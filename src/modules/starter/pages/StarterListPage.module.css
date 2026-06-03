@@ -1,0 +1,25 @@
+.searchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.searchInput {
+  width: 280px;
+}
+
+.toolbarActions {
+  display: flex;
+  gap: 12px;
+}
+
+.actionGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.statusTag {
+  min-width: 70px;
+  text-align: center;
+}

@@ -1,0 +1,58 @@
+export const enUS = {
+  common: {
+    search: "Search",
+    reset: "Reset",
+    refresh: "Refresh",
+    create: "Create",
+    back: "Back",
+    backHome: "Back to home",
+    save: "Save",
+    cancel: "Cancel",
+    edit: "Edit",
+    detail: "Detail",
+    status: "Status",
+    actions: "Actions",
+    basicInfo: "Basic Information",
+    advancedConfig: "Advanced Configuration",
+    enabled: "Enabled",
+    disabled: "Disabled",
+    success: "Action completed",
+    required: "This field is required",
+    notFound: "The requested data was not found",
+    noPermission: "You do not have permission to access this capability",
+    pageNotFound: "Page not found",
+    notFoundDescription: "The page you visited does not exist or has been moved.",
+    unexpectedError: "Something went wrong",
+    reload: "Reload",
+    requestFailed: "Request failed. Please try again later.",
+    routeErrorDescription:
+      "The page failed to load or render. Please try again in a moment.",
+    retry: "Retry",
+  },
+  app: {
+    title: "BKN Studio",
+    subtitle: "Standalone-first admin frontend project",
+  },
+  starter: {
+    title: "Starter Module",
+    description:
+      "This screen validates routing, scaffold layout, shared UI, services, and runtime composition.",
+    searchPlaceholder: "Search by name",
+    name: "Name",
+    owner: "Owner",
+    updatedAt: "Updated At",
+    empty: "No data",
+    createTitle: "Create Record",
+    editTitle: "Edit Record",
+    detailTitle: "Record Detail",
+    createDescription:
+      "Use the standard form page to validate form scaffold and route-based create flow.",
+    editDescription:
+      "Use the standard form page to validate edit flow and shared framework wiring.",
+    statusEnabled: "Enabled",
+    statusDisabled: "Disabled",
+    summary: "Summary",
+    summaryPlaceholder: "Describe the module purpose or extra notes",
+  },
+} as const;
+
