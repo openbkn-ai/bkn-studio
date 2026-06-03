@@ -6,12 +6,15 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { WorkspaceToolbarPortal } from "@/app/shell/workspace-slots";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { CrudListPage } from "@/framework/scaffold/CrudListPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
+import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { WorkspaceToolbar } from "@/framework/ui/common/WorkspaceToolbar";
 import { useAppServices } from "@/framework/context/use-app-services";
 import {
   listStarterRecords,
@@ -141,42 +144,46 @@ export function StarterListPage() {
     },
   ];
 
+  const toolbar = (
+    <WorkspaceToolbar
+      actions={
+        <div className={styles.toolbarActions}>
+          <PermissionGate permissions="starter:create">
+            <AppButton
+              onClick={() => {
+                void navigate("/starter/new");
+              }}
+              type="primary"
+            >
+              {t("common.create")}
+            </AppButton>
+          </PermissionGate>
+          <AppButton
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              reset();
+            }}
+          >
+            {t("common.refresh")}
+          </AppButton>
+        </div>
+      }
+      filters={
+        <Input.Search
+          allowClear
+          className={styles.searchInput}
+          onSearch={setKeyword}
+          placeholder={t("starter.searchPlaceholder")}
+        />
+      }
+      meta={<span className={styles.toolbarMeta}>{t("starter.toolbarHint")}</span>}
+    />
+  );
+
   return (
     <>
-      <CrudListPage
-        description={t("starter.description")}
-        title={t("starter.title")}
-        toolbar={
-          <div className={styles.searchRow}>
-            <Input.Search
-              allowClear
-              className={styles.searchInput}
-              onSearch={setKeyword}
-              placeholder={t("starter.searchPlaceholder")}
-            />
-            <div className={styles.toolbarActions}>
-              <AppButton
-                icon={<ReloadOutlined />}
-                onClick={() => {
-                  reset();
-                }}
-              >
-                {t("common.refresh")}
-              </AppButton>
-              <PermissionGate permissions="starter:create">
-                <AppButton
-                  onClick={() => {
-                    void navigate("/starter/new");
-                  }}
-                  type="primary"
-                >
-                  {t("common.create")}
-                </AppButton>
-              </PermissionGate>
-            </div>
-          </div>
-        }
-      >
+      <WorkspaceToolbarPortal>{toolbar}</WorkspaceToolbarPortal>
+      <CrudListPage>
         {loadError ? (
           <Alert
             action={
@@ -194,20 +201,39 @@ export function StarterListPage() {
             style={{ marginBottom: 16 }}
             type="error"
           />
+        ) : !loading && items.length === 0 ? (
+          <EmptyStatePanel
+            action={
+              <PermissionGate permissions="starter:create">
+                <AppButton
+                  onClick={() => {
+                    void navigate("/starter/new");
+                  }}
+                  type="primary"
+                >
+                  {t("common.create")}
+                </AppButton>
+              </PermissionGate>
+            }
+            description={t("starter.emptyDescription")}
+            title={t("starter.empty")}
+          />
         ) : null}
-        <AppTable<StarterRecord>
-          columns={columns}
-          dataSource={items}
-          loading={loading}
-          locale={{ emptyText: t("starter.empty") }}
-          pagination={{
-            current: pageState.page,
-            pageSize: pageState.pageSize,
-            total,
-            onChange: setPagination,
-          }}
-          rowKey="id"
-        />
+        {loading || items.length > 0 ? (
+          <AppTable<StarterRecord>
+            columns={columns}
+            dataSource={items}
+            loading={loading}
+            locale={{ emptyText: t("starter.empty") }}
+            pagination={{
+              current: pageState.page,
+              pageSize: pageState.pageSize,
+              total,
+              onChange: setPagination,
+            }}
+            rowKey="id"
+          />
+        ) : null}
       </CrudListPage>
       {detailRecord ? (
         <Suspense fallback={<RouteLoading />}>

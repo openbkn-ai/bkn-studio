@@ -5,8 +5,8 @@ import { Space, Typography } from "antd";
 import { PageContainer } from "@/framework/ui/common/PageContainer";
 
 type CrudListPageProps = PropsWithChildren<{
-  title: string;
   description?: string;
+  title?: string;
   toolbar?: ReactNode;
 }>;
 
@@ -19,18 +19,19 @@ export function CrudListPage({
   return (
     <PageContainer>
       <Space className="page-section" direction="vertical" size={20}>
-        <div className="page-title-block">
-          <Typography.Title level={3}>{title}</Typography.Title>
-          {description ? (
-            <Typography.Paragraph className="page-description">
-              {description}
-            </Typography.Paragraph>
-          ) : null}
-        </div>
+        {title ? (
+          <div className="page-title-block">
+            <Typography.Title level={3}>{title}</Typography.Title>
+            {description ? (
+              <Typography.Paragraph className="page-description">
+                {description}
+              </Typography.Paragraph>
+            ) : null}
+          </div>
+        ) : null}
         {toolbar ? <div className="page-toolbar">{toolbar}</div> : null}
         <div className="page-body">{children}</div>
       </Space>
     </PageContainer>
   );
 }
-

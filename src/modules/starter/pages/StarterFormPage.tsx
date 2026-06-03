@@ -92,12 +92,6 @@ export function StarterFormPage({ mode }: StarterFormPageProps) {
   };
 
   const permission = mode === "create" ? "starter:create" : "starter:edit";
-  const title = mode === "create" ? t("starter.createTitle") : t("starter.editTitle");
-  const description =
-    mode === "create"
-      ? t("starter.createDescription")
-      : t("starter.editDescription");
-
   return (
     <PermissionGate
       fallback={<Result status="403" subTitle={t("common.noPermission")} title="403" />}
@@ -124,8 +118,6 @@ export function StarterFormPage({ mode }: StarterFormPageProps) {
             </AppButton>
           </div>
         }
-        description={description}
-        title={title}
       >
         {loading ? (
           <Spin />

@@ -33,26 +33,48 @@ export const enUS = {
     title: "BKN Studio",
     subtitle: "Standalone-first admin frontend project",
   },
+  shell: {
+    workspace: "Workspace",
+    modeStandalone: "Standalone",
+    modeHosted: "Hosted",
+    productTagline: "Studio Console",
+    headerAside: "Application shell baseline",
+    items: {
+      domainKnowledgeNetwork: "Domain Knowledge Network",
+      generalBusinessKnowledgeNetwork: "General Business Knowledge Network",
+      dataConnection: "Data Connection",
+      dataResource: "Data Resource",
+      dataQuality: "Data Quality",
+      dataflow: "Dataflow",
+      systemConfig: "System Configuration",
+      userManagement: "User Management",
+      roleManagement: "Role Management",
+      logManagement: "Log Management",
+      modelManagement: "Model Management",
+    },
+  },
   starter: {
     title: "Starter Module",
     description:
-      "This screen validates routing, scaffold layout, shared UI, services, and runtime composition.",
+      "This screen validates routing, shell layout, shared UI, services, and runtime composition.",
     searchPlaceholder: "Search by name",
     name: "Name",
     owner: "Owner",
     updatedAt: "Updated At",
     empty: "No data",
+    emptyDescription:
+      "No starter records yet. Use the workspace action area to create the first one.",
+    toolbarHint: "Workspace actions are now mounted in the shell toolbar area.",
     createTitle: "Create Record",
     editTitle: "Edit Record",
     detailTitle: "Record Detail",
     createDescription:
-      "Use the standard form page to validate form scaffold and route-based create flow.",
+      "Use the standard form route to validate create flow within the new workspace shell.",
     editDescription:
-      "Use the standard form page to validate edit flow and shared framework wiring.",
+      "Use the standard form route to validate edit flow and shared framework wiring.",
     statusEnabled: "Enabled",
     statusDisabled: "Disabled",
     summary: "Summary",
     summaryPlaceholder: "Describe the module purpose or extra notes",
   },
 } as const;
-

@@ -1,17 +1,16 @@
-.searchRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: space-between;
-}
-
 .searchInput {
-  width: 280px;
+  width: min(360px, 100%);
 }
 
 .toolbarActions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+}
+
+.toolbarMeta {
+  color: #64748d;
+  font-size: 13px;
 }
 
 .actionGroup {
