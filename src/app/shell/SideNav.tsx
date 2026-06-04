@@ -1,4 +1,4 @@
-import { DownOutlined } from "@ant-design/icons";
+import { DownOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatches, useNavigate } from "react-router-dom";
@@ -14,7 +14,12 @@ type SelectedItem = {
   parentKey?: string;
 };
 
-export function SideNav() {
+type SideNavProps = {
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+};
+
+export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const matches = useMatches();
@@ -52,13 +57,14 @@ export function SideNav() {
   };
 
   return (
-    <aside className="console-sidenav">
+    <aside className={collapsed ? "console-sidenav is-collapsed" : "console-sidenav"}>
       <div className="console-sidenav-scroll">
         <ul className="console-sidenav-list">
           {consoleNavigation.map((item) => {
             const hasChildren = Boolean(item.children?.length);
             const isExpanded = expandedKeys.includes(item.key);
             const isSelected = selectedItem?.key === item.key;
+            const hasSelectedChild = selectedItem?.parentKey === item.key;
 
             if (!hasChildren) {
               return (
@@ -77,12 +83,15 @@ export function SideNav() {
                         void navigate(item.path);
                       }
                     }}
+                    title={t(item.labelKey)}
                     type="button"
                   >
                     <span className="console-sidenav-icon" aria-hidden>
                       {item.icon}
                     </span>
-                    <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                    {!collapsed ? (
+                      <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                    ) : null}
                   </button>
                 </li>
               );
@@ -94,29 +103,45 @@ export function SideNav() {
                   className={[
                     "console-sidenav-link",
                     isSelected ? "is-active" : "",
+                    hasSelectedChild ? "is-parent-active" : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  onClick={() => toggleExpanded(item.key)}
+                  onClick={() => {
+                    if (collapsed) {
+                      onToggleCollapsed();
+                      setExpandedKeys((current) =>
+                        current.includes(item.key) ? current : [...current, item.key],
+                      );
+                      return;
+                    }
+
+                    toggleExpanded(item.key);
+                  }}
+                  title={t(item.labelKey)}
                   type="button"
                 >
                   <span className="console-sidenav-icon" aria-hidden>
                     {item.icon}
                   </span>
-                  <span className="console-sidenav-label">{t(item.labelKey)}</span>
-                  <span
-                    className={[
-                      "console-sidenav-caret",
-                      isExpanded ? "is-open" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    aria-hidden
-                  >
-                    <DownOutlined />
-                  </span>
+                  {!collapsed ? (
+                    <>
+                      <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                      <span
+                        className={[
+                          "console-sidenav-caret",
+                          isExpanded ? "is-open" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        aria-hidden
+                      >
+                        <DownOutlined />
+                      </span>
+                    </>
+                  ) : null}
                 </button>
-                {isExpanded ? (
+                {!collapsed && isExpanded ? (
                   <ul className="console-sidenav-sublist">
                     {item.children!.map((child) => (
                       <li key={child.key} className="console-sidenav-item">
@@ -135,14 +160,17 @@ export function SideNav() {
                               void navigate(child.path);
                             }
                           }}
+                          title={t(child.labelKey)}
                           type="button"
                         >
                           <span className="console-sidenav-icon" aria-hidden>
                             {child.icon}
                           </span>
-                          <span className="console-sidenav-label">
-                            {t(child.labelKey)}
-                          </span>
+                          {!collapsed ? (
+                            <span className="console-sidenav-label">
+                              {t(child.labelKey)}
+                            </span>
+                          ) : null}
                         </button>
                       </li>
                     ))}
@@ -152,6 +180,16 @@ export function SideNav() {
             );
           })}
         </ul>
+      </div>
+      <div className="console-sidenav-footer">
+        <button
+          aria-label={collapsed ? t("shell.expandSidenav") : t("shell.collapseSidenav")}
+          className="console-sidenav-toggle"
+          onClick={onToggleCollapsed}
+          type="button"
+        >
+          {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+        </button>
       </div>
     </aside>
   );

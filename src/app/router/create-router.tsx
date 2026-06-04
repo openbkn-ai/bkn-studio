@@ -4,6 +4,7 @@ import { Navigate, createBrowserRouter } from "react-router-dom";
 import { NotFoundPage } from "@/app/router/NotFoundPage";
 import { RouteErrorPage } from "@/app/router/RouteErrorPage";
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { dataConnectRoutes } from "@/modules/data-connect/routes";
 import { starterRoutes } from "@/modules/starter/routes";
 
 const AppShell = lazy(async () => {
@@ -27,6 +28,7 @@ export function createAppRouter(basename?: string) {
             index: true,
             element: <Navigate replace to="/starter" />,
           },
+          ...dataConnectRoutes,
           ...starterRoutes,
           {
             path: "*",

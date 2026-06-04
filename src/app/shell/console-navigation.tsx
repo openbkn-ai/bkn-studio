@@ -37,7 +37,7 @@ export const consoleNavigation: ConsoleNavItem[] = [
         key: "data-connection",
         labelKey: "shell.items.dataConnection",
         icon: <ApiOutlined />,
-        disabled: true,
+        path: "/data-connect",
       },
       {
         key: "data-resource",

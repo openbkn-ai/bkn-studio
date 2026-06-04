@@ -48,6 +48,7 @@ select {
   padding: 14px 24px;
   border-bottom: 1px solid rgba(22, 40, 73, 0.08);
   background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 24px rgba(22, 40, 73, 0.04);
   backdrop-filter: blur(18px);
 }
 
@@ -98,10 +99,11 @@ select {
   bottom: 7px;
 }
 
-.console-brand-copy {
+.console-brand-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
 }
 
 .console-brand-title {
@@ -111,11 +113,48 @@ select {
   letter-spacing: -0.03em;
 }
 
-.console-brand-subtitle {
+.console-brand-path {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
   color: #72819b;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-size: 15px;
+}
+
+.console-brand-path-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.console-brand-path-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #72819b;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.console-brand-path-link:hover {
+  color: #1f4fd4;
+}
+
+.console-brand-path-item .is-current {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(46, 104, 255, 0.08);
+  color: #1c2438;
+  font-weight: 600;
+}
+
+.console-brand-path-separator {
+  color: #b4bed0;
+  font-size: 14px;
 }
 
 .console-topbar-actions {
@@ -135,6 +174,16 @@ select {
   background: rgba(255, 255, 255, 0.92);
   color: #5d6c86;
   font-size: 13px;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.console-topbar-chip:hover {
+  border-color: rgba(46, 104, 255, 0.16);
+  background: rgba(46, 104, 255, 0.04);
+  color: #29486f;
 }
 
 .console-topbar-chip-accent {
@@ -151,6 +200,14 @@ select {
   border: 1px solid rgba(22, 40, 73, 0.08);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.96);
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.console-user-pill:hover {
+  border-color: rgba(46, 104, 255, 0.18);
+  transform: translateY(-1px);
 }
 
 .console-user-avatar {
@@ -184,19 +241,68 @@ select {
 
 .console-body {
   display: grid;
-  grid-template-columns: 286px minmax(0, 1fr);
+  grid-template-columns: 229px minmax(0, 1fr);
   min-height: calc(100vh - 72px);
+  transition: grid-template-columns 0.24s ease;
+}
+
+.console-body.is-sidenav-collapsed {
+  grid-template-columns: 88px minmax(0, 1fr);
 }
 
 .console-sidenav {
+  display: flex;
+  flex-direction: column;
   border-right: 1px solid rgba(22, 40, 73, 0.08);
-  background: rgba(255, 255, 255, 0.78);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(250, 252, 255, 0.78));
+  transition: width 0.24s ease;
+}
+
+.console-sidenav-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(22, 40, 73, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #42506a;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.console-sidenav-toggle:hover {
+  border-color: rgba(46, 104, 255, 0.22);
+  background: rgba(46, 104, 255, 0.08);
+  color: #1f4fd4;
 }
 
 .console-sidenav-scroll {
-  height: 100%;
+  flex: 1;
   overflow: auto;
   padding: 22px 16px 24px;
+}
+
+.console-sidenav-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.console-sidenav-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(124, 140, 166, 0.22);
+  background-clip: padding-box;
+}
+
+.console-sidenav-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 16px 16px;
+  border-top: 1px solid rgba(22, 40, 73, 0.06);
 }
 
 .console-sidenav-section + .console-sidenav-section {
@@ -228,6 +334,7 @@ select {
 }
 
 .console-sidenav-link {
+  position: relative;
   display: flex;
   width: 100%;
   align-items: center;
@@ -256,6 +363,23 @@ select {
   box-shadow: inset 0 0 0 1px rgba(46, 104, 255, 0.16);
 }
 
+.console-sidenav-link.is-parent-active:not(.is-active) {
+  background: rgba(46, 104, 255, 0.06);
+  color: #2447a6;
+}
+
+.console-sidenav-link.is-active::before,
+.console-sidenav-link.is-parent-active::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 999px;
+  background: #2e68ff;
+}
+
 .console-sidenav-link.is-disabled {
   cursor: not-allowed;
   color: #9ca8ba;
@@ -264,6 +388,9 @@ select {
 .console-sidenav-link.is-child {
   margin-left: 8px;
   width: calc(100% - 8px);
+  min-height: 42px;
+  border-radius: 12px;
+  font-size: 13px;
 }
 
 .console-sidenav-icon {
@@ -288,123 +415,57 @@ select {
   transform: rotate(180deg);
 }
 
+.console-sidenav.is-collapsed .console-sidenav-footer {
+  justify-content: center;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.console-sidenav.is-collapsed .console-sidenav-scroll {
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.console-sidenav.is-collapsed .console-sidenav-link {
+  justify-content: center;
+  padding: 0;
+}
+
+.console-sidenav.is-collapsed .console-sidenav-link.is-child {
+  margin-left: 0;
+  width: 100%;
+}
+
+.console-sidenav.is-collapsed .console-sidenav-icon {
+  width: auto;
+  font-size: 18px;
+}
+
 .console-main {
   min-width: 0;
   min-height: 0;
   overflow: auto;
 }
 
+.console-main::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.console-main::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(124, 140, 166, 0.22);
+  background-clip: padding-box;
+}
+
 .workspace-shell {
   min-height: 100%;
-  padding: 28px 28px 36px;
-}
-
-.workspace-hero {
-  position: relative;
-  overflow: hidden;
-  padding: 24px 28px;
-  border: 1px solid rgba(22, 40, 73, 0.08);
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at top left, rgba(66, 125, 255, 0.16), transparent 30%),
-    radial-gradient(circle at right center, rgba(242, 197, 104, 0.18), transparent 22%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 255, 0.96));
-  box-shadow: 0 18px 48px rgba(28, 42, 69, 0.08);
-}
-
-.workspace-hero-noise {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2)),
-    radial-gradient(rgba(36, 56, 96, 0.04) 0.8px, transparent 0.8px);
-  background-size: 100% 100%, 14px 14px;
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.workspace-breadcrumbs,
-.workspace-header {
-  position: relative;
-  z-index: 1;
-}
-
-.workspace-breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  color: #7a889e;
-  font-size: 13px;
-}
-
-.workspace-breadcrumb-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.workspace-breadcrumb-link {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: #5d6f8b;
-  font-size: 13px;
-}
-
-.workspace-breadcrumb-item .is-current {
-  color: #1e2a41;
-  font-weight: 600;
-}
-
-.workspace-breadcrumb-separator {
-  color: #9aa7ba;
-  font-size: 11px;
-}
-
-.workspace-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  margin-top: 18px;
-}
-
-.workspace-header-copy {
-  max-width: min(820px, 100%);
-}
-
-.workspace-title {
-  margin: 0;
-  color: #1a2438;
-  font-size: clamp(28px, 3vw, 34px);
-  font-weight: 700;
-  letter-spacing: -0.04em;
-}
-
-.workspace-description {
-  margin: 10px 0 0;
-  color: #60708a;
-  line-height: 1.7;
-}
-
-.workspace-header-aside {
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.54);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  color: #5b6780;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  padding: 24px 24px 32px;
 }
 
 .workspace-toolbar-host {
-  position: relative;
-  z-index: 1;
-  margin-top: 18px;
+  margin-bottom: 18px;
 }
 
 .workspace-toolbar-host:empty {
@@ -442,7 +503,7 @@ select {
 }
 
 .workspace-content {
-  margin-top: 20px;
+  margin-top: 0;
 }
 
 .workspace-content.is-standalone {

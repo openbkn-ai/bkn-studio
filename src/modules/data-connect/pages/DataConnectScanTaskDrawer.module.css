@@ -1,0 +1,94 @@
+.drawerContent {
+  display: grid;
+  gap: 18px;
+}
+
+.summaryCard,
+.sectionCard {
+  padding: 20px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.summaryCard {
+  background: linear-gradient(180deg, #f8fbff 0%, #f4f8ff 100%);
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.summaryTitle {
+  margin: 0;
+  color: #152239;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.summaryDescription {
+  margin: 8px 0 0;
+  color: #64748d;
+}
+
+.summaryStatus {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.metricRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.metricItem {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.metricLabel {
+  color: #70809a;
+  font-size: 12px;
+}
+
+.metricValue {
+  color: #152239;
+  font-size: 18px;
+}
+
+.sectionTitle {
+  margin: 0 0 14px;
+  color: #152239;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.descriptionBlock :global(.ant-descriptions-view) {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .summaryHeader {
+    flex-direction: column;
+  }
+
+  .metricRow {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryCard,
+  .sectionCard {
+    padding: 16px;
+    border-radius: 18px;
+  }
+}

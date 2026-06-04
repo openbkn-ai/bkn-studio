@@ -1,0 +1,324 @@
+import { Alert, Form, Result, Space, Spin, Steps } from "antd";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
+
+import { useAppServices } from "@/framework/context/use-app-services";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { AppButton } from "@/framework/ui/common/AppButton";
+import { ConnectorTypePicker } from "@/modules/data-connect/components/ConnectorTypePicker";
+import { DataConnectConfigForm } from "@/modules/data-connect/components/DataConnectConfigForm";
+import {
+  createDataConnectRecord,
+  getDataConnectRecord,
+  listDataConnectConnectorTypes,
+  testDataConnectRecord,
+  updateDataConnectRecord,
+} from "@/modules/data-connect/services/data-connect.service";
+import type {
+  DataConnectConnectorType,
+  DataConnectMutationInput,
+  DataConnectMutationPayload,
+  DataConnectRecord,
+} from "@/modules/data-connect/types/data-connect";
+
+import styles from "./DataConnectFormPage.module.css";
+
+type DataConnectFormPageProps = {
+  mode: "create" | "edit";
+};
+
+export function DataConnectFormPage({ mode }: DataConnectFormPageProps) {
+  const { t } = useTranslation();
+  const { message } = useAppServices();
+  const navigate = useNavigate();
+  const { recordId } = useParams<{ recordId: string }>();
+  const [form] = Form.useForm<DataConnectMutationInput>();
+  const [loading, setLoading] = useState(mode === "edit");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [record, setRecord] = useState<DataConnectRecord | null>(null);
+  const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
+  const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
+  const [currentStep, setCurrentStep] = useState(mode === "edit" ? 1 : 0);
+
+  useEffect(() => {
+    void (async () => {
+      setLoading(true);
+      setLoadError(null);
+
+      try {
+        const types = await listDataConnectConnectorTypes();
+        setConnectorTypes(types);
+
+        if (mode === "edit" && recordId) {
+          const currentRecord = await getDataConnectRecord(recordId);
+          setRecord(currentRecord);
+
+          if (currentRecord) {
+            setSelectedConnectorType(currentRecord.connectorType);
+            form.setFieldsValue({
+              connectorConfig: sanitizeConnectorConfig(currentRecord.connectorConfig),
+              connectorType: currentRecord.connectorType,
+              description: currentRecord.description,
+              enabled: currentRecord.enabled,
+              name: currentRecord.name,
+              tags: currentRecord.tags,
+            });
+          }
+        } else {
+          form.setFieldsValue({
+            connectorConfig: {},
+            description: "",
+            enabled: true,
+            name: "",
+            tags: [],
+          });
+        }
+      } catch (error) {
+        setLoadError(extractRequestErrorMessage(error));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [form, mode, recordId]);
+
+  const selectedConnector = useMemo(
+    () => connectorTypes.find((item) => item.type === selectedConnectorType),
+    [connectorTypes, selectedConnectorType],
+  );
+
+  const permission = mode === "create" ? "data-connect:create" : "data-connect:edit";
+  const pageTitle =
+    mode === "create" ? t("dataConnect.createTitle") : t("dataConnect.editTitle");
+  const pageDescription =
+    mode === "create"
+      ? t("dataConnect.createDescription")
+      : t("dataConnect.editDescription");
+
+  const stepItems = [
+    { title: t("dataConnect.connectorTypeStep") },
+    { title: t("dataConnect.configStep") },
+  ];
+
+  const handleBack = () => {
+    void navigate("/data-connect");
+  };
+
+  const handleNext = () => {
+    if (!selectedConnectorType) {
+      void message.warning(t("dataConnect.selectConnectorTypeRequired"));
+      return;
+    }
+
+    form.setFieldValue("connectorType", selectedConnectorType);
+    setCurrentStep(1);
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setSubmitting(true);
+      const values = await form.validateFields();
+      const payload: DataConnectMutationPayload = {
+        connectorConfig: normalizeConnectorConfig(values.connectorConfig ?? {}),
+        connectorType: selectedConnectorType ?? values.connectorType,
+        description: values.description ?? "",
+        enabled: record?.enabled ?? values.enabled ?? true,
+        name: values.name.trim(),
+        tags: values.tags ?? [],
+      };
+
+      if (mode === "create") {
+        await createDataConnectRecord(payload);
+      } else if (recordId) {
+        await updateDataConnectRecord(recordId, payload);
+      }
+
+      message.success(t("common.success"));
+      void navigate("/data-connect");
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "errorFields" in error
+      ) {
+        return;
+      }
+      void message.error(extractRequestErrorMessage(error));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!recordId) {
+      return;
+    }
+
+    try {
+      setTestingConnection(true);
+      await testDataConnectRecord(recordId);
+      message.success(t("dataConnect.testConnectionSuccess"));
+    } catch (error) {
+      void message.error(extractRequestErrorMessage(error));
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  return (
+    <PermissionGate
+      fallback={<Result status="403" subTitle={t("common.noPermission")} title="403" />}
+      permissions={permission}
+    >
+      <section className={styles.contentSurface}>
+        <div className={styles.headerPanel}>
+          <div className={styles.headerCopy}>
+            <h1 className={styles.pageTitle}>{pageTitle}</h1>
+            <p className={styles.pageDescription}>{pageDescription}</p>
+          </div>
+          <div className={styles.headerSteps}>
+            <Steps current={currentStep} items={stepItems} />
+          </div>
+        </div>
+        <div className={styles.formShell}>
+          {loading ? (
+            <div className={styles.loadingState}>
+              <Spin />
+            </div>
+          ) : loadError ? (
+            <Alert
+              action={
+                <AppButton
+                  onClick={() => {
+                    window.location.reload();
+                  }}
+                  type="link"
+                >
+                  {t("common.retry")}
+                </AppButton>
+              }
+              message={loadError}
+              showIcon
+              type="error"
+            />
+          ) : mode === "edit" && !record ? (
+            <Alert message={t("common.notFound")} showIcon type="warning" />
+          ) : (
+            <Space direction="vertical" size={20} style={{ width: "100%" }}>
+              <div className={styles.stepPanel}>
+                <Form form={form} layout="vertical">
+                  {currentStep === 0 && mode === "create" ? (
+                    <ConnectorTypePicker
+                      onChange={(value) => {
+                        setSelectedConnectorType(value);
+                        form.setFieldValue("connectorType", value);
+                      }}
+                      options={connectorTypes}
+                      value={selectedConnectorType}
+                    />
+                  ) : (
+                    <DataConnectConfigForm
+                      isEdit={mode === "edit"}
+                      selectedConnectorType={selectedConnector}
+                    />
+                  )}
+                </Form>
+              </div>
+              <div className={styles.hintPanel}>
+                <p className={styles.hintText}>
+                  {mode === "edit"
+                    ? t("dataConnect.editFlowHint")
+                    : t("dataConnect.createFlowHint")}
+                </p>
+              </div>
+            </Space>
+          )}
+        </div>
+        <div className={styles.footerBar}>
+          <div className={styles.actionsLeft}>
+            <AppButton onClick={handleBack}>{t("common.back")}</AppButton>
+            {currentStep === 1 && mode === "create" ? (
+              <AppButton
+                onClick={() => {
+                  setCurrentStep(0);
+                }}
+              >
+                {t("common.previous")}
+              </AppButton>
+            ) : null}
+            {mode === "edit" && recordId ? (
+              <AppButton
+                loading={testingConnection}
+                onClick={() => {
+                  void handleTestConnection();
+                }}
+              >
+                {t("common.testConnection")}
+              </AppButton>
+            ) : null}
+          </div>
+          <div className={styles.actionsRight}>
+            <AppButton onClick={handleBack}>{t("common.cancel")}</AppButton>
+            <AppButton
+              loading={submitting}
+              onClick={() => {
+                void (currentStep === 0 && mode === "create" ? handleNext() : handleSubmit());
+              }}
+              type="primary"
+            >
+              {currentStep === 0 && mode === "create" ? t("common.next") : t("common.save")}
+            </AppButton>
+          </div>
+        </div>
+      </section>
+    </PermissionGate>
+  );
+}
+
+function sanitizeConnectorConfig(config: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(config).map(([key, value]) => {
+      if (
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean"
+      ) {
+        return [key, value];
+      }
+
+      if (Array.isArray(value)) {
+        return [key, value.map((item) => String(item))];
+      }
+
+      return [key, JSON.stringify(value)];
+    }),
+  ) as Record<string, boolean | number | string | string[]>;
+}
+
+function normalizeConnectorConfig(config: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(config)
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .map(([key, value]) => {
+        if (typeof value === "string") {
+          const trimmed = value.trim();
+
+          if (
+            (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+            (trimmed.startsWith("[") && trimmed.endsWith("]"))
+          ) {
+            try {
+              return [key, JSON.parse(trimmed) as unknown];
+            } catch {
+              return [key, value];
+            }
+          }
+        }
+
+        return [key, value];
+      }),
+  ) as Record<string, unknown>;
+}

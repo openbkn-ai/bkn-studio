@@ -1,0 +1,95 @@
+.picker {
+  display: grid;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+  color: #1d2942;
+  font-size: 20px;
+}
+
+.description {
+  margin: 8px 0 0;
+  color: #64748d;
+}
+
+.search {
+  width: min(320px, 100%);
+}
+
+.segmented {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid rgba(12, 83, 84, 0.1);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(25, 43, 78, 0.06);
+  text-align: left;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(13, 122, 111, 0.2);
+  box-shadow: 0 16px 34px rgba(25, 43, 78, 0.08);
+}
+
+.cardActive {
+  border-color: rgba(13, 122, 111, 0.48);
+  background: linear-gradient(180deg, rgba(13, 122, 111, 0.06), rgba(13, 122, 111, 0.02));
+  box-shadow: inset 0 0 0 1px rgba(13, 122, 111, 0.1);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(13, 122, 111, 0.08);
+  color: #0d7a6f;
+  font-size: 12px;
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: #64748d;
+  font-size: 13px;
+}
+
+.cardDescription {
+  margin: 0;
+  color: #51627d;
+  line-height: 1.6;
+}

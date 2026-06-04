@@ -1,0 +1,35 @@
+.sectionCard {
+  padding: 18px 20px 6px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 20px;
+  background: #ffffff;
+}
+
+.sectionTitle {
+  margin: 0 0 16px;
+  color: #152239;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+  .sectionCard {
+    padding: 16px 16px 4px;
+    border-radius: 16px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}

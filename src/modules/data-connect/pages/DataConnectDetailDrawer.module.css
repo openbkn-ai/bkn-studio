@@ -1,0 +1,114 @@
+.drawerContent {
+  display: grid;
+  gap: 18px;
+}
+
+.summaryCard,
+.sectionCard {
+  padding: 20px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.summaryCard {
+  background: linear-gradient(180deg, #f8fbff 0%, #f4f8ff 100%);
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.summaryCopy {
+  min-width: 0;
+}
+
+.summaryTitle {
+  margin: 0;
+  color: #152239;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.summaryDescription {
+  margin: 8px 0 0;
+  color: #64748d;
+  line-height: 1.7;
+}
+
+.summaryStatus {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.summaryMeta {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  color: #4f607b;
+  font-size: 13px;
+}
+
+.tagGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.sectionTitle {
+  margin: 0 0 14px;
+  color: #152239;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.descriptionBlock :global(.ant-descriptions-view) {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.configGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.configItem {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 16px;
+  background: #f9fbff;
+}
+
+.configLabel {
+  color: #70809a;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.configValue {
+  color: #152239;
+  line-height: 1.7;
+  word-break: break-all;
+}
+
+@media (max-width: 768px) {
+  .summaryHeader {
+    flex-direction: column;
+  }
+
+  .summaryCard,
+  .sectionCard {
+    padding: 16px;
+    border-radius: 18px;
+  }
+}

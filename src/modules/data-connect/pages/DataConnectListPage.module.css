@@ -1,0 +1,259 @@
+.contentSurface {
+  min-height: calc(100vh - 144px);
+  padding: 28px 30px 20px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(22, 42, 69, 0.06);
+}
+
+.operationBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+}
+
+.operationPrimary {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  width: min(420px, 100%);
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.toolbarFilters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 12px 14px;
+  border: 1px solid rgba(15, 30, 54, 0.08);
+  border-radius: 20px;
+  background: #f9fbff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.toolbarMeta {
+  color: #64748d;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.filterSelect {
+  min-width: 210px;
+}
+
+.tableSurface {
+  overflow: hidden;
+  min-height: calc(100vh - 258px);
+  padding-top: 4px;
+}
+
+.tableSurface :global(.ant-alert) {
+  margin-top: 24px;
+}
+
+.tableSurface :global(.ant-table-wrapper) {
+  padding-bottom: 12px;
+}
+
+.tableSurface :global(.ant-table) {
+  background: transparent;
+}
+
+.tableSurface :global(.ant-table-tbody > tr) {
+  transition: background-color 0.2s ease;
+}
+
+.tableSurface :global(.ant-table-thead > tr > th) {
+  height: 72px;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+  background: transparent;
+  color: #152239;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.tableSurface :global(.ant-table-tbody > tr > td) {
+  padding-top: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.06);
+  color: #152239;
+  vertical-align: top;
+}
+
+.tableSurface :global(.ant-table-tbody > tr:hover > td) {
+  background: rgba(46, 104, 255, 0.03);
+}
+
+.tableSurface :global(.ant-table-pagination) {
+  margin: 18px 0 12px;
+}
+
+.actionGroup {
+  display: flex;
+  gap: 4px 8px;
+  flex-wrap: wrap;
+  max-width: 228px;
+}
+
+.statusTag {
+  min-width: 72px;
+  margin-inline-end: 0;
+  text-align: center;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.connectorTypeCell {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-direction: column;
+}
+
+.descriptionText {
+  display: inline-block;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #64748d;
+}
+
+.nameCell {
+  display: grid;
+  gap: 6px;
+}
+
+.nameTitle {
+  color: #152239;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.connectorTypeTag {
+  margin-inline-end: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border-color: rgba(37, 99, 235, 0.16);
+  background: rgba(46, 104, 255, 0.06);
+  color: #1f4fd4;
+  font-size: 12px;
+  text-transform: lowercase;
+}
+
+.connectorTypeName {
+  color: #3e4d66;
+  line-height: 1.6;
+}
+
+.modeText {
+  color: #334155;
+}
+
+.statusEnabled {
+  border-color: rgba(101, 192, 65, 0.22);
+  background: rgba(101, 192, 65, 0.08);
+  color: #4f9f22;
+}
+
+.statusDisabled {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(148, 163, 184, 0.08);
+  color: #64748b;
+}
+
+.healthHealthy {
+  border-color: rgba(101, 192, 65, 0.22);
+  background: rgba(101, 192, 65, 0.08);
+  color: #4f9f22;
+}
+
+.healthDegraded {
+  border-color: rgba(245, 158, 11, 0.24);
+  background: rgba(245, 158, 11, 0.08);
+  color: #d97706;
+}
+
+.healthUnhealthy {
+  border-color: rgba(239, 68, 68, 0.22);
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+}
+
+.healthOffline {
+  border-color: rgba(249, 115, 22, 0.24);
+  background: rgba(249, 115, 22, 0.08);
+  color: #ea580c;
+}
+
+.healthUnchecked {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(148, 163, 184, 0.08);
+  color: #64748b;
+}
+
+.actionLink {
+  padding-inline: 0;
+  color: #165dff;
+  font-weight: 500;
+}
+
+.actionLink:hover {
+  color: #0f4bcc;
+}
+
+.actionDanger {
+  color: #ef4444;
+}
+
+@media (max-width: 1200px) {
+  .contentSurface {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .operationBar {
+    flex-direction: column;
+  }
+
+  .toolbarFilters {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .searchInput {
+    width: min(100%, 420px);
+  }
+}
+
+@media (max-width: 768px) {
+  .contentSurface {
+    min-height: calc(100vh - 124px);
+    padding: 20px 18px 16px;
+    border-radius: 20px;
+  }
+
+  .tableSurface {
+    min-height: calc(100vh - 220px);
+  }
+}

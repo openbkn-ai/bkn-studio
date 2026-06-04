@@ -1,31 +1,30 @@
 # 数据连接需求说明
 
 ## 需求标识
-
 - Feature: `data-connect`
 - Status: `draft`
-- Goal: 在 `bkn-studio` 中重建“数据连接”模块，先完成需求梳理，明确前端页面范围、后端接口范围、差异清单与实现边界。
+- Goal: 在 `bkn-studio` 中建设新的“数据连接”模块，前端模块名保持 `data-connect`，后端能力优先对齐 `vega-backend` 中已经存在的 `catalog / connector-types / discover-schedules / discover-tasks` 模型。
 
 ## 需求来源
-
-本需求的参考来源有三类：
-
-1. 旧前端实现
-   - 目录：`D:\kowell\kowell-dip\web\apps\vega\src\pages\DataConnect`
-   - 路由入口：`/data-connect`
-2. 旧服务调用契约
+1. 旧前端页面与交互
+   - `D:\kowell\kowell-dip\web\apps\vega\src\pages\DataConnect`
+   - 线上入口：[vega data-connect](https://118.196.7.174/dip-hub/business-network/vega/data-connect)
+2. 旧前端服务定义
    - `D:\kowell\kowell-dip\web\apps\vega\src\services\dataConnect`
    - `D:\kowell\kowell-dip\web\apps\vega\src\services\scanManagement`
-3. 新项目目标后端
-   - 目录：`D:\kowell\kowell-core\kowell-core\adp\bkn\bkn-backend\server`
-4. 指定线上入口
-   - `https://118.196.7.174/dip-hub/business-network/vega/data-connect`
-   - 该地址可返回 SPA 入口 HTML，但当前未直接读取到渲染后的页面细节，因此本次以旧前端源码作为等效静态页基线。
+3. 新后端现状
+   - `D:\kowell\kowell-core\kowell-core\adp\vega\vega-backend\server`
+   - 重点目录：
+     - `driveradapters`
+     - `logics/catalog`
+     - `logics/connector_type`
+     - `logics/discover_schedule`
+     - `logics/discover_task`
+     - `logics/connectors`
 
 ## 参考文件
 
-### 旧前端核心页面
-
+### 旧前端
 - `src/pages/router.tsx`
 - `src/pages/DataConnect/tabs.tsx`
 - `src/pages/DataConnect/index.tsx`
@@ -35,378 +34,284 @@
 - `src/pages/DataConnect/ScanManagement/index.tsx`
 - `src/pages/DataConnect/ExcelForm/index.tsx`
 - `src/pages/DataConnect/Components/ScanTaskConfig/index.tsx`
-
-### 旧前端接口与类型
-
 - `src/services/dataConnect/index.ts`
 - `src/services/dataConnect/type.ts`
 - `src/services/scanManagement/index.ts`
 - `src/services/scanManagement/type.ts`
 
-### 新后端现状
+### 新后端
+- `driveradapters/router.go`
+- `driveradapters/catalog_handler.go`
+- `driveradapters/connector_type_handler.go`
+- `driveradapters/discover_schedule_handler.go`
+- `driveradapters/discover_task_handler.go`
+- `logics/catalog/catalog_service.go`
+- `logics/connector_type/connector_type_service.go`
+- `logics/connectors/*`
 
-- `driveradapters/routers.go`
-- `driveradapters/resource_handler.go`
-- `interfaces/vega_backend_access.go`
-- `drivenadapters/vega_backend/vega_backend_access.go`
-- `main.go`
+## 需求结论
+
+新的“数据连接”不是从零设计后端，而是要把旧 `vega` 前端里的业务入口，映射到 `vega-backend` 已经存在的新领域模型。
+
+对应关系如下：
+
+- 前端“数据连接实例/数据源”
+  - 对应后端 `catalogs`
+- 前端“连接器类型/动态配置字段”
+  - 对应后端 `connector-types`
+- 前端“扫描计划”
+  - 对应后端 `discover-schedules`
+- 前端“扫描任务记录”
+  - 对应后端 `discover-tasks`
+- 前端“真实连接能力”
+  - 对应后端 `logics/connectors/*`
+
+因此，本次需求文档的基线应当是：
+
+1. 前端模块仍然叫 `data-connect`
+2. 页面交互参考旧 `vega` 页面
+3. 接口语义优先对齐 `vega-backend`
+4. 不再以旧 `/api/data-connection/v1/*` 作为新实现的主契约
 
 ## 模块范围
 
-旧实现里的“数据连接”实际上是一个复合模块，不是单页。
-
-当前完整范围包括：
+旧实现里的“数据连接”实际是一个复合模块，包含：
 
 1. 数据连接管理页
 2. 数据连接新建页
 3. 数据连接编辑页
 4. 数据连接详情抽屉
-5. Excel 元数据创建弹窗
-6. 扫描管理页
-7. 新建扫描任务弹窗
-8. 扫描任务详情/执行明细
-9. 按表选择扫描对象弹窗
+5. 扫描管理页
+6. 扫描计划配置弹窗
+7. 扫描任务详情
+8. Excel 元数据相关能力
 
-## 页面结构与流程
+但新项目不建议一次性全量重建，应该分阶段推进。
+
+## 页面结构
 
 ### 1. 数据连接管理页
+- 路由建议：`/general-business-network/data-connect`
+- 主体区域包含：
+  - 页面标题与描述
+  - 工具栏
+    - 新建
+    - 搜索
+    - 类型筛选
+    - 刷新
+  - 列表区
+  - 详情抽屉
 
-页面入口：
-
-- `/data-connect`
-
-主结构：
-
-- 顶部 tab
-  - `数据连接管理`
-  - `扫描管理`
-- 列表工具栏
-  - 关键词搜索
-  - 刷新
-  - 新建
-  - 类型筛选
-  - 排序
-- 主表格
-- 详情抽屉
-- Excel 元数据配置弹窗
-- 扫描任务配置弹窗
-
-表格列：
-
+列表建议字段：
 - 名称
-- 操作
-- 数据源类型
-- Host
-- 操作人
+- 连接器类型
+- 类别
+- 连接模式
+- 启用状态
+- 健康检查状态
+- 最近检查时间
+- 更新人
 - 更新时间
-- 扫描状态
 
-行操作：
-
+行操作建议：
 - 查看详情
-- 创建元数据
 - 编辑
 - 测试连接
-- 创建扫描任务
+- 启用/禁用
 - 删除
+- 触发扫描
 
-状态规则：
+### 2. 数据连接新建页
+- 路由建议：`/general-business-network/data-connect/create`
+- 两步结构：
+  - 第一步：选择连接器类型
+  - 第二步：填写连接配置
 
-- 扫描状态根据 `latest_task_status` 展示徽标
-- `metadata_obtain_level` 决定是否显示“扫描”或“创建元数据”动作
-- 操作项受权限码控制
+页面行为：
+- 先选择 connector type
+- 再根据 `field_config` 渲染动态表单
+- 支持保存前测试连接
 
-### 2. 数据连接新建/编辑页
+### 3. 数据连接编辑页
+- 路由建议：`/general-business-network/data-connect/:id/edit`
+- 编辑态直接进入配置页
+- 根据详情接口回填
+- 敏感字段遵循后端脱敏策略
+- `connector_type` 默认不允许变更
 
-页面入口：
-
-- `/data-connect/create`
-- `/data-connect/edit/:id`
-
-主结构：
-
-- 顶部步骤条
-  - 第一步：选择连接类型
-  - 第二步：数据源配置
-- 底部固定按钮区
-
-创建流程：
-
-1. 先选择连接器类型
-2. 再填写连接配置
-3. 可先测试连接
-4. 保存成功后返回列表
-
-编辑流程：
-
-- 直接进入第二步
-- 回填已有配置
-- 密码默认脱敏，占位为 `********`
-- 是否更新密码由再次聚焦密码框触发
-
-#### 连接类型选择页
-
-包含：
-
-- 类型 tabs
-- 类型搜索
-- 卡片式连接器列表
-
-选择结果：
-
-- 选中某个 connector 后进入配置页
-
-#### 数据源配置页字段
-
-通用字段：
-
-- 数据源名称
-- 连接协议
-- 备注
-
-按连接器类型动态出现的字段：
-
-- 存储介质
-- 数据库名
-- schema 名
-- host
-- port
-- 认证方式
-- token
-- 用户名 / 用户 ID
-- 密码
-- 部署方式
-- 副本集名称
-- 存储路径
-
-校验规则：
-
-- 名称必填，长度上限 128
-- 名称只允许字母、数字、下划线、中文、中划线
-- host、port、用户、密码等按类型动态必填
-- 不同连接器类型决定字段显隐
-
-### 3. 详情抽屉
-
-展示内容：
-
-- 基础配置分组
-- 连接信息
-- 更新人、更新时间
-- 元数据管理区
-- 数据库表结构区
-- 扫描任务区
-
-特殊分支：
-
-- Excel 类型展示 ExcelTable
-- 非 Excel 类型展示 DatabaseTable
-- 支持扫描的数据源展示 ScanTask
-
-### 4. Excel 元数据创建弹窗
-
-触发入口：
-
-- 对 `metadata_obtain_level === 3` 的连接执行“创建元数据”
-
-字段：
-
-- 文件选择
-- 元数据名称
-- sheet 多选
-- 单元格范围
-- 字段配置方式
-  - 首行作为字段名
-  - 自定义
-- sheet 名是否作为新字段
-
-校验规则：
-
-- 文件必选
-- 元数据名称必填并符合命名规则
-- sheet 必选
-- 起止单元格都必填且格式合法
-- 结束单元格不能在开始单元格之前
+### 4. 数据连接详情
+- 建议沿用右侧抽屉
+- 展示内容：
+  - 基础信息
+  - 连接器信息
+  - 动态连接配置
+  - 健康检查状态
+  - 创建/更新信息
 
 ### 5. 扫描管理页
+- 可以作为二期独立页或同模块第二个子页
+- 主体内容：
+  - 扫描计划列表
+  - 计划启停
+  - 任务历史
+  - 任务详情
 
-tab 入口：
+### 6. Excel 元数据能力
+- 暂不进入一期
+- 只有在确认 `vega-backend` 里仍需要保留这类独立能力时再单独设计
 
-- `扫描管理`
+## 后端语义映射
 
-主结构：
+### 连接器类型
+来源：`connector-types`
 
-- 工具栏
-  - 搜索任务名
-  - 新建扫描任务
-  - 状态筛选
-  - 排序
-- 表格
-- 新建任务弹窗
-- 详情弹窗
-- 定时任务编辑弹窗
+关键能力：
+- 获取连接器类型列表
+- 获取单个连接器类型详情
+- 连接器类型启用/禁用
+- 读取 `field_config`
 
-表格列：
+对应前端用途：
+- 新建页类型选择
+- 动态表单字段渲染
+- 类型筛选
 
-- 名称
-- 操作
-- 任务类型
-- 任务状态
-- 扫描状态
-- 扫描进度
-- 创建人
-- 创建时间
+### 数据连接实例
+来源：`catalogs`
 
-行操作：
+关键能力：
+- 列表
+- 详情
+- 创建
+- 更新
+- 删除
+- 启用/禁用
+- 测试连接
+- 健康状态查询
+- 触发 discover
 
-- 查看
-- 编辑（仅定时任务）
+对应前端用途：
+- 数据连接管理主列表
+- 新建/编辑表单
+- 详情抽屉
+- 测试连接
 
-### 6. 扫描任务配置弹窗
+### 扫描计划
+来源：`discover-schedules`
 
-支持两种模式：
+关键能力：
+- 创建计划
+- 更新计划
+- 删除计划
+- 启停计划
+- 列表与详情
 
-- 立即扫描
-- 定时扫描
+对应前端用途：
+- 扫描管理页
+- 扫描计划配置弹窗
 
-字段：
+### 扫描任务
+来源：`discover-tasks`
 
-- 扫描类型
-- 定时表达式
-  - 固定频率
-  - cron 表达式
-- 扫描策略
-  - 仅扫描新表
-  - 仅扫描变更表
-  - 仅清理失效表
-- 任务开关
+关键能力：
+- 列表
+- 详情
+- 删除
 
-行为：
-
-- 创建模式支持批量创建多个扫描任务
-- 编辑模式支持更新定时任务配置和开关
-
-## 旧接口契约
-
-### 数据连接接口
-
-旧前端依赖的核心接口：
-
-- `GET /api/data-connection/v1/datasource`
-- `GET /api/data-connection/v1/datasource/:id`
-- `POST /api/data-connection/v1/datasource`
-- `PUT /api/data-connection/v1/datasource/:id`
-- `DELETE /api/data-connection/v1/datasource/:ids`
-- `GET /api/data-connection/v1/datasource/connectors`
-- `POST /api/data-connection/v1/datasource/test`
-
-### 扫描管理接口
-
-- `GET /api/data-connection/v1/metadata/scan`
-- `POST /api/data-connection/v1/metadata/scan`
-- `POST /api/data-connection/v1/metadata/scan/batch`
-- `GET /api/data-connection/v1/metadata/scan/status/:taskId`
-- `POST /api/data-connection/v1/metadata/scan/status`
-- `POST /api/data-connection/v1/metadata/scan/retry`
-- `GET /api/data-connection/v1/metadata/data-source/:id`
-- `GET /api/data-connection/v1/metadata/table/:tableId`
-- `GET /api/data-connection/v1/metadata/scan/info/:taskId`
-- `GET /api/data-connection/v1/metadata/scan/schedule/:scheduleId`
-- `GET /api/data-connection/v1/metadata/scan/schedule/task/:scheduleId`
-- `PUT /api/data-connection/v1/metadata/scan/schedule/status`
-- `PUT /api/data-connection/v1/metadata/scan/schedule`
-
-### Excel 配置接口
-
-- `POST /api/data-connection/v1/gateway/excel/columns`
-- `POST /api/data-connection/v1/gateway/excel/table`
-- `DELETE /api/data-connection/v1/gateway/excel/table/:tableId`
-- `GET /api/data-connection/v1/gateway/excel/sheet`
-- `GET /api/data-connection/v1/gateway/excel/files/:catalog`
+对应前端用途：
+- 扫描任务历史
+- 扫描任务详情
 
 ## 当前前端现状
 
-`bkn-studio` 当前只有：
-
+`bkn-studio` 当前已经具备：
 - 控制台壳层
-- 框架示例模块 `starter`
-- 列表页/表单页/详情抽屉/工具栏/空态等母能力
+- 左侧导航和工作区布局
+- 列表页/表单页/详情抽屉骨架
+- 请求层、权限层、i18n、空态、工具栏
 
-当前没有：
-
-- 数据连接模块目录
-- 数据连接路由
-- 数据源列表/表单/详情/扫描页
-- 对应 service / types
+`bkn-studio` 当前还没有：
+- `data-connect` 模块目录
+- `data-connect` 模块路由
+- 数据连接列表页、表单页、详情抽屉
+- 对接 `vega-backend` 的 service / types
 
 ## 当前后端现状
 
-`bkn-backend` 当前没有旧接口等价的 `data-connect` 模块。
+需要明确平台关系：
 
-已确认情况：
+1. `bkn-studio`
+   - 是 `bkn平台` 的统一前端
+   - 允许按业务模块对接多个平台后端
+2. `vega-backend\server`
+   - 当前已经提供“数据连接”所需的主链路能力
+   - 包括 `catalogs`、`connector-types`、`discover-schedules`、`discover-tasks`
+3. `bkn-backend\server`
+   - 是平台中的另一个后端模块
+   - 不是本次“数据连接”一期的主能力来源
 
-- `driveradapters/routers.go` 中没有 `/data-connection/*` 路由
-- `driveradapters` 中没有 `data_connect_handler.go`
-- `logics` 中没有数据连接 service
-- `interfaces` 中没有数据连接 service / access 定义
-- 当前只存在 `interfaces/vega_backend_access.go` 与 `drivenadapters/vega_backend/*`
-- 说明现有后端最多只具备“访问 Vega 资源服务”的能力，不具备旧前端要求的完整数据连接业务接口
+因此本次需求基线应明确为：
+
+- `bkn-studio` 作为平台统一前端，直接对接 `vega-backend` 属于正常架构
+- “数据连接”一期以后端 `vega-backend` 为准
+- `bkn-backend` 只在它自身业务归属的模块中承接前端请求
 
 ## 差异清单
 
 ### Already supported
-
-- `bkn-studio` 已有控制台壳层，可直接挂载新模块
-- `bkn-studio` 已有列表页、表单页、详情区、工作区工具栏、空态等通用骨架
-- `bkn-backend` 已有标准的 `driveradapters -> logics -> drivenadapters/interfaces` 分层
-- `bkn-backend` 已有 `vega_backend_access`，可作为未来对接底层资源服务的复用入口
+- `bkn-studio` 已经有控制台壳层和工作区骨架
+- `vega-backend` 已经有连接器、catalog、discover 的主链路能力
+- 新后端已经有连接测试、启停、列表、更新等基础接口语义
 
 ### Needs frontend work
+- 新增 `data-connect` 模块路由与目录
+- 基于 `catalogs` 重建数据连接管理页
+- 基于 `connector-types` 重建连接器选择与动态表单
+- 重建详情抽屉
+- 后续补扫描管理页
 
-- 需要新增数据连接模块路由和目录结构
-- 需要重建 tab 式双页结构：数据连接管理 / 扫描管理
-- 需要重建数据源列表、详情、创建/编辑两步表单
-- 需要重建 Excel 元数据弹窗、扫描任务配置弹窗、扫描详情视图
-- 需要补齐 `services`、`types`、i18n 和状态编排
+### Needs backend clarification
+- `bkn-studio` 对接 `vega-backend` 时使用哪条实际环境路径
+- 平台网关如何暴露 `vega-backend` 这一组接口
+- 权限模型是否直接沿用 `vega-backend` 现有资源权限语义
 
-### Needs backend work
+### Needs explicit compromise
+- 一期是否只做数据连接管理，不做扫描管理
+- 是否保留旧页里的 tab 结构
+- Excel 元数据能力是否继续存在于新项目
 
-- 需要在 `bkn-backend` 新增数据连接模块的路由、handler、service、access 定义
-- 需要明确数据源、连接器、扫描任务、Excel 相关接口契约
-- 需要决定哪些能力由 `bkn-backend` 自己实现，哪些通过 `vega_backend_access` 或其他外部服务代理
-- 需要补权限、校验、错误码和测试
+## 分期建议
 
-### Needs explicit compromise or clarification
+### Phase 1
+- 数据连接列表
+- 新建/编辑
+- 详情抽屉
+- 测试连接
+- 启用/禁用
+- 删除
+- 类型列表与动态表单
 
-- 是否第一阶段完整重建旧模块全部能力，还是先只做“数据源列表 + 新建/编辑 + 详情”
-- 旧模块中的“扫描管理”和“Excel 元数据”是否必须同步进入第一期
-- 新后端是否继续沿用旧 `/api/data-connection/v1/*` 契约，还是统一切到 `bkn-backend` 自己的命名空间
-- 是否保留旧模块中的“测试连接”“删除”“扫描任务”这些操作时序和权限模型
+### Phase 2
+- 扫描计划管理
+- 扫描任务历史
+- 手动触发扫描
 
-## 建议切分
+### Phase 3
+- Excel 元数据相关能力
+- 旧模块中的特殊细节补齐
 
-建议不要一次性把旧模块全量复制过来，按下面顺序推进：
+## 一期交付边界
 
-1. 数据连接管理列表页
-2. 新建/编辑数据连接
-3. 数据连接详情
-4. 测试连接
-5. 扫描管理
-6. Excel 元数据
+一期只要求打通以下闭环：
 
-## 第一阶段推荐范围
+1. 菜单进入“数据连接”
+2. 可查询 `catalogs` 列表
+3. 可读取 `connector-types`
+4. 可新建、编辑、查看、删除连接
+5. 可测试连接
+6. 页面结构与控制台壳层风格一致
 
-第一阶段建议只交付：
-
-1. 数据连接列表页
-2. 数据连接新建/编辑页
-3. 数据连接详情页或详情抽屉
-4. 连接器列表接口
-5. 数据源 CRUD 与测试连接接口
-
-先不纳入第一阶段：
-
+一期暂不纳入：
 - 扫描管理整套流程
-- Excel 元数据管理
-- 按表扫描
-- 扫描历史与执行详情
+- Excel 元数据能力
+- 按表扫描和扫描详情扩展能力
