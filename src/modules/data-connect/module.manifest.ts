@@ -1,0 +1,40 @@
+export const dataConnectModuleManifest = {
+  id: "data-connect",
+  name: "Data Connect",
+  permissions: [
+    "data-connect:create",
+    "data-connect:edit",
+    "data-connect:delete",
+    "data-connect:test",
+    "data-connect:toggle",
+    "data-connect-scan:create",
+    "data-connect-scan:edit",
+    "data-connect-scan:delete",
+    "data-connect-scan:toggle",
+    "data-connect-scan:trigger",
+  ],
+  requiresShell: true,
+  supportsEmbedded: false,
+  supportsReadOnly: false,
+  services: ["vega-backend/catalogs", "vega-backend/connector-types", "vega-backend/discover-schedules", "vega-backend/discover-tasks"],
+  scenes: [
+    {
+      id: "data-connect.list",
+      exportName: "DataConnectListScene",
+      description: "Manage data connection records, search, filter, inspect and operate entries.",
+      inputs: ["defaultKeyword?", "defaultConnectorType?", "onCreate?", "onEdit?", "onOpenDetail?", "onOpenScans?"],
+    },
+    {
+      id: "data-connect.form",
+      exportName: "DataConnectFormScene",
+      description: "Create or edit a data connection using connector-type driven configuration.",
+      inputs: ["mode", "recordId?", "onBack?", "onSubmitSuccess?"],
+    },
+    {
+      id: "data-connect.scan",
+      exportName: "DataConnectScanScene",
+      description: "Manage discover schedules and scan tasks for data connection catalogs.",
+      inputs: ["catalogId?", "onBackToConnections?", "onCatalogIdChange?"],
+    },
+  ],
+} as const;

@@ -1,16 +1,17 @@
-# BKN Studio 前端架构说明
+# BKN Studio 架构说明
 
 ## 目标
 
-本文档描述当前 `bkn-studio` 项目的前端架构。
+本文档描述当前 `bkn-studio` 的前端架构，以及后续业务模块如何接入现有结构。
 
-重点不是抽象讨论，而是说明当前项目已经采用的结构、各层职责，以及后续功能开发应如何接入现有框架。
+它关注的是当前真实项目，而不是抽象模板。
 
 ## 项目定位
 
-- 独立运行优先的中后台前端项目
-- 支持未来扩展宿主接入，但当前默认按独立应用开发
-- 业务代码持续沉淀在统一分层下，而不是散落式开发
+- `bkn-studio` 是 `bkn` 平台的统一前端
+- 前端允许按业务模块对接平台内多个后端服务
+- 当前默认以独立应用模式运行
+- 如未来接入宿主，宿主差异统一收口到 `runtime`
 
 ## 默认技术栈
 
@@ -26,230 +27,194 @@
 
 ## 总体分层
 
-项目按以下 3 个主层级组织：
-
-### 1. `app`
+### `app`
 
 职责：
 
 - 应用入口
-- 路由注册
-- 全局 provider 装配
-- 主题与国际化初始化
+- 路由装配
+- 全局 Provider
 - 应用壳层
+- 顶部栏、左侧导航、工作区布局
 
 规则：
 
-- 这里只负责启动和装配
-- 不承载具体业务实现
+- 这里只做启动、装配和壳层
+- 不放具体业务实现
 
-### 2. `framework`
+### `framework`
 
 职责：
 
-- 运行时配置
-- 请求封装
-- 全局上下文
-- 通用 hooks
-- 权限判断
-- 通用 UI 组件
-- 页面骨架能力
+- `runtime`
+- `request`
+- `context`
+- `permission`
+- `hooks`
+- `ui`
+- `scaffold`
 
 规则：
 
 - 这里只放跨模块复用能力
-- 不直接写具体业务逻辑
+- 不写具体业务语义
 
-### 3. `modules`
+### `modules`
 
 职责：
 
 - 具体业务模块
-- 页面实现
-- 模块服务
-- 模块内类型和局部组件
+- 业务页面
+- 业务场景
+- 业务服务
+- 模块类型和契约
 
 规则：
 
 - 模块可以依赖 `framework/*`
 - 模块之间不能直接依赖彼此内部实现
 
-## framework 细分说明
+## 标准模块结构
+
+推荐业务模块采用如下结构：
+
+```text
+src/modules/<module-name>/
+  components/
+  contracts/
+  pages/
+  scenes/
+  services/
+  types/
+  index.ts
+  module.manifest.ts
+  routes.tsx
+```
+
+其中：
+
+- `pages/`
+  路由页包装器，只负责接路由和壳层。
+- `scenes/`
+  面向复用的完整业务场景，是未来给其他智能体整合引用的主入口。
+- `components/`
+  业务块组件，供场景拼装。
+- `contracts/`
+  对外稳定输入输出契约。
+- `module.manifest.ts`
+  模块能力清单。
+- `index.ts`
+  模块统一公开出口。
+
+## 可组合架构约束
+
+这是当前架构新增的重点约束。
+
+### 1. `pages` 不是复用入口
+
+- `pages/*` 只能作为路由页
+- 不允许把外部智能体的整合建立在深层页面 import 上
+- 路由页应该尽量薄，只负责接入场景
+
+### 2. `scenes` 才是可整合入口
+
+- 外部智能体如果要整合某个业务能力，应优先引用 `scenes/*`
+- `scene` 应该表达“一个完整业务场景”
+- 例如：
+  - `DataConnectListScene`
+  - `DataConnectScanScene`
+
+### 3. 场景必须尽量受控
+
+- 输入走 `props`
+- 输出走回调
+- 导航行为可注入或可替换
+- 不假设一定跑在当前页面路由里
+- 不把外部宿主必须控制的状态全部藏在内部
+
+### 4. 模块必须有稳定出口
+
+- 每个模块通过 `index.ts` 对外暴露稳定入口
+- 其他智能体不得直接依赖深层私有文件
+- 模块公开内容应包括：
+  - `scene`
+  - `types`
+  - `contracts`
+  - `manifest`
+
+### 5. 模块需要能力清单
+
+`module.manifest.ts` 应至少描述：
+
+- 模块 id
+- 模块名称
+- 提供的场景
+- 场景输入
+- 依赖权限
+- 依赖服务
+- 是否要求壳层
+- 是否支持嵌入模式
+
+## framework 关键职责
 
 ### `framework/runtime`
 
-职责：
-
-- 统一收口运行时输入
-- 管理独立运行和未来宿主接入的差异
-- 管理运行时用户、权限、主题、路由基路径等配置
-
-当前实现：
-
-- `startStandaloneApp`
-- `mountApp / unmountApp`
-- `createRuntimeConfig`
+- 统一收口运行模式差异
+- 提供当前用户、权限、语言、主题等运行时配置
 
 ### `framework/request`
 
-职责：
-
-- 统一创建 HTTP 客户端
-- 注入语言头和鉴权头
-- 处理 401 刷新逻辑
-- 统一请求入口
-
-规则：
-
-- 页面和模块禁止直接创建 axios 实例
-- 所有接口调用必须走这一层
+- 统一 HTTP 客户端
+- 注入鉴权和语言头
+- 统一处理 401 刷新和请求失败
 
 ### `framework/context`
 
-职责：
-
-- 暴露应用级共享能力
-- 提供 `message`、`modal`、`runtimeConfig`
-- 提供读取运行时配置和 app services 的 hooks
-
-规则：
-
-- 这里只放应用级上下文
-- 不放页面局部状态
-
-### `framework/hooks`
-
-职责：
-
-- 沉淀跨页面的通用 hooks
-- 当前已包含分页、查询参数等页面状态管理能力
-
-规则：
-
-- 只要不是强业务耦合的 hook，都优先沉淀到这里
+- 提供全局 `message`、`modal`、`runtimeConfig`
 
 ### `framework/permission`
 
-职责：
-
-- 统一权限判断逻辑
-- 提供权限显隐组件
-
-当前实现：
-
-- `hasPermissions`
-- `PermissionGate`
-
-规则：
-
-- 页面中不要散落原始权限判断
-- 权限逻辑统一复用这一层
+- 统一权限判断
+- 统一权限显隐
 
 ### `framework/ui`
 
-职责：
-
 - 通用 UI 包装组件
-- UI provider
-- 未来继续沉淀复用组件
-
-当前实现：
-
-- `AppButton`
-- `AppTable`
-- `PageContainer`
-- `AntdProviders`
+- UI Provider
 
 ### `framework/scaffold`
 
-职责：
-
-- 提供页面结构骨架
-- 降低新模块开发时的重复布局成本
-
-当前实现：
-
-- `CrudListPage`
-- `CrudFormPage`
-
-规则：
-
-- 这里沉淀结构，不沉淀具体业务字段
-
-## 建议目录结构
-
-```text
-src/
-  app/
-    router/
-    providers/
-    theme/
-    locales/
-  framework/
-    runtime/
-    request/
-    context/
-    hooks/
-    permission/
-    ui/
-    scaffold/
-  modules/
-    <module-name>/
-      pages/
-      services/
-      components/
-      hooks/
-      types/
-      locales/
-```
+- 页面结构骨架
+- 仅提供通用结构，不承载具体业务语义
 
 ## 路由策略
 
-- 路由文件只负责页面挂载和布局组织
-- 页面按模块注册
+- 路由层只做挂载和布局组织
+- 页面默认按模块注册
 - 页面采用懒加载
-- 详情等次级内容可进一步按需加载
-- 如果未来接入宿主，`basename` 由 runtime 层统一处理
+- 未来如果接宿主，`basename` 和挂载差异由 `runtime` 处理
 
 ## 状态管理策略
 
-状态优先级建议如下：
+优先级如下：
 
 1. 组件局部 state
-2. 通用 hook 状态
-3. 全局 context 中的应用级能力
-4. 真正跨页面共享的全局 store
+2. 通用 hook
+3. 应用级 context
+4. 真正需要跨场景共享时再引入更重的状态机制
 
 当前项目默认不引入 Redux/Saga。
 
-## 样式策略
-
-- 全局样式只负责基础布局、主题氛围和通用类
-- 模块样式优先使用 CSS Modules
-- 不在业务页面中随意覆盖全局组件行为
-
-## 独立运行策略
-
-当前项目默认按独立应用模式运行：
-
-- 可以直接本地启动
-- 不依赖宿主注入导航对象
-- 不依赖微前端生命周期
-- 页面默认按普通中后台应用设计
-
-## 宿主接入策略
-
-如果未来需要宿主挂载，应遵守：
-
-- 宿主耦合逻辑统一收口到 `framework/runtime`
-- 业务页面不感知运行模式差异
-- 不把宿主能力散落到模块页面内部
-
 ## 新功能接入原则
 
-新增功能应直接接入现有结构：
+- 页面落到 `src/modules/<module>/pages`
+- 复用场景落到 `src/modules/<module>/scenes`
+- 接口逻辑落到 `src/modules/<module>/services`
+- 类型和契约落到 `src/modules/<module>/types` 与 `contracts`
+- 跨模块公共能力优先沉淀到 `framework/*`
 
-- 页面放到 `src/modules/<module>/pages`
-- 接口放到 `src/modules/<module>/services`
-- 公共能力优先复用 `framework/*`
-- 连续在多个页面重复出现的结构或组件，应评估是否上提
+## 宿主接入原则
+
+- 宿主耦合统一收口到 `framework/runtime`
+- 模块与页面不直接感知宿主实现细节
+- 不为未来可能的宿主场景，把复杂兼容逻辑提前散落进业务页面
