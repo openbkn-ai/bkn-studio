@@ -1,0 +1,44 @@
+name: ci-execution-factory
+
+on:
+  pull_request:
+    paths:
+      - 'src/modules/execution-factory/**'
+      - 'tests/execution-factory/**'
+      - 'specs/execution-factory/**'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/ci-execution-factory.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/modules/execution-factory/**'
+      - 'tests/execution-factory/**'
+      - 'specs/execution-factory/**'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/ci-execution-factory.yml'
+
+jobs:
+  vitest-l1:
+    name: L1 vitest (execution-factory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run execution-factory unit tests
+        run: pnpm test:execution-factory

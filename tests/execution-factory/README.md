@@ -21,12 +21,14 @@ tests/execution-factory/
 `-- (vitest in src/modules/execution-factory/services/*.test.ts)
 ```
 
-## 1. Frontend mock unit tests (recommended first)
+## 1. Frontend mock unit tests (L1, PR gate)
 
 ```bash
 cd bkn-studio/bkn-studio
 corepack pnpm test:execution-factory
 ```
+
+CI: `.github/workflows/ci-execution-factory.yml` runs the same command on PRs touching `src/modules/execution-factory/`.
 
 ## 2. Backend smoke (canonical path)
 
