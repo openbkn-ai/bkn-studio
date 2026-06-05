@@ -2,17 +2,21 @@ import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
 import { dataConnectRouteContribution } from "@/modules/data-connect/routes";
-import { starterRouteContribution } from "@/modules/starter/routes";
+import { knowledgeNetworkRouteContribution } from "@/modules/knowledge-network/routes";
 
 const routeContributions: AppRouteContribution[] = [
-  starterRouteContribution,
+  knowledgeNetworkRouteContribution,
   dataConnectRouteContribution,
 ];
 
 export const defaultModuleRoutePath =
   routeContributions.find((contribution) => contribution.defaultEntryPath)
-    ?.defaultEntryPath ?? "/starter";
+    ?.defaultEntryPath ?? "/knowledge-network";
 
 export const moduleRoutes: RouteObject[] = routeContributions.flatMap(
   (contribution) => contribution.routes,
+);
+
+export const standaloneModuleRoutes: RouteObject[] = routeContributions.flatMap(
+  (contribution) => contribution.standaloneRoutes ?? [],
 );

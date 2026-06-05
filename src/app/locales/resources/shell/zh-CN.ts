@@ -8,6 +8,7 @@ export const shellZhCN = {
     collapseSidenav: "收起导航",
     expandSidenav: "展开导航",
     items: {
+      globalBusinessKnowledgeNetwork: "全局业务知识网络",
       domainKnowledgeNetwork: "领域业务知识网络",
       generalBusinessKnowledgeNetwork: "通用业务知识网络",
       dataConnection: "数据连接",

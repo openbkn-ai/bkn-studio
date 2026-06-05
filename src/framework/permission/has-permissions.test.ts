@@ -6,8 +6,8 @@ describe("hasPermissions", () => {
   it("returns true when all required permissions exist", () => {
     expect(
       hasPermissions({
-        currentPermissions: ["starter:create", "starter:edit"],
-        requiredPermissions: ["starter:create", "starter:edit"],
+        currentPermissions: ["knowledge-network:create", "knowledge-network:edit"],
+        requiredPermissions: ["knowledge-network:create", "knowledge-network:edit"],
       }),
     ).toBe(true);
   });
@@ -15,8 +15,8 @@ describe("hasPermissions", () => {
   it("returns false when one required permission is missing", () => {
     expect(
       hasPermissions({
-        currentPermissions: ["starter:create"],
-        requiredPermissions: ["starter:create", "starter:edit"],
+        currentPermissions: ["knowledge-network:create"],
+        requiredPermissions: ["knowledge-network:create", "knowledge-network:edit"],
       }),
     ).toBe(false);
   });
@@ -24,11 +24,10 @@ describe("hasPermissions", () => {
   it("supports any mode", () => {
     expect(
       hasPermissions({
-        currentPermissions: ["starter:toggle"],
+        currentPermissions: ["data-connect:test"],
         mode: "any",
-        requiredPermissions: ["starter:create", "starter:toggle"],
+        requiredPermissions: ["knowledge-network:create", "data-connect:test"],
       }),
     ).toBe(true);
   });
 });
-

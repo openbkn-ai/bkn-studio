@@ -36,7 +36,7 @@ export function RouteErrorPage() {
           <button
             className="status-button"
             onClick={() => {
-              void navigate("/starter");
+              void navigate("/knowledge-network");
             }}
             type="button"
           >
@@ -47,4 +47,3 @@ export function RouteErrorPage() {
     </div>
   );
 }
-

@@ -28,7 +28,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
   },
   theme: {
     borderRadius: 12,
-    primaryColor: "#0d7a6f",
+    primaryColor: "#126EE3",
   },
 };
 

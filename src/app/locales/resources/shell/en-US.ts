@@ -8,6 +8,7 @@ export const shellEnUS = {
     collapseSidenav: "Collapse navigation",
     expandSidenav: "Expand navigation",
     items: {
+      globalBusinessKnowledgeNetwork: "Global Business Knowledge Network",
       domainKnowledgeNetwork: "Domain Business Knowledge Network",
       generalBusinessKnowledgeNetwork: "General Business Knowledge Network",
       dataConnection: "Data Connection",

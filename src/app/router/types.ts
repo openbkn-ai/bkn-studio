@@ -4,4 +4,5 @@ export type AppRouteContribution = {
   defaultEntryPath?: string;
   moduleId: string;
   routes: RouteObject[];
+  standaloneRoutes?: RouteObject[];
 };

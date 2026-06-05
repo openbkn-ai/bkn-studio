@@ -1,0 +1,72 @@
+.drawerLayout {
+  display: grid;
+  gap: 20px;
+}
+
+.summaryCard {
+  background: linear-gradient(135deg, #f8fbff 0%, #fffaf0 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.summaryHead {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+}
+
+.summaryDot,
+.memberDot {
+  border-radius: 999px;
+  display: inline-flex;
+  height: 12px;
+  width: 12px;
+}
+
+.summaryHead h3 {
+  margin: 0;
+}
+
+.summaryHead p {
+  color: #64748b;
+  margin: 8px 0 0;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summaryStats {
+  color: #475569;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.detailPanel {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 20px;
+  padding: 20px;
+}
+
+.memberTitleRow {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.memberTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.placeholder {
+  color: #94a3b8;
+}

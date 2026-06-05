@@ -16,10 +16,21 @@ export function TopBar() {
   const navigate = useNavigate();
   const runtimeConfig = useRuntimeConfig();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
-  const trail = getConsoleNavTrail(routeHandle?.console?.menuKey).map((item) => ({
-    label: t(item.labelKey),
-    path: item.path,
-  }));
+  const rawTrail = getConsoleNavTrail(routeHandle?.console?.menuKey);
+  const trail = [
+    ...(routeHandle?.console?.menuKey === "domain-knowledge-network"
+      ? [
+          {
+            label: t("shell.items.globalBusinessKnowledgeNetwork"),
+            path: undefined,
+          },
+        ]
+      : []),
+    ...rawTrail.map((item) => ({
+      label: t(item.labelKey),
+      path: item.path,
+    })),
+  ];
 
   return (
     <header className="console-topbar">

@@ -15,7 +15,7 @@ export function NotFoundPage() {
           <button
             className="status-button status-button-primary"
             onClick={() => {
-              void navigate("/starter");
+              void navigate("/knowledge-network");
             }}
             type="button"
           >
@@ -26,4 +26,3 @@ export function NotFoundPage() {
     </div>
   );
 }
-

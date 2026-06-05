@@ -1,7 +1,11 @@
 import { lazy, Suspense } from "react";
 import { Navigate, createBrowserRouter } from "react-router-dom";
 
-import { defaultModuleRoutePath, moduleRoutes } from "@/app/router/module-routes";
+import {
+  defaultModuleRoutePath,
+  moduleRoutes,
+  standaloneModuleRoutes,
+} from "@/app/router/module-routes";
 import { NotFoundPage } from "@/app/router/NotFoundPage";
 import { RouteErrorPage } from "@/app/router/RouteErrorPage";
 import { RouteLoading } from "@/app/router/RouteLoading";
@@ -14,6 +18,10 @@ const AppShell = lazy(async () => {
 export function createAppRouter(basename?: string) {
   return createBrowserRouter(
     [
+      ...standaloneModuleRoutes.map((route) => ({
+        ...route,
+        errorElement: <RouteErrorPage />,
+      })),
       {
         path: "/",
         errorElement: <RouteErrorPage />,
