@@ -7,8 +7,8 @@ import {
   DatabaseOutlined,
   DeploymentUnitOutlined,
   FileTextOutlined,
-  SafetyCertificateOutlined,
   SettingOutlined,
+  SafetyCertificateOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 
@@ -60,8 +60,27 @@ export const consoleNavigation: ConsoleNavItem[] = [
     ],
   },
   {
-    key: "system-config",
-    labelKey: "shell.items.systemConfig",
+    key: "execution-factory",
+    labelKey: "shell.items.executionFactory",
+    icon: <ClusterOutlined />,
+    children: [
+      {
+        key: "execution-unit-management",
+        labelKey: "shell.items.executionUnitManagement",
+        icon: <DeploymentUnitOutlined />,
+        disabled: true,
+      },
+      {
+        key: "all-execution-units",
+        labelKey: "shell.items.allExecutionUnits",
+        icon: <AppstoreOutlined />,
+        disabled: true,
+      },
+    ],
+  },
+  {
+    key: "system-management",
+    labelKey: "shell.items.systemManagement",
     icon: <SettingOutlined />,
     children: [
       {
@@ -77,15 +96,21 @@ export const consoleNavigation: ConsoleNavItem[] = [
         disabled: true,
       },
       {
-        key: "log-management",
-        labelKey: "shell.items.logManagement",
-        icon: <FileTextOutlined />,
-        disabled: true,
-      },
-      {
         key: "model-management",
         labelKey: "shell.items.modelManagement",
         icon: <AppstoreOutlined />,
+        disabled: true,
+      },
+      {
+        key: "traceai",
+        labelKey: "shell.items.traceai",
+        icon: <ClusterOutlined />,
+        disabled: true,
+      },
+      {
+        key: "log-management",
+        labelKey: "shell.items.logManagement",
+        icon: <FileTextOutlined />,
         disabled: true,
       },
     ],
