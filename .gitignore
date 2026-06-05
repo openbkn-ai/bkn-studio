@@ -6,4 +6,10 @@ coverage
 .vscode/*
 !.vscode/extensions.json
 *.local
+tests/execution-factory/agent-at/
+tests/execution-factory/operator-web-ui/
+tests/execution-factory/fixtures/
+tests/execution-factory/http/test.json
+tests/execution-factory/agent-at/config/env.ini
+tests/execution-factory/tool/config.local.yaml
 

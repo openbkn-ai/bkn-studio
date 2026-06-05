@@ -1,0 +1,21 @@
+.formSurface {
+  max-width: 920px;
+  padding: 28px 30px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(22, 42, 69, 0.06);
+}
+
+.formHint {
+  margin-bottom: 20px;
+  color: rgba(15, 30, 54, 0.56);
+  line-height: 1.7;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}

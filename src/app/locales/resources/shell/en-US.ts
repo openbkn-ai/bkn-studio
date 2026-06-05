@@ -17,6 +17,8 @@ export const shellEnUS = {
       executionFactory: "Execution Factory",
       executionUnitManagement: "Execution Unit Management",
       allExecutionUnits: "All Execution Units",
+      mcpManagement: "MCP Management",
+      skillManagement: "Skill Management",
       systemManagement: "System Management",
       userManagement: "User Management",
       roleManagement: "Role Management",

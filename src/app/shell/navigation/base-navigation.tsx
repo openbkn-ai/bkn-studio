@@ -2,7 +2,6 @@ import {
   AppstoreOutlined,
   ClusterOutlined,
   DatabaseOutlined,
-  DeploymentUnitOutlined,
   FileTextOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
@@ -41,20 +40,6 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
     key: "execution-factory",
     labelKey: "shell.items.executionFactory",
     icon: <ClusterOutlined />,
-    children: [
-      {
-        key: "execution-unit-management",
-        labelKey: "shell.items.executionUnitManagement",
-        icon: <DeploymentUnitOutlined />,
-        disabled: true,
-      },
-      {
-        key: "all-execution-units",
-        labelKey: "shell.items.allExecutionUnits",
-        icon: <AppstoreOutlined />,
-        disabled: true,
-      },
-    ],
   },
   {
     key: "system-management",

@@ -10,6 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest",
+    "test:execution-factory": "vitest run src/modules/execution-factory",
+    "test:execution-factory:agent-at": "echo Run Agent AT from tests/execution-factory/agent-at — see LOCAL_SETUP.md",
     "check": "npm run lint && npm run test -- --run && npm run build"
   },
   "dependencies": {

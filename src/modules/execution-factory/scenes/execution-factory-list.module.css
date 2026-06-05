@@ -1,0 +1,133 @@
+.contentSurface {
+  min-height: calc(100vh - 144px);
+  padding: 28px 30px 20px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(22, 42, 69, 0.06);
+}
+
+.pageIntro {
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+}
+
+.pageIntroTitle {
+  margin: 0;
+  color: #10233f;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.pageIntroDescription {
+  margin: 8px 0 0;
+  color: rgba(15, 30, 54, 0.62);
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 760px;
+}
+
+.operationBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+}
+
+.operationPrimary {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.toolbarMeta {
+  color: rgba(15, 30, 54, 0.56);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.toolbarFilters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.searchInput {
+  width: min(420px, 100%);
+}
+
+.filterSelect {
+  min-width: 180px;
+}
+
+.tableSurface {
+  padding-top: 22px;
+}
+
+.tabSurface {
+  padding-top: 8px;
+}
+
+.actionGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.actionDanger {
+  color: #cf1322;
+}
+
+.nameCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nameTitle {
+  color: #10233f;
+  font-weight: 600;
+}
+
+.operatorIdText {
+  color: rgba(15, 30, 54, 0.56);
+  font-size: 12px;
+}
+
+.statusTagPublished {
+  color: #0f6b3f;
+  background: rgba(15, 107, 63, 0.1);
+  border-color: transparent;
+}
+
+.statusTagEditing {
+  color: #8a5a00;
+  background: rgba(138, 90, 0, 0.1);
+  border-color: transparent;
+}
+
+.statusTagOffline {
+  color: rgba(15, 30, 54, 0.56);
+  background: rgba(15, 30, 54, 0.06);
+  border-color: transparent;
+}
+
+.statusTagDefault {
+  color: #1f4f8f;
+  background: rgba(31, 79, 143, 0.1);
+  border-color: transparent;
+}
