@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
+import type { AppRouteContribution } from "@/app/router/types";
 import { RouteLoading } from "@/app/router/RouteLoading";
 
 const StarterListPage = lazy(async () => {
@@ -52,3 +53,9 @@ export const starterRoutes: RouteObject[] = [
     element: withRouteLoading(<StarterFormPage mode="edit" />),
   },
 ];
+
+export const starterRouteContribution: AppRouteContribution = {
+  defaultEntryPath: "/starter",
+  moduleId: "starter",
+  routes: starterRoutes,
+};

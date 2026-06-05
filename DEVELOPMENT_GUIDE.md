@@ -1,14 +1,13 @@
-# BKN Studio 开发指南
+# BKN Studio 开发指引
 
 ## 目的
 
 本文档约束 `bkn-studio` 的日常功能开发方式，包括：
-
 - 新功能放哪里
 - 新模块怎么建
 - 哪些能力必须复用
+- 文案、菜单、路由、权限如何接入
 - AI 开发时哪些边界不能突破
-- 如何为其他智能体提供可组合引用能力
 
 ## 默认前提
 
@@ -32,14 +31,13 @@
 ## 分层规则
 
 - `src/app/*`
-  入口、路由、壳层、全局装配
+  入口、壳层、全局装配、路由聚合、全局文案
 - `src/framework/*`
   跨模块复用能力
 - `src/modules/*`
   具体业务模块
 
 禁止：
-
 - 把业务逻辑写进 `framework`
 - 把页面直接堆进 `app`
 - 在模块里重写 request、runtime、permission 机制
@@ -50,28 +48,30 @@
 src/modules/<module-name>/
   components/
   contracts/
+  locales/
   pages/
   scenes/
   services/
   types/
   index.ts
   module.manifest.ts
+  navigation.tsx
   routes.tsx
 ```
 
 最低要求：
-
 - `pages/`
-- `scenes/`
 - `services/`
 - `types/`
-- `index.ts`
+- `locales/`
 - `routes.tsx`
 
 如果该模块未来需要被其他智能体整合：
-
+- 必须补 `scenes/`
 - 必须补 `contracts/`
+- 必须补 `index.ts`
 - 必须补 `module.manifest.ts`
+- 应补 `navigation.tsx`
 
 ## 页面、场景、组件约束
 
@@ -92,68 +92,150 @@ src/modules/<module-name>/
 
 - 细粒度业务块
 - 给本模块场景拼装使用
-- 如果明确要对外复用，需要从 `index.ts` 受控导出
+- 如需对外复用，必须从 `index.ts` 受控导出
+
+## 文案接入规则
+
+### 全局文案
+
+放在：
+
+```text
+src/app/locales/resources/
+  common/
+  app/
+  shell/
+```
+
+约束：
+- `common` 只放全局公共文案
+- `app` 只放平台级品牌或应用信息
+- `shell` 只放壳层文案
+
+### 模块文案
+
+放在：
+
+```text
+src/modules/<module>/locales/
+  en-US.ts
+  zh-CN.ts
+```
+
+约束：
+- 用户可见文案必须走 i18n
+- 模块文案必须跟模块走
+- 不再把所有模块文案长期集中到 `app/locales/resources/en-US.ts` 和 `zh-CN.ts`
+- 全局入口文件只负责合并资源
+
+## 菜单接入规则
+
+### 壳层基础导航
+
+放在：
+
+```text
+src/app/shell/navigation/
+```
+
+这里只定义：
+- 平台级一级分组
+- 导航类型
+
+### 模块菜单
+
+放在：
+
+```text
+src/modules/<module>/navigation.tsx
+```
+
+约束：
+- 模块通过 `navigation.tsx` 提供菜单片段
+- 普通模块不直接改壳层总菜单树
+- 只有新增平台级一级分组时，才调整 `app/shell/navigation/base-navigation.tsx`
+
+## 路由接入规则
+
+### 模块路由
+
+放在：
+
+```text
+src/modules/<module>/routes.tsx
+```
+
+模块应提供：
+- `RouteObject[]`
+- 路由贡献对象
+
+### 应用聚合
+
+放在：
+
+```text
+src/app/router/module-routes.ts
+```
+
+约束：
+- 模块自己声明路由
+- `app` 层统一聚合
+- 不再在总路由文件中长期手工堆模块 import
+- 默认首页入口由模块路由贡献决定
+
+## 权限与运行时接入规则
+
+### 模块权限
+
+放在：
+
+```text
+src/modules/<module>/module.manifest.ts
+```
+
+约束：
+- 模块权限由模块自己声明
+- 模块对外能力清单由 manifest 描述
+
+### runtime 聚合
+
+放在：
+
+```text
+src/framework/runtime/
+  module-manifests.ts
+  dev-profile.ts
+  config.ts
+```
+
+约束：
+- `module-manifests.ts` 统一收集模块 manifest
+- `dev-profile.ts` 维护开发态默认用户和权限种子
+- `config.ts` 只保留 runtime 合并逻辑
+- 不再在 `config.ts` 里长期硬编码所有模块权限
 
 ## 新模块开发步骤
 
 推荐顺序：
-
 1. 定义 `types`
 2. 定义 `contracts`
 3. 编写 `services`
-4. 编写 `scene`
-5. 用 `page` 接入路由
-6. 编写 `module.manifest.ts`
-7. 在 `index.ts` 统一导出
-8. 补测试和文档
-
-## 可组合模块约束
-
-如果模块将来要被其他智能体整合引用，必须遵守：
-
-### 1. 统一公开出口
-
-- 模块对外只通过 `src/modules/<module>/index.ts`
-- 外部不得依赖模块私有深层路径
-
-### 2. 场景可受控
-
-- 输入参数清晰
-- 允许宿主控制关键行为
-- 不把所有控制都锁死在内部
-
-### 3. 导航和副作用可替换
-
-- 场景中涉及跳转、消息、确认框时，优先考虑是否需要暴露适配点
-- 不要把场景写死为“只能运行在当前路由页”
-
-### 4. 契约先于实现
-
-- 先定义 `contracts/*`
-- 再让 `scene` 和 `service` 对齐契约
-
-### 5. 能力清单必须可读
-
-`module.manifest.ts` 至少描述：
-
-- 模块 id
-- 模块名称
-- 提供的场景
-- 依赖权限
-- 依赖后端服务
-- 是否要求壳层
-- 是否支持嵌入/只读模式
+4. 编写 `locales`
+5. 编写 `scene`
+6. 用 `page` 接入路由
+7. 编写 `navigation.tsx`
+8. 编写 `module.manifest.ts`
+9. 在 `index.ts` 统一导出
+10. 补测试和文档
 
 ## service 开发约束
 
 service 只负责：
-
 - 请求调用
 - 参数装配
 - DTO 到页面模型的映射
 
 service 不负责：
-
 - 组件状态
 - 页面交互
 - 直接调 `message` / `modal`
@@ -172,11 +254,6 @@ service 不负责：
 - 判断统一走 `hasPermissions`
 - 不要在 JSX 里散落原始权限字符串判断
 
-## 国际化约束
-
-- 所有用户可见文案必须走 i18n
-- 不在页面里硬编码最终显示文本
-
 ## 样式约束
 
 - 模块样式优先使用 CSS Modules
@@ -194,7 +271,8 @@ service 不负责：
 ### AI 不应做的事
 
 - 自建一套 request、runtime、permission
-- 直接复制整页旧代码而不按当前结构重组
+- 继续把文案、菜单、路由、权限重新收回单一总文件
+- 直接复制旧项目整页代码而不按当前结构重组
 - 无理由引入新框架或重依赖
 - 深层 import 其他模块私有文件
 
@@ -202,7 +280,7 @@ service 不负责：
 
 - `pages` 不是跨智能体复用入口
 - `scenes` 才是
-- 新增可组合模块时，必须同步补 `contracts`、`manifest`、`index.ts`
+- 新增模块时，应同步补 `locales`、`navigation.tsx`、`routes.tsx`、`module.manifest.ts`
 
 ## 自测要求
 

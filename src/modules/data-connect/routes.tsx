@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
+import type { AppRouteContribution } from "@/app/router/types";
 import { RouteLoading } from "@/app/router/RouteLoading";
 
 const DataConnectListPage = lazy(async () => {
@@ -68,3 +69,8 @@ export const dataConnectRoutes: RouteObject[] = [
     element: withRouteLoading(<DataConnectScanPage />),
   },
 ];
+
+export const dataConnectRouteContribution: AppRouteContribution = {
+  moduleId: "data-connect",
+  routes: dataConnectRoutes,
+};

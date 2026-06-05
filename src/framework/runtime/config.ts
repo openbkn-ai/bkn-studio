@@ -1,4 +1,5 @@
 import type { RuntimeConfig, RuntimeInput, TokenManager } from "@/framework/runtime/types";
+import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 
 const storageTokenManager: TokenManager = {
   getAccessToken: () => window.sessionStorage.getItem("bkn_access_token"),
@@ -19,27 +20,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
   auth: {
     tokenManager: storageTokenManager,
   },
-  currentUser: {
-    businessDomainId: null,
-    id: "local-admin",
-    name: "Local Admin",
-    permissions: [
-      "starter:create",
-      "starter:edit",
-      "starter:toggle",
-      "data-connect:create",
-      "data-connect:edit",
-      "data-connect:delete",
-      "data-connect:test",
-      "data-connect:toggle",
-      "data-connect-scan:create",
-      "data-connect-scan:edit",
-      "data-connect-scan:delete",
-      "data-connect-scan:toggle",
-      "data-connect-scan:trigger",
-    ],
-    roles: ["admin"],
-  },
+  currentUser: defaultDevRuntimeUser,
   locale: "zh-CN",
   mode: "standalone",
   router: {

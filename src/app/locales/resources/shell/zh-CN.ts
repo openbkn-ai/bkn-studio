@@ -1,0 +1,28 @@
+export const shellZhCN = {
+  shell: {
+    workspace: "工作区",
+    modeStandalone: "独立运行",
+    modeHosted: "宿主接入",
+    productTagline: "控制台",
+    headerAside: "统一应用壳层",
+    collapseSidenav: "收起导航",
+    expandSidenav: "展开导航",
+    items: {
+      domainKnowledgeNetwork: "领域业务知识网络",
+      generalBusinessKnowledgeNetwork: "通用业务知识网络",
+      dataConnection: "数据连接",
+      dataResource: "数据资源",
+      dataQuality: "数据质量",
+      dataflow: "dataflow",
+      executionFactory: "执行工厂",
+      executionUnitManagement: "执行单元管理",
+      allExecutionUnits: "全部执行单元",
+      systemManagement: "系统管理",
+      userManagement: "用户管理",
+      roleManagement: "角色管理",
+      modelManagement: "模型管理",
+      traceai: "traceai",
+      logManagement: "日志管理",
+    },
+  },
+} as const;

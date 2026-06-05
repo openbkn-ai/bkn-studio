@@ -1,121 +1,22 @@
-import type { ReactNode } from "react";
+import { baseConsoleNavigation } from "@/app/shell/navigation/base-navigation";
+import type {
+  ConsoleNavContribution,
+  ConsoleNavItem,
+} from "@/app/shell/navigation/types";
+import { dataConnectNavigation } from "@/modules/data-connect/navigation";
+import { starterNavigation } from "@/modules/starter/navigation";
 
-import {
-  ApiOutlined,
-  AppstoreOutlined,
-  ClusterOutlined,
-  DatabaseOutlined,
-  DeploymentUnitOutlined,
-  FileTextOutlined,
-  SettingOutlined,
-  SafetyCertificateOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
-
-export type ConsoleNavItem = {
-  children?: ConsoleNavItem[];
-  disabled?: boolean;
-  icon?: ReactNode;
-  key: string;
-  labelKey: string;
-  path?: string;
-};
-
-export const consoleNavigation: ConsoleNavItem[] = [
-  {
-    key: "domain-knowledge-network",
-    labelKey: "shell.items.domainKnowledgeNetwork",
-    icon: <DeploymentUnitOutlined />,
-    path: "/starter",
-  },
-  {
-    key: "general-business-knowledge-network",
-    labelKey: "shell.items.generalBusinessKnowledgeNetwork",
-    icon: <AppstoreOutlined />,
-    children: [
-      {
-        key: "data-connection",
-        labelKey: "shell.items.dataConnection",
-        icon: <ApiOutlined />,
-        path: "/data-connect",
-      },
-      {
-        key: "data-resource",
-        labelKey: "shell.items.dataResource",
-        icon: <DatabaseOutlined />,
-        disabled: true,
-      },
-      {
-        key: "data-quality",
-        labelKey: "shell.items.dataQuality",
-        icon: <SafetyCertificateOutlined />,
-        disabled: true,
-      },
-      {
-        key: "dataflow",
-        labelKey: "shell.items.dataflow",
-        icon: <ClusterOutlined />,
-        disabled: true,
-      },
-    ],
-  },
-  {
-    key: "execution-factory",
-    labelKey: "shell.items.executionFactory",
-    icon: <ClusterOutlined />,
-    children: [
-      {
-        key: "execution-unit-management",
-        labelKey: "shell.items.executionUnitManagement",
-        icon: <DeploymentUnitOutlined />,
-        disabled: true,
-      },
-      {
-        key: "all-execution-units",
-        labelKey: "shell.items.allExecutionUnits",
-        icon: <AppstoreOutlined />,
-        disabled: true,
-      },
-    ],
-  },
-  {
-    key: "system-management",
-    labelKey: "shell.items.systemManagement",
-    icon: <SettingOutlined />,
-    children: [
-      {
-        key: "user-management",
-        labelKey: "shell.items.userManagement",
-        icon: <TeamOutlined />,
-        disabled: true,
-      },
-      {
-        key: "role-management",
-        labelKey: "shell.items.roleManagement",
-        icon: <SafetyCertificateOutlined />,
-        disabled: true,
-      },
-      {
-        key: "model-management",
-        labelKey: "shell.items.modelManagement",
-        icon: <AppstoreOutlined />,
-        disabled: true,
-      },
-      {
-        key: "traceai",
-        labelKey: "shell.items.traceai",
-        icon: <ClusterOutlined />,
-        disabled: true,
-      },
-      {
-        key: "log-management",
-        labelKey: "shell.items.logManagement",
-        icon: <FileTextOutlined />,
-        disabled: true,
-      },
-    ],
-  },
+const navigationContributions: ConsoleNavContribution[] = [
+  starterNavigation,
+  dataConnectNavigation,
 ];
+
+export type { ConsoleNavItem } from "@/app/shell/navigation/types";
+
+export const consoleNavigation: ConsoleNavItem[] = buildConsoleNavigation(
+  baseConsoleNavigation,
+  navigationContributions,
+);
 
 type ConsoleNavTrailItem = {
   key: string;
@@ -130,6 +31,43 @@ function flattenItems(items: ConsoleNavItem[]): ConsoleNavItem[] {
 }
 
 const consoleNavItems = flattenItems(consoleNavigation);
+
+function buildConsoleNavigation(
+  baseItems: ConsoleNavItem[],
+  contributions: ConsoleNavContribution[],
+) {
+  const topLevelItems = contributions.flatMap((contribution) =>
+    contribution.parentKey ? [] : contribution.items,
+  );
+  const groupedItems = new Map<string, ConsoleNavItem[]>();
+
+  for (const contribution of contributions) {
+    if (!contribution.parentKey) {
+      continue;
+    }
+
+    groupedItems.set(contribution.parentKey, [
+      ...(groupedItems.get(contribution.parentKey) ?? []),
+      ...contribution.items,
+    ]);
+  }
+
+  return [
+    ...topLevelItems,
+    ...baseItems.map((item) => {
+      const extraChildren = groupedItems.get(item.key) ?? [];
+
+      if (extraChildren.length === 0) {
+        return item;
+      }
+
+      return {
+        ...item,
+        children: [...extraChildren, ...(item.children ?? [])],
+      };
+    }),
+  ];
+}
 
 export function findConsoleNavItemByPath(pathname: string) {
   return consoleNavItems

@@ -20,7 +20,7 @@
 
 - `pages/*` 只作为路由页
 - 不允许把页面文件当作跨智能体复用入口
-- 路由页应该尽量薄，只负责把路由接到场景上
+- 路由页应尽量薄，只负责把路由接到场景上
 
 ### 2. 场景才是复用单元
 
@@ -51,12 +51,14 @@
 src/modules/<module-name>/
   components/
   contracts/
+  locales/
   pages/
   scenes/
   services/
   types/
   index.ts
   module.manifest.ts
+  navigation.tsx
   routes.tsx
 ```
 
@@ -65,26 +67,22 @@ src/modules/<module-name>/
 ### `pages`
 
 负责：
-
 - 路由参数读取
 - 权限挂载
 - 壳层接入
 
 不负责：
-
 - 成为对外复用入口
 - 承担复杂场景编排
 
 ### `scenes`
 
 负责：
-
 - 可复用业务场景
 - 场景级状态
 - 场景级事件编排
 
 要求：
-
 - 输入通过 `props`
 - 输出通过回调
 - 允许外部控制关键行为
@@ -93,37 +91,32 @@ src/modules/<module-name>/
 ### `components`
 
 负责：
-
 - 场景内细粒度 UI 块
 - 复杂表格、筛选区、详情分组、表单区块
 
 要求：
-
 - 默认视为模块内部组件
-- 只有明确需要时才从 `index.ts` 暴露为公开组件
+- 只有明确需要时，才从 `index.ts` 暴露为公开组件
 
 ### `contracts`
 
 负责：
-
 - 定义场景输入
 - 定义场景输出
 - 定义外部可依赖的数据模型
 
 要求：
-
 - 语义稳定
 - 不把内部实现细节泄露为对外契约
 
 ### `module.manifest.ts`
 
 负责：
-
 - 描述模块能力边界
+- 描述模块权限与服务依赖
 - 供人和智能体快速判断模块可用性
 
 至少包含：
-
 - 模块 id
 - 模块名称
 - 可暴露场景
@@ -137,11 +130,9 @@ src/modules/<module-name>/
 ### `index.ts`
 
 负责：
-
 - 统一公开模块可复用内容
 
 可导出：
-
 - `scenes`
 - `contracts`
 - `types`
@@ -149,8 +140,23 @@ src/modules/<module-name>/
 - 明确允许外部使用的组件
 
 禁止：
-
 - 把整个模块所有内部文件无差别导出
+
+## 模块与平台注册约束
+
+一个可整合模块除了暴露 `scene` 和 `manifest`，还应按当前平台方式完成自注册：
+
+- 文案放在 `src/modules/<module>/locales/*`
+- 菜单片段放在 `src/modules/<module>/navigation.tsx`
+- 路由贡献放在 `src/modules/<module>/routes.tsx`
+- 权限和能力清单放在 `src/modules/<module>/module.manifest.ts`
+
+这样模块被引入时，平台可以同时获得：
+- 文案
+- 菜单
+- 路由
+- 权限种子
+- 可整合场景
 
 ## 场景设计规则
 
@@ -172,7 +178,6 @@ src/modules/<module-name>/
 ### 行为替换规则
 
 场景中以下行为应尽量允许宿主替换：
-
 - 跳转
 - 消息提示
 - 确认框
@@ -181,7 +186,6 @@ src/modules/<module-name>/
 ### 壳层依赖规则
 
 场景必须声明：
-
 - 是否必须运行在 `console shell`
 - 是否支持无壳层嵌入
 - 是否要求顶部工具栏插槽
@@ -207,10 +211,10 @@ src/modules/<module-name>/
 - 修改 `index.ts`
 - 修改 `contracts/*`
 - 修改 `module.manifest.ts`
+- 修改模块 `locales/*`、`navigation.tsx`、`routes.tsx` 的公开语义
 - 修改已公开 `scene` 的输入输出
 
 这类改动必须：
-
 - 在 PR 中明确说明影响范围
 - 说明是否会影响其他智能体整合
 - 经人工 review 后再合并
@@ -222,6 +226,9 @@ src/modules/<module-name>/
 - 有 `scene`
 - 有 `contracts`
 - 有 `manifest`
+- 有 `locales`
+- 有 `navigation.tsx`
+- 有 `routes.tsx`
 - 有统一 `index.ts`
 - 没有要求外部深层 import 私有文件
 - 场景输入输出清晰

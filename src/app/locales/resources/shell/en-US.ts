@@ -1,0 +1,28 @@
+export const shellEnUS = {
+  shell: {
+    workspace: "Workspace",
+    modeStandalone: "Standalone",
+    modeHosted: "Hosted",
+    productTagline: "Studio Console",
+    headerAside: "Application shell baseline",
+    collapseSidenav: "Collapse navigation",
+    expandSidenav: "Expand navigation",
+    items: {
+      domainKnowledgeNetwork: "Domain Business Knowledge Network",
+      generalBusinessKnowledgeNetwork: "General Business Knowledge Network",
+      dataConnection: "Data Connection",
+      dataResource: "Data Resource",
+      dataQuality: "Data Quality",
+      dataflow: "Dataflow",
+      executionFactory: "Execution Factory",
+      executionUnitManagement: "Execution Unit Management",
+      allExecutionUnits: "All Execution Units",
+      systemManagement: "System Management",
+      userManagement: "User Management",
+      roleManagement: "Role Management",
+      modelManagement: "Model Management",
+      traceai: "TraceAI",
+      logManagement: "Log Management",
+    },
+  },
+} as const;
