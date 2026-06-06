@@ -6,21 +6,26 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
-  getOperator,
+  getOperatorDetail,
   getOperatorMarket,
 } from "@/modules/execution-factory/services/operator.service";
 import type {
+  OperatorExecuteControl,
   OperatorRecord,
+  OperatorRunLogEntry,
   OperatorStatus,
 } from "@/modules/execution-factory/types/operator";
 
 import { ConvertOperatorToToolModal } from "./ConvertOperatorToToolModal";
 import { OperatorDebugModal } from "./OperatorDebugModal";
+import { OperatorHistoryDrawer } from "./OperatorHistoryDrawer";
+import { OperatorRunLogPanel } from "./OperatorRunLogPanel";
 import styles from "./OperatorDetailDrawer.module.css";
 
 type OperatorDetailDrawerProps = {
   marketMode?: boolean;
   onClose: () => void;
+  onEdit?: (operatorId: string) => void;
   open: boolean;
   operatorId: string | null;
 };
@@ -40,9 +45,30 @@ function formatTimestamp(value?: number) {
   return new Date(value).toLocaleString();
 }
 
+function formatExecuteControl(
+  control: OperatorExecuteControl | undefined,
+  t: (key: string) => string,
+) {
+  if (!control) {
+    return "-";
+  }
+
+  const parts = [
+    control.timeout !== undefined
+      ? `${t("executionFactory.executeControlTimeout")}: ${control.timeout}ms`
+      : null,
+    control.retryPolicy?.maxAttempts !== undefined
+      ? `${t("executionFactory.executeControlMaxAttempts")}: ${control.retryPolicy.maxAttempts}`
+      : null,
+  ].filter(Boolean);
+
+  return parts.length ? parts.join(" · ") : "-";
+}
+
 export function OperatorDetailDrawer({
   marketMode = false,
   onClose,
+  onEdit,
   open,
   operatorId,
 }: OperatorDetailDrawerProps) {
@@ -52,6 +78,9 @@ export function OperatorDetailDrawer({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [debugOpen, setDebugOpen] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [executeControl, setExecuteControl] = useState<OperatorExecuteControl | undefined>();
+  const [sessionLogs, setSessionLogs] = useState<OperatorRunLogEntry[]>([]);
 
   useEffect(() => {
     if (!open || !operatorId) {
@@ -64,11 +93,14 @@ export function OperatorDetailDrawer({
       setRecord(null);
 
       try {
-        setRecord(
-          marketMode
-            ? await getOperatorMarket(operatorId)
-            : await getOperator(operatorId),
-        );
+        if (marketMode) {
+          setRecord(await getOperatorMarket(operatorId));
+          setExecuteControl(undefined);
+        } else {
+          const detail = await getOperatorDetail(operatorId);
+          setRecord(detail);
+          setExecuteControl(detail.executeControl);
+        }
       } catch (error) {
         setLoadError(extractRequestErrorMessage(error));
       } finally {
@@ -84,6 +116,14 @@ export function OperatorDetailDrawer({
       extra={
         !marketMode && record ? (
           <div style={{ display: "flex", gap: 8 }}>
+            {onEdit ? (
+              <AppButton onClick={() => onEdit(record.operatorId)}>
+                {t("executionFactory.cardMenu.edit")}
+              </AppButton>
+            ) : null}
+            <AppButton onClick={() => setHistoryOpen(true)}>
+              {t("executionFactory.operatorHistoryAction")}
+            </AppButton>
             <PermissionGate permissions="execution-factory:tool:create">
               <AppButton onClick={() => setConvertOpen(true)}>
                 {t("executionFactory.convertToTool")}
@@ -166,6 +206,11 @@ export function OperatorDetailDrawer({
                   children: record.categoryName ?? record.category ?? "-",
                 },
                 {
+                  key: "executeControl",
+                  label: t("executionFactory.executeControlTitle"),
+                  children: formatExecuteControl(executeControl, t),
+                },
+                {
                   key: "createUser",
                   label: t("executionFactory.createUser"),
                   children: record.createUser ?? "-",
@@ -188,11 +233,23 @@ export function OperatorDetailDrawer({
               ]}
             />
           </section>
+          {!marketMode ? (
+            <section className={styles.sectionCard}>
+              <h3 className={styles.sectionTitle}>{t("executionFactory.runLogTitle")}</h3>
+              <OperatorRunLogPanel
+                operatorId={record.operatorId}
+                sessionLogs={sessionLogs}
+              />
+            </section>
+          ) : null}
         </div>
       ) : null}
     </Drawer>
     <OperatorDebugModal
       onClose={() => setDebugOpen(false)}
+      onRunComplete={(entry) => {
+        setSessionLogs((current) => [entry, ...current].slice(0, 20));
+      }}
       open={debugOpen}
       record={record}
     />
@@ -200,6 +257,12 @@ export function OperatorDetailDrawer({
       onClose={() => setConvertOpen(false)}
       open={convertOpen}
       record={record}
+    />
+    <OperatorHistoryDrawer
+      onClose={() => setHistoryOpen(false)}
+      open={historyOpen}
+      operatorId={record?.operatorId ?? null}
+      operatorName={record?.name}
     />
     </>
   );

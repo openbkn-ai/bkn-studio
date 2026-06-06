@@ -1,4 +1,4 @@
-import { DeploymentUnitOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { ApiOutlined, DeploymentUnitOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { Modal, Radio } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,7 +13,7 @@ type CreateOperatorModalProps = {
   onClose: () => void;
 };
 
-type CreateMode = "function" | "flow";
+type CreateMode = "openapi" | "function" | "flow";
 
 export function CreateOperatorModal({ open, onClose }: CreateOperatorModalProps) {
   const { t } = useTranslation();
@@ -23,6 +23,12 @@ export function CreateOperatorModal({ open, onClose }: CreateOperatorModalProps)
 
   const options = useMemo(
     () => [
+      {
+        key: "openapi" as const,
+        icon: ApiOutlined,
+        title: t("executionFactory.metadataTypes.openapi"),
+        desc: t("executionFactory.createOperatorOpenApiDesc"),
+      },
       {
         key: "function" as const,
         icon: ThunderboltOutlined,
@@ -46,12 +52,12 @@ export function CreateOperatorModal({ open, onClose }: CreateOperatorModalProps)
 
     onClose();
 
-    if (mode === "function") {
-      void navigate("/execution-factory/units/new?metadataType=function");
+    if (mode === "flow") {
+      void message.info(t("executionFactory.flowEditorComingSoon"));
       return;
     }
 
-    void message.info(t("executionFactory.flowEditorComingSoon"));
+    void navigate(`/execution-factory/units/new?metadataType=${mode}`);
   };
 
   return (
@@ -63,7 +69,7 @@ export function CreateOperatorModal({ open, onClose }: CreateOperatorModalProps)
       onOk={handleConfirm}
       open={open}
       title={t("executionFactory.createOperatorModalTitle")}
-      width={640}
+      width={720}
     >
       <p className={styles.modalHint}>{t("executionFactory.createOperatorModalHint")}</p>
       <p className={styles.modalHint}>{t("executionFactory.createOperatorModalHintLocked")}</p>

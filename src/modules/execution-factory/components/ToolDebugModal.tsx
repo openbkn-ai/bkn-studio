@@ -4,11 +4,21 @@ import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { debugTool } from "@/modules/execution-factory/services/tool.service";
-import type { ToolDebugResult, ToolRecord } from "@/modules/execution-factory/types/tool";
+import type {
+  ToolDebugResult,
+  ToolDetail,
+  ToolRecord,
+  ToolRunLogEntry,
+  ToolIoSpec,
+} from "@/modules/execution-factory/types/tool";
+import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/tool-io";
 
 type ToolDebugModalProps = {
   boxId: string;
+  defaultRequestBody?: string;
+  ioSpec?: ToolIoSpec;
   onClose: () => void;
+  onRunComplete?: (entry: ToolRunLogEntry) => void;
   open: boolean;
   record: ToolRecord | null;
 };
@@ -19,7 +29,10 @@ type DebugFormValues = {
 
 export function ToolDebugModal({
   boxId,
+  defaultRequestBody,
+  ioSpec,
   onClose,
+  onRunComplete,
   open,
   record,
 }: ToolDebugModalProps) {
@@ -37,8 +50,10 @@ export function ToolDebugModal({
       return;
     }
 
-    form.setFieldsValue({ requestBody: "{}" });
-  }, [form, open]);
+    form.setFieldsValue({
+      requestBody: defaultRequestBody ?? buildDefaultDebugBody(ioSpec),
+    });
+  }, [defaultRequestBody, form, ioSpec, open]);
 
   const handleDebug = async () => {
     if (!record) {
@@ -57,7 +72,17 @@ export function ToolDebugModal({
         body = JSON.parse(values.requestBody) as Record<string, unknown>;
       }
 
-      setResult(await debugTool(boxId, record.toolId, { body }));
+      const debugResult = await debugTool(boxId, record.toolId, { body });
+      setResult(debugResult);
+      onRunComplete?.({
+        id: `${Date.now()}`,
+        timestamp: Date.now(),
+        statusCode: debugResult.statusCode,
+        durationMs: debugResult.durationMs,
+        error: debugResult.error,
+        body: debugResult.body,
+        requestBody: body,
+      });
     } catch (caughtError) {
       setError(extractRequestErrorMessage(caughtError));
     } finally {

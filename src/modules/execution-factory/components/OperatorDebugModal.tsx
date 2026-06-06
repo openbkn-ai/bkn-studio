@@ -7,10 +7,12 @@ import { debugOperator } from "@/modules/execution-factory/services/operator.ser
 import type {
   OperatorDebugResult,
   OperatorRecord,
+  OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
 
 type OperatorDebugModalProps = {
   onClose: () => void;
+  onRunComplete?: (entry: OperatorRunLogEntry) => void;
   open: boolean;
   record: OperatorRecord | null;
 };
@@ -21,6 +23,7 @@ type DebugFormValues = {
 
 export function OperatorDebugModal({
   onClose,
+  onRunComplete,
   open,
   record,
 }: OperatorDebugModalProps) {
@@ -64,6 +67,15 @@ export function OperatorDebugModal({
         version: record.version,
       });
       setResult(debugResult);
+      onRunComplete?.({
+        id: `${Date.now()}`,
+        timestamp: Date.now(),
+        statusCode: debugResult.statusCode,
+        durationMs: debugResult.durationMs,
+        error: debugResult.error,
+        body: debugResult.body,
+        requestBody: body,
+      });
     } catch (caughtError) {
       setError(extractRequestErrorMessage(caughtError));
     } finally {

@@ -52,6 +52,22 @@ export type McpRegisterInput = {
   toolConfigs?: McpToolConfigInput[];
 };
 
+export type McpUpdateInput = {
+  name: string;
+  description?: string;
+  creationType: McpCreationType;
+  mode?: McpMode;
+  url?: string;
+  category?: string;
+  headers?: Record<string, string>;
+  toolConfigs?: McpToolConfigInput[];
+};
+
+export type McpDetail = McpRecord & {
+  headers?: Record<string, string>;
+  toolConfigs?: McpToolConfigInput[];
+};
+
 export type McpParseSseInput = {
   url: string;
   mode?: McpMode;

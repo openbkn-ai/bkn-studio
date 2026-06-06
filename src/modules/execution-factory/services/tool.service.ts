@@ -4,25 +4,43 @@ import type {
   ConvertOperatorToToolInput,
   ConvertOperatorToToolResult,
   ToolCreateInput,
+  ToolCreateResult,
   ToolDebugInput,
   ToolDebugResult,
+  ToolDetail,
   ToolEditInput,
   ToolListQuery,
   ToolListResult,
   ToolRecord,
   ToolStatus,
 } from "@/modules/execution-factory/types/tool";
+import {
+  mapFunctionContent,
+  serializeOpenApiSpec,
+} from "@/modules/execution-factory/utils/metadata-content";
 import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-timestamp";
+import { parseToolIoSpec } from "@/modules/execution-factory/utils/tool-io";
+import type { ToolGlobalParameter } from "@/modules/execution-factory/types/tool";
 
 type BackendToolInfo = {
   create_time?: number;
   create_user?: string;
   description?: string;
+  global_parameters?: {
+    description?: string;
+    in?: string;
+    name?: string;
+    required?: boolean;
+    type?: string;
+    value?: unknown;
+  };
   metadata?: {
-    method?: string;
-    path?: string;
-    server_url?: string;
-    version?: string;
+    api_spec?: unknown;
+    function_content?: {
+      code?: string;
+      dependencies?: Array<{ name?: string; version?: string }>;
+      script_type?: string;
+    };
   };
   metadata_type?: string;
   name?: string;
@@ -91,15 +109,100 @@ function mapTool(item: BackendToolInfo): ToolRecord {
     status: (item.status ?? "disabled") as ToolStatus,
     metadataType: item.metadata_type as ToolRecord["metadataType"],
     useRule: item.use_rule,
-    serverUrl: item.metadata?.server_url,
-    path: item.metadata?.path,
-    method: item.metadata?.method,
-    metadataVersion: item.metadata?.version,
+    serverUrl: typeof item.metadata === "object" && item.metadata && "server_url" in item.metadata
+      ? String((item.metadata as { server_url?: string }).server_url ?? "")
+      : undefined,
+    path: typeof item.metadata === "object" && item.metadata && "path" in item.metadata
+      ? String((item.metadata as { path?: string }).path ?? "")
+      : undefined,
+    method: typeof item.metadata === "object" && item.metadata && "method" in item.metadata
+      ? String((item.metadata as { method?: string }).method ?? "")
+      : undefined,
     createTime: normalizeTimestamp(item.create_time),
     updateTime: normalizeTimestamp(item.update_time),
     createUser: item.create_user,
     updateUser: item.update_user,
   };
+}
+
+function mapToolGlobalParameter(
+  raw?: BackendToolInfo["global_parameters"],
+): ToolGlobalParameter | undefined {
+  if (!raw?.name || !raw.description || !raw.in || !raw.type) {
+    return undefined;
+  }
+
+  return {
+    name: raw.name,
+    description: raw.description,
+    required: raw.required,
+    in: raw.in as ToolGlobalParameter["in"],
+    type: raw.type as ToolGlobalParameter["type"],
+    value: raw.value,
+  };
+}
+
+function serializeToolGlobalParameter(globalParameters?: ToolGlobalParameter) {
+  if (!globalParameters?.name || !globalParameters.description) {
+    return undefined;
+  }
+
+  let value = globalParameters.value;
+
+  if (typeof value === "string" && value.trim()) {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      value = globalParameters.value;
+    }
+  }
+
+  return {
+    description: globalParameters.description,
+    in: globalParameters.in,
+    name: globalParameters.name,
+    required: globalParameters.required ?? false,
+    type: globalParameters.type,
+    value,
+  };
+}
+
+function mapToolDetail(item: BackendToolInfo): ToolDetail {
+  return {
+    ...mapTool(item),
+    openapiSpec: serializeOpenApiSpec(item.metadata),
+    functionInput: mapFunctionContent(item.metadata),
+    ioSpec: parseToolIoSpec(item.metadata as Parameters<typeof parseToolIoSpec>[0]),
+    globalParameters: mapToolGlobalParameter(item.global_parameters),
+  };
+}
+
+function buildToolMutationBody(input: ToolCreateInput | ToolEditInput) {
+  const body: Record<string, unknown> = {
+    data: input.openapiSpec,
+    function_input: input.functionInput
+      ? {
+          ...input.functionInput,
+          name:
+            input.functionInput.name ??
+            ("name" in input && input.name ? input.name : undefined),
+          description:
+            input.functionInput.description ??
+            ("description" in input ? input.description : undefined),
+          script_type: input.functionInput.script_type ?? "python",
+        }
+      : undefined,
+    global_parameters: serializeToolGlobalParameter(input.globalParameters),
+    metadata_type: input.metadataType,
+    use_rule: input.useRule,
+  };
+
+  if ("name" in input) {
+    body.name = input.name;
+    body.description = input.description;
+  }
+
+  return body;
 }
 
 function getMockTools(boxId: string) {
@@ -187,10 +290,36 @@ export async function getTool(boxId: string, toolId: string): Promise<ToolRecord
   return mapTool(response.data);
 }
 
+export async function getToolDetail(boxId: string, toolId: string): Promise<ToolDetail> {
+  if (useMock) {
+    const record = getMockTools(boxId).find((item) => item.toolId === toolId);
+
+    if (!record) {
+      throw new Error("Tool not found");
+    }
+
+    return {
+      ...record,
+      openapiSpec: record.metadataType === "openapi" ? '{"openapi":"3.0.3"}' : undefined,
+      functionInput:
+        record.metadataType === "function"
+          ? { code: "def handler(event):\n    return event\n", script_type: "python" }
+          : undefined,
+    };
+  }
+
+  const response = await http.get<BackendToolInfo>(
+    `${API_PREFIX}/tool-box/${boxId}/tool/${toolId}`,
+    { headers: getBusinessDomainHeaders() },
+  );
+
+  return mapToolDetail(response.data);
+}
+
 export async function createTool(
   boxId: string,
   input: ToolCreateInput,
-): Promise<string[]> {
+): Promise<ToolCreateResult> {
   if (useMock) {
     const toolId = `tool_${Date.now()}`;
     const record: ToolRecord = {
@@ -202,20 +331,44 @@ export async function createTool(
       updateTime: Date.now(),
     };
     mockToolsByBox[boxId] = [record, ...getMockTools(boxId)];
-    return [toolId];
+    return {
+      successIds: [toolId],
+      successCount: 1,
+      failureCount: 0,
+      failures: [],
+    };
   }
 
-  const response = await http.post<{ success_ids?: string[] }>(
-    `${API_PREFIX}/tool-box/${boxId}/tool`,
-    {
-      data: input.openapiSpec,
-      metadata_type: input.metadataType,
-      use_rule: input.useRule,
-    },
-    { headers: getBusinessDomainHeaders() },
-  );
+  const response = await http.post<{
+    failure_count?: number;
+    failures?: Array<{ error?: { description?: string }; tool_name?: string }>;
+    success_count?: number;
+    success_ids?: string[];
+  }>(`${API_PREFIX}/tool-box/${boxId}/tool`, buildToolMutationBody(input), {
+    headers: getBusinessDomainHeaders(),
+  });
 
-  return response.data.success_ids ?? [];
+  return {
+    successIds: response.data.success_ids ?? [],
+    successCount: response.data.success_count ?? response.data.success_ids?.length ?? 0,
+    failureCount: response.data.failure_count ?? 0,
+    failures: (response.data.failures ?? []).map((item) => ({
+      toolName: item.tool_name,
+      error: item.error?.description ?? "Unknown error",
+    })),
+  };
+}
+
+export async function importOpenApiTools(
+  boxId: string,
+  openapiSpec: string,
+  useRule?: string,
+): Promise<ToolCreateResult> {
+  return createTool(boxId, {
+    metadataType: "openapi",
+    openapiSpec,
+    useRule,
+  });
 }
 
 export async function updateTool(
@@ -240,13 +393,7 @@ export async function updateTool(
 
   await http.post(
     `${API_PREFIX}/tool-box/${boxId}/tool/${toolId}`,
-    {
-      data: input.openapiSpec,
-      description: input.description,
-      metadata_type: input.metadataType,
-      name: input.name,
-      use_rule: input.useRule,
-    },
+    buildToolMutationBody(input),
     { headers: getBusinessDomainHeaders() },
   );
 }

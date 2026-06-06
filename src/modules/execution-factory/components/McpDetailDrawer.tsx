@@ -6,8 +6,8 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { McpToolDebugModal } from "@/modules/execution-factory/components/McpToolDebugModal";
-import { getMcp, getMcpMarket, listMcpTools } from "@/modules/execution-factory/services/mcp.service";
-import type { McpProxyTool, McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
+import { getMcpDetail, getMcpMarket, listMcpTools } from "@/modules/execution-factory/services/mcp.service";
+import type { McpDetail, McpProxyTool, McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
 
 import styles from "./ToolboxDetailDrawer.module.css";
 
@@ -40,7 +40,7 @@ export function McpDetailDrawer({
   open,
 }: McpDetailDrawerProps) {
   const { t } = useTranslation();
-  const [record, setRecord] = useState<McpRecord | null>(null);
+  const [record, setRecord] = useState<McpDetail | null>(null);
   const [tools, setTools] = useState<McpProxyTool[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -58,7 +58,9 @@ export function McpDetailDrawer({
       setTools([]);
 
       try {
-        const mcpRecord = marketMode ? await getMcpMarket(mcpId) : await getMcp(mcpId);
+        const mcpRecord = marketMode
+          ? await getMcpMarket(mcpId)
+          : await getMcpDetail(mcpId);
         setRecord(mcpRecord);
 
         if (!marketMode) {
@@ -127,6 +129,15 @@ export function McpDetailDrawer({
                   key: "url",
                   label: t("executionFactory.serviceUrl"),
                   children: record.url ?? "-",
+                },
+                {
+                  key: "headers",
+                  label: t("executionFactory.mcpHeadersLabel"),
+                  children: record.headers
+                    ? Object.entries(record.headers)
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join("\n")
+                    : "-",
                 },
                 {
                   key: "createUser",
