@@ -27,6 +27,12 @@ export type ToolboxToolsSceneProps = {
   onBack?: () => void;
 };
 
+export type ToolDetailSceneProps = {
+  boxId: string;
+  toolId: string;
+  onBack?: () => void;
+};
+
 export type McpFormSceneProps = {
   onBack?: () => void;
   onSubmitSuccess?: () => void;

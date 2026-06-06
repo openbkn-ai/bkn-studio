@@ -5,11 +5,10 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { FunctionAiGenerateModal } from "@/modules/execution-factory/components/FunctionAiGenerateModal";
-import { FunctionExecuteModal } from "@/modules/execution-factory/components/FunctionExecuteModal";
+import { FunctionCodeField } from "@/modules/execution-factory/components/FunctionCodeField";
 import {
   createTool,
-  getTool,
+  getToolDetail,
   updateTool,
 } from "@/modules/execution-factory/services/tool.service";
 import type {
@@ -27,10 +26,14 @@ type ToolFormDrawerProps = {
   toolId?: string;
 };
 
-type ToolFormValues = ToolCreateInput &
-  ToolEditInput & {
-    metadataType: ToolMetadataType;
-  };
+type ToolFormValues = {
+  name: string;
+  description?: string;
+  metadataType: ToolMetadataType;
+  openapiSpec?: string;
+  functionCode?: string;
+  useRule?: string;
+};
 
 export function ToolFormDrawer({
   boxId,
@@ -46,9 +49,6 @@ export function ToolFormDrawer({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [functionExecuteOpen, setFunctionExecuteOpen] = useState(false);
-  const [functionAiGenerateOpen, setFunctionAiGenerateOpen] = useState(false);
-  const [functionCode, setFunctionCode] = useState("");
   const metadataType = Form.useWatch("metadataType", form) as ToolMetadataType | undefined;
 
   useEffect(() => {
@@ -70,11 +70,13 @@ export function ToolFormDrawer({
       setLoadError(null);
 
       try {
-        const record = await getTool(boxId, toolId);
+        const record = await getToolDetail(boxId, toolId);
         form.setFieldsValue({
           description: record.description,
+          functionCode: record.functionInput?.code,
           metadataType: record.metadataType ?? "openapi",
           name: record.name,
+          openapiSpec: record.openapiSpec,
           useRule: record.useRule,
         });
       } catch (error) {
@@ -91,19 +93,44 @@ export function ToolFormDrawer({
 
     try {
       if (mode === "create") {
-        await createTool(boxId, {
+        const input: ToolCreateInput = {
           metadataType: values.metadataType,
-          openapiSpec: values.openapiSpec,
           useRule: values.useRule,
-        });
+          openapiSpec: values.metadataType === "openapi" ? values.openapiSpec : undefined,
+          functionInput:
+            values.metadataType === "function"
+              ? {
+                  code: values.functionCode,
+                  script_type: "python",
+                }
+              : undefined,
+        };
+        const result = await createTool(boxId, input);
+
+        if (result.failureCount > 0) {
+          void message.warning(
+            t("executionFactory.importPartialFailureTitle") +
+              `: ${result.failures.map((item) => item.toolName).join(", ")}`,
+          );
+        }
       } else if (toolId) {
-        await updateTool(boxId, toolId, {
+        const input: ToolEditInput = {
+          name: values.name,
           description: values.description,
           metadataType: values.metadataType,
-          name: values.name,
-          openapiSpec: values.openapiSpec,
           useRule: values.useRule,
-        });
+          openapiSpec: values.metadataType === "openapi" ? values.openapiSpec : undefined,
+          functionInput:
+            values.metadataType === "function"
+              ? {
+                  code: values.functionCode,
+                  description: values.description,
+                  name: values.name,
+                  script_type: "python",
+                }
+              : undefined,
+        };
+        await updateTool(boxId, toolId, input);
       }
 
       void message.success(t("common.success"));
@@ -192,32 +219,16 @@ export function ToolFormDrawer({
             </Form.Item>
           ) : null}
           {metadataType === "function" ? (
-            <div style={{ display: "flex", gap: 12 }}>
-              <AppButton onClick={() => setFunctionAiGenerateOpen(true)}>
-                {t("executionFactory.functionAiGenerate")}
-              </AppButton>
-              <AppButton onClick={() => setFunctionExecuteOpen(true)}>
-                {t("executionFactory.runFunction")}
-              </AppButton>
-            </div>
+            <Form.Item
+              label={t("executionFactory.functionCode")}
+              name="functionCode"
+              rules={[{ required: true, message: t("common.required") }]}
+            >
+              <FunctionCodeField />
+            </Form.Item>
           ) : null}
         </Form>
       ) : null}
-      <FunctionExecuteModal
-        initialCode={functionCode}
-        onClose={() => setFunctionExecuteOpen(false)}
-        open={functionExecuteOpen}
-      />
-      <FunctionAiGenerateModal
-        initialCode={functionCode}
-        onApply={(content) => {
-          if (typeof content === "string") {
-            setFunctionCode(content);
-          }
-        }}
-        onClose={() => setFunctionAiGenerateOpen(false)}
-        open={functionAiGenerateOpen}
-      />
     </Drawer>
   );
 }

@@ -12,6 +12,7 @@ See [SOURCES.md](./SOURCES.md) for origin paths and coverage mapping.
 
 ```
 tests/execution-factory/
+|-- PARITY_CHECKLIST.md     # UI parity matrix vs operator-web (issue-style)
 |-- SOURCES.md              # where each suite came from
 |-- agent-at/               # mirror of foundry Agent AT (may drift)
 |-- operator-web-ui/        # DIP operator-web Jest snapshots (reference)

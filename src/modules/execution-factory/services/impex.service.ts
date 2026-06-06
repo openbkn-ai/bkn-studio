@@ -1,5 +1,9 @@
 import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
+import {
+  sanitizeDownloadFilename,
+  triggerBrowserDownload,
+} from "@/modules/execution-factory/utils/download-file";
 import type {
   ImpexComponentType,
   ImpexExportResult,
@@ -52,6 +56,19 @@ export async function exportComponent(
   );
 
   return response.data;
+}
+
+export async function downloadComponentExport(
+  type: ImpexComponentType,
+  id: string,
+  displayName?: string,
+): Promise<void> {
+  const payload = await exportComponent(type, id);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
+  const filename = `${type}-${sanitizeDownloadFilename(displayName ?? id, id)}.json`;
+  triggerBrowserDownload(blob, filename);
 }
 
 async function postImportFormData(

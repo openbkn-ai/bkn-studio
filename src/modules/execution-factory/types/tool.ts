@@ -1,3 +1,41 @@
+import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
+
+export type ToolRunLogEntry = {
+  id: string;
+  timestamp: number;
+  statusCode?: number;
+  durationMs?: number;
+  error?: string;
+  body?: unknown;
+  requestBody?: Record<string, unknown>;
+};
+
+export type ToolIoParameter = {
+  name: string;
+  in?: string;
+  required?: boolean;
+  description?: string;
+  type?: string;
+};
+
+export type ToolIoSpec = {
+  parameters: ToolIoParameter[];
+  requestBodyDescription?: string;
+  requestBodyRequired?: boolean;
+  requestBodyExample?: unknown;
+  requestBodySchema?: unknown;
+  responses?: Record<string, { description?: string; example?: unknown; schema?: unknown }>;
+};
+
+export type ToolGlobalParameter = {
+  name: string;
+  description: string;
+  required?: boolean;
+  in: "query" | "path" | "header" | "cookie" | "body";
+  type: "string" | "integer" | "boolean" | "array" | "object";
+  value?: unknown;
+};
+
 export type ToolStatus = "enabled" | "disabled";
 
 export type ToolMetadataType = "openapi" | "function";
@@ -37,6 +75,8 @@ export type ToolListResult = {
 export type ToolCreateInput = {
   metadataType: ToolMetadataType;
   openapiSpec?: string;
+  functionInput?: FunctionInputPayload;
+  globalParameters?: ToolGlobalParameter;
   useRule?: string;
 };
 
@@ -46,6 +86,22 @@ export type ToolEditInput = {
   useRule?: string;
   metadataType?: ToolMetadataType;
   openapiSpec?: string;
+  functionInput?: FunctionInputPayload;
+  globalParameters?: ToolGlobalParameter;
+};
+
+export type ToolDetail = ToolRecord & {
+  openapiSpec?: string;
+  functionInput?: FunctionInputPayload;
+  ioSpec?: ToolIoSpec;
+  globalParameters?: ToolGlobalParameter;
+};
+
+export type ToolCreateResult = {
+  successIds: string[];
+  successCount: number;
+  failureCount: number;
+  failures: Array<{ toolName?: string; error?: string }>;
 };
 
 export type ToolDebugInput = {

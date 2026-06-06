@@ -30,6 +30,11 @@ const ToolboxToolsPage = lazy(async () => {
   return { default: module.ToolboxToolsPage };
 });
 
+const ToolDetailPage = lazy(async () => {
+  const module = await import("@/modules/execution-factory/pages/ToolDetailPage");
+  return { default: module.ToolDetailPage };
+});
+
 const SkillEditPage = lazy(async () => {
   const module = await import("@/modules/execution-factory/pages/SkillEditPage");
   return { default: module.SkillEditPage };
@@ -107,11 +112,22 @@ export const executionFactoryRoutes: RouteObject[] = [
     element: withRouteLoading(<ToolboxToolsPage />),
   },
   {
+    path: "execution-factory/toolboxes/:boxId/tools/:toolId/edit",
+    handle: {
+      console: {
+        descriptionKey: "executionFactory.toolDetailDescription",
+        menuKey: "execution-unit-management",
+        titleKey: "executionFactory.toolDetailTitle",
+      },
+    },
+    element: withRouteLoading(<ToolDetailPage />),
+  },
+  {
     path: "execution-factory/mcp",
     handle: {
       console: {
         descriptionKey: "executionFactory.mcpListDescription",
-        menuKey: "mcp-management",
+        menuKey: "execution-unit-management",
         titleKey: "executionFactory.mcpListTitle",
       },
     },
@@ -122,7 +138,7 @@ export const executionFactoryRoutes: RouteObject[] = [
     handle: {
       console: {
         descriptionKey: "executionFactory.mcpCreateDescription",
-        menuKey: "mcp-management",
+        menuKey: "execution-unit-management",
         titleKey: "executionFactory.mcpCreateTitle",
       },
     },
@@ -133,7 +149,7 @@ export const executionFactoryRoutes: RouteObject[] = [
     handle: {
       console: {
         descriptionKey: "executionFactory.skillListDescription",
-        menuKey: "skill-management",
+        menuKey: "execution-unit-management",
         titleKey: "executionFactory.skillListTitle",
       },
     },
@@ -144,7 +160,7 @@ export const executionFactoryRoutes: RouteObject[] = [
     handle: {
       console: {
         descriptionKey: "executionFactory.skillCreateDescription",
-        menuKey: "skill-management",
+        menuKey: "execution-unit-management",
         titleKey: "executionFactory.skillCreateTitle",
       },
     },
@@ -155,7 +171,7 @@ export const executionFactoryRoutes: RouteObject[] = [
     handle: {
       console: {
         descriptionKey: "executionFactory.skillEditDescription",
-        menuKey: "skill-management",
+        menuKey: "execution-unit-management",
         titleKey: "executionFactory.skillEditTitle",
       },
     },

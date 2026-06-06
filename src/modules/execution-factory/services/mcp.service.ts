@@ -1,6 +1,7 @@
 import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import type {
+  McpDetail,
   McpListQuery,
   McpListResult,
   McpParseSseInput,
@@ -9,8 +10,10 @@ import type {
   McpRecord,
   McpRegisterInput,
   McpStatus,
+  McpToolConfigInput,
   McpToolDebugInput,
   McpToolDebugResult,
+  McpUpdateInput,
 } from "@/modules/execution-factory/types/mcp";
 
 type BackendMcpInfo = {
@@ -18,11 +21,20 @@ type BackendMcpInfo = {
   create_user?: string;
   creation_type?: string;
   description?: string;
+  headers?: Record<string, string>;
   is_internal?: boolean;
   mcp_id: string | number;
   mode?: string;
   name: string;
   status?: string;
+  tool_configs?: Array<{
+    box_id?: string;
+    box_name?: string;
+    description?: string;
+    tool_id?: string;
+    tool_name?: string;
+    use_rule?: string;
+  }>;
   update_time?: number;
   url?: string;
 };
@@ -71,6 +83,26 @@ function getBusinessDomainHeaders() {
     getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
 
   return { "x-business-domain": businessDomainId };
+}
+
+function mapMcpToolConfig(
+  tool: NonNullable<BackendMcpInfo["tool_configs"]>[number],
+): McpToolConfigInput {
+  return {
+    boxId: tool.box_id,
+    description: tool.description,
+    toolId: tool.tool_id,
+    toolName: tool.tool_name,
+    useRule: tool.use_rule,
+  };
+}
+
+function mapMcpDetail(baseInfo: BackendMcpInfo): McpDetail {
+  return {
+    ...mapMcp(baseInfo),
+    headers: baseInfo.headers,
+    toolConfigs: baseInfo.tool_configs?.map(mapMcpToolConfig),
+  };
 }
 
 function mapMcp(item: BackendMcpInfo): McpRecord {
@@ -187,6 +219,34 @@ export async function getMcp(mcpId: string): Promise<McpRecord> {
   return mapMcp(response.data.base_info);
 }
 
+export async function getMcpDetail(mcpId: string): Promise<McpDetail> {
+  if (useMock) {
+    const record = mockMcps.find((item) => item.mcpId === mcpId);
+
+    if (!record) {
+      throw new Error("MCP not found");
+    }
+
+    return {
+      ...record,
+      headers: { Authorization: "Bearer mock-token" },
+      toolConfigs: [],
+    };
+  }
+
+  const response = await http.get<{
+    base_info?: BackendMcpInfo;
+  }>(`${API_PREFIX}/mcp/${mcpId}`, {
+    headers: getBusinessDomainHeaders(),
+  });
+
+  if (!response.data.base_info) {
+    throw new Error("MCP not found");
+  }
+
+  return mapMcpDetail(response.data.base_info);
+}
+
 export async function getMcpMarket(mcpId: string): Promise<McpRecord> {
   if (useMock) {
     return getMcp(mcpId);
@@ -259,22 +319,7 @@ export async function registerMcp(input: McpRegisterInput): Promise<string> {
 
   const response = await http.post<{ mcp_id?: string | number }>(
     `${API_PREFIX}/mcp`,
-    {
-      category: input.category ?? "other_category",
-      creation_type: input.creationType,
-      description: input.description,
-      headers: input.headers,
-      mode: input.mode,
-      name: input.name,
-      tool_configs: input.toolConfigs?.map((tool) => ({
-        box_id: tool.boxId,
-        description: tool.description,
-        tool_id: tool.toolId,
-        tool_name: tool.toolName,
-        use_rule: tool.useRule,
-      })),
-      url: input.url,
-    },
+    buildMcpMutationBody(input),
     { headers: getBusinessDomainHeaders() },
   );
 
@@ -283,6 +328,50 @@ export async function registerMcp(input: McpRegisterInput): Promise<string> {
   }
 
   return String(response.data.mcp_id);
+}
+
+function buildMcpMutationBody(input: McpRegisterInput | McpUpdateInput) {
+  return {
+    category: input.category ?? "other_category",
+    creation_type: input.creationType,
+    description: input.description,
+    headers: input.headers,
+    mode: input.mode,
+    name: input.name,
+    source: "custom",
+    tool_configs: input.toolConfigs?.map((tool) => ({
+      box_id: tool.boxId,
+      description: tool.description,
+      tool_id: tool.toolId,
+      tool_name: tool.toolName,
+      use_rule: tool.useRule,
+    })),
+    url: input.url,
+  };
+}
+
+export async function updateMcp(mcpId: string, input: McpUpdateInput): Promise<void> {
+  if (useMock) {
+    mockMcps = mockMcps.map((item) =>
+      item.mcpId === mcpId
+        ? {
+            ...item,
+            name: input.name,
+            description: input.description,
+            mode: input.mode,
+            creationType: input.creationType,
+            category: input.category,
+            url: input.url,
+            updateTime: Date.now(),
+          }
+        : item,
+    );
+    return;
+  }
+
+  await http.put(`${API_PREFIX}/mcp/${mcpId}`, buildMcpMutationBody(input), {
+    headers: getBusinessDomainHeaders(),
+  });
 }
 
 export async function updateMcpStatus(

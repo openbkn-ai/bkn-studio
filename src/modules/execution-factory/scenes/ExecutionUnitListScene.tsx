@@ -9,6 +9,8 @@ import { usePageState } from "@/framework/hooks/use-page-state";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CreateMenu } from "@/modules/execution-factory/components/create-menu/CreateMenu";
+import { CreateMcpDrawer } from "@/modules/execution-factory/components/create-menu/CreateMcpDrawer";
+import { UpdateSkillPackageModal } from "@/modules/execution-factory/components/create-menu/UpdateSkillPackageModal";
 import { ExecutionUnitCard } from "@/modules/execution-factory/components/execution-unit/ExecutionUnitCard";
 import type { ExecutionUnitCardAction } from "@/modules/execution-factory/components/execution-unit/ExecutionUnitCardMenu";
 import type {
@@ -23,6 +25,7 @@ import { SkillDetailDrawer } from "@/modules/execution-factory/components/SkillD
 import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
 import { ToolboxDetailDrawer } from "@/modules/execution-factory/components/ToolboxDetailDrawer";
 import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { downloadComponentExport } from "@/modules/execution-factory/services/impex.service";
 import {
   deleteMcp,
   listMcpMarket,
@@ -37,6 +40,7 @@ import {
 } from "@/modules/execution-factory/services/operator.service";
 import {
   deleteSkill,
+  downloadSkillPackage,
   listSkillMarket,
   listSkills,
   updateSkillStatus,
@@ -184,6 +188,11 @@ export function ExecutionUnitListScene({
     type: ImpexComponentType;
   } | null>(null);
   const [publishedPermTarget, setPublishedPermTarget] = useState<{
+    name: string;
+  } | null>(null);
+  const [editMcpId, setEditMcpId] = useState<string | null>(null);
+  const [updateSkillPackageTarget, setUpdateSkillPackageTarget] = useState<{
+    id: string;
     name: string;
   } | null>(null);
 
@@ -416,7 +425,9 @@ export function ExecutionUnitListScene({
       }
 
       if (action === "view") {
-        if (activeTab === "mcp") {
+        if (activeTab === "operator") {
+          setDetailOperatorId(item.id);
+        } else if (activeTab === "mcp") {
           setDetailMcpId(item.id);
         } else if (activeTab === "skill") {
           setDetailSkillId(item.id);
@@ -424,11 +435,55 @@ export function ExecutionUnitListScene({
         return;
       }
 
+      if (action === "export") {
+        const componentType = impexTypeForTab(activeTab);
+        if (!componentType) {
+          return;
+        }
+
+        void (async () => {
+          try {
+            await downloadComponentExport(componentType, item.id, item.name);
+            void message.success(t("executionFactory.exportSuccess"));
+          } catch (error) {
+            void message.error(extractRequestErrorMessage(error));
+          }
+        })();
+        return;
+      }
+
+      if (action === "download") {
+        if (activeTab !== "skill") {
+          return;
+        }
+
+        void (async () => {
+          try {
+            await downloadSkillPackage(item.id, item.name);
+            void message.success(t("executionFactory.downloadSuccess"));
+          } catch (error) {
+            void message.error(extractRequestErrorMessage(error));
+          }
+        })();
+        return;
+      }
+
+      if (action === "updatePackage") {
+        if (activeTab !== "skill") {
+          return;
+        }
+
+        setUpdateSkillPackageTarget({ id: item.id, name: item.name });
+        return;
+      }
+
       if (action === "edit") {
         if (activeTab === "operator") {
           void navigate(`/execution-factory/units/${item.id}/edit`);
         } else if (activeTab === "toolbox") {
-          void navigate(`/execution-factory/toolboxes/${item.id}/tools?action=edit`);
+          void navigate(`/execution-factory/toolboxes/${item.id}/edit`);
+        } else if (activeTab === "mcp") {
+          setEditMcpId(item.id);
         } else if (activeTab === "skill") {
           void navigate(`/execution-factory/skills/${item.id}/edit`);
         }
@@ -743,6 +798,10 @@ export function ExecutionUnitListScene({
       <OperatorDetailDrawer
         marketMode={marketMode}
         onClose={() => setDetailOperatorId(null)}
+        onEdit={(id) => {
+          setDetailOperatorId(null);
+          void navigate(`/execution-factory/units/${id}/edit`);
+        }}
         open={Boolean(detailOperatorId)}
         operatorId={detailOperatorId}
       />
@@ -791,6 +850,19 @@ export function ExecutionUnitListScene({
         onClose={() => setPublishedPermTarget(null)}
         open={Boolean(publishedPermTarget)}
         resourceName={publishedPermTarget?.name ?? ""}
+      />
+      <CreateMcpDrawer
+        mcpId={editMcpId}
+        onClose={() => setEditMcpId(null)}
+        onUpdated={reloadList}
+        open={Boolean(editMcpId)}
+      />
+      <UpdateSkillPackageModal
+        onClose={() => setUpdateSkillPackageTarget(null)}
+        onUpdated={reloadList}
+        open={Boolean(updateSkillPackageTarget)}
+        skillId={updateSkillPackageTarget?.id ?? null}
+        skillName={updateSkillPackageTarget?.name}
       />
     </>
   );

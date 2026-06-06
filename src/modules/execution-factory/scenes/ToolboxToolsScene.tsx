@@ -17,15 +17,17 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ToolDebugModal } from "@/modules/execution-factory/components/ToolDebugModal";
 import { ToolFormDrawer } from "@/modules/execution-factory/components/ToolFormDrawer";
+import { ToolIoPanel } from "@/modules/execution-factory/components/ToolIoPanel";
+import { ImportOpenApiToolsModal } from "@/modules/execution-factory/components/create-menu/ImportOpenApiToolsModal";
 import { getToolbox, getToolboxMarket } from "@/modules/execution-factory/services/toolbox.service";
 import {
   deleteTools,
-  getTool,
+  getToolDetail,
   listTools,
   updateToolStatus,
 } from "@/modules/execution-factory/services/tool.service";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
-import type { ToolRecord, ToolStatus } from "@/modules/execution-factory/types/tool";
+import type { ToolRecord, ToolRunLogEntry, ToolStatus } from "@/modules/execution-factory/types/tool";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import styles from "./toolbox-detail.module.css";
@@ -42,10 +44,15 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const [toolbox, setToolbox] = useState<ToolboxRecord | null>(null);
   const [items, setItems] = useState<ToolRecord[]>([]);
   const [selectedTool, setSelectedTool] = useState<ToolRecord | null>(null);
+  const [selectedToolDetail, setSelectedToolDetail] = useState<Awaited<
+    ReturnType<typeof getToolDetail>
+  > | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
+  const [formMode, setFormMode] = useState<"create" | null>(null);
   const [debugRecord, setDebugRecord] = useState<ToolRecord | null>(null);
+  const [toolRunLogs, setToolRunLogs] = useState<ToolRunLogEntry[]>([]);
+  const [importOpenApiOpen, setImportOpenApiOpen] = useState(false);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
 
   const loadToolbox = useCallback(async () => {
@@ -72,14 +79,17 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
       setSelectedToolIds([]);
 
       if (listResult.items[0]) {
-        const detail = await getTool(boxId, listResult.items[0].toolId);
+        const detail = await getToolDetail(boxId, listResult.items[0].toolId);
         setSelectedTool(detail);
+        setSelectedToolDetail(detail);
       } else {
         setSelectedTool(null);
+        setSelectedToolDetail(null);
       }
     } catch (error) {
       setItems([]);
       setSelectedTool(null);
+      setSelectedToolDetail(null);
       setLoadError(extractRequestErrorMessage(error));
     } finally {
       setLoading(false);
@@ -104,11 +114,20 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   };
 
   const handleSelectTool = async (tool: ToolRecord) => {
+    setSelectedTool(tool);
+    setToolRunLogs([]);
+
     try {
-      setSelectedTool(await getTool(boxId, tool.toolId));
+      const detail = await getToolDetail(boxId, tool.toolId);
+      setSelectedTool(detail);
+      setSelectedToolDetail(detail);
     } catch {
-      setSelectedTool(tool);
+      setSelectedToolDetail(null);
     }
+  };
+
+  const handleDebugRunComplete = (entry: ToolRunLogEntry) => {
+    setToolRunLogs((current) => [entry, ...current].slice(0, 20));
   };
 
   const handleToggleStatus = (tool: ToolRecord) => {
@@ -231,9 +250,14 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
             </div>
             {!viewMode ? (
               <PermissionGate permissions="execution-factory:tool:create">
-                <AppButton onClick={() => setFormMode("create")} type="primary">
-                  {t("common.create")}
-                </AppButton>
+                <Space>
+                  <AppButton onClick={() => setFormMode("create")} type="primary">
+                    {t("common.create")}
+                  </AppButton>
+                  <AppButton onClick={() => setImportOpenApiOpen(true)}>
+                    {t("executionFactory.importOpenApiToolsButton")}
+                  </AppButton>
+                </Space>
               </PermissionGate>
             ) : null}
           </div>
@@ -256,7 +280,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                     <AppButton onClick={() => setFormMode("create")} type="primary">
                       {t("common.create")}
                     </AppButton>
-                    <AppButton onClick={() => setFormMode("create")}>
+                    <AppButton onClick={() => setImportOpenApiOpen(true)}>
                       {t("executionFactory.importOpenApiToolsButton")}
                     </AppButton>
                   </PermissionGate>
@@ -355,10 +379,14 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                       {!viewMode ? (
                         <PermissionGate permissions="execution-factory:tool:edit">
                           <AppButton
-                            onClick={() => setFormMode("edit")}
+                            onClick={() =>
+                              void navigate(
+                                `/execution-factory/toolboxes/${boxId}/tools/${selectedTool.toolId}/edit`,
+                              )
+                            }
                             type="link"
                           >
-                            {t("common.edit")}
+                            {t("executionFactory.openToolIde")}
                           </AppButton>
                         </PermissionGate>
                       ) : null}
@@ -430,10 +458,24 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                             {t("executionFactory.debug")}
                           </AppButton>
                         </PermissionGate>
-                        <AppButton icon={<SettingOutlined />} style={{ marginLeft: 8 }} />
+                        <AppButton icon={<SettingOutlined />} style={{ marginLeft: 8 }}
+                          onClick={() => {
+                            void navigate(
+                              `/execution-factory/toolboxes/${boxId}/tools/${selectedTool.toolId}/edit`,
+                            );
+                          }}
+                        />
                       </div>
                     </div>
-                    <Empty description={t("executionFactory.debugResultTitle")} />
+                    <ToolIoPanel
+                      functionInput={
+                        selectedToolDetail?.metadataType === "function"
+                          ? selectedToolDetail.functionInput
+                          : undefined
+                      }
+                      ioSpec={selectedToolDetail?.ioSpec}
+                      runLogs={toolRunLogs}
+                    />
                   </div>
                 </>
               ) : (
@@ -448,17 +490,26 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
 
       <ToolFormDrawer
         boxId={boxId}
-        mode={formMode ?? "create"}
+        mode="create"
         onClose={() => setFormMode(null)}
         onSuccess={() => {
           void loadTools();
         }}
-        open={formMode !== null}
-        toolId={formMode === "edit" ? selectedTool?.toolId : undefined}
+        open={formMode === "create"}
+      />
+      <ImportOpenApiToolsModal
+        boxId={boxId}
+        onClose={() => setImportOpenApiOpen(false)}
+        onSuccess={() => {
+          void loadTools();
+        }}
+        open={importOpenApiOpen}
       />
       <ToolDebugModal
         boxId={boxId}
+        ioSpec={selectedToolDetail?.ioSpec}
         onClose={() => setDebugRecord(null)}
+        onRunComplete={handleDebugRunComplete}
         open={Boolean(debugRecord)}
         record={debugRecord}
       />

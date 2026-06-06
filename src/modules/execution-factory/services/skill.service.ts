@@ -1,5 +1,9 @@
 import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
+import {
+  sanitizeDownloadFilename,
+  triggerBrowserDownload,
+} from "@/modules/execution-factory/utils/download-file";
 import type {
   SkillContentResult,
   SkillHistoryRecord,
@@ -293,6 +297,36 @@ export async function registerSkill(input: SkillRegisterInput): Promise<SkillRec
   }
 
   return mapSkill(response.data);
+}
+
+export async function downloadSkillPackage(
+  skillId: string,
+  displayName?: string,
+): Promise<void> {
+  if (useMock) {
+    const blob = new Blob(["mock skill package"], { type: "application/zip" });
+    triggerBrowserDownload(
+      blob,
+      `${sanitizeDownloadFilename(displayName ?? skillId, skillId)}.zip`,
+    );
+    return;
+  }
+
+  const response = await http.get<Blob>(
+    `${API_PREFIX}/skills/${skillId}/management/download`,
+    {
+      headers: getBusinessDomainHeaders(),
+      responseType: "blob",
+    },
+  );
+
+  const contentDisposition = response.headers["content-disposition"] as string | undefined;
+  const filenameMatch = contentDisposition?.match(/filename="?([^";]+)"?/i);
+  const filename =
+    filenameMatch?.[1] ??
+    `${sanitizeDownloadFilename(displayName ?? skillId, skillId)}.zip`;
+
+  triggerBrowserDownload(response.data, filename);
 }
 
 export async function getSkillManagementContent(

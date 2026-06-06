@@ -22,6 +22,7 @@ type FormValues = {
   description?: string;
   category: string;
   metadataType: ToolboxMetadataType;
+  serviceUrl?: string;
 };
 
 export function CreateToolboxModal({ open, onClose, onCreated }: CreateToolboxModalProps) {
@@ -67,6 +68,7 @@ export function CreateToolboxModal({ open, onClose, onCreated }: CreateToolboxMo
       form.setFieldsValue({
         category: options[0]?.value ?? "other_category",
         metadataType: "openapi",
+        serviceUrl: "http://127.0.0.1:9000",
       });
     })();
   }, [form, open]);
@@ -81,7 +83,7 @@ export function CreateToolboxModal({ open, onClose, onCreated }: CreateToolboxMo
         description: values.description,
         category: values.category,
         metadataType: values.metadataType,
-        serviceUrl: "http://127.0.0.1:9000",
+        serviceUrl: values.serviceUrl ?? "http://127.0.0.1:9000",
       });
       void message.success(t("executionFactory.createToolboxSuccess"));
       onClose();
@@ -122,6 +124,15 @@ export function CreateToolboxModal({ open, onClose, onCreated }: CreateToolboxMo
         >
           <Select options={categories} />
         </Form.Item>
+        {metadataType === "openapi" ? (
+          <Form.Item
+            label={t("executionFactory.serviceUrl")}
+            name="serviceUrl"
+            rules={[{ required: true, message: t("common.required") }]}
+          >
+            <Input placeholder="http://127.0.0.1:9000" />
+          </Form.Item>
+        ) : null}
         <Form.Item label={t("executionFactory.createToolboxTypeLabel")} required>
           <p className={styles.modalHint}>{t("executionFactory.createToolboxTypeHint")}</p>
           <Form.Item name="metadataType" noStyle rules={[{ required: true }]}>

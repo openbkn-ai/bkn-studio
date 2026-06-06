@@ -1,3 +1,29 @@
+import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
+
+export type OperatorRetryPolicy = {
+  maxAttempts?: number;
+  initialDelay?: number;
+  maxDelay?: number;
+  backoffFactor?: number;
+  retryStatusCodes?: number[];
+  retryErrorCodes?: string[];
+};
+
+export type OperatorExecuteControl = {
+  timeout?: number;
+  retryPolicy?: OperatorRetryPolicy;
+};
+
+export type OperatorRunLogEntry = {
+  id: string;
+  timestamp: number;
+  statusCode?: number;
+  durationMs?: number;
+  error?: string;
+  body?: unknown;
+  requestBody?: Record<string, unknown>;
+};
+
 export type OperatorStatus = "unpublish" | "published" | "offline" | "editing";
 
 export type PublicOperatorStatus = "unpublish" | "published" | "offline";
@@ -54,7 +80,24 @@ export type OperatorMutationInput = {
   category?: OperatorCategory;
   metadataType?: OperatorMetadataType;
   openapiSpec?: string;
+  functionInput?: FunctionInputPayload;
+  executeControl?: OperatorExecuteControl;
   directPublish?: boolean;
+};
+
+export type OperatorDetail = OperatorRecord & {
+  openapiSpec?: string;
+  functionInput?: FunctionInputPayload;
+  executeControl?: OperatorExecuteControl;
+};
+
+export type OperatorHistoryRecord = {
+  operatorId: string;
+  version: string;
+  status?: OperatorStatus;
+  releaseUser?: string;
+  releaseTime?: number;
+  updateTime?: number;
 };
 
 export type OperatorRegisterInput = OperatorMutationInput & {

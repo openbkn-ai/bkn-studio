@@ -3,7 +3,9 @@ import { getRuntimeConfig } from "@/framework/runtime/config";
 import type {
   OperatorDebugInput,
   OperatorDebugResult,
+  OperatorDetail,
   OperatorEditInput,
+  OperatorHistoryRecord,
   OperatorListQuery,
   OperatorListResult,
   OperatorRecord,
@@ -11,14 +13,42 @@ import type {
   OperatorStatus,
   PublicOperatorStatus,
 } from "@/modules/execution-factory/types/operator";
+import {
+  mapFunctionContent,
+  serializeOpenApiSpec,
+} from "@/modules/execution-factory/utils/metadata-content";
+import type { OperatorExecuteControl } from "@/modules/execution-factory/types/operator";
+
+type BackendOperatorExecuteControl = {
+  retry_policy?: {
+    backoff_factor?: number;
+    initial_delay?: number;
+    max_attempts?: number;
+    max_delay?: number;
+    retry_conditions?: {
+      error_codes?: string[];
+      status_code?: number[];
+    };
+  };
+  timeout?: number;
+};
 
 type BackendOperatorDataInfo = {
   create_time?: number;
   create_user?: string;
   description?: string;
   is_internal?: boolean;
+  metadata?: {
+    api_spec?: unknown;
+    function_content?: {
+      code?: string;
+      dependencies?: Array<{ name?: string; version?: string }>;
+      script_type?: string;
+    };
+  };
   metadata_type?: string;
   name?: string;
+  operator_execute_control?: BackendOperatorExecuteControl;
   operator_id: string;
   operator_info?: { category?: string; category_name?: string };
   release_time?: number;
@@ -27,6 +57,15 @@ type BackendOperatorDataInfo = {
   update_time?: number;
   update_user?: string;
   version: string;
+};
+
+type BackendOperatorHistoryItem = {
+  operator_id?: string;
+  release_time?: number;
+  release_user?: string;
+  status?: string;
+  update_time?: number;
+  version?: string;
 };
 
 type BackendOperatorListResponse = {
@@ -80,6 +119,86 @@ function getBusinessDomainHeaders() {
     getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
 
   return { "x-business-domain": businessDomainId };
+}
+
+function mapOperatorExecuteControl(
+  raw?: BackendOperatorExecuteControl,
+): OperatorExecuteControl | undefined {
+  if (!raw) {
+    return undefined;
+  }
+
+  const retryPolicy = raw.retry_policy;
+
+  return {
+    timeout: raw.timeout,
+    retryPolicy: retryPolicy
+      ? {
+          backoffFactor: retryPolicy.backoff_factor,
+          initialDelay: retryPolicy.initial_delay,
+          maxAttempts: retryPolicy.max_attempts,
+          maxDelay: retryPolicy.max_delay,
+          retryErrorCodes: retryPolicy.retry_conditions?.error_codes,
+          retryStatusCodes: retryPolicy.retry_conditions?.status_code,
+        }
+      : undefined,
+  };
+}
+
+function serializeOperatorExecuteControl(control?: OperatorExecuteControl) {
+  if (!control) {
+    return undefined;
+  }
+
+  const retryPolicy = control.retryPolicy;
+
+  return {
+    timeout: control.timeout,
+    retry_policy: retryPolicy
+      ? {
+          backoff_factor: retryPolicy.backoffFactor,
+          initial_delay: retryPolicy.initialDelay,
+          max_attempts: retryPolicy.maxAttempts,
+          max_delay: retryPolicy.maxDelay,
+          retry_conditions: {
+            error_codes: retryPolicy.retryErrorCodes?.map(String),
+            status_code: retryPolicy.retryStatusCodes
+              ?.map((value) => (typeof value === "string" ? Number(value) : value))
+              .filter((value) => !Number.isNaN(value)),
+          },
+        }
+      : undefined,
+  };
+}
+
+function mapOperatorDetail(item: BackendOperatorDataInfo): OperatorDetail {
+  return {
+    ...mapOperator(item),
+    openapiSpec: serializeOpenApiSpec(item.metadata),
+    functionInput: mapFunctionContent(item.metadata),
+    executeControl: mapOperatorExecuteControl(item.operator_execute_control),
+  };
+}
+
+function buildOperatorMutationBody(input: OperatorRegisterInput | OperatorEditInput) {
+  return {
+    data: input.openapiSpec,
+    description: input.description,
+    function_input: input.functionInput
+      ? {
+          ...input.functionInput,
+          name: input.functionInput.name ?? input.name,
+          description: input.functionInput.description ?? input.description,
+          script_type: input.functionInput.script_type ?? "python",
+        }
+      : undefined,
+    metadata_type: input.metadataType,
+    name: input.name,
+    operator_execute_control: serializeOperatorExecuteControl(input.executeControl),
+    operator_info: {
+      category: input.category ?? "other_category",
+    },
+  };
 }
 
 function mapOperator(item: BackendOperatorDataInfo): OperatorRecord {
@@ -198,6 +317,33 @@ export async function getOperator(operatorId: string): Promise<OperatorRecord> {
   return mapOperator(response.data);
 }
 
+export async function getOperatorDetail(operatorId: string): Promise<OperatorDetail> {
+  if (useMock) {
+    const record = mockOperators.find((item) => item.operatorId === operatorId);
+
+    if (!record) {
+      throw new Error("Operator not found");
+    }
+
+    return {
+      ...record,
+      openapiSpec: record.metadataType === "openapi" ? '{"openapi":"3.0.3"}' : undefined,
+      functionInput:
+        record.metadataType === "function"
+          ? { code: "def handler(event):\n    return event\n", script_type: "python" }
+          : undefined,
+      executeControl: { timeout: 3000 },
+    };
+  }
+
+  const response = await http.get<BackendOperatorDataInfo>(
+    `${API_PREFIX}/operator/info/${operatorId}`,
+    { headers: getBusinessDomainHeaders() },
+  );
+
+  return mapOperatorDetail(response.data);
+}
+
 export async function registerOperator(
   input: OperatorRegisterInput,
 ): Promise<OperatorRecord> {
@@ -223,11 +369,8 @@ export async function registerOperator(
   const response = await http.post<BackendOperatorRegisterResult[]>(
     `${API_PREFIX}/operator/register`,
     {
-      data: input.openapiSpec,
+      ...buildOperatorMutationBody(input),
       direct_publish: input.directPublish ?? false,
-      operator_info: {
-        category: input.category ?? "other_category",
-      },
       operator_metadata_type: input.metadataType,
     },
     { headers: getBusinessDomainHeaders() },
@@ -262,12 +405,8 @@ export async function updateOperator(input: OperatorEditInput): Promise<void> {
   await http.post(
     `${API_PREFIX}/operator/info`,
     {
-      description: input.description,
-      name: input.name,
+      ...buildOperatorMutationBody(input),
       operator_id: input.operatorId,
-      operator_info: {
-        category: input.category ?? "other_category",
-      },
     },
     { headers: getBusinessDomainHeaders() },
   );
@@ -370,4 +509,45 @@ export async function debugOperator(
     error: response.data.error,
     durationMs: response.data.duration_ms,
   };
+}
+
+export async function listOperatorHistory(
+  operatorId: string,
+): Promise<OperatorHistoryRecord[]> {
+  if (useMock) {
+    const record = mockOperators.find((item) => item.operatorId === operatorId);
+
+    if (!record) {
+      return [];
+    }
+
+    return [
+      {
+        operatorId: record.operatorId,
+        version: record.version,
+        status: record.status,
+        releaseUser: record.releaseUser,
+        releaseTime: record.releaseTime,
+        updateTime: record.updateTime,
+      },
+    ];
+  }
+
+  const response = await http.get<BackendOperatorHistoryItem[]>(
+    `${API_PREFIX}/operator/history/${operatorId}`,
+    { headers: getBusinessDomainHeaders() },
+  );
+
+  const history = Array.isArray(response.data) ? response.data : [];
+
+  return history
+    .filter((item) => item.version)
+    .map((item) => ({
+      operatorId,
+      version: item.version ?? "",
+      status: (item.status ?? "published") as OperatorStatus,
+      releaseUser: item.release_user,
+      releaseTime: item.release_time,
+      updateTime: item.update_time,
+    }));
 }

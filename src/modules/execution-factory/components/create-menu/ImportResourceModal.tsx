@@ -1,17 +1,23 @@
-import { CloudUploadOutlined } from "@ant-design/icons";
+import { CloudUploadOutlined, DownloadOutlined } from "@ant-design/icons";
 import { Alert, Form, Input, Modal, Radio, Select, Tabs, Upload } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { AppButton } from "@/framework/ui/common/AppButton";
+import {
+  OPENAPI_OPERATOR_TEMPLATE,
+  OPENAPI_TOOLBOX_TEMPLATE,
+} from "@/modules/execution-factory/constants/import-templates";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
 import { importComponentFile } from "@/modules/execution-factory/services/impex.service";
 import { registerOperator } from "@/modules/execution-factory/services/operator.service";
 import { createToolbox } from "@/modules/execution-factory/services/toolbox.service";
 import type { ImpexComponentType, ImpexImportMode } from "@/modules/execution-factory/types/impex";
+import { triggerBrowserDownload } from "@/modules/execution-factory/utils/download-file";
+import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 
 import styles from "./create-menu.module.css";
 
@@ -64,7 +70,9 @@ export function ImportResourceModal({
   const [openApiFileList, setOpenApiFileList] = useState<UploadFile[]>([]);
   const [adpFileList, setAdpFileList] = useState<UploadFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<ReturnType<
+    typeof extractRequestErrorDetail
+  > | null>(null);
 
   const impexType = tabToImpexType(activeTab);
   const supportsOpenApi = activeTab === "operator" || activeTab === "toolbox";
@@ -101,9 +109,17 @@ export function ImportResourceModal({
       setImportKind(supportsOpenApi ? "openapi" : "adp");
       setOpenApiFileList([]);
       setAdpFileList([]);
-      setError(null);
+      setErrorDetail(null);
     })();
   }, [adpForm, open, openApiForm, supportsOpenApi]);
+
+  const handleDownloadTemplate = () => {
+    const template =
+      activeTab === "toolbox" ? OPENAPI_TOOLBOX_TEMPLATE : OPENAPI_OPERATOR_TEMPLATE;
+    const filename =
+      activeTab === "toolbox" ? "toolbox-openapi-template.yaml" : "operator-openapi-template.yaml";
+    triggerBrowserDownload(new Blob([template], { type: "text/yaml" }), filename);
+  };
 
   const handleSubmit = async () => {
     if (!impexType) {
@@ -111,7 +127,7 @@ export function ImportResourceModal({
     }
 
     setSubmitting(true);
-    setError(null);
+    setErrorDetail(null);
 
     try {
       if (importKind === "openapi" && supportsOpenApi) {
@@ -128,6 +144,7 @@ export function ImportResourceModal({
         if (activeTab === "operator") {
           await registerOperator({
             metadataType: "openapi",
+            name: uploadFile.name.replace(/\.[^.]+$/, ""),
             openapiSpec,
             category: values.category,
           });
@@ -156,7 +173,7 @@ export function ImportResourceModal({
       onSuccess?.();
       onClose();
     } catch (caughtError) {
-      setError(extractRequestErrorMessage(caughtError));
+      setErrorDetail(extractRequestErrorDetail(caughtError));
     } finally {
       setSubmitting(false);
     }
@@ -179,6 +196,13 @@ export function ImportResourceModal({
       title={t(`executionFactory.importResourceTitle.${activeTab}`)}
       width={640}
     >
+      {supportsOpenApi && importKind === "openapi" ? (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <AppButton icon={<DownloadOutlined />} onClick={handleDownloadTemplate} type="link">
+            {t("executionFactory.downloadImportTemplate")}
+          </AppButton>
+        </div>
+      ) : null}
       <Tabs
         activeKey={importKind}
         items={importKindOptions.map((item) => ({
@@ -262,7 +286,25 @@ export function ImportResourceModal({
         }))}
         onChange={(key) => setImportKind(key as ImportKind)}
       />
-      {error ? <Alert message={error} showIcon style={{ marginTop: 12 }} type="error" /> : null}
+      {errorDetail ? (
+        <Alert
+          description={
+            <div>
+              {errorDetail.code ? <div>{errorDetail.code}</div> : null}
+              {errorDetail.detail ? (
+                <pre style={{ margin: "8px 0 0", whiteSpace: "pre-wrap" }}>
+                  {JSON.stringify(errorDetail.detail, null, 2)}
+                </pre>
+              ) : null}
+              {errorDetail.solution ? <div>{errorDetail.solution}</div> : null}
+            </div>
+          }
+          message={errorDetail.message}
+          showIcon
+          style={{ marginTop: 12 }}
+          type="error"
+        />
+      ) : null}
     </Modal>
   );
 }
