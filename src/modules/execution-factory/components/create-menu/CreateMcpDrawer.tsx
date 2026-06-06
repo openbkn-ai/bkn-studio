@@ -1,6 +1,5 @@
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import {
-  Alert,
   Button,
   Drawer,
   Empty,
@@ -23,9 +22,11 @@ import type {
   McpCreationType,
   McpMode,
   McpParseSseTool,
+  McpToolConfigInput,
 } from "@/modules/execution-factory/types/mcp";
 
 import styles from "./create-menu.module.css";
+import { McpToolImportedSection } from "./McpToolImportedSection";
 
 type CreateMcpDrawerProps = {
   open: boolean;
@@ -53,6 +54,7 @@ export function CreateMcpDrawer({ open, onClose, onCreated }: CreateMcpDrawerPro
     [],
   );
   const [tools, setTools] = useState<McpParseSseTool[]>([]);
+  const [importedTools, setImportedTools] = useState<McpToolConfigInput[]>([]);
   const creationType = Form.useWatch("creationType", form);
 
   useEffect(() => {
@@ -74,6 +76,7 @@ export function CreateMcpDrawer({ open, onClose, onCreated }: CreateMcpDrawerPro
         headers: [],
       });
       setTools([]);
+      setImportedTools([]);
     })();
   }, [form, open]);
 
@@ -111,7 +114,23 @@ export function CreateMcpDrawer({ open, onClose, onCreated }: CreateMcpDrawerPro
 
     try {
       if (values.creationType === "tool_imported") {
-        void message.info(t("executionFactory.mcpToolImportedComingSoon"));
+        if (importedTools.length === 0) {
+          void message.info(t("executionFactory.mcpToolImportedRequired"));
+          return;
+        }
+
+        const mcpId = await registerMcp({
+          name: values.name,
+          description: values.description,
+          creationType: values.creationType,
+          category: values.category,
+          mode: "stream",
+          toolConfigs: importedTools,
+        });
+
+        void message.success(t("common.success"));
+        onClose();
+        onCreated(mcpId);
         return;
       }
 
@@ -171,6 +190,7 @@ export function CreateMcpDrawer({ open, onClose, onCreated }: CreateMcpDrawerPro
         onValuesChange={(changed) => {
           if (changed.creationType) {
             setTools([]);
+            setImportedTools([]);
           }
         }}
       >
@@ -267,7 +287,7 @@ export function CreateMcpDrawer({ open, onClose, onCreated }: CreateMcpDrawerPro
             />
           </>
         ) : (
-          <Alert message={t("executionFactory.mcpToolImportedComingSoon")} showIcon type="info" />
+          <McpToolImportedSection onChange={setImportedTools} value={importedTools} />
         )}
       </Form>
     </Drawer>

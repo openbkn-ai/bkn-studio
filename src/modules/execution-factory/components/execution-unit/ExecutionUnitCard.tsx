@@ -10,6 +10,10 @@ import { useTranslation } from "react-i18next";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import type { ExecutionUnitCardItem, ExecutionUnitTab } from "./types";
+import {
+  ExecutionUnitCardMenu,
+  type ExecutionUnitCardAction,
+} from "./ExecutionUnitCardMenu";
 
 import styles from "./ExecutionUnitCard.module.css";
 
@@ -19,6 +23,7 @@ type ExecutionUnitCardProps = {
   activeTab: ExecutionUnitTab;
   item: ExecutionUnitCardItem;
   marketMode?: boolean;
+  onAction?: (action: ExecutionUnitCardAction, item: ExecutionUnitCardItem) => void;
   onClick?: () => void;
 };
 
@@ -55,6 +60,7 @@ export function ExecutionUnitCard({
   activeTab,
   item,
   marketMode = false,
+  onAction,
   onClick,
 }: ExecutionUnitCardProps) {
   const { t } = useTranslation();
@@ -82,6 +88,16 @@ export function ExecutionUnitCard({
       styles={{ body: { padding: 0 } }}
     >
       <div className={styles.cardBody}>
+        {onAction ? (
+          <div className={styles.cardActions}>
+            <ExecutionUnitCardMenu
+              activeTab={activeTab}
+              item={item}
+              marketMode={marketMode}
+              onAction={onAction}
+            />
+          </div>
+        ) : null}
         <div className={styles.iconWrap}>
           <div className={styles.iconBadge}>{getTabIcon(activeTab)}</div>
           {showMetadataTag && item.metadataType ? (

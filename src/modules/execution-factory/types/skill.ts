@@ -17,6 +17,7 @@ export type SkillListQuery = {
   pageSize: number;
   keyword?: string;
   status?: SkillStatus;
+  category?: string;
 };
 
 export type SkillListResult = {

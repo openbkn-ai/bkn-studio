@@ -8,6 +8,37 @@
   transition: all 0.3s ease;
 }
 
+.cardActions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+}
+
+.cardMenuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.cardMenuButton:hover {
+  color: #1677ff;
+}
+
+.cardInstallButton {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
 .card:hover {
   border-color: rgba(18, 110, 227, 0.35);
   box-shadow: 0 4px 14px rgba(18, 110, 227, 0.12);

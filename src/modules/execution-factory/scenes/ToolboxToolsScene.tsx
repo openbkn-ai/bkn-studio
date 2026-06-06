@@ -1,10 +1,11 @@
 import {
   BarsOutlined,
   ClockCircleOutlined,
+  DeleteOutlined,
   LeftOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { Alert, Empty, Layout, Spin, Switch, Tag, Typography } from "antd";
+import { Alert, Checkbox, Empty, Layout, Space, Spin, Switch, Tag, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -18,6 +19,7 @@ import { ToolDebugModal } from "@/modules/execution-factory/components/ToolDebug
 import { ToolFormDrawer } from "@/modules/execution-factory/components/ToolFormDrawer";
 import { getToolbox, getToolboxMarket } from "@/modules/execution-factory/services/toolbox.service";
 import {
+  deleteTools,
   getTool,
   listTools,
   updateToolStatus,
@@ -44,6 +46,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   const [debugRecord, setDebugRecord] = useState<ToolRecord | null>(null);
+  const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
 
   const loadToolbox = useCallback(async () => {
     try {
@@ -66,6 +69,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         pageSize: 100,
       });
       setItems(listResult.items);
+      setSelectedToolIds([]);
 
       if (listResult.items[0]) {
         const detail = await getTool(boxId, listResult.items[0].toolId);
@@ -124,6 +128,54 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         await loadTools();
       },
     });
+  };
+
+  const handleBatchStatus = (nextStatus: ToolStatus) => {
+    if (selectedToolIds.length === 0) {
+      return;
+    }
+
+    void modal.confirm({
+      title: t("executionFactory.toolBatchStatusConfirmTitle"),
+      content: t("executionFactory.toolBatchStatusConfirmDescription", {
+        count: selectedToolIds.length,
+        status: t(`executionFactory.toolStatuses.${nextStatus}`),
+      }),
+      okText: t("common.save"),
+      cancelText: t("common.cancel"),
+      onOk: async () => {
+        await updateToolStatus(boxId, selectedToolIds, nextStatus);
+        void message.success(t("common.success"));
+        await loadTools();
+      },
+    });
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedToolIds.length === 0) {
+      return;
+    }
+
+    void modal.confirm({
+      title: t("executionFactory.toolBatchDeleteConfirmTitle"),
+      content: t("executionFactory.toolBatchDeleteConfirmDescription", {
+        count: selectedToolIds.length,
+      }),
+      okButtonProps: { danger: true },
+      okText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      onOk: async () => {
+        await deleteTools(boxId, selectedToolIds);
+        void message.success(t("common.success"));
+        await loadTools();
+      },
+    });
+  };
+
+  const toggleToolSelection = (toolId: string, checked: boolean) => {
+    setSelectedToolIds((current) =>
+      checked ? [...new Set([...current, toolId])] : current.filter((id) => id !== toolId),
+    );
   };
 
   const statusTag = useMemo(() => {
@@ -197,7 +249,20 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
           </div>
         ) : items.length === 0 ? (
           <div className={styles.emptyWrap}>
-            <Empty description={t("executionFactory.toolsEmpty")} />
+            <Empty description={t("executionFactory.toolsEmpty")}>
+              {!viewMode ? (
+                <Space style={{ marginTop: 16 }}>
+                  <PermissionGate permissions="execution-factory:tool:create">
+                    <AppButton onClick={() => setFormMode("create")} type="primary">
+                      {t("common.create")}
+                    </AppButton>
+                    <AppButton onClick={() => setFormMode("create")}>
+                      {t("executionFactory.importOpenApiToolsButton")}
+                    </AppButton>
+                  </PermissionGate>
+                </Space>
+              ) : null}
+            </Empty>
           </div>
         ) : (
           <Layout className={styles.layout}>
@@ -210,6 +275,33 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                   })}
                 </span>
               </div>
+              {!viewMode && selectedToolIds.length > 0 ? (
+                <div className={styles.batchBar}>
+                  <span>
+                    {t("executionFactory.toolBatchSelectedCount", {
+                      count: selectedToolIds.length,
+                    })}
+                  </span>
+                  <Space size={8} wrap>
+                    <PermissionGate permissions="execution-factory:tool:edit">
+                      <AppButton onClick={() => handleBatchStatus("enabled")} size="small">
+                        {t("executionFactory.enable")}
+                      </AppButton>
+                      <AppButton onClick={() => handleBatchStatus("disabled")} size="small">
+                        {t("executionFactory.disable")}
+                      </AppButton>
+                      <AppButton
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={handleBatchDelete}
+                        size="small"
+                      >
+                        {t("common.delete")}
+                      </AppButton>
+                    </PermissionGate>
+                  </Space>
+                </div>
+              ) : null}
               <div className={styles.toolList}>
                 {items.map((item, index) => {
                   const active = selectedTool?.toolId === item.toolId;
@@ -223,6 +315,15 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                       }}
                     >
                       <div className={styles.toolItemTop}>
+                        {!viewMode ? (
+                          <Checkbox
+                            checked={selectedToolIds.includes(item.toolId)}
+                            onChange={(event) => {
+                              toggleToolSelection(item.toolId, event.target.checked);
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                          />
+                        ) : null}
                         <span className={styles.toolIndex}>{index + 1}</span>
                         <span className={styles.toolName}>{item.name}</span>
                         {item.method ? (

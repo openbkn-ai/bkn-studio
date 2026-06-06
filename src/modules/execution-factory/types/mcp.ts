@@ -23,6 +23,7 @@ export type McpListQuery = {
   pageSize: number;
   keyword?: string;
   status?: McpStatus;
+  category?: string;
 };
 
 export type McpListResult = {

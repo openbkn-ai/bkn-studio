@@ -1,4 +1,4 @@
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ import { CreateMcpDrawer } from "./CreateMcpDrawer";
 import { CreateOperatorModal } from "./CreateOperatorModal";
 import { CreateSkillModal } from "./CreateSkillModal";
 import { CreateToolboxModal } from "./CreateToolboxModal";
+import { ImportResourceModal } from "./ImportResourceModal";
 import styles from "./create-menu.module.css";
 
 type CreateMenuProps = {
@@ -34,6 +35,14 @@ function getCreatePermission(activeTab: ExecutionUnitTab) {
     default:
       return undefined;
   }
+}
+
+function getImportPermission(activeTab: ExecutionUnitTab) {
+  if (activeTab === "operator" || activeTab === "toolbox" || activeTab === "mcp") {
+    return "execution-factory:impex:import";
+  }
+
+  return undefined;
 }
 
 function getCreateLabel(activeTab: ExecutionUnitTab, t: (key: string) => string) {
@@ -91,8 +100,10 @@ export function CreateMenu({
   const [toolboxOpen, setToolboxOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
   const [skillOpen, setSkillOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const permission = getCreatePermission(activeTab);
+  const importPermission = getImportPermission(activeTab);
 
   const handlePrimaryClick = () => {
     openCreateOverlay(activeTab, {
@@ -128,6 +139,13 @@ export function CreateMenu({
           <AppButton icon={<PlusOutlined />} onClick={handlePrimaryClick} type="primary">
             {getCreateLabel(activeTab, t)}
           </AppButton>
+          {importPermission ? (
+            <PermissionGate permissions={importPermission}>
+              <AppButton icon={<UploadOutlined />} onClick={() => setImportOpen(true)}>
+                {t("executionFactory.importButton")}
+              </AppButton>
+            </PermissionGate>
+          ) : null}
         </div>
       </PermissionGate>
 
@@ -155,6 +173,16 @@ export function CreateMenu({
         }}
         open={skillOpen}
       />
+      {importPermission ? (
+        <ImportResourceModal
+          activeTab={activeTab}
+          onClose={() => setImportOpen(false)}
+          onSuccess={() => {
+            onRefresh?.();
+          }}
+          open={importOpen}
+        />
+      ) : null}
     </>
   );
 }

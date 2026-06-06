@@ -1,39 +1,57 @@
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Empty, Input, Select, Spin, Tabs } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CreateMenu } from "@/modules/execution-factory/components/create-menu/CreateMenu";
 import { ExecutionUnitCard } from "@/modules/execution-factory/components/execution-unit/ExecutionUnitCard";
+import type { ExecutionUnitCardAction } from "@/modules/execution-factory/components/execution-unit/ExecutionUnitCardMenu";
 import type {
   ExecutionUnitCardItem,
   ExecutionUnitTab,
 } from "@/modules/execution-factory/components/execution-unit/types";
 import { InstallFromCatalogModal } from "@/modules/execution-factory/components/InstallFromCatalogModal";
+import { PublishedPermModal } from "@/modules/execution-factory/components/PublishedPermModal";
 import { McpDetailDrawer } from "@/modules/execution-factory/components/McpDetailDrawer";
 import { OperatorDetailDrawer } from "@/modules/execution-factory/components/OperatorDetailDrawer";
 import { SkillDetailDrawer } from "@/modules/execution-factory/components/SkillDetailDrawer";
+import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
 import { ToolboxDetailDrawer } from "@/modules/execution-factory/components/ToolboxDetailDrawer";
-import { listMcpMarket, listMcps } from "@/modules/execution-factory/services/mcp.service";
+import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
 import {
+  deleteMcp,
+  listMcpMarket,
+  listMcps,
+  updateMcpStatus,
+} from "@/modules/execution-factory/services/mcp.service";
+import {
+  deleteOperator,
   listOperatorMarket,
   listOperators,
+  updateOperatorStatus,
 } from "@/modules/execution-factory/services/operator.service";
-import { listSkillMarket, listSkills } from "@/modules/execution-factory/services/skill.service";
 import {
+  deleteSkill,
+  listSkillMarket,
+  listSkills,
+  updateSkillStatus,
+} from "@/modules/execution-factory/services/skill.service";
+import {
+  deleteToolbox,
   listToolboxMarket,
   listToolboxes,
+  updateToolboxStatus,
 } from "@/modules/execution-factory/services/toolbox.service";
 import type { ImpexComponentType } from "@/modules/execution-factory/types/impex";
-import type { McpRecord } from "@/modules/execution-factory/types/mcp";
-import type { OperatorRecord } from "@/modules/execution-factory/types/operator";
-import type { SkillRecord } from "@/modules/execution-factory/types/skill";
-import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
+import type { McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
+import type { OperatorRecord, PublicOperatorStatus } from "@/modules/execution-factory/types/operator";
+import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
+import type { ToolboxRecord, ToolboxStatus } from "@/modules/execution-factory/types/toolbox";
 
 import styles from "./execution-unit-list.module.css";
 
@@ -55,12 +73,10 @@ function resolveActiveTab(
   return tabs[0];
 }
 
-const CATEGORY_OPTIONS = [
-  { value: "", labelKey: "executionFactory.allCategory" },
-  { value: "other_category", labelKey: "executionFactory.operatorCategories.other_category" },
-  { value: "data_process", labelKey: "executionFactory.operatorCategories.data_process" },
-  { value: "data_analysis", labelKey: "executionFactory.operatorCategories.data_analysis" },
-];
+type CategoryChipOption = {
+  value: string;
+  label: string;
+};
 
 type ExecutionUnitListSceneProps = {
   defaultKeyword?: string;
@@ -84,6 +100,7 @@ function mapOperator(item: OperatorRecord): ExecutionUnitCardItem {
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
+    version: item.version,
   };
 }
 
@@ -140,13 +157,16 @@ export function ExecutionUnitListScene({
   toolbarHintKey,
 }: ExecutionUnitListSceneProps) {
   const { t } = useTranslation();
+  const { message, modal } = useAppServices();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { pageState, query, reset, setKeyword } = usePageState();
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [activeTab, setActiveTab] = useState<ExecutionUnitTab>(() =>
     resolveActiveTab(searchParams.get("activeTab"), defaultTab, tabs),
   );
   const [category, setCategory] = useState("");
+  const [categoryOptions, setCategoryOptions] = useState<CategoryChipOption[]>([]);
   const [status, setStatus] = useState<string>("");
   const [items, setItems] = useState<ExecutionUnitCardItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -157,10 +177,14 @@ export function ExecutionUnitListScene({
   const [detailBoxId, setDetailBoxId] = useState<string | null>(null);
   const [detailMcpId, setDetailMcpId] = useState<string | null>(null);
   const [detailSkillId, setDetailSkillId] = useState<string | null>(null);
+  const [historySkillId, setHistorySkillId] = useState<string | null>(null);
   const [installTarget, setInstallTarget] = useState<{
     id: string;
     name: string;
     type: ImpexComponentType;
+  } | null>(null);
+  const [publishedPermTarget, setPublishedPermTarget] = useState<{
+    name: string;
   } | null>(null);
 
   useEffect(() => {
@@ -168,6 +192,19 @@ export function ExecutionUnitListScene({
       setKeyword(defaultKeyword);
     }
   }, [defaultKeyword, setKeyword]);
+
+  useEffect(() => {
+    void (async () => {
+      const items = await listOperatorCategories();
+      setCategoryOptions([
+        { value: "", label: t("executionFactory.allCategory") },
+        ...items.map((item) => ({
+          value: item.categoryType,
+          label: item.name,
+        })),
+      ]);
+    })();
+  }, [t]);
 
   useEffect(() => {
     const param = searchParams.get("activeTab");
@@ -188,8 +225,9 @@ export function ExecutionUnitListScene({
       pageSize: PAGE_SIZE,
       keyword: query.keyword,
       status: status || undefined,
+      category: category || undefined,
     }),
-    [page, query.keyword, status],
+    [category, page, query.keyword, status],
   );
 
   const loadItems = useCallback(async () => {
@@ -316,6 +354,239 @@ export function ExecutionUnitListScene({
     void loadItems();
   }, [loadItems]);
 
+  const impexTypeForTab = useCallback((tab: ExecutionUnitTab): ImpexComponentType | null => {
+    if (tab === "operator" || tab === "toolbox" || tab === "mcp") {
+      return tab;
+    }
+
+    return null;
+  }, []);
+
+  const handleCardAction = useCallback(
+    (action: ExecutionUnitCardAction, item: ExecutionUnitCardItem) => {
+      const runStatusChange = (
+        nextStatus: PublicOperatorStatus | ToolboxStatus | McpStatus | SkillStatus,
+        titleKey: string,
+        descriptionKey: string,
+        onConfirm: () => Promise<void>,
+      ) => {
+        void modal.confirm({
+          title: t(titleKey),
+          content: t(descriptionKey, { name: item.name, status: t(`executionFactory.statuses.${nextStatus}`) }),
+          okText: t("common.save"),
+          cancelText: t("common.cancel"),
+          onOk: async () => {
+            await onConfirm();
+            void message.success(t("common.success"));
+            reloadList();
+            if (!marketMode && nextStatus === "published") {
+              setPublishedPermTarget({ name: item.name });
+            }
+          },
+        });
+      };
+
+      const runDelete = (titleKey: string, descriptionKey: string, onConfirm: () => Promise<void>) => {
+        void modal.confirm({
+          title: t(titleKey),
+          content: t(descriptionKey, { name: item.name }),
+          okButtonProps: { danger: true },
+          okText: t("common.delete"),
+          cancelText: t("common.cancel"),
+          onOk: async () => {
+            await onConfirm();
+            void message.success(t("common.success"));
+            reloadList();
+          },
+        });
+      };
+
+      if (action === "install") {
+        const componentType = impexTypeForTab(activeTab);
+        if (!componentType) {
+          return;
+        }
+
+        setInstallTarget({
+          id: item.id,
+          name: item.name,
+          type: componentType,
+        });
+        return;
+      }
+
+      if (action === "view") {
+        if (activeTab === "mcp") {
+          setDetailMcpId(item.id);
+        } else if (activeTab === "skill") {
+          setDetailSkillId(item.id);
+        }
+        return;
+      }
+
+      if (action === "edit") {
+        if (activeTab === "operator") {
+          void navigate(`/execution-factory/units/${item.id}/edit`);
+        } else if (activeTab === "toolbox") {
+          void navigate(`/execution-factory/toolboxes/${item.id}/tools?action=edit`);
+        } else if (activeTab === "skill") {
+          void navigate(`/execution-factory/skills/${item.id}/edit`);
+        }
+        return;
+      }
+
+      if (action === "publish") {
+        if (activeTab === "operator" && item.version) {
+          runStatusChange(
+            "published",
+            "executionFactory.operatorStatusChangeConfirmTitle",
+            "executionFactory.operatorStatusChangeConfirmDescription",
+            () => updateOperatorStatus(item.id, item.version!, "published"),
+          );
+        } else if (activeTab === "toolbox") {
+          runStatusChange(
+            "published",
+            "executionFactory.toolboxStatusChangeConfirmTitle",
+            "executionFactory.toolboxStatusChangeConfirmDescription",
+            () => updateToolboxStatus(item.id, "published"),
+          );
+        } else if (activeTab === "mcp") {
+          runStatusChange(
+            "published",
+            "executionFactory.mcpStatusChangeConfirmTitle",
+            "executionFactory.mcpStatusChangeConfirmDescription",
+            () => updateMcpStatus(item.id, "published"),
+          );
+        } else if (activeTab === "skill") {
+          runStatusChange(
+            "published",
+            "executionFactory.skillStatusChangeConfirmTitle",
+            "executionFactory.skillStatusChangeConfirmDescription",
+            () => updateSkillStatus(item.id, "published"),
+          );
+        }
+        return;
+      }
+
+      if (action === "unpublish") {
+        if (activeTab === "operator" && item.version) {
+          runStatusChange(
+            "unpublish",
+            "executionFactory.operatorStatusChangeConfirmTitle",
+            "executionFactory.operatorStatusChangeConfirmDescription",
+            () => updateOperatorStatus(item.id, item.version!, "unpublish"),
+          );
+        } else if (activeTab === "toolbox") {
+          runStatusChange(
+            "unpublish",
+            "executionFactory.toolboxStatusChangeConfirmTitle",
+            "executionFactory.toolboxStatusChangeConfirmDescription",
+            () => updateToolboxStatus(item.id, "unpublish"),
+          );
+        } else if (activeTab === "mcp") {
+          runStatusChange(
+            "unpublish",
+            "executionFactory.mcpStatusChangeConfirmTitle",
+            "executionFactory.mcpStatusChangeConfirmDescription",
+            () => updateMcpStatus(item.id, "unpublish"),
+          );
+        } else if (activeTab === "skill") {
+          runStatusChange(
+            "unpublish",
+            "executionFactory.skillStatusChangeConfirmTitle",
+            "executionFactory.skillStatusChangeConfirmDescription",
+            () => updateSkillStatus(item.id, "unpublish"),
+          );
+        }
+        return;
+      }
+
+      if (action === "offline") {
+        if (activeTab === "operator" && item.version) {
+          runStatusChange(
+            "offline",
+            "executionFactory.operatorStatusChangeConfirmTitle",
+            "executionFactory.operatorStatusChangeConfirmDescription",
+            () => updateOperatorStatus(item.id, item.version!, "offline"),
+          );
+        } else if (activeTab === "toolbox") {
+          runStatusChange(
+            "offline",
+            "executionFactory.toolboxStatusChangeConfirmTitle",
+            "executionFactory.toolboxStatusChangeConfirmDescription",
+            () => updateToolboxStatus(item.id, "offline"),
+          );
+        } else if (activeTab === "mcp") {
+          runStatusChange(
+            "offline",
+            "executionFactory.mcpStatusChangeConfirmTitle",
+            "executionFactory.mcpStatusChangeConfirmDescription",
+            () => updateMcpStatus(item.id, "offline"),
+          );
+        } else if (activeTab === "skill") {
+          runStatusChange(
+            "offline",
+            "executionFactory.skillStatusChangeConfirmTitle",
+            "executionFactory.skillStatusChangeConfirmDescription",
+            () => updateSkillStatus(item.id, "offline"),
+          );
+        }
+        return;
+      }
+
+      if (action === "delete") {
+        if (activeTab === "operator") {
+          runDelete(
+            "executionFactory.operatorDeleteConfirmTitle",
+            "executionFactory.operatorDeleteConfirmDescription",
+            async () => {
+              if (item.status === "published" && item.version) {
+                await updateOperatorStatus(item.id, item.version, "offline");
+              }
+
+              if (!item.version) {
+                throw new Error("Missing operator version");
+              }
+
+              await deleteOperator(item.id, item.version);
+            },
+          );
+        } else if (activeTab === "toolbox") {
+          runDelete(
+            "executionFactory.toolboxDeleteConfirmTitle",
+            "executionFactory.toolboxDeleteConfirmDescription",
+            () => deleteToolbox(item.id),
+          );
+        } else if (activeTab === "mcp") {
+          runDelete(
+            "executionFactory.mcpDeleteConfirmTitle",
+            "executionFactory.mcpDeleteConfirmDescription",
+            async () => {
+              if (item.status === "published") {
+                await updateMcpStatus(item.id, "offline");
+              }
+
+              await deleteMcp(item.id);
+            },
+          );
+        } else if (activeTab === "skill") {
+          runDelete(
+            "executionFactory.skillDeleteConfirmTitle",
+            "executionFactory.skillDeleteConfirmDescription",
+            async () => {
+              if (item.status === "published") {
+                await updateSkillStatus(item.id, "offline");
+              }
+
+              await deleteSkill(item.id);
+            },
+          );
+        }
+      }
+    },
+    [activeTab, impexTypeForTab, marketMode, message, modal, navigate, reloadList, t],
+  );
+
   const reload = () => {
     reset();
     setStatus("");
@@ -324,6 +595,25 @@ export function ExecutionUnitListScene({
   };
 
   const hasMore = items.length < total;
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasMore || loading) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setPage((current) => current + 1);
+        }
+      },
+      { rootMargin: "120px", threshold: 0.1 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loading, items.length]);
 
   return (
     <>
@@ -361,7 +651,7 @@ export function ExecutionUnitListScene({
           <div className={styles.filterLeft}>
             <span className={styles.filterLabel}>{t("executionFactory.typeFilter")}</span>
             <div className={styles.categoryGroup}>
-              {CATEGORY_OPTIONS.map((option) => (
+              {categoryOptions.map((option) => (
                 <button
                   className={`${styles.categoryChip} ${
                     category === option.value ? styles.categoryChipActive : ""
@@ -370,7 +660,7 @@ export function ExecutionUnitListScene({
                   onClick={() => setCategory(option.value)}
                   type="button"
                 >
-                  {t(option.labelKey)}
+                  {option.label}
                 </button>
               ))}
             </div>
@@ -435,18 +725,14 @@ export function ExecutionUnitListScene({
                     item={item}
                     key={item.id}
                     marketMode={marketMode}
+                    onAction={handleCardAction}
                     onClick={() => handleCardClick(item)}
                   />
                 ))}
               </div>
               {hasMore ? (
-                <div className={styles.loadMore}>
-                  <AppButton
-                    loading={loading}
-                    onClick={() => setPage((current) => current + 1)}
-                  >
-                    {t("executionFactory.loadMore")}
-                  </AppButton>
+                <div className={styles.loadMore} ref={loadMoreRef}>
+                  {loading ? <Spin size="small" /> : null}
                 </div>
               ) : null}
             </>
@@ -475,15 +761,36 @@ export function ExecutionUnitListScene({
       <SkillDetailDrawer
         marketMode={marketMode}
         onClose={() => setDetailSkillId(null)}
+        onEdit={(skillId) => {
+          setDetailSkillId(null);
+          void navigate(`/execution-factory/skills/${skillId}/edit`);
+        }}
+        onOpenHistory={(skillId) => {
+          setDetailSkillId(null);
+          setHistorySkillId(skillId);
+        }}
         open={Boolean(detailSkillId)}
         skillId={detailSkillId}
+      />
+      <SkillHistoryDrawer
+        onClose={() => setHistorySkillId(null)}
+        onUpdated={reloadList}
+        open={Boolean(historySkillId)}
+        skillId={historySkillId}
       />
       <InstallFromCatalogModal
         componentId={installTarget?.id ?? ""}
         componentName={installTarget?.name ?? ""}
         componentType={installTarget?.type ?? "operator"}
         onClose={() => setInstallTarget(null)}
+        onSuccess={reloadList}
         open={Boolean(installTarget)}
+      />
+      <PublishedPermModal
+        activeTab={activeTab}
+        onClose={() => setPublishedPermTarget(null)}
+        open={Boolean(publishedPermTarget)}
+        resourceName={publishedPermTarget?.name ?? ""}
       />
     </>
   );

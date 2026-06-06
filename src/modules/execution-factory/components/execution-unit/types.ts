@@ -12,4 +12,5 @@ export type ExecutionUnitCardItem = {
   releaseTime?: number;
   updateTime?: number;
   status?: string;
+  version?: string;
 };

@@ -54,6 +54,18 @@ export async function exportComponent(
   return response.data;
 }
 
+async function postImportFormData(
+  type: ImpexComponentType,
+  formData: FormData,
+): Promise<void> {
+  await http.post(`${API_PREFIX}/impex/import/${type}`, formData, {
+    headers: {
+      ...getBusinessDomainHeaders(),
+      "Content-Type": "multipart/form-data",
+    },
+  });
+}
+
 export async function importComponent(
   type: ImpexComponentType,
   payload: ImpexExportResult,
@@ -69,13 +81,27 @@ export async function importComponent(
   const formData = new FormData();
   formData.append("data", new Blob([JSON.stringify(payload)], { type: "application/json" }));
   formData.append("mode", mode);
+  await postImportFormData(type, formData);
 
-  await http.post(`${API_PREFIX}/impex/import/${type}`, formData, {
-    headers: {
-      ...getBusinessDomainHeaders(),
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  return { type };
+}
+
+export async function importComponentFile(
+  type: ImpexComponentType,
+  file: File,
+  mode: ImpexImportMode,
+): Promise<ImpexImportResult> {
+  if (useMock) {
+    return {
+      type,
+      id: `imported_${type}_${Date.now()}`,
+    };
+  }
+
+  const formData = new FormData();
+  formData.append("data", file);
+  formData.append("mode", mode);
+  await postImportFormData(type, formData);
 
   return { type };
 }

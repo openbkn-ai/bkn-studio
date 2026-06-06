@@ -155,6 +155,7 @@ async function fetchSkillList(
       page_size: query.pageSize,
       name: query.keyword || undefined,
       status: query.status,
+      category: query.category || undefined,
       sort_by: "update_time",
       sort_order: "desc",
     },

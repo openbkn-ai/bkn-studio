@@ -1,3 +1,16 @@
+.batchBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(18, 110, 227, 0.18);
+  border-radius: 8px;
+  background: rgba(18, 110, 227, 0.04);
+  font-size: 13px;
+}
+
 .page {
   min-height: calc(100vh - 120px);
   padding: 0 24px 24px;

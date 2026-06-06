@@ -35,6 +35,7 @@ export type ToolboxListQuery = {
   pageSize: number;
   keyword?: string;
   status?: ToolboxStatus;
+  category?: string;
 };
 
 export type ToolboxListResult = {
