@@ -99,18 +99,22 @@ export function McpFormScene({ onBack, onSubmitSuccess }: McpFormSceneProps) {
               rules={[{ required: true, message: t("common.required") }]}
             >
               <Radio.Group>
-                <Radio value="custom">custom</Radio>
-                <Radio value="tool_imported">tool_imported</Radio>
+                <Radio value="custom">
+                  {t("executionFactory.mcpCreationTypes.custom")}
+                </Radio>
+                <Radio value="tool_imported">
+                  {t("executionFactory.mcpCreationTypes.tool_imported")}
+                </Radio>
               </Radio.Group>
             </Form.Item>
             {creationType === "custom" ? (
               <>
                 <Form.Item label={t("executionFactory.mcpMode")} name="mode">
                   <Select
-                    options={[
-                      { label: "sse", value: "sse" },
-                      { label: "stream", value: "stream" },
-                    ]}
+                    options={(["sse", "stream"] as const).map((value) => ({
+                      label: t(`executionFactory.mcpModes.${value}`),
+                      value,
+                    }))}
                   />
                 </Form.Item>
                 <Form.Item label={t("executionFactory.serviceUrl")} name="url">

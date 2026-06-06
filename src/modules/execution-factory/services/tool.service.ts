@@ -12,11 +12,18 @@ import type {
   ToolRecord,
   ToolStatus,
 } from "@/modules/execution-factory/types/tool";
+import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-timestamp";
 
 type BackendToolInfo = {
   create_time?: number;
   create_user?: string;
   description?: string;
+  metadata?: {
+    method?: string;
+    path?: string;
+    server_url?: string;
+    version?: string;
+  };
   metadata_type?: string;
   name?: string;
   status?: string;
@@ -84,8 +91,12 @@ function mapTool(item: BackendToolInfo): ToolRecord {
     status: (item.status ?? "disabled") as ToolStatus,
     metadataType: item.metadata_type as ToolRecord["metadataType"],
     useRule: item.use_rule,
-    createTime: item.create_time,
-    updateTime: item.update_time,
+    serverUrl: item.metadata?.server_url,
+    path: item.metadata?.path,
+    method: item.metadata?.method,
+    metadataVersion: item.metadata?.version,
+    createTime: normalizeTimestamp(item.create_time),
+    updateTime: normalizeTimestamp(item.update_time),
     createUser: item.create_user,
     updateUser: item.update_user,
   };

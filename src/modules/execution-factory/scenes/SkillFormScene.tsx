@@ -93,8 +93,10 @@ export function SkillFormScene({ onBack, onSubmitSuccess }: SkillFormSceneProps)
           <Form form={form} initialValues={{ fileType: "zip" }} layout="vertical">
             <Form.Item label={t("executionFactory.skillFileType")} name="fileType">
               <Radio.Group>
-                <Radio value="zip">zip</Radio>
-                <Radio value="content">content</Radio>
+                <Radio value="zip">{t("executionFactory.skillFileTypes.zip")}</Radio>
+                <Radio value="content">
+                  {t("executionFactory.skillFileTypes.content")}
+                </Radio>
               </Radio.Group>
             </Form.Item>
             {fileType === "zip" ? (

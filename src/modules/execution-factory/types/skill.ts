@@ -29,6 +29,7 @@ export type SkillListResult = {
 export type SkillRegisterInput = {
   fileType: "zip" | "content";
   file: Blob | string;
+  category?: string;
   source?: string;
 };
 

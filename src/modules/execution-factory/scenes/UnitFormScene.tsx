@@ -1,7 +1,7 @@
 import { Alert, Form, Input, Radio, Result, Select, Spin, Switch } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import type { UnitFormSceneProps } from "@/modules/execution-factory/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -43,6 +43,7 @@ export function UnitFormScene({
   const { t } = useTranslation();
   const { message } = useAppServices();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm<OperatorMutationInput>();
   const [loading, setLoading] = useState(mode === "edit");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -54,10 +55,14 @@ export function UnitFormScene({
   useEffect(() => {
     void (async () => {
       if (mode !== "edit" || !operatorId) {
+        const metadataTypeParam = searchParams.get("metadataType");
         form.setFieldsValue({
           category: "other_category",
           directPublish: false,
-          metadataType: "openapi",
+          metadataType:
+            metadataTypeParam === "function" || metadataTypeParam === "openapi"
+              ? metadataTypeParam
+              : "openapi",
         });
         return;
       }
@@ -79,7 +84,7 @@ export function UnitFormScene({
         setLoading(false);
       }
     })();
-  }, [form, mode, operatorId]);
+  }, [form, mode, operatorId, searchParams]);
 
   const permission =
     mode === "create"
@@ -162,8 +167,12 @@ export function UnitFormScene({
                   rules={[{ required: true, message: t("common.required") }]}
                 >
                   <Radio.Group>
-                    <Radio value="openapi">OpenAPI</Radio>
-                    <Radio value="function">Function</Radio>
+                    <Radio value="openapi">
+                      {t("executionFactory.metadataTypes.openapi")}
+                    </Radio>
+                    <Radio value="function">
+                      {t("executionFactory.metadataTypes.function")}
+                    </Radio>
                   </Radio.Group>
                 </Form.Item>
               ) : null}
@@ -180,7 +189,7 @@ export function UnitFormScene({
               <Form.Item label={t("executionFactory.category")} name="category">
                 <Select
                   options={categoryOptions.map((value) => ({
-                    label: value,
+                    label: t(`executionFactory.operatorCategories.${value}`),
                     value,
                   }))}
                 />

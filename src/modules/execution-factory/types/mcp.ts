@@ -32,6 +32,14 @@ export type McpListResult = {
   pageSize: number;
 };
 
+export type McpToolConfigInput = {
+  boxId?: string;
+  toolId?: string;
+  toolName?: string;
+  description?: string;
+  useRule?: string;
+};
+
 export type McpRegisterInput = {
   name: string;
   description?: string;
@@ -39,10 +47,13 @@ export type McpRegisterInput = {
   mode?: McpMode;
   url?: string;
   category?: string;
+  headers?: Record<string, string>;
+  toolConfigs?: McpToolConfigInput[];
 };
 
 export type McpParseSseInput = {
   url: string;
+  mode?: McpMode;
   headers?: Record<string, string>;
 };
 

@@ -82,3 +82,28 @@ corepack pnpm dev
 ```
 
 Routes: `/execution-factory/units`, `/catalog`, `/mcp`, `/skills`, `/skills/:id/edit`.
+
+## 8. Operator UI E2E AT (Playwright)
+
+Requires local stack: `ef-studio` (:5173) + `agent-operator-integration` (:9000), with `VITE_USE_MOCK=false`.
+
+```bash
+cd tests/e2e
+npm install
+npm run install:browsers
+npm run test:operator
+```
+
+From repo root:
+
+```bash
+corepack pnpm test:execution-factory:e2e
+```
+
+Environment overrides:
+
+| Variable | Default |
+|----------|---------|
+| `E2E_BASE_URL` | `http://127.0.0.1:5173` |
+| `E2E_API_BASE_URL` | `http://127.0.0.1:9000/api` |
+| `E2E_BUSINESS_DOMAIN` | `bd_public` |

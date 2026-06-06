@@ -9,6 +9,10 @@ export type ToolRecord = {
   status: ToolStatus;
   metadataType?: ToolMetadataType;
   useRule?: string;
+  serverUrl?: string;
+  path?: string;
+  method?: string;
+  metadataVersion?: string;
   createTime?: number;
   updateTime?: number;
   createUser?: string;

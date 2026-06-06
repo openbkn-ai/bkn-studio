@@ -1,0 +1,15 @@
+{
+  "name": "bkn-studio-execution-factory-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "playwright test",
+    "test:operator": "playwright test specs/execution-factory/operator.at.spec.ts",
+    "install:browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.52.0",
+    "@types/node": "^24.6.1",
+    "typescript": "~5.9.3"
+  }
+}
