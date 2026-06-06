@@ -1,5 +1,7 @@
 # Execution Factory Tests (bkn-studio mirror)
 
+CI L1 vitest job requires Node.js 22+ (pnpm 11.5.1).
+
 Convenience copy of backend test assets. **Canonical location:**
 
 `bkn-foundry/bkn-foundry/adp/execution-factory/tests/`
