@@ -144,6 +144,7 @@ async function fetchOperatorList(
       page_size: query.pageSize,
       name: query.keyword || undefined,
       status: query.status,
+      category: query.category || undefined,
       sort_by: "update_time",
       sort_order: "desc",
     },
@@ -274,6 +275,7 @@ export async function updateOperator(input: OperatorEditInput): Promise<void> {
 
 export async function updateOperatorStatus(
   operatorId: string,
+  version: string,
   status: PublicOperatorStatus,
 ): Promise<void> {
   if (useMock) {
@@ -291,7 +293,7 @@ export async function updateOperatorStatus(
 
   await http.post(
     `${API_PREFIX}/operator/status`,
-    [{ operator_id: operatorId, status }],
+    [{ operator_id: operatorId, version, status }],
     { headers: getBusinessDomainHeaders() },
   );
 }

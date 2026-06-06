@@ -175,19 +175,21 @@ export function SkillEditScene({
                           rules={[{ required: true, message: t("common.required") }]}
                         >
                           <Select
-                            options={[
-                              { label: "other_category", value: "other_category" },
-                              { label: "system", value: "system" },
-                            ]}
+                            options={(
+                              ["other_category", "system"] as const
+                            ).map((value) => ({
+                              label: t(`executionFactory.skillCategories.${value}`),
+                              value,
+                            }))}
                           />
                         </Form.Item>
                         <Form.Item label={t("executionFactory.skillSource")} name="source">
                           <Select
                             allowClear
-                            options={[
-                              { label: "custom", value: "custom" },
-                              { label: "internal", value: "internal" },
-                            ]}
+                            options={(["custom", "internal"] as const).map((value) => ({
+                              label: t(`executionFactory.skillSources.${value}`),
+                              value,
+                            }))}
                           />
                         </Form.Item>
                       </Form>
@@ -217,8 +219,12 @@ export function SkillEditScene({
                       <Form form={packageForm} initialValues={{ fileType: "zip" }} layout="vertical">
                         <Form.Item label={t("executionFactory.skillFileType")} name="fileType">
                           <Radio.Group>
-                            <Radio value="zip">zip</Radio>
-                            <Radio value="content">content</Radio>
+                            <Radio value="zip">
+                              {t("executionFactory.skillFileTypes.zip")}
+                            </Radio>
+                            <Radio value="content">
+                              {t("executionFactory.skillFileTypes.content")}
+                            </Radio>
                           </Radio.Group>
                         </Form.Item>
                         {fileType === "zip" ? (

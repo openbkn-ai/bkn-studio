@@ -9,6 +9,7 @@ import type {
   ToolboxStatus,
   ToolRecord,
 } from "@/modules/execution-factory/types/toolbox";
+import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-timestamp";
 
 type BackendToolInfo = {
   description?: string;
@@ -31,7 +32,7 @@ type BackendToolboxInfo = {
   release_time?: number;
   release_user?: string;
   status?: string;
-  tools?: BackendToolInfo[];
+  tools?: Array<BackendToolInfo | string>;
   update_time?: number;
   update_user?: string;
 };
@@ -100,7 +101,13 @@ function mapTool(item: BackendToolInfo): ToolRecord {
 }
 
 function mapToolbox(item: BackendToolboxInfo): ToolboxRecord {
-  const tools = item.tools?.map(mapTool);
+  const tools = Array.isArray(item.tools)
+    ? item.tools.map((tool) =>
+        typeof tool === "string"
+          ? { toolId: tool, name: tool, status: "disabled" as const }
+          : mapTool(tool),
+      )
+    : undefined;
 
   return {
     boxId: item.box_id,
@@ -113,12 +120,12 @@ function mapToolbox(item: BackendToolboxInfo): ToolboxRecord {
     metadataType: item.metadata_type as ToolboxRecord["metadataType"],
     toolCount: tools?.length ?? 0,
     tools,
-    createTime: item.create_time,
-    updateTime: item.update_time,
+    createTime: normalizeTimestamp(item.create_time),
+    updateTime: normalizeTimestamp(item.update_time),
     createUser: item.create_user,
     updateUser: item.update_user,
     releaseUser: item.release_user,
-    releaseTime: item.release_time,
+    releaseTime: normalizeTimestamp(item.release_time),
     isInternal: item.is_internal,
   };
 }
@@ -165,6 +172,7 @@ async function fetchToolboxList(
       page_size: query.pageSize,
       name: query.keyword || undefined,
       status: query.status,
+      category: query.category || undefined,
       sort_by: "update_time",
       sort_order: "desc",
     },

@@ -9,6 +9,7 @@ export const commonEnUS = {
     previous: "Previous",
     next: "Next",
     save: "Save",
+    confirm: "Confirm",
     cancel: "Cancel",
     edit: "Edit",
     detail: "Detail",

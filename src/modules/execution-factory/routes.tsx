@@ -3,6 +3,7 @@ import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { ExecutionUnitTabRedirect } from "@/modules/execution-factory/pages/ExecutionUnitTabRedirect";
 
 const UnitManagementListPage = lazy(async () => {
   const module = await import("@/modules/execution-factory/pages/UnitManagementListPage");
@@ -27,26 +28,6 @@ const ToolboxFormPage = lazy(async () => {
 const ToolboxToolsPage = lazy(async () => {
   const module = await import("@/modules/execution-factory/pages/ToolboxToolsPage");
   return { default: module.ToolboxToolsPage };
-});
-
-const McpListPage = lazy(async () => {
-  const module = await import("@/modules/execution-factory/pages/McpListPage");
-  return { default: module.McpListPage };
-});
-
-const McpFormPage = lazy(async () => {
-  const module = await import("@/modules/execution-factory/pages/McpFormPage");
-  return { default: module.McpFormPage };
-});
-
-const SkillListPage = lazy(async () => {
-  const module = await import("@/modules/execution-factory/pages/SkillListPage");
-  return { default: module.SkillListPage };
-});
-
-const SkillFormPage = lazy(async () => {
-  const module = await import("@/modules/execution-factory/pages/SkillFormPage");
-  return { default: module.SkillFormPage };
 });
 
 const SkillEditPage = lazy(async () => {
@@ -101,7 +82,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.toolboxCreateTitle",
       },
     },
-    element: withRouteLoading(<ToolboxFormPage mode="create" />),
+    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="toolbox" openCreate />),
   },
   {
     path: "execution-factory/toolboxes/:boxId/edit",
@@ -134,7 +115,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.mcpListTitle",
       },
     },
-    element: withRouteLoading(<McpListPage />),
+    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="mcp" />),
   },
   {
     path: "execution-factory/mcp/new",
@@ -145,7 +126,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.mcpCreateTitle",
       },
     },
-    element: withRouteLoading(<McpFormPage />),
+    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="mcp" openCreate />),
   },
   {
     path: "execution-factory/skills",
@@ -156,7 +137,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.skillListTitle",
       },
     },
-    element: withRouteLoading(<SkillListPage />),
+    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="skill" />),
   },
   {
     path: "execution-factory/skills/new",
@@ -167,7 +148,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.skillCreateTitle",
       },
     },
-    element: withRouteLoading(<SkillFormPage />),
+    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="skill" openCreate />),
   },
   {
     path: "execution-factory/skills/:skillId/edit",

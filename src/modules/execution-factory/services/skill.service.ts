@@ -26,13 +26,16 @@ type BackendSkillSummary = {
 };
 
 type BackendSkillListResponse = {
-  code?: number;
-  data?: {
-    data?: BackendSkillSummary[];
-    page?: number;
-    page_size?: number;
-    total_count?: number;
-  };
+  data?: BackendSkillSummary[];
+  page?: number;
+  page_size?: number;
+  total?: number;
+};
+
+type BackendSkillManagementContent = {
+  content?: string;
+  files?: Array<{ rel_path?: string } | string>;
+  url?: string;
 };
 
 const API_PREFIX = "/agent-operator-integration/v1";
@@ -95,6 +98,19 @@ function getBusinessDomainHeaders() {
   return { "x-business-domain": businessDomainId };
 }
 
+function normalizeTimestamp(value?: number): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  // Backend timestamps are nanoseconds; JS Date expects milliseconds.
+  if (value > 1e15) {
+    return Math.floor(value / 1_000_000);
+  }
+
+  return value;
+}
+
 function mapSkill(item: BackendSkillSummary): SkillRecord {
   return {
     skillId: item.skill_id,
@@ -105,7 +121,7 @@ function mapSkill(item: BackendSkillSummary): SkillRecord {
     category: item.category,
     categoryName: item.category_name,
     createUser: item.create_user,
-    updateTime: item.update_time,
+    updateTime: normalizeTimestamp(item.update_time),
   };
 }
 
@@ -139,18 +155,19 @@ async function fetchSkillList(
       page_size: query.pageSize,
       name: query.keyword || undefined,
       status: query.status,
+      category: query.category || undefined,
       sort_by: "update_time",
       sort_order: "desc",
     },
   });
 
-  const data = response.data.data;
+  const data = response.data;
 
   return {
-    items: (data?.data ?? []).map(mapSkill),
-    total: data?.total_count ?? 0,
-    page: data?.page ?? query.page,
-    pageSize: data?.page_size ?? query.pageSize,
+    items: (data.data ?? []).map(mapSkill),
+    total: data.total ?? 0,
+    page: data.page ?? query.page,
+    pageSize: data.page_size ?? query.pageSize,
   };
 }
 
@@ -193,17 +210,18 @@ export async function getSkill(skillId: string): Promise<SkillRecord> {
     return record;
   }
 
-  const response = await http.get<{
-    data?: BackendSkillSummary;
-  }>(`${API_PREFIX}/skills/${skillId}`, {
-    headers: getBusinessDomainHeaders(),
-  });
+  const response = await http.get<BackendSkillSummary>(
+    `${API_PREFIX}/skills/${skillId}`,
+    {
+      headers: getBusinessDomainHeaders(),
+    },
+  );
 
-  if (!response.data.data) {
+  if (!response.data.skill_id) {
     throw new Error("Skill not found");
   }
 
-  return mapSkill(response.data.data);
+  return mapSkill(response.data);
 }
 
 export async function getSkillMarket(skillId: string): Promise<SkillRecord> {
@@ -211,17 +229,18 @@ export async function getSkillMarket(skillId: string): Promise<SkillRecord> {
     return getSkill(skillId);
   }
 
-  const response = await http.get<{
-    data?: BackendSkillSummary;
-  }>(`${API_PREFIX}/skills/market/${skillId}`, {
-    headers: getBusinessDomainHeaders(),
-  });
+  const response = await http.get<BackendSkillSummary>(
+    `${API_PREFIX}/skills/market/${skillId}`,
+    {
+      headers: getBusinessDomainHeaders(),
+    },
+  );
 
-  if (!response.data.data) {
+  if (!response.data.skill_id) {
     throw new Error("Market skill not found");
   }
 
-  return mapSkill(response.data.data);
+  return mapSkill(response.data);
 }
 
 export async function registerSkill(input: SkillRegisterInput): Promise<SkillRecord> {
@@ -250,24 +269,30 @@ export async function registerSkill(input: SkillRegisterInput): Promise<SkillRec
     formData.append("file", input.file);
   }
 
+  if (input.category) {
+    formData.append("category", input.category);
+  }
+
   if (input.source) {
     formData.append("source", input.source);
   }
 
-  const response = await http.post<{
-    data?: BackendSkillSummary;
-  }>(`${API_PREFIX}/skills`, formData, {
-    headers: {
-      ...getBusinessDomainHeaders(),
-      "Content-Type": "multipart/form-data",
+  const response = await http.post<BackendSkillSummary>(
+    `${API_PREFIX}/skills`,
+    formData,
+    {
+      headers: {
+        ...getBusinessDomainHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
     },
-  });
+  );
 
-  if (!response.data.data) {
+  if (!response.data.skill_id) {
     throw new Error("Skill registration failed");
   }
 
-  return mapSkill(response.data.data);
+  return mapSkill(response.data);
 }
 
 export async function getSkillManagementContent(
@@ -280,21 +305,22 @@ export async function getSkillManagementContent(
     };
   }
 
-  const response = await http.get<{
-    data?: {
-      content?: string;
-      files?: string[];
-      url?: string;
-    };
-  }>(`${API_PREFIX}/skills/${skillId}/management/content`, {
-    headers: getBusinessDomainHeaders(),
-    params: { response_mode: "content" },
-  });
+  const response = await http.get<BackendSkillManagementContent>(
+    `${API_PREFIX}/skills/${skillId}/management/content`,
+    {
+      headers: getBusinessDomainHeaders(),
+      params: { response_mode: "content" },
+    },
+  );
+
+  const files = response.data.files?.map((file) =>
+    typeof file === "string" ? file : (file.rel_path ?? ""),
+  );
 
   return {
-    content: response.data.data?.content,
-    files: response.data.data?.files,
-    downloadUrl: response.data.data?.url,
+    content: response.data.content,
+    files: files?.filter(Boolean),
+    downloadUrl: response.data.url,
   };
 }
 
@@ -336,7 +362,7 @@ function mapSkillHistory(item: BackendSkillHistoryInfo): SkillHistoryRecord {
     version: item.version,
     status: (item.status ?? "published") as SkillHistoryRecord["status"],
     releaseUser: item.release_user,
-    releaseTime: item.release_time,
+    releaseTime: normalizeTimestamp(item.release_time),
   };
 }
 
@@ -365,9 +391,7 @@ export async function updateSkillMetadata(
     return record;
   }
 
-  const response = await http.put<{
-    data?: BackendSkillSummary;
-  }>(
+  const response = await http.put<BackendSkillSummary>(
     `${API_PREFIX}/skills/${skillId}/metadata`,
     {
       category: input.category,
@@ -378,11 +402,11 @@ export async function updateSkillMetadata(
     { headers: getBusinessDomainHeaders() },
   );
 
-  if (!response.data.data) {
+  if (!response.data.skill_id) {
     throw new Error("Skill metadata update failed");
   }
 
-  return mapSkill(response.data.data);
+  return mapSkill(response.data);
 }
 
 export async function updateSkillPackage(
@@ -417,20 +441,22 @@ export async function updateSkillPackage(
     formData.append("file", input.file);
   }
 
-  const response = await http.put<{
-    data?: BackendSkillSummary;
-  }>(`${API_PREFIX}/skills/${skillId}/package`, formData, {
-    headers: {
-      ...getBusinessDomainHeaders(),
-      "Content-Type": "multipart/form-data",
+  const response = await http.put<BackendSkillSummary>(
+    `${API_PREFIX}/skills/${skillId}/package`,
+    formData,
+    {
+      headers: {
+        ...getBusinessDomainHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
     },
-  });
+  );
 
-  if (!response.data.data) {
+  if (!response.data.skill_id) {
     throw new Error("Skill package update failed");
   }
 
-  return mapSkill(response.data.data);
+  return mapSkill(response.data);
 }
 
 export async function getSkillReleaseHistory(
@@ -440,13 +466,16 @@ export async function getSkillReleaseHistory(
     return mockSkillHistory.filter((item) => item.skillId === skillId);
   }
 
-  const response = await http.get<{
-    data?: BackendSkillHistoryInfo[];
-  }>(`${API_PREFIX}/skills/${skillId}/history`, {
-    headers: getBusinessDomainHeaders(),
-  });
+  const response = await http.get<BackendSkillHistoryInfo[]>(
+    `${API_PREFIX}/skills/${skillId}/history`,
+    {
+      headers: getBusinessDomainHeaders(),
+    },
+  );
 
-  return (response.data.data ?? []).map(mapSkillHistory);
+  const history = Array.isArray(response.data) ? response.data : [];
+
+  return history.map(mapSkillHistory);
 }
 
 export async function republishSkillHistory(
@@ -484,19 +513,17 @@ export async function republishSkillHistory(
     return record;
   }
 
-  const response = await http.post<{
-    data?: BackendSkillSummary;
-  }>(
+  const response = await http.post<BackendSkillSummary>(
     `${API_PREFIX}/skills/${skillId}/history/republish`,
     { version },
     { headers: getBusinessDomainHeaders() },
   );
 
-  if (!response.data.data) {
+  if (!response.data.skill_id) {
     throw new Error("Skill history republish failed");
   }
 
-  return mapSkill(response.data.data);
+  return mapSkill(response.data);
 }
 
 export async function publishSkillHistory(
@@ -534,17 +561,15 @@ export async function publishSkillHistory(
     return record;
   }
 
-  const response = await http.post<{
-    data?: BackendSkillSummary;
-  }>(
+  const response = await http.post<BackendSkillSummary>(
     `${API_PREFIX}/skills/${skillId}/history/publish`,
     { version },
     { headers: getBusinessDomainHeaders() },
   );
 
-  if (!response.data.data) {
+  if (!response.data.skill_id) {
     throw new Error("Skill history publish failed");
   }
 
-  return mapSkill(response.data.data);
+  return mapSkill(response.data);
 }

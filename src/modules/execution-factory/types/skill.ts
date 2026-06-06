@@ -17,6 +17,7 @@ export type SkillListQuery = {
   pageSize: number;
   keyword?: string;
   status?: SkillStatus;
+  category?: string;
 };
 
 export type SkillListResult = {
@@ -29,6 +30,7 @@ export type SkillListResult = {
 export type SkillRegisterInput = {
   fileType: "zip" | "content";
   file: Blob | string;
+  category?: string;
   source?: string;
 };
 

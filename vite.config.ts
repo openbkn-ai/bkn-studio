@@ -18,6 +18,8 @@ export default defineConfig({
     ],
   },
   server: {
+    host: true,
+    allowedHosts: ["host.docker.internal", "localhost", "127.0.0.1"],
     proxy: {
       "/api/agent-operator-integration": {
         changeOrigin: true,

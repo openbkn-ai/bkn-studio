@@ -26,13 +26,13 @@ export const executionFactoryNavigation: ConsoleNavContribution = {
       key: "mcp-management",
       labelKey: "shell.items.mcpManagement",
       icon: <ApiOutlined />,
-      path: "/execution-factory/mcp",
+      path: "/execution-factory/units?activeTab=mcp",
     },
     {
       key: "skill-management",
       labelKey: "shell.items.skillManagement",
       icon: <ThunderboltOutlined />,
-      path: "/execution-factory/skills",
+      path: "/execution-factory/units?activeTab=skill",
     },
   ],
 };

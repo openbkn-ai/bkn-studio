@@ -1,0 +1,160 @@
+.card {
+  position: relative;
+  height: 100%;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+  transition: all 0.3s ease;
+}
+
+.cardActions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+}
+
+.cardMenuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.cardMenuButton:hover {
+  color: #1677ff;
+}
+
+.cardInstallButton {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.card:hover {
+  border-color: rgba(18, 110, 227, 0.35);
+  box-shadow: 0 4px 14px rgba(18, 110, 227, 0.12);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 18px 16px;
+}
+
+.iconWrap {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 14px;
+}
+
+.iconBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fff4e8 0%, #ffe8d6 100%);
+  color: #d46b08;
+  font-size: 20px;
+}
+
+.metadataTag {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  min-width: 38px;
+  padding: 1px 4px;
+  border-radius: 0 0 8px 8px;
+  background: rgb(206, 153, 101);
+  color: #fff;
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.title {
+  margin: 0 !important;
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 16px !important;
+  line-height: 24px !important;
+}
+
+.description {
+  flex: 1;
+  min-height: 44px;
+  margin-bottom: 12px !important;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.toolCount {
+  margin-bottom: 16px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.footerLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.footerRight {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.internalBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.internalDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #126ee3;
+}
+
+.userName {
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

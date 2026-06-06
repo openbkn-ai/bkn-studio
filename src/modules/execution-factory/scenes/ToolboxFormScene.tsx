@@ -151,8 +151,12 @@ export function ToolboxFormScene({
                   rules={[{ required: true, message: t("common.required") }]}
                 >
                   <Radio.Group>
-                    <Radio value="openapi">OpenAPI</Radio>
-                    <Radio value="function">Function</Radio>
+                    <Radio value="openapi">
+                      {t("executionFactory.metadataTypes.openapi")}
+                    </Radio>
+                    <Radio value="function">
+                      {t("executionFactory.metadataTypes.function")}
+                    </Radio>
                   </Radio.Group>
                 </Form.Item>
               ) : null}
@@ -172,7 +176,7 @@ export function ToolboxFormScene({
               <Form.Item label={t("executionFactory.category")} name="category">
                 <Select
                   options={categoryOptions.map((value) => ({
-                    label: value,
+                    label: t(`executionFactory.toolboxCategories.${value}`),
                     value,
                   }))}
                 />

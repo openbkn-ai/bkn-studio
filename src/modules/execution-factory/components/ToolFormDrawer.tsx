@@ -153,8 +153,12 @@ export function ToolFormDrawer({
               rules={[{ required: true, message: t("common.required") }]}
             >
               <Radio.Group>
-                <Radio value="openapi">OpenAPI</Radio>
-                <Radio value="function">Function</Radio>
+                <Radio value="openapi">
+                  {t("executionFactory.metadataTypes.openapi")}
+                </Radio>
+                <Radio value="function">
+                  {t("executionFactory.metadataTypes.function")}
+                </Radio>
               </Radio.Group>
             </Form.Item>
           ) : (

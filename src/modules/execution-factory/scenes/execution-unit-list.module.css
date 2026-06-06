@@ -1,0 +1,120 @@
+.page {
+  min-height: calc(100vh - 144px);
+  padding: 0 25px 25px;
+  background: #fff;
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 16px;
+}
+
+.tabs :global(.ant-tabs-nav::before) {
+  border-bottom: none !important;
+}
+
+.tabs :global(.ant-tabs-tab) {
+  margin: 0 24px 0 0 !important;
+  padding: 5px 0 !important;
+}
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.filterLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filterLabel {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+}
+
+.categoryGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.categoryChip {
+  padding: 4px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 16px;
+  background: #fff;
+  color: rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.categoryChipActive {
+  border-color: #126ee3;
+  background: rgba(18, 110, 227, 0.08);
+  color: #126ee3;
+}
+
+.filterRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchInput {
+  width: 240px;
+}
+
+.gridWrap {
+  min-height: 560px;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 1599px) {
+  .cardGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (max-width: 1199px) {
+  .cardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.emptyWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 560px;
+}
+
+.loadMore {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0 8px;
+}
+
+.toolbarMeta {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}

@@ -9,6 +9,7 @@ export const commonZhCN = {
     previous: "上一步",
     next: "下一步",
     save: "保存",
+    confirm: "确定",
     cancel: "取消",
     edit: "编辑",
     detail: "详情",
