@@ -14,6 +14,7 @@ import {
   republishSkillHistory,
 } from "@/modules/execution-factory/services/skill.service";
 import type { SkillHistoryRecord } from "@/modules/execution-factory/types/skill";
+import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import styles from "./ToolboxDetailDrawer.module.css";
 
@@ -25,11 +26,7 @@ type SkillHistoryDrawerProps = {
 };
 
 function formatTimestamp(value?: number) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Date(value).toLocaleString();
+  return formatExecutionUnitTime(value);
 }
 
 export function SkillHistoryDrawer({

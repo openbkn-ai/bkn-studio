@@ -1,9 +1,10 @@
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
+  parseContentDispositionFilename,
   sanitizeDownloadFilename,
   triggerBrowserDownload,
 } from "@/modules/execution-factory/utils/download-file";
+import { getExecutionFactoryApiHeaders } from "@/modules/execution-factory/utils/execution-factory-api-headers";
 import type {
   ImpexComponentType,
   ImpexExportResult,
@@ -13,13 +14,20 @@ import type {
 
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
+const IMPEX_EXPORT_TIMEOUT_MS = 60_000;
 
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
+function resolveExportFilename(
+  contentDisposition: string | undefined,
+  displayName: string | undefined,
+  fallbackId: string,
+) {
+  const fromHeader = parseContentDispositionFilename(contentDisposition);
+  if (fromHeader) {
+    return fromHeader;
+  }
 
-  return { "x-business-domain": businessDomainId };
+  const baseName = sanitizeDownloadFilename(displayName ?? fallbackId, fallbackId);
+  return `${baseName}.adp`;
 }
 
 export async function exportComponent(
@@ -52,7 +60,11 @@ export async function exportComponent(
 
   const response = await http.get<ImpexExportResult>(
     `${API_PREFIX}/impex/export/${type}/${id}`,
-    { headers: getBusinessDomainHeaders() },
+    {
+      headers: getExecutionFactoryApiHeaders(),
+      timeout: IMPEX_EXPORT_TIMEOUT_MS,
+      skipErrorToast: true,
+    },
   );
 
   return response.data;
@@ -63,12 +75,36 @@ export async function downloadComponentExport(
   id: string,
   displayName?: string,
 ): Promise<void> {
-  const payload = await exportComponent(type, id);
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {
-    type: "application/json",
-  });
-  const filename = `${type}-${sanitizeDownloadFilename(displayName ?? id, id)}.json`;
-  triggerBrowserDownload(blob, filename);
+  if (useMock) {
+    const payload = await exportComponent(type, id);
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    triggerBrowserDownload(
+      blob,
+      resolveExportFilename(undefined, displayName, id),
+    );
+    return;
+  }
+
+  const response = await http.get<Blob>(
+    `${API_PREFIX}/impex/export/${type}/${id}`,
+    {
+      headers: getExecutionFactoryApiHeaders(),
+      responseType: "blob",
+      timeout: IMPEX_EXPORT_TIMEOUT_MS,
+      skipErrorToast: true,
+    },
+  );
+
+  const contentDisposition = response.headers["content-disposition"] as
+    | string
+    | undefined;
+
+  triggerBrowserDownload(
+    response.data,
+    resolveExportFilename(contentDisposition, displayName, id),
+  );
 }
 
 async function postImportFormData(
@@ -77,9 +113,10 @@ async function postImportFormData(
 ): Promise<void> {
   await http.post(`${API_PREFIX}/impex/import/${type}`, formData, {
     headers: {
-      ...getBusinessDomainHeaders(),
+      ...getExecutionFactoryApiHeaders(),
       "Content-Type": "multipart/form-data",
     },
+    skipErrorToast: true,
   });
 }
 

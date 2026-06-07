@@ -15,6 +15,13 @@
   background: linear-gradient(180deg, #f8fbff 0%, #f4f8ff 100%);
 }
 
+.summaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .summaryTitle {
   margin: 0;
   color: #152239;

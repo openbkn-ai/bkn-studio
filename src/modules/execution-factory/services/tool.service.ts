@@ -16,6 +16,7 @@ import type {
 } from "@/modules/execution-factory/types/tool";
 import {
   mapFunctionContent,
+  parseOpenApiDataPayload,
   serializeOpenApiSpec,
 } from "@/modules/execution-factory/utils/metadata-content";
 import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-timestamp";
@@ -179,7 +180,7 @@ function mapToolDetail(item: BackendToolInfo): ToolDetail {
 
 function buildToolMutationBody(input: ToolCreateInput | ToolEditInput) {
   const body: Record<string, unknown> = {
-    data: input.openapiSpec,
+    data: parseOpenApiDataPayload(input.openapiSpec, "edit"),
     function_input: input.functionInput
       ? {
           ...input.functionInput,

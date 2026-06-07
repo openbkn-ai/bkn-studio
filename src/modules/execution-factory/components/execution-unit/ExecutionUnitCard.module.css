@@ -39,6 +39,18 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
+.marketActionGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.installedTag {
+  margin: 0;
+  font-size: 12px;
+  line-height: 20px;
+}
+
 .card:hover {
   border-color: rgba(18, 110, 227, 0.35);
   box-shadow: 0 4px 14px rgba(18, 110, 227, 0.12);

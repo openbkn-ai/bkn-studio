@@ -5,12 +5,19 @@ import i18n from "@/app/locales/i18n";
 type ErrorResponseBody = {
   error?: string;
   message?: string;
+  description?: string;
 };
 
 export function extractRequestErrorMessage(error: unknown) {
   if (axios.isAxiosError<ErrorResponseBody>(error)) {
-    const responseMessage = error.response?.data?.message;
-    const responseError = error.response?.data?.error;
+    const data = error.response?.data;
+    const responseDescription = data?.description;
+    const responseMessage = data?.message;
+    const responseError = data?.error;
+
+    if (typeof responseDescription === "string" && responseDescription.trim()) {
+      return responseDescription;
+    }
 
     if (typeof responseMessage === "string" && responseMessage.trim()) {
       return responseMessage;

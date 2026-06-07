@@ -10,6 +10,13 @@ import {
   type RegisteredOperator,
 } from "../../helpers/operator";
 
+function operatorCard(page: import("@playwright/test").Page, operatorName: string) {
+  return page
+    .locator(".ant-card")
+    .filter({ has: page.getByRole("heading", { level: 5, name: operatorName }) })
+    .first();
+}
+
 test.describe("Execution Factory — Operator AT", () => {
   let backendReady = false;
   const createdOperators: RegisteredOperator[] = [];
@@ -44,12 +51,12 @@ test.describe("Execution Factory — Operator AT", () => {
   });
 
   test("AT-01: operator list page loads and shows operators tab", async ({ page }) => {
-    await page.goto("/execution-factory/units");
+    await page.goto("/execution-factory/units?activeTab=operator");
 
-    await expect(page.getByRole("heading", { name: "执行单元管理" })).toBeVisible();
+    await expect(page.getByText("执行单元管理").first()).toBeVisible();
     await expect(page.getByRole("tab", { name: "算子" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "工具箱" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /新\s*建/ })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "工具" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /新建算子/ })).toBeVisible();
   });
 
   test("AT-02: register operator through UI and verify in list", async ({ page }) => {
@@ -64,13 +71,15 @@ test.describe("Execution Factory — Operator AT", () => {
     await page.getByLabel("OpenAPI 规范").fill(openApiSpec);
     await page.getByRole("button", { name: /保\s*存/ }).click();
 
-    await expect(page).toHaveURL(/\/execution-factory\/units$/);
-    await expect(page.getByText(operatorName).first()).toBeVisible();
+    await expect(page).toHaveURL(/\/execution-factory\/units/);
+    await page.getByRole("tab", { name: "算子" }).click();
+    await expect(page.getByRole("heading", { level: 5, name: operatorName })).toBeVisible();
 
-    const row = page.locator("tr").filter({ hasText: operatorName }).first();
-    await expect(row).toContainText("未发布");
+    const card = operatorCard(page, operatorName);
+    await expect(card.locator(".ant-tag").filter({ hasText: "未发布" })).toBeVisible();
 
-    await row.getByRole("button", { name: "详情" }).click();
+    await card.getByRole("button", { name: "更多操作" }).click();
+    await page.getByRole("menuitem", { name: "查看" }).click();
     await expect(page.getByText("算子详情")).toBeVisible();
     await expect(page.getByText(operatorName).first()).toBeVisible();
 
@@ -103,10 +112,10 @@ test.describe("Execution Factory — Operator AT", () => {
 
     await publishOperatorViaApi(request, operator);
 
-    await page.goto("/execution-factory/units");
-    await expect(page.getByText(operatorName).first()).toBeVisible();
+    await page.goto("/execution-factory/units?activeTab=operator");
+    await expect(page.getByRole("heading", { level: 5, name: operatorName })).toBeVisible();
 
-    const row = page.locator("tr").filter({ hasText: operatorName }).first();
-    await expect(row).toContainText("已发布");
+    const card = operatorCard(page, operatorName);
+    await expect(card.locator(".ant-tag").filter({ hasText: "已发布" })).toBeVisible();
   });
 });

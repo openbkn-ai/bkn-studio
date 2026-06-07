@@ -1,0 +1,114 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  buildOpenApiDocumentFromMetadata,
+  parseOpenApiDataPayload,
+  validateOpenApiDocumentText,
+} from "@/modules/execution-factory/utils/metadata-content";
+
+describe("metadata-content OpenAPI helpers", () => {
+  it("reconstructs a full OpenAPI document from backend metadata", () => {
+    const document = buildOpenApiDocumentFromMetadata({
+      description: "test",
+      method: "POST",
+      path: "/api/v1/add",
+      server_url: "http://ef-oss-mock:8080",
+      summary: "加法",
+      api_spec: {
+        parameters: [],
+        request_body: {
+          content: {
+            "application/json": {
+              schema: {
+                properties: {
+                  a: { type: "number" },
+                  b: { type: "number" },
+                },
+                required: ["a", "b"],
+                type: "object",
+              },
+            },
+          },
+          required: false,
+        },
+        responses: [
+          {
+            status_code: "200",
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: {
+                  properties: { sum: { type: "number" } },
+                  type: "object",
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    expect(document).toBeTruthy();
+
+    const parsed = JSON.parse(document!) as {
+      openapi?: string;
+      info?: { title?: string };
+      paths?: Record<string, Record<string, unknown>>;
+    };
+
+    expect(parsed.openapi).toBe("3.0.3");
+    expect(parsed.info?.title).toBe("加法");
+    expect(parsed.paths?.["/api/v1/add"]?.post).toBeTruthy();
+  });
+
+  it("rejects api_spec fragments without OpenAPI top-level fields", () => {
+    const validation = validateOpenApiDocumentText(
+      JSON.stringify(
+        {
+          parameters: [],
+          responses: [{ status_code: "200", description: "OK" }],
+        },
+        null,
+        2,
+      ),
+    );
+
+    expect(validation.ok).toBe(false);
+    if (!validation.ok) {
+      expect(validation.reason).toContain("openapi");
+    }
+  });
+
+  it("keeps register payloads as raw JSON strings", () => {
+    const spec = JSON.stringify({ openapi: "3.0.3" }, null, 2);
+    const payload = parseOpenApiDataPayload(spec, "register");
+
+    expect(typeof payload).toBe("string");
+    expect(payload).toBe(spec);
+  });
+
+  it("parses edit payloads into OpenAPI objects", () => {
+    const spec = JSON.stringify(
+      {
+        openapi: "3.0.3",
+        info: { title: "加法", version: "1.0.0" },
+        servers: [{ url: "http://localhost:8080" }],
+        paths: {
+          "/api/v1/add": {
+            post: {
+              summary: "加法",
+              responses: { "200": { description: "OK" } },
+            },
+          },
+        },
+      },
+      null,
+      2,
+    );
+
+    const payload = parseOpenApiDataPayload(spec, "edit");
+
+    expect(typeof payload).toBe("object");
+    expect(payload).toMatchObject({ openapi: "3.0.3" });
+  });
+});

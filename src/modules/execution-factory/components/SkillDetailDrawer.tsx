@@ -11,6 +11,10 @@ import {
   getSkillMarket,
 } from "@/modules/execution-factory/services/skill.service";
 import type { SkillContentResult, SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
+import {
+  formatOptionalTimestamp,
+  resolveSkillCategoryLabel,
+} from "@/modules/execution-factory/utils/detail-display";
 
 import styles from "./ToolboxDetailDrawer.module.css";
 
@@ -28,14 +32,6 @@ const statusColorMap: Record<SkillStatus, string> = {
   offline: "default",
   unpublish: "blue",
 };
-
-function formatTimestamp(value?: number) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Date(value).toLocaleString();
-}
 
 export function SkillDetailDrawer({
   marketMode = false,
@@ -105,7 +101,7 @@ export function SkillDetailDrawer({
           ? t("executionFactory.skillMarketDetailTitle")
           : t("executionFactory.skillDetailTitle")
       }
-      width={760}
+      width={860}
     >
       {loading ? <Spin /> : null}
       {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
@@ -115,18 +111,20 @@ export function SkillDetailDrawer({
       {!loading && !loadError && record ? (
         <div className={styles.drawerContent}>
           <section className={styles.summaryCard}>
-            <h2 className={styles.summaryTitle}>{record.name}</h2>
-            <p className={styles.summaryDescription}>{record.description || "-"}</p>
-            <div className={styles.summaryStatus}>
-              <Tag color={statusColorMap[record.status]}>
-                {t(`executionFactory.skillStatuses.${record.status}`)}
-              </Tag>
-            </div>
-            <div className={styles.summaryMeta}>
-              <span>{record.skillId}</span>
-              {record.version ? <span>{record.version}</span> : null}
+            <div className={styles.summaryHeader}>
+              <div>
+                <h2 className={styles.summaryTitle}>{record.name}</h2>
+                <p className={styles.summaryDescription}>{record.description || "-"}</p>
+              </div>
+              <div className={styles.summaryStatus}>
+                <Tag color={statusColorMap[record.status]}>
+                  {t(`executionFactory.skillStatuses.${record.status}`)}
+                </Tag>
+                {record.version ? <Tag>{record.version}</Tag> : null}
+              </div>
             </div>
           </section>
+
           <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("common.basicInfo")}</h3>
             <Descriptions
@@ -134,9 +132,29 @@ export function SkillDetailDrawer({
               column={1}
               items={[
                 {
+                  key: "skillId",
+                  label: t("executionFactory.skillIdLabel"),
+                  children: record.skillId,
+                },
+                {
+                  key: "name",
+                  label: t("executionFactory.skillNameLabel"),
+                  children: record.name,
+                },
+                {
+                  key: "version",
+                  label: t("executionFactory.version"),
+                  children: record.version ?? "-",
+                },
+                {
                   key: "category",
                   label: t("executionFactory.category"),
-                  children: record.categoryName ?? record.category ?? "-",
+                  children: resolveSkillCategoryLabel(record, t),
+                },
+                {
+                  key: "status",
+                  label: t("executionFactory.statusLabel"),
+                  children: t(`executionFactory.skillStatuses.${record.status}`),
                 },
                 {
                   key: "createUser",
@@ -144,13 +162,19 @@ export function SkillDetailDrawer({
                   children: record.createUser ?? "-",
                 },
                 {
+                  key: "createTime",
+                  label: t("executionFactory.createTime"),
+                  children: formatOptionalTimestamp(record.createTime),
+                },
+                {
                   key: "updateTime",
                   label: t("executionFactory.updateTime"),
-                  children: formatTimestamp(record.updateTime),
+                  children: formatOptionalTimestamp(record.updateTime),
                 },
               ]}
             />
           </section>
+
           {!marketMode && content ? (
             <section className={styles.sectionCard}>
               <h3 className={styles.sectionTitle}>{t("executionFactory.skillContentTitle")}</h3>
@@ -160,13 +184,18 @@ export function SkillDetailDrawer({
                 <Empty description={t("executionFactory.skillContentEmpty")} />
               )}
               {content.files && content.files.length > 0 ? (
-                <div className={styles.toolList} style={{ marginTop: 12 }}>
-                  {content.files.map((file) => (
-                    <div className={styles.toolItem} key={file}>
-                      <div className={styles.toolName}>{file}</div>
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <h4 className={styles.sectionTitle} style={{ marginTop: 16 }}>
+                    {t("executionFactory.skillFilesSectionTitle")}
+                  </h4>
+                  <div className={styles.toolList}>
+                    {content.files.map((file) => (
+                      <div className={styles.toolItem} key={file}>
+                        <div className={styles.toolName}>{file}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : null}
             </section>
           ) : null}

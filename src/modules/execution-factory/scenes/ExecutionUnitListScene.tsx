@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CreateMenu } from "@/modules/execution-factory/components/create-menu/CreateMenu";
 import { CreateMcpDrawer } from "@/modules/execution-factory/components/create-menu/CreateMcpDrawer";
@@ -52,6 +53,7 @@ import {
   updateToolboxStatus,
 } from "@/modules/execution-factory/services/toolbox.service";
 import type { ImpexComponentType } from "@/modules/execution-factory/types/impex";
+import { collectLocalResourceIds } from "@/modules/execution-factory/utils/collect-local-resource-ids";
 import type { McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
 import type { OperatorRecord, PublicOperatorStatus } from "@/modules/execution-factory/types/operator";
 import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
@@ -186,7 +188,10 @@ export function ExecutionUnitListScene({
     id: string;
     name: string;
     type: ImpexComponentType;
+    alreadyInstalled: boolean;
   } | null>(null);
+  const [installedResourceIds, setInstalledResourceIds] = useState<Set<string>>(() => new Set());
+  const [installedResourceIdsReady, setInstalledResourceIdsReady] = useState(!marketMode);
   const [publishedPermTarget, setPublishedPermTarget] = useState<{
     name: string;
   } | null>(null);
@@ -227,6 +232,40 @@ export function ExecutionUnitListScene({
       setSearchParams(nextParams, { replace: true });
     }
   }, [defaultTab, marketMode, searchParams, setSearchParams, tabs]);
+
+  const reloadInstalledResourceIds = useCallback(async () => {
+    if (!marketMode || activeTab === "skill") {
+      setInstalledResourceIds(new Set());
+      setInstalledResourceIdsReady(true);
+      return;
+    }
+
+    setInstalledResourceIdsReady(false);
+
+    try {
+      const ids = await collectLocalResourceIds(activeTab);
+      setInstalledResourceIds(ids);
+    } catch {
+      setInstalledResourceIds(new Set());
+    } finally {
+      setInstalledResourceIdsReady(true);
+    }
+  }, [activeTab, marketMode]);
+
+  useEffect(() => {
+    void reloadInstalledResourceIds();
+  }, [reloadInstalledResourceIds]);
+
+  const displayItems = useMemo(() => {
+    if (!marketMode) {
+      return items;
+    }
+
+    return items.map((item) => ({
+      ...item,
+      installedInDomain: installedResourceIds.has(item.id),
+    }));
+  }, [installedResourceIds, items, marketMode]);
 
   const listQuery = useMemo(
     () => ({
@@ -420,6 +459,7 @@ export function ExecutionUnitListScene({
           id: item.id,
           name: item.name,
           type: componentType,
+          alreadyInstalled: item.installedInDomain === true,
         });
         return;
       }
@@ -427,6 +467,8 @@ export function ExecutionUnitListScene({
       if (action === "view") {
         if (activeTab === "operator") {
           setDetailOperatorId(item.id);
+        } else if (activeTab === "toolbox") {
+          setDetailBoxId(item.id);
         } else if (activeTab === "mcp") {
           setDetailMcpId(item.id);
         } else if (activeTab === "skill") {
@@ -446,7 +488,8 @@ export function ExecutionUnitListScene({
             await downloadComponentExport(componentType, item.id, item.name);
             void message.success(t("executionFactory.exportSuccess"));
           } catch (error) {
-            void message.error(extractRequestErrorMessage(error));
+            const detail = extractRequestErrorDetail(error);
+            void message.error(detail.description ?? detail.message);
           }
         })();
         return;
@@ -771,12 +814,13 @@ export function ExecutionUnitListScene({
               <Empty description={t("executionFactory.catalogEmptyDescription")} />
             </div>
           ) : null}
-          {items.length > 0 ? (
+          {displayItems.length > 0 ? (
             <>
               <div className={styles.cardGrid}>
-                {items.map((item) => (
+                {displayItems.map((item) => (
                   <ExecutionUnitCard
                     activeTab={activeTab}
+                    installedStateReady={installedResourceIdsReady}
                     item={item}
                     key={item.id}
                     marketMode={marketMode}
@@ -838,11 +882,15 @@ export function ExecutionUnitListScene({
         skillId={historySkillId}
       />
       <InstallFromCatalogModal
+        alreadyInstalled={installTarget?.alreadyInstalled ?? false}
         componentId={installTarget?.id ?? ""}
         componentName={installTarget?.name ?? ""}
         componentType={installTarget?.type ?? "operator"}
         onClose={() => setInstallTarget(null)}
-        onSuccess={reloadList}
+        onSuccess={() => {
+          reloadList();
+          void reloadInstalledResourceIds();
+        }}
         open={Boolean(installTarget)}
       />
       <PublishedPermModal

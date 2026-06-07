@@ -125,6 +125,7 @@ function mapSkill(item: BackendSkillSummary): SkillRecord {
     category: item.category,
     categoryName: item.category_name,
     createUser: item.create_user,
+    createTime: normalizeTimestamp(item.create_time),
     updateTime: normalizeTimestamp(item.update_time),
   };
 }

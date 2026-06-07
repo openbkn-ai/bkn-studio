@@ -24,7 +24,7 @@ export default defineConfig({
       "/api/agent-operator-integration": {
         changeOrigin: true,
         secure: false,
-        target: process.env.VITE_PROXY_TARGET ?? "http://127.0.0.1",
+        target: process.env.VITE_PROXY_TARGET ?? "http://127.0.0.1:9000",
       },
     },
   },

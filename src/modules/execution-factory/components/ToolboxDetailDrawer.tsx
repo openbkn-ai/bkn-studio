@@ -8,6 +8,10 @@ import {
   getToolboxMarket,
 } from "@/modules/execution-factory/services/toolbox.service";
 import type { ToolboxRecord, ToolboxStatus } from "@/modules/execution-factory/types/toolbox";
+import {
+  formatOptionalTimestamp,
+  resolveToolboxCategoryLabel,
+} from "@/modules/execution-factory/utils/detail-display";
 
 import styles from "./ToolboxDetailDrawer.module.css";
 
@@ -23,14 +27,6 @@ const statusColorMap: Record<ToolboxStatus, string> = {
   offline: "default",
   unpublish: "blue",
 };
-
-function formatTimestamp(value?: number) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Date(value).toLocaleString();
-}
 
 export function ToolboxDetailDrawer({
   boxId,
@@ -75,7 +71,7 @@ export function ToolboxDetailDrawer({
           ? t("executionFactory.toolboxMarketDetailTitle")
           : t("executionFactory.toolboxDetailTitle")
       }
-      width={760}
+      width={860}
     >
       {loading ? <Spin /> : null}
       {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
@@ -85,21 +81,25 @@ export function ToolboxDetailDrawer({
       {!loading && !loadError && record ? (
         <div className={styles.drawerContent}>
           <section className={styles.summaryCard}>
-            <h2 className={styles.summaryTitle}>{record.name}</h2>
-            <p className={styles.summaryDescription}>{record.description || "-"}</p>
-            <div className={styles.summaryStatus}>
-              <Tag color={statusColorMap[record.status]}>
-                {t(`executionFactory.toolboxStatuses.${record.status}`)}
-              </Tag>
-              {record.isInternal ? (
-                <Tag>{t("executionFactory.internalTag")}</Tag>
-              ) : null}
-            </div>
-            <div className={styles.summaryMeta}>
-              <span>{record.boxId}</span>
-              {record.serviceUrl ? <span>{record.serviceUrl}</span> : null}
+            <div className={styles.summaryHeader}>
+              <div>
+                <h2 className={styles.summaryTitle}>{record.name}</h2>
+                <p className={styles.summaryDescription}>{record.description || "-"}</p>
+              </div>
+              <div className={styles.summaryStatus}>
+                <Tag color={statusColorMap[record.status]}>
+                  {t(`executionFactory.toolboxStatuses.${record.status}`)}
+                </Tag>
+                {record.metadataType ? (
+                  <Tag>{t(`executionFactory.metadataTypes.${record.metadataType}`)}</Tag>
+                ) : null}
+                {record.isInternal ? (
+                  <Tag>{t("executionFactory.internalTag")}</Tag>
+                ) : null}
+              </div>
             </div>
           </section>
+
           <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("common.basicInfo")}</h3>
             <Descriptions
@@ -112,14 +112,31 @@ export function ToolboxDetailDrawer({
                   children: record.boxId,
                 },
                 {
+                  key: "name",
+                  label: t("executionFactory.toolboxName"),
+                  children: record.name,
+                },
+                {
                   key: "category",
                   label: t("executionFactory.category"),
-                  children: record.categoryName ?? record.categoryType ?? "-",
+                  children: resolveToolboxCategoryLabel(record, t),
                 },
                 {
                   key: "metadataType",
                   label: t("executionFactory.metadataType"),
-                  children: record.metadataType ?? "-",
+                  children: record.metadataType
+                    ? t(`executionFactory.metadataTypes.${record.metadataType}`)
+                    : "-",
+                },
+                {
+                  key: "serviceUrl",
+                  label: t("executionFactory.serviceUrl"),
+                  children: record.serviceUrl ?? "-",
+                },
+                {
+                  key: "toolCount",
+                  label: t("executionFactory.toolCount"),
+                  children: String(record.toolCount ?? record.tools?.length ?? 0),
                 },
                 {
                   key: "createUser",
@@ -127,13 +144,34 @@ export function ToolboxDetailDrawer({
                   children: record.createUser ?? "-",
                 },
                 {
+                  key: "updateUser",
+                  label: t("executionFactory.updateUser"),
+                  children: record.updateUser ?? "-",
+                },
+                {
+                  key: "createTime",
+                  label: t("executionFactory.createTime"),
+                  children: formatOptionalTimestamp(record.createTime),
+                },
+                {
                   key: "updateTime",
                   label: t("executionFactory.updateTime"),
-                  children: formatTimestamp(record.updateTime),
+                  children: formatOptionalTimestamp(record.updateTime),
+                },
+                {
+                  key: "releaseUser",
+                  label: t("executionFactory.releaseUser"),
+                  children: record.releaseUser ?? "-",
+                },
+                {
+                  key: "releaseTime",
+                  label: t("executionFactory.releaseTime"),
+                  children: formatOptionalTimestamp(record.releaseTime),
                 },
               ]}
             />
           </section>
+
           <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("executionFactory.toolsSectionTitle")}</h3>
             {record.tools && record.tools.length > 0 ? (
@@ -143,6 +181,9 @@ export function ToolboxDetailDrawer({
                     <div>
                       <div className={styles.toolName}>{tool.name}</div>
                       <div className={styles.toolMeta}>{tool.toolId}</div>
+                      {tool.description ? (
+                        <div className={styles.toolMeta}>{tool.description}</div>
+                      ) : null}
                     </div>
                     <Tag>
                       {tool.status

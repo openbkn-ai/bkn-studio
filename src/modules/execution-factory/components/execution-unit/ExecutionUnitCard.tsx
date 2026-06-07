@@ -21,6 +21,7 @@ const { Paragraph, Title } = Typography;
 
 type ExecutionUnitCardProps = {
   activeTab: ExecutionUnitTab;
+  installedStateReady?: boolean;
   item: ExecutionUnitCardItem;
   marketMode?: boolean;
   onAction?: (action: ExecutionUnitCardAction, item: ExecutionUnitCardItem) => void;
@@ -58,6 +59,7 @@ function getStatusColor(status?: string) {
 
 export function ExecutionUnitCard({
   activeTab,
+  installedStateReady = true,
   item,
   marketMode = false,
   onAction,
@@ -92,6 +94,7 @@ export function ExecutionUnitCard({
           <div className={styles.cardActions}>
             <ExecutionUnitCardMenu
               activeTab={activeTab}
+              installedStateReady={installedStateReady}
               item={item}
               marketMode={marketMode}
               onAction={onAction}

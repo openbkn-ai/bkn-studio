@@ -5,7 +5,7 @@ export const executionFactoryEnUS = {
       "Manage registered execution operators via agent-operator-integration.",
     catalogTitle: "All Execution Units",
     catalogDescription:
-      "Browse installable execution units from the operator market.",
+      "Browse published execution units in the market. Introduce resources into your domain or sync updates for copies you already have.",
     searchNamePlaceholder: "Search name",
     typeFilter: "Type",
     allCategory: "All",
@@ -26,7 +26,7 @@ export const executionFactoryEnUS = {
     toolbarHint:
       "Connected to agent-operator-integration with default business domain bd_public.",
     catalogToolbarHint:
-      "Browse published operator, toolbox, MCP, and skill market entries.",
+      "The market lists published resources. Items already in your domain are tagged accordingly—you can use them in Execution Units or choose Sync to update.",
     empty: "No execution units",
     emptyDescription: "There are no execution operators to display yet.",
     catalogEmpty: "No market execution units",
@@ -38,7 +38,19 @@ export const executionFactoryEnUS = {
     metadataType: "Metadata Type",
     category: "Category",
     updateTime: "Updated At",
+    createTime: "Created At",
+    updateUser: "Updated By",
     createUser: "Created By",
+    metadataSectionTitle: "Metadata",
+    apiMethodLabel: "HTTP Method",
+    apiPathLabel: "Request Path",
+    mcpIdLabel: "MCP ID",
+    mcpNameLabel: "MCP Name",
+    mcpModeLabel: "Connection Mode",
+    mcpToolConfigsSectionTitle: "Imported Tool Configurations",
+    skillIdLabel: "Skill ID",
+    skillNameLabel: "Skill Name",
+    skillFilesSectionTitle: "Package Files",
     internalTag: "Built-in",
     statuses: {
       unpublish: "Unpublished",
@@ -227,12 +239,40 @@ export const executionFactoryEnUS = {
     toolStatusChangeConfirmDescription: 'Change "{{name}}" to "{{status}}"?',
     toolDeleteConfirmTitle: "Delete tool",
     toolDeleteConfirmDescription: 'Delete "{{name}}"? This action cannot be undone.',
+    marketIntroduce: "Introduce",
+    marketSync: "Sync",
+    marketIntroducedTag: "In your domain",
+    introduceTitle: "Introduce to Domain",
+    introduceDescription:
+      'Introduce "{{name}}" from the market into your current business domain. You can manage and use it under Execution Units afterward.',
+    introduceConfirm: "Introduce",
+    introduceSuccess: "Introduced successfully",
+    syncTitle: "Sync from Market",
+    syncDescription:
+      '"{{name}}" is already in your domain. Sync the latest market version to your local copy.',
+    syncConfirm: "Start sync",
+    syncSuccess: "Synced successfully",
+    syncModeHint: "The market version will update or overwrite the existing copy in your domain.",
     install: "Install",
     installTitle: "Install from Market",
     installDescription: 'Install "{{name}}" into the current business domain?',
     importMode: "Import Mode",
     importModeCreate: "Create new",
+    importModeCreateHint: "Use only when this resource does not exist in your domain yet.",
     importModeUpsert: "Create or update",
+    importModeUpsertHint: "Use when the resource already exists in your domain to overwrite or update it.",
+    installError: {
+      generic: "Operation failed. Please try again or contact your administrator.",
+      alreadyExistsHint:
+        "This resource is already in your domain. Choose Sync, or open Execution Units to use it directly.",
+      alreadyExists: {
+        toolbox:
+          "This toolbox is already in your domain and cannot be introduced again as new.",
+        operator:
+          "This operator is already in your domain and cannot be introduced again as new.",
+        mcp: "This MCP is already in your domain and cannot be introduced again as new.",
+      },
+    },
     importButton: "Import",
     importConfirm: "Import",
     importSuccess: "Imported successfully",

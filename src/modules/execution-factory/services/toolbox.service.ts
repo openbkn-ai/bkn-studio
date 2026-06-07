@@ -10,6 +10,7 @@ import type {
   ToolRecord,
 } from "@/modules/execution-factory/types/toolbox";
 import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-timestamp";
+import { parseOpenApiDataPayload } from "@/modules/execution-factory/utils/metadata-content";
 
 type BackendToolInfo = {
   description?: string;
@@ -277,7 +278,7 @@ export async function createToolbox(
       box_desc: input.description,
       box_name: input.name,
       box_svc_url: input.serviceUrl,
-      data: input.openapiSpec,
+      data: parseOpenApiDataPayload(input.openapiSpec, "edit"),
       metadata_type: input.metadataType,
     },
     { headers: getBusinessDomainHeaders() },
@@ -315,7 +316,7 @@ export async function updateToolbox(input: ToolboxEditInput): Promise<void> {
       box_desc: input.description,
       box_name: input.name,
       box_svc_url: input.serviceUrl,
-      data: input.openapiSpec,
+      data: parseOpenApiDataPayload(input.openapiSpec, "edit"),
       metadata_type: input.metadataType,
     },
     { headers: getBusinessDomainHeaders() },

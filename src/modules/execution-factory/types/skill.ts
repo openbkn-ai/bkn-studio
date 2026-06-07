@@ -8,6 +8,7 @@ export type SkillRecord = {
   status: SkillStatus;
   category?: string;
   categoryName?: string;
+  createTime?: number;
   createUser?: string;
   updateTime?: number;
 };
