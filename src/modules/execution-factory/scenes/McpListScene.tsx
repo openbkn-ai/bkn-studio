@@ -19,6 +19,7 @@ import {
   updateMcpStatus,
 } from "@/modules/execution-factory/services/mcp.service";
 import type { McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
+import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import styles from "./execution-factory-list.module.css";
 
@@ -30,13 +31,10 @@ const statusClassMap: Record<McpStatus, string> = {
 };
 
 function formatTimestamp(value?: number) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Date(value).toLocaleString();
+  return formatExecutionUnitTime(value);
 }
 
+/** @deprecated Use `ExecutionUnitListScene` with `activeTab="mcp"` instead. */
 export function McpListScene() {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();

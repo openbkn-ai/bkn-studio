@@ -5,6 +5,7 @@ import type {
   OperatorDebugResult,
   OperatorDetail,
   OperatorEditInput,
+  OperatorExecuteControl,
   OperatorHistoryRecord,
   OperatorListQuery,
   OperatorListResult,
@@ -15,9 +16,10 @@ import type {
 } from "@/modules/execution-factory/types/operator";
 import {
   mapFunctionContent,
+  parseOpenApiDataPayload,
   serializeOpenApiSpec,
 } from "@/modules/execution-factory/utils/metadata-content";
-import type { OperatorExecuteControl } from "@/modules/execution-factory/types/operator";
+import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-timestamp";
 
 type BackendOperatorExecuteControl = {
   retry_policy?: {
@@ -39,6 +41,11 @@ type BackendOperatorDataInfo = {
   description?: string;
   is_internal?: boolean;
   metadata?: {
+    description?: string;
+    summary?: string;
+    server_url?: string;
+    path?: string;
+    method?: string;
     api_spec?: unknown;
     function_content?: {
       code?: string;
@@ -171,18 +178,54 @@ function serializeOperatorExecuteControl(control?: OperatorExecuteControl) {
   };
 }
 
+export function resolveOperatorDescription(
+  item: BackendOperatorDataInfo,
+): string | undefined {
+  const metadataDescription = item.metadata?.description;
+  if (typeof metadataDescription === "string" && metadataDescription.length > 0) {
+    return metadataDescription;
+  }
+
+  if (typeof item.description === "string" && item.description.length > 0) {
+    return item.description;
+  }
+
+  return metadataDescription ?? item.description;
+}
+
 function mapOperatorDetail(item: BackendOperatorDataInfo): OperatorDetail {
   return {
     ...mapOperator(item),
+    description: resolveOperatorDescription(item),
     openapiSpec: serializeOpenApiSpec(item.metadata),
     functionInput: mapFunctionContent(item.metadata),
     executeControl: mapOperatorExecuteControl(item.operator_execute_control),
   };
 }
 
-function buildOperatorMutationBody(input: OperatorRegisterInput | OperatorEditInput) {
+export function operatorDetailToFormValues(
+  record: OperatorDetail,
+): Partial<OperatorMutationInput & { functionCode?: string }> {
   return {
-    data: input.openapiSpec,
+    category: record.category,
+    description: record.description ?? "",
+    executeControl: record.executeControl ?? { timeout: 3000 },
+    functionCode: record.functionInput?.code,
+    metadataType: record.metadataType ?? "openapi",
+    name: record.name,
+    openapiSpec: record.openapiSpec,
+  };
+}
+
+function buildOperatorMutationBody(
+  input: OperatorRegisterInput | OperatorEditInput,
+  options?: { openApiAsObject?: boolean },
+) {
+  return {
+    data: parseOpenApiDataPayload(
+      input.openapiSpec,
+      options?.openApiAsObject ? "edit" : "register",
+    ),
     description: input.description,
     function_input: input.functionInput
       ? {
@@ -207,16 +250,16 @@ function mapOperator(item: BackendOperatorDataInfo): OperatorRecord {
     name: item.name ?? item.operator_id,
     version: item.version,
     status: (item.status ?? "unpublish") as OperatorStatus,
-    description: item.description,
+    description: resolveOperatorDescription(item),
     metadataType: item.metadata_type as OperatorRecord["metadataType"],
     category: item.operator_info?.category as OperatorRecord["category"],
     categoryName: item.operator_info?.category_name,
-    createTime: item.create_time,
-    updateTime: item.update_time,
+    createTime: normalizeTimestamp(item.create_time),
+    updateTime: normalizeTimestamp(item.update_time),
     createUser: item.create_user,
     updateUser: item.update_user,
     releaseUser: item.release_user,
-    releaseTime: item.release_time,
+    releaseTime: normalizeTimestamp(item.release_time),
     isInternal: item.is_internal,
   };
 }
@@ -267,6 +310,7 @@ async function fetchOperatorList(
       sort_by: "update_time",
       sort_order: "desc",
     },
+    skipErrorToast: true,
   });
   const data = response.data;
 
@@ -341,7 +385,23 @@ export async function getOperatorDetail(operatorId: string): Promise<OperatorDet
     { headers: getBusinessDomainHeaders() },
   );
 
-  return mapOperatorDetail(response.data);
+  const detail = mapOperatorDetail(response.data);
+  const enriched: OperatorDetail = {
+    ...detail,
+    description: resolveOperatorDescription(response.data) ?? detail.description ?? "",
+  };
+
+  if (!enriched.releaseTime && enriched.status === "published") {
+    const history = await listOperatorHistory(operatorId);
+    const currentRelease = history.find((item) => item.version === enriched.version);
+
+    if (currentRelease) {
+      enriched.releaseUser = enriched.releaseUser ?? currentRelease.releaseUser;
+      enriched.releaseTime = enriched.releaseTime ?? currentRelease.releaseTime;
+    }
+  }
+
+  return enriched;
 }
 
 export async function registerOperator(
@@ -405,7 +465,7 @@ export async function updateOperator(input: OperatorEditInput): Promise<void> {
   await http.post(
     `${API_PREFIX}/operator/info`,
     {
-      ...buildOperatorMutationBody(input),
+      ...buildOperatorMutationBody(input, { openApiAsObject: true }),
       operator_id: input.operatorId,
     },
     { headers: getBusinessDomainHeaders() },
@@ -547,7 +607,7 @@ export async function listOperatorHistory(
       version: item.version ?? "",
       status: (item.status ?? "published") as OperatorStatus,
       releaseUser: item.release_user,
-      releaseTime: item.release_time,
-      updateTime: item.update_time,
+      releaseTime: normalizeTimestamp(item.release_time),
+      updateTime: normalizeTimestamp(item.update_time),
     }));
 }

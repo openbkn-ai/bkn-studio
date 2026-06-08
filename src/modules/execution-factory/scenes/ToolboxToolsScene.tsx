@@ -1,11 +1,5 @@
-import {
-  BarsOutlined,
-  ClockCircleOutlined,
-  DeleteOutlined,
-  LeftOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
-import { Alert, Checkbox, Empty, Layout, Space, Spin, Switch, Tag, Typography } from "antd";
+import { BarsOutlined, ClockCircleOutlined, DeleteOutlined, DownloadOutlined, SettingOutlined } from "@ant-design/icons";
+import { Alert, Breadcrumb, Checkbox, Empty, Layout, Space, Spin, Switch, Tag, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -29,6 +23,7 @@ import {
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 import type { ToolRecord, ToolRunLogEntry, ToolStatus } from "@/modules/execution-factory/types/tool";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
+import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-export";
 
 import styles from "./toolbox-detail.module.css";
 
@@ -39,7 +34,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const viewMode = searchParams.get("action") === "view";
   const [toolbox, setToolbox] = useState<ToolboxRecord | null>(null);
   const [items, setItems] = useState<ToolRecord[]>([]);
@@ -54,6 +49,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const [toolRunLogs, setToolRunLogs] = useState<ToolRunLogEntry[]>([]);
   const [importOpenApiOpen, setImportOpenApiOpen] = useState(false);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
+  const { exportComponentById, isExporting } = useImpexExport();
 
   const loadToolbox = useCallback(async () => {
     try {
@@ -104,9 +100,27 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     void loadTools();
   }, [loadTools]);
 
+  useEffect(() => {
+    if (viewMode || loading || searchParams.get("create") !== "1") {
+      return;
+    }
+
+    setFormMode("create");
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("create");
+    setSearchParams(nextParams, { replace: true });
+  }, [loading, searchParams, setSearchParams, viewMode]);
+
+  const isFunctionToolbox = toolbox?.metadataType === "function";
+
   const handleBack = () => {
     if (onBack) {
       onBack();
+      return;
+    }
+
+    if (window.history.length > 1) {
+      void navigate(-1);
       return;
     }
 
@@ -219,9 +233,29 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   return (
     <>
       <section className={styles.page}>
-        <div className={styles.backRow} onClick={handleBack}>
-          <LeftOutlined />
-          {t("executionFactory.toolboxDetailBack")}
+        <div className={styles.backRow}>
+          <Breadcrumb
+            items={[
+              {
+                title: (
+                  <button className={styles.breadcrumbLink} onClick={handleBack} type="button">
+                    {viewMode
+                      ? t("executionFactory.catalogTitle")
+                      : t("executionFactory.unitManagementTitle")}
+                  </button>
+                ),
+              },
+              {
+                title: toolbox?.name ?? t("executionFactory.toolboxToolsPageTitle"),
+              },
+              {
+                title: t("executionFactory.toolboxToolsPageTitle"),
+              },
+            ]}
+          />
+          <AppButton icon={<SettingOutlined />} onClick={handleBack} type="link">
+            {t("executionFactory.toolboxDetailBack")}
+          </AppButton>
         </div>
 
         {toolbox ? (
@@ -251,12 +285,27 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
             {!viewMode ? (
               <PermissionGate permissions="execution-factory:tool:create">
                 <Space>
+                  {!toolbox.isInternal ? (
+                    <PermissionGate permissions="execution-factory:impex:export">
+                      <AppButton
+                        icon={<DownloadOutlined />}
+                        loading={isExporting("toolbox", boxId)}
+                        onClick={() => {
+                          void exportComponentById("toolbox", boxId, toolbox.name);
+                        }}
+                      >
+                        {t("executionFactory.cardMenu.export")}
+                      </AppButton>
+                    </PermissionGate>
+                  ) : null}
                   <AppButton onClick={() => setFormMode("create")} type="primary">
                     {t("common.create")}
                   </AppButton>
-                  <AppButton onClick={() => setImportOpenApiOpen(true)}>
-                    {t("executionFactory.importOpenApiToolsButton")}
-                  </AppButton>
+                  {!isFunctionToolbox ? (
+                    <AppButton onClick={() => setImportOpenApiOpen(true)}>
+                      {t("executionFactory.importOpenApiToolsButton")}
+                    </AppButton>
+                  ) : null}
                 </Space>
               </PermissionGate>
             ) : null}
@@ -275,15 +324,22 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
           <div className={styles.emptyWrap}>
             <Empty description={t("executionFactory.toolsEmpty")}>
               {!viewMode ? (
-                <Space style={{ marginTop: 16 }}>
-                  <PermissionGate permissions="execution-factory:tool:create">
-                    <AppButton onClick={() => setFormMode("create")} type="primary">
-                      {t("common.create")}
-                    </AppButton>
-                    <AppButton onClick={() => setImportOpenApiOpen(true)}>
-                      {t("executionFactory.importOpenApiToolsButton")}
-                    </AppButton>
-                  </PermissionGate>
+                <Space direction="vertical" size={16} style={{ marginTop: 16, width: "100%" }}>
+                  {isFunctionToolbox ? (
+                    <Alert message={t("executionFactory.functionToolCreateHint")} showIcon type="info" />
+                  ) : null}
+                  <Space>
+                    <PermissionGate permissions="execution-factory:tool:create">
+                      <AppButton onClick={() => setFormMode("create")} type="primary">
+                        {t("common.create")}
+                      </AppButton>
+                      {!isFunctionToolbox ? (
+                        <AppButton onClick={() => setImportOpenApiOpen(true)}>
+                          {t("executionFactory.importOpenApiToolsButton")}
+                        </AppButton>
+                      ) : null}
+                    </PermissionGate>
+                  </Space>
                 </Space>
               ) : null}
             </Empty>
@@ -488,6 +544,37 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         )}
       </section>
 
+      {!viewMode && selectedToolIds.length > 0 ? (
+        <div className={styles.batchBarFixed}>
+          <span>
+            {t("executionFactory.toolBatchSelectedCount", {
+              count: selectedToolIds.length,
+            })}
+          </span>
+          <Space size={8} wrap>
+            <AppButton onClick={() => setSelectedToolIds([])} size="small">
+              {t("common.cancel")}
+            </AppButton>
+            <PermissionGate permissions="execution-factory:tool:edit">
+              <AppButton onClick={() => handleBatchStatus("enabled")} size="small">
+                {t("executionFactory.enable")}
+              </AppButton>
+              <AppButton onClick={() => handleBatchStatus("disabled")} size="small">
+                {t("executionFactory.disable")}
+              </AppButton>
+              <AppButton
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+                size="small"
+              >
+                {t("common.delete")}
+              </AppButton>
+            </PermissionGate>
+          </Space>
+        </div>
+      ) : null}
+
       <ToolFormDrawer
         boxId={boxId}
         mode="create"
@@ -496,6 +583,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
           void loadTools();
         }}
         open={formMode === "create"}
+        toolboxMetadataType={toolbox?.metadataType}
       />
       <ImportOpenApiToolsModal
         boxId={boxId}

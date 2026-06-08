@@ -1,30 +1,23 @@
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Empty, Input, Select, Spin, Tabs } from "antd";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CreateMenu } from "@/modules/execution-factory/components/create-menu/CreateMenu";
-import { CreateMcpDrawer } from "@/modules/execution-factory/components/create-menu/CreateMcpDrawer";
-import { UpdateSkillPackageModal } from "@/modules/execution-factory/components/create-menu/UpdateSkillPackageModal";
 import { ExecutionUnitCard } from "@/modules/execution-factory/components/execution-unit/ExecutionUnitCard";
+import { ExecutionUnitCardSkeleton } from "@/modules/execution-factory/components/execution-unit/ExecutionUnitCardSkeleton";
 import type { ExecutionUnitCardAction } from "@/modules/execution-factory/components/execution-unit/ExecutionUnitCardMenu";
 import type {
   ExecutionUnitCardItem,
   ExecutionUnitTab,
 } from "@/modules/execution-factory/components/execution-unit/types";
-import { InstallFromCatalogModal } from "@/modules/execution-factory/components/InstallFromCatalogModal";
-import { PublishedPermModal } from "@/modules/execution-factory/components/PublishedPermModal";
-import { McpDetailDrawer } from "@/modules/execution-factory/components/McpDetailDrawer";
-import { OperatorDetailDrawer } from "@/modules/execution-factory/components/OperatorDetailDrawer";
-import { SkillDetailDrawer } from "@/modules/execution-factory/components/SkillDetailDrawer";
-import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
-import { ToolboxDetailDrawer } from "@/modules/execution-factory/components/ToolboxDetailDrawer";
-import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import type { ImpexComponentType } from "@/modules/execution-factory/types/impex";
 import { downloadComponentExport } from "@/modules/execution-factory/services/impex.service";
 import {
   deleteMcp,
@@ -51,15 +44,41 @@ import {
   listToolboxes,
   updateToolboxStatus,
 } from "@/modules/execution-factory/services/toolbox.service";
-import type { ImpexComponentType } from "@/modules/execution-factory/types/impex";
+import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
 import type { McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
 import type { OperatorRecord, PublicOperatorStatus } from "@/modules/execution-factory/types/operator";
 import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
 import type { ToolboxRecord, ToolboxStatus } from "@/modules/execution-factory/types/toolbox";
+import { collectLocalResourceIds } from "@/modules/execution-factory/utils/collect-local-resource-ids";
 
 import styles from "./execution-unit-list.module.css";
 
+const ExecutionUnitListOverlays = lazy(async () => {
+  const module = await import("@/modules/execution-factory/scenes/ExecutionUnitListOverlays");
+  return { default: module.ExecutionUnitListOverlays };
+});
+
 const PAGE_SIZE = 20;
+const TAB_STORAGE_KEY = "execution-factory.activeTab";
+const DEFAULT_TABS: ExecutionUnitTab[] = ["operator", "toolbox", "mcp", "skill"];
+
+type IdleTaskHandle = {
+  cancel: () => void;
+};
+
+function scheduleIdleTask(task: () => void, timeoutMs: number): IdleTaskHandle {
+  if (typeof window.requestIdleCallback === "function") {
+    const id = window.requestIdleCallback(task, { timeout: timeoutMs });
+    return {
+      cancel: () => window.cancelIdleCallback(id),
+    };
+  }
+
+  const id = window.setTimeout(task, Math.min(timeoutMs, 1500));
+  return {
+    cancel: () => window.clearTimeout(id),
+  };
+}
 
 function resolveActiveTab(
   param: string | null,
@@ -68,6 +87,13 @@ function resolveActiveTab(
 ): ExecutionUnitTab {
   if (param && tabs.includes(param as ExecutionUnitTab)) {
     return param as ExecutionUnitTab;
+  }
+
+  if (typeof window !== "undefined") {
+    const stored = window.localStorage.getItem(TAB_STORAGE_KEY);
+    if (stored && tabs.includes(stored as ExecutionUnitTab)) {
+      return stored as ExecutionUnitTab;
+    }
   }
 
   if (defaultTab && tabs.includes(defaultTab)) {
@@ -155,7 +181,7 @@ export function ExecutionUnitListScene({
   defaultKeyword,
   defaultTab,
   marketMode = false,
-  tabs = ["mcp", "toolbox", "operator", "skill"],
+  tabs = DEFAULT_TABS,
   titleKey,
   descriptionKey,
   toolbarHintKey,
@@ -164,8 +190,11 @@ export function ExecutionUnitListScene({
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { pageState, query, reset, setKeyword } = usePageState();
+  const { pageState, reset, setKeyword } = usePageState();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const listLoadGenerationRef = useRef(0);
+  const installedSyncIdleRef = useRef<IdleTaskHandle | null>(null);
+  const [overlaysReady, setOverlaysReady] = useState(false);
   const [activeTab, setActiveTab] = useState<ExecutionUnitTab>(() =>
     resolveActiveTab(searchParams.get("activeTab"), defaultTab, tabs),
   );
@@ -175,10 +204,16 @@ export function ExecutionUnitListScene({
   const [items, setItems] = useState<ExecutionUnitCardItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [installedResourceIdsError, setInstalledResourceIdsError] = useState<string | null>(
+    null,
+  );
+  const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
   const [detailOperatorId, setDetailOperatorId] = useState<string | null>(null);
   const [detailBoxId, setDetailBoxId] = useState<string | null>(null);
+  const [detailBoxEditMode, setDetailBoxEditMode] = useState(false);
   const [detailMcpId, setDetailMcpId] = useState<string | null>(null);
   const [detailSkillId, setDetailSkillId] = useState<string | null>(null);
   const [historySkillId, setHistorySkillId] = useState<string | null>(null);
@@ -186,7 +221,17 @@ export function ExecutionUnitListScene({
     id: string;
     name: string;
     type: ImpexComponentType;
+    alreadyInstalled: boolean;
   } | null>(null);
+  const [skillInstallTarget, setSkillInstallTarget] = useState<{
+    id: string;
+    name: string;
+    alreadyInstalled: boolean;
+  } | null>(null);
+  const [installedResourceIds, setInstalledResourceIds] = useState<Set<string>>(() => new Set());
+  const [installedResourceIdsReady, setInstalledResourceIdsReady] = useState(!marketMode);
+  const installedSyncAbortRef = useRef<AbortController | null>(null);
+  const installedSyncManualRef = useRef(false);
   const [publishedPermTarget, setPublishedPermTarget] = useState<{
     name: string;
   } | null>(null);
@@ -195,6 +240,7 @@ export function ExecutionUnitListScene({
     id: string;
     name: string;
   } | null>(null);
+  const [debouncedKeyword, setDebouncedKeyword] = useState(pageState.keyword);
 
   useEffect(() => {
     if (defaultKeyword) {
@@ -203,6 +249,25 @@ export function ExecutionUnitListScene({
   }, [defaultKeyword, setKeyword]);
 
   useEffect(() => {
+    if (pageState.keyword === "") {
+      setDebouncedKeyword("");
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setDebouncedKeyword(pageState.keyword);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [pageState.keyword]);
+
+  useEffect(() => {
+    if (activeTab !== "operator") {
+      setCategoryOptions([]);
+      setCategory("");
+      return;
+    }
+
     void (async () => {
       const items = await listOperatorCategories();
       setCategoryOptions([
@@ -213,7 +278,12 @@ export function ExecutionUnitListScene({
         })),
       ]);
     })();
-  }, [t]);
+  }, [activeTab, t]);
+
+  useEffect(() => {
+    setCategory("");
+    setStatus("");
+  }, [activeTab]);
 
   useEffect(() => {
     const param = searchParams.get("activeTab");
@@ -221,36 +291,171 @@ export function ExecutionUnitListScene({
 
     setActiveTab(resolved);
 
-    if (param !== resolved) {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.set("activeTab", resolved);
-      setSearchParams(nextParams, { replace: true });
+    if (param && tabs.includes(param as ExecutionUnitTab)) {
+      return;
     }
-  }, [defaultTab, marketMode, searchParams, setSearchParams, tabs]);
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("activeTab", resolved);
+    setSearchParams(nextParams, { replace: true });
+  }, [defaultTab, searchParams, setSearchParams, tabs]);
+
+  useEffect(() => {
+    const detailId = searchParams.get("detailId");
+    if (!detailId || marketMode) {
+      return;
+    }
+
+    if (activeTab === "operator") {
+      setDetailOperatorId(detailId);
+    } else if (activeTab === "toolbox") {
+      setDetailBoxId(detailId);
+    } else if (activeTab === "mcp") {
+      setDetailMcpId(detailId);
+    } else if (activeTab === "skill") {
+      setDetailSkillId(detailId);
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("detailId");
+    setSearchParams(nextParams, { replace: true });
+  }, [activeTab, marketMode, searchParams, setSearchParams]);
+
+  const reloadInstalledResourceIds = useCallback(async (options?: { manual?: boolean }) => {
+    if (!marketMode) {
+      setInstalledResourceIds(new Set());
+      setInstalledResourceIdsReady(true);
+      setInstalledResourceIdsError(null);
+      return;
+    }
+
+    installedSyncAbortRef.current?.abort();
+    const controller = new AbortController();
+    installedSyncAbortRef.current = controller;
+
+    const manual = options?.manual ?? false;
+    if (manual) {
+      installedSyncManualRef.current = true;
+      invalidateLocalResourceIdsCache(activeTab);
+    }
+
+    setInstalledResourceIdsReady(false);
+    if (manual) {
+      setInstalledResourceIdsError(null);
+    }
+
+    try {
+      const ids = await collectLocalResourceIds(activeTab, {
+        signal: controller.signal,
+        singlePage: true,
+        useCache: !manual,
+      });
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      setInstalledResourceIds(ids);
+      setInstalledResourceIdsError(null);
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      setInstalledResourceIds(new Set());
+      if (manual || installedSyncManualRef.current) {
+        setInstalledResourceIdsError(extractRequestErrorMessage(error));
+      }
+    } finally {
+      if (installedSyncAbortRef.current === controller) {
+        installedSyncAbortRef.current = null;
+      }
+
+      if (!controller.signal.aborted) {
+        setInstalledResourceIdsReady(true);
+      }
+    }
+  }, [activeTab, marketMode]);
+
+  useEffect(() => {
+    return () => {
+      installedSyncAbortRef.current?.abort();
+      installedSyncIdleRef.current?.cancel();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!marketMode) {
+      void reloadInstalledResourceIds();
+      return;
+    }
+
+    installedSyncManualRef.current = false;
+    setInstalledResourceIdsError(null);
+  }, [activeTab, marketMode, reloadInstalledResourceIds]);
+
+  const scheduleInstalledResourceSync = useCallback(() => {
+    if (!marketMode) {
+      return;
+    }
+
+    installedSyncIdleRef.current?.cancel();
+
+    const run = () => {
+      installedSyncIdleRef.current = null;
+      void reloadInstalledResourceIds();
+    };
+
+    installedSyncIdleRef.current = scheduleIdleTask(run, 4000);
+  }, [marketMode, reloadInstalledResourceIds]);
+
+  const displayItems = useMemo(() => {
+    if (!marketMode) {
+      return items;
+    }
+
+    return items.map((item) => ({
+      ...item,
+      installedInDomain: installedResourceIds.has(item.id),
+    }));
+  }, [installedResourceIds, items, marketMode]);
 
   const listQuery = useMemo(
     () => ({
       page,
       pageSize: PAGE_SIZE,
-      keyword: query.keyword,
+      keyword: debouncedKeyword,
       status: status || undefined,
-      category: category || undefined,
+      category: activeTab === "operator" && category ? category : undefined,
     }),
-    [category, page, query.keyword, status],
+    [activeTab, category, debouncedKeyword, page, status],
   );
 
   const loadItems = useCallback(async () => {
+    const generation = listLoadGenerationRef.current + 1;
+    listLoadGenerationRef.current = generation;
+
     setLoading(true);
-    setLoadError(null);
+    if (page === 1) {
+      setLoadError(null);
+    } else {
+      setLoadMoreError(null);
+    }
 
     try {
       if (activeTab === "operator") {
         const result = marketMode
           ? await listOperatorMarket(listQuery)
           : await listOperators(listQuery);
+        if (generation !== listLoadGenerationRef.current) {
+          return;
+        }
         const mapped = result.items.map(mapOperator);
         setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
         setTotal(result.total);
+        if (page === 1) {
+          scheduleInstalledResourceSync();
+        }
         return;
       }
 
@@ -258,45 +463,85 @@ export function ExecutionUnitListScene({
         const result = marketMode
           ? await listToolboxMarket(listQuery)
           : await listToolboxes(listQuery);
+        if (generation !== listLoadGenerationRef.current) {
+          return;
+        }
       const mapped = result.items.map(mapToolbox);
       setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
       setTotal(result.total);
+      if (page === 1) {
+        scheduleInstalledResourceSync();
+      }
       return;
       }
 
       if (activeTab === "mcp") {
         const result = marketMode ? await listMcpMarket(listQuery) : await listMcps(listQuery);
+        if (generation !== listLoadGenerationRef.current) {
+          return;
+        }
         const mapped = result.items.map(mapMcp);
         setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
         setTotal(result.total);
+        if (page === 1) {
+          scheduleInstalledResourceSync();
+        }
         return;
       }
 
       const result = marketMode
         ? await listSkillMarket(listQuery)
         : await listSkills(listQuery);
+      if (generation !== listLoadGenerationRef.current) {
+        return;
+      }
       const mapped = result.items.map(mapSkill);
       setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
       setTotal(result.total);
+      if (page === 1) {
+        scheduleInstalledResourceSync();
+      }
     } catch (error) {
+      if (generation !== listLoadGenerationRef.current) {
+        return;
+      }
       if (page === 1) {
         setItems([]);
         setTotal(0);
+        setLoadError(extractRequestErrorMessage(error));
+      } else {
+        setLoadMoreError(extractRequestErrorMessage(error));
       }
-      setLoadError(extractRequestErrorMessage(error));
     } finally {
-      setLoading(false);
+      if (generation === listLoadGenerationRef.current) {
+        setLoading(false);
+      }
     }
-  }, [activeTab, listQuery, marketMode, page]);
+  }, [activeTab, listQuery, marketMode, page, scheduleInstalledResourceSync]);
 
   useEffect(() => {
     setPage(1);
     setItems([]);
-  }, [activeTab, query.keyword, status, marketMode, category]);
+    setLoading(true);
+  }, [activeTab, debouncedKeyword, status, marketMode, category]);
 
   useEffect(() => {
     void loadItems();
   }, [loadItems]);
+
+  const tabLabel = t(`executionFactory.executionUnitTabs.${activeTab}`);
+  const emptyDescription = t(
+    marketMode
+      ? `executionFactory.catalogEmptyByTab.${activeTab}`
+      : `executionFactory.emptyByTab.${activeTab}`,
+  );
+  const showCategoryFilter = activeTab === "operator";
+
+  const openEmptyCreate = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("create", "1");
+    setSearchParams(nextParams);
+  };
 
   const tabItems = useMemo(
     () =>
@@ -309,7 +554,7 @@ export function ExecutionUnitListScene({
 
   const statusOptions = useMemo(() => {
     const base = [
-      { value: "", label: t("executionFactory.allCategory") },
+      { value: "", label: t("executionFactory.allStatus") },
       { value: "published", label: t("executionFactory.statuses.published") },
       { value: "unpublish", label: t("executionFactory.statuses.unpublish") },
       { value: "offline", label: t("executionFactory.statuses.offline") },
@@ -330,22 +575,14 @@ export function ExecutionUnitListScene({
   }, [activeTab, t]);
 
   const handleCardClick = (item: ExecutionUnitCardItem) => {
-    const action = marketMode ? "view" : "edit";
-
-    if (activeTab === "toolbox") {
-      void navigate(
-        `/execution-factory/toolboxes/${item.id}/tools?action=${action}`,
-      );
+    if (activeTab === "operator") {
+      setDetailOperatorId(item.id);
       return;
     }
 
-    if (activeTab === "operator") {
-      if (marketMode) {
-        setDetailOperatorId(item.id);
-        return;
-      }
-
-      void navigate(`/execution-factory/units/${item.id}/edit`);
+    if (activeTab === "toolbox") {
+      setDetailBoxEditMode(false);
+      setDetailBoxId(item.id);
       return;
     }
 
@@ -385,11 +622,16 @@ export function ExecutionUnitListScene({
           okText: t("common.save"),
           cancelText: t("common.cancel"),
           onOk: async () => {
-            await onConfirm();
-            void message.success(t("common.success"));
-            reloadList();
-            if (!marketMode && nextStatus === "published") {
-              setPublishedPermTarget({ name: item.name });
+            try {
+              await onConfirm();
+              void message.success(t("common.success"));
+              reloadList();
+              if (!marketMode && nextStatus === "published") {
+                setPublishedPermTarget({ name: item.name });
+              }
+            } catch (error) {
+              void message.error(extractRequestErrorMessage(error));
+              return Promise.reject(error);
             }
           },
         });
@@ -403,14 +645,28 @@ export function ExecutionUnitListScene({
           okText: t("common.delete"),
           cancelText: t("common.cancel"),
           onOk: async () => {
-            await onConfirm();
-            void message.success(t("common.success"));
-            reloadList();
+            try {
+              await onConfirm();
+              void message.success(t("common.success"));
+              reloadList();
+            } catch (error) {
+              void message.error(extractRequestErrorMessage(error));
+              return Promise.reject(error);
+            }
           },
         });
       };
 
       if (action === "install") {
+        if (activeTab === "skill") {
+          setSkillInstallTarget({
+            id: item.id,
+            name: item.name,
+            alreadyInstalled: item.installedInDomain === true,
+          });
+          return;
+        }
+
         const componentType = impexTypeForTab(activeTab);
         if (!componentType) {
           return;
@@ -420,6 +676,7 @@ export function ExecutionUnitListScene({
           id: item.id,
           name: item.name,
           type: componentType,
+          alreadyInstalled: item.installedInDomain === true,
         });
         return;
       }
@@ -427,6 +684,9 @@ export function ExecutionUnitListScene({
       if (action === "view") {
         if (activeTab === "operator") {
           setDetailOperatorId(item.id);
+        } else if (activeTab === "toolbox") {
+          setDetailBoxEditMode(false);
+          setDetailBoxId(item.id);
         } else if (activeTab === "mcp") {
           setDetailMcpId(item.id);
         } else if (activeTab === "skill") {
@@ -441,12 +701,18 @@ export function ExecutionUnitListScene({
           return;
         }
 
+        const actionKey = `${action}:${item.id}`;
+        setPendingActionKey(actionKey);
+
         void (async () => {
           try {
             await downloadComponentExport(componentType, item.id, item.name);
             void message.success(t("executionFactory.exportSuccess"));
           } catch (error) {
-            void message.error(extractRequestErrorMessage(error));
+            const detail = extractRequestErrorDetail(error);
+            void message.error(detail.description ?? detail.message);
+          } finally {
+            setPendingActionKey((current) => (current === actionKey ? null : current));
           }
         })();
         return;
@@ -457,12 +723,17 @@ export function ExecutionUnitListScene({
           return;
         }
 
+        const actionKey = `${action}:${item.id}`;
+        setPendingActionKey(actionKey);
+
         void (async () => {
           try {
             await downloadSkillPackage(item.id, item.name);
             void message.success(t("executionFactory.downloadSuccess"));
           } catch (error) {
             void message.error(extractRequestErrorMessage(error));
+          } finally {
+            setPendingActionKey((current) => (current === actionKey ? null : current));
           }
         })();
         return;
@@ -481,7 +752,8 @@ export function ExecutionUnitListScene({
         if (activeTab === "operator") {
           void navigate(`/execution-factory/units/${item.id}/edit`);
         } else if (activeTab === "toolbox") {
-          void navigate(`/execution-factory/toolboxes/${item.id}/edit`);
+          setDetailBoxEditMode(true);
+          setDetailBoxId(item.id);
         } else if (activeTab === "mcp") {
           setEditMcpId(item.id);
         } else if (activeTab === "skill") {
@@ -651,6 +923,49 @@ export function ExecutionUnitListScene({
 
   const hasMore = items.length < total;
 
+  const overlayRequested = useMemo(
+    () =>
+      Boolean(
+        detailOperatorId ||
+          detailBoxId ||
+          detailMcpId ||
+          detailSkillId ||
+          historySkillId ||
+          installTarget ||
+          skillInstallTarget ||
+          publishedPermTarget ||
+          editMcpId ||
+          updateSkillPackageTarget,
+      ),
+    [
+      detailBoxId,
+      detailMcpId,
+      detailOperatorId,
+      detailSkillId,
+      editMcpId,
+      historySkillId,
+      installTarget,
+      publishedPermTarget,
+      skillInstallTarget,
+      updateSkillPackageTarget,
+    ],
+  );
+
+  useEffect(() => {
+    if (overlayRequested) {
+      setOverlaysReady(true);
+    }
+  }, [overlayRequested]);
+
+  useEffect(() => {
+    if (marketMode) {
+      return;
+    }
+
+    const handle = scheduleIdleTask(() => setOverlaysReady(true), 3000);
+    return () => handle.cancel();
+  }, [marketMode]);
+
   useEffect(() => {
     const node = loadMoreRef.current;
     if (!node || !hasMore || loading) {
@@ -672,7 +987,12 @@ export function ExecutionUnitListScene({
 
   return (
     <>
-      <section className={styles.page}>
+      <section className={`${styles.page} ${marketMode ? styles.pageMarket : ""}`}>
+        <div className={styles.pageIntro}>
+          <h2 className={styles.pageIntroTitle}>{t(titleKey)}</h2>
+          <p className={styles.pageIntroDescription}>{t(descriptionKey)}</p>
+        </div>
+
         {!marketMode ? (
           <div className={styles.toolbarActions}>
             <CreateMenu
@@ -683,12 +1003,43 @@ export function ExecutionUnitListScene({
                 nextParams.delete("create");
                 setSearchParams(nextParams, { replace: true });
               }}
-              onMcpCreated={(mcpId) => setDetailMcpId(mcpId)}
               onRefresh={reloadList}
+              onResourceCreated={({ tab, id }) => {
+                reloadList();
+                if (tab === "operator") {
+                  setDetailOperatorId(id);
+                  return;
+                }
+                if (tab === "toolbox") {
+                  void navigate(`/execution-factory/toolboxes/${id}/tools?create=1`);
+                  return;
+                }
+                if (tab === "mcp") {
+                  setDetailMcpId(id);
+                  return;
+                }
+                setDetailSkillId(id);
+              }}
             />
             <span className={styles.toolbarMeta}>{t(toolbarHintKey)}</span>
           </div>
-        ) : null}
+        ) : (
+          <div className={styles.toolbarActions}>
+            {installedResourceIdsError ? (
+              <Alert
+                action={
+                  <AppButton onClick={() => void reloadInstalledResourceIds({ manual: true })} type="link">
+                    {t("common.retry")}
+                  </AppButton>
+                }
+                message={t("executionFactory.installedStateSyncFailed")}
+                showIcon
+                style={{ marginBottom: 12 }}
+                type="warning"
+              />
+            ) : null}
+          </div>
+        )}
 
         <Tabs
           activeKey={activeTab}
@@ -696,6 +1047,7 @@ export function ExecutionUnitListScene({
           items={tabItems}
           onChange={(key) => {
             const nextTab = key as ExecutionUnitTab;
+            window.localStorage.setItem(TAB_STORAGE_KEY, nextTab);
             const nextParams = new URLSearchParams(searchParams);
             nextParams.set("activeTab", nextTab);
             setSearchParams(nextParams);
@@ -704,21 +1056,25 @@ export function ExecutionUnitListScene({
 
         <div className={styles.filterBar}>
           <div className={styles.filterLeft}>
-            <span className={styles.filterLabel}>{t("executionFactory.typeFilter")}</span>
-            <div className={styles.categoryGroup}>
-              {categoryOptions.map((option) => (
-                <button
-                  className={`${styles.categoryChip} ${
-                    category === option.value ? styles.categoryChipActive : ""
-                  }`}
-                  key={option.value || "all"}
-                  onClick={() => setCategory(option.value)}
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            {showCategoryFilter ? (
+              <>
+                <span className={styles.filterLabel}>{t("executionFactory.typeFilter")}</span>
+                <div className={styles.categoryGroup}>
+                  {categoryOptions.map((option) => (
+                    <button
+                      className={`${styles.categoryChip} ${
+                        category === option.value ? styles.categoryChipActive : ""
+                      }`}
+                      key={option.value || "all"}
+                      onClick={() => setCategory(option.value)}
+                      type="button"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
             {!marketMode && statusOptions.length > 0 ? (
               <>
                 <span className={styles.filterLabel}>
@@ -746,6 +1102,18 @@ export function ExecutionUnitListScene({
           </div>
         </div>
 
+        {!loading && total > 0 ? (
+          <div className={styles.resultCount}>
+            {items.length < total
+              ? t("executionFactory.resultCountLoaded", {
+                  loaded: items.length,
+                  total,
+                  tab: tabLabel,
+                })
+              : t("executionFactory.resultCount", { count: total, tab: tabLabel })}
+          </div>
+        ) : null}
+
         {loadError ? (
           <Alert
             action={
@@ -762,21 +1130,28 @@ export function ExecutionUnitListScene({
 
         <div className={styles.gridWrap}>
           {loading && items.length === 0 ? (
-            <div className={styles.emptyWrap}>
-              <Spin size="large" />
+            <div className={styles.cardGrid}>
+              <ExecutionUnitCardSkeleton count={8} />
             </div>
           ) : null}
           {!loading && items.length === 0 ? (
             <div className={styles.emptyWrap}>
-              <Empty description={t("executionFactory.catalogEmptyDescription")} />
+              <Empty description={emptyDescription}>
+                {!marketMode ? (
+                  <AppButton onClick={openEmptyCreate} type="primary">
+                    {t(`executionFactory.emptyCreateByTab.${activeTab}`)}
+                  </AppButton>
+                ) : null}
+              </Empty>
             </div>
           ) : null}
-          {items.length > 0 ? (
+          {displayItems.length > 0 ? (
             <>
               <div className={styles.cardGrid}>
-                {items.map((item) => (
+                {displayItems.map((item) => (
                   <ExecutionUnitCard
                     activeTab={activeTab}
+                    installedStateReady={installedResourceIdsReady}
                     item={item}
                     key={item.id}
                     marketMode={marketMode}
@@ -788,6 +1163,18 @@ export function ExecutionUnitListScene({
               {hasMore ? (
                 <div className={styles.loadMore} ref={loadMoreRef}>
                   {loading ? <Spin size="small" /> : null}
+                  {loadMoreError ? (
+                    <Alert
+                      action={
+                        <AppButton onClick={() => void loadItems()} type="link">
+                          {t("common.retry")}
+                        </AppButton>
+                      }
+                      message={t("executionFactory.loadMoreFailed")}
+                      showIcon
+                      type="error"
+                    />
+                  ) : null}
                 </div>
               ) : null}
             </>
@@ -795,75 +1182,40 @@ export function ExecutionUnitListScene({
         </div>
       </section>
 
-      <OperatorDetailDrawer
-        marketMode={marketMode}
-        onClose={() => setDetailOperatorId(null)}
-        onEdit={(id) => {
-          setDetailOperatorId(null);
-          void navigate(`/execution-factory/units/${id}/edit`);
-        }}
-        open={Boolean(detailOperatorId)}
-        operatorId={detailOperatorId}
-      />
-      <ToolboxDetailDrawer
-        boxId={detailBoxId}
-        marketMode={marketMode}
-        onClose={() => setDetailBoxId(null)}
-        open={Boolean(detailBoxId)}
-      />
-      <McpDetailDrawer
-        marketMode={marketMode}
-        mcpId={detailMcpId}
-        onClose={() => setDetailMcpId(null)}
-        open={Boolean(detailMcpId)}
-      />
-      <SkillDetailDrawer
-        marketMode={marketMode}
-        onClose={() => setDetailSkillId(null)}
-        onEdit={(skillId) => {
-          setDetailSkillId(null);
-          void navigate(`/execution-factory/skills/${skillId}/edit`);
-        }}
-        onOpenHistory={(skillId) => {
-          setDetailSkillId(null);
-          setHistorySkillId(skillId);
-        }}
-        open={Boolean(detailSkillId)}
-        skillId={detailSkillId}
-      />
-      <SkillHistoryDrawer
-        onClose={() => setHistorySkillId(null)}
-        onUpdated={reloadList}
-        open={Boolean(historySkillId)}
-        skillId={historySkillId}
-      />
-      <InstallFromCatalogModal
-        componentId={installTarget?.id ?? ""}
-        componentName={installTarget?.name ?? ""}
-        componentType={installTarget?.type ?? "operator"}
-        onClose={() => setInstallTarget(null)}
-        onSuccess={reloadList}
-        open={Boolean(installTarget)}
-      />
-      <PublishedPermModal
-        activeTab={activeTab}
-        onClose={() => setPublishedPermTarget(null)}
-        open={Boolean(publishedPermTarget)}
-        resourceName={publishedPermTarget?.name ?? ""}
-      />
-      <CreateMcpDrawer
-        mcpId={editMcpId}
-        onClose={() => setEditMcpId(null)}
-        onUpdated={reloadList}
-        open={Boolean(editMcpId)}
-      />
-      <UpdateSkillPackageModal
-        onClose={() => setUpdateSkillPackageTarget(null)}
-        onUpdated={reloadList}
-        open={Boolean(updateSkillPackageTarget)}
-        skillId={updateSkillPackageTarget?.id ?? null}
-        skillName={updateSkillPackageTarget?.name}
-      />
+      {overlaysReady ? (
+        <Suspense fallback={null}>
+          <ExecutionUnitListOverlays
+            activeTab={activeTab}
+            detailBoxId={detailBoxId}
+            detailBoxEditMode={detailBoxEditMode}
+            detailMcpId={detailMcpId}
+            detailOperatorId={detailOperatorId}
+            detailSkillId={detailSkillId}
+            editMcpId={editMcpId}
+            historySkillId={historySkillId}
+            installTarget={installTarget}
+            marketMode={marketMode}
+            navigate={navigate}
+            onCloseDetailBox={() => setDetailBoxId(null)}
+            onCloseDetailBoxEditMode={() => setDetailBoxEditMode(false)}
+            onCloseDetailMcp={() => setDetailMcpId(null)}
+            onCloseDetailOperator={() => setDetailOperatorId(null)}
+            onCloseDetailSkill={() => setDetailSkillId(null)}
+            onCloseEditMcp={() => setEditMcpId(null)}
+            onCloseHistorySkill={() => setHistorySkillId(null)}
+            onCloseInstallTarget={() => setInstallTarget(null)}
+            onClosePublishedPerm={() => setPublishedPermTarget(null)}
+            onCloseSkillInstallTarget={() => setSkillInstallTarget(null)}
+            onCloseUpdateSkillPackage={() => setUpdateSkillPackageTarget(null)}
+            onOpenHistorySkill={(skillId) => setHistorySkillId(skillId)}
+            onReloadInstalledResourceIds={reloadInstalledResourceIds}
+            onReloadList={reloadList}
+            publishedPermTarget={publishedPermTarget}
+            skillInstallTarget={skillInstallTarget}
+            updateSkillPackageTarget={updateSkillPackageTarget}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 }

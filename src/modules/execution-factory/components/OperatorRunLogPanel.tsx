@@ -110,7 +110,7 @@ export function OperatorRunLogPanel({
           {
             dataIndex: "timestamp",
             key: "timestamp",
-            render: (value: number) => new Date(value).toLocaleString(),
+            render: (value: number) => formatExecutionUnitTime(value),
             title: t("executionFactory.runLogTime"),
           },
           {

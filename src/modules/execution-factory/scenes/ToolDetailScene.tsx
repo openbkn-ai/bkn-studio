@@ -9,8 +9,8 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { CrudFormPage } from "@/framework/scaffold/CrudFormPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { FunctionCodeField } from "@/modules/execution-factory/components/FunctionCodeField";
-import { FunctionParameterEditor } from "@/modules/execution-factory/components/FunctionParameterEditor";
+import { FunctionDefinitionFields } from "@/modules/execution-factory/components/FunctionDefinitionFields";
+import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
 import { ToolDebugModal } from "@/modules/execution-factory/components/ToolDebugModal";
 import { ToolGlobalParameterFields } from "@/modules/execution-factory/components/ToolGlobalParameterFields";
 import { ToolIoPanel } from "@/modules/execution-factory/components/ToolIoPanel";
@@ -25,6 +25,7 @@ import type {
   ToolRunLogEntry,
 } from "@/modules/execution-factory/types/tool";
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
+import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
 
 import styles from "./UnitFormScene.module.css";
 
@@ -101,6 +102,15 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
+
+    if (metadataType === "openapi") {
+      const openApiValidation = validateOpenApiDocumentText(values.openapiSpec);
+      if (!openApiValidation.ok) {
+        void message.error(openApiValidation.reason);
+        return;
+      }
+    }
+
     setSubmitting(true);
 
     try {
@@ -176,19 +186,10 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
                   name="openapiSpec"
                   rules={[{ required: true, message: t("common.required") }]}
                 >
-                  <Input.TextArea rows={14} />
+                  <OpenApiSpecInput rows={14} />
                 </Form.Item>
               ) : (
-                <>
-                  <Form.Item
-                    label={t("executionFactory.functionCode")}
-                    name="functionCode"
-                    rules={[{ required: true, message: t("common.required") }]}
-                  >
-                    <FunctionCodeField />
-                  </Form.Item>
-                  <FunctionParameterEditor />
-                </>
+                <FunctionDefinitionFields />
               )}
               <Collapse
                 ghost

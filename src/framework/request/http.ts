@@ -13,7 +13,7 @@ type RetryableRequestConfig = InternalAxiosRequestConfig & {
 type RequestErrorHandler = ((message: string) => void) | null;
 
 export const http = axios.create({
-  timeout: 15000,
+  timeout: import.meta.env.DEV ? 30000 : 15000,
 });
 
 let refreshPromise: Promise<string | null> | null = null;

@@ -7,7 +7,12 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { McpToolDebugModal } from "@/modules/execution-factory/components/McpToolDebugModal";
 import { getMcpDetail, getMcpMarket, listMcpTools } from "@/modules/execution-factory/services/mcp.service";
-import type { McpDetail, McpProxyTool, McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
+import type { McpDetail, McpProxyTool, McpStatus } from "@/modules/execution-factory/types/mcp";
+import {
+  formatOptionalTimestamp,
+  formatRecordHeaders,
+  resolveMcpCategoryLabel,
+} from "@/modules/execution-factory/utils/detail-display";
 
 import styles from "./ToolboxDetailDrawer.module.css";
 
@@ -25,12 +30,27 @@ const statusColorMap: Record<McpStatus, string> = {
   unpublish: "blue",
 };
 
-function formatTimestamp(value?: number) {
-  if (!value) {
+function resolveCreationTypeLabel(
+  creationType: McpDetail["creationType"],
+  t: (key: string) => string,
+) {
+  if (!creationType) {
     return "-";
   }
 
-  return new Date(value).toLocaleString();
+  const key = `executionFactory.mcpCreationTypes.${creationType}`;
+  const translated = t(key);
+  return translated !== key ? translated : creationType;
+}
+
+function resolveModeLabel(mode: McpDetail["mode"], t: (key: string) => string) {
+  if (!mode) {
+    return "-";
+  }
+
+  const key = `executionFactory.mcpModes.${mode}`;
+  const translated = t(key);
+  return translated !== key ? translated : mode;
 }
 
 export function McpDetailDrawer({
@@ -84,7 +104,7 @@ export function McpDetailDrawer({
           ? t("executionFactory.mcpMarketDetailTitle")
           : t("executionFactory.mcpDetailTitle")
       }
-      width={760}
+      width={860}
     >
       {loading ? <Spin /> : null}
       {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
@@ -94,21 +114,25 @@ export function McpDetailDrawer({
       {!loading && !loadError && record ? (
         <div className={styles.drawerContent}>
           <section className={styles.summaryCard}>
-            <h2 className={styles.summaryTitle}>{record.name}</h2>
-            <p className={styles.summaryDescription}>{record.description || "-"}</p>
-            <div className={styles.summaryStatus}>
-              <Tag color={statusColorMap[record.status]}>
-                {t(`executionFactory.mcpStatuses.${record.status}`)}
-              </Tag>
-              {record.isInternal ? (
-                <Tag>{t("executionFactory.internalTag")}</Tag>
-              ) : null}
-            </div>
-            <div className={styles.summaryMeta}>
-              <span>{record.mcpId}</span>
-              {record.mode ? <span>{record.mode}</span> : null}
+            <div className={styles.summaryHeader}>
+              <div>
+                <h2 className={styles.summaryTitle}>{record.name}</h2>
+                <p className={styles.summaryDescription}>{record.description || "-"}</p>
+              </div>
+              <div className={styles.summaryStatus}>
+                <Tag color={statusColorMap[record.status]}>
+                  {t(`executionFactory.mcpStatuses.${record.status}`)}
+                </Tag>
+                {record.mode ? (
+                  <Tag>{resolveModeLabel(record.mode, t)}</Tag>
+                ) : null}
+                {record.isInternal ? (
+                  <Tag>{t("executionFactory.internalTag")}</Tag>
+                ) : null}
+              </div>
             </div>
           </section>
+
           <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("common.basicInfo")}</h3>
             <Descriptions
@@ -116,14 +140,29 @@ export function McpDetailDrawer({
               column={1}
               items={[
                 {
+                  key: "mcpId",
+                  label: t("executionFactory.mcpIdLabel"),
+                  children: record.mcpId,
+                },
+                {
+                  key: "name",
+                  label: t("executionFactory.mcpNameLabel"),
+                  children: record.name,
+                },
+                {
                   key: "creationType",
                   label: t("executionFactory.mcpCreationType"),
-                  children: record.creationType ?? "-",
+                  children: resolveCreationTypeLabel(record.creationType, t),
                 },
                 {
                   key: "category",
                   label: t("executionFactory.category"),
-                  children: record.category ?? "-",
+                  children: resolveMcpCategoryLabel(record.category, t),
+                },
+                {
+                  key: "mode",
+                  label: t("executionFactory.mcpModeLabel"),
+                  children: resolveModeLabel(record.mode, t),
                 },
                 {
                   key: "url",
@@ -133,11 +172,11 @@ export function McpDetailDrawer({
                 {
                   key: "headers",
                   label: t("executionFactory.mcpHeadersLabel"),
-                  children: record.headers
-                    ? Object.entries(record.headers)
-                        .map(([key, value]) => `${key}: ${value}`)
-                        .join("\n")
-                    : "-",
+                  children: (
+                    <span style={{ whiteSpace: "pre-wrap" }}>
+                      {formatRecordHeaders(record.headers)}
+                    </span>
+                  ),
                 },
                 {
                   key: "createUser",
@@ -147,14 +186,51 @@ export function McpDetailDrawer({
                 {
                   key: "updateTime",
                   label: t("executionFactory.updateTime"),
-                  children: formatTimestamp(record.updateTime),
+                  children: formatOptionalTimestamp(record.updateTime),
                 },
               ]}
             />
           </section>
+
+          {record.toolConfigs && record.toolConfigs.length > 0 ? (
+            <section className={styles.sectionCard}>
+              <h3 className={styles.sectionTitle}>
+                {t("executionFactory.mcpToolConfigsSectionTitle")}
+              </h3>
+              <div className={styles.toolList}>
+                {record.toolConfigs.map((tool) => (
+                  <div
+                    className={styles.toolItem}
+                    key={`${tool.boxId ?? "box"}-${tool.toolId ?? tool.toolName}`}
+                  >
+                    <div>
+                      <div className={styles.toolName}>
+                        {tool.toolName ?? tool.toolId ?? "-"}
+                      </div>
+                      {tool.description ? (
+                        <div className={styles.toolMeta}>{tool.description}</div>
+                      ) : null}
+                      {tool.useRule ? (
+                        <div className={styles.toolMeta}>{tool.useRule}</div>
+                      ) : null}
+                      {tool.boxId ? (
+                        <div className={styles.toolMeta}>
+                          {t("executionFactory.toolboxId")}: {tool.boxId}
+                          {tool.toolId ? ` · ${tool.toolId}` : ""}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {!marketMode ? (
             <section className={styles.sectionCard}>
-              <h3 className={styles.sectionTitle}>{t("executionFactory.mcpToolsSectionTitle")}</h3>
+              <h3 className={styles.sectionTitle}>
+                {t("executionFactory.mcpToolsSectionTitle")}
+              </h3>
               {tools.length === 0 ? (
                 <Empty description={t("executionFactory.mcpToolsEmpty")} />
               ) : (

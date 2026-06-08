@@ -8,6 +8,11 @@
   transition: all 0.3s ease;
 }
 
+.cardMarket {
+  border-color: rgba(18, 110, 227, 0.18);
+  background: linear-gradient(180deg, rgba(18, 110, 227, 0.03) 0%, #fff 72px);
+}
+
 .cardActions {
   position: absolute;
   top: 12px;
@@ -39,9 +44,29 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
-.card:hover {
+.marketActionGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.installedTag {
+  margin: 0;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.card:hover,
+.card:focus-visible {
   border-color: rgba(18, 110, 227, 0.35);
   box-shadow: 0 4px 14px rgba(18, 110, 227, 0.12);
+  outline: none;
+}
+
+.card:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(18, 110, 227, 0.2),
+    0 4px 14px rgba(18, 110, 227, 0.12);
 }
 
 .cardBody {

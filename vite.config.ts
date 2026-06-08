@@ -20,11 +20,23 @@ export default defineConfig({
   server: {
     host: true,
     allowedHosts: ["host.docker.internal", "localhost", "127.0.0.1"],
+    ...(process.env.VITE_DEV_USE_POLLING === "true"
+      ? {
+          watch: {
+            // Docker Desktop on Windows bind mounts do not propagate inotify.
+            usePolling: true,
+            interval: 3000,
+            ignored: ["**/node_modules/**", "**/.git/**", "**/dist/**"],
+          },
+        }
+      : {}),
     proxy: {
       "/api/agent-operator-integration": {
         changeOrigin: true,
         secure: false,
-        target: process.env.VITE_PROXY_TARGET ?? "http://127.0.0.1",
+        timeout: 120_000,
+        proxyTimeout: 120_000,
+        target: process.env.VITE_PROXY_TARGET ?? "http://127.0.0.1:9000",
       },
     },
   },

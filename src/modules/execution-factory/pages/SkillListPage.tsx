@@ -1,5 +1,8 @@
-import { SkillListScene } from "@/modules/execution-factory/scenes/SkillListScene";
+import { ExecutionUnitTabRedirect } from "@/modules/execution-factory/pages/ExecutionUnitTabRedirect";
 
+/** @deprecated Use `ExecutionUnitListScene` via `/execution-factory/units?activeTab=skill` instead. */
 export function SkillListPage() {
-  return <SkillListScene />;
+  return (
+    <ExecutionUnitTabRedirect activeTab="skill" migrationFrom="legacy-skill-list" />
+  );
 }

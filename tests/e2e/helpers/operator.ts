@@ -1,9 +1,21 @@
 import type { APIRequestContext } from "@playwright/test";
 
-export const BUSINESS_DOMAIN = process.env.E2E_BUSINESS_DOMAIN ?? "bd_public";
-export const API_BASE_URL =
-  process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:9000/api";
-export const API_PREFIX = `${API_BASE_URL}/agent-operator-integration/v1`;
+import {
+  API_PREFIX,
+  buildUniqueName,
+  defaultApiHeaders,
+  expectOk,
+} from "./common";
+
+export {
+  assertBackendReady,
+  apiUrl,
+  buildUniqueName,
+  BUSINESS_DOMAIN,
+  API_BASE_URL,
+  API_PREFIX,
+  defaultApiHeaders,
+} from "./common";
 
 export type RegisteredOperator = {
   operatorId: string;
@@ -11,8 +23,8 @@ export type RegisteredOperator = {
   name: string;
 };
 
-export function buildOperatorName(suffix: string) {
-  return `at_e2e_operator_${suffix}`;
+export function buildOperatorName(suffix?: string) {
+  return buildUniqueName(suffix ? `at_e2e_operator_${suffix}` : "at_e2e_operator");
 }
 
 export function buildMinimalOpenApiSpec(operatorName: string) {
@@ -20,7 +32,7 @@ export function buildMinimalOpenApiSpec(operatorName: string) {
     openapi: "3.0.3",
     info: {
       title: operatorName,
-      description: "Execution factory Playwright AT operator",
+      description: "Execution factory E2E operator",
       version: "1.0.0",
     },
     servers: [{ url: "http://127.0.0.1:9000", description: "local" }],
@@ -28,7 +40,7 @@ export function buildMinimalOpenApiSpec(operatorName: string) {
       "/execute": {
         post: {
           summary: operatorName,
-          description: "Playwright AT execute endpoint",
+          description: "E2E execute endpoint",
           requestBody: {
             required: true,
             content: {
@@ -59,50 +71,56 @@ export function buildMinimalOpenApiSpec(operatorName: string) {
   };
 }
 
-export function defaultApiHeaders() {
-  return {
-    "x-business-domain": BUSINESS_DOMAIN,
-    Accept: "application/json",
-  };
-}
-
-export async function assertBackendReady(request: APIRequestContext) {
-  const response = await request.get(
-    `${API_PREFIX}/operator/info/list?page=1&page_size=1`,
-    { headers: defaultApiHeaders() },
-  );
-
-  if (!response.ok()) {
-    throw new Error(
-      `Backend unavailable (${response.status()}). Start execution-factory-dev stack before running AT.`,
-    );
-  }
+export function buildFunctionHandlerCode() {
+  return [
+    "def handler(event):",
+    "    x = event.get('x', 0)",
+    "    return {'result': x + 1}",
+  ].join("\n");
 }
 
 export async function registerOperatorViaApi(
   request: APIRequestContext,
   operatorName: string,
+  options?: { metadataType?: "openapi" | "function"; directPublish?: boolean },
 ): Promise<RegisteredOperator> {
+  const metadataType = options?.metadataType ?? "openapi";
+  const payload =
+    metadataType === "function"
+      ? {
+          name: operatorName,
+          description: "E2E function operator",
+          operator_metadata_type: "function",
+          direct_publish: options?.directPublish ?? false,
+          function_input: {
+            name: operatorName,
+            description: "E2E function operator",
+            script_type: "python",
+            code: buildFunctionHandlerCode(),
+            inputs: [{ name: "x", type: "number", description: "input x" }],
+            outputs: [],
+          },
+          operator_info: { category: "other_category" },
+        }
+      : {
+          data: JSON.stringify(buildMinimalOpenApiSpec(operatorName)),
+          direct_publish: options?.directPublish ?? false,
+          operator_metadata_type: "openapi",
+          operator_info: { category: "other_category" },
+        };
+
   const response = await request.post(`${API_PREFIX}/operator/register`, {
     headers: {
       ...defaultApiHeaders(),
       "Content-Type": "application/json",
     },
-    data: {
-      data: JSON.stringify(buildMinimalOpenApiSpec(operatorName)),
-      direct_publish: false,
-      operator_metadata_type: "openapi",
-      operator_info: { category: "other_category" },
-    },
+    data: payload,
   });
 
-  if (!response.ok()) {
-    throw new Error(`Register failed (${response.status()}): ${await response.text()}`);
-  }
+  await expectOk(response, "Register operator");
 
   const body = (await response.json()) as Array<{
     operator_id?: string;
-    version?: string;
     status?: string;
     error?: unknown;
   }>;
@@ -116,10 +134,7 @@ export async function registerOperatorViaApi(
     `${API_PREFIX}/operator/info/${result.operator_id}`,
     { headers: defaultApiHeaders() },
   );
-
-  if (!detailResponse.ok()) {
-    throw new Error(`Get operator failed (${detailResponse.status()})`);
-  }
+  await expectOk(detailResponse, "Get operator detail");
 
   const detail = (await detailResponse.json()) as {
     name?: string;
@@ -133,6 +148,61 @@ export async function registerOperatorViaApi(
   };
 }
 
+export async function exportOperatorViaApi(
+  request: APIRequestContext,
+  operatorId: string,
+) {
+  const response = await request.get(`${API_PREFIX}/impex/export/operator/${operatorId}`, {
+    headers: defaultApiHeaders(),
+  });
+  await expectOk(response, "Export operator");
+  return response.json();
+}
+
+export async function importOperatorViaApi(
+  request: APIRequestContext,
+  payload: unknown,
+  mode: "create" | "upsert" = "create",
+) {
+  const response = await request.post(`${API_PREFIX}/impex/import/operator`, {
+    headers: defaultApiHeaders(),
+    multipart: {
+      mode,
+      data: {
+        name: "import.adp.json",
+        mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify(payload)),
+      },
+    },
+  });
+  await expectOk(response, "Import operator");
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+  return JSON.parse(text);
+}
+
+export async function debugOperatorViaApi(
+  request: APIRequestContext,
+  operator: RegisteredOperator,
+  event: Record<string, unknown> = { input: "e2e" },
+) {
+  const response = await request.post(`${API_PREFIX}/operator/debug`, {
+    headers: {
+      ...defaultApiHeaders(),
+      "Content-Type": "application/json",
+    },
+    data: {
+      operator_id: operator.operatorId,
+      version: operator.version,
+      event,
+    },
+  });
+  await expectOk(response, "Debug operator");
+  return response.json();
+}
+
 export async function deleteOperatorViaApi(
   request: APIRequestContext,
   operator: RegisteredOperator,
@@ -144,10 +214,7 @@ export async function deleteOperatorViaApi(
     },
     data: [{ operator_id: operator.operatorId, version: operator.version }],
   });
-
-  if (!response.ok()) {
-    throw new Error(`Delete failed (${response.status()}): ${await response.text()}`);
-  }
+  await expectOk(response, "Delete operator");
 }
 
 export async function updateOperatorStatusViaApi(
@@ -168,12 +235,7 @@ export async function updateOperatorStatusViaApi(
       },
     ],
   });
-
-  if (!response.ok()) {
-    throw new Error(
-      `Status update failed (${response.status()}): ${await response.text()}`,
-    );
-  }
+  await expectOk(response, `Update operator status to ${status}`);
 }
 
 export async function publishOperatorViaApi(
@@ -190,8 +252,88 @@ export async function cleanupOperatorViaApi(
   try {
     await updateOperatorStatusViaApi(request, operator, "offline");
   } catch {
-    // Ignore if already offline or unpublish.
+    // Ignore if already offline.
   }
 
   await deleteOperatorViaApi(request, operator);
+}
+
+export async function getOperatorDetailViaApi(
+  request: APIRequestContext,
+  operatorId: string,
+) {
+  const response = await request.get(`${API_PREFIX}/operator/info/${operatorId}`, {
+    headers: defaultApiHeaders(),
+  });
+  await expectOk(response, "Get operator detail");
+  return response.json() as Promise<{
+    name?: string;
+    version: string;
+    description?: string;
+    metadata_type?: string;
+  }>;
+}
+
+export async function refreshOperatorViaApi(
+  request: APIRequestContext,
+  operator: RegisteredOperator,
+): Promise<RegisteredOperator> {
+  const detail = await getOperatorDetailViaApi(request, operator.operatorId);
+  return {
+    operatorId: operator.operatorId,
+    version: detail.version,
+    name: detail.name ?? operator.name,
+  };
+}
+
+export async function updateOperatorViaApi(
+  request: APIRequestContext,
+  operator: RegisteredOperator,
+  operatorName: string,
+  description = "E2E updated operator",
+) {
+  const openApiSpec = buildMinimalOpenApiSpec(operatorName);
+  openApiSpec.info.description = description;
+
+  const response = await request.post(`${API_PREFIX}/operator/info`, {
+    headers: {
+      ...defaultApiHeaders(),
+      "Content-Type": "application/json",
+    },
+    data: {
+      operator_id: operator.operatorId,
+      data: openApiSpec,
+      metadata_type: "openapi",
+      name: operatorName,
+      description,
+      operator_info: { category: "other_category" },
+    },
+  });
+  await expectOk(response, "Update operator");
+}
+
+export async function listOperatorHistoryViaApi(
+  request: APIRequestContext,
+  operatorId: string,
+) {
+  const response = await request.get(`${API_PREFIX}/operator/history/${operatorId}`, {
+    headers: defaultApiHeaders(),
+  });
+  await expectOk(response, "List operator history");
+  const body = await response.json();
+  return Array.isArray(body) ? body : [];
+}
+
+export async function unpublishOperatorViaApi(
+  request: APIRequestContext,
+  operator: RegisteredOperator,
+) {
+  await updateOperatorStatusViaApi(request, operator, "unpublish");
+}
+
+export async function offlineOperatorViaApi(
+  request: APIRequestContext,
+  operator: RegisteredOperator,
+) {
+  await updateOperatorStatusViaApi(request, operator, "offline");
 }

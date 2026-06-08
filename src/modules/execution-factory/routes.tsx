@@ -87,7 +87,9 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.toolboxCreateTitle",
       },
     },
-    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="toolbox" openCreate />),
+    element: withRouteLoading(
+      <ExecutionUnitTabRedirect activeTab="toolbox" migrationFrom="toolboxes-new" openCreate />,
+    ),
   },
   {
     path: "execution-factory/toolboxes/:boxId/edit",
@@ -131,7 +133,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.mcpListTitle",
       },
     },
-    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="mcp" />),
+    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="mcp" migrationFrom="mcp" />),
   },
   {
     path: "execution-factory/mcp/new",
@@ -142,7 +144,9 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.mcpCreateTitle",
       },
     },
-    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="mcp" openCreate />),
+    element: withRouteLoading(
+      <ExecutionUnitTabRedirect activeTab="mcp" migrationFrom="mcp-new" openCreate />,
+    ),
   },
   {
     path: "execution-factory/skills",
@@ -153,7 +157,9 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.skillListTitle",
       },
     },
-    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="skill" />),
+    element: withRouteLoading(
+      <ExecutionUnitTabRedirect activeTab="skill" migrationFrom="skills" />,
+    ),
   },
   {
     path: "execution-factory/skills/new",
@@ -164,7 +170,9 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.skillCreateTitle",
       },
     },
-    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="skill" openCreate />),
+    element: withRouteLoading(
+      <ExecutionUnitTabRedirect activeTab="skill" migrationFrom="skills-new" openCreate />,
+    ),
   },
   {
     path: "execution-factory/skills/:skillId/edit",

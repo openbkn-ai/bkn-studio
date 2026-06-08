@@ -46,6 +46,8 @@ type BackendMcpListResponse = {
   total?: number;
 };
 
+import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-timestamp";
+
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const DEFAULT_BUSINESS_DOMAIN = "bd_public";
@@ -116,7 +118,7 @@ function mapMcp(item: BackendMcpInfo): McpRecord {
     category: item.category,
     url: item.url,
     createUser: item.create_user,
-    updateTime: item.update_time,
+    updateTime: normalizeTimestamp(item.update_time),
     isInternal: item.is_internal,
   };
 }
@@ -155,6 +157,7 @@ async function fetchMcpList(
       sort_by: "update_time",
       sort_order: "desc",
     },
+    skipErrorToast: true,
   });
 
   const data = response.data;

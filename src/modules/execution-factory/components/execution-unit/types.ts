@@ -13,4 +13,5 @@ export type ExecutionUnitCardItem = {
   updateTime?: number;
   status?: string;
   version?: string;
+  installedInDomain?: boolean;
 };

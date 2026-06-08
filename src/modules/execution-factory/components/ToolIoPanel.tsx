@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
 import type { ToolIoSpec, ToolRunLogEntry } from "@/modules/execution-factory/types/tool";
+import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import styles from "./ToolIoPanel.module.css";
 
@@ -153,7 +154,7 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
             {runLogs.map((entry) => (
               <div className={styles.logItem} key={entry.id}>
                 <div className={styles.logMeta}>
-                  {new Date(entry.timestamp).toLocaleString()} ·{" "}
+                  {formatExecutionUnitTime(entry.timestamp)} ·{" "}
                   {entry.statusCode ?? "-"} · {entry.durationMs ?? "-"}ms
                   {entry.error ? ` · ${entry.error}` : ""}
                 </div>

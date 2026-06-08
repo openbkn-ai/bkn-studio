@@ -1,5 +1,5 @@
-import { DownloadOutlined, MoreOutlined } from "@ant-design/icons";
-import { Dropdown } from "antd";
+import { DownloadOutlined, MoreOutlined, SyncOutlined } from "@ant-design/icons";
+import { Dropdown, Tag } from "antd";
 import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 
@@ -24,16 +24,13 @@ export type ExecutionUnitCardAction =
 
 type ExecutionUnitCardMenuProps = {
   activeTab: ExecutionUnitTab;
+  installedStateReady?: boolean;
   item: ExecutionUnitCardItem;
   marketMode?: boolean;
   onAction: (action: ExecutionUnitCardAction, item: ExecutionUnitCardItem) => void;
 };
 
-function getInstallPermission(activeTab: ExecutionUnitTab) {
-  if (activeTab === "skill") {
-    return undefined;
-  }
-
+function getInstallPermission(_activeTab: ExecutionUnitTab) {
   return "execution-factory:catalog:install";
 }
 
@@ -59,6 +56,7 @@ function pushMenuAction(
 
 export function ExecutionUnitCardMenu({
   activeTab,
+  installedStateReady = true,
   item,
   marketMode = false,
   onAction,
@@ -66,29 +64,31 @@ export function ExecutionUnitCardMenu({
   const { t } = useTranslation();
 
   if (marketMode) {
-    if (activeTab === "skill") {
-      return null;
-    }
-
     const permission = getInstallPermission(activeTab);
-    if (!permission) {
-      return null;
-    }
+    const installedInDomain = installedStateReady && item.installedInDomain === true;
 
     return (
       <PermissionGate permissions={permission}>
-        <AppButton
-          className={styles.cardInstallButton}
-          icon={<DownloadOutlined />}
-          onClick={(event) => {
-            event.stopPropagation();
-            onAction("install", item);
-          }}
-          size="small"
-          type="primary"
-        >
-          {t("executionFactory.install")}
-        </AppButton>
+        <div className={styles.marketActionGroup}>
+          {installedInDomain ? (
+            <Tag className={styles.installedTag} color="success">
+              {t("executionFactory.marketIntroducedTag")}
+            </Tag>
+          ) : null}
+          <AppButton
+            className={styles.cardInstallButton}
+            icon={installedInDomain ? <SyncOutlined /> : <DownloadOutlined />}
+            loading={!installedStateReady}
+            onClick={(event) => {
+              event.stopPropagation();
+              onAction("install", item);
+            }}
+            size="small"
+            type={installedInDomain ? "default" : "primary"}
+          >
+            {t(installedInDomain ? "executionFactory.marketSync" : "executionFactory.marketIntroduce")}
+          </AppButton>
+        </div>
       </PermissionGate>
     );
   }
@@ -115,6 +115,14 @@ export function ExecutionUnitCardMenu({
   }
 
   if (activeTab === "toolbox") {
+    pushMenuAction(
+      menuItems,
+      "view",
+      t("executionFactory.cardMenu.view"),
+      onAction,
+      "view",
+      item,
+    );
     pushMenuAction(
       menuItems,
       "edit",

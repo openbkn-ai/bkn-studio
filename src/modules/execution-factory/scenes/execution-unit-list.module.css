@@ -4,6 +4,27 @@
   background: #fff;
 }
 
+.pageIntro {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+}
+
+.pageIntroTitle {
+  margin: 0;
+  color: #10233f;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.pageIntroDescription {
+  margin: 8px 0 0;
+  color: rgba(15, 30, 54, 0.62);
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 760px;
+}
+
 .tabs :global(.ant-tabs-nav) {
   margin-bottom: 16px;
 }
@@ -71,6 +92,12 @@
   width: 240px;
 }
 
+.resultCount {
+  margin: -8px 0 16px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
 .gridWrap {
   min-height: 560px;
 }
@@ -105,6 +132,21 @@
   display: flex;
   justify-content: center;
   padding: 24px 0 8px;
+}
+
+.pageMarket {
+  background: linear-gradient(180deg, rgba(18, 110, 227, 0.04) 0%, #fff 120px);
+}
+
+.pageMarket .pageIntro {
+  border-bottom-color: rgba(18, 110, 227, 0.12);
+}
+
+.pageMarket .filterBar {
+  padding: 12px 14px;
+  border: 1px solid rgba(18, 110, 227, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .toolbarMeta {
