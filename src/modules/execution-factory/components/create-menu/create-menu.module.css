@@ -56,3 +56,19 @@
 .uploadDragger {
   margin-top: 8px;
 }
+
+.wizardSteps {
+  margin-bottom: 24px;
+}
+
+.wizardFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.wizardTypeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}

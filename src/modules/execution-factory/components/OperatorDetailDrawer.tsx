@@ -1,10 +1,11 @@
-import { Alert, Descriptions, Drawer, Empty, Spin, Tag } from "antd";
+import { Descriptions, Tag } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { ExecutionUnitDetailDrawerLayout } from "@/modules/execution-factory/components/execution-unit-detail/ExecutionUnitDetailDrawerLayout";
 import { MetadataDetailSection } from "@/modules/execution-factory/components/execution-unit-detail/MetadataDetailSection";
 import {
   getOperatorDetail,
@@ -28,9 +29,11 @@ import { OperatorRunLogPanel } from "./OperatorRunLogPanel";
 import styles from "./OperatorDetailDrawer.module.css";
 
 type OperatorDetailDrawerProps = {
+  installedInDomain?: boolean;
   marketMode?: boolean;
   onClose: () => void;
   onEdit?: (operatorId: string) => void;
+  onMarketInstall?: () => void;
   open: boolean;
   operatorId: string | null;
 };
@@ -43,9 +46,11 @@ const statusColorMap: Record<OperatorStatus, string> = {
 };
 
 export function OperatorDetailDrawer({
+  installedInDomain = false,
   marketMode = false,
   onClose,
   onEdit,
+  onMarketInstall,
   open,
   operatorId,
 }: OperatorDetailDrawerProps) {
@@ -84,11 +89,30 @@ export function OperatorDetailDrawer({
 
   return (
     <>
-      <Drawer
-        destroyOnClose
-        extra={
+      <ExecutionUnitDetailDrawerLayout
+        empty={!record}
+        footerPrimary={
+          marketMode ? (
+            onMarketInstall ? (
+              <AppButton onClick={onMarketInstall} type="primary">
+                {t(
+                  installedInDomain
+                    ? "executionFactory.marketSync"
+                    : "executionFactory.marketIntroduce",
+                )}
+              </AppButton>
+            ) : null
+          ) : record ? (
+            <PermissionGate permissions="execution-factory:operator:debug">
+              <AppButton onClick={() => setDebugOpen(true)} type="primary">
+                {t("executionFactory.debug")}
+              </AppButton>
+            </PermissionGate>
+          ) : null
+        }
+        footerSecondary={
           !marketMode && record ? (
-            <div style={{ display: "flex", gap: 8 }}>
+            <>
               {onEdit ? (
                 <AppButton onClick={() => onEdit(record.operatorId)}>
                   {t("executionFactory.cardMenu.edit")}
@@ -102,14 +126,12 @@ export function OperatorDetailDrawer({
                   {t("executionFactory.convertToTool")}
                 </AppButton>
               </PermissionGate>
-              <PermissionGate permissions="execution-factory:operator:debug">
-                <AppButton onClick={() => setDebugOpen(true)} type="primary">
-                  {t("executionFactory.debug")}
-                </AppButton>
-              </PermissionGate>
-            </div>
+            </>
           ) : null
         }
+        loadError={loadError}
+        loading={loading}
+        marketMode={marketMode}
         onClose={onClose}
         open={open}
         title={
@@ -117,14 +139,8 @@ export function OperatorDetailDrawer({
             ? t("executionFactory.marketDetailTitle")
             : t("executionFactory.detailTitle")
         }
-        width={860}
       >
-        {loading ? <Spin /> : null}
-        {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
-        {!loading && !loadError && !record ? (
-          <Empty description={t("common.notFound")} />
-        ) : null}
-        {!loading && !loadError && record ? (
+        {record ? (
           <div className={styles.drawerContent}>
             <section className={styles.summaryCard}>
               <div className={styles.summaryHeader}>
@@ -240,7 +256,7 @@ export function OperatorDetailDrawer({
             ) : null}
           </div>
         ) : null}
-      </Drawer>
+      </ExecutionUnitDetailDrawerLayout>
       <OperatorDebugModal
         onClose={() => setDebugOpen(false)}
         onRunComplete={(entry) => {

@@ -1,4 +1,4 @@
-import { Alert, Form, Input, Radio, Result, Select, Spin } from "antd";
+import { Alert, Form, Input, Radio, Result, Spin } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +9,8 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { CrudFormPage } from "@/framework/scaffold/CrudFormPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
+import { ToolboxMetadataFormFields } from "@/modules/execution-factory/components/ToolboxMetadataFormFields";
 import {
   createToolbox,
   getToolbox,
@@ -18,10 +20,9 @@ import type {
   ToolboxMetadataType,
   ToolboxMutationInput,
 } from "@/modules/execution-factory/types/toolbox";
+import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
 
 import styles from "./UnitFormScene.module.css";
-
-const categoryOptions = ["box_category", "custom_category", "platform_category"];
 
 export function ToolboxFormScene({
   boxId,
@@ -89,19 +90,34 @@ export function ToolboxFormScene({
       return;
     }
 
-    void navigate("/execution-factory/units");
+    void navigate("/execution-factory/units?activeTab=toolbox");
   };
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
+
+    if (mode === "create" && values.metadataType === "openapi") {
+      const openApiValidation = validateOpenApiDocumentText(values.openapiSpec);
+      if (!openApiValidation.ok) {
+        void message.error(openApiValidation.reason);
+        return;
+      }
+    }
+
     setSubmitting(true);
 
     try {
       if (mode === "create") {
-        await createToolbox({
+        const record = await createToolbox({
           ...values,
           metadataType: values.metadataType ?? "openapi",
         });
+
+        if (values.metadataType === "function") {
+          void message.success(t("common.success"));
+          void navigate(`/execution-factory/toolboxes/${record.boxId}/tools?create=1`);
+          return;
+        }
       } else if (boxId) {
         await updateToolbox({
           ...values,
@@ -116,7 +132,7 @@ export function ToolboxFormScene({
         return;
       }
 
-      void navigate("/execution-factory/units");
+      void navigate("/execution-factory/units?activeTab=toolbox");
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
@@ -140,9 +156,19 @@ export function ToolboxFormScene({
           <div className={styles.formSurface}>
             <p className={styles.formHint}>
               {mode === "create"
-                ? t("executionFactory.toolboxCreateFlowHint")
+                ? metadataType === "function"
+                  ? t("executionFactory.toolboxCreateFunctionFlowHint")
+                  : t("executionFactory.toolboxCreateFlowHint")
                 : t("executionFactory.toolboxEditFlowHint")}
             </p>
+            {mode === "create" && metadataType === "function" ? (
+              <Alert
+                message={t("executionFactory.createToolboxFunctionNextStep")}
+                showIcon
+                style={{ marginBottom: 16 }}
+                type="info"
+              />
+            ) : null}
             <Form form={form} layout="vertical">
               {mode === "create" ? (
                 <Form.Item
@@ -160,34 +186,22 @@ export function ToolboxFormScene({
                   </Radio.Group>
                 </Form.Item>
               ) : null}
-              <Form.Item
-                label={t("executionFactory.toolboxName")}
-                name="name"
-                rules={[{ required: true, message: t("common.required") }]}
-              >
-                <Input />
-              </Form.Item>
-              <Form.Item label={t("common.description")} name="description">
-                <Input.TextArea rows={3} />
-              </Form.Item>
-              <Form.Item label={t("executionFactory.serviceUrl")} name="serviceUrl">
-                <Input placeholder="https://example.com/toolbox" />
-              </Form.Item>
-              <Form.Item label={t("executionFactory.category")} name="category">
-                <Select
-                  options={categoryOptions.map((value) => ({
-                    label: t(`executionFactory.toolboxCategories.${value}`),
-                    value,
-                  }))}
-                />
-              </Form.Item>
+              <ToolboxMetadataFormFields />
+              {mode === "edit" && metadataType ? (
+                <Form.Item label={t("executionFactory.metadataType")}>
+                  <Input
+                    disabled
+                    value={t(`executionFactory.metadataTypes.${metadataType}`)}
+                  />
+                </Form.Item>
+              ) : null}
               {mode === "create" && metadataType === "openapi" ? (
                 <Form.Item
                   label={t("executionFactory.openapiSpec")}
                   name="openapiSpec"
                   rules={[{ required: true, message: t("common.required") }]}
                 >
-                  <Input.TextArea placeholder="{...}" rows={10} />
+                  <OpenApiSpecInput rows={10} />
                 </Form.Item>
               ) : null}
             </Form>

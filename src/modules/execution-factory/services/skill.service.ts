@@ -164,6 +164,7 @@ async function fetchSkillList(
       sort_by: "update_time",
       sort_order: "desc",
     },
+    skipErrorToast: true,
   });
 
   const data = response.data;
@@ -298,6 +299,43 @@ export async function registerSkill(input: SkillRegisterInput): Promise<SkillRec
   }
 
   return mapSkill(response.data);
+}
+
+async function fetchSkillMarketPackageBlob(skillId: string): Promise<Blob> {
+  if (useMock) {
+    return new Blob(["mock skill package"], { type: "application/zip" });
+  }
+
+  const response = await http.get<Blob>(
+    `${API_PREFIX}/skills/market/${skillId}/management/download`,
+    {
+      headers: getBusinessDomainHeaders(),
+      responseType: "blob",
+    },
+  );
+
+  return response.data;
+}
+
+export async function installSkillFromMarket(skillId: string): Promise<SkillRecord> {
+  const blob = await fetchSkillMarketPackageBlob(skillId);
+  const file = new File([blob], `${skillId}.zip`, { type: "application/zip" });
+
+  return registerSkill({
+    file,
+    fileType: "zip",
+    source: "internal",
+  });
+}
+
+export async function syncSkillFromMarket(skillId: string): Promise<SkillRecord> {
+  const blob = await fetchSkillMarketPackageBlob(skillId);
+  const file = new File([blob], `${skillId}.zip`, { type: "application/zip" });
+
+  return updateSkillPackage(skillId, {
+    file,
+    fileType: "zip",
+  });
 }
 
 export async function downloadSkillPackage(

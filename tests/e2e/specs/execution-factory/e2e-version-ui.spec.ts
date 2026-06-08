@@ -2,6 +2,16 @@ import { expect, test } from "@playwright/test";
 
 import { assertBackendReady } from "../../helpers/common";
 import {
+  executionUnitCard,
+  expectAppToast,
+  gotoE2ePage,
+  openCatalogInstallDialog,
+  retryListLoadIfNeeded,
+  searchExecutionUnitByName,
+  waitForImpexExportResponse,
+  waitForImpexImportResponse,
+} from "../../helpers/execution-unit-ui";
+import {
   buildOperatorName,
   cleanupOperatorViaApi,
   publishOperatorViaApi,
@@ -22,13 +32,12 @@ import {
 } from "../../helpers/toolbox";
 
 function operatorCard(page: import("@playwright/test").Page, operatorName: string) {
-  return page
-    .locator(".ant-card")
-    .filter({ has: page.getByRole("heading", { level: 5, name: operatorName }) })
-    .first();
+  return executionUnitCard(page, operatorName);
 }
 
 test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
+  test.describe.configure({ timeout: 180_000 });
+
   let backendReady = false;
   const createdOperators: RegisteredOperator[] = [];
   const createdBoxIds: string[] = [];
@@ -119,17 +128,22 @@ test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
     createdBoxIds.push(toolbox.boxId);
     await publishToolboxViaApi(request, toolbox.boxId);
 
-    await page.goto("/execution-factory/catalog?activeTab=toolbox");
-    const card = page
-      .locator(".ant-card")
-      .filter({ has: page.getByRole("heading", { level: 5, name: toolbox.name }) })
-      .first();
-    await card.getByRole("button", { name: "同步" }).click();
+    await gotoE2ePage(page, "/execution-factory/catalog?activeTab=toolbox");
+    await retryListLoadIfNeeded(page);
+    const card = await searchExecutionUnitByName(page, toolbox.name);
+    const installDialog = await openCatalogInstallDialog(page, card);
+    await expect(installDialog).toBeVisible({ timeout: 30_000 });
 
-    const installDialog = page.getByRole("dialog", { name: "从市场同步" });
-    await expect(installDialog).toBeVisible();
-    await installDialog.getByRole("button", { name: "开始同步" }).click();
+    const exportResponsePromise = waitForImpexExportResponse(page, "toolbox");
+    const importResponsePromise = waitForImpexImportResponse(page, "toolbox");
+    await installDialog.getByRole("button", { name: /确认引入|开始同步|Confirm|Start/i }).click();
 
-    await expect(page.getByText(/成功|success/i).first()).toBeVisible({ timeout: 30_000 });
+    const exportResponse = await exportResponsePromise;
+    const importResponse = await importResponsePromise;
+    expect(exportResponse.ok()).toBeTruthy();
+    expect(importResponse.ok()).toBeTruthy();
+
+    await expectAppToast(page, /同步成功|引入成功|Synced successfully|Introduced successfully/i);
+    await expect(page.getByRole("dialog")).toBeHidden();
   });
 });

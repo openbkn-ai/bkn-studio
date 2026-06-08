@@ -35,6 +35,7 @@ import styles from "./create-menu.module.css";
 import { McpToolImportedSection } from "./McpToolImportedSection";
 
 type CreateMcpDrawerProps = {
+  embedded?: boolean;
   open: boolean;
   onClose: () => void;
   onCreated?: (mcpId: string) => void;
@@ -57,6 +58,7 @@ function mapHeadersToFormList(headers?: Record<string, string>) {
 }
 
 export function CreateMcpDrawer({
+  embedded = false,
   open,
   onClose,
   onCreated,
@@ -246,41 +248,21 @@ export function CreateMcpDrawer({
     }
   };
 
-  return (
-    <Drawer
-      destroyOnClose
-      extra={
-        <Space>
-          <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
-          <AppButton loading={submitting} onClick={() => void handleSubmit()} type="primary">
-            {t("common.confirm")}
-          </AppButton>
-        </Space>
-      }
-      onClose={onClose}
-      open={open}
-      title={
-        isEditMode
-          ? t("executionFactory.editMcpDrawerTitle")
-          : t("executionFactory.createMcpDrawerTitle")
-      }
-      width={800}
+  const formContent = loading ? (
+    <div style={{ padding: 48, textAlign: "center" }}>
+      <Spin />
+    </div>
+  ) : (
+    <Form
+      form={form}
+      layout="vertical"
+      onValuesChange={(changed) => {
+        if (changed.creationType && !isEditMode) {
+          setTools([]);
+          setImportedTools([]);
+        }
+      }}
     >
-      {loading ? (
-        <div style={{ padding: 48, textAlign: "center" }}>
-          <Spin />
-        </div>
-      ) : (
-        <Form
-          form={form}
-          layout="vertical"
-          onValuesChange={(changed) => {
-            if (changed.creationType && !isEditMode) {
-              setTools([]);
-              setImportedTools([]);
-            }
-          }}
-        >
           <Form.Item
             label={t("executionFactory.mcpName")}
             name="name"
@@ -382,8 +364,45 @@ export function CreateMcpDrawer({
           ) : (
             <McpToolImportedSection onChange={setImportedTools} value={importedTools} />
           )}
-        </Form>
-      )}
+    </Form>
+  );
+
+  const actionBar = (
+    <Space style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+      {!embedded ? <AppButton onClick={onClose}>{t("common.cancel")}</AppButton> : null}
+      <AppButton loading={submitting} onClick={() => void handleSubmit()} type="primary">
+        {t("common.confirm")}
+      </AppButton>
+    </Space>
+  );
+
+  if (embedded) {
+    if (!open) {
+      return null;
+    }
+
+    return (
+      <>
+        {formContent}
+        {actionBar}
+      </>
+    );
+  }
+
+  return (
+    <Drawer
+      destroyOnClose
+      extra={actionBar}
+      onClose={onClose}
+      open={open}
+      title={
+        isEditMode
+          ? t("executionFactory.editMcpDrawerTitle")
+          : t("executionFactory.createMcpDrawerTitle")
+      }
+      width={800}
+    >
+      {formContent}
     </Drawer>
   );
 }

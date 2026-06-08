@@ -190,6 +190,27 @@ export function validateOpenApiDocumentText(
   return { ok: true };
 }
 
+export function extractOpenApiMetadataHints(
+  openapiSpec?: string,
+): { title?: string; description?: string } {
+  if (!openapiSpec?.trim()) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(openapiSpec) as {
+      info?: { description?: string; title?: string };
+    };
+
+    return {
+      title: parsed.info?.title,
+      description: parsed.info?.description,
+    };
+  } catch {
+    return {};
+  }
+}
+
 export function parseOpenApiDataPayload(
   openapiSpec?: string,
   mode: "register" | "edit" = "register",

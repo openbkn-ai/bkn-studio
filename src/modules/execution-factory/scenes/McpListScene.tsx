@@ -34,6 +34,7 @@ function formatTimestamp(value?: number) {
   return formatExecutionUnitTime(value);
 }
 
+/** @deprecated Use `ExecutionUnitListScene` with `activeTab="mcp"` instead. */
 export function McpListScene() {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();

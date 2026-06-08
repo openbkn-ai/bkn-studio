@@ -1,16 +1,15 @@
 import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 
-import { CreateMcpDrawer } from "./CreateMcpDrawer";
-import { CreateOperatorModal } from "./CreateOperatorModal";
-import { CreateSkillModal } from "./CreateSkillModal";
-import { CreateToolboxModal } from "./CreateToolboxModal";
+import {
+  CreateExecutionUnitWizard,
+  type CreatedExecutionUnitPayload,
+} from "./CreateExecutionUnitWizard";
 import { ImportResourceModal } from "./ImportResourceModal";
 import styles from "./create-menu.module.css";
 
@@ -18,8 +17,8 @@ type CreateMenuProps = {
   activeTab: ExecutionUnitTab;
   autoOpen?: boolean;
   onAutoOpenHandled?: () => void;
-  onMcpCreated?: (mcpId: string) => void;
   onRefresh?: () => void;
+  onResourceCreated?: (payload: CreatedExecutionUnitPayload) => void;
 };
 
 function getCreatePermission(activeTab: ExecutionUnitTab) {
@@ -60,73 +59,28 @@ function getCreateLabel(activeTab: ExecutionUnitTab, t: (key: string) => string)
   }
 }
 
-function openCreateOverlay(
-  activeTab: ExecutionUnitTab,
-  setters: {
-    setOperatorOpen: (open: boolean) => void;
-    setToolboxOpen: (open: boolean) => void;
-    setMcpOpen: (open: boolean) => void;
-    setSkillOpen: (open: boolean) => void;
-  },
-) {
-  switch (activeTab) {
-    case "operator":
-      setters.setOperatorOpen(true);
-      break;
-    case "toolbox":
-      setters.setToolboxOpen(true);
-      break;
-    case "mcp":
-      setters.setMcpOpen(true);
-      break;
-    case "skill":
-      setters.setSkillOpen(true);
-      break;
-    default:
-      break;
-  }
-}
-
 export function CreateMenu({
   activeTab,
   autoOpen = false,
   onAutoOpenHandled,
-  onMcpCreated,
   onRefresh,
+  onResourceCreated,
 }: CreateMenuProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const [operatorOpen, setOperatorOpen] = useState(false);
-  const [toolboxOpen, setToolboxOpen] = useState(false);
-  const [mcpOpen, setMcpOpen] = useState(false);
-  const [skillOpen, setSkillOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
   const permission = getCreatePermission(activeTab);
   const importPermission = getImportPermission(activeTab);
-
-  const handlePrimaryClick = () => {
-    openCreateOverlay(activeTab, {
-      setOperatorOpen,
-      setToolboxOpen,
-      setMcpOpen,
-      setSkillOpen,
-    });
-  };
 
   useEffect(() => {
     if (!autoOpen || !permission) {
       return;
     }
 
-    openCreateOverlay(activeTab, {
-      setOperatorOpen,
-      setToolboxOpen,
-      setMcpOpen,
-      setSkillOpen,
-    });
+    setWizardOpen(true);
     onAutoOpenHandled?.();
-  }, [activeTab, autoOpen, onAutoOpenHandled, permission]);
+  }, [autoOpen, onAutoOpenHandled, permission]);
 
   if (!permission) {
     return null;
@@ -136,7 +90,7 @@ export function CreateMenu({
     <>
       <PermissionGate permissions={permission}>
         <div className={styles.toolbarRow}>
-          <AppButton icon={<PlusOutlined />} onClick={handlePrimaryClick} type="primary">
+          <AppButton icon={<PlusOutlined />} onClick={() => setWizardOpen(true)} type="primary">
             {getCreateLabel(activeTab, t)}
           </AppButton>
           {importPermission ? (
@@ -149,29 +103,12 @@ export function CreateMenu({
         </div>
       </PermissionGate>
 
-      <CreateOperatorModal onClose={() => setOperatorOpen(false)} open={operatorOpen} />
-      <CreateToolboxModal
-        onClose={() => setToolboxOpen(false)}
-        onCreated={(boxId) => {
-          onRefresh?.();
-          void navigate(`/execution-factory/toolboxes/${boxId}/tools?action=edit`);
-        }}
-        open={toolboxOpen}
-      />
-      <CreateMcpDrawer
-        onClose={() => setMcpOpen(false)}
-        onCreated={(mcpId) => {
-          onRefresh?.();
-          onMcpCreated?.(mcpId);
-        }}
-        open={mcpOpen}
-      />
-      <CreateSkillModal
-        onClose={() => setSkillOpen(false)}
-        onImported={() => {
-          onRefresh?.();
-        }}
-        open={skillOpen}
+      <CreateExecutionUnitWizard
+        initialTab={activeTab}
+        onClose={() => setWizardOpen(false)}
+        onRefresh={onRefresh}
+        onResourceCreated={onResourceCreated}
+        open={wizardOpen}
       />
       {importPermission ? (
         <ImportResourceModal

@@ -157,6 +157,7 @@ async function fetchMcpList(
       sort_by: "update_time",
       sort_order: "desc",
     },
+    skipErrorToast: true,
   });
 
   const data = response.data;

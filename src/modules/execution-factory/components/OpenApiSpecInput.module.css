@@ -1,0 +1,24 @@
+.root :global(.ant-tabs-nav) {
+  margin-bottom: 12px;
+}
+
+.urlRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.urlFetchButton {
+  padding: 4px 12px;
+  border: 1px solid rgba(18, 110, 227, 0.35);
+  border-radius: 8px;
+  background: rgba(18, 110, 227, 0.08);
+  color: #126ee3;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.urlFetchButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

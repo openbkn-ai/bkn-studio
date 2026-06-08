@@ -1,21 +1,27 @@
-import { Alert, Drawer, Form, Input, Radio, Spin } from "antd";
-import { useEffect, useState } from "react";
+import { Alert, Collapse, Drawer, Form, Input, Radio, Spin } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { FunctionCodeField } from "@/modules/execution-factory/components/FunctionCodeField";
+import { FunctionDefinitionFields } from "@/modules/execution-factory/components/FunctionDefinitionFields";
+import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
+import { ToolGlobalParameterFields } from "@/modules/execution-factory/components/ToolGlobalParameterFields";
 import {
   createTool,
   getToolDetail,
   updateTool,
 } from "@/modules/execution-factory/services/tool.service";
+import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
 import type {
   ToolCreateInput,
   ToolEditInput,
+  ToolGlobalParameter,
   ToolMetadataType,
 } from "@/modules/execution-factory/types/tool";
+import type { ToolboxMetadataType } from "@/modules/execution-factory/types/toolbox";
+import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
 
 type ToolFormDrawerProps = {
   boxId: string;
@@ -24,6 +30,7 @@ type ToolFormDrawerProps = {
   onSuccess: () => void;
   open: boolean;
   toolId?: string;
+  toolboxMetadataType?: ToolboxMetadataType;
 };
 
 type ToolFormValues = {
@@ -32,8 +39,15 @@ type ToolFormValues = {
   metadataType: ToolMetadataType;
   openapiSpec?: string;
   functionCode?: string;
+  functionInputs?: FunctionParameterDef[];
+  functionOutputs?: FunctionParameterDef[];
+  globalParameters?: ToolGlobalParameter;
   useRule?: string;
 };
+
+function resolveDefaultMetadataType(toolboxMetadataType?: ToolboxMetadataType): ToolMetadataType {
+  return toolboxMetadataType === "function" ? "function" : "openapi";
+}
 
 export function ToolFormDrawer({
   boxId,
@@ -42,6 +56,7 @@ export function ToolFormDrawer({
   onSuccess,
   open,
   toolId,
+  toolboxMetadataType,
 }: ToolFormDrawerProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
@@ -49,7 +64,13 @@ export function ToolFormDrawer({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const metadataType = Form.useWatch("metadataType", form) as ToolMetadataType | undefined;
+  const defaultMetadataType = useMemo(
+    () => resolveDefaultMetadataType(toolboxMetadataType),
+    [toolboxMetadataType],
+  );
+  const watchedMetadataType = Form.useWatch("metadataType", form) as ToolMetadataType | undefined;
+  const metadataType = watchedMetadataType ?? defaultMetadataType;
+  const lockMetadataType = toolboxMetadataType === "function";
 
   useEffect(() => {
     if (!open) {
@@ -58,7 +79,12 @@ export function ToolFormDrawer({
 
     void (async () => {
       if (mode === "create") {
-        form.setFieldsValue({ metadataType: "openapi" });
+        form.resetFields();
+        form.setFieldsValue({
+          functionInputs: [],
+          functionOutputs: [],
+          metadataType: defaultMetadataType,
+        });
         return;
       }
 
@@ -74,7 +100,18 @@ export function ToolFormDrawer({
         form.setFieldsValue({
           description: record.description,
           functionCode: record.functionInput?.code,
-          metadataType: record.metadataType ?? "openapi",
+          functionInputs: record.functionInput?.inputs ?? [],
+          functionOutputs: record.functionInput?.outputs ?? [],
+          globalParameters: record.globalParameters
+            ? {
+                ...record.globalParameters,
+                value:
+                  record.globalParameters.value !== undefined
+                    ? JSON.stringify(record.globalParameters.value, null, 2)
+                    : undefined,
+              }
+            : undefined,
+          metadataType: record.metadataType ?? defaultMetadataType,
           name: record.name,
           openapiSpec: record.openapiSpec,
           useRule: record.useRule,
@@ -85,10 +122,19 @@ export function ToolFormDrawer({
         setLoading(false);
       }
     })();
-  }, [boxId, form, mode, open, toolId]);
+  }, [boxId, defaultMetadataType, form, mode, open, toolId]);
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
+
+    if (values.metadataType === "openapi") {
+      const openApiValidation = validateOpenApiDocumentText(values.openapiSpec);
+      if (!openApiValidation.ok) {
+        void message.error(openApiValidation.reason);
+        return;
+      }
+    }
+
     setSubmitting(true);
 
     try {
@@ -96,11 +142,16 @@ export function ToolFormDrawer({
         const input: ToolCreateInput = {
           metadataType: values.metadataType,
           useRule: values.useRule,
+          globalParameters: values.globalParameters,
           openapiSpec: values.metadataType === "openapi" ? values.openapiSpec : undefined,
           functionInput:
             values.metadataType === "function"
               ? {
                   code: values.functionCode,
+                  description: values.description,
+                  inputs: values.functionInputs,
+                  name: values.name,
+                  outputs: values.functionOutputs,
                   script_type: "python",
                 }
               : undefined,
@@ -119,13 +170,16 @@ export function ToolFormDrawer({
           description: values.description,
           metadataType: values.metadataType,
           useRule: values.useRule,
+          globalParameters: values.globalParameters,
           openapiSpec: values.metadataType === "openapi" ? values.openapiSpec : undefined,
           functionInput:
             values.metadataType === "function"
               ? {
                   code: values.functionCode,
                   description: values.description,
+                  inputs: values.functionInputs,
                   name: values.name,
+                  outputs: values.functionOutputs,
                   script_type: "python",
                 }
               : undefined,
@@ -167,45 +221,70 @@ export function ToolFormDrawer({
           ? t("executionFactory.toolCreateTitle")
           : t("executionFactory.toolEditTitle")
       }
-      width={720}
+      width={840}
     >
       {loading ? <Spin /> : null}
       {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
       {!loading && !loadError ? (
         <Form form={form} layout="vertical">
-          {mode === "create" ? (
+          {mode === "create" && !lockMetadataType ? (
             <Form.Item
               label={t("executionFactory.metadataType")}
               name="metadataType"
               rules={[{ required: true, message: t("common.required") }]}
             >
               <Radio.Group>
-                <Radio value="openapi">
-                  {t("executionFactory.metadataTypes.openapi")}
-                </Radio>
-                <Radio value="function">
-                  {t("executionFactory.metadataTypes.function")}
-                </Radio>
+                <Radio value="openapi">{t("executionFactory.metadataTypes.openapi")}</Radio>
+                <Radio value="function">{t("executionFactory.metadataTypes.function")}</Radio>
               </Radio.Group>
             </Form.Item>
-          ) : (
-            <Form.Item
-              label={t("executionFactory.toolName")}
-              name="name"
-              rules={[{ required: true, message: t("common.required") }]}
-            >
-              <Input />
-            </Form.Item>
-          )}
+          ) : null}
+          {lockMetadataType ? (
+            <>
+              <Form.Item hidden name="metadataType">
+                <Input />
+              </Form.Item>
+              <Alert
+                description={t("executionFactory.functionToolCreateHint")}
+                message={t("executionFactory.metadataTypes.function")}
+                showIcon
+                style={{ marginBottom: 16 }}
+                type="info"
+              />
+            </>
+          ) : null}
+          {mode === "create" && metadataType === "function" ? (
+            <>
+              <Form.Item
+                label={t("executionFactory.toolName")}
+                name="name"
+                rules={[{ required: true, message: t("common.required") }]}
+              >
+                <Input />
+              </Form.Item>
+              <Form.Item label={t("common.description")} name="description">
+                <Input.TextArea rows={3} />
+              </Form.Item>
+            </>
+          ) : null}
           {mode === "edit" ? (
-            <Form.Item label={t("common.description")} name="description">
-              <Input.TextArea rows={3} />
-            </Form.Item>
+            <>
+              <Form.Item
+                label={t("executionFactory.toolName")}
+                name="name"
+                rules={[{ required: true, message: t("common.required") }]}
+              >
+                <Input />
+              </Form.Item>
+              <Form.Item label={t("common.description")} name="description">
+                <Input.TextArea rows={3} />
+              </Form.Item>
+            </>
           ) : null}
           <Form.Item label={t("executionFactory.useRule")} name="useRule">
             <Input.TextArea rows={2} />
           </Form.Item>
-          {(mode === "create" || metadataType === "openapi") && metadataType === "openapi" ? (
+          {metadataType === "openapi" ? (
             <Form.Item
               label={t("executionFactory.openapiSpec")}
               name="openapiSpec"
@@ -215,18 +294,20 @@ export function ToolFormDrawer({
                   : undefined
               }
             >
-              <Input.TextArea placeholder="{...}" rows={10} />
+              <OpenApiSpecInput rows={10} />
             </Form.Item>
           ) : null}
-          {metadataType === "function" ? (
-            <Form.Item
-              label={t("executionFactory.functionCode")}
-              name="functionCode"
-              rules={[{ required: true, message: t("common.required") }]}
-            >
-              <FunctionCodeField />
-            </Form.Item>
-          ) : null}
+          {metadataType === "function" ? <FunctionDefinitionFields /> : null}
+          <Collapse
+            ghost
+            items={[
+              {
+                key: "globalParameters",
+                label: t("executionFactory.globalParametersTitle"),
+                children: <ToolGlobalParameterFields />,
+              },
+            ]}
+          />
         </Form>
       ) : null}
     </Drawer>

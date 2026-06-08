@@ -1,5 +1,5 @@
-import { Alert, Collapse, Form, Input, Radio, Result, Select, Spin, Switch } from "antd";
-import { useEffect, useState } from "react";
+import { Alert, Anchor, Collapse, Form, Input, Radio, Result, Select, Spin, Switch } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -9,9 +9,9 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { CrudFormPage } from "@/framework/scaffold/CrudFormPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { FunctionCodeField } from "@/modules/execution-factory/components/FunctionCodeField";
-import { FunctionParameterEditor } from "@/modules/execution-factory/components/FunctionParameterEditor";
-import { OperatorDebugModal } from "@/modules/execution-factory/components/OperatorDebugModal";
+import { FunctionDefinitionFields } from "@/modules/execution-factory/components/FunctionDefinitionFields";
+import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
+import { OperatorDebugPanel } from "@/modules/execution-factory/components/OperatorDebugPanel";
 import { OperatorExecuteControlFields } from "@/modules/execution-factory/components/OperatorExecuteControlFields";
 import { OperatorRunLogPanel } from "@/modules/execution-factory/components/OperatorRunLogPanel";
 import {
@@ -24,7 +24,6 @@ import type {
   OperatorCategory,
   OperatorMetadataType,
   OperatorMutationInput,
-  OperatorRecord,
   OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
@@ -62,24 +61,29 @@ export function UnitFormScene({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const metadataTypeParam = searchParams.get("metadataType");
+  const lockedMetadataType =
+    mode === "create" &&
+    (metadataTypeParam === "function" || metadataTypeParam === "openapi")
+      ? metadataTypeParam
+      : null;
   const [form] = Form.useForm<FormValues>();
   const [loading, setLoading] = useState(mode === "edit");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [debugOpen, setDebugOpen] = useState(false);
-  const [debugRecord, setDebugRecord] = useState<OperatorRecord | null>(null);
   const [sessionLogs, setSessionLogs] = useState<OperatorRunLogEntry[]>([]);
   const metadataType = Form.useWatch("metadataType", form) as
     | OperatorMetadataType
     | undefined;
-  const [loadedValues, setLoadedValues] = useState<Partial<FormValues> | null>(
-    null,
-  );
+  const [loadedValues, setLoadedValues] = useState<Partial<FormValues> | null>(null);
+  const [debugRecord, setDebugRecord] = useState<Awaited<
+    ReturnType<typeof getOperatorDetail>
+  > | null>(null);
 
   useEffect(() => {
     void (async () => {
       if (mode !== "edit" || !operatorId) {
         setLoadedValues(null);
+        setDebugRecord(null);
         form.setFieldsValue({
           category: "other_category",
           directPublish: false,
@@ -134,20 +138,78 @@ export function UnitFormScene({
       ? t("executionFactory.createDescription")
       : t("executionFactory.editDescription");
 
+  const anchorItems = useMemo(() => {
+    const items = [
+      { href: "#operator-basic", key: "basic", title: t("executionFactory.formSectionBasic") },
+    ];
+
+    if (metadataType === "openapi") {
+      items.push({
+        href: "#operator-openapi",
+        key: "openapi",
+        title: t("executionFactory.metadataTypes.openapi"),
+      });
+    }
+
+    if (metadataType === "function") {
+      items.push(
+        {
+          href: "#function-inputs",
+          key: "function-inputs",
+          title: t("executionFactory.functionInputs"),
+        },
+        {
+          href: "#function-logic",
+          key: "function-logic",
+          title: t("executionFactory.functionLogic"),
+        },
+        {
+          href: "#function-outputs",
+          key: "function-outputs",
+          title: t("executionFactory.functionOutputs"),
+        },
+      );
+    }
+
+    items.push({
+      href: "#operator-execute-control",
+      key: "executeControl",
+      title: t("executionFactory.executeControlTitle"),
+    });
+
+    if (mode === "create") {
+      items.push({
+        href: "#operator-publish",
+        key: "publish",
+        title: t("executionFactory.formSectionPublish"),
+      });
+    }
+
+    if (mode === "edit") {
+      items.push({
+        href: "#operator-debug",
+        key: "debug",
+        title: t("executionFactory.runLogTitle"),
+      });
+    }
+
+    return items;
+  }, [metadataType, mode, t]);
+
   const handleBack = () => {
     if (onBack) {
       onBack();
       return;
     }
 
-    void navigate("/execution-factory/units");
+    void navigate("/execution-factory/units?activeTab=operator");
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
-    setSubmitting(true);
-
     try {
+      const values = await form.validateFields();
+      setSubmitting(true);
+
       const resolvedMetadataType = values.metadataType ?? "openapi";
       if (resolvedMetadataType === "openapi") {
         const openApiValidation = validateOpenApiDocumentText(values.openapiSpec);
@@ -170,12 +232,19 @@ export function UnitFormScene({
           : undefined;
 
       if (mode === "create") {
-        await registerOperator({
+        const record = await registerOperator({
           ...values,
           metadataType: resolvedMetadataType,
           functionInput,
         });
-      } else if (operatorId) {
+        void message.success(t("common.success"));
+        void navigate(
+          `/execution-factory/units?activeTab=operator&detailId=${record.operatorId}`,
+        );
+        return;
+      }
+
+      if (operatorId) {
         await updateOperator({
           ...values,
           metadataType: resolvedMetadataType,
@@ -191,8 +260,20 @@ export function UnitFormScene({
         return;
       }
 
-      void navigate("/execution-factory/units");
+      void navigate("/execution-factory/units?activeTab=operator");
     } catch (error) {
+      if (error && typeof error === "object" && "errorFields" in error) {
+        const firstField = (
+          error as { errorFields?: Array<{ name?: Array<string | number> }> }
+        ).errorFields?.[0]?.name?.[0];
+
+        if (typeof firstField === "string") {
+          document
+            .querySelector(`[id="operator-${firstField}"]`)
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+
       const errorDetail = extractRequestErrorDetail(error);
       const detailText =
         typeof errorDetail.detail === "string"
@@ -226,133 +307,163 @@ export function UnitFormScene({
           <Alert message={loadError} showIcon type="error" />
         ) : null}
         {!loading && !loadError && (mode === "create" || loadedValues) ? (
-          <div className={styles.formSurface}>
-            <p className={styles.formHint}>
-              {mode === "create"
-                ? t("executionFactory.createFlowHint")
-                : t("executionFactory.editFlowHint")}
-            </p>
-            <Form form={form} layout="vertical">
-              {mode === "create" ? (
-                <Form.Item
-                  label={t("executionFactory.metadataType")}
-                  name="metadataType"
-                  rules={[{ required: true, message: t("common.required") }]}
-                >
-                  <Radio.Group>
-                    <Radio value="openapi">
-                      {t("executionFactory.metadataTypes.openapi")}
-                    </Radio>
-                    <Radio value="function">
-                      {t("executionFactory.metadataTypes.function")}
-                    </Radio>
-                  </Radio.Group>
-                </Form.Item>
-              ) : (
-                <Form.Item hidden name="metadataType">
-                  <Input />
-                </Form.Item>
-              )}
-              <Form.Item
-                label={t("executionFactory.operatorName")}
-                name="name"
-                rules={[{ required: true, message: t("common.required") }]}
-              >
-                <Input />
-              </Form.Item>
-              <Form.Item label={t("common.description")} name="description">
-                <Input.TextArea rows={3} />
-              </Form.Item>
-              <Form.Item label={t("executionFactory.category")} name="category">
-                <Select
-                  options={categoryOptions.map((value) => ({
-                    label: t(`executionFactory.operatorCategories.${value}`),
-                    value,
-                  }))}
-                />
-              </Form.Item>
-              {metadataType === "openapi" ? (
-                <Form.Item
-                  label={t("executionFactory.openapiSpec")}
-                  name="openapiSpec"
-                  rules={[{ required: true, message: t("common.required") }]}
-                >
-                  <Input.TextArea placeholder="{...}" rows={10} />
-                </Form.Item>
-              ) : null}
-              {metadataType === "function" ? (
-                <>
-                  <Form.Item
-                    label={t("executionFactory.functionCode")}
-                    name="functionCode"
-                    rules={[{ required: true, message: t("common.required") }]}
+          <div className={styles.formLayout}>
+            <Anchor
+              affix={false}
+              className={styles.formAnchor}
+              items={anchorItems}
+              offsetTop={12}
+            />
+            <div className={styles.formMain}>
+              <div className={styles.formSurface}>
+                <p className={styles.formHint}>
+                  {mode === "create"
+                    ? t("executionFactory.createFlowHint")
+                    : t("executionFactory.editFlowHint")}
+                </p>
+                {mode === "create" ? (
+                  <Alert
+                    message={t("executionFactory.quickPublishHint")}
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                    type="info"
+                  />
+                ) : null}
+                <Form form={form} layout="vertical">
+                  <section id="operator-basic">
+                    {mode === "create" && lockedMetadataType ? (
+                      <>
+                        <Alert
+                          message={t("executionFactory.operatorCreateTypeLockedHint")}
+                          showIcon
+                          style={{ marginBottom: 16 }}
+                          type="info"
+                        />
+                        <Form.Item hidden name="metadataType">
+                          <Input />
+                        </Form.Item>
+                      </>
+                    ) : null}
+                    {mode === "create" && !lockedMetadataType ? (
+                      <Form.Item
+                        label={t("executionFactory.metadataType")}
+                        name="metadataType"
+                        rules={[{ required: true, message: t("common.required") }]}
+                      >
+                        <Radio.Group>
+                          <Radio value="openapi">
+                            {t("executionFactory.metadataTypes.openapi")}
+                          </Radio>
+                          <Radio value="function">
+                            {t("executionFactory.metadataTypes.function")}
+                          </Radio>
+                        </Radio.Group>
+                      </Form.Item>
+                    ) : null}
+                    {mode === "edit" ? (
+                      <Form.Item hidden name="metadataType">
+                        <Input />
+                      </Form.Item>
+                    ) : null}
+                    <Form.Item
+                      label={t("executionFactory.operatorName")}
+                      name="name"
+                      rules={[{ required: true, message: t("common.required") }]}
+                    >
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label={t("common.description")} name="description">
+                      <Input.TextArea rows={3} />
+                    </Form.Item>
+                    <Form.Item label={t("executionFactory.category")} name="category">
+                      <Select
+                        options={categoryOptions.map((value) => ({
+                          label: t(`executionFactory.operatorCategories.${value}`),
+                          value,
+                        }))}
+                      />
+                    </Form.Item>
+                  </section>
+                  {metadataType === "openapi" ? (
+                    <section id="operator-openapi">
+                      <Form.Item
+                        extra={t("executionFactory.openapiImportHint")}
+                        label={t("executionFactory.openapiSpec")}
+                        name="openapiSpec"
+                        rules={[{ required: true, message: t("common.required") }]}
+                      >
+                        <OpenApiSpecInput
+                          onMetadataHints={(hints) => {
+                            if (!form.getFieldValue("name") && hints.title) {
+                              form.setFieldValue("name", hints.title);
+                            }
+                            if (!form.getFieldValue("description") && hints.description) {
+                              form.setFieldValue("description", hints.description);
+                            }
+                          }}
+                        />
+                      </Form.Item>
+                    </section>
+                  ) : null}
+                  {metadataType === "function" ? (
+                    <section id="operator-function">
+                      <FunctionDefinitionFields />
+                    </section>
+                  ) : null}
+                  <section id="operator-execute-control">
+                    <Collapse
+                      ghost
+                      items={[
+                        {
+                          key: "executeControl",
+                          label: t("executionFactory.executeControlTitle"),
+                          children: <OperatorExecuteControlFields />,
+                        },
+                      ]}
+                    />
+                  </section>
+                  {mode === "create" ? (
+                    <section id="operator-publish">
+                      <Form.Item
+                        extra={t("executionFactory.directPublishHint")}
+                        label={t("executionFactory.directPublish")}
+                        name="directPublish"
+                        valuePropName="checked"
+                      >
+                        <Switch />
+                      </Form.Item>
+                    </section>
+                  ) : null}
+                </Form>
+                <div className={styles.formActions}>
+                  <AppButton onClick={handleBack}>{t("common.cancel")}</AppButton>
+                  <AppButton
+                    loading={submitting}
+                    onClick={() => {
+                      void handleSubmit();
+                    }}
+                    type="primary"
                   >
-                    <FunctionCodeField />
-                  </Form.Item>
-                  <FunctionParameterEditor />
-                </>
-              ) : null}
-              <Collapse
-                ghost
-                items={[
-                  {
-                    key: "executeControl",
-                    label: t("executionFactory.executeControlTitle"),
-                    children: <OperatorExecuteControlFields />,
-                  },
-                ]}
-              />
-              {mode === "create" ? (
-                <Form.Item
-                  label={t("executionFactory.directPublish")}
-                  name="directPublish"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-              ) : null}
-            </Form>
-            {mode === "edit" && operatorId ? (
-              <section style={{ marginTop: 24 }}>
-                <div
-                  style={{
-                    alignItems: "center",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 12,
-                  }}
-                >
-                  <h3 style={{ margin: 0 }}>{t("executionFactory.runLogTitle")}</h3>
-                  <PermissionGate permissions="execution-factory:operator:debug">
-                    <AppButton onClick={() => setDebugOpen(true)} type="primary">
-                      {t("executionFactory.debug")}
-                    </AppButton>
-                  </PermissionGate>
+                    {t("common.save")}
+                  </AppButton>
                 </div>
-                <OperatorRunLogPanel operatorId={operatorId} sessionLogs={sessionLogs} />
-              </section>
-            ) : null}
-            <div className={styles.formActions}>
-              <AppButton onClick={handleBack}>{t("common.cancel")}</AppButton>
-              <AppButton
-                loading={submitting}
-                onClick={() => {
-                  void handleSubmit();
-                }}
-                type="primary"
-              >
-                {t("common.save")}
-              </AppButton>
+              </div>
+              {mode === "edit" && operatorId ? (
+                <aside className={styles.debugAside} id="operator-debug">
+                  <h3 className={styles.debugTitle}>{t("executionFactory.runLogTitle")}</h3>
+                  <PermissionGate permissions="execution-factory:operator:debug">
+                    <OperatorDebugPanel
+                      onRunComplete={handleDebugRunComplete}
+                      record={debugRecord}
+                    />
+                  </PermissionGate>
+                  <OperatorRunLogPanel operatorId={operatorId} sessionLogs={sessionLogs} />
+                </aside>
+              ) : null}
             </div>
           </div>
         ) : null}
       </CrudFormPage>
-      <OperatorDebugModal
-        onClose={() => setDebugOpen(false)}
-        onRunComplete={handleDebugRunComplete}
-        open={debugOpen}
-        record={debugRecord}
-      />
     </PermissionGate>
   );
 }

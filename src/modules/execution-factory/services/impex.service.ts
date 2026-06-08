@@ -116,6 +116,7 @@ async function postImportFormData(
       ...getExecutionFactoryApiHeaders(),
       "Content-Type": "multipart/form-data",
     },
+    timeout: IMPEX_EXPORT_TIMEOUT_MS,
     skipErrorToast: true,
   });
 }

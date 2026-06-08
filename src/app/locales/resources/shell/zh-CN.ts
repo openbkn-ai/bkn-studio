@@ -17,6 +17,8 @@ export const shellZhCN = {
       executionFactory: "执行工厂",
       executionUnitManagement: "执行单元管理",
       allExecutionUnits: "全部执行单元",
+      executionUnitManagementTooltip: "管理本业务域内的算子、工具箱、MCP 与 Skill",
+      allExecutionUnitsTooltip: "浏览市场目录并将资源引入到本业务域",
       systemManagement: "系统管理",
       userManagement: "用户管理",
       roleManagement: "角色管理",

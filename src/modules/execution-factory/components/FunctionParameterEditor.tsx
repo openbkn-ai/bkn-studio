@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 type FunctionParameterEditorProps = {
   inputsNamePath?: (string | number)[];
   outputsNamePath?: (string | number)[];
+  section?: "both" | "inputs" | "outputs";
 };
 
 const typeOptions = ["string", "integer", "number", "boolean", "object", "array"];
@@ -75,13 +76,18 @@ function ParameterList({ namePath, title }: { namePath: (string | number)[]; tit
 export function FunctionParameterEditor({
   inputsNamePath = ["functionInputs"],
   outputsNamePath = ["functionOutputs"],
+  section = "both",
 }: FunctionParameterEditorProps) {
   const { t } = useTranslation();
 
   return (
     <>
-      <ParameterList namePath={inputsNamePath} title={t("executionFactory.functionInputs")} />
-      <ParameterList namePath={outputsNamePath} title={t("executionFactory.functionOutputs")} />
+      {section === "both" || section === "inputs" ? (
+        <ParameterList namePath={inputsNamePath} title={t("executionFactory.functionInputs")} />
+      ) : null}
+      {section === "both" || section === "outputs" ? (
+        <ParameterList namePath={outputsNamePath} title={t("executionFactory.functionOutputs")} />
+      ) : null}
     </>
   );
 }

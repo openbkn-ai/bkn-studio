@@ -7,7 +7,7 @@
     "test:operator": "playwright test specs/execution-factory/operator.at.spec.ts",
     "test:full": "playwright test specs/execution-factory",
     "test:api": "playwright test specs/execution-factory/e2e-operator.spec.ts specs/execution-factory/e2e-toolbox.spec.ts specs/execution-factory/e2e-mcp.spec.ts specs/execution-factory/e2e-skill.spec.ts specs/execution-factory/e2e-function.spec.ts specs/execution-factory/e2e-catalog.spec.ts specs/execution-factory/e2e-impex.spec.ts specs/execution-factory/e2e-version.spec.ts --grep-invert CAT-02",
-    "test:ui": "playwright test specs/execution-factory/e2e-ui-tabs.spec.ts specs/execution-factory/operator.at.spec.ts specs/execution-factory/e2e-catalog.spec.ts specs/execution-factory/e2e-impex-ui.spec.ts specs/execution-factory/e2e-version-ui.spec.ts --grep \"UI-|CAT-02|CAT-UI|IMPEX-UI|VER-UI|Operator AT\"",
+    "test:ui": "playwright test specs/execution-factory/e2e-ui-tabs.spec.ts specs/execution-factory/e2e-ui-coverage.spec.ts specs/execution-factory/e2e-ux-regression.spec.ts specs/execution-factory/operator.at.spec.ts specs/execution-factory/e2e-catalog.spec.ts specs/execution-factory/e2e-impex-ui.spec.ts specs/execution-factory/e2e-version-ui.spec.ts --grep \"UI-|UX-|CAT-02|CAT-UI|IMPEX-UI|VER-UI|Operator AT\"",
     "install:browsers": "playwright install chromium"
   },
   "devDependencies": {

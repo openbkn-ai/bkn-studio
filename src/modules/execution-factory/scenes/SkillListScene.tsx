@@ -34,6 +34,7 @@ function formatTimestamp(value?: number) {
   return formatExecutionUnitTime(value);
 }
 
+/** @deprecated Use `ExecutionUnitListScene` with `activeTab="skill"` instead. */
 export function SkillListScene() {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();

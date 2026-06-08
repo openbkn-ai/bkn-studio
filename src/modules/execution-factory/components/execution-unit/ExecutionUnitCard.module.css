@@ -8,6 +8,11 @@
   transition: all 0.3s ease;
 }
 
+.cardMarket {
+  border-color: rgba(18, 110, 227, 0.18);
+  background: linear-gradient(180deg, rgba(18, 110, 227, 0.03) 0%, #fff 72px);
+}
+
 .cardActions {
   position: absolute;
   top: 12px;
@@ -51,9 +56,17 @@
   line-height: 20px;
 }
 
-.card:hover {
+.card:hover,
+.card:focus-visible {
   border-color: rgba(18, 110, 227, 0.35);
   box-shadow: 0 4px 14px rgba(18, 110, 227, 0.12);
+  outline: none;
+}
+
+.card:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(18, 110, 227, 0.2),
+    0 4px 14px rgba(18, 110, 227, 0.12);
 }
 
 .cardBody {

@@ -84,14 +84,32 @@ export function ExecutionUnitCard({
 
   return (
     <Card
-      className={styles.card}
+      className={`${styles.card} ${marketMode ? styles.cardMarket : ""}`}
+      data-testid="execution-unit-card"
       hoverable
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (!onClick) {
+          return;
+        }
+
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
       styles={{ body: { padding: 0 } }}
     >
       <div className={styles.cardBody}>
         {onAction ? (
-          <div className={styles.cardActions}>
+          <div
+            className={styles.cardActions}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
             <ExecutionUnitCardMenu
               activeTab={activeTab}
               installedStateReady={installedStateReady}

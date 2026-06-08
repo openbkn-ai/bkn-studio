@@ -101,22 +101,27 @@ export function buildToolboxName(suffix?: string) {
 export async function createToolboxViaApi(
   request: APIRequestContext,
   name: string,
+  options?: { metadataType?: "openapi" | "function" },
 ): Promise<ToolboxRecord> {
-  const openApiSpec = buildMinimalOpenApiSpec(name);
+  const metadataType = options?.metadataType ?? "openapi";
+  const payload: Record<string, unknown> = {
+    box_category: "other_category",
+    box_desc: "E2E toolbox",
+    box_name: name,
+    box_svc_url: "http://127.0.0.1:9000/api/agent-operator-integration",
+    metadata_type: metadataType,
+  };
+
+  if (metadataType === "openapi") {
+    payload.data = buildMinimalOpenApiSpec(name);
+  }
 
   const response = await request.post(`${API_PREFIX}/tool-box`, {
     headers: {
       ...defaultApiHeaders(),
       "Content-Type": "application/json",
     },
-    data: {
-      box_category: "other_category",
-      box_desc: "E2E toolbox",
-      box_name: name,
-      box_svc_url: "http://127.0.0.1:9000/api/agent-operator-integration",
-      data: openApiSpec,
-      metadata_type: "openapi",
-    },
+    data: payload,
   });
 
   await expectOk(response, "Create toolbox");
@@ -127,6 +132,13 @@ export async function createToolboxViaApi(
   }
 
   return { boxId: body.box_id, name };
+}
+
+export async function createFunctionToolboxViaApi(
+  request: APIRequestContext,
+  name: string,
+): Promise<ToolboxRecord> {
+  return createToolboxViaApi(request, name, { metadataType: "function" });
 }
 
 export async function createToolViaApi(
