@@ -1,0 +1,169 @@
+.root {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: calc(100vh - 96px);
+  overflow: hidden;
+}
+
+.infoBar {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 24px;
+}
+
+.infoIcon {
+  align-items: center;
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 14px;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.infoName {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 10px 30px;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.titleBox {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.title {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.helpIcon {
+  color: rgba(0, 0, 0, 0.45);
+  cursor: help;
+}
+
+.toolbar {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.toolbarActions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.searchInput {
+  width: 280px;
+}
+
+.tableContainer {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.nameCell {
+  display: flex;
+  gap: 8px;
+}
+
+.dataName {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.bindResourceCell {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.dataResource {
+  align-items: center;
+  border-radius: 3px;
+  display: flex;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+.resourceIconMetric {
+  align-items: center;
+  background: #eef4ff;
+  border-radius: 4px;
+  color: #126ee3;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.resourceIconOperator {
+  align-items: center;
+  background: #fff7e6;
+  border-radius: 4px;
+  color: #fa8c16;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.resourceName {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.emptyTip {
+  color: rgba(0, 0, 0, 0.45);
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 8px;
+  max-width: 360px;
+  text-align: center;
+}
+
+.propertyTable :global(.ant-table-thead > tr > th) {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.propertyTable :global(.ant-empty-description) {
+  text-align: center;
+}
+
+.propertyTable :global(.ant-table-row) {
+  cursor: pointer;
+}

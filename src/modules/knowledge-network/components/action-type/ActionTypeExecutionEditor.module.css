@@ -1,0 +1,14 @@
+.panel {
+  width: 100%;
+}
+
+.operatorSection {
+  margin-bottom: 24px;
+}
+
+.operatorLabel {
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 14px;
+  line-height: 22px;
+  margin-bottom: 8px;
+}

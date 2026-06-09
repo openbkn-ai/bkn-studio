@@ -1,0 +1,113 @@
+.modal :global(.ant-modal-content) {
+  padding: 0;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+}
+
+.header {
+  border-bottom: 1px solid #f0f0f0;
+  color: #1f2329;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 16px 24px;
+}
+
+.body {
+  display: grid;
+  flex: 1;
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  min-height: 0;
+}
+
+.leftPanel {
+  border-right: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 16px 24px 0;
+}
+
+.searchInput {
+  width: 220px;
+}
+
+.rightPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 16px 0;
+}
+
+.selectedTitle {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.selectedList {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.selectedItem {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.selectedName {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.selectedNameText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer {
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 16px;
+}
+
+.nameCell {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.nameIcon {
+  align-items: center;
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 14px;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.nameText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,336 @@
+.modal :global(.ant-modal-content) {
+  border-radius: 4px;
+  padding: 0;
+}
+
+.modal :global(.ant-modal-header) {
+  margin-bottom: 20px;
+  padding: 16px 24px 0;
+}
+
+.modal :global(.ant-modal-body) {
+  padding: 0;
+}
+
+.modal :global(.ant-modal-footer) {
+  margin-top: 0;
+  padding: 0;
+}
+
+.modal :global(.ant-table-thead > tr > th) {
+  background: #fafafa;
+  border-radius: 0 !important;
+}
+
+.titleBox {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.titleText {
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.splitter {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  height: 492px !important;
+}
+
+.panelBox {
+  height: 100%;
+  overflow: hidden;
+  padding-top: 10px;
+}
+
+.groupBox {
+  height: 100%;
+  overflow: auto;
+}
+
+.allItem {
+  box-sizing: border-box;
+  cursor: pointer;
+  font-size: 14px;
+  height: 36px;
+  line-height: 36px;
+  padding-left: 16px;
+  width: 100%;
+}
+
+.allItem:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.allItemActive {
+  background: #ecf5ff !important;
+}
+
+.groupTree :global(.ant-tree-treenode) {
+  align-items: center !important;
+  box-sizing: border-box;
+  display: flex;
+  height: 36px;
+  line-height: 36px;
+  margin-bottom: 0 !important;
+  overflow: hidden;
+  padding-left: 12px;
+  width: 100%;
+}
+
+.groupTree :global(.ant-tree-treenode:hover) {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.groupTree :global(.ant-tree-treenode-selected) {
+  background: #ecf5ff !important;
+}
+
+.groupTree :global(.ant-tree-node-selected) {
+  background: initial !important;
+}
+
+.groupTree :global(.ant-tree-switcher) {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  margin-inline-end: 0;
+  width: 28px;
+}
+
+.groupTree :global(.ant-tree-node-content-wrapper) {
+  align-items: center;
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  padding-inline: 0;
+  width: calc(100% - 28px);
+}
+
+.groupTree :global(.ant-tree-title) {
+  align-items: center;
+  display: flex;
+  min-width: 0;
+  width: 100%;
+}
+
+.groupNodeTitle {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.groupNodeIcon {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 20px;
+  height: 20px;
+  justify-content: center;
+}
+
+.groupNodeText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groupIcon {
+  color: #262626;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.groupBadge {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  height: 16px;
+  justify-content: center;
+  line-height: 1;
+  width: 20px;
+}
+
+.groupBadgeMysql {
+  background: linear-gradient(135deg, #6f86ff 0%, #39d0f2 100%);
+  color: #fff;
+}
+
+.groupBadgeDefault {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+.listBox {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-bottom: 12px;
+}
+
+.searchInput {
+  margin-bottom: 16px;
+  padding: 0 16px;
+}
+
+.listContainer {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.listItem {
+  align-items: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  font-size: 14px;
+  gap: 8px;
+  height: 40px;
+  overflow: hidden;
+  padding: 0 16px;
+}
+
+.listItem:hover {
+  background: #f5f5f5;
+}
+
+.listItemActive {
+  background: #ecf5ff;
+}
+
+.listItemContent {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.listItemTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listItemIconBox {
+  align-items: center;
+  background: #27d3b7;
+  border-radius: 4px;
+  display: inline-flex;
+  height: 18px;
+  justify-content: center;
+  width: 18px;
+}
+
+.listItemIconGrid {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(2, 3px);
+  grid-template-rows: repeat(3, 3px);
+}
+
+.listItemIconGrid span {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 1px;
+}
+
+.paginationBox {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px 0;
+}
+
+.previewContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 16px;
+}
+
+.previewTitle {
+  align-items: center;
+  color: #000;
+  display: flex;
+  font-size: 14px;
+  gap: 4px;
+  height: 36px;
+}
+
+.previewTip {
+  color: rgba(0, 0, 0, 0.8);
+  font-size: 12px;
+}
+
+.previewEmpty {
+  align-items: center;
+  color: rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex: 1;
+  font-size: 14px;
+  justify-content: center;
+}
+
+.footerBox {
+  align-items: center;
+  display: flex;
+  font-size: 14px;
+  justify-content: space-between;
+  padding: 0 24px 12px 11px;
+}
+
+.footerText {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.footerTextActive {
+  align-items: center;
+  color: #126ee3;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+}
+
+.footerActions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.checkedBoxTitle {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-width: 200px;
+}
+
+.checkedBoxClear {
+  color: #126ee3;
+  cursor: pointer;
+}
+
+.checkedBoxItem {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-width: 200px;
+}
+
+.checkedBoxText {
+  max-width: 150px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

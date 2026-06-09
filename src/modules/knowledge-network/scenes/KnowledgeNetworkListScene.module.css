@@ -1,4 +1,5 @@
 .page {
+  box-sizing: border-box;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -8,6 +9,7 @@
 }
 
 .title {
+  flex-shrink: 0;
   margin: 0 0 10px;
   color: #1f2329;
   font-size: 18px;
@@ -17,57 +19,70 @@
 
 .toolbar {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
   gap: 16px;
+  min-height: 32px;
 }
 
-.toolbarLeft {
+.toolbarLeft,
+.toolbarRight {
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
 }
 
-.toolbarButton {
-  height: 40px;
-  padding-inline: 20px;
-  border-radius: 10px;
+.toolbarLeft :global(.ant-upload-wrapper),
+.toolbarLeft :global(.ant-upload) {
+  display: inline-flex;
+  align-items: center;
 }
 
 .toolbarRight {
-  display: flex;
-  align-items: center;
-  gap: 16px;
   flex-shrink: 0;
-  white-space: nowrap;
+  justify-content: flex-end;
+}
+
+.toolbarButton {
+  height: 32px;
+  padding-inline: 15px;
+  border-radius: 6px;
+}
+
+.toolbarButton:global(.ant-btn) {
+  height: 32px;
 }
 
 .searchInput {
-  width: 250px;
-  height: 40px;
-  min-height: 40px;
-  padding-right: 12px;
-  border-radius: 12px;
+  width: 220px;
+  height: 32px;
+}
+
+.searchInput :global(.ant-input-affix-wrapper) {
+  height: 32px;
+  padding-inline: 11px;
+  border-radius: 6px;
 }
 
 .searchInput :global(.ant-input) {
-  height: 100%;
+  height: 30px;
 }
 
-.searchInput :global(.ant-input-suffix) {
+.searchInput :global(.ant-input-prefix) {
   color: rgba(0, 0, 0, 0.35);
+  margin-inline-end: 8px;
 }
 
 .searchIcon {
-  font-size: 16px;
+  font-size: 14px;
 }
 
-.filterRow {
-  display: flex;
+.filterGroup {
+  display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
 }
 
 .filterLabel {
@@ -76,20 +91,27 @@
   height: 32px;
   color: #1f2329;
   font-size: 14px;
-  line-height: 22px;
+  line-height: 32px;
+  white-space: nowrap;
 }
 
 .filterSelect {
-  width: 200px;
+  width: 190px;
 }
 
 .filterSelect :global(.ant-select-selector) {
-  height: 40px !important;
-  border-radius: 10px !important;
+  height: 32px !important;
+  border-radius: 6px !important;
 }
 
 .filterSelect :global(.ant-select-selection-wrap) {
   align-items: center;
+}
+
+.toolbarActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .iconButton {
@@ -106,25 +128,40 @@
   cursor: pointer;
 }
 
-.iconButton:hover {
+.iconButton:hover:not(:disabled) {
   background: rgba(0, 0, 0, 0.04);
   color: rgba(0, 0, 0, 0.65);
 }
 
-.emptyWrapper {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  min-height: 280px;
+.iconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .contentArea {
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: space-between;
   min-height: 0;
+}
+
+.loadingWrapper {
+  flex: 1;
+  min-height: 0;
+}
+
+.loadingWrapper :global(.ant-spin-container) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.listContent {
+  flex: 1;
+  min-height: 0;
+  padding-top: 16px;
+  overflow: auto;
 }
 
 .grid {
@@ -132,14 +169,22 @@
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
   align-content: start;
-  padding-top: 12px;
+  padding-right: 4px;
+}
+
+.emptyPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  padding: 24px 0;
 }
 
 .paginationBar {
   display: flex;
+  flex-shrink: 0;
   justify-content: flex-end;
-  margin-top: 32px;
-  padding-top: 20px;
+  margin-top: 24px;
 }
 
 .paginationBar :global(.ant-pagination) {

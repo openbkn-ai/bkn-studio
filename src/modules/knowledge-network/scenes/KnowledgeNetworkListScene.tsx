@@ -1,11 +1,10 @@
 import {
-  ImportOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Pagination, Select, Space } from "antd";
+import { Alert, Dropdown, Empty, Input, Pagination, Select, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -14,13 +13,14 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import type { KnowledgeNetworkListSceneProps } from "@/modules/knowledge-network/contracts/scenes";
-import { KnowledgeNetworkCard } from "@/modules/knowledge-network/components/KnowledgeNetworkCard";
-import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/KnowledgeNetworkFormModal";
+import { KnowledgeNetworkCard } from "@/modules/knowledge-network/components/network/KnowledgeNetworkCard";
+import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
+import { KnowledgeNetworkImportButton } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkImportButton";
 import {
   createKnowledgeNetwork,
   deleteKnowledgeNetwork,
+  exportKnowledgeNetwork,
   listKnowledgeNetworks,
   listKnowledgeNetworkTags,
   updateKnowledgeNetwork,
@@ -38,7 +38,7 @@ export function KnowledgeNetworkListScene({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
-  const { pageState, query, reset, setKeyword, setPagination } = usePageState({
+  const { pageState, query, setKeyword, setPagination } = usePageState({
     pageSize: 20,
   });
   const [items, setItems] = useState<KnowledgeNetworkRecord[]>([]);
@@ -55,6 +55,11 @@ export function KnowledgeNetworkListScene({
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
+  const hasActiveFilter = useMemo(
+    () => Boolean(pageState.keyword.trim()) || selectedTag !== "all",
+    [pageState.keyword, selectedTag],
+  );
+
   const listQuery = useMemo(
     () => ({
       ...query,
@@ -65,19 +70,15 @@ export function KnowledgeNetworkListScene({
     [query, selectedTag, sortBy, sortDirection],
   );
 
-  const loadData = useCallback(async () => {
+  const loadListData = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
 
     try {
-      const [listResult, tagResult] = await Promise.all([
-        listKnowledgeNetworks(listQuery),
-        tags.length === 0 ? listKnowledgeNetworkTags() : Promise.resolve(tags),
-      ]);
+      const listResult = await listKnowledgeNetworks(listQuery);
 
       setItems(listResult.items);
       setTotal(listResult.total);
-      setTags(tagResult);
     } catch (error) {
       setItems([]);
       setTotal(0);
@@ -85,11 +86,28 @@ export function KnowledgeNetworkListScene({
     } finally {
       setLoading(false);
     }
-  }, [listQuery, tags]);
+  }, [listQuery]);
+
+  const loadTags = useCallback(async () => {
+    try {
+      const tagResult = await listKnowledgeNetworkTags();
+      setTags(tagResult);
+    } catch {
+      setTags([]);
+    }
+  }, []);
+
+  const reloadData = useCallback(async () => {
+    await Promise.all([loadListData(), loadTags()]);
+  }, [loadListData, loadTags]);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    void loadListData();
+  }, [loadListData]);
+
+  useEffect(() => {
+    void loadTags();
+  }, [loadTags]);
 
   const openCreate = () => {
     setModalMode("create");
@@ -112,10 +130,6 @@ export function KnowledgeNetworkListScene({
     void navigate(`/knowledge-network/workspace/${record.id}/overview`);
   };
 
-  const openPreview = (record: KnowledgeNetworkRecord) => {
-    void navigate(`/knowledge-network/workspace/${record.id}/preview`);
-  };
-
   const submitForm = async (values: KnowledgeNetworkMutationPayload) => {
     if (modalMode === "create") {
       const nextRecord = await createKnowledgeNetwork(values);
@@ -132,7 +146,33 @@ export function KnowledgeNetworkListScene({
       void message.success(t("common.success"));
     }
 
-    await loadData();
+    await reloadData();
+  };
+
+  const renderEmptyContent = () => {
+    if (hasActiveFilter) {
+      return (
+        <Empty
+          className={styles.emptyPanel}
+          description={t("knowledgeNetwork.emptyNoSearchResult")}
+        />
+      );
+    }
+
+    return (
+      <Empty
+        className={styles.emptyPanel}
+        description={
+          <span>
+            {t("knowledgeNetwork.emptyCreateHint")}
+            <AppButton onClick={openCreate} type="link">
+              {t("knowledgeNetwork.emptyCreateAction")}
+            </AppButton>
+            {t("knowledgeNetwork.emptyCreateSuffix")}
+          </span>
+        }
+      />
+    );
   };
 
   return (
@@ -141,54 +181,44 @@ export function KnowledgeNetworkListScene({
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          <Space wrap>
-            <AppButton
-              className={styles.toolbarButton}
-              icon={<PlusOutlined />}
-              onClick={openCreate}
-              type="primary"
-            >
-              {t("common.create")}
-            </AppButton>
-            <AppButton
-              className={styles.toolbarButton}
-              icon={<ImportOutlined />}
-              onClick={() => {
-                void modal.info({
-                  title: t("knowledgeNetwork.importTitle"),
-                  content: t("knowledgeNetwork.importPending"),
-                });
-              }}
-            >
-              {t("knowledgeNetwork.importButton")}
-            </AppButton>
-          </Space>
+          <AppButton
+            className={styles.toolbarButton}
+            icon={<PlusOutlined />}
+            onClick={openCreate}
+            type="primary"
+          >
+            {t("common.create")}
+          </AppButton>
+          <KnowledgeNetworkImportButton
+            className={styles.toolbarButton}
+            onImported={reloadData}
+          />
         </div>
         <div className={styles.toolbarRight}>
           <Input
             allowClear
             className={styles.searchInput}
             onChange={(event) => setKeyword(event.target.value)}
-            onPressEnter={(event) => {
-              const nextValue = (event.target as HTMLInputElement).value;
-              setKeyword(nextValue);
-            }}
             placeholder={t("knowledgeNetwork.searchPlaceholder")}
-            suffix={<SearchOutlined className={styles.searchIcon} />}
+            prefix={<SearchOutlined className={styles.searchIcon} />}
             value={pageState.keyword}
           />
-          <div className={styles.filterRow}>
+          <div className={styles.filterGroup}>
             <span className={styles.filterLabel}>{t("common.tag")}</span>
             <Select
               className={styles.filterSelect}
-              onChange={(value) => setSelectedTag(value)}
+              onChange={(value) => {
+                setSelectedTag(value);
+                setPagination(1, pageState.pageSize);
+              }}
               options={[
                 { label: t("common.all"), value: "all" },
                 ...tags.map((tag) => ({ label: tag, value: tag })),
               ]}
-              placeholder={t("knowledgeNetwork.tagFilterPlaceholder")}
               value={selectedTag ?? "all"}
             />
+          </div>
+          <div className={styles.toolbarActions}>
             <Dropdown
               menu={{
                 items: [
@@ -207,22 +237,24 @@ export function KnowledgeNetworkListScene({
                     nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
                   );
                   setSortBy(nextSortBy);
+                  setPagination(1, pageState.pageSize);
                 },
               }}
               trigger={["click"]}
             >
-              <button className={styles.iconButton} type="button">
+              <button
+                aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+                className={styles.iconButton}
+                type="button"
+              >
                 <SortAscendingOutlined />
               </button>
             </Dropdown>
             <button
               className={styles.iconButton}
+              disabled={loading}
               onClick={() => {
-                reset();
-                setSelectedTag("all");
-                setSortBy("updateTime");
-                setSortDirection("desc");
-                void loadData();
+                void reloadData();
               }}
               type="button"
             >
@@ -237,7 +269,7 @@ export function KnowledgeNetworkListScene({
           action={
             <AppButton
               onClick={() => {
-                void loadData();
+                void reloadData();
               }}
               type="link"
             >
@@ -251,59 +283,59 @@ export function KnowledgeNetworkListScene({
       ) : null}
 
       <div className={styles.contentArea}>
-        {!loadError && !loading && items.length === 0 ? (
-          <div className={styles.emptyWrapper}>
-            <EmptyStatePanel
-              action={
-                <AppButton onClick={openCreate} type="primary">
-                  {t("common.create")}
-                </AppButton>
-              }
-              description={t("knowledgeNetwork.emptyDescription")}
-              icon={<PlusOutlined />}
-              title={t("knowledgeNetwork.emptyTitle")}
+        <Spin spinning={loading} wrapperClassName={styles.loadingWrapper}>
+          <div className={styles.listContent}>
+            {!loadError && !loading && items.length === 0 ? (
+              renderEmptyContent()
+            ) : (
+              <div className={styles.grid}>
+                {items.map((record) => (
+                  <KnowledgeNetworkCard
+                    key={record.id}
+                    onDelete={(nextRecord) => {
+                      void modal.confirm({
+                        title: t("knowledgeNetwork.deleteTitle"),
+                        content: t("knowledgeNetwork.deleteDescription", {
+                          name: nextRecord.name,
+                        }),
+                        okButtonProps: { danger: true },
+                        okText: t("common.delete"),
+                        cancelText: t("common.cancel"),
+                        onOk: async () => {
+                          await deleteKnowledgeNetwork(nextRecord.id);
+                          void message.success(t("common.success"));
+                          await reloadData();
+                        },
+                      });
+                    }}
+                    onEdit={openEdit}
+                    onExport={(nextRecord) => {
+                      void exportKnowledgeNetwork(nextRecord.id).then(() => {
+                        void message.success(t("knowledgeNetwork.exportSuccess"));
+                      });
+                    }}
+                    onOpen={openWorkspace}
+                    record={record}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </Spin>
+
+        {items.length > 0 ? (
+          <div className={styles.paginationBar}>
+            <Pagination
+              current={pageState.page}
+              onChange={(page, pageSize) => setPagination(page, pageSize)}
+              pageSize={pageState.pageSize}
+              pageSizeOptions={["20", "50", "100"]}
+              showSizeChanger
+              showTotal={(nextTotal) => t("common.total", { total: nextTotal })}
+              total={total}
             />
           </div>
-        ) : (
-          <div className={styles.grid}>
-            {items.map((record) => (
-              <KnowledgeNetworkCard
-                key={record.id}
-                onDelete={(nextRecord) => {
-                  void modal.confirm({
-                    title: t("knowledgeNetwork.deleteTitle"),
-                    content: t("knowledgeNetwork.deleteDescription", {
-                      name: nextRecord.name,
-                    }),
-                    okButtonProps: { danger: true },
-                    okText: t("common.delete"),
-                    cancelText: t("common.cancel"),
-                    onOk: async () => {
-                      await deleteKnowledgeNetwork(nextRecord.id);
-                      void message.success(t("common.success"));
-                      await loadData();
-                    },
-                  });
-                }}
-                onEdit={openEdit}
-                onOpen={openWorkspace}
-                onPreview={openPreview}
-                record={record}
-              />
-            ))}
-          </div>
-        )}
-        <div className={styles.paginationBar}>
-          <Pagination
-            current={pageState.page}
-            onChange={(page, pageSize) => setPagination(page, pageSize)}
-            pageSize={pageState.pageSize}
-            pageSizeOptions={["20", "50", "100"]}
-            showSizeChanger
-            showTotal={(nextTotal) => t("common.total", { total: nextTotal })}
-            total={total}
-          />
-        </div>
+        ) : null}
       </div>
 
       <KnowledgeNetworkFormModal

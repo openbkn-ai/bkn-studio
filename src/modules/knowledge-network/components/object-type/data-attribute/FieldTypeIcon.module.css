@@ -1,0 +1,21 @@
+.typeBadge {
+  align-items: center;
+  color: rgba(0, 0, 0, 0.65);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 2px;
+  justify-content: center;
+  min-width: 28px;
+}
+
+.typeBadgeIcon {
+  font-size: 12px;
+}
+
+.dateIcon {
+  color: rgba(0, 0, 0, 0.65);
+  flex-shrink: 0;
+  font-size: 16px;
+}

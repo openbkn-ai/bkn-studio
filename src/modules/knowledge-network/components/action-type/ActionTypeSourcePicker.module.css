@@ -1,0 +1,102 @@
+.selectTrigger {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 11px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.selectTrigger:hover {
+  border-color: #4096ff;
+}
+
+.selectTrigger:focus-visible {
+  border-color: #4096ff;
+  box-shadow: 0 0 0 2px rgba(5, 145, 255, 0.1);
+  outline: none;
+}
+
+.placeholder {
+  color: rgba(0, 0, 0, 0.25);
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.value {
+  color: rgba(0, 0, 0, 0.88);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suffixIcon {
+  color: rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.closeIcon {
+  color: rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+
+.closeIcon:hover {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.toolList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toolItem {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.toolItemName {
+  font-weight: 600;
+}
+
+.toolItemMeta {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.manualForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.manualTitle {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.catalogLoading {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 120px;
+}
+
+.catalogHint {
+  margin-bottom: 8px;
+}

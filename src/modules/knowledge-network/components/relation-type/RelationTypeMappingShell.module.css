@@ -1,0 +1,17 @@
+.shell {
+  margin: 0 auto;
+  max-width: 1000px;
+  width: 100%;
+}
+
+.modeField {
+  margin-bottom: 0;
+}
+
+.modeField :global(.ant-form-item-label > label) {
+  color: #1f2329;
+}
+
+.rulesPanel {
+  margin-top: 24px;
+}

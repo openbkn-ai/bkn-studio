@@ -1,0 +1,57 @@
+.jobTypeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jobTypeOption {
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  text-align: left;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.jobTypeOption:hover {
+  border-color: #1677ff;
+}
+
+.jobTypeOptionSelected {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+}
+
+.jobTypeTitle {
+  color: #1f2329;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.jobTypeDescription {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+  margin: 0;
+}
+
+.loadingState {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 320px;
+}
+
+.formPanel {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  margin: 0 auto;
+  max-width: 720px;
+  padding: 24px;
+}

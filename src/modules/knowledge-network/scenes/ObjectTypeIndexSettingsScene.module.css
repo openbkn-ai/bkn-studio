@@ -1,0 +1,220 @@
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  background: #fff;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  height: 48px;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+}
+
+.backButton {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: rgba(0, 0, 0, 0.88);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 6px;
+  padding: 0;
+  font-size: 14px;
+}
+
+.headerDivider {
+  width: 1px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.headerInfo {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+}
+
+.headerInfoLabel {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.headerInfoIcon {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.headerInfoName {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 500;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px;
+}
+
+.panelTitle {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  color: #000;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.countBadge {
+  padding: 2px 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbarFilters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  width: 220px;
+  height: 32px;
+}
+
+.searchInput :global(.ant-input-affix-wrapper) {
+  height: 32px;
+  padding-inline: 11px;
+  border-radius: 6px;
+}
+
+.filterGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterLabel {
+  color: #1f2329;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.filterSelect {
+  width: 180px;
+}
+
+.filterSelect :global(.ant-select-selector) {
+  height: 32px !important;
+  border-radius: 6px !important;
+}
+
+.filterSelect :global(.ant-select-selection-item),
+.filterSelect :global(.ant-select-selection-placeholder) {
+  line-height: 30px !important;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.tableCard {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+}
+
+.tableCard :global(.ant-table-thead > tr > th) {
+  background: #fff;
+  color: #1f2329;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tableCard :global(.ant-table-tbody > tr > td) {
+  color: #1f2329;
+  font-size: 14px;
+}
+
+.propertyNameCell {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.keyBadge {
+  border-radius: 4px;
+  color: #126ee3;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 6px;
+  background: #f1f6fd;
+}
+
+.stateCell {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.stateConfigured {
+  color: #52c41a;
+}
+
+.stateNotConfigured {
+  color: #bfbfbf;
+}
+
+.loadingState {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  min-height: 320px;
+}

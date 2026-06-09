@@ -1,0 +1,83 @@
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  background: #fff;
+}
+
+.header {
+  position: relative;
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid #e9e9e9;
+  display: flex;
+  flex-shrink: 0;
+  height: 48px;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.headerLeft {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  left: 16px;
+  max-width: min(320px, 28vw);
+  min-width: 0;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.backButton {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #1f2329;
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.title {
+  color: #1f2329;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerCenter {
+  max-width: 720px;
+  min-width: 0;
+  width: min(720px, calc(100% - 560px));
+}
+
+.steps :global(.ant-steps-item-title) {
+  font-size: 14px !important;
+}
+
+.headerActions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}

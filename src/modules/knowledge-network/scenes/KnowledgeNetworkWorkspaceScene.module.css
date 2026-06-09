@@ -1,4 +1,5 @@
 .workspace {
+  box-sizing: border-box;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -50,9 +51,9 @@
 }
 
 .workspaceNameTitle {
-  color: #0f172a;
-  font-size: 18px;
-  font-weight: 500;
+  color: #1f2329;
+  font-size: 16px;
+  font-weight: 400;
   line-height: 1;
   margin: 0;
 }
@@ -73,20 +74,7 @@
   flex-shrink: 0;
   width: 240px;
   height: 100%;
-  padding: 12px 8px;
-}
-
-.workspaceSidePrimary {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.workspaceSideSecondary {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  padding: 8px;
 }
 
 .sideItem,
@@ -95,14 +83,16 @@
   background: transparent;
   border: 0;
   border-radius: 4px;
-  color: #334155;
+  box-sizing: border-box;
+  color: rgba(0, 0, 0, 0.88);
   cursor: pointer;
   display: flex;
   font-size: 14px;
+  height: 36px;
   justify-content: space-between;
-  min-height: 36px;
   padding: 8px 12px;
   text-align: left;
+  width: 100%;
 }
 
 .sideItemActive {
@@ -110,8 +100,7 @@
   color: #126ee3;
 }
 
-.sideItem:hover,
-.sideItemActive:hover {
+.sideItem:hover {
   background: #f0f0f0;
 }
 
@@ -120,12 +109,27 @@
 }
 
 .workspaceContent {
-  flex: 1;
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
   width: 100%;
-  min-width: 760px;
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.workspaceContentOverview {
+  background: #f5f8ff;
   overflow: auto;
-  background: transparent;
+}
+
+.workspaceSectionPage {
+  box-sizing: border-box;
+  height: 100%;
+  overflow: auto;
+  padding: 24px;
+  width: 100%;
 }
 
 .loadingState {
@@ -137,7 +141,8 @@
 
 .sectionGrid {
   display: grid;
-  gap: 20px;
+  gap: 0;
+  height: 100%;
 }
 
 .sideItemMeta {
@@ -149,6 +154,14 @@
 .sideItemMeta :global(svg) {
   flex-shrink: 0;
   font-size: 16px;
+}
+
+.sideItem .sideItemMeta :global(svg) {
+  color: #000;
+}
+
+.sideItemActive .sideItemMeta :global(svg) {
+  color: #126ee3;
 }
 
 .sideItemCount {
@@ -178,23 +191,25 @@
   height: 36px;
   padding-left: 12px;
   color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
   line-height: 36px;
+  opacity: 0.65;
 }
 
 .overviewBox {
+  box-sizing: border-box;
   display: flex;
-  flex-direction: column;
   flex: 1;
-  gap: 16px;
-  height: 100%;
-  min-height: 0;
+  flex-direction: column;
   width: 100%;
+  min-height: min-content;
   padding: 24px;
   background: #f5f8ff;
 }
 
 .overviewHeaderCard {
   padding: 20px 20px 0;
+  margin-bottom: 16px;
   background: #fff;
   border: 1px solid #e5e5e5;
   border-radius: 4px;
@@ -209,7 +224,7 @@
 .overviewHeaderTitleLeft {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -242,12 +257,12 @@
   line-height: 1;
   color: rgba(0, 0, 0, 0.45);
   border-bottom: 1px solid #e5e5e5;
+  opacity: 0.45;
 }
 
 .overviewHeaderFooter {
   display: flex;
   align-items: center;
-  gap: 6px;
   width: 100%;
   padding: 12px 0;
   font-size: 13px;
@@ -255,18 +270,29 @@
   color: rgba(0, 0, 0, 0.65);
 }
 
+.overviewHeaderFooterLabel {
+  padding: 0 5px;
+}
+
+.overviewHeaderFooterValue {
+  margin-right: 20px;
+}
+
 .overviewHeaderFooter :global(svg) {
   font-size: 16px;
 }
 
 .overviewStatRow {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
   gap: 20px;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .overviewStatCard {
+  flex: 1;
   padding: 20px 20px 0;
+  margin-bottom: 16px;
   background: #fff;
   border: 1px solid #e5e5e5;
   border-radius: 4px;
@@ -313,14 +339,18 @@
   justify-content: flex-start;
   width: 100%;
   height: 40px;
-  padding: 0 !important;
+  padding: 0 12px !important;
   border-top: 1px solid #e5e5e5;
   border-radius: 0 !important;
 }
 
+.overviewStatAction:global(.ant-btn) {
+  width: 100%;
+  height: 40px;
+  justify-content: flex-start;
+}
+
 .overviewContentCard {
-  flex: 1;
-  min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 20px;
@@ -333,13 +363,12 @@
   margin: 0 0 8px;
   color: #1f2329;
   font-size: 18px;
+  font-weight: 400;
+  line-height: 1.2;
 }
 
 .overviewContentBody {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  flex-direction: column;
+  display: block;
 }
 
 .objectTitleBox {
@@ -352,10 +381,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   border-radius: 4px;
   color: #fff;
+  font-size: 14px;
 }
 
 .tableTags {
@@ -371,17 +401,6 @@
   font-weight: 600;
 }
 
-.overviewContentBody :global(.ant-table-wrapper),
-.overviewContentBody :global(.ant-spin-nested-loading),
-.overviewContentBody :global(.ant-spin-container),
-.overviewContentBody :global(.ant-table),
-.overviewContentBody :global(.ant-table-container) {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  flex-direction: column;
-}
-
 .overviewContentCard :global(.ant-table-tbody > tr > td) {
   color: #1f2329;
   font-size: 14px;
@@ -390,7 +409,7 @@
 }
 
 .tableEmptyState {
-  margin-block: 72px;
+  margin-block: 24px;
 }
 
 .statisticsRow {
@@ -418,7 +437,26 @@
 }
 
 .panel {
-  border-radius: 24px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.panel :global(.ant-card-head) {
+  border-bottom: 1px solid #e5e5e5;
+  min-height: 48px;
+  padding: 0 20px;
+}
+
+.panel :global(.ant-card-head-title) {
+  color: #1f2329;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.panel :global(.ant-card-body) {
+  padding: 0 20px 20px;
 }
 
 .panelToolbar {
@@ -427,6 +465,20 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+}
+
+.toolbarButton {
+  height: 40px;
+  border-radius: 10px;
+}
+
+.resourceList :global(.ant-list-item) {
+  align-items: flex-start;
+  padding-block: 16px;
+}
+
+.resourceListItem {
+  min-height: 72px;
 }
 
 .listTitleRow {

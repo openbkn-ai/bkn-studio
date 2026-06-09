@@ -1,0 +1,41 @@
+.drawer :global(.ant-drawer-body) {
+  padding-top: 16px;
+}
+
+.settingTitle {
+  color: #333;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  padding: 0 8px;
+}
+
+.footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.metricRow {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-height: 50px;
+}
+
+.addRow {
+  align-items: center;
+  color: #126ee3;
+  cursor: pointer;
+  display: flex;
+  font-size: 14px;
+  gap: 8px;
+  margin-top: 10px;
+  padding-left: 16px;
+  width: 80px;
+}
+
+.description {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}

@@ -1,0 +1,38 @@
+.footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.switchGroup {
+  margin-top: 8px;
+}
+
+.switchRow {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 48px;
+}
+
+.switchLabelRow {
+  align-items: center;
+  color: rgba(0, 0, 0, 0.85);
+  display: inline-flex;
+  gap: 4px;
+  justify-content: flex-start;
+}
+
+.switchLabelText {
+  font-size: 14px;
+}
+
+.switchHelpIcon {
+  color: rgba(0, 0, 0, 0.35);
+  cursor: help;
+  font-size: 12px;
+}
+
+.switchLabelColon {
+  color: rgba(0, 0, 0, 0.45);
+}

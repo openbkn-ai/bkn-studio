@@ -1,0 +1,63 @@
+.root {
+  width: 100%;
+}
+
+.table :global(.ant-table-thead > tr > th) {
+  background: #fafafa;
+  color: rgba(0, 0, 0, 0.88);
+  font-weight: 500;
+}
+
+.table :global(.ant-table-cell) {
+  vertical-align: middle;
+}
+
+.table :global(.ant-table-placeholder > td) {
+  border-bottom: none !important;
+}
+
+.readOnlyName {
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.typeCell {
+  align-items: center;
+  color: rgba(0, 0, 0, 0.65);
+  display: inline-flex;
+  gap: 8px;
+}
+
+.sourceCell {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.tableEmpty {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  min-height: 280px;
+  padding: 32px 16px;
+}
+
+.tableEmptyIcon {
+  align-items: center;
+  background:
+    radial-gradient(circle at top left, rgba(77, 126, 255, 0.12), transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, #f3f7ff 100%);
+  border-radius: 20px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  color: #4d7eff;
+  display: inline-flex;
+  font-size: 28px;
+  height: 72px;
+  justify-content: center;
+  width: 72px;
+}
+
+.tableEmptyText {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+  margin: 0;
+}

@@ -1,0 +1,82 @@
+.previewBox {
+  background: #f5f5f5;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  margin: 16px 0 24px;
+  min-height: 160px;
+  padding: 24px 32px;
+}
+
+.previewCanvas {
+  align-items: center;
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  min-height: 112px;
+}
+
+.previewColumn {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 88px;
+}
+
+.previewNode {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.previewNodeIcon {
+  align-items: center;
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 16px;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.previewNodeLabel {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 12px;
+  max-width: 96px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewLinks {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 280px;
+  min-width: 160px;
+  padding-top: 8px;
+}
+
+.previewLink {
+  background: linear-gradient(90deg, #91caff 0%, #91caff 100%);
+  border-radius: 999px;
+  display: block;
+  height: 2px;
+  position: relative;
+  width: 100%;
+}
+
+.previewLink::after {
+  border-color: transparent transparent transparent #91caff;
+  border-style: solid;
+  border-width: 5px 0 5px 8px;
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+}

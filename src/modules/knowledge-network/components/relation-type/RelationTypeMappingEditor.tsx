@@ -1,0 +1,93 @@
+import { useMemo } from "react";
+
+import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
+
+import { RelationTypeDataViewMappingRules } from "./RelationTypeDataViewMappingRules";
+import { RelationTypeDirectMappingRules } from "./RelationTypeDirectMappingRules";
+import {
+  countValidDataViewMappings,
+  resetMappingRulesForMode,
+  type RelationTypeMappingFormValues,
+} from "./mapping-utils";
+import { RelationTypeMappingShell } from "./RelationTypeMappingShell";
+
+export type { RelationTypeMappingFormValues } from "./mapping-utils";
+
+type RelationTypeMappingEditorProps = {
+  mappingModeField?: boolean;
+  networkId: string;
+  objectTypes: KnowledgeNetworkObjectTypeRecord[];
+  value: RelationTypeMappingFormValues;
+  onChange: (value: RelationTypeMappingFormValues) => void;
+};
+
+export {
+  buildRelationTypeMappingRulesFromDetail,
+  createDefaultRelationTypeMappingValues,
+  normalizeRelationTypeMappingValues,
+  validateRelationTypeMappingValues,
+} from "./mapping-utils";
+
+export function RelationTypeMappingEditor({
+  mappingModeField = true,
+  networkId,
+  objectTypes,
+  value,
+  onChange,
+}: RelationTypeMappingEditorProps) {
+  const mappingSummaryCount = useMemo(() => {
+    if (value.mappingMode === "data-view") {
+      return countValidDataViewMappings(value.mappingRules.dataViewMappings);
+    }
+
+    return value.mappingRules.propertyMappings.filter(
+      (item) => item.sourcePropertyName && item.targetPropertyName,
+    ).length;
+  }, [value.mappingMode, value.mappingRules.dataViewMappings, value.mappingRules.propertyMappings]);
+
+  const handleMappingModeChange = (mode: "direct" | "data-view") => {
+    if (mode === value.mappingMode) {
+      return;
+    }
+
+    onChange({
+      mappingMode: mode,
+      mappingRules: resetMappingRulesForMode(mode),
+    });
+  };
+
+  const handleMappingRulesChange = (mappingRules: RelationTypeMappingFormValues["mappingRules"]) => {
+    onChange({
+      ...value,
+      mappingRules,
+    });
+  };
+
+  return (
+    <RelationTypeMappingShell
+      mappingMode={value.mappingMode}
+      mappingModeField={mappingModeField}
+      objectTypes={objectTypes}
+      onMappingModeChange={handleMappingModeChange}
+      propertyMappingCount={mappingSummaryCount}
+      sourceObjectTypeId={value.mappingRules.sourceObjectTypeId}
+      targetObjectTypeId={value.mappingRules.targetObjectTypeId}
+    >
+      {value.mappingMode === "direct" ? (
+        <RelationTypeDirectMappingRules
+          networkId={networkId}
+          objectTypes={objectTypes}
+          onChange={handleMappingRulesChange}
+          value={value.mappingRules}
+        />
+      ) : (
+        <RelationTypeDataViewMappingRules
+          networkId={networkId}
+          objectTypes={objectTypes}
+          onChange={handleMappingRulesChange}
+          value={value.mappingRules}
+        />
+      )}
+    </RelationTypeMappingShell>
+  );
+}

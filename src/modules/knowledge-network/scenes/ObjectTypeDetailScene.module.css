@@ -1,0 +1,101 @@
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  width: 100%;
+}
+
+.summaryCard {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.summaryHead {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.objectIconSquare {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.summaryTitle {
+  margin: 0 0 8px;
+  color: #1f2329;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.summaryDescription {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 16px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+}
+
+.sectionCard {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.sectionToolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.propertyTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.keyBadge {
+  border-radius: 4px;
+  color: #126ee3;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 6px;
+  background: #f1f6fd;
+}
+
+.loadingState {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 320px;
+}
+
+.placeholder {
+  color: rgba(0, 0, 0, 0.45);
+}

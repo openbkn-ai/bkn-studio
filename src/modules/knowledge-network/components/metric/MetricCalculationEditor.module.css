@@ -1,0 +1,17 @@
+.section {
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionTitle {
+  border-bottom: 1px solid #e9e9e9;
+  color: #1f2329;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+}
+
+.inlineFieldGroup :global(.ant-space-item) {
+  margin-bottom: 0;
+}

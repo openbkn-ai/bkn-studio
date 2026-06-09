@@ -1,0 +1,15 @@
+.formPanel {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  margin: 0 auto;
+  max-width: 720px;
+  padding: 24px;
+}
+
+.loadingState {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 320px;
+}

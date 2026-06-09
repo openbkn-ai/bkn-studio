@@ -1,0 +1,54 @@
+.colorGrid {
+  display: flex;
+  flex-wrap: wrap;
+  width: 248px;
+}
+
+.colorItem {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.checkIcon {
+  color: #fff;
+  font-size: 14px;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 32px;
+  padding: 4px 11px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.trigger:hover {
+  border-color: #4096ff;
+}
+
+.prefixSwatch {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.triggerIcon {
+  color: rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+}

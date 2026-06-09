@@ -1,0 +1,8 @@
+.form {
+  display: grid;
+  gap: 0;
+}
+
+.form :global(.ant-form-item) {
+  margin-bottom: 16px;
+}

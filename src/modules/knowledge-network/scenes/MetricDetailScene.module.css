@@ -1,0 +1,73 @@
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  width: 100%;
+}
+
+.summaryCard,
+.sectionCard {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.summaryHead {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.summaryIcon {
+  align-items: center;
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 18px;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.summaryTitle {
+  margin: 0 0 8px;
+  color: #1f2329;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.summaryDescription {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.summaryMeta {
+  color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 16px;
+  font-size: 13px;
+}
+
+.placeholder {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.loadingState {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 320px;
+}

@@ -1,0 +1,155 @@
+import { useTranslation } from "react-i18next";
+
+import { useAppServices } from "@/framework/context/use-app-services";
+import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-network/contracts/scenes";
+import { ActionTypeListPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeListPanel";
+import { ConceptGroupListPanel } from "@/modules/knowledge-network/components/concept-group/ConceptGroupListPanel";
+import { MetricListPanel } from "@/modules/knowledge-network/components/metric/MetricListPanel";
+import { ObjectTypeListPanel } from "@/modules/knowledge-network/components/object-type/ObjectTypeListPanel";
+import { RelationTypeListPanel } from "@/modules/knowledge-network/components/relation-type/RelationTypeListPanel";
+import { TaskListPanel } from "@/modules/knowledge-network/components/task/TaskListPanel";
+import {
+  deleteKnowledgeNetworkActionType,
+  deleteKnowledgeNetworkConceptGroup,
+  deleteKnowledgeNetworkMetric,
+  deleteKnowledgeNetworkObjectType,
+  deleteKnowledgeNetworkRelationType,
+  deleteKnowledgeNetworkTask,
+  importKnowledgeNetworkActionTypes,
+  importKnowledgeNetworkConceptGroup,
+  importKnowledgeNetworkObjectTypes,
+  importKnowledgeNetworkRelationTypes,
+} from "@/modules/knowledge-network/services/knowledge-network.service";
+import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
+
+type WorkspaceData = ReturnType<typeof useWorkspaceData>;
+
+type WorkspaceResourceSectionProps = {
+  data: WorkspaceData;
+  networkId: string;
+  section: KnowledgeNetworkWorkspaceSection;
+};
+
+export function WorkspaceResourceSection({
+  data,
+  networkId,
+  section,
+}: WorkspaceResourceSectionProps) {
+  const { t } = useTranslation();
+  const { message } = useAppServices();
+
+  switch (section) {
+    case "concept-groups":
+      return (
+        <ConceptGroupListPanel
+          items={data.conceptGroups}
+          loading={data.loading}
+          networkId={networkId}
+          onDelete={async (records) => {
+            await Promise.all(
+              records.map((record) =>
+                deleteKnowledgeNetworkConceptGroup(networkId, record.id),
+              ),
+            );
+            void message.success(t("common.success"));
+            await data.reloadConceptGroups();
+          }}
+          onImport={(payload, importMode) =>
+            importKnowledgeNetworkConceptGroup(networkId, payload, importMode)
+          }
+          onRefresh={data.reloadConceptGroups}
+        />
+      );
+    case "object-types":
+      return (
+        <ObjectTypeListPanel
+          items={data.objectTypes}
+          loading={data.loading}
+          networkId={networkId}
+          onDelete={async (records) => {
+            await Promise.all(
+              records.map((record) =>
+                deleteKnowledgeNetworkObjectType(networkId, record.id),
+              ),
+            );
+            void message.success(t("common.success"));
+            await data.reloadObjectTypes();
+          }}
+          onImport={(payload, importMode) =>
+            importKnowledgeNetworkObjectTypes(networkId, payload, importMode)
+          }
+          onRefresh={data.reloadObjectTypes}
+        />
+      );
+    case "relation-types":
+      return (
+        <RelationTypeListPanel
+          items={data.relationTypes}
+          loading={data.loading}
+          networkId={networkId}
+          objectTypes={data.objectTypes}
+          onDelete={async (records) => {
+            await Promise.all(
+              records.map((record) =>
+                deleteKnowledgeNetworkRelationType(networkId, record.id),
+              ),
+            );
+            void message.success(t("common.success"));
+            await data.reloadRelationTypes();
+          }}
+          onImport={(payload, importMode) =>
+            importKnowledgeNetworkRelationTypes(networkId, payload, importMode)
+          }
+          onRefresh={data.reloadRelationTypes}
+        />
+      );
+    case "action-types":
+      return (
+        <ActionTypeListPanel
+          items={data.actionTypes}
+          loading={data.loading}
+          networkId={networkId}
+          objectTypes={data.objectTypes}
+          onDelete={async (records) => {
+            await Promise.all(
+              records.map((record) =>
+                deleteKnowledgeNetworkActionType(networkId, record.id),
+              ),
+            );
+            void message.success(t("common.success"));
+            await data.reloadActionTypes();
+          }}
+          onImport={(payload, importMode) =>
+            importKnowledgeNetworkActionTypes(networkId, payload, importMode)
+          }
+          onRefresh={data.reloadActionTypes}
+        />
+      );
+    case "metrics":
+      return (
+        <MetricListPanel
+          loading={data.loading}
+          metrics={data.metrics}
+          networkId={networkId}
+          onDelete={async (metricId) => {
+            await deleteKnowledgeNetworkMetric(networkId, metricId);
+          }}
+          onRefresh={data.reloadMetrics}
+          unsupported={data.metricApiUnavailable}
+        />
+      );
+    case "tasks":
+      return (
+        <TaskListPanel
+          networkId={networkId}
+          onDelete={async (taskId) => {
+            await deleteKnowledgeNetworkTask(networkId, taskId);
+          }}
+          onRefresh={data.reloadTasks}
+          tasks={data.tasks}
+        />
+      );
+    default:
+      return null;
+  }
+}

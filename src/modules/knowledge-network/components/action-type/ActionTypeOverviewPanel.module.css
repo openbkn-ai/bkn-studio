@@ -1,0 +1,119 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.summaryCard,
+.sectionCard {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.summaryHead {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+}
+
+.objectIconSquare {
+  align-items: center;
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 18px;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.summaryTitle {
+  color: #1f2329;
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+
+.summaryDescription {
+  color: rgba(0, 0, 0, 0.65);
+  margin: 0;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.metaRow {
+  color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.sectionCard h3 {
+  align-items: center;
+  color: #1f2329;
+  display: flex;
+  font-size: 16px;
+  font-weight: 500;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.infoGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.infoGrid > div,
+.fullWidthItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fullWidthItem {
+  grid-column: 1 / -1;
+}
+
+.infoGrid span,
+.fullWidthItem span {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
+.infoGrid strong,
+.fullWidthItem strong {
+  color: rgba(0, 0, 0, 0.88);
+  font-weight: 500;
+}
+
+.emptyValue {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.objectCell {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.objectIcon {
+  align-items: center;
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}

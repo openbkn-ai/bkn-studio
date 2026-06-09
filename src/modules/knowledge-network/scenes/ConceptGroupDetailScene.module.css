@@ -1,0 +1,160 @@
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  width: 100%;
+}
+
+.summaryCard,
+.sectionCard {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.summaryHead {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.summaryIcon {
+  align-items: center;
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 18px;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.summaryTitle {
+  margin: 0 0 8px;
+  color: #1f2329;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.summaryDescription {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.summaryStats {
+  color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 16px;
+  font-size: 13px;
+}
+
+.summaryMain {
+  min-width: 0;
+}
+
+.summaryMeta {
+  color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 16px;
+  font-size: 13px;
+}
+
+.sectionTitle {
+  color: #1f2329;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+
+.sectionToolbar {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin: 16px 0;
+}
+
+.toolbarLeft,
+.toolbarRight {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.tagSelect {
+  width: 140px;
+}
+
+.memberIcon {
+  align-items: center;
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 14px;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.memberName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memberLinkStatic {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.searchInput {
+  width: 220px;
+}
+
+.memberLink {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #1f2329;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+}
+
+.memberDot {
+  border-radius: 999px;
+  display: inline-flex;
+  height: 10px;
+  width: 10px;
+}
+
+.loadingState {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 320px;
+}
+
+.placeholder {
+  color: rgba(0, 0, 0, 0.45);
+}

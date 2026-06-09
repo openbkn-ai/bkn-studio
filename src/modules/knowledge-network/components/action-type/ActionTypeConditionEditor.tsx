@@ -1,0 +1,250 @@
+import { PlusOutlined } from "@ant-design/icons";
+import { Input, Select } from "antd";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+import { AppButton } from "@/framework/ui/common/AppButton";
+import { RelationTypeObjectTypeSelect } from "@/modules/knowledge-network/components/relation-type/RelationTypeObjectTypeSelect";
+import { RelationTypePropertySelect } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
+import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
+import type {
+  ActionTypeCondition,
+  ActionTypeConditionOperation,
+  KnowledgeNetworkObjectTypeRecord,
+} from "@/modules/knowledge-network/types/knowledge-network";
+
+import styles from "./ActionTypeConditionEditor.module.css";
+
+const VALUELESS_OPERATIONS = new Set<ActionTypeConditionOperation>(["exist", "not_exist"]);
+
+type ConditionRowProps = {
+  boundObjectTypeId?: string;
+  objectTypes: KnowledgeNetworkObjectTypeRecord[];
+  onChange: (next: ActionTypeCondition) => void;
+  onRemove?: () => void;
+  propertyOptions: RelationTypePropertyOption[];
+  showAddButton?: boolean;
+  onAdd?: () => void;
+  value: ActionTypeCondition;
+};
+
+function ConditionRow({
+  boundObjectTypeId,
+  objectTypes,
+  onAdd,
+  onChange,
+  onRemove,
+  propertyOptions,
+  showAddButton,
+  value,
+}: ConditionRowProps) {
+  const { t } = useTranslation();
+
+  const operationOptions = useMemo(
+    () =>
+      (
+        [
+          "==",
+          "!=",
+          ">",
+          ">=",
+          "<",
+          "<=",
+          "in",
+          "not_in",
+          "exist",
+          "not_exist",
+        ] as ActionTypeConditionOperation[]
+      ).map((operation) => ({
+        label: t(`knowledgeNetwork.actionTypeConditionOperation_${operation}`),
+        value: operation,
+      })),
+    [t],
+  );
+
+  const currentOperation = value.operation;
+  const needsValue = currentOperation ? !VALUELESS_OPERATIONS.has(currentOperation) : true;
+  const objectTypeId = value.objectTypeId || boundObjectTypeId;
+
+  const updateRow = (patch: Partial<ActionTypeCondition>) => {
+    onChange({
+      ...value,
+      ...patch,
+      objectTypeId: patch.objectTypeId ?? objectTypeId,
+      valueFrom: "const",
+    });
+  };
+
+  const scalarValue = Array.isArray(value.value)
+    ? value.value.join(",")
+    : value.value === undefined || value.value === null
+      ? ""
+      : String(value.value);
+
+  return (
+    <div className={styles.conditionRow}>
+      <div className={styles.objectTypeSelect}>
+        <RelationTypeObjectTypeSelect
+          allowClear
+          objectTypes={objectTypes}
+          onChange={(nextObjectTypeId) => {
+            updateRow({
+              field: undefined,
+              objectTypeId: nextObjectTypeId,
+              value: undefined,
+            });
+          }}
+          placeholder={t("knowledgeNetwork.actionTypeConditionObjectPlaceholder")}
+          value={objectTypeId}
+        />
+      </div>
+      <div className={styles.fieldSelect}>
+        <RelationTypePropertySelect
+          allowClear
+          disabled={!objectTypeId}
+          fields={propertyOptions}
+          onChange={(nextField) => {
+            updateRow({ field: nextField ?? undefined });
+          }}
+          placeholder={t("knowledgeNetwork.actionTypeConditionFieldPlaceholder")}
+          value={value.field}
+        />
+      </div>
+      <Select<ActionTypeConditionOperation>
+        allowClear
+        className={styles.operationSelect}
+        disabled={!objectTypeId}
+        onChange={(nextOperation) => {
+          updateRow({ operation: nextOperation ?? undefined });
+        }}
+        options={operationOptions}
+        placeholder={t("knowledgeNetwork.pleaseSelect")}
+        value={currentOperation}
+      />
+      <Select
+        className={styles.valueFromSelect}
+        disabled={!objectTypeId}
+        options={[
+          {
+            label: t("knowledgeNetwork.actionTypeConditionValueFromConst"),
+            value: "const",
+          },
+        ]}
+        value="const"
+      />
+      <Input
+        className={styles.valueInput}
+        disabled={!objectTypeId || !needsValue}
+        onChange={(event) => {
+          updateRow({ value: event.target.value || undefined });
+        }}
+        placeholder={t("knowledgeNetwork.actionTypeConditionValueInputPlaceholder")}
+        value={scalarValue}
+      />
+      {showAddButton ? (
+        <AppButton
+          aria-label={t("knowledgeNetwork.actionTypeConditionAdd")}
+          className={styles.addButton}
+          disabled={!objectTypeId}
+          icon={<PlusOutlined />}
+          onClick={onAdd}
+        />
+      ) : onRemove ? (
+        <AppButton className={styles.addButton} onClick={onRemove} type="text">
+          {t("common.delete")}
+        </AppButton>
+      ) : (
+        <span className={styles.addButton} />
+      )}
+    </div>
+  );
+}
+
+type ActionTypeConditionEditorProps = {
+  boundObjectTypeId?: string;
+  objectTypes: KnowledgeNetworkObjectTypeRecord[];
+  propertyOptions: RelationTypePropertyOption[];
+  value?: ActionTypeCondition | null;
+  onChange?: (value?: ActionTypeCondition | null) => void;
+};
+
+export function ActionTypeConditionEditor({
+  boundObjectTypeId,
+  objectTypes,
+  propertyOptions,
+  value,
+  onChange,
+}: ActionTypeConditionEditorProps) {
+  const rootCondition: ActionTypeCondition = value ?? {
+    objectTypeId: boundObjectTypeId,
+    valueFrom: "const",
+  };
+  const subConditions = rootCondition.subConditions ?? [];
+
+  const updateRoot = (next: ActionTypeCondition) => {
+    const hasContent =
+      next.field ||
+      next.operation ||
+      next.value !== undefined ||
+      (next.subConditions?.length ?? 0) > 0;
+
+    if (!hasContent && !next.objectTypeId) {
+      onChange?.(null);
+      return;
+    }
+
+    onChange?.({
+      ...next,
+      objectTypeId: next.objectTypeId || boundObjectTypeId,
+      valueFrom: "const",
+    });
+  };
+
+  const handleAddRow = () => {
+    updateRoot({
+      ...rootCondition,
+      subConditions: [...subConditions, { objectTypeId: rootCondition.objectTypeId || boundObjectTypeId, valueFrom: "const" }],
+    });
+  };
+
+  const handleSubConditionChange = (index: number, next: ActionTypeCondition) => {
+    const nextSubConditions = [...subConditions];
+    nextSubConditions[index] = next;
+    updateRoot({
+      ...rootCondition,
+      subConditions: nextSubConditions,
+    });
+  };
+
+  const handleRemoveSubCondition = (index: number) => {
+    updateRoot({
+      ...rootCondition,
+      subConditions: subConditions.filter((_, itemIndex) => itemIndex !== index),
+    });
+  };
+
+  return (
+    <div className={styles.conditionList}>
+      <ConditionRow
+        boundObjectTypeId={boundObjectTypeId}
+        objectTypes={objectTypes}
+        onAdd={handleAddRow}
+        onChange={updateRoot}
+        propertyOptions={propertyOptions}
+        showAddButton
+        value={rootCondition}
+      />
+      {subConditions.map((item, index) => (
+        <ConditionRow
+          boundObjectTypeId={boundObjectTypeId}
+          key={`condition-${index}`}
+          objectTypes={objectTypes}
+          onChange={(next) => handleSubConditionChange(index, next)}
+          onRemove={() => handleRemoveSubCondition(index)}
+          propertyOptions={propertyOptions}
+          value={item}
+        />
+      ))}
+    </div>
+  );
+}

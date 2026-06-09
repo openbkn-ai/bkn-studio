@@ -1,0 +1,491 @@
+.root {
+  background: #fff;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.infoBar {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-shrink: 0;
+  gap: 16px;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 0 24px;
+}
+
+.infoMain {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.infoIcon {
+  align-items: center;
+  border-radius: 0;
+  color: #fff;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 14px;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.infoName {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.infoRight {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.infoItem {
+  align-items: center;
+  display: flex;
+  font-size: 14px;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+.infoLabel {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.infoHintIcon {
+  color: rgba(0, 0, 0, 0.35);
+  cursor: help;
+  flex-shrink: 0;
+  font-size: 12px;
+  transition: color 0.2s ease;
+}
+
+.infoHintIcon:hover {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.infoValue {
+  color: rgba(0, 0, 0, 0.85);
+  cursor: pointer;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.infoValueEmpty {
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.infoDivider {
+  background: #d9d9d9;
+  height: 14px;
+  width: 1px;
+}
+
+.infoKeyIconPrimary {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+}
+
+.infoKeyIconTitle {
+  color: #faad14;
+  font-size: 14px;
+}
+
+.infoKeyIconIncremental {
+  background: #52c41a;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  height: 8px;
+  width: 8px;
+}
+
+.countBadge {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 2px;
+  color: rgba(0, 0, 0, 0.85);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 10px;
+  height: 16px;
+  justify-content: center;
+  line-height: 2.2;
+  min-width: 16px;
+  padding: 0 3px;
+  text-align: center;
+}
+
+.keyPopover {
+  width: 280px;
+}
+
+.canvas {
+  background: #fff;
+  cursor: grab;
+  flex: 1;
+  min-height: 480px;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas:active {
+  cursor: grabbing;
+}
+
+.canvasViewport {
+  pointer-events: none;
+  position: relative;
+  transform-origin: 0 0;
+  z-index: 1;
+}
+
+.canvasViewport > * {
+  pointer-events: auto;
+}
+
+.connectionLayer {
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  z-index: 0;
+}
+
+.connectionLine {
+  fill: none;
+  pointer-events: stroke;
+  stroke: #b1b1b1;
+  stroke-width: 1.5;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.connectionLineHover {
+  stroke: #000;
+  stroke-width: 2;
+}
+
+.panelNode {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  position: absolute;
+  z-index: 1;
+}
+
+.panelHeader {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.panelTitleBox {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.panelIcon {
+  align-items: center;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 20px;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.panelIconView {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.panelTitle {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+  font-weight: 600;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panelCount {
+  background: #f5f5f5;
+  border-radius: 4px;
+  color: rgba(0, 0, 0, 0.65);
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 2px 6px;
+}
+
+.panelActions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.panelActionIcon {
+  color: #126ee3;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.panelSearch {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
+}
+
+.panelContent {
+  overflow: visible;
+}
+
+.panelEmpty {
+  padding: 24px 16px;
+}
+
+.invalidNameIcon {
+  color: #ff4d4f;
+  flex-shrink: 0;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.panelItem {
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 52px;
+  padding: 8px 16px;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.panelItemView {
+  cursor: default;
+}
+
+.panelItem:hover {
+  background: #f5f7fa;
+}
+
+.panelItem:hover .itemIconsStatus {
+  display: none;
+}
+
+.panelItem:hover .itemIconsActions {
+  display: flex;
+  pointer-events: auto;
+}
+
+.panelItemHighlighted {
+  background: #f1f7ff;
+}
+
+.panelItemMapped {
+  background: rgba(22, 119, 255, 0.04);
+}
+
+.itemContent {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.itemName {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemTechName {
+  align-items: center;
+  color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  font-size: 12px;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemTypeIcon {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+  color: rgba(0, 0, 0, 0.65);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 11px;
+  height: 24px;
+  justify-content: center;
+  min-width: 24px;
+  padding: 0 4px;
+}
+
+.panelHandle {
+  background: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.06);
+  border-radius: 50%;
+  flex-shrink: 0;
+  height: 10px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  z-index: 2;
+}
+
+.panelHandleRight {
+  right: 4px;
+}
+
+.panelHandleLeft {
+  left: 4px;
+}
+
+.itemIcons {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  margin-right: 12px;
+}
+
+.itemIconsStatus {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.itemIconsActions {
+  align-items: center;
+  display: none;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.rowActionIcon {
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.rowActionIconActivePrimary {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.rowActionIconActiveTitle {
+  color: #faad14;
+}
+
+.rowActionIconActiveIncremental {
+  color: #52c41a;
+}
+
+.canvasControls {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  right: 24px;
+  z-index: 3;
+}
+
+.canvasControlButton {
+  align-items: center;
+  background: #fff;
+  border: 0;
+  color: rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 16px;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.canvasControlButton:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.canvasControlButton:hover {
+  color: #1677ff;
+}
+
+.attrDrawer {
+  background: #fff;
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  right: 0;
+  top: 96px;
+  width: 420px;
+  z-index: 99;
+}
+
+.attrDrawerHidden {
+  display: none;
+}
+
+.attrDrawerHeader {
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.attrDrawerForm {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 20px 0;
+}
+
+.attrDrawerFooter {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 16px 20px;
+}

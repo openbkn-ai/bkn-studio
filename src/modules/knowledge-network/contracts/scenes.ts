@@ -8,7 +8,9 @@ export type KnowledgeNetworkWorkspaceSection =
   | "concept-groups"
   | "object-types"
   | "relation-types"
-  | "action-types";
+  | "action-types"
+  | "metrics"
+  | "tasks";
 
 export type KnowledgeNetworkWorkspaceSceneProps = {
   networkId?: string;

@@ -3,6 +3,7 @@ import { RouterProvider } from "react-router-dom";
 
 import { AppProviders } from "@/app/providers/AppProviders";
 import { createAppRouter } from "@/app/router/create-router";
+import { DevAuthGate } from "@/framework/auth/DevAuthGate";
 import type { RuntimeConfig } from "@/framework/runtime/types";
 
 type AppProps = {
@@ -16,7 +17,9 @@ export function App({ runtimeConfig }: AppProps) {
 
   return (
     <AppProviders runtimeConfig={runtimeConfig}>
-      <RouterProvider router={router} />
+      <DevAuthGate>
+        <RouterProvider router={router} />
+      </DevAuthGate>
     </AppProviders>
   );
 }

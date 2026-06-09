@@ -1,0 +1,30 @@
+.formPanel {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  margin: 0 auto;
+  max-width: 720px;
+  padding: 24px;
+}
+
+.loadingState {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 320px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  border-bottom: 1px solid #e9e9e9;
+  color: #1f2329;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+}

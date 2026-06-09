@@ -1,0 +1,58 @@
+.dataViewPicker {
+  align-items: center;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 32px;
+  padding: 4px 12px;
+  transition: border-color 0.2s ease;
+}
+
+.dataViewPicker:hover {
+  border-color: #4096ff;
+}
+
+.dataViewPickerPlaceholder {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.dataViewPickerValue {
+  color: rgba(0, 0, 0, 0.88);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dataViewPropertyPair {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+}
+
+.dataViewPropertyPairItem {
+  flex: 1;
+  min-width: 0;
+}
+
+.addButton {
+  margin-top: 8px;
+  padding-left: 0;
+}
+
+.mappingTable :global(.ant-table-thead > tr > th) {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.mappingTable :global(.ant-table-cell) {
+  vertical-align: middle;
+}
+
+.root {
+  width: 100%;
+}

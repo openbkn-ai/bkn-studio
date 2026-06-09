@@ -1,11 +1,15 @@
 import type { RuntimeConfig, RuntimeInput, TokenManager } from "@/framework/runtime/types";
+import {
+  getDevAccessToken,
+  handleDevAuthFailure,
+} from "@/framework/auth/dev-auth";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 
 const storageTokenManager: TokenManager = {
-  getAccessToken: () => window.sessionStorage.getItem("bkn_access_token"),
+  getAccessToken: () => getDevAccessToken(),
   refreshAccessToken: () => Promise.resolve(null),
   onAuthFailure: () => {
-    window.sessionStorage.removeItem("bkn_access_token");
+    handleDevAuthFailure();
   },
 };
 

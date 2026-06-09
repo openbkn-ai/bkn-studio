@@ -1,0 +1,29 @@
+.modal :global(.ant-transfer-operation) {
+  display: none !important;
+}
+
+.clearButton {
+  color: #126ee3;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.transferItem {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.itemContent {
+  min-width: 0;
+}
+
+.itemTitle {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+}
+
+.itemDesc {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}

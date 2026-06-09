@@ -1,0 +1,39 @@
+.basicForm {
+  margin: 24px auto 32px;
+  max-width: 900px;
+  padding: 0 24px;
+  width: 100%;
+}
+
+.basicForm :global(.ant-form-item) {
+  margin-bottom: 20px;
+}
+
+.basicForm :global(.ant-form-item-label > label) {
+  color: #1f2329;
+  font-size: 14px;
+  height: auto;
+}
+
+.basicForm :global(.ant-form-item-label > label.ant-form-item-required:not(.ant-form-item-required-mark-hidden)::before) {
+  margin-inline-end: 4px;
+}
+
+.executionForm {
+  margin: 24px auto 32px;
+  max-width: 900px;
+  padding: 0 24px;
+  width: 100%;
+}
+
+.loadError {
+  margin: 24px auto;
+  max-width: 900px;
+}
+
+.loadingState {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 320px;
+}

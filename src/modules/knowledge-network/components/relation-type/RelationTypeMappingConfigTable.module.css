@@ -1,0 +1,97 @@
+.objectCell {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.objectIcon {
+  align-items: center;
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 14px;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.objectName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.propertyCell {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.propertyName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dataViewCell {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  min-width: 0;
+}
+
+.dataViewField {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dataViewFieldLabel {
+  background: #5381df;
+  border-radius: 2px;
+  color: #fff;
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 20px;
+  padding: 0 6px;
+}
+
+.dataViewFieldLabelTarget {
+  background: #000;
+}
+
+.dataViewFieldValue {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emptyValue {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.mappingTable :global(.ant-table-thead > tr > th) {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.mappingTable :global(.ant-table-cell) {
+  vertical-align: middle;
+}
+
+.rowTypeLabel {
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 14px;
+  font-weight: 500;
+}

@@ -1,0 +1,20 @@
+﻿node_modules/
+dist/
+coverage/
+.git/
+
+# Migration specs — rarely needed for code edits
+specs/
+
+# One-off scripts and tooling
+scripts/
+
+# Large static assets (icon fonts)
+**/resource-iconfont/**
+**/*.ttf
+**/*.woff
+**/*.woff2
+
+# Build artifacts and local overrides
+*.local
+.DS_Store

@@ -1,0 +1,33 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metaRow {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.metaRow > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metaRow span {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
+.metaRow strong {
+  color: rgba(0, 0, 0, 0.88);
+  font-weight: 500;
+}
+
+.propertyCell {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}

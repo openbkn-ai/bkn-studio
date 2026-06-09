@@ -1,0 +1,80 @@
+export const relationtypePart = {
+    relationTypeAddPropertyMapping: "Add data property",
+    relationTypeBasicInfo: "Basic information",
+    relationTypeBatchDeleteDescription:
+      "Delete the selected {{count}} relation types? This action cannot be undone.",
+    relationTypeBatchDeleteTitle: "Delete relation types",
+    relationTypeConfigSection: "Configuration",
+    relationTypeCreateDescription:
+      "Create a relation type and its mapping rules through a multi-step form.",
+    relationTypeCreateTitle: "Create relation type",
+    relationTypeDataViewMapping: "Data view mapping",
+    relationTypeDataViewMappingCount: "{{count}} data view mappings",
+    relationTypeDataViewMappingHint:
+      "Connect source and target object properties through a data view. Configure object types, the data view, and field mappings.",
+    relationTypeDataViewMappingOption:
+      "Connect object type properties through a data view",
+    relationTypeDataViewMappingRequired:
+      "Configure at least one complete data view mapping.",
+    relationTypeDataViewColumn: "Data view",
+    relationTypeChooseDataView: "Choose a data view",
+    relationTypeDataViewRequired: "Please choose a data view.",
+    relationTypeDataViewSourcePropertyPlaceholder: "Select a data view source field",
+    relationTypeDataViewTargetPropertyPlaceholder: "Select a data view target field",
+    relationTypeDataViewSourcePropertyLabel: "Data view source field",
+    relationTypeDataViewTargetPropertyLabel: "Data view target field",
+    relationTypeDeleteDescription:
+      'Delete "{{name}}"? This action cannot be undone.',
+    relationTypeDeleteTitle: "Delete relation type",
+    relationTypeDetailDescription:
+      "Review relation type details, object links, and property mappings.",
+    relationTypeDetailTitle: "Relation type detail",
+    relationTypeDirectMapping: "Direct mapping",
+    relationTypeDirectMappingOption: "Connect object type properties directly",
+    relationTypeEditDescription: "Edit relation type basics and mapping rules.",
+    relationTypeEditTitle: "Edit relation type",
+    relationTypeEmptyValue: "—",
+    relationTypeEmptyNoSearchResult: "No matching relation types found.",
+    relationTypeImportPending:
+      "The legacy Vega import flow for relation types will be aligned in a later slice.",
+    relationTypeImportTitle: "Import relation types",
+    relationTypeMappingAssociation: "Relation association",
+    relationTypeMappingDescription: "Maintain relation type mapping configuration.",
+    relationTypeMappingEntry: "Mapping config",
+    relationTypeMappingItemDataView: "Data view mapping rules",
+    relationTypeMappingItemDirect: "Direct mapping rules",
+    relationTypeMappingItemProperty: "Property mapping table",
+    relationTypeMappingMode: "Mapping mode",
+    relationTypeMappingObjectRow: "Object type",
+    relationTypeMappingPending:
+      "Full mapping rules will be migrated in the next phase. This page currently hosts the entry and basic information.",
+    relationTypeMappingPropertyRow: "Data property",
+    relationTypeMappingSourcePoint: "Source",
+    relationTypeMappingSourcePropertyPlaceholder: "Select a source property",
+    relationTypeMappingStep: "Mapping rules",
+    relationTypeMappingSubtitle:
+      "Maintain source/target object types and property mapping rules.",
+    relationTypeMappingTargetPoint: "Target",
+    relationTypeMappingTargetPropertyPlaceholder: "Select a target property",
+    relationTypeMappingTitle: "Relation type mapping",
+    relationTypeName: "Relation type name",
+    relationTypeNameRequired: "Please enter a relation type name.",
+    relationTypeObjectLink: "Object link",
+    relationTypePropertyMappingCount: "{{count}} property mappings",
+    relationTypePropertyMappingEmpty: "No property mappings yet.",
+    relationTypePropertyMappingRequired:
+      "Configure at least one valid property mapping.",
+    relationTypes: "Relation types",
+    relationTypeSaveAndExit: "Save and exit",
+    relationTypesDescription:
+      "Review and maintain relation types under the active knowledge network.",
+    relationTypeSourceObject: "Source object type",
+    relationTypeSourceObjectPlaceholder: "Select a source object type",
+    relationTypeSourceObjectRequired: "Please select a source object type.",
+    relationTypesTitle: "Relation types",
+    relationTypeTargetObject: "Target object type",
+    relationTypeTargetObjectPlaceholder: "Select a target object type",
+    relationTypeTargetObjectRequired: "Please select a target object type.",
+    relationTypeToolbarHint:
+      "This slice covers list, create, edit, and delete for relation types first.",
+};

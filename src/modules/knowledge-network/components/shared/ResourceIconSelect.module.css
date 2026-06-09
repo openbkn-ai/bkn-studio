@@ -1,0 +1,30 @@
+.panel {
+  padding: 8px;
+}
+
+.iconBox {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  max-height: 240px;
+  overflow: auto;
+}
+
+.iconItem {
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 8px 2px;
+  text-align: center;
+}
+
+.iconLabel {
+  font-size: 12px;
+  line-height: 1.2;
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
