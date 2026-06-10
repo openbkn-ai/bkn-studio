@@ -20,17 +20,15 @@ type BackendBuildTask = {
   create_time?: number;
   embedding_fields?: string | string[];
   embedding_model?: string;
-  error?: string;
-  finish_time?: number;
+  error_msg?: string;
   id: string;
-  last_event_time?: number;
   mode?: string;
   model_dimensions?: number;
   resource_id?: string;
-  state?: string;
   status?: string;
   synced_count?: number;
   total_count?: number;
+  update_time?: number;
   vectorized_count?: number;
 };
 
@@ -59,15 +57,27 @@ function splitFields(value?: string | string[]): string[] {
     .filter(Boolean);
 }
 
-function normalizeStatus(value?: string): BuildTaskStatus {
+/**
+ * vega 后端枚举:init/running/completed/stopping/stopped/failed。
+ * streaming 模式的 running 即“常驻监听”,stopped/stopping 即“已暂停”。
+ */
+function normalizeStatus(value: string | undefined, mode: BuildMode): BuildTaskStatus {
   switch (value) {
-    case "pending":
     case "running":
+      return mode === "streaming" ? "listening" : "running";
+    case "completed":
+      return "succeeded";
+    case "stopping":
+    case "stopped":
+      return "paused";
+    case "failed":
+      return "failed";
     case "listening":
     case "paused":
     case "succeeded":
-    case "failed":
+    case "pending":
       return value;
+    case "init":
     default:
       return "pending";
   }
@@ -75,12 +85,14 @@ function normalizeStatus(value?: string): BuildTaskStatus {
 
 function mapBuildTask(item: BackendBuildTask): BuildTask {
   const createdAt = item.create_time ?? 0;
+  const mode: BuildMode = item.mode === "streaming" ? "streaming" : "batch";
+  const status = normalizeStatus(item.status, mode);
 
   return {
     id: item.id,
     resourceId: item.resource_id ?? "",
-    mode: (item.mode === "streaming" ? "streaming" : "batch") as BuildMode,
-    status: normalizeStatus(item.status ?? item.state),
+    mode,
+    status,
     embeddingFields: splitFields(item.embedding_fields),
     buildKeyFields: splitFields(item.build_key_fields),
     embeddingModel: item.embedding_model ?? "",
@@ -90,9 +102,12 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
     vectorizedCount: item.vectorized_count ?? 0,
     createdAt,
     createTime: createdAt ? formatMockTimestamp(createdAt) : "-",
-    finishTime: item.finish_time ? formatMockTimestamp(item.finish_time) : null,
-    lastEventAt: item.last_event_time ?? null,
-    error: item.error ?? null,
+    finishTime:
+      (status === "succeeded" || status === "failed") && item.update_time
+        ? formatMockTimestamp(item.update_time)
+        : null,
+    lastEventAt: mode === "streaming" ? (item.update_time ?? null) : null,
+    error: item.error_msg || null,
   };
 }
 
@@ -115,6 +130,8 @@ export async function listBuildTasks(
     return wait(filterTasks([...mockBuildTasks], query), 120);
   }
 
+  // 后端 status 仅支持单值且枚举与前端不同(completed/stopped),
+  // 统一拉全量后在前端按归一化状态过滤。
   const response = await http.get<ListResponse<BackendBuildTask>>(
     "/vega-backend/v1/build-tasks",
     {
@@ -122,12 +139,11 @@ export async function listBuildTasks(
         limit: 200,
         offset: 0,
         resource_id: query.resourceId || undefined,
-        status: query.statuses?.join(",") || undefined,
       },
     },
   );
 
-  return response.data.entries.map(mapBuildTask);
+  return filterTasks(response.data.entries.map(mapBuildTask), query);
 }
 
 export async function getBuildTask(id: string) {
@@ -188,6 +204,7 @@ export async function createBuildTask(
     return wait(task);
   }
 
+  // 创建仅返回 {id, resource_id, status: "init"},完整任务体再查一次
   const response = await http.post<BackendBuildTask>(
     "/vega-backend/v1/build-tasks",
     {
@@ -200,7 +217,8 @@ export async function createBuildTask(
     },
   );
 
-  return mapBuildTask(response.data);
+  const created = await getBuildTask(response.data.id);
+  return created ?? mapBuildTask(response.data);
 }
 
 export async function pauseBuildTask(id: string) {
@@ -214,7 +232,8 @@ export async function pauseBuildTask(id: string) {
     return;
   }
 
-  await http.post(`/vega-backend/v1/build-tasks/${id}/pause`);
+  // 后端语义:stop = 暂停(streaming 监听停止 / batch 中止)
+  await http.post(`/vega-backend/v1/build-tasks/${id}/stop`);
 }
 
 export async function resumeBuildTask(id: string) {
@@ -230,7 +249,8 @@ export async function resumeBuildTask(id: string) {
     return;
   }
 
-  await http.post(`/vega-backend/v1/build-tasks/${id}/resume`);
+  // 后端语义:start = 恢复运行(body 可选)
+  await http.post(`/vega-backend/v1/build-tasks/${id}/start`);
 }
 
 export async function retryBuildTask(id: string): Promise<BuildTask | null> {
@@ -249,11 +269,9 @@ export async function retryBuildTask(id: string): Promise<BuildTask | null> {
     });
   }
 
-  const response = await http.post<BackendBuildTask>(
-    `/vega-backend/v1/build-tasks/${id}/retry`,
-  );
-
-  return response.data ? mapBuildTask(response.data) : null;
+  // 后端没有独立 retry:对失败任务重新 start
+  await http.post(`/vega-backend/v1/build-tasks/${id}/start`);
+  return getBuildTask(id);
 }
 
 /** 停用连接时,暂停其下所有监听中的 streaming 任务(mock 行为;真实后端由服务端联动) */

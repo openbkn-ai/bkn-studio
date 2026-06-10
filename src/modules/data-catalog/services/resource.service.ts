@@ -21,7 +21,9 @@ import type {
 } from "@/modules/data-catalog/types/data-catalog";
 
 type BackendSchemaField = {
+  display_name?: string;
   name?: string;
+  original_type?: string;
   type?: string;
 };
 
@@ -30,9 +32,10 @@ type BackendResource = {
   category?: string;
   description?: string;
   id: string;
+  logic_type?: string;
   name: string;
   row_count?: number;
-  schema_definition?: BackendSchemaField[];
+  schema_definition?: BackendSchemaField[] | null;
   source_identifier?: string;
   update_time?: number;
 };
@@ -56,9 +59,12 @@ function formatTimestamp(value?: number) {
   return formatMockTimestamp(value);
 }
 
-function normalizeCategory(value?: string): ResourceCategory {
+function normalizeCategory(value?: string, logicType?: string): ResourceCategory {
   if (value === "logicview" || value === "dataset") {
     return value;
+  }
+  if (logicType) {
+    return "logicview";
   }
   return "table";
 }
@@ -68,12 +74,12 @@ function mapResource(item: BackendResource): CatalogResource {
     id: item.id,
     catalogId: item.catalog_id,
     name: item.name,
-    category: normalizeCategory(item.category),
+    category: normalizeCategory(item.category, item.logic_type),
     sourceIdentifier: item.source_identifier ?? "",
     description: item.description ?? "",
     schema: (item.schema_definition ?? []).map((field) => ({
-      name: field.name ?? "",
-      type: field.type ?? "string",
+      name: field.name ?? field.display_name ?? "",
+      type: field.type ?? field.original_type ?? "string",
     })),
     rowCount: item.row_count ?? 0,
     updatedAt: item.update_time ?? 0,
@@ -125,9 +131,13 @@ export async function getCatalogResource(id: string) {
     return wait(mockResources.find((item) => item.id === id) ?? null);
   }
 
-  const response = await http.get<BackendResource>(`/vega-backend/v1/resources/${id}`);
+  // GET /resources/:id 返回 {entries:[...]}(支持逗号多 id)
+  const response = await http.get<{ entries?: BackendResource[] }>(
+    `/vega-backend/v1/resources/${id}`,
+  );
 
-  return response.data ? mapResource(response.data) : null;
+  const resource = response.data.entries?.[0];
+  return resource ? mapResource(resource) : null;
 }
 
 export async function createCatalogResource(input: ResourceCreateInput) {
@@ -156,16 +166,33 @@ export async function createCatalogResource(input: ResourceCreateInput) {
     return wait(resource);
   }
 
-  const response = await http.post<BackendResource>("/vega-backend/v1/resources", {
-    catalog_id: input.catalogId,
-    category: input.category,
-    description: input.description,
-    name: input.name,
-    schema_definition: input.schema.length > 0 ? input.schema : undefined,
-    source_identifier: input.sourceIdentifier,
-  });
+  const response = await http.post<{ id?: string } & BackendResource>(
+    "/vega-backend/v1/resources",
+    {
+      catalog_id: input.catalogId,
+      category: input.category,
+      description: input.description,
+      name: input.name,
+      schema_definition: input.schema.length > 0 ? input.schema : undefined,
+      source_identifier: input.sourceIdentifier,
+    },
+  );
 
-  return mapResource(response.data);
+  const created = response.data.id ? await getCatalogResource(response.data.id) : null;
+  return (
+    created ?? {
+      id: response.data.id ?? "",
+      catalogId: input.catalogId,
+      name: input.name,
+      category: input.category,
+      sourceIdentifier: input.sourceIdentifier,
+      description: input.description,
+      schema: input.schema,
+      rowCount: 0,
+      updatedAt: Date.now(),
+      updateTime: formatMockTimestamp(Date.now()),
+    }
+  );
 }
 
 export async function deleteCatalogResource(id: string) {
@@ -238,17 +265,22 @@ export async function previewCatalogResource(
     return wait({ rows, total }, 260);
   }
 
+  // POST /resources/:id/data + X-HTTP-Method-Override: GET = 数据查询
   const response = await http.post<{
-    rows?: Record<string, unknown>[];
+    entries?: Record<string, unknown>[];
     total_count?: number;
-  }>(`/vega-backend/v1/resources/${id}/data`, {
-    limit: query.limit,
-    need_total: true,
-    offset: query.offset,
-  });
+  }>(
+    `/vega-backend/v1/resources/${id}/data`,
+    {
+      limit: query.limit,
+      need_total: true,
+      offset: query.offset,
+    },
+    { headers: { "X-HTTP-Method-Override": "GET" } },
+  );
 
   return {
-    rows: response.data.rows ?? [],
+    rows: response.data.entries ?? [],
     total: response.data.total_count ?? 0,
   };
 }
@@ -258,9 +290,14 @@ export async function previewCatalogResource(
 type BackendDiscoverTask = {
   create_time?: number;
   finish_time?: number;
-  found_count?: number;
   id: string;
-  new_count?: number;
+  result?: {
+    new_count?: number;
+    restored_count?: number;
+    stale_count?: number;
+    unchanged_count?: number;
+    updated_count?: number;
+  } | null;
   start_time?: number;
   status?: string;
   trigger_type?: string;
@@ -286,12 +323,20 @@ export async function listCatalogScans(
 
   return response.data.entries.map((item) => {
     const startedAt = item.start_time ?? item.create_time ?? 0;
+    // 后端枚举:pending/running/completed/failed
     const status: CatalogScanRecord["status"] =
       item.status === "running" || item.status === "pending"
         ? "running"
         : item.status === "failed"
           ? "failed"
           : "succeeded";
+    const result = item.result;
+    const foundResources = result
+      ? (result.new_count ?? 0) +
+        (result.unchanged_count ?? 0) +
+        (result.updated_count ?? 0) +
+        (result.restored_count ?? 0)
+      : null;
 
     return {
       id: item.id,
@@ -303,8 +348,8 @@ export async function listCatalogScans(
         item.finish_time && startedAt
           ? Math.max(0, Math.round((item.finish_time - startedAt) / 1000))
           : null,
-      foundResources: item.found_count ?? null,
-      newResources: item.new_count ?? null,
+      foundResources,
+      newResources: result?.new_count ?? null,
     };
   });
 }
