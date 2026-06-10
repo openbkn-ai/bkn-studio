@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { listObjectTypeSmallModels } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { logServiceFallback } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
   ObjectTypeIndexConfig,
   ObjectTypeSmallModel,
@@ -75,7 +76,8 @@ export function ObjectTypeIndexSettingModal({
       try {
         const result = await listObjectTypeSmallModels();
         setSmallModels(result);
-      } catch {
+      } catch (error) {
+        logServiceFallback("ObjectTypeIndexSettingModal.loadSmallModels", error);
         setSmallModels([]);
       }
     };

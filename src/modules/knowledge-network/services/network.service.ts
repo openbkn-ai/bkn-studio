@@ -9,14 +9,12 @@ import type {
   KnowledgeNetworkListQuery,
   KnowledgeNetworkListResult,
   KnowledgeNetworkMutationPayload,
-  KnowledgeNetworkPreviewGraph,
   KnowledgeNetworkRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type {
   BackendKnowledgeNetwork,
   BackendListResponse,
   BackendObjectType,
-  BackendSubgraphResponse,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import {
   mapKnowledgeNetwork,
@@ -31,7 +29,6 @@ import {
   mockConceptGroups,
   mockKnowledgeNetworks,
   mockObjectTypes,
-  mockPreviewGraphs,
   mockRecentObjects,
   mockRelationTypes,
   replaceMockKnowledgeNetworks,
@@ -41,6 +38,7 @@ import {
   emptyStatistics,
   filterKnowledgeNetworks,
   formatTimestamp,
+  logServiceFallback,
   stringFromUnknown,
   throwImportConflict,
   useMock,
@@ -135,7 +133,12 @@ export async function getKnowledgeNetwork(networkId: string) {
 
     const record = unwrapSingleEntryResponse(response.data);
     return record ? mapKnowledgeNetwork(record) : null;
-  } catch {
+  } catch (error) {
+    logServiceFallback(
+      "getKnowledgeNetwork",
+      error,
+      "retrying without include_statistics",
+    );
     const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
       `/bkn-backend/v1/knowledge-networks/${networkId}`,
       {
@@ -168,7 +171,6 @@ export async function createKnowledgeNetwork(input: KnowledgeNetworkMutationPayl
     mockKnowledgeNetworks.unshift(nextRecord);
     mockRecentObjects[nextRecord.id] = [];
     mockConceptGroups[nextRecord.id] = [];
-    mockPreviewGraphs[nextRecord.id] = { nodes: [], edges: [] };
     mockObjectTypes[nextRecord.id] = [];
     mockRelationTypes[nextRecord.id] = [];
     mockActionTypes[nextRecord.id] = [];
@@ -238,7 +240,6 @@ export async function deleteKnowledgeNetwork(networkId: string) {
     );
     delete mockRecentObjects[networkId];
     delete mockConceptGroups[networkId];
-    delete mockPreviewGraphs[networkId];
     delete mockObjectTypes[networkId];
     delete mockRelationTypes[networkId];
     delete mockActionTypes[networkId];
@@ -269,69 +270,6 @@ export async function listKnowledgeNetworkRecentObjects(networkId: string) {
   );
 
   return response.data.entries.map(mapRecentObject);
-}
-
-export async function getKnowledgeNetworkPreviewGraph(networkId: string) {
-  if (useMock) {
-    return wait(mockPreviewGraphs[networkId] ?? { nodes: [], edges: [] });
-  }
-
-  const emptyGraph = {
-    edges: [] as KnowledgeNetworkPreviewGraph["edges"],
-    nodes: [] as KnowledgeNetworkPreviewGraph["nodes"],
-  };
-
-  try {
-    const response = await http.post<BackendSubgraphResponse>(
-      `/ontology-query/v1/knowledge-networks/${networkId}/subgraph`,
-      {},
-      { skipErrorToast: true } as Parameters<typeof http.post>[2],
-    );
-
-    const subgraph = response.data;
-    const rawNodes = (subgraph.nodes ?? subgraph.objects ?? []) as Array<{
-      color?: string;
-      id?: string;
-      name?: string;
-    }>;
-    const rawEdges = (subgraph.edges ?? subgraph.relations ?? []) as Array<{
-      id?: string;
-      name?: string;
-      source?: string;
-      source_id?: string;
-      source_object_type_id?: string;
-      target?: string;
-      target_id?: string;
-      target_object_type_id?: string;
-    }>;
-
-    return {
-      nodes: rawNodes
-        .filter((item) => item.id)
-        .map((item) => ({
-          id: item.id as string,
-          name: item.name ?? item.id ?? "-",
-          color: item.color ?? "#1677ff",
-        })),
-      edges: rawEdges
-        .filter(
-          (item) =>
-            item.id &&
-            (item.source ?? item.source_id ?? item.source_object_type_id) &&
-            (item.target ?? item.target_id ?? item.target_object_type_id),
-        )
-        .map((item) => ({
-          id: item.id as string,
-          name: item.name ?? "",
-          sourceId:
-            item.source ?? item.source_id ?? (item.source_object_type_id as string),
-          targetId:
-            item.target ?? item.target_id ?? (item.target_object_type_id as string),
-        })),
-    };
-  } catch {
-    return emptyGraph;
-  }
 }
 
 export async function exportKnowledgeNetwork(networkId: string) {

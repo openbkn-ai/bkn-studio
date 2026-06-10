@@ -19,6 +19,7 @@ export type McpRecord = {
 };
 
 export type McpListQuery = {
+  all?: boolean;
   page: number;
   pageSize: number;
   keyword?: string;

@@ -1,5 +1,4 @@
 import {
-  ApartmentOutlined,
   AppstoreOutlined,
   DeleteOutlined,
   EllipsisOutlined,
@@ -7,7 +6,6 @@ import {
   ReloadOutlined,
   SearchOutlined,
   SortAscendingOutlined,
-  ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Pagination, Select, Table, Tag } from "antd";
 import type { MenuProps, TableProps } from "antd";
@@ -263,27 +261,6 @@ export function ConceptGroupListPanel({
       },
     },
     {
-      key: "relatedResources",
-      title: t("knowledgeNetwork.conceptGroupRelatedResources"),
-      width: 260,
-      render: (_value, record) => (
-        <div className={styles.relatedStats}>
-          <span title={t("knowledgeNetwork.objectTypes")}>
-            <AppstoreOutlined className={styles.relatedIconObject} />
-            {record.objectTypesTotal}
-          </span>
-          <span title={t("knowledgeNetwork.relationTypes")}>
-            <ApartmentOutlined className={styles.relatedIconRelation} />
-            {record.relationTypesTotal}
-          </span>
-          <span title={t("knowledgeNetwork.actionTypes")}>
-            <ThunderboltOutlined className={styles.relatedIconAction} />
-            {record.actionTypesTotal}
-          </span>
-        </div>
-      ),
-    },
-    {
       dataIndex: "tags",
       key: "tags",
       title: t("common.tag"),
@@ -460,7 +437,7 @@ export function ConceptGroupListPanel({
               setSelectedRowKeys(nextSelectedRowKeys.map(String));
             },
           }}
-          scroll={{ x: 1180 }}
+          scroll={{ x: 920 }}
           size="middle"
         />
       </div>

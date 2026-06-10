@@ -132,11 +132,22 @@
   width: 100%;
 }
 
+.workspacePreviewPage {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .loadingState {
   align-items: center;
   display: flex;
   justify-content: center;
   min-height: 240px;
+}
+
+.workspaceAlert {
+  flex-shrink: 0;
+  margin: 16px 24px 0;
 }
 
 .sectionGrid {

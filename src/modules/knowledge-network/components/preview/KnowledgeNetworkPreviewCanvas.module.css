@@ -1,0 +1,133 @@
+.canvasShell {
+  background: #fff;
+  border: 1px solid #ebebeb;
+  border-radius: 8px;
+  flex: 1;
+  min-height: 520px;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvasToolbar {
+  display: flex;
+  gap: 8px;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 3;
+}
+
+.toolbarButton {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  color: #595959;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.toolbarButton:hover {
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.canvasViewport {
+  cursor: grab;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+  width: 100%;
+}
+
+.canvasViewportDragging {
+  cursor: grabbing;
+}
+
+.canvasStage {
+  position: relative;
+  transform-origin: 0 0;
+}
+
+.canvasSvg {
+  display: block;
+  pointer-events: none;
+}
+
+.edgePath {
+  fill: none;
+  pointer-events: none;
+  stroke: #d0d0d0;
+  stroke-linecap: round;
+  stroke-width: 1;
+}
+
+.edgeLabelBg {
+  fill: #fff;
+  pointer-events: none;
+}
+
+.edgeLabel {
+  fill: #8c8c8c;
+  font-size: 12px;
+  pointer-events: none;
+  text-anchor: middle;
+}
+
+.nodeLayer {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.nodeCard {
+  align-items: center;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  touch-action: none;
+  user-select: none;
+}
+
+.nodeCardDragging {
+  cursor: grabbing;
+}
+
+.nodeCard:hover .nodeCircle {
+  box-shadow: 0 4px 14px rgba(22, 119, 255, 0.28);
+}
+
+.nodeCircle {
+  align-items: center;
+  background: #3b8cff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.18);
+  color: #fff;
+  display: inline-flex;
+  font-size: 20px;
+  height: 72px;
+  justify-content: center;
+  transition: box-shadow 0.2s ease;
+  width: 72px;
+}
+
+.nodeLabel {
+  color: #434343;
+  font-size: 14px;
+  line-height: 1.2;
+  max-width: 120px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

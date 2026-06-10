@@ -6,15 +6,12 @@ import type { ActionTypeCatalogSelection } from "@/modules/knowledge-network/ser
 import type { ActionTypeActionSource } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { ActionTypeToolSelectModal } from "./ActionTypeToolSelectModal";
-import { getActionSourceDisplayName } from "./execution-utils";
+import { getActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
 
 import styles from "./ActionTypeSourcePicker.module.css";
 
 type ActionTypeSourcePickerProps = {
-  onSourceSelected?: (
-    source: ActionTypeActionSource,
-    toolParameters: Array<{ name: string; required?: boolean; type?: string }>,
-  ) => void;
+  onSourceSelected?: (source: ActionTypeActionSource) => void;
   value?: ActionTypeActionSource;
   onChange?: (value?: ActionTypeActionSource) => void;
 };
@@ -29,9 +26,9 @@ export function ActionTypeSourcePicker({
 
   const displayName = useMemo(() => getActionSourceDisplayName(value), [value]);
 
-  const handleConfirm = (source: ActionTypeActionSource, selection: ActionTypeCatalogSelection) => {
+  const handleConfirm = (source: ActionTypeActionSource, _selection: ActionTypeCatalogSelection) => {
     onChange?.(source);
-    onSourceSelected?.(source, selection.tool.parameters);
+    onSourceSelected?.(source);
     setModalOpen(false);
   };
 

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-network/contracts/scenes";
 import {
   getKnowledgeNetwork,
-  getKnowledgeNetworkPreviewGraph,
   listKnowledgeNetworkActionTypes,
   getMetricApiAvailability,
   listKnowledgeNetworkConceptGroups,
@@ -16,20 +16,27 @@ import {
 import {
   integrateWorkspaceMetrics,
   integrateWorkspaceTasks,
+  logServiceFallback,
 } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
   ConceptGroupRecord,
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkMetricRecord,
   KnowledgeNetworkObjectTypeRecord,
-  KnowledgeNetworkPreviewGraph,
   KnowledgeNetworkRecord,
   KnowledgeNetworkRecentObject,
   KnowledgeNetworkRelationTypeRecord,
   KnowledgeNetworkTaskRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
-export function useWorkspaceData(networkId: string) {
+function sectionCacheKey(networkId: string, section: KnowledgeNetworkWorkspaceSection) {
+  return `${networkId}:${section}`;
+}
+
+export function useWorkspaceData(
+  networkId: string,
+  section: KnowledgeNetworkWorkspaceSection,
+) {
   const [detail, setDetail] = useState<KnowledgeNetworkRecord | null>(null);
   const [recentObjects, setRecentObjects] = useState<KnowledgeNetworkRecentObject[]>([]);
   const [conceptGroups, setConceptGroups] = useState<ConceptGroupRecord[]>([]);
@@ -41,75 +48,148 @@ export function useWorkspaceData(networkId: string) {
   const [metrics, setMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
   const [metricApiUnavailable, setMetricApiUnavailable] = useState(false);
   const [tasks, setTasks] = useState<KnowledgeNetworkTaskRecord[]>([]);
-  const [previewGraph, setPreviewGraph] = useState<KnowledgeNetworkPreviewGraph>({
-    edges: [],
-    nodes: [],
-  });
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [detailLoading, setDetailLoading] = useState(true);
+  const [sectionLoading, setSectionLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [sectionError, setSectionError] = useState<string | null>(null);
+  const loadedSectionsRef = useRef<Set<string>>(new Set());
 
-  const loadWorkspaceData = useCallback(async () => {
+  const clearSectionCache = useCallback(() => {
+    loadedSectionsRef.current.clear();
+  }, []);
+
+  const loadDetail = useCallback(async () => {
     if (!networkId) {
       return;
     }
 
-    setLoading(true);
-    setLoadError(null);
+    setDetailLoading(true);
+    setDetailError(null);
 
     try {
-      const [
-        detailResult,
-        objectResult,
-        groupResult,
-        previewResult,
-        objectTypeResult,
-        relationTypeResult,
-        actionTypeResult,
-        metricResult,
-        taskResult,
-      ] = await Promise.all([
-        getKnowledgeNetwork(networkId),
-        listKnowledgeNetworkRecentObjects(networkId),
-        listKnowledgeNetworkConceptGroups(networkId),
-        getKnowledgeNetworkPreviewGraph(networkId),
-        listKnowledgeNetworkObjectTypes(networkId),
-        listKnowledgeNetworkRelationTypes(networkId),
-        listKnowledgeNetworkActionTypes(networkId),
-        integrateWorkspaceMetrics
-          ? listKnowledgeNetworkMetrics(networkId)
-          : Promise.resolve([]),
-        integrateWorkspaceTasks
-          ? listKnowledgeNetworkTasks(networkId)
-          : Promise.resolve([]),
-      ]);
-
-      setDetail(detailResult);
-      setRecentObjects(objectResult);
-      setConceptGroups(groupResult);
-      setPreviewGraph(previewResult);
-      setObjectTypes(objectTypeResult);
-      setRelationTypes(relationTypeResult);
-      setActionTypes(actionTypeResult);
-      setMetrics(metricResult);
-      setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
-      setTasks(taskResult);
+      setDetail(await getKnowledgeNetwork(networkId));
     } catch (error) {
-      setLoadError(extractRequestErrorMessage(error));
+      setDetail(null);
+      setDetailError(extractRequestErrorMessage(error));
     } finally {
-      setLoading(false);
+      setDetailLoading(false);
     }
   }, [networkId]);
 
+  const loadSectionData = useCallback(
+    async (targetSection: KnowledgeNetworkWorkspaceSection, options?: { force?: boolean }) => {
+      if (!networkId) {
+        return;
+      }
+
+      const cacheKey = sectionCacheKey(networkId, targetSection);
+      if (!options?.force && loadedSectionsRef.current.has(cacheKey)) {
+        return;
+      }
+
+      setSectionLoading(true);
+      setSectionError(null);
+
+      try {
+        switch (targetSection) {
+          case "overview": {
+            const recentResult = await Promise.allSettled([
+              listKnowledgeNetworkRecentObjects(networkId),
+            ]);
+
+            if (recentResult[0]?.status === "fulfilled") {
+              setRecentObjects(recentResult[0].value);
+            } else {
+              const recentError = recentResult[0]?.reason;
+              logServiceFallback("useWorkspaceData.overview.recentObjects", recentError);
+              setRecentObjects([]);
+              setSectionError(
+                extractRequestErrorMessage(recentError ?? "Failed to load recent objects"),
+              );
+            }
+            break;
+          }
+          case "preview": {
+            const [objectTypeResult, relationTypeResult] = await Promise.all([
+              listKnowledgeNetworkObjectTypes(networkId),
+              listKnowledgeNetworkRelationTypes(networkId),
+            ]);
+            setObjectTypes(objectTypeResult);
+            setRelationTypes(relationTypeResult);
+            break;
+          }
+          case "concept-groups":
+            setConceptGroups(await listKnowledgeNetworkConceptGroups(networkId));
+            break;
+          case "object-types":
+            setObjectTypes(await listKnowledgeNetworkObjectTypes(networkId));
+            break;
+          case "relation-types": {
+            const [objectTypeResult, relationTypeResult] = await Promise.all([
+              listKnowledgeNetworkObjectTypes(networkId),
+              listKnowledgeNetworkRelationTypes(networkId),
+            ]);
+            setObjectTypes(objectTypeResult);
+            setRelationTypes(relationTypeResult);
+            break;
+          }
+          case "action-types": {
+            const [objectTypeResult, actionTypeResult] = await Promise.all([
+              listKnowledgeNetworkObjectTypes(networkId),
+              listKnowledgeNetworkActionTypes(networkId),
+            ]);
+            setObjectTypes(objectTypeResult);
+            setActionTypes(actionTypeResult);
+            break;
+          }
+          case "metrics":
+            if (integrateWorkspaceMetrics) {
+              setMetrics(await listKnowledgeNetworkMetrics(networkId));
+              setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
+            }
+            break;
+          case "tasks":
+            if (integrateWorkspaceTasks) {
+              setTasks(await listKnowledgeNetworkTasks(networkId));
+            }
+            break;
+          default:
+            break;
+        }
+
+        loadedSectionsRef.current.add(cacheKey);
+      } catch (error) {
+        setSectionError(extractRequestErrorMessage(error));
+      } finally {
+        setSectionLoading(false);
+      }
+    },
+    [networkId],
+  );
+
   useEffect(() => {
-    void loadWorkspaceData();
-  }, [loadWorkspaceData]);
+    clearSectionCache();
+    void loadDetail();
+  }, [clearSectionCache, loadDetail, networkId]);
+
+  useEffect(() => {
+    void loadSectionData(section);
+  }, [loadSectionData, section]);
+
+  const loadWorkspaceData = useCallback(async () => {
+    clearSectionCache();
+    await loadDetail();
+    await loadSectionData(section, { force: true });
+  }, [clearSectionCache, loadDetail, loadSectionData, section]);
 
   const reloadConceptGroups = useCallback(async () => {
     if (!networkId) {
       return;
     }
 
+    loadedSectionsRef.current.delete(sectionCacheKey(networkId, "concept-groups"));
     setConceptGroups(await listKnowledgeNetworkConceptGroups(networkId));
+    loadedSectionsRef.current.add(sectionCacheKey(networkId, "concept-groups"));
   }, [networkId]);
 
   const reloadObjectTypes = useCallback(async () => {
@@ -117,7 +197,11 @@ export function useWorkspaceData(networkId: string) {
       return;
     }
 
+    ["object-types", "preview", "relation-types", "action-types"].forEach((item) => {
+      loadedSectionsRef.current.delete(sectionCacheKey(networkId, item as KnowledgeNetworkWorkspaceSection));
+    });
     setObjectTypes(await listKnowledgeNetworkObjectTypes(networkId));
+    loadedSectionsRef.current.add(sectionCacheKey(networkId, "object-types"));
   }, [networkId]);
 
   const reloadRelationTypes = useCallback(async () => {
@@ -125,7 +209,11 @@ export function useWorkspaceData(networkId: string) {
       return;
     }
 
+    ["relation-types", "preview"].forEach((item) => {
+      loadedSectionsRef.current.delete(sectionCacheKey(networkId, item as KnowledgeNetworkWorkspaceSection));
+    });
     setRelationTypes(await listKnowledgeNetworkRelationTypes(networkId));
+    loadedSectionsRef.current.add(sectionCacheKey(networkId, "relation-types"));
   }, [networkId]);
 
   const reloadActionTypes = useCallback(async () => {
@@ -133,7 +221,9 @@ export function useWorkspaceData(networkId: string) {
       return;
     }
 
+    loadedSectionsRef.current.delete(sectionCacheKey(networkId, "action-types"));
     setActionTypes(await listKnowledgeNetworkActionTypes(networkId));
+    loadedSectionsRef.current.add(sectionCacheKey(networkId, "action-types"));
   }, [networkId]);
 
   const reloadMetrics = useCallback(async () => {
@@ -141,8 +231,10 @@ export function useWorkspaceData(networkId: string) {
       return;
     }
 
+    loadedSectionsRef.current.delete(sectionCacheKey(networkId, "metrics"));
     setMetrics(await listKnowledgeNetworkMetrics(networkId));
     setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
+    loadedSectionsRef.current.add(sectionCacheKey(networkId, "metrics"));
   }, [networkId]);
 
   const reloadTasks = useCallback(async () => {
@@ -150,22 +242,25 @@ export function useWorkspaceData(networkId: string) {
       return;
     }
 
+    loadedSectionsRef.current.delete(sectionCacheKey(networkId, "tasks"));
     setTasks(await listKnowledgeNetworkTasks(networkId));
+    loadedSectionsRef.current.add(sectionCacheKey(networkId, "tasks"));
   }, [networkId]);
 
   return {
     actionTypes,
     conceptGroups,
     detail,
+    detailError,
+    detailLoading,
     integrateMetrics: integrateWorkspaceMetrics,
     integrateTasks: integrateWorkspaceTasks,
-    loadError,
-    loading,
+    loadError: detailError,
+    loading: sectionLoading,
     loadWorkspaceData,
     metricApiUnavailable,
     metrics,
     objectTypes,
-    previewGraph,
     recentObjects,
     relationTypes,
     reloadActionTypes,
@@ -174,6 +269,8 @@ export function useWorkspaceData(networkId: string) {
     reloadObjectTypes,
     reloadRelationTypes,
     reloadTasks,
+    sectionError,
+    sectionLoading,
     tasks,
   };
 }

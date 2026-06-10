@@ -4,8 +4,14 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
+import {
+  buildGroupedConditionFieldOptions,
+  findConditionProperty,
+  getConditionOperationLabelKey,
+  getConditionOperationsForFieldType,
+  resolveConditionOperation,
+} from "@/modules/knowledge-network/constants/action-type-condition";
 import { RelationTypeObjectTypeSelect } from "@/modules/knowledge-network/components/relation-type/RelationTypeObjectTypeSelect";
-import { RelationTypePropertySelect } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type {
   ActionTypeCondition,
@@ -40,31 +46,33 @@ function ConditionRow({
 }: ConditionRowProps) {
   const { t } = useTranslation();
 
+  const selectableObjectTypes = useMemo(() => {
+    if (!boundObjectTypeId) {
+      return objectTypes;
+    }
+
+    return objectTypes.filter((item) => item.id === boundObjectTypeId);
+  }, [boundObjectTypeId, objectTypes]);
+
+  const objectTypeId = value.objectTypeId || boundObjectTypeId;
+  const selectedProperty = findConditionProperty(propertyOptions, value.field);
+  const fieldType = selectedProperty?.type;
+  const fieldOptions = useMemo(
+    () => buildGroupedConditionFieldOptions(propertyOptions),
+    [propertyOptions],
+  );
+
   const operationOptions = useMemo(
     () =>
-      (
-        [
-          "==",
-          "!=",
-          ">",
-          ">=",
-          "<",
-          "<=",
-          "in",
-          "not_in",
-          "exist",
-          "not_exist",
-        ] as ActionTypeConditionOperation[]
-      ).map((operation) => ({
-        label: t(`knowledgeNetwork.actionTypeConditionOperation_${operation}`),
+      getConditionOperationsForFieldType(fieldType).map((operation) => ({
+        label: t(getConditionOperationLabelKey(operation)),
         value: operation,
       })),
-    [t],
+    [fieldType, t],
   );
 
   const currentOperation = value.operation;
   const needsValue = currentOperation ? !VALUELESS_OPERATIONS.has(currentOperation) : true;
-  const objectTypeId = value.objectTypeId || boundObjectTypeId;
 
   const updateRow = (patch: Partial<ActionTypeCondition>) => {
     onChange({
@@ -85,12 +93,14 @@ function ConditionRow({
     <div className={styles.conditionRow}>
       <div className={styles.objectTypeSelect}>
         <RelationTypeObjectTypeSelect
-          allowClear
-          objectTypes={objectTypes}
+          allowClear={!boundObjectTypeId}
+          disabled={Boolean(boundObjectTypeId)}
+          objectTypes={selectableObjectTypes}
           onChange={(nextObjectTypeId) => {
             updateRow({
               field: undefined,
               objectTypeId: nextObjectTypeId,
+              operation: undefined,
               value: undefined,
             });
           }}
@@ -99,26 +109,35 @@ function ConditionRow({
         />
       </div>
       <div className={styles.fieldSelect}>
-        <RelationTypePropertySelect
+        <Select
           allowClear
           disabled={!objectTypeId}
-          fields={propertyOptions}
           onChange={(nextField) => {
-            updateRow({ field: nextField ?? undefined });
+            const property = findConditionProperty(propertyOptions, nextField ?? undefined);
+            updateRow({
+              field: nextField ?? undefined,
+              operation: resolveConditionOperation(property?.type, value.operation),
+              value: undefined,
+            });
           }}
+          options={fieldOptions}
           placeholder={t("knowledgeNetwork.actionTypeConditionFieldPlaceholder")}
+          showSearch
           value={value.field}
         />
       </div>
       <Select<ActionTypeConditionOperation>
         allowClear
         className={styles.operationSelect}
-        disabled={!objectTypeId}
+        disabled={!objectTypeId || !value.field}
         onChange={(nextOperation) => {
-          updateRow({ operation: nextOperation ?? undefined });
+          updateRow({
+            operation: resolveConditionOperation(fieldType, nextOperation ?? undefined),
+            value: undefined,
+          });
         }}
         options={operationOptions}
-        placeholder={t("knowledgeNetwork.pleaseSelect")}
+        placeholder={t("knowledgeNetwork.actionTypeConditionOperationPlaceholder")}
         value={currentOperation}
       />
       <Select
@@ -203,7 +222,10 @@ export function ActionTypeConditionEditor({
   const handleAddRow = () => {
     updateRoot({
       ...rootCondition,
-      subConditions: [...subConditions, { objectTypeId: rootCondition.objectTypeId || boundObjectTypeId, valueFrom: "const" }],
+      subConditions: [
+        ...subConditions,
+        { objectTypeId: rootCondition.objectTypeId || boundObjectTypeId, valueFrom: "const" },
+      ],
     });
   };
 

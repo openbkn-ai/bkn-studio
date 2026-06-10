@@ -169,6 +169,7 @@ async function fetchToolboxList(
   const response = await http.get<BackendToolboxListResponse>(path, {
     headers: getBusinessDomainHeaders(),
     params: {
+      all: query.all || undefined,
       page: query.page,
       page_size: query.pageSize,
       name: query.keyword || undefined,
@@ -224,7 +225,7 @@ export async function getToolboxMarket(boxId: string): Promise<ToolboxRecord> {
 
   const response = await http.get<BackendToolboxInfo>(
     `${API_PREFIX}/tool-box/market/${boxId}`,
-    { headers: getBusinessDomainHeaders() },
+    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
   );
 
   return mapToolbox(response.data);

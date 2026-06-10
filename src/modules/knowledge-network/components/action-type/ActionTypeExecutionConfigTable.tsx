@@ -3,7 +3,7 @@ import type { TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getActionSourceDisplayName } from "@/modules/knowledge-network/components/action-type/execution-utils";
+import { getActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
 import { FieldTypeIcon } from "@/modules/knowledge-network/components/object-type/data-attribute/FieldTypeIcon";
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {

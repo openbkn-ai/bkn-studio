@@ -1,48 +1,84 @@
-import { Card, Empty } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { Empty, Spin } from "antd";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
-import type { KnowledgeNetworkPreviewGraph } from "@/modules/knowledge-network/types/knowledge-network";
+import { AppButton } from "@/framework/ui/common/AppButton";
+import { KnowledgeNetworkPreviewCanvas } from "@/modules/knowledge-network/components/preview/KnowledgeNetworkPreviewCanvas";
+import type {
+  KnowledgeNetworkObjectTypeRecord,
+  KnowledgeNetworkRelationTypeRecord,
+} from "@/modules/knowledge-network/types/knowledge-network";
+import { buildModelingPreviewGraph } from "@/modules/knowledge-network/utils/build-modeling-preview-graph";
 
-import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
+import styles from "./WorkspacePreviewSection.module.css";
 
 type WorkspacePreviewSectionProps = {
-  previewGraph: KnowledgeNetworkPreviewGraph;
+  loading?: boolean;
+  networkId: string;
+  objectTypes: KnowledgeNetworkObjectTypeRecord[];
+  relationTypes: KnowledgeNetworkRelationTypeRecord[];
 };
 
-export function WorkspacePreviewSection({ previewGraph }: WorkspacePreviewSectionProps) {
+export function WorkspacePreviewSection({
+  loading = false,
+  networkId,
+  objectTypes,
+  relationTypes,
+}: WorkspacePreviewSectionProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const previewGraph = useMemo(
+    () => buildModelingPreviewGraph(objectTypes, relationTypes),
+    [objectTypes, relationTypes],
+  );
 
   return (
-    <div className={styles.sectionGrid}>
-      <Card className={styles.panel} title={t("knowledgeNetwork.previewCanvas")}>
-        {previewGraph.nodes.length === 0 ? (
-          <Empty description={t("knowledgeNetwork.previewEmpty")} />
+    <section className={styles.previewSection}>
+      <div className={styles.previewHeader}>
+        <div className={styles.previewHeading}>
+          <h2 className={styles.previewTitle}>{t("knowledgeNetwork.workspacePreviewModeling")}</h2>
+          <p className={styles.previewDescription}>{t("knowledgeNetwork.previewDescription")}</p>
+        </div>
+        {previewGraph.nodes.length > 0 ? (
+          <div className={styles.previewStats}>
+            <span className={styles.previewStatItem}>
+              <span className={styles.previewStatDot} />
+              {t("knowledgeNetwork.previewNodeCount", { count: previewGraph.nodes.length })}
+            </span>
+            <span className={styles.previewStatItem}>
+              <span className={`${styles.previewStatDot} ${styles.previewStatDotEdge}`} />
+              {t("knowledgeNetwork.previewEdgeCount", { count: previewGraph.edges.length })}
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      <Spin spinning={loading} wrapperClassName={styles.previewSpinWrap}>
+        {previewGraph.nodes.length === 0 && !loading ? (
+          <div className={styles.emptyPanel}>
+            <Empty description={t("knowledgeNetwork.previewEmpty")}>
+              <AppButton
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/object-types/create`,
+                  );
+                }}
+                type="primary"
+              >
+                {t("knowledgeNetwork.previewCreateObjectType")}
+              </AppButton>
+            </Empty>
+          </div>
         ) : (
-          <div className={styles.previewCanvas}>
-            <div className={styles.previewNodes}>
-              {previewGraph.nodes.map((node) => (
-                <div className={styles.previewNode} key={node.id}>
-                  <span
-                    className={styles.previewNodeDot}
-                    style={{ backgroundColor: node.color }}
-                  />
-                  <span>{node.name}</span>
-                </div>
-              ))}
-            </div>
-            <div className={styles.previewEdges}>
-              {previewGraph.edges.map((edge) => (
-                <div className={styles.previewEdge} key={edge.id}>
-                  <strong>{edge.name || t("knowledgeNetwork.defaultEdgeName")}</strong>
-                  <span>
-                    {edge.sourceId} -&gt; {edge.targetId}
-                  </span>
-                </div>
-              ))}
-            </div>
+          <div className={styles.previewCanvasWrap}>
+            <KnowledgeNetworkPreviewCanvas graph={previewGraph} />
           </div>
         )}
-      </Card>
-    </div>
+      </Spin>
+    </section>
   );
 }

@@ -72,6 +72,35 @@ const MOCK_TOOL_BOXES: ActionTypeToolBox[] = [
     ],
   },
   {
+    boxId: "box-data-agent-config",
+    boxName: "DataAgent配置相关工具",
+    description: "获取 agent 配置详情",
+    tools: [
+      {
+        parameters: [{ name: "agent_id", required: true, type: "string" }],
+        toolId: "get_agent_config",
+        toolName: "获取 Agent 配置",
+      },
+    ],
+  },
+  {
+    boxId: "box-memory",
+    boxName: "记忆管理",
+    description: "包含 记忆构建&召回 两个工具",
+    tools: [
+      {
+        parameters: [{ name: "content", required: true, type: "string" }],
+        toolId: "memory_build",
+        toolName: "记忆构建",
+      },
+      {
+        parameters: [{ name: "query", required: true, type: "string" }],
+        toolId: "memory_recall",
+        toolName: "记忆召回",
+      },
+    ],
+  },
+  {
     boxId: "box-risk",
     boxName: "Risk Tools",
     description: "风险域行动工具箱",

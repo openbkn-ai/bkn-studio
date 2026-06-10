@@ -25,6 +25,7 @@ import {
   listKnowledgeNetworkTags,
   updateKnowledgeNetwork,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { logServiceFallback } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
   KnowledgeNetworkMutationPayload,
   KnowledgeNetworkRecord,
@@ -92,7 +93,8 @@ export function KnowledgeNetworkListScene({
     try {
       const tagResult = await listKnowledgeNetworkTags();
       setTags(tagResult);
-    } catch {
+    } catch (error) {
+      logServiceFallback("KnowledgeNetworkListScene.loadTags", error);
       setTags([]);
     }
   }, []);

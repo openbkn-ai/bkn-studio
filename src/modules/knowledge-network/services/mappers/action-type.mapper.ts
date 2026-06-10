@@ -17,7 +17,7 @@ import { formatTimestamp } from "@/modules/knowledge-network/services/shared/run
 import {
   createDefaultActionTypeExecutionConfig,
   getActionSourceDisplayName,
-} from "@/modules/knowledge-network/components/action-type/execution-utils";
+} from "@/modules/knowledge-network/utils/action-type-execution";
 
 export type BackendActionCondition = {
   field?: string;
@@ -127,7 +127,7 @@ function toBackendActionSource(
   }
 
   if (actionSource.type === "mcp") {
-    return actionSource.mcpId || actionSource.toolName
+    return actionSource.mcpId && actionSource.toolName
       ? {
           mcp_id: actionSource.mcpId,
           tool_name: actionSource.toolName,
@@ -136,11 +136,10 @@ function toBackendActionSource(
       : undefined;
   }
 
-  return actionSource.boxId || actionSource.toolId || actionSource.toolName
+  return actionSource.boxId && actionSource.toolId
     ? {
         box_id: actionSource.boxId,
         tool_id: actionSource.toolId,
-        tool_name: actionSource.toolName,
         type: "tool",
       }
     : undefined;
@@ -150,12 +149,24 @@ function toBackendActionParameters(
   parameters?: ActionTypeExecutionParameter[],
 ): BackendActionParameter[] | undefined {
   const nextParameters = (parameters ?? [])
-    .filter((item) => item.name.trim() && item.sourcePropertyName)
-    .map((item) => ({
-      name: item.name.trim(),
-      value: item.sourcePropertyName,
-      value_from: "property" as const,
-    }));
+    .map((item) => {
+      const valueFrom = item.valueFrom ?? "input";
+      const value =
+        valueFrom === "property"
+          ? item.value ?? item.sourcePropertyName ?? ""
+          : item.value;
+
+      return {
+        name: item.name.trim(),
+        value: valueFrom === "input" ? undefined : value,
+        value_from: valueFrom,
+      };
+    })
+    .filter(
+      (item) =>
+        item.name.length > 0 &&
+        (item.value_from === "input" || Boolean(item.value?.trim())),
+    );
 
   return nextParameters.length > 0 ? nextParameters : undefined;
 }
@@ -232,9 +243,9 @@ export function mapActionTypeExecutionConfigFromBackend(
     .filter((entry) => entry.name)
     .map((entry) => ({
       name: entry.name,
-      sourcePropertyName:
-        entry.value_from === "property" ? entry.value ?? "" : entry.value ?? "",
-      valueFrom: "property" as const,
+      sourcePropertyName: entry.value_from === "property" ? entry.value ?? "" : "",
+      value: entry.value,
+      valueFrom: entry.value_from ?? "input",
     }));
 
   const sourceName = getActionSourceDisplayName(actionSource);
@@ -245,7 +256,7 @@ export function mapActionTypeExecutionConfigFromBackend(
 
   return {
     actionSource,
-    parameters: parameters.length > 0 ? parameters : [{ name: "", sourcePropertyName: "" }],
+    parameters,
     sourceName,
     sourceType: actionSource?.type ?? "tool",
   };

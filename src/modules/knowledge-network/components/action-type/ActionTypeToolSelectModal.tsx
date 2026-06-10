@@ -1,12 +1,14 @@
 import { RightOutlined, SearchOutlined, ToolOutlined } from "@ant-design/icons";
 import { Input, Modal, Spin, Tabs } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   buildActionSourceFromCatalogSelection,
   listActionTypeExecutionFactoryCatalog,
+  loadActionTypeMcpServerTools,
+  loadActionTypeToolBoxTools,
   type ActionTypeCatalogSelection,
   type ActionTypeExecutionFactoryCatalog,
 } from "@/modules/knowledge-network/services/action-type-tool.service";
@@ -78,10 +80,66 @@ export function ActionTypeToolSelectModal({
     mcpServers: [],
     toolBoxes: [],
   });
+  const catalogRef = useRef(catalog);
+  catalogRef.current = catalog;
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const [loadingGroupKeys, setLoadingGroupKeys] = useState<string[]>([]);
+  const loadedGroupKeysRef = useRef(new Set<string>());
+  const loadingGroupKeysRef = useRef(new Set<string>());
   const [selectedSelection, setSelectedSelection] = useState<ActionTypeCatalogSelection | null>(
     null,
   );
+
+  const ensureGroupToolsLoaded = useCallback(async (groupKey: string) => {
+    if (loadedGroupKeysRef.current.has(groupKey) || loadingGroupKeysRef.current.has(groupKey)) {
+      return;
+    }
+
+    const isToolGroup = groupKey.startsWith("group:tool:");
+    const resourceId = groupKey.replace(/^group:(tool|mcp):/, "");
+
+    const hasCachedTools = isToolGroup
+      ? catalogRef.current.toolBoxes.some(
+          (box) => box.boxId === resourceId && box.tools.length > 0,
+        )
+      : catalogRef.current.mcpServers.some(
+          (server) => server.mcpId === resourceId && server.tools.length > 0,
+        );
+
+    if (hasCachedTools) {
+      loadedGroupKeysRef.current.add(groupKey);
+      return;
+    }
+
+    loadingGroupKeysRef.current.add(groupKey);
+    setLoadingGroupKeys((prev) => [...prev, groupKey]);
+
+    try {
+      const tools = isToolGroup
+        ? await loadActionTypeToolBoxTools(resourceId)
+        : await loadActionTypeMcpServerTools(resourceId);
+
+      setCatalog((prev) => ({
+        ...prev,
+        mcpServers: isToolGroup
+          ? prev.mcpServers
+          : prev.mcpServers.map((server) =>
+              server.mcpId === resourceId ? { ...server, tools } : server,
+            ),
+        toolBoxes: isToolGroup
+          ? prev.toolBoxes.map((box) =>
+              box.boxId === resourceId ? { ...box, tools } : box,
+            )
+          : prev.toolBoxes,
+      }));
+      if (tools.length > 0) {
+        loadedGroupKeysRef.current.add(groupKey);
+      }
+    } finally {
+      loadingGroupKeysRef.current.delete(groupKey);
+      setLoadingGroupKeys((prev) => prev.filter((item) => item !== groupKey));
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -93,15 +151,36 @@ export function ActionTypeToolSelectModal({
       try {
         const nextCatalog = await listActionTypeExecutionFactoryCatalog(keyword);
         setCatalog(nextCatalog);
+        loadedGroupKeysRef.current = new Set();
+        loadingGroupKeysRef.current = new Set();
+        nextCatalog.toolBoxes.forEach((box) => {
+          if (box.tools.length > 0) {
+            loadedGroupKeysRef.current.add(`group:tool:${box.boxId}`);
+          }
+        });
+        nextCatalog.mcpServers.forEach((server) => {
+          if (server.tools.length > 0) {
+            loadedGroupKeysRef.current.add(`group:mcp:${server.mcpId}`);
+          }
+        });
         const initialSelection = buildSelectionFromValue(nextCatalog, value);
         setSelectedSelection(initialSelection);
         setActiveTab(value?.type === "mcp" ? "mcp" : "tool");
         if (initialSelection) {
-          setExpandedKeys([
+          const initialGroupKey =
             initialSelection.kind === "mcp"
               ? `group:mcp:${initialSelection.mcpId}`
-              : `group:tool:${initialSelection.boxId}`,
-          ]);
+              : `group:tool:${initialSelection.boxId}`;
+          setExpandedKeys([initialGroupKey]);
+          if (
+            initialSelection.kind === "mcp"
+              ? !nextCatalog.mcpServers.find((item) => item.mcpId === initialSelection.mcpId)
+                  ?.tools.length
+              : !nextCatalog.toolBoxes.find((item) => item.boxId === initialSelection.boxId)
+                  ?.tools.length
+          ) {
+            await ensureGroupToolsLoaded(initialGroupKey);
+          }
         } else {
           setExpandedKeys([]);
         }
@@ -111,7 +190,7 @@ export function ActionTypeToolSelectModal({
     };
 
     void loadCatalog();
-  }, [keyword, open, value]);
+  }, [ensureGroupToolsLoaded, keyword, open, value]);
 
   const selectedKey = useMemo(
     () => (selectedSelection ? buildSelectionKey(selectedSelection) : null),
@@ -119,9 +198,14 @@ export function ActionTypeToolSelectModal({
   );
 
   const toggleExpand = (groupKey: string) => {
+    const willExpand = !expandedKeys.includes(groupKey);
     setExpandedKeys((prev) =>
-      prev.includes(groupKey) ? prev.filter((item) => item !== groupKey) : [...prev, groupKey],
+      willExpand ? [...prev, groupKey] : prev.filter((item) => item !== groupKey),
     );
+
+    if (willExpand) {
+      void ensureGroupToolsLoaded(groupKey);
+    }
   };
 
   const renderToolBoxes = () => {
@@ -160,8 +244,15 @@ export function ActionTypeToolSelectModal({
               ) : null}
             </div>
           </div>
-          {expanded
-            ? box.tools.map((tool) => {
+          {expanded ? (
+            loadingGroupKeys.includes(groupKey) ? (
+              <div className={styles.loadingState}>
+                <Spin size="small" />
+              </div>
+            ) : box.tools.length === 0 ? (
+              <div className={styles.emptyState}>{t("knowledgeNetwork.actionTypeToolCatalogEmpty")}</div>
+            ) : (
+              box.tools.map((tool) => {
                 const toolKey = `tool:${box.boxId}:${tool.toolId}`;
                 const selected = selectedKey === toolKey;
 
@@ -204,7 +295,8 @@ export function ActionTypeToolSelectModal({
                   </div>
                 );
               })
-            : null}
+            )
+          ) : null}
         </div>
       );
     });
@@ -246,8 +338,15 @@ export function ActionTypeToolSelectModal({
               ) : null}
             </div>
           </div>
-          {expanded
-            ? server.tools.map((tool) => {
+          {expanded ? (
+            loadingGroupKeys.includes(groupKey) ? (
+              <div className={styles.loadingState}>
+                <Spin size="small" />
+              </div>
+            ) : server.tools.length === 0 ? (
+              <div className={styles.emptyState}>{t("knowledgeNetwork.actionTypeMcpCatalogEmpty")}</div>
+            ) : (
+              server.tools.map((tool) => {
                 const toolKey = `mcp:${server.mcpId}:${tool.toolId}`;
                 const selected = selectedKey === toolKey;
 
@@ -290,7 +389,8 @@ export function ActionTypeToolSelectModal({
                   </div>
                 );
               })
-            : null}
+            )
+          ) : null}
         </div>
       );
     });

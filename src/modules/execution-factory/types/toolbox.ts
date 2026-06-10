@@ -31,6 +31,7 @@ export type ToolboxRecord = {
 };
 
 export type ToolboxListQuery = {
+  all?: boolean;
   page: number;
   pageSize: number;
   keyword?: string;

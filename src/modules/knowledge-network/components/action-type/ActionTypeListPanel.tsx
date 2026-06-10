@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
+import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import type {
   KnowledgeNetworkActionTypeKind,
   KnowledgeNetworkActionTypeRecord,
@@ -409,10 +410,7 @@ export function ActionTypeListPanel({
               }}
               options={[
                 { label: t("common.all"), value: "all" },
-                { label: t("knowledgeNetwork.actionTypeKindCreate"), value: "create" },
-                { label: t("knowledgeNetwork.actionTypeKindUpdate"), value: "update" },
-                { label: t("knowledgeNetwork.actionTypeKindDelete"), value: "delete" },
-                { label: t("knowledgeNetwork.actionTypeKindNotify"), value: "notify" },
+                ...buildActionTypeKindSelectOptions(t),
               ]}
               value={actionKindFilter}
             />

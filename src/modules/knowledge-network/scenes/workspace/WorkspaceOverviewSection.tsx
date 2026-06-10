@@ -6,7 +6,7 @@ import {
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Empty, Table, Tag } from "antd";
+import { Empty, Spin, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,8 +23,10 @@ import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
 
 type WorkspaceOverviewSectionProps = {
   detail: KnowledgeNetworkRecord | null;
+  detailLoading?: boolean;
   networkId: string;
   onEdit: () => void;
+  recentLoading?: boolean;
   recentObjects: KnowledgeNetworkRecentObject[];
 };
 
@@ -34,8 +36,10 @@ function formatOverviewCount(value?: number) {
 
 export function WorkspaceOverviewSection({
   detail,
+  detailLoading = false,
   networkId,
   onEdit,
+  recentLoading = false,
   recentObjects,
 }: WorkspaceOverviewSectionProps) {
   const { t } = useTranslation();
@@ -98,6 +102,7 @@ export function WorkspaceOverviewSection({
 
   return (
     <div className={styles.overviewBox}>
+      <Spin spinning={detailLoading}>
       <div className={styles.overviewHeaderCard}>
         <div className={styles.overviewHeaderTitle}>
           <div className={styles.overviewHeaderTitleLeft}>
@@ -213,6 +218,7 @@ export function WorkspaceOverviewSection({
           </AppButton>
         </div>
       </div>
+      </Spin>
 
       <div className={styles.overviewContentCard}>
         <h3 className={styles.overviewContentTitle}>
@@ -222,6 +228,7 @@ export function WorkspaceOverviewSection({
           <Table<KnowledgeNetworkRecentObject>
             columns={recentObjectColumns}
             dataSource={recentObjects}
+            loading={recentLoading}
             locale={{
               emptyText: (
                 <Empty

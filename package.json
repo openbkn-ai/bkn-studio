@@ -9,12 +9,13 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "lint:types": "eslint . --config eslint.config.typechecked.js",
     "test": "vitest",
     "test:execution-factory": "vitest run src/modules/execution-factory",
     "test:execution-factory:e2e": "npm run test:full --prefix tests/e2e",
     "test:execution-factory:e2e:operator": "npm run test:operator --prefix tests/e2e",
     "test:execution-factory:agent-at": "echo Run Agent AT from tests/execution-factory/agent-at — see LOCAL_SETUP.md",
-    "check": "npm run lint && npm run test -- --run && npm run build"
+    "check": "npm run lint:types && npm run test -- --run && npm run build"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",

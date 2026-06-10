@@ -149,6 +149,7 @@ async function fetchMcpList(
   const response = await http.get<BackendMcpListResponse>(path, {
     headers: getBusinessDomainHeaders(),
     params: {
+      all: query.all || undefined,
       page: query.page,
       page_size: query.pageSize,
       name: query.keyword || undefined,
@@ -406,7 +407,17 @@ export async function deleteMcp(mcpId: string): Promise<void> {
   });
 }
 
-export async function listMcpTools(mcpId: string): Promise<McpProxyTool[]> {
+type McpToolsQuery = {
+  all?: boolean;
+  page?: number;
+  pageSize?: number;
+  status?: "enabled" | "disabled";
+};
+
+export async function listMcpTools(
+  mcpId: string,
+  query: McpToolsQuery = {},
+): Promise<McpProxyTool[]> {
   if (useMock) {
     return [
       { name: "search", description: "Search documents in the connected MCP server." },
@@ -418,6 +429,13 @@ export async function listMcpTools(mcpId: string): Promise<McpProxyTool[]> {
     tools?: Array<{ description?: string; name?: string }>;
   }>(`${API_PREFIX}/mcp/proxy/${mcpId}/tools`, {
     headers: getBusinessDomainHeaders(),
+    params: {
+      all: query.all || undefined,
+      page: query.page ?? 1,
+      page_size: query.pageSize ?? 100,
+      status: query.status,
+    },
+    skipErrorToast: true,
   });
 
   return (response.data.tools ?? []).map((tool) => ({

@@ -13,10 +13,7 @@ import {
   validateRelationTypeMappingValues,
   type RelationTypeMappingFormValues,
 } from "@/modules/knowledge-network/components/relation-type/mapping-utils";
-import {
-  DEFAULT_RESOURCE_COLOR,
-  ResourceColorSelect,
-} from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
+import { DEFAULT_RESOURCE_COLOR } from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
 import { ResourceFormStepsShell } from "@/modules/knowledge-network/components/shared/ResourceFormStepsShell";
 import {
   ResourceTagsSelect,
@@ -181,7 +178,7 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       const values = await basicForm.validateFields();
       const nextBasic: BasicFormValues = {
         ...values,
-        color: values.color || DEFAULT_RESOURCE_COLOR,
+        color: basicValue?.color ?? DEFAULT_RESOURCE_COLOR,
       };
       setBasicValue(nextBasic);
       if (mode === "edit") {
@@ -323,7 +320,6 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
             colon={false}
             form={basicForm}
             initialValues={{
-              color: DEFAULT_RESOURCE_COLOR,
               description: "",
               name: "",
               tags: [],
@@ -363,9 +359,6 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
               ]}
             >
               <Input disabled={mode === "edit"} />
-            </Form.Item>
-            <Form.Item label={t("knowledgeNetwork.color")} name="color">
-              <ResourceColorSelect inModal={false} />
             </Form.Item>
             <Form.Item
               label={t("common.tag")}

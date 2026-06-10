@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { listKnowledgeNetworkTags } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { logServiceFallback } from "@/modules/knowledge-network/services/shared/runtime";
 
 const TAG_PATTERN = /^[^/:?\\"<>|：?""？！《》,#[]{}%&*$^!=.'']*$/;
 
@@ -26,7 +27,8 @@ export function ResourceTagsSelect({
       try {
         const tags = await listKnowledgeNetworkTags();
         setTagOptions(tags);
-      } catch {
+      } catch (error) {
+        logServiceFallback("ResourceTagsSelect.loadTags", error);
         setTagOptions([]);
       }
     };

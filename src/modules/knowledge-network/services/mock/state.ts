@@ -1,7 +1,7 @@
 import {
   cloneActionTypeExecutionConfig,
   createDefaultActionTypeExecutionConfig,
-} from "@/modules/knowledge-network/components/action-type/execution-utils";
+} from "@/modules/knowledge-network/utils/action-type-execution";
 import type {
   ActionTypeAffect,
   ActionTypeCondition,
@@ -13,7 +13,6 @@ import type {
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkMetricRecord,
   KnowledgeNetworkObjectTypeRecord,
-  KnowledgeNetworkPreviewGraph,
   KnowledgeNetworkRecentObject,
   KnowledgeNetworkRecord,
   KnowledgeNetworkRelationTypeRecord,
@@ -245,44 +244,6 @@ export const mockConceptGroups: Record<string, ConceptGroupDetail[]> = {
       actionTypes: [],
     },
   ],
-};
-
-export const mockPreviewGraphs: Record<string, KnowledgeNetworkPreviewGraph> = {
-  "kn-domain-risk": {
-    nodes: [
-      { id: "risk-order", name: "风险订单", color: "#1677ff" },
-      { id: "risk-device", name: "风险设备", color: "#722ed1" },
-      { id: "risk-strategy", name: "风控策略", color: "#fa8c16" },
-      { id: "risk-action", name: "处置行动", color: "#52c41a" },
-    ],
-    edges: [
-      { id: "edge-1", name: "命中", sourceId: "risk-order", targetId: "risk-strategy" },
-      { id: "edge-2", name: "关联", sourceId: "risk-device", targetId: "risk-order" },
-      { id: "edge-3", name: "触发", sourceId: "risk-strategy", targetId: "risk-action" },
-    ],
-  },
-  "kn-domain-supply": {
-    nodes: [
-      { id: "supplier", name: "供应商", color: "#13c2c2" },
-      { id: "warehouse", name: "仓库", color: "#36cfc9" },
-      { id: "fulfillment", name: "履约任务", color: "#08979c" },
-    ],
-    edges: [
-      { id: "edge-supply-1", name: "服务", sourceId: "supplier", targetId: "warehouse" },
-      { id: "edge-supply-2", name: "承接", sourceId: "warehouse", targetId: "fulfillment" },
-    ],
-  },
-  "kn-domain-customer": {
-    nodes: [
-      { id: "customer", name: "客户", color: "#52c41a" },
-      { id: "segment", name: "人群分层", color: "#95de64" },
-      { id: "campaign", name: "营销行动", color: "#389e0d" },
-    ],
-    edges: [
-      { id: "edge-customer-1", name: "归属", sourceId: "customer", targetId: "segment" },
-      { id: "edge-customer-2", name: "触达", sourceId: "segment", targetId: "campaign" },
-    ],
-  },
 };
 
 export const mockObjectTypes: Record<string, KnowledgeNetworkObjectTypeRecord[]> = {

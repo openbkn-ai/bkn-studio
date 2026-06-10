@@ -4,13 +4,11 @@ import { shellZhCN } from "@/app/locales/resources/shell/zh-CN";
 import { dataConnectZhCN } from "@/modules/data-connect/locales/zh-CN";
 import { executionFactoryZhCN } from "@/modules/execution-factory/locales/zh-CN";
 import { knowledgeNetworkZhCN } from "@/modules/knowledge-network/locales/zh-CN";
-import { starterZhCN } from "@/modules/starter/locales/zh-CN";
 
 export const zhCN = {
   ...commonZhCN,
   ...appZhCN,
   ...shellZhCN,
-  ...starterZhCN,
   ...dataConnectZhCN,
   ...knowledgeNetworkZhCN,
   ...executionFactoryZhCN,

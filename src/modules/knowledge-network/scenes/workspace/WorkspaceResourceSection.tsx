@@ -43,7 +43,7 @@ export function WorkspaceResourceSection({
       return (
         <ConceptGroupListPanel
           items={data.conceptGroups}
-          loading={data.loading}
+          loading={data.sectionLoading}
           networkId={networkId}
           onDelete={async (records) => {
             await Promise.all(
@@ -64,7 +64,7 @@ export function WorkspaceResourceSection({
       return (
         <ObjectTypeListPanel
           items={data.objectTypes}
-          loading={data.loading}
+          loading={data.sectionLoading}
           networkId={networkId}
           onDelete={async (records) => {
             await Promise.all(
@@ -85,7 +85,7 @@ export function WorkspaceResourceSection({
       return (
         <RelationTypeListPanel
           items={data.relationTypes}
-          loading={data.loading}
+          loading={data.sectionLoading}
           networkId={networkId}
           objectTypes={data.objectTypes}
           onDelete={async (records) => {
@@ -107,7 +107,7 @@ export function WorkspaceResourceSection({
       return (
         <ActionTypeListPanel
           items={data.actionTypes}
-          loading={data.loading}
+          loading={data.sectionLoading}
           networkId={networkId}
           objectTypes={data.objectTypes}
           onDelete={async (records) => {
@@ -128,7 +128,7 @@ export function WorkspaceResourceSection({
     case "metrics":
       return (
         <MetricListPanel
-          loading={data.loading}
+          loading={data.sectionLoading}
           metrics={data.metrics}
           networkId={networkId}
           onDelete={async (metricId) => {

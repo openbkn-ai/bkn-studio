@@ -1,13 +1,82 @@
 import { http } from "@/framework/request/http";
+import { listMcpMarket, listMcpTools } from "@/modules/execution-factory/services/mcp.service";
+import { getToolDetail, listTools } from "@/modules/execution-factory/services/tool.service";
+import {
+  getToolboxMarket,
+  listToolboxMarket,
+} from "@/modules/execution-factory/services/toolbox.service";
+import type { ToolRecord } from "@/modules/execution-factory/types/tool";
 
-import type { MockActionTool } from "@/modules/knowledge-network/components/action-type/execution-utils";
+import type { MockActionTool } from "@/modules/knowledge-network/types/action-type-tool";
 import type { ActionTypeActionSource } from "@/modules/knowledge-network/types/knowledge-network";
 import {
   findCatalogTool,
   flattenCatalogTools,
   MOCK_EXECUTION_FACTORY_CATALOG,
 } from "@/modules/knowledge-network/services/mock/action-type-tool-catalog";
-import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
+import {
+  AGENT_OPERATOR_API_PREFIX,
+  AGENT_OPERATOR_PAGE_SIZE,
+  getAgentOperatorHeaders,
+} from "@/modules/knowledge-network/services/shared/agent-operator-client";
+import {
+  logServiceFallback,
+  useMock,
+  wait,
+} from "@/modules/knowledge-network/services/shared/runtime";
+import {
+  getInputParamsFromToolOpenAPISpec,
+  type ActionTypeToolInputParam,
+} from "@/modules/knowledge-network/utils/tool-input-params";
+
+/** Backend validates PageSize with a max tag; Vega uses 100. */
+const CATALOG_PAGE_SIZE = AGENT_OPERATOR_PAGE_SIZE;
+
+type MarketSearchToolBox = {
+  box_desc?: string;
+  box_id?: string;
+  box_name?: string;
+  tools?: Array<{
+    description?: string;
+    name?: string;
+    status?: string;
+    tool_id?: string;
+  }>;
+};
+
+type MarketToolboxDetailEntry = {
+  box_id?: string;
+  box_name?: string;
+  tools?: Array<{
+    description?: string;
+    name?: string;
+    tool_id?: string;
+    use_rule?: string;
+  }>;
+};
+
+function mapCatalogToolsFromRecords(
+  tools:
+    | Array<Pick<ToolRecord, "description" | "name" | "status" | "toolId" | "useRule">>
+    | undefined,
+): ActionTypeCatalogTool[] {
+  return (tools ?? [])
+    .map((tool) => {
+      const toolId = tool.toolId || tool.name;
+      const toolName = tool.name || tool.toolId;
+      if (!toolId || !toolName) {
+        return null;
+      }
+
+      return {
+        description: tool.description ?? tool.useRule,
+        parameters: [],
+        toolId,
+        toolName,
+      };
+    })
+    .filter((tool): tool is ActionTypeCatalogTool => Boolean(tool));
+}
 
 export type ActionTypeCatalogTool = {
   description?: string;
@@ -49,158 +118,6 @@ export type ActionTypeCatalogSelection =
       tool: ActionTypeCatalogTool;
     };
 
-type BackendCatalogTool = {
-  comment?: string;
-  description?: string;
-  id?: string;
-  name?: string;
-  parameters?: Array<{ name: string; required?: boolean; type?: string }>;
-  tool_id?: string;
-  tool_name?: string;
-};
-
-type BackendToolBox = {
-  comment?: string;
-  description?: string;
-  id?: string;
-  name?: string;
-  tools?: BackendCatalogTool[];
-};
-
-type BackendMcpServer = {
-  comment?: string;
-  description?: string;
-  id?: string;
-  mcp_id?: string;
-  mcp_name?: string;
-  name?: string;
-  tools?: BackendCatalogTool[];
-};
-
-type BackendExecutionFactoryCatalog = {
-  mcp_servers?: BackendMcpServer[];
-  tool_boxes?: BackendToolBox[];
-};
-
-type LegacyToolBoxMarketListItem = {
-  box_desc?: string;
-  box_id?: string;
-  box_name?: string;
-  tools?: string[];
-};
-
-type LegacyToolBoxMarketListResponse = {
-  data?: LegacyToolBoxMarketListItem[];
-};
-
-type LegacyToolSchema = {
-  properties?: Record<string, { type?: string }>;
-  required?: string[];
-};
-
-type LegacyToolMetadata = {
-  api_spec?: {
-    components?: {
-      schemas?: Record<string, LegacyToolSchema>;
-    };
-    request_body?: {
-      content?: Record<
-        string,
-        {
-          schema?: LegacyToolSchema & {
-            $ref?: string;
-          };
-        }
-      >;
-    };
-  };
-};
-
-type LegacyToolEntry = {
-  description?: string;
-  metadata?: LegacyToolMetadata;
-  name?: string;
-  tool_id?: string;
-  use_rule?: string;
-};
-
-type LegacyToolBoxDetailItem = {
-  box_desc?: string;
-  box_id?: string;
-  box_name?: string;
-  tools?: LegacyToolEntry[];
-};
-
-function mapBackendCatalogTool(entry: BackendCatalogTool): ActionTypeCatalogTool | null {
-  const toolId = entry.tool_id ?? entry.id;
-  const toolName = entry.tool_name ?? entry.name;
-  if (!toolId || !toolName) {
-    return null;
-  }
-
-  return {
-    description: entry.description ?? entry.comment,
-    parameters: (entry.parameters ?? []).map((item) => ({
-      name: item.name,
-      required: item.required,
-      type: item.type,
-    })),
-    toolId,
-    toolName,
-  };
-}
-
-function mapBackendToolBox(entry: BackendToolBox): ActionTypeToolBox | null {
-  const boxId = entry.id;
-  const boxName = entry.name;
-  if (!boxId || !boxName) {
-    return null;
-  }
-
-  const tools = (entry.tools ?? [])
-    .map(mapBackendCatalogTool)
-    .filter((item): item is ActionTypeCatalogTool => Boolean(item));
-
-  return {
-    boxId,
-    boxName,
-    description: entry.description ?? entry.comment,
-    tools,
-  };
-}
-
-function mapBackendMcpServer(entry: BackendMcpServer): ActionTypeMcpServer | null {
-  const mcpId = entry.mcp_id ?? entry.id;
-  const mcpName = entry.mcp_name ?? entry.name;
-  if (!mcpId || !mcpName) {
-    return null;
-  }
-
-  const tools = (entry.tools ?? [])
-    .map(mapBackendCatalogTool)
-    .filter((item): item is ActionTypeCatalogTool => Boolean(item));
-
-  return {
-    description: entry.description ?? entry.comment,
-    mcpId,
-    mcpName,
-    tools,
-  };
-}
-
-function mapBackendExecutionFactoryCatalog(
-  payload: BackendExecutionFactoryCatalog,
-): ActionTypeExecutionFactoryCatalog {
-  return {
-    mcpServers: (payload.mcp_servers ?? [])
-      .map(mapBackendMcpServer)
-      .filter((item): item is ActionTypeMcpServer => Boolean(item)),
-    toolBoxes: (payload.tool_boxes ?? [])
-      .map(mapBackendToolBox)
-      .filter((item): item is ActionTypeToolBox => Boolean(item)),
-  };
-}
-
 function filterCatalogByKeyword(
   catalog: ActionTypeExecutionFactoryCatalog,
   keyword: string,
@@ -237,142 +154,378 @@ function filterCatalogByKeyword(
   };
 }
 
-function resolveLegacyToolSchema(tool: LegacyToolEntry): LegacyToolSchema | null {
-  const content = tool.metadata?.api_spec?.request_body?.content;
-  const schema = content?.["application/json"]?.schema;
-  if (!schema) {
-    return null;
-  }
-
-  if (schema.properties) {
-    return schema;
-  }
-
-  const schemaRef = schema.$ref?.split("/").pop();
-  if (!schemaRef) {
-    return null;
-  }
-
-  return tool.metadata?.api_spec?.components?.schemas?.[schemaRef] ?? null;
-}
-
-function mapLegacyToolEntry(entry: LegacyToolEntry): ActionTypeCatalogTool | null {
-  if (!entry.tool_id || !entry.name) {
-    return null;
-  }
-
-  const schema = resolveLegacyToolSchema(entry);
-  const required = new Set(schema?.required ?? []);
-  const parameters = Object.entries(schema?.properties ?? {}).map(([name, value]) => ({
-    name,
-    required: required.has(name),
-    type: value.type,
-  }));
-
-  return {
-    description: entry.description ?? entry.use_rule,
-    parameters,
-    toolId: entry.tool_id,
-    toolName: entry.name,
-  };
-}
-
-function mapLegacyToolBoxDetail(entry: LegacyToolBoxDetailItem): ActionTypeToolBox | null {
-  if (!entry.box_id || !entry.box_name) {
-    return null;
-  }
-
-  const tools = (entry.tools ?? [])
-    .map(mapLegacyToolEntry)
-    .filter((item): item is ActionTypeCatalogTool => Boolean(item));
-
-  if (tools.length === 0) {
-    return null;
-  }
-
-  return {
-    boxId: entry.box_id,
-    boxName: entry.box_name,
-    description: entry.box_desc,
-    tools,
-  };
-}
-
-async function fetchLegacyToolBoxCatalog(
-  keyword: string,
-): Promise<ActionTypeExecutionFactoryCatalog> {
-  const response = await http.get<LegacyToolBoxMarketListResponse>(
-    "/agent-operator-integration/v1/tool-box/market",
+async function fetchMarketToolboxDetailTools(boxId: string): Promise<ActionTypeCatalogTool[]> {
+  const response = await http.get<MarketToolboxDetailEntry[] | MarketToolboxDetailEntry>(
+    `${AGENT_OPERATOR_API_PREFIX}/tool-box/market/${boxId}/box_name,tools`,
     {
-      params: {
-        limit: 200,
-        offset: 0,
-      },
+      headers: getAgentOperatorHeaders(),
+      skipErrorToast: true,
     },
   );
 
-  const filteredBoxes = (response.data.data ?? []).filter((item) => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-    if (!normalizedKeyword) {
-      return true;
-    }
+  const detail = Array.isArray(response.data) ? response.data[0] : response.data;
 
-    const values = [item.box_name, item.box_desc, ...(item.tools ?? [])];
-    return values.some((value) => value?.toLowerCase().includes(normalizedKeyword));
-  });
+  return (detail?.tools ?? [])
+    .filter((tool) => tool.tool_id)
+    .map((tool) => ({
+      description: tool.description ?? tool.use_rule,
+      parameters: [],
+      toolId: tool.tool_id!,
+      toolName: tool.name ?? tool.tool_id!,
+    }));
+}
 
-  const detailResponses = await Promise.allSettled(
-    filteredBoxes
-      .filter((item): item is LegacyToolBoxMarketListItem & { box_id: string } =>
-        typeof item.box_id === "string" && item.box_id.trim().length > 0,
-      )
-      .map((item) =>
-        http.get<LegacyToolBoxDetailItem[]>(
-          `/agent-operator-integration/v1/tool-box/market/${item.box_id}/box_name,tools`,
-        ),
-      ),
+async function searchMarketToolBoxes(keyword: string): Promise<ActionTypeToolBox[]> {
+  const response = await http.get<{ data?: MarketSearchToolBox[] }>(
+    `${AGENT_OPERATOR_API_PREFIX}/tool-box/market/tools`,
+    {
+      headers: getAgentOperatorHeaders(),
+      params: {
+        all: true,
+        sort_by: "create_time",
+        sort_order: "desc",
+        status: "enabled",
+        tool_name: keyword.trim(),
+      },
+      skipErrorToast: true,
+    },
   );
 
+  return (response.data.data ?? [])
+    .map((box) => {
+      if (!box.box_id || !box.box_name) {
+        return null;
+      }
+
+      const tools = (box.tools ?? [])
+        .filter((tool) => tool.tool_id)
+        .map((tool) => ({
+          description: tool.description,
+          parameters: [],
+          toolId: tool.tool_id!,
+          toolName: tool.name ?? tool.tool_id!,
+        }));
+
+      return {
+        boxId: box.box_id,
+        boxName: box.box_name,
+        description: box.box_desc,
+        tools,
+      } satisfies ActionTypeToolBox;
+    })
+    .filter((item): item is ActionTypeToolBox => Boolean(item));
+}
+
+async function fetchAgentOperatorCatalog(
+  keyword = "",
+): Promise<ActionTypeExecutionFactoryCatalog> {
+  const normalizedKeyword = keyword.trim();
+
+  if (normalizedKeyword) {
+    const [toolBoxes, mcpResult] = await Promise.all([
+      searchMarketToolBoxes(normalizedKeyword),
+      listMcpMarket({
+        all: true,
+        page: 1,
+        pageSize: CATALOG_PAGE_SIZE,
+        keyword: normalizedKeyword,
+      }),
+    ]);
+
+    return {
+      mcpServers: mcpResult.items.map((server) => ({
+        description: server.description,
+        mcpId: server.mcpId,
+        mcpName: server.name,
+        tools: [],
+      })),
+      toolBoxes,
+    };
+  }
+
+  const [toolboxResult, mcpResult] = await Promise.all([
+    listToolboxMarket({
+      all: true,
+      page: 1,
+      pageSize: CATALOG_PAGE_SIZE,
+    }),
+    listMcpMarket({
+      all: true,
+      page: 1,
+      pageSize: CATALOG_PAGE_SIZE,
+    }),
+  ]);
+
   return {
-    mcpServers: [],
-    toolBoxes: detailResponses
-      .flatMap((result) =>
-        result.status === "fulfilled" ? result.value.data.map(mapLegacyToolBoxDetail) : [],
-      )
-      .filter((item): item is ActionTypeToolBox => Boolean(item)),
+    mcpServers: mcpResult.items.map((server) => ({
+      description: server.description,
+      mcpId: server.mcpId,
+      mcpName: server.name,
+      tools: [],
+    })),
+    // Match Vega: market list only returns toolboxes; tools load on expand.
+    toolBoxes: toolboxResult.items.map((box) => ({
+      boxId: box.boxId,
+      boxName: box.name,
+      description: box.description,
+      tools: [],
+    })),
   };
+}
+
+function getMockToolBoxTools(boxId: string) {
+  return (
+    MOCK_EXECUTION_FACTORY_CATALOG.toolBoxes.find((item) => item.boxId === boxId)?.tools ?? []
+  );
+}
+
+function getMockMcpServerTools(mcpId: string) {
+  return (
+    MOCK_EXECUTION_FACTORY_CATALOG.mcpServers.find((item) => item.mcpId === mcpId)?.tools ?? []
+  );
+}
+
+export async function loadActionTypeToolBoxTools(
+  boxId: string,
+): Promise<ActionTypeCatalogTool[]> {
+  if (useMock) {
+    return getMockToolBoxTools(boxId);
+  }
+
+  const loaders: Array<() => Promise<ActionTypeCatalogTool[]>> = [
+    async () => {
+      const toolsResult = await listTools(boxId, {
+        all: true,
+        page: 1,
+        pageSize: CATALOG_PAGE_SIZE,
+        status: "enabled",
+      });
+      return mapCatalogToolsFromRecords(toolsResult.items);
+    },
+    async () => {
+      const toolsResult = await listTools(boxId, {
+        all: true,
+        page: 1,
+        pageSize: CATALOG_PAGE_SIZE,
+      });
+      return mapCatalogToolsFromRecords(toolsResult.items);
+    },
+    () => fetchMarketToolboxDetailTools(boxId),
+    async () => {
+      const marketToolbox = await getToolboxMarket(boxId);
+      return mapCatalogToolsFromRecords(marketToolbox.tools);
+    },
+  ];
+
+  for (const [index, load] of loaders.entries()) {
+    try {
+      const tools = await load();
+      if (tools.length > 0) {
+        return tools;
+      }
+    } catch (error) {
+      logServiceFallback("loadActionTypeToolBoxTools", error, `loader=${index} boxId=${boxId}`);
+    }
+  }
+
+  return [];
+}
+
+export async function loadActionTypeMcpServerTools(
+  mcpId: string,
+): Promise<ActionTypeCatalogTool[]> {
+  if (useMock) {
+    return getMockMcpServerTools(mcpId);
+  }
+
+  try {
+    const mcpTools = await listMcpTools(mcpId, {
+      all: true,
+      page: 1,
+      pageSize: CATALOG_PAGE_SIZE,
+      status: "enabled",
+    });
+
+    return mcpTools.map((tool) => ({
+      description: tool.description,
+      parameters: [],
+      toolId: tool.name,
+      toolName: tool.name,
+    }));
+  } catch (error) {
+    logServiceFallback("loadActionTypeMcpServerTools", error, `mcpId=${mcpId}`);
+    return [];
+  }
+}
+
+function resolveMockCatalog(keyword: string) {
+  return wait(filterCatalogByKeyword(MOCK_EXECUTION_FACTORY_CATALOG, keyword));
 }
 
 export async function listActionTypeExecutionFactoryCatalog(
   keyword = "",
 ): Promise<ActionTypeExecutionFactoryCatalog> {
   if (useMock) {
-    return wait(filterCatalogByKeyword(MOCK_EXECUTION_FACTORY_CATALOG, keyword));
+    return resolveMockCatalog(keyword);
   }
 
   try {
-    const response = await http.get<BackendExecutionFactoryCatalog>(
-      "/bkn-backend/v1/execution-factory/catalog",
-      {
-        params: {
-          keyword: keyword.trim() || undefined,
-          limit: 200,
-          offset: 0,
-        },
-      },
-    );
+    const catalog = await fetchAgentOperatorCatalog(keyword);
+    return filterCatalogByKeyword(catalog, keyword);
+  } catch (error) {
+    logServiceFallback("listActionTypeExecutionFactoryCatalog", error, `keyword=${keyword}`);
+    return {
+      mcpServers: [],
+      toolBoxes: [],
+    };
+  }
+}
 
-    return filterCatalogByKeyword(mapBackendExecutionFactoryCatalog(response.data), keyword);
-  } catch {
-    try {
-      return filterCatalogByKeyword(await fetchLegacyToolBoxCatalog(keyword), keyword);
-    } catch {
-      return {
-        mcpServers: [],
-        toolBoxes: [],
+function mapFlatCatalogParameters(
+  parameters: Array<{ name: string; required?: boolean; type?: string }>,
+): ActionTypeToolInputParam[] {
+  return parameters.map((item) => ({
+    description: undefined,
+    key: item.name,
+    name: item.name,
+    required: item.required,
+    source: "Body",
+    type: item.type ?? "string",
+  }));
+}
+
+async function fetchMcpToolInputSchema(
+  mcpId: string,
+  toolName: string,
+): Promise<ActionTypeToolInputParam[]> {
+  const response = await http.get<{
+    tools?: Array<{
+      description?: string;
+      inputSchema?: {
+        properties?: Record<
+          string,
+          {
+            description?: string;
+            properties?: Record<string, unknown>;
+            required?: string[];
+            type?: string;
+          }
+        >;
+        required?: string[];
+        type?: string;
       };
+      name?: string;
+    }>;
+  }>(`${AGENT_OPERATOR_API_PREFIX}/mcp/proxy/${mcpId}/tools`, {
+    headers: getAgentOperatorHeaders(),
+    params: {
+      all: true,
+      page: 1,
+      page_size: 100,
+      status: "enabled",
+    },
+    skipErrorToast: true,
+  });
+
+  const tool = (response.data.tools ?? []).find((item) => item.name === toolName);
+  const properties = tool?.inputSchema?.properties;
+  if (!properties) {
+    return [];
+  }
+
+  return Object.keys(properties)
+    .sort((left, right) => left.localeCompare(right))
+    .map((name) => {
+      const property = properties[name];
+      const children = property.properties
+        ? Object.keys(property.properties)
+            .sort((left, right) => left.localeCompare(right))
+            .map((childName) => {
+              const child = property.properties?.[childName] as
+                | { description?: string; type?: string }
+                | undefined;
+
+              return {
+                name: childName,
+                key: `${name}.${childName}`,
+                type: child?.type ?? "string",
+                description: child?.description,
+                source: "Body",
+              };
+            })
+        : undefined;
+
+      return {
+        name,
+        key: name,
+        type: property.type ?? "object",
+        description: property.description ?? tool?.description,
+        source: "Body",
+        children,
+      };
+    });
+}
+
+export async function resolveActionTypeToolInputSchema(
+  actionSource: ActionTypeActionSource,
+): Promise<ActionTypeToolInputParam[]> {
+  const mockParameters = findCatalogTool(MOCK_EXECUTION_FACTORY_CATALOG, actionSource)?.parameters;
+
+  if (useMock) {
+    return mapFlatCatalogParameters(mockParameters ?? []);
+  }
+
+  if (actionSource.type === "tool" && actionSource.boxId && actionSource.toolId) {
+    try {
+      const detail = await getToolDetail(actionSource.boxId, actionSource.toolId);
+      const schema = getInputParamsFromToolOpenAPISpec(detail.apiSpec);
+      if (schema.length > 0) {
+        return schema;
+      }
+    } catch (error) {
+      logServiceFallback(
+        "resolveActionTypeToolInputSchema.toolDetail",
+        error,
+        `boxId=${actionSource.boxId} toolId=${actionSource.toolId}`,
+      );
+      return mapFlatCatalogParameters(mockParameters ?? []);
     }
   }
+
+  if (actionSource.type === "mcp" && actionSource.mcpId && actionSource.toolName) {
+    try {
+      const schema = await fetchMcpToolInputSchema(actionSource.mcpId, actionSource.toolName);
+      if (schema.length > 0) {
+        return schema;
+      }
+    } catch (error) {
+      logServiceFallback(
+        "resolveActionTypeToolInputSchema.mcpProxy",
+        error,
+        `mcpId=${actionSource.mcpId} toolName=${actionSource.toolName}`,
+      );
+      return mapFlatCatalogParameters(mockParameters ?? []);
+    }
+  }
+
+  return mapFlatCatalogParameters(mockParameters ?? []);
+}
+
+export async function resolveActionTypeToolParameters(
+  actionSource: ActionTypeActionSource,
+  fallback: Array<{ name: string; required?: boolean; type?: string }> = [],
+): Promise<Array<{ name: string; required?: boolean; type?: string }>> {
+  const schema = await resolveActionTypeToolInputSchema(actionSource);
+
+  if (schema.length > 0) {
+    return schema.map((item) => ({
+      name: item.key,
+      required: item.required,
+      type: item.type,
+    }));
+  }
+
+  return fallback;
 }
 
 export function buildActionSourceFromCatalogSelection(

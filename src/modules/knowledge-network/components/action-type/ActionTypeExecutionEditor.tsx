@@ -1,20 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { resolveActionTypeToolInputSchema } from "@/modules/knowledge-network/services/action-type-tool.service";
 import type {
   ActionTypeExecutionConfig,
   ActionTypeExecutionParameter,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import type { ActionTypeToolInputParam } from "@/modules/knowledge-network/utils/tool-input-params";
+import { mergeExecutionParametersWithSchema } from "@/modules/knowledge-network/utils/tool-params-table-state";
 
-import { ActionTypeParameterMappingTable } from "./ActionTypeParameterMappingTable";
 import { ActionTypeSourcePicker } from "./ActionTypeSourcePicker";
-import {
-  buildParametersFromMockTool,
-  buildMockToolFromSelection,
-  findMockActionTool,
-  getActionSourceDisplayName,
-} from "./execution-utils";
+import { ActionTypeToolParamsTable } from "./ActionTypeToolParamsTable";
+import { getActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
 
 import styles from "./ActionTypeExecutionEditor.module.css";
 
@@ -23,7 +21,7 @@ export {
   createDefaultActionTypeExecutionConfig,
   normalizeActionTypeExecutionConfig,
   validateActionTypeExecutionConfig,
-} from "./execution-utils";
+} from "@/modules/knowledge-network/utils/action-type-execution";
 
 type ActionTypeExecutionEditorProps = {
   networkId: string;
@@ -32,6 +30,22 @@ type ActionTypeExecutionEditorProps = {
   onChange: (value: ActionTypeExecutionConfig) => void;
 };
 
+function buildActionSourceKey(actionSource?: ActionTypeExecutionConfig["actionSource"]) {
+  if (!actionSource) {
+    return "";
+  }
+
+  if (actionSource.type === "mcp") {
+    return actionSource.mcpId && actionSource.toolName
+      ? `mcp:${actionSource.mcpId}:${actionSource.toolName}`
+      : "";
+  }
+
+  return actionSource.boxId && actionSource.toolId
+    ? `tool:${actionSource.boxId}:${actionSource.toolId}`
+    : "";
+}
+
 export function ActionTypeExecutionEditor({
   networkId,
   objectTypeId,
@@ -39,6 +53,11 @@ export function ActionTypeExecutionEditor({
   onChange,
 }: ActionTypeExecutionEditorProps) {
   const { t } = useTranslation();
+  const valueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+  const loadedSourceKeyRef = useRef("");
+  const [inputSchema, setInputSchema] = useState<ActionTypeToolInputParam[]>([]);
+  const [schemaLoading, setSchemaLoading] = useState(false);
   const [propertyOptions, setPropertyOptions] = useState<
     Array<{
       comment?: string;
@@ -49,6 +68,14 @@ export function ActionTypeExecutionEditor({
       value: string;
     }>
   >([]);
+
+  valueRef.current = value;
+  onChangeRef.current = onChange;
+
+  const sourceKey = useMemo(
+    () => buildActionSourceKey(value.actionSource),
+    [value.actionSource],
+  );
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -73,19 +100,44 @@ export function ActionTypeExecutionEditor({
     void loadProperties();
   }, [networkId, objectTypeId]);
 
+  useEffect(() => {
+    if (!sourceKey || !value.actionSource) {
+      loadedSourceKeyRef.current = "";
+      setInputSchema([]);
+      return;
+    }
+
+    if (loadedSourceKeyRef.current === sourceKey) {
+      return;
+    }
+
+    const loadSchema = async () => {
+      setSchemaLoading(true);
+      try {
+        const schema = await resolveActionTypeToolInputSchema(value.actionSource!);
+        loadedSourceKeyRef.current = sourceKey;
+        setInputSchema(schema);
+        onChangeRef.current({
+          ...valueRef.current,
+          parameters: mergeExecutionParametersWithSchema(
+            schema,
+            valueRef.current.parameters,
+          ),
+        });
+      } finally {
+        setSchemaLoading(false);
+      }
+    };
+
+    void loadSchema();
+  }, [sourceKey, value.actionSource]);
+
   const hasSource = Boolean(getActionSourceDisplayName(value.actionSource) || value.sourceName.trim());
 
-  const mockTool = useMemo(() => findMockActionTool(value.actionSource), [value.actionSource]);
-
-  const parameterTypeByName = useMemo(
-    () =>
-      Object.fromEntries(
-        (mockTool?.parameters ?? []).map((item) => [item.name, item.type ?? "string"]),
-      ),
-    [mockTool],
-  );
-
   const handleSourceChange = (nextSource: ActionTypeExecutionConfig["actionSource"]) => {
+    loadedSourceKeyRef.current = "";
+    setInputSchema([]);
+
     if (!nextSource) {
       onChange({
         ...value,
@@ -96,27 +148,22 @@ export function ActionTypeExecutionEditor({
       return;
     }
 
-    const nextMockTool = findMockActionTool(nextSource);
-    const nextParameters = nextMockTool ? buildParametersFromMockTool(nextMockTool) : [];
-
     onChange({
       ...value,
       actionSource: nextSource,
-      parameters: nextParameters,
+      parameters: [],
       sourceName: getActionSourceDisplayName(nextSource),
       sourceType: nextSource.type ?? value.sourceType,
     });
   };
 
-  const handleSourceSelected = (
-    nextSource: NonNullable<ActionTypeExecutionConfig["actionSource"]>,
-    parameters: Array<{ name: string; required?: boolean; type?: string }>,
-  ) => {
-    const mockTool = buildMockToolFromSelection(nextSource, parameters);
+  const handleSourceSelected = (nextSource: NonNullable<ActionTypeExecutionConfig["actionSource"]>) => {
+    loadedSourceKeyRef.current = "";
+    setInputSchema([]);
     onChange({
       ...value,
       actionSource: nextSource,
-      parameters: buildParametersFromMockTool(mockTool),
+      parameters: [],
       sourceName: getActionSourceDisplayName(nextSource),
       sourceType: nextSource.type,
     });
@@ -140,11 +187,12 @@ export function ActionTypeExecutionEditor({
         />
       </div>
 
-      <ActionTypeParameterMappingTable
+      <ActionTypeToolParamsTable
         hasSource={hasSource}
+        inputSchema={inputSchema}
+        loading={schemaLoading}
         objectTypeId={objectTypeId}
         onChange={handleParametersChange}
-        parameterTypeByName={parameterTypeByName}
         parameters={value.parameters}
         propertyOptions={propertyOptions}
       />

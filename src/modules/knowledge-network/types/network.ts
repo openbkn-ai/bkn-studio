@@ -56,6 +56,7 @@ export type KnowledgeNetworkRecentObject = {
 
 export type KnowledgeNetworkPreviewNode = {
   color: string;
+  icon?: string;
   id: string;
   name: string;
 };

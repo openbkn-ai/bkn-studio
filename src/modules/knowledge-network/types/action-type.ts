@@ -46,10 +46,16 @@ export type ActionTypeActionSource = {
   type: ActionTypeSourceKind;
 };
 
+export type ActionTypeExecutionParameterValueFrom = "const" | "input" | "property";
+
 export type ActionTypeExecutionParameter = {
+  description?: string;
   name: string;
-  sourcePropertyName: string;
-  valueFrom?: "property";
+  source?: string;
+  sourcePropertyName?: string;
+  type?: string;
+  value?: string;
+  valueFrom?: ActionTypeExecutionParameterValueFrom;
 };
 
 export type ActionTypeExecutionConfig = {

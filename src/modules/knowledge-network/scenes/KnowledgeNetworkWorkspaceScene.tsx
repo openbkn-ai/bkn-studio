@@ -1,17 +1,15 @@
 import {
   ApiOutlined,
-  AppstoreOutlined,
   ApartmentOutlined,
   ClusterOutlined,
   ClockCircleOutlined,
   DatabaseOutlined,
-  EyeOutlined,
   FileTextOutlined,
   LeftOutlined,
   LineChartOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
-import { Alert, Spin } from "antd";
+import { Alert } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -61,9 +59,19 @@ export function KnowledgeNetworkWorkspaceScene({
   const { message } = useAppServices();
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
-  const workspaceData = useWorkspaceData(activeNetworkId);
-  const { detail, loadError, loading, loadWorkspaceData, metrics, previewGraph, recentObjects } =
-    workspaceData;
+  const workspaceData = useWorkspaceData(activeNetworkId, section);
+  const {
+    detail,
+    detailError,
+    detailLoading,
+    loadWorkspaceData,
+    metrics,
+    objectTypes,
+    recentObjects,
+    relationTypes,
+    sectionError,
+    sectionLoading,
+  } = workspaceData;
 
   useEffect(() => {
     if (
@@ -136,6 +144,9 @@ export function KnowledgeNetworkWorkspaceScene({
     return items;
   }, [detail, metrics.length, t]);
 
+  const primaryNavItems = navigationItems.filter(
+    (item) => item.key === "overview" || item.key === "preview",
+  );
   const resourceNavItems = navigationItems.filter(
     (item) =>
       item.key === "object-types" ||
@@ -180,15 +191,24 @@ export function KnowledgeNetworkWorkspaceScene({
       return (
         <WorkspaceOverviewSection
           detail={detail}
+          detailLoading={detailLoading}
           networkId={activeNetworkId}
           onEdit={() => setNetworkFormOpen(true)}
+          recentLoading={sectionLoading}
           recentObjects={recentObjects}
         />
       );
     }
 
     if (section === "preview") {
-      return <WorkspacePreviewSection previewGraph={previewGraph} />;
+      return (
+        <WorkspacePreviewSection
+          loading={sectionLoading}
+          networkId={activeNetworkId}
+          objectTypes={objectTypes}
+          relationTypes={relationTypes}
+        />
+      );
     }
 
     return (
@@ -232,34 +252,7 @@ export function KnowledgeNetworkWorkspaceScene({
 
       <div className={styles.workspaceLayout}>
         <aside className={styles.workspaceSide}>
-          <button
-            className={section === "overview" ? styles.sideItemActive : styles.sideItem}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${activeNetworkId}/overview`,
-              );
-            }}
-            type="button"
-          >
-            <span className={styles.sideItemMeta}>
-              <AppstoreOutlined />
-              <span>{t("knowledgeNetwork.workspaceOverviewShort")}</span>
-            </span>
-          </button>
-          <button
-            className={section === "preview" ? styles.sideItemActive : styles.sideItem}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${activeNetworkId}/preview`,
-              );
-            }}
-            type="button"
-          >
-            <span className={styles.sideItemMeta}>
-              <EyeOutlined />
-              <span>{t("knowledgeNetwork.workspacePreviewModeling")}</span>
-            </span>
-          </button>
+          {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
           <div className={styles.sideDivider} />
           <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceResources")}</div>
           {resourceNavItems.map((item) => renderSideNavItem(item))}
@@ -274,16 +267,29 @@ export function KnowledgeNetworkWorkspaceScene({
               : styles.workspaceContent
           }
         >
-          {loadError ? (
-            <Alert message={loadError} showIcon type="error" />
-          ) : loading ? (
-            <div className={styles.loadingState}>
-              <Spin />
-            </div>
-          ) : section === "overview" ? (
+          {detailError ? (
+            <Alert className={styles.workspaceAlert} message={detailError} showIcon type="error" />
+          ) : null}
+          {sectionError ? (
+            <Alert
+              className={styles.workspaceAlert}
+              message={sectionError}
+              showIcon
+              type="warning"
+            />
+          ) : null}
+          {section === "overview" ? (
             renderSectionContent()
           ) : (
-            <div className={styles.workspaceSectionPage}>{renderSectionContent()}</div>
+            <div
+              className={
+                section === "preview"
+                  ? `${styles.workspaceSectionPage} ${styles.workspacePreviewPage}`
+                  : styles.workspaceSectionPage
+              }
+            >
+              {renderSectionContent()}
+            </div>
           )}
         </main>
       </div>

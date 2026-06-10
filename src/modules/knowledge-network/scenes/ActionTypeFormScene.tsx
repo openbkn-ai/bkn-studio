@@ -12,7 +12,7 @@ import {
   validateActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
-import { normalizeActionTypeCondition } from "@/modules/knowledge-network/components/action-type/execution-utils";
+import { normalizeActionTypeCondition } from "@/modules/knowledge-network/utils/action-type-execution";
 import { RelationTypeObjectTypeSelect } from "@/modules/knowledge-network/components/relation-type/RelationTypeObjectTypeSelect";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import {
@@ -24,6 +24,7 @@ import {
   ResourceTagsSelect,
   validateKnowledgeNetworkTags,
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
+import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import {
   createKnowledgeNetworkActionType,
   getKnowledgeNetworkActionTypeDetail,
@@ -403,24 +404,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                   ]}
                 >
                   <Select
-                    options={[
-                      {
-                        label: t("knowledgeNetwork.actionTypeKindCreate"),
-                        value: "create",
-                      },
-                      {
-                        label: t("knowledgeNetwork.actionTypeKindUpdate"),
-                        value: "update",
-                      },
-                      {
-                        label: t("knowledgeNetwork.actionTypeKindDelete"),
-                        value: "delete",
-                      },
-                      {
-                        label: t("knowledgeNetwork.actionTypeKindNotify"),
-                        value: "notify",
-                      },
-                    ]}
+                    options={buildActionTypeKindSelectOptions(t)}
                     placeholder={t("knowledgeNetwork.pleaseSelect")}
                   />
                 </Form.Item>

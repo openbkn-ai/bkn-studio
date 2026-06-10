@@ -58,6 +58,7 @@ export type ToolRecord = {
 };
 
 export type ToolListQuery = {
+  all?: boolean;
   page: number;
   pageSize: number;
   keyword?: string;
@@ -91,6 +92,7 @@ export type ToolEditInput = {
 };
 
 export type ToolDetail = ToolRecord & {
+  apiSpec?: unknown;
   openapiSpec?: string;
   functionInput?: FunctionInputPayload;
   ioSpec?: ToolIoSpec;

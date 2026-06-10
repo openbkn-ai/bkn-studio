@@ -63,6 +63,12 @@ export const networkPart = {
     previewDescription:
       "Preview graph nodes and the relationships between them.",
     previewEmpty: "There are no graph nodes to display yet.",
+    previewCreateObjectType: "Create object type",
+    previewEdgeCount: "{{count}} relations",
+    previewFitView: "Fit to view",
+    previewNodeCount: "{{count}} object types",
+    previewZoomIn: "Zoom in",
+    previewZoomOut: "Zoom out",
     recentlyModifiedObjectTypes: "Recently modified object types",
     resourcePageExit: "Exit",
     searchPlaceholder: "Search name/ID",

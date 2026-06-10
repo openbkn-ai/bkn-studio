@@ -1,3 +1,4 @@
+import { getRuntimeConfig } from "@/framework/runtime/config";
 import type {
   KnowledgeNetworkListQuery,
   KnowledgeNetworkRecord,
@@ -50,8 +51,9 @@ export function formatTimestamp(value?: number) {
   }
 
   const timestamp = value < 1_000_000_000_000 ? value * 1000 : value;
+  const locale = getRuntimeConfig().locale;
 
-  return new Intl.DateTimeFormat("zh-CN", {
+  const formatted = new Intl.DateTimeFormat(locale, {
     hour12: false,
     year: "numeric",
     month: "2-digit",
@@ -59,21 +61,51 @@ export function formatTimestamp(value?: number) {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-  })
-    .format(timestamp)
-    .replace(/\//g, "-");
+  }).format(timestamp);
+
+  if (locale === "zh-CN") {
+    return formatted.replace(/\//g, "-");
+  }
+
+  return formatted.replace(",", "");
+}
+
+export function getRequestErrorStatus(error: unknown): number | undefined {
+  return (error as { response?: { status?: number } }).response?.status;
+}
+
+function formatServiceFallbackReason(error: unknown): string {
+  const status = getRequestErrorStatus(error);
+  const message =
+    error instanceof Error ? error.message : typeof error === "string" ? error : "";
+
+  return [status ? `status=${status}` : null, message].filter(Boolean).join(" · ");
+}
+
+/** Dev-only breadcrumb when a service intentionally degrades instead of throwing. */
+export function logServiceFallback(scope: string, error: unknown, detail?: string): void {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+
+  const parts = [formatServiceFallbackReason(error), detail].filter(Boolean).join(" · ");
+  console.debug(`[knowledge-network] ${scope} fallback${parts ? `: ${parts}` : ""}`);
 }
 
 export async function withServiceFallback<T>(
   promise: Promise<T>,
   fallback: T,
   ignoredStatuses: number[] = [],
+  scope?: string,
 ): Promise<T> {
   try {
     return await promise;
   } catch (error) {
-    const status = (error as { response?: { status?: number } }).response?.status;
+    const status = getRequestErrorStatus(error);
     if (status && ignoredStatuses.includes(status)) {
+      if (scope) {
+        logServiceFallback(scope, error);
+      }
       return fallback;
     }
 

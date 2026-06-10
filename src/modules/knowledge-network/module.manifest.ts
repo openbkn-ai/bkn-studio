@@ -17,7 +17,6 @@ export const knowledgeNetworkModuleManifest = {
     "bkn-backend/knowledge-networks",
     "bkn-backend/concept-groups",
     "bkn-backend/object-types",
-    "ontology-query/subgraph",
   ],
   scenes: [
     {

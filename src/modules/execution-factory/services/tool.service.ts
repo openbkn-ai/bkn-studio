@@ -54,6 +54,13 @@ type BackendToolInfo = {
 
 type BackendToolListResponse = {
   box_id?: string;
+  data?: {
+    box_id?: string;
+    page?: number;
+    page_size?: number;
+    tools?: BackendToolInfo[];
+    total?: number;
+  };
   page?: number;
   page_size?: number;
   tools?: BackendToolInfo[];
@@ -169,8 +176,11 @@ function serializeToolGlobalParameter(globalParameters?: ToolGlobalParameter) {
 }
 
 function mapToolDetail(item: BackendToolInfo): ToolDetail {
+  const metadata = item.metadata as { api_spec?: unknown } | undefined;
+
   return {
     ...mapTool(item),
+    apiSpec: metadata?.api_spec,
     openapiSpec: serializeOpenApiSpec(item.metadata),
     functionInput: mapFunctionContent(item.metadata),
     ioSpec: parseToolIoSpec(item.metadata as Parameters<typeof parseToolIoSpec>[0]),
@@ -251,6 +261,8 @@ export async function listTools(
     {
       headers: getBusinessDomainHeaders(),
       params: {
+        all: query.all || undefined,
+        box_id: boxId,
         page: query.page,
         page_size: query.pageSize,
         name: query.keyword || undefined,
@@ -258,17 +270,18 @@ export async function listTools(
         sort_by: "update_time",
         sort_order: "desc",
       },
+      skipErrorToast: true,
     },
   );
 
-  const data = response.data;
+  const payload = response.data.data ?? response.data;
 
   return {
-    boxId: data.box_id ?? boxId,
-    items: (data.tools ?? []).map(mapTool),
-    total: data.total ?? 0,
-    page: data.page ?? query.page,
-    pageSize: data.page_size ?? query.pageSize,
+    boxId: payload.box_id ?? boxId,
+    items: (payload.tools ?? []).map(mapTool),
+    total: payload.total ?? 0,
+    page: payload.page ?? query.page,
+    pageSize: payload.page_size ?? query.pageSize,
   };
 }
 

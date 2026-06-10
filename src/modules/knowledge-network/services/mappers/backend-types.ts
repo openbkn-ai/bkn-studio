@@ -233,39 +233,6 @@ export type BackendListResponse<T> = {
   total_count: number;
 };
 
-export type BackendSubgraphResponse = {
-  edges?: Array<{
-    id?: string;
-    name?: string;
-    source?: string;
-    source_id?: string;
-    source_object_type_id?: string;
-    target?: string;
-    target_id?: string;
-    target_object_type_id?: string;
-  }>;
-  nodes?: Array<{
-    color?: string;
-    id?: string;
-    name?: string;
-  }>;
-  objects?: Array<{
-    color?: string;
-    id?: string;
-    name?: string;
-  }>;
-  relations?: Array<{
-    id?: string;
-    name?: string;
-    source?: string;
-    source_id?: string;
-    source_object_type_id?: string;
-    target?: string;
-    target_id?: string;
-    target_object_type_id?: string;
-  }>;
-};
-
 export type BackendMetric = {
   calculation_formula?: {
     aggregation?: {
