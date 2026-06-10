@@ -4,6 +4,7 @@ import { shellEnUS } from "@/app/locales/resources/shell/en-US";
 import { dataConnectEnUS } from "@/modules/data-connect/locales/en-US";
 import { executionFactoryEnUS } from "@/modules/execution-factory/locales/en-US";
 import { knowledgeNetworkEnUS } from "@/modules/knowledge-network/locales/en-US";
+import { modelResourcesEnUS } from "@/modules/model-resources/locales/en-US";
 
 export const enUS = {
   ...commonEnUS,
@@ -12,4 +13,5 @@ export const enUS = {
   ...dataConnectEnUS,
   ...knowledgeNetworkEnUS,
   ...executionFactoryEnUS,
+  ...modelResourcesEnUS,
 } as const;

@@ -1,0 +1,59 @@
+.description {
+  margin-bottom: 16px;
+  color: rgba(15, 30, 54, 0.72);
+}
+
+.sectionTitle {
+  margin: 24px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.subsectionTitle {
+  margin: 16px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sdkDescription {
+  margin-top: 12px;
+  color: rgba(15, 30, 54, 0.72);
+}
+
+.installCommand {
+  position: relative;
+  margin-top: 16px;
+  padding: 8px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #f7f8fa;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.copyButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+}
+
+.valueCell {
+  position: relative;
+  padding-right: 28px;
+}
+
+.valueCopyButton {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+}
+
+.codeBlock {
+  position: relative;
+  margin-top: 12px;
+  padding-top: 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #f7f8fa;
+  overflow: hidden;
+}

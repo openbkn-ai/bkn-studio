@@ -1,0 +1,14 @@
+.modelFilter {
+  width: 220px;
+}
+
+.modelNameCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.multiLineCell {
+  display: grid;
+  gap: 4px;
+}

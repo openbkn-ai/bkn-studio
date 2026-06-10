@@ -1,0 +1,117 @@
+.panel {
+  min-height: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  min-height: 32px;
+}
+
+.toolbarLeft,
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.toolbarRight {
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.toolbarButton {
+  height: 32px;
+  padding-inline: 15px;
+}
+
+.toolbarButton:global(.ant-btn) {
+  height: 32px;
+}
+
+.searchInput {
+  width: 240px;
+}
+
+.searchInput :global(.ant-input-search) {
+  height: 32px;
+}
+
+.searchInput :global(.ant-input-affix-wrapper) {
+  height: 32px;
+  border-radius: 0;
+}
+
+.searchInput :global(.ant-input) {
+  height: 30px;
+}
+
+.searchInput :global(.ant-input-search-button) {
+  height: 32px;
+  border-radius: 0;
+}
+
+.filterGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterLabel {
+  color: #1f2329;
+  font-size: 14px;
+  line-height: 32px;
+  white-space: nowrap;
+}
+
+.typeFilter {
+  width: 190px;
+}
+
+.typeFilter :global(.ant-select-selector) {
+  height: 32px !important;
+  border-radius: 0 !important;
+}
+
+.typeFilter :global(.ant-select-selection-item),
+.typeFilter :global(.ant-select-selection-placeholder) {
+  line-height: 30px !important;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.iconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.nameCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.multiLineCell {
+  display: grid;
+  gap: 4px;
+}

@@ -1,0 +1,28 @@
+.editorBorder {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding: 4px 11px 11px 0;
+  position: relative;
+}
+
+.editorBorder:focus-within {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(5, 145, 255, 0.1);
+}
+
+.placeholder {
+  top: 2px;
+  left: 48px;
+  z-index: 2;
+  color: rgba(0, 0, 0, 0.25);
+  position: absolute;
+  pointer-events: none;
+}
+
+.editor :global(.decorationsOverviewRuler) {
+  display: none !important;
+}
+
+.editorReadOnly :global(.monaco-editor .cursors-layer .cursor) {
+  opacity: 0 !important;
+}

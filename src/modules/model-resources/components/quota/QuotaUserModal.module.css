@@ -1,0 +1,46 @@
+.header {
+  margin-bottom: 16px;
+}
+
+.modelTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modelName {
+  color: #10233f;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modelMeta {
+  margin-top: 8px;
+  color: rgba(15, 30, 54, 0.62);
+  font-size: 13px;
+}
+
+.remainAlert {
+  margin-bottom: 16px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fieldCell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
