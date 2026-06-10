@@ -23,7 +23,9 @@ const ICON_GLYPHS = legacyIconList.glyphs as LegacyIconGlyph[];
 
 export type ResourceIconValue = string;
 
-export const DEFAULT_RESOURCE_ICON = `${ICON_PREFIX}${ICON_GLYPHS[0].font_class}`;
+export const DEFAULT_RESOURCE_ICON = ICON_GLYPHS[0]
+  ? `${ICON_PREFIX}${ICON_GLYPHS[0].font_class}`
+  : "icon-yingyongguanli";
 
 const COMPAT_ICON_TYPE_BY_VALUE: Record<string, string> = {
   appstore: "icon-yingyongguanli",

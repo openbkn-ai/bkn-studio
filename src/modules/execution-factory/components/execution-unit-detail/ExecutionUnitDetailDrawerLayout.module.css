@@ -1,0 +1,30 @@
+.drawerMarket :global(.ant-drawer-header) {
+  background: linear-gradient(180deg, rgba(18, 110, 227, 0.06) 0%, #fff 100%);
+}
+
+.stateWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.footerDanger {
+  display: flex;
+  align-items: center;
+}

@@ -1,0 +1,10 @@
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cardTitle {
+  margin-bottom: 16px;
+}
+

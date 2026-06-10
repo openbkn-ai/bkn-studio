@@ -1,0 +1,74 @@
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.optionGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.optionCard {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.optionCard:hover {
+  border-color: #1677ff;
+}
+
+.optionCardActive {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+}
+
+.optionTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 8px 0 4px;
+}
+
+.optionDesc {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.modalHint {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.headerRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.uploadDragger {
+  margin-top: 8px;
+}
+
+.wizardSteps {
+  margin-bottom: 24px;
+}
+
+.wizardFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.wizardTypeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}

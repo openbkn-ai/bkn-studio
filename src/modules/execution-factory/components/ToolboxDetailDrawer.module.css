@@ -1,0 +1,84 @@
+.drawerContent {
+  display: grid;
+  gap: 18px;
+}
+
+.summaryCard,
+.sectionCard {
+  padding: 20px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.summaryCard {
+  background: linear-gradient(180deg, #f8fbff 0%, #f4f8ff 100%);
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.summaryTitle {
+  margin: 0;
+  color: #152239;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.summaryDescription {
+  margin: 8px 0 0;
+  color: #64748d;
+  line-height: 1.7;
+}
+
+.summaryStatus {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.summaryMeta {
+  display: flex;
+  gap: 18px;
+  margin-top: 16px;
+  color: #64748d;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  margin: 0 0 14px;
+  color: #152239;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.toolList {
+  display: grid;
+  gap: 10px;
+}
+
+.toolItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 14px;
+}
+
+.toolName {
+  color: #152239;
+  font-weight: 600;
+}
+
+.toolMeta {
+  color: #64748d;
+  font-size: 12px;
+}

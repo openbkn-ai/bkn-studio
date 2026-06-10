@@ -1,6 +1,6 @@
 import { ShareAltOutlined } from "@ant-design/icons";
 import { Alert, Form, Input, Spin } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -10,10 +10,9 @@ import {
   buildRelationTypeMappingRulesFromDetail,
   createDefaultRelationTypeMappingValues,
   normalizeRelationTypeMappingValues,
-  RelationTypeMappingEditor,
   validateRelationTypeMappingValues,
   type RelationTypeMappingFormValues,
-} from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor";
+} from "@/modules/knowledge-network/components/relation-type/mapping-utils";
 import {
   DEFAULT_RESOURCE_COLOR,
   ResourceColorSelect,
@@ -35,6 +34,13 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectTypeFormScene.module.css";
+
+const RelationTypeMappingEditor = lazy(async () => {
+  const module = await import(
+    "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor"
+  );
+  return { default: module.RelationTypeMappingEditor };
+});
 
 const IDENTIFIER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 
@@ -175,7 +181,7 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       const values = await basicForm.validateFields();
       const nextBasic: BasicFormValues = {
         ...values,
-        color: basicValue?.color ?? DEFAULT_RESOURCE_COLOR,
+        color: values.color || DEFAULT_RESOURCE_COLOR,
       };
       setBasicValue(nextBasic);
       if (mode === "edit") {
@@ -384,12 +390,20 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       <>
         {renderRelationInfoBar()}
         <div className={`${styles.sectionPanel} ${styles.mappingFormPanel}`}>
-          <RelationTypeMappingEditor
-            networkId={networkId}
-            objectTypes={objectTypes}
-            onChange={setMappingValue}
-            value={mappingValue}
-          />
+          <Suspense
+            fallback={
+              <div className={styles.loadingState}>
+                <Spin />
+              </div>
+            }
+          >
+            <RelationTypeMappingEditor
+              networkId={networkId}
+              objectTypes={objectTypes}
+              onChange={setMappingValue}
+              value={mappingValue}
+            />
+          </Suspense>
         </div>
       </>
     );

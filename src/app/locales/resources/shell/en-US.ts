@@ -18,6 +18,8 @@ export const shellEnUS = {
       executionFactory: "Execution Factory",
       executionUnitManagement: "Execution Unit Management",
       allExecutionUnits: "All Execution Units",
+      executionUnitManagementTooltip: "Manage operators, toolboxes, MCP servers, and skills in your domain",
+      allExecutionUnitsTooltip: "Browse the market catalog and introduce resources into your domain",
       systemManagement: "System Management",
       userManagement: "User Management",
       roleManagement: "Role Management",

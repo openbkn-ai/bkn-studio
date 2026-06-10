@@ -11,6 +11,12 @@ interface ImportMetaEnv {
   readonly VITE_USE_MOCK?: "true" | "false";
 }
 
+declare module "axios" {
+  interface AxiosRequestConfig {
+    skipErrorToast?: boolean;
+  }
+}
+
 declare global {
   interface Window {
     __BKN_STUDIO_RUNTIME__?: RuntimeInput;

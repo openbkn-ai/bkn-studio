@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "@/app/App";
+import i18n from "@/app/locales/i18n";
 import {
   createRuntimeConfig,
   readWindowRuntimeInput,
@@ -14,6 +15,7 @@ const roots = new WeakMap<Element, ReturnType<typeof createRoot>>();
 export function mountApp(container: Element, runtimeInput: RuntimeInput = {}) {
   const runtimeConfig = createRuntimeConfig(runtimeInput);
   setRuntimeConfig(runtimeConfig);
+  void i18n.changeLanguage(runtimeConfig.locale);
 
   const existingRoot = roots.get(container);
 

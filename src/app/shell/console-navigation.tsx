@@ -4,11 +4,15 @@ import type {
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
 import { dataConnectNavigation } from "@/modules/data-connect/navigation";
+import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
 import { knowledgeNetworkNavigation } from "@/modules/knowledge-network/navigation";
+import { starterNavigation } from "@/modules/starter/navigation";
 
 const navigationContributions: ConsoleNavContribution[] = [
   knowledgeNetworkNavigation,
+  starterNavigation,
   dataConnectNavigation,
+  executionFactoryNavigation,
 ];
 
 export type { ConsoleNavItem } from "@/app/shell/navigation/types";

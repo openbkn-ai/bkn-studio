@@ -1,0 +1,49 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 240px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.emptyHint {
+  color: rgba(0, 0, 0, 0.45);
+  margin: 0;
+}
+
+.jsonPreview {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  font-size: 12px;
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+.logList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.logItem {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.logMeta {
+  color: rgba(0, 0, 0, 0.45);
+  margin-bottom: 4px;
+}
