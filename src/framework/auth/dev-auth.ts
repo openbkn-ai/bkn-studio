@@ -1,6 +1,11 @@
-const ACCESS_TOKEN_KEY = "bkn_access_token";
+import {
+  clearStoredTokens,
+  getStoredAccessToken,
+  getStoredRefreshToken,
+  storeTokens,
+} from "@/framework/auth/token-store";
+
 const FAILED_ENV_ACCESS_TOKEN_KEY = "bkn_failed_env_access_token";
-const REFRESH_TOKEN_KEY = "bkn_refresh_token";
 
 function readEnvAccessToken() {
   const value: unknown = import.meta.env.VITE_DEV_ACCESS_TOKEN;
@@ -21,7 +26,7 @@ export function hasDevAccessToken() {
 }
 
 export function getDevAccessToken() {
-  const stored = window.sessionStorage.getItem(ACCESS_TOKEN_KEY)?.trim();
+  const stored = getStoredAccessToken();
   if (stored) {
     return stored;
   }
@@ -39,7 +44,7 @@ export function getDevAccessToken() {
 }
 
 export function getDevRefreshToken() {
-  const stored = window.sessionStorage.getItem(REFRESH_TOKEN_KEY)?.trim();
+  const stored = getStoredRefreshToken();
   if (stored) {
     return stored;
   }
@@ -48,19 +53,12 @@ export function getDevRefreshToken() {
 }
 
 export function setDevTokens(accessToken: string, refreshToken?: string) {
-  window.sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken.trim());
+  storeTokens({ accessToken, refreshToken });
   window.sessionStorage.removeItem(FAILED_ENV_ACCESS_TOKEN_KEY);
-
-  if (refreshToken?.trim()) {
-    window.sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken.trim());
-  } else {
-    window.sessionStorage.removeItem(REFRESH_TOKEN_KEY);
-  }
 }
 
 export function clearDevAuthSession() {
-  window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-  window.sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  clearStoredTokens();
 }
 
 export function seedDevTokensFromEnv() {
@@ -68,7 +66,7 @@ export function seedDevTokensFromEnv() {
     return;
   }
 
-  if (window.sessionStorage.getItem(ACCESS_TOKEN_KEY)) {
+  if (getStoredAccessToken()) {
     return;
   }
 

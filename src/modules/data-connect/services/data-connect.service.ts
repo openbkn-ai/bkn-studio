@@ -242,6 +242,28 @@ let mockCatalogs: DataConnectRecord[] = [
     operations: ["view", "edit", "delete", "test_connection", "enable", "disable"],
     type: "physical",
   },
+  {
+    id: "cat-004",
+    name: "kn_workspace",
+    description: "平台内部命名空间,承载逻辑视图与衍生数据集。",
+    connectorType: "",
+    category: "table",
+    mode: "local",
+    enabled: true,
+    status: "enabled",
+    healthStatus: "healthy",
+    healthCheckEnabled: false,
+    healthCheckResult: "",
+    updateTime: "2026-06-02 14:30:00",
+    createTime: "2026-05-20 09:00:00",
+    updaterName: "Platform Admin",
+    creatorName: "Platform Admin",
+    tags: ["internal"],
+    connectorConfig: {},
+    metadata: {},
+    operations: ["view", "delete"],
+    type: "logical",
+  },
 ];
 
 const wait = async <T,>(value: T) =>

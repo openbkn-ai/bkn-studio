@@ -2,14 +2,24 @@ import type { RuntimeConfig, RuntimeInput, TokenManager } from "@/framework/runt
 import {
   getDevAccessToken,
   handleDevAuthFailure,
+  shouldUseDevAuth,
 } from "@/framework/auth/dev-auth";
+import { refreshOAuthTokens, shouldUseOAuthGate } from "@/framework/auth/oauth";
+import { clearStoredTokens } from "@/framework/auth/token-store";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 
 const storageTokenManager: TokenManager = {
   getAccessToken: () => getDevAccessToken(),
-  refreshAccessToken: () => Promise.resolve(null),
+  refreshAccessToken: () => refreshOAuthTokens(),
   onAuthFailure: () => {
     handleDevAuthFailure();
+
+    // Outside dev remote-debug mode the reload is not triggered above; force a
+    // reload so the AuthGate drops to the sign-in screen.
+    if (!shouldUseDevAuth() && shouldUseOAuthGate(getRuntimeConfig().mode)) {
+      clearStoredTokens();
+      window.location.reload();
+    }
   },
 };
 

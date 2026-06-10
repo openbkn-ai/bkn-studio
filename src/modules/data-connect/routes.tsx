@@ -1,13 +1,8 @@
 import { lazy, Suspense, type ReactNode } from "react";
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
 import { RouteLoading } from "@/app/router/RouteLoading";
-
-const DataConnectListPage = lazy(async () => {
-  const module = await import("@/modules/data-connect/pages/DataConnectListPage");
-  return { default: module.DataConnectListPage };
-});
 
 const DataConnectFormPage = lazy(async () => {
   const module = await import("@/modules/data-connect/pages/DataConnectFormPage");
@@ -25,22 +20,16 @@ function withRouteLoading(element: ReactNode) {
 
 export const dataConnectRoutes: RouteObject[] = [
   {
+    // 旧入口:数据连接列表已并入「数据目录」树形页
     path: "data-connect",
-    handle: {
-      console: {
-        descriptionKey: "dataConnect.description",
-        menuKey: "data-connection",
-        titleKey: "dataConnect.title",
-      },
-    },
-    element: withRouteLoading(<DataConnectListPage />),
+    element: <Navigate replace to="/data-catalog" />,
   },
   {
     path: "data-connect/new",
     handle: {
       console: {
         descriptionKey: "dataConnect.createDescription",
-        menuKey: "data-connection",
+        menuKey: "data-catalog",
         titleKey: "dataConnect.createTitle",
       },
     },
@@ -51,7 +40,7 @@ export const dataConnectRoutes: RouteObject[] = [
     handle: {
       console: {
         descriptionKey: "dataConnect.editDescription",
-        menuKey: "data-connection",
+        menuKey: "data-catalog",
         titleKey: "dataConnect.editTitle",
       },
     },
@@ -62,7 +51,7 @@ export const dataConnectRoutes: RouteObject[] = [
     handle: {
       console: {
         descriptionKey: "dataConnect.scanDescription",
-        menuKey: "data-connection",
+        menuKey: "data-catalog",
         titleKey: "dataConnect.scanTitle",
       },
     },

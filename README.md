@@ -31,7 +31,7 @@ corepack pnpm dev
 默认开发地址：
 
 ```text
-http://localhost:5173
+http://localhost:8000
 ```
 
 常用命令：

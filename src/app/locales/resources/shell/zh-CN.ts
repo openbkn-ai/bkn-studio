@@ -12,6 +12,8 @@ export const shellZhCN = {
       domainKnowledgeNetwork: "领域业务知识网络",
       generalBusinessKnowledgeNetwork: "通用业务知识网络",
       dataConnection: "数据连接",
+      dataCatalog: "数据目录",
+      indexBuild: "索引构建",
       dataResource: "数据资源",
       dataQuality: "数据质量",
       dataflow: "dataflow",

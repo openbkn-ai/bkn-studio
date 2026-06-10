@@ -1,0 +1,31 @@
+.explorer {
+  display: grid;
+  grid-template-columns: 296px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.detailSurface {
+  min-height: calc(100vh - 144px);
+  padding: 28px 30px 24px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(22, 42, 69, 0.06);
+}
+
+.placeholder {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 80px 0;
+  color: #8b98ac;
+  font-size: 14px;
+  text-align: center;
+}
+
+@media (max-width: 1200px) {
+  .explorer {
+    grid-template-columns: 1fr;
+  }
+}

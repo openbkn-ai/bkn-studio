@@ -30,6 +30,10 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true,
+      // OAuth redirect_uri is registered as http://localhost:8000/callback —
+      // fail fast instead of silently drifting to another port when taken.
+      port: 8000,
+      strictPort: true,
       allowedHosts: ["host.docker.internal", "localhost", "127.0.0.1"],
       ...(process.env.VITE_DEV_USE_POLLING === "true"
         ? {
@@ -46,6 +50,20 @@ export default defineConfig(({ mode }) => {
           ? {}
           : {
               "/api": {
+                changeOrigin: true,
+                target: devProxyOrigin,
+              },
+              // hydra public OAuth2/OIDC endpoints (login flow + token exchange)
+              // exposed same-origin at the gateway; mirror them in dev.
+              "/oauth2": {
+                changeOrigin: true,
+                target: devProxyOrigin,
+              },
+              "/.well-known": {
+                changeOrigin: true,
+                target: devProxyOrigin,
+              },
+              "/userinfo": {
                 changeOrigin: true,
                 target: devProxyOrigin,
               },

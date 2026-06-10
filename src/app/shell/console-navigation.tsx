@@ -3,14 +3,14 @@ import type {
   ConsoleNavContribution,
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
-import { dataConnectNavigation } from "@/modules/data-connect/navigation";
+import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
 import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
 import { knowledgeNetworkNavigation } from "@/modules/knowledge-network/navigation";
 import { modelResourcesNavigation } from "@/modules/model-resources/navigation";
 
 const navigationContributions: ConsoleNavContribution[] = [
   knowledgeNetworkNavigation,
-  dataConnectNavigation,
+  dataCatalogNavigation,
   executionFactoryNavigation,
   modelResourcesNavigation,
 ];

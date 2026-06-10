@@ -1,6 +1,7 @@
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
+import { dataCatalogRouteContribution } from "@/modules/data-catalog/routes";
 import { dataConnectRouteContribution } from "@/modules/data-connect/routes";
 import { executionFactoryRouteContribution } from "@/modules/execution-factory/routes";
 import { knowledgeNetworkRouteContribution } from "@/modules/knowledge-network/routes";
@@ -8,6 +9,7 @@ import { modelResourcesRouteContribution } from "@/modules/model-resources/route
 
 const routeContributions: AppRouteContribution[] = [
   knowledgeNetworkRouteContribution,
+  dataCatalogRouteContribution,
   dataConnectRouteContribution,
   executionFactoryRouteContribution,
   modelResourcesRouteContribution,

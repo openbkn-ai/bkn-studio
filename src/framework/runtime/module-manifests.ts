@@ -1,3 +1,4 @@
+import { dataCatalogModuleManifest } from "@/modules/data-catalog/module.manifest";
 import { dataConnectModuleManifest } from "@/modules/data-connect/module.manifest";
 import { executionFactoryModuleManifest } from "@/modules/execution-factory/module.manifest";
 import { knowledgeNetworkModuleManifest } from "@/modules/knowledge-network/module.manifest";
@@ -5,6 +6,7 @@ import { modelResourcesModuleManifest } from "@/modules/model-resources/module.m
 
 export const runtimeModuleManifests = [
   knowledgeNetworkModuleManifest,
+  dataCatalogModuleManifest,
   dataConnectModuleManifest,
   executionFactoryModuleManifest,
   modelResourcesModuleManifest,

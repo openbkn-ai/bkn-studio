@@ -1,0 +1,106 @@
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  color: #64748d;
+  font-size: 13px;
+}
+
+.tableWrap {
+  overflow: auto;
+  max-height: 58vh;
+  border: 1px solid rgba(15, 30, 54, 0.08);
+  border-radius: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 9px 14px;
+  text-align: left;
+  background: #f6f8fc;
+  color: #3e4d66;
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+}
+
+.table th small {
+  margin-left: 6px;
+  color: #9ca8ba;
+  font-weight: 400;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.table td {
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.05);
+  color: #152239;
+  white-space: nowrap;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table tbody tr:hover td {
+  background: rgba(46, 104, 255, 0.03);
+}
+
+.rowIndexHead {
+  left: 0;
+  z-index: 3;
+}
+
+.rowIndex {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fbfcff;
+  color: #9ca8ba;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  text-align: right;
+  min-width: 56px;
+}
+
+.numericCell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.nullCell {
+  color: #b4bed0;
+  font-style: italic;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+  color: #64748d;
+  font-size: 13px;
+}
+
+.endpointChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(15, 30, 54, 0.06);
+  color: #3e4d66;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}

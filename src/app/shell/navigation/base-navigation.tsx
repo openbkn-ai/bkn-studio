@@ -1,7 +1,6 @@
 import {
   AppstoreOutlined,
   ClusterOutlined,
-  DatabaseOutlined,
   ExperimentOutlined,
   FileTextOutlined,
   SafetyCertificateOutlined,
@@ -17,12 +16,6 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
     labelKey: "shell.items.generalBusinessKnowledgeNetwork",
     icon: <AppstoreOutlined />,
     children: [
-      {
-        key: "data-resource",
-        labelKey: "shell.items.dataResource",
-        icon: <DatabaseOutlined />,
-        disabled: true,
-      },
       {
         key: "data-quality",
         labelKey: "shell.items.dataQuality",

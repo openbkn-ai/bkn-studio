@@ -12,6 +12,8 @@ export const shellEnUS = {
       domainKnowledgeNetwork: "Domain Business Knowledge Network",
       generalBusinessKnowledgeNetwork: "General Business Knowledge Network",
       dataConnection: "Data Connection",
+      dataCatalog: "Data Catalog",
+      indexBuild: "Index Builds",
       dataResource: "Data Resource",
       dataQuality: "Data Quality",
       dataflow: "Dataflow",

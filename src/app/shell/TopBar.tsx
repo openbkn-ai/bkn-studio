@@ -1,14 +1,18 @@
 import {
   DesktopOutlined,
+  LogoutOutlined,
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import { Dropdown } from "antd";
 import { useTranslation } from "react-i18next";
 import { useMatches, useNavigate } from "react-router-dom";
 
 import { getConsoleNavTrail } from "@/app/shell/console-navigation";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
+import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import { BuildActivityChip } from "@/modules/data-catalog/components/BuildActivityChip";
 
 export function TopBar() {
   const { t } = useTranslation();
@@ -72,6 +76,7 @@ export function TopBar() {
       </div>
 
       <div className="console-topbar-actions">
+        <BuildActivityChip />
         <div className="console-topbar-chip">
           <DesktopOutlined />
           <span>{t("shell.workspace")}</span>
@@ -84,15 +89,33 @@ export function TopBar() {
               : t("shell.modeHosted")}
           </span>
         </div>
-        <button className="console-user-pill" type="button">
-          <span className="console-user-avatar" aria-hidden>
-            <UserOutlined />
-          </span>
-          <span className="console-user-copy">
-            <strong>{runtimeConfig.currentUser.name}</strong>
-            <span>{runtimeConfig.currentUser.id}</span>
-          </span>
-        </button>
+        <Dropdown
+          menu={{
+            items: [
+              {
+                danger: true,
+                icon: <LogoutOutlined />,
+                key: "logout",
+                label: t("auth.logout"),
+                onClick: () => {
+                  logout(runtimeConfig.mode);
+                },
+              },
+            ],
+          }}
+          placement="bottomRight"
+          trigger={["click"]}
+        >
+          <button className="console-user-pill" type="button">
+            <span className="console-user-avatar" aria-hidden>
+              <UserOutlined />
+            </span>
+            <span className="console-user-copy">
+              <strong>{runtimeConfig.currentUser.name}</strong>
+              <span>{runtimeConfig.currentUser.id}</span>
+            </span>
+          </button>
+        </Dropdown>
       </div>
     </header>
   );

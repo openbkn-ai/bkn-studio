@@ -1,0 +1,484 @@
+/* 数据目录共享样式:状态标签 / 进度 / 详情面板骨架(取值对齐设计稿 studio.css) */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 2px 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 999px;
+  background: #fafafa;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.taskPending {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(148, 163, 184, 0.08);
+  color: #64748b;
+}
+
+.taskRunning {
+  border-color: rgba(37, 99, 235, 0.2);
+  background: rgba(46, 104, 255, 0.08);
+  color: #1f4fd4;
+}
+
+.taskSucceeded {
+  border-color: rgba(101, 192, 65, 0.22);
+  background: rgba(101, 192, 65, 0.08);
+  color: #4f9f22;
+}
+
+.taskFailed {
+  border-color: rgba(239, 68, 68, 0.22);
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+}
+
+.modeBatch {
+  border-color: rgba(15, 118, 110, 0.2);
+  background: rgba(15, 118, 110, 0.06);
+  color: #0f766e;
+}
+
+.modeStreaming {
+  border-color: rgba(124, 58, 237, 0.18);
+  background: rgba(124, 58, 237, 0.07);
+  color: #7c3aed;
+}
+
+.kindPhysical {
+  border-color: rgba(37, 99, 235, 0.18);
+  background: rgba(46, 104, 255, 0.07);
+  color: #1f4fd4;
+}
+
+.kindLogical {
+  border-color: rgba(124, 58, 237, 0.18);
+  background: rgba(124, 58, 237, 0.07);
+  color: #7c3aed;
+}
+
+.catTable {
+  border-color: rgba(13, 148, 136, 0.2);
+  background: rgba(13, 148, 136, 0.07);
+  color: #0d9488;
+}
+
+.catLogicview {
+  border-color: rgba(124, 58, 237, 0.18);
+  background: rgba(124, 58, 237, 0.07);
+  color: #7c3aed;
+}
+
+.catDataset {
+  border-color: rgba(217, 119, 6, 0.2);
+  background: rgba(217, 119, 6, 0.07);
+  color: #d97706;
+}
+
+.statusEnabled {
+  border-color: rgba(101, 192, 65, 0.22);
+  background: rgba(101, 192, 65, 0.08);
+  color: #4f9f22;
+}
+
+.statusDisabled {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(148, 163, 184, 0.08);
+  color: #64748b;
+}
+
+.healthHealthy {
+  border-color: rgba(101, 192, 65, 0.22);
+  background: rgba(101, 192, 65, 0.08);
+  color: #4f9f22;
+}
+
+.healthDegraded {
+  border-color: rgba(245, 158, 11, 0.24);
+  background: rgba(245, 158, 11, 0.08);
+  color: #d97706;
+}
+
+.healthUnhealthy {
+  border-color: rgba(239, 68, 68, 0.22);
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+}
+
+.healthOffline {
+  border-color: rgba(249, 115, 22, 0.24);
+  background: rgba(249, 115, 22, 0.08);
+  color: #ea580c;
+}
+
+.healthUnchecked {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(148, 163, 184, 0.08);
+  color: #64748b;
+}
+
+.chipRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.slugChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(15, 30, 54, 0.06);
+  color: #3e4d66;
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.fieldChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border: 1px solid rgba(15, 30, 54, 0.1);
+  border-radius: 999px;
+  background: #f6f8fc;
+  color: #3e4d66;
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+/* ---------------- 进度 ---------------- */
+
+.progressWrap {
+  display: grid;
+  gap: 5px;
+  min-width: 150px;
+}
+
+.progressTrack {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(46, 104, 255, 0.1);
+  overflow: hidden;
+}
+
+.progressFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: rgba(46, 104, 255, 0.35);
+  transition: width 0.5s ease;
+}
+
+.progressFillVector {
+  background: linear-gradient(90deg, #2e68ff, #4d80ff);
+}
+
+.progressFillDone {
+  background: #65c041;
+}
+
+.progressFillFailed {
+  background: #ef4444;
+}
+
+.progressMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #8b98ac;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ---------------- 详情骨架 ---------------- */
+
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+}
+
+.detailHeadMain {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.detailTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detailTitle {
+  margin: 0;
+  color: #152239;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.detailSub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #64748d;
+  font-size: 13px;
+}
+
+.detailActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.statCard {
+  padding: 14px 18px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 16px;
+  background: #f9fbff;
+}
+
+.statLabel {
+  color: #8b98ac;
+  font-size: 12px;
+}
+
+.statValue {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #152239;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.statValueSmall {
+  font-size: 17px;
+}
+
+.statValue small {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748d;
+}
+
+.sectionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.sectionCard {
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 20px 22px;
+  min-width: 0;
+}
+
+.sectionCardFlat {
+  background: #fbfcff;
+}
+
+.sectionTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: #152239;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.sectionTitleHint {
+  color: #8b98ac;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.sectionTools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.descGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+}
+
+.descItem {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.descItemWide {
+  grid-column: 1 / -1;
+}
+
+.descLabel {
+  color: #8b98ac;
+  font-size: 12px;
+}
+
+.descValue {
+  color: #152239;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.calloutWarn {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.06);
+  color: #92600a;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.calloutWarn :global(.anticon) {
+  margin-top: 3px;
+  flex: none;
+  color: #d97706;
+}
+
+.scanList {
+  display: grid;
+  gap: 10px;
+}
+
+.scanItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid rgba(18, 40, 72, 0.06);
+  border-radius: 12px;
+  background: #f9fbff;
+  font-size: 13px;
+}
+
+.scanItemClickable {
+  cursor: pointer;
+}
+
+.scanDot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #65c041;
+  flex: none;
+}
+
+.scanDotFailed {
+  background: #ef4444;
+}
+
+.scanDotRunning {
+  background: #2e68ff;
+  box-shadow: 0 0 0 4px rgba(46, 104, 255, 0.15);
+}
+
+.scanSpin {
+  display: inline-flex;
+  margin-top: 3px;
+  color: #2e68ff;
+  font-size: 14px;
+  flex: none;
+}
+
+.scanItemBody {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.scanItemTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #152239;
+  font-weight: 600;
+}
+
+.scanItemMeta {
+  color: #8b98ac;
+  font-size: 12px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #72819b;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.backLink:hover {
+  color: #1f4fd4;
+}
+
+.monoText {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 13px;
+  color: #334155;
+}
+
+@media (max-width: 1600px) {
+  .sectionGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1280px) {
+  .statStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

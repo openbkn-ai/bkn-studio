@@ -1,0 +1,272 @@
+.treePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid rgba(18, 40, 72, 0.08);
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(22, 42, 69, 0.06);
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 110px);
+}
+
+.treeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.treeHeadTitle {
+  color: #152239;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.treeBody {
+  flex: 1;
+  overflow: auto;
+  margin: 0 -6px;
+  padding: 0 6px;
+}
+
+.treeBody::-webkit-scrollbar {
+  width: 8px;
+}
+
+.treeBody::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(124, 140, 166, 0.22);
+  background-clip: padding-box;
+}
+
+.treeSection {
+  margin: 10px 2px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8b98ac;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.treeSectionHint {
+  font-weight: 400;
+  color: #b4bed0;
+}
+
+.treeNode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #2c3e57;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.treeNode:hover {
+  background: #f3f7ff;
+}
+
+.treeNodeSelected,
+.treeNodeSelected:hover {
+  background: rgba(46, 104, 255, 0.1);
+  color: #1f4fd4;
+}
+
+.treeNodeCatalog {
+  font-weight: 600;
+}
+
+.treeNodeOff .treeNodeName {
+  color: #8b98ac;
+  font-weight: 500;
+}
+
+.treeNodeResource {
+  padding: 5.5px 8px;
+  font-size: 13px;
+}
+
+.treeCaret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #8b98ac;
+  font-size: 10px;
+  cursor: pointer;
+  transform: rotate(-90deg);
+  transition: transform 0.16s ease, background-color 0.16s ease;
+  flex: none;
+}
+
+.treeCaret:hover {
+  background: #eef3fb;
+}
+
+.treeCaretOpen {
+  transform: rotate(0deg);
+}
+
+.treeNodeIcon {
+  display: inline-flex;
+  width: 16px;
+  justify-content: center;
+  color: #64748d;
+  font-size: 14px;
+  flex: none;
+}
+
+.treeNodeSelected .treeNodeIcon {
+  color: #1f4fd4;
+}
+
+.treeNodeResource .treeNodeIcon {
+  font-size: 12.5px;
+}
+
+.treeNodeName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treeMiniTag {
+  padding: 0 5px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  color: #8b98ac;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 16px;
+  flex: none;
+}
+
+.treeMiniTagScan {
+  color: #1f4fd4;
+  border-color: rgba(46, 104, 255, 0.3);
+}
+
+.treeCount {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #f1f5fb;
+  color: #64748d;
+  font-size: 11px;
+  font-weight: 500;
+  flex: none;
+}
+
+.treeAdd {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #1f4fd4;
+  font-size: 11px;
+  cursor: pointer;
+  flex: none;
+}
+
+.treeNode:hover .treeAdd {
+  display: inline-flex;
+}
+
+.treeAdd:hover {
+  background: rgba(46, 104, 255, 0.12);
+}
+
+.treeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  flex: none;
+}
+
+.treeDotBuilt {
+  background: #16a34a;
+}
+
+.treeDotBuilding {
+  background: #2e68ff;
+  animation: treePulse 1.2s ease infinite;
+}
+
+.treeDotListening {
+  background: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+}
+
+.treeDotPaused {
+  background: #d97706;
+}
+
+.treeDotFailed {
+  background: #dc2626;
+}
+
+@keyframes treePulse {
+  50% {
+    box-shadow: 0 0 0 5px rgba(46, 104, 255, 0.12);
+  }
+}
+
+.treeChildren {
+  position: relative;
+  display: grid;
+  gap: 1px;
+  margin: 1px 0 4px;
+  padding-left: 20px;
+}
+
+.treeChildren::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: rgba(15, 30, 54, 0.08);
+}
+
+.treeEmptyHint {
+  padding: 5px 8px;
+  color: #b4bed0;
+  font-size: 12px;
+}
+
+.treeFoot {
+  padding: 8px 6px 0;
+  border-top: 1px solid rgba(15, 30, 54, 0.08);
+  color: #8b98ac;
+  font-size: 12px;
+}
+
+.treeEmpty {
+  padding: 26px 8px;
+  color: #8b98ac;
+  font-size: 13px;
+  text-align: center;
+}
