@@ -127,6 +127,16 @@
   color: rgba(0, 0, 0, 0.65);
 }
 
+.iconButtonActive {
+  background: rgba(18, 110, 227, 0.08);
+  color: #126ee3;
+}
+
+.iconButtonActive:hover {
+  background: rgba(18, 110, 227, 0.12);
+  color: #126ee3;
+}
+
 .tableCard {
   flex: 1;
   min-height: 0;
@@ -228,4 +238,110 @@
   display: flex;
   justify-content: flex-end;
   padding-top: 4px;
+}
+
+.integratedFilterBar {
+  align-items: center;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  gap: 0;
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.integratedFilterSearch {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  min-width: 180px;
+}
+
+.integratedFilterSearchIcon {
+  color: rgba(0, 0, 0, 0.35);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.integratedFilterSearchInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.integratedFilterSearchInput :global(.ant-input) {
+  padding: 0;
+}
+
+.integratedFilterSearchInput:global(.ant-input-affix-wrapper) {
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.integratedFilterSearchInput :global(.ant-input-clear-icon) {
+  color: rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+}
+
+.integratedFilterSearchInput :global(.ant-input-clear-icon:hover) {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.integratedFilterDivider {
+  align-self: stretch;
+  background: #e5e5e5;
+  flex-shrink: 0;
+  margin: 8px 12px;
+  width: 1px;
+}
+
+.integratedFilterField {
+  align-items: center;
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.integratedFilterLabel {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.integratedFilterSelect {
+  min-width: 88px;
+}
+
+.integratedFilterSelect :global(.ant-select-selector) {
+  border: 0 !important;
+  box-shadow: none !important;
+  padding-inline: 0 !important;
+}
+
+.integratedFilterSelect :global(.ant-select-selection-item),
+.integratedFilterSelect :global(.ant-select-selection-placeholder) {
+  color: #1f2329;
+  font-size: 14px;
+  line-height: 22px !important;
+}
+
+.integratedFilterClear {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 24px;
+  justify-content: center;
+  margin-left: auto;
+  width: 24px;
+}
+
+.integratedFilterClear:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.65);
 }

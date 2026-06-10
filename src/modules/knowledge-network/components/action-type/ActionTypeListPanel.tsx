@@ -1,6 +1,8 @@
 import {
+  CloseOutlined,
   DeleteOutlined,
   EllipsisOutlined,
+  FilterOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -69,7 +71,7 @@ export function ActionTypeListPanel({
   const navigate = useNavigate();
   const { modal } = useAppServices();
   const [keyword, setKeyword] = useState("");
-  const [selectedTag, setSelectedTag] = useState("all");
+  const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [actionKindFilter, setActionKindFilter] = useState<"all" | KnowledgeNetworkActionTypeKind>(
     "all",
   );
@@ -79,14 +81,6 @@ export function ActionTypeListPanel({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-
-  const tagOptions = useMemo(() => {
-    const tags = new Set<string>();
-    items.forEach((item) => {
-      item.tags.forEach((tag) => tags.add(tag));
-    });
-    return [...tags].sort((left, right) => left.localeCompare(right));
-  }, [items]);
 
   const objectTypeOptions = useMemo(
     () =>
@@ -100,10 +94,9 @@ export function ActionTypeListPanel({
   const hasActiveFilter = useMemo(
     () =>
       Boolean(keyword.trim()) ||
-      selectedTag !== "all" ||
       actionKindFilter !== "all" ||
       objectTypeFilter !== "all",
-    [actionKindFilter, keyword, objectTypeFilter, selectedTag],
+    [actionKindFilter, keyword, objectTypeFilter],
   );
 
   const filteredItems = useMemo(() => {
@@ -115,15 +108,14 @@ export function ActionTypeListPanel({
         item.name.toLowerCase().includes(normalizedKeyword) ||
         item.id.toLowerCase().includes(normalizedKeyword) ||
         item.description.toLowerCase().includes(normalizedKeyword);
-      const matchesTag = selectedTag === "all" || item.tags.includes(selectedTag);
       const matchesActionKind =
         actionKindFilter === "all" || item.actionKind === actionKindFilter;
       const matchesObjectType =
         objectTypeFilter === "all" || item.objectTypeId === objectTypeFilter;
 
-      return matchesKeyword && matchesTag && matchesActionKind && matchesObjectType;
+      return matchesKeyword && matchesActionKind && matchesObjectType;
     });
-  }, [actionKindFilter, items, keyword, objectTypeFilter, selectedTag]);
+  }, [actionKindFilter, items, keyword, objectTypeFilter]);
 
   const sortedItems = useMemo(() => {
     const nextItems = [...filteredItems];
@@ -374,59 +366,21 @@ export function ActionTypeListPanel({
           />
         </div>
         <div className={styles.toolbarRight}>
-          <Input
-            allowClear
-            className={styles.searchInput}
-            onChange={(event) => {
-              setKeyword(event.target.value);
-              setPage(1);
+          <button
+            aria-expanded={searchBarOpen}
+            aria-label={t("knowledgeNetwork.toggleSearchBar")}
+            className={
+              searchBarOpen
+                ? `${styles.iconButton} ${styles.iconButtonActive}`
+                : styles.iconButton
+            }
+            onClick={() => {
+              setSearchBarOpen(true);
             }}
-            placeholder={t("knowledgeNetwork.searchPlaceholder")}
-            prefix={<SearchOutlined className={styles.searchIcon} />}
-            value={keyword}
-          />
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>{t("common.tag")}</span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setSelectedTag(value);
-                setPage(1);
-              }}
-              options={[
-                { label: t("common.all"), value: "all" },
-                ...tagOptions.map((tag) => ({ label: tag, value: tag })),
-              ]}
-              value={selectedTag}
-            />
-          </div>
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>{t("knowledgeNetwork.actionTypeKind")}</span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setActionKindFilter(value);
-                setPage(1);
-              }}
-              options={[
-                { label: t("common.all"), value: "all" },
-                ...buildActionTypeKindSelectOptions(t),
-              ]}
-              value={actionKindFilter}
-            />
-          </div>
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>{t("knowledgeNetwork.actionTypeObject")}</span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setObjectTypeFilter(value);
-                setPage(1);
-              }}
-              options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
-              value={objectTypeFilter}
-            />
-          </div>
+            type="button"
+          >
+            <FilterOutlined />
+          </button>
           <Dropdown
             menu={{
               items: [
@@ -470,6 +424,69 @@ export function ActionTypeListPanel({
       </div>
 
       <div className={styles.tableCard}>
+        {searchBarOpen ? (
+          <div className={styles.integratedFilterBar}>
+            <div className={styles.integratedFilterSearch}>
+              <SearchOutlined className={styles.integratedFilterSearchIcon} />
+              <Input
+                allowClear
+                bordered={false}
+                className={styles.integratedFilterSearchInput}
+                onChange={(event) => {
+                  setKeyword(event.target.value);
+                  setPage(1);
+                }}
+                placeholder={t("knowledgeNetwork.searchPlaceholder")}
+                value={keyword}
+              />
+            </div>
+            <div className={styles.integratedFilterDivider} />
+            <div className={styles.integratedFilterField}>
+              <span className={styles.integratedFilterLabel}>
+                {t("knowledgeNetwork.actionTypeKind")}
+              </span>
+              <Select
+                bordered={false}
+                className={styles.integratedFilterSelect}
+                onChange={(value) => {
+                  setActionKindFilter(value);
+                  setPage(1);
+                }}
+                options={[
+                  { label: t("common.all"), value: "all" },
+                  ...buildActionTypeKindSelectOptions(t),
+                ]}
+                value={actionKindFilter}
+              />
+            </div>
+            <div className={styles.integratedFilterDivider} />
+            <div className={styles.integratedFilterField}>
+              <span className={styles.integratedFilterLabel}>
+                {t("knowledgeNetwork.actionTypeObject")}
+              </span>
+              <Select
+                bordered={false}
+                className={styles.integratedFilterSelect}
+                onChange={(value) => {
+                  setObjectTypeFilter(value);
+                  setPage(1);
+                }}
+                options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
+                value={objectTypeFilter}
+              />
+            </div>
+            <button
+              aria-label={t("knowledgeNetwork.closeSearchBar")}
+              className={styles.integratedFilterClear}
+              onClick={() => {
+                setSearchBarOpen(false);
+              }}
+              type="button"
+            >
+              <CloseOutlined />
+            </button>
+          </div>
+        ) : null}
         <Table<KnowledgeNetworkActionTypeRecord>
           columns={columns}
           dataSource={paginatedItems}

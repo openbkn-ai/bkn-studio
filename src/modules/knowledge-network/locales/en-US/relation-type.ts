@@ -68,6 +68,8 @@ export const relationtypePart = {
     relationTypeSaveAndExit: "Save and exit",
     relationTypesDescription:
       "Review and maintain relation types under the active knowledge network.",
+    relationTypeListSourceObject: "Start object type",
+    relationTypeListTargetObject: "End object type",
     relationTypeSourceObject: "Source object type",
     relationTypeSourceObjectPlaceholder: "Select a source object type",
     relationTypeSourceObjectRequired: "Please select a source object type.",

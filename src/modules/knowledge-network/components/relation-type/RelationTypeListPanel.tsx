@@ -1,7 +1,9 @@
 import {
   ApartmentOutlined,
+  CloseOutlined,
   DeleteOutlined,
   EllipsisOutlined,
+  FilterOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -50,7 +52,7 @@ export function RelationTypeListPanel({
   const navigate = useNavigate();
   const { modal } = useAppServices();
   const [keyword, setKeyword] = useState("");
-  const [selectedTag, setSelectedTag] = useState("all");
+  const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState("all");
   const [targetFilter, setTargetFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
@@ -58,14 +60,6 @@ export function RelationTypeListPanel({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-
-  const tagOptions = useMemo(() => {
-    const tags = new Set<string>();
-    items.forEach((item) => {
-      item.tags.forEach((tag) => tags.add(tag));
-    });
-    return [...tags].sort((left, right) => left.localeCompare(right));
-  }, [items]);
 
   const objectTypeOptions = useMemo(
     () =>
@@ -78,11 +72,8 @@ export function RelationTypeListPanel({
 
   const hasActiveFilter = useMemo(
     () =>
-      Boolean(keyword.trim()) ||
-      selectedTag !== "all" ||
-      sourceFilter !== "all" ||
-      targetFilter !== "all",
-    [keyword, selectedTag, sourceFilter, targetFilter],
+      Boolean(keyword.trim()) || sourceFilter !== "all" || targetFilter !== "all",
+    [keyword, sourceFilter, targetFilter],
   );
 
   const filteredItems = useMemo(() => {
@@ -94,15 +85,14 @@ export function RelationTypeListPanel({
         item.name.toLowerCase().includes(normalizedKeyword) ||
         item.id.toLowerCase().includes(normalizedKeyword) ||
         item.description.toLowerCase().includes(normalizedKeyword);
-      const matchesTag = selectedTag === "all" || item.tags.includes(selectedTag);
       const matchesSource =
         sourceFilter === "all" || item.sourceObjectTypeId === sourceFilter;
       const matchesTarget =
         targetFilter === "all" || item.targetObjectTypeId === targetFilter;
 
-      return matchesKeyword && matchesTag && matchesSource && matchesTarget;
+      return matchesKeyword && matchesSource && matchesTarget;
     });
-  }, [items, keyword, selectedTag, sourceFilter, targetFilter]);
+  }, [items, keyword, sourceFilter, targetFilter]);
 
   const sortedItems = useMemo(() => {
     const nextItems = [...filteredItems];
@@ -247,14 +237,14 @@ export function RelationTypeListPanel({
     {
       dataIndex: "sourceObjectTypeName",
       key: "sourceObjectTypeName",
-      title: t("knowledgeNetwork.relationTypeSourceObject"),
+      title: t("knowledgeNetwork.relationTypeListSourceObject"),
       width: 180,
       render: (value: string) => value || "--",
     },
     {
       dataIndex: "targetObjectTypeName",
       key: "targetObjectTypeName",
-      title: t("knowledgeNetwork.relationTypeTargetObject"),
+      title: t("knowledgeNetwork.relationTypeListTargetObject"),
       width: 180,
       render: (value: string) => value || "--",
     },
@@ -363,60 +353,21 @@ export function RelationTypeListPanel({
           />
         </div>
         <div className={styles.toolbarRight}>
-          <Input
-            allowClear
-            className={styles.searchInput}
-            onChange={(event) => {
-              setKeyword(event.target.value);
-              setPage(1);
+          <button
+            aria-expanded={searchBarOpen}
+            aria-label={t("knowledgeNetwork.toggleSearchBar")}
+            className={
+              searchBarOpen
+                ? `${styles.iconButton} ${styles.iconButtonActive}`
+                : styles.iconButton
+            }
+            onClick={() => {
+              setSearchBarOpen(true);
             }}
-            placeholder={t("knowledgeNetwork.searchPlaceholder")}
-            prefix={<SearchOutlined className={styles.searchIcon} />}
-            value={keyword}
-          />
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>{t("common.tag")}</span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setSelectedTag(value);
-                setPage(1);
-              }}
-              options={[
-                { label: t("common.all"), value: "all" },
-                ...tagOptions.map((tag) => ({ label: tag, value: tag })),
-              ]}
-              value={selectedTag}
-            />
-          </div>
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>
-              {t("knowledgeNetwork.relationTypeSourceObject")}
-            </span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setSourceFilter(value);
-                setPage(1);
-              }}
-              options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
-              value={sourceFilter}
-            />
-          </div>
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>
-              {t("knowledgeNetwork.relationTypeTargetObject")}
-            </span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setTargetFilter(value);
-                setPage(1);
-              }}
-              options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
-              value={targetFilter}
-            />
-          </div>
+            type="button"
+          >
+            <FilterOutlined />
+          </button>
           <Dropdown
             menu={{
               items: [
@@ -466,6 +417,66 @@ export function RelationTypeListPanel({
       </div>
 
       <div className={styles.tableCard}>
+        {searchBarOpen ? (
+          <div className={styles.integratedFilterBar}>
+            <div className={styles.integratedFilterSearch}>
+              <SearchOutlined className={styles.integratedFilterSearchIcon} />
+              <Input
+                allowClear
+                bordered={false}
+                className={styles.integratedFilterSearchInput}
+                onChange={(event) => {
+                  setKeyword(event.target.value);
+                  setPage(1);
+                }}
+                placeholder={t("knowledgeNetwork.searchPlaceholder")}
+                value={keyword}
+              />
+            </div>
+            <div className={styles.integratedFilterDivider} />
+            <div className={styles.integratedFilterField}>
+              <span className={styles.integratedFilterLabel}>
+                {t("knowledgeNetwork.relationTypeListSourceObject")}
+              </span>
+              <Select
+                bordered={false}
+                className={styles.integratedFilterSelect}
+                onChange={(value) => {
+                  setSourceFilter(value);
+                  setPage(1);
+                }}
+                options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
+                value={sourceFilter}
+              />
+            </div>
+            <div className={styles.integratedFilterDivider} />
+            <div className={styles.integratedFilterField}>
+              <span className={styles.integratedFilterLabel}>
+                {t("knowledgeNetwork.relationTypeListTargetObject")}
+              </span>
+              <Select
+                bordered={false}
+                className={styles.integratedFilterSelect}
+                onChange={(value) => {
+                  setTargetFilter(value);
+                  setPage(1);
+                }}
+                options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
+                value={targetFilter}
+              />
+            </div>
+            <button
+              aria-label={t("knowledgeNetwork.closeSearchBar")}
+              className={styles.integratedFilterClear}
+              onClick={() => {
+                setSearchBarOpen(false);
+              }}
+              type="button"
+            >
+              <CloseOutlined />
+            </button>
+          </div>
+        ) : null}
         <Table<KnowledgeNetworkRelationTypeRecord>
           columns={columns}
           dataSource={paginatedItems}

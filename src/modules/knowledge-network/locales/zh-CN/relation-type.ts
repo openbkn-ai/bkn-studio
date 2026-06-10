@@ -59,6 +59,8 @@ export const relationtypePart = {
     relationTypes: "关系类",
     relationTypeSaveAndExit: "保存并退出",
     relationTypesDescription: "查看并维护当前知识网络下的关系类资源。",
+    relationTypeListSourceObject: "起点对象类",
+    relationTypeListTargetObject: "终点对象类",
     relationTypeSourceObject: "源对象类",
     relationTypeSourceObjectPlaceholder: "请选择起点",
     relationTypeSourceObjectRequired: "请选择起点。",
