@@ -1,0 +1,11 @@
+.quotaHint {
+  margin: -8px 0 16px;
+  padding-left: 29.17%;
+  color: rgba(15, 30, 54, 0.62);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.quotaHintLast {
+  margin-bottom: 0;
+}

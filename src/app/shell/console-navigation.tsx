@@ -6,11 +6,13 @@ import type {
 import { dataConnectNavigation } from "@/modules/data-connect/navigation";
 import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
 import { knowledgeNetworkNavigation } from "@/modules/knowledge-network/navigation";
+import { modelResourcesNavigation } from "@/modules/model-resources/navigation";
 
 const navigationContributions: ConsoleNavContribution[] = [
   knowledgeNetworkNavigation,
   dataConnectNavigation,
   executionFactoryNavigation,
+  modelResourcesNavigation,
 ];
 
 export type { ConsoleNavItem } from "@/app/shell/navigation/types";

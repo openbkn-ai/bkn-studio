@@ -2,6 +2,7 @@ import {
   AppstoreOutlined,
   ClusterOutlined,
   DatabaseOutlined,
+  ExperimentOutlined,
   FileTextOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
@@ -40,6 +41,11 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
     key: "execution-factory",
     labelKey: "shell.items.executionFactory",
     icon: <ClusterOutlined />,
+  },
+  {
+    key: "model-resources",
+    labelKey: "shell.items.modelResources",
+    icon: <ExperimentOutlined />,
   },
   {
     key: "system-management",

@@ -4,11 +4,13 @@ import type { AppRouteContribution } from "@/app/router/types";
 import { dataConnectRouteContribution } from "@/modules/data-connect/routes";
 import { executionFactoryRouteContribution } from "@/modules/execution-factory/routes";
 import { knowledgeNetworkRouteContribution } from "@/modules/knowledge-network/routes";
+import { modelResourcesRouteContribution } from "@/modules/model-resources/routes";
 
 const routeContributions: AppRouteContribution[] = [
   knowledgeNetworkRouteContribution,
   dataConnectRouteContribution,
   executionFactoryRouteContribution,
+  modelResourcesRouteContribution,
 ];
 
 export const defaultModuleRoutePath =

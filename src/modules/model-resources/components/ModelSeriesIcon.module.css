@@ -1,0 +1,13 @@
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 2px;
+  background: rgba(22, 119, 255, 0.12);
+  color: #1677ff;
+  font-size: 12px;
+  font-weight: 600;
+}

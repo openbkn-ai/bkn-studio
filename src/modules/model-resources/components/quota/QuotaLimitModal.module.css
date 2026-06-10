@@ -1,0 +1,56 @@
+.pageHeader {
+  margin-bottom: 16px;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.modelTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modelName {
+  color: #10233f;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modelMeta {
+  margin-top: 8px;
+  color: rgba(15, 30, 54, 0.62);
+  font-size: 13px;
+}
+
+.sectionTitle {
+  margin: 20px 0 12px;
+  color: #10233f;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fieldCell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.errorText {
+  width: 100%;
+  color: #d4380d;
+  font-size: 12px;
+}
+
+.summary {
+  margin-top: 16px;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}

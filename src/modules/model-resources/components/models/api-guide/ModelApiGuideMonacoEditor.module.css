@@ -1,0 +1,3 @@
+.editor :global(.decorationsOverviewRuler) {
+  display: none !important;
+}
