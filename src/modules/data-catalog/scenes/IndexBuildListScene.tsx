@@ -16,6 +16,8 @@ import { BuildTaskDetailModal } from "@/modules/data-catalog/components/BuildTas
 import { BuildTaskModal } from "@/modules/data-catalog/components/BuildTaskModal";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import {
+  buildTaskStatusLabelKey,
+  deleteBuildTask,
   listBuildTasks,
   pauseBuildTask,
   resumeBuildTask,
@@ -45,7 +47,7 @@ const STATUS_OPTIONS: BuildTaskStatus[] = [
 
 export function IndexBuildListScene() {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const navigate = useNavigate();
 
   const [tasks, setTasks] = useState<BuildTask[]>([]);
@@ -78,6 +80,15 @@ export function IndexBuildListScene() {
     }
   }, []);
 
+  // 轮询只刷新任务列表;资源/连接等静态数据进页和手动刷新时才拉
+  const loadTasks = useCallback(async () => {
+    try {
+      setTasks(await listBuildTasks());
+    } catch {
+      // 轮询失败保留旧数据,等下一轮
+    }
+  }, []);
+
   useEffect(() => {
     void loadData();
   }, [loadData]);
@@ -99,9 +110,14 @@ export function IndexBuildListScene() {
     if (!hasActive) {
       return;
     }
-    const timer = window.setInterval(() => void loadData(), 4000);
+    const timer = window.setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
+      void loadTasks();
+    }, 10_000);
     return () => window.clearInterval(timer);
-  }, [hasActive, loadData]);
+  }, [hasActive, loadTasks]);
 
   const resourceMap = useMemo(
     () => new Map(resources.map((resource) => [resource.id, resource])),
@@ -131,13 +147,18 @@ export function IndexBuildListScene() {
   };
 
   const handlePauseResume = async (task: BuildTask) => {
+    const isStreaming = task.mode === "streaming";
     try {
-      if (task.status === "listening") {
+      if (task.status === "listening" || task.status === "running") {
         await pauseBuildTask(task.id);
-        message.success(t("dataCatalog.task.paused"));
+        message.success(
+          t(isStreaming ? "dataCatalog.task.paused" : "dataCatalog.task.stopped"),
+        );
       } else {
         await resumeBuildTask(task.id);
-        message.success(t("dataCatalog.task.resumed"));
+        message.success(
+          t(isStreaming ? "dataCatalog.task.resumed" : "dataCatalog.task.buildResumed"),
+        );
       }
       await loadData();
     } catch (error) {
@@ -155,6 +176,28 @@ export function IndexBuildListScene() {
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     }
+  };
+
+  const handleDelete = (task: BuildTask) => {
+    const isActive = task.status === "running" || task.status === "listening";
+    void modal.confirm({
+      title: t("dataCatalog.task.deleteConfirmTitle", { id: task.id }),
+      content: isActive
+        ? t("dataCatalog.task.deleteConfirmContentActive")
+        : t("dataCatalog.task.deleteConfirmContent"),
+      okText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteBuildTask(task.id, { stopFirst: isActive });
+          message.success(t("common.success"));
+          await loadData();
+        } catch (error) {
+          void message.error(extractRequestErrorMessage(error));
+        }
+      },
+    });
   };
 
   const columns: ColumnsType<BuildTask> = [
@@ -205,7 +248,7 @@ export function IndexBuildListScene() {
     {
       dataIndex: "status",
       title: t("common.status"),
-      render: (value: BuildTaskStatus) => (
+      render: (value: BuildTaskStatus, record) => (
         <span
           className={[
             styles.tag,
@@ -220,7 +263,7 @@ export function IndexBuildListScene() {
                     : styles.taskPending,
           ].join(" ")}
         >
-          {t(`dataCatalog.task.statuses.${value}`)}
+          {t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(value, record.mode)}`)}
         </span>
       ),
     },
@@ -255,16 +298,26 @@ export function IndexBuildListScene() {
           <AppButton onClick={() => setDetailTask(record)} type="link">
             {t("common.detail")}
           </AppButton>
-          {record.status === "listening" || record.status === "paused" ? (
+          {record.status === "running" ||
+          record.status === "listening" ||
+          record.status === "paused" ? (
             <PermissionGate permissions="resource:task_manage">
               <AppButton
                 disabled={record.status === "paused" && !gateOf(record).ok}
                 onClick={() => void handlePauseResume(record)}
                 type="link"
               >
-                {record.status === "listening"
-                  ? t("dataCatalog.task.pauseListening")
-                  : t("dataCatalog.task.resumeListening")}
+                {record.status === "paused"
+                  ? t(
+                      record.mode === "streaming"
+                        ? "dataCatalog.task.resumeListening"
+                        : "dataCatalog.task.resumeBuild",
+                    )
+                  : t(
+                      record.mode === "streaming"
+                        ? "dataCatalog.task.pauseListening"
+                        : "dataCatalog.task.stopBuild",
+                    )}
               </AppButton>
             </PermissionGate>
           ) : null}
@@ -279,6 +332,11 @@ export function IndexBuildListScene() {
               </AppButton>
             </PermissionGate>
           ) : null}
+          <PermissionGate permissions="resource:task_manage">
+            <AppButton danger onClick={() => handleDelete(record)} type="link">
+              {t("common.delete")}
+            </AppButton>
+          </PermissionGate>
         </Space>
       ),
     },
@@ -325,7 +383,11 @@ export function IndexBuildListScene() {
             className={sceneStyles.filterSelect}
             onChange={(value) => setStatusFilter(value)}
             options={STATUS_OPTIONS.map((status) => ({
-              label: t(`dataCatalog.task.statuses.${status}`),
+              // paused 内部状态同时承载 streaming 暂停与 batch 停止
+              label:
+                status === "paused"
+                  ? `${t("dataCatalog.task.statuses.paused")} / ${t("dataCatalog.task.statuses.stopped")}`
+                  : t(`dataCatalog.task.statuses.${status}`),
               value: status,
             }))}
             placeholder={t("dataCatalog.task.statusFilterPlaceholder")}

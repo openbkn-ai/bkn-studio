@@ -22,6 +22,7 @@ import {
   sortTasks,
 } from "@/modules/data-catalog/lib/index-state";
 import {
+  buildTaskStatusLabelKey,
   pauseBuildTask,
   resumeBuildTask,
   retryBuildTask,
@@ -450,7 +451,9 @@ export function ResourceDetailPanel({
                             : styles.taskRunning,
                       ].join(" ")}
                     >
-                      {t(`dataCatalog.task.statuses.${latest.status}`)}
+                      {t(
+                        `dataCatalog.task.statuses.${buildTaskStatusLabelKey(latest.status, latest.mode)}`,
+                      )}
                     </span>
                   </div>
                   {latest.status === "failed" && effective ? (
@@ -532,7 +535,9 @@ export function ResourceDetailPanel({
                                   : styles.taskPending,
                             ].join(" ")}
                           >
-                            {t(`dataCatalog.task.statuses.${task.status}`)}
+                            {t(
+                              `dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`,
+                            )}
                           </span>
                         </span>
                         <span className={styles.scanItemMeta}>

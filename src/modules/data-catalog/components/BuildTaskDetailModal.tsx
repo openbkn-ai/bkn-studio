@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { formatCount } from "@/modules/data-catalog/lib/format";
+import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./shared.module.css";
@@ -57,7 +58,9 @@ export function BuildTaskDetailModal({
                     : styles.taskRunning,
             ].join(" ")}
           >
-            {t(`dataCatalog.task.statuses.${task.status}`)}
+            {t(
+              `dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`,
+            )}
           </span>
         </div>
 

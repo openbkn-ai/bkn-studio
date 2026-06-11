@@ -1,3 +1,5 @@
+import axios from "axios";
+
 import { http } from "@/framework/request/http";
 import {
   emitMockChange,
@@ -81,6 +83,17 @@ function normalizeStatus(value: string | undefined, mode: BuildMode): BuildTaskS
     default:
       return "pending";
   }
+}
+
+/**
+ * 状态文案 key:内部统一用 paused,但 batch 的 stop 是中止而非可续传的暂停,
+ * 显示上 batch 用"已停止"(statuses.stopped)、streaming 用"已暂停"(statuses.paused)。
+ */
+export function buildTaskStatusLabelKey(status: BuildTaskStatus, mode: BuildMode) {
+  if (status === "paused" && mode === "batch") {
+    return "stopped";
+  }
+  return status;
 }
 
 function mapBuildTask(item: BackendBuildTask): BuildTask {
@@ -224,7 +237,7 @@ export async function createBuildTask(
 export async function pauseBuildTask(id: string) {
   if (useMock) {
     const task = mockBuildTasks.find((item) => item.id === id);
-    if (task && task.status === "listening") {
+    if (task && (task.status === "listening" || task.status === "running")) {
       task.status = "paused";
       emitMockChange();
     }
@@ -240,7 +253,7 @@ export async function resumeBuildTask(id: string) {
   if (useMock) {
     const task = mockBuildTasks.find((item) => item.id === id);
     if (task && task.status === "paused") {
-      task.status = "listening";
+      task.status = task.mode === "streaming" ? "listening" : "running";
       task.lastEventAt = Date.now();
       emitMockChange();
       ensureMockTicker();
@@ -251,6 +264,46 @@ export async function resumeBuildTask(id: string) {
 
   // 后端语义:start = 恢复运行(body 可选)
   await http.post(`/vega-backend/v1/build-tasks/${id}/start`);
+}
+
+export async function deleteBuildTask(
+  id: string,
+  options: { stopFirst?: boolean } = {},
+) {
+  if (useMock) {
+    const index = mockBuildTasks.findIndex((item) => item.id === id);
+    if (index >= 0) {
+      mockBuildTasks.splice(index, 1);
+      emitMockChange();
+    }
+    await wait(undefined, 120);
+    return;
+  }
+
+  if (options.stopFirst) {
+    // 已停止/已完成时 stop 会报错,忽略即可
+    await http
+      .post(`/vega-backend/v1/build-tasks/${id}/stop`, undefined, {
+        skipErrorToast: true,
+      })
+      .catch(() => undefined);
+  }
+
+  // 后端拒删 running/stopping(409);stop 后短暂处于 stopping,小退避重试
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await http.delete(`/vega-backend/v1/build-tasks/${id}`, {
+        skipErrorToast: true,
+      });
+      return;
+    } catch (error) {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      if (status !== 409 || attempt >= 4) {
+        throw error;
+      }
+      await wait(undefined, 1000);
+    }
+  }
 }
 
 export async function retryBuildTask(id: string): Promise<BuildTask | null> {
