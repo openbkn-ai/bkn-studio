@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { gotoE2ePage } from "../../helpers/execution-unit-ui";
+
 const OPERATOR_ID = "e0b56d33-31e8-4646-a32d-8bac094073c5";
 
 test("operator edit form shows saved description", async ({ page, request }) => {
@@ -33,8 +35,7 @@ test("operator edit form shows saved description", async ({ page, request }) => 
     })();
   });
 
-  const baseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173";
-  await page.goto(`${baseUrl}/execution-factory/units/${OPERATOR_ID}/edit`);
+  await gotoE2ePage(page, `/execution-factory/units/${OPERATOR_ID}/edit`);
   await page.waitForLoadState("networkidle");
 
   await expect.poll(() => browserDetail?.metadata?.description).toBe(expectedDescription);
@@ -43,7 +44,8 @@ test("operator edit form shows saved description", async ({ page, request }) => 
   await expect(nameField).toBeVisible({ timeout: 15000 });
   await expect(nameField).not.toHaveValue("", { timeout: 15000 });
 
-  const openapiField = page.locator("#openapiSpec");
+  await page.getByRole("tab", { name: /粘贴|Paste/i }).click();
+  const openapiField = page.getByRole("tabpanel", { name: /粘贴|Paste/i }).getByRole("textbox");
   await expect(openapiField).toBeVisible({ timeout: 15000 });
   await expect(openapiField).toContainText('"openapi"', { timeout: 15000 });
   await expect(openapiField).toContainText('"paths"', { timeout: 15000 });

@@ -20,6 +20,17 @@ export type RuntimeInput = {
     tokenManager?: TokenManager;
   };
   currentUser?: Partial<RuntimeUser>;
+  features?: {
+    capabilityUxV2?: boolean;
+    executionFactoryLab?: Partial<{
+      catalog: boolean;
+      function: boolean;
+      impex: boolean;
+      mcp_sse_wizard: boolean;
+      skill_files: boolean;
+      hide_legacy_execution_factory_menu: boolean;
+    }>;
+  };
   locale?: SupportedLocale;
   mode?: "hosted" | "standalone";
   router?: {
@@ -37,6 +48,17 @@ export type RuntimeConfig = {
     tokenManager: TokenManager;
   };
   currentUser: RuntimeUser;
+  features?: {
+    capabilityUxV2?: boolean;
+    executionFactoryLab?: Partial<{
+      catalog: boolean;
+      function: boolean;
+      impex: boolean;
+      mcp_sse_wizard: boolean;
+      skill_files: boolean;
+      hide_legacy_execution_factory_menu: boolean;
+    }>;
+  };
   locale: SupportedLocale;
   mode: "hosted" | "standalone";
   router: {

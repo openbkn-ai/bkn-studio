@@ -304,6 +304,10 @@ export function SkillListScene() {
         setDetailSkillId(null);
         setHistorySkillId(skillId);
       }}
+      onViewDetail={(id) => {
+        setDetailSkillId(null);
+        void navigate(`/execution-factory/skills/${id}`);
+      }}
       open={Boolean(detailSkillId)}
       skillId={detailSkillId}
     />

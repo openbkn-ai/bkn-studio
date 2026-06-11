@@ -126,11 +126,38 @@ export async function publishSkillViaApi(request: APIRequestContext, skillId: st
 
 export async function getSkillContentViaApi(request: APIRequestContext, skillId: string) {
   const response = await request.get(
-    `${API_PREFIX}/skills/${skillId}/management/content`,
+    `${API_PREFIX}/skills/${skillId}/management/content?response_mode=content`,
     { headers: defaultApiHeaders() },
   );
   await expectOk(response, "Get skill content");
   return response.json();
+}
+
+export async function readSkillManagementFileViaApi(
+  request: APIRequestContext,
+  skillId: string,
+  relPath: string,
+  options?: { responseMode?: "url" | "content" },
+) {
+  const responseMode = options?.responseMode ?? "url";
+  const response = await request.post(
+    `${API_PREFIX}/skills/${skillId}/management/files/read?response_mode=${responseMode}`,
+    {
+      headers: {
+        ...defaultApiHeaders(),
+        "Content-Type": "application/json",
+      },
+      data: { rel_path: relPath },
+    },
+  );
+  await expectOk(response, "Read skill management file");
+  return response.json() as Promise<{
+    rel_path?: string;
+    url?: string;
+    content?: string;
+    mime_type?: string;
+    size?: number;
+  }>;
 }
 
 export async function getSkillHistoryViaApi(request: APIRequestContext, skillId: string) {
@@ -186,6 +213,26 @@ export async function deleteSkillViaApi(request: APIRequestContext, skillId: str
     headers: defaultApiHeaders(),
   });
   await expectOk(response, "Delete skill");
+}
+
+export async function updateSkillPackageViaApi(
+  request: APIRequestContext,
+  skillId: string,
+  zipBuffer: Buffer,
+) {
+  const response = await request.put(`${API_PREFIX}/skills/${skillId}/package`, {
+    headers: defaultApiHeaders(),
+    multipart: {
+      file_type: "zip",
+      file: {
+        name: "skill.zip",
+        mimeType: "application/zip",
+        buffer: zipBuffer,
+      },
+    },
+  });
+  await expectOk(response, "Update skill package");
+  return response.json();
 }
 
 export async function cleanupSkillViaApi(request: APIRequestContext, skillId: string) {

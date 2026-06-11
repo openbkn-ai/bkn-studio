@@ -4,16 +4,24 @@ import type { UploadProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { OpenApiOperationsIoPreview } from "@/modules/execution-factory/components/OpenApiOperationsIoPreview";
 import {
+  OPENAPI_OPERATOR_TEMPLATE,
+  OPENAPI_TOOLBOX_TEMPLATE,
+} from "@/modules/execution-factory/constants/import-templates";
+import {
+  analyzeOpenApiDocumentText,
   extractOpenApiMetadataHints,
   validateOpenApiDocumentText,
 } from "@/modules/execution-factory/utils/metadata-content";
+import { triggerBrowserDownload } from "@/modules/execution-factory/utils/download-file";
 
 import styles from "./OpenApiSpecInput.module.css";
 
 type OpenApiSpecInputProps = {
   onMetadataHints?: (hints: { title?: string; description?: string }) => void;
   onValidationChange?: (valid: boolean) => void;
+  registrationTarget?: "operator" | "toolbox" | "default";
   rows?: number;
   value?: string;
   onChange?: (value: string) => void;
@@ -24,6 +32,7 @@ type InputMode = "paste" | "file" | "url";
 export function OpenApiSpecInput({
   onMetadataHints,
   onValidationChange,
+  registrationTarget = "default",
   rows = 10,
   value = "",
   onChange,
@@ -34,6 +43,7 @@ export function OpenApiSpecInput({
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  const analysis = useMemo(() => analyzeOpenApiDocumentText(value), [value]);
   const validation = useMemo(() => validateOpenApiDocumentText(value), [value]);
 
   useEffect(() => {
@@ -50,6 +60,7 @@ export function OpenApiSpecInput({
 
   const readFileText = async (file: File) => {
     const text = await file.text();
+    setFetchError(null);
     onChange?.(text);
   };
 
@@ -89,8 +100,40 @@ export function OpenApiSpecInput({
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const template =
+      registrationTarget === "toolbox" ? OPENAPI_TOOLBOX_TEMPLATE : OPENAPI_OPERATOR_TEMPLATE;
+    const filename =
+      registrationTarget === "toolbox"
+        ? "toolbox-openapi-template.yaml"
+        : "operator-openapi-template.yaml";
+    const blob = new Blob([template], { type: "text/yaml" });
+    triggerBrowserDownload(blob, filename);
+  };
+
+  const showMultiOperationWarning =
+    registrationTarget === "operator" &&
+    analysis.ok &&
+    validation.ok &&
+    analysis.operationCount > 1;
+
+  const showOpenApi31Hint =
+    analysis.ok && analysis.openApiVersion.startsWith("3.1");
+
   return (
     <div className={styles.root}>
+      {registrationTarget === "operator" || registrationTarget === "toolbox" ? (
+        <div className={styles.toolbar}>
+          <span className={styles.toolbarHint}>
+            {registrationTarget === "operator"
+              ? t("executionFactory.openapiOperatorHint")
+              : t("executionFactory.openapiToolboxHint")}
+          </span>
+          <button className={styles.templateButton} onClick={handleDownloadTemplate} type="button">
+            {t("executionFactory.downloadImportTemplate")}
+          </button>
+        </div>
+      ) : null}
       <Tabs
         activeKey={mode}
         items={[
@@ -152,12 +195,45 @@ export function OpenApiSpecInput({
       {value.trim() && !validation.ok ? (
         <Alert message={validation.reason} showIcon style={{ marginTop: 8 }} type="error" />
       ) : null}
-      {validation.ok ? (
+      {validation.ok && analysis.ok ? (
+        <>
+          <Alert
+            message={t("executionFactory.openapiValidationOkWithCount", {
+              count: analysis.operationCount,
+            })}
+            showIcon
+            style={{ marginTop: 8 }}
+            type="success"
+          />
+          <div className={styles.previewPanel}>
+            <div className={styles.previewMeta}>
+              <span>
+                {t("executionFactory.openapiPreviewServer")}: {analysis.serverUrl}
+              </span>
+              <span>
+                {t("executionFactory.openapiPreviewVersion")}: {analysis.openApiVersion}
+              </span>
+            </div>
+            <OpenApiOperationsIoPreview openapiSpec={value} />
+          </div>
+        </>
+      ) : null}
+      {showMultiOperationWarning ? (
         <Alert
-          message={t("executionFactory.openapiValidationOk")}
+          message={t("executionFactory.openapiMultiOperationWarning", {
+            count: analysis.operationCount,
+          })}
           showIcon
           style={{ marginTop: 8 }}
-          type="success"
+          type="warning"
+        />
+      ) : null}
+      {showOpenApi31Hint ? (
+        <Alert
+          message={t("executionFactory.openapiVersion31Hint")}
+          showIcon
+          style={{ marginTop: 8 }}
+          type="info"
         />
       ) : null}
     </div>

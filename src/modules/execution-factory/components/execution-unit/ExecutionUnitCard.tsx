@@ -5,8 +5,14 @@ import {
   ToolOutlined,
 } from "@ant-design/icons";
 import { Avatar, Card, Tag, Typography } from "antd";
+import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  resolveOperatorCategoryLabel,
+  resolveSkillCategoryLabel,
+  resolveToolboxCategoryLabel,
+} from "@/modules/execution-factory/utils/detail-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import type { ExecutionUnitCardItem, ExecutionUnitTab } from "./types";
@@ -41,20 +47,71 @@ function getTabIcon(activeTab: ExecutionUnitTab) {
   }
 }
 
-function getStatusColor(status?: string) {
+function getStatusStyle(status?: string): CSSProperties {
   if (status === "published") {
-    return "success";
+    return {
+      background: "var(--color-success-bg)",
+      borderColor: "var(--color-success-border)",
+      color: "var(--color-success-text)",
+    };
   }
 
   if (status === "offline") {
-    return "default";
+    return {
+      background: "var(--color-error-bg)",
+      borderColor: "var(--color-error-border)",
+      color: "var(--color-error-text)",
+    };
   }
 
   if (status === "editing") {
-    return "warning";
+    return {
+      background: "var(--color-warning-bg)",
+      borderColor: "var(--color-warning-border)",
+      color: "var(--color-warning-text)",
+    };
   }
 
-  return "processing";
+  return {
+    background: "var(--color-info-bg)",
+    borderColor: "var(--color-info-border)",
+    color: "var(--color-info-text)",
+  };
+}
+
+function resolveCardCategoryLabel(
+  activeTab: ExecutionUnitTab,
+  item: ExecutionUnitCardItem,
+  t: (key: string) => string,
+) {
+  if (activeTab === "operator") {
+    return resolveOperatorCategoryLabel(
+      { category: item.category, categoryName: item.categoryName },
+      t,
+    );
+  }
+
+  if (activeTab === "toolbox") {
+    return resolveToolboxCategoryLabel(
+      { categoryType: item.category, categoryName: item.categoryName },
+      t,
+    );
+  }
+
+  if (activeTab === "skill") {
+    return resolveSkillCategoryLabel(
+      { category: item.category, categoryName: item.categoryName },
+      t,
+    );
+  }
+
+  if (activeTab === "mcp" && item.category) {
+    const key = `executionFactory.operatorCategories.${item.category}`;
+    const translated = t(key);
+    return translated !== key ? translated : item.categoryName ?? item.category;
+  }
+
+  return item.categoryName ?? item.category ?? "";
 }
 
 export function ExecutionUnitCard({
@@ -81,10 +138,11 @@ export function ExecutionUnitCard({
     activeTab === "toolbox"
       ? `executionFactory.toolboxStatuses.${item.status as "published" | "unpublish" | "offline"}`
       : `executionFactory.statuses.${item.status as "published" | "unpublish" | "offline" | "editing"}`;
+  const categoryLabel = resolveCardCategoryLabel(activeTab, item, t);
 
   return (
     <Card
-      className={`${styles.card} ${marketMode ? styles.cardMarket : ""}`}
+      className={styles.card}
       data-testid="execution-unit-card"
       hoverable
       onClick={onClick}
@@ -132,14 +190,20 @@ export function ExecutionUnitCard({
           <Title className={styles.title} ellipsis={{ rows: 1 }} level={5}>
             {item.name}
           </Title>
-          {!marketMode && item.status ? (
-            <Tag color={getStatusColor(item.status)}>{t(statusLabelKey)}</Tag>
+          {item.status ? (
+            <Tag style={getStatusStyle(item.status)}>{t(statusLabelKey)}</Tag>
           ) : null}
         </div>
 
         <Paragraph className={styles.description} ellipsis={{ rows: 2 }}>
           {item.description || "-"}
         </Paragraph>
+
+        {categoryLabel && categoryLabel !== "-" ? (
+          <div className={styles.cardMetaRow}>
+            <Tag className={styles.categoryTag}>{categoryLabel}</Tag>
+          </div>
+        ) : null}
 
         {activeTab === "toolbox" ? (
           <div className={styles.toolCount}>

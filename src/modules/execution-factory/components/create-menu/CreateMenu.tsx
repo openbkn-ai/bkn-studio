@@ -5,7 +5,12 @@ import { useTranslation } from "react-i18next";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
+import { isCapabilityUxV2 } from "@/modules/execution-factory/utils/capability-ux";
 
+import {
+  AddCapabilityWizard,
+  type CreatedCapabilityPayload,
+} from "./AddCapabilityWizard";
 import {
   CreateExecutionUnitWizard,
   type CreatedExecutionUnitPayload,
@@ -18,7 +23,7 @@ type CreateMenuProps = {
   autoOpen?: boolean;
   onAutoOpenHandled?: () => void;
   onRefresh?: () => void;
-  onResourceCreated?: (payload: CreatedExecutionUnitPayload) => void;
+  onResourceCreated?: (payload: CreatedExecutionUnitPayload | CreatedCapabilityPayload) => void;
 };
 
 function getCreatePermission(activeTab: ExecutionUnitTab) {
@@ -41,10 +46,10 @@ function getImportPermission(activeTab: ExecutionUnitTab) {
     return "execution-factory:impex:import";
   }
 
-  return undefined;
+  return null;
 }
 
-function getCreateLabel(activeTab: ExecutionUnitTab, t: (key: string) => string) {
+function getLegacyCreateLabel(activeTab: ExecutionUnitTab, t: (key: string) => string) {
   switch (activeTab) {
     case "operator":
       return t("executionFactory.createOperatorButton");
@@ -59,6 +64,18 @@ function getCreateLabel(activeTab: ExecutionUnitTab, t: (key: string) => string)
   }
 }
 
+function resolveCapabilityCreatePermission(activeTab: ExecutionUnitTab) {
+  if (activeTab === "skill") {
+    return "execution-factory:skill:create";
+  }
+
+  if (activeTab === "mcp") {
+    return "execution-factory:mcp:create";
+  }
+
+  return "execution-factory:toolbox:create";
+}
+
 export function CreateMenu({
   activeTab,
   autoOpen = false,
@@ -67,10 +84,19 @@ export function CreateMenu({
   onResourceCreated,
 }: CreateMenuProps) {
   const { t } = useTranslation();
-  const [wizardOpen, setWizardOpen] = useState(false);
+  const capabilityUxV2 = isCapabilityUxV2();
+  const [legacyWizardOpen, setLegacyWizardOpen] = useState(false);
+  const [capabilityWizardOpen, setCapabilityWizardOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
-  const permission = getCreatePermission(activeTab);
+  const useLegacyOperatorCreate = capabilityUxV2 && activeTab === "operator";
+  const showAddCapabilityWizard = capabilityUxV2 && !useLegacyOperatorCreate;
+  const showLegacyCreateWizard = !capabilityUxV2 || useLegacyOperatorCreate;
+  const permission = capabilityUxV2
+    ? useLegacyOperatorCreate
+      ? "execution-factory:operator:create"
+      : resolveCapabilityCreatePermission(activeTab)
+    : getCreatePermission(activeTab);
   const importPermission = getImportPermission(activeTab);
 
   useEffect(() => {
@@ -78,20 +104,42 @@ export function CreateMenu({
       return;
     }
 
-    setWizardOpen(true);
+    if (capabilityUxV2 && !useLegacyOperatorCreate) {
+      setCapabilityWizardOpen(true);
+    } else {
+      setLegacyWizardOpen(true);
+    }
     onAutoOpenHandled?.();
-  }, [autoOpen, onAutoOpenHandled, permission]);
+  }, [autoOpen, capabilityUxV2, onAutoOpenHandled, permission, useLegacyOperatorCreate]);
 
   if (!permission) {
     return null;
   }
 
+  const handleResourceCreated = (payload: CreatedExecutionUnitPayload | CreatedCapabilityPayload) => {
+    onResourceCreated?.(payload);
+  };
+
   return (
     <>
       <PermissionGate permissions={permission}>
         <div className={styles.toolbarRow}>
-          <AppButton icon={<PlusOutlined />} onClick={() => setWizardOpen(true)} type="primary">
-            {getCreateLabel(activeTab, t)}
+          <AppButton
+            icon={<PlusOutlined />}
+            onClick={() => {
+              if (capabilityUxV2 && !useLegacyOperatorCreate) {
+                setCapabilityWizardOpen(true);
+                return;
+              }
+              setLegacyWizardOpen(true);
+            }}
+            type="primary"
+          >
+            {useLegacyOperatorCreate
+              ? t("executionFactory.createOperatorButton")
+              : capabilityUxV2
+                ? t("executionFactory.addCapabilityButton")
+                : getLegacyCreateLabel(activeTab, t)}
           </AppButton>
           {importPermission ? (
             <PermissionGate permissions={importPermission}>
@@ -103,13 +151,31 @@ export function CreateMenu({
         </div>
       </PermissionGate>
 
-      <CreateExecutionUnitWizard
-        initialTab={activeTab}
-        onClose={() => setWizardOpen(false)}
-        onRefresh={onRefresh}
-        onResourceCreated={onResourceCreated}
-        open={wizardOpen}
-      />
+      {showAddCapabilityWizard ? (
+        <AddCapabilityWizard
+          contextTab={activeTab}
+          initialMode={
+            activeTab === "mcp"
+              ? "mcp"
+              : activeTab === "skill"
+                ? "skill"
+                : "quick-api"
+          }
+          onClose={() => setCapabilityWizardOpen(false)}
+          onCreated={handleResourceCreated}
+          onRefresh={onRefresh}
+          open={capabilityWizardOpen}
+        />
+      ) : null}
+      {showLegacyCreateWizard ? (
+        <CreateExecutionUnitWizard
+          initialTab={activeTab}
+          onClose={() => setLegacyWizardOpen(false)}
+          onRefresh={onRefresh}
+          onResourceCreated={handleResourceCreated}
+          open={legacyWizardOpen}
+        />
+      ) : null}
       {importPermission ? (
         <ImportResourceModal
           activeTab={activeTab}

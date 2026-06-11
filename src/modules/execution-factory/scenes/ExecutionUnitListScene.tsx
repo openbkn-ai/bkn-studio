@@ -53,6 +53,13 @@ import {
   collectLocalResourceIds,
   invalidateLocalResourceIdsCache,
 } from "@/modules/execution-factory/utils/collect-local-resource-ids";
+import {
+  getDefaultManagementTab,
+  getExecutionUnitTabLabelKey,
+  isCapabilityUxV2,
+  resolveVisibleManagementTabs,
+} from "@/modules/execution-factory/utils/capability-ux";
+import { supportsCategoryFilter } from "@/modules/execution-factory/utils/capability-parity";
 
 import styles from "./execution-unit-list.module.css";
 
@@ -127,6 +134,8 @@ function mapOperator(item: OperatorRecord): ExecutionUnitCardItem {
     name: item.name,
     description: item.description,
     metadataType: item.metadataType,
+    category: item.category,
+    categoryName: item.categoryName,
     isInternal: item.isInternal,
     releaseUser: item.releaseUser,
     updateUser: item.createUser,
@@ -143,6 +152,8 @@ function mapToolbox(item: ToolboxRecord): ExecutionUnitCardItem {
     name: item.name,
     description: item.description,
     metadataType: item.metadataType,
+    category: item.categoryType,
+    categoryName: item.categoryName,
     isInternal: item.isInternal,
     toolCount: item.toolCount ?? item.tools?.length ?? 0,
     releaseUser: item.releaseUser,
@@ -158,6 +169,7 @@ function mapMcp(item: McpRecord): ExecutionUnitCardItem {
     id: item.mcpId,
     name: item.name,
     description: item.description,
+    category: item.category,
     isInternal: item.isInternal,
     releaseUser: item.releaseUser,
     updateUser: item.createUser,
@@ -172,6 +184,8 @@ function mapSkill(item: SkillRecord): ExecutionUnitCardItem {
     id: item.skillId,
     name: item.name,
     description: item.description,
+    category: item.category,
+    categoryName: item.categoryName,
     releaseUser: item.releaseUser,
     updateUser: item.createUser,
     releaseTime: item.releaseTime,
@@ -198,11 +212,19 @@ export function ExecutionUnitListScene({
   const listLoadGenerationRef = useRef(0);
   const installedSyncIdleRef = useRef<IdleTaskHandle | null>(null);
   const [overlaysReady, setOverlaysReady] = useState(false);
+  const resolvableTabs = useMemo(() => {
+    if (!isCapabilityUxV2() || tabs.includes("operator")) {
+      return tabs;
+    }
+
+    return [...tabs, "operator"];
+  }, [tabs]);
   const [activeTab, setActiveTab] = useState<ExecutionUnitTab>(() =>
-    resolveActiveTab(searchParams.get("activeTab"), defaultTab, tabs),
+    resolveActiveTab(searchParams.get("activeTab"), defaultTab, resolvableTabs),
   );
   const [category, setCategory] = useState("");
   const [categoryOptions, setCategoryOptions] = useState<CategoryChipOption[]>([]);
+  const [originFilter, setOriginFilter] = useState<"" | "internal" | "custom">("");
   const [status, setStatus] = useState<string>("");
   const [items, setItems] = useState<ExecutionUnitCardItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -265,7 +287,7 @@ export function ExecutionUnitListScene({
   }, [pageState.keyword]);
 
   useEffect(() => {
-    if (activeTab !== "operator") {
+    if (!supportsCategoryFilter(activeTab)) {
       setCategoryOptions([]);
       setCategory("");
       return;
@@ -285,23 +307,24 @@ export function ExecutionUnitListScene({
 
   useEffect(() => {
     setCategory("");
+    setOriginFilter("");
     setStatus("");
   }, [activeTab]);
 
   useEffect(() => {
     const param = searchParams.get("activeTab");
-    const resolved = resolveActiveTab(param, defaultTab, tabs);
+    const resolved = resolveActiveTab(param, defaultTab, resolvableTabs);
 
     setActiveTab(resolved);
 
-    if (param && tabs.includes(param as ExecutionUnitTab)) {
+    if (param && resolvableTabs.includes(param as ExecutionUnitTab)) {
       return;
     }
 
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("activeTab", resolved);
     setSearchParams(nextParams, { replace: true });
-  }, [defaultTab, searchParams, setSearchParams, tabs]);
+  }, [defaultTab, resolvableTabs, searchParams, setSearchParams]);
 
   useEffect(() => {
     const detailId = searchParams.get("detailId");
@@ -412,16 +435,41 @@ export function ExecutionUnitListScene({
     installedSyncIdleRef.current = scheduleIdleTask(run, 4000);
   }, [marketMode, reloadInstalledResourceIds]);
 
+  const showOriginFilter =
+    !marketMode &&
+    (activeTab === "toolbox" || activeTab === "mcp" || activeTab === "operator");
+
+  const originFilterOptions = useMemo(
+    () => [
+      { value: "" as const, label: t("executionFactory.originFilterAll") },
+      { value: "internal" as const, label: t("executionFactory.originFilterInternal") },
+      { value: "custom" as const, label: t("executionFactory.originFilterCustom") },
+    ],
+    [t],
+  );
+
   const displayItems = useMemo(() => {
-    if (!marketMode) {
-      return items;
+    let filtered = items;
+
+    if (originFilter === "internal") {
+      filtered = filtered.filter((item) => item.isInternal);
+    } else if (originFilter === "custom") {
+      filtered = filtered.filter((item) => !item.isInternal);
+    } else if (showOriginFilter) {
+      filtered = [...filtered].sort(
+        (left, right) => Number(Boolean(right.isInternal)) - Number(Boolean(left.isInternal)),
+      );
     }
 
-    return items.map((item) => ({
+    if (!marketMode) {
+      return filtered;
+    }
+
+    return filtered.map((item) => ({
       ...item,
       installedInDomain: installedResourceIds.has(item.id),
     }));
-  }, [installedResourceIds, items, marketMode]);
+  }, [installedResourceIds, items, marketMode, originFilter, showOriginFilter]);
 
   const listQuery = useMemo(
     () => ({
@@ -429,7 +477,7 @@ export function ExecutionUnitListScene({
       pageSize: PAGE_SIZE,
       keyword: debouncedKeyword,
       status: status || undefined,
-      category: activeTab === "operator" && category ? category : undefined,
+      category: supportsCategoryFilter(activeTab) && category ? category : undefined,
     }),
     [activeTab, category, debouncedKeyword, page, status],
   );
@@ -532,13 +580,14 @@ export function ExecutionUnitListScene({
     void loadItems();
   }, [loadItems]);
 
-  const tabLabel = t(`executionFactory.executionUnitTabs.${activeTab}`);
+  const tabLabel = t(getExecutionUnitTabLabelKey(activeTab));
   const emptyDescription = t(
     marketMode
       ? `executionFactory.catalogEmptyByTab.${activeTab}`
       : `executionFactory.emptyByTab.${activeTab}`,
   );
-  const showCategoryFilter = activeTab === "operator";
+  const showCategoryFilter = supportsCategoryFilter(activeTab);
+  const hasOriginFilteredEmpty = !loading && items.length > 0 && displayItems.length === 0;
 
   const openEmptyCreate = () => {
     const nextParams = new URLSearchParams(searchParams);
@@ -548,12 +597,22 @@ export function ExecutionUnitListScene({
 
   const tabItems = useMemo(
     () =>
-      tabs.map((tab) => ({
-        key: tab,
-        label: t(`executionFactory.executionUnitTabs.${tab}`),
-      })),
-    [t, tabs],
+      resolveVisibleManagementTabs(activeTab)
+        .filter((tab) => resolvableTabs.includes(tab))
+        .map((tab) => ({
+          key: tab,
+          label: t(getExecutionUnitTabLabelKey(tab)),
+        })),
+    [activeTab, resolvableTabs, t],
   );
+
+  const returnToPrimaryCapabilities = () => {
+    const primaryTab = getDefaultManagementTab();
+    window.localStorage.setItem(TAB_STORAGE_KEY, primaryTab);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("activeTab", primaryTab);
+    setSearchParams(nextParams);
+  };
 
   const statusOptions = useMemo(() => {
     const base = [
@@ -563,15 +622,19 @@ export function ExecutionUnitListScene({
       { value: "offline", label: t("executionFactory.statuses.offline") },
     ];
 
-    if (activeTab === "toolbox") {
-      return base.filter((item) => item.value !== "editing");
-    }
-
     if (activeTab === "operator") {
       return [
         ...base,
         { value: "editing", label: t("executionFactory.statuses.editing") },
       ];
+    }
+
+    if (
+      activeTab === "toolbox" ||
+      activeTab === "mcp" ||
+      activeTab === "skill"
+    ) {
+      return base.filter((item) => item.value !== "editing");
     }
 
     return [];
@@ -990,10 +1053,17 @@ export function ExecutionUnitListScene({
 
   return (
     <>
-      <section className={`${styles.page} ${marketMode ? styles.pageMarket : ""}`}>
+      <section className={styles.page}>
         <div className={styles.pageIntro}>
           <h2 className={styles.pageIntroTitle}>{t(titleKey)}</h2>
           <p className={styles.pageIntroDescription}>{t(descriptionKey)}</p>
+          {isCapabilityUxV2() && !marketMode && activeTab === "operator" ? (
+            <div className={styles.pageIntroActions}>
+              <Button onClick={returnToPrimaryCapabilities} type="link">
+                {t("executionFactory.backToCapabilities")}
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         {!marketMode ? (
@@ -1007,13 +1077,17 @@ export function ExecutionUnitListScene({
                 setSearchParams(nextParams, { replace: true });
               }}
               onRefresh={reloadList}
-              onResourceCreated={({ tab, id }) => {
+              onResourceCreated={({ tab, id, toolId }) => {
                 reloadList();
                 if (tab === "operator") {
                   setDetailOperatorId(id);
                   return;
                 }
                 if (tab === "toolbox") {
+                  if (toolId) {
+                    void navigate(`/execution-factory/toolboxes/${id}/tools?toolId=${toolId}`);
+                    return;
+                  }
                   void navigate(`/execution-factory/toolboxes/${id}/tools?create=1`);
                   return;
                 }
@@ -1037,10 +1111,10 @@ export function ExecutionUnitListScene({
                 }
                 message={t("executionFactory.installedStateSyncFailed")}
                 showIcon
-                style={{ marginBottom: 12 }}
                 type="warning"
               />
             ) : null}
+            <span className={styles.toolbarMeta}>{t(toolbarHintKey)}</span>
           </div>
         )}
 
@@ -1057,8 +1131,36 @@ export function ExecutionUnitListScene({
           }}
         />
 
+        {isCapabilityUxV2() && !marketMode && activeTab === "operator" ? (
+          <Alert
+            message={t("executionFactory.advancedOperatorBanner")}
+            showIcon
+            style={{ marginBottom: 16 }}
+            type="info"
+          />
+        ) : null}
+
         <div className={styles.filterBar}>
           <div className={styles.filterLeft}>
+            {showOriginFilter ? (
+              <>
+                <span className={styles.filterLabel}>{t("executionFactory.originFilter")}</span>
+                <div className={styles.categoryGroup}>
+                  {originFilterOptions.map((option) => (
+                    <button
+                      className={`${styles.categoryChip} ${
+                        originFilter === option.value ? styles.categoryChipActive : ""
+                      }`}
+                      key={option.value || "all"}
+                      onClick={() => setOriginFilter(option.value)}
+                      type="button"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
             {showCategoryFilter ? (
               <>
                 <span className={styles.filterLabel}>{t("executionFactory.typeFilter")}</span>
@@ -1137,10 +1239,16 @@ export function ExecutionUnitListScene({
               <ExecutionUnitCardSkeleton count={8} />
             </div>
           ) : null}
-          {!loading && items.length === 0 ? (
+          {!loading && displayItems.length === 0 ? (
             <div className={styles.emptyWrap}>
-              <Empty description={emptyDescription}>
-                {!marketMode ? (
+              <Empty
+                description={
+                  hasOriginFilteredEmpty
+                    ? t("executionFactory.originFilterEmpty", { tab: tabLabel })
+                    : emptyDescription
+                }
+              >
+                {!marketMode && !hasOriginFilteredEmpty ? (
                   <AppButton onClick={openEmptyCreate} type="primary">
                     {t(`executionFactory.emptyCreateByTab.${activeTab}`)}
                   </AppButton>

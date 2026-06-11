@@ -1,0 +1,148 @@
+.card {
+  position: relative;
+  height: 100%;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s ease;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--color-primary-border);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  outline: none;
+}
+
+.card:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.12),
+    0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+.cardHighlighted {
+  background: var(--color-primary-100);
+  border-color: var(--color-primary-border);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 18px 16px;
+}
+
+.iconWrap {
+  margin-bottom: 14px;
+}
+
+.iconBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 20px;
+}
+
+.iconHttp {
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
+}
+
+.iconMcp {
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
+}
+
+.iconSkill {
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
+}
+
+.iconFunction {
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.title {
+  margin: 0 !important;
+  color: var(--color-text-primary);
+  font-size: 16px !important;
+  line-height: 24px !important;
+}
+
+.description {
+  flex: 1;
+  min-height: 40px;
+  margin-bottom: 12px !important;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.contextRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.kindTag {
+  margin: 0;
+  font-size: 12px;
+}
+
+.contextText {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.footerLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.footerRight {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.orchestrationDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  flex-shrink: 0;
+}

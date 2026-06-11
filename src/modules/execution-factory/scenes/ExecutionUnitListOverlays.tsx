@@ -104,11 +104,13 @@ export function ExecutionUnitListOverlays({
           onCloseDetailBoxEditMode();
           onCloseDetailBox();
         }}
-        onManageTools={(id) => {
+        onViewTools={(id) => {
           onCloseDetailBoxEditMode();
           onCloseDetailBox();
           void navigate(
-            `/execution-factory/toolboxes/${id}/tools?action=${marketMode ? "view" : "edit"}`,
+            marketMode
+              ? `/execution-factory/toolboxes/${id}/tools?from=catalog`
+              : `/execution-factory/toolboxes/${id}/tools`,
           );
         }}
         onUpdated={onReloadList}
@@ -118,6 +120,14 @@ export function ExecutionUnitListOverlays({
         marketMode={marketMode}
         mcpId={detailMcpId}
         onClose={onCloseDetailMcp}
+        onViewDetail={(id) => {
+          onCloseDetailMcp();
+          void navigate(
+            marketMode
+              ? `/execution-factory/mcp/${id}?from=catalog`
+              : `/execution-factory/mcp/${id}`,
+          );
+        }}
         open={Boolean(detailMcpId)}
       />
       <SkillDetailDrawer
@@ -130,6 +140,14 @@ export function ExecutionUnitListOverlays({
         onOpenHistory={(skillId) => {
           onCloseDetailSkill();
           onOpenHistorySkill(skillId);
+        }}
+        onViewDetail={(id) => {
+          onCloseDetailSkill();
+          void navigate(
+            marketMode
+              ? `/execution-factory/skills/${id}?from=catalog`
+              : `/execution-factory/skills/${id}`,
+          );
         }}
         open={Boolean(detailSkillId)}
         skillId={detailSkillId}

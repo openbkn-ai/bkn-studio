@@ -32,7 +32,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
   },
   theme: {
     borderRadius: 12,
-    primaryColor: "#126EE3",
+    primaryColor: "#1e3a8a",
   },
 };
 
@@ -62,6 +62,10 @@ export function createRuntimeConfig(runtimeInput: RuntimeInput = {}): RuntimeCon
     theme: {
       ...defaultRuntimeConfig.theme,
       ...runtimeInput.theme,
+    },
+    features: {
+      ...defaultRuntimeConfig.features,
+      ...runtimeInput.features,
     },
   };
 }

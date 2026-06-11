@@ -5,9 +5,11 @@ import { useLocation, useMatches, useNavigate } from "react-router-dom";
 
 import {
   consoleNavigation,
+  filterConsoleNavigation,
   findConsoleNavItemByPath,
 } from "@/app/shell/console-navigation";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
+import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeatures";
 
 type SelectedItem = {
   key: string;
@@ -21,11 +23,21 @@ type SideNavProps = {
 
 export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   const { t } = useTranslation();
+  const { features } = useLabFeatures();
   const location = useLocation();
   const matches = useMatches();
   const navigate = useNavigate();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const routeMenuKey = routeHandle?.console?.menuKey;
+
+  const navigationItems = useMemo(
+    () =>
+      filterConsoleNavigation(consoleNavigation, {
+        hideCatalog: !features.catalog,
+        hideLegacyExecutionFactory: features.hide_legacy_execution_factory_menu,
+      }),
+    [features.catalog, features.hide_legacy_execution_factory_menu],
+  );
 
   const selectedItem = useMemo(
     () => findSelectedItem(routeMenuKey, location.pathname),
@@ -60,7 +72,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
     <aside className={collapsed ? "console-sidenav is-collapsed" : "console-sidenav"}>
       <div className="console-sidenav-scroll">
         <ul className="console-sidenav-list">
-          {consoleNavigation.map((item) => {
+          {navigationItems.map((item) => {
             const hasChildren = Boolean(item.children?.length);
             const isExpanded = expandedKeys.includes(item.key);
             const isSelected = selectedItem?.key === item.key;

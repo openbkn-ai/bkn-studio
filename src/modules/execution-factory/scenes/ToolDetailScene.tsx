@@ -226,6 +226,14 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
       </CrudFormPage>
       <ToolDebugModal
         boxId={boxId}
+        functionInput={
+          metadataType === "function"
+            ? {
+                inputs: functionInputs,
+                outputs: functionOutputs,
+              }
+            : undefined
+        }
         ioSpec={ioSpec}
         onClose={() => setDebugOpen(false)}
         onRunComplete={handleDebugRunComplete}

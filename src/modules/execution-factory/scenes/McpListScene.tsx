@@ -285,6 +285,10 @@ export function McpListScene() {
     <McpDetailDrawer
       mcpId={detailMcpId}
       onClose={() => setDetailMcpId(null)}
+      onViewDetail={(id) => {
+        setDetailMcpId(null);
+        void navigate(`/execution-factory/mcp/${id}`);
+      }}
       open={Boolean(detailMcpId)}
     />
     </>

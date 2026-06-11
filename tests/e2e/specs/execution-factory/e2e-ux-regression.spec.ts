@@ -9,6 +9,8 @@ import {
   gotoE2ePage,
   gotoToolboxToolsPage,
   gotoUnitsTab,
+  openAddCapabilityWizard,
+  openAdvancedOperatorTab,
   openCreateWizard,
   openOperatorCreateWizardStep2,
   openToolboxCardMenu,
@@ -57,7 +59,7 @@ test.describe("Execution Factory — UX regression", () => {
   });
 
   test("UX-003: card click opens operator detail drawer", async ({ page }) => {
-    await gotoUnitsTab(page, "operator");
+    await openAdvancedOperatorTab(page);
 
     const firstCard = page.locator('[data-testid="execution-unit-card"]').first();
     if ((await firstCard.count()) === 0) {
@@ -69,7 +71,7 @@ test.describe("Execution Factory — UX regression", () => {
   });
 
   test("UX-021: catalog skill tab shows introduce action", async ({ page }) => {
-    await page.goto("/execution-factory/catalog?activeTab=skill");
+    await gotoE2ePage(page, "/execution-factory/catalog?activeTab=skill");
     await expect(page.getByRole("tab", { name: "Skill" })).toBeVisible();
 
     const introduceButton = page.getByRole("button", { name: /引入|Introduce/i }).first();
@@ -81,10 +83,12 @@ test.describe("Execution Factory — UX regression", () => {
   });
 
   test("UX-034: legacy skills route redirects with create deep link", async ({ page }) => {
-    await page.goto("/execution-factory/skills/new");
+    await gotoE2ePage(page, "/execution-factory/skills/new");
     await expect(page).toHaveURL(/activeTab=skill/);
     await expect(page).toHaveURL(/create=1/);
-    await expect(page.getByText("执行单元管理").first()).toBeVisible();
+    await expect(
+      page.getByText(/执行能力管理|执行单元管理|Execution Capabilities|Execution Unit Management/i).first(),
+    ).toBeVisible();
   });
 
   test("UX-017: operator wizard selecting function navigates to registration form", async ({
@@ -99,7 +103,7 @@ test.describe("Execution Factory — UX regression", () => {
   });
 
   test("UX-018: function operator form shows inputs, logic, outputs in order", async ({ page }) => {
-    await page.goto("/execution-factory/units/new?metadataType=function");
+    await gotoE2ePage(page, "/execution-factory/units/new?metadataType=function");
     await expect(page.getByRole("heading", { name: /注册算子|Register Operator/i })).toBeVisible();
     await expectFunctionDefinitionSections(page);
   });
@@ -130,7 +134,7 @@ test.describe("Execution Factory — UX regression", () => {
     await expect(drawer.getByRole("button", { name: /保\s*存|Save/i })).toBeVisible();
   });
 
-  test("UX-025: toolbox detail drawer export triggers ADP download", async ({ page, request }) => {
+  test("UX-025: toolbox detail drawer export triggers backup download", async ({ page, request }) => {
     const toolbox = await createToolboxViaApi(request, buildToolboxName("drawer_export"));
     createdBoxIds.push(toolbox.boxId);
 
@@ -148,7 +152,7 @@ test.describe("Execution Factory — UX regression", () => {
     });
   });
 
-  test("UX-026: toolbox tools page header export triggers ADP download", async ({
+  test("UX-026: toolbox tools page header export triggers backup download", async ({
     page,
     request,
   }) => {
@@ -169,7 +173,7 @@ test.describe("Execution Factory — UX regression", () => {
     const toolbox = await createFunctionToolboxViaApi(request, buildToolboxName("fn_tool"));
     createdBoxIds.push(toolbox.boxId);
 
-    await page.goto(`/execution-factory/toolboxes/${toolbox.boxId}/tools?create=1`);
+    await gotoE2ePage(page, `/execution-factory/toolboxes/${toolbox.boxId}/tools?create=1`);
     const drawer = page.locator(".ant-drawer").first();
     await expect(drawer).toBeVisible();
     await expectFunctionDefinitionSections(page, drawer);
@@ -178,12 +182,11 @@ test.describe("Execution Factory — UX regression", () => {
   test("UX-028: create wizard step 2 shows expected content per tab", async ({ page }) => {
     const operatorDrawer = await openCreateWizard(page, "operator");
     await advanceCreateWizardToDetails(page);
-    await expect(operatorDrawer.getByText("函数计算")).toBeVisible();
+    await expect(operatorDrawer.getByText(/函数计算|Function/i).first()).toBeVisible();
     await page.keyboard.press("Escape");
 
-    const toolboxDrawer = await openCreateWizard(page, "toolbox");
-    await advanceCreateWizardToDetails(page);
-    await expect(toolboxDrawer.getByLabel(/工具箱名称|Toolbox Name/i)).toBeVisible();
+    const toolboxDrawer = await openAddCapabilityWizard(page, "toolbox");
+    await expect(toolboxDrawer.getByText(/粘贴 cURL|Paste cURL/i).first()).toBeVisible();
     await page.keyboard.press("Escape");
   });
 });

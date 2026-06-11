@@ -1,7 +1,7 @@
-import { Form, Input, Select } from "antd";
+import { Form, Input } from "antd";
 import { useTranslation } from "react-i18next";
 
-const categoryOptions = ["box_category", "custom_category", "platform_category"];
+import { CapabilityCategoryFields } from "@/modules/execution-factory/components/CapabilityCategoryFields";
 
 export function ToolboxMetadataFormFields() {
   const { t } = useTranslation();
@@ -21,14 +21,7 @@ export function ToolboxMetadataFormFields() {
       <Form.Item label={t("executionFactory.serviceUrl")} name="serviceUrl">
         <Input placeholder="https://example.com/toolbox" />
       </Form.Item>
-      <Form.Item label={t("executionFactory.category")} name="category">
-        <Select
-          options={categoryOptions.map((value) => ({
-            label: t(`executionFactory.toolboxCategories.${value}`),
-            value,
-          }))}
-        />
-      </Form.Item>
+      <CapabilityCategoryFields />
     </>
   );
 }

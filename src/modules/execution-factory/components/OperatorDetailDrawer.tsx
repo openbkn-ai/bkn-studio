@@ -1,4 +1,5 @@
 import { Descriptions, Tag } from "antd";
+import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -38,11 +39,27 @@ type OperatorDetailDrawerProps = {
   operatorId: string | null;
 };
 
-const statusColorMap: Record<OperatorStatus, string> = {
-  published: "green",
-  editing: "gold",
-  offline: "default",
-  unpublish: "blue",
+const statusStyleMap: Record<OperatorStatus, CSSProperties> = {
+  published: {
+    background: "var(--color-success-bg)",
+    borderColor: "var(--color-success-border)",
+    color: "var(--color-success-text)",
+  },
+  editing: {
+    background: "var(--color-warning-bg)",
+    borderColor: "var(--color-warning-border)",
+    color: "var(--color-warning-text)",
+  },
+  offline: {
+    background: "var(--color-error-bg)",
+    borderColor: "var(--color-error-border)",
+    color: "var(--color-error-text)",
+  },
+  unpublish: {
+    background: "var(--color-info-bg)",
+    borderColor: "var(--color-info-border)",
+    color: "var(--color-info-text)",
+  },
 };
 
 export function OperatorDetailDrawer({
@@ -151,7 +168,7 @@ export function OperatorDetailDrawer({
                   </p>
                 </div>
                 <div className={styles.summaryStatus}>
-                  <Tag color={statusColorMap[record.status]}>
+                  <Tag style={statusStyleMap[record.status]}>
                     {t(`executionFactory.statuses.${record.status}`)}
                   </Tag>
                   {record.metadataType ? (
@@ -258,11 +275,13 @@ export function OperatorDetailDrawer({
         ) : null}
       </ExecutionUnitDetailDrawerLayout>
       <OperatorDebugModal
+        functionInput={record?.functionInput}
         onClose={() => setDebugOpen(false)}
         onRunComplete={(entry) => {
           setSessionLogs((current) => [entry, ...current].slice(0, 20));
         }}
         open={debugOpen}
+        openapiSpec={record?.openapiSpec}
         record={record}
       />
       <ConvertOperatorToToolModal

@@ -1,12 +1,14 @@
-import { Alert, Form, Input, Modal } from "antd";
-import { useEffect, useState } from "react";
+import { Alert, Form, Input, Modal, Typography } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { debugMcpTool } from "@/modules/execution-factory/services/mcp.service";
 import type { McpToolDebugResult } from "@/modules/execution-factory/types/mcp";
+import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
 
 type McpToolDebugModalProps = {
+  inputSchema?: unknown;
   mcpId: string;
   onClose: () => void;
   open: boolean;
@@ -18,6 +20,7 @@ type DebugFormValues = {
 };
 
 export function McpToolDebugModal({
+  inputSchema,
   mcpId,
   onClose,
   open,
@@ -29,6 +32,11 @@ export function McpToolDebugModal({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<McpToolDebugResult | null>(null);
 
+  const generatedBody = useMemo(
+    () => buildDefaultDebugBody({ inputSchema }),
+    [inputSchema],
+  );
+
   useEffect(() => {
     if (!open) {
       form.resetFields();
@@ -37,8 +45,8 @@ export function McpToolDebugModal({
       return;
     }
 
-    form.setFieldsValue({ argumentsPayload: "{}" });
-  }, [form, open]);
+    form.setFieldsValue({ argumentsPayload: generatedBody });
+  }, [form, generatedBody, open]);
 
   const handleDebug = async () => {
     setSubmitting(true);
@@ -78,9 +86,10 @@ export function McpToolDebugModal({
       title={t("executionFactory.mcpToolDebugTitle", { tool: toolName })}
       width={760}
     >
+      <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
       <Form form={form} layout="vertical">
         <Form.Item label={t("executionFactory.debugRequestBody")} name="argumentsPayload">
-          <Input.TextArea placeholder="{}" rows={6} />
+          <Input.TextArea placeholder="{}" rows={8} />
         </Form.Item>
       </Form>
       {error ? <Alert message={error} showIcon style={{ marginBottom: 16 }} type="error" /> : null}

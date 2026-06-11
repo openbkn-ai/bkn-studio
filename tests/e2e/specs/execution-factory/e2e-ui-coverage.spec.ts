@@ -10,14 +10,20 @@ import {
   expectOpenApiInputModes,
   fillFunctionOperatorForm,
   fillOpenApiSpecPaste,
+  gotoE2ePage,
   gotoUnitsTab,
+  openAddCapabilityWizard,
+  openAdvancedOperatorTab,
   openCardMenu,
   openCreateWizard,
+  UNITS_PAGE_TITLE,
   openDetailDrawerByCardClick,
   openImportModal,
   openOperatorCreateForm,
   openToolboxDetailDrawer,
-  selectWizardResourceType,
+  gotoSkillDetailPage,
+  selectSkillFileInDetailPage,
+  selectOperatorCreateMode,
 } from "../../helpers/execution-unit-ui";
 import {
   buildFunctionHandlerCode,
@@ -109,37 +115,57 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
 
   test.describe("List shell & filters", () => {
     test("UI-COV-001: units page shows pageIntro and toolbar hint", async ({ page }) => {
-      await gotoUnitsTab(page, "operator");
-      await expect(page.getByRole("heading", { level: 2, name: /执行单元管理|Execution Unit Management/i })).toBeVisible();
+      await gotoUnitsTab(page, "toolbox");
       await expect(
-        page.getByText(/在本业务域注册和管理 MCP|Register and manage MCP/i).first(),
+        page.getByRole("heading", { level: 2, name: /执行能力管理|执行单元管理|Execution Capabilities|Execution Unit Management/i }),
       ).toBeVisible();
       await expect(
-        page.getByText(/管理本业务域已注册的执行资源|Manage execution resources/i).first(),
+        page
+          .getByText(
+            /为智能体配置可调用的能力|Configure what agents can call|工具集接入 HTTP|MCP 服务连接|Skill 包导入/i,
+          )
+          .first(),
+      ).toBeVisible();
+      await expect(
+        page
+          .getByText(
+            /先选择上方类型|Pick a type above|添加能力|Add Capability|系统内置|System built-in/i,
+          )
+          .first(),
       ).toBeVisible();
     });
 
-    test("UI-COV-002: catalog page shows market-specific intro", async ({ page }) => {
-      await page.goto("/execution-factory/catalog?activeTab=operator");
+    test("UI-COV-002: catalog page shares management list shell and market intro", async ({ page }) => {
+      await gotoE2ePage(page, "/execution-factory/catalog?activeTab=toolbox");
       await expect(page.getByRole("heading", { level: 2, name: /全部执行单元|All Execution Units/i })).toBeVisible();
+      await expect(page.getByRole("tab", { name: /工具集|Toolsets/i })).toBeVisible();
+      await expect(page.getByText(/类型|Type/i).first()).toBeVisible();
       await expect(
-        page.getByText(/浏览市场中已发布的执行单元|Browse published execution units/i).first(),
+        page
+          .getByText(
+            /与执行能力管理相同的列表视图|Same list view as Execution Capabilities|浏览其他业务域已发布|Browse capability packs published/i,
+          )
+          .first(),
       ).toBeVisible();
     });
 
-    test("UI-COV-003: category filter only on operator tab", async ({ page }) => {
-      await gotoUnitsTab(page, "operator");
-      await expect(page.getByText(/类型|Type/i).first()).toBeVisible();
-      await expect(page.getByRole("button", { name: /全部分类|All categories/i })).toBeVisible();
-
-      await page.getByRole("tab", { name: "工具" }).click();
-      await expect(page.getByRole("button", { name: /全部分类|All categories/i })).toHaveCount(0);
+    test("UI-COV-003: category filter on primary capability tabs", async ({ page }) => {
+      for (const tab of ["toolbox", "mcp", "skill"] as const) {
+        await gotoUnitsTab(page, tab);
+        await expect(page.getByText(/类型|Type/i).first()).toBeVisible();
+        await expect(page.getByRole("button", { name: /全部分类|All categories/i })).toBeVisible();
+      }
     });
 
     test("UI-COV-004: publish status filter on management tabs", async ({ page }) => {
-      await gotoUnitsTab(page, "operator");
+      for (const tab of ["toolbox", "mcp", "skill"] as const) {
+        await gotoUnitsTab(page, tab);
+        await expect(page.getByText(/发布状态|Publish status/i).first()).toBeVisible();
+        await expect(page.getByText(/全部状态|All statuses/i).first()).toBeVisible();
+      }
+
+      await openAdvancedOperatorTab(page);
       await expect(page.getByText(/发布状态|Publish status/i).first()).toBeVisible();
-      await expect(page.getByText(/全部状态|All statuses/i).first()).toBeVisible();
     });
 
     test("UI-COV-005: search input and result count when list has data", async ({
@@ -149,7 +175,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       const operator = await registerOperatorViaApi(request, buildOperatorName("ui_cov_search"));
       createdOperators.push(operator);
 
-      await gotoUnitsTab(page, "operator");
+      await openAdvancedOperatorTab(page);
       await expect(page.getByPlaceholder(/搜索名称|Search name/i)).toBeVisible();
       await page.getByPlaceholder(/搜索名称|Search name/i).fill(operator.name);
       await expect(page.getByRole("heading", { level: 5, name: operator.name })).toBeVisible();
@@ -158,10 +184,8 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
   });
 
   test.describe("Create wizard", () => {
-    test("UI-COV-010: wizard step1 can switch resource type", async ({ page }) => {
-      const drawer = await openCreateWizard(page, "operator");
-      await selectWizardResourceType(drawer, "mcp");
-      await advanceCreateWizardToDetails(page);
+    test("UI-COV-010: mcp tab wizard opens mcp configure directly", async ({ page }) => {
+      const drawer = await openAddCapabilityWizard(page, "mcp");
       await expect(drawer.getByLabel(/MCP 名称|MCP Name/i)).toBeVisible();
       await page.keyboard.press("Escape");
     });
@@ -179,8 +203,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       const operatorName = buildOperatorName(String(Date.now()));
       const drawer = await openCreateWizard(page, "operator");
       await advanceCreateWizardToDetails(page);
-      await drawer.getByText(/函数计算|Function/i).click();
-      await expect(page).toHaveURL(/metadataType=function/);
+      await selectOperatorCreateMode(page, "function", drawer);
 
       await fillFunctionOperatorForm(page, operatorName, buildFunctionHandlerCode());
       await page.getByRole("button", { name: /保\s*存|Save/i }).click();
@@ -213,7 +236,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
     test("UI-COV-013: operator form shows anchor navigation and OpenAPI input modes", async ({
       page,
     }) => {
-      await page.goto("/execution-factory/units/new?metadataType=openapi");
+      await gotoE2ePage(page, "/execution-factory/units/new?metadataType=openapi");
       await expect(page.getByRole("link", { name: /基本信息|Basic/i })).toBeVisible();
       await expect(page.getByRole("link", { name: /^OpenAPI$/ })).toBeVisible();
       await expect(page.getByRole("link", { name: /执行控制|Execute/i })).toBeVisible();
@@ -224,14 +247,14 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       for (const tab of ["operator", "toolbox", "mcp"] as const) {
         await gotoUnitsTab(page, tab);
         const dialog = await openImportModal(page);
-        await expect(dialog.getByRole("tab", { name: /ADP 包|ADP/i })).toBeVisible();
+        await expect(dialog.getByRole("tab", { name: /备份文件|Backup file/i })).toBeVisible();
         await closeImportOrOverlay(page);
       }
     });
   });
 
   test.describe("Detail drawers & card menus", () => {
-    test("UI-COV-020: toolbox card click opens detail with manage tools CTA", async ({
+    test("UI-COV-020: toolbox card click opens detail with view tools CTA", async ({
       page,
       request,
     }) => {
@@ -241,7 +264,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await gotoUnitsTab(page, "toolbox");
       const drawer = await openDetailDrawerByCardClick(page, toolbox.name);
       await expect(drawer.getByText(/工具箱详情|Toolbox Detail/i)).toBeVisible();
-      await drawer.getByRole("button", { name: /管理工具|Manage Tools/i }).click();
+      await drawer.getByRole("button", { name: /查看工具详情|View Tools/i }).click();
       await expect(page).toHaveURL(new RegExp(`/execution-factory/toolboxes/${toolbox.boxId}/tools`));
     });
 
@@ -252,7 +275,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       const operator = await registerOperatorViaApi(request, buildOperatorName("ui_cov_detail"));
       createdOperators.push(operator);
 
-      await gotoUnitsTab(page, "operator");
+      await openAdvancedOperatorTab(page);
       const drawer = await openDetailDrawerByCardClick(page, operator.name);
       await expect(drawer.getByText(/算子详情|Operator Detail/i)).toBeVisible();
       await expect(drawer.getByRole("button", { name: /编\s*辑|Edit/i })).toBeVisible();
@@ -267,7 +290,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       const operator = await registerOperatorViaApi(request, buildOperatorName("ui_cov_edit"));
       createdOperators.push(operator);
 
-      await gotoUnitsTab(page, "operator");
+      await openAdvancedOperatorTab(page);
       await openCardMenu(page, operator.name, /编辑|Edit/i);
       await expect(page).toHaveURL(new RegExp(`/execution-factory/units/${operator.operatorId}/edit`));
       await expect(page.getByLabel(/算子名称|Operator Name/i)).toHaveValue(operator.name);
@@ -277,7 +300,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       const operator = await registerOperatorViaApi(request, buildOperatorName("ui_cov_pub"));
       createdOperators.push(operator);
 
-      await gotoUnitsTab(page, "operator");
+      await openAdvancedOperatorTab(page);
       await openCardMenu(page, operator.name, /^发布$|^Publish$/i);
       await confirmAntModal(page);
       await expect(page.getByText(/成功|success/i).first()).toBeVisible({ timeout: 30_000 });
@@ -286,7 +309,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await expect(card.locator(".ant-tag").filter({ hasText: /已发布|Published/i })).toBeVisible();
     });
 
-    test("UI-COV-024: mcp card click and edit drawer", async ({ page, request }) => {
+    test("UI-COV-024: mcp card click opens detail with view detail CTA", async ({ page, request }) => {
       const toolbox = await createToolboxViaApi(request, buildToolboxName("ui_cov_mcp_box"));
       createdBoxIds.push(toolbox.boxId);
       const tool = await createToolViaApi(request, toolbox.boxId, buildToolboxName("ui_cov_mcp_tool"));
@@ -301,8 +324,11 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await gotoUnitsTab(page, "mcp");
       const drawer = await openDetailDrawerByCardClick(page, mcp.name);
       await expect(drawer.getByText(/MCP 详情|MCP Detail/i)).toBeVisible();
-      await closeTopDrawer(page);
+      await drawer.getByRole("button", { name: /查看 MCP 详情|View MCP Detail/i }).click();
+      await expect(page).toHaveURL(new RegExp(`/execution-factory/mcp/${mcp.mcpId}`));
+      await expect(page.getByRole("heading", { level: 3, name: mcp.name })).toBeVisible();
 
+      await gotoUnitsTab(page, "mcp");
       await openCardMenu(page, mcp.name, /编辑|Edit/i);
       await expect(page.locator(".ant-drawer").getByLabel(/MCP 名称|MCP Name/i)).toBeVisible();
     });
@@ -341,33 +367,51 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await page.keyboard.press("Escape");
     });
 
-    test("UI-COV-027: skill card click opens detail drawer", async ({ page, request }) => {
+    test("UI-COV-027: skill card click opens detail with view detail CTA", async ({ page, request }) => {
       const skill = await registerSkillZipViaApi(request, buildSkillName("ui_cov_detail"));
       createdSkillIds.push(skill.skillId);
 
       await gotoUnitsTab(page, "skill");
       const drawer = await openDetailDrawerByCardClick(page, skill.name);
-      await expect(drawer.getByText(/Skill 详情|Skill Detail/i)).toBeVisible();
+      await expect(drawer.locator(".ant-drawer-title")).toHaveText(/Skill 详情|Skill Detail/i);
+      await drawer.getByRole("button", { name: /查看 Skill 详情|View Skill Detail/i }).click();
+      await expect(page).toHaveURL(new RegExp(`/execution-factory/skills/${skill.skillId}`));
+      await expect(page.getByRole("heading", { level: 3, name: skill.name })).toBeVisible();
+    });
+
+    test("UI-COV-028: skill detail page previews package files", async ({ page, request }) => {
+      const skill = await registerSkillZipViaApi(request, buildSkillName("ui_cov_preview"));
+      createdSkillIds.push(skill.skillId);
+
+      await gotoSkillDetailPage(page, skill.skillId, skill.name);
+      await expect(page.getByText(/Zip-packaged skill body|E2E|skill body/i).first()).toBeVisible({
+        timeout: 45_000,
+      });
+
+      await selectSkillFileInDetailPage(page, "refs/guide.md");
+      await expect(page.locator('[class*="ioPanel"] pre')).toContainText("# Guide", {
+        timeout: 45_000,
+      });
     });
   });
 
   test.describe("Routes & navigation", () => {
     test("UI-COV-030a: legacy toolboxes/new redirects with create deep link", async ({ page }) => {
-      await page.goto("/execution-factory/toolboxes/new");
+      await gotoE2ePage(page, "/execution-factory/toolboxes/new");
       await expect(page).toHaveURL(/activeTab=toolbox/);
       await expect(page).toHaveURL(/create=1/);
       await page.keyboard.press("Escape");
     });
 
     test("UI-COV-030b: legacy mcp/new redirects with create deep link", async ({ page }) => {
-      await page.goto("/execution-factory/mcp/new");
+      await gotoE2ePage(page, "/execution-factory/mcp/new");
       await expect(page).toHaveURL(/activeTab=mcp/);
       await expect(page).toHaveURL(/create=1/);
       await page.keyboard.press("Escape");
     });
 
     test("UI-COV-030c: legacy mcp list redirects to units tab", async ({ page }) => {
-      await page.goto("/execution-factory/mcp");
+      await gotoE2ePage(page, "/execution-factory/mcp");
       await expect(page).toHaveURL(/activeTab=mcp/);
     });
 
@@ -375,11 +419,11 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       const toolbox = await createToolboxViaApi(request, buildToolboxName("ui_cov_bc"));
       createdBoxIds.push(toolbox.boxId);
 
-      await page.goto(`/execution-factory/toolboxes/${toolbox.boxId}/tools`);
+      await gotoE2ePage(page, `/execution-factory/toolboxes/${toolbox.boxId}/tools`);
       await expect(page.getByRole("heading", { level: 3, name: toolbox.name })).toBeVisible();
 
       const breadcrumb = page.getByRole("navigation");
-      await expect(breadcrumb.getByText(/执行单元管理|Execution Unit Management/i)).toBeVisible();
+      await expect(breadcrumb.getByText(UNITS_PAGE_TITLE)).toBeVisible();
       await expect(breadcrumb.getByText(toolbox.name)).toBeVisible();
       await expect(breadcrumb.getByText(/工具箱工具|Toolbox Tools/i)).toBeVisible();
     });
@@ -418,7 +462,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       }
     });
 
-    test("UI-COV-041: toolbox detail manage tools from card menu view path", async ({
+    test("UI-COV-041: toolbox detail view tools from card menu view path", async ({
       page,
       request,
     }) => {
@@ -427,7 +471,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
 
       await gotoUnitsTab(page, "toolbox");
       const drawer = await openToolboxDetailDrawer(page, toolbox.name);
-      await drawer.getByRole("button", { name: /管理工具|Manage Tools/i }).click();
+      await drawer.getByRole("button", { name: /查看工具详情|View Tools/i }).click();
       await expect(page).toHaveURL(new RegExp(`/toolboxes/${toolbox.boxId}/tools`));
     });
   });

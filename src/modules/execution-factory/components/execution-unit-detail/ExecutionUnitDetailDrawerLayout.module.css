@@ -1,5 +1,13 @@
+.drawer :global(.ant-drawer-content) {
+  background: var(--color-bg-surface);
+}
+
+.drawer :global(.ant-drawer-mask) {
+  background: rgba(15, 23, 42, 0.45) !important;
+}
+
 .drawerMarket :global(.ant-drawer-header) {
-  background: linear-gradient(180deg, rgba(18, 110, 227, 0.06) 0%, #fff 100%);
+  background: linear-gradient(180deg, var(--color-primary-100) 0%, var(--color-bg-surface) 100%);
 }
 
 .stateWrap {

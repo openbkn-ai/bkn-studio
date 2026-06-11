@@ -1,5 +1,7 @@
 import type { ToolIoParameter, ToolIoSpec } from "@/modules/execution-factory/types/tool";
 
+export { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
+
 type ApiSpecMetadata = {
   api_spec?: {
     parameters?: Array<{
@@ -72,12 +74,4 @@ export function parseToolIoSpec(metadata?: ApiSpecMetadata): ToolIoSpec | undefi
     requestBodySchema: firstRequestContent?.schema,
     responses,
   };
-}
-
-export function buildDefaultDebugBody(ioSpec?: ToolIoSpec): string {
-  if (ioSpec?.requestBodyExample) {
-    return JSON.stringify(ioSpec.requestBodyExample, null, 2);
-  }
-
-  return "{}";
 }

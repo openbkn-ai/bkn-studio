@@ -5,9 +5,14 @@ export const executionFactoryEnUS = {
       "Register and manage MCP servers, toolboxes, operators, and skills in your business domain for agent execution.",
     catalogTitle: "All Execution Units",
     catalogDescription:
-      "Browse published execution units in the market. Introduce resources into your domain or sync updates for copies you already have.",
+      "Browse capability packs published by other domains: toolsets, MCP services, and skill packs. The layout matches Execution Capabilities; introduce into your domain or sync updates for copies you already have.",
     searchNamePlaceholder: "Search name",
     typeFilter: "Type",
+    originFilter: "Origin",
+    originFilterAll: "All",
+    originFilterInternal: "System built-in",
+    originFilterCustom: "Custom",
+    originFilterEmpty: "No {{tab}} match the current filter",
     allCategory: "All categories",
     allStatus: "All statuses",
     resultCount: "{{count}} {{tab}}",
@@ -23,13 +28,134 @@ export const executionFactoryEnUS = {
       operator: "Operators",
       skill: "Skill",
     },
+    executionUnitTabsV2: {
+      mcp: "MCP Services",
+      toolbox: "Toolsets",
+      operator: "Operator Dev",
+      skill: "Skill Packs",
+    },
+    capabilityManagementTitle: "Execution Capabilities",
+    capabilityManagementDescription:
+      "Configure what agents can call: HTTP APIs in toolsets, external tools via MCP services, and reusable skills in skill packs. After you configure and publish, they are available in chat and flows.",
+    capabilityToolbarHint:
+      "Pick a type above, then click Add Capability. Items labeled System built-in are platform presets—use Origin to filter for them.",
+    businessIntro: {
+      quickApiTop:
+        "Register an HTTP API as a callable tool. Paste cURL or fill in the URL and the system builds OpenAPI for you. After save, the tool appears in a toolset for agents in chat or flows.",
+      quickApiInputCurl:
+        "Paste cURL from a browser or API docs. The system parses method, URL, and parameters into the form.",
+      quickApiInputForm:
+        "Enter the service base URL and path when you do not have a cURL command handy.",
+      toolboxPlacementSection:
+        "A toolset groups related tools. Tools in the same set share category, publish, and access settings; agents discover tools by toolset.",
+      toolboxPlacementNew:
+        "Creates a new toolset with this API. You can add more APIs later and publish the whole set to agents.",
+      toolboxPlacementExisting:
+        "Adds this API to the selected toolset. After the toolset is published, agents can call this API with the rest.",
+      importOpenApiTop:
+        "Upload OpenAPI 3.0 (JSON/YAML) to batch-create tools from paths. Best when you already have a full spec. After save, enable, debug, and publish from the toolset.",
+      functionToolboxTop:
+        "Create a function toolset for custom logic (not HTTP). After save, add each function in the tool list, then publish for agents.",
+      mcpCreateTop:
+        "Register an MCP server so agents can discover and call its tools via MCP. After save, test the connection, publish, and attach in agent config.",
+      mcpEditTop:
+        "Update MCP service metadata and connection settings. Republish after changes so agents pick up the latest config.",
+      skillImportTop:
+        "Upload a skill pack (ZIP or SKILL.md) into this domain. After publish, agents can load and run the packaged capabilities at runtime.",
+      importOpenApiToolsTop:
+        "Batch-import OpenAPI paths into this toolset. Each path becomes a tool you can enable, debug, and publish with the set.",
+      impexOpenApiOperator:
+        "Upload OpenAPI to register an operator. Use for migration or when you need full operator metadata from a spec file.",
+      impexOpenApiToolbox:
+        "Upload OpenAPI to create a toolbox and import all tools in one step.",
+      impexAdpOperator:
+        "Upload a backup file you downloaded earlier via Export on the list. Restores the operator and its settings—for recovery or migration from another environment.",
+      impexAdpToolbox:
+        "Upload a backup file you downloaded earlier via Export on the list. Restores the toolset and all its tools. Choose import mode if the same name already exists in this domain.",
+      impexAdpMcp:
+        "Upload a backup file you downloaded earlier via Export on the list. Restores MCP service settings; you can debug and publish afterward.",
+      addCapabilityWizard:
+        "Pick how to add capability: use Add API for everyday HTTP; Import OpenAPI for full specs; MCP and Skill for protocol servers and skill packs.",
+      operatorCreateTop:
+        "Register an operator for flow orchestration. OpenAPI operators wrap HTTP services; function operators run custom logic. Debug, publish, then use as a node in flows.",
+      toolMetadataSection:
+        "Set how the tool appears to agents. Use a clear name and a short description of when to call it.",
+    },
+    operatorSyncPublishLabel: "Sync publish as operator",
+    operatorSyncPublishHint:
+      "Registers the same OpenAPI as an operator with category, timeout, and retry settings for orchestration.",
+    operatorSyncDirectPublish: "Publish operator immediately after registration",
+    quickApiCreateWithOperatorSuccess: "API added to toolset and operator registered",
+    importOpenApiCapabilityWithOperatorSuccess: "Imported {{count}} tool(s) and registered operator",
+    addCapabilityButton: "Add Capability",
+    addCapabilityWizardTitle: "Add Capability",
+    addCapabilityWizardHint:
+      "Pick the path that matches your team. Full OpenAPI import remains under Advanced.",
+    addCapabilityStepMode: "Choose method",
+    addCapabilityStepConfigure: "Configure",
+    addCapabilityQuickApiTitle: "Add API",
+    addCapabilityQuickApiDesc: "Paste cURL or fill a URL to create a tool automatically",
+    addCapabilityImportOpenApiTitle: "Import OpenAPI 3.0",
+    addCapabilityImportOpenApiDesc: "Upload JSON/YAML spec to batch-create API tools",
+    importOpenApiCapabilityTitle: "Import OpenAPI 3.0 collection",
+    importOpenApiCapabilityHint:
+      "Upload a full OpenAPI 3.0 document. Each path becomes a tool—best when you already have a spec with many endpoints.",
+    importOpenApiCapabilitySave: "Import and finish",
+    importOpenApiCapabilitySuccess: "Imported {{count}} tool(s) successfully",
+    importOpenApiCapabilityPartial: "Imported {{success}} tool(s), {{failed}} failed",
+    importOpenApiCapabilityParsed: "Detected {{count}} endpoint(s). Confirm the toolset and import.",
+    importOpenApiCapabilityFileReady: "File ready. It will be parsed and imported on save.",
+    importOpenApiCapabilityPreview: "OpenAPI {{version}} · {{count}} endpoint(s)",
+    addCapabilityFunctionTitle: "Write a function",
+    addCapabilityFunctionDesc: "Create a function toolset and add code tools",
+    addCapabilityMcpTitle: "MCP service",
+    addCapabilityMcpDesc: "Register an MCP server for agents to call",
+    addCapabilitySkillTitle: "Skill pack",
+    addCapabilitySkillDesc: "Upload a ZIP or SKILL.md skill pack",
+    addMcpWizardTitle: "Add MCP service",
+    addSkillWizardTitle: "Import skill pack",
+    addApiWizardTitle: "Add API",
+    addCapabilityAdvancedTitle: "Advanced / Operators",
+    addCapabilityAdvancedDesc: "Full OpenAPI operators and function operators",
+    addCapabilityAdvancedHint:
+      "Best for integration engineers. Business users should prefer Add API.",
+    addCapabilityAdvancedOpenApi: "Register OpenAPI operator",
+    addCapabilityAdvancedFunction: "Register function operator",
+    addCapabilityFunctionNextHint:
+      "Create a function toolset first, then add each function tool inside it.",
+    developerOperatorEntry: "Operator dev: OpenAPI / function registration",
+    backToCapabilities: "← Back to toolsets / MCP / skills",
+    advancedOperatorEntry: "Operator dev",
+    advancedOperatorBanner:
+      "Operator list and debug. For everyday HTTP APIs, use Add API under Toolsets and enable Sync as operator.",
+    quickApiTabCurl: "Paste cURL",
+    quickApiTabForm: "Simple form",
+    quickApiCurlLabel: "cURL command",
+    quickApiCurlPlaceholder:
+      "curl 'https://example.com/api/v1/resource?city=Boston'",
+    quickApiParseAction: "Detect API details",
+    quickApiUrlLabel: "Full API URL",
+    quickApiServerUrl: "Service base URL",
+    quickApiMethod: "Method",
+    quickApiPath: "Path",
+    quickApiSummary: "Tool name",
+    quickApiToolboxTarget: "Add to toolset",
+    quickApiToolboxExisting: "Existing toolset",
+    quickApiToolboxNew: "New toolset",
+    quickApiParsedOk: "API detected. Confirm the name and toolset, then save.",
+    quickApiIoPreviewTitle: "Endpoint preview (verify inputs, body, and responses before saving)",
+    quickApiParsedParams: "Detected {{count}} query parameters.",
+    quickApiBuildFailed: "Could not build an API definition from the input.",
+    quickApiSave: "Save and finish",
+    quickApiCreateSuccess: "API added to the toolset",
+    addApiButton: "Add API",
     searchPlaceholder: "Search by operator name or ID",
     toolboxSearchPlaceholder: "Search by toolbox name or ID",
     statusFilterPlaceholder: "Filter by status",
     toolbarHint:
       "Manage execution resources in your business domain—create, publish, debug, import, and export.",
     catalogToolbarHint:
-      "The market lists published resources. Items already in your domain are tagged accordingly—you can use them in Execution Units or choose Sync to update.",
+      "Same list view as Execution Capabilities; data comes from the market catalog. Filter by category; items already in your domain are marked so you can introduce or sync.",
     empty: "No execution units",
     emptyDescription: "There are no execution operators to display yet.",
     catalogEmpty: "No market execution units",
@@ -41,10 +167,10 @@ export const executionFactoryEnUS = {
       skill: "No skills yet. Import a skill package to distribute and install.",
     },
     catalogEmptyByTab: {
-      mcp: "No MCP servers are available to introduce from the market.",
-      toolbox: "No toolboxes are available to introduce from the market.",
+      mcp: "No MCP services are available to introduce from the market.",
+      toolbox: "No toolsets are available to introduce from the market.",
       operator: "No operators are available to introduce from the market.",
-      skill: "No skills are available to introduce from the market.",
+      skill: "No skill packs are available to introduce from the market.",
     },
     emptyCreateByTab: {
       mcp: "Create MCP",
@@ -83,7 +209,7 @@ export const executionFactoryEnUS = {
     skillIdLabel: "Skill ID",
     skillNameLabel: "Skill Name",
     skillFilesSectionTitle: "Package Files",
-    internalTag: "Built-in",
+    internalTag: "System built-in",
     statuses: {
       unpublish: "Unpublished",
       published: "Published",
@@ -136,6 +262,8 @@ export const executionFactoryEnUS = {
     debugTitle: "Debug Operator",
     runDebug: "Run Debug",
     debugRequestBody: "Request Body (JSON)",
+    debugSampleHint:
+      "A sample JSON payload was generated from the input definition. Edit the values, then run debug.",
     debugResultTitle: "Debug Result",
     createTitle: "Register Operator",
     editTitle: "Edit Operator",
@@ -216,7 +344,7 @@ export const executionFactoryEnUS = {
     toolboxEditDescription: "Update toolbox metadata and service URL.",
     toolboxCreateFlowHint: "OpenAPI registration requires a valid OpenAPI document payload.",
     toolboxCreateFunctionFlowHint:
-      "After creating a function toolbox, configure each tool with code, inputs, and outputs under Manage Tools.",
+      "After creating a function toolbox, configure each tool with code, inputs, and outputs under View Tools.",
     toolboxEditFlowHint: "Editing updates toolbox metadata without replacing the registered spec.",
     functionToolCreateHint:
       "Provide function code plus input and output parameters. After saving, use the tool IDE for debugging and advanced edits.",
@@ -248,10 +376,18 @@ export const executionFactoryEnUS = {
     toolboxDeleteConfirmTitle: "Delete toolbox",
     toolboxDeleteConfirmDescription: 'Delete "{{name}}"? This action cannot be undone.',
     manageTools: "Manage Tools",
+    viewToolsDetail: "View Tools",
+    viewMcpDetail: "View MCP Detail",
+    viewSkillDetail: "View Skill Detail",
+    toolboxToolsEnterEdit: "Edit Tools",
+    toolboxToolsViewHint:
+      "Review each tool's inputs and outputs and run debug. Users with edit permission can click Edit Tools to add or modify tools.",
     toolboxToolsTitle: "{{name}} Tools",
     toolboxToolsPageTitle: "Toolbox Tools",
     toolboxToolsDescription: "Manage tools inside the selected toolbox.",
     toolboxToolsHint: "Create, enable, debug, and delete tools within this toolbox.",
+    toolboxToolsDebugHint:
+      "Select a tool on the left, review parameters and examples under Input / Output, then click Debug or the debug action in the list to send a trial request.",
     toolboxDetailBack: "Back",
     toolboxToolListTitle: "Tool list - {{count}}",
     toolboxToolInfoTitle: "Tool info",
@@ -317,11 +453,12 @@ export const executionFactoryEnUS = {
     importConfirm: "Import",
     importSuccess: "Imported successfully",
     importKindOpenApi: "OpenAPI",
-    importKindAdp: "ADP Package",
+    importKindAdp: "Backup file",
+    importKindAdpHint: "Pairs with Export on the list—upload the file you downloaded (.adp / .json)",
     importOpenApiFileRequired: "Please upload an OpenAPI spec file",
-    importAdpFileRequired: "Please upload an ADP or JSON package file",
+    importAdpFileRequired: "Please upload a backup file (.adp or .json)",
     importOpenApiDraggerHint: "Click or drag an OpenAPI JSON/YAML file here",
-    importAdpDraggerHint: "Click or drag a .adp or .json package file here",
+    importAdpDraggerHint: "Click or drag a backup file here (.adp / .json)",
     importOpenApiToolsButton: "Import OpenAPI Tools",
     importOpenApiToolsTitle: "Import OpenAPI Tools",
     importOpenApiToolsHint: "Upload an OpenAPI document to parse and create tools in batch.",
@@ -357,6 +494,7 @@ export const executionFactoryEnUS = {
     runLogError: "Error",
     runLogResponse: "Response",
     ioPanelEmpty: "No input/output definition available",
+    ioPanelEmptyHint: "If the document has no parameter or response examples, you can still click Debug to send a trial request.",
     ioParameters: "Parameters",
     ioRequestBody: "Request body",
     ioResponses: "Responses",
@@ -389,9 +527,9 @@ export const executionFactoryEnUS = {
       toolbox: "Upload an OpenAPI spec file to create a toolbox and import tools.",
     },
     importAdpHint: {
-      operator: "Upload an exported ADP package to restore operator configuration.",
-      toolbox: "Upload an ADP package to import a toolbox and its tools.",
-      mcp: "Upload an ADP package to import MCP server configuration.",
+      operator: "Upload a backup file from Export to restore operator configuration.",
+      toolbox: "Upload a backup file from Export to restore a toolbox and its tools.",
+      mcp: "Upload a backup file from Export to restore MCP server configuration.",
     },
     publishedPermTitle: "Published Successfully",
     publishedPermDescription:
@@ -462,6 +600,19 @@ export const executionFactoryEnUS = {
     skillContentRequired: "Please provide skill content.",
     chooseFile: "Choose File",
     skillDetailTitle: "Skill Detail",
+    skillDetailPageTitle: "Skill Detail",
+    skillDetailDescription: "Review skill content, package files, and version info.",
+    skillDetailEnterEdit: "Edit Skill",
+    skillDetailViewHint:
+      "Review skill content and package files. Users with edit permission can click Edit Skill to update metadata or replace the package.",
+    skillDetailEditHint: "Edit mode allows updating metadata, downloading the package, or viewing release history.",
+    skillDetailCatalogContentHint:
+      "Full content in catalog mode is available after introducing to this domain. If already introduced, open from unit management.",
+    skillFileCountLabel: "{{count}} files",
+    skillFilePreviewTitle: "File Preview",
+    skillFilePreviewBinaryHint: "This file is binary and cannot be previewed inline. Use the link below to download it.",
+    skillFilePreviewDownloadLink: "Open download link",
+    skillFilePreviewSelectHint: "Select a file on the left to preview its contents.",
     skillMarketDetailTitle: "Market Skill Detail",
     skillContentTitle: "SKILL.md Content",
     skillContentEmpty: "No skill content available.",
@@ -472,6 +623,20 @@ export const executionFactoryEnUS = {
     mcpCatalogEmpty: "No market MCP servers",
     mcpCatalogEmptyDescription: "No MCP servers are available in the market view.",
     mcpDetailTitle: "MCP Detail",
+    mcpDetailPageTitle: "MCP Detail",
+    mcpDetailDescription: "Review MCP tools, parameter schemas, and run debug.",
+    mcpDetailEnterEdit: "Edit MCP",
+    mcpDetailViewHint:
+      "Review each MCP tool's parameter schema and run debug. Users with edit permission can click Edit MCP to change configuration.",
+    mcpDetailEditHint: "Edit mode allows updating MCP configuration or exporting a backup.",
+    mcpDetailCatalogToolsHint:
+      "Tool lists in catalog mode are available after introducing to this domain. If already introduced, open from unit management.",
+    mcpToolCountLabel: "{{count}} MCP tools",
+    mcpToolCountFieldLabel: "Tool count",
+    mcpToolInfoTitle: "Tool Info",
+    mcpToolSchemaEmptyHint:
+      "This tool has no input schema. Refer to the MCP server docs when filling debug arguments.",
+    mcpToolSchemaRawTitle: "Input Schema",
     mcpMarketDetailTitle: "Market MCP Detail",
     parseSse: "Parse SSE",
     parseSseTitle: "Parse SSE MCP Endpoint",
@@ -510,7 +675,15 @@ export const executionFactoryEnUS = {
     quickPublishHint:
       "Fill the minimum required fields and save a draft first. Enable publish-on-register for quick POC demos.",
     directPublishHint: "Best for POC environments. Production workflows should publish manually after review.",
-    openapiImportHint: "Paste JSON, upload a file, or fetch an OpenAPI 3.0 document from a URL.",
+    openapiImportHint:
+      "Paste JSON, upload a file, or fetch an OpenAPI document from a URL. For a single operator, keep only one endpoint.",
+    openapiOperatorHint:
+      "Use a single-endpoint OpenAPI document (one path and one method). A full service spec registers multiple operators.",
+    openapiToolboxHint:
+      "Paste JSON, upload a file, or fetch from a URL. After parsing, expand each endpoint to review inputs, request body, and response examples.",
+    openapiOperationsIoPreviewHint: "Expand an endpoint to review parameters, request body, and response examples.",
+    openapiOperationIoSummary: "{{paramCount}} input(s) · {{responseCount}} response(s)",
+    openapiOperationIoRequestBody: "with request body",
     openapiInputPaste: "Paste",
     openapiInputFile: "Upload File",
     openapiInputUrl: "URL",
@@ -520,6 +693,16 @@ export const executionFactoryEnUS = {
     openapiUrlRequired: "Enter an OpenAPI document URL",
     openapiUrlFetchFailed: "Unable to fetch the OpenAPI document. Check the URL or network.",
     openapiValidationOk: "OpenAPI document validated successfully",
+    openapiValidationOkWithCount:
+      "OpenAPI document validated. Detected {{count}} endpoint(s).",
+    openapiPreviewServer: "Server URL",
+    openapiPreviewVersion: "Spec version",
+    openapiPreviewMore: "{{count}} more endpoint(s) not shown",
+    openapiMultiOperationWarning:
+      "This document contains {{count}} endpoints and will register {{count}} operators. Keep only the target endpoint for a single operator.",
+    openapiVersion31Hint:
+      "OpenAPI 3.1 detected. If save fails, try OpenAPI 3.0.x or keep a single endpoint only.",
+    submitErrorTitle: "Save failed",
     installedStateSyncFailed: "Failed to sync installed state. Installed tags may be inaccurate.",
     loadMoreFailed: "Failed to load more items. Please retry.",
     routeMigrated: "This page has moved. You were redirected to the new execution unit hub.",

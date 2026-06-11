@@ -1,21 +1,33 @@
+import { writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { expect, test } from "@playwright/test";
 
 import { assertBackendReady } from "../../helpers/common";
+import { cloneOperatorImpexForCreate, buildImpexImportName } from "../../helpers/impex";
 import {
-  executionUnitCard,
-  expectAppToast,
+  exportFromCardMenu,
   gotoE2ePage,
+  gotoUnitsTab,
+  importBackupFileViaUi,
   openCatalogInstallDialog,
+  openOperatorVersionHistoryDrawer,
+  openSkillReleaseHistoryDrawer,
   retryListLoadIfNeeded,
   searchExecutionUnitByName,
   waitForImpexExportResponse,
   waitForImpexImportResponse,
+  expectAppToast,
 } from "../../helpers/execution-unit-ui";
 import {
   buildOperatorName,
   cleanupOperatorViaApi,
+  exportOperatorViaApi,
+  listOperatorHistoryViaApi,
   publishOperatorViaApi,
   registerOperatorViaApi,
+  updateOperatorViaApi,
   type RegisteredOperator,
 } from "../../helpers/operator";
 import {
@@ -30,10 +42,6 @@ import {
   createToolboxViaApi,
   publishToolboxViaApi,
 } from "../../helpers/toolbox";
-
-function operatorCard(page: import("@playwright/test").Page, operatorName: string) {
-  return executionUnitCard(page, operatorName);
-}
 
 test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
   test.describe.configure({ timeout: 180_000 });
@@ -97,14 +105,9 @@ test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
     createdOperators.push(operator);
     await publishOperatorViaApi(request, operator);
 
-    await page.goto("/execution-factory/units?activeTab=operator");
-    const card = operatorCard(page, operator.name);
-    await card.getByRole("button", { name: "更多操作" }).click();
-    await page.getByRole("menuitem", { name: "查看" }).click();
-    await page.getByRole("button", { name: "版本历史" }).click();
-
-    await expect(page.getByText(/算子版本历史/)).toBeVisible();
-    await expect(page.locator(".ant-drawer").getByRole("cell").first()).toBeVisible();
+    await gotoUnitsTab(page, "operator");
+    const historyDrawer = await openOperatorVersionHistoryDrawer(page, operator.name);
+    await expect(historyDrawer.getByRole("cell").first()).toBeVisible();
   });
 
   test("VER-UI-02: skill release history drawer opens", async ({ page, request }) => {
@@ -115,12 +118,72 @@ test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
     createdSkillIds.push(skill.skillId);
     await publishSkillViaApi(request, skill.skillId);
 
-    await page.goto("/execution-factory/units?activeTab=skill");
-    await page.getByRole("heading", { level: 5, name: skill.name }).click();
-    await page.getByRole("button", { name: "发布历史" }).click();
+    await gotoUnitsTab(page, "skill");
+    const historyDrawer = await openSkillReleaseHistoryDrawer(page, skill.name);
+    await expect(historyDrawer.getByRole("cell").first()).toBeVisible();
+  });
 
-    await expect(page.getByText("发布历史")).toBeVisible();
-    await expect(page.locator(".ant-drawer").getByRole("cell").first()).toBeVisible();
+  test("VER-UI-03: republish operator adds a second history entry", async ({ page, request }) => {
+    const operator = await registerOperatorViaApi(request, buildOperatorName("ui_repub"));
+    createdOperators.push(operator);
+    await publishOperatorViaApi(request, operator);
+
+    await updateOperatorViaApi(
+      request,
+      operator,
+      operator.name,
+      `Updated at ${Date.now()}`,
+    );
+    await publishOperatorViaApi(request, operator);
+
+    const history = await listOperatorHistoryViaApi(request, operator.operatorId);
+    expect(history.length).toBeGreaterThanOrEqual(2);
+
+    await gotoUnitsTab(page, "operator");
+    const historyDrawer = await openOperatorVersionHistoryDrawer(page, operator.name);
+    await expect(historyDrawer.getByRole("cell").nth(1)).toBeVisible();
+  });
+
+  test("VER-UI-04: published operator backup export then UI import clone", async ({
+    page,
+    request,
+  }) => {
+    const operator = await registerOperatorViaApi(request, buildOperatorName("ui_ver_impex"));
+    createdOperators.push(operator);
+    await publishOperatorViaApi(request, operator);
+
+    await gotoUnitsTab(page, "operator");
+    await exportFromCardMenu(page, operator.name, "operator");
+
+    const exported = (await exportOperatorViaApi(request, operator.operatorId)) as Record<
+      string,
+      unknown
+    >;
+    const importName = buildImpexImportName("ui_ver_impex_copy");
+    const payload = cloneOperatorImpexForCreate(exported, importName);
+    const filePath = join(tmpdir(), `e2e-ver-impex-${Date.now()}.adp`);
+    writeFileSync(filePath, JSON.stringify(payload), "utf8");
+
+    await importBackupFileViaUi(page, "operator", filePath);
+
+    await expect(page.getByRole("heading", { level: 5, name: importName })).toBeVisible();
+    const listResponse = await request.get(
+      "/api/agent-operator-integration/v1/operator/info/list?page=1&page_size=50",
+      { headers: { "x-business-domain": "bd_public" } },
+    );
+    if (listResponse.ok()) {
+      const body = (await listResponse.json()) as {
+        data?: Array<{ operator_id: string; name?: string; version: string }>;
+      };
+      const imported = body.data?.find((item) => item.name === importName);
+      if (imported) {
+        createdOperators.push({
+          operatorId: imported.operator_id,
+          version: imported.version,
+          name: importName,
+        });
+      }
+    }
   });
 
   test("CAT-UI-01: catalog install toolbox from market UI", async ({ page, request }) => {

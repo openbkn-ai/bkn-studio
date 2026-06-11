@@ -46,7 +46,9 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
   if (!hasOpenApiIo && !hasFunctionIo && runLogs.length === 0) {
     return (
       <div className={styles.panel}>
-        <Empty description={t("executionFactory.ioPanelEmpty")} />
+        <Empty description={t("executionFactory.ioPanelEmpty")}>
+          <p className={styles.emptyHint}>{t("executionFactory.ioPanelEmptyHint")}</p>
+        </Empty>
       </div>
     );
   }

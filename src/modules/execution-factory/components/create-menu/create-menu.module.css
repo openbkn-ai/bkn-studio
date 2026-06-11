@@ -12,6 +12,32 @@
   margin-top: 8px;
 }
 
+.optionGridTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.optionGridThree {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.inlineAction {
+  background: none;
+  border: none;
+  color: #1677ff;
+  cursor: pointer;
+  font-size: 13px;
+  margin-bottom: 16px;
+  padding: 0;
+}
+
+.inlineAction:hover {
+  text-decoration: underline;
+}
+
+.advancedEntryRow {
+  margin: -8px 0 12px;
+}
+
 .optionCard {
   border: 1px solid #d9d9d9;
   border-radius: 8px;
@@ -47,6 +73,24 @@
   margin-bottom: 12px;
 }
 
+.businessIntro {
+  border-left: 3px solid #1677ff;
+  background: rgba(15, 30, 54, 0.03);
+  border-radius: 8px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+  line-height: 1.65;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+}
+
+.sectionIntro {
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
 .headerRow {
   display: flex;
   gap: 8px;
@@ -64,6 +108,19 @@
 .wizardFooter {
   display: flex;
   justify-content: flex-end;
+}
+
+.operatorSyncSection {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(15, 30, 54, 0.08);
+}
+
+.operatorSyncPanel {
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(15, 30, 54, 0.03);
 }
 
 .wizardTypeGrid {

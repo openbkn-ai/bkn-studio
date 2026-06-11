@@ -57,6 +57,18 @@ export default defineConfig(({ mode }) => {
           proxyTimeout: 120_000,
           target: agentOperatorProxyTarget,
         },
+        "/api/capabilities-lab": {
+          changeOrigin: true,
+          secure: false,
+          timeout: 120_000,
+          proxyTimeout: 120_000,
+          target: process.env.VITE_LAB_PROXY_TARGET ?? "http://127.0.0.1:9010",
+        },
+        "/oss-workspace": {
+          changeOrigin: true,
+          secure: false,
+          target: process.env.VITE_OSS_PROXY_TARGET ?? "http://127.0.0.1:9080",
+        },
       },
     },
     resolve: {

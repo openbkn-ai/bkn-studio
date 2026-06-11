@@ -1,28 +1,37 @@
 .page {
   min-height: calc(100vh - 144px);
   padding: 0 25px 25px;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 
 .pageIntro {
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .pageIntroTitle {
   margin: 0;
-  color: #10233f;
+  color: var(--color-text-primary);
   font-size: 22px;
   font-weight: 700;
 }
 
 .pageIntroDescription {
   margin: 8px 0 0;
-  color: rgba(15, 30, 54, 0.62);
+  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 1.7;
   max-width: 760px;
+}
+
+.pageIntroActions {
+  margin-top: 4px;
+}
+
+.pageIntroActions :global(.ant-btn-link) {
+  padding-inline: 0;
+  height: auto;
 }
 
 .tabs :global(.ant-tabs-nav) {
@@ -36,6 +45,14 @@
 .tabs :global(.ant-tabs-tab) {
   margin: 0 24px 0 0 !important;
   padding: 5px 0 !important;
+}
+
+.tabs :global(.ant-tabs-tab-active .ant-tabs-tab-btn) {
+  color: var(--color-primary-700) !important;
+}
+
+.tabs :global(.ant-tabs-ink-bar) {
+  background: var(--color-primary-600) !important;
 }
 
 .filterBar {
@@ -55,7 +72,7 @@
 }
 
 .filterLabel {
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 
@@ -67,19 +84,19 @@
 
 .categoryChip {
   padding: 4px 12px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #fff;
-  color: rgba(0, 0, 0, 0.65);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font-size: 13px;
   line-height: 20px;
 }
 
 .categoryChipActive {
-  border-color: #126ee3;
-  background: rgba(18, 110, 227, 0.08);
-  color: #126ee3;
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
 }
 
 .filterRight {
@@ -94,7 +111,7 @@
 
 .resultCount {
   margin: -8px 0 16px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
@@ -134,23 +151,8 @@
   padding: 24px 0 8px;
 }
 
-.pageMarket {
-  background: linear-gradient(180deg, rgba(18, 110, 227, 0.04) 0%, #fff 120px);
-}
-
-.pageMarket .pageIntro {
-  border-bottom-color: rgba(18, 110, 227, 0.12);
-}
-
-.pageMarket .filterBar {
-  padding: 12px 14px;
-  border: 1px solid rgba(18, 110, 227, 0.1);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-}
-
 .toolbarMeta {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 

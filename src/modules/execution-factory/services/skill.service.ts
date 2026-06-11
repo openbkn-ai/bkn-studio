@@ -6,15 +6,22 @@ import {
 } from "@/modules/execution-factory/utils/download-file";
 import type {
   SkillContentResult,
+  SkillFilePreviewResult,
+  SkillFileSummary,
   SkillHistoryRecord,
   SkillListQuery,
   SkillListResult,
+  SkillManagementFileReadResult,
   SkillMetadataEditInput,
   SkillPackageUpdateInput,
   SkillRecord,
   SkillRegisterInput,
   SkillStatus,
 } from "@/modules/execution-factory/types/skill";
+import {
+  isTextPreviewableSkillFile,
+  resolveSkillFileFetchUrl,
+} from "@/modules/execution-factory/utils/skill-file-preview";
 
 type BackendSkillSummary = {
   category?: string;
@@ -38,9 +45,51 @@ type BackendSkillListResponse = {
 
 type BackendSkillManagementContent = {
   content?: string;
-  files?: Array<{ rel_path?: string } | string>;
+  file_type?: string;
+  files?: Array<{
+    rel_path?: string;
+    file_type?: string;
+    size?: number;
+    mime_type?: string;
+  } | string>;
   url?: string;
 };
+
+type BackendReadManagementFileResponse = {
+  skill_id?: string;
+  rel_path?: string;
+  url?: string;
+  content?: string;
+  mime_type?: string;
+  file_type?: string;
+  size?: number;
+};
+
+function mapSkillFileSummary(
+  file: NonNullable<BackendSkillManagementContent["files"]>[number],
+): SkillFileSummary | null {
+  if (typeof file === "string") {
+    return file ? { relPath: file } : null;
+  }
+
+  if (!file.rel_path) {
+    return null;
+  }
+
+  return {
+    relPath: file.rel_path,
+    fileType: file.file_type,
+    mimeType: file.mime_type,
+    size: file.size,
+  };
+}
+
+function buildMockFileSummaries(): SkillFileSummary[] {
+  return [
+    { relPath: "SKILL.md", fileType: "reference", mimeType: "text/markdown", size: 128 },
+    { relPath: "scripts/run.py", fileType: "script", mimeType: "text/x-python", size: 256 },
+  ];
+}
 
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -374,7 +423,9 @@ export async function getSkillManagementContent(
   if (useMock) {
     return {
       content: "# Mock SKILL.md\n\nThis is a mock skill content preview.",
-      files: ["SKILL.md", "scripts/run.py"],
+      fileSummaries: buildMockFileSummaries(),
+      files: buildMockFileSummaries().map((item) => item.relPath),
+      fileType: "zip",
     };
   }
 
@@ -386,14 +437,138 @@ export async function getSkillManagementContent(
     },
   );
 
-  const files = response.data.files?.map((file) =>
-    typeof file === "string" ? file : (file.rel_path ?? ""),
-  );
+  const fileSummaries = (response.data.files ?? [])
+    .map(mapSkillFileSummary)
+    .filter((item): item is SkillFileSummary => Boolean(item));
 
   return {
     content: response.data.content,
-    files: files?.filter(Boolean),
+    fileSummaries,
+    files: fileSummaries.map((item) => item.relPath),
     downloadUrl: response.data.url,
+    fileType: response.data.file_type,
+  };
+}
+
+export async function readSkillManagementFile(
+  skillId: string,
+  relPath: string,
+  options?: { responseMode?: "url" | "content" },
+): Promise<SkillManagementFileReadResult> {
+  if (useMock) {
+    const mockContents: Record<string, string> = {
+      "SKILL.md": "# Mock SKILL.md\n\nThis is a mock skill content preview.",
+      "scripts/run.py": "def main():\n    return 'ok'\n",
+      "refs/guide.md": "# Guide\n",
+    };
+
+    const content = mockContents[relPath];
+    if (options?.responseMode === "content") {
+      return {
+        skillId,
+        relPath,
+        content: content ?? "",
+        mimeType: relPath.endsWith(".py") ? "text/x-python" : "text/markdown",
+        fileType: relPath.endsWith(".py") ? "script" : "reference",
+        size: content?.length ?? 0,
+      };
+    }
+
+    return {
+      skillId,
+      relPath,
+      url: `mock://skill-file/${encodeURIComponent(relPath)}`,
+      mimeType: relPath.endsWith(".py") ? "text/x-python" : "text/markdown",
+      fileType: relPath.endsWith(".py") ? "script" : "reference",
+      size: content?.length ?? 0,
+    };
+  }
+
+  const responseMode = options?.responseMode ?? "url";
+  const response = await http.post<BackendReadManagementFileResponse>(
+    `${API_PREFIX}/skills/${skillId}/management/files/read?response_mode=${responseMode}`,
+    { rel_path: relPath },
+    { headers: getBusinessDomainHeaders() },
+  );
+
+  return {
+    skillId: response.data.skill_id ?? skillId,
+    relPath: response.data.rel_path ?? relPath,
+    url: response.data.url,
+    content: response.data.content,
+    mimeType: response.data.mime_type,
+    fileType: response.data.file_type,
+    size: response.data.size,
+  };
+}
+
+async function fetchSkillFileTextFromUrl(url: string): Promise<string> {
+  if (url.startsWith("mock://")) {
+    const relPath = decodeURIComponent(url.split("/").pop() ?? "");
+    const mockContents: Record<string, string> = {
+      "SKILL.md": "# Mock SKILL.md\n\nThis is a mock skill content preview.",
+      "scripts/run.py": "def main():\n    return 'ok'\n",
+    };
+    return mockContents[relPath] ?? "";
+  }
+
+  const response = await fetch(
+    resolveSkillFileFetchUrl(url, getRuntimeConfig().apiBaseUrl),
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to fetch skill file content (${response.status})`);
+  }
+
+  return response.text();
+}
+
+export async function previewSkillManagementFile(
+  skillId: string,
+  relPath: string,
+  options?: { skillMdContent?: string },
+): Promise<SkillFilePreviewResult> {
+  if (relPath === "SKILL.md") {
+    if (options?.skillMdContent) {
+      return { kind: "text", content: options.skillMdContent };
+    }
+
+    const mgmtContent = await getSkillManagementContent(skillId);
+    if (mgmtContent.content) {
+      return { kind: "text", content: mgmtContent.content };
+    }
+  }
+
+  const fileMeta = await readSkillManagementFile(skillId, relPath, {
+    responseMode: isTextPreviewableSkillFile(undefined, relPath) ? "content" : "url",
+  });
+
+  if (isTextPreviewableSkillFile(fileMeta.mimeType, relPath)) {
+    if (fileMeta.content !== undefined) {
+      return {
+        kind: "text",
+        content: fileMeta.content,
+      };
+    }
+
+    if (!fileMeta.url) {
+      throw new Error("Skill file preview content is unavailable");
+    }
+
+    return {
+      kind: "text",
+      content: await fetchSkillFileTextFromUrl(fileMeta.url),
+    };
+  }
+
+  if (!fileMeta.url) {
+    throw new Error("Skill file preview URL is unavailable");
+  }
+
+  return {
+    kind: "binary",
+    url: resolveSkillFileFetchUrl(fileMeta.url, getRuntimeConfig().apiBaseUrl),
+    mimeType: fileMeta.mimeType,
+    size: fileMeta.size,
   };
 }
 

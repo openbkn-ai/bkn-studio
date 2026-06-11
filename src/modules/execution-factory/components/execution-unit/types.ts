@@ -13,5 +13,7 @@ export type ExecutionUnitCardItem = {
   updateTime?: number;
   status?: string;
   version?: string;
+  category?: string;
+  categoryName?: string;
   installedInDomain?: boolean;
 };

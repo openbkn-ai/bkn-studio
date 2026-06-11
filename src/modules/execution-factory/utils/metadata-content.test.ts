@@ -1,10 +1,29 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  analyzeOpenApiDocumentText,
   buildOpenApiDocumentFromMetadata,
   parseOpenApiDataPayload,
   validateOpenApiDocumentText,
 } from "@/modules/execution-factory/utils/metadata-content";
+
+const validSpec = JSON.stringify(
+  {
+    openapi: "3.0.3",
+    info: { title: "get_weather", version: "1.0.0" },
+    servers: [{ url: "https://example.com" }],
+    paths: {
+      "/weather": {
+        get: {
+          summary: "查询天气",
+          responses: { "200": { description: "OK" } },
+        },
+      },
+    },
+  },
+  null,
+  2,
+);
 
 describe("metadata-content OpenAPI helpers", () => {
   it("reconstructs a full OpenAPI document from backend metadata", () => {
@@ -85,6 +104,132 @@ describe("metadata-content OpenAPI helpers", () => {
 
     expect(typeof payload).toBe("string");
     expect(payload).toBe(spec);
+  });
+
+  it("analyzes a valid single-endpoint OpenAPI document", () => {
+    const analysis = analyzeOpenApiDocumentText(validSpec);
+
+    expect(analysis.ok).toBe(true);
+    if (analysis.ok) {
+      expect(analysis.operationCount).toBe(1);
+      expect(analysis.serverUrl).toBe("https://example.com");
+      expect(analysis.operations[0]).toMatchObject({
+        method: "GET",
+        path: "/weather",
+        summary: "查询天气",
+      });
+    }
+  });
+
+  it("rejects documents with empty info.title", () => {
+    const validation = validateOpenApiDocumentText(
+      JSON.stringify(
+        {
+          openapi: "3.0.3",
+          info: { title: "  ", version: "1.0.0" },
+          servers: [{ url: "https://example.com" }],
+          paths: {
+            "/weather": {
+              get: {
+                summary: "查询天气",
+                responses: { "200": { description: "OK" } },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    expect(validation.ok).toBe(false);
+    if (!validation.ok) {
+      expect(validation.reason).toContain("info.title");
+    }
+  });
+
+  it("rejects documents with unresolved component refs", () => {
+    const validation = validateOpenApiDocumentText(
+      JSON.stringify(
+        {
+          openapi: "3.0.3",
+          info: { title: "demo", version: "1.0.0" },
+          servers: [{ url: "https://example.com" }],
+          paths: {
+            "/weather": {
+              get: {
+                summary: "查询天气",
+                responses: {
+                  "429": { $ref: "#/components/responses/RateLimited" },
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    expect(validation.ok).toBe(false);
+    if (!validation.ok) {
+      expect(validation.reason).toContain("components/responses/RateLimited");
+    }
+  });
+
+  it("rejects operations with description longer than backend limit", () => {
+    const validation = validateOpenApiDocumentText(
+      JSON.stringify(
+        {
+          openapi: "3.0.3",
+          info: { title: "demo", version: "1.0.0" },
+          servers: [{ url: "https://example.com" }],
+          paths: {
+            "/weather": {
+              get: {
+                summary: "查询天气",
+                description: "x".repeat(501),
+                responses: { "200": { description: "OK" } },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    expect(validation.ok).toBe(false);
+    if (!validation.ok) {
+      expect(validation.reason).toContain("description");
+      expect(validation.reason).toContain("500");
+    }
+  });
+
+  it("rejects operations without summary", () => {
+    const validation = validateOpenApiDocumentText(
+      JSON.stringify(
+        {
+          openapi: "3.0.3",
+          info: { title: "demo", version: "1.0.0" },
+          servers: [{ url: "https://example.com" }],
+          paths: {
+            "/weather": {
+              get: {
+                responses: { "200": { description: "OK" } },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    expect(validation.ok).toBe(false);
+    if (!validation.ok) {
+      expect(validation.reason).toContain("summary");
+    }
   });
 
   it("parses edit payloads into OpenAPI objects", () => {

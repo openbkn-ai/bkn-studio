@@ -1,0 +1,1475 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "get_weather",
+    "description": "查询天气",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://uapis.cn/api/v1",
+      "description": "Production"
+    }
+  ],
+  "paths": {
+    "/api/v1/misc/weather": {
+      "get": {
+        "operationId": "get-misc-weather",
+        "summary": "查询天气",
+        "tags": [
+          "Misc"
+        ],
+        "description": "查询指定城市的实时天气，支持 city/adcode 参数或 IP 自动定位。",
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "description": "城市名称，支持中文（`北京`）和英文（`Tokyo`）。可选参数，不传时会尝试 IP 自动定位。",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "北京"
+            }
+          },
+          {
+            "name": "adcode",
+            "in": "query",
+            "description": "城市行政区划代码（如 `110000`），优先级高于 city。可选参数，不传时会尝试 IP 自动定位。",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "extended",
+            "in": "query",
+            "description": "返回扩展气象字段（体感温度、能见度、气压、紫外线、降水量、云量、空气质量指数及污染物分项数据）。",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "enum": [
+                false,
+                true
+              ]
+            }
+          },
+          {
+            "name": "forecast",
+            "in": "query",
+            "description": "返回多天预报数据（最多7天），含每天的最高温度、最低温度、白天夜间天气、风向风力、日出日落等。",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "enum": [
+                false,
+                true
+              ]
+            }
+          },
+          {
+            "name": "hourly",
+            "in": "query",
+            "description": "返回逐小时预报（24小时），含温度、天气、风向风速、湿度、降水概率等。",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "enum": [
+                false,
+                true
+              ]
+            }
+          },
+          {
+            "name": "minutely",
+            "in": "query",
+            "description": "返回分钟级降水预报（仅国内城市），精确到2分钟。",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "enum": [
+                false,
+                true
+              ]
+            }
+          },
+          {
+            "name": "indices",
+            "in": "query",
+            "description": "返回18项生活指数（穿衣、紫外线、洗车、晾晒、空调、感冒、运动、舒适度、出行、钓鱼、过敏、防晒、心情、啤酒、雨伞、交通、空气净化器、花粉）。",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "enum": [
+                false,
+                true
+              ]
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "返回语言。`zh` 返回中文（默认），`en` 返回英文。城市名翻译覆盖 7000+ 城市。生活指数（`indices`）目前仅支持中文。",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "zh",
+                "en"
+              ],
+              "default": "zh"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功！返回该地区的实时天气信息。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "province": {
+                      "type": "string",
+                      "description": "省份",
+                      "example": "北京市"
+                    },
+                    "city": {
+                      "type": "string",
+                      "description": "城市名",
+                      "example": "北京"
+                    },
+                    "district": {
+                      "type": "string",
+                      "description": "区县或更细一级的行政区名称。自动按 IP 定位时更常见。",
+                      "example": "海淀区"
+                    },
+                    "adcode": {
+                      "type": "string",
+                      "description": "行政区划代码（部分数据源可能为空）",
+                      "example": ""
+                    },
+                    "weather": {
+                      "type": "string",
+                      "description": "天气状况描述。默认返回中文，传 `lang=en` 时返回英文。非固定枚举。",
+                      "example": "晴"
+                    },
+                    "weather_icon": {
+                      "type": "string",
+                      "description": "天气图标代码。请从[天气图标代码表](#enum-list)中查看所有可能的值。",
+                      "example": "100",
+                      "enum": [
+                        "100",
+                        "101",
+                        "102",
+                        "103",
+                        "104",
+                        "150",
+                        "151",
+                        "152",
+                        "153",
+                        "300",
+                        "301",
+                        "302",
+                        "303",
+                        "304",
+                        "305",
+                        "306",
+                        "307",
+                        "308",
+                        "309",
+                        "310",
+                        "311",
+                        "312",
+                        "313",
+                        "314",
+                        "315",
+                        "316",
+                        "317",
+                        "318",
+                        "350",
+                        "351",
+                        "399",
+                        "400",
+                        "401",
+                        "402",
+                        "403",
+                        "404",
+                        "405",
+                        "406",
+                        "407",
+                        "408",
+                        "409",
+                        "410",
+                        "456",
+                        "457",
+                        "499",
+                        "500",
+                        "501",
+                        "502",
+                        "503",
+                        "504",
+                        "507",
+                        "508",
+                        "509",
+                        "510",
+                        "511",
+                        "512",
+                        "513",
+                        "514",
+                        "515",
+                        "800",
+                        "801",
+                        "802",
+                        "803",
+                        "804",
+                        "805",
+                        "806",
+                        "807",
+                        "900",
+                        "901",
+                        "999",
+                        "1001",
+                        "1002",
+                        "1003",
+                        "1004",
+                        "1005",
+                        "1006",
+                        "1007",
+                        "1008",
+                        "1009",
+                        "1010",
+                        "1011",
+                        "1012",
+                        "1013",
+                        "1014",
+                        "1015",
+                        "1016",
+                        "1017",
+                        "1018",
+                        "1019",
+                        "1020",
+                        "1021",
+                        "1022",
+                        "1023",
+                        "1024",
+                        "1025",
+                        "1026",
+                        "1027",
+                        "1028",
+                        "1029",
+                        "1030",
+                        "1031",
+                        "1032",
+                        "1033",
+                        "1034",
+                        "1035",
+                        "1036",
+                        "1037",
+                        "1038",
+                        "1039",
+                        "1040",
+                        "1041",
+                        "1042",
+                        "1043",
+                        "1044",
+                        "1045",
+                        "1046",
+                        "1047",
+                        "1048",
+                        "1049",
+                        "1050",
+                        "1051",
+                        "1052",
+                        "1053",
+                        "1054",
+                        "1055",
+                        "1056",
+                        "1057",
+                        "1058",
+                        "1059",
+                        "1060",
+                        "1061",
+                        "1062",
+                        "1063",
+                        "1064",
+                        "1065",
+                        "1066",
+                        "1067",
+                        "1068",
+                        "1069",
+                        "1071",
+                        "1072",
+                        "1073",
+                        "1074",
+                        "1075",
+                        "1076",
+                        "1077",
+                        "1078",
+                        "1079",
+                        "1080",
+                        "1081",
+                        "1082",
+                        "1084",
+                        "1085",
+                        "1086",
+                        "1087",
+                        "1088",
+                        "1089",
+                        "1201",
+                        "1202",
+                        "1203",
+                        "1204",
+                        "1205",
+                        "1206",
+                        "1207",
+                        "1208",
+                        "1209",
+                        "1210",
+                        "1211",
+                        "1212",
+                        "1213",
+                        "1214",
+                        "1215",
+                        "1216",
+                        "1217",
+                        "1218",
+                        "1219",
+                        "1221",
+                        "1241",
+                        "1242",
+                        "1243",
+                        "1244",
+                        "1245",
+                        "1246",
+                        "1247",
+                        "1248",
+                        "1249",
+                        "1250",
+                        "1251",
+                        "1271",
+                        "1272",
+                        "1273",
+                        "1274",
+                        "1601",
+                        "1602",
+                        "1603",
+                        "1604",
+                        "1605",
+                        "1606",
+                        "1607",
+                        "1608",
+                        "1609",
+                        "1610",
+                        "1701",
+                        "1702",
+                        "1703",
+                        "1704",
+                        "1705",
+                        "1706",
+                        "1707",
+                        "1708",
+                        "1709",
+                        "1710",
+                        "1801",
+                        "1802",
+                        "1803",
+                        "1804",
+                        "1805",
+                        "2001",
+                        "2002",
+                        "2003",
+                        "2004",
+                        "2005",
+                        "2006",
+                        "2007",
+                        "2029",
+                        "2030",
+                        "2031",
+                        "2032",
+                        "2033",
+                        "2050",
+                        "2051",
+                        "2052",
+                        "2053",
+                        "2054",
+                        "2070",
+                        "2071",
+                        "2072",
+                        "2073",
+                        "2074",
+                        "2075",
+                        "2076",
+                        "2077",
+                        "2078",
+                        "2079",
+                        "2080",
+                        "2081",
+                        "2082",
+                        "2083",
+                        "2084",
+                        "2085",
+                        "2100",
+                        "2101",
+                        "2102",
+                        "2103",
+                        "2104",
+                        "2105",
+                        "2106",
+                        "2107",
+                        "2108",
+                        "2109",
+                        "2111",
+                        "2120",
+                        "2121",
+                        "2122",
+                        "2123",
+                        "2124",
+                        "2125",
+                        "2126",
+                        "2127",
+                        "2128",
+                        "2129",
+                        "2130",
+                        "2131",
+                        "2132",
+                        "2133",
+                        "2134",
+                        "2135",
+                        "2150",
+                        "2151",
+                        "2152",
+                        "2153",
+                        "2154",
+                        "2155",
+                        "2156",
+                        "2157",
+                        "2158",
+                        "2159",
+                        "2160",
+                        "2161",
+                        "2162",
+                        "2163",
+                        "2164",
+                        "2165",
+                        "2166",
+                        "2167",
+                        "2190",
+                        "2191",
+                        "2192",
+                        "2193",
+                        "2200",
+                        "2201",
+                        "2202",
+                        "2203",
+                        "2204",
+                        "2205",
+                        "2207",
+                        "2208",
+                        "2209",
+                        "2210",
+                        "2211",
+                        "2212",
+                        "2213",
+                        "2214",
+                        "2215",
+                        "2216",
+                        "2217",
+                        "2218",
+                        "2300",
+                        "2301",
+                        "2302",
+                        "2303",
+                        "2304",
+                        "2305",
+                        "2306",
+                        "2307",
+                        "2308",
+                        "2309",
+                        "2311",
+                        "2312",
+                        "2313",
+                        "2314",
+                        "2315",
+                        "2316",
+                        "2317",
+                        "2318",
+                        "2319",
+                        "2320",
+                        "2321",
+                        "2322",
+                        "2323",
+                        "2324",
+                        "2325",
+                        "2326",
+                        "2327",
+                        "2328",
+                        "2330",
+                        "2331",
+                        "2332",
+                        "2333",
+                        "2341",
+                        "2343",
+                        "2345",
+                        "2346",
+                        "2348",
+                        "2349",
+                        "2350",
+                        "2351",
+                        "2352",
+                        "2353",
+                        "2354",
+                        "2355",
+                        "2356",
+                        "2357",
+                        "2358",
+                        "2359",
+                        "2360",
+                        "2361",
+                        "2362",
+                        "2363",
+                        "2364",
+                        "2365",
+                        "2366",
+                        "2367",
+                        "2368",
+                        "2369",
+                        "2370",
+                        "2371",
+                        "2372",
+                        "2373",
+                        "2374",
+                        "2375",
+                        "2376",
+                        "2377",
+                        "2378",
+                        "2379",
+                        "2380",
+                        "2381",
+                        "2382",
+                        "2383",
+                        "2384",
+                        "2385",
+                        "2386",
+                        "2387",
+                        "2388",
+                        "2389",
+                        "2390",
+                        "2391",
+                        "2392",
+                        "2393",
+                        "2394",
+                        "2395",
+                        "2396",
+                        "2397",
+                        "2398",
+                        "2399",
+                        "2400",
+                        "2409",
+                        "2411",
+                        "2412",
+                        "2413",
+                        "2414",
+                        "2415",
+                        "2416",
+                        "2417",
+                        "2418",
+                        "2419",
+                        "2420",
+                        "2421",
+                        "2422",
+                        "2423",
+                        "2424",
+                        "2425",
+                        "2426",
+                        "2501",
+                        "2502",
+                        "2521",
+                        "2522",
+                        "2523",
+                        "2524",
+                        "2525",
+                        "2526",
+                        "2527",
+                        "2528",
+                        "2529",
+                        "2530",
+                        "2531",
+                        "2532",
+                        "2550",
+                        "2551",
+                        "2552",
+                        "2553",
+                        "2554",
+                        "9999"
+                      ]
+                    },
+                    "temperature": {
+                      "type": "number",
+                      "description": "当前温度 °C",
+                      "example": 18.3
+                    },
+                    "wind_direction": {
+                      "type": "string",
+                      "description": "风向",
+                      "example": "西南风"
+                    },
+                    "wind_power": {
+                      "type": "string",
+                      "description": "风力等级",
+                      "example": "微风"
+                    },
+                    "humidity": {
+                      "type": "number",
+                      "description": "相对湿度 %",
+                      "example": 20
+                    },
+                    "report_time": {
+                      "type": "string",
+                      "description": "数据更新时间",
+                      "example": "2026-02-19 15:25:58"
+                    },
+                    "feels_like": {
+                      "type": "number",
+                      "description": "体感温度 °C（extended=true 时返回）",
+                      "example": 6
+                    },
+                    "visibility": {
+                      "type": "number",
+                      "description": "能见度 km（extended=true 时返回）",
+                      "example": 11.3
+                    },
+                    "pressure": {
+                      "type": "number",
+                      "description": "气压 hPa（extended=true 时返回）",
+                      "example": 1017.5
+                    },
+                    "uv": {
+                      "type": "number",
+                      "description": "紫外线指数（extended=true 时返回）",
+                      "example": 2.9
+                    },
+                    "precipitation": {
+                      "type": "number",
+                      "description": "当前降水量 mm（extended=true 时返回）",
+                      "example": 0
+                    },
+                    "cloud": {
+                      "type": "number",
+                      "description": "云量 %（extended=true 时返回）",
+                      "example": 75
+                    },
+                    "aqi": {
+                      "type": "number",
+                      "description": "空气质量指数 0-500（extended=true 时返回）",
+                      "example": 56
+                    },
+                    "aqi_level": {
+                      "type": "number",
+                      "description": "AQI 等级 1-6（extended=true 时返回）",
+                      "example": 2
+                    },
+                    "aqi_category": {
+                      "type": "string",
+                      "description": "AQI 等级描述（优/良/轻度污染/中度污染/重度污染/严重污染）（extended=true 时返回）",
+                      "example": "良"
+                    },
+                    "aqi_primary": {
+                      "type": "string",
+                      "description": "主要污染物（如 PM2.5、PM10、O3 等）（extended=true 时返回）",
+                      "example": "PM10"
+                    },
+                    "air_pollutants": {
+                      "type": "object",
+                      "description": "空气污染物分项数据（extended=true 时返回，部分数据源可能不返回）",
+                      "properties": {
+                        "pm25": {
+                          "type": "number",
+                          "description": "PM2.5 μg/m³",
+                          "example": 33
+                        },
+                        "pm10": {
+                          "type": "number",
+                          "description": "PM10 μg/m³",
+                          "example": 69
+                        },
+                        "o3": {
+                          "type": "number",
+                          "description": "臭氧 μg/m³",
+                          "example": 91
+                        },
+                        "no2": {
+                          "type": "number",
+                          "description": "二氧化氮 μg/m³",
+                          "example": 13
+                        },
+                        "so2": {
+                          "type": "number",
+                          "description": "二氧化硫 μg/m³",
+                          "example": 7
+                        },
+                        "co": {
+                          "type": "number",
+                          "description": "一氧化碳 mg/m³",
+                          "example": 0.4
+                        }
+                      }
+                    },
+                    "alerts": {
+                      "type": "array",
+                      "description": "官方气象预警列表（存在有效预警时返回）",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "description": "预警标题"
+                          },
+                          "type": {
+                            "type": "string",
+                            "description": "预警类型，如雷电、暴雨"
+                          },
+                          "level": {
+                            "type": "string",
+                            "description": "预警级别，如蓝色、黄色、橙色、红色"
+                          },
+                          "text": {
+                            "type": "string",
+                            "description": "预警正文"
+                          },
+                          "publish_time": {
+                            "type": "string",
+                            "description": "预警发布时间"
+                          },
+                          "publisher": {
+                            "type": "string",
+                            "description": "发布单位"
+                          },
+                          "guidance": {
+                            "type": "array",
+                            "description": "防御指引列表",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "temp_max": {
+                      "type": "number",
+                      "description": "当天最高温 °C（forecast=true 时返回）",
+                      "example": 14
+                    },
+                    "temp_min": {
+                      "type": "number",
+                      "description": "当天最低温 °C（forecast=true 时返回）",
+                      "example": -1
+                    },
+                    "forecast": {
+                      "type": "array",
+                      "description": "多天天气预报，最多7天（forecast=true 时返回）",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "description": "日期 YYYY-MM-DD",
+                            "example": "2026-02-19"
+                          },
+                          "week": {
+                            "type": "string",
+                            "description": "星期几（`lang=en` 时返回英文星期）",
+                            "example": "星期四"
+                          },
+                          "temp_max": {
+                            "type": "number",
+                            "description": "最高温度 °C",
+                            "example": 14
+                          },
+                          "temp_min": {
+                            "type": "number",
+                            "description": "最低温度 °C",
+                            "example": -1
+                          },
+                          "weather_day": {
+                            "type": "string",
+                            "description": "白天天气（`lang=en` 时返回英文）",
+                            "example": "晴"
+                          },
+                          "weather_night": {
+                            "type": "string",
+                            "description": "夜间天气（`lang=en` 时返回英文）",
+                            "example": "晴"
+                          },
+                          "wind_dir_day": {
+                            "type": "string",
+                            "description": "白天风向（可选，`lang=en` 时返回英文）",
+                            "example": "西南风"
+                          },
+                          "wind_dir_night": {
+                            "type": "string",
+                            "description": "夜间风向（可选，`lang=en` 时返回英文）",
+                            "example": "北风"
+                          },
+                          "wind_scale_day": {
+                            "type": "string",
+                            "description": "白天风力（可选，`lang=en` 时返回英文）",
+                            "example": "微风"
+                          },
+                          "wind_scale_night": {
+                            "type": "string",
+                            "description": "夜间风力（可选，`lang=en` 时返回英文）",
+                            "example": "微风"
+                          },
+                          "wind_speed_day": {
+                            "type": "number",
+                            "description": "白天风速 km/h（可选）",
+                            "example": 17
+                          },
+                          "humidity": {
+                            "type": "number",
+                            "description": "湿度 %（可选）",
+                            "example": 40
+                          },
+                          "precip": {
+                            "type": "number",
+                            "description": "降水量 mm（可选）",
+                            "example": 0
+                          },
+                          "visibility": {
+                            "type": "number",
+                            "description": "能见度 km（可选）",
+                            "example": 25
+                          },
+                          "uv_index": {
+                            "type": "number",
+                            "description": "紫外线指数（可选）",
+                            "example": 5
+                          },
+                          "sunrise": {
+                            "type": "string",
+                            "description": "日出时间 HH:MM（可选）",
+                            "example": "06:52"
+                          },
+                          "sunset": {
+                            "type": "string",
+                            "description": "日落时间 HH:MM（可选）",
+                            "example": "17:56"
+                          }
+                        }
+                      }
+                    },
+                    "hourly_forecast": {
+                      "type": "array",
+                      "description": "逐小时预报，最多24小时（hourly=true 时返回）",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "time": {
+                            "type": "string",
+                            "description": "预报时间（ISO8601 或 YYYY-MM-DD HH:MM）",
+                            "example": "2026-02-19T17:00:00+0900"
+                          },
+                          "temperature": {
+                            "type": "number",
+                            "description": "温度 °C",
+                            "example": 8
+                          },
+                          "weather": {
+                            "type": "string",
+                            "description": "天气状况",
+                            "example": "晴"
+                          },
+                          "wind_direction": {
+                            "type": "string",
+                            "description": "风向（可选）",
+                            "example": "北北西"
+                          },
+                          "wind_speed": {
+                            "type": "number",
+                            "description": "风速 km/h（可选）",
+                            "example": 17
+                          },
+                          "wind_scale": {
+                            "type": "string",
+                            "description": "风力等级（可选）",
+                            "example": "3级"
+                          },
+                          "humidity": {
+                            "type": "number",
+                            "description": "湿度 %（可选）",
+                            "example": 25
+                          },
+                          "precip": {
+                            "type": "number",
+                            "description": "降水量 mm（可选）",
+                            "example": 0
+                          },
+                          "feels_like": {
+                            "type": "number",
+                            "description": "体感温度 °C（可选）",
+                            "example": 6
+                          },
+                          "visibility": {
+                            "type": "number",
+                            "description": "能见度 km（可选）",
+                            "example": 14
+                          },
+                          "pop": {
+                            "type": "number",
+                            "description": "降水概率 %（可选）",
+                            "example": 0
+                          },
+                          "uv_index": {
+                            "type": "number",
+                            "description": "紫外线指数（可选，国内城市通常不返回）",
+                            "example": 0
+                          }
+                        }
+                      }
+                    },
+                    "minutely_precip": {
+                      "type": "object",
+                      "description": "分钟级降水预报（minutely=true 时返回，仅国内城市可用，精确到2分钟）",
+                      "properties": {
+                        "summary": {
+                          "type": "string",
+                          "description": "降水描述",
+                          "example": "未来2小时无降水"
+                        },
+                        "update_time": {
+                          "type": "string",
+                          "description": "更新时间",
+                          "example": "2026-02-19T15:30:00+08:00"
+                        },
+                        "data": {
+                          "type": "array",
+                          "description": "精确到2分钟的数据点",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "time": {
+                                "type": "string",
+                                "description": "预报时间 ISO8601",
+                                "example": "2026-02-19T15:30:00+08:00"
+                              },
+                              "precip": {
+                                "type": "number",
+                                "description": "该时间点的降水量 mm",
+                                "example": 0
+                              },
+                              "type": {
+                                "type": "string",
+                                "description": "降水类型：rain / snow",
+                                "example": "rain"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "life_indices": {
+                      "type": "object",
+                      "description": "18项生活指数（indices=true 时返回），每项包含 level（等级名称）、brief（简短描述）、advice（详细建议）",
+                      "properties": {
+                        "clothing": {
+                          "type": "object",
+                          "description": "穿衣指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "较舒适"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "微凉"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "建议穿薄外套、卫衣或长袖衬衫"
+                            }
+                          }
+                        },
+                        "uv": {
+                          "type": "object",
+                          "description": "紫外线指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "高"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "较强"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "紫外线较强，减少10-14点户外活动，涂抹SPF30+防晒霜，戴帽子和墨镜"
+                            }
+                          }
+                        },
+                        "car_wash": {
+                          "type": "object",
+                          "description": "洗车指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "非常适宜"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "极佳"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "天气晴好，非常适合洗车"
+                            }
+                          }
+                        },
+                        "drying": {
+                          "type": "object",
+                          "description": "晾晒指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "适宜"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "较好"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "天气较好，适合晾晒"
+                            }
+                          }
+                        },
+                        "air_conditioner": {
+                          "type": "object",
+                          "description": "空调开启指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "建议制热"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "寒冷"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "建议开启空调制热"
+                            }
+                          }
+                        },
+                        "cold_risk": {
+                          "type": "object",
+                          "description": "感冒指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "较低"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "较少发"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "感冒风险较低"
+                            }
+                          }
+                        },
+                        "exercise": {
+                          "type": "object",
+                          "description": "运动指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "适宜"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "较好"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "天气适合运动"
+                            }
+                          }
+                        },
+                        "comfort": {
+                          "type": "object",
+                          "description": "舒适度指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "冷"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "偏冷"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "体感偏冷，适当添加衣物"
+                            }
+                          }
+                        },
+                        "travel": {
+                          "type": "object",
+                          "description": "出行指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "适宜"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "较好"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "天气较好，适合出行"
+                            }
+                          }
+                        },
+                        "fishing": {
+                          "type": "object",
+                          "description": "钓鱼指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "适宜"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "较好"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "天气适合钓鱼"
+                            }
+                          }
+                        },
+                        "allergy": {
+                          "type": "object",
+                          "description": "过敏指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "较低"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "不易发"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "过敏风险较低"
+                            }
+                          }
+                        },
+                        "sunscreen": {
+                          "type": "object",
+                          "description": "防晒指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "中等"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "需防晒"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "建议涂抹防晒霜"
+                            }
+                          }
+                        },
+                        "mood": {
+                          "type": "object",
+                          "description": "心情指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "较好"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "愉悦"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "天气不错，心情愉悦"
+                            }
+                          }
+                        },
+                        "beer": {
+                          "type": "object",
+                          "description": "啤酒指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "适宜"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "较好"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "适合来一杯冰啤酒"
+                            }
+                          }
+                        },
+                        "umbrella": {
+                          "type": "object",
+                          "description": "雨伞指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "不需要"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "无需"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "天气晴好，无需带伞"
+                            }
+                          }
+                        },
+                        "traffic": {
+                          "type": "object",
+                          "description": "交通指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "良好"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "较好"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "天气对交通无明显影响"
+                            }
+                          }
+                        },
+                        "air_purifier": {
+                          "type": "object",
+                          "description": "空气净化器指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "建议开启"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "一般"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "空气质量一般，建议开启空气净化器"
+                            }
+                          }
+                        },
+                        "pollen": {
+                          "type": "object",
+                          "description": "花粉扩散指数",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "example": "较低"
+                            },
+                            "brief": {
+                              "type": "string",
+                              "example": "不易发"
+                            },
+                            "advice": {
+                              "type": "string",
+                              "example": "花粉浓度较低"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效。常见原因：`adcode` 格式非法、`lang` 非法（仅支持 zh/en）、参数值类型错误或参数组合无效。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "INVALID_PARAMETER"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "参数无效"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "城市未找到。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "NOT_FOUND"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "未找到该城市的天气数据"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "description": "服务器内部错误。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "INTERNAL_SERVER_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "服务器内部错误"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "天气服务暂时不可用。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "SERVICE_UNAVAILABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "天气服务暂时不可用"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/UApiError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UApiError": {
+        "type": "object",
+        "required": [
+          "code",
+          "success"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "example": 429,
+            "description": "HTTP status code mirrored into the body for convenience."
+          },
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "string",
+            "example": "Too many requests, please try again later.",
+            "description": "Human-readable error message safe to surface to the user."
+          },
+          "request_id": {
+            "type": "string",
+            "example": "01J0E3AQXWK7Q2N9F0BSP6YMYC",
+            "description": "Opaque request identifier, useful when filing a support ticket."
+          }
+        }
+      }
+    },
+    "responses": {
+      "RateLimited": {
+        "description": "Rate limit exceeded.",
+        "headers": {
+          "X-RateLimit-Limit": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Total requests allowed in the current window."
+          },
+          "X-RateLimit-Remaining": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Requests remaining in the current window."
+          },
+          "X-RateLimit-Reset": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Unix timestamp at which the window resets."
+          },
+          "Retry-After": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Seconds to wait before retrying."
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UApiError"
+            }
+          }
+        }
+      },
+      "UApiError": {
+        "description": "Error response (any non-2xx).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UApiError"
+            }
+          }
+        }
+      }
+    }
+  }
+}

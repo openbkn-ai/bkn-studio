@@ -1,18 +1,23 @@
 import { Alert, Form, Input, Typography } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { debugOperator } from "@/modules/execution-factory/services/operator.service";
+import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
 import type {
   OperatorDebugResult,
   OperatorRecord,
   OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
+import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
+import { extractOpenApiOperationsIo } from "@/modules/execution-factory/utils/openapi-operation-io";
 
 type OperatorDebugPanelProps = {
+  functionInput?: FunctionInputPayload;
   onRunComplete?: (entry: OperatorRunLogEntry) => void;
+  openapiSpec?: string;
   record: OperatorRecord | null;
 };
 
@@ -20,18 +25,32 @@ type DebugFormValues = {
   requestBody?: string;
 };
 
-export function OperatorDebugPanel({ onRunComplete, record }: OperatorDebugPanelProps) {
+export function OperatorDebugPanel({
+  functionInput,
+  onRunComplete,
+  openapiSpec,
+  record,
+}: OperatorDebugPanelProps) {
   const { t } = useTranslation();
   const [form] = Form.useForm<DebugFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OperatorDebugResult | null>(null);
 
+  const generatedBody = useMemo(() => {
+    const ioSpec = openapiSpec ? extractOpenApiOperationsIo(openapiSpec)[0]?.io : undefined;
+
+    return buildDefaultDebugBody({
+      functionInput,
+      ioSpec,
+    });
+  }, [functionInput, openapiSpec]);
+
   useEffect(() => {
-    form.setFieldsValue({ requestBody: "{}" });
+    form.setFieldsValue({ requestBody: generatedBody });
     setError(null);
     setResult(null);
-  }, [form, record?.operatorId, record?.version]);
+  }, [form, generatedBody, record?.operatorId, record?.version]);
 
   const handleDebug = async () => {
     if (!record) {
@@ -78,9 +97,10 @@ export function OperatorDebugPanel({ onRunComplete, record }: OperatorDebugPanel
 
   return (
     <div>
+      <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
       <Form form={form} layout="vertical">
         <Form.Item label={t("executionFactory.debugRequestBody")} name="requestBody">
-          <Input.TextArea rows={6} />
+          <Input.TextArea rows={8} />
         </Form.Item>
       </Form>
       {error ? <Alert message={error} showIcon style={{ marginBottom: 12 }} type="error" /> : null}

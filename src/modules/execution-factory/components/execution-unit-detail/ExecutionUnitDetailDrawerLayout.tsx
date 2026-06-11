@@ -40,7 +40,7 @@ export function ExecutionUnitDetailDrawerLayout({
 
   return (
     <Drawer
-      className={marketMode ? styles.drawerMarket : undefined}
+      className={[styles.drawer, marketMode ? styles.drawerMarket : ""].filter(Boolean).join(" ")}
       destroyOnClose
       extra={headerExtra}
       footer={

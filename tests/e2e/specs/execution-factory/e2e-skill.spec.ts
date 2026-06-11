@@ -6,6 +6,7 @@ import {
   cleanupSkillViaApi,
   getSkillContentViaApi,
   publishSkillViaApi,
+  readSkillManagementFileViaApi,
   registerSkillViaApi,
   registerSkillZipViaApi,
 } from "../../helpers/skill";
@@ -77,5 +78,29 @@ test.describe("Execution Factory — Skill E2E flows", () => {
     const skill = await registerSkillZipViaApi(request, buildSkillName("zip"));
     createdSkillIds.push(skill.skillId);
     expect(skill.skillId).toBeTruthy();
+  });
+
+  test("SK-05: read zip skill management file via files/read", async ({ request }) => {
+    const skill = await registerSkillZipViaApi(request, buildSkillName("file_read"));
+    createdSkillIds.push(skill.skillId);
+
+    const content = (await getSkillContentViaApi(request, skill.skillId)) as {
+      files?: Array<{ rel_path?: string } | string>;
+    };
+    const relPaths = (content.files ?? [])
+      .map((file) => (typeof file === "string" ? file : file.rel_path))
+      .filter(Boolean) as string[];
+    expect(relPaths.some((path) => path.includes("refs/guide.md"))).toBeTruthy();
+
+    const fileMeta = await readSkillManagementFileViaApi(request, skill.skillId, "refs/guide.md");
+    expect(fileMeta.url).toBeTruthy();
+
+    const fileContent = await readSkillManagementFileViaApi(
+      request,
+      skill.skillId,
+      "refs/guide.md",
+      { responseMode: "content" },
+    );
+    expect(fileContent.content).toContain("# Guide");
   });
 });

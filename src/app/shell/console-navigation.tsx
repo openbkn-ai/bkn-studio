@@ -4,6 +4,7 @@ import type {
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
 import { dataConnectNavigation } from "@/modules/data-connect/navigation";
+import { executionFactoryLabNavigation } from "@/modules/execution-factory-lab/navigation";
 import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
 import { knowledgeNetworkNavigation } from "@/modules/knowledge-network/navigation";
 import { modelResourcesNavigation } from "@/modules/model-resources/navigation";
@@ -13,6 +14,7 @@ const navigationContributions: ConsoleNavContribution[] = [
   dataConnectNavigation,
   executionFactoryNavigation,
   modelResourcesNavigation,
+  executionFactoryLabNavigation,
 ];
 
 export type { ConsoleNavItem } from "@/app/shell/navigation/types";
@@ -21,6 +23,31 @@ export const consoleNavigation: ConsoleNavItem[] = buildConsoleNavigation(
   baseConsoleNavigation,
   navigationContributions,
 );
+
+export function filterConsoleNavigation(
+  items: ConsoleNavItem[],
+  options?: {
+    hideLegacyExecutionFactory?: boolean;
+    hideCatalog?: boolean;
+  },
+): ConsoleNavItem[] {
+  return items
+    .filter((item) => !(options?.hideLegacyExecutionFactory && item.key === "execution-factory"))
+    .map((item) => {
+      if (!item.children?.length) {
+        return item;
+      }
+
+      const children = item.children.filter(
+        (child) => !(options?.hideCatalog && child.key === "execution-factory-lab-catalog"),
+      );
+
+      return {
+        ...item,
+        children,
+      };
+    });
+}
 
 type ConsoleNavTrailItem = {
   key: string;
