@@ -158,7 +158,11 @@ export function IndexBuildListScene() {
   const handlePauseResume = async (task: BuildTask) => {
     const isStreaming = task.mode === "streaming";
     try {
-      if (task.status === "listening" || task.status === "running") {
+      if (
+        task.status === "listening" ||
+        task.status === "running" ||
+        task.status === "pending"
+      ) {
         await pauseBuildTask(task.id);
         message.success(
           t(isStreaming ? "dataCatalog.task.paused" : "dataCatalog.task.stopped"),
@@ -328,6 +332,7 @@ export function IndexBuildListScene() {
             </Tooltip>
             {record.status === "running" ||
             record.status === "listening" ||
+            record.status === "pending" ||
             record.status === "paused" ? (
               <PermissionGate permissions="resource:task_manage">
                 <Tooltip title={pauseResumeLabel}>
