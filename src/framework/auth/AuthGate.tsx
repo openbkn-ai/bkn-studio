@@ -1,13 +1,19 @@
 import type { PropsWithChildren } from "react";
 import { useState } from "react";
 
+import { CurrentUserLoader } from "@/framework/auth/CurrentUserLoader";
 import { hasDevAccessToken, seedDevTokensFromEnv } from "@/framework/auth/dev-auth";
 import { isOAuthCallbackPath, shouldUseOAuthGate } from "@/framework/auth/oauth";
 import { OAuthCallback } from "@/framework/auth/OAuthCallback";
 import { SignInScreen } from "@/framework/auth/SignInScreen";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import type { RuntimeUser } from "@/framework/runtime/types";
 
-export function AuthGate({ children }: PropsWithChildren) {
+type AuthGateProps = PropsWithChildren<{
+  onCurrentUser: (user: RuntimeUser) => void;
+}>;
+
+export function AuthGate({ children, onCurrentUser }: AuthGateProps) {
   const runtimeConfig = useRuntimeConfig();
   // Dev remote-debug mode can still seed tokens from .env.local (no-op otherwise).
   const [, forceRender] = useState(() => {
@@ -24,7 +30,7 @@ export function AuthGate({ children }: PropsWithChildren) {
   }
 
   if (hasDevAccessToken()) {
-    return children;
+    return <CurrentUserLoader onLoaded={onCurrentUser}>{children}</CurrentUserLoader>;
   }
 
   return (

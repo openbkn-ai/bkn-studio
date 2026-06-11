@@ -37,6 +37,11 @@ type BackendResource = {
   row_count?: number;
   schema_definition?: BackendSchemaField[] | null;
   source_identifier?: string;
+  source_metadata?: {
+    properties?: {
+      row_count?: number;
+    };
+  } | null;
   update_time?: number;
 };
 
@@ -81,7 +86,8 @@ function mapResource(item: BackendResource): CatalogResource {
       name: field.name ?? field.display_name ?? "",
       type: field.type ?? field.original_type ?? "string",
     })),
-    rowCount: item.row_count ?? 0,
+    // 顶层 row_count 后端常缺省,实际行数在 source_metadata.properties 里
+    rowCount: item.row_count ?? item.source_metadata?.properties?.row_count ?? 0,
     updatedAt: item.update_time ?? 0,
     updateTime: formatTimestamp(item.update_time),
   };

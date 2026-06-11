@@ -69,10 +69,24 @@ export function DataPreviewModal({ onClose, open, resource }: DataPreviewModalPr
     }
   }, [load, open]);
 
-  const total = result?.total ?? 0;
+  const backendTotal = result?.total ?? 0;
   const rows = result?.rows ?? [];
+  const fetched = offset + rows.length;
+  // 后端 total_count 可能只是本页条数(满页时 total ≤ 已取数,无法分页),
+  // 此时退回资源元数据里的行数
+  const totalUnreliable = rows.length === pageSize && backendTotal <= fetched;
+  const total = totalUnreliable
+    ? Math.max(backendTotal, resource.rowCount, fetched)
+    : Math.max(backendTotal, fetched);
+  // resource 可能来自列表接口(无 schema_definition),兜底用首行数据推导列
+  const columns =
+    resource.schema.length > 0
+      ? resource.schema
+      : rows.length > 0
+        ? Object.keys(rows[0]).map((name) => ({ name, type: "string" }))
+        : [];
   const hasPrev = offset > 0;
-  const hasNext = offset + pageSize < total;
+  const hasNext = fetched < total || rows.length === pageSize;
 
   const changePage = (nextOffset: number) => {
     setOffset(nextOffset);
@@ -113,7 +127,7 @@ export function DataPreviewModal({ onClose, open, resource }: DataPreviewModalPr
               <thead>
                 <tr>
                   <th className={[styles.rowIndexHead, styles.rowIndex].join(" ")}>#</th>
-                  {resource.schema.map((field) => (
+                  {columns.map((field) => (
                     <th key={field.name}>
                       {field.name}
                       <small>{field.type}</small>
@@ -125,7 +139,7 @@ export function DataPreviewModal({ onClose, open, resource }: DataPreviewModalPr
                 {rows.map((row, rowIndex) => (
                   <tr key={offset + rowIndex}>
                     <td className={styles.rowIndex}>{offset + rowIndex + 1}</td>
-                    {resource.schema.map((field) => {
+                    {columns.map((field) => {
                       const value = row[field.name];
                       const isNull = value === null || value === undefined;
                       const text = isNull ? "NULL" : String(value);
@@ -153,7 +167,7 @@ export function DataPreviewModal({ onClose, open, resource }: DataPreviewModalPr
                 ))}
                 {rows.length === 0 && !loading ? (
                   <tr>
-                    <td colSpan={resource.schema.length + 1} style={{ textAlign: "center" }}>
+                    <td colSpan={columns.length + 1} style={{ textAlign: "center" }}>
                       {t("dataCatalog.preview.empty")}
                     </td>
                   </tr>

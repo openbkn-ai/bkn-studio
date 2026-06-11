@@ -12,6 +12,14 @@
   max-height: calc(100vh - 110px);
 }
 
+/* 单栏堆叠时树和详情上下排列,sticky 会让树盖住下方详情,必须关掉 */
+@media (max-width: 1200px) {
+  .treePanel {
+    position: static;
+    max-height: none;
+  }
+}
+
 .treeHead {
   display: flex;
   align-items: center;
@@ -27,6 +35,8 @@
 
 .treeBody {
   flex: 1;
+  /* flex 子项默认 min-height:auto,会撑破 .treePanel 的 max-height 导致内容溢出叠在下方面板上 */
+  min-height: 0;
   overflow: auto;
   margin: 0 -6px;
   padding: 0 6px;

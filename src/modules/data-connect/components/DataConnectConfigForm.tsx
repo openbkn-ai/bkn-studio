@@ -172,7 +172,13 @@ export function DataConnectConfigForm({
             rules={[{ message: t("common.required"), required: fieldConfig.required }]}
             valuePropName={fieldConfig.type === "boolean" ? "checked" : "value"}
           >
-            {renderField(fieldConfig.type, fieldConfig.encrypted)}
+            {renderField(
+              fieldConfig.type,
+              fieldConfig.encrypted,
+              t("dataConnect.encryptedFieldPlaceholder", {
+                field: fieldConfig.name || getFieldLabel(fieldName),
+              }),
+            )}
           </Form.Item>
         ))}
       </div>
@@ -180,9 +186,9 @@ export function DataConnectConfigForm({
   );
 }
 
-function renderField(fieldType: string, encrypted: boolean) {
+function renderField(fieldType: string, encrypted: boolean, encryptedPlaceholder: string) {
   if (encrypted) {
-    return <Input.Password />;
+    return <Input.Password placeholder={encryptedPlaceholder} />;
   }
 
   switch (fieldType) {

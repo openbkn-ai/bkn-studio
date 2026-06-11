@@ -43,6 +43,7 @@ export const dataConnectEnUS = {
       "Fill in the connector configuration fields returned by the backend model.",
     encryptedFieldEditHint:
       "Sensitive fields are not returned by the backend. Re-enter them when editing.",
+    encryptedFieldPlaceholder: "Enter {{field}}",
     createFlowHint:
       "Creating a connection will trigger backend-side validation and connection testing during save.",
     editFlowHint:

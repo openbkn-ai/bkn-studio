@@ -20,6 +20,7 @@ import { ResourceFormDrawer } from "@/modules/data-catalog/components/ResourceFo
 import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
+  getCatalogResource,
   isCatalogScanning,
   listCatalogResources,
   listCatalogScans,
@@ -77,13 +78,43 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     return null;
   }, [catalogs, resources, selection]);
 
-  const selectedResource = useMemo(
-    () =>
-      selection?.type === "resource"
-        ? (resources.find((item) => item.id === selection.id) ?? null)
-        : null,
-    [resources, selection],
-  );
+  // 列表接口不返回 schema_definition,详情页需单独拉取补全 schema
+  const [resourceDetail, setResourceDetail] = useState<CatalogResource | null>(null);
+
+  useEffect(() => {
+    if (selection?.type !== "resource") {
+      setResourceDetail(null);
+      return;
+    }
+
+    let cancelled = false;
+    getCatalogResource(selection.id)
+      .then((detail) => {
+        if (!cancelled) {
+          setResourceDetail(detail);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setResourceDetail(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selection]);
+
+  const selectedResource = useMemo(() => {
+    if (selection?.type !== "resource") {
+      return null;
+    }
+    const listItem = resources.find((item) => item.id === selection.id) ?? null;
+    if (resourceDetail?.id === selection.id) {
+      return listItem ? { ...listItem, ...resourceDetail } : resourceDetail;
+    }
+    return listItem;
+  }, [resourceDetail, resources, selection]);
 
   const loadAll = useCallback(async () => {
     setLoadError(null);

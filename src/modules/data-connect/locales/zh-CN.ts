@@ -40,6 +40,7 @@ export const dataConnectZhCN = {
       "根据后端返回的字段配置，填写连接实例需要的参数。",
     encryptedFieldEditHint:
       "敏感字段不会从后端回传，编辑时需要重新输入。",
+    encryptedFieldPlaceholder: "请输入{{field}}",
     createFlowHint: "创建连接时，后端会在保存阶段执行参数校验和连接测试。",
     editFlowHint:
       "编辑时不允许更换连接器类型；启用/停用请在列表页操作。",

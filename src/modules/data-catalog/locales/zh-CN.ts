@@ -149,7 +149,7 @@ export const dataCatalogZhCN = {
     },
     preview: {
       title: "数据预览",
-      summary: "展示 {{count}} 行 · 总计约 {{total}} 行",
+      summary: "展示 {{count}} 行 · 总计 {{total}} 行",
       empty: "没有数据",
       pageSize: "{{size}} 条/页",
       prev: "上一页",

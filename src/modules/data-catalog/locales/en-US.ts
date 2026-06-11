@@ -155,7 +155,7 @@ export const dataCatalogEnUS = {
     },
     preview: {
       title: "Data Preview",
-      summary: "Showing {{count}} rows · ~{{total}} rows total",
+      summary: "Showing {{count}} rows · {{total}} rows total",
       empty: "No data",
       pageSize: "{{size}} / page",
       prev: "Prev",
