@@ -321,7 +321,7 @@ export function IndexBuildListScene() {
               </AppButton>
             </PermissionGate>
           ) : null}
-          {record.status === "failed" ? (
+          {record.status === "failed" || record.status === "succeeded" ? (
             <PermissionGate permissions="resource:task_manage">
               <AppButton
                 disabled={!gateOf(record).ok}
