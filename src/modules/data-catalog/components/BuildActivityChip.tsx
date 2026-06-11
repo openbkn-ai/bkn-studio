@@ -26,7 +26,12 @@ export function BuildActivityChip() {
 
   useEffect(() => {
     void refresh();
-    const timer = window.setInterval(() => void refresh(), 10_000);
+    const timer = window.setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
+      void refresh();
+    }, 30_000);
     const unsubscribe = subscribeMockDb(() => void refresh());
     return () => {
       window.clearInterval(timer);

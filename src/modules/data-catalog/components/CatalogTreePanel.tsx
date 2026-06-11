@@ -7,7 +7,7 @@ import {
   PlusOutlined,
   TableOutlined,
 } from "@ant-design/icons";
-import { Input } from "antd";
+import { Input, Select } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -38,6 +38,8 @@ type CatalogTreePanelProps = {
   selection: CatalogTreeSelection | null;
   tasks: BuildTask[];
 };
+
+const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 const DOT_CLASS: Partial<Record<IndexStateKey, string>> = {
   built: styles.treeDotBuilt,
@@ -73,6 +75,8 @@ export function CatalogTreePanel({
   const { t } = useTranslation();
   const [keyword, setKeyword] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [pages, setPages] = useState<Map<string, number>>(() => new Map());
 
   const tasksByResource = useMemo(() => {
     const map = new Map<string, BuildTask[]>();
@@ -93,23 +97,31 @@ export function CatalogTreePanel({
     return map;
   }, [resources]);
 
-  // 选中资源时自动展开所属 catalog
+  // 选中资源/目录时自动展开所属 catalog 一次;之后仍可手动收起
   useEffect(() => {
-    if (selection?.type !== "resource") {
+    if (!selection) {
       return;
     }
-    const resource = resources.find((item) => item.id === selection.id);
-    if (resource) {
+    const catalogId =
+      selection.type === "catalog"
+        ? selection.id
+        : resources.find((item) => item.id === selection.id)?.catalogId;
+    if (catalogId) {
       setExpanded((previous) => {
-        if (previous.has(resource.catalogId)) {
+        if (previous.has(catalogId)) {
           return previous;
         }
         const next = new Set(previous);
-        next.add(resource.catalogId);
+        next.add(catalogId);
         return next;
       });
     }
   }, [resources, selection]);
+
+  // 搜索词或页大小变化时回到第一页
+  useEffect(() => {
+    setPages(new Map());
+  }, [keyword, pageSize]);
 
   const query = keyword.trim().toLowerCase();
 
@@ -137,6 +149,14 @@ export function CatalogTreePanel({
   const physicalCatalogs = visibleCatalogs.filter((catalog) => catalog.type !== "logical");
   const logicalCatalogs = visibleCatalogs.filter((catalog) => catalog.type === "logical");
 
+  const setPage = (catalogId: string, page: number) => {
+    setPages((previous) => {
+      const next = new Map(previous);
+      next.set(catalogId, page);
+      return next;
+    });
+  };
+
   const toggleExpanded = (catalogId: string) => {
     setExpanded((previous) => {
       const next = new Set(previous);
@@ -152,14 +172,16 @@ export function CatalogTreePanel({
   const renderCatalogNode = (catalog: DataConnectRecord) => {
     const children = matchedResources(catalog);
     const forcedOpen = query.length > 0 && !matchesCatalog(catalog) && children.length > 0;
-    const isOpen =
-      forcedOpen ||
-      expanded.has(catalog.id) ||
-      (selection?.type === "catalog" && selection.id === catalog.id);
+    // 选中只在切换选区时自动展开一次(见上方 effect),这里不强制,否则"收起"失效
+    const isOpen = forcedOpen || expanded.has(catalog.id);
     const isSelected = selection?.type === "catalog" && selection.id === catalog.id;
     const isPhysical = catalog.type !== "logical";
     const scanning = scanningCatalogIds.includes(catalog.id);
     const resourceCount = (resourcesByCatalog.get(catalog.id) ?? []).length;
+
+    const totalPages = Math.max(1, Math.ceil(children.length / pageSize));
+    const page = Math.min(pages.get(catalog.id) ?? 1, totalPages);
+    const pagedChildren = children.slice((page - 1) * pageSize, page * pageSize);
 
     return (
       <div key={catalog.id}>
@@ -238,7 +260,7 @@ export function CatalogTreePanel({
                   : t("dataCatalog.tree.emptyLogical")}
               </div>
             ) : (
-              children.map((resource) => {
+              pagedChildren.map((resource) => {
                 const state = indexStateOf(tasksByResource.get(resource.id) ?? []);
                 const isResourceSelected =
                   selection?.type === "resource" && selection.id === resource.id;

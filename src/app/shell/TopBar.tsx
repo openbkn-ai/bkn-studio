@@ -112,7 +112,9 @@ export function TopBar() {
             </span>
             <span className="console-user-copy">
               <strong>{runtimeConfig.currentUser.name}</strong>
-              <span>{runtimeConfig.currentUser.id}</span>
+              {runtimeConfig.currentUser.roles.length > 0 ? (
+                <span>{runtimeConfig.currentUser.roles.join("、")}</span>
+              ) : null}
             </span>
           </button>
         </Dropdown>

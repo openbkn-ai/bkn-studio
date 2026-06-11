@@ -205,13 +205,18 @@ export function CatalogDetailPanel({
     {
       dataIndex: "schema",
       title: "Schema",
+      // 列表接口不返回 schema_definition/row_count(后端 GetByIDsBasic),
+      // 0 视为"未返回"显示占位,真实数字看详情
       render: (_, record) =>
-        t("dataCatalog.resource.columnCount", { count: record.schema.length }),
+        record.schema.length > 0
+          ? t("dataCatalog.resource.columnCount", { count: record.schema.length })
+          : "—",
     },
     {
       dataIndex: "rowCount",
       title: t("dataCatalog.resource.rowCount"),
-      render: (value: number) => <span className={styles.monoText}>{formatCount(value)}</span>,
+      render: (value: number) =>
+        value > 0 ? <span className={styles.monoText}>{formatCount(value)}</span> : "—",
     },
     {
       key: "indexState",

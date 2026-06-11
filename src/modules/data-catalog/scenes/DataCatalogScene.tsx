@@ -1,6 +1,6 @@
 import { DatabaseOutlined } from "@ant-design/icons";
 import { Alert, Spin } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -180,16 +180,37 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     [scans, tasks],
   );
 
+  // 轮询只刷新会变化的任务/扫描;失败保留旧数据等下一轮
+  const pollActive = useCallback(async () => {
+    try {
+      setTasks(await listBuildTasks());
+    } catch {
+      // ignore
+    }
+    void loadScans();
+  }, [loadScans]);
+
   useEffect(() => {
     if (!hasActiveWork) {
       return;
     }
     const timer = window.setInterval(() => {
-      void loadAll();
-      void loadScans();
-    }, 4000);
+      if (document.hidden) {
+        return;
+      }
+      void pollActive();
+    }, 10_000);
     return () => window.clearInterval(timer);
-  }, [hasActiveWork, loadAll, loadScans]);
+  }, [hasActiveWork, pollActive]);
+
+  // 活跃任务全部结束时整体刷一次,带回资源行数 / 索引状态等结果数据
+  const prevActiveRef = useRef(hasActiveWork);
+  useEffect(() => {
+    if (prevActiveRef.current && !hasActiveWork) {
+      void loadAll();
+    }
+    prevActiveRef.current = hasActiveWork;
+  }, [hasActiveWork, loadAll]);
 
   // 无选中时默认选第一个 catalog
   useEffect(() => {
