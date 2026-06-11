@@ -268,10 +268,48 @@
 }
 
 .treeFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 8px 6px 0;
   border-top: 1px solid rgba(15, 30, 54, 0.08);
   color: #8b98ac;
   font-size: 12px;
+}
+
+.treePager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 8px 2px;
+  color: #8b98ac;
+  font-size: 11.5px;
+}
+
+.treePagerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #64748d;
+  font-size: 13px;
+  cursor: pointer;
+  flex: none;
+}
+
+.treePagerBtn:hover:not(:disabled) {
+  background: #eef3fb;
+}
+
+.treePagerBtn:disabled {
+  color: #cbd5e1;
+  cursor: default;
 }
 
 .treeEmpty {

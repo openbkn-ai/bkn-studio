@@ -64,6 +64,8 @@ export const dataCatalogZhCN = {
       summary: "{{catalogCount}} 个 catalog · {{resourceCount}} 个资源",
       expand: "展开",
       collapse: "收起",
+      pageInfo: "{{from}}-{{to}} / 共 {{total}}",
+      pageSize: "{{size}} 条/页",
     },
     catalog: {
       notFound: "未找到该 Catalog,可能已被删除",
@@ -188,7 +190,7 @@ export const dataCatalogZhCN = {
       modalTitle: "构建任务",
       progress: "进度",
       toolbarHint:
-        "batch 任务按 synced_count / vectorized_count 轮询进度;streaming 任务为常驻监听,可暂停/恢复。",
+        "批量任务:一次性同步全部数据并向量化,完成后自动结束。流式任务:持续监听数据变化、随到随建,可随时暂停或恢复。",
       searchPlaceholder: "按任务 ID 或资源名称搜索",
       statusFilterPlaceholder: "全部状态",
       empty: "还没有构建任务",
@@ -204,6 +206,8 @@ export const dataCatalogZhCN = {
       stopped: "已停止构建",
       buildResumed: "已继续构建",
       rebuild: "重新构建",
+      rebuildIncremental: "增量更新(从断点续传)",
+      rebuildFull: "全量重建(游标清零重灌)",
       retried: "已重新提交构建任务:{{id}}",
       deleteConfirmTitle: "删除构建任务 {{id}}?",
       deleteConfirmContent: "删除后任务记录不可恢复。",

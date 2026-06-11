@@ -1,5 +1,13 @@
-import { ReloadOutlined, ThunderboltOutlined } from "@ant-design/icons";
-import { Alert, Input, Modal, Select, Space } from "antd";
+import {
+  DeleteOutlined,
+  EyeOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  RedoOutlined,
+  ReloadOutlined,
+  ThunderboltOutlined,
+} from "@ant-design/icons";
+import { Alert, Dropdown, Input, Modal, Select, Space, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,6 +24,7 @@ import { BuildTaskDetailModal } from "@/modules/data-catalog/components/BuildTas
 import { BuildTaskModal } from "@/modules/data-catalog/components/BuildTaskModal";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import {
+  type BuildExecuteType,
   buildTaskStatusLabelKey,
   deleteBuildTask,
   listBuildTasks,
@@ -166,9 +175,9 @@ export function IndexBuildListScene() {
     }
   };
 
-  const handleRetry = async (task: BuildTask) => {
+  const handleRetry = async (task: BuildTask, executeType: BuildExecuteType) => {
     try {
-      const next = await retryBuildTask(task.id);
+      const next = await retryBuildTask(task.id, executeType);
       if (next) {
         message.success(t("dataCatalog.task.retried", { id: next.id }));
       }
@@ -293,52 +302,93 @@ export function IndexBuildListScene() {
     {
       key: "actions",
       title: t("common.actions"),
-      render: (_, record) => (
-        <Space>
-          <AppButton onClick={() => setDetailTask(record)} type="link">
-            {t("common.detail")}
-          </AppButton>
-          {record.status === "running" ||
-          record.status === "listening" ||
-          record.status === "paused" ? (
-            <PermissionGate permissions="resource:task_manage">
+      render: (_, record) => {
+        const pauseResumeLabel =
+          record.status === "paused"
+            ? t(
+                record.mode === "streaming"
+                  ? "dataCatalog.task.resumeListening"
+                  : "dataCatalog.task.resumeBuild",
+              )
+            : t(
+                record.mode === "streaming"
+                  ? "dataCatalog.task.pauseListening"
+                  : "dataCatalog.task.stopBuild",
+              );
+
+        return (
+          <Space size={2}>
+            <Tooltip title={t("common.detail")}>
               <AppButton
-                disabled={record.status === "paused" && !gateOf(record).ok}
-                onClick={() => void handlePauseResume(record)}
-                type="link"
-              >
-                {record.status === "paused"
-                  ? t(
-                      record.mode === "streaming"
-                        ? "dataCatalog.task.resumeListening"
-                        : "dataCatalog.task.resumeBuild",
-                    )
-                  : t(
-                      record.mode === "streaming"
-                        ? "dataCatalog.task.pauseListening"
-                        : "dataCatalog.task.stopBuild",
-                    )}
-              </AppButton>
-            </PermissionGate>
-          ) : null}
-          {record.status === "failed" || record.status === "succeeded" ? (
+                aria-label={t("common.detail")}
+                icon={<EyeOutlined />}
+                onClick={() => setDetailTask(record)}
+                type="text"
+              />
+            </Tooltip>
+            {record.status === "running" ||
+            record.status === "listening" ||
+            record.status === "paused" ? (
+              <PermissionGate permissions="resource:task_manage">
+                <Tooltip title={pauseResumeLabel}>
+                  <AppButton
+                    aria-label={pauseResumeLabel}
+                    disabled={record.status === "paused" && !gateOf(record).ok}
+                    icon={
+                      record.status === "paused" ? (
+                        <PlayCircleOutlined />
+                      ) : (
+                        <PauseCircleOutlined />
+                      )
+                    }
+                    onClick={() => void handlePauseResume(record)}
+                    type="text"
+                  />
+                </Tooltip>
+              </PermissionGate>
+            ) : null}
+            {record.status === "failed" || record.status === "succeeded" ? (
+              <PermissionGate permissions="resource:task_manage">
+                <Dropdown
+                  disabled={!gateOf(record).ok}
+                  menu={{
+                    items: [
+                      {
+                        key: "incremental",
+                        label: t("dataCatalog.task.rebuildIncremental"),
+                      },
+                      {
+                        key: "full",
+                        label: t("dataCatalog.task.rebuildFull"),
+                      },
+                    ],
+                    onClick: ({ key }) =>
+                      void handleRetry(record, key as BuildExecuteType),
+                  }}
+                >
+                  <AppButton
+                    aria-label={t("dataCatalog.task.rebuild")}
+                    disabled={!gateOf(record).ok}
+                    icon={<RedoOutlined />}
+                    type="text"
+                  />
+                </Dropdown>
+              </PermissionGate>
+            ) : null}
             <PermissionGate permissions="resource:task_manage">
-              <AppButton
-                disabled={!gateOf(record).ok}
-                onClick={() => void handleRetry(record)}
-                type="link"
-              >
-                {t("dataCatalog.task.rebuild")}
-              </AppButton>
+              <Tooltip title={t("common.delete")}>
+                <AppButton
+                  aria-label={t("common.delete")}
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleDelete(record)}
+                  type="text"
+                />
+              </Tooltip>
             </PermissionGate>
-          ) : null}
-          <PermissionGate permissions="resource:task_manage">
-            <AppButton danger onClick={() => handleDelete(record)} type="link">
-              {t("common.delete")}
-            </AppButton>
-          </PermissionGate>
-        </Space>
-      ),
+          </Space>
+        );
+      },
     },
   ];
 

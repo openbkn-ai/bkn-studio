@@ -306,7 +306,12 @@ export async function deleteBuildTask(
   }
 }
 
-export async function retryBuildTask(id: string): Promise<BuildTask | null> {
+export type BuildExecuteType = "incremental" | "full";
+
+export async function retryBuildTask(
+  id: string,
+  executeType: BuildExecuteType = "incremental",
+): Promise<BuildTask | null> {
   if (useMock) {
     const source = mockBuildTasks.find((item) => item.id === id);
     if (!source) {
@@ -322,8 +327,11 @@ export async function retryBuildTask(id: string): Promise<BuildTask | null> {
     });
   }
 
-  // 后端没有独立 retry:对失败任务重新 start
-  await http.post(`/vega-backend/v1/build-tasks/${id}/start`);
+  // 后端没有独立 retry:重新 start(支持 completed/stopped/failed)。
+  // execute_type:incremental 从 build key 游标(synced_mark)续传;full 游标清零全表重灌
+  await http.post(`/vega-backend/v1/build-tasks/${id}/start`, {
+    execute_type: executeType,
+  });
   return getBuildTask(id);
 }
 

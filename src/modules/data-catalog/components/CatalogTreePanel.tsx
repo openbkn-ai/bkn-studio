@@ -297,6 +297,35 @@ export function CatalogTreePanel({
                 );
               })
             )}
+            {children.length > pageSize ? (
+              <div className={styles.treePager}>
+                <button
+                  aria-label={t("dataCatalog.preview.prev")}
+                  className={styles.treePagerBtn}
+                  disabled={page <= 1}
+                  onClick={() => setPage(catalog.id, page - 1)}
+                  type="button"
+                >
+                  ‹
+                </button>
+                <span>
+                  {t("dataCatalog.tree.pageInfo", {
+                    from: (page - 1) * pageSize + 1,
+                    to: Math.min(page * pageSize, children.length),
+                    total: children.length,
+                  })}
+                </span>
+                <button
+                  aria-label={t("dataCatalog.preview.next")}
+                  className={styles.treePagerBtn}
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(catalog.id, page + 1)}
+                  type="button"
+                >
+                  ›
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -353,10 +382,23 @@ export function CatalogTreePanel({
         )}
       </div>
       <div className={styles.treeFoot}>
-        {t("dataCatalog.tree.summary", {
-          catalogCount: catalogs.length as never,
-          resourceCount: resources.length as never,
-        })}
+        <span>
+          {t("dataCatalog.tree.summary", {
+            catalogCount: catalogs.length as never,
+            resourceCount: resources.length as never,
+          })}
+        </span>
+        <Select
+          onChange={(value: number) => setPageSize(value)}
+          options={PAGE_SIZE_OPTIONS.map((size) => ({
+            label: t("dataCatalog.tree.pageSize", { size }),
+            value: size,
+          }))}
+          popupMatchSelectWidth={false}
+          size="small"
+          value={pageSize}
+          variant="borderless"
+        />
       </div>
     </aside>
   );

@@ -65,6 +65,8 @@ export const dataCatalogEnUS = {
       summary: "{{catalogCount}} catalogs · {{resourceCount}} resources",
       expand: "Expand",
       collapse: "Collapse",
+      pageInfo: "{{from}}-{{to}} of {{total}}",
+      pageSize: "{{size}} / page",
     },
     catalog: {
       notFound: "Catalog not found; it may have been deleted",
@@ -197,7 +199,7 @@ export const dataCatalogEnUS = {
       modalTitle: "Build Task",
       progress: "Progress",
       toolbarHint:
-        "Batch tasks report progress via synced_count / vectorized_count polling; streaming tasks are standing listeners that can be paused/resumed.",
+        "Batch tasks sync and vectorize all data once, then finish automatically. Streaming tasks keep watching for changes and index them as they arrive; pause or resume anytime.",
       searchPlaceholder: "Search by task ID or resource name",
       statusFilterPlaceholder: "All statuses",
       empty: "No build tasks yet",
@@ -214,6 +216,8 @@ export const dataCatalogEnUS = {
       stopped: "Build stopped",
       buildResumed: "Build resumed",
       rebuild: "Rebuild",
+      rebuildIncremental: "Incremental (resume from cursor)",
+      rebuildFull: "Full (reset cursor, resync all)",
       retried: "Build task resubmitted: {{id}}",
       deleteConfirmTitle: "Delete build task {{id}}?",
       deleteConfirmContent: "The task record cannot be recovered after deletion.",

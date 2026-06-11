@@ -37,7 +37,9 @@ export function BuildProgress({ task }: BuildProgressProps) {
     );
   }
 
-  const total = Math.max(1, task.totalCount);
+  // 后端 total_count 可能只是首批行数(连接器未做 COUNT(*)),
+  // 用 max(total, synced) 兜底,避免向量化百分比虚高
+  const total = Math.max(1, task.totalCount, task.syncedCount);
   const syncedPercent = Math.min(100, (task.syncedCount / total) * 100);
   const vectorPercent = Math.min(100, (task.vectorizedCount / total) * 100);
   const fillClass =

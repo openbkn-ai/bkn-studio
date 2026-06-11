@@ -42,7 +42,7 @@
 .toolbarFilters {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 12px;
   justify-content: flex-end;
   padding: 12px 14px;
@@ -53,11 +53,13 @@
 }
 
 .searchInput {
-  width: min(340px, 100%);
+  flex: 0 1 340px;
+  min-width: 180px;
 }
 
 .filterSelect {
   min-width: 170px;
+  flex: none;
 }
 
 .tableSurface {
