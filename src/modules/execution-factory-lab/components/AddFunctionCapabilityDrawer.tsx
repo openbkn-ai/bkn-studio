@@ -16,6 +16,7 @@ import type {
   CapabilityRecord,
   ExecutePythonResult,
 } from "@/modules/execution-factory-lab/types/capability";
+import { generateFunctionCode } from "@/modules/execution-factory-lab/utils/function-code-template";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -61,67 +62,6 @@ function getJsonType(value: unknown): string {
     return "null";
   }
   return typeof value;
-}
-
-function toPythonLiteral(value: unknown): string {
-  if (value === null) {
-    return "None";
-  }
-  if (typeof value === "boolean") {
-    return value ? "True" : "False";
-  }
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? String(value) : "None";
-  }
-  if (typeof value === "string") {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(toPythonLiteral).join(", ")}]`;
-  }
-  if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>).map(
-      ([key, entryValue]) => `${JSON.stringify(key)}: ${toPythonLiteral(entryValue)}`,
-    );
-    return `{${entries.join(", ")}}`;
-  }
-  return "None";
-}
-
-function generateFunctionCode(values: Partial<FormValues>) {
-  let outputExample: Record<string, unknown> | undefined;
-
-  try {
-    outputExample = parseJsonObject(values.outputExample);
-  } catch {
-    outputExample = undefined;
-  }
-
-  const intentLines = (values.intent || values.description || "Implement the requested function.")
-    .trim()
-    .split(/\r?\n/)
-    .map((line) => `    ${line}`)
-    .join("\n");
-
-  if (outputExample) {
-    return `def handler(event):
-    """
-${intentLines}
-    """
-    # Replace this generated draft with the real logic when needed.
-    return ${toPythonLiteral(outputExample)}
-`;
-  }
-
-  return `def handler(event):
-    """
-${intentLines}
-    """
-    return {
-        "input": event,
-        "result": None,
-    }
-`;
 }
 
 function inferIoDefinitions(example?: string, fallbackName = "event") {
