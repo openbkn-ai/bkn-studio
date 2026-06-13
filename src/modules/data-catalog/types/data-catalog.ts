@@ -59,6 +59,8 @@ export type BuildTask = {
   createdAt: number;
   embeddingFields: string[];
   embeddingModel: string;
+  fulltextAnalyzer: string;
+  fulltextFields: string[];
   error: string | null;
   finishTime: string | null;
   id: string;
@@ -81,10 +83,14 @@ export type BuildTaskCreateInput = {
   buildKeyFields: string[];
   embeddingFields: string[];
   embeddingModel: string;
+  fulltextAnalyzer?: string;
+  fulltextFields: string[];
   mode: BuildMode;
   modelDimensions: number;
   resourceId: string;
 };
+
+export type FulltextAnalyzer = "hanlp_index" | "ik_max_word" | "standard";
 
 export type CatalogScanStatus = "failed" | "running" | "succeeded";
 

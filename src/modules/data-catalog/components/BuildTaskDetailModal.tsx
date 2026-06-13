@@ -110,8 +110,26 @@ export function BuildTaskDetailModal({
             </span>
           </div>
           <div className={styles.descItem}>
+            <span className={styles.descLabel}>fulltext_fields</span>
+            <span className={styles.chipRow}>
+              {task.fulltextFields.length > 0
+                ? task.fulltextFields.map((field) => (
+                    <span className={styles.fieldChip} key={field}>
+                      {field}
+                    </span>
+                  ))
+                : "—"}
+            </span>
+          </div>
+          {task.fulltextFields.length > 0 ? (
+            <div className={styles.descItem}>
+              <span className={styles.descLabel}>fulltext_analyzer</span>
+              <span className={styles.descValue}>{task.fulltextAnalyzer || "standard"}</span>
+            </div>
+          ) : null}
+          <div className={styles.descItem}>
             <span className={styles.descLabel}>embedding_model</span>
-            <span className={styles.descValue}>{task.embeddingModel}</span>
+            <span className={styles.descValue}>{task.embeddingModel || "—"}</span>
           </div>
           <div className={styles.descItem}>
             <span className={styles.descLabel}>model_dimensions</span>

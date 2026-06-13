@@ -35,6 +35,12 @@ const FALLBACK_MODELS: EmbeddingModelOption[] = [
   { id: "bge-large-zh-v1.5", name: "BGE-Large-zh v1.5", dimensions: 1024 },
 ];
 
+const FULLTEXT_ANALYZERS = ["standard", "ik_max_word", "hanlp_index"] as const;
+
+// 全文索引仅支持文本类字段;后端对非文本字段返回 400,前端先置灰拦截
+const TEXT_TYPE_RE = /text|string|char|clob/i;
+const isTextField = (type: string) => TEXT_TYPE_RE.test(type);
+
 export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTaskModalProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
@@ -45,6 +51,8 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
   const [schemaLoading, setSchemaLoading] = useState(false);
   const [embeddingFields, setEmbeddingFields] = useState<string[]>([]);
   const [buildKeyFields, setBuildKeyFields] = useState<string[]>([]);
+  const [fulltextFields, setFulltextFields] = useState<string[]>([]);
+  const [fulltextAnalyzer, setFulltextAnalyzer] = useState<string>("standard");
   const [models, setModels] = useState<EmbeddingModelOption[]>([]);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [modelId, setModelId] = useState<string>();
@@ -59,6 +67,8 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
     setMode("batch");
     setEmbeddingFields([]);
     setBuildKeyFields([]);
+    setFulltextFields([]);
+    setFulltextAnalyzer("standard");
     setError(null);
     setModelsLoaded(false);
     setSchema(resource.schema);
@@ -120,18 +130,22 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
   };
 
   const handleSubmit = async () => {
-    if (embeddingFields.length === 0) {
-      setError(t("dataCatalog.build.embeddingRequired"));
+    // embedding 与 fulltext 都是可选能力,至少选一种字段
+    if (embeddingFields.length === 0 && fulltextFields.length === 0) {
+      setError(t("dataCatalog.build.fieldsRequired"));
       return;
     }
     if (mode === "batch" && buildKeyFields.length === 0) {
       setError(t("dataCatalog.build.buildKeyRequired"));
       return;
     }
-    if (!selectedModel) {
+    // 仅向量化才需要 embedding 模型;纯全文任务不要求
+    if (embeddingFields.length > 0 && !selectedModel) {
       setError(t("dataCatalog.build.modelRequired"));
       return;
     }
+
+    const useEmbedding = embeddingFields.length > 0 && selectedModel;
 
     setSaving(true);
     setError(null);
@@ -139,10 +153,12 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
       const task = await createBuildTask({
         buildKeyFields,
         embeddingFields,
-        embeddingModel: selectedModel.id,
+        embeddingModel: useEmbedding ? selectedModel.id : "",
         mode,
-        modelDimensions: selectedModel.dimensions,
+        modelDimensions: useEmbedding ? selectedModel.dimensions : 0,
         resourceId: resource.id,
+        fulltextFields,
+        fulltextAnalyzer: fulltextFields.length > 0 ? fulltextAnalyzer : undefined,
       });
       message.success(t("dataCatalog.build.created", { id: task.id }));
       onCreated(task);
@@ -158,7 +174,11 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
     }
   };
 
-  const fieldChips = (selected: string[], onToggle: (field: string) => void) => {
+  const fieldChips = (
+    selected: string[],
+    onToggle: (field: string) => void,
+    opts?: { textOnly?: boolean },
+  ) => {
     if (schemaLoading) {
       return (
         <span style={{ color: "#8b98ac", fontSize: 12 }}>
@@ -174,25 +194,37 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
       );
     }
     return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-      {schema.map((field) => (
-        <Tag.CheckableTag
-          checked={selected.includes(field.name)}
-          key={field.name}
-          onChange={() => onToggle(field.name)}
-          style={{
-            border: "1px solid",
-            borderColor: selected.includes(field.name) ? "#2e68ff" : "#d9d9d9",
-            borderRadius: 999,
-            padding: "3px 12px",
-            userSelect: "none",
-          }}
-        >
-          <code style={{ fontSize: 12 }}>{field.name}</code>{" "}
-          <span style={{ fontSize: 11, opacity: 0.65 }}>{field.type}</span>
-        </Tag.CheckableTag>
-      ))}
-    </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {schema.map((field) => {
+          const disabled = opts?.textOnly && !isTextField(field.type);
+          const checked = selected.includes(field.name);
+          return (
+            <Tag.CheckableTag
+              checked={checked}
+              key={field.name}
+              onChange={() => {
+                if (disabled) {
+                  return;
+                }
+                onToggle(field.name);
+              }}
+              style={{
+                border: "1px solid",
+                borderColor: checked ? "#2e68ff" : "#d9d9d9",
+                borderRadius: 999,
+                padding: "3px 12px",
+                userSelect: "none",
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.4 : 1,
+              }}
+              title={disabled ? t("dataCatalog.build.fulltextTypeHint") : undefined}
+            >
+              <code style={{ fontSize: 12 }}>{field.name}</code>{" "}
+              <span style={{ fontSize: 11, opacity: 0.65 }}>{field.type}</span>
+            </Tag.CheckableTag>
+          );
+        })}
+      </div>
     );
   };
 
@@ -207,7 +239,7 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
           </span>
           <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
           <AppButton
-            disabled={noModels}
+            disabled={noModels && embeddingFields.length > 0}
             icon={<ThunderboltOutlined />}
             loading={saving}
             onClick={() => void handleSubmit()}
@@ -314,6 +346,41 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
           {fieldChips(buildKeyFields, (field) =>
             toggleField(field, buildKeyFields, setBuildKeyFields),
           )}
+        </div>
+
+        <div>
+          <div style={{ marginBottom: 7, fontWeight: 600, fontSize: 13, color: "#3e4d66" }}>
+            {t("dataCatalog.build.fulltextFields")}
+            <span style={{ marginLeft: 6, fontWeight: 400, color: "#8b98ac", fontSize: 12 }}>
+              {t("dataCatalog.build.fulltextFieldsHint")}
+            </span>
+          </div>
+          {fieldChips(
+            fulltextFields,
+            (field) => toggleField(field, fulltextFields, setFulltextFields),
+            { textOnly: true },
+          )}
+          {fulltextFields.length > 0 ? (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ marginBottom: 7, fontWeight: 600, fontSize: 13, color: "#3e4d66" }}>
+                {t("dataCatalog.build.fulltextAnalyzer")}
+                <span
+                  style={{ marginLeft: 6, fontWeight: 400, color: "#8b98ac", fontSize: 12 }}
+                >
+                  {t("dataCatalog.build.fulltextAnalyzerHint")}
+                </span>
+              </div>
+              <Select
+                onChange={(value) => setFulltextAnalyzer(value)}
+                options={FULLTEXT_ANALYZERS.map((analyzer) => ({
+                  label: t(`dataCatalog.build.analyzers.${analyzer}`),
+                  value: analyzer,
+                }))}
+                style={{ width: 260 }}
+                value={fulltextAnalyzer}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>

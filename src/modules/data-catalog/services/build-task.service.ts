@@ -23,6 +23,8 @@ type BackendBuildTask = {
   embedding_fields?: string | string[];
   embedding_model?: string;
   error_msg?: string;
+  fulltext_analyzer?: string;
+  fulltext_fields?: string | string[];
   id: string;
   mode?: string;
   model_dimensions?: number;
@@ -110,6 +112,8 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
     buildKeyFields: splitFields(item.build_key_fields),
     embeddingModel: item.embedding_model ?? "",
     modelDimensions: item.model_dimensions ?? 0,
+    fulltextFields: splitFields(item.fulltext_fields),
+    fulltextAnalyzer: item.fulltext_analyzer ?? "",
     totalCount: item.total_count ?? 0,
     syncedCount: item.synced_count ?? 0,
     vectorizedCount: item.vectorized_count ?? 0,
@@ -202,6 +206,8 @@ export async function createBuildTask(
       buildKeyFields: input.buildKeyFields,
       embeddingModel: input.embeddingModel,
       modelDimensions: input.modelDimensions,
+      fulltextFields: input.fulltextFields,
+      fulltextAnalyzer: input.fulltextAnalyzer ?? "",
       totalCount: resource?.rowCount ?? 0,
       syncedCount: 0,
       vectorizedCount: 0,
@@ -227,6 +233,8 @@ export async function createBuildTask(
       mode: input.mode,
       model_dimensions: input.modelDimensions,
       resource_id: input.resourceId,
+      fulltext_fields: input.fulltextFields.join(","),
+      fulltext_analyzer: input.fulltextAnalyzer || undefined,
     },
   );
 
@@ -324,6 +332,8 @@ export async function retryBuildTask(
       mode: source.mode,
       modelDimensions: source.modelDimensions,
       resourceId: source.resourceId,
+      fulltextFields: source.fulltextFields,
+      fulltextAnalyzer: source.fulltextAnalyzer,
     });
   }
 

@@ -185,7 +185,20 @@ export const dataCatalogEnUS = {
       schemaEmpty: "This resource has no fields yet; run a scan to discover its schema.",
       buildKeyFields: "Build Key Fields",
       buildKeyFieldsHint: "(batch: time field; streaming: row ID)",
+      fulltextFields: "Full-text Fields",
+      fulltextFieldsHint:
+        "(text columns to index for keyword search; applied during sync, no separate progress)",
+      fulltextTypeHint: "Text-type fields only",
+      fulltextAnalyzer: "Analyzer",
+      fulltextAnalyzerHint:
+        "(use ik / hanlp for Chinese data, standard for English / general)",
+      analyzers: {
+        standard: "standard · English / general",
+        ik_max_word: "ik_max_word · Chinese fine-grained",
+        hanlp_index: "hanlp_index · Chinese HanLP",
+      },
       embeddingRequired: "Select at least one embedding field.",
+      fieldsRequired: "Select at least one embedding or full-text field.",
       buildKeyRequired: "build_key_fields is required for batch mode.",
       model: "Embedding Model",
       modelRequired: "Select an embedding model.",
