@@ -10,6 +10,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   BuildTaskConflictError,
   createBuildTask,
+  listBuildTasks,
 } from "@/modules/data-catalog/services/build-task.service";
 import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type {
@@ -87,6 +88,24 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
     }
 
     void (async () => {
+      // 资源已有构建任务时预填其配置(一个资源对应一个任务),方便查看/重建
+      let existing: BuildTask | null = null;
+      try {
+        const tasks = await listBuildTasks({ resourceId: resource.id });
+        existing = tasks[0] ?? null;
+      } catch {
+        existing = null;
+      }
+      if (existing) {
+        setMode(existing.mode);
+        setEmbeddingFields(existing.embeddingFields);
+        setBuildKeyFields(existing.buildKeyFields);
+        setFulltextFields(existing.fulltextFields);
+        if (existing.fulltextAnalyzer) {
+          setFulltextAnalyzer(existing.fulltextAnalyzer);
+        }
+      }
+
       try {
         const result = await listSmallModels({
           modelType: "embedding",
@@ -100,11 +119,23 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
             id: item.modelName,
             name: item.modelName,
           }));
-        setModels(options.length > 0 ? options : FALLBACK_MODELS);
-        setModelId((options.length > 0 ? options : FALLBACK_MODELS)[0]?.id);
+        const list = options.length > 0 ? options : FALLBACK_MODELS;
+        setModels(list);
+        // 预填已有任务的模型;模型已下线则回退到首个可选
+        const preferred = existing?.embeddingModel;
+        setModelId(
+          preferred && list.some((item) => item.id === preferred)
+            ? preferred
+            : list[0]?.id,
+        );
       } catch {
         setModels(FALLBACK_MODELS);
-        setModelId(FALLBACK_MODELS[0].id);
+        const preferred = existing?.embeddingModel;
+        setModelId(
+          preferred && FALLBACK_MODELS.some((item) => item.id === preferred)
+            ? preferred
+            : FALLBACK_MODELS[0].id,
+        );
       } finally {
         setModelsLoaded(true);
       }
