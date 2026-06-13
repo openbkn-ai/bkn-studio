@@ -16,7 +16,6 @@ export const shellEnUS = {
       indexBuild: "Index Builds",
       dataResource: "Data Resource",
       dataQuality: "Data Quality",
-      dataflow: "Dataflow",
       executionFactory: "Execution Factory",
       executionUnitManagement: "Execution Unit Management",
       allExecutionUnits: "All Execution Units",

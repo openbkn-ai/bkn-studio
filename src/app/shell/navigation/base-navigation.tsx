@@ -22,12 +22,6 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         icon: <SafetyCertificateOutlined />,
         disabled: true,
       },
-      {
-        key: "dataflow",
-        labelKey: "shell.items.dataflow",
-        icon: <ClusterOutlined />,
-        disabled: true,
-      },
     ],
   },
   {

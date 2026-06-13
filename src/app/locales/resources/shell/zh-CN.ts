@@ -16,7 +16,6 @@ export const shellZhCN = {
       indexBuild: "索引构建",
       dataResource: "数据资源",
       dataQuality: "数据质量",
-      dataflow: "dataflow",
       executionFactory: "执行工厂",
       executionUnitManagement: "执行单元管理",
       allExecutionUnits: "全部执行单元",
