@@ -11,11 +11,13 @@ import {
   BuildTaskConflictError,
   createBuildTask,
 } from "@/modules/data-catalog/services/build-task.service";
+import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildMode,
   BuildTask,
   CatalogResource,
   EmbeddingModelOption,
+  ResourceSchemaField,
 } from "@/modules/data-catalog/types/data-catalog";
 import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
 
@@ -39,6 +41,8 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<BuildMode>("batch");
+  const [schema, setSchema] = useState<ResourceSchemaField[]>(resource.schema);
+  const [schemaLoading, setSchemaLoading] = useState(false);
   const [embeddingFields, setEmbeddingFields] = useState<string[]>([]);
   const [buildKeyFields, setBuildKeyFields] = useState<string[]>([]);
   const [models, setModels] = useState<EmbeddingModelOption[]>([]);
@@ -57,6 +61,20 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
     setBuildKeyFields([]);
     setError(null);
     setModelsLoaded(false);
+    setSchema(resource.schema);
+
+    // 列表接口不返回 schema_definition,字段为空时补拉资源详情,
+    // 否则 embedding / build key 无候选字段,无法创建任务
+    if (resource.schema.length === 0) {
+      setSchemaLoading(true);
+      void getCatalogResource(resource.id)
+        .then((detail) => {
+          if (detail?.schema.length) {
+            setSchema(detail.schema);
+          }
+        })
+        .finally(() => setSchemaLoading(false));
+    }
 
     void (async () => {
       try {
@@ -81,7 +99,7 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
         setModelsLoaded(true);
       }
     })();
-  }, [open]);
+  }, [open, resource]);
 
   const selectedModel = useMemo(
     () => models.find((item) => item.id === modelId) ?? null,
@@ -140,9 +158,24 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
     }
   };
 
-  const fieldChips = (selected: string[], onToggle: (field: string) => void) => (
+  const fieldChips = (selected: string[], onToggle: (field: string) => void) => {
+    if (schemaLoading) {
+      return (
+        <span style={{ color: "#8b98ac", fontSize: 12 }}>
+          {t("dataCatalog.build.schemaLoading")}
+        </span>
+      );
+    }
+    if (schema.length === 0) {
+      return (
+        <span style={{ color: "#8b98ac", fontSize: 12 }}>
+          {t("dataCatalog.build.schemaEmpty")}
+        </span>
+      );
+    }
+    return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-      {resource.schema.map((field) => (
+      {schema.map((field) => (
         <Tag.CheckableTag
           checked={selected.includes(field.name)}
           key={field.name}
@@ -160,7 +193,8 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
         </Tag.CheckableTag>
       ))}
     </div>
-  );
+    );
+  };
 
   const noModels = modelsLoaded && models.length === 0;
 

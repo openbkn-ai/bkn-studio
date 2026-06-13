@@ -181,6 +181,8 @@ export const dataCatalogEnUS = {
         "Continuous incremental sync with a standing listener; build key is the row ID field (optional).",
       embeddingFields: "Embedding Fields",
       embeddingFieldsHint: "(text columns to vectorize)",
+      schemaLoading: "Loading fields…",
+      schemaEmpty: "This resource has no fields yet; run a scan to discover its schema.",
       buildKeyFields: "Build Key Fields",
       buildKeyFieldsHint: "(batch: time field; streaming: row ID)",
       embeddingRequired: "Select at least one embedding field.",

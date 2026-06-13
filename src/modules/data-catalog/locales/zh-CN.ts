@@ -172,6 +172,8 @@ export const dataCatalogZhCN = {
       streamingDescription: "持续增量同步、常驻监听;build key 为行 ID 字段(可选)。",
       embeddingFields: "Embedding 字段",
       embeddingFieldsHint: "(将被向量化的文本列)",
+      schemaLoading: "正在加载字段…",
+      schemaEmpty: "该资源暂无字段,请先执行扫描发现 schema。",
       buildKeyFields: "Build key 字段",
       buildKeyFieldsHint: "(batch:时间字段;streaming:行 ID)",
       embeddingRequired: "请至少选择一个 Embedding 字段。",
