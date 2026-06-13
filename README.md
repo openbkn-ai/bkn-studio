@@ -43,6 +43,45 @@ corepack pnpm build
 corepack pnpm check
 ```
 
+## 连接真实后端调试
+
+默认 `VITE_USE_MOCK=true`，前端走内置 mock 数据，无需后端即可启动。要连真实后端（通过 Vite dev server 代理转发，免跨域）：
+
+1. 复制环境模板：
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+2. 在 `.env.local` 中配置：
+
+   ```text
+   VITE_USE_MOCK=false                       # 关闭 mock，所有请求走真实 HTTP
+   VITE_API_BASE_URL=/api                    # 前端发同源 /api/...，由 dev proxy 转发
+   VITE_DEV_AUTH_ORIGIN=http://<网关地址>     # 后端网关 origin（代理目标）
+   VITE_DEV_ACCESS_TOKEN=                    # 可选：填则跳过登录直接带 token
+   VITE_DEV_REFRESH_TOKEN=
+   ```
+
+   也可单独用 `VITE_PROXY_TARGET=<url>` 覆盖代理目标（优先级高于 `VITE_DEV_AUTH_ORIGIN`）。
+
+3. 启动 dev server：`corepack pnpm dev`，访问 `http://localhost:8000`。
+
+   `VITE_USE_MOCK=false` 时，dev server 把以下路径代理到上面配置的 origin：
+
+   | 路径 | 用途 |
+   | --- | --- |
+   | `/api` | 业务接口 |
+   | `/oauth2`、`/.well-known`、`/userinfo` | OAuth2 / OIDC 登录流程 |
+
+4. 登录：未填 token 时走浏览器内 OAuth 登录（需要网关的 hydra 已为 `openbkn-studio` 客户端登记 redirect_uri `http://localhost:8000/callback`）；填了 token 则直接进入，token 失效时页面会弹出表单可现场粘贴新 token。
+
+注意事项：
+
+- 端口锁定 `8000`（`strictPort`），被占用会直接报错而非漂移——因为 OAuth redirect_uri 是写死的。
+- `.env.local` 改动后**必须重启 dev server**，Vite 仅在启动时读取环境变量。
+- 后端代码改动需先部署到目标网关，否则前端连的仍是旧行为。
+
 ## 目录概览
 
 ```text
