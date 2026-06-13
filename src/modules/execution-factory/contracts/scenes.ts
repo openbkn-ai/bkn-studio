@@ -27,6 +27,16 @@ export type ToolboxToolsSceneProps = {
   onBack?: () => void;
 };
 
+export type McpDetailSceneProps = {
+  mcpId: string;
+  onBack?: () => void;
+};
+
+export type SkillDetailSceneProps = {
+  skillId: string;
+  onBack?: () => void;
+};
+
 export type ToolDetailSceneProps = {
   boxId: string;
   toolId: string;

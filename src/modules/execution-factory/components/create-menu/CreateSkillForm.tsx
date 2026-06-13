@@ -1,12 +1,13 @@
 import { CloudUploadOutlined } from "@ant-design/icons";
-import { Form, Select, Upload, message as antMessage } from "antd";
+import { Form, Upload, message as antMessage } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { CapabilityBusinessIntro } from "@/modules/execution-factory/components/CapabilityBusinessIntro";
+import { CapabilityCategoryFields } from "@/modules/execution-factory/components/CapabilityCategoryFields";
 import { registerSkill } from "@/modules/execution-factory/services/skill.service";
 
 import styles from "./create-menu.module.css";
@@ -37,27 +38,11 @@ export function CreateSkillForm({ formId, onImported }: CreateSkillFormProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [form] = Form.useForm<{ category: string }>();
-  const [categories, setCategories] = useState<Array<{ value: string; label: string }>>(
-    [],
-  );
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    void (async () => {
-      const items = await listOperatorCategories();
-      const options = items.map((item) => ({
-        value: item.categoryType,
-        label: item.name,
-      }));
-      setCategories(options);
-      const defaultCategory =
-        options.find((item) => item.label.includes("未分类"))?.value ??
-        options[0]?.value ??
-        "other_category";
-      form.setFieldsValue({ category: defaultCategory });
-      setFileList([]);
-    })();
+    setFileList([]);
   }, [form]);
 
   const handleSubmit = async (values: { category: string }) => {
@@ -94,13 +79,8 @@ export function CreateSkillForm({ formId, onImported }: CreateSkillFormProps) {
       onFinish={(values) => void handleSubmit(values)}
     >
       <fieldset disabled={submitting} style={{ border: 0, margin: 0, padding: 0 }}>
-        <Form.Item
-          label={t("executionFactory.category")}
-          name="category"
-          rules={[{ required: true, message: t("common.required") }]}
-        >
-          <Select options={categories} />
-        </Form.Item>
+        <CapabilityBusinessIntro messageKey="executionFactory.businessIntro.skillImportTop" />
+        <CapabilityCategoryFields />
         <Form.Item label={t("executionFactory.skillUpload")} required>
           <Upload.Dragger
             beforeUpload={(file) => {

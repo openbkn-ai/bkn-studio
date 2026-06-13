@@ -1,11 +1,12 @@
 import { ApiOutlined, ThunderboltOutlined } from "@ant-design/icons";
-import { Alert, Form, Input, Radio, Select } from "antd";
+import { Alert, Form, Input, Radio } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { CapabilityBusinessIntro } from "@/modules/execution-factory/components/CapabilityBusinessIntro";
+import { CapabilityCategoryFields } from "@/modules/execution-factory/components/CapabilityCategoryFields";
 import { createToolbox } from "@/modules/execution-factory/services/toolbox.service";
 import type { ToolboxMetadataType } from "@/modules/execution-factory/types/toolbox";
 
@@ -21,17 +22,19 @@ type FormValues = {
 
 type CreateToolboxFormProps = {
   formId?: string;
+  lockMetadataType?: ToolboxMetadataType;
   onCreated: (boxId: string) => void;
 };
 
-export function CreateToolboxForm({ formId, onCreated }: CreateToolboxFormProps) {
+export function CreateToolboxForm({
+  formId,
+  lockMetadataType,
+  onCreated,
+}: CreateToolboxFormProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
-  const [categories, setCategories] = useState<Array<{ value: string; label: string }>>(
-    [],
-  );
   const metadataType = Form.useWatch("metadataType", form);
 
   const metadataOptions = useMemo(
@@ -53,20 +56,11 @@ export function CreateToolboxForm({ formId, onCreated }: CreateToolboxFormProps)
   );
 
   useEffect(() => {
-    void (async () => {
-      const items = await listOperatorCategories();
-      const options = items.map((item) => ({
-        value: item.categoryType,
-        label: item.name,
-      }));
-      setCategories(options);
-      form.setFieldsValue({
-        category: options[0]?.value ?? "other_category",
-        metadataType: "openapi",
-        serviceUrl: "http://127.0.0.1:9000",
-      });
-    })();
-  }, [form]);
+    form.setFieldsValue({
+      metadataType: lockMetadataType ?? "openapi",
+      serviceUrl: "http://127.0.0.1:9000",
+    });
+  }, [form, lockMetadataType]);
 
   const handleSubmit = async (values: FormValues) => {
     setSubmitting(true);
@@ -96,6 +90,7 @@ export function CreateToolboxForm({ formId, onCreated }: CreateToolboxFormProps)
       onFinish={(values) => void handleSubmit(values)}
     >
       <fieldset disabled={submitting} style={{ border: 0, margin: 0, padding: 0 }}>
+        <CapabilityBusinessIntro messageKey="executionFactory.businessIntro.functionToolboxTop" />
         <Form.Item
           label={t("executionFactory.toolboxName")}
           name="name"
@@ -106,13 +101,7 @@ export function CreateToolboxForm({ formId, onCreated }: CreateToolboxFormProps)
         <Form.Item label={t("common.description")} name="description">
           <Input.TextArea rows={3} />
         </Form.Item>
-        <Form.Item
-          label={t("executionFactory.category")}
-          name="category"
-          rules={[{ required: true, message: t("common.required") }]}
-        >
-          <Select options={categories} />
-        </Form.Item>
+        <CapabilityCategoryFields />
         {metadataType === "openapi" ? (
           <Form.Item
             label={t("executionFactory.serviceUrl")}
@@ -122,36 +111,49 @@ export function CreateToolboxForm({ formId, onCreated }: CreateToolboxFormProps)
             <Input placeholder="http://127.0.0.1:9000" />
           </Form.Item>
         ) : null}
-        <Form.Item label={t("executionFactory.createToolboxTypeLabel")} required>
-          <p className={styles.modalHint}>{t("executionFactory.createToolboxTypeHint")}</p>
-          {metadataType === "function" ? (
-            <Alert
-              message={t("executionFactory.createToolboxFunctionNextStep")}
-              showIcon
-              style={{ marginBottom: 12 }}
-              type="info"
-            />
-          ) : null}
-          <Form.Item name="metadataType" noStyle rules={[{ required: true }]}>
-            <Radio.Group style={{ width: "100%" }}>
-              <div className={styles.optionGrid}>
-                {metadataOptions.map(({ key, title, desc, icon: Icon }) => (
-                  <label
-                    className={`${styles.optionCard} ${
-                      metadataType === key ? styles.optionCardActive : ""
-                    }`}
-                    key={key}
-                  >
-                    <Radio value={key} />
-                    <Icon style={{ fontSize: 22, color: "#1677ff" }} />
-                    <div className={styles.optionTitle}>{title}</div>
-                    <div className={styles.optionDesc}>{desc}</div>
-                  </label>
-                ))}
-              </div>
-            </Radio.Group>
+        {lockMetadataType ? (
+          <Form.Item hidden name="metadataType">
+            <Input />
           </Form.Item>
-        </Form.Item>
+        ) : (
+          <Form.Item label={t("executionFactory.createToolboxTypeLabel")} required>
+            <p className={styles.modalHint}>{t("executionFactory.createToolboxTypeHint")}</p>
+            {metadataType === "function" ? (
+              <Alert
+                message={t("executionFactory.createToolboxFunctionNextStep")}
+                showIcon
+                style={{ marginBottom: 12 }}
+                type="info"
+              />
+            ) : null}
+            <Form.Item name="metadataType" noStyle rules={[{ required: true }]}>
+              <Radio.Group style={{ width: "100%" }}>
+                <div className={styles.optionGrid}>
+                  {metadataOptions.map(({ key, title, desc, icon: Icon }) => (
+                    <label
+                      className={`${styles.optionCard} ${
+                        metadataType === key ? styles.optionCardActive : ""
+                      }`}
+                      key={key}
+                    >
+                      <Radio value={key} />
+                      <Icon style={{ fontSize: 22, color: "#1677ff" }} />
+                      <div className={styles.optionTitle}>{title}</div>
+                      <div className={styles.optionDesc}>{desc}</div>
+                    </label>
+                  ))}
+                </div>
+              </Radio.Group>
+            </Form.Item>
+          </Form.Item>
+        )}
+        {lockMetadataType === "function" ? (
+          <Alert
+            message={t("executionFactory.createToolboxFunctionNextStep")}
+            showIcon
+            type="info"
+          />
+        ) : null}
       </fieldset>
     </Form>
   );

@@ -35,10 +35,34 @@ export type SkillRegisterInput = {
   source?: string;
 };
 
+export type SkillFileSummary = {
+  relPath: string;
+  fileType?: string;
+  size?: number;
+  mimeType?: string;
+};
+
+export type SkillManagementFileReadResult = {
+  skillId: string;
+  relPath: string;
+  url?: string;
+  content?: string;
+  mimeType?: string;
+  fileType?: string;
+  size?: number;
+};
+
+export type SkillFilePreviewResult =
+  | { kind: "text"; content: string }
+  | { kind: "binary"; url: string; mimeType?: string; size?: number };
+
 export type SkillContentResult = {
   content?: string;
+  /** @deprecated use fileSummaries */
   files?: string[];
+  fileSummaries?: SkillFileSummary[];
   downloadUrl?: string;
+  fileType?: string;
 };
 
 export type SkillMetadataEditInput = {

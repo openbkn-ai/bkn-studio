@@ -28,6 +28,7 @@ import type {
 } from "@/modules/execution-factory/types/operator";
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
 import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
+import type { RequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 
 import styles from "./UnitFormScene.module.css";
@@ -70,9 +71,17 @@ export function UnitFormScene({
   const [loading, setLoading] = useState(mode === "edit");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<RequestErrorDetail | null>(null);
   const [sessionLogs, setSessionLogs] = useState<OperatorRunLogEntry[]>([]);
   const metadataType = Form.useWatch("metadataType", form) as
     | OperatorMetadataType
+    | undefined;
+  const openapiSpec = Form.useWatch("openapiSpec", form) as string | undefined;
+  const functionInputs = Form.useWatch("functionInputs", form) as
+    | FunctionParameterDef[]
+    | undefined;
+  const functionOutputs = Form.useWatch("functionOutputs", form) as
+    | FunctionParameterDef[]
     | undefined;
   const [loadedValues, setLoadedValues] = useState<Partial<FormValues> | null>(null);
   const [debugRecord, setDebugRecord] = useState<Awaited<
@@ -209,6 +218,7 @@ export function UnitFormScene({
     try {
       const values = await form.validateFields();
       setSubmitting(true);
+      setSubmitError(null);
 
       const resolvedMetadataType = values.metadataType ?? "openapi";
       if (resolvedMetadataType === "openapi") {
@@ -275,6 +285,8 @@ export function UnitFormScene({
       }
 
       const errorDetail = extractRequestErrorDetail(error);
+      setSubmitError(errorDetail);
+
       const detailText =
         typeof errorDetail.detail === "string"
           ? errorDetail.detail
@@ -393,6 +405,7 @@ export function UnitFormScene({
                         rules={[{ required: true, message: t("common.required") }]}
                       >
                         <OpenApiSpecInput
+                          registrationTarget="operator"
                           onMetadataHints={(hints) => {
                             if (!form.getFieldValue("name") && hints.title) {
                               form.setFieldValue("name", hints.title);
@@ -435,6 +448,23 @@ export function UnitFormScene({
                     </section>
                   ) : null}
                 </Form>
+                {submitError ? (
+                  <Alert
+                    closable
+                    description={
+                      typeof submitError.detail === "string"
+                        ? submitError.detail
+                        : Array.isArray(submitError.detail)
+                          ? submitError.detail.join("；")
+                          : submitError.solution
+                    }
+                    message={submitError.message || t("executionFactory.submitErrorTitle")}
+                    onClose={() => setSubmitError(null)}
+                    showIcon
+                    style={{ marginTop: 16 }}
+                    type="error"
+                  />
+                ) : null}
                 <div className={styles.formActions}>
                   <AppButton onClick={handleBack}>{t("common.cancel")}</AppButton>
                   <AppButton
@@ -453,7 +483,12 @@ export function UnitFormScene({
                   <h3 className={styles.debugTitle}>{t("executionFactory.runLogTitle")}</h3>
                   <PermissionGate permissions="execution-factory:operator:debug">
                     <OperatorDebugPanel
+                      functionInput={{
+                        inputs: functionInputs,
+                        outputs: functionOutputs,
+                      }}
                       onRunComplete={handleDebugRunComplete}
+                      openapiSpec={openapiSpec}
                       record={debugRecord}
                     />
                   </PermissionGate>

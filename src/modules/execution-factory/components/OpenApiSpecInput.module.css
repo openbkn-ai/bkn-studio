@@ -2,6 +2,35 @@
   margin-bottom: 12px;
 }
 
+.toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.toolbarHint {
+  flex: 1;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.templateButton {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #126ee3;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.templateButton:hover {
+  text-decoration: underline;
+}
+
 .urlRow {
   display: flex;
   gap: 8px;
@@ -21,4 +50,38 @@
 .urlFetchButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.previewPanel {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(18, 110, 227, 0.15);
+  border-radius: 8px;
+  background: rgba(18, 110, 227, 0.04);
+}
+
+.previewMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 12px;
+}
+
+.previewList {
+  margin: 0;
+  padding-left: 18px;
+  color: rgba(0, 0, 0, 0.75);
+  font-size: 12px;
+}
+
+.previewList li + li {
+  margin-top: 4px;
+}
+
+.previewMore {
+  margin-top: 6px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
 }

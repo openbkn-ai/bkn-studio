@@ -434,7 +434,7 @@ export async function registerOperator(
       direct_publish: input.directPublish ?? false,
       operator_metadata_type: input.metadataType,
     },
-    { headers: getBusinessDomainHeaders() },
+    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
   );
 
   const result = response.data[0];
@@ -469,7 +469,7 @@ export async function updateOperator(input: OperatorEditInput): Promise<void> {
       ...buildOperatorMutationBody(input, { openApiAsObject: true }),
       operator_id: input.operatorId,
     },
-    { headers: getBusinessDomainHeaders() },
+    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
   );
 }
 

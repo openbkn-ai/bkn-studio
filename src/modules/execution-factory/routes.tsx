@@ -40,6 +40,16 @@ const SkillEditPage = lazy(async () => {
   return { default: module.SkillEditPage };
 });
 
+const McpDetailPage = lazy(async () => {
+  const module = await import("@/modules/execution-factory/pages/McpDetailPage");
+  return { default: module.McpDetailPage };
+});
+
+const SkillDetailPage = lazy(async () => {
+  const module = await import("@/modules/execution-factory/pages/SkillDetailPage");
+  return { default: module.SkillDetailPage };
+});
+
 function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
@@ -149,6 +159,17 @@ export const executionFactoryRoutes: RouteObject[] = [
     ),
   },
   {
+    path: "execution-factory/mcp/:mcpId",
+    handle: {
+      console: {
+        descriptionKey: "executionFactory.mcpDetailDescription",
+        menuKey: "execution-unit-management",
+        titleKey: "executionFactory.mcpDetailPageTitle",
+      },
+    },
+    element: withRouteLoading(<McpDetailPage />),
+  },
+  {
     path: "execution-factory/skills",
     handle: {
       console: {
@@ -184,6 +205,17 @@ export const executionFactoryRoutes: RouteObject[] = [
       },
     },
     element: withRouteLoading(<SkillEditPage />),
+  },
+  {
+    path: "execution-factory/skills/:skillId",
+    handle: {
+      console: {
+        descriptionKey: "executionFactory.skillDetailDescription",
+        menuKey: "execution-unit-management",
+        titleKey: "executionFactory.skillDetailPageTitle",
+      },
+    },
+    element: withRouteLoading(<SkillDetailPage />),
   },
   {
     path: "execution-factory/catalog",

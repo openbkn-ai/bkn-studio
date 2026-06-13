@@ -23,8 +23,8 @@ Backend: `bkn-foundry/adp/execution-factory/operator-integration`
 
 | ID | Item | Ref | Local | Status |
 |----|------|-----|-------|--------|
-| EF-LST-001 | Tabs: MCP / 工具箱 / 算子 / Skill | ✓ | ExecutionUnitListScene | [x] |
-| EF-LST-002 | Category chip filter | ✓ | category.service | [x] |
+| EF-LST-001 | Tabs: 工具集 / MCP 服务 / Skill 包 (+ 算子开发入口) | ✓ | ExecutionUnitListScene | [x] |
+| EF-LST-002 | Category chip filter (all resource tabs) | ✓ | category.service | [x] |
 | EF-LST-003 | Publish status filter (mgmt mode) | ✓ | Select | [x] |
 | EF-LST-004 | Keyword search + reload | ✓ | usePageState | [x] |
 | EF-LST-005 | Infinite scroll (page_size=20) | ✓ | IntersectionObserver | [x] |
@@ -68,6 +68,7 @@ Backend: `bkn-foundry/adp/execution-factory/operator-integration`
 | EF-CRT-005 | ImportResourceModal (operator/toolbox/mcp impex) | [x] |
 | EF-CRT-006 | OpenAPI toolbox import distinct UX | [x] |
 | EF-CRT-007 | Import failure detail + template download | [x] |
+| EF-CRT-008 | Unified category on create (toolbox/mcp/skill/quick-api/import) | ✓ | CapabilityCategoryFields | [x] |
 
 ---
 

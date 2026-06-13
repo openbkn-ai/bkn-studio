@@ -420,13 +420,34 @@ export async function listMcpTools(
 ): Promise<McpProxyTool[]> {
   if (useMock) {
     return [
-      { name: "search", description: "Search documents in the connected MCP server." },
-      { name: "fetch", description: "Fetch a document by identifier." },
+      {
+        name: "search",
+        description: "Search documents in the connected MCP server.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: { type: "string", description: "Search query" },
+            limit: { type: "integer" },
+          },
+          required: ["query"],
+        },
+      },
+      {
+        name: "fetch",
+        description: "Fetch a document by identifier.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+          },
+          required: ["id"],
+        },
+      },
     ];
   }
 
   const response = await http.get<{
-    tools?: Array<{ description?: string; name?: string }>;
+    tools?: Array<{ description?: string; input_schema?: unknown; inputSchema?: unknown; name?: string }>;
   }>(`${API_PREFIX}/mcp/proxy/${mcpId}/tools`, {
     headers: getBusinessDomainHeaders(),
     params: {
@@ -441,6 +462,7 @@ export async function listMcpTools(
   return (response.data.tools ?? []).map((tool) => ({
     name: tool.name ?? "unknown",
     description: tool.description,
+    inputSchema: tool.inputSchema ?? tool.input_schema,
   }));
 }
 

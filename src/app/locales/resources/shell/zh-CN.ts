@@ -17,6 +17,8 @@ export const shellZhCN = {
       dataResource: "数据资源",
       dataQuality: "数据质量",
       executionFactory: "执行工厂",
+      executionFactoryLab: "执行工厂（实验版）",
+      executionFactoryLabCapabilities: "能力库",
       executionUnitManagement: "执行单元管理",
       allExecutionUnits: "全部执行单元",
       executionUnitManagementTooltip: "管理本业务域内的算子、工具箱、MCP 与 Skill",

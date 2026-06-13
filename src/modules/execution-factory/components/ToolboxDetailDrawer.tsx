@@ -1,12 +1,22 @@
-import { DownloadOutlined } from "@ant-design/icons";
-import { Alert, Descriptions, Empty, Form, Input, Tag } from "antd";
-import { useEffect, useState } from "react";
+import {
+  AppstoreOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
+  DownloadOutlined,
+  IdcardOutlined,
+  LinkOutlined,
+  ToolOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import { Alert, Empty, Form, Input, Tag } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { ExecutionUnitDetailDrawerLayout } from "@/modules/execution-factory/components/execution-unit-detail/ExecutionUnitDetailDrawerLayout";
 import { ToolboxMetadataFormFields } from "@/modules/execution-factory/components/ToolboxMetadataFormFields";
 import {
@@ -33,9 +43,9 @@ type ToolboxDetailDrawerProps = {
   installedInDomain?: boolean;
   marketMode?: boolean;
   onClose: () => void;
-  onManageTools?: (boxId: string) => void;
   onMarketInstall?: () => void;
   onUpdated?: () => void;
+  onViewTools?: (boxId: string) => void;
   open: boolean;
 };
 
@@ -62,9 +72,9 @@ export function ToolboxDetailDrawer({
   installedInDomain = false,
   marketMode = false,
   onClose,
-  onManageTools,
   onMarketInstall,
   onUpdated,
+  onViewTools,
   open,
 }: ToolboxDetailDrawerProps) {
   const { t } = useTranslation();
@@ -171,6 +181,87 @@ export function ToolboxDetailDrawer({
       ? t("executionFactory.toolboxEditTitle")
       : t("executionFactory.toolboxDetailTitle");
 
+  const basicInfoItems = useMemo(() => {
+    if (!record) {
+      return [];
+    }
+
+    return [
+      {
+        key: "boxId",
+        label: t("executionFactory.toolboxId"),
+        value: record.boxId,
+        icon: <IdcardOutlined />,
+        variant: "mono" as const,
+        span: "full" as const,
+      },
+      {
+        key: "category",
+        label: t("executionFactory.category"),
+        value: resolveToolboxCategoryLabel(record, t),
+        icon: <AppstoreOutlined />,
+        variant: "accent" as const,
+      },
+      {
+        key: "metadataType",
+        label: t("executionFactory.metadataType"),
+        value: record.metadataType
+          ? t(`executionFactory.metadataTypes.${record.metadataType}`)
+          : "-",
+      },
+      {
+        key: "toolCount",
+        label: t("executionFactory.toolCount"),
+        value: String(record.toolCount ?? record.tools?.length ?? 0),
+        icon: <ToolOutlined />,
+      },
+      {
+        key: "serviceUrl",
+        label: t("executionFactory.serviceUrl"),
+        value: record.serviceUrl ?? "-",
+        icon: <LinkOutlined />,
+        span: "full" as const,
+        variant: "mono" as const,
+      },
+      {
+        key: "createUser",
+        label: t("executionFactory.createUser"),
+        value: record.createUser ?? "-",
+        icon: <UserOutlined />,
+      },
+      {
+        key: "updateUser",
+        label: t("executionFactory.updateUser"),
+        value: record.updateUser ?? "-",
+        icon: <UserOutlined />,
+      },
+      {
+        key: "createTime",
+        label: t("executionFactory.createTime"),
+        value: formatOptionalTimestamp(record.createTime),
+        icon: <CalendarOutlined />,
+      },
+      {
+        key: "updateTime",
+        label: t("executionFactory.updateTime"),
+        value: formatOptionalTimestamp(record.updateTime),
+        icon: <ClockCircleOutlined />,
+      },
+      {
+        key: "releaseUser",
+        label: t("executionFactory.releaseUser"),
+        value: record.releaseUser ?? "-",
+        icon: <UserOutlined />,
+      },
+      {
+        key: "releaseTime",
+        label: t("executionFactory.releaseTime"),
+        value: formatOptionalTimestamp(record.releaseTime),
+        icon: <CalendarOutlined />,
+      },
+    ];
+  }, [record, t]);
+
   return (
     <ExecutionUnitDetailDrawerLayout
       empty={!record}
@@ -189,9 +280,9 @@ export function ToolboxDetailDrawer({
               )}
             </AppButton>
           ) : null
-        ) : onManageTools && record ? (
-          <AppButton onClick={() => onManageTools(record.boxId)} type="primary">
-            {t("executionFactory.manageTools")}
+        ) : onViewTools && record ? (
+          <AppButton onClick={() => onViewTools(record.boxId)} type="primary">
+            {t("executionFactory.viewToolsDetail")}
             {` (${record.toolCount ?? record.tools?.length ?? 0})`}
           </AppButton>
         ) : null
@@ -279,77 +370,12 @@ export function ToolboxDetailDrawer({
               </Form>
             </section>
           ) : (
-            <section className={styles.sectionCard}>
-              <h3 className={styles.sectionTitle}>{t("common.basicInfo")}</h3>
-              <Descriptions
-                bordered
-                column={1}
-                items={[
-                  {
-                    key: "boxId",
-                    label: t("executionFactory.toolboxId"),
-                    children: record.boxId,
-                  },
-                  {
-                    key: "name",
-                    label: t("executionFactory.toolboxName"),
-                    children: record.name,
-                  },
-                  {
-                    key: "category",
-                    label: t("executionFactory.category"),
-                    children: resolveToolboxCategoryLabel(record, t),
-                  },
-                  {
-                    key: "metadataType",
-                    label: t("executionFactory.metadataType"),
-                    children: record.metadataType
-                      ? t(`executionFactory.metadataTypes.${record.metadataType}`)
-                      : "-",
-                  },
-                  {
-                    key: "serviceUrl",
-                    label: t("executionFactory.serviceUrl"),
-                    children: record.serviceUrl ?? "-",
-                  },
-                  {
-                    key: "toolCount",
-                    label: t("executionFactory.toolCount"),
-                    children: String(record.toolCount ?? record.tools?.length ?? 0),
-                  },
-                  {
-                    key: "createUser",
-                    label: t("executionFactory.createUser"),
-                    children: record.createUser ?? "-",
-                  },
-                  {
-                    key: "updateUser",
-                    label: t("executionFactory.updateUser"),
-                    children: record.updateUser ?? "-",
-                  },
-                  {
-                    key: "createTime",
-                    label: t("executionFactory.createTime"),
-                    children: formatOptionalTimestamp(record.createTime),
-                  },
-                  {
-                    key: "updateTime",
-                    label: t("executionFactory.updateTime"),
-                    children: formatOptionalTimestamp(record.updateTime),
-                  },
-                  {
-                    key: "releaseUser",
-                    label: t("executionFactory.releaseUser"),
-                    children: record.releaseUser ?? "-",
-                  },
-                  {
-                    key: "releaseTime",
-                    label: t("executionFactory.releaseTime"),
-                    children: formatOptionalTimestamp(record.releaseTime),
-                  },
-                ]}
-              />
-            </section>
+            <DetailMetaPanel
+              columns={2}
+              compact
+              items={basicInfoItems}
+              title={t("common.basicInfo")}
+            />
           )}
 
           {!editing ? (

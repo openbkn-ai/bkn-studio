@@ -2,9 +2,14 @@ import { expect, test } from "@playwright/test";
 
 import {
   executionUnitCard,
+  expectCapabilityManagementPage,
+  expectOpenApiOperationsIoPreview,
   fillOpenApiSpecPaste,
+  gotoE2ePage,
+  openAdvancedOperatorTab,
   openCreateWizard,
   openOperatorCreateForm,
+  OPERATOR_TAB_LABEL,
 } from "../../helpers/execution-unit-ui";
 import {
   assertBackendReady,
@@ -50,11 +55,10 @@ test.describe("Execution Factory — Operator AT", () => {
   });
 
   test("AT-01: operator list page loads and shows operators tab", async ({ page }) => {
-    await page.goto("/execution-factory/units?activeTab=operator");
+    await openAdvancedOperatorTab(page);
 
-    await expect(page.getByText("执行单元管理").first()).toBeVisible();
-    await expect(page.getByRole("tab", { name: "算子" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "工具" })).toBeVisible();
+    await expectCapabilityManagementPage(page);
+    await expect(page.getByRole("tab", { name: OPERATOR_TAB_LABEL })).toBeVisible();
     await expect(page.getByRole("button", { name: /新建算子|New Operator/i })).toBeVisible();
 
     const drawer = await openCreateWizard(page, "operator");
@@ -71,6 +75,7 @@ test.describe("Execution Factory — Operator AT", () => {
     await page.getByLabel(/算子名称|Operator Name/i).fill(operatorName);
     await page.getByLabel(/描述|Description/i).fill("Playwright AT — UI registration flow");
     await fillOpenApiSpecPaste(page, openApiSpec);
+    await expectOpenApiOperationsIoPreview(page, { containsText: /input|Input/i });
     await page.getByRole("button", { name: /保\s*存|Save/i }).click();
 
     await expect(page).toHaveURL(/\/execution-factory\/units\?activeTab=operator/);
@@ -115,8 +120,8 @@ test.describe("Execution Factory — Operator AT", () => {
 
     await publishOperatorViaApi(request, operator);
 
-    await page.goto("/execution-factory/units?activeTab=operator");
-    await expect(page.getByRole("heading", { level: 5, name: operatorName })).toBeVisible();
+    await gotoE2ePage(page, "/execution-factory/units?activeTab=operator");
+    await expect(page.getByRole("heading", { level: 5, name: operator.name })).toBeVisible();
 
     const card = executionUnitCard(page, operatorName);
     await expect(card.locator(".ant-tag").filter({ hasText: /已发布|Published/i })).toBeVisible();

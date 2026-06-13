@@ -29,6 +29,7 @@ export function cloneOperatorImpexForCreate(exported: Record<string, unknown>, n
 export function cloneToolboxImpexForCreate(exported: Record<string, unknown>, newName: string) {
   const payload = JSON.parse(JSON.stringify(exported)) as {
     toolbox?: { configs?: Array<Record<string, unknown>> };
+    operator?: { configs?: Array<Record<string, unknown>> };
   };
   const item = payload.toolbox?.configs?.[0];
   if (!item) {
@@ -38,10 +39,38 @@ export function cloneToolboxImpexForCreate(exported: Record<string, unknown>, ne
   item.box_id = newBoxId;
   item.box_name = newName;
   item.status = "unpublish";
+
+  const operatorIdMap = new Map<string, string>();
+  if (payload.operator?.configs) {
+    for (const op of payload.operator.configs) {
+      const oldId = String(op.operator_id ?? "");
+      const newOpId = randomUUID();
+      const metadataVersion = randomUUID();
+      if (oldId) {
+        operatorIdMap.set(oldId, newOpId);
+      }
+      op.operator_id = newOpId;
+      if (op.operator_name) {
+        op.operator_name = newName;
+      }
+      op.version = metadataVersion;
+      op.status = "unpublish";
+      const metadata = op.metadata as Record<string, unknown> | undefined;
+      if (metadata) {
+        metadata.version = metadataVersion;
+      }
+    }
+  }
+
   if (Array.isArray(item.tools)) {
     for (const tool of item.tools as Array<Record<string, unknown>>) {
       tool.box_id = newBoxId;
       tool.tool_id = randomUUID();
+      if (tool.source_type === "operator" && tool.source_id) {
+        tool.source_id = operatorIdMap.get(String(tool.source_id)) ?? randomUUID();
+      } else if (tool.source_id) {
+        tool.source_id = randomUUID();
+      }
     }
   }
   return payload;

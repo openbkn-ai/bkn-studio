@@ -58,8 +58,11 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 20px 22px;
+  border: 1px solid rgba(18, 110, 227, 0.1);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 8px 24px rgba(18, 110, 227, 0.05);
 }
 
 .headerMain {
@@ -170,7 +173,7 @@
 .toolItemFooter {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   margin-top: 8px;
 }
 

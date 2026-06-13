@@ -3,6 +3,7 @@ import type { RouteObject } from "react-router-dom";
 import type { AppRouteContribution } from "@/app/router/types";
 import { dataCatalogRouteContribution } from "@/modules/data-catalog/routes";
 import { dataConnectRouteContribution } from "@/modules/data-connect/routes";
+import { executionFactoryLabRouteContribution } from "@/modules/execution-factory-lab/routes";
 import { executionFactoryRouteContribution } from "@/modules/execution-factory/routes";
 import { knowledgeNetworkRouteContribution } from "@/modules/knowledge-network/routes";
 import { modelResourcesRouteContribution } from "@/modules/model-resources/routes";
@@ -13,6 +14,7 @@ const routeContributions: AppRouteContribution[] = [
   dataConnectRouteContribution,
   executionFactoryRouteContribution,
   modelResourcesRouteContribution,
+  executionFactoryLabRouteContribution,
 ];
 
 export const defaultModuleRoutePath =

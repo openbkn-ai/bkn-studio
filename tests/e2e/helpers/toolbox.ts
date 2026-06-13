@@ -28,6 +28,39 @@ export function buildMultiEndpointOpenApiSpec(baseName: string) {
   };
 }
 
+export async function importOpenApiSpecBatchViaApi(
+  request: APIRequestContext,
+  boxId: string,
+  openApiSpec: Record<string, unknown>,
+  toolDesc = "E2E batch import",
+) {
+  const response = await request.post(`${API_PREFIX}/tool-box/${boxId}/tool`, {
+    headers: {
+      ...defaultApiHeaders(),
+      "Content-Type": "application/json",
+    },
+    data: {
+      metadata_type: "openapi",
+      data: openApiSpec,
+      tool_desc: toolDesc,
+    },
+  });
+
+  await expectOk(response, "Batch import OpenAPI spec");
+
+  const body = (await response.json()) as {
+    success_ids?: string[];
+    success_count?: number;
+    failure_count?: number;
+  };
+
+  return {
+    toolIds: body.success_ids ?? [],
+    successCount: body.success_count ?? body.success_ids?.length ?? 0,
+    failureCount: body.failure_count ?? 0,
+  };
+}
+
 export async function importOpenApiToolsBatchViaApi(
   request: APIRequestContext,
   boxId: string,
@@ -101,14 +134,15 @@ export function buildToolboxName(suffix?: string) {
 export async function createToolboxViaApi(
   request: APIRequestContext,
   name: string,
-  options?: { metadataType?: "openapi" | "function" },
+  options?: { metadataType?: "openapi" | "function"; serviceUrl?: string },
 ): Promise<ToolboxRecord> {
   const metadataType = options?.metadataType ?? "openapi";
   const payload: Record<string, unknown> = {
     box_category: "other_category",
     box_desc: "E2E toolbox",
     box_name: name,
-    box_svc_url: "http://127.0.0.1:9000/api/agent-operator-integration",
+    box_svc_url:
+      options?.serviceUrl ?? "http://127.0.0.1:9000/api/agent-operator-integration",
     metadata_type: metadataType,
   };
 
@@ -173,6 +207,28 @@ export async function createToolViaApi(
   }
 
   return { toolId, name: toolName };
+}
+
+export async function debugToolViaApi(
+  request: APIRequestContext,
+  boxId: string,
+  toolId: string,
+  body?: Record<string, unknown>,
+) {
+  const response = await request.post(`${API_PREFIX}/tool-box/${boxId}/tool/${toolId}/debug`, {
+    headers: {
+      ...defaultApiHeaders(),
+      "Content-Type": "application/json",
+    },
+    data: { body: body ?? {} },
+  });
+  await expectOk(response, "Debug tool");
+  return response.json() as Promise<{
+    status_code?: number;
+    body?: unknown;
+    error?: string;
+    duration_ms?: number;
+  }>;
 }
 
 export async function publishToolboxViaApi(

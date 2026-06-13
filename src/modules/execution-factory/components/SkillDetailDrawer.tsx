@@ -1,16 +1,22 @@
-import { Alert, Descriptions, Drawer, Empty, Spin, Tag } from "antd";
-import { useEffect, useState } from "react";
+import {
+  AppstoreOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
+  IdcardOutlined,
+  TagOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import { Tag } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import {
-  getSkill,
-  getSkillManagementContent,
-  getSkillMarket,
-} from "@/modules/execution-factory/services/skill.service";
-import type { SkillContentResult, SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
+import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
+import { ExecutionUnitDetailDrawerLayout } from "@/modules/execution-factory/components/execution-unit-detail/ExecutionUnitDetailDrawerLayout";
+import { getSkill, getSkillMarket } from "@/modules/execution-factory/services/skill.service";
+import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
 import {
   formatOptionalTimestamp,
   resolveSkillCategoryLabel,
@@ -23,6 +29,7 @@ type SkillDetailDrawerProps = {
   onClose: () => void;
   onEdit?: (skillId: string) => void;
   onOpenHistory?: (skillId: string) => void;
+  onViewDetail?: (skillId: string) => void;
   open: boolean;
   skillId: string | null;
 };
@@ -38,12 +45,12 @@ export function SkillDetailDrawer({
   onClose,
   onEdit,
   onOpenHistory,
+  onViewDetail,
   open,
   skillId,
 }: SkillDetailDrawerProps) {
   const { t } = useTranslation();
   const [record, setRecord] = useState<SkillRecord | null>(null);
-  const [content, setContent] = useState<SkillContentResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -56,17 +63,12 @@ export function SkillDetailDrawer({
       setLoading(true);
       setLoadError(null);
       setRecord(null);
-      setContent(null);
 
       try {
         const skillRecord = marketMode
           ? await getSkillMarket(skillId)
           : await getSkill(skillId);
         setRecord(skillRecord);
-
-        if (!marketMode) {
-          setContent(await getSkillManagementContent(skillId));
-        }
       } catch (error) {
         setLoadError(extractRequestErrorMessage(error));
       } finally {
@@ -75,40 +77,100 @@ export function SkillDetailDrawer({
     })();
   }, [marketMode, open, skillId]);
 
+  const drawerTitle = marketMode
+    ? t("executionFactory.skillMarketDetailTitle")
+    : t("executionFactory.skillDetailTitle");
+
+  const basicInfoItems = useMemo(() => {
+    if (!record) {
+      return [];
+    }
+
+    return [
+      {
+        key: "skillId",
+        label: t("executionFactory.skillIdLabel"),
+        value: record.skillId,
+        icon: <IdcardOutlined />,
+        variant: "mono" as const,
+        span: "full" as const,
+      },
+      {
+        key: "version",
+        label: t("executionFactory.version"),
+        value: record.version ?? "-",
+        icon: <TagOutlined />,
+        variant: "accent" as const,
+      },
+      {
+        key: "category",
+        label: t("executionFactory.category"),
+        value: resolveSkillCategoryLabel(record, t),
+        icon: <AppstoreOutlined />,
+      },
+      {
+        key: "status",
+        label: t("executionFactory.statusLabel"),
+        value: t(`executionFactory.skillStatuses.${record.status}`),
+      },
+      {
+        key: "createUser",
+        label: t("executionFactory.createUser"),
+        value: record.createUser ?? "-",
+        icon: <UserOutlined />,
+      },
+      {
+        key: "createTime",
+        label: t("executionFactory.createTime"),
+        value: formatOptionalTimestamp(record.createTime),
+        icon: <CalendarOutlined />,
+      },
+      {
+        key: "updateTime",
+        label: t("executionFactory.updateTime"),
+        value: formatOptionalTimestamp(record.updateTime),
+        icon: <ClockCircleOutlined />,
+      },
+    ];
+  }, [record, t]);
+
   return (
-    <Drawer
-      destroyOnClose
-      extra={
-        !marketMode && skillId ? (
-          <div style={{ display: "flex", gap: 8 }}>
-            <PermissionGate permissions="execution-factory:skill:edit">
-              <AppButton onClick={() => onEdit?.(skillId)} type="link">
-                {t("common.edit")}
-              </AppButton>
-            </PermissionGate>
-            <PermissionGate permissions="execution-factory:skill:view">
-              <AppButton onClick={() => onOpenHistory?.(skillId)} type="link">
-                {t("executionFactory.skillHistoryTitle")}
-              </AppButton>
-            </PermissionGate>
-          </div>
+    <ExecutionUnitDetailDrawerLayout
+      empty={!record}
+      footerPrimary={
+        onViewDetail && record ? (
+          <AppButton onClick={() => onViewDetail(record.skillId)} type="primary">
+            {t("executionFactory.viewSkillDetail")}
+          </AppButton>
         ) : null
       }
+      footerSecondary={
+        !marketMode && skillId ? (
+          <PermissionGate permissions="execution-factory:skill:view">
+            <AppButton onClick={() => onOpenHistory?.(skillId)}>
+              {t("executionFactory.skillHistoryTitle")}
+            </AppButton>
+          </PermissionGate>
+        ) : null
+      }
+      headerExtra={
+        !marketMode && skillId ? (
+          <PermissionGate permissions="execution-factory:skill:edit">
+            <AppButton onClick={() => onEdit?.(skillId)} type="link">
+              {t("common.edit")}
+            </AppButton>
+          </PermissionGate>
+        ) : null
+      }
+      loadError={loadError}
+      loading={loading}
+      marketMode={marketMode}
       onClose={onClose}
       open={open}
-      title={
-        marketMode
-          ? t("executionFactory.skillMarketDetailTitle")
-          : t("executionFactory.skillDetailTitle")
-      }
+      title={drawerTitle}
       width={860}
     >
-      {loading ? <Spin /> : null}
-      {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
-      {!loading && !loadError && !record ? (
-        <Empty description={t("common.notFound")} />
-      ) : null}
-      {!loading && !loadError && record ? (
+      {record ? (
         <div className={styles.drawerContent}>
           <section className={styles.summaryCard}>
             <div className={styles.summaryHeader}>
@@ -125,82 +187,14 @@ export function SkillDetailDrawer({
             </div>
           </section>
 
-          <section className={styles.sectionCard}>
-            <h3 className={styles.sectionTitle}>{t("common.basicInfo")}</h3>
-            <Descriptions
-              bordered
-              column={1}
-              items={[
-                {
-                  key: "skillId",
-                  label: t("executionFactory.skillIdLabel"),
-                  children: record.skillId,
-                },
-                {
-                  key: "name",
-                  label: t("executionFactory.skillNameLabel"),
-                  children: record.name,
-                },
-                {
-                  key: "version",
-                  label: t("executionFactory.version"),
-                  children: record.version ?? "-",
-                },
-                {
-                  key: "category",
-                  label: t("executionFactory.category"),
-                  children: resolveSkillCategoryLabel(record, t),
-                },
-                {
-                  key: "status",
-                  label: t("executionFactory.statusLabel"),
-                  children: t(`executionFactory.skillStatuses.${record.status}`),
-                },
-                {
-                  key: "createUser",
-                  label: t("executionFactory.createUser"),
-                  children: record.createUser ?? "-",
-                },
-                {
-                  key: "createTime",
-                  label: t("executionFactory.createTime"),
-                  children: formatOptionalTimestamp(record.createTime),
-                },
-                {
-                  key: "updateTime",
-                  label: t("executionFactory.updateTime"),
-                  children: formatOptionalTimestamp(record.updateTime),
-                },
-              ]}
-            />
-          </section>
-
-          {!marketMode && content ? (
-            <section className={styles.sectionCard}>
-              <h3 className={styles.sectionTitle}>{t("executionFactory.skillContentTitle")}</h3>
-              {content.content ? (
-                <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{content.content}</pre>
-              ) : (
-                <Empty description={t("executionFactory.skillContentEmpty")} />
-              )}
-              {content.files && content.files.length > 0 ? (
-                <>
-                  <h4 className={styles.sectionTitle} style={{ marginTop: 16 }}>
-                    {t("executionFactory.skillFilesSectionTitle")}
-                  </h4>
-                  <div className={styles.toolList}>
-                    {content.files.map((file) => (
-                      <div className={styles.toolItem} key={file}>
-                        <div className={styles.toolName}>{file}</div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : null}
-            </section>
-          ) : null}
+          <DetailMetaPanel
+            columns={2}
+            compact
+            items={basicInfoItems}
+            title={t("common.basicInfo")}
+          />
         </div>
       ) : null}
-    </Drawer>
+    </ExecutionUnitDetailDrawerLayout>
   );
 }

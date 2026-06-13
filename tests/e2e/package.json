@@ -8,6 +8,14 @@
     "test:full": "playwright test specs/execution-factory",
     "test:api": "playwright test specs/execution-factory/e2e-operator.spec.ts specs/execution-factory/e2e-toolbox.spec.ts specs/execution-factory/e2e-mcp.spec.ts specs/execution-factory/e2e-skill.spec.ts specs/execution-factory/e2e-function.spec.ts specs/execution-factory/e2e-catalog.spec.ts specs/execution-factory/e2e-impex.spec.ts specs/execution-factory/e2e-version.spec.ts --grep-invert CAT-02",
     "test:ui": "playwright test specs/execution-factory/e2e-ui-tabs.spec.ts specs/execution-factory/e2e-ui-coverage.spec.ts specs/execution-factory/e2e-ux-regression.spec.ts specs/execution-factory/operator.at.spec.ts specs/execution-factory/e2e-catalog.spec.ts specs/execution-factory/e2e-impex-ui.spec.ts specs/execution-factory/e2e-version-ui.spec.ts --grep \"UI-|UX-|CAT-02|CAT-UI|IMPEX-UI|VER-UI|Operator AT\"",
+    "cleanup:e2e": "playwright test specs/execution-factory/e2e-cleanup.spec.ts",
+    "test:realworld": "playwright test specs/execution-factory/e2e-realworld.spec.ts specs/execution-factory/e2e-realworld-ui.spec.ts",
+    "test:realworld:api": "playwright test specs/execution-factory/e2e-realworld.spec.ts",
+    "test:realworld:ui": "playwright test specs/execution-factory/e2e-realworld-ui.spec.ts",
+    "test:lab": "playwright test specs/execution-factory-lab",
+    "test:lab:api": "playwright test specs/execution-factory-lab/e2e-lab-api.spec.ts",
+    "test:lab:ui": "playwright test specs/execution-factory-lab/e2e-lab-ui.spec.ts",
+    "pretest:realworld": "npm run cleanup:e2e",
     "install:browsers": "playwright install chromium"
   },
   "devDependencies": {

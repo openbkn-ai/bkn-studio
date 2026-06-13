@@ -3,6 +3,8 @@ import { Radio } from "antd";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CapabilityBusinessIntro } from "@/modules/execution-factory/components/CapabilityBusinessIntro";
+
 import styles from "./create-menu.module.css";
 
 export type CreateOperatorMode = "openapi" | "function";
@@ -40,7 +42,7 @@ export function CreateOperatorTypeStep({
 
   return (
     <div>
-      <p className={styles.modalHint}>{t("executionFactory.createOperatorModalHint")}</p>
+      <CapabilityBusinessIntro messageKey="executionFactory.businessIntro.operatorCreateTop" />
       <p className={styles.modalHint}>{t("executionFactory.createOperatorModalHintLocked")}</p>
       <Radio.Group
         onChange={(event) => {

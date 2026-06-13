@@ -45,7 +45,7 @@ export function ToolboxFormScene({
     void (async () => {
       if (mode !== "edit" || !boxId) {
         form.setFieldsValue({
-          category: "box_category",
+          category: "other_category",
           metadataType: "openapi",
         });
         return;

@@ -70,6 +70,18 @@ export const executionFactoryModuleManifest = {
       inputs: ["boxId", "onBack?"],
     },
     {
+      id: "execution-factory.mcp-detail",
+      exportName: "McpDetailScene",
+      description: "View MCP tools, schemas, and debug.",
+      inputs: ["mcpId", "onBack?"],
+    },
+    {
+      id: "execution-factory.skill-detail",
+      exportName: "SkillDetailScene",
+      description: "View skill content and package files.",
+      inputs: ["skillId", "onBack?"],
+    },
+    {
       id: "execution-factory.catalog",
       exportName: "CatalogListScene",
       description: "Browse operator and toolbox market entries for installable execution units.",

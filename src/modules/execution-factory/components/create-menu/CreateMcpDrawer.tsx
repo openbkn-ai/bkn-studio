@@ -31,6 +31,8 @@ import type {
   McpToolConfigInput,
 } from "@/modules/execution-factory/types/mcp";
 
+import { CapabilityBusinessIntro } from "@/modules/execution-factory/components/CapabilityBusinessIntro";
+
 import styles from "./create-menu.module.css";
 import { McpToolImportedSection } from "./McpToolImportedSection";
 
@@ -263,6 +265,13 @@ export function CreateMcpDrawer({
         }
       }}
     >
+          <CapabilityBusinessIntro
+            messageKey={
+              isEditMode
+                ? "executionFactory.businessIntro.mcpEditTop"
+                : "executionFactory.businessIntro.mcpCreateTop"
+            }
+          />
           <Form.Item
             label={t("executionFactory.mcpName")}
             name="name"

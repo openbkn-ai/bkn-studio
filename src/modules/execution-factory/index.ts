@@ -1,7 +1,9 @@
 export { executionFactoryModuleManifest } from "@/modules/execution-factory/module.manifest";
 export type {
   CatalogListSceneProps,
+  McpDetailSceneProps,
   McpFormSceneProps,
+  SkillDetailSceneProps,
   SkillEditSceneProps,
   SkillFormSceneProps,
   ToolboxFormSceneProps,
@@ -13,6 +15,8 @@ export { UnitManagementListScene } from "@/modules/execution-factory/scenes/Unit
 export { UnitFormScene } from "@/modules/execution-factory/scenes/UnitFormScene";
 export { ToolboxFormScene } from "@/modules/execution-factory/scenes/ToolboxFormScene";
 export { ToolboxToolsScene } from "@/modules/execution-factory/scenes/ToolboxToolsScene";
+export { McpDetailScene } from "@/modules/execution-factory/scenes/McpDetailScene";
+export { SkillDetailScene } from "@/modules/execution-factory/scenes/SkillDetailScene";
 export { CatalogListScene } from "@/modules/execution-factory/scenes/CatalogListScene";
 export { McpListScene } from "@/modules/execution-factory/scenes/McpListScene";
 export { McpFormScene } from "@/modules/execution-factory/scenes/McpFormScene";

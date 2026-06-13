@@ -1,19 +1,24 @@
 import { Alert, Form, Input, Modal, Typography } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { debugOperator } from "@/modules/execution-factory/services/operator.service";
+import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
 import type {
   OperatorDebugResult,
   OperatorRecord,
   OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
+import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
+import { extractOpenApiOperationsIo } from "@/modules/execution-factory/utils/openapi-operation-io";
 
 type OperatorDebugModalProps = {
+  functionInput?: FunctionInputPayload;
   onClose: () => void;
   onRunComplete?: (entry: OperatorRunLogEntry) => void;
   open: boolean;
+  openapiSpec?: string;
   record: OperatorRecord | null;
 };
 
@@ -22,9 +27,11 @@ type DebugFormValues = {
 };
 
 export function OperatorDebugModal({
+  functionInput,
   onClose,
   onRunComplete,
   open,
+  openapiSpec,
   record,
 }: OperatorDebugModalProps) {
   const { t } = useTranslation();
@@ -32,6 +39,15 @@ export function OperatorDebugModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OperatorDebugResult | null>(null);
+
+  const generatedBody = useMemo(() => {
+    const ioSpec = openapiSpec ? extractOpenApiOperationsIo(openapiSpec)[0]?.io : undefined;
+
+    return buildDefaultDebugBody({
+      functionInput,
+      ioSpec,
+    });
+  }, [functionInput, openapiSpec]);
 
   useEffect(() => {
     if (!open) {
@@ -41,8 +57,8 @@ export function OperatorDebugModal({
       return;
     }
 
-    form.setFieldsValue({ requestBody: "{}" });
-  }, [form, open]);
+    form.setFieldsValue({ requestBody: generatedBody });
+  }, [form, generatedBody, open]);
 
   const handleDebug = async () => {
     if (!record) {
@@ -85,6 +101,7 @@ export function OperatorDebugModal({
 
   return (
     <Modal
+      confirmLoading={submitting}
       destroyOnClose
       okText={t("executionFactory.runDebug")}
       onCancel={onClose}
@@ -94,16 +111,16 @@ export function OperatorDebugModal({
       open={open}
       title={t("executionFactory.debugTitle")}
       width={720}
-      confirmLoading={submitting}
     >
       {record ? (
         <Typography.Paragraph type="secondary">
           {record.name} ({record.operatorId} @ {record.version})
         </Typography.Paragraph>
       ) : null}
+      <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
       <Form form={form} layout="vertical">
         <Form.Item label={t("executionFactory.debugRequestBody")} name="requestBody">
-          <Input.TextArea placeholder="{}" rows={6} />
+          <Input.TextArea placeholder="{}" rows={8} />
         </Form.Item>
       </Form>
       {error ? <Alert message={error} showIcon style={{ marginBottom: 16 }} type="error" /> : null}

@@ -1,21 +1,22 @@
 import { Alert, Form, Input, Modal, Typography } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { debugTool } from "@/modules/execution-factory/services/tool.service";
+import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
 import type {
   ToolDebugResult,
-  ToolDetail,
   ToolRecord,
   ToolRunLogEntry,
   ToolIoSpec,
 } from "@/modules/execution-factory/types/tool";
-import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/tool-io";
+import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
 
 type ToolDebugModalProps = {
   boxId: string;
   defaultRequestBody?: string;
+  functionInput?: FunctionInputPayload;
   ioSpec?: ToolIoSpec;
   onClose: () => void;
   onRunComplete?: (entry: ToolRunLogEntry) => void;
@@ -30,6 +31,7 @@ type DebugFormValues = {
 export function ToolDebugModal({
   boxId,
   defaultRequestBody,
+  functionInput,
   ioSpec,
   onClose,
   onRunComplete,
@@ -42,6 +44,16 @@ export function ToolDebugModal({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ToolDebugResult | null>(null);
 
+  const generatedBody = useMemo(
+    () =>
+      defaultRequestBody ??
+      buildDefaultDebugBody({
+        ioSpec,
+        functionInput,
+      }),
+    [defaultRequestBody, functionInput, ioSpec],
+  );
+
   useEffect(() => {
     if (!open) {
       form.resetFields();
@@ -51,9 +63,9 @@ export function ToolDebugModal({
     }
 
     form.setFieldsValue({
-      requestBody: defaultRequestBody ?? buildDefaultDebugBody(ioSpec),
+      requestBody: generatedBody,
     });
-  }, [defaultRequestBody, form, ioSpec, open]);
+  }, [form, generatedBody, open]);
 
   const handleDebug = async () => {
     if (!record) {
@@ -108,9 +120,10 @@ export function ToolDebugModal({
           {record.name} ({record.toolId})
         </Typography.Paragraph>
       ) : null}
+      <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
       <Form form={form} layout="vertical">
         <Form.Item label={t("executionFactory.debugRequestBody")} name="requestBody">
-          <Input.TextArea placeholder="{}" rows={6} />
+          <Input.TextArea placeholder="{}" rows={8} />
         </Form.Item>
       </Form>
       {error ? <Alert message={error} showIcon style={{ marginBottom: 16 }} type="error" /> : null}

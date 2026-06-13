@@ -69,17 +69,13 @@ export function CreateExecutionUnitWizard({
     handleClose();
   };
 
-  const handleOperatorModeSelect = (mode: CreateOperatorMode) => {
-    setOperatorMode(mode);
-    void navigate(`/execution-factory/units/new?metadataType=${mode}`);
-  };
-
   const handleOperatorContinue = () => {
     if (!operatorMode) {
       return;
     }
 
     void navigate(`/execution-factory/units/new?metadataType=${operatorMode}`);
+    handleClose();
   };
 
   const renderStepBody = () => {
@@ -93,7 +89,6 @@ export function CreateExecutionUnitWizard({
           <CreateOperatorTypeStep
             mode={operatorMode}
             onModeChange={setOperatorMode}
-            onSelect={handleOperatorModeSelect}
           />
         );
       case "toolbox":

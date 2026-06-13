@@ -1,6 +1,6 @@
 # Execution Factory E2E Test Matrix
 
-Comprehensive end-to-end coverage for `/execution-factory` tabs and creation paths.
+Comprehensive end-to-end coverage for **Capability UX v2** (`capabilityUxV2=true` by default).
 Automated specs live in `tests/e2e/specs/execution-factory/`.
 
 ## Prerequisites
@@ -27,100 +27,80 @@ npm run test:full
 
 From repo root: `corepack pnpm test:execution-factory:e2e:full`
 
+Playwright init script (`helpers/execution-unit-ui.ts`) forces `capabilityUxV2=true` and API proxy `/api` unless a spec opts into legacy via `ensureLegacyE2eRuntime`.
+
+---
+
+## UX v2 entry points (what tests target)
+
+| User action | V2 UI | Legacy (flag off) |
+|-------------|-------|-------------------|
+| Primary tabs | 工具集 / MCP 服务 / Skill 包 | + 算子 tab in main nav |
+| Create | **添加能力** wizard (contextual) | 新建工具箱 / 新建 MCP / … |
+| Operator dev | `?activeTab=operator` deep link → **新建算子** | Same tab in main nav |
+| Import | **导入** → OpenAPI \| **备份文件** | ADP terminology removed |
+| Export | Card menu / detail **导出** (backup for impex) | unchanged API |
+| Version | Operator **版本历史**; Skill **发布历史** | same |
+
 ---
 
 ## Matrix
 
 | ID | Tab / Page | Feature path | Spec | Status |
 |----|------------|--------------|------|--------|
-| UI-operator | 算子 | Tab load + 新建算子 overlay | `e2e-ui-tabs.spec.ts` | auto |
-| UI-toolbox | 工具箱 | Tab load + 新建工具箱 overlay | `e2e-ui-tabs.spec.ts` | auto |
-| UI-mcp | MCP | Tab load + 新建 MCP drawer | `e2e-ui-tabs.spec.ts` | auto |
-| UI-skill | Skill | Tab load + 导入 Skill modal | `e2e-ui-tabs.spec.ts` | auto |
+| CAP-V2-01..09 | 执行能力管理 | V2 shell, wizard, operator deep link, import backup tab, OpenAPI IO preview | `e2e-capability-v2.spec.ts` | auto |
+| QA-01..07 | 工具集 | Quick add API + publish + export + list + debug + IO preview | `e2e-quick-api.spec.ts` | auto |
+| UI-toolbox/mcp/skill | 主 Tab | Tab load + 添加能力直达配置 | `e2e-ui-tabs.spec.ts` | auto |
+| UI-operator-advanced | 算子开发 | Deep link + 新建算子 legacy wizard | `e2e-ui-tabs.spec.ts` | auto |
+| UI-legacy-toolbox | 工具箱 | Legacy UX (`capabilityUxV2=false`) | `e2e-ui-tabs.spec.ts` | auto |
 | UI-catalog | 全部执行单元 | Catalog page load | `e2e-ui-tabs.spec.ts` | auto |
-| UI-operator-form | 注册算子 | Function metadata form + definition sections | `e2e-ui-tabs.spec.ts` | auto |
-| UI-operator-wizard | 注册算子 | Create wizard step 1 type selection | `e2e-ui-tabs.spec.ts` | auto |
-| AT-01..03 | 算子 | UI list / wizard create / API publish | `operator.at.spec.ts` | auto |
-| OP-01 | 算子 | OpenAPI register (API) | `e2e-operator.spec.ts` | auto |
-| OP-02 | 算子 | Function register + sandbox execute | `e2e-operator.spec.ts` | auto |
-| OP-03 | 算子 | Publish + market verify | `e2e-operator.spec.ts` | auto |
-| OP-04 | 算子 | ADP impex export/import copy | `e2e-operator.spec.ts` | auto |
-| OP-05 | 算子 | Debug OpenAPI operator | `e2e-operator.spec.ts` | auto |
-| OP-UI | 算子 | UI OpenAPI wizard create | `operator.at.spec.ts` AT-02 | auto |
-| TB-01 | 工具箱 | Create toolbox (OpenAPI JSON) | `e2e-toolbox.spec.ts` | auto |
-| TB-02 | 工具箱 | Add tool to toolbox | `e2e-toolbox.spec.ts` | auto |
-| TB-03 | 工具箱 | Publish + market verify | `e2e-toolbox.spec.ts` | auto |
-| TB-04 | 工具箱 | ADP impex export/import | `e2e-toolbox.spec.ts` | auto |
-| TB-05 | 工具箱 | Batch OpenAPI tool import | `e2e-toolbox.spec.ts` | auto |
-| TB-UI | 工具箱 | Tools page export + function tool create drawer | `e2e-ux-regression.spec.ts` UX-026/027 | auto |
-| MCP-01 | MCP | tool_imported create | `e2e-mcp.spec.ts` | auto |
-| MCP-02 | MCP | Publish + market | `e2e-mcp.spec.ts` | auto |
-| MCP-03 | MCP | ADP impex export/import | `e2e-mcp.spec.ts` | auto |
-| MCP-SSE | MCP | Custom SSE + parse/sse | manual (needs MCP server) | deferred |
-| SK-01 | Skill | SKILL.md upload | `e2e-skill.spec.ts` | auto |
-| SK-02 | Skill | Content preview API | `e2e-skill.spec.ts` | auto |
-| SK-03 | Skill | Publish + market | `e2e-skill.spec.ts` | auto |
-| SK-04 | Skill | Zip package upload | `e2e-skill.spec.ts` | auto |
-| FN-01 | 函数 | Sandbox execute | `e2e-function.spec.ts` | auto |
-| FN-02 | 函数 | Python template | `e2e-function.spec.ts` | auto |
-| FN-03 | 函数 | AI prompt fetch | `e2e-function.spec.ts` | auto |
-| FN-04 | 函数 | AI code generate | `e2e-function.spec.ts` | auto |
-| CAT-01 | 全部执行单元 | Install via impex copy | `e2e-catalog.spec.ts` | auto |
-| CAT-02 | 全部执行单元 | Catalog UI lists published item | `e2e-catalog.spec.ts` | auto |
-| CAT-03 | 全部执行单元 | Catalog install via impex create | `e2e-catalog.spec.ts` | auto |
-| CAT-UI-01 | 全部执行单元 | Catalog install from market UI | `e2e-version-ui.spec.ts` | auto |
-| IMPEX-01 | 算子 | ADP import create mode | `e2e-impex.spec.ts` | auto |
-| IMPEX-02 | 算子 | ADP import upsert mode | `e2e-impex.spec.ts` | auto |
-| IMPEX-03 | 工具箱 | ADP import create mode | `e2e-impex.spec.ts` | auto |
-| IMPEX-04 | MCP | ADP import create mode | `e2e-impex.spec.ts` | auto |
-| IMPEX-UI-01 | 算子 | UI ADP import | `e2e-impex-ui.spec.ts` | auto |
-| IMPEX-UI-02 | 算子 | UI ADP export download | `e2e-impex-ui.spec.ts` | auto |
-| IMPEX-UI-03 | 工具箱 | UI ADP export from card menu | `e2e-impex-ui.spec.ts` | auto |
-| VER-01 | 算子 | Publish creates version history | `e2e-version.spec.ts` | auto |
-| VER-02 | 算子 | Edit + republish adds history | `e2e-version.spec.ts` | auto |
-| VER-03 | 算子 | Unpublish / offline status | `e2e-version.spec.ts` | auto |
-| VER-04 | 工具箱/MCP | Publish / unpublish / offline | `e2e-version.spec.ts` | auto |
-| VER-05 | Skill | Publish history + republish draft | `e2e-version.spec.ts` | auto |
-| VER-UI-01 | 算子 | Version history drawer | `e2e-version-ui.spec.ts` | auto |
-| VER-UI-02 | Skill | Release history drawer | `e2e-version-ui.spec.ts` | auto |
-| UX-003 | 算子 | Card opens detail drawer | `e2e-ux-regression.spec.ts` | auto |
-| UX-017 | 算子 | Wizard 函数选择 → 注册表单 | `e2e-ux-regression.spec.ts` | auto |
-| UX-018 | 算子 | Function form inputs/logic/outputs order | `e2e-ux-regression.spec.ts` | auto |
-| UX-019 | 算子 | Wizard OpenAPI 选择 → 注册表单 | `e2e-ux-regression.spec.ts` | auto |
-| UX-021 | Skill | Catalog introduce action | `e2e-ux-regression.spec.ts` | auto |
-| UX-024 | 工具箱 | Drawer inline edit (no navigate away) | `e2e-ux-regression.spec.ts` | auto |
-| UX-025 | 工具箱 | Drawer export ADP download | `e2e-ux-regression.spec.ts` | auto |
-| UX-026 | 工具箱 | Tools page header export | `e2e-ux-regression.spec.ts` | auto |
-| UX-027 | 工具箱 | Function toolbox tool create fields | `e2e-ux-regression.spec.ts` | auto |
-| UX-028 | 创建向导 | Step 2 content per tab | `e2e-ux-regression.spec.ts` | auto |
-| UX-034 | 路由 | Legacy create deep link redirect | `e2e-ux-regression.spec.ts` | auto |
-| UI-COV-* | 全模块 | 列表/向导/详情/菜单/路由全面 UI 覆盖 | `e2e-ui-coverage.spec.ts` | auto |
+| AT-01..03 | 算子开发 | List / wizard create / API publish status | `operator.at.spec.ts` | auto |
+| IMPEX-UI-01..05 | 算子/工具集/MCP | UI backup import/export + roundtrip | `e2e-impex-ui.spec.ts` | auto |
+| VER-UI-01..04 | 算子/Skill | Version history drawers + republish + export/import clone | `e2e-version-ui.spec.ts` | auto |
+| CAT-UI-01 | 全部执行单元 | Market install (impex-backed) | `e2e-version-ui.spec.ts` | auto |
+| UI-COV-* | 全模块 | List / wizard / detail drawer → detail page / routes | `e2e-ui-coverage.spec.ts` | auto |
+| UI-MCP-SK-DTL | MCP / Skill | 详情页：工具 schema + 调试 / Skill 正文 + 文件预览 | `e2e-ui-coverage.spec.ts` (UI-COV-024/027/028) | auto |
+| SK-05 | Skill API | 管理态 files/read 读取包内文件 | `e2e-skill.spec.ts` | auto |
+| UX-003..034 | 回归 | Drawer, export, wizard, redirects | `e2e-ux-regression.spec.ts` | auto |
+| OP/TB/MCP/SK/FN/VER/IMPEX/CAT | API层 | Backend flows (non-UI) | `e2e-*.spec.ts` | auto |
 
-### UI-COV 覆盖范围（`e2e-ui-coverage.spec.ts`）
+### IMPEX-UI (backup file = 导出产物)
 
-| ID | 区域 | 覆盖点 |
-|----|------|--------|
-| UI-COV-001..005 | 列表壳层 | pageIntro、toolbarHint、分类/状态筛选、搜索 |
-| UI-COV-010..014 | 创建向导 | 类型切换、无编排入口、函数算子 UI 创建、表单锚点、OpenAPI 三来源、导入弹窗 |
-| UI-COV-020..027 | 卡片/详情 | 四类资源详情 Drawer、算子编辑/调试/发布、MCP/Skill 菜单 |
-| UI-COV-030a..c | 路由迁移 | toolboxes/new、mcp/new、mcp 旧入口 |
-| UI-COV-031 | 工具页 | 面包屑层级 |
-| UI-COV-040..041 | 端到端 | OpenAPI/工具箱完整新建路径 |
+| ID | Scenario |
+|----|----------|
+| IMPEX-UI-01 | Operator backup **新建** import via UI |
+| IMPEX-UI-02 | Operator export from card menu |
+| IMPEX-UI-03 | Toolbox export from card menu |
+| IMPEX-UI-04 | MCP export from card menu |
+| IMPEX-UI-05 | Published toolbox export → UI import clone |
+
+### VER-UI (version + impex)
+
+| ID | Scenario |
+|----|----------|
+| VER-UI-01 | Operator publish → **版本历史** drawer |
+| VER-UI-02 | Skill publish → **发布历史** drawer |
+| VER-UI-03 | Operator republish → ≥2 history entries (API + UI) |
+| VER-UI-04 | Published operator export + UI import clone |
+| CAT-UI-01 | Catalog introduce/sync uses impex export+import |
 
 ---
 
-## UX checklist mapping
+## Helpers (`helpers/execution-unit-ui.ts`)
 
-See `specs/execution-factory/ux-optimization-checklist.md` for UX-001..UX-036 scope. Automated guard cases:
-
-| UX ID | Spec |
-|-------|------|
-| UX-003 | `e2e-ux-regression.spec.ts` |
-| UX-017..019 | `e2e-ux-regression.spec.ts` |
-| UX-021 | `e2e-ux-regression.spec.ts` |
-| UX-024..028 | `e2e-ux-regression.spec.ts` |
-| UX-034 | `e2e-ux-regression.spec.ts` |
-| UX-036 | matrix + `e2e-ui-tabs.spec.ts` + `e2e-ux-regression.spec.ts` |
+| Helper | Purpose |
+|--------|---------|
+| `ensureE2eRuntime` / `gotoE2ePage` | V2 flag + API proxy |
+| `gotoUnitsTab` / `openAdvancedOperatorTab` | Tab navigation (operator via `?activeTab=operator`) |
+| `openAddCapabilityWizard` | **添加能力** on toolbox/mcp/skill |
+| `openCreateWizard` | **新建算子** legacy wizard on operator tab |
+| `fillAndSubmitQuickAddApi` | cURL quick-add with category wait + IO preview assert |
+| `expectOpenApiOperationsIoPreview` | Collapse IO preview after OpenAPI paste |
+| `openImportModal` / `openImportOpenApiPanel` / `importBackupFileViaUi` | **导入** → OpenAPI \| 备份文件 |
+| `debugToolFromToolsPage` | IO panel or list-item **调试** + run debug |
+| `exportFromCardMenu` | Card **导出** + toast |
+| `openOperatorVersionHistoryDrawer` | Version history from detail |
+| `openSkillReleaseHistoryDrawer` | Skill release history |
 
 ---
 
@@ -128,22 +108,23 @@ See `specs/execution-factory/ux-optimization-checklist.md` for UX-001..UX-036 sc
 
 | Feature | Reason |
 |---------|--------|
-| Flow 编排算子 | Backend/UI stub ("coming soon") |
-| MCP SSE custom server | Requires external MCP at `:8080/sse` |
-| Post-publish permission modal | Stub implementation |
-| Toolbox OpenAPI file upload UI | Covered by API path TB-01/TB-02/TB-05 |
+| Flow 编排算子 | Backend/UI stub |
+| MCP SSE custom server | External MCP at `:8080/sse` |
+| ef-log-bridge | `:8095` — Docker logs for RW-01 |
+| ef-mcp-mock | `:8096/sse` — local MCP for RW-06 |
 
----
+### Realworld scenarios (`e2e-realworld*.spec.ts`)
 
-## Helpers
+| ID | Feature | Spec | Status |
+|----|---------|------|--------|
+| P0-CLEAN | Bulk delete `at_e2e_*` assets | `e2e-cleanup.spec.ts` | New |
+| RW-01..08 | API realworld flows (+ RW-08 openapi bundle) | `e2e-realworld.spec.ts` | Done |
+| RW-UI-01..08 | UI realworld flows (+ RW-UI-08 operator sync bundle) | `e2e-realworld-ui.spec.ts` | Done |
+| RW-X-01..02 | Lifecycle edit/publish/debug | `e2e-realworld.spec.ts` | New |
 
-| File | Purpose |
-|------|---------|
-| `helpers/common.ts` | API base URL, headers, backend health |
-| `helpers/operator.ts` | Operator CRUD, impex, debug |
-| `helpers/execution-unit-ui.ts` | Wizard steps, cards, function form assertions |
-| `helpers/toolbox.ts` | Toolbox + tool CRUD, impex |
-| `helpers/mcp.ts` | MCP tool_imported flows |
-| `helpers/skill.ts` | Skill upload, publish |
-| `helpers/impex.ts` | ADP clone/create payloads for impex |
-| `helpers/function.ts` | Sandbox execute, AI generate |
+```bash
+npm run test:realworld      # cleanup + API + UI
+npm run test:realworld:api
+npm run cleanup:e2e
+```
+| Skill backup impex UI | Import is zip/content wizard only |
