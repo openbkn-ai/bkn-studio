@@ -11,6 +11,7 @@ import {
   BuildTaskConflictError,
   createBuildTask,
   listBuildTasks,
+  updateBuildTask,
 } from "@/modules/data-catalog/services/build-task.service";
 import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type {
@@ -44,9 +45,10 @@ const isTextField = (type: string) => TEXT_TYPE_RE.test(type);
 
 export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTaskModalProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const navigate = useNavigate();
 
+  const [existingTask, setExistingTask] = useState<BuildTask | null>(null);
   const [mode, setMode] = useState<BuildMode>("batch");
   const [schema, setSchema] = useState<ResourceSchemaField[]>(resource.schema);
   const [schemaLoading, setSchemaLoading] = useState(false);
@@ -65,6 +67,7 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
       return;
     }
 
+    setExistingTask(null);
     setMode("batch");
     setEmbeddingFields([]);
     setBuildKeyFields([]);
@@ -97,6 +100,7 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
         existing = null;
       }
       if (existing) {
+        setExistingTask(existing);
         setMode(existing.mode);
         setEmbeddingFields(existing.embeddingFields);
         setBuildKeyFields(existing.buildKeyFields);
@@ -147,6 +151,10 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
     [modelId, models],
   );
 
+  // 已有 batch 任务 → 编辑模式(保存走 PUT + full 重建);streaming 暂不支持编辑
+  const isEditable = existingTask !== null && existingTask.mode === "batch";
+  const streamingLocked = existingTask !== null && existingTask.mode === "streaming";
+
   const toggleField = (
     field: string,
     list: string[],
@@ -177,19 +185,47 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
     }
 
     const useEmbedding = embeddingFields.length > 0 && selectedModel;
+    const payload = {
+      buildKeyFields,
+      embeddingFields,
+      embeddingModel: useEmbedding ? selectedModel.id : "",
+      modelDimensions: useEmbedding ? selectedModel.dimensions : 0,
+      fulltextFields,
+      fulltextAnalyzer: fulltextFields.length > 0 ? fulltextAnalyzer : undefined,
+    };
+
+    // 编辑:改字段会重建索引,二次确认后走 PUT
+    if (isEditable && existingTask) {
+      void modal.confirm({
+        title: t("dataCatalog.build.editConfirmTitle"),
+        content: t("dataCatalog.build.editConfirmContent"),
+        okText: t("dataCatalog.build.editConfirmOk"),
+        cancelText: t("common.cancel"),
+        onOk: async () => {
+          setSaving(true);
+          setError(null);
+          try {
+            await updateBuildTask(existingTask.id, payload);
+            message.success(t("dataCatalog.build.edited"));
+            onCreated(existingTask);
+            onClose();
+          } catch (submitError) {
+            setError(extractRequestErrorMessage(submitError));
+          } finally {
+            setSaving(false);
+          }
+        },
+      });
+      return;
+    }
 
     setSaving(true);
     setError(null);
     try {
       const task = await createBuildTask({
-        buildKeyFields,
-        embeddingFields,
-        embeddingModel: useEmbedding ? selectedModel.id : "",
+        ...payload,
         mode,
-        modelDimensions: useEmbedding ? selectedModel.dimensions : 0,
         resourceId: resource.id,
-        fulltextFields,
-        fulltextAnalyzer: fulltextFields.length > 0 ? fulltextAnalyzer : undefined,
       });
       message.success(t("dataCatalog.build.created", { id: task.id }));
       onCreated(task);
@@ -266,26 +302,33 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
       footer={
         <Space style={{ display: "flex", width: "100%" }}>
           <span style={{ marginRight: "auto", color: "#8b98ac", fontSize: 12 }}>
-            POST /vega-backend/v1/build-tasks
+            {isEditable
+              ? "PUT /vega-backend/v1/build-tasks/:id"
+              : "POST /vega-backend/v1/build-tasks"}
           </span>
           <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
           <AppButton
-            disabled={noModels && embeddingFields.length > 0}
+            disabled={streamingLocked || (noModels && embeddingFields.length > 0)}
             icon={<ThunderboltOutlined />}
             loading={saving}
             onClick={() => void handleSubmit()}
             type="primary"
           >
-            {t("dataCatalog.build.submit")}
+            {isEditable
+              ? t("dataCatalog.build.editSubmit")
+              : t("dataCatalog.build.submit")}
           </AppButton>
         </Space>
       }
       onCancel={onClose}
       open={open}
-      title={t("dataCatalog.build.title")}
+      title={isEditable ? t("dataCatalog.build.editTitle") : t("dataCatalog.build.title")}
       width={680}
     >
       <div style={{ display: "grid", gap: 18 }}>
+        {streamingLocked ? (
+          <Alert message={t("dataCatalog.build.streamingEditLocked")} showIcon type="info" />
+        ) : null}
         <div>
           <div style={{ marginBottom: 7, fontWeight: 600, fontSize: 13, color: "#3e4d66" }}>
             {t("dataCatalog.build.resource")}

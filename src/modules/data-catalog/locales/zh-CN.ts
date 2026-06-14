@@ -160,6 +160,14 @@ export const dataCatalogZhCN = {
     build: {
       title: "索引构建 · 新建 BuildTask",
       submit: "创建并开始构建",
+      editTitle: "编辑索引配置",
+      editSubmit: "保存并重建",
+      editConfirmTitle: "保存并重建索引?",
+      editConfirmContent:
+        "修改字段会重建索引;重建期间该资源检索短暂以旧索引服务,完成后切换到新配置。",
+      editConfirmOk: "保存并重建",
+      edited: "已保存,开始重建索引",
+      streamingEditLocked: "流式任务暂不支持编辑配置,如需修改请删除后重建。",
       created: "构建任务已创建:{{id}}",
       conflict: "该资源已有进行中的构建任务,需等待完成或先暂停监听。",
       resource: "数据资源",
