@@ -156,6 +156,9 @@ export function ResourceDetailPanel({
           {roleSource?.embeddingFields.includes(record.name) ? (
             <span className={[styles.tag, styles.taskRunning].join(" ")}>embedding</span>
           ) : null}
+          {roleSource?.fulltextFields.includes(record.name) ? (
+            <span className={[styles.tag, styles.modeStreaming].join(" ")}>fulltext</span>
+          ) : null}
           {roleSource?.buildKeyFields.includes(record.name) ? (
             <span className={[styles.tag, styles.modeBatch].join(" ")}>build key</span>
           ) : null}
@@ -379,6 +382,18 @@ export function ResourceDetailPanel({
                         ))}
                       </span>
                     </div>
+                    {effective.fulltextFields.length > 0 ? (
+                      <div className={styles.descItem}>
+                        <span className={styles.descLabel}>fulltext_fields</span>
+                        <span className={styles.chipRow}>
+                          {effective.fulltextFields.map((field) => (
+                            <span className={styles.fieldChip} key={field}>
+                              {field}
+                            </span>
+                          ))}
+                        </span>
+                      </div>
+                    ) : null}
                     <div className={styles.descItem}>
                       <span className={styles.descLabel}>
                         {t("dataCatalog.task.model")}

@@ -92,6 +92,15 @@ export type BuildTaskCreateInput = {
 
 export type FulltextAnalyzer = "hanlp_index" | "ik_max_word" | "standard";
 
+export type BuildTaskUpdateInput = {
+  buildKeyFields: string[];
+  embeddingFields: string[];
+  embeddingModel: string;
+  fulltextAnalyzer?: string;
+  fulltextFields: string[];
+  modelDimensions: number;
+};
+
 export type CatalogScanStatus = "failed" | "running" | "succeeded";
 
 export type CatalogScanRecord = {

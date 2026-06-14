@@ -15,6 +15,7 @@ import type {
   BuildTaskCreateInput,
   BuildTaskListQuery,
   BuildTaskStatus,
+  BuildTaskUpdateInput,
 } from "@/modules/data-catalog/types/data-catalog";
 
 type BackendBuildTask = {
@@ -272,6 +273,41 @@ export async function resumeBuildTask(id: string) {
 
   // 后端语义:start = 恢复运行(body 可选)
   await http.post(`/vega-backend/v1/build-tasks/${id}/start`);
+}
+
+export async function updateBuildTask(
+  id: string,
+  input: BuildTaskUpdateInput,
+): Promise<void> {
+  if (useMock) {
+    const task = mockBuildTasks.find((item) => item.id === id);
+    if (task) {
+      task.embeddingFields = input.embeddingFields;
+      task.buildKeyFields = input.buildKeyFields;
+      task.embeddingModel = input.embeddingModel;
+      task.modelDimensions = input.modelDimensions;
+      task.fulltextFields = input.fulltextFields;
+      task.fulltextAnalyzer = input.fulltextAnalyzer ?? "";
+      task.status = "pending";
+      task.syncedCount = 0;
+      task.vectorizedCount = 0;
+      task.error = null;
+      emitMockChange();
+      ensureMockTicker();
+    }
+    await wait(undefined, 120);
+    return;
+  }
+
+  // 编辑配置 + 触发 full 重建(后端 drop 旧索引按新 mapping 重建)。仅 batch。
+  await http.put(`/vega-backend/v1/build-tasks/${id}`, {
+    build_key_fields: input.buildKeyFields.join(","),
+    embedding_fields: input.embeddingFields.join(","),
+    embedding_model: input.embeddingModel,
+    model_dimensions: input.modelDimensions,
+    fulltext_fields: input.fulltextFields.join(","),
+    fulltext_analyzer: input.fulltextAnalyzer || undefined,
+  });
 }
 
 export async function deleteBuildTask(

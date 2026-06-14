@@ -166,6 +166,15 @@ export const dataCatalogEnUS = {
     build: {
       title: "Index Build · New BuildTask",
       submit: "Create & Start Build",
+      editTitle: "Edit Index Config",
+      editSubmit: "Save & Rebuild",
+      editConfirmTitle: "Save and rebuild the index?",
+      editConfirmContent:
+        "Changing fields rebuilds the index; during the rebuild this resource is served by the old index, then switches to the new config once done.",
+      editConfirmOk: "Save & Rebuild",
+      edited: "Saved; index rebuild started",
+      streamingEditLocked:
+        "Editing config is not supported for streaming tasks yet; delete and recreate to change it.",
       created: "Build task created: {{id}}",
       conflict:
         "This resource already has an active build task; wait for it or pause listening first.",
