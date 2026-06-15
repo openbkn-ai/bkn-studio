@@ -286,21 +286,20 @@ export function IndexBuildListScene() {
       render: (_, record) => <BuildProgress task={record} />,
     },
     {
-      key: "embedding",
-      title: "Embedding",
+      key: "index",
+      title: t("dataCatalog.task.indexColumn"),
       render: (_, record) => (
-        <div style={{ display: "grid", gap: 4 }}>
-          <span className={styles.chipRow}>
-            {record.embeddingFields.map((field) => (
-              <span className={styles.fieldChip} key={field}>
-                {field}
-              </span>
-            ))}
-          </span>
-          <span style={{ color: "#8b98ac", fontSize: 12 }}>
-            {record.embeddingModel} · {record.modelDimensions}d
-          </span>
-        </div>
+        <span className={styles.chipRow}>
+          {record.embeddingFields.length > 0 ? (
+            <span className={[styles.tag, styles.taskRunning].join(" ")}>embedding</span>
+          ) : null}
+          {record.fulltextFields.length > 0 ? (
+            <span className={[styles.tag, styles.modeStreaming].join(" ")}>fulltext</span>
+          ) : null}
+          {record.embeddingFields.length === 0 && record.fulltextFields.length === 0 ? (
+            <span style={{ color: "#8b98ac", fontSize: 12 }}>—</span>
+          ) : null}
+        </span>
       ),
     },
     {

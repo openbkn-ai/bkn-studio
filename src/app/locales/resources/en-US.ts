@@ -8,6 +8,7 @@ import { executionFactoryLabEnUS } from "@/modules/execution-factory-lab/locales
 import { executionFactoryEnUS } from "@/modules/execution-factory/locales/en-US";
 import { knowledgeNetworkEnUS } from "@/modules/knowledge-network/locales/en-US";
 import { modelResourcesEnUS } from "@/modules/model-resources/locales/en-US";
+import { systemAdminEnUS } from "@/modules/system-admin/locales/en-US";
 
 export const enUS = {
   ...commonEnUS,
@@ -20,4 +21,5 @@ export const enUS = {
   ...executionFactoryEnUS,
   ...modelResourcesEnUS,
   ...executionFactoryLabEnUS,
+  ...systemAdminEnUS,
 } as const;

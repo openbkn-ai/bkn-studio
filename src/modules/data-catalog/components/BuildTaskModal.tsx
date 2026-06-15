@@ -1,5 +1,5 @@
-import { ThunderboltOutlined } from "@ant-design/icons";
-import { Alert, Input, Modal, Select, Space, Tag } from "antd";
+import { SearchOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { Alert, Input, Modal, Select, Space } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -56,6 +56,7 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
   const [buildKeyFields, setBuildKeyFields] = useState<string[]>([]);
   const [fulltextFields, setFulltextFields] = useState<string[]>([]);
   const [fulltextAnalyzer, setFulltextAnalyzer] = useState<string>("standard");
+  const [fieldFilter, setFieldFilter] = useState("");
   const [models, setModels] = useState<EmbeddingModelOption[]>([]);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [modelId, setModelId] = useState<string>();
@@ -73,6 +74,7 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
     setBuildKeyFields([]);
     setFulltextFields([]);
     setFulltextAnalyzer("standard");
+    setFieldFilter("");
     setError(null);
     setModelsLoaded(false);
     setSchema(resource.schema);
@@ -241,59 +243,83 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
     }
   };
 
-  const fieldChips = (
-    selected: string[],
-    onToggle: (field: string) => void,
-    opts?: { textOnly?: boolean },
-  ) => {
-    if (schemaLoading) {
-      return (
-        <span style={{ color: "#8b98ac", fontSize: 12 }}>
-          {t("dataCatalog.build.schemaLoading")}
-        </span>
-      );
-    }
-    if (schema.length === 0) {
-      return (
-        <span style={{ color: "#8b98ac", fontSize: 12 }}>
-          {t("dataCatalog.build.schemaEmpty")}
-        </span>
-      );
-    }
-    return (
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {schema.map((field) => {
-          const disabled = opts?.textOnly && !isTextField(field.type);
-          const checked = selected.includes(field.name);
-          return (
-            <Tag.CheckableTag
-              checked={checked}
-              key={field.name}
-              onChange={() => {
-                if (disabled) {
-                  return;
-                }
-                onToggle(field.name);
-              }}
-              style={{
-                border: "1px solid",
-                borderColor: checked ? "#2e68ff" : "#d9d9d9",
-                borderRadius: 999,
-                padding: "3px 12px",
-                userSelect: "none",
-                cursor: disabled ? "not-allowed" : "pointer",
-                opacity: disabled ? 0.4 : 1,
-              }}
-              title={disabled ? t("dataCatalog.build.fulltextTypeHint") : undefined}
-            >
-              <code style={{ fontSize: 12 }}>{field.name}</code>{" "}
-              <span style={{ fontSize: 11, opacity: 0.65 }}>{field.type}</span>
-            </Tag.CheckableTag>
-          );
-        })}
-      </div>
-    );
+  // 字段角色矩阵:一字段一行,三角色列勾选(替代原先三段重复字段网格)
+  const roleDefs = [
+    {
+      box: styles.frtBoxEmb,
+      dot: styles.frtDotEmb,
+      id: "emb",
+      list: embeddingFields,
+      name: t("dataCatalog.build.roleEmbedding"),
+      required: true,
+      set: setEmbeddingFields,
+      textOnly: false,
+    },
+    {
+      box: styles.frtBoxKey,
+      dot: styles.frtDotKey,
+      id: "key",
+      list: buildKeyFields,
+      name: t("dataCatalog.build.roleBuildKey"),
+      required: mode === "batch",
+      set: setBuildKeyFields,
+      textOnly: false,
+    },
+    {
+      box: styles.frtBoxFt,
+      dot: styles.frtDotFt,
+      id: "ft",
+      list: fulltextFields,
+      name: t("dataCatalog.build.roleFulltext"),
+      required: false,
+      set: setFulltextFields,
+      textOnly: true,
+    },
+  ] as const;
+
+  const filterText = fieldFilter.trim().toLowerCase();
+  const visibleFields = useMemo(
+    () =>
+      schema.filter((field) => !filterText || field.name.toLowerCase().includes(filterText)),
+    [schema, filterText],
+  );
+  const showFieldSearch = schema.length > 8;
+
+  const eligibleFields = (role: (typeof roleDefs)[number]) =>
+    role.textOnly ? visibleFields.filter((field) => isTextField(field.type)) : visibleFields;
+
+  const columnAllOn = (role: (typeof roleDefs)[number]) => {
+    const eligible = eligibleFields(role);
+    return eligible.length > 0 && eligible.every((field) => role.list.includes(field.name));
   };
+
+  const toggleColumn = (role: (typeof roleDefs)[number]) => {
+    setError(null);
+    const eligible = eligibleFields(role);
+    if (columnAllOn(role)) {
+      const drop = new Set(eligible.map((field) => field.name));
+      role.set(role.list.filter((name) => !drop.has(name)));
+    } else {
+      const next = new Set(role.list);
+      eligible.forEach((field) => next.add(field.name));
+      role.set([...next]);
+    }
+  };
+
+  const cx = (...parts: Array<string | false | undefined>) =>
+    parts.filter(Boolean).join(" ");
+
+  const checkIcon = (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 16 16">
+      <path
+        d="M3.5 8.4l3 3 6-7"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+      />
+    </svg>
+  );
 
   const noModels = modelsLoaded && models.length === 0;
 
@@ -323,7 +349,7 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
       onCancel={onClose}
       open={open}
       title={isEditable ? t("dataCatalog.build.editTitle") : t("dataCatalog.build.title")}
-      width={680}
+      width={880}
     >
       <div style={{ display: "grid", gap: 18 }}>
         {streamingLocked ? (
@@ -400,62 +426,178 @@ export function BuildTaskModal({ onClose, onCreated, open, resource }: BuildTask
 
         <div>
           <div style={{ marginBottom: 7, fontWeight: 600, fontSize: 13, color: "#3e4d66" }}>
-            {t("dataCatalog.build.embeddingFields")}
+            <span style={{ color: "#ef4444", marginRight: 4 }}>*</span>
+            {t("dataCatalog.build.fieldRole")}
             <span style={{ marginLeft: 6, fontWeight: 400, color: "#8b98ac", fontSize: 12 }}>
-              {t("dataCatalog.build.embeddingFieldsHint")}
+              {t("dataCatalog.build.fieldRoleHint")}
             </span>
           </div>
-          {fieldChips(embeddingFields, (field) =>
-            toggleField(field, embeddingFields, setEmbeddingFields),
-          )}
+          <div className={styles.fieldRoleCard}>
+            {schemaLoading ? (
+              <div className={styles.frtEmpty}>{t("dataCatalog.build.schemaLoading")}</div>
+            ) : schema.length === 0 ? (
+              <div className={styles.frtEmpty}>{t("dataCatalog.build.schemaEmpty")}</div>
+            ) : (
+              <>
+                <div className={styles.frtBar}>
+                  {showFieldSearch ? (
+                    <span className={styles.frtSearch}>
+                      <span className={styles.frtSearchIcon}>
+                        <SearchOutlined />
+                      </span>
+                      <input
+                        onChange={(event) => setFieldFilter(event.target.value)}
+                        placeholder={t("dataCatalog.build.fieldFilterPlaceholder")}
+                        type="text"
+                        value={fieldFilter}
+                      />
+                    </span>
+                  ) : (
+                    <span className={styles.frtStat}>
+                      {t("dataCatalog.build.fieldCount", { count: schema.length })}
+                    </span>
+                  )}
+                  <span className={styles.frtSummary}>
+                    {roleDefs.map((role) => (
+                      <span className={styles.frtStat} key={role.id}>
+                        <span className={cx(styles.frtDot, role.dot)} />
+                        {role.name} <b>{role.list.length}</b>
+                      </span>
+                    ))}
+                  </span>
+                </div>
+                <div className={styles.frtScroll}>
+                  <table className={styles.frtTable}>
+                    <thead>
+                      <tr>
+                        <th>{t("dataCatalog.resource.field")}</th>
+                        {roleDefs.map((role) => {
+                          const allOn = columnAllOn(role);
+                          return (
+                            <th className={styles.frtRoleCol} key={role.id}>
+                              <span
+                                className={styles.frtRoleHead}
+                                onClick={() => toggleColumn(role)}
+                              >
+                                <span className={styles.frtRoleName}>
+                                  <span className={cx(styles.frtDot, role.dot)} />
+                                  {role.name}
+                                  {role.required ? (
+                                    <span className={styles.frtReq}>*</span>
+                                  ) : null}
+                                </span>
+                                <span className={cx(styles.frtAll, allOn && styles.frtAllOn)}>
+                                  {allOn
+                                    ? t("dataCatalog.build.clearAll")
+                                    : t("dataCatalog.build.selectAll")}
+                                </span>
+                              </span>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleFields.length === 0 ? (
+                        <tr>
+                          <td className={styles.frtEmpty} colSpan={4}>
+                            {t("dataCatalog.build.fieldNoMatch", { keyword: fieldFilter })}
+                          </td>
+                        </tr>
+                      ) : (
+                        visibleFields.map((field) => {
+                          const active = roleDefs.some((role) =>
+                            role.list.includes(field.name),
+                          );
+                          return (
+                            <tr
+                              className={active ? styles.frtRowActive : undefined}
+                              key={field.name}
+                            >
+                              <td className={styles.frtField}>
+                                <code>{field.name}</code>
+                                <span className={styles.frtFieldType}>{field.type}</span>
+                              </td>
+                              {roleDefs.map((role) => {
+                                const disabled =
+                                  role.textOnly && !isTextField(field.type);
+                                const checked = role.list.includes(field.name);
+                                return (
+                                  <td className={styles.frtCell} key={role.id}>
+                                    <span
+                                      className={cx(
+                                        styles.frtBox,
+                                        role.box,
+                                        checked && styles.frtBoxChecked,
+                                        disabled && styles.frtBoxDisabled,
+                                      )}
+                                      onClick={() => {
+                                        if (disabled) {
+                                          return;
+                                        }
+                                        toggleField(field.name, role.list, role.set);
+                                      }}
+                                      title={
+                                        disabled
+                                          ? t("dataCatalog.build.fulltextTypeHint")
+                                          : undefined
+                                      }
+                                    >
+                                      <span className={styles.frtMark}>{checkIcon}</span>
+                                    </span>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+          <div className={styles.frtLegend}>
+            <span>
+              <span className={cx(styles.frtDot, styles.frtDotEmb)} />
+              {t("dataCatalog.build.roleEmbedding")} ＝ {t("dataCatalog.build.legendEmbedding")}；
+            </span>
+            <span>
+              <span className={cx(styles.frtDot, styles.frtDotKey)} />
+              {t("dataCatalog.build.roleBuildKey")} ＝{" "}
+              {mode === "batch"
+                ? t("dataCatalog.build.legendBuildKeyBatch")
+                : t("dataCatalog.build.legendBuildKeyStreaming")}
+              ；
+            </span>
+            <span>
+              <span className={cx(styles.frtDot, styles.frtDotFt)} />
+              {t("dataCatalog.build.roleFulltext")} ＝ {t("dataCatalog.build.legendFulltext")}。
+            </span>
+          </div>
         </div>
 
-        <div>
-          <div style={{ marginBottom: 7, fontWeight: 600, fontSize: 13, color: "#3e4d66" }}>
-            {t("dataCatalog.build.buildKeyFields")}
-            <span style={{ marginLeft: 6, fontWeight: 400, color: "#8b98ac", fontSize: 12 }}>
-              {t("dataCatalog.build.buildKeyFieldsHint")}
-            </span>
-          </div>
-          {fieldChips(buildKeyFields, (field) =>
-            toggleField(field, buildKeyFields, setBuildKeyFields),
-          )}
-        </div>
-
-        <div>
-          <div style={{ marginBottom: 7, fontWeight: 600, fontSize: 13, color: "#3e4d66" }}>
-            {t("dataCatalog.build.fulltextFields")}
-            <span style={{ marginLeft: 6, fontWeight: 400, color: "#8b98ac", fontSize: 12 }}>
-              {t("dataCatalog.build.fulltextFieldsHint")}
-            </span>
-          </div>
-          {fieldChips(
-            fulltextFields,
-            (field) => toggleField(field, fulltextFields, setFulltextFields),
-            { textOnly: true },
-          )}
-          {fulltextFields.length > 0 ? (
-            <div style={{ marginTop: 10 }}>
-              <div style={{ marginBottom: 7, fontWeight: 600, fontSize: 13, color: "#3e4d66" }}>
-                {t("dataCatalog.build.fulltextAnalyzer")}
-                <span
-                  style={{ marginLeft: 6, fontWeight: 400, color: "#8b98ac", fontSize: 12 }}
-                >
-                  {t("dataCatalog.build.fulltextAnalyzerHint")}
-                </span>
-              </div>
-              <Select
-                onChange={(value) => setFulltextAnalyzer(value)}
-                options={FULLTEXT_ANALYZERS.map((analyzer) => ({
-                  label: t(`dataCatalog.build.analyzers.${analyzer}`),
-                  value: analyzer,
-                }))}
-                style={{ width: 260 }}
-                value={fulltextAnalyzer}
-              />
+        {fulltextFields.length > 0 ? (
+          <div>
+            <div style={{ marginBottom: 7, fontWeight: 600, fontSize: 13, color: "#3e4d66" }}>
+              <span style={{ color: "#ef4444", marginRight: 4 }}>*</span>
+              {t("dataCatalog.build.fulltextAnalyzer")}
+              <span style={{ marginLeft: 6, fontWeight: 400, color: "#8b98ac", fontSize: 12 }}>
+                {t("dataCatalog.build.fulltextAnalyzerHint")}
+              </span>
             </div>
-          ) : null}
-        </div>
+            <Select
+              onChange={(value) => setFulltextAnalyzer(value)}
+              options={FULLTEXT_ANALYZERS.map((analyzer) => ({
+                label: t(`dataCatalog.build.analyzers.${analyzer}`),
+                value: analyzer,
+              }))}
+              style={{ width: 420 }}
+              value={fulltextAnalyzer}
+            />
+          </div>
+        ) : null}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <div>

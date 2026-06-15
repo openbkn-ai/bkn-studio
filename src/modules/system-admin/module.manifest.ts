@@ -1,0 +1,36 @@
+export const systemAdminModuleManifest = {
+  id: "system-admin",
+  name: "System Admin",
+  permissions: [
+    "admin-user:create",
+    "admin-user:edit",
+    "admin-user:delete",
+    "admin-user:toggle",
+    "admin-user:reset-password",
+    "admin-dept:create",
+    "admin-dept:edit",
+    "admin-dept:delete",
+    "admin-role:create",
+    "admin-role:edit",
+    "admin-role:delete",
+    "admin-role:members",
+  ],
+  requiresShell: true,
+  supportsEmbedded: false,
+  supportsReadOnly: false,
+  services: ["user-management/users", "user-management/departments", "authorization/roles", "authorization/role-members"],
+  scenes: [
+    {
+      id: "system-admin.users",
+      exportName: "UserManagementScene",
+      description: "Manage platform users and the department (org) tree: create, edit, freeze, disable, reset password.",
+      inputs: [],
+    },
+    {
+      id: "system-admin.roles",
+      exportName: "RoleManagementScene",
+      description: "Manage authorization roles, their grouped permission points, and user/department members.",
+      inputs: [],
+    },
+  ],
+} as const;

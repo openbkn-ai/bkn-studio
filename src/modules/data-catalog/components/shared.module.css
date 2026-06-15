@@ -208,13 +208,13 @@
   justify-content: space-between;
   gap: 24px;
   flex-wrap: wrap;
-  padding-bottom: 20px;
+  padding-bottom: 14px;
   border-bottom: 1px solid rgba(15, 30, 54, 0.08);
 }
 
 .detailHeadMain {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -228,7 +228,7 @@
 .detailTitle {
   margin: 0;
   color: #152239;
-  font-size: 24px;
+  font-size: 21px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -252,14 +252,14 @@
 .statStrip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin: 20px 0;
+  gap: 10px;
+  margin: 14px 0;
 }
 
 .statCard {
-  padding: 14px 18px;
+  padding: 8px 14px;
   border: 1px solid rgba(18, 40, 72, 0.08);
-  border-radius: 16px;
+  border-radius: 12px;
   background: #f9fbff;
 }
 
@@ -269,18 +269,18 @@
 }
 
 .statValue {
-  margin-top: 4px;
+  margin-top: 2px;
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
   color: #152239;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
 }
 
 .statValueSmall {
-  font-size: 17px;
+  font-size: 15px;
 }
 
 .statValue small {
@@ -292,16 +292,19 @@
 .sectionGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-  margin-bottom: 18px;
+  gap: 14px;
+  margin-bottom: 14px;
+  align-items: stretch;
 }
 
 .sectionCard {
   border: 1px solid rgba(18, 40, 72, 0.08);
-  border-radius: 20px;
+  border-radius: 16px;
   background: #ffffff;
-  padding: 20px 22px;
+  padding: 12px 16px;
   min-width: 0;
+  /* sectionGrid 两卡等高:内容少的一侧(扫描管理)拉伸到与连接信息齐平 */
+  height: 100%;
 }
 
 .sectionCardFlat {
@@ -313,13 +316,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
 .sectionTitle {
   margin: 0;
   color: #152239;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -338,12 +341,12 @@
 .descGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 24px;
+  gap: 8px 20px;
 }
 
 .descItem {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -358,8 +361,11 @@
 
 .descValue {
   color: #152239;
-  font-size: 14px;
-  word-break: break-all;
+  font-size: 13px;
+  /* 定宽截断:长文本省略号,完整值靠 title 悬浮提示 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calloutWarn {
@@ -379,6 +385,25 @@
   margin-top: 3px;
   flex: none;
   color: #d97706;
+}
+
+.calloutNote {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 10px;
+  background: rgba(100, 116, 139, 0.06);
+  color: #475569;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.calloutNote :global(.anticon) {
+  margin-top: 3px;
+  flex: none;
+  color: #64748b;
 }
 
 .scanList {
@@ -481,4 +506,293 @@
   .statStrip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* ===== 字段角色矩阵(BuildTaskModal):一字段一行,三角色列勾选 ===== */
+.fieldRoleCard {
+  border: 1px solid rgba(15, 30, 54, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.frtBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+  background: #fafbfd;
+}
+
+.frtSearch {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  max-width: 280px;
+}
+
+.frtSearchIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca8ba;
+  display: inline-flex;
+  pointer-events: none;
+}
+
+.frtSearch input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px 0 30px;
+  border: 1px solid rgba(15, 30, 54, 0.14);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #152239;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.frtSearch input:focus {
+  border-color: #2e68ff;
+}
+
+.frtSummary {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.frtStat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #5a6b85;
+  white-space: nowrap;
+}
+
+.frtStat b {
+  color: #152239;
+  font-variant-numeric: tabular-nums;
+}
+
+.frtDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.frtDotEmb {
+  background: #2e68ff;
+}
+
+.frtDotKey {
+  background: #e8973a;
+}
+
+.frtDotFt {
+  background: #16a394;
+}
+
+.frtScroll {
+  max-height: 304px;
+  overflow: auto;
+}
+
+.frtScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.frtScroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: rgba(15, 30, 54, 0.18);
+}
+
+.frtTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.frtTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f4f6fa;
+  color: #3e4d66;
+  font-weight: 600;
+  text-align: left;
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.1);
+  white-space: nowrap;
+}
+
+.frtRoleCol {
+  text-align: center !important;
+  width: 116px;
+}
+
+.frtRoleHead {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.frtRoleName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #152239;
+}
+
+.frtReq {
+  color: #ef4444;
+}
+
+.frtAll {
+  font-size: 11px;
+  color: #8b98ac;
+  font-weight: 500;
+}
+
+.frtAllOn {
+  color: #2e68ff;
+}
+
+.frtTable tbody tr {
+  border-top: 1px solid rgba(15, 30, 54, 0.05);
+}
+
+.frtTable tbody tr:first-child {
+  border-top: 0;
+}
+
+.frtTable tbody tr:hover {
+  background: #f7f9fc;
+}
+
+.frtRowActive {
+  background: rgba(46, 104, 255, 0.045);
+}
+
+.frtField {
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.frtField code {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12.5px;
+  color: #152239;
+}
+
+.frtFieldType {
+  margin-left: 8px;
+  color: #9ca8ba;
+  font-size: 11px;
+}
+
+.frtCell {
+  padding: 0;
+  text-align: center;
+}
+
+.frtBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 39px;
+  cursor: pointer;
+}
+
+.frtBoxDisabled {
+  cursor: not-allowed;
+  opacity: 0.32;
+}
+
+.frtMark {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(15, 30, 54, 0.22);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.frtMark svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.frtBox:not(.frtBoxDisabled):hover .frtMark {
+  border-color: currentColor;
+}
+
+.frtBoxEmb:not(.frtBoxDisabled):hover .frtMark {
+  color: #2e68ff;
+}
+
+.frtBoxKey:not(.frtBoxDisabled):hover .frtMark {
+  color: #e8973a;
+}
+
+.frtBoxFt:not(.frtBoxDisabled):hover .frtMark {
+  color: #16a394;
+}
+
+.frtBoxChecked .frtMark svg {
+  opacity: 1;
+}
+
+.frtBoxEmb.frtBoxChecked .frtMark {
+  background: #2e68ff;
+  border-color: #2e68ff;
+}
+
+.frtBoxKey.frtBoxChecked .frtMark {
+  background: #e8973a;
+  border-color: #e8973a;
+}
+
+.frtBoxFt.frtBoxChecked .frtMark {
+  background: #16a394;
+  border-color: #16a394;
+}
+
+.frtEmpty {
+  padding: 22px 14px;
+  text-align: center;
+  color: #8b98ac;
+  font-size: 12.5px;
+}
+
+.frtLegend {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  color: #8b98ac;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.frtLegend .frtDot {
+  margin: 0 2px 0 4px;
 }

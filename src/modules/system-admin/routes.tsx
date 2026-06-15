@@ -1,0 +1,49 @@
+import { lazy, Suspense, type ReactNode } from "react";
+import type { RouteObject } from "react-router-dom";
+
+import type { AppRouteContribution } from "@/app/router/types";
+import { RouteLoading } from "@/app/router/RouteLoading";
+
+const UserManagementPage = lazy(async () => {
+  const module = await import("@/modules/system-admin/pages/UserManagementPage");
+  return { default: module.UserManagementPage };
+});
+
+const RoleManagementPage = lazy(async () => {
+  const module = await import("@/modules/system-admin/pages/RoleManagementPage");
+  return { default: module.RoleManagementPage };
+});
+
+function withRouteLoading(element: ReactNode) {
+  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
+}
+
+export const systemAdminRoutes: RouteObject[] = [
+  {
+    path: "system/users",
+    handle: {
+      console: {
+        descriptionKey: "systemAdmin.users.description",
+        menuKey: "user-management",
+        titleKey: "systemAdmin.users.title",
+      },
+    },
+    element: withRouteLoading(<UserManagementPage />),
+  },
+  {
+    path: "system/roles",
+    handle: {
+      console: {
+        descriptionKey: "systemAdmin.roles.description",
+        menuKey: "role-management",
+        titleKey: "systemAdmin.roles.title",
+      },
+    },
+    element: withRouteLoading(<RoleManagementPage />),
+  },
+];
+
+export const systemAdminRouteContribution: AppRouteContribution = {
+  moduleId: "system-admin",
+  routes: systemAdminRoutes,
+};

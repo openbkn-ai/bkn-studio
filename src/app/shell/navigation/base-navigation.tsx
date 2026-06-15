@@ -48,13 +48,13 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         key: "user-management",
         labelKey: "shell.items.userManagement",
         icon: <TeamOutlined />,
-        disabled: true,
+        path: "/system/users",
       },
       {
         key: "role-management",
         labelKey: "shell.items.roleManagement",
         icon: <SafetyCertificateOutlined />,
-        disabled: true,
+        path: "/system/roles",
       },
       {
         key: "model-management",

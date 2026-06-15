@@ -212,12 +212,13 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     prevActiveRef.current = hasActiveWork;
   }, [hasActiveWork, loadAll]);
 
-  // 无选中时默认选第一个 catalog
+  // 无选中时默认选第一个物理数据源(与树形分组一致,物理优先);无物理时退回第一个 catalog
   useEffect(() => {
     if (loading || selection || catalogs.length === 0) {
       return;
     }
-    void navigate(`/data-catalog/catalog/${catalogs[0].id}`, { replace: true });
+    const target = catalogs.find((item) => item.type !== "logical") ?? catalogs[0];
+    void navigate(`/data-catalog/catalog/${target.id}`, { replace: true });
   }, [catalogs, loading, navigate, selection]);
 
   const scanningCatalogIds = useMemo(() => {

@@ -1,11 +1,14 @@
-import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { ExclamationCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { Modal } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { formatCount } from "@/modules/data-catalog/lib/format";
 import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
+import type { SmallModel } from "@/modules/model-resources/types/small-model";
 
 import styles from "./shared.module.css";
 
@@ -23,6 +26,50 @@ export function BuildTaskDetailModal({
   task,
 }: BuildTaskDetailModalProps) {
   const { t } = useTranslation();
+  const [models, setModels] = useState<SmallModel[]>([]);
+
+  // embedding_model 可能是模型名(studio 建)或数字 model_id(后端建),拉模型表解析成可读名称
+  useEffect(() => {
+    if (!open || !task.embeddingModel) {
+      return;
+    }
+    let active = true;
+    void (async () => {
+      try {
+        const result = await listSmallModels({
+          modelType: "embedding",
+          page: 1,
+          size: 200,
+        });
+        if (active) {
+          setModels(result.items);
+        }
+      } catch {
+        // 解析失败保留原始值
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [open, task.embeddingModel]);
+
+  const modelInfo = useMemo(() => {
+    const match = models.find(
+      (item) =>
+        item.modelId === task.embeddingModel || item.modelName === task.embeddingModel,
+    );
+    return {
+      name: match?.modelName || task.embeddingModel,
+      dimensions: match?.embeddingDim ?? task.modelDimensions,
+    };
+  }, [models, task.embeddingModel, task.modelDimensions]);
+
+  // completed 任务可能仍带非致命 error_msg(如 version_conflict 幂等跳过);
+  // 此时状态标注“有警告”、提示降级为中性说明,避免“已完成”却显示报错的矛盾
+  const succeededWithWarning = task.status === "succeeded" && Boolean(task.error);
+  const statusLabel = succeededWithWarning
+    ? t("dataCatalog.task.statuses.succeededWithWarning")
+    : t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`);
 
   return (
     <Modal
@@ -58,15 +105,20 @@ export function BuildTaskDetailModal({
                     : styles.taskRunning,
             ].join(" ")}
           >
-            {t(
-              `dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`,
-            )}
+            {statusLabel}
           </span>
         </div>
 
         {task.error ? (
-          <div className={styles.calloutWarn} style={{ marginBottom: 0 }}>
-            <ExclamationCircleOutlined />
+          <div
+            className={succeededWithWarning ? styles.calloutNote : styles.calloutWarn}
+            style={{ marginBottom: 0 }}
+          >
+            {succeededWithWarning ? (
+              <InfoCircleOutlined />
+            ) : (
+              <ExclamationCircleOutlined />
+            )}
             <span>{task.error}</span>
           </div>
         ) : null}
@@ -129,11 +181,11 @@ export function BuildTaskDetailModal({
           ) : null}
           <div className={styles.descItem}>
             <span className={styles.descLabel}>embedding_model</span>
-            <span className={styles.descValue}>{task.embeddingModel || "—"}</span>
+            <span className={styles.descValue}>{modelInfo.name || "—"}</span>
           </div>
           <div className={styles.descItem}>
             <span className={styles.descLabel}>model_dimensions</span>
-            <span className={styles.descValue}>{task.modelDimensions}</span>
+            <span className={styles.descValue}>{modelInfo.dimensions}</span>
           </div>
           <div className={styles.descItem}>
             <span className={styles.descLabel}>{t("dataConnect.createTime")}</span>
