@@ -203,14 +203,11 @@ export function CatalogDetailPanel({
       ),
     },
     {
-      dataIndex: "schema",
+      dataIndex: "columnCount",
       title: "Schema",
-      // 列表接口不返回 schema_definition/row_count(后端 GetByIDsBasic),
-      // 0 视为"未返回"显示占位,真实数字看详情
-      render: (_, record) =>
-        record.schema.length > 0
-          ? t("dataCatalog.resource.columnCount", { count: record.schema.length })
-          : "—",
+      // 列表接口用后端标量 column_count(schema_definition 不在列表返回);0 视为未返回
+      render: (value: number) =>
+        value > 0 ? t("dataCatalog.resource.columnCount", { count: value }) : "—",
     },
     {
       dataIndex: "rowCount",
