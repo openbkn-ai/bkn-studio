@@ -81,6 +81,7 @@ export const dataCatalogEnUS = {
       resourceSection: "Data Resources",
       statResources: "Resources",
       statLastScan: "Last Scan",
+      statIndexed: "Indexed",
       logicalNoConfig:
         "A logical catalog is an internal namespace with no external connection config.",
       logicalNoScans: "Logical catalogs do not support scans",
@@ -92,6 +93,8 @@ export const dataCatalogEnUS = {
       emptyResourcesLogical: "No resources yet",
       scanResult:
         "took {{duration}}s · found {{found}} resources ({{fresh}} new)",
+      scanShowMore: "{{count}} more",
+      scanShowLess: "Show less",
       trigger: {
         manual: "manual",
         scheduled: "scheduled",
@@ -112,6 +115,8 @@ export const dataCatalogEnUS = {
       category: "Category",
       rowCount: "Rows",
       indexState: "Index State",
+      searchPlaceholder: "Search resource name",
+      indexFilterPlaceholder: "Index state",
       buildTasks: "Build Tasks",
       columnCount: "{{count}} columns",
       fieldCount: "Fields",
@@ -199,6 +204,20 @@ export const dataCatalogEnUS = {
       fulltextFieldsHint:
         "(text columns to index for keyword search; applied during sync, no separate progress)",
       fulltextTypeHint: "Text-type fields only",
+      fieldRole: "Field Roles",
+      fieldRoleHint: "Check each field's role in the index; multiple allowed",
+      roleEmbedding: "Embedding",
+      roleBuildKey: "Build key",
+      roleFulltext: "Full-text",
+      selectAll: "Select all",
+      clearAll: "Clear",
+      fieldCount: "{{count}} fields",
+      fieldFilterPlaceholder: "Filter field name…",
+      fieldNoMatch: "No fields match “{{keyword}}”",
+      legendEmbedding: "text columns to vectorize (required)",
+      legendBuildKeyBatch: "time / incremental field (required)",
+      legendBuildKeyStreaming: "row ID field (optional)",
+      legendFulltext: "keyword-indexed columns, effective immediately with sync",
       fulltextAnalyzer: "Analyzer",
       fulltextAnalyzerHint:
         "(use ik / hanlp for Chinese data, standard for English / general)",
@@ -219,6 +238,7 @@ export const dataCatalogEnUS = {
     },
     task: {
       column: "Task",
+      indexColumn: "Index",
       create: "New Build Task",
       detail: "Task Detail",
       modalTitle: "Build Task",
@@ -258,6 +278,7 @@ export const dataCatalogEnUS = {
         paused: "Paused",
         stopped: "Stopped",
         succeeded: "Succeeded",
+        succeededWithWarning: "Succeeded (with warning)",
         failed: "Failed",
       },
     },

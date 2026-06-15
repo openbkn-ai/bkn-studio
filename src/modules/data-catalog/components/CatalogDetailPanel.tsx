@@ -3,7 +3,7 @@ import {
   LoadingOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Space } from "antd";
+import { Input, Select, Space } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,7 +15,11 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
-import { indexStateOf, isCatalogPhysical } from "@/modules/data-catalog/lib/index-state";
+import {
+  effectiveIndexOf,
+  indexStateOf,
+  isCatalogPhysical,
+} from "@/modules/data-catalog/lib/index-state";
 import { pauseListeningTasksOfCatalog } from "@/modules/data-catalog/services/build-task.service";
 import { triggerCatalogScan } from "@/modules/data-catalog/services/resource.service";
 import type {
@@ -35,6 +39,17 @@ import type {
 import { IndexStateTag } from "@/modules/data-catalog/components/IndexStateTag";
 
 import styles from "./shared.module.css";
+
+// 索引状态下拉的粗分桶:把 indexStateOf 的细分 key 收敛成可过滤的几类
+const INDEX_FILTERS = ["built", "none", "building", "listening", "failed"] as const;
+
+function indexFilterBucket(key: string) {
+  if (key === "built") return "built";
+  if (key === "none") return "none";
+  if (key === "building" || key === "rebuilding") return "building";
+  if (key === "listening" || key === "paused") return "listening";
+  return "failed"; // failed / failed-stale
+}
 
 type CatalogDetailPanelProps = {
   catalog: DataConnectRecord;
@@ -65,6 +80,9 @@ export function CatalogDetailPanel({
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
   const [testing, setTesting] = useState(false);
+  const [resourceKeyword, setResourceKeyword] = useState("");
+  const [indexFilter, setIndexFilter] = useState<string | undefined>(undefined);
+  const [scansExpanded, setScansExpanded] = useState(false);
 
   const physical = isCatalogPhysical(catalog);
   const connectorType = connectorTypes.find((item) => item.type === catalog.connectorType);
@@ -76,6 +94,35 @@ export function CatalogDetailPanel({
     });
     return map;
   }, [tasks]);
+
+  const filteredResources = useMemo(() => {
+    const kw = resourceKeyword.trim().toLowerCase();
+    return resources.filter((resource) => {
+      if (
+        kw &&
+        !resource.name.toLowerCase().includes(kw) &&
+        !(resource.sourceIdentifier ?? "").toLowerCase().includes(kw)
+      ) {
+        return false;
+      }
+      if (indexFilter) {
+        const key = indexStateOf(tasksByResource.get(resource.id) ?? []).key;
+        if (indexFilterBucket(key) !== indexFilter) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [resources, resourceKeyword, indexFilter, tasksByResource]);
+
+  // 已建索引 = 当前有生效索引在服务的资源数(built / 流式监听 / 重建失败沿用旧索引等)
+  const indexedCount = useMemo(
+    () =>
+      resources.filter(
+        (resource) => effectiveIndexOf(tasksByResource.get(resource.id) ?? []) != null,
+      ).length,
+    [resources, tasksByResource],
+  );
 
   const listeningCount = useMemo(
     () =>
@@ -172,7 +219,7 @@ export function CatalogDetailPanel({
       dataIndex: "name",
       title: t("dataCatalog.resource.name"),
       render: (_, record) => (
-        <div style={{ display: "grid", gap: 4 }}>
+        <div style={{ display: "grid", gap: 4, justifyItems: "start" }}>
           <AppButton
             onClick={() => onSelectResource(record.id)}
             style={{ padding: 0, height: "auto", fontWeight: 600 }}
@@ -180,7 +227,10 @@ export function CatalogDetailPanel({
           >
             {record.name}
           </AppButton>
-          <span className={styles.slugChip}>{record.sourceIdentifier}</span>
+          {/* sourceIdentifier 与 name 相同(物理表常见)时是重复信息,只在不同时展示 */}
+          {record.sourceIdentifier && record.sourceIdentifier !== record.name ? (
+            <span className={styles.slugChip}>{record.sourceIdentifier}</span>
+          ) : null}
         </div>
       ),
     },
@@ -205,6 +255,7 @@ export function CatalogDetailPanel({
     {
       dataIndex: "columnCount",
       title: t("dataCatalog.resource.fieldCount"),
+      sorter: (left, right) => (left.columnCount ?? 0) - (right.columnCount ?? 0),
       // 列表接口用后端标量 column_count(schema_definition 不在列表返回);0 视为未返回
       render: (value: number) =>
         value > 0 ? <span className={styles.monoText}>{value}</span> : "—",
@@ -212,6 +263,7 @@ export function CatalogDetailPanel({
     {
       dataIndex: "rowCount",
       title: t("dataCatalog.resource.rowCount"),
+      sorter: (left, right) => (left.rowCount ?? 0) - (right.rowCount ?? 0),
       render: (value: number) =>
         value > 0 ? <span className={styles.monoText}>{formatCount(value)}</span> : "—",
     },
@@ -275,20 +327,22 @@ export function CatalogDetailPanel({
             >
               {catalog.enabled ? t("common.enabled") : t("common.disabled")}
             </span>
-            <span
-              className={[
-                styles.tag,
-                {
-                  healthy: styles.healthHealthy,
-                  degraded: styles.healthDegraded,
-                  unhealthy: styles.healthUnhealthy,
-                  offline: styles.healthOffline,
-                  unchecked: styles.healthUnchecked,
-                }[catalog.healthStatus],
-              ].join(" ")}
-            >
-              {t(`dataConnect.healthStatuses.${catalog.healthStatus}`)}
-            </span>
+            {catalog.healthStatus !== "unchecked" ? (
+              <span
+                className={[
+                  styles.tag,
+                  {
+                    healthy: styles.healthHealthy,
+                    degraded: styles.healthDegraded,
+                    unhealthy: styles.healthUnhealthy,
+                    offline: styles.healthOffline,
+                    unchecked: styles.healthUnchecked,
+                  }[catalog.healthStatus],
+                ].join(" ")}
+              >
+                {t(`dataConnect.healthStatuses.${catalog.healthStatus}`)}
+              </span>
+            ) : null}
           </div>
           <div className={styles.detailSub}>
             <span className={styles.slugChip}>{catalog.id}</span>
@@ -355,22 +409,9 @@ export function CatalogDetailPanel({
           <div className={[styles.statValue, styles.statValueSmall].join(" ")}>{lastScanText}</div>
         </div>
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>{t("common.healthStatus")}</div>
+          <div className={styles.statLabel}>{t("dataCatalog.catalog.statIndexed")}</div>
           <div className={styles.statValue}>
-            <span
-              className={[
-                styles.tag,
-                {
-                  healthy: styles.healthHealthy,
-                  degraded: styles.healthDegraded,
-                  unhealthy: styles.healthUnhealthy,
-                  offline: styles.healthOffline,
-                  unchecked: styles.healthUnchecked,
-                }[catalog.healthStatus],
-              ].join(" ")}
-            >
-              {t(`dataConnect.healthStatuses.${catalog.healthStatus}`)}
-            </span>
+            {indexedCount} <small>/ {resources.length}</small>
           </div>
         </div>
         <div className={styles.statCard}>
@@ -388,29 +429,61 @@ export function CatalogDetailPanel({
               {t("dataCatalog.catalog.connectionInfo")}{" "}
               <span className={styles.sectionTitleHint}>GET /catalogs/{"{id}"}</span>
             </h3>
+            <div className={styles.sectionTools}>
+              <span
+                className={[
+                  styles.tag,
+                  catalog.enabled ? styles.statusEnabled : styles.statusDisabled,
+                ].join(" ")}
+              >
+                {catalog.enabled ? t("common.enabled") : t("common.disabled")}
+              </span>
+              {catalog.healthStatus !== "unchecked" ? (
+                <span
+                  className={[
+                    styles.tag,
+                    {
+                      healthy: styles.healthHealthy,
+                      degraded: styles.healthDegraded,
+                      unhealthy: styles.healthUnhealthy,
+                      offline: styles.healthOffline,
+                      unchecked: styles.healthUnchecked,
+                    }[catalog.healthStatus],
+                  ].join(" ")}
+                >
+                  {t(`dataConnect.healthStatuses.${catalog.healthStatus}`)}
+                </span>
+              ) : null}
+            </div>
           </div>
           <div className={styles.descGrid}>
             {physical ? (
               <>
-                <div className={styles.descItem}>
-                  <span className={styles.descLabel}>{t("dataConnect.connectorType")}</span>
-                  <span className={styles.descValue}>
-                    {connectorType
-                      ? `${connectorType.name}(${t(`dataConnect.categories.${connectorType.category}`)})`
-                      : catalog.connectorType || "—"}
-                  </span>
-                </div>
+                {(() => {
+                  const connectorTypeText = connectorType
+                    ? `${connectorType.name}(${t(`dataConnect.categories.${connectorType.category}`)})`
+                    : catalog.connectorType || "—";
+                  return (
+                    <div className={styles.descItem}>
+                      <span className={styles.descLabel}>{t("dataConnect.connectorType")}</span>
+                      <span className={styles.descValue} title={connectorTypeText}>
+                        {connectorTypeText}
+                      </span>
+                    </div>
+                  );
+                })()}
                 <div className={styles.descItem}>
                   <span className={styles.descLabel}>{t("common.mode")}</span>
                   <span className={styles.descValue}>{t(`dataConnect.modes.${catalog.mode}`)}</span>
                 </div>
                 {Object.entries(catalog.connectorConfig).map(([key, value]) => {
                   const field = connectorType?.fieldConfig[key];
+                  const text = field?.encrypted ? "••••••••" : String(value ?? "—");
                   return (
                     <div className={styles.descItem} key={key}>
                       <span className={styles.descLabel}>{field?.name ?? key}</span>
-                      <span className={styles.descValue}>
-                        {field?.encrypted ? "••••••••" : String(value ?? "—")}
+                      <span className={styles.descValue} title={text}>
+                        {text}
                       </span>
                     </div>
                   );
@@ -424,12 +497,16 @@ export function CatalogDetailPanel({
               </div>
             )}
             <div className={styles.descItem}>
-              <span className={styles.descLabel}>{t("dataConnect.updater")}</span>
-              <span className={styles.descValue}>{catalog.updaterName}</span>
+              <span className={styles.descLabel}>{t("dataConnect.createTime")}</span>
+              <span className={styles.descValue} title={catalog.createTime}>
+                {catalog.createTime}
+              </span>
             </div>
             <div className={styles.descItem}>
-              <span className={styles.descLabel}>{t("dataConnect.updateTime")}</span>
-              <span className={styles.descValue}>{catalog.updateTime}</span>
+              <span className={styles.descLabel}>{t("dataConnect.updater")}</span>
+              <span className={styles.descValue} title={catalog.updaterName}>
+                {catalog.updaterName}
+              </span>
             </div>
           </div>
         </div>
@@ -468,7 +545,7 @@ export function CatalogDetailPanel({
             </div>
           ) : (
             <div className={styles.scanList}>
-              {scans.slice(0, 6).map((scan) => (
+              {(scansExpanded ? scans : scans.slice(0, 2)).map((scan) => (
                 <div className={styles.scanItem} key={scan.id}>
                   {scan.status === "running" ? (
                     <span className={styles.scanSpin}>
@@ -510,6 +587,18 @@ export function CatalogDetailPanel({
                   </div>
                 </div>
               ))}
+              {scans.length > 2 ? (
+                <AppButton
+                  onClick={() => setScansExpanded((prev) => !prev)}
+                  size="small"
+                  style={{ alignSelf: "flex-start", padding: 0 }}
+                  type="link"
+                >
+                  {scansExpanded
+                    ? t("dataCatalog.catalog.scanShowLess")
+                    : t("dataCatalog.catalog.scanShowMore", { count: scans.length - 2 })}
+                </AppButton>
+              ) : null}
             </div>
           )}
         </div>
@@ -524,6 +613,30 @@ export function CatalogDetailPanel({
             </span>
           </h3>
           <div className={styles.sectionTools}>
+            {resources.length > 0 ? (
+              <>
+                <Input.Search
+                  allowClear
+                  onChange={(event) => setResourceKeyword(event.target.value)}
+                  placeholder={t("dataCatalog.resource.searchPlaceholder")}
+                  size="small"
+                  style={{ width: 200 }}
+                  value={resourceKeyword}
+                />
+                <Select
+                  allowClear
+                  onChange={(value) => setIndexFilter(value)}
+                  options={INDEX_FILTERS.map((key) => ({
+                    label: t(`dataCatalog.indexState.${key}`),
+                    value: key,
+                  }))}
+                  placeholder={t("dataCatalog.resource.indexFilterPlaceholder")}
+                  size="small"
+                  style={{ width: 130 }}
+                  value={indexFilter}
+                />
+              </>
+            ) : null}
             <PermissionGate permissions="resource:create">
               <AppButton onClick={() => onCreateResource(catalog.id)} size="small">
                 {t("dataCatalog.resource.create")}
@@ -540,8 +653,13 @@ export function CatalogDetailPanel({
         ) : (
           <AppTable<CatalogResource>
             columns={resourceColumns}
-            dataSource={resources}
-            pagination={false}
+            dataSource={filteredResources}
+            pagination={{
+              pageSize: 10,
+              size: "small",
+              hideOnSinglePage: true,
+              showSizeChanger: false,
+            }}
             rowKey="id"
             size="small"
           />
