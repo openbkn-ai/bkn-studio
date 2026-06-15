@@ -110,6 +110,7 @@ export const dataCatalogZhCN = {
       indexState: "索引状态",
       buildTasks: "构建任务",
       columnCount: "{{count}} 列",
+      fieldCount: "字段数",
       create: "新建资源",
       createTitle: "新建数据资源",
       created: "资源已创建:{{name}}",

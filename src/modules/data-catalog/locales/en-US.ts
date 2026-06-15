@@ -114,6 +114,7 @@ export const dataCatalogEnUS = {
       indexState: "Index State",
       buildTasks: "Build Tasks",
       columnCount: "{{count}} columns",
+      fieldCount: "Fields",
       create: "New Resource",
       createTitle: "New Data Resource",
       created: "Resource created: {{name}}",

@@ -204,10 +204,10 @@ export function CatalogDetailPanel({
     },
     {
       dataIndex: "columnCount",
-      title: "Schema",
+      title: t("dataCatalog.resource.fieldCount"),
       // 列表接口用后端标量 column_count(schema_definition 不在列表返回);0 视为未返回
       render: (value: number) =>
-        value > 0 ? t("dataCatalog.resource.columnCount", { count: value }) : "—",
+        value > 0 ? <span className={styles.monoText}>{value}</span> : "—",
     },
     {
       dataIndex: "rowCount",
