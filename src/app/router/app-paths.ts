@@ -1,6 +1,8 @@
 import type { RuntimeInput } from "@/framework/runtime/types";
 
-export const DEFAULT_APP_BASENAME = "/studio";
+// Standalone dev/prod serves from `/` by default. Hosted/embedded deployments
+// should pass `window.__BKN_STUDIO_RUNTIME__.router.basename` (e.g. `/studio`).
+export const DEFAULT_APP_BASENAME = "/";
 
 function normalizeBasename(value?: string) {
   const trimmed = value?.trim();

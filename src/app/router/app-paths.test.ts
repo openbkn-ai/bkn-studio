@@ -11,9 +11,9 @@ describe("app-paths", () => {
     window.__BKN_STUDIO_RUNTIME__ = undefined;
   });
 
-  it("uses /studio as the default app basename", () => {
-    expect(DEFAULT_APP_BASENAME).toBe("/studio");
-    expect(resolveAppBasename()).toBe("/studio");
+  it("uses / as the default app basename", () => {
+    expect(DEFAULT_APP_BASENAME).toBe("/");
+    expect(resolveAppBasename()).toBe("/");
   });
 
   it("builds callback paths under the configured basename", () => {
