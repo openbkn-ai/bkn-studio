@@ -68,7 +68,7 @@ describe("oauth", () => {
     expect(body.get("grant_type")).toBe("authorization_code");
     expect(body.get("client_id")).toBe("openbkn-studio");
     expect(body.get("code_verifier")).toBe("verifier-1");
-    expect(body.get("redirect_uri")).toBe("http://localhost:3000/callback");
+    expect(body.get("redirect_uri")).toBe("http://localhost:3000/studio/callback");
 
     expect(window.sessionStorage.getItem("bkn_access_token")).toBe("access-1");
     expect(window.sessionStorage.getItem("bkn_refresh_token")).toBe("refresh-1");
