@@ -146,12 +146,12 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
   );
 
   const validPropertyMappingCount = useMemo(() => {
-    if (mappingValue.mappingMode === "data-view") {
-      return mappingValue.mappingRules.dataViewMappings.filter(
+    if (mappingValue.mappingMode === "resource") {
+      return mappingValue.mappingRules.resourceMappings.filter(
         (item) =>
           item.sourceObjectPropertyName &&
-          item.dataViewSourcePropertyName &&
-          item.dataViewTargetPropertyName &&
+          item.resourceSourcePropertyName &&
+          item.resourceTargetPropertyName &&
           item.targetObjectPropertyName,
       ).length;
     }
@@ -279,7 +279,7 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
     const mappingModeLabel =
       mappingValue.mappingMode === "direct"
         ? t("knowledgeNetwork.relationTypeDirectMapping")
-        : t("knowledgeNetwork.relationTypeDataViewMapping");
+        : t("knowledgeNetwork.relationTypeResourceMapping");
 
     return (
       <div className={styles.objectInfoBar}>
@@ -302,7 +302,7 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
             </span>
           ) : (
             <span>
-              {t("knowledgeNetwork.relationTypeDataViewMappingCount", {
+              {t("knowledgeNetwork.relationTypeResourceMappingCount", {
                 count: validPropertyMappingCount,
               })}
             </span>

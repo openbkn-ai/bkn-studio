@@ -1,6 +1,6 @@
 import type {
   KnowledgeNetworkRelationTypeMutationPayload,
-  RelationTypeDataViewRowMapping,
+  RelationTypeResourceRowMapping,
   RelationTypeMappingConfig,
   RelationTypePropertyMapping,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -50,14 +50,14 @@ export type BackendRelationTypeUpdatePayload = BackendRelationTypeCreateEntry;
 export type RelationTypeMappingReadResult = {
   backingDataSourceId: string;
   backingDataSourceName?: string;
-  dataViewMappings: RelationTypeDataViewRowMapping[];
+  resourceMappings: RelationTypeResourceRowMapping[];
   propertyMappings: RelationTypePropertyMapping[];
 };
 
-function createEmptyDataViewMapping(): RelationTypeDataViewRowMapping {
+function createEmptyResourceMapping(): RelationTypeResourceRowMapping {
   return {
-    dataViewSourcePropertyName: "",
-    dataViewTargetPropertyName: "",
+    resourceSourcePropertyName: "",
+    resourceTargetPropertyName: "",
     sourceObjectPropertyName: "",
     targetObjectPropertyName: "",
   };
@@ -74,19 +74,19 @@ function toBackendDirectMappingRules(
     }));
 }
 
-function toBackendDataViewMappingRules(
+function toBackendResourceMappingRules(
   mappingRules: RelationTypeMappingConfig,
 ): Extract<BackendRelationTypeMappingRules, { backing_data_source?: unknown }> {
-  const sourceMappingRules = mappingRules.dataViewMappings
-    .filter((item) => item.sourceObjectPropertyName && item.dataViewSourcePropertyName)
+  const sourceMappingRules = mappingRules.resourceMappings
+    .filter((item) => item.sourceObjectPropertyName && item.resourceSourcePropertyName)
     .map((item) => ({
       source_property: { name: item.sourceObjectPropertyName },
-      target_property: { name: item.dataViewSourcePropertyName },
+      target_property: { name: item.resourceSourcePropertyName },
     }));
-  const targetMappingRules = mappingRules.dataViewMappings
-    .filter((item) => item.targetObjectPropertyName && item.dataViewTargetPropertyName)
+  const targetMappingRules = mappingRules.resourceMappings
+    .filter((item) => item.targetObjectPropertyName && item.resourceTargetPropertyName)
     .map((item) => ({
-      source_property: { name: item.dataViewTargetPropertyName },
+      source_property: { name: item.resourceTargetPropertyName },
       target_property: { name: item.targetObjectPropertyName },
     }));
 
@@ -94,7 +94,7 @@ function toBackendDataViewMappingRules(
     backing_data_source: {
       id: mappingRules.backingDataSourceId,
       name: mappingRules.backingDataSourceName,
-      type: "data_view",
+      type: "resource",
     },
     source_mapping_rules: sourceMappingRules,
     target_mapping_rules: targetMappingRules,
@@ -118,14 +118,14 @@ export function mapRelationTypePropertyMappingsFromBackend(
 
 export function mapRelationTypeMappingsFromBackend(
   mappingRules?: BackendRelationTypeMappingRules,
-  mappingMode: "direct" | "data-view" = "direct",
+  mappingMode: "direct" | "resource" = "direct",
 ): RelationTypeMappingReadResult {
-  if (mappingMode === "data-view") {
+  if (mappingMode === "resource") {
     if (!mappingRules || Array.isArray(mappingRules)) {
       return {
         backingDataSourceId: "",
         backingDataSourceName: "",
-        dataViewMappings: [createEmptyDataViewMapping()],
+        resourceMappings: [createEmptyResourceMapping()],
         propertyMappings: [],
       };
     }
@@ -133,10 +133,10 @@ export function mapRelationTypeMappingsFromBackend(
     const sourceRules = mappingRules.source_mapping_rules ?? [];
     const targetRules = mappingRules.target_mapping_rules ?? [];
     const rowCount = Math.max(sourceRules.length, targetRules.length, 1);
-    const dataViewMappings = Array.from({ length: rowCount }, (_, index) => ({
+    const resourceMappings = Array.from({ length: rowCount }, (_, index) => ({
       sourceObjectPropertyName: sourceRules[index]?.source_property?.name ?? "",
-      dataViewSourcePropertyName: sourceRules[index]?.target_property?.name ?? "",
-      dataViewTargetPropertyName: targetRules[index]?.source_property?.name ?? "",
+      resourceSourcePropertyName: sourceRules[index]?.target_property?.name ?? "",
+      resourceTargetPropertyName: targetRules[index]?.source_property?.name ?? "",
       targetObjectPropertyName: targetRules[index]?.target_property?.name ?? "",
     }));
 
@@ -145,7 +145,7 @@ export function mapRelationTypeMappingsFromBackend(
       backingDataSourceName:
         mappingRules.backing_data_source?.name ??
         mappingRules.backing_data_source?.display_name,
-      dataViewMappings,
+      resourceMappings,
       propertyMappings: [],
     };
   }
@@ -155,7 +155,7 @@ export function mapRelationTypeMappingsFromBackend(
   return {
     backingDataSourceId: "",
     backingDataSourceName: "",
-    dataViewMappings: [createEmptyDataViewMapping()],
+    resourceMappings: [createEmptyResourceMapping()],
     propertyMappings: propertyMappings.length > 0 ? propertyMappings : [],
   };
 }
@@ -168,14 +168,14 @@ function appendMappingRules(
     return payload;
   }
 
-  if (input.mappingMode === "data-view") {
+  if (input.mappingMode === "resource") {
     if (!input.mappingRules.backingDataSourceId) {
       return payload;
     }
 
     return {
       ...payload,
-      mapping_rules: toBackendDataViewMappingRules(input.mappingRules),
+      mapping_rules: toBackendResourceMappingRules(input.mappingRules),
     };
   }
 
@@ -193,7 +193,7 @@ function appendMappingRules(
 export function toBackendRelationTypeCreateEntry(
   input: KnowledgeNetworkRelationTypeMutationPayload,
 ): BackendRelationTypeCreateEntry {
-  const mappingMode = input.mappingMode === "data-view" ? "data_view" : "direct";
+  const mappingMode = input.mappingMode === "resource" ? "data_view" : "direct";
 
   const payload: BackendRelationTypeCreateEntry = {
     branch: "main",

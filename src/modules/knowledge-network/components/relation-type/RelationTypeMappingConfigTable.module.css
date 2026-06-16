@@ -40,14 +40,14 @@
   white-space: nowrap;
 }
 
-.dataViewCell {
+.resourceCell {
   align-items: center;
   display: flex;
   gap: 16px;
   min-width: 0;
 }
 
-.dataViewField {
+.resourceField {
   align-items: center;
   display: flex;
   flex: 1;
@@ -55,7 +55,7 @@
   min-width: 0;
 }
 
-.dataViewFieldLabel {
+.resourceFieldLabel {
   background: #5381df;
   border-radius: 2px;
   color: #fff;
@@ -65,11 +65,11 @@
   padding: 0 6px;
 }
 
-.dataViewFieldLabelTarget {
+.resourceFieldLabelTarget {
   background: #000;
 }
 
-.dataViewFieldValue {
+.resourceFieldValue {
   flex: 1;
   min-width: 0;
   overflow: hidden;

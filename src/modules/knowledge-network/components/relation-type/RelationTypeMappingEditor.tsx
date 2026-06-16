@@ -2,10 +2,10 @@ import { useMemo } from "react";
 
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { RelationTypeDataViewMappingRules } from "./RelationTypeDataViewMappingRules";
+import { RelationTypeResourceMappingRules } from "./RelationTypeResourceMappingRules";
 import { RelationTypeDirectMappingRules } from "./RelationTypeDirectMappingRules";
 import {
-  countValidDataViewMappings,
+  countValidResourceMappings,
   resetMappingRulesForMode,
   type RelationTypeMappingFormValues,
 } from "./mapping-utils";
@@ -36,16 +36,16 @@ export function RelationTypeMappingEditor({
   onChange,
 }: RelationTypeMappingEditorProps) {
   const mappingSummaryCount = useMemo(() => {
-    if (value.mappingMode === "data-view") {
-      return countValidDataViewMappings(value.mappingRules.dataViewMappings);
+    if (value.mappingMode === "resource") {
+      return countValidResourceMappings(value.mappingRules.resourceMappings);
     }
 
     return value.mappingRules.propertyMappings.filter(
       (item) => item.sourcePropertyName && item.targetPropertyName,
     ).length;
-  }, [value.mappingMode, value.mappingRules.dataViewMappings, value.mappingRules.propertyMappings]);
+  }, [value.mappingMode, value.mappingRules.resourceMappings, value.mappingRules.propertyMappings]);
 
-  const handleMappingModeChange = (mode: "direct" | "data-view") => {
+  const handleMappingModeChange = (mode: "direct" | "resource") => {
     if (mode === value.mappingMode) {
       return;
     }
@@ -81,7 +81,7 @@ export function RelationTypeMappingEditor({
           value={value.mappingRules}
         />
       ) : (
-        <RelationTypeDataViewMappingRules
+        <RelationTypeResourceMappingRules
           networkId={networkId}
           objectTypes={objectTypes}
           onChange={handleMappingRulesChange}

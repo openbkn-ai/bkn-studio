@@ -5,37 +5,37 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { ObjectTypeDataViewSelectModal } from "@/modules/knowledge-network/components/object-type/data-attribute/ObjectTypeDataViewSelectModal";
+import { ObjectTypeResourceSelectModal } from "@/modules/knowledge-network/components/object-type/data-attribute/ObjectTypeResourceSelectModal";
 import {
   getKnowledgeNetworkObjectTypeDetail,
-  listObjectTypeDataViewFields,
+  listObjectTypeResourceFields,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   KnowledgeNetworkObjectTypeRecord,
   ObjectTypeDataSource,
-  RelationTypeDataViewRowMapping,
+  RelationTypeResourceRowMapping,
   RelationTypeMappingConfig,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { createEmptyDataViewMapping } from "./mapping-utils";
+import { createEmptyResourceMapping } from "./mapping-utils";
 import { RelationTypeObjectTypeSelect } from "./RelationTypeObjectTypeSelect";
-import styles from "./RelationTypeDataViewMappingRules.module.css";
+import styles from "./RelationTypeResourceMappingRules.module.css";
 import {
   RelationTypePropertySelect,
   type RelationTypePropertyOption,
 } from "./RelationTypePropertySelect";
 
-type DataViewTableRow =
+type ResourceTableRow =
   | {
-      dataViewValue?: string;
+      resourceValue?: string;
       key: string;
       rowType: "object";
       sourceValue?: string;
       targetValue?: string;
     }
   | {
-      dataViewSource?: string;
-      dataViewTarget?: string;
+      resourceSource?: string;
+      resourceTarget?: string;
       index: number;
       key: string;
       rowType: "property";
@@ -43,7 +43,7 @@ type DataViewTableRow =
       targetValue?: string;
     };
 
-type RelationTypeDataViewMappingRulesProps = {
+type RelationTypeResourceMappingRulesProps = {
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   value: RelationTypeMappingConfig;
@@ -63,21 +63,21 @@ function mapPropertyOptions(
   }));
 }
 
-export function RelationTypeDataViewMappingRules({
+export function RelationTypeResourceMappingRules({
   networkId,
   objectTypes,
   value,
   onChange,
-}: RelationTypeDataViewMappingRulesProps) {
+}: RelationTypeResourceMappingRulesProps) {
   const { t } = useTranslation();
-  const [dataViewModalOpen, setDataViewModalOpen] = useState(false);
+  const [resourceModalOpen, setResourceModalOpen] = useState(false);
   const [sourcePropertyOptions, setSourcePropertyOptions] = useState<RelationTypePropertyOption[]>(
     [],
   );
   const [targetPropertyOptions, setTargetPropertyOptions] = useState<RelationTypePropertyOption[]>(
     [],
   );
-  const [dataViewPropertyOptions, setDataViewPropertyOptions] = useState<
+  const [resourcePropertyOptions, setResourcePropertyOptions] = useState<
     RelationTypePropertyOption[]
   >([]);
 
@@ -108,14 +108,14 @@ export function RelationTypeDataViewMappingRules({
     }
   };
 
-  const loadDataViewPropertyOptions = async (dataViewId: string) => {
-    if (!dataViewId) {
-      setDataViewPropertyOptions([]);
+  const loadResourcePropertyOptions = async (resourceId: string) => {
+    if (!resourceId) {
+      setResourcePropertyOptions([]);
       return;
     }
 
-    const fields = await listObjectTypeDataViewFields(networkId, dataViewId);
-    setDataViewPropertyOptions(mapPropertyOptions(fields));
+    const fields = await listObjectTypeResourceFields(networkId, resourceId);
+    setResourcePropertyOptions(mapPropertyOptions(fields));
   };
 
   useEffect(() => {
@@ -127,13 +127,13 @@ export function RelationTypeDataViewMappingRules({
   }, [networkId, value.targetObjectTypeId]);
 
   useEffect(() => {
-    void loadDataViewPropertyOptions(value.backingDataSourceId);
+    void loadResourcePropertyOptions(value.backingDataSourceId);
   }, [networkId, value.backingDataSourceId]);
 
-  const tableRows = useMemo<DataViewTableRow[]>(() => {
-    const rows: DataViewTableRow[] = [
+  const tableRows = useMemo<ResourceTableRow[]>(() => {
+    const rows: ResourceTableRow[] = [
       {
-        dataViewValue: value.backingDataSourceName || value.backingDataSourceId,
+        resourceValue: value.backingDataSourceName || value.backingDataSourceId,
         key: "object-row",
         rowType: "object",
         sourceValue: value.sourceObjectTypeId,
@@ -141,10 +141,10 @@ export function RelationTypeDataViewMappingRules({
       },
     ];
 
-    value.dataViewMappings.forEach((mapping, index) => {
+    value.resourceMappings.forEach((mapping, index) => {
       rows.push({
-        dataViewSource: mapping.dataViewSourcePropertyName,
-        dataViewTarget: mapping.dataViewTargetPropertyName,
+        resourceSource: mapping.resourceSourcePropertyName,
+        resourceTarget: mapping.resourceTargetPropertyName,
         index,
         key: `property-row-${index}`,
         rowType: "property",
@@ -156,19 +156,19 @@ export function RelationTypeDataViewMappingRules({
     return rows;
   }, [value]);
 
-  const clearDataViewSideMappings = (
-    mappings: RelationTypeDataViewRowMapping[],
-  ): RelationTypeDataViewRowMapping[] =>
+  const clearResourceSideMappings = (
+    mappings: RelationTypeResourceRowMapping[],
+  ): RelationTypeResourceRowMapping[] =>
     mappings.map((item) => ({
       ...item,
-      dataViewSourcePropertyName: "",
-      dataViewTargetPropertyName: "",
+      resourceSourcePropertyName: "",
+      resourceTargetPropertyName: "",
     }));
 
   const handleSourceObjectChange = (nextSourceObjectTypeId: string) => {
     updateMappingRules({
       sourceObjectTypeId: nextSourceObjectTypeId,
-      dataViewMappings: value.dataViewMappings.map((item) => ({
+      resourceMappings: value.resourceMappings.map((item) => ({
         ...item,
         sourceObjectPropertyName: "",
       })),
@@ -178,18 +178,18 @@ export function RelationTypeDataViewMappingRules({
   const handleTargetObjectChange = (nextTargetObjectTypeId: string) => {
     updateMappingRules({
       targetObjectTypeId: nextTargetObjectTypeId,
-      dataViewMappings: value.dataViewMappings.map((item) => ({
+      resourceMappings: value.resourceMappings.map((item) => ({
         ...item,
         targetObjectPropertyName: "",
       })),
     });
   };
 
-  const handleDataViewChange = (dataView: ObjectTypeDataSource) => {
+  const handleResourceChange = (resource: ObjectTypeDataSource) => {
     updateMappingRules({
-      backingDataSourceId: dataView.id,
-      backingDataSourceName: dataView.name,
-      dataViewMappings: clearDataViewSideMappings(value.dataViewMappings),
+      backingDataSourceId: resource.id,
+      backingDataSourceName: resource.name,
+      resourceMappings: clearResourceSideMappings(value.resourceMappings),
     });
   };
 
@@ -199,40 +199,40 @@ export function RelationTypeDataViewMappingRules({
       backingDataSourceName: "",
       sourceObjectTypeId: "",
       targetObjectTypeId: "",
-      dataViewMappings: value.dataViewMappings.map(() => createEmptyDataViewMapping()),
+      resourceMappings: value.resourceMappings.map(() => createEmptyResourceMapping()),
     });
   };
 
-  const handleDataViewMappingChange = (
+  const handleResourceMappingChange = (
     index: number,
-    patch: Partial<RelationTypeDataViewRowMapping>,
+    patch: Partial<RelationTypeResourceRowMapping>,
   ) => {
     updateMappingRules({
-      dataViewMappings: value.dataViewMappings.map((item, itemIndex) =>
+      resourceMappings: value.resourceMappings.map((item, itemIndex) =>
         itemIndex === index ? { ...item, ...patch } : item,
       ),
     });
   };
 
-  const handleDeleteRow = (row: DataViewTableRow) => {
+  const handleDeleteRow = (row: ResourceTableRow) => {
     if (row.rowType === "object") {
       handleClearObjects();
       return;
     }
 
-    if (value.dataViewMappings.length === 1) {
-      handleDataViewMappingChange(row.index, createEmptyDataViewMapping());
+    if (value.resourceMappings.length === 1) {
+      handleResourceMappingChange(row.index, createEmptyResourceMapping());
       return;
     }
 
     updateMappingRules({
-      dataViewMappings: value.dataViewMappings.filter(
+      resourceMappings: value.resourceMappings.filter(
         (_item, itemIndex) => itemIndex !== row.index,
       ),
     });
   };
 
-  const columns: TableProps<DataViewTableRow>["columns"] = [
+  const columns: TableProps<ResourceTableRow>["columns"] = [
     {
       dataIndex: "sourceValue",
       key: "sourceValue",
@@ -251,7 +251,7 @@ export function RelationTypeDataViewMappingRules({
             disabled={!value.sourceObjectTypeId}
             fields={sourcePropertyOptions}
             onChange={(nextValue) =>
-              handleDataViewMappingChange(row.index, {
+              handleResourceMappingChange(row.index, {
                 sourceObjectPropertyName: nextValue ?? "",
               })
             }
@@ -261,24 +261,24 @@ export function RelationTypeDataViewMappingRules({
         ),
     },
     {
-      dataIndex: "dataViewValue",
-      key: "dataViewValue",
-      title: t("knowledgeNetwork.relationTypeDataViewColumn"),
+      dataIndex: "resourceValue",
+      key: "resourceValue",
+      title: t("knowledgeNetwork.relationTypeResourceColumn"),
       width: 400,
       render: (cellValue: string | undefined, row) => {
         if (row.rowType === "object") {
           return (
             <button
-              className={styles.dataViewPicker}
-              onClick={() => setDataViewModalOpen(true)}
+              className={styles.resourcePicker}
+              onClick={() => setResourceModalOpen(true)}
               type="button"
             >
               <span
                 className={
-                  cellValue ? styles.dataViewPickerValue : styles.dataViewPickerPlaceholder
+                  cellValue ? styles.resourcePickerValue : styles.resourcePickerPlaceholder
                 }
               >
-                {cellValue || t("knowledgeNetwork.relationTypeChooseDataView")}
+                {cellValue || t("knowledgeNetwork.relationTypeChooseResource")}
               </span>
               <DownOutlined style={{ color: "#d9d9d9", fontSize: 12 }} />
             </button>
@@ -286,31 +286,31 @@ export function RelationTypeDataViewMappingRules({
         }
 
         return (
-          <div className={styles.dataViewPropertyPair}>
-            <div className={styles.dataViewPropertyPairItem}>
+          <div className={styles.resourcePropertyPair}>
+            <div className={styles.resourcePropertyPairItem}>
               <RelationTypePropertySelect
                 disabled={!value.backingDataSourceId}
-                fields={dataViewPropertyOptions}
+                fields={resourcePropertyOptions}
                 onChange={(nextValue) =>
-                  handleDataViewMappingChange(row.index, {
-                    dataViewSourcePropertyName: nextValue ?? "",
+                  handleResourceMappingChange(row.index, {
+                    resourceSourcePropertyName: nextValue ?? "",
                   })
                 }
-                placeholder={t("knowledgeNetwork.relationTypeDataViewSourcePropertyPlaceholder")}
-                value={row.dataViewSource || undefined}
+                placeholder={t("knowledgeNetwork.relationTypeResourceSourcePropertyPlaceholder")}
+                value={row.resourceSource || undefined}
               />
             </div>
-            <div className={styles.dataViewPropertyPairItem}>
+            <div className={styles.resourcePropertyPairItem}>
               <RelationTypePropertySelect
                 disabled={!value.backingDataSourceId}
-                fields={dataViewPropertyOptions}
+                fields={resourcePropertyOptions}
                 onChange={(nextValue) =>
-                  handleDataViewMappingChange(row.index, {
-                    dataViewTargetPropertyName: nextValue ?? "",
+                  handleResourceMappingChange(row.index, {
+                    resourceTargetPropertyName: nextValue ?? "",
                   })
                 }
-                placeholder={t("knowledgeNetwork.relationTypeDataViewTargetPropertyPlaceholder")}
-                value={row.dataViewTarget || undefined}
+                placeholder={t("knowledgeNetwork.relationTypeResourceTargetPropertyPlaceholder")}
+                value={row.resourceTarget || undefined}
               />
             </div>
           </div>
@@ -335,7 +335,7 @@ export function RelationTypeDataViewMappingRules({
             disabled={!value.targetObjectTypeId}
             fields={targetPropertyOptions}
             onChange={(nextValue) =>
-              handleDataViewMappingChange(row.index, {
+              handleResourceMappingChange(row.index, {
                 targetObjectPropertyName: nextValue ?? "",
               })
             }
@@ -362,7 +362,7 @@ export function RelationTypeDataViewMappingRules({
 
   return (
     <div className={styles.root}>
-      <Table<DataViewTableRow>
+      <Table<ResourceTableRow>
         bordered
         className={styles.mappingTable}
         columns={columns}
@@ -377,7 +377,7 @@ export function RelationTypeDataViewMappingRules({
         icon={<PlusOutlined />}
         onClick={() => {
           updateMappingRules({
-            dataViewMappings: [...value.dataViewMappings, createEmptyDataViewMapping()],
+            resourceMappings: [...value.resourceMappings, createEmptyResourceMapping()],
           });
         }}
         type="link"
@@ -385,14 +385,14 @@ export function RelationTypeDataViewMappingRules({
         {t("knowledgeNetwork.relationTypeAddPropertyMapping")}
       </AppButton>
 
-      <ObjectTypeDataViewSelectModal
+      <ObjectTypeResourceSelectModal
         networkId={networkId}
-        onCancel={() => setDataViewModalOpen(false)}
-        onOk={(dataView) => {
-          handleDataViewChange(dataView);
-          setDataViewModalOpen(false);
+        onCancel={() => setResourceModalOpen(false)}
+        onOk={(resource) => {
+          handleResourceChange(resource);
+          setResourceModalOpen(false);
         }}
-        open={dataViewModalOpen}
+        open={resourceModalOpen}
         selectedId={value.backingDataSourceId || undefined}
       />
     </div>

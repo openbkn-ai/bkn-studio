@@ -25,9 +25,9 @@ type DirectConfigRow = {
   typeLabel: string;
 };
 
-type DataViewConfigRow = {
-  dataViewSourceName?: string;
-  dataViewTargetName?: string;
+type ResourceConfigRow = {
+  resourceSourceName?: string;
+  resourceTargetName?: string;
   key: string;
   rowType: "object" | "property";
   sourceName?: string;
@@ -182,18 +182,18 @@ export function RelationTypeMappingConfigTable({
     return rows;
   }, [detail.propertyMappings, t]);
 
-  const dataViewRows = useMemo<DataViewConfigRow[]>(() => {
-    const rows: DataViewConfigRow[] = [
+  const resourceRows = useMemo<ResourceConfigRow[]>(() => {
+    const rows: ResourceConfigRow[] = [
       {
         key: "object-row",
         rowType: "object",
       },
     ];
 
-    detail.dataViewMappings.forEach((mapping, index) => {
+    detail.resourceMappings.forEach((mapping, index) => {
       rows.push({
-        dataViewSourceName: mapping.dataViewSourcePropertyName,
-        dataViewTargetName: mapping.dataViewTargetPropertyName,
+        resourceSourceName: mapping.resourceSourcePropertyName,
+        resourceTargetName: mapping.resourceTargetPropertyName,
         key: `property-row-${index}`,
         rowType: "property",
         sourceName: mapping.sourceObjectPropertyName,
@@ -202,7 +202,7 @@ export function RelationTypeMappingConfigTable({
     });
 
     return rows;
-  }, [detail.dataViewMappings]);
+  }, [detail.resourceMappings]);
 
   if (detail.mappingMode === "direct") {
     const columns: TableProps<DirectConfigRow>["columns"] = [
@@ -269,7 +269,7 @@ export function RelationTypeMappingConfigTable({
     );
   }
 
-  const dataViewColumns: TableProps<DataViewConfigRow>["columns"] = [
+  const resourceColumns: TableProps<ResourceConfigRow>["columns"] = [
     {
       dataIndex: "sourceName",
       key: "sourceName",
@@ -291,9 +291,9 @@ export function RelationTypeMappingConfigTable({
         ),
     },
     {
-      dataIndex: "dataViewSourceName",
-      key: "dataView",
-      title: t("knowledgeNetwork.relationTypeDataViewColumn"),
+      dataIndex: "resourceSourceName",
+      key: "resource",
+      title: t("knowledgeNetwork.relationTypeResourceColumn"),
       width: 400,
       render: (_value: string | undefined, row) => {
         if (row.rowType === "object") {
@@ -303,20 +303,20 @@ export function RelationTypeMappingConfigTable({
         }
 
         return (
-          <div className={styles.dataViewCell}>
-            <div className={styles.dataViewField}>
-              <span className={styles.dataViewFieldLabel}>
-                {t("knowledgeNetwork.relationTypeDataViewSourcePropertyLabel")}
+          <div className={styles.resourceCell}>
+            <div className={styles.resourceField}>
+              <span className={styles.resourceFieldLabel}>
+                {t("knowledgeNetwork.relationTypeResourceSourcePropertyLabel")}
               </span>
-              <PropertyNameCell name={row.dataViewSourceName} />
+              <PropertyNameCell name={row.resourceSourceName} />
             </div>
-            <div className={styles.dataViewField}>
+            <div className={styles.resourceField}>
               <span
-                className={`${styles.dataViewFieldLabel} ${styles.dataViewFieldLabelTarget}`}
+                className={`${styles.resourceFieldLabel} ${styles.resourceFieldLabelTarget}`}
               >
-                {t("knowledgeNetwork.relationTypeDataViewTargetPropertyLabel")}
+                {t("knowledgeNetwork.relationTypeResourceTargetPropertyLabel")}
               </span>
-              <PropertyNameCell name={row.dataViewTargetName} />
+              <PropertyNameCell name={row.resourceTargetName} />
             </div>
           </div>
         );
@@ -345,11 +345,11 @@ export function RelationTypeMappingConfigTable({
   ];
 
   return (
-    <Table<DataViewConfigRow>
+    <Table<ResourceConfigRow>
       bordered
       className={styles.mappingTable}
-      columns={dataViewColumns}
-      dataSource={dataViewRows}
+      columns={resourceColumns}
+      dataSource={resourceRows}
       locale={{ emptyText: t("knowledgeNetwork.relationTypePropertyMappingEmpty") }}
       pagination={false}
       rowKey="key"

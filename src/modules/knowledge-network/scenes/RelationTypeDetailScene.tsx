@@ -148,7 +148,7 @@ export function RelationTypeDetailScene() {
               {t("knowledgeNetwork.relationTypeMappingMode")}:{" "}
               {detail.mappingMode === "direct"
                 ? t("knowledgeNetwork.relationTypeDirectMapping")
-                : t("knowledgeNetwork.relationTypeDataViewMapping")}
+                : t("knowledgeNetwork.relationTypeResourceMapping")}
             </span>
             <span>{t("knowledgeNetwork.updatedBy", { name: detail.updaterName })}</span>
             <span>{detail.updateTime}</span>

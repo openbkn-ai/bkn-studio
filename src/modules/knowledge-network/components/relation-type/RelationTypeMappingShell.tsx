@@ -10,13 +10,13 @@ import styles from "./RelationTypeMappingShell.module.css";
 
 type RelationTypeMappingShellProps = {
   children: ReactNode;
-  mappingMode: "direct" | "data-view";
+  mappingMode: "direct" | "resource";
   mappingModeField?: boolean;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   propertyMappingCount: number;
   sourceObjectTypeId: string;
   targetObjectTypeId: string;
-  onMappingModeChange: (mode: "direct" | "data-view") => void;
+  onMappingModeChange: (mode: "direct" | "resource") => void;
 };
 
 export function RelationTypeMappingShell({
@@ -51,7 +51,7 @@ export function RelationTypeMappingShell({
         >
           <Radio.Group
             onChange={(event) => {
-              onMappingModeChange(event.target.value as "direct" | "data-view");
+              onMappingModeChange(event.target.value as "direct" | "resource");
             }}
             options={[
               {
@@ -59,8 +59,8 @@ export function RelationTypeMappingShell({
                 value: "direct",
               },
               {
-                label: t("knowledgeNetwork.relationTypeDataViewMappingOption"),
-                value: "data-view",
+                label: t("knowledgeNetwork.relationTypeResourceMappingOption"),
+                value: "resource",
               },
             ]}
             value={mappingMode}

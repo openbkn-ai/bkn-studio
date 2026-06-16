@@ -20,15 +20,15 @@ import {
   toBackendRelationTypeUpdatePayload,
 } from "@/modules/knowledge-network/services/mappers";
 import {
-  cloneRelationTypeDataViewMappings,
+  cloneRelationTypeResourceMappings,
   cloneRelationTypePropertyMappings,
   mockObjectTypes,
-  mockRelationTypeDataViewMappings,
+  mockRelationTypeResourceMappings,
   mockRelationTypeMappings,
   mockRelationTypes,
-  persistMockRelationTypeDataViewMappings,
+  persistMockRelationTypeResourceMappings,
   persistMockRelationTypeMappings,
-  removeMockRelationTypeDataViewMappings,
+  removeMockRelationTypeResourceMappings,
   removeMockRelationTypeMappings,
   syncKnowledgeNetworkStatistics,
 } from "@/modules/knowledge-network/services/mock/state";
@@ -78,15 +78,15 @@ function persistMockRelationTypeMappingBundle(
   relationTypeId: string,
   input: KnowledgeNetworkRelationTypeMutationPayload,
 ) {
-  if (input.mappingMode === "data-view" && input.mappingRules) {
-    persistMockRelationTypeDataViewMappings(networkId, relationTypeId, {
+  if (input.mappingMode === "resource" && input.mappingRules) {
+    persistMockRelationTypeResourceMappings(networkId, relationTypeId, {
       backingDataSourceId: input.mappingRules.backingDataSourceId,
       backingDataSourceName: input.mappingRules.backingDataSourceName,
-      dataViewMappings: input.mappingRules.dataViewMappings.filter(
+      resourceMappings: input.mappingRules.resourceMappings.filter(
         (item) =>
           item.sourceObjectPropertyName &&
-          item.dataViewSourcePropertyName &&
-          item.dataViewTargetPropertyName &&
+          item.resourceSourcePropertyName &&
+          item.resourceTargetPropertyName &&
           item.targetObjectPropertyName,
       ),
     });
@@ -101,7 +101,7 @@ function persistMockRelationTypeMappingBundle(
       (item) => item.sourcePropertyName && item.targetPropertyName,
     ),
   );
-  removeMockRelationTypeDataViewMappings(networkId, relationTypeId);
+  removeMockRelationTypeResourceMappings(networkId, relationTypeId);
 }
 
 export async function listKnowledgeNetworkRelationTypes(networkId: string) {
@@ -152,15 +152,15 @@ export async function getKnowledgeNetworkRelationTypeDetail(
       return null;
     }
 
-    if (record.mappingMode === "data-view") {
-      const dataViewStore = mockRelationTypeDataViewMappings[networkId]?.[relationTypeId];
+    if (record.mappingMode === "resource") {
+      const resourceStore = mockRelationTypeResourceMappings[networkId]?.[relationTypeId];
 
       return {
         ...record,
-        backingDataSourceId: dataViewStore?.backingDataSourceId ?? "",
-        backingDataSourceName: dataViewStore?.backingDataSourceName,
-        dataViewMappings: cloneRelationTypeDataViewMappings(
-          dataViewStore?.dataViewMappings ?? [],
+        backingDataSourceId: resourceStore?.backingDataSourceId ?? "",
+        backingDataSourceName: resourceStore?.backingDataSourceName,
+        resourceMappings: cloneRelationTypeResourceMappings(
+          resourceStore?.resourceMappings ?? [],
         ),
         propertyMappings: [],
       };
@@ -170,7 +170,7 @@ export async function getKnowledgeNetworkRelationTypeDetail(
       ...record,
       backingDataSourceId: "",
       backingDataSourceName: "",
-      dataViewMappings: [],
+      resourceMappings: [],
       propertyMappings: cloneRelationTypePropertyMappings(
         mockRelationTypeMappings[networkId]?.[relationTypeId] ?? [],
       ),
@@ -290,7 +290,7 @@ export async function deleteKnowledgeNetworkRelationType(
       (item) => item.id !== relationTypeId,
     );
     removeMockRelationTypeMappings(networkId, relationTypeId);
-    removeMockRelationTypeDataViewMappings(networkId, relationTypeId);
+    removeMockRelationTypeResourceMappings(networkId, relationTypeId);
     syncKnowledgeNetworkStatistics(networkId);
     await wait(undefined);
     return;

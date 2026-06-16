@@ -1,74 +1,91 @@
 import {
+  AppstoreOutlined,
   CloseOutlined,
   DatabaseOutlined,
   DownOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Button, Checkbox, Dropdown, Input, Modal, Pagination, Splitter, Table, Tree } from "antd";
+import { Button, Checkbox, Dropdown, Empty, Input, Modal, Pagination, Splitter, Table, Tree } from "antd";
 import type { DataNode } from "antd/es/tree";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  getObjectTypeDataViewPreview,
-  listObjectTypeDataViewGroups,
-  queryObjectTypeDataViews,
+  getObjectTypeResourcePreview,
+  listObjectTypeResourceGroups,
+  queryObjectTypeResources,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ObjectTypeDataSource,
-  ObjectTypeDataViewGroup,
-  ObjectTypeDataViewPreview,
+  ObjectTypeResourceGroup,
+  ObjectTypeResourcePreview,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
-import styles from "./ObjectTypeDataViewSelectModal.module.css";
+import styles from "./ObjectTypeResourceSelectModal.module.css";
 
-type ObjectTypeDataViewSelectModalProps = {
+type ObjectTypeResourceSelectModalProps = {
   networkId: string;
   onCancel: () => void;
-  onOk: (dataView: ObjectTypeDataSource) => void;
+  onOk: (resource: ObjectTypeDataSource) => void;
   open: boolean;
   selectedId?: string;
 };
 
-function getGroupIcon(type: string) {
-  if (type === "mysql") {
+function getGroupIcon(group: ObjectTypeResourceGroup) {
+  if (group.type === "other") {
+    return <AppstoreOutlined className={styles.groupIconLogical} />;
+  }
+
+  if (group.type === "mysql" || group.type === "mariadb") {
     return <span className={`${styles.groupBadge} ${styles.groupBadgeMysql}`}>My</span>;
   }
 
-  if (type === "index_base") {
+  if (group.type === "postgresql" || group.type === "postgres") {
+    return <span className={`${styles.groupBadge} ${styles.groupBadgeMysql}`}>PG</span>;
+  }
+
+  if (group.type === "opensearch" || group.type === "index_base") {
     return <DatabaseOutlined className={styles.groupIcon} />;
   }
 
   return <span className={`${styles.groupBadge} ${styles.groupBadgeDefault}`}>DB</span>;
 }
 
-function renderGroupTitle(group: ObjectTypeDataViewGroup) {
-  return (
-    <span className={styles.groupNodeTitle}>
-      <span className={styles.groupNodeIcon}>{getGroupIcon(group.type)}</span>
-      <span className={styles.groupNodeText}>{group.name}</span>
-    </span>
-  );
-}
-
-export function ObjectTypeDataViewSelectModal({
+export function ObjectTypeResourceSelectModal({
   networkId,
   onCancel,
   onOk,
   open,
   selectedId,
-}: ObjectTypeDataViewSelectModalProps) {
+}: ObjectTypeResourceSelectModalProps) {
   const { t } = useTranslation();
-  const [groups, setGroups] = useState<ObjectTypeDataViewGroup[]>([]);
+  const [groups, setGroups] = useState<ObjectTypeResourceGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [searchValue, setSearchValue] = useState("");
   const [checkedItem, setCheckedItem] = useState<ObjectTypeDataSource | null>(null);
   const [previewId, setPreviewId] = useState("");
-  const [preview, setPreview] = useState<ObjectTypeDataViewPreview | null>(null);
+  const [preview, setPreview] = useState<ObjectTypeResourcePreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [listItems, setListItems] = useState<ObjectTypeDataSource[]>([]);
   const [listTotal, setListTotal] = useState(0);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 10 });
+
+  const renderGroupTitle = useCallback(
+    (group: ObjectTypeResourceGroup) => {
+      const displayName =
+        group.id === "source-type:other"
+          ? t("knowledgeNetwork.objectTypeLogicalDataCatalog")
+          : group.name;
+
+      return (
+        <span className={styles.groupNodeTitle}>
+          <span className={styles.groupNodeIcon}>{getGroupIcon(group)}</span>
+          <span className={styles.groupNodeText}>{displayName}</span>
+        </span>
+      );
+    },
+    [t],
+  );
 
   const treeData = useMemo<DataNode[]>(
     () => {
@@ -105,7 +122,7 @@ export function ObjectTypeDataViewSelectModal({
 
       return roots;
     },
-    [groups],
+    [groups, renderGroupTitle],
   );
 
   const dropdownItems = useMemo(() => {
@@ -118,13 +135,13 @@ export function ObjectTypeDataViewSelectModal({
         key: "header",
         label: (
           <div className={styles.checkedBoxTitle} onClick={(event) => event.stopPropagation()}>
-            <span>{t("knowledgeNetwork.objectTypeDataViewCheckedCount", { count: 1 })}</span>
+            <span>{t("knowledgeNetwork.objectTypeResourceCheckedCount", { count: 1 })}</span>
             <button
               className={styles.checkedBoxClear}
               onClick={() => setCheckedItem(null)}
               type="button"
             >
-              {t("knowledgeNetwork.objectTypeDataViewClearAll")}
+              {t("knowledgeNetwork.objectTypeResourceClearAll")}
             </button>
           </div>
         ),
@@ -144,12 +161,12 @@ export function ObjectTypeDataViewSelectModal({
   }, [checkedItem, t]);
 
   const loadGroups = useCallback(async () => {
-    const nextGroups = await listObjectTypeDataViewGroups(networkId);
+    const nextGroups = await listObjectTypeResourceGroups(networkId);
     setGroups(nextGroups);
   }, [networkId]);
 
   const loadList = useCallback(async (nextPagination = pagination) => {
-    const result = await queryObjectTypeDataViews(networkId, {
+    const result = await queryObjectTypeResources(networkId, {
       dataSourceId: selectedGroupId || undefined,
       name: searchValue,
       page: nextPagination.page,
@@ -159,15 +176,15 @@ export function ObjectTypeDataViewSelectModal({
     setListTotal(result.total);
   }, [networkId, pagination, searchValue, selectedGroupId]);
 
-  const loadPreview = useCallback(async (dataViewId: string) => {
-    if (!dataViewId) {
+  const loadPreview = useCallback(async (resourceId: string) => {
+    if (!resourceId) {
       setPreview(null);
       return;
     }
 
     setPreviewLoading(true);
     try {
-      const nextPreview = await getObjectTypeDataViewPreview(networkId, dataViewId);
+      const nextPreview = await getObjectTypeResourcePreview(networkId, resourceId);
       setPreview(nextPreview);
     } finally {
       setPreviewLoading(false);
@@ -228,12 +245,12 @@ export function ObjectTypeDataViewSelectModal({
     <div className={styles.footerBox}>
       {!checkedItem ? (
         <div className={styles.footerText}>
-          {t("knowledgeNetwork.objectTypeDataViewCheckedCount", { count: 0 })}
+          {t("knowledgeNetwork.objectTypeResourceCheckedCount", { count: 0 })}
         </div>
       ) : (
         <Dropdown menu={{ items: dropdownItems }} trigger={["click"]}>
           <div className={styles.footerTextActive}>
-            {t("knowledgeNetwork.objectTypeDataViewCheckedCount", { count: 1 })}
+            {t("knowledgeNetwork.objectTypeResourceCheckedCount", { count: 1 })}
             <DownOutlined />
           </div>
         </Dropdown>
@@ -264,7 +281,7 @@ export function ObjectTypeDataViewSelectModal({
       open={open}
       title={
         <div className={styles.titleBox}>
-          <span className={styles.titleText}>{t("knowledgeNetwork.objectTypeSelectDataView")}</span>
+          <span className={styles.titleText}>{t("knowledgeNetwork.objectTypeSelectResource")}</span>
         </div>
       }
       width={1080}
@@ -274,9 +291,12 @@ export function ObjectTypeDataViewSelectModal({
           <div className={styles.groupBox}>
             <div
               className={`${styles.allItem} ${selectedGroupId ? "" : styles.allItemActive}`}
-              onClick={() => setSelectedGroupId("")}
+              onClick={() => {
+                setSelectedGroupId("");
+                setPagination((current) => ({ ...current, page: 1 }));
+              }}
             >
-              {t("knowledgeNetwork.objectTypeDataViewAll")}
+              {t("knowledgeNetwork.objectTypeResourceAll")}
             </div>
             <Tree
               blockNode
@@ -287,7 +307,14 @@ export function ObjectTypeDataViewSelectModal({
                   return;
                 }
 
-                setSelectedGroupId(String(keys[0] ?? ""));
+                const nextGroupId = String(keys[0] ?? "");
+                if (!nextGroupId || nextGroupId.startsWith("source-type:")) {
+                  return;
+                }
+
+                setSelectedGroupId(nextGroupId);
+                setPreviewId("");
+                setPreview(null);
                 setPagination((current) => ({ ...current, page: 1 }));
               }}
               selectedKeys={selectedGroupId ? [selectedGroupId] : []}
@@ -312,43 +339,50 @@ export function ObjectTypeDataViewSelectModal({
               />
             </div>
             <div className={styles.listContainer}>
-              {listItems.map((item) => {
-                const isChecked = checkedItem?.id === item.id;
-                const isDisabled = selectedId === item.id;
-                return (
-                  <div
-                    className={`${styles.listItem} ${previewId === item.id ? styles.listItemActive : ""}`}
-                    key={item.id}
-                  >
-                    {isDisabled ? (
-                      <Checkbox checked disabled />
-                    ) : (
-                      <Checkbox
-                        checked={isChecked}
-                        onChange={() => handleToggleItem(item)}
-                      />
-                    )}
+              {listItems.length > 0 ? (
+                listItems.map((item) => {
+                  const isChecked = checkedItem?.id === item.id;
+                  const isDisabled = selectedId === item.id;
+                  return (
                     <div
-                      className={styles.listItemContent}
-                      onClick={() => {
-                        setPreviewId(item.id);
-                      }}
+                      className={`${styles.listItem} ${previewId === item.id ? styles.listItemActive : ""}`}
+                      key={item.id}
                     >
-                      <span className={styles.listItemIconBox}>
-                        <span className={styles.listItemIconGrid}>
-                          <span />
-                          <span />
-                          <span />
-                          <span />
-                          <span />
-                          <span />
+                      {isDisabled ? (
+                        <Checkbox checked disabled />
+                      ) : (
+                        <Checkbox
+                          checked={isChecked}
+                          onChange={() => handleToggleItem(item)}
+                        />
+                      )}
+                      <div
+                        className={styles.listItemContent}
+                        onClick={() => {
+                          setPreviewId(item.id);
+                          setPreview(null);
+                        }}
+                      >
+                        <span className={styles.listItemIconBox}>
+                          <span className={styles.listItemIconGrid}>
+                            <span />
+                            <span />
+                            <span />
+                            <span />
+                            <span />
+                            <span />
+                          </span>
                         </span>
-                      </span>
-                      <div className={styles.listItemTitle}>{item.name}</div>
+                        <div className={styles.listItemTitle}>{item.name}</div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <div className={styles.previewEmpty}>
+                  <Empty description={t("knowledgeNetwork.objectTypeEmptyNoSearchResult")} />
+                </div>
+              )}
             </div>
             <div className={styles.paginationBox}>
               <Pagination
@@ -371,7 +405,7 @@ export function ObjectTypeDataViewSelectModal({
               <div className={styles.previewTitle}>
                 <span>{preview.name}</span>
                 <span className={styles.previewTip}>
-                  {t("knowledgeNetwork.objectTypeDataViewPreviewTip")}
+                  {t("knowledgeNetwork.objectTypeResourcePreviewTip")}
                 </span>
               </div>
               <Table
@@ -392,7 +426,7 @@ export function ObjectTypeDataViewSelectModal({
             </div>
           ) : (
             <div className={styles.previewEmpty}>
-              {t("knowledgeNetwork.objectTypeDataViewPreviewEmpty")}
+              {t("knowledgeNetwork.objectTypeResourcePreviewEmpty")}
             </div>
           )}
         </Splitter.Panel>

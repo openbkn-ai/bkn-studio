@@ -3,13 +3,13 @@ import type { TransferProps } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ObjectTypeDataViewField } from "@/modules/knowledge-network/types/knowledge-network";
+import type { ObjectTypeResourceField } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { FieldTypeIcon } from "./FieldTypeIcon";
 import styles from "./ObjectTypeDataAttributePickModal.module.css";
 
 type ObjectTypeDataAttributePickModalProps = {
-  fields: ObjectTypeDataViewField[];
+  fields: ObjectTypeResourceField[];
   onCancel: () => void;
   onOk: (fieldNames: string[]) => void;
   open: boolean;
@@ -91,7 +91,7 @@ export function ObjectTypeDataAttributePickModal({
         showSearch
         targetKeys={targetKeys}
         titles={[
-          t("knowledgeNetwork.objectTypeDataView"),
+          t("knowledgeNetwork.objectTypeResource"),
           <button
             className={styles.clearButton}
             key="clear"

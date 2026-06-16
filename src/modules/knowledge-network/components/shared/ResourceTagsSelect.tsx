@@ -6,7 +6,46 @@ import { useTranslation } from "react-i18next";
 import { listKnowledgeNetworkTags } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { logServiceFallback } from "@/modules/knowledge-network/services/shared/runtime";
 
-const TAG_PATTERN = /^[^/:?\\"<>|：?""？！《》,#[]{}%&*$^!=.'']*$/;
+const TAG_INVALID_CHARACTERS = [
+  "/",
+  ":",
+  "?",
+  "\\",
+  '"',
+  "<",
+  ">",
+  "|",
+  "：",
+  "？",
+  "‘",
+  "’",
+  "“",
+  "”",
+  "！",
+  "《",
+  "》",
+  ",",
+  "#",
+  "[",
+  "]",
+  "{",
+  "}",
+  "%",
+  "&",
+  "*",
+  "$",
+  "^",
+  "!",
+  "=",
+  ".",
+  "'",
+] as const;
+
+function hasInvalidTagCharacter(tag: string) {
+  return tag.split("").some((character) =>
+    TAG_INVALID_CHARACTERS.includes(character as (typeof TAG_INVALID_CHARACTERS)[number]),
+  );
+}
 
 type ResourceTagsSelectProps = {
   onChange?: (value: string[]) => void;
@@ -77,7 +116,7 @@ export function validateKnowledgeNetworkTags(
         return Promise.reject(new Error(t("knowledgeNetwork.tagLengthLimit")));
       }
 
-      if (!TAG_PATTERN.test(tag)) {
+      if (hasInvalidTagCharacter(tag)) {
         return Promise.reject(new Error(t("knowledgeNetwork.tagInvalidCharacter")));
       }
     }

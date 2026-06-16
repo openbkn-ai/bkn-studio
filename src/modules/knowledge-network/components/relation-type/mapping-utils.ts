@@ -1,11 +1,11 @@
 import type {
-  RelationTypeDataViewRowMapping,
+  RelationTypeResourceRowMapping,
   RelationTypeMappingConfig,
   RelationTypePropertyMapping,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 export type RelationTypeMappingFormValues = {
-  mappingMode: "direct" | "data-view";
+  mappingMode: "direct" | "resource";
   mappingRules: RelationTypeMappingConfig;
 };
 
@@ -16,10 +16,10 @@ export function createEmptyPropertyMapping(): RelationTypePropertyMapping {
   };
 }
 
-export function createEmptyDataViewMapping(): RelationTypeDataViewRowMapping {
+export function createEmptyResourceMapping(): RelationTypeResourceRowMapping {
   return {
-    dataViewSourcePropertyName: "",
-    dataViewTargetPropertyName: "",
+    resourceSourcePropertyName: "",
+    resourceTargetPropertyName: "",
     sourceObjectPropertyName: "",
     targetObjectPropertyName: "",
   };
@@ -29,45 +29,45 @@ export function createDefaultDirectMappingRules(): RelationTypeMappingConfig {
   return {
     backingDataSourceId: "",
     backingDataSourceName: "",
-    dataViewMappings: [createEmptyDataViewMapping()],
+    resourceMappings: [createEmptyResourceMapping()],
     propertyMappings: [createEmptyPropertyMapping()],
     sourceObjectTypeId: "",
     targetObjectTypeId: "",
   };
 }
 
-export function createDefaultDataViewMappingRules(): RelationTypeMappingConfig {
+export function createDefaultResourceMappingRules(): RelationTypeMappingConfig {
   return createDefaultDirectMappingRules();
 }
 
 export function createDefaultRelationTypeMappingValues(
-  mappingMode: "direct" | "data-view" = "direct",
+  mappingMode: "direct" | "resource" = "direct",
 ): RelationTypeMappingFormValues {
   return {
     mappingMode,
     mappingRules:
-      mappingMode === "data-view"
-        ? createDefaultDataViewMappingRules()
+      mappingMode === "resource"
+        ? createDefaultResourceMappingRules()
         : createDefaultDirectMappingRules(),
   };
 }
 
 export function resetMappingRulesForMode(
-  mode: "direct" | "data-view",
+  mode: "direct" | "resource",
 ): RelationTypeMappingConfig {
-  return mode === "data-view"
-    ? createDefaultDataViewMappingRules()
+  return mode === "resource"
+    ? createDefaultResourceMappingRules()
     : createDefaultDirectMappingRules();
 }
 
-export function countValidDataViewMappings(
-  mappings: RelationTypeDataViewRowMapping[],
+export function countValidResourceMappings(
+  mappings: RelationTypeResourceRowMapping[],
 ): number {
   return mappings.filter(
     (item) =>
       item.sourceObjectPropertyName &&
-      item.dataViewSourcePropertyName &&
-      item.dataViewTargetPropertyName &&
+      item.resourceSourcePropertyName &&
+      item.resourceTargetPropertyName &&
       item.targetObjectPropertyName,
   ).length;
 }
@@ -75,13 +75,13 @@ export function countValidDataViewMappings(
 export function normalizeRelationTypeMappingValues(
   value: RelationTypeMappingFormValues,
 ): RelationTypeMappingFormValues {
-  if (value.mappingMode === "data-view") {
-    const dataViewMappings = value.mappingRules.dataViewMappings
+  if (value.mappingMode === "resource") {
+    const resourceMappings = value.mappingRules.resourceMappings
       .filter(
         (item) =>
           item.sourceObjectPropertyName &&
-          item.dataViewSourcePropertyName &&
-          item.dataViewTargetPropertyName &&
+          item.resourceSourcePropertyName &&
+          item.resourceTargetPropertyName &&
           item.targetObjectPropertyName,
       )
       .map((item) => ({ ...item }));
@@ -91,8 +91,8 @@ export function normalizeRelationTypeMappingValues(
       mappingRules: {
         backingDataSourceId: value.mappingRules.backingDataSourceId,
         backingDataSourceName: value.mappingRules.backingDataSourceName,
-        dataViewMappings:
-          dataViewMappings.length > 0 ? dataViewMappings : [createEmptyDataViewMapping()],
+        resourceMappings:
+          resourceMappings.length > 0 ? resourceMappings : [createEmptyResourceMapping()],
         propertyMappings: [createEmptyPropertyMapping()],
         sourceObjectTypeId: value.mappingRules.sourceObjectTypeId,
         targetObjectTypeId: value.mappingRules.targetObjectTypeId,
@@ -112,7 +112,7 @@ export function normalizeRelationTypeMappingValues(
     mappingRules: {
       backingDataSourceId: "",
       backingDataSourceName: "",
-      dataViewMappings: [createEmptyDataViewMapping()],
+      resourceMappings: [createEmptyResourceMapping()],
       propertyMappings:
         propertyMappings.length > 0 ? propertyMappings : [createEmptyPropertyMapping()],
       sourceObjectTypeId: value.mappingRules.sourceObjectTypeId,
@@ -148,11 +148,11 @@ export function validateRelationTypeMappingValues(
   }
 
   if (!mappingRules.backingDataSourceId) {
-    return t("knowledgeNetwork.relationTypeDataViewRequired");
+    return t("knowledgeNetwork.relationTypeResourceRequired");
   }
 
-  if (countValidDataViewMappings(mappingRules.dataViewMappings) === 0) {
-    return t("knowledgeNetwork.relationTypeDataViewMappingRequired");
+  if (countValidResourceMappings(mappingRules.resourceMappings) === 0) {
+    return t("knowledgeNetwork.relationTypeResourceMappingRequired");
   }
 
   return null;
@@ -162,8 +162,8 @@ export function buildRelationTypeMappingRulesFromDetail(
   detail: {
     backingDataSourceId?: string;
     backingDataSourceName?: string;
-    dataViewMappings: RelationTypeDataViewRowMapping[];
-    mappingMode: "direct" | "data-view";
+    resourceMappings: RelationTypeResourceRowMapping[];
+    mappingMode: "direct" | "resource";
     propertyMappings: RelationTypePropertyMapping[];
     sourceObjectTypeId: string;
     targetObjectTypeId: string;
@@ -172,10 +172,10 @@ export function buildRelationTypeMappingRulesFromDetail(
   return {
     backingDataSourceId: detail.backingDataSourceId ?? "",
     backingDataSourceName: detail.backingDataSourceName,
-    dataViewMappings:
-      detail.dataViewMappings.length > 0
-        ? detail.dataViewMappings.map((item) => ({ ...item }))
-        : [createEmptyDataViewMapping()],
+    resourceMappings:
+      detail.resourceMappings.length > 0
+        ? detail.resourceMappings.map((item) => ({ ...item }))
+        : [createEmptyResourceMapping()],
     propertyMappings:
       detail.propertyMappings.length > 0
         ? detail.propertyMappings.map((item) => ({ ...item }))

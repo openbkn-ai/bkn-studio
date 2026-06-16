@@ -39,7 +39,7 @@ export type ObjectTypeDataSource = {
   name: string;
 };
 
-export type ObjectTypeDataViewGroup = {
+export type ObjectTypeResourceGroup = {
   id: string;
   name: string;
   parentId?: string;
@@ -47,19 +47,19 @@ export type ObjectTypeDataViewGroup = {
   type: string;
 };
 
-export type ObjectTypeDataViewListQuery = {
+export type ObjectTypeResourceListQuery = {
   dataSourceId?: string;
   name?: string;
   page?: number;
   pageSize?: number;
 };
 
-export type ObjectTypeDataViewListResult = {
+export type ObjectTypeResourceListResult = {
   items: ObjectTypeDataSource[];
   total: number;
 };
 
-export type ObjectTypeDataViewPreview = {
+export type ObjectTypeResourcePreview = {
   columns: Array<{
     dataIndex: string;
     title: string;
@@ -68,7 +68,7 @@ export type ObjectTypeDataViewPreview = {
   rows: Array<Record<string, string | number>>;
 };
 
-export type ObjectTypeDataViewField = {
+export type ObjectTypeResourceField = {
   comment?: string;
   displayName: string;
   name: string;

@@ -145,6 +145,12 @@
   line-height: 1;
 }
 
+.groupIconLogical {
+  color: #722ed1;
+  font-size: 16px;
+  line-height: 1;
+}
+
 .groupBadge {
   align-items: center;
   border-radius: 6px;

@@ -119,7 +119,7 @@ services/
   knowledge-network.service.ts   # 对外 API 统一导出入口（import 路径不变）
   network.service.ts             # 网络级 CRUD / 预览 / 导入导出
   object-type.service.ts         # 对象类 CRUD / 索引配置
-  object-type-data-view.service.ts  # 数据视图 / legacy mdl 接口
+  object-type-resource.service.ts  # 数据视图 / legacy mdl 接口
   object-type-logic.service.ts   # 逻辑属性（算子 / 指标模型 / 小模型）
   shared/agent-operator-client.ts   # agent-operator 公共头与分页（复用 execution-factory headers）
   relation-type.service.ts       # 关系类 CRUD / 映射规则

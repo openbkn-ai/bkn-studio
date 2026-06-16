@@ -20,15 +20,15 @@ import type {
   KnowledgeNetworkTaskRecord,
   ObjectTypeDataProperty,
   ObjectTypeDataSource,
-  ObjectTypeDataViewField,
-  ObjectTypeDataViewGroup,
+  ObjectTypeResourceField,
+  ObjectTypeResourceGroup,
   ObjectTypeDetail,
   ObjectTypeIndexConfig,
   ObjectTypeLogicMetricModelRecord,
   ObjectTypeLogicOperatorRecord,
   ObjectTypeLogicProperty,
   ObjectTypeSmallModel,
-  RelationTypeDataViewRowMapping,
+  RelationTypeResourceRowMapping,
   RelationTypePropertyMapping,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
@@ -640,7 +640,7 @@ export const mockObjectTypeSmallModels: ObjectTypeSmallModel[] = [
   },
 ];
 
-export const mockObjectTypeDataViewGroups: Record<string, ObjectTypeDataViewGroup[]> = {
+export const mockObjectTypeResourceGroups: Record<string, ObjectTypeResourceGroup[]> = {
   "kn-domain-risk": [
     { id: "source-type:mysql", name: "MySQL", selectable: false, type: "mysql" },
     { id: "ds-mysql", name: "order_platform", parentId: "source-type:mysql", type: "mysql" },
@@ -657,7 +657,7 @@ export const mockObjectTypeDataViewGroups: Record<string, ObjectTypeDataViewGrou
   ],
 };
 
-export const mockObjectTypeDataViews: Record<string, ObjectTypeDataSource[]> = {
+export const mockObjectTypeResources: Record<string, ObjectTypeDataSource[]> = {
   "kn-domain-risk": [
     { dataSourceId: "ds-mysql", id: "dv-risk-order", name: "风险订单视图" },
     { dataSourceId: "ds-mysql", id: "dv-risk-device", name: "风险设备视图" },
@@ -669,7 +669,7 @@ export const mockObjectTypeDataViews: Record<string, ObjectTypeDataSource[]> = {
   "kn-domain-customer": [{ dataSourceId: "ds-index", id: "dv-customer", name: "Customer View" }],
 };
 
-export const mockObjectTypeDataViewPreviewRows: Record<
+export const mockObjectTypeResourcePreviewRows: Record<
   string,
   Record<string, Array<Record<string, string | number>>>
 > = {
@@ -709,9 +709,9 @@ export const mockObjectTypeDataViewPreviewRows: Record<
   },
 };
 
-export const mockObjectTypeDataViewFields: Record<
+export const mockObjectTypeResourceFields: Record<
   string,
-  Record<string, ObjectTypeDataViewField[]>
+  Record<string, ObjectTypeResourceField[]>
 > = {
   "kn-domain-risk": {
     "dv-risk-order": [
@@ -777,7 +777,7 @@ export const mockRelationTypes: Record<string, KnowledgeNetworkRelationTypeRecor
       name: "Service Relation",
       description: "Supplier serves a fulfillment node.",
       color: "#08979c",
-      mappingMode: "data-view",
+      mappingMode: "resource",
       sourceObjectTypeId: "ot-supplier",
       sourceObjectTypeName: "Supplier",
       targetObjectTypeId: "ot-supplier",
@@ -804,14 +804,14 @@ export const mockRelationTypeMappings: Record<
   },
 };
 
-export const mockRelationTypeDataViewMappings: Record<
+export const mockRelationTypeResourceMappings: Record<
   string,
   Record<
     string,
     {
       backingDataSourceId: string;
       backingDataSourceName?: string;
-      dataViewMappings: RelationTypeDataViewRowMapping[];
+      resourceMappings: RelationTypeResourceRowMapping[];
     }
   >
 > = {
@@ -819,10 +819,10 @@ export const mockRelationTypeDataViewMappings: Record<
     "rt-supply-service": {
       backingDataSourceId: "dv-supplier",
       backingDataSourceName: "Supplier View",
-      dataViewMappings: [
+      resourceMappings: [
         {
-          dataViewSourcePropertyName: "supplier_id",
-          dataViewTargetPropertyName: "supplier_name",
+          resourceSourcePropertyName: "supplier_id",
+          resourceTargetPropertyName: "supplier_name",
           sourceObjectPropertyName: "supplier_id",
           targetObjectPropertyName: "supplier_name",
         },
@@ -831,34 +831,34 @@ export const mockRelationTypeDataViewMappings: Record<
   },
 };
 
-export function cloneRelationTypeDataViewMappings(
-  mappings: RelationTypeDataViewRowMapping[],
-): RelationTypeDataViewRowMapping[] {
+export function cloneRelationTypeResourceMappings(
+  mappings: RelationTypeResourceRowMapping[],
+): RelationTypeResourceRowMapping[] {
   return mappings.map((item) => ({ ...item }));
 }
 
-export function persistMockRelationTypeDataViewMappings(
+export function persistMockRelationTypeResourceMappings(
   networkId: string,
   relationTypeId: string,
   store: {
     backingDataSourceId: string;
     backingDataSourceName?: string;
-    dataViewMappings: RelationTypeDataViewRowMapping[];
+    resourceMappings: RelationTypeResourceRowMapping[];
   },
 ) {
-  mockRelationTypeDataViewMappings[networkId] = {
-    ...(mockRelationTypeDataViewMappings[networkId] ?? {}),
+  mockRelationTypeResourceMappings[networkId] = {
+    ...(mockRelationTypeResourceMappings[networkId] ?? {}),
     [relationTypeId]: {
       backingDataSourceId: store.backingDataSourceId,
       backingDataSourceName: store.backingDataSourceName,
-      dataViewMappings: cloneRelationTypeDataViewMappings(store.dataViewMappings),
+      resourceMappings: cloneRelationTypeResourceMappings(store.resourceMappings),
     },
   };
 }
 
-export function removeMockRelationTypeDataViewMappings(networkId: string, relationTypeId: string) {
-  if (mockRelationTypeDataViewMappings[networkId]) {
-    delete mockRelationTypeDataViewMappings[networkId][relationTypeId];
+export function removeMockRelationTypeResourceMappings(networkId: string, relationTypeId: string) {
+  if (mockRelationTypeResourceMappings[networkId]) {
+    delete mockRelationTypeResourceMappings[networkId][relationTypeId];
   }
 }
 

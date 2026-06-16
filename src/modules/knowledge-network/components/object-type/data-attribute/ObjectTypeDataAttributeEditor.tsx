@@ -35,12 +35,12 @@ import {
   renderResourceIcon,
 } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import {
-  listObjectTypeDataViewFields,
+  listObjectTypeResourceFields,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ObjectTypeDataProperty,
   ObjectTypeDataSource,
-  ObjectTypeDataViewField,
+  ObjectTypeResourceField,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import {
@@ -53,7 +53,7 @@ import {
 import { ObjectTypeDataAttributeFormDrawer } from "./ObjectTypeDataAttributeFormDrawer";
 import styles from "./ObjectTypeDataAttributeEditor.module.css";
 import { ObjectTypeDataAttributePickModal } from "./ObjectTypeDataAttributePickModal";
-import { ObjectTypeDataViewSelectModal } from "./ObjectTypeDataViewSelectModal";
+import { ObjectTypeResourceSelectModal } from "./ObjectTypeResourceSelectModal";
 import { FieldTypeIcon } from "./FieldTypeIcon";
 
 type ObjectTypeBasicInfo = {
@@ -104,7 +104,7 @@ const PANEL_EMPTY_HEIGHT = 96;
 const CANVAS_MIN_HEIGHT = 560;
 const CANVAS_STAGE_WIDTH = 1400;
 
-function isSupportedDataViewFieldName(name: string) {
+function isSupportedResourceFieldName(name: string) {
   return !name.startsWith("_") && !name.startsWith("@");
 }
 
@@ -113,7 +113,7 @@ function normalizeProperties(properties: ObjectTypeDataProperty[]) {
 }
 
 function buildMappedPropertiesFromViewFields(
-  fields: ObjectTypeDataViewField[],
+  fields: ObjectTypeResourceField[],
   existingProperties: ObjectTypeDataProperty[] = [],
 ): ObjectTypeDataProperty[] {
   const existingByName = new Map(existingProperties.map((item) => [item.name, item]));
@@ -158,9 +158,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const viewHandleRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const propertyHandleRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
-  const [viewFields, setViewFields] = useState<ObjectTypeDataViewField[]>([]);
+  const [viewFields, setViewFields] = useState<ObjectTypeResourceField[]>([]);
   const [selectedViewId, setSelectedViewId] = useState(dataSource?.id ?? "");
-  const [pendingViewField, setPendingViewField] = useState<ObjectTypeDataViewField | null>(
+  const [pendingViewField, setPendingViewField] = useState<ObjectTypeResourceField | null>(
     null,
   );
   const [hoveredConnection, setHoveredConnection] = useState<string | null>(null);
@@ -169,7 +169,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<ObjectTypeDataProperty | undefined>();
   const [pickModalOpen, setPickModalOpen] = useState(false);
-  const [dataViewModalOpen, setDataViewModalOpen] = useState(false);
+  const [resourceModalOpen, setResourceModalOpen] = useState(false);
   const [fieldSearch, setFieldSearch] = useState("");
   const [propertySearch, setPropertySearch] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -184,7 +184,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   const logicNameSet = useMemo(() => new Set(logicPropertyNames), [logicPropertyNames]);
 
-  const selectedDataView = useMemo(() => dataSource, [dataSource]);
+  const selectedResource = useMemo(() => dataSource, [dataSource]);
 
   const primaryKeyNames = useMemo(
     () => validProperties.filter((item) => item.primaryKey).map((item) => item.name),
@@ -277,9 +277,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         return [];
       }
 
-      const fields = await listObjectTypeDataViewFields(networkId, viewId);
+      const fields = await listObjectTypeResourceFields(networkId, viewId);
       const filteredFields = fields
-        .filter((item) => isSupportedDataViewFieldName(item.name))
+        .filter((item) => isSupportedResourceFieldName(item.name))
         .map((item) => ({
           ...item,
           name: item.name.replace(/\./g, "_"),
@@ -379,10 +379,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     [dataProperties, dataSource, t],
   );
 
-  const handleSelectDataView = async (view: ObjectTypeDataSource) => {
+  const handleSelectResource = async (view: ObjectTypeDataSource) => {
     setSelectedViewId(view.id);
     setPendingViewField(null);
-    setDataViewModalOpen(false);
+    setResourceModalOpen(false);
 
     const filteredFields = await loadViewFields(view.id);
     const mappedProperties = buildMappedPropertiesFromViewFields(filteredFields, dataProperties);
@@ -393,10 +393,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     updateProperties([...mappedProperties, ...manualProperties], view);
   };
 
-  const handleClearDataView = () => {
+  const handleClearResource = () => {
     void modal.confirm({
-      title: t("knowledgeNetwork.objectTypeClearDataViewTitle"),
-      content: t("knowledgeNetwork.objectTypeClearDataViewDescription"),
+      title: t("knowledgeNetwork.objectTypeClearResourceTitle"),
+      content: t("knowledgeNetwork.objectTypeClearResourceDescription"),
       cancelText: t("common.cancel"),
       okText: t("common.ok"),
       onOk: () => {
@@ -674,11 +674,11 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const viewPanelMenu: MenuProps["items"] = [
     {
       key: "replace",
-      label: t("knowledgeNetwork.objectTypeReplaceDataView"),
+      label: t("knowledgeNetwork.objectTypeReplaceResource"),
     },
     {
       key: "clear",
-      label: t("knowledgeNetwork.objectTypeClearDataView"),
+      label: t("knowledgeNetwork.objectTypeClearResource"),
     },
   ];
 
@@ -690,7 +690,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     {
       disabled: !selectedViewId,
       key: "pick",
-      label: t("knowledgeNetwork.objectTypeSyncDataViewFields"),
+      label: t("knowledgeNetwork.objectTypeSyncResourceFields"),
     },
   ];
 
@@ -892,7 +892,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                   <TableOutlined />
                 </span>
                 <span className={styles.panelTitle}>
-                  {selectedDataView?.name ?? t("knowledgeNetwork.objectTypeDataView")}
+                  {selectedResource?.name ?? t("knowledgeNetwork.objectTypeResource")}
                 </span>
                 <span className={styles.panelCount}>{viewFields.length}</span>
               </div>
@@ -913,10 +913,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                         items: viewPanelMenu,
                         onClick: ({ key }) => {
                           if (key === "replace") {
-                            setDataViewModalOpen(true);
+                            setResourceModalOpen(true);
                           }
                           if (key === "clear") {
-                            handleClearDataView();
+                            handleClearResource();
                           }
                         },
                       }}
@@ -928,7 +928,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                 ) : (
                   <PlusOutlined
                     className={styles.panelActionIcon}
-                    onClick={() => setDataViewModalOpen(true)}
+                    onClick={() => setResourceModalOpen(true)}
                   />
                 )}
               </div>
@@ -1235,13 +1235,13 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         open={pickModalOpen}
       />
 
-      <ObjectTypeDataViewSelectModal
+      <ObjectTypeResourceSelectModal
         networkId={networkId}
-        onCancel={() => setDataViewModalOpen(false)}
+        onCancel={() => setResourceModalOpen(false)}
         onOk={(view) => {
-          void handleSelectDataView(view);
+          void handleSelectResource(view);
         }}
-        open={dataViewModalOpen}
+        open={resourceModalOpen}
         selectedId={selectedViewId}
       />
     </div>

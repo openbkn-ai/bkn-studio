@@ -272,7 +272,7 @@ export function RelationTypeListPanel({
       render: (value: KnowledgeNetworkRelationTypeRecord["mappingMode"]) =>
         value === "direct"
           ? t("knowledgeNetwork.relationTypeDirectMapping")
-          : t("knowledgeNetwork.relationTypeDataViewMapping"),
+          : t("knowledgeNetwork.relationTypeResourceMapping"),
     },
     {
       dataIndex: "updaterName",

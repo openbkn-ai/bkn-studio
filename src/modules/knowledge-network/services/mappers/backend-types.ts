@@ -65,7 +65,7 @@ export type BackendDataProperty = {
 export type BackendDataSource = {
   id: string;
   name?: string;
-  type: "data_view";
+  type: "data_view" | "resource";
 };
 
 export type BackendLogicParameter = {

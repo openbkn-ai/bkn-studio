@@ -8,21 +8,21 @@ export const relationtypePart = {
     relationTypeCreateDescription:
       "Create a relation type and its mapping rules through a multi-step form.",
     relationTypeCreateTitle: "Create relation type",
-    relationTypeDataViewMapping: "Data view mapping",
-    relationTypeDataViewMappingCount: "{{count}} data view mappings",
-    relationTypeDataViewMappingHint:
-      "Connect source and target object properties through a data view. Configure object types, the data view, and field mappings.",
-    relationTypeDataViewMappingOption:
-      "Connect object type properties through a data view",
-    relationTypeDataViewMappingRequired:
-      "Configure at least one complete data view mapping.",
-    relationTypeDataViewColumn: "Data view",
-    relationTypeChooseDataView: "Choose a data view",
-    relationTypeDataViewRequired: "Please choose a data view.",
-    relationTypeDataViewSourcePropertyPlaceholder: "Select a data view source field",
-    relationTypeDataViewTargetPropertyPlaceholder: "Select a data view target field",
-    relationTypeDataViewSourcePropertyLabel: "Data view source field",
-    relationTypeDataViewTargetPropertyLabel: "Data view target field",
+    relationTypeResourceMapping: "Resource mapping",
+    relationTypeResourceMappingCount: "{{count}} resource mappings",
+    relationTypeResourceMappingHint:
+      "Connect source and target object properties through a resource. Configure object types, the resource, and field mappings.",
+    relationTypeResourceMappingOption:
+      "Connect object type properties through a resource",
+    relationTypeResourceMappingRequired:
+      "Configure at least one complete resource mapping.",
+    relationTypeResourceColumn: "Resource",
+    relationTypeChooseResource: "Choose a resource",
+    relationTypeResourceRequired: "Please choose a resource.",
+    relationTypeResourceSourcePropertyPlaceholder: "Select a resource source field",
+    relationTypeResourceTargetPropertyPlaceholder: "Select a resource target field",
+    relationTypeResourceSourcePropertyLabel: "Resource source field",
+    relationTypeResourceTargetPropertyLabel: "Resource target field",
     relationTypeDeleteDescription:
       'Delete "{{name}}"? This action cannot be undone.',
     relationTypeDeleteTitle: "Delete relation type",
@@ -41,7 +41,7 @@ export const relationtypePart = {
     relationTypeMappingAssociation: "Relation association",
     relationTypeMappingDescription: "Maintain relation type mapping configuration.",
     relationTypeMappingEntry: "Mapping config",
-    relationTypeMappingItemDataView: "Data view mapping rules",
+    relationTypeMappingItemResource: "Resource mapping rules",
     relationTypeMappingItemDirect: "Direct mapping rules",
     relationTypeMappingItemProperty: "Property mapping table",
     relationTypeMappingMode: "Mapping mode",

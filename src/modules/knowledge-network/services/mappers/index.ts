@@ -284,7 +284,7 @@ export function buildBackendObjectTypePayload(
     data_properties: dataProperties.map(toBackendDataProperty),
     data_source: input.dataSource
       ? {
-          type: "data_view",
+          type: "resource",
           id: input.dataSource.id,
           name: input.dataSource.name,
         }
@@ -410,7 +410,7 @@ export function mapConceptGroupDetail(item: BackendConceptGroup): ConceptGroupDe
 
 export function mapRelationType(item: BackendRelationType): KnowledgeNetworkRelationTypeRecord {
   const mappingMode =
-    item.mapping_mode === "data_view" || item.type === "data_view" ? "data-view" : "direct";
+    item.mapping_mode === "data_view" || item.type === "data_view" ? "resource" : "direct";
 
   return {
     id: item.id,
@@ -444,7 +444,7 @@ export function mapRelationTypeDetail(item: BackendRelationType): RelationTypeDe
     ...record,
     backingDataSourceId: mappings.backingDataSourceId,
     backingDataSourceName: mappings.backingDataSourceName,
-    dataViewMappings: mappings.dataViewMappings,
+    resourceMappings: mappings.resourceMappings,
     propertyMappings: mappings.propertyMappings,
   };
 }
