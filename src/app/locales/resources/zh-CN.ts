@@ -9,6 +9,7 @@ import { executionFactoryLabGapFillZh } from "@/modules/execution-factory-lab/ut
 import { executionFactoryZhCN } from "@/modules/execution-factory/locales/zh-CN";
 import { knowledgeNetworkZhCN } from "@/modules/knowledge-network/locales/zh-CN";
 import { modelResourcesZhCN } from "@/modules/model-resources/locales/zh-CN";
+import { systemAdminZhCN } from "@/modules/system-admin/locales/zh-CN";
 
 export const zhCN = {
   ...commonZhCN,
@@ -20,6 +21,7 @@ export const zhCN = {
   ...knowledgeNetworkZhCN,
   ...executionFactoryZhCN,
   ...modelResourcesZhCN,
+  ...systemAdminZhCN,
   executionFactoryLab: {
     ...executionFactoryLabZhCN.executionFactoryLab,
     ...executionFactoryLabGapFillZh.executionFactoryLab,

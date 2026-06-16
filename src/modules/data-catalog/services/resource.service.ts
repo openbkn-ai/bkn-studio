@@ -30,6 +30,7 @@ type BackendSchemaField = {
 type BackendResource = {
   catalog_id: string;
   category?: string;
+  column_count?: number;
   description?: string;
   id: string;
   logic_type?: string;
@@ -86,6 +87,8 @@ function mapResource(item: BackendResource): CatalogResource {
       name: field.name ?? field.display_name ?? "",
       type: field.type ?? field.original_type ?? "string",
     })),
+    // 列表接口不返回 schema_definition,改用后端标量 column_count;详情接口回退到 schema 长度
+    columnCount: item.column_count ?? item.schema_definition?.length ?? 0,
     // 顶层 row_count 后端常缺省,实际行数在 source_metadata.properties 里
     rowCount: item.row_count ?? item.source_metadata?.properties?.row_count ?? 0,
     updatedAt: item.update_time ?? 0,
@@ -163,6 +166,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
               { name: "name", type: "varchar(128)" },
               { name: "updated_at", type: "datetime" },
             ],
+      columnCount: input.schema.length > 0 ? input.schema.length : 3,
       rowCount: 0,
       updatedAt: Date.now(),
       updateTime: formatMockTimestamp(Date.now()),
@@ -194,6 +198,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       sourceIdentifier: input.sourceIdentifier,
       description: input.description,
       schema: input.schema,
+      columnCount: input.schema.length,
       rowCount: 0,
       updatedAt: Date.now(),
       updateTime: formatMockTimestamp(Date.now()),

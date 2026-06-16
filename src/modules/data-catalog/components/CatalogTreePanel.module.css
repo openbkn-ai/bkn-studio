@@ -9,13 +9,15 @@
   box-shadow: 0 14px 34px rgba(22, 42, 69, 0.06);
   position: sticky;
   top: 16px;
-  max-height: calc(100vh - 110px);
+  /* 固定高度:面板长度恒定不随内容条数变化,foot 钉底,body 内部滚动 */
+  height: calc(100vh - 110px);
 }
 
-/* 单栏堆叠时树和详情上下排列,sticky 会让树盖住下方详情,必须关掉 */
+/* 单栏堆叠时树和详情上下排列,sticky+固定高会让树盖住下方详情,必须关掉 */
 @media (max-width: 1200px) {
   .treePanel {
     position: static;
+    height: auto;
     max-height: none;
   }
 }
@@ -37,7 +39,9 @@
   flex: 1;
   /* flex 子项默认 min-height:auto,会撑破 .treePanel 的 max-height 导致内容溢出叠在下方面板上 */
   min-height: 0;
-  overflow: auto;
+  /* 只竖向滚动:长资源名靠节点 ellipsis 截断,不出现底部横向滚动条 */
+  overflow-x: hidden;
+  overflow-y: auto;
   margin: 0 -6px;
   padding: 0 6px;
 }

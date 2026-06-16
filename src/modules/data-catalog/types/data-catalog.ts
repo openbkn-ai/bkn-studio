@@ -8,6 +8,7 @@ export type ResourceSchemaField = {
 export type CatalogResource = {
   catalogId: string;
   category: ResourceCategory;
+  columnCount: number;
   description: string;
   id: string;
   name: string;
