@@ -221,14 +221,17 @@ export function QuotaListScene() {
   ];
 
   const handleTableChange = (pagination: TablePaginationConfig) => {
-    setPagination(pagination.current ?? 1, pagination.pageSize ?? pageState.pageSize);
+    setPagination({
+      page: pagination.current ?? 1,
+      pageSize: pagination.pageSize ?? pageState.pageSize,
+    });
   };
 
   const handleSortChange = (key: string) => {
     const nextRule = key as QuotaSortRule;
     setSortRule(nextRule);
     setSortOrder(nextRule !== sortRule ? "desc" : sortOrder === "desc" ? "asc" : "desc");
-    setPagination(1, pageState.pageSize);
+    setPagination({ page: 1 });
   };
 
   const closeLimitModal = (refresh?: boolean) => {
@@ -272,7 +275,7 @@ export function QuotaListScene() {
           value={apiModel}
           onChange={(value) => {
             setApiModel(value);
-            setPagination(1, pageState.pageSize);
+            setPagination({ page: 1 });
           }}
         />
         <Dropdown

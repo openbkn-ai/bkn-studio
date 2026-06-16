@@ -1,4 +1,3 @@
-import { DEFAULT_APP_BASENAME } from "@/app/router/app-paths";
 import type { RuntimeConfig, RuntimeInput, TokenManager } from "@/framework/runtime/types";
 import {
   getDevAccessToken,
@@ -39,7 +38,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
   locale: "zh-CN",
   mode: "standalone",
   router: {
-    basename: DEFAULT_APP_BASENAME,
+    basename: "/",
   },
   theme: {
     borderRadius: 12,

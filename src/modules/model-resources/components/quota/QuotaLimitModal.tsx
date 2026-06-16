@@ -12,7 +12,7 @@ import {
   getModelQuotaDetail,
   updateModelQuota,
 } from "@/modules/model-resources/services/quota.service";
-import type { ModelQuota, ModelQuotaDetail } from "@/modules/model-resources/types/quota";
+import type { ModelQuota } from "@/modules/model-resources/types/quota";
 import {
   formatForecastAmount,
   isQuotaConfigured,
@@ -51,17 +51,7 @@ function toBackendNumType(value: number) {
 }
 
 function createRowsFromRecord(
-  record: Pick<
-    ModelQuota | ModelQuotaDetail,
-    | "billingType"
-    | "currencyType"
-    | "inputTokens"
-    | "numType"
-    | "outputTokens"
-    | "priceType"
-    | "referPriceIn"
-    | "referPriceOut"
-  >,
+  record: ModelQuota,
   billingType: "0" | "1",
 ): QuotaRow[] {
   const configured = isQuotaConfigured(record);

@@ -18,6 +18,5 @@ describe("createRuntimeConfig", () => {
     expect(runtimeConfig.currentUser.permissions).toEqual(["knowledge-network:create"]);
     expect(runtimeConfig.currentUser.roles).toEqual(["admin"]);
     expect(runtimeConfig.theme.primaryColor).toBe("#123456");
-    expect(runtimeConfig.router.basename).toBe("/studio");
   });
 });

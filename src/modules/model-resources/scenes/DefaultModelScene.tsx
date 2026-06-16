@@ -1,11 +1,7 @@
 import { CheckCircleFilled, ReloadOutlined } from "@ant-design/icons";
 import { Alert, Input } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
-import type {
-  FilterValue,
-  SorterResult,
-  TableCurrentDataSource,
-} from "antd/es/table/interface";
+import type { SorterResult } from "antd/es/table/interface";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -99,9 +95,8 @@ export function DefaultModelScene() {
 
   const handleTableChange = (
     pagination: TablePaginationConfig,
-    _filters: Record<string, FilterValue | null>,
+    _filters: Record<string, (string | number | boolean)[] | null>,
     sorter: SorterResult<LlmModel> | SorterResult<LlmModel>[],
-    _extra: TableCurrentDataSource<LlmModel>,
   ) => {
     const nextSorter = Array.isArray(sorter) ? sorter[0] : sorter;
     const nextPage = pagination.current ?? 1;

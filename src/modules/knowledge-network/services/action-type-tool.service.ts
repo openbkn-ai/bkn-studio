@@ -57,31 +57,25 @@ type MarketToolboxDetailEntry = {
 
 function mapCatalogToolsFromRecords(
   tools:
-    | Array<{
-        description?: string;
-        name?: string;
-        status?: ToolRecord["status"];
-        toolId?: string;
-        useRule?: string;
-      }>
+    | Array<Pick<ToolRecord, "description" | "name" | "status" | "toolId" | "useRule">>
     | undefined,
 ): ActionTypeCatalogTool[] {
-  return (tools ?? []).reduce<ActionTypeCatalogTool[]>((result, tool) => {
+  return (tools ?? [])
+    .map((tool) => {
       const toolId = tool.toolId || tool.name;
       const toolName = tool.name || tool.toolId;
       if (!toolId || !toolName) {
-        return result;
+        return null;
       }
 
-      result.push({
+      return {
         description: tool.description ?? tool.useRule,
         parameters: [],
         toolId,
         toolName,
-      });
-
-      return result;
-    }, []);
+      };
+    })
+    .filter((tool): tool is ActionTypeCatalogTool => Boolean(tool));
 }
 
 export type ActionTypeCatalogTool = {
@@ -198,9 +192,9 @@ async function searchMarketToolBoxes(keyword: string): Promise<ActionTypeToolBox
   );
 
   return (response.data.data ?? [])
-    .reduce<ActionTypeToolBox[]>((result, box) => {
+    .map((box) => {
       if (!box.box_id || !box.box_name) {
-        return result;
+        return null;
       }
 
       const tools = (box.tools ?? [])
@@ -212,15 +206,14 @@ async function searchMarketToolBoxes(keyword: string): Promise<ActionTypeToolBox
           toolName: tool.name ?? tool.tool_id!,
         }));
 
-      result.push({
+      return {
         boxId: box.box_id,
         boxName: box.box_name,
         description: box.box_desc,
         tools,
-      });
-
-      return result;
-    }, []);
+      } satisfies ActionTypeToolBox;
+    })
+    .filter((item): item is ActionTypeToolBox => Boolean(item));
 }
 
 async function fetchAgentOperatorCatalog(
