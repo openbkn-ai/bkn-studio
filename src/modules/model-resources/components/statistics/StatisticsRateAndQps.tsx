@@ -55,7 +55,7 @@ export function StatisticsRateAndQps({ overview }: StatisticsRateAndQpsProps) {
             return "";
           }
 
-          const time = String(first.axisValue ?? "");
+          const time = String(first.name ?? "");
           const value = first.data;
 
           return `${formatStatisticsTooltipTime(time)}<br/>${t("modelResources.statistics.charts.qps")}: ${value}`;

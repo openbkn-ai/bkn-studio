@@ -64,7 +64,10 @@ export function formatReferPrice(
 
   const currency = CURRENCY_SYMBOL[record.currencyType ?? 0] ?? "￥";
   const priceType = record.priceType?.[0] ?? "thousand";
-  const unitLabel = priceType === "million" ? millionLabel : thousandLabel;
+  const unitLabel =
+    priceType === "million"
+      ? millionLabel || PRICE_UNIT_LABEL.million
+      : thousandLabel || PRICE_UNIT_LABEL.thousand;
   const prefix = record.billingType === 1 ? `${type === "in" ? inLabel : outLabel}：` : "";
 
   return `${prefix}${currency}${price}${currency === "￥" ? "元" : "美元"}/${unitLabel} tokens`;

@@ -1,3 +1,4 @@
+import { getAppCallbackPath, getAppHomePath } from "@/app/router/app-paths";
 import { getDevRefreshToken } from "@/framework/auth/dev-auth";
 import {
   clearStoredTokens,
@@ -30,7 +31,7 @@ function gatewayOrigin() {
   return typeof value === "string" ? value.trim().replace(/\/+$/, "") : "";
 }
 
-export const OAUTH_CALLBACK_PATH = "/callback";
+export const OAUTH_CALLBACK_PATH = getAppCallbackPath();
 
 const STATE_KEY = "bkn_oauth_state";
 const VERIFIER_KEY = "bkn_oauth_verifier";
@@ -54,7 +55,7 @@ export function shouldUseOAuthGate(mode: "hosted" | "standalone") {
 }
 
 export function isOAuthCallbackPath(pathname = window.location.pathname) {
-  return pathname === OAUTH_CALLBACK_PATH;
+  return pathname === getAppCallbackPath();
 }
 
 function base64UrlEncode(bytes: Uint8Array) {
@@ -80,7 +81,7 @@ export async function computeCodeChallenge(verifier: string) {
 }
 
 function redirectUri() {
-  return `${window.location.origin}${OAUTH_CALLBACK_PATH}`;
+  return `${window.location.origin}${getAppCallbackPath()}`;
 }
 
 export async function beginLogin(returnTo?: string) {
@@ -179,7 +180,7 @@ export async function completeLogin(search = window.location.search) {
   window.sessionStorage.removeItem(STATE_KEY);
   window.sessionStorage.removeItem(VERIFIER_KEY);
 
-  const returnTo = window.sessionStorage.getItem(RETURN_TO_KEY) ?? "/";
+  const returnTo = window.sessionStorage.getItem(RETURN_TO_KEY) ?? getAppHomePath();
   window.sessionStorage.removeItem(RETURN_TO_KEY);
   return returnTo;
 }
@@ -218,12 +219,12 @@ export function logout(mode: "hosted" | "standalone") {
 
   if (!shouldUseOAuthGate(mode)) {
     // Mock / hosted mode has no hydra session to revoke.
-    window.location.assign("/");
+    window.location.assign(getAppHomePath());
     return;
   }
 
   const params = new URLSearchParams({
-    post_logout_redirect_uri: `${window.location.origin}/`,
+    post_logout_redirect_uri: `${window.location.origin}${getAppHomePath()}`,
   });
   if (idToken) {
     params.set("id_token_hint", idToken);

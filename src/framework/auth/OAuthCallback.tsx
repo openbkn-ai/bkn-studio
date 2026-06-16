@@ -1,3 +1,4 @@
+import { getAppHomePath } from "@/app/router/app-paths";
 import { Alert, Spin } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,7 +44,7 @@ export function OAuthCallback() {
             <AppButton
               className={styles.submit}
               type="primary"
-              onClick={() => window.location.replace("/")}
+              onClick={() => window.location.replace(getAppHomePath())}
             >
               {t("auth.backToSignIn")}
             </AppButton>
