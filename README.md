@@ -31,8 +31,10 @@ corepack pnpm dev
 默认开发地址：
 
 ```text
-http://localhost:8000
+http://localhost:8000/studio
 ```
+
+访问 `http://localhost:8000/` 会自动重定向到 `/studio`。
 
 常用命令：
 
@@ -65,7 +67,7 @@ corepack pnpm check
 
    也可单独用 `VITE_PROXY_TARGET=<url>` 覆盖代理目标（优先级高于 `VITE_DEV_AUTH_ORIGIN`）。
 
-3. 启动 dev server：`corepack pnpm dev`，访问 `http://localhost:8000`。
+3. 启动 dev server：`corepack pnpm dev`，访问 `http://localhost:8000/studio`。
 
    `VITE_USE_MOCK=false` 时，dev server 把以下路径代理到上面配置的 origin：
 
@@ -74,7 +76,7 @@ corepack pnpm check
    | `/api` | 业务接口 |
    | `/oauth2`、`/.well-known`、`/userinfo` | OAuth2 / OIDC 登录流程 |
 
-4. 登录：未填 token 时走浏览器内 OAuth 登录（需要网关的 hydra 已为 `openbkn-studio` 客户端登记 redirect_uri `http://localhost:8000/callback`）；填了 token 则直接进入，token 失效时页面会弹出表单可现场粘贴新 token。
+4. 登录：未填 token 时走浏览器内 OAuth 登录（需要网关的 hydra 已为 `openbkn-studio` 客户端登记 redirect_uri `http://localhost:8000/studio/callback`）；填了 token 则直接进入，token 失效时页面会弹出表单可现场粘贴新 token。
 
 注意事项：
 

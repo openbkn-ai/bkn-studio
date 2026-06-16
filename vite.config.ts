@@ -2,10 +2,33 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import react from "@vitejs/plugin-react";
+import type { Plugin } from "vite";
 import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
+import { DEFAULT_APP_BASENAME } from "./src/app/router/app-paths";
+
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
+const appBase = `${DEFAULT_APP_BASENAME}/`;
+
+function redirectRootToAppBase(): Plugin {
+  return {
+    name: "redirect-root-to-app-base",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split("?")[0] ?? "";
+
+        if (url === "/" || url === DEFAULT_APP_BASENAME) {
+          res.writeHead(302, { Location: appBase });
+          res.end();
+          return;
+        }
+
+        next();
+      });
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, "");
@@ -15,7 +38,8 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_PROXY_TARGET ?? (useMock ? "http://127.0.0.1:9000" : devProxyOrigin);
 
   return {
-    plugins: [react()],
+    base: appBase,
+    plugins: [react(), redirectRootToAppBase()],
     test: {
       environment: "jsdom",
       env: {
@@ -30,7 +54,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true,
-      // OAuth redirect_uri is registered as http://localhost:8000/callback —
+      // OAuth redirect_uri is registered as http://localhost:8000/studio/callback —
       // fail fast instead of silently drifting to another port when taken.
       port: 8000,
       strictPort: true,
