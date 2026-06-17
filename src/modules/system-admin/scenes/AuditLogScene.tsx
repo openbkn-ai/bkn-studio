@@ -1,5 +1,5 @@
 import { ReloadOutlined } from "@ant-design/icons";
-import { Alert, Checkbox, DatePicker, Select, Tag } from "antd";
+import { Alert, Checkbox, DatePicker, Select, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -8,8 +8,18 @@ import { useTranslation } from "react-i18next";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
-import { listAuditLogs, listUsers } from "@/modules/system-admin/services/admin.service";
-import type { AdminUser, AuditLog } from "@/modules/system-admin/types/admin";
+import {
+  listAuditLogs,
+  listDepartments,
+  listRoles,
+  listUsers,
+} from "@/modules/system-admin/services/admin.service";
+import type {
+  AdminDepartment,
+  AdminRole,
+  AdminUser,
+  AuditLog,
+} from "@/modules/system-admin/types/admin";
 import { AUDIT_RESOURCES, auditActionToken } from "@/modules/system-admin/utils/audit-labels";
 
 import styles from "./admin.module.css";
@@ -43,6 +53,8 @@ export function AuditLogScene() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [departments, setDepartments] = useState<AdminDepartment[]>([]);
+  const [roles, setRoles] = useState<AdminRole[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -55,6 +67,25 @@ export function AuditLogScene() {
     const map = new Map(users.map((user) => [user.id, `${user.name}（${user.account}）`]));
     return (id: string) => map.get(id) ?? id;
   }, [users]);
+
+  // 按资源类型把 target_id 解析成名字（已删除对象解析不到 → 回落短 id）。
+  const resolveTarget = useMemo(() => {
+    const u = new Map(users.map((x) => [x.id, x.name]));
+    const d = new Map(departments.map((x) => [x.id, x.name]));
+    const r = new Map(roles.map((x) => [x.id, x.name]));
+    return (resource: string, id: string): string | undefined => {
+      if (resource === "users") {
+        return u.get(id);
+      }
+      if (resource === "departments") {
+        return d.get(id);
+      }
+      if (resource === "roles") {
+        return r.get(id);
+      }
+      return undefined;
+    };
+  }, [departments, roles, users]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -83,9 +114,9 @@ export function AuditLogScene() {
   }, [load]);
 
   useEffect(() => {
-    void listUsers()
-      .then(setUsers)
-      .catch(() => undefined);
+    void listUsers().then(setUsers).catch(() => undefined);
+    void listDepartments().then(setDepartments).catch(() => undefined);
+    void listRoles().then(setRoles).catch(() => undefined);
   }, []);
 
   const columns: ColumnsType<AuditLog> = [
@@ -118,9 +149,26 @@ export function AuditLogScene() {
     },
     {
       title: t("systemAdmin.audit.columns.target"),
-      dataIndex: "targetId",
-      render: (value: string) =>
-        value ? <span className={styles.slugChip}>{value}</span> : <span className={styles.mutedText}>—</span>,
+      key: "target",
+      render: (_, log) => {
+        if (!log.targetId) {
+          return <span className={styles.mutedText}>—</span>;
+        }
+        const name = resolveTarget(log.resource, log.targetId);
+        if (name) {
+          return (
+            <Tooltip title={log.targetId}>
+              <span className={styles.modeText}>{name}</span>
+            </Tooltip>
+          );
+        }
+        // 解析不到（多为已删除对象）→ 短 id + 完整 id tooltip。
+        return (
+          <Tooltip title={`${log.targetId} · ${t("systemAdmin.audit.targetUnknown")}`}>
+            <span className={styles.slugChip}>{log.targetId.slice(0, 8)}…</span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: t("systemAdmin.audit.columns.status"),

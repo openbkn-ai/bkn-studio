@@ -138,9 +138,7 @@ export function UserFormDrawer({
       destroyOnClose
       footer={
         <div className={styles.drawerFooter}>
-          <span className={styles.footNote}>
-            {isEdit ? "PUT" : "POST"} /safe/v1/admin/users
-          </span>
+          <span style={{ flex: 1 }} />
           <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
           <AppButton loading={submitting} onClick={handleSubmit} type="primary">
             {isEdit ? t("common.save") : t("common.create")}

@@ -57,18 +57,6 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         path: "/system/roles",
       },
       {
-        key: "model-management",
-        labelKey: "shell.items.modelManagement",
-        icon: <AppstoreOutlined />,
-        disabled: true,
-      },
-      {
-        key: "traceai",
-        labelKey: "shell.items.traceai",
-        icon: <ClusterOutlined />,
-        disabled: true,
-      },
-      {
         key: "log-management",
         labelKey: "shell.items.logManagement",
         path: "/system/audit",
