@@ -1,5 +1,6 @@
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { Drawer, Form, Input, Select } from "antd";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -9,20 +10,15 @@ import {
   createDepartment,
   updateDepartment,
 } from "@/modules/system-admin/services/admin.service";
-import type {
-  AdminDepartment,
-  AdminUser,
-} from "@/modules/system-admin/types/admin";
+import type { AdminDepartment } from "@/modules/system-admin/types/admin";
 import { buildDeptTree } from "@/modules/system-admin/utils/admin-helpers";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
 type DeptFormValues = {
-  code: string;
-  managerId: string | null;
   name: string;
   parentId: string;
-  remark: string;
+  type: string;
 };
 
 type DepartmentFormDrawerProps = {
@@ -32,7 +28,6 @@ type DepartmentFormDrawerProps = {
   onSaved: () => void;
   open: boolean;
   presetParentId?: string;
-  users: AdminUser[];
 };
 
 export function DepartmentFormDrawer({
@@ -42,23 +37,23 @@ export function DepartmentFormDrawer({
   onSaved,
   open,
   presetParentId,
-  users,
 }: DepartmentFormDrawerProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [form] = Form.useForm<DeptFormValues>();
+  const [submitting, setSubmitting] = useState(false);
   const isEdit = Boolean(department);
   const isRoot = isEdit && !department?.parentId;
 
+  // value "" = 顶层（根部门），提交时 parent_id 为空。
   const parentOptions = useMemo(
-    () =>
-      buildDeptTree(departments)
+    () => [
+      { label: t("systemAdmin.users.deptDrawer.rootNode"), value: "" },
+      ...buildDeptTree(departments)
         .filter(({ dept }) => !department || dept.id !== department.id)
-        .map(({ dept, depth }) => ({
-          label: `${"　".repeat(depth)}${dept.name}`,
-          value: dept.id,
-        })),
-    [department, departments],
+        .map(({ dept, depth }) => ({ label: `${"　".repeat(depth)}${dept.name}`, value: dept.id })),
+    ],
+    [department, departments, t],
   );
 
   useEffect(() => {
@@ -67,22 +62,19 @@ export function DepartmentFormDrawer({
     }
     form.setFieldsValue({
       name: department?.name ?? "",
-      parentId: department?.parentId ?? presetParentId ?? "dep-root",
-      code: department?.code ?? "",
-      managerId: department?.managerId ?? null,
-      remark: department?.remark ?? "",
+      parentId: department?.parentId ?? presetParentId ?? "",
+      type: department?.type ?? "dept",
     });
   }, [department, form, open, presetParentId]);
 
   const handleSubmit = () => {
     void form.validateFields().then(async (values) => {
+      setSubmitting(true);
       try {
         const payload = {
           name: values.name.trim(),
-          code: values.code.trim(),
-          managerId: values.managerId || null,
-          remark: values.remark.trim(),
-          parentId: isRoot ? null : values.parentId,
+          parentId: isRoot ? null : values.parentId || null,
+          type: values.type,
         };
         if (isEdit && department) {
           await updateDepartment(department.id, payload);
@@ -95,6 +87,8 @@ export function DepartmentFormDrawer({
         onClose();
       } catch (error) {
         void message.error(extractRequestErrorMessage(error));
+      } finally {
+        setSubmitting(false);
       }
     });
   };
@@ -105,10 +99,10 @@ export function DepartmentFormDrawer({
       footer={
         <div className={styles.drawerFooter}>
           <span className={styles.footNote}>
-            ShareMgnt.Usrm_{isEdit ? "EditDepartment" : "AddDepartment"}
+            {isEdit ? "PUT" : "POST"} /safe/v1/admin/departments
           </span>
           <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
-          <AppButton onClick={handleSubmit} type="primary">
+          <AppButton loading={submitting} onClick={handleSubmit} type="primary">
             {isEdit ? t("common.save") : t("common.create")}
           </AppButton>
         </div>
@@ -120,7 +114,7 @@ export function DepartmentFormDrawer({
           ? t("systemAdmin.users.deptDrawer.editTitle", { name: department?.name })
           : t("systemAdmin.users.deptDrawer.createTitle")
       }
-      width={520}
+      width={480}
     >
       <Form form={form} layout="vertical" requiredMark>
         <Form.Item
@@ -135,28 +129,24 @@ export function DepartmentFormDrawer({
             disabled={isRoot}
             options={
               isRoot
-                ? [{ label: t("systemAdmin.users.deptDrawer.rootNode"), value: "dep-root" }]
+                ? [{ label: t("systemAdmin.users.deptDrawer.rootNode"), value: "" }]
                 : parentOptions
             }
           />
         </Form.Item>
-        <Form.Item label={t("systemAdmin.users.deptDrawer.code")} name="code">
-          <Input placeholder={t("systemAdmin.users.deptDrawer.codePlaceholder")} />
-        </Form.Item>
-        <Form.Item label={t("systemAdmin.users.deptDrawer.manager")} name="managerId">
+        <Form.Item label={t("systemAdmin.users.deptDrawer.type")} name="type">
           <Select
-            allowClear
-            options={users.map((user) => ({
-              label: `${user.name}（${user.account}）`,
-              value: user.id,
-            }))}
-            placeholder={t("systemAdmin.users.deptDrawer.managerUnset")}
+            options={[
+              { label: t("systemAdmin.users.deptDrawer.typeOrg"), value: "org" },
+              { label: t("systemAdmin.users.deptDrawer.typeDept"), value: "dept" },
+            ]}
           />
         </Form.Item>
-        <Form.Item label={t("systemAdmin.users.deptDrawer.remark")} name="remark">
-          <Input placeholder={t("systemAdmin.users.deptDrawer.remarkPlaceholder")} />
-        </Form.Item>
       </Form>
+      <div className={styles.calloutBox}>
+        <InfoCircleOutlined />
+        <span>{t("systemAdmin.users.deptDrawer.fieldsNote")}</span>
+      </div>
     </Drawer>
   );
 }

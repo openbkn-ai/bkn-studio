@@ -10,35 +10,36 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { DepartmentFormDrawer } from "@/modules/system-admin/components/DepartmentFormDrawer";
+import { DepartmentTree } from "@/modules/system-admin/components/DepartmentTree";
+import { DeptMembersModal } from "@/modules/system-admin/components/DeptMembersModal";
 import { ResetPasswordModal } from "@/modules/system-admin/components/ResetPasswordModal";
 import { UserFormDrawer } from "@/modules/system-admin/components/UserFormDrawer";
 import {
+  DEFAULT_NEW_USER_PASSWORD,
   deleteDepartment,
   deleteUser,
+  listDepartmentMemberIds,
   listDepartments,
   listRoles,
   listUsers,
   setUserEnabled,
-  unfreezeUser,
+  updateDepartment,
 } from "@/modules/system-admin/services/admin.service";
 import type {
   AdminDepartment,
   AdminRole,
   AdminUser,
-  DeptTreeEntry,
 } from "@/modules/system-admin/types/admin";
-import {
-  buildDeptTree,
-  deptPath,
-  deptUsers,
-  rolesOfUser,
-} from "@/modules/system-admin/utils/admin-helpers";
+import { buildDeptTree, rolesOfUser } from "@/modules/system-admin/utils/admin-helpers";
 
 import styles from "./admin.module.css";
 
-type StatusFilter = "" | "enabled" | "disabled" | "frozen";
+type StatusFilter = "" | "enabled" | "disabled";
 
-function formatTime(value: number) {
+function formatTime(value?: number) {
+  if (!value) {
+    return "—";
+  }
   return new Intl.DateTimeFormat("zh-CN", {
     hour12: false,
     year: "numeric",
@@ -58,12 +59,14 @@ export function UserManagementScene() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
   const [roles, setRoles] = useState<AdminRole[]>([]);
+  // deptId -> member user ids（部门视角；用户的部门归属由此反查）。
+  const [deptMembers, setDeptMembers] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [keyword, setKeyword] = useState("");
-  const [deptFilter, setDeptFilter] = useState<string>();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
+  const [deptFilter, setDeptFilter] = useState<string>();
 
   const [userDrawer, setUserDrawer] = useState<{ open: boolean; user: AdminUser | null }>({
     open: false,
@@ -75,6 +78,7 @@ export function UserManagementScene() {
     presetParentId?: string;
   }>({ department: null, open: false });
   const [resetUser, setResetUser] = useState<AdminUser | null>(null);
+  const [membersDept, setMembersDept] = useState<AdminDepartment | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -99,61 +103,71 @@ export function UserManagementScene() {
     void loadData();
   }, [loadData]);
 
+  // 成员数单独、非阻塞加载——成员接口慢/挂也不卡住整张表；逐部门各自容错。
+  useEffect(() => {
+    if (!departments.length) {
+      setDeptMembers({});
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(
+      departments.map(async (dept) => {
+        try {
+          return [dept.id, await listDepartmentMemberIds(dept.id)] as const;
+        } catch {
+          return [dept.id, []] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (!cancelled) {
+        setDeptMembers(Object.fromEntries(entries));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [departments]);
+
   const deptTree = useMemo(() => buildDeptTree(departments), [departments]);
+  const deptNameById = useMemo(
+    () => new Map(departments.map((dept) => [dept.id, dept.name])),
+    [departments],
+  );
+  // userId -> deptIds（由 deptMembers 反查）。
+  const deptsByUser = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const [deptId, ids] of Object.entries(deptMembers)) {
+      for (const userId of ids) {
+        (map[userId] ??= []).push(deptId);
+      }
+    }
+    return map;
+  }, [deptMembers]);
 
   const filteredUsers = useMemo(() => {
     const query = keyword.trim().toLowerCase();
     return users.filter((user) => {
-      if (query) {
-        const haystack = `${user.name} ${user.account} ${user.email}`.toLowerCase();
-        if (!haystack.includes(query)) {
-          return false;
-        }
-      }
-      if (deptFilter && !user.deptIds.includes(deptFilter)) {
+      if (query && !`${user.name} ${user.account} ${user.email}`.toLowerCase().includes(query)) {
         return false;
       }
-      if (statusFilter === "enabled" && (!user.enabled || user.frozen)) {
+      if (statusFilter === "enabled" && !user.enabled) {
         return false;
       }
       if (statusFilter === "disabled" && user.enabled) {
         return false;
       }
-      if (statusFilter === "frozen" && !user.frozen) {
+      if (deptFilter && !(deptsByUser[user.id] ?? []).includes(deptFilter)) {
         return false;
       }
       return true;
     });
-  }, [deptFilter, keyword, statusFilter, users]);
-
-  const statusTag = (user: AdminUser) => {
-    if (user.frozen) {
-      return (
-        <Tag className={[styles.statusTag, styles.statusFrozen].join(" ")}>
-          {t("systemAdmin.users.statusFrozen")}
-        </Tag>
-      );
-    }
-    return (
-      <Tag
-        className={[
-          styles.statusTag,
-          user.enabled ? styles.statusEnabled : styles.statusDisabled,
-        ].join(" ")}
-      >
-        {user.enabled ? t("systemAdmin.users.statusEnabled") : t("systemAdmin.users.statusDisabled")}
-      </Tag>
-    );
-  };
+  }, [deptFilter, deptsByUser, keyword, statusFilter, users]);
 
   const handleToggle = (user: AdminUser) => {
     if (user.enabled) {
       void modal.confirm({
         title: t("systemAdmin.users.disableUserTitle"),
-        content: t("systemAdmin.users.disableUserConfirm", {
-          name: user.name,
-          account: user.account,
-        }),
+        content: t("systemAdmin.users.disableUserConfirm", { name: user.name, account: user.account }),
         okText: t("systemAdmin.users.disableUser"),
         cancelText: t("common.cancel"),
         onOk: async () => {
@@ -198,12 +212,22 @@ export function UserManagementScene() {
     },
     {
       title: t("systemAdmin.users.columns.department"),
-      dataIndex: "deptIds",
-      render: (_, user) => (
-        <span className={styles.modeText}>
-          {deptPath(departments, user.deptIds[0]) || t("systemAdmin.users.noDepartment")}
-        </span>
-      ),
+      key: "department",
+      render: (_, user) => {
+        const ids = deptsByUser[user.id] ?? [];
+        if (!ids.length) {
+          return <span className={styles.mutedText}>—</span>;
+        }
+        return (
+          <span className={styles.chipRow}>
+            {ids.map((id) => (
+              <Tag className={styles.permChip} key={id}>
+                {deptNameById.get(id) ?? id}
+              </Tag>
+            ))}
+          </span>
+        );
+      },
     },
     {
       title: t("systemAdmin.users.columns.roles"),
@@ -225,21 +249,23 @@ export function UserManagementScene() {
       },
     },
     {
-      title: t("systemAdmin.users.columns.position"),
-      dataIndex: "position",
-      render: (value: string) => (
-        <span className={styles.modeText}>{value || t("systemAdmin.users.noDepartment")}</span>
-      ),
-    },
-    {
       title: t("systemAdmin.users.columns.status"),
       key: "status",
-      render: (_, user) => statusTag(user),
+      render: (_, user) => (
+        <Tag
+          className={[
+            styles.statusTag,
+            user.enabled ? styles.statusEnabled : styles.statusDisabled,
+          ].join(" ")}
+        >
+          {user.enabled ? t("systemAdmin.users.statusEnabled") : t("systemAdmin.users.statusDisabled")}
+        </Tag>
+      ),
     },
     {
       title: t("systemAdmin.users.columns.updateTime"),
       dataIndex: "updatedAt",
-      render: (value: number) => <span className={styles.subText}>{formatTime(value)}</span>,
+      render: (value?: number) => <span className={styles.subText}>{formatTime(value)}</span>,
     },
     {
       title: t("systemAdmin.users.columns.actions"),
@@ -256,41 +282,12 @@ export function UserManagementScene() {
             </AppButton>
           </PermissionGate>
           <PermissionGate permissions="admin-user:reset-password">
-            <AppButton
-              className={styles.actionLink}
-              onClick={() => setResetUser(user)}
-              type="link"
-            >
+            <AppButton className={styles.actionLink} onClick={() => setResetUser(user)} type="link">
               {t("systemAdmin.users.actions.resetPassword")}
             </AppButton>
           </PermissionGate>
-          {user.frozen ? (
-            <PermissionGate permissions="admin-user:toggle">
-              <AppButton
-                className={styles.actionLink}
-                onClick={() => {
-                  void (async () => {
-                    try {
-                      await unfreezeUser(user.id);
-                      message.success(t("systemAdmin.users.toast.unfrozen", { name: user.name }));
-                      await loadData();
-                    } catch (error) {
-                      void message.error(extractRequestErrorMessage(error));
-                    }
-                  })();
-                }}
-                type="link"
-              >
-                {t("systemAdmin.users.actions.unfreeze")}
-              </AppButton>
-            </PermissionGate>
-          ) : null}
           <PermissionGate permissions="admin-user:toggle">
-            <AppButton
-              className={styles.actionLink}
-              onClick={() => handleToggle(user)}
-              type="link"
-            >
+            <AppButton className={styles.actionLink} onClick={() => handleToggle(user)} type="link">
               {user.enabled
                 ? t("systemAdmin.users.actions.disable")
                 : t("systemAdmin.users.actions.enable")}
@@ -327,104 +324,40 @@ export function UserManagementScene() {
     },
   ];
 
-  const deptColumns: ColumnsType<DeptTreeEntry> = [
-    {
-      title: t("systemAdmin.users.columns.department"),
-      key: "dept",
-      render: (_, entry) => (
-        <div className={styles.nameCell} style={{ paddingLeft: entry.depth * 24 }}>
-          <span className={styles.nameTitle}>
-            {entry.depth ? <span className={styles.treeIndent}>└</span> : null}
-            {entry.dept.name}
-          </span>
-          {entry.dept.code ? <span className={styles.slugChip}>{entry.dept.code}</span> : null}
-        </div>
-      ),
-    },
-    {
-      title: t("systemAdmin.users.columns.manager"),
-      key: "manager",
-      render: (_, entry) => {
-        const manager = entry.dept.managerId
-          ? users.find((user) => user.id === entry.dept.managerId)
-          : null;
-        return <span className={styles.modeText}>{manager?.name ?? "—"}</span>;
+  const handleDeleteDept = (dept: AdminDepartment) => {
+    void modal.confirm({
+      title: t("systemAdmin.users.deleteDeptTitle"),
+      content: t("systemAdmin.users.deleteDeptConfirm", { name: dept.name }),
+      okText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteDepartment(dept.id);
+          message.success(t("systemAdmin.users.toast.deptDeleted", { name: dept.name }));
+          await loadData();
+        } catch (error) {
+          void message.error(extractRequestErrorMessage(error));
+        }
       },
-    },
-    {
-      title: t("systemAdmin.users.columns.memberCount"),
-      key: "members",
-      render: (_, entry) => (
-        <span className={styles.modeText}>{deptUsers(users, entry.dept.id).length}</span>
-      ),
-    },
-    {
-      title: t("systemAdmin.users.columns.remark"),
-      key: "remark",
-      render: (_, entry) => (
-        <span className={styles.subText}>{entry.dept.remark || "—"}</span>
-      ),
-    },
-    {
-      title: t("systemAdmin.users.columns.actions"),
-      key: "actions",
-      render: (_, entry) => (
-        <Space className={styles.actionGroup}>
-          <PermissionGate permissions="admin-dept:create">
-            <AppButton
-              className={styles.actionLink}
-              onClick={() =>
-                setDeptDrawer({ department: null, open: true, presetParentId: entry.dept.id })
-              }
-              type="link"
-            >
-              {t("systemAdmin.users.actions.addChild")}
-            </AppButton>
-          </PermissionGate>
-          <PermissionGate permissions="admin-dept:edit">
-            <AppButton
-              className={styles.actionLink}
-              onClick={() => setDeptDrawer({ department: entry.dept, open: true })}
-              type="link"
-            >
-              {t("systemAdmin.users.actions.edit")}
-            </AppButton>
-          </PermissionGate>
-          {entry.dept.parentId ? (
-            <PermissionGate permissions="admin-dept:delete">
-              <AppButton
-                className={[styles.actionLink, styles.actionDanger].join(" ")}
-                danger
-                onClick={() => {
-                  void modal.confirm({
-                    title: t("systemAdmin.users.deleteDeptTitle"),
-                    content: t("systemAdmin.users.deleteDeptConfirm", { name: entry.dept.name }),
-                    okText: t("common.delete"),
-                    cancelText: t("common.cancel"),
-                    okButtonProps: { danger: true },
-                    onOk: async () => {
-                      try {
-                        await deleteDepartment(entry.dept.id);
-                        message.success(
-                          t("systemAdmin.users.toast.deptDeleted", { name: entry.dept.name }),
-                        );
-                        await loadData();
-                      } catch (error) {
-                        void message.error(extractRequestErrorMessage(error));
-                      }
-                    },
-                  });
-                }}
-                type="link"
-              >
-                {t("systemAdmin.users.actions.delete")}
-              </AppButton>
-            </PermissionGate>
-          ) : null}
-        </Space>
-      ),
-    },
-  ];
+    });
+  };
+
+  const handleReparent = (dragId: string, newParentId: string | null) => {
+    const dept = departments.find((item) => item.id === dragId);
+    if (!dept) {
+      return;
+    }
+    void (async () => {
+      try {
+        await updateDepartment(dragId, { name: dept.name, parentId: newParentId, type: dept.type });
+        message.success(t("systemAdmin.users.toast.deptSaved"));
+        await loadData();
+      } catch (error) {
+        void message.error(extractRequestErrorMessage(error));
+      }
+    })();
+  };
 
   return (
     <>
@@ -472,12 +405,14 @@ export function UserManagementScene() {
                 {t("common.refresh")}
               </AppButton>
             </div>
-            {tab === "depts" ? (
-              <span className={styles.toolbarMeta}>{t("systemAdmin.users.deptToolbarHint")}</span>
-            ) : null}
+            <span className={styles.toolbarMeta}>
+              {tab === "depts"
+                ? t("systemAdmin.users.deptToolbarHint")
+                : t("systemAdmin.users.userToolbarHint", { password: DEFAULT_NEW_USER_PASSWORD })}
+            </span>
           </div>
           {tab === "users" ? (
-            <div className={styles.toolbarFilters}>
+            <div className={[styles.toolbarFilters, styles.filtersInline].join(" ")}>
               <Input.Search
                 allowClear
                 className={styles.searchInput}
@@ -489,11 +424,13 @@ export function UserManagementScene() {
                 allowClear
                 className={styles.filterSelect}
                 onChange={(value) => setDeptFilter(value)}
+                optionFilterProp="label"
                 options={deptTree.map(({ dept, depth }) => ({
                   label: `${"　".repeat(depth)}${dept.name}`,
                   value: dept.id,
                 }))}
                 placeholder={t("systemAdmin.users.deptFilterAll")}
+                showSearch
                 value={deptFilter}
               />
               <Select
@@ -503,7 +440,6 @@ export function UserManagementScene() {
                   { label: t("systemAdmin.users.statusAll"), value: "" },
                   { label: t("systemAdmin.users.statusEnabled"), value: "enabled" },
                   { label: t("systemAdmin.users.statusDisabled"), value: "disabled" },
-                  { label: t("systemAdmin.users.statusFrozen"), value: "frozen" },
                 ]}
                 value={statusFilter}
               />
@@ -531,15 +467,23 @@ export function UserManagementScene() {
               pagination={{ pageSize: 10, hideOnSinglePage: true }}
               rowKey="id"
             />
+          ) : departments.length ? (
+            <>
+              <p className={styles.deptDragHint}>{t("systemAdmin.users.deptNode.dragHint")}</p>
+              <DepartmentTree
+                deptMembers={deptMembers}
+                departments={departments}
+                onAddChild={(parentId) =>
+                  setDeptDrawer({ department: null, open: true, presetParentId: parentId })
+                }
+                onDelete={handleDeleteDept}
+                onEdit={(dept) => setDeptDrawer({ department: dept, open: true })}
+                onMembers={(dept) => setMembersDept(dept)}
+                onReparent={handleReparent}
+              />
+            </>
           ) : (
-            <AppTable<DeptTreeEntry>
-              columns={deptColumns}
-              dataSource={deptTree}
-              loading={loading}
-              locale={{ emptyText: t("systemAdmin.users.emptyDepts") }}
-              pagination={false}
-              rowKey={(entry) => entry.dept.id}
-            />
+            <p className={styles.mutedText}>{t("systemAdmin.users.emptyDepts")}</p>
           )}
         </div>
       </section>
@@ -559,10 +503,19 @@ export function UserManagementScene() {
         onSaved={loadData}
         open={deptDrawer.open}
         presetParentId={deptDrawer.presetParentId}
-        users={users}
       />
       {resetUser ? (
         <ResetPasswordModal onClose={() => setResetUser(null)} open={Boolean(resetUser)} user={resetUser} />
+      ) : null}
+      {membersDept ? (
+        <DeptMembersModal
+          department={membersDept}
+          departments={departments}
+          onChanged={loadData}
+          onClose={() => setMembersDept(null)}
+          open={Boolean(membersDept)}
+          users={users}
+        />
       ) : null}
     </>
   );

@@ -14,6 +14,11 @@ const RoleManagementPage = lazy(async () => {
   return { default: module.RoleManagementPage };
 });
 
+const AuditLogPage = lazy(async () => {
+  const module = await import("@/modules/system-admin/pages/AuditLogPage");
+  return { default: module.AuditLogPage };
+});
+
 function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
@@ -40,6 +45,17 @@ export const systemAdminRoutes: RouteObject[] = [
       },
     },
     element: withRouteLoading(<RoleManagementPage />),
+  },
+  {
+    path: "system/audit",
+    handle: {
+      console: {
+        descriptionKey: "systemAdmin.audit.description",
+        menuKey: "log-management",
+        titleKey: "systemAdmin.audit.title",
+      },
+    },
+    element: withRouteLoading(<AuditLogPage />),
   },
 ];
 

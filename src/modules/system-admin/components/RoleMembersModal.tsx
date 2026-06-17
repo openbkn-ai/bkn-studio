@@ -6,7 +6,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
-import { modifyRoleMembers } from "@/modules/system-admin/services/admin.service";
+import { setRoleMember } from "@/modules/system-admin/services/admin.service";
 import type {
   AdminDepartment,
   AdminRole,
@@ -36,47 +36,50 @@ export function RoleMembersModal({
 }: RoleMembersModalProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
-  const [members, setMembers] = useState<RoleMember[]>(role.members);
+  const [accessorIds, setAccessorIds] = useState<string[]>(role.accessorIds);
   const [candidate, setCandidate] = useState<string>();
 
   useEffect(() => {
-    setMembers(role.members);
-  }, [role.members]);
+    setAccessorIds(role.accessorIds);
+  }, [role.accessorIds]);
 
-  const memberName = (member: RoleMember) => {
-    if (member.type === "user") {
-      const user = users.find((item) => item.id === member.id);
-      return user ? `${user.name}（${user.account}）` : member.id;
-    }
-    return deptPath(departments, member.id) || member.id;
-  };
+  // accessor id 反查类型 + 名称（用户优先，再部门）。
+  const resolve = useMemo(() => {
+    const userById = new Map(users.map((user) => [user.id, user]));
+    const deptById = new Map(departments.map((dept) => [dept.id, dept]));
+    return (id: string): RoleMember => {
+      const user = userById.get(id);
+      if (user) {
+        return { id, type: "user", label: `${user.name}（${user.account}）` };
+      }
+      if (deptById.has(id)) {
+        return { id, type: "department", label: deptPath(departments, id) };
+      }
+      return { id, type: "user", label: id };
+    };
+  }, [departments, users]);
 
   const candidates = useMemo(() => {
     const userOptions = users
-      .filter((user) => !members.some((m) => m.type === "user" && m.id === user.id))
-      .map((user) => ({
-        label: `${user.name}（${user.account}）`,
-        value: `user:${user.id}`,
-      }));
+      .filter((user) => !accessorIds.includes(user.id))
+      .map((user) => ({ label: `${user.name}（${user.account}）`, value: user.id }));
     const deptOptions = departments
-      .filter((dept) => !members.some((m) => m.type === "department" && m.id === dept.id))
+      .filter((dept) => !accessorIds.includes(dept.id))
       .map((dept) => ({
         label: `${t("systemAdmin.roles.membersModal.memberDept")} · ${deptPath(departments, dept.id)}`,
-        value: `department:${dept.id}`,
+        value: dept.id,
       }));
     return [...userOptions, ...deptOptions];
-  }, [departments, members, t, users]);
+  }, [accessorIds, departments, t, users]);
 
-  const apply = async (method: "POST" | "DELETE", member: RoleMember) => {
+  const apply = async (accessorId: string, attach: boolean) => {
     try {
-      await modifyRoleMembers(role.id, method, [member]);
-      setMembers((current) =>
-        method === "POST"
-          ? [...current, member]
-          : current.filter((m) => !(m.id === member.id && m.type === member.type)),
+      await setRoleMember(role.id, accessorId, attach);
+      setAccessorIds((current) =>
+        attach ? [...current, accessorId] : current.filter((id) => id !== accessorId),
       );
       message.success(
-        method === "POST"
+        attach
           ? t("systemAdmin.roles.toast.memberAdded")
           : t("systemAdmin.roles.toast.memberRemoved"),
       );
@@ -90,8 +93,7 @@ export function RoleMembersModal({
     if (!candidate) {
       return;
     }
-    const [type, ...rest] = candidate.split(":");
-    void apply("POST", { id: rest.join(":"), type: type === "department" ? "department" : "user" });
+    void apply(candidate, true);
     setCandidate(undefined);
   };
 
@@ -100,44 +102,47 @@ export function RoleMembersModal({
       footer={null}
       onCancel={onClose}
       open={open}
-      title={t("systemAdmin.roles.membersModal.title", { name: role.displayName })}
+      title={t("systemAdmin.roles.membersModal.title", { name: role.name })}
       width={560}
     >
       <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
         <Select
           onChange={setCandidate}
+          optionFilterProp="label"
           options={candidates}
           placeholder={t("systemAdmin.roles.membersModal.addPlaceholder")}
           showSearch
           style={{ flex: 1 }}
           value={candidate}
-          optionFilterProp="label"
         />
         <AppButton onClick={handleAdd} type="primary">
           {t("systemAdmin.roles.membersModal.add")}
         </AppButton>
       </div>
-      {members.length ? (
+      {accessorIds.length ? (
         <div className={styles.memberList}>
-          {members.map((member) => (
-            <div className={styles.memberItem} key={`${member.type}:${member.id}`}>
-              <span className={styles.memberName}>
-                {memberName(member)}
-                <Tag className={member.type === "user" ? styles.roleTag : styles.permChip}>
-                  {member.type === "user"
-                    ? t("systemAdmin.roles.membersModal.memberUser")
-                    : t("systemAdmin.roles.membersModal.memberDept")}
-                </Tag>
-              </span>
-              <AppButton
-                className={[styles.actionLink, styles.actionDanger].join(" ")}
-                onClick={() => void apply("DELETE", member)}
-                type="link"
-              >
-                {t("systemAdmin.roles.membersModal.remove")}
-              </AppButton>
-            </div>
-          ))}
+          {accessorIds.map((id) => {
+            const member = resolve(id);
+            return (
+              <div className={styles.memberItem} key={id}>
+                <span className={styles.memberName}>
+                  {member.label}
+                  <Tag className={member.type === "user" ? styles.roleTag : styles.permChip}>
+                    {member.type === "user"
+                      ? t("systemAdmin.roles.membersModal.memberUser")
+                      : t("systemAdmin.roles.membersModal.memberDept")}
+                  </Tag>
+                </span>
+                <AppButton
+                  className={[styles.actionLink, styles.actionDanger].join(" ")}
+                  onClick={() => void apply(id, false)}
+                  type="link"
+                >
+                  {t("systemAdmin.roles.membersModal.remove")}
+                </AppButton>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <EmptyStatePanel title={t("systemAdmin.roles.membersModal.empty")} />

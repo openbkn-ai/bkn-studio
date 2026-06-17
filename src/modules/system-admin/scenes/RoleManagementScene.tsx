@@ -22,11 +22,18 @@ import type {
   AdminRole,
   AdminUser,
 } from "@/modules/system-admin/types/admin";
-import { permissionLabel } from "@/modules/system-admin/utils/permission-catalog";
+import {
+  operationLabel,
+  resourceTypeLabel,
+  WILDCARD,
+} from "@/modules/system-admin/utils/resource-catalog";
 
 import styles from "./admin.module.css";
 
-function formatTime(value: number) {
+function formatTime(value?: number) {
+  if (!value) {
+    return "—";
+  }
   return new Intl.DateTimeFormat("zh-CN", {
     hour12: false,
     year: "numeric",
@@ -77,7 +84,6 @@ export function RoleManagementScene() {
     void loadData();
   }, [loadData]);
 
-  // 成员弹窗打开时，列表刷新后用最新的 role 数据回填，保证成员变更即时可见。
   useEffect(() => {
     if (membersRole) {
       const next = roles.find((role) => role.id === membersRole.id);
@@ -93,45 +99,54 @@ export function RoleManagementScene() {
       return roles;
     }
     return roles.filter((role) =>
-      `${role.name} ${role.displayName} ${role.description}`.toLowerCase().includes(query),
+      `${role.name} ${role.description}`.toLowerCase().includes(query),
     );
   }, [keyword, roles]);
+
+  const grantSummary = (role: AdminRole) =>
+    role.permissions
+      .map((grant) => {
+        const scope =
+          grant.resource.id === WILDCARD
+            ? t("systemAdmin.grant.wholeType")
+            : grant.resource.id;
+        const ops = grant.operations
+          .map((op) => (op === "*" ? t("systemAdmin.grant.allOps") : operationLabel(grant.resource.type, op)))
+          .join("、");
+        return `${resourceTypeLabel(grant.resource.type)}（${scope}）: ${ops}`;
+      })
+      .join("\n");
 
   const columns: ColumnsType<AdminRole> = [
     {
       title: t("systemAdmin.roles.columns.role"),
-      dataIndex: "displayName",
+      dataIndex: "name",
       render: (_, role) => (
         <div className={styles.nameCell}>
           <span className={styles.nameTitle}>
-            {role.displayName}
+            {role.name}
             {role.builtin ? <Tag>{t("systemAdmin.roles.builtin")}</Tag> : null}
           </span>
-          <span className={styles.slugChip}>{role.name}</span>
+          {role.description ? <span className={styles.subText}>{role.description}</span> : null}
         </div>
-      ),
-    },
-    {
-      title: t("systemAdmin.roles.columns.description"),
-      dataIndex: "description",
-      render: (value: string) => (
-        <span className={styles.subText} style={{ whiteSpace: "normal" }}>
-          {value || "—"}
-        </span>
       ),
     },
     {
       title: t("systemAdmin.roles.columns.permissions"),
       key: "permissions",
       render: (_, role) => {
+        if (!role.permissions.length) {
+          return <span className={styles.mutedText}>{t("systemAdmin.grant.empty")}</span>;
+        }
         const shown = role.permissions.slice(0, 3);
         const more = role.permissions.length - shown.length;
         return (
-          <Tooltip title={role.permissions.map(permissionLabel).join("、")}>
+          <Tooltip title={<span style={{ whiteSpace: "pre-line" }}>{grantSummary(role)}</span>}>
             <span className={styles.chipRow}>
-              {shown.map((permission) => (
-                <Tag className={styles.permChip} key={permission}>
-                  {permission}
+              {shown.map((grant, index) => (
+                <Tag className={styles.permChip} key={`${grant.resource.type}:${grant.resource.id}:${index}`}>
+                  {resourceTypeLabel(grant.resource.type)}
+                  {grant.resource.id === WILDCARD ? "" : ` · ${grant.resource.id}`}
                 </Tag>
               ))}
               {more > 0 ? <Tag className={styles.permChip}>+{more}</Tag> : null}
@@ -143,12 +158,12 @@ export function RoleManagementScene() {
     {
       title: t("systemAdmin.roles.columns.members"),
       key: "members",
-      render: (_, role) => <span className={styles.modeText}>{role.members.length}</span>,
+      render: (_, role) => <span className={styles.modeText}>{role.accessorIds.length}</span>,
     },
     {
       title: t("systemAdmin.roles.columns.updateTime"),
       dataIndex: "updatedAt",
-      render: (value: number) => <span className={styles.subText}>{formatTime(value)}</span>,
+      render: (value?: number) => <span className={styles.subText}>{formatTime(value)}</span>,
     },
     {
       title: t("systemAdmin.roles.columns.actions"),
@@ -156,11 +171,7 @@ export function RoleManagementScene() {
       render: (_, role) => (
         <Space className={styles.actionGroup}>
           <PermissionGate permissions="admin-role:members">
-            <AppButton
-              className={styles.actionLink}
-              onClick={() => setMembersRole(role)}
-              type="link"
-            >
+            <AppButton className={styles.actionLink} onClick={() => setMembersRole(role)} type="link">
               {t("systemAdmin.roles.actions.members")}
             </AppButton>
           </PermissionGate>
@@ -170,7 +181,7 @@ export function RoleManagementScene() {
               onClick={() => setRoleDrawer({ open: true, role })}
               type="link"
             >
-              {t("systemAdmin.roles.actions.edit")}
+              {role.builtin ? t("common.detail") : t("systemAdmin.roles.actions.edit")}
             </AppButton>
           </PermissionGate>
           {!role.builtin ? (
@@ -181,16 +192,12 @@ export function RoleManagementScene() {
                 onClick={() => {
                   void modal.confirm({
                     title: t("systemAdmin.roles.deleteTitle"),
-                    content: role.members.length
+                    content: role.accessorIds.length
                       ? t("systemAdmin.roles.deleteConfirmWithMembers", {
-                          name: role.displayName,
-                          slug: role.name,
-                          count: role.members.length,
+                          name: role.name,
+                          count: role.accessorIds.length,
                         })
-                      : t("systemAdmin.roles.deleteConfirm", {
-                          name: role.displayName,
-                          slug: role.name,
-                        }),
+                      : t("systemAdmin.roles.deleteConfirm", { name: role.name }),
                     okText: t("common.delete"),
                     cancelText: t("common.cancel"),
                     okButtonProps: { danger: true },

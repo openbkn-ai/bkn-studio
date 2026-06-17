@@ -5,4 +5,5 @@ export type {
 } from "@/modules/system-admin/contracts/scenes";
 export { UserManagementScene } from "@/modules/system-admin/scenes/UserManagementScene";
 export { RoleManagementScene } from "@/modules/system-admin/scenes/RoleManagementScene";
+export { AuditLogScene } from "@/modules/system-admin/scenes/AuditLogScene";
 export type * from "@/modules/system-admin/types/admin";

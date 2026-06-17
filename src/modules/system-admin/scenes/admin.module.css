@@ -60,6 +60,82 @@
   min-width: 150px;
 }
 
+/* 筛选项强制单行 */
+.filtersInline {
+  flex-wrap: nowrap;
+}
+
+.filtersInline .searchInput {
+  flex: 1;
+  width: auto;
+  min-width: 160px;
+}
+
+.filtersInline .filterSelect {
+  flex: 0 0 auto;
+}
+
+.roleGroupLabel {
+  margin: 0 0 8px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ---- department tree (draggable) ---- */
+
+.deptDragHint {
+  margin: 0 0 12px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.deptTree {
+  padding: 4px 0;
+}
+
+.deptTree :global(.ant-tree-treenode) {
+  width: 100%;
+  padding: 4px 0;
+  align-items: center;
+}
+
+.deptTree :global(.ant-tree-node-content-wrapper) {
+  flex: 1;
+  min-width: 0;
+}
+
+.deptTree :global(.ant-tree-node-content-wrapper:hover) {
+  background: rgba(46, 104, 255, 0.05);
+}
+
+.deptNode {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.deptNodeName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #152239;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.deptNodeCount {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.deptNodeActions {
+  flex: 0 0 auto;
+}
+
 .tabsRow {
   margin-bottom: 4px;
 }
@@ -343,6 +419,50 @@
   gap: 8px;
   color: #1f2d45;
   font-size: 14px;
+}
+
+/* ---- object-grant editor ---- */
+
+.grantEditor {
+  display: grid;
+  gap: 12px;
+}
+
+.grantList {
+  display: grid;
+  gap: 8px;
+}
+
+.grantItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 30, 54, 0.08);
+  border-radius: 12px;
+  background: #f9fbff;
+}
+
+.grantMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.grantItem .chipRow {
+  flex: 1;
+}
+
+.grantAddRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed rgba(46, 104, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(46, 104, 255, 0.03);
 }
 
 @media (max-width: 1200px) {

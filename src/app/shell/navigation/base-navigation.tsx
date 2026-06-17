@@ -71,8 +71,8 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
       {
         key: "log-management",
         labelKey: "shell.items.logManagement",
+        path: "/system/audit",
         icon: <FileTextOutlined />,
-        disabled: true,
       },
     ],
   },

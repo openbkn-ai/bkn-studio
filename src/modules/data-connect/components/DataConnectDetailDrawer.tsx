@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { AppButton } from "@/framework/ui/common/AppButton";
+import { CatalogAuthorizeModal } from "@/modules/system-admin/components/CatalogAuthorizeModal";
 import { getDataConnectRecord } from "@/modules/data-connect/services/data-connect.service";
 import type {
   DataConnectConnectorType,
@@ -36,6 +39,7 @@ export function DataConnectDetailDrawer({
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -68,11 +72,28 @@ export function DataConnectDetailDrawer({
   return (
     <Drawer
       destroyOnClose
+      extra={
+        record ? (
+          <PermissionGate permissions="admin-role:edit">
+            <AppButton onClick={() => setAuthorizeOpen(true)} type="primary">
+              {t("systemAdmin.authorize.grant")}
+            </AppButton>
+          </PermissionGate>
+        ) : null
+      }
       onClose={onClose}
       open={open}
       title={t("dataConnect.detailTitle")}
       width={760}
     >
+      {record ? (
+        <CatalogAuthorizeModal
+          catalogId={record.id}
+          catalogName={record.name}
+          onClose={() => setAuthorizeOpen(false)}
+          open={authorizeOpen}
+        />
+      ) : null}
       {loading ? <Spin /> : null}
       {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
       {!loading && !loadError && !record ? (

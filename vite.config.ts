@@ -75,20 +75,25 @@ export default defineConfig(({ mode }) => {
           : {
               "/api": {
                 changeOrigin: true,
+                // 允许自签名 https 目标（如 VM https://10.211.55.4）。
+                secure: false,
                 target: devProxyOrigin,
               },
               // hydra public OAuth2/OIDC endpoints (login flow + token exchange)
               // exposed same-origin at the gateway; mirror them in dev.
               "/oauth2": {
                 changeOrigin: true,
+                secure: false,
                 target: devProxyOrigin,
               },
               "/.well-known": {
                 changeOrigin: true,
+                secure: false,
                 target: devProxyOrigin,
               },
               "/userinfo": {
                 changeOrigin: true,
+                secure: false,
                 target: devProxyOrigin,
               },
             }),

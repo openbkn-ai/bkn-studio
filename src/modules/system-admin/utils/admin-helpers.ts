@@ -1,7 +1,6 @@
 import type {
   AdminDepartment,
   AdminRole,
-  AdminUser,
   DeptTreeEntry,
 } from "@/modules/system-admin/types/admin";
 
@@ -33,10 +32,6 @@ export function deptPath(departments: AdminDepartment[], deptId?: string): strin
   return parts.join(" / ");
 }
 
-export function deptUsers(users: AdminUser[], deptId: string): AdminUser[] {
-  return users.filter((user) => user.deptIds.includes(deptId));
-}
-
 export function childDepartments(
   departments: AdminDepartment[],
   parentId: string,
@@ -44,8 +39,7 @@ export function childDepartments(
   return departments.filter((item) => item.parentId === parentId);
 }
 
+/** 直接绑定到该用户的角色（role-bindings；不含部门继承）。 */
 export function rolesOfUser(roles: AdminRole[], userId: string): AdminRole[] {
-  return roles.filter((role) =>
-    role.members.some((member) => member.type === "user" && member.id === userId),
-  );
+  return roles.filter((role) => role.accessorIds.includes(userId));
 }
