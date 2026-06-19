@@ -80,10 +80,17 @@ export function UserFormDrawer({
     }
   }, [form, open, roles, user]);
 
+  const isSystemRole = (roleId: string) => systemRoles.some((role) => role.id === roleId);
+
   const toggleRole = (roleId: string) => {
-    setRoleIds((current) =>
-      current.includes(roleId) ? current.filter((id) => id !== roleId) : [...current, roleId],
-    );
+    setRoleIds((current) => {
+      if (current.includes(roleId)) {
+        return current.filter((id) => id !== roleId);
+      }
+      // 系统角色与业务角色互斥：选其一即清掉另一组。
+      const sameGroup = current.filter((id) => isSystemRole(id) === isSystemRole(roleId));
+      return [...sameGroup, roleId];
+    });
   };
 
   const handleSubmit = () => {
@@ -191,6 +198,9 @@ export function UserFormDrawer({
             />
           </Form.Item>
           <Form.Item label={t("systemAdmin.users.drawer.grantRoles")}>
+            <p className={styles.roleExclusiveHint}>
+              {t("systemAdmin.users.drawer.roleExclusiveHint")}
+            </p>
             {businessRoles.length ? (
               <>
                 <p className={styles.roleGroupLabel}>{t("systemAdmin.users.drawer.businessRoles")}</p>

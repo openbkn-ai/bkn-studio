@@ -30,6 +30,11 @@ import {
 
 import styles from "./admin.module.css";
 
+// 超级管理员（最高权限角色）：不可修改，编辑禁用。兼容真实(中文名)与 mock(slug)。
+function isSuperAdminRole(role: AdminRole) {
+  return role.name === "超级管理员" || role.name === "super_admin";
+}
+
 function formatTime(value?: number) {
   if (!value) {
     return "—";
@@ -176,13 +181,21 @@ export function RoleManagementScene() {
             </AppButton>
           </PermissionGate>
           <PermissionGate permissions="admin-role:edit">
-            <AppButton
-              className={styles.actionLink}
-              onClick={() => setRoleDrawer({ open: true, role })}
-              type="link"
-            >
-              {role.builtin ? t("common.detail") : t("systemAdmin.roles.actions.edit")}
-            </AppButton>
+            {isSuperAdminRole(role) ? (
+              <Tooltip title={t("systemAdmin.roles.superAdminLocked")}>
+                <AppButton className={styles.actionLink} disabled type="link">
+                  {t("systemAdmin.roles.actions.edit")}
+                </AppButton>
+              </Tooltip>
+            ) : (
+              <AppButton
+                className={styles.actionLink}
+                onClick={() => setRoleDrawer({ open: true, role })}
+                type="link"
+              >
+                {role.builtin ? t("common.detail") : t("systemAdmin.roles.actions.edit")}
+              </AppButton>
+            )}
           </PermissionGate>
           {!role.builtin ? (
             <PermissionGate permissions="admin-role:delete">

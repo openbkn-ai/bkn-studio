@@ -95,6 +95,7 @@ export const systemAdminZhCN = {
         grantRoles: "授予角色",
         businessRoles: "业务角色（非系统）",
         systemRoles: "系统管理员",
+        roleExclusiveHint: "系统角色与业务角色不可同时授予；选择其一会清除另一组。",
         rolesHint: "选择该用户拥有的角色，决定其权限。",
         defaultPasswordNote: "建用户不设密码——使用平台默认密码 {{password}}，首次登陆会提示用户修改。",
       },
@@ -145,6 +146,7 @@ export const systemAdminZhCN = {
       searchPlaceholder: "按角色名称或描述搜索",
       builtin: "内置",
       empty: "没有匹配的角色",
+      superAdminLocked: "超级管理员为最高权限角色，不可修改。",
       columns: {
         role: "角色",
         permissions: "权限",

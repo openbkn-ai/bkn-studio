@@ -95,6 +95,7 @@ export const systemAdminEnUS = {
         grantRoles: "Grant roles",
         businessRoles: "Business roles (non-system)",
         systemRoles: "System administrators",
+        roleExclusiveHint: "System and business roles cannot be granted together; picking one clears the other group.",
         rolesHint: "Pick the roles this user holds, which decide their permissions.",
         defaultPasswordNote: "Users are created without a password — they get the platform default '{{password}}' and are prompted to change it on first login.",
       },
@@ -145,6 +146,7 @@ export const systemAdminEnUS = {
       searchPlaceholder: "Search by role name or description",
       builtin: "Built-in",
       empty: "No matching roles",
+      superAdminLocked: "Super admin is the highest-privilege role and cannot be modified.",
       columns: {
         role: "Role",
         permissions: "Permissions",

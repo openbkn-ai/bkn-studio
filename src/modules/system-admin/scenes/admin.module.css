@@ -82,6 +82,16 @@
   font-weight: 600;
 }
 
+.roleExclusiveHint {
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 /* ---- department tree (draggable) ---- */
 
 .deptDragHint {
