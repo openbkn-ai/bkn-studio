@@ -8,6 +8,7 @@ coverage
 .vscode/*
 !.vscode/extensions.json
 *.local
+vite-*.log
 tests/execution-factory/agent-at/
 tests/execution-factory/operator-web-ui/
 tests/execution-factory/fixtures/
