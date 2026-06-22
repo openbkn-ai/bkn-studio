@@ -39,6 +39,20 @@
   color: #dc2626;
 }
 
+/* 已完成但向量化失败/部分失败：琥珀色降级标 */
+.taskDegraded {
+  border-color: rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+.progressWarn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #d97706;
+}
+
 .modeBatch {
   border-color: rgba(15, 118, 110, 0.2);
   background: rgba(15, 118, 110, 0.06);

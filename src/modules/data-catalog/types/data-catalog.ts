@@ -60,11 +60,17 @@ export type BuildTask = {
   createdAt: number;
   embeddingFields: string[];
   embeddingModel: string;
+  /** completed 但向量化没建满（vectorized < synced），索引不可用/部分可用。 */
+  embeddingDegraded: boolean;
   fulltextAnalyzer: string;
   fulltextFields: string[];
   error: string | null;
+  /** 后端 failure_detail：向量化失败的详细原因，tooltip 展开用。 */
+  failureDetail: string;
   finishTime: string | null;
   id: string;
+  /** 索引是否可用（embeddingDegraded 时为 false）。 */
+  indexUsable: boolean;
   lastEventAt: number | null;
   mode: BuildMode;
   modelDimensions: number;

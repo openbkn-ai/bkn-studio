@@ -47,6 +47,8 @@ export const dataCatalogEnUS = {
     progress: {
       synced: "Synced {{synced}} / {{total}}",
       vectorized: "Vectorized {{percent}}%",
+      vectorizeFailed: "Vectorization failed",
+      vectorizePartial: "Vectorized {{percent}}% (partial)",
       syncedRows: "{{count}} rows synced",
       lastEvent: "Last event {{time}}",
     },
@@ -271,6 +273,7 @@ export const dataCatalogEnUS = {
       model: "Model",
       lastEvent: "Last Event",
       finishedAt: "Finished At",
+      embeddingDegradedHint: "Vector index is incomplete; semantic search may be unavailable or partial.",
       statuses: {
         pending: "Pending",
         running: "Building",
@@ -279,6 +282,8 @@ export const dataCatalogEnUS = {
         stopped: "Stopped",
         succeeded: "Succeeded",
         succeededWithWarning: "Succeeded (with warning)",
+        embeddingFailed: "Completed · vectorization failed",
+        embeddingPartial: "Completed · vectorization partial",
         failed: "Failed",
       },
     },

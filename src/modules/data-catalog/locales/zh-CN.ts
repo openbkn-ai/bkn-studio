@@ -46,6 +46,8 @@ export const dataCatalogZhCN = {
     progress: {
       synced: "同步 {{synced}} / {{total}}",
       vectorized: "向量化 {{percent}}%",
+      vectorizeFailed: "向量化失败",
+      vectorizePartial: "向量化 {{percent}}%(部分失败)",
       syncedRows: "已同步 {{count}} 行",
       lastEvent: "最近事件 {{time}}",
     },
@@ -257,6 +259,7 @@ export const dataCatalogZhCN = {
       model: "模型",
       lastEvent: "最近事件",
       finishedAt: "完成时间",
+      embeddingDegradedHint: "向量索引未建满，语义检索可能不可用或不完整。",
       statuses: {
         pending: "排队中",
         running: "构建中",
@@ -265,6 +268,8 @@ export const dataCatalogZhCN = {
         stopped: "已停止",
         succeeded: "已完成",
         succeededWithWarning: "已完成(有警告)",
+        embeddingFailed: "已完成·向量化失败",
+        embeddingPartial: "已完成·向量化部分失败",
         failed: "失败",
       },
     },

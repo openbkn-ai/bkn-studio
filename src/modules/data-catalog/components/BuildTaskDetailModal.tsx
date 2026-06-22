@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
+import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { formatCount } from "@/modules/data-catalog/lib/format";
 import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
@@ -93,20 +94,24 @@ export function BuildTaskDetailModal({
           >
             {t(`dataCatalog.modes.${task.mode}`)}
           </span>
-          <span
-            className={[
-              styles.tag,
-              task.status === "failed"
-                ? styles.taskFailed
-                : task.status === "succeeded"
-                  ? styles.taskSucceeded
-                  : task.status === "listening"
-                    ? styles.modeStreaming
-                    : styles.taskRunning,
-            ].join(" ")}
-          >
-            {statusLabel}
-          </span>
+          {task.embeddingDegraded ? (
+            <BuildStatusTag task={task} />
+          ) : (
+            <span
+              className={[
+                styles.tag,
+                task.status === "failed"
+                  ? styles.taskFailed
+                  : task.status === "succeeded"
+                    ? styles.taskSucceeded
+                    : task.status === "listening"
+                      ? styles.modeStreaming
+                      : styles.taskRunning,
+              ].join(" ")}
+            >
+              {statusLabel}
+            </span>
+          )}
         </div>
 
         {task.error ? (

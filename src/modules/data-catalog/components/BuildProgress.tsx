@@ -1,3 +1,4 @@
+import { WarningOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
@@ -65,11 +66,22 @@ export function BuildProgress({ task }: BuildProgressProps) {
             total: formatCount(task.totalCount) as never,
           })}
         </span>
-        <span>
-          {t("dataCatalog.progress.vectorized", {
-            percent: Math.round(vectorPercent) as never,
-          })}
-        </span>
+        {task.embeddingDegraded ? (
+          <span className={styles.progressWarn}>
+            <WarningOutlined />
+            {task.vectorizedCount === 0
+              ? t("dataCatalog.progress.vectorizeFailed")
+              : t("dataCatalog.progress.vectorizePartial", {
+                  percent: Math.round(vectorPercent) as never,
+                })}
+          </span>
+        ) : (
+          <span>
+            {t("dataCatalog.progress.vectorized", {
+              percent: Math.round(vectorPercent) as never,
+            })}
+          </span>
+        )}
       </div>
     </div>
   );

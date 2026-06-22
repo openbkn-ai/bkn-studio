@@ -24,6 +24,7 @@ type BackendBuildTask = {
   embedding_fields?: string | string[];
   embedding_model?: string;
   error_msg?: string;
+  failure_detail?: string;
   fulltext_analyzer?: string;
   fulltext_fields?: string | string[];
   id: string;
@@ -104,6 +105,12 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
   const mode: BuildMode = item.mode === "streaming" ? "streaming" : "batch";
   const status = normalizeStatus(item.status, mode);
 
+  // 已完成但 embedding 没建满（vectorized < synced）= 索引降级：向量化失败/部分失败。
+  const synced = item.synced_count ?? 0;
+  const vectorized = item.vectorized_count ?? 0;
+  const wantsEmbedding = splitFields(item.embedding_fields).length > 0;
+  const embeddingDegraded = wantsEmbedding && status === "succeeded" && vectorized < synced;
+
   return {
     id: item.id,
     resourceId: item.resource_id ?? "",
@@ -112,12 +119,15 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
     embeddingFields: splitFields(item.embedding_fields),
     buildKeyFields: splitFields(item.build_key_fields),
     embeddingModel: item.embedding_model ?? "",
+    embeddingDegraded,
     modelDimensions: item.model_dimensions ?? 0,
     fulltextFields: splitFields(item.fulltext_fields),
     fulltextAnalyzer: item.fulltext_analyzer ?? "",
     totalCount: item.total_count ?? 0,
-    syncedCount: item.synced_count ?? 0,
-    vectorizedCount: item.vectorized_count ?? 0,
+    syncedCount: synced,
+    vectorizedCount: vectorized,
+    indexUsable: !embeddingDegraded,
+    failureDetail: item.failure_detail ?? "",
     createdAt,
     createTime: createdAt ? formatMockTimestamp(createdAt) : "-",
     finishTime:
@@ -212,6 +222,9 @@ export async function createBuildTask(
       totalCount: resource?.rowCount ?? 0,
       syncedCount: 0,
       vectorizedCount: 0,
+      embeddingDegraded: false,
+      indexUsable: true,
+      failureDetail: "",
       createdAt,
       createTime: formatMockTimestamp(createdAt),
       finishTime: null,
@@ -291,6 +304,9 @@ export async function updateBuildTask(
       task.status = "pending";
       task.syncedCount = 0;
       task.vectorizedCount = 0;
+      task.embeddingDegraded = false;
+      task.indexUsable = true;
+      task.failureDetail = "";
       task.error = null;
       emitMockChange();
       ensureMockTicker();

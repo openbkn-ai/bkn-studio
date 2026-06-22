@@ -14,6 +14,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
+import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { IndexStateTag } from "@/modules/data-catalog/components/IndexStateTag";
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
 import {
@@ -22,7 +23,6 @@ import {
   sortTasks,
 } from "@/modules/data-catalog/lib/index-state";
 import {
-  buildTaskStatusLabelKey,
   pauseBuildTask,
   resumeBuildTask,
   retryBuildTask,
@@ -456,20 +456,7 @@ export function ResourceDetailPanel({
                     >
                       {t(`dataCatalog.modes.${latest.mode}`)}
                     </span>
-                    <span
-                      className={[
-                        styles.tag,
-                        latest.status === "failed"
-                          ? styles.taskFailed
-                          : latest.status === "succeeded"
-                            ? styles.taskSucceeded
-                            : styles.taskRunning,
-                      ].join(" ")}
-                    >
-                      {t(
-                        `dataCatalog.task.statuses.${buildTaskStatusLabelKey(latest.status, latest.mode)}`,
-                      )}
-                    </span>
+                    <BuildStatusTag task={latest} />
                   </div>
                   {latest.status === "failed" && effective ? (
                     <div className={styles.calloutWarn} style={{ marginBottom: 0 }}>
@@ -540,20 +527,7 @@ export function ResourceDetailPanel({
                           >
                             {t(`dataCatalog.modes.${task.mode}`)}
                           </span>
-                          <span
-                            className={[
-                              styles.tag,
-                              task.status === "failed"
-                                ? styles.taskFailed
-                                : task.status === "succeeded"
-                                  ? styles.taskSucceeded
-                                  : styles.taskPending,
-                            ].join(" ")}
-                          >
-                            {t(
-                              `dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`,
-                            )}
-                          </span>
+                          <BuildStatusTag task={task} />
                         </span>
                         <span className={styles.scanItemMeta}>
                           {task.createTime} · {task.embeddingFields.join(", ")} ·{" "}

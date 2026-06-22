@@ -20,12 +20,12 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
+import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { BuildTaskDetailModal } from "@/modules/data-catalog/components/BuildTaskDetailModal";
 import { BuildTaskModal } from "@/modules/data-catalog/components/BuildTaskModal";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import {
   type BuildExecuteType,
-  buildTaskStatusLabelKey,
   deleteBuildTask,
   listBuildTasks,
   pauseBuildTask,
@@ -261,24 +261,7 @@ export function IndexBuildListScene() {
     {
       dataIndex: "status",
       title: t("common.status"),
-      render: (value: BuildTaskStatus, record) => (
-        <span
-          className={[
-            styles.tag,
-            value === "failed"
-              ? styles.taskFailed
-              : value === "succeeded"
-                ? styles.taskSucceeded
-                : value === "listening"
-                  ? styles.modeStreaming
-                  : value === "running"
-                    ? styles.taskRunning
-                    : styles.taskPending,
-          ].join(" ")}
-        >
-          {t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(value, record.mode)}`)}
-        </span>
-      ),
+      render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
     },
     {
       key: "progress",
