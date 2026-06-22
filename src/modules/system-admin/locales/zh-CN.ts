@@ -59,6 +59,7 @@ export const systemAdminZhCN = {
       removeGrantTitle: "移除授权",
       removeGrantConfirm: "确定移除对「{{name}}」的授权吗？",
       removeLastOpConfirm: "该被授权方将不再拥有任何操作，授权记录会被移除。是否继续？",
+      adminLocked: "管理员拥有全部权限，不可在此调整或移除。",
       revokeTitle: "撤销授权",
       revokeConfirm: "确定撤销「{{name}}」对「{{object}}」的授权吗？",
       stats: {

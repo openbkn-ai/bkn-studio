@@ -3,6 +3,7 @@ import type {
   ConsoleNavContribution,
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
 import { executionFactoryLabNavigation } from "@/modules/execution-factory-lab/navigation";
 import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
@@ -47,6 +48,36 @@ export function filterConsoleNavigation(
         children,
       };
     });
+}
+
+// 按当前用户权限过滤导航:自身权限不满足 → 隐藏;子项全被过滤且本身不可点 → 整组隐藏。
+export function filterNavByPermission(
+  items: ConsoleNavItem[],
+  permissions: string[],
+): ConsoleNavItem[] {
+  const visible: ConsoleNavItem[] = [];
+  for (const item of items) {
+    if (
+      item.permission &&
+      !hasPermissions({
+        currentPermissions: permissions,
+        mode: item.permissionMode ?? "any",
+        requiredPermissions: item.permission,
+      })
+    ) {
+      continue;
+    }
+    if (item.children?.length) {
+      const children = filterNavByPermission(item.children, permissions);
+      if (children.length === 0 && !item.path) {
+        continue;
+      }
+      visible.push({ ...item, children });
+    } else {
+      visible.push(item);
+    }
+  }
+  return visible;
 }
 
 type ConsoleNavTrailItem = {

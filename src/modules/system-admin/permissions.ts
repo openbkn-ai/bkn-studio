@@ -1,0 +1,21 @@
+// 系统管理各页面所需权限(任一即可)。导航过滤与路由守卫共用同一份，避免漂移。
+// 与 module.manifest.ts 的权限点对齐;普通用户不持有任何 admin-* 权限。
+export const systemAdminPermissions: Record<
+  "users" | "roles" | "authorizations" | "audit",
+  string[]
+> = {
+  users: [
+    "admin-user:create",
+    "admin-user:edit",
+    "admin-user:delete",
+    "admin-user:toggle",
+    "admin-user:reset-password",
+    "admin-dept:create",
+    "admin-dept:edit",
+    "admin-dept:delete",
+    "admin-dept:members",
+  ],
+  roles: ["admin-role:create", "admin-role:edit", "admin-role:delete", "admin-role:members"],
+  authorizations: ["admin-authz:grant", "admin-authz:revoke"],
+  audit: ["admin-audit:view"],
+};

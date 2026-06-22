@@ -10,6 +10,7 @@ import {
 } from "@ant-design/icons";
 
 import type { ConsoleNavItem } from "@/app/shell/navigation/types";
+import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 export const baseConsoleNavigation: ConsoleNavItem[] = [
   {
@@ -50,24 +51,28 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         labelKey: "shell.items.userManagement",
         icon: <TeamOutlined />,
         path: "/system/users",
+        permission: systemAdminPermissions.users,
       },
       {
         key: "role-management",
         labelKey: "shell.items.roleManagement",
         icon: <SafetyCertificateOutlined />,
         path: "/system/roles",
+        permission: systemAdminPermissions.roles,
       },
       {
         key: "authorization-management",
         labelKey: "shell.items.authorizationManagement",
         icon: <KeyOutlined />,
         path: "/system/authorizations",
+        permission: systemAdminPermissions.authorizations,
       },
       {
         key: "log-management",
         labelKey: "shell.items.logManagement",
         path: "/system/audit",
         icon: <FileTextOutlined />,
+        permission: systemAdminPermissions.audit,
       },
     ],
   },

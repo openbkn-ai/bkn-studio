@@ -59,6 +59,7 @@ export const systemAdminEnUS = {
       removeGrantTitle: "Remove grant",
       removeGrantConfirm: "Remove the grant for \"{{name}}\"?",
       removeLastOpConfirm: "This grantee will have no operations left and the grant will be removed. Continue?",
+      adminLocked: "The administrator holds all permissions and cannot be adjusted or removed here.",
       revokeTitle: "Revoke grant",
       revokeConfirm: "Revoke \"{{name}}\"'s access to \"{{object}}\"?",
       stats: {

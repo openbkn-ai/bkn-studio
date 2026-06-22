@@ -5,11 +5,12 @@ import {
   DatabaseOutlined,
   DeploymentUnitOutlined,
   FunctionOutlined,
+  LockOutlined,
   PlusOutlined,
   ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Drawer, Empty, Select, Spin, Tag } from "antd";
+import { Drawer, Empty, Select, Spin, Tag, Tooltip } from "antd";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -100,6 +101,11 @@ export function ObjectAuthorizeDrawer({
   const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
   const userName = useCallback((id: string) => userMap.get(id)?.name ?? id, [userMap]);
   const userAccount = useCallback((id: string) => userMap.get(id)?.account ?? "", [userMap]);
+  // 内置(超级)管理员本就拥有全部权限,其授权不可在此调整或移除。
+  const isProtected = useCallback(
+    (id: string) => userMap.get(id)?.builtin === true,
+    [userMap],
+  );
 
   // 候选用户（排除本对象已授权的）。
   const candidates = useMemo(() => {
@@ -236,40 +242,51 @@ export function ObjectAuthorizeDrawer({
         </div>
       ) : grants.length ? (
         <div className={styles.authzList}>
-          {grants.map((grant) => (
-            <div className={styles.authzCard} key={grant.accessorId}>
-              <div className={styles.authzCardHead}>
-                <span className={styles.authzWho}>
-                  <span className={styles.authzAvatar}>
-                    <UserOutlined />
+          {grants.map((grant) => {
+            const locked = isProtected(grant.accessorId);
+            return (
+              <div className={styles.authzCard} key={grant.accessorId}>
+                <div className={styles.authzCardHead}>
+                  <span className={styles.authzWho}>
+                    <span className={styles.authzAvatar}>
+                      <UserOutlined />
+                    </span>
+                    <span className={styles.authzWhoName}>{userName(grant.accessorId)}</span>
+                    <span className={styles.authzWhoSub}>{userAccount(grant.accessorId)}</span>
                   </span>
-                  <span className={styles.authzWhoName}>{userName(grant.accessorId)}</span>
-                  <span className={styles.authzWhoSub}>{userAccount(grant.accessorId)}</span>
-                </span>
-                <AppButton
-                  className={[styles.actionLink, styles.actionDanger].join(" ")}
-                  onClick={() => handleRemove(grant)}
-                  type="link"
-                >
-                  {t("systemAdmin.objectGrants.remove")}
-                </AppButton>
+                  {locked ? (
+                    <Tooltip title={t("systemAdmin.objectGrants.adminLocked")}>
+                      <span className={styles.subText}>
+                        <LockOutlined />
+                      </span>
+                    </Tooltip>
+                  ) : (
+                    <AppButton
+                      className={[styles.actionLink, styles.actionDanger].join(" ")}
+                      onClick={() => handleRemove(grant)}
+                      type="link"
+                    >
+                      {t("systemAdmin.objectGrants.remove")}
+                    </AppButton>
+                  )}
+                </div>
+                <div className={styles.chipGroup}>
+                  {ops.map((op) => (
+                    <button
+                      className={[styles.chipOpt, grant.operations.includes(op.key) ? styles.chipOptSelected : ""].join(" ")}
+                      disabled={busy || locked}
+                      key={op.key}
+                      onClick={() => void toggleOp(grant, op.key)}
+                      type="button"
+                    >
+                      <span className={styles.chipCode}>{op.label}</span>
+                      <span className={styles.chipType}>{op.key}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className={styles.chipGroup}>
-                {ops.map((op) => (
-                  <button
-                    className={[styles.chipOpt, grant.operations.includes(op.key) ? styles.chipOptSelected : ""].join(" ")}
-                    disabled={busy}
-                    key={op.key}
-                    onClick={() => void toggleOp(grant, op.key)}
-                    type="button"
-                  >
-                    <span className={styles.chipCode}>{op.label}</span>
-                    <span className={styles.chipType}>{op.key}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <Empty

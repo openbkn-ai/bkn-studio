@@ -3,6 +3,8 @@ import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { RequirePermission } from "@/framework/permission/RequirePermission";
+import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 const UserManagementPage = lazy(async () => {
   const module = await import("@/modules/system-admin/pages/UserManagementPage");
@@ -28,6 +30,15 @@ function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
+// 路由级守卫:无权限直接渲染 403,被守卫页面不 mount(因而不触发其拉数据副作用)。
+function guarded(permissions: readonly string[], element: ReactNode) {
+  return (
+    <RequirePermission permissions={[...permissions]}>
+      {withRouteLoading(element)}
+    </RequirePermission>
+  );
+}
+
 export const systemAdminRoutes: RouteObject[] = [
   {
     path: "system/users",
@@ -38,7 +49,7 @@ export const systemAdminRoutes: RouteObject[] = [
         titleKey: "systemAdmin.users.title",
       },
     },
-    element: withRouteLoading(<UserManagementPage />),
+    element: guarded(systemAdminPermissions.users, <UserManagementPage />),
   },
   {
     path: "system/roles",
@@ -49,7 +60,7 @@ export const systemAdminRoutes: RouteObject[] = [
         titleKey: "systemAdmin.roles.title",
       },
     },
-    element: withRouteLoading(<RoleManagementPage />),
+    element: guarded(systemAdminPermissions.roles, <RoleManagementPage />),
   },
   {
     path: "system/authorizations",
@@ -60,7 +71,7 @@ export const systemAdminRoutes: RouteObject[] = [
         titleKey: "systemAdmin.objectGrants.title",
       },
     },
-    element: withRouteLoading(<ObjectAuthorizationPage />),
+    element: guarded(systemAdminPermissions.authorizations, <ObjectAuthorizationPage />),
   },
   {
     path: "system/audit",
@@ -71,7 +82,7 @@ export const systemAdminRoutes: RouteObject[] = [
         titleKey: "systemAdmin.audit.title",
       },
     },
-    element: withRouteLoading(<AuditLogPage />),
+    element: guarded(systemAdminPermissions.audit, <AuditLogPage />),
   },
 ];
 

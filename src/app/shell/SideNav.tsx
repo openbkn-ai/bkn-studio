@@ -6,9 +6,11 @@ import { useLocation, useMatches, useNavigate } from "react-router-dom";
 import {
   consoleNavigation,
   filterConsoleNavigation,
+  filterNavByPermission,
   findConsoleNavItemByPath,
 } from "@/app/shell/console-navigation";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
+import { useAppServices } from "@/framework/context/use-app-services";
 import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeatures";
 
 type SelectedItem = {
@@ -24,6 +26,7 @@ type SideNavProps = {
 export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   const { t } = useTranslation();
   const { features } = useLabFeatures();
+  const { runtimeConfig } = useAppServices();
   const location = useLocation();
   const matches = useMatches();
   const navigate = useNavigate();
@@ -32,11 +35,18 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
 
   const navigationItems = useMemo(
     () =>
-      filterConsoleNavigation(consoleNavigation, {
-        hideCatalog: !features.catalog,
-        hideLegacyExecutionFactory: features.hide_legacy_execution_factory_menu,
-      }),
-    [features.catalog, features.hide_legacy_execution_factory_menu],
+      filterNavByPermission(
+        filterConsoleNavigation(consoleNavigation, {
+          hideCatalog: !features.catalog,
+          hideLegacyExecutionFactory: features.hide_legacy_execution_factory_menu,
+        }),
+        runtimeConfig.currentUser.permissions,
+      ),
+    [
+      features.catalog,
+      features.hide_legacy_execution_factory_menu,
+      runtimeConfig.currentUser.permissions,
+    ],
   );
 
   const selectedItem = useMemo(
