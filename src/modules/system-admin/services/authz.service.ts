@@ -1,4 +1,8 @@
 import { http } from "@/framework/request/http";
+import {
+  listDomainObjects,
+  resolveGrantNames,
+} from "@/modules/system-admin/services/authz-objects.service";
 import type {
   AuthorizableObject,
   AuthzSummary,
@@ -83,16 +87,17 @@ export async function listObjectGrants(): Promise<ObjectGrant[]> {
     return wait(grants.map(clone));
   }
   const response = await http.get<{ entries?: BackendEntry[] }>(`${ADMIN}/object-grants`);
-  return (response.data.entries ?? []).map(mapEntry);
+  const mapped = (response.data.entries ?? []).map(mapEntry);
+  // bkn-safe 只返 type:id，对象名从各领域服务解析回填。
+  return resolveGrantNames(mapped);
 }
 
 export async function listAuthorizableObjects(objType?: string): Promise<AuthorizableObject[]> {
   if (useMock) {
     return wait(authzObjects.filter((item) => !objType || item.type === objType).map((item) => ({ ...item })));
   }
-  // TODO(real): bkn-safe 不存资源名/列表，对象实例需从各领域服务取
-  // （catalog/resource→vega，模型→mf-model，算子/工具箱/技能/mcp→执行工厂）。
-  return [];
+  const objects = await listDomainObjects();
+  return objType ? objects.filter((item) => item.type === objType) : objects;
 }
 
 export function summarizeGrants(list: ObjectGrant[]): AuthzSummary {
