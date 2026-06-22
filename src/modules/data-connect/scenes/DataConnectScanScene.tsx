@@ -257,7 +257,7 @@ export function DataConnectScanScene({
       dataIndex: "enabled",
       title: t("common.status"),
       render: (value: boolean, record) => (
-        <PermissionGate permissions="data-connect-scan:toggle">
+        <PermissionGate permissions="catalog:task_manage">
           <Switch
             checked={value}
             onChange={(checked) => {
@@ -292,7 +292,7 @@ export function DataConnectScanScene({
       title: t("common.actions"),
       render: (_, record) => (
         <Space className={styles.actionGroup}>
-          <PermissionGate permissions="data-connect-scan:edit">
+          <PermissionGate permissions="catalog:task_manage">
             <AppButton
               onClick={() => {
                 setScheduleModalState({ mode: "edit", scheduleId: record.id });
@@ -302,7 +302,7 @@ export function DataConnectScanScene({
               {t("common.edit")}
             </AppButton>
           </PermissionGate>
-          <PermissionGate permissions="data-connect-scan:trigger">
+          <PermissionGate permissions="catalog:task_manage">
             <AppButton
               loading={triggeringScheduleId === record.id}
               onClick={() => {
@@ -328,7 +328,7 @@ export function DataConnectScanScene({
               {t("dataConnect.scanRunNow")}
             </AppButton>
           </PermissionGate>
-          <PermissionGate permissions="data-connect-scan:delete">
+          <PermissionGate permissions="catalog:task_manage">
             <AppButton
               danger
               onClick={() => {
@@ -426,7 +426,7 @@ export function DataConnectScanScene({
           >
             {t("common.detail")}
           </AppButton>
-          <PermissionGate permissions="data-connect-scan:delete">
+          <PermissionGate permissions="catalog:task_manage">
             <AppButton
               danger
               onClick={() => {
@@ -526,7 +526,7 @@ export function DataConnectScanScene({
         <div className={styles.operationBar}>
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
-              <PermissionGate permissions="data-connect-scan:create">
+              <PermissionGate permissions="catalog:task_manage">
                 <AppButton
                   onClick={() => {
                     setEditingSchedule(null);
@@ -537,7 +537,7 @@ export function DataConnectScanScene({
                   {t("dataConnect.scanCreate")}
                 </AppButton>
               </PermissionGate>
-              <PermissionGate permissions="data-connect-scan:trigger">
+              <PermissionGate permissions="catalog:task_manage">
                 <AppButton
                   disabled={!selectedCatalogId}
                   onClick={() => {
@@ -692,7 +692,7 @@ export function DataConnectScanScene({
           ) : !loadingSchedules && schedules.length === 0 ? (
             <EmptyStatePanel
               action={
-                <PermissionGate permissions="data-connect-scan:create">
+                <PermissionGate permissions="catalog:task_manage">
                   <AppButton
                     onClick={() => {
                       setScheduleModalState({ mode: "create" });

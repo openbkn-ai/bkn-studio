@@ -307,7 +307,7 @@ export function DataConnectListScene({
                   {t("common.create")}
                 </AppButton>
               </PermissionGate>
-                <PermissionGate permissions="data-connect-scan:create">
+                <PermissionGate permissions="catalog:task_manage">
                   <AppButton
                     onClick={() => {
                       if (onOpenScans) {
