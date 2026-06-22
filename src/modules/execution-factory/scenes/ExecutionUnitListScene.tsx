@@ -60,8 +60,17 @@ import {
   resolveVisibleManagementTabs,
 } from "@/modules/execution-factory/utils/capability-ux";
 import { supportsCategoryFilter } from "@/modules/execution-factory/utils/capability-parity";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./execution-unit-list.module.css";
+
+// 执行单元 tab → bkn-safe 对象类型（toolbox 的后端 type 是 tool_box）。
+const AUTHZ_TYPE_BY_TAB: Record<ExecutionUnitTab, string> = {
+  operator: "operator",
+  toolbox: "tool_box",
+  mcp: "mcp",
+  skill: "skill",
+};
 
 const ExecutionUnitListOverlays = lazy(async () => {
   const module = await import("@/modules/execution-factory/scenes/ExecutionUnitListOverlays");
@@ -241,6 +250,9 @@ export function ExecutionUnitListScene({
   const [detailBoxEditMode, setDetailBoxEditMode] = useState(false);
   const [detailMcpId, setDetailMcpId] = useState<string | null>(null);
   const [detailSkillId, setDetailSkillId] = useState<string | null>(null);
+  const [authorizeTarget, setAuthorizeTarget] = useState<{ id: string; name: string; type: string } | null>(
+    null,
+  );
   const [historySkillId, setHistorySkillId] = useState<string | null>(null);
   const [installTarget, setInstallTarget] = useState<{
     id: string;
@@ -722,6 +734,11 @@ export function ExecutionUnitListScene({
           },
         });
       };
+
+      if (action === "authorize") {
+        setAuthorizeTarget({ id: item.id, name: item.name, type: AUTHZ_TYPE_BY_TAB[activeTab] });
+        return;
+      }
 
       if (action === "install") {
         if (activeTab === "skill") {
@@ -1326,6 +1343,16 @@ export function ExecutionUnitListScene({
             updateSkillPackageTarget={updateSkillPackageTarget}
           />
         </Suspense>
+      ) : null}
+
+      {authorizeTarget ? (
+        <ObjectAuthorizeDrawer
+          objId={authorizeTarget.id}
+          objName={authorizeTarget.name}
+          objType={authorizeTarget.type}
+          onClose={() => setAuthorizeTarget(null)}
+          open={Boolean(authorizeTarget)}
+        />
       ) : null}
     </>
   );

@@ -475,6 +475,184 @@
   background: rgba(46, 104, 255, 0.03);
 }
 
+/* ---- object-level authorize (list mode) ---- */
+
+.authzObjHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(15, 30, 54, 0.08);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.authzAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  background: rgba(46, 104, 255, 0.08);
+  color: #2e68ff;
+  font-size: 16px;
+}
+
+.authzObjMeta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.authzObjName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #152239;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.authzList {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.authzCard {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(15, 30, 54, 0.08);
+  border-radius: 14px;
+  background: #f9fbff;
+}
+
+.authzCardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.authzWho {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.authzWhoName {
+  color: #1f2d45;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.authzWhoSub {
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- authorizations overview (stat strip + grouped views) ---- */
+
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.statCard {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid rgba(15, 30, 54, 0.08);
+  border-radius: 16px;
+  background: #f9fbff;
+}
+
+.statLabel {
+  color: #64748d;
+  font-size: 13px;
+}
+
+.statValue {
+  color: #152239;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.authzGroupList {
+  display: grid;
+  gap: 12px;
+}
+
+.authzGroup {
+  border: 1px solid rgba(15, 30, 54, 0.08);
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.authzGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f9fbff;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.06);
+}
+
+.authzGroupTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.authzGroupName {
+  color: #152239;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.authzGroupCount {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.authzGroupBody {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.authzGrantLine {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(15, 30, 54, 0.06);
+  border-radius: 12px;
+}
+
+.authzGrantLine .chipRow {
+  flex: 1;
+}
+
+@media (max-width: 1200px) {
+  .statStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 1200px) {
   .contentSurface {
     padding-right: 22px;

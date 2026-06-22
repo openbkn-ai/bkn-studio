@@ -30,6 +30,7 @@ export const shellZhCN = {
       systemManagement: "系统管理",
       userManagement: "用户管理",
       roleManagement: "角色管理",
+      authorizationManagement: "授权管理",
       modelManagement: "模型管理",
       traceai: "traceai",
       logManagement: "日志管理",

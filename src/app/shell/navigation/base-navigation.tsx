@@ -3,6 +3,7 @@ import {
   ClusterOutlined,
   ExperimentOutlined,
   FileTextOutlined,
+  KeyOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
   TeamOutlined,
@@ -55,6 +56,12 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         labelKey: "shell.items.roleManagement",
         icon: <SafetyCertificateOutlined />,
         path: "/system/roles",
+      },
+      {
+        key: "authorization-management",
+        labelKey: "shell.items.authorizationManagement",
+        icon: <KeyOutlined />,
+        path: "/system/authorizations",
       },
       {
         key: "log-management",

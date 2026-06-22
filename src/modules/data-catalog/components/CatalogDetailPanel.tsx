@@ -1,5 +1,6 @@
 import {
   ExclamationCircleOutlined,
+  KeyOutlined,
   LoadingOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -37,6 +38,7 @@ import type {
   DataConnectRecord,
 } from "@/modules/data-connect/types/data-connect";
 import { IndexStateTag } from "@/modules/data-catalog/components/IndexStateTag";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./shared.module.css";
 
@@ -83,6 +85,7 @@ export function CatalogDetailPanel({
   const [resourceKeyword, setResourceKeyword] = useState("");
   const [indexFilter, setIndexFilter] = useState<string | undefined>(undefined);
   const [scansExpanded, setScansExpanded] = useState(false);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
 
   const physical = isCatalogPhysical(catalog);
   const connectorType = connectorTypes.find((item) => item.type === catalog.connectorType);
@@ -389,6 +392,11 @@ export function CatalogDetailPanel({
               {t("common.edit")}
             </AppButton>
           </PermissionGate>
+          <PermissionGate permissions="admin-authz:grant">
+            <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
+              {t("systemAdmin.objectGrants.authorize")}
+            </AppButton>
+          </PermissionGate>
           <PermissionGate permissions="catalog:delete">
             <AppButton danger onClick={removeCatalog}>
               {t("common.delete")}
@@ -396,6 +404,15 @@ export function CatalogDetailPanel({
           </PermissionGate>
         </div>
       </div>
+
+      <ObjectAuthorizeDrawer
+        objId={catalog.id}
+        objName={catalog.name}
+        objSub={connectorType?.name ?? catalog.connectorType}
+        objType="catalog"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+      />
 
       <div className={styles.statStrip}>
         <div className={styles.statCard}>

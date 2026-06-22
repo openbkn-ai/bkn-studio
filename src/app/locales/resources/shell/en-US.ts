@@ -31,6 +31,7 @@ export const shellEnUS = {
       systemManagement: "System Management",
       userManagement: "User Management",
       roleManagement: "Role Management",
+      authorizationManagement: "Authorizations",
       modelManagement: "Model Management",
       traceai: "TraceAI",
       logManagement: "Log Management",

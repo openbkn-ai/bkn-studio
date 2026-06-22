@@ -84,6 +84,7 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
     operations: ["list", "view", "create", "modify", "delete", "manual_exec", "run_statistics", "run_with_app", "display"],
   },
   { type: "small_model", label: "小模型", operations: ["display", "create", "modify", "delete", "execute"] },
+  { type: "large_model", label: "大模型", operations: ["display", "create", "modify", "delete", "execute"] },
   { type: "operator", label: "算子", operations: PUBLISHABLE },
   { type: "tool_box", label: "工具箱", operations: PUBLISHABLE },
   { type: "skill", label: "技能", operations: PUBLISHABLE },

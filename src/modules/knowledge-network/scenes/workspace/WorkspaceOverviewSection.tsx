@@ -3,16 +3,19 @@ import {
   ClockCircleOutlined,
   DatabaseOutlined,
   EditOutlined,
+  KeyOutlined,
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { Empty, Spin, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import type {
   KnowledgeNetworkRecord,
@@ -44,6 +47,7 @@ export function WorkspaceOverviewSection({
 }: WorkspaceOverviewSectionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
 
   const recentObjectColumns = useMemo<ColumnsType<KnowledgeNetworkRecentObject>>(
     () => [
@@ -115,6 +119,15 @@ export function WorkspaceOverviewSection({
             <div className={styles.overviewHeaderName}>{detail?.name}</div>
           </div>
           <div className={styles.overviewHeaderTitleRight}>
+            <PermissionGate permissions="admin-authz:grant">
+              <AppButton
+                disabled={!detail}
+                icon={<KeyOutlined />}
+                onClick={() => setAuthorizeOpen(true)}
+              >
+                {t("systemAdmin.objectGrants.authorize")}
+              </AppButton>
+            </PermissionGate>
             <AppButton icon={<EditOutlined />} onClick={onEdit}>
               {t("common.edit")}
             </AppButton>
@@ -243,6 +256,16 @@ export function WorkspaceOverviewSection({
           />
         </div>
       </div>
+
+      {detail ? (
+        <ObjectAuthorizeDrawer
+          objId={networkId}
+          objName={detail.name}
+          objType="knowledge_network"
+          onClose={() => setAuthorizeOpen(false)}
+          open={authorizeOpen}
+        />
+      ) : null}
     </div>
   );
 }

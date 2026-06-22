@@ -15,12 +15,14 @@ export const systemAdminModuleManifest = {
     "admin-role:edit",
     "admin-role:delete",
     "admin-role:members",
+    "admin-authz:grant",
+    "admin-authz:revoke",
     "admin-audit:view",
   ],
   requiresShell: true,
   supportsEmbedded: false,
   supportsReadOnly: false,
-  services: ["user-management/users", "user-management/departments", "authorization/roles", "authorization/role-members"],
+  services: ["user-management/users", "user-management/departments", "authorization/roles", "authorization/role-members", "authorization/object-grants"],
   scenes: [
     {
       id: "system-admin.users",
@@ -32,6 +34,12 @@ export const systemAdminModuleManifest = {
       id: "system-admin.roles",
       exportName: "RoleManagementScene",
       description: "Manage authorization roles, their object-level resource grants, and user/department members.",
+      inputs: [],
+    },
+    {
+      id: "system-admin.object-authorization",
+      exportName: "ObjectAuthorizationScene",
+      description: "Grant a specific object (data connection / Catalog, knowledge network, small model) directly to a user or department, on top of role permissions. Authorization is at the whole-object level (e.g. a whole Catalog, not individual resources). List-style with an overview page (all / by object / by member).",
       inputs: [],
     },
     {

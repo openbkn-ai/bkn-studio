@@ -20,7 +20,8 @@ export type ExecutionUnitCardAction =
   | "unpublish"
   | "offline"
   | "delete"
-  | "install";
+  | "install"
+  | "authorize";
 
 type ExecutionUnitCardMenuProps = {
   activeTab: ExecutionUnitTab;
@@ -222,6 +223,15 @@ export function ExecutionUnitCardMenu({
       item,
     );
   }
+
+  pushMenuAction(
+    menuItems,
+    "authorize",
+    t("systemAdmin.objectGrants.authorize"),
+    onAction,
+    "authorize",
+    item,
+  );
 
   pushMenuAction(menuItems, "delete", t("common.delete"), onAction, "delete", item, {
     danger: true,

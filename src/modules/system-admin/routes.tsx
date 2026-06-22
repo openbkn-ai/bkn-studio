@@ -19,6 +19,11 @@ const AuditLogPage = lazy(async () => {
   return { default: module.AuditLogPage };
 });
 
+const ObjectAuthorizationPage = lazy(async () => {
+  const module = await import("@/modules/system-admin/pages/ObjectAuthorizationPage");
+  return { default: module.ObjectAuthorizationPage };
+});
+
 function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
@@ -45,6 +50,17 @@ export const systemAdminRoutes: RouteObject[] = [
       },
     },
     element: withRouteLoading(<RoleManagementPage />),
+  },
+  {
+    path: "system/authorizations",
+    handle: {
+      console: {
+        descriptionKey: "systemAdmin.objectGrants.description",
+        menuKey: "authorization-management",
+        titleKey: "systemAdmin.objectGrants.title",
+      },
+    },
+    element: withRouteLoading(<ObjectAuthorizationPage />),
   },
   {
     path: "system/audit",

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { CatalogAuthorizeModal } from "@/modules/system-admin/components/CatalogAuthorizeModal";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { getDataConnectRecord } from "@/modules/data-connect/services/data-connect.service";
 import type {
   DataConnectConnectorType,
@@ -74,9 +74,9 @@ export function DataConnectDetailDrawer({
       destroyOnClose
       extra={
         record ? (
-          <PermissionGate permissions="admin-role:edit">
+          <PermissionGate permissions="admin-authz:grant">
             <AppButton onClick={() => setAuthorizeOpen(true)} type="primary">
-              {t("systemAdmin.authorize.grant")}
+              {t("systemAdmin.objectGrants.authorize")}
             </AppButton>
           </PermissionGate>
         ) : null
@@ -87,9 +87,11 @@ export function DataConnectDetailDrawer({
       width={760}
     >
       {record ? (
-        <CatalogAuthorizeModal
-          catalogId={record.id}
-          catalogName={record.name}
+        <ObjectAuthorizeDrawer
+          objId={record.id}
+          objName={record.name}
+          objSub={connectorTypeName}
+          objType="catalog"
           onClose={() => setAuthorizeOpen(false)}
           open={authorizeOpen}
         />

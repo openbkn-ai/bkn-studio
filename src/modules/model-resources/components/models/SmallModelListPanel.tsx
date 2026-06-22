@@ -32,6 +32,7 @@ import {
   getModelTableColumnSortOrder,
   toggleModelSort,
 } from "@/modules/model-resources/utils/model-table-sort";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./ModelListPanels.module.css";
 
@@ -60,6 +61,7 @@ export function SmallModelListPanel() {
   const [formMode, setFormMode] = useState<"create" | "edit" | "view">("create");
   const [formOpen, setFormOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [authorizeRecord, setAuthorizeRecord] = useState<SmallModel | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -196,7 +198,7 @@ export function SmallModelListPanel() {
     }
 
     if (key === "authorize" && canAuthorize(record)) {
-      message.info(t("modelResources.models.authorizationPending"));
+      setAuthorizeRecord(record);
     }
   };
 
@@ -423,6 +425,16 @@ export function SmallModelListPanel() {
         open={guideOpen}
         record={activeRecord}
       />
+      {authorizeRecord ? (
+        <ObjectAuthorizeDrawer
+          objId={authorizeRecord.modelId}
+          objName={authorizeRecord.modelName}
+          objSub={authorizeRecord.modelType}
+          objType="small_model"
+          onClose={() => setAuthorizeRecord(null)}
+          open={Boolean(authorizeRecord)}
+        />
+      ) : null}
     </div>
   );
 }

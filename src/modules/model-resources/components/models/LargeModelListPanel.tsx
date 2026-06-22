@@ -35,6 +35,7 @@ import {
   getModelTableColumnSortOrder,
   toggleModelSort,
 } from "@/modules/model-resources/utils/model-table-sort";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./ModelListPanels.module.css";
 
@@ -67,6 +68,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   const [formOpen, setFormOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
+  const [authorizeRecord, setAuthorizeRecord] = useState<LlmModel | null>(null);
 
   const showQuotaColumns = !isAdmin && !runtimeConfig.currentUser.roles.includes("admin");
 
@@ -196,6 +198,11 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     if (key === "guide") {
       setActiveRecord(record);
       setGuideOpen(true);
+      return;
+    }
+
+    if (key === "authorize") {
+      setAuthorizeRecord(record);
     }
   };
 
@@ -234,6 +241,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
               { key: "delete", label: t("modelResources.models.menus.delete") },
               { key: "test", label: t("modelResources.models.menus.testConnection") },
               { key: "monitor", label: t("modelResources.models.menus.modelMonitoring") },
+              { key: "authorize", label: t("modelResources.models.menus.authorizationManagement") },
             ],
             onClick: ({ key, domEvent }) => {
               domEvent.stopPropagation();
@@ -539,6 +547,16 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
         open={monitorOpen}
         record={activeRecord}
       />
+      {authorizeRecord ? (
+        <ObjectAuthorizeDrawer
+          objId={authorizeRecord.modelId}
+          objName={authorizeRecord.modelName}
+          objSub={authorizeRecord.modelType}
+          objType="large_model"
+          onClose={() => setAuthorizeRecord(null)}
+          open={Boolean(authorizeRecord)}
+        />
+      ) : null}
     </div>
   );
 }
