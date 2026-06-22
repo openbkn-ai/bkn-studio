@@ -54,6 +54,15 @@ export type BuildTaskStatus =
   | "running"
   | "succeeded";
 
+/** 后端 index_health 的单项健康态:ok / 部分失败 / 失败 / 构建中。 */
+export type IndexHealthState = "ok" | "partial" | "failed" | "building";
+
+export type IndexHealth = {
+  embedding: IndexHealthState;
+  fulltext: IndexHealthState;
+  usable: boolean;
+};
+
 export type BuildTask = {
   buildKeyFields: string[];
   createTime: string;
@@ -69,6 +78,8 @@ export type BuildTask = {
   failureDetail: string;
   finishTime: string | null;
   id: string;
+  /** 后端真实索引健康态(index_health);mock 旧数据可能缺,组件按 embeddingDegraded 兜底。 */
+  indexHealth?: IndexHealth;
   /** 索引是否可用（embeddingDegraded 时为 false）。 */
   indexUsable: boolean;
   lastEventAt: number | null;
@@ -82,6 +93,7 @@ export type BuildTask = {
 };
 
 export type BuildTaskListQuery = {
+  catalogId?: string;
   resourceId?: string;
   statuses?: BuildTaskStatus[];
 };

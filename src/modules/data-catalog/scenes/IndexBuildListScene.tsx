@@ -181,15 +181,30 @@ export function IndexBuildListScene() {
   };
 
   const handleRetry = async (task: BuildTask, executeType: BuildExecuteType) => {
-    try {
-      const next = await retryBuildTask(task.id, executeType);
-      if (next) {
-        message.success(t("dataCatalog.task.retried", { id: next.id }));
+    const run = async () => {
+      try {
+        const next = await retryBuildTask(task.id, executeType);
+        if (next) {
+          message.success(t("dataCatalog.task.retried", { id: next.id }));
+        }
+        await loadData();
+      } catch (error) {
+        void message.error(extractRequestErrorMessage(error));
       }
-      await loadData();
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
+    };
+    // 全量重建先删旧索引再重建,重建完成前不可用 → 先确认;增量不 drop 索引,不弹。
+    if (executeType === "full") {
+      modal.confirm({
+        title: t("dataCatalog.task.rebuildFullConfirmTitle"),
+        content: t("dataCatalog.task.rebuildFullConfirmContent"),
+        okText: t("common.confirm"),
+        cancelText: t("common.cancel"),
+        okButtonProps: { danger: true },
+        onOk: run,
+      });
+      return;
     }
+    await run();
   };
 
   const handleDelete = (task: BuildTask) => {

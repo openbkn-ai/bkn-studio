@@ -37,7 +37,15 @@ import type {
   DataConnectConnectorType,
   DataConnectRecord,
 } from "@/modules/data-connect/types/data-connect";
+import {
+  DeleteImpactAlert,
+  useDangerDelete,
+} from "@/modules/data-catalog/components/DangerDeleteModal";
 import { IndexStateTag } from "@/modules/data-catalog/components/IndexStateTag";
+import {
+  catalogBlastRadius,
+  runningIdsFromError,
+} from "@/modules/data-catalog/utils/delete-guard";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./shared.module.css";
@@ -80,6 +88,7 @@ export function CatalogDetailPanel({
 }: CatalogDetailPanelProps) {
   const { i18n, t } = useTranslation();
   const { message, modal } = useAppServices();
+  const danger = useDangerDelete();
   const navigate = useNavigate();
   const [testing, setTesting] = useState(false);
   const [resourceKeyword, setResourceKeyword] = useState("");
@@ -200,21 +209,53 @@ export function CatalogDetailPanel({
   };
 
   const removeCatalog = () => {
-    void modal.confirm({
-      title: t("dataCatalog.catalog.deleteConfirmTitle", { name: catalog.name }),
-      content: t("dataCatalog.catalog.deleteConfirmContent", {
-        resourceCount: resources.length,
-      }),
-      okText: t("common.delete"),
-      cancelText: t("common.cancel"),
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        await deleteDataConnectRecord(catalog.id);
-        message.success(t("common.success"));
-        void navigate("/data-catalog", { replace: true });
-        await onRefresh();
-      },
-    });
+    void (async () => {
+      // 影响面取该连接下已构建的索引数(一次 GET /build-tasks?catalog_id=)。
+      let indexCount: number;
+      try {
+        indexCount = (await catalogBlastRadius(catalog.id)).indexCount;
+      } catch {
+        indexCount = resources.length; // 查不到就用资源数兜底
+      }
+      const highRisk = indexCount > 0;
+      danger.open({
+        title: t("dataCatalog.catalog.deleteConfirmTitle", { name: catalog.name }),
+        targetName: catalog.name,
+        requireTypeName: highRisk,
+        impact: (
+          <DeleteImpactAlert
+            detail={
+              highRisk
+                ? t("dataCatalog.dangerDelete.catalogImpact", {
+                    name: catalog.name,
+                    count: indexCount,
+                  })
+                : t("dataCatalog.dangerDelete.catalogEmpty", { name: catalog.name })
+            }
+            warning={
+              highRisk ? t("dataCatalog.dangerDelete.impactWarning") : undefined
+            }
+          />
+        ),
+        onOk: async () => {
+          try {
+            // 后端级联清理资源/索引/任务,前端不再手动先删任务。
+            await deleteDataConnectRecord(catalog.id);
+          } catch (error) {
+            const running = runningIdsFromError(error);
+            void message.error(
+              running
+                ? t("dataCatalog.dangerDelete.hasRunning")
+                : extractRequestErrorMessage(error),
+            );
+            throw error;
+          }
+          message.success(t("common.success"));
+          void navigate("/data-catalog", { replace: true });
+          await onRefresh();
+        },
+      });
+    })();
   };
 
   const resourceColumns: ColumnsType<CatalogResource> = [
@@ -306,6 +347,7 @@ export function CatalogDetailPanel({
 
   return (
     <section>
+      {danger.node}
       <div className={styles.detailHeader}>
         <div className={styles.detailHeadMain}>
           <div className={styles.detailTitleRow}>

@@ -25,6 +25,14 @@ import type {
   DataConnectRecord,
 } from "@/modules/data-connect/types/data-connect";
 import { DataConnectDetailDrawer } from "@/modules/data-connect/components/DataConnectDetailDrawer";
+import {
+  DeleteImpactAlert,
+  useDangerDelete,
+} from "@/modules/data-catalog/components/DangerDeleteModal";
+import {
+  catalogBlastRadius,
+  runningIdsFromError,
+} from "@/modules/data-catalog/utils/delete-guard";
 
 import styles from "./DataConnectListScene.module.css";
 
@@ -45,7 +53,8 @@ export function DataConnectListScene({
   onOpenScans,
 }: DataConnectListSceneProps) {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message } = useAppServices();
+  const danger = useDangerDelete();
   const navigate = useNavigate();
   const { pageState, query, reset, setKeyword, setPagination } = usePageState();
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
@@ -262,20 +271,54 @@ export function DataConnectListScene({
               className={[styles.actionLink, styles.actionDanger].join(" ")}
               danger
               onClick={() => {
-                void modal.confirm({
-                  title: t("dataConnect.deleteConfirmTitle"),
-                  content: t("dataConnect.deleteConfirmDescription", {
-                    name: record.name,
-                  }),
-                  okText: t("common.delete"),
-                  cancelText: t("common.cancel"),
-                  okButtonProps: { danger: true },
-                  onOk: async () => {
-                    await deleteDataConnectRecord(record.id);
-                    void message.success(t("common.success"));
-                    await loadData();
-                  },
-                });
+                void (async () => {
+                  let indexCount = 0;
+                  try {
+                    indexCount = (await catalogBlastRadius(record.id)).indexCount;
+                  } catch {
+                    indexCount = 0;
+                  }
+                  const highRisk = indexCount > 0;
+                  danger.open({
+                    title: t("dataConnect.deleteConfirmTitle"),
+                    targetName: record.name,
+                    requireTypeName: highRisk,
+                    impact: (
+                      <DeleteImpactAlert
+                        detail={
+                          highRisk
+                            ? t("dataCatalog.dangerDelete.catalogImpact", {
+                                name: record.name,
+                                count: indexCount,
+                              })
+                            : t("dataCatalog.dangerDelete.catalogEmpty", {
+                                name: record.name,
+                              })
+                        }
+                        warning={
+                          highRisk
+                            ? t("dataCatalog.dangerDelete.impactWarning")
+                            : undefined
+                        }
+                      />
+                    ),
+                    onOk: async () => {
+                      try {
+                        await deleteDataConnectRecord(record.id);
+                      } catch (error) {
+                        const running = runningIdsFromError(error);
+                        void message.error(
+                          running
+                            ? t("dataCatalog.dangerDelete.hasRunning")
+                            : extractRequestErrorMessage(error),
+                        );
+                        throw error;
+                      }
+                      void message.success(t("common.success"));
+                      await loadData();
+                    },
+                  });
+                })();
               }}
               type="link"
             >
@@ -289,6 +332,7 @@ export function DataConnectListScene({
 
   return (
     <>
+      {danger.node}
       <section className={styles.contentSurface}>
         <div className={styles.operationBar}>
           <div className={styles.operationPrimary}>

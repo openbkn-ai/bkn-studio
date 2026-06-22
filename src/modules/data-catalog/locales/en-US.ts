@@ -70,6 +70,19 @@ export const dataCatalogEnUS = {
       pageInfo: "{{from}}-{{to}} of {{total}}",
       pageSize: "{{size}} / page",
     },
+    dangerDelete: {
+      typeNameToConfirm:
+        "This is a high-risk action. Type the name \"{{name}}\" to confirm deletion.",
+      hasRunning: "A build task is still running. Stop it before deleting.",
+      catalogImpact: "Connection \"{{name}}\" has {{count}} index(es) built.",
+      resourceImpact: "Resource \"{{name}}\" has {{count}} index(es) built.",
+      impactWarning:
+        "Deleting will also remove all indexes and build tasks, and cannot be undone.",
+      catalogEmpty:
+        "Connection \"{{name}}\" has no built indexes. Deletion cannot be undone.",
+      resourceEmpty:
+        "Resource \"{{name}}\" has no built indexes. Deletion cannot be undone.",
+    },
     catalog: {
       notFound: "Catalog not found; it may have been deleted",
       neverScanned: "Never scanned",
@@ -265,6 +278,9 @@ export const dataCatalogEnUS = {
       rebuild: "Rebuild",
       rebuildIncremental: "Incremental (resume from cursor)",
       rebuildFull: "Full (reset cursor, resync all)",
+      rebuildFullConfirmTitle: "Full rebuild?",
+      rebuildFullConfirmContent:
+        "A full rebuild drops the old index first, then rebuilds; the index is unavailable until it finishes. Continue?",
       retried: "Build task resubmitted: {{id}}",
       deleteConfirmTitle: "Delete build task {{id}}?",
       deleteConfirmContent: "The task record cannot be recovered after deletion.",

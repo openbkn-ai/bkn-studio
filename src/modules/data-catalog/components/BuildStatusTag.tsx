@@ -2,7 +2,10 @@ import { WarningOutlined } from "@ant-design/icons";
 import { Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
-import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
+import {
+  buildTaskStatusLabelKey,
+  embeddingStateOf,
+} from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./shared.module.css";
@@ -18,16 +21,21 @@ type BuildStatusTagProps = {
 export function BuildStatusTag({ task }: BuildStatusTagProps) {
   const { t } = useTranslation();
 
-  if (task.embeddingDegraded) {
-    const labelKey =
-      task.vectorizedCount === 0
-        ? "dataCatalog.task.statuses.embeddingFailed"
-        : "dataCatalog.task.statuses.embeddingPartial";
+  // 已完成但向量化失败/部分失败:红/橙告警标 + tooltip 展开 failure_detail。
+  const embeddingState = embeddingStateOf(task);
+  if (embeddingState === "failed" || embeddingState === "partial") {
+    const failed = embeddingState === "failed";
     return (
       <Tooltip title={task.failureDetail || t("dataCatalog.task.embeddingDegradedHint")}>
-        <span className={[styles.tag, styles.taskDegraded].join(" ")}>
+        <span
+          className={[styles.tag, failed ? styles.taskFailed : styles.taskDegraded].join(" ")}
+        >
           <WarningOutlined />
-          {t(labelKey)}
+          {t(
+            failed
+              ? "dataCatalog.task.statuses.embeddingFailed"
+              : "dataCatalog.task.statuses.embeddingPartial",
+          )}
         </span>
       </Tooltip>
     );

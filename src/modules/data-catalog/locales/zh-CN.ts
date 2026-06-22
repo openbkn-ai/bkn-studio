@@ -69,6 +69,15 @@ export const dataCatalogZhCN = {
       pageInfo: "{{from}}-{{to}} / 共 {{total}}",
       pageSize: "{{size}} 条/页",
     },
+    dangerDelete: {
+      typeNameToConfirm: "此操作高危,请输入名称「{{name}}」以确认删除。",
+      hasRunning: "有构建任务正在运行,请先停止再删除。",
+      catalogImpact: "连接「{{name}}」下已构建 {{count}} 个索引。",
+      resourceImpact: "资源「{{name}}」下已构建 {{count}} 个索引。",
+      impactWarning: "删除将一并删除全部索引和构建任务,且不可恢复。",
+      catalogEmpty: "连接「{{name}}」下暂无已构建的索引,删除不可恢复。",
+      resourceEmpty: "资源「{{name}}」下暂无已构建的索引,删除不可恢复。",
+    },
     catalog: {
       notFound: "未找到该 Catalog,可能已被删除",
       neverScanned: "从未扫描",
@@ -252,6 +261,9 @@ export const dataCatalogZhCN = {
       rebuild: "重新构建",
       rebuildIncremental: "增量更新(从断点续传)",
       rebuildFull: "全量重建(游标清零重灌)",
+      rebuildFullConfirmTitle: "确定全量重建?",
+      rebuildFullConfirmContent:
+        "全量重建会先删除旧索引再重建,重建完成前该索引不可用。是否继续?",
       retried: "已重新提交构建任务:{{id}}",
       deleteConfirmTitle: "删除构建任务 {{id}}?",
       deleteConfirmContent: "删除后任务记录不可恢复。",

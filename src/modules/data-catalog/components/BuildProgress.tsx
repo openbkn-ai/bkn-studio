@@ -1,7 +1,9 @@
 import { WarningOutlined } from "@ant-design/icons";
+import { Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
+import { embeddingStateOf } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./shared.module.css";
@@ -16,6 +18,7 @@ type BuildProgressProps = {
  */
 export function BuildProgress({ task }: BuildProgressProps) {
   const { i18n, t } = useTranslation();
+  const embeddingState = embeddingStateOf(task);
 
   if (task.mode === "streaming") {
     return (
@@ -66,15 +69,17 @@ export function BuildProgress({ task }: BuildProgressProps) {
             total: formatCount(task.totalCount) as never,
           })}
         </span>
-        {task.embeddingDegraded ? (
-          <span className={styles.progressWarn}>
-            <WarningOutlined />
-            {task.vectorizedCount === 0
-              ? t("dataCatalog.progress.vectorizeFailed")
-              : t("dataCatalog.progress.vectorizePartial", {
-                  percent: Math.round(vectorPercent) as never,
-                })}
-          </span>
+        {embeddingState === "failed" || embeddingState === "partial" ? (
+          <Tooltip title={task.failureDetail || undefined}>
+            <span className={styles.progressWarn}>
+              <WarningOutlined />
+              {embeddingState === "failed"
+                ? t("dataCatalog.progress.vectorizeFailed")
+                : t("dataCatalog.progress.vectorizePartial", {
+                    percent: Math.round(vectorPercent) as never,
+                  })}
+            </span>
+          </Tooltip>
         ) : (
           <span>
             {t("dataCatalog.progress.vectorized", {

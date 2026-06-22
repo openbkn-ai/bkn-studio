@@ -16,6 +16,8 @@ import type {
   BuildTaskListQuery,
   BuildTaskStatus,
   BuildTaskUpdateInput,
+  IndexHealth,
+  IndexHealthState,
 } from "@/modules/data-catalog/types/data-catalog";
 
 type BackendBuildTask = {
@@ -28,6 +30,7 @@ type BackendBuildTask = {
   fulltext_analyzer?: string;
   fulltext_fields?: string | string[];
   id: string;
+  index_health?: { embedding?: string; fulltext?: string; usable?: boolean };
   mode?: string;
   model_dimensions?: number;
   resource_id?: string;
@@ -100,6 +103,18 @@ export function buildTaskStatusLabelKey(status: BuildTaskStatus, mode: BuildMode
   return status;
 }
 
+/** 向量化健康态:优先后端 index_health.embedding,缺省按计数兜底。 */
+export function embeddingStateOf(task: BuildTask): IndexHealthState {
+  return (
+    task.indexHealth?.embedding ??
+    (task.embeddingDegraded
+      ? task.vectorizedCount === 0
+        ? "failed"
+        : "partial"
+      : "ok")
+  );
+}
+
 function mapBuildTask(item: BackendBuildTask): BuildTask {
   const createdAt = item.create_time ?? 0;
   const mode: BuildMode = item.mode === "streaming" ? "streaming" : "batch";
@@ -110,6 +125,22 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
   const vectorized = item.vectorized_count ?? 0;
   const wantsEmbedding = splitFields(item.embedding_fields).length > 0;
   const embeddingDegraded = wantsEmbedding && status === "succeeded" && vectorized < synced;
+
+  // 优先用后端真实 index_health;缺省则按计数兜底,保持与 embeddingDegraded 一致。
+  const toHealthState = (value: string | undefined): IndexHealthState =>
+    value === "failed" || value === "partial" || value === "building" ? value : "ok";
+  const derivedEmbedding: IndexHealthState = embeddingDegraded
+    ? vectorized === 0
+      ? "failed"
+      : "partial"
+    : "ok";
+  const indexHealth: IndexHealth = item.index_health
+    ? {
+        embedding: toHealthState(item.index_health.embedding),
+        fulltext: toHealthState(item.index_health.fulltext),
+        usable: item.index_health.usable ?? !embeddingDegraded,
+      }
+    : { embedding: derivedEmbedding, fulltext: "ok", usable: !embeddingDegraded };
 
   return {
     id: item.id,
@@ -126,7 +157,8 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
     totalCount: item.total_count ?? 0,
     syncedCount: synced,
     vectorizedCount: vectorized,
-    indexUsable: !embeddingDegraded,
+    indexHealth,
+    indexUsable: indexHealth.usable,
     failureDetail: item.failure_detail ?? "",
     createdAt,
     createTime: createdAt ? formatMockTimestamp(createdAt) : "-",
@@ -155,7 +187,17 @@ export async function listBuildTasks(
 ): Promise<BuildTask[]> {
   if (useMock) {
     ensureMockTicker();
-    return wait(filterTasks([...mockBuildTasks], query), 120);
+    let tasks = [...mockBuildTasks];
+    if (query.catalogId) {
+      // mock 无 catalog_id 过滤,经 mockResources 解析 catalog → resourceIds。
+      const resourceIds = new Set(
+        mockResources
+          .filter((resource) => resource.catalogId === query.catalogId)
+          .map((resource) => resource.id),
+      );
+      tasks = tasks.filter((task) => resourceIds.has(task.resourceId));
+    }
+    return wait(filterTasks(tasks, query), 120);
   }
 
   // 后端 status 仅支持单值且枚举与前端不同(completed/stopped),
@@ -167,6 +209,7 @@ export async function listBuildTasks(
         limit: 200,
         offset: 0,
         resource_id: query.resourceId || undefined,
+        catalog_id: query.catalogId || undefined,
       },
     },
   );

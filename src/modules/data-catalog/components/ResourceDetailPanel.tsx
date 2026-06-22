@@ -15,6 +15,10 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
+import {
+  DeleteImpactAlert,
+  useDangerDelete,
+} from "@/modules/data-catalog/components/DangerDeleteModal";
 import { IndexStateTag } from "@/modules/data-catalog/components/IndexStateTag";
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
 import {
@@ -28,6 +32,7 @@ import {
   retryBuildTask,
 } from "@/modules/data-catalog/services/build-task.service";
 import { deleteCatalogResource } from "@/modules/data-catalog/services/resource.service";
+import { runningIdsFromError } from "@/modules/data-catalog/utils/delete-guard";
 import type {
   BuildTask,
   CatalogResource,
@@ -57,7 +62,8 @@ export function ResourceDetailPanel({
   tasks,
 }: ResourceDetailPanelProps) {
   const { i18n, t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message } = useAppServices();
+  const danger = useDangerDelete();
   const navigate = useNavigate();
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
@@ -76,16 +82,41 @@ export function ResourceDetailPanel({
         : styles.catDataset;
 
   const removeResource = () => {
-    void modal.confirm({
+    // 该面板已加载本资源的全部构建任务,直接用 tasks.length 作影响面,无需再查。
+    const indexCount = tasks.length;
+    const highRisk = indexCount > 0;
+    danger.open({
       title: t("dataCatalog.resource.deleteConfirmTitle", { name: resource.name }),
-      content: t("dataCatalog.resource.deleteConfirmContent", {
-        taskCount: tasks.length,
-      }),
-      okText: t("common.delete"),
-      cancelText: t("common.cancel"),
-      okButtonProps: { danger: true },
+      targetName: resource.name,
+      requireTypeName: highRisk,
+      impact: (
+        <DeleteImpactAlert
+          detail={
+            highRisk
+              ? t("dataCatalog.dangerDelete.resourceImpact", {
+                  name: resource.name,
+                  count: indexCount,
+                })
+              : t("dataCatalog.dangerDelete.resourceEmpty", { name: resource.name })
+          }
+          warning={
+            highRisk ? t("dataCatalog.dangerDelete.impactWarning") : undefined
+          }
+        />
+      ),
       onOk: async () => {
-        await deleteCatalogResource(resource.id);
+        try {
+          // 后端级联清理索引/任务,前端不再手动先删任务。
+          await deleteCatalogResource(resource.id);
+        } catch (error) {
+          const running = runningIdsFromError(error);
+          void message.error(
+            running
+              ? t("dataCatalog.dangerDelete.hasRunning")
+              : extractRequestErrorMessage(error),
+          );
+          throw error;
+        }
         message.success(t("common.success"));
         void navigate(
           catalog ? `/data-catalog/catalog/${catalog.id}` : "/data-catalog",
@@ -177,6 +208,7 @@ export function ResourceDetailPanel({
 
   return (
     <section>
+      {danger.node}
       <div className={styles.detailHeader}>
         <div className={styles.detailHeadMain}>
           <div className={styles.detailTitleRow}>
