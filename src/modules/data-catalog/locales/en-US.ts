@@ -270,6 +270,11 @@ export const dataCatalogEnUS = {
       deleteConfirmContent: "The task record cannot be recovered after deletion.",
       deleteConfirmContentActive:
         "The task is still running and will be stopped before deletion; the record cannot be recovered.",
+      batchDelete: "Batch Delete",
+      batchDeleteConfirmTitle: "Delete {{count}} build task(s)",
+      batchDeleteConfirmContent:
+        "Deleted task records cannot be recovered; running tasks are stopped before deletion.",
+      batchDeletePartial: "{{failed}}/{{total}} task(s) failed to delete",
       model: "Model",
       lastEvent: "Last Event",
       finishedAt: "Finished At",

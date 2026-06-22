@@ -70,6 +70,7 @@ export function IndexBuildListScene() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickedResourceId, setPickedResourceId] = useState<string>();
   const [buildResource, setBuildResource] = useState<CatalogResource | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
     setLoadError(null);
@@ -209,6 +210,39 @@ export function IndexBuildListScene() {
         } catch (error) {
           void message.error(extractRequestErrorMessage(error));
         }
+      },
+    });
+  };
+
+  const handleBatchDelete = () => {
+    const targets = tasks.filter((task) => selectedKeys.includes(task.id));
+    if (!targets.length) {
+      return;
+    }
+    void modal.confirm({
+      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: targets.length }),
+      content: t("dataCatalog.task.batchDeleteConfirmContent"),
+      okText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const results = await Promise.allSettled(
+          targets.map((task) =>
+            deleteBuildTask(task.id, {
+              stopFirst: task.status === "running" || task.status === "listening",
+            }),
+          ),
+        );
+        const failed = results.filter((result) => result.status === "rejected").length;
+        if (failed) {
+          void message.error(
+            t("dataCatalog.task.batchDeletePartial", { failed, total: targets.length }),
+          );
+        } else {
+          message.success(t("common.success"));
+        }
+        setSelectedKeys([]);
+        await loadData();
       },
     });
   };
@@ -403,6 +437,18 @@ export function IndexBuildListScene() {
             <AppButton icon={<ReloadOutlined />} onClick={() => void loadData()}>
               {t("common.refresh")}
             </AppButton>
+            <PermissionGate permissions="resource:task_manage">
+              <AppButton
+                danger
+                disabled={selectedKeys.length === 0}
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+              >
+                {selectedKeys.length > 0
+                  ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})`
+                  : t("dataCatalog.task.batchDelete")}
+              </AppButton>
+            </PermissionGate>
           </div>
           <span className={sceneStyles.toolbarMeta}>{t("dataCatalog.task.toolbarHint")}</span>
         </div>
@@ -464,6 +510,10 @@ export function IndexBuildListScene() {
             loading={loading}
             pagination={false}
             rowKey="id"
+            rowSelection={{
+              selectedRowKeys: selectedKeys,
+              onChange: (keys) => setSelectedKeys(keys.map(String)),
+            }}
           />
         )}
       </div>
