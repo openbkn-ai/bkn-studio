@@ -10,7 +10,7 @@ import {
   findConsoleNavItemByPath,
 } from "@/app/shell/console-navigation";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
-import { useAppServices } from "@/framework/context/use-app-services";
+import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeatures";
 
 type SelectedItem = {
@@ -26,7 +26,7 @@ type SideNavProps = {
 export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   const { t } = useTranslation();
   const { features } = useLabFeatures();
-  const { runtimeConfig } = useAppServices();
+  const runtimeConfig = useRuntimeConfig();
   const location = useLocation();
   const matches = useMatches();
   const navigate = useNavigate();
