@@ -205,7 +205,7 @@ export function DataConnectListScene({
           >
             {t("dataConnect.scanManage")}
           </AppButton>
-          <PermissionGate permissions="data-connect:edit">
+          <PermissionGate permissions="catalog:modify">
             <AppButton
               className={styles.actionLink}
               onClick={() => {
@@ -220,7 +220,7 @@ export function DataConnectListScene({
               {t("common.edit")}
             </AppButton>
           </PermissionGate>
-          <PermissionGate permissions="data-connect:test">
+          <PermissionGate permissions="catalog:modify">
             <AppButton
               className={styles.actionLink}
               onClick={() => {
@@ -238,7 +238,7 @@ export function DataConnectListScene({
               {t("common.testConnection")}
             </AppButton>
           </PermissionGate>
-          <PermissionGate permissions="data-connect:toggle">
+          <PermissionGate permissions="catalog:modify">
             <AppButton
               className={styles.actionLink}
               onClick={() => {
@@ -257,7 +257,7 @@ export function DataConnectListScene({
               {record.enabled ? t("common.disabled") : t("common.enabled")}
             </AppButton>
           </PermissionGate>
-          <PermissionGate permissions="data-connect:delete">
+          <PermissionGate permissions="catalog:delete">
             <AppButton
               className={[styles.actionLink, styles.actionDanger].join(" ")}
               danger
@@ -293,7 +293,7 @@ export function DataConnectListScene({
         <div className={styles.operationBar}>
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
-                <PermissionGate permissions="data-connect:create">
+                <PermissionGate permissions="catalog:create">
                   <AppButton
                     onClick={() => {
                       if (onCreate) {

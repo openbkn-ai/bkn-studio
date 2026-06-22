@@ -91,7 +91,9 @@ export function DataConnectFormScene({
     [connectorTypes, selectedConnectorType],
   );
 
-  const permission = mode === "create" ? "data-connect:create" : "data-connect:edit";
+  // 对齐后端 catalog op 词表（catalog.json）：新建=catalog:create，编辑=catalog:modify。
+  // 旧的 data-connect:create/edit 是前端自造 key，/me/permissions 不返回 → 永远 403。
+  const permission = mode === "create" ? "catalog:create" : "catalog:modify";
   const pageTitle =
     mode === "create" ? t("dataConnect.createTitle") : t("dataConnect.editTitle");
   const pageDescription =
