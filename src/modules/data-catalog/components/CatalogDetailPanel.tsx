@@ -370,13 +370,15 @@ export function CatalogDetailPanel({
                 : t("dataCatalog.catalog.scanNow")}
             </AppButton>
           </PermissionGate>
-          <AppButton
-            disabled={testing || !physical}
-            icon={testing ? <LoadingOutlined spin /> : undefined}
-            onClick={() => void runTest()}
-          >
-            {testing ? t("dataCatalog.catalog.testing") : t("common.testConnection")}
-          </AppButton>
+          <PermissionGate permissions="catalog:modify">
+            <AppButton
+              disabled={testing || !physical}
+              icon={testing ? <LoadingOutlined spin /> : undefined}
+              onClick={() => void runTest()}
+            >
+              {testing ? t("dataCatalog.catalog.testing") : t("common.testConnection")}
+            </AppButton>
+          </PermissionGate>
           <PermissionGate permissions="catalog:modify">
             <AppButton onClick={toggleEnabled}>
               {catalog.enabled ? t("common.disabled") : t("common.enabled")}
