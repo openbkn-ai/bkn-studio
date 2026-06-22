@@ -88,6 +88,9 @@ const NAMES_CONFIG: Record<string, NamesConfig> = {
   skill: { kind: "post", domain: true, path: "/agent-operator-integration/v1/skills/names" },
   knowledge_network: { kind: "post", domain: true, path: "/bkn-backend/v1/knowledge-networks/names" },
   catalog: { kind: "vega", path: "/vega-backend/v1/catalogs" },
+  // resource 不在授权对象选择器里（不新建单资源授权），但后端可能已存在 resource 级
+  // 授权记录，列表需能回显其名称，故保留按 id 取名（vega 旧批量接口，同 catalog）。
+  resource: { kind: "vega", path: "/vega-backend/v1/resources" },
   mcp: { kind: "mcp" },
 };
 
@@ -133,11 +136,12 @@ async function namesFor(type: string, ids: string[]): Promise<Map<string, string
       }
     } catch {
       const settled = await Promise.allSettled(
-        ids.map((id) => http.get<Record<string, unknown>>(`${cfg.path}/${encodeURIComponent(id)}`, { skipErrorToast: true })),
+        ids.map((id) => http.get<unknown>(`${cfg.path}/${encodeURIComponent(id)}`, { skipErrorToast: true })),
       );
       settled.forEach((result, index) => {
         if (result.status === "fulfilled") {
-          const name = str((result.value.data as Record<string, unknown>)?.name);
+          // 单条响应同样是 {entries:[{id,name}]} 形态；用同一解析兜住。
+          const name = collectNamePairs(result.value.data, "id", "name")[0]?.[1];
           if (name) {
             map.set(ids[index], name);
           }
