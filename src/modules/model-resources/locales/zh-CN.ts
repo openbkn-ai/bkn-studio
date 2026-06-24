@@ -23,9 +23,10 @@ export const modelResourcesZhCN = {
       deleteConfirmTitle: "删除确认",
       deleteConfirmContent: "确定删除 {{names}}？删除后不可恢复。",
       defaultTag: "默认",
-      setDefaultConfirmTitle: "设为系统默认",
+      setDefaultConfirmTitle: "修改系统默认小模型（高危操作）",
       setDefaultConfirmContent:
-        "确定将「{{name}}」设为 {{type}} 类型的系统默认小模型？同类型原默认将被自动取消，变更最长约 60 秒生效。",
+        "这是系统级高危操作：将 {{type}} 类型的系统默认小模型改为「{{name}}」。变更后，新建知识网络（未指定时）、新建 Skill 索引等所有依赖系统默认的功能都会改用该模型；同类型原默认会被自动取消，最长约 60 秒生效。已建资源不受影响。确认修改？",
+      setDefaultConfirmOk: "确认修改默认",
       setDefaultSuccess: "已设为系统默认。",
       setDefaultFailed: "设置系统默认失败。",
       authorizationPending: "授权管理功能将在后续版本接入。",

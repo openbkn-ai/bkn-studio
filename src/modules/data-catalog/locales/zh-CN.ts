@@ -238,6 +238,7 @@ export const dataCatalogZhCN = {
     },
     task: {
       column: "任务",
+      createTime: "创建时间",
       indexColumn: "索引",
       create: "新建构建任务",
       detail: "任务详情",

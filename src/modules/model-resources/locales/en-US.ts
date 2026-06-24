@@ -24,9 +24,10 @@ export const modelResourcesEnUS = {
       deleteConfirmTitle: "Delete confirmation",
       deleteConfirmContent: "Delete {{names}}? This action cannot be undone.",
       defaultTag: "Default",
-      setDefaultConfirmTitle: "Set as system default",
+      setDefaultConfirmTitle: "Change system default small model (high-risk)",
       setDefaultConfirmContent:
-        "Set \"{{name}}\" as the system default {{type}} model? The current default of the same type is cleared automatically; the change takes up to ~60s to apply.",
+        "This is a system-wide high-risk operation: change the system default {{type}} model to \"{{name}}\". Afterwards every feature relying on the system default — new knowledge networks (when unspecified), new Skill indexes, etc. — will use this model. The previous default of the same type is cleared automatically and the change takes up to ~60s to apply. Existing resources are unaffected. Confirm change?",
+      setDefaultConfirmOk: "Confirm change",
       setDefaultSuccess: "Set as system default.",
       setDefaultFailed: "Failed to set system default.",
       authorizationPending: "Authorization management will be added in a later release.",

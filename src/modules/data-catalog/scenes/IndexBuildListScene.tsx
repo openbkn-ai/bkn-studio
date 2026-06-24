@@ -7,7 +7,7 @@ import {
   ReloadOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
-import { Alert, Checkbox, Dropdown, Input, Modal, Select, Space, Tooltip } from "antd";
+import { Alert, Dropdown, Input, Modal, Select, Space, Tooltip } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -68,7 +68,6 @@ export function IndexBuildListScene() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState("");
   const [statuses, setStatuses] = useState<BuildTaskStatus[]>([]);
-  const [activeOnly, setActiveOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [orderBy, setOrderBy] = useState<BuildTaskOrderBy>("default");
@@ -80,17 +79,16 @@ export function IndexBuildListScene() {
   const [buildResource, setBuildResource] = useState<CatalogResource | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
-  // 服务端分页 + 排序 + 状态过滤的查询参数。active=true 时不再传 status。
+  // 服务端分页 + 排序 + 状态过滤的查询参数。
   const taskQuery = useMemo<BuildTaskPageQuery>(
     () => ({
       page,
       pageSize,
       orderBy,
       order,
-      active: activeOnly || undefined,
-      statuses: activeOnly || statuses.length === 0 ? undefined : statuses,
+      statuses: statuses.length === 0 ? undefined : statuses,
     }),
-    [activeOnly, order, orderBy, page, pageSize, statuses],
+    [order, orderBy, page, pageSize, statuses],
   );
 
   const loadData = useCallback(async () => {
@@ -316,16 +314,8 @@ export function IndexBuildListScene() {
   const columns: ColumnsType<BuildTask> = [
     {
       dataIndex: "id",
-      key: "created_at",
       title: t("dataCatalog.task.column"),
-      sorter: true,
-      sortOrder: sortOrderOf("created_at"),
-      render: (_, record) => (
-        <div style={{ display: "grid", gap: 4 }}>
-          <span className={styles.slugChip}>{record.id}</span>
-          <span style={{ color: "#8b98ac", fontSize: 12 }}>{record.createTime}</span>
-        </div>
-      ),
+      render: (value: string) => <span className={styles.slugChip}>{value}</span>,
     },
     {
       dataIndex: "resourceId",
@@ -371,6 +361,16 @@ export function IndexBuildListScene() {
       sorter: true,
       sortOrder: sortOrderOf("status"),
       render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
+    },
+    {
+      dataIndex: "createTime",
+      key: "created_at",
+      title: t("dataCatalog.task.createTime"),
+      sorter: true,
+      sortOrder: sortOrderOf("created_at"),
+      render: (value: string) => (
+        <span style={{ color: "#8b98ac", fontSize: 12 }}>{value}</span>
+      ),
     },
     {
       key: "progress",
@@ -539,19 +539,9 @@ export function IndexBuildListScene() {
             placeholder={t("dataCatalog.task.searchPlaceholder")}
             value={keyword}
           />
-          <Checkbox
-            checked={activeOnly}
-            onChange={(event) => {
-              setActiveOnly(event.target.checked);
-              setPage(1);
-            }}
-          >
-            {t("dataCatalog.task.activeOnly")}
-          </Checkbox>
           <Select
             allowClear
             className={sceneStyles.filterSelect}
-            disabled={activeOnly}
             mode="multiple"
             onChange={(value: BuildTaskStatus[]) => {
               setStatuses(value);

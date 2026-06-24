@@ -254,6 +254,7 @@ export const dataCatalogEnUS = {
     },
     task: {
       column: "Task",
+      createTime: "Created",
       indexColumn: "Index",
       create: "New Build Task",
       detail: "Task Detail",

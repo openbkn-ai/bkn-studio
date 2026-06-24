@@ -1,4 +1,4 @@
-import { EllipsisOutlined, ExportOutlined } from "@ant-design/icons";
+import { EllipsisOutlined, ExclamationCircleFilled, ExportOutlined } from "@ant-design/icons";
 import { Alert, Dropdown, Tag } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
@@ -178,11 +178,13 @@ export function SmallModelListPanel() {
   const handleSetDefault = (record: SmallModel) => {
     void modal.confirm({
       title: t("modelResources.models.setDefaultConfirmTitle"),
+      icon: <ExclamationCircleFilled style={{ color: "#ff4d4f" }} />,
       content: t("modelResources.models.setDefaultConfirmContent", {
         name: record.modelName,
         type: record.modelType,
       }),
-      okText: t("common.confirm"),
+      okText: t("modelResources.models.setDefaultConfirmOk"),
+      okButtonProps: { danger: true },
       cancelText: t("common.cancel"),
       onOk: async () => {
         const result = await setDefaultSmallModel(record.modelId);
