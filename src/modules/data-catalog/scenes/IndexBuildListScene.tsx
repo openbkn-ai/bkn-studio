@@ -315,11 +315,14 @@ export function IndexBuildListScene() {
     {
       dataIndex: "id",
       title: t("dataCatalog.task.column"),
+      width: 190,
       render: (value: string) => <span className={styles.slugChip}>{value}</span>,
     },
     {
       dataIndex: "resourceId",
       title: t("dataCatalog.build.resource"),
+      // 无固定宽度 → 吸收剩余空间;窄屏靠 ellipsis 截断,避免整表被撑宽。
+      ellipsis: true,
       render: (value: string) => {
         const resource = resourceMap.get(value);
         return resource ? (
@@ -341,6 +344,7 @@ export function IndexBuildListScene() {
       dataIndex: "mode",
       key: "mode",
       title: t("dataCatalog.build.mode"),
+      width: 96,
       sorter: true,
       sortOrder: sortOrderOf("mode"),
       render: (value: BuildTask["mode"]) => (
@@ -358,6 +362,7 @@ export function IndexBuildListScene() {
       dataIndex: "status",
       key: "status",
       title: t("common.status"),
+      width: 160,
       sorter: true,
       sortOrder: sortOrderOf("status"),
       render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
@@ -366,6 +371,7 @@ export function IndexBuildListScene() {
       dataIndex: "createTime",
       key: "created_at",
       title: t("dataCatalog.task.createTime"),
+      width: 160,
       sorter: true,
       sortOrder: sortOrderOf("created_at"),
       render: (value: string) => (
@@ -375,11 +381,13 @@ export function IndexBuildListScene() {
     {
       key: "progress",
       title: t("dataCatalog.task.progress"),
+      width: 200,
       render: (_, record) => <BuildProgress task={record} />,
     },
     {
       key: "index",
       title: t("dataCatalog.task.indexColumn"),
+      width: 130,
       render: (_, record) => (
         <span className={styles.chipRow}>
           {record.embeddingFields.length > 0 ? (
@@ -607,7 +615,7 @@ export function IndexBuildListScene() {
               selectedRowKeys: selectedKeys,
               onChange: (keys) => setSelectedKeys(keys.map(String)),
             }}
-            scroll={{ x: "max-content" }}
+            scroll={{ x: 1280 }}
           />
         )}
       </div>

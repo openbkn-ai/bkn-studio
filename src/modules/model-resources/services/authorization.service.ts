@@ -1,5 +1,4 @@
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 
 export type AuthorizationResource = {
   id: string;
@@ -11,51 +10,100 @@ type ResourceOperationItem = {
   operation?: string[];
 };
 
+export type AccessorPermission = {
+  type: string;
+  id: string;
+  operations: string[];
+};
+
+export type MyPermissions = {
+  isAdmin: boolean;
+  permissions: AccessorPermission[];
+};
+
 /**
- * bkn-safe operations check — `/api/safe/v1/authz/operations`.
- * Single resource per call: body `{accessor_id, resource:{type,id}}`,
- * response `{operations: [...]}`. (Migrated from the old ISF
- * `/authorization/v1/resource-operation`, which took a `resources[]` batch.)
+ * Ops surfaced to an admin so menu/button visibility is complete even when the
+ * permission list is grant-driven. The backend still enforces every write.
  */
-type AuthzOperationsRequest = {
-  accessor_id: string;
-  resource: {
-    type: string;
-    id: string;
+const ADMIN_OPERATIONS = [
+  "create",
+  "delete",
+  "display",
+  "execute",
+  "modify",
+  "authorize",
+];
+
+type MePermissionsResponse = {
+  is_admin?: boolean;
+  permissions?: {
+    resource?: { type?: string; id?: string };
+    operations?: string[];
+  }[];
+};
+
+/**
+ * Self-service permission read — `/api/safe/v1/me/permissions`.
+ *
+ * This is the gateway-exposed, token-gated bkn-safe endpoint frontends are meant
+ * to call (accessor derived from the bearer token). The `/authz/*` family is an
+ * internal, tokenless ClusterIP API and is NOT reachable through the gateway, so
+ * UI permission checks must go through `/me/*`, not `/authz/operations`.
+ *
+ * Returns `is_admin` plus the accessor's grants (role-inherited included);
+ * type-wide grants keep the id `"*"`.
+ */
+export async function getMyPermissions(): Promise<MyPermissions> {
+  const response = await http.get<MePermissionsResponse>("/safe/v1/me/permissions");
+
+  return {
+    isAdmin: Boolean(response.data?.is_admin),
+    permissions: (response.data?.permissions ?? []).map((item) => ({
+      type: item.resource?.type ?? "",
+      id: item.resource?.id ?? "",
+      operations: item.operations ?? [],
+    })),
   };
-};
-
-type AuthzOperationsResponse = {
-  operations?: string[];
-};
-
-async function fetchResourceOperation(
-  accessorId: string,
-  resource: AuthorizationResource,
-): Promise<ResourceOperationItem> {
-  const response = await http.post<AuthzOperationsResponse>(
-    "/safe/v1/authz/operations",
-    {
-      accessor_id: accessorId,
-      resource: { type: resource.type, id: resource.id },
-    } satisfies AuthzOperationsRequest,
-  );
-
-  return { id: resource.id, operation: response.data?.operations ?? [] };
 }
 
+/**
+ * Ops the accessor may perform on a single resource, derived from
+ * `/me/permissions`: a type-wide grant (id `"*"`) applies to every instance, so
+ * its operations union with any exact-id grant.
+ */
+function operationsFor(me: MyPermissions, type: string, id: string): string[] {
+  if (me.isAdmin) {
+    return [...ADMIN_OPERATIONS];
+  }
+
+  const ops = new Set<string>();
+  for (const permission of me.permissions) {
+    if (permission.type !== type) {
+      continue;
+    }
+    if (permission.id === id || permission.id === "*") {
+      permission.operations.forEach((op) => ops.add(op));
+    }
+  }
+
+  return [...ops];
+}
+
+/**
+ * Back-compat helper for the existing callers: resolve the ops for each
+ * requested resource from a single `/me/permissions` read.
+ */
 export async function getResourceOperations(
   resources: AuthorizationResource[],
 ): Promise<ResourceOperationItem[]> {
-  const accessorId = getRuntimeConfig().currentUser.id;
-
-  if (!accessorId || resources.length === 0) {
+  if (resources.length === 0) {
     return [];
   }
 
-  // The endpoint is single-resource, so query each resource and reassemble the
-  // batch the callers expect.
-  return Promise.all(
-    resources.map((resource) => fetchResourceOperation(accessorId, resource)),
-  );
+  const me = await getMyPermissions();
+
+  return resources.map((resource) => ({
+    id: resource.id,
+    operation: operationsFor(me, resource.type, resource.id),
+  }));
 }
