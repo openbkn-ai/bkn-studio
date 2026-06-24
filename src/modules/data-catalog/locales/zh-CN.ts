@@ -46,6 +46,7 @@ export const dataCatalogZhCN = {
     progress: {
       synced: "同步 {{synced}} / {{total}}",
       vectorized: "向量化 {{percent}}%",
+      noVectorize: "无需向量化",
       vectorizeFailed: "向量化失败",
       vectorizePartial: "向量化 {{percent}}%(部分失败)",
       syncedRows: "已同步 {{count}} 行",

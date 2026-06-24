@@ -47,6 +47,7 @@ export const dataCatalogEnUS = {
     progress: {
       synced: "Synced {{synced}} / {{total}}",
       vectorized: "Vectorized {{percent}}%",
+      noVectorize: "No vectorization",
       vectorizeFailed: "Vectorization failed",
       vectorizePartial: "Vectorized {{percent}}% (partial)",
       syncedRows: "{{count}} rows synced",

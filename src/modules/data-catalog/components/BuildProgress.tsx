@@ -69,7 +69,12 @@ export function BuildProgress({ task }: BuildProgressProps) {
             total: formatCount(task.totalCount) as never,
           })}
         </span>
-        {embeddingState === "failed" || embeddingState === "partial" ? (
+        {task.embeddingFields.length === 0 ? (
+          // 没配向量化:别显示「向量化 0%」(会误读成失败),与索引列「—」一致。
+          <span style={{ color: "#8b98ac", fontSize: 12 }}>
+            {t("dataCatalog.progress.noVectorize")}
+          </span>
+        ) : embeddingState === "failed" || embeddingState === "partial" ? (
           <Tooltip title={task.failureDetail || undefined}>
             <span className={styles.progressWarn}>
               <WarningOutlined />
