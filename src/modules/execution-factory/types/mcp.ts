@@ -14,6 +14,9 @@ export type McpRecord = {
   category?: string;
   url?: string;
   createUser?: string;
+  releaseUser?: string;
+  releaseTime?: number;
+  toolConfigs?: McpToolConfigInput[];
   updateTime?: number;
   isInternal?: boolean;
 };

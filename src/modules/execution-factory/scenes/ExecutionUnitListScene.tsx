@@ -226,7 +226,7 @@ export function ExecutionUnitListScene({
       return tabs;
     }
 
-    return [...tabs, "operator"];
+    return [...tabs, "operator" as const];
   }, [tabs]);
   const [activeTab, setActiveTab] = useState<ExecutionUnitTab>(() =>
     resolveActiveTab(searchParams.get("activeTab"), defaultTab, resolvableTabs),
@@ -244,7 +244,7 @@ export function ExecutionUnitListScene({
   const [installedResourceIdsError, setInstalledResourceIdsError] = useState<string | null>(
     null,
   );
-  const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
+  const [, setPendingActionKey] = useState<string | null>(null);
   const [detailOperatorId, setDetailOperatorId] = useState<string | null>(null);
   const [detailBoxId, setDetailBoxId] = useState<string | null>(null);
   const [detailBoxEditMode, setDetailBoxEditMode] = useState(false);
@@ -507,9 +507,12 @@ export function ExecutionUnitListScene({
 
     try {
       if (activeTab === "operator") {
+        // status/category are cross-tab filter strings; assert to this tab's
+        // query shape at the call boundary (the select only emits valid values).
+        const query = listQuery as Parameters<typeof listOperators>[0];
         const result = marketMode
-          ? await listOperatorMarket(listQuery)
-          : await listOperators(listQuery);
+          ? await listOperatorMarket(query)
+          : await listOperators(query);
         if (generation !== listLoadGenerationRef.current) {
           return;
         }
@@ -523,9 +526,10 @@ export function ExecutionUnitListScene({
       }
 
       if (activeTab === "toolbox") {
+        const query = listQuery as Parameters<typeof listToolboxes>[0];
         const result = marketMode
-          ? await listToolboxMarket(listQuery)
-          : await listToolboxes(listQuery);
+          ? await listToolboxMarket(query)
+          : await listToolboxes(query);
         if (generation !== listLoadGenerationRef.current) {
           return;
         }
@@ -539,7 +543,8 @@ export function ExecutionUnitListScene({
       }
 
       if (activeTab === "mcp") {
-        const result = marketMode ? await listMcpMarket(listQuery) : await listMcps(listQuery);
+        const query = listQuery as Parameters<typeof listMcps>[0];
+        const result = marketMode ? await listMcpMarket(query) : await listMcps(query);
         if (generation !== listLoadGenerationRef.current) {
           return;
         }
@@ -552,9 +557,10 @@ export function ExecutionUnitListScene({
         return;
       }
 
+      const query = listQuery as Parameters<typeof listSkills>[0];
       const result = marketMode
-        ? await listSkillMarket(listQuery)
-        : await listSkills(listQuery);
+        ? await listSkillMarket(query)
+        : await listSkills(query);
       if (generation !== listLoadGenerationRef.current) {
         return;
       }

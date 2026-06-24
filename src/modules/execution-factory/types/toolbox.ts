@@ -2,7 +2,7 @@ export type ToolboxStatus = "unpublish" | "published" | "offline";
 
 export type ToolboxMetadataType = "openapi" | "function";
 
-export type ToolRecord = {
+export type ToolboxToolRecord = {
   toolId: string;
   name: string;
   description?: string;
@@ -20,7 +20,7 @@ export type ToolboxRecord = {
   categoryName?: string;
   metadataType?: ToolboxMetadataType;
   toolCount?: number;
-  tools?: ToolRecord[];
+  tools?: ToolboxToolRecord[];
   createTime?: number;
   updateTime?: number;
   createUser?: string;

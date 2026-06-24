@@ -59,9 +59,13 @@ const minutesAgo = (minutes: number) => now - minutes * 60_000;
 const daysAgo = (days: number) => now - days * 86_400_000;
 
 function makeResource(
-  input: Omit<CatalogResource, "updateTime"> & { updatedAt: number },
+  input: Omit<CatalogResource, "columnCount" | "updateTime"> & { updatedAt: number },
 ): CatalogResource {
-  return { ...input, updateTime: formatMockTimestamp(input.updatedAt) };
+  return {
+    ...input,
+    columnCount: input.schema.length,
+    updateTime: formatMockTimestamp(input.updatedAt),
+  };
 }
 
 export const mockResources: CatalogResource[] = [
@@ -135,12 +139,37 @@ export const mockResources: CatalogResource[] = [
 ];
 
 function makeTask(
-  input: Omit<BuildTask, "createTime" | "finishTime"> & {
+  input: Omit<
+    BuildTask,
+    | "createTime"
+    | "embeddingDegraded"
+    | "failureDetail"
+    | "finishTime"
+    | "fulltextAnalyzer"
+    | "fulltextFields"
+    | "indexUsable"
+  > & {
     finishedAt?: number | null;
+    embeddingDegraded?: boolean;
+    failureDetail?: string;
+    fulltextAnalyzer?: string;
+    fulltextFields?: string[];
+    indexUsable?: boolean;
   },
 ): BuildTask {
+  // Derive the index-health fields so existing mock literals stay terse: an
+  // index is "indexed" once succeeded/listening, degraded if vectorization
+  // didn't catch up to the row count, and unusable while degraded or unbuilt.
+  const indexed = input.status === "succeeded" || input.status === "listening";
+  const embeddingDegraded =
+    input.embeddingDegraded ?? (indexed && input.vectorizedCount < input.totalCount);
   return {
     ...input,
+    fulltextAnalyzer: input.fulltextAnalyzer ?? "ik_max_word",
+    fulltextFields: input.fulltextFields ?? input.embeddingFields,
+    embeddingDegraded,
+    failureDetail: input.failureDetail ?? input.error ?? "",
+    indexUsable: input.indexUsable ?? (indexed && !embeddingDegraded),
     createTime: formatMockTimestamp(input.createdAt),
     finishTime: input.finishedAt ? formatMockTimestamp(input.finishedAt) : null,
   };

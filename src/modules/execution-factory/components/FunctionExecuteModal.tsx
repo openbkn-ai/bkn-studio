@@ -1,4 +1,4 @@
-import { Alert, Form, Input, Modal, Typography } from "antd";
+import { Alert, Form, Input, Modal } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 

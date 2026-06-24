@@ -7,7 +7,7 @@ import type {
   ToolboxMutationInput,
   ToolboxRecord,
   ToolboxStatus,
-  ToolRecord,
+  ToolboxToolRecord,
 } from "@/modules/execution-factory/types/toolbox";
 import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-timestamp";
 import { parseOpenApiDataPayload } from "@/modules/execution-factory/utils/metadata-content";
@@ -92,12 +92,12 @@ function getBusinessDomainHeaders() {
   return { "x-business-domain": businessDomainId };
 }
 
-function mapTool(item: BackendToolInfo): ToolRecord {
+function mapTool(item: BackendToolInfo): ToolboxToolRecord {
   return {
     toolId: item.tool_id,
     name: item.name ?? item.tool_id,
     description: item.description,
-    status: item.status as ToolRecord["status"],
+    status: item.status as ToolboxToolRecord["status"],
   };
 }
 

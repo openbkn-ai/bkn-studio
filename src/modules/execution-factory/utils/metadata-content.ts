@@ -289,7 +289,10 @@ export function buildOpenApiDocumentFromMetadata(metadata: BackendMetadata): str
       ? (JSON.parse(metadata.api_spec) as InternalApiSpec)
       : (metadata.api_spec as InternalApiSpec);
 
-  if (isFullOpenApiDocument(apiSpec)) {
+  // Probe a cast expression, not the bare `apiSpec` reference: the type guard
+  // narrows to Record<string, unknown>, which would otherwise collapse the
+  // negative branch (InternalApiSpec) to `never` and break every field read below.
+  if (isFullOpenApiDocument(apiSpec as unknown)) {
     return JSON.stringify(apiSpec, null, 2);
   }
 
@@ -407,7 +410,7 @@ export function validateOpenApiDocumentText(
   let parsed: Record<string, unknown>;
 
   try {
-    parsed = JSON.parse(openapiSpec) as Record<string, unknown>;
+    parsed = JSON.parse(openapiSpec ?? "") as Record<string, unknown>;
   } catch {
     return { ok: false, reason: "JSON 语法无效，无法解析。" };
   }

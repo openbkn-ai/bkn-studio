@@ -6,7 +6,7 @@ import type { Plugin } from "vite";
 import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
-import { DEFAULT_APP_BASENAME } from "./src/app/router/app-paths";
+import { DEFAULT_APP_BASENAME } from "./src/app/router/app-basename";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const appBase = `${DEFAULT_APP_BASENAME}/`;
@@ -48,6 +48,10 @@ export default defineConfig(({ mode }) => {
       exclude: [
         "**/node_modules/**",
         "**/dist/**",
+        // Playwright e2e specs run via `pnpm test:execution-factory:e2e`, not
+        // vitest — they import @playwright/test (not a root dep), so collecting
+        // them here would always fail.
+        "tests/e2e/**",
         "tests/execution-factory/agent-at/**",
         "tests/execution-factory/operator-web-ui/**",
       ],

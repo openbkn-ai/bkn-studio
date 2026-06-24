@@ -23,6 +23,7 @@ import { listOperatorCategories } from "@/modules/execution-factory/services/cat
 import { importComponentFile } from "@/modules/execution-factory/services/impex.service";
 
 import { registerOperator } from "@/modules/execution-factory/services/operator.service";
+import type { OperatorCategory } from "@/modules/execution-factory/types/operator";
 
 import { createToolbox } from "@/modules/execution-factory/services/toolbox.service";
 
@@ -328,7 +329,7 @@ export function ImportResourceModal({
 
             openapiSpec,
 
-            category: values.category,
+            category: values.category as OperatorCategory,
 
           });
 

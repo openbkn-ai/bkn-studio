@@ -10,6 +10,8 @@ export type SkillRecord = {
   categoryName?: string;
   createTime?: number;
   createUser?: string;
+  releaseUser?: string;
+  releaseTime?: number;
   updateTime?: number;
 };
 

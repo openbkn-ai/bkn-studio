@@ -16,6 +16,7 @@ import styles from "./create-menu.module.css";
 export type CreatedExecutionUnitPayload = {
   id: string;
   tab: ExecutionUnitTab;
+  toolId?: string;
 };
 
 type CreateExecutionUnitWizardProps = {

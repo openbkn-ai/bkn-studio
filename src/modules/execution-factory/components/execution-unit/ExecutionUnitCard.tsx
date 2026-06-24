@@ -13,6 +13,7 @@ import {
   resolveSkillCategoryLabel,
   resolveToolboxCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
+import type { OperatorCategory } from "@/modules/execution-factory/types/operator";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import type { ExecutionUnitCardItem, ExecutionUnitTab } from "./types";
@@ -86,7 +87,7 @@ function resolveCardCategoryLabel(
 ) {
   if (activeTab === "operator") {
     return resolveOperatorCategoryLabel(
-      { category: item.category, categoryName: item.categoryName },
+      { category: item.category as OperatorCategory | undefined, categoryName: item.categoryName },
       t,
     );
   }

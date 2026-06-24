@@ -1,6 +1,7 @@
 import type { RuntimeInput } from "@/framework/runtime/types";
 
-export const DEFAULT_APP_BASENAME = "/studio";
+export { DEFAULT_APP_BASENAME } from "./app-basename";
+import { DEFAULT_APP_BASENAME } from "./app-basename";
 
 function normalizeBasename(value?: string) {
   const trimmed = value?.trim();
