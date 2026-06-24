@@ -22,6 +22,8 @@ export type SmallModel = {
   updateTime?: string;
   modelConfig?: SmallModelConfig;
   operations?: string[];
+  /** Whether this model is the system default for its model_type (embedding/reranker). */
+  default?: boolean;
 };
 
 export type SmallModelListQuery = {

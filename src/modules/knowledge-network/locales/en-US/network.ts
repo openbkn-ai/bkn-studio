@@ -11,6 +11,17 @@ export const networkPart = {
     description:
       "Phase one brings in the network list, create/edit entry, and the base workspace shell first. Concept groups, object types, and the full graph preview will follow in later slices.",
     descriptionField: "Description",
+    embeddingModel: "Embedding model",
+    embeddingModelPlaceholder: "System default",
+    embeddingModelHint:
+      "Locked after creation: selectable only at creation; the network is locked to this model afterward.",
+    embeddingModelLockedLabel: "Embedding model (locked after creation)",
+    embeddingModelSystemDefault: "System default embedding model",
+    embeddingModelDimSuffix: "{{dim}}-dim",
+    embeddingModelOnlySameDimHint:
+      "Only embedding models matching the global concept-store dimension ({{dim}}-dim) can be selected.",
+    embeddingModelLoadFailed: "Failed to load the embedding model list.",
+    embeddingDimUnknown: "Unknown dimension",
     editDescription:
       "Update the current knowledge network name, identifier, color, and tags.",
     editTitle: "Edit knowledge network",

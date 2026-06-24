@@ -28,6 +28,10 @@ export type KnowledgeNetworkRecord = {
   tags: string[];
   updateTime: string;
   updaterName: string;
+  /** Embedding model locked at creation time (immutable). */
+  embeddingModelId?: string;
+  /** Embedding dimension of the locked model. */
+  embeddingDim?: number;
 };
 
 export type KnowledgeNetworkListResult = {
@@ -41,6 +45,11 @@ export type KnowledgeNetworkMutationPayload = {
   identifier: string;
   name: string;
   tags: string[];
+  /**
+   * Embedding model name or model_id chosen at creation (create only).
+   * Empty = use the system default. Ignored on update (locked after create).
+   */
+  embeddingModel?: string;
 };
 
 export type KnowledgeNetworkRecentObject = {
