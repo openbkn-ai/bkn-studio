@@ -14,6 +14,9 @@ import type {
   BuildTask,
   BuildTaskCreateInput,
   BuildTaskListQuery,
+  BuildTaskOrderBy,
+  BuildTaskPageQuery,
+  BuildTaskPageResult,
   BuildTaskStatus,
   BuildTaskUpdateInput,
   IndexHealth,
@@ -215,6 +218,121 @@ export async function listBuildTasks(
   );
 
   return filterTasks(response.data.entries.map(mapBuildTask), query);
+}
+
+// 前端归一状态 → 后端枚举。paused 同时覆盖 stopping/stopped;listening 即后端 running。
+const FE_TO_BACKEND_STATUS: Record<BuildTaskStatus, string[]> = {
+  pending: ["init"],
+  running: ["running"],
+  listening: ["running"],
+  succeeded: ["completed"],
+  paused: ["stopping", "stopped"],
+  failed: ["failed"],
+};
+
+export function backendStatusParam(statuses: BuildTaskStatus[]): string {
+  const set = new Set<string>();
+  for (const status of statuses) {
+    for (const backend of FE_TO_BACKEND_STATUS[status]) {
+      set.add(backend);
+    }
+  }
+  return Array.from(set).join(",");
+}
+
+const ACTIVE_FE_STATUSES = new Set<BuildTaskStatus>(["pending", "running", "listening"]);
+
+function sortMockTasks(
+  items: BuildTask[],
+  orderBy: BuildTaskOrderBy,
+  order: "asc" | "desc",
+): BuildTask[] {
+  const arr = [...items];
+  if (orderBy === "default") {
+    // 构建中置顶,桶内按 createdAt 倒序。
+    return arr.sort((a, b) => {
+      const aActive = ACTIVE_FE_STATUSES.has(a.status) ? 0 : 1;
+      const bActive = ACTIVE_FE_STATUSES.has(b.status) ? 0 : 1;
+      return aActive !== bActive ? aActive - bActive : b.createdAt - a.createdAt;
+    });
+  }
+  const dir = order === "asc" ? 1 : -1;
+  const keyOf = (task: BuildTask): number | string =>
+    orderBy === "created_at"
+      ? task.createdAt
+      : orderBy === "updated_at"
+        ? (task.lastEventAt ?? task.createdAt)
+        : orderBy === "mode"
+          ? task.mode
+          : task.status;
+  return arr.sort((a, b) => {
+    const ka = keyOf(a);
+    const kb = keyOf(b);
+    if (ka < kb) return -dir;
+    if (ka > kb) return dir;
+    return 0;
+  });
+}
+
+/**
+ * 服务端分页 + 排序 + 状态过滤的列表。对接后端真分页:
+ * limit/offset、order_by/order、status(多值逗号)、active=true(只看构建中)。
+ */
+export async function listBuildTaskPage(
+  query: BuildTaskPageQuery,
+): Promise<BuildTaskPageResult> {
+  const { page, pageSize } = query;
+
+  if (useMock) {
+    ensureMockTicker();
+    let items = [...mockBuildTasks];
+    if (query.catalogId) {
+      const resourceIds = new Set(
+        mockResources
+          .filter((resource) => resource.catalogId === query.catalogId)
+          .map((resource) => resource.id),
+      );
+      items = items.filter((task) => resourceIds.has(task.resourceId));
+    }
+    if (query.resourceId) {
+      items = items.filter((task) => task.resourceId === query.resourceId);
+    }
+    if (query.active) {
+      items = items.filter((task) => ACTIVE_FE_STATUSES.has(task.status));
+    } else if (query.statuses?.length) {
+      const set = new Set(query.statuses);
+      items = items.filter((task) => set.has(task.status));
+    }
+    items = sortMockTasks(items, query.orderBy ?? "default", query.order ?? "desc");
+    const total = items.length;
+    const start = (page - 1) * pageSize;
+    return wait({ items: items.slice(start, start + pageSize), total }, 120);
+  }
+
+  const params: Record<string, unknown> = {
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+    resource_id: query.resourceId || undefined,
+    catalog_id: query.catalogId || undefined,
+  };
+  if (query.orderBy && query.orderBy !== "default") {
+    params.order_by = query.orderBy;
+    params.order = query.order ?? "desc";
+  }
+  if (query.active) {
+    params.active = true;
+  } else if (query.statuses?.length) {
+    params.status = backendStatusParam(query.statuses);
+  }
+
+  const response = await http.get<ListResponse<BackendBuildTask>>(
+    "/vega-backend/v1/build-tasks",
+    { params },
+  );
+  return {
+    items: response.data.entries.map(mapBuildTask),
+    total: response.data.total_count,
+  };
 }
 
 export async function getBuildTask(id: string) {

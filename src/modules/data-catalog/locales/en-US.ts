@@ -263,6 +263,7 @@ export const dataCatalogEnUS = {
         "Batch tasks sync and vectorize all data once, then finish automatically. Streaming tasks keep watching for changes and index them as they arrive; pause or resume anytime.",
       searchPlaceholder: "Search by task ID or resource name",
       statusFilterPlaceholder: "All statuses",
+      activeOnly: "Building only",
       empty: "No build tasks yet",
       emptyDescription:
         "Pick a data resource to create your first index build task.",

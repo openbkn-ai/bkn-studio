@@ -98,6 +98,31 @@ export type BuildTaskListQuery = {
   statuses?: BuildTaskStatus[];
 };
 
+/** 服务端排序维度:default=后端默认(构建中置顶),不传 order_by。 */
+export type BuildTaskOrderBy =
+  | "default"
+  | "status"
+  | "created_at"
+  | "updated_at"
+  | "mode";
+
+export type BuildTaskPageQuery = {
+  /** 只看构建中:传 active=true,且不再传 status。 */
+  active?: boolean;
+  catalogId?: string;
+  order?: "asc" | "desc";
+  orderBy?: BuildTaskOrderBy;
+  page: number;
+  pageSize: number;
+  resourceId?: string;
+  statuses?: BuildTaskStatus[];
+};
+
+export type BuildTaskPageResult = {
+  items: BuildTask[];
+  total: number;
+};
+
 export type BuildTaskCreateInput = {
   buildKeyFields: string[];
   embeddingFields: string[];

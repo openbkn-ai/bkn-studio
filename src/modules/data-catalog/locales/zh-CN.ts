@@ -247,6 +247,7 @@ export const dataCatalogZhCN = {
         "批量任务:一次性同步全部数据并向量化,完成后自动结束。流式任务:持续监听数据变化、随到随建,可随时暂停或恢复。",
       searchPlaceholder: "按任务 ID 或资源名称搜索",
       statusFilterPlaceholder: "全部状态",
+      activeOnly: "只看构建中",
       empty: "还没有构建任务",
       emptyDescription: "选择数据资源后即可创建第一个索引构建任务。",
       pickResource: "选择数据资源",

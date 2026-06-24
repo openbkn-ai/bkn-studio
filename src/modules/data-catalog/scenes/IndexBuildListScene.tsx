@@ -7,8 +7,8 @@ import {
   ReloadOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Modal, Select, Space, Tooltip } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { Alert, Checkbox, Dropdown, Input, Modal, Select, Space, Tooltip } from "antd";
+import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -27,7 +27,7 @@ import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import {
   type BuildExecuteType,
   deleteBuildTask,
-  listBuildTasks,
+  listBuildTaskPage,
   pauseBuildTask,
   resumeBuildTask,
   retryBuildTask,
@@ -36,6 +36,8 @@ import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import { listCatalogResources } from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildTask,
+  BuildTaskOrderBy,
+  BuildTaskPageQuery,
   BuildTaskStatus,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
@@ -65,22 +67,42 @@ export function IndexBuildListScene() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState("");
-  const [statusFilter, setStatusFilter] = useState<BuildTaskStatus>();
+  const [statuses, setStatuses] = useState<BuildTaskStatus[]>([]);
+  const [activeOnly, setActiveOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [orderBy, setOrderBy] = useState<BuildTaskOrderBy>("default");
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const [total, setTotal] = useState(0);
   const [detailTask, setDetailTask] = useState<BuildTask | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickedResourceId, setPickedResourceId] = useState<string>();
   const [buildResource, setBuildResource] = useState<CatalogResource | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
+  // 服务端分页 + 排序 + 状态过滤的查询参数。active=true 时不再传 status。
+  const taskQuery = useMemo<BuildTaskPageQuery>(
+    () => ({
+      page,
+      pageSize,
+      orderBy,
+      order,
+      active: activeOnly || undefined,
+      statuses: activeOnly || statuses.length === 0 ? undefined : statuses,
+    }),
+    [activeOnly, order, orderBy, page, pageSize, statuses],
+  );
+
   const loadData = useCallback(async () => {
     setLoadError(null);
     try {
       const [taskResult, resourceResult, catalogResult] = await Promise.all([
-        listBuildTasks(),
+        listBuildTaskPage(taskQuery),
         listCatalogResources(),
         listDataConnectRecords({ keyword: "", page: 1, pageSize: 200 }),
       ]);
-      setTasks(taskResult);
+      setTasks(taskResult.items);
+      setTotal(taskResult.total);
       setResources(resourceResult);
       setCatalogs(catalogResult.items);
     } catch (error) {
@@ -88,16 +110,18 @@ export function IndexBuildListScene() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [taskQuery]);
 
-  // 轮询只刷新任务列表;资源/连接等静态数据进页和手动刷新时才拉
+  // 轮询只刷新当前页任务;资源/连接等静态数据进页和手动刷新时才拉
   const loadTasks = useCallback(async () => {
     try {
-      setTasks(await listBuildTasks());
+      const result = await listBuildTaskPage(taskQuery);
+      setTasks(result.items);
+      setTotal(result.total);
     } catch {
       // 轮询失败保留旧数据,等下一轮
     }
-  }, []);
+  }, [taskQuery]);
 
   useEffect(() => {
     void loadData();
@@ -138,18 +162,21 @@ export function IndexBuildListScene() {
     [catalogs],
   );
 
+  // 状态过滤/排序/分页已下沉服务端;此处只对「当前页」做关键字过滤。
+  // TODO(后端): build-tasks 暂无 keyword 参数,搜索无法跨页;后端补 search 后改服务端。
   const filteredTasks = useMemo(() => {
     const query = keyword.trim().toLowerCase();
+    if (query.length === 0) {
+      return tasks;
+    }
     return tasks.filter((task) => {
       const resource = resourceMap.get(task.resourceId);
-      const matchesKeyword =
-        query.length === 0 ||
+      return (
         task.id.toLowerCase().includes(query) ||
-        (resource?.name.toLowerCase().includes(query) ?? false);
-      const matchesStatus = !statusFilter || task.status === statusFilter;
-      return matchesKeyword && matchesStatus;
+        (resource?.name.toLowerCase().includes(query) ?? false)
+      );
     });
-  }, [keyword, resourceMap, statusFilter, tasks]);
+  }, [keyword, resourceMap, tasks]);
 
   const gateOf = (task: BuildTask) => {
     const resource = resourceMap.get(task.resourceId);
@@ -262,10 +289,37 @@ export function IndexBuildListScene() {
     });
   };
 
+  const sortOrderOf = (key: BuildTaskOrderBy): "ascend" | "descend" | null =>
+    orderBy === key ? (order === "asc" ? "ascend" : "descend") : null;
+
+  // 列头排序:有方向 → order_by=列key + order;清除 → 回 default(不显箭头)。
+  const handleTableChange: TableProps<BuildTask>["onChange"] = (
+    _pagination,
+    _filters,
+    sorter,
+    extra,
+  ) => {
+    if (extra.action !== "sort") {
+      return;
+    }
+    const single = Array.isArray(sorter) ? sorter[0] : sorter;
+    if (!single || !single.order || !single.columnKey) {
+      setOrderBy("default");
+      setOrder("desc");
+    } else {
+      setOrderBy(single.columnKey as BuildTaskOrderBy);
+      setOrder(single.order === "ascend" ? "asc" : "desc");
+    }
+    setPage(1);
+  };
+
   const columns: ColumnsType<BuildTask> = [
     {
       dataIndex: "id",
+      key: "created_at",
       title: t("dataCatalog.task.column"),
+      sorter: true,
+      sortOrder: sortOrderOf("created_at"),
       render: (_, record) => (
         <div style={{ display: "grid", gap: 4 }}>
           <span className={styles.slugChip}>{record.id}</span>
@@ -295,7 +349,10 @@ export function IndexBuildListScene() {
     },
     {
       dataIndex: "mode",
+      key: "mode",
       title: t("dataCatalog.build.mode"),
+      sorter: true,
+      sortOrder: sortOrderOf("mode"),
       render: (value: BuildTask["mode"]) => (
         <span
           className={[
@@ -309,7 +366,10 @@ export function IndexBuildListScene() {
     },
     {
       dataIndex: "status",
+      key: "status",
       title: t("common.status"),
+      sorter: true,
+      sortOrder: sortOrderOf("status"),
       render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
     },
     {
@@ -479,10 +539,24 @@ export function IndexBuildListScene() {
             placeholder={t("dataCatalog.task.searchPlaceholder")}
             value={keyword}
           />
+          <Checkbox
+            checked={activeOnly}
+            onChange={(event) => {
+              setActiveOnly(event.target.checked);
+              setPage(1);
+            }}
+          >
+            {t("dataCatalog.task.activeOnly")}
+          </Checkbox>
           <Select
             allowClear
             className={sceneStyles.filterSelect}
-            onChange={(value) => setStatusFilter(value)}
+            disabled={activeOnly}
+            mode="multiple"
+            onChange={(value: BuildTaskStatus[]) => {
+              setStatuses(value);
+              setPage(1);
+            }}
             options={STATUS_OPTIONS.map((status) => ({
               // paused 内部状态同时承载 streaming 暂停与 batch 停止
               label:
@@ -492,7 +566,7 @@ export function IndexBuildListScene() {
               value: status,
             }))}
             placeholder={t("dataCatalog.task.statusFilterPlaceholder")}
-            value={statusFilter}
+            value={statuses}
           />
         </div>
       </div>
@@ -526,7 +600,18 @@ export function IndexBuildListScene() {
             columns={columns}
             dataSource={filteredTasks}
             loading={loading}
-            pagination={false}
+            onChange={handleTableChange}
+            pagination={{
+              current: page,
+              pageSize,
+              total,
+              showSizeChanger: true,
+              showTotal: (count) => t("common.total", { total: count }),
+              onChange: (nextPage, nextPageSize) => {
+                setPage(nextPage);
+                setPageSize(nextPageSize);
+              },
+            }}
             rowKey="id"
             rowSelection={{
               selectedRowKeys: selectedKeys,
