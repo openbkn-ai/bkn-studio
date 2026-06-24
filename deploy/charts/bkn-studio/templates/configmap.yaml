@@ -1,0 +1,15 @@
+{{- if not .Values.auth.enabled }}
+# Overrides the image's no-op config.js so studio boots WITHOUT its OAuth gate
+# (no bkn-safe). Mounted over /usr/share/nginx/html/studio/config.js.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.image.name }}-runtime
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.image.name }}
+data:
+  config.js: |
+    // Injected by the chart (auth.enabled=false): gate-less, no bkn-safe.
+    window.__BKN_STUDIO_RUNTIME__ = { mode: "hosted" };
+{{- end }}

@@ -1,0 +1,42 @@
+replicaCount: 1
+# Namespace follows the Helm release (-n); templates use .Release.Namespace so
+# studio installs into the same namespace as the rest of BKN Foundry (openbkn).
+
+image:
+  registry: ghcr.io/openbkn-ai
+  repository: bkn-studio
+  # Replaced with the resolved version at package time (reusable-chart pattern).
+  tag: "__VERSION__"
+  pullPolicy: IfNotPresent
+  name: bkn-studio
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# Auth gate. true = studio runs its own OAuth login against bkn-safe/hydra (the
+# normal Foundry install). false = NO bkn-safe: a ConfigMap overrides config.js
+# with mode:"hosted", so studio boots gate-less as the default local-admin user
+# — no login, no auth. Set false only when the deployment has no bkn-safe.
+auth:
+  enabled: true
+
+# studio is a static SPA. The gateway ingress already routes /api, /oauth2,
+# /.well-known and /userinfo to bkn-safe — studio contributes ONLY /studio.
+ingress:
+  enabled: true
+  ingressClass: class-443
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  path: /studio
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+nodeSelector: {}

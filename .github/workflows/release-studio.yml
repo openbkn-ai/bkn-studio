@@ -1,0 +1,156 @@
+name: release-studio
+
+# Builds the bkn-studio SPA image AND packages the Helm chart, then pushes both
+# to GHCR (image mirrored to Huawei SWR when those secrets are present). The
+# chart's image tag and its own version share one resolved version, so the chart
+# always points at the matching image. kowell-core's bkn-foundry.yaml references
+# the published chart by name + version.
+#
+# Versioning mirrors the kowell-core convention so image tag == chart version:
+# a `v*` tag IS the release version (leading "v" stripped). Branch / PR runs
+# build-only (no push) unless dispatched with publish=true.
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig*.json'
+      - 'vite.config.ts'
+      - 'Dockerfile'
+      - 'deploy/nginx.conf'
+      - 'deploy/charts/**'
+      - '.dockerignore'
+      - '.github/workflows/release-studio.yml'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Push to registries (true) or build-only verify (false)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: bkn-studio
+  CHART_NAME: bkn-studio
+  CHART_PATH: deploy/charts/bkn-studio
+  SWR_REGISTRY: swr.cn-east-3.myhuaweicloud.com
+  SWR_NAMESPACE: openbkn-ai
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Surfaced so step `if:` can test credential presence — secrets can't be
+      # referenced in `if:` directly. Empty when the SWR secrets aren't set.
+      SWR_USERNAME: ${{ secrets.HUAWEI_SWR_USERNAME }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_VERSION="$(node -p "require('./package.json').version")"
+          SHORT_SHA="$(git rev-parse --short=7 HEAD)"
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # Tag push (e.g. v0.1.0) cuts a release: the tag IS the version.
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            SANITIZED="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^0-9a-zA-Z.-]+#-#g; s#-+#-#g; s#^[.-]+##; s#[.-]+$##')"
+            VERSION="${BASE_VERSION}-${SANITIZED}.sha${SHORT_SHA}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION"
+
+      - name: Decide publish
+        id: gate
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "push" || ( "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.publish }}" == "true" ) ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: ${{ steps.gate.outputs.publish == 'true' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Login to Huawei SWR
+        if: ${{ steps.gate.outputs.publish == 'true' && env.SWR_USERNAME != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.SWR_REGISTRY }}
+          username: ${{ secrets.HUAWEI_SWR_USERNAME }}
+          password: ${{ secrets.HUAWEI_SWR_PASSWORD }}
+
+      - name: Compute image tags
+        id: tags
+        shell: bash
+        run: |
+          # GHCR always; SWR mirror only when publishing AND credentials present.
+          {
+            echo "tags<<EOF"
+            echo "ghcr.io/${{ github.repository_owner }}/${IMAGE_NAME}:${{ steps.version.outputs.version }}"
+            if [[ "${{ steps.gate.outputs.publish }}" == "true" && -n "${SWR_USERNAME}" ]]; then
+              echo "${SWR_REGISTRY}/${SWR_NAMESPACE}/${IMAGE_NAME}:${{ steps.version.outputs.version }}"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ steps.gate.outputs.publish == 'true' }}
+          provenance: false
+          sbom: false
+          tags: ${{ steps.tags.outputs.tags }}
+
+      # ---- Helm chart: same resolved version as the image, so the chart's
+      #      image.tag and its own version always match. ----
+      - uses: azure/setup-helm@v4
+
+      - name: Stamp chart version + image tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i "s/^version: .*/version: ${VERSION}/" "${CHART_PATH}/Chart.yaml"
+          sed -i "s/^appVersion: .*/appVersion: \"${VERSION}\"/" "${CHART_PATH}/Chart.yaml"
+          # Charts reference the image tag via the __VERSION__ placeholder.
+          sed -i "s/__VERSION__/${VERSION}/g" "${CHART_PATH}/values.yaml"
+
+      - name: Helm lint
+        run: helm lint "${CHART_PATH}"
+
+      - name: Package chart
+        run: helm package "${CHART_PATH}" --destination /tmp/charts
+
+      - name: Push chart to GHCR
+        if: ${{ steps.gate.outputs.publish == 'true' }}
+        run: |
+          set -euo pipefail
+          echo "${{ github.token }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+          helm push "/tmp/charts/${CHART_NAME}-${{ steps.version.outputs.version }}.tgz" \
+            "oci://ghcr.io/${{ github.repository_owner }}/charts"

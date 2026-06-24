@@ -55,9 +55,13 @@ export function startStandaloneApp() {
     throw new Error("Root container #root was not found.");
   }
 
+  const runtimeInput = readWindowRuntimeInput();
   mountApp(container, {
-    ...readWindowRuntimeInput(),
-    mode: "standalone",
+    ...runtimeInput,
+    // Default: standalone (runs its own OAuth gate). A no-bkn-safe deploy injects
+    // mode:"hosted" via config.js to run gate-less with the default user — see
+    // public/config.js. Honour the injected value instead of forcing standalone.
+    mode: runtimeInput.mode ?? "standalone",
   });
 }
 
