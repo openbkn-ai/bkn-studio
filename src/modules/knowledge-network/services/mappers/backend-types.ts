@@ -30,6 +30,8 @@ export type BackendKnowledgeNetwork = {
   tags?: string[];
   update_time?: number;
   updater?: BackendAccountInfo;
+  embedding_model_id?: string;
+  embedding_dim?: number;
 };
 
 export type BackendIndexConfig = {

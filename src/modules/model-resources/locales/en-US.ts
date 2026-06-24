@@ -23,6 +23,12 @@ export const modelResourcesEnUS = {
       deleteFailed: "Failed to delete model",
       deleteConfirmTitle: "Delete confirmation",
       deleteConfirmContent: "Delete {{names}}? This action cannot be undone.",
+      defaultTag: "Default",
+      setDefaultConfirmTitle: "Set as system default",
+      setDefaultConfirmContent:
+        "Set \"{{name}}\" as the system default {{type}} model? The current default of the same type is cleared automatically; the change takes up to ~60s to apply.",
+      setDefaultSuccess: "Set as system default.",
+      setDefaultFailed: "Failed to set system default.",
       authorizationPending: "Authorization management will be added in a later release.",
       tabs: {
         llm: "Large models",
@@ -63,6 +69,7 @@ export const modelResourcesEnUS = {
         edit: "Edit",
         delete: "Delete",
         testConnection: "Test connection",
+        setAsDefault: "Set as default",
         authorizationManagement: "Authorization",
         modelMonitoring: "Model monitoring",
       },

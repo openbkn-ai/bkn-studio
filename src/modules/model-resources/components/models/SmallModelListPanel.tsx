@@ -1,5 +1,5 @@
 import { EllipsisOutlined, ExportOutlined } from "@ant-design/icons";
-import { Alert, Dropdown } from "antd";
+import { Alert, Dropdown, Tag } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
 import dayjs from "dayjs";
@@ -21,6 +21,7 @@ import {
   getSmallModelItemPermissions,
   getSmallModelRolePermissions,
   listSmallModels,
+  setDefaultSmallModel,
   testSmallModel,
 } from "@/modules/model-resources/services/small-model.service";
 import type { SmallModel } from "@/modules/model-resources/types/small-model";
@@ -169,6 +170,30 @@ export function SmallModelListPanel() {
   const canModify = (record: SmallModel) => isAdmin || record.operations?.includes("modify");
   const canDelete = (record: SmallModel) => isAdmin || record.operations?.includes("delete");
   const canAuthorize = (record: SmallModel) => isAdmin || record.operations?.includes("authorize");
+  const canSetDefault = (record: SmallModel) =>
+    (record.modelType === "embedding" || record.modelType === "reranker") &&
+    !record.default &&
+    Boolean(canModify(record));
+
+  const handleSetDefault = (record: SmallModel) => {
+    void modal.confirm({
+      title: t("modelResources.models.setDefaultConfirmTitle"),
+      content: t("modelResources.models.setDefaultConfirmContent", {
+        name: record.modelName,
+        type: record.modelType,
+      }),
+      okText: t("common.confirm"),
+      cancelText: t("common.cancel"),
+      onOk: async () => {
+        const result = await setDefaultSmallModel(record.modelId);
+        if (result.status !== "ok") {
+          throw new Error(t("modelResources.models.setDefaultFailed"));
+        }
+        message.success(t("modelResources.models.setDefaultSuccess"));
+        await loadData();
+      },
+    });
+  };
 
   const handleOperate = (key: string, record: SmallModel) => {
     if (key === "view") {
@@ -197,6 +222,11 @@ export function SmallModelListPanel() {
       return;
     }
 
+    if (key === "setDefault" && canSetDefault(record)) {
+      handleSetDefault(record);
+      return;
+    }
+
     if (key === "authorize" && canAuthorize(record)) {
       setAuthorizeRecord(record);
     }
@@ -220,6 +250,9 @@ export function SmallModelListPanel() {
         <div className={styles.nameCell}>
           <ModelSeriesIcon modelName={record.modelName} />
           <span title={record.modelName}>{record.modelName}</span>
+          {record.default ? (
+            <Tag color="blue">{t("modelResources.models.defaultTag")}</Tag>
+          ) : null}
         </div>
       ),
     },
@@ -234,6 +267,9 @@ export function SmallModelListPanel() {
           canModify(record) ? { key: "edit", label: t("modelResources.models.menus.edit") } : null,
           canDelete(record) ? { key: "delete", label: t("modelResources.models.menus.delete") } : null,
           { key: "test", label: t("modelResources.models.menus.testConnection") },
+          canSetDefault(record)
+            ? { key: "setDefault", label: t("modelResources.models.menus.setAsDefault") }
+            : null,
           canAuthorize(record)
             ? { key: "authorize", label: t("modelResources.models.menus.authorizationManagement") }
             : null,

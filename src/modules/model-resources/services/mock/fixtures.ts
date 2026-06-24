@@ -68,6 +68,7 @@ export const mockSmallModels: SmallModel[] = [
       apiUrl: "https://api.openai.com/v1/embeddings",
     },
     operations: ["modify", "delete", "authorize"],
+    default: true,
   },
   {
     modelId: "sm-2",

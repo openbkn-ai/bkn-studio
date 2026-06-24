@@ -27,6 +27,7 @@ type BackendSmallModel = {
   update_time?: string;
   model_config?: string | BackendModelConfig;
   __operation?: string[];
+  default?: boolean;
 };
 
 type BackendModelConfig = {
@@ -42,6 +43,11 @@ type BackendSmallModelListResponse = {
 
 type BackendStatusResponse = {
   status?: string;
+};
+
+type BackendSetDefaultResponse = {
+  status?: string;
+  id?: string;
 };
 
 function parseModelConfig(config?: string | BackendModelConfig) {
@@ -78,6 +84,7 @@ function mapSmallModel(item: BackendSmallModel): SmallModel {
     updateTime: item.update_time,
     modelConfig: parseModelConfig(item.model_config),
     operations: item.__operation,
+    default: item.default,
   };
 }
 
@@ -277,6 +284,57 @@ export async function testSmallModel(payload: SmallModelSavePayload) {
     `${API_PREFIX}/small-model/test`,
     mapSavePayload(payload),
     { timeout: 600_000 },
+  );
+
+  return response.data;
+}
+
+/**
+ * System default small model for a given model_type (embedding/reranker).
+ * Backend returns the model object, or an empty object `{}` when no default is set.
+ */
+export async function getDefaultSmallModel(
+  modelType: "embedding" | "reranker",
+): Promise<SmallModel | null> {
+  if (useMock) {
+    return (
+      mockSmallModels.find((item) => item.modelType === modelType && item.default) ?? null
+    );
+  }
+
+  const response = await http.get<BackendSmallModel>(
+    `${API_PREFIX}/small-model/get_default`,
+    { params: { model_type: modelType } },
+  );
+
+  // Empty object `{}` => no default configured.
+  if (!response.data?.model_id) {
+    return null;
+  }
+
+  return mapSmallModel(response.data);
+}
+
+/**
+ * Set a small model as the system default for its model_type (admin only).
+ * The backend automatically clears the previous default of the same type.
+ */
+export async function setDefaultSmallModel(modelId: string) {
+  if (useMock) {
+    const target = mockSmallModels.find((item) => item.modelId === modelId);
+    if (target) {
+      mockSmallModels.forEach((item) => {
+        if (item.modelType === target.modelType) {
+          item.default = item.modelId === modelId;
+        }
+      });
+    }
+    return { status: "ok", id: modelId };
+  }
+
+  const response = await http.post<BackendSetDefaultResponse>(
+    `${API_PREFIX}/small-model/set-default`,
+    { model_id: modelId },
   );
 
   return response.data;

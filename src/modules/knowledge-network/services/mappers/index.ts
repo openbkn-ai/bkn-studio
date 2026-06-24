@@ -52,6 +52,8 @@ export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNet
     updateTime: formatTimestamp(item.update_time),
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
+    embeddingModelId: item.embedding_model_id,
+    embeddingDim: item.embedding_dim,
     statistics: {
       objectTypesTotal: item.statistics?.object_types_total ?? 0,
       relationTypesTotal: item.statistics?.relation_types_total ?? 0,

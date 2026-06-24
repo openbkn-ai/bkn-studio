@@ -22,6 +22,12 @@ export const modelResourcesZhCN = {
       deleteFailed: "模型删除失败",
       deleteConfirmTitle: "删除确认",
       deleteConfirmContent: "确定删除 {{names}}？删除后不可恢复。",
+      defaultTag: "默认",
+      setDefaultConfirmTitle: "设为系统默认",
+      setDefaultConfirmContent:
+        "确定将「{{name}}」设为 {{type}} 类型的系统默认小模型？同类型原默认将被自动取消，变更最长约 60 秒生效。",
+      setDefaultSuccess: "已设为系统默认。",
+      setDefaultFailed: "设置系统默认失败。",
       authorizationPending: "授权管理功能将在后续版本接入。",
       tabs: {
         llm: "大模型",
@@ -62,6 +68,7 @@ export const modelResourcesZhCN = {
         edit: "编辑",
         delete: "删除",
         testConnection: "测试连接",
+        setAsDefault: "设为默认",
         authorizationManagement: "授权管理",
         modelMonitoring: "模型监控",
       },

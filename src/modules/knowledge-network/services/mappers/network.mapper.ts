@@ -6,6 +6,8 @@ export const DEFAULT_KNOWLEDGE_NETWORK_ICON = "icon-dip-graph";
 export function toBackendKnowledgeNetworkCreatePayload(
   input: KnowledgeNetworkMutationPayload,
 ) {
+  const embeddingModel = input.embeddingModel?.trim();
+
   return {
     branch: DEFAULT_KNOWLEDGE_NETWORK_BRANCH,
     color: input.color,
@@ -14,6 +16,8 @@ export function toBackendKnowledgeNetworkCreatePayload(
     id: input.identifier,
     name: input.name,
     tags: input.tags,
+    // Empty = backend uses the system default embedding model.
+    ...(embeddingModel ? { embedding_model: embeddingModel } : {}),
   };
 }
 
