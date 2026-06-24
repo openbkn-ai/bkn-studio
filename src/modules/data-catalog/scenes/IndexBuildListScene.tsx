@@ -337,6 +337,9 @@ export function IndexBuildListScene() {
     {
       key: "actions",
       title: t("common.actions"),
+      // 窄屏时钉在右侧,操作不被裁掉。
+      fixed: "right",
+      width: 180,
       render: (_, record) => {
         const pauseResumeLabel =
           record.status === "paused"
@@ -529,6 +532,7 @@ export function IndexBuildListScene() {
               selectedRowKeys: selectedKeys,
               onChange: (keys) => setSelectedKeys(keys.map(String)),
             }}
+            scroll={{ x: "max-content" }}
           />
         )}
       </div>
