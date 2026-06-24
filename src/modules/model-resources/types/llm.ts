@@ -46,11 +46,6 @@ export type LlmListResult = {
   total: number;
 };
 
-export type LlmDefaultEditPayload = {
-  modelId: string;
-  default: boolean;
-};
-
 export type LlmSavePayload = {
   modelId?: string;
   modelName: string;

@@ -4,7 +4,6 @@ import {
   mockLlmMonitorData,
 } from "@/modules/model-resources/services/mock/fixtures";
 import type {
-  LlmDefaultEditPayload,
   LlmListQuery,
   LlmListResult,
   LlmModel,
@@ -303,20 +302,4 @@ export async function getLlmModelMonitor(modelId: string): Promise<LlmMonitorDat
     outputTokenSpeed: payload.output_token_speed ?? [],
     totalTokenSpeed: payload.total_token_speed ?? [],
   };
-}
-
-export async function setDefaultLlmModel(payload: LlmDefaultEditPayload) {
-  if (useMock) {
-    mockLlmModels.forEach((item) => {
-      item.default = item.modelId === payload.modelId;
-    });
-    return { status: "ok" };
-  }
-
-  const response = await http.post<{ status?: string }>(`${API_PREFIX}/llm/default/edit`, {
-    model_id: payload.modelId,
-    default: payload.default,
-  });
-
-  return response.data;
 }

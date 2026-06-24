@@ -1,11 +1,9 @@
 export { modelResourcesModuleManifest } from "@/modules/model-resources/module.manifest";
 export type {
-  DefaultModelSceneProps,
   ModelListSceneProps,
   ModelStatisticsSceneProps,
   QuotaListSceneProps,
 } from "@/modules/model-resources/contracts/scenes";
-export { DefaultModelScene } from "@/modules/model-resources/scenes/DefaultModelScene";
 export { ModelListScene } from "@/modules/model-resources/scenes/ModelListScene";
 export { ModelStatisticsScene } from "@/modules/model-resources/scenes/ModelStatisticsScene";
 export { QuotaListScene } from "@/modules/model-resources/scenes/QuotaListScene";

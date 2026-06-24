@@ -25,7 +25,6 @@ export const shellZhCN = {
       allExecutionUnitsTooltip: "浏览市场目录并将资源引入到本业务域",
       modelResources: "模型资源",
       quotaManagement: "配额管理",
-      defaultModel: "默认模型",
       modelStatistics: "模型统计",
       systemManagement: "系统管理",
       userManagement: "用户管理",

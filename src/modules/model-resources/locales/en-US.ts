@@ -203,24 +203,6 @@ export const modelResourcesEnUS = {
         remainSeparate: "Remaining quota: input {{input}}, output {{output}}",
       },
     },
-    defaultModel: {
-      title: "Default Model",
-      description:
-        "After a default model is set, features without an explicit model assignment will use it automatically.",
-      searchPlaceholder: "Search by model name",
-      currentDefault: "Current default",
-      setAsDefault: "Set as default",
-      setDefaultSuccess: "Default model updated.",
-      setDefaultFailed: "Failed to update the default model.",
-      emptyTitle: "No large models",
-      emptyDescription: "There are no large models available to set as default.",
-      columns: {
-        modelName: "Model name",
-        modelType: "Model type",
-        baseModel: "Base model",
-        setting: "Setting",
-      },
-    },
     statistics: {
       title: "Model Statistics",
       description: "Review model usage, error rate, latency, and token consumption trends.",

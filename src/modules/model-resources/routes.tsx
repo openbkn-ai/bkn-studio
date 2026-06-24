@@ -14,11 +14,6 @@ const QuotaListPage = lazy(async () => {
   return { default: module.QuotaListPage };
 });
 
-const DefaultModelPage = lazy(async () => {
-  const module = await import("@/modules/model-resources/pages/DefaultModelPage");
-  return { default: module.DefaultModelPage };
-});
-
 const ModelStatisticsPage = lazy(async () => {
   const module = await import("@/modules/model-resources/pages/ModelStatisticsPage");
   return { default: module.ModelStatisticsPage };
@@ -50,17 +45,6 @@ export const modelResourcesRoutes: RouteObject[] = [
       },
     },
     element: withRouteLoading(<QuotaListPage />),
-  },
-  {
-    path: "model-resources/default-model",
-    handle: {
-      console: {
-        descriptionKey: "modelResources.defaultModel.description",
-        menuKey: "default-model",
-        titleKey: "modelResources.defaultModel.title",
-      },
-    },
-    element: withRouteLoading(<DefaultModelPage />),
   },
   {
     path: "model-resources/statistics",

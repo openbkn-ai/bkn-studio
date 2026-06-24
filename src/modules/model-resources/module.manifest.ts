@@ -8,8 +8,6 @@ export const modelResourcesModuleManifest = {
     "model-resources:model:delete",
     "model-resources:quota:view",
     "model-resources:quota:edit",
-    "model-resources:default-model:view",
-    "model-resources:default-model:edit",
     "model-resources:statistics:view",
   ],
   requiresShell: true,
@@ -27,12 +25,6 @@ export const modelResourcesModuleManifest = {
       id: "model-resources.quotas",
       exportName: "QuotaListScene",
       description: "Configure model quotas and distribute user token limits.",
-      inputs: [],
-    },
-    {
-      id: "model-resources.default-model",
-      exportName: "DefaultModelScene",
-      description: "Set the default large language model for the workspace.",
       inputs: [],
     },
     {

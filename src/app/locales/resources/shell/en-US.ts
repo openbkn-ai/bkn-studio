@@ -26,7 +26,6 @@ export const shellEnUS = {
       allExecutionUnitsTooltip: "Browse the market catalog and introduce resources into your domain",
       modelResources: "Model Resources",
       quotaManagement: "Quota Management",
-      defaultModel: "Default Model",
       modelStatistics: "Model Statistics",
       systemManagement: "System Management",
       userManagement: "User Management",

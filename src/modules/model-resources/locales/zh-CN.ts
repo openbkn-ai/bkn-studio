@@ -199,24 +199,6 @@ export const modelResourcesZhCN = {
         remainSeparate: "剩余可分配额度：输入 {{input}}，输出 {{output}}",
       },
     },
-    defaultModel: {
-      title: "默认模型",
-      description:
-        "设置默认模型后，若功能未配置指定模型，则自动调用当前设定的默认模型。",
-      searchPlaceholder: "请输入模型名称",
-      currentDefault: "当前默认",
-      setAsDefault: "设置为默认",
-      setDefaultSuccess: "默认模型已更新。",
-      setDefaultFailed: "设置默认模型失败。",
-      emptyTitle: "暂无大模型",
-      emptyDescription: "当前没有可设置为默认的大模型记录。",
-      columns: {
-        modelName: "模型名称",
-        modelType: "模型类型",
-        baseModel: "基础模型",
-        setting: "设置",
-      },
-    },
     statistics: {
       title: "模型统计",
       description: "查看模型调用次数、错误率、耗时与 Token 消耗趋势。",
