@@ -94,6 +94,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
+      # Surface a silent skip: on a real publish the image is supposed to mirror
+      # to SWR, so make a missing credential loud instead of a no-op.
+      - name: Warn if SWR mirror is skipped
+        if: ${{ steps.gate.outputs.publish == 'true' && env.SWR_USERNAME == '' }}
+        run: echo "::warning title=SWR mirror skipped::HUAWEI_SWR_USERNAME/PASSWORD not available to this repo — image pushed to GHCR only, NOT mirrored to ${SWR_REGISTRY}/${SWR_NAMESPACE}."
+
       - name: Login to Huawei SWR
         if: ${{ steps.gate.outputs.publish == 'true' && env.SWR_USERNAME != '' }}
         uses: docker/login-action@v3
