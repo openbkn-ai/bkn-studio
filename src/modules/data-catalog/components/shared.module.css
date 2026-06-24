@@ -207,10 +207,14 @@
 
 .progressMeta {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 10px;
+  gap: 2px 10px;
   color: #8b98ac;
   font-size: 12px;
+}
+
+.progressMeta > span {
   white-space: nowrap;
 }
 

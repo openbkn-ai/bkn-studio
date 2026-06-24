@@ -25,10 +25,16 @@ export const modelResourcesZhCN = {
       defaultTag: "默认",
       setDefaultConfirmTitle: "修改系统默认小模型（高危操作）",
       setDefaultConfirmContent:
-        "这是系统级高危操作：将 {{type}} 类型的系统默认小模型改为「{{name}}」。变更后，新建知识网络（未指定时）、新建 Skill 索引等所有依赖系统默认的功能都会改用该模型；同类型原默认会被自动取消，最长约 60 秒生效。已建资源不受影响。确认修改？",
+        "将 {{type}} 系统默认改为「{{name}}」？同类型原默认会被取消，约 60 秒生效。",
       setDefaultConfirmOk: "确认修改默认",
       setDefaultSuccess: "已设为系统默认。",
       setDefaultFailed: "设置系统默认失败。",
+      unsetDefaultConfirmTitle: "取消系统默认（高危操作）",
+      unsetDefaultConfirmContent:
+        "取消「{{name}}」作为 {{type}} 系统默认？该类型将回到「无默认」，约 60 秒生效。",
+      unsetDefaultConfirmOk: "确认取消默认",
+      unsetDefaultSuccess: "已取消系统默认。",
+      unsetDefaultFailed: "取消系统默认失败。",
       authorizationPending: "授权管理功能将在后续版本接入。",
       tabs: {
         llm: "大模型",
@@ -70,6 +76,7 @@ export const modelResourcesZhCN = {
         delete: "删除",
         testConnection: "测试连接",
         setAsDefault: "设为默认",
+        unsetDefault: "取消默认",
         authorizationManagement: "授权管理",
         modelMonitoring: "模型监控",
       },

@@ -48,6 +48,7 @@ type BackendStatusResponse = {
 type BackendSetDefaultResponse = {
   status?: string;
   id?: string;
+  default?: boolean;
 };
 
 function parseModelConfig(config?: string | BackendModelConfig) {
@@ -316,25 +317,32 @@ export async function getDefaultSmallModel(
 }
 
 /**
- * Set a small model as the system default for its model_type (admin only).
- * The backend automatically clears the previous default of the same type.
+ * Set or clear a small model as the system default for its model_type (admin only).
+ * - asDefault=true: set as default; the backend clears the previous default of the
+ *   same type (mutually exclusive).
+ * - asDefault=false: clear this model's default flag; the type returns to
+ *   "no default" and runtime falls back to the backend local config.
  */
-export async function setDefaultSmallModel(modelId: string) {
+export async function setDefaultSmallModel(modelId: string, asDefault = true) {
   if (useMock) {
     const target = mockSmallModels.find((item) => item.modelId === modelId);
     if (target) {
-      mockSmallModels.forEach((item) => {
-        if (item.modelType === target.modelType) {
-          item.default = item.modelId === modelId;
-        }
-      });
+      if (asDefault) {
+        mockSmallModels.forEach((item) => {
+          if (item.modelType === target.modelType) {
+            item.default = item.modelId === modelId;
+          }
+        });
+      } else {
+        target.default = false;
+      }
     }
-    return { status: "ok", id: modelId };
+    return { status: "ok", id: modelId, default: asDefault };
   }
 
   const response = await http.post<BackendSetDefaultResponse>(
     `${API_PREFIX}/small-model/set-default`,
-    { model_id: modelId },
+    { model_id: modelId, default: asDefault },
   );
 
   return response.data;

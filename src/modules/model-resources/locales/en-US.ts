@@ -26,10 +26,16 @@ export const modelResourcesEnUS = {
       defaultTag: "Default",
       setDefaultConfirmTitle: "Change system default small model (high-risk)",
       setDefaultConfirmContent:
-        "This is a system-wide high-risk operation: change the system default {{type}} model to \"{{name}}\". Afterwards every feature relying on the system default — new knowledge networks (when unspecified), new Skill indexes, etc. — will use this model. The previous default of the same type is cleared automatically and the change takes up to ~60s to apply. Existing resources are unaffected. Confirm change?",
+        "Change the system default {{type}} model to \"{{name}}\"? The current default is cleared; takes up to ~60s.",
       setDefaultConfirmOk: "Confirm change",
       setDefaultSuccess: "Set as system default.",
       setDefaultFailed: "Failed to set system default.",
+      unsetDefaultConfirmTitle: "Clear system default (high-risk)",
+      unsetDefaultConfirmContent:
+        "Clear \"{{name}}\" as the system default {{type}} model? The type returns to \"no default\"; takes up to ~60s.",
+      unsetDefaultConfirmOk: "Confirm clear",
+      unsetDefaultSuccess: "System default cleared.",
+      unsetDefaultFailed: "Failed to clear system default.",
       authorizationPending: "Authorization management will be added in a later release.",
       tabs: {
         llm: "Large models",
@@ -71,6 +77,7 @@ export const modelResourcesEnUS = {
         delete: "Delete",
         testConnection: "Test connection",
         setAsDefault: "Set as default",
+        unsetDefault: "Clear default",
         authorizationManagement: "Authorization",
         modelMonitoring: "Model monitoring",
       },

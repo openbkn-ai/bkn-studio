@@ -362,7 +362,7 @@ export function IndexBuildListScene() {
       dataIndex: "status",
       key: "status",
       title: t("common.status"),
-      width: 160,
+      width: 230,
       sorter: true,
       sortOrder: sortOrderOf("status"),
       render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
@@ -381,7 +381,7 @@ export function IndexBuildListScene() {
     {
       key: "progress",
       title: t("dataCatalog.task.progress"),
-      width: 200,
+      width: 240,
       render: (_, record) => <BuildProgress task={record} />,
     },
     {
@@ -615,7 +615,7 @@ export function IndexBuildListScene() {
               selectedRowKeys: selectedKeys,
               onChange: (keys) => setSelectedKeys(keys.map(String)),
             }}
-            scroll={{ x: 1280 }}
+            scroll={{ x: 1400 }}
           />
         )}
       </div>

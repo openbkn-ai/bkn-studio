@@ -174,6 +174,8 @@ export function SmallModelListPanel() {
     (record.modelType === "embedding" || record.modelType === "reranker") &&
     !record.default &&
     Boolean(canModify(record));
+  const canUnsetDefault = (record: SmallModel) =>
+    Boolean(record.default) && Boolean(canModify(record));
 
   const handleSetDefault = (record: SmallModel) => {
     void modal.confirm({
@@ -192,6 +194,28 @@ export function SmallModelListPanel() {
           throw new Error(t("modelResources.models.setDefaultFailed"));
         }
         message.success(t("modelResources.models.setDefaultSuccess"));
+        await loadData();
+      },
+    });
+  };
+
+  const handleUnsetDefault = (record: SmallModel) => {
+    void modal.confirm({
+      title: t("modelResources.models.unsetDefaultConfirmTitle"),
+      icon: <ExclamationCircleFilled style={{ color: "#ff4d4f" }} />,
+      content: t("modelResources.models.unsetDefaultConfirmContent", {
+        name: record.modelName,
+        type: record.modelType,
+      }),
+      okText: t("modelResources.models.unsetDefaultConfirmOk"),
+      okButtonProps: { danger: true },
+      cancelText: t("common.cancel"),
+      onOk: async () => {
+        const result = await setDefaultSmallModel(record.modelId, false);
+        if (result.status !== "ok") {
+          throw new Error(t("modelResources.models.unsetDefaultFailed"));
+        }
+        message.success(t("modelResources.models.unsetDefaultSuccess"));
         await loadData();
       },
     });
@@ -226,6 +250,11 @@ export function SmallModelListPanel() {
 
     if (key === "setDefault" && canSetDefault(record)) {
       handleSetDefault(record);
+      return;
+    }
+
+    if (key === "unsetDefault" && canUnsetDefault(record)) {
+      handleUnsetDefault(record);
       return;
     }
 
@@ -271,6 +300,9 @@ export function SmallModelListPanel() {
           { key: "test", label: t("modelResources.models.menus.testConnection") },
           canSetDefault(record)
             ? { key: "setDefault", label: t("modelResources.models.menus.setAsDefault") }
+            : null,
+          canUnsetDefault(record)
+            ? { key: "unsetDefault", label: t("modelResources.models.menus.unsetDefault") }
             : null,
           canAuthorize(record)
             ? { key: "authorize", label: t("modelResources.models.menus.authorizationManagement") }
