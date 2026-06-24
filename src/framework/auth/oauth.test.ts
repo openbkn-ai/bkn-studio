@@ -2,7 +2,11 @@ import { webcrypto } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { completeLogin, computeCodeChallenge } from "@/framework/auth/oauth";
+import {
+  completeLogin,
+  computeCodeChallenge,
+  shouldUseOAuthGate,
+} from "@/framework/auth/oauth";
 
 describe("oauth", () => {
   beforeEach(() => {
@@ -92,5 +96,25 @@ describe("oauth", () => {
     await expect(completeLogin("?code=abc&state=state-1")).rejects.toThrow(
       "invalid_grant",
     );
+  });
+});
+
+describe("shouldUseOAuthGate", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  // No-auth / no-bkn-safe contract: a deploy that injects mode:"hosted"
+  // (config.js override) must NEVER trigger the OAuth gate, whatever the build
+  // mode — AuthGate then renders the app directly as the default user, no login.
+  it("never gates in hosted mode", () => {
+    expect(shouldUseOAuthGate("hosted")).toBe(false);
+  });
+
+  // Standalone against a real backend (mock off) must gate — that path needs a
+  // bkn-safe/hydra login.
+  it("gates standalone against a real backend", () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    expect(shouldUseOAuthGate("standalone")).toBe(true);
   });
 });
