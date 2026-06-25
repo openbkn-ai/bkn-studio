@@ -23,7 +23,7 @@
 .previewTitle {
   color: #1f2329;
   font-size: 18px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.2;
   margin: 0;
 }
@@ -34,36 +34,162 @@
   margin: 0;
 }
 
-.previewStats {
-  color: #4b5565;
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 13px;
-  gap: 16px;
-}
-
-.previewStatItem {
+/* ---------------- 酷炫「立即体验」按钮 ---------------- */
+.experienceButton {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  display: inline-flex;
-  gap: 6px;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 20px;
+  background: linear-gradient(110deg, #7c3aed 0%, #2e68ff 55%, #22d3ee 100%);
+  background-size: 200% 100%;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 8px 22px rgba(80, 70, 229, 0.32);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-position 0.6s ease;
 }
 
-.previewStatDot {
-  background: #126ee3;
-  border-radius: 999px;
-  display: inline-flex;
-  height: 8px;
-  width: 8px;
+.experienceButton :global(.anticon) {
+  font-size: 16px;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6));
 }
 
-.previewStatDotEdge {
-  background: #98afc8;
+.experienceButton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: skewX(-18deg);
+  animation: knExperienceShimmer 3.2s ease-in-out infinite;
 }
 
-.previewCanvasWrap {
+.experienceButton:hover {
+  background-position: 100% 0;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(80, 70, 229, 0.42);
+}
+
+.experienceButton:active {
+  transform: translateY(0);
+}
+
+@keyframes knExperienceShimmer {
+  0% {
+    left: -120%;
+  }
+  55%,
+  100% {
+    left: 140%;
+  }
+}
+
+/* ---------------- 统计条 ---------------- */
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.statCard {
+  padding: 14px 16px;
+  border: 1px solid #eef1f6;
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.statLabel {
+  color: #8a94a6;
+  font-size: 12px;
+}
+
+.statValue {
+  margin-top: 4px;
+  color: #1f2329;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- 图谱卡片 ---------------- */
+.graphCard {
   display: flex;
   flex: 1;
+  flex-direction: column;
   min-height: 0;
+  border: 1px solid #eef1f6;
+  border-radius: 14px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.graphHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f0f2f6;
+  flex-shrink: 0;
+}
+
+.graphTitle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: #1f2329;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.graphTitleHint {
+  color: #b0b7c3;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.graphLegend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #99a2b2;
+  font-size: 12px;
+}
+
+.graphLayout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  flex: 1;
+  min-height: 0;
+}
+
+.graphCanvas {
+  min-height: 480px;
+  padding: 12px;
+  border-right: 1px solid #f0f2f6;
+  min-width: 0;
+}
+
+.graphAside {
+  padding: 16px;
+  overflow-y: auto;
+  min-width: 0;
 }
 
 .previewSpinWrap {
@@ -88,4 +214,18 @@
   flex: 1;
   justify-content: center;
   min-height: 480px;
+}
+
+@media (max-width: 1100px) {
+  .graphLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .graphAside {
+    border-top: 1px solid #f0f2f6;
+  }
+
+  .statStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

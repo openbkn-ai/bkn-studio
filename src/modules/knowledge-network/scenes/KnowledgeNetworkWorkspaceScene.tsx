@@ -203,6 +203,7 @@ export function KnowledgeNetworkWorkspaceScene({
     if (section === "preview") {
       return (
         <WorkspacePreviewSection
+          detail={detail}
           loading={sectionLoading}
           networkId={activeNetworkId}
           objectTypes={objectTypes}

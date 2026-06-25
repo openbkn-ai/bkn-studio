@@ -1,0 +1,90 @@
+.graph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+.edge line {
+  stroke: #c4ccd8;
+  stroke-width: 1.6;
+  transition: stroke 0.15s ease, opacity 0.15s ease;
+}
+
+.edgeActive line {
+  stroke: #2e68ff;
+  stroke-width: 2.4;
+}
+
+.edgeDim {
+  opacity: 0.22;
+}
+
+.edgeLabelBg {
+  fill: #ffffff;
+  stroke: #e5e9f0;
+  stroke-width: 1;
+}
+
+.edgeLabel {
+  fill: #5b6472;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.edgeActive .edgeLabelBg {
+  stroke: #b9ccff;
+}
+
+.edgeActive .edgeLabel {
+  fill: #2e68ff;
+}
+
+.node {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.nodeDim {
+  opacity: 0.32;
+}
+
+.nodeDisc {
+  fill: var(--nc);
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  transition: filter 0.15s ease;
+}
+
+.node:hover .nodeDisc {
+  filter: brightness(1.06);
+}
+
+.nodeRing {
+  fill: none;
+  stroke: var(--nc);
+  stroke-width: 2;
+  opacity: 0.45;
+}
+
+.nodeSelected .nodeDisc {
+  filter: drop-shadow(0 4px 12px rgba(46, 104, 255, 0.28));
+}
+
+.nodeName {
+  fill: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.nodeHub .nodeName {
+  font-size: 15px;
+}
+
+.nodeIndexDot {
+  fill: #34d399;
+  stroke: #ffffff;
+  stroke-width: 2;
+}
