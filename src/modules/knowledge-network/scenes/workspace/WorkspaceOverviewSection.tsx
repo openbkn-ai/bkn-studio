@@ -18,7 +18,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
-import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
+import { OverviewOntologyBlock } from "@/modules/knowledge-network/components/preview/OverviewOntologyBlock";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import type {
   KnowledgeNetworkRecord,
@@ -246,7 +246,7 @@ export function WorkspaceOverviewSection({
       </Spin>
 
       <div className={styles.overviewGraphSection}>
-        <OntologyGraphCard networkId={networkId} />
+        <OverviewOntologyBlock networkId={networkId} />
       </div>
 
       <div className={styles.overviewContentCard}>

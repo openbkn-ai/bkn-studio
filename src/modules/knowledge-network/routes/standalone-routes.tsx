@@ -36,14 +36,6 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("overview"),
   ),
   createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/preview",
-    {
-      descriptionKey: "knowledgeNetwork.previewDescription",
-      titleKey: "knowledgeNetwork.workspacePreview",
-    },
-    workspaceSectionPage("preview"),
-  ),
-  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/concept-groups",
     {
       descriptionKey: "knowledgeNetwork.conceptGroupsDescription",
