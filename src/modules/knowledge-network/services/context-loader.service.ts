@@ -2,7 +2,8 @@
  * 知识网络「立即体验」—— ContextLoader 接口调试台 (agent-retrieval)。
  *
  * 单一 ContextLoader 操作集，REST 与 MCP 一一对应：同一接口的两种调用方式。
- * REST 全路径前缀 /api/agent-retrieval/in/v1；MCP 路径为去前缀后的 /kn/...，工具名 = op.id。
+ * REST 全路径前缀 /api/agent-retrieval/out/v1（网关暴露的 out 接口，非内部 in）；
+ * MCP 路径为去前缀后的 /kn/...，工具名 = op.id。
  * 「发送请求」是真实 HTTP 调用（默认同源，避免跨域；服务地址可改）。
  */
 
@@ -27,7 +28,7 @@ export type ContextLoaderOp = {
   mcpArgs?: Record<string, unknown>;
 };
 
-export const REST_PREFIX = "/api/agent-retrieval/in/v1";
+export const REST_PREFIX = "/api/agent-retrieval/out/v1";
 
 export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
