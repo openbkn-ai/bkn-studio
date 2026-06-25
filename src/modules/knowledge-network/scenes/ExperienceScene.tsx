@@ -1,78 +1,178 @@
-/** 知识网络「立即体验」—— 智能问数对话：自然语言提问，基于本体检索作答 + 检索过程。 */
+/**
+ * 知识网络「立即体验」—— ContextLoader 接口调试台 (agent-retrieval)。
+ * 三个 Tab：Agent 对话 / REST 接口 / MCP 工具。REST 与 MCP 一一对应；发送为真实 HTTP 调用。
+ */
 
-import { ArrowLeftOutlined, SendOutlined, ThunderboltFilled } from "@ant-design/icons";
-import { Input, Spin } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeftOutlined, ApiOutlined, KeyOutlined, SendOutlined, ThunderboltFilled } from "@ant-design/icons";
+import { Input, Select, Spin } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
-  SAMPLE_QUESTIONS,
   askKnowledgeNetwork,
+  SAMPLE_QUESTIONS,
   type ExperienceAnswer,
 } from "@/modules/knowledge-network/services/experience.service";
+import {
+  CONTEXT_LOADER_OPS,
+  buildCurl,
+  exampleBodyText,
+  mcpPathOf,
+  sendRequest,
+  type AccountType,
+  type ContextLoaderEnv,
+  type ContextLoaderMode,
+  type ContextLoaderOp,
+  type ContextLoaderResponse,
+} from "@/modules/knowledge-network/services/context-loader.service";
 
 import styles from "./ExperienceScene.module.css";
 
+const GROUPS = ["Schema & 查询", "Skills & Logic", "Knowledge Network"];
+
+function prettyResponse(text: string): string {
+  try {
+    return JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    return text;
+  }
+}
+
+/* ============================ Agent 对话 ============================ */
 type ChatMessage =
   | { id: string; role: "user"; text: string }
   | { id: string; role: "assistant"; pending: boolean; answer?: ExperienceAnswer };
 
-function formatMs(ms: number): string {
-  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
-}
+function AgentChat({ networkName }: { networkName: string }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const seq = useRef(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-function TraceCard({ answer }: { answer: ExperienceAnswer }) {
-  const { trace } = answer;
-  const schema = [...trace.obj, ...trace.rel];
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  const send = useCallback(
+    async (question: string) => {
+      const trimmed = question.trim();
+      if (!trimmed || sending) return;
+      const userId = `u${(seq.current += 1)}`;
+      const botId = `a${(seq.current += 1)}`;
+      setMessages((prev) => [...prev, { id: userId, role: "user", text: trimmed }, { id: botId, role: "assistant", pending: true }]);
+      setInput("");
+      setSending(true);
+      try {
+        const answer = await askKnowledgeNetwork(networkName, trimmed);
+        setMessages((prev) => prev.map((m) => (m.id === botId ? { id: botId, role: "assistant", pending: false, answer } : m)));
+      } finally {
+        setSending(false);
+      }
+    },
+    [networkName, sending],
+  );
+
   return (
-    <div className={styles.trace}>
-      <div className={styles.traceHead}>
-        检索过程
-        <span className={styles.traceMeta}>
-          {formatMs(answer.latencyMs)} · {trace.instances == null ? "纯 Schema" : `${trace.instances} 实例`} ·{" "}
-          {answer.tokens} token
-        </span>
+    <div className={styles.chat}>
+      <div className={styles.chatScroll} ref={scrollRef}>
+        {messages.length === 0 ? (
+          <div className={styles.intro}>
+            <div className={styles.introGlyph}>
+              <ThunderboltFilled />
+            </div>
+            <h3>体验「{networkName}」的智能问数</h3>
+            <p>用自然语言提问，Agent 基于本体检索作答。试试这些问题：</p>
+            <div className={styles.sugs}>
+              {SAMPLE_QUESTIONS.map((q) => (
+                <button key={q} type="button" className={styles.sug} onClick={() => void send(q)}>
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className={styles.chatWrap}>
+            {messages.map((message) =>
+              message.role === "user" ? (
+                <div key={message.id} className={`${styles.msg} ${styles.msgUser}`}>
+                  <div className={styles.bubbleUser}>{message.text}</div>
+                </div>
+              ) : (
+                <div key={message.id} className={`${styles.msg} ${styles.msgBot}`}>
+                  <div className={styles.botAv}>
+                    <ThunderboltFilled />
+                  </div>
+                  <div className={styles.bubbleBot}>
+                    {message.pending ? (
+                      <span className={styles.thinking}>
+                        <Spin size="small" /> 检索作答中…
+                      </span>
+                    ) : message.answer ? (
+                      <>
+                        <div className={styles.answer}>{message.answer.answer}</div>
+                        <div className={styles.tools}>
+                          {message.answer.trace.tools.map((tool) => (
+                            <span key={tool} className={styles.toolchip}>
+                              <span className={styles.tcDot} />
+                              {tool}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+        )}
       </div>
-      {schema.length > 0 ? (
-        <div className={styles.traceRow}>
-          <span className={styles.traceLbl}>命中</span>
-          <span className={styles.chips}>
-            {schema.map((label) => (
-              <span key={label} className={styles.chip}>
-                {label}
-              </span>
-            ))}
-          </span>
-        </div>
-      ) : null}
-      <div className={styles.traceRow}>
-        <span className={styles.traceLbl}>调用链</span>
-        <span className={styles.chain}>
-          {trace.tools.map((tool, index) => (
-            <span key={tool} className={styles.chainStep}>
-              {index > 0 ? <span className={styles.chainArrow}>→</span> : null}
-              <span className={styles.chainDot} />
-              {tool}
-            </span>
-          ))}
-        </span>
+      <div className={styles.composer}>
+        <Input.TextArea
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          placeholder="向 Agent 提问，例如：最近活跃的高价值客户有哪些？"
+          autoSize={{ minRows: 1, maxRows: 4 }}
+          onPressEnter={(event) => {
+            if (!event.shiftKey) {
+              event.preventDefault();
+              void send(input);
+            }
+          }}
+        />
+        <button type="button" className={styles.sendBtn} disabled={sending || input.trim().length === 0} onClick={() => void send(input)}>
+          <SendOutlined />
+        </button>
       </div>
     </div>
   );
 }
 
+/* ============================ 主场景 ============================ */
 export function ExperienceScene() {
   const navigate = useNavigate();
   const { networkId } = useParams<{ networkId: string }>();
   const id = networkId ?? "";
 
   const [network, setNetwork] = useState<{ name: string; slug: string } | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
+  const [mode, setMode] = useState<ContextLoaderMode>("rest");
+
+  const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "http://agent-retrieval:30779"));
+  const [token, setToken] = useState("");
+  const [acctId, setAcctId] = useState("");
+  const [acctType, setAcctType] = useState<AccountType>("");
+
+  const [filter, setFilter] = useState("");
+  const [selectedId, setSelectedId] = useState(CONTEXT_LOADER_OPS[0]!.id);
+  const [bodyText, setBodyText] = useState("");
+  const [bodyError, setBodyError] = useState<string | null>(null);
+  const [queryVals, setQueryVals] = useState<Record<string, string>>({});
+  const [response, setResponse] = useState<ContextLoaderResponse | null>(null);
+  const [reqError, setReqError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const seq = useRef(0);
-  const bodyRef = useRef<HTMLDivElement>(null);
+  const [curlOpen, setCurlOpen] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,136 +188,335 @@ export function ExperienceScene() {
     };
   }, [id]);
 
-  useEffect(() => {
-    bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  const knId = network?.slug ?? "kn_legal";
+  const env: ContextLoaderEnv = useMemo(
+    () => ({ base, token, acctId, acctType, knId }),
+    [base, token, acctId, acctType, knId],
+  );
 
-  const send = useCallback(
-    async (question: string) => {
-      const trimmed = question.trim();
-      if (!trimmed || sending) {
+  const op = useMemo(
+    () => CONTEXT_LOADER_OPS.find((item) => item.id === selectedId) ?? CONTEXT_LOADER_OPS[0]!,
+    [selectedId],
+  );
+
+  // 选中接口 / 模式 / 网络变化时重置请求体与 query 默认值
+  useEffect(() => {
+    setBodyText(exampleBodyText(op, mode, knId));
+    setBodyError(null);
+    const next: Record<string, string> = {};
+    op.query.forEach((param) => {
+      next[param.name] = param.name === "kn_id" ? knId : param.value;
+    });
+    setQueryVals(next);
+    setResponse(null);
+    setReqError(null);
+  }, [op, mode, knId]);
+
+  const curl = useMemo(
+    () => buildCurl(env, op, mode, queryVals, bodyText),
+    [env, op, mode, queryVals, bodyText],
+  );
+
+  const displayPath = mode === "mcp" ? mcpPathOf(op) : op.path;
+
+  const onSend = useCallback(async () => {
+    if (op.body !== null) {
+      try {
+        JSON.parse(bodyText || "{}");
+        setBodyError(null);
+      } catch (error) {
+        setBodyError(error instanceof Error ? error.message : "JSON 解析失败");
         return;
       }
-      const userId = `u${(seq.current += 1)}`;
-      const botId = `a${(seq.current += 1)}`;
-      setMessages((prev) => [
-        ...prev,
-        { id: userId, role: "user", text: trimmed },
-        { id: botId, role: "assistant", pending: true },
-      ]);
-      setInput("");
-      setSending(true);
-      try {
-        const answer = await askKnowledgeNetwork(network?.name ?? "知识网络", trimmed);
-        setMessages((prev) =>
-          prev.map((message) =>
-            message.id === botId ? { id: botId, role: "assistant", pending: false, answer } : message,
-          ),
-        );
-      } finally {
-        setSending(false);
-      }
-    },
-    [network, sending],
-  );
+    }
+    setSending(true);
+    setResponse(null);
+    setReqError(null);
+    try {
+      const result = await sendRequest(env, op, mode, queryVals, bodyText);
+      setResponse(result);
+    } catch (error) {
+      setReqError(error instanceof Error ? error.message : "请求失败（可能是跨域或服务不可达）");
+    } finally {
+      setSending(false);
+    }
+  }, [env, op, mode, queryVals, bodyText]);
+
+  const verb = mode === "mcp" ? "MCP" : "POST";
 
   return (
     <section className={styles.page}>
-      <button
-        type="button"
-        className={styles.backLink}
-        onClick={() => navigate(`/knowledge-network/workspace/${id}/overview`)}
-      >
-        <ArrowLeftOutlined />
-        返回 {network?.name ?? "知识网络"}
-      </button>
-
-      <div className={styles.titleRow}>
-        <h2 className={styles.title}>立即体验</h2>
-        <span className={styles.expBadge}>
-          <ThunderboltFilled /> 智能问数
-        </span>
-        {network ? <span className={styles.slug}>{network.slug}</span> : null}
-        <span className={styles.subMeta}>用自然语言提问，基于本体检索作答</span>
-      </div>
-
-      <div className={styles.chatCard}>
-        <div className={styles.body} ref={bodyRef}>
-          {messages.length === 0 ? (
-            <div className={styles.welcome}>
-              <div className={styles.welcomeIcon}>
-                <ThunderboltFilled />
-              </div>
-              <div className={styles.welcomeTitle}>
-                体验「{network?.name ?? "知识网络"}」的智能问数
-              </div>
-              <div className={styles.welcomeSub}>用自然语言提问，试试这些问题：</div>
-              <div className={styles.samples}>
-                {SAMPLE_QUESTIONS.map((question) => (
-                  <button
-                    key={question}
-                    type="button"
-                    className={styles.sample}
-                    onClick={() => void send(question)}
-                  >
-                    {question}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            messages.map((message) =>
-              message.role === "user" ? (
-                <div key={message.id} className={`${styles.msg} ${styles.msgUser}`}>
-                  <div className={styles.bubbleUser}>{message.text}</div>
-                </div>
-              ) : (
-                <div key={message.id} className={`${styles.msg} ${styles.msgBot}`}>
-                  <div className={styles.botAvatar}>
-                    <ThunderboltFilled />
-                  </div>
-                  <div className={styles.bubbleBot}>
-                    {message.pending ? (
-                      <span className={styles.thinking}>
-                        <Spin size="small" /> 检索作答中…
-                      </span>
-                    ) : message.answer ? (
-                      <>
-                        <div className={styles.answer}>{message.answer.answer}</div>
-                        <TraceCard answer={message.answer} />
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-              ),
-            )
-          )}
-        </div>
-
-        <div className={styles.inputBar}>
-          <Input.TextArea
-            className={styles.input}
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="输入问题，回车发送（Shift + 回车换行）"
-            autoSize={{ minRows: 1, maxRows: 4 }}
-            onPressEnter={(event) => {
-              if (!event.shiftKey) {
-                event.preventDefault();
-                void send(input);
-              }
-            }}
-          />
-          <button
-            type="button"
-            className={styles.sendBtn}
-            disabled={sending || input.trim().length === 0}
-            onClick={() => void send(input)}
-          >
-            <SendOutlined />
+      <div className={styles.topbar}>
+        {network ? (
+          <button type="button" className={styles.back} onClick={() => navigate(`/knowledge-network/workspace/${id}/overview`)}>
+            <ArrowLeftOutlined /> 返回 {network.name}
           </button>
+        ) : null}
+        <div className={styles.tabs}>
+          {(["agent", "rest", "mcp"] as ContextLoaderMode[]).map((value) => (
+            <button
+              key={value}
+              type="button"
+              className={`${styles.tab} ${mode === value ? styles.tabActive : ""}`}
+              onClick={() => setMode(value)}
+            >
+              {value === "agent" ? "Agent 对话" : value === "rest" ? "REST 接口" : "MCP 工具"}
+            </button>
+          ))}
+        </div>
+        <div className={styles.envset}>
+          <div className={styles.ef}>
+            <label>知识网络 kn_id</label>
+            <div className={styles.knLock}>
+              <KeyOutlined />
+              <span className={styles.knName}>{network?.name ?? "—"}</span>
+              <span className={styles.knSlug}>{knId}</span>
+            </div>
+          </div>
+          <div className={styles.ef}>
+            <label>服务地址</label>
+            <div className={styles.addr} title={mode === "mcp" ? `${base}/mcp` : base}>
+              {mode === "mcp" ? `${base}/mcp` : base}
+            </div>
+          </div>
+          <div className={styles.ef}>
+            <label>Bearer Token</label>
+            <Input className={styles.tokInput} value={token} onChange={(e) => setToken(e.target.value)} placeholder="可选" />
+          </div>
+          <div className={styles.ef}>
+            <label>x-account-id</label>
+            <Input className={styles.accInput} value={acctId} onChange={(e) => setAcctId(e.target.value)} placeholder="可选" />
+          </div>
+          <div className={styles.ef}>
+            <label>x-account-type</label>
+            <Select<AccountType>
+              className={styles.accType}
+              value={acctType}
+              onChange={setAcctType}
+              options={[
+                { value: "", label: "—" },
+                { value: "user", label: "user" },
+                { value: "app", label: "app" },
+                { value: "anonymous", label: "anonymous" },
+              ]}
+            />
+          </div>
         </div>
       </div>
+
+      {mode === "agent" ? (
+        <AgentChat networkName={network?.name ?? "知识网络"} />
+      ) : (
+        <div className={styles.main}>
+          {/* 接口列表 */}
+          <aside className={styles.list}>
+            <div className={styles.listSearch}>
+              <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="筛选接口…" />
+            </div>
+            <div className={styles.eplist}>
+              {GROUPS.map((group) => {
+                const items = CONTEXT_LOADER_OPS.filter(
+                  (item) =>
+                    item.group === group &&
+                    (!filter || (item.id + item.path + item.summary).toLowerCase().includes(filter.toLowerCase())),
+                );
+                if (items.length === 0) return null;
+                return (
+                  <div key={group}>
+                    <div className={styles.grp}>{group}</div>
+                    {items.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`${styles.ep} ${item.id === selectedId ? styles.epActive : ""}`}
+                        onClick={() => setSelectedId(item.id)}
+                      >
+                        <span className={`${styles.epVerb} ${mode === "mcp" ? styles.epVerbTool : ""}`}>
+                          {mode === "mcp" ? "TOOL" : "POST"}
+                        </span>
+                        <span className={styles.epName}>{item.id}</span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* 请求 */}
+          <section className={styles.req}>
+            <div className={styles.reqHead}>
+              <div className={styles.reqRow1}>
+                <span className={styles.verb}>{verb}</span>
+                <span className={styles.path}>{displayPath}</span>
+              </div>
+              <h2 className={styles.reqTitle}>{op.id}</h2>
+              <p className={styles.reqSum}>{op.summary}</p>
+            </div>
+            <div className={styles.reqBody}>
+              {mode === "rest" && op.query.length > 0 ? (
+                <div className={styles.sec}>
+                  <div className={styles.secHead}>
+                    QUERY 参数 <span className={styles.cnt}>{op.query.length}</span>
+                  </div>
+                  <div className={styles.qp}>
+                    {op.query.map((param) => (
+                      <QueryParamRow
+                        key={param.name}
+                        param={param}
+                        locked={param.name === "kn_id"}
+                        value={param.name === "kn_id" ? knId : queryVals[param.name] ?? param.value}
+                        onChange={(value) => setQueryVals((prev) => ({ ...prev, [param.name]: value }))}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {op.body !== null ? (
+                <div className={styles.sec}>
+                  <div className={styles.secHead}>
+                    请求体 <span className={styles.sub}>application/json</span>
+                  </div>
+                  <div className={styles.editor}>
+                    <div className={styles.editbar}>
+                      <span className={styles.editLbl}>body.json</span>
+                      <button
+                        type="button"
+                        className={styles.mini}
+                        onClick={() => {
+                          try {
+                            setBodyText(JSON.stringify(JSON.parse(bodyText), null, 2));
+                            setBodyError(null);
+                          } catch (error) {
+                            setBodyError(error instanceof Error ? error.message : "JSON 解析失败");
+                          }
+                        }}
+                      >
+                        格式化
+                      </button>
+                    </div>
+                    <textarea
+                      className={styles.ta}
+                      value={bodyText}
+                      spellCheck={false}
+                      onChange={(e) => setBodyText(e.target.value)}
+                    />
+                    {bodyError ? <div className={styles.bodyErr}>{bodyError}</div> : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <div className={styles.actions}>
+              <button type="button" className={styles.sendReq} onClick={() => void onSend()} disabled={sending}>
+                {sending ? <Spin size="small" /> : null}
+                发送请求
+              </button>
+              <button type="button" className={styles.resetBtn} onClick={() => setBodyText(exampleBodyText(op, mode, knId))}>
+                恢复示例
+              </button>
+              <span className={styles.kbd}>⌘ + ↵ 发送</span>
+            </div>
+          </section>
+
+          {/* 响应 */}
+          <section className={styles.res}>
+            <div className={styles.resHead}>
+              <span className={styles.resTitle}>响应</span>
+              {response ? (
+                <>
+                  <span className={`${styles.pill} ${response.ok ? styles.pillOk : styles.pillErr}`}>
+                    <span className={styles.pillDot} />
+                    {response.status} {response.statusText}
+                  </span>
+                  <span className={styles.resMeta}>
+                    {response.latencyMs}ms · {response.sizeBytes}B
+                  </span>
+                </>
+              ) : (
+                <span className={styles.resHint}>尚未发送请求</span>
+              )}
+            </div>
+            <div className={styles.resBody}>
+              {sending ? (
+                <div className={styles.resEmpty}>
+                  <Spin />
+                </div>
+              ) : reqError ? (
+                <div className={styles.resError}>
+                  <ApiOutlined />
+                  <div>
+                    <strong>请求失败</strong>
+                    <p>{reqError}</p>
+                  </div>
+                </div>
+              ) : response ? (
+                <pre className={styles.out}>{prettyResponse(response.text)}</pre>
+              ) : (
+                <div className={styles.resEmpty}>
+                  <ApiOutlined className={styles.resEmptyIc} />
+                  <h3>准备就绪</h3>
+                  <p>选择接口、确认 kn_id 与参数后点击「发送请求」查看实时响应。</p>
+                </div>
+              )}
+            </div>
+            <div className={`${styles.curl} ${curlOpen ? styles.curlOpen : ""}`}>
+              <div className={styles.curlHead} onClick={() => setCurlOpen((value) => !value)}>
+                <span className={styles.curlLbl}>
+                  <span className={styles.chev}>▶</span> cURL
+                </span>
+                <button
+                  type="button"
+                  className={styles.mini}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void navigator.clipboard?.writeText(curl);
+                  }}
+                >
+                  复制
+                </button>
+              </div>
+              {curlOpen ? (
+                <div className={styles.curlBody}>
+                  <pre className={styles.curlPre}>{curl}</pre>
+                </div>
+              ) : null}
+            </div>
+          </section>
+        </div>
+      )}
     </section>
+  );
+}
+
+function QueryParamRow({
+  param,
+  value,
+  locked,
+  onChange,
+}: {
+  param: ContextLoaderOp["query"][number];
+  value: string;
+  locked: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <>
+      <div className={styles.qpKey}>
+        {param.name}
+        {param.required ? <span className={styles.star}>*</span> : null}
+      </div>
+      {param.options ? (
+        <select className={styles.qpInput} value={value} onChange={(e) => onChange(e.target.value)}>
+          {param.options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input className={styles.qpInput} value={value} disabled={locked} onChange={(e) => onChange(e.target.value)} />
+      )}
+    </>
   );
 }
