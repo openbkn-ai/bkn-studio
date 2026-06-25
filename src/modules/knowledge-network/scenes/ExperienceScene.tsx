@@ -8,9 +8,11 @@ import { Input, Select, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
   CONTEXT_LOADER_OPS,
+  MCP_PATH,
   buildCurl,
   exampleBodyText,
   mcpPathOf,
@@ -52,6 +54,7 @@ function AgentBlank() {
 /* ============================ 主场景 ============================ */
 export function ExperienceScene() {
   const navigate = useNavigate();
+  const runtimeConfig = useRuntimeConfig();
   const { networkId } = useParams<{ networkId: string }>();
   const id = networkId ?? "";
 
@@ -59,9 +62,10 @@ export function ExperienceScene() {
   const [mode, setMode] = useState<ContextLoaderMode>("rest");
 
   const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "http://agent-retrieval:30779"));
-  const [token, setToken] = useState("");
-  const [acctId, setAcctId] = useState("");
-  const [acctType, setAcctType] = useState<AccountType>("");
+  // 自动带 studio 当前登录态（仍可见/可改）：Bearer = 访问令牌，x-account-id/type = 当前用户。
+  const [token, setToken] = useState(() => runtimeConfig.auth.tokenManager.getAccessToken() ?? "");
+  const [acctId, setAcctId] = useState(() => runtimeConfig.currentUser.id ?? "");
+  const [acctType, setAcctType] = useState<AccountType>(() => (runtimeConfig.currentUser.id ? "user" : ""));
 
   const [filter, setFilter] = useState("");
   const [selectedId, setSelectedId] = useState(CONTEXT_LOADER_OPS[0]!.id);
@@ -174,8 +178,8 @@ export function ExperienceScene() {
           </div>
           <div className={styles.ef}>
             <label>服务地址</label>
-            <div className={styles.addr} title={mode === "mcp" ? `${base}/mcp` : base}>
-              {mode === "mcp" ? `${base}/mcp` : base}
+            <div className={styles.addr} title={mode === "mcp" ? `${base}${MCP_PATH}` : base}>
+              {mode === "mcp" ? `${base}${MCP_PATH}` : base}
             </div>
           </div>
           <div className={styles.ef}>

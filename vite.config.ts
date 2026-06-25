@@ -36,8 +36,8 @@ export default defineConfig(({ mode }) => {
   const useMock = env.VITE_USE_MOCK !== "false";
   const agentOperatorProxyTarget =
     process.env.VITE_PROXY_TARGET ?? (useMock ? "http://127.0.0.1:9000" : devProxyOrigin);
-  // ContextLoader「立即体验」直接打 agent-retrieval 的 REST(/api/agent-retrieval) 与 MCP(/mcp)。
-  // 默认转发到后端网关；本地直连 agent-retrieval 时设 VITE_AGENT_RETRIEVAL_TARGET（如 http://127.0.0.1:30779）。
+  // ContextLoader「立即体验」直接打 agent-retrieval（REST /api/agent-retrieval/v1/...，MCP /api/agent-retrieval/v1/mcp）。
+  // 默认转发到后端网关；自定义时设 VITE_AGENT_RETRIEVAL_TARGET。
   const agentRetrievalTarget = process.env.VITE_AGENT_RETRIEVAL_TARGET ?? devProxyOrigin;
 
   return {
@@ -118,14 +118,8 @@ export default defineConfig(({ mode }) => {
           proxyTimeout: 120_000,
           target: process.env.VITE_LAB_PROXY_TARGET ?? "http://127.0.0.1:9010",
         },
+        // REST(/api/agent-retrieval/v1/...) 与 MCP(/api/agent-retrieval/v1/mcp) 同前缀，一条代理覆盖。
         "/api/agent-retrieval": {
-          changeOrigin: true,
-          secure: false,
-          timeout: 120_000,
-          proxyTimeout: 120_000,
-          target: agentRetrievalTarget,
-        },
-        "/mcp": {
           changeOrigin: true,
           secure: false,
           timeout: 120_000,
