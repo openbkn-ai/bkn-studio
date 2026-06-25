@@ -3,17 +3,12 @@
  * 三个 Tab：Agent 对话 / REST 接口 / MCP 工具。REST 与 MCP 一一对应；发送为真实 HTTP 调用。
  */
 
-import { ArrowLeftOutlined, ApiOutlined, KeyOutlined, SendOutlined, ThunderboltFilled } from "@ant-design/icons";
+import { ArrowLeftOutlined, ApiOutlined, KeyOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { Input, Select, Spin } from "antd";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
-import {
-  askKnowledgeNetwork,
-  SAMPLE_QUESTIONS,
-  type ExperienceAnswer,
-} from "@/modules/knowledge-network/services/experience.service";
 import {
   CONTEXT_LOADER_OPS,
   buildCurl,
@@ -39,112 +34,16 @@ function prettyResponse(text: string): string {
   }
 }
 
-/* ============================ Agent 对话 ============================ */
-type ChatMessage =
-  | { id: string; role: "user"; text: string }
-  | { id: string; role: "assistant"; pending: boolean; answer?: ExperienceAnswer };
-
-function AgentChat({ networkName }: { networkName: string }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const seq = useRef(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
-
-  const send = useCallback(
-    async (question: string) => {
-      const trimmed = question.trim();
-      if (!trimmed || sending) return;
-      const userId = `u${(seq.current += 1)}`;
-      const botId = `a${(seq.current += 1)}`;
-      setMessages((prev) => [...prev, { id: userId, role: "user", text: trimmed }, { id: botId, role: "assistant", pending: true }]);
-      setInput("");
-      setSending(true);
-      try {
-        const answer = await askKnowledgeNetwork(networkName, trimmed);
-        setMessages((prev) => prev.map((m) => (m.id === botId ? { id: botId, role: "assistant", pending: false, answer } : m)));
-      } finally {
-        setSending(false);
-      }
-    },
-    [networkName, sending],
-  );
-
+/* ============================ Agent 对话（待接入真实 Agent，先留空） ============================ */
+function AgentBlank() {
   return (
     <div className={styles.chat}>
-      <div className={styles.chatScroll} ref={scrollRef}>
-        {messages.length === 0 ? (
-          <div className={styles.intro}>
-            <div className={styles.introGlyph}>
-              <ThunderboltFilled />
-            </div>
-            <h3>体验「{networkName}」的智能问数</h3>
-            <p>用自然语言提问，Agent 基于本体检索作答。试试这些问题：</p>
-            <div className={styles.sugs}>
-              {SAMPLE_QUESTIONS.map((q) => (
-                <button key={q} type="button" className={styles.sug} onClick={() => void send(q)}>
-                  {q}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className={styles.chatWrap}>
-            {messages.map((message) =>
-              message.role === "user" ? (
-                <div key={message.id} className={`${styles.msg} ${styles.msgUser}`}>
-                  <div className={styles.bubbleUser}>{message.text}</div>
-                </div>
-              ) : (
-                <div key={message.id} className={`${styles.msg} ${styles.msgBot}`}>
-                  <div className={styles.botAv}>
-                    <ThunderboltFilled />
-                  </div>
-                  <div className={styles.bubbleBot}>
-                    {message.pending ? (
-                      <span className={styles.thinking}>
-                        <Spin size="small" /> 检索作答中…
-                      </span>
-                    ) : message.answer ? (
-                      <>
-                        <div className={styles.answer}>{message.answer.answer}</div>
-                        <div className={styles.tools}>
-                          {message.answer.trace.tools.map((tool) => (
-                            <span key={tool} className={styles.toolchip}>
-                              <span className={styles.tcDot} />
-                              {tool}
-                            </span>
-                          ))}
-                        </div>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-              ),
-            )}
-          </div>
-        )}
-      </div>
-      <div className={styles.composer}>
-        <Input.TextArea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="向 Agent 提问，例如：最近活跃的高价值客户有哪些？"
-          autoSize={{ minRows: 1, maxRows: 4 }}
-          onPressEnter={(event) => {
-            if (!event.shiftKey) {
-              event.preventDefault();
-              void send(input);
-            }
-          }}
-        />
-        <button type="button" className={styles.sendBtn} disabled={sending || input.trim().length === 0} onClick={() => void send(input)}>
-          <SendOutlined />
-        </button>
+      <div className={styles.agentBlank}>
+        <div className={styles.introGlyph}>
+          <ThunderboltFilled />
+        </div>
+        <h3>Agent 对话</h3>
+        <p>待接入真实 Agent 检索对话，敬请期待。</p>
       </div>
     </div>
   );
@@ -305,7 +204,7 @@ export function ExperienceScene() {
       </div>
 
       {mode === "agent" ? (
-        <AgentChat networkName={network?.name ?? "知识网络"} />
+        <AgentBlank />
       ) : (
         <div className={styles.main}>
           {/* 接口列表 */}
