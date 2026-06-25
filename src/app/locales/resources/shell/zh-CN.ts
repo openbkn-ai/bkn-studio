@@ -10,6 +10,7 @@ export const shellZhCN = {
     items: {
       globalBusinessKnowledgeNetwork: "全局业务知识网络",
       domainKnowledgeNetwork: "领域业务知识网络",
+      domainKnowledgeNetworkLab: "领域业务知识网络（实验版）",
       generalBusinessKnowledgeNetwork: "通用业务知识网络",
       dataConnection: "数据连接",
       dataCatalog: "数据目录",

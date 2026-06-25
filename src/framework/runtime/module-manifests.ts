@@ -2,6 +2,7 @@ import { dataCatalogModuleManifest } from "@/modules/data-catalog/module.manifes
 import { dataConnectModuleManifest } from "@/modules/data-connect/module.manifest";
 import { executionFactoryLabModuleManifest } from "@/modules/execution-factory-lab/module.manifest";
 import { executionFactoryModuleManifest } from "@/modules/execution-factory/module.manifest";
+import { knowledgeNetworkLabModuleManifest } from "@/modules/knowledge-network-lab/module.manifest";
 import { knowledgeNetworkModuleManifest } from "@/modules/knowledge-network/module.manifest";
 import { modelResourcesModuleManifest } from "@/modules/model-resources/module.manifest";
 import { systemAdminModuleManifest } from "@/modules/system-admin/module.manifest";
@@ -13,6 +14,7 @@ export const runtimeModuleManifests = [
   executionFactoryModuleManifest,
   modelResourcesModuleManifest,
   executionFactoryLabModuleManifest,
+  knowledgeNetworkLabModuleManifest,
   systemAdminModuleManifest,
 ] as const;
 

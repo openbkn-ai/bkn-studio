@@ -5,6 +5,7 @@ import { dataCatalogRouteContribution } from "@/modules/data-catalog/routes";
 import { dataConnectRouteContribution } from "@/modules/data-connect/routes";
 import { executionFactoryLabRouteContribution } from "@/modules/execution-factory-lab/routes";
 import { executionFactoryRouteContribution } from "@/modules/execution-factory/routes";
+import { knowledgeNetworkLabRouteContribution } from "@/modules/knowledge-network-lab/routes";
 import { knowledgeNetworkRouteContribution } from "@/modules/knowledge-network/routes";
 import { modelResourcesRouteContribution } from "@/modules/model-resources/routes";
 import { systemAdminRouteContribution } from "@/modules/system-admin/routes";
@@ -16,6 +17,7 @@ const routeContributions: AppRouteContribution[] = [
   executionFactoryRouteContribution,
   modelResourcesRouteContribution,
   executionFactoryLabRouteContribution,
+  knowledgeNetworkLabRouteContribution,
   systemAdminRouteContribution,
 ];
 

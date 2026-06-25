@@ -1,0 +1,161 @@
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.center {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #5b6472;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.backLink:hover {
+  color: #2e68ff;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  color: #1f2329;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.labBadge {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #7c3aed, #2e68ff);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.netName {
+  color: #4a5160;
+  font-size: 14px;
+}
+
+.slug {
+  color: #99a2b2;
+  font-size: 12px;
+  font-family: var(--code-font, monospace);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.builderCard,
+.ioCard {
+  padding: 16px 18px;
+  border: 1px solid #eef1f6;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.builderCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-content: start;
+}
+
+.cardTitle {
+  margin-bottom: 6px;
+  color: #1f2329;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fieldLabel {
+  margin-top: 6px;
+  color: #5b6472;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.runBtn {
+  margin-top: 14px;
+}
+
+.ioCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.code {
+  margin: 0;
+  padding: 16px;
+  max-height: 520px;
+  overflow: auto;
+  border-radius: 10px;
+  background: #0f1b2d;
+  color: #d7e2f4;
+  font-family: var(--code-font, "SFMono-Regular", Consolas, monospace);
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.responseWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.responseEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+}
+
+.noMetrics {
+  margin: 60px 0;
+}
+
+.responseMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.latency {
+  color: #8a94a6;
+  font-size: 12px;
+}
+
+.hitsTable {
+  margin-bottom: 4px;
+}
