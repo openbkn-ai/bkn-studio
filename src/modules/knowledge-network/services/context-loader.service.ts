@@ -41,8 +41,8 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     path: `${REST_PREFIX}/kn/search_schema`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: {
-      query: "药企最近上市的药品",
-      kn_id: "kn_medical",
+      query: "查询核心业务对象与关系",
+      kn_id: "your_kn_id",
       search_scope: { concept_groups: [], include_object_types: true, include_relation_types: true, include_action_types: true, include_metric_types: true },
       max_concepts: 10,
       schema_brief: false,
@@ -55,8 +55,8 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     summary: "根据单个对象类查询对象实例数据，支持过滤、排序与分页。REST 经 query 传 kn_id / ot_id；MCP 经 arguments 传入。",
     path: `${REST_PREFIX}/kn/query_object_instance`,
     query: [
-      { name: "kn_id", value: "kn_legal", required: true },
-      { name: "ot_id", value: "contract", required: true },
+      { name: "kn_id", value: "your_kn_id", required: true },
+      { name: "ot_id", value: "your_object_type", required: true },
       { name: "include_logic_params", value: "false", options: ["false", "true"] },
       { name: "response_format", value: "json", options: ["json", "toon"] },
     ],
@@ -68,8 +68,8 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
       properties: [],
     },
     mcpArgs: {
-      kn_id: "kn_legal",
-      ot_id: "contract",
+      kn_id: "your_kn_id",
+      ot_id: "your_object_type",
       include_logic_params: false,
       condition: { operation: "==", field: "status", value: "active", value_from: "const" },
       sort: [{ field: "@timestamp", direction: "desc" }],
@@ -83,25 +83,25 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     summary: "基于预定义关系类路径查询知识图谱中的对象子图。支持多条路径；object_types 与 relation_types 顺序必须严格对应。",
     path: `${REST_PREFIX}/kn/query_instance_subgraph`,
     query: [
-      { name: "kn_id", value: "kn_legal", required: true },
+      { name: "kn_id", value: "your_kn_id", required: true },
       { name: "include_logic_params", value: "false", options: ["false", "true"] },
       { name: "response_format", value: "json", options: ["json", "toon"] },
     ],
     body: {
       relation_type_paths: [
         {
-          object_types: [{ id: "contract" }, { id: "party" }],
-          relation_types: [{ relation_type_id: "contract_party", source_object_type_id: "contract", target_object_type_id: "party" }],
+          object_types: [{ id: "object_type_a" }, { id: "object_type_b" }],
+          relation_types: [{ relation_type_id: "relation_a_b", source_object_type_id: "object_type_a", target_object_type_id: "object_type_b" }],
           limit: 10,
         },
       ],
     },
     mcpArgs: {
-      kn_id: "kn_legal",
+      kn_id: "your_kn_id",
       relation_type_paths: [
         {
-          object_types: [{ id: "contract" }, { id: "party" }],
-          relation_types: [{ relation_type_id: "contract_party", source_object_type_id: "contract", target_object_type_id: "party" }],
+          object_types: [{ id: "object_type_a" }, { id: "object_type_b" }],
+          relation_types: [{ relation_type_id: "relation_a_b", source_object_type_id: "object_type_a", target_object_type_id: "object_type_b" }],
           limit: 10,
         },
       ],
@@ -113,7 +113,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     summary: "在知识网络上直接执行 SQL 查询并返回结果集。",
     path: `${REST_PREFIX}/kn/run_sql`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body: { kn_id: "kn_legal", sql: "SELECT * FROM contract WHERE status = 'active' LIMIT 10" },
+    body: { kn_id: "your_kn_id", sql: "SELECT * FROM your_object_type WHERE status = 'active' LIMIT 10" },
   },
   {
     id: "get_logic_properties_values",
@@ -122,11 +122,11 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     path: `${REST_PREFIX}/kn/logic-property-resolver`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: {
-      kn_id: "kn_medical",
-      ot_id: "company",
-      query: "最近一年这些药企的药品上市数量和健康度",
-      _instance_identities: [{ company_id: "company_000001" }],
-      properties: ["approved_drug_count", "business_health_score"],
+      kn_id: "your_kn_id",
+      ot_id: "your_object_type",
+      query: "示例：批量计算对象的逻辑属性值",
+      _instance_identities: [{ id: "instance_000001" }],
+      properties: ["your_metric_a", "your_metric_b"],
       options: { return_debug: true },
     },
   },
@@ -136,7 +136,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     summary: "根据对象实例标识召回关联行动，返回符合 Function Call 规范的 _dynamic_tools 工具定义。支持多个实例标识。",
     path: `${REST_PREFIX}/kn/get_action_info`,
     query: [],
-    body: { kn_id: "kn_medical", at_id: "generate_treatment_plan", _instance_identities: [{ disease_id: "disease_000001" }, { disease_id: "disease_000002" }] },
+    body: { kn_id: "your_kn_id", at_id: "your_action_type", _instance_identities: [{ id: "instance_000001" }, { id: "instance_000002" }] },
   },
   {
     id: "find_skills",
@@ -144,7 +144,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     summary: "基于业务上下文召回 Skill 候选列表。kn_id + object_type_id 为对象类级；附带 instance_identities 为实例级召回。",
     path: `${REST_PREFIX}/kn/find_skills`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body: { kn_id: "kn_legal", object_type_id: "contract", instance_identities: [{ contract_id: "C-2024-001" }], skill_query: "合同审查", top_k: 10 },
+    body: { kn_id: "your_kn_id", object_type_id: "your_object_type", instance_identities: [{ id: "instance_000001" }], skill_query: "示例技能检索", top_k: 10 },
   },
   {
     id: "list_knowledge_networks",
@@ -160,7 +160,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     summary: "查询指定知识网络的详细信息。",
     path: `${REST_PREFIX}/kn/get_kn_detail`,
     query: [],
-    body: { kn_id: "kn_legal" },
+    body: { kn_id: "your_kn_id" },
   },
 ];
 
@@ -271,10 +271,49 @@ export async function sendRequest(
 ): Promise<ContextLoaderResponse> {
   const start = performance.now();
   if (mode === "mcp") {
+    // MCP Streamable HTTP：必须先 initialize 建会话（响应头 Mcp-Session-Id），
+    // 再 notifications/initialized，最后才能 tools/call。
     const url = mcpBase(env);
-    const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...authHeaders(env) };
-    const payload = { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: op.id, arguments: JSON.parse(bodyText || "{}") } };
-    const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(payload) });
+    const baseHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      ...authHeaders(env),
+    };
+    const initResp = await fetch(url, {
+      method: "POST",
+      headers: baseHeaders,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bkn-studio", version: "1.0.0" } },
+      }),
+    });
+    const sessionId = initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
+    const initText = await initResp.text();
+    if (!initResp.ok && !sessionId) {
+      return {
+        ok: false,
+        status: initResp.status,
+        statusText: `${initResp.statusText} (initialize)`,
+        latencyMs: Math.round(performance.now() - start),
+        sizeBytes: new Blob([initText]).size,
+        text: initText || "MCP initialize 失败，未拿到会话（Mcp-Session-Id）。",
+      };
+    }
+    const sessionHeaders = sessionId ? { ...baseHeaders, "Mcp-Session-Id": sessionId } : baseHeaders;
+    if (sessionId) {
+      await fetch(url, {
+        method: "POST",
+        headers: sessionHeaders,
+        body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+      }).catch(() => undefined);
+    }
+    const response = await fetch(url, {
+      method: "POST",
+      headers: sessionHeaders,
+      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: op.id, arguments: JSON.parse(bodyText || "{}") } }),
+    });
     const text = await response.text();
     return {
       ok: response.ok,

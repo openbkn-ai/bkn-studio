@@ -29,8 +29,15 @@ import styles from "./ExperienceScene.module.css";
 const GROUPS = ["Schema & 查询", "Skills & Logic", "Knowledge Network"];
 
 function prettyResponse(text: string): string {
+  // MCP 走 Streamable HTTP，响应可能是 SSE（event:/data: 行），取最后一条 data 解析。
+  const dataLines = text
+    .split("\n")
+    .filter((line) => line.trimStart().startsWith("data:"))
+    .map((line) => line.replace(/^\s*data:/, "").trim())
+    .filter(Boolean);
+  const candidate = dataLines.length > 0 ? dataLines[dataLines.length - 1]! : text;
   try {
-    return JSON.stringify(JSON.parse(text), null, 2);
+    return JSON.stringify(JSON.parse(candidate), null, 2);
   } catch {
     return text;
   }
