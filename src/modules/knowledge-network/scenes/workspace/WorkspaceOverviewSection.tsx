@@ -4,6 +4,7 @@ import {
   DatabaseOutlined,
   EditOutlined,
   KeyOutlined,
+  ThunderboltFilled,
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -13,9 +14,11 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
+import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import type {
   KnowledgeNetworkRecord,
@@ -47,6 +50,7 @@ export function WorkspaceOverviewSection({
 }: WorkspaceOverviewSectionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { message } = useAppServices();
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
 
   const recentObjectColumns = useMemo<ColumnsType<KnowledgeNetworkRecentObject>>(
@@ -131,6 +135,14 @@ export function WorkspaceOverviewSection({
             <AppButton icon={<EditOutlined />} onClick={onEdit}>
               {t("common.edit")}
             </AppButton>
+            <button
+              type="button"
+              className={styles.experienceButton}
+              onClick={() => message.info(t("knowledgeNetwork.previewExperienceHint"))}
+            >
+              <ThunderboltFilled />
+              <span>{t("knowledgeNetwork.previewExperience")}</span>
+            </button>
           </div>
         </div>
         <div className={styles.overviewHeaderComment}>
@@ -232,6 +244,10 @@ export function WorkspaceOverviewSection({
         </div>
       </div>
       </Spin>
+
+      <div className={styles.overviewGraphSection}>
+        <OntologyGraphCard networkId={networkId} />
+      </div>
 
       <div className={styles.overviewContentCard}>
         <h3 className={styles.overviewContentTitle}>

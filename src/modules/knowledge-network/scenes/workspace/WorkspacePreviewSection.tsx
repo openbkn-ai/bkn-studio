@@ -1,13 +1,12 @@
-import { DeploymentUnitOutlined, PlusOutlined, ThunderboltFilled } from "@ant-design/icons";
+import { PlusOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { Empty, Spin } from "antd";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { OntologyGraphView } from "@/modules/knowledge-network/components/preview/OntologyGraphView";
-import { OntologyInspectorPanel } from "@/modules/knowledge-network/components/preview/OntologyInspectorPanel";
+import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
 import type {
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRecord,
@@ -35,7 +34,6 @@ export function WorkspacePreviewSection({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const previewGraph = useMemo(
     () => buildModelingPreviewGraph(objectTypes, relationTypes),
@@ -119,37 +117,11 @@ export function WorkspacePreviewSection({
             </Empty>
           </div>
         ) : (
-          <div className={styles.graphCard}>
-            <div className={styles.graphHeader}>
-              <h3 className={styles.graphTitle}>
-                {t("knowledgeNetwork.previewCanvas")}
-                <span className={styles.graphTitleHint}>ontology graph</span>
-              </h3>
-              <span className={styles.graphLegend}>
-                <DeploymentUnitOutlined />
-                {t("knowledgeNetwork.previewGraphLegend")}
-              </span>
-            </div>
-            <div className={styles.graphLayout}>
-              <div className={styles.graphCanvas}>
-                <OntologyGraphView
-                  graph={previewGraph}
-                  indexedIds={indexedIds}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                />
-              </div>
-              <aside className={styles.graphAside}>
-                <OntologyInspectorPanel
-                  networkId={networkId}
-                  objectTypes={objectTypes}
-                  relationTypes={relationTypes}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                />
-              </aside>
-            </div>
-          </div>
+          <OntologyGraphCard
+            networkId={networkId}
+            objectTypes={objectTypes}
+            relationTypes={relationTypes}
+          />
         )}
       </Spin>
     </section>

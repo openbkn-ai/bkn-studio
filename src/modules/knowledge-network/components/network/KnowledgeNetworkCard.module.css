@@ -1,23 +1,28 @@
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 112px;
-  padding: 14px 16px 12px;
+  min-height: 132px;
+  overflow: hidden;
   cursor: pointer;
   background: #fff;
-  border: 1px solid #e8ebf2;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(31, 35, 41, 0.05);
+  border: 1px solid #e8ebf1;
+  border-radius: 14px;
   transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease,
-    border-color 0.2s ease;
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .card:hover {
-  border-color: rgba(18, 110, 227, 0.18);
-  box-shadow: 0 8px 10px rgba(18, 110, 227, 0.12);
-  transform: translateY(-1px);
+  border-color: #c9d6ff;
+  box-shadow: 0 10px 28px rgba(31, 35, 41, 0.1);
+  transform: translateY(-2px);
+}
+
+.accent {
+  height: 4px;
+  width: 100%;
 }
 
 .header {
@@ -25,6 +30,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  padding: 16px 16px 0;
 }
 
 .titleRow {
@@ -34,22 +40,17 @@
   min-width: 0;
 }
 
-.iconBox,
-.placeholderIcon {
+.iconBox {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   color: #fff;
   font-size: 16px;
-  font-weight: 500;
-}
-
-.placeholderIcon {
-  background: rgba(52, 143, 179, 1);
+  font-weight: 600;
 }
 
 .titleContent {
@@ -60,12 +61,20 @@
 }
 
 .titleText {
-  margin-top: 2px;
   overflow: hidden;
   color: #1f2329;
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 24px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slug {
+  overflow: hidden;
+  color: #99a2b2;
+  font-size: 12px;
+  font-family: var(--code-font, monospace);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -73,10 +82,10 @@
 .description {
   display: -webkit-box;
   min-height: 40px;
-  margin-top: 4px;
+  margin-top: 6px;
   overflow: hidden;
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 12px;
+  color: #5b6472;
+  font-size: 13px;
   line-height: 20px;
   text-overflow: ellipsis;
   -webkit-line-clamp: 2;
@@ -100,20 +109,20 @@
 }
 
 .moreButton:hover {
-  color: #126ee3;
-  background: rgba(18, 110, 227, 0.08);
+  color: #2e68ff;
+  background: rgba(46, 104, 255, 0.08);
 }
 
 .footer {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  margin: auto 16px 16px;
   padding-top: 12px;
-  margin-top: 12px;
-  color: rgba(0, 0, 0, 0.65);
+  color: #8a94a6;
   font-size: 12px;
   line-height: 20px;
-  border-top: 1px solid #f0f2f5;
+  border-top: 1px solid #f0f2f6;
 }
 
 .footerLeft {
