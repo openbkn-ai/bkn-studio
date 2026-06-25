@@ -14,9 +14,9 @@ export const KnowledgeNetworkListPage = lazyNamedExport(
   "KnowledgeNetworkListPage",
 );
 
-export const EvalPage = lazyNamedExport(
-  () => import("@/modules/knowledge-network/pages/EvalPage"),
-  "EvalPage",
+export const ExperiencePage = lazyNamedExport(
+  () => import("@/modules/knowledge-network/pages/ExperiencePage"),
+  "ExperiencePage",
 );
 
 export const KnowledgeNetworkWorkspaceStandalonePage = lazy(async () => {

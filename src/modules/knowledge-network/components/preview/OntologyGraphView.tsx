@@ -35,7 +35,8 @@ export function OntologyGraphView({
 }: OntologyGraphViewProps) {
   const { t } = useTranslation();
 
-  const { positions, radiusById, hubId, neighbors } = useMemo(() => {
+  // 布局只随 graph 变化计算一次，选中节点时不重排（避免节点跳动 / 重新排列）。
+  const { positions, radiusById, hubId } = useMemo(() => {
     const layout = computePreviewGraphLayout(graph);
     const positionMap = new Map(layout.map((node) => [node.id, node]));
 
@@ -57,6 +58,10 @@ export function OntologyGraphView({
     const radius = new Map<string, number>();
     graph.nodes.forEach((node) => radius.set(node.id, node.id === topId ? HUB_RADIUS : NODE_RADIUS));
 
+    return { positions: positionMap, radiusById: radius, hubId: topId };
+  }, [graph]);
+
+  const neighbors = useMemo(() => {
     const neighborSet = new Set<string>();
     if (selectedId) {
       graph.edges.forEach((edge) => {
@@ -64,8 +69,7 @@ export function OntologyGraphView({
         if (edge.targetId === selectedId) neighborSet.add(edge.sourceId);
       });
     }
-
-    return { positions: positionMap, radiusById: radius, hubId: topId, neighbors: neighborSet };
+    return neighborSet;
   }, [graph, selectedId]);
 
   return (

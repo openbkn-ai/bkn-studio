@@ -1,13 +1,13 @@
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { AntdProviders } from "@/framework/ui/AntdProviders";
-import { EvalScene } from "@/modules/knowledge-network/scenes/EvalScene";
+import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 
-export function EvalPage() {
+export function ExperiencePage() {
   const runtimeConfig = useRuntimeConfig();
 
   return (
     <AntdProviders runtimeConfig={runtimeConfig}>
-      <EvalScene />
+      <ExperienceScene />
     </AntdProviders>
   );
 }
