@@ -5,7 +5,7 @@ import { Tag } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { DomainNetworkSummary } from "@/modules/knowledge-network-lab/types/domain-network";
-import { formatCount, formatTimeAgo } from "@/modules/knowledge-network-lab/utils/domain-network";
+import { formatTimeAgo } from "@/modules/knowledge-network-lab/utils/domain-network";
 
 import styles from "./DomainNetworkCard.module.css";
 
@@ -37,25 +37,6 @@ export function DomainNetworkCard({ network, onOpen }: DomainNetworkCardProps) {
         </div>
 
         <p className={styles.desc}>{network.desc || t("knowledgeNetworkLab.card.noDesc")}</p>
-
-        <div className={styles.stats}>
-          <div className={styles.stat}>
-            <span className={styles.statNum}>{formatCount(network.stats.objectTypes)}</span>
-            <span className={styles.statLabel}>{t("knowledgeNetworkLab.card.entityClasses")}</span>
-          </div>
-          <div className={styles.stat}>
-            <span className={styles.statNum}>{formatCount(network.stats.relationTypes)}</span>
-            <span className={styles.statLabel}>{t("knowledgeNetworkLab.card.relationClasses")}</span>
-          </div>
-          <div className={styles.stat}>
-            <span className={styles.statNum}>{formatCount(network.stats.conceptGroups)}</span>
-            <span className={styles.statLabel}>{t("knowledgeNetworkLab.card.conceptGroups")}</span>
-          </div>
-          <div className={styles.stat}>
-            <span className={styles.statNum}>{formatCount(network.stats.metrics)}</span>
-            <span className={styles.statLabel}>{t("knowledgeNetworkLab.card.metrics")}</span>
-          </div>
-        </div>
 
         <div className={styles.foot}>
           <span className={styles.owner}>

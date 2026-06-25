@@ -89,37 +89,13 @@
   -webkit-box-orient: vertical;
 }
 
-.stats {
-  display: flex;
-  gap: 8px;
-  padding: 12px 0;
-  border-top: 1px solid #f0f2f6;
-  border-bottom: 1px solid #f0f2f6;
-}
-
-.stat {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.statNum {
-  color: #1f2329;
-  font-size: 17px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.statLabel {
-  color: #99a2b2;
-  font-size: 11px;
-}
-
 .foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #f0f2f6;
 }
 
 .owner {
