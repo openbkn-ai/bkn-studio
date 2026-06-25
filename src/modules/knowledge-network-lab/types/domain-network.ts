@@ -2,16 +2,13 @@
  * 领域业务知识网络（实验版）视图模型。
  *
  * 数据全部来自真实后端（ontology-manager via `@/modules/knowledge-network` 服务，
- * 内置 mock/real 切换）。这里的类型只保留后端确实提供的字段，并把
+ * 内置 mock/real 切换）。只保留后端确实提供的字段，把
  *   knowledge-network → 领域网络
  *   object-type       → 实体类
  *   relation-type     → 关系类
  *   metric            → 指标（检索沙盒按其试算数据）
- * 映射成图谱呈现需要的形状。
+ * 映射成图谱呈现需要的形状。后端没有「建模状态」这一概念，故不展示状态。
  */
-
-/** 状态由 statistics 计数派生：有关系类=已建模；仅有实体类=草稿；空=未建模。 */
-export type DomainNetworkStatus = "published" | "draft" | "empty";
 
 export type EntityProp = {
   name: string;
@@ -37,13 +34,6 @@ export type GraphNode = {
   color: string;
   x: number;
   y: number;
-};
-
-export type GraphEdge = {
-  key: string;
-  name: string;
-  from: string;
-  to: string;
 };
 
 export type EntityClass = GraphNode & {
@@ -73,20 +63,17 @@ export type DomainNetworkStats = {
   metrics: number;
 };
 
-/** 列表卡片用的领域网络摘要（含本体缩略图）。 */
+/** 列表卡片用的领域网络摘要（不再附带本体缩略图，避免逐网络拉本体）。 */
 export type DomainNetworkSummary = {
   id: string;
   slug: string;
   name: string;
   domain: string;
-  status: DomainNetworkStatus;
   desc: string;
   owner: string;
   updatedAt: number;
   color: string;
   stats: DomainNetworkStats;
-  miniNodes: GraphNode[];
-  miniEdges: GraphEdge[];
 };
 
 /** 详情页用的完整领域网络（含实体类 / 关系类）。 */
@@ -97,5 +84,4 @@ export type DomainNetwork = DomainNetworkSummary & {
 
 export type DomainNetworkListQuery = {
   keyword?: string;
-  status?: DomainNetworkStatus | "all";
 };

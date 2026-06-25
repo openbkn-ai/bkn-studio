@@ -1,4 +1,5 @@
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -17,62 +18,51 @@
   transform: translateY(-2px);
 }
 
-.media {
-  position: relative;
-  height: 150px;
-  border-bottom: 1px solid #eef1f6;
-  background: linear-gradient(180deg, #f7f9fc 0%, #eef2f9 100%);
-}
-
-.stripe_published {
-  background: linear-gradient(180deg, #f1f7ff 0%, #e3edff 100%);
-}
-
-.stripe_draft {
-  background: linear-gradient(180deg, #fff6ec 0%, #ffeed8 100%);
-}
-
-.stripe_empty {
-  background: linear-gradient(180deg, #f5f6f8 0%, #ebedf1 100%);
-}
-
-.mini {
-  display: block;
+.accent {
+  height: 4px;
   width: 100%;
-  height: 100%;
-}
-
-.miniEdges line {
-  stroke: #b9c4d6;
-  stroke-width: 4;
-  opacity: 0.7;
 }
 
 .body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px 16px;
+  gap: 12px;
+  padding: 16px;
 }
 
 .top {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 18px;
 }
 
 .titleWrap {
   display: flex;
+  flex: 1;
   flex-direction: column;
   min-width: 0;
 }
 
 .name {
+  overflow: hidden;
   color: #1f2329;
   font-size: 15px;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .slug {
@@ -81,47 +71,17 @@
   font-family: var(--code-font, monospace);
 }
 
-.buildingDot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 5px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: knLabPulse 1.2s ease-in-out infinite;
-  vertical-align: middle;
-}
-
-@keyframes knLabPulse {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.tags {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .domainTag {
+  flex-shrink: 0;
   background: #eef2f9;
   color: #4a5160;
-}
-
-.version {
-  color: #99a2b2;
-  font-size: 12px;
 }
 
 .desc {
   margin: 0;
   display: -webkit-box;
   overflow: hidden;
+  min-height: 40px;
   color: #5b6472;
   font-size: 13px;
   line-height: 1.55;
@@ -132,7 +92,7 @@
 .stats {
   display: flex;
   gap: 8px;
-  padding: 10px 0;
+  padding: 12px 0;
   border-top: 1px solid #f0f2f6;
   border-bottom: 1px solid #f0f2f6;
 }
@@ -146,7 +106,7 @@
 
 .statNum {
   color: #1f2329;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }

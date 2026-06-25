@@ -2,7 +2,6 @@
 
 import type {
   DomainNetwork,
-  DomainNetworkStatus,
   EntityClass,
   RelationClass,
 } from "@/modules/knowledge-network-lab/types/domain-network";
@@ -34,16 +33,6 @@ export function neighborsOf(net: DomainNetwork, key: string | null): Set<string>
   });
   return neighbors;
 }
-
-/** 网络状态 → i18n key + 标签色调（antd Tag color）。状态由 statistics 计数派生。 */
-export const STATUS_META: Record<
-  DomainNetworkStatus,
-  { labelKey: string; color: string }
-> = {
-  published: { labelKey: "knowledgeNetworkLab.status.published", color: "green" },
-  draft: { labelKey: "knowledgeNetworkLab.status.draft", color: "gold" },
-  empty: { labelKey: "knowledgeNetworkLab.status.empty", color: "default" },
-};
 
 export function formatCount(value: number): string {
   return value.toLocaleString("en-US");

@@ -5,6 +5,9 @@
  * 命中 `/bkn-backend/v1/knowledge-networks/...`），把 ontology-manager 的
  * knowledge-network / object-type / relation-type 组装成图谱视图模型。
  * 实验版不另起后端，仅在现有数据之上换一套「领域网络 + 本体图谱」呈现。
+ *
+ * 列表仅发一次 listKnowledgeNetworks；本体（实体类 / 关系类 / 布局）只在
+ * 详情页按需拉取，避免逐网络拉本体造成大量请求。
  */
 
 import {
@@ -17,7 +20,6 @@ import {
 import type {
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRecord,
-  KnowledgeNetworkRelationTypeRecord,
   ObjectTypeDetail,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { buildModelingPreviewGraph } from "@/modules/knowledge-network/utils/build-modeling-preview-graph";
@@ -26,10 +28,8 @@ import type {
   DomainNetwork,
   DomainNetworkListQuery,
   DomainNetworkStats,
-  DomainNetworkStatus,
   DomainNetworkSummary,
   EntityClass,
-  GraphEdge,
   GraphNode,
   RelationClass,
 } from "@/modules/knowledge-network-lab/types/domain-network";
@@ -41,16 +41,6 @@ function parseTime(value: string): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function deriveStatus(stats: DomainNetworkStats): DomainNetworkStatus {
-  if (stats.objectTypes === 0) {
-    return "empty";
-  }
-  if (stats.relationTypes === 0) {
-    return "draft";
-  }
-  return "published";
-}
-
 function statsOf(record: KnowledgeNetworkRecord): DomainNetworkStats {
   return {
     objectTypes: record.statistics.objectTypesTotal,
@@ -60,65 +50,17 @@ function statsOf(record: KnowledgeNetworkRecord): DomainNetworkStats {
   };
 }
 
-/** 用真实 object-type / relation-type 计算图谱布局节点与连线。 */
-function layoutGraph(
-  objectTypes: KnowledgeNetworkObjectTypeRecord[],
-  relationTypes: KnowledgeNetworkRelationTypeRecord[],
-): { nodes: GraphNode[]; edges: GraphEdge[]; positionById: Map<string, GraphNode>; degreeById: Map<string, number> } {
-  const graph = buildModelingPreviewGraph(objectTypes, relationTypes);
-  const layout = computePreviewGraphLayout(graph);
-  const layoutById = new Map(layout.map((node) => [node.id, node]));
-
-  const nodes: GraphNode[] = graph.nodes.map((node) => {
-    const position = layoutById.get(node.id);
-    return {
-      key: node.id,
-      name: node.name,
-      color: node.color || DEFAULT_COLOR,
-      x: position?.x ?? 0,
-      y: position?.y ?? 0,
-    };
-  });
-
-  const edges: GraphEdge[] = graph.edges.map((edge) => ({
-    key: edge.id,
-    name: edge.name,
-    from: edge.sourceId,
-    to: edge.targetId,
-  }));
-
-  const degreeById = new Map<string, number>();
-  nodes.forEach((node) => degreeById.set(node.key, 0));
-  edges.forEach((edge) => {
-    degreeById.set(edge.from, (degreeById.get(edge.from) ?? 0) + 1);
-    degreeById.set(edge.to, (degreeById.get(edge.to) ?? 0) + 1);
-  });
-
-  const positionById = new Map(nodes.map((node) => [node.key, node]));
-  return { nodes, edges, positionById, degreeById };
-}
-
-async function toSummary(record: KnowledgeNetworkRecord): Promise<DomainNetworkSummary> {
-  const [objectTypes, relationTypes] = await Promise.all([
-    listKnowledgeNetworkObjectTypes(record.id),
-    listKnowledgeNetworkRelationTypes(record.id),
-  ]);
-  const { nodes, edges } = layoutGraph(objectTypes, relationTypes);
-  const stats = statsOf(record);
-
+function toSummary(record: KnowledgeNetworkRecord): DomainNetworkSummary {
   return {
     id: record.id,
     slug: record.identifier,
     name: record.name,
     domain: record.tags[0] ?? "",
-    status: deriveStatus(stats),
     desc: record.description,
     owner: record.creatorName || record.updaterName || "",
     updatedAt: parseTime(record.updateTime),
     color: record.color || DEFAULT_COLOR,
-    stats,
-    miniNodes: nodes,
-    miniEdges: edges,
+    stats: statsOf(record),
   };
 }
 
@@ -170,11 +112,7 @@ function toEntityClass(
   };
 }
 
-function matchesStatus(summary: DomainNetworkSummary, status?: DomainNetworkListQuery["status"]): boolean {
-  return !status || status === "all" || summary.status === status;
-}
-
-/** 列出领域知识网络（真实后端，每个网络附带本体缩略图）。 */
+/** 列出领域知识网络（真实后端，单次请求，不拉本体）。 */
 export async function listDomainNetworks(
   query: DomainNetworkListQuery = {},
 ): Promise<{ records: DomainNetworkSummary[]; total: number }> {
@@ -186,9 +124,7 @@ export async function listDomainNetworks(
     direction: "desc",
   });
 
-  const summaries = await Promise.all(result.items.map(toSummary));
-  const records = summaries.filter((summary) => matchesStatus(summary, query.status));
-  return { records, total: records.length };
+  return { records: result.items.map(toSummary), total: result.total };
 }
 
 /** 读取单个领域知识网络的完整本体（实体类 + 关系类 + 数据绑定）。 */
@@ -203,7 +139,19 @@ export async function getDomainNetwork(id: string): Promise<DomainNetwork | null
     return null;
   }
 
-  const { nodes, edges, positionById, degreeById } = layoutGraph(objectTypes, relationTypes);
+  // 用真实 object-type / relation-type 计算图谱布局。
+  const graph = buildModelingPreviewGraph(objectTypes, relationTypes);
+  const layout = computePreviewGraphLayout(graph);
+  const positionById = new Map<string, GraphNode>(
+    layout.map((node) => [node.id, { key: node.id, name: "", color: DEFAULT_COLOR, x: node.x, y: node.y }]),
+  );
+
+  const degreeById = new Map<string, number>();
+  objectTypes.forEach((objectType) => degreeById.set(objectType.id, 0));
+  graph.edges.forEach((edge) => {
+    degreeById.set(edge.sourceId, (degreeById.get(edge.sourceId) ?? 0) + 1);
+    degreeById.set(edge.targetId, (degreeById.get(edge.targetId) ?? 0) + 1);
+  });
   const maxDegree = Math.max(0, ...degreeById.values());
 
   // 拉取每个实体类的明细（属性 + 绑定资源）。
@@ -233,21 +181,8 @@ export async function getDomainNetwork(id: string): Promise<DomainNetwork | null
     mappingMode: relationType.mappingMode,
   }));
 
-  const stats = statsOf(record);
-
   return {
-    id: record.id,
-    slug: record.identifier,
-    name: record.name,
-    domain: record.tags[0] ?? "",
-    status: deriveStatus(stats),
-    desc: record.description,
-    owner: record.creatorName || record.updaterName || "",
-    updatedAt: parseTime(record.updateTime),
-    color: record.color || DEFAULT_COLOR,
-    stats,
-    miniNodes: nodes,
-    miniEdges: edges,
+    ...toSummary(record),
     entityClasses,
     relationClasses,
   };

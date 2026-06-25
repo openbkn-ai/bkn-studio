@@ -1,7 +1,7 @@
 /** 领域业务知识网络（实验版）列表 —— 卡片浏览 + 搜索 + 状态过滤（真实后端）。 */
 
 import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Empty, Input, Select, Spin } from "antd";
+import { Alert, Empty, Input, Spin } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -11,14 +11,9 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { DomainNetworkCard } from "@/modules/knowledge-network-lab/components/DomainNetworkCard";
 import { listDomainNetworks } from "@/modules/knowledge-network-lab/services/domain-networks.lab.service";
-import type {
-  DomainNetworkStatus,
-  DomainNetworkSummary,
-} from "@/modules/knowledge-network-lab/types/domain-network";
+import type { DomainNetworkSummary } from "@/modules/knowledge-network-lab/types/domain-network";
 
 import styles from "./DomainNetworkLabListScene.module.css";
-
-type StatusFilter = DomainNetworkStatus | "all";
 
 export function DomainNetworkLabListScene() {
   const { t } = useTranslation();
@@ -26,7 +21,6 @@ export function DomainNetworkLabListScene() {
   const { message } = useAppServices();
 
   const [keyword, setKeyword] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
   const [items, setItems] = useState<DomainNetworkSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +29,7 @@ export function DomainNetworkLabListScene() {
     setLoading(true);
     setError(null);
     try {
-      const result = await listDomainNetworks({ keyword, status });
+      const result = await listDomainNetworks({ keyword });
       setItems(result.records);
     } catch (caught) {
       setError(extractRequestErrorMessage(caught));
@@ -43,13 +37,13 @@ export function DomainNetworkLabListScene() {
     } finally {
       setLoading(false);
     }
-  }, [keyword, status]);
+  }, [keyword]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const hasFilter = keyword.trim().length > 0 || status !== "all";
+  const hasFilter = keyword.trim().length > 0;
 
   return (
     <section className={styles.page}>
@@ -69,17 +63,6 @@ export function DomainNetworkLabListScene() {
             onChange={(event) => setKeyword(event.target.value)}
             placeholder={t("knowledgeNetworkLab.list.searchPlaceholder")}
             prefix={<SearchOutlined className={styles.searchIcon} />}
-          />
-          <Select<StatusFilter>
-            className={styles.statusSelect}
-            value={status}
-            onChange={setStatus}
-            options={[
-              { value: "all", label: t("knowledgeNetworkLab.list.statusAll") },
-              { value: "published", label: t("knowledgeNetworkLab.status.published") },
-              { value: "draft", label: t("knowledgeNetworkLab.status.draft") },
-              { value: "empty", label: t("knowledgeNetworkLab.status.empty") },
-            ]}
           />
           <AppButton
             type="primary"

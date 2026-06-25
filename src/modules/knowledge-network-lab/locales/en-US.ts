@@ -1,11 +1,6 @@
 export const knowledgeNetworkLabEnUS = {
   knowledgeNetworkLab: {
     labBadge: "Lab",
-    status: {
-      published: "Modeled",
-      draft: "Draft",
-      empty: "Empty",
-    },
     indexState: {
       built: "Indexed",
       none: "No index",
@@ -21,7 +16,6 @@ export const knowledgeNetworkLabEnUS = {
       subtitle:
         "Knowledge graphs built per business domain. Each network is an ontology of entity and relation classes mapped to indexed resources in the General Business Knowledge Network. Data comes from the live backend.",
       searchPlaceholder: "Search networks / domains",
-      statusAll: "All status",
       create: "New network",
       createHint: "Create networks in the production Domain Knowledge Network (lab is read-only graph view).",
       empty: "No domain knowledge networks yet",
@@ -31,6 +25,7 @@ export const knowledgeNetworkLabEnUS = {
       entityClasses: "Entity classes",
       relationClasses: "Relation classes",
       conceptGroups: "Concept groups",
+      metrics: "Metrics",
       updatedAt: "Updated {{time}}",
       noDesc: "No description",
     },

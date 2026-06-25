@@ -1,11 +1,6 @@
 export const knowledgeNetworkLabZhCN = {
   knowledgeNetworkLab: {
     labBadge: "实验版",
-    status: {
-      published: "已建模",
-      draft: "草稿",
-      empty: "未建模",
-    },
     indexState: {
       built: "已建索引",
       none: "未建索引",
@@ -21,7 +16,6 @@ export const knowledgeNetworkLabZhCN = {
       subtitle:
         "面向业务领域构建的知识图谱。每个网络由实体类与关系类组成本体，映射到「通用业务知识网络」中已构建索引的数据资源。数据来自真实后端。",
       searchPlaceholder: "搜索知识网络 / 领域",
-      statusAll: "全部状态",
       create: "新建知识网络",
       createHint: "新建知识网络请在「领域业务知识网络」正式版中操作（实验版仅作图谱呈现）。",
       empty: "还没有领域知识网络",
@@ -31,6 +25,7 @@ export const knowledgeNetworkLabZhCN = {
       entityClasses: "实体类",
       relationClasses: "关系类",
       conceptGroups: "概念组",
+      metrics: "指标",
       updatedAt: "更新于 {{time}}",
       noDesc: "暂无描述",
     },

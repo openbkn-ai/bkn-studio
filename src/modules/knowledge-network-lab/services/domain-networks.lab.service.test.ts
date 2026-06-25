@@ -7,22 +7,15 @@ import {
 
 // vitest 以 VITE_USE_MOCK=true 运行，底层复用 knowledge-network 的 mock（真实数据形状）。
 describe("domain network adapter (real-backend shape)", () => {
-  it("lists networks with derived stats and a mini ontology graph", async () => {
+  it("lists networks in a single call with real statistics", async () => {
     const { records } = await listDomainNetworks();
     expect(records.length).toBeGreaterThan(0);
 
     const risk = records.find((item) => item.id === "kn-domain-risk");
     expect(risk).toBeDefined();
     expect(risk?.slug).toBe("domain_risk_network");
-    // 有实体类与关系类 → 已建模
-    expect(risk?.status).toBe("published");
     expect(risk?.stats.objectTypes).toBeGreaterThan(0);
-    expect(Array.isArray(risk?.miniNodes)).toBe(true);
-  });
-
-  it("filters by derived status", async () => {
-    const { records } = await listDomainNetworks({ status: "published" });
-    expect(records.every((item) => item.status === "published")).toBe(true);
+    expect(risk?.domain).toBeTruthy();
   });
 
   it("loads full ontology with entity props and relation endpoints", async () => {

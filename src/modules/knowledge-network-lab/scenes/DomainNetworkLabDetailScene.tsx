@@ -25,7 +25,6 @@ import type {
   RelationClass,
 } from "@/modules/knowledge-network-lab/types/domain-network";
 import {
-  STATUS_META,
   entityOf,
   formatCount,
   formatTimeAgo,
@@ -91,8 +90,6 @@ export function DomainNetworkLabDetailScene() {
     );
   }
 
-  const status = STATUS_META[network.status];
-
   const onPrototypeAction = (key: string) =>
     message.info(t(`knowledgeNetworkLab.detail.action.${key}Hint`));
 
@@ -114,9 +111,6 @@ export function DomainNetworkLabDetailScene() {
         <div className={styles.headMain}>
           <div className={styles.titleRow}>
             <h2 className={styles.title}>{network.name}</h2>
-            <Tag color={status.color} bordered={false}>
-              {t(status.labelKey)}
-            </Tag>
             {network.domain ? (
               <Tag bordered={false} className={styles.domainTag}>
                 {network.domain}
