@@ -7,7 +7,6 @@ import { hasPermissions } from "@/framework/permission/has-permissions";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
 import { executionFactoryLabNavigation } from "@/modules/execution-factory-lab/navigation";
 import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
-import { knowledgeNetworkLabNavigation } from "@/modules/knowledge-network-lab/navigation";
 import { knowledgeNetworkNavigation } from "@/modules/knowledge-network/navigation";
 import { modelResourcesNavigation } from "@/modules/model-resources/navigation";
 
@@ -17,7 +16,6 @@ const navigationContributions: ConsoleNavContribution[] = [
   executionFactoryNavigation,
   modelResourcesNavigation,
   executionFactoryLabNavigation,
-  knowledgeNetworkLabNavigation,
 ];
 
 export type { ConsoleNavItem } from "@/app/shell/navigation/types";
