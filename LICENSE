@@ -1,0 +1,26 @@
+BKN Studio — Licensing Overview
+Copyright (c) 2026 OpenBKN
+
+BKN Studio is part of the BKN Foundry project
+(https://github.com/openbkn-ai/bkn-foundry). It is one of the OpenBKN
+modules and is licensed under the OpenBKN License, a modified version of
+the Apache License, Version 2.0, with Additional Conditions.
+
+  Full text of the OpenBKN License:           LICENSE-OPENBKN.txt
+  Full text of the Apache License, Version 2.0: LICENSE-APACHE.txt
+
+The OpenBKN License incorporates the Apache License, Version 2.0, as
+modified and supplemented by its Additional Conditions. In the event of
+any conflict between the Additional Conditions and the Apache License,
+the Additional Conditions control with respect to BKN Studio.
+
+The license applicable to each file is stated in that file's header.
+For attribution and a per-component breakdown, see the NOTICE file.
+
+Third-party components bundled with or depended upon by BKN Studio
+retain their own licenses; see NOTICE for details.
+
+--------------------------------------------------------------------
+For commercial licensing inquiries (including authorization to provide
+services, operate multi-tenant environments, or other uses requiring a
+commercial license): <CONTACT EMAIL / URL>

@@ -258,3 +258,24 @@ src/modules/<module-name>/
 - `data-connect` 已完成第一版业务实现
 - 模块文案、菜单、路由、开发态权限已改为按模块贡献组织
 - 新增模块时，应继续沿用“模块自带 locales / navigation / routes / manifest”的接入方式
+
+## 开源协议 / License
+
+BKN Studio 是 [BKN Foundry](https://github.com/openbkn-ai/bkn-foundry) 项目的
+OpenBKN 模块，遵循 **OpenBKN License** —— 在 Apache License 2.0 基础上附加额外条件的修改版。
+
+- OpenBKN License 全文：[LICENSE-OPENBKN.txt](LICENSE-OPENBKN.txt)
+- Apache License 2.0 全文（被 OpenBKN License 引用）：[LICENSE-APACHE.txt](LICENSE-APACHE.txt)
+- 许可总览：[LICENSE](LICENSE)
+- 组件与第三方归属：[NOTICE](NOTICE)
+
+每个源文件的适用许可以其文件头声明为准。源文件头建议使用如下片段：
+
+```text
+Copyright (c) 2026 OpenBKN
+SPDX-License-Identifier: LicenseRef-OpenBKN
+Licensed under the OpenBKN License, a modified Apache License 2.0 with
+Additional Conditions. See LICENSE-OPENBKN.txt for the full text.
+```
+
+商业授权咨询请见 LICENSE / LICENSE-OPENBKN.txt 中的联系方式。
