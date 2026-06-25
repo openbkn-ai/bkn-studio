@@ -14,7 +14,6 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
@@ -50,7 +49,6 @@ export function WorkspaceOverviewSection({
 }: WorkspaceOverviewSectionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message } = useAppServices();
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
 
   const recentObjectColumns = useMemo<ColumnsType<KnowledgeNetworkRecentObject>>(
@@ -138,7 +136,7 @@ export function WorkspaceOverviewSection({
             <button
               type="button"
               className={styles.experienceButton}
-              onClick={() => message.info(t("knowledgeNetwork.previewExperienceHint"))}
+              onClick={() => navigate(`/knowledge-network/workspace/${networkId}/eval`)}
             >
               <ThunderboltFilled />
               <span>{t("knowledgeNetwork.previewExperience")}</span>

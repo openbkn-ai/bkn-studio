@@ -105,6 +105,8 @@ export const networkPart = {
     previewColBoundResource: "Bound resource",
     previewColIndexState: "Index state",
     previewUnbound: "Unbound",
+    evalTitle: "Evaluation",
+    evalDescription: "Evaluate the network's QA quality: pass rate, five-dimension scoring, and per-case attribution.",
     previewCreateObjectType: "Create object type",
     previewEdgeCount: "{{count}} relations",
     previewFitView: "Fit to view",

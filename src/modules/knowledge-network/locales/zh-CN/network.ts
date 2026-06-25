@@ -103,6 +103,8 @@ export const networkPart = {
     previewColBoundResource: "绑定资源",
     previewColIndexState: "索引状态",
     previewUnbound: "未绑定",
+    evalTitle: "效果评估",
+    evalDescription: "对知识网络的问答效果做评测：通过率、五维打分与逐例归因。",
     recentlyModifiedObjectTypes: "最近修改的对象类",
     resourcePageExit: "退出",
     closeSearchBar: "关闭搜索栏",
