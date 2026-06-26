@@ -22,6 +22,8 @@ type BackendLlmModel = {
   model_series: string;
   max_model_len?: number;
   model_parameters?: number;
+  /** 列表用 f_default 标默认（1 = 当前系统默认）。旧字段 default 作兜底。 */
+  f_default?: number;
   default?: boolean;
   quota?: boolean;
   create_by?: string;
@@ -80,7 +82,7 @@ function mapLlmModel(item: BackendLlmModel): LlmModel {
     modelSeries: item.model_series,
     maxModelLen: item.max_model_len,
     modelParameters: item.model_parameters,
-    default: item.default,
+    default: item.f_default === 1 || Boolean(item.default),
     quota: item.quota,
     createBy: item.create_by,
     createTime: item.create_time,
@@ -243,6 +245,34 @@ export async function updateLlmModel(payload: LlmSavePayload) {
     `${API_PREFIX}/llm/edit`,
     mapSavePayload(payload),
   );
+
+  return response.data;
+}
+
+/**
+ * 设置 / 清除某大模型为系统默认（管理员）。设默认按 model_id，不是名称。
+ * - asDefault=true：设为默认；后端取消原默认（互斥）。ContextLoader 之后自动使用该默认模型。
+ * - asDefault=false：清除该模型的默认标记，系统回到「无默认」。
+ */
+export async function setDefaultLlmModel(modelId: string, asDefault = true) {
+  if (useMock) {
+    const target = mockLlmModels.find((item) => item.modelId === modelId);
+    if (target) {
+      if (asDefault) {
+        mockLlmModels.forEach((item) => {
+          item.default = item.modelId === modelId;
+        });
+      } else {
+        target.default = false;
+      }
+    }
+    return { status: "ok" };
+  }
+
+  const response = await http.post<BackendStatusResponse>(`${API_PREFIX}/llm/default/edit`, {
+    model_id: modelId,
+    default: asDefault,
+  });
 
   return response.data;
 }

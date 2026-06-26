@@ -1,5 +1,5 @@
-import { EllipsisOutlined, ExportOutlined } from "@ant-design/icons";
-import { Alert, Dropdown } from "antd";
+import { EllipsisOutlined, ExclamationCircleFilled, ExportOutlined } from "@ant-design/icons";
+import { Alert, Dropdown, Tag } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
 import dayjs from "dayjs";
@@ -22,6 +22,7 @@ import { ModelListToolbar } from "@/modules/model-resources/components/models/Mo
 import {
   deleteLlmModels,
   listLlmModels,
+  setDefaultLlmModel,
   testLlmModel,
 } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
@@ -168,9 +169,61 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     }
   };
 
+  const canManageDefault = isAdmin || runtimeConfig.currentUser.roles.includes("admin");
+  const canSetDefault = (record: LlmModel) => canManageDefault && !record.default;
+  const canUnsetDefault = (record: LlmModel) => canManageDefault && Boolean(record.default);
+
+  const handleSetDefault = (record: LlmModel) => {
+    void modal.confirm({
+      title: t("modelResources.models.setDefaultLlmConfirmTitle"),
+      icon: <ExclamationCircleFilled style={{ color: "#ff4d4f" }} />,
+      content: t("modelResources.models.setDefaultLlmConfirmContent", { name: record.modelName }),
+      okText: t("modelResources.models.setDefaultConfirmOk"),
+      okButtonProps: { danger: true },
+      cancelText: t("common.cancel"),
+      onOk: async () => {
+        const result = await setDefaultLlmModel(record.modelId);
+        if (result.status !== "ok") {
+          throw new Error(t("modelResources.models.setDefaultFailed"));
+        }
+        message.success(t("modelResources.models.setDefaultSuccess"));
+        await loadData();
+      },
+    });
+  };
+
+  const handleUnsetDefault = (record: LlmModel) => {
+    void modal.confirm({
+      title: t("modelResources.models.unsetDefaultLlmConfirmTitle"),
+      icon: <ExclamationCircleFilled style={{ color: "#ff4d4f" }} />,
+      content: t("modelResources.models.unsetDefaultLlmConfirmContent", { name: record.modelName }),
+      okText: t("modelResources.models.unsetDefaultConfirmOk"),
+      okButtonProps: { danger: true },
+      cancelText: t("common.cancel"),
+      onOk: async () => {
+        const result = await setDefaultLlmModel(record.modelId, false);
+        if (result.status !== "ok") {
+          throw new Error(t("modelResources.models.unsetDefaultFailed"));
+        }
+        message.success(t("modelResources.models.unsetDefaultSuccess"));
+        await loadData();
+      },
+    });
+  };
+
   const handleOperate = (key: string, record: LlmModel) => {
     if (key === "view") {
       openForm("view", record);
+      return;
+    }
+
+    if (key === "setDefault" && canSetDefault(record)) {
+      handleSetDefault(record);
+      return;
+    }
+
+    if (key === "unsetDefault" && canUnsetDefault(record)) {
+      handleUnsetDefault(record);
       return;
     }
 
@@ -224,6 +277,9 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
         <div className={styles.nameCell}>
           <ModelSeriesIcon modelName={record.modelName} modelSeries={record.modelSeries} />
           <span title={record.modelName}>{record.modelName}</span>
+          {record.default ? (
+            <Tag color="blue">{t("modelResources.models.defaultTag")}</Tag>
+          ) : null}
         </div>
       ),
     },
@@ -240,9 +296,15 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
               { key: "edit", label: t("modelResources.models.menus.edit") },
               { key: "delete", label: t("modelResources.models.menus.delete") },
               { key: "test", label: t("modelResources.models.menus.testConnection") },
+              canSetDefault(record)
+                ? { key: "setDefault", label: t("modelResources.models.menus.setAsDefault") }
+                : null,
+              canUnsetDefault(record)
+                ? { key: "unsetDefault", label: t("modelResources.models.menus.unsetDefault") }
+                : null,
               { key: "monitor", label: t("modelResources.models.menus.modelMonitoring") },
               { key: "authorize", label: t("modelResources.models.menus.authorizationManagement") },
-            ],
+            ].filter(Boolean) as { key: string; label: string }[],
             onClick: ({ key, domEvent }) => {
               domEvent.stopPropagation();
               handleOperate(key, record);
