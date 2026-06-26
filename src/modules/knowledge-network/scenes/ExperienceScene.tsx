@@ -466,8 +466,9 @@ export function ExperienceScene() {
   const [mode, setMode] = useState<ContextLoaderMode>("rest");
 
   const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "http://agent-retrieval:30779"));
-  // 自动带 studio 当前登录态（仍可见/可改）：Bearer = 访问令牌。网关从 token 派生账号，无需 x-account-*。
-  const [token, setToken] = useState(() => runtimeConfig.auth.tokenManager.getAccessToken() ?? "");
+  // 用 studio 当前登录态的访问令牌，每次渲染现取（不冻结，避免过期后还用旧 token → 401）。
+  // 网关从 Bearer 派生账号，无需 x-account-*；token 不在界面展示，发送时再取一次最新。
+  const token = runtimeConfig.auth.tokenManager.getAccessToken() ?? "";
 
   const [filter, setFilter] = useState("");
   const [selectedId, setSelectedId] = useState(CONTEXT_LOADER_OPS[0]!.id);
@@ -540,14 +541,16 @@ export function ExperienceScene() {
     setResponse(null);
     setReqError(null);
     try {
-      const result = await sendRequest(env, op, mode, queryVals, bodyText);
+      // 发送时再取一次最新 token（会话可能已刷新），避免用到过期令牌。
+      const freshEnv = { ...env, token: runtimeConfig.auth.tokenManager.getAccessToken() ?? env.token };
+      const result = await sendRequest(freshEnv, op, mode, queryVals, bodyText);
       setResponse(result);
     } catch (error) {
       setReqError(error instanceof Error ? error.message : "请求失败（可能是跨域或服务不可达）");
     } finally {
       setSending(false);
     }
-  }, [env, op, mode, queryVals, bodyText]);
+  }, [env, op, mode, queryVals, bodyText, runtimeConfig]);
 
   // 数据浏览器「填入」：字段可能是 REST 的 query 参数（如 query_object_instance 的 ot_id），
   // 也可能在请求体里（如 MCP 的 arguments）。按实际位置填，落不到则复制兜底。
@@ -635,10 +638,6 @@ export function ExperienceScene() {
             <div className={styles.addr} title={mode === "mcp" ? `${base}${MCP_PATH}` : base}>
               {mode === "mcp" ? `${base}${MCP_PATH}` : base}
             </div>
-          </div>
-          <div className={styles.ef}>
-            <label>Bearer Token</label>
-            <Input className={styles.tokInput} value={token} onChange={(e) => setToken(e.target.value)} placeholder="可选" />
           </div>
         </div>
       </div>
