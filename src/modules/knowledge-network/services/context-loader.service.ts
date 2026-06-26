@@ -113,7 +113,9 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     summary: "在知识网络上直接执行 SQL 查询并返回结果集。",
     path: `${REST_PREFIX}/kn/run_sql`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body: { kn_id: "your_kn_id", sql: "SELECT * FROM your_object_type WHERE status = 'active' LIMIT 10" },
+    // 数据表必须用模板占位引用（后端解析为真实资源），不能写裸表名：
+    // 后端报错示例 "sql must reference at least one data resource via the {{.resource_id}}"。
+    body: { kn_id: "your_kn_id", sql: "SELECT * FROM {{.resource_id}} WHERE status = 'active' LIMIT 10" },
   },
   {
     id: "get_logic_properties_values",
