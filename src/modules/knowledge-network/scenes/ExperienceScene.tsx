@@ -172,6 +172,7 @@ function McpSetupModal({
 
   return (
     <Modal open={open} onCancel={onClose} footer={null} width={680} title="接入 MCP（Claude Code / Cursor）">
+      <div className={styles.guideRoot}>
       <p className={styles.guideNote}>
         本服务为 <b>Streamable HTTP</b> MCP，需带鉴权头。下方已自动填入当前服务地址与登录态——
         Bearer Token 为短期令牌（<code>ory_at_…</code>），正式接入请换用长期令牌。
@@ -215,6 +216,7 @@ function McpSetupModal({
           },
         ]}
       />
+      </div>
     </Modal>
   );
 }
@@ -286,18 +288,22 @@ function ObjectTypeCard({
 
       {open && props.length > 0 ? (
         <div className={styles.dbPropList}>
+          <div className={styles.dbPropHead}>字段 · 点击复制名称</div>
           {props.map((prop) => (
-            <div key={prop.name} className={styles.dbProp}>
-              <span className={styles.dbPropName} title={prop.name}>
-                {prop.name}
-              </span>
-              {prop.display_name && prop.display_name !== prop.name ? (
-                <span className={styles.dbPropDisp} title={prop.display_name}>
-                  {prop.display_name}
-                </span>
-              ) : null}
-              <span className={styles.dbPropType}>{prop.type || "—"}</span>
-            </div>
+            <Tooltip key={prop.name} title={`复制字段名 ${prop.name}`}>
+              <button
+                type="button"
+                className={styles.dbProp}
+                onClick={() => copy(prop.name, `已复制 ${prop.name}`)}
+              >
+                <span className={styles.dbPropName}>{prop.name}</span>
+                {prop.display_name && prop.display_name !== prop.name ? (
+                  <span className={styles.dbPropDisp}>{prop.display_name}</span>
+                ) : null}
+                <span className={styles.dbPropType}>{prop.type || "—"}</span>
+                <CopyOutlined className={styles.dbPropCopy} />
+              </button>
+            </Tooltip>
           ))}
         </div>
       ) : null}

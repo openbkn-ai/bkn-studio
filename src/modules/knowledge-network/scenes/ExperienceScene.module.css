@@ -534,8 +534,15 @@
   outline: none;
 }
 
+/* 文本平时透明（只显示背后高亮层）；选中时给文字上色，让选区可见、可复制 */
 .ta::selection {
-  background: rgba(46, 104, 255, 0.22);
+  color: var(--txt);
+  background: rgba(46, 104, 255, 0.28);
+}
+
+.ta::-moz-selection {
+  color: var(--txt);
+  background: rgba(46, 104, 255, 0.28);
 }
 
 .bodyErr {
@@ -1058,6 +1065,22 @@
 }
 
 /* ---------------- 数据浏览器 Drawer ---------------- */
+/* antd Drawer/Modal 会把内容 portal 到 <body>，脱离 .page，故这里重新声明设计变量，
+   否则 var(--accent) 等失效（如 .dbChip:hover 背景丢失 → 白字白底，控件“消失”）。 */
+.dbWrap,
+.guideRoot {
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --accent: #2e68ff;
+  --line: rgba(15, 30, 54, 0.1);
+  --line2: rgba(15, 30, 54, 0.06);
+  --txt: #1e293b;
+  --txt2: #5b6678;
+  --faint: #9aa6bd;
+  --code: #f4f7fd;
+  --chip: #eef2f9;
+  --field-bd: #d8e0ea;
+}
+
 .dbWrap {
   display: flex;
   flex-direction: column;
@@ -1290,16 +1313,38 @@
   overflow-y: auto;
 }
 
+.dbPropHead {
+  font-size: 10.5px;
+  color: var(--faint);
+  padding: 0 6px 4px;
+}
+
 .dbProp {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 4px 6px;
+  border: 0;
   border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
 .dbProp:hover {
   background: var(--code);
+}
+
+.dbPropCopy {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--faint);
+  opacity: 0;
+}
+
+.dbProp:hover .dbPropCopy {
+  opacity: 1;
 }
 
 .dbPropName {
