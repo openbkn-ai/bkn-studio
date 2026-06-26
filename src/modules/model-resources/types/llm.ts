@@ -30,6 +30,8 @@ export type LlmModel = {
   inputsLeft?: number;
   outputsLeft?: number;
   modelConfig?: LlmModelConfig;
+  /** Per-item operations the accessor may perform (from /me/permissions). */
+  operations?: string[];
 };
 
 export type LlmListQuery = {

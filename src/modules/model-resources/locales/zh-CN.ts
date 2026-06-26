@@ -35,6 +35,12 @@ export const modelResourcesZhCN = {
       unsetDefaultConfirmOk: "确认取消默认",
       unsetDefaultSuccess: "已取消系统默认。",
       unsetDefaultFailed: "取消系统默认失败。",
+      setDefaultLlmConfirmTitle: "修改系统默认大模型（高危操作）",
+      setDefaultLlmConfirmContent:
+        "将系统默认大模型改为「{{name}}」？原默认会被取消，约 60 秒生效。设默认后 ContextLoader 会自动使用该模型。",
+      unsetDefaultLlmConfirmTitle: "取消系统默认大模型（高危操作）",
+      unsetDefaultLlmConfirmContent:
+        "取消「{{name}}」作为系统默认大模型？系统将回到「无默认」，约 60 秒生效。",
       authorizationPending: "授权管理功能将在后续版本接入。",
       tabs: {
         llm: "大模型",
