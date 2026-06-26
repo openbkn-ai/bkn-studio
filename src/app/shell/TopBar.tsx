@@ -1,5 +1,6 @@
 import {
   DesktopOutlined,
+  KeyOutlined,
   LogoutOutlined,
   ThunderboltOutlined,
   UserOutlined,
@@ -92,6 +93,15 @@ export function TopBar() {
         <Dropdown
           menu={{
             items: [
+              {
+                icon: <KeyOutlined />,
+                key: "api-keys",
+                label: t("shell.items.apiKeys"),
+                onClick: () => {
+                  void navigate("/api-keys");
+                },
+              },
+              { type: "divider" },
               {
                 danger: true,
                 icon: <LogoutOutlined />,

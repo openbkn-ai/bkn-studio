@@ -1,0 +1,46 @@
+.page {
+  padding: 24px 28px;
+}
+
+.head {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+}
+
+.title {
+  margin: 0;
+  color: #10233f;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.intro {
+  margin: 8px 0 0;
+  max-width: 880px;
+  color: rgba(15, 30, 54, 0.62);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.nameCell {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.muted {
+  color: #9aa6bd;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

@@ -155,16 +155,16 @@ function McpSetupModal({
   open,
   onClose,
   mcpUrl,
-  token,
+  onIssueKey,
   copy,
 }: {
   open: boolean;
   onClose: () => void;
   mcpUrl: string;
-  token: string;
+  onIssueKey: () => void;
   copy: (text: string, label?: string) => void;
 }) {
-  const tk = token || "<your-token>";
+  const tk = "bak_<在「API Key」页签发的长期 Key>";
   const jsonConfig = JSON.stringify(
     {
       mcpServers: {
@@ -187,8 +187,16 @@ function McpSetupModal({
     <Modal open={open} onCancel={onClose} footer={null} width={680} title="接入 MCP（Claude Code / Cursor）">
       <div className={styles.guideRoot}>
       <p className={styles.guideNote}>
-        本服务为 <b>Streamable HTTP</b> MCP，需带鉴权头。下方已自动填入当前服务地址与登录态——
-        Bearer Token 为短期令牌（<code>ory_at_…</code>），正式接入请换用长期令牌。
+        接入指南用于<b>外部 MCP 客户端 / SDK</b>（Cursor、Claude Code 等）。鉴权填 <b>AppKey</b>（<code>bak_</code> 开头的长期 Key），
+        在左下角「API Key」页签发。
+        <button type="button" className={styles.guideLink} onClick={onIssueKey}>
+          去签发 AppKey →
+        </button>
+      </p>
+      <p className={styles.guideNote}>
+        <b>和本页登录态的差异：</b>本页调试用的是你的<b>会话 token</b>（<code>ory_at_</code>，几十分钟就过期，只够即时调试）；
+        外部客户端要长期可用，必须用 <b>AppKey</b>（<code>bak_</code>，长期有效、可撤销、可轮换）。两者都放同一个
+        <code>Authorization: Bearer</code> 头，网关按前缀自动识别。
       </p>
       <Tabs
         defaultActiveKey="claude"
@@ -892,7 +900,7 @@ export function ExperienceScene() {
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
         mcpUrl={`${base}${MCP_PATH}`}
-        token={token}
+        onIssueKey={() => navigate("/api-keys")}
         copy={copy}
       />
       <DataBrowserDrawer

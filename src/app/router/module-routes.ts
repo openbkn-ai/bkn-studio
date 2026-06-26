@@ -1,6 +1,7 @@
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
+import { apiKeysRouteContribution } from "@/modules/api-keys/routes";
 import { dataCatalogRouteContribution } from "@/modules/data-catalog/routes";
 import { dataConnectRouteContribution } from "@/modules/data-connect/routes";
 import { executionFactoryLabRouteContribution } from "@/modules/execution-factory-lab/routes";
@@ -17,6 +18,7 @@ const routeContributions: AppRouteContribution[] = [
   modelResourcesRouteContribution,
   executionFactoryLabRouteContribution,
   systemAdminRouteContribution,
+  apiKeysRouteContribution,
 ];
 
 export const defaultModuleRoutePath =
