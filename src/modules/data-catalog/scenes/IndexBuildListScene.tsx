@@ -316,12 +316,18 @@ export function IndexBuildListScene() {
       dataIndex: "id",
       title: t("dataCatalog.task.column"),
       width: 190,
-      render: (value: string) => <span className={styles.slugChip}>{value}</span>,
+      render: (value: string) => (
+        // nowrap:auto 布局下 slug 不被 break-all 压成单字一列
+        <span className={styles.slugChip} style={{ whiteSpace: "nowrap", wordBreak: "normal" }}>
+          {value}
+        </span>
+      ),
     },
     {
       dataIndex: "resourceId",
       title: t("dataCatalog.build.resource"),
-      // 无固定宽度 → 吸收剩余空间;窄屏靠 ellipsis 截断,避免整表被撑宽。
+      // 给宽度 → auto 布局下不再独占剩余空间;窄屏靠 ellipsis 截断。
+      width: 240,
       ellipsis: true,
       render: (value: string) => {
         const resource = resourceMap.get(value);
@@ -344,7 +350,8 @@ export function IndexBuildListScene() {
       dataIndex: "mode",
       key: "mode",
       title: t("dataCatalog.build.mode"),
-      width: 96,
+      width: 110,
+      onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
       sorter: true,
       sortOrder: sortOrderOf("mode"),
       render: (value: BuildTask["mode"]) => (
@@ -362,7 +369,7 @@ export function IndexBuildListScene() {
       dataIndex: "status",
       key: "status",
       title: t("common.status"),
-      width: 230,
+      width: 190,
       sorter: true,
       sortOrder: sortOrderOf("status"),
       render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
@@ -381,7 +388,7 @@ export function IndexBuildListScene() {
     {
       key: "progress",
       title: t("dataCatalog.task.progress"),
-      width: 240,
+      width: 200,
       render: (_, record) => <BuildProgress task={record} />,
     },
     {
@@ -405,9 +412,7 @@ export function IndexBuildListScene() {
     {
       key: "actions",
       title: t("common.actions"),
-      // 窄屏时钉在右侧,操作不被裁掉。
-      fixed: "right",
-      width: 180,
+      width: 150,
       render: (_, record) => {
         const pauseResumeLabel =
           record.status === "paused"
@@ -615,7 +620,7 @@ export function IndexBuildListScene() {
               selectedRowKeys: selectedKeys,
               onChange: (keys) => setSelectedKeys(keys.map(String)),
             }}
-            scroll={{ x: 1400 }}
+            tableLayout="auto"
           />
         )}
       </div>
