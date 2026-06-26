@@ -1,4 +1,5 @@
 import { http } from "@/framework/request/http";
+import { getResourceOperations } from "@/modules/model-resources/services/authorization.service";
 import {
   mockLlmModels,
   mockLlmMonitorData,
@@ -247,6 +248,38 @@ export async function updateLlmModel(payload: LlmSavePayload) {
   );
 
   return response.data;
+}
+
+/**
+ * 每个大模型当前账号可执行的操作（来自 /me/permissions，对象类型 large_model）。
+ * 真实管理员判定走此处：getMyPermissions().isAdmin 时返回全量操作（含 modify），
+ * 据此决定「设为默认 / 取消默认」等高危操作是否可见。
+ */
+export async function getLlmItemPermissions(
+  modelIds: string[],
+): Promise<Record<string, string[]>> {
+  if (useMock) {
+    return Object.fromEntries(
+      modelIds.map((modelId) => [
+        modelId,
+        mockLlmModels.find((item) => item.modelId === modelId)?.operations ?? [],
+      ]),
+    );
+  }
+
+  if (modelIds.length === 0) {
+    return {};
+  }
+
+  try {
+    const items = await getResourceOperations(
+      modelIds.map((modelId) => ({ id: modelId, type: "large_model" })),
+    );
+
+    return Object.fromEntries(items.map((item) => [item.id, item.operation ?? []]));
+  } catch {
+    return {};
+  }
 }
 
 /**

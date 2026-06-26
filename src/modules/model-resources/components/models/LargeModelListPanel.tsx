@@ -21,6 +21,7 @@ import {
 import { ModelListToolbar } from "@/modules/model-resources/components/models/ModelListToolbar";
 import {
   deleteLlmModels,
+  getLlmItemPermissions,
   listLlmModels,
   setDefaultLlmModel,
   testLlmModel,
@@ -87,7 +88,13 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
         rule: sortRule,
       });
 
-      setItems(result.items);
+      const permissionMap = await getLlmItemPermissions(result.items.map((item) => item.modelId));
+      setItems(
+        result.items.map((item) => ({
+          ...item,
+          operations: permissionMap[item.modelId] ?? item.operations ?? [],
+        })),
+      );
       setTotal(result.total);
     } catch (error) {
       setItems([]);
@@ -169,9 +176,11 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     }
   };
 
-  const canManageDefault = isAdmin || runtimeConfig.currentUser.roles.includes("admin");
-  const canSetDefault = (record: LlmModel) => canManageDefault && !record.default;
-  const canUnsetDefault = (record: LlmModel) => canManageDefault && Boolean(record.default);
+  // 真实管理员判定：roles 含 admin，或该项 operations 含 modify（getMyPermissions().isAdmin 会下发全量操作）。
+  const canModify = (record: LlmModel) =>
+    isAdmin || runtimeConfig.currentUser.roles.includes("admin") || Boolean(record.operations?.includes("modify"));
+  const canSetDefault = (record: LlmModel) => canModify(record) && !record.default;
+  const canUnsetDefault = (record: LlmModel) => canModify(record) && Boolean(record.default);
 
   const handleSetDefault = (record: LlmModel) => {
     void modal.confirm({
