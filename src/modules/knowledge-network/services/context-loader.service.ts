@@ -343,3 +343,49 @@ export async function sendRequest(
     text,
   };
 }
+
+/* ============================ 数据浏览器：知识网络 schema + 资源 ============================ */
+export type KnDataSource = { type?: string; id: string; name?: string };
+
+export type KnDataProperty = { name: string; display_name?: string; type?: string; comment?: string };
+
+export type KnObjectType = {
+  id: string;
+  name?: string;
+  comment?: string;
+  data_source?: KnDataSource | null;
+  data_properties?: KnDataProperty[] | null;
+};
+
+export type KnConceptGroup = { id: string; name?: string; object_type_ids?: string[] };
+
+export type KnDetail = {
+  id: string;
+  name?: string;
+  object_types: KnObjectType[];
+  concept_groups: KnConceptGroup[];
+};
+
+/**
+ * 取知识网络详情（对象类型 + 资源绑定 + 概念分组），供数据浏览器展示与「填入请求体」。
+ * 走与调试台一致的真实 REST 鉴权路径（get_kn_detail 已验证可用）。
+ */
+export async function fetchKnDetail(env: ContextLoaderEnv): Promise<KnDetail> {
+  const base = env.base.replace(/\/+$/, "");
+  const response = await fetch(`${base}${REST_PREFIX}/kn/get_kn_detail`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(env) },
+    body: JSON.stringify({ kn_id: env.knId }),
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(text || `获取知识网络详情失败（${response.status}）`);
+  }
+  const data = JSON.parse(text) as Partial<KnDetail>;
+  return {
+    id: data.id ?? env.knId,
+    name: data.name,
+    object_types: Array.isArray(data.object_types) ? data.object_types : [],
+    concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
+  };
+}

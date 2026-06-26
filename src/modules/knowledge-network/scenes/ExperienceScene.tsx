@@ -3,8 +3,16 @@
  * 三个 Tab：Agent 对话 / REST 接口 / MCP 工具。REST 与 MCP 一一对应；发送为真实 HTTP 调用。
  */
 
-import { ArrowLeftOutlined, ApiOutlined, CopyOutlined, KeyOutlined, ReadOutlined, ThunderboltFilled } from "@ant-design/icons";
-import { App, Input, Modal, Select, Spin, Tabs } from "antd";
+import {
+  ArrowLeftOutlined,
+  ApiOutlined,
+  CopyOutlined,
+  DatabaseOutlined,
+  KeyOutlined,
+  ReadOutlined,
+  ThunderboltFilled,
+} from "@ant-design/icons";
+import { App, Drawer, Empty, Input, Modal, Select, Spin, Tabs } from "antd";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -15,6 +23,7 @@ import {
   MCP_PATH,
   buildCurl,
   exampleBodyText,
+  fetchKnDetail,
   mcpPathOf,
   sendRequest,
   type AccountType,
@@ -22,6 +31,8 @@ import {
   type ContextLoaderMode,
   type ContextLoaderOp,
   type ContextLoaderResponse,
+  type KnDetail,
+  type KnObjectType,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
 import styles from "./ExperienceScene.module.css";
@@ -189,6 +200,173 @@ function McpSetupModal({
   );
 }
 
+/* ============================ 数据浏览器（右侧抽屉：schema + 资源 id，点击填入请求体） ============================ */
+function ObjectTypeCard({
+  ot,
+  onFillField,
+  onFillResource,
+  copy,
+}: {
+  ot: KnObjectType;
+  onFillField: (key: string, value: string) => void;
+  onFillResource: (resourceId: string) => void;
+  copy: (text: string, label?: string) => void;
+}) {
+  const res = ot.data_source ?? null;
+  const propCount = ot.data_properties?.length ?? 0;
+  return (
+    <div className={styles.dbCard}>
+      <div className={styles.dbCardHead}>
+        <span className={styles.dbOtName}>{ot.name || ot.id}</span>
+        <button
+          type="button"
+          className={styles.dbChip}
+          title="填入请求体 ot_id"
+          onClick={() => onFillField("ot_id", ot.id)}
+        >
+          {ot.id}
+        </button>
+      </div>
+      <div className={styles.dbCardMeta}>
+        {res?.id ? (
+          <button
+            type="button"
+            className={styles.dbRes}
+            title="填入 run_sql 的 {{资源}} 占位（其它接口则复制）"
+            onClick={() => onFillResource(res.id)}
+          >
+            <DatabaseOutlined /> {res.name || "资源"} · {res.id}
+          </button>
+        ) : (
+          <span className={styles.dbNoRes}>无资源绑定</span>
+        )}
+        <span className={styles.dbProps}>{propCount} 字段</span>
+        <button type="button" className={styles.dbCopy} title="复制 ot_id" onClick={() => copy(ot.id, "已复制 ot_id")}>
+          <CopyOutlined />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DataBrowserDrawer({
+  open,
+  onClose,
+  env,
+  knName,
+  onFillField,
+  onFillResource,
+  copy,
+}: {
+  open: boolean;
+  onClose: () => void;
+  env: ContextLoaderEnv;
+  knName: string;
+  onFillField: (key: string, value: string) => void;
+  onFillResource: (resourceId: string) => void;
+  copy: (text: string, label?: string) => void;
+}) {
+  const [detail, setDetail] = useState<KnDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchKnDetail(env)
+      .then((data) => {
+        if (!cancelled) setDetail(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "加载失败");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, env]);
+
+  const sections = useMemo(() => {
+    if (!detail) return [];
+    const needle = q.trim().toLowerCase();
+    const match = (ot: KnObjectType) =>
+      !needle ||
+      `${ot.id} ${ot.name ?? ""} ${ot.data_source?.id ?? ""} ${ot.data_source?.name ?? ""}`
+        .toLowerCase()
+        .includes(needle);
+    const byId = new Map(detail.object_types.map((o) => [o.id, o]));
+    const grouped = detail.concept_groups.map((group) => ({
+      title: group.name || group.id,
+      ots: (group.object_type_ids ?? []).map((oid) => byId.get(oid)).filter((o): o is KnObjectType => Boolean(o)),
+    }));
+    const inGroup = new Set(detail.concept_groups.flatMap((g) => g.object_type_ids ?? []));
+    const ungrouped = detail.object_types.filter((o) => !inGroup.has(o.id));
+    if (ungrouped.length) grouped.push({ title: "未分组", ots: ungrouped });
+    return grouped
+      .map((section) => ({ ...section, ots: section.ots.filter(match) }))
+      .filter((section) => section.ots.length > 0);
+  }, [detail, q]);
+
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      width={480}
+      title={`数据浏览器 · ${knName || "知识网络"}`}
+      styles={{ body: { padding: 0 } }}
+    >
+      <div className={styles.dbWrap}>
+        <p className={styles.dbHint}>
+          点对象类型 id → 填入请求体 <code>ot_id</code>；点资源 → 填入 run_sql 的 <code>{"{{资源}}"}</code> 占位。
+          样本行预览将在数据资源就绪后开放。
+        </p>
+        <div className={styles.dbSearch}>
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="筛选对象类型 / 资源…" allowClear />
+        </div>
+        <div className={styles.dbList}>
+          {loading ? (
+            <div className={styles.dbCenter}>
+              <Spin />
+            </div>
+          ) : error ? (
+            <div className={styles.dbError}>
+              <ApiOutlined />
+              <div>
+                <strong>加载失败</strong>
+                <p>{error}</p>
+              </div>
+            </div>
+          ) : sections.length === 0 ? (
+            <div className={styles.dbCenter}>
+              <Empty description="无对象类型" />
+            </div>
+          ) : (
+            sections.map((section) => (
+              <div key={section.title} className={styles.dbSection}>
+                <div className={styles.dbGroup}>{section.title}</div>
+                {section.ots.map((ot) => (
+                  <ObjectTypeCard
+                    key={ot.id}
+                    ot={ot}
+                    onFillField={onFillField}
+                    onFillResource={onFillResource}
+                    copy={copy}
+                  />
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </Drawer>
+  );
+}
+
 /* ============================ Agent 对话（待接入真实 Agent，先留空） ============================ */
 function AgentBlank() {
   return (
@@ -241,6 +419,7 @@ export function ExperienceScene() {
   const [sending, setSending] = useState(false);
   const [curlOpen, setCurlOpen] = useState(true);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [dataOpen, setDataOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -309,6 +488,48 @@ export function ExperienceScene() {
       setSending(false);
     }
   }, [env, op, mode, queryVals, bodyText]);
+
+  // 数据浏览器「填入请求体」：把对象类型 id / 资源占位写进当前 body JSON（非 JSON 则复制兜底）。
+  const fillBodyField = useCallback(
+    (key: string, value: string) => {
+      try {
+        const obj = JSON.parse(bodyText || "{}");
+        if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+          (obj as Record<string, unknown>)[key] = value;
+          setBodyText(JSON.stringify(obj, null, 2));
+          setBodyError(null);
+          message.success(`已填入 ${key}`);
+          return;
+        }
+      } catch {
+        /* 落到复制兜底 */
+      }
+      copy(value, `已复制（当前请求体无法自动填入 ${key}）`);
+    },
+    [bodyText, copy, message],
+  );
+
+  const fillResource = useCallback(
+    (resourceId: string) => {
+      const token = `{{${resourceId}}}`;
+      try {
+        const obj = JSON.parse(bodyText || "{}") as Record<string, unknown>;
+        if (obj && typeof obj === "object" && typeof obj.sql === "string") {
+          obj.sql = /\{\{[^}]*\}\}/.test(obj.sql)
+            ? obj.sql.replace(/\{\{[^}]*\}\}/, token)
+            : `SELECT * FROM ${token} LIMIT 20`;
+          setBodyText(JSON.stringify(obj, null, 2));
+          setBodyError(null);
+          message.success("资源已填入 SQL");
+          return;
+        }
+      } catch {
+        /* 落到复制兜底 */
+      }
+      copy(token, "已复制资源占位");
+    },
+    [bodyText, copy, message],
+  );
 
   const verb = mode === "mcp" ? "MCP" : "POST";
 
@@ -488,6 +709,9 @@ export function ExperienceScene() {
               <button type="button" className={styles.resetBtn} onClick={() => setBodyText(exampleBodyText(op, mode, knId))}>
                 恢复示例
               </button>
+              <button type="button" className={styles.dataBtn} onClick={() => setDataOpen(true)}>
+                <DatabaseOutlined /> 数据浏览器
+              </button>
               <span className={styles.kbd}>⌘ + ↵ 发送</span>
             </div>
           </section>
@@ -575,6 +799,15 @@ export function ExperienceScene() {
         token={token}
         acctId={acctId}
         acctType={acctType}
+        copy={copy}
+      />
+      <DataBrowserDrawer
+        open={dataOpen}
+        onClose={() => setDataOpen(false)}
+        env={env}
+        knName={network?.name ?? ""}
+        onFillField={fillBodyField}
+        onFillResource={fillResource}
         copy={copy}
       />
     </section>
