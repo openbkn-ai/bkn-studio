@@ -384,3 +384,27 @@ export async function fetchKnDetail(env: ContextLoaderEnv): Promise<KnDetail> {
     concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
   };
 }
+
+/**
+ * 取某对象类型的样本行（query_object_instance），供数据浏览器内嵌预览。
+ * 走真实 REST 鉴权路径；返回 `datas` 数组（每行一个对象）。
+ */
+export async function fetchObjectInstances(
+  env: ContextLoaderEnv,
+  otId: string,
+  limit = 5,
+): Promise<Record<string, unknown>[]> {
+  const base = env.base.replace(/\/+$/, "");
+  const params = new URLSearchParams({ kn_id: env.knId, ot_id: otId, response_format: "json" });
+  const response = await fetch(`${base}${REST_PREFIX}/kn/query_object_instance?${params.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(env) },
+    body: JSON.stringify({ limit, need_total: false, properties: [] }),
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(text || `查询实例失败（${response.status}）`);
+  }
+  const data = JSON.parse(text) as { datas?: unknown };
+  return Array.isArray(data.datas) ? (data.datas as Record<string, unknown>[]) : [];
+}

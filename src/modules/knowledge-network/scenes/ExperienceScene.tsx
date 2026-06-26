@@ -9,6 +9,7 @@ import {
   CopyOutlined,
   DatabaseOutlined,
   KeyOutlined,
+  QuestionCircleOutlined,
   ReadOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
@@ -16,6 +17,7 @@ import { App, Drawer, Empty, Input, Modal, Select, Spin, Tabs, Tooltip } from "a
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { gatewayOrigin } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
@@ -24,6 +26,7 @@ import {
   buildCurl,
   exampleBodyText,
   fetchKnDetail,
+  fetchObjectInstances,
   mcpPathOf,
   sendRequest,
   type ContextLoaderEnv,
@@ -122,6 +125,41 @@ function JsonEditor({ value, onChange }: { value: string; onChange: (next: strin
         onChange={(event) => onChange(event.target.value)}
         onScroll={syncScroll}
       />
+    </div>
+  );
+}
+
+/* ============================ API Key 掩码输入（失焦掩码头+尾，聚焦显全编辑） ============================ */
+function maskKey(value: string): string {
+  const v = value.trim();
+  return v.length <= 12 ? v : `${v.slice(0, 8)}****${v.slice(-4)}`;
+}
+
+function MaskedKeyInput({
+  value,
+  onChange,
+  onIssue,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  onIssue: () => void;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div className={styles.keyField}>
+      <input
+        className={styles.keyInput}
+        value={focused ? value : value ? maskKey(value) : ""}
+        placeholder="粘贴 bak_ API Key"
+        spellCheck={false}
+        autoComplete="off"
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <button type="button" className={styles.keyIssue} onClick={onIssue}>
+        去签发
+      </button>
     </div>
   );
 }
@@ -248,15 +286,44 @@ function ObjectTypeCard({
   onFillField,
   onFillResource,
   copy,
+  env,
 }: {
   ot: KnObjectType;
   onFillField: (key: string, value: string) => void;
   onFillResource: (resourceId: string) => void;
   copy: (text: string, label?: string) => void;
+  env: ContextLoaderEnv;
 }) {
   const [open, setOpen] = useState(false);
   const res = ot.data_source ?? null;
   const props = ot.data_properties ?? [];
+
+  // 样本行预览（按需拉取 query_object_instance）
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewRows, setPreviewRows] = useState<Record<string, unknown>[] | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const togglePreview = () => {
+    const next = !previewOpen;
+    setPreviewOpen(next);
+    if (next && previewRows === null && !previewLoading) {
+      setPreviewLoading(true);
+      setPreviewError(null);
+      fetchObjectInstances(env, ot.id, 5)
+        .then((rows) => setPreviewRows(rows))
+        .catch((error) => setPreviewError(error instanceof Error ? error.message : "查询失败"))
+        .finally(() => setPreviewLoading(false));
+    }
+  };
+
+  const previewColumns =
+    props.length > 0
+      ? props.map((p) => p.name)
+      : previewRows && previewRows[0]
+        ? Object.keys(previewRows[0]).filter((k) => !k.startsWith("_"))
+        : [];
+
   return (
     <div className={styles.dbCard}>
       <div className={styles.dbCardHead}>
@@ -326,6 +393,58 @@ function ObjectTypeCard({
               </button>
             </Tooltip>
           ))}
+        </div>
+      ) : null}
+
+      <div className={styles.dbRow}>
+        <span className={styles.dbRowLabel}>样本数据</span>
+        <button
+          type="button"
+          className={`${styles.dbFields} ${previewOpen ? styles.dbFieldsOpen : ""}`}
+          onClick={togglePreview}
+        >
+          {previewOpen ? "收起预览" : "预览数据"} <span className={styles.dbChev}>▾</span>
+        </button>
+      </div>
+
+      {previewOpen ? (
+        <div className={styles.dbPreview}>
+          {previewLoading ? (
+            <div className={styles.dbPreviewMsg}>
+              <Spin size="small" /> 加载中…
+            </div>
+          ) : previewError ? (
+            <div className={styles.dbPreviewErr}>{previewError}</div>
+          ) : previewRows && previewRows.length > 0 && previewColumns.length > 0 ? (
+            <div className={styles.dbPreviewTableWrap}>
+              <table className={styles.dbPreviewTable}>
+                <thead>
+                  <tr>
+                    {previewColumns.map((col) => (
+                      <th key={col}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((row, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {previewColumns.map((col) => {
+                        const value = row[col];
+                        const text = value === null || value === undefined ? "—" : String(value);
+                        return (
+                          <td key={col} title={text}>
+                            {text}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className={styles.dbPreviewMsg}>无数据</div>
+          )}
         </div>
       ) : null}
     </div>
@@ -409,7 +528,7 @@ function DataBrowserDrawer({
       <div className={styles.dbWrap}>
         <p className={styles.dbHint}>
           点「<b>+ 资源组</b>」→ 加入 <code>concept_groups</code>；点「对象类型」→ 填入当前接口的 <code>ot_id</code>；
-          点「数据资源」→ 填入 run_sql 的 <code>{"{{资源}}"}</code> 占位。样本行预览将在数据资源就绪后开放。
+          点「数据资源」→ 填入 run_sql 的 <code>{"{{资源}}"}</code> 占位；点「预览数据」看样本行。
         </p>
         <div className={styles.dbSearch}>
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="筛选对象类型 / 资源…" allowClear />
@@ -457,6 +576,7 @@ function DataBrowserDrawer({
                     onFillField={onFillField}
                     onFillResource={onFillResource}
                     copy={copy}
+                    env={env}
                   />
                 ))}
               </div>
@@ -504,9 +624,15 @@ export function ExperienceScene() {
   const [network, setNetwork] = useState<{ name: string; slug: string } | null>(null);
   const [mode, setMode] = useState<ContextLoaderMode>("rest");
 
+  // 请求基址：走当前源（dev 经 vite 代理转后端，避免浏览器跨域）。
   const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "http://agent-retrieval:30779"));
-  // 用 studio 当前登录态的访问令牌，每次渲染现取（不冻结，避免过期后还用旧 token → 401）。
-  const token = runtimeConfig.auth.tokenManager.getAccessToken() ?? "";
+  // 展示/接入指南用真实服务器（网关）地址：dev 取 VITE_DEV_AUTH_ORIGIN，prod 同源。
+  const serverAddress = gatewayOrigin() || base;
+  // 认证方式：OAuth 会话令牌（默认，每次现取避免过期）或用户粘贴的长期 API Key（bak_）。
+  const sessionToken = runtimeConfig.auth.tokenManager.getAccessToken() ?? "";
+  const [authMode, setAuthMode] = useState<"oauth" | "apikey">("oauth");
+  const [appKey, setAppKey] = useState("");
+  const token = authMode === "apikey" ? appKey.trim() : sessionToken;
 
   const [filter, setFilter] = useState("");
   const [selectedId, setSelectedId] = useState(CONTEXT_LOADER_OPS[0]!.id);
@@ -558,9 +684,10 @@ export function ExperienceScene() {
     setReqError(null);
   }, [op, mode, knId]);
 
+  // cURL 展示真实网关地址（终端可直接跑，无浏览器跨域顾虑）；请求本体仍走 env.base 代理。
   const curl = useMemo(
-    () => buildCurl(env, op, mode, queryVals, bodyText),
-    [env, op, mode, queryVals, bodyText],
+    () => buildCurl({ ...env, base: serverAddress }, op, mode, queryVals, bodyText),
+    [env, serverAddress, op, mode, queryVals, bodyText],
   );
 
   const displayPath = mode === "mcp" ? mcpPathOf(op) : op.path;
@@ -579,8 +706,10 @@ export function ExperienceScene() {
     setResponse(null);
     setReqError(null);
     try {
-      // 发送时再取一次最新 token（会话可能已刷新），避免用到过期令牌。
-      const freshEnv = { ...env, token: runtimeConfig.auth.tokenManager.getAccessToken() ?? env.token };
+      // OAuth：发送时再取一次最新会话令牌（可能已刷新）；API Key：用粘贴的长期 key。
+      const freshToken =
+        authMode === "apikey" ? appKey.trim() : runtimeConfig.auth.tokenManager.getAccessToken() ?? env.token;
+      const freshEnv = { ...env, token: freshToken };
       const result = await sendRequest(freshEnv, op, mode, queryVals, bodyText);
       setResponse(result);
     } catch (error) {
@@ -588,7 +717,7 @@ export function ExperienceScene() {
     } finally {
       setSending(false);
     }
-  }, [env, op, mode, queryVals, bodyText, runtimeConfig]);
+  }, [env, op, mode, queryVals, bodyText, runtimeConfig, authMode, appKey]);
 
   // 数据浏览器「填入」：字段可能是 REST 的 query 参数（如 query_object_instance 的 ot_id），
   // 也可能在请求体里（如 MCP 的 arguments）。按实际位置填，落不到则复制兜底。
@@ -694,10 +823,36 @@ export function ExperienceScene() {
           </div>
           <div className={styles.ef}>
             <label>服务地址</label>
-            <div className={styles.addr} title={mode === "mcp" ? `${base}${MCP_PATH}` : base}>
-              {mode === "mcp" ? `${base}${MCP_PATH}` : base}
+            <div
+              className={styles.addr}
+              title={mode === "mcp" ? `${serverAddress}${MCP_PATH}` : serverAddress}
+            >
+              {mode === "mcp" ? `${serverAddress}${MCP_PATH}` : serverAddress}
             </div>
           </div>
+          <div className={styles.ef}>
+            <label>
+              认证方式
+              <Tooltip title="OAuth Token：用你当前登录态（短期，仅本页调试）。API Key：填长期 bak_ Key（右上角「API Key」页签发），仅对 Context Loader 有效。">
+                <QuestionCircleOutlined className={styles.hintIcon} />
+              </Tooltip>
+            </label>
+            <Select
+              className={styles.authSelect}
+              value={authMode}
+              onChange={setAuthMode}
+              options={[
+                { value: "oauth", label: "OAuth Token" },
+                { value: "apikey", label: "API Key" },
+              ]}
+            />
+          </div>
+          {authMode === "apikey" ? (
+            <div className={styles.ef}>
+              <label>API Key</label>
+              <MaskedKeyInput value={appKey} onChange={setAppKey} onIssue={() => navigate("/api-keys")} />
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -898,7 +1053,7 @@ export function ExperienceScene() {
       <McpSetupModal
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
-        mcpUrl={`${base}${MCP_PATH}`}
+        mcpUrl={`${serverAddress}${MCP_PATH}`}
         onIssueKey={() => navigate("/api-keys")}
         copy={copy}
       />

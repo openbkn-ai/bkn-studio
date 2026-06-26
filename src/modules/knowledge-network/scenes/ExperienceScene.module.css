@@ -145,6 +145,58 @@
   font-family: var(--mono);
 }
 
+.hintIcon {
+  margin-left: 5px;
+  color: var(--faint);
+  cursor: help;
+}
+
+.authSelect {
+  width: 132px;
+}
+
+.keyField {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.keyInput {
+  width: 188px;
+  height: 32px;
+  border: 1px solid var(--field-bd);
+  border-radius: 8px;
+  padding: 0 11px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--txt);
+  background: #fff;
+  outline: none;
+}
+
+.keyInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(46, 104, 255, 0.1);
+}
+
+.keyIssue {
+  flex: 0 0 auto;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #d9c8f5;
+  border-radius: 8px;
+  background: #f6f0ff;
+  color: #7c3aed;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.keyIssue:hover {
+  background: #efe5ff;
+}
+
 /* ---------------- main ---------------- */
 .main {
   flex: 1 1 auto;
@@ -1425,6 +1477,72 @@
   background: #f4eefc;
   border-radius: 4px;
   padding: 1px 7px;
+}
+
+/* ---------------- 样本数据预览 ---------------- */
+.dbPreview {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.dbPreviewMsg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  font-size: 12px;
+  color: var(--txt2);
+}
+
+.dbPreviewErr {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(214, 58, 58, 0.07);
+  color: #d63a3a;
+  font-size: 11.5px;
+  word-break: break-all;
+}
+
+.dbPreviewTableWrap {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.dbPreviewTable {
+  border-collapse: collapse;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.dbPreviewTable th,
+.dbPreviewTable td {
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--line2);
+  border-right: 1px solid var(--line2);
+  text-align: left;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dbPreviewTable th {
+  position: sticky;
+  top: 0;
+  background: var(--code);
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--txt2);
+}
+
+.dbPreviewTable td {
+  color: var(--txt);
+}
+
+.dbPreviewTable tbody tr:hover {
+  background: var(--code);
 }
 
 @media (max-width: 1180px) {
