@@ -1,0 +1,58 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.block {
+  border: 1px solid rgba(15, 30, 54, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f4f7fd;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+  font-size: 12px;
+  font-weight: 600;
+  color: #5b6678;
+}
+
+.title {
+  font-size: 12px;
+}
+
+.copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid rgba(15, 30, 54, 0.1);
+  border-radius: 6px;
+  background: #eef2f9;
+  color: #5b6678;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.copy:hover {
+  border-color: #2e68ff;
+  color: #2e68ff;
+}
+
+.pre {
+  margin: 0;
+  padding: 13px;
+  max-height: 220px;
+  overflow: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #1e293b;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

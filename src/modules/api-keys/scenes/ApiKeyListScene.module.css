@@ -30,9 +30,26 @@
   margin-bottom: 16px;
 }
 
+.nameKeyCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .nameCell {
   font-weight: 600;
   color: #1e293b;
+}
+
+.keyMask {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: #7c3aed;
+  background: #f6f0ff;
+  border: 1px solid #e4d6fb;
+  border-radius: 5px;
+  padding: 1px 7px;
+  width: fit-content;
 }
 
 .muted {

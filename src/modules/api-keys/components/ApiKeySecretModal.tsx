@@ -3,6 +3,7 @@ import { Alert, Modal } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { UsageBlocks } from "@/modules/api-keys/components/UsageBlocks";
 import type { IssuedApiKey } from "@/modules/api-keys/types/api-key";
 
 import styles from "./ApiKeySecretModal.module.css";
@@ -36,6 +37,7 @@ export function ApiKeySecretModal({
       cancelButtonProps={{ style: { display: "none" } }}
       closable={false}
       maskClosable={false}
+      width={640}
       title={
         <span className={styles.titleRow}>
           <WarningFilled className={styles.titleIcon} /> {t("apiKeys.secretModal.title")}
@@ -49,6 +51,8 @@ export function ApiKeySecretModal({
           <CopyOutlined /> {t("apiKeys.secretModal.copy")}
         </button>
       </div>
+      <p className={styles.usageLead}>{t("apiKeys.usage.lead")}</p>
+      {secret ? <UsageBlocks keyValue={secret.key} /> : null}
     </Modal>
   );
 }

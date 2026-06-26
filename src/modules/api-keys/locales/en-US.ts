@@ -5,8 +5,11 @@ export const apiKeysEnUS = {
       "Issue long-lived API keys (bak_ prefix) and put them in the Authorization header of MCP clients / SDKs to replace short-lived login tokens. Valid only for the Context Loader (MCP / REST); identity and permissions match yours.",
     issue: "Issue key",
     refresh: "Refresh",
+    calloutInfo:
+      "A key is a personal Bearer token: paste it into the 立即体验 API Key field, or configure it in a CLI / MCP client. Identity and permissions match yours; the secret is shown only once at issue time.",
     columns: {
       name: "Name",
+      key: "Key",
       created: "Created",
       expires: "Expires",
       lastUsed: "Last used",
@@ -17,8 +20,19 @@ export const apiKeysEnUS = {
     never: "Never",
     statusEnabled: "Enabled",
     statusDisabled: "Disabled",
+    actionUsage: "Usage",
     actionRegenerate: "Regenerate",
     actionRevoke: "Revoke",
+    usage: {
+      lead: "Use the key as the Authorization: Bearer header to call the ContextLoader REST API or configure an MCP client.",
+      rest: "REST · ContextLoader",
+      mcp: "MCP · client config",
+    },
+    usageModal: {
+      title: "Use key",
+      lead: "This key's secret was shown only once at issue time. Replace <YOUR_API_KEY> in the examples below with the full key you saved then.",
+      close: "Close",
+    },
     emptyTitle: "No API keys",
     emptyDescription: "Issue a long-lived key for MCP clients like Cursor / Claude Code.",
     loadFailed: "Failed to load API keys.",

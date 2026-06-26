@@ -12,12 +12,14 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ApiKeySecretModal } from "@/modules/api-keys/components/ApiKeySecretModal";
 import { IssueApiKeyModal } from "@/modules/api-keys/components/IssueApiKeyModal";
+import { KeyUsageModal } from "@/modules/api-keys/components/KeyUsageModal";
 import {
   listApiKeys,
   regenerateApiKey,
   revokeApiKey,
 } from "@/modules/api-keys/services/api-key.service";
 import type { ApiKey, IssuedApiKey } from "@/modules/api-keys/types/api-key";
+import { maskApiKey } from "@/modules/api-keys/utils/api-key-usage";
 
 import styles from "./ApiKeyListScene.module.css";
 
@@ -32,6 +34,7 @@ export function ApiKeyListScene() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
   const [secret, setSecret] = useState<IssuedApiKey | null>(null);
+  const [usageKey, setUsageKey] = useState<ApiKey | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -93,10 +96,15 @@ export function ApiKeyListScene() {
 
   const columns: ColumnsType<ApiKey> = [
     {
-      title: t("apiKeys.columns.name"),
+      title: `${t("apiKeys.columns.name")} / ${t("apiKeys.columns.key")}`,
       dataIndex: "name",
-      width: 200,
-      render: (value: string) => <span className={styles.nameCell}>{value}</span>,
+      width: 280,
+      render: (value: string, record) => (
+        <div className={styles.nameKeyCell}>
+          <span className={styles.nameCell}>{value}</span>
+          <code className={styles.keyMask}>{maskApiKey(record.keyId)}</code>
+        </div>
+      ),
     },
     {
       title: t("apiKeys.columns.status"),
@@ -135,6 +143,9 @@ export function ApiKeyListScene() {
       width: 170,
       render: (_value, record) => (
         <div className={styles.actions}>
+          <AppButton type="link" onClick={() => setUsageKey(record)}>
+            {t("apiKeys.actionUsage")}
+          </AppButton>
           <AppButton type="link" onClick={() => handleRegenerate(record)}>
             {t("apiKeys.actionRegenerate")}
           </AppButton>
@@ -152,6 +163,8 @@ export function ApiKeyListScene() {
         <h2 className={styles.title}>{t("apiKeys.title")}</h2>
         <p className={styles.intro}>{t("apiKeys.description")}</p>
       </div>
+
+      <Alert type="info" showIcon message={t("apiKeys.calloutInfo")} style={{ marginBottom: 16 }} />
 
       <div className={styles.toolbar}>
         <AppButton icon={<PlusOutlined />} type="primary" onClick={() => setIssueOpen(true)}>
@@ -204,6 +217,7 @@ export function ApiKeyListScene() {
         }}
       />
       <ApiKeySecretModal secret={secret} onClose={() => setSecret(null)} />
+      <KeyUsageModal apiKey={usageKey} onClose={() => setUsageKey(null)} />
     </section>
   );
 }

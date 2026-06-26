@@ -1,0 +1,28 @@
+.lead {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(15, 30, 54, 0.62);
+}
+
+.masked {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.maskedLabel {
+  font-size: 12px;
+  color: #9aa6bd;
+}
+
+.maskedCode {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: #f4f7fd;
+  border: 1px solid #e3e8f0;
+  color: #1e293b;
+}

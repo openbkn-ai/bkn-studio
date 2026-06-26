@@ -5,8 +5,11 @@ export const apiKeysZhCN = {
       "签发长期 API Key（bak_ 开头），填到 MCP 客户端 / SDK 的 Authorization，替代易过期的登录 token。仅对 Context Loader（MCP / REST）有效，身份与权限同你本人。",
     issue: "签发 Key",
     refresh: "刷新",
+    calloutInfo:
+      "密钥即个人 Bearer 令牌，可填到「立即体验」的 API Key，或配置进 CLI / MCP 客户端。身份与权限同你本人；明文仅在签发时显示一次。",
     columns: {
       name: "名称",
+      key: "密钥",
       created: "创建时间",
       expires: "过期时间",
       lastUsed: "最近使用",
@@ -17,8 +20,19 @@ export const apiKeysZhCN = {
     never: "从未",
     statusEnabled: "启用",
     statusDisabled: "停用",
+    actionUsage: "用法",
     actionRegenerate: "重新生成",
     actionRevoke: "撤销",
+    usage: {
+      lead: "把密钥作为 Authorization: Bearer 头，调 ContextLoader 的 REST 接口，或配置到 MCP 客户端。",
+      rest: "REST · ContextLoader",
+      mcp: "MCP · 客户端配置",
+    },
+    usageModal: {
+      title: "使用密钥",
+      lead: "这枚密钥的明文仅在签发时显示过一次。下方示例中的 <YOUR_API_KEY> 请替换为你当时保存的完整密钥。",
+      close: "关闭",
+    },
     emptyTitle: "暂无 API Key",
     emptyDescription: "签发一个长期 Key，给 Cursor / Claude Code 等 MCP 客户端使用。",
     loadFailed: "加载 API Key 失败。",
