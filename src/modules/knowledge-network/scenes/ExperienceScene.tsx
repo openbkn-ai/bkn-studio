@@ -12,8 +12,8 @@ import {
   ReadOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
-import { App, Drawer, Empty, Input, Modal, Spin, Tabs } from "antd";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { App, Drawer, Empty, Input, Modal, Spin, Tabs, Tooltip } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
@@ -83,6 +83,34 @@ function JsonHighlight({ text }: { text: string }) {
   }
   if (last < text.length) nodes.push(text.slice(last));
   return <>{nodes}</>;
+}
+
+/* ============================ 可编辑 JSON 编辑器（透明 textarea + 背后高亮 pre，滚动同步） ============================ */
+function JsonEditor({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const preRef = useRef<HTMLPreElement>(null);
+  const syncScroll = () => {
+    if (preRef.current && taRef.current) {
+      preRef.current.scrollTop = taRef.current.scrollTop;
+      preRef.current.scrollLeft = taRef.current.scrollLeft;
+    }
+  };
+  return (
+    <div className={styles.editWrap}>
+      <pre ref={preRef} className={styles.editHl} aria-hidden="true">
+        <JsonHighlight text={value} />
+        {"\n"}
+      </pre>
+      <textarea
+        ref={taRef}
+        className={styles.ta}
+        value={value}
+        spellCheck={false}
+        onChange={(event) => onChange(event.target.value)}
+        onScroll={syncScroll}
+      />
+    </div>
+  );
 }
 
 /* ============================ MCP 接入指南（Claude Code / Cursor / 通用） ============================ */
@@ -203,39 +231,76 @@ function ObjectTypeCard({
   onFillResource: (resourceId: string) => void;
   copy: (text: string, label?: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const res = ot.data_source ?? null;
-  const propCount = ot.data_properties?.length ?? 0;
+  const props = ot.data_properties ?? [];
   return (
     <div className={styles.dbCard}>
       <div className={styles.dbCardHead}>
-        <span className={styles.dbOtName}>{ot.name || ot.id}</span>
+        <span className={styles.dbOtName} title={ot.name || ot.id}>
+          {ot.name || ot.id}
+        </span>
         <button
           type="button"
-          className={styles.dbChip}
-          title="填入请求体 ot_id"
-          onClick={() => onFillField("ot_id", ot.id)}
+          className={`${styles.dbFields} ${open ? styles.dbFieldsOpen : ""}`}
+          onClick={() => setOpen((value) => !value)}
+          disabled={props.length === 0}
         >
-          {ot.id}
+          {props.length} 字段 <span className={styles.dbChev}>▾</span>
         </button>
       </div>
-      <div className={styles.dbCardMeta}>
-        {res?.id ? (
-          <button
-            type="button"
-            className={styles.dbRes}
-            title="填入 run_sql 的 {{资源}} 占位（其它接口则复制）"
-            onClick={() => onFillResource(res.id)}
-          >
-            <DatabaseOutlined /> {res.name || "资源"} · {res.id}
+
+      <div className={styles.dbRow}>
+        <span className={styles.dbRowLabel}>对象类型</span>
+        <Tooltip title="点击填入当前接口的 ot_id">
+          <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", ot.id)}>
+            {ot.id}
           </button>
-        ) : (
-          <span className={styles.dbNoRes}>无资源绑定</span>
-        )}
-        <span className={styles.dbProps}>{propCount} 字段</span>
-        <button type="button" className={styles.dbCopy} title="复制 ot_id" onClick={() => copy(ot.id, "已复制 ot_id")}>
-          <CopyOutlined />
-        </button>
+        </Tooltip>
+        <Tooltip title="复制 ot_id">
+          <button type="button" className={styles.dbCopy} onClick={() => copy(ot.id, "已复制 ot_id")}>
+            <CopyOutlined />
+          </button>
+        </Tooltip>
       </div>
+
+      <div className={styles.dbRow}>
+        <span className={styles.dbRowLabel}>数据资源</span>
+        {res?.id ? (
+          <>
+            <Tooltip title="点击填入 run_sql 的 {{资源}} 占位（其它接口则复制）">
+              <button type="button" className={styles.dbRes} onClick={() => onFillResource(res.id)}>
+                <DatabaseOutlined /> {res.name || "资源"} · {res.id}
+              </button>
+            </Tooltip>
+            <Tooltip title="复制资源 id">
+              <button type="button" className={styles.dbCopy} onClick={() => copy(res.id, "已复制资源 id")}>
+                <CopyOutlined />
+              </button>
+            </Tooltip>
+          </>
+        ) : (
+          <span className={styles.dbNoRes}>无绑定</span>
+        )}
+      </div>
+
+      {open && props.length > 0 ? (
+        <div className={styles.dbPropList}>
+          {props.map((prop) => (
+            <div key={prop.name} className={styles.dbProp}>
+              <span className={styles.dbPropName} title={prop.name}>
+                {prop.name}
+              </span>
+              {prop.display_name && prop.display_name !== prop.name ? (
+                <span className={styles.dbPropDisp} title={prop.display_name}>
+                  {prop.display_name}
+                </span>
+              ) : null}
+              <span className={styles.dbPropType}>{prop.type || "—"}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -313,8 +378,8 @@ function DataBrowserDrawer({
     >
       <div className={styles.dbWrap}>
         <p className={styles.dbHint}>
-          点对象类型 id → 填入请求体 <code>ot_id</code>；点资源 → 填入 run_sql 的 <code>{"{{资源}}"}</code> 占位。
-          样本行预览将在数据资源就绪后开放。
+          点「对象类型」→ 填入当前接口的 <code>ot_id</code>（query 参数或请求体，自动判断）；
+          点「数据资源」→ 填入 run_sql 的 <code>{"{{资源}}"}</code> 占位。样本行预览将在数据资源就绪后开放。
         </p>
         <div className={styles.dbSearch}>
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="筛选对象类型 / 资源…" allowClear />
@@ -478,9 +543,17 @@ export function ExperienceScene() {
     }
   }, [env, op, mode, queryVals, bodyText]);
 
-  // 数据浏览器「填入请求体」：把对象类型 id / 资源占位写进当前 body JSON（非 JSON 则复制兜底）。
+  // 数据浏览器「填入」：字段可能是 REST 的 query 参数（如 query_object_instance 的 ot_id），
+  // 也可能在请求体里（如 MCP 的 arguments）。按实际位置填，落不到则复制兜底。
   const fillBodyField = useCallback(
     (key: string, value: string) => {
+      // 1) 当前接口把该字段作为 REST query 参数 → 填 query
+      if (mode === "rest" && op.query.some((param) => param.name === key)) {
+        setQueryVals((prev) => ({ ...prev, [key]: value }));
+        message.success(`已填入 ${key}`);
+        return;
+      }
+      // 2) 否则写进请求体 JSON
       try {
         const obj = JSON.parse(bodyText || "{}");
         if (obj && typeof obj === "object" && !Array.isArray(obj)) {
@@ -493,9 +566,9 @@ export function ExperienceScene() {
       } catch {
         /* 落到复制兜底 */
       }
-      copy(value, `已复制（当前请求体无法自动填入 ${key}）`);
+      copy(value, `已复制（当前接口无 ${key} 字段，可手动粘贴）`);
     },
-    [bodyText, copy, message],
+    [mode, op, bodyText, copy, message],
   );
 
   const fillResource = useCallback(
@@ -661,12 +734,7 @@ export function ExperienceScene() {
                         格式化
                       </button>
                     </div>
-                    <textarea
-                      className={styles.ta}
-                      value={bodyText}
-                      spellCheck={false}
-                      onChange={(e) => setBodyText(e.target.value)}
-                    />
+                    <JsonEditor value={bodyText} onChange={setBodyText} />
                     {bodyError ? <div className={styles.bodyErr}>{bodyError}</div> : null}
                   </div>
                 </div>
