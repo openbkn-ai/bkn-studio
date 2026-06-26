@@ -179,8 +179,7 @@ export function KnowledgeNetworkListScene({
 
   return (
     <section className={styles.page}>
-      <h1 className={styles.title}>{t("knowledgeNetwork.title")}</h1>
-
+      {/* 页面标题与顶栏面包屑「领域业务知识网络」重复，去掉避免冗余 */}
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
           <AppButton
