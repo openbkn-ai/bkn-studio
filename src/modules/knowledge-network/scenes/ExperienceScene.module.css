@@ -455,6 +455,10 @@
   color: var(--txt2);
 }
 
+.qpSelect {
+  width: 100%;
+}
+
 .editor {
   border: 1px solid var(--line);
   border-radius: 10px;

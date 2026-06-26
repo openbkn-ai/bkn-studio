@@ -12,7 +12,7 @@ import {
   ReadOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
-import { App, Drawer, Empty, Input, Modal, Spin, Tabs, Tooltip } from "antd";
+import { App, Drawer, Empty, Input, Modal, Select, Spin, Tabs, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -506,7 +506,6 @@ export function ExperienceScene() {
 
   const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "http://agent-retrieval:30779"));
   // 用 studio 当前登录态的访问令牌，每次渲染现取（不冻结，避免过期后还用旧 token → 401）。
-  // 网关从 Bearer 派生账号，无需 x-account-*；token 不在界面展示，发送时再取一次最新。
   const token = runtimeConfig.auth.tokenManager.getAccessToken() ?? "";
 
   const [filter, setFilter] = useState("");
@@ -935,13 +934,13 @@ function QueryParamRow({
         {param.required ? <span className={styles.star}>*</span> : null}
       </div>
       {param.options ? (
-        <select className={styles.qpInput} value={value} onChange={(e) => onChange(e.target.value)}>
-          {param.options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <Select
+          className={styles.qpSelect}
+          value={value}
+          onChange={(next) => onChange(next)}
+          options={param.options.map((option) => ({ value: option, label: option }))}
+          popupMatchSelectWidth={false}
+        />
       ) : (
         <input className={styles.qpInput} value={value} disabled={locked} onChange={(e) => onChange(e.target.value)} />
       )}
