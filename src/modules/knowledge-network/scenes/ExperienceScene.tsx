@@ -3,9 +3,9 @@
  * 三个 Tab：Agent 对话 / REST 接口 / MCP 工具。REST 与 MCP 一一对应；发送为真实 HTTP 调用。
  */
 
-import { ArrowLeftOutlined, ApiOutlined, KeyOutlined, ThunderboltFilled } from "@ant-design/icons";
-import { Input, Select, Spin } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeftOutlined, ApiOutlined, CopyOutlined, KeyOutlined, ReadOutlined, ThunderboltFilled } from "@ant-design/icons";
+import { App, Input, Modal, Select, Spin, Tabs } from "antd";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
@@ -43,6 +43,152 @@ function prettyResponse(text: string): string {
   }
 }
 
+/* ============================ JSON 语法高亮（无依赖，正则分词） ============================ */
+const JSON_TOKEN_RE = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
+
+function JsonHighlight({ text }: { text: string }) {
+  // 超大响应不逐 token 渲染，避免卡顿。
+  if (text.length > 200_000) return <>{text}</>;
+  const nodes: ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  JSON_TOKEN_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = JSON_TOKEN_RE.exec(text)) !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    if (m[1] !== undefined) {
+      if (m[2] !== undefined) {
+        // 字符串后紧跟冒号 → 属性名（key）
+        nodes.push(<span key={key++} className={styles.jKey}>{m[1]}</span>);
+        nodes.push(<span key={key++} className={styles.jPunct}>{m[2]}</span>);
+      } else {
+        nodes.push(<span key={key++} className={styles.jStr}>{m[1]}</span>);
+      }
+    } else if (m[3] !== undefined) {
+      nodes.push(<span key={key++} className={styles.jKw}>{m[3]}</span>);
+    } else if (m[4] !== undefined) {
+      nodes.push(<span key={key++} className={styles.jNum}>{m[4]}</span>);
+    }
+    last = JSON_TOKEN_RE.lastIndex;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return <>{nodes}</>;
+}
+
+/* ============================ MCP 接入指南（Claude Code / Cursor / 通用） ============================ */
+function CodeBlock({
+  title,
+  code,
+  json,
+  onCopy,
+}: {
+  title: string;
+  code: string;
+  json?: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className={styles.codeBlk}>
+      <div className={styles.codeBlkHead}>
+        <span>{title}</span>
+        <button type="button" className={styles.mini} onClick={onCopy}>
+          <CopyOutlined /> 复制
+        </button>
+      </div>
+      <pre className={styles.codeBlkPre}>{json ? <JsonHighlight text={code} /> : code}</pre>
+    </div>
+  );
+}
+
+function McpSetupModal({
+  open,
+  onClose,
+  mcpUrl,
+  token,
+  acctId,
+  acctType,
+  copy,
+}: {
+  open: boolean;
+  onClose: () => void;
+  mcpUrl: string;
+  token: string;
+  acctId: string;
+  acctType: string;
+  copy: (text: string, label?: string) => void;
+}) {
+  const tk = token || "<your-token>";
+  const aid = acctId || "<account-id>";
+  const at = acctType || "user";
+  const jsonConfig = JSON.stringify(
+    {
+      mcpServers: {
+        "bkn-agent-retrieval": {
+          type: "http",
+          url: mcpUrl,
+          headers: { Authorization: `Bearer ${tk}`, "x-account-id": aid, "x-account-type": at },
+        },
+      },
+    },
+    null,
+    2,
+  );
+  const claudeCli = [
+    `claude mcp add --transport http bkn-agent-retrieval ${mcpUrl} \\`,
+    `  --header "Authorization: Bearer ${tk}" \\`,
+    `  --header "x-account-id: ${aid}" \\`,
+    `  --header "x-account-type: ${at}"`,
+  ].join("\n");
+
+  return (
+    <Modal open={open} onCancel={onClose} footer={null} width={680} title="接入 MCP（Claude Code / Cursor）">
+      <p className={styles.guideNote}>
+        本服务为 <b>Streamable HTTP</b> MCP，需带鉴权头。下方已自动填入当前服务地址与登录态——
+        Bearer Token 为短期令牌（<code>ory_at_…</code>），正式接入请换用长期令牌。
+      </p>
+      <Tabs
+        defaultActiveKey="claude"
+        items={[
+          {
+            key: "claude",
+            label: "Claude Code",
+            children: (
+              <>
+                <CodeBlock title="① CLI 一行接入" code={claudeCli} onCopy={() => copy(claudeCli, "命令已复制")} />
+                <CodeBlock
+                  title="② 或写入项目 .mcp.json"
+                  code={jsonConfig}
+                  json
+                  onCopy={() => copy(jsonConfig, "配置已复制")}
+                />
+              </>
+            ),
+          },
+          {
+            key: "cursor",
+            label: "Cursor",
+            children: (
+              <>
+                <p className={styles.guideNote}>
+                  写入 <code>~/.cursor/mcp.json</code>（全局）或项目内 <code>.cursor/mcp.json</code>，重启 Cursor 后生效。
+                </p>
+                <CodeBlock title="~/.cursor/mcp.json" code={jsonConfig} json onCopy={() => copy(jsonConfig, "配置已复制")} />
+              </>
+            ),
+          },
+          {
+            key: "generic",
+            label: "通用 (mcp.json)",
+            children: (
+              <CodeBlock title="mcpServers 配置" code={jsonConfig} json onCopy={() => copy(jsonConfig, "配置已复制")} />
+            ),
+          },
+        ]}
+      />
+    </Modal>
+  );
+}
+
 /* ============================ Agent 对话（待接入真实 Agent，先留空） ============================ */
 function AgentBlank() {
   return (
@@ -62,8 +208,19 @@ function AgentBlank() {
 export function ExperienceScene() {
   const navigate = useNavigate();
   const runtimeConfig = useRuntimeConfig();
+  const { message } = App.useApp();
   const { networkId } = useParams<{ networkId: string }>();
   const id = networkId ?? "";
+
+  const copy = useCallback(
+    (text: string, label = "已复制") => {
+      void navigator.clipboard
+        ?.writeText(text)
+        .then(() => message.success(label))
+        .catch(() => message.error("复制失败"));
+    },
+    [message],
+  );
 
   const [network, setNetwork] = useState<{ name: string; slug: string } | null>(null);
   const [mode, setMode] = useState<ContextLoaderMode>("rest");
@@ -83,6 +240,7 @@ export function ExperienceScene() {
   const [reqError, setReqError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [curlOpen, setCurlOpen] = useState(true);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -220,6 +378,11 @@ export function ExperienceScene() {
         <div className={styles.main}>
           {/* 接口列表 */}
           <aside className={styles.list}>
+            {mode === "mcp" ? (
+              <button type="button" className={styles.guideBtn} onClick={() => setGuideOpen(true)}>
+                <ReadOutlined /> 接入 Claude Code / Cursor
+              </button>
+            ) : null}
             <div className={styles.listSearch}>
               <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="筛选接口…" />
             </div>
@@ -342,6 +505,13 @@ export function ExperienceScene() {
                   <span className={styles.resMeta}>
                     {response.latencyMs}ms · {response.sizeBytes}B
                   </span>
+                  <button
+                    type="button"
+                    className={styles.copyResp}
+                    onClick={() => copy(prettyResponse(response.text), "响应已复制")}
+                  >
+                    <CopyOutlined /> 复制结果
+                  </button>
                 </>
               ) : (
                 <span className={styles.resHint}>尚未发送请求</span>
@@ -361,7 +531,9 @@ export function ExperienceScene() {
                   </div>
                 </div>
               ) : response ? (
-                <pre className={styles.out}>{prettyResponse(response.text)}</pre>
+                <pre className={styles.out}>
+                  <JsonHighlight text={prettyResponse(response.text)} />
+                </pre>
               ) : (
                 <div className={styles.resEmpty}>
                   <ApiOutlined className={styles.resEmptyIc} />
@@ -380,7 +552,7 @@ export function ExperienceScene() {
                   className={styles.mini}
                   onClick={(event) => {
                     event.stopPropagation();
-                    void navigator.clipboard?.writeText(curl);
+                    copy(curl, "cURL 已复制");
                   }}
                 >
                   复制
@@ -395,6 +567,16 @@ export function ExperienceScene() {
           </section>
         </div>
       )}
+
+      <McpSetupModal
+        open={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        mcpUrl={`${base}${MCP_PATH}`}
+        token={token}
+        acctId={acctId}
+        acctType={acctType}
+        copy={copy}
+      />
     </section>
   );
 }
