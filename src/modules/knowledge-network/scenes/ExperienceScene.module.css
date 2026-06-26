@@ -1142,12 +1142,41 @@
   margin-top: 22px;
 }
 
+.dbGroupRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px 10px;
+}
+
 .dbGroup {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--txt2);
   padding: 0 2px 10px;
+}
+
+.dbGroupRow .dbGroup {
+  padding: 0;
+}
+
+.dbGroupAdd {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: #6d28d9;
+  background: #f6f0ff;
+  border: 1px solid #e4d6fb;
+  border-radius: 6px;
+  padding: 2px 9px;
+  cursor: pointer;
+}
+
+.dbGroupAdd:hover {
+  background: #8a3fd1;
+  color: #fff;
+  border-color: #8a3fd1;
 }
 
 .dbCard {

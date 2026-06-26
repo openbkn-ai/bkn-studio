@@ -53,6 +53,19 @@ function prettyResponse(text: string): string {
   }
 }
 
+/** 递归查找名为 key 且值为数组的属性（如嵌套在 search_scope 里的 concept_groups），返回该数组引用。 */
+function findArrayProp(node: unknown, key: string): unknown[] | null {
+  if (!node || typeof node !== "object") return null;
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+    if (k === key && Array.isArray(v)) return v;
+    if (v && typeof v === "object") {
+      const found = findArrayProp(v, key);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 /* ============================ JSON 语法高亮（无依赖，正则分词） ============================ */
 const JSON_TOKEN_RE = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
 
@@ -318,6 +331,7 @@ function DataBrowserDrawer({
   knName,
   onFillField,
   onFillResource,
+  onFillConceptGroup,
   copy,
 }: {
   open: boolean;
@@ -326,6 +340,7 @@ function DataBrowserDrawer({
   knName: string;
   onFillField: (key: string, value: string) => void;
   onFillResource: (resourceId: string) => void;
+  onFillConceptGroup: (groupId: string) => void;
   copy: (text: string, label?: string) => void;
 }) {
   const [detail, setDetail] = useState<KnDetail | null>(null);
@@ -363,12 +378,13 @@ function DataBrowserDrawer({
         .includes(needle);
     const byId = new Map(detail.object_types.map((o) => [o.id, o]));
     const grouped = detail.concept_groups.map((group) => ({
+      id: group.id,
       title: group.name || group.id,
       ots: (group.object_type_ids ?? []).map((oid) => byId.get(oid)).filter((o): o is KnObjectType => Boolean(o)),
     }));
     const inGroup = new Set(detail.concept_groups.flatMap((g) => g.object_type_ids ?? []));
     const ungrouped = detail.object_types.filter((o) => !inGroup.has(o.id));
-    if (ungrouped.length) grouped.push({ title: "未分组", ots: ungrouped });
+    if (ungrouped.length) grouped.push({ id: "", title: "未分组", ots: ungrouped });
     return grouped
       .map((section) => ({ ...section, ots: section.ots.filter(match) }))
       .filter((section) => section.ots.length > 0);
@@ -384,7 +400,7 @@ function DataBrowserDrawer({
     >
       <div className={styles.dbWrap}>
         <p className={styles.dbHint}>
-          点「对象类型」→ 填入当前接口的 <code>ot_id</code>（query 参数或请求体，自动判断）；
+          点「<b>+ 资源组</b>」→ 加入 <code>concept_groups</code>；点「对象类型」→ 填入当前接口的 <code>ot_id</code>；
           点「数据资源」→ 填入 run_sql 的 <code>{"{{资源}}"}</code> 占位。样本行预览将在数据资源就绪后开放。
         </p>
         <div className={styles.dbSearch}>
@@ -410,7 +426,22 @@ function DataBrowserDrawer({
           ) : (
             sections.map((section) => (
               <div key={section.title} className={styles.dbSection}>
-                <div className={styles.dbGroup}>{section.title}</div>
+                {section.id ? (
+                  <div className={styles.dbGroupRow}>
+                    <span className={styles.dbGroup}>{section.title}</span>
+                    <Tooltip title={`加入 concept_groups：${section.id}`}>
+                      <button
+                        type="button"
+                        className={styles.dbGroupAdd}
+                        onClick={() => onFillConceptGroup(section.id)}
+                      >
+                        + 资源组
+                      </button>
+                    </Tooltip>
+                  </div>
+                ) : (
+                  <div className={styles.dbGroup}>{section.title}</div>
+                )}
                 {section.ots.map((ot) => (
                   <ObjectTypeCard
                     key={ot.id}
@@ -598,6 +629,27 @@ export function ExperienceScene() {
         /* 落到复制兜底 */
       }
       copy(token, "已复制资源占位");
+    },
+    [bodyText, copy, message],
+  );
+
+  // 资源组（concept_group）→ 加入请求体的 concept_groups 数组（可能嵌套在 search_scope 下）。
+  const fillConceptGroup = useCallback(
+    (groupId: string) => {
+      try {
+        const obj = JSON.parse(bodyText || "{}");
+        const arr = findArrayProp(obj, "concept_groups");
+        if (arr) {
+          if (!arr.includes(groupId)) arr.push(groupId);
+          setBodyText(JSON.stringify(obj, null, 2));
+          setBodyError(null);
+          message.success(`已加入资源组 ${groupId}`);
+          return;
+        }
+      } catch {
+        /* 落到复制兜底 */
+      }
+      copy(groupId, `已复制资源组 ${groupId}（当前接口无 concept_groups）`);
     },
     [bodyText, copy, message],
   );
@@ -850,6 +902,7 @@ export function ExperienceScene() {
         knName={network?.name ?? ""}
         onFillField={fillBodyField}
         onFillResource={fillResource}
+        onFillConceptGroup={fillConceptGroup}
         copy={copy}
       />
     </section>
