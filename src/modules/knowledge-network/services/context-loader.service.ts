@@ -170,22 +170,17 @@ export function mcpPathOf(op: ContextLoaderOp): string {
   return op.path.startsWith(REST_PREFIX) ? op.path.slice(REST_PREFIX.length) : op.path;
 }
 
-export type AccountType = "" | "user" | "app" | "anonymous";
-
 export type ContextLoaderEnv = {
   base: string;
   token: string;
-  acctId: string;
-  acctType: AccountType;
   /** 锁定的知识网络 slug（kn_id）。 */
   knId: string;
 };
 
 export function authHeaders(env: ContextLoaderEnv): Record<string, string> {
+  // 网关从 Bearer token 派生账号；x-account-id / x-account-type 无需再传。
   const headers: Record<string, string> = {};
   if (env.token) headers.Authorization = `Bearer ${env.token}`;
-  if (env.acctId) headers["x-account-id"] = env.acctId;
-  if (env.acctType) headers["x-account-type"] = env.acctType;
   return headers;
 }
 

@@ -12,7 +12,7 @@ import {
   ReadOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
-import { App, Drawer, Empty, Input, Modal, Select, Spin, Tabs } from "antd";
+import { App, Drawer, Empty, Input, Modal, Spin, Tabs } from "antd";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -26,7 +26,6 @@ import {
   fetchKnDetail,
   mcpPathOf,
   sendRequest,
-  type AccountType,
   type ContextLoaderEnv,
   type ContextLoaderMode,
   type ContextLoaderOp,
@@ -116,28 +115,22 @@ function McpSetupModal({
   onClose,
   mcpUrl,
   token,
-  acctId,
-  acctType,
   copy,
 }: {
   open: boolean;
   onClose: () => void;
   mcpUrl: string;
   token: string;
-  acctId: string;
-  acctType: string;
   copy: (text: string, label?: string) => void;
 }) {
   const tk = token || "<your-token>";
-  const aid = acctId || "<account-id>";
-  const at = acctType || "user";
   const jsonConfig = JSON.stringify(
     {
       mcpServers: {
         "bkn-agent-retrieval": {
           type: "http",
           url: mcpUrl,
-          headers: { Authorization: `Bearer ${tk}`, "x-account-id": aid, "x-account-type": at },
+          headers: { Authorization: `Bearer ${tk}` },
         },
       },
     },
@@ -146,9 +139,7 @@ function McpSetupModal({
   );
   const claudeCli = [
     `claude mcp add --transport http bkn-agent-retrieval ${mcpUrl} \\`,
-    `  --header "Authorization: Bearer ${tk}" \\`,
-    `  --header "x-account-id: ${aid}" \\`,
-    `  --header "x-account-type: ${at}"`,
+    `  --header "Authorization: Bearer ${tk}"`,
   ].join("\n");
 
   return (
@@ -404,10 +395,8 @@ export function ExperienceScene() {
   const [mode, setMode] = useState<ContextLoaderMode>("rest");
 
   const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "http://agent-retrieval:30779"));
-  // 自动带 studio 当前登录态（仍可见/可改）：Bearer = 访问令牌，x-account-id/type = 当前用户。
+  // 自动带 studio 当前登录态（仍可见/可改）：Bearer = 访问令牌。网关从 token 派生账号，无需 x-account-*。
   const [token, setToken] = useState(() => runtimeConfig.auth.tokenManager.getAccessToken() ?? "");
-  const [acctId, setAcctId] = useState(() => runtimeConfig.currentUser.id ?? "");
-  const [acctType, setAcctType] = useState<AccountType>(() => (runtimeConfig.currentUser.id ? "user" : ""));
 
   const [filter, setFilter] = useState("");
   const [selectedId, setSelectedId] = useState(CONTEXT_LOADER_OPS[0]!.id);
@@ -437,8 +426,8 @@ export function ExperienceScene() {
 
   const knId = network?.slug ?? "kn_legal";
   const env: ContextLoaderEnv = useMemo(
-    () => ({ base, token, acctId, acctType, knId }),
-    [base, token, acctId, acctType, knId],
+    () => ({ base, token, knId }),
+    [base, token, knId],
   );
 
   const op = useMemo(
@@ -571,24 +560,6 @@ export function ExperienceScene() {
           <div className={styles.ef}>
             <label>Bearer Token</label>
             <Input className={styles.tokInput} value={token} onChange={(e) => setToken(e.target.value)} placeholder="可选" />
-          </div>
-          <div className={styles.ef}>
-            <label>x-account-id</label>
-            <Input className={styles.accInput} value={acctId} onChange={(e) => setAcctId(e.target.value)} placeholder="可选" />
-          </div>
-          <div className={styles.ef}>
-            <label>x-account-type</label>
-            <Select<AccountType>
-              className={styles.accType}
-              value={acctType}
-              onChange={setAcctType}
-              options={[
-                { value: "", label: "—" },
-                { value: "user", label: "user" },
-                { value: "app", label: "app" },
-                { value: "anonymous", label: "anonymous" },
-              ]}
-            />
           </div>
         </div>
       </div>
@@ -797,8 +768,6 @@ export function ExperienceScene() {
         onClose={() => setGuideOpen(false)}
         mcpUrl={`${base}${MCP_PATH}`}
         token={token}
-        acctId={acctId}
-        acctType={acctType}
         copy={copy}
       />
       <DataBrowserDrawer
