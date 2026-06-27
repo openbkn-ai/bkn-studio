@@ -54,8 +54,9 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     group: "Schema & 查询",
     summary:
       "根据单个对象类查询对象实例数据，支持过滤、排序与分页。REST 经 query 传 kn_id / ot_id；MCP 经 arguments 传入。" +
-      "condition 可选——operation: == / != / > / < / in 等；field 填字段名（用数据浏览器查）；value 填值；" +
-      "value_from: const（常量）或 field（与另一字段比较）。不过滤就删掉 condition。",
+      "推荐用 filters 扁平糖衣——[{field, op, value}]，op: == != > >= < <= in not_in like not_like exist not_exist match" +
+      "（白名单以对象类 condition_operations 为准；in/not_in 的 value 传数组）。" +
+      "需要 or / 嵌套时改用 condition（与 filters 互斥，同传 condition 优先）。不过滤就删掉 filters。",
     path: `${REST_PREFIX}/kn/query_object_instance`,
     query: [
       { name: "kn_id", value: "your_kn_id", required: true },
@@ -64,7 +65,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
       { name: "response_format", value: "json", options: ["json", "toon"] },
     ],
     body: {
-      condition: { operation: "==", field: "your_field", value: "your_value", value_from: "const" },
+      filters: [{ field: "your_field", op: "==", value: "your_value" }],
       sort: [{ field: "@timestamp", direction: "desc" }],
       limit: 10,
       need_total: true,
@@ -74,7 +75,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
       kn_id: "your_kn_id",
       ot_id: "your_object_type",
       include_logic_params: false,
-      condition: { operation: "==", field: "your_field", value: "your_value", value_from: "const" },
+      filters: [{ field: "your_field", op: "==", value: "your_value" }],
       sort: [{ field: "@timestamp", direction: "desc" }],
       limit: 10,
       need_total: true,
@@ -124,7 +125,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     id: "get_logic_properties_values",
     group: "Skills & Logic",
     summary: "批量查询对象的逻辑属性值（metric / operator），自动根据 query 生成 dynamic_params。缺参时返回 missing 提示。",
-    path: `${REST_PREFIX}/kn/logic-property-resolver`,
+    path: `${REST_PREFIX}/kn/get_logic_properties_values`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: {
       kn_id: "your_kn_id",
@@ -216,6 +217,27 @@ function mcpBase(env: ContextLoaderEnv): string {
   return `${env.base.replace(/\/+$/, "")}${MCP_PATH}`;
 }
 
+/**
+ * MCP tools/call 的 arguments：解析请求体 JSON，并把 response_format 选择器的值
+ * 注入进 arguments（MCP 没有 query，response_format 必须走 arg；不传则后端默认 toon）。
+ */
+function mcpCallArgs(bodyText: string, queryValues: Record<string, string>): Record<string, unknown> {
+  let args: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(bodyText || "{}");
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      args = parsed as Record<string, unknown>;
+    }
+  } catch {
+    args = {};
+  }
+  const responseFormat = queryValues.response_format;
+  if (responseFormat && !("response_format" in args)) {
+    args.response_format = responseFormat;
+  }
+  return args;
+}
+
 export function buildCurl(
   env: ContextLoaderEnv,
   op: ContextLoaderOp,
@@ -226,12 +248,7 @@ export function buildCurl(
   if (mode === "mcp") {
     const url = mcpBase(env);
     const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...authHeaders(env) };
-    let args: unknown = {};
-    try {
-      args = JSON.parse(bodyText || "{}");
-    } catch {
-      args = {};
-    }
+    const args = mcpCallArgs(bodyText, queryValues);
     const payload = { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: op.id, arguments: args } };
     let curl = `curl -X POST '${url}'`;
     Object.entries(headers).forEach(([key, value]) => {
@@ -312,7 +329,12 @@ export async function sendRequest(
     const response = await fetch(url, {
       method: "POST",
       headers: sessionHeaders,
-      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: op.id, arguments: JSON.parse(bodyText || "{}") } }),
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name: op.id, arguments: mcpCallArgs(bodyText, queryValues) },
+      }),
     });
     const text = await response.text();
     return {

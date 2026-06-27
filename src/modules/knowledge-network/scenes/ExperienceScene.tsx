@@ -691,6 +691,8 @@ export function ExperienceScene() {
   );
 
   const displayPath = mode === "mcp" ? mcpPathOf(op) : op.path;
+  // MCP 没有 query；但 response_format 必须可调（注入进 arguments），故 MCP 也露出这一项。
+  const visibleQuery = mode === "rest" ? op.query : op.query.filter((param) => param.name === "response_format");
 
   const onSend = useCallback(async () => {
     if (op.body !== null) {
@@ -749,7 +751,8 @@ export function ExperienceScene() {
 
   const fillResource = useCallback(
     (resourceId: string) => {
-      const token = `{{${resourceId}}}`;
+      // 后端 SQL 表名占位需前导点：{{.<data_source.id>}}（无点会被当作裸表名报错）。
+      const token = `{{.${resourceId}}}`;
       try {
         const obj = JSON.parse(bodyText || "{}") as Record<string, unknown>;
         if (obj && typeof obj === "object" && typeof obj.sql === "string") {
@@ -911,13 +914,13 @@ export function ExperienceScene() {
               <p className={styles.reqSum}>{op.summary}</p>
             </div>
             <div className={styles.reqBody}>
-              {mode === "rest" && op.query.length > 0 ? (
+              {visibleQuery.length > 0 ? (
                 <div className={styles.sec}>
                   <div className={styles.secHead}>
-                    QUERY 参数 <span className={styles.cnt}>{op.query.length}</span>
+                    {mode === "mcp" ? "参数" : "QUERY 参数"} <span className={styles.cnt}>{visibleQuery.length}</span>
                   </div>
                   <div className={styles.qp}>
-                    {op.query.map((param) => (
+                    {visibleQuery.map((param) => (
                       <QueryParamRow
                         key={param.name}
                         param={param}
