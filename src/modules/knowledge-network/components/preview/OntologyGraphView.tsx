@@ -62,10 +62,35 @@ function circleLayout(ids: string[]): { id: string; x: number; y: number }[] {
   });
 }
 
-/** 按概念分组聚类：每组一个簇心（绕画布中心排布），组内节点再绕簇心成小圆。 */
+/** 组内节点绕簇心成圆（半径按成员数自适应，受可用半径上限约束）。 */
+function placeCluster(
+  gids: string[],
+  gcx: number,
+  gcy: number,
+  maxR: number,
+): { id: string; x: number; y: number }[] {
+  if (gids.length <= 1) {
+    return gids.map((id) => ({
+      id,
+      x: clamp(gcx, PREVIEW_LAYOUT_WIDTH),
+      y: clamp(gcy, PREVIEW_LAYOUT_HEIGHT),
+    }));
+  }
+  // 圆周排开不重叠所需半径：周长 ≥ n·(节点直径+间隙)。
+  const need = (gids.length * (NODE_RADIUS * 2 + 14)) / (2 * Math.PI);
+  const inner = Math.min(Math.max(need, 64), Math.max(NODE_RADIUS, maxR));
+  return gids.map((id, ni) => {
+    const a = (ni / gids.length) * 2 * Math.PI - Math.PI / 2;
+    return {
+      id,
+      x: clamp(gcx + inner * Math.cos(a), PREVIEW_LAYOUT_WIDTH),
+      y: clamp(gcy + inner * Math.sin(a), PREVIEW_LAYOUT_HEIGHT),
+    };
+  });
+}
+
+/** 按概念分组聚类：簇心铺成网格填满画布，组内节点再绕簇心成圆。 */
 function groupLayout(ids: string[], groupOf: Map<string, string>): { id: string; x: number; y: number }[] {
-  const cx = PREVIEW_LAYOUT_WIDTH / 2;
-  const cy = PREVIEW_LAYOUT_HEIGHT / 2;
   const buckets = new Map<string, string[]>();
   ids.forEach((id) => {
     const g = groupOf.get(id) ?? "__ungrouped";
@@ -74,26 +99,30 @@ function groupLayout(ids: string[], groupOf: Map<string, string>): { id: string;
     buckets.set(g, arr);
   });
   const groups = [...buckets.values()];
-  const gn = Math.max(groups.length, 1);
-  const groupR = gn === 1 ? 0 : Math.min(PREVIEW_LAYOUT_WIDTH, PREVIEW_LAYOUT_HEIGHT) * 0.3;
+  const gn = groups.length;
+  if (gn <= 1) {
+    // 单组：直接铺成大圆占满画布。
+    return placeCluster(
+      groups[0] ?? [],
+      PREVIEW_LAYOUT_WIDTH / 2,
+      PREVIEW_LAYOUT_HEIGHT / 2,
+      Math.min(PREVIEW_LAYOUT_WIDTH, PREVIEW_LAYOUT_HEIGHT) * 0.4,
+    );
+  }
+  // 簇心网格：按画布宽高比定列数，居中铺满。
+  const cols = Math.max(1, Math.ceil(Math.sqrt(gn * (PREVIEW_LAYOUT_WIDTH / PREVIEW_LAYOUT_HEIGHT))));
+  const rows = Math.ceil(gn / cols);
+  const cellW = PREVIEW_LAYOUT_WIDTH / cols;
+  const cellH = PREVIEW_LAYOUT_HEIGHT / rows;
+  // 簇半径上限：留出节点半径 + hull 边距，避免相邻簇/边界互相重叠。
+  const maxR = Math.max(NODE_RADIUS, Math.min(cellW, cellH) / 2 - NODE_RADIUS - GROUP_HULL_PAD - 10);
   const out: { id: string; x: number; y: number }[] = [];
   groups.forEach((gids, gi) => {
-    const ga = (gi / gn) * 2 * Math.PI - Math.PI / 2;
-    const gcx = cx + groupR * Math.cos(ga);
-    const gcy = cy + groupR * Math.sin(ga);
-    const inner = gids.length <= 1 ? 0 : Math.min(118, 42 + gids.length * 9);
-    gids.forEach((id, ni) => {
-      if (gids.length <= 1) {
-        out.push({ id, x: clamp(gcx, PREVIEW_LAYOUT_WIDTH), y: clamp(gcy, PREVIEW_LAYOUT_HEIGHT) });
-        return;
-      }
-      const a = (ni / gids.length) * 2 * Math.PI - Math.PI / 2;
-      out.push({
-        id,
-        x: clamp(gcx + inner * Math.cos(a), PREVIEW_LAYOUT_WIDTH),
-        y: clamp(gcy + inner * Math.sin(a), PREVIEW_LAYOUT_HEIGHT),
-      });
-    });
+    const col = gi % cols;
+    const row = Math.floor(gi / cols);
+    const gcx = cellW * (col + 0.5);
+    const gcy = cellH * (row + 0.5);
+    out.push(...placeCluster(gids, gcx, gcy, maxR));
   });
   return out;
 }
