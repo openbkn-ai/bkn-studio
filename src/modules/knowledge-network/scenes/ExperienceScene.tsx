@@ -742,6 +742,7 @@ export function ExperienceScene() {
         return;
       }
     }
+    setRightTab("res"); // 发送即切回响应视图，免得停在数据浏览器看不到结果
     setSending(true);
     setResponse(null);
     setReqError(null);
