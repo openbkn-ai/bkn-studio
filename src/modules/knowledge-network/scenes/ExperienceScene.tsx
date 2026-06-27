@@ -521,7 +521,7 @@ function DataBrowserDrawer({
     <Drawer
       open={open}
       onClose={onClose}
-      width={480}
+      width="min(600px, 92vw)"
       title={`数据浏览器 · ${knName || "知识网络"}`}
       styles={{ body: { padding: 0 } }}
     >
