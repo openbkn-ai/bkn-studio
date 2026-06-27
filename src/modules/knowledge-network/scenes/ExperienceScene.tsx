@@ -27,6 +27,7 @@ import {
   exampleBodyText,
   fetchKnDetail,
   fetchObjectInstances,
+  listMcpTools,
   mcpPathOf,
   sendRequest,
   type ContextLoaderEnv,
@@ -35,6 +36,7 @@ import {
   type ContextLoaderResponse,
   type KnDetail,
   type KnObjectType,
+  type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
 import styles from "./ExperienceScene.module.css";
@@ -313,6 +315,118 @@ function McpSetupModal({
           },
         ]}
       />
+      </div>
+    </Modal>
+  );
+}
+
+/* ============================ 工具发现（tools/list：动态发现 + 与本地硬编码漂移对照） ============================ */
+function ToolDiscoveryModal({
+  open,
+  onClose,
+  env,
+  copy,
+}: {
+  open: boolean;
+  onClose: () => void;
+  env: ContextLoaderEnv;
+  copy: (text: string, label?: string) => void;
+}) {
+  const [tools, setTools] = useState<McpToolDef[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setTools(null);
+    listMcpTools(env)
+      .then((list) => {
+        if (!cancelled) setTools(list);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "tools/list 失败");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, env]);
+
+  // 漂移对照：本地硬编码 ops vs 线上 tools/list。
+  const drift = useMemo(() => {
+    if (!tools) return null;
+    const live = new Set(tools.map((tool) => tool.name));
+    const ours = new Set(CONTEXT_LOADER_OPS.map((op) => op.id));
+    return {
+      onlyLive: tools.map((tool) => tool.name).filter((name) => !ours.has(name)),
+      onlyOurs: CONTEXT_LOADER_OPS.map((op) => op.id).filter((id) => !live.has(id)),
+    };
+  }, [tools]);
+
+  return (
+    <Modal open={open} onCancel={onClose} footer={null} width={720} title="工具发现 · tools/list">
+      <div className={styles.guideRoot}>
+        <p className={styles.guideNote}>
+          直接向 MCP <code>tools/list</code> 拉取线上工具与 <code>inputSchema</code>，并与本地硬编码工具表对照。
+          用来核对后端 schema 是否齐全（schema 驱动表单的前置），以及发现两边的<b>漂移</b>。
+        </p>
+        {loading ? (
+          <div className={styles.discoverEmpty}>
+            <Spin />
+          </div>
+        ) : error ? (
+          <div className={styles.resError}>
+            <ApiOutlined />
+            <div>
+              <strong>拉取失败</strong>
+              <p>{error}</p>
+            </div>
+          </div>
+        ) : tools ? (
+          <>
+            <div className={styles.driftRow}>
+              <span className={styles.driftStat}>线上 {tools.length} 个</span>
+              {drift && drift.onlyLive.length > 0 ? (
+                <span className={`${styles.driftChip} ${styles.driftLive}`}>仅线上：{drift.onlyLive.join("、")}</span>
+              ) : null}
+              {drift && drift.onlyOurs.length > 0 ? (
+                <span className={`${styles.driftChip} ${styles.driftOurs}`}>仅本地：{drift.onlyOurs.join("、")}</span>
+              ) : null}
+              {drift && drift.onlyLive.length === 0 && drift.onlyOurs.length === 0 ? (
+                <span className={`${styles.driftChip} ${styles.driftOk}`}>工具名与本地一致</span>
+              ) : null}
+            </div>
+            <div className={styles.toolList}>
+              {tools.map((tool) => {
+                const schemaText = JSON.stringify(tool.inputSchema ?? {}, null, 2);
+                return (
+                  <details key={tool.name} className={styles.toolItem}>
+                    <summary className={styles.toolSummary}>
+                      <span className={styles.toolName}>{tool.name}</span>
+                      {tool.description ? <span className={styles.toolDesc}>{tool.description}</span> : null}
+                    </summary>
+                    <div className={styles.toolSchema}>
+                      <div className={styles.codeBlkHead}>
+                        <span>inputSchema</span>
+                        <button type="button" className={styles.mini} onClick={() => copy(schemaText, "schema 已复制")}>
+                          <CopyOutlined /> 复制
+                        </button>
+                      </div>
+                      <pre className={styles.codeBlkPre}>
+                        <JsonHighlight text={schemaText} />
+                      </pre>
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
       </div>
     </Modal>
   );
@@ -681,6 +795,7 @@ export function ExperienceScene() {
   const [sending, setSending] = useState(false);
   const [curlOpen, setCurlOpen] = useState(true);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [discoverOpen, setDiscoverOpen] = useState(false);
   const [rightTab, setRightTab] = useState<"res" | "data">("res");
 
   useEffect(() => {
@@ -905,9 +1020,14 @@ export function ExperienceScene() {
           {/* 接口列表 */}
           <aside className={styles.list}>
             {mode === "mcp" ? (
-              <button type="button" className={styles.guideBtn} onClick={() => setGuideOpen(true)}>
-                <ReadOutlined /> 接入 Claude Code / Cursor
-              </button>
+              <>
+                <button type="button" className={styles.guideBtn} onClick={() => setGuideOpen(true)}>
+                  <ReadOutlined /> 接入 Claude Code / Cursor
+                </button>
+                <button type="button" className={styles.discoverBtn} onClick={() => setDiscoverOpen(true)}>
+                  <ApiOutlined /> 工具发现 · tools/list
+                </button>
+              </>
             ) : null}
             <div className={styles.listSearch}>
               <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="筛选接口…" />
@@ -1135,6 +1255,7 @@ export function ExperienceScene() {
         onIssueKey={() => navigate("/account")}
         copy={copy}
       />
+      <ToolDiscoveryModal open={discoverOpen} onClose={() => setDiscoverOpen(false)} env={env} copy={copy} />
     </section>
   );
 }

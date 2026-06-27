@@ -364,6 +364,85 @@ export async function sendRequest(
   };
 }
 
+/* ============================ MCP 工具发现（tools/list）============================ */
+export type McpToolDef = { name: string; description?: string; inputSchema?: unknown };
+
+/** 解析 MCP 响应（SSE event:/data: 取最后一条 data，再 JSON.parse）。失败返回 null。 */
+function parseMcpEnvelope(text: string): unknown {
+  const dataLines = text
+    .split("\n")
+    .filter((line) => line.trimStart().startsWith("data:"))
+    .map((line) => line.replace(/^\s*data:/, "").trim())
+    .filter(Boolean);
+  const candidate = dataLines.length > 0 ? dataLines[dataLines.length - 1]! : text;
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 调 MCP tools/list 动态发现工具（含 inputSchema）。
+ * 走完整握手：initialize → notifications/initialized → tools/list。
+ * 用于「工具发现 / 漂移对照」，也是 schema 驱动表单的数据源。
+ */
+export async function listMcpTools(env: ContextLoaderEnv): Promise<McpToolDef[]> {
+  const url = mcpBase(env);
+  const baseHeaders = {
+    "Content-Type": "application/json",
+    Accept: "application/json, text/event-stream",
+    ...authHeaders(env),
+  };
+  const initResp = await fetch(url, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bkn-studio", version: "1.0.0" } },
+    }),
+  });
+  const sessionId = initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
+  if (!initResp.ok && !sessionId) {
+    throw new Error((await initResp.text()) || `MCP initialize 失败 (${initResp.status})`);
+  }
+  const sessionHeaders = sessionId ? { ...baseHeaders, "Mcp-Session-Id": sessionId } : baseHeaders;
+  if (sessionId) {
+    await fetch(url, {
+      method: "POST",
+      headers: sessionHeaders,
+      body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+    }).catch(() => undefined);
+  }
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+  });
+  const text = await resp.text();
+  if (!resp.ok) {
+    throw new Error(text || `tools/list 失败 (${resp.status})`);
+  }
+  const parsed = parseMcpEnvelope(text);
+  const result = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>).result : null;
+  const tools = result && typeof result === "object" ? (result as Record<string, unknown>).tools : null;
+  if (!Array.isArray(tools)) {
+    throw new Error("tools/list 未返回 tools 数组");
+  }
+  return tools
+    .map((item) => {
+      const tool = (item ?? {}) as Record<string, unknown>;
+      return {
+        name: typeof tool.name === "string" ? tool.name : "",
+        description: typeof tool.description === "string" ? tool.description : undefined,
+        inputSchema: tool.inputSchema,
+      };
+    })
+    .filter((tool) => tool.name);
+}
+
 /* ============================ 数据浏览器：知识网络 schema + 资源 ============================ */
 export type KnDataSource = { type?: string; id: string; name?: string };
 
