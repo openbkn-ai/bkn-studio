@@ -1,6 +1,5 @@
 import {
   DesktopOutlined,
-  KeyOutlined,
   LogoutOutlined,
   ThunderboltOutlined,
   UserOutlined,
@@ -94,11 +93,11 @@ export function TopBar() {
           menu={{
             items: [
               {
-                icon: <KeyOutlined />,
-                key: "api-keys",
-                label: t("shell.items.apiKeys"),
+                icon: <UserOutlined />,
+                key: "account",
+                label: t("shell.items.account"),
                 onClick: () => {
-                  void navigate("/api-keys");
+                  void navigate("/account");
                 },
               },
               { type: "divider" },

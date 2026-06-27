@@ -2,6 +2,10 @@
   padding: 24px 28px;
 }
 
+.pageEmbedded {
+  padding: 4px 0 0;
+}
+
 .head {
   margin-bottom: 18px;
   padding-bottom: 16px;

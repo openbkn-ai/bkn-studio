@@ -850,7 +850,7 @@ export function ExperienceScene() {
           {authMode === "apikey" ? (
             <div className={styles.ef}>
               <label>API Key</label>
-              <MaskedKeyInput value={appKey} onChange={setAppKey} onIssue={() => navigate("/api-keys")} />
+              <MaskedKeyInput value={appKey} onChange={setAppKey} onIssue={() => navigate("/account")} />
             </div>
           ) : null}
         </div>
@@ -1054,7 +1054,7 @@ export function ExperienceScene() {
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
         mcpUrl={`${serverAddress}${MCP_PATH}`}
-        onIssueKey={() => navigate("/api-keys")}
+        onIssueKey={() => navigate("/account")}
         copy={copy}
       />
       <DataBrowserDrawer

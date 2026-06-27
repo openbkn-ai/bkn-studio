@@ -26,7 +26,7 @@ import styles from "./ApiKeyListScene.module.css";
 const formatTime = (value?: string | null) =>
   value ? dayjs(value).format("YYYY/MM/DD HH:mm") : null;
 
-export function ApiKeyListScene() {
+export function ApiKeyListScene({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const [items, setItems] = useState<ApiKey[]>([]);
@@ -158,11 +158,13 @@ export function ApiKeyListScene() {
   ];
 
   return (
-    <section className={styles.page}>
-      <div className={styles.head}>
-        <h2 className={styles.title}>{t("apiKeys.title")}</h2>
-        <p className={styles.intro}>{t("apiKeys.description")}</p>
-      </div>
+    <section className={embedded ? styles.pageEmbedded : styles.page}>
+      {embedded ? null : (
+        <div className={styles.head}>
+          <h2 className={styles.title}>{t("apiKeys.title")}</h2>
+          <p className={styles.intro}>{t("apiKeys.description")}</p>
+        </div>
+      )}
 
       <Alert type="info" showIcon message={t("apiKeys.calloutInfo")} style={{ marginBottom: 16 }} />
 
