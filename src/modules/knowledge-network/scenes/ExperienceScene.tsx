@@ -48,19 +48,50 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function prettyResponse(text: string): string {
-  // MCP 走 Streamable HTTP，响应可能是 SSE（event:/data: 行），取最后一条 data 解析。
+/** 从 MCP tools/call 信封里抽出 result.content[].text（TOON 或 JSON 文本载荷）。 */
+function mcpContentTexts(obj: unknown): string[] | null {
+  if (!obj || typeof obj !== "object") return null;
+  const result = (obj as Record<string, unknown>).result;
+  if (!result || typeof result !== "object") return null;
+  const content = (result as Record<string, unknown>).content;
+  if (!Array.isArray(content)) return null;
+  const texts = content
+    .map((item) => (item && typeof item === "object" ? (item as Record<string, unknown>).text : undefined))
+    .filter((value): value is string => typeof value === "string");
+  return texts.length > 0 ? texts : null;
+}
+
+export type ResponseView = { kind: "json" | "toon"; text: string };
+
+/**
+ * 响应展示视图：
+ * - MCP 信封抽出 content 文本载荷——能 JSON.parse 的当 JSON 美化，否则当 TOON 纯文本（真换行）。
+ * - 其余（REST / 非工具响应）按 JSON 美化；解析失败原样返回。
+ * SSE（event:/data:）取最后一条 data。
+ */
+function formatResponseView(text: string): ResponseView {
   const dataLines = text
     .split("\n")
     .filter((line) => line.trimStart().startsWith("data:"))
     .map((line) => line.replace(/^\s*data:/, "").trim())
     .filter(Boolean);
   const candidate = dataLines.length > 0 ? dataLines[dataLines.length - 1]! : text;
+  let obj: unknown;
   try {
-    return JSON.stringify(JSON.parse(candidate), null, 2);
+    obj = JSON.parse(candidate);
   } catch {
-    return text;
+    return { kind: "toon", text };
   }
+  const texts = mcpContentTexts(obj);
+  if (texts) {
+    const joined = texts.join("\n");
+    try {
+      return { kind: "json", text: JSON.stringify(JSON.parse(joined), null, 2) };
+    } catch {
+      return { kind: "toon", text: joined };
+    }
+  }
+  return { kind: "json", text: JSON.stringify(obj, null, 2) };
 }
 
 /** 递归查找名为 key 且值为数组的属性（如嵌套在 search_scope 里的 concept_groups），返回该数组引用。 */
@@ -700,6 +731,7 @@ export function ExperienceScene() {
   const displayPath = mode === "mcp" ? mcpPathOf(op) : op.path;
   // MCP 没有 query；但 response_format 必须可调（注入进 arguments），故 MCP 也露出这一项。
   const visibleQuery = mode === "rest" ? op.query : op.query.filter((param) => param.name === "response_format");
+  const responseView = useMemo(() => (response ? formatResponseView(response.text) : null), [response]);
 
   const onSend = useCallback(async () => {
     if (op.body !== null) {
@@ -1000,7 +1032,7 @@ export function ExperienceScene() {
                   <button
                     type="button"
                     className={styles.copyResp}
-                    onClick={() => copy(prettyResponse(response.text), "响应已复制")}
+                    onClick={() => copy(responseView?.text ?? response.text, "响应已复制")}
                   >
                     <CopyOutlined /> 复制结果
                   </button>
@@ -1022,9 +1054,16 @@ export function ExperienceScene() {
                     <p>{reqError}</p>
                   </div>
                 </div>
-              ) : response ? (
+              ) : responseView ? (
                 <pre className={styles.out}>
-                  <JsonHighlight text={prettyResponse(response.text)} />
+                  {responseView.kind === "toon" ? (
+                    <>
+                      <span className={styles.toonTag}>TOON</span>
+                      {responseView.text}
+                    </>
+                  ) : (
+                    <JsonHighlight text={responseView.text} />
+                  )}
                 </pre>
               ) : (
                 <div className={styles.resEmpty}>
