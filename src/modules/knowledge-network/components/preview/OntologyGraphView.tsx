@@ -1,6 +1,7 @@
 /** 本体图谱（建模预览新设计）—— 彩色实体类节点 + 关系连线，可选中并高亮邻居。 */
 
-import { RetweetOutlined } from "@ant-design/icons";
+import { DownOutlined, RetweetOutlined } from "@ant-design/icons";
+import { Dropdown } from "antd";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,9 +18,13 @@ import styles from "./OntologyGraphView.module.css";
 const HUB_RADIUS = 46;
 const NODE_RADIUS = 38;
 
+type OntologyLayoutMode = "force" | "circle" | "group";
+
 type OntologyGraphViewProps = {
   graph: KnowledgeNetworkPreviewGraph;
   indexedIds: Set<string>;
+  /** 节点 id → 概念分组 id，供「按逻辑分组」聚类。 */
+  groupOf?: Map<string, string>;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 };
@@ -28,18 +33,77 @@ function truncate(value: string, max = 6) {
   return value.length <= max ? value : `${value.slice(0, max)}…`;
 }
 
+const CLAMP_PAD = 64;
+const clamp = (value: number, max: number) => Math.max(CLAMP_PAD, Math.min(max - CLAMP_PAD, value));
+
+/** 圆形布局：节点等角分布在画布中心的大圆上。 */
+function circleLayout(ids: string[]): { id: string; x: number; y: number }[] {
+  const cx = PREVIEW_LAYOUT_WIDTH / 2;
+  const cy = PREVIEW_LAYOUT_HEIGHT / 2;
+  const r = Math.min(PREVIEW_LAYOUT_WIDTH, PREVIEW_LAYOUT_HEIGHT) * 0.36;
+  const n = Math.max(ids.length, 1);
+  return ids.map((id, i) => {
+    const a = (i / n) * 2 * Math.PI - Math.PI / 2;
+    return { id, x: clamp(cx + r * Math.cos(a), PREVIEW_LAYOUT_WIDTH), y: clamp(cy + r * Math.sin(a), PREVIEW_LAYOUT_HEIGHT) };
+  });
+}
+
+/** 按概念分组聚类：每组一个簇心（绕画布中心排布），组内节点再绕簇心成小圆。 */
+function groupLayout(ids: string[], groupOf: Map<string, string>): { id: string; x: number; y: number }[] {
+  const cx = PREVIEW_LAYOUT_WIDTH / 2;
+  const cy = PREVIEW_LAYOUT_HEIGHT / 2;
+  const buckets = new Map<string, string[]>();
+  ids.forEach((id) => {
+    const g = groupOf.get(id) ?? "__ungrouped";
+    const arr = buckets.get(g) ?? [];
+    arr.push(id);
+    buckets.set(g, arr);
+  });
+  const groups = [...buckets.values()];
+  const gn = Math.max(groups.length, 1);
+  const groupR = gn === 1 ? 0 : Math.min(PREVIEW_LAYOUT_WIDTH, PREVIEW_LAYOUT_HEIGHT) * 0.3;
+  const out: { id: string; x: number; y: number }[] = [];
+  groups.forEach((gids, gi) => {
+    const ga = (gi / gn) * 2 * Math.PI - Math.PI / 2;
+    const gcx = cx + groupR * Math.cos(ga);
+    const gcy = cy + groupR * Math.sin(ga);
+    const inner = gids.length <= 1 ? 0 : Math.min(118, 42 + gids.length * 9);
+    gids.forEach((id, ni) => {
+      if (gids.length <= 1) {
+        out.push({ id, x: clamp(gcx, PREVIEW_LAYOUT_WIDTH), y: clamp(gcy, PREVIEW_LAYOUT_HEIGHT) });
+        return;
+      }
+      const a = (ni / gids.length) * 2 * Math.PI - Math.PI / 2;
+      out.push({
+        id,
+        x: clamp(gcx + inner * Math.cos(a), PREVIEW_LAYOUT_WIDTH),
+        y: clamp(gcy + inner * Math.sin(a), PREVIEW_LAYOUT_HEIGHT),
+      });
+    });
+  });
+  return out;
+}
+
 export function OntologyGraphView({
   graph,
   indexedIds,
+  groupOf,
   selectedId,
   onSelect,
 }: OntologyGraphViewProps) {
   const { t } = useTranslation();
+  const [mode, setMode] = useState<OntologyLayoutMode>("force");
 
-  // 布局只随 graph 变化计算一次，选中节点时不重排（避免节点跳动 / 重新排列）。
+  // 布局随 graph / 排列方式变化计算；选中节点时不重排。
   const { positions, radiusById, hubId } = useMemo(() => {
-    const layout = computePreviewGraphLayout(graph);
-    const positionMap = new Map(layout.map((node) => [node.id, node]));
+    const ids = graph.nodes.map((node) => node.id);
+    const layout =
+      mode === "circle"
+        ? circleLayout(ids)
+        : mode === "group"
+          ? groupLayout(ids, groupOf ?? new Map())
+          : computePreviewGraphLayout(graph);
+    const positionMap = new Map(layout.map((node) => [node.id, { id: node.id, x: node.x, y: node.y }]));
 
     const degree = new Map<string, number>();
     graph.nodes.forEach((node) => degree.set(node.id, 0));
@@ -60,7 +124,7 @@ export function OntologyGraphView({
     graph.nodes.forEach((node) => radius.set(node.id, node.id === topId ? HUB_RADIUS : NODE_RADIUS));
 
     return { positions: positionMap, radiusById: radius, hubId: topId };
-  }, [graph]);
+  }, [graph, mode, groupOf]);
 
   const neighbors = useMemo(() => {
     const neighborSet = new Set<string>();
@@ -78,10 +142,10 @@ export function OntologyGraphView({
   const [dragged, setDragged] = useState<Map<string, { x: number; y: number }>>(new Map());
   const dragRef = useRef<{ id: string; offsetX: number; offsetY: number; moved: boolean } | null>(null);
 
-  // 新布局（graph 变化）时清掉手动位置。
+  // 切换图 / 排列方式时清掉手动位置。
   useEffect(() => {
     setDragged(new Map());
-  }, [graph]);
+  }, [graph, mode]);
 
   const posOf = useCallback(
     (id: string) => dragged.get(id) ?? positions.get(id) ?? null,
@@ -135,14 +199,31 @@ export function OntologyGraphView({
 
   return (
     <div className={styles.wrap}>
-      <button
-        type="button"
-        className={styles.arrange}
-        onClick={() => setDragged(new Map())}
-        title={t("knowledgeNetwork.previewRearrange")}
+      <Dropdown
+        trigger={["click"]}
+        menu={{
+          selectedKeys: [mode],
+          items: [
+            { key: "force", label: t("knowledgeNetwork.previewLayoutForce") },
+            { key: "circle", label: t("knowledgeNetwork.previewLayoutCircle") },
+            { key: "group", label: t("knowledgeNetwork.previewLayoutGroup") },
+          ],
+          onClick: ({ key }) => {
+            setMode(key as OntologyLayoutMode);
+            setDragged(new Map());
+          },
+        }}
       >
-        <RetweetOutlined /> {t("knowledgeNetwork.previewRearrange")}
-      </button>
+        <button type="button" className={styles.arrange} title={t("knowledgeNetwork.previewRearrange")}>
+          <RetweetOutlined />
+          {mode === "circle"
+            ? t("knowledgeNetwork.previewLayoutCircle")
+            : mode === "group"
+              ? t("knowledgeNetwork.previewLayoutGroup")
+              : t("knowledgeNetwork.previewLayoutForce")}
+          <DownOutlined className={styles.arrangeCaret} />
+        </button>
+      </Dropdown>
       <svg
         ref={svgRef}
         className={styles.graph}

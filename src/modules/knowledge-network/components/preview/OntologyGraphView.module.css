@@ -27,6 +27,11 @@
   color: #2e68ff;
 }
 
+.arrangeCaret {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
 .graph {
   display: block;
   width: 100%;

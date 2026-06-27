@@ -13,6 +13,10 @@ import { useTranslation } from "react-i18next";
 import { OntologyGraphView } from "@/modules/knowledge-network/components/preview/OntologyGraphView";
 import { OntologyInspectorPanel } from "@/modules/knowledge-network/components/preview/OntologyInspectorPanel";
 import {
+  getKnowledgeNetworkConceptGroup,
+  listKnowledgeNetworkConceptGroups,
+} from "@/modules/knowledge-network/services/concept-group.service";
+import {
   listKnowledgeNetworkObjectTypes,
   listKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -89,6 +93,32 @@ export function OntologyGraphCard({
     [objectTypes],
   );
 
+  // 概念分组成员（节点 → 分组 id），供「按逻辑分组」排列聚类。各组取详情拿成员对象类。
+  const [groupOf, setGroupOf] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    let cancelled = false;
+    listKnowledgeNetworkConceptGroups(networkId)
+      .then(async (groups) => {
+        const details = await Promise.all(
+          groups.map((group) =>
+            getKnowledgeNetworkConceptGroup(networkId, group.id).catch(() => null),
+          ),
+        );
+        if (cancelled) return;
+        const map = new Map<string, string>();
+        details.forEach((detail, index) => {
+          detail?.objectTypes.forEach((item) => map.set(item.id, groups[index]!.id));
+        });
+        setGroupOf(map);
+      })
+      .catch(() => {
+        if (!cancelled) setGroupOf(new Map());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [networkId]);
+
   return (
     <div className={styles.graphCard}>
       <div className={styles.graphHeader}>
@@ -116,6 +146,7 @@ export function OntologyGraphCard({
             <OntologyGraphView
               graph={graph}
               indexedIds={indexedIds}
+              groupOf={groupOf}
               selectedId={selectedId}
               onSelect={setSelectedId}
             />
