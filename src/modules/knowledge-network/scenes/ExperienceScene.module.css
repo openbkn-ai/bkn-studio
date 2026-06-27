@@ -1169,6 +1169,64 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: #fff;
+}
+
+/* 右侧区域：响应 / 数据浏览器 标签切换。两个视图常驻，隐藏的用 display:none 保留状态。 */
+.rightTabs {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+  padding: 8px 12px 0;
+  background: var(--code);
+  border-bottom: 1px solid var(--line);
+}
+
+.rightTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #5b6678;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rightTab:hover {
+  color: #1e293b;
+}
+
+.rightTabOn {
+  color: #2e68ff;
+  border-bottom-color: #2e68ff;
+}
+
+.rightView {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rightHidden {
+  display: none;
+}
+
+.dbTitle {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line2);
+  background: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1e293b;
 }
 
 .dbHint {

@@ -13,7 +13,7 @@ import {
   ReadOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
-import { App, Drawer, Empty, Input, Modal, Select, Spin, Tabs, Tooltip } from "antd";
+import { App, Empty, Input, Modal, Select, Spin, Tabs, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -489,9 +489,8 @@ function ObjectTypeCard({
   );
 }
 
-function DataBrowserDrawer({
-  open,
-  onClose,
+function DataBrowserPanel({
+  active,
   env,
   knName,
   onFillField,
@@ -499,8 +498,7 @@ function DataBrowserDrawer({
   onFillConceptGroup,
   copy,
 }: {
-  open: boolean;
-  onClose: () => void;
+  active: boolean;
   env: ContextLoaderEnv;
   knName: string;
   onFillField: (key: string, value: string) => void;
@@ -512,9 +510,12 @@ function DataBrowserDrawer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const loadedRef = useRef(false);
 
+  // 懒加载：首次切到「数据浏览器」标签时拉一次 schema，之后常驻不再重拉，保留预览/筛选上下文。
   useEffect(() => {
-    if (!open) return;
+    if (!active || loadedRef.current) return;
+    loadedRef.current = true;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -523,7 +524,10 @@ function DataBrowserDrawer({
         if (!cancelled) setDetail(data);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "加载失败");
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "加载失败");
+          loadedRef.current = false; // 失败可重试
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -531,7 +535,7 @@ function DataBrowserDrawer({
     return () => {
       cancelled = true;
     };
-  }, [open, env]);
+  }, [active, env]);
 
   const sections = useMemo(() => {
     if (!detail) return [];
@@ -556,14 +560,10 @@ function DataBrowserDrawer({
   }, [detail, q]);
 
   return (
-    <Drawer
-      open={open}
-      onClose={onClose}
-      width="min(600px, 92vw)"
-      title={`数据浏览器 · ${knName || "知识网络"}`}
-      styles={{ body: { padding: 0 } }}
-    >
-      <div className={styles.dbWrap}>
+    <div className={styles.dbWrap}>
+      <div className={styles.dbTitle}>
+        <DatabaseOutlined /> 数据浏览器 · {knName || "知识网络"}
+      </div>
         <p className={styles.dbHint}>
           点「<b>+ 资源组</b>」→ 加入 <code>concept_groups</code>；点「对象类型」→ 填入当前接口的 <code>ot_id</code>；
           点「数据资源」→ 填入 run_sql 的 <code>{"{{资源}}"}</code> 占位；点「预览数据」看样本行。
@@ -622,7 +622,6 @@ function DataBrowserDrawer({
           )}
         </div>
       </div>
-    </Drawer>
   );
 }
 
@@ -682,7 +681,7 @@ export function ExperienceScene() {
   const [sending, setSending] = useState(false);
   const [curlOpen, setCurlOpen] = useState(true);
   const [guideOpen, setGuideOpen] = useState(false);
-  const [dataOpen, setDataOpen] = useState(false);
+  const [rightTab, setRightTab] = useState<"res" | "data">("res");
 
   useEffect(() => {
     let cancelled = false;
@@ -1009,15 +1008,32 @@ export function ExperienceScene() {
               <button type="button" className={styles.resetBtn} onClick={() => setBodyText(exampleBodyText(op, mode, knId))}>
                 恢复示例
               </button>
-              <button type="button" className={styles.dataBtn} onClick={() => setDataOpen(true)}>
+              <button type="button" className={styles.dataBtn} onClick={() => setRightTab("data")}>
                 <DatabaseOutlined /> 数据浏览器
               </button>
               <span className={styles.kbd}>⌘ + ↵ 发送</span>
             </div>
           </section>
 
-          {/* 响应 */}
+          {/* 响应 / 数据浏览器（标签切换；两个视图常驻不卸载，切换不丢预览/筛选上下文） */}
           <section className={styles.res}>
+            <div className={styles.rightTabs}>
+              <button
+                type="button"
+                className={`${styles.rightTab} ${rightTab === "res" ? styles.rightTabOn : ""}`}
+                onClick={() => setRightTab("res")}
+              >
+                响应
+              </button>
+              <button
+                type="button"
+                className={`${styles.rightTab} ${rightTab === "data" ? styles.rightTabOn : ""}`}
+                onClick={() => setRightTab("data")}
+              >
+                <DatabaseOutlined /> 数据浏览器
+              </button>
+            </div>
+            <div className={`${styles.rightView} ${rightTab === "res" ? "" : styles.rightHidden}`}>
             <div className={styles.resHead}>
               <span className={styles.resTitle}>响应</span>
               {response ? (
@@ -1095,6 +1111,18 @@ export function ExperienceScene() {
                 </div>
               ) : null}
             </div>
+            </div>
+            <div className={`${styles.rightView} ${rightTab === "data" ? "" : styles.rightHidden}`}>
+              <DataBrowserPanel
+                active={rightTab === "data"}
+                env={env}
+                knName={network?.name ?? ""}
+                onFillField={fillBodyField}
+                onFillResource={fillResource}
+                onFillConceptGroup={fillConceptGroup}
+                copy={copy}
+              />
+            </div>
           </section>
         </div>
       )}
@@ -1104,16 +1132,6 @@ export function ExperienceScene() {
         onClose={() => setGuideOpen(false)}
         mcpUrl={`${serverAddress}${MCP_PATH}`}
         onIssueKey={() => navigate("/account")}
-        copy={copy}
-      />
-      <DataBrowserDrawer
-        open={dataOpen}
-        onClose={() => setDataOpen(false)}
-        env={env}
-        knName={network?.name ?? ""}
-        onFillField={fillBodyField}
-        onFillResource={fillResource}
-        onFillConceptGroup={fillConceptGroup}
         copy={copy}
       />
     </section>
