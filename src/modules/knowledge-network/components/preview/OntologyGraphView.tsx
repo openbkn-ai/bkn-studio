@@ -1,6 +1,12 @@
 /** 本体图谱（建模预览新设计）—— 彩色实体类节点 + 关系连线，可选中并高亮邻居。 */
 
-import { DownOutlined, RetweetOutlined } from "@ant-design/icons";
+import {
+  CompressOutlined,
+  DownOutlined,
+  RetweetOutlined,
+  ZoomInOutlined,
+  ZoomOutOutlined,
+} from "@ant-design/icons";
 import { Dropdown } from "antd";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,6 +23,9 @@ import styles from "./OntologyGraphView.module.css";
 
 const HUB_RADIUS = 46;
 const NODE_RADIUS = 38;
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 3;
+const INITIAL_VIEW = { x: 0, y: 0, w: PREVIEW_LAYOUT_WIDTH, h: PREVIEW_LAYOUT_HEIGHT };
 
 type OntologyLayoutMode = "force" | "circle" | "group";
 
@@ -142,10 +151,34 @@ export function OntologyGraphView({
   const [dragged, setDragged] = useState<Map<string, { x: number; y: number }>>(new Map());
   const dragRef = useRef<{ id: string; offsetX: number; offsetY: number; moved: boolean } | null>(null);
 
-  // 切换图 / 排列方式时清掉手动位置。
+  // 画布缩放/平移：viewBox 驱动（getScreenCTM 自动反映，节点拖拽数学不变）。
+  const [view, setView] = useState(INITIAL_VIEW);
+  const panRef = useRef<
+    { startX: number; startY: number; view: typeof INITIAL_VIEW; moved: boolean } | null
+  >(null);
+
+  // 切换图 / 排列方式时清掉手动位置；切换图时回到初始视图。
   useEffect(() => {
     setDragged(new Map());
   }, [graph, mode]);
+  useEffect(() => {
+    setView(INITIAL_VIEW);
+  }, [graph]);
+
+  const zoomBy = useCallback((factor: number, anchorX?: number, anchorY?: number) => {
+    setView((prev) => {
+      const ax = anchorX ?? prev.x + prev.w / 2;
+      const ay = anchorY ?? prev.y + prev.h / 2;
+      let nw = prev.w / factor;
+      const zoom = PREVIEW_LAYOUT_WIDTH / nw;
+      if (zoom > ZOOM_MAX) nw = PREVIEW_LAYOUT_WIDTH / ZOOM_MAX;
+      if (zoom < ZOOM_MIN) nw = PREVIEW_LAYOUT_WIDTH / ZOOM_MIN;
+      const nh = nw * (PREVIEW_LAYOUT_HEIGHT / PREVIEW_LAYOUT_WIDTH);
+      const k = nw / prev.w;
+      return { x: ax - (ax - prev.x) * k, y: ay - (ay - prev.y) * k, w: nw, h: nh };
+    });
+  }, []);
+  const resetView = useCallback(() => setView(INITIAL_VIEW), []);
 
   const posOf = useCallback(
     (id: string) => dragged.get(id) ?? positions.get(id) ?? null,
@@ -163,6 +196,19 @@ export function OntologyGraphView({
     return { x: local.x, y: local.y };
   }, []);
 
+  // 滚轮缩放（绕光标）。用非 passive 监听以便 preventDefault 阻止页面滚动。
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return undefined;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const p = toSvgPoint(event.clientX, event.clientY);
+      zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12, p?.x, p?.y);
+    };
+    svg.addEventListener("wheel", onWheel, { passive: false });
+    return () => svg.removeEventListener("wheel", onWheel);
+  }, [toSvgPoint, zoomBy]);
+
   const onNodePointerDown = (event: ReactPointerEvent<SVGGElement>, id: string) => {
     event.stopPropagation();
     const p = toSvgPoint(event.clientX, event.clientY);
@@ -172,29 +218,49 @@ export function OntologyGraphView({
     (event.currentTarget as SVGGElement).setPointerCapture?.(event.pointerId);
   };
 
+  // 空白处按下 = 开始平移画布（节点 onPointerDown 已 stopPropagation）。
+  const onCanvasPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    panRef.current = { startX: event.clientX, startY: event.clientY, view, moved: false };
+    svgRef.current?.setPointerCapture?.(event.pointerId);
+  };
+
   const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
     const drag = dragRef.current;
-    if (!drag) return;
-    const p = toSvgPoint(event.clientX, event.clientY);
-    if (!p) return;
-    const nx = p.x - drag.offsetX;
-    const ny = p.y - drag.offsetY;
-    const base = positions.get(drag.id);
-    if (base && Math.hypot(nx - base.x, ny - base.y) > 3) drag.moved = true;
-    setDragged((prev) => {
-      const next = new Map(prev);
-      next.set(drag.id, { x: nx, y: ny });
-      return next;
-    });
+    if (drag) {
+      const p = toSvgPoint(event.clientX, event.clientY);
+      if (!p) return;
+      const nx = p.x - drag.offsetX;
+      const ny = p.y - drag.offsetY;
+      const base = positions.get(drag.id);
+      if (base && Math.hypot(nx - base.x, ny - base.y) > 3) drag.moved = true;
+      setDragged((prev) => {
+        const next = new Map(prev);
+        next.set(drag.id, { x: nx, y: ny });
+        return next;
+      });
+      return;
+    }
+    const pan = panRef.current;
+    if (pan) {
+      const rect = svgRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const dx = ((event.clientX - pan.startX) * pan.view.w) / rect.width;
+      const dy = ((event.clientY - pan.startY) * pan.view.h) / rect.height;
+      if (Math.hypot(event.clientX - pan.startX, event.clientY - pan.startY) > 3) pan.moved = true;
+      setView({ x: pan.view.x - dx, y: pan.view.y - dy, w: pan.view.w, h: pan.view.h });
+    }
   };
 
   const onPointerUp = () => {
     const drag = dragRef.current;
-    dragRef.current = null;
-    if (drag && !drag.moved) {
-      // 未移动 = 点选（切换选中）
-      onSelect(drag.id === selectedId ? null : drag.id);
+    if (drag) {
+      dragRef.current = null;
+      if (!drag.moved) onSelect(drag.id === selectedId ? null : drag.id);
+      return;
     }
+    const pan = panRef.current;
+    panRef.current = null;
+    if (pan && !pan.moved) onSelect(null); // 空白点击 = 取消选中
   };
 
   return (
@@ -227,19 +293,15 @@ export function OntologyGraphView({
       <svg
         ref={svgRef}
         className={styles.graph}
-        viewBox={`0 0 ${PREVIEW_LAYOUT_WIDTH} ${PREVIEW_LAYOUT_HEIGHT}`}
-      preserveAspectRatio="xMidYMid meet"
-      role="img"
-      aria-label={t("knowledgeNetwork.previewCanvas")}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerLeave={onPointerUp}
-      onClick={(event) => {
-        if ((event.target as Element).tagName === "svg") {
-          onSelect(null);
-        }
-      }}
-    >
+        viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label={t("knowledgeNetwork.previewCanvas")}
+        onPointerDown={onCanvasPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+      >
       <defs>
         <pattern id="kn-onto-grid" width="26" height="26" patternUnits="userSpaceOnUse">
           <circle cx="1.4" cy="1.4" r="1.3" fill="#eef1f6" />
@@ -347,6 +409,17 @@ export function OntologyGraphView({
         })}
       </g>
       </svg>
+      <div className={styles.zoomCtl}>
+        <button type="button" onClick={() => zoomBy(1.25)} title={t("knowledgeNetwork.previewZoomIn")}>
+          <ZoomInOutlined />
+        </button>
+        <button type="button" onClick={() => zoomBy(0.8)} title={t("knowledgeNetwork.previewZoomOut")}>
+          <ZoomOutOutlined />
+        </button>
+        <button type="button" onClick={resetView} title={t("knowledgeNetwork.previewFitView")}>
+          <CompressOutlined />
+        </button>
+      </div>
     </div>
   );
 }
