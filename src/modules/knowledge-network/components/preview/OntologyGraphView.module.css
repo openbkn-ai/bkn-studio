@@ -3,6 +3,7 @@
   width: 100%;
   height: 100%;
   user-select: none;
+  touch-action: none;
 }
 
 .edge line {
@@ -42,8 +43,12 @@
 }
 
 .node {
-  cursor: pointer;
+  cursor: grab;
   transition: opacity 0.15s ease;
+}
+
+.node:active {
+  cursor: grabbing;
 }
 
 .nodeDim {

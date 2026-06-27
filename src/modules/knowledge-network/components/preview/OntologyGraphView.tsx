@@ -1,7 +1,7 @@
 /** 本体图谱（建模预览新设计）—— 彩色实体类节点 + 关系连线，可选中并高亮邻居。 */
 
-import type { CSSProperties } from "react";
-import { useMemo } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { KnowledgeNetworkPreviewGraph } from "@/modules/knowledge-network/types/knowledge-network";
@@ -72,13 +72,77 @@ export function OntologyGraphView({
     return neighborSet;
   }, [graph, selectedId]);
 
+  // 拖拽：用户可移动节点重排。覆盖位置存在 dragged 里，优先于计算布局。
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [dragged, setDragged] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const dragRef = useRef<{ id: string; offsetX: number; offsetY: number; moved: boolean } | null>(null);
+
+  // 新布局（graph 变化）时清掉手动位置。
+  useEffect(() => {
+    setDragged(new Map());
+  }, [graph]);
+
+  const posOf = useCallback(
+    (id: string) => dragged.get(id) ?? positions.get(id) ?? null,
+    [dragged, positions],
+  );
+
+  const toSvgPoint = useCallback((clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    const ctm = svg?.getScreenCTM();
+    if (!svg || !ctm) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const local = pt.matrixTransform(ctm.inverse());
+    return { x: local.x, y: local.y };
+  }, []);
+
+  const onNodePointerDown = (event: ReactPointerEvent<SVGGElement>, id: string) => {
+    event.stopPropagation();
+    const p = toSvgPoint(event.clientX, event.clientY);
+    const base = posOf(id);
+    if (!p || !base) return;
+    dragRef.current = { id, offsetX: p.x - base.x, offsetY: p.y - base.y, moved: false };
+    (event.currentTarget as SVGGElement).setPointerCapture?.(event.pointerId);
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const p = toSvgPoint(event.clientX, event.clientY);
+    if (!p) return;
+    const nx = p.x - drag.offsetX;
+    const ny = p.y - drag.offsetY;
+    const base = positions.get(drag.id);
+    if (base && Math.hypot(nx - base.x, ny - base.y) > 3) drag.moved = true;
+    setDragged((prev) => {
+      const next = new Map(prev);
+      next.set(drag.id, { x: nx, y: ny });
+      return next;
+    });
+  };
+
+  const onPointerUp = () => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (drag && !drag.moved) {
+      // 未移动 = 点选（切换选中）
+      onSelect(drag.id === selectedId ? null : drag.id);
+    }
+  };
+
   return (
     <svg
+      ref={svgRef}
       className={styles.graph}
       viewBox={`0 0 ${PREVIEW_LAYOUT_WIDTH} ${PREVIEW_LAYOUT_HEIGHT}`}
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={t("knowledgeNetwork.previewCanvas")}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerUp}
       onClick={(event) => {
         if ((event.target as Element).tagName === "svg") {
           onSelect(null);
@@ -101,8 +165,8 @@ export function OntologyGraphView({
 
       <g className={styles.edges}>
         {graph.edges.map((edge) => {
-          const a = positions.get(edge.sourceId);
-          const b = positions.get(edge.targetId);
+          const a = posOf(edge.sourceId);
+          const b = posOf(edge.targetId);
           if (!a || !b) {
             return null;
           }
@@ -147,7 +211,7 @@ export function OntologyGraphView({
 
       <g className={styles.nodes}>
         {graph.nodes.map((node) => {
-          const position = positions.get(node.id);
+          const position = posOf(node.id);
           if (!position) {
             return null;
           }
@@ -168,7 +232,7 @@ export function OntologyGraphView({
                 .filter(Boolean)
                 .join(" ")}
               style={nodeStyle}
-              onClick={() => onSelect(isSelected ? null : node.id)}
+              onPointerDown={(event) => onNodePointerDown(event, node.id)}
             >
               {isSelected ? (
                 <circle className={styles.nodeRing} cx={position.x} cy={position.y} r={radius + 7} />
