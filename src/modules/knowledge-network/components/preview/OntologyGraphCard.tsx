@@ -95,6 +95,7 @@ export function OntologyGraphCard({
 
   // 概念分组成员（节点 → 分组 id），供「按逻辑分组」排列聚类。各组取详情拿成员对象类。
   const [groupOf, setGroupOf] = useState<Map<string, string>>(new Map());
+  const [groupNames, setGroupNames] = useState<Map<string, string>>(new Map());
   useEffect(() => {
     let cancelled = false;
     listKnowledgeNetworkConceptGroups(networkId)
@@ -110,9 +111,13 @@ export function OntologyGraphCard({
           detail?.objectTypes.forEach((item) => map.set(item.id, groups[index]!.id));
         });
         setGroupOf(map);
+        setGroupNames(new Map(groups.map((group) => [group.id, group.name])));
       })
       .catch(() => {
-        if (!cancelled) setGroupOf(new Map());
+        if (!cancelled) {
+          setGroupOf(new Map());
+          setGroupNames(new Map());
+        }
       });
     return () => {
       cancelled = true;
@@ -147,6 +152,7 @@ export function OntologyGraphCard({
               graph={graph}
               indexedIds={indexedIds}
               groupOf={groupOf}
+              groupNames={groupNames}
               selectedId={selectedId}
               onSelect={setSelectedId}
             />

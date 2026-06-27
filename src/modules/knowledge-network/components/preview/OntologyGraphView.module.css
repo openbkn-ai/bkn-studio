@@ -77,6 +77,23 @@
   color: #2e68ff;
 }
 
+.groupHull {
+  fill: var(--gc);
+  fill-opacity: 0.06;
+  stroke: var(--gc);
+  stroke-width: 1.4;
+  stroke-dasharray: 7 5;
+  opacity: 0.85;
+}
+
+.groupLabel {
+  fill: var(--gc);
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
 .edge line {
   stroke: #c4ccd8;
   stroke-width: 1.6;

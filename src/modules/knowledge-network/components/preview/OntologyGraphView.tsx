@@ -26,6 +26,9 @@ const NODE_RADIUS = 38;
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 3;
 const INITIAL_VIEW = { x: 0, y: 0, w: PREVIEW_LAYOUT_WIDTH, h: PREVIEW_LAYOUT_HEIGHT };
+const GROUP_HULL_PAD = 28;
+// 分组边界配色（按分组 id 排序后稳定取色）。
+const GROUP_COLORS = ["#2e68ff", "#7c4dff", "#00b8a3", "#f5a623", "#eb5757", "#11a0d8", "#9b51e0", "#2bb673"];
 
 type OntologyLayoutMode = "force" | "circle" | "group";
 
@@ -34,6 +37,8 @@ type OntologyGraphViewProps = {
   indexedIds: Set<string>;
   /** 节点 id → 概念分组 id，供「按逻辑分组」聚类。 */
   groupOf?: Map<string, string>;
+  /** 分组 id → 名称，用于「按逻辑分组」时画边界标签。 */
+  groupNames?: Map<string, string>;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 };
@@ -97,6 +102,7 @@ export function OntologyGraphView({
   graph,
   indexedIds,
   groupOf,
+  groupNames,
   selectedId,
   onSelect,
 }: OntologyGraphViewProps) {
@@ -184,6 +190,48 @@ export function OntologyGraphView({
     (id: string) => dragged.get(id) ?? positions.get(id) ?? null,
     [dragged, positions],
   );
+
+  // 「按逻辑分组」时，按当前位置（含拖拽）算每组包围盒，画虚线边界 + 名称。
+  const groupHulls = useMemo(() => {
+    if (mode !== "group" || !groupOf || groupOf.size === 0) return [];
+    const buckets = new Map<string, string[]>();
+    graph.nodes.forEach((node) => {
+      const gid = groupOf.get(node.id);
+      if (!gid) return; // 未分组节点不画边界
+      const arr = buckets.get(gid) ?? [];
+      arr.push(node.id);
+      buckets.set(gid, arr);
+    });
+    const gids = [...buckets.keys()].sort();
+    return gids
+      .map((gid, gi) => {
+        const ids = buckets.get(gid) ?? [];
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        ids.forEach((id) => {
+          const p = posOf(id);
+          if (!p) return;
+          const r = radiusById.get(id) ?? NODE_RADIUS;
+          minX = Math.min(minX, p.x - r);
+          minY = Math.min(minY, p.y - r);
+          maxX = Math.max(maxX, p.x + r);
+          maxY = Math.max(maxY, p.y + r);
+        });
+        if (!Number.isFinite(minX)) return null;
+        return {
+          gid,
+          name: groupNames?.get(gid) ?? "",
+          color: GROUP_COLORS[gi % GROUP_COLORS.length],
+          x: minX - GROUP_HULL_PAD,
+          y: minY - GROUP_HULL_PAD,
+          w: maxX - minX + GROUP_HULL_PAD * 2,
+          h: maxY - minY + GROUP_HULL_PAD * 2,
+        };
+      })
+      .filter((hull): hull is NonNullable<typeof hull> => hull !== null);
+  }, [mode, groupOf, groupNames, graph, posOf, radiusById]);
 
   const toSvgPoint = useCallback((clientX: number, clientY: number) => {
     const svg = svgRef.current;
@@ -315,6 +363,21 @@ export function OntologyGraphView({
       </defs>
 
       <rect width={PREVIEW_LAYOUT_WIDTH} height={PREVIEW_LAYOUT_HEIGHT} fill="url(#kn-onto-grid)" />
+
+      {groupHulls.length > 0 ? (
+        <g className={styles.groups}>
+          {groupHulls.map((hull) => (
+            <g key={hull.gid} style={{ "--gc": hull.color } as CSSProperties}>
+              <rect className={styles.groupHull} x={hull.x} y={hull.y} width={hull.w} height={hull.h} rx={22} />
+              {hull.name ? (
+                <text className={styles.groupLabel} x={hull.x + 16} y={hull.y + 24}>
+                  {hull.name}
+                </text>
+              ) : null}
+            </g>
+          ))}
+        </g>
+      ) : null}
 
       <g className={styles.edges}>
         {graph.edges.map((edge) => {
