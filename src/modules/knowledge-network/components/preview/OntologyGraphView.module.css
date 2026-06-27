@@ -79,13 +79,13 @@
 
 .nodeName {
   fill: #ffffff;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   pointer-events: none;
 }
 
 .nodeHub .nodeName {
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .nodeIndexDot {
