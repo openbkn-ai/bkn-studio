@@ -52,7 +52,10 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "query_object_instance",
     group: "Schema & 查询",
-    summary: "根据单个对象类查询对象实例数据，支持过滤、排序与分页。REST 经 query 传 kn_id / ot_id；MCP 经 arguments 传入。",
+    summary:
+      "根据单个对象类查询对象实例数据，支持过滤、排序与分页。REST 经 query 传 kn_id / ot_id；MCP 经 arguments 传入。" +
+      "condition 可选——operation: == / != / > / < / in 等；field 填字段名（用数据浏览器查）；value 填值；" +
+      "value_from: const（常量）或 field（与另一字段比较）。不过滤就删掉 condition。",
     path: `${REST_PREFIX}/kn/query_object_instance`,
     query: [
       { name: "kn_id", value: "your_kn_id", required: true },
@@ -61,7 +64,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
       { name: "response_format", value: "json", options: ["json", "toon"] },
     ],
     body: {
-      condition: { operation: "==", field: "status", value: "active", value_from: "const" },
+      condition: { operation: "==", field: "your_field", value: "your_value", value_from: "const" },
       sort: [{ field: "@timestamp", direction: "desc" }],
       limit: 10,
       need_total: true,
@@ -71,7 +74,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
       kn_id: "your_kn_id",
       ot_id: "your_object_type",
       include_logic_params: false,
-      condition: { operation: "==", field: "status", value: "active", value_from: "const" },
+      condition: { operation: "==", field: "your_field", value: "your_value", value_from: "const" },
       sort: [{ field: "@timestamp", direction: "desc" }],
       limit: 10,
       need_total: true,
