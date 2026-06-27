@@ -63,9 +63,13 @@ export async function changePassword(
     }
     return;
   }
-  await http.post("/safe/v1/auth/change-password", {
-    account,
-    old_password: oldPassword,
-    new_password: newPassword,
-  });
+  await http.post(
+    "/safe/v1/auth/change-password",
+    {
+      account,
+      old_password: oldPassword,
+      new_password: newPassword,
+    },
+    { skipErrorToast: true } as Parameters<typeof http.post>[2],
+  );
 }

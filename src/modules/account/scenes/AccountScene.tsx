@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiKeyListScene } from "@/modules/api-keys/scenes/ApiKeyListScene";
+import { SecurityPanel } from "@/modules/account/components/SecurityPanel";
 import { getMyProfile, type MyProfile } from "@/modules/account/services/profile.service";
 
 import styles from "./AccountScene.module.css";
@@ -81,7 +82,7 @@ export function AccountScene() {
           {
             key: "security",
             label: t("account.tabs.security"),
-            children: <ComingSoon text={t("account.securitySoon")} />,
+            children: <SecurityPanel account={profile?.account ?? ""} />,
           },
           {
             key: "keys",
