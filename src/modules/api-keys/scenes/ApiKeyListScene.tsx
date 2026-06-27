@@ -19,7 +19,6 @@ import {
   revokeApiKey,
 } from "@/modules/api-keys/services/api-key.service";
 import type { ApiKey, IssuedApiKey } from "@/modules/api-keys/types/api-key";
-import { maskApiKey } from "@/modules/api-keys/utils/api-key-usage";
 
 import styles from "./ApiKeyListScene.module.css";
 
@@ -102,7 +101,7 @@ export function ApiKeyListScene({ embedded = false }: { embedded?: boolean } = {
       render: (value: string, record) => (
         <div className={styles.nameKeyCell}>
           <span className={styles.nameCell}>{value}</span>
-          <code className={styles.keyMask}>{maskApiKey(record.keyId)}</code>
+          <code className={styles.keyMask}>{record.masked}</code>
         </div>
       ),
     },

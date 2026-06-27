@@ -3,6 +3,8 @@ export type ApiKey = {
   id: string;
   keyId: string;
   name: string;
+  /** 后端返回的掩码展示，如 bak_b3ff****b234（secret 不可回取）。 */
+  masked: string;
   enabled: boolean;
   /** RFC3339；null = 永不过期。 */
   expiresAt: string | null;

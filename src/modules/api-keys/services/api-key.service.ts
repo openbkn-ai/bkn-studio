@@ -13,6 +13,7 @@ type BackendApiKey = {
   key_id: string;
   name: string;
   key?: string;
+  masked?: string;
   enabled: boolean;
   expires_at: string | null;
   last_used_at: string | null;
@@ -24,6 +25,7 @@ function mapApiKey(item: BackendApiKey): ApiKey {
     id: item.id,
     keyId: item.key_id,
     name: item.name,
+    masked: item.masked ?? `bak_${item.key_id}_••••`,
     enabled: item.enabled,
     expiresAt: item.expires_at,
     lastUsedAt: item.last_used_at,
@@ -41,12 +43,18 @@ const mockApiKeys: BackendApiKey[] = [
     id: "mock-1",
     key_id: "b3ffa7f4mock",
     name: "我的 Cursor",
+    masked: "bak_b3ff****mock",
     enabled: true,
     expires_at: "2027-06-26T11:49:59+08:00",
     last_used_at: "2026-06-20T09:12:00+08:00",
     created_at: "2026-06-01T11:49:59+08:00",
   },
 ];
+
+/** 由完整明文派生掩码（mock 用；真实环境由后端返回 masked）。 */
+function maskFromPlaintext(plain: string): string {
+  return plain.length <= 12 ? plain : `${plain.slice(0, 8)}****${plain.slice(-4)}`;
+}
 
 function oneYearLater(): string {
   const now = new Date();
@@ -72,11 +80,13 @@ export async function listApiKeys(): Promise<ApiKey[]> {
 export async function issueApiKey(payload: IssueApiKeyPayload): Promise<IssuedApiKey> {
   if (useMock) {
     const created = new Date().toISOString();
+    const plain = mockPlaintext();
     const item: BackendApiKey = {
       id: `mock-${mockApiKeys.length + 1}-${created}`,
       key_id: `mock${mockApiKeys.length + 1}`,
       name: payload.name,
-      key: mockPlaintext(),
+      key: plain,
+      masked: maskFromPlaintext(plain),
       enabled: true,
       expires_at: payload.neverExpire ? null : payload.expiresAt ?? oneYearLater(),
       last_used_at: null,
@@ -113,6 +123,7 @@ export async function regenerateApiKey(id: string): Promise<IssuedApiKey> {
       throw new Error("api key not found");
     }
     item.key = mockPlaintext();
+    item.masked = maskFromPlaintext(item.key);
     item.last_used_at = null;
     return mapIssued(item);
   }

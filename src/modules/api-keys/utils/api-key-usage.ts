@@ -7,14 +7,6 @@ export function serverOrigin(): string {
   return typeof window !== "undefined" ? window.location.origin : "https://your-bkn-host";
 }
 
-/**
- * 列表里 key 的掩码展示：后端只回 key_id（公开半段），完整密钥含的 secret 不可回取。
- * 显示 `bak_<key_id>_••••` —— 头是真实可识别的 key_id，尾用 •••• 表示隐藏的 secret。
- */
-export function maskApiKey(keyId: string): string {
-  return `bak_${keyId}_••••`;
-}
-
 const REST_PATH = "/api/agent-retrieval/v1/kn/search_schema";
 const MCP_PATH = "/api/agent-retrieval/v1/mcp";
 
