@@ -77,6 +77,7 @@ export const networkPart = {
     previewExperience: "Try it now",
     previewExperienceHint: "Query & retrieval experience for this network is coming soon.",
     previewGraphLegend: "Node = entity class, edge = relation class, green dot = indexed",
+    previewRearrange: "Re-arrange",
     previewInspectorHint: "Click a node to inspect the entity class",
     previewEntityClasses: "Entity classes",
     previewIndexed: "Indexed",

@@ -75,6 +75,7 @@ export const networkPart = {
     previewExperience: "立即体验",
     previewExperienceHint: "基于该知识网络的智能问数 / 检索体验入口即将开放。",
     previewGraphLegend: "节点 = 实体类，连线 = 关系类，绿点 = 已建索引",
+    previewRearrange: "重新排列",
     previewInspectorHint: "点击图中节点查看实体类详情",
     previewEntityClasses: "实体类",
     previewIndexed: "已建索引",

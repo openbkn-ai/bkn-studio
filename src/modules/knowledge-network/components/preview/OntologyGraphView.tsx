@@ -1,5 +1,6 @@
 /** 本体图谱（建模预览新设计）—— 彩色实体类节点 + 关系连线，可选中并高亮邻居。 */
 
+import { RetweetOutlined } from "@ant-design/icons";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -133,10 +134,19 @@ export function OntologyGraphView({
   };
 
   return (
-    <svg
-      ref={svgRef}
-      className={styles.graph}
-      viewBox={`0 0 ${PREVIEW_LAYOUT_WIDTH} ${PREVIEW_LAYOUT_HEIGHT}`}
+    <div className={styles.wrap}>
+      <button
+        type="button"
+        className={styles.arrange}
+        onClick={() => setDragged(new Map())}
+        title={t("knowledgeNetwork.previewRearrange")}
+      >
+        <RetweetOutlined /> {t("knowledgeNetwork.previewRearrange")}
+      </button>
+      <svg
+        ref={svgRef}
+        className={styles.graph}
+        viewBox={`0 0 ${PREVIEW_LAYOUT_WIDTH} ${PREVIEW_LAYOUT_HEIGHT}`}
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={t("knowledgeNetwork.previewCanvas")}
@@ -255,6 +265,7 @@ export function OntologyGraphView({
           );
         })}
       </g>
-    </svg>
+      </svg>
+    </div>
   );
 }
