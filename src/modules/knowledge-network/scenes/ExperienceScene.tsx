@@ -41,6 +41,13 @@ import styles from "./ExperienceScene.module.css";
 
 const GROUPS = ["Schema & 查询", "Skills & Logic", "Knowledge Network"];
 
+/** 字节数转人类可读：B / KB / MB（1024 进制，保留一位小数）。 */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function prettyResponse(text: string): string {
   // MCP 走 Streamable HTTP，响应可能是 SSE（event:/data: 行），取最后一条 data 解析。
   const dataLines = text
@@ -988,7 +995,7 @@ export function ExperienceScene() {
                     {response.status} {response.statusText}
                   </span>
                   <span className={styles.resMeta}>
-                    {response.latencyMs}ms · {response.sizeBytes}B
+                    {response.latencyMs}ms · {formatBytes(response.sizeBytes)}
                   </span>
                   <button
                     type="button"
