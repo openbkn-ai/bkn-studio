@@ -4,6 +4,13 @@
   gap: 12px;
 }
 
+.note {
+  margin: 0 0 4px;
+  color: #5b6678;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
 .block {
   border: 1px solid rgba(15, 30, 54, 0.1);
   border-radius: 10px;

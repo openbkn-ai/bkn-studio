@@ -26,7 +26,17 @@ export const apiKeysZhCN = {
     usage: {
       lead: "把密钥作为 Authorization: Bearer 头，调 ContextLoader 的 REST 接口，或配置到 MCP 客户端。",
       rest: "REST · ContextLoader",
-      mcp: "MCP · 客户端配置",
+      mcp: "mcpServers 配置",
+      tabClaude: "Claude Code",
+      tabCodex: "Codex",
+      tabCursor: "Cursor",
+      tabGeneric: "通用 mcp.json",
+      tabRest: "REST",
+      claudeCli: "① CLI 一行接入",
+      claudeJson: "② 或写入项目 .mcp.json",
+      codexToml: "~/.codex/config.toml（streamable HTTP）",
+      cursorHint: "写入 ~/.cursor/mcp.json（全局）或项目内 .cursor/mcp.json，重启 Cursor 后生效。",
+      cursorFile: "~/.cursor/mcp.json",
     },
     usageModal: {
       title: "使用密钥",

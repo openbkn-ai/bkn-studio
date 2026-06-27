@@ -9,6 +9,12 @@ export function serverOrigin(): string {
 
 const REST_PATH = "/api/agent-retrieval/v1/kn/search_schema";
 const MCP_PATH = "/api/agent-retrieval/v1/mcp";
+const MCP_NAME = "bkn-agent-retrieval";
+
+/** MCP 服务端点（真实网关地址 + /mcp）。 */
+export function mcpUrl(): string {
+  return `${serverOrigin()}${MCP_PATH}`;
+}
 
 /** REST 调用示例（真实契约：/v1 前缀，仅 Authorization 头）。 */
 export function buildRestSnippet(keyValue: string): string {
@@ -20,14 +26,14 @@ export function buildRestSnippet(keyValue: string): string {
   ].join("\n");
 }
 
-/** MCP 客户端配置示例（Cursor / Claude Code 等）。 */
+/** 通用 mcp.json 配置（Cursor / Claude Code .mcp.json / 大多数 MCP 客户端）。 */
 export function buildMcpSnippet(keyValue: string): string {
   return JSON.stringify(
     {
       mcpServers: {
-        "bkn-agent-retrieval": {
+        [MCP_NAME]: {
           type: "http",
-          url: `${serverOrigin()}${MCP_PATH}`,
+          url: mcpUrl(),
           headers: { Authorization: `Bearer ${keyValue}` },
         },
       },
@@ -35,4 +41,22 @@ export function buildMcpSnippet(keyValue: string): string {
     null,
     2,
   );
+}
+
+/** Claude Code：CLI 一行接入。 */
+export function buildClaudeCliSnippet(keyValue: string): string {
+  return [
+    `claude mcp add --transport http ${MCP_NAME} ${mcpUrl()} \\`,
+    `  --header "Authorization: Bearer ${keyValue}"`,
+  ].join("\n");
+}
+
+/** Codex CLI：~/.codex/config.toml 的 streamable-HTTP MCP 配置。 */
+export function buildCodexSnippet(keyValue: string): string {
+  return [
+    `# ~/.codex/config.toml`,
+    `[mcp_servers.${MCP_NAME}]`,
+    `url = "${mcpUrl()}"`,
+    `http_headers = { Authorization = "Bearer ${keyValue}" }`,
+  ].join("\n");
 }

@@ -26,7 +26,17 @@ export const apiKeysEnUS = {
     usage: {
       lead: "Use the key as the Authorization: Bearer header to call the ContextLoader REST API or configure an MCP client.",
       rest: "REST · ContextLoader",
-      mcp: "MCP · client config",
+      mcp: "mcpServers config",
+      tabClaude: "Claude Code",
+      tabCodex: "Codex",
+      tabCursor: "Cursor",
+      tabGeneric: "Generic mcp.json",
+      tabRest: "REST",
+      claudeCli: "① One-line CLI setup",
+      claudeJson: "② Or write to the project .mcp.json",
+      codexToml: "~/.codex/config.toml (streamable HTTP)",
+      cursorHint: "Write to ~/.cursor/mcp.json (global) or the project's .cursor/mcp.json, then restart Cursor.",
+      cursorFile: "~/.cursor/mcp.json",
     },
     usageModal: {
       title: "Use key",
