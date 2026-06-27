@@ -141,7 +141,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     group: "Skills & Logic",
     summary: "根据对象实例标识召回关联行动，返回符合 Function Call 规范的 _dynamic_tools 工具定义。支持多个实例标识。",
     path: `${REST_PREFIX}/kn/get_action_info`,
-    query: [],
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { kn_id: "your_kn_id", at_id: "your_action_type", _instance_identities: [{ id: "instance_000001" }, { id: "instance_000002" }] },
   },
   {
@@ -157,7 +157,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     group: "Knowledge Network",
     summary: "列出当前账户可访问的业务知识网络。",
     path: `${REST_PREFIX}/kn/list_knowledge_networks`,
-    query: [],
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: {},
   },
   {
@@ -165,7 +165,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     group: "Knowledge Network",
     summary: "查询指定知识网络的详细信息。",
     path: `${REST_PREFIX}/kn/get_kn_detail`,
-    query: [],
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { kn_id: "your_kn_id" },
   },
 ];
