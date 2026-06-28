@@ -306,11 +306,14 @@ export function OntologyGraphView({
     return { x: local.x, y: local.y };
   }, []);
 
-  // 滚轮缩放（绕光标）。用非 passive 监听以便 preventDefault 阻止页面滚动。
+  // 滚轮缩放（绕光标）：仅在按住 Ctrl/⌘ 时拦截，否则放行让页面正常滚动，
+  // 避免整页滚动经过画布时被劫持成缩放。触控板捏合会带 ctrlKey，自然支持。
+  // 用非 passive 监听以便 preventDefault 阻止页面滚动。
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return undefined;
     const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return; // 普通滚轮 = 翻页
       event.preventDefault();
       const p = toSvgPoint(event.clientX, event.clientY);
       zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12, p?.x, p?.y);
@@ -547,6 +550,7 @@ export function OntologyGraphView({
         })}
       </g>
       </svg>
+      <span className={styles.zoomHint}>{t("knowledgeNetwork.previewZoomHint")}</span>
       <div className={styles.zoomCtl}>
         <button type="button" onClick={() => zoomBy(1.25)} title={t("knowledgeNetwork.previewZoomIn")}>
           <ZoomInOutlined />

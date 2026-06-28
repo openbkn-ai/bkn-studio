@@ -119,6 +119,7 @@ export const networkPart = {
     previewNodeCount: "{{count}} object types",
     previewZoomIn: "Zoom in",
     previewZoomOut: "Zoom out",
+    previewZoomHint: "Hold Ctrl / ⌘ + scroll to zoom",
     recentlyModifiedObjectTypes: "Recently modified object types",
     resourcePageExit: "Exit",
     closeSearchBar: "Close search bar",

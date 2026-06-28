@@ -72,6 +72,7 @@ export const networkPart = {
     previewNodeCount: "{{count}} 个对象类",
     previewZoomIn: "放大",
     previewZoomOut: "缩小",
+    previewZoomHint: "按住 Ctrl / ⌘ 滚动缩放",
     previewExperience: "立即体验",
     previewExperienceHint: "基于该知识网络的智能问数 / 检索体验入口即将开放。",
     previewGraphLegend: "节点 = 实体类，连线 = 关系类，绿点 = 已建索引",
