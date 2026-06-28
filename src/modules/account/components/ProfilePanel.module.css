@@ -1,0 +1,64 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 8px 0 4px;
+}
+
+.block {
+  max-width: 460px;
+}
+
+.title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #10233f;
+}
+
+.hint {
+  margin: 0 0 18px;
+  color: #5b6678;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.form :global(.ant-form-item) {
+  margin-bottom: 18px;
+}
+
+.actions {
+  margin-bottom: 0;
+}
+
+.infoGrid {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid rgba(15, 30, 54, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(15, 30, 54, 0.08);
+}
+
+.infoRow {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  padding: 11px 14px;
+  background: #fff;
+}
+
+.infoLabel {
+  margin: 0;
+  color: #8a94a6;
+  font-size: 13px;
+}
+
+.infoValue {
+  margin: 0;
+  color: #1e293b;
+  font-size: 13px;
+  word-break: break-word;
+}

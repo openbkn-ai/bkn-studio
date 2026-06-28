@@ -1,9 +1,9 @@
-import { ClockCircleOutlined } from "@ant-design/icons";
-import { Tabs } from "antd";
+import { Spin, Tabs } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiKeyListScene } from "@/modules/api-keys/scenes/ApiKeyListScene";
+import { ProfilePanel } from "@/modules/account/components/ProfilePanel";
 import { SecurityPanel } from "@/modules/account/components/SecurityPanel";
 import { getMyProfile, type MyProfile } from "@/modules/account/services/profile.service";
 
@@ -16,17 +16,6 @@ function initials(name: string): string {
   const parts = value.split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0][0]! + parts[1][0]!).toUpperCase();
   return value.slice(0, 2).toUpperCase();
-}
-
-/** 资料 / 安全 Tab 暂以占位呈现，真实可写实现见 OPE-25。 */
-function ComingSoon({ text }: { text: string }) {
-  return (
-    <div className={styles.soon}>
-      <ClockCircleOutlined className={styles.soonIcon} />
-      <p>{text}</p>
-      <span className={styles.soonRef}>OPE-25</span>
-    </div>
-  );
 }
 
 export function AccountScene() {
@@ -72,12 +61,18 @@ export function AccountScene() {
 
       <Tabs
         className={styles.tabs}
-        defaultActiveKey="keys"
+        defaultActiveKey="profile"
         items={[
           {
             key: "profile",
             label: t("account.tabs.profile"),
-            children: <ComingSoon text={t("account.profileSoon")} />,
+            children: profile ? (
+              <ProfilePanel profile={profile} onSaved={setProfile} />
+            ) : (
+              <div className={styles.tabLoading}>
+                <Spin />
+              </div>
+            ),
           },
           {
             key: "security",

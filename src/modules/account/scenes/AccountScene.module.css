@@ -82,6 +82,13 @@
   margin-top: 6px;
 }
 
+.tabLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 20px;
+}
+
 .soon {
   display: flex;
   flex-direction: column;

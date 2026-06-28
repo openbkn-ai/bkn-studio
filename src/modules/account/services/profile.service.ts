@@ -1,14 +1,24 @@
 import { http } from "@/framework/request/http";
 
-/** 当前用户资料（GET /api/safe/v1/me，只读）。 */
+/** 当前用户资料（GET /api/safe/v1/me）。name/email/telephone 可自助改，其余只读。 */
 export type MyProfile = {
   id: string;
   account: string;
   name: string;
   email: string;
+  telephone: string;
   accountType: string;
+  enabled: boolean;
   departments: string[];
   roles: string[];
+  updatedAt: string;
+};
+
+/** 自助可写字段（PUT /api/safe/v1/me，部分更新）。 */
+export type ProfileUpdatePayload = {
+  name?: string;
+  email?: string;
+  telephone?: string;
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -18,34 +28,68 @@ type BackendMe = {
   account: string;
   name: string;
   email?: string;
+  telephone?: string;
   account_type?: string;
+  enabled?: boolean;
   departments?: string[];
   roles?: string[];
+  updated_at?: string;
 };
 
-export async function getMyProfile(): Promise<MyProfile> {
-  if (useMock) {
-    return {
-      id: "local-admin",
-      account: "local-admin",
-      name: "Local Admin",
-      email: "admin@bkn.local",
-      accountType: "user",
-      departments: ["bkn-platform"],
-      roles: ["super_admin"],
-    };
-  }
-  const response = await http.get<BackendMe>("/safe/v1/me");
-  const data = response.data;
+let mockProfile: MyProfile = {
+  id: "local-admin",
+  account: "local-admin",
+  name: "Local Admin",
+  email: "admin@bkn.local",
+  telephone: "",
+  accountType: "user",
+  enabled: true,
+  departments: ["bkn-platform"],
+  roles: ["super_admin"],
+  updatedAt: "2026-01-01T00:00:00Z",
+};
+
+function mapMe(data: BackendMe): MyProfile {
   return {
     id: data.id,
     account: data.account,
     name: data.name,
     email: data.email ?? "",
+    telephone: data.telephone ?? "",
     accountType: data.account_type ?? "",
+    enabled: data.enabled ?? true,
     departments: data.departments ?? [],
     roles: data.roles ?? [],
+    updatedAt: data.updated_at ?? "",
   };
+}
+
+export async function getMyProfile(): Promise<MyProfile> {
+  if (useMock) {
+    return mockProfile;
+  }
+  const response = await http.get<BackendMe>("/safe/v1/me");
+  return mapMe(response.data);
+}
+
+/**
+ * 自助改资料（PUT /api/safe/v1/me，部分更新）。
+ * 后端：无可更新字段 / 校验不过 → 400；无 token → 401；subject 无用户 → 404。
+ * email 为裸地址（不含显示名），空串清空；telephone ≤64；name 非空 ≤255。
+ */
+export async function updateMyProfile(payload: ProfileUpdatePayload): Promise<MyProfile> {
+  if (useMock) {
+    mockProfile = {
+      ...mockProfile,
+      ...payload,
+      updatedAt: new Date().toISOString(),
+    };
+    return mockProfile;
+  }
+  const response = await http.put<BackendMe>("/safe/v1/me", payload, {
+    skipErrorToast: true,
+  } as Parameters<typeof http.put>[2]);
+  return mapMe(response.data);
 }
 
 /**
