@@ -18,11 +18,16 @@ const ot = (id: string, fields: string[], resourceId?: string): KnObjectType => 
   data_properties: fields.map((name) => ({ name })),
 });
 
-const detail = (objectTypes: KnObjectType[], groups: { id: string }[] = []): KnDetail => ({
+const detail = (
+  objectTypes: KnObjectType[],
+  groups: { id: string }[] = [],
+  relations: KnDetail["relation_types"] = [],
+): KnDetail => ({
   id: "kn_demo",
   name: "demo",
   object_types: objectTypes,
   concept_groups: groups.map((g) => ({ id: g.id })),
+  relation_types: relations,
 });
 
 describe("opSupportsTestData", () => {
@@ -31,7 +36,7 @@ describe("opSupportsTestData", () => {
     expect(opSupportsTestData("run_sql")).toBe(true);
     expect(opSupportsTestData("search_schema")).toBe(true);
     expect(opSupportsTestData("get_kn_detail")).toBe(true);
-    expect(opSupportsTestData("query_instance_subgraph")).toBe(false);
+    expect(opSupportsTestData("query_instance_subgraph")).toBe(true);
     expect(opSupportsTestData("find_skills")).toBe(false);
     expect(opSupportsTestData("get_action_info")).toBe(false);
   });
@@ -118,5 +123,39 @@ describe("buildTestData", () => {
       filters: [{ field: "status", op: "==", value: "paid" }],
     });
     expect(fill.query).toBeUndefined();
+  });
+
+  it("query_instance_subgraph builds a path from a real relation type (REST)", () => {
+    const dg = detail(
+      [ot("team", ["name"], "res_team"), ot("player", ["name"], "res_player")],
+      [],
+      [{ id: "plays_for", name: "效力于", sourceId: "player", targetId: "team" }],
+    );
+    const fill = buildTestData(opById("query_instance_subgraph"), "rest", "kn_demo", dg, null, null);
+    const body = JSON.parse(fill.body);
+    expect(body.relation_type_paths[0]).toEqual({
+      object_types: [{ id: "player" }, { id: "team" }],
+      relation_types: [
+        { relation_type_id: "plays_for", source_object_type_id: "player", target_object_type_id: "team" },
+      ],
+      limit: 10,
+    });
+    expect(fill.query).toEqual({ kn_id: "kn_demo" });
+  });
+
+  it("query_instance_subgraph (MCP) puts kn_id in the arguments body", () => {
+    const dg = detail(
+      [ot("team", ["name"]), ot("player", ["name"])],
+      [],
+      [{ id: "plays_for", sourceId: "player", targetId: "team" }],
+    );
+    const fill = buildTestData(opById("query_instance_subgraph"), "mcp", "kn_demo", dg, null, null);
+    expect(JSON.parse(fill.body).kn_id).toBe("kn_demo");
+    expect(fill.query).toBeUndefined();
+  });
+
+  it("query_instance_subgraph notes when no relation type is available", () => {
+    const fill = buildTestData(opById("query_instance_subgraph"), "rest", "kn_demo", d, null, null);
+    expect(fill.note).toContain("未在 get_kn_detail 发现可用关系类");
   });
 });

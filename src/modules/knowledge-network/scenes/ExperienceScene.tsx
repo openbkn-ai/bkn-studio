@@ -972,7 +972,7 @@ export function ExperienceScene() {
           const rows = await fetchObjectInstances(env, ot.id, 1);
           sampleRow = rows[0] ?? null;
         }
-        const detail = knDetailRef.current?.detail ?? { id: knId, object_types: [], concept_groups: [] };
+        const detail = knDetailRef.current?.detail ?? { id: knId, object_types: [], concept_groups: [], relation_types: [] };
         const fill = buildTestData(op, mode, knId, detail, ot, sampleRow);
         setBodyText(fill.body);
         setBodyError(null);

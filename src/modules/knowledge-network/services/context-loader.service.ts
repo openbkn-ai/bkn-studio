@@ -205,7 +205,13 @@ export function exampleBodyText(op: ContextLoaderOp, mode: ContextLoaderMode, kn
 // 用当前知识网络的真实 schema + 样本行生成可直接发送的请求体。
 // 仅覆盖能从 get_kn_detail / 样本行推出真实值的接口；relation / action / metric 类留待大模型填。
 
-const TEST_DATA_OPS = new Set(["query_object_instance", "run_sql", "search_schema", "get_kn_detail"]);
+const TEST_DATA_OPS = new Set([
+  "query_object_instance",
+  "run_sql",
+  "search_schema",
+  "get_kn_detail",
+  "query_instance_subgraph",
+]);
 
 /** 该接口是否支持「填充测试数据」。 */
 export function opSupportsTestData(opId: string): boolean {
@@ -274,6 +280,27 @@ export function buildTestData(
       const resId = ot?.data_source?.id ?? "";
       const body = { kn_id: knId, sql: `SELECT * FROM {{.${resId}}} LIMIT 10` };
       return { body: JSON.stringify(body, null, 2), note: `资源 ${resId}` };
+    }
+
+    case "query_instance_subgraph": {
+      const otIds = new Set(detail.object_types.map((o) => o.id));
+      const rels = detail.relation_types ?? [];
+      const rel = rels.find((r) => otIds.has(r.sourceId) && otIds.has(r.targetId)) ?? rels[0] ?? null;
+      if (!rel) {
+        return { body: exampleBodyText(op, mode, knId), note: "未在 get_kn_detail 发现可用关系类，请手填" };
+      }
+      const path = {
+        object_types: [{ id: rel.sourceId }, { id: rel.targetId }],
+        relation_types: [
+          { relation_type_id: rel.id, source_object_type_id: rel.sourceId, target_object_type_id: rel.targetId },
+        ],
+        limit: 10,
+      };
+      const note = `关系类 ${rel.name || rel.id}（${rel.sourceId} → ${rel.targetId}）`;
+      if (mode === "mcp") {
+        return { body: JSON.stringify({ kn_id: knId, relation_type_paths: [path] }, null, 2), note };
+      }
+      return { body: JSON.stringify({ relation_type_paths: [path] }, null, 2), query: { kn_id: knId }, note };
     }
 
     case "query_object_instance": {
@@ -560,12 +587,41 @@ export type KnObjectType = {
 
 export type KnConceptGroup = { id: string; name?: string; object_type_ids?: string[] };
 
+export type KnRelationType = { id: string; name?: string; sourceId: string; targetId: string };
+
 export type KnDetail = {
   id: string;
   name?: string;
   object_types: KnObjectType[];
   concept_groups: KnConceptGroup[];
+  relation_types: KnRelationType[];
 };
+
+/** get_kn_detail 的关系类字段名各实现不一，容错取值。 */
+function parseRelationTypes(raw: unknown): KnRelationType[] {
+  if (!Array.isArray(raw)) return [];
+  const pickId = (...candidates: unknown[]): string => {
+    for (const value of candidates) {
+      if (typeof value === "string" && value) return value;
+      if (value && typeof value === "object") {
+        const id = (value as Record<string, unknown>).id;
+        if (typeof id === "string" && id) return id;
+      }
+    }
+    return "";
+  };
+  return raw
+    .map((item) => {
+      const r = (item ?? {}) as Record<string, unknown>;
+      return {
+        id: pickId(r.id, r.relation_type_id),
+        name: typeof r.name === "string" ? r.name : undefined,
+        sourceId: pickId(r.source_object_type_id, r.source_id, r.source, r.from_object_type_id, r.from),
+        targetId: pickId(r.target_object_type_id, r.target_id, r.target, r.to_object_type_id, r.to),
+      };
+    })
+    .filter((r) => r.id && r.sourceId && r.targetId);
+}
 
 /**
  * 取知识网络详情（对象类型 + 资源绑定 + 概念分组），供数据浏览器展示与「填入请求体」。
@@ -582,12 +638,13 @@ export async function fetchKnDetail(env: ContextLoaderEnv): Promise<KnDetail> {
   if (!response.ok) {
     throw new Error(text || `获取知识网络详情失败（${response.status}）`);
   }
-  const data = JSON.parse(text) as Partial<KnDetail>;
+  const data = JSON.parse(text) as Partial<KnDetail> & Record<string, unknown>;
   return {
     id: data.id ?? env.knId,
     name: data.name,
     object_types: Array.isArray(data.object_types) ? data.object_types : [],
     concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
+    relation_types: parseRelationTypes(data.relation_types ?? data.relations),
   };
 }
 
