@@ -2,6 +2,8 @@ import { appZhCN } from "@/app/locales/resources/app/zh-CN";
 import { authZhCN } from "@/app/locales/resources/auth/zh-CN";
 import { commonZhCN } from "@/app/locales/resources/common/zh-CN";
 import { shellZhCN } from "@/app/locales/resources/shell/zh-CN";
+import { accountZhCN } from "@/modules/account/locales/zh-CN";
+import { apiKeysZhCN } from "@/modules/api-keys/locales/zh-CN";
 import { dataCatalogZhCN } from "@/modules/data-catalog/locales/zh-CN";
 import { dataConnectZhCN } from "@/modules/data-connect/locales/zh-CN";
 import { executionFactoryLabZhCN } from "@/modules/execution-factory-lab/locales/zh-CN";
@@ -22,6 +24,8 @@ export const zhCN = {
   ...executionFactoryZhCN,
   ...modelResourcesZhCN,
   ...systemAdminZhCN,
+  ...apiKeysZhCN,
+  ...accountZhCN,
   executionFactoryLab: {
     ...executionFactoryLabZhCN.executionFactoryLab,
     ...executionFactoryLabGapFillZh.executionFactoryLab,

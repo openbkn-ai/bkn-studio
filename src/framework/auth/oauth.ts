@@ -22,7 +22,7 @@ const AUTHORIZE_PATH = "/oauth2/auth";
 const TOKEN_PATH = "/oauth2/token";
 const LOGOUT_PATH = "/oauth2/sessions/logout";
 
-function gatewayOrigin() {
+export function gatewayOrigin() {
   if (!import.meta.env.DEV) {
     return "";
   }

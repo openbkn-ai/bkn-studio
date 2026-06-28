@@ -5,6 +5,7 @@ import {
   ActionTypeDetailPage,
   ActionTypeEditPage,
   ActionTypeExecutionPage,
+  ExperiencePage,
   ConceptGroupCreatePage,
   ConceptGroupDetailPage,
   ConceptGroupEditPage,
@@ -36,12 +37,12 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("overview"),
   ),
   createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/preview",
+    "/knowledge-network/workspace/:networkId/experience",
     {
-      descriptionKey: "knowledgeNetwork.previewDescription",
-      titleKey: "knowledgeNetwork.workspacePreview",
+      descriptionKey: "knowledgeNetwork.experienceDescription",
+      titleKey: "knowledgeNetwork.experienceTitle",
     },
-    workspaceSectionPage("preview"),
+    <ExperiencePage />,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/concept-groups",

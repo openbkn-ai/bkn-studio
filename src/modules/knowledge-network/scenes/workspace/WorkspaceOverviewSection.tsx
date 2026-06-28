@@ -4,6 +4,7 @@ import {
   DatabaseOutlined,
   EditOutlined,
   KeyOutlined,
+  ThunderboltFilled,
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -16,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
+import { OverviewOntologyBlock } from "@/modules/knowledge-network/components/preview/OverviewOntologyBlock";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import type {
   KnowledgeNetworkRecord,
@@ -131,6 +133,14 @@ export function WorkspaceOverviewSection({
             <AppButton icon={<EditOutlined />} onClick={onEdit}>
               {t("common.edit")}
             </AppButton>
+            <button
+              type="button"
+              className={styles.experienceButton}
+              onClick={() => navigate(`/knowledge-network/workspace/${networkId}/experience`)}
+            >
+              <ThunderboltFilled />
+              <span>{t("knowledgeNetwork.previewExperience")}</span>
+            </button>
           </div>
         </div>
         <div className={styles.overviewHeaderComment}>
@@ -232,6 +242,10 @@ export function WorkspaceOverviewSection({
         </div>
       </div>
       </Spin>
+
+      <div className={styles.overviewGraphSection}>
+        <OverviewOntologyBlock networkId={networkId} />
+      </div>
 
       <div className={styles.overviewContentCard}>
         <h3 className={styles.overviewContentTitle}>

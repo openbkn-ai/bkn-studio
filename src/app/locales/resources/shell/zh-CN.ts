@@ -33,6 +33,8 @@ export const shellZhCN = {
       modelManagement: "模型管理",
       traceai: "traceai",
       logManagement: "日志管理",
+      apiKeys: "API Key",
+      account: "个人中心",
     },
   },
 } as const;

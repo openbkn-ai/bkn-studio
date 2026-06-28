@@ -57,20 +57,22 @@ export function KnowledgeNetworkCard({
         }
       }}
     >
+      <span
+        className={styles.accent}
+        style={{ background: record.color || "#2e68ff" }}
+        aria-hidden
+      />
       <div className={styles.header}>
         <div className={styles.titleRow}>
-          {record.icon ? (
-            <span
-              className={styles.iconBox}
-              style={{ backgroundColor: record.color }}
-            >
-              {placeholderText}
-            </span>
-          ) : (
-            <span className={styles.placeholderIcon}>{placeholderText}</span>
-          )}
+          <span
+            className={styles.iconBox}
+            style={{ backgroundColor: record.color || "#2e68ff" }}
+          >
+            {placeholderText}
+          </span>
           <div className={styles.titleContent}>
             <div className={styles.titleText}>{record.name}</div>
+            <div className={styles.slug}>{record.identifier}</div>
             <div className={styles.description}>
               {record.description || t("knowledgeNetwork.noDescription")}
             </div>

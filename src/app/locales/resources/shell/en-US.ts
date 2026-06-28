@@ -34,6 +34,8 @@ export const shellEnUS = {
       modelManagement: "Model Management",
       traceai: "TraceAI",
       logManagement: "Log Management",
+      apiKeys: "API Key",
+      account: "Account",
     },
   },
 } as const;

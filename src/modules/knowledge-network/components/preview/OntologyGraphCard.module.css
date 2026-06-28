@@ -1,0 +1,82 @@
+.graphCard {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid #eef1f6;
+  border-radius: 14px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.graphHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f0f2f6;
+  flex-shrink: 0;
+}
+
+.graphTitle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: #1f2329;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.graphTitleHint {
+  color: #b0b7c3;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.graphLegend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #99a2b2;
+  font-size: 12px;
+}
+
+.graphLayout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  min-height: 0;
+}
+
+.graphCanvas {
+  min-height: 480px;
+  padding: 12px;
+  border-right: 1px solid #f0f2f6;
+  min-width: 0;
+}
+
+.graphAside {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 540px;
+  min-width: 0;
+}
+
+.emptyPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+  padding: 40px 0;
+}
+
+@media (max-width: 1100px) {
+  .graphLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .graphAside {
+    max-height: none;
+    border-top: 1px solid #f0f2f6;
+  }
+}

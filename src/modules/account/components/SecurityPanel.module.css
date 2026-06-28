@@ -1,0 +1,26 @@
+.panel {
+  max-width: 420px;
+  padding: 8px 0 4px;
+}
+
+.title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #10233f;
+}
+
+.hint {
+  margin: 0 0 18px;
+  color: #5b6678;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.form :global(.ant-form-item) {
+  margin-bottom: 18px;
+}
+
+.actions {
+  margin-bottom: 0;
+}

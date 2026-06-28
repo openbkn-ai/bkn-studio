@@ -1,7 +1,6 @@
 import {
   ApiOutlined,
   ApartmentOutlined,
-  ClusterOutlined,
   ClockCircleOutlined,
   DatabaseOutlined,
   FileTextOutlined,
@@ -23,7 +22,6 @@ import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/component
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
-import { WorkspacePreviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspacePreviewSection";
 import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection";
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
@@ -66,9 +64,7 @@ export function KnowledgeNetworkWorkspaceScene({
     detailLoading,
     loadWorkspaceData,
     metrics,
-    objectTypes,
     recentObjects,
-    relationTypes,
     sectionError,
     sectionLoading,
   } = workspaceData;
@@ -92,11 +88,6 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "overview",
         label: t("knowledgeNetwork.workspaceOverviewShort"),
         icon: <FileTextOutlined />,
-      },
-      {
-        key: "preview",
-        label: t("knowledgeNetwork.workspacePreviewModeling"),
-        icon: <ClusterOutlined />,
       },
       {
         key: "object-types",
@@ -145,7 +136,7 @@ export function KnowledgeNetworkWorkspaceScene({
   }, [detail, metrics.length, t]);
 
   const primaryNavItems = navigationItems.filter(
-    (item) => item.key === "overview" || item.key === "preview",
+    (item) => item.key === "overview",
   );
   const resourceNavItems = navigationItems.filter(
     (item) =>
@@ -196,17 +187,6 @@ export function KnowledgeNetworkWorkspaceScene({
           onEdit={() => setNetworkFormOpen(true)}
           recentLoading={sectionLoading}
           recentObjects={recentObjects}
-        />
-      );
-    }
-
-    if (section === "preview") {
-      return (
-        <WorkspacePreviewSection
-          loading={sectionLoading}
-          networkId={activeNetworkId}
-          objectTypes={objectTypes}
-          relationTypes={relationTypes}
         />
       );
     }
@@ -281,13 +261,7 @@ export function KnowledgeNetworkWorkspaceScene({
           {section === "overview" ? (
             renderSectionContent()
           ) : (
-            <div
-              className={
-                section === "preview"
-                  ? `${styles.workspaceSectionPage} ${styles.workspacePreviewPage}`
-                  : styles.workspaceSectionPage
-              }
-            >
+            <div className={styles.workspaceSectionPage}>
               {renderSectionContent()}
             </div>
           )}

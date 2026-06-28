@@ -36,6 +36,12 @@ export const modelResourcesEnUS = {
       unsetDefaultConfirmOk: "Confirm clear",
       unsetDefaultSuccess: "System default cleared.",
       unsetDefaultFailed: "Failed to clear system default.",
+      setDefaultLlmConfirmTitle: "Change system default LLM (high-risk)",
+      setDefaultLlmConfirmContent:
+        "Set the system default LLM to \"{{name}}\"? The current default will be cleared, effective in ~60s. ContextLoader will then use this model automatically.",
+      unsetDefaultLlmConfirmTitle: "Clear system default LLM (high-risk)",
+      unsetDefaultLlmConfirmContent:
+        "Clear \"{{name}}\" as the system default LLM? It returns to \"no default\", effective in ~60s.",
       authorizationPending: "Authorization management will be added in a later release.",
       tabs: {
         llm: "Large models",

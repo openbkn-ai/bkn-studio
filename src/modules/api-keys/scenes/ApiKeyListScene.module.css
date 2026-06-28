@@ -1,0 +1,67 @@
+.page {
+  padding: 24px 28px;
+}
+
+.pageEmbedded {
+  padding: 4px 0 0;
+}
+
+.head {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+}
+
+.title {
+  margin: 0;
+  color: #10233f;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.intro {
+  margin: 8px 0 0;
+  max-width: 880px;
+  color: rgba(15, 30, 54, 0.62);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.nameKeyCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nameCell {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.keyMask {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: #7c3aed;
+  background: #f6f0ff;
+  border: 1px solid #e4d6fb;
+  border-radius: 5px;
+  padding: 1px 7px;
+  width: fit-content;
+}
+
+.muted {
+  color: #9aa6bd;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

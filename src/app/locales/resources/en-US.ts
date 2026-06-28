@@ -2,6 +2,8 @@ import { appEnUS } from "@/app/locales/resources/app/en-US";
 import { authEnUS } from "@/app/locales/resources/auth/en-US";
 import { commonEnUS } from "@/app/locales/resources/common/en-US";
 import { shellEnUS } from "@/app/locales/resources/shell/en-US";
+import { accountEnUS } from "@/modules/account/locales/en-US";
+import { apiKeysEnUS } from "@/modules/api-keys/locales/en-US";
 import { dataCatalogEnUS } from "@/modules/data-catalog/locales/en-US";
 import { dataConnectEnUS } from "@/modules/data-connect/locales/en-US";
 import { executionFactoryLabEnUS } from "@/modules/execution-factory-lab/locales/en-US";
@@ -22,4 +24,6 @@ export const enUS = {
   ...modelResourcesEnUS,
   ...executionFactoryLabEnUS,
   ...systemAdminEnUS,
+  ...apiKeysEnUS,
+  ...accountEnUS,
 } as const;

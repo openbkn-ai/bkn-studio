@@ -93,6 +93,15 @@ export function TopBar() {
           menu={{
             items: [
               {
+                icon: <UserOutlined />,
+                key: "account",
+                label: t("shell.items.account"),
+                onClick: () => {
+                  void navigate("/account");
+                },
+              },
+              { type: "divider" },
+              {
                 danger: true,
                 icon: <LogoutOutlined />,
                 key: "logout",
