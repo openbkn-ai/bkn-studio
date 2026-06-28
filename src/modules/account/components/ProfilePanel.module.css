@@ -1,12 +1,15 @@
 .panel {
   display: flex;
-  flex-direction: column;
-  gap: 28px;
-  padding: 8px 0 4px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px 56px;
+  padding: 4px 0;
 }
 
 .block {
-  max-width: 460px;
+  flex: 1 1 360px;
+  min-width: 300px;
+  max-width: 480px;
 }
 
 .title {
@@ -24,7 +27,7 @@
 }
 
 .form :global(.ant-form-item) {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .actions {
@@ -44,9 +47,9 @@
 
 .infoRow {
   display: grid;
-  grid-template-columns: 120px 1fr;
+  grid-template-columns: 96px 1fr;
   gap: 12px;
-  padding: 11px 14px;
+  padding: 9px 14px;
   background: #fff;
 }
 
