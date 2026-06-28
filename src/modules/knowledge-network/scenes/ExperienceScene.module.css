@@ -1402,6 +1402,11 @@
   padding: 12px 18px 6px;
 }
 
+.dbViewSwitch {
+  flex: 0 0 auto;
+  padding: 2px 18px 8px;
+}
+
 .dbList {
   flex: 1 1 auto;
   overflow-y: auto;

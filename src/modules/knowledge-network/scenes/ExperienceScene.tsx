@@ -13,7 +13,7 @@ import {
   ReadOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
-import { App, Empty, Input, Modal, Select, Spin, Tabs, Tooltip } from "antd";
+import { App, Empty, Input, Modal, Segmented, Select, Spin, Tabs, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -646,6 +646,7 @@ function DataBrowserPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [view, setView] = useState<"object" | "relation">("object");
   const loadedRef = useRef(false);
 
   // 懒加载：首次切到「数据浏览器」标签时拉一次 schema，之后常驻不再重拉，保留预览/筛选上下文。
@@ -715,8 +716,27 @@ function DataBrowserPanel({
           点「数据资源」→ 填入 run_sql 的 <code>{"{{资源}}"}</code> 占位；点「预览数据」看样本行。
         </p>
         <div className={styles.dbSearch}>
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="筛选对象类型 / 资源…" allowClear />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={view === "object" ? "筛选对象类型 / 资源…" : "筛选关系类…"}
+            allowClear
+          />
         </div>
+        {detail && !loading && !error ? (
+          <div className={styles.dbViewSwitch}>
+            <Segmented
+              size="small"
+              block
+              value={view}
+              onChange={(value) => setView(value as "object" | "relation")}
+              options={[
+                { label: `对象类型 ${detail.object_types.length}`, value: "object" },
+                { label: `关系类 ${detail.relation_types.length}`, value: "relation" },
+              ]}
+            />
+          </div>
+        ) : null}
         <div className={styles.dbList}>
           {loading ? (
             <div className={styles.dbCenter}>
@@ -730,13 +750,13 @@ function DataBrowserPanel({
                 <p>{error}</p>
               </div>
             </div>
-          ) : sections.length === 0 && relations.length === 0 ? (
-            <div className={styles.dbCenter}>
-              <Empty description="无对象类型" />
-            </div>
-          ) : (
-            <>
-              {sections.map((section) => (
+          ) : view === "object" ? (
+            sections.length === 0 ? (
+              <div className={styles.dbCenter}>
+                <Empty description="无匹配对象类型" />
+              </div>
+            ) : (
+              sections.map((section) => (
                 <div key={section.title} className={styles.dbSection}>
                   {section.id ? (
                     <div className={styles.dbGroupRow}>
@@ -766,49 +786,50 @@ function DataBrowserPanel({
                     />
                   ))}
                 </div>
-              ))}
-
-              {relations.length > 0 ? (
-                <div className={styles.dbSection}>
-                  <div className={styles.dbGroup}>关系类 · {relations.length}</div>
-                  {relations.map((rel) => (
-                    <div key={rel.id} className={styles.dbCard}>
-                      <div className={styles.dbCardHead}>
-                        <span className={styles.dbOtName} title={rel.name || rel.id}>
-                          {rel.name || rel.id}
-                        </span>
-                        {onFillRelation ? (
-                          <Tooltip title="填入 query_instance_subgraph 的 relation_type_paths">
-                            <button type="button" className={styles.dbTestBtn} onClick={() => onFillRelation(rel)}>
-                              <ThunderboltFilled /> 填入子图
-                            </button>
-                          </Tooltip>
-                        ) : null}
-                      </div>
-                      <div className={styles.dbRow}>
-                        <span className={styles.dbRowLabel}>路径</span>
-                        <Tooltip title="点击填入 ot_id">
-                          <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", rel.sourceId)}>
-                            {rel.sourceId}
-                          </button>
-                        </Tooltip>
-                        <span className={styles.dbRelArrow}>→</span>
-                        <Tooltip title="点击填入 ot_id">
-                          <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", rel.targetId)}>
-                            {rel.targetId}
-                          </button>
-                        </Tooltip>
-                        <Tooltip title="复制关系 id">
-                          <button type="button" className={styles.dbCopy} onClick={() => copy(rel.id, "已复制关系 id")}>
-                            <CopyOutlined />
-                          </button>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  ))}
+              ))
+            )
+          ) : relations.length === 0 ? (
+            <div className={styles.dbCenter}>
+              <Empty description="无匹配关系类" />
+            </div>
+          ) : (
+            <div className={styles.dbSection}>
+              {relations.map((rel) => (
+                <div key={rel.id} className={styles.dbCard}>
+                  <div className={styles.dbCardHead}>
+                    <span className={styles.dbOtName} title={rel.name || rel.id}>
+                      {rel.name || rel.id}
+                    </span>
+                    {onFillRelation ? (
+                      <Tooltip title="填入 query_instance_subgraph 的 relation_type_paths">
+                        <button type="button" className={styles.dbTestBtn} onClick={() => onFillRelation(rel)}>
+                          <ThunderboltFilled /> 填入子图
+                        </button>
+                      </Tooltip>
+                    ) : null}
+                  </div>
+                  <div className={styles.dbRow}>
+                    <span className={styles.dbRowLabel}>路径</span>
+                    <Tooltip title="点击填入 ot_id">
+                      <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", rel.sourceId)}>
+                        {rel.sourceId}
+                      </button>
+                    </Tooltip>
+                    <span className={styles.dbRelArrow}>→</span>
+                    <Tooltip title="点击填入 ot_id">
+                      <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", rel.targetId)}>
+                        {rel.targetId}
+                      </button>
+                    </Tooltip>
+                    <Tooltip title="复制关系 id">
+                      <button type="button" className={styles.dbCopy} onClick={() => copy(rel.id, "已复制关系 id")}>
+                        <CopyOutlined />
+                      </button>
+                    </Tooltip>
+                  </div>
                 </div>
-              ) : null}
-            </>
+              ))}
+            </div>
           )}
         </div>
       </div>
