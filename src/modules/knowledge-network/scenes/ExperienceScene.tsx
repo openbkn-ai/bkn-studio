@@ -431,16 +431,20 @@ function ObjectTypeCard({
   ot,
   onFillField,
   onFillResource,
+  onFillTest,
   copy,
   env,
 }: {
   ot: KnObjectType;
   onFillField: (key: string, value: string) => void;
   onFillResource: (resourceId: string) => void;
+  /** 用该对象类型的真实样本行填充当前接口；仅在当前接口按对象类型取数时传入。 */
+  onFillTest?: (ot: KnObjectType) => Promise<void>;
   copy: (text: string, label?: string) => void;
   env: ContextLoaderEnv;
 }) {
   const [open, setOpen] = useState(false);
+  const [filling, setFilling] = useState(false);
   const res = ot.data_source ?? null;
   const props = ot.data_properties ?? [];
 
@@ -476,6 +480,22 @@ function ObjectTypeCard({
         <span className={styles.dbOtName} title={ot.name || ot.id}>
           {ot.name || ot.id}
         </span>
+        {onFillTest && res?.id ? (
+          <Tooltip title="用该对象类型的真实样本行填充当前接口请求体">
+            <button
+              type="button"
+              className={styles.dbTestBtn}
+              disabled={filling}
+              onClick={() => {
+                if (filling) return;
+                setFilling(true);
+                void onFillTest(ot).finally(() => setFilling(false));
+              }}
+            >
+              {filling ? <Spin size="small" /> : <ThunderboltFilled />} 填入测试请求
+            </button>
+          </Tooltip>
+        ) : null}
         <button
           type="button"
           className={`${styles.dbFields} ${open ? styles.dbFieldsOpen : ""}`}
@@ -604,6 +624,7 @@ function DataBrowserPanel({
   onFillField,
   onFillResource,
   onFillConceptGroup,
+  onFillTest,
   copy,
 }: {
   active: boolean;
@@ -612,6 +633,8 @@ function DataBrowserPanel({
   onFillField: (key: string, value: string) => void;
   onFillResource: (resourceId: string) => void;
   onFillConceptGroup: (groupId: string) => void;
+  /** 当前接口按对象类型取数时传入，使每张卡片可一键填充测试请求。 */
+  onFillTest?: (ot: KnObjectType) => Promise<void>;
   copy: (text: string, label?: string) => void;
 }) {
   const [detail, setDetail] = useState<KnDetail | null>(null);
@@ -721,6 +744,7 @@ function DataBrowserPanel({
                     ot={ot}
                     onFillField={onFillField}
                     onFillResource={onFillResource}
+                    onFillTest={onFillTest}
                     copy={copy}
                     env={env}
                   />
@@ -931,6 +955,35 @@ export function ExperienceScene() {
       setFillingTest(false);
     }
   }, [env, op, mode, knId, message]);
+
+  // 当前接口是否按对象类型取数（决定数据浏览器卡片是否露出「填入测试请求」）。
+  const opFillsFromObjectType = op.id === "query_object_instance" || op.id === "run_sql";
+
+  // 数据浏览器卡片「填入测试请求」：用指定对象类型的真实样本行填当前接口（用户选实体，不再随机取第一个）。
+  const fillTestFromObjectType = useCallback(
+    async (ot: KnObjectType) => {
+      try {
+        if (op.id === "run_sql" && !ot.data_source?.id) {
+          message.warning("该对象类型未绑定数据资源，无法生成 SQL 测试数据");
+          return;
+        }
+        let sampleRow: Record<string, unknown> | null = null;
+        if (op.id === "query_object_instance") {
+          const rows = await fetchObjectInstances(env, ot.id, 1);
+          sampleRow = rows[0] ?? null;
+        }
+        const detail = knDetailRef.current?.detail ?? { id: knId, object_types: [], concept_groups: [] };
+        const fill = buildTestData(op, mode, knId, detail, ot, sampleRow);
+        setBodyText(fill.body);
+        setBodyError(null);
+        if (fill.query) setQueryVals((prev) => ({ ...prev, ...fill.query }));
+        message.success(`已用 ${ot.name || ot.id} 填充测试请求${fill.note ? ` · ${fill.note}` : ""}`);
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : "生成测试数据失败");
+      }
+    },
+    [env, op, mode, knId, message],
+  );
 
   // 数据浏览器「填入」：字段可能是 REST 的 query 参数（如 query_object_instance 的 ot_id），
   // 也可能在请求体里（如 MCP 的 arguments）。按实际位置填，落不到则复制兜底。
@@ -1351,6 +1404,7 @@ export function ExperienceScene() {
                 onFillField={fillBodyField}
                 onFillResource={fillResource}
                 onFillConceptGroup={fillConceptGroup}
+                onFillTest={opFillsFromObjectType ? fillTestFromObjectType : undefined}
                 copy={copy}
               />
             </div>

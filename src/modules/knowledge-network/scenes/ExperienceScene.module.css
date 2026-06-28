@@ -1528,6 +1528,32 @@
   opacity: 0.6;
 }
 
+/* 卡片内「填入测试请求」：用该对象类型的真实样本行填当前接口 */
+.dbTestBtn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid #b6e6cd;
+  border-radius: 20px;
+  background: #effaf3;
+  color: #1a7f4b;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dbTestBtn:hover:not(:disabled) {
+  border-color: #1a7f4b;
+  background: #e2f6ea;
+}
+
+.dbTestBtn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 .dbChev {
   font-size: 9px;
   transition: transform 0.15s;
