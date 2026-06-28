@@ -201,6 +201,106 @@ export function exampleBodyText(op: ContextLoaderOp, mode: ContextLoaderMode, kn
   return JSON.stringify(cloned, null, 2);
 }
 
+/* ============================ 一键填充测试数据 ============================ */
+// 用当前知识网络的真实 schema + 样本行生成可直接发送的请求体。
+// 仅覆盖能从 get_kn_detail / 样本行推出真实值的接口；relation / action / metric 类留待大模型填。
+
+const TEST_DATA_OPS = new Set(["query_object_instance", "run_sql", "search_schema", "get_kn_detail"]);
+
+/** 该接口是否支持「填充测试数据」。 */
+export function opSupportsTestData(opId: string): boolean {
+  return TEST_DATA_OPS.has(opId);
+}
+
+/** 选一个绑定了数据资源的对象类型（有资源才查得到数据）。 */
+export function pickQueryableObjectType(detail: KnDetail): KnObjectType | null {
+  return detail.object_types.find((o) => Boolean(o.data_source?.id)) ?? null;
+}
+
+/** 从样本行挑一个非空标量字段当过滤条件，优先 schema 声明的 data_properties。 */
+function pickFilterFieldValue(
+  ot: KnObjectType,
+  row: Record<string, unknown> | null,
+): { field: string; value: string | number | boolean } | null {
+  if (!row) return null;
+  const declared = (ot.data_properties ?? []).map((p) => p.name);
+  const candidates = declared.length > 0 ? declared : Object.keys(row).filter((k) => !k.startsWith("_"));
+  for (const name of candidates) {
+    const v = row[name];
+    if (typeof v === "number" || typeof v === "boolean") return { field: name, value: v };
+    if (typeof v === "string" && v.trim() !== "") return { field: name, value: v };
+  }
+  return null;
+}
+
+export type TestDataFill = { body: string; query?: Record<string, string>; note: string };
+
+/**
+ * 为支持的接口生成测试请求体。ot / sampleRow 由调用方按 op 需要预取：
+ * query_object_instance 需要二者；run_sql 只需带资源的 ot；schema / kn 详情无需。
+ */
+export function buildTestData(
+  op: ContextLoaderOp,
+  mode: ContextLoaderMode,
+  knId: string,
+  detail: KnDetail,
+  ot: KnObjectType | null,
+  sampleRow: Record<string, unknown> | null,
+): TestDataFill {
+  switch (op.id) {
+    case "get_kn_detail":
+      return { body: JSON.stringify({ kn_id: knId }, null, 2), note: "已填入当前 kn_id" };
+
+    case "search_schema": {
+      const groupId = detail.concept_groups[0]?.id;
+      const body = {
+        query: "查询核心业务对象与关系",
+        kn_id: knId,
+        search_scope: {
+          concept_groups: groupId ? [groupId] : [],
+          include_object_types: true,
+          include_relation_types: true,
+          include_action_types: true,
+          include_metric_types: true,
+        },
+        max_concepts: 10,
+        schema_brief: false,
+        enable_rerank: true,
+      };
+      return { body: JSON.stringify(body, null, 2), note: groupId ? `kn_id + 真实资源组 ${groupId}` : "已填入 kn_id" };
+    }
+
+    case "run_sql": {
+      const resId = ot?.data_source?.id ?? "";
+      const body = { kn_id: knId, sql: `SELECT * FROM {{.${resId}}} LIMIT 10` };
+      return { body: JSON.stringify(body, null, 2), note: `资源 ${resId}` };
+    }
+
+    case "query_object_instance": {
+      const ff = ot ? pickFilterFieldValue(ot, sampleRow) : null;
+      const filters = ff ? [{ field: ff.field, op: "==", value: ff.value }] : [];
+      const otId = ot?.id ?? "";
+      const note = ff ? `对象类型 ${otId}，过滤 ${ff.field} == ${ff.value}` : `对象类型 ${otId}（无样本，未加过滤）`;
+      if (mode === "mcp") {
+        const body: Record<string, unknown> = { kn_id: knId, ot_id: otId, include_logic_params: false };
+        if (filters.length) body.filters = filters;
+        body.limit = 10;
+        body.need_total = true;
+        return { body: JSON.stringify(body, null, 2), note };
+      }
+      const body: Record<string, unknown> = {};
+      if (filters.length) body.filters = filters;
+      body.limit = 10;
+      body.need_total = true;
+      body.properties = [];
+      return { body: JSON.stringify(body, null, 2), query: { kn_id: knId, ot_id: otId }, note };
+    }
+
+    default:
+      return { body: exampleBodyText(op, mode, knId), note: "" };
+  }
+}
+
 export function buildRestUrl(env: ContextLoaderEnv, op: ContextLoaderOp, queryValues: Record<string, string>): string {
   const base = env.base.replace(/\/+$/, "");
   const parts: string[] = [];
@@ -365,7 +465,7 @@ export async function sendRequest(
 }
 
 /* ============================ MCP 工具发现（tools/list）============================ */
-export type McpToolDef = { name: string; description?: string; inputSchema?: unknown };
+export type McpToolDef = { name: string; description?: string; inputSchema?: unknown; outputSchema?: unknown };
 
 /** 解析 MCP 响应（SSE event:/data: 取最后一条 data，再 JSON.parse）。失败返回 null。 */
 function parseMcpEnvelope(text: string): unknown {
@@ -438,6 +538,8 @@ export async function listMcpTools(env: ContextLoaderEnv): Promise<McpToolDef[]>
         name: typeof tool.name === "string" ? tool.name : "",
         description: typeof tool.description === "string" ? tool.description : undefined,
         inputSchema: tool.inputSchema,
+        // MCP 规格用 outputSchema；个别实现用 output_schema，做兜底。
+        outputSchema: tool.outputSchema ?? tool.output_schema,
       };
     })
     .filter((tool) => tool.name);

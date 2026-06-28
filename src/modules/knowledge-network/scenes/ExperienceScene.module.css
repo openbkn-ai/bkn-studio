@@ -800,6 +800,31 @@
   color: var(--accent);
 }
 
+.testBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid #b6e6cd;
+  border-radius: 8px;
+  background: #effaf3;
+  color: #1a7f4b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.testBtn:hover {
+  border-color: #1a7f4b;
+  background: #e2f6ea;
+}
+
+.testBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .kbd {
   margin-left: auto;
   color: var(--faint);

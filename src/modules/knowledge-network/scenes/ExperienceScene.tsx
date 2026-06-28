@@ -24,9 +24,12 @@ import {
   CONTEXT_LOADER_OPS,
   MCP_PATH,
   buildCurl,
+  buildTestData,
   exampleBodyText,
   fetchKnDetail,
   fetchObjectInstances,
+  opSupportsTestData,
+  pickQueryableObjectType,
   listMcpTools,
   mcpPathOf,
   sendRequest,
@@ -797,6 +800,9 @@ export function ExperienceScene() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [discoverOpen, setDiscoverOpen] = useState(false);
   const [rightTab, setRightTab] = useState<"res" | "data">("res");
+  const [fillingTest, setFillingTest] = useState(false);
+  // 缓存当前网络的 schema，避免「填充测试数据」每次重拉；换网络时按 knId 失效。
+  const knDetailRef = useRef<{ knId: string; detail: KnDetail } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -847,6 +853,32 @@ export function ExperienceScene() {
   const visibleQuery = mode === "rest" ? op.query : op.query.filter((param) => param.name === "response_format");
   const responseView = useMemo(() => (response ? formatResponseView(response.text) : null), [response]);
 
+  // tools/list 发现结果缓存：内联 schema 展示 + 工具发现弹窗共用，避免重复拉取。
+  const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
+  const [toolsLoading, setToolsLoading] = useState(false);
+  const [toolsError, setToolsError] = useState<string | null>(null);
+  const loadTools = useCallback(
+    (force = false) => {
+      if (toolsLoading) return;
+      if (!force && toolDefs) return;
+      setToolsLoading(true);
+      setToolsError(null);
+      listMcpTools(env)
+        .then((list) => setToolDefs(list))
+        .catch((err) => setToolsError(err instanceof Error ? err.message : "tools/list 失败"))
+        .finally(() => setToolsLoading(false));
+    },
+    [env, toolDefs, toolsLoading],
+  );
+  // 进入 MCP 模式时按需拉一次（同源 fetch，失败仅内联提示，不弹全局 toast）。
+  useEffect(() => {
+    if (mode === "mcp" && !toolDefs && !toolsLoading && !toolsError) loadTools();
+  }, [mode, toolDefs, toolsLoading, toolsError, loadTools]);
+  const currentTool = useMemo(
+    () => toolDefs?.find((tool) => tool.name === op.id) ?? null,
+    [toolDefs, op.id],
+  );
+
   const onSend = useCallback(async () => {
     if (op.body !== null) {
       try {
@@ -874,6 +906,40 @@ export function ExperienceScene() {
       setSending(false);
     }
   }, [env, op, mode, queryVals, bodyText, runtimeConfig, authMode, appKey]);
+
+  // 一键填充测试数据：用当前网络真实 schema + 样本行生成可直接发送的请求体。
+  const onFillTestData = useCallback(async () => {
+    setFillingTest(true);
+    try {
+      const detail =
+        knDetailRef.current?.knId === knId ? knDetailRef.current.detail : await fetchKnDetail(env);
+      knDetailRef.current = { knId, detail };
+
+      let ot: KnObjectType | null = null;
+      let sampleRow: Record<string, unknown> | null = null;
+      if (op.id === "query_object_instance" || op.id === "run_sql") {
+        ot = pickQueryableObjectType(detail);
+        if (!ot) {
+          message.warning("当前知识网络没有绑定数据资源的对象类型，无法生成测试数据");
+          return;
+        }
+      }
+      if (op.id === "query_object_instance" && ot) {
+        const rows = await fetchObjectInstances(env, ot.id, 1);
+        sampleRow = rows[0] ?? null;
+      }
+
+      const fill = buildTestData(op, mode, knId, detail, ot, sampleRow);
+      setBodyText(fill.body);
+      setBodyError(null);
+      if (fill.query) setQueryVals((prev) => ({ ...prev, ...fill.query }));
+      message.success(fill.note ? `已填充测试数据 · ${fill.note}` : "已填充测试数据");
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "生成测试数据失败");
+    } finally {
+      setFillingTest(false);
+    }
+  }, [env, op, mode, knId, message]);
 
   // 数据浏览器「填入」：字段可能是 REST 的 query 参数（如 query_object_instance 的 ot_id），
   // 也可能在请求体里（如 MCP 的 arguments）。按实际位置填，落不到则复制兜底。
@@ -1129,6 +1195,18 @@ export function ExperienceScene() {
               <button type="button" className={styles.resetBtn} onClick={() => setBodyText(exampleBodyText(op, mode, knId))}>
                 恢复示例
               </button>
+              {opSupportsTestData(op.id) ? (
+                <Tooltip title="用当前网络真实 schema + 样本行填充，可直接发送">
+                  <button
+                    type="button"
+                    className={styles.testBtn}
+                    onClick={() => void onFillTestData()}
+                    disabled={fillingTest}
+                  >
+                    {fillingTest ? <Spin size="small" /> : <ThunderboltFilled />} 填充测试数据
+                  </button>
+                </Tooltip>
+              ) : null}
               <button type="button" className={styles.dataBtn} onClick={() => setRightTab("data")}>
                 <DatabaseOutlined /> 数据浏览器
               </button>
