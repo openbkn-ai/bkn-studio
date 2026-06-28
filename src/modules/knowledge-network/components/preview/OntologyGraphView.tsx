@@ -62,11 +62,12 @@ function circleLayout(ids: string[]): { id: string; x: number; y: number }[] {
   });
 }
 
-const NODE_GAP = 14; // 网格相邻节点中心间最小间隙之外的留白
-const NODE_SPACING = NODE_RADIUS * 2 + NODE_GAP; // 两节点中心最小距离（不重叠）
-const CELL_INSET = GROUP_HULL_PAD + NODE_RADIUS + 10; // cell 边到节点中心可用区的内缩（含 hull 边距）
+const NODE_GAP = 14; // 网格相邻节点中心最小距离之外的留白
+const NODE_SPACING = NODE_RADIUS * 2 + NODE_GAP; // 理想中心距
+const MIN_SPACING = NODE_RADIUS * 2; // 最小中心距：相切，绝不重叠
+const CELL_INSET = GROUP_HULL_PAD + NODE_RADIUS; // cell 边到节点中心可用区的内缩（留出 hull 边距）
 
-/** 组内节点排成居中网格，填满 cell 的可用区，保证两两不重叠。 */
+/** 组内节点排成接近正方的网格，居中于 cell；间距最多压到相切（MIN_SPACING），保证两两不重叠。 */
 function placeCluster(
   gids: string[],
   gcx: number,
@@ -84,30 +85,26 @@ function placeCluster(
   }
   const availW = Math.max(0, cellW - CELL_INSET * 2);
   const availH = Math.max(0, cellH - CELL_INSET * 2);
-  const maxCols = Math.max(1, Math.floor(availW / NODE_SPACING) + 1);
-  const maxRows = Math.max(1, Math.floor(availH / NODE_SPACING) + 1);
-  let cols = Math.min(n, maxCols);
-  let rows = Math.ceil(n / cols);
-  if (rows > maxRows) {
-    rows = maxRows;
-    cols = Math.ceil(n / rows); // 行不够时加列（可能压缩列距）
-  }
-  const spacingX = cols > 1 ? Math.min(NODE_SPACING, availW / (cols - 1)) : 0;
-  const spacingY = rows > 1 ? Math.min(NODE_SPACING, availH / (rows - 1)) : 0;
+  // 按可用区宽高比挑接近正方的列数。
+  const aspect = availW / Math.max(1, availH);
+  const cols = Math.max(1, Math.min(n, Math.round(Math.sqrt(n * aspect)) || 1));
+  const rows = Math.ceil(n / cols);
+  // 间距：理想 NODE_SPACING；可用区不足则压缩，但不低于 MIN_SPACING（相切）。
+  const spacingX = cols > 1 ? Math.max(MIN_SPACING, Math.min(NODE_SPACING, availW / (cols - 1))) : 0;
+  const spacingY = rows > 1 ? Math.max(MIN_SPACING, Math.min(NODE_SPACING, availH / (rows - 1))) : 0;
   const startX = gcx - ((cols - 1) * spacingX) / 2;
   const startY = gcy - ((rows - 1) * spacingY) / 2;
-  return gids.map((id, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    return {
-      id,
-      x: clamp(startX + col * spacingX, PREVIEW_LAYOUT_WIDTH),
-      y: clamp(startY + row * spacingY, PREVIEW_LAYOUT_HEIGHT),
-    };
-  });
+  return gids.map((id, i) => ({
+    id,
+    x: startX + (i % cols) * spacingX,
+    y: startY + Math.floor(i / cols) * spacingY,
+  }));
 }
 
-/** 按概念分组聚类：簇心铺成网格填满画布，组内节点再排成网格。 */
+/**
+ * 按概念分组聚类：每组分得「等密度」cell（面积 ∝ 节点数），横向铺成若干 shelf，组内再排网格。
+ * 大组拿到大 cell，不会再被挤到重叠；小组也不浪费空间。整体仍落在固定画布内。
+ */
 function groupLayout(ids: string[], groupOf: Map<string, string>): { id: string; x: number; y: number }[] {
   const buckets = new Map<string, string[]>();
   ids.forEach((id) => {
@@ -128,19 +125,35 @@ function groupLayout(ids: string[], groupOf: Map<string, string>): { id: string;
       PREVIEW_LAYOUT_HEIGHT,
     );
   }
-  // 簇心网格：按画布宽高比定列数，居中铺满。
-  const cols = Math.max(1, Math.ceil(Math.sqrt(gn * (PREVIEW_LAYOUT_WIDTH / PREVIEW_LAYOUT_HEIGHT))));
-  const rows = Math.ceil(gn / cols);
-  const cellW = PREVIEW_LAYOUT_WIDTH / cols;
-  const cellH = PREVIEW_LAYOUT_HEIGHT / rows;
+  const total = ids.length || 1;
+  // shelf 行数按画布宽高比定，再把组按节点数均衡分到各 shelf（行高随之 ∝ 节点数）。
+  const shelfCount = Math.max(
+    1,
+    Math.round(Math.sqrt(gn * (PREVIEW_LAYOUT_HEIGHT / PREVIEW_LAYOUT_WIDTH))) || 1,
+  );
+  const shelves = Array.from({ length: shelfCount }, () => ({ groups: [] as string[][], nodes: 0 }));
+  // 大组优先放进当前节点数最少的 shelf，均衡每行总高度。
+  [...groups]
+    .sort((a, b) => b.length - a.length)
+    .forEach((gids) => {
+      const target = shelves.reduce((min, s) => (s.nodes < min.nodes ? s : min));
+      target.groups.push(gids);
+      target.nodes += gids.length;
+    });
   const out: { id: string; x: number; y: number }[] = [];
-  groups.forEach((gids, gi) => {
-    const col = gi % cols;
-    const row = Math.floor(gi / cols);
-    const gcx = cellW * (col + 0.5);
-    const gcy = cellH * (row + 0.5);
-    out.push(...placeCluster(gids, gcx, gcy, cellW, cellH));
-  });
+  let y = 0;
+  shelves
+    .filter((shelf) => shelf.groups.length > 0)
+    .forEach((shelf) => {
+      const shelfH = PREVIEW_LAYOUT_HEIGHT * (shelf.nodes / total);
+      let x = 0;
+      shelf.groups.forEach((gids) => {
+        const cellW = PREVIEW_LAYOUT_WIDTH * (gids.length / shelf.nodes);
+        out.push(...placeCluster(gids, x + cellW / 2, y + shelfH / 2, cellW, shelfH));
+        x += cellW;
+      });
+      y += shelfH;
+    });
   return out;
 }
 
