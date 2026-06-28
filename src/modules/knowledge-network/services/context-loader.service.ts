@@ -239,6 +239,17 @@ function pickFilterFieldValue(
   return null;
 }
 
+/** 由一条关系类构造 query_instance_subgraph 的单条路径。 */
+export function subgraphPathFor(rel: KnRelationType) {
+  return {
+    object_types: [{ id: rel.sourceId }, { id: rel.targetId }],
+    relation_types: [
+      { relation_type_id: rel.id, source_object_type_id: rel.sourceId, target_object_type_id: rel.targetId },
+    ],
+    limit: 10,
+  };
+}
+
 export type TestDataFill = { body: string; query?: Record<string, string>; note: string };
 
 /**
@@ -289,13 +300,7 @@ export function buildTestData(
       if (!rel) {
         return { body: exampleBodyText(op, mode, knId), note: "未在 get_kn_detail 发现可用关系类，请手填" };
       }
-      const path = {
-        object_types: [{ id: rel.sourceId }, { id: rel.targetId }],
-        relation_types: [
-          { relation_type_id: rel.id, source_object_type_id: rel.sourceId, target_object_type_id: rel.targetId },
-        ],
-        limit: 10,
-      };
+      const path = subgraphPathFor(rel);
       const note = `关系类 ${rel.name || rel.id}（${rel.sourceId} → ${rel.targetId}）`;
       if (mode === "mcp") {
         return { body: JSON.stringify({ kn_id: knId, relation_type_paths: [path] }, null, 2), note };

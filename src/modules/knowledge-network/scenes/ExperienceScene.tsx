@@ -33,12 +33,14 @@ import {
   listMcpTools,
   mcpPathOf,
   sendRequest,
+  subgraphPathFor,
   type ContextLoaderEnv,
   type ContextLoaderMode,
   type ContextLoaderOp,
   type ContextLoaderResponse,
   type KnDetail,
   type KnObjectType,
+  type KnRelationType,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
@@ -625,6 +627,7 @@ function DataBrowserPanel({
   onFillResource,
   onFillConceptGroup,
   onFillTest,
+  onFillRelation,
   copy,
 }: {
   active: boolean;
@@ -635,6 +638,8 @@ function DataBrowserPanel({
   onFillConceptGroup: (groupId: string) => void;
   /** 当前接口按对象类型取数时传入，使每张卡片可一键填充测试请求。 */
   onFillTest?: (ot: KnObjectType) => Promise<void>;
+  /** 当前接口为 query_instance_subgraph 时传入，使关系卡可一键填入子图路径。 */
+  onFillRelation?: (rel: KnRelationType) => void;
   copy: (text: string, label?: string) => void;
 }) {
   const [detail, setDetail] = useState<KnDetail | null>(null);
@@ -690,6 +695,16 @@ function DataBrowserPanel({
       .filter((section) => section.ots.length > 0);
   }, [detail, q]);
 
+  const relations = useMemo(() => {
+    if (!detail) return [];
+    const needle = q.trim().toLowerCase();
+    return detail.relation_types.filter(
+      (rel) =>
+        !needle ||
+        `${rel.id} ${rel.name ?? ""} ${rel.sourceId} ${rel.targetId}`.toLowerCase().includes(needle),
+    );
+  }, [detail, q]);
+
   return (
     <div className={styles.dbWrap}>
       <div className={styles.dbTitle}>
@@ -715,42 +730,85 @@ function DataBrowserPanel({
                 <p>{error}</p>
               </div>
             </div>
-          ) : sections.length === 0 ? (
+          ) : sections.length === 0 && relations.length === 0 ? (
             <div className={styles.dbCenter}>
               <Empty description="无对象类型" />
             </div>
           ) : (
-            sections.map((section) => (
-              <div key={section.title} className={styles.dbSection}>
-                {section.id ? (
-                  <div className={styles.dbGroupRow}>
-                    <span className={styles.dbGroup}>{section.title}</span>
-                    <Tooltip title={`加入 concept_groups：${section.id}`}>
-                      <button
-                        type="button"
-                        className={styles.dbGroupAdd}
-                        onClick={() => onFillConceptGroup(section.id)}
-                      >
-                        + 资源组
-                      </button>
-                    </Tooltip>
-                  </div>
-                ) : (
-                  <div className={styles.dbGroup}>{section.title}</div>
-                )}
-                {section.ots.map((ot) => (
-                  <ObjectTypeCard
-                    key={ot.id}
-                    ot={ot}
-                    onFillField={onFillField}
-                    onFillResource={onFillResource}
-                    onFillTest={onFillTest}
-                    copy={copy}
-                    env={env}
-                  />
-                ))}
-              </div>
-            ))
+            <>
+              {sections.map((section) => (
+                <div key={section.title} className={styles.dbSection}>
+                  {section.id ? (
+                    <div className={styles.dbGroupRow}>
+                      <span className={styles.dbGroup}>{section.title}</span>
+                      <Tooltip title={`加入 concept_groups：${section.id}`}>
+                        <button
+                          type="button"
+                          className={styles.dbGroupAdd}
+                          onClick={() => onFillConceptGroup(section.id)}
+                        >
+                          + 资源组
+                        </button>
+                      </Tooltip>
+                    </div>
+                  ) : (
+                    <div className={styles.dbGroup}>{section.title}</div>
+                  )}
+                  {section.ots.map((ot) => (
+                    <ObjectTypeCard
+                      key={ot.id}
+                      ot={ot}
+                      onFillField={onFillField}
+                      onFillResource={onFillResource}
+                      onFillTest={onFillTest}
+                      copy={copy}
+                      env={env}
+                    />
+                  ))}
+                </div>
+              ))}
+
+              {relations.length > 0 ? (
+                <div className={styles.dbSection}>
+                  <div className={styles.dbGroup}>关系类 · {relations.length}</div>
+                  {relations.map((rel) => (
+                    <div key={rel.id} className={styles.dbCard}>
+                      <div className={styles.dbCardHead}>
+                        <span className={styles.dbOtName} title={rel.name || rel.id}>
+                          {rel.name || rel.id}
+                        </span>
+                        {onFillRelation ? (
+                          <Tooltip title="填入 query_instance_subgraph 的 relation_type_paths">
+                            <button type="button" className={styles.dbTestBtn} onClick={() => onFillRelation(rel)}>
+                              <ThunderboltFilled /> 填入子图
+                            </button>
+                          </Tooltip>
+                        ) : null}
+                      </div>
+                      <div className={styles.dbRow}>
+                        <span className={styles.dbRowLabel}>路径</span>
+                        <Tooltip title="点击填入 ot_id">
+                          <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", rel.sourceId)}>
+                            {rel.sourceId}
+                          </button>
+                        </Tooltip>
+                        <span className={styles.dbRelArrow}>→</span>
+                        <Tooltip title="点击填入 ot_id">
+                          <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", rel.targetId)}>
+                            {rel.targetId}
+                          </button>
+                        </Tooltip>
+                        <Tooltip title="复制关系 id">
+                          <button type="button" className={styles.dbCopy} onClick={() => copy(rel.id, "已复制关系 id")}>
+                            <CopyOutlined />
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </div>
@@ -983,6 +1041,19 @@ export function ExperienceScene() {
       }
     },
     [env, op, mode, knId, message],
+  );
+
+  // 数据浏览器关系卡「填入子图」：用指定关系类拼 query_instance_subgraph 的 relation_type_paths。
+  const fillSubgraphFromRelation = useCallback(
+    (rel: KnRelationType) => {
+      const path = subgraphPathFor(rel);
+      const body = mode === "mcp" ? { kn_id: knId, relation_type_paths: [path] } : { relation_type_paths: [path] };
+      setBodyText(JSON.stringify(body, null, 2));
+      setBodyError(null);
+      if (mode === "rest") setQueryVals((prev) => ({ ...prev, kn_id: knId }));
+      message.success(`已填入子图路径 · ${rel.name || rel.id}`);
+    },
+    [mode, knId, message],
   );
 
   // 数据浏览器「填入」：字段可能是 REST 的 query 参数（如 query_object_instance 的 ot_id），
@@ -1405,6 +1476,7 @@ export function ExperienceScene() {
                 onFillResource={fillResource}
                 onFillConceptGroup={fillConceptGroup}
                 onFillTest={opFillsFromObjectType ? fillTestFromObjectType : undefined}
+                onFillRelation={op.id === "query_instance_subgraph" ? fillSubgraphFromRelation : undefined}
                 copy={copy}
               />
             </div>
