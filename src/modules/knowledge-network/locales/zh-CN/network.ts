@@ -79,6 +79,8 @@ export const networkPart = {
     previewLayoutForce: "默认布局",
     previewLayoutCircle: "圆形布局",
     previewLayoutGroup: "按逻辑分组",
+    previewShowEdgeLabels: "显示关系名",
+    previewHideEdgeLabels: "隐藏关系名",
     previewInspectorHint: "点击图中节点查看实体类详情",
     previewEntityClasses: "实体类",
     previewIndexed: "已建索引",

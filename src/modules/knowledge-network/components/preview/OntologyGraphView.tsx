@@ -3,6 +3,8 @@
 import {
   CompressOutlined,
   DownOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
   RetweetOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
@@ -167,6 +169,7 @@ export function OntologyGraphView({
 }: OntologyGraphViewProps) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<OntologyLayoutMode>("force");
+  const [showEdgeLabels, setShowEdgeLabels] = useState(true);
 
   // 布局随 graph / 排列方式变化计算；选中节点时不重排。
   const { positions, radiusById, hubId } = useMemo(() => {
@@ -397,6 +400,15 @@ export function OntologyGraphView({
           <DownOutlined className={styles.arrangeCaret} />
         </button>
       </Dropdown>
+      <button
+        type="button"
+        className={`${styles.edgeToggle} ${showEdgeLabels ? styles.edgeToggleOn : ""}`}
+        title={t(showEdgeLabels ? "knowledgeNetwork.previewHideEdgeLabels" : "knowledgeNetwork.previewShowEdgeLabels")}
+        aria-pressed={showEdgeLabels}
+        onClick={() => setShowEdgeLabels((value) => !value)}
+      >
+        {showEdgeLabels ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+      </button>
       <svg
         ref={svgRef}
         className={styles.graph}
@@ -468,17 +480,21 @@ export function OntologyGraphView({
               className={`${styles.edge} ${active ? styles.edgeActive : ""} ${dim ? styles.edgeDim : ""}`}
             >
               <line x1={sx} y1={sy} x2={ex} y2={ey} markerEnd={`url(#kn-onto-arrow${active ? "-hi" : ""})`} />
-              <rect
-                className={styles.edgeLabelBg}
-                x={mx - labelWidth / 2}
-                y={my - 13}
-                width={labelWidth}
-                height={24}
-                rx={12}
-              />
-              <text className={styles.edgeLabel} x={mx} y={my + 4} textAnchor="middle">
-                {label}
-              </text>
+              {showEdgeLabels || active ? (
+                <>
+                  <rect
+                    className={styles.edgeLabelBg}
+                    x={mx - labelWidth / 2}
+                    y={my - 13}
+                    width={labelWidth}
+                    height={24}
+                    rx={12}
+                  />
+                  <text className={styles.edgeLabel} x={mx} y={my + 4} textAnchor="middle">
+                    {label}
+                  </text>
+                </>
+              ) : null}
             </g>
           );
         })}

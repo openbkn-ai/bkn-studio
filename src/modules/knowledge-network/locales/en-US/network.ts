@@ -81,6 +81,8 @@ export const networkPart = {
     previewLayoutForce: "Default layout",
     previewLayoutCircle: "Circle layout",
     previewLayoutGroup: "By concept group",
+    previewShowEdgeLabels: "Show relation labels",
+    previewHideEdgeLabels: "Hide relation labels",
     previewInspectorHint: "Click a node to inspect the entity class",
     previewEntityClasses: "Entity classes",
     previewIndexed: "Indexed",

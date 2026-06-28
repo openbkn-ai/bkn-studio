@@ -32,6 +32,37 @@
   opacity: 0.6;
 }
 
+/* 边文本（关系名）显隐开关 */
+.edgeToggle {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #8a94a6;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(15, 30, 54, 0.08);
+}
+
+.edgeToggle:hover {
+  border-color: #2e68ff;
+  color: #2e68ff;
+}
+
+.edgeToggleOn {
+  color: #2e68ff;
+  border-color: #bcd0f7;
+  background: #eef4ff;
+}
+
 .graph {
   display: block;
   width: 100%;
