@@ -349,6 +349,15 @@
   border-top: 1px solid var(--line);
 }
 
+.schemaHint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 2px;
+  color: var(--txt2);
+  font-size: 12.5px;
+}
+
 .listSearch {
   padding: 12px 12px 8px;
 }

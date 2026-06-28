@@ -324,42 +324,40 @@ function McpSetupModal({
 }
 
 /* ============================ 工具发现（tools/list：动态发现 + 与本地硬编码漂移对照） ============================ */
+function SchemaPre({ title, value, copy }: { title: string; value: unknown; copy: (text: string, label?: string) => void }) {
+  const text = JSON.stringify(value ?? {}, null, 2);
+  return (
+    <div className={styles.toolSchema}>
+      <div className={styles.codeBlkHead}>
+        <span>{title}</span>
+        <button type="button" className={styles.mini} onClick={() => copy(text, `${title} 已复制`)}>
+          <CopyOutlined /> 复制
+        </button>
+      </div>
+      <pre className={styles.codeBlkPre}>
+        <JsonHighlight text={text} />
+      </pre>
+    </div>
+  );
+}
+
 function ToolDiscoveryModal({
   open,
   onClose,
-  env,
+  tools,
+  loading,
+  error,
+  onReload,
   copy,
 }: {
   open: boolean;
   onClose: () => void;
-  env: ContextLoaderEnv;
+  tools: McpToolDef[] | null;
+  loading: boolean;
+  error: string | null;
+  onReload: () => void;
   copy: (text: string, label?: string) => void;
 }) {
-  const [tools, setTools] = useState<McpToolDef[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setTools(null);
-    listMcpTools(env)
-      .then((list) => {
-        if (!cancelled) setTools(list);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "tools/list 失败");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, env]);
-
   // 漂移对照：本地硬编码 ops vs 线上 tools/list。
   const drift = useMemo(() => {
     if (!tools) return null;
@@ -375,8 +373,11 @@ function ToolDiscoveryModal({
     <Modal open={open} onCancel={onClose} footer={null} width={720} title="工具发现 · tools/list">
       <div className={styles.guideRoot}>
         <p className={styles.guideNote}>
-          直接向 MCP <code>tools/list</code> 拉取线上工具与 <code>inputSchema</code>，并与本地硬编码工具表对照。
+          直接向 MCP <code>tools/list</code> 拉取线上工具与 <code>inputSchema</code> / <code>outputSchema</code>，并与本地硬编码工具表对照。
           用来核对后端 schema 是否齐全（schema 驱动表单的前置），以及发现两边的<b>漂移</b>。
+          <button type="button" className={styles.guideLink} onClick={onReload}>
+            重新拉取 →
+          </button>
         </p>
         {loading ? (
           <div className={styles.discoverEmpty}>
@@ -405,28 +406,18 @@ function ToolDiscoveryModal({
               ) : null}
             </div>
             <div className={styles.toolList}>
-              {tools.map((tool) => {
-                const schemaText = JSON.stringify(tool.inputSchema ?? {}, null, 2);
-                return (
-                  <details key={tool.name} className={styles.toolItem}>
-                    <summary className={styles.toolSummary}>
-                      <span className={styles.toolName}>{tool.name}</span>
-                      {tool.description ? <span className={styles.toolDesc}>{tool.description}</span> : null}
-                    </summary>
-                    <div className={styles.toolSchema}>
-                      <div className={styles.codeBlkHead}>
-                        <span>inputSchema</span>
-                        <button type="button" className={styles.mini} onClick={() => copy(schemaText, "schema 已复制")}>
-                          <CopyOutlined /> 复制
-                        </button>
-                      </div>
-                      <pre className={styles.codeBlkPre}>
-                        <JsonHighlight text={schemaText} />
-                      </pre>
-                    </div>
-                  </details>
-                );
-              })}
+              {tools.map((tool) => (
+                <details key={tool.name} className={styles.toolItem}>
+                  <summary className={styles.toolSummary}>
+                    <span className={styles.toolName}>{tool.name}</span>
+                    {tool.description ? <span className={styles.toolDesc}>{tool.description}</span> : null}
+                  </summary>
+                  <SchemaPre title="inputSchema" value={tool.inputSchema} copy={copy} />
+                  {tool.outputSchema !== undefined ? (
+                    <SchemaPre title="outputSchema" value={tool.outputSchema} copy={copy} />
+                  ) : null}
+                </details>
+              ))}
             </div>
           </>
         ) : null}
@@ -1186,6 +1177,47 @@ export function ExperienceScene() {
                   </div>
                 </div>
               ) : null}
+
+              {mode === "mcp" ? (
+                <div className={styles.sec}>
+                  <div className={styles.secHead}>
+                    Schema <span className={styles.sub}>tools/list</span>
+                    {toolDefs || toolsError ? (
+                      <button type="button" className={styles.mini} onClick={() => loadTools(true)}>
+                        刷新
+                      </button>
+                    ) : null}
+                  </div>
+                  {toolsLoading ? (
+                    <div className={styles.schemaHint}>
+                      <Spin size="small" /> 拉取工具 schema…
+                    </div>
+                  ) : toolsError ? (
+                    <div className={styles.schemaHint}>加载失败：{toolsError}</div>
+                  ) : currentTool ? (
+                    <>
+                      <CodeBlock
+                        title="Input Schema"
+                        code={JSON.stringify(currentTool.inputSchema ?? {}, null, 2)}
+                        json
+                        onCopy={() => copy(JSON.stringify(currentTool.inputSchema ?? {}, null, 2), "Input Schema 已复制")}
+                      />
+                      {currentTool.outputSchema !== undefined ? (
+                        <CodeBlock
+                          title="Output Schema"
+                          code={JSON.stringify(currentTool.outputSchema, null, 2)}
+                          json
+                          onCopy={() => copy(JSON.stringify(currentTool.outputSchema, null, 2), "Output Schema 已复制")}
+                        />
+                      ) : (
+                        <div className={styles.schemaHint}>后端未在 tools/list 提供 Output Schema。</div>
+                      )}
+                    </>
+                  ) : toolDefs ? (
+                    <div className={styles.schemaHint}>tools/list 未包含「{op.id}」。</div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
             <div className={styles.actions}>
               <button type="button" className={styles.sendReq} onClick={() => void onSend()} disabled={sending}>
@@ -1333,7 +1365,15 @@ export function ExperienceScene() {
         onIssueKey={() => navigate("/account")}
         copy={copy}
       />
-      <ToolDiscoveryModal open={discoverOpen} onClose={() => setDiscoverOpen(false)} env={env} copy={copy} />
+      <ToolDiscoveryModal
+        open={discoverOpen}
+        onClose={() => setDiscoverOpen(false)}
+        tools={toolDefs}
+        loading={toolsLoading}
+        error={toolsError}
+        onReload={() => loadTools(true)}
+        copy={copy}
+      />
     </section>
   );
 }
