@@ -21,6 +21,20 @@
   padding: 4px 2px;
 }
 
+/* 左右双表统一行高，逐行对齐（关系列带 chip，否则比实体行高、往下累积错位）。 */
+.sectionGrid :global(.ant-table-thead > tr > th) {
+  height: 40px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.sectionGrid :global(.ant-table-tbody > tr > td) {
+  height: 40px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  vertical-align: middle;
+}
+
 .sectionCardTitle {
   display: flex;
   align-items: baseline;
