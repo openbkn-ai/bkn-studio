@@ -46,7 +46,7 @@ import {
 
 import styles from "./ExperienceScene.module.css";
 
-const GROUPS = ["Schema & 查询", "Skills & Logic", "Knowledge Network"];
+const GROUPS = ["Schema & 查询", "数据资源", "Skills & Logic", "Knowledge Network"];
 
 /** 字节数转人类可读：B / KB / MB（1024 进制，保留一位小数）。 */
 function formatBytes(bytes: number): string {
@@ -870,7 +870,7 @@ export function ExperienceScene() {
   );
 
   const [network, setNetwork] = useState<{ name: string; slug: string } | null>(null);
-  const [mode, setMode] = useState<ContextLoaderMode>("rest");
+  const [mode, setMode] = useState<ContextLoaderMode>("mcp");
 
   // 请求基址：走当前源（dev 经 vite 代理转后端，避免浏览器跨域）。
   const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "http://agent-retrieval:30779"));
@@ -1160,7 +1160,7 @@ export function ExperienceScene() {
           </button>
         ) : null}
         <div className={styles.tabs}>
-          {(["agent", "rest", "mcp"] as ContextLoaderMode[]).map((value) => (
+          {(["agent", "mcp", "rest"] as ContextLoaderMode[]).map((value) => (
             <button
               key={value}
               type="button"

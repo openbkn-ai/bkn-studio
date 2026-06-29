@@ -127,10 +127,7 @@ export function OntologyGraphCard({
   return (
     <div className={styles.graphCard}>
       <div className={styles.graphHeader}>
-        <h3 className={styles.graphTitle}>
-          {t("knowledgeNetwork.previewCanvas")}
-          <span className={styles.graphTitleHint}>ontology graph</span>
-        </h3>
+        <h3 className={styles.graphTitle}>{t("knowledgeNetwork.previewCanvas")}</h3>
         <span className={styles.graphLegend}>
           <DeploymentUnitOutlined />
           {t("knowledgeNetwork.previewGraphLegend")}
