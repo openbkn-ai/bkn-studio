@@ -32,11 +32,11 @@
   opacity: 0.6;
 }
 
-/* 边文本（关系名）显隐开关 */
+/* 边文本（关系名）显隐开关：叠在右上角「重新排列」按钮下方 */
 .edgeToggle {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 50px;
+  right: 12px;
   z-index: 2;
   display: inline-flex;
   align-items: center;

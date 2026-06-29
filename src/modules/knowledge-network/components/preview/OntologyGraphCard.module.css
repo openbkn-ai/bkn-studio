@@ -28,12 +28,6 @@
   font-weight: 600;
 }
 
-.graphTitleHint {
-  color: #b0b7c3;
-  font-size: 12px;
-  font-weight: 400;
-}
-
 .graphLegend {
   display: inline-flex;
   align-items: center;
