@@ -46,7 +46,7 @@ import {
 
 import styles from "./ExperienceScene.module.css";
 
-const GROUPS = ["Schema & 查询", "Skills & Logic", "Knowledge Network"];
+const GROUPS = ["Schema & 查询", "数据资源", "Skills & Logic", "Knowledge Network"];
 
 /** 字节数转人类可读：B / KB / MB（1024 进制，保留一位小数）。 */
 function formatBytes(bytes: number): string {

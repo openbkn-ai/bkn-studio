@@ -112,9 +112,28 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     },
   },
   {
+    id: "list_resources",
+    group: "数据资源",
+    summary:
+      "列出当前账户可访问的数据层资源（table / file …），按 catalog_id / type 过滤并分页（offset / limit）；req 字段全可选。" +
+      "列表已按 token 账户的 view_detail 权限过滤——前端不要假设能看到全部；空账户 / 无 token 后端返 403，按未授权处理。" +
+      "type 是资源类别（table/file/…），不是数据类型。",
+    path: `${REST_PREFIX}/kn/list_resources`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { catalog_id: "your_catalog_id", type: "table", offset: 0, limit: 20 },
+  },
+  {
+    id: "describe_resource",
+    group: "数据资源",
+    summary: "查看单个数据资源的列结构，返回 connector_type 与 columns:[{name,type,description}]。resource_id 取自 list_resources 的 entries[].resource_id。",
+    path: `${REST_PREFIX}/kn/describe_resource`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { resource_id: "your_resource_id" },
+  },
+  {
     id: "run_sql",
-    group: "Schema & 查询",
-    summary: "在知识网络上直接执行 SQL 查询并返回结果集。",
+    group: "数据资源",
+    summary: "在知识网络上直接执行 SQL 查询并返回结果集。表名用模板占位 {{.<resource_id>}} 引用资源；跨 catalog 不能 join。",
     path: `${REST_PREFIX}/kn/run_sql`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     // 数据表必须用模板占位引用（后端解析为真实资源），不能写裸表名：
