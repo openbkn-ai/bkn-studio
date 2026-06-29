@@ -4,11 +4,18 @@
   height: 100%;
 }
 
-.arrange {
+/* 右上角工具条：重新排列 + 边名开关 同一排 */
+.toolbar {
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arrange {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -32,12 +39,8 @@
   opacity: 0.6;
 }
 
-/* 边文本（关系名）显隐开关：叠在右上角「重新排列」按钮下方 */
+/* 边文本（关系名）显隐开关 */
 .edgeToggle {
-  position: absolute;
-  top: 50px;
-  right: 12px;
-  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;

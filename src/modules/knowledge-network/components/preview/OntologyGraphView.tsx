@@ -378,6 +378,7 @@ export function OntologyGraphView({
 
   return (
     <div className={styles.wrap}>
+      <div className={styles.toolbar}>
       <Dropdown
         trigger={["click"]}
         menu={{
@@ -412,6 +413,7 @@ export function OntologyGraphView({
       >
         {showEdgeLabels ? <EyeOutlined /> : <EyeInvisibleOutlined />}
       </button>
+      </div>
       <svg
         ref={svgRef}
         className={styles.graph}
