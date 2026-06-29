@@ -1,8 +1,7 @@
 BKN Studio
 Copyright 2026 OpenBKN
 
-BKN Studio is an OpenBKN module, part of the BKN Foundry project
-(https://github.com/openbkn-ai/bkn-foundry).
+BKN Studio is part of the OpenBKN project.
 
 ================================================================
 1. BKN Studio (OpenBKN License)
@@ -12,8 +11,8 @@ upstream kweaver-ai/kweaver-core code, is copyright OpenBKN, and is
 licensed under the OpenBKN License — a modified version of the Apache
 License, Version 2.0, with Additional Conditions.
 
-  Full license text:                              LICENSE-OPENBKN.txt
-  Apache License, Version 2.0 (incorporated):     LICENSE-APACHE.txt
+  Full license text:                              LICENSE
+  Apache License, Version 2.0 (incorporated):     http://www.apache.org/licenses/LICENSE-2.0
 
 ================================================================
 2. Third-party dependencies

@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "license": "SEE LICENSE IN LICENSE-OPENBKN.txt",
+  "license": "SEE LICENSE IN LICENSE",
   "packageManager": "pnpm@11.5.1",
   "scripts": {
     "dev": "vite",
