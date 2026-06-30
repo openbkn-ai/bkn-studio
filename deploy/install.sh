@@ -112,7 +112,8 @@ PY
 }
 
 # Version to install when --latest is used (or --version omitted):
-#   GHCR OCI ref → newest main build by commit time (fallback: helm --devel)
+#   GHCR OCI ref → newest main build by commit DATE in the tag (no git lookup;
+#                  falls back to legacy commit-time, then helm --devel)
 #   other OCI ref → helm --devel (latest SemVer)
 #   local chart dir → its own Chart.yaml version
 resolve_latest_version() {
