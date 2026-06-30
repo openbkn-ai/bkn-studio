@@ -8,6 +8,7 @@
 import { DownOutlined, RightOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { App, Select } from "antd";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -155,12 +156,14 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
 
 export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; networkName?: string }) {
   const { message } = App.useApp();
+  const navigate = useNavigate();
   const knId = env.knId;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [models, setModels] = useState<LlmModel[]>([]);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [model, setModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
   const [promptOpen, setPromptOpen] = useState(false);
@@ -204,6 +207,9 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
       })
       .catch(() => {
         if (!cancelled) setModels([]);
+      })
+      .finally(() => {
+        if (!cancelled) setModelsLoaded(true);
       });
     return () => {
       cancelled = true;
@@ -392,6 +398,7 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
 
   const empty = messages.length === 0;
   const lastIdx = messages.length - 1;
+  const noLlm = modelsLoaded && models.length === 0;
 
   return (
     <div className={styles.root}>
@@ -481,7 +488,21 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
       ) : null}
 
       <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll}>
-        {empty ? (
+        {noLlm ? (
+          <div className={styles.intro}>
+            <div className={styles.introGlyph}>
+              <ThunderboltFilled />
+            </div>
+            <h3>还没有可用的大模型</h3>
+            <p>Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。</p>
+            <div className={styles.sugs}>
+              <button type="button" className={styles.sug} onClick={() => navigate("/model-resources/models")}>
+                <span className={styles.sugText}>去模型工厂接入大模型</span>
+                <RightOutlined className={styles.sugArrow} />
+              </button>
+            </div>
+          </div>
+        ) : empty ? (
           <div className={styles.intro}>
             <div className={styles.introGlyph}>
               <ThunderboltFilled />
@@ -546,7 +567,12 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
             className={styles.cInput}
             value={input}
             rows={1}
-            placeholder={`向 Agent 提问，例如：${suggestions[0] ?? "这个知识网络里有哪些对象类和关系？"}`}
+            disabled={noLlm}
+            placeholder={
+              noLlm
+                ? "请先在「模型工厂」接入大模型后再对话"
+                : `向 Agent 提问，例如：${suggestions[0] ?? "这个知识网络里有哪些对象类和关系？"}`
+            }
             spellCheck={false}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
