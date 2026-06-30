@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs";
 import { expect, type Page } from "@playwright/test";
 
 import { buildLabWeatherOpenApi } from "./capabilities-lab";
+import { BUSINESS_DOMAIN } from "./common";
 
 export const LAB_UI_PERMISSIONS = [
   "execution-factory-lab:capability:view",
@@ -25,6 +26,15 @@ export const LAB_UI_PERMISSIONS = [
   "execution-factory-lab:function:create",
   "execution-factory-lab:function:debug",
 ];
+
+const STUDIO_API_BASE_URL =
+  process.env.E2E_STUDIO_API_BASE_URL ?? "http://127.0.0.1:9010/api";
+const STUDIO_BASE_PATH = new URL(process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173")
+  .pathname.replace(/\/$/, "");
+
+function studioPath(path: string) {
+  return `${STUDIO_BASE_PATH}${path}`;
+}
 
 const CAPABILITY_NAME_LABEL = /能力名称|Capability name/i;
 const PYTHON_CODE_LABEL = /Python 代码|Python code/i;
@@ -106,22 +116,27 @@ export async function ensureOverviewTab(page: Page) {
 }
 
 export async function ensureLabE2eRuntime(page: Page) {
-  await page.addInitScript((permissions: string[]) => {
+  await page.addInitScript(({ apiBaseUrl, businessDomainId, permissions }) => {
     window.__BKN_STUDIO_RUNTIME__ = {
       ...(window.__BKN_STUDIO_RUNTIME__ ?? {}),
-      apiBaseUrl: "http://127.0.0.1:9010/api",
+      apiBaseUrl,
+      mode: "hosted",
       currentUser: {
         ...(window.__BKN_STUDIO_RUNTIME__?.currentUser ?? {}),
-        businessDomainId: "bd_public",
+        businessDomainId,
         permissions,
       },
     };
-  }, LAB_UI_PERMISSIONS);
+  }, {
+    apiBaseUrl: STUDIO_API_BASE_URL,
+    businessDomainId: BUSINESS_DOMAIN,
+    permissions: LAB_UI_PERMISSIONS,
+  });
 }
 
 export async function gotoCapabilitiesLab(page: Page) {
   await ensureLabE2eRuntime(page);
-  await page.goto("/execution-factory-lab/capabilities");
+  await page.goto(studioPath("/execution-factory-lab/capabilities"));
   await expect(
     page.getByRole("heading", { level: 2, name: /能力库|Capability Library/i }),
   ).toBeVisible({ timeout: 60_000 });
@@ -129,7 +144,7 @@ export async function gotoCapabilitiesLab(page: Page) {
 
 export async function gotoCatalogLab(page: Page) {
   await ensureLabE2eRuntime(page);
-  await page.goto("/execution-factory-lab/catalog");
+  await page.goto(studioPath("/execution-factory-lab/catalog"));
   await expect(
     page.getByRole("heading", { level: 2, name: /能力市场|Capability Catalog/i }),
   ).toBeVisible({ timeout: 60_000 });
@@ -775,10 +790,11 @@ export async function runOrchestrationLifecycleInDetail(page: Page) {
   await expect(enableButton).toBeDisabled();
   await expect(saveButton).toBeEnabled();
   await expect(disableButton).toBeEnabled();
-  await expect(drawer.locator(".ant-alert").filter({ hasText: /流程算子|workflow operator/i }).first()).toHaveCSS(
-    "background-color",
-    "rgb(243, 251, 249)",
-  );
+  const operatorAlert = drawer.locator(".ant-alert").filter({
+    hasText: /流程算子|workflow operator/i,
+  }).first();
+  await expect(operatorAlert).toBeVisible();
+  await expect(operatorAlert).toHaveClass(/ant-alert-success/);
 
   const saveResponse = await Promise.all([
     page.waitForResponse(
