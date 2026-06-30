@@ -22,6 +22,11 @@ COPY . .
 # which also runs `tsc -b`. Type safety is a CI gate (`pnpm lint:types` /
 # `pnpm check`), so the deployable artifact isn't blocked on an unrelated
 # typecheck regression. The browser bundle never needs tsc's output.
+# A deployed image must hit the REAL backend: services fall back to the mock
+# fixtures unless VITE_USE_MOCK="false", so bake it off for builds. Pass
+# --build-arg VITE_USE_MOCK=true to produce a mock/demo image instead.
+ARG VITE_USE_MOCK=false
+ENV VITE_USE_MOCK=${VITE_USE_MOCK}
 RUN pnpm exec vite build
 
 ########################### Stage 1 — runtime ###########################
