@@ -19,8 +19,70 @@ import {
 /** 模型工厂 OpenAI 兼容前缀（与 model-api-guide.getModelApiBaseUrl 一致）。 */
 export const MODEL_API_PATH = "/api/mf-model-api/v1";
 
-/** 一轮最多工具步数，防止模型反复调工具跑飞。 */
-const MAX_STEPS = 8;
+/**
+ * 一轮最多工具步数。仅作防跑飞兜底——正常情况模型出最终答复即自动停。
+ * 因有步间驱逐（每步只留最近若干工具结果），步数与上下文已解耦，故拉得很高≈不限，
+ * 同时保留上限避免模型卡死循环无限调工具。
+ */
+const MAX_STEPS = 40;
+
+/**
+ * 单个工具结果喂回模型前的字符上限。检索工具（run_sql / list_resources / TOON 全表）
+ * 可能返回极大文本，全量累积进多步对话历史会把上下文撑到几十万 token，导致请求超模型
+ * context 上限或生成超时、SSE 中断（"断了"）。截断并提示模型用更精确的过滤 / 更小 LIMIT
+ * 重查，而不是拉全表。
+ */
+const MAX_TOOL_RESULT_CHARS = 8000;
+
+function capToolResult(text: string): string {
+  if (text.length <= MAX_TOOL_RESULT_CHARS) return text;
+  const dropped = text.length - MAX_TOOL_RESULT_CHARS;
+  return (
+    text.slice(0, MAX_TOOL_RESULT_CHARS) +
+    `\n\n…[结果过长，已截断约 ${dropped} 字符。请改用更精确的过滤条件或更小的 LIMIT 重新查询，不要拉全表；已获得的信息不要重复查询]`
+  );
+}
+
+/** 大结果工具的硬性查询约束，追加到工具 description，逼模型在查询里就缩小结果。 */
+const TOOL_HINTS: Record<string, string> = {
+  run_sql:
+    " 【重要】用 SQL 完成聚合/计数/排序/分组并配 LIMIT、只取需要的列；禁止 SELECT * 或拉全表。结果会被截断到约 8000 字符。",
+  query_object_instance:
+    " 【重要】用 filters 精确过滤 + 小 limit + properties 只取必要字段；不要返回大结果集。结果会被截断到约 8000 字符。",
+  query_instance_subgraph: " 【重要】用尽量小的 limit；结果会被截断到约 8000 字符。",
+  list_resources: " 【重要】用 catalog_id/type 过滤 + 小 limit 分页；结果会被截断到约 8000 字符。",
+  search_schema: " 建议：用精确的 query，max_concepts 默认不超过 10；结果会被截断到约 8000 字符。",
+};
+
+/**
+ * 步间驱逐旧工具结果：每步前只保留最近 KEEP 个工具结果的全文，更早的把内容替换成占位，
+ * 但**保留 toolCallId / toolName 配对**（OpenAI 要求每个 tool_call 都有对应 tool 响应）。
+ * 治本地压住「单轮多步工具结果累积撑爆上下文」。
+ */
+const KEEP_TOOL_RESULTS = 3;
+
+function evictOldToolResults(messages: ModelMessage[]): ModelMessage[] {
+  const toolPositions = messages.reduce<number[]>((acc, m, i) => {
+    if (m.role === "tool") acc.push(i);
+    return acc;
+  }, []);
+  if (toolPositions.length <= KEEP_TOOL_RESULTS) return messages;
+  const evict = new Set(toolPositions.slice(0, toolPositions.length - KEEP_TOOL_RESULTS));
+  return messages.map((m, i) => {
+    if (!evict.has(i) || m.role !== "tool" || !Array.isArray(m.content)) return m;
+    const content = m.content.map((part) =>
+      part.type === "tool-result"
+        ? {
+            type: "tool-result" as const,
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+            output: { type: "text" as const, value: "[旧工具结果已省略以节省上下文]" },
+          }
+        : part,
+    );
+    return { ...m, content };
+  });
+}
 
 export type AgentChatRole = "user" | "assistant";
 
@@ -53,7 +115,7 @@ export function buildAgentTools(mcpTools: McpToolDef[], env: ContextLoaderEnv, k
         ? (def.inputSchema as Record<string, unknown>)
         : { type: "object", properties: {} };
     tools[def.name] = tool({
-      description: def.description ?? def.name,
+      description: (def.description ?? def.name) + (TOOL_HINTS[def.name] ?? ""),
       inputSchema: jsonSchema(schema),
       execute: async (input: unknown): Promise<string> => {
         const args: Record<string, unknown> = {
@@ -61,7 +123,7 @@ export function buildAgentTools(mcpTools: McpToolDef[], env: ContextLoaderEnv, k
           kn_id: knId,
         };
         const res = await session.callTool(def.name, args);
-        return res.text;
+        return capToolResult(res.text);
       },
     });
   }
@@ -126,13 +188,19 @@ export async function runAgentChat(params: {
       messages,
       tools,
       stopWhen: stepCountIs(MAX_STEPS),
+      // 每步前驱逐旧工具结果，避免单轮多步累积撑爆上下文。
+      prepareStep: ({ messages: stepMessages }) => ({ messages: evictOldToolResults(stepMessages) }),
       abortSignal: signal,
     });
 
+    let gotText = false;
     for await (const part of result.fullStream) {
       switch (part.type) {
         case "text-delta":
-          if (part.text) onChunk({ type: "text", delta: part.text });
+          if (part.text) {
+            gotText = true;
+            onChunk({ type: "text", delta: part.text });
+          }
           break;
         case "reasoning-delta":
           if (part.text) onChunk({ type: "reasoning", delta: part.text });
@@ -159,6 +227,25 @@ export async function runAgentChat(params: {
           break;
         default:
           break;
+      }
+    }
+
+    // 跑满工具轮次仍没出最终答复（最后一步还在调工具）→ 强制基于已有信息收尾作答，不再调工具。
+    if (!gotText && !signal?.aborted) {
+      const resp = await result.response;
+      const finalResult = streamText({
+        model: createChatModel(env, modelName),
+        system:
+          system +
+          "\n\n（已达到工具调用上限或需要收尾：请基于以上已获得的信息，直接用中文给出最终答复，不要再调用任何工具。）",
+        messages: [...messages, ...(resp.messages as ModelMessage[])],
+        abortSignal: signal,
+      });
+      for await (const part of finalResult.fullStream) {
+        if (part.type === "text-delta" && part.text) onChunk({ type: "text", delta: part.text });
+        else if (part.type === "reasoning-delta" && part.text) onChunk({ type: "reasoning", delta: part.text });
+        else if (part.type === "error")
+          onChunk({ type: "error", error: part.error instanceof Error ? part.error.message : String(part.error) });
       }
     }
     onChunk({ type: "finish" });
