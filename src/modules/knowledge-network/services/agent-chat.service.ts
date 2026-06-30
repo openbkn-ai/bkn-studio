@@ -22,6 +22,23 @@ export const MODEL_API_PATH = "/api/mf-model-api/v1";
 /** 一轮最多工具步数，防止模型反复调工具跑飞。 */
 const MAX_STEPS = 8;
 
+/**
+ * 单个工具结果喂回模型前的字符上限。检索工具（run_sql / list_resources / TOON 全表）
+ * 可能返回极大文本，全量累积进多步对话历史会把上下文撑到几十万 token，导致请求超模型
+ * context 上限或生成超时、SSE 中断（"断了"）。截断并提示模型用更精确的过滤 / 更小 LIMIT
+ * 重查，而不是拉全表。
+ */
+const MAX_TOOL_RESULT_CHARS = 8000;
+
+function capToolResult(text: string): string {
+  if (text.length <= MAX_TOOL_RESULT_CHARS) return text;
+  const dropped = text.length - MAX_TOOL_RESULT_CHARS;
+  return (
+    text.slice(0, MAX_TOOL_RESULT_CHARS) +
+    `\n\n…[结果过长，已截断约 ${dropped} 字符。请改用更精确的过滤条件或更小的 LIMIT 重新查询，不要拉全表；已获得的信息不要重复查询]`
+  );
+}
+
 export type AgentChatRole = "user" | "assistant";
 
 /** 缓存进 localStorage 的对话历史项（仅文本，工具步骤不进历史，仅用于重发上下文）。 */
@@ -61,7 +78,7 @@ export function buildAgentTools(mcpTools: McpToolDef[], env: ContextLoaderEnv, k
           kn_id: knId,
         };
         const res = await session.callTool(def.name, args);
-        return res.text;
+        return capToolResult(res.text);
       },
     });
   }

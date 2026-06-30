@@ -33,7 +33,9 @@ import styles from "./AgentChat.module.css";
 const DEFAULT_PROMPT =
   "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
   "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
-  "kn_id 已锁定为当前网络，无需也不要修改。回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据。";
+  "kn_id 已锁定为当前网络，无需也不要修改。\n" +
+  "查询要高效：聚合/排序尽量交给 SQL，用 LIMIT 和精确过滤，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。\n" +
+  "回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据。";
 
 const FALLBACK_SUGGESTIONS = [
   "这个知识网络里有哪些对象类和关系？",
@@ -541,7 +543,9 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
                       </div>
                     ) : null}
                     {m.content ? (
-                      m.role === "assistant" ? (
+                      // 流式进行中的最后一条用纯文本，结束后再渲染 Markdown：
+                      // 避免每来一个 token 就整段重新解析 Markdown（长答复 O(n²) 卡 UI）。
+                      m.role === "assistant" && !(busy && isLast) ? (
                         <MarkdownView text={m.content} />
                       ) : (
                         <div className={styles.txt}>{m.content}</div>
