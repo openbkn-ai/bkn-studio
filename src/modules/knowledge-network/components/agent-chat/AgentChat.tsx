@@ -339,7 +339,14 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
       setBusy(true);
       setInput("");
 
-      const history: AgentChatTurn[] = messages.map((m) => ({ role: m.role, content: m.content }));
+      // 多轮上下文压缩：只保留最近若干轮，且单轮文本封顶，防长对话纯文本堆大。
+      // （工具结果/思考本就不进历史，见 send() 历史只取 role+content。）
+      const MAX_HISTORY_MESSAGES = 16;
+      const MAX_TURN_CHARS = 4000;
+      const history: AgentChatTurn[] = messages.slice(-MAX_HISTORY_MESSAGES).map((m) => ({
+        role: m.role,
+        content: m.content.length > MAX_TURN_CHARS ? `${m.content.slice(0, MAX_TURN_CHARS)}\n…[历史过长已截断]` : m.content,
+      }));
       history.push({ role: "user", content: question });
       setMessages((prev) => [
         ...prev,
