@@ -18,7 +18,8 @@
 #
 # Usage:
 #   deploy/install.sh cluster [--namespace openbkn] [--version 0.1.0 | --latest]
-#                             [--chart <ref>] [--kube-context <ctx>] [--no-auth]
+#                             [--registry ghcr|swr] [--chart <ref>]
+#                             [--kube-context <ctx>] [--no-auth]
 #   deploy/install.sh local --foundry https://10.211.55.4 [--port 8080]
 #                           [--version 0.1.0] [--image <ref>] [--register]
 #                           [--no-auth] [--no-compose]
@@ -44,6 +45,10 @@ CHART_NAME="bkn-studio"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_CHART_OCI="oci://ghcr.io/openbkn-ai/charts/${CHART_NAME}"
 DEFAULT_IMAGE_REPO="ghcr.io/openbkn-ai/${CHART_NAME}"
+# Image registry bases for `cluster --registry ghcr|swr` — overrides the chart's
+# image.registry so the cluster pulls from a reachable mirror (SWR for CN).
+IMAGE_REGISTRY_GHCR="ghcr.io/openbkn-ai"
+IMAGE_REGISTRY_SWR="swr.cn-east-3.myhuaweicloud.com/openbkn-ai"
 # Pre-seeded by bkn-safe (clientSeed.extraWebRedirectUris default) — login works
 # on this origin with zero registration.
 SEEDED_LOCAL_ORIGIN="http://localhost:8000"
@@ -76,12 +81,13 @@ usage() { awk 'NR>=2{ if(/^#/){sub(/^# ?/,"");print} else exit }' "$0"; exit "${
 
 # ---------------------------------------------------------------- cluster ----
 cmd_cluster() {
-  local namespace="openbkn" version="" chart="$DEFAULT_CHART_OCI" kube_context="" no_auth="false" want_latest="false"
+  local namespace="openbkn" version="" chart="$DEFAULT_CHART_OCI" kube_context="" no_auth="false" want_latest="false" registry=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --namespace) namespace="$2"; shift 2;;
       --version) version="$2"; shift 2;;
       --latest) want_latest="true"; shift;;
+      --registry) registry="$2"; shift 2;;
       --chart) chart="$2"; shift 2;;
       --kube-context) kube_context="$2"; shift 2;;
       --no-auth) no_auth="true"; shift;;
@@ -108,6 +114,11 @@ cmd_cluster() {
   # chart's auth.enabled so studio installs gate-less (no bkn-safe).
   local sets=(--set image.tag="$version")
   [ "$no_auth" = "true" ] && sets+=(--set auth.enabled=false)
+  case "$registry" in
+    ""|ghcr) ;;  # chart default already points at GHCR
+    swr) sets+=(--set image.registry="$IMAGE_REGISTRY_SWR");;
+    *) die "--registry must be 'ghcr' or 'swr'";;
+  esac
 
   info "helm upgrade --install ${CHART_NAME} ${chart} (v${version}) -n ${namespace}${no_auth:+ (no-auth=$no_auth)}"
   helm upgrade --install "$CHART_NAME" "$chart" \
