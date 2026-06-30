@@ -20,6 +20,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { gatewayOrigin } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { issueApiKey } from "@/modules/api-keys/services/api-key.service";
 import {
   CONTEXT_LOADER_OPS,
   MCP_PATH,
@@ -184,10 +185,12 @@ function MaskedKeyInput({
   value,
   onChange,
   onIssue,
+  issuing,
 }: {
   value: string;
   onChange: (next: string) => void;
   onIssue: () => void;
+  issuing?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -202,8 +205,8 @@ function MaskedKeyInput({
         onBlur={() => setFocused(false)}
         onChange={(event) => onChange(event.target.value)}
       />
-      <button type="button" className={styles.keyIssue} onClick={onIssue}>
-        去签发
+      <button type="button" className={styles.keyIssue} onClick={onIssue} disabled={issuing}>
+        {issuing ? "签发中…" : "去签发"}
       </button>
     </div>
   );
@@ -880,6 +883,22 @@ export function ExperienceScene() {
   const sessionToken = runtimeConfig.auth.tokenManager.getAccessToken() ?? "";
   const [authMode, setAuthMode] = useState<"oauth" | "apikey">("oauth");
   const [appKey, setAppKey] = useState("");
+  const [issuingKey, setIssuingKey] = useState(false);
+
+  // 「去签发」直接签发一个 API Key 并填入（不再跳个人中心）。密钥明文只此一次返回。
+  const issueAppKey = useCallback(async () => {
+    setIssuingKey(true);
+    try {
+      const stamp = new Date().toISOString().slice(0, 19).replace("T", " ");
+      const issued = await issueApiKey({ name: `Studio 调试台 ${stamp}` });
+      setAppKey(issued.key);
+      message.success(`已签发并填入 API Key（${issued.masked}），可在「个人中心 · API Key」管理`);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "签发失败，请到个人中心手动签发");
+    } finally {
+      setIssuingKey(false);
+    }
+  }, [message]);
   const token = authMode === "apikey" ? appKey.trim() : sessionToken;
 
   const [filter, setFilter] = useState("");
@@ -1209,7 +1228,7 @@ export function ExperienceScene() {
           {authMode === "apikey" ? (
             <div className={styles.ef}>
               <label>API Key</label>
-              <MaskedKeyInput value={appKey} onChange={setAppKey} onIssue={() => navigate("/account")} />
+              <MaskedKeyInput value={appKey} onChange={setAppKey} onIssue={() => void issueAppKey()} issuing={issuingKey} />
             </div>
           ) : null}
         </div>
