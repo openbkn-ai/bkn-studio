@@ -19,8 +19,8 @@ import {
 /** 模型工厂 OpenAI 兼容前缀（与 model-api-guide.getModelApiBaseUrl 一致）。 */
 export const MODEL_API_PATH = "/api/mf-model-api/v1";
 
-/** 一轮最多工具步数，防止模型反复调工具跑飞。 */
-const MAX_STEPS = 8;
+/** 一轮最多工具步数，防止模型反复调工具跑飞。配合步间驱逐压上下文，可放宽。 */
+const MAX_STEPS = 16;
 
 /**
  * 单个工具结果喂回模型前的字符上限。检索工具（run_sql / list_resources / TOON 全表）
@@ -47,7 +47,7 @@ const TOOL_HINTS: Record<string, string> = {
     " 【重要】用 filters 精确过滤 + 小 limit + properties 只取必要字段；不要返回大结果集。结果会被截断到约 8000 字符。",
   query_instance_subgraph: " 【重要】用尽量小的 limit；结果会被截断到约 8000 字符。",
   list_resources: " 【重要】用 catalog_id/type 过滤 + 小 limit 分页；结果会被截断到约 8000 字符。",
-  search_schema: " 提示：用精确的 query 与较小的 max_concepts；结果会被截断到约 8000 字符。",
+  search_schema: " 建议：用精确的 query，max_concepts 默认不超过 10；结果会被截断到约 8000 字符。",
 };
 
 /**
@@ -189,10 +189,14 @@ export async function runAgentChat(params: {
       abortSignal: signal,
     });
 
+    let gotText = false;
     for await (const part of result.fullStream) {
       switch (part.type) {
         case "text-delta":
-          if (part.text) onChunk({ type: "text", delta: part.text });
+          if (part.text) {
+            gotText = true;
+            onChunk({ type: "text", delta: part.text });
+          }
           break;
         case "reasoning-delta":
           if (part.text) onChunk({ type: "reasoning", delta: part.text });
@@ -219,6 +223,25 @@ export async function runAgentChat(params: {
           break;
         default:
           break;
+      }
+    }
+
+    // 跑满工具轮次仍没出最终答复（最后一步还在调工具）→ 强制基于已有信息收尾作答，不再调工具。
+    if (!gotText && !signal?.aborted) {
+      const resp = await result.response;
+      const finalResult = streamText({
+        model: createChatModel(env, modelName),
+        system:
+          system +
+          "\n\n（已达到工具调用上限或需要收尾：请基于以上已获得的信息，直接用中文给出最终答复，不要再调用任何工具。）",
+        messages: [...messages, ...(resp.messages as ModelMessage[])],
+        abortSignal: signal,
+      });
+      for await (const part of finalResult.fullStream) {
+        if (part.type === "text-delta" && part.text) onChunk({ type: "text", delta: part.text });
+        else if (part.type === "reasoning-delta" && part.text) onChunk({ type: "reasoning", delta: part.text });
+        else if (part.type === "error")
+          onChunk({ type: "error", error: part.error instanceof Error ? part.error.message : String(part.error) });
       }
     }
     onChunk({ type: "finish" });
