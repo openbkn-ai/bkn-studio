@@ -6,6 +6,8 @@
 #            the SAME host as /api, /oauth2, /.well-known, /userinfo — so the SPA
 #            is same-origin and the OAuth callback (https://<gateway>/studio/
 #            callback) is already seeded by bkn-safe. Nothing to register.
+#            --version pins a specific release; OMIT it to install the latest
+#            published version (resolved from the chart registry).
 #
 #   local    Run the studio image as a local container whose nginx ALSO reverse-
 #            proxies /api, /oauth2, /.well-known, /userinfo to a remote Foundry
@@ -58,6 +60,17 @@ default_version() {
   [ -f "$cy" ] && sed -n 's/^version:[[:space:]]*//p' "$cy" | head -1 || true
 }
 
+# Latest published version for a chart ref. For an OCI ref helm resolves the
+# newest tag — with --devel, since main builds are pre-releases (0.1.0-<ref>.shaX)
+# that helm would otherwise skip. For a local chart dir it returns its own
+# version. Falls back to the checkout's Chart.yaml.
+resolve_latest_version() {
+  local chart="$1" v
+  v="$(helm show chart "$chart" --devel 2>/dev/null | sed -n 's/^version:[[:space:]]*//p' | head -1)"
+  [ -n "$v" ] && { echo "$v"; return; }
+  default_version
+}
+
 # Print the header comment block (line 2 until the first non-comment line).
 usage() { awk 'NR>=2{ if(/^#/){sub(/^# ?/,"");print} else exit }' "$0"; exit "${1:-0}"; }
 
@@ -75,8 +88,11 @@ cmd_cluster() {
       *) die "unknown flag for 'cluster': $1";;
     esac
   done
-  version="${version:-$(default_version)}"
-  [ -n "$version" ] || die "specify --version (chart + image tag to install)"
+  if [ -z "$version" ]; then
+    version="$(resolve_latest_version "$chart")"
+    [ -n "$version" ] || die "could not resolve latest version from ${chart}; pass --version"
+    info "no --version given — installing latest published: ${version}"
+  fi
   command -v helm >/dev/null 2>&1 || die "helm not found"
   command -v kubectl >/dev/null 2>&1 || die "kubectl not found"
   local kctx=(); [ -n "$kube_context" ] && kctx=(--kube-context "$kube_context")
