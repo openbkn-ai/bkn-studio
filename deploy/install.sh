@@ -65,11 +65,12 @@ default_version() {
   [ -f "$cy" ] && sed -n 's/^version:[[:space:]]*//p' "$cy" | head -1 || true
 }
 
-# Newest "<semver>-main.sha<7hex>" build for a GHCR chart repo, ranked by the
-# sha's git COMMIT TIME — NOT SemVer: the sha suffix isn't monotonic, so a
-# lexical SemVer "latest" picks the wrong build. Mirrors bkn-foundry's
-# gen-dev-manifest. Anonymous for public packages; set GHCR_TOKEN (a PAT with
-# read:packages) for private ones. Prints nothing if it can't resolve.
+# Newest main build for a GHCR chart repo. The build version embeds a
+# fixed-width commit date (<semver>-main.<YYYYMMDDHHMMSS>.sha<7hex>), so the
+# newest is the lexical max — NOT SemVer (the sha suffix isn't monotonic) and
+# needs no git history. Mirrors bkn-foundry. Falls back to the legacy un-dated
+# form via git commit time. Anonymous for public packages; set GHCR_TOKEN (a
+# PAT with read:packages) for private ones. Prints nothing if it can't resolve.
 newest_main_build_version() {
   SSL_CERT_FILE="${SSL_CERT_FILE:-/etc/ssl/cert.pem}" \
   GHCR_AUTH="${GHCR_TOKEN:-${GITHUB_TOKEN:-}}" GHCR_USER="${GHCR_USER:-${USER:-x}}" \
@@ -89,16 +90,24 @@ try:
     tags = fetch(f"https://ghcr.io/v2/{repo}/tags/list", {"Authorization": f"Bearer {tok}"}).get("tags") or []
 except Exception:
     sys.exit(1)
-rx = re.compile(r'.*-main\.sha([0-9a-f]{7})$')
-def commit_time(sha):
-    try:
-        return int(subprocess.run(["git", "show", "-s", "--format=%ct", sha],
-                   capture_output=True, text=True).stdout.strip() or 0)
-    except Exception:
-        return 0
-cand = [(t, m.group(1)) for t in tags for m in [rx.match(t)] if m]
+# Preferred form embeds a fixed-width commit date (<semver>-main.<14d>.sha<7hex>)
+# → lexical max == newest, no git history needed. Fall back to the legacy
+# un-dated form (<semver>-main.sha<7hex>), ranked by the sha's git commit time.
+dated = re.compile(r'.*-main\.(\d{14})\.sha[0-9a-f]{7}$')
+cand = [(m.group(1), t) for t in tags for m in [dated.match(t)] if m]
 if cand:
-    print(max(cand, key=lambda ts: (commit_time(ts[1]), ts[0]))[0])
+    print(max(cand)[1])
+else:
+    legacy = re.compile(r'.*-main\.sha([0-9a-f]{7})$')
+    def commit_time(sha):
+        try:
+            return int(subprocess.run(["git", "show", "-s", "--format=%ct", sha],
+                       capture_output=True, text=True).stdout.strip() or 0)
+        except Exception:
+            return 0
+    old = [(t, m.group(1)) for t in tags for m in [legacy.match(t)] if m]
+    if old:
+        print(max(old, key=lambda ts: (commit_time(ts[1]), ts[0]))[0])
 PY
 }
 
