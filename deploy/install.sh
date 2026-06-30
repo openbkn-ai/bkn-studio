@@ -6,8 +6,8 @@
 #            the SAME host as /api, /oauth2, /.well-known, /userinfo — so the SPA
 #            is same-origin and the OAuth callback (https://<gateway>/studio/
 #            callback) is already seeded by bkn-safe. Nothing to register.
-#            --version pins a specific release; OMIT it to install the latest
-#            published version (resolved from the chart registry).
+#            --version pins a specific release; --latest (or omitting --version)
+#            installs the latest published version from the chart registry.
 #
 #   local    Run the studio image as a local container whose nginx ALSO reverse-
 #            proxies /api, /oauth2, /.well-known, /userinfo to a remote Foundry
@@ -17,7 +17,7 @@
 #            registered with bkn-safe unless it is the pre-seeded localhost:8000.
 #
 # Usage:
-#   deploy/install.sh cluster [--namespace openbkn] [--version 0.1.0]
+#   deploy/install.sh cluster [--namespace openbkn] [--version 0.1.0 | --latest]
 #                             [--chart <ref>] [--kube-context <ctx>] [--no-auth]
 #   deploy/install.sh local --foundry https://10.211.55.4 [--port 8080]
 #                           [--version 0.1.0] [--image <ref>] [--register]
@@ -76,11 +76,12 @@ usage() { awk 'NR>=2{ if(/^#/){sub(/^# ?/,"");print} else exit }' "$0"; exit "${
 
 # ---------------------------------------------------------------- cluster ----
 cmd_cluster() {
-  local namespace="openbkn" version="" chart="$DEFAULT_CHART_OCI" kube_context="" no_auth="false"
+  local namespace="openbkn" version="" chart="$DEFAULT_CHART_OCI" kube_context="" no_auth="false" want_latest="false"
   while [ $# -gt 0 ]; do
     case "$1" in
       --namespace) namespace="$2"; shift 2;;
       --version) version="$2"; shift 2;;
+      --latest) want_latest="true"; shift;;
       --chart) chart="$2"; shift 2;;
       --kube-context) kube_context="$2"; shift 2;;
       --no-auth) no_auth="true"; shift;;
@@ -88,10 +89,16 @@ cmd_cluster() {
       *) die "unknown flag for 'cluster': $1";;
     esac
   done
+  # --latest (or --version latest, or omitting --version) installs the newest
+  # published release; an explicit --version pins one. The two are exclusive.
+  [ "$version" = "latest" ] && { want_latest="true"; version=""; }
+  if [ "$want_latest" = "true" ] && [ -n "$version" ]; then
+    die "--latest and --version are mutually exclusive"
+  fi
   if [ -z "$version" ]; then
     version="$(resolve_latest_version "$chart")"
     [ -n "$version" ] || die "could not resolve latest version from ${chart}; pass --version"
-    info "no --version given — installing latest published: ${version}"
+    info "installing latest published version: ${version}"
   fi
   command -v helm >/dev/null 2>&1 || die "helm not found"
   command -v kubectl >/dev/null 2>&1 || die "kubectl not found"
