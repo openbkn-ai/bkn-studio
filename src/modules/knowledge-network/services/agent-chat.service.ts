@@ -19,8 +19,12 @@ import {
 /** 模型工厂 OpenAI 兼容前缀（与 model-api-guide.getModelApiBaseUrl 一致）。 */
 export const MODEL_API_PATH = "/api/mf-model-api/v1";
 
-/** 一轮最多工具步数，防止模型反复调工具跑飞。配合步间驱逐压上下文，可放宽。 */
-const MAX_STEPS = 16;
+/**
+ * 一轮最多工具步数。仅作防跑飞兜底——正常情况模型出最终答复即自动停。
+ * 因有步间驱逐（每步只留最近若干工具结果），步数与上下文已解耦，故拉得很高≈不限，
+ * 同时保留上限避免模型卡死循环无限调工具。
+ */
+const MAX_STEPS = 40;
 
 /**
  * 单个工具结果喂回模型前的字符上限。检索工具（run_sql / list_resources / TOON 全表）
