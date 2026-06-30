@@ -311,6 +311,7 @@
 }
 
 .toolItem {
+  flex: 0 0 auto; /* flex 列 + 滚动容器里禁止被压缩，否则展开某项时其余行会被挤扁/裁切 */
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--code);

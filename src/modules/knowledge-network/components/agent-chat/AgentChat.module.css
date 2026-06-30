@@ -155,23 +155,43 @@
 }
 .sugs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 560px;
+  margin: 4px auto 0;
 }
 .sug {
-  font-size: 12.5px;
-  color: var(--txt2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  font-size: 13.5px;
+  color: var(--txt);
   background: var(--code);
   border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 8px 13px;
+  border-radius: 12px;
+  padding: 13px 16px;
   cursor: pointer;
-  transition: 0.14s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
 .sug:hover {
   border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(46, 104, 255, 0.1);
+}
+.sugText {
+  flex: 1 1 auto;
+}
+.sugArrow {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-size: 12px;
+  transition: transform 0.15s, color 0.15s;
+}
+.sug:hover .sugArrow {
   color: var(--accent);
+  transform: translateX(2px);
 }
 
 /* 消息气泡 */
@@ -404,4 +424,191 @@
   background: var(--chip);
   color: var(--txt2);
   border: 1px solid var(--field-bd);
+}
+
+/* 已载入网络结构提示 chip */
+.knChip {
+  font-size: 11.5px;
+  color: var(--accent);
+  background: rgba(46, 104, 255, 0.08);
+  border: 1px solid rgba(46, 104, 255, 0.18);
+  border-radius: 7px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+/* 思考过程（reasoning_content） */
+.reasoning {
+  margin: 2px 0 8px;
+  border-left: 2px solid var(--line);
+  padding-left: 0;
+}
+.reasoningHead {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 2px 0 2px 10px;
+  font-size: 11.5px;
+  color: var(--faint);
+  cursor: pointer;
+}
+.reasoningHead:hover {
+  color: var(--txt2);
+}
+.reasoningText {
+  margin: 4px 0 0 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--faint);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow: auto;
+}
+
+/* Markdown 答复渲染 */
+.md {
+  font-size: 13.5px;
+  line-height: 1.72;
+  color: var(--txt);
+  word-break: break-word;
+}
+.md > :first-child {
+  margin-top: 0;
+}
+.md > :last-child {
+  margin-bottom: 0;
+}
+.md p {
+  margin: 0 0 10px;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  margin: 16px 0 8px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.md h1 {
+  font-size: 18px;
+}
+.md h2 {
+  font-size: 16px;
+}
+.md h3 {
+  font-size: 14.5px;
+}
+.md h4 {
+  font-size: 13.5px;
+}
+.md ul,
+.md ol {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+.md li {
+  margin: 3px 0;
+}
+.md a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.md a:hover {
+  text-decoration: underline;
+}
+.md code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--chip);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.md pre {
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  background: var(--code);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: auto;
+}
+.md pre code {
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.md blockquote {
+  margin: 0 0 10px;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--line);
+  color: var(--txt2);
+}
+.md table {
+  border-collapse: collapse;
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  display: block;
+  overflow: auto;
+}
+.md th,
+.md td {
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  text-align: left;
+}
+.md th {
+  background: var(--code);
+  font-weight: 600;
+}
+.md hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 14px 0;
+}
+
+/* 系统提示词 编辑/完整 切换 */
+.promptTabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.promptTab {
+  border: 1px solid var(--field-bd);
+  background: #fff;
+  color: var(--txt2);
+  font-size: 12px;
+  padding: 4px 11px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.promptTab:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.promptTabActive {
+  background: rgba(46, 104, 255, 0.08);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.promptFull {
+  display: block;
+  width: 100%;
+  min-height: 140px;
+  max-height: 320px;
+  resize: vertical;
+  border: 1px solid var(--field-bd);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 12px;
+  line-height: 1.6;
+  font-family: var(--mono);
+  color: var(--txt2);
+  background: var(--code);
+  outline: none;
+  white-space: pre-wrap;
 }
