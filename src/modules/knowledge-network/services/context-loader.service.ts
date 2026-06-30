@@ -596,6 +596,101 @@ export async function listMcpTools(env: ContextLoaderEnv): Promise<McpToolDef[]>
     .filter((tool) => tool.name);
 }
 
+/* ============================ 会话级 MCP 客户端（Agent 对话工具执行复用） ============================ */
+
+/**
+ * 从 MCP tools/call 信封抽出文本载荷：result.content[].text 合并；
+ * 无 content 时回退序列化 result；JSON-RPC error 时序列化 error。给大模型回灌用。
+ */
+export function mcpResultText(parsed: unknown): string {
+  if (!parsed || typeof parsed !== "object") return "";
+  const envelope = parsed as Record<string, unknown>;
+  const result = envelope.result;
+  if (!result || typeof result !== "object") {
+    return envelope.error ? JSON.stringify(envelope.error) : "";
+  }
+  const content = (result as Record<string, unknown>).content;
+  if (Array.isArray(content)) {
+    const texts = content
+      .map((item) => (item && typeof item === "object" ? (item as Record<string, unknown>).text : undefined))
+      .filter((value): value is string => typeof value === "string");
+    if (texts.length > 0) return texts.join("\n");
+  }
+  return JSON.stringify(result);
+}
+
+export type McpToolCallResult = { ok: boolean; text: string; latencyMs: number };
+
+export type McpSession = {
+  callTool(name: string, args: Record<string, unknown>): Promise<McpToolCallResult>;
+};
+
+/**
+ * 会话级 MCP 客户端：initialize 一次、缓存并复用 Mcp-Session-Id；
+ * 会话失效（400/404）时自动重连一次。供 Agent 对话的工具循环复用，避免每次调用重建会话。
+ */
+export function createMcpSession(env: ContextLoaderEnv): McpSession {
+  const url = mcpBase(env);
+  const baseHeaders = (): Record<string, string> => ({
+    "Content-Type": "application/json",
+    Accept: "application/json, text/event-stream",
+    ...authHeaders(env),
+  });
+  let sessionId: string | null = null;
+  let rpcId = 1;
+
+  async function initialize(): Promise<void> {
+    const initResp = await fetch(url, {
+      method: "POST",
+      headers: baseHeaders(),
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: rpcId++,
+        method: "initialize",
+        params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bkn-studio-agent", version: "1.0.0" } },
+      }),
+    });
+    sessionId = initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
+    if (!initResp.ok && !sessionId) {
+      throw new Error((await initResp.text()) || `MCP initialize 失败 (${initResp.status})`);
+    }
+    if (sessionId) {
+      await fetch(url, {
+        method: "POST",
+        headers: { ...baseHeaders(), "Mcp-Session-Id": sessionId },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+      }).catch(() => undefined);
+    }
+  }
+
+  function callOnce(name: string, args: Record<string, unknown>): Promise<Response> {
+    const headers = sessionId ? { ...baseHeaders(), "Mcp-Session-Id": sessionId } : baseHeaders();
+    return fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ jsonrpc: "2.0", id: rpcId++, method: "tools/call", params: { name, arguments: args } }),
+    });
+  }
+
+  return {
+    async callTool(name, args) {
+      const start = performance.now();
+      if (!sessionId) await initialize();
+      let response = await callOnce(name, args);
+      if (response.status === 400 || response.status === 404) {
+        // 会话失效 → 重连一次再试。
+        sessionId = null;
+        await initialize();
+        response = await callOnce(name, args);
+      }
+      const text = await response.text();
+      const parsed = parseMcpEnvelope(text);
+      const payload = parsed ? mcpResultText(parsed) : text;
+      return { ok: response.ok, text: payload || text, latencyMs: Math.round(performance.now() - start) };
+    },
+  };
+}
+
 /* ============================ 数据浏览器：知识网络 schema + 资源 ============================ */
 export type KnDataSource = { type?: string; id: string; name?: string };
 

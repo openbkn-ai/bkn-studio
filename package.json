@@ -19,8 +19,10 @@
     "check": "npm run lint:types && npm run test -- --run && npm run build"
   },
   "dependencies": {
-    "@monaco-editor/react": "^4.7.0",
+    "@ai-sdk/openai-compatible": "^3.0.1",
     "@ant-design/icons": "^6.1.0",
+    "@monaco-editor/react": "^4.7.0",
+    "ai": "^7.0.4",
     "antd": "^5.28.0",
     "axios": "^1.12.2",
     "dayjs": "^1.11.21",

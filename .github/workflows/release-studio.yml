@@ -68,7 +68,11 @@ jobs:
             VERSION="${GITHUB_REF_NAME#v}"
           else
             SANITIZED="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^0-9a-zA-Z.-]+#-#g; s#-+#-#g; s#^[.-]+##; s#[.-]+$##')"
-            VERSION="${BASE_VERSION}-${SANITIZED}.sha${SHORT_SHA}"
+            # Embed the commit date (UTC, fixed-width 14 digits) so the version
+            # sorts chronologically by string alone — "latest" resolution needs
+            # no local git history. Matches bkn-foundry's scheme.
+            COMMIT_DATE="$(TZ=UTC git show -s --format=%cd --date=format-local:%Y%m%d%H%M%S HEAD)"
+            VERSION="${BASE_VERSION}-${SANITIZED}.${COMMIT_DATE}.sha${SHORT_SHA}"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Resolved version: $VERSION"

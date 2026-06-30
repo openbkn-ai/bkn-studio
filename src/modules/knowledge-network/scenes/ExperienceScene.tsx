@@ -44,6 +44,7 @@ import {
   type KnRelationType,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
+import { AgentChat } from "@/modules/knowledge-network/components/agent-chat/AgentChat";
 
 import styles from "./ExperienceScene.module.css";
 
@@ -839,21 +840,6 @@ function DataBrowserPanel({
   );
 }
 
-/* ============================ Agent 对话（待接入真实 Agent，先留空） ============================ */
-function AgentBlank() {
-  return (
-    <div className={styles.chat}>
-      <div className={styles.agentBlank}>
-        <div className={styles.introGlyph}>
-          <ThunderboltFilled />
-        </div>
-        <h3>Agent 对话</h3>
-        <p>待接入真实 Agent 检索对话，敬请期待。</p>
-      </div>
-    </div>
-  );
-}
-
 /* ============================ 主场景 ============================ */
 export function ExperienceScene() {
   const navigate = useNavigate();
@@ -873,7 +859,7 @@ export function ExperienceScene() {
   );
 
   const [network, setNetwork] = useState<{ name: string; slug: string } | null>(null);
-  const [mode, setMode] = useState<ContextLoaderMode>("mcp");
+  const [mode, setMode] = useState<ContextLoaderMode>("agent");
 
   // 请求基址：走当前源（dev 经 vite 代理转后端，避免浏览器跨域）。
   const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "http://agent-retrieval:30779"));
@@ -1235,7 +1221,7 @@ export function ExperienceScene() {
       </div>
 
       {mode === "agent" ? (
-        <AgentBlank />
+        <AgentChat env={env} networkName={network?.name} />
       ) : (
         <div className={styles.main}>
           {/* 接口列表 */}
