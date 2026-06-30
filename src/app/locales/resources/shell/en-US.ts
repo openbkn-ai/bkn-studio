@@ -10,7 +10,7 @@ export const shellEnUS = {
     items: {
       globalBusinessKnowledgeNetwork: "Global Business Knowledge Network",
       domainKnowledgeNetwork: "Domain Business Knowledge Network",
-      generalBusinessKnowledgeNetwork: "General Business Knowledge Network",
+      generalBusinessKnowledgeNetwork: "Data Resource Knowledge Network",
       dataConnection: "Data Connection",
       dataCatalog: "Data Catalog",
       indexBuild: "Index Builds",

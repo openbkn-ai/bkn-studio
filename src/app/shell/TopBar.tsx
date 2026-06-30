@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { useMatches, useNavigate } from "react-router-dom";
 
 import { getConsoleNavTrail } from "@/app/shell/console-navigation";
+import openBknLogo from "@/assets/brand/openbkn-logo.png";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
@@ -39,13 +40,8 @@ export function TopBar() {
   return (
     <header className="console-topbar">
       <div className="console-brand">
-        <div className="console-brand-mark" aria-hidden>
-          <span className="console-brand-mark-core" />
-          <span className="console-brand-mark-orbit console-brand-mark-orbit-left" />
-          <span className="console-brand-mark-orbit console-brand-mark-orbit-right" />
-        </div>
+        <img className="console-brand-logo" src={openBknLogo} alt={t("app.title")} />
         <div className="console-brand-row">
-          <strong className="console-brand-title">{t("app.title")}</strong>
           {trail.length > 0 ? (
             <div className="console-brand-path">
               {trail.map((item, index) => (
