@@ -27,19 +27,30 @@ export const MODEL_API_PATH = "/api/mf-model-api/v1";
 const MAX_STEPS = 40;
 
 /**
- * 单个工具结果喂回模型前的字符上限。检索工具（run_sql / list_resources / TOON 全表）
- * 可能返回极大文本，全量累积进多步对话历史会把上下文撑到几十万 token，导致请求超模型
- * context 上限或生成超时、SSE 中断（"断了"）。截断并提示模型用更精确的过滤 / 更小 LIMIT
- * 重查，而不是拉全表。
+ * 单个工具结果喂回模型前的**按工具分级**字符上限。
+ * - 数据类（run_sql / query_* / 逻辑属性）：本应在查询里聚合/过滤，返回大结果是查询写法问题 →
+ *   收紧到 8000，逼模型聚合，避免全表 dump 撑爆上下文。
+ * - schema / 发现类（get_kn_detail / search_schema / describe_resource / list_resources / skills /
+ *   action）：结果天生较大但**有界且模型理解必需**，截太狠会丢结构信息导致反复重查 → 放宽。
+ * 配合步间驱逐（只留最近若干个），即便放宽，累积也受控（远低于 384k context）。
  */
-const MAX_TOOL_RESULT_CHARS = 8000;
+const DEFAULT_TOOL_RESULT_CHARS = 8000;
+const TOOL_RESULT_CAP: Record<string, number> = {
+  get_kn_detail: 32000,
+  search_schema: 24000,
+  describe_resource: 16000,
+  list_resources: 16000,
+  find_skills: 12000,
+  get_action_info: 12000,
+};
 
-function capToolResult(text: string): string {
-  if (text.length <= MAX_TOOL_RESULT_CHARS) return text;
-  const dropped = text.length - MAX_TOOL_RESULT_CHARS;
+function capToolResult(text: string, toolName: string): string {
+  const limit = TOOL_RESULT_CAP[toolName] ?? DEFAULT_TOOL_RESULT_CHARS;
+  if (text.length <= limit) return text;
+  const dropped = text.length - limit;
   return (
-    text.slice(0, MAX_TOOL_RESULT_CHARS) +
-    `\n\n…[结果过长，已截断约 ${dropped} 字符。请改用更精确的过滤条件或更小的 LIMIT 重新查询，不要拉全表；已获得的信息不要重复查询]`
+    text.slice(0, limit) +
+    `\n\n…[结果过长，已截断约 ${dropped} 字符。请改用更精确的过滤条件 / 更小的 LIMIT / 只取必要字段重新查询，不要拉全表；已获得的信息不要重复查询]`
   );
 }
 
@@ -50,8 +61,8 @@ const TOOL_HINTS: Record<string, string> = {
   query_object_instance:
     " 【重要】用 filters 精确过滤 + 小 limit + properties 只取必要字段；不要返回大结果集。结果会被截断到约 8000 字符。",
   query_instance_subgraph: " 【重要】用尽量小的 limit；结果会被截断到约 8000 字符。",
-  list_resources: " 【重要】用 catalog_id/type 过滤 + 小 limit 分页；结果会被截断到约 8000 字符。",
-  search_schema: " 建议：用精确的 query，max_concepts 默认不超过 10；结果会被截断到约 8000 字符。",
+  list_resources: " 【重要】用 catalog_id/type 过滤 + 小 limit 分页；结果过大会被截断。",
+  search_schema: " 建议：用精确的 query，max_concepts 默认不超过 10；结果过大会被截断。",
 };
 
 /**
@@ -123,7 +134,7 @@ export function buildAgentTools(mcpTools: McpToolDef[], env: ContextLoaderEnv, k
           kn_id: knId,
         };
         const res = await session.callTool(def.name, args);
-        return capToolResult(res.text);
+        return capToolResult(res.text, def.name);
       },
     });
   }
