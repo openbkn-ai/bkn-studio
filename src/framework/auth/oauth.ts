@@ -51,7 +51,7 @@ export function shouldUseOAuthGate(mode: "hosted" | "standalone") {
   }
 
   // Mock-mode dev runs without a backend, so there is nothing to log in to.
-  return !import.meta.env.DEV || import.meta.env.VITE_USE_MOCK === "false";
+  return !import.meta.env.DEV || import.meta.env.VITE_USE_MOCK !== "true";
 }
 
 export function isOAuthCallbackPath(pathname = window.location.pathname) {

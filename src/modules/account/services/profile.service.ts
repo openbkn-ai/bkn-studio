@@ -21,7 +21,7 @@ export type ProfileUpdatePayload = {
   telephone?: string;
 };
 
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 type BackendMe = {
   id: string;

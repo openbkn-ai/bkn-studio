@@ -49,7 +49,7 @@ type BackendMcpListResponse = {
 import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-timestamp";
 
 const API_PREFIX = "/agent-operator-integration/v1";
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
 let mockMcps: McpRecord[] = [

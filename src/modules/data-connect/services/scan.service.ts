@@ -54,7 +54,7 @@ type ListResponse<T> = {
   total_count: number;
 };
 
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 let mockSchedules: DataConnectScanSchedule[] = [
   {

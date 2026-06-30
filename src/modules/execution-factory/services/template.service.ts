@@ -2,7 +2,7 @@ import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 
 const API_PREFIX = "/agent-operator-integration/v1";
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 function getBusinessDomainHeaders() {
   const businessDomainId =

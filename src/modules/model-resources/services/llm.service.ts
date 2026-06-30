@@ -14,7 +14,7 @@ import type {
 } from "@/modules/model-resources/types/llm";
 
 const API_PREFIX = "/mf-model-manager/v1";
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 type BackendLlmModel = {
   model_id: string;

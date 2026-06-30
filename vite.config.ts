@@ -33,7 +33,7 @@ function redirectRootToAppBase(): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, "");
   const devProxyOrigin = env.VITE_DEV_AUTH_ORIGIN || "http://118.196.7.174";
-  const useMock = env.VITE_USE_MOCK !== "false";
+  const useMock = env.VITE_USE_MOCK === "true";
   const agentOperatorProxyTarget =
     process.env.VITE_PROXY_TARGET ?? (useMock ? "http://127.0.0.1:9000" : devProxyOrigin);
   // ContextLoader「立即体验」直接打 agent-retrieval（REST /api/agent-retrieval/v1/...，MCP /api/agent-retrieval/v1/mcp）。

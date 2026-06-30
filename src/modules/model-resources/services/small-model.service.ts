@@ -9,7 +9,7 @@ import type {
 } from "@/modules/model-resources/types/small-model";
 
 const API_PREFIX = "/mf-model-manager/v1";
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 type BackendSmallModel = {
   model_id: string;

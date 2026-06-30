@@ -51,7 +51,7 @@ type ListResponse<T> = {
   total_count: number;
 };
 
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 const wait = async <T,>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {

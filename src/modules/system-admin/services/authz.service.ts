@@ -22,7 +22,7 @@ import type {
  *   - bkn-safe 不存资源名：真实模式下对象名需前端从各领域服务解析（见
  *     listAuthorizableObjects 的 TODO）。
  */
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 const ADMIN = "/safe/v1/admin";
 

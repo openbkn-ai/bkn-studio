@@ -12,7 +12,7 @@ import {
 } from "@/modules/model-resources/utils/statistics-chart";
 
 const API_PREFIX = "/mf-model-manager/v1";
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 type BackendStatisticsOverview = {
   summary?: {

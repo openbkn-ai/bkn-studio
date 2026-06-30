@@ -68,7 +68,7 @@ type BackendToolListResponse = {
 };
 
 const API_PREFIX = "/agent-operator-integration/v1";
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
 const mockToolsByBox: Record<string, ToolRecord[]> = {

@@ -6,7 +6,7 @@ import type {
 } from "@/modules/api-keys/types/api-key";
 
 const API_PREFIX = "/safe/v1/me/api-keys";
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 type BackendApiKey = {
   id: string;

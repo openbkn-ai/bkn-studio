@@ -16,7 +16,7 @@ import type {
 } from "@/modules/model-resources/types/quota";
 
 const API_PREFIX = "/mf-model-manager/v1";
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 type BackendModelQuota = {
   conf_id?: string;

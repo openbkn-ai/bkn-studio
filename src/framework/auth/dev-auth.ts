@@ -18,7 +18,7 @@ function readEnvRefreshToken() {
 }
 
 export function shouldUseDevAuth() {
-  return import.meta.env.DEV && import.meta.env.VITE_USE_MOCK === "false";
+  return import.meta.env.DEV && import.meta.env.VITE_USE_MOCK !== "true";
 }
 
 export function hasDevAccessToken() {

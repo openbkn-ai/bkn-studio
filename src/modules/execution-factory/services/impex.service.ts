@@ -13,7 +13,7 @@ import type {
 } from "@/modules/execution-factory/types/impex";
 
 const API_PREFIX = "/agent-operator-integration/v1";
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 const IMPEX_EXPORT_TIMEOUT_MS = 60_000;
 
 function resolveExportFilename(

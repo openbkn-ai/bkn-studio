@@ -34,7 +34,7 @@ export function readFileReaderText(result: string | ArrayBuffer | null | undefin
   return typeof result === "string" ? result : "{}";
 }
 
-export const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+export const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 /** Real-env integration defers metric/task APIs until the test backend is ready. */
 export const integrateWorkspaceMetrics = useMock;

@@ -21,7 +21,7 @@ import type {
  * 后端暂不支持、已从写路径剔除（等后端反馈）：冻结/解冻、部门扩展字段
  * （负责人/编码/邮箱/备注）、用户↔部门归属写入。
  */
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
 const ADMIN = "/safe/v1/admin";
 export const DEFAULT_NEW_USER_PASSWORD = "openbkn"; // 平台初始密码，首登提示改

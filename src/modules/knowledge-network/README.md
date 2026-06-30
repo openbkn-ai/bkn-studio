@@ -149,7 +149,7 @@ services/
 
 ## 开发 Mock
 
-默认启用 mock（`VITE_USE_MOCK !== "false"`）。验收网络：`kn-domain-risk`。
+默认走真实后端；设 `VITE_USE_MOCK=true` 才启用 mock。验收网络：`kn-domain-risk`。
 
 对象类新建：`/knowledge-network/workspace/kn-domain-risk/object-types/create`
 
