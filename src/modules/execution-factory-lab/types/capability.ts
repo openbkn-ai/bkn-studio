@@ -22,10 +22,13 @@ export type CapabilityOrchestration = {
 
 export type CapabilityAudit = {
   createUser?: string;
+  createUserName?: string;
   createTime?: number;
   updateUser?: string;
+  updateUserName?: string;
   updateTime?: number;
   releaseUser?: string;
+  releaseUserName?: string;
   releaseTime?: number;
 };
 
@@ -69,6 +72,7 @@ export type VersionEntry = {
   version: string;
   status?: string;
   releaseUser?: string;
+  releaseUserName?: string;
   releaseTime?: number;
   updateTime?: number;
 };

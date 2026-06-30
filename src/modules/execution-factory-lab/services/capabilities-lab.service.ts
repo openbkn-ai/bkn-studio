@@ -80,10 +80,13 @@ type BackendCapability = {
 
 type BackendAudit = {
   create_user?: string;
+  create_user_name?: string;
   create_time?: number;
   update_user?: string;
+  update_user_name?: string;
   update_time?: number;
   release_user?: string;
+  release_user_name?: string;
   release_time?: number;
 };
 
@@ -94,10 +97,13 @@ function mapAudit(audit?: BackendAudit): CapabilityAudit | undefined {
 
   return {
     createUser: audit.create_user,
+    createUserName: audit.create_user_name,
     createTime: audit.create_time,
     updateUser: audit.update_user,
+    updateUserName: audit.update_user_name,
     updateTime: audit.update_time,
     releaseUser: audit.release_user,
+    releaseUserName: audit.release_user_name,
     releaseTime: audit.release_time,
   };
 }
@@ -260,6 +266,8 @@ export async function listCapabilityVersions(capabilityId: string): Promise<Vers
     version: item.version,
     status: item.status,
     releaseUser: item.releaseUser ?? (item as { release_user?: string }).release_user,
+    releaseUserName:
+      item.releaseUserName ?? (item as { release_user_name?: string }).release_user_name,
     releaseTime: item.releaseTime ?? (item as { release_time?: number }).release_time,
     updateTime: item.updateTime ?? (item as { update_time?: number }).update_time,
   }));

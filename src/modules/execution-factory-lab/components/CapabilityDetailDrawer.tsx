@@ -28,6 +28,7 @@ import { Link } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
+import { listUsers } from "@/modules/system-admin/services/admin.service";
 import { CapabilityStatusStepper } from "@/modules/execution-factory-lab/components/CapabilityStatusStepper";
 import {
   LabDestructiveImpactAlert,
@@ -56,6 +57,10 @@ import { SkillFileTreePanel } from "@/modules/execution-factory-lab/components/S
 import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeatures";
 import { executionFactoryLabPermissions } from "@/modules/execution-factory-lab/permissions";
 import { editPermissionForKind } from "@/modules/execution-factory-lab/utils/create-menu-permissions";
+import {
+  buildAuditUserDirectory,
+  formatAuditUserDisplay,
+} from "@/modules/execution-factory-lab/utils/audit-user-display";
 import type {
   CapabilityAudit,
   CapabilityRecord,
@@ -400,20 +405,25 @@ function formatFunctionParameters(params?: FunctionParameterDef[]) {
   );
 }
 
-function formatAuditUser(value?: string) {
-  return value && value.trim() ? value : "-";
-}
-
 function formatAuditTime(value?: number) {
   return formatExecutionUnitTime(value);
 }
 
-function auditDescriptionItems(audit?: CapabilityAudit) {
+function auditDescriptionItems(
+  audit?: CapabilityAudit,
+  currentUser?: { id?: string | null; name?: string | null },
+  userDirectory?: Map<string, string>,
+) {
   return [
     {
       key: "createUser",
       label: "创建人",
-      children: formatAuditUser(audit?.createUser),
+      children: formatAuditUserDisplay({
+        id: audit?.createUser,
+        name: audit?.createUserName,
+        currentUser,
+        directory: userDirectory,
+      }),
     },
     {
       key: "createTime",
@@ -423,7 +433,12 @@ function auditDescriptionItems(audit?: CapabilityAudit) {
     {
       key: "updateUser",
       label: "更新人",
-      children: formatAuditUser(audit?.updateUser),
+      children: formatAuditUserDisplay({
+        id: audit?.updateUser,
+        name: audit?.updateUserName,
+        currentUser,
+        directory: userDirectory,
+      }),
     },
     {
       key: "updateTime",
@@ -433,7 +448,12 @@ function auditDescriptionItems(audit?: CapabilityAudit) {
     {
       key: "releaseUser",
       label: "发布人",
-      children: formatAuditUser(audit?.releaseUser),
+      children: formatAuditUserDisplay({
+        id: audit?.releaseUser,
+        name: audit?.releaseUserName,
+        currentUser,
+        directory: userDirectory,
+      }),
     },
     {
       key: "releaseTime",
@@ -454,6 +474,13 @@ export function CapabilityDetailDrawer({
   const { features } = useLabFeatures();
   const { runtimeConfig } = useAppServices();
   const userPermissions = runtimeConfig.currentUser.permissions ?? [];
+  const currentAuditUser = {
+    id: runtimeConfig.currentUser.id,
+    name: runtimeConfig.currentUser.name,
+  };
+  const [auditUserDirectory, setAuditUserDirectory] = useState<Map<string, string>>(
+    () => buildAuditUserDirectory([]),
+  );
   const [detail, setDetail] = useState<CapabilityRecord | undefined>(capability);
   const [versions, setVersions] = useState<VersionEntry[]>([]);
   const [orchestration, setOrchestration] = useState<{
@@ -539,6 +566,25 @@ export function CapabilityDetailDrawer({
       }
     })();
   }, [capability, initialTab, open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let cancelled = false;
+    void listUsers()
+      .then((users) => {
+        if (!cancelled) {
+          setAuditUserDirectory(buildAuditUserDirectory(users));
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   if (!detail) {
     return null;
@@ -1080,7 +1126,11 @@ export function CapabilityDetailDrawer({
                   <Descriptions
                     bordered
                     column={2}
-                    items={auditDescriptionItems(detail.audit).map((item) => ({
+                    items={auditDescriptionItems(
+                      detail.audit,
+                      currentAuditUser,
+                      auditUserDirectory,
+                    ).map((item) => ({
                       ...item,
                       label: t(`executionFactoryLab.${item.key}`),
                     }))}
@@ -1249,7 +1299,13 @@ export function CapabilityDetailDrawer({
                   },
                   {
                     title: t("executionFactoryLab.releaseUser"),
-                    render: (_, row) => formatAuditUser(row.releaseUser),
+                    render: (_, row) =>
+                      formatAuditUserDisplay({
+                        id: row.releaseUser,
+                        name: row.releaseUserName,
+                        currentUser: currentAuditUser,
+                        directory: auditUserDirectory,
+                      }),
                   },
                   {
                     title: t("executionFactoryLab.releaseTime"),
@@ -1351,7 +1407,11 @@ export function CapabilityDetailDrawer({
                     <Descriptions
                       bordered
                       column={2}
-                      items={auditDescriptionItems(orchestration.audit).map((item) => ({
+                      items={auditDescriptionItems(
+                        orchestration.audit,
+                        currentAuditUser,
+                        auditUserDirectory,
+                      ).map((item) => ({
                         ...item,
                         label: t(`executionFactoryLab.${item.key}`),
                       }))}
