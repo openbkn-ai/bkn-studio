@@ -65,13 +65,58 @@ default_version() {
   [ -f "$cy" ] && sed -n 's/^version:[[:space:]]*//p' "$cy" | head -1 || true
 }
 
-# Latest published version for a chart ref. For an OCI ref helm resolves the
-# newest tag — with --devel, since main builds are pre-releases (0.1.0-<ref>.shaX)
-# that helm would otherwise skip. For a local chart dir it returns its own
-# version. Falls back to the checkout's Chart.yaml.
+# Newest "<semver>-main.sha<7hex>" build for a GHCR chart repo, ranked by the
+# sha's git COMMIT TIME — NOT SemVer: the sha suffix isn't monotonic, so a
+# lexical SemVer "latest" picks the wrong build. Mirrors bkn-foundry's
+# gen-dev-manifest. Anonymous for public packages; set GHCR_TOKEN (a PAT with
+# read:packages) for private ones. Prints nothing if it can't resolve.
+newest_main_build_version() {
+  SSL_CERT_FILE="${SSL_CERT_FILE:-/etc/ssl/cert.pem}" \
+  GHCR_AUTH="${GHCR_TOKEN:-${GITHUB_TOKEN:-}}" GHCR_USER="${GHCR_USER:-${USER:-x}}" \
+  python3 - "$1" 2>/dev/null <<'PY'
+import os, sys, json, re, subprocess, ssl, base64, urllib.request
+repo = sys.argv[1]
+try: ctx = ssl.create_default_context()
+except Exception: ctx = ssl._create_unverified_context()
+def fetch(url, headers):
+    return json.load(urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=20, context=ctx))
+thdr = {}
+auth = os.environ.get("GHCR_AUTH", "")
+if auth:
+    thdr["Authorization"] = "Basic " + base64.b64encode(f"{os.environ.get('GHCR_USER','x')}:{auth}".encode()).decode()
+try:
+    tok = fetch(f"https://ghcr.io/token?scope=repository:{repo}:pull", thdr)["token"]
+    tags = fetch(f"https://ghcr.io/v2/{repo}/tags/list", {"Authorization": f"Bearer {tok}"}).get("tags") or []
+except Exception:
+    sys.exit(1)
+rx = re.compile(r'.*-main\.sha([0-9a-f]{7})$')
+def commit_time(sha):
+    try:
+        return int(subprocess.run(["git", "show", "-s", "--format=%ct", sha],
+                   capture_output=True, text=True).stdout.strip() or 0)
+    except Exception:
+        return 0
+cand = [(t, m.group(1)) for t in tags for m in [rx.match(t)] if m]
+if cand:
+    print(max(cand, key=lambda ts: (commit_time(ts[1]), ts[0]))[0])
+PY
+}
+
+# Version to install when --latest is used (or --version omitted):
+#   GHCR OCI ref → newest main build by commit time (fallback: helm --devel)
+#   other OCI ref → helm --devel (latest SemVer)
+#   local chart dir → its own Chart.yaml version
 resolve_latest_version() {
-  local chart="$1" v
-  v="$(helm show chart "$chart" --devel 2>/dev/null | sed -n 's/^version:[[:space:]]*//p' | head -1)"
+  local chart="$1" v=""
+  case "$chart" in
+    oci://ghcr.io/*)
+      v="$(newest_main_build_version "${chart#oci://ghcr.io/}")"
+      [ -n "$v" ] || v="$(helm show chart "$chart" --devel 2>/dev/null | sed -n 's/^version:[[:space:]]*//p' | head -1)"
+      ;;
+    oci://*)
+      v="$(helm show chart "$chart" --devel 2>/dev/null | sed -n 's/^version:[[:space:]]*//p' | head -1)"
+      ;;
+  esac
   [ -n "$v" ] && { echo "$v"; return; }
   default_version
 }
