@@ -711,6 +711,8 @@ export type KnRelationType = { id: string; name?: string; sourceId: string; targ
 export type KnDetail = {
   id: string;
   name?: string;
+  /** 网络简介/用途（get_kn_detail 顶层 comment），适合做摘要。 */
+  comment?: string;
   object_types: KnObjectType[];
   concept_groups: KnConceptGroup[];
   relation_types: KnRelationType[];
@@ -761,6 +763,7 @@ export async function fetchKnDetail(env: ContextLoaderEnv): Promise<KnDetail> {
   return {
     id: data.id ?? env.knId,
     name: data.name,
+    comment: typeof data.comment === "string" ? data.comment : undefined,
     object_types: Array.isArray(data.object_types) ? data.object_types : [],
     concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
     relation_types: parseRelationTypes(data.relation_types ?? data.relations),

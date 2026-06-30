@@ -2,11 +2,15 @@
  * 立即体验 · Agent 对话 —— 前端编排的真实工具调用循环 UI。
  * 模型走「模型工厂」(mf-model-api OpenAI 兼容)，检索工具走 agent-retrieval MCP；
  * 上下文全在前端缓存（localStorage，按 kn_id 隔离）。see agent-chat.service.ts。
+ * 进入时自动载入选定知识网络的本体结构注入系统提示词（免去先浏览）；回答 Markdown 渲染。
  */
 
 import { DownOutlined, RightOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { App, Select } from "antd";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
@@ -17,8 +21,10 @@ import {
   type AgentChunk,
 } from "@/modules/knowledge-network/services/agent-chat.service";
 import {
+  fetchKnDetail,
   listMcpTools,
   type ContextLoaderEnv,
+  type KnDetail,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
@@ -27,9 +33,9 @@ import styles from "./AgentChat.module.css";
 const DEFAULT_PROMPT =
   "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
   "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
-  "kn_id 已锁定为当前网络，无需也不要修改。回答简洁、专业，使用中文，并在结论里说明依据。";
+  "kn_id 已锁定为当前网络，无需也不要修改。回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据。";
 
-const SUGGESTIONS = [
+const FALLBACK_SUGGESTIONS = [
   "这个知识网络里有哪些对象类和关系？",
   "帮我查最近活跃的高价值客户",
   "对象类之间是怎么关联的？",
@@ -76,6 +82,46 @@ function formatArgs(args: unknown): string {
   }
 }
 
+/**
+ * 注入系统提示词的知识网络**摘要**（非完整结构）：名称 + 简介 + 规模 + 对象类名（截断）。
+ * 完整本体/实例由 Agent 按需调 get_kn_detail / search_schema 等工具获取。
+ */
+function buildKnContext(detail: KnDetail): string {
+  const otNames = detail.object_types.map((o) => o.name || o.id);
+  const shown = otNames.slice(0, 12);
+  const lines = [`名称：${detail.name ?? detail.id}（${detail.id}）`];
+  if (detail.comment) lines.push(`简介：${detail.comment.replace(/\s+/g, " ").trim().slice(0, 200)}`);
+  lines.push(`规模：${detail.object_types.length} 个对象类、${detail.relation_types.length} 个关系类`);
+  if (otNames.length) {
+    lines.push(`对象类：${shown.join("、")}${otNames.length > shown.length ? ` 等 ${otNames.length} 个` : ""}`);
+  }
+  return lines.join("\n");
+}
+
+/** Markdown 渲染（GFM：表格/删除线/任务列表）。 */
+const MarkdownView = memo(function MarkdownView({ text }: { text: string }) {
+  return (
+    <div className={styles.md}>
+      <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+    </div>
+  );
+});
+
+/** 思考过程（reasoning_content）流式展示：进行中自动展开，结束后可折叠。 */
+function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
+  // 生成中默认展开，但用户可随时手动收起（不再被 live 强制锁开）。
+  const [open, setOpen] = useState(live);
+  return (
+    <div className={styles.reasoning}>
+      <button type="button" className={styles.reasoningHead} onClick={() => setOpen((v) => !v)}>
+        <span>💭 {live ? "思考中…" : "思考过程"}</span>
+        <span className={styles.chev}>{open ? <DownOutlined /> : <RightOutlined />}</span>
+      </button>
+      {open ? <div className={styles.reasoningText}>{text}</div> : null}
+    </div>
+  );
+}
+
 /** 单条工具调用卡片（可折叠，展开看真实请求参数与响应）。 */
 function ToolCallCard({ call }: { call: ToolCallView }) {
   const [open, setOpen] = useState(false);
@@ -110,20 +156,33 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
 
 export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; networkName?: string }) {
   const { message } = App.useApp();
+  const navigate = useNavigate();
   const knId = env.knId;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [models, setModels] = useState<LlmModel[]>([]);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [model, setModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
   const [promptOpen, setPromptOpen] = useState(false);
+  const [promptView, setPromptView] = useState<"edit" | "full">("edit");
+  // 自动载入的知识网络本体结构（注入系统提示词；也用于定制建议问题）。
+  const [knContext, setKnContext] = useState("");
+  const [knSummary, setKnSummary] = useState<{ objectTypes: number; relations: number } | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>(FALLBACK_SUGGESTIONS);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  // 缓存 MCP 工具定义（tools/list）；按 kn 失效重取。
   const mcpToolsRef = useRef<{ knId: string; tools: McpToolDef[] } | null>(null);
+  // 是否贴底跟随；用户上滚时置 false，回到底部恢复，避免生成时被强制拽到底。
+  const stickRef = useRef(true);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  }, []);
 
   // 载入持久化对话（按 kn 隔离）。
   useEffect(() => {
@@ -148,18 +207,45 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
       })
       .catch(() => {
         if (!cancelled) setModels([]);
+      })
+      .finally(() => {
+        if (!cancelled) setModelsLoaded(true);
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // 持久化（对话除外，对话在每轮结束时落盘，避免逐字写）。
+  // 自动载入选定知识网络的本体结构 → 注入系统提示词 + 定制建议（免去先浏览业务知识网络）。
+  useEffect(() => {
+    let cancelled = false;
+    setKnContext("");
+    setKnSummary(null);
+    setSuggestions(FALLBACK_SUGGESTIONS);
+    fetchKnDetail(env)
+      .then((detail) => {
+        if (cancelled) return;
+        setKnContext(buildKnContext(detail));
+        setKnSummary({ objectTypes: detail.object_types.length, relations: detail.relation_types.length });
+        const firstOt = detail.object_types[0];
+        const firstRel = detail.relation_types[0];
+        const tailored: string[] = ["列出这个知识网络的对象类和关系类"];
+        if (firstOt) tailored.push(`${firstOt.name ?? firstOt.id} 有哪些数据？举几条实例`);
+        if (firstRel) tailored.push(`${firstRel.name ?? firstRel.id} 关系连接了哪些对象？`);
+        setSuggestions(tailored.length >= 2 ? tailored : FALLBACK_SUGGESTIONS);
+      })
+      .catch(() => {
+        /* 占位符 / 无权限网络拉不到结构时，回退默认建议，Agent 仍可用工具探索 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [env]);
+
   const persist = useCallback(
     (msgs: ChatMessage[]) => {
       try {
-        const data: Persisted = { messages: msgs, model, systemPrompt };
-        localStorage.setItem(lsKey(knId), JSON.stringify(data));
+        localStorage.setItem(lsKey(knId), JSON.stringify({ messages: msgs, model, systemPrompt } satisfies Persisted));
       } catch {
         /* localStorage 不可用时忽略 */
       }
@@ -169,10 +255,9 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  /** 更新当前（最后一条）assistant 消息。 */
   const updateAssistant = useCallback((updater: (prev: ChatMessage) => ChatMessage) => {
     setMessages((prev) => {
       if (prev.length === 0) return prev;
@@ -223,12 +308,20 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
           updateAssistant((m) => ({ ...m, content: m.content + (m.content ? "\n\n" : "") + `⚠️ ${chunk.error}` }));
           break;
         case "finish":
-          break;
         default:
           break;
       }
     },
     [updateAssistant],
+  );
+
+  // 实际发送的完整系统提示词 = 可编辑提示词 + 自动附加的知识网络摘要。
+  const composedSystem = useMemo(
+    () =>
+      knContext
+        ? `${systemPrompt}\n\n## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n${knContext}`
+        : systemPrompt,
+    [systemPrompt, knContext],
   );
 
   const send = useCallback(
@@ -243,7 +336,6 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
       setBusy(true);
       setInput("");
 
-      // 先拼历史（不含本轮），再 push user + assistant 占位。
       const history: AgentChatTurn[] = messages.map((m) => ({ role: m.role, content: m.content }));
       history.push({ role: "user", content: question });
       setMessages((prev) => [
@@ -253,10 +345,8 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
       ]);
 
       try {
-        // 构造/复用工具：tools/list 按 kn 缓存；每轮新建会话以用当轮新鲜 token。
         if (!mcpToolsRef.current || mcpToolsRef.current.knId !== knId) {
-          const tools = await listMcpTools(env);
-          mcpToolsRef.current = { knId, tools };
+          mcpToolsRef.current = { knId, tools: await listMcpTools(env) };
         }
         const tools = buildAgentTools(mcpToolsRef.current.tools, env, knId);
 
@@ -265,7 +355,7 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
         await runAgentChat({
           env,
           modelName: model,
-          system: systemPrompt,
+          system: composedSystem,
           history,
           tools,
           signal: controller.signal,
@@ -285,7 +375,7 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
         });
       }
     },
-    [busy, model, messages, env, knId, systemPrompt, handleChunk, updateAssistant, persist, message],
+    [busy, model, messages, env, knId, composedSystem, handleChunk, updateAssistant, persist, message],
   );
 
   const stop = useCallback(() => {
@@ -307,10 +397,11 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
   );
 
   const empty = messages.length === 0;
+  const lastIdx = messages.length - 1;
+  const noLlm = modelsLoaded && models.length === 0;
 
   return (
     <div className={styles.root}>
-      {/* 顶部工具条：模型选择 + 系统提示词 + 清空 */}
       <div className={styles.bar}>
         <div className={styles.barField}>
           <span className={styles.barLabel}>模型</span>
@@ -325,6 +416,11 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
             popupMatchSelectWidth={false}
           />
         </div>
+        {knSummary ? (
+          <span className={styles.knChip}>
+            已载入网络摘要 · {knSummary.objectTypes} 对象类 / {knSummary.relations} 关系类
+          </span>
+        ) : null}
         <button type="button" className={styles.barBtn} onClick={() => setPromptOpen((v) => !v)}>
           <ThunderboltFilled /> 系统提示词 {promptOpen ? <DownOutlined /> : <RightOutlined />}
         </button>
@@ -334,24 +430,79 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
       </div>
       {promptOpen ? (
         <div className={styles.promptEdit}>
-          <textarea
-            value={systemPrompt}
-            spellCheck={false}
-            onChange={(e) => setSystemPrompt(e.target.value)}
-            placeholder="系统提示词（修改即时生效，随对话一起发送）"
-          />
-          <div className={styles.promptAct}>
-            <button type="button" className={styles.linkBtn} onClick={() => setSystemPrompt(DEFAULT_PROMPT)}>
-              恢复默认
+          <div className={styles.promptTabs}>
+            <button
+              type="button"
+              className={`${styles.promptTab} ${promptView === "edit" ? styles.promptTabActive : ""}`}
+              onClick={() => setPromptView("edit")}
+            >
+              编辑
             </button>
-            <span className={styles.hint}>kn_id 已锁定为 {knId}，无需在提示词里指定。</span>
+            <button
+              type="button"
+              className={`${styles.promptTab} ${promptView === "full" ? styles.promptTabActive : ""}`}
+              onClick={() => setPromptView("full")}
+            >
+              完整（实际发送）
+            </button>
+            {promptView === "full" ? (
+              <button
+                type="button"
+                className={styles.linkBtn}
+                style={{ marginLeft: "auto" }}
+                onClick={() => {
+                  void navigator.clipboard?.writeText(composedSystem).then(() => message.success("已复制完整提示词"));
+                }}
+              >
+                复制
+              </button>
+            ) : null}
           </div>
+          {promptView === "edit" ? (
+            <>
+              <textarea
+                value={systemPrompt}
+                spellCheck={false}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                placeholder="系统提示词（修改即时生效，随对话一起发送）"
+              />
+              <div className={styles.promptAct}>
+                <button type="button" className={styles.linkBtn} onClick={() => setSystemPrompt(DEFAULT_PROMPT)}>
+                  恢复默认
+                </button>
+                <span className={styles.hint}>
+                  kn_id 已锁定为 {knId}
+                  {knSummary ? "；该网络摘要会自动附加（见「完整」）" : ""}。
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <textarea className={styles.promptFull} value={composedSystem} readOnly spellCheck={false} />
+              <div className={styles.promptAct}>
+                <span className={styles.hint}>每轮随对话实际发送给模型的完整系统提示词（你的提示词 + 自动附加的网络摘要），只读。</span>
+              </div>
+            </>
+          )}
         </div>
       ) : null}
 
-      {/* 消息区 */}
-      <div className={styles.scroll} ref={scrollRef}>
-        {empty ? (
+      <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll}>
+        {noLlm ? (
+          <div className={styles.intro}>
+            <div className={styles.introGlyph}>
+              <ThunderboltFilled />
+            </div>
+            <h3>还没有可用的大模型</h3>
+            <p>Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。</p>
+            <div className={styles.sugs}>
+              <button type="button" className={styles.sug} onClick={() => navigate("/model-resources/models")}>
+                <span className={styles.sugText}>去模型工厂接入大模型</span>
+                <RightOutlined className={styles.sugArrow} />
+              </button>
+            </div>
+          </div>
+        ) : empty ? (
           <div className={styles.intro}>
             <div className={styles.introGlyph}>
               <ThunderboltFilled />
@@ -360,57 +511,73 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
             <p>
               用自然语言向 Agent 提问，它会基于知识网络 <code>{knId}</code>
               {networkName ? `（${networkName}）` : ""} 调用检索工具并作答。
+              {knSummary ? `已自动载入网络摘要（${knSummary.objectTypes} 对象类 / ${knSummary.relations} 关系类），无需先浏览。` : ""}
             </p>
             <div className={styles.sugs}>
-              {SUGGESTIONS.map((s) => (
+              {suggestions.map((s) => (
                 <button key={s} type="button" className={styles.sug} onClick={() => void send(s)}>
-                  {s}
+                  <span className={styles.sugText}>{s}</span>
+                  <RightOutlined className={styles.sugArrow} />
                 </button>
               ))}
             </div>
           </div>
         ) : (
           <div className={styles.wrap}>
-            {messages.map((m, i) => (
-              <div key={i} className={`${styles.msg} ${m.role === "user" ? styles.msgUser : styles.msgBot}`}>
-                <div className={styles.avatar}>{m.role === "user" ? "我" : <ThunderboltFilled />}</div>
-                <div className={styles.bubble}>
-                  <div className={styles.who}>{m.role === "user" ? "我" : "Agent"}</div>
-                  {m.toolCalls && m.toolCalls.length > 0 ? (
-                    <div className={styles.calls}>
-                      {m.toolCalls.map((tc) => (
-                        <ToolCallCard key={tc.id} call={tc} />
-                      ))}
-                    </div>
-                  ) : null}
-                  {m.content ? (
-                    <div className={styles.txt}>{m.content}</div>
-                  ) : m.role === "assistant" && busy && i === messages.length - 1 && (!m.toolCalls || m.toolCalls.length === 0) ? (
-                    <div className={styles.typing}>
-                      <i />
-                      <i />
-                      <i />
-                    </div>
-                  ) : null}
+            {messages.map((m, i) => {
+              const isLast = i === lastIdx;
+              const hasTools = !!m.toolCalls && m.toolCalls.length > 0;
+              return (
+                <div key={i} className={`${styles.msg} ${m.role === "user" ? styles.msgUser : styles.msgBot}`}>
+                  <div className={styles.avatar}>{m.role === "user" ? "我" : <ThunderboltFilled />}</div>
+                  <div className={styles.bubble}>
+                    <div className={styles.who}>{m.role === "user" ? "我" : "Agent"}</div>
+                    {m.reasoning ? <ReasoningBlock text={m.reasoning} live={busy && isLast && !m.content} /> : null}
+                    {hasTools ? (
+                      <div className={styles.calls}>
+                        {m.toolCalls!.map((tc) => (
+                          <ToolCallCard key={tc.id} call={tc} />
+                        ))}
+                      </div>
+                    ) : null}
+                    {m.content ? (
+                      m.role === "assistant" ? (
+                        <MarkdownView text={m.content} />
+                      ) : (
+                        <div className={styles.txt}>{m.content}</div>
+                      )
+                    ) : m.role === "assistant" && busy && isLast && !m.reasoning && !hasTools ? (
+                      <div className={styles.typing}>
+                        <i />
+                        <i />
+                        <i />
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* 输入区 */}
       <div className={styles.composer}>
         <div className={styles.cwrap}>
           <textarea
             className={styles.cInput}
             value={input}
             rows={1}
-            placeholder="向 Agent 提问，例如：最近活跃的高价值客户有哪些？"
+            disabled={noLlm}
+            placeholder={
+              noLlm
+                ? "请先在「模型工厂」接入大模型后再对话"
+                : `向 Agent 提问，例如：${suggestions[0] ?? "这个知识网络里有哪些对象类和关系？"}`
+            }
             spellCheck={false}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              // 跳过中文输入法组字中的回车（确认候选词），避免误发送。
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
                 e.preventDefault();
                 void send(input);
               }
