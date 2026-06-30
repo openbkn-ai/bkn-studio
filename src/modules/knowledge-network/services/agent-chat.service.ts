@@ -39,6 +39,47 @@ function capToolResult(text: string): string {
   );
 }
 
+/** 大结果工具的硬性查询约束，追加到工具 description，逼模型在查询里就缩小结果。 */
+const TOOL_HINTS: Record<string, string> = {
+  run_sql:
+    " 【重要】用 SQL 完成聚合/计数/排序/分组并配 LIMIT、只取需要的列；禁止 SELECT * 或拉全表。结果会被截断到约 8000 字符。",
+  query_object_instance:
+    " 【重要】用 filters 精确过滤 + 小 limit + properties 只取必要字段；不要返回大结果集。结果会被截断到约 8000 字符。",
+  query_instance_subgraph: " 【重要】用尽量小的 limit；结果会被截断到约 8000 字符。",
+  list_resources: " 【重要】用 catalog_id/type 过滤 + 小 limit 分页；结果会被截断到约 8000 字符。",
+  search_schema: " 提示：用精确的 query 与较小的 max_concepts；结果会被截断到约 8000 字符。",
+};
+
+/**
+ * 步间驱逐旧工具结果：每步前只保留最近 KEEP 个工具结果的全文，更早的把内容替换成占位，
+ * 但**保留 toolCallId / toolName 配对**（OpenAI 要求每个 tool_call 都有对应 tool 响应）。
+ * 治本地压住「单轮多步工具结果累积撑爆上下文」。
+ */
+const KEEP_TOOL_RESULTS = 3;
+
+function evictOldToolResults(messages: ModelMessage[]): ModelMessage[] {
+  const toolPositions = messages.reduce<number[]>((acc, m, i) => {
+    if (m.role === "tool") acc.push(i);
+    return acc;
+  }, []);
+  if (toolPositions.length <= KEEP_TOOL_RESULTS) return messages;
+  const evict = new Set(toolPositions.slice(0, toolPositions.length - KEEP_TOOL_RESULTS));
+  return messages.map((m, i) => {
+    if (!evict.has(i) || m.role !== "tool" || !Array.isArray(m.content)) return m;
+    const content = m.content.map((part) =>
+      part.type === "tool-result"
+        ? {
+            type: "tool-result" as const,
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+            output: { type: "text" as const, value: "[旧工具结果已省略以节省上下文]" },
+          }
+        : part,
+    );
+    return { ...m, content };
+  });
+}
+
 export type AgentChatRole = "user" | "assistant";
 
 /** 缓存进 localStorage 的对话历史项（仅文本，工具步骤不进历史，仅用于重发上下文）。 */
@@ -70,7 +111,7 @@ export function buildAgentTools(mcpTools: McpToolDef[], env: ContextLoaderEnv, k
         ? (def.inputSchema as Record<string, unknown>)
         : { type: "object", properties: {} };
     tools[def.name] = tool({
-      description: def.description ?? def.name,
+      description: (def.description ?? def.name) + (TOOL_HINTS[def.name] ?? ""),
       inputSchema: jsonSchema(schema),
       execute: async (input: unknown): Promise<string> => {
         const args: Record<string, unknown> = {
@@ -143,6 +184,8 @@ export async function runAgentChat(params: {
       messages,
       tools,
       stopWhen: stepCountIs(MAX_STEPS),
+      // 每步前驱逐旧工具结果，避免单轮多步累积撑爆上下文。
+      prepareStep: ({ messages: stepMessages }) => ({ messages: evictOldToolResults(stepMessages) }),
       abortSignal: signal,
     });
 
