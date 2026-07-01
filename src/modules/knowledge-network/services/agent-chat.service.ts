@@ -134,8 +134,9 @@ export function buildAgentTools(
   env: ContextLoaderEnv,
   knId: string,
   cfg: AgentConfig,
+  tokenProvider: AgentTokenProvider,
 ): ToolSet {
-  const session = createMcpSession(env);
+  const session = createMcpSession(env, tokenProvider);
   const tools: ToolSet = {};
   for (const def of mcpTools) {
     if (!def.name) continue;
@@ -159,37 +160,53 @@ export function buildAgentTools(
   return tools;
 }
 
-/**
- * 模型工厂网关兼容性 fetch：实测其 OpenAI 兼容 router 比标准更严——
- * 不接受 assistant 消息的 `content: null`（报 "none is not an allowed value"）。
- * 故在出站请求体里把任意 null content 归一为 ""，并剥掉回灌的 `reasoning_content`（思考不必回发）。
- */
-const compatFetch = (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-  if (init?.body && typeof init.body === "string") {
-    try {
-      const parsed = JSON.parse(init.body) as { messages?: Array<Record<string, unknown>> };
-      if (Array.isArray(parsed.messages)) {
-        for (const m of parsed.messages) {
-          if (m && m.content === null) m.content = "";
-          if (m && "reasoning_content" in m) delete m.reasoning_content;
-        }
-        init = { ...init, body: JSON.stringify(parsed) };
-      }
-    } catch {
-      /* 非 JSON body 原样放行 */
-    }
-  }
-  return fetch(input, init);
-}) as typeof fetch;
+/** 鉴权 provider：getToken 每请求取新鲜 token（OAuth 会续期），refresh 在 401 时刷新。 */
+export type AgentTokenProvider = { getToken: () => string; refresh: () => Promise<string | null> };
 
-/** 构造模型工厂 OpenAI 兼容大模型实例（同源相对网关，带 Bearer + 兼容性 fetch）。 */
-function createChatModel(env: ContextLoaderEnv, modelName: string) {
+/**
+ * 模型工厂网关的鉴权 + 兼容性 fetch：
+ * - 每请求用 provider.getToken() 的新鲜 token 设 Authorization；401 时 refresh 后重试一次（OAuth 自动续期，
+ *   解决长对话/长循环跨过 token 过期而断掉的问题）。
+ * - 兼容其严格 router：assistant 消息 `content: null` 归一为 ""，剥掉回灌的 `reasoning_content`。
+ */
+function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
+  const run = (input: RequestInfo | URL, init: RequestInit | undefined, token: string): Promise<Response> => {
+    let body = init?.body;
+    if (typeof body === "string") {
+      try {
+        const parsed = JSON.parse(body) as { messages?: Array<Record<string, unknown>> };
+        if (Array.isArray(parsed.messages)) {
+          for (const m of parsed.messages) {
+            if (m && m.content === null) m.content = "";
+            if (m && "reasoning_content" in m) delete m.reasoning_content;
+          }
+          body = JSON.stringify(parsed);
+        }
+      } catch {
+        /* 非 JSON body 原样放行 */
+      }
+    }
+    const headers = new Headers(init?.headers);
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    return fetch(input, { ...init, headers, body });
+  };
+  return (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    let response = await run(input, init, provider.getToken());
+    if (response.status === 401) {
+      const fresh = await provider.refresh().catch(() => null);
+      if (fresh) response = await run(input, init, fresh);
+    }
+    return response;
+  }) as typeof fetch;
+}
+
+/** 构造模型工厂 OpenAI 兼容大模型实例（新鲜 token + 401 刷新 + 兼容性 fetch）。 */
+function createChatModel(env: ContextLoaderEnv, modelName: string, tokenProvider: AgentTokenProvider) {
   const baseURL = `${env.base.replace(/\/+$/, "")}${MODEL_API_PATH}`;
   const provider = createOpenAICompatible({
     name: "mf-model-api",
     baseURL,
-    headers: env.token ? { Authorization: `Bearer ${env.token}` } : {},
-    fetch: compatFetch,
+    fetch: makeAuthedFetch(tokenProvider),
   });
   return provider(modelName);
 }
@@ -205,15 +222,16 @@ export async function runAgentChat(params: {
   history: AgentChatTurn[];
   tools: ToolSet;
   config: AgentConfig;
+  tokenProvider: AgentTokenProvider;
   signal?: AbortSignal;
   onChunk: (chunk: AgentChunk) => void;
 }): Promise<void> {
-  const { env, modelName, system, history, tools, config, signal, onChunk } = params;
+  const { env, modelName, system, history, tools, config, tokenProvider, signal, onChunk } = params;
   const messages: ModelMessage[] = history.map((turn) => ({ role: turn.role, content: turn.content }));
 
   try {
     const result = streamText({
-      model: createChatModel(env, modelName),
+      model: createChatModel(env, modelName, tokenProvider),
       system,
       messages,
       tools,
@@ -265,7 +283,7 @@ export async function runAgentChat(params: {
     if (!gotText && !signal?.aborted) {
       const resp = await result.response;
       const finalResult = streamText({
-        model: createChatModel(env, modelName),
+        model: createChatModel(env, modelName, tokenProvider),
         system:
           system +
           "\n\n（已达到工具调用上限或需要收尾：请基于以上已获得的信息，直接用中文给出最终答复，不要再调用任何工具。）",

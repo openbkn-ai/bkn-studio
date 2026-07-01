@@ -629,13 +629,20 @@ export type McpSession = {
  * 会话级 MCP 客户端：initialize 一次、缓存并复用 Mcp-Session-Id；
  * 会话失效（400/404）时自动重连一次。供 Agent 对话的工具循环复用，避免每次调用重建会话。
  */
-export function createMcpSession(env: ContextLoaderEnv): McpSession {
+/** 可选鉴权：getToken 每次取新鲜 token，refresh 在 401 时刷新（OAuth 自动续期）。 */
+export type McpAuth = { getToken?: () => string; refresh?: () => Promise<string | null> };
+
+export function createMcpSession(env: ContextLoaderEnv, auth?: McpAuth): McpSession {
   const url = mcpBase(env);
-  const baseHeaders = (): Record<string, string> => ({
-    "Content-Type": "application/json",
-    Accept: "application/json, text/event-stream",
-    ...authHeaders(env),
-  });
+  const getToken = auth?.getToken ?? (() => env.token);
+  const baseHeaders = (): Record<string, string> => {
+    const token = getToken();
+    return {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  };
   let sessionId: string | null = null;
   let rpcId = 1;
 
@@ -677,6 +684,13 @@ export function createMcpSession(env: ContextLoaderEnv): McpSession {
       const start = performance.now();
       if (!sessionId) await initialize();
       let response = await callOnce(name, args);
+      if (response.status === 401 && auth?.refresh) {
+        // token 过期 → 刷新后重连重试。
+        await auth.refresh().catch(() => null);
+        sessionId = null;
+        await initialize();
+        response = await callOnce(name, args);
+      }
       if (response.status === 400 || response.status === 404) {
         // 会话失效 → 重连一次再试。
         sessionId = null;

@@ -21,6 +21,7 @@ import {
   type AgentChatTurn,
   type AgentChunk,
   type AgentConfig,
+  type AgentTokenProvider,
 } from "@/modules/knowledge-network/services/agent-chat.service";
 import {
   fetchKnDetail,
@@ -191,7 +192,15 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
   );
 }
 
-export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; networkName?: string }) {
+export function AgentChat({
+  env,
+  networkName,
+  tokenProvider,
+}: {
+  env: ContextLoaderEnv;
+  networkName?: string;
+  tokenProvider: AgentTokenProvider;
+}) {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const knId = env.knId;
@@ -414,7 +423,7 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
         if (!mcpToolsRef.current || mcpToolsRef.current.knId !== knId) {
           mcpToolsRef.current = { knId, tools: await listMcpTools(env) };
         }
-        const tools = buildAgentTools(mcpToolsRef.current.tools, env, knId, config);
+        const tools = buildAgentTools(mcpToolsRef.current.tools, env, knId, config, tokenProvider);
 
         const controller = new AbortController();
         abortRef.current = controller;
@@ -425,6 +434,7 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
           history,
           tools,
           config,
+          tokenProvider,
           signal: controller.signal,
           onChunk: handleChunk,
         });
@@ -442,7 +452,7 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
         });
       }
     },
-    [busy, model, messages, env, knId, composedSystem, config, handleChunk, updateAssistant, persist, message],
+    [busy, model, messages, env, knId, composedSystem, config, tokenProvider, handleChunk, updateAssistant, persist, message],
   );
 
   const stop = useCallback(() => {

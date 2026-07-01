@@ -45,6 +45,7 @@ import {
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 import { AgentChat } from "@/modules/knowledge-network/components/agent-chat/AgentChat";
+import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
 
 import styles from "./ExperienceScene.module.css";
 
@@ -923,6 +924,19 @@ export function ExperienceScene() {
     [base, token, knId],
   );
 
+  // Agent 对话用：每请求取新鲜 token、401 时刷新（OAuth 自动续期，避免长对话/长循环 token 过期断掉）。
+  const tokenProvider = useMemo<AgentTokenProvider>(
+    () => ({
+      getToken: () =>
+        authMode === "apikey" ? appKey.trim() : runtimeConfig.auth.tokenManager.getAccessToken() ?? "",
+      refresh: () =>
+        authMode === "apikey"
+          ? Promise.resolve(appKey.trim() || null)
+          : runtimeConfig.auth.tokenManager.refreshAccessToken(),
+    }),
+    [authMode, appKey, runtimeConfig],
+  );
+
   const op = useMemo(
     () => CONTEXT_LOADER_OPS.find((item) => item.id === selectedId) ?? CONTEXT_LOADER_OPS[0]!,
     [selectedId],
@@ -1221,7 +1235,7 @@ export function ExperienceScene() {
       </div>
 
       {mode === "agent" ? (
-        <AgentChat env={env} networkName={network?.name} />
+        <AgentChat env={env} networkName={network?.name} tokenProvider={tokenProvider} />
       ) : (
         <div className={styles.main}>
           {/* 接口列表 */}
