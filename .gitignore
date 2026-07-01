@@ -19,3 +19,6 @@ tests/execution-factory/tool/config.local.yaml
 
 # Claude Code local dir (config, worktrees)
 .claude/
+
+# Agent scratch dir
+.agents/
