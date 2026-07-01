@@ -17,8 +17,10 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
   buildAgentTools,
   runAgentChat,
+  DEFAULT_AGENT_CONFIG,
   type AgentChatTurn,
   type AgentChunk,
+  type AgentConfig,
 } from "@/modules/knowledge-network/services/agent-chat.service";
 import {
   fetchKnDetail,
@@ -76,6 +78,28 @@ function loadPersisted(knId: string): Partial<Persisted> {
     return {};
   }
 }
+
+/** Agent 调参全局缓存（不分 kn），UI 实时改。 */
+const CONFIG_LS_KEY = "bkn-studio:agentconfig";
+
+function loadConfig(): AgentConfig {
+  try {
+    const raw = localStorage.getItem(CONFIG_LS_KEY);
+    return raw ? { ...DEFAULT_AGENT_CONFIG, ...(JSON.parse(raw) as Partial<AgentConfig>) } : { ...DEFAULT_AGENT_CONFIG };
+  } catch {
+    return { ...DEFAULT_AGENT_CONFIG };
+  }
+}
+
+/** 参数面板字段定义（label + 说明 + key）。 */
+const CONFIG_FIELDS: { key: keyof AgentConfig; label: string; hint: string }[] = [
+  { key: "maxSteps", label: "工具步数上限", hint: "一轮最多调多少步工具（防跑飞兜底）" },
+  { key: "keepToolResults", label: "步间保留结果数", hint: "每步只保留最近 N 个工具结果全文（0=不驱逐）" },
+  { key: "dataToolCap", label: "数据类结果上限(字)", hint: "run_sql / query_* 结果字符上限（0=不截断）" },
+  { key: "schemaToolCap", label: "Schema类结果上限(字)", hint: "get_kn_detail / search_schema 等（0=不截断）" },
+  { key: "maxHistoryMessages", label: "多轮保留条数", hint: "跨轮历史只保留最近 N 条消息" },
+  { key: "maxTurnChars", label: "单轮文本上限(字)", hint: "每条历史消息文本封顶" },
+];
 
 function formatArgs(args: unknown): string {
   try {
@@ -171,6 +195,27 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
   const [promptOpen, setPromptOpen] = useState(false);
   const [promptView, setPromptView] = useState<"edit" | "full">("edit");
+  const [config, setConfigState] = useState<AgentConfig>(loadConfig);
+  const [cfgOpen, setCfgOpen] = useState(false);
+  const setConfigField = useCallback((key: keyof AgentConfig, value: number) => {
+    setConfigState((prev) => {
+      const next = { ...prev, [key]: Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : prev[key] };
+      try {
+        localStorage.setItem(CONFIG_LS_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+  const resetConfig = useCallback(() => {
+    setConfigState({ ...DEFAULT_AGENT_CONFIG });
+    try {
+      localStorage.removeItem(CONFIG_LS_KEY);
+    } catch {
+      /* ignore */
+    }
+  }, []);
   // 自动载入的知识网络本体结构（注入系统提示词；也用于定制建议问题）。
   const [knContext, setKnContext] = useState("");
   const [knSummary, setKnSummary] = useState<{ objectTypes: number; relations: number } | null>(null);
@@ -341,11 +386,12 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
 
       // 多轮上下文压缩：只保留最近若干轮，且单轮文本封顶，防长对话纯文本堆大。
       // （工具结果/思考本就不进历史，见 send() 历史只取 role+content。）
-      const MAX_HISTORY_MESSAGES = 16;
-      const MAX_TURN_CHARS = 4000;
-      const history: AgentChatTurn[] = messages.slice(-MAX_HISTORY_MESSAGES).map((m) => ({
+      const history: AgentChatTurn[] = messages.slice(-config.maxHistoryMessages).map((m) => ({
         role: m.role,
-        content: m.content.length > MAX_TURN_CHARS ? `${m.content.slice(0, MAX_TURN_CHARS)}\n…[历史过长已截断]` : m.content,
+        content:
+          config.maxTurnChars > 0 && m.content.length > config.maxTurnChars
+            ? `${m.content.slice(0, config.maxTurnChars)}\n…[历史过长已截断]`
+            : m.content,
       }));
       history.push({ role: "user", content: question });
       setMessages((prev) => [
@@ -358,7 +404,7 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
         if (!mcpToolsRef.current || mcpToolsRef.current.knId !== knId) {
           mcpToolsRef.current = { knId, tools: await listMcpTools(env) };
         }
-        const tools = buildAgentTools(mcpToolsRef.current.tools, env, knId);
+        const tools = buildAgentTools(mcpToolsRef.current.tools, env, knId, config);
 
         const controller = new AbortController();
         abortRef.current = controller;
@@ -368,6 +414,7 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
           system: composedSystem,
           history,
           tools,
+          config,
           signal: controller.signal,
           onChunk: handleChunk,
         });
@@ -385,7 +432,7 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
         });
       }
     },
-    [busy, model, messages, env, knId, composedSystem, handleChunk, updateAssistant, persist, message],
+    [busy, model, messages, env, knId, composedSystem, config, handleChunk, updateAssistant, persist, message],
   );
 
   const stop = useCallback(() => {
@@ -434,10 +481,38 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
         <button type="button" className={styles.barBtn} onClick={() => setPromptOpen((v) => !v)}>
           <ThunderboltFilled /> 系统提示词 {promptOpen ? <DownOutlined /> : <RightOutlined />}
         </button>
+        <button type="button" className={styles.barBtn} onClick={() => setCfgOpen((v) => !v)}>
+          参数 {cfgOpen ? <DownOutlined /> : <RightOutlined />}
+        </button>
         <button type="button" className={styles.barBtn} onClick={clearChat} disabled={busy || empty}>
           清空对话
         </button>
       </div>
+      {cfgOpen ? (
+        <div className={styles.cfgPanel}>
+          <div className={styles.cfgGrid}>
+            {CONFIG_FIELDS.map((f) => (
+              <label key={f.key} className={styles.cfgField} title={f.hint}>
+                <span className={styles.cfgLabel}>{f.label}</span>
+                <input
+                  type="number"
+                  min={0}
+                  className={styles.cfgInput}
+                  value={config[f.key]}
+                  onChange={(e) => setConfigField(f.key, Number(e.target.value))}
+                />
+                <span className={styles.cfgHint}>{f.hint}</span>
+              </label>
+            ))}
+          </div>
+          <div className={styles.promptAct}>
+            <button type="button" className={styles.linkBtn} onClick={resetConfig}>
+              恢复默认
+            </button>
+            <span className={styles.hint}>改动即时生效、localStorage 持久化，无需重新部署。0 表示不限制/不截断/不驱逐。</span>
+          </div>
+        </div>
+      ) : null}
       {promptOpen ? (
         <div className={styles.promptEdit}>
           <div className={styles.promptTabs}>

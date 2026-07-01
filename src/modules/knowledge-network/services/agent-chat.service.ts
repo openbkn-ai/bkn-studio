@@ -20,33 +20,45 @@ import {
 export const MODEL_API_PATH = "/api/mf-model-api/v1";
 
 /**
- * 一轮最多工具步数。仅作防跑飞兜底——正常情况模型出最终答复即自动停。
- * 因有步间驱逐（每步只留最近若干工具结果），步数与上下文已解耦，故拉得很高≈不限，
- * 同时保留上限避免模型卡死循环无限调工具。
+ * Agent 对话可调参数。前端 localStorage 存、UI 实时改，无需重新部署调参。
  */
-const MAX_STEPS = 40;
-
-/**
- * 单个工具结果喂回模型前的**按工具分级**字符上限。
- * - 数据类（run_sql / query_* / 逻辑属性）：本应在查询里聚合/过滤，返回大结果是查询写法问题 →
- *   收紧到 8000，逼模型聚合，避免全表 dump 撑爆上下文。
- * - schema / 发现类（get_kn_detail / search_schema / describe_resource / list_resources / skills /
- *   action）：结果天生较大但**有界且模型理解必需**，截太狠会丢结构信息导致反复重查 → 放宽。
- * 配合步间驱逐（只留最近若干个），即便放宽，累积也受控（远低于 384k context）。
- */
-const DEFAULT_TOOL_RESULT_CHARS = 8000;
-const TOOL_RESULT_CAP: Record<string, number> = {
-  get_kn_detail: 32000,
-  search_schema: 24000,
-  describe_resource: 16000,
-  list_resources: 16000,
-  find_skills: 12000,
-  get_action_info: 12000,
+export type AgentConfig = {
+  /** 工具步数上限（防跑飞兜底；正常由模型出最终答复自动停）。 */
+  maxSteps: number;
+  /** 步间驱逐：每步保留最近几个工具结果全文，更早的换占位（0=不驱逐）。 */
+  keepToolResults: number;
+  /** 数据类工具（run_sql / query_*）结果字符上限——逼聚合（0=不截断）。 */
+  dataToolCap: number;
+  /** schema/发现类工具（get_kn_detail / search_schema / describe / list_resources …）结果字符上限——放宽（0=不截断）。 */
+  schemaToolCap: number;
+  /** 多轮历史保留最近条数。 */
+  maxHistoryMessages: number;
+  /** 单轮历史文本字符上限。 */
+  maxTurnChars: number;
 };
 
-function capToolResult(text: string, toolName: string): string {
-  const limit = TOOL_RESULT_CAP[toolName] ?? DEFAULT_TOOL_RESULT_CHARS;
-  if (text.length <= limit) return text;
+export const DEFAULT_AGENT_CONFIG: AgentConfig = {
+  maxSteps: 40,
+  keepToolResults: 3,
+  dataToolCap: 8000,
+  schemaToolCap: 24000,
+  maxHistoryMessages: 16,
+  maxTurnChars: 4000,
+};
+
+/** schema/发现类工具：结果天生大但有界且模型理解必需 → 用 schemaToolCap（更宽）；其余用 dataToolCap（逼聚合）。 */
+const SCHEMA_TOOLS = new Set([
+  "get_kn_detail",
+  "search_schema",
+  "describe_resource",
+  "list_resources",
+  "find_skills",
+  "get_action_info",
+]);
+
+function capToolResult(text: string, toolName: string, cfg: AgentConfig): string {
+  const limit = SCHEMA_TOOLS.has(toolName) ? cfg.schemaToolCap : cfg.dataToolCap;
+  if (limit <= 0 || text.length <= limit) return text;
   const dropped = text.length - limit;
   return (
     text.slice(0, limit) +
@@ -54,31 +66,29 @@ function capToolResult(text: string, toolName: string): string {
   );
 }
 
-/** 大结果工具的硬性查询约束，追加到工具 description，逼模型在查询里就缩小结果。 */
+/** 大结果工具的查询约束，追加到工具 description，逼模型在查询里就缩小结果。 */
 const TOOL_HINTS: Record<string, string> = {
   run_sql:
-    " 【重要】用 SQL 完成聚合/计数/排序/分组并配 LIMIT、只取需要的列；禁止 SELECT * 或拉全表。结果会被截断到约 8000 字符。",
+    " 【重要】用 SQL 完成聚合/计数/排序/分组并配 LIMIT、只取需要的列；禁止 SELECT * 或拉全表。结果过大会被截断。",
   query_object_instance:
-    " 【重要】用 filters 精确过滤 + 小 limit + properties 只取必要字段；不要返回大结果集。结果会被截断到约 8000 字符。",
-  query_instance_subgraph: " 【重要】用尽量小的 limit；结果会被截断到约 8000 字符。",
+    " 【重要】用 filters 精确过滤 + 小 limit + properties 只取必要字段；不要返回大结果集。结果过大会被截断。",
+  query_instance_subgraph: " 【重要】用尽量小的 limit；结果过大会被截断。",
   list_resources: " 【重要】用 catalog_id/type 过滤 + 小 limit 分页；结果过大会被截断。",
   search_schema: " 建议：用精确的 query，max_concepts 默认不超过 10；结果过大会被截断。",
 };
 
 /**
- * 步间驱逐旧工具结果：每步前只保留最近 KEEP 个工具结果的全文，更早的把内容替换成占位，
- * 但**保留 toolCallId / toolName 配对**（OpenAI 要求每个 tool_call 都有对应 tool 响应）。
- * 治本地压住「单轮多步工具结果累积撑爆上下文」。
+ * 步间驱逐旧工具结果：每步前只保留最近 keep 个工具结果的全文，更早的把内容替换成占位，
+ * 但**保留 toolCallId / toolName 配对**（OpenAI 要求每个 tool_call 都有对应 tool 响应）。keep<=0 不驱逐。
  */
-const KEEP_TOOL_RESULTS = 3;
-
-function evictOldToolResults(messages: ModelMessage[]): ModelMessage[] {
+function evictOldToolResults(messages: ModelMessage[], keep: number): ModelMessage[] {
+  if (keep <= 0) return messages;
   const toolPositions = messages.reduce<number[]>((acc, m, i) => {
     if (m.role === "tool") acc.push(i);
     return acc;
   }, []);
-  if (toolPositions.length <= KEEP_TOOL_RESULTS) return messages;
-  const evict = new Set(toolPositions.slice(0, toolPositions.length - KEEP_TOOL_RESULTS));
+  if (toolPositions.length <= keep) return messages;
+  const evict = new Set(toolPositions.slice(0, toolPositions.length - keep));
   return messages.map((m, i) => {
     if (!evict.has(i) || m.role !== "tool" || !Array.isArray(m.content)) return m;
     const content = m.content.map((part) =>
@@ -116,7 +126,12 @@ export type AgentChunk =
  * - execute 走会话级 MCP 客户端，并强制注入锁定 kn_id（模型不可改）。
  * 返回工具集 + 共享的 MCP 会话（复用同一 session）。
  */
-export function buildAgentTools(mcpTools: McpToolDef[], env: ContextLoaderEnv, knId: string): ToolSet {
+export function buildAgentTools(
+  mcpTools: McpToolDef[],
+  env: ContextLoaderEnv,
+  knId: string,
+  cfg: AgentConfig,
+): ToolSet {
   const session = createMcpSession(env);
   const tools: ToolSet = {};
   for (const def of mcpTools) {
@@ -134,7 +149,7 @@ export function buildAgentTools(mcpTools: McpToolDef[], env: ContextLoaderEnv, k
           kn_id: knId,
         };
         const res = await session.callTool(def.name, args);
-        return capToolResult(res.text, def.name);
+        return capToolResult(res.text, def.name, cfg);
       },
     });
   }
@@ -186,10 +201,11 @@ export async function runAgentChat(params: {
   system: string;
   history: AgentChatTurn[];
   tools: ToolSet;
+  config: AgentConfig;
   signal?: AbortSignal;
   onChunk: (chunk: AgentChunk) => void;
 }): Promise<void> {
-  const { env, modelName, system, history, tools, signal, onChunk } = params;
+  const { env, modelName, system, history, tools, config, signal, onChunk } = params;
   const messages: ModelMessage[] = history.map((turn) => ({ role: turn.role, content: turn.content }));
 
   try {
@@ -198,9 +214,9 @@ export async function runAgentChat(params: {
       system,
       messages,
       tools,
-      stopWhen: stepCountIs(MAX_STEPS),
+      stopWhen: stepCountIs(config.maxSteps),
       // 每步前驱逐旧工具结果，避免单轮多步累积撑爆上下文。
-      prepareStep: ({ messages: stepMessages }) => ({ messages: evictOldToolResults(stepMessages) }),
+      prepareStep: ({ messages: stepMessages }) => ({ messages: evictOldToolResults(stepMessages, config.keepToolResults) }),
       abortSignal: signal,
     });
 
