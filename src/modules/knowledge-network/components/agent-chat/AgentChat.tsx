@@ -509,7 +509,17 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
             <button type="button" className={styles.linkBtn} onClick={resetConfig}>
               恢复默认
             </button>
-            <span className={styles.hint}>改动即时生效、localStorage 持久化，无需重新部署。0 表示不限制/不截断/不驱逐。</span>
+            <span className={styles.hint}>已随输入即时保存到 localStorage，无需重新部署。0 表示不限制/不截断/不驱逐。</span>
+            <button
+              type="button"
+              className={styles.confirmBtn}
+              onClick={() => {
+                setCfgOpen(false);
+                message.success("参数已保存");
+              }}
+            >
+              确认
+            </button>
           </div>
         </div>
       ) : null}
@@ -559,6 +569,17 @@ export function AgentChat({ env, networkName }: { env: ContextLoaderEnv; network
                   kn_id 已锁定为 {knId}
                   {knSummary ? "；该网络摘要会自动附加（见「完整」）" : ""}。
                 </span>
+                <button
+                  type="button"
+                  className={styles.confirmBtn}
+                  onClick={() => {
+                    persist(messages);
+                    setPromptOpen(false);
+                    message.success("系统提示词已保存");
+                  }}
+                >
+                  确认
+                </button>
               </div>
             </>
           ) : (
