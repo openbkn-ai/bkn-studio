@@ -358,6 +358,13 @@ export function AgentChat({
     if (el && stickRef.current) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
+  // 一轮结束（busy: true→false）把最终 messages+stats（含本轮时长）落盘；流式中不写。
+  const prevBusyRef = useRef(false);
+  useEffect(() => {
+    if (prevBusyRef.current && !busy && messages.length) persist(messages, stats);
+    prevBusyRef.current = busy;
+  }, [busy, messages, stats, persist]);
+
   const updateAssistant = useCallback((updater: (prev: ChatMessage) => ChatMessage) => {
     setMessages((prev) => {
       if (prev.length === 0) return prev;
@@ -483,20 +490,13 @@ export function AgentChat({
         }));
       } finally {
         abortRef.current = null;
-        setBusy(false);
         const elapsed = performance.now() - startedAt;
-        // 本轮耗时写到最后一条 assistant 消息 + 累计会话总时长；token 已在 usage chunk 累计。
-        setStats((prevStats) => {
-          const nextStats = { ...prevStats, ms: prevStats.ms + elapsed };
-          setMessages((prevMsgs) => {
-            const nextMsgs = prevMsgs.map((m, i) =>
-              i === prevMsgs.length - 1 && m.role === "assistant" ? { ...m, ms: elapsed } : m,
-            );
-            persist(nextMsgs, nextStats);
-            return nextMsgs;
-          });
-          return nextStats;
-        });
+        // 本轮耗时写到最后一条 assistant 消息 + 累计会话总时长（token 已在 usage chunk 累计）。
+        setMessages((cur) =>
+          cur.map((m, i) => (i === cur.length - 1 && m.role === "assistant" ? { ...m, ms: elapsed } : m)),
+        );
+        setStats((s) => ({ ...s, ms: s.ms + elapsed }));
+        setBusy(false); // 触发下方「完成即持久化」effect
       }
     },
     [busy, model, messages, env, knId, composedSystem, config, tokenProvider, handleChunk, updateAssistant, persist, message],
