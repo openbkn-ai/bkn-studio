@@ -467,6 +467,29 @@
   max-height: 260px;
   overflow: auto;
 }
+/* 思考中：头部变蓝 + 闪烁点，收起时也能看到在跑 */
+.reasoningLive {
+  color: var(--accent);
+}
+.thinkDots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.thinkDots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: blink 1.2s infinite;
+}
+.thinkDots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.thinkDots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 /* Markdown 答复渲染 */
 .md {

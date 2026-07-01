@@ -140,8 +140,17 @@ function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
   const [open, setOpen] = useState(live);
   return (
     <div className={styles.reasoning}>
-      <button type="button" className={styles.reasoningHead} onClick={() => setOpen((v) => !v)}>
-        <span>💭 {live ? "思考中…" : "思考过程"}</span>
+      <button type="button" className={`${styles.reasoningHead} ${live ? styles.reasoningLive : ""}`} onClick={() => setOpen((v) => !v)}>
+        <span>
+          💭 {live ? "思考中" : "思考过程"}
+          {live ? (
+            <span className={styles.thinkDots}>
+              <i />
+              <i />
+              <i />
+            </span>
+          ) : null}
+        </span>
         <span className={styles.chev}>{open ? <DownOutlined /> : <RightOutlined />}</span>
       </button>
       {open ? <div className={styles.reasoningText}>{text}</div> : null}
