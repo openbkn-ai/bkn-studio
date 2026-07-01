@@ -70,9 +70,29 @@ type ChatMessage = {
   content: string;
   reasoning?: string;
   toolCalls?: ToolCallView[];
+  /** 本轮真实累计 token（来自 usage，finish 时才有）。 */
+  tokens?: number;
+  /** 本轮总耗时 ms（完成后填）。 */
+  ms?: number;
 };
 
-type Persisted = { messages: ChatMessage[]; model: string; systemPrompt: string };
+type SessionStats = { tokens: number; ms: number };
+
+type Persisted = { messages: ChatMessage[]; model: string; systemPrompt: string; stats?: SessionStats };
+
+/** 粗略 token 估算（中英混排约 2.5 字符/token），仅流式过程实时显示用；结束换真实 usage。 */
+function estimateTokens(chars: number): number {
+  return Math.round(chars / 2.5);
+}
+
+function fmtTokens(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+}
+
+function fmtDuration(ms: number): string {
+  const s = ms / 1000;
+  return s >= 60 ? `${Math.floor(s / 60)}m${Math.round(s % 60)}s` : `${s.toFixed(1)}s`;
+}
 
 function lsKey(knId: string): string {
   return `bkn-studio:agentchat:${knId}`;
@@ -246,6 +266,8 @@ export function AgentChat({
   const [knContext, setKnContext] = useState("");
   const [knSummary, setKnSummary] = useState<{ objectTypes: number; relations: number } | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>(FALLBACK_SUGGESTIONS);
+  // 会话累计 token + 总时长（像 Claude Code 那样累加）。
+  const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -264,6 +286,7 @@ export function AgentChat({
     setMessages(Array.isArray(saved.messages) ? saved.messages : []);
     if (saved.model) setModel(saved.model);
     setSystemPrompt(saved.systemPrompt ?? DEFAULT_PROMPT);
+    setStats(saved.stats ?? { tokens: 0, ms: 0 });
     mcpToolsRef.current = null;
   }, [knId]);
 
@@ -317,9 +340,12 @@ export function AgentChat({
   }, [env]);
 
   const persist = useCallback(
-    (msgs: ChatMessage[]) => {
+    (msgs: ChatMessage[], statsSnapshot: SessionStats) => {
       try {
-        localStorage.setItem(lsKey(knId), JSON.stringify({ messages: msgs, model, systemPrompt } satisfies Persisted));
+        localStorage.setItem(
+          lsKey(knId),
+          JSON.stringify({ messages: msgs, model, systemPrompt, stats: statsSnapshot } satisfies Persisted),
+        );
       } catch {
         /* localStorage 不可用时忽略 */
       }
@@ -378,6 +404,10 @@ export function AgentChat({
             ),
           }));
           break;
+        case "usage":
+          updateAssistant((m) => ({ ...m, tokens: (m.tokens ?? 0) + chunk.totalTokens }));
+          setStats((s) => ({ ...s, tokens: s.tokens + chunk.totalTokens }));
+          break;
         case "error":
           updateAssistant((m) => ({ ...m, content: m.content + (m.content ? "\n\n" : "") + `⚠️ ${chunk.error}` }));
           break;
@@ -409,6 +439,7 @@ export function AgentChat({
 
       setBusy(true);
       setInput("");
+      const startedAt = performance.now();
 
       // 多轮上下文压缩：只保留最近若干轮，且单轮文本封顶，防长对话纯文本堆大。
       // （工具结果/思考本就不进历史，见 send() 历史只取 role+content。）
@@ -453,9 +484,18 @@ export function AgentChat({
       } finally {
         abortRef.current = null;
         setBusy(false);
-        setMessages((cur) => {
-          persist(cur);
-          return cur;
+        const elapsed = performance.now() - startedAt;
+        // 本轮耗时写到最后一条 assistant 消息 + 累计会话总时长；token 已在 usage chunk 累计。
+        setStats((prevStats) => {
+          const nextStats = { ...prevStats, ms: prevStats.ms + elapsed };
+          setMessages((prevMsgs) => {
+            const nextMsgs = prevMsgs.map((m, i) =>
+              i === prevMsgs.length - 1 && m.role === "assistant" ? { ...m, ms: elapsed } : m,
+            );
+            persist(nextMsgs, nextStats);
+            return nextMsgs;
+          });
+          return nextStats;
         });
       }
     },
@@ -468,6 +508,7 @@ export function AgentChat({
 
   const clearChat = useCallback(() => {
     setMessages([]);
+    setStats({ tokens: 0, ms: 0 });
     try {
       localStorage.removeItem(lsKey(knId));
     } catch {
@@ -514,6 +555,11 @@ export function AgentChat({
         <button type="button" className={styles.barBtn} onClick={clearChat} disabled={busy || empty}>
           清空对话
         </button>
+        {stats.tokens > 0 || stats.ms > 0 ? (
+          <span className={styles.statChip} title="本会话累计 token 与总时长">
+            Σ {fmtTokens(stats.tokens)} tokens · {fmtDuration(stats.ms)}
+          </span>
+        ) : null}
       </div>
       {cfgOpen ? (
         <div className={styles.cfgPanel}>
@@ -600,7 +646,7 @@ export function AgentChat({
                   type="button"
                   className={styles.confirmBtn}
                   onClick={() => {
-                    persist(messages);
+                    persist(messages, stats);
                     setPromptOpen(false);
                     message.success("系统提示词已保存");
                   }}
@@ -687,6 +733,19 @@ export function AgentChat({
                         <i />
                         <i />
                       </div>
+                    ) : null}
+                    {m.role === "assistant" ? (
+                      busy && isLast ? (
+                        <div className={styles.msgMeta}>
+                          · ~{fmtTokens(estimateTokens((m.reasoning?.length ?? 0) + m.content.length))} tokens
+                        </div>
+                      ) : m.tokens || m.ms ? (
+                        <div className={styles.msgMeta}>
+                          {m.tokens ? `${fmtTokens(m.tokens)} tokens` : ""}
+                          {m.tokens && m.ms ? " · " : ""}
+                          {m.ms ? fmtDuration(m.ms) : ""}
+                        </div>
+                      ) : null
                     ) : null}
                   </div>
                 </div>

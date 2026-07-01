@@ -701,3 +701,23 @@
 .confirmBtn:hover {
   opacity: 0.92;
 }
+
+/* 会话累计 token + 总时长 chip（顶部右侧） */
+.statChip {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--txt2);
+  background: var(--chip);
+  border-radius: 7px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+/* 单条消息的 token / 时长脚注 */
+.msgMeta {
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+}

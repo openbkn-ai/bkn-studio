@@ -127,6 +127,7 @@ export type AgentChunk =
   | { type: "tool-call"; id: string; name: string; args: unknown }
   | { type: "tool-result"; id: string; result: string }
   | { type: "tool-error"; id: string; error: string }
+  | { type: "usage"; inputTokens: number; outputTokens: number; totalTokens: number }
   | { type: "error"; error: string }
   | { type: "finish" };
 
@@ -278,6 +279,16 @@ export async function runAgentChat(params: {
             error: part.error instanceof Error ? part.error.message : String(part.error),
           });
           break;
+        case "finish": {
+          const u = part.totalUsage;
+          onChunk({
+            type: "usage",
+            inputTokens: u?.inputTokens ?? 0,
+            outputTokens: u?.outputTokens ?? 0,
+            totalTokens: u?.totalTokens ?? (u?.inputTokens ?? 0) + (u?.outputTokens ?? 0),
+          });
+          break;
+        }
         case "error":
           onChunk({ type: "error", error: part.error instanceof Error ? part.error.message : String(part.error) });
           break;
@@ -301,7 +312,15 @@ export async function runAgentChat(params: {
       for await (const part of finalResult.fullStream) {
         if (part.type === "text-delta" && part.text) onChunk({ type: "text", delta: part.text });
         else if (part.type === "reasoning-delta" && part.text) onChunk({ type: "reasoning", delta: part.text });
-        else if (part.type === "error")
+        else if (part.type === "finish") {
+          const u = part.totalUsage;
+          onChunk({
+            type: "usage",
+            inputTokens: u?.inputTokens ?? 0,
+            outputTokens: u?.outputTokens ?? 0,
+            totalTokens: u?.totalTokens ?? (u?.inputTokens ?? 0) + (u?.outputTokens ?? 0),
+          });
+        } else if (part.type === "error")
           onChunk({ type: "error", error: part.error instanceof Error ? part.error.message : String(part.error) });
       }
     }

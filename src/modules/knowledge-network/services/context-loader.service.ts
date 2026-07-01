@@ -181,10 +181,10 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "list_knowledge_networks",
     group: "Knowledge Network",
-    summary: "列出当前账户可访问的业务知识网络。",
+    summary: "列出当前账户可访问的业务知识网络。支持 name_pattern 过滤、limit/offset 分页、sort/direction 排序。",
     path: `${REST_PREFIX}/kn/list_knowledge_networks`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body: {},
+    body: { limit: 20, offset: 0 },
   },
   {
     id: "get_kn_detail",
@@ -239,6 +239,8 @@ const TEST_DATA_OPS = new Set([
   "query_instance_subgraph",
   "get_object_types",
   "get_relation_types",
+  "describe_resource",
+  "list_resources",
 ]);
 
 /** 该接口是否支持「填充测试数据」。 */
@@ -377,6 +379,17 @@ export function buildTestData(
         note: ids.length ? `前 ${ids.length} 个关系类` : "该网络无关系类，请手填 ids",
       };
     }
+
+    case "describe_resource": {
+      const resId = detail.object_types.find((o) => o.data_source?.id)?.data_source?.id ?? "";
+      return {
+        body: JSON.stringify({ resource_id: resId }, null, 2),
+        note: resId ? `资源 ${resId}（取自对象类绑定）` : "该网络对象类无绑定资源，请手填 resource_id",
+      };
+    }
+
+    case "list_resources":
+      return { body: JSON.stringify({ type: "table", offset: 0, limit: 20 }, null, 2), note: "前 20 个 table 资源" };
 
     default:
       return { body: exampleBodyText(op, mode, knId), note: "" };
