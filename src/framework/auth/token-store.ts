@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 const ACCESS_TOKEN_KEY = "bkn_access_token";
 const REFRESH_TOKEN_KEY = "bkn_refresh_token";
 const ID_TOKEN_KEY = "bkn_id_token";

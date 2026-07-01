@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import type { OperatorExecuteControl, OperatorRecord } from "@/modules/execution-factory/types/operator";
 
 import { formatExecutionUnitTime } from "./format-timestamp";

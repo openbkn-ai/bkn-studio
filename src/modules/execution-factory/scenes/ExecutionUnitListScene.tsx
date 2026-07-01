@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Empty, Input, Select, Spin, Tabs } from "antd";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";

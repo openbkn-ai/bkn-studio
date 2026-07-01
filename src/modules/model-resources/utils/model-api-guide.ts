@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import type { SmallModelType } from "@/modules/model-resources/types/small-model";
 
 export const MODEL_API_KEY_PLACEHOLDER = "$api_key";

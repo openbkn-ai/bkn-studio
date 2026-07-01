@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/knowledge-network";
 
 export const PRIMARY_KEY_TYPES = ["integer", "unsigned integer", "string", "text"] as const;

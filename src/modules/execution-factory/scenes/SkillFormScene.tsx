@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { Alert, Form, Radio, Result, Upload } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import { useState } from "react";

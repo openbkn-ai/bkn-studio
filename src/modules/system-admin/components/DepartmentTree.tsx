@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { Space, Tag, Tree } from "antd";
 import type { DataNode } from "antd/es/tree";
 import type { TreeProps } from "antd/es/tree";

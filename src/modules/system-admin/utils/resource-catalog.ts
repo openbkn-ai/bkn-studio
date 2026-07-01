@@ -1,4 +1,11 @@
 /**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/**
  * 对象授权的「资源类型 → 操作」词表。
  *
  * 数据来源：对 bkn-safe(VM 10.211.55.4) 9 个内置角色的 permissions 聚合实测，

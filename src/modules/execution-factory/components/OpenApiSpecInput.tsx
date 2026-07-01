@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { InboxOutlined, LinkOutlined } from "@ant-design/icons";
 import { Alert, Input, Tabs, Upload } from "antd";
 import type { UploadProps } from "antd";

@@ -1,4 +1,11 @@
 /**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/**
  * 概述页本体区块 —— 一次拉取实体类 / 关系类（含明细），渲染本体图谱 +
  * 本体结构 / 数据绑定 表格。所有取数集中在此，避免重复请求。
  */

@@ -1,4 +1,11 @@
 /**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/**
  * 知识网络「立即体验」—— ContextLoader 接口调试台 (agent-retrieval)。
  *
  * 单一 ContextLoader 操作集，REST 与 MCP 一一对应：同一接口的两种调用方式。

@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { appZhCN } from "@/app/locales/resources/app/zh-CN";
 import { authZhCN } from "@/app/locales/resources/auth/zh-CN";
 import { commonZhCN } from "@/app/locales/resources/common/zh-CN";

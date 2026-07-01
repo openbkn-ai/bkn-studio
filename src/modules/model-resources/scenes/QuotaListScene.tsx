@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { EllipsisOutlined, ReloadOutlined, SortAscendingOutlined } from "@ant-design/icons";
 import { Alert, Dropdown, Input, Select } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";

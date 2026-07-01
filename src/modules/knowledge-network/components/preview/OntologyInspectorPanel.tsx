@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 /** 本体图谱右侧检查面板 —— 未选中显示实体类图例，选中显示属性 / 绑定资源 / 关系。 */
 
 import { CloseOutlined, DeploymentUnitOutlined } from "@ant-design/icons";

@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 // 对象级授权开放的对象类型 —— 对接 bkn-safe 的 type 词表
 // (frontend-object-grants-integration.md 第三节)。授权粒度到「整个对象实例」
 // （如整个 Catalog），不做单条数据资源(resource)的细粒度授权。类型 label /

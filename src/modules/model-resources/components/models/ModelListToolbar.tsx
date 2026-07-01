@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { DeleteOutlined, PlusOutlined, ReloadOutlined, SortAscendingOutlined } from "@ant-design/icons";
 import { Dropdown, Input, Select } from "antd";
 import type { MenuProps } from "antd";

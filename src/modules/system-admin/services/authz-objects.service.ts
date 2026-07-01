@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 // 对象 id → 名称解析（各领域服务，bkn-safe 不提供）。
 // 契约见 kowell-core/bkn-safe/docs/frontend-object-grants-integration.md 第七节：
 //   7.1 列实例（id+name，搜索分页）—— 喂「新建授权」对象选择器

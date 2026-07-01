@@ -1,4 +1,11 @@
 /**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/**
  * 本体图谱卡片 —— 图谱 + 右侧检查面板，自带选中态与空态。概述/预览复用。
  *
  * 不传 objectTypes/relationTypes 时自行按 networkId 拉取（概述页用），

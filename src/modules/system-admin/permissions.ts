@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 // 系统管理各页面所需权限(任一即可)。导航过滤与路由守卫共用同一份，避免漂移。
 // 与 module.manifest.ts 的权限点对齐;普通用户不持有任何 admin-* 权限。
 export const systemAdminPermissions: Record<
