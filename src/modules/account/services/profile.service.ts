@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { http } from "@/framework/request/http";
 
 /** 当前用户资料（GET /api/safe/v1/me）。name/email/telephone 可自助改，其余只读。 */

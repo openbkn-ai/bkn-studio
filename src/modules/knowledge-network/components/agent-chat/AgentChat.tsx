@@ -1,4 +1,11 @@
 /**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/**
  * 立即体验 · Agent 对话 —— 前端编排的真实工具调用循环 UI。
  * 模型走「模型工厂」(mf-model-api OpenAI 兼容)，检索工具走 agent-retrieval MCP；
  * 上下文全在前端缓存（localStorage，按 kn_id 隔离）。see agent-chat.service.ts。

@@ -16,3 +16,6 @@ tests/execution-factory/http/test.json
 tests/execution-factory/agent-at/config/env.ini
 tests/execution-factory/tool/config.local.yaml
 
+
+# Claude Code local dir (config, worktrees)
+.claude/

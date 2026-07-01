@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { gatewayOrigin } from "@/framework/auth/oauth";
 
 /** 展示/示例用真实网关地址：dev 取 VITE_DEV_AUTH_ORIGIN，prod 同源。 */

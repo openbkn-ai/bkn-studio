@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 import type { ModelQuota, UserQuotaRecord } from "@/modules/model-resources/types/quota";
 import type { ModelStatisticsOverview } from "@/modules/model-resources/types/statistics";

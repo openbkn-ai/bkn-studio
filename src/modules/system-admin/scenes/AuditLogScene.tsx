@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { ReloadOutlined } from "@ant-design/icons";
 import { Alert, Checkbox, DatePicker, Select, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";

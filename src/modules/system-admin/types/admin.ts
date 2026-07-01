@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 // 对齐 bkn-safe `/api/safe/v1/admin/*`(ISF 退役后的统一 admin API)。
 // 注意：冻结/解冻、部门扩展字段(负责人/编码/邮箱/备注)、用户↔部门归属写入
 // 三项后端暂不支持，已从写路径剔除，等后端反馈再补。

@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 /** @deprecated Prefer registerOpenApiBundle when operatorSync is enabled. */
 import { registerOperator } from "@/modules/execution-factory/services/operator.service";
 import type { OperatorRecord } from "@/modules/execution-factory/types/operator";

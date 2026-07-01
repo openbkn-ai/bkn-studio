@@ -1,4 +1,11 @@
 /**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/**
  * 审计日志 method+action → 稳定 token（再由 i18n 渲染人话）。
  * 映射表见 bkn-safe admin-api-frontend-changes.md。
  */

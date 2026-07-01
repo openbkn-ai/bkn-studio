@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Input, Space } from "antd";
 import type { ReactNode } from "react";

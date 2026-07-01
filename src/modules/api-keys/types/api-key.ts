@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 /** 用户自助签发的 AppKey（长期凭据，bak_ 开头）。明文 key 仅签发/轮换时返回一次。 */
 export type ApiKey = {
   id: string;
