@@ -237,6 +237,8 @@ const TEST_DATA_OPS = new Set([
   "search_schema",
   "get_kn_detail",
   "query_instance_subgraph",
+  "get_object_types",
+  "get_relation_types",
 ]);
 
 /** 该接口是否支持「填充测试数据」。 */
@@ -352,6 +354,28 @@ export function buildTestData(
       body.need_total = true;
       body.properties = [];
       return { body: JSON.stringify(body, null, 2), query: { kn_id: knId, ot_id: otId }, note };
+    }
+
+    case "get_object_types": {
+      const ids = detail.object_types
+        .slice(0, 3)
+        .map((o) => o.id)
+        .filter(Boolean);
+      return {
+        body: JSON.stringify({ kn_id: knId, ids }, null, 2),
+        note: ids.length ? `前 ${ids.length} 个对象类` : "该网络无对象类，请手填 ids",
+      };
+    }
+
+    case "get_relation_types": {
+      const ids = detail.relation_types
+        .slice(0, 3)
+        .map((r) => r.id)
+        .filter(Boolean);
+      return {
+        body: JSON.stringify({ kn_id: knId, ids }, null, 2),
+        note: ids.length ? `前 ${ids.length} 个关系类` : "该网络无关系类，请手填 ids",
+      };
     }
 
     default:
