@@ -439,8 +439,8 @@ function ToolDiscoveryModal({
     <Modal open={open} onCancel={onClose} footer={null} width={720} title="工具发现 · tools/list">
       <div className={styles.guideRoot}>
         <p className={styles.guideNote}>
-          直接向 MCP <code>tools/list</code> 拉取线上工具与 <code>inputSchema</code> / <code>outputSchema</code>，并与本地硬编码工具表对照。
-          用来核对后端 schema 是否齐全（schema 驱动表单的前置），以及发现两边的<b>漂移</b>。
+          直接向 MCP <code>tools/list</code> 拉取所有线上工具及其 <code>inputSchema</code> / <code>outputSchema</code>。
+          左侧 MCP 接口列表已<b>实时由 tools/list 驱动</b>（后端新增工具自动出现）；这里查看各工具完整 schema，并标出哪些本地有精选定义、哪些用 schema 自动合成请求体。
           <button type="button" className={styles.guideLink} onClick={onReload}>
             重新拉取 →
           </button>
@@ -462,13 +462,15 @@ function ToolDiscoveryModal({
             <div className={styles.driftRow}>
               <span className={styles.driftStat}>线上 {tools.length} 个</span>
               {drift && drift.onlyLive.length > 0 ? (
-                <span className={`${styles.driftChip} ${styles.driftLive}`}>仅线上：{drift.onlyLive.join("、")}</span>
+                <span className={`${styles.driftChip} ${styles.driftLive}`}>
+                  本地未精选·用 schema 自动合成：{drift.onlyLive.join("、")}
+                </span>
               ) : null}
               {drift && drift.onlyOurs.length > 0 ? (
-                <span className={`${styles.driftChip} ${styles.driftOurs}`}>仅本地：{drift.onlyOurs.join("、")}</span>
+                <span className={`${styles.driftChip} ${styles.driftOurs}`}>本地有·线上无：{drift.onlyOurs.join("、")}</span>
               ) : null}
               {drift && drift.onlyLive.length === 0 && drift.onlyOurs.length === 0 ? (
-                <span className={`${styles.driftChip} ${styles.driftOk}`}>工具名与本地一致</span>
+                <span className={`${styles.driftChip} ${styles.driftOk}`}>全部工具均有本地精选定义</span>
               ) : null}
             </div>
             <div className={styles.toolList}>
