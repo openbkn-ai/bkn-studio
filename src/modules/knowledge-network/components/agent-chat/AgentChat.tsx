@@ -99,6 +99,7 @@ const CONFIG_FIELDS: { key: keyof AgentConfig; label: string; hint: string }[] =
   { key: "schemaToolCap", label: "Schema类结果上限(字)", hint: "get_kn_detail / search_schema 等（0=不截断）" },
   { key: "maxHistoryMessages", label: "多轮保留条数", hint: "跨轮历史只保留最近 N 条消息" },
   { key: "maxTurnChars", label: "单轮文本上限(字)", hint: "每条历史消息文本封顶" },
+  { key: "maxOutputTokens", label: "最大输出token", hint: "单步最大输出(含思考)；推理模型(deepseek)调大，0=模型默认" },
 ];
 
 function formatArgs(args: unknown): string {

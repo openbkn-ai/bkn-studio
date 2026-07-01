@@ -35,6 +35,8 @@ export type AgentConfig = {
   maxHistoryMessages: number;
   /** 单轮历史文本字符上限。 */
   maxTurnChars: number;
+  /** 单步最大输出 token（含思考）。推理模型（deepseek 等）思考多，需调大否则答案被截；0=模型默认。 */
+  maxOutputTokens: number;
 };
 
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
@@ -44,6 +46,7 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   schemaToolCap: 24000,
   maxHistoryMessages: 16,
   maxTurnChars: 4000,
+  maxOutputTokens: 16384,
 };
 
 /** schema/发现类工具：结果天生大但有界且模型理解必需 → 用 schemaToolCap（更宽）；其余用 dataToolCap（逼聚合）。 */
@@ -215,6 +218,7 @@ export async function runAgentChat(params: {
       messages,
       tools,
       stopWhen: stepCountIs(config.maxSteps),
+      ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
       // 每步前驱逐旧工具结果，避免单轮多步累积撑爆上下文。
       prepareStep: ({ messages: stepMessages }) => ({ messages: evictOldToolResults(stepMessages, config.keepToolResults) }),
       abortSignal: signal,
@@ -266,6 +270,7 @@ export async function runAgentChat(params: {
           system +
           "\n\n（已达到工具调用上限或需要收尾：请基于以上已获得的信息，直接用中文给出最终答复，不要再调用任何工具。）",
         messages: [...messages, ...(resp.messages as ModelMessage[])],
+        ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
         abortSignal: signal,
       });
       for await (const part of finalResult.fullStream) {
