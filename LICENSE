@@ -10,9 +10,9 @@ Copyright (c) 2026 OpenBKN. All rights reserved.
 PREAMBLE
 ================================================================
 
-This license applies only to the OpenBKN modules that expressly
-reference this file in their source headers (the "Licensed Modules"),
-including but not limited to BKN Safe and BKN Studio.
+This license applies to the entire BKN Studio repository (the
+"Licensed Modules"), except for any individual file that expressly
+states in its own header that it is licensed under different terms.
 
 The Licensed Modules are licensed under the terms of the Apache
 License, Version 2.0 (the "Apache License"), the full text of which is
@@ -23,14 +23,16 @@ In the event of any conflict between the Additional Conditions and the
 Apache License, the Additional Conditions shall control with respect to
 the Licensed Modules.
 
-This license does not apply to:
-  (a) components that originate from the upstream project
-      kweaver-ai/kweaver-core, which remain licensed solely under the
-      Apache License, Version 2.0, with their original copyright
-      notices preserved; nor
-  (b) OpenBKN components expressly licensed under the plain Apache
-      License, Version 2.0 (e.g., BKN SDK / CLI and BKN Skill).
-See the NOTICE file for the per-component breakdown.
+BKN Studio is independently developed by OpenBKN and does not contain
+code originating from the upstream project kweaver-ai/kweaver-core.
+Third-party dependencies are not covered by this license and remain
+under their own licenses as declared in their package metadata (see
+package.json and the dependency manifests).
+
+Versions of this repository previously distributed under the Apache
+License, Version 2.0 remain available under that license; their grant
+is not affected by the present arrangement, which applies only to
+versions released after this file was added.
 
 ================================================================
 ADDITIONAL CONDITIONS
