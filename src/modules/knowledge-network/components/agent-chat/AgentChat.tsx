@@ -137,8 +137,8 @@ const MarkdownView = memo(function MarkdownView({ text }: { text: string }) {
 
 /** 思考过程（reasoning_content）流式展示：进行中自动展开，结束后可折叠。 */
 function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
-  // 生成中默认展开，但用户可随时手动收起（不再被 live 强制锁开）。
-  const [open, setOpen] = useState(live);
+  // 默认收起（思考中靠头部闪烁点体现在跑）；用户可手动展开。
+  const [open, setOpen] = useState(false);
   return (
     <div className={styles.reasoning}>
       <button type="button" className={`${styles.reasoningHead} ${live ? styles.reasoningLive : ""}`} onClick={() => setOpen((v) => !v)}>
