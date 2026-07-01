@@ -57,8 +57,8 @@ import type { AgentTokenProvider } from "@/modules/knowledge-network/services/ag
 
 import styles from "./ExperienceScene.module.css";
 
-/** 线上有、本地无精选定义的工具归到这个分组（tools/list 实时驱动）。 */
-const ONLINE_GROUP = "线上工具（tools/list）";
+/** 线上有、本地无精选定义的工具（如 get_object_types / get_relation_types）归到 Knowledge Network 组，不单开分类。 */
+const ONLINE_GROUP = "Knowledge Network";
 
 /** 从单个 JSON Schema 属性生成可编辑示例值。 */
 function sampleForSchemaProp(def: unknown): unknown {
