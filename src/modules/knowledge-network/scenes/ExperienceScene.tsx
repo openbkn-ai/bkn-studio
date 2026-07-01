@@ -31,6 +31,7 @@ import { issueApiKey } from "@/modules/api-keys/services/api-key.service";
 import {
   CONTEXT_LOADER_OPS,
   MCP_PATH,
+  REST_PREFIX,
   buildCurl,
   buildTestData,
   exampleBodyText,
@@ -56,7 +57,58 @@ import type { AgentTokenProvider } from "@/modules/knowledge-network/services/ag
 
 import styles from "./ExperienceScene.module.css";
 
-const GROUPS = ["Schema & 查询", "数据资源", "Skills & Logic", "Knowledge Network"];
+/** 线上有、本地无精选定义的工具归到这个分组（tools/list 实时驱动）。 */
+const ONLINE_GROUP = "线上工具（tools/list）";
+
+/** 从单个 JSON Schema 属性生成可编辑示例值。 */
+function sampleForSchemaProp(def: unknown): unknown {
+  if (!def || typeof def !== "object") return "";
+  const d = def as Record<string, unknown>;
+  if (d.default !== undefined) return d.default;
+  if (Array.isArray(d.enum) && d.enum.length > 0) return d.enum[0];
+  switch (d.type) {
+    case "number":
+    case "integer":
+      return 0;
+    case "boolean":
+      return false;
+    case "array":
+      return [];
+    case "object":
+      return {};
+    default:
+      return "";
+  }
+}
+
+/** 从工具 inputSchema 生成示例请求体（含 required + kn_id/response_format），供合成 op 使用。 */
+function exampleBodyFromSchema(schema: unknown): Record<string, unknown> {
+  if (!schema || typeof schema !== "object") return {};
+  const s = schema as Record<string, unknown>;
+  const props = (s.properties && typeof s.properties === "object" ? s.properties : {}) as Record<string, unknown>;
+  const required = Array.isArray(s.required) ? (s.required as string[]) : [];
+  const out: Record<string, unknown> = {};
+  for (const [key, def] of Object.entries(props)) {
+    if (required.includes(key) || key === "kn_id" || key === "response_format") {
+      out[key] = sampleForSchemaProp(def);
+    }
+  }
+  return out;
+}
+
+/** 把线上 MCP 工具（tools/list）合成为 ContextLoaderOp（本地无精选定义时用）。 */
+function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
+  const body = exampleBodyFromSchema(tool.inputSchema);
+  return {
+    id: tool.name,
+    group: ONLINE_GROUP,
+    summary: tool.description ?? tool.name,
+    path: `${REST_PREFIX}/kn/${tool.name}`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body,
+    mcpArgs: body,
+  };
+}
 
 /** 字节数转人类可读：B / KB / MB（1024 进制，保留一位小数）。 */
 function formatBytes(bytes: number): string {
@@ -944,10 +996,45 @@ export function ExperienceScene() {
     [authMode, appKey, runtimeConfig],
   );
 
-  const op = useMemo(
-    () => CONTEXT_LOADER_OPS.find((item) => item.id === selectedId) ?? CONTEXT_LOADER_OPS[0]!,
-    [selectedId],
+  // tools/list 发现结果缓存：MCP 侧栏实时驱动 + 内联 schema + 工具发现弹窗共用。
+  const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
+  const [toolsLoading, setToolsLoading] = useState(false);
+  const [toolsError, setToolsError] = useState<string | null>(null);
+  const loadTools = useCallback(
+    (force = false) => {
+      if (toolsLoading) return;
+      if (!force && toolDefs) return;
+      setToolsLoading(true);
+      setToolsError(null);
+      listMcpTools(env)
+        .then((list) => setToolDefs(list))
+        .catch((err) => setToolsError(err instanceof Error ? err.message : "tools/list 失败"))
+        .finally(() => setToolsLoading(false));
+    },
+    [env, toolDefs, toolsLoading],
   );
+  // 进入 MCP 模式时按需拉一次（同源 fetch，失败仅内联提示，不弹全局 toast）。
+  useEffect(() => {
+    if (mode === "mcp" && !toolDefs && !toolsLoading && !toolsError) loadTools();
+  }, [mode, toolDefs, toolsLoading, toolsError, loadTools]);
+
+  // MCP 模式接口列表实时由 tools/list 驱动：线上每个工具用本地精选 op（若有），否则从 inputSchema 合成 → 后端加工具自动出现，零漂移。
+  const mcpOps = useMemo<ContextLoaderOp[]>(
+    () =>
+      toolDefs
+        ? toolDefs.map((t) => CONTEXT_LOADER_OPS.find((o) => o.id === t.name) ?? synthesizeOp(t))
+        : CONTEXT_LOADER_OPS,
+    [toolDefs],
+  );
+  const activeOps = mode === "mcp" ? mcpOps : CONTEXT_LOADER_OPS;
+  const op = useMemo(
+    () => activeOps.find((item) => item.id === selectedId) ?? activeOps[0]!,
+    [activeOps, selectedId],
+  );
+  // selectedId 在当前模式的工具集里失效时（切模式 / 只在另一侧存在）回退到首项，保持侧栏高亮一致。
+  useEffect(() => {
+    if (!activeOps.some((item) => item.id === selectedId)) setSelectedId(activeOps[0]!.id);
+  }, [activeOps, selectedId]);
 
   // 选中接口 / 模式 / 网络变化时重置请求体与 query 默认值
   useEffect(() => {
@@ -973,27 +1060,6 @@ export function ExperienceScene() {
   const visibleQuery = mode === "rest" ? op.query : op.query.filter((param) => param.name === "response_format");
   const responseView = useMemo(() => (response ? formatResponseView(response.text) : null), [response]);
 
-  // tools/list 发现结果缓存：内联 schema 展示 + 工具发现弹窗共用，避免重复拉取。
-  const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
-  const [toolsLoading, setToolsLoading] = useState(false);
-  const [toolsError, setToolsError] = useState<string | null>(null);
-  const loadTools = useCallback(
-    (force = false) => {
-      if (toolsLoading) return;
-      if (!force && toolDefs) return;
-      setToolsLoading(true);
-      setToolsError(null);
-      listMcpTools(env)
-        .then((list) => setToolDefs(list))
-        .catch((err) => setToolsError(err instanceof Error ? err.message : "tools/list 失败"))
-        .finally(() => setToolsLoading(false));
-    },
-    [env, toolDefs, toolsLoading],
-  );
-  // 进入 MCP 模式时按需拉一次（同源 fetch，失败仅内联提示，不弹全局 toast）。
-  useEffect(() => {
-    if (mode === "mcp" && !toolDefs && !toolsLoading && !toolsError) loadTools();
-  }, [mode, toolDefs, toolsLoading, toolsError, loadTools]);
   const currentTool = useMemo(
     () => toolDefs?.find((tool) => tool.name === op.id) ?? null,
     [toolDefs, op.id],
@@ -1261,8 +1327,8 @@ export function ExperienceScene() {
               <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="筛选接口…" />
             </div>
             <div className={styles.eplist}>
-              {GROUPS.map((group) => {
-                const items = CONTEXT_LOADER_OPS.filter(
+              {[...new Set(activeOps.map((item) => item.group))].map((group) => {
+                const items = activeOps.filter(
                   (item) =>
                     item.group === group &&
                     (!filter || (item.id + item.path + item.summary).toLowerCase().includes(filter.toLowerCase())),
