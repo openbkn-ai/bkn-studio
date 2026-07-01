@@ -499,7 +499,7 @@ export function AgentChat({
         setBusy(false); // 触发下方「完成即持久化」effect
       }
     },
-    [busy, model, messages, env, knId, composedSystem, config, tokenProvider, handleChunk, updateAssistant, persist, message],
+    [busy, model, messages, env, knId, composedSystem, config, tokenProvider, handleChunk, updateAssistant, message],
   );
 
   const stop = useCallback(() => {
