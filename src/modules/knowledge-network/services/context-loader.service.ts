@@ -43,7 +43,7 @@ export const MCP_PATH = "/api/agent-retrieval/v1/mcp";
 export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "search_schema",
-    group: "Schema & 查询",
+    group: "Knowledge Network",
     summary: "统一的 Schema 探索入口：根据自然语言探索 object / relation / action / metric types。固定 Schema-only，不返回实例数据。",
     path: `${REST_PREFIX}/kn/search_schema`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -58,7 +58,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "query_object_instance",
-    group: "Schema & 查询",
+    group: "查询",
     summary:
       "根据单个对象类查询对象实例数据，支持过滤、排序与分页。REST 经 query 传 kn_id / ot_id；MCP 经 arguments 传入。" +
       "推荐用 filters 扁平糖衣——[{field, op, value}]，op: == != > >= < <= in not_in like not_like exist not_exist match" +
@@ -90,7 +90,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "query_instance_subgraph",
-    group: "Schema & 查询",
+    group: "查询",
     summary: "基于预定义关系类路径查询知识图谱中的对象子图。支持多条路径；object_types 与 relation_types 顺序必须严格对应。",
     path: `${REST_PREFIX}/kn/query_instance_subgraph`,
     query: [
