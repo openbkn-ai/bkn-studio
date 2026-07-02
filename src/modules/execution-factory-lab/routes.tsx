@@ -10,6 +10,7 @@ import type { RouteObject } from "react-router-dom";
 import type { AppRouteContribution } from "@/app/router/types";
 import { CatalogLabPage } from "@/modules/execution-factory-lab/pages/CatalogLabPage";
 import { CapabilityLabPage } from "@/modules/execution-factory-lab/pages/CapabilityLabPage";
+import { SandboxRuntimePage } from "@/modules/execution-factory-lab/pages/SandboxRuntimePage";
 
 export const executionFactoryLabRoutes: RouteObject[] = [
   {
@@ -33,6 +34,17 @@ export const executionFactoryLabRoutes: RouteObject[] = [
       },
     },
     element: <CatalogLabPage />,
+  },
+  {
+    path: "execution-factory-lab/sandbox-runtime",
+    handle: {
+      console: {
+        descriptionKey: "executionFactoryLab.sandboxRuntimeDescription",
+        menuKey: "execution-factory-lab-sandbox-runtime",
+        titleKey: "executionFactoryLab.sandboxRuntimeTitle",
+      },
+    },
+    element: <SandboxRuntimePage />,
   },
 ];
 

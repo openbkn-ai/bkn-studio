@@ -752,17 +752,32 @@ export async function createFunctionCapability(input: CreateFunctionCapabilityIn
 }
 
 export async function executePython(input: ExecutePythonInput): Promise<ExecutePythonResult> {
+  const currentUser = getRuntimeConfig().currentUser;
   const response = await http.post<{
     output?: unknown;
     stdout?: string;
     stderr?: string;
     error?: string;
     duration_ms?: number;
-  }>(`${API_PREFIX}/function/execute`, input, {
-    headers: getBusinessDomainHeaders(),
-    skipErrorToast: true,
-    timeout: 60_000,
-  });
+  }>(
+    `${API_PREFIX}/function/execute`,
+    {
+      code: input.code,
+      event: input.event,
+      timeout: input.timeout,
+      source: input.source ?? "function_debug",
+      task_id: input.taskId ?? `function_debug_${Date.now()}`,
+      capability_id: input.capabilityId,
+      capability_name: input.capabilityName,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+    },
+    {
+      headers: getBusinessDomainHeaders(),
+      skipErrorToast: true,
+      timeout: 60_000,
+    },
+  );
 
   return {
     output: response.data.output,
