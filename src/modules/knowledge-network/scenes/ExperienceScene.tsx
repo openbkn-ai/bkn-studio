@@ -246,11 +246,13 @@ function MaskedKeyInput({
   value,
   onChange,
   onIssue,
+  onCopy,
   issuing,
 }: {
   value: string;
   onChange: (next: string) => void;
   onIssue: () => void;
+  onCopy: () => void;
   issuing?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
@@ -266,6 +268,13 @@ function MaskedKeyInput({
         onBlur={() => setFocused(false)}
         onChange={(event) => onChange(event.target.value)}
       />
+      {value.trim() ? (
+        <Tooltip title="复制 API Key 明文">
+          <button type="button" className={styles.keyCopy} onClick={onCopy}>
+            <CopyOutlined />
+          </button>
+        </Tooltip>
+      ) : null}
       <button type="button" className={styles.keyIssue} onClick={onIssue} disabled={issuing}>
         {issuing ? "签发中…" : "去签发"}
       </button>
@@ -940,7 +949,10 @@ export function ExperienceScene() {
       const stamp = new Date().toISOString().slice(0, 19).replace("T", " ");
       const issued = await issueApiKey({ name: `Studio 调试台 ${stamp}` });
       setAppKey(issued.key);
-      message.success(`已签发并填入 API Key（${issued.masked}），可在「个人中心 · API Key」管理`);
+      message.success(
+        `已签发并填入 API Key（${issued.masked}），点输入框右侧图标可复制明文保存；可在「个人中心 · API Key」管理`,
+        6,
+      );
     } catch (error) {
       message.error(error instanceof Error ? error.message : "签发失败，请到个人中心手动签发");
     } finally {
@@ -1303,7 +1315,13 @@ export function ExperienceScene() {
           {authMode === "apikey" ? (
             <div className={styles.ef}>
               <label>API Key</label>
-              <MaskedKeyInput value={appKey} onChange={setAppKey} onIssue={() => void issueAppKey()} issuing={issuingKey} />
+              <MaskedKeyInput
+                value={appKey}
+                onChange={setAppKey}
+                onIssue={() => void issueAppKey()}
+                onCopy={() => copy(appKey.trim(), "API Key 已复制")}
+                issuing={issuingKey}
+              />
             </div>
           ) : null}
         </div>

@@ -197,6 +197,24 @@
   background: #efe5ff;
 }
 
+.keyCopy {
+  flex: 0 0 auto;
+  height: 32px;
+  width: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--field-bd);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--txt2);
+  cursor: pointer;
+}
+
+.keyCopy:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* ---------------- main ---------------- */
 .main {
   flex: 1 1 auto;
