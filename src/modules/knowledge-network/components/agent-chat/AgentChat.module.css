@@ -333,6 +333,18 @@
 .targetSeg {
   flex: 0 0 auto;
 }
+/* 选中项默认白底不明显 → 主色实心 + 白字（thumb 是切换动画的滑块，同色） */
+.targetSeg :global(.ant-segmented-item-selected) {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.targetSeg :global(.ant-segmented-item-selected:hover) {
+  color: #fff;
+}
+.targetSeg :global(.ant-segmented-thumb) {
+  background: var(--accent);
+}
 
 /* 分屏半宽面板头：更紧凑，尽量一行放下 */
 .barCompact {
