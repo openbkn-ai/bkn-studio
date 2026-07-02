@@ -483,38 +483,88 @@ export function AgentChat({
               <p className={styles.rptHint}>两侧还没有对话。先用「两侧同问」发一个问题，再来看对比报告。</p>
             ) : (
               <>
-                {/* 会话总览 */}
-                <table className={styles.rptTable}>
-                  <thead>
-                    <tr>
-                      <th>会话总览</th>
-                      <th>
-                        <span className={styles.paneTitle}>仅基础数据</span>
-                      </th>
-                      <th>
-                        <span className={`${styles.paneTitle} ${styles.paneTitleHl}`}>业务知识网络</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>模型</td>
-                      <td>{report.base.model || "—"}</td>
-                      <td>{report.kn.model || "—"}</td>
-                    </tr>
-                    <tr>
-                      <td>会话累计</td>
-                      <td>
-                        {fmtTokens(report.base.stats.tokens)} tokens · {fmtDuration(report.base.stats.ms)} ·{" "}
-                        {report.base.rounds.length} 轮
-                      </td>
-                      <td>
-                        {fmtTokens(report.kn.stats.tokens)} tokens · {fmtDuration(report.kn.stats.ms)} ·{" "}
-                        {report.kn.rounds.length} 轮
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                {/* 会话总览（汇总对比） */}
+                {(() => {
+                  const agg = (s: PaneSnapshot) => {
+                    const calls = s.rounds.flatMap((r) => r.toolCalls);
+                    return {
+                      rounds: s.rounds.length,
+                      calls: calls.length,
+                      ok: calls.filter((t) => t.status === "done").length,
+                      err: calls.filter((t) => t.status === "error").length,
+                      avgTokens: s.rounds.length > 0 ? Math.round(s.stats.tokens / s.rounds.length) : 0,
+                      avgMs: s.rounds.length > 0 ? s.stats.ms / s.rounds.length : 0,
+                    };
+                  };
+                  const b = report.base;
+                  const k = report.kn;
+                  const ba = agg(b);
+                  const ka = agg(k);
+                  const both = ba.rounds > 0 && ka.rounds > 0;
+                  const bBestTok = both && b.stats.tokens < k.stats.tokens;
+                  const kBestTok = both && k.stats.tokens < b.stats.tokens;
+                  const bBestMs = both && b.stats.ms < k.stats.ms;
+                  const kBestMs = both && k.stats.ms < b.stats.ms;
+                  const callsCell = (a: ReturnType<typeof agg>) => (
+                    <>
+                      {a.calls} 次
+                      {a.calls > 0 ? (
+                        <>
+                          {" · "}
+                          <span className={styles.rptOkTxt}>{a.ok} 成功</span>
+                          {a.err > 0 ? (
+                            <>
+                              {" / "}
+                              <span className={styles.rptErrTxt}>{a.err} 失败</span>
+                            </>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </>
+                  );
+                  return (
+                    <table className={styles.rptTable}>
+                      <thead>
+                        <tr>
+                          <th>会话总览（{Math.max(ba.rounds, ka.rounds)} 轮）</th>
+                          <th>
+                            <span className={styles.paneTitle}>仅基础数据</span>
+                          </th>
+                          <th>
+                            <span className={`${styles.paneTitle} ${styles.paneTitleHl}`}>业务知识网络</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>模型</td>
+                          <td>{b.model || "—"}</td>
+                          <td>{k.model || "—"}</td>
+                        </tr>
+                        <tr>
+                          <td>总 token</td>
+                          <td className={bBestTok ? styles.rptBest : ""}>{fmtTokens(b.stats.tokens)}</td>
+                          <td className={kBestTok ? styles.rptBest : ""}>{fmtTokens(k.stats.tokens)}</td>
+                        </tr>
+                        <tr>
+                          <td>总耗时</td>
+                          <td className={bBestMs ? styles.rptBest : ""}>{fmtDuration(b.stats.ms)}</td>
+                          <td className={kBestMs ? styles.rptBest : ""}>{fmtDuration(k.stats.ms)}</td>
+                        </tr>
+                        <tr>
+                          <td>平均每轮</td>
+                          <td>{ba.rounds > 0 ? `${fmtTokens(ba.avgTokens)} tokens · ${fmtDuration(ba.avgMs)}` : "—"}</td>
+                          <td>{ka.rounds > 0 ? `${fmtTokens(ka.avgTokens)} tokens · ${fmtDuration(ka.avgMs)}` : "—"}</td>
+                        </tr>
+                        <tr>
+                          <td>工具调用合计</td>
+                          <td>{callsCell(ba)}</td>
+                          <td>{callsCell(ka)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  );
+                })()}
 
                 {/* 逐轮对比 */}
                 {Array.from({ length: Math.max(report.base.rounds.length, report.kn.rounds.length) }, (_, i) => {
