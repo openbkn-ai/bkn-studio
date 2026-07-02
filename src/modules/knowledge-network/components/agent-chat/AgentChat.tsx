@@ -476,7 +476,13 @@ export function AgentChat({
         </div>
       </div>
 
-      <Modal open={report !== null} onCancel={closeReport} footer={null} width={880} title="对比报告">
+      <Modal
+        open={report !== null}
+        onCancel={closeReport}
+        footer={null}
+        width="min(1120px, 94vw)"
+        title="对比报告"
+      >
         {report ? (
           <div className={styles.rptRoot}>
             {report.base.rounds.length === 0 && report.kn.rounds.length === 0 ? (
@@ -648,7 +654,7 @@ export function AgentChat({
                             { key: "kn", title: "业务知识网络", hl: true, ans: k?.answer ?? null },
                           ] as const
                         ).map(({ key, title, hl, ans }) => (
-                          <details key={key} className={styles.rptAnsBox} open>
+                          <details key={key} className={styles.rptAnsBox}>
                             <summary className={styles.rptAnsHead}>
                               <span className={`${styles.paneTitle} ${hl ? styles.paneTitleHl : ""}`}>{title}</span>
                               <span className={styles.rptAnsLbl}>回答（点击展开/收起）</span>
