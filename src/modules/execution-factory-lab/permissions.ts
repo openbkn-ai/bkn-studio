@@ -23,6 +23,7 @@ export const executionFactoryLabPermissions = {
   impexImport: "execution-factory-lab:impex:import",
   catalogView: "execution-factory-lab:catalog:view",
   catalogInstall: "execution-factory-lab:catalog:install",
+  sandboxRuntimeView: "execution-factory-lab:sandbox-runtime:view",
   functionCreate: "execution-factory-lab:function:create",
   functionDebug: "execution-factory-lab:function:debug",
 } as const;
