@@ -52,7 +52,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
       kn_id: "your_kn_id",
       search_scope: { concept_groups: [], include_object_types: true, include_relation_types: true, include_action_types: true, include_metric_types: true },
       max_concepts: 10,
-      schema_brief: false,
+      schema_brief: true,
       enable_rerank: true,
     },
   },

@@ -46,6 +46,9 @@ export type AgentConfig = {
   maxOutputTokens: number;
 };
 
+/** 「仅基础数据」对比面板的默认工具集：纯表/SQL 层能力，无知识网络语义。 */
+export const BASE_DATA_TOOL_NAMES = ["list_resources", "describe_resource", "run_sql"];
+
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   maxSteps: 40,
   keepToolResults: 3,
@@ -84,7 +87,14 @@ const TOOL_HINTS: Record<string, string> = {
     " 【重要】用 filters 精确过滤 + 小 limit + properties 只取必要字段；不要返回大结果集。结果过大会被截断。",
   query_instance_subgraph: " 【重要】用尽量小的 limit；结果过大会被截断。",
   list_resources: " 【重要】用 catalog_id/type 过滤 + 小 limit 分页；结果过大会被截断。",
-  search_schema: " 建议：用精确的 query，max_concepts 默认不超过 10；结果过大会被截断。",
+  search_schema:
+    " 建议：用精确的 query，max_concepts 默认不超过 10；结果过大会被截断。schema_brief 默认 true（只返回概要），需要完整字段定义时显式传 schema_brief=false。",
+};
+
+/** 模型未显式传参时注入的默认 arguments（模型显式传值优先）。 */
+const TOOL_ARG_DEFAULTS: Record<string, Record<string, unknown>> = {
+  // brief 概要即可支撑绝大多数探索，省 token；要完整 schema 让模型显式关。
+  search_schema: { schema_brief: true },
 };
 
 /**
@@ -157,6 +167,7 @@ export function buildAgentTools(
       inputSchema: jsonSchema(schema),
       execute: async (input: unknown): Promise<string> => {
         const args: Record<string, unknown> = {
+          ...TOOL_ARG_DEFAULTS[def.name],
           ...(input && typeof input === "object" ? (input as Record<string, unknown>) : {}),
           kn_id: knId,
         };

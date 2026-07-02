@@ -6,28 +6,23 @@
  */
 
 /**
- * 立即体验 · Agent 对话 —— 前端编排的真实工具调用循环 UI。
- * 模型走「模型工厂」(mf-model-api OpenAI 兼容)，检索工具走 agent-retrieval MCP；
- * 上下文全在前端缓存（localStorage，按 kn_id 隔离）。see agent-chat.service.ts。
- * 进入时自动载入选定知识网络的本体结构注入系统提示词（免去先浏览）；回答 Markdown 渲染。
+ * 立即体验 · Agent 对话 —— 容器：单会话 / 对比模式（分屏）。
+ * 会话本体在 ChatPane（独立的消息/模型/提示词/调参/工具勾选）；本容器负责共享资源
+ * （模型列表、知识网络摘要、tools/list 缓存）、对比开关与共享输入框（发送目标可选）。
+ * 对比模式：左「仅基础数据」（默认只挂 list_resources/describe_resource/run_sql，不注入网络摘要）
+ * vs 右「业务知识网络」（全部工具 + 注入摘要）——同一问题两侧同问，直观对比语义层价值。
  */
 
-import { DownOutlined, RightOutlined, ThunderboltFilled } from "@ant-design/icons";
-import { App, Select } from "antd";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { FileTextOutlined, PauseOutlined } from "@ant-design/icons";
+import { Modal, Segmented, Switch } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
-  buildAgentTools,
-  runAgentChat,
+  BASE_DATA_TOOL_NAMES,
   DEFAULT_AGENT_CONFIG,
-  type AgentChatTurn,
-  type AgentChunk,
-  type AgentConfig,
+  runAgentChat,
   type AgentTokenProvider,
 } from "@/modules/knowledge-network/services/agent-chat.service";
 import {
@@ -38,15 +33,19 @@ import {
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
+import {
+  ChatPane,
+  DEFAULT_BASE_PROMPT,
+  DEFAULT_PROMPT,
+  MarkdownView,
+  fmtDuration,
+  fmtTokens,
+  type ChatPaneHandle,
+  type PaneKey,
+  type PaneProfile,
+  type PaneSnapshot,
+} from "./ChatPane";
 import styles from "./AgentChat.module.css";
-
-const DEFAULT_PROMPT =
-  "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
-  "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
-  "kn_id 已锁定为当前网络，无需也不要修改。\n" +
-  "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。\n" +
-  "重要：单个工具返回的文本会被截断到约 8000 字符，超出部分丢失。务必把过滤/聚合下推到查询里，必要时分多次小批查询；若看到「已截断」提示，说明结果不完整，应缩小查询范围重查，切勿把截断结果当作完整数据下结论。\n" +
-  "回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据。";
 
 const FALLBACK_SUGGESTIONS = [
   "这个知识网络里有哪些对象类和关系？",
@@ -54,88 +53,39 @@ const FALLBACK_SUGGESTIONS = [
   "对象类之间是怎么关联的？",
 ];
 
-type ToolCallView = {
-  id: string;
-  name: string;
-  args: unknown;
-  status: "running" | "done" | "error";
-  result?: string;
-  error?: string;
-  startedAt: number;
-  latencyMs?: number;
-};
-
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-  reasoning?: string;
-  toolCalls?: ToolCallView[];
-  /** 本轮真实累计 token（来自 usage，finish 时才有）。 */
-  tokens?: number;
-  /** 本轮总耗时 ms（完成后填）。 */
-  ms?: number;
-};
-
-type SessionStats = { tokens: number; ms: number };
-
-type Persisted = { messages: ChatMessage[]; model: string; systemPrompt: string; stats?: SessionStats };
-
-/** 粗略 token 估算（中英混排约 2.5 字符/token），仅流式过程实时显示用；结束换真实 usage。 */
-function estimateTokens(chars: number): number {
-  return Math.round(chars / 2.5);
-}
-
-function fmtTokens(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
-}
-
-function fmtDuration(ms: number): string {
-  const s = ms / 1000;
-  return s >= 60 ? `${Math.floor(s / 60)}m${Math.round(s % 60)}s` : `${s.toFixed(1)}s`;
-}
-
-function lsKey(knId: string): string {
-  return `bkn-studio:agentchat:${knId}`;
-}
-
-function loadPersisted(knId: string): Partial<Persisted> {
-  try {
-    const raw = localStorage.getItem(lsKey(knId));
-    return raw ? (JSON.parse(raw) as Partial<Persisted>) : {};
-  } catch {
-    return {};
-  }
-}
-
-/** Agent 调参全局缓存（不分 kn），UI 实时改。 */
-const CONFIG_LS_KEY = "bkn-studio:agentconfig";
-
-function loadConfig(): AgentConfig {
-  try {
-    const raw = localStorage.getItem(CONFIG_LS_KEY);
-    return raw ? { ...DEFAULT_AGENT_CONFIG, ...(JSON.parse(raw) as Partial<AgentConfig>) } : { ...DEFAULT_AGENT_CONFIG };
-  } catch {
-    return { ...DEFAULT_AGENT_CONFIG };
-  }
-}
-
-/** 参数面板字段定义（label + 说明 + key）。 */
-const CONFIG_FIELDS: { key: keyof AgentConfig; label: string; hint: string }[] = [
-  { key: "maxSteps", label: "工具步数上限", hint: "一轮最多调多少步工具（防跑飞兜底）" },
-  { key: "keepToolResults", label: "步间保留结果数", hint: "每步只保留最近 N 个工具结果全文（0=不驱逐）" },
-  { key: "dataToolCap", label: "数据类结果上限(字)", hint: "run_sql / query_* 结果字符上限（0=不截断）" },
-  { key: "schemaToolCap", label: "Schema类结果上限(字)", hint: "get_kn_detail / search_schema 等（0=不截断）" },
-  { key: "maxHistoryMessages", label: "多轮保留条数", hint: "跨轮历史只保留最近 N 条消息" },
-  { key: "maxTurnChars", label: "单轮文本上限(字)", hint: "每条历史消息文本封顶" },
-  { key: "maxOutputTokens", label: "最大输出token", hint: "单步最大输出(含思考)；推理模型(deepseek)调大，0=模型默认" },
+const FALLBACK_BASE_SUGGESTIONS = [
+  "有哪些数据表？分别存什么数据？",
+  "帮我查最近活跃的高价值客户",
 ];
 
-function formatArgs(args: unknown): string {
+/** 对比模式开关 + 发送目标（全局缓存，不分 kn）。 */
+const COMPARE_LS_KEY = "bkn-studio:agentchat:compare";
+
+type CompareTarget = "both" | "base" | "kn";
+
+type CompareState = { on: boolean; target: CompareTarget };
+
+function loadCompareState(): CompareState {
+  let state: CompareState = { on: false, target: "both" };
   try {
-    return JSON.stringify(args, null, 2);
+    const raw = localStorage.getItem(COMPARE_LS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Partial<CompareState>) : {};
+    state = {
+      on: parsed.on === true,
+      target: parsed.target === "base" || parsed.target === "kn" ? parsed.target : "both",
+    };
   } catch {
-    return String(args);
+    /* 用默认 */
   }
+  try {
+    // 深链覆盖：?compare=on / ?compare=off（可分享演示链接，也便于自动化冒烟）。
+    const qp = new URLSearchParams(window.location.search).get("compare");
+    if (qp === "on" || qp === "1") state = { ...state, on: true };
+    else if (qp === "off" || qp === "0") state = { ...state, on: false };
+  } catch {
+    /* SSR/异常时忽略 */
+  }
+  return state;
 }
 
 /**
@@ -154,70 +104,47 @@ function buildKnContext(detail: KnDetail): string {
   return lines.join("\n");
 }
 
-/** Markdown 渲染（GFM：表格/删除线/任务列表）。 */
-const MarkdownView = memo(function MarkdownView({ text }: { text: string }) {
-  return (
-    <div className={styles.md}>
-      <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
-    </div>
-  );
-});
+const SOLO_PROFILE: PaneProfile = {
+  paneKey: "solo",
+  defaultPrompt: DEFAULT_PROMPT,
+  injectKnContext: true,
+  defaultToolNames: null,
+};
 
-/** 思考过程（reasoning_content）流式展示：进行中自动展开，结束后可折叠。 */
-function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
-  // 默认收起（思考中靠头部闪烁点体现在跑）；用户可手动展开。
-  const [open, setOpen] = useState(false);
-  return (
-    <div className={styles.reasoning}>
-      <button type="button" className={`${styles.reasoningHead} ${live ? styles.reasoningLive : ""}`} onClick={() => setOpen((v) => !v)}>
-        <span>
-          💭 {live ? "思考中" : "思考过程"}
-          {live ? (
-            <span className={styles.thinkDots}>
-              <i />
-              <i />
-              <i />
-            </span>
-          ) : null}
-        </span>
-        <span className={styles.chev}>{open ? <DownOutlined /> : <RightOutlined />}</span>
-      </button>
-      {open ? <div className={styles.reasoningText}>{text}</div> : null}
-    </div>
-  );
+const BASE_PROFILE: PaneProfile = {
+  paneKey: "base",
+  title: "仅基础数据",
+  defaultPrompt: DEFAULT_BASE_PROMPT,
+  injectKnContext: false,
+  defaultToolNames: BASE_DATA_TOOL_NAMES,
+};
+
+/** 对比报告 AI 总结的评审提示词。 */
+const JUDGE_PROMPT =
+  "你是对比评审员。同一个问题由两个 Agent 分别回答：A「仅基础数据」只能用 SQL/表工具直接查库；B「业务知识网络」可用全部知识网络检索工具（语义 Schema、实例、子图、逻辑属性等）。\n" +
+  "请基于给出的两份回答与指标，从这些维度简要对比：①结论正确性与完整度 ②依据是否充分可信 ③效率（工具调用次数、token、耗时）④哪一侧对业务用户更有用、为什么。\n" +
+  "输出中文 Markdown，先给一行总评（哪侧更好），再分点展开，简洁克制，不要复述全文。";
+
+/** 报告里单侧指标块的输入。 */
+function snapshotBrief(label: string, s: PaneSnapshot): string {
+  const tools = s.lastToolCalls.map((t) => t.name).join(", ") || "无";
+  return [
+    `### ${label}`,
+    `- 模型：${s.model || "—"}`,
+    `- 本轮 token：${s.lastTokens ?? "—"}；本轮耗时：${s.lastMs ? fmtDuration(s.lastMs) : "—"}；工具调用 ${s.lastToolCalls.length} 次（${tools}）`,
+    `- 回答：`,
+    s.lastAnswer ?? "（无回答）",
+  ].join("\n");
 }
 
-/** 单条工具调用卡片（可折叠，展开看真实请求参数与响应）。 */
-function ToolCallCard({ call }: { call: ToolCallView }) {
-  const [open, setOpen] = useState(false);
-  const statusDot =
-    call.status === "running" ? styles.dotRunning : call.status === "error" ? styles.dotError : styles.dotOk;
-  const statusText =
-    call.status === "running" ? "调用中…" : call.status === "error" ? "失败" : `200 · ${call.latencyMs ?? "—"}ms`;
-  return (
-    <div className={`${styles.call} ${open ? styles.callOpen : ""}`}>
-      <button type="button" className={styles.callHead} onClick={() => setOpen((v) => !v)}>
-        <span className={styles.verb}>MCP</span>
-        <span className={styles.callName}>{call.name}</span>
-        <span className={`${styles.dot} ${statusDot}`} />
-        <span className={styles.callMeta}>{statusText}</span>
-        <span className={styles.chev}>{open ? <DownOutlined /> : <RightOutlined />}</span>
-      </button>
-      {open ? (
-        <div className={styles.callBody}>
-          <div className={styles.callSec}>
-            <div className={styles.callLbl}>请求 · tools/call → {call.name}</div>
-            <pre className={styles.callPre}>{formatArgs(call.args)}</pre>
-          </div>
-          <div className={styles.callSec}>
-            <div className={styles.callLbl}>{call.status === "error" ? "错误" : "响应"}</div>
-            <pre className={styles.callPre}>{call.status === "error" ? call.error : call.result ?? "—"}</pre>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
+const KN_PROFILE: PaneProfile = {
+  paneKey: "kn",
+  title: "业务知识网络",
+  defaultPrompt: DEFAULT_PROMPT,
+  injectKnContext: true,
+  defaultToolNames: null,
+  highlight: true,
+};
 
 export function AgentChat({
   env,
@@ -228,79 +155,49 @@ export function AgentChat({
   networkName?: string;
   tokenProvider: AgentTokenProvider;
 }) {
-  const { message } = App.useApp();
-  const navigate = useNavigate();
   const knId = env.knId;
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
   const [models, setModels] = useState<LlmModel[]>([]);
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [model, setModel] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
-  const [promptOpen, setPromptOpen] = useState(false);
-  const [promptView, setPromptView] = useState<"edit" | "full">("edit");
-  const [config, setConfigState] = useState<AgentConfig>(loadConfig);
-  const [cfgOpen, setCfgOpen] = useState(false);
-  const setConfigField = useCallback((key: keyof AgentConfig, value: number) => {
-    setConfigState((prev) => {
-      const next = { ...prev, [key]: Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : prev[key] };
+  // 自动载入的知识网络本体结构（注入系统提示词；也用于定制建议问题）。
+  const [knContext, setKnContext] = useState("");
+  const [knSummary, setKnSummary] = useState<{ objectTypes: number; relations: number } | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>(FALLBACK_SUGGESTIONS);
+  const [baseSuggestions, setBaseSuggestions] = useState<string[]>(FALLBACK_BASE_SUGGESTIONS);
+
+  const [compare, setCompare] = useState<CompareState>(loadCompareState);
+  const setCompareState = useCallback((updater: (prev: CompareState) => CompareState) => {
+    setCompare((prev) => {
+      const next = updater(prev);
       try {
-        localStorage.setItem(CONFIG_LS_KEY, JSON.stringify(next));
+        localStorage.setItem(COMPARE_LS_KEY, JSON.stringify(next));
       } catch {
         /* ignore */
       }
       return next;
     });
   }, []);
-  const resetConfig = useCallback(() => {
-    setConfigState({ ...DEFAULT_AGENT_CONFIG });
-    try {
-      localStorage.removeItem(CONFIG_LS_KEY);
-    } catch {
-      /* ignore */
-    }
+
+  // 每面板 busy 上报（禁发/停止逻辑用）。
+  const [busyMap, setBusyMap] = useState<Record<PaneKey, boolean>>({ solo: false, base: false, kn: false });
+  const setPaneBusy = useCallback((key: PaneKey, busy: boolean) => {
+    setBusyMap((prev) => (prev[key] === busy ? prev : { ...prev, [key]: busy }));
   }, []);
-  // 自动载入的知识网络本体结构（注入系统提示词；也用于定制建议问题）。
-  const [knContext, setKnContext] = useState("");
-  const [knSummary, setKnSummary] = useState<{ objectTypes: number; relations: number } | null>(null);
-  const [suggestions, setSuggestions] = useState<string[]>(FALLBACK_SUGGESTIONS);
-  // 会话累计 token + 总时长（像 Claude Code 那样累加）。
-  const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
+  const onSoloBusy = useCallback((b: boolean) => setPaneBusy("solo", b), [setPaneBusy]);
+  const onBaseBusy = useCallback((b: boolean) => setPaneBusy("base", b), [setPaneBusy]);
+  const onKnBusy = useCallback((b: boolean) => setPaneBusy("kn", b), [setPaneBusy]);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  const mcpToolsRef = useRef<{ knId: string; tools: McpToolDef[] } | null>(null);
-  // 是否贴底跟随；用户上滚时置 false，回到底部恢复，避免生成时被强制拽到底。
-  const stickRef = useRef(true);
+  const soloRef = useRef<ChatPaneHandle>(null);
+  const baseRef = useRef<ChatPaneHandle>(null);
+  const knRef = useRef<ChatPaneHandle>(null);
 
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-  }, []);
-
-  // 载入持久化对话（按 kn 隔离）。
-  useEffect(() => {
-    const saved = loadPersisted(knId);
-    setMessages(Array.isArray(saved.messages) ? saved.messages : []);
-    if (saved.model) setModel(saved.model);
-    setSystemPrompt(saved.systemPrompt ?? DEFAULT_PROMPT);
-    setStats(saved.stats ?? { tokens: 0, ms: 0 });
-    mcpToolsRef.current = null;
-  }, [knId]);
-
-  // 拉模型列表（模型工厂），默认选系统默认模型。
+  // 拉模型列表（模型工厂）一次，两侧共享；默认模型在 ChatPane 内选。
   useEffect(() => {
     let cancelled = false;
     listLlmModels({ page: 1, size: 100 })
       .then((res) => {
-        if (cancelled) return;
-        setModels(res.items);
-        setModel((prev) => {
-          if (prev && res.items.some((m) => m.modelName === prev)) return prev;
-          return res.items.find((m) => m.default)?.modelName ?? res.items[0]?.modelName ?? "";
-        });
+        if (!cancelled) setModels(res.items);
       })
       .catch(() => {
         if (!cancelled) setModels([]);
@@ -319,6 +216,7 @@ export function AgentChat({
     setKnContext("");
     setKnSummary(null);
     setSuggestions(FALLBACK_SUGGESTIONS);
+    setBaseSuggestions(FALLBACK_BASE_SUGGESTIONS);
     fetchKnDetail(env)
       .then((detail) => {
         if (cancelled) return;
@@ -330,6 +228,9 @@ export function AgentChat({
         if (firstOt) tailored.push(`${firstOt.name ?? firstOt.id} 有哪些数据？举几条实例`);
         if (firstRel) tailored.push(`${firstRel.name ?? firstRel.id} 关系连接了哪些对象？`);
         setSuggestions(tailored.length >= 2 ? tailored : FALLBACK_SUGGESTIONS);
+        const tailoredBase: string[] = ["有哪些数据表？分别存什么数据？"];
+        if (firstOt) tailoredBase.push(`查几条 ${firstOt.name ?? firstOt.id} 相关的数据看看`);
+        setBaseSuggestions(tailoredBase);
       })
       .catch(() => {
         /* 占位符 / 无权限网络拉不到结构时，回退默认建议，Agent 仍可用工具探索 */
@@ -339,455 +240,396 @@ export function AgentChat({
     };
   }, [env]);
 
-  const persist = useCallback(
-    (msgs: ChatMessage[], statsSnapshot: SessionStats) => {
-      try {
-        localStorage.setItem(
-          lsKey(knId),
-          JSON.stringify({ messages: msgs, model, systemPrompt, stats: statsSnapshot } satisfies Persisted),
-        );
-      } catch {
-        /* localStorage 不可用时忽略 */
-      }
-    },
-    [knId, model, systemPrompt],
-  );
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
-  }, [messages]);
-
-  // 一轮结束（busy: true→false）把最终 messages+stats（含本轮时长）落盘；流式中不写。
-  const prevBusyRef = useRef(false);
-  useEffect(() => {
-    if (prevBusyRef.current && !busy && messages.length) persist(messages, stats);
-    prevBusyRef.current = busy;
-  }, [busy, messages, stats, persist]);
-
-  const updateAssistant = useCallback((updater: (prev: ChatMessage) => ChatMessage) => {
-    setMessages((prev) => {
-      if (prev.length === 0) return prev;
-      const next = [...prev];
-      const idx = next.length - 1;
-      next[idx] = updater(next[idx]!);
-      return next;
-    });
-  }, []);
-
-  const handleChunk = useCallback(
-    (chunk: AgentChunk) => {
-      switch (chunk.type) {
-        case "text":
-          updateAssistant((m) => ({ ...m, content: m.content + chunk.delta }));
-          break;
-        case "reasoning":
-          updateAssistant((m) => ({ ...m, reasoning: (m.reasoning ?? "") + chunk.delta }));
-          break;
-        case "tool-call":
-          updateAssistant((m) => ({
-            ...m,
-            toolCalls: [
-              ...(m.toolCalls ?? []),
-              { id: chunk.id, name: chunk.name, args: chunk.args, status: "running", startedAt: performance.now() },
-            ],
-          }));
-          break;
-        case "tool-result":
-          updateAssistant((m) => ({
-            ...m,
-            toolCalls: (m.toolCalls ?? []).map((tc) =>
-              tc.id === chunk.id
-                ? { ...tc, status: "done", result: chunk.result, latencyMs: Math.round(performance.now() - tc.startedAt) }
-                : tc,
-            ),
-          }));
-          break;
-        case "tool-error":
-          updateAssistant((m) => ({
-            ...m,
-            toolCalls: (m.toolCalls ?? []).map((tc) =>
-              tc.id === chunk.id ? { ...tc, status: "error", error: chunk.error } : tc,
-            ),
-          }));
-          break;
-        case "usage":
-          updateAssistant((m) => ({ ...m, tokens: (m.tokens ?? 0) + chunk.totalTokens }));
-          setStats((s) => ({ ...s, tokens: s.tokens + chunk.totalTokens }));
-          break;
-        case "error":
-          updateAssistant((m) => ({ ...m, content: m.content + (m.content ? "\n\n" : "") + `⚠️ ${chunk.error}` }));
-          break;
-        case "finish":
-        default:
-          break;
-      }
-    },
-    [updateAssistant],
-  );
-
-  // 实际发送的完整系统提示词 = 可编辑提示词 + 自动附加的知识网络摘要。
-  const composedSystem = useMemo(
-    () =>
-      knContext
-        ? `${systemPrompt}\n\n## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n${knContext}`
-        : systemPrompt,
-    [systemPrompt, knContext],
-  );
-
-  const send = useCallback(
-    async (text: string) => {
-      const question = text.trim();
-      if (!question || busy) return;
-      if (!model) {
-        message.error("当前没有可用的大模型，请先在「模型工厂」配置默认模型");
-        return;
-      }
-
-      setBusy(true);
-      setInput("");
-      const startedAt = performance.now();
-
-      // 多轮上下文压缩：只保留最近若干轮，且单轮文本封顶，防长对话纯文本堆大。
-      // （工具结果/思考本就不进历史，见 send() 历史只取 role+content。）
-      const history: AgentChatTurn[] = messages.slice(-config.maxHistoryMessages).map((m) => ({
-        role: m.role,
-        content:
-          config.maxTurnChars > 0 && m.content.length > config.maxTurnChars
-            ? `${m.content.slice(0, config.maxTurnChars)}\n…[历史过长已截断]`
-            : m.content,
-      }));
-      history.push({ role: "user", content: question });
-      setMessages((prev) => [
-        ...prev,
-        { role: "user", content: question },
-        { role: "assistant", content: "", toolCalls: [] },
-      ]);
-
-      try {
-        if (!mcpToolsRef.current || mcpToolsRef.current.knId !== knId) {
-          mcpToolsRef.current = { knId, tools: await listMcpTools(env) };
-        }
-        const tools = buildAgentTools(mcpToolsRef.current.tools, env, knId, config, tokenProvider);
-
-        const controller = new AbortController();
-        abortRef.current = controller;
-        await runAgentChat({
-          env,
-          modelName: model,
-          system: composedSystem,
-          history,
-          tools,
-          config,
-          tokenProvider,
-          signal: controller.signal,
-          onChunk: handleChunk,
+  // tools/list 缓存：按 knId 拉一次，多面板共享（send 懒取 promise；picker 用已解析的 toolDefs）。
+  const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
+  const toolsCacheRef = useRef<{ knId: string; promise: Promise<McpToolDef[]> } | null>(null);
+  const envRef = useRef(env);
+  envRef.current = env;
+  const getTools = useCallback((): Promise<McpToolDef[]> => {
+    if (!toolsCacheRef.current || toolsCacheRef.current.knId !== knId) {
+      const promise = listMcpTools(envRef.current)
+        .then((list) => {
+          setToolDefs(list);
+          return list;
+        })
+        .catch((error: unknown) => {
+          // 失败不缓存，下次重试。
+          toolsCacheRef.current = null;
+          throw error;
         });
-      } catch (error) {
-        updateAssistant((m) => ({
-          ...m,
-          content: m.content + (m.content ? "\n\n" : "") + `⚠️ ${error instanceof Error ? error.message : String(error)}`,
-        }));
-      } finally {
-        abortRef.current = null;
-        const elapsed = performance.now() - startedAt;
-        // 本轮耗时写到最后一条 assistant 消息 + 累计会话总时长（token 已在 usage chunk 累计）。
-        setMessages((cur) =>
-          cur.map((m, i) => (i === cur.length - 1 && m.role === "assistant" ? { ...m, ms: elapsed } : m)),
-        );
-        setStats((s) => ({ ...s, ms: s.ms + elapsed }));
-        setBusy(false); // 触发下方「完成即持久化」effect
-      }
-    },
-    [busy, model, messages, env, knId, composedSystem, config, tokenProvider, handleChunk, updateAssistant, message],
+      toolsCacheRef.current = { knId, promise };
+    }
+    return toolsCacheRef.current.promise;
+  }, [knId]);
+  useEffect(() => {
+    setToolDefs(null);
+    toolsCacheRef.current = null;
+  }, [knId]);
+  // 对比模式下工具选择器需要 options → 打开时预拉一次。
+  useEffect(() => {
+    if (compare.on && !toolDefs) {
+      getTools().catch(() => {
+        /* picker 显示加载失败前的 loading 态；send 时会重试并把错误写进消息 */
+      });
+    }
+  }, [compare.on, toolDefs, getTools]);
+
+  const targets = useMemo<PaneKey[]>(() => {
+    if (!compare.on) return ["solo"];
+    return compare.target === "both" ? ["base", "kn"] : [compare.target];
+  }, [compare]);
+
+  const refOf = useCallback(
+    (key: PaneKey) => (key === "solo" ? soloRef : key === "base" ? baseRef : knRef),
+    [],
   );
 
-  const stop = useCallback(() => {
-    abortRef.current?.abort();
+  const anyTargetBusy = targets.some((k) => busyMap[k]);
+  const anyBusy = busyMap.solo || busyMap.base || busyMap.kn;
+  const noLlm = modelsLoaded && models.length === 0;
+
+  const sendShared = useCallback(() => {
+    const text = input.trim();
+    if (!text || anyTargetBusy) return;
+    targets.forEach((key) => refOf(key).current?.send(text));
+    setInput("");
+  }, [input, targets, anyTargetBusy, refOf]);
+
+  const stopAll = useCallback(() => {
+    (Object.keys(busyMap) as PaneKey[]).forEach((key) => {
+      if (busyMap[key]) refOf(key).current?.stop();
+    });
+  }, [busyMap, refOf]);
+
+  // 对比报告：两侧快照 + 指标表 + AI 总结（用右侧模型评审，流式）。
+  const [report, setReport] = useState<{ base: PaneSnapshot; kn: PaneSnapshot } | null>(null);
+  const [summary, setSummary] = useState("");
+  const [summarizing, setSummarizing] = useState(false);
+  const summaryAbortRef = useRef<AbortController | null>(null);
+
+  const openReport = useCallback(() => {
+    const base = baseRef.current?.getSnapshot();
+    const kn = knRef.current?.getSnapshot();
+    if (base && kn) {
+      setReport({ base, kn });
+      setSummary("");
+    }
   }, []);
 
-  const clearChat = useCallback(() => {
-    setMessages([]);
-    setStats({ tokens: 0, ms: 0 });
+  const closeReport = useCallback(() => {
+    summaryAbortRef.current?.abort();
+    setReport(null);
+  }, []);
+
+  const generateSummary = useCallback(async () => {
+    if (!report || summarizing) return;
+    const modelName = report.kn.model || report.base.model;
+    if (!modelName) return;
+    const content = [
+      `问题：${report.kn.lastQuestion ?? report.base.lastQuestion ?? "（未知）"}`,
+      "",
+      snapshotBrief("A · 仅基础数据", report.base),
+      "",
+      snapshotBrief("B · 业务知识网络", report.kn),
+    ].join("\n");
+    setSummarizing(true);
+    setSummary("");
+    const controller = new AbortController();
+    summaryAbortRef.current = controller;
     try {
-      localStorage.removeItem(lsKey(knId));
-    } catch {
-      /* ignore */
+      await runAgentChat({
+        env,
+        modelName,
+        system: JUDGE_PROMPT,
+        history: [{ role: "user", content }],
+        tools: {},
+        config: DEFAULT_AGENT_CONFIG,
+        tokenProvider,
+        signal: controller.signal,
+        onChunk: (chunk) => {
+          if (chunk.type === "text") setSummary((s) => s + chunk.delta);
+          else if (chunk.type === "error") setSummary((s) => s + (s ? "\n\n" : "") + `⚠️ ${chunk.error}`);
+        },
+      });
+    } finally {
+      summaryAbortRef.current = null;
+      setSummarizing(false);
     }
-  }, [knId]);
+  }, [report, summarizing, env, tokenProvider]);
 
-  const modelOptions = useMemo(
-    () => models.map((m) => ({ value: m.modelName, label: m.default ? `${m.modelName} · 默认` : m.modelName })),
-    [models],
-  );
+  const placeholder = useMemo(() => {
+    if (noLlm) return "请先在「模型工厂」接入大模型后再对话";
+    if (!compare.on) return `向 Agent 提问，例如：${suggestions[0] ?? FALLBACK_SUGGESTIONS[0]!}`;
+    if (compare.target === "both") return "同一个问题，同时问两侧，对比两种回答";
+    return compare.target === "base" ? "仅问左侧「仅基础数据」" : "仅问右侧「业务知识网络」";
+  }, [noLlm, compare, suggestions]);
 
-  const empty = messages.length === 0;
-  const lastIdx = messages.length - 1;
-  const noLlm = modelsLoaded && models.length === 0;
+  const paneShared = {
+    env,
+    tokenProvider,
+    networkName,
+    models,
+    modelsLoaded,
+    knContext,
+    knSummary,
+    getTools,
+    toolDefs,
+  };
 
   return (
     <div className={styles.root}>
-      <div className={styles.bar}>
-        <div className={styles.barField}>
-          <span className={styles.barLabel}>模型</span>
-          <Select
-            size="small"
-            className={styles.modelSelect}
-            value={model || undefined}
-            onChange={setModel}
-            options={modelOptions}
-            placeholder="选择模型"
-            disabled={busy}
-            popupMatchSelectWidth={false}
-          />
-        </div>
-        {knSummary ? (
-          <span className={styles.knChip}>
-            已载入网络摘要 · {knSummary.objectTypes} 对象类 / {knSummary.relations} 关系类
-          </span>
-        ) : null}
-        <button type="button" className={styles.barBtn} onClick={() => setPromptOpen((v) => !v)}>
-          <ThunderboltFilled /> 系统提示词 {promptOpen ? <DownOutlined /> : <RightOutlined />}
-        </button>
-        <button type="button" className={styles.barBtn} onClick={() => setCfgOpen((v) => !v)}>
-          参数 {cfgOpen ? <DownOutlined /> : <RightOutlined />}
-        </button>
-        <button type="button" className={styles.barBtn} onClick={clearChat} disabled={busy || empty}>
-          清空对话
-        </button>
-        {stats.tokens > 0 || stats.ms > 0 ? (
-          <span className={styles.statChip} title="本会话累计 token 与总时长">
-            Σ {fmtTokens(stats.tokens)} tokens · {fmtDuration(stats.ms)}
-          </span>
+      <div className={styles.cmpBar}>
+        <Switch
+          size="small"
+          checked={compare.on}
+          disabled={anyBusy}
+          onChange={(on) => setCompareState((prev) => ({ ...prev, on }))}
+        />
+        <span className={styles.cmpTitle}>
+          <PauseOutlined rotate={90} /> 对比模式
+        </span>
+        <span className={styles.cmpDesc}>同一问题，对比「仅基础数据」与「有业务知识网络」两种回答</span>
+        {compare.on ? (
+          <button
+            type="button"
+            className={styles.cmpReport}
+            onClick={openReport}
+            disabled={anyBusy}
+            title="对比两侧最近一轮的回答与指标，可生成 AI 总结"
+          >
+            <FileTextOutlined /> 对比报告
+          </button>
         ) : null}
       </div>
-      {cfgOpen ? (
-        <div className={styles.cfgPanel}>
-          <div className={styles.cfgGrid}>
-            {CONFIG_FIELDS.map((f) => (
-              <label key={f.key} className={styles.cfgField} title={f.hint}>
-                <span className={styles.cfgLabel}>{f.label}</span>
-                <input
-                  type="number"
-                  min={0}
-                  className={styles.cfgInput}
-                  value={config[f.key]}
-                  onChange={(e) => setConfigField(f.key, Number(e.target.value))}
-                />
-                <span className={styles.cfgHint}>{f.hint}</span>
-              </label>
-            ))}
-          </div>
-          <div className={styles.promptAct}>
-            <button type="button" className={styles.linkBtn} onClick={resetConfig}>
-              恢复默认
-            </button>
-            <span className={styles.hint}>已随输入即时保存到 localStorage，无需重新部署。0 表示不限制/不截断/不驱逐。</span>
-            <button
-              type="button"
-              className={styles.confirmBtn}
-              onClick={() => {
-                setCfgOpen(false);
-                message.success("参数已保存");
-              }}
-            >
-              确认
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {promptOpen ? (
-        <div className={styles.promptEdit}>
-          <div className={styles.promptTabs}>
-            <button
-              type="button"
-              className={`${styles.promptTab} ${promptView === "edit" ? styles.promptTabActive : ""}`}
-              onClick={() => setPromptView("edit")}
-            >
-              编辑
-            </button>
-            <button
-              type="button"
-              className={`${styles.promptTab} ${promptView === "full" ? styles.promptTabActive : ""}`}
-              onClick={() => setPromptView("full")}
-            >
-              完整（实际发送）
-            </button>
-            {promptView === "full" ? (
-              <button
-                type="button"
-                className={styles.linkBtn}
-                style={{ marginLeft: "auto" }}
-                onClick={() => {
-                  void navigator.clipboard?.writeText(composedSystem).then(() => message.success("已复制完整提示词"));
-                }}
-              >
-                复制
-              </button>
-            ) : null}
-          </div>
-          {promptView === "edit" ? (
-            <>
-              <textarea
-                value={systemPrompt}
-                spellCheck={false}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                placeholder="系统提示词（修改即时生效，随对话一起发送）"
-              />
-              <div className={styles.promptAct}>
-                <button type="button" className={styles.linkBtn} onClick={() => setSystemPrompt(DEFAULT_PROMPT)}>
-                  恢复默认
-                </button>
-                <span className={styles.hint}>
-                  kn_id 已锁定为 {knId}
-                  {knSummary ? "；该网络摘要会自动附加（见「完整」）" : ""}。
-                </span>
-                <button
-                  type="button"
-                  className={styles.confirmBtn}
-                  onClick={() => {
-                    persist(messages, stats);
-                    setPromptOpen(false);
-                    message.success("系统提示词已保存");
-                  }}
-                >
-                  确认
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <textarea className={styles.promptFull} value={composedSystem} readOnly spellCheck={false} />
-              <div className={styles.promptAct}>
-                <span className={styles.hint}>每轮随对话实际发送给模型的完整系统提示词（你的提示词 + 自动附加的网络摘要），只读。</span>
-              </div>
-            </>
-          )}
-        </div>
-      ) : null}
 
-      <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll}>
-        {noLlm ? (
-          <div className={styles.intro}>
-            <div className={styles.introGlyph}>
-              <ThunderboltFilled />
-            </div>
-            <h3>还没有可用的大模型</h3>
-            <p>Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。</p>
-            <div className={styles.sugs}>
-              <button type="button" className={styles.sug} onClick={() => navigate("/model-resources/models")}>
-                <span className={styles.sugText}>去模型工厂接入大模型</span>
-                <RightOutlined className={styles.sugArrow} />
-              </button>
-            </div>
+      {compare.on ? (
+        <div className={styles.panes}>
+          <div className={styles.pane}>
+            <ChatPane
+              ref={baseRef}
+              {...paneShared}
+              profile={BASE_PROFILE}
+              suggestions={baseSuggestions}
+              onBusyChange={onBaseBusy}
+            />
           </div>
-        ) : empty ? (
-          <div className={styles.intro}>
-            <div className={styles.introGlyph}>
-              <ThunderboltFilled />
-            </div>
-            <h3>Agent 对话</h3>
-            <p>
-              用自然语言向 Agent 提问，它会基于知识网络 <code>{knId}</code>
-              {networkName ? `（${networkName}）` : ""} 调用检索工具并作答。
-              {knSummary ? `已自动载入网络摘要（${knSummary.objectTypes} 对象类 / ${knSummary.relations} 关系类），无需先浏览。` : ""}
-            </p>
-            <div className={styles.sugs}>
-              {suggestions.map((s) => (
-                <button key={s} type="button" className={styles.sug} onClick={() => void send(s)}>
-                  <span className={styles.sugText}>{s}</span>
-                  <RightOutlined className={styles.sugArrow} />
-                </button>
-              ))}
-            </div>
+          <div className={`${styles.pane} ${styles.paneRight} ${styles.paneHl}`}>
+            <ChatPane
+              ref={knRef}
+              {...paneShared}
+              profile={KN_PROFILE}
+              suggestions={suggestions}
+              onBusyChange={onKnBusy}
+            />
           </div>
-        ) : (
-          <div className={styles.wrap}>
-            {messages.map((m, i) => {
-              const isLast = i === lastIdx;
-              const hasTools = !!m.toolCalls && m.toolCalls.length > 0;
-              return (
-                <div key={i} className={`${styles.msg} ${m.role === "user" ? styles.msgUser : styles.msgBot}`}>
-                  <div className={styles.avatar}>{m.role === "user" ? "我" : <ThunderboltFilled />}</div>
-                  <div className={styles.bubble}>
-                    <div className={styles.who}>{m.role === "user" ? "我" : "Agent"}</div>
-                    {m.reasoning ? <ReasoningBlock text={m.reasoning} live={busy && isLast && !m.content} /> : null}
-                    {hasTools ? (
-                      <div className={styles.calls}>
-                        {m.toolCalls!.map((tc) => (
-                          <ToolCallCard key={tc.id} call={tc} />
-                        ))}
-                      </div>
-                    ) : null}
-                    {m.content ? (
-                      // 流式进行中的最后一条用纯文本，结束后再渲染 Markdown：
-                      // 避免每来一个 token 就整段重新解析 Markdown（长答复 O(n²) 卡 UI）。
-                      m.role === "assistant" && !(busy && isLast) ? (
-                        <MarkdownView text={m.content} />
-                      ) : (
-                        <div className={styles.txt}>{m.content}</div>
-                      )
-                    ) : m.role === "assistant" && busy && isLast && !m.reasoning && !hasTools ? (
-                      <div className={styles.typing}>
-                        <i />
-                        <i />
-                        <i />
-                      </div>
-                    ) : null}
-                    {m.role === "assistant" ? (
-                      busy && isLast ? (
-                        <div className={styles.msgMeta}>
-                          · ~{fmtTokens(estimateTokens((m.reasoning?.length ?? 0) + m.content.length))} tokens
-                        </div>
-                      ) : m.tokens || m.ms ? (
-                        <div className={styles.msgMeta}>
-                          {m.tokens ? `${fmtTokens(m.tokens)} tokens` : ""}
-                          {m.tokens && m.ms ? " · " : ""}
-                          {m.ms ? fmtDuration(m.ms) : ""}
-                        </div>
-                      ) : null
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <ChatPane
+          ref={soloRef}
+          {...paneShared}
+          profile={SOLO_PROFILE}
+          suggestions={suggestions}
+          onBusyChange={onSoloBusy}
+        />
+      )}
 
       <div className={styles.composer}>
+        {compare.on ? (
+          <div className={styles.targetRow}>
+            <Segmented
+              className={styles.targetSeg}
+              value={compare.target}
+              onChange={(value) => setCompareState((prev) => ({ ...prev, target: value as CompareTarget }))}
+              options={[
+                { label: "两侧同问", value: "both" },
+                { label: "仅基础数据", value: "base" },
+                { label: "仅业务知识网络", value: "kn" },
+              ]}
+            />
+          </div>
+        ) : null}
         <div className={styles.cwrap}>
           <textarea
             className={styles.cInput}
             value={input}
             rows={1}
             disabled={noLlm}
-            placeholder={
-              noLlm
-                ? "请先在「模型工厂」接入大模型后再对话"
-                : `向 Agent 提问，例如：${suggestions[0] ?? "这个知识网络里有哪些对象类和关系？"}`
-            }
+            placeholder={placeholder}
             spellCheck={false}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               // 跳过中文输入法组字中的回车（确认候选词），避免误发送。
               if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
                 e.preventDefault();
-                void send(input);
+                sendShared();
               }
             }}
           />
-          {busy ? (
-            <button type="button" className={styles.stopBtn} onClick={stop}>
+          {anyTargetBusy ? (
+            <button type="button" className={styles.stopBtn} onClick={stopAll}>
               停止
             </button>
           ) : (
-            <button type="button" className={styles.sendBtn} onClick={() => void send(input)} disabled={!input.trim()}>
+            <button type="button" className={styles.sendBtn} onClick={sendShared} disabled={!input.trim() || noLlm}>
               发送
             </button>
           )}
         </div>
       </div>
+
+      <Modal open={report !== null} onCancel={closeReport} footer={null} width={880} title="对比报告">
+        {report ? (
+          <div className={styles.rptRoot}>
+            {!report.base.lastAnswer && !report.kn.lastAnswer ? (
+              <p className={styles.rptHint}>两侧还没有回答。先用「两侧同问」发一个问题，再来看对比报告。</p>
+            ) : (
+              <>
+                <div className={styles.rptQ}>
+                  <span className={styles.rptQMark}>❝</span>
+                  {report.kn.lastQuestion ?? report.base.lastQuestion ?? "—"}
+                </div>
+                {(() => {
+                  const callStats = (s: PaneSnapshot) => ({
+                    n: s.lastToolCalls.length,
+                    ok: s.lastToolCalls.filter((t) => t.status === "done").length,
+                    err: s.lastToolCalls.filter((t) => t.status === "error").length,
+                  });
+                  const b = report.base;
+                  const k = report.kn;
+                  const bc = callStats(b);
+                  const kc = callStats(k);
+                  const bBestTokens = b.lastTokens != null && k.lastTokens != null && b.lastTokens < k.lastTokens;
+                  const kBestTokens = b.lastTokens != null && k.lastTokens != null && k.lastTokens < b.lastTokens;
+                  const bBestMs = b.lastMs != null && k.lastMs != null && b.lastMs < k.lastMs;
+                  const kBestMs = b.lastMs != null && k.lastMs != null && k.lastMs < b.lastMs;
+                  const toolCell = (s: PaneSnapshot, c: { n: number; ok: number; err: number }) => (
+                    <>
+                      {c.n} 次
+                      {c.n > 0 ? (
+                        <>
+                          {" · "}
+                          <span className={styles.rptOkTxt}>{c.ok} 成功</span>
+                          {c.err > 0 ? (
+                            <>
+                              {" / "}
+                              <span className={styles.rptErrTxt}>{c.err} 失败</span>
+                            </>
+                          ) : null}
+                          <div className={styles.rptToolTags}>
+                            {s.lastToolCalls.map((t, i) => (
+                              <span
+                                key={`${t.name}-${i}`}
+                                className={`${styles.rptTool} ${t.status === "error" ? styles.rptToolErr : ""}`}
+                              >
+                                {t.name}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      ) : null}
+                    </>
+                  );
+                  return (
+                    <>
+                      <table className={styles.rptTable}>
+                        <thead>
+                          <tr>
+                            <th>指标（最近一轮）</th>
+                            <th>
+                              <span className={styles.paneTitle}>仅基础数据</span>
+                            </th>
+                            <th>
+                              <span className={`${styles.paneTitle} ${styles.paneTitleHl}`}>业务知识网络</span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>模型</td>
+                            <td>{b.model || "—"}</td>
+                            <td>{k.model || "—"}</td>
+                          </tr>
+                          <tr>
+                            <td>本轮 token</td>
+                            <td className={bBestTokens ? styles.rptBest : ""}>
+                              {b.lastTokens != null ? fmtTokens(b.lastTokens) : "—"}
+                            </td>
+                            <td className={kBestTokens ? styles.rptBest : ""}>
+                              {k.lastTokens != null ? fmtTokens(k.lastTokens) : "—"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>本轮耗时</td>
+                            <td className={bBestMs ? styles.rptBest : ""}>
+                              {b.lastMs != null ? fmtDuration(b.lastMs) : "—"}
+                            </td>
+                            <td className={kBestMs ? styles.rptBest : ""}>
+                              {k.lastMs != null ? fmtDuration(k.lastMs) : "—"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>工具调用</td>
+                            <td>{toolCell(b, bc)}</td>
+                            <td>{toolCell(k, kc)}</td>
+                          </tr>
+                          <tr>
+                            <td>会话累计</td>
+                            <td>
+                              {fmtTokens(b.stats.tokens)} tokens · {fmtDuration(b.stats.ms)} · {b.rounds} 轮
+                            </td>
+                            <td>
+                              {fmtTokens(k.stats.tokens)} tokens · {fmtDuration(k.stats.ms)} · {k.rounds} 轮
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div className={styles.rptAnsGrid}>
+                        {(
+                          [
+                            { key: "base", title: "仅基础数据", hl: false, ans: b.lastAnswer },
+                            { key: "kn", title: "业务知识网络", hl: true, ans: k.lastAnswer },
+                          ] as const
+                        ).map(({ key, title, hl, ans }) => (
+                          <div key={key} className={styles.rptAnsBox}>
+                            <div className={styles.rptAnsHead}>
+                              <span className={`${styles.paneTitle} ${hl ? styles.paneTitleHl : ""}`}>{title}</span>
+                              <span className={styles.rptAnsLbl}>回答</span>
+                            </div>
+                            <div className={styles.rptAnsBody}>
+                              {ans ? <MarkdownView text={ans} /> : <span className={styles.rptHint}>（无回答）</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
+
+                <div className={styles.rptSumHead}>
+                  <span>AI 总结</span>
+                  <button
+                    type="button"
+                    className={styles.rptGenBtn}
+                    onClick={() => void generateSummary()}
+                    disabled={summarizing || (!report.base.lastAnswer && !report.kn.lastAnswer)}
+                  >
+                    {summarizing ? "生成中…" : summary ? "重新生成" : "生成总结"}
+                  </button>
+                </div>
+                {summary ? (
+                  <div className={styles.rptSummary}>
+                    <MarkdownView text={summary} />
+                  </div>
+                ) : (
+                  <p className={styles.rptHint}>
+                    {summarizing ? "评审模型思考中…" : "用右侧模型对两份回答做正确性 / 依据 / 效率评审。"}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }
