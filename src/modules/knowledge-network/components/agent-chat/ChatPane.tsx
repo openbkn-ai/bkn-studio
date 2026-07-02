@@ -31,6 +31,7 @@ import remarkGfm from "remark-gfm";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
   buildAgentTools,
+  effectiveToolArgs,
   runAgentChat,
   DEFAULT_AGENT_CONFIG,
   type AgentChatTurn,
@@ -457,7 +458,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             ...m,
             toolCalls: [
               ...(m.toolCalls ?? []),
-              { id: chunk.id, name: chunk.name, args: chunk.args, status: "running", startedAt: performance.now() },
+              {
+                id: chunk.id,
+                name: chunk.name,
+                // 展示实际发出的请求体（含注入的 kn_id 与 schema_brief 等默认值），而非模型原始入参。
+                args: effectiveToolArgs(chunk.name, chunk.args, knId),
+                status: "running",
+                startedAt: performance.now(),
+              },
             ],
           }));
           break;
@@ -491,7 +499,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           break;
       }
     },
-    [updateAssistant],
+    [updateAssistant, knId],
   );
 
   // 实际发送的完整系统提示词 = 可编辑提示词 + （按画像）自动附加的知识网络摘要。

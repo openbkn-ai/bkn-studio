@@ -97,6 +97,15 @@ const TOOL_ARG_DEFAULTS: Record<string, Record<string, unknown>> = {
   search_schema: { schema_brief: true },
 };
 
+/** 实际发给 MCP 的最终 arguments = 默认值 ← 模型入参 ← 锁定 kn_id。UI 工具卡片也用它展示真实请求。 */
+export function effectiveToolArgs(name: string, input: unknown, knId: string): Record<string, unknown> {
+  return {
+    ...TOOL_ARG_DEFAULTS[name],
+    ...(input && typeof input === "object" ? (input as Record<string, unknown>) : {}),
+    kn_id: knId,
+  };
+}
+
 /**
  * 步间驱逐旧工具结果：每步前只保留最近 keep 个工具结果的全文，更早的把内容替换成占位，
  * 但**保留 toolCallId / toolName 配对**（OpenAI 要求每个 tool_call 都有对应 tool 响应）。keep<=0 不驱逐。
@@ -166,11 +175,7 @@ export function buildAgentTools(
       description: (def.description ?? def.name) + (TOOL_HINTS[def.name] ?? ""),
       inputSchema: jsonSchema(schema),
       execute: async (input: unknown): Promise<string> => {
-        const args: Record<string, unknown> = {
-          ...TOOL_ARG_DEFAULTS[def.name],
-          ...(input && typeof input === "object" ? (input as Record<string, unknown>) : {}),
-          kn_id: knId,
-        };
+        const args = effectiveToolArgs(def.name, input, knId);
         const res = await session.callTool(def.name, args);
         return capToolResult(res.text, def.name, cfg);
       },
