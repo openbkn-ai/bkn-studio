@@ -91,15 +91,19 @@ const TOOL_HINTS: Record<string, string> = {
     " 建议：用精确的 query，max_concepts 默认不超过 10；结果过大会被截断。schema_brief 默认 true（只返回概要），需要完整字段定义时显式传 schema_brief=false。",
 };
 
+/** 所有工具通用的默认 arguments：TOON 紧凑文本比 JSON 省大量 token（模型显式传值优先）。 */
+const GLOBAL_ARG_DEFAULTS: Record<string, unknown> = { response_format: "toon" };
+
 /** 模型未显式传参时注入的默认 arguments（模型显式传值优先）。 */
 const TOOL_ARG_DEFAULTS: Record<string, Record<string, unknown>> = {
   // brief 概要即可支撑绝大多数探索，省 token；要完整 schema 让模型显式关。
   search_schema: { schema_brief: true },
 };
 
-/** 实际发给 MCP 的最终 arguments = 默认值 ← 模型入参 ← 锁定 kn_id。UI 工具卡片也用它展示真实请求。 */
+/** 实际发给 MCP 的最终 arguments = 通用默认 ← 工具默认 ← 模型入参 ← 锁定 kn_id。UI 工具卡片也用它展示真实请求。 */
 export function effectiveToolArgs(name: string, input: unknown, knId: string): Record<string, unknown> {
   return {
+    ...GLOBAL_ARG_DEFAULTS,
     ...TOOL_ARG_DEFAULTS[name],
     ...(input && typeof input === "object" ? (input as Record<string, unknown>) : {}),
     kn_id: knId,
@@ -235,6 +239,141 @@ function createChatModel(env: ContextLoaderEnv, modelName: string, tokenProvider
   return provider(modelName);
 }
 
+/* ============================ 模板标记泄漏过滤（后端 parser 缺失兜底） ============================ */
+
+/**
+ * 推理后端没配 tool-call / reasoning parser 时，模型会把 <think>…</think> 与
+ * <function=…>/<tool_call> 模板标记当**纯文本**吐出来（调用根本没被执行）。
+ * 这里做流式兜底：think 内容改道到思考区；泄漏的调用块拦截成一张失败的工具卡，
+ * 并说明根因，不再污染答案正文。代价：正文里若真要引用这些标记原文会被误拦（可接受）。
+ */
+const LEAK_OPENERS = ["<think>", "<tool_call>", "<function="] as const;
+const LEAK_FN_CLOSERS = ["</function>", "</tool_call>"] as const;
+const LEAK_ALL_MARKS = ["<think>", "</think>", "<tool_call>", "</tool_call>", "<function=", "</function>"];
+
+const LEAK_ERROR_MSG =
+  "模型把工具调用当文本输出，调用未真正执行——通常是该模型的推理后端未配置 tool-call parser" +
+  "（如 vLLM 的 --enable-auto-tool-choice --tool-call-parser，配套 --reasoning-parser）。" +
+  "请修正模型接入配置，或换用可正常调用工具的模型。";
+
+export function createLeakFilter(onChunk: (chunk: AgentChunk) => void) {
+  let buf = "";
+  let mode: "normal" | "think" | "fn" = "normal";
+  let fnRaw = "";
+  let fnSeq = 0;
+
+  // 结尾若可能是某个标记的前缀，先兜住不发（跨 delta 的半个标签）。
+  const holdLen = (s: string): number => {
+    const max = Math.min(s.length, 12);
+    for (let n = max; n > 0; n--) {
+      const tail = s.slice(s.length - n);
+      if (LEAK_ALL_MARKS.some((m) => m.length > n && m.startsWith(tail))) return n;
+    }
+    return 0;
+  };
+
+  const emitText = (delta: string) => {
+    if (delta) onChunk({ type: "text", delta });
+  };
+  const emitReasoning = (delta: string) => {
+    if (delta) onChunk({ type: "reasoning", delta });
+  };
+  const reportLeakedCall = (raw: string) => {
+    const name =
+      /<function=([\w.-]+)/.exec(raw)?.[1] ?? /"name"\s*:\s*"([\w.-]+)"/.exec(raw)?.[1] ?? "未知工具";
+    const id = `leaked-${++fnSeq}`;
+    onChunk({ type: "tool-call", id, name, args: { 泄漏的原始输出: raw.slice(0, 2000) } });
+    onChunk({ type: "tool-error", id, error: LEAK_ERROR_MSG });
+  };
+
+  const process = () => {
+    for (;;) {
+      if (mode === "normal") {
+        let idx = -1;
+        let marker = "";
+        for (const m of [...LEAK_OPENERS, "</think>"]) {
+          const i = buf.indexOf(m);
+          if (i !== -1 && (idx === -1 || i < idx)) {
+            idx = i;
+            marker = m;
+          }
+        }
+        if (idx === -1) {
+          const hold = holdLen(buf);
+          emitText(buf.slice(0, buf.length - hold));
+          buf = buf.slice(buf.length - hold);
+          return;
+        }
+        emitText(buf.slice(0, idx));
+        buf = buf.slice(idx + marker.length);
+        if (marker === "<think>") mode = "think";
+        else if (marker === "</think>") {
+          /* 落单的闭合标签直接丢弃 */
+        } else {
+          mode = "fn";
+          fnRaw = marker;
+        }
+        continue;
+      }
+      if (mode === "think") {
+        const i = buf.indexOf("</think>");
+        if (i === -1) {
+          const hold = holdLen(buf);
+          emitReasoning(buf.slice(0, buf.length - hold));
+          buf = buf.slice(buf.length - hold);
+          return;
+        }
+        emitReasoning(buf.slice(0, i));
+        buf = buf.slice(i + "</think>".length);
+        mode = "normal";
+        continue;
+      }
+      // fn：收集到闭合标签为止
+      let close = -1;
+      let closer = "";
+      for (const c of LEAK_FN_CLOSERS) {
+        const i = buf.indexOf(c);
+        if (i !== -1 && (close === -1 || i < close)) {
+          close = i;
+          closer = c;
+        }
+      }
+      if (close === -1) {
+        const hold = holdLen(buf);
+        fnRaw += buf.slice(0, buf.length - hold);
+        buf = buf.slice(buf.length - hold);
+        if (fnRaw.length > 20000) {
+          // 防收集无限膨胀：超长直接上报重置
+          reportLeakedCall(fnRaw);
+          fnRaw = "";
+          mode = "normal";
+        }
+        return;
+      }
+      fnRaw += buf.slice(0, close + closer.length);
+      buf = buf.slice(close + closer.length);
+      reportLeakedCall(fnRaw);
+      fnRaw = "";
+      mode = "normal";
+    }
+  };
+
+  return {
+    feed(delta: string) {
+      buf += delta;
+      process();
+    },
+    flush() {
+      if (mode === "fn" && (fnRaw || buf)) reportLeakedCall(fnRaw + buf);
+      else if (mode === "think") emitReasoning(buf);
+      else emitText(buf);
+      buf = "";
+      fnRaw = "";
+      mode = "normal";
+    },
+  };
+}
+
 /**
  * 跑一轮 Agent 对话：streamText 驱动模型工厂 + 工具循环，遍历 fullStream 把增量事件推给 onChunk。
  * history 含本轮最新 user 消息（最后一项）。tools 由 buildAgentTools 预构造。
@@ -267,13 +406,15 @@ export async function runAgentChat(params: {
     });
 
     let gotText = false;
+    // 文本经泄漏过滤器：真实正文才算 gotText，泄漏的调用块会变成失败工具卡。
+    const leakFilter = createLeakFilter((chunk) => {
+      if (chunk.type === "text" && chunk.delta.trim()) gotText = true;
+      onChunk(chunk);
+    });
     for await (const part of result.fullStream) {
       switch (part.type) {
         case "text-delta":
-          if (part.text) {
-            gotText = true;
-            onChunk({ type: "text", delta: part.text });
-          }
+          if (part.text) leakFilter.feed(part.text);
           break;
         case "reasoning-delta":
           if (part.text) onChunk({ type: "reasoning", delta: part.text });
@@ -312,6 +453,7 @@ export async function runAgentChat(params: {
           break;
       }
     }
+    leakFilter.flush();
 
     // 跑满工具轮次仍没出最终答复（最后一步还在调工具）→ 强制基于已有信息收尾作答，不再调工具。
     if (!gotText && !signal?.aborted) {
@@ -325,8 +467,9 @@ export async function runAgentChat(params: {
         ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
         abortSignal: signal,
       });
+      const finalFilter = createLeakFilter(onChunk);
       for await (const part of finalResult.fullStream) {
-        if (part.type === "text-delta" && part.text) onChunk({ type: "text", delta: part.text });
+        if (part.type === "text-delta" && part.text) finalFilter.feed(part.text);
         else if (part.type === "reasoning-delta" && part.text) onChunk({ type: "reasoning", delta: part.text });
         else if (part.type === "finish") {
           const u = part.totalUsage;
@@ -339,6 +482,7 @@ export async function runAgentChat(params: {
         } else if (part.type === "error")
           onChunk({ type: "error", error: part.error instanceof Error ? part.error.message : String(part.error) });
       }
+      finalFilter.flush();
     }
     onChunk({ type: "finish" });
   } catch (error) {

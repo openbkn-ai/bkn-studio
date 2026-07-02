@@ -53,6 +53,7 @@ export const DEFAULT_PROMPT =
   "kn_id 已锁定为当前网络，无需也不要修改。\n" +
   "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。\n" +
   "search_schema 默认 schema_brief=true（只返回概要，省 token）；确需完整字段定义时才显式传 schema_brief=false。\n" +
+  "工具结果默认 response_format=toon（TOON 紧凑文本，信息与 JSON 等价、更省 token），直接解读即可；确需 JSON 时显式传 response_format=json。\n" +
   "重要：单个工具返回的文本会被截断到约 8000 字符，超出部分丢失。务必把过滤/聚合下推到查询里，必要时分多次小批查询；若看到「已截断」提示，说明结果不完整，应缩小查询范围重查，切勿把截断结果当作完整数据下结论。\n" +
   "回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据。";
 
@@ -64,6 +65,7 @@ export const DEFAULT_BASE_PROMPT =
   "SQL 中的表名必须用模板占位 {{.<resource_id>}} 引用（resource_id 取自 list_resources 的 entries[].resource_id），不能写裸表名；跨 catalog 不能 join。\n" +
   "查询要高效：聚合/排序/计数交给 SQL，用 LIMIT 和精确过滤、只取需要的字段，避免拉全表；" +
   "单个工具返回的文本会被截断到约 8000 字符，若看到「已截断」提示应缩小查询范围重查，切勿把截断结果当作完整数据下结论。\n" +
+  "工具结果默认 response_format=toon（TOON 紧凑文本，信息与 JSON 等价、更省 token），直接解读即可；确需 JSON 时显式传 response_format=json。\n" +
   "回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据（用了哪些表 / 什么 SQL）。";
 
 const FALLBACK_SUGGESTIONS = [
