@@ -184,7 +184,12 @@ export function AddFunctionCapabilityDrawer({
     try {
       const values = await form.validateFields(["code", "inputExample"]);
       const event = parseJsonObject(values.inputExample);
-      const result = await executePython({ code: values.code, event });
+      const draftName = form.getFieldValue("name") as string | undefined;
+      const result = await executePython({
+        code: values.code,
+        event,
+        capabilityName: draftName?.trim() || undefined,
+      });
       setRunResult(result);
       if (result.error) {
         setRunError(result.error);
