@@ -260,6 +260,8 @@ export function AgentChat({
   // 自动载入的知识网络本体结构（注入系统提示词；也用于定制建议问题）。
   const [knContext, setKnContext] = useState("");
   const [knSummary, setKnSummary] = useState<{ objectTypes: number; relations: number } | null>(null);
+  // 当前网络绑定的 resource_id 集（object_type.data_source.id）；用于把 list_resources 默认限定到本网络的数据表。
+  const [knResourceIds, setKnResourceIds] = useState<string[] | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>(FALLBACK_SUGGESTIONS);
   const [baseSuggestions, setBaseSuggestions] = useState<string[]>(FALLBACK_BASE_SUGGESTIONS);
 
@@ -312,6 +314,7 @@ export function AgentChat({
     let cancelled = false;
     setKnContext("");
     setKnSummary(null);
+    setKnResourceIds(null);
     setSuggestions(FALLBACK_SUGGESTIONS);
     setBaseSuggestions(FALLBACK_BASE_SUGGESTIONS);
     fetchKnDetail(env, tokenProvider)
@@ -319,6 +322,7 @@ export function AgentChat({
         if (cancelled) return;
         setKnContext(buildKnContext(detail));
         setKnSummary({ objectTypes: detail.object_types.length, relations: detail.relation_types.length });
+        setKnResourceIds(detail.object_types.map((o) => o.data_source?.id).filter((id): id is string => !!id));
         const firstOt = detail.object_types[0];
         const firstRel = detail.relation_types[0];
         const tailored: string[] = ["列出这个知识网络的对象类和关系类"];
@@ -493,6 +497,7 @@ export function AgentChat({
     knSummary,
     getTools,
     toolDefs,
+    resourceScope: knResourceIds,
   };
 
   return (

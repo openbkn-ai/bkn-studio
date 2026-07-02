@@ -311,6 +311,8 @@ export type ChatPaneProps = {
   /** 实时 tools/list（父级缓存共享）；send 时懒取，picker 展示用已加载值。 */
   getTools: () => Promise<McpToolDef[]>;
   toolDefs: McpToolDef[] | null;
+  /** 当前知识网络绑定的 resource_id 集；用于默认把 list_resources 限定到本网络的数据表。 */
+  resourceScope?: readonly string[] | null;
   onBusyChange?: (busy: boolean) => void;
 };
 
@@ -328,6 +330,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     suggestions,
     getTools,
     toolDefs,
+    resourceScope,
     onBusyChange,
   },
   ref,
@@ -561,7 +564,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         const allTools = await getTools();
         // 硬限定：只把勾选的工具传给模型（null = 全部）。
         const activeTools = toolSelection ? allTools.filter((t) => toolSelection.includes(t.name)) : allTools;
-        const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider);
+        const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider, resourceScope);
 
         await runAgentChat({
           env,
@@ -596,7 +599,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         setBusy(false); // 触发下方「完成即持久化」effect
       }
     },
-    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, handleChunk, updateAssistant, message],
+    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, handleChunk, updateAssistant, message],
   );
 
   const stop = useCallback(() => {

@@ -20,6 +20,7 @@ import { jsonSchema, stepCountIs, streamText, tool, type ModelMessage, type Tool
 import {
   createMcpSession,
   type ContextLoaderEnv,
+  type McpSession,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
@@ -166,8 +167,11 @@ export function buildAgentTools(
   knId: string,
   cfg: AgentConfig,
   tokenProvider: AgentTokenProvider,
+  /** 当前知识网络绑定的 resource_id 集（KnDetail 的 data_source）。传入则默认把 list_resources 限定到本网络的数据表。 */
+  resourceScope?: readonly string[] | null,
 ): ToolSet {
   const session = createMcpSession(env, tokenProvider);
+  const scopeSet = resourceScope && resourceScope.length ? new Set(resourceScope) : null;
   const tools: ToolSet = {};
   for (const def of mcpTools) {
     if (!def.name) continue;
@@ -175,10 +179,15 @@ export function buildAgentTools(
       def.inputSchema && typeof def.inputSchema === "object"
         ? (def.inputSchema as Record<string, unknown>)
         : { type: "object", properties: {} };
+    const scopedList = scopeSet !== null && def.name === "list_resources";
     tools[def.name] = tool({
-      description: (def.description ?? def.name) + (TOOL_HINTS[def.name] ?? ""),
+      description:
+        (def.description ?? def.name) +
+        (TOOL_HINTS[def.name] ?? "") +
+        (scopedList ? " 返回结果已默认限定为当前知识网络绑定的数据表（其他 catalog 的表不会出现）。" : ""),
       inputSchema: jsonSchema(schema),
       execute: async (input: unknown): Promise<string> => {
+        if (scopedList && scopeSet) return listResourcesScoped(session, input, knId, scopeSet, cfg);
         const args = effectiveToolArgs(def.name, input, knId);
         const res = await session.callTool(def.name, args);
         return capToolResult(res.text, def.name, cfg);
@@ -186,6 +195,36 @@ export function buildAgentTools(
     });
   }
   return tools;
+}
+
+/**
+ * list_resources 限定到当前知识网络：强制 json + 一次取全（offset 0、大 limit——网络内表集很小，
+ * 分页无意义），再按 KnDetail 的 resource_id 集过滤，只留本网络绑定的数据表。
+ */
+async function listResourcesScoped(
+  session: McpSession,
+  input: unknown,
+  knId: string,
+  scopeSet: Set<string>,
+  cfg: AgentConfig,
+): Promise<string> {
+  const args = {
+    ...effectiveToolArgs("list_resources", input, knId),
+    response_format: "json",
+    offset: 0,
+    limit: Math.max(scopeSet.size + 5, 200),
+  };
+  const res = await session.callTool("list_resources", args);
+  try {
+    const parsed = JSON.parse(res.text) as { entries?: Array<{ resource_id?: string }> };
+    const entries = Array.isArray(parsed.entries)
+      ? parsed.entries.filter((e) => typeof e.resource_id === "string" && scopeSet.has(e.resource_id))
+      : [];
+    return capToolResult(JSON.stringify({ entries, total_count: entries.length }), "list_resources", cfg);
+  } catch {
+    // 非预期格式（如仍是 TOON）时不阻断，原样返回。
+    return capToolResult(res.text, "list_resources", cfg);
+  }
 }
 
 /** 鉴权 provider：getToken 每请求取新鲜 token（OAuth 会续期），refresh 在 401 时刷新。 */
