@@ -50,6 +50,7 @@ import {
   type KnDetail,
   type KnObjectType,
   type KnRelationType,
+  type McpAuth,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 import { AgentChat } from "@/modules/knowledge-network/components/agent-chat/AgentChat";
@@ -511,6 +512,7 @@ function ObjectTypeCard({
   onFillTest,
   copy,
   env,
+  auth,
 }: {
   ot: KnObjectType;
   onFillField: (key: string, value: string) => void;
@@ -519,6 +521,8 @@ function ObjectTypeCard({
   onFillTest?: (ot: KnObjectType) => Promise<void>;
   copy: (text: string, label?: string) => void;
   env: ContextLoaderEnv;
+  /** 401 自动刷新 token 用（OAuth 续期）。 */
+  auth?: McpAuth;
 }) {
   const [open, setOpen] = useState(false);
   const [filling, setFilling] = useState(false);
@@ -537,7 +541,7 @@ function ObjectTypeCard({
     if (next && previewRows === null && !previewLoading) {
       setPreviewLoading(true);
       setPreviewError(null);
-      fetchObjectInstances(env, ot.id, 5)
+      fetchObjectInstances(env, ot.id, 5, auth)
         .then((rows) => setPreviewRows(rows))
         .catch((error) => setPreviewError(error instanceof Error ? error.message : "查询失败"))
         .finally(() => setPreviewLoading(false));
@@ -704,6 +708,7 @@ function DataBrowserPanel({
   onFillTest,
   onFillRelation,
   copy,
+  auth,
 }: {
   active: boolean;
   env: ContextLoaderEnv;
@@ -716,6 +721,8 @@ function DataBrowserPanel({
   /** 当前接口为 query_instance_subgraph 时传入，使关系卡可一键填入子图路径。 */
   onFillRelation?: (rel: KnRelationType) => void;
   copy: (text: string, label?: string) => void;
+  /** 401 自动刷新 token 用（OAuth 续期）。 */
+  auth?: McpAuth;
 }) {
   const [detail, setDetail] = useState<KnDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -731,7 +738,7 @@ function DataBrowserPanel({
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchKnDetail(env)
+    fetchKnDetail(env, auth)
       .then((data) => {
         if (!cancelled) setDetail(data);
       })
@@ -747,7 +754,7 @@ function DataBrowserPanel({
     return () => {
       cancelled = true;
     };
-  }, [active, env]);
+  }, [active, env, auth]);
 
   const sections = useMemo(() => {
     if (!detail) return [];
@@ -858,6 +865,7 @@ function DataBrowserPanel({
                       onFillTest={onFillTest}
                       copy={copy}
                       env={env}
+                      auth={auth}
                     />
                   ))}
                 </div>
@@ -1030,12 +1038,12 @@ export function ExperienceScene() {
       if (!force && toolDefs) return;
       setToolsLoading(true);
       setToolsError(null);
-      listMcpTools(env)
+      listMcpTools(env, tokenProvider)
         .then((list) => setToolDefs(list))
         .catch((err) => setToolsError(err instanceof Error ? err.message : "tools/list 失败"))
         .finally(() => setToolsLoading(false));
     },
-    [env, toolDefs, toolsLoading],
+    [env, toolDefs, toolsLoading, tokenProvider],
   );
   // 进入 MCP 模式时按需拉一次（同源 fetch，失败仅内联提示，不弹全局 toast）。
   useEffect(() => {
@@ -1108,21 +1116,22 @@ export function ExperienceScene() {
       const freshToken =
         authMode === "apikey" ? appKey.trim() : runtimeConfig.auth.tokenManager.getAccessToken() ?? env.token;
       const freshEnv = { ...env, token: freshToken };
-      const result = await sendRequest(freshEnv, op, mode, queryVals, bodyText);
+      // 传 tokenProvider：401（token 过期）时刷新一次再重跑，不用手动重试。
+      const result = await sendRequest(freshEnv, op, mode, queryVals, bodyText, tokenProvider);
       setResponse(result);
     } catch (error) {
       setReqError(error instanceof Error ? error.message : "请求失败（可能是跨域或服务不可达）");
     } finally {
       setSending(false);
     }
-  }, [env, op, mode, queryVals, bodyText, runtimeConfig, authMode, appKey]);
+  }, [env, op, mode, queryVals, bodyText, runtimeConfig, authMode, appKey, tokenProvider]);
 
   // 一键填充测试数据：用当前网络真实 schema + 样本行生成可直接发送的请求体。
   const onFillTestData = useCallback(async () => {
     setFillingTest(true);
     try {
       const detail =
-        knDetailRef.current?.knId === knId ? knDetailRef.current.detail : await fetchKnDetail(env);
+        knDetailRef.current?.knId === knId ? knDetailRef.current.detail : await fetchKnDetail(env, tokenProvider);
       knDetailRef.current = { knId, detail };
 
       let ot: KnObjectType | null = null;
@@ -1135,7 +1144,7 @@ export function ExperienceScene() {
         }
       }
       if (op.id === "query_object_instance" && ot) {
-        const rows = await fetchObjectInstances(env, ot.id, 1);
+        const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider);
         sampleRow = rows[0] ?? null;
       }
 
@@ -1149,7 +1158,7 @@ export function ExperienceScene() {
     } finally {
       setFillingTest(false);
     }
-  }, [env, op, mode, knId, message]);
+  }, [env, op, mode, knId, message, tokenProvider]);
 
   // 当前接口是否按对象类型取数（决定数据浏览器卡片是否露出「填入测试请求」）。
   const opFillsFromObjectType = op.id === "query_object_instance" || op.id === "run_sql";
@@ -1164,7 +1173,7 @@ export function ExperienceScene() {
         }
         let sampleRow: Record<string, unknown> | null = null;
         if (op.id === "query_object_instance") {
-          const rows = await fetchObjectInstances(env, ot.id, 1);
+          const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider);
           sampleRow = rows[0] ?? null;
         }
         const detail = knDetailRef.current?.detail ?? { id: knId, object_types: [], concept_groups: [], relation_types: [] };
@@ -1177,7 +1186,7 @@ export function ExperienceScene() {
         message.error(error instanceof Error ? error.message : "生成测试数据失败");
       }
     },
-    [env, op, mode, knId, message],
+    [env, op, mode, knId, message, tokenProvider],
   );
 
   // 数据浏览器关系卡「填入子图」：用指定关系类拼 query_instance_subgraph 的 relation_type_paths。
@@ -1626,6 +1635,7 @@ export function ExperienceScene() {
                 onFillTest={opFillsFromObjectType ? fillTestFromObjectType : undefined}
                 onFillRelation={op.id === "query_instance_subgraph" ? fillSubgraphFromRelation : undefined}
                 copy={copy}
+                auth={tokenProvider}
               />
             </div>
           </section>

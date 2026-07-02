@@ -480,57 +480,77 @@ export async function sendRequest(
   mode: ContextLoaderMode,
   queryValues: Record<string, string>,
   bodyText: string,
+  auth?: McpAuth,
 ): Promise<ContextLoaderResponse> {
-  const start = performance.now();
-  if (mode === "mcp") {
-    // MCP Streamable HTTP：必须先 initialize 建会话（响应头 Mcp-Session-Id），
-    // 再 notifications/initialized，最后才能 tools/call。
-    const url = mcpBase(env);
-    const baseHeaders = {
-      "Content-Type": "application/json",
-      Accept: "application/json, text/event-stream",
-      ...authHeaders(env),
-    };
-    const initResp = await fetch(url, {
-      method: "POST",
-      headers: baseHeaders,
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "initialize",
-        params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bkn-studio", version: "1.0.0" } },
-      }),
-    });
-    const sessionId = initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
-    const initText = await initResp.text();
-    if (!initResp.ok && !sessionId) {
-      return {
-        ok: false,
-        status: initResp.status,
-        statusText: `${initResp.statusText} (initialize)`,
-        latencyMs: Math.round(performance.now() - start),
-        sizeBytes: new Blob([initText]).size,
-        text: initText || "MCP initialize 失败，未拿到会话（Mcp-Session-Id）。",
+  const attempt = async (token: string): Promise<ContextLoaderResponse> => {
+    const start = performance.now();
+    const bearer: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+    if (mode === "mcp") {
+      // MCP Streamable HTTP：必须先 initialize 建会话（响应头 Mcp-Session-Id），
+      // 再 notifications/initialized，最后才能 tools/call。
+      const url = mcpBase(env);
+      const baseHeaders = {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        ...bearer,
       };
-    }
-    const sessionHeaders = sessionId ? { ...baseHeaders, "Mcp-Session-Id": sessionId } : baseHeaders;
-    if (sessionId) {
-      await fetch(url, {
+      const initResp = await fetch(url, {
+        method: "POST",
+        headers: baseHeaders,
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bkn-studio", version: "1.0.0" } },
+        }),
+      });
+      const sessionId = initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
+      const initText = await initResp.text();
+      if (!initResp.ok && !sessionId) {
+        return {
+          ok: false,
+          status: initResp.status,
+          statusText: `${initResp.statusText} (initialize)`,
+          latencyMs: Math.round(performance.now() - start),
+          sizeBytes: new Blob([initText]).size,
+          text: initText || "MCP initialize 失败，未拿到会话（Mcp-Session-Id）。",
+        };
+      }
+      const sessionHeaders = sessionId ? { ...baseHeaders, "Mcp-Session-Id": sessionId } : baseHeaders;
+      if (sessionId) {
+        await fetch(url, {
+          method: "POST",
+          headers: sessionHeaders,
+          body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+        }).catch(() => undefined);
+      }
+      const response = await fetch(url, {
         method: "POST",
         headers: sessionHeaders,
-        body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
-      }).catch(() => undefined);
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: op.id, arguments: mcpCallArgs(bodyText, queryValues) },
+        }),
+      });
+      const text = await response.text();
+      return {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        latencyMs: Math.round(performance.now() - start),
+        sizeBytes: new Blob([text]).size,
+        text,
+      };
     }
-    const response = await fetch(url, {
-      method: "POST",
-      headers: sessionHeaders,
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 2,
-        method: "tools/call",
-        params: { name: op.id, arguments: mcpCallArgs(bodyText, queryValues) },
-      }),
-    });
+    const url = buildRestUrl(env, op, queryValues);
+    const headers = { "Content-Type": "application/json", ...bearer };
+    const init: RequestInit = { method: "POST", headers };
+    if (op.body !== null) {
+      init.body = JSON.stringify(JSON.parse(bodyText || "{}"));
+    }
+    const response = await fetch(url, init);
     const text = await response.text();
     return {
       ok: response.ok,
@@ -540,23 +560,15 @@ export async function sendRequest(
       sizeBytes: new Blob([text]).size,
       text,
     };
-  }
-  const url = buildRestUrl(env, op, queryValues);
-  const headers = { "Content-Type": "application/json", ...authHeaders(env) };
-  const init: RequestInit = { method: "POST", headers };
-  if (op.body !== null) {
-    init.body = JSON.stringify(JSON.parse(bodyText || "{}"));
-  }
-  const response = await fetch(url, init);
-  const text = await response.text();
-  return {
-    ok: response.ok,
-    status: response.status,
-    statusText: response.statusText,
-    latencyMs: Math.round(performance.now() - start),
-    sizeBytes: new Blob([text]).size,
-    text,
   };
+
+  // token 过期不自动续：401（或 MCP initialize 401）时刷新一次再重跑整条流程。
+  let res = await attempt(auth?.getToken?.() ?? env.token);
+  if (res.status === 401 && auth?.refresh) {
+    const fresh = await auth.refresh().catch(() => null);
+    res = await attempt(fresh ?? auth?.getToken?.() ?? env.token);
+  }
+  return res;
 }
 
 /* ============================ MCP 工具发现（tools/list）============================ */
@@ -582,50 +594,71 @@ function parseMcpEnvelope(text: string): unknown {
  * 走完整握手：initialize → notifications/initialized → tools/list。
  * 用于「工具发现 / 漂移对照」，也是 schema 驱动表单的数据源。
  */
-export async function listMcpTools(env: ContextLoaderEnv): Promise<McpToolDef[]> {
-  const url = mcpBase(env);
-  const baseHeaders = {
-    "Content-Type": "application/json",
-    Accept: "application/json, text/event-stream",
-    ...authHeaders(env),
-  };
-  const initResp = await fetch(url, {
-    method: "POST",
-    headers: baseHeaders,
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "initialize",
-      params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bkn-studio", version: "1.0.0" } },
-    }),
-  });
-  const sessionId = initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
-  if (!initResp.ok && !sessionId) {
-    throw new Error((await initResp.text()) || `MCP initialize 失败 (${initResp.status})`);
-  }
-  const sessionHeaders = sessionId ? { ...baseHeaders, "Mcp-Session-Id": sessionId } : baseHeaders;
-  if (sessionId) {
-    await fetch(url, {
+export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth): Promise<McpToolDef[]> {
+  // 单次完整握手；401 用哨兵透出，由外层刷新 token 后重跑（token 过期不自动续）。
+  const UNAUTHORIZED = Symbol("unauthorized");
+  const attempt = async (token: string): Promise<McpToolDef[] | typeof UNAUTHORIZED> => {
+    const url = mcpBase(env);
+    const baseHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+    };
+    if (token) baseHeaders.Authorization = `Bearer ${token}`;
+    const initResp = await fetch(url, {
+      method: "POST",
+      headers: baseHeaders,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bkn-studio", version: "1.0.0" } },
+      }),
+    });
+    const sessionId = initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
+    if (initResp.status === 401 && !sessionId) return UNAUTHORIZED;
+    if (!initResp.ok && !sessionId) {
+      throw new Error((await initResp.text()) || `MCP initialize 失败 (${initResp.status})`);
+    }
+    const sessionHeaders = sessionId ? { ...baseHeaders, "Mcp-Session-Id": sessionId } : baseHeaders;
+    if (sessionId) {
+      await fetch(url, {
+        method: "POST",
+        headers: sessionHeaders,
+        body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+      }).catch(() => undefined);
+    }
+    const resp = await fetch(url, {
       method: "POST",
       headers: sessionHeaders,
-      body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
-    }).catch(() => undefined);
+      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+    });
+    const text = await resp.text();
+    if (resp.status === 401) return UNAUTHORIZED;
+    if (!resp.ok) {
+      throw new Error(text || `tools/list 失败 (${resp.status})`);
+    }
+    const parsed = parseMcpEnvelope(text);
+    const result = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>).result : null;
+    const tools = result && typeof result === "object" ? (result as Record<string, unknown>).tools : null;
+    if (!Array.isArray(tools)) {
+      throw new Error("tools/list 未返回 tools 数组");
+    }
+    return parseToolDefs(tools);
+  };
+
+  let out = await attempt(auth?.getToken?.() ?? env.token);
+  if (out === UNAUTHORIZED && auth?.refresh) {
+    const fresh = await auth.refresh().catch(() => null);
+    out = await attempt(fresh ?? auth?.getToken?.() ?? env.token);
   }
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: sessionHeaders,
-    body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
-  });
-  const text = await resp.text();
-  if (!resp.ok) {
-    throw new Error(text || `tools/list 失败 (${resp.status})`);
+  if (out === UNAUTHORIZED) {
+    throw new Error('{"code":"Public.Unauthorized","description":"认证失败","details":"token is invalid"}');
   }
-  const parsed = parseMcpEnvelope(text);
-  const result = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>).result : null;
-  const tools = result && typeof result === "object" ? (result as Record<string, unknown>).tools : null;
-  if (!Array.isArray(tools)) {
-    throw new Error("tools/list 未返回 tools 数组");
-  }
+  return out;
+}
+
+/** tools/list 原始条目 → McpToolDef[]（含 inputSchema / outputSchema 兜底）。 */
+function parseToolDefs(tools: unknown[]): McpToolDef[] {
   return tools
     .map((item) => {
       const tool = (item ?? {}) as Record<string, unknown>;
@@ -806,13 +839,24 @@ function parseRelationTypes(raw: unknown): KnRelationType[] {
  * 取知识网络详情（对象类型 + 资源绑定 + 概念分组），供数据浏览器展示与「填入请求体」。
  * 走与调试台一致的真实 REST 鉴权路径（get_kn_detail 已验证可用）。
  */
-export async function fetchKnDetail(env: ContextLoaderEnv): Promise<KnDetail> {
+/** REST POST：注入 fresh Bearer；401（token 过期）时刷新一次再重试。 */
+async function restPost(env: ContextLoaderEnv, auth: McpAuth | undefined, url: string, body: unknown): Promise<Response> {
+  const doFetch = (token: string) => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+  };
+  let resp = await doFetch(auth?.getToken?.() ?? env.token);
+  if (resp.status === 401 && auth?.refresh) {
+    const fresh = await auth.refresh().catch(() => null);
+    resp = await doFetch(fresh ?? auth?.getToken?.() ?? env.token);
+  }
+  return resp;
+}
+
+export async function fetchKnDetail(env: ContextLoaderEnv, auth?: McpAuth): Promise<KnDetail> {
   const base = env.base.replace(/\/+$/, "");
-  const response = await fetch(`${base}${REST_PREFIX}/kn/get_kn_detail`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders(env) },
-    body: JSON.stringify({ kn_id: env.knId }),
-  });
+  const response = await restPost(env, auth, `${base}${REST_PREFIX}/kn/get_kn_detail`, { kn_id: env.knId });
   const text = await response.text();
   if (!response.ok) {
     throw new Error(text || `获取知识网络详情失败（${response.status}）`);
@@ -836,14 +880,16 @@ export async function fetchObjectInstances(
   env: ContextLoaderEnv,
   otId: string,
   limit = 5,
+  auth?: McpAuth,
 ): Promise<Record<string, unknown>[]> {
   const base = env.base.replace(/\/+$/, "");
   const params = new URLSearchParams({ kn_id: env.knId, ot_id: otId, response_format: "json" });
-  const response = await fetch(`${base}${REST_PREFIX}/kn/query_object_instance?${params.toString()}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders(env) },
-    body: JSON.stringify({ limit, need_total: false, properties: [] }),
-  });
+  const response = await restPost(
+    env,
+    auth,
+    `${base}${REST_PREFIX}/kn/query_object_instance?${params.toString()}`,
+    { limit, need_total: false, properties: [] },
+  );
   const text = await response.text();
   if (!response.ok) {
     throw new Error(text || `查询实例失败（${response.status}）`);

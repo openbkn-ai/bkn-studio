@@ -314,7 +314,7 @@ export function AgentChat({
     setKnSummary(null);
     setSuggestions(FALLBACK_SUGGESTIONS);
     setBaseSuggestions(FALLBACK_BASE_SUGGESTIONS);
-    fetchKnDetail(env)
+    fetchKnDetail(env, tokenProvider)
       .then((detail) => {
         if (cancelled) return;
         setKnContext(buildKnContext(detail));
@@ -335,7 +335,7 @@ export function AgentChat({
     return () => {
       cancelled = true;
     };
-  }, [env]);
+  }, [env, tokenProvider]);
 
   // tools/list 缓存：按 knId 拉一次，多面板共享（send 懒取 promise；picker 用已解析的 toolDefs）。
   const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
