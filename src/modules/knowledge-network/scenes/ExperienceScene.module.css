@@ -1407,6 +1407,18 @@
   flex: 0 0 auto;
   padding: 2px 18px 8px;
 }
+/* 与 Agent 对话发送目标同款：选中项主色实心，白底太不明显 */
+.dbViewSwitch :global(.ant-segmented-item-selected) {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.dbViewSwitch :global(.ant-segmented-item-selected:hover) {
+  color: #fff;
+}
+.dbViewSwitch :global(.ant-segmented-thumb) {
+  background: var(--accent);
+}
 
 .dbList {
   flex: 1 1 auto;

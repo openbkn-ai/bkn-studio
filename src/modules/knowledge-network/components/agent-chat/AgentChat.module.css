@@ -73,6 +73,30 @@
   font-size: 13px;
   color: var(--txt);
 }
+/* 报告顶部操作（复制 / 导出） */
+.rptActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.rptActBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(46, 104, 255, 0.28);
+  background: #fff;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.rptActBtn:hover {
+  background: rgba(46, 104, 255, 0.08);
+}
+
 .rptQ {
   display: flex;
   align-items: baseline;

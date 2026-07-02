@@ -13,8 +13,8 @@
  * vs 右「业务知识网络」（全部工具 + 注入摘要）——同一问题两侧同问，直观对比语义层价值。
  */
 
-import { FileTextOutlined, PauseOutlined } from "@ant-design/icons";
-import { Modal, Segmented, Switch } from "antd";
+import { CopyOutlined, DownloadOutlined, FileTextOutlined, PauseOutlined } from "@ant-design/icons";
+import { App, Modal, Segmented, Switch } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
@@ -43,6 +43,7 @@ import {
   type ChatPaneHandle,
   type PaneKey,
   type PaneProfile,
+  type PaneRound,
   type PaneSnapshot,
 } from "./ChatPane";
 import styles from "./AgentChat.module.css";
@@ -125,6 +126,58 @@ const JUDGE_PROMPT =
   "请基于给出的各轮回答与指标，从这些维度对比：①结论正确性与完整度 ②依据是否充分可信 ③效率（工具调用次数、token、耗时）④哪一侧对业务用户更有用、为什么。\n" +
   "输出中文 Markdown：先给一行总评（哪侧更好），再逐轮简要对比（每轮 2-3 句），最后分点归纳，简洁克制，不要复述全文。";
 
+/** 导出 Markdown：一轮的工具调用摘要。 */
+function mdCalls(r?: PaneRound): string {
+  if (!r || r.toolCalls.length === 0) return "0 次";
+  const ok = r.toolCalls.filter((t) => t.status === "done").length;
+  const err = r.toolCalls.filter((t) => t.status === "error").length;
+  const names = r.toolCalls.map((t) => (t.status === "error" ? `${t.name}(失败)` : t.name)).join(", ");
+  return `${r.toolCalls.length} 次（${ok} 成功${err > 0 ? ` / ${err} 失败` : ""}）：${names}`;
+}
+
+/** 把对比报告导出为 Markdown 文本（总览 + 逐轮问答指标 + 双方答案 + AI 总结）。 */
+function reportToMarkdown(
+  base: PaneSnapshot,
+  kn: PaneSnapshot,
+  summary: string,
+  knLabel: string,
+  generatedAt: string,
+): string {
+  const L: string[] = [];
+  L.push(`# Agent 对话对比报告 · ${knLabel}`, "");
+  L.push(`- 生成时间：${generatedAt}`);
+  L.push(`- 左「仅基础数据」模型：${base.model || "—"}；右「业务知识网络」模型：${kn.model || "—"}`, "");
+  L.push("## 会话总览", "");
+  L.push("| 指标 | 仅基础数据 | 业务知识网络 |");
+  L.push("| --- | --- | --- |");
+  L.push(`| 总 token | ${fmtTokens(base.stats.tokens)} | ${fmtTokens(kn.stats.tokens)} |`);
+  L.push(`| 总耗时 | ${fmtDuration(base.stats.ms)} | ${fmtDuration(kn.stats.ms)} |`);
+  L.push(`| 轮数 | ${base.rounds.length} | ${kn.rounds.length} |`);
+  const totalCalls = (s: PaneSnapshot) => s.rounds.reduce((n, r) => n + r.toolCalls.length, 0);
+  L.push(`| 工具调用合计 | ${totalCalls(base)} 次 | ${totalCalls(kn)} 次 |`, "");
+  const roundCount = Math.max(base.rounds.length, kn.rounds.length);
+  for (let i = 0; i < roundCount; i++) {
+    const b = base.rounds[i];
+    const k = kn.rounds[i];
+    const sameQ = !b || !k || b.question === k.question;
+    L.push(`## 第 ${i + 1} 轮`, "");
+    L.push(`> ${sameQ ? (k?.question ?? b?.question ?? "—") : `左：${b?.question ?? "—"} ／ 右：${k?.question ?? "—"}`}`, "");
+    L.push("| 指标 | 仅基础数据 | 业务知识网络 |");
+    L.push("| --- | --- | --- |");
+    L.push(
+      `| token | ${b?.tokens != null ? fmtTokens(b.tokens) : "—"} | ${k?.tokens != null ? fmtTokens(k.tokens) : "—"} |`,
+    );
+    L.push(
+      `| 耗时 | ${b?.ms != null ? fmtDuration(b.ms) : "—"} | ${k?.ms != null ? fmtDuration(k.ms) : "—"} |`,
+    );
+    L.push(`| 工具调用 | ${mdCalls(b)} | ${mdCalls(k)} |`, "");
+    L.push(`### 仅基础数据 · 回答`, "", b?.answer ?? "（无回答）", "");
+    L.push(`### 业务知识网络 · 回答`, "", k?.answer ?? "（无回答）", "");
+  }
+  if (summary.trim()) L.push("## AI 总结", "", summary.trim(), "");
+  return L.join("\n");
+}
+
 /** 报告里单侧全部轮次的评审语料（长回答截断，防提示词爆炸）。 */
 function paneBrief(label: string, s: PaneSnapshot): string {
   const parts = [
@@ -161,6 +214,7 @@ export function AgentChat({
   tokenProvider: AgentTokenProvider;
 }) {
   const knId = env.knId;
+  const { message } = App.useApp();
 
   const [input, setInput] = useState("");
   const [models, setModels] = useState<LlmModel[]>([]);
@@ -326,6 +380,33 @@ export function AgentChat({
     setReport(null);
   }, []);
 
+  const buildMarkdown = useCallback(() => {
+    if (!report) return null;
+    const stamp = new Date().toLocaleString("zh-CN", { hour12: false });
+    return reportToMarkdown(report.base, report.kn, summary, networkName ? `${networkName}（${knId}）` : knId, stamp);
+  }, [report, summary, networkName, knId]);
+
+  const copyReportMd = useCallback(() => {
+    const md = buildMarkdown();
+    if (!md) return;
+    void navigator.clipboard
+      ?.writeText(md)
+      .then(() => message.success("报告 Markdown 已复制"))
+      .catch(() => message.error("复制失败"));
+  }, [buildMarkdown, message]);
+
+  const exportReportMd = useCallback(() => {
+    const md = buildMarkdown();
+    if (!md) return;
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `对比报告-${knId}-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-")}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [buildMarkdown, knId]);
+
   const generateSummary = useCallback(async () => {
     if (!report || summarizing) return;
     const modelName = report.kn.model || report.base.model;
@@ -489,6 +570,14 @@ export function AgentChat({
               <p className={styles.rptHint}>两侧还没有对话。先用「两侧同问」发一个问题，再来看对比报告。</p>
             ) : (
               <>
+                <div className={styles.rptActions}>
+                  <button type="button" className={styles.rptActBtn} onClick={copyReportMd}>
+                    <CopyOutlined /> 复制 Markdown
+                  </button>
+                  <button type="button" className={styles.rptActBtn} onClick={exportReportMd}>
+                    <DownloadOutlined /> 导出 .md
+                  </button>
+                </div>
                 {/* 会话总览（汇总对比） */}
                 {(() => {
                   const agg = (s: PaneSnapshot) => {
