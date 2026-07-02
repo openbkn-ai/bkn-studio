@@ -95,6 +95,8 @@
   border-collapse: collapse;
   font-size: 13px;
   margin-bottom: 18px;
+  /* 固定布局：总览表与各轮指标表列宽一致，上下对齐 */
+  table-layout: fixed;
 }
 .rptTable th,
 .rptTable td {
@@ -109,10 +111,12 @@
   background: var(--code);
   font-weight: 600;
 }
+.rptTable th:first-child,
+.rptTable td:first-child {
+  width: 130px;
+}
 .rptTable td:first-child {
   color: var(--txt2);
-  white-space: nowrap;
-  width: 130px;
 }
 .rptBest {
   color: #15803d;

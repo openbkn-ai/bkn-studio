@@ -570,7 +570,6 @@ export function AgentChat({
                 {Array.from({ length: Math.max(report.base.rounds.length, report.kn.rounds.length) }, (_, i) => {
                   const b = report.base.rounds[i];
                   const k = report.kn.rounds[i];
-                  const isLast = i === Math.max(report.base.rounds.length, report.kn.rounds.length) - 1;
                   const sameQ = !b || !k || b.question === k.question;
                   const bBestTokens = b?.tokens != null && k?.tokens != null && b.tokens < k.tokens;
                   const kBestTokens = b?.tokens != null && k?.tokens != null && k.tokens < b.tokens;
@@ -649,7 +648,7 @@ export function AgentChat({
                             { key: "kn", title: "业务知识网络", hl: true, ans: k?.answer ?? null },
                           ] as const
                         ).map(({ key, title, hl, ans }) => (
-                          <details key={key} className={styles.rptAnsBox} open={isLast}>
+                          <details key={key} className={styles.rptAnsBox} open>
                             <summary className={styles.rptAnsHead}>
                               <span className={`${styles.paneTitle} ${hl ? styles.paneTitleHl : ""}`}>{title}</span>
                               <span className={styles.rptAnsLbl}>回答（点击展开/收起）</span>
