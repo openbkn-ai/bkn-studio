@@ -25,6 +25,7 @@ import {
   listKnowledgeNetworkObjectTypes,
   updateKnowledgeNetworkMetric,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import type { MetricFormSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import type {
   KnowledgeNetworkMetricMutationPayload,
   KnowledgeNetworkMetricScopeType,
@@ -35,10 +36,6 @@ import type {
 import { createDefaultMetricCalculationFormula } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./MetricFormScene.module.css";
-
-type MetricFormSceneProps = {
-  mode: "create" | "edit";
-};
 
 const SCOPE_TYPE_OPTIONS: KnowledgeNetworkMetricScopeType[] = ["object_type", "subgraph"];
 
@@ -89,6 +86,19 @@ const UNIT_OPTIONS: MetricUnit[] = [
   "year",
 ];
 
+const UNIT_OPTIONS_BY_TYPE: Record<MetricUnitType, MetricUnit[]> = {
+  countUnit: ["times", "transaction", "piece", "item", "household", "man_day"],
+  currencyUnit: ["CNY", "10K_CNY", "1M_CNY", "100M_CNY", "USD", "Fen", "Jiao"],
+  numUnit: ["none", "K", "Mil", "Bil", "Tri"],
+  ordinalRankUnit: ["rank"],
+  percent: ["%"],
+  percentageUnit: ["‰"],
+  storeUnit: ["none", "K", "Mil", "Bil", "Tri"],
+  timeUnit: ["ms", "s", "m", "h", "day", "week", "month", "year"],
+  transmissionRate: ["none"],
+  weightUnit: ["ton", "kg"],
+};
+
 function getScopeTypeLabel(
   value: KnowledgeNetworkMetricScopeType,
   t: (key: string) => string,
@@ -116,14 +126,22 @@ function resetScopeDependentFields(
   });
 }
 
-export function MetricFormScene({ mode }: MetricFormSceneProps) {
+export function MetricFormScene({
+  metricId: metricIdProp,
+  mode,
+  networkId: networkIdProp,
+  onBack,
+  onSubmitSuccess,
+}: MetricFormSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
-  const { metricId = "", networkId = "" } = useParams<{
+  const params = useParams<{
     metricId?: string;
     networkId: string;
   }>();
+  const metricId = metricIdProp ?? params.metricId ?? "";
+  const networkId = networkIdProp ?? params.networkId ?? "";
   const [form] = Form.useForm<KnowledgeNetworkMetricMutationPayload>();
   const [loading, setLoading] = useState(mode === "edit");
   const [submitting, setSubmitting] = useState(false);
@@ -132,12 +150,18 @@ export function MetricFormScene({ mode }: MetricFormSceneProps) {
   const [pageTitle, setPageTitle] = useState(t("knowledgeNetwork.metricCreateTitle"));
   const scopeType = Form.useWatch("scopeType", form);
   const scopeRef = Form.useWatch("scopeRef", form);
+  const unitType = Form.useWatch("unitType", form);
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
 
   const objectTypeOptions = useMemo(
     () => objectTypes.map((item) => ({ label: item.name, value: item.id })),
     [objectTypes],
+  );
+
+  const availableUnitOptions = useMemo(
+    () => (unitType ? UNIT_OPTIONS_BY_TYPE[unitType] : UNIT_OPTIONS),
+    [unitType],
   );
 
   useEffect(() => {
@@ -201,15 +225,26 @@ export function MetricFormScene({ mode }: MetricFormSceneProps) {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
+      let savedMetric = null;
 
       if (mode === "create") {
-        await createKnowledgeNetworkMetric(networkId, values);
+        savedMetric = await createKnowledgeNetworkMetric(networkId, values);
       } else if (metricId) {
-        await updateKnowledgeNetworkMetric(networkId, metricId, values);
+        savedMetric = await updateKnowledgeNetworkMetric(networkId, metricId, values);
       }
 
       void message.success(t("common.success"));
-      void navigate(listPath);
+
+      if (onSubmitSuccess) {
+        onSubmitSuccess();
+        return;
+      }
+
+      void navigate(
+        mode === "create"
+          ? listPath
+          : `/knowledge-network/workspace/${networkId}/metrics/${savedMetric?.id ?? metricId}/detail`,
+      );
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
@@ -239,6 +274,11 @@ export function MetricFormScene({ mode }: MetricFormSceneProps) {
         </AppButton>
       }
       onBack={() => {
+        if (onBack) {
+          onBack();
+          return;
+        }
+
         void navigate(listPath);
       }}
       subtitle={
@@ -336,8 +376,9 @@ export function MetricFormScene({ mode }: MetricFormSceneProps) {
             <Form.Item label={t("knowledgeNetwork.metricUnit")} name="unit">
               <Select
                 allowClear
+                disabled={!unitType}
                 optionFilterProp="label"
-                options={UNIT_OPTIONS.map((value) => ({
+                options={availableUnitOptions.map((value) => ({
                   label: t(`knowledgeNetwork.metricUnitOption.${value}`, { defaultValue: value }),
                   value,
                 }))}
@@ -369,6 +410,7 @@ export function MetricFormScene({ mode }: MetricFormSceneProps) {
           <MetricCalculationEditor
             form={form}
             networkId={networkId}
+            objectTypes={objectTypes}
             scopeRef={scopeRef}
             scopeType={scopeType}
           />

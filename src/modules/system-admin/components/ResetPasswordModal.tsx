@@ -60,6 +60,7 @@ export function ResetPasswordModal({ onClose, open, user }: ResetPasswordModalPr
       onCancel={onClose}
       onOk={handleSubmit}
       open={open}
+      rootClassName={styles.adminOverlay}
       title={t("systemAdmin.users.reset.title", { name: user.name })}
     >
       <Form form={form} layout="vertical" requiredMark>

@@ -389,7 +389,7 @@ export function IndexBuildListScene() {
       sorter: true,
       sortOrder: sortOrderOf("created_at"),
       render: (value: string) => (
-        <span style={{ color: "#8b98ac", fontSize: 12 }}>{value}</span>
+        <span style={{ color: "#4b5563", fontSize: 14 }}>{value}</span>
       ),
     },
     {
@@ -411,7 +411,7 @@ export function IndexBuildListScene() {
             <span className={[styles.tag, styles.modeStreaming].join(" ")}>fulltext</span>
           ) : null}
           {record.embeddingFields.length === 0 && record.fulltextFields.length === 0 ? (
-            <span style={{ color: "#8b98ac", fontSize: 12 }}>—</span>
+            <span style={{ color: "#6b7280", fontSize: 14 }}>—</span>
           ) : null}
         </span>
       ),

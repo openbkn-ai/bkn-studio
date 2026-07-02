@@ -147,6 +147,7 @@ export function CatalogAuthorizeModal({
       footer={null}
       onCancel={onClose}
       open={open}
+      rootClassName={styles.adminOverlay}
       title={t("systemAdmin.authorize.title", { name: catalogName })}
       width={600}
     >

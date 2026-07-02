@@ -24,3 +24,25 @@ export type KnowledgeNetworkWorkspaceSceneProps = {
   onBack?: () => void;
   section: KnowledgeNetworkWorkspaceSection;
 };
+
+export type MetricFormSceneProps = {
+  metricId?: string;
+  mode: "create" | "edit";
+  networkId?: string;
+  onBack?: () => void;
+  onSubmitSuccess?: () => void;
+};
+
+export type MetricDetailSceneProps = {
+  metricId?: string;
+  networkId?: string;
+  onBack?: () => void;
+  onDeleteSuccess?: () => void;
+  onEdit?: () => void;
+};
+
+export type MetricDataQuerySceneProps = {
+  metricId?: string;
+  networkId?: string;
+  onBack?: () => void;
+};

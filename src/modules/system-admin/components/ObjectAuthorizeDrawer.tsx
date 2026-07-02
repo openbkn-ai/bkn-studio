@@ -209,6 +209,7 @@ export function ObjectAuthorizeDrawer({
       destroyOnClose
       onClose={onClose}
       open={open}
+      rootClassName={styles.adminOverlay}
       title={t("systemAdmin.objectGrants.drawerTitle", { name: objName })}
       width={640}
     >
@@ -223,7 +224,7 @@ export function ObjectAuthorizeDrawer({
         </div>
       </div>
 
-      <div className={styles.calloutBox} style={{ marginBottom: 14 }}>
+      <div className={[styles.calloutBox, styles.sectionCalloutBottom].join(" ")}>
         <span>{t("systemAdmin.objectGrants.drawerHint")}</span>
       </div>
 

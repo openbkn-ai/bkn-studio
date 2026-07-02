@@ -16,8 +16,8 @@ export const shellZhCN = {
     expandSidenav: "展开导航",
     items: {
       globalBusinessKnowledgeNetwork: "全局业务知识网络",
-      domainKnowledgeNetwork: "领域业务知识网络",
-      generalBusinessKnowledgeNetwork: "数据资源知识网络",
+      domainKnowledgeNetwork: "领域知识网络",
+      generalBusinessKnowledgeNetwork: "数据资源网络",
       dataConnection: "数据连接",
       dataCatalog: "数据目录",
       indexBuild: "索引构建",
@@ -26,6 +26,7 @@ export const shellZhCN = {
       executionFactory: "执行工厂",
       executionFactoryLab: "执行工厂（实验版）",
       executionFactoryLabCapabilities: "能力库",
+      executionFactoryLabSandboxRuntime: "沙箱运行时管理",
       executionUnitManagement: "执行单元管理",
       allExecutionUnits: "全部执行单元",
       executionUnitManagementTooltip: "管理本业务域内的算子、工具箱、MCP 与 Skill",

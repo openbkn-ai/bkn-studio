@@ -109,6 +109,7 @@ export function RoleMembersModal({
       footer={null}
       onCancel={onClose}
       open={open}
+      rootClassName={styles.adminOverlay}
       title={t("systemAdmin.roles.membersModal.title", { name: role.name })}
       width={560}
     >

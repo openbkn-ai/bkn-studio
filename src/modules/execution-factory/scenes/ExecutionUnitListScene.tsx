@@ -614,12 +614,6 @@ export function ExecutionUnitListScene({
   const showCategoryFilter = supportsCategoryFilter(activeTab);
   const hasOriginFilteredEmpty = !loading && items.length > 0 && displayItems.length === 0;
 
-  const openEmptyCreate = () => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("create", "1");
-    setSearchParams(nextParams);
-  };
-
   const tabItems = useMemo(
     () =>
       resolveVisibleManagementTabs(activeTab)
@@ -690,6 +684,30 @@ export function ExecutionUnitListScene({
     setItems([]);
     void loadItems();
   }, [loadItems]);
+
+  const handleCreateMenuResourceCreated = useCallback(
+    ({ tab, id, toolId }: { tab: ExecutionUnitTab; id: string; toolId?: string }) => {
+      reloadList();
+      if (tab === "operator") {
+        setDetailOperatorId(id);
+        return;
+      }
+      if (tab === "toolbox") {
+        if (toolId) {
+          void navigate(`/execution-factory/toolboxes/${id}/tools?toolId=${toolId}`);
+          return;
+        }
+        void navigate(`/execution-factory/toolboxes/${id}/tools?create=1`);
+        return;
+      }
+      if (tab === "mcp") {
+        setDetailMcpId(id);
+        return;
+      }
+      setDetailSkillId(id);
+    },
+    [navigate, reloadList],
+  );
 
   const impexTypeForTab = useCallback((tab: ExecutionUnitTab): ImpexComponentType | null => {
     if (tab === "operator" || tab === "toolbox" || tab === "mcp") {
@@ -1107,26 +1125,7 @@ export function ExecutionUnitListScene({
                 setSearchParams(nextParams, { replace: true });
               }}
               onRefresh={reloadList}
-              onResourceCreated={({ tab, id, toolId }) => {
-                reloadList();
-                if (tab === "operator") {
-                  setDetailOperatorId(id);
-                  return;
-                }
-                if (tab === "toolbox") {
-                  if (toolId) {
-                    void navigate(`/execution-factory/toolboxes/${id}/tools?toolId=${toolId}`);
-                    return;
-                  }
-                  void navigate(`/execution-factory/toolboxes/${id}/tools?create=1`);
-                  return;
-                }
-                if (tab === "mcp") {
-                  setDetailMcpId(id);
-                  return;
-                }
-                setDetailSkillId(id);
-              }}
+              onResourceCreated={handleCreateMenuResourceCreated}
             />
             <span className={styles.toolbarMeta}>{t(toolbarHintKey)}</span>
           </div>
@@ -1279,9 +1278,12 @@ export function ExecutionUnitListScene({
                 }
               >
                 {!marketMode && !hasOriginFilteredEmpty ? (
-                  <AppButton onClick={openEmptyCreate} type="primary">
-                    {t(`executionFactory.emptyCreateByTab.${activeTab}`)}
-                  </AppButton>
+                  <CreateMenu
+                    activeTab={activeTab}
+                    onRefresh={reloadList}
+                    onResourceCreated={handleCreateMenuResourceCreated}
+                    variant="empty"
+                  />
                 ) : null}
               </Empty>
             </div>

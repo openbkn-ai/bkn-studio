@@ -161,6 +161,7 @@ export function UserFormDrawer({
       }
       onClose={onClose}
       open={open}
+      rootClassName={styles.adminOverlay}
       title={
         isEdit
           ? t("systemAdmin.users.drawer.editTitle", { name: user?.name })
@@ -216,13 +217,13 @@ export function UserFormDrawer({
             ) : null}
             {systemRoles.length ? (
               <>
-                <p className={styles.roleGroupLabel} style={{ marginTop: 12 }}>
+                <p className={[styles.roleGroupLabel, styles.roleGroupLabelSpaced].join(" ")}>
                   {t("systemAdmin.users.drawer.systemRoles")}
                 </p>
                 <div className={styles.chipGroup}>{systemRoles.map(roleChip)}</div>
               </>
             ) : null}
-            <p className={styles.subText} style={{ marginTop: 8 }}>
+            <p className={[styles.subText, styles.sectionNote].join(" ")}>
               {t("systemAdmin.users.drawer.rolesHint")}
             </p>
           </Form.Item>

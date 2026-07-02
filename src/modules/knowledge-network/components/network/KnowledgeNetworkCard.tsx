@@ -6,7 +6,7 @@
  */
 
 import { EllipsisOutlined } from "@ant-design/icons";
-import { Dropdown, type MenuProps } from "antd";
+import { Dropdown, Tooltip, type MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
@@ -31,6 +31,7 @@ export function KnowledgeNetworkCard({
   const { t } = useTranslation();
   const placeholderText =
     (record.name || "?").trim().charAt(0).toUpperCase() || "?";
+  const description = record.description || t("knowledgeNetwork.noDescription");
   const dropdownItems: MenuProps["items"] = [
     {
       key: "view",
@@ -80,9 +81,9 @@ export function KnowledgeNetworkCard({
           <div className={styles.titleContent}>
             <div className={styles.titleText}>{record.name}</div>
             <div className={styles.slug}>{record.identifier}</div>
-            <div className={styles.description}>
-              {record.description || t("knowledgeNetwork.noDescription")}
-            </div>
+            <Tooltip title={description}>
+              <div className={styles.description}>{description}</div>
+            </Tooltip>
           </div>
         </div>
         <Dropdown

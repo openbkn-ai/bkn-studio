@@ -191,6 +191,10 @@ export type ExecutePythonInput = {
   code: string;
   event?: Record<string, unknown>;
   timeout?: number;
+  source?: string;
+  taskId?: string;
+  capabilityId?: string;
+  capabilityName?: string;
 };
 
 export type ExecutePythonResult = {

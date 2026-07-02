@@ -41,11 +41,13 @@ export type AuditLog = {
   actorId: string;
   clientIp: string;
   createdAt: string;
+  detail?: string;
   id: string;
   method: string;
   resource: string;
   status: number;
   targetId: string;
+  targetName?: string;
 };
 
 export type AuditLogQuery = {

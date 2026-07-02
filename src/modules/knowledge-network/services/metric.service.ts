@@ -15,6 +15,8 @@ import type {
   KnowledgeNetworkMetricRecord,
   MetricDataQueryParams,
   MetricDataQueryResult,
+  MetricListQuery,
+  MetricListResult,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type {
   BackendListResponse,
@@ -50,23 +52,69 @@ export function getMetricApiAvailability() {
   return metricApiAvailability;
 }
 
-export async function listKnowledgeNetworkMetrics(networkId: string) {
+function filterAndSortMockMetrics(
+  metrics: KnowledgeNetworkMetricRecord[],
+  query: MetricListQuery = {},
+): MetricListResult {
+  const keyword = query.keyword?.trim().toLowerCase();
+  const filtered = metrics.filter((item) => {
+    const matchesKeyword =
+      !keyword ||
+      item.name.toLowerCase().includes(keyword) ||
+      item.id.toLowerCase().includes(keyword);
+    const matchesTag = !query.tag || query.tag === "all" || item.tags.includes(query.tag);
+    return matchesKeyword && matchesTag;
+  });
+
+  const sort = query.sort === "name" ? "name" : "update_time";
+  const direction = query.direction ?? "desc";
+  const sorted = [...filtered].sort((left, right) => {
+    const leftValue = sort === "name" ? left.name : left.updateTime;
+    const rightValue = sort === "name" ? right.name : right.updateTime;
+    const compared = leftValue.localeCompare(rightValue);
+    return direction === "asc" ? compared : -compared;
+  });
+  const offset = query.offset ?? 0;
+  const limit = query.limit ?? sorted.length;
+
+  return {
+    entries: sorted.slice(offset, offset + limit),
+    totalCount: sorted.length,
+  };
+}
+
+export async function listKnowledgeNetworkMetrics(
+  networkId: string,
+  query: MetricListQuery = {},
+): Promise<MetricListResult> {
   if (useMock) {
     updateMetricApiAvailability("ready");
-    return wait(mockMetrics[networkId] ?? []);
+    return wait(filterAndSortMockMetrics(mockMetrics[networkId] ?? [], query));
   }
 
   try {
     const response = await http.get<BackendListResponse<BackendMetric>>(
       `/bkn-backend/v1/knowledge-networks/${networkId}/metrics`,
-      { params: { limit: 200, offset: 0, sort: "update_time", direction: "desc" } },
+      {
+        params: {
+          direction: query.direction ?? "desc",
+          limit: query.limit ?? 20,
+          name_pattern: query.keyword || undefined,
+          offset: query.offset ?? 0,
+          sort: query.sort ?? "update_time",
+          tag: query.tag && query.tag !== "all" ? query.tag : undefined,
+        },
+      },
     );
     updateMetricApiAvailability("ready");
-    return response.data.entries.map(mapMetric);
+    return {
+      entries: response.data.entries.map(mapMetric),
+      totalCount: response.data.total_count,
+    };
   } catch (error) {
     if (getErrorStatus(error) === 404) {
       updateMetricApiAvailability("unsupported");
-      return [];
+      return { entries: [], totalCount: 0 };
     }
 
     throw error;
@@ -129,7 +177,10 @@ export async function createKnowledgeNetworkMetric(
       `/bkn-backend/v1/knowledge-networks/${networkId}/metrics`,
       {
         entries: [toBackendMetricEntry(input)],
-        strict_mode: false,
+      },
+      {
+        headers: { "x-http-method-override": "POST" },
+        params: { strict_mode: false },
       },
     );
 
@@ -143,6 +194,97 @@ export async function createKnowledgeNetworkMetric(
 
     throw error;
   }
+}
+
+export async function getKnowledgeNetworkMetricDetails(
+  networkId: string,
+  metricIds: string[],
+) {
+  if (metricIds.length === 0) {
+    return [];
+  }
+
+  if (useMock) {
+    updateMetricApiAvailability("ready");
+    return wait(
+      (mockMetrics[networkId] ?? []).filter((item) => metricIds.includes(item.id)),
+    );
+  }
+
+  const response = await http.get<BackendListResponse<BackendMetric>>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/metrics/${metricIds.join(",")}`,
+  );
+  updateMetricApiAvailability("ready");
+  return response.data.entries.map(mapMetric);
+}
+
+export async function createKnowledgeNetworkMetrics(
+  networkId: string,
+  entries: KnowledgeNetworkMetricMutationPayload[],
+  options?: { importMode?: "normal" | "ignore" | "overwrite"; strictMode?: boolean },
+) {
+  if (useMock) {
+    const created: KnowledgeNetworkMetricRecord[] = entries.map((input) => ({
+      calculationFormula: input.calculationFormula,
+      description: input.description,
+      id: crypto.randomUUID(),
+      metricType: input.metricType,
+      name: input.name,
+      scopeRef: input.scopeRef,
+      scopeType: input.scopeType,
+      tags: input.tags,
+      timeDimension: input.timeDimension,
+      unit: input.unit,
+      unitType: input.unitType,
+      updateTime: formatTimestamp(Date.now()),
+      updaterName: "Local Admin",
+    }));
+    mockMetrics[networkId] = [...created, ...(mockMetrics[networkId] ?? [])];
+    syncKnowledgeNetworkStatistics(networkId);
+    updateMetricApiAvailability("ready");
+    return wait(created);
+  }
+
+  await http.post(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/metrics`,
+    {
+      entries: entries.map(toBackendMetricEntry),
+    },
+    {
+      headers: { "x-http-method-override": "POST" },
+      params: {
+        import_mode: options?.importMode,
+        strict_mode: options?.strictMode ?? false,
+      },
+    },
+  );
+  updateMetricApiAvailability("ready");
+}
+
+export async function validateKnowledgeNetworkMetrics(
+  networkId: string,
+  entries: KnowledgeNetworkMetricMutationPayload[],
+  options?: { importMode?: "normal" | "ignore" | "overwrite"; strictMode?: boolean },
+) {
+  if (useMock) {
+    updateMetricApiAvailability("ready");
+    return wait({ valid: true });
+  }
+
+  const response = await http.post<{ detail?: string; valid: boolean }>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/metrics/validation`,
+    {
+      entries: entries.map(toBackendMetricEntry),
+    },
+    {
+      params: {
+        import_mode: options?.importMode,
+        strict_mode: options?.strictMode ?? false,
+      },
+    },
+  );
+  updateMetricApiAvailability("ready");
+  return response.data;
 }
 
 export async function updateKnowledgeNetworkMetric(
@@ -216,6 +358,203 @@ export async function deleteKnowledgeNetworkMetric(networkId: string, metricId: 
   }
 }
 
+export async function deleteKnowledgeNetworkMetrics(networkId: string, metricIds: string[]) {
+  if (metricIds.length === 0) {
+    return;
+  }
+
+  if (useMock) {
+    mockMetrics[networkId] = (mockMetrics[networkId] ?? []).filter(
+      (item) => !metricIds.includes(item.id),
+    );
+    syncKnowledgeNetworkStatistics(networkId);
+    await wait(undefined);
+    updateMetricApiAvailability("ready");
+    return;
+  }
+
+  await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}/metrics/${metricIds.join(",")}`);
+  updateMetricApiAvailability("ready");
+}
+
+type MetricTimeWindow = {
+  end?: number;
+  instant?: boolean;
+  start?: number;
+};
+
+type BackendMetricDataResponse = {
+  datas?: Array<{
+    growth_rates?: Array<number | string>;
+    growth_values?: Array<number | string>;
+    labels?: Record<string, string> | string[];
+    proportions?: Array<number | string>;
+    time_strs?: string[];
+    times?: Array<number | string>;
+    values?: Array<number | string>;
+  }>;
+  overall_ms?: number;
+  vega_duration_ms?: number;
+};
+
+function getRelativeTimeWindow(timeRange: MetricDataQueryParams["timeRange"]): MetricTimeWindow {
+  const now = Date.now();
+  const oneHour = 60 * 60 * 1000;
+  const oneDay = 24 * oneHour;
+
+  switch (timeRange) {
+    case "last_1h":
+      return { end: now, start: now - oneHour };
+    case "last_7d":
+      return { end: now, start: now - 7 * oneDay };
+    case "last_30d":
+      return { end: now, start: now - 30 * oneDay };
+    case "calendar_day": {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return { end: now, start: start.getTime() };
+    }
+    case "last_24h":
+    default:
+      return { end: now, start: now - oneDay };
+  }
+}
+
+function toTimestamp(value: unknown): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  if (typeof value === "object" && "valueOf" in value) {
+    const parsed = Number((value as { valueOf: () => unknown }).valueOf());
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
+function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
+  const time =
+    params.timeRange === "custom"
+      ? {
+          end: toTimestamp(params.customEndTime),
+          start: toTimestamp(params.customStartTime),
+        }
+      : getRelativeTimeWindow(params.timeRange);
+
+  const payload: Record<string, unknown> = {
+    limit: params.limit,
+    time: {
+      ...time,
+      instant: params.mode === "instant",
+    },
+  };
+
+  if (params.mode === "sameperiod") {
+    payload.metrics = {
+      sameperiod_config: {
+        method: [params.samePeriodMethod ?? "growth_value"],
+        offset: params.samePeriodOffset ?? 1,
+        time_granularity: params.samePeriodGranularity ?? "day",
+      },
+      type: "sameperiod",
+    };
+  }
+
+  if (params.mode === "proportion") {
+    payload.metrics = {
+      type: "proportion",
+    };
+  }
+
+  return payload;
+}
+
+function normalizeMetricDataResponse(
+  data: BackendMetricDataResponse | MetricDataQueryResult,
+  mode: MetricDataQueryParams["mode"],
+): MetricDataQueryResult {
+  if ("rows" in data && "columns" in data) {
+    return data;
+  }
+
+  const firstData = data.datas?.[0];
+  if (!firstData) {
+    return {
+      columns: [],
+      durationMs: data.overall_ms ?? data.vega_duration_ms,
+      rows: [],
+    };
+  }
+
+  if (mode === "instant") {
+    return {
+      columns: [
+        { key: "metric", title: "Metric" },
+        { key: "value", title: "Value" },
+      ],
+      durationMs: data.overall_ms ?? data.vega_duration_ms,
+      rows: [{ metric: "value", value: firstData.values?.[0] ?? "--" }],
+      visualHint: "instant-card",
+    };
+  }
+
+  if (mode === "proportion") {
+    const labels = Array.isArray(firstData.labels)
+      ? firstData.labels
+      : Object.values(firstData.labels ?? {});
+    const values = firstData.proportions ?? firstData.values ?? [];
+
+    return {
+      columns: [
+        { key: "dimension", title: "Dimension" },
+        { key: "value", title: "Value" },
+      ],
+      durationMs: data.overall_ms ?? data.vega_duration_ms,
+      rows: values.map((value, index) => ({
+        dimension: labels[index] ?? `Item ${index + 1}`,
+        value,
+      })),
+      visualHint: "proportion-bars",
+    };
+  }
+
+  const times = firstData.time_strs ?? firstData.times ?? [];
+  const valueKey = mode === "sameperiod" ? "current" : "value";
+
+  return {
+    columns:
+      mode === "sameperiod"
+        ? [
+            { key: "timestamp", title: "Timestamp" },
+            { key: "current", title: "Current" },
+            { key: "growthValue", title: "Growth value" },
+            { key: "growthRate", title: "Growth rate" },
+          ]
+        : [
+            { key: "timestamp", title: "Timestamp" },
+            { key: "value", title: "Value" },
+          ],
+    durationMs: data.overall_ms ?? data.vega_duration_ms,
+    rows: (firstData.values ?? []).map((value, index) => ({
+      growthRate: firstData.growth_rates?.[index] ?? "",
+      growthValue: firstData.growth_values?.[index] ?? "",
+      timestamp: times[index] ?? index,
+      [valueKey]: value,
+    })),
+    visualHint: "trend-bars",
+  };
+}
+
 export async function queryKnowledgeNetworkMetricData(
   networkId: string,
   metricId: string,
@@ -260,6 +599,24 @@ export async function queryKnowledgeNetworkMetricData(
       };
     }
 
+    if (params.mode === "sameperiod") {
+      return {
+        columns: [
+          { key: "timestamp", title: "Timestamp" },
+          { key: "current", title: metric?.name ?? "Current" },
+          { key: "growthValue", title: "Growth value" },
+          { key: "growthRate", title: "Growth rate" },
+        ],
+        durationMs: 233,
+        rows: [
+          { current: `68.2${unitSuffix}`, growthRate: "4.2%", growthValue: "2.8", timestamp: "2026-06-05 08:00" },
+          { current: `70.1${unitSuffix}`, growthRate: "5.1%", growthValue: "3.4", timestamp: "2026-06-05 09:00" },
+          { current: `72.5${unitSuffix}`, growthRate: "6.0%", growthValue: "4.1", timestamp: "2026-06-05 10:00" },
+        ],
+        visualHint: "trend-bars",
+      };
+    }
+
     return {
       columns: [
         { key: "timestamp", title: "Timestamp" },
@@ -277,14 +634,9 @@ export async function queryKnowledgeNetworkMetricData(
   }
 
   try {
-    const response = await http.post<MetricDataQueryResult>(
+    const response = await http.post<BackendMetricDataResponse | MetricDataQueryResult>(
       `/ontology-query/v1/knowledge-networks/${networkId}/metrics/${metricId}/data`,
-      {
-        fill_null: params.fillNull,
-        limit: params.limit,
-        mode: params.mode,
-        time_range: params.timeRange,
-      },
+      buildMetricDataQueryPayload(params),
       {
         params: {
           fill_null: params.fillNull,
@@ -293,7 +645,7 @@ export async function queryKnowledgeNetworkMetricData(
     );
 
     updateMetricApiAvailability("ready");
-    return response.data;
+    return normalizeMetricDataResponse(response.data, params.mode);
   } catch (error) {
     if (getErrorStatus(error) === 404) {
       updateMetricApiAvailability("unsupported");
@@ -301,4 +653,40 @@ export async function queryKnowledgeNetworkMetricData(
 
     throw error;
   }
+}
+
+export async function dryRunKnowledgeNetworkMetricData(
+  networkId: string,
+  metricConfig: KnowledgeNetworkMetricMutationPayload,
+  params: MetricDataQueryParams,
+): Promise<MetricDataQueryResult> {
+  if (useMock) {
+    await wait(undefined);
+    updateMetricApiAvailability("ready");
+    return {
+      columns: [
+        { key: "metric", title: "Metric" },
+        { key: "value", title: "Value" },
+      ],
+      durationMs: 148,
+      rows: [{ metric: metricConfig.name, value: 0 }],
+      visualHint: "instant-card",
+    };
+  }
+
+  const response = await http.post<BackendMetricDataResponse | MetricDataQueryResult>(
+    `/ontology-query/v1/knowledge-networks/${networkId}/metrics/dry-run`,
+    {
+      ...buildMetricDataQueryPayload(params),
+      metric_config: toBackendMetricEntry(metricConfig),
+    },
+    {
+      params: {
+        fill_null: params.fillNull,
+      },
+    },
+  );
+
+  updateMetricApiAvailability("ready");
+  return normalizeMetricDataResponse(response.data, params.mode);
 }

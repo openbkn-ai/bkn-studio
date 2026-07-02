@@ -78,6 +78,7 @@ export type MetricCalculationFormula = {
     property: string;
   };
   analysisDimensions?: string[];
+  condition?: import("./action-type").ActionTypeCondition;
   groupBy?: string[];
   having?: {
     operator: MetricHavingOperator;
@@ -123,19 +124,41 @@ export type KnowledgeNetworkMetricMutationPayload = {
   unitType?: MetricUnitType;
 };
 
-export type MetricDataQueryMode = "instant" | "trend" | "proportion";
+export type MetricListQuery = {
+  direction?: MetricOrderDirection;
+  keyword?: string;
+  limit?: number;
+  offset?: number;
+  sort?: "name" | "update_time";
+  tag?: string;
+};
+
+export type MetricListResult = {
+  entries: KnowledgeNetworkMetricRecord[];
+  totalCount: number;
+};
+
+export type MetricDataQueryMode = "instant" | "trend" | "sameperiod" | "proportion";
+export type MetricSamePeriodMethod = "growth_value" | "growth_rate";
+export type MetricSamePeriodTimeGranularity = "day" | "month" | "quarter" | "year";
 
 export type MetricDataQueryTimeRange =
   | "last_1h"
   | "last_24h"
   | "last_7d"
   | "last_30d"
-  | "calendar_day";
+  | "calendar_day"
+  | "custom";
 
 export type MetricDataQueryParams = {
+  customEndTime?: unknown;
+  customStartTime?: unknown;
   fillNull?: boolean;
   limit?: number;
   mode: MetricDataQueryMode;
+  samePeriodGranularity?: MetricSamePeriodTimeGranularity;
+  samePeriodMethod?: MetricSamePeriodMethod;
+  samePeriodOffset?: number;
   timeRange: MetricDataQueryTimeRange;
 };
 

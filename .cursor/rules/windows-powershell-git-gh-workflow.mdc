@@ -1,0 +1,14 @@
+---
+description: Windows PowerShell git and gh workflow guidance
+alwaysApply: true
+---
+
+# Windows PowerShell Git/GH Workflow
+
+- On Windows, prefer PowerShell-compatible shell syntax over bash syntax.
+- Do not use `&&`, bash heredocs, or other bash-only constructs in shell commands.
+- For multiline content such as PR bodies, use PowerShell here-strings.
+- Before pushing code, fetch and compare against `origin/main` first.
+- Prefer `feature/*` branches plus PRs instead of directly pushing `main`.
+- If a command returns no exit status, retry with a simpler PowerShell-safe command before assuming git or gh failed.
+- If `pnpm` or another expected tool is unavailable, verify the local environment before changing implementation just to work around the missing command.

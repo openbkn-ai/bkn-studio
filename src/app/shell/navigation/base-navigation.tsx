@@ -21,6 +21,16 @@ import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 export const baseConsoleNavigation: ConsoleNavItem[] = [
   {
+    key: "execution-factory",
+    labelKey: "shell.items.executionFactory",
+    icon: <ClusterOutlined />,
+  },
+  {
+    key: "execution-factory-lab",
+    labelKey: "shell.items.executionFactoryLab",
+    icon: <ExperimentOutlined />,
+  },
+  {
     key: "general-business-knowledge-network",
     labelKey: "shell.items.generalBusinessKnowledgeNetwork",
     icon: <AppstoreOutlined />,
@@ -34,18 +44,8 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
     ],
   },
   {
-    key: "execution-factory",
-    labelKey: "shell.items.executionFactory",
-    icon: <ClusterOutlined />,
-  },
-  {
     key: "model-resources",
     labelKey: "shell.items.modelResources",
-    icon: <ExperimentOutlined />,
-  },
-  {
-    key: "execution-factory-lab",
-    labelKey: "shell.items.executionFactoryLab",
     icon: <ExperimentOutlined />,
   },
   {

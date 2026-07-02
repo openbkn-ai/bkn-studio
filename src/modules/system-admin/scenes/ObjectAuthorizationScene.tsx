@@ -407,7 +407,7 @@ export function ObjectAuthorizationScene() {
 
   return (
     <>
-      <section className={styles.contentSurface}>
+      <section className={[styles.contentSurface, styles.contentSurfacePlain].join(" ")}>
         <div className={styles.statStrip}>
           <div className={styles.statCard}>
             <span className={styles.statLabel}>{t("systemAdmin.objectGrants.stats.grants")}</span>
@@ -474,7 +474,7 @@ export function ObjectAuthorizationScene() {
           </div>
         </div>
 
-        <div className={styles.calloutBox} style={{ marginTop: 16 }}>
+        <div className={[styles.calloutBox, styles.sectionCallout].join(" ")}>
           <KeyOutlined />
           <span>
             {t("systemAdmin.objectGrants.calloutPrefix")}
@@ -511,6 +511,7 @@ export function ObjectAuthorizationScene() {
         onCancel={() => setPicker((prev) => ({ ...prev, open: false }))}
         onOk={confirmPicker}
         open={picker.open}
+        rootClassName={styles.adminOverlay}
         title={t("systemAdmin.objectGrants.create")}
       >
         <p className={styles.subText} style={{ marginTop: 0 }}>

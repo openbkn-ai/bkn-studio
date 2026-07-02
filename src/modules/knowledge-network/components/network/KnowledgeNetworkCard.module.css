@@ -6,18 +6,16 @@
   overflow: hidden;
   cursor: pointer;
   background: #fff;
-  border: 1px solid #e8ebf1;
-  border-radius: 14px;
+  border: 1px solid #d9e0ea;
+  border-radius: 0;
   transition:
-    box-shadow 0.18s ease,
-    transform 0.18s ease,
+    background-color 0.18s ease,
     border-color 0.18s ease;
 }
 
 .card:hover {
-  border-color: #c9d6ff;
-  box-shadow: 0 10px 28px rgba(31, 35, 41, 0.1);
-  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  background: #f7faff;
 }
 
 .accent {
@@ -47,10 +45,10 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 0;
   color: #fff;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .titleContent {
@@ -62,9 +60,9 @@
 
 .titleText {
   overflow: hidden;
-  color: #1f2329;
-  font-size: 15px;
-  font-weight: 600;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 400;
   line-height: 22px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -72,8 +70,8 @@
 
 .slug {
   overflow: hidden;
-  color: #99a2b2;
-  font-size: 12px;
+  color: #6b7280;
+  font-size: 14px;
   font-family: var(--code-font, monospace);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -81,16 +79,18 @@
 
 .description {
   display: -webkit-box;
+  max-height: 40px;
   min-height: 40px;
   margin-top: 6px;
   overflow: hidden;
-  color: #5b6472;
-  font-size: 13px;
+  color: #4b5563;
+  font-size: 14px;
   line-height: 20px;
   text-overflow: ellipsis;
-  -webkit-line-clamp: 2;
   line-clamp: 2;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  word-break: break-all;
 }
 
 .moreButton {
@@ -119,10 +119,10 @@
   gap: 12px;
   margin: auto 16px 16px;
   padding-top: 12px;
-  color: #8a94a6;
-  font-size: 12px;
+  color: #6b7280;
+  font-size: 14px;
   line-height: 20px;
-  border-top: 1px solid #f0f2f6;
+  border-top: 1px solid #e8edf3;
 }
 
 .footerLeft {

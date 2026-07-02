@@ -242,6 +242,15 @@ export type BackendListResponse<T> = {
   total_count: number;
 };
 
+export type BackendMetricCondition = {
+  field?: string;
+  object_type_id?: string;
+  operation?: string;
+  sub_conditions?: BackendMetricCondition[];
+  value?: string | string[];
+  value_from?: "const";
+};
+
 export type BackendMetric = {
   calculation_formula?: {
     aggregation?: {
@@ -249,6 +258,7 @@ export type BackendMetric = {
       property?: string;
     };
     analysis_dimensions?: Array<{ property?: string } | string>;
+    condition?: BackendMetricCondition;
     group_by?: Array<{ property?: string } | string>;
     having?: {
       field?: string;

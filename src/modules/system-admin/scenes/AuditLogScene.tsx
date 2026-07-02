@@ -52,6 +52,24 @@ function formatTime(value: string) {
     .replace(/\//g, "-");
 }
 
+function parseAuditDetail(detail?: string): Record<string, unknown> {
+  if (!detail) {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(detail);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value : value == null ? "" : String(value);
+}
+
 const PAGE_SIZE = 20;
 
 export function AuditLogScene() {
@@ -93,6 +111,37 @@ export function AuditLogScene() {
       return undefined;
     };
   }, [departments, roles, users]);
+
+  const resolveDetailTarget = useCallback(
+    (log: AuditLog): string | undefined => {
+      const detail = parseAuditDetail(log.detail);
+      const directName = stringValue(detail.name);
+      if (directName) {
+        return directName;
+      }
+      const roleId = stringValue(detail.role_id);
+      const accessorId = stringValue(detail.accessor_id);
+      if (log.resource === "role-bindings" && roleId) {
+        const roleName = resolveTarget("roles", roleId) ?? roleId;
+        const accessorName =
+          resolveTarget("users", accessorId) ??
+          resolveTarget("departments", accessorId) ??
+          accessorId;
+        return accessorName ? `${roleName} / ${accessorName}` : roleName;
+      }
+      const resource = detail.resource;
+      if (resource && typeof resource === "object" && !Array.isArray(resource)) {
+        const resourceRecord = resource as Record<string, unknown>;
+        const resourceType = stringValue(resourceRecord.type);
+        const resourceId = stringValue(resourceRecord.id);
+        if (resourceType === "users" || resourceType === "departments" || resourceType === "roles") {
+          return resolveTarget(resourceType, resourceId) ?? resourceId;
+        }
+      }
+      return undefined;
+    },
+    [resolveTarget],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -158,14 +207,22 @@ export function AuditLogScene() {
       title: t("systemAdmin.audit.columns.target"),
       key: "target",
       render: (_, log) => {
+        const detailName = resolveDetailTarget(log);
+        const displayName =
+          log.targetName ||
+          (log.targetId ? resolveTarget(log.resource, log.targetId) : undefined) ||
+          detailName;
         if (!log.targetId) {
-          return <span className={styles.mutedText}>—</span>;
+          return displayName ? (
+            <span className={styles.modeText}>{displayName}</span>
+          ) : (
+            <span className={styles.mutedText}>—</span>
+          );
         }
-        const name = resolveTarget(log.resource, log.targetId);
-        if (name) {
+        if (displayName) {
           return (
             <Tooltip title={log.targetId}>
-              <span className={styles.modeText}>{name}</span>
+              <span className={styles.modeText}>{displayName}</span>
             </Tooltip>
           );
         }
@@ -199,7 +256,7 @@ export function AuditLogScene() {
   ];
 
   return (
-    <section className={styles.contentSurface}>
+    <section className={[styles.contentSurface, styles.contentSurfacePlain].join(" ")}>
       <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
           <div className={styles.toolbarActions}>

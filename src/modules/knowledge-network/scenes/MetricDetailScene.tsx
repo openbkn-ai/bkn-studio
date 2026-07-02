@@ -7,7 +7,7 @@
 
 import { EditOutlined, LineChartOutlined } from "@ant-design/icons";
 import { Alert, Descriptions, Spin, Tabs, Tag } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -16,12 +16,14 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import type { MetricDetailSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import {
   deleteKnowledgeNetworkMetric,
   getKnowledgeNetworkMetric,
   listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
+  ActionTypeCondition,
   KnowledgeNetworkMetricRecord,
   KnowledgeNetworkMetricScopeType,
   KnowledgeNetworkObjectTypeRecord,
@@ -50,14 +52,37 @@ function formatPropertyList(values: string[] | undefined, emptyLabel: string) {
   return values.join(", ");
 }
 
-export function MetricDetailScene() {
+function formatConditionLabel(condition: ActionTypeCondition | undefined, emptyLabel: string): string {
+  if (!condition?.field || !condition.operation) {
+    return emptyLabel;
+  }
+
+  const value =
+    Array.isArray(condition.value) ? condition.value.join(", ") : condition.value;
+  const current = value ? `${condition.field} ${condition.operation} ${value}` : `${condition.field} ${condition.operation}`;
+  const subConditions = condition.subConditions
+    ?.map((item) => formatConditionLabel(item, ""))
+    .filter(Boolean);
+
+  return subConditions?.length ? [current, ...subConditions].join("; ") : current;
+}
+
+export function MetricDetailScene({
+  metricId: metricIdProp,
+  networkId: networkIdProp,
+  onBack,
+  onDeleteSuccess,
+  onEdit,
+}: MetricDetailSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
-  const { metricId = "", networkId = "" } = useParams<{
+  const params = useParams<{
     metricId: string;
     networkId: string;
   }>();
+  const metricId = metricIdProp ?? params.metricId ?? "";
+  const networkId = networkIdProp ?? params.networkId ?? "";
   const [detail, setDetail] = useState<KnowledgeNetworkMetricRecord | null>(null);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +91,7 @@ export function MetricDetailScene() {
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!networkId || !metricId) {
       return;
     }
@@ -86,11 +111,11 @@ export function MetricDetailScene() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [metricId, networkId]);
 
   useEffect(() => {
     void loadData();
-  }, [metricId, networkId]);
+  }, [loadData]);
 
   const confirmDelete = () => {
     if (!detail) {
@@ -105,6 +130,11 @@ export function MetricDetailScene() {
       onOk: async () => {
         await deleteKnowledgeNetworkMetric(networkId, detail.id);
         void message.success(t("common.success"));
+        if (onDeleteSuccess) {
+          onDeleteSuccess();
+          return;
+        }
+
         void navigate(listPath);
       },
       title: t("knowledgeNetwork.metricDeleteTitle"),
@@ -136,6 +166,11 @@ export function MetricDetailScene() {
           <AppButton
             icon={<EditOutlined />}
             onClick={() => {
+              if (onEdit) {
+                onEdit();
+                return;
+              }
+
               void navigate(`/knowledge-network/workspace/${networkId}/metrics/${metricId}/edit`);
             }}
           >
@@ -147,6 +182,11 @@ export function MetricDetailScene() {
         </>
       }
       onBack={() => {
+        if (onBack) {
+          onBack();
+          return;
+        }
+
         void navigate(listPath);
       }}
       subtitle={t("knowledgeNetwork.metricDetailDescription")}
@@ -222,8 +262,21 @@ export function MetricDetailScene() {
                   ? t(`knowledgeNetwork.metricAggregationAggrOption.${formula.aggregation.aggr}`)
                   : "--"}
               </Descriptions.Item>
+              <Descriptions.Item label={t("knowledgeNetwork.metricFilterCondition")} span={2}>
+                {formatConditionLabel(formula.condition, "--")}
+              </Descriptions.Item>
               <Descriptions.Item label={t("knowledgeNetwork.metricGroupBy")}>
                 {formatPropertyList(formula.groupBy, t("knowledgeNetwork.noTags"))}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("knowledgeNetwork.metricOrderBy")}>
+                {formula.orderBy?.property
+                  ? `${formula.orderBy.property} (${formula.orderBy.direction})`
+                  : "--"}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("knowledgeNetwork.metricHaving")}>
+                {formula.having?.operator
+                  ? `${formula.having.operator} ${formula.having.value ?? ""}`.trim()
+                  : "--"}
               </Descriptions.Item>
               <Descriptions.Item label={t("knowledgeNetwork.metricAnalysisDimensions")}>
                 {formatPropertyList(formula.analysisDimensions, t("knowledgeNetwork.noTags"))}

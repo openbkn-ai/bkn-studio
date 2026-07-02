@@ -5,7 +5,8 @@
   flex-direction: column;
   height: 100%;
   min-height: calc(100vh - 72px - 24px - 32px);
-  padding: 0;
+  padding: 14px 12px 20px;
+  background: #fff;
 }
 
 .title {
@@ -24,6 +25,8 @@
   justify-content: space-between;
   gap: 16px;
   min-height: 32px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d9e0ea;
 }
 
 .toolbarLeft,
@@ -160,7 +163,7 @@
 .listContent {
   flex: 1;
   min-height: 0;
-  padding-top: 16px;
+  padding-top: 14px;
   overflow: auto;
 }
 

@@ -93,6 +93,7 @@ export function DeptMembersModal({
       footer={null}
       onCancel={onClose}
       open={open}
+      rootClassName={styles.adminOverlay}
       title={t("systemAdmin.users.deptMembers.title", { name: deptPath(departments, department.id) })}
       width={560}
     >

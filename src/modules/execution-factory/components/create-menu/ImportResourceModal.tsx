@@ -52,11 +52,15 @@ import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/req
 
 import styles from "./create-menu.module.css";
 
+type ImportKind = "openapi" | "adp";
+
 
 
 type ImportResourceModalProps = {
 
   activeTab: ExecutionUnitTab;
+
+  initialKind?: ImportKind;
 
   open: boolean;
 
@@ -65,10 +69,6 @@ type ImportResourceModalProps = {
   onSuccess?: () => void;
 
 };
-
-
-
-type ImportKind = "openapi" | "adp";
 
 
 
@@ -121,6 +121,8 @@ function readUploadFile(fileList: UploadFile[]) {
 export function ImportResourceModal({
 
   activeTab,
+
+  initialKind,
 
   open,
 
@@ -226,7 +228,7 @@ export function ImportResourceModal({
 
       adpForm.setFieldsValue({ mode: "create" });
 
-      setImportKind(supportsOpenApi ? "openapi" : "adp");
+      setImportKind(initialKind ?? (supportsOpenApi ? "openapi" : "adp"));
 
       setOpenApiSpec("");
 
@@ -236,7 +238,7 @@ export function ImportResourceModal({
 
     })();
 
-  }, [adpForm, open, openApiForm, supportsOpenApi]);
+  }, [adpForm, initialKind, open, openApiForm, supportsOpenApi]);
 
 
 

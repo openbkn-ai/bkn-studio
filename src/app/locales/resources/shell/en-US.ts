@@ -16,7 +16,7 @@ export const shellEnUS = {
     expandSidenav: "Expand navigation",
     items: {
       globalBusinessKnowledgeNetwork: "Global Business Knowledge Network",
-      domainKnowledgeNetwork: "Domain Business Knowledge Network",
+      domainKnowledgeNetwork: "Domain Knowledge Network",
       generalBusinessKnowledgeNetwork: "Data Resource Knowledge Network",
       dataConnection: "Data Connection",
       dataCatalog: "Data Catalog",
@@ -27,6 +27,7 @@ export const shellEnUS = {
       executionFactoryLab: "Execution Factory (Lab)",
       executionFactoryLabCapabilities: "Capability Library (Lab)",
       executionFactoryLabCatalog: "Capability Catalog (Lab)",
+      executionFactoryLabSandboxRuntime: "Sandbox Runtime Management",
       executionUnitManagement: "Execution Unit Management",
       allExecutionUnits: "All Execution Units",
       executionUnitManagementTooltip: "Manage operators, toolboxes, MCP servers, and skills in your domain",

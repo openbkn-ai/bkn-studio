@@ -14,7 +14,7 @@ export const executionFactoryLabModuleManifest = {
   requiresShell: true,
   supportsEmbedded: false,
   supportsReadOnly: false,
-  services: ["capabilities-lab/v1"],
+  services: ["capabilities-lab/v1", "agent-operator-integration/internal-v1/sandbox"],
   scenes: [
     {
       id: "execution-factory-lab.capabilities",
@@ -26,6 +26,12 @@ export const executionFactoryLabModuleManifest = {
       id: "execution-factory-lab.catalog",
       exportName: "CatalogLabListScene",
       description: "Market catalog browse and install for lab capabilities.",
+      inputs: [],
+    },
+    {
+      id: "execution-factory-lab.sandbox-runtime",
+      exportName: "SandboxRuntimeScene",
+      description: "Sandbox runtime health, session pool, and execution session management.",
       inputs: [],
     },
   ],

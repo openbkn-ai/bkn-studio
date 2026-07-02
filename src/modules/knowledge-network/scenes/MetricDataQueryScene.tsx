@@ -13,18 +13,25 @@ import { useNavigate, useParams } from "react-router-dom";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import type { MetricDataQuerySceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { getKnowledgeNetworkMetric } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { KnowledgeNetworkMetricRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./MetricDetailScene.module.css";
 
-export function MetricDataQueryScene() {
+export function MetricDataQueryScene({
+  metricId: metricIdProp,
+  networkId: networkIdProp,
+  onBack,
+}: MetricDataQuerySceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { metricId = "", networkId = "" } = useParams<{
+  const params = useParams<{
     metricId: string;
     networkId: string;
   }>();
+  const metricId = metricIdProp ?? params.metricId ?? "";
+  const networkId = networkIdProp ?? params.networkId ?? "";
   const [detail, setDetail] = useState<KnowledgeNetworkMetricRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +75,11 @@ export function MetricDataQueryScene() {
   return (
     <KnowledgeNetworkResourceConfigShell
       onBack={() => {
+        if (onBack) {
+          onBack();
+          return;
+        }
+
         void navigate(detailPath);
       }}
       subtitle={t("knowledgeNetwork.metricDataQueryDescription")}

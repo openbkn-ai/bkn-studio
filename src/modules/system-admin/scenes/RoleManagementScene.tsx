@@ -245,7 +245,7 @@ export function RoleManagementScene() {
 
   return (
     <>
-      <section className={styles.contentSurface}>
+      <section className={[styles.contentSurface, styles.contentSurfacePlain].join(" ")}>
         <div className={styles.operationBar}>
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
