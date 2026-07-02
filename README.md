@@ -266,7 +266,6 @@ License 2.0 基础上附加额外条件的修改版。
 
 - OpenBKN License 全文：[LICENSE](LICENSE)
 - Apache License 2.0（被 OpenBKN License 引用）：<http://www.apache.org/licenses/LICENSE-2.0>
-- 组件与第三方归属：[NOTICE](NOTICE)
 
 每个源文件的适用许可以其文件头声明为准。源文件头建议使用如下片段：
 
@@ -277,4 +276,4 @@ Licensed under the OpenBKN License, a modified Apache License 2.0 with
 Additional Conditions. See LICENSE for the full text.
 ```
 
-商业授权咨询请见 LICENSE 中的联系方式。
+商业授权咨询请见 [LICENSE](LICENSE) 中的联系方式。
