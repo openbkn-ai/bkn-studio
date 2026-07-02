@@ -52,6 +52,7 @@ export const DEFAULT_PROMPT =
   "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
   "kn_id 已锁定为当前网络，无需也不要修改。\n" +
   "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。\n" +
+  "search_schema 默认 schema_brief=true（只返回概要，省 token）；确需完整字段定义时才显式传 schema_brief=false。\n" +
   "重要：单个工具返回的文本会被截断到约 8000 字符，超出部分丢失。务必把过滤/聚合下推到查询里，必要时分多次小批查询；若看到「已截断」提示，说明结果不完整，应缩小查询范围重查，切勿把截断结果当作完整数据下结论。\n" +
   "回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据。";
 
