@@ -90,13 +90,18 @@ export type PaneProfile = {
   highlight?: boolean;
 };
 
-/** 对比报告用：一轮问答 + 指标。 */
+/** 一轮的结果状态：有效回答 / 无回答 / 被用户停止 / 出错。后三者为负面。 */
+export type RoundOutcome = "answered" | "empty" | "stopped" | "error";
+
+/** 对比报告用：一轮问答 + 指标 + 结果状态。 */
 export type PaneRound = {
   question: string;
   answer: string | null;
   tokens: number | null;
   ms: number | null;
   toolCalls: { name: string; status: string }[];
+  /** 结果状态；empty/stopped/error 计为负面（该侧该轮未有效完成）。 */
+  outcome: RoundOutcome;
 };
 
 /** 对比报告用的面板快照：全部轮次 + 会话累计。 */
@@ -132,6 +137,10 @@ type ChatMessage = {
   tokens?: number;
   /** 本轮总耗时 ms（完成后填）。 */
   ms?: number;
+  /** 本轮被用户中途停止（AbortController）。 */
+  stopped?: boolean;
+  /** 本轮整体执行失败（非工具级、而是这一轮没跑出结果）。 */
+  errored?: boolean;
 };
 
 type SessionStats = { tokens: number; ms: number };
@@ -546,14 +555,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         { role: "assistant", content: "", toolCalls: [] },
       ]);
 
+      const controller = new AbortController();
+      abortRef.current = controller;
       try {
         const allTools = await getTools();
         // 硬限定：只把勾选的工具传给模型（null = 全部）。
         const activeTools = toolSelection ? allTools.filter((t) => toolSelection.includes(t.name)) : allTools;
         const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider);
 
-        const controller = new AbortController();
-        abortRef.current = controller;
         await runAgentChat({
           env,
           modelName: model,
@@ -566,10 +575,16 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           onChunk: handleChunk,
         });
       } catch (error) {
-        updateAssistant((m) => ({
-          ...m,
-          content: m.content + (m.content ? "\n\n" : "") + `⚠️ ${error instanceof Error ? error.message : String(error)}`,
-        }));
+        if (controller.signal.aborted) {
+          // 用户中途停止：标记本轮 stopped（对比报告计为负面），保留已生成的部分内容。
+          updateAssistant((m) => ({ ...m, stopped: true }));
+        } else {
+          updateAssistant((m) => ({
+            ...m,
+            errored: true,
+            content: m.content + (m.content ? "\n\n" : "") + `⚠️ ${error instanceof Error ? error.message : String(error)}`,
+          }));
+        }
       } finally {
         abortRef.current = null;
         const elapsed = performance.now() - startedAt;
@@ -594,13 +609,16 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     let current: PaneRound | null = null;
     for (const m of messages) {
       if (m.role === "user") {
-        current = { question: m.content, answer: null, tokens: null, ms: null, toolCalls: [] };
+        // 默认 empty：只有 user、没有对应 assistant（发出未答）也计为负面。
+        current = { question: m.content, answer: null, tokens: null, ms: null, toolCalls: [], outcome: "empty" };
         rounds.push(current);
       } else if (m.role === "assistant" && current) {
         current.answer = m.content || null;
         current.tokens = m.tokens ?? null;
         current.ms = m.ms ?? null;
         current.toolCalls = (m.toolCalls ?? []).map((tc) => ({ name: tc.name, status: tc.status }));
+        const hasAnswer = !!m.content && m.content.trim().length > 0;
+        current.outcome = m.stopped ? "stopped" : m.errored ? "error" : hasAnswer ? "answered" : "empty";
         current = null;
       }
     }

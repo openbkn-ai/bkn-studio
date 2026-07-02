@@ -45,6 +45,7 @@ import {
   type PaneProfile,
   type PaneRound,
   type PaneSnapshot,
+  type RoundOutcome,
 } from "./ChatPane";
 import styles from "./AgentChat.module.css";
 
@@ -124,7 +125,36 @@ const BASE_PROFILE: PaneProfile = {
 const JUDGE_PROMPT =
   "你是对比评审员。同样的问题由两个 Agent 分别回答（可能有多轮）：A「仅基础数据」只能用 SQL/表工具直接查库；B「业务知识网络」可用全部知识网络检索工具（语义 Schema、实例、子图、逻辑属性等）。\n" +
   "请基于给出的各轮回答与指标，从这些维度对比：①结论正确性与完整度 ②依据是否充分可信 ③效率（工具调用次数、token、耗时）④哪一侧对业务用户更有用、为什么。\n" +
-  "输出中文 Markdown：先给一行总评（哪侧更好），再逐轮简要对比（每轮 2-3 句），最后分点归纳，简洁克制，不要复述全文。";
+  "特别注意每轮的『结果状态』：若某侧某轮为『无有效回答 / 被用户停止 / 执行出错』，一律视为该侧该轮的负面结果（未完成任务），应判其明显劣于给出有效答案的一侧；某侧负面轮次越多，总评越应反映其不可靠。\n" +
+  "输出中文 Markdown：先给一行总评（哪侧更好），再逐轮简要对比（每轮 2-3 句，并点明负面结果），最后分点归纳，简洁克制，不要复述全文。";
+
+/** 结果状态标签；empty/stopped/error 明确标注为负面。 */
+function outcomeLabel(o: RoundOutcome): string {
+  switch (o) {
+    case "answered":
+      return "已回答";
+    case "stopped":
+      return "⏹ 被用户停止（负面）";
+    case "error":
+      return "⚠️ 执行出错（负面）";
+    case "empty":
+    default:
+      return "⚠️ 无有效回答（负面）";
+  }
+}
+
+/** 一轮的答案块：有效回答直接给正文；否则标注负面状态（有部分内容则附上）。 */
+function answerBlock(r?: PaneRound): string {
+  if (!r) return "（未参与本轮）";
+  if (r.outcome === "answered") return r.answer ?? "（无回答）";
+  const note = `**${outcomeLabel(r.outcome)}**`;
+  return r.answer && r.answer.trim() ? `${note}\n\n${r.answer}` : note;
+}
+
+/** 某侧未有效完成（无答/停止/出错）的轮数——对比报告里的负面计数。 */
+function negativeRounds(s: PaneSnapshot): number {
+  return s.rounds.filter((r) => r.outcome !== "answered").length;
+}
 
 /** 导出 Markdown：一轮的工具调用摘要。 */
 function mdCalls(r?: PaneRound): string {
@@ -154,7 +184,8 @@ function reportToMarkdown(
   L.push(`| 总耗时 | ${fmtDuration(base.stats.ms)} | ${fmtDuration(kn.stats.ms)} |`);
   L.push(`| 轮数 | ${base.rounds.length} | ${kn.rounds.length} |`);
   const totalCalls = (s: PaneSnapshot) => s.rounds.reduce((n, r) => n + r.toolCalls.length, 0);
-  L.push(`| 工具调用合计 | ${totalCalls(base)} 次 | ${totalCalls(kn)} 次 |`, "");
+  L.push(`| 工具调用合计 | ${totalCalls(base)} 次 | ${totalCalls(kn)} 次 |`);
+  L.push(`| 无效轮次(无答/停止/出错) | ${negativeRounds(base)} | ${negativeRounds(kn)} |`, "");
   const roundCount = Math.max(base.rounds.length, kn.rounds.length);
   for (let i = 0; i < roundCount; i++) {
     const b = base.rounds[i];
@@ -170,9 +201,10 @@ function reportToMarkdown(
     L.push(
       `| 耗时 | ${b?.ms != null ? fmtDuration(b.ms) : "—"} | ${k?.ms != null ? fmtDuration(k.ms) : "—"} |`,
     );
-    L.push(`| 工具调用 | ${mdCalls(b)} | ${mdCalls(k)} |`, "");
-    L.push(`### 仅基础数据 · 回答`, "", b?.answer ?? "（无回答）", "");
-    L.push(`### 业务知识网络 · 回答`, "", k?.answer ?? "（无回答）", "");
+    L.push(`| 工具调用 | ${mdCalls(b)} | ${mdCalls(k)} |`);
+    L.push(`| 结果 | ${b ? outcomeLabel(b.outcome) : "—"} | ${k ? outcomeLabel(k.outcome) : "—"} |`, "");
+    L.push(`### 仅基础数据 · 回答`, "", answerBlock(b), "");
+    L.push(`### 业务知识网络 · 回答`, "", answerBlock(k), "");
   }
   if (summary.trim()) L.push("## AI 总结", "", summary.trim(), "");
   return L.join("\n");
@@ -188,6 +220,7 @@ function paneBrief(label: string, s: PaneSnapshot): string {
     const answer = r.answer ? (r.answer.length > 1500 ? `${r.answer.slice(0, 1500)}…[已截断]` : r.answer) : "（无回答）";
     parts.push(
       `【第 ${i + 1} 轮】问题：${r.question}\n` +
+        `结果状态：${outcomeLabel(r.outcome)}\n` +
         `指标：token ${r.tokens ?? "—"}，耗时 ${r.ms != null ? fmtDuration(r.ms) : "—"}，工具 ${r.toolCalls.length} 次（${tools}）\n` +
         `回答：${answer}`,
     );
@@ -595,6 +628,7 @@ export function AgentChat({
                       err: calls.filter((t) => t.status === "error").length,
                       avgTokens: s.rounds.length > 0 ? Math.round(s.stats.tokens / s.rounds.length) : 0,
                       avgMs: s.rounds.length > 0 ? s.stats.ms / s.rounds.length : 0,
+                      neg: s.rounds.filter((r) => r.outcome !== "answered").length,
                     };
                   };
                   const b = report.base;
@@ -661,6 +695,11 @@ export function AgentChat({
                           <td>工具调用合计</td>
                           <td>{callsCell(ba)}</td>
                           <td>{callsCell(ka)}</td>
+                        </tr>
+                        <tr>
+                          <td>无效轮次(无答/停止/出错)</td>
+                          <td className={ba.neg > 0 ? styles.rptErrTxt : ""}>{ba.neg}</td>
+                          <td className={ka.neg > 0 ? styles.rptErrTxt : ""}>{ka.neg}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -740,25 +779,46 @@ export function AgentChat({
                             <td>{toolCell(b)}</td>
                             <td>{toolCell(k)}</td>
                           </tr>
+                          <tr>
+                            <td>结果</td>
+                            <td className={b && b.outcome !== "answered" ? styles.rptErrTxt : ""}>
+                              {b ? outcomeLabel(b.outcome) : "—"}
+                            </td>
+                            <td className={k && k.outcome !== "answered" ? styles.rptErrTxt : ""}>
+                              {k ? outcomeLabel(k.outcome) : "—"}
+                            </td>
+                          </tr>
                         </tbody>
                       </table>
                       <div className={styles.rptAnsGrid}>
                         {(
                           [
-                            { key: "base", title: "仅基础数据", hl: false, ans: b?.answer ?? null },
-                            { key: "kn", title: "业务知识网络", hl: true, ans: k?.answer ?? null },
+                            { key: "base", title: "仅基础数据", hl: false, round: b },
+                            { key: "kn", title: "业务知识网络", hl: true, round: k },
                           ] as const
-                        ).map(({ key, title, hl, ans }) => (
-                          <details key={key} className={styles.rptAnsBox}>
-                            <summary className={styles.rptAnsHead}>
-                              <span className={`${styles.paneTitle} ${hl ? styles.paneTitleHl : ""}`}>{title}</span>
-                              <span className={styles.rptAnsLbl}>回答（点击展开/收起）</span>
-                            </summary>
-                            <div className={styles.rptAnsBody}>
-                              {ans ? <MarkdownView text={ans} /> : <span className={styles.rptHint}>（无回答）</span>}
-                            </div>
-                          </details>
-                        ))}
+                        ).map(({ key, title, hl, round }) => {
+                          const negative = !!round && round.outcome !== "answered";
+                          return (
+                            <details key={key} className={styles.rptAnsBox}>
+                              <summary className={styles.rptAnsHead}>
+                                <span className={`${styles.paneTitle} ${hl ? styles.paneTitleHl : ""}`}>{title}</span>
+                                {negative ? (
+                                  <span className={styles.rptErrTxt}>{outcomeLabel(round.outcome)}</span>
+                                ) : (
+                                  <span className={styles.rptAnsLbl}>回答（点击展开/收起）</span>
+                                )}
+                              </summary>
+                              <div className={styles.rptAnsBody}>
+                                {negative ? <div className={styles.rptErrTxt}>{outcomeLabel(round.outcome)}</div> : null}
+                                {round?.answer ? (
+                                  <MarkdownView text={round.answer} />
+                                ) : negative ? null : (
+                                  <span className={styles.rptHint}>（无回答）</span>
+                                )}
+                              </div>
+                            </details>
+                          );
+                        })}
                       </div>
                     </div>
                   );
