@@ -144,6 +144,28 @@
   background: rgba(214, 58, 58, 0.09);
 }
 
+/* 逐轮分节 */
+.rptRound {
+  margin-top: 20px;
+}
+.rptRoundNo {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(46, 104, 255, 0.1);
+  border-radius: 6px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.rptAnsBox > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.rptAnsBox > summary::-webkit-details-marker {
+  display: none;
+}
+
 /* 回答对比（两列，各自滚动） */
 .rptAnsGrid {
   display: grid;

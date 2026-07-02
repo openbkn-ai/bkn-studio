@@ -121,20 +121,25 @@ const BASE_PROFILE: PaneProfile = {
 
 /** 对比报告 AI 总结的评审提示词。 */
 const JUDGE_PROMPT =
-  "你是对比评审员。同一个问题由两个 Agent 分别回答：A「仅基础数据」只能用 SQL/表工具直接查库；B「业务知识网络」可用全部知识网络检索工具（语义 Schema、实例、子图、逻辑属性等）。\n" +
-  "请基于给出的两份回答与指标，从这些维度简要对比：①结论正确性与完整度 ②依据是否充分可信 ③效率（工具调用次数、token、耗时）④哪一侧对业务用户更有用、为什么。\n" +
-  "输出中文 Markdown，先给一行总评（哪侧更好），再分点展开，简洁克制，不要复述全文。";
+  "你是对比评审员。同样的问题由两个 Agent 分别回答（可能有多轮）：A「仅基础数据」只能用 SQL/表工具直接查库；B「业务知识网络」可用全部知识网络检索工具（语义 Schema、实例、子图、逻辑属性等）。\n" +
+  "请基于给出的各轮回答与指标，从这些维度对比：①结论正确性与完整度 ②依据是否充分可信 ③效率（工具调用次数、token、耗时）④哪一侧对业务用户更有用、为什么。\n" +
+  "输出中文 Markdown：先给一行总评（哪侧更好），再逐轮简要对比（每轮 2-3 句），最后分点归纳，简洁克制，不要复述全文。";
 
-/** 报告里单侧指标块的输入。 */
-function snapshotBrief(label: string, s: PaneSnapshot): string {
-  const tools = s.lastToolCalls.map((t) => t.name).join(", ") || "无";
-  return [
-    `### ${label}`,
-    `- 模型：${s.model || "—"}`,
-    `- 本轮 token：${s.lastTokens ?? "—"}；本轮耗时：${s.lastMs ? fmtDuration(s.lastMs) : "—"}；工具调用 ${s.lastToolCalls.length} 次（${tools}）`,
-    `- 回答：`,
-    s.lastAnswer ?? "（无回答）",
-  ].join("\n");
+/** 报告里单侧全部轮次的评审语料（长回答截断，防提示词爆炸）。 */
+function paneBrief(label: string, s: PaneSnapshot): string {
+  const parts = [
+    `### ${label}（模型 ${s.model || "—"}；会话累计 ${fmtTokens(s.stats.tokens)} tokens · ${fmtDuration(s.stats.ms)}）`,
+  ];
+  s.rounds.forEach((r, i) => {
+    const tools = r.toolCalls.map((t) => (t.status === "error" ? `${t.name}(失败)` : t.name)).join(", ") || "无";
+    const answer = r.answer ? (r.answer.length > 1500 ? `${r.answer.slice(0, 1500)}…[已截断]` : r.answer) : "（无回答）";
+    parts.push(
+      `【第 ${i + 1} 轮】问题：${r.question}\n` +
+        `指标：token ${r.tokens ?? "—"}，耗时 ${r.ms != null ? fmtDuration(r.ms) : "—"}，工具 ${r.toolCalls.length} 次（${tools}）\n` +
+        `回答：${answer}`,
+    );
+  });
+  return parts.join("\n\n");
 }
 
 const KN_PROFILE: PaneProfile = {
@@ -325,13 +330,7 @@ export function AgentChat({
     if (!report || summarizing) return;
     const modelName = report.kn.model || report.base.model;
     if (!modelName) return;
-    const content = [
-      `问题：${report.kn.lastQuestion ?? report.base.lastQuestion ?? "（未知）"}`,
-      "",
-      snapshotBrief("A · 仅基础数据", report.base),
-      "",
-      snapshotBrief("B · 业务知识网络", report.kn),
-    ].join("\n");
+    const content = [paneBrief("A · 仅基础数据", report.base), "", paneBrief("B · 业务知识网络", report.kn)].join("\n");
     setSummarizing(true);
     setSummary("");
     const controller = new AbortController();
@@ -480,130 +479,140 @@ export function AgentChat({
       <Modal open={report !== null} onCancel={closeReport} footer={null} width={880} title="对比报告">
         {report ? (
           <div className={styles.rptRoot}>
-            {!report.base.lastAnswer && !report.kn.lastAnswer ? (
-              <p className={styles.rptHint}>两侧还没有回答。先用「两侧同问」发一个问题，再来看对比报告。</p>
+            {report.base.rounds.length === 0 && report.kn.rounds.length === 0 ? (
+              <p className={styles.rptHint}>两侧还没有对话。先用「两侧同问」发一个问题，再来看对比报告。</p>
             ) : (
               <>
-                <div className={styles.rptQ}>
-                  <span className={styles.rptQMark}>❝</span>
-                  {report.kn.lastQuestion ?? report.base.lastQuestion ?? "—"}
-                </div>
-                {(() => {
-                  const callStats = (s: PaneSnapshot) => ({
-                    n: s.lastToolCalls.length,
-                    ok: s.lastToolCalls.filter((t) => t.status === "done").length,
-                    err: s.lastToolCalls.filter((t) => t.status === "error").length,
-                  });
-                  const b = report.base;
-                  const k = report.kn;
-                  const bc = callStats(b);
-                  const kc = callStats(k);
-                  const bBestTokens = b.lastTokens != null && k.lastTokens != null && b.lastTokens < k.lastTokens;
-                  const kBestTokens = b.lastTokens != null && k.lastTokens != null && k.lastTokens < b.lastTokens;
-                  const bBestMs = b.lastMs != null && k.lastMs != null && b.lastMs < k.lastMs;
-                  const kBestMs = b.lastMs != null && k.lastMs != null && k.lastMs < b.lastMs;
-                  const toolCell = (s: PaneSnapshot, c: { n: number; ok: number; err: number }) => (
-                    <>
-                      {c.n} 次
-                      {c.n > 0 ? (
-                        <>
-                          {" · "}
-                          <span className={styles.rptOkTxt}>{c.ok} 成功</span>
-                          {c.err > 0 ? (
-                            <>
-                              {" / "}
-                              <span className={styles.rptErrTxt}>{c.err} 失败</span>
-                            </>
-                          ) : null}
-                          <div className={styles.rptToolTags}>
-                            {s.lastToolCalls.map((t, i) => (
-                              <span
-                                key={`${t.name}-${i}`}
-                                className={`${styles.rptTool} ${t.status === "error" ? styles.rptToolErr : ""}`}
-                              >
-                                {t.name}
-                              </span>
-                            ))}
-                          </div>
-                        </>
-                      ) : null}
-                    </>
-                  );
+                {/* 会话总览 */}
+                <table className={styles.rptTable}>
+                  <thead>
+                    <tr>
+                      <th>会话总览</th>
+                      <th>
+                        <span className={styles.paneTitle}>仅基础数据</span>
+                      </th>
+                      <th>
+                        <span className={`${styles.paneTitle} ${styles.paneTitleHl}`}>业务知识网络</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>模型</td>
+                      <td>{report.base.model || "—"}</td>
+                      <td>{report.kn.model || "—"}</td>
+                    </tr>
+                    <tr>
+                      <td>会话累计</td>
+                      <td>
+                        {fmtTokens(report.base.stats.tokens)} tokens · {fmtDuration(report.base.stats.ms)} ·{" "}
+                        {report.base.rounds.length} 轮
+                      </td>
+                      <td>
+                        {fmtTokens(report.kn.stats.tokens)} tokens · {fmtDuration(report.kn.stats.ms)} ·{" "}
+                        {report.kn.rounds.length} 轮
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* 逐轮对比 */}
+                {Array.from({ length: Math.max(report.base.rounds.length, report.kn.rounds.length) }, (_, i) => {
+                  const b = report.base.rounds[i];
+                  const k = report.kn.rounds[i];
+                  const isLast = i === Math.max(report.base.rounds.length, report.kn.rounds.length) - 1;
+                  const sameQ = !b || !k || b.question === k.question;
+                  const bBestTokens = b?.tokens != null && k?.tokens != null && b.tokens < k.tokens;
+                  const kBestTokens = b?.tokens != null && k?.tokens != null && k.tokens < b.tokens;
+                  const bBestMs = b?.ms != null && k?.ms != null && b.ms < k.ms;
+                  const kBestMs = b?.ms != null && k?.ms != null && k.ms < b.ms;
+                  const toolCell = (r?: (typeof report.base.rounds)[number]) => {
+                    if (!r) return "—";
+                    const ok = r.toolCalls.filter((t) => t.status === "done").length;
+                    const err = r.toolCalls.filter((t) => t.status === "error").length;
+                    return (
+                      <>
+                        {r.toolCalls.length} 次
+                        {r.toolCalls.length > 0 ? (
+                          <>
+                            {" · "}
+                            <span className={styles.rptOkTxt}>{ok} 成功</span>
+                            {err > 0 ? (
+                              <>
+                                {" / "}
+                                <span className={styles.rptErrTxt}>{err} 失败</span>
+                              </>
+                            ) : null}
+                            <div className={styles.rptToolTags}>
+                              {r.toolCalls.map((t, j) => (
+                                <span
+                                  key={`${t.name}-${j}`}
+                                  className={`${styles.rptTool} ${t.status === "error" ? styles.rptToolErr : ""}`}
+                                >
+                                  {t.name}
+                                </span>
+                              ))}
+                            </div>
+                          </>
+                        ) : null}
+                      </>
+                    );
+                  };
                   return (
-                    <>
+                    <div key={i} className={styles.rptRound}>
+                      <div className={styles.rptQ}>
+                        <span className={styles.rptRoundNo}>第 {i + 1} 轮</span>
+                        <span className={styles.rptQMark}>❝</span>
+                        <span>
+                          {sameQ
+                            ? (k?.question ?? b?.question ?? "—")
+                            : `左：${b?.question ?? "—"} ／ 右：${k?.question ?? "—"}`}
+                        </span>
+                      </div>
                       <table className={styles.rptTable}>
-                        <thead>
-                          <tr>
-                            <th>指标（最近一轮）</th>
-                            <th>
-                              <span className={styles.paneTitle}>仅基础数据</span>
-                            </th>
-                            <th>
-                              <span className={`${styles.paneTitle} ${styles.paneTitleHl}`}>业务知识网络</span>
-                            </th>
-                          </tr>
-                        </thead>
                         <tbody>
                           <tr>
-                            <td>模型</td>
-                            <td>{b.model || "—"}</td>
-                            <td>{k.model || "—"}</td>
-                          </tr>
-                          <tr>
-                            <td>本轮 token</td>
+                            <td>token</td>
                             <td className={bBestTokens ? styles.rptBest : ""}>
-                              {b.lastTokens != null ? fmtTokens(b.lastTokens) : "—"}
+                              {b?.tokens != null ? fmtTokens(b.tokens) : "—"}
                             </td>
                             <td className={kBestTokens ? styles.rptBest : ""}>
-                              {k.lastTokens != null ? fmtTokens(k.lastTokens) : "—"}
+                              {k?.tokens != null ? fmtTokens(k.tokens) : "—"}
                             </td>
                           </tr>
                           <tr>
-                            <td>本轮耗时</td>
-                            <td className={bBestMs ? styles.rptBest : ""}>
-                              {b.lastMs != null ? fmtDuration(b.lastMs) : "—"}
-                            </td>
-                            <td className={kBestMs ? styles.rptBest : ""}>
-                              {k.lastMs != null ? fmtDuration(k.lastMs) : "—"}
-                            </td>
+                            <td>耗时</td>
+                            <td className={bBestMs ? styles.rptBest : ""}>{b?.ms != null ? fmtDuration(b.ms) : "—"}</td>
+                            <td className={kBestMs ? styles.rptBest : ""}>{k?.ms != null ? fmtDuration(k.ms) : "—"}</td>
                           </tr>
                           <tr>
                             <td>工具调用</td>
-                            <td>{toolCell(b, bc)}</td>
-                            <td>{toolCell(k, kc)}</td>
-                          </tr>
-                          <tr>
-                            <td>会话累计</td>
-                            <td>
-                              {fmtTokens(b.stats.tokens)} tokens · {fmtDuration(b.stats.ms)} · {b.rounds} 轮
-                            </td>
-                            <td>
-                              {fmtTokens(k.stats.tokens)} tokens · {fmtDuration(k.stats.ms)} · {k.rounds} 轮
-                            </td>
+                            <td>{toolCell(b)}</td>
+                            <td>{toolCell(k)}</td>
                           </tr>
                         </tbody>
                       </table>
                       <div className={styles.rptAnsGrid}>
                         {(
                           [
-                            { key: "base", title: "仅基础数据", hl: false, ans: b.lastAnswer },
-                            { key: "kn", title: "业务知识网络", hl: true, ans: k.lastAnswer },
+                            { key: "base", title: "仅基础数据", hl: false, ans: b?.answer ?? null },
+                            { key: "kn", title: "业务知识网络", hl: true, ans: k?.answer ?? null },
                           ] as const
                         ).map(({ key, title, hl, ans }) => (
-                          <div key={key} className={styles.rptAnsBox}>
-                            <div className={styles.rptAnsHead}>
+                          <details key={key} className={styles.rptAnsBox} open={isLast}>
+                            <summary className={styles.rptAnsHead}>
                               <span className={`${styles.paneTitle} ${hl ? styles.paneTitleHl : ""}`}>{title}</span>
-                              <span className={styles.rptAnsLbl}>回答</span>
-                            </div>
+                              <span className={styles.rptAnsLbl}>回答（点击展开/收起）</span>
+                            </summary>
                             <div className={styles.rptAnsBody}>
                               {ans ? <MarkdownView text={ans} /> : <span className={styles.rptHint}>（无回答）</span>}
                             </div>
-                          </div>
+                          </details>
                         ))}
                       </div>
-                    </>
+                    </div>
                   );
-                })()}
+                })}
 
                 <div className={styles.rptSumHead}>
                   <span>AI 总结</span>
@@ -611,7 +620,7 @@ export function AgentChat({
                     type="button"
                     className={styles.rptGenBtn}
                     onClick={() => void generateSummary()}
-                    disabled={summarizing || (!report.base.lastAnswer && !report.kn.lastAnswer)}
+                    disabled={summarizing}
                   >
                     {summarizing ? "生成中…" : summary ? "重新生成" : "生成总结"}
                   </button>
@@ -622,7 +631,7 @@ export function AgentChat({
                   </div>
                 ) : (
                   <p className={styles.rptHint}>
-                    {summarizing ? "评审模型思考中…" : "用右侧模型对两份回答做正确性 / 依据 / 效率评审。"}
+                    {summarizing ? "评审模型思考中…" : "用右侧模型对全部轮次做正确性 / 依据 / 效率评审。"}
                   </p>
                 )}
               </>

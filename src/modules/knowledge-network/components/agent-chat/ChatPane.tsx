@@ -86,17 +86,20 @@ export type PaneProfile = {
   highlight?: boolean;
 };
 
-/** 对比报告用的面板快照：最近一轮问答 + 指标。 */
+/** 对比报告用：一轮问答 + 指标。 */
+export type PaneRound = {
+  question: string;
+  answer: string | null;
+  tokens: number | null;
+  ms: number | null;
+  toolCalls: { name: string; status: string }[];
+};
+
+/** 对比报告用的面板快照：全部轮次 + 会话累计。 */
 export type PaneSnapshot = {
   model: string;
-  /** 已问轮数（user 消息数）。 */
-  rounds: number;
   stats: { tokens: number; ms: number };
-  lastQuestion: string | null;
-  lastAnswer: string | null;
-  lastTokens: number | null;
-  lastMs: number | null;
-  lastToolCalls: { name: string; status: string }[];
+  rounds: PaneRound[];
 };
 
 export type ChatPaneHandle = {
@@ -570,20 +573,23 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     abortRef.current?.abort();
   }, []);
 
-  // 对比报告用：最近一轮问答 + 指标快照。
+  // 对比报告用：全部轮次（user → 其后紧跟的 assistant 配对）+ 会话累计快照。
   const getSnapshot = useCallback((): PaneSnapshot => {
-    const lastUser = [...messages].reverse().find((m) => m.role === "user");
-    const lastBot = [...messages].reverse().find((m) => m.role === "assistant");
-    return {
-      model,
-      rounds: messages.filter((m) => m.role === "user").length,
-      stats,
-      lastQuestion: lastUser?.content ?? null,
-      lastAnswer: lastBot?.content || null,
-      lastTokens: lastBot?.tokens ?? null,
-      lastMs: lastBot?.ms ?? null,
-      lastToolCalls: (lastBot?.toolCalls ?? []).map((tc) => ({ name: tc.name, status: tc.status })),
-    };
+    const rounds: PaneRound[] = [];
+    let current: PaneRound | null = null;
+    for (const m of messages) {
+      if (m.role === "user") {
+        current = { question: m.content, answer: null, tokens: null, ms: null, toolCalls: [] };
+        rounds.push(current);
+      } else if (m.role === "assistant" && current) {
+        current.answer = m.content || null;
+        current.tokens = m.tokens ?? null;
+        current.ms = m.ms ?? null;
+        current.toolCalls = (m.toolCalls ?? []).map((tc) => ({ name: tc.name, status: tc.status }));
+        current = null;
+      }
+    }
+    return { model, stats, rounds };
   }, [messages, model, stats]);
 
   useImperativeHandle(
