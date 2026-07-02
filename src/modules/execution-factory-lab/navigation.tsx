@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { AppstoreOutlined, ExperimentOutlined } from "@ant-design/icons";
+import { AppstoreOutlined, CloudServerOutlined, ExperimentOutlined } from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 
@@ -23,6 +23,12 @@ export const executionFactoryLabNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.executionFactoryLabCatalog",
       icon: <AppstoreOutlined />,
       path: "/execution-factory-lab/catalog",
+    },
+    {
+      key: "execution-factory-lab-sandbox-runtime",
+      labelKey: "shell.items.executionFactoryLabSandboxRuntime",
+      icon: <CloudServerOutlined />,
+      path: "/execution-factory-lab/sandbox-runtime",
     },
   ],
 };
