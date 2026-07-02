@@ -11,13 +11,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
 import type {
   MetricAggregationAggr,
   MetricDefaultRangePolicy,
   MetricHavingOperator,
   MetricOrderDirection,
   ObjectTypeDataProperty,
+  KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 
 import styles from "./MetricCalculationEditor.module.css";
 
@@ -45,6 +48,7 @@ const RANGE_POLICIES: MetricDefaultRangePolicy[] = [
 type MetricCalculationEditorProps = {
   form: FormInstance;
   networkId: string;
+  objectTypes: KnowledgeNetworkObjectTypeRecord[];
   scopeRef?: string;
   scopeType?: string;
 };
@@ -67,6 +71,7 @@ function formatPropertyLabel(property: ObjectTypeDataProperty) {
 export function MetricCalculationEditor({
   form,
   networkId,
+  objectTypes,
   scopeRef,
   scopeType,
 }: MetricCalculationEditorProps) {
@@ -103,6 +108,18 @@ export function MetricCalculationEditor({
     () =>
       properties.map((item) => ({
         label: item.displayName || item.name,
+        value: item.name,
+      })),
+    [properties],
+  );
+  const conditionPropertyOptions = useMemo<RelationTypePropertyOption[]>(
+    () =>
+      properties.map((item) => ({
+        comment: item.comment,
+        displayName: item.displayName || item.name,
+        label: item.displayName || item.name,
+        name: item.name,
+        type: item.type,
         value: item.name,
       })),
     [properties],
@@ -163,6 +180,17 @@ export function MetricCalculationEditor({
             value,
           }))}
           placeholder={t("knowledgeNetwork.pleaseSelect")}
+        />
+      </Form.Item>
+
+      <Form.Item
+        label={t("knowledgeNetwork.metricFilterCondition")}
+        name={["calculationFormula", "condition"]}
+      >
+        <ActionTypeConditionEditor
+          boundObjectTypeId={scopeType === "object_type" ? scopeRef : undefined}
+          objectTypes={objectTypes}
+          propertyOptions={conditionPropertyOptions}
         />
       </Form.Item>
 

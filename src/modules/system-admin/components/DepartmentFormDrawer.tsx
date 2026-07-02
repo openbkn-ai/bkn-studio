@@ -114,6 +114,7 @@ export function DepartmentFormDrawer({
       }
       onClose={onClose}
       open={open}
+      rootClassName={styles.adminOverlay}
       title={
         isEdit
           ? t("systemAdmin.users.deptDrawer.editTitle", { name: department?.name })

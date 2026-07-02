@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Card, Form, Select, Switch, Table } from "antd";
+import { Card, DatePicker, Form, InputNumber, Select, Space, Switch, Table } from "antd";
 import type { TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,17 +19,27 @@ import type {
   MetricDataQueryParams,
   MetricDataQueryResult,
   MetricDataQueryTimeRange,
+  MetricSamePeriodMethod,
+  MetricSamePeriodTimeGranularity,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./MetricDataQueryPanel.module.css";
 
-const QUERY_MODE_OPTIONS: MetricDataQueryMode[] = ["instant", "trend", "proportion"];
+const QUERY_MODE_OPTIONS: MetricDataQueryMode[] = ["instant", "trend", "sameperiod", "proportion"];
 const TIME_RANGE_OPTIONS: MetricDataQueryTimeRange[] = [
   "last_1h",
   "last_24h",
   "last_7d",
   "last_30d",
   "calendar_day",
+  "custom",
+];
+const SAME_PERIOD_METHOD_OPTIONS: MetricSamePeriodMethod[] = ["growth_value", "growth_rate"];
+const SAME_PERIOD_GRANULARITY_OPTIONS: MetricSamePeriodTimeGranularity[] = [
+  "day",
+  "month",
+  "quarter",
+  "year",
 ];
 
 type MetricDataQueryPanelProps = {
@@ -108,6 +118,7 @@ export function MetricDataQueryPanel({
   const [queryLoading, setQueryLoading] = useState(false);
   const [result, setResult] = useState<MetricDataQueryResult | null>(null);
   const queryMode = Form.useWatch("mode", form);
+  const timeRange = Form.useWatch("timeRange", form);
 
   const columns: TableProps<Record<string, string | number>>["columns"] = useMemo(
     () =>
@@ -145,7 +156,15 @@ export function MetricDataQueryPanel({
         <Form
           className={styles.queryForm}
           form={form}
-          initialValues={{ fillNull: false, limit: 100, mode: "instant", timeRange: "last_24h" }}
+          initialValues={{
+            fillNull: false,
+            limit: 100,
+            mode: "instant",
+            samePeriodGranularity: "day",
+            samePeriodMethod: "growth_value",
+            samePeriodOffset: 1,
+            timeRange: "last_24h",
+          }}
           layout="inline"
         >
           <Form.Item
@@ -176,11 +195,54 @@ export function MetricDataQueryPanel({
               />
             </Form.Item>
           ) : null}
+          {queryMode !== "instant" && timeRange === "custom" ? (
+            <Space>
+              <Form.Item
+                label={t("knowledgeNetwork.metricQueryCustomStartTime")}
+                name="customStartTime"
+                rules={[{ required: true }]}
+              >
+                <DatePicker showTime />
+              </Form.Item>
+              <Form.Item
+                label={t("knowledgeNetwork.metricQueryCustomEndTime")}
+                name="customEndTime"
+                rules={[{ required: true }]}
+              >
+                <DatePicker showTime />
+              </Form.Item>
+            </Space>
+          ) : null}
+          {queryMode === "sameperiod" ? (
+            <Space>
+              <Form.Item label={t("knowledgeNetwork.metricQuerySamePeriodMethod")} name="samePeriodMethod">
+                <Select
+                  options={SAME_PERIOD_METHOD_OPTIONS.map((value) => ({
+                    label: t(`knowledgeNetwork.metricQuerySamePeriodMethod.${value}`),
+                    value,
+                  }))}
+                  style={{ width: 140 }}
+                />
+              </Form.Item>
+              <Form.Item
+                label={t("knowledgeNetwork.metricQuerySamePeriodGranularity")}
+                name="samePeriodGranularity"
+              >
+                <Select
+                  options={SAME_PERIOD_GRANULARITY_OPTIONS.map((value) => ({
+                    label: t(`knowledgeNetwork.metricQuerySamePeriodGranularity.${value}`),
+                    value,
+                  }))}
+                  style={{ width: 120 }}
+                />
+              </Form.Item>
+              <Form.Item label={t("knowledgeNetwork.metricQuerySamePeriodOffset")} name="samePeriodOffset">
+                <InputNumber min={1} max={12} style={{ width: 90 }} />
+              </Form.Item>
+            </Space>
+          ) : null}
           <Form.Item label={t("knowledgeNetwork.metricQueryLimit")} name="limit">
-            <Select
-              options={[10, 20, 50, 100, 500].map((value) => ({ label: String(value), value }))}
-              style={{ width: 100 }}
-            />
+            <InputNumber min={1} max={1000} style={{ width: 100 }} />
           </Form.Item>
           <Form.Item label={t("knowledgeNetwork.metricQueryFillNull")} name="fillNull" valuePropName="checked">
             <Switch />

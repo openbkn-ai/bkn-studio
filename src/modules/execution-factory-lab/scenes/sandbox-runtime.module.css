@@ -1,7 +1,13 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  min-height: auto;
+  padding: 14px 12px 20px;
+  background: #ffffff;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 400;
 }
 
 .intro {
@@ -9,19 +15,23 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d9e0ea;
 }
 
 .introTitle {
   margin: 0;
-  color: var(--color-text-primary);
-  font-size: 22px;
+  color: #172033;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .introDescription {
   max-width: 920px;
-  margin: 8px 0 0;
-  color: var(--color-text-secondary);
+  margin: 6px 0 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .metrics {
@@ -67,7 +77,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d9e0ea;
 }
 
 .filter {
@@ -76,6 +88,24 @@
 
 .search {
   width: min(360px, 100%);
+}
+
+.page :global(.ant-input),
+.page :global(.ant-input-affix-wrapper),
+.page :global(.ant-input-search-button),
+.page :global(.ant-select .ant-select-selector),
+.page :global(.ant-btn),
+.page :global(.ant-tag),
+.page :global(.ant-checkbox-inner) {
+  border-radius: 0 !important;
+}
+
+.page :global(.ant-btn) {
+  font-weight: 500;
+}
+
+.page :global(.ant-tag) {
+  font-weight: 400;
 }
 
 .sessionRow {

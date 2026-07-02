@@ -8,7 +8,7 @@
 
   /* Neutral */
   --color-bg-page: #f6f8fb;
-  --color-bg-sidebar: #f8fafc;
+  --color-bg-sidebar: var(--color-bg-surface);
   --color-bg-surface: #ffffff;
   --color-text-primary: #111827;
   --color-text-secondary: #475569;
@@ -259,6 +259,7 @@ select {
   flex-direction: column;
   border-right: 1px solid var(--color-border);
   background: var(--color-bg-sidebar);
+  box-shadow: 4px 0 20px rgba(15, 23, 42, 0.03);
   transition: width 0.24s ease;
 }
 
@@ -270,7 +271,7 @@ select {
   height: 40px;
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--color-bg-page);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition:
@@ -306,7 +307,7 @@ select {
   display: flex;
   justify-content: flex-end;
   padding: 0 16px 16px;
-  border-top: 1px solid rgba(22, 40, 73, 0.06);
+  border-top: 1px solid var(--color-divider);
 }
 
 .console-sidenav-section + .console-sidenav-section {
@@ -448,31 +449,17 @@ select {
 .console-main {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 72px);
+  min-height: calc(100vh - 72px);
   min-width: 0;
-  min-height: 0;
-  overflow: auto;
-}
-
-.console-main::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-.console-main::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background: rgba(124, 140, 166, 0.22);
-  background-clip: padding-box;
+  overflow: visible;
 }
 
 .workspace-shell {
   display: flex;
   flex: 1;
   flex-direction: column;
-  height: 100%;
-  min-height: 100%;
-  padding: 24px 24px 32px;
+  min-height: calc(100vh - 72px);
+  padding: 12px 12px 20px;
 }
 
 .workspace-toolbar-host {
@@ -855,7 +842,7 @@ select {
   }
 
   .workspace-shell {
-    padding: 20px;
+    padding: 12px;
   }
 }
 
@@ -876,7 +863,7 @@ select {
   }
 
   .workspace-shell {
-    padding: 16px;
+    padding: 10px;
   }
 
   .workspace-hero {

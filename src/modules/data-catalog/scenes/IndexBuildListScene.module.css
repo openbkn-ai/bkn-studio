@@ -1,28 +1,28 @@
 .contentSurface {
-  min-height: calc(100vh - 144px);
-  padding: 28px 30px 20px;
-  border: 1px solid rgba(18, 40, 72, 0.08);
-  border-radius: 28px;
+  min-height: auto;
+  padding: 14px 12px 20px;
+  border: 0;
+  border-radius: 0;
   background: #ffffff;
-  box-shadow: 0 14px 34px rgba(22, 42, 69, 0.06);
+  box-shadow: none;
 }
 
 .operationBar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d9e0ea;
 }
 
 .operationPrimary {
   display: flex;
   flex: 1;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
   min-width: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .toolbarActions {
@@ -33,27 +33,31 @@
 }
 
 .toolbarMeta {
-  color: #64748d;
+  flex: 1;
+  color: #4b5563;
   font-size: 13px;
   line-height: 1.7;
-  max-width: 420px;
+  max-width: 620px;
+  min-width: 220px;
 }
 
 .toolbarFilters {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
   gap: 12px;
   justify-content: flex-end;
-  padding: 12px 14px;
-  border: 1px solid rgba(15, 30, 54, 0.08);
-  border-radius: 20px;
-  background: #f9fbff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .searchInput {
-  flex: 0 1 340px;
+  flex: 1;
+  width: auto;
   min-width: 180px;
 }
 
@@ -63,13 +67,70 @@
 }
 
 .tableSurface {
-  overflow: hidden;
-  padding-top: 4px;
+  overflow-x: auto;
+  overflow-y: visible;
+  min-height: auto;
+  padding-top: 14px;
+}
+
+.tableSurface :global(.ant-table-wrapper) {
+  border: 1px solid #d9e0ea;
+  border-radius: 0;
+}
+
+.tableSurface :global(.ant-table) {
+  background: #ffffff;
+}
+
+.tableSurface :global(.ant-table-thead > tr > th) {
+  height: 48px;
+  border-bottom: 1px solid #d9e0ea;
+  background: #f3f6fa;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tableSurface :global(.ant-table-tbody > tr > td) {
+  padding-top: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e8edf3;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+.tableSurface :global(.ant-table-tbody > tr > td *),
+.tableSurface :global(.ant-table-tbody > tr > td .ant-btn),
+.tableSurface :global(.ant-table-tbody > tr > td .ant-tag) {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.tableSurface :global(.ant-table-tbody > tr:hover > td) {
+  background: #f7faff;
+}
+
+.contentSurface :global(.ant-input),
+.contentSurface :global(.ant-input-affix-wrapper),
+.contentSurface :global(.ant-input-search-button),
+.contentSurface :global(.ant-select .ant-select-selector) {
+  border-radius: 0 !important;
+}
+
+.contentSurface :global(.ant-tag) {
+  border-radius: 0;
 }
 
 @media (max-width: 1200px) {
   .operationBar {
+    align-items: stretch;
     flex-direction: column;
+  }
+
+  .operationPrimary {
+    flex-wrap: wrap;
   }
 
   .toolbarFilters {

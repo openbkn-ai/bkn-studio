@@ -107,7 +107,7 @@ export function useWorkspaceData(
             if (recentResult[0]?.status === "fulfilled") {
               setRecentObjects(recentResult[0].value);
             } else {
-              const recentError = recentResult[0]?.reason;
+              const recentError: unknown = recentResult[0]?.reason;
               logServiceFallback("useWorkspaceData.overview.recentObjects", recentError);
               setRecentObjects([]);
               setSectionError(
@@ -151,7 +151,8 @@ export function useWorkspaceData(
           }
           case "metrics":
             if (integrateWorkspaceMetrics) {
-              setMetrics(await listKnowledgeNetworkMetrics(networkId));
+              const metricResult = await listKnowledgeNetworkMetrics(networkId);
+              setMetrics(metricResult.entries);
               setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
             }
             break;
@@ -239,7 +240,8 @@ export function useWorkspaceData(
     }
 
     loadedSectionsRef.current.delete(sectionCacheKey(networkId, "metrics"));
-    setMetrics(await listKnowledgeNetworkMetrics(networkId));
+    const metricResult = await listKnowledgeNetworkMetrics(networkId);
+    setMetrics(metricResult.entries);
     setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "metrics"));
   }, [networkId]);

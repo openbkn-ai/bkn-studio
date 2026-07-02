@@ -1,14 +1,13 @@
 .treePanel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px 20px;
-  border: 1px solid rgba(18, 40, 72, 0.08);
-  border-radius: 28px;
+  gap: 10px;
+  padding: 14px 12px;
+  border: 1px solid #d9e0ea;
+  border-radius: 0;
   background: #ffffff;
-  box-shadow: 0 14px 34px rgba(22, 42, 69, 0.06);
-  position: sticky;
-  top: 16px;
+  box-shadow: none;
+  position: static;
   /* 固定高度:面板长度恒定不随内容条数变化,foot 钉底,body 内部滚动 */
   height: calc(100vh - 110px);
 }
@@ -30,8 +29,8 @@
 }
 
 .treeHeadTitle {
-  color: #152239;
-  font-size: 16px;
+  color: #172033;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -52,7 +51,7 @@
 
 .treeBody::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(124, 140, 166, 0.22);
   background-clip: padding-box;
 }
@@ -62,7 +61,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #8b98ac;
+  color: #6b7280;
   font-size: 12px;
   font-weight: 600;
 }
@@ -73,38 +72,50 @@
 }
 
 .treeNode {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
   width: 100%;
   padding: 7px 8px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 0;
   background: transparent;
-  color: #2c3e57;
-  font-size: 13.5px;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 400;
   text-align: left;
   cursor: pointer;
   transition: background-color 0.16s ease, color 0.16s ease;
 }
 
 .treeNode:hover {
-  background: #f3f7ff;
+  background: #f7faff;
 }
 
 .treeNodeSelected,
 .treeNodeSelected:hover {
-  background: rgba(46, 104, 255, 0.1);
-  color: #1f4fd4;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.treeNodeSelected::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: #1d4ed8;
 }
 
 .treeNodeCatalog {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .treeNodeOff .treeNodeName {
-  color: #8b98ac;
-  font-weight: 500;
+  color: #6b7280;
+  font-weight: 400;
 }
 
 .treeNodeResource {
@@ -119,7 +130,7 @@
   width: 18px;
   height: 18px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: none;
   color: #8b98ac;
   font-size: 10px;
@@ -130,7 +141,7 @@
 }
 
 .treeCaret:hover {
-  background: #eef3fb;
+  background: #f3f6fa;
 }
 
 .treeCaretOpen {
@@ -141,13 +152,13 @@
   display: inline-flex;
   width: 16px;
   justify-content: center;
-  color: #64748d;
+  color: #4b5563;
   font-size: 14px;
   flex: none;
 }
 
 .treeNodeSelected .treeNodeIcon {
-  color: #1f4fd4;
+  color: #1d4ed8;
 }
 
 .treeNodeResource .treeNodeIcon {
@@ -164,11 +175,11 @@
 
 .treeMiniTag {
   padding: 0 5px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 6px;
-  color: #8b98ac;
+  border: 1px solid #d9e0ea;
+  border-radius: 0;
+  color: #6b7280;
   font-size: 10.5px;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 16px;
   flex: none;
 }
@@ -180,11 +191,11 @@
 
 .treeCount {
   padding: 1px 7px;
-  border-radius: 999px;
-  background: #f1f5fb;
-  color: #64748d;
+  border-radius: 0;
+  background: #f3f6fa;
+  color: #4b5563;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 400;
   flex: none;
 }
 
@@ -195,7 +206,7 @@
   width: 20px;
   height: 20px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: none;
   color: #1f4fd4;
   font-size: 11px;
@@ -208,7 +219,7 @@
 }
 
 .treeAdd:hover {
-  background: rgba(46, 104, 255, 0.12);
+  background: #eff6ff;
 }
 
 .treeDot {
@@ -262,7 +273,7 @@
   top: 2px;
   bottom: 2px;
   width: 1px;
-  background: rgba(15, 30, 54, 0.08);
+  background: #e8edf3;
 }
 
 .treeEmptyHint {
@@ -277,8 +288,8 @@
   justify-content: space-between;
   gap: 8px;
   padding: 8px 6px 0;
-  border-top: 1px solid rgba(15, 30, 54, 0.08);
-  color: #8b98ac;
+  border-top: 1px solid #e8edf3;
+  color: #6b7280;
   font-size: 12px;
 }
 
@@ -299,7 +310,7 @@
   width: 18px;
   height: 18px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: none;
   color: #64748d;
   font-size: 13px;
@@ -308,7 +319,7 @@
 }
 
 .treePagerBtn:hover:not(:disabled) {
-  background: #eef3fb;
+  background: #f3f6fa;
 }
 
 .treePagerBtn:disabled {

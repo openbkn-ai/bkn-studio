@@ -1,10 +1,18 @@
 .formPanel {
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 4px;
-  margin: 0 auto;
+  margin: 24px auto 32px;
   max-width: 720px;
-  padding: 24px;
+  padding: 0 24px;
+  width: 100%;
+}
+
+.formPanel :global(.ant-form-item) {
+  margin-bottom: 20px;
+}
+
+.formPanel :global(.ant-form-item-label > label) {
+  color: #1f2329;
+  font-size: 14px;
+  height: auto;
 }
 
 .loadingState {

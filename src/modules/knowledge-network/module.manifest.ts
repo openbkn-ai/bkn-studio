@@ -16,6 +16,11 @@ export const knowledgeNetworkModuleManifest = {
     "knowledge-network:export",
     "knowledge-network:preview",
     "knowledge-network:concept-group:view",
+    "knowledge-network:metric:view",
+    "knowledge-network:metric:create",
+    "knowledge-network:metric:edit",
+    "knowledge-network:metric:delete",
+    "knowledge-network:metric:query",
   ],
   requiresShell: true,
   supportsEmbedded: false,
@@ -24,6 +29,8 @@ export const knowledgeNetworkModuleManifest = {
     "bkn-backend/knowledge-networks",
     "bkn-backend/concept-groups",
     "bkn-backend/object-types",
+    "bkn-backend/metrics",
+    "ontology-query/metrics",
   ],
   scenes: [
     {
@@ -37,8 +44,26 @@ export const knowledgeNetworkModuleManifest = {
       id: "knowledge-network.workspace",
       exportName: "KnowledgeNetworkWorkspaceScene",
       description:
-        "Render the phase-one workspace shell for overview, preview, and concept groups.",
+        "Render the knowledge-network workspace shell for overview, modeling, and resource sections.",
       inputs: ["networkId?", "section", "onBack?"],
+    },
+    {
+      id: "knowledge-network.metric-form",
+      exportName: "MetricFormScene",
+      description: "Create or edit a knowledge-network metric.",
+      inputs: ["mode", "networkId?", "metricId?", "onBack?", "onSubmitSuccess?"],
+    },
+    {
+      id: "knowledge-network.metric-detail",
+      exportName: "MetricDetailScene",
+      description: "View metric details, formula, and embedded data query results.",
+      inputs: ["networkId?", "metricId?", "onBack?", "onEdit?", "onDeleteSuccess?"],
+    },
+    {
+      id: "knowledge-network.metric-data-query",
+      exportName: "MetricDataQueryScene",
+      description: "Run standalone data queries for a knowledge-network metric.",
+      inputs: ["networkId?", "metricId?", "onBack?"],
     },
   ],
 } as const;

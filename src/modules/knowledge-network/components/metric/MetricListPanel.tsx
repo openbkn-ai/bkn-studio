@@ -16,12 +16,16 @@ import {
 } from "@ant-design/icons";
 import { Alert, Dropdown, Empty, Input, Pagination, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import {
+  deleteKnowledgeNetworkMetrics,
+  listKnowledgeNetworkMetrics,
+} from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   KnowledgeNetworkMetricRecord,
   KnowledgeNetworkMetricScopeType,
@@ -77,50 +81,52 @@ export function MetricListPanel({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
+  const [tableMetrics, setTableMetrics] = useState(metrics);
+  const [tableLoading, setTableLoading] = useState(Boolean(loading));
   const [keyword, setKeyword] = useState("");
   const [selectedTag, setSelectedTag] = useState("all");
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(metrics.length);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   const tagOptions = useMemo(() => {
     const tags = new Set<string>();
-    metrics.forEach((item) => {
+    [...metrics, ...tableMetrics].forEach((item) => {
       item.tags.forEach((tag) => tags.add(tag));
     });
     return [...tags].sort((left, right) => left.localeCompare(right));
-  }, [metrics]);
+  }, [metrics, tableMetrics]);
 
   const hasActiveFilter = useMemo(
     () => Boolean(keyword.trim()) || selectedTag !== "all",
     [keyword, selectedTag],
   );
 
-  const filteredMetrics = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-    const items = metrics.filter((item) => {
-      const matchesKeyword =
-        !normalizedKeyword ||
-        item.name.toLowerCase().includes(normalizedKeyword) ||
-        item.id.toLowerCase().includes(normalizedKeyword);
-      const matchesTag = selectedTag === "all" || item.tags.includes(selectedTag);
-      return matchesKeyword && matchesTag;
-    });
+  const fetchMetrics = useCallback(async () => {
+    setTableLoading(true);
+    try {
+      const result = await listKnowledgeNetworkMetrics(networkId, {
+        direction: sortDirection,
+        keyword,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+        sort: sortBy === "name" ? "name" : "update_time",
+        tag: selectedTag,
+      });
+      setTableMetrics(result.entries);
+      setTotal(result.totalCount);
+      setSelectedRowKeys([]);
+    } finally {
+      setTableLoading(false);
+    }
+  }, [keyword, networkId, page, pageSize, selectedTag, sortBy, sortDirection]);
 
-    return [...items].sort((left, right) => {
-      const leftValue = sortBy === "name" ? left.name : left.updateTime;
-      const rightValue = sortBy === "name" ? right.name : right.updateTime;
-      const compared = leftValue.localeCompare(rightValue);
-      return sortDirection === "asc" ? compared : -compared;
-    });
-  }, [keyword, metrics, selectedTag, sortBy, sortDirection]);
-
-  const pagedMetrics = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredMetrics.slice(start, start + pageSize);
-  }, [filteredMetrics, page, pageSize]);
+  useEffect(() => {
+    void fetchMetrics();
+  }, [fetchMetrics]);
 
   const confirmDelete = (records: KnowledgeNetworkMetricRecord[]) => {
     if (records.length === 0) {
@@ -136,10 +142,17 @@ export function MetricListPanel({
       okButtonProps: { danger: true },
       okText: t("common.delete"),
       onOk: async () => {
-        await Promise.all(records.map((record) => onDelete(record.id)));
+        if (records.length === 1) {
+          await onDelete(records[0].id);
+        } else {
+          await deleteKnowledgeNetworkMetrics(
+            networkId,
+            records.map((record) => record.id),
+          );
+        }
         setSelectedRowKeys([]);
         void message.success(t("common.success"));
-        await onRefresh();
+        await Promise.all([fetchMetrics(), onRefresh()]);
       },
       title: t("knowledgeNetwork.metricDeleteTitle"),
     });
@@ -169,18 +182,18 @@ export function MetricListPanel({
       title: t("common.name"),
       width: 280,
       render: (value: string, record) => (
-        <button
+        <div
           className={styles.objectTitleBox}
           onClick={() => {
             void navigate(`/knowledge-network/workspace/${networkId}/metrics/${record.id}/detail`);
           }}
-          type="button"
+          title={value}
         >
-          <span className={styles.objectIconSquare} style={{ backgroundColor: "#126ee3" }}>
+          <span className={styles.objectIconSquare} style={{ backgroundColor: "#5381DF" }}>
             <LineChartOutlined />
           </span>
           <span className={styles.objectName}>{value}</span>
-        </button>
+        </div>
       ),
     },
     {
@@ -285,14 +298,14 @@ export function MetricListPanel({
   };
 
   const tableContent =
-    filteredMetrics.length === 0 ? (
+    tableMetrics.length === 0 ? (
       renderEmptyContent()
     ) : (
       <>
         <Table
           columns={columns}
-          dataSource={pagedMetrics}
-          loading={loading}
+          dataSource={tableMetrics}
+          loading={tableLoading}
           pagination={false}
           rowKey="id"
           rowSelection={{
@@ -312,7 +325,7 @@ export function MetricListPanel({
             pageSize={pageSize}
             showSizeChanger
             showTotal={(total) => t("common.total", { total })}
-            total={filteredMetrics.length}
+            total={total}
           />
         </div>
       </>
@@ -349,8 +362,8 @@ export function MetricListPanel({
             disabled={selectedRowKeys.length === 0}
             icon={<DeleteOutlined />}
             onClick={() => {
-              const selectedRecords = metrics.filter((item) => selectedRowKeys.includes(item.id));
-              confirmDelete(selectedRecords);
+              const pageSelectedRecords = tableMetrics.filter((item) => selectedRowKeys.includes(item.id));
+              confirmDelete(pageSelectedRecords);
             }}
           >
             {t("common.delete")}
@@ -412,7 +425,7 @@ export function MetricListPanel({
             aria-label={t("common.refresh")}
             className={styles.iconButton}
             icon={<ReloadOutlined />}
-            onClick={() => void onRefresh()}
+            onClick={() => void Promise.all([fetchMetrics(), onRefresh()])}
           />
         </div>
       </div>

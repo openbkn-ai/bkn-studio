@@ -16,7 +16,7 @@ export const shellEnUS = {
     expandSidenav: "Expand navigation",
     items: {
       globalBusinessKnowledgeNetwork: "Global Business Knowledge Network",
-      domainKnowledgeNetwork: "Domain Business Knowledge Network",
+      domainKnowledgeNetwork: "Domain Knowledge Network",
       generalBusinessKnowledgeNetwork: "Data Resource Knowledge Network",
       dataConnection: "Data Connection",
       dataCatalog: "Data Catalog",

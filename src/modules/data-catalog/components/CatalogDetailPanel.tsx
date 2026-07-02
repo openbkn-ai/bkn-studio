@@ -273,7 +273,7 @@ export function CatalogDetailPanel({
         <div style={{ display: "grid", gap: 4, justifyItems: "start" }}>
           <AppButton
             onClick={() => onSelectResource(record.id)}
-            style={{ padding: 0, height: "auto", fontWeight: 600 }}
+            style={{ padding: 0, height: "auto", fontWeight: 400 }}
             type="link"
           >
             {record.name}

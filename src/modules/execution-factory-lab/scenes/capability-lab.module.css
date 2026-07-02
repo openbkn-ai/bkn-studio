@@ -1,13 +1,21 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  min-height: auto;
+  padding: 14px 12px 20px;
+  background: #ffffff;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 400;
 }
 
 .intro {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d9e0ea;
 }
 
 .introTitleRow {
@@ -18,43 +26,50 @@
 
 .introTitle {
   margin: 0;
-  color: var(--color-text-primary);
-  font-size: 22px;
+  color: #172033;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .introDescription {
   margin: 0;
-  color: var(--color-text-secondary);
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.7;
   max-width: 880px;
 }
 
 .experimentTag {
   margin: 0;
-  border-color: #cbd5e1;
-  background: #f1f5f9;
-  color: var(--color-text-secondary);
+  border-color: #d9e0ea;
+  border-radius: 0;
+  background: #f7f9fc;
+  color: #4b5563;
+  font-weight: 400;
 }
 
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
   align-items: center;
   justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d9e0ea;
 }
 
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
+  min-width: 0;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
+  gap: 12px;
   align-items: stretch;
 }
 
@@ -105,9 +120,9 @@
 .empty {
   padding: 48px 16px;
   text-align: center;
-  color: var(--color-text-muted);
-  border: 1px dashed var(--color-primary-border);
-  border-radius: 8px;
+  color: #6b7280;
+  border: 1px dashed #bfdbfe;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -131,9 +146,45 @@
   max-width: 880px;
 }
 
+.dualTrackCollapse :global(.ant-collapse-header) {
+  padding: 4px 0 !important;
+  color: #4b5563 !important;
+  font-size: 13px;
+}
+
+.dualTrackCollapse :global(.ant-collapse-content-box) {
+  padding: 4px 0 0 !important;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 .menuItemDesc {
   font-size: 12px;
-  color: #64748b;
+  color: #6b7280;
   line-height: 1.4;
   margin-top: 2px;
+}
+
+.page :global(.ant-input),
+.page :global(.ant-input-affix-wrapper),
+.page :global(.ant-input-search-button),
+.page :global(.ant-select .ant-select-selector),
+.page :global(.ant-btn),
+.page :global(.ant-tag) {
+  border-radius: 0 !important;
+}
+
+.page :global(.ant-btn) {
+  font-weight: 500;
+}
+
+.page :global(.ant-tag) {
+  font-weight: 400;
+}
+
+.page :global(.ant-pagination .ant-pagination-item),
+.page :global(.ant-pagination .ant-pagination-prev),
+.page :global(.ant-pagination .ant-pagination-next) {
+  border-radius: 0;
 }

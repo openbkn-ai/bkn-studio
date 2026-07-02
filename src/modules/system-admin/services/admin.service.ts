@@ -617,11 +617,13 @@ type BackendAudit = {
   actor_id?: string;
   client_ip?: string;
   created_at?: string;
+  detail?: string;
   id: string;
   method?: string;
   resource?: string;
   status?: number;
   target_id?: string;
+  target_name?: string;
 };
 
 // 注意：departments 端点返 PascalCase（ID/Name/ParentID/Type），与 users/roles
@@ -681,6 +683,8 @@ function mapAudit(item: BackendAudit): AuditLog {
     status: item.status ?? 0,
     clientIp: item.client_ip ?? "",
     createdAt: item.created_at ?? "",
+    detail: item.detail ?? "",
+    targetName: item.target_name || undefined,
   };
 }
 

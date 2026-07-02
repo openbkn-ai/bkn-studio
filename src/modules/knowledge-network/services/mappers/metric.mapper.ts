@@ -6,14 +6,61 @@
  */
 
 import type {
+  ActionTypeCondition,
+  ActionTypeConditionOperation,
   KnowledgeNetworkMetricMutationPayload,
   KnowledgeNetworkMetricRecord,
   MetricCalculationFormula,
   MetricHavingOperator,
   MetricTimeDimension,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import type { BackendMetric } from "@/modules/knowledge-network/services/mappers/backend-types";
+import type {
+  BackendMetric,
+  BackendMetricCondition,
+} from "@/modules/knowledge-network/services/mappers/backend-types";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
+
+function mapMetricConditionFromBackend(
+  condition?: BackendMetricCondition,
+): ActionTypeCondition | undefined {
+  if (!condition) {
+    return undefined;
+  }
+
+  if (!condition.field && !(condition.sub_conditions?.length ?? 0)) {
+    return undefined;
+  }
+
+  return {
+    field: condition.field,
+    objectTypeId: condition.object_type_id,
+    operation: condition.operation as ActionTypeConditionOperation | undefined,
+    subConditions: condition.sub_conditions
+      ?.map((item) => mapMetricConditionFromBackend(item))
+      .filter((item): item is ActionTypeCondition => Boolean(item)),
+    value: condition.value,
+    valueFrom: condition.value_from ?? "const",
+  };
+}
+
+function toBackendMetricCondition(
+  condition?: ActionTypeCondition,
+): BackendMetricCondition | undefined {
+  if (!condition?.field || !condition.operation) {
+    return undefined;
+  }
+
+  return {
+    field: condition.field,
+    object_type_id: condition.objectTypeId,
+    operation: condition.operation,
+    sub_conditions: condition.subConditions
+      ?.map((item) => toBackendMetricCondition(item))
+      .filter((item): item is BackendMetricCondition => Boolean(item)),
+    value: condition.value,
+    value_from: condition.valueFrom ?? "const",
+  };
+}
 
 function mapCalculationFormula(
   value: BackendMetric["calculation_formula"],
@@ -29,6 +76,7 @@ function mapCalculationFormula(
     analysisDimensions: (value?.analysis_dimensions ?? [])
       .map((item) => (typeof item === "string" ? item : item.property ?? ""))
       .filter(Boolean),
+    condition: mapMetricConditionFromBackend(value?.condition),
     groupBy: (value?.group_by ?? [])
       .map((item) => (typeof item === "string" ? item : item.property ?? ""))
       .filter(Boolean),
@@ -97,6 +145,7 @@ export function toBackendMetricEntry(input: KnowledgeNetworkMetricMutationPayloa
     calculation_formula: {
       aggregation: input.calculationFormula.aggregation,
       analysis_dimensions: analysisDimensions.map((property) => ({ property })),
+      condition: toBackendMetricCondition(input.calculationFormula.condition),
       group_by: groupBy.map((property) => ({ property })),
       having: input.calculationFormula.having?.value
         ? {
