@@ -5,6 +5,31 @@
   flex-wrap: wrap;
 }
 
+.emptyCreateRow {
+  display: inline-flex;
+  align-items: center;
+}
+
+.createMenuItem {
+  min-width: 220px;
+  max-width: 300px;
+  padding: 2px 0;
+}
+
+.createMenuItemTitle {
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.createMenuItemDesc {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
 .optionGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;

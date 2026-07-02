@@ -80,6 +80,8 @@ type AddCapabilityWizardProps = {
 
   initialMode?: CapabilityUxMode;
 
+  lockInitialMode?: boolean;
+
   onClose: () => void;
 
   onRefresh?: () => void;
@@ -105,6 +107,8 @@ export function AddCapabilityWizard({
 
   initialMode,
 
+  lockInitialMode = false,
+
   onClose,
 
   onRefresh,
@@ -126,7 +130,8 @@ export function AddCapabilityWizard({
 
   const allowedModes = useMemo(() => getCapabilityModesForTab(contextTab), [contextTab]);
 
-  const skipModeStep = shouldSkipCapabilityModeStep(contextTab, { initialBoxId });
+  const skipModeStep =
+    lockInitialMode || shouldSkipCapabilityModeStep(contextTab, { initialBoxId });
 
   const [step, setStep] = useState(0);
 
@@ -260,7 +265,7 @@ export function AddCapabilityWizard({
 
   const handleBackFromConfigure = () => {
 
-    if (canReturnToModeStep(allowedModes)) {
+    if (!lockInitialMode && canReturnToModeStep(allowedModes)) {
 
       setStep(0);
 
@@ -669,7 +674,7 @@ export function AddCapabilityWizard({
 
         <AppButton onClick={handleBackFromConfigure}>
 
-          {canReturnToModeStep(allowedModes) ? t("common.back") : t("common.cancel")}
+          {!lockInitialMode && canReturnToModeStep(allowedModes) ? t("common.back") : t("common.cancel")}
 
         </AppButton>
 
@@ -687,7 +692,7 @@ export function AddCapabilityWizard({
 
           <AppButton onClick={handleBackFromConfigure}>
 
-            {canReturnToModeStep(allowedModes) ? t("common.back") : t("common.cancel")}
+            {!lockInitialMode && canReturnToModeStep(allowedModes) ? t("common.back") : t("common.cancel")}
 
           </AppButton>
 
