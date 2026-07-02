@@ -285,7 +285,10 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
 
 export type ChatPaneProps = {
   env: ContextLoaderEnv;
+  /** 检索工具（agent-retrieval MCP）鉴权。 */
   tokenProvider: AgentTokenProvider;
+  /** 大模型（mf-model-api）鉴权：网关不认 bak_ AppKey，恒用 OAuth 会话；缺省回落 tokenProvider。 */
+  modelTokenProvider?: AgentTokenProvider;
   profile: PaneProfile;
   networkName?: string;
   /** 模型列表由父级拉一次，多面板共享。 */
@@ -306,6 +309,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   {
     env,
     tokenProvider,
+    modelTokenProvider,
     profile,
     networkName,
     models,
@@ -557,7 +561,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           history,
           tools,
           config,
-          tokenProvider,
+          tokenProvider: modelTokenProvider ?? tokenProvider,
           signal: controller.signal,
           onChunk: handleChunk,
         });
@@ -577,7 +581,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         setBusy(false); // 触发下方「完成即持久化」effect
       }
     },
-    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, handleChunk, updateAssistant, message],
+    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, handleChunk, updateAssistant, message],
   );
 
   const stop = useCallback(() => {

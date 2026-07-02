@@ -998,6 +998,7 @@ export function ExperienceScene() {
   );
 
   // Agent 对话用：每请求取新鲜 token、401 时刷新（OAuth 自动续期，避免长对话/长循环 token 过期断掉）。
+  // 检索工具（agent-retrieval）按所选认证方式：OAuth 会话或 bak_ AppKey。
   const tokenProvider = useMemo<AgentTokenProvider>(
     () => ({
       getToken: () =>
@@ -1008,6 +1009,15 @@ export function ExperienceScene() {
           : runtimeConfig.auth.tokenManager.refreshAccessToken(),
     }),
     [authMode, appKey, runtimeConfig],
+  );
+  // 大模型（mf-model-api）不认 bak_ AppKey（AppKey 仅对 Context Loader 有效）→ 恒用 OAuth 会话 token，
+  // 否则认证方式切到 API Key 后模型第一步就 401。
+  const modelTokenProvider = useMemo<AgentTokenProvider>(
+    () => ({
+      getToken: () => runtimeConfig.auth.tokenManager.getAccessToken() ?? "",
+      refresh: () => runtimeConfig.auth.tokenManager.refreshAccessToken(),
+    }),
+    [runtimeConfig],
   );
 
   // tools/list 发现结果缓存：MCP 侧栏实时驱动 + 内联 schema + 工具发现弹窗共用。
@@ -1328,7 +1338,12 @@ export function ExperienceScene() {
       </div>
 
       {mode === "agent" ? (
-        <AgentChat env={env} networkName={network?.name} tokenProvider={tokenProvider} />
+        <AgentChat
+          env={env}
+          networkName={network?.name}
+          tokenProvider={tokenProvider}
+          modelTokenProvider={modelTokenProvider}
+        />
       ) : (
         <div className={styles.main}>
           {/* 接口列表 */}

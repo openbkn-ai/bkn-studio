@@ -208,13 +208,18 @@ export function AgentChat({
   env,
   networkName,
   tokenProvider,
+  modelTokenProvider,
 }: {
   env: ContextLoaderEnv;
   networkName?: string;
+  /** 检索工具（agent-retrieval MCP）鉴权：OAuth 会话或 bak_ AppKey。 */
   tokenProvider: AgentTokenProvider;
+  /** 大模型（mf-model-api）鉴权：网关不认 bak_，恒用 OAuth 会话；缺省回落 tokenProvider。 */
+  modelTokenProvider?: AgentTokenProvider;
 }) {
   const knId = env.knId;
   const { message } = App.useApp();
+  const llmTokenProvider = modelTokenProvider ?? tokenProvider;
 
   const [input, setInput] = useState("");
   const [models, setModels] = useState<LlmModel[]>([]);
@@ -424,7 +429,7 @@ export function AgentChat({
         history: [{ role: "user", content }],
         tools: {},
         config: DEFAULT_AGENT_CONFIG,
-        tokenProvider,
+        tokenProvider: llmTokenProvider,
         signal: controller.signal,
         onChunk: (chunk) => {
           if (chunk.type === "text") setSummary((s) => s + chunk.delta);
@@ -447,6 +452,7 @@ export function AgentChat({
   const paneShared = {
     env,
     tokenProvider,
+    modelTokenProvider: llmTokenProvider,
     networkName,
     models,
     modelsLoaded,
