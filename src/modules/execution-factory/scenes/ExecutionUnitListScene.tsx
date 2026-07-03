@@ -67,6 +67,8 @@ import {
   resolveVisibleManagementTabs,
 } from "@/modules/execution-factory/utils/capability-ux";
 import { supportsCategoryFilter } from "@/modules/execution-factory/utils/capability-parity";
+import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
+import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./execution-unit-list.module.css";
@@ -144,7 +146,11 @@ type ExecutionUnitListSceneProps = {
   toolbarHintKey: string;
 };
 
-function mapOperator(item: OperatorRecord): ExecutionUnitCardItem {
+function mapAuditUser(userId: string | undefined, directory: Map<string, string>) {
+  return formatAuditUserDisplay({ directory, id: userId });
+}
+
+function mapOperator(item: OperatorRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
     id: item.operatorId,
     name: item.name,
@@ -153,8 +159,8 @@ function mapOperator(item: OperatorRecord): ExecutionUnitCardItem {
     category: item.category,
     categoryName: item.categoryName,
     isInternal: item.isInternal,
-    releaseUser: item.releaseUser,
-    updateUser: item.createUser,
+    releaseUser: mapAuditUser(item.releaseUser, directory),
+    updateUser: mapAuditUser(item.createUser, directory),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
@@ -162,7 +168,7 @@ function mapOperator(item: OperatorRecord): ExecutionUnitCardItem {
   };
 }
 
-function mapToolbox(item: ToolboxRecord): ExecutionUnitCardItem {
+function mapToolbox(item: ToolboxRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
     id: item.boxId,
     name: item.name,
@@ -172,38 +178,38 @@ function mapToolbox(item: ToolboxRecord): ExecutionUnitCardItem {
     categoryName: item.categoryName,
     isInternal: item.isInternal,
     toolCount: item.toolCount ?? item.tools?.length ?? 0,
-    releaseUser: item.releaseUser,
-    updateUser: item.updateUser ?? item.createUser,
+    releaseUser: mapAuditUser(item.releaseUser, directory),
+    updateUser: mapAuditUser(item.updateUser ?? item.createUser, directory),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
   };
 }
 
-function mapMcp(item: McpRecord): ExecutionUnitCardItem {
+function mapMcp(item: McpRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
     id: item.mcpId,
     name: item.name,
     description: item.description,
     category: item.category,
     isInternal: item.isInternal,
-    releaseUser: item.releaseUser,
-    updateUser: item.createUser,
+    releaseUser: mapAuditUser(item.releaseUser, directory),
+    updateUser: mapAuditUser(item.createUser, directory),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
   };
 }
 
-function mapSkill(item: SkillRecord): ExecutionUnitCardItem {
+function mapSkill(item: SkillRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
     id: item.skillId,
     name: item.name,
     description: item.description,
     category: item.category,
     categoryName: item.categoryName,
-    releaseUser: item.releaseUser,
-    updateUser: item.createUser,
+    releaseUser: mapAuditUser(item.releaseUser, directory),
+    updateUser: mapAuditUser(item.createUser, directory),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
@@ -243,6 +249,7 @@ export function ExecutionUnitListScene({
   const [originFilter, setOriginFilter] = useState<"" | "internal" | "custom">("");
   const [status, setStatus] = useState<string>("");
   const [items, setItems] = useState<ExecutionUnitCardItem[]>([]);
+  const auditUserDirectory = useAuditUserDirectory();
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -523,7 +530,7 @@ export function ExecutionUnitListScene({
         if (generation !== listLoadGenerationRef.current) {
           return;
         }
-        const mapped = result.items.map(mapOperator);
+        const mapped = result.items.map((item) => mapOperator(item, auditUserDirectory));
         setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
         setTotal(result.total);
         if (page === 1) {
@@ -540,7 +547,7 @@ export function ExecutionUnitListScene({
         if (generation !== listLoadGenerationRef.current) {
           return;
         }
-      const mapped = result.items.map(mapToolbox);
+      const mapped = result.items.map((item) => mapToolbox(item, auditUserDirectory));
       setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
       setTotal(result.total);
       if (page === 1) {
@@ -555,7 +562,7 @@ export function ExecutionUnitListScene({
         if (generation !== listLoadGenerationRef.current) {
           return;
         }
-        const mapped = result.items.map(mapMcp);
+        const mapped = result.items.map((item) => mapMcp(item, auditUserDirectory));
         setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
         setTotal(result.total);
         if (page === 1) {
@@ -571,7 +578,7 @@ export function ExecutionUnitListScene({
       if (generation !== listLoadGenerationRef.current) {
         return;
       }
-      const mapped = result.items.map(mapSkill);
+      const mapped = result.items.map((item) => mapSkill(item, auditUserDirectory));
       setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
       setTotal(result.total);
       if (page === 1) {
@@ -593,7 +600,7 @@ export function ExecutionUnitListScene({
         setLoading(false);
       }
     }
-  }, [activeTab, listQuery, marketMode, page, scheduleInstalledResourceSync]);
+  }, [activeTab, auditUserDirectory, listQuery, marketMode, page, scheduleInstalledResourceSync]);
 
   useEffect(() => {
     setPage(1);

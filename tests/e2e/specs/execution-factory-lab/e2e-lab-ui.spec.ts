@@ -32,7 +32,6 @@ import {
   importSkillContentViaUi,
   importSkillZipViaUi,
   installCatalogEntryViaUi,
-  openDetailMoreMenu,
   openCapabilityDetail,
   publishCapabilityInDetail,
   registerMcpViaUi,

@@ -82,7 +82,7 @@ test.describe("Execution Factory — UI tab navigation", () => {
 
   test("UI-catalog: catalog page loads with install actions", async ({ page }) => {
     await gotoE2ePage(page, "/execution-factory/catalog?activeTab=toolbox");
-    await expect(page.getByText("全部执行单元").first()).toBeVisible();
+    await expect(page.getByText(/能力市场|全部执行单元/).first()).toBeVisible();
     await expect(page.getByRole("tab", { name: /工具|Tools|工具集|Toolsets/i })).toBeVisible();
   });
 
@@ -106,7 +106,7 @@ test.describe("Execution Factory — UI tab navigation", () => {
 
     test("UI-legacy-toolbox: legacy create toolbox button", async ({ page }) => {
       await gotoLegacyE2ePage(page, "/execution-factory/units?activeTab=toolbox");
-      await expect(page.getByText("执行单元管理").first()).toBeVisible();
+      await expect(page.getByText(/能力管理|执行单元管理/).first()).toBeVisible();
       await page
         .locator("button.ant-btn-primary")
         .filter({ hasText: /新建工具箱|New Toolbox/i })

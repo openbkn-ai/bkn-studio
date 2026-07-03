@@ -10,6 +10,7 @@ import {
   importToolboxViaApi,
   publishToolboxViaApi,
 } from "../../helpers/toolbox";
+import { gotoE2ePage } from "../../helpers/execution-unit-ui";
 
 test.describe("Execution Factory — Catalog E2E flows", () => {
   let backendReady = false;
@@ -86,7 +87,7 @@ test.describe("Execution Factory — Catalog E2E flows", () => {
     createdBoxIds.push(toolbox.boxId);
     await publishToolboxViaApi(request, toolbox.boxId);
 
-    await page.goto("/execution-factory/catalog?activeTab=toolbox");
+    await gotoE2ePage(page, "/execution-factory/catalog?activeTab=toolbox");
     await expect(page.getByText(toolbox.name).first()).toBeVisible({ timeout: 30_000 });
   });
 });

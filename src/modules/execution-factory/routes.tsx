@@ -57,6 +57,11 @@ const SkillDetailPage = lazy(async () => {
   return { default: module.SkillDetailPage };
 });
 
+const SandboxRuntimePage = lazy(async () => {
+  const module = await import("@/modules/execution-factory-lab/pages/SandboxRuntimePage");
+  return { default: module.SandboxRuntimePage };
+});
+
 function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
@@ -234,6 +239,17 @@ export const executionFactoryRoutes: RouteObject[] = [
       },
     },
     element: withRouteLoading(<CatalogListPage />),
+  },
+  {
+    path: "execution-factory/sandbox-runtime",
+    handle: {
+      console: {
+        descriptionKey: "executionFactory.sandboxRuntimeDescription",
+        menuKey: "execution-factory-sandbox-runtime",
+        titleKey: "executionFactory.sandboxRuntimeTitle",
+      },
+    },
+    element: withRouteLoading(<SandboxRuntimePage />),
   },
 ];
 

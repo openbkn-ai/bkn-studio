@@ -9,7 +9,6 @@ import { CloseCircleFilled, DownOutlined } from "@ant-design/icons";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ActionTypeCatalogSelection } from "@/modules/knowledge-network/services/action-type-tool.service";
 import type { ActionTypeActionSource } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { ActionTypeToolSelectModal } from "./ActionTypeToolSelectModal";
@@ -33,7 +32,7 @@ export function ActionTypeSourcePicker({
 
   const displayName = useMemo(() => getActionSourceDisplayName(value), [value]);
 
-  const handleConfirm = (source: ActionTypeActionSource, _selection: ActionTypeCatalogSelection) => {
+  const handleConfirm = (source: ActionTypeActionSource) => {
     onChange?.(source);
     onSourceSelected?.(source);
     setModalOpen(false);

@@ -1,5 +1,19 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
+const STUDIO_BASE_PATH = "/studio";
+
+export function toStudioPath(url: string) {
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+
+  if (url === STUDIO_BASE_PATH || url.startsWith(`${STUDIO_BASE_PATH}/`)) {
+    return url;
+  }
+
+  return `${STUDIO_BASE_PATH}${url.startsWith("/") ? url : `/${url}`}`;
+}
+
 /** 强制 UI 请求走 Vite 同源代理，避免 localhost/127.0.0.1 跨域导致 impex 无响应 */
 export async function ensureE2eRuntime(
   page: Page,
@@ -9,6 +23,7 @@ export async function ensureE2eRuntime(
     window.__BKN_STUDIO_RUNTIME__ = {
       ...(window.__BKN_STUDIO_RUNTIME__ ?? {}),
       apiBaseUrl: "/api",
+      mode: "hosted",
       features: {
         ...(window.__BKN_STUDIO_RUNTIME__?.features ?? {}),
         capabilityUxV2,
@@ -31,7 +46,7 @@ export async function gotoE2ePage(
   options?: { capabilityUxV2?: boolean },
 ) {
   await ensureE2eRuntime(page, { capabilityUxV2: options?.capabilityUxV2 ?? true });
-  await page.goto(url);
+  await page.goto(toStudioPath(url));
 }
 
 export async function gotoLegacyE2ePage(page: Page, url: string) {
@@ -91,9 +106,9 @@ export async function searchExecutionUnitByName(page: Page, name: string) {
 }
 
 export const UNITS_PAGE_TITLE =
-  /执行能力管理|执行单元管理|Execution Capabilities|Execution Unit Management/i;
+  /能力管理|执行能力管理|执行单元管理|Capability Management|Execution Capabilities|Execution Unit Management/i;
 
-export const CATALOG_PAGE_TITLE = /全部执行单元|All Execution Units/i;
+export const CATALOG_PAGE_TITLE = /能力市场|全部执行单元|Capability Market|All Execution Units/i;
 
 export const OPERATOR_TAB_LABEL = /算子开发|Operator Dev/i;
 
@@ -254,6 +269,13 @@ export async function expectVisibleDrawer(page: Page) {
 export async function openAddCapabilityWizard(page: Page, tab: "toolbox" | "mcp" | "skill" = "toolbox") {
   await gotoUnitsTab(page, tab);
   await clickPrimaryToolbarButton(page, /添加能力|Add Capability/i);
+
+  const menuItemPatterns: Record<typeof tab, RegExp> = {
+    toolbox: /添加 HTTP API|Add HTTP API/i,
+    mcp: /注册 MCP 服务|Register MCP/i,
+    skill: /导入 Skill|Import Skill/i,
+  };
+  await page.getByRole("menuitem", { name: menuItemPatterns[tab] }).click();
 
   const drawer = await expectVisibleDrawer(page);
   const wizardTitle = /添加能力|Add Capability|添加 API|Add API|导入 OpenAPI|Import OpenAPI|添加 MCP 服务|Add MCP service|导入 Skill 包|Import skill pack/i;

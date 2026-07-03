@@ -267,6 +267,26 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     );
   }, [t, toolbox?.status]);
 
+  const renderToolboxExportButton = () => {
+    if (!toolbox || toolbox.isInternal) {
+      return null;
+    }
+
+    return (
+      <PermissionGate permissions="execution-factory:impex:export">
+        <AppButton
+          icon={<DownloadOutlined />}
+          loading={isExporting("toolbox", boxId)}
+          onClick={() => {
+            void exportComponentById("toolbox", boxId, toolbox.name);
+          }}
+        >
+          {t("executionFactory.cardMenu.export")}
+        </AppButton>
+      </PermissionGate>
+    );
+  };
+
   const toolInfoItems = useMemo(() => {
     if (!selectedTool) {
       return [];
@@ -394,6 +414,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
             </div>
             {viewMode ? (
               <Space>
+                {renderToolboxExportButton()}
                 <PermissionGate permissions="execution-factory:tool:edit">
                   <AppButton onClick={handleEnterEditMode} type="primary">
                     {t("executionFactory.toolboxToolsEnterEdit")}
@@ -403,19 +424,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
             ) : (
               <PermissionGate permissions="execution-factory:tool:create">
                 <Space>
-                  {!toolbox.isInternal ? (
-                    <PermissionGate permissions="execution-factory:impex:export">
-                      <AppButton
-                        icon={<DownloadOutlined />}
-                        loading={isExporting("toolbox", boxId)}
-                        onClick={() => {
-                          void exportComponentById("toolbox", boxId, toolbox.name);
-                        }}
-                      >
-                        {t("executionFactory.cardMenu.export")}
-                      </AppButton>
-                    </PermissionGate>
-                  ) : null}
+                  {renderToolboxExportButton()}
                   <AppButton
                     onClick={() => {
                       if (capabilityUxV2 && !isFunctionToolbox) {

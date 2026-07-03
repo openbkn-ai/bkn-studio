@@ -46,8 +46,10 @@ import {
   formatOptionalTimestamp,
   resolveSkillCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
+import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 import { formatSkillFileSize } from "@/modules/execution-factory/utils/skill-file-preview";
+import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 import styles from "./toolbox-detail.module.css";
 
@@ -77,6 +79,7 @@ function buildFileEntries(content: SkillContentResult | null): SkillFileSummary[
 
 export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
   const { t } = useTranslation();
+  const auditUserDirectory = useAuditUserDirectory();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const catalogContext = searchParams.get("from") === "catalog";
@@ -241,7 +244,7 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
       {
         key: "createUser",
         label: t("executionFactory.createUser"),
-        value: record.createUser ?? "-",
+        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: record.createUser }),
         icon: <UserOutlined />,
       },
       {
@@ -257,7 +260,7 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
         icon: <ClockCircleOutlined />,
       },
     ];
-  }, [record, t]);
+  }, [auditUserDirectory, record, t]);
 
   const handleDownload = async () => {
     if (!record) {
