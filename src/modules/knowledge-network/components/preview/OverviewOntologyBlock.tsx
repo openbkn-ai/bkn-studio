@@ -10,6 +10,7 @@
  * 本体结构 / 数据绑定 表格。所有取数集中在此，避免重复请求。
  */
 
+import { DownOutlined, RightOutlined } from "@ant-design/icons";
 import { Spin, Table, Tabs, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { CSSProperties } from "react";
@@ -31,22 +32,29 @@ import type {
 import styles from "./OverviewOntologyBlock.module.css";
 
 type OverviewOntologyBlockProps = {
+  detailsExpanded?: boolean;
   networkId: string;
+  onToggleDetails?: () => void;
 };
 
 const DEFAULT_COLOR = "#2e68ff";
 
-export function OverviewOntologyBlock({ networkId }: OverviewOntologyBlockProps) {
+export function OverviewOntologyBlock({
+  detailsExpanded = false,
+  networkId,
+  onToggleDetails,
+}: OverviewOntologyBlockProps) {
   const { t } = useTranslation();
 
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [relationTypes, setRelationTypes] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
   const [detailById, setDetailById] = useState<Record<string, ObjectTypeDetail | null>>({});
-  const [loading, setLoading] = useState(true);
+  const [structureLoading, setStructureLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    setStructureLoading(true);
     setDetailById({});
 
     (async () => {
@@ -81,7 +89,7 @@ export function OverviewOntologyBlock({ networkId }: OverviewOntologyBlockProps)
         }
       } finally {
         if (!cancelled) {
-          setLoading(false);
+          setStructureLoading(false);
         }
       }
     })();
@@ -90,6 +98,49 @@ export function OverviewOntologyBlock({ networkId }: OverviewOntologyBlockProps)
       cancelled = true;
     };
   }, [networkId]);
+
+  useEffect(() => {
+    if (!detailsExpanded || objectTypes.length === 0) {
+      return;
+    }
+
+    const missingItems = objectTypes.filter((item) => !(item.id in detailById));
+    if (missingItems.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+    setDetailLoading(true);
+
+    (async () => {
+      try {
+        const details = await Promise.all(
+          missingItems.map((item) =>
+            getKnowledgeNetworkObjectTypeDetail(networkId, item.id).catch(() => null),
+          ),
+        );
+        if (cancelled) {
+          return;
+        }
+
+        setDetailById((current) => {
+          const next = { ...current };
+          missingItems.forEach((item, index) => {
+            next[item.id] = details[index] ?? null;
+          });
+          return next;
+        });
+      } finally {
+        if (!cancelled) {
+          setDetailLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detailById, detailsExpanded, networkId, objectTypes]);
 
   const hubIds = useMemo(() => {
     const degree = new Map<string, number>();
@@ -252,66 +303,103 @@ export function OverviewOntologyBlock({ networkId }: OverviewOntologyBlockProps)
         relationTypes={relationTypes}
       />
 
-      {objectTypes.length > 0 || loading ? (
-        <Spin spinning={loading}>
-          <Tabs
-            className={styles.tabs}
-            defaultActiveKey="ontology"
-            items={[
-              {
-                key: "ontology",
-                label: t("knowledgeNetwork.previewTabOntology"),
-                children: (
-                  <div className={styles.sectionGrid}>
-                    <div className={styles.sectionCard}>
-                      <div className={styles.sectionCardTitle}>
-                        {t("knowledgeNetwork.previewEntityClasses")}
-                        <span className={styles.badge}>{objectTypes.length}</span>
-                      </div>
-                      <Table
-                        rowKey="id"
-                        size="small"
-                        columns={entityColumns}
-                        dataSource={objectTypes}
-                        pagination={false}
-                      />
-                    </div>
-                    <div className={styles.sectionCard}>
-                      <div className={styles.sectionCardTitle}>
-                        {t("knowledgeNetwork.previewRelationClasses")}
-                        <span className={styles.badge}>{relationTypes.length}</span>
-                      </div>
-                      <Table
-                        rowKey="id"
-                        size="small"
-                        columns={relationColumns}
-                        dataSource={relationTypes}
-                        pagination={false}
-                      />
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                key: "binding",
-                label: t("knowledgeNetwork.previewTabBinding"),
-                children: (
-                  <div className={styles.sectionCard}>
-                    <div className={styles.sectionCardTitle}>
-                      {t("knowledgeNetwork.previewColBoundResource")}
-                    </div>
-                    <Table
-                      rowKey="id"
-                      size="small"
-                      columns={bindingColumns}
-                      dataSource={objectTypes}
-                      pagination={false}
-                    />
-                  </div>
-                ),
-              },
-            ]}
-          />
+      {objectTypes.length > 0 || structureLoading ? (
+        <Spin spinning={structureLoading}>
+          <div className={styles.structureCard}>
+            <button
+              className={`${styles.structureToggle} ${detailsExpanded ? styles.structureToggleExpanded : ""}`}
+              onClick={onToggleDetails}
+              type="button"
+            >
+              <span>{t("knowledgeNetwork.previewTabOntology")}</span>
+              <span className={styles.structureToggleIcon}>
+                {detailsExpanded ? <DownOutlined /> : <RightOutlined />}
+              </span>
+            </button>
+            {detailsExpanded ? (
+              <Spin spinning={detailLoading}>
+                <Tabs
+                  className={styles.tabs}
+                  defaultActiveKey="ontology"
+                  items={[
+                    {
+                      key: "ontology",
+                      label: t("knowledgeNetwork.previewTabOntology"),
+                      children: (
+                        <div className={styles.sectionGrid}>
+                          <div className={styles.sectionCard}>
+                            <div className={styles.sectionCardTitle}>
+                              {t("knowledgeNetwork.previewEntityClasses")}
+                              <span className={styles.badge}>{objectTypes.length}</span>
+                            </div>
+                            <Table
+                              rowKey="id"
+                              size="small"
+                              columns={entityColumns}
+                              dataSource={objectTypes}
+                              pagination={{
+                                defaultPageSize: 10,
+                                hideOnSinglePage: true,
+                                pageSizeOptions: [10, 20, 50],
+                                showQuickJumper: false,
+                                showSizeChanger: true,
+                                showTotal: (total) => `共 ${total} 条`,
+                              }}
+                            />
+                          </div>
+                          <div className={`${styles.sectionCard} ${styles.sectionCardSecondary}`}>
+                            <div className={styles.sectionCardTitle}>
+                              {t("knowledgeNetwork.previewRelationClasses")}
+                              <span className={styles.badge}>{relationTypes.length}</span>
+                            </div>
+                            <Table
+                              rowKey="id"
+                              size="small"
+                              columns={relationColumns}
+                              dataSource={relationTypes}
+                              pagination={{
+                                defaultPageSize: 10,
+                                hideOnSinglePage: true,
+                                pageSizeOptions: [10, 20, 50],
+                                showQuickJumper: false,
+                                showSizeChanger: true,
+                                showTotal: (total) => `共 ${total} 条`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: "binding",
+                      label: t("knowledgeNetwork.previewTabBinding"),
+                      children: (
+                        <div className={styles.sectionCard}>
+                          <div className={styles.sectionCardTitle}>
+                            {t("knowledgeNetwork.previewColBoundResource")}
+                          </div>
+                          <Table
+                            rowKey="id"
+                            size="small"
+                            columns={bindingColumns}
+                            dataSource={objectTypes}
+                            pagination={{
+                              defaultPageSize: 10,
+                              hideOnSinglePage: true,
+                              pageSizeOptions: [10, 20, 50],
+                              showQuickJumper: false,
+                              showSizeChanger: true,
+                              showTotal: (total) => `共 ${total} 条`,
+                            }}
+                          />
+                        </div>
+                      ),
+                    },
+                  ]}
+                />
+              </Spin>
+            ) : null}
+          </div>
         </Spin>
       ) : null}
     </div>

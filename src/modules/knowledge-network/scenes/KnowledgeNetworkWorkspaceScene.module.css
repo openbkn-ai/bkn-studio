@@ -421,22 +421,15 @@
 .overviewContentCard {
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: 0;
   background: #fff;
   border: 1px solid #d9e0ea;
   border-radius: 0;
 }
 
-.overviewContentTitle {
-  margin: 0 0 8px;
-  color: #1f2329;
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 1.2;
-}
-
 .overviewContentBody {
   display: block;
+  padding: 16px;
 }
 
 .objectTitleBox {
@@ -479,8 +472,104 @@
 .overviewContentCard :global(.ant-table-container),
 .overviewContentCard :global(.ant-table),
 .overviewContentCard :global(.ant-table-thead > tr > th),
+.overviewContentCard :global(.ant-pagination-options-size-changer),
 .overviewContentCard :global(.ant-tag) {
   border-radius: 0 !important;
+}
+
+.overviewContentCard :global(.ant-pagination) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.overviewContentCard :global(.ant-pagination-total-text) {
+  margin-inline-end: auto;
+  color: #1f2329;
+  font-size: 13px;
+}
+
+.overviewContentCard :global(.ant-pagination .ant-pagination-item),
+.overviewContentCard :global(.ant-pagination .ant-pagination-prev),
+.overviewContentCard :global(.ant-pagination .ant-pagination-next) {
+  min-width: 32px;
+  height: 32px;
+  margin-inline-end: 0;
+  border-radius: 0;
+}
+
+.overviewContentCard :global(.ant-pagination .ant-pagination-item) {
+  border-color: #d9e0ea;
+}
+
+.overviewContentCard :global(.ant-pagination .ant-pagination-item a) {
+  line-height: 30px;
+  color: #1f2329;
+}
+
+.overviewContentCard :global(.ant-pagination .ant-pagination-item-active) {
+  border-color: #2e68ff;
+}
+
+.overviewContentCard :global(.ant-pagination .ant-pagination-item-active a) {
+  color: #2e68ff;
+}
+
+.overviewContentCard :global(.ant-pagination .ant-pagination-prev .ant-pagination-item-link),
+.overviewContentCard :global(.ant-pagination .ant-pagination-next .ant-pagination-item-link) {
+  border: 1px solid transparent;
+  border-radius: 0;
+  color: #8c8c8c;
+}
+
+.overviewContentCard :global(.ant-pagination .ant-pagination-options) {
+  margin-inline-start: 8px;
+}
+
+.overviewContentCard :global(.ant-pagination .ant-select-selector) {
+  height: 32px !important;
+  padding: 0 12px !important;
+  border: 1px solid #d9e0ea !important;
+  border-radius: 0 !important;
+}
+
+.overviewContentCard :global(.ant-pagination .ant-select-selection-item) {
+  line-height: 30px !important;
+  color: #1f2329;
+  font-size: 13px;
+}
+
+.overviewSectionToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  background: #fff;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.overviewSectionToggle:hover {
+  background: #f8fbff;
+}
+
+.overviewSectionToggleExpanded {
+  border-bottom: 1px solid #e5eaf2;
+}
+
+.overviewSectionToggleIcon {
+  color: #64748b;
+  font-size: 12px;
 }
 
 .tableEmptyState {

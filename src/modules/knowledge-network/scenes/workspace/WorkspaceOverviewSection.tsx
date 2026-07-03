@@ -9,9 +9,11 @@ import {
   ApiOutlined,
   ClockCircleOutlined,
   DatabaseOutlined,
+  DownOutlined,
   DeploymentUnitOutlined,
   EditOutlined,
   KeyOutlined,
+  RightOutlined,
   ThunderboltFilled,
   ThunderboltOutlined,
   UserOutlined,
@@ -58,6 +60,8 @@ export function WorkspaceOverviewSection({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
+  const [graphExpanded, setGraphExpanded] = useState(false);
+  const [recentExpanded, setRecentExpanded] = useState(false);
 
   const recentObjectColumns = useMemo<ColumnsType<KnowledgeNetworkRecentObject>>(
     () => [
@@ -252,31 +256,55 @@ export function WorkspaceOverviewSection({
       </Spin>
 
       <div className={styles.overviewGraphSection}>
-        <OverviewOntologyBlock networkId={networkId} />
+        <OverviewOntologyBlock
+          detailsExpanded={graphExpanded}
+          networkId={networkId}
+          onToggleDetails={() => setGraphExpanded((value) => !value)}
+        />
       </div>
 
       <div className={styles.overviewContentCard}>
-        <h3 className={styles.overviewContentTitle}>
-          {t("knowledgeNetwork.recentlyModifiedObjectTypes")}
-        </h3>
-        <div className={styles.overviewContentBody}>
-          <Table<KnowledgeNetworkRecentObject>
-            columns={recentObjectColumns}
-            dataSource={recentObjects}
-            loading={recentLoading}
-            locale={{
-              emptyText: (
-                <Empty
-                  className={styles.tableEmptyState}
-                  description={t("knowledgeNetwork.emptyRecentObjects")}
-                />
-              ),
-            }}
-            pagination={false}
-            rowKey="id"
-            size="small"
-          />
-        </div>
+        <button
+          className={
+            recentExpanded
+              ? `${styles.overviewSectionToggle} ${styles.overviewSectionToggleExpanded}`
+              : styles.overviewSectionToggle
+          }
+          onClick={() => setRecentExpanded((value) => !value)}
+          type="button"
+        >
+          <span>{t("knowledgeNetwork.recentlyModifiedObjectTypes")}</span>
+          <span className={styles.overviewSectionToggleIcon}>
+            {recentExpanded ? <DownOutlined /> : <RightOutlined />}
+          </span>
+        </button>
+        {recentExpanded ? (
+          <div className={styles.overviewContentBody}>
+            <Table<KnowledgeNetworkRecentObject>
+              columns={recentObjectColumns}
+              dataSource={recentObjects}
+              loading={recentLoading}
+              locale={{
+                emptyText: (
+                  <Empty
+                    className={styles.tableEmptyState}
+                    description={t("knowledgeNetwork.emptyRecentObjects")}
+                  />
+                ),
+              }}
+              pagination={{
+                defaultPageSize: 5,
+                hideOnSinglePage: true,
+                pageSizeOptions: [5, 10, 20],
+                showQuickJumper: false,
+                showSizeChanger: true,
+                showTotal: (total) => `共 ${total} 条`,
+              }}
+              rowKey="id"
+              size="small"
+            />
+          </div>
+        ) : null}
       </div>
 
       {detail ? (
