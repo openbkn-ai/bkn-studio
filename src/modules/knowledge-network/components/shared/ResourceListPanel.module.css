@@ -348,8 +348,7 @@
 
 .objectTypePage {
   gap: 14px;
-  height: 100%;
-  min-height: 0;
+  min-height: 100%;
 }
 
 .objectTypePage .title {
@@ -381,6 +380,8 @@
 }
 
 .objectTypePage .tableCard {
+  flex: 0 0 auto;
+  min-height: auto;
   overflow: hidden;
   border-color: #d9e0ea;
   border-radius: 0;
@@ -430,6 +431,19 @@
   background: #f3f6fa !important;
   color: #1d4ed8;
   font-size: 14px;
+}
+
+.objectTypePage .objectIconSquare :global(.anticon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.objectTypePage .objectIconSquare :global(.anticon svg) {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
 }
 
 .objectTypePage .objectName {

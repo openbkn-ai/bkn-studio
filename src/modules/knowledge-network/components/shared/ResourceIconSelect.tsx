@@ -10,14 +10,12 @@ import { Input, Select, Space } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import legacyIconList from "./resource-iconfont/dip-iconfont.json";
-import iconfontObjectScript from "./resource-iconfont/iconfont-dip-object.js?url";
+import "./resource-iconfont/iconfont-dip-object.js";
 import styles from "./ResourceIconSelect.module.css";
 
 const { Search } = Input;
 
-const ResourceIconFont = createFromIconfontCN({
-  scriptUrl: iconfontObjectScript,
-});
+const ResourceIconFont = createFromIconfontCN();
 
 type LegacyIconGlyph = {
   font_class: string;
@@ -45,17 +43,26 @@ const COMPAT_ICON_TYPE_BY_VALUE: Record<string, string> = {
   user: "icon-user",
 };
 
+const ICON_TYPE_BY_FONT_CLASS = Object.fromEntries(
+  ICON_GLYPHS.map((glyph) => [glyph.font_class, `${ICON_PREFIX}${glyph.font_class}`]),
+) as Record<string, string>;
+
 function resolveIconType(icon?: string) {
-  if (!icon) {
+  const trimmed = icon?.trim();
+  if (!trimmed) {
     return undefined;
   }
 
-  if (COMPAT_ICON_TYPE_BY_VALUE[icon]) {
-    return COMPAT_ICON_TYPE_BY_VALUE[icon];
+  if (COMPAT_ICON_TYPE_BY_VALUE[trimmed]) {
+    return COMPAT_ICON_TYPE_BY_VALUE[trimmed];
   }
 
-  if (icon.startsWith("icon-")) {
-    return icon;
+  if (trimmed.startsWith("icon-")) {
+    return trimmed;
+  }
+
+  if (ICON_TYPE_BY_FONT_CLASS[trimmed]) {
+    return ICON_TYPE_BY_FONT_CLASS[trimmed];
   }
 
   return undefined;

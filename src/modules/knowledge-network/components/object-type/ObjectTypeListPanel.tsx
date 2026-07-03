@@ -59,7 +59,7 @@ export function ObjectTypeListPanel({
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   const tagOptions = useMemo(() => {
