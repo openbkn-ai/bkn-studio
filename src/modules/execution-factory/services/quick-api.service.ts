@@ -7,9 +7,13 @@
 
 import { registerOpenApiBundle } from "@/modules/execution-factory/services/capability-bundle.service";
 
-import { createToolbox } from "@/modules/execution-factory/services/toolbox.service";
+import {
+  createToolbox,
+  getToolbox,
+  listToolboxes,
+} from "@/modules/execution-factory/services/toolbox.service";
 
-import { createTool } from "@/modules/execution-factory/services/tool.service";
+import { createTool, listTools } from "@/modules/execution-factory/services/tool.service";
 
 import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
 
@@ -50,6 +54,62 @@ export type RegisterQuickApiResult = {
   operatorIds?: string[];
 
 };
+
+const CONFIRM_ATTEMPTS = 3;
+const CONFIRM_RETRY_DELAY_MS = 150;
+
+function delay(ms: number) {
+  return new Promise((resolve) => globalThis.setTimeout(resolve, ms));
+}
+
+async function confirmQuickApiPersistence(input: {
+  boxId: string;
+  toolIds: string[];
+  toolboxName?: string;
+}) {
+  let toolboxVisible = false;
+  let toolsVisible = false;
+
+  for (let attempt = 1; attempt <= CONFIRM_ATTEMPTS; attempt += 1) {
+    const toolbox = await getToolbox(input.boxId).catch(() => null);
+    toolboxVisible = Boolean(toolbox);
+
+    if (toolboxVisible && input.toolboxName?.trim()) {
+      const list = await listToolboxes({
+        keyword: input.toolboxName.trim(),
+        page: 1,
+        pageSize: 100,
+      }).catch(() => null);
+      toolboxVisible = Boolean(
+        list?.items.some((item) => item.boxId === input.boxId),
+      );
+    }
+
+    if (toolboxVisible) {
+      const toolList = await listTools(input.boxId, {
+        all: true,
+        page: 1,
+        pageSize: 100,
+      }).catch(() => null);
+      const visibleToolIds = new Set(toolList?.items.map((item) => item.toolId) ?? []);
+      toolsVisible = input.toolIds.every((toolId) => visibleToolIds.has(toolId));
+    }
+
+    if (toolboxVisible && toolsVisible) {
+      return;
+    }
+
+    if (attempt < CONFIRM_ATTEMPTS) {
+      await delay(CONFIRM_RETRY_DELAY_MS);
+    }
+  }
+
+  if (!toolboxVisible) {
+    throw new Error("Toolbox creation was not persisted. Please retry saving.");
+  }
+
+  throw new Error("Tool creation was not persisted. Please retry saving.");
+}
 
 
 
@@ -100,6 +160,12 @@ export async function registerQuickApi(
     });
 
 
+
+    await confirmQuickApiPersistence({
+      boxId: bundle.boxId,
+      toolIds: bundle.toolIds,
+      toolboxName,
+    });
 
     return {
 
@@ -172,6 +238,12 @@ export async function registerQuickApi(
   }
 
 
+
+  await confirmQuickApiPersistence({
+    boxId,
+    toolIds: result.successIds,
+    toolboxName: input.toolboxName,
+  });
 
   return {
 
