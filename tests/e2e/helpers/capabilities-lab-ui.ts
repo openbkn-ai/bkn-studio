@@ -99,14 +99,6 @@ async function confirmPopconfirm(page: Page) {
   await popconfirm.getByRole("button", { name: BTN_CONFIRM }).click();
 }
 
-async function confirmModal(page: Page, titlePattern?: RegExp) {
-  const modal = titlePattern
-    ? page.locator(".ant-modal, [role='dialog']").filter({ hasText: titlePattern })
-    : page.locator(".ant-modal-confirm, .ant-modal").last();
-  await expect(modal).toBeVisible({ timeout: 10_000 });
-  await modal.getByRole("button", { name: BTN_CONFIRM }).click();
-}
-
 export async function ensureOverviewTab(page: Page) {
   const drawer = capabilityDetailDrawer(page);
   const overviewTab = drawer.getByRole("tab", { name: /概览|Overview/i });

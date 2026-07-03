@@ -10,7 +10,6 @@ import {
   importOpenApiToolsBatchViaApi,
   importToolboxViaApi,
   publishToolboxViaApi,
-  type ToolboxRecord,
 } from "../../helpers/toolbox";
 
 test.describe("Execution Factory — Toolbox E2E flows", () => {

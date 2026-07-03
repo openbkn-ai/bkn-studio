@@ -38,7 +38,7 @@ type ExecutionUnitCardMenuProps = {
   onAction: (action: ExecutionUnitCardAction, item: ExecutionUnitCardItem) => void;
 };
 
-function getInstallPermission(_activeTab: ExecutionUnitTab) {
+function getInstallPermission() {
   return "execution-factory:catalog:install";
 }
 
@@ -72,7 +72,7 @@ export function ExecutionUnitCardMenu({
   const { t } = useTranslation();
 
   if (marketMode) {
-    const permission = getInstallPermission(activeTab);
+    const permission = getInstallPermission();
     const installedInDomain = installedStateReady && item.installedInDomain === true;
 
     return (

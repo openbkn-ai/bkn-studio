@@ -117,7 +117,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
     test("UI-COV-001: units page shows pageIntro and toolbar hint", async ({ page }) => {
       await gotoUnitsTab(page, "toolbox");
       await expect(
-        page.getByRole("heading", { level: 2, name: /执行能力管理|执行单元管理|Execution Capabilities|Execution Unit Management/i }),
+        page.getByRole("heading", { level: 2, name: /能力管理|执行能力管理|执行单元管理|Capability Management|Execution Capabilities|Execution Unit Management/i }),
       ).toBeVisible();
       await expect(
         page
@@ -137,13 +137,13 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
 
     test("UI-COV-002: catalog page shares management list shell and market intro", async ({ page }) => {
       await gotoE2ePage(page, "/execution-factory/catalog?activeTab=toolbox");
-      await expect(page.getByRole("heading", { level: 2, name: /全部执行单元|All Execution Units/i })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 2, name: /能力市场|全部执行单元|Capability Market|All Execution Units/i })).toBeVisible();
       await expect(page.getByRole("tab", { name: /工具集|Toolsets/i })).toBeVisible();
       await expect(page.getByText(/类型|Type/i).first()).toBeVisible();
       await expect(
         page
           .getByText(
-            /与执行能力管理相同的列表视图|Same list view as Execution Capabilities|浏览其他业务域已发布|Browse capability packs published/i,
+            /与能力管理相同的列表视图|与执行能力管理相同的列表视图|Same list view as Capability Management|Same list view as Execution Capabilities|浏览其他业务域已发布|Browse capability packs published/i,
           )
           .first(),
       ).toBeVisible();
@@ -180,6 +180,25 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await page.getByPlaceholder(/搜索名称|Search name/i).fill(operator.name);
       await expect(page.getByRole("heading", { level: 5, name: operator.name })).toBeVisible();
       await expect(page.getByText(/算子|Operators/i).first()).toBeVisible();
+    });
+
+    test("UI-COV-006: audit users render as names instead of raw ids", async ({
+      page,
+      request,
+    }) => {
+      const toolbox = await createToolboxViaApi(request, buildToolboxName("ui_cov_user"));
+      createdBoxIds.push(toolbox.boxId);
+      const uuidText =
+        /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
+
+      await gotoUnitsTab(page, "toolbox");
+      const card = await executionUnitCard(page, toolbox.name);
+      await expect(card.getByText(/Local Admin|admin/i)).toBeVisible();
+      await expect(card.getByText(uuidText)).toHaveCount(0);
+
+      const drawer = await openDetailDrawerByCardClick(page, toolbox.name);
+      await expect(drawer.getByText(/创建人\s*Local Admin|Created By\s*Local Admin/i)).toBeVisible();
+      await expect(drawer.getByText(/更新人\s*Local Admin|Updated By\s*Local Admin/i)).toBeVisible();
     });
   });
 
@@ -323,7 +342,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
 
       await gotoUnitsTab(page, "mcp");
       const drawer = await openDetailDrawerByCardClick(page, mcp.name);
-      await expect(drawer.getByText(/MCP 详情|MCP Detail/i)).toBeVisible();
+      await expect(drawer.locator(".ant-drawer-title")).toHaveText(/MCP 详情|MCP Detail/i);
       await drawer.getByRole("button", { name: /查看 MCP 详情|View MCP Detail/i }).click();
       await expect(page).toHaveURL(new RegExp(`/execution-factory/mcp/${mcp.mcpId}`));
       await expect(page.getByRole("heading", { level: 3, name: mcp.name })).toBeVisible();

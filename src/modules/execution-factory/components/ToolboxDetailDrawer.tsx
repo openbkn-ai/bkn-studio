@@ -40,6 +40,8 @@ import {
   formatOptionalTimestamp,
   resolveToolboxCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
+import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
+import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-export";
 
 import styles from "./ToolboxDetailDrawer.module.css";
@@ -93,6 +95,7 @@ export function ToolboxDetailDrawer({
   const [editing, setEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { exportComponentById, isExporting } = useImpexExport();
+  const auditUserDirectory = useAuditUserDirectory();
 
   const loadRecord = async (targetBoxId: string) => {
     setLoading(true);
@@ -233,13 +236,13 @@ export function ToolboxDetailDrawer({
       {
         key: "createUser",
         label: t("executionFactory.createUser"),
-        value: record.createUser ?? "-",
+        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: record.createUser }),
         icon: <UserOutlined />,
       },
       {
         key: "updateUser",
         label: t("executionFactory.updateUser"),
-        value: record.updateUser ?? "-",
+        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: record.updateUser }),
         icon: <UserOutlined />,
       },
       {
@@ -257,7 +260,7 @@ export function ToolboxDetailDrawer({
       {
         key: "releaseUser",
         label: t("executionFactory.releaseUser"),
-        value: record.releaseUser ?? "-",
+        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: record.releaseUser }),
         icon: <UserOutlined />,
       },
       {
@@ -267,7 +270,7 @@ export function ToolboxDetailDrawer({
         icon: <CalendarOutlined />,
       },
     ];
-  }, [record, t]);
+  }, [auditUserDirectory, record, t]);
 
   return (
     <ExecutionUnitDetailDrawerLayout

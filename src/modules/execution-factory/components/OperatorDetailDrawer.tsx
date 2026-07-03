@@ -29,6 +29,8 @@ import {
   formatOptionalTimestamp,
   resolveOperatorCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
+import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
+import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 import { ConvertOperatorToToolModal } from "./ConvertOperatorToToolModal";
 import { OperatorDebugModal } from "./OperatorDebugModal";
@@ -79,6 +81,7 @@ export function OperatorDetailDrawer({
   operatorId,
 }: OperatorDetailDrawerProps) {
   const { t } = useTranslation();
+  const auditUserDirectory = useAuditUserDirectory();
   const [record, setRecord] = useState<OperatorDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -230,12 +233,18 @@ export function OperatorDetailDrawer({
                   {
                     key: "createUser",
                     label: t("executionFactory.createUser"),
-                    children: record.createUser ?? "-",
+                    children: formatAuditUserDisplay({
+                      directory: auditUserDirectory,
+                      id: record.createUser,
+                    }),
                   },
                   {
                     key: "updateUser",
                     label: t("executionFactory.updateUser"),
-                    children: record.updateUser ?? "-",
+                    children: formatAuditUserDisplay({
+                      directory: auditUserDirectory,
+                      id: record.updateUser,
+                    }),
                   },
                   {
                     key: "createTime",
@@ -250,7 +259,10 @@ export function OperatorDetailDrawer({
                   {
                     key: "releaseUser",
                     label: t("executionFactory.releaseUser"),
-                    children: record.releaseUser ?? "-",
+                    children: formatAuditUserDisplay({
+                      directory: auditUserDirectory,
+                      id: record.releaseUser,
+                    }),
                   },
                   {
                     key: "releaseTime",

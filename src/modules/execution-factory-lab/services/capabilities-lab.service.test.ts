@@ -51,7 +51,7 @@ describe("capabilities-lab.service", () => {
         task_id: "function_debug_1783000000000",
         capability_id: undefined,
         capability_name: "天气归一化函数",
-        user_id: "local-admin",
+        user_id: "266c6a42-6131-4d62-8f39-853e7093701c",
         user_name: "Local Admin",
       },
       expect.objectContaining({

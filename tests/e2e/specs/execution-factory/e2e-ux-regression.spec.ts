@@ -3,7 +3,6 @@ import { expect, test } from "@playwright/test";
 import { assertBackendReady } from "../../helpers/common";
 import {
   advanceCreateWizardToDetails,
-  expectAppToast,
   expectFunctionDefinitionSections,
   executionUnitCard,
   gotoE2ePage,
@@ -14,7 +13,6 @@ import {
   openCreateWizard,
   openOperatorCreateWizardStep2,
   openToolboxCardMenu,
-  openToolboxDetailDrawer,
   selectOperatorCreateMode,
   triggerImpexExport,
   clickVisibleImpexExportButton,
@@ -87,7 +85,7 @@ test.describe("Execution Factory — UX regression", () => {
     await expect(page).toHaveURL(/activeTab=skill/);
     await expect(page).toHaveURL(/create=1/);
     await expect(
-      page.getByText(/执行能力管理|执行单元管理|Execution Capabilities|Execution Unit Management/i).first(),
+      page.getByText(/能力管理|执行能力管理|执行单元管理|Capability Management|Execution Capabilities|Execution Unit Management/i).first(),
     ).toBeVisible();
   });
 

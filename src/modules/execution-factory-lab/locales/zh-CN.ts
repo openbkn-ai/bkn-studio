@@ -61,7 +61,7 @@ export const executionFactoryLabZhCN = {
     serviceUrlLabel: "服务地址",
     sandboxRuntimeTitle: "沙箱运行时管理",
     sandboxRuntimeDescription:
-      "查看执行工厂实验版使用的沙箱健康状态、会话池压力、依赖安装和任务会话，覆盖 HTTP、MCP、Skill 与 Function。",
+      "查看能力工厂可调用能力使用的沙箱健康状态、会话池压力、依赖安装和任务会话，覆盖 HTTP、MCP、Skill 与 Function。",
     sandboxRuntimeRefresh: "刷新",
     sandboxRuntimeControlPlane: "控制面",
     sandboxRuntimeSessionPool: "会话池",

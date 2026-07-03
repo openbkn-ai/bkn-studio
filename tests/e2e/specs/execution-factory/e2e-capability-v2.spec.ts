@@ -34,7 +34,7 @@ test.describe("Execution Factory — Capability UX v2", () => {
 
   test("CAP-V2-01: management page defaults to toolsets tab", async ({ page }) => {
     await gotoE2ePage(page, "/execution-factory/units");
-    await expect(page.getByText(/执行能力管理|Execution Capabilities/i).first()).toBeVisible();
+    await expect(page.getByText(/能力管理|Capability Management|执行能力管理|Execution Capabilities/i).first()).toBeVisible();
     await expect(page.getByRole("tab", { name: /工具集|Toolsets/i })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -81,7 +81,7 @@ test.describe("Execution Factory — Capability UX v2", () => {
 
   test("CAP-V2-05: catalog still lists toolsets", async ({ page }) => {
     await gotoE2ePage(page, "/execution-factory/catalog?activeTab=toolbox");
-    await expect(page.getByText(/全部执行单元|All Execution Units/i).first()).toBeVisible();
+    await expect(page.getByText(/能力市场|Capability Market|全部执行单元|All Execution Units/i).first()).toBeVisible();
     await expect(page.getByRole("tablist")).toBeVisible();
   });
 

@@ -44,11 +44,6 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
     icon: <ExperimentOutlined />,
   },
   {
-    key: "execution-factory-lab",
-    labelKey: "shell.items.executionFactoryLab",
-    icon: <ExperimentOutlined />,
-  },
-  {
     key: "system-management",
     labelKey: "shell.items.systemManagement",
     icon: <SettingOutlined />,

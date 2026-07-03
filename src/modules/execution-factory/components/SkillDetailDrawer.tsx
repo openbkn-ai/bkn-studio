@@ -28,6 +28,8 @@ import {
   formatOptionalTimestamp,
   resolveSkillCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
+import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
+import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 import styles from "./ToolboxDetailDrawer.module.css";
 
@@ -57,6 +59,7 @@ export function SkillDetailDrawer({
   skillId,
 }: SkillDetailDrawerProps) {
   const { t } = useTranslation();
+  const auditUserDirectory = useAuditUserDirectory();
   const [record, setRecord] = useState<SkillRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -123,7 +126,7 @@ export function SkillDetailDrawer({
       {
         key: "createUser",
         label: t("executionFactory.createUser"),
-        value: record.createUser ?? "-",
+        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: record.createUser }),
         icon: <UserOutlined />,
       },
       {
@@ -139,7 +142,7 @@ export function SkillDetailDrawer({
         icon: <ClockCircleOutlined />,
       },
     ];
-  }, [record, t]);
+  }, [auditUserDirectory, record, t]);
 
   return (
     <ExecutionUnitDetailDrawerLayout

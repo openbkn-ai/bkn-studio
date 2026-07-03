@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  SANDBOX_RUNTIME_API_PREFIX,
   buildSandboxSessionQuery,
   formatResourceLimit,
   isAbnormalSandboxSession,
@@ -15,6 +16,13 @@ import {
 } from "@/modules/execution-factory-lab/services/sandbox-runtime.service";
 
 describe("sandbox-runtime.service", () => {
+  it("uses the http client relative API prefix without duplicating /api", () => {
+    expect(SANDBOX_RUNTIME_API_PREFIX).toBe(
+      "/agent-operator-integration/internal-v1/sandbox",
+    );
+    expect(SANDBOX_RUNTIME_API_PREFIX).not.toMatch(/^\/api\//);
+  });
+
   it("builds query params for the real operator-integration sandbox API", () => {
     expect(
       buildSandboxSessionQuery({

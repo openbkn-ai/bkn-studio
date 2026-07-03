@@ -68,17 +68,6 @@ export async function cleanupAllE2eAssets(
   const headers = defaultApiHeaders();
   const jsonHeaders = { ...headers, "Content-Type": "application/json" };
 
-  const get = async <T>(url: string) => {
-    if (request) {
-      const response = await request.get(url, { headers });
-      if (!response.ok()) {
-        throw new Error(`Request failed (${response.status()}) ${url}`);
-      }
-      return response.json() as Promise<T>;
-    }
-    return fetchJson<T>(url, { headers });
-  };
-
   const post = async (url: string, data: unknown) => {
     if (dryRun) {
       return;

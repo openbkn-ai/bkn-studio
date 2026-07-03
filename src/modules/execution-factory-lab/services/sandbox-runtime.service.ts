@@ -15,7 +15,8 @@ import type {
   SandboxSessionSummary,
 } from "@/modules/execution-factory-lab/types/sandbox-runtime";
 
-const API_PREFIX = "/api/agent-operator-integration/internal-v1/sandbox";
+export const SANDBOX_RUNTIME_API_PREFIX =
+  "/agent-operator-integration/internal-v1/sandbox";
 
 type BackendHealth = {
   status?: string;
@@ -161,7 +162,7 @@ export function isAbnormalSandboxSession(item: SandboxSessionSummary): boolean {
 }
 
 export async function getSandboxRuntimeHealth(): Promise<SandboxRuntimeHealth> {
-  const response = await http.get<BackendHealth>(`${API_PREFIX}/health`, {
+  const response = await http.get<BackendHealth>(`${SANDBOX_RUNTIME_API_PREFIX}/health`, {
     skipErrorToast: true,
   });
   return {
@@ -177,7 +178,7 @@ export async function getSandboxRuntimeHealth(): Promise<SandboxRuntimeHealth> {
 }
 
 export async function getSandboxRuntimePool(): Promise<SandboxRuntimePool> {
-  const response = await http.get<BackendPool>(`${API_PREFIX}/pool`, {
+  const response = await http.get<BackendPool>(`${SANDBOX_RUNTIME_API_PREFIX}/pool`, {
     skipErrorToast: true,
   });
   return {
@@ -194,7 +195,7 @@ export async function getSandboxRuntimePool(): Promise<SandboxRuntimePool> {
 export async function listSandboxSessions(
   query: SandboxSessionQuery,
 ): Promise<SandboxSessionListResult> {
-  const response = await http.get<BackendSessionList>(`${API_PREFIX}/sessions`, {
+  const response = await http.get<BackendSessionList>(`${SANDBOX_RUNTIME_API_PREFIX}/sessions`, {
     params: buildSandboxSessionQuery(query),
     skipErrorToast: true,
   });
@@ -209,7 +210,7 @@ export async function listSandboxSessions(
 
 export async function getSandboxSessionDetail(sessionId: string): Promise<SandboxSessionDetail> {
   const response = await http.get<BackendSessionDetail>(
-    `${API_PREFIX}/sessions/${encodeURIComponent(sessionId)}`,
+    `${SANDBOX_RUNTIME_API_PREFIX}/sessions/${encodeURIComponent(sessionId)}`,
     { skipErrorToast: true },
   );
   return mapSandboxSessionDetail(response.data);

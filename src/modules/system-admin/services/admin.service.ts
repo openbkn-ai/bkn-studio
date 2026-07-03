@@ -141,12 +141,13 @@ function setBinding(roleId: string, accessorId: string, attach: boolean) {
 
 // ---- reads ------------------------------------------------------------------
 
-export async function listUsers(): Promise<AdminUser[]> {
+export async function listUsers(options?: { skipErrorToast?: boolean }): Promise<AdminUser[]> {
   if (useMock) {
     return wait(users.map((item) => ({ ...item })));
   }
   const response = await http.get<{ users?: BackendUser[] }>(`${ADMIN}/users`, {
     params: { offset: 0, limit: 500 },
+    skipErrorToast: options?.skipErrorToast,
   });
   return (response.data.users ?? []).map((item) => mapUser(item));
 }

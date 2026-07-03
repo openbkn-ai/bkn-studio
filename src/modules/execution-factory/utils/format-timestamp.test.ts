@@ -14,11 +14,11 @@ import {
 
 describe("format-timestamp", () => {
   it("normalizes backend nanosecond timestamps to milliseconds", () => {
-    expect(normalizeTimestamp(1780804434033323501)).toBe(1780804434033);
+    expect(normalizeTimestamp(Number("1780804434033323501"))).toBe(1780804434033);
   });
 
   it("formats normalized timestamps without Invalid Date", () => {
-    const formatted = formatExecutionUnitTime(1780804434033323501);
+    const formatted = formatExecutionUnitTime(Number("1780804434033323501"));
 
     expect(formatted).not.toBe("-");
     expect(formatted).not.toContain("Invalid");

@@ -209,7 +209,7 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
   test("RW-02: export toolbox backup then import clone and debug", async ({ request }) => {
     const toolbox = await createToolboxViaApi(request, buildToolboxName("rw02_src"));
     createdBoxIds.push(toolbox.boxId);
-    const tool = await createToolViaApi(request, toolbox.boxId, buildToolboxName("rw02_tool"));
+    await createToolViaApi(request, toolbox.boxId, buildToolboxName("rw02_tool"));
     await publishToolboxViaApi(request, toolbox.boxId);
 
     const exported = (await exportToolboxViaApi(request, toolbox.boxId)) as Record<string, unknown>;

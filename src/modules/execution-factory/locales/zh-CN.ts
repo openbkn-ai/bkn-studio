@@ -7,12 +7,12 @@
 
 export const executionFactoryZhCN = {
   executionFactory: {
-    unitManagementTitle: "执行单元管理",
+    unitManagementTitle: "能力管理",
     unitManagementDescription:
       "在本业务域注册和管理 MCP、工具箱、算子与 Skill，供智能体调用。",
-    catalogTitle: "全部执行单元",
+    catalogTitle: "能力市场",
     catalogDescription:
-      "浏览其他业务域已发布的能力包：工具集、MCP 服务与 Skill 包。布局与「执行能力管理」一致；可将资源引入本域，或同步已引入副本的最新版本。",
+      "浏览其他业务域已发布的能力包：工具集、MCP 服务与 Skill 包。布局与「能力管理」一致；可将资源引入本域，或同步已引入副本的最新版本。",
     searchNamePlaceholder: "搜索名称",
     typeFilter: "类型",
     originFilter: "来源",
@@ -41,7 +41,7 @@ export const executionFactoryZhCN = {
       operator: "算子开发",
       skill: "Skill 包",
     },
-    capabilityManagementTitle: "执行能力管理",
+    capabilityManagementTitle: "能力管理",
     capabilityManagementDescription:
       "为智能体配置可调用的能力：工具集接入 HTTP 接口，MCP 服务连接外部协议工具，Skill 包导入可复用技能。配置并发布后，即可在对话与流程编排中被调用。",
     capabilityToolbarHint:
@@ -177,7 +177,7 @@ export const executionFactoryZhCN = {
     toolbarHint:
       "管理本业务域已注册的执行资源，可创建、发布、调试与导入导出。",
     catalogToolbarHint:
-      "与执行能力管理相同的列表视图；数据来自市场目录。可按分类筛选，已引入本域的会标记「已在本业务域」，可引入或同步最新版本。",
+      "与能力管理相同的列表视图；数据来自市场目录。可按分类筛选，已引入本域的会标记「已在本业务域」，可引入或同步最新版本。",
     empty: "暂无执行单元",
     emptyDescription: "当前还没有可展示的执行算子。",
     catalogEmpty: "暂无市场执行单元",
@@ -441,7 +441,7 @@ export const executionFactoryZhCN = {
     marketIntroducedTag: "已在本业务域",
     introduceTitle: "引入到本业务域",
     introduceDescription:
-      "将市场中的「{{name}}」引入到当前业务域。引入后可在「执行单元管理」中查看和使用。",
+      "将市场中的「{{name}}」引入到当前业务域。引入后可在「能力管理」中查看和使用。",
     introduceConfirm: "确认引入",
     introduceSuccess: "引入成功",
     syncTitle: "从市场同步",
@@ -461,7 +461,7 @@ export const executionFactoryZhCN = {
     installError: {
       generic: "操作失败，请稍后重试或联系管理员。",
       alreadyExistsHint:
-        "该资源已在当前业务域中。请改用「同步」，或前往「执行单元管理」直接使用。",
+        "该资源已在当前业务域中。请改用「同步」，或前往「能力管理」直接使用。",
       alreadyExists: {
         toolbox: "该工具箱已在当前业务域中，无法再次以「新建」方式引入。",
         operator: "该算子已在当前业务域中，无法再次以「新建」方式引入。",
@@ -721,7 +721,10 @@ export const executionFactoryZhCN = {
     submitErrorTitle: "保存失败",
     installedStateSyncFailed: "安装状态同步失败，已安装标记可能不准确。",
     loadMoreFailed: "加载更多失败，请重试。",
-    routeMigrated: "页面地址已更新，已为您跳转到新的执行单元管理入口。",
+    routeMigrated: "页面地址已更新，已为您跳转到新的能力管理入口。",
+    sandboxRuntimeTitle: "沙箱运行时管理",
+    sandboxRuntimeDescription:
+      "查看可调用能力使用的沙箱健康状态、会话池压力、依赖安装与任务会话。",
     navExecutionUnitManagementTooltip: "管理本业务域内的算子、工具箱、MCP 与 Skill。",
     navAllExecutionUnitsTooltip: "浏览市场目录并将资源引入到本业务域。",
   },

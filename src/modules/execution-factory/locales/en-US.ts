@@ -7,12 +7,12 @@
 
 export const executionFactoryEnUS = {
   executionFactory: {
-    unitManagementTitle: "Execution Unit Management",
+    unitManagementTitle: "Capability Management",
     unitManagementDescription:
       "Register and manage MCP servers, toolboxes, operators, and skills in your business domain for agent execution.",
-    catalogTitle: "All Execution Units",
+    catalogTitle: "Capability Market",
     catalogDescription:
-      "Browse capability packs published by other domains: toolsets, MCP services, and skill packs. The layout matches Execution Capabilities; introduce into your domain or sync updates for copies you already have.",
+      "Browse capability packs published by other domains: toolsets, MCP services, and skill packs. The layout matches Capability Management; introduce into your domain or sync updates for copies you already have.",
     searchNamePlaceholder: "Search name",
     typeFilter: "Type",
     originFilter: "Origin",
@@ -41,7 +41,7 @@ export const executionFactoryEnUS = {
       operator: "Operator Dev",
       skill: "Skill Packs",
     },
-    capabilityManagementTitle: "Execution Capabilities",
+    capabilityManagementTitle: "Capability Management",
     capabilityManagementDescription:
       "Configure what agents can call: HTTP APIs in toolsets, external tools via MCP services, and reusable skills in skill packs. After you configure and publish, they are available in chat and flows.",
     capabilityToolbarHint:
@@ -180,7 +180,7 @@ export const executionFactoryEnUS = {
     toolbarHint:
       "Manage execution resources in your business domain—create, publish, debug, import, and export.",
     catalogToolbarHint:
-      "Same list view as Execution Capabilities; data comes from the market catalog. Filter by category; items already in your domain are marked so you can introduce or sync.",
+      "Same list view as Capability Management; data comes from the market catalog. Filter by category; items already in your domain are marked so you can introduce or sync.",
     empty: "No execution units",
     emptyDescription: "There are no execution operators to display yet.",
     catalogEmpty: "No market execution units",
@@ -445,7 +445,7 @@ export const executionFactoryEnUS = {
     marketIntroducedTag: "In your domain",
     introduceTitle: "Introduce to Domain",
     introduceDescription:
-      'Introduce "{{name}}" from the market into your current business domain. You can manage and use it under Execution Units afterward.',
+      'Introduce "{{name}}" from the market into your current business domain. You can manage and use it under Capability Management afterward.',
     introduceConfirm: "Introduce",
     introduceSuccess: "Introduced successfully",
     syncTitle: "Sync from Market",
@@ -465,7 +465,7 @@ export const executionFactoryEnUS = {
     installError: {
       generic: "Operation failed. Please try again or contact your administrator.",
       alreadyExistsHint:
-        "This resource is already in your domain. Choose Sync, or open Execution Units to use it directly.",
+        "This resource is already in your domain. Choose Sync, or open Capability Management to use it directly.",
       alreadyExists: {
         toolbox:
           "This toolbox is already in your domain and cannot be introduced again as new.",
@@ -730,7 +730,10 @@ export const executionFactoryEnUS = {
     submitErrorTitle: "Save failed",
     installedStateSyncFailed: "Failed to sync installed state. Installed tags may be inaccurate.",
     loadMoreFailed: "Failed to load more items. Please retry.",
-    routeMigrated: "This page has moved. You were redirected to the new execution unit hub.",
+    routeMigrated: "This page has moved. You were redirected to the new capability management hub.",
+    sandboxRuntimeTitle: "Sandbox Runtime Management",
+    sandboxRuntimeDescription:
+      "Observe sandbox health, session pool pressure, dependency installation, and task sessions used by callable capabilities.",
     navExecutionUnitManagementTooltip: "Manage operators, toolboxes, MCP servers, and skills in your domain.",
     navAllExecutionUnitsTooltip: "Browse the market catalog and introduce resources into your domain.",
   },
