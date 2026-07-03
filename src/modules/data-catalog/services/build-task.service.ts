@@ -221,6 +221,7 @@ export async function listBuildTasks(
         resource_id: query.resourceId || undefined,
         catalog_id: query.catalogId || undefined,
       },
+      skipErrorToast: query.silent,
     },
   );
 

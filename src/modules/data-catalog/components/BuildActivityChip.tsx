@@ -24,7 +24,7 @@ export function BuildActivityChip() {
 
   const refresh = useCallback(async () => {
     try {
-      const tasks = await listBuildTasks({ statuses: ["pending", "running"] });
+      const tasks = await listBuildTasks({ silent: true, statuses: ["pending", "running"] });
       setCount(tasks.filter((task) => task.mode === "batch").length);
     } catch {
       setCount(0);

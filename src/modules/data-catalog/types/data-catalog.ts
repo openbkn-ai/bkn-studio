@@ -102,6 +102,7 @@ export type BuildTask = {
 export type BuildTaskListQuery = {
   catalogId?: string;
   resourceId?: string;
+  silent?: boolean;
   statuses?: BuildTaskStatus[];
 };
 
