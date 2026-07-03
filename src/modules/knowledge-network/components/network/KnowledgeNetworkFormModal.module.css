@@ -1,3 +1,46 @@
+.businessModal :global(.ant-modal-content) {
+  border-radius: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.businessModal :global(.ant-modal-header) {
+  margin: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5eaf2;
+  border-radius: 0;
+}
+
+.businessModal :global(.ant-modal-title) {
+  color: #111827;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.businessModal :global(.ant-modal-body) {
+  padding: 18px 20px 4px;
+}
+
+.businessModal :global(.ant-modal-footer) {
+  margin-top: 0;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #e5eaf2;
+}
+
+.businessModal :global(.ant-btn),
+.businessModal :global(.ant-input),
+.businessModal :global(.ant-input-affix-wrapper),
+.businessModal :global(.ant-input-number),
+.businessModal :global(.ant-select-selector),
+.businessModal :global(.ant-picker),
+.businessModal :global(.ant-tag) {
+  border-radius: 0 !important;
+}
+
+.businessModal :global(.ant-input-textarea-show-count::after) {
+  margin-bottom: 0;
+}
+
 .form {
   display: grid;
   gap: 0;

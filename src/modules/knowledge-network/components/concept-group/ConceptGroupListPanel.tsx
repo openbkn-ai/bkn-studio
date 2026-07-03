@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import {
   getKnowledgeNetworkConceptGroup,
@@ -153,6 +154,7 @@ export function ConceptGroupListPanel({
               name: records[0]?.name ?? "",
             }),
       cancelText: t("common.cancel"),
+      className: modalStyles.businessModal,
       okButtonProps: { danger: true },
       okText: t("common.delete"),
       onOk: async () => {
@@ -220,7 +222,7 @@ export function ConceptGroupListPanel({
         >
           <span
             className={styles.objectIconSquare}
-            style={{ backgroundColor: record.color ?? "#1677ff" }}
+            style={{ color: record.color ?? "#1677ff" }}
           >
             <AppstoreOutlined />
           </span>
@@ -255,6 +257,7 @@ export function ConceptGroupListPanel({
                 handleOperate(String(key), record);
               },
             }}
+            overlayClassName={styles.dropdownMenu}
             trigger={["click"]}
           >
             <AppButton
@@ -331,7 +334,7 @@ export function ConceptGroupListPanel({
   };
 
   return (
-    <section className={styles.page}>
+    <section className={`${styles.page} ${styles.objectTypePage} ${styles.conceptGroupPage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.conceptGroupsTitle")}</h2>
 
       <div className={styles.toolbar}>

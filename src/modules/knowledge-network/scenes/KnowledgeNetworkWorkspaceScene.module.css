@@ -45,10 +45,11 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border-radius: 7px;
-  color: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 0;
+  background: #f3f6fa;
   display: inline-flex;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 /* 标题对齐其它模块页头（model-resources 22/700、data-catalog 21/700） */
@@ -247,31 +248,35 @@
   gap: 10px;
 }
 
+.overviewHeaderTitleRight :global(.ant-btn) {
+  border-radius: 0;
+}
+
 .overviewHeaderIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 18px;
+  border: 1px solid #e8edf3;
+  border-radius: 0;
+  background: #f3f6fa;
+  font-size: 15px;
 }
 
 .overviewHeaderName {
   color: #1f2329;
   font-size: 18px;
-  font-weight: 400;
+  font-weight: 600;
   line-height: 1;
 }
 
 .overviewHeaderComment {
   width: 100%;
-  padding: 20px 0;
-  line-height: 1;
-  color: rgba(0, 0, 0, 0.45);
+  padding: 16px 0;
+  line-height: 1.6;
+  color: #4b5563;
   border-bottom: 1px solid #e8edf3;
-  opacity: 0.45;
 }
 
 .overviewHeaderFooter {
@@ -310,6 +315,11 @@
   background: #fff;
   border: 1px solid #d9e0ea;
   border-radius: 0;
+}
+
+.overviewStatCard:hover {
+  border-color: #bfd2ff;
+  background: #f8fbff;
 }
 
 .overviewStatDefinition {
@@ -368,6 +378,7 @@
 .overviewStatAction:global(.ant-btn) {
   width: 100%;
   height: 36px;
+  border-radius: 0;
   justify-content: flex-start;
 }
 
@@ -382,59 +393,29 @@
   gap: 8px;
   height: 32px;
   padding: 0 18px;
-  border: none;
-  border-radius: 16px;
-  background: linear-gradient(110deg, #7c3aed 0%, #2e68ff 55%, #22d3ee 100%);
-  background-size: 200% 100%;
+  border: 1px solid #1e3a8a;
+  border-radius: 0;
+  background: #1e3a8a;
   color: #ffffff;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(80, 70, 229, 0.3);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background-position 0.6s ease;
+  box-shadow: none;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
 .experienceButton :global(.anticon) {
   font-size: 15px;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6));
-}
-
-.experienceButton::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -120%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(
-    100deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.55) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  transform: skewX(-18deg);
-  animation: knExperienceShimmer 3.2s ease-in-out infinite;
 }
 
 .experienceButton:hover {
-  background-position: 100% 0;
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(80, 70, 229, 0.4);
+  border-color: #17306f;
+  background: #17306f;
 }
 
 .experienceButton:active {
-  transform: translateY(0);
-}
-
-@keyframes knExperienceShimmer {
-  0% {
-    left: -120%;
-  }
-  55%,
-  100% {
-    left: 140%;
-  }
+  background: #0f2a4a;
 }
 
 .overviewContentCard {
@@ -482,7 +463,7 @@
 }
 
 .overviewContentCard :global(.ant-table-thead > tr > th) {
-  background: #fff;
+  background: #f3f6fa;
   color: #1f2329;
   font-size: 14px;
   font-weight: 600;
@@ -493,6 +474,13 @@
   font-size: 14px;
   padding-top: 14px;
   padding-bottom: 14px;
+}
+
+.overviewContentCard :global(.ant-table-container),
+.overviewContentCard :global(.ant-table),
+.overviewContentCard :global(.ant-table-thead > tr > th),
+.overviewContentCard :global(.ant-tag) {
+  border-radius: 0 !important;
 }
 
 .tableEmptyState {

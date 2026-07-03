@@ -24,6 +24,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import type {
@@ -170,6 +171,7 @@ export function ActionTypeListPanel({
               name: records[0]?.name ?? "",
             }),
       cancelText: t("common.cancel"),
+      className: modalStyles.businessModal,
       okButtonProps: { danger: true },
       okText: t("common.delete"),
       onOk: async () => {
@@ -252,6 +254,7 @@ export function ActionTypeListPanel({
                 handleOperate(String(key), record);
               },
             }}
+            overlayClassName={styles.dropdownMenu}
             trigger={["click"]}
           >
             <AppButton
@@ -342,7 +345,7 @@ export function ActionTypeListPanel({
   };
 
   return (
-    <section className={styles.page}>
+    <section className={`${styles.page} ${styles.objectTypePage} ${styles.actionTypePage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.actionTypesTitle")}</h2>
 
       <div className={styles.toolbar}>

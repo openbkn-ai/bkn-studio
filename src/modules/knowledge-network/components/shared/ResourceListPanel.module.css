@@ -345,3 +345,176 @@
   background: rgba(0, 0, 0, 0.04);
   color: rgba(0, 0, 0, 0.65);
 }
+
+.objectTypePage {
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+}
+
+.objectTypePage .title {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.objectTypePage .toolbar {
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d9e0ea;
+}
+
+.objectTypePage .toolbarButton,
+.objectTypePage .toolbarButton:global(.ant-btn),
+.objectTypePage .searchInput :global(.ant-input-affix-wrapper),
+.objectTypePage .filterSelect :global(.ant-select-selector),
+.objectTypePage .iconButton {
+  border-radius: 0 !important;
+}
+
+.objectTypePage .toolbarButton:global(.ant-btn) {
+  box-shadow: none;
+}
+
+.objectTypePage .iconButton:hover {
+  background: #f3f6fa;
+}
+
+.objectTypePage .tableCard {
+  overflow: hidden;
+  border-color: #d9e0ea;
+  border-radius: 0;
+}
+
+.objectTypePage .tableCard :global(.ant-table),
+.objectTypePage .tableCard :global(.ant-table-container),
+.objectTypePage .tableCard :global(.ant-table-content),
+.objectTypePage .tableCard :global(.ant-table-thead > tr > th),
+.objectTypePage .tableCard :global(.ant-table-cell),
+.objectTypePage .tableCard :global(.ant-checkbox-inner),
+.objectTypePage .tableCard :global(.ant-btn),
+.objectTypePage .tableCard :global(.ant-tag) {
+  border-radius: 0 !important;
+}
+
+.objectTypePage .tableCard :global(.ant-table-thead > tr > th) {
+  background: #f3f6fa;
+  border-bottom: 1px solid #d9e0ea;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.objectTypePage .tableCard :global(.ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #e5eaf2;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 400;
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+
+.objectTypePage .tableCard :global(.ant-table-tbody > tr:hover > td) {
+  background: #f8fbff;
+}
+
+.objectTypePage .objectTitleBox {
+  gap: 10px;
+}
+
+.objectTypePage .objectIconSquare {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e8edf3;
+  border-radius: 0;
+  background: #f3f6fa !important;
+  color: #1d4ed8;
+  font-size: 14px;
+}
+
+.objectTypePage .objectName {
+  color: #111827;
+  font-weight: 500;
+}
+
+.objectTypePage .tableTags :global(.ant-tag) {
+  margin-inline-end: 0;
+  border-color: #bfd2ff;
+  background: #f8fbff;
+  color: #1d4ed8;
+}
+
+.objectTypePage .paginationBar {
+  flex-shrink: 0;
+  padding-top: 0;
+}
+
+.objectTypePage .paginationBar :global(.ant-pagination) {
+  align-items: center;
+  gap: 6px;
+}
+
+.objectTypePage .paginationBar :global(.ant-pagination-item),
+.objectTypePage .paginationBar :global(.ant-pagination-prev .ant-pagination-item-link),
+.objectTypePage .paginationBar :global(.ant-pagination-next .ant-pagination-item-link),
+.objectTypePage .paginationBar :global(.ant-select-selector) {
+  border-radius: 0 !important;
+}
+
+.objectTypePage .integratedFilterBar {
+  border-bottom-color: #d9e0ea;
+  background: #fff;
+}
+
+.objectTypePage .integratedFilterSearchInput:global(.ant-input-affix-wrapper),
+.objectTypePage .integratedFilterSelect :global(.ant-select-selector),
+.objectTypePage .integratedFilterClear {
+  border-radius: 0 !important;
+}
+
+.objectTypePage .integratedFilterClear:hover {
+  background: #f3f6fa;
+}
+
+.relationTypePage .objectIconSquare {
+  color: #08979c;
+}
+
+.actionTypePage .objectIconSquare {
+  color: #90c06b;
+}
+
+.metricPage .objectIconSquare {
+  color: #1d4ed8;
+}
+
+.metricPage .noticeBanner {
+  border-radius: 0;
+}
+
+.metricPage .noticeBanner :global(.ant-alert) {
+  border-radius: 0;
+}
+
+.metricPage .tableCard {
+  display: flex;
+  flex-direction: column;
+}
+
+.metricPage .tableCard > .paginationBar {
+  padding: 12px 16px;
+  border-top: 1px solid #e5eaf2;
+}
+
+.conceptGroupPage .objectSubName {
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.dropdownMenu :global(.ant-dropdown-menu) {
+  border-radius: 0;
+}
+
+.dropdownMenu :global(.ant-dropdown-menu-item) {
+  border-radius: 0;
+}

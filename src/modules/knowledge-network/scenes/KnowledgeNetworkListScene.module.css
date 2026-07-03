@@ -51,11 +51,12 @@
 .toolbarButton {
   height: 32px;
   padding-inline: 15px;
-  border-radius: 6px;
+  border-radius: 0;
 }
 
 .toolbarButton:global(.ant-btn) {
   height: 32px;
+  border-radius: 0;
 }
 
 .searchInput {
@@ -66,7 +67,7 @@
 .searchInput :global(.ant-input-affix-wrapper) {
   height: 32px;
   padding-inline: 11px;
-  border-radius: 6px;
+  border-radius: 0;
 }
 
 .searchInput :global(.ant-input) {
@@ -104,7 +105,7 @@
 
 .filterSelect :global(.ant-select-selector) {
   height: 32px !important;
-  border-radius: 6px !important;
+  border-radius: 0 !important;
 }
 
 .filterSelect :global(.ant-select-selection-wrap) {
@@ -125,7 +126,7 @@
   height: 32px;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
   color: rgba(0, 0, 0, 0.5);
   cursor: pointer;
@@ -170,7 +171,7 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
+  gap: 12px;
   align-content: start;
   padding-right: 4px;
 }
@@ -193,4 +194,11 @@
 .paginationBar :global(.ant-pagination) {
   align-items: center;
   gap: 6px;
+}
+
+.paginationBar :global(.ant-pagination-item),
+.paginationBar :global(.ant-pagination-prev .ant-pagination-item-link),
+.paginationBar :global(.ant-pagination-next .ant-pagination-item-link),
+.paginationBar :global(.ant-select-selector) {
+  border-radius: 0 !important;
 }

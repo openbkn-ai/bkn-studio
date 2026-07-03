@@ -161,6 +161,7 @@ export function KnowledgeNetworkFormModal({
         });
       }}
       open={open}
+      rootClassName={styles.businessModal}
       title={
         mode === "create"
           ? t("knowledgeNetwork.createTitle")

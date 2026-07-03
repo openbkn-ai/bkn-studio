@@ -37,8 +37,12 @@ import type {
   KnowledgeNetworkMutationPayload,
   KnowledgeNetworkRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 
 import styles from "./KnowledgeNetworkListScene.module.css";
+
+const CARD_GRID_PAGE_SIZE = 12;
+const CARD_GRID_PAGE_SIZE_OPTIONS = ["12", "24", "36"];
 
 export function KnowledgeNetworkListScene({
   onOpenWorkspace,
@@ -47,7 +51,7 @@ export function KnowledgeNetworkListScene({
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
   const { pageState, query, setKeyword, setPagination } = usePageState({
-    pageSize: 20,
+    pageSize: CARD_GRID_PAGE_SIZE,
   });
   const [items, setItems] = useState<KnowledgeNetworkRecord[]>([]);
   const [total, setTotal] = useState(0);
@@ -306,6 +310,7 @@ export function KnowledgeNetworkListScene({
                         content: t("knowledgeNetwork.deleteDescription", {
                           name: nextRecord.name,
                         }),
+                        className: modalStyles.businessModal,
                         okButtonProps: { danger: true },
                         okText: t("common.delete"),
                         cancelText: t("common.cancel"),
@@ -337,7 +342,7 @@ export function KnowledgeNetworkListScene({
               current={pageState.page}
               onChange={(page, pageSize) => setPagination(page, pageSize)}
               pageSize={pageState.pageSize}
-              pageSizeOptions={["20", "50", "100"]}
+              pageSizeOptions={CARD_GRID_PAGE_SIZE_OPTIONS}
               showSizeChanger
               showTotal={(nextTotal) => t("common.total", { total: nextTotal })}
               total={total}

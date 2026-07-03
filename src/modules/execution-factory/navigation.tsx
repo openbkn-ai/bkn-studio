@@ -8,7 +8,7 @@
 import {
   AppstoreOutlined,
   CloudServerOutlined,
-  DeploymentUnitOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
@@ -19,7 +19,7 @@ export const executionFactoryNavigation: ConsoleNavContribution = {
     {
       key: "execution-unit-management",
       labelKey: "shell.items.executionUnitManagement",
-      icon: <DeploymentUnitOutlined />,
+      icon: <ToolOutlined />,
       path: "/execution-factory/units",
     },
     {

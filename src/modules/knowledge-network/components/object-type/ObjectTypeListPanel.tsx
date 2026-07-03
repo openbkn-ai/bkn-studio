@@ -23,6 +23,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import type {
   KnowledgeNetworkImportMode,
   KnowledgeNetworkObjectTypeRecord,
@@ -136,6 +137,7 @@ export function ObjectTypeListPanel({
               name: records[0]?.name ?? "",
             }),
       cancelText: t("common.cancel"),
+      className: modalStyles.businessModal,
       okButtonProps: { danger: true },
       okText: t("common.delete"),
       onOk: async () => {
@@ -224,6 +226,7 @@ export function ObjectTypeListPanel({
                 handleOperate(String(key), record);
               },
             }}
+            overlayClassName={styles.dropdownMenu}
             trigger={["click"]}
           >
             <AppButton
@@ -310,7 +313,7 @@ export function ObjectTypeListPanel({
   };
 
   return (
-    <section className={styles.page}>
+    <section className={`${styles.page} ${styles.objectTypePage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.objectTypesTitle")}</h2>
 
       <div className={styles.toolbar}>

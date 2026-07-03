@@ -9,6 +9,7 @@ import {
   ApiOutlined,
   ClockCircleOutlined,
   DatabaseOutlined,
+  DeploymentUnitOutlined,
   EditOutlined,
   KeyOutlined,
   ThunderboltFilled,
@@ -121,9 +122,9 @@ export function WorkspaceOverviewSection({
           <div className={styles.overviewHeaderTitleLeft}>
             <span
               className={styles.overviewHeaderIcon}
-              style={{ backgroundColor: detail?.color ?? "#126ee3" }}
+              style={{ color: detail?.color ?? "#126ee3" }}
             >
-              {renderResourceIcon(detail?.icon)}
+              <DeploymentUnitOutlined />
             </span>
             <div className={styles.overviewHeaderName}>{detail?.name}</div>
           </div>

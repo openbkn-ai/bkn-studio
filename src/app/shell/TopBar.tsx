@@ -6,9 +6,7 @@
  */
 
 import {
-  DesktopOutlined,
   LogoutOutlined,
-  ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { Dropdown } from "antd";
@@ -29,20 +27,10 @@ export function TopBar() {
   const runtimeConfig = useRuntimeConfig();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const rawTrail = getConsoleNavTrail(routeHandle?.console?.menuKey);
-  const trail = [
-    ...(routeHandle?.console?.menuKey === "domain-knowledge-network"
-      ? [
-          {
-            label: t("shell.items.globalBusinessKnowledgeNetwork"),
-            path: undefined,
-          },
-        ]
-      : []),
-    ...rawTrail.map((item) => ({
-      label: t(item.labelKey),
-      path: item.path,
-    })),
-  ];
+  const trail = rawTrail.map((item) => ({
+    label: t(item.labelKey),
+    path: item.path,
+  }));
 
   return (
     <header className="console-topbar">
@@ -80,18 +68,6 @@ export function TopBar() {
 
       <div className="console-topbar-actions">
         <BuildActivityChip />
-        <div className="console-topbar-chip">
-          <DesktopOutlined />
-          <span>{t("shell.workspace")}</span>
-        </div>
-        <div className="console-topbar-chip console-topbar-chip-accent">
-          <ThunderboltOutlined />
-          <span>
-            {runtimeConfig.mode === "standalone"
-              ? t("shell.modeStandalone")
-              : t("shell.modeHosted")}
-          </span>
-        </div>
         <Dropdown
           menu={{
             items: [

@@ -22,6 +22,8 @@ import {
   stringFromUnknown,
 } from "@/modules/knowledge-network/services/shared/runtime";
 
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+
 type KnowledgeNetworkImportButtonProps = {
   className?: string;
   onImported: () => void | Promise<void>;
@@ -56,6 +58,7 @@ export function KnowledgeNetworkImportButton({
     } catch (error) {
       if (error instanceof KnowledgeNetworkImportConflictError) {
         const modalContext = modal.info({
+          className: modalStyles.businessModal,
           title: t("knowledgeNetwork.importConflictTitle"),
           content: (
             <div>
@@ -163,6 +166,7 @@ export function KnowledgeNetworkImportButton({
           });
         }}
         open={renameOpen}
+        rootClassName={modalStyles.businessModal}
         title={t("knowledgeNetwork.importTitle")}
       >
         <Form form={form} layout="vertical">

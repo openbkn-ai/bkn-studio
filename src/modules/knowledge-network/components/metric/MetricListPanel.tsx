@@ -14,7 +14,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Empty, Input, Pagination, Select, Table } from "antd";
+import { Alert, Dropdown, Empty, Input, Pagination, Select, Table, Tag } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import {
   deleteKnowledgeNetworkMetrics,
   listKnowledgeNetworkMetrics,
@@ -135,6 +136,7 @@ export function MetricListPanel({
 
     void modal.confirm({
       cancelText: t("common.cancel"),
+      className: modalStyles.businessModal,
       content:
         records.length === 1
           ? t("knowledgeNetwork.metricDeleteDescription", { name: records[0].name })
@@ -217,6 +219,7 @@ export function MetricListPanel({
                 handleOperate(String(key), record);
               },
             }}
+            overlayClassName={styles.dropdownMenu}
             trigger={["click"]}
           >
             <AppButton
@@ -248,7 +251,16 @@ export function MetricListPanel({
       key: "tags",
       title: t("common.tag"),
       width: 160,
-      render: (tags: string[]) => (tags.length > 0 ? tags.join(", ") : "--"),
+      render: (tags: string[]) =>
+        tags.length > 0 ? (
+          <div className={styles.tableTags}>
+            {tags.map((tag) => (
+              <Tag key={tag}>{tag}</Tag>
+            ))}
+          </div>
+        ) : (
+          "--"
+        ),
     },
     {
       dataIndex: "updaterName",
@@ -332,7 +344,7 @@ export function MetricListPanel({
     );
 
   return (
-    <section className={styles.page}>
+    <section className={`${styles.page} ${styles.objectTypePage} ${styles.metricPage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.metricsTitle")}</h2>
       {unsupported ? (
         <Alert

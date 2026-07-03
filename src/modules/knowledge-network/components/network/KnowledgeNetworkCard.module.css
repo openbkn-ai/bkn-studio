@@ -2,7 +2,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 132px;
+  min-height: 120px;
   overflow: hidden;
   cursor: pointer;
   background: #fff;
@@ -18,17 +18,12 @@
   background: #f7faff;
 }
 
-.accent {
-  height: 4px;
-  width: 100%;
-}
-
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 16px 0;
+  padding: 12px 14px 0;
 }
 
 .titleRow {
@@ -43,11 +38,12 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e8edf3;
   border-radius: 0;
-  color: #fff;
-  font-size: 16px;
+  background: #f3f6fa;
+  font-size: 15px;
   font-weight: 500;
 }
 
@@ -62,7 +58,7 @@
   overflow: hidden;
   color: #111827;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 22px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -71,7 +67,7 @@
 .slug {
   overflow: hidden;
   color: #6b7280;
-  font-size: 14px;
+  font-size: 13px;
   font-family: var(--code-font, monospace);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -79,13 +75,13 @@
 
 .description {
   display: -webkit-box;
-  max-height: 40px;
-  min-height: 40px;
-  margin-top: 6px;
+  max-height: 38px;
+  min-height: 38px;
+  margin-top: 4px;
   overflow: hidden;
   color: #4b5563;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 13px;
+  line-height: 19px;
   text-overflow: ellipsis;
   line-clamp: 2;
   -webkit-line-clamp: 2;
@@ -102,7 +98,7 @@
   height: 26px;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
   color: rgba(0, 0, 0, 0.45);
   cursor: pointer;
@@ -113,15 +109,23 @@
   background: rgba(46, 104, 255, 0.08);
 }
 
+.cardMenu :global(.ant-dropdown-menu) {
+  border-radius: 0;
+}
+
+.cardMenu :global(.ant-dropdown-menu-item) {
+  border-radius: 0;
+}
+
 .footer {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin: auto 16px 16px;
-  padding-top: 12px;
+  margin: auto 14px 12px;
+  padding-top: 9px;
   color: #6b7280;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 13px;
+  line-height: 19px;
   border-top: 1px solid #e8edf3;
 }
 

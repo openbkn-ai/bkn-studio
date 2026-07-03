@@ -7,7 +7,7 @@
 
 export const appZhCN = {
   app: {
-    title: "BKN Studio",
+    title: "OpenBKN",
     subtitle: "BKN 平台统一前端项目",
   },
 } as const;

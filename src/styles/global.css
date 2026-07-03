@@ -75,6 +75,9 @@ select {
 }
 
 .console-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -255,8 +258,12 @@ select {
 }
 
 .console-sidenav {
+  position: sticky;
+  top: 72px;
+  align-self: start;
   display: flex;
   flex-direction: column;
+  height: calc(100vh - 72px);
   border-right: 1px solid var(--color-border);
   background: var(--color-bg-sidebar);
   box-shadow: 4px 0 20px rgba(15, 23, 42, 0.03);
@@ -270,7 +277,7 @@ select {
   width: 40px;
   height: 40px;
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--color-bg-page);
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -306,7 +313,7 @@ select {
 .console-sidenav-footer {
   display: flex;
   justify-content: flex-end;
-  padding: 0 16px 16px;
+  padding: 12px 20px 16px;
   border-top: 1px solid var(--color-divider);
 }
 
@@ -347,7 +354,7 @@ select {
   min-height: 44px;
   padding: 0 14px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 0;
   background: transparent;
   color: var(--color-text-secondary);
   font-size: 14px;
@@ -369,19 +376,19 @@ select {
 }
 
 .console-sidenav-link.is-parent-active:not(.is-active) {
-  background: var(--color-primary-100);
+  background: transparent;
   color: var(--color-primary-700);
+  font-weight: 500;
 }
 
-.console-sidenav-link.is-active::before,
-.console-sidenav-link.is-parent-active::before {
+.console-sidenav-link.is-active::before {
   content: "";
   position: absolute;
-  left: 6px;
-  top: 10px;
-  bottom: 10px;
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: 3px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-primary-600);
 }
 
@@ -394,7 +401,7 @@ select {
   margin-left: 8px;
   width: calc(100% - 8px);
   min-height: 42px;
-  border-radius: 12px;
+  border-radius: 0;
   font-size: 13px;
 }
 
@@ -837,6 +844,8 @@ select {
   }
 
   .console-sidenav {
+    position: static;
+    height: auto;
     border-right: 0;
     border-bottom: 1px solid rgba(22, 40, 73, 0.08);
   }

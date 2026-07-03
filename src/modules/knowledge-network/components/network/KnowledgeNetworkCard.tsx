@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { EllipsisOutlined } from "@ant-design/icons";
+import { DeploymentUnitOutlined, EllipsisOutlined } from "@ant-design/icons";
 import { Dropdown, Tooltip, type MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 
@@ -29,8 +29,6 @@ export function KnowledgeNetworkCard({
   record,
 }: KnowledgeNetworkCardProps) {
   const { t } = useTranslation();
-  const placeholderText =
-    (record.name || "?").trim().charAt(0).toUpperCase() || "?";
   const description = record.description || t("knowledgeNetwork.noDescription");
   const dropdownItems: MenuProps["items"] = [
     {
@@ -65,18 +63,13 @@ export function KnowledgeNetworkCard({
         }
       }}
     >
-      <span
-        className={styles.accent}
-        style={{ background: record.color || "#2e68ff" }}
-        aria-hidden
-      />
       <div className={styles.header}>
         <div className={styles.titleRow}>
           <span
             className={styles.iconBox}
-            style={{ backgroundColor: record.color || "#2e68ff" }}
+            style={{ color: record.color || "#1d4ed8" }}
           >
-            {placeholderText}
+            <DeploymentUnitOutlined />
           </span>
           <div className={styles.titleContent}>
             <div className={styles.titleText}>{record.name}</div>
@@ -110,6 +103,7 @@ export function KnowledgeNetworkCard({
               onOpen(record);
             },
           }}
+          overlayClassName={styles.cardMenu}
           trigger={["click"]}
         >
           <button

@@ -10,6 +10,7 @@ import {
   ApartmentOutlined,
   ClockCircleOutlined,
   DatabaseOutlined,
+  DeploymentUnitOutlined,
   FileTextOutlined,
   LeftOutlined,
   LineChartOutlined,
@@ -26,7 +27,6 @@ import type {
   KnowledgeNetworkWorkspaceSection,
 } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
-import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
 import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection";
@@ -227,9 +227,9 @@ export function KnowledgeNetworkWorkspaceScene({
         <div className={styles.workspaceIdentity}>
           <span
             className={styles.workspaceNameIcon}
-            style={{ backgroundColor: detail?.color ?? "#1677ff" }}
+            style={{ color: detail?.color ?? "#1677ff" }}
           >
-            {renderResourceIcon(detail?.icon)}
+            <DeploymentUnitOutlined />
           </span>
           <h4 className={styles.workspaceNameTitle}>
             {detail?.name ?? t("knowledgeNetwork.workspaceTitle")}
