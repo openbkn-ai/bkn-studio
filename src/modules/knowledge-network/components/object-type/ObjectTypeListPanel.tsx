@@ -165,13 +165,6 @@ export function ObjectTypeListPanel({
       return;
     }
 
-    if (key === "index") {
-      void navigate(
-        `/knowledge-network/workspace/${networkId}/object-types/${record.id}/index-settings`,
-      );
-      return;
-    }
-
     if (key === "delete") {
       confirmDelete([record]);
     }
@@ -213,7 +206,6 @@ export function ObjectTypeListPanel({
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
           { key: "edit", label: t("common.edit") },
-          { key: "index", label: t("knowledgeNetwork.objectTypeIndexSettingsEntry") },
           { key: "delete", danger: true, label: t("common.delete") },
         ];
 

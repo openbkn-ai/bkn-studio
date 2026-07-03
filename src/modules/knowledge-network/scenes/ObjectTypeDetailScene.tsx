@@ -8,7 +8,6 @@
 import {
   EditOutlined,
   EllipsisOutlined,
-  SettingOutlined,
 } from "@ant-design/icons";
 import { Alert, Dropdown, Empty, Input, Segmented, Spin, Table, Tag } from "antd";
 import type { MenuProps, TableProps } from "antd";
@@ -217,16 +216,6 @@ export function ObjectTypeDetailScene() {
           >
             {t("common.edit")}
           </AppButton>
-          <AppButton
-            icon={<SettingOutlined />}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/index-settings`,
-              );
-            }}
-          >
-            {t("knowledgeNetwork.objectTypeIndexSettingsEntry")}
-          </AppButton>
           <Dropdown
             menu={{
               items: menuItems,
@@ -322,7 +311,14 @@ export function ObjectTypeDetailScene() {
                   <Empty description={t("knowledgeNetwork.objectTypePropertyEmpty")} />
                 ),
               }}
-              pagination={false}
+              pagination={{
+                defaultPageSize: 10,
+                hideOnSinglePage: true,
+                pageSizeOptions: [10, 20, 50],
+                showQuickJumper: false,
+                showSizeChanger: true,
+                showTotal: (total) => `共 ${total} 条`,
+              }}
               rowKey="name"
               size="small"
             />
@@ -335,7 +331,14 @@ export function ObjectTypeDetailScene() {
                   <Empty description={t("knowledgeNetwork.objectTypeLogicPropertyEmpty")} />
                 ),
               }}
-              pagination={false}
+              pagination={{
+                defaultPageSize: 10,
+                hideOnSinglePage: true,
+                pageSizeOptions: [10, 20, 50],
+                showQuickJumper: false,
+                showSizeChanger: true,
+                showTotal: (total) => `共 ${total} 条`,
+              }}
               rowKey="name"
               size="small"
             />
