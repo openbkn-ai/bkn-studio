@@ -225,7 +225,7 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
       return;
     }
     const target = catalogs.find((item) => item.type !== "logical") ?? catalogs[0];
-    void navigate(`/data-catalog/catalog/${target.id}`, { replace: true });
+    void navigate(`/data-directory/catalog/${target.id}`, { replace: true });
   }, [catalogs, loading, navigate, selection]);
 
   const scanningCatalogIds = useMemo(() => {
@@ -317,7 +317,7 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
             action={
               <AppButton
                 onClick={() => {
-                  void navigate("/data-catalog");
+                  void navigate("/data-directory");
                 }}
               >
                 {t("dataCatalog.backToCatalog")}
@@ -358,7 +358,7 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
             await loadScans();
           }}
           onSelectResource={(resourceId) => {
-            void navigate(`/data-catalog/resource/${resourceId}`);
+            void navigate(`/data-directory/resource/${resourceId}`);
           }}
           resources={selectedCatalogResources}
           scanning={scanningCatalogIds.includes(selectedCatalog.id)}
@@ -387,10 +387,10 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
           }}
           onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
           onSelectCatalog={(catalogId) => {
-            void navigate(`/data-catalog/catalog/${catalogId}`);
+            void navigate(`/data-directory/catalog/${catalogId}`);
           }}
           onSelectResource={(resourceId) => {
-            void navigate(`/data-catalog/resource/${resourceId}`);
+            void navigate(`/data-directory/resource/${resourceId}`);
           }}
           resources={resources}
           scanningCatalogIds={scanningCatalogIds}
@@ -406,7 +406,7 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
         onClose={() => setResourceDrawer({ open: false })}
         onCreated={(resource) => {
           void loadAll();
-          void navigate(`/data-catalog/resource/${resource.id}`);
+          void navigate(`/data-directory/resource/${resource.id}`);
         }}
         open={resourceDrawer.open}
       />

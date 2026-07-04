@@ -126,7 +126,7 @@ export function ResourceDetailPanel({
         }
         message.success(t("common.success"));
         void navigate(
-          catalog ? `/data-catalog/catalog/${catalog.id}` : "/data-catalog",
+          catalog ? `/data-directory/catalog/${catalog.id}` : "/data-directory",
           { replace: true },
         );
         await onRefresh();
@@ -231,7 +231,7 @@ export function ResourceDetailPanel({
               <button
                 className={styles.backLink}
                 onClick={() => {
-                  void navigate(`/data-catalog/catalog/${catalog.id}`);
+                  void navigate(`/data-directory/catalog/${catalog.id}`);
                 }}
                 type="button"
               >
@@ -277,7 +277,7 @@ export function ResourceDetailPanel({
             <button
               className={styles.backLink}
               onClick={() => {
-                void navigate(`/data-catalog/catalog/${catalog.id}`);
+                void navigate(`/data-directory/catalog/${catalog.id}`);
               }}
               style={{ color: "#1f4fd4" }}
               type="button"

@@ -13,7 +13,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Empty, Input, Pagination, Select, Table } from "antd";
+import { Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TaskStateTag, getTaskStateLabel } from "@/modules/knowledge-network/components/task/TaskStateTag";
 import type {
   KnowledgeNetworkTaskJobType,
@@ -230,7 +231,7 @@ export function TaskListPanel({
           size="middle"
         />
         <div className={styles.paginationBar}>
-          <Pagination
+          <TablePaginationBar
             current={page}
             onChange={(nextPage, nextPageSize) => {
               setPage(nextPage);

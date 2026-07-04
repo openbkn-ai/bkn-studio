@@ -6,7 +6,7 @@
  */
 
 import { ApiOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Input, Select, Space, Tag } from "antd";
+import { Alert, Input, Select, Space } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +20,8 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { TableSurface } from "@/framework/ui/common/TableSurface";
 import {
   deleteDataConnectRecord,
   listDataConnectConnectorTypes,
@@ -27,10 +29,7 @@ import {
   setDataConnectRecordEnabled,
   testDataConnectRecord,
 } from "@/modules/data-connect/services/data-connect.service";
-import type {
-  DataConnectConnectorType,
-  DataConnectRecord,
-} from "@/modules/data-connect/types/data-connect";
+import type { DataConnectConnectorType, DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 import { DataConnectDetailDrawer } from "@/modules/data-connect/components/DataConnectDetailDrawer";
 import {
   DeleteImpactAlert,
@@ -42,14 +41,6 @@ import {
 } from "@/modules/data-catalog/utils/delete-guard";
 
 import styles from "./DataConnectListScene.module.css";
-
-const healthColorMap: Record<DataConnectRecord["healthStatus"], string> = {
-  healthy: styles.healthHealthy,
-  degraded: styles.healthDegraded,
-  unhealthy: styles.healthUnhealthy,
-  offline: styles.healthOffline,
-  unchecked: styles.healthUnchecked,
-};
 
 export function DataConnectListScene({
   defaultConnectorType,
@@ -93,14 +84,8 @@ export function DataConnectListScene({
   );
 
   const connectorTypeMap = useMemo(
-    () =>
-      new Map(
-        connectorTypes.map((item) => [
-          item.type,
-          `${item.name} (${t(`dataConnect.categories.${item.category}`)})`,
-        ]),
-      ),
-    [connectorTypes, t],
+    () => new Map(connectorTypes.map((item) => [item.type, item.name])),
+    [connectorTypes],
   );
 
   const loadConnectorTypes = async () => {
@@ -141,24 +126,12 @@ export function DataConnectListScene({
     {
       dataIndex: "name",
       title: t("dataConnect.name"),
-      render: (_, record) => (
-        <div className={styles.nameCell}>
-          <div className={styles.nameTitle}>{record.name}</div>
-          {record.description ? (
-            <span className={styles.descriptionText}>{record.description}</span>
-          ) : null}
-        </div>
-      ),
+      render: (_, record) => <span className={styles.nameTitle}>{record.name}</span>,
     },
     {
       dataIndex: "connectorType",
       title: t("dataConnect.connectorType"),
-      render: (value: string) => (
-        <span className={styles.connectorTypeCell}>
-          <Tag className={styles.connectorTypeTag}>{value}</Tag>
-          <span className={styles.connectorTypeName}>{connectorTypeMap.get(value) ?? value}</span>
-        </span>
-      ),
+      render: (value: string) => <span>{connectorTypeMap.get(value) ?? value}</span>,
     },
     {
       dataIndex: "mode",
@@ -168,22 +141,12 @@ export function DataConnectListScene({
     {
       dataIndex: "status",
       title: t("common.status"),
-      render: (_, record) => (
-        <Tag
-          className={[styles.statusTag, record.enabled ? styles.statusEnabled : styles.statusDisabled].join(" ")}
-        >
-          {record.enabled ? t("common.enabled") : t("common.disabled")}
-        </Tag>
-      ),
+      render: (_, record) => <span>{record.enabled ? t("common.enabled") : t("common.disabled")}</span>,
     },
     {
       dataIndex: "healthStatus",
       title: t("common.healthStatus"),
-      render: (value: DataConnectRecord["healthStatus"]) => (
-        <Tag className={[styles.statusTag, healthColorMap[value]].join(" ")}>
-          {t(`dataConnect.healthStatuses.${value}`)}
-        </Tag>
-      ),
+      render: (value: DataConnectRecord["healthStatus"]) => <span>{t(`dataConnect.healthStatuses.${value}`)}</span>,
     },
     {
       dataIndex: "updaterName",
@@ -406,7 +369,7 @@ export function DataConnectListScene({
             />
           </div>
         </div>
-        <div className={styles.tableSurface}>
+        <TableSurface className={styles.tableSurface}>
           {loadError ? (
             <Alert
               action={
@@ -445,16 +408,21 @@ export function DataConnectListScene({
               dataSource={items}
               loading={loading}
               locale={{ emptyText: t("dataConnect.empty") }}
-              pagination={{
-                current: pageState.page,
-                pageSize: pageState.pageSize,
-                total,
-                onChange: setPagination,
-              }}
+              pagination={false}
               rowKey="id"
             />
           )}
-        </div>
+        </TableSurface>
+        {total > 0 ? (
+          <TablePaginationBar
+            current={pageState.page}
+            onChange={setPagination}
+            pageSize={pageState.pageSize}
+            showSizeChanger
+            showTotal={(count) => t("common.total", { total: count })}
+            total={total}
+          />
+        ) : null}
       </section>
       {detailRecordId ? (
         <DataConnectDetailDrawer

@@ -12,29 +12,86 @@
 
 .title {
   margin: 0;
-  color: #1d2942;
-  font-size: 20px;
+  color: #172033;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .description {
-  margin: 8px 0 0;
-  color: #64748d;
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .summary {
   display: grid;
   gap: 4px;
-  min-width: 180px;
+  min-width: 220px;
   padding: 12px 14px;
-  border: 1px solid rgba(12, 83, 84, 0.1);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.7);
-  color: #51627d;
-  font-size: 13px;
+  border: 1px solid #d9e0ea;
+  background: #f8fafc;
+  color: #667085;
+  font-size: 12px;
 }
 
 .summary strong {
-  color: #1d2942;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sectionCard {
+  border: 1px solid #d9e0ea;
+  background: #fff;
+  padding: 16px;
+}
+
+.groupStack {
+  display: grid;
+  gap: 16px;
+}
+
+.innerSection {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e8edf3;
+}
+
+.innerSection:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.innerSectionTitle {
+  color: #172033;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e8edf3;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sectionHint {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.7;
 }
 
 .grid {
@@ -57,6 +114,7 @@
   }
 
   .summary {
+    min-width: 0;
     width: 100%;
   }
 

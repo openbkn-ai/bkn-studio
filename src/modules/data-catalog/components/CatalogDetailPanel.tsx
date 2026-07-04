@@ -258,7 +258,7 @@ export function CatalogDetailPanel({
             throw error;
           }
           message.success(t("common.success"));
-          void navigate("/data-catalog", { replace: true });
+          void navigate("/data-directory", { replace: true });
           await onRefresh();
         },
       });

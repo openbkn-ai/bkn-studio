@@ -20,12 +20,13 @@ import {
 } from "@ant-design/icons";
 import { Empty, Spin, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { OverviewOntologyBlock } from "@/modules/knowledge-network/components/preview/OverviewOntologyBlock";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
@@ -62,6 +63,8 @@ export function WorkspaceOverviewSection({
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [graphExpanded, setGraphExpanded] = useState(false);
   const [recentExpanded, setRecentExpanded] = useState(false);
+  const [recentPage, setRecentPage] = useState(1);
+  const [recentPageSize, setRecentPageSize] = useState(5);
 
   const recentObjectColumns = useMemo<ColumnsType<KnowledgeNetworkRecentObject>>(
     () => [
@@ -117,6 +120,15 @@ export function WorkspaceOverviewSection({
     ],
     [t],
   );
+
+  const pagedRecentObjects = useMemo(() => {
+    const start = (recentPage - 1) * recentPageSize;
+    return recentObjects.slice(start, start + recentPageSize);
+  }, [recentObjects, recentPage, recentPageSize]);
+
+  useEffect(() => {
+    setRecentPage(1);
+  }, [networkId]);
 
   return (
     <div className={styles.overviewBox}>
@@ -282,7 +294,7 @@ export function WorkspaceOverviewSection({
           <div className={styles.overviewContentBody}>
             <Table<KnowledgeNetworkRecentObject>
               columns={recentObjectColumns}
-              dataSource={recentObjects}
+              dataSource={pagedRecentObjects}
               loading={recentLoading}
               locale={{
                 emptyText: (
@@ -292,17 +304,26 @@ export function WorkspaceOverviewSection({
                   />
                 ),
               }}
-              pagination={{
-                defaultPageSize: 5,
-                hideOnSinglePage: true,
-                pageSizeOptions: [5, 10, 20],
-                showQuickJumper: false,
-                showSizeChanger: true,
-                showTotal: (total) => `共 ${total} 条`,
-              }}
+              pagination={false}
               rowKey="id"
               size="small"
             />
+            {recentObjects.length > 0 ? (
+              <div className={styles.paginationBar}>
+                <TablePaginationBar
+                  current={recentPage}
+                  onChange={(page, pageSize) => {
+                    setRecentPage(page);
+                    setRecentPageSize(pageSize);
+                  }}
+                  pageSize={recentPageSize}
+                  pageSizeOptions={[5, 10, 20]}
+                  showSizeChanger
+                  showTotal={(total) => t("common.total", { total })}
+                  total={recentObjects.length}
+                />
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

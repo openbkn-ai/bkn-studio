@@ -12,6 +12,7 @@ import type {
 } from "@/app/shell/navigation/types";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
+import { dataConnectNavigation } from "@/modules/data-connect/navigation";
 import { executionFactoryLabNavigation } from "@/modules/execution-factory-lab/navigation";
 import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
 import { knowledgeNetworkNavigation } from "@/modules/knowledge-network/navigation";
@@ -19,6 +20,7 @@ import { modelResourcesNavigation } from "@/modules/model-resources/navigation";
 
 const navigationContributions: ConsoleNavContribution[] = [
   knowledgeNetworkNavigation,
+  dataConnectNavigation,
   dataCatalogNavigation,
   executionFactoryNavigation,
   modelResourcesNavigation,

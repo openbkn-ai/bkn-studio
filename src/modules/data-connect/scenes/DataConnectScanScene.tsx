@@ -18,6 +18,8 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { TableSurface } from "@/framework/ui/common/TableSurface";
 import {
   listDataConnectRecords,
 } from "@/modules/data-connect/services/data-connect.service";
@@ -673,7 +675,7 @@ export function DataConnectScanScene({
             />
           </div>
         </div>
-        <div className={styles.panelSection}>
+        <TableSurface className={styles.panelSection}>
           <div className={styles.sectionHeader}>
             <div>
               <h3 className={styles.sectionTitle}>{t("dataConnect.scanScheduleTableTitle")}</h3>
@@ -727,20 +729,25 @@ export function DataConnectScanScene({
                   setTaskPage(1);
                 },
               })}
-              pagination={{
-                current: schedulePage,
-                pageSize: schedulePageSize,
-                total: scheduleTotal,
-                onChange: (page, pageSize) => {
-                  setSchedulePage(page);
-                  setSchedulePageSize(pageSize);
-                },
-              }}
+              pagination={false}
               rowKey="id"
             />
           )}
-        </div>
-        <div className={styles.panelSection}>
+        </TableSurface>
+        {scheduleTotal > 0 ? (
+          <TablePaginationBar
+            current={schedulePage}
+            onChange={(page, pageSize) => {
+              setSchedulePage(page);
+              setSchedulePageSize(pageSize);
+            }}
+            pageSize={schedulePageSize}
+            showSizeChanger
+            showTotal={(count) => t("common.total", { total: count })}
+            total={scheduleTotal}
+          />
+        ) : null}
+        <TableSurface className={styles.panelSection}>
           <div className={styles.sectionHeader}>
             <div>
               <h3 className={styles.sectionTitle}>{t("dataConnect.scanTaskTableTitle")}</h3>
@@ -792,19 +799,24 @@ export function DataConnectScanScene({
               columns={taskColumns}
               dataSource={tasks}
               loading={loadingTasks}
-              pagination={{
-                current: taskPage,
-                pageSize: taskPageSize,
-                total: taskTotal,
-                onChange: (page, pageSize) => {
-                  setTaskPage(page);
-                  setTaskPageSize(pageSize);
-                },
-              }}
+              pagination={false}
               rowKey="id"
             />
           )}
-        </div>
+        </TableSurface>
+        {taskTotal > 0 ? (
+          <TablePaginationBar
+            current={taskPage}
+            onChange={(page, pageSize) => {
+              setTaskPage(page);
+              setTaskPageSize(pageSize);
+            }}
+            pageSize={taskPageSize}
+            showSizeChanger
+            showTotal={(count) => t("common.total", { total: count })}
+            total={taskTotal}
+          />
+        ) : null}
       </section>
       {scheduleModalState ? (
         <ScanScheduleFormModal

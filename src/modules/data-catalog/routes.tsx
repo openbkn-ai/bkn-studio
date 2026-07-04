@@ -27,6 +27,39 @@ function withRouteLoading(element: ReactNode) {
 
 export const dataCatalogRoutes: RouteObject[] = [
   {
+    path: "data-directory",
+    handle: {
+      console: {
+        descriptionKey: "dataCatalog.description",
+        menuKey: "data-catalog",
+        titleKey: "dataCatalog.title",
+      },
+    },
+    element: withRouteLoading(<DataCatalogPage />),
+  },
+  {
+    path: "data-directory/catalog/:catalogId",
+    handle: {
+      console: {
+        descriptionKey: "dataCatalog.description",
+        menuKey: "data-catalog",
+        titleKey: "dataCatalog.catalogDetailTitle",
+      },
+    },
+    element: withRouteLoading(<DataCatalogPage selectionType="catalog" />),
+  },
+  {
+    path: "data-directory/resource/:resourceId",
+    handle: {
+      console: {
+        descriptionKey: "dataCatalog.description",
+        menuKey: "data-catalog",
+        titleKey: "dataCatalog.resourceDetailTitle",
+      },
+    },
+    element: withRouteLoading(<DataCatalogPage selectionType="resource" />),
+  },
+  {
     path: "data-catalog",
     handle: {
       console: {
@@ -64,7 +97,7 @@ export const dataCatalogRoutes: RouteObject[] = [
     handle: {
       console: {
         descriptionKey: "dataCatalog.indexBuildDescription",
-        menuKey: "index-build",
+        menuKey: "data-catalog",
         titleKey: "dataCatalog.indexBuildTitle",
       },
     },

@@ -463,18 +463,6 @@
   padding-top: 0;
 }
 
-.objectTypePage .paginationBar :global(.ant-pagination) {
-  align-items: center;
-  gap: 6px;
-}
-
-.objectTypePage .paginationBar :global(.ant-pagination-item),
-.objectTypePage .paginationBar :global(.ant-pagination-prev .ant-pagination-item-link),
-.objectTypePage .paginationBar :global(.ant-pagination-next .ant-pagination-item-link),
-.objectTypePage .paginationBar :global(.ant-select-selector) {
-  border-radius: 0 !important;
-}
-
 .objectTypePage .integratedFilterBar {
   border-bottom-color: #d9e0ea;
   background: #fff;
@@ -516,7 +504,7 @@
 }
 
 .metricPage .tableCard > .paginationBar {
-  padding: 12px 16px;
+  padding: 12px 16px 0;
   border-top: 1px solid #e5eaf2;
 }
 

@@ -14,6 +14,10 @@ export const objecttypePart = {
       "Delete the selected {{count}} object types? This action cannot be undone.",
     objectTypeBatchDeleteTitle: "Delete object types",
     objectTypeBindResource: "Bound resource",
+    objectTypeBoundDataView: "Bound data view",
+    objectTypeBoundDataViewDescription:
+      "Show which data view is currently mapped to this object type and provide a direct entry to the resource detail.",
+    objectTypeBoundDataViewEmpty: "This object type is not bound to a data view yet.",
     objectTypeClearAllProperties: "Clear all",
     objectTypeClearAllPropertiesDescription: "Clear all data properties?",
     objectTypeClearAllPropertiesTitle: "Clear data properties",
@@ -31,6 +35,16 @@ export const objecttypePart = {
     objectTypeDataPropertyNamePattern:
       "Name must start with a letter or number and may contain letters, numbers, underscores, and hyphens.",
     objectTypeDataPropertyRequired: "Add at least one valid data property.",
+    objectTypeDataQueryDescription:
+      "Preview sample rows from the bound data view and filter them by keyword.",
+    objectTypeDataQueryEmpty: "No sample data available.",
+    objectTypeDataQueryResourceName: "Resource",
+    objectTypeDataQuerySampleCount: "{{count}} sample rows",
+    objectTypeDataQuerySearchPlaceholder: "Search sample data",
+    objectTypeDataQueryTitle: "Data query",
+    objectTypeDataViewCatalogId: "Catalog ID",
+    objectTypeDataViewName: "Data view",
+    objectTypeDataViewResourceId: "Resource ID",
     objectTypeResource: "Resource",
     objectTypeResourceAll: "All resources",
     objectTypeResourceCheckedCount: "{{count}} resource(s) selected",
@@ -162,4 +176,5 @@ export const objecttypePart = {
       "Your changes have not been saved. Are you sure you want to leave?",
     objectTypeUnsavedLeaveOk: "Leave",
     objectTypeUnsavedLeaveTitle: "Leave this page?",
+    objectTypeViewDataResource: "View resource detail",
 };

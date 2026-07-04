@@ -11,7 +11,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Empty, Input, Pagination, Select, Spin } from "antd";
+import { Alert, Dropdown, Empty, Input, Select, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +20,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import type { KnowledgeNetworkListSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkCard } from "@/modules/knowledge-network/components/network/KnowledgeNetworkCard";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
@@ -338,7 +339,7 @@ export function KnowledgeNetworkListScene({
 
         {items.length > 0 ? (
           <div className={styles.paginationBar}>
-            <Pagination
+            <TablePaginationBar
               current={pageState.page}
               onChange={(page, pageSize) => setPagination(page, pageSize)}
               pageSize={pageState.pageSize}

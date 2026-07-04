@@ -14,7 +14,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Empty, Input, Pagination, Select, Table, Tag } from "antd";
+import { Alert, Dropdown, Empty, Input, Select, Table, Tag } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import {
   deleteKnowledgeNetworkMetrics,
@@ -328,7 +329,7 @@ export function MetricListPanel({
           size="middle"
         />
         <div className={styles.paginationBar}>
-          <Pagination
+          <TablePaginationBar
             current={page}
             onChange={(nextPage, nextPageSize) => {
               setPage(nextPage);

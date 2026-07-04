@@ -26,6 +26,8 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { BuildTaskDetailModal } from "@/modules/data-catalog/components/BuildTaskDetailModal";
@@ -341,7 +343,7 @@ export function IndexBuildListScene() {
         return resource ? (
           <AppButton
             onClick={() => {
-              void navigate(`/data-catalog/resource/${resource.id}`);
+              void navigate(`/data-directory/resource/${resource.id}`);
             }}
             style={{ padding: 0, height: "auto" }}
             type="link"
@@ -580,7 +582,7 @@ export function IndexBuildListScene() {
           />
         </div>
       </div>
-      <div className={sceneStyles.tableSurface}>
+      <TableSurface className={sceneStyles.tableSurface}>
         {loadError ? (
           <Alert
             action={
@@ -611,17 +613,7 @@ export function IndexBuildListScene() {
             dataSource={filteredTasks}
             loading={loading}
             onChange={handleTableChange}
-            pagination={{
-              current: page,
-              pageSize,
-              total,
-              showSizeChanger: true,
-              showTotal: (count) => t("common.total", { total: count }),
-              onChange: (nextPage, nextPageSize) => {
-                setPage(nextPage);
-                setPageSize(nextPageSize);
-              },
-            }}
+            pagination={false}
             rowKey="id"
             rowSelection={{
               selectedRowKeys: selectedKeys,
@@ -630,7 +622,20 @@ export function IndexBuildListScene() {
             tableLayout="auto"
           />
         )}
-      </div>
+      </TableSurface>
+      {total > 0 ? (
+        <TablePaginationBar
+          current={page}
+          onChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          pageSize={pageSize}
+          showSizeChanger
+          showTotal={(count) => t("common.total", { total: count })}
+          total={total}
+        />
+      ) : null}
 
       <Modal
         okButtonProps={{ disabled: !pickedResourceId }}

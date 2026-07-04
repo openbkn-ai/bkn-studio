@@ -238,6 +238,85 @@
   background: var(--business-color-surface-hover);
 }
 
+.tableSurface :global(.ant-table-pagination) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 0;
+}
+
+.tableSurface :global(.ant-pagination-total-text) {
+  margin-inline-end: 20px;
+  color: var(--business-color-text);
+  font-size: var(--business-font-size-body);
+  font-weight: var(--business-font-weight-regular);
+}
+
+.tableSurface :global(.ant-pagination-prev),
+.tableSurface :global(.ant-pagination-next),
+.tableSurface :global(.ant-pagination-item) {
+  min-width: 40px;
+  height: 40px;
+  margin-inline-end: 0;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: var(--business-color-surface);
+}
+
+.tableSurface :global(.ant-pagination-item) {
+  border-color: var(--business-color-border);
+}
+
+.tableSurface :global(.ant-pagination-item a) {
+  color: var(--business-color-text);
+  font-size: var(--business-font-size-body);
+  font-weight: var(--business-font-weight-regular);
+  line-height: 38px;
+}
+
+.tableSurface :global(.ant-pagination-item-active) {
+  border-color: var(--business-color-primary);
+}
+
+.tableSurface :global(.ant-pagination-item-active a) {
+  color: var(--business-color-primary);
+  font-weight: var(--business-font-weight-medium);
+}
+
+.tableSurface :global(.ant-pagination-prev .ant-pagination-item-link),
+.tableSurface :global(.ant-pagination-next .ant-pagination-item-link) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--business-color-muted);
+}
+
+.tableSurface :global(.ant-pagination-disabled .ant-pagination-item-link) {
+  color: var(--business-color-placeholder);
+}
+
+.tableSurface :global(.ant-pagination-options) {
+  margin-inline-start: 16px;
+}
+
+.tableSurface :global(.ant-pagination-options-size-changer) {
+  min-width: 108px;
+}
+
+.tableSurface :global(.ant-pagination-options-size-changer .ant-select-selector) {
+  height: 40px !important;
+  border-radius: 0 !important;
+  border-color: var(--business-color-border) !important;
+  box-shadow: none !important;
+}
+
+.tableSurface
+  :global(.ant-pagination-options-size-changer .ant-select-selection-item) {
+  color: var(--business-color-text);
+  font-size: var(--business-font-size-body);
+  line-height: 38px !important;
+}
+
 .nameCell {
   display: grid;
   gap: 4px;

@@ -17,6 +17,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
 import {
   getKnowledgeNetworkObjectTypeDetail,
@@ -51,11 +52,20 @@ export function OverviewOntologyBlock({
   const [detailById, setDetailById] = useState<Record<string, ObjectTypeDetail | null>>({});
   const [structureLoading, setStructureLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [entityPage, setEntityPage] = useState(1);
+  const [entityPageSize, setEntityPageSize] = useState(10);
+  const [relationPage, setRelationPage] = useState(1);
+  const [relationPageSize, setRelationPageSize] = useState(10);
+  const [bindingPage, setBindingPage] = useState(1);
+  const [bindingPageSize, setBindingPageSize] = useState(10);
 
   useEffect(() => {
     let cancelled = false;
     setStructureLoading(true);
     setDetailById({});
+    setEntityPage(1);
+    setRelationPage(1);
+    setBindingPage(1);
 
     (async () => {
       try {
@@ -295,6 +305,21 @@ export function OverviewOntologyBlock({
     },
   ];
 
+  const pagedObjectTypes = useMemo(() => {
+    const start = (entityPage - 1) * entityPageSize;
+    return objectTypes.slice(start, start + entityPageSize);
+  }, [entityPage, entityPageSize, objectTypes]);
+
+  const pagedRelationTypes = useMemo(() => {
+    const start = (relationPage - 1) * relationPageSize;
+    return relationTypes.slice(start, start + relationPageSize);
+  }, [relationPage, relationPageSize, relationTypes]);
+
+  const pagedBindingObjectTypes = useMemo(() => {
+    const start = (bindingPage - 1) * bindingPageSize;
+    return objectTypes.slice(start, start + bindingPageSize);
+  }, [bindingPage, bindingPageSize, objectTypes]);
+
   return (
     <div className={styles.block}>
       <OntologyGraphCard
@@ -336,16 +361,24 @@ export function OverviewOntologyBlock({
                               rowKey="id"
                               size="small"
                               columns={entityColumns}
-                              dataSource={objectTypes}
-                              pagination={{
-                                defaultPageSize: 10,
-                                hideOnSinglePage: true,
-                                pageSizeOptions: [10, 20, 50],
-                                showQuickJumper: false,
-                                showSizeChanger: true,
-                                showTotal: (total) => `共 ${total} 条`,
-                              }}
+                              dataSource={pagedObjectTypes}
+                              pagination={false}
                             />
+                            {objectTypes.length > 0 ? (
+                              <div className={styles.paginationBar}>
+                                <TablePaginationBar
+                                  current={entityPage}
+                                  onChange={(page, pageSize) => {
+                                    setEntityPage(page);
+                                    setEntityPageSize(pageSize);
+                                  }}
+                                  pageSize={entityPageSize}
+                                  showSizeChanger
+                                  showTotal={(total) => t("common.total", { total })}
+                                  total={objectTypes.length}
+                                />
+                              </div>
+                            ) : null}
                           </div>
                           <div className={`${styles.sectionCard} ${styles.sectionCardSecondary}`}>
                             <div className={styles.sectionCardTitle}>
@@ -356,16 +389,24 @@ export function OverviewOntologyBlock({
                               rowKey="id"
                               size="small"
                               columns={relationColumns}
-                              dataSource={relationTypes}
-                              pagination={{
-                                defaultPageSize: 10,
-                                hideOnSinglePage: true,
-                                pageSizeOptions: [10, 20, 50],
-                                showQuickJumper: false,
-                                showSizeChanger: true,
-                                showTotal: (total) => `共 ${total} 条`,
-                              }}
+                              dataSource={pagedRelationTypes}
+                              pagination={false}
                             />
+                            {relationTypes.length > 0 ? (
+                              <div className={styles.paginationBar}>
+                                <TablePaginationBar
+                                  current={relationPage}
+                                  onChange={(page, pageSize) => {
+                                    setRelationPage(page);
+                                    setRelationPageSize(pageSize);
+                                  }}
+                                  pageSize={relationPageSize}
+                                  showSizeChanger
+                                  showTotal={(total) => t("common.total", { total })}
+                                  total={relationTypes.length}
+                                />
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       ),
@@ -382,16 +423,24 @@ export function OverviewOntologyBlock({
                             rowKey="id"
                             size="small"
                             columns={bindingColumns}
-                            dataSource={objectTypes}
-                            pagination={{
-                              defaultPageSize: 10,
-                              hideOnSinglePage: true,
-                              pageSizeOptions: [10, 20, 50],
-                              showQuickJumper: false,
-                              showSizeChanger: true,
-                              showTotal: (total) => `共 ${total} 条`,
-                            }}
+                            dataSource={pagedBindingObjectTypes}
+                            pagination={false}
                           />
+                          {objectTypes.length > 0 ? (
+                            <div className={styles.paginationBar}>
+                              <TablePaginationBar
+                                current={bindingPage}
+                                onChange={(page, pageSize) => {
+                                  setBindingPage(page);
+                                  setBindingPageSize(pageSize);
+                                }}
+                                pageSize={bindingPageSize}
+                                showSizeChanger
+                                showTotal={(total) => t("common.total", { total })}
+                                total={objectTypes.length}
+                              />
+                            </div>
+                          ) : null}
                         </div>
                       ),
                     },

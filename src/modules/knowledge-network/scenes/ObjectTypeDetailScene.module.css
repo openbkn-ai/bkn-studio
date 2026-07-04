@@ -67,6 +67,66 @@
   padding: 20px;
 }
 
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: #1f2329;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.sectionHint {
+  margin: 6px 0 0;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.dataViewGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dataViewItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #e5e5e5;
+  background: #fafcff;
+}
+
+.dataViewLabel {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.dataViewValue {
+  color: #1f2329;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.dataViewCode {
+  color: #1f2329;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
 .sectionCard :global(.ant-table),
 .sectionCard :global(.ant-table-container),
 .sectionCard :global(.ant-table-thead > tr > th),
@@ -78,63 +138,8 @@
   border-radius: 0 !important;
 }
 
-.sectionCard :global(.ant-pagination) {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 16px;
-  margin-bottom: 0;
-}
-
-.sectionCard :global(.ant-pagination-total-text) {
-  margin-inline-end: auto;
-  color: #1f2329;
-  font-size: 13px;
-}
-
-.sectionCard :global(.ant-pagination .ant-pagination-item),
-.sectionCard :global(.ant-pagination .ant-pagination-prev),
-.sectionCard :global(.ant-pagination .ant-pagination-next) {
-  min-width: 32px;
-  height: 32px;
-  margin-inline-end: 0;
-  border-radius: 0;
-}
-
-.sectionCard :global(.ant-pagination .ant-pagination-item a) {
-  line-height: 30px;
-}
-
-.sectionCard :global(.ant-pagination .ant-pagination-item-active) {
-  border-color: #2e68ff;
-}
-
-.sectionCard :global(.ant-pagination .ant-pagination-item-active a) {
-  color: #2e68ff;
-}
-
-.sectionCard :global(.ant-pagination .ant-pagination-prev .ant-pagination-item-link),
-.sectionCard :global(.ant-pagination .ant-pagination-next .ant-pagination-item-link) {
-  border: 1px solid transparent;
-  border-radius: 0;
-  color: #8c8c8c;
-}
-
-.sectionCard :global(.ant-pagination .ant-pagination-options) {
-  margin-inline-start: 8px;
-}
-
-.sectionCard :global(.ant-pagination .ant-select-selector) {
-  height: 32px !important;
-  padding: 0 12px !important;
-  border: 1px solid #d9e0ea !important;
-}
-
-.sectionCard :global(.ant-pagination .ant-select-selection-item) {
-  line-height: 30px !important;
-  color: #1f2329;
-  font-size: 13px;
+.paginationBar {
+  margin-top: 12px;
 }
 
 .sectionToolbar {
@@ -142,6 +147,21 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
+}
+
+.previewToolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.previewSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 16px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
 }
 
 .propertyTitle {
@@ -168,4 +188,15 @@
 
 .placeholder {
   color: rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 1080px) {
+  .dataViewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

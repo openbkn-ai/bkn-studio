@@ -372,6 +372,7 @@ function filterCatalogs(items: DataConnectRecord[], query: DataConnectListQuery)
   const keyword = query.keyword.trim().toLowerCase();
 
   return items.filter((item) => {
+    const matchesPhysicalType = item.type === "physical";
     const matchesKeyword =
       keyword.length === 0 ||
       item.name.toLowerCase().includes(keyword) ||
@@ -379,7 +380,7 @@ function filterCatalogs(items: DataConnectRecord[], query: DataConnectListQuery)
     const matchesConnectorType =
       !query.connectorType || item.connectorType === query.connectorType;
 
-    return matchesKeyword && matchesConnectorType;
+    return matchesPhysicalType && matchesKeyword && matchesConnectorType;
   });
 }
 
@@ -454,9 +455,11 @@ export async function listDataConnectRecords(
     },
   );
 
+  const mapped = response.data.entries.map(mapCatalog).filter((item) => item.type === "physical");
+
   return {
-    items: response.data.entries.map(mapCatalog),
-    total: response.data.total_count,
+    items: mapped,
+    total: mapped.length,
   };
 }
 

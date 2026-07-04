@@ -5,19 +5,19 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Descriptions, Drawer, Empty, Spin, Tag } from "antd";
+import { Alert, Descriptions, Drawer, Empty, Spin } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { getDataConnectRecord } from "@/modules/data-connect/services/data-connect.service";
 import type {
   DataConnectConnectorType,
   DataConnectRecord,
 } from "@/modules/data-connect/types/data-connect";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./DataConnectDetailDrawer.module.css";
 
@@ -26,14 +26,6 @@ type DataConnectDetailDrawerProps = {
   onClose: () => void;
   open: boolean;
   recordId: string;
-};
-
-const healthColorMap: Record<DataConnectRecord["healthStatus"], string> = {
-  healthy: "green",
-  degraded: "gold",
-  unhealthy: "red",
-  offline: "volcano",
-  unchecked: "default",
 };
 
 export function DataConnectDetailDrawer({
@@ -76,8 +68,14 @@ export function DataConnectDetailDrawer({
     [connectorTypes, record?.connectorType],
   );
 
+  const selectedConnectorType = useMemo(
+    () => connectorTypes.find((item) => item.type === record?.connectorType),
+    [connectorTypes, record?.connectorType],
+  );
+
   return (
     <Drawer
+      className={styles.drawer}
       destroyOnClose
       extra={
         record ? (
@@ -91,7 +89,7 @@ export function DataConnectDetailDrawer({
       onClose={onClose}
       open={open}
       title={t("dataConnect.detailTitle")}
-      width={760}
+      width={960}
     >
       {record ? (
         <ObjectAuthorizeDrawer
@@ -105,50 +103,25 @@ export function DataConnectDetailDrawer({
       ) : null}
       {loading ? <Spin /> : null}
       {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
-      {!loading && !loadError && !record ? (
-        <Empty description={t("common.notFound")} />
-      ) : null}
+      {!loading && !loadError && !record ? <Empty description={t("common.notFound")} /> : null}
       {!loading && !loadError && record ? (
         <div className={styles.drawerContent}>
-          <section className={styles.summaryCard}>
-            <div className={styles.summaryHeader}>
-              <div className={styles.summaryCopy}>
-                <h2 className={styles.summaryTitle}>{record.name}</h2>
-                <p className={styles.summaryDescription}>{record.description || "-"}</p>
-              </div>
-              <div className={styles.summaryStatus}>
-                <Tag color={record.enabled ? "green" : "default"}>
-                  {record.enabled ? t("common.enabled") : t("common.disabled")}
-                </Tag>
-                <Tag color={healthColorMap[record.healthStatus]}>
-                  {t(`dataConnect.healthStatuses.${record.healthStatus}`)}
-                </Tag>
-              </div>
-            </div>
-            <div className={styles.summaryMeta}>
-              <span>{connectorTypeName}</span>
-              <span>{t(`dataConnect.categories.${record.category}`)}</span>
-              <span>{t(`dataConnect.modes.${record.mode}`)}</span>
-            </div>
-            {record.tags.length > 0 ? (
-              <div className={styles.tagGroup}>
-                {record.tags.map((tag) => (
-                  <Tag key={tag}>{tag}</Tag>
-                ))}
-              </div>
-            ) : null}
-          </section>
           <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("common.basicInfo")}</h3>
             <Descriptions
               bordered
               className={styles.descriptionBlock}
-              column={1}
+              column={2}
               items={[
                 {
                   key: "name",
                   label: t("dataConnect.name"),
                   children: record.name,
+                },
+                {
+                  key: "description",
+                  label: t("common.description"),
+                  children: record.description || "-",
                 },
                 {
                   key: "connectorType",
@@ -164,6 +137,21 @@ export function DataConnectDetailDrawer({
                   key: "mode",
                   label: t("common.mode"),
                   children: t(`dataConnect.modes.${record.mode}`),
+                },
+                {
+                  key: "status",
+                  label: t("common.status"),
+                  children: record.enabled ? t("common.enabled") : t("common.disabled"),
+                },
+                {
+                  key: "health",
+                  label: t("common.healthStatus"),
+                  children: t(`dataConnect.healthStatuses.${record.healthStatus}`),
+                },
+                {
+                  key: "tags",
+                  label: t("dataConnect.tags"),
+                  children: record.tags.length > 0 ? record.tags.join(" / ") : "-",
                 },
                 {
                   key: "creator",
@@ -196,24 +184,6 @@ export function DataConnectDetailDrawer({
               column={1}
               items={[
                 {
-                  key: "status",
-                  label: t("common.status"),
-                  children: (
-                    <Tag color={record.enabled ? "green" : "default"}>
-                      {record.enabled ? t("common.enabled") : t("common.disabled")}
-                    </Tag>
-                  ),
-                },
-                {
-                  key: "health",
-                  label: t("common.healthStatus"),
-                  children: (
-                    <Tag color={healthColorMap[record.healthStatus]}>
-                      {t(`dataConnect.healthStatuses.${record.healthStatus}`)}
-                    </Tag>
-                  ),
-                },
-                {
                   key: "healthResult",
                   label: t("dataConnect.healthResult"),
                   children: record.healthCheckResult || "-",
@@ -225,15 +195,21 @@ export function DataConnectDetailDrawer({
             <h3 className={styles.sectionTitle}>{t("dataConnect.connectorConfig")}</h3>
             {Object.entries(record.connectorConfig).length > 0 ? (
               <div className={styles.configGrid}>
-                {Object.entries(record.connectorConfig).map(([key, value]) => (
-                  <div className={styles.configItem} key={key}>
-                    <span className={styles.configLabel}>{key}</span>
-                    <span className={styles.configValue}>{formatConfigValue(value)}</span>
+                {buildConfigEntries(record, selectedConnectorType).map((item) => (
+                  <div className={styles.configItem} key={item.key}>
+                    <span className={styles.configLabel}>{item.label}</span>
+                    {item.description ? (
+                      <span className={styles.configHint}>{item.description}</span>
+                    ) : null}
+                    <span className={styles.configValue}>{item.value}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <Empty description={t("dataConnect.noConnectorConfig")} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              <Empty
+                description={t("dataConnect.noConnectorConfig")}
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
             )}
           </section>
         </div>
@@ -243,9 +219,105 @@ export function DataConnectDetailDrawer({
 }
 
 function formatConfigValue(value: unknown) {
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "是" : "否";
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
     return String(value);
   }
 
-  return JSON.stringify(value);
+  return JSON.stringify(value, null, 2);
+}
+
+function buildConfigEntries(
+  record: DataConnectRecord,
+  connectorType?: DataConnectConnectorType,
+) {
+  const config = record.connectorConfig ?? {};
+  const fieldConfig = connectorType?.fieldConfig ?? {};
+  const keys = Object.keys(config).sort((left, right) => {
+    const leftRank = configFieldOrderRank(left);
+    const rightRank = configFieldOrderRank(right);
+
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    const leftName = fieldConfig[left]?.name ?? humanizeConfigKey(left);
+    const rightName = fieldConfig[right]?.name ?? humanizeConfigKey(right);
+    return leftName.localeCompare(rightName, "zh-CN");
+  });
+
+  return keys.map((key) => {
+    const configItem = fieldConfig[key];
+    return {
+      description: configItem?.description?.trim() || "",
+      key,
+      label: configItem?.name?.trim() || humanizeConfigKey(key),
+      value: configItem?.encrypted ? "******" : formatConfigValue(config[key]),
+    };
+  });
+}
+
+function configFieldOrderRank(key: string) {
+  const normalized = key.trim().toLowerCase();
+  const rankMap: Record<string, number> = {
+    host: 1,
+    hostname: 1,
+    server: 1,
+    user: 2,
+    username: 2,
+    account: 2,
+    port: 3,
+    database: 4,
+    db: 4,
+    database_list: 4,
+    databases: 4,
+    schema: 4,
+    schema_list: 4,
+  };
+
+  return rankMap[normalized] ?? 100;
+}
+
+function humanizeConfigKey(key: string) {
+  const normalized = key.trim().toLowerCase();
+  const labelMap: Record<string, string> = {
+    account: "账号",
+    api_key: "API Key",
+    catalog: "Catalog",
+    cluster: "集群",
+    database: "数据库",
+    db: "数据库",
+    endpoint: "访问地址",
+    host: "主机地址",
+    password: "密码",
+    path: "路径",
+    port: "端口",
+    project: "项目",
+    schema: "Schema",
+    secret: "密钥",
+    secret_key: "密钥",
+    table: "数据表",
+    token: "访问令牌",
+    uri: "连接地址",
+    url: "连接地址",
+    user: "用户名",
+    username: "用户名",
+    warehouse: "仓库",
+  };
+
+  if (labelMap[normalized]) {
+    return labelMap[normalized];
+  }
+
+  return key
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/^\w/, (char) => char.toUpperCase());
 }

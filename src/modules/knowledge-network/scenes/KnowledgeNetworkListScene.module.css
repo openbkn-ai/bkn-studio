@@ -188,17 +188,5 @@
   display: flex;
   flex-shrink: 0;
   justify-content: flex-end;
-  margin-top: 24px;
-}
-
-.paginationBar :global(.ant-pagination) {
-  align-items: center;
-  gap: 6px;
-}
-
-.paginationBar :global(.ant-pagination-item),
-.paginationBar :global(.ant-pagination-prev .ant-pagination-item-link),
-.paginationBar :global(.ant-pagination-next .ant-pagination-item-link),
-.paginationBar :global(.ant-select-selector) {
-  border-radius: 0 !important;
+  margin-top: 16px;
 }

@@ -1,114 +1,102 @@
-.drawerContent {
-  display: grid;
-  gap: 18px;
+.drawer :global(.ant-drawer-header) {
+  padding: 20px 24px;
+  border-bottom: 1px solid #d9e0ea;
 }
 
-.summaryCard,
-.sectionCard {
-  padding: 20px;
-  border: 1px solid rgba(18, 40, 72, 0.08);
-  border-radius: 22px;
-  background: #ffffff;
-}
-
-.summaryCard {
-  background: linear-gradient(180deg, #f8fbff 0%, #f4f8ff 100%);
-}
-
-.summaryHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.summaryCopy {
-  min-width: 0;
-}
-
-.summaryTitle {
-  margin: 0;
-  color: #152239;
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.summaryDescription {
-  margin: 8px 0 0;
-  color: #64748d;
-  line-height: 1.7;
-}
-
-.summaryStatus {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.summaryMeta {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-  margin-top: 16px;
-  color: #4f607b;
-  font-size: 13px;
-}
-
-.tagGroup {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 14px;
-}
-
-.sectionTitle {
-  margin: 0 0 14px;
-  color: #152239;
+.drawer :global(.ant-drawer-title) {
+  color: #172033;
   font-size: 16px;
   font-weight: 700;
 }
 
+.drawer :global(.ant-drawer-body) {
+  padding: 20px 24px 24px;
+  background: #f5f7fb;
+}
+
+.drawerContent {
+  display: grid;
+  gap: 16px;
+}
+
+.sectionCard {
+  padding: 18px 20px;
+  border: 1px solid #d9e0ea;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .descriptionBlock :global(.ant-descriptions-view) {
-  border-radius: 16px;
+  border-radius: 0;
   overflow: hidden;
+}
+
+.descriptionBlock :global(.ant-descriptions-item-label) {
+  width: 160px;
+  background: #f7f9fc;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.descriptionBlock :global(.ant-descriptions-item-content) {
+  color: #172033;
 }
 
 .configGrid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
 .configItem {
   display: grid;
   gap: 6px;
-  padding: 14px 16px;
-  border: 1px solid rgba(18, 40, 72, 0.08);
-  border-radius: 16px;
-  background: #f9fbff;
+  padding: 12px 14px;
+  border: 1px solid #d9e0ea;
+  border-radius: 0;
+  background: #f7f9fc;
 }
 
 .configLabel {
-  color: #70809a;
+  color: #6b7280;
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+}
+
+.configHint {
+  color: #98a2b3;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .configValue {
-  color: #152239;
+  color: #172033;
   line-height: 1.7;
-  word-break: break-all;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 960px) {
+  .descriptionBlock :global(.ant-descriptions) {
+    width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
-  .summaryHeader {
-    flex-direction: column;
+  .configGrid {
+    grid-template-columns: 1fr;
   }
 
-  .summaryCard,
-  .sectionCard {
+  .drawer :global(.ant-drawer-body) {
     padding: 16px;
-    border-radius: 18px;
   }
 }

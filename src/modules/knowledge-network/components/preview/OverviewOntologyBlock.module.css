@@ -58,77 +58,12 @@
 .tabs :global(.ant-btn),
 .tabs :global(.ant-input),
 .tabs :global(.ant-input-affix-wrapper),
-.tabs :global(.ant-pagination-options-size-changer),
 .tabs :global(.ant-select-selector),
 .tabs :global(.ant-table),
 .tabs :global(.ant-table-container),
 .tabs :global(.ant-table-thead > tr > th),
 .tabs :global(.ant-tag) {
   border-radius: 0 !important;
-}
-
-.tabs :global(.ant-pagination) {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 16px;
-  margin-bottom: 0;
-}
-
-.tabs :global(.ant-pagination-total-text) {
-  margin-inline-end: auto;
-  color: #1f2329;
-  font-size: 13px;
-}
-
-.tabs :global(.ant-pagination .ant-pagination-item),
-.tabs :global(.ant-pagination .ant-pagination-prev),
-.tabs :global(.ant-pagination .ant-pagination-next) {
-  min-width: 32px;
-  height: 32px;
-  margin-inline-end: 0;
-  border-radius: 0;
-}
-
-.tabs :global(.ant-pagination .ant-pagination-item) {
-  border-color: #d9e0ea;
-}
-
-.tabs :global(.ant-pagination .ant-pagination-item a) {
-  line-height: 30px;
-  color: #1f2329;
-}
-
-.tabs :global(.ant-pagination .ant-pagination-item-active) {
-  border-color: #2e68ff;
-}
-
-.tabs :global(.ant-pagination .ant-pagination-item-active a) {
-  color: #2e68ff;
-}
-
-.tabs :global(.ant-pagination .ant-pagination-prev .ant-pagination-item-link),
-.tabs :global(.ant-pagination .ant-pagination-next .ant-pagination-item-link) {
-  border: 1px solid transparent;
-  border-radius: 0;
-  color: #8c8c8c;
-}
-
-.tabs :global(.ant-pagination .ant-pagination-options) {
-  margin-inline-start: 8px;
-}
-
-.tabs :global(.ant-pagination .ant-select-selector) {
-  height: 32px !important;
-  padding: 0 12px !important;
-  border: 1px solid #d9e0ea !important;
-}
-
-.tabs :global(.ant-pagination .ant-select-selection-item) {
-  line-height: 30px !important;
-  color: #1f2329;
-  font-size: 13px;
 }
 
 .sectionGrid {
@@ -139,6 +74,10 @@
 
 .sectionCard {
   padding: 4px 2px;
+}
+
+.paginationBar {
+  margin-top: 12px;
 }
 
 .sectionCardSecondary {

@@ -7,16 +7,16 @@
 
 export const dataCatalogEnUS = {
   dataCatalog: {
-    title: "Data Catalog",
+    title: "Data Directory",
     description:
-      "Manage data connections and resources as a catalog ▸ resource tree backed by Vega.",
-    catalogDetailTitle: "Catalog Detail",
+      "Browse resources and logical views discovered from data connections, and manage resource-level operations backed by Vega.",
+    catalogDetailTitle: "Connection Resources",
     resourceDetailTitle: "Resource Detail",
-    indexBuildTitle: "Index Builds",
-    indexBuildDescription: "Cross-resource index build task operations view.",
+    indexBuildTitle: "Data Vectorization",
+    indexBuildDescription: "Resource-level index build task operations view.",
     emptyDescription:
       "Create a connection, then discover resources and build vector indexes.",
-    backToCatalog: "Back to Data Catalog",
+    backToCatalog: "Back to Data Directory",
     buildChip: "Building · {{count}}",
     kind: {
       physical: "Physical Source",
@@ -96,8 +96,8 @@ export const dataCatalogEnUS = {
       neverScanned: "Never scanned",
       scanNow: "Scan Now",
       runScan: "Run Scan",
-      scanningAction: "Scanning…",
-      testing: "Testing…",
+      scanningAction: "Scanning...",
+      testing: "Testing...",
       scanTriggered: "Scan triggered: {{name}}",
       scanSection: "Scan Management",
       connectionInfo: "Connection Info",
@@ -110,7 +110,7 @@ export const dataCatalogEnUS = {
       logicalNoScans: "Logical catalogs do not support scans",
       noScans: "No scan records yet; enable the connection to run discover",
       disabledScanHint:
-        "This connection is disabled. Discover requires an enabled catalog — enable it before scanning.",
+        "This connection is disabled. Discover requires an enabled catalog - enable it before scanning.",
       emptyResourcesPhysical:
         "No resources yet; run a scan to discover them from the source",
       emptyResourcesLogical: "No resources yet",
@@ -164,7 +164,7 @@ export const dataCatalogEnUS = {
       indexedRows: "Indexed Rows",
       latestTask: "Latest Build Task",
       noEffectiveIndex:
-        "No effective index yet — once a build succeeds, vector retrieval becomes available.",
+        "No effective index yet - once a build succeeds, vector retrieval becomes available.",
       noIndexHint:
         "This resource has no index yet. Build one to enable vector retrieval in knowledge networks.",
       rebuildFailedHint:
@@ -219,7 +219,7 @@ export const dataCatalogEnUS = {
         "Continuous incremental sync with a standing listener; build key is the row ID field (optional).",
       embeddingFields: "Embedding Fields",
       embeddingFieldsHint: "(text columns to vectorize)",
-      schemaLoading: "Loading fields…",
+      schemaLoading: "Loading fields...",
       schemaEmpty: "This resource has no fields yet; run a scan to discover its schema.",
       buildKeyFields: "Build Key Fields",
       buildKeyFieldsHint: "(batch: time field; streaming: row ID)",
@@ -235,8 +235,8 @@ export const dataCatalogEnUS = {
       selectAll: "Select all",
       clearAll: "Clear",
       fieldCount: "{{count}} fields",
-      fieldFilterPlaceholder: "Filter field name…",
-      fieldNoMatch: "No fields match “{{keyword}}”",
+      fieldFilterPlaceholder: "Filter field name...",
+      fieldNoMatch: "No fields match {{keyword}}",
       legendEmbedding: "text columns to vectorize (required)",
       legendBuildKeyBatch: "time / incremental field (required)",
       legendBuildKeyStreaming: "row ID field (optional)",
@@ -320,3 +320,4 @@ export const dataCatalogEnUS = {
     },
   },
 } as const;
+

@@ -6,6 +6,7 @@
  */
 
 import {
+  ArrowRightOutlined,
   EditOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
@@ -18,8 +19,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import { getObjectTypeResourcePreview } from "@/modules/knowledge-network/services/object-type-resource.service";
 import {
   deleteKnowledgeNetworkObjectType,
   getKnowledgeNetworkObjectTypeDetail,
@@ -28,6 +31,7 @@ import type {
   ObjectTypeDataProperty,
   ObjectTypeDetail,
   ObjectTypeLogicProperty,
+  ObjectTypeResourcePreview,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectTypeDetailScene.module.css";
@@ -45,6 +49,16 @@ export function ObjectTypeDetailScene() {
   const [error, setError] = useState<string | null>(null);
   const [propertyType, setPropertyType] = useState<"data" | "logic">("data");
   const [keyword, setKeyword] = useState("");
+  const [preview, setPreview] = useState<ObjectTypeResourcePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewKeyword, setPreviewKeyword] = useState("");
+  const [dataPage, setDataPage] = useState(1);
+  const [dataPageSize, setDataPageSize] = useState(10);
+  const [logicPage, setLogicPage] = useState(1);
+  const [logicPageSize, setLogicPageSize] = useState(10);
+  const [previewPage, setPreviewPage] = useState(1);
+  const [previewPageSize, setPreviewPageSize] = useState(10);
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
 
@@ -69,6 +83,47 @@ export function ObjectTypeDetailScene() {
   useEffect(() => {
     void loadData();
   }, [networkId, objectTypeId]);
+
+  useEffect(() => {
+    const resourceId = detail?.dataSource?.id;
+
+    if (!networkId || !resourceId) {
+      setPreview(null);
+      setPreviewError(null);
+      setPreviewLoading(false);
+      setPreviewKeyword("");
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPreview = async () => {
+      setPreviewLoading(true);
+      setPreviewError(null);
+
+      try {
+        const result = await getObjectTypeResourcePreview(networkId, resourceId);
+        if (!cancelled) {
+          setPreview(result);
+        }
+      } catch (nextError) {
+        if (!cancelled) {
+          setPreview(null);
+          setPreviewError(extractRequestErrorMessage(nextError));
+        }
+      } finally {
+        if (!cancelled) {
+          setPreviewLoading(false);
+        }
+      }
+    };
+
+    void loadPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detail?.dataSource?.id, networkId]);
 
   const filteredDataProperties = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -99,6 +154,44 @@ export function ObjectTypeDetailScene() {
         item.displayName.toLowerCase().includes(normalized),
     );
   }, [detail?.logicProperties, keyword]);
+
+  const filteredPreviewRows = useMemo(() => {
+    const rows = preview?.rows ?? [];
+    const normalized = previewKeyword.trim().toLowerCase();
+
+    if (!normalized) {
+      return rows;
+    }
+
+    return rows.filter((row) =>
+      Object.values(row).some((value) => String(value ?? "").toLowerCase().includes(normalized)),
+    );
+  }, [preview?.rows, previewKeyword]);
+
+  const pagedDataProperties = useMemo(() => {
+    const start = (dataPage - 1) * dataPageSize;
+    return filteredDataProperties.slice(start, start + dataPageSize);
+  }, [dataPage, dataPageSize, filteredDataProperties]);
+
+  const pagedLogicProperties = useMemo(() => {
+    const start = (logicPage - 1) * logicPageSize;
+    return filteredLogicProperties.slice(start, start + logicPageSize);
+  }, [filteredLogicProperties, logicPage, logicPageSize]);
+
+  const pagedPreviewRows = useMemo(() => {
+    const start = (previewPage - 1) * previewPageSize;
+    return filteredPreviewRows.slice(start, start + previewPageSize);
+  }, [filteredPreviewRows, previewPage, previewPageSize]);
+
+  const previewColumns: TableProps<Record<string, string | number>>["columns"] = useMemo(
+    () =>
+      (preview?.columns ?? []).map((column) => ({
+        dataIndex: column.dataIndex,
+        key: column.dataIndex,
+        title: column.title,
+      })),
+    [preview?.columns],
+  );
 
   const confirmDelete = () => {
     if (!detail) {
@@ -202,6 +295,8 @@ export function ObjectTypeDetailScene() {
     return <Alert message={error ?? t("common.notFound")} showIcon type="error" />;
   }
 
+  const boundDataView = detail.dataSource;
+
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
@@ -281,11 +376,59 @@ export function ObjectTypeDetailScene() {
         </section>
 
         <section className={styles.sectionCard}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.objectTypeBoundDataView")}</h3>
+              <p className={styles.sectionHint}>
+                {t("knowledgeNetwork.objectTypeBoundDataViewDescription")}
+              </p>
+            </div>
+            {boundDataView ? (
+              <AppButton
+                icon={<ArrowRightOutlined />}
+                onClick={() => {
+                  void navigate(`/data-directory/resource/${boundDataView.id}`);
+                }}
+              >
+                {t("knowledgeNetwork.objectTypeViewDataResource")}
+              </AppButton>
+            ) : null}
+          </div>
+
+          {boundDataView ? (
+            <div className={styles.dataViewGrid}>
+              <div className={styles.dataViewItem}>
+                <span className={styles.dataViewLabel}>
+                  {t("knowledgeNetwork.objectTypeDataViewName")}
+                </span>
+                <span className={styles.dataViewValue}>{boundDataView.name || "--"}</span>
+              </div>
+              <div className={styles.dataViewItem}>
+                <span className={styles.dataViewLabel}>
+                  {t("knowledgeNetwork.objectTypeDataViewResourceId")}
+                </span>
+                <span className={styles.dataViewCode}>{boundDataView.id || "--"}</span>
+              </div>
+              <div className={styles.dataViewItem}>
+                <span className={styles.dataViewLabel}>
+                  {t("knowledgeNetwork.objectTypeDataViewCatalogId")}
+                </span>
+                <span className={styles.dataViewCode}>{boundDataView.dataSourceId || "--"}</span>
+              </div>
+            </div>
+          ) : (
+            <Empty description={t("knowledgeNetwork.objectTypeBoundDataViewEmpty")} />
+          )}
+        </section>
+
+        <section className={styles.sectionCard}>
           <div className={styles.sectionToolbar}>
             <Segmented
               onChange={(value) => {
                 setPropertyType(value as "data" | "logic");
                 setKeyword("");
+                setDataPage(1);
+                setLogicPage(1);
               }}
               options={[
                 { label: t("knowledgeNetwork.objectTypeDataProperty"), value: "data" },
@@ -296,6 +439,10 @@ export function ObjectTypeDetailScene() {
             <Input.Search
               allowClear
               onChange={(event) => setKeyword(event.target.value)}
+              onSearch={() => {
+                setDataPage(1);
+                setLogicPage(1);
+              }}
               placeholder={t("knowledgeNetwork.objectTypeSearchProperty")}
               style={{ width: 280 }}
               value={keyword}
@@ -303,45 +450,144 @@ export function ObjectTypeDetailScene() {
           </div>
 
           {propertyType === "data" ? (
-            <Table<ObjectTypeDataProperty>
-              columns={dataColumns}
-              dataSource={filteredDataProperties}
-              locale={{
-                emptyText: (
-                  <Empty description={t("knowledgeNetwork.objectTypePropertyEmpty")} />
-                ),
-              }}
-              pagination={{
-                defaultPageSize: 10,
-                hideOnSinglePage: true,
-                pageSizeOptions: [10, 20, 50],
-                showQuickJumper: false,
-                showSizeChanger: true,
-                showTotal: (total) => `共 ${total} 条`,
-              }}
-              rowKey="name"
-              size="small"
-            />
+            <>
+              <Table<ObjectTypeDataProperty>
+                columns={dataColumns}
+                dataSource={pagedDataProperties}
+                locale={{
+                  emptyText: (
+                    <Empty description={t("knowledgeNetwork.objectTypePropertyEmpty")} />
+                  ),
+                }}
+                pagination={false}
+                rowKey="name"
+                size="small"
+              />
+              {filteredDataProperties.length > 0 ? (
+                <div className={styles.paginationBar}>
+                  <TablePaginationBar
+                    current={dataPage}
+                    onChange={(nextPage, nextPageSize) => {
+                      setDataPage(nextPage);
+                      setDataPageSize(nextPageSize);
+                    }}
+                    pageSize={dataPageSize}
+                    showSizeChanger
+                    showTotal={(total) => t("common.total", { total })}
+                    total={filteredDataProperties.length}
+                  />
+                </div>
+              ) : null}
+            </>
           ) : (
-            <Table<ObjectTypeLogicProperty>
-              columns={logicColumns}
-              dataSource={filteredLogicProperties}
-              locale={{
-                emptyText: (
-                  <Empty description={t("knowledgeNetwork.objectTypeLogicPropertyEmpty")} />
-                ),
-              }}
-              pagination={{
-                defaultPageSize: 10,
-                hideOnSinglePage: true,
-                pageSizeOptions: [10, 20, 50],
-                showQuickJumper: false,
-                showSizeChanger: true,
-                showTotal: (total) => `共 ${total} 条`,
-              }}
-              rowKey="name"
-              size="small"
-            />
+            <>
+              <Table<ObjectTypeLogicProperty>
+                columns={logicColumns}
+                dataSource={pagedLogicProperties}
+                locale={{
+                  emptyText: (
+                    <Empty description={t("knowledgeNetwork.objectTypeLogicPropertyEmpty")} />
+                  ),
+                }}
+                pagination={false}
+                rowKey="name"
+                size="small"
+              />
+              {filteredLogicProperties.length > 0 ? (
+                <div className={styles.paginationBar}>
+                  <TablePaginationBar
+                    current={logicPage}
+                    onChange={(nextPage, nextPageSize) => {
+                      setLogicPage(nextPage);
+                      setLogicPageSize(nextPageSize);
+                    }}
+                    pageSize={logicPageSize}
+                    showSizeChanger
+                    showTotal={(total) => t("common.total", { total })}
+                    total={filteredLogicProperties.length}
+                  />
+                </div>
+              ) : null}
+            </>
+          )}
+        </section>
+
+        <section className={styles.sectionCard}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.objectTypeDataQueryTitle")}</h3>
+              <p className={styles.sectionHint}>
+                {t("knowledgeNetwork.objectTypeDataQueryDescription")}
+              </p>
+            </div>
+            <div className={styles.previewToolbar}>
+              <Input.Search
+                allowClear
+                disabled={!preview || previewLoading}
+                onChange={(event) => {
+                  setPreviewKeyword(event.target.value);
+                  setPreviewPage(1);
+                }}
+                placeholder={t("knowledgeNetwork.objectTypeDataQuerySearchPlaceholder")}
+                style={{ width: 280 }}
+                value={previewKeyword}
+              />
+            </div>
+          </div>
+
+          {!boundDataView ? (
+            <Empty description={t("knowledgeNetwork.objectTypeBoundDataViewEmpty")} />
+          ) : previewError ? (
+            <Alert message={previewError} showIcon type="error" />
+          ) : previewLoading ? (
+            <div className={styles.loadingState}>
+              <Spin />
+            </div>
+          ) : preview && previewColumns.length > 0 ? (
+            <>
+              <div className={styles.previewSummary}>
+                <span>
+                  {t("knowledgeNetwork.objectTypeDataQueryResourceName")}: {preview.name || "--"}
+                </span>
+                <span>
+                  {t("knowledgeNetwork.objectTypeDataQuerySampleCount", {
+                    count: filteredPreviewRows.length,
+                  })}
+                </span>
+              </div>
+              <Table<Record<string, string | number>>
+                columns={previewColumns}
+                dataSource={pagedPreviewRows.map((row, index) => ({
+                  ...row,
+                  key: `${previewPage}-${index}-${Object.values(row).join("-")}`,
+                }))}
+                locale={{
+                  emptyText: (
+                    <Empty description={t("knowledgeNetwork.objectTypeDataQueryEmpty")} />
+                  ),
+                }}
+                pagination={false}
+                scroll={{ x: true }}
+                size="small"
+              />
+              {filteredPreviewRows.length > 0 ? (
+                <div className={styles.paginationBar}>
+                  <TablePaginationBar
+                    current={previewPage}
+                    onChange={(nextPage, nextPageSize) => {
+                      setPreviewPage(nextPage);
+                      setPreviewPageSize(nextPageSize);
+                    }}
+                    pageSize={previewPageSize}
+                    showSizeChanger
+                    showTotal={(total) => t("common.total", { total })}
+                    total={filteredPreviewRows.length}
+                  />
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <Empty description={t("knowledgeNetwork.objectTypeDataQueryEmpty")} />
           )}
         </section>
       </div>

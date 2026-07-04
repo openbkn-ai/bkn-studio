@@ -1,0 +1,77 @@
+.surface {
+  composes: tableSurface from "./BusinessPageTemplate.module.css";
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: hidden;
+  padding-top: 0 !important;
+  border: 1px solid #d9e0ea;
+  border-radius: 0;
+  background: #fff;
+}
+
+.surface :global(.ant-table-wrapper) {
+  border: 0;
+  border-radius: 0;
+}
+
+.surface :global(.ant-table),
+.surface :global(.ant-table-container),
+.surface :global(.ant-table-content),
+.surface :global(.ant-table-thead > tr > th),
+.surface :global(.ant-table-cell),
+.surface :global(.ant-checkbox-inner),
+.surface :global(.ant-btn),
+.surface :global(.ant-tag) {
+  border-radius: 0 !important;
+}
+
+.surface :global(.ant-table-thead > tr > th) {
+  background: #f3f6fa;
+  border-bottom: 1px solid #d9e0ea;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.surface :global(.ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #e5eaf2;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 400;
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+
+.surface :global(.ant-table-tbody > tr:hover > td) {
+  background: #f8fbff;
+}
+
+.surface :global(.ant-table-pagination) {
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 16px 16px;
+}
+
+.surface :global(.ant-pagination-total-text) {
+  margin-inline-end: auto;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.surface :global(.ant-pagination-item),
+.surface :global(.ant-pagination-prev .ant-pagination-item-link),
+.surface :global(.ant-pagination-next .ant-pagination-item-link),
+.surface :global(.ant-select-selector) {
+  border-radius: 0 !important;
+}
+
+.surface :global(.ant-pagination-item-active) {
+  border-color: #1e3a8a;
+}
+
+.surface :global(.ant-pagination-item-active a) {
+  color: #1e3a8a;
+  font-weight: 500;
+}

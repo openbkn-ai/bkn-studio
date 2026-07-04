@@ -9,9 +9,25 @@ import type { TableProps } from "antd";
 
 import { Table } from "antd";
 
+import {
+  buildTablePagination,
+  type StandardTablePaginationOptions,
+} from "@/framework/ui/common/table-pagination";
+
+type AppTableProps<RecordType extends object> = TableProps<RecordType> & {
+  paginationOptions?: StandardTablePaginationOptions;
+};
+
 export function AppTable<RecordType extends object>(
-  props: TableProps<RecordType>,
+  props: AppTableProps<RecordType>,
 ) {
-  return <Table<RecordType> {...props} />;
+  const { pagination, paginationOptions, ...restProps } = props;
+
+  const resolvedPagination =
+    pagination && typeof pagination === "object"
+      ? buildTablePagination(pagination, paginationOptions)
+      : pagination;
+
+  return <Table<RecordType> {...restProps} pagination={resolvedPagination} />;
 }
 

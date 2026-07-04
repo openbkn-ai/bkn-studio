@@ -249,6 +249,7 @@ export function DataConnectFormScene({
                 </Form>
               </div>
               <div className={styles.hintPanel}>
+                <div className={styles.hintTitle}>操作说明</div>
                 <p className={styles.hintText}>
                   {mode === "edit"
                     ? t("dataConnect.editFlowHint")

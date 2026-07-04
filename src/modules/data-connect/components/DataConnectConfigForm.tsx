@@ -9,6 +9,11 @@ import { Form, Input, InputNumber, Select, Switch } from "antd";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  getConnectorFieldPlaceholder,
+  groupConnectorFields,
+  humanizeConnectorFieldLabel,
+} from "@/modules/data-connect/lib/connector-template";
 import type {
   DataConnectConnectorType,
 } from "@/modules/data-connect/types/data-connect";
@@ -59,25 +64,15 @@ const TAG_INVALID_CHARACTERS = [
   "'",
 ];
 
-function getFieldLabel(name: string) {
-  return name
-    .replace(/_/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/^\w/, (char) => char.toUpperCase());
-}
-
 export function DataConnectConfigForm({
   isEdit = false,
   selectedConnectorType,
 }: DataConnectConfigFormProps) {
   const { t } = useTranslation();
 
-  const fields = useMemo(
-    () =>
-      Object.entries(selectedConnectorType?.fieldConfig ?? {}).sort((left, right) =>
-        left[0].localeCompare(right[0]),
-      ),
-    [selectedConnectorType?.fieldConfig],
+  const groupedFields = useMemo(
+    () => groupConnectorFields(selectedConnectorType),
+    [selectedConnectorType],
   );
 
   const tagRules = [
@@ -123,92 +118,130 @@ export function DataConnectConfigForm({
           <div className={styles.summary}>
             <strong>{selectedConnectorType.name}</strong>
             <span>{selectedConnectorType.type}</span>
+            <span>{Object.keys(selectedConnectorType.fieldConfig ?? {}).length} 个配置字段</span>
           </div>
         ) : null}
       </div>
-      <div className={styles.grid}>
-        <Form.Item
-          label={t("dataConnect.name")}
-          name="name"
-          rules={[
-            { message: t("common.required"), required: true },
-            { max: NAME_MAX_LENGTH, message: t("dataConnect.nameLengthLimit", { count: NAME_MAX_LENGTH }) },
-          ]}
-        >
-          <Input maxLength={NAME_MAX_LENGTH} />
-        </Form.Item>
-        <Form.Item label={t("common.status")} name="enabled" valuePropName="checked">
-          <Switch
-            checkedChildren={t("common.enabled")}
-            disabled={isEdit}
-            unCheckedChildren={t("common.disabled")}
-          />
-        </Form.Item>
-        <Form.Item
-          className={styles.full}
-          label={t("common.description")}
-          name="description"
-          rules={[
-            {
-              max: DESCRIPTION_MAX_LENGTH,
-              message: t("dataConnect.descriptionLengthLimit", { count: DESCRIPTION_MAX_LENGTH }),
-            },
-          ]}
-        >
-          <Input.TextArea maxLength={DESCRIPTION_MAX_LENGTH} rows={4} />
-        </Form.Item>
-        <Form.Item
-          className={styles.full}
-          label={t("dataConnect.tags")}
-          name="tags"
-          rules={tagRules}
-        >
-          <Select mode="tags" open={false} placeholder={t("dataConnect.tagsPlaceholder")} />
-        </Form.Item>
-        {fields.map(([fieldName, fieldConfig]) => (
+      <section className={styles.sectionCard}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h4 className={styles.sectionTitle}>基础信息</h4>
+            <p className={styles.sectionHint}>定义连接名称、用途描述与标签，便于后续识别和管理。</p>
+          </div>
+        </div>
+        <div className={styles.grid}>
           <Form.Item
-            className={fieldConfig.type === "object" || fieldConfig.type === "array" ? styles.full : ""}
-            extra={
-              isEdit && fieldConfig.encrypted
-                ? t("dataConnect.encryptedFieldEditHint")
-                : fieldConfig.description || undefined
-            }
-            key={fieldName}
-            label={fieldConfig.name || getFieldLabel(fieldName)}
-            name={["connectorConfig", fieldName]}
-            rules={[{ message: t("common.required"), required: fieldConfig.required }]}
-            valuePropName={fieldConfig.type === "boolean" ? "checked" : "value"}
+            label={t("dataConnect.name")}
+            name="name"
+            rules={[
+              { message: t("common.required"), required: true },
+              { max: NAME_MAX_LENGTH, message: t("dataConnect.nameLengthLimit", { count: NAME_MAX_LENGTH }) },
+            ]}
           >
-            {renderField(
-              fieldConfig.type,
-              fieldConfig.encrypted,
-              t("dataConnect.encryptedFieldPlaceholder", {
-                field: fieldConfig.name || getFieldLabel(fieldName),
-              }),
-            )}
+            <Input maxLength={NAME_MAX_LENGTH} />
           </Form.Item>
-        ))}
-      </div>
+          <Form.Item label={t("common.status")} name="enabled" valuePropName="checked">
+            <Switch
+              checkedChildren={t("common.enabled")}
+              disabled={isEdit}
+              unCheckedChildren={t("common.disabled")}
+            />
+          </Form.Item>
+          <Form.Item
+            className={styles.full}
+            label={t("common.description")}
+            name="description"
+            rules={[
+              {
+                max: DESCRIPTION_MAX_LENGTH,
+                message: t("dataConnect.descriptionLengthLimit", { count: DESCRIPTION_MAX_LENGTH }),
+              },
+            ]}
+          >
+            <Input.TextArea maxLength={DESCRIPTION_MAX_LENGTH} rows={4} />
+          </Form.Item>
+          <Form.Item
+            className={styles.full}
+            label={t("dataConnect.tags")}
+            name="tags"
+            rules={tagRules}
+          >
+            <Select mode="tags" open={false} placeholder={t("dataConnect.tagsPlaceholder")} />
+          </Form.Item>
+        </div>
+      </section>
+      <section className={styles.sectionCard}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h4 className={styles.sectionTitle}>连接配置</h4>
+            <p className={styles.sectionHint}>填写连接目标的访问参数。敏感字段不会在编辑时回显。</p>
+          </div>
+        </div>
+        <div className={styles.groupStack}>
+          {groupedFields.map((group) => (
+            <section className={styles.innerSection} key={group.key}>
+              <div className={styles.innerSectionTitle}>{group.title}</div>
+              <div className={styles.grid}>
+                {group.fields.map(([fieldName, fieldConfig]) => (
+                  <Form.Item
+                    className={
+                      fieldConfig.type === "object" || fieldConfig.type === "array"
+                        ? styles.full
+                        : ""
+                    }
+                    extra={
+                      isEdit && fieldConfig.encrypted
+                        ? t("dataConnect.encryptedFieldEditHint")
+                        : fieldConfig.description || undefined
+                    }
+                    key={fieldName}
+                    label={fieldConfig.name || humanizeConnectorFieldLabel(fieldName)}
+                    name={["connectorConfig", fieldName]}
+                    rules={[{ message: t("common.required"), required: fieldConfig.required }]}
+                    valuePropName={fieldConfig.type === "boolean" ? "checked" : "value"}
+                  >
+                    {renderField(
+                      fieldName,
+                      fieldConfig.type,
+                      fieldConfig.encrypted,
+                      t("dataConnect.encryptedFieldPlaceholder", {
+                        field: fieldConfig.name || humanizeConnectorFieldLabel(fieldName),
+                      }),
+                    )}
+                  </Form.Item>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
 
-function renderField(fieldType: string, encrypted: boolean, encryptedPlaceholder: string) {
+function renderField(
+  fieldName: string,
+  fieldType: string,
+  encrypted: boolean,
+  encryptedPlaceholder: string,
+) {
   if (encrypted) {
     return <Input.Password placeholder={encryptedPlaceholder} />;
   }
 
+  const placeholder = getConnectorFieldPlaceholder(fieldName, fieldType);
+
   switch (fieldType) {
     case "integer":
     case "number":
-      return <InputNumber className={styles.numberInput} />;
+      return <InputNumber className={styles.numberInput} placeholder={placeholder} />;
     case "boolean":
       return <Switch />;
     case "array":
-      return <Select mode="tags" open={false} />;
+      return <Select mode="tags" open={false} placeholder={placeholder} />;
     case "object":
-      return <Input.TextArea rows={4} />;
+      return <Input.TextArea placeholder={placeholder} rows={4} />;
     default:
-      return <Input />;
+      return <Input placeholder={placeholder} />;
   }
 }

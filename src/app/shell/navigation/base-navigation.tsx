@@ -34,14 +34,6 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
     key: "general-business-knowledge-network",
     labelKey: "shell.items.generalBusinessKnowledgeNetwork",
     icon: <AppstoreOutlined />,
-    children: [
-      {
-        key: "data-quality",
-        labelKey: "shell.items.dataQuality",
-        icon: <SafetyCertificateOutlined />,
-        disabled: true,
-      },
-    ],
   },
   {
     key: "model-resources",

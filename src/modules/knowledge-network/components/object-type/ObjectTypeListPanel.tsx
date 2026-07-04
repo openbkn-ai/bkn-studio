@@ -13,7 +13,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Empty, Input, Pagination, Select, Table, Tag } from "antd";
+import { Dropdown, Empty, Input, Select, Table, Tag } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
@@ -431,7 +432,7 @@ export function ObjectTypeListPanel({
 
       {sortedItems.length > 0 ? (
         <div className={styles.paginationBar}>
-          <Pagination
+          <TablePaginationBar
             current={page}
             onChange={(nextPage, nextPageSize) => {
               setPage(nextPage);
