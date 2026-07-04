@@ -13,7 +13,7 @@ export const dataConnectZhCN = {
     editTitle: "编辑数据连接",
     createDescription: "先选择连接器类型，再完成连接配置。",
     editDescription: "更新当前数据连接配置，连接器类型保持不变。",
-    searchPlaceholder: "按连接名称或描述搜索",
+    searchPlaceholder: "搜索名称/描述",
     connectorTypeFilterPlaceholder: "按连接器类型筛选",
     toolbarHint:
       "当前模块已接入 Vega 后端的 catalogs 和 connector-types，表单流已经打通。",
@@ -43,14 +43,11 @@ export const dataConnectZhCN = {
     categoryAll: "全部",
     selectConnectorTypeRequired: "请先选择连接器类型。",
     configStepTitle: "填写连接配置",
-    configStepDescription:
-      "根据后端返回的字段配置，填写连接实例需要的参数。",
-    encryptedFieldEditHint:
-      "敏感字段不会从后端回传，编辑时需要重新输入。",
+    configStepDescription: "按所选连接器填写访问参数。",
+    encryptedFieldEditHint: "敏感字段不回显，请重新输入。",
     encryptedFieldPlaceholder: "请输入{{field}}",
-    createFlowHint: "创建连接时，后端会在保存阶段执行参数校验和连接测试。",
-    editFlowHint:
-      "编辑时不允许更换连接器类型；启用/停用请在列表页操作。",
+    createFlowHint: "保存时会校验参数并测试连接。",
+    editFlowHint: "不可更换连接器类型；启停请在列表操作。",
     nameLengthLimit: "连接名称不能超过 {{count}} 个字符。",
     descriptionLengthLimit: "描述不能超过 {{count}} 个字符。",
     tagsMaxLength: "标签最多只能填写 {{count}} 个。",
@@ -60,6 +57,11 @@ export const dataConnectZhCN = {
     tagRequired: "标签不能为空。",
     deleteConfirmTitle: "删除数据连接",
     deleteConfirmDescription: '确认删除“{{name}}”吗？该操作不可撤销。',
+    enableConfirmTitle: "启用数据连接",
+    enableConfirmDescription: '确认启用“{{name}}”吗？',
+    disableConfirmTitle: "停用数据连接",
+    disableConfirmDescription:
+      '确认停用“{{name}}”吗？停用后该连接将不可用于扫描与数据访问。',
     scanManage: "扫描管理",
     scanTitle: "扫描管理",
     scanDescription: "管理数据连接的定时扫描计划，并查看最近的扫描任务执行情况。",

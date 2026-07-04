@@ -6,13 +6,18 @@
  */
 
 import { Form, Input, InputNumber, Select, Switch } from "antd";
+import type { FormItemProps, Rule } from "antd/es/form";
+import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
   getConnectorFieldPlaceholder,
+  getConnectorTemplateMeta,
   groupConnectorFields,
   humanizeConnectorFieldLabel,
+  resolveConnectorFieldControl,
+  type ConnectorFieldControl,
 } from "@/modules/data-connect/lib/connector-template";
 import type {
   DataConnectConnectorType,
@@ -75,7 +80,11 @@ export function DataConnectConfigForm({
     [selectedConnectorType],
   );
 
-  const tagRules = [
+  const templateMeta = selectedConnectorType
+    ? getConnectorTemplateMeta(selectedConnectorType)
+    : null;
+
+  const tagRules: Rule[] = [
     {
       validator: (_: unknown, value?: string[]) => {
         const tags = value ?? [];
@@ -110,108 +119,132 @@ export function DataConnectConfigForm({
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
-        <div>
+        <div className={styles.headerCopy}>
           <h3 className={styles.title}>{t("dataConnect.configStepTitle")}</h3>
           <p className={styles.description}>{t("dataConnect.configStepDescription")}</p>
         </div>
         {selectedConnectorType ? (
           <div className={styles.summary}>
-            <strong>{selectedConnectorType.name}</strong>
-            <span>{selectedConnectorType.type}</span>
-            <span>{Object.keys(selectedConnectorType.fieldConfig ?? {}).length} 个配置字段</span>
+            <span className={styles.summaryName}>{selectedConnectorType.name}</span>
+            <span className={styles.summaryBadge}>{templateMeta?.label}</span>
           </div>
         ) : null}
       </div>
-      <section className={styles.sectionCard}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h4 className={styles.sectionTitle}>基础信息</h4>
-            <p className={styles.sectionHint}>定义连接名称、用途描述与标签，便于后续识别和管理。</p>
-          </div>
-        </div>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>基础信息</div>
         <div className={styles.grid}>
-          <Form.Item
+          <InlineField
             label={t("dataConnect.name")}
             name="name"
+            required
             rules={[
               { message: t("common.required"), required: true },
-              { max: NAME_MAX_LENGTH, message: t("dataConnect.nameLengthLimit", { count: NAME_MAX_LENGTH }) },
+              {
+                max: NAME_MAX_LENGTH,
+                message: t("dataConnect.nameLengthLimit", { count: NAME_MAX_LENGTH }),
+              },
             ]}
+            span="half"
           >
-            <Input maxLength={NAME_MAX_LENGTH} />
-          </Form.Item>
-          <Form.Item label={t("common.status")} name="enabled" valuePropName="checked">
+            <Input maxLength={NAME_MAX_LENGTH} placeholder="例如 供应链主库" />
+          </InlineField>
+          <InlineField
+            label={t("common.status")}
+            name="enabled"
+            span="half"
+            valuePropName="checked"
+          >
             <Switch
               checkedChildren={t("common.enabled")}
               disabled={isEdit}
               unCheckedChildren={t("common.disabled")}
             />
-          </Form.Item>
-          <Form.Item
-            className={styles.full}
+          </InlineField>
+          <InlineField
+            align="start"
             label={t("common.description")}
             name="description"
             rules={[
               {
                 max: DESCRIPTION_MAX_LENGTH,
-                message: t("dataConnect.descriptionLengthLimit", { count: DESCRIPTION_MAX_LENGTH }),
+                message: t("dataConnect.descriptionLengthLimit", {
+                  count: DESCRIPTION_MAX_LENGTH,
+                }),
               },
             ]}
+            span="full"
           >
-            <Input.TextArea maxLength={DESCRIPTION_MAX_LENGTH} rows={4} />
-          </Form.Item>
-          <Form.Item
-            className={styles.full}
+            <Input.TextArea
+              maxLength={DESCRIPTION_MAX_LENGTH}
+              placeholder="简要说明用途（可选）"
+              rows={2}
+            />
+          </InlineField>
+          <InlineField
             label={t("dataConnect.tags")}
             name="tags"
             rules={tagRules}
+            span="full"
           >
-            <Select mode="tags" open={false} placeholder={t("dataConnect.tagsPlaceholder")} />
-          </Form.Item>
+            <Select
+              mode="tags"
+              open={false}
+              placeholder={t("dataConnect.tagsPlaceholder")}
+            />
+          </InlineField>
         </div>
       </section>
-      <section className={styles.sectionCard}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h4 className={styles.sectionTitle}>连接配置</h4>
-            <p className={styles.sectionHint}>填写连接目标的访问参数。敏感字段不会在编辑时回显。</p>
-          </div>
-        </div>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>连接配置</div>
         <div className={styles.groupStack}>
           {groupedFields.map((group) => (
-            <section className={styles.innerSection} key={group.key}>
-              <div className={styles.innerSectionTitle}>{group.title}</div>
+            <div className={styles.group} key={group.key}>
+              <div className={styles.groupTitle}>{group.title}</div>
               <div className={styles.grid}>
-                {group.fields.map(([fieldName, fieldConfig]) => (
-                  <Form.Item
-                    className={
-                      fieldConfig.type === "object" || fieldConfig.type === "array"
-                        ? styles.full
-                        : ""
-                    }
-                    extra={
-                      isEdit && fieldConfig.encrypted
-                        ? t("dataConnect.encryptedFieldEditHint")
-                        : fieldConfig.description || undefined
-                    }
-                    key={fieldName}
-                    label={fieldConfig.name || humanizeConnectorFieldLabel(fieldName)}
-                    name={["connectorConfig", fieldName]}
-                    rules={[{ message: t("common.required"), required: fieldConfig.required }]}
-                    valuePropName={fieldConfig.type === "boolean" ? "checked" : "value"}
-                  >
-                    {renderField(
-                      fieldName,
-                      fieldConfig.type,
-                      fieldConfig.encrypted,
-                      t("dataConnect.encryptedFieldPlaceholder", {
-                        field: fieldConfig.name || humanizeConnectorFieldLabel(fieldName),
-                      }),
-                    )}
-                  </Form.Item>
-                ))}
+                {group.fields.map(([fieldName, fieldConfig]) => {
+                  const control = resolveConnectorFieldControl(fieldName, fieldConfig.type);
+                  const label = fieldConfig.name || humanizeConnectorFieldLabel(fieldName);
+
+                  return (
+                    <InlineField
+                      align={control.kind === "json" ? "start" : "center"}
+                      extra={
+                        isEdit && fieldConfig.encrypted
+                          ? t("dataConnect.encryptedFieldEditHint")
+                          : undefined
+                      }
+                      key={fieldName}
+                      label={label}
+                      name={["connectorConfig", fieldName]}
+                      required={fieldConfig.required}
+                      rules={[
+                        {
+                          message: t("common.required"),
+                          required: fieldConfig.required,
+                        },
+                      ]}
+                      span={
+                        control.kind === "json" || control.kind === "tags" ? "full" : "half"
+                      }
+                      valuePropName={control.kind === "switch" ? "checked" : "value"}
+                    >
+                      {renderField({
+                        connectorType: selectedConnectorType?.type,
+                        control,
+                        encrypted: fieldConfig.encrypted,
+                        encryptedPlaceholder: t("dataConnect.encryptedFieldPlaceholder", {
+                          field: label,
+                        }),
+                        fieldName,
+                        fieldType: fieldConfig.type,
+                      })}
+                    </InlineField>
+                  );
+                })}
               </div>
-            </section>
+            </div>
           ))}
         </div>
       </section>
@@ -219,28 +252,104 @@ export function DataConnectConfigForm({
   );
 }
 
-function renderField(
-  fieldName: string,
-  fieldType: string,
-  encrypted: boolean,
-  encryptedPlaceholder: string,
-) {
+type InlineFieldProps = {
+  align?: "center" | "start";
+  children: ReactNode;
+  extra?: string;
+  label: string;
+  name: FormItemProps["name"];
+  required?: boolean;
+  rules?: Rule[];
+  span?: "full" | "half";
+  valuePropName?: string;
+};
+
+function InlineField({
+  align = "center",
+  children,
+  extra,
+  label,
+  name,
+  required = false,
+  rules,
+  span = "half",
+  valuePropName,
+}: InlineFieldProps) {
+  return (
+    <div
+      className={[
+        styles.field,
+        span === "full" ? styles.spanFull : styles.spanHalf,
+        align === "start" ? styles.fieldStart : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <label className={styles.fieldLabel}>
+        {required ? <span className={styles.requiredMark}>*</span> : null}
+        <span>{label}</span>
+      </label>
+      <div className={styles.fieldBody}>
+        <Form.Item
+          className={styles.fieldItem}
+          extra={extra}
+          name={name}
+          rules={rules}
+          valuePropName={valuePropName}
+        >
+          {children}
+        </Form.Item>
+      </div>
+    </div>
+  );
+}
+
+function renderField(options: {
+  connectorType?: string;
+  control: ConnectorFieldControl;
+  encrypted: boolean;
+  encryptedPlaceholder: string;
+  fieldName: string;
+  fieldType: string;
+}) {
+  const {
+    connectorType,
+    control,
+    encrypted,
+    encryptedPlaceholder,
+    fieldName,
+    fieldType,
+  } = options;
+
   if (encrypted) {
     return <Input.Password placeholder={encryptedPlaceholder} />;
   }
 
-  const placeholder = getConnectorFieldPlaceholder(fieldName, fieldType);
+  const placeholder = getConnectorFieldPlaceholder(fieldName, fieldType, connectorType);
 
-  switch (fieldType) {
-    case "integer":
+  switch (control.kind) {
     case "number":
-      return <InputNumber className={styles.numberInput} placeholder={placeholder} />;
-    case "boolean":
-      return <Switch />;
-    case "array":
+      return (
+        <InputNumber
+          className={styles.numberInput}
+          controls={false}
+          placeholder={placeholder}
+        />
+      );
+    case "switch":
+      return <Switch checkedChildren="开" unCheckedChildren="关" />;
+    case "select":
+      return (
+        <Select
+          allowClear
+          options={control.options}
+          placeholder={`请选择${humanizeConnectorFieldLabel(fieldName)}`}
+        />
+      );
+    case "tags":
       return <Select mode="tags" open={false} placeholder={placeholder} />;
-    case "object":
-      return <Input.TextArea placeholder={placeholder} rows={4} />;
+    case "json":
+      return <Input.TextArea placeholder={placeholder} rows={3} />;
     default:
       return <Input placeholder={placeholder} />;
   }

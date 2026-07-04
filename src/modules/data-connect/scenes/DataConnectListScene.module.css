@@ -16,21 +16,77 @@
 }
 
 .toolbarFilters {
-  composes: toolbarFilters from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-}
-
-.toolbarMeta {
-  composes: toolbarMeta from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: flex-end;
 }
 
 .searchInput {
-  composes: searchInput from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-  width: min(360px, 100%);
+  width: 240px;
+}
+
+.toolbarFilters :global(.ant-input-affix-wrapper) {
+  height: 32px;
+  padding-inline: 11px;
+  border-color: #d9e0ea;
+  border-radius: 0 !important;
+  background: #fff;
+  box-shadow: none;
+}
+
+.toolbarFilters :global(.ant-input-affix-wrapper:hover),
+.toolbarFilters :global(.ant-input-affix-wrapper-focused) {
+  border-color: #2e68ff;
+  box-shadow: none;
+}
+
+.toolbarFilters :global(.ant-input-affix-wrapper .ant-input) {
+  font-size: 13px;
+}
+
+.searchIcon {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.filterField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterLabel {
+  flex-shrink: 0;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 32px;
+  white-space: nowrap;
 }
 
 .filterSelect {
-  composes: filterSelect from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-  min-width: 180px;
+  width: 160px;
+}
+
+.filterSelect :global(.ant-select-selector) {
+  height: 32px !important;
+  border-color: #d9e0ea !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.filterSelect :global(.ant-select-selection-item),
+.filterSelect :global(.ant-select-selection-placeholder) {
+  line-height: 30px !important;
+  font-size: 13px;
+}
+
+.filterSelect:global(.ant-select-focused) :global(.ant-select-selector),
+.filterSelect:global(.ant-select):hover :global(.ant-select-selector) {
+  border-color: #2e68ff !important;
 }
 
 .tableSurface {
@@ -125,7 +181,32 @@
 }
 
 @media (max-width: 1200px) {
+  .toolbarFilters {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .searchInput {
-    width: min(100%, 360px);
+    width: min(100%, 240px);
+  }
+}
+
+@media (max-width: 768px) {
+  .toolbarFilters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchInput,
+  .filterSelect {
+    width: 100%;
+  }
+
+  .filterField {
+    width: 100%;
+  }
+
+  .filterSelect {
+    flex: 1;
   }
 }

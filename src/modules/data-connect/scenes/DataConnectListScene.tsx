@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ApiOutlined, ReloadOutlined } from "@ant-design/icons";
+import { ApiOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Input, Select, Space } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -51,7 +51,7 @@ export function DataConnectListScene({
   onOpenScans,
 }: DataConnectListSceneProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const danger = useDangerDelete();
   const navigate = useNavigate();
   const { pageState, query, reset, setKeyword, setPagination } = usePageState();
@@ -221,15 +221,28 @@ export function DataConnectListScene({
             <AppButton
               className={styles.actionLink}
               onClick={() => {
-                void (async () => {
-                  try {
-                    await setDataConnectRecordEnabled(record.id, !record.enabled);
-                    message.success(t("common.success"));
-                    await loadData();
-                  } catch (error) {
-                    void message.error(extractRequestErrorMessage(error));
-                  }
-                })();
+                const nextEnabled = !record.enabled;
+                void modal.confirm({
+                  title: nextEnabled
+                    ? t("dataConnect.enableConfirmTitle")
+                    : t("dataConnect.disableConfirmTitle"),
+                  content: nextEnabled
+                    ? t("dataConnect.enableConfirmDescription", { name: record.name })
+                    : t("dataConnect.disableConfirmDescription", { name: record.name }),
+                  okText: nextEnabled ? t("common.enabled") : t("common.disabled"),
+                  cancelText: t("common.cancel"),
+                  okButtonProps: nextEnabled ? undefined : { danger: true },
+                  onOk: async () => {
+                    try {
+                      await setDataConnectRecordEnabled(record.id, nextEnabled);
+                      message.success(t("common.success"));
+                      await loadData();
+                    } catch (error) {
+                      void message.error(extractRequestErrorMessage(error));
+                      throw error;
+                    }
+                  },
+                });
               }}
               type="link"
             >
@@ -345,28 +358,34 @@ export function DataConnectListScene({
                 {t("common.refresh")}
               </AppButton>
             </div>
-            <span className={styles.toolbarMeta}>{t("dataConnect.toolbarHint")}</span>
           </div>
           <div className={styles.toolbarFilters}>
-            <Input.Search
+            <Input
               allowClear
               className={styles.searchInput}
               onChange={(event) => setKeyword(event.target.value)}
-              onSearch={setKeyword}
+              onPressEnter={(event) => setKeyword(event.currentTarget.value)}
               placeholder={t("dataConnect.searchPlaceholder")}
+              prefix={<SearchOutlined className={styles.searchIcon} />}
               value={pageState.keyword}
             />
-            <Select
-              allowClear
-              className={styles.filterSelect}
-              onChange={(value) => setSelectedConnectorType(value)}
-              options={connectorTypes.map((item) => ({
-                label: item.name,
-                value: item.type,
-              }))}
-              placeholder={t("dataConnect.connectorTypeFilterPlaceholder")}
-              value={selectedConnectorType}
-            />
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>{t("dataConnect.connectorType")}</span>
+              <Select
+                className={styles.filterSelect}
+                onChange={(value) => {
+                  setSelectedConnectorType(value || undefined);
+                }}
+                options={[
+                  { label: t("dataConnect.categoryAll"), value: "" },
+                  ...connectorTypes.map((item) => ({
+                    label: item.name,
+                    value: item.type,
+                  })),
+                ]}
+                value={selectedConnectorType ?? ""}
+              />
+            </div>
           </div>
         </div>
         <TableSurface className={styles.tableSurface}>

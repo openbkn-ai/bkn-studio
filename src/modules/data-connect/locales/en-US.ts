@@ -16,7 +16,7 @@ export const dataConnectEnUS = {
       "Select a connector type first, then complete the connection configuration.",
     editDescription:
       "Update the current data connection configuration. Connector type remains unchanged.",
-    searchPlaceholder: "Search by connection name or description",
+    searchPlaceholder: "Search name/description",
     connectorTypeFilterPlaceholder: "Filter by connector type",
     toolbarHint:
       "This module is now using Vega backend catalogs and connector types as the first implementation slice.",
@@ -46,15 +46,11 @@ export const dataConnectEnUS = {
     categoryAll: "All",
     selectConnectorTypeRequired: "Please select a connector type first.",
     configStepTitle: "Configure data connection",
-    configStepDescription:
-      "Fill in the connector configuration fields returned by the backend model.",
-    encryptedFieldEditHint:
-      "Sensitive fields are not returned by the backend. Re-enter them when editing.",
+    configStepDescription: "Fill in access parameters for the selected connector.",
+    encryptedFieldEditHint: "Sensitive fields are not echoed. Re-enter them.",
     encryptedFieldPlaceholder: "Enter {{field}}",
-    createFlowHint:
-      "Creating a connection will trigger backend-side validation and connection testing during save.",
-    editFlowHint:
-      "Editing keeps the connector type unchanged. Use enable/disable in the list page to change status.",
+    createFlowHint: "Saving validates parameters and tests the connection.",
+    editFlowHint: "Connector type cannot change. Enable or disable from the list.",
     nameLengthLimit: "Connection name cannot exceed {{count}} characters.",
     descriptionLengthLimit: "Description cannot exceed {{count}} characters.",
     tagsMaxLength: "At most {{count}} tags are allowed.",
@@ -65,6 +61,11 @@ export const dataConnectEnUS = {
     deleteConfirmTitle: "Delete data connection",
     deleteConfirmDescription:
       'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
+    enableConfirmTitle: "Enable data connection",
+    enableConfirmDescription: 'Enable "{{name}}"?',
+    disableConfirmTitle: "Disable data connection",
+    disableConfirmDescription:
+      'Disable "{{name}}"? Scanning and data access for this connection will be unavailable.',
     scanManage: "Scan Management",
     scanTitle: "Scan Management",
     scanDescription:

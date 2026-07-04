@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Form, Result, Space, Spin, Steps } from "antd";
+import { Alert, Form, Result, Spin, Steps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ConnectorTypePicker } from "@/modules/data-connect/components/ConnectorTypePicker";
 import { DataConnectConfigForm } from "@/modules/data-connect/components/DataConnectConfigForm";
+import { getConnectorConfigDefaults } from "@/modules/data-connect/lib/connector-template";
 import {
   createDataConnectRecord,
   getDataConnectRecord,
@@ -128,7 +129,21 @@ export function DataConnectFormScene({
       return;
     }
 
-    form.setFieldValue("connectorType", selectedConnectorType);
+    const connector = connectorTypes.find((item) => item.type === selectedConnectorType);
+    const defaults = getConnectorConfigDefaults(connector);
+    const currentConfig = (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>;
+    const mergedConfig = { ...defaults };
+
+    Object.entries(currentConfig).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        mergedConfig[key] = value;
+      }
+    });
+
+    form.setFieldsValue({
+      connectorConfig: mergedConfig,
+      connectorType: selectedConnectorType,
+    });
     setCurrentStep(1);
   };
 
@@ -200,9 +215,11 @@ export function DataConnectFormScene({
             <h1 className={styles.pageTitle}>{pageTitle}</h1>
             <p className={styles.pageDescription}>{pageDescription}</p>
           </div>
-          <div className={styles.headerSteps}>
-            <Steps current={currentStep} items={stepItems} />
-          </div>
+          {mode === "create" ? (
+            <div className={styles.headerSteps}>
+              <Steps current={currentStep} items={stepItems} />
+            </div>
+          ) : null}
         </div>
         <div className={styles.formShell}>
           {loading ? (
@@ -228,39 +245,55 @@ export function DataConnectFormScene({
           ) : mode === "edit" && !record ? (
             <Alert message={t("common.notFound")} showIcon type="warning" />
           ) : (
-            <Space direction="vertical" size={20} style={{ width: "100%" }}>
-              <div className={styles.stepPanel}>
-                <Form form={form} layout="vertical">
-                  {currentStep === 0 && mode === "create" ? (
-                    <ConnectorTypePicker
-                      onChange={(value) => {
-                        setSelectedConnectorType(value);
-                        form.setFieldValue("connectorType", value);
-                      }}
-                      options={connectorTypes}
-                      value={selectedConnectorType}
-                    />
-                  ) : (
-                    <DataConnectConfigForm
-                      isEdit={mode === "edit"}
-                      selectedConnectorType={selectedConnector}
-                    />
-                  )}
-                </Form>
-              </div>
-              <div className={styles.hintPanel}>
-                <div className={styles.hintTitle}>操作说明</div>
-                <p className={styles.hintText}>
-                  {mode === "edit"
-                    ? t("dataConnect.editFlowHint")
-                    : t("dataConnect.createFlowHint")}
-                </p>
-              </div>
-            </Space>
+            <div className={styles.stepPanel}>
+              <Form
+                className={
+                  currentStep === 0 && mode === "create"
+                    ? undefined
+                    : styles.configFormHorizontal
+                }
+                colon={false}
+                form={form}
+                labelAlign="right"
+                labelCol={
+                  currentStep === 0 && mode === "create"
+                    ? undefined
+                    : { flex: "0 0 96px" }
+                }
+                layout={
+                  currentStep === 0 && mode === "create" ? "vertical" : "horizontal"
+                }
+                wrapperCol={
+                  currentStep === 0 && mode === "create"
+                    ? undefined
+                    : { flex: "1 1 0" }
+                }
+              >
+                {currentStep === 0 && mode === "create" ? (
+                  <ConnectorTypePicker
+                    onChange={(value) => {
+                      const connector = connectorTypes.find((item) => item.type === value);
+                      setSelectedConnectorType(value);
+                      form.setFieldsValue({
+                        connectorConfig: getConnectorConfigDefaults(connector),
+                        connectorType: value,
+                      });
+                    }}
+                    options={connectorTypes}
+                    value={selectedConnectorType}
+                  />
+                ) : (
+                  <DataConnectConfigForm
+                    isEdit={mode === "edit"}
+                    selectedConnectorType={selectedConnector}
+                  />
+                )}
+              </Form>
+            </div>
           )}
         </div>
         <div className={styles.footerBar}>
-          <div className={styles.actionsLeft}>
+          <div className={styles.actionsRight}>
             <AppButton onClick={handleBack}>{t("common.back")}</AppButton>
             {currentStep === 1 && mode === "create" ? (
               <AppButton
@@ -281,8 +314,6 @@ export function DataConnectFormScene({
                 {t("common.testConnection")}
               </AppButton>
             ) : null}
-          </div>
-          <div className={styles.actionsRight}>
             <AppButton onClick={handleBack}>{t("common.cancel")}</AppButton>
             <AppButton
               loading={submitting}
