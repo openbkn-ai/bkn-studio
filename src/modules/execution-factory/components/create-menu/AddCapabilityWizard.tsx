@@ -55,6 +55,7 @@ import {
   type ImportOpenApiCapabilityFormHandle,
 } from "./ImportOpenApiCapabilityForm";
 import { QuickAddApiForm, type QuickAddApiFormHandle } from "./QuickAddApiForm";
+import { buildQuickApiSubmitError } from "./quick-api-submit-error";
 
 import styles from "./create-menu.module.css";
 
@@ -343,7 +344,9 @@ export function AddCapabilityWizard({
 
     } catch (error) {
 
-      void message.error(extractRequestErrorMessage(error));
+      const submitError = buildQuickApiSubmitError(error);
+      quickApiFormRef.current?.showSubmitError(submitError);
+      void message.error(submitError.message);
 
     } finally {
 
