@@ -66,6 +66,14 @@ export const dataConnectEnUS = {
     disableConfirmTitle: "Disable data connection",
     disableConfirmDescription:
       'Disable "{{name}}"? Scanning and data access for this connection will be unavailable.',
+    dangerDelete: {
+      hasRunning: "A build task is still running. Stop it before deleting.",
+      catalogImpact: "Connection \"{{name}}\" has {{count}} index(es) built.",
+      impactWarning:
+        "Deleting will also remove all indexes and build tasks, and cannot be undone.",
+      catalogEmpty:
+        "Connection \"{{name}}\" has no built indexes. Deletion cannot be undone.",
+    },
     scanManage: "Scan",
     scanTitle: "Scan Management",
     scanDescription:
