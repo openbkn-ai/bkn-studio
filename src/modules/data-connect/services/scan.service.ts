@@ -6,7 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
-import { postCatalogDiscover } from "@/modules/data-catalog/services/catalog-discover.service";
+import { postCatalogDiscover } from "@/shared/catalog";
 import type {
   DataConnectScanSchedule,
   DataConnectScanScheduleListQuery,

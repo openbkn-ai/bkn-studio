@@ -1,5 +1,5 @@
 ---
-description: Windows PowerShell git and gh workflow guidance
+description: Windows PowerShell git/gh workflow and feature-branch PR policy
 alwaysApply: true
 ---
 
@@ -9,6 +9,19 @@ alwaysApply: true
 - Do not use `&&`, bash heredocs, or other bash-only constructs in shell commands.
 - For multiline content such as PR bodies, use PowerShell here-strings.
 - Before pushing code, fetch and compare against `origin/main` first.
-- Prefer `feature/*` branches plus PRs instead of directly pushing `main`.
 - If a command returns no exit status, retry with a simpler PowerShell-safe command before assuming git or gh failed.
 - If `pnpm` or another expected tool is unavailable, verify the local environment before changing implementation just to work around the missing command.
+
+## Feature branch + PR (required)
+
+**Default for all new work:** do not commit or push directly to `main` unless the user explicitly asks to push `main`.
+
+1. **Branch**: Create `feature/<short-topic>` from up-to-date `main` (fetch first).
+2. **Implement**: Commit on the feature branch with focused messages.
+3. **Push**: `git push -u origin HEAD` (not `git push origin main`).
+4. **Review**: Open a PR with `gh pr create` (summary + test plan).
+5. **Merge**: Let the user review and merge; do not force-push `main`.
+
+**When the user asks to "提交代码" or "推送"** without naming a branch: create/use a `feature/*` branch, push it, and offer or create a PR—not a direct `main` push.
+
+**Exceptions** (only if the user clearly requests): hotfix directly on `main`, amend/push `main`, or push without a PR.

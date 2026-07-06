@@ -35,11 +35,8 @@ import type {
 import {
   listDataConnectConnectorTypes,
 } from "@/modules/data-connect/services/data-connect.service";
-import type {
-  DataConnectConnectorType,
-  DataConnectRecord,
-} from "@/modules/data-connect/types/data-connect";
-import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
+import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
+import { catalogListAllQuery, listCatalogs, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./DataCatalogScene.module.css";
 
@@ -51,7 +48,7 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const [catalogs, setCatalogs] = useState<DataConnectRecord[]>([]);
+  const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [resources, setResources] = useState<CatalogResource[]>([]);
   const [tasks, setTasks] = useState<BuildTask[]>([]);

@@ -563,5 +563,3 @@ export function buildActionSourceFromCatalogSelection(
     type: "tool",
   };
 }
-
-export async function listActionTypeExecutionFactoryCatalog(

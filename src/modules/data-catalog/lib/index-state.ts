@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+import type { CatalogRecord } from "@/shared/catalog";
 import type {
   BuildTask,
   IndexState,
@@ -73,7 +73,7 @@ export function indexStateOf(tasks: BuildTask[]): IndexState {
  * 停用闸门:physical 连接停用后,其下资源禁止预览 / 构建。
  * logical catalog 是平台内部命名空间,不受启停控制。
  */
-export function resourceGateOf(catalog: DataConnectRecord | null): ResourceGate {
+export function resourceGateOf(catalog: CatalogRecord | null): ResourceGate {
   if (!catalog) {
     return { ok: false };
   }
@@ -85,6 +85,6 @@ export function resourceGateOf(catalog: DataConnectRecord | null): ResourceGate 
   return { ok: false, catalogName: catalog.name };
 }
 
-export function isCatalogPhysical(catalog: DataConnectRecord) {
+export function isCatalogPhysical(catalog: CatalogRecord) {
   return catalog.type !== "logical";
 }

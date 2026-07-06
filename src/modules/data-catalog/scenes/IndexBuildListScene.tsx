@@ -48,7 +48,7 @@ import type {
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
-import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+import type { CatalogRecord } from "@/shared/catalog";
 
 import sceneStyles from "./IndexBuildListScene.module.css";
 
@@ -93,7 +93,7 @@ export function IndexBuildListScene() {
 
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [resources, setResources] = useState<CatalogResource[]>([]);
-  const [catalogs, setCatalogs] = useState<DataConnectRecord[]>([]);
+  const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState("");

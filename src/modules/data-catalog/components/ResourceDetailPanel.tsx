@@ -16,12 +16,12 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import type { CatalogResource, ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
-import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ResourceDetailPanel.module.css";
 
 type ResourceDetailPanelProps = {
-  catalog: DataConnectRecord | null;
+  catalog: CatalogRecord | null;
   resource: CatalogResource;
 };
 

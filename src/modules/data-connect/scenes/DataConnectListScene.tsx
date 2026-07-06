@@ -37,7 +37,7 @@ import {
   useDangerDelete,
 } from "@/framework/safety/DangerDeleteModal";
 import { runningIdsFromError } from "@/framework/safety/delete-guard";
-import { catalogBlastRadius } from "@/modules/data-catalog/utils/delete-guard";
+import { catalogBlastRadius } from "@/shared/catalog";
 
 import styles from "./DataConnectListScene.module.css";
 

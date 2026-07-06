@@ -25,10 +25,8 @@ import {
   createLogicalCatalog,
   deleteCatalog,
 } from "@/shared/catalog";
-import type {
-  DataConnectConnectorType,
-  DataConnectRecord,
-} from "@/modules/data-connect/types/data-connect";
+import type { CatalogRecord } from "@/shared/catalog";
+import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 import styles from "./CatalogTreePanel.module.css";
 
@@ -37,7 +35,7 @@ export type CatalogTreeSelection =
   | { id: string; type: "resource" };
 
 type CatalogTreePanelProps = {
-  catalogs: DataConnectRecord[];
+  catalogs: CatalogRecord[];
   connectorTypes: DataConnectConnectorType[];
   onRefresh: () => Promise<void> | void;
   onSelectCatalog: (catalogId: string) => void;
@@ -48,7 +46,7 @@ type CatalogTreePanelProps = {
 };
 
 type ConnectorTypeGroup = {
-  catalogs: DataConnectRecord[];
+  catalogs: CatalogRecord[];
   key: string;
   label: string;
 };
@@ -93,7 +91,7 @@ export function CatalogTreePanel({
 
   const query = keyword.trim().toLowerCase();
 
-  const matchesCatalog = (catalog: DataConnectRecord) =>
+  const matchesCatalog = (catalog: CatalogRecord) =>
     query.length === 0 ||
     catalog.name.toLowerCase().includes(query) ||
     catalog.id.toLowerCase().includes(query) ||
@@ -126,7 +124,7 @@ export function CatalogTreePanel({
   }, [catalogs, query, connectorTypeNameMap]);
 
   const physicalGroups = useMemo(() => {
-    const groupMap = new Map<string, DataConnectRecord[]>();
+    const groupMap = new Map<string, CatalogRecord[]>();
 
     physicalCatalogs.forEach((catalog) => {
       const key = catalog.connectorType || "unknown";
@@ -208,7 +206,7 @@ export function CatalogTreePanel({
     }
   };
 
-  const handleDeleteLogical = (catalog: DataConnectRecord) => {
+  const handleDeleteLogical = (catalog: CatalogRecord) => {
     void modal.confirm({
       title: t("dataCatalog.tree.deleteLogicalTitle"),
       content: t("dataCatalog.tree.deleteLogicalDescription", { name: catalog.name }),
@@ -229,7 +227,7 @@ export function CatalogTreePanel({
   };
 
   const renderCatalogLeaf = (
-    catalog: DataConnectRecord,
+    catalog: CatalogRecord,
     options?: { indented?: boolean; showDelete?: boolean },
   ) => {
     const isSelected = selectedCatalogId === catalog.id;

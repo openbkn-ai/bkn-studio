@@ -110,66 +110,22 @@ export const dataCatalogEnUS = {
       pageSize: "{{size}} / page",
     },
     dangerDelete: {
-      typeNameToConfirm:
-        "This is a high-risk action. Type the name \"{{name}}\" to confirm deletion.",
       hasRunning: "A build task is still running. Stop it before deleting.",
       catalogImpact: "Connection \"{{name}}\" has {{count}} index(es) built.",
-      resourceImpact: "Resource \"{{name}}\" has {{count}} index(es) built.",
       impactWarning:
         "Deleting will also remove all indexes and build tasks, and cannot be undone.",
       catalogEmpty:
         "Connection \"{{name}}\" has no built indexes. Deletion cannot be undone.",
-      resourceEmpty:
-        "Resource \"{{name}}\" has no built indexes. Deletion cannot be undone.",
     },
     catalog: {
       notFound: "No resources found for this connection; it may have been deleted",
-      neverScanned: "Never scanned",
-      scanNow: "Scan Now",
-      runScan: "Run Scan",
-      scanningAction: "Scanning...",
-      testing: "Testing...",
-      scanTriggered: "Scan triggered: {{name}}",
-      scanSection: "Scan Management",
-      connectionInfo: "Connection Info",
       resourceSection: "Resources",
-      resourceSummary: "{{total}} resources, {{indexed}} indexed",
       goConnection: "Connection",
       goScan: "Scan",
       goScanToDiscover: "Go scan to discover resources",
-      scanningHint: "Connection is scanning",
-      headerName: "Name",
-      headerKind: "Type",
-      headerConnector: "Connector",
-      headerStatus: "Status",
-      headerResources: "Resources",
-      statResources: "Resources",
-      statLastScan: "Last Scan",
-      statIndexed: "Indexed",
-      logicalNoConfig:
-        "A logical catalog is an internal namespace with no external connection config.",
-      logicalNoScans: "Logical catalogs do not support scans",
-      noScans: "No scan records yet; enable the connection to run discover",
-      disabledScanHint:
-        "This connection is disabled. Discover requires an enabled catalog - enable it before scanning.",
       emptyResourcesPhysical:
         "No resources yet. Run a scan from Data Connection to discover resources from the source.",
       emptyResourcesLogical: "No resources yet",
-      scanResult:
-        "took {{duration}}s · found {{found}} resources ({{fresh}} new)",
-      scanShowMore: "{{count}} more",
-      scanShowLess: "Show less",
-      trigger: {
-        manual: "manual",
-        scheduled: "scheduled",
-      },
-      disableConfirmTitle: "Disable connection {{name}}?",
-      disableConfirmContent:
-        "After disabling: {{resourceCount}} resources cannot be previewed/built; {{listeningCount}} listening streaming tasks will pause; effective indexes are unaffected and resume on re-enable.",
-      disabled: "Disabled {{name}}",
-      deleteConfirmTitle: "Delete connection {{name}}?",
-      deleteConfirmContent:
-        "Its {{resourceCount}} resources and build tasks will be deleted as well. This cannot be undone.",
     },
     resource: {
       name: "Resource Name",

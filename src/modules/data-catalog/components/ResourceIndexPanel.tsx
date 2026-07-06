@@ -30,7 +30,7 @@ import {
   embeddingStateOf,
 } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
-import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+import type { CatalogRecord } from "@/shared/catalog";
 
 import panelStyles from "./ResourceIndexPanel.module.css";
 
@@ -38,7 +38,7 @@ export type { ResourceIndexView };
 
 type ResourceIndexPanelProps = {
   active: boolean;
-  catalog: DataConnectRecord | null;
+  catalog: CatalogRecord | null;
   indexView: ResourceIndexView;
   onIndexViewChange: (view: ResourceIndexView) => void;
   onRefresh: () => Promise<void> | void;
