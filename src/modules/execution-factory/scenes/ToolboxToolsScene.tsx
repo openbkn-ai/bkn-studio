@@ -28,6 +28,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { ToolDebugModal } from "@/modules/execution-factory/components/ToolDebugModal";
 import { ToolFormDrawer } from "@/modules/execution-factory/components/ToolFormDrawer";
@@ -44,6 +45,7 @@ import {
 } from "@/modules/execution-factory/services/tool.service";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 import type { ToolRecord, ToolRunLogEntry, ToolStatus } from "@/modules/execution-factory/types/tool";
+import { buildToolCapabilityManifest } from "@/modules/execution-factory/utils/capability-manifest";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-export";
 
@@ -360,6 +362,18 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     ];
   }, [handleToggleStatus, selectedTool, t, toolbox?.serviceUrl, viewMode]);
 
+  const selectedToolManifest = useMemo(() => {
+    if (selectedToolDetail) {
+      return buildToolCapabilityManifest(selectedToolDetail);
+    }
+
+    if (!selectedTool) {
+      return null;
+    }
+
+    return buildToolCapabilityManifest(selectedTool);
+  }, [selectedTool, selectedToolDetail]);
+
   return (
     <>
       <section className={styles.page}>
@@ -628,6 +642,9 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                       ) : null
                     }
                   />
+                  {selectedToolManifest ? (
+                    <CapabilityAgentReadinessPanel manifest={selectedToolManifest} />
+                  ) : null}
                   <div className={styles.ioPanel}>
                     <div className={styles.ioHeader}>
                       <span>{t("executionFactory.toolboxInputOutputTitle")}</span>

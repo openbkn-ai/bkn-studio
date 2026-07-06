@@ -1,0 +1,76 @@
+.panel {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid rgba(18, 110, 227, 0.14);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.titleWrap {
+  min-width: 0;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(0, 0, 0, 0.88);
+  font-weight: 600;
+}
+
+.description {
+  margin-top: 4px;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.score {
+  min-width: 104px;
+  text-align: right;
+}
+
+.scoreValue {
+  color: #126ee3;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.scoreLabel {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  margin-bottom: 8px;
+  color: rgba(0, 0, 0, 0.72);
+  font-weight: 600;
+}
+
+.missingList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.emptyText {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
