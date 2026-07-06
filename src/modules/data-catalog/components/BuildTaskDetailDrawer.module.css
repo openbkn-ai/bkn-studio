@@ -18,10 +18,6 @@
   background: #f8fafc;
 }
 
-.drawer :global(.ant-btn) {
-  border-radius: 0 !important;
-}
-
 .drawerContent {
   display: grid;
   gap: 12px;
@@ -41,6 +37,20 @@
   font-weight: 600;
 }
 
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.metaLine {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 12px;
+}
+
 .descriptionBlock :global(.ant-descriptions-view) {
   border-radius: 0;
   overflow: hidden;
@@ -54,7 +64,7 @@
 }
 
 .descriptionBlock :global(.ant-descriptions-item-label) {
-  width: 96px;
+  width: 120px;
   background: #f8fafc;
   color: #64748b;
   font-weight: 500;
@@ -66,44 +76,17 @@
   word-break: break-word;
 }
 
-.configGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.fieldList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
 }
 
-.configItem {
-  display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid #e5eaf2;
-  border-radius: 0;
-  background: #f8fafc;
-}
-
-.configLabel {
-  color: #94a3b8;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.configHint {
-  color: #94a3b8;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.configValue {
+.fieldText {
   color: #111827;
-  font-size: 13px;
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
   line-height: 1.5;
-  word-break: break-word;
-  white-space: pre-wrap;
+  word-break: break-all;
 }
 
-@media (max-width: 768px) {
-  .configGrid {
-    grid-template-columns: 1fr;
-  }
-}

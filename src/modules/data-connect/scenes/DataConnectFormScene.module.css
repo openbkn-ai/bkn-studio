@@ -21,6 +21,31 @@
   background: linear-gradient(180deg, #fbfcfe 0%, #fff 100%);
 }
 
+.headerPanelCreate {
+  display: grid;
+  grid-template-columns: 1fr minmax(360px, 360px) 1fr;
+  align-items: center;
+  gap: 16px;
+}
+
+.headerPanelCreate .headerCopy {
+  grid-column: 1;
+  justify-self: start;
+  min-width: 0;
+}
+
+.headerPanelCreate .headerSteps {
+  grid-column: 2;
+  justify-self: stretch;
+  width: 100%;
+  max-width: 360px;
+}
+
+.headerPanelCreate .headerBackAction {
+  grid-column: 3;
+  justify-self: end;
+}
+
 .headerCopy {
   display: grid;
   gap: 4px;
@@ -52,6 +77,10 @@
   background: #fff;
 }
 
+.headerSteps :global(.ant-steps) {
+  width: 100%;
+}
+
 .headerSteps :global(.ant-steps-item-title) {
   font-size: 13px;
   font-weight: 600;
@@ -59,6 +88,11 @@
 
 .headerSteps :global(.ant-steps-item-icon) {
   border-radius: 0 !important;
+}
+
+.headerBackAction {
+  flex: none;
+  align-self: center;
 }
 
 .formShell {
@@ -158,9 +192,21 @@
     padding: 16px 18px;
   }
 
+  .headerPanelCreate {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .headerPanelCreate .headerBackAction {
+    align-self: flex-end;
+  }
+
   .headerSteps {
     width: 100%;
     min-width: 0;
+    max-width: none;
   }
 
   .formShell {

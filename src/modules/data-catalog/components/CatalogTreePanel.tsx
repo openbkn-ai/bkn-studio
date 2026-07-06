@@ -8,25 +8,27 @@
 import {
   ApiOutlined,
   AppstoreOutlined,
-  DatabaseOutlined,
+  DeleteOutlined,
   DownOutlined,
-  EyeOutlined,
   PlusOutlined,
-  TableOutlined,
 } from "@ant-design/icons";
-import { Input, Select } from "antd";
+import { Form, Input, Modal } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
-import { AppButton } from "@/framework/ui/common/AppButton";
-import { indexStateOf } from "@/modules/data-catalog/lib/index-state";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { isBuiltinLogicalCatalog } from "@/modules/data-catalog/lib/logical-catalog";
+import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import {
+  createLogicalCatalog,
+  deleteDataConnectRecord,
+} from "@/modules/data-connect/services/data-connect.service";
 import type {
-  BuildTask,
-  CatalogResource,
-  IndexStateKey,
-} from "@/modules/data-catalog/types/data-catalog";
-import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+  DataConnectConnectorType,
+  DataConnectRecord,
+} from "@/modules/data-connect/types/data-connect";
 
 import styles from "./CatalogTreePanel.module.css";
 
@@ -36,328 +38,320 @@ export type CatalogTreeSelection =
 
 type CatalogTreePanelProps = {
   catalogs: DataConnectRecord[];
-  onCreateConnection: () => void;
-  onCreateResource: (catalogId: string) => void;
+  connectorTypes: DataConnectConnectorType[];
+  onRefresh: () => Promise<void> | void;
   onSelectCatalog: (catalogId: string) => void;
-  onSelectResource: (resourceId: string) => void;
   resources: CatalogResource[];
   scanningCatalogIds: string[];
   selection: CatalogTreeSelection | null;
-  tasks: BuildTask[];
 };
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100];
-
-const DOT_CLASS: Partial<Record<IndexStateKey, string>> = {
-  built: styles.treeDotBuilt,
-  building: styles.treeDotBuilding,
-  rebuilding: styles.treeDotBuilding,
-  listening: styles.treeDotListening,
-  paused: styles.treeDotPaused,
-  failed: styles.treeDotFailed,
-  "failed-stale": styles.treeDotFailed,
+type ConnectorTypeGroup = {
+  catalogs: DataConnectRecord[];
+  key: string;
+  label: string;
 };
 
-function resourceIcon(category: CatalogResource["category"]) {
-  if (category === "logicview") {
-    return <EyeOutlined />;
-  }
-  if (category === "dataset") {
-    return <DatabaseOutlined />;
-  }
-  return <TableOutlined />;
-}
+type LogicalFormValues = {
+  description?: string;
+  name: string;
+};
 
 export function CatalogTreePanel({
   catalogs,
-  onCreateConnection,
-  onCreateResource,
+  connectorTypes,
+  onRefresh,
   onSelectCatalog,
-  onSelectResource,
   resources,
   scanningCatalogIds,
   selection,
-  tasks,
 }: CatalogTreePanelProps) {
   const { t } = useTranslation();
+  const { message, modal } = useAppServices();
   const [keyword, setKeyword] = useState("");
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
-  const [pages, setPages] = useState<Map<string, number>>(() => new Map());
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(() => new Set());
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form] = Form.useForm<LogicalFormValues>();
 
-  const tasksByResource = useMemo(() => {
-    const map = new Map<string, BuildTask[]>();
-    tasks.forEach((task) => {
-      map.set(task.resourceId, [...(map.get(task.resourceId) ?? []), task]);
-    });
-    return map;
-  }, [tasks]);
+  const connectorTypeNameMap = useMemo(
+    () => new Map(connectorTypes.map((item) => [item.type, item.name])),
+    [connectorTypes],
+  );
 
-  const resourcesByCatalog = useMemo(() => {
-    const map = new Map<string, CatalogResource[]>();
-    resources.forEach((resource) => {
-      map.set(resource.catalogId, [
-        ...(map.get(resource.catalogId) ?? []),
-        resource,
-      ]);
-    });
-    return map;
-  }, [resources]);
-
-  // 选中资源/目录时自动展开所属 catalog 一次;之后仍可手动收起
-  useEffect(() => {
+  const selectedCatalogId = useMemo(() => {
     if (!selection) {
-      return;
+      return undefined;
     }
-    const catalogId =
-      selection.type === "catalog"
-        ? selection.id
-        : resources.find((item) => item.id === selection.id)?.catalogId;
-    if (catalogId) {
-      setExpanded((previous) => {
-        if (previous.has(catalogId)) {
-          return previous;
-        }
-        const next = new Set(previous);
-        next.add(catalogId);
-        return next;
-      });
+    if (selection.type === "catalog") {
+      return selection.id;
     }
+    return resources.find((item) => item.id === selection.id)?.catalogId;
   }, [resources, selection]);
-
-  // 搜索词或页大小变化时回到第一页
-  useEffect(() => {
-    setPages(new Map());
-  }, [keyword, pageSize]);
 
   const query = keyword.trim().toLowerCase();
 
   const matchesCatalog = (catalog: DataConnectRecord) =>
     query.length === 0 ||
     catalog.name.toLowerCase().includes(query) ||
-    catalog.id.toLowerCase().includes(query);
+    catalog.id.toLowerCase().includes(query) ||
+    catalog.connectorType.toLowerCase().includes(query) ||
+    (connectorTypeNameMap.get(catalog.connectorType) ?? "")
+      .toLowerCase()
+      .includes(query);
 
-  const matchedResources = (catalog: DataConnectRecord) => {
-    const list = resourcesByCatalog.get(catalog.id) ?? [];
-    if (query.length === 0 || matchesCatalog(catalog)) {
-      return list;
-    }
-    return list.filter(
-      (resource) =>
-        resource.name.toLowerCase().includes(query) ||
-        resource.sourceIdentifier.toLowerCase().includes(query),
-    );
-  };
-
-  const visibleCatalogs = catalogs.filter(
-    (catalog) => matchesCatalog(catalog) || matchedResources(catalog).length > 0,
+  const physicalCatalogs = useMemo(
+    () =>
+      catalogs.filter(
+        (catalog) => catalog.type !== "logical" && matchesCatalog(catalog),
+      ),
+    [catalogs, query, connectorTypeNameMap],
   );
 
-  const physicalCatalogs = visibleCatalogs.filter((catalog) => catalog.type !== "logical");
-  const logicalCatalogs = visibleCatalogs.filter((catalog) => catalog.type === "logical");
+  const logicalCatalogs = useMemo(() => {
+    const items = catalogs.filter(
+      (catalog) => catalog.type === "logical" && matchesCatalog(catalog),
+    );
 
-  const setPage = (catalogId: string, page: number) => {
-    setPages((previous) => {
-      const next = new Map(previous);
-      next.set(catalogId, page);
-      return next;
+    return items.sort((left, right) => {
+      const leftBuiltin = isBuiltinLogicalCatalog(left) ? 0 : 1;
+      const rightBuiltin = isBuiltinLogicalCatalog(right) ? 0 : 1;
+      if (leftBuiltin !== rightBuiltin) {
+        return leftBuiltin - rightBuiltin;
+      }
+      return left.name.localeCompare(right.name, "zh-CN");
     });
-  };
+  }, [catalogs, query, connectorTypeNameMap]);
 
-  const toggleExpanded = (catalogId: string) => {
-    setExpanded((previous) => {
+  const physicalGroups = useMemo(() => {
+    const groupMap = new Map<string, DataConnectRecord[]>();
+
+    physicalCatalogs.forEach((catalog) => {
+      const key = catalog.connectorType || "unknown";
+      groupMap.set(key, [...(groupMap.get(key) ?? []), catalog]);
+    });
+
+    return [...groupMap.entries()]
+      .map(([key, items]) => ({
+        key,
+        label: connectorTypeNameMap.get(key) ?? key,
+        catalogs: items.sort((left, right) =>
+          left.name.localeCompare(right.name, "zh-CN"),
+        ),
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label, "zh-CN"));
+  }, [connectorTypeNameMap, physicalCatalogs]);
+
+  // 搜索时展开匹配类型；选中物理 catalog 时仅展开其所属类型。首次加载保持全部收起。
+  useEffect(() => {
+    setExpandedTypes((previous) => {
       const next = new Set(previous);
-      if (next.has(catalogId)) {
-        next.delete(catalogId);
+      let changed = false;
+
+      if (query.length > 0) {
+        physicalGroups.forEach((group) => {
+          if (!next.has(group.key)) {
+            next.add(group.key);
+            changed = true;
+          }
+        });
+      }
+
+      if (selectedCatalogId) {
+        const catalog = catalogs.find((item) => item.id === selectedCatalogId);
+        if (catalog && catalog.type !== "logical") {
+          const typeKey = catalog.connectorType || "unknown";
+          if (!next.has(typeKey)) {
+            next.add(typeKey);
+            changed = true;
+          }
+        }
+      }
+
+      return changed ? next : previous;
+    });
+  }, [catalogs, physicalGroups, query, selectedCatalogId]);
+
+  const toggleTypeExpanded = (typeKey: string) => {
+    setExpandedTypes((previous) => {
+      const next = new Set(previous);
+      if (next.has(typeKey)) {
+        next.delete(typeKey);
       } else {
-        next.add(catalogId);
+        next.add(typeKey);
       }
       return next;
     });
   };
 
-  const renderCatalogNode = (catalog: DataConnectRecord) => {
-    const children = matchedResources(catalog);
-    const forcedOpen = query.length > 0 && !matchesCatalog(catalog) && children.length > 0;
-    // 选中只在切换选区时自动展开一次(见上方 effect),这里不强制,否则"收起"失效
-    const isOpen = forcedOpen || expanded.has(catalog.id);
-    const isSelected = selection?.type === "catalog" && selection.id === catalog.id;
-    const isPhysical = catalog.type !== "logical";
-    const scanning = scanningCatalogIds.includes(catalog.id);
-    const resourceCount = (resourcesByCatalog.get(catalog.id) ?? []).length;
+  const handleCreateLogical = async () => {
+    try {
+      const values = await form.validateFields();
+      setCreating(true);
+      await createLogicalCatalog({
+        name: values.name.trim(),
+        description: values.description?.trim() ?? "",
+      });
+      message.success(t("common.success"));
+      setCreateOpen(false);
+      form.resetFields();
+      await onRefresh();
+    } catch (error) {
+      if (error && typeof error === "object" && "errorFields" in error) {
+        return;
+      }
+      void message.error(extractRequestErrorMessage(error));
+    } finally {
+      setCreating(false);
+    }
+  };
 
-    const totalPages = Math.max(1, Math.ceil(children.length / pageSize));
-    const page = Math.min(pages.get(catalog.id) ?? 1, totalPages);
-    const pagedChildren = children.slice((page - 1) * pageSize, page * pageSize);
+  const handleDeleteLogical = (catalog: DataConnectRecord) => {
+    void modal.confirm({
+      title: t("dataCatalog.tree.deleteLogicalTitle"),
+      content: t("dataCatalog.tree.deleteLogicalDescription", { name: catalog.name }),
+      okText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteDataConnectRecord(catalog.id);
+          message.success(t("common.success"));
+          await onRefresh();
+        } catch (error) {
+          void message.error(extractRequestErrorMessage(error));
+          throw error;
+        }
+      },
+    });
+  };
+
+  const renderCatalogLeaf = (
+    catalog: DataConnectRecord,
+    options?: { indented?: boolean; showDelete?: boolean },
+  ) => {
+    const isSelected = selectedCatalogId === catalog.id;
+    const scanning = scanningCatalogIds.includes(catalog.id);
+    const isPhysical = catalog.type !== "logical";
+    const builtin = !isPhysical && isBuiltinLogicalCatalog(catalog);
 
     return (
-      <div key={catalog.id}>
-        <div
-          className={[
-            styles.treeNode,
-            styles.treeNodeCatalog,
-            isSelected ? styles.treeNodeSelected : "",
-            isPhysical && !catalog.enabled ? styles.treeNodeOff : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          onClick={() => {
-            setExpanded((previous) => {
-              const next = new Set(previous);
-              next.add(catalog.id);
-              return next;
-            });
+      <div
+        className={[
+          styles.treeNode,
+          options?.indented ? styles.treeNodeCatalog : styles.treeNodeLogical,
+          isSelected ? styles.treeNodeSelected : "",
+          isPhysical && !catalog.enabled ? styles.treeNodeOff : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        key={catalog.id}
+        onClick={() => onSelectCatalog(catalog.id)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
             onSelectCatalog(catalog.id);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        title={catalog.name}
+      >
+        <span className={styles.treeNodeIcon}>
+          {isPhysical ? <ApiOutlined /> : <AppstoreOutlined />}
+        </span>
+        <span className={styles.treeNodeName}>{catalog.name}</span>
+        {scanning ? (
+          <span className={[styles.treeMiniTag, styles.treeMiniTagScan].join(" ")}>
+            {t("dataCatalog.tree.scanning")}
+          </span>
+        ) : null}
+        {isPhysical && !catalog.enabled ? (
+          <span className={styles.treeMiniTag}>{t("common.disabled")}</span>
+        ) : null}
+        {builtin ? (
+          <span className={styles.treeMiniTag}>{t("dataCatalog.tree.builtin")}</span>
+        ) : options?.showDelete ? (
+          <PermissionGate permissions="catalog:delete">
+            <button
+              aria-label={t("common.delete")}
+              className={styles.treeActionBtnVisible}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleDeleteLogical(catalog);
+              }}
+              title={t("common.delete")}
+              type="button"
+            >
+              <DeleteOutlined />
+            </button>
+          </PermissionGate>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderPhysicalGroup = (group: ConnectorTypeGroup) => {
+    const isOpen = query.length > 0 || expandedTypes.has(group.key);
+
+    return (
+      <div key={group.key}>
+        <div
+          className={styles.treeNodeType}
+          onClick={() => toggleTypeExpanded(group.key)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              toggleTypeExpanded(group.key);
+            }
           }}
           role="button"
           tabIndex={0}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              onSelectCatalog(catalog.id);
-            }
-          }}
         >
           <button
             aria-label={isOpen ? t("dataCatalog.tree.collapse") : t("dataCatalog.tree.expand")}
             className={[styles.treeCaret, isOpen ? styles.treeCaretOpen : ""].join(" ")}
             onClick={(event) => {
               event.stopPropagation();
-              toggleExpanded(catalog.id);
+              toggleTypeExpanded(group.key);
             }}
             type="button"
           >
             <DownOutlined />
           </button>
           <span className={styles.treeNodeIcon}>
-            {isPhysical ? <ApiOutlined /> : <AppstoreOutlined />}
+            <ApiOutlined />
           </span>
-          <span className={styles.treeNodeName} title={catalog.name}>
-            {catalog.name}
+          <span className={styles.treeNodeName} title={group.label}>
+            {group.label}
           </span>
-          {scanning ? (
-            <span className={[styles.treeMiniTag, styles.treeMiniTagScan].join(" ")}>
-              {t("dataCatalog.tree.scanning")}
-            </span>
-          ) : null}
-          {isPhysical && !catalog.enabled ? (
-            <span className={styles.treeMiniTag}>{t("common.disabled")}</span>
-          ) : null}
-          <span className={styles.treeCount}>{resourceCount}</span>
-          <PermissionGate permissions="resource:create">
-            <button
-              aria-label={t("dataCatalog.tree.addResource")}
-              className={styles.treeAdd}
-              onClick={(event) => {
-                event.stopPropagation();
-                onCreateResource(catalog.id);
-              }}
-              title={t("dataCatalog.tree.addResource")}
-              type="button"
-            >
-              <PlusOutlined />
-            </button>
-          </PermissionGate>
+          <span className={styles.treeCount}>{group.catalogs.length}</span>
         </div>
         {isOpen ? (
           <div className={styles.treeChildren}>
-            {children.length === 0 ? (
-              <div className={styles.treeEmptyHint}>
-                {isPhysical
-                  ? t("dataCatalog.tree.emptyPhysical")
-                  : t("dataCatalog.tree.emptyLogical")}
-              </div>
-            ) : (
-              pagedChildren.map((resource) => {
-                const state = indexStateOf(tasksByResource.get(resource.id) ?? []);
-                const isResourceSelected =
-                  selection?.type === "resource" && selection.id === resource.id;
-
-                return (
-                  <div
-                    className={[
-                      styles.treeNode,
-                      styles.treeNodeResource,
-                      isResourceSelected ? styles.treeNodeSelected : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    key={resource.id}
-                    onClick={() => onSelectResource(resource.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        onSelectResource(resource.id);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    title={resource.sourceIdentifier}
-                  >
-                    <span className={styles.treeNodeIcon}>
-                      {resourceIcon(resource.category)}
-                    </span>
-                    <span className={styles.treeNodeName}>{resource.name}</span>
-                    <span
-                      className={[styles.treeDot, DOT_CLASS[state.key] ?? ""].join(" ")}
-                      title={t(`dataCatalog.indexState.${state.key === "failed-stale" ? "rebuildFailed" : state.key}`)}
-                    />
-                  </div>
-                );
-              })
+            {group.catalogs.map((catalog) =>
+              renderCatalogLeaf(catalog, { indented: true }),
             )}
-            {children.length > pageSize ? (
-              <div className={styles.treePager}>
-                <button
-                  aria-label={t("dataCatalog.preview.prev")}
-                  className={styles.treePagerBtn}
-                  disabled={page <= 1}
-                  onClick={() => setPage(catalog.id, page - 1)}
-                  type="button"
-                >
-                  ‹
-                </button>
-                <span>
-                  {t("dataCatalog.tree.pageInfo", {
-                    from: (page - 1) * pageSize + 1,
-                    to: Math.min(page * pageSize, children.length),
-                    total: children.length,
-                  })}
-                </span>
-                <button
-                  aria-label={t("dataCatalog.preview.next")}
-                  className={styles.treePagerBtn}
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(catalog.id, page + 1)}
-                  type="button"
-                >
-                  ›
-                </button>
-              </div>
-            ) : null}
           </div>
         ) : null}
       </div>
     );
   };
 
+  const hasAny = physicalGroups.length > 0 || logicalCatalogs.length > 0;
+
   return (
     <aside className={styles.treePanel}>
       <div className={styles.treeHead}>
         <span className={styles.treeHeadTitle}>{t("dataCatalog.title")}</span>
-        <PermissionGate permissions="catalog:create">
-          <AppButton onClick={onCreateConnection} size="small" type="primary">
-            {t("dataCatalog.tree.newConnection")}
-          </AppButton>
-        </PermissionGate>
       </div>
       <Input
         allowClear
+        className={styles.treeSearch}
         onChange={(event) => setKeyword(event.target.value)}
         placeholder={t("dataCatalog.tree.searchPlaceholder")}
-        size="small"
         value={keyword}
       />
       <div className={styles.treeBody}>
-        {visibleCatalogs.length === 0 ? (
+        {!hasAny ? (
           <div className={styles.treeEmpty}>
             {query.length > 0
               ? t("dataCatalog.tree.noMatch")
@@ -365,26 +359,52 @@ export function CatalogTreePanel({
           </div>
         ) : (
           <>
-            {physicalCatalogs.length > 0 ? (
-              <>
-                <div className={styles.treeSection}>
-                  {t("dataCatalog.tree.physicalGroup")}
-                  <span className={styles.treeSectionHint}>physical</span>
+            <div className={styles.treeBlock}>
+              <div className={styles.treeSection}>
+                <span>{t("dataCatalog.tree.physicalGroup")}</span>
+              </div>
+              <div className={styles.treeBlockBody}>
+                {physicalGroups.length === 0 ? (
+                  <div className={styles.treeEmptyHint}>
+                    {t("dataCatalog.tree.emptyPhysicalGroup")}
+                  </div>
+                ) : (
+                  physicalGroups.map(renderPhysicalGroup)
+                )}
+              </div>
+            </div>
+            <div className={styles.treeBlock}>
+              <div className={styles.treeSection}>
+                <span>{t("dataCatalog.tree.logicalGroup")}</span>
+                <div className={styles.treeSectionActions}>
+                  <PermissionGate permissions="catalog:create">
+                    <button
+                      aria-label={t("dataCatalog.tree.addLogical")}
+                      className={styles.treeSectionBtn}
+                      onClick={() => {
+                        form.resetFields();
+                        setCreateOpen(true);
+                      }}
+                      title={t("dataCatalog.tree.addLogical")}
+                      type="button"
+                    >
+                      <PlusOutlined />
+                    </button>
+                  </PermissionGate>
                 </div>
-                {physicalCatalogs.map(renderCatalogNode)}
-              </>
-            ) : null}
-            {logicalCatalogs.length > 0 ? (
-              <>
-                <div className={styles.treeSection}>
-                  {t("dataCatalog.tree.logicalGroup")}
-                  <span className={styles.treeSectionHint}>
-                    {t("dataCatalog.tree.logicalGroupHint")}
-                  </span>
-                </div>
-                {logicalCatalogs.map(renderCatalogNode)}
-              </>
-            ) : null}
+              </div>
+              <div className={styles.treeBlockBody}>
+                {logicalCatalogs.length === 0 ? (
+                  <div className={styles.treeEmptyHint}>
+                    {t("dataCatalog.tree.emptyLogicalGroup")}
+                  </div>
+                ) : (
+                  logicalCatalogs.map((catalog) =>
+                    renderCatalogLeaf(catalog, { showDelete: true }),
+                  )
+                )}
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -395,18 +415,49 @@ export function CatalogTreePanel({
             resourceCount: resources.length as never,
           })}
         </span>
-        <Select
-          onChange={(value: number) => setPageSize(value)}
-          options={PAGE_SIZE_OPTIONS.map((size) => ({
-            label: t("dataCatalog.tree.pageSize", { size }),
-            value: size,
-          }))}
-          popupMatchSelectWidth={false}
-          size="small"
-          value={pageSize}
-          variant="borderless"
-        />
       </div>
+
+      <Modal
+        cancelText={t("common.cancel")}
+        className={styles.logicalModal}
+        confirmLoading={creating}
+        destroyOnHidden
+        okText={t("common.create")}
+        onCancel={() => {
+          setCreateOpen(false);
+          form.resetFields();
+        }}
+        onOk={() => {
+          void handleCreateLogical();
+        }}
+        open={createOpen}
+        rootClassName={styles.logicalModalRoot}
+        title={t("dataCatalog.tree.addLogicalTitle")}
+        width={440}
+      >
+        <Form form={form} layout="vertical" requiredMark={false}>
+          <Form.Item
+            label={t("dataCatalog.tree.logicalName")}
+            name="name"
+            rules={[{ required: true, message: t("common.required") }]}
+          >
+            <Input
+              maxLength={64}
+              placeholder={t("dataCatalog.tree.logicalNamePlaceholder")}
+            />
+          </Form.Item>
+          <Form.Item
+            label={t("common.description")}
+            name="description"
+          >
+            <Input.TextArea
+              maxLength={200}
+              placeholder={t("dataCatalog.tree.logicalDescriptionPlaceholder")}
+              rows={3}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </aside>
   );
 }

@@ -18,6 +18,7 @@ import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 import styles from "./shared.module.css";
 
 type BuildStatusTagProps = {
+  plain?: boolean;
   task: BuildTask;
 };
 
@@ -25,27 +26,46 @@ type BuildStatusTagProps = {
  * 构建任务状态标。已完成但向量化没建满时，用琥珀色「已完成·向量化失败/部分失败」
  * 替代绿色「已完成」，并在 tooltip 里展开 failureDetail。
  */
-export function BuildStatusTag({ task }: BuildStatusTagProps) {
+export function BuildStatusTag({ plain = false, task }: BuildStatusTagProps) {
   const { t } = useTranslation();
+
+  const renderPlain = (label: string, tooltip?: string) => {
+    const content = <span className={styles.plainText}>{label}</span>;
+    if (!tooltip) {
+      return content;
+    }
+    return <Tooltip title={tooltip}>{content}</Tooltip>;
+  };
 
   // 已完成但向量化失败/部分失败:红/橙告警标 + tooltip 展开 failure_detail。
   const embeddingState = embeddingStateOf(task);
   if (embeddingState === "failed" || embeddingState === "partial") {
     const failed = embeddingState === "failed";
+    const label = t(
+      failed
+        ? "dataCatalog.task.statuses.embeddingFailed"
+        : "dataCatalog.task.statuses.embeddingPartial",
+    );
+    const tooltip = task.failureDetail || t("dataCatalog.task.embeddingDegradedHint");
+    if (plain) {
+      return renderPlain(label, tooltip);
+    }
     return (
-      <Tooltip title={task.failureDetail || t("dataCatalog.task.embeddingDegradedHint")}>
+      <Tooltip title={tooltip}>
         <span
           className={[styles.tag, failed ? styles.taskFailed : styles.taskDegraded].join(" ")}
         >
           <WarningOutlined />
-          {t(
-            failed
-              ? "dataCatalog.task.statuses.embeddingFailed"
-              : "dataCatalog.task.statuses.embeddingPartial",
-          )}
+          {label}
         </span>
       </Tooltip>
     );
+  }
+
+  const label = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`);
+
+  if (plain) {
+    return renderPlain(label);
   }
 
   const statusClass =
@@ -61,7 +81,7 @@ export function BuildStatusTag({ task }: BuildStatusTagProps) {
 
   return (
     <span className={[styles.tag, statusClass].join(" ")}>
-      {t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`)}
+      {label}
     </span>
   );
 }

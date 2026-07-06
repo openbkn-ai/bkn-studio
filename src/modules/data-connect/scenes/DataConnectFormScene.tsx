@@ -132,13 +132,10 @@ export function DataConnectFormScene({
     const connector = connectorTypes.find((item) => item.type === selectedConnectorType);
     const defaults = getConnectorConfigDefaults(connector);
     const currentConfig = (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>;
-    const mergedConfig = { ...defaults };
-
-    Object.entries(currentConfig).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        mergedConfig[key] = value;
-      }
-    });
+    const mergedConfig: DataConnectMutationInput["connectorConfig"] = {
+      ...defaults,
+      ...sanitizeConnectorConfig(currentConfig),
+    };
 
     form.setFieldsValue({
       connectorConfig: mergedConfig,
@@ -210,7 +207,9 @@ export function DataConnectFormScene({
       permissions={permission}
     >
       <section className={styles.contentSurface}>
-        <div className={styles.headerPanel}>
+        <div
+          className={`${styles.headerPanel}${mode === "create" ? ` ${styles.headerPanelCreate}` : ""}`}
+        >
           <div className={styles.headerCopy}>
             <h1 className={styles.pageTitle}>{pageTitle}</h1>
             <p className={styles.pageDescription}>{pageDescription}</p>
@@ -220,6 +219,9 @@ export function DataConnectFormScene({
               <Steps current={currentStep} items={stepItems} />
             </div>
           ) : null}
+          <AppButton className={styles.headerBackAction} onClick={handleBack}>
+            {t("dataConnect.backToConnections")}
+          </AppButton>
         </div>
         <div className={styles.formShell}>
           {loading ? (
@@ -294,7 +296,6 @@ export function DataConnectFormScene({
         </div>
         <div className={styles.footerBar}>
           <div className={styles.actionsRight}>
-            <AppButton onClick={handleBack}>{t("common.back")}</AppButton>
             {currentStep === 1 && mode === "create" ? (
               <AppButton
                 onClick={() => {
@@ -314,7 +315,6 @@ export function DataConnectFormScene({
                 {t("common.testConnection")}
               </AppButton>
             ) : null}
-            <AppButton onClick={handleBack}>{t("common.cancel")}</AppButton>
             <AppButton
               loading={submitting}
               onClick={() => {

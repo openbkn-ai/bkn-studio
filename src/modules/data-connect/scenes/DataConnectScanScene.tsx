@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Input, Select, Space, Switch, Tag } from "antd";
+import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Alert, Input, Select, Space, Switch, Tabs } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,6 +46,7 @@ import {
   ScanScheduleFormModal,
   type ScanScheduleFormModalSubmitPayload,
 } from "@/modules/data-connect/components/ScanScheduleFormModal";
+import { ScanRunNowModal } from "@/modules/data-connect/components/ScanRunNowModal";
 import { DataConnectScanTaskDrawer } from "@/modules/data-connect/components/DataConnectScanTaskDrawer";
 
 import styles from "./DataConnectScanScene.module.css";
@@ -55,15 +57,9 @@ type ScheduleModalState =
   | null;
 
 type EnabledFilterValue = "all" | "disabled" | "enabled";
+type ScanPageTab = "schedules" | "tasks";
 type TaskStatusFilterValue = "all" | DataConnectScanTaskStatus;
 type TaskTriggerTypeFilterValue = "all" | DataConnectScanTask["triggerType"];
-
-const taskStatusColorMap: Record<DataConnectScanTaskStatus, string> = {
-  pending: "default",
-  running: "processing",
-  completed: "success",
-  failed: "error",
-};
 
 export function DataConnectScanScene({
   catalogId,
@@ -73,6 +69,8 @@ export function DataConnectScanScene({
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
+  const [catalogLocked] = useState(() => Boolean(catalogId));
+  const [activeTab, setActiveTab] = useState<ScanPageTab>("schedules");
   const [keyword, setKeyword] = useState("");
   const [selectedCatalogId, setSelectedCatalogId] = useState<string | undefined>(catalogId);
   const [enabledFilter, setEnabledFilter] =
@@ -103,12 +101,18 @@ export function DataConnectScanScene({
   const [editingSchedule, setEditingSchedule] =
     useState<DataConnectScanSchedule | null>(null);
   const [triggeringScheduleId, setTriggeringScheduleId] = useState<string | null>(null);
+  const [runNowOpen, setRunNowOpen] = useState(false);
+  const [runNowSubmitting, setRunNowSubmitting] = useState(false);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
 
   const catalogNameMap = useMemo(
     () => new Map(catalogs.map((item) => [item.id, item.name])),
     [catalogs],
   );
+
+  const selectedCatalogName = selectedCatalogId
+    ? catalogNameMap.get(selectedCatalogId)
+    : undefined;
 
   const selectedSchedule = useMemo(
     () => schedules.find((item) => item.id === selectedScheduleId) ?? null,
@@ -117,6 +121,16 @@ export function DataConnectScanScene({
   const hasActiveTasks = useMemo(
     () => tasks.some((item) => item.status === "pending" || item.status === "running"),
     [tasks],
+  );
+  const activeTaskCount = useMemo(
+    () =>
+      tasks.filter((item) => item.status === "pending" || item.status === "running")
+        .length,
+    [tasks],
+  );
+  const scheduleNameMap = useMemo(
+    () => new Map(schedules.map((item) => [item.id, item.name])),
+    [schedules],
   );
 
   const loadCatalogs = useCallback(async () => {
@@ -193,6 +207,28 @@ export function DataConnectScanScene({
     taskStatusFilter,
   ]);
 
+  const openTasksForSchedule = useCallback(() => {
+    // 立即扫描 / 按计划执行 走的都是 catalog discover，任务不带 schedule_id；
+    // 因此「查看任务」进入任务 Tab 时展示当前连接下全部任务，不再按计划过滤。
+    setSelectedScheduleId(undefined);
+    setTaskStatusFilter("all");
+    setTaskTriggerTypeFilter("all");
+    setTaskPage(1);
+    setActiveTab("tasks");
+  }, []);
+
+  const runDiscover = useCallback(
+    async (targetCatalogId: string, strategy?: DataConnectScanSchedule["strategy"]) => {
+      const result = await triggerDataConnectDiscover(targetCatalogId, strategy);
+      void message.success(t("dataConnect.scanTriggerSuccess"));
+      setDetailTaskId(result.id);
+      setActiveTab("tasks");
+      await Promise.all([loadSchedules(), loadTasks()]);
+      return result;
+    },
+    [loadSchedules, loadTasks, message, t],
+  );
+
   useEffect(() => {
     void loadCatalogs();
   }, [loadCatalogs]);
@@ -245,18 +281,10 @@ export function DataConnectScanScene({
       title: t("dataConnect.scanScheduleName"),
     },
     {
-      dataIndex: "catalogId",
-      title: t("dataConnect.scanCatalog"),
-      render: (value: string) => catalogNameMap.get(value) ?? value,
-    },
-    {
       dataIndex: "strategy",
       title: t("dataConnect.scanStrategy"),
-      render: (value: DataConnectScanSchedule["strategy"]) => (
-        <Tag className={styles.strategyTag}>
-          {t(`dataConnect.scanStrategies.${value}`)}
-        </Tag>
-      ),
+      render: (value: DataConnectScanSchedule["strategy"]) =>
+        t(`dataConnect.scanStrategies.${value}`),
     },
     {
       dataIndex: "cronExpr",
@@ -270,15 +298,31 @@ export function DataConnectScanScene({
           <Switch
             checked={value}
             onChange={(checked) => {
-              void (async () => {
-                try {
-                  await setDataConnectScanScheduleEnabled(record.id, checked);
-                  message.success(t("common.success"));
-                  await Promise.all([loadSchedules(), loadTasks()]);
-                } catch (error) {
-                  void message.error(extractRequestErrorMessage(error));
-                }
-              })();
+              void modal.confirm({
+                title: checked
+                  ? t("dataConnect.scanScheduleEnableConfirmTitle")
+                  : t("dataConnect.scanScheduleDisableConfirmTitle"),
+                content: checked
+                  ? t("dataConnect.scanScheduleEnableConfirmDescription", {
+                      name: record.name,
+                    })
+                  : t("dataConnect.scanScheduleDisableConfirmDescription", {
+                      name: record.name,
+                    }),
+                okText: checked ? t("common.enabled") : t("common.disabled"),
+                cancelText: t("common.cancel"),
+                okButtonProps: checked ? undefined : { danger: true },
+                onOk: async () => {
+                  try {
+                    await setDataConnectScanScheduleEnabled(record.id, checked);
+                    message.success(t("common.success"));
+                    await Promise.all([loadSchedules(), loadTasks()]);
+                  } catch (error) {
+                    void message.error(extractRequestErrorMessage(error));
+                    throw error;
+                  }
+                },
+              });
             }}
           />
         </PermissionGate>
@@ -300,7 +344,15 @@ export function DataConnectScanScene({
       key: "actions",
       title: t("common.actions"),
       render: (_, record) => (
-        <Space className={styles.actionGroup}>
+        <Space className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
+          <AppButton
+            onClick={() => {
+              openTasksForSchedule();
+            }}
+            type="link"
+          >
+            {t("dataConnect.scanViewTasks")}
+          </AppButton>
           <PermissionGate permissions="catalog:task_manage">
             <AppButton
               onClick={() => {
@@ -315,26 +367,30 @@ export function DataConnectScanScene({
             <AppButton
               loading={triggeringScheduleId === record.id}
               onClick={() => {
-                void (async () => {
-                  try {
-                    setTriggeringScheduleId(record.id);
-                    const result = await triggerDataConnectDiscover(
-                      record.catalogId,
-                      record.strategy,
-                    );
-                    void message.success(t("dataConnect.scanTriggerSuccess"));
-                    setDetailTaskId(result.id);
-                    await Promise.all([loadSchedules(), loadTasks()]);
-                  } catch (error) {
-                    void message.error(extractRequestErrorMessage(error));
-                  } finally {
-                    setTriggeringScheduleId(null);
-                  }
-                })();
+                void modal.confirm({
+                  title: t("dataConnect.scanRunScheduleConfirmTitle"),
+                  content: t("dataConnect.scanRunScheduleConfirmDescription", {
+                    name: record.name,
+                  }),
+                  okText: t("dataConnect.scanRunSchedule"),
+                  cancelText: t("common.cancel"),
+                    onOk: async () => {
+                    try {
+                      setTriggeringScheduleId(record.id);
+                      setSelectedScheduleId(undefined);
+                      await runDiscover(record.catalogId, record.strategy);
+                    } catch (error) {
+                      void message.error(extractRequestErrorMessage(error));
+                      throw error;
+                    } finally {
+                      setTriggeringScheduleId(null);
+                    }
+                  },
+                });
               }}
               type="link"
             >
-              {t("dataConnect.scanRunNow")}
+              {t("dataConnect.scanRunSchedule")}
             </AppButton>
           </PermissionGate>
           <PermissionGate permissions="catalog:task_manage">
@@ -373,20 +429,20 @@ export function DataConnectScanScene({
     {
       dataIndex: "status",
       title: t("dataConnect.scanTaskStatus"),
-      render: (value: DataConnectScanTaskStatus) => (
-        <Tag className={styles.statusTag} color={taskStatusColorMap[value]}>
-          {t(`dataConnect.scanTaskStatuses.${value}`)}
-        </Tag>
-      ),
+      render: (value: DataConnectScanTaskStatus) =>
+        t(`dataConnect.scanTaskStatuses.${value}`),
+    },
+    {
+      dataIndex: "scheduleId",
+      title: t("dataConnect.scanScheduleName"),
+      render: (value: string) =>
+        value ? scheduleNameMap.get(value) ?? t("dataConnect.scanManualTask") : "-",
     },
     {
       dataIndex: "triggerType",
       title: t("dataConnect.scanTriggerType"),
-      render: (value: DataConnectScanTask["triggerType"]) => (
-        <Tag className={styles.triggerTag}>
-          {t(`dataConnect.scanTriggerTypes.${value}`)}
-        </Tag>
-      ),
+      render: (value: DataConnectScanTask["triggerType"]) =>
+        t(`dataConnect.scanTriggerTypes.${value}`),
     },
     {
       dataIndex: "strategy",
@@ -528,110 +584,90 @@ export function DataConnectScanScene({
     }
   };
 
-  return (
-    <>
-      <section className={styles.contentSurface}>
-        {catalogError ? <Alert message={catalogError} showIcon type="warning" /> : null}
-        <div className={styles.operationBar}>
-          <div className={styles.operationPrimary}>
-            <div className={styles.toolbarActions}>
-              <PermissionGate permissions="catalog:task_manage">
-                <AppButton
-                  onClick={() => {
-                    setEditingSchedule(null);
-                    setScheduleModalState({ mode: "create" });
-                  }}
-                  type="primary"
-                >
-                  {t("dataConnect.scanCreate")}
-                </AppButton>
-              </PermissionGate>
-              <PermissionGate permissions="catalog:task_manage">
-                <AppButton
-                  disabled={!selectedCatalogId}
-                  onClick={() => {
-                    void (async () => {
-                      if (!selectedCatalogId) {
-                        return;
-                      }
+  const catalogFilter = (
+    <div className={styles.filterField}>
+      <span className={styles.filterLabel}>{t("dataConnect.scanCatalog")}</span>
+      <Select
+        className={styles.filterSelectWide}
+        disabled={catalogLocked}
+        loading={loadingCatalogs}
+        onChange={(value) => {
+          setSelectedCatalogId(value || undefined);
+          setSelectedScheduleId(undefined);
+          setSchedulePage(1);
+          setTaskPage(1);
+        }}
+        optionFilterProp="label"
+        options={[
+          ...(catalogLocked ? [] : [{ label: t("dataConnect.categoryAll"), value: "" }]),
+          ...catalogs.map((item) => ({
+            label: item.name,
+            value: item.id,
+          })),
+        ]}
+        showSearch={!catalogLocked}
+        value={selectedCatalogId ?? ""}
+      />
+    </div>
+  );
 
-                      try {
-                        const result = await triggerDataConnectDiscover(selectedCatalogId);
-                        void message.success(t("dataConnect.scanTriggerSuccess"));
-                        setDetailTaskId(result.id);
-                        await loadTasks();
-                      } catch (error) {
-                        void message.error(extractRequestErrorMessage(error));
-                      }
-                    })();
-                  }}
-                >
-                  {t("dataConnect.scanRunNow")}
-                </AppButton>
-              </PermissionGate>
+  const schedulesPanel = (
+    <div className={styles.tabPanel}>
+      <div className={styles.operationBar}>
+        <div className={styles.operationPrimary}>
+          <div className={styles.toolbarActions}>
+            <PermissionGate permissions="catalog:task_manage">
               <AppButton
                 onClick={() => {
-                  if (onBackToConnections) {
-                    onBackToConnections();
+                  setEditingSchedule(null);
+                  setScheduleModalState({ mode: "create" });
+                }}
+                type="primary"
+              >
+                {t("dataConnect.scanCreate")}
+              </AppButton>
+            </PermissionGate>
+            <PermissionGate permissions="catalog:task_manage">
+              <AppButton
+                disabled={!selectedCatalogId}
+                onClick={() => {
+                  if (!selectedCatalogId) {
                     return;
                   }
-                  void navigate("/data-connect");
+                  setRunNowOpen(true);
                 }}
               >
-                {t("dataConnect.backToConnections")}
+                {t("dataConnect.scanRunNow")}
               </AppButton>
-              <AppButton
-                onClick={() => {
-                  void Promise.all([loadCatalogs(), loadSchedules(), loadTasks()]);
-                }}
-              >
-                {t("common.refresh")}
-              </AppButton>
-            </div>
-            <span className={styles.toolbarMeta}>
-              {selectedSchedule
-                ? t("dataConnect.scanSelectedSchedule", {
-                    name: selectedSchedule.name,
-                  })
-                : hasActiveTasks
-                  ? t("dataConnect.scanAutoRefreshHint")
-                  : t("dataConnect.scanToolbarHint")}
-            </span>
+            </PermissionGate>
+            <AppButton
+              icon={<ReloadOutlined />}
+              onClick={() => {
+                void Promise.all([loadSchedules(), loadCatalogs()]);
+              }}
+            >
+              {t("common.refresh")}
+            </AppButton>
           </div>
-          <div className={styles.toolbarFilters}>
-            <Input.Search
-              allowClear
-              className={styles.searchInput}
-              onChange={(event) => {
-                setKeyword(event.target.value);
-                setSchedulePage(1);
-              }}
-              onSearch={(value) => {
-                setKeyword(value);
-                setSchedulePage(1);
-              }}
-              placeholder={t("dataConnect.scanSearchPlaceholder")}
-              value={keyword}
-            />
-            <Select
-              allowClear
-              className={styles.filterSelect}
-              loading={loadingCatalogs}
-              onChange={(value) => {
-                setSelectedCatalogId(value);
-                setSelectedScheduleId(undefined);
-                setSchedulePage(1);
-                setTaskPage(1);
-              }}
-              options={catalogs.map((item) => ({
-                label: item.name,
-                value: item.id,
-              }))}
-              optionFilterProp="label"
-              placeholder={t("dataConnect.scanCatalogFilterPlaceholder")}
-              showSearch
-              value={selectedCatalogId}
-            />
+        </div>
+        <div className={styles.toolbarFilters}>
+          <Input
+            allowClear
+            className={styles.searchInput}
+            onChange={(event) => {
+              setKeyword(event.target.value);
+              setSchedulePage(1);
+            }}
+            onPressEnter={(event) => {
+              setKeyword(event.currentTarget.value);
+              setSchedulePage(1);
+            }}
+            placeholder={t("dataConnect.scanSearchPlaceholder")}
+            prefix={<SearchOutlined className={styles.searchIcon} />}
+            value={keyword}
+          />
+          <div className={styles.filterField}>
+            <span className={styles.filterLabel}>{t("dataConnect.scanStatusFilter")}</span>
             <Select
               className={styles.filterSelect}
               onChange={(value: EnabledFilterValue) => {
@@ -645,6 +681,90 @@ export function DataConnectScanScene({
               ]}
               value={enabledFilter}
             />
+          </div>
+        </div>
+      </div>
+      <TableSurface className={styles.panelSection}>
+        {scheduleError ? (
+          <Alert
+            action={
+              <AppButton
+                onClick={() => {
+                  void loadSchedules();
+                }}
+                type="link"
+              >
+                {t("common.retry")}
+              </AppButton>
+            }
+            message={scheduleError}
+            showIcon
+            type="error"
+          />
+        ) : !loadingSchedules && schedules.length === 0 ? (
+          <EmptyStatePanel
+            action={
+              <PermissionGate permissions="catalog:task_manage">
+                <AppButton
+                  onClick={() => {
+                    setScheduleModalState({ mode: "create" });
+                  }}
+                  type="primary"
+                >
+                  {t("dataConnect.scanCreate")}
+                </AppButton>
+              </PermissionGate>
+            }
+            description={t("dataConnect.scanScheduleEmptyDescription")}
+            title={t("dataConnect.scanScheduleEmpty")}
+          />
+        ) : (
+          <AppTable<DataConnectScanSchedule>
+            columns={scheduleColumns}
+            dataSource={schedules}
+            loading={loadingSchedules}
+            pagination={false}
+            rowKey="id"
+          />
+        )}
+      </TableSurface>
+      {scheduleTotal > 0 ? (
+        <TablePaginationBar
+          current={schedulePage}
+          onChange={(page, pageSize) => {
+            setSchedulePage(page);
+            setSchedulePageSize(pageSize);
+          }}
+          pageSize={schedulePageSize}
+          showSizeChanger
+          showTotal={(count) => t("common.total", { total: count })}
+          total={scheduleTotal}
+        />
+      ) : null}
+    </div>
+  );
+
+  const tasksPanel = (
+    <div className={styles.tabPanel}>
+      <div className={styles.operationBar}>
+        <div className={styles.operationPrimary}>
+          <div className={styles.toolbarActions}>
+            <AppButton
+              icon={<ReloadOutlined />}
+              onClick={() => {
+                void loadTasks();
+              }}
+            >
+              {t("common.refresh")}
+            </AppButton>
+          </div>
+          {hasActiveTasks ? (
+            <span className={styles.inlineHint}>{t("dataConnect.scanAutoRefreshHint")}</span>
+          ) : null}
+        </div>
+        <div className={styles.toolbarFilters}>
+          <div className={styles.filterField}>
+            <span className={styles.filterLabel}>{t("dataConnect.scanTaskStatus")}</span>
             <Select
               className={styles.filterSelect}
               onChange={(value: TaskStatusFilterValue) => {
@@ -655,11 +775,17 @@ export function DataConnectScanScene({
                 { label: t("common.all"), value: "all" },
                 { label: t("dataConnect.scanTaskStatuses.pending"), value: "pending" },
                 { label: t("dataConnect.scanTaskStatuses.running"), value: "running" },
-                { label: t("dataConnect.scanTaskStatuses.completed"), value: "completed" },
+                {
+                  label: t("dataConnect.scanTaskStatuses.completed"),
+                  value: "completed",
+                },
                 { label: t("dataConnect.scanTaskStatuses.failed"), value: "failed" },
               ]}
               value={taskStatusFilter}
             />
+          </div>
+          <div className={styles.filterField}>
+            <span className={styles.filterLabel}>{t("dataConnect.scanTriggerType")}</span>
             <Select
               className={styles.filterSelect}
               onChange={(value: TaskTriggerTypeFilterValue) => {
@@ -669,158 +795,144 @@ export function DataConnectScanScene({
               options={[
                 { label: t("common.all"), value: "all" },
                 { label: t("dataConnect.scanTriggerTypes.manual"), value: "manual" },
-                { label: t("dataConnect.scanTriggerTypes.scheduled"), value: "scheduled" },
+                {
+                  label: t("dataConnect.scanTriggerTypes.scheduled"),
+                  value: "scheduled",
+                },
               ]}
               value={taskTriggerTypeFilter}
             />
           </div>
         </div>
-        <TableSurface className={styles.panelSection}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h3 className={styles.sectionTitle}>{t("dataConnect.scanScheduleTableTitle")}</h3>
-              <p className={styles.sectionDescription}>{t("dataConnect.scanDescription")}</p>
-            </div>
-          </div>
-          {scheduleError ? (
-            <Alert
-              action={
-                <AppButton
-                  onClick={() => {
-                    void loadSchedules();
-                  }}
-                  type="link"
-                >
-                  {t("common.retry")}
-                </AppButton>
-              }
-              message={scheduleError}
-              showIcon
-              type="error"
-            />
-          ) : !loadingSchedules && schedules.length === 0 ? (
-            <EmptyStatePanel
-              action={
-                <PermissionGate permissions="catalog:task_manage">
-                  <AppButton
-                    onClick={() => {
-                      setScheduleModalState({ mode: "create" });
-                    }}
-                    type="primary"
-                  >
-                    {t("dataConnect.scanCreate")}
-                  </AppButton>
-                </PermissionGate>
-              }
-              description={t("dataConnect.scanScheduleEmptyDescription")}
-              title={t("dataConnect.scanScheduleEmpty")}
-            />
-          ) : (
-            <AppTable<DataConnectScanSchedule>
-              columns={scheduleColumns}
-              dataSource={schedules}
-              loading={loadingSchedules}
-              onRow={(record) => ({
-                className: record.id === selectedScheduleId ? styles.selectedRow : "",
-                onClick: () => {
-                  setSelectedScheduleId((current) =>
-                    current === record.id ? undefined : record.id,
-                  );
-                  setTaskPage(1);
-                },
-              })}
-              pagination={false}
-              rowKey="id"
-            />
-          )}
-        </TableSurface>
-        {scheduleTotal > 0 ? (
-          <TablePaginationBar
-            current={schedulePage}
-            onChange={(page, pageSize) => {
-              setSchedulePage(page);
-              setSchedulePageSize(pageSize);
+      </div>
+      {selectedSchedule ? (
+        <div className={styles.filterChipBar}>
+          <span>
+            {t("dataConnect.scanSelectedSchedule", { name: selectedSchedule.name })}
+          </span>
+          <AppButton
+            onClick={() => {
+              setSelectedScheduleId(undefined);
+              setTaskPage(1);
             }}
-            pageSize={schedulePageSize}
-            showSizeChanger
-            showTotal={(count) => t("common.total", { total: count })}
-            total={scheduleTotal}
-          />
-        ) : null}
-        <TableSurface className={styles.panelSection}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h3 className={styles.sectionTitle}>{t("dataConnect.scanTaskTableTitle")}</h3>
-              <p className={styles.sectionDescription}>
-                {selectedSchedule
-                  ? t("dataConnect.scanSelectedSchedule", {
-                      name: selectedSchedule.name,
-                    })
-                  : hasActiveTasks
-                    ? t("dataConnect.scanTaskAutoRefreshing")
-                    : t("dataConnect.scanTaskEmptyDescription")}
-              </p>
-            </div>
-            {selectedSchedule ? (
+            type="link"
+          >
+            {t("dataConnect.scanClearSelection")}
+          </AppButton>
+        </div>
+      ) : null}
+      <TableSurface className={styles.panelSection}>
+        {taskError ? (
+          <Alert
+            action={
               <AppButton
                 onClick={() => {
-                  setSelectedScheduleId(undefined);
-                  setTaskPage(1);
+                  void loadTasks();
                 }}
                 type="link"
               >
-                {t("dataConnect.scanClearSelection")}
+                {t("common.retry")}
               </AppButton>
-            ) : null}
-          </div>
-          {taskError ? (
-            <Alert
-              action={
-                <AppButton
-                  onClick={() => {
-                    void loadTasks();
-                  }}
-                  type="link"
-                >
-                  {t("common.retry")}
-                </AppButton>
-              }
-              message={taskError}
-              showIcon
-              type="error"
-            />
-          ) : !loadingTasks && tasks.length === 0 ? (
-            <EmptyStatePanel
-              description={t("dataConnect.scanTaskEmptyDescription")}
-              title={t("dataConnect.scanTaskEmpty")}
-            />
-          ) : (
-            <AppTable<DataConnectScanTask>
-              columns={taskColumns}
-              dataSource={tasks}
-              loading={loadingTasks}
-              pagination={false}
-              rowKey="id"
-            />
-          )}
-        </TableSurface>
-        {taskTotal > 0 ? (
-          <TablePaginationBar
-            current={taskPage}
-            onChange={(page, pageSize) => {
-              setTaskPage(page);
-              setTaskPageSize(pageSize);
-            }}
-            pageSize={taskPageSize}
-            showSizeChanger
-            showTotal={(count) => t("common.total", { total: count })}
-            total={taskTotal}
+            }
+            message={taskError}
+            showIcon
+            type="error"
           />
-        ) : null}
+        ) : !loadingTasks && tasks.length === 0 ? (
+          <EmptyStatePanel
+            description={
+              selectedSchedule
+                ? t("dataConnect.scanTaskEmptyByScheduleDescription")
+                : t("dataConnect.scanTaskEmptyDescription")
+            }
+            title={t("dataConnect.scanTaskEmpty")}
+          />
+        ) : (
+          <AppTable<DataConnectScanTask>
+            columns={taskColumns}
+            dataSource={tasks}
+            loading={loadingTasks}
+            pagination={false}
+            rowKey="id"
+          />
+        )}
+      </TableSurface>
+      {taskTotal > 0 ? (
+        <TablePaginationBar
+          current={taskPage}
+          onChange={(page, pageSize) => {
+            setTaskPage(page);
+            setTaskPageSize(pageSize);
+          }}
+          pageSize={taskPageSize}
+          showSizeChanger
+          showTotal={(count) => t("common.total", { total: count })}
+          total={taskTotal}
+        />
+      ) : null}
+    </div>
+  );
+
+  return (
+    <>
+      <section className={styles.contentSurface}>
+        {catalogError ? <Alert message={catalogError} showIcon type="warning" /> : null}
+        <div className={styles.pageHeader}>
+          <div className={styles.pageHeaderMain}>
+            {catalogLocked && selectedCatalogName ? (
+              <div className={styles.contextBar}>
+                <span className={styles.contextLabel}>
+                  {t("dataConnect.scanCurrentConnection")}
+                </span>
+                <strong className={styles.contextName}>{selectedCatalogName}</strong>
+              </div>
+            ) : (
+              catalogFilter
+            )}
+          </div>
+          <AppButton
+            onClick={() => {
+              if (onBackToConnections) {
+                onBackToConnections();
+                return;
+              }
+              void navigate("/data-connect");
+            }}
+          >
+            {t("dataConnect.backToConnections")}
+          </AppButton>
+        </div>
+        <Tabs
+          activeKey={activeTab}
+          className={styles.pageTabs}
+          items={[
+            {
+              key: "schedules",
+              label: t("dataConnect.scanTabSchedules"),
+              children: schedulesPanel,
+            },
+            {
+              key: "tasks",
+              label:
+                activeTaskCount > 0
+                  ? `${t("dataConnect.scanTabTasks")} (${activeTaskCount})`
+                  : t("dataConnect.scanTabTasks"),
+              children: tasksPanel,
+            },
+          ]}
+          onChange={(key) => {
+            setActiveTab(key as ScanPageTab);
+          }}
+        />
       </section>
       {scheduleModalState ? (
         <ScanScheduleFormModal
           catalogs={catalogs}
+          defaultCatalogId={
+            scheduleModalState.mode === "create" && catalogLocked
+              ? selectedCatalogId
+              : undefined
+          }
           initialValue={scheduleModalState.mode === "edit" ? editingSchedule : null}
           mode={scheduleModalState.mode}
           onCancel={() => {
@@ -830,6 +942,30 @@ export function DataConnectScanScene({
           onSubmit={handleScheduleSubmit}
           open
           submitting={scheduleModalSubmitting}
+        />
+      ) : null}
+      {selectedCatalogId ? (
+        <ScanRunNowModal
+          connectionName={
+            catalogNameMap.get(selectedCatalogId) ?? selectedCatalogId
+          }
+          onCancel={() => {
+            setRunNowOpen(false);
+          }}
+          onSubmit={async (strategy) => {
+            try {
+              setRunNowSubmitting(true);
+              setSelectedScheduleId(undefined);
+              await runDiscover(selectedCatalogId, strategy);
+              setRunNowOpen(false);
+            } catch (error) {
+              void message.error(extractRequestErrorMessage(error));
+            } finally {
+              setRunNowSubmitting(false);
+            }
+          }}
+          open={runNowOpen}
+          submitting={runNowSubmitting}
         />
       ) : null}
       {detailTaskId ? (

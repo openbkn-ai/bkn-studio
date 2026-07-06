@@ -20,7 +20,7 @@ export const shellZhCN = {
       generalBusinessKnowledgeNetwork: "数据资源知识网络",
       dataConnection: "数据连接",
       dataCatalog: "数据目录",
-      indexBuild: "数据向量化",
+      indexBuild: "索引任务",
       dataResource: "数据目录",
       dataQuality: "数据质量",
       executionFactory: "执行工厂",

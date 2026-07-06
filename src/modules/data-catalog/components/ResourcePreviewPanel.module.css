@@ -1,0 +1,144 @@
+.panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.metaRow {
+  flex-shrink: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.gatePanel {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.tableSection {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tableWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid #d9e0ea;
+}
+
+.table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 9px 14px;
+  text-align: left;
+  background: #f3f6fa;
+  color: #111827;
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 1px solid #d9e0ea;
+}
+
+.columnHead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.columnHeadPrimary {
+  color: #111827;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.columnHeadSecondary {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 400;
+  font-family: ui-monospace, Consolas, monospace;
+  line-height: 1.3;
+}
+
+.columnHeadType {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 400;
+  font-family: ui-monospace, Consolas, monospace;
+  line-height: 1.3;
+}
+
+.table td {
+  padding: 8px 14px;
+  border-bottom: 1px solid #e8edf3;
+  color: #111827;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.table tbody tr:hover td {
+  background: #f7faff;
+}
+
+.rowIndexHead {
+  left: 0;
+  z-index: 3;
+}
+
+.rowIndex {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  color: #94a3b8;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  min-width: 56px;
+}
+
+.numericCell {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.nullCell {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.emptyCell {
+  padding: 24px;
+  text-align: left;
+  color: #64748b;
+}
+
+.panel :global(.ant-spin-nested-loading),
+.panel :global(.ant-spin-container) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}

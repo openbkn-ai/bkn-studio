@@ -60,6 +60,8 @@ export type DataConnectListQuery = {
   keyword: string;
   page: number;
   pageSize: number;
+  /** 默认 physical；数据目录需同时展示逻辑 catalog 时传 all */
+  type?: "all" | "logical" | "physical";
 };
 
 export type DataConnectListResult = {

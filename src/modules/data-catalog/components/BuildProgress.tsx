@@ -16,35 +16,103 @@ import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 import styles from "./shared.module.css";
 
 type BuildProgressProps = {
+  compact?: boolean;
   task: BuildTask;
 };
+
+function renderVectorMeta(
+  task: BuildTask,
+  embeddingState: ReturnType<typeof embeddingStateOf>,
+  vectorPercent: number,
+  t: ReturnType<typeof useTranslation>["t"],
+) {
+  if (task.embeddingFields.length === 0) {
+    return (
+      <span className={styles.progressMuted}>{t("dataCatalog.progress.noVectorize")}</span>
+    );
+  }
+  if (embeddingState === "failed" || embeddingState === "partial") {
+    return (
+      <Tooltip title={task.failureDetail || undefined}>
+        <span className={styles.progressWarn}>
+          <WarningOutlined />
+          {embeddingState === "failed"
+            ? t("dataCatalog.progress.vectorizeFailed")
+            : t("dataCatalog.progress.vectorizePartial", {
+                percent: Math.round(vectorPercent) as never,
+              })}
+        </span>
+      </Tooltip>
+    );
+  }
+  return (
+    <span>
+      {t("dataCatalog.progress.vectorized", {
+        percent: Math.round(vectorPercent) as never,
+      })}
+    </span>
+  );
+}
+
+function vectorSummary(
+  task: BuildTask,
+  embeddingState: ReturnType<typeof embeddingStateOf>,
+  vectorPercent: number,
+  t: ReturnType<typeof useTranslation>["t"],
+) {
+  if (task.embeddingFields.length === 0) {
+    return t("dataCatalog.progress.noVectorize");
+  }
+  if (embeddingState === "failed") {
+    return t("dataCatalog.progress.vectorizeFailed");
+  }
+  if (embeddingState === "partial") {
+    return t("dataCatalog.progress.vectorizePartial", {
+      percent: Math.round(vectorPercent) as never,
+    });
+  }
+  return t("dataCatalog.progress.vectorized", {
+    percent: Math.round(vectorPercent) as never,
+  });
+}
 
 /**
  * batch:双层进度条(浅色=已同步,深色=已向量化,SDK 返回真实计数,百分比诚实)。
  * streaming:常驻监听没有分母,只显示已同步行数 + 最近事件时间。
  */
-export function BuildProgress({ task }: BuildProgressProps) {
+export function BuildProgress({ compact = false, task }: BuildProgressProps) {
   const { i18n, t } = useTranslation();
   const embeddingState = embeddingStateOf(task);
+  const wrapClass = compact ? styles.progressWrapCompact : styles.progressWrap;
+  const metaClass = compact ? styles.progressMetaCompact : styles.progressMeta;
 
   if (task.mode === "streaming") {
-    return (
-      <div className={styles.progressWrap}>
-        <div className={styles.progressMeta}>
-          <span>
-            {t("dataCatalog.progress.syncedRows", {
-              count: formatCount(task.syncedCount) as never,
-            })}
-          </span>
-          <span>
-            {task.status === "paused"
-              ? t("dataCatalog.indexState.paused")
-              : t("dataCatalog.progress.lastEvent", {
-                  time: timeAgo(task.lastEventAt ?? task.createdAt, i18n.language),
-                })}
-          </span>
+    const syncedLabel = t("dataCatalog.progress.syncedRows", {
+      count: formatCount(task.syncedCount) as never,
+    });
+    const eventLabel =
+      task.status === "paused"
+        ? t("dataCatalog.indexState.paused")
+        : t("dataCatalog.progress.lastEvent", {
+            time: timeAgo(task.lastEventAt ?? task.createdAt, i18n.language),
+          });
+    const content = (
+      <div className={wrapClass}>
+        <div className={metaClass}>
+          <span>{syncedLabel}</span>
+          <span>{eventLabel}</span>
         </div>
       </div>
+    );
+
+    if (!compact) {
+      return content;
+    }
+
+    return (
+      <Tooltip title={`${syncedLabel} · ${eventLabel}`}>
+        <div className={styles.progressTooltipTrigger}>{content}</div>
+      </Tooltip>
     );
   }
 
@@ -60,8 +128,15 @@ export function BuildProgress({ task }: BuildProgressProps) {
         ? styles.progressFillFailed
         : styles.progressFillVector;
 
-  return (
-    <div className={styles.progressWrap}>
+  const syncedLabel = t("dataCatalog.progress.synced", {
+    synced: formatCount(task.syncedCount) as never,
+    total: formatCount(task.totalCount) as never,
+  });
+  const vectorLabel = vectorSummary(task, embeddingState, vectorPercent, t);
+  const vectorMeta = renderVectorMeta(task, embeddingState, vectorPercent, t);
+
+  const content = (
+    <div className={wrapClass}>
       <div className={styles.progressTrack}>
         <span className={styles.progressFill} style={{ width: `${syncedPercent}%` }} />
         <span
@@ -69,37 +144,20 @@ export function BuildProgress({ task }: BuildProgressProps) {
           style={{ width: `${vectorPercent}%` }}
         />
       </div>
-      <div className={styles.progressMeta}>
-        <span>
-          {t("dataCatalog.progress.synced", {
-            synced: formatCount(task.syncedCount) as never,
-            total: formatCount(task.totalCount) as never,
-          })}
-        </span>
-        {task.embeddingFields.length === 0 ? (
-          // 没配向量化:别显示「向量化 0%」(会误读成失败),与索引列「—」一致。
-          <span style={{ color: "#8b98ac", fontSize: 12 }}>
-            {t("dataCatalog.progress.noVectorize")}
-          </span>
-        ) : embeddingState === "failed" || embeddingState === "partial" ? (
-          <Tooltip title={task.failureDetail || undefined}>
-            <span className={styles.progressWarn}>
-              <WarningOutlined />
-              {embeddingState === "failed"
-                ? t("dataCatalog.progress.vectorizeFailed")
-                : t("dataCatalog.progress.vectorizePartial", {
-                    percent: Math.round(vectorPercent) as never,
-                  })}
-            </span>
-          </Tooltip>
-        ) : (
-          <span>
-            {t("dataCatalog.progress.vectorized", {
-              percent: Math.round(vectorPercent) as never,
-            })}
-          </span>
-        )}
+      <div className={metaClass}>
+        <span>{syncedLabel}</span>
+        {vectorMeta}
       </div>
     </div>
+  );
+
+  if (!compact) {
+    return content;
+  }
+
+  return (
+    <Tooltip title={`${syncedLabel} · ${vectorLabel}`}>
+      <div className={styles.progressTooltipTrigger}>{content}</div>
+    </Tooltip>
   );
 }

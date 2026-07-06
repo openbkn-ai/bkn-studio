@@ -66,28 +66,57 @@ export const dataConnectEnUS = {
     disableConfirmTitle: "Disable data connection",
     disableConfirmDescription:
       'Disable "{{name}}"? Scanning and data access for this connection will be unavailable.',
-    scanManage: "Scan Management",
+    scanManage: "Scan",
     scanTitle: "Scan Management",
     scanDescription:
       "Manage scheduled scans and review recent discover tasks for data connections.",
     scanToolbarHint:
       "Schedules use Vega backend discover-schedules, and recent executions come from discover-tasks.",
-    scanAutoRefreshHint:
-      "Active scan tasks are being refreshed automatically every few seconds.",
+    scanAutoRefreshHint: "Active tasks are refreshing automatically.",
+    scanCurrentConnection: "Current connection",
+    scanScheduleEnableConfirmTitle: "Enable scan schedule",
+    scanScheduleEnableConfirmDescription: 'Enable schedule "{{name}}"?',
+    scanScheduleDisableConfirmTitle: "Disable scan schedule",
+    scanScheduleDisableConfirmDescription:
+      'Disable schedule "{{name}}"? Automatic scans will stop until it is enabled again.',
     backToConnections: "Back to Data Connections",
     scanCreate: "New Scan Plan",
-    scanRunNow: "Run Now",
+    scanRunNow: "Scan Now",
+    scanRunSchedule: "Run Now",
+    scanViewTasks: "View Tasks",
+    scanTabSchedules: "Schedules",
+    scanTabTasks: "Tasks",
+    scanRunNowConfirmTitle: "Scan now",
+    scanRunNowConfirmDescription:
+      'A manual scan task will be created for "{{name}}". Choose a scan strategy.',
+    scanStrategyHints: {
+      full_sync: "Sync all resources, including new discovery and cleanup.",
+      create_only: "Discover new resources only. Existing resources are kept.",
+      cleanup_only: "Clean up stale resources only. No new discovery.",
+    },
+    scanRunScheduleConfirmTitle: "Run now",
+    scanRunScheduleConfirmDescription:
+      'Run schedule "{{name}}" now? A task will be created with this schedule strategy.',
     scanCreateTitle: "Create Scan Plan",
     scanEditTitle: "Edit Scan Plan",
     scanEditHint:
       "Catalog and enabled status are managed separately. Use the table switch to enable or disable a schedule.",
-    scanSearchPlaceholder: "Search by schedule name",
+    scanSearchPlaceholder: "Search schedule name",
     scanCatalog: "Data Connection",
     scanCatalogFilterPlaceholder: "Filter by data connection",
+    scanStatusFilter: "Status",
     scanScheduleName: "Schedule Name",
+    scanScheduleNamePlaceholder: "e.g. Daily full scan",
+    scanScheduleConfig: "Schedule",
     scanStrategy: "Scan Strategy",
-    scanCronExpr: "Cron Expression",
-    scanCronExprPlaceholder: "Example: 0 0 2 * * *",
+    scanCronExpr: "Cron",
+    scanCronExprPlaceholder: "Example: 0 2 * * * (min hour day month weekday)",
+    scanCronPresets: "Presets",
+    scanCronPresetLabels: {
+      daily2am: "Daily 02:00",
+      hourly: "Hourly",
+      monday2am: "Monday 02:00",
+    },
     scanStartTime: "Start Time",
     scanEndTime: "End Time",
     scanNextRun: "Next Run",
@@ -108,6 +137,8 @@ export const dataConnectEnUS = {
     scanTaskEmpty: "No scan tasks",
     scanTaskEmptyDescription:
       "No recent discover tasks match the current filters yet.",
+    scanTaskEmptyByScheduleDescription:
+      "No tasks are linked to this schedule. Manual scans and run-now actions are not attached to a schedule. Clear the filter to see all tasks.",
     scanDeleteConfirmTitle: "Delete scan plan",
     scanDeleteConfirmDescription:
       'Are you sure you want to delete the scan plan "{{name}}"?',

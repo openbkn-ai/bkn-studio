@@ -1,0 +1,101 @@
+.formCard {
+  display: grid;
+  gap: 16px;
+}
+
+.fieldLabel {
+  margin-bottom: 8px;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fieldLabelHint {
+  margin-left: 6px;
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.fieldHint {
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.requiredMark {
+  margin-right: 4px;
+  color: #ef4444;
+}
+
+.modeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.modeOption {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid #d9e0ea;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.modeOptionActive {
+  border-color: #2e68ff;
+  background: #f7faff;
+  box-shadow: inset 0 0 0 1px #2e68ff;
+}
+
+.modeOptionLabel {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modeOptionActive .modeOptionLabel {
+  color: #1d4ed8;
+}
+
+.modeOptionDesc {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.modelGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid #eef2f7;
+}
+
+.footer :global(.ant-btn) {
+  border-radius: 0 !important;
+}
+
+.formCard :global(.ant-select-selector),
+.formCard :global(.ant-input),
+.formCard :global(.ant-input-affix-wrapper),
+.formCard :global(.ant-alert) {
+  border-radius: 0 !important;
+}
+
+@media (max-width: 768px) {
+  .modeGrid,
+  .modelGrid {
+    grid-template-columns: 1fr;
+  }
+}

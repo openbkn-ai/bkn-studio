@@ -157,6 +157,15 @@
   word-break: break-all;
 }
 
+.plainText {
+  display: block;
+  overflow: hidden;
+  color: #172033;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .fieldChip {
   display: inline-flex;
   align-items: center;
@@ -176,6 +185,12 @@
   display: grid;
   gap: 5px;
   min-width: 150px;
+}
+
+.progressWrapCompact {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 .progressTrack {
@@ -215,8 +230,33 @@
   font-size: 12px;
 }
 
+.progressMetaCompact {
+  display: grid;
+  gap: 1px;
+  color: #8b98ac;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .progressMeta > span {
   white-space: nowrap;
+}
+
+.progressMetaCompact > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progressTooltipTrigger {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+.progressMuted {
+  color: #8b98ac;
+  font-size: inherit;
 }
 
 /* ---------------- 详情骨架 ---------------- */
@@ -267,6 +307,163 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.detailActions :global(.ant-btn) {
+  border-radius: 0 !important;
+}
+
+.resourcePanel {
+  display: grid;
+  min-height: 100%;
+}
+
+.resourceBody {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px 16px;
+}
+
+.operationBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbarFilters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.searchInput {
+  width: 200px;
+}
+
+.filterSelect {
+  width: 120px;
+}
+
+.nameCell {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+
+.nameLink {
+  height: auto !important;
+  padding: 0 !important;
+  font-weight: 400;
+}
+
+.actionGroup :global(.ant-btn-link) {
+  padding-inline: 0;
+}
+
+.resourceTable :global(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
+.resourcePanel :global(.ant-input-affix-wrapper),
+.resourcePanel :global(.ant-select-selector),
+.resourcePanel :global(.ant-btn) {
+  border-radius: 0 !important;
+}
+
+.resourcePanel :global(.ant-input-affix-wrapper) {
+  height: 32px;
+  border-color: #d9e0ea;
+}
+
+.resourcePanel :global(.ant-select-selector) {
+  height: 32px !important;
+  border-color: #d9e0ea !important;
+}
+
+.resourcePanel :global(.ant-select-selection-item),
+.resourcePanel :global(.ant-select-selection-placeholder) {
+  line-height: 30px !important;
+  font-size: 13px;
+}
+
+.headerGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.headerField {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.headerLabel {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.headerValue {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.scanningHint {
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.filterField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterLabel {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.searchIcon {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.emptyResources {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 24px 4px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.emptyResources p {
+  margin: 0;
+}
+
+.sectionTools :global(.ant-input-affix-wrapper),
+.sectionTools :global(.ant-select-selector),
+.sectionTools :global(.ant-btn) {
+  border-radius: 0 !important;
 }
 
 .statStrip {
@@ -722,6 +919,17 @@
   color: #ef4444;
 }
 
+.frtRoleHint {
+  font-size: 12px;
+  color: #8b98ac;
+  cursor: help;
+  line-height: 1;
+}
+
+.frtRoleHint:hover {
+  color: #2e68ff;
+}
+
 .frtAll {
   font-size: 11px;
   color: #8b98ac;
@@ -753,16 +961,17 @@
   white-space: nowrap;
 }
 
+.frtFieldMeta {
+  padding: 8px 14px;
+  color: #3e4d66;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
 .frtField code {
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
   font-size: 12.5px;
   color: #152239;
-}
-
-.frtFieldType {
-  margin-left: 8px;
-  color: #9ca8ba;
-  font-size: 11px;
 }
 
 .frtCell {

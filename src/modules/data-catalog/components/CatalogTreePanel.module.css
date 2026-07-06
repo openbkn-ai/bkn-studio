@@ -1,21 +1,16 @@
 .treePanel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 12px;
-  border: 1px solid #d9e0ea;
+  gap: 14px;
+  padding: 16px 14px;
+  border: 1px solid #e5eaf2;
   border-radius: 0;
   background: #ffffff;
-  box-shadow: none;
-  position: static;
-  /* 固定高度:面板长度恒定不随内容条数变化,foot 钉底,body 内部滚动 */
   height: calc(100vh - 110px);
 }
 
-/* 单栏堆叠时树和详情上下排列,sticky+固定高会让树盖住下方详情,必须关掉 */
 @media (max-width: 1200px) {
   .treePanel {
-    position: static;
     height: auto;
     max-height: none;
   }
@@ -25,24 +20,45 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .treeHeadTitle {
-  color: #172033;
-  font-size: 14px;
+  color: #111827;
+  font-size: 15px;
   font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.treeHead :global(.ant-btn) {
+  border-radius: 0 !important;
+}
+
+.treeSearch:global(.ant-input),
+.treeSearch:global(.ant-input-affix-wrapper) {
+  height: 32px;
+  border-color: #d9e0ea;
+  border-radius: 0 !important;
+  box-shadow: none;
+}
+
+.treeSearch:global(.ant-input:hover),
+.treeSearch:global(.ant-input:focus),
+.treeSearch:global(.ant-input-affix-wrapper:hover),
+.treeSearch:global(.ant-input-affix-wrapper-focused) {
+  border-color: #2e68ff;
+  box-shadow: none;
 }
 
 .treeBody {
+  display: flex;
   flex: 1;
-  /* flex 子项默认 min-height:auto,会撑破 .treePanel 的 max-height 导致内容溢出叠在下方面板上 */
+  flex-direction: column;
+  gap: 20px;
   min-height: 0;
-  /* 只竖向滚动:长资源名靠节点 ellipsis 截断,不出现底部横向滚动条 */
   overflow-x: hidden;
   overflow-y: auto;
-  margin: 0 -6px;
-  padding: 0 6px;
+  padding-right: 2px;
 }
 
 .treeBody::-webkit-scrollbar {
@@ -56,41 +72,115 @@
   background-clip: padding-box;
 }
 
-.treeSection {
-  margin: 10px 2px 6px;
+.treeBlock {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #6b7280;
-  font-size: 12px;
-  font-weight: 600;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
 }
 
-.treeSectionHint {
+.treeBlockBody {
+  display: grid;
+  gap: 2px;
+}
+
+.treeSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 8px;
+  border-bottom: 1px solid #eef2f7;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.treeSectionActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.treeSectionBtn,
+.treeActionBtnVisible {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #e5eaf2;
+  background: #fff;
+  color: #64748b;
+  font-size: 12px;
+  cursor: pointer;
+  flex: none;
+}
+
+.treeSectionBtn:hover {
+  border-color: #2e68ff;
+  color: #1d4ed8;
+  background: #f5f8ff;
+}
+
+.treeActionBtnVisible:hover {
+  border-color: #fecaca;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.logicalModalRoot :global(.ant-modal-content),
+.logicalModalRoot :global(.ant-modal-header),
+.logicalModalRoot :global(.ant-modal-body),
+.logicalModalRoot :global(.ant-modal-footer),
+.logicalModalRoot :global(.ant-btn),
+.logicalModalRoot :global(.ant-input),
+.logicalModalRoot :global(textarea.ant-input) {
+  border-radius: 0 !important;
+}
+
+.treeNodeType {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.treeNodeType:hover {
+  background: #f8fafc;
+}
+
+.treeNodeCatalog,
+.treeNodeLogical {
   font-weight: 400;
-  color: #b4bed0;
 }
 
 .treeNode {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  padding: 7px 8px;
+  min-height: 36px;
+  padding: 8px 10px;
   border: 0;
-  border-radius: 0;
   background: transparent;
-  color: #172033;
-  font-size: 14px;
-  font-weight: 400;
+  color: #111827;
+  font-size: 13px;
   text-align: left;
   cursor: pointer;
   transition: background-color 0.16s ease, color 0.16s ease;
 }
 
 .treeNode:hover {
-  background: #f7faff;
+  background: #f8fafc;
 }
 
 .treeNodeSelected,
@@ -103,45 +193,35 @@
   content: "";
   position: absolute;
   left: 0;
-  top: 6px;
-  bottom: 6px;
+  top: 8px;
+  bottom: 8px;
   width: 2px;
-  background: #1d4ed8;
-}
-
-.treeNodeCatalog {
-  font-weight: 500;
+  background: #2e68ff;
 }
 
 .treeNodeOff .treeNodeName {
-  color: #6b7280;
-  font-weight: 400;
-}
-
-.treeNodeResource {
-  padding: 5.5px 8px;
-  font-size: 13px;
+  color: #94a3b8;
 }
 
 .treeCaret {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border: 0;
-  border-radius: 0;
   background: none;
-  color: #8b98ac;
+  color: #94a3b8;
   font-size: 10px;
   cursor: pointer;
   transform: rotate(-90deg);
-  transition: transform 0.16s ease, background-color 0.16s ease;
+  transition: transform 0.16s ease;
   flex: none;
 }
 
 .treeCaret:hover {
-  background: #f3f6fa;
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .treeCaretOpen {
@@ -152,7 +232,7 @@
   display: inline-flex;
   width: 16px;
   justify-content: center;
-  color: #4b5563;
+  color: #64748b;
   font-size: 14px;
   flex: none;
 }
@@ -161,175 +241,65 @@
   color: #1d4ed8;
 }
 
-.treeNodeResource .treeNodeIcon {
-  font-size: 12.5px;
-}
-
 .treeNodeName {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.4;
 }
 
 .treeMiniTag {
-  padding: 0 5px;
-  border: 1px solid #d9e0ea;
-  border-radius: 0;
-  color: #6b7280;
-  font-size: 10.5px;
-  font-weight: 400;
-  line-height: 16px;
+  padding: 0 6px;
+  border: 1px solid #e5eaf2;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 18px;
   flex: none;
 }
 
 .treeMiniTagScan {
-  color: #1f4fd4;
-  border-color: rgba(46, 104, 255, 0.3);
+  color: #1d4ed8;
+  border-color: #bfd2ff;
+  background: #f5f8ff;
 }
 
 .treeCount {
-  padding: 1px 7px;
-  border-radius: 0;
-  background: #f3f6fa;
-  color: #4b5563;
-  font-size: 11px;
-  font-weight: 400;
+  padding: 0 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 20px;
   flex: none;
-}
-
-.treeAdd {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  color: #1f4fd4;
-  font-size: 11px;
-  cursor: pointer;
-  flex: none;
-}
-
-.treeNode:hover .treeAdd {
-  display: inline-flex;
-}
-
-.treeAdd:hover {
-  background: #eff6ff;
-}
-
-.treeDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #cbd5e1;
-  flex: none;
-}
-
-.treeDotBuilt {
-  background: #16a34a;
-}
-
-.treeDotBuilding {
-  background: #2e68ff;
-  animation: treePulse 1.2s ease infinite;
-}
-
-.treeDotListening {
-  background: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
-}
-
-.treeDotPaused {
-  background: #d97706;
-}
-
-.treeDotFailed {
-  background: #dc2626;
-}
-
-@keyframes treePulse {
-  50% {
-    box-shadow: 0 0 0 5px rgba(46, 104, 255, 0.12);
-  }
 }
 
 .treeChildren {
-  position: relative;
   display: grid;
-  gap: 1px;
-  margin: 1px 0 4px;
-  padding-left: 20px;
-}
-
-.treeChildren::before {
-  content: "";
-  position: absolute;
-  left: 16px;
-  top: 2px;
-  bottom: 2px;
-  width: 1px;
-  background: #e8edf3;
+  gap: 2px;
+  margin: 2px 0 8px;
+  padding-left: 28px;
 }
 
 .treeEmptyHint {
-  padding: 5px 8px;
-  color: #b4bed0;
+  padding: 10px 12px;
+  color: #94a3b8;
   font-size: 12px;
+  line-height: 1.5;
 }
 
 .treeFoot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 6px 0;
-  border-top: 1px solid #e8edf3;
-  color: #6b7280;
+  padding-top: 10px;
+  border-top: 1px solid #eef2f7;
+  color: #94a3b8;
   font-size: 12px;
-}
-
-.treePager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 4px 8px 2px;
-  color: #8b98ac;
-  font-size: 11.5px;
-}
-
-.treePagerBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  color: #64748d;
-  font-size: 13px;
-  cursor: pointer;
-  flex: none;
-}
-
-.treePagerBtn:hover:not(:disabled) {
-  background: #f3f6fa;
-}
-
-.treePagerBtn:disabled {
-  color: #cbd5e1;
-  cursor: default;
+  line-height: 1.5;
 }
 
 .treeEmpty {
-  padding: 26px 8px;
-  color: #8b98ac;
+  padding: 32px 12px;
+  color: #94a3b8;
   font-size: 13px;
+  line-height: 1.6;
   text-align: center;
 }

@@ -1,8 +1,95 @@
 .contentSurface {
   composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
   display: grid;
-  gap: 18px;
+  gap: 16px;
   min-height: auto;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pageHeaderMain {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.contextBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #e5eaf2;
+  background: #f8fafc;
+}
+
+.pageTabs :global(.ant-tabs-nav) {
+  margin-bottom: 16px;
+}
+
+.pageTabs :global(.ant-tabs-nav::before) {
+  border-bottom-color: #e8edf3;
+}
+
+.pageTabs :global(.ant-tabs-tab) {
+  padding: 10px 2px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pageTabs :global(.ant-tabs-ink-bar) {
+  height: 2px;
+  border-radius: 0;
+  background: #2e68ff;
+}
+
+.pageTabs :global(.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn) {
+  color: #1d4ed8;
+}
+
+.tabPanel {
+  display: grid;
+  gap: 12px;
+}
+
+.filterChipBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #e5eaf2;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+}
+
+.inlineHint {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.filterSelectWide {
+  width: 200px;
+}
+
+.contextLabel {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.contextName {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .operationBar {
@@ -18,21 +105,81 @@
 }
 
 .toolbarFilters {
-  composes: toolbarFilters from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-}
-
-.toolbarMeta {
-  composes: toolbarMeta from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: flex-end;
 }
 
 .searchInput {
-  composes: searchInput from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-  width: min(320px, 100%);
+  width: 220px;
+}
+
+.searchIcon {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.filterField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterLabel {
+  flex-shrink: 0;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 32px;
+  white-space: nowrap;
 }
 
 .filterSelect {
-  composes: filterSelect from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-  min-width: 180px;
+  width: 150px;
+}
+
+.contentSurface :global(.ant-input-affix-wrapper) {
+  height: 32px;
+  padding-inline: 11px;
+  border-color: #d9e0ea;
+  border-radius: 0 !important;
+  background: #fff;
+  box-shadow: none;
+}
+
+.contentSurface :global(.ant-input-affix-wrapper:hover),
+.contentSurface :global(.ant-input-affix-wrapper-focused) {
+  border-color: #2e68ff;
+  box-shadow: none;
+}
+
+.contentSurface :global(.ant-input-affix-wrapper .ant-input) {
+  font-size: 13px;
+}
+
+.contentSurface :global(.ant-select-selector) {
+  height: 32px !important;
+  border-color: #d9e0ea !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.contentSurface :global(.ant-select-selection-item),
+.contentSurface :global(.ant-select-selection-placeholder) {
+  line-height: 30px !important;
+  font-size: 13px;
+}
+
+.contentSurface :global(.ant-select-focused) :global(.ant-select-selector),
+.contentSurface :global(.ant-select):hover :global(.ant-select-selector) {
+  border-color: #2e68ff !important;
+}
+
+.contentSurface :global(.ant-btn) {
+  border-radius: 0 !important;
 }
 
 .panelSection {
@@ -40,36 +187,12 @@
   padding-top: 0;
 }
 
-.sectionHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  padding-bottom: 14px;
-}
-
-.sectionTitle {
-  margin: 0;
-  color: var(--business-color-heading);
-  font-size: var(--business-font-size-body);
-  font-weight: var(--business-font-weight-strong);
-}
-
-.sectionDescription {
-  margin: 8px 0 0;
-  color: var(--business-color-secondary);
-  font-size: var(--business-font-size-meta);
-  line-height: 1.7;
-}
-
 .panelSection :global(.ant-alert) {
   margin-bottom: 14px;
 }
 
-.statusTag,
-.triggerTag,
-.strategyTag {
-  composes: neutralTag from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+.panelSection :global(.ant-table-thead > tr > th) {
+  white-space: nowrap;
 }
 
 .actionGroup {
@@ -93,15 +216,41 @@
 }
 
 @media (max-width: 1200px) {
-  .sectionHeader {
+  .pageHeader,
+  .operationBar {
+    align-items: stretch;
     flex-direction: column;
   }
 
-  .searchInput {
-    width: min(100%, 360px);
+  .toolbarFilters {
+    width: 100%;
+    justify-content: flex-start;
   }
 
-  .filterSelect {
-    min-width: 160px;
+  .searchInput,
+  .filterSelectWide {
+    width: min(100%, 220px);
+  }
+}
+
+@media (max-width: 768px) {
+  .toolbarFilters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchInput,
+  .filterSelect,
+  .filterSelectWide {
+    width: 100%;
+  }
+
+  .filterField {
+    width: 100%;
+  }
+
+  .filterSelect,
+  .filterSelectWide {
+    flex: 1;
   }
 }

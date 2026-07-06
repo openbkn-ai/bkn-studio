@@ -430,9 +430,11 @@ export function resolveConnectorFieldControl(
   return { kind: "text" };
 }
 
+type ConnectorConfigDefaultValue = boolean | number | string | string[];
+
 export function getConnectorConfigDefaults(
   connector?: Pick<DataConnectConnectorType, "fieldConfig" | "type">,
-) {
+): Record<string, ConnectorConfigDefaultValue> {
   if (!connector) {
     return {};
   }
@@ -440,12 +442,12 @@ export function getConnectorConfigDefaults(
   const typeKey = connector.type.trim().toLowerCase();
   const recommended = TYPE_FIELD_DEFAULTS[typeKey] ?? {};
   const fieldConfig = connector.fieldConfig ?? {};
-  const defaults: Record<string, unknown> = {};
+  const defaults: Record<string, ConnectorConfigDefaultValue> = {};
 
   Object.keys(fieldConfig).forEach((fieldName) => {
     const normalized = fieldName.trim().toLowerCase();
     if (Object.prototype.hasOwnProperty.call(recommended, normalized)) {
-      defaults[fieldName] = recommended[normalized];
+      defaults[fieldName] = recommended[normalized] as ConnectorConfigDefaultValue;
     }
   });
 

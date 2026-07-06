@@ -334,19 +334,6 @@ export function DataConnectListScene({
                   {t("common.create")}
                 </AppButton>
               </PermissionGate>
-                <PermissionGate permissions="catalog:task_manage">
-                  <AppButton
-                    onClick={() => {
-                      if (onOpenScans) {
-                        onOpenScans();
-                        return;
-                      }
-                      void navigate("/data-connect/scans");
-                    }}
-                  >
-                  {t("dataConnect.scanManage")}
-                </AppButton>
-              </PermissionGate>
               <AppButton
                 icon={<ReloadOutlined />}
                 onClick={() => {

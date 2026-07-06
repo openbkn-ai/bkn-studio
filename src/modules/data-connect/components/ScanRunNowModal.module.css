@@ -1,0 +1,69 @@
+.modalRoot :global(.ant-modal-content),
+.modalRoot :global(.ant-modal-header),
+.modalRoot :global(.ant-modal-body),
+.modalRoot :global(.ant-modal-footer) {
+  border-radius: 0 !important;
+}
+
+.modalRoot :global(.ant-btn) {
+  border-radius: 0 !important;
+}
+
+.modal {
+  border-radius: 0 !important;
+}
+
+.summary {
+  margin: 0 0 16px;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.fieldLabel {
+  margin-bottom: 10px;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.strategyGroup {
+  width: 100%;
+}
+
+.strategyOption {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  margin-inline-end: 0;
+  padding: 10px 12px;
+  border: 1px solid #e5eaf2;
+  border-radius: 0;
+  background: #fbfcfe;
+}
+
+.strategyOption:global(.ant-radio-wrapper-checked) {
+  border-color: #2e68ff;
+  background: #f5f8ff;
+}
+
+.strategyOption :global(.ant-radio) {
+  margin-top: 3px;
+}
+
+.strategyTitle {
+  display: block;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.strategyHint {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+}

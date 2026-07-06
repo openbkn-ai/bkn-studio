@@ -28,11 +28,27 @@ import type {
 } from "@/modules/data-catalog/types/data-catalog";
 
 type BackendSchemaField = {
+  description?: string;
   display_name?: string;
   name?: string;
+  original_name?: string;
   original_type?: string;
   type?: string;
 };
+
+function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
+  const name = field.name ?? field.original_name ?? field.display_name ?? "";
+  const displayName = field.display_name?.trim();
+  const description = field.description?.trim();
+
+  return {
+    name,
+    type: field.type ?? field.original_type ?? "string",
+    displayName:
+      displayName && displayName !== name ? displayName : undefined,
+    description: description || undefined,
+  };
+}
 
 type BackendResource = {
   catalog_id: string;
@@ -90,10 +106,7 @@ function mapResource(item: BackendResource): CatalogResource {
     category: normalizeCategory(item.category, item.logic_type),
     sourceIdentifier: item.source_identifier ?? "",
     description: item.description ?? "",
-    schema: (item.schema_definition ?? []).map((field) => ({
-      name: field.name ?? field.display_name ?? "",
-      type: field.type ?? field.original_type ?? "string",
-    })),
+    schema: (item.schema_definition ?? []).map(mapSchemaField),
     // 列表接口不返回 schema_definition,改用后端标量 column_count;详情接口回退到 schema 长度
     columnCount: item.column_count ?? item.schema_definition?.length ?? 0,
     // 顶层 row_count 后端常缺省,实际行数在 source_metadata.properties 里

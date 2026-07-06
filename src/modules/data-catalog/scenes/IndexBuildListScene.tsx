@@ -12,13 +12,13 @@ import {
   PlayCircleOutlined,
   RedoOutlined,
   ReloadOutlined,
-  ThunderboltOutlined,
+  UnorderedListOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Modal, Select, Space, Tooltip } from "antd";
+import { Alert, Dropdown, Input, Select, Space, Tooltip } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -30,9 +30,12 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
-import { BuildTaskDetailModal } from "@/modules/data-catalog/components/BuildTaskDetailModal";
-import { BuildTaskModal } from "@/modules/data-catalog/components/BuildTaskModal";
+import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTaskDetailDrawer";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
+import {
+  applyIndexBuildListFilters,
+  readIndexBuildListFilters,
+} from "@/modules/data-catalog/lib/index-build-filters";
 import {
   type BuildExecuteType,
   deleteBuildTask,
@@ -54,7 +57,6 @@ import { listDataConnectRecords } from "@/modules/data-connect/services/data-con
 import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 
 import sceneStyles from "./IndexBuildListScene.module.css";
-import styles from "../components/shared.module.css";
 
 const STATUS_OPTIONS: BuildTaskStatus[] = [
   "pending",
@@ -65,10 +67,35 @@ const STATUS_OPTIONS: BuildTaskStatus[] = [
   "failed",
 ];
 
+function EllipsisText({ text, title }: { text: string; title?: string }) {
+  return (
+    <Tooltip title={title ?? text}>
+      <span className={sceneStyles.cellEllipsis}>{text}</span>
+    </Tooltip>
+  );
+}
+
+function formatIndexTypes(record: BuildTask) {
+  const parts: string[] = [];
+  if (record.embeddingFields.length > 0) {
+    parts.push("embedding");
+  }
+  if (record.fulltextFields.length > 0) {
+    parts.push("fulltext");
+  }
+  return parts.length > 0 ? parts.join(", ") : "—";
+}
+
 export function IndexBuildListScene() {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const listFilters = useMemo(
+    () => readIndexBuildListFilters(searchParams),
+    [searchParams],
+  );
 
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [resources, setResources] = useState<CatalogResource[]>([]);
@@ -76,16 +103,12 @@ export function IndexBuildListScene() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState("");
-  const [statuses, setStatuses] = useState<BuildTaskStatus[]>([]);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [orderBy, setOrderBy] = useState<BuildTaskOrderBy>("default");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [total, setTotal] = useState(0);
   const [detailTask, setDetailTask] = useState<BuildTask | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickedResourceId, setPickedResourceId] = useState<string>();
-  const [buildResource, setBuildResource] = useState<CatalogResource | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
   // 服务端分页 + 排序 + 状态过滤的查询参数。
@@ -95,9 +118,24 @@ export function IndexBuildListScene() {
       pageSize,
       orderBy,
       order,
-      statuses: statuses.length === 0 ? undefined : statuses,
+      catalogId: listFilters.catalogId,
+      resourceId: listFilters.resourceId,
+      statuses: listFilters.statuses.length === 0 ? undefined : listFilters.statuses,
     }),
-    [order, orderBy, page, pageSize, statuses],
+    [listFilters.catalogId, listFilters.resourceId, listFilters.statuses, order, orderBy, page, pageSize],
+  );
+
+  const updateListFilters = useCallback(
+    (patch: Partial<typeof listFilters>) => {
+      const next = applyIndexBuildListFilters(searchParams, {
+        catalogId: "catalogId" in patch ? patch.catalogId : listFilters.catalogId,
+        resourceId: "resourceId" in patch ? patch.resourceId : listFilters.resourceId,
+        statuses: "statuses" in patch ? patch.statuses! : listFilters.statuses,
+      });
+      setSearchParams(next, { replace: true });
+      setPage(1);
+    },
+    [listFilters, searchParams, setSearchParams],
   );
 
   const loadData = useCallback(async () => {
@@ -168,6 +206,29 @@ export function IndexBuildListScene() {
     () => new Map(catalogs.map((catalog) => [catalog.id, catalog])),
     [catalogs],
   );
+
+  const resourceOptions = useMemo(() => {
+    const items = listFilters.catalogId
+      ? resources.filter((resource) => resource.catalogId === listFilters.catalogId)
+      : resources;
+    return items.map((resource) => ({
+      label: resource.name,
+      value: resource.id,
+    }));
+  }, [listFilters.catalogId, resources]);
+
+  useEffect(() => {
+    if (!listFilters.resourceId) {
+      return;
+    }
+    const resource = resourceMap.get(listFilters.resourceId);
+    if (!resource) {
+      return;
+    }
+    if (listFilters.catalogId && resource.catalogId !== listFilters.catalogId) {
+      updateListFilters({ resourceId: undefined });
+    }
+  }, [listFilters.catalogId, listFilters.resourceId, resourceMap, updateListFilters]);
 
   // 状态过滤/排序/分页已下沉服务端;此处只对「当前页」做关键字过滤。
   // TODO(后端): build-tasks 暂无 keyword 参数,搜索无法跨页;后端补 search 后改服务端。
@@ -324,34 +385,29 @@ export function IndexBuildListScene() {
     {
       dataIndex: "id",
       title: t("dataCatalog.task.column"),
-      width: 190,
-      render: (value: string) => (
-        // nowrap:auto 布局下 slug 不被 break-all 压成单字一列
-        <span className={styles.slugChip} style={{ whiteSpace: "nowrap", wordBreak: "normal" }}>
-          {value}
-        </span>
-      ),
+      width: 152,
+      render: (value: string) => <EllipsisText text={value} />,
     },
     {
       dataIndex: "resourceId",
       title: t("dataCatalog.build.resource"),
-      // 给宽度 → auto 布局下不再独占剩余空间;窄屏靠 ellipsis 截断。
-      width: 240,
-      ellipsis: true,
       render: (value: string) => {
         const resource = resourceMap.get(value);
+        const label = resource?.name ?? value;
         return resource ? (
-          <AppButton
-            onClick={() => {
-              void navigate(`/data-directory/resource/${resource.id}`);
-            }}
-            style={{ padding: 0, height: "auto" }}
-            type="link"
-          >
-            {resource.name}
-          </AppButton>
+          <Tooltip title={label}>
+            <button
+              className={sceneStyles.textLink}
+              onClick={() => {
+                void navigate(`/data-directory/resource/${resource.id}?tab=index`);
+              }}
+              type="button"
+            >
+              <span className={sceneStyles.cellEllipsis}>{label}</span>
+            </button>
+          </Tooltip>
         ) : (
-          <span className={styles.slugChip}>{value}</span>
+          <EllipsisText text={label} />
         );
       },
     },
@@ -359,69 +415,50 @@ export function IndexBuildListScene() {
       dataIndex: "mode",
       key: "mode",
       title: t("dataCatalog.build.mode"),
-      width: 110,
+      width: 108,
       onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
       sorter: true,
       sortOrder: sortOrderOf("mode"),
       render: (value: BuildTask["mode"]) => (
-        <span
-          className={[
-            styles.tag,
-            value === "batch" ? styles.modeBatch : styles.modeStreaming,
-          ].join(" ")}
-        >
-          {t(`dataCatalog.modes.${value}`)}
-        </span>
+        <EllipsisText text={t(`dataCatalog.modes.${value}`)} />
       ),
     },
     {
       dataIndex: "status",
       key: "status",
       title: t("common.status"),
-      width: 190,
+      width: 116,
       sorter: true,
       sortOrder: sortOrderOf("status"),
-      render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
+      render: (_value: BuildTaskStatus, record) => <BuildStatusTag plain task={record} />,
     },
     {
       dataIndex: "createTime",
       key: "created_at",
       title: t("dataCatalog.task.createTime"),
-      width: 160,
+      width: 132,
       sorter: true,
       sortOrder: sortOrderOf("created_at"),
-      render: (value: string) => (
-        <span style={{ color: "#4b5563", fontSize: 14 }}>{value}</span>
-      ),
+      render: (value: string) => <EllipsisText text={value} />,
     },
     {
       key: "progress",
       title: t("dataCatalog.task.progress"),
-      width: 200,
-      render: (_, record) => <BuildProgress task={record} />,
+      width: 196,
+      onCell: () => ({ className: sceneStyles.progressCell }),
+      render: (_, record) => <BuildProgress compact task={record} />,
     },
     {
       key: "index",
       title: t("dataCatalog.task.indexColumn"),
-      width: 130,
-      render: (_, record) => (
-        <span className={styles.chipRow}>
-          {record.embeddingFields.length > 0 ? (
-            <span className={[styles.tag, styles.taskRunning].join(" ")}>embedding</span>
-          ) : null}
-          {record.fulltextFields.length > 0 ? (
-            <span className={[styles.tag, styles.modeStreaming].join(" ")}>fulltext</span>
-          ) : null}
-          {record.embeddingFields.length === 0 && record.fulltextFields.length === 0 ? (
-            <span style={{ color: "#6b7280", fontSize: 14 }}>—</span>
-          ) : null}
-        </span>
-      ),
+      width: 88,
+      render: (_, record) => <EllipsisText text={formatIndexTypes(record)} />,
     },
     {
       key: "actions",
       title: t("common.actions"),
-      width: 150,
+      width: 120,
+      fixed: "right",
       render: (_, record) => {
         const pauseResumeLabel =
           record.status === "paused"
@@ -513,27 +550,11 @@ export function IndexBuildListScene() {
     },
   ];
 
-  const buildableResources = resources.filter(
-    (resource) => resourceGateOf(catalogMap.get(resource.catalogId) ?? null).ok,
-  );
-
   return (
     <section className={sceneStyles.contentSurface}>
       <div className={sceneStyles.operationBar}>
         <div className={sceneStyles.operationPrimary}>
           <div className={sceneStyles.toolbarActions}>
-            <PermissionGate permissions="resource:task_manage">
-              <AppButton
-                icon={<ThunderboltOutlined />}
-                onClick={() => {
-                  setPickedResourceId(undefined);
-                  setPickerOpen(true);
-                }}
-                type="primary"
-              >
-                {t("dataCatalog.task.create")}
-              </AppButton>
-            </PermissionGate>
             <AppButton icon={<ReloadOutlined />} onClick={() => void loadData()}>
               {t("common.refresh")}
             </AppButton>
@@ -550,9 +571,61 @@ export function IndexBuildListScene() {
               </AppButton>
             </PermissionGate>
           </div>
-          <span className={sceneStyles.toolbarMeta}>{t("dataCatalog.task.toolbarHint")}</span>
         </div>
         <div className={sceneStyles.toolbarFilters}>
+          <div className={sceneStyles.filterField}>
+            <span className={sceneStyles.filterLabel}>{t("dataCatalog.resource.catalog")}</span>
+            <Select
+              allowClear
+              className={sceneStyles.filterSelect}
+              onChange={(value) => {
+                updateListFilters({
+                  catalogId: value ?? undefined,
+                  resourceId: undefined,
+                });
+              }}
+              options={catalogs.map((catalog) => ({
+                label: catalog.name,
+                value: catalog.id,
+              }))}
+              placeholder={t("common.all")}
+              value={listFilters.catalogId ?? null}
+            />
+          </div>
+          <div className={sceneStyles.filterField}>
+            <span className={sceneStyles.filterLabel}>{t("dataCatalog.build.resource")}</span>
+            <Select
+              allowClear
+              className={sceneStyles.filterSelectWide}
+              onChange={(value) => {
+                updateListFilters({ resourceId: value ?? undefined });
+              }}
+              options={resourceOptions}
+              placeholder={t("common.all")}
+              value={listFilters.resourceId ?? null}
+            />
+          </div>
+          <div className={sceneStyles.filterField}>
+            <span className={sceneStyles.filterLabel}>{t("common.status")}</span>
+            <Select
+              allowClear
+              className={`${sceneStyles.filterSelect} ${sceneStyles.filterSelectMultiple}`}
+              maxTagCount="responsive"
+              mode="multiple"
+              onChange={(value: BuildTaskStatus[]) => {
+                updateListFilters({ statuses: value });
+              }}
+              options={STATUS_OPTIONS.map((status) => ({
+                label:
+                  status === "paused"
+                    ? `${t("dataCatalog.task.statuses.paused")} / ${t("dataCatalog.task.statuses.stopped")}`
+                    : t(`dataCatalog.task.statuses.${status}`),
+                value: status,
+              }))}
+              placeholder={t("dataCatalog.task.statusFilterPlaceholder")}
+              value={listFilters.statuses}
+            />
+          </div>
           <Input.Search
             allowClear
             className={sceneStyles.searchInput}
@@ -561,27 +634,9 @@ export function IndexBuildListScene() {
             placeholder={t("dataCatalog.task.searchPlaceholder")}
             value={keyword}
           />
-          <Select
-            allowClear
-            className={sceneStyles.filterSelect}
-            mode="multiple"
-            onChange={(value: BuildTaskStatus[]) => {
-              setStatuses(value);
-              setPage(1);
-            }}
-            options={STATUS_OPTIONS.map((status) => ({
-              // paused 内部状态同时承载 streaming 暂停与 batch 停止
-              label:
-                status === "paused"
-                  ? `${t("dataCatalog.task.statuses.paused")} / ${t("dataCatalog.task.statuses.stopped")}`
-                  : t(`dataCatalog.task.statuses.${status}`),
-              value: status,
-            }))}
-            placeholder={t("dataCatalog.task.statusFilterPlaceholder")}
-            value={statuses}
-          />
         </div>
       </div>
+
       <TableSurface className={sceneStyles.tableSurface}>
         {loadError ? (
           <Alert
@@ -596,15 +651,8 @@ export function IndexBuildListScene() {
           />
         ) : !loading && filteredTasks.length === 0 ? (
           <EmptyStatePanel
-            action={
-              <PermissionGate permissions="resource:task_manage">
-                <AppButton onClick={() => setPickerOpen(true)} type="primary">
-                  {t("dataCatalog.task.create")}
-                </AppButton>
-              </PermissionGate>
-            }
             description={t("dataCatalog.task.emptyDescription")}
-            icon={<ThunderboltOutlined />}
+            icon={<UnorderedListOutlined />}
             title={t("dataCatalog.task.empty")}
           />
         ) : (
@@ -619,7 +667,7 @@ export function IndexBuildListScene() {
               selectedRowKeys: selectedKeys,
               onChange: (keys) => setSelectedKeys(keys.map(String)),
             }}
-            tableLayout="auto"
+            tableLayout="fixed"
           />
         )}
       </TableSurface>
@@ -637,53 +685,8 @@ export function IndexBuildListScene() {
         />
       ) : null}
 
-      <Modal
-        okButtonProps={{ disabled: !pickedResourceId }}
-        okText={t("common.confirm")}
-        onCancel={() => setPickerOpen(false)}
-        onOk={() => {
-          const resource = resources.find((item) => item.id === pickedResourceId);
-          if (resource) {
-            setBuildResource(resource);
-            setPickerOpen(false);
-          }
-        }}
-        open={pickerOpen}
-        title={t("dataCatalog.task.pickResource")}
-      >
-        <Select
-          onChange={(value) => setPickedResourceId(value)}
-          optionFilterProp="label"
-          options={buildableResources.map((resource) => {
-            const catalog = catalogMap.get(resource.catalogId);
-            return {
-              label: `${catalog ? `${catalog.name} / ` : ""}${resource.name}(${t(
-                `dataCatalog.categories.${resource.category}`,
-              )})`,
-              value: resource.id,
-            };
-          })}
-          placeholder={t("dataCatalog.task.pickResourcePlaceholder")}
-          showSearch
-          style={{ width: "100%" }}
-          value={pickedResourceId}
-        />
-        <div style={{ marginTop: 8, color: "#8b98ac", fontSize: 12 }}>
-          {t("dataCatalog.build.resourceHint")}
-        </div>
-      </Modal>
-
-      {buildResource ? (
-        <BuildTaskModal
-          onClose={() => setBuildResource(null)}
-          onCreated={() => void loadData()}
-          open
-          resource={buildResource}
-        />
-      ) : null}
-
       {detailTask ? (
-        <BuildTaskDetailModal
+        <BuildTaskDetailDrawer
           onClose={() => setDetailTask(null)}
           open
           resource={resourceMap.get(detailTask.resourceId) ?? null}

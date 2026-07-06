@@ -16,6 +16,11 @@ const DataCatalogPage = lazy(async () => {
   return { default: module.DataCatalogPage };
 });
 
+const ResourceWorkspacePage = lazy(async () => {
+  const module = await import("@/modules/data-catalog/pages/ResourceWorkspacePage");
+  return { default: module.ResourceWorkspacePage };
+});
+
 const IndexBuildPage = lazy(async () => {
   const module = await import("@/modules/data-catalog/pages/IndexBuildPage");
   return { default: module.IndexBuildPage };
@@ -57,7 +62,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.resourceDetailTitle",
       },
     },
-    element: withRouteLoading(<DataCatalogPage selectionType="resource" />),
+    element: withRouteLoading(<ResourceWorkspacePage />),
   },
   {
     path: "data-catalog",
@@ -90,14 +95,14 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.resourceDetailTitle",
       },
     },
-    element: withRouteLoading(<DataCatalogPage selectionType="resource" />),
+    element: withRouteLoading(<ResourceWorkspacePage />),
   },
   {
     path: "index-builds",
     handle: {
       console: {
         descriptionKey: "dataCatalog.indexBuildDescription",
-        menuKey: "data-catalog",
+        menuKey: "index-builds",
         titleKey: "dataCatalog.indexBuildTitle",
       },
     },

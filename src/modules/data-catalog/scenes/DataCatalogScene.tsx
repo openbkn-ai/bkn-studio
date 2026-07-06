@@ -7,27 +7,22 @@
 
 import { DatabaseOutlined } from "@ant-design/icons";
 import { Alert, Spin } from "antd";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
-import { BuildTaskDetailModal } from "@/modules/data-catalog/components/BuildTaskDetailModal";
-import { BuildTaskModal } from "@/modules/data-catalog/components/BuildTaskModal";
 import { CatalogDetailPanel } from "@/modules/data-catalog/components/CatalogDetailPanel";
 import {
   CatalogTreePanel,
   type CatalogTreeSelection,
 } from "@/modules/data-catalog/components/CatalogTreePanel";
-import { DataPreviewModal } from "@/modules/data-catalog/components/DataPreviewModal";
-import { ResourceDetailPanel } from "@/modules/data-catalog/components/ResourceDetailPanel";
 import { ResourceFormDrawer } from "@/modules/data-catalog/components/ResourceFormDrawer";
 import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
-  getCatalogResource,
   isCatalogScanning,
   listCatalogResources,
   listCatalogScans,
@@ -68,66 +63,19 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     catalogId?: string;
     open: boolean;
   }>({ open: false });
-  const [previewResource, setPreviewResource] = useState<CatalogResource | null>(null);
-  const [buildResource, setBuildResource] = useState<CatalogResource | null>(null);
-  const [detailTask, setDetailTask] = useState<BuildTask | null>(null);
 
   const selectedCatalog = useMemo(() => {
     if (selection?.type === "catalog") {
       return catalogs.find((item) => item.id === selection.id) ?? null;
     }
-    if (selection?.type === "resource") {
-      const resource = resources.find((item) => item.id === selection.id);
-      return resource
-        ? (catalogs.find((item) => item.id === resource.catalogId) ?? null)
-        : null;
-    }
     return null;
-  }, [catalogs, resources, selection]);
-
-  // 列表接口不返回 schema_definition,详情页需单独拉取补全 schema
-  const [resourceDetail, setResourceDetail] = useState<CatalogResource | null>(null);
-
-  useEffect(() => {
-    if (selection?.type !== "resource") {
-      setResourceDetail(null);
-      return;
-    }
-
-    let cancelled = false;
-    getCatalogResource(selection.id)
-      .then((detail) => {
-        if (!cancelled) {
-          setResourceDetail(detail);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setResourceDetail(null);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selection]);
-
-  const selectedResource = useMemo(() => {
-    if (selection?.type !== "resource") {
-      return null;
-    }
-    const listItem = resources.find((item) => item.id === selection.id) ?? null;
-    if (resourceDetail?.id === selection.id) {
-      return listItem ? { ...listItem, ...resourceDetail } : resourceDetail;
-    }
-    return listItem;
-  }, [resourceDetail, resources, selection]);
+  }, [catalogs, selection]);
 
   const loadAll = useCallback(async () => {
     setLoadError(null);
     try {
       const [catalogResult, resourceResult, taskResult, typeResult] = await Promise.all([
-        listDataConnectRecords({ keyword: "", page: 1, pageSize: 200 }),
+        listDataConnectRecords({ keyword: "", page: 1, pageSize: 200, type: "all" }),
         listCatalogResources(),
         listBuildTasks(),
         connectorTypes.length === 0
@@ -219,8 +167,8 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     prevActiveRef.current = hasActiveWork;
   }, [hasActiveWork, loadAll]);
 
-  // 无选中时默认选第一个物理数据源(与树形分组一致,物理优先);无物理时退回第一个 catalog
-  useEffect(() => {
+  // 无选中时默认选第一个物理 catalog；用 layout effect 尽量在首帧绘制前跳转，避免闪空态。
+  useLayoutEffect(() => {
     if (loading || selection || catalogs.length === 0) {
       return;
     }
@@ -250,20 +198,23 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     [resources, selectedCatalog],
   );
 
-  const selectedResourceTasks = useMemo(
-    () =>
-      selectedResource
-        ? tasks.filter((task) => task.resourceId === selectedResource.id)
-        : [],
-    [selectedResource, tasks],
-  );
-
-  const detailTaskResource = useMemo(
-    () =>
-      detailTask
-        ? (resources.find((item) => item.id === detailTask.resourceId) ?? null)
-        : null,
-    [detailTask, resources],
+  const openResourceWorkspace = useCallback(
+    (
+      resourceId: string,
+      tab: "detail" | "index" | "preview" = "detail",
+      indexView?: "configure",
+    ) => {
+      const params = new URLSearchParams();
+      if (tab !== "detail") {
+        params.set("tab", tab);
+      }
+      if (tab === "index" && indexView === "configure") {
+        params.set("view", "configure");
+      }
+      const query = params.toString();
+      void navigate(`/data-directory/resource/${resourceId}${query ? `?${query}` : ""}`);
+    },
+    [navigate],
   );
 
   const renderDetail = () => {
@@ -310,38 +261,21 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
       );
     }
 
-    if (selection?.type === "resource") {
-      if (!selectedResource) {
-        return (
-          <EmptyStatePanel
-            action={
-              <AppButton
-                onClick={() => {
-                  void navigate("/data-directory");
-                }}
-              >
-                {t("dataCatalog.backToCatalog")}
-              </AppButton>
-            }
-            description=""
-            icon={<DatabaseOutlined />}
-            title={t("dataCatalog.resource.notFound")}
-          />
-        );
-      }
-
+    if (selection?.type === "catalog" && !selectedCatalog) {
       return (
-        <ResourceDetailPanel
-          catalog={selectedCatalog}
-          onBuild={(resource) => setBuildResource(resource)}
-          onOpenTask={(task) => setDetailTask(task)}
-          onPreview={(resource) => setPreviewResource(resource)}
-          onRefresh={async () => {
-            await loadAll();
-            await loadScans();
-          }}
-          resource={selectedResource}
-          tasks={selectedResourceTasks}
+        <EmptyStatePanel
+          action={
+            <AppButton
+              onClick={() => {
+                void navigate("/data-directory");
+              }}
+            >
+              {t("dataCatalog.backToCatalog")}
+            </AppButton>
+          }
+          description=""
+          icon={<DatabaseOutlined />}
+          title={t("dataCatalog.catalog.notFound")}
         />
       );
     }
@@ -350,21 +284,20 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
       return (
         <CatalogDetailPanel
           catalog={selectedCatalog}
-          connectorTypes={connectorTypes}
-          onBuildResource={(resource) => setBuildResource(resource)}
           onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
-          onRefresh={async () => {
-            await loadAll();
-            await loadScans();
-          }}
-          onSelectResource={(resourceId) => {
-            void navigate(`/data-directory/resource/${resourceId}`);
-          }}
+          onOpenResource={openResourceWorkspace}
           resources={selectedCatalogResources}
-          scanning={scanningCatalogIds.includes(selectedCatalog.id)}
-          scans={scans}
           tasks={tasks}
         />
+      );
+    }
+
+    // /data-directory 根路径：等待默认 catalog 跳转，勿误报「未找到」。
+    if (catalogs.length > 0) {
+      return (
+        <div className={styles.placeholder}>
+          <Spin />
+        </div>
       );
     }
 
@@ -382,20 +315,16 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
       <div className={styles.explorer}>
         <CatalogTreePanel
           catalogs={catalogs}
-          onCreateConnection={() => {
-            void navigate("/data-connect/new");
+          connectorTypes={connectorTypes}
+          onRefresh={async () => {
+            await loadAll();
           }}
-          onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
           onSelectCatalog={(catalogId) => {
             void navigate(`/data-directory/catalog/${catalogId}`);
-          }}
-          onSelectResource={(resourceId) => {
-            void navigate(`/data-directory/resource/${resourceId}`);
           }}
           resources={resources}
           scanningCatalogIds={scanningCatalogIds}
           selection={selection}
-          tasks={tasks}
         />
         <section className={styles.detailSurface}>{renderDetail()}</section>
       </div>
@@ -406,38 +335,11 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
         onClose={() => setResourceDrawer({ open: false })}
         onCreated={(resource) => {
           void loadAll();
-          void navigate(`/data-directory/resource/${resource.id}`);
+          openResourceWorkspace(resource.id);
         }}
         open={resourceDrawer.open}
       />
 
-      {previewResource ? (
-        <DataPreviewModal
-          onClose={() => setPreviewResource(null)}
-          open
-          resource={previewResource}
-        />
-      ) : null}
-
-      {buildResource ? (
-        <BuildTaskModal
-          onClose={() => setBuildResource(null)}
-          onCreated={() => {
-            void loadAll();
-          }}
-          open
-          resource={buildResource}
-        />
-      ) : null}
-
-      {detailTask ? (
-        <BuildTaskDetailModal
-          onClose={() => setDetailTask(null)}
-          open
-          resource={detailTaskResource}
-          task={detailTask}
-        />
-      ) : null}
     </>
   );
 }

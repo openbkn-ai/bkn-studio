@@ -5,7 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Form, Input, Modal, Select, Switch } from "antd";
+import { Form, Input, Modal, Select, Switch } from "antd";
+import type { FormItemProps, Rule } from "antd/es/form";
+import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -19,6 +21,7 @@ import styles from "./ScanScheduleFormModal.module.css";
 
 type ScanScheduleFormModalProps = {
   catalogs: DataConnectRecord[];
+  defaultCatalogId?: string;
   initialValue?: DataConnectScanSchedule | null;
   mode: "create" | "edit";
   onCancel: () => void;
@@ -47,8 +50,16 @@ export type ScanScheduleFormModalSubmitPayload = {
   strategy: DataConnectScanStrategy;
 };
 
+/** Vega discover-schedule 使用标准 5 段 cron：分 时 日 月 周 */
+const CRON_PRESETS = [
+  { key: "daily2am", value: "0 2 * * *" },
+  { key: "hourly", value: "0 * * * *" },
+  { key: "monday2am", value: "0 2 * * 1" },
+] as const;
+
 export function ScanScheduleFormModal({
   catalogs,
+  defaultCatalogId,
   initialValue,
   mode,
   onCancel,
@@ -58,6 +69,8 @@ export function ScanScheduleFormModal({
 }: ScanScheduleFormModalProps) {
   const { t } = useTranslation();
   const [form] = Form.useForm<ScanScheduleFormValues>();
+  const catalogLocked = mode === "edit" || Boolean(defaultCatalogId);
+  const cronExpr = Form.useWatch("cronExpr", form);
 
   useEffect(() => {
     if (!open) {
@@ -66,29 +79,30 @@ export function ScanScheduleFormModal({
 
     form.resetFields();
     form.setFieldsValue({
-      catalogId: initialValue?.catalogId,
-      cronExpr: initialValue?.cronExpr ?? "",
+      catalogId: initialValue?.catalogId ?? defaultCatalogId,
+      cronExpr: initialValue?.cronExpr ?? "0 2 * * *",
       enabled: initialValue?.enabled ?? true,
       endTime: formatDateTimeLocal(initialValue?.endTimeValue),
       name: initialValue?.name ?? "",
       startTime: formatDateTimeLocal(initialValue?.startTimeValue),
       strategy: initialValue?.strategy ?? "full_sync",
     });
-  }, [form, initialValue, open]);
+  }, [defaultCatalogId, form, initialValue, open]);
 
   return (
     <Modal
+      cancelText={t("common.cancel")}
+      className={styles.modal}
+      confirmLoading={submitting}
       destroyOnHidden
       okText={t("common.save")}
-      cancelText={t("common.cancel")}
-      confirmLoading={submitting}
       onCancel={onCancel}
       onOk={() => {
         void form.validateFields().then(async (values) => {
           await onSubmit({
             catalogId: values.catalogId,
             cronExpr: values.cronExpr.trim(),
-            enabled: values.enabled,
+            enabled: values.enabled ?? true,
             endTime: parseDateTimeLocal(values.endTime),
             name: values.name.trim(),
             startTime: parseDateTimeLocal(values.startTime),
@@ -97,40 +111,54 @@ export function ScanScheduleFormModal({
         });
       }}
       open={open}
+      rootClassName={styles.modalRoot}
       title={
         mode === "create"
           ? t("dataConnect.scanCreateTitle")
           : t("dataConnect.scanEditTitle")
       }
-      width={720}
+      width={640}
     >
-      <Form form={form} layout="vertical">
-        {mode === "edit" ? (
-          <Alert
-            message={t("dataConnect.scanEditHint")}
-            showIcon
-            style={{ marginBottom: 16 }}
-            type="info"
-          />
-        ) : null}
-        <div className={styles.sectionCard}>
-          <h3 className={styles.sectionTitle}>{t("common.basicInfo")}</h3>
-          <div className={styles.formGrid}>
-            <Form.Item
-              className={styles.full}
+      <Form className={styles.form} colon={false} form={form} requiredMark={false}>
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>{t("common.basicInfo")}</div>
+          <div className={styles.grid}>
+            <InlineField
               label={t("dataConnect.scanScheduleName")}
               name="name"
+              required
               rules={[{ required: true, message: t("common.required") }]}
+              span="half"
             >
-              <Input maxLength={255} />
-            </Form.Item>
-            <Form.Item
+              <Input
+                maxLength={255}
+                placeholder={t("dataConnect.scanScheduleNamePlaceholder")}
+              />
+            </InlineField>
+            {mode === "create" ? (
+              <InlineField
+                label={t("common.status")}
+                name="enabled"
+                span="half"
+                valuePropName="checked"
+              >
+                <Switch
+                  checkedChildren={t("common.enabled")}
+                  unCheckedChildren={t("common.disabled")}
+                />
+              </InlineField>
+            ) : (
+              <div className={styles.spanHalf} />
+            )}
+            <InlineField
               label={t("dataConnect.scanCatalog")}
               name="catalogId"
+              required
               rules={[{ required: true, message: t("common.required") }]}
+              span="half"
             >
               <Select
-                disabled={mode === "edit"}
+                disabled={catalogLocked}
                 options={catalogs.map((item) => ({
                   label: item.name,
                   value: item.id,
@@ -139,13 +167,16 @@ export function ScanScheduleFormModal({
                 placeholder={t("dataConnect.scanCatalogFilterPlaceholder")}
                 showSearch
               />
-            </Form.Item>
-            <Form.Item
+            </InlineField>
+            <InlineField
               label={t("dataConnect.scanStrategy")}
               name="strategy"
+              required
               rules={[{ required: true, message: t("common.required") }]}
+              span="half"
             >
               <Select
+                optionLabelProp="label"
                 options={[
                   {
                     label: t("dataConnect.scanStrategies.full_sync"),
@@ -160,41 +191,115 @@ export function ScanScheduleFormModal({
                     value: "cleanup_only",
                   },
                 ]}
+                optionRender={(option) => (
+                  <div className={styles.strategyOption}>
+                    <span className={styles.strategyTitle}>{option.label}</span>
+                    <span className={styles.strategyHint}>
+                      {t(`dataConnect.scanStrategyHints.${String(option.value)}`)}
+                    </span>
+                  </div>
+                )}
               />
-            </Form.Item>
-            {mode === "create" ? (
-              <Form.Item
-                initialValue={true}
-                label={t("common.enabled")}
-                name="enabled"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            ) : null}
+            </InlineField>
           </div>
         </div>
-        <div className={styles.sectionCard}>
-          <h3 className={styles.sectionTitle}>{t("common.advancedConfig")}</h3>
-          <div className={styles.formGrid}>
-            <Form.Item
-              className={styles.full}
+
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>{t("dataConnect.scanScheduleConfig")}</div>
+          <div className={styles.grid}>
+            <InlineField
               label={t("dataConnect.scanCronExpr")}
               name="cronExpr"
+              required
               rules={[{ required: true, message: t("common.required") }]}
+              span="full"
             >
               <Input placeholder={t("dataConnect.scanCronExprPlaceholder")} />
-            </Form.Item>
-            <Form.Item label={t("dataConnect.scanStartTime")} name="startTime">
+            </InlineField>
+            <div className={styles.cronPresets}>
+              <span className={styles.cronPresetsLabel}>
+                {t("dataConnect.scanCronPresets")}
+              </span>
+              <div className={styles.cronPresetList}>
+                {CRON_PRESETS.map((preset) => (
+                  <button
+                    className={
+                      cronExpr === preset.value
+                        ? `${styles.cronPreset} ${styles.cronPresetActive}`
+                        : styles.cronPreset
+                    }
+                    key={preset.key}
+                    onClick={() => {
+                      form.setFieldValue("cronExpr", preset.value);
+                    }}
+                    type="button"
+                  >
+                    {t(`dataConnect.scanCronPresetLabels.${preset.key}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <InlineField
+              label={t("dataConnect.scanStartTime")}
+              name="startTime"
+              span="half"
+            >
               <Input type="datetime-local" />
-            </Form.Item>
-            <Form.Item label={t("dataConnect.scanEndTime")} name="endTime">
+            </InlineField>
+            <InlineField
+              label={t("dataConnect.scanEndTime")}
+              name="endTime"
+              span="half"
+            >
               <Input type="datetime-local" />
-            </Form.Item>
+            </InlineField>
           </div>
         </div>
       </Form>
     </Modal>
+  );
+}
+
+type InlineFieldProps = {
+  children: ReactNode;
+  label: string;
+  name: FormItemProps["name"];
+  required?: boolean;
+  rules?: Rule[];
+  span?: "full" | "half";
+  valuePropName?: string;
+};
+
+function InlineField({
+  children,
+  label,
+  name,
+  required = false,
+  rules,
+  span = "half",
+  valuePropName,
+}: InlineFieldProps) {
+  return (
+    <div
+      className={[styles.field, span === "full" ? styles.spanFull : styles.spanHalf]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <label className={styles.fieldLabel}>
+        {required ? <span className={styles.requiredMark}>*</span> : null}
+        <span>{label}</span>
+      </label>
+      <div className={styles.fieldBody}>
+        <Form.Item
+          className={styles.fieldItem}
+          name={name}
+          rules={rules}
+          valuePropName={valuePropName}
+        >
+          {children}
+        </Form.Item>
+      </div>
+    </div>
   );
 }
 

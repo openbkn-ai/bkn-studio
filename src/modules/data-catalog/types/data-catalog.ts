@@ -8,6 +8,10 @@
 export type ResourceCategory = "dataset" | "logicview" | "table";
 
 export type ResourceSchemaField = {
+  /** 业务字段名（后端 display_name） */
+  displayName?: string;
+  /** 字段说明（后端 description） */
+  description?: string;
   name: string;
   type: string;
 };

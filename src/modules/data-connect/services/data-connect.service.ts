@@ -251,8 +251,8 @@ let mockCatalogs: DataConnectRecord[] = [
   },
   {
     id: "cat-004",
-    name: "kn_workspace",
-    description: "平台内部命名空间,承载逻辑视图与衍生数据集。",
+    name: "adp_bkn_catalog",
+    description: "平台内置逻辑 Catalog。",
     connectorType: "",
     category: "table",
     mode: "local",
@@ -267,8 +267,30 @@ let mockCatalogs: DataConnectRecord[] = [
     creatorName: "Platform Admin",
     tags: ["internal"],
     connectorConfig: {},
-    metadata: {},
-    operations: ["view", "delete"],
+    metadata: { builtin: true },
+    operations: ["view"],
+    type: "logical",
+  },
+  {
+    id: "cat-005",
+    name: "kweaver_execution_factory",
+    description: "执行工厂内置逻辑 Catalog。",
+    connectorType: "",
+    category: "table",
+    mode: "local",
+    enabled: true,
+    status: "enabled",
+    healthStatus: "healthy",
+    healthCheckEnabled: false,
+    healthCheckResult: "",
+    updateTime: "2026-06-02 14:30:00",
+    createTime: "2026-05-20 09:00:00",
+    updaterName: "Platform Admin",
+    creatorName: "Platform Admin",
+    tags: ["system"],
+    connectorConfig: {},
+    metadata: { builtin: true },
+    operations: ["view"],
     type: "logical",
   },
 ];
@@ -368,11 +390,22 @@ function inferConnectorCategory(connectorType: string) {
   return "table";
 }
 
+function matchesCatalogType(item: DataConnectRecord, type: DataConnectListQuery["type"]) {
+  const catalogType = item.type || "physical";
+  if (!type || type === "physical") {
+    return catalogType === "physical";
+  }
+  if (type === "logical") {
+    return catalogType === "logical";
+  }
+  return true;
+}
+
 function filterCatalogs(items: DataConnectRecord[], query: DataConnectListQuery) {
   const keyword = query.keyword.trim().toLowerCase();
 
   return items.filter((item) => {
-    const matchesPhysicalType = item.type === "physical";
+    const matchesType = matchesCatalogType(item, query.type);
     const matchesKeyword =
       keyword.length === 0 ||
       item.name.toLowerCase().includes(keyword) ||
@@ -380,7 +413,7 @@ function filterCatalogs(items: DataConnectRecord[], query: DataConnectListQuery)
     const matchesConnectorType =
       !query.connectorType || item.connectorType === query.connectorType;
 
-    return matchesPhysicalType && matchesKeyword && matchesConnectorType;
+    return matchesType && matchesKeyword && matchesConnectorType;
   });
 }
 
@@ -455,11 +488,12 @@ export async function listDataConnectRecords(
     },
   );
 
-  const mapped = response.data.entries.map(mapCatalog).filter((item) => item.type === "physical");
+  const mapped = response.data.entries.map(mapCatalog);
+  const filtered = filterCatalogs(mapped, query);
 
   return {
-    items: mapped,
-    total: mapped.length,
+    items: filtered,
+    total: filtered.length,
   };
 }
 
@@ -557,6 +591,50 @@ export async function createDataConnectRecord(input: DataConnectMutationPayload)
     enabled: input.enabled,
     name: input.name,
     tags: input.tags,
+  });
+}
+
+export async function createLogicalCatalog(input: {
+  description?: string;
+  name: string;
+}) {
+  if (useMock) {
+    mockCatalogs = [
+      {
+        id: crypto.randomUUID(),
+        name: input.name,
+        description: input.description ?? "",
+        connectorType: "",
+        category: "table",
+        mode: "local",
+        enabled: true,
+        status: "enabled",
+        healthStatus: "healthy",
+        healthCheckEnabled: false,
+        healthCheckResult: "",
+        updateTime: formatTimestamp(Date.now()),
+        createTime: formatTimestamp(Date.now()),
+        updaterName: "Local Admin",
+        creatorName: "Local Admin",
+        tags: [],
+        connectorConfig: {},
+        metadata: {},
+        operations: ["view", "delete"],
+        type: "logical",
+      },
+      ...mockCatalogs,
+    ];
+
+    await wait(undefined);
+    return;
+  }
+
+  await http.post("/vega-backend/v1/catalogs", {
+    description: input.description ?? "",
+    enabled: true,
+    name: input.name,
+    tags: [],
+    type: "logical",
   });
 }
 

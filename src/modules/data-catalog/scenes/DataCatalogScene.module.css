@@ -1,18 +1,19 @@
 .explorer {
   display: grid;
-  grid-template-columns: 296px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
   align-items: start;
-  padding: 14px 12px 20px;
+  padding: 16px 16px 20px;
   background: #ffffff;
 }
 
 .detailSurface {
   min-height: auto;
+  min-width: 0;
   padding: 0;
-  border: 1px solid #d9e0ea;
+  border: 0;
   border-radius: 0;
-  background: #ffffff;
+  background: transparent;
   box-shadow: none;
 }
 

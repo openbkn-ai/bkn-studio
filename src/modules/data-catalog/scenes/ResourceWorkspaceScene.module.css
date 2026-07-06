@@ -1,0 +1,176 @@
+.contentSurface {
+  composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 16px;
+  min-height: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.placeholder {
+  display: flex;
+  min-height: 40vh;
+  align-items: center;
+  justify-content: center;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.pageHeaderMain {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pageHeaderActions {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.contextBar {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #e5eaf2;
+  background: #f8fafc;
+}
+
+.contextLabel {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.contextName {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.contextMeta {
+  color: #475569;
+  font-size: 13px;
+}
+
+.contextDivider {
+  color: #cbd5e1;
+}
+
+.textLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1d4ed8;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.textLink:hover {
+  text-decoration: underline;
+}
+
+.pageHeader :global(.ant-btn) {
+  border-radius: 0 !important;
+}
+
+.pageTabs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+}
+
+.pageTabs :global(.ant-tabs-content-holder) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pageTabs :global(.ant-tabs-content) {
+  flex: 1;
+  min-height: 0;
+}
+
+.pageTabs :global(.ant-tabs-tabpane-hidden) {
+  display: none !important;
+}
+
+.pageTabs :global(.ant-tabs-tabpane-active) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pageTabs :global(.ant-tabs-nav) {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.pageTabs :global(.ant-tabs-nav::before) {
+  border-bottom-color: #e8edf3;
+}
+
+.pageTabs :global(.ant-tabs-tab) {
+  padding: 10px 2px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pageTabs :global(.ant-tabs-ink-bar) {
+  height: 2px;
+  border-radius: 0;
+  background: #2e68ff;
+}
+
+.pageTabs :global(.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn) {
+  color: #1d4ed8;
+}
+
+.tabPanel {
+  padding-top: 16px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tabPanelPreview {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 960px) {
+  .pageHeader {
+    align-items: stretch;
+    flex-direction: column;
+    flex-wrap: wrap;
+  }
+
+  .pageHeaderActions {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+}

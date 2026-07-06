@@ -1,0 +1,245 @@
+.panelRoot {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.viewBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #d9e0ea;
+}
+
+.viewTabs {
+  display: inline-flex;
+  border: 1px solid #d9e0ea;
+  background: #f3f6fa;
+}
+
+.viewTab {
+  min-width: 88px;
+  padding: 6px 16px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.viewTab + .viewTab {
+  border-left: 1px solid #d9e0ea;
+}
+
+.viewTabActive {
+  composes: viewTab;
+  background: #fff;
+  color: #111827;
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 #2e68ff;
+}
+
+.viewBarHint {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sectionCard {
+  padding: 14px 16px;
+  border: 1px solid #d9e0ea;
+  background: #fff;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.sectionSummary {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sectionActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sectionActions :global(.ant-btn) {
+  border-radius: 0 !important;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid #eef2f7;
+}
+
+.metaItem {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.metaItem:nth-child(even) {
+  padding-right: 0;
+  padding-left: 12px;
+  border-left: 1px solid #eef2f7;
+}
+
+.metaItemFull {
+  grid-column: 1 / -1;
+  padding-right: 0;
+  padding-left: 0;
+  border-left: 0;
+}
+
+.metaLabel {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.metaValue {
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.progressBlock {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eef2f7;
+}
+
+.statusAlert {
+  margin-top: 12px;
+}
+
+.statusAlert :global(.ant-alert) {
+  border-radius: 0;
+}
+
+.emptyPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px 16px;
+  border: 1px solid #d9e0ea;
+  background: #fff;
+  text-align: center;
+}
+
+.emptyText {
+  margin: 0;
+  max-width: 420px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.historyHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.historyTitle {
+  margin: 0;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.historyCount {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.configureCard {
+  composes: sectionCard;
+}
+
+.configureCard :global(.ant-select-selector),
+.configureCard :global(.ant-input),
+.configureCard :global(.ant-input-affix-wrapper) {
+  border-radius: 0 !important;
+}
+
+.tableSurface {
+  border: 0;
+}
+
+.tableSurface :global(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
+.calloutWarn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.textLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1d4ed8;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.textLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .viewBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .metaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metaItem:nth-child(even) {
+    padding-left: 0;
+    border-left: 0;
+  }
+}

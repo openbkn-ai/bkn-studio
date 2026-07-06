@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DatabaseOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, ThunderboltOutlined } from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 
@@ -17,6 +17,12 @@ export const dataCatalogNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.dataResource",
       icon: <DatabaseOutlined />,
       path: "/data-directory",
+    },
+    {
+      key: "index-builds",
+      labelKey: "shell.items.indexBuild",
+      icon: <ThunderboltOutlined />,
+      path: "/index-builds",
     },
   ],
 };

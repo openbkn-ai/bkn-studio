@@ -1,0 +1,167 @@
+.contentSurface {
+  composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  min-height: auto;
+}
+
+.operationBar {
+  composes: operationBar from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+}
+
+.operationPrimary {
+  composes: operationPrimary from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+}
+
+.toolbarActions {
+  composes: toolbarActions from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+}
+
+.toolbarFilters {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: flex-end;
+}
+
+.searchInput {
+  width: 240px;
+}
+
+.toolbarFilters :global(.ant-input-affix-wrapper) {
+  height: 32px;
+  padding-inline: 11px;
+  border-color: #d9e0ea;
+  border-radius: 0 !important;
+  background: #fff;
+  box-shadow: none;
+}
+
+.toolbarFilters :global(.ant-input-affix-wrapper:hover),
+.toolbarFilters :global(.ant-input-affix-wrapper-focused) {
+  border-color: #2e68ff;
+  box-shadow: none;
+}
+
+.toolbarFilters :global(.ant-input-affix-wrapper .ant-input) {
+  font-size: 13px;
+}
+
+.searchIcon {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.filterField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterLabel {
+  flex-shrink: 0;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 32px;
+  white-space: nowrap;
+}
+
+.filterSelect {
+  width: 130px;
+}
+
+.filterSelect :global(.ant-select-selector) {
+  height: 32px !important;
+  border-color: #d9e0ea !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.filterSelect :global(.ant-select-selection-item),
+.filterSelect :global(.ant-select-selection-placeholder) {
+  line-height: 30px !important;
+  font-size: 13px;
+}
+
+.operationBar :global(.ant-btn) {
+  border-radius: 0 !important;
+}
+
+.tableSurface {
+  composes: tableSurface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+}
+
+.tableSurface :global(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
+.tableSurface :global(.ant-table-tbody > tr > td) {
+  white-space: nowrap;
+}
+
+.tableSurface :global(.ant-table-cell) {
+  overflow: hidden;
+}
+
+.cellEllipsis {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ellipsisLink {
+  display: inline-flex !important;
+  align-items: center;
+  max-width: 100%;
+  height: auto !important;
+  padding: 0 !important;
+  font-weight: 400;
+}
+
+.ellipsisLink .cellEllipsis {
+  min-width: 0;
+}
+
+.monoText {
+  font-variant-numeric: tabular-nums;
+}
+
+.actionGroup {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.actionGroup :global(.ant-btn-link) {
+  padding-inline: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .operationBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbarFilters {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .toolbarFilters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchInput,
+  .filterSelect {
+    width: 100%;
+  }
+
+  .filterField {
+    width: 100%;
+  }
+}

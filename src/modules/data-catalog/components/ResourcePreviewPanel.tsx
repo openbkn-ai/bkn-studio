@@ -5,28 +5,31 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Modal, Select, Spin, Tooltip } from "antd";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { Alert, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatCount } from "@/modules/data-catalog/lib/format";
 import { previewCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type {
   CatalogResource,
   ResourcePreviewResult,
+  ResourceSchemaField,
 } from "@/modules/data-catalog/types/data-catalog";
 
-import styles from "./DataPreviewModal.module.css";
+import styles from "./ResourcePreviewPanel.module.css";
 
-type DataPreviewModalProps = {
-  onClose: () => void;
-  open: boolean;
+type ResourcePreviewPanelProps = {
+  active: boolean;
+  disabled?: boolean;
+  disabledMessage?: string;
   resource: CatalogResource;
 };
 
-const PAGE_SIZES = [20, 50, 100];
+const DEFAULT_PAGE_SIZE = 10;
 
 function isNumericType(type: string) {
   const lowered = type.toLowerCase();
@@ -40,10 +43,30 @@ function isNumericType(type: string) {
   );
 }
 
-export function DataPreviewModal({ onClose, open, resource }: DataPreviewModalProps) {
+function resolvePreviewColumnHead(field: ResourceSchemaField) {
+  const technicalName = field.name;
+  const businessName = field.displayName?.trim();
+  const hasDistinctBusinessName = Boolean(
+    businessName && businessName !== technicalName,
+  );
+
+  return {
+    primary: hasDistinctBusinessName ? businessName! : technicalName,
+    secondary: hasDistinctBusinessName ? technicalName : undefined,
+    type: field.type,
+    tooltip: field.description?.trim() || undefined,
+  };
+}
+
+export function ResourcePreviewPanel({
+  active,
+  disabled = false,
+  disabledMessage,
+  resource,
+}: ResourcePreviewPanelProps) {
   const { t } = useTranslation();
-  const [pageSize, setPageSize] = useState(20);
-  const [offset, setOffset] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [page, setPage] = useState(1);
   const [result, setResult] = useState<ResourcePreviewResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,51 +92,51 @@ export function DataPreviewModal({ onClose, open, resource }: DataPreviewModalPr
   );
 
   useEffect(() => {
-    if (open) {
-      setOffset(0);
-      setPageSize(20);
-      void load(0, 20);
+    if (!active || disabled) {
+      return;
     }
-  }, [load, open]);
+    setPage(1);
+    setPageSize(DEFAULT_PAGE_SIZE);
+    void load(0, DEFAULT_PAGE_SIZE);
+  }, [active, disabled, load, resource.id]);
+
+  const offset = (page - 1) * pageSize;
+
+  if (disabled) {
+    return (
+      <div className={styles.gatePanel}>
+        <ExclamationCircleOutlined />
+        <span>{disabledMessage ?? t("dataCatalog.gate.catalogDisabledShort")}</span>
+      </div>
+    );
+  }
 
   const backendTotal = result?.total ?? 0;
   const rows = result?.rows ?? [];
   const fetched = offset + rows.length;
-  // 后端 total_count 可能只是本页条数(满页时 total ≤ 已取数,无法分页),
-  // 此时退回资源元数据里的行数
   const totalUnreliable = rows.length === pageSize && backendTotal <= fetched;
   const total = totalUnreliable
     ? Math.max(backendTotal, resource.rowCount, fetched)
     : Math.max(backendTotal, fetched);
-  // resource 可能来自列表接口(无 schema_definition),兜底用首行数据推导列
   const columns =
     resource.schema.length > 0
       ? resource.schema
       : rows.length > 0
         ? Object.keys(rows[0]).map((name) => ({ name, type: "string" }))
         : [];
-  const hasPrev = offset > 0;
-  const hasNext = fetched < total || rows.length === pageSize;
 
-  const changePage = (nextOffset: number) => {
-    setOffset(nextOffset);
-    void load(nextOffset, pageSize);
-  };
+  const handlePaginationChange = (nextPage: number, nextPageSize: number) => {
+    const resolvedPageSize = nextPageSize || pageSize;
+    const resolvedPage = resolvedPageSize !== pageSize ? 1 : nextPage;
+    const nextOffset = (resolvedPage - 1) * resolvedPageSize;
 
-  const changePageSize = (nextSize: number) => {
-    setPageSize(nextSize);
-    setOffset(0);
-    void load(0, nextSize);
+    setPage(resolvedPage);
+    setPageSize(resolvedPageSize);
+    void load(nextOffset, resolvedPageSize);
   };
 
   return (
-    <Modal
-      footer={null}
-      onCancel={onClose}
-      open={open}
-      title={`${t("dataCatalog.preview.title")} · ${resource.name}`}
-      width="min(1240px, calc(100vw - 64px))"
-    >
+    <div className={styles.panel}>
       <div className={styles.metaRow}>
         <span>
           {t("dataCatalog.preview.summary", {
@@ -121,25 +144,40 @@ export function DataPreviewModal({ onClose, open, resource }: DataPreviewModalPr
             total: formatCount(total) as never,
           })}
         </span>
-        <span className={styles.endpointChip}>
-          POST /resources/{resource.id}/data · limit={pageSize} offset={offset}
-        </span>
       </div>
       {error ? (
         <Alert message={error} showIcon type="error" />
       ) : (
-        <Spin spinning={loading}>
+        <Spin spinning={loading} wrapperClassName={styles.tableSection}>
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
                   <th className={[styles.rowIndexHead, styles.rowIndex].join(" ")}>#</th>
-                  {columns.map((field) => (
-                    <th key={field.name}>
-                      {field.name}
-                      <small>{field.type}</small>
-                    </th>
-                  ))}
+                  {columns.map((field) => {
+                    const head = resolvePreviewColumnHead(field);
+                    const primaryLabel = (
+                      <span className={styles.columnHeadPrimary}>{head.primary}</span>
+                    );
+
+                    return (
+                      <th key={field.name}>
+                        <div className={styles.columnHead}>
+                          {head.tooltip ? (
+                            <Tooltip title={head.tooltip}>{primaryLabel}</Tooltip>
+                          ) : (
+                            primaryLabel
+                          )}
+                          {head.secondary ? (
+                            <span className={styles.columnHeadSecondary}>
+                              {head.secondary}
+                            </span>
+                          ) : null}
+                          <span className={styles.columnHeadType}>{head.type}</span>
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -174,7 +212,7 @@ export function DataPreviewModal({ onClose, open, resource }: DataPreviewModalPr
                 ))}
                 {rows.length === 0 && !loading ? (
                   <tr>
-                    <td colSpan={columns.length + 1} style={{ textAlign: "center" }}>
+                    <td colSpan={columns.length + 1} className={styles.emptyCell}>
                       {t("dataCatalog.preview.empty")}
                     </td>
                   </tr>
@@ -184,28 +222,16 @@ export function DataPreviewModal({ onClose, open, resource }: DataPreviewModalPr
           </div>
         </Spin>
       )}
-      <div className={styles.pagination}>
-        <Select
-          onChange={changePageSize}
-          options={PAGE_SIZES.map((size) => ({
-            label: t("dataCatalog.preview.pageSize", { size }),
-            value: size,
-          }))}
-          size="small"
-          style={{ width: 110 }}
-          value={pageSize}
+      {total > 0 ? (
+        <TablePaginationBar
+          current={page}
+          onChange={handlePaginationChange}
+          pageSize={pageSize}
+          showSizeChanger
+          showTotal={(count) => t("common.total", { total: count })}
+          total={total}
         />
-        <AppButton disabled={!hasPrev || loading} onClick={() => changePage(Math.max(0, offset - pageSize))} size="small">
-          {t("dataCatalog.preview.prev")}
-        </AppButton>
-        <span>
-          {formatCount(total === 0 ? 0 : offset + 1)} –{" "}
-          {formatCount(Math.min(offset + pageSize, total))}
-        </span>
-        <AppButton disabled={!hasNext || loading} onClick={() => changePage(offset + pageSize)} size="small">
-          {t("dataCatalog.preview.next")}
-        </AppButton>
-      </div>
-    </Modal>
+      ) : null}
+    </div>
   );
 }
