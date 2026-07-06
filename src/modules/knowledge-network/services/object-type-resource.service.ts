@@ -6,10 +6,8 @@
  */
 
 import { http } from "@/framework/request/http";
-import {
-  listDataConnectConnectorTypes,
-  listDataConnectRecords,
-} from "@/modules/data-connect/services/data-connect.service";
+import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
+import { listDataConnectConnectorTypes } from "@/modules/data-connect/services/data-connect.service";
 import type {
   ObjectTypeResourceListQuery,
   ObjectTypeResourceListResult,
@@ -181,11 +179,7 @@ export async function listObjectTypeResourceGroups(networkId: string) {
   }
 
   const [catalogsResult, connectorTypesResult] = await Promise.all([
-    listDataConnectRecords({
-      keyword: "",
-      page: 1,
-      pageSize: 500,
-    }),
+    listCatalogs(catalogListAllQuery({ pageSize: 500 })),
     listDataConnectConnectorTypes(),
   ]);
 
@@ -298,6 +292,7 @@ export async function getObjectTypeResourcePreview(
         title: field.displayName,
       })),
       name: view.name,
+      rowTotalCount: rows.length > 0 ? 10_401 : 0,
       rows,
     });
   }
@@ -339,17 +334,9 @@ export async function getObjectTypeResourcePreview(
   return {
     columns,
     name: detail.name ?? resourceId,
+    rowTotalCount: previewResponse.data.total_count,
     rows,
   };
-}
-
-export async function listObjectTypeResources(networkId: string) {
-  if (useMock) {
-    return wait((mockObjectTypeResources[networkId] ?? []).map((item) => ({ ...item })));
-  }
-
-  const result = await queryObjectTypeResources(networkId, { page: 1, pageSize: 9999 });
-  return result.items;
 }
 
 export async function listObjectTypeResourceFields(networkId: string, resourceId: string) {

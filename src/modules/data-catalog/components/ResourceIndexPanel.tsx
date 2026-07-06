@@ -13,9 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -23,15 +21,13 @@ import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTaskDetailDrawer";
 import { BuildTaskFormPanel } from "@/modules/data-catalog/components/BuildTaskFormPanel";
+import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task-actions";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
 import { indexStateOf, resourceGateOf, sortTasks } from "@/modules/data-catalog/lib/index-state";
 import {
   buildTaskStatusLabelKey,
   embeddingStateOf,
-  pauseBuildTask,
-  resumeBuildTask,
-  retryBuildTask,
 } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
@@ -150,11 +146,11 @@ export function ResourceIndexPanel({
   tasks,
 }: ResourceIndexPanelProps) {
   const { i18n, t } = useTranslation();
-  const { message } = useAppServices();
   const navigate = useNavigate();
   const [taskPage, setTaskPage] = useState(1);
   const [taskPageSize, setTaskPageSize] = useState(10);
   const [detailTask, setDetailTask] = useState<BuildTask | null>(null);
+  const { pauseOrResume, retry } = useBuildTaskActions(onRefresh);
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
   const state = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);
@@ -173,46 +169,18 @@ export function ResourceIndexPanel({
     return sortedTasks.slice(start, start + taskPageSize);
   }, [sortedTasks, taskPage, taskPageSize]);
 
-  const handlePause = async () => {
-    if (!activeTask) {
-      return;
-    }
-    try {
-      await pauseBuildTask(activeTask.id);
-      message.success(t("dataCatalog.task.paused"));
-      await onRefresh();
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-    }
-  };
-
-  const handleResume = async () => {
-    if (!activeTask) {
-      return;
-    }
-    try {
-      await resumeBuildTask(activeTask.id);
-      message.success(t("dataCatalog.task.resumed"));
-      await onRefresh();
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-    }
-  };
-
-  const handleRetry = async () => {
-    if (!latest) {
-      return;
-    }
-    try {
-      const task = await retryBuildTask(latest.id);
-      if (task) {
-        message.success(t("dataCatalog.task.retried", { id: task.id }));
-      }
-      await onRefresh();
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-    }
-  };
+  const pauseResumeLabel =
+    activeTask?.status === "paused"
+      ? t(
+          activeTask.mode === "streaming"
+            ? "dataCatalog.task.resumeListening"
+            : "dataCatalog.task.resumeBuild",
+        )
+      : t(
+          activeTask?.mode === "streaming" && activeTask.status === "listening"
+            ? "dataCatalog.task.pauseListening"
+            : "dataCatalog.task.stopBuild",
+        );
 
   const taskColumns: ColumnsType<BuildTask> = [
     {
@@ -298,23 +266,33 @@ export function ResourceIndexPanel({
               )}
             </div>
             <div className={panelStyles.sectionActions}>
-              {activeTask?.mode === "streaming" && activeTask.status === "listening" ? (
+              {activeTask &&
+              (activeTask.status === "listening" ||
+                activeTask.status === "running" ||
+                activeTask.status === "pending") ? (
                 <PermissionGate permissions="resource:task_manage">
-                  <AppButton onClick={() => void handlePause()}>
-                    {t("dataCatalog.task.pauseListening")}
+                  <AppButton onClick={() => void pauseOrResume(activeTask)}>
+                    {pauseResumeLabel}
                   </AppButton>
                 </PermissionGate>
               ) : null}
               {activeTask?.status === "paused" ? (
                 <PermissionGate permissions="resource:task_manage">
-                  <AppButton disabled={!gate.ok} onClick={() => void handleResume()}>
-                    {t("dataCatalog.task.resumeListening")}
+                  <AppButton disabled={!gate.ok} onClick={() => void pauseOrResume(activeTask)}>
+                    {pauseResumeLabel}
                   </AppButton>
                 </PermissionGate>
               ) : null}
               {latest?.status === "failed" ? (
                 <PermissionGate permissions="resource:task_manage">
-                  <AppButton disabled={!gate.ok} onClick={() => void handleRetry()}>
+                  <AppButton
+                    disabled={!gate.ok}
+                    onClick={() => {
+                      if (latest) {
+                        void retry(latest);
+                      }
+                    }}
+                  >
                     {t("dataCatalog.task.rebuild")}
                   </AppButton>
                 </PermissionGate>

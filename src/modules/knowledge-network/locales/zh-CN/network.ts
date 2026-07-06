@@ -7,6 +7,9 @@
 
 export const networkPart = {
     color: "主题色",
+    columnSettings: "列设置",
+    columnSettingsMoveDown: "下移",
+    columnSettingsMoveUp: "上移",
     createActionTypeEntry: "+ 新建行动类",
     createDescription: "通过列表页弹窗快速创建新的知识网络。",
     createObjectTypeEntry: "+ 新建对象类",

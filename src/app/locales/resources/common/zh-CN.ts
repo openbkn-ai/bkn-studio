@@ -54,5 +54,8 @@ export const commonZhCN = {
     mode: "模式",
     healthStatus: "健康状态",
     testConnection: "测试连接",
+    dangerDelete: {
+      typeNameToConfirm: "此操作高危,请输入名称「{{name}}」以确认删除。",
+    },
   },
 } as const;

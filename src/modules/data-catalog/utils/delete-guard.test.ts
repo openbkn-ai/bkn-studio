@@ -8,7 +8,7 @@
 import { AxiosError, AxiosHeaders } from "axios";
 import { describe, expect, it } from "vitest";
 
-import { runningIdsFromError } from "@/modules/data-catalog/utils/delete-guard";
+import { runningIdsFromError } from "@/framework/safety/delete-guard";
 
 function axios409(data: unknown): AxiosError {
   const error = new AxiosError("conflict");

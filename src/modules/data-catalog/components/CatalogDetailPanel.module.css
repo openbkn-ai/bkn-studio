@@ -104,6 +104,13 @@
   overflow: hidden;
 }
 
+.tableLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+}
+
 .cellEllipsis {
   display: block;
   overflow: hidden;

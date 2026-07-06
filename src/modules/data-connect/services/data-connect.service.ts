@@ -451,34 +451,11 @@ export async function listDataConnectRecords(
     });
   }
 
-  if (query.connectorType) {
-    const response = await http.get<ListResponse<BackendCatalog>>(
-      "/vega-backend/v1/catalogs",
-      {
-        params: {
-          direction: "desc",
-          limit: 200,
-          name: query.keyword.trim() || undefined,
-          offset: 0,
-          sort: "update_time",
-        },
-      },
-    );
-
-    const mapped = response.data.entries.map(mapCatalog);
-    const filtered = filterCatalogs(mapped, query);
-    const startIndex = (query.page - 1) * query.pageSize;
-
-    return {
-      items: filtered.slice(startIndex, startIndex + query.pageSize),
-      total: filtered.length,
-    };
-  }
-
   const response = await http.get<ListResponse<BackendCatalog>>(
     "/vega-backend/v1/catalogs",
     {
       params: {
+        connector_type: query.connectorType || undefined,
         direction: "desc",
         limit: query.pageSize,
         name: query.keyword.trim() || undefined,
@@ -490,10 +467,11 @@ export async function listDataConnectRecords(
 
   const mapped = response.data.entries.map(mapCatalog);
   const filtered = filterCatalogs(mapped, query);
+  const usesClientTypeFilter = query.type && query.type !== "all";
 
   return {
     items: filtered,
-    total: filtered.length,
+    total: usesClientTypeFilter ? filtered.length : response.data.total_count,
   };
 }
 

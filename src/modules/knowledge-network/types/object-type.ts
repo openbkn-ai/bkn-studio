@@ -72,6 +72,7 @@ export type ObjectTypeResourcePreview = {
     title: string;
   }>;
   name: string;
+  rowTotalCount?: number;
   rows: Array<Record<string, string | number>>;
 };
 
@@ -91,6 +92,7 @@ export type ObjectTypeDataProperty = {
   mappedField?: ObjectTypeMappedField;
   name: string;
   primaryKey: boolean;
+  totalCount?: number;
   type: string;
 };
 

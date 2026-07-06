@@ -368,6 +368,16 @@ export const dataCatalogEnUS = {
       lastEvent: "Last Event",
       finishedAt: "Finished At",
       embeddingDegradedHint: "Vector index is incomplete; semantic search may be unavailable or partial.",
+      fields: {
+        resourceId: "Resource ID",
+        embeddingFields: "Embedding fields",
+        buildKeyFields: "Build key fields",
+        fulltextFields: "Fulltext fields",
+        fulltextAnalyzer: "Fulltext analyzer",
+        embeddingModel: "Embedding model",
+        modelDimensions: "Model dimensions",
+        totalCount: "Total rows",
+      },
       statuses: {
         pending: "Pending",
         running: "Building",

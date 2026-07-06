@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 
 import type { DataConnectScanSceneProps } from "@/modules/data-connect/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -21,9 +22,7 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
-import {
-  listDataConnectRecords,
-} from "@/modules/data-connect/services/data-connect.service";
+import { catalogListPhysicalQuery, listCatalogs } from "@/shared/catalog";
 import {
   createDataConnectScanSchedule,
   deleteDataConnectScanTask,
@@ -72,6 +71,7 @@ export function DataConnectScanScene({
   const [catalogLocked] = useState(() => Boolean(catalogId));
   const [activeTab, setActiveTab] = useState<ScanPageTab>("schedules");
   const [keyword, setKeyword] = useState("");
+  const debouncedKeyword = useDebouncedValue(keyword.trim());
   const [selectedCatalogId, setSelectedCatalogId] = useState<string | undefined>(catalogId);
   const [enabledFilter, setEnabledFilter] =
     useState<EnabledFilterValue>("all");
@@ -82,7 +82,6 @@ export function DataConnectScanScene({
   const [catalogs, setCatalogs] = useState<DataConnectRecord[]>([]);
   const [schedules, setSchedules] = useState<DataConnectScanSchedule[]>([]);
   const [tasks, setTasks] = useState<DataConnectScanTask[]>([]);
-  const [selectedScheduleId, setSelectedScheduleId] = useState<string>();
   const [schedulePage, setSchedulePage] = useState(1);
   const [schedulePageSize, setSchedulePageSize] = useState(10);
   const [scheduleTotal, setScheduleTotal] = useState(0);
@@ -114,10 +113,6 @@ export function DataConnectScanScene({
     ? catalogNameMap.get(selectedCatalogId)
     : undefined;
 
-  const selectedSchedule = useMemo(
-    () => schedules.find((item) => item.id === selectedScheduleId) ?? null,
-    [schedules, selectedScheduleId],
-  );
   const hasActiveTasks = useMemo(
     () => tasks.some((item) => item.status === "pending" || item.status === "running"),
     [tasks],
@@ -138,11 +133,7 @@ export function DataConnectScanScene({
     setCatalogError(null);
 
     try {
-      const result = await listDataConnectRecords({
-        keyword: "",
-        page: 1,
-        pageSize: 200,
-      });
+      const result = await listCatalogs(catalogListPhysicalQuery());
       setCatalogs(result.items);
     } catch (error) {
       setCatalogError(extractRequestErrorMessage(error));
@@ -160,7 +151,7 @@ export function DataConnectScanScene({
         catalogId: selectedCatalogId,
         enabled:
           enabledFilter === "all" ? undefined : enabledFilter === "enabled",
-        keyword,
+        keyword: debouncedKeyword,
         page: schedulePage,
         pageSize: schedulePageSize,
       });
@@ -173,7 +164,7 @@ export function DataConnectScanScene({
     } finally {
       setLoadingSchedules(false);
     }
-  }, [enabledFilter, keyword, schedulePage, schedulePageSize, selectedCatalogId]);
+  }, [debouncedKeyword, enabledFilter, schedulePage, schedulePageSize, selectedCatalogId]);
 
   const loadTasks = useCallback(async () => {
     setLoadingTasks(true);
@@ -184,7 +175,6 @@ export function DataConnectScanScene({
         catalogId: selectedCatalogId,
         page: taskPage,
         pageSize: taskPageSize,
-        scheduleId: selectedScheduleId,
         status: taskStatusFilter === "all" ? undefined : taskStatusFilter,
         triggerType:
           taskTriggerTypeFilter === "all" ? undefined : taskTriggerTypeFilter,
@@ -200,7 +190,6 @@ export function DataConnectScanScene({
     }
   }, [
     selectedCatalogId,
-    selectedScheduleId,
     taskPage,
     taskPageSize,
     taskTriggerTypeFilter,
@@ -209,8 +198,7 @@ export function DataConnectScanScene({
 
   const openTasksForSchedule = useCallback(() => {
     // 立即扫描 / 按计划执行 走的都是 catalog discover，任务不带 schedule_id；
-    // 因此「查看任务」进入任务 Tab 时展示当前连接下全部任务，不再按计划过滤。
-    setSelectedScheduleId(undefined);
+    // 因此「查看任务」进入任务 Tab 时展示当前连接下全部任务。
     setTaskStatusFilter("all");
     setTaskTriggerTypeFilter("all");
     setTaskPage(1);
@@ -244,18 +232,6 @@ export function DataConnectScanScene({
   useEffect(() => {
     setSelectedCatalogId(catalogId);
   }, [catalogId]);
-
-  useEffect(() => {
-    if (!selectedScheduleId) {
-      return;
-    }
-
-    const existsInCurrentList = schedules.some((item) => item.id === selectedScheduleId);
-    if (!existsInCurrentList) {
-      setSelectedScheduleId(undefined);
-      setTaskPage(1);
-    }
-  }, [schedules, selectedScheduleId]);
 
   useEffect(() => {
     onCatalogIdChange?.(selectedCatalogId);
@@ -377,7 +353,6 @@ export function DataConnectScanScene({
                     onOk: async () => {
                     try {
                       setTriggeringScheduleId(record.id);
-                      setSelectedScheduleId(undefined);
                       await runDiscover(record.catalogId, record.strategy);
                     } catch (error) {
                       void message.error(extractRequestErrorMessage(error));
@@ -408,9 +383,6 @@ export function DataConnectScanScene({
                   onOk: async () => {
                     await deleteDataConnectScanSchedule(record.id);
                     void message.success(t("common.success"));
-                    if (selectedScheduleId === record.id) {
-                      setSelectedScheduleId(undefined);
-                    }
                     await Promise.all([loadSchedules(), loadTasks()]);
                   },
                 });
@@ -593,7 +565,6 @@ export function DataConnectScanScene({
         loading={loadingCatalogs}
         onChange={(value) => {
           setSelectedCatalogId(value || undefined);
-          setSelectedScheduleId(undefined);
           setSchedulePage(1);
           setTaskPage(1);
         }}
@@ -805,22 +776,6 @@ export function DataConnectScanScene({
           </div>
         </div>
       </div>
-      {selectedSchedule ? (
-        <div className={styles.filterChipBar}>
-          <span>
-            {t("dataConnect.scanSelectedSchedule", { name: selectedSchedule.name })}
-          </span>
-          <AppButton
-            onClick={() => {
-              setSelectedScheduleId(undefined);
-              setTaskPage(1);
-            }}
-            type="link"
-          >
-            {t("dataConnect.scanClearSelection")}
-          </AppButton>
-        </div>
-      ) : null}
       <TableSurface className={styles.panelSection}>
         {taskError ? (
           <Alert
@@ -840,11 +795,7 @@ export function DataConnectScanScene({
           />
         ) : !loadingTasks && tasks.length === 0 ? (
           <EmptyStatePanel
-            description={
-              selectedSchedule
-                ? t("dataConnect.scanTaskEmptyByScheduleDescription")
-                : t("dataConnect.scanTaskEmptyDescription")
-            }
+            description={t("dataConnect.scanTaskEmptyDescription")}
             title={t("dataConnect.scanTaskEmpty")}
           />
         ) : (
@@ -955,7 +906,6 @@ export function DataConnectScanScene({
           onSubmit={async (strategy) => {
             try {
               setRunNowSubmitting(true);
-              setSelectedScheduleId(undefined);
               await runDiscover(selectedCatalogId, strategy);
               setRunNowOpen(false);
             } catch (error) {

@@ -7,6 +7,9 @@
 
 export const networkPart = {
     color: "Theme color",
+    columnSettings: "Column settings",
+    columnSettingsMoveDown: "Move down",
+    columnSettingsMoveUp: "Move up",
     createActionTypeEntry: "+ Create action type",
     createDescription: "Create a new knowledge network quickly from the list page modal.",
     createObjectTypeEntry: "+ Create object type",

@@ -564,19 +564,4 @@ export function buildActionSourceFromCatalogSelection(
   };
 }
 
-export function resolveCatalogToolParameters(actionSource?: ActionTypeActionSource) {
-  if (!actionSource?.toolId) {
-    return undefined;
-  }
-
-  if (useMock) {
-    return findCatalogTool(MOCK_EXECUTION_FACTORY_CATALOG, actionSource)?.parameters;
-  }
-
-  return undefined;
-}
-
-export async function listActionTypeToolCatalog(): Promise<MockActionTool[]> {
-  const catalog = await listActionTypeExecutionFactoryCatalog();
-  return flattenCatalogTools(catalog);
-}
+export async function listActionTypeExecutionFactoryCatalog(

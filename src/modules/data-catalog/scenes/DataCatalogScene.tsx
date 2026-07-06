@@ -34,12 +34,12 @@ import type {
 } from "@/modules/data-catalog/types/data-catalog";
 import {
   listDataConnectConnectorTypes,
-  listDataConnectRecords,
 } from "@/modules/data-connect/services/data-connect.service";
 import type {
   DataConnectConnectorType,
   DataConnectRecord,
 } from "@/modules/data-connect/types/data-connect";
+import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./DataCatalogScene.module.css";
 
@@ -57,12 +57,14 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [scans, setScans] = useState<CatalogScanRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [resourceDrawer, setResourceDrawer] = useState<{
     catalogId?: string;
     open: boolean;
   }>({ open: false });
+  const [resourceTotal, setResourceTotal] = useState(0);
 
   const selectedCatalog = useMemo(() => {
     if (selection?.type === "catalog") {
@@ -71,30 +73,51 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     return null;
   }, [catalogs, selection]);
 
+  const selectedCatalogId = selectedCatalog?.id;
+
+  const loadCatalogs = useCallback(async () => {
+    const [catalogResult, typeResult] = await Promise.all([
+      listCatalogs(catalogListAllQuery()),
+      connectorTypes.length === 0
+        ? listDataConnectConnectorTypes()
+        : Promise.resolve(null),
+    ]);
+    setCatalogs(catalogResult.items);
+    if (typeResult) {
+      setConnectorTypes(typeResult);
+    }
+  }, [connectorTypes.length]);
+
+  const loadCatalogDetail = useCallback(async (catalogId?: string) => {
+    if (!catalogId) {
+      setResources([]);
+      setTasks([]);
+      return;
+    }
+    const [nextResources, nextTasks] = await Promise.all([
+      listCatalogResources({ catalogId }),
+      listBuildTasks({ catalogId }),
+    ]);
+    setResources(nextResources);
+    setTasks(nextTasks);
+  }, []);
+
+  const refreshResourceTotal = useCallback(async () => {
+    const items = await listCatalogResources();
+    setResourceTotal(items.length);
+  }, []);
+
   const loadAll = useCallback(async () => {
     setLoadError(null);
     try {
-      const [catalogResult, resourceResult, taskResult, typeResult] = await Promise.all([
-        listDataConnectRecords({ keyword: "", page: 1, pageSize: 200, type: "all" }),
-        listCatalogResources(),
-        listBuildTasks(),
-        connectorTypes.length === 0
-          ? listDataConnectConnectorTypes()
-          : Promise.resolve(null),
-      ]);
-
-      setCatalogs(catalogResult.items);
-      setResources(resourceResult);
-      setTasks(taskResult);
-      if (typeResult) {
-        setConnectorTypes(typeResult);
-      }
+      await loadCatalogs();
+      await refreshResourceTotal();
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [connectorTypes.length]);
+  }, [loadCatalogs, refreshResourceTotal]);
 
   const loadScans = useCallback(async () => {
     if (!selectedCatalog) {
@@ -120,9 +143,41 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
   useEffect(() => {
     return subscribeMockDb(() => {
       void loadAll();
+      if (selectedCatalogId) {
+        void loadCatalogDetail(selectedCatalogId);
+      }
       void loadScans();
     });
-  }, [loadAll, loadScans]);
+  }, [loadAll, loadCatalogDetail, loadScans, selectedCatalogId]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+    if (!selectedCatalogId) {
+      setResources([]);
+      setTasks([]);
+      setDetailLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    void loadCatalogDetail(selectedCatalogId).finally(() => {
+      if (!cancelled) {
+        setDetailLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadCatalogDetail, loading, selectedCatalogId]);
+
+  useLayoutEffect(() => {
+    if (!loading && selectedCatalogId) {
+      setDetailLoading(true);
+    }
+  }, [loading, selectedCatalogId]);
 
   const hasActiveWork = useMemo(
     () =>
@@ -137,13 +192,16 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
 
   // 轮询只刷新会变化的任务/扫描;失败保留旧数据等下一轮
   const pollActive = useCallback(async () => {
+    if (!selectedCatalogId) {
+      return;
+    }
     try {
-      setTasks(await listBuildTasks());
+      setTasks(await listBuildTasks({ catalogId: selectedCatalogId }));
     } catch {
       // ignore
     }
     void loadScans();
-  }, [loadScans]);
+  }, [loadScans, selectedCatalogId]);
 
   useEffect(() => {
     if (!hasActiveWork) {
@@ -287,6 +345,7 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
           onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
           onOpenResource={openResourceWorkspace}
           resources={selectedCatalogResources}
+          resourcesLoading={detailLoading}
           tasks={tasks}
         />
       );
@@ -322,6 +381,7 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
           onSelectCatalog={(catalogId) => {
             void navigate(`/data-directory/catalog/${catalogId}`);
           }}
+          resourceCount={resourceTotal}
           resources={resources}
           scanningCatalogIds={scanningCatalogIds}
           selection={selection}
@@ -334,7 +394,10 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
         defaultCatalogId={resourceDrawer.catalogId}
         onClose={() => setResourceDrawer({ open: false })}
         onCreated={(resource) => {
-          void loadAll();
+          void refreshResourceTotal();
+          if (selectedCatalogId) {
+            void loadCatalogDetail(selectedCatalogId);
+          }
           openResourceWorkspace(resource.id);
         }}
         open={resourceDrawer.open}

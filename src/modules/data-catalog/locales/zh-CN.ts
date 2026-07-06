@@ -346,6 +346,16 @@ export const dataCatalogZhCN = {
       lastEvent: "最近事件",
       finishedAt: "完成时间",
       embeddingDegradedHint: "向量索引未建满，语义检索可能不可用或不完整。",
+      fields: {
+        resourceId: "资源 ID",
+        embeddingFields: "向量字段",
+        buildKeyFields: "增量键字段",
+        fulltextFields: "全文字段",
+        fulltextAnalyzer: "全文分词器",
+        embeddingModel: "向量模型",
+        modelDimensions: "向量维度",
+        totalCount: "总行数",
+      },
       statuses: {
         pending: "排队中",
         running: "构建中",

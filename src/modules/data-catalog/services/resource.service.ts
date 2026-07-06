@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { postCatalogDiscover } from "@/modules/data-catalog/services/catalog-discover.service";
 import {
   emitMockChange,
   formatMockTimestamp,
@@ -392,7 +393,5 @@ export async function triggerCatalogScan(catalogId: string) {
     return;
   }
 
-  await http.post(`/vega-backend/v1/catalogs/${catalogId}/discover`, undefined, {
-    params: { wait: false },
-  });
+  await postCatalogDiscover(catalogId, { wait: false });
 }

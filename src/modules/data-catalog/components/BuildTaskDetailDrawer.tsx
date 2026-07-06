@@ -152,7 +152,7 @@ export function BuildTaskDetailDrawer({
           <BuildProgress task={task} />
           {task.mode === "batch" ? (
             <div className={styles.metaLine}>
-              total_count {formatCount(task.totalCount)}
+              {t("dataCatalog.task.fields.totalCount")} {formatCount(task.totalCount)}
             </div>
           ) : null}
         </section>
@@ -163,25 +163,29 @@ export function BuildTaskDetailDrawer({
             <Descriptions.Item label={t("dataCatalog.build.resource")}>
               {resource?.name ?? task.resourceId}
             </Descriptions.Item>
-            <Descriptions.Item label="resource_id">{task.resourceId}</Descriptions.Item>
-            <Descriptions.Item label="embedding_fields">
+            <Descriptions.Item label={t("dataCatalog.task.fields.resourceId")}>
+              {task.resourceId}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.embeddingFields")}>
               {renderFieldList(task.embeddingFields)}
             </Descriptions.Item>
-            <Descriptions.Item label="build_key_fields">
+            <Descriptions.Item label={t("dataCatalog.task.fields.buildKeyFields")}>
               {renderFieldList(task.buildKeyFields)}
             </Descriptions.Item>
-            <Descriptions.Item label="fulltext_fields">
+            <Descriptions.Item label={t("dataCatalog.task.fields.fulltextFields")}>
               {renderFieldList(task.fulltextFields)}
             </Descriptions.Item>
             {task.fulltextFields.length > 0 ? (
-              <Descriptions.Item label="fulltext_analyzer">
+              <Descriptions.Item label={t("dataCatalog.task.fields.fulltextAnalyzer")}>
                 {task.fulltextAnalyzer || "standard"}
               </Descriptions.Item>
             ) : null}
-            <Descriptions.Item label="embedding_model">
+            <Descriptions.Item label={t("dataCatalog.task.fields.embeddingModel")}>
               {modelInfo.name || "—"}
             </Descriptions.Item>
-            <Descriptions.Item label="model_dimensions">{modelInfo.dimensions}</Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.modelDimensions")}>
+              {modelInfo.dimensions}
+            </Descriptions.Item>
             <Descriptions.Item label={t("dataConnect.createTime")}>
               {task.createTime}
             </Descriptions.Item>

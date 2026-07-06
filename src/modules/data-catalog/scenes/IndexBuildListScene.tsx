@@ -7,10 +7,6 @@
 
 import {
   DeleteOutlined,
-  EyeOutlined,
-  PauseCircleOutlined,
-  PlayCircleOutlined,
-  RedoOutlined,
   ReloadOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
@@ -31,6 +27,7 @@ import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTaskDetailDrawer";
+import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task-actions";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import {
   applyIndexBuildListFilters,
@@ -40,9 +37,6 @@ import {
   type BuildExecuteType,
   deleteBuildTask,
   listBuildTaskPage,
-  pauseBuildTask,
-  resumeBuildTask,
-  retryBuildTask,
 } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import { listCatalogResources } from "@/modules/data-catalog/services/resource.service";
@@ -53,7 +47,7 @@ import type {
   BuildTaskStatus,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
-import { listDataConnectRecords } from "@/modules/data-connect/services/data-connect.service";
+import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 
 import sceneStyles from "./IndexBuildListScene.module.css";
@@ -144,7 +138,7 @@ export function IndexBuildListScene() {
       const [taskResult, resourceResult, catalogResult] = await Promise.all([
         listBuildTaskPage(taskQuery),
         listCatalogResources(),
-        listDataConnectRecords({ keyword: "", page: 1, pageSize: 200 }),
+        listCatalogs(catalogListAllQuery()),
       ]);
       setTasks(taskResult.items);
       setTotal(taskResult.total);
@@ -246,82 +240,12 @@ export function IndexBuildListScene() {
     });
   }, [keyword, resourceMap, tasks]);
 
+  const { pauseOrResume: handlePauseResume, remove: handleDelete, retry: handleRetry } =
+    useBuildTaskActions(loadData);
+
   const gateOf = (task: BuildTask) => {
     const resource = resourceMap.get(task.resourceId);
     return resourceGateOf(resource ? (catalogMap.get(resource.catalogId) ?? null) : null);
-  };
-
-  const handlePauseResume = async (task: BuildTask) => {
-    const isStreaming = task.mode === "streaming";
-    try {
-      if (
-        task.status === "listening" ||
-        task.status === "running" ||
-        task.status === "pending"
-      ) {
-        await pauseBuildTask(task.id);
-        message.success(
-          t(isStreaming ? "dataCatalog.task.paused" : "dataCatalog.task.stopped"),
-        );
-      } else {
-        await resumeBuildTask(task.id);
-        message.success(
-          t(isStreaming ? "dataCatalog.task.resumed" : "dataCatalog.task.buildResumed"),
-        );
-      }
-      await loadData();
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-    }
-  };
-
-  const handleRetry = async (task: BuildTask, executeType: BuildExecuteType) => {
-    const run = async () => {
-      try {
-        const next = await retryBuildTask(task.id, executeType);
-        if (next) {
-          message.success(t("dataCatalog.task.retried", { id: next.id }));
-        }
-        await loadData();
-      } catch (error) {
-        void message.error(extractRequestErrorMessage(error));
-      }
-    };
-    // 全量重建先删旧索引再重建,重建完成前不可用 → 先确认;增量不 drop 索引,不弹。
-    if (executeType === "full") {
-      modal.confirm({
-        title: t("dataCatalog.task.rebuildFullConfirmTitle"),
-        content: t("dataCatalog.task.rebuildFullConfirmContent"),
-        okText: t("common.confirm"),
-        cancelText: t("common.cancel"),
-        okButtonProps: { danger: true },
-        onOk: run,
-      });
-      return;
-    }
-    await run();
-  };
-
-  const handleDelete = (task: BuildTask) => {
-    const isActive = task.status === "running" || task.status === "listening";
-    void modal.confirm({
-      title: t("dataCatalog.task.deleteConfirmTitle", { id: task.id }),
-      content: isActive
-        ? t("dataCatalog.task.deleteConfirmContentActive")
-        : t("dataCatalog.task.deleteConfirmContent"),
-      okText: t("common.delete"),
-      cancelText: t("common.cancel"),
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await deleteBuildTask(task.id, { stopFirst: isActive });
-          message.success(t("common.success"));
-          await loadData();
-        } catch (error) {
-          void message.error(extractRequestErrorMessage(error));
-        }
-      },
-    });
   };
 
   const handleBatchDelete = () => {
@@ -457,7 +381,7 @@ export function IndexBuildListScene() {
     {
       key: "actions",
       title: t("common.actions"),
-      width: 120,
+      width: 220,
       fixed: "right",
       render: (_, record) => {
         const pauseResumeLabel =
@@ -474,35 +398,22 @@ export function IndexBuildListScene() {
               );
 
         return (
-          <Space size={2}>
-            <Tooltip title={t("common.detail")}>
-              <AppButton
-                aria-label={t("common.detail")}
-                icon={<EyeOutlined />}
-                onClick={() => setDetailTask(record)}
-                type="text"
-              />
-            </Tooltip>
+          <Space className={sceneStyles.actionGroup} size={4}>
+            <AppButton onClick={() => setDetailTask(record)} type="link">
+              {t("common.detail")}
+            </AppButton>
             {record.status === "running" ||
             record.status === "listening" ||
             record.status === "pending" ||
             record.status === "paused" ? (
               <PermissionGate permissions="resource:task_manage">
-                <Tooltip title={pauseResumeLabel}>
-                  <AppButton
-                    aria-label={pauseResumeLabel}
-                    disabled={record.status === "paused" && !gateOf(record).ok}
-                    icon={
-                      record.status === "paused" ? (
-                        <PlayCircleOutlined />
-                      ) : (
-                        <PauseCircleOutlined />
-                      )
-                    }
-                    onClick={() => void handlePauseResume(record)}
-                    type="text"
-                  />
-                </Tooltip>
+                <AppButton
+                  disabled={record.status === "paused" && !gateOf(record).ok}
+                  onClick={() => void handlePauseResume(record)}
+                  type="link"
+                >
+                  {pauseResumeLabel}
+                </AppButton>
               </PermissionGate>
             ) : null}
             {record.status === "failed" || record.status === "succeeded" ? (
@@ -524,25 +435,16 @@ export function IndexBuildListScene() {
                       void handleRetry(record, key as BuildExecuteType),
                   }}
                 >
-                  <AppButton
-                    aria-label={t("dataCatalog.task.rebuild")}
-                    disabled={!gateOf(record).ok}
-                    icon={<RedoOutlined />}
-                    type="text"
-                  />
+                  <AppButton disabled={!gateOf(record).ok} type="link">
+                    {t("dataCatalog.task.rebuild")}
+                  </AppButton>
                 </Dropdown>
               </PermissionGate>
             ) : null}
             <PermissionGate permissions="resource:task_manage">
-              <Tooltip title={t("common.delete")}>
-                <AppButton
-                  aria-label={t("common.delete")}
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => handleDelete(record)}
-                  type="text"
-                />
-              </Tooltip>
+              <AppButton danger onClick={() => handleDelete(record)} type="link">
+                {t("common.delete")}
+              </AppButton>
             </PermissionGate>
           </Space>
         );

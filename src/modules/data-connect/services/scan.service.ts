@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { postCatalogDiscover } from "@/modules/data-catalog/services/catalog-discover.service";
 import type {
   DataConnectScanSchedule,
   DataConnectScanScheduleListQuery,
@@ -519,10 +520,6 @@ export async function triggerDataConnectDiscover(
     return { id: task.id };
   }
 
-  const response = await http.post<{ id: string }>(
-    `/vega-backend/v1/catalogs/${catalogId}/discover`,
-    strategy ? { strategy } : undefined,
-  );
-
-  return response.data;
+  const result = await postCatalogDiscover(catalogId, { strategy, wait: false });
+  return result ?? { id: catalogId };
 }

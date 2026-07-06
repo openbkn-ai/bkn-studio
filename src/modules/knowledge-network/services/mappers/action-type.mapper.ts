@@ -333,20 +333,3 @@ export function toBackendActionTypeUpdatePayload(
 ): BackendActionTypeUpdatePayload {
   return toBackendActionTypeCreateEntry(input);
 }
-
-export function buildActionTypeMutationPayloadFromRecord(
-  record: KnowledgeNetworkActionTypeRecord,
-  detail: Pick<ActionTypeDetail, "affect" | "condition" | "executionConfig">,
-): KnowledgeNetworkActionTypeMutationPayload {
-  return {
-    actionKind: record.actionKind,
-    affect: detail.affect,
-    color: record.color,
-    condition: detail.condition,
-    description: record.description,
-    executionConfig: detail.executionConfig,
-    name: record.name,
-    objectTypeId: record.objectTypeId,
-    tags: record.tags,
-  };
-}

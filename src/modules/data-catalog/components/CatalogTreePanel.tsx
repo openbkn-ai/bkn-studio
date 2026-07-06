@@ -23,8 +23,8 @@ import { isBuiltinLogicalCatalog } from "@/modules/data-catalog/lib/logical-cata
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import {
   createLogicalCatalog,
-  deleteDataConnectRecord,
-} from "@/modules/data-connect/services/data-connect.service";
+  deleteCatalog,
+} from "@/shared/catalog";
 import type {
   DataConnectConnectorType,
   DataConnectRecord,
@@ -41,6 +41,7 @@ type CatalogTreePanelProps = {
   connectorTypes: DataConnectConnectorType[];
   onRefresh: () => Promise<void> | void;
   onSelectCatalog: (catalogId: string) => void;
+  resourceCount: number;
   resources: CatalogResource[];
   scanningCatalogIds: string[];
   selection: CatalogTreeSelection | null;
@@ -62,6 +63,7 @@ export function CatalogTreePanel({
   connectorTypes,
   onRefresh,
   onSelectCatalog,
+  resourceCount,
   resources,
   scanningCatalogIds,
   selection,
@@ -215,7 +217,7 @@ export function CatalogTreePanel({
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          await deleteDataConnectRecord(catalog.id);
+          await deleteCatalog(catalog.id);
           message.success(t("common.success"));
           await onRefresh();
         } catch (error) {
@@ -412,7 +414,7 @@ export function CatalogTreePanel({
         <span>
           {t("dataCatalog.tree.summary", {
             catalogCount: catalogs.length as never,
-            resourceCount: resources.length as never,
+            resourceCount: resourceCount as never,
           })}
         </span>
       </div>

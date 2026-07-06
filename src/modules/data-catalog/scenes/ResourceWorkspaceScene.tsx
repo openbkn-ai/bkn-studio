@@ -7,7 +7,6 @@
 
 import { DatabaseOutlined } from "@ant-design/icons";
 import { Alert, Spin, Tabs } from "antd";
-import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +16,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ResourceDetailPanel } from "@/modules/data-catalog/components/ResourceDetailPanel";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
+import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { ResourceIndexPanel } from "@/modules/data-catalog/components/ResourceIndexPanel";
 import { ResourcePreviewPanel } from "@/modules/data-catalog/components/ResourcePreviewPanel";
 import {
@@ -27,8 +27,8 @@ import {
 import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
-import type { BuildTask, CatalogResource, IndexState } from "@/modules/data-catalog/types/data-catalog";
-import { getDataConnectRecord } from "@/modules/data-connect/services/data-connect.service";
+import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import { getCatalog } from "@/shared/catalog";
 import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 
 import styles from "./ResourceWorkspaceScene.module.css";
@@ -42,28 +42,6 @@ type ResourceWorkspaceSceneProps = {
   resourceId: string;
   tab: ResourceWorkspaceTab;
 };
-
-function formatIndexStateLabel(state: IndexState, t: TFunction) {
-  if (state.key === "failed-stale") {
-    return `${t("dataCatalog.indexState.rebuildFailed")} / ${t("dataCatalog.indexState.staleServing")}`;
-  }
-
-  let label = t(`dataCatalog.indexState.${state.key}`);
-
-  if (
-    (state.key === "building" || state.key === "rebuilding") &&
-    state.latest &&
-    state.latest.totalCount > 0
-  ) {
-    const percent = Math.min(
-      100,
-      Math.round((state.latest.vectorizedCount / state.latest.totalCount) * 100),
-    );
-    label = `${label} ${percent}%`;
-  }
-
-  return label;
-}
 
 export function ResourceWorkspaceScene({
   indexView,
@@ -94,7 +72,7 @@ export function ResourceWorkspaceScene({
       }
 
       const [catalogRecord, taskList] = await Promise.all([
-        getDataConnectRecord(detail.catalogId),
+        getCatalog(detail.catalogId),
         listBuildTasks({ resourceId }),
       ]);
 

@@ -484,4 +484,13 @@
 
 }
 
+.actionGroup {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.actionGroup :global(.ant-btn-link) {
+  padding-inline: 0;
+  white-space: nowrap;
+}
 

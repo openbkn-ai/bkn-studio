@@ -45,5 +45,12 @@ export const dataCatalogModuleManifest = {
       description: "Cross-resource index build task list with progress polling.",
       inputs: [],
     },
+    {
+      id: "data-catalog.resource-workspace",
+      exportName: "ResourceWorkspaceScene",
+      description:
+        "Resource detail workspace with overview, index configuration, and data preview tabs.",
+      inputs: ["resourceId", "tab?", "view?"],
+    },
   ],
 } as const;

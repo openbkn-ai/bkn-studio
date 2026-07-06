@@ -99,10 +99,14 @@ export function ScanScheduleFormModal({
       onCancel={onCancel}
       onOk={() => {
         void form.validateFields().then(async (values) => {
+          const enabled =
+            mode === "edit"
+              ? (initialValue?.enabled ?? true)
+              : (values.enabled ?? true);
           await onSubmit({
             catalogId: values.catalogId,
             cronExpr: values.cronExpr.trim(),
-            enabled: values.enabled ?? true,
+            enabled,
             endTime: parseDateTimeLocal(values.endTime),
             name: values.name.trim(),
             startTime: parseDateTimeLocal(values.startTime),

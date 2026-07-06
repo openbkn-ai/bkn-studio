@@ -6,7 +6,7 @@
  */
 
 import { DatabaseOutlined, SearchOutlined } from "@ant-design/icons";
-import { Input, Select, Space, Tooltip } from "antd";
+import { Input, Select, Space, Spin, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,6 +19,7 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { formatCount } from "@/modules/data-catalog/lib/format";
+import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import {
   indexStateOf,
   isCatalogPhysical,
@@ -26,7 +27,6 @@ import {
 import type {
   BuildTask,
   CatalogResource,
-  IndexState,
 } from "@/modules/data-catalog/types/data-catalog";
 import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 
@@ -41,28 +41,6 @@ function indexFilterBucket(key: string) {
   if (key === "building" || key === "rebuilding") return "building";
   if (key === "listening" || key === "paused") return "listening";
   return "failed";
-}
-
-function formatIndexStateLabel(state: IndexState, t: (key: string) => string) {
-  if (state.key === "failed-stale") {
-    return `${t("dataCatalog.indexState.rebuildFailed")} / ${t("dataCatalog.indexState.staleServing")}`;
-  }
-
-  let label = t(`dataCatalog.indexState.${state.key}`);
-
-  if (
-    (state.key === "building" || state.key === "rebuilding") &&
-    state.latest &&
-    state.latest.totalCount > 0
-  ) {
-    const percent = Math.min(
-      100,
-      Math.round((state.latest.vectorizedCount / state.latest.totalCount) * 100),
-    );
-    label = `${label} ${percent}%`;
-  }
-
-  return label;
 }
 
 function EllipsisText({ text }: { text: string }) {
@@ -82,6 +60,7 @@ type CatalogDetailPanelProps = {
     indexView?: "configure",
   ) => void;
   resources: CatalogResource[];
+  resourcesLoading?: boolean;
   tasks: BuildTask[];
 };
 
@@ -90,6 +69,7 @@ export function CatalogDetailPanel({
   onCreateResource,
   onOpenResource,
   resources,
+  resourcesLoading = false,
   tasks,
 }: CatalogDetailPanelProps) {
   const { t } = useTranslation();
@@ -321,7 +301,11 @@ export function CatalogDetailPanel({
       </div>
 
       <TableSurface className={styles.tableSurface}>
-        {resources.length === 0 ? (
+        {resourcesLoading ? (
+          <div className={styles.tableLoading}>
+            <Spin />
+          </div>
+        ) : resources.length === 0 ? (
           <EmptyStatePanel
             action={
               physical ? (

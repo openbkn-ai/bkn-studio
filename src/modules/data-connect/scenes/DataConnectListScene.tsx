@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import type { DataConnectListSceneProps } from "@/modules/data-connect/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
+import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -34,11 +35,9 @@ import { DataConnectDetailDrawer } from "@/modules/data-connect/components/DataC
 import {
   DeleteImpactAlert,
   useDangerDelete,
-} from "@/modules/data-catalog/components/DangerDeleteModal";
-import {
-  catalogBlastRadius,
-  runningIdsFromError,
-} from "@/modules/data-catalog/utils/delete-guard";
+} from "@/framework/safety/DangerDeleteModal";
+import { runningIdsFromError } from "@/framework/safety/delete-guard";
+import { catalogBlastRadius } from "@/modules/data-catalog/utils/delete-guard";
 
 import styles from "./DataConnectListScene.module.css";
 
@@ -55,6 +54,7 @@ export function DataConnectListScene({
   const danger = useDangerDelete();
   const navigate = useNavigate();
   const { pageState, query, reset, setKeyword, setPagination } = usePageState();
+  const debouncedKeyword = useDebouncedValue(pageState.keyword.trim());
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
   const [items, setItems] = useState<DataConnectRecord[]>([]);
@@ -77,10 +77,12 @@ export function DataConnectListScene({
 
   const listQuery = useMemo(
     () => ({
-      ...query,
+      page: query.page,
+      pageSize: query.pageSize,
+      keyword: debouncedKeyword,
       connectorType: selectedConnectorType,
     }),
-    [query, selectedConnectorType],
+    [debouncedKeyword, query.page, query.pageSize, selectedConnectorType],
   );
 
   const connectorTypeMap = useMemo(

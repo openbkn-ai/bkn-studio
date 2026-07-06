@@ -22,6 +22,8 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import { ObjectTypePropertyTable } from "@/modules/knowledge-network/components/object-type/ObjectTypePropertyTable";
+import { enrichDataPropertiesWithRowTotal } from "@/modules/knowledge-network/lib/enrich-data-properties";
 import { getObjectTypeResourcePreview } from "@/modules/knowledge-network/services/object-type-resource.service";
 import {
   deleteKnowledgeNetworkObjectType,
@@ -168,10 +170,15 @@ export function ObjectTypeDetailScene() {
     );
   }, [preview?.rows, previewKeyword]);
 
+  const enrichedDataProperties = useMemo(
+    () => enrichDataPropertiesWithRowTotal(filteredDataProperties, preview?.rowTotalCount),
+    [filteredDataProperties, preview?.rowTotalCount],
+  );
+
   const pagedDataProperties = useMemo(() => {
     const start = (dataPage - 1) * dataPageSize;
-    return filteredDataProperties.slice(start, start + dataPageSize);
-  }, [dataPage, dataPageSize, filteredDataProperties]);
+    return enrichedDataProperties.slice(start, start + dataPageSize);
+  }, [dataPage, dataPageSize, enrichedDataProperties]);
 
   const pagedLogicProperties = useMemo(() => {
     const start = (logicPage - 1) * logicPageSize;
@@ -217,42 +224,6 @@ export function ObjectTypeDetailScene() {
       danger: true,
       key: "delete",
       label: t("common.delete"),
-    },
-  ];
-
-  const dataColumns: TableProps<ObjectTypeDataProperty>["columns"] = [
-    {
-      dataIndex: "name",
-      key: "name",
-      title: t("common.name"),
-      render: (value: string, record) => (
-        <div className={styles.propertyTitle}>
-          <span>{value}</span>
-          {record.primaryKey ? (
-            <span className={styles.keyBadge}>{t("knowledgeNetwork.objectTypePrimaryKey")}</span>
-          ) : null}
-          {record.displayKey ? (
-            <span className={styles.keyBadge}>{t("knowledgeNetwork.objectTypeDisplayKey")}</span>
-          ) : null}
-          {record.incrementalKey ? (
-            <span className={styles.keyBadge}>
-              {t("knowledgeNetwork.objectTypeIncrementalKey")}
-            </span>
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      dataIndex: "displayName",
-      key: "displayName",
-      title: t("knowledgeNetwork.objectTypePropertyDisplayName"),
-      render: (value: string) => value || "--",
-    },
-    {
-      dataIndex: "type",
-      key: "type",
-      title: t("knowledgeNetwork.objectTypePropertyType"),
-      width: 120,
     },
   ];
 
@@ -310,6 +281,15 @@ export function ObjectTypeDetailScene() {
             }}
           >
             {t("common.edit")}
+          </AppButton>
+          <AppButton
+            onClick={() => {
+              void navigate(
+                `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/index-settings`,
+              );
+            }}
+          >
+            {t("knowledgeNetwork.objectTypeIndexSettingsEntry")}
           </AppButton>
           <Dropdown
             menu={{
@@ -451,33 +431,29 @@ export function ObjectTypeDetailScene() {
 
           {propertyType === "data" ? (
             <>
-              <Table<ObjectTypeDataProperty>
-                columns={dataColumns}
-                dataSource={pagedDataProperties}
-                locale={{
-                  emptyText: (
-                    <Empty description={t("knowledgeNetwork.objectTypePropertyEmpty")} />
-                  ),
-                }}
-                pagination={false}
-                rowKey="name"
-                size="small"
-              />
-              {filteredDataProperties.length > 0 ? (
-                <div className={styles.paginationBar}>
-                  <TablePaginationBar
-                    current={dataPage}
-                    onChange={(nextPage, nextPageSize) => {
-                      setDataPage(nextPage);
-                      setDataPageSize(nextPageSize);
-                    }}
-                    pageSize={dataPageSize}
-                    showSizeChanger
-                    showTotal={(total) => t("common.total", { total })}
-                    total={filteredDataProperties.length}
+              {filteredDataProperties.length === 0 ? (
+                <Empty description={t("knowledgeNetwork.objectTypePropertyEmpty")} />
+              ) : (
+                <>
+                  <ObjectTypePropertyTable
+                    properties={pagedDataProperties}
+                    rowIndexOffset={(dataPage - 1) * dataPageSize}
                   />
-                </div>
-              ) : null}
+                  <div className={styles.paginationBar}>
+                    <TablePaginationBar
+                      current={dataPage}
+                      onChange={(nextPage, nextPageSize) => {
+                        setDataPage(nextPage);
+                        setDataPageSize(nextPageSize);
+                      }}
+                      pageSize={dataPageSize}
+                      showSizeChanger
+                      showTotal={(total) => t("common.total", { total })}
+                      total={enrichedDataProperties.length}
+                    />
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <>

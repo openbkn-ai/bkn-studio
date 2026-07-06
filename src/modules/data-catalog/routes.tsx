@@ -6,7 +6,7 @@
  */
 
 import { lazy, Suspense, type ReactNode } from "react";
-import type { RouteObject } from "react-router-dom";
+import { Navigate, useLocation, useParams, type RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
 import { RouteLoading } from "@/app/router/RouteLoading";
@@ -28,6 +28,26 @@ const IndexBuildPage = lazy(async () => {
 
 function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
+}
+
+function LegacyDataCatalogRootRedirect() {
+  return <Navigate replace to="/data-directory" />;
+}
+
+function LegacyDataCatalogCatalogRedirect() {
+  const { catalogId } = useParams();
+  return <Navigate replace to={`/data-directory/catalog/${catalogId ?? ""}`} />;
+}
+
+function LegacyDataCatalogResourceRedirect() {
+  const { resourceId } = useParams();
+  const location = useLocation();
+  return (
+    <Navigate
+      replace
+      to={`/data-directory/resource/${resourceId ?? ""}${location.search}`}
+    />
+  );
 }
 
 export const dataCatalogRoutes: RouteObject[] = [
@@ -66,36 +86,15 @@ export const dataCatalogRoutes: RouteObject[] = [
   },
   {
     path: "data-catalog",
-    handle: {
-      console: {
-        descriptionKey: "dataCatalog.description",
-        menuKey: "data-catalog",
-        titleKey: "dataCatalog.title",
-      },
-    },
-    element: withRouteLoading(<DataCatalogPage />),
+    element: <LegacyDataCatalogRootRedirect />,
   },
   {
     path: "data-catalog/catalog/:catalogId",
-    handle: {
-      console: {
-        descriptionKey: "dataCatalog.description",
-        menuKey: "data-catalog",
-        titleKey: "dataCatalog.catalogDetailTitle",
-      },
-    },
-    element: withRouteLoading(<DataCatalogPage selectionType="catalog" />),
+    element: <LegacyDataCatalogCatalogRedirect />,
   },
   {
     path: "data-catalog/resource/:resourceId",
-    handle: {
-      console: {
-        descriptionKey: "dataCatalog.description",
-        menuKey: "data-catalog",
-        titleKey: "dataCatalog.resourceDetailTitle",
-      },
-    },
-    element: withRouteLoading(<ResourceWorkspacePage />),
+    element: <LegacyDataCatalogResourceRedirect />,
   },
   {
     path: "index-builds",

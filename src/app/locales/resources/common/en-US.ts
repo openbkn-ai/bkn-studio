@@ -55,5 +55,9 @@ export const commonEnUS = {
     mode: "Mode",
     healthStatus: "Health Status",
     testConnection: "Test Connection",
+    dangerDelete: {
+      typeNameToConfirm:
+        'This is a high-risk action. Type "{{name}}" to confirm deletion.',
+    },
   },
 } as const;

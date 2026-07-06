@@ -99,27 +99,6 @@ export function logServiceFallback(scope: string, error: unknown, detail?: strin
   console.debug(`[knowledge-network] ${scope} fallback${parts ? `: ${parts}` : ""}`);
 }
 
-export async function withServiceFallback<T>(
-  promise: Promise<T>,
-  fallback: T,
-  ignoredStatuses: number[] = [],
-  scope?: string,
-): Promise<T> {
-  try {
-    return await promise;
-  } catch (error) {
-    const status = getRequestErrorStatus(error);
-    if (status && ignoredStatuses.includes(status)) {
-      if (scope) {
-        logServiceFallback(scope, error);
-      }
-      return fallback;
-    }
-
-    throw error;
-  }
-}
-
 export function emptyStatistics(): KnowledgeNetworkStatistics {
   return {
     objectTypesTotal: 0,

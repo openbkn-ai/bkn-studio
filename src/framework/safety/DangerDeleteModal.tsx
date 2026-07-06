@@ -77,7 +77,7 @@ export function useDangerDelete() {
       {config?.requireTypeName ? (
         <div style={{ marginTop: 12 }}>
           <Typography.Paragraph style={{ marginBottom: 8 }}>
-            {t("dataCatalog.dangerDelete.typeNameToConfirm", {
+            {t("common.dangerDelete.typeNameToConfirm", {
               name: config.targetName,
             })}
           </Typography.Paragraph>

@@ -1,0 +1,33 @@
+.tableSection {
+  display: grid;
+  gap: 12px;
+}
+
+.tableToolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.table :global(.ant-table-thead > tr > th) {
+  background: #f3f6fa;
+  color: #111827;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.table :global(.ant-table-tbody > tr > td) {
+  vertical-align: middle;
+}
+
+.cellEllipsis {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.primaryKeyIcon,
+.titleIcon {
+  color: #2e68ff;
+  font-size: 14px;
+}

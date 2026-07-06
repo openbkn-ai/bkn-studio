@@ -1,0 +1,52 @@
+.panel {
+  width: 260px;
+}
+
+.panelTitle {
+  margin-bottom: 10px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.list {
+  display: grid;
+  gap: 4px;
+  max-height: 320px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e5eaf2;
+  background: #fff;
+}
+
+.rowLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.rowActions {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5eaf2;
+}
