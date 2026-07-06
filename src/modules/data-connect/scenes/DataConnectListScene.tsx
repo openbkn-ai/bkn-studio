@@ -272,17 +272,17 @@ export function DataConnectListScene({
                       <DeleteImpactAlert
                         detail={
                           highRisk
-                            ? t("dataCatalog.dangerDelete.catalogImpact", {
+                            ? t("dataConnect.dangerDelete.catalogImpact", {
                                 name: record.name,
                                 count: indexCount,
                               })
-                            : t("dataCatalog.dangerDelete.catalogEmpty", {
+                            : t("dataConnect.dangerDelete.catalogEmpty", {
                                 name: record.name,
                               })
                         }
                         warning={
                           highRisk
-                            ? t("dataCatalog.dangerDelete.impactWarning")
+                            ? t("dataConnect.dangerDelete.impactWarning")
                             : undefined
                         }
                       />
@@ -294,7 +294,7 @@ export function DataConnectListScene({
                         const running = runningIdsFromError(error);
                         void message.error(
                           running
-                            ? t("dataCatalog.dangerDelete.hasRunning")
+                            ? t("dataConnect.dangerDelete.hasRunning")
                             : extractRequestErrorMessage(error),
                         );
                         throw error;

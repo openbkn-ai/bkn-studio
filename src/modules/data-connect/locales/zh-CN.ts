@@ -62,6 +62,12 @@ export const dataConnectZhCN = {
     disableConfirmTitle: "停用数据连接",
     disableConfirmDescription:
       '确认停用“{{name}}”吗？停用后该连接将不可用于扫描与数据访问。',
+    dangerDelete: {
+      hasRunning: "有构建任务正在运行,请先停止再删除。",
+      catalogImpact: "连接「{{name}}」下已构建 {{count}} 个索引。",
+      impactWarning: "删除将一并删除全部索引和构建任务,且不可恢复。",
+      catalogEmpty: "连接「{{name}}」下暂无已构建的索引,删除不可恢复。",
+    },
     scanManage: "扫描",
     scanTitle: "扫描管理",
     scanDescription: "管理数据连接的定时扫描计划，并查看最近的扫描任务执行情况。",

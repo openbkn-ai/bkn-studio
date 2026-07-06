@@ -51,11 +51,6 @@ export const dataCatalogEnUS = {
       batch: "Batch",
       streaming: "Streaming",
     },
-    unit: {
-      item: "items",
-      column: "columns",
-      times: "runs",
-    },
     form: {
       required: "Required",
       optional: "Optional",
@@ -83,10 +78,8 @@ export const dataCatalogEnUS = {
     tree: {
       searchPlaceholder: "Search connections / resources",
       newConnection: "New Connection",
-      addResource: "New Resource",
       physicalGroup: "Physical Catalog",
       logicalGroup: "Logical Catalog",
-      logicalGroupHint: "Built-in",
       builtin: "Built-in",
       addLogical: "Add logical catalog",
       addLogicalTitle: "Add Logical Catalog",
@@ -97,8 +90,6 @@ export const dataCatalogEnUS = {
       deleteLogicalDescription:
         'Delete logical catalog "{{name}}"? Resources under it will also be removed.',
       scanning: "Scanning",
-      emptyPhysical: "No resources yet; scan from Data Connection to discover them",
-      emptyLogical: "No resources yet",
       emptyPhysicalGroup: "No physical data source connections",
       emptyLogicalGroup: "No logical catalogs yet. Use + to add one.",
       empty: "No data connections yet",
@@ -106,16 +97,6 @@ export const dataCatalogEnUS = {
       summary: "{{catalogCount}} connections · {{resourceCount}} resources",
       expand: "Expand",
       collapse: "Collapse",
-      pageInfo: "{{from}}-{{to}} of {{total}}",
-      pageSize: "{{size}} / page",
-    },
-    dangerDelete: {
-      hasRunning: "A build task is still running. Stop it before deleting.",
-      catalogImpact: "Connection \"{{name}}\" has {{count}} index(es) built.",
-      impactWarning:
-        "Deleting will also remove all indexes and build tasks, and cannot be undone.",
-      catalogEmpty:
-        "Connection \"{{name}}\" has no built indexes. Deletion cannot be undone.",
     },
     catalog: {
       notFound: "No resources found for this connection; it may have been deleted",
@@ -130,14 +111,10 @@ export const dataCatalogEnUS = {
     resource: {
       name: "Resource Name",
       basicName: "Resource",
-      headerName: "Name",
-      headerCategory: "Category",
       headerIndexState: "Index State",
       headerCatalog: "Catalog",
-      backToList: "Back",
       schemaSection: "Schema",
       schemaEmpty: "No schema fields",
-      indexSection: "Index & Build",
       historyTasks: "Build History",
       historyEmpty: "No build tasks yet",
       namePlaceholder: "e.g. customers",
@@ -147,10 +124,7 @@ export const dataCatalogEnUS = {
       rowCount: "Rows",
       indexState: "Index State",
       searchPlaceholder: "Search resource name",
-      indexFilterPlaceholder: "Index state",
       noMatch: "No resources match the current filters",
-      buildTasks: "Build Tasks",
-      columnCount: "{{count}} columns",
       fieldCount: "Fields",
       create: "New Resource",
       createTitle: "New Data Resource",
@@ -163,17 +137,12 @@ export const dataCatalogEnUS = {
       schemaDefinition: "Schema Definition",
       schemaHint:
         "One field per line: name type. Leave empty to use the default schema (id / name / updated_at); scans can complete it later.",
-      field: "Field",
       fieldName: "Field Name",
       fieldDisplayName: "Business Name",
       fieldDescription: "Description",
       fieldType: "Type",
-      indexRole: "Index Role",
-      effectiveIndex: "Effective Index",
-      effectiveIndexHint: "retrieval is served by this version",
       effectiveVersion: "Effective Version",
       effectiveActive: "Active",
-      indexedRows: "Indexed Rows",
       latestTask: "Latest Build Task",
       noEffectiveIndex:
         "No effective index yet - once a build succeeds, vector retrieval becomes available.",
@@ -182,9 +151,6 @@ export const dataCatalogEnUS = {
       rebuildFailedHint:
         "Rebuild failed: {{error}}. Retrieval is unaffected and still served by index {{version}}.",
       notFound: "Resource not found; it may have been deleted",
-      deleteConfirmTitle: "Delete resource {{name}}?",
-      deleteConfirmContent:
-        "Its {{taskCount}} build task records will be deleted as well. This cannot be undone.",
     },
     actions: {
       preview: "Preview Data",
@@ -197,15 +163,10 @@ export const dataCatalogEnUS = {
       goEnable: "Open connections",
     },
     preview: {
-      title: "Data Preview",
       summary: "Showing {{count}} rows · {{total}} rows total",
       empty: "No data",
-      pageSize: "{{size}} / page",
-      prev: "Prev",
-      next: "Next",
     },
     build: {
-      title: "Index Build · New BuildTask",
       submit: "Create & Start Build",
       editTitle: "Edit Index Config",
       editSubmit: "Save & Rebuild",
@@ -229,15 +190,8 @@ export const dataCatalogEnUS = {
       streamingLabel: "streaming",
       streamingDescription:
         "Continuous incremental sync with a standing listener; build key is the row ID field (optional).",
-      embeddingFields: "Embedding Fields",
-      embeddingFieldsHint: "(text columns to vectorize)",
       schemaLoading: "Loading fields...",
       schemaEmpty: "This resource has no fields yet; run a scan to discover its schema.",
-      buildKeyFields: "Build Key Fields",
-      buildKeyFieldsHint: "(batch: time field; streaming: row ID)",
-      fulltextFields: "Full-text Fields",
-      fulltextFieldsHint:
-        "(text columns to index for keyword search; applied during sync, no separate progress)",
       fulltextTypeHint: "Text-type fields only",
       fieldRole: "Field Roles",
       fieldRoleHint: "Check each field's role in the index; multiple allowed",
@@ -256,10 +210,6 @@ export const dataCatalogEnUS = {
       fieldCount: "{{count}} fields",
       fieldFilterPlaceholder: "Filter field name...",
       fieldNoMatch: "No fields match {{keyword}}",
-      legendEmbedding: "text columns to vectorize (required)",
-      legendBuildKeyBatch: "time / incremental field (required)",
-      legendBuildKeyStreaming: "row ID field (optional)",
-      legendFulltext: "keyword-indexed columns, effective immediately with sync",
       fulltextAnalyzer: "Analyzer",
       fulltextAnalyzerHint:
         "(use ik / hanlp for Chinese data, standard for English / general)",
@@ -268,7 +218,6 @@ export const dataCatalogEnUS = {
         ik_max_word: "ik_max_word · Chinese fine-grained",
         hanlp_index: "hanlp_index · Chinese HanLP",
       },
-      embeddingRequired: "Select at least one embedding field.",
       fieldsRequired: "Select at least one embedding or full-text field.",
       buildKeyRequired: "build_key_fields is required for batch mode.",
       model: "Embedding Model",
@@ -282,20 +231,14 @@ export const dataCatalogEnUS = {
       column: "Task",
       createTime: "Created",
       indexColumn: "Index",
-      create: "New Build Task",
       detail: "Task Detail",
       modalTitle: "Build Task",
       progress: "Progress",
-      toolbarHint:
-        "Batch tasks sync and vectorize all data once, then finish automatically. Streaming tasks keep watching for changes and index them as they arrive; pause or resume anytime.",
       searchPlaceholder: "Search by task ID or resource name",
       statusFilterPlaceholder: "All statuses",
-      activeOnly: "Building only",
       empty: "No index tasks",
       emptyDescription:
         "No tasks match the current filters. Configure and submit a build from a resource's Data Index tab in Data Directory.",
-      pickResource: "Select Resource",
-      pickResourcePlaceholder: "Select a resource to build an index for",
       pauseListening: "Pause Listening",
       resumeListening: "Resume Listening",
       paused: "Listening paused",
@@ -321,7 +264,6 @@ export const dataCatalogEnUS = {
         "Deleted task records cannot be recovered; running tasks are stopped before deletion.",
       batchDeletePartial: "{{failed}}/{{total}} task(s) failed to delete",
       model: "Model",
-      lastEvent: "Last Event",
       finishedAt: "Finished At",
       embeddingDegradedHint: "Vector index is incomplete; semantic search may be unavailable or partial.",
       fields: {
