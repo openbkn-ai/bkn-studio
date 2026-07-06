@@ -5,12 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+import type { CatalogRecord } from "@/shared/catalog";
 
 const BUILTIN_TAG_SET = new Set(["builtin", "built-in", "internal", "system"]);
 
 /** 仅依据明确的系统标识判断内置逻辑 catalog，避免误伤用户新建项。 */
-export function isBuiltinLogicalCatalog(catalog: DataConnectRecord) {
+export function isBuiltinLogicalCatalog(catalog: CatalogRecord) {
   if (catalog.type !== "logical") {
     return false;
   }

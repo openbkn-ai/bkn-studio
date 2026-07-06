@@ -6,16 +6,37 @@
  */
 
 export type {
+  CatalogHealthStatus,
   CatalogListQuery,
   CatalogListResult,
   CatalogRecord,
-} from "@/shared/catalog/catalog.service";
+  CatalogRecordStatus,
+} from "@/shared/catalog/types";
+
+export { catalogListAllQuery, catalogListPhysicalQuery } from "@/shared/catalog/catalog-queries";
 
 export {
-  catalogListAllQuery,
-  catalogListPhysicalQuery,
+  appendMockPhysicalCatalog,
   createLogicalCatalog,
+  createPhysicalCatalog,
   deleteCatalog,
   getCatalog,
   listCatalogs,
+  setCatalogEnabled,
+  testCatalogConnection,
+  updateCatalog,
+  updateMockCatalogRecord,
 } from "@/shared/catalog/catalog.service";
+
+export {
+  catalogBlastRadius,
+  resourceBlastRadius,
+  type CatalogBlastRadius,
+} from "@/shared/catalog/blast-radius";
+
+export { inferConnectorCategory } from "@/shared/catalog/catalog-mapper";
+
+export {
+  postCatalogDiscover,
+  type CatalogDiscoverStrategy,
+} from "@/shared/catalog/catalog-discover";

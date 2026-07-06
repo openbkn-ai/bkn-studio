@@ -28,7 +28,7 @@ import type {
   BuildTask,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
-import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./CatalogDetailPanel.module.css";
 
@@ -52,7 +52,7 @@ function EllipsisText({ text }: { text: string }) {
 }
 
 type CatalogDetailPanelProps = {
-  catalog: DataConnectRecord;
+  catalog: CatalogRecord;
   onCreateResource: (catalogId: string) => void;
   onOpenResource: (
     resourceId: string,

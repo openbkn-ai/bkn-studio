@@ -17,7 +17,7 @@ import type {
   CatalogResource,
   ResourceCategory,
 } from "@/modules/data-catalog/types/data-catalog";
-import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+import type { CatalogRecord } from "@/shared/catalog";
 
 type ResourceFormValues = {
   catalogId: string;
@@ -29,7 +29,7 @@ type ResourceFormValues = {
 };
 
 type ResourceFormDrawerProps = {
-  catalogs: DataConnectRecord[];
+  catalogs: CatalogRecord[];
   defaultCatalogId?: string;
   onClose: () => void;
   onCreated: (resource: CatalogResource) => void;

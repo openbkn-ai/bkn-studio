@@ -29,7 +29,7 @@ import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { getCatalog } from "@/shared/catalog";
-import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ResourceWorkspaceScene.module.css";
 
@@ -53,7 +53,7 @@ export function ResourceWorkspaceScene({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [resource, setResource] = useState<CatalogResource | null>(null);
-  const [catalog, setCatalog] = useState<DataConnectRecord | null>(null);
+  const [catalog, setCatalog] = useState<CatalogRecord | null>(null);
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
