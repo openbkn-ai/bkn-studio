@@ -85,3 +85,17 @@
   color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
 }
+
+.validationSuccess {
+  margin-top: 8px;
+  border-color: rgba(23, 125, 78, 0.2);
+  background: rgba(23, 125, 78, 0.055);
+}
+
+.validationSuccess :global(.ant-alert-icon) {
+  color: #177d4e;
+}
+
+.validationSuccess :global(.ant-alert-message) {
+  color: rgba(15, 30, 54, 0.78);
+}

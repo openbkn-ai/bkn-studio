@@ -762,6 +762,7 @@ export async function importToolboxOpenApiViaUi(
   const panel = await openImportOpenApiPanel(importDialog);
   await fillOpenApiSpecPaste(page, spec, panel);
   await expectOpenApiOperationsIoPreview(panel, { containsText: /GET|POST/i });
+  await expect(panel.getByText(/Endpoint review|端点审阅|绔偣瀹￠槄/i)).toBeVisible();
 
   await importDialog.getByLabel(/工具箱名称|Toolbox Name/i).fill(toolboxName);
   if (options?.serviceUrl) {

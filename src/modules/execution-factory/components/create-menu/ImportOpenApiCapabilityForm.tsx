@@ -243,6 +243,8 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
         rows={8}
 
+        showEndpointReview
+
         value={openapiSpec}
 
       />
