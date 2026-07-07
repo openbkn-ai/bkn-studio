@@ -43,6 +43,7 @@ import {
 
 
 import { AddCapabilityModeStep } from "./AddCapabilityModeStep";
+import { CapabilityCreatedNextSteps } from "./CapabilityCreatedNextSteps";
 
 import { CreateMcpDrawer } from "./CreateMcpDrawer";
 
@@ -98,7 +99,12 @@ type AddCapabilityWizardProps = {
 const FUNCTION_TOOLBOX_FORM_ID = "create-function-toolbox-form";
 const IMPORT_OPENAPI_FORM_ID = "import-openapi-capability-form";
 
-
+type CreatedNextStepState = {
+  boxId: string;
+  toolId?: string;
+  toolName?: string;
+  toolboxName?: string;
+};
 
 export function AddCapabilityWizard({
 
@@ -143,6 +149,7 @@ export function AddCapabilityWizard({
   );
 
   const [submitting, setSubmitting] = useState(false);
+  const [createdNextStep, setCreatedNextStep] = useState<CreatedNextStepState | null>(null);
 
 
 
@@ -163,6 +170,7 @@ export function AddCapabilityWizard({
     setStep(skipModeStep ? 1 : 0);
 
     setSubmitting(false);
+    setCreatedNextStep(null);
 
   }, [contextTab, initialBoxId, initialMode, open, skipModeStep]);
 
@@ -245,6 +253,7 @@ export function AddCapabilityWizard({
   const handleClose = () => {
 
     setStep(0);
+    setCreatedNextStep(null);
 
     onClose();
 
@@ -260,6 +269,28 @@ export function AddCapabilityWizard({
 
     handleClose();
 
+  };
+
+  const handleCreatedNextStep = (payload: CreatedNextStepState) => {
+    onRefresh?.();
+    setCreatedNextStep(payload);
+  };
+
+  const navigateToCreatedToolset = (mode: "view" | "contract" = "view") => {
+    if (!createdNextStep) {
+      return;
+    }
+
+    handleClose();
+
+    if (mode === "contract" && createdNextStep.toolId) {
+      void navigate(
+        `/execution-factory/toolboxes/${createdNextStep.boxId}/tools/${createdNextStep.toolId}/edit`,
+      );
+      return;
+    }
+
+    void navigate(`/execution-factory/toolboxes/${createdNextStep.boxId}/tools`);
   };
 
 
@@ -340,7 +371,12 @@ export function AddCapabilityWizard({
           : t("executionFactory.quickApiCreateSuccess"),
       );
 
-      handleCreated("toolbox", result.boxId, result.toolIds[0]);
+      handleCreatedNextStep({
+        boxId: result.boxId,
+        toolId: result.toolIds[0],
+        toolName: payload.values.summary,
+        toolboxName: payload.values.toolboxName,
+      });
 
     } catch (error) {
 
@@ -412,7 +448,11 @@ export function AddCapabilityWizard({
         );
       }
 
-      handleCreated("toolbox", result.boxId, result.toolIds[0]);
+      handleCreatedNextStep({
+        boxId: result.boxId,
+        toolId: result.toolIds[0],
+        toolboxName: payload.values.toolboxName,
+      });
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
@@ -421,6 +461,23 @@ export function AddCapabilityWizard({
   };
 
   const renderBody = () => {
+
+    if (createdNextStep) {
+      return (
+        <CapabilityCreatedNextSteps
+          onClose={handleClose}
+          onCompleteContract={
+            createdNextStep.toolId
+              ? () => navigateToCreatedToolset("contract")
+              : undefined
+          }
+          onDebug={() => navigateToCreatedToolset("view")}
+          onViewToolset={() => navigateToCreatedToolset("view")}
+          toolName={createdNextStep.toolName}
+          toolboxName={createdNextStep.toolboxName}
+        />
+      );
+    }
 
     if (showModeStep) {
 
@@ -575,6 +632,10 @@ export function AddCapabilityWizard({
 
 
   const renderFooter = () => {
+
+    if (createdNextStep) {
+      return null;
+    }
 
     if (showModeStep) {
 

@@ -1,0 +1,53 @@
+.panel {
+  border: 1px solid rgba(23, 63, 159, 0.14);
+  border-radius: 10px;
+  background: #fbfdff;
+  padding: 18px;
+}
+
+.title {
+  color: #17253d;
+  font-size: 18px;
+  font-weight: 750;
+  margin-bottom: 6px;
+}
+
+.description {
+  color: rgba(15, 30, 54, 0.62);
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.metaItem {
+  border: 1px solid rgba(15, 30, 54, 0.08);
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.metaLabel {
+  color: rgba(15, 30, 54, 0.48);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.metaValue {
+  color: #17253d;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
