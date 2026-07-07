@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
 const STUDIO_BASE_PATH = "/studio";
+const STUDIO_API_BASE_URL = process.env.E2E_STUDIO_API_BASE_URL ?? "/api";
 
 export function toStudioPath(url: string) {
   if (/^https?:\/\//i.test(url)) {
@@ -19,10 +20,10 @@ export async function ensureE2eRuntime(
   page: Page,
   options?: { capabilityUxV2?: boolean },
 ) {
-  await page.addInitScript((capabilityUxV2) => {
+  await page.addInitScript(({ apiBaseUrl, capabilityUxV2 }) => {
     window.__BKN_STUDIO_RUNTIME__ = {
       ...(window.__BKN_STUDIO_RUNTIME__ ?? {}),
-      apiBaseUrl: "/api",
+      apiBaseUrl,
       mode: "hosted",
       features: {
         ...(window.__BKN_STUDIO_RUNTIME__?.features ?? {}),
@@ -33,7 +34,10 @@ export async function ensureE2eRuntime(
         ...(window.__BKN_STUDIO_RUNTIME__?.currentUser ?? {}),
       },
     };
-  }, options?.capabilityUxV2 ?? true);
+  }, {
+    apiBaseUrl: STUDIO_API_BASE_URL,
+    capabilityUxV2: options?.capabilityUxV2 ?? true,
+  });
 }
 
 export async function ensureLegacyE2eRuntime(page: Page) {
@@ -496,7 +500,10 @@ export async function submitImportModal(
     importDialog.getByRole("button", { name: /开始导入|^Import$/i }).click(),
   ]);
   const importResponse = await importResponsePromise;
-  expect(importResponse.ok()).toBeTruthy();
+  expect(
+    importResponse.ok(),
+    `Import ${type} backup failed (${importResponse.status()}) at ${importResponse.url()}: ${await importResponse.text()}`,
+  ).toBeTruthy();
   await expectAppToast(page, /导入成功|Imported successfully/i);
   await expect(importDialog).toBeHidden();
   return importResponse;

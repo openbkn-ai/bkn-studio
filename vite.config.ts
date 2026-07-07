@@ -36,8 +36,6 @@ export default defineConfig(({ mode }) => {
   const useMock = env.VITE_USE_MOCK !== "false";
   const agentOperatorProxyTarget =
     process.env.VITE_PROXY_TARGET ?? (useMock ? "http://127.0.0.1:9000" : devProxyOrigin);
-  // ContextLoader「立即体验」直接打 agent-retrieval（REST /api/agent-retrieval/v1/...，MCP /api/agent-retrieval/v1/mcp）。
-  // 默认转发到后端网关；自定义时设 VITE_AGENT_RETRIEVAL_TARGET。
   const agentRetrievalTarget = process.env.VITE_AGENT_RETRIEVAL_TARGET ?? devProxyOrigin;
 
   return {
@@ -52,8 +50,7 @@ export default defineConfig(({ mode }) => {
         "**/node_modules/**",
         "**/dist/**",
         // Playwright e2e specs run via `pnpm test:execution-factory:e2e`, not
-        // vitest — they import @playwright/test (not a root dep), so collecting
-        // them here would always fail.
+        // vitest. They import @playwright/test, so collecting them here fails.
         "tests/e2e/**",
         "tests/execution-factory/agent-at/**",
         "tests/execution-factory/operator-web-ui/**",
@@ -61,8 +58,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true,
-      // OAuth redirect_uri is registered as http://localhost:8000/studio/callback —
-      // fail fast instead of silently drifting to another port when taken.
+      // OAuth redirect_uri is registered as http://localhost:8000/studio/callback.
+      // Fail fast instead of silently drifting to another port when taken.
       port: 8000,
       strictPort: true,
       allowedHosts: ["host.docker.internal", "localhost", "127.0.0.1"],
@@ -77,12 +74,34 @@ export default defineConfig(({ mode }) => {
           }
         : {}),
       proxy: {
+        // Specific API prefixes must be listed before the generic /api proxy.
+        "/api/agent-operator-integration": {
+          changeOrigin: true,
+          secure: false,
+          timeout: 120_000,
+          proxyTimeout: 120_000,
+          target: agentOperatorProxyTarget,
+        },
+        "/api/capabilities-lab": {
+          changeOrigin: true,
+          secure: false,
+          timeout: 120_000,
+          proxyTimeout: 120_000,
+          target: process.env.VITE_LAB_PROXY_TARGET ?? "http://127.0.0.1:9010",
+        },
+        "/api/agent-retrieval": {
+          changeOrigin: true,
+          secure: false,
+          timeout: 120_000,
+          proxyTimeout: 120_000,
+          target: agentRetrievalTarget,
+        },
         ...(useMock
           ? {}
           : {
               "/api": {
                 changeOrigin: true,
-                // 允许自签名 https 目标（如 VM https://10.211.55.4）。
+                // Allow self-signed HTTPS targets used by local gateways.
                 secure: false,
                 target: devProxyOrigin,
               },
@@ -104,28 +123,6 @@ export default defineConfig(({ mode }) => {
                 target: devProxyOrigin,
               },
             }),
-        "/api/agent-operator-integration": {
-          changeOrigin: true,
-          secure: false,
-          timeout: 120_000,
-          proxyTimeout: 120_000,
-          target: agentOperatorProxyTarget,
-        },
-        "/api/capabilities-lab": {
-          changeOrigin: true,
-          secure: false,
-          timeout: 120_000,
-          proxyTimeout: 120_000,
-          target: process.env.VITE_LAB_PROXY_TARGET ?? "http://127.0.0.1:9010",
-        },
-        // REST(/api/agent-retrieval/v1/...) 与 MCP(/api/agent-retrieval/v1/mcp) 同前缀，一条代理覆盖。
-        "/api/agent-retrieval": {
-          changeOrigin: true,
-          secure: false,
-          timeout: 120_000,
-          proxyTimeout: 120_000,
-          target: agentRetrievalTarget,
-        },
         "/oss-workspace": {
           changeOrigin: true,
           secure: false,

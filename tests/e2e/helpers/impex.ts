@@ -68,8 +68,15 @@ export function cloneToolboxImpexForCreate(exported: Record<string, unknown>, ne
       tool.tool_id = randomUUID();
       if (tool.source_type === "operator" && tool.source_id) {
         tool.source_id = operatorIdMap.get(String(tool.source_id)) ?? randomUUID();
-      } else if (tool.source_id) {
-        tool.source_id = randomUUID();
+      } else {
+        const metadata = tool.metadata as Record<string, unknown> | undefined;
+        if (metadata?.version) {
+          const metadataVersion = randomUUID();
+          metadata.version = metadataVersion;
+          tool.source_id = metadataVersion;
+        } else if (tool.source_id) {
+          tool.source_id = randomUUID();
+        }
       }
     }
   }
