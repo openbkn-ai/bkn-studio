@@ -11,6 +11,7 @@ import {
   gotoUnitsTab,
   openAddCapabilityWizard,
   triggerImpexExport,
+  waitForCategoryFieldReady,
 } from "../../helpers/execution-unit-ui";
 import {
   buildToolboxName,
@@ -77,6 +78,43 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
     await expect(page).toHaveURL(new RegExp(`/execution-factory/toolboxes/${boxId}/tools`));
     await expectAppToast(page, /已添加到工具集|added to the toolset/i);
     await expect(page.getByRole("heading", { level: 3, name: toolboxName })).toBeVisible();
+  });
+
+  test("QA-01b: quick add API from cURL tab submits parsed service URL", async ({ page }) => {
+    const toolboxName = buildToolboxName("quick_api_curl");
+    const toolName = `manual_http_weather_${Date.now()}`;
+    const curl =
+      'curl -X GET "http://host.docker.internal:8080/proxy/uapis/weather"';
+
+    const drawer = await openAddCapabilityWizard(page, "toolbox");
+
+    await drawer.getByRole("textbox", { name: /cURL/i }).fill(curl);
+    await drawer.getByRole("button", { name: /识别接口信息|Detect API details/i }).click();
+    await drawer.getByLabel(/工具名称|Tool name/i).fill(toolName);
+    await drawer.getByRole("radio", { name: /新建工具集|New toolset/i }).check();
+    await drawer.getByLabel(/工具箱名称|Toolbox Name/i).fill(toolboxName);
+    await waitForCategoryFieldReady(page, drawer);
+    await expectOpenApiOperationsIoPreview(drawer, { containsText: /GET/i });
+
+    await drawer.locator(".ant-drawer-body").evaluate((body) => {
+      body.scrollTop = body.scrollHeight;
+    });
+
+    const saveButton = drawer.getByRole("button", { name: /保存并完成|Save and finish/i });
+    await saveButton.scrollIntoViewIfNeeded();
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+
+    await expect(page).toHaveURL(/\/execution-factory\/toolboxes\/[^/]+\/tools/, {
+      timeout: 180_000,
+    });
+    await expect(page.getByText("http://host.docker.internal:8080")).toBeVisible({
+      timeout: 30_000,
+    });
+    const currentUrl = new URL(page.url());
+    const boxId = currentUrl.pathname.match(/\/toolboxes\/([^/]+)/)?.[1] ?? "";
+    expect(boxId).toBeTruthy();
+    createdBoxIds.push(boxId);
   });
 
   test("QA-02: quick added toolset supports publish and export", async ({ page, request }) => {

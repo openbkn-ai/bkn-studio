@@ -22,6 +22,7 @@ type BackendErrorBody = {
   code?: string;
   description?: string;
   detail?: unknown;
+  details?: unknown;
   error?: string;
   message?: string;
   solution?: string;
@@ -41,7 +42,7 @@ export function extractRequestErrorDetail(error: unknown): RequestErrorDetail {
     message: data?.description ?? data?.message ?? message,
     code: data?.code,
     description: data?.description,
-    detail: data?.detail,
+    detail: data?.detail ?? data?.details,
     solution: data?.solution,
     link: data?.link,
   };

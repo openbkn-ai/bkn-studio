@@ -50,8 +50,11 @@ type QuickAddApiFormProps = {
   onSubmit: (payload: { openapiSpec: string; serviceUrl: string; values: QuickAddApiFormValues }) => void;
 };
 
+type QuickAddApiSubmitErrorField = "curlText" | "serverUrl" | "apiUrl" | "summary" | "toolboxName";
+
 export type QuickAddApiFormHandle = {
   submit: () => void;
+  showSubmitError: (error: { field?: QuickAddApiSubmitErrorField; message: string }) => void;
 };
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
@@ -63,6 +66,15 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
   useImperativeHandle(ref, () => ({
     submit: () => {
       form.submit();
+    },
+    showSubmitError: ({ field, message }) => {
+      const targetField = field ?? (inputMode === "curl" ? "curlText" : "serverUrl");
+      setInputMode(targetField === "curlText" ? "curl" : "form");
+      setParseHint(message);
+      form.setFields([{ name: targetField, errors: [message] }]);
+      window.setTimeout(() => {
+        form.scrollToField(targetField, { behavior: "smooth", focus: true });
+      });
     },
   }));
   const [inputMode, setInputMode] = useState<"curl" | "form">("curl");
@@ -156,22 +168,27 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
       }
     }
 
-    const spec = buildSpecFromValues(values, inputMode);
-    if (!spec) {
+    const submission = buildSubmissionFromValues(values, inputMode);
+    if (!submission) {
       setParseHint(t("executionFactory.quickApiBuildFailed"));
       return;
     }
 
-    const validation = analyzeOpenApiDocumentText(spec);
+    const validation = analyzeOpenApiDocumentText(submission.openapiSpec);
     if (!validation.ok) {
       setParseHint(validation.reason);
       return;
     }
 
     onSubmit({
-      openapiSpec: spec,
-      serviceUrl: values.serverUrl,
-      values,
+      openapiSpec: submission.openapiSpec,
+      serviceUrl: submission.serviceUrl,
+      values: {
+        ...values,
+        serverUrl: submission.serviceUrl,
+        method: submission.method,
+        path: submission.path,
+      },
     });
   };
 
@@ -312,15 +329,25 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
 );
 
 function buildSpecFromValues(values: QuickAddApiFormValues, inputMode: "curl" | "form") {
+  return buildSubmissionFromValues(values, inputMode)?.openapiSpec;
+}
+
+function buildSubmissionFromValues(values: QuickAddApiFormValues, inputMode: "curl" | "form") {
   if (inputMode === "curl" && values.curlText?.trim()) {
     const parsed = parseCurlCommand(values.curlText);
     if (parsed.ok) {
-      return buildOpenApiFromQuickApi({
+      const openapiSpec = buildOpenApiFromQuickApi({
         ...parsed.value,
         summary: values.summary || parsed.value.summary,
         description: values.description,
         queryParams: parsed.value.queryParams,
       });
+      return {
+        openapiSpec,
+        serviceUrl: parsed.value.serverUrl,
+        method: parsed.value.method,
+        path: parsed.value.path,
+      };
     }
   }
 
@@ -337,7 +364,7 @@ function buildSpecFromValues(values: QuickAddApiFormValues, inputMode: "curl" | 
     }
   }
 
-  return buildOpenApiFromQuickApi({
+  const openapiSpec = buildOpenApiFromQuickApi({
     method: values.method || "GET",
     serverUrl: values.serverUrl,
     path: values.path,
@@ -345,4 +372,11 @@ function buildSpecFromValues(values: QuickAddApiFormValues, inputMode: "curl" | 
     description: values.description,
     queryParams,
   });
+
+  return {
+    openapiSpec,
+    serviceUrl: values.serverUrl,
+    method: values.method || "GET",
+    path: values.path,
+  };
 }
