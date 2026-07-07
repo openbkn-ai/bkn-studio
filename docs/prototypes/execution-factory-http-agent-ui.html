@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>执行工厂 HTTP Agent UI 原型</title>
+  <style>
+    :root {
+      --blue: #173f9f;
+      --blue-2: #2457d6;
+      --ink: #071832;
+      --muted: #60708a;
+      --line: #dfe6f2;
+      --soft: #f5f8fc;
+      --panel: #ffffff;
+      --green: #18a058;
+      --amber: #d98500;
+      --red: #d93025;
+      --shadow: 0 10px 28px rgba(28, 47, 85, .12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #eef3f9;
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: 100vh;
+    }
+
+    .side {
+      background: #fff;
+      border-right: 1px solid var(--line);
+      padding: 18px 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      color: var(--blue);
+      margin-bottom: 28px;
+      font-size: 20px;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      border: 2px solid var(--blue);
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .mark:before,
+    .mark:after {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border: 1px solid #66a3ff;
+      transform: rotate(45deg);
+    }
+
+    .nav-group {
+      color: #50617c;
+      margin: 18px 0 8px;
+      font-weight: 650;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      height: 40px;
+      padding: 0 12px;
+      border-radius: 7px;
+      color: #243653;
+    }
+
+    .nav-item.active {
+      background: #eaf1ff;
+      color: var(--blue);
+      border: 1px solid #b8ccff;
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 64px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+    }
+
+    .crumb {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 650;
+      color: #53647c;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      height: 26px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f7faff;
+      color: #49617f;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fff;
+    }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--blue-2);
+    }
+
+    .content {
+      padding: 26px 28px 60px;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      line-height: 1.25;
+    }
+
+    h1 { font-size: 28px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 16px; }
+
+    .sub {
+      color: var(--muted);
+      margin-top: 8px;
+      max-width: 820px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #1f3150;
+      border-radius: 8px;
+      height: 36px;
+      padding: 0 15px;
+      font-weight: 650;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+      box-shadow: 0 6px 14px rgba(23, 63, 159, .22);
+    }
+
+    .btn.ghost {
+      background: #f8fbff;
+    }
+
+    .toolbar {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .select, .input {
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 0 12px;
+      color: #42536f;
+      min-width: 130px;
+    }
+
+    .input.search { min-width: 280px; }
+
+    .tabs {
+      display: flex;
+      gap: 22px;
+      border-bottom: 1px solid var(--line);
+      margin: 8px 0 18px;
+    }
+
+    .tab {
+      padding: 11px 0;
+      color: #31415c;
+      font-weight: 650;
+    }
+
+    .tab.active {
+      color: var(--blue);
+      border-bottom: 2px solid var(--blue);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 210px;
+      box-shadow: 0 2px 10px rgba(20, 39, 70, .04);
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .type {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 7px;
+      border-radius: 5px;
+      background: #eaf1ff;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 650;
+      background: #eefbf4;
+      color: var(--green);
+      border: 1px solid #a9e6c5;
+    }
+
+    .status.draft {
+      background: #eef5ff;
+      color: #1f60d1;
+      border-color: #b8d2ff;
+    }
+
+    .muted { color: var(--muted); }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px;
+      background: #fbfdff;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 2px;
+    }
+
+    .bar {
+      height: 7px;
+      border-radius: 99px;
+      background: #dce5f5;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      background: var(--blue-2);
+    }
+
+    .card-foot {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      color: #70809b;
+      font-size: 12px;
+    }
+
+    .section {
+      margin-top: 28px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .section-title {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .section-body { padding: 18px; }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) 360px;
+      gap: 18px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-weight: 650;
+      color: #253653;
+    }
+
+    textarea, input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 11px;
+      font: inherit;
+      color: #17253d;
+      background: #fff;
+    }
+
+    textarea { min-height: 92px; resize: vertical; }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .preview {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 14px;
+    }
+
+    .preview h3 { margin-bottom: 12px; }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      gap: 8px;
+      margin: 8px 0;
+      color: #31415c;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 12px;
+      color: #455670;
+    }
+
+    .tag.green { color: var(--green); background: #effbf4; border-color: #bde9cc; }
+    .tag.amber { color: var(--amber); background: #fff8e8; border-color: #f2d59b; }
+    .tag.red { color: var(--red); background: #fff0ee; border-color: #f2b8b5; }
+    .tag.blue { color: var(--blue); background: #eef4ff; border-color: #c6d7ff; }
+
+    .drawer {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: 1fr 620px;
+      gap: 18px;
+    }
+
+    .scrim {
+      border: 1px dashed #b7c4d9;
+      border-radius: 8px;
+      background: rgba(20, 31, 52, .04);
+      min-height: 680px;
+      padding: 22px;
+      color: #6a7891;
+    }
+
+    .drawer-panel {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .drawer-head {
+      height: 60px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .steps {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: #6f7f97;
+      font-weight: 650;
+    }
+
+    .step b {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #edf2fa;
+      color: #5b6e8d;
+      font-size: 12px;
+    }
+
+    .step.active { color: var(--blue); }
+    .step.active b { background: var(--blue); color: #fff; }
+
+    .drawer-body {
+      padding: 18px;
+      max-height: 780px;
+      overflow: auto;
+    }
+
+    .mini-tabs {
+      display: flex;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 14px;
+    }
+
+    .mini-tabs span {
+      padding: 9px 0;
+      font-weight: 650;
+    }
+
+    .mini-tabs .active {
+      color: var(--blue);
+      border-bottom: 2px solid var(--blue);
+    }
+
+    .notice {
+      border: 1px solid #b8d2ff;
+      background: #f3f7ff;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      color: #28456f;
+    }
+
+    .success {
+      border-color: #a9e6c5;
+      background: #f0fbf5;
+      color: #145c36;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .table th,
+    .table td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .table th {
+      background: #f8fbff;
+      color: #40516c;
+      font-weight: 700;
+    }
+
+    .table tr:last-child td { border-bottom: 0; }
+
+    .detail-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .summary {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .summary strong {
+      display: block;
+      font-size: 22px;
+      margin: 4px 0;
+    }
+
+    .contract-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 18px;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 9px;
+      color: #40516c;
+    }
+
+    .check {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    .code {
+      font-family: Consolas, "SFMono-Regular", monospace;
+      background: #f7f9fc;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      white-space: pre-wrap;
+      color: #1f304d;
+    }
+
+    @media (max-width: 1200px) {
+      .cards { grid-template-columns: repeat(2, minmax(260px, 1fr)); }
+      .split, .contract-grid { grid-template-columns: 1fr; }
+      .drawer { grid-template-columns: 1fr; }
+      .scrim { min-height: 180px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><span class="mark"></span><span>OpenBKN</span></div>
+      <div class="nav-group">领域业务知识网络</div>
+      <div class="nav-item"><span class="dot"></span>知识网络</div>
+      <div class="nav-group">执行工厂</div>
+      <div class="nav-item active"><span class="dot"></span>能力管理</div>
+      <div class="nav-item"><span class="dot"></span>能力市场</div>
+      <div class="nav-item"><span class="dot"></span>沙箱运行时管理</div>
+      <div class="nav-group">模型管理</div>
+      <div class="nav-item"><span class="dot"></span>模型配置</div>
+      <div class="nav-item"><span class="dot"></span>模型统计</div>
+      <div class="nav-group">系统管理</div>
+      <div class="nav-item"><span class="dot"></span>用户管理</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">执行工厂 <span>/</span> <span class="pill">能力管理</span></div>
+        <div class="user"><span class="avatar"></span><div><b>Local Admin</b><br><span class="muted">admin</span></div></div>
+      </header>
+
+      <div class="content">
+        <section class="page-head">
+          <div>
+            <h1>能力管理</h1>
+            <p class="sub">为智能体配置可调用的能力：工具集接入 HTTP 接口、MCP 服务连接外部协议工具、Skill 包导入可复用技能。配置、验证并发布后，即可在对话与流程编排中调用。</p>
+          </div>
+          <div class="actions">
+            <button class="btn primary">+ 添加能力</button>
+            <button class="btn">导入</button>
+          </div>
+        </section>
+
+        <section class="toolbar">
+          <select class="select"><option>全部来源</option><option>系统内置</option><option>自定义</option></select>
+          <select class="select"><option>全部类型</option><option>HTTP</option><option>Function</option><option>MCP</option><option>Skill</option></select>
+          <select class="select"><option>全部状态</option><option>已发布</option><option>未发布</option></select>
+          <input class="input search" placeholder="搜索能力名称或描述" />
+        </section>
+
+        <nav class="tabs">
+          <span class="tab active">工具集</span>
+          <span class="tab">MCP 服务</span>
+          <span class="tab">Skill 包</span>
+        </nav>
+
+        <section class="cards">
+          <article class="card">
+            <div class="card-head">
+              <span class="type">OpenAPI</span>
+              <span class="status">已发布</span>
+            </div>
+            <h3>查询天气</h3>
+            <p class="muted">根据城市查询实时天气。</p>
+            <div class="metric-row">
+              <div class="metric"><strong>75%</strong><span class="muted">Agent Ready</span><div class="bar"><span style="width:75%"></span></div></div>
+              <div class="metric"><strong>低</strong><span class="muted">风险</span></div>
+              <div class="metric"><strong>通过</strong><span class="muted">验证</span></div>
+            </div>
+            <div class="tags">
+              <span class="tag green">Agent 可调用</span>
+              <span class="tag amber">调用前确认</span>
+              <span class="tag blue">GET /weather</span>
+            </div>
+            <div class="card-foot"><span>1 个工具</span><span>更新：2026/07/07</span></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <span class="type">OpenAPI</span>
+              <span class="status draft">未发布</span>
+            </div>
+            <h3>订单查询工具集</h3>
+            <p class="muted">ERP 订单查询接口集合。</p>
+            <div class="metric-row">
+              <div class="metric"><strong>40%</strong><span class="muted">Agent Ready</span><div class="bar"><span style="width:40%"></span></div></div>
+              <div class="metric"><strong>中</strong><span class="muted">风险</span></div>
+              <div class="metric"><strong>未测</strong><span class="muted">验证</span></div>
+            </div>
+            <div class="tags">
+              <span class="tag">缺少输出语义</span>
+              <span class="tag">缺少成功示例</span>
+            </div>
+            <div class="card-foot"><span>8 个工具</span><span>更新：2026/07/07</span></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <span class="type">Function</span>
+              <span class="status draft">未发布</span>
+            </div>
+            <h3>运算工具箱</h3>
+            <p class="muted">用于简单数学计算的函数工具。</p>
+            <div class="metric-row">
+              <div class="metric"><strong>55%</strong><span class="muted">Agent Ready</span><div class="bar"><span style="width:55%"></span></div></div>
+              <div class="metric"><strong>低</strong><span class="muted">风险</span></div>
+              <div class="metric"><strong>通过</strong><span class="muted">验证</span></div>
+            </div>
+            <div class="tags">
+              <span class="tag blue">函数</span>
+              <span class="tag">待发布</span>
+            </div>
+            <div class="card-foot"><span>5 个工具</span><span>更新：2026/07/06</span></div>
+          </article>
+        </section>
+
+        <section class="section">
+          <div class="section-title">
+            <div>
+              <h2>添加能力菜单</h2>
+              <div class="muted">在现有按钮上优化文案和分组，降低选择成本。</div>
+            </div>
+            <button class="btn primary">+ 添加能力</button>
+          </div>
+          <div class="section-body">
+            <div class="preview" style="max-width: 360px">
+              <h3>HTTP / API</h3>
+              <p><b>添加 HTTP API</b><br><span class="muted">从 cURL、URL 或表单快速创建单个工具。</span></p>
+              <p><b>导入 OpenAPI</b><br><span class="muted">从 OpenAPI 文档批量生成工具集和工具。</span></p>
+              <h3 style="margin-top: 18px">MCP</h3>
+              <p><b>注册 MCP 服务</b><br><span class="muted">连接 SSE 或 Streamable HTTP MCP 服务。</span></p>
+              <h3 style="margin-top: 18px">Skill</h3>
+              <p><b>导入 Skill 包</b><br><span class="muted">上传 ZIP 或 SKILL.md，沉淀可复用技能。</span></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="drawer">
+          <div class="scrim">
+            <h2>当前能力管理页</h2>
+            <p>点击“添加 HTTP API”后，沿用现有右侧抽屉交互。抽屉内部改为三段式轻量表单，右侧固定显示接口预览和 Agent Ready。</p>
+          </div>
+          <div class="drawer-panel">
+            <div class="drawer-head">
+              <h2>添加 HTTP API</h2>
+              <button class="btn primary">保存并完成</button>
+            </div>
+            <div class="drawer-body">
+              <div class="steps">
+                <span class="step active"><b>1</b>接口来源</span>
+                <span class="step active"><b>2</b>工具信息</span>
+                <span class="step"><b>3</b>工具集</span>
+              </div>
+              <div class="split">
+                <div>
+                  <div class="mini-tabs"><span class="active">粘贴 cURL</span><span>填表单</span></div>
+                  <div class="field full">
+                    <label>cURL 命令</label>
+                    <textarea>curl -X GET "http://host.docker.internal:8080/proxy/uapis/weather?city=北京"</textarea>
+                    <span class="hint">从浏览器或接口文档复制 cURL，系统会解析方法、地址与参数。</span>
+                  </div>
+                  <button class="btn ghost" style="margin: 12px 0">识别接口信息</button>
+                  <div class="notice success">识别成功：已解析 GET、服务地址、路径与 1 个 query 参数。</div>
+
+                  <div class="form-grid">
+                    <div class="field">
+                      <label>工具名称 *</label>
+                      <input value="query_weather" />
+                    </div>
+                    <div class="field">
+                      <label>一句话说明 *</label>
+                      <input value="根据城市查询实时天气" />
+                    </div>
+                    <div class="field full">
+                      <label>业务意图</label>
+                      <textarea>当用户询问某个城市的实时天气时使用，不适合查询历史天气。</textarea>
+                    </div>
+                    <div class="field">
+                      <label>放入工具集</label>
+                      <select><option>新建工具集</option><option>加入已有工具集</option></select>
+                    </div>
+                    <div class="field">
+                      <label>工具集名称 *</label>
+                      <input value="weather_toolbox" />
+                    </div>
+                    <div class="field full">
+                      <label>工具集描述</label>
+                      <input value="天气查询相关 HTTP 工具" />
+                    </div>
+                  </div>
+                </div>
+                <aside class="preview">
+                  <h3>接口预览</h3>
+                  <div class="kv"><span>方法</span><b>GET</b></div>
+                  <div class="kv"><span>服务地址</span><b>http://host.docker.internal:8080</b></div>
+                  <div class="kv"><span>路径</span><b>/proxy/uapis/weather</b></div>
+                  <div class="kv"><span>入参</span><b>city query string</b></div>
+                  <div class="kv"><span>响应</span><b>200 object</b></div>
+                  <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+                  <h3>Agent Ready</h3>
+                  <div class="bar"><span style="width:45%"></span></div>
+                  <p><b>45%</b></p>
+                  <div class="tags">
+                    <span class="tag green">已识别接口结构</span>
+                    <span class="tag green">已填写工具名称</span>
+                    <span class="tag">缺少参数语义</span>
+                    <span class="tag">缺少输出语义</span>
+                    <span class="tag">缺少成功示例</span>
+                  </div>
+                </aside>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-title">
+            <div>
+              <h2>导入 OpenAPI</h2>
+              <div class="muted">批量导入时重点不是堆字段，而是先让用户选择接口、识别风险、设置默认 Agent 策略。</div>
+            </div>
+            <button class="btn primary">导入 2 个接口</button>
+          </div>
+          <div class="section-body">
+            <div class="split">
+              <div>
+                <div class="steps">
+                  <span class="step active"><b>1</b>文档来源</span>
+                  <span class="step active"><b>2</b>选择接口</span>
+                  <span class="step"><b>3</b>工具集设置</span>
+                </div>
+                <div class="mini-tabs"><span class="active">粘贴内容</span><span>上传文件</span><span>从 URL 获取</span></div>
+                <div class="code">openapi: 3.0.3
+info:
+  title: Weather API
+paths:
+  /weather:
+    get:
+      summary: 查询天气</div>
+                <div class="notice success">解析成功：OpenAPI 3.0.3 · 发现 6 个接口 · 服务地址已识别。</div>
+                <table class="table">
+                  <thead>
+                    <tr><th>选择</th><th>方法</th><th>路径</th><th>说明</th><th>风险</th><th>结构</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>☑</td><td>GET</td><td>/weather</td><td>查询天气</td><td><span class="tag green">低</span></td><td>1 入参</td></tr>
+                    <tr><td>☑</td><td>GET</td><td>/weather/history</td><td>查询历史天气</td><td><span class="tag green">低</span></td><td>2 入参</td></tr>
+                    <tr><td>☐</td><td>POST</td><td>/weather/alert</td><td>创建天气提醒</td><td><span class="tag amber">中</span></td><td>3 入参</td></tr>
+                    <tr><td>☐</td><td>DELETE</td><td>/weather/alert/{id}</td><td>删除天气提醒</td><td><span class="tag red">高</span></td><td>1 入参</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <aside class="preview">
+                <h3>工具集设置</h3>
+                <div class="field"><label>工具集名称 *</label><input value="Weather API 工具集"></div>
+                <div class="field"><label>工具集描述</label><textarea>天气查询与提醒相关接口。</textarea></div>
+                <div class="field"><label>分类</label><select><option>数据查询</option></select></div>
+                <h3 style="margin-top:16px">默认 Agent 策略</h3>
+                <div class="field"><label>Agent 可见性</label><select><option>可发现</option><option>不可见</option><option>可调用</option></select></div>
+                <div class="field"><label>调用策略</label><select><option>调用前确认</option><option>仅人工调用</option><option>允许自动调用</option></select></div>
+                <div class="field"><label>写操作默认策略</label><select><option>必须人工确认</option><option>禁止 Agent 调用</option></select></div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-title">
+            <div>
+              <h2>HTTP 工具详情页</h2>
+              <div class="muted">详情页负责补齐 Agent 契约，不把创建流程做重。</div>
+            </div>
+            <div class="actions"><button class="btn">调试</button><button class="btn primary">保存</button></div>
+          </div>
+          <div class="section-body">
+            <div class="detail-head">
+              <div>
+                <h2>查询天气</h2>
+                <p class="muted">HTTP / OpenAPI · GET /proxy/uapis/weather</p>
+              </div>
+              <div class="tags">
+                <span class="tag blue">未发布</span>
+                <span class="tag green">Agent 可发现</span>
+                <span class="tag amber">调用前确认</span>
+                <span class="tag green">Agent Ready 65%</span>
+              </div>
+            </div>
+
+            <div class="tabs">
+              <span class="tab">概览</span>
+              <span class="tab active">契约</span>
+              <span class="tab">调试</span>
+              <span class="tab">发布</span>
+            </div>
+
+            <div class="contract-grid">
+              <div>
+                <div class="form-grid">
+                  <div class="field full">
+                    <label>业务意图</label>
+                    <textarea>当用户询问某个城市的实时天气时使用。</textarea>
+                  </div>
+                  <div class="field full">
+                    <label>适用场景</label>
+                    <input value="查询实时天气；查询城市天气概况" />
+                  </div>
+                  <div class="field full">
+                    <label>不适用场景</label>
+                    <input value="查询历史天气；查询空气质量详情" />
+                  </div>
+                </div>
+
+                <h3 style="margin:18px 0 10px">输入语义</h3>
+                <table class="table">
+                  <thead><tr><th>参数名</th><th>位置</th><th>类型</th><th>必填</th><th>业务含义</th><th>示例</th></tr></thead>
+                  <tbody><tr><td>city</td><td>query</td><td>string</td><td>是</td><td>城市名称，如北京、上海</td><td>北京</td></tr></tbody>
+                </table>
+
+                <h3 style="margin:18px 0 10px">输出语义</h3>
+                <table class="table">
+                  <thead><tr><th>字段路径</th><th>类型</th><th>业务含义</th><th>示例</th></tr></thead>
+                  <tbody>
+                    <tr><td>weather</td><td>string</td><td>天气现象</td><td>晴</td></tr>
+                    <tr><td>temperature</td><td>number</td><td>当前温度，单位摄氏度</td><td>26</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <aside class="preview">
+                <h3>Agent 可用性</h3>
+                <div class="bar"><span style="width:65%"></span></div>
+                <p><b>65%</b></p>
+                <div class="field"><label>副作用</label><select><option>只读</option><option>写入</option><option>外部动作</option></select></div>
+                <div class="field"><label>风险等级</label><select><option>低</option><option>中</option><option>高</option></select></div>
+                <div class="field"><label>Agent 可见性</label><select><option>可发现</option><option>不可见</option><option>可调用</option></select></div>
+                <div class="field"><label>调用策略</label><select><option>调用前确认</option><option>仅人工调用</option><option>允许自动调用</option></select></div>
+                <h3 style="margin-top:16px">待完善</h3>
+                <div class="checklist">
+                  <div class="check"><span>成功验证示例</span><span class="tag amber">缺少</span></div>
+                  <div class="check"><span>发布状态</span><span class="tag">未发布</span></div>
+                  <div class="check"><span>输出语义</span><span class="tag green">已填写</span></div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-title">
+            <div>
+              <h2>调试与发布</h2>
+              <div class="muted">调试成功要能沉淀为 Agent 示例；发布时区分资源发布和 Agent 可用策略。</div>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="split">
+              <div class="preview">
+                <h3>调试</h3>
+                <div class="field"><label>city</label><input value="北京" /></div>
+                <button class="btn primary" style="margin:12px 0">运行调试</button>
+                <div class="notice success">调试成功 · 128ms</div>
+                <div class="code">{
+  "weather": "晴",
+  "temperature": 26
+}</div>
+                <button class="btn" style="margin-top:12px">保存为成功示例</button>
+              </div>
+              <div class="preview">
+                <h3>发布与 Agent 治理</h3>
+                <div class="summary-grid" style="grid-template-columns:1fr 1fr">
+                  <div class="summary"><span class="muted">资源状态</span><strong>未发布</strong></div>
+                  <div class="summary"><span class="muted">Agent 状态</span><strong>可发现</strong></div>
+                </div>
+                <div class="checklist">
+                  <div class="check"><span>接口结构完整</span><span class="tag green">通过</span></div>
+                  <div class="check"><span>业务意图</span><span class="tag green">通过</span></div>
+                  <div class="check"><span>输入语义</span><span class="tag green">通过</span></div>
+                  <div class="check"><span>输出语义</span><span class="tag green">通过</span></div>
+                  <div class="check"><span>成功验证示例</span><span class="tag amber">建议补齐</span></div>
+                </div>
+                <div class="actions" style="margin-top:16px">
+                  <button class="btn">保存策略</button>
+                  <button class="btn primary">发布并保持 Agent 可发现</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
