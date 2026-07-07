@@ -319,6 +319,7 @@ export const executionFactoryEnUS = {
     createMcpDrawerTitle: "New MCP",
     editMcpDrawerTitle: "Edit MCP",
     exportSuccess: "Export completed",
+    exportDisabledUntilPublished: "Publish before exporting a backup",
     downloadSuccess: "Download completed",
     updateSkillPackageTitle: "Update Skill package: {{name}}",
     skillPackageUpdateSuccess: "Skill package updated",

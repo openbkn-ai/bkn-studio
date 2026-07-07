@@ -49,14 +49,18 @@ function pushMenuAction(
   onAction: ExecutionUnitCardMenuProps["onAction"],
   action: ExecutionUnitCardAction,
   item: ExecutionUnitCardItem,
-  options?: { danger?: boolean },
+  options?: { danger?: boolean; disabled?: boolean; disabledReason?: string },
 ) {
   menuItems?.push({
     key,
     danger: options?.danger,
-    label,
+    disabled: options?.disabled,
+    label: options?.disabledReason ? <span title={options.disabledReason}>{label}</span> : label,
     onClick: ({ domEvent }) => {
       domEvent.stopPropagation();
+      if (options?.disabled) {
+        return;
+      }
       onAction(action, item);
     },
   });
@@ -191,6 +195,7 @@ export function ExecutionUnitCardMenu({
   }
 
   if (activeTab === "operator" || activeTab === "toolbox" || activeTab === "mcp") {
+    const exportDisabled = activeTab === "toolbox" && item.status !== "published";
     pushMenuAction(
       menuItems,
       "export",
@@ -198,6 +203,12 @@ export function ExecutionUnitCardMenu({
       onAction,
       "export",
       item,
+      exportDisabled
+        ? {
+            disabled: true,
+            disabledReason: t("executionFactory.exportDisabledUntilPublished"),
+          }
+        : undefined,
     );
   }
 
