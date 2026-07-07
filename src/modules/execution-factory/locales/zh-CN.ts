@@ -315,6 +315,7 @@ export const executionFactoryZhCN = {
     createMcpDrawerTitle: "新建 MCP",
     editMcpDrawerTitle: "编辑 MCP",
     exportSuccess: "导出成功",
+    exportDisabledUntilPublished: "发布后可导出备份",
     downloadSuccess: "下载成功",
     updateSkillPackageTitle: "更新 Skill 包：{{name}}",
     skillPackageUpdateSuccess: "Skill 包更新成功",

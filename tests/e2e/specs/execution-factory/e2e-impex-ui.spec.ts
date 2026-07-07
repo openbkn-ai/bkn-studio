@@ -11,7 +11,10 @@ import {
   buildImpexImportName,
 } from "../../helpers/impex";
 import {
+  debugToolFromToolsPage,
+  executionUnitCard,
   exportFromCardMenu,
+  gotoToolboxToolsPage,
   gotoUnitsTab,
   importBackupFileViaUi,
 } from "../../helpers/execution-unit-ui";
@@ -134,9 +137,31 @@ test.describe("Execution Factory — Impex UI E2E flows", () => {
   test("IMPEX-UI-03: export toolbox backup from card menu", async ({ page, request }) => {
     const toolbox = await createToolboxViaApi(request, buildToolboxName("ui_export"));
     createdBoxIds.push(toolbox.boxId);
+    await createToolViaApi(request, toolbox.boxId, buildToolboxName("ui_export_tool"));
+    await publishToolboxViaApi(request, toolbox.boxId);
 
     await gotoUnitsTab(page, "toolbox");
     await exportFromCardMenu(page, toolbox.name, "toolbox");
+  });
+
+  test("IMPEX-UI-03b: unpublished toolbox export action is disabled with guidance", async ({
+    page,
+    request,
+  }) => {
+    const toolbox = await createToolboxViaApi(request, buildToolboxName("ui_export_draft"));
+    createdBoxIds.push(toolbox.boxId);
+
+    await gotoUnitsTab(page, "toolbox");
+    const card = executionUnitCard(page, toolbox.name);
+    await card.getByRole("button", { name: /更多操作|More/i }).click();
+    const menu = page.getByRole("menu").last();
+    await expect(menu).toBeVisible();
+    const exportItem = menu.getByRole("menuitem", { name: /导出|Export/i });
+    await expect(exportItem).toHaveAttribute("aria-disabled", "true");
+    await expect(exportItem.locator("[title]").first()).toHaveAttribute(
+      "title",
+      /发布后可导出备份|Publish before exporting a backup/i,
+    );
   });
 
   test("IMPEX-UI-04: export MCP backup from card menu", async ({ page, request }) => {
@@ -161,6 +186,7 @@ test.describe("Execution Factory — Impex UI E2E flows", () => {
   }) => {
     const toolbox = await createToolboxViaApi(request, buildToolboxName("ui_roundtrip"));
     createdBoxIds.push(toolbox.boxId);
+    await createToolViaApi(request, toolbox.boxId, buildToolboxName("ui_roundtrip_tool"));
     await publishToolboxViaApi(request, toolbox.boxId);
 
     const exported = (await exportToolboxViaApi(request, toolbox.boxId)) as Record<string, unknown>;
@@ -184,6 +210,25 @@ test.describe("Execution Factory — Impex UI E2E flows", () => {
     expect(imported?.box_id).toBeTruthy();
     if (imported?.box_id) {
       createdBoxIds.push(imported.box_id);
+      const tools = await request.get(
+        apiUrl(`/tool-box/${imported.box_id}/tools/list?page=1&page_size=20`),
+        { headers: { "x-business-domain": "bd_public" } },
+      );
+      expect(tools.ok()).toBeTruthy();
+      const toolsBody = (await tools.json()) as {
+        data?: Array<{ tool_id: string; tool_name?: string; name?: string }>;
+        tools?: Array<{ tool_id: string; tool_name?: string; name?: string }>;
+      };
+      const firstTool = (toolsBody.tools ?? toolsBody.data ?? [])[0];
+      const toolName = firstTool?.tool_name ?? firstTool?.name ?? "";
+      expect(toolName).toBeTruthy();
+
+      await gotoToolboxToolsPage(page, imported.box_id, importName);
+      const debugResponse = await debugToolFromToolsPage(page, imported.box_id, {
+        toolName,
+        fromListItem: true,
+      });
+      expect(debugResponse.ok()).toBeTruthy();
     }
   });
 });
