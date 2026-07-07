@@ -518,6 +518,8 @@ export function ImportResourceModal({
 
                   rows={8}
 
+                  showEndpointReview
+
                   value={openapiSpec}
 
                 />
