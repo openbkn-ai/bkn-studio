@@ -636,6 +636,12 @@ export async function fillAndSubmitQuickAddApi(
   const errorToast = page
     .locator(".ant-message-notice-content")
     .filter({ hasText: /失败|错误|error|invalid/i });
+  const nextSteps = drawer.getByTestId("capability-created-next-steps");
+  await expect(nextSteps).toBeVisible({ timeout: 180_000 });
+  await expect(nextSteps).toContainText(options.summary);
+  await expect(nextSteps).toContainText(options.toolboxName);
+  await nextSteps.locator("button").first().click();
+
   await expect(page).toHaveURL(/\/execution-factory\/toolboxes\/[^/]+\/tools/, {
     timeout: 180_000,
   });
