@@ -79,6 +79,27 @@ describe("capability-manifest", () => {
     ]);
   });
 
+  it("marks sensitive read-only tools with data sensitivity hints", () => {
+    const manifest = buildToolCapabilityManifest({
+      toolId: "tool-container-logs",
+      name: "Read container logs",
+      description: "Read recent error logs from a container.",
+      status: "enabled",
+      metadataType: "openapi",
+      method: "GET",
+      path: "/ops/container/logs",
+      useRule: "Use during production incident triage.",
+      ioSpec: {
+        parameters: [{ name: "container", description: "Container name." }],
+        responses: { "200": { description: "Recent log lines." } },
+      },
+    });
+
+    expect(manifest.sideEffects).toBe("read");
+    expect(manifest.riskLevel).toBe("low");
+    expect(manifest.dataSensitivity).toBe("possible_sensitive");
+  });
+
   it("maps an MCP tool schema into argument semantics", () => {
     const tool: McpProxyTool = {
       name: "list_orders",
@@ -213,4 +234,3 @@ describe("capability-manifest", () => {
     expect(readiness.missing).toEqual([]);
   });
 });
-

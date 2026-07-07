@@ -16,6 +16,11 @@ export type CapabilitySideEffect =
 
 export type CapabilityRiskLevel = "low" | "medium" | "high";
 
+export type CapabilityDataSensitivity =
+  | "normal"
+  | "possible_sensitive"
+  | "high_sensitive";
+
 export type CapabilityTestStatus = "untested" | "passed" | "failed" | "stale";
 
 export type AgentVisibility = "hidden" | "discoverable" | "callable";
@@ -74,6 +79,7 @@ export type CapabilityManifest = {
   sideEffects?: CapabilitySideEffect;
   authRequirements?: string[];
   riskLevel?: CapabilityRiskLevel;
+  dataSensitivity?: CapabilityDataSensitivity;
   testStatus?: CapabilityTestStatus;
   agentVisibility?: AgentVisibility;
   agentInvokePolicy?: AgentInvokePolicy;
@@ -85,4 +91,3 @@ export type CapabilityReadiness = {
   level: "low" | "medium" | "high";
   missing: string[];
 };
-

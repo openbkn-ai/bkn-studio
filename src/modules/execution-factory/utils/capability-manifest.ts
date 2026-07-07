@@ -6,6 +6,7 @@
  */
 
 import type {
+  CapabilityDataSensitivity,
   CapabilityInputSemantic,
   CapabilityManifest,
   CapabilityOutputSemantic,
@@ -89,6 +90,62 @@ function inferToolRisk(tool: ToolDetail): CapabilityManifest["riskLevel"] {
   return inferToolSideEffect(tool) === "read" ? "low" : "medium";
 }
 
+const POSSIBLE_SENSITIVE_KEYWORDS = [
+  "audit",
+  "log",
+  "logs",
+  "trace",
+  "traces",
+];
+
+const HIGH_SENSITIVE_KEYWORDS = [
+  "credential",
+  "credentials",
+  "customer",
+  "finance",
+  "financial",
+  "invoice",
+  "password",
+  "secret",
+  "token",
+  "user",
+  "users",
+  "order",
+  "orders",
+];
+
+function includesKeyword(text: string, keywords: string[]) {
+  return keywords.some((keyword) => text.includes(keyword));
+}
+
+function inferToolDataSensitivity(tool: ToolDetail): CapabilityDataSensitivity {
+  const semanticText = [
+    tool.name,
+    tool.description,
+    tool.useRule,
+    tool.path,
+    tool.serverUrl,
+    ...(tool.ioSpec?.parameters ?? []).flatMap((parameter) => [
+      parameter.name,
+      parameter.description,
+    ]),
+    ...Object.values(tool.ioSpec?.responses ?? {}).map((response) => response.description),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (includesKeyword(semanticText, HIGH_SENSITIVE_KEYWORDS)) {
+    return "high_sensitive";
+  }
+
+  if (includesKeyword(semanticText, POSSIBLE_SENSITIVE_KEYWORDS)) {
+    return "possible_sensitive";
+  }
+
+  return "normal";
+}
+
 export function buildToolCapabilityManifest(tool: ToolDetail): CapabilityManifest {
   return {
     id: `tool:${tool.toolId}`,
@@ -103,6 +160,7 @@ export function buildToolCapabilityManifest(tool: ToolDetail): CapabilityManifes
     outputSemantics: buildToolOutputs(tool),
     sideEffects: inferToolSideEffect(tool),
     riskLevel: inferToolRisk(tool),
+    dataSensitivity: inferToolDataSensitivity(tool),
     testStatus: "untested",
     agentVisibility: tool.status === "enabled" ? "discoverable" : "hidden",
     agentInvokePolicy: "approval_required",
@@ -241,4 +299,3 @@ export function getCapabilityReadiness(manifest: CapabilityManifest): Capability
     missing,
   };
 }
-
