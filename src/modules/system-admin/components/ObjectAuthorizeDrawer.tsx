@@ -130,10 +130,9 @@ export function ObjectAuthorizeDrawer({
   const loadRemote = useCallback(async () => {
     setLoading(true);
     try {
-      const grantList = await listObjectGrants();
-      const filtered = filterObjectGrants(grantList, objType, objId);
-      setGrants(filtered);
-      await syncLookup(filtered.map((grant) => grant.accessorId));
+      const grantList = await listObjectGrants({ resourceType: objType, resourceId: objId });
+      setGrants(grantList);
+      await syncLookup(grantList.map((grant) => grant.accessorId));
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
