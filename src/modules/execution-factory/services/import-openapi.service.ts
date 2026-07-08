@@ -17,6 +17,12 @@ import {
 
   analyzeOpenApiDocumentText,
 
+  normalizeGeneratedToolboxDescription,
+
+  rewriteOpenApiOperationSummaries,
+
+  rewriteOpenApiServerUrl,
+
   validateOpenApiDocumentText,
 
 } from "@/modules/execution-factory/utils/metadata-content";
@@ -130,6 +136,10 @@ export async function registerOpenApiImport(
 
 
   const serviceUrl = resolveServiceUrl(openapiSpec, input.serviceUrl);
+  const normalizedOpenapiSpec = rewriteOpenApiOperationSummaries(
+    rewriteOpenApiServerUrl(openapiSpec, serviceUrl),
+  );
+  const toolboxDescription = normalizeGeneratedToolboxDescription(input.toolboxDescription);
 
 
 
@@ -147,7 +157,7 @@ export async function registerOpenApiImport(
 
     const bundle = await registerOpenApiBundle({
 
-      openapiSpec,
+      openapiSpec: normalizedOpenapiSpec,
 
       serviceUrl,
 
@@ -155,7 +165,7 @@ export async function registerOpenApiImport(
 
       toolboxName,
 
-      toolboxDescription: input.toolboxDescription,
+      toolboxDescription,
 
       category: input.category,
 
@@ -207,7 +217,7 @@ export async function registerOpenApiImport(
 
       name: toolboxName,
 
-      description: input.toolboxDescription,
+      description: toolboxDescription,
 
       category: input.category ?? "other_category",
 
@@ -223,7 +233,7 @@ export async function registerOpenApiImport(
 
 
 
-  const result = await importOpenApiTools(boxId, openapiSpec, input.useRule);
+  const result = await importOpenApiTools(boxId, normalizedOpenapiSpec, input.useRule);
 
 
 

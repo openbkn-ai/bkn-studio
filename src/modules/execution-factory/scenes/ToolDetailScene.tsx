@@ -8,7 +8,7 @@
 import { Alert, Collapse, Form, Input, Spin } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import type { ToolDetailSceneProps } from "@/modules/execution-factory/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -51,6 +51,7 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
   const { t } = useTranslation();
   const { message } = useAppServices();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm<ToolFormValues>();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -97,6 +98,12 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
       }
     })();
   }, [boxId, form, toolId]);
+
+  useEffect(() => {
+    if (!loading && !loadError && searchParams.get("focus") === "debug") {
+      setDebugOpen(true);
+    }
+  }, [loadError, loading, searchParams]);
 
   const handleBack = () => {
     if (onBack) {
