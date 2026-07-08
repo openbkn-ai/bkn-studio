@@ -10,15 +10,18 @@ import {
   AppstoreOutlined,
   DeleteOutlined,
   DownOutlined,
+  LeftOutlined,
   PlusOutlined,
+  RightOutlined,
 } from "@ant-design/icons";
-import { Form, Input, Modal } from "antd";
+import { Form, Input, Modal, Tabs, Tooltip } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { AppButton } from "@/framework/ui/common/AppButton";
 import { isBuiltinLogicalCatalog } from "@/modules/data-catalog/lib/logical-catalog";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import {
@@ -35,10 +38,15 @@ export type CatalogTreeSelection =
   | { id: string; type: "resource" };
 
 type CatalogTreePanelProps = {
+  activeDb?: string;
+  activeSchema?: string;
   catalogs: CatalogRecord[];
+  collapsed?: boolean;
   connectorTypes: DataConnectConnectorType[];
   onRefresh: () => Promise<void> | void;
   onSelectCatalog: (catalogId: string) => void;
+  onSelectScope?: (scope: { database?: string; schema?: string } | null) => void;
+  onToggleCollapsed?: () => void;
   resourceCount: number;
   resources: CatalogResource[];
   scanningCatalogIds: string[];
@@ -57,10 +65,15 @@ type LogicalFormValues = {
 };
 
 export function CatalogTreePanel({
+  activeDb = "",
+  activeSchema = "",
   catalogs,
+  collapsed = false,
   connectorTypes,
   onRefresh,
   onSelectCatalog,
+  onSelectScope,
+  onToggleCollapsed,
   resourceCount,
   resources,
   scanningCatalogIds,
@@ -88,6 +101,40 @@ export function CatalogTreePanel({
     }
     return resources.find((item) => item.id === selection.id)?.catalogId;
   }, [resources, selection]);
+
+  const scopeGroups = useMemo(() => {
+    if (!selectedCatalogId) {
+      return [];
+    }
+    const scoped = resources.filter((item) => item.catalogId === selectedCatalogId);
+    const group = new Map<string, Set<string>>();
+    scoped.forEach((item) => {
+      const raw = (item.sourceIdentifier ?? "").trim();
+      const fromMatch = raw.match(/\bfrom\s+([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+){0,2})/i);
+      const candidate = (fromMatch?.[1] ?? raw).trim();
+      const parts = candidate
+        .split(".")
+        .map((part) => part.trim().match(/[A-Za-z0-9_]+/g)?.[0] ?? "")
+        .filter(Boolean);
+      if (parts.length >= 2) {
+        const db = parts[0];
+        const schema = parts.length >= 3 ? parts[1] : "";
+        if (!group.has(db)) {
+          group.set(db, new Set());
+        }
+        if (schema) {
+          group.get(db)?.add(schema);
+        }
+      }
+    });
+
+    return [...group.entries()]
+      .map(([db, schemas]) => ({
+        db,
+        schemas: [...schemas].sort((a, b) => a.localeCompare(b, "zh-CN")),
+      }))
+      .sort((a, b) => a.db.localeCompare(b.db, "zh-CN"));
+  }, [resources, selectedCatalogId]);
 
   const query = keyword.trim().toLowerCase();
 
@@ -236,55 +283,98 @@ export function CatalogTreePanel({
     const builtin = !isPhysical && isBuiltinLogicalCatalog(catalog);
 
     return (
-      <div
-        className={[
-          styles.treeNode,
-          options?.indented ? styles.treeNodeCatalog : styles.treeNodeLogical,
-          isSelected ? styles.treeNodeSelected : "",
-          isPhysical && !catalog.enabled ? styles.treeNodeOff : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        key={catalog.id}
-        onClick={() => onSelectCatalog(catalog.id)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            onSelectCatalog(catalog.id);
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        title={catalog.name}
-      >
-        <span className={styles.treeNodeIcon}>
-          {isPhysical ? <ApiOutlined /> : <AppstoreOutlined />}
-        </span>
-        <span className={styles.treeNodeName}>{catalog.name}</span>
-        {scanning ? (
-          <span className={[styles.treeMiniTag, styles.treeMiniTagScan].join(" ")}>
-            {t("dataCatalog.tree.scanning")}
+      <div key={catalog.id}>
+        <div
+          className={[
+            styles.treeNode,
+            options?.indented ? styles.treeNodeCatalog : styles.treeNodeLogical,
+            isSelected ? styles.treeNodeSelected : "",
+            isPhysical && !catalog.enabled ? styles.treeNodeOff : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          onClick={() => onSelectCatalog(catalog.id)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              onSelectCatalog(catalog.id);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          title={catalog.name}
+        >
+          <span className={styles.treeNodeIcon}>
+            {isPhysical ? <ApiOutlined /> : <AppstoreOutlined />}
           </span>
-        ) : null}
-        {isPhysical && !catalog.enabled ? (
-          <span className={styles.treeMiniTag}>{t("common.disabled")}</span>
-        ) : null}
-        {builtin ? (
-          <span className={styles.treeMiniTag}>{t("dataCatalog.tree.builtin")}</span>
-        ) : options?.showDelete ? (
-          <PermissionGate permissions="catalog:delete">
-            <button
-              aria-label={t("common.delete")}
-              className={styles.treeActionBtnVisible}
-              onClick={(event) => {
-                event.stopPropagation();
-                handleDeleteLogical(catalog);
-              }}
-              title={t("common.delete")}
-              type="button"
-            >
-              <DeleteOutlined />
-            </button>
-          </PermissionGate>
+          <span className={styles.treeNodeName}>{catalog.name}</span>
+          {scanning ? (
+            <span className={[styles.treeMiniTag, styles.treeMiniTagScan].join(" ")}>
+              {t("dataCatalog.tree.scanning")}
+            </span>
+          ) : null}
+          {isPhysical && !catalog.enabled ? (
+            <span className={styles.treeMiniTag}>{t("common.disabled")}</span>
+          ) : null}
+          {builtin ? (
+            <span className={styles.treeMiniTag}>{t("dataCatalog.tree.builtin")}</span>
+          ) : options?.showDelete ? (
+            <PermissionGate permissions="catalog:delete">
+              <button
+                aria-label={t("common.delete")}
+                className={styles.treeActionBtnVisible}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleDeleteLogical(catalog);
+                }}
+                title={t("common.delete")}
+                type="button"
+              >
+                <DeleteOutlined />
+              </button>
+            </PermissionGate>
+          ) : null}
+        </div>
+        {isSelected && isPhysical && scopeGroups.length > 0 ? (
+          <div className={styles.scopeBlock}>
+            {scopeGroups.map((group) => (
+              <div key={group.db} className={styles.scopeGroup}>
+                <div
+                  className={[
+                    styles.scopeNode,
+                    activeDb === group.db && !activeSchema ? styles.scopeNodeActive : "",
+                  ].join(" ")}
+                  onClick={() => onSelectScope?.({ database: group.db })}
+                  role="button"
+                  tabIndex={0}
+                  title={group.db}
+                >
+                  <span className={styles.scopeNodeName}>{group.db}</span>
+                </div>
+                {group.schemas.length > 0 ? (
+                  <div className={styles.scopeChildren}>
+                    {group.schemas.map((schema) => (
+                      <div
+                        key={`${group.db}.${schema}`}
+                        className={[
+                          styles.scopeNode,
+                          styles.scopeNodeChild,
+                          activeDb === group.db && activeSchema === schema
+                            ? styles.scopeNodeActive
+                            : "",
+                        ].join(" ")}
+                        onClick={() => onSelectScope?.({ database: group.db, schema })}
+                        role="button"
+                        tabIndex={0}
+                        title={schema}
+                      >
+                        <span className={styles.scopeNodeName}>{schema}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
         ) : null}
       </div>
     );
@@ -337,11 +427,55 @@ export function CatalogTreePanel({
   };
 
   const hasAny = physicalGroups.length > 0 || logicalCatalogs.length > 0;
+  const hasPhysical = physicalGroups.length > 0;
+  const hasLogical = logicalCatalogs.length > 0;
+  const [activeTab, setActiveTab] = useState<"physical" | "logical">(() =>
+    hasPhysical ? "physical" : "logical",
+  );
+
+  useEffect(() => {
+    if (activeTab === "physical" && !hasPhysical && hasLogical) {
+      setActiveTab("logical");
+    }
+    if (activeTab === "logical" && !hasLogical && hasPhysical) {
+      setActiveTab("physical");
+    }
+  }, [activeTab, hasLogical, hasPhysical]);
+
+  if (collapsed) {
+    return (
+      <aside className={[styles.treePanel, styles.treePanelCollapsed].join(" ")}>
+        <div className={styles.treeCollapsedHead}>
+          <Tooltip title={t("dataCatalog.title")}>
+            <span className={styles.treeCollapsedIcon}>
+              <ApiOutlined />
+            </span>
+          </Tooltip>
+          <AppButton
+            aria-label={t("dataCatalog.tree.expand")}
+            className={styles.treeCollapseBtn}
+            icon={<RightOutlined />}
+            onClick={() => onToggleCollapsed?.()}
+          />
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className={styles.treePanel}>
       <div className={styles.treeHead}>
         <span className={styles.treeHeadTitle}>{t("dataCatalog.title")}</span>
+        <div className={styles.treeHeadActions}>
+          <Tooltip title={t("dataCatalog.tree.collapse")}>
+            <AppButton
+              aria-label={t("dataCatalog.tree.collapse")}
+              className={styles.treeCollapseBtn}
+              icon={<LeftOutlined />}
+              onClick={() => onToggleCollapsed?.()}
+            />
+          </Tooltip>
+        </div>
       </div>
       <Input
         allowClear
@@ -358,54 +492,74 @@ export function CatalogTreePanel({
               : t("dataCatalog.tree.empty")}
           </div>
         ) : (
-          <>
-            <div className={styles.treeBlock}>
-              <div className={styles.treeSection}>
-                <span>{t("dataCatalog.tree.physicalGroup")}</span>
-              </div>
-              <div className={styles.treeBlockBody}>
-                {physicalGroups.length === 0 ? (
-                  <div className={styles.treeEmptyHint}>
-                    {t("dataCatalog.tree.emptyPhysicalGroup")}
+          <Tabs
+            activeKey={activeTab}
+            className={styles.treeTabs}
+            items={[
+              {
+                key: "physical",
+                label: (
+                  <span className={styles.treeTabLabel}>
+                    {t("dataCatalog.tree.physicalGroup")}
+                    <span className={styles.treeTabCount}>{physicalCatalogs.length}</span>
+                  </span>
+                ),
+                children: (
+                  <div className={styles.treeTabScroll}>
+                    {physicalGroups.length === 0 ? (
+                      <div className={styles.treeEmptyHint}>
+                        {t("dataCatalog.tree.emptyPhysicalGroup")}
+                      </div>
+                    ) : (
+                      physicalGroups.map(renderPhysicalGroup)
+                    )}
                   </div>
-                ) : (
-                  physicalGroups.map(renderPhysicalGroup)
-                )}
-              </div>
-            </div>
-            <div className={styles.treeBlock}>
-              <div className={styles.treeSection}>
-                <span>{t("dataCatalog.tree.logicalGroup")}</span>
-                <div className={styles.treeSectionActions}>
-                  <PermissionGate permissions="catalog:create">
-                    <button
-                      aria-label={t("dataCatalog.tree.addLogical")}
-                      className={styles.treeSectionBtn}
-                      onClick={() => {
-                        form.resetFields();
-                        setCreateOpen(true);
-                      }}
-                      title={t("dataCatalog.tree.addLogical")}
-                      type="button"
-                    >
-                      <PlusOutlined />
-                    </button>
-                  </PermissionGate>
-                </div>
-              </div>
-              <div className={styles.treeBlockBody}>
-                {logicalCatalogs.length === 0 ? (
-                  <div className={styles.treeEmptyHint}>
-                    {t("dataCatalog.tree.emptyLogicalGroup")}
+                ),
+              },
+              {
+                key: "logical",
+                label: (
+                  <span className={styles.treeTabLabel}>
+                    {t("dataCatalog.tree.logicalGroup")}
+                    <span className={styles.treeTabCount}>{logicalCatalogs.length}</span>
+                  </span>
+                ),
+                children: (
+                  <div className={styles.treeTabScroll}>
+                    {logicalCatalogs.length === 0 ? (
+                      <div className={styles.treeEmptyHint}>
+                        {t("dataCatalog.tree.emptyLogicalGroup")}
+                      </div>
+                    ) : (
+                      logicalCatalogs.map((catalog) =>
+                        renderCatalogLeaf(catalog, { showDelete: true }),
+                      )
+                    )}
                   </div>
-                ) : (
-                  logicalCatalogs.map((catalog) =>
-                    renderCatalogLeaf(catalog, { showDelete: true }),
-                  )
-                )}
-              </div>
-            </div>
-          </>
+                ),
+              },
+            ]}
+            tabBarExtraContent={
+              activeTab === "logical" ? (
+                <PermissionGate permissions="catalog:create">
+                  <button
+                    aria-label={t("dataCatalog.tree.addLogical")}
+                    className={styles.treeSectionBtn}
+                    onClick={() => {
+                      form.resetFields();
+                      setCreateOpen(true);
+                    }}
+                    title={t("dataCatalog.tree.addLogical")}
+                    type="button"
+                  >
+                    <PlusOutlined />
+                  </button>
+                </PermissionGate>
+              ) : null
+            }
+            onChange={(key) => setActiveTab(key as "physical" | "logical")}
+            size="small"
+          />
         )}
       </div>
       <div className={styles.treeFoot}>

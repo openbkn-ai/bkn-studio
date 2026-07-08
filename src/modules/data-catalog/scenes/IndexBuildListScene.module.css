@@ -494,3 +494,39 @@
   white-space: nowrap;
 }
 
+.resizableHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  padding-right: 10px;
+}
+
+.resizeHandle {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  bottom: -8px;
+  width: 12px;
+  cursor: col-resize;
+  user-select: none;
+}
+
+.resizeHandle::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 50%;
+  width: 1px;
+  background: #d9e0ea;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.tableSurface :global(.ant-table-thead > tr > th:hover) .resizeHandle::after {
+  opacity: 1;
+}
+

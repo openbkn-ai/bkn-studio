@@ -1,10 +1,14 @@
 .explorer {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: var(--data-catalog-tree-width, 320px) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
   padding: 16px 16px 20px;
   background: #ffffff;
+}
+
+.explorerCollapsed {
+  --data-catalog-tree-width: 44px;
 }
 
 .detailSurface {

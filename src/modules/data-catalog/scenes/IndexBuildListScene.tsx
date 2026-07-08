@@ -12,7 +12,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Dropdown, Input, Select, Space, Tooltip } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -85,6 +85,27 @@ export function IndexBuildListScene() {
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [taskColumnWidth, setTaskColumnWidth] = useState(() => {
+    try {
+      const value = window.localStorage.getItem("index-builds.colWidth.task");
+      const parsed = value ? Number(value) : NaN;
+      return Number.isFinite(parsed) && parsed >= 120 ? parsed : 152;
+    } catch {
+      return 152;
+    }
+  });
+  const [resourceColumnWidth, setResourceColumnWidth] = useState(() => {
+    try {
+      const value = window.localStorage.getItem("index-builds.colWidth.resource");
+      const parsed = value ? Number(value) : NaN;
+      return Number.isFinite(parsed) && parsed >= 160 ? parsed : 240;
+    } catch {
+      return 240;
+    }
+  });
+  const resizingRef = useRef<{ key: "task" | "resource"; startX: number; startWidth: number } | null>(
+    null,
+  );
 
   const listFilters = useMemo(
     () => readIndexBuildListFilters(searchParams),
@@ -284,6 +305,42 @@ export function IndexBuildListScene() {
   const sortOrderOf = (key: BuildTaskOrderBy): "ascend" | "descend" | null =>
     orderBy === key ? (order === "asc" ? "ascend" : "descend") : null;
 
+  useEffect(() => {
+    const handleMove = (event: MouseEvent) => {
+      if (!resizingRef.current) {
+        return;
+      }
+      const delta = event.clientX - resizingRef.current.startX;
+      const next = Math.max(120, resizingRef.current.startWidth + delta);
+      if (resizingRef.current.key === "task") {
+        setTaskColumnWidth(next);
+      } else {
+        setResourceColumnWidth(Math.max(160, next));
+      }
+    };
+
+    const handleUp = () => {
+      if (!resizingRef.current) {
+        return;
+      }
+      const current = resizingRef.current;
+      resizingRef.current = null;
+      try {
+        const width = current.key === "task" ? taskColumnWidth : resourceColumnWidth;
+        window.localStorage.setItem(`index-builds.colWidth.${current.key}`, String(width));
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [resourceColumnWidth, taskColumnWidth]);
+
   // 列头排序:有方向 → order_by=列key + order;清除 → 回 default(不显箭头)。
   const handleTableChange: TableProps<BuildTask>["onChange"] = (
     _pagination,
@@ -309,12 +366,46 @@ export function IndexBuildListScene() {
     {
       dataIndex: "id",
       title: t("dataCatalog.task.column"),
-      width: 152,
+      width: taskColumnWidth,
+      onHeaderCell: () => ({ style: { position: "relative" } }),
+      title: (
+        <div className={sceneStyles.resizableHeader}>
+          <span>{t("dataCatalog.task.column")}</span>
+          <span
+            className={sceneStyles.resizeHandle}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              resizingRef.current = { key: "task", startX: event.clientX, startWidth: taskColumnWidth };
+            }}
+            role="separator"
+          />
+        </div>
+      ),
       render: (value: string) => <EllipsisText text={value} />,
     },
     {
       dataIndex: "resourceId",
-      title: t("dataCatalog.build.resource"),
+      width: resourceColumnWidth,
+      onHeaderCell: () => ({ style: { position: "relative" } }),
+      title: (
+        <div className={sceneStyles.resizableHeader}>
+          <span>{t("dataCatalog.build.resource")}</span>
+          <span
+            className={sceneStyles.resizeHandle}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              resizingRef.current = {
+                key: "resource",
+                startX: event.clientX,
+                startWidth: resourceColumnWidth,
+              };
+            }}
+            role="separator"
+          />
+        </div>
+      ),
       render: (value: string) => {
         const resource = resourceMap.get(value);
         const label = resource?.name ?? value;
