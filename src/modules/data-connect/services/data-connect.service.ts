@@ -227,15 +227,14 @@ export async function deleteDataConnectRecord(id: string) {
 export async function createDataConnectRecord(input: DataConnectMutationPayload) {
   if (useMock) {
     const connectorType = mockConnectorTypes.find((item) => item.type === input.connectorType);
-    await createPhysicalCatalog({
+    return createPhysicalCatalog({
       ...input,
       category: connectorType?.category ?? inferConnectorCategory(input.connectorType),
       mode: connectorType?.mode ?? "local",
     });
-    return;
   }
 
-  await createPhysicalCatalog(input);
+  return createPhysicalCatalog(input);
 }
 
 export { createLogicalCatalog };

@@ -201,10 +201,11 @@ export async function createPhysicalCatalog(input: {
   tags: string[];
   category?: string;
   mode?: string;
-}) {
+}): Promise<string> {
   if (useMock) {
+    const id = crypto.randomUUID();
     prependMockCatalog({
-      id: crypto.randomUUID(),
+      id,
       name: input.name,
       description: input.description,
       connectorType: input.connectorType,
@@ -226,10 +227,10 @@ export async function createPhysicalCatalog(input: {
       type: "physical",
     });
     await wait(undefined);
-    return;
+    return id;
   }
 
-  await http.post("/vega-backend/v1/catalogs", {
+  const response = await http.post<{ id?: string }>("/vega-backend/v1/catalogs", {
     connector_config: input.connectorConfig,
     connector_type: input.connectorType,
     description: input.description,
@@ -237,6 +238,8 @@ export async function createPhysicalCatalog(input: {
     name: input.name,
     tags: input.tags,
   });
+
+  return response.data.id ?? "";
 }
 
 export async function testCatalogConnection(id: string) {

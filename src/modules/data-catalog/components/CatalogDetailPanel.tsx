@@ -8,9 +8,9 @@
 import { DatabaseOutlined, SearchOutlined } from "@ant-design/icons";
 import { Input, Select, Space, Spin, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -28,6 +28,7 @@ import type {
   BuildTask,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
+import { parseResourceScope } from "@/modules/data-catalog/lib/resource-identifier";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./CatalogDetailPanel.module.css";
@@ -41,6 +42,20 @@ function indexFilterBucket(key: string) {
   if (key === "building" || key === "rebuilding") return "building";
   if (key === "listening" || key === "paused") return "listening";
   return "failed";
+}
+
+function deriveDisplayName(resource: CatalogResource) {
+  const rawName = (resource.name ?? "").trim();
+  const byName = rawName.includes(".") ? rawName.split(".").filter(Boolean).at(-1) : rawName;
+  if (byName) {
+    return byName;
+  }
+
+  const rawIdentifier = (resource.sourceIdentifier ?? "").trim();
+  const fromMatch = rawIdentifier.match(/\bfrom\s+([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+){0,2})/i);
+  const candidate = (fromMatch?.[1] ?? rawIdentifier).trim();
+  const byIdentifier = candidate.includes(".") ? candidate.split(".").filter(Boolean).at(-1) : candidate;
+  return byIdentifier || "-";
 }
 
 function EllipsisText({ text }: { text: string }) {
@@ -74,11 +89,24 @@ export function CatalogDetailPanel({
 }: CatalogDetailPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeDb = searchParams.get("db")?.trim() || "";
+  const activeSchema = searchParams.get("schema")?.trim() || "";
   const [resourceKeyword, setResourceKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [indexFilter, setIndexFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [nameColumnWidth, setNameColumnWidth] = useState(() => {
+    try {
+      const value = window.localStorage.getItem("data-catalog.resourceNameColumnWidth");
+      const parsed = value ? Number(value) : NaN;
+      return Number.isFinite(parsed) && parsed >= 160 ? parsed : 260;
+    } catch {
+      return 260;
+    }
+  });
+  const resizingRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const physical = isCatalogPhysical(catalog);
 
@@ -93,6 +121,15 @@ export function CatalogDetailPanel({
   const filteredResources = useMemo(() => {
     const kw = resourceKeyword.trim().toLowerCase();
     return resources.filter((resource) => {
+      if (activeDb) {
+        const scope = parseResourceScope(resource.sourceIdentifier);
+        if (!scope.database || scope.database !== activeDb) {
+          return false;
+        }
+        if (activeSchema && (!scope.schema || scope.schema !== activeSchema)) {
+          return false;
+        }
+      }
       if (
         kw &&
         !resource.name.toLowerCase().includes(kw) &&
@@ -111,27 +148,83 @@ export function CatalogDetailPanel({
       }
       return true;
     });
-  }, [resources, resourceKeyword, categoryFilter, indexFilter, tasksByResource]);
+  }, [
+    resources,
+    resourceKeyword,
+    categoryFilter,
+    indexFilter,
+    tasksByResource,
+    activeDb,
+    activeSchema,
+  ]);
 
   useEffect(() => {
     setPage(1);
-  }, [resourceKeyword, categoryFilter, indexFilter, catalog.id]);
+  }, [resourceKeyword, categoryFilter, indexFilter, catalog.id, activeDb, activeSchema]);
 
   const pagedResources = useMemo(() => {
     const start = (page - 1) * pageSize;
     return filteredResources.slice(start, start + pageSize);
   }, [filteredResources, page, pageSize]);
 
+  useEffect(() => {
+    const handleMove = (event: MouseEvent) => {
+      if (!resizingRef.current) {
+        return;
+      }
+      const delta = event.clientX - resizingRef.current.startX;
+      const next = Math.max(160, resizingRef.current.startWidth + delta);
+      setNameColumnWidth(next);
+    };
+
+    const handleUp = () => {
+      if (!resizingRef.current) {
+        return;
+      }
+      resizingRef.current = null;
+      try {
+        window.localStorage.setItem(
+          "data-catalog.resourceNameColumnWidth",
+          String(nameColumnWidth),
+        );
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [nameColumnWidth]);
+
   const resourceColumns: ColumnsType<CatalogResource> = [
     {
       dataIndex: "name",
       ellipsis: true,
-      title: t("dataCatalog.resource.name"),
+      width: nameColumnWidth,
+      title: (
+        <div className={styles.resizableHeader}>
+          <span>{t("dataCatalog.resource.name")}</span>
+          <span
+            className={styles.resizeHandle}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              resizingRef.current = { startX: event.clientX, startWidth: nameColumnWidth };
+            }}
+            role="separator"
+          />
+        </div>
+      ),
       render: (_, record) => {
         const tooltip =
           record.sourceIdentifier && record.sourceIdentifier !== record.name
             ? `${record.name}\n${record.sourceIdentifier}`
             : record.name;
+        const displayName = deriveDisplayName(record);
         return (
           <Tooltip title={tooltip}>
             <AppButton
@@ -139,7 +232,7 @@ export function CatalogDetailPanel({
               onClick={() => onOpenResource(record.id, "detail")}
               type="link"
             >
-              <span className={styles.cellEllipsis}>{record.name}</span>
+              <span className={styles.cellEllipsis}>{displayName}</span>
             </AppButton>
           </Tooltip>
         );

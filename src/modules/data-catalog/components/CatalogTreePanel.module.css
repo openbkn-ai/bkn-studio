@@ -23,6 +23,18 @@
   gap: 12px;
 }
 
+.treeHeadActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.treeCollapseBtn:global(.ant-btn) {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
 .treeHeadTitle {
   color: #111827;
   font-size: 15px;
@@ -54,18 +66,83 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 20px;
   min-height: 0;
+}
+
+.treeTabs:global(.ant-tabs) {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.treeTabs :global(.ant-tabs-nav) {
+  margin: 0;
+  padding: 0 2px;
+}
+
+.treeTabs :global(.ant-tabs-nav::before) {
+  border-bottom-color: #eef2f7;
+}
+
+.treeTabs :global(.ant-tabs-tab) {
+  padding: 10px 2px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.treeTabs :global(.ant-tabs-ink-bar) {
+  height: 2px;
+  border-radius: 0;
+  background: #2e68ff;
+}
+
+.treeTabs :global(.ant-tabs-content-holder) {
+  min-height: 0;
+  flex: 1;
+}
+
+.treeTabs :global(.ant-tabs-content) {
+  height: 100%;
+}
+
+.treeTabs :global(.ant-tabs-tabpane) {
+  height: 100%;
+}
+
+.treeTabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.treeTabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid #e5eaf2;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.treeTabScroll {
+  min-height: 0;
+  height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   padding-right: 2px;
 }
 
-.treeBody::-webkit-scrollbar {
+.treeTabScroll::-webkit-scrollbar {
   width: 8px;
 }
 
-.treeBody::-webkit-scrollbar-thumb {
+.treeTabScroll::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 0;
   background: rgba(124, 140, 166, 0.22);
@@ -281,6 +358,57 @@
   padding-left: 28px;
 }
 
+.scopeBlock {
+  margin: 2px 0 8px;
+  padding-left: 24px;
+  display: grid;
+  gap: 2px;
+}
+
+.scopeGroup {
+  display: grid;
+  gap: 2px;
+}
+
+.scopeChildren {
+  display: grid;
+  gap: 2px;
+  padding-left: 18px;
+}
+
+.scopeNode {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  color: #475569;
+  font-size: 12px;
+  cursor: pointer;
+  border-left: 1px solid transparent;
+}
+
+.scopeNode:hover {
+  background: #f8fafc;
+}
+
+.scopeNodeActive,
+.scopeNodeActive:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-left-color: #2e68ff;
+}
+
+.scopeNodeChild {
+  padding-left: 14px;
+}
+
+.scopeNodeName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .treeEmptyHint {
   padding: 10px 12px;
   color: #94a3b8;
@@ -302,4 +430,28 @@
   font-size: 13px;
   line-height: 1.6;
   text-align: center;
+}
+
+.treePanelCollapsed {
+  padding: 10px 6px;
+  gap: 10px;
+}
+
+.treeCollapsedHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.treeCollapsedIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e5eaf2;
+  background: #fff;
+  color: #64748b;
+  font-size: 16px;
 }

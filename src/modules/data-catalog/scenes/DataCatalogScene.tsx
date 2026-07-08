@@ -9,7 +9,7 @@ import { DatabaseOutlined } from "@ant-design/icons";
 import { Alert, Spin } from "antd";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -47,6 +47,16 @@ export type DataCatalogSceneProps = {
 export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeDb = searchParams.get("db")?.trim() || "";
+  const activeSchema = searchParams.get("schema")?.trim() || "";
+  const [treeCollapsed, setTreeCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem("data-catalog.treeCollapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
 
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
@@ -368,15 +378,48 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
 
   return (
     <>
-      <div className={styles.explorer}>
+      <div className={[styles.explorer, treeCollapsed ? styles.explorerCollapsed : ""].join(" ")}>
         <CatalogTreePanel
           catalogs={catalogs}
+          activeDb={activeDb}
+          activeSchema={activeSchema}
           connectorTypes={connectorTypes}
+          collapsed={treeCollapsed}
           onRefresh={async () => {
             await loadAll();
           }}
           onSelectCatalog={(catalogId) => {
+            const next = new URLSearchParams(searchParams);
+            next.delete("db");
+            next.delete("schema");
+            setSearchParams(next, { replace: true });
             void navigate(`/data-directory/catalog/${catalogId}`);
+          }}
+          onSelectScope={(scope) => {
+            const next = new URLSearchParams(searchParams);
+            if (!scope?.database) {
+              next.delete("db");
+              next.delete("schema");
+            } else {
+              next.set("db", scope.database);
+              if (scope.schema) {
+                next.set("schema", scope.schema);
+              } else {
+                next.delete("schema");
+              }
+            }
+            setSearchParams(next, { replace: true });
+          }}
+          onToggleCollapsed={() => {
+            setTreeCollapsed((value) => {
+              const next = !value;
+              try {
+                window.localStorage.setItem("data-catalog.treeCollapsed", next ? "1" : "0");
+              } catch {
+                // ignore
+              }
+              return next;
+            });
           }}
           resourceCount={resourceTotal}
           resources={resources}

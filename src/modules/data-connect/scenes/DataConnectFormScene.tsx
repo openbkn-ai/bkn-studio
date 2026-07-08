@@ -17,6 +17,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ConnectorTypePicker } from "@/modules/data-connect/components/ConnectorTypePicker";
 import { DataConnectConfigForm } from "@/modules/data-connect/components/DataConnectConfigForm";
+import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
 import { getConnectorConfigDefaults } from "@/modules/data-connect/lib/connector-template";
 import {
   createDataConnectRecord,
@@ -52,6 +53,7 @@ export function DataConnectFormScene({
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
   const [currentStep, setCurrentStep] = useState(mode === "edit" ? 1 : 0);
+  const [draftRecordId, setDraftRecordId] = useState<string>();
 
   useEffect(() => {
     void (async () => {
@@ -144,20 +146,28 @@ export function DataConnectFormScene({
     setCurrentStep(1);
   };
 
+  const buildMutationPayload = async () => {
+    const values = await form.validateFields();
+
+    return {
+      connectorConfig: normalizeConnectorConfig(values.connectorConfig ?? {}),
+      connectorType: selectedConnectorType ?? values.connectorType,
+      description: values.description ?? "",
+      enabled: record?.enabled ?? values.enabled ?? true,
+      name: values.name.trim(),
+      tags: values.tags ?? [],
+    } satisfies DataConnectMutationPayload;
+  };
+
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
-      const values = await form.validateFields();
-      const payload: DataConnectMutationPayload = {
-        connectorConfig: normalizeConnectorConfig(values.connectorConfig ?? {}),
-        connectorType: selectedConnectorType ?? values.connectorType,
-        description: values.description ?? "",
-        enabled: record?.enabled ?? values.enabled ?? true,
-        name: values.name.trim(),
-        tags: values.tags ?? [],
-      };
+      const payload = await buildMutationPayload();
+      const persistedRecordId = mode === "edit" ? recordId : draftRecordId;
 
-      if (mode === "create") {
+      if (mode === "create" && persistedRecordId) {
+        await updateDataConnectRecord(persistedRecordId, payload);
+      } else if (mode === "create") {
         await createDataConnectRecord(payload);
       } else if (recordId) {
         await updateDataConnectRecord(recordId, payload);
@@ -186,15 +196,32 @@ export function DataConnectFormScene({
   };
 
   const handleTestConnection = async () => {
-    if (!recordId) {
-      return;
-    }
-
     try {
       setTestingConnection(true);
-      await testDataConnectRecord(recordId);
+      const payload = await buildMutationPayload();
+      let targetRecordId = recordId ?? draftRecordId;
+
+      if (!targetRecordId) {
+        const createdRecordId = await createDataConnectRecord(payload);
+        if (!createdRecordId) {
+          throw new Error(t("common.notFound"));
+        }
+        setDraftRecordId(createdRecordId);
+        targetRecordId = createdRecordId;
+      } else {
+        await updateDataConnectRecord(targetRecordId, payload);
+      }
+
+      await testDataConnectRecord(targetRecordId);
       message.success(t("dataConnect.testConnectionSuccess"));
     } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "errorFields" in error
+      ) {
+        return;
+      }
       void message.error(extractRequestErrorMessage(error));
     } finally {
       setTestingConnection(false);
@@ -207,22 +234,19 @@ export function DataConnectFormScene({
       permissions={permission}
     >
       <section className={styles.contentSurface}>
-        <div
-          className={`${styles.headerPanel}${mode === "create" ? ` ${styles.headerPanelCreate}` : ""}`}
-        >
-          <div className={styles.headerCopy}>
-            <h1 className={styles.pageTitle}>{pageTitle}</h1>
-            <p className={styles.pageDescription}>{pageDescription}</p>
-          </div>
-          {mode === "create" ? (
-            <div className={styles.headerSteps}>
-              <Steps current={currentStep} items={stepItems} />
-            </div>
-          ) : null}
-          <AppButton className={styles.headerBackAction} onClick={handleBack}>
-            {t("dataConnect.backToConnections")}
-          </AppButton>
-        </div>
+        <DataConnectPageHeader
+          description={pageDescription}
+          layout={mode === "create" ? "default" : "inline"}
+          onBack={handleBack}
+          title={pageTitle}
+          trailing={
+            mode === "create" ? (
+              <div className={styles.headerSteps}>
+                <Steps current={currentStep} items={stepItems} />
+              </div>
+            ) : undefined
+          }
+        />
         <div className={styles.formShell}>
           {loading ? (
             <div className={styles.loadingState}>
@@ -305,7 +329,7 @@ export function DataConnectFormScene({
                 {t("common.previous")}
               </AppButton>
             ) : null}
-            {mode === "edit" && recordId ? (
+            {((currentStep === 1 && mode === "create") || (mode === "edit" && recordId)) ? (
               <AppButton
                 loading={testingConnection}
                 onClick={() => {
@@ -322,7 +346,11 @@ export function DataConnectFormScene({
               }}
               type="primary"
             >
-              {currentStep === 0 && mode === "create" ? t("common.next") : t("common.save")}
+              {currentStep === 0 && mode === "create"
+                ? t("common.next")
+                : currentStep === 1 && mode === "create"
+                  ? t("common.confirm")
+                  : t("common.save")}
             </AppButton>
           </div>
         </div>
