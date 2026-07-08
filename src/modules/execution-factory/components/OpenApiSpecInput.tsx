@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { OpenApiOperationsIoPreview } from "@/modules/execution-factory/components/OpenApiOperationsIoPreview";
+import { OpenApiEndpointReview } from "@/modules/execution-factory/components/OpenApiEndpointReview";
 import {
   OPENAPI_OPERATOR_TEMPLATE,
   OPENAPI_TOOLBOX_TEMPLATE,
@@ -30,6 +31,7 @@ type OpenApiSpecInputProps = {
   onValidationChange?: (valid: boolean) => void;
   registrationTarget?: "operator" | "toolbox" | "default";
   rows?: number;
+  showEndpointReview?: boolean;
   value?: string;
   onChange?: (value: string) => void;
 };
@@ -41,6 +43,7 @@ export function OpenApiSpecInput({
   onValidationChange,
   registrationTarget = "default",
   rows = 10,
+  showEndpointReview = false,
   value = "",
   onChange,
 }: OpenApiSpecInputProps) {
@@ -205,11 +208,11 @@ export function OpenApiSpecInput({
       {validation.ok && analysis.ok ? (
         <>
           <Alert
+            className={styles.validationSuccess}
             message={t("executionFactory.openapiValidationOkWithCount", {
               count: analysis.operationCount,
             })}
             showIcon
-            style={{ marginTop: 8 }}
             type="success"
           />
           <div className={styles.previewPanel}>
@@ -222,6 +225,7 @@ export function OpenApiSpecInput({
               </span>
             </div>
             <OpenApiOperationsIoPreview openapiSpec={value} />
+            {showEndpointReview ? <OpenApiEndpointReview openapiSpec={value} /> : null}
           </div>
         </>
       ) : null}

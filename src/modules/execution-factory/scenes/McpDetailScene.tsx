@@ -27,6 +27,7 @@ import type { McpDetailSceneProps } from "@/modules/execution-factory/contracts/
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { CreateMcpDrawer } from "@/modules/execution-factory/components/create-menu/CreateMcpDrawer";
 import { JsonSchemaIoPanel } from "@/modules/execution-factory/components/JsonSchemaIoPanel";
@@ -37,6 +38,7 @@ import {
   listMcpTools,
 } from "@/modules/execution-factory/services/mcp.service";
 import type { McpDetail, McpProxyTool, McpStatus } from "@/modules/execution-factory/types/mcp";
+import { buildMcpToolCapabilityManifest } from "@/modules/execution-factory/utils/capability-manifest";
 import {
   formatOptionalTimestamp,
   formatRecordHeaders,
@@ -219,6 +221,18 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
     ];
   }, [record, selectedTool, t]);
 
+  const selectedToolManifest = useMemo(() => {
+    if (!record || !selectedTool) {
+      return null;
+    }
+
+    return buildMcpToolCapabilityManifest({
+      mcpId,
+      serviceName: record.name,
+      tool: selectedTool,
+    });
+  }, [mcpId, record, selectedTool]);
+
   return (
     <section className={styles.page}>
       <div className={styles.backRow}>
@@ -384,6 +398,9 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
                   items={toolInfoItems}
                   title={t("executionFactory.mcpToolInfoTitle")}
                 />
+                {selectedToolManifest ? (
+                  <CapabilityAgentReadinessPanel manifest={selectedToolManifest} />
+                ) : null}
                 <div className={styles.ioPanel}>
                   <div className={styles.ioHeader}>
                     <span>{t("executionFactory.toolboxInputOutputTitle")}</span>

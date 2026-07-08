@@ -1,0 +1,106 @@
+.root {
+  margin-top: 10px;
+  border: 1px solid rgba(23, 63, 159, 0.14);
+  border-radius: 8px;
+  background: #fbfdff;
+  overflow: hidden;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(23, 63, 159, 0.1);
+}
+
+.title {
+  color: #17253d;
+  font-weight: 700;
+}
+
+.count {
+  color: rgba(15, 30, 54, 0.56);
+  font-size: 12px;
+}
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+  padding: 9px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  background: rgba(23, 63, 159, 0.035);
+  color: rgba(15, 30, 54, 0.64);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.method {
+  display: inline-flex;
+  min-width: 54px;
+  justify-content: center;
+  border-radius: 6px;
+  background: #eef4ff;
+  color: #173f9f;
+  font-family: Consolas, "SFMono-Regular", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 6px;
+}
+
+.path {
+  color: #20324e;
+  font-family: Consolas, "SFMono-Regular", monospace;
+  font-size: 12px;
+}
+
+.summary {
+  color: rgba(15, 30, 54, 0.78);
+}
+
+.risk {
+  border: 1px solid #dfe6f2;
+  border-radius: 999px;
+  color: rgba(15, 30, 54, 0.72);
+  display: inline-flex;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.riskLow {
+  background: rgba(23, 125, 78, 0.06);
+  border-color: rgba(23, 125, 78, 0.18);
+  color: #177d4e;
+}
+
+.riskMedium {
+  background: rgba(217, 133, 0, 0.07);
+  border-color: rgba(217, 133, 0, 0.2);
+  color: #9b6100;
+}
+
+.riskHigh {
+  background: rgba(217, 48, 37, 0.06);
+  border-color: rgba(217, 48, 37, 0.2);
+  color: #b42318;
+}
+
+.io {
+  color: rgba(15, 30, 54, 0.58);
+  font-size: 12px;
+  white-space: nowrap;
+}

@@ -26,11 +26,6 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
     icon: <ClusterOutlined />,
   },
   {
-    key: "execution-factory-lab",
-    labelKey: "shell.items.executionFactoryLab",
-    icon: <ExperimentOutlined />,
-  },
-  {
     key: "general-business-knowledge-network",
     labelKey: "shell.items.generalBusinessKnowledgeNetwork",
     icon: <AppstoreOutlined />,

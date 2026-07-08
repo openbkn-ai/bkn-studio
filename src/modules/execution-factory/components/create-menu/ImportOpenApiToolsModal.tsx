@@ -217,6 +217,8 @@ export function ImportOpenApiToolsModal({
 
         rows={8}
 
+        showEndpointReview
+
         value={openapiSpec}
 
       />
