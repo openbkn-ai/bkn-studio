@@ -2,6 +2,23 @@
   margin-top: 8px;
 }
 
+.root :global(.ant-collapse) {
+  border-color: var(--color-interface-panel-border);
+  background: var(--color-interface-panel-bg);
+}
+
+.root :global(.ant-collapse-item) {
+  border-color: var(--color-interface-panel-border);
+}
+
+.root :global(.ant-collapse-content) {
+  border-color: var(--color-interface-panel-border);
+}
+
+.root :global(.ant-collapse-header) {
+  background: var(--color-interface-panel-bg);
+}
+
 .hint {
   margin-bottom: 8px;
   color: rgba(0, 0, 0, 0.55);
@@ -27,13 +44,13 @@
 }
 
 .ioMeta {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-interface-panel-muted);
   font-size: 12px;
 }
 
 .more {
   margin-top: 8px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-interface-panel-muted);
   font-size: 12px;
 }
 
