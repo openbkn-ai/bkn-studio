@@ -31,6 +31,19 @@
   --color-error-text: #b91c1c;
   --color-error-border: #fecaca;
 
+  /* Interface debugging and schema review */
+  --color-interface-panel-bg: #f8fafc;
+  --color-interface-panel-border: rgba(21, 94, 117, 0.18);
+  --color-interface-panel-muted: rgba(15, 30, 54, 0.52);
+  --color-interface-code-bg: #ffffff;
+  --color-interface-code-text: #182235;
+  --color-interface-success-dot: #0f9f6e;
+  --color-interface-success-ring: rgba(15, 159, 110, 0.12);
+  --color-interface-warning-bg: #fffaf3;
+  --color-interface-warning-border: rgba(180, 83, 9, 0.24);
+  --color-interface-warning-dot: #d97706;
+  --color-interface-warning-ring: rgba(217, 119, 6, 0.14);
+
   /* Shadow */
   --shadow-card: 0 4px 16px rgba(15, 23, 42, 0.06);
   --shadow-dropdown: 0 12px 32px rgba(15, 23, 42, 0.14);

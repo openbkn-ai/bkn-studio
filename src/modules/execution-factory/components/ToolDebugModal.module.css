@@ -6,13 +6,13 @@
 }
 
 .resultPanelSuccess {
-  border: 1px solid rgba(21, 94, 117, 0.18);
-  background: #f8fafc;
+  border: 1px solid var(--color-interface-panel-border);
+  background: var(--color-interface-panel-bg);
 }
 
 .resultPanelWarning {
-  border: 1px solid rgba(180, 83, 9, 0.24);
-  background: #fffaf3;
+  border: 1px solid var(--color-interface-warning-border);
+  background: var(--color-interface-warning-bg);
 }
 
 .resultHeader {
@@ -32,13 +32,13 @@
 }
 
 .statusDotSuccess {
-  background: #0f9f6e;
-  box-shadow: 0 0 0 3px rgba(15, 159, 110, 0.12);
+  background: var(--color-interface-success-dot);
+  box-shadow: 0 0 0 3px var(--color-interface-success-ring);
 }
 
 .statusDotWarning {
-  background: #d97706;
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.14);
+  background: var(--color-interface-warning-dot);
+  box-shadow: 0 0 0 3px var(--color-interface-warning-ring);
 }
 
 .resultTitle {
@@ -47,14 +47,14 @@
 }
 
 .resultMeta {
-  color: rgba(15, 30, 54, 0.52);
+  color: var(--color-interface-panel-muted);
   font-size: 12px;
   margin-left: auto;
 }
 
 .resultCode {
-  background: #ffffff;
-  color: #182235;
+  background: var(--color-interface-code-bg);
+  color: var(--color-interface-code-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   line-height: 1.58;

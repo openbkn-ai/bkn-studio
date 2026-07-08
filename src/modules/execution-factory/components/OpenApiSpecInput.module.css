@@ -55,9 +55,9 @@
 .previewPanel {
   margin-top: 8px;
   padding: 10px 12px;
-  border: 1px solid rgba(18, 110, 227, 0.15);
+  border: 1px solid var(--color-interface-panel-border);
   border-radius: 8px;
-  background: rgba(18, 110, 227, 0.04);
+  background: var(--color-interface-panel-bg);
 }
 
 .previewMeta {
@@ -82,18 +82,18 @@
 
 .previewMore {
   margin-top: 6px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-interface-panel-muted);
   font-size: 12px;
 }
 
 .validationSuccess {
   margin-top: 8px;
-  border-color: rgba(23, 125, 78, 0.2);
-  background: rgba(23, 125, 78, 0.055);
+  border-color: var(--color-interface-panel-border);
+  background: var(--color-interface-panel-bg);
 }
 
 .validationSuccess :global(.ant-alert-icon) {
-  color: #177d4e;
+  color: var(--color-interface-success-dot);
 }
 
 .validationSuccess :global(.ant-alert-message) {
