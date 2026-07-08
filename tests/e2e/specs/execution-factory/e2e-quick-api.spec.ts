@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+﻿import { expect, test } from "@playwright/test";
 
 import { apiUrl, assertBackendReady } from "../../helpers/common";
 import {
@@ -22,9 +22,9 @@ import {
 const QUICK_API_CURL =
   "curl 'http://127.0.0.1:9000/api/agent-operator-integration/v1/operator/info/list?page=1&page_size=1'";
 
-const UAPIS_WEATHER_CURL = "curl 'https://uapis.cn/api/v1/misc/weather?city=北京'";
+const UAPIS_WEATHER_CURL = "curl 'https://uapis.cn/api/v1/misc/weather?city=鍖椾含'";
 
-test.describe("Execution Factory — Quick Add API lifecycle", () => {
+test.describe("Execution Factory 鈥?Quick Add API lifecycle", () => {
   test.describe.configure({ timeout: 180_000 });
 
   let backendReady = false;
@@ -76,7 +76,7 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
     createdBoxIds.push(boxId);
 
     await expect(page).toHaveURL(new RegExp(`/execution-factory/toolboxes/${boxId}/tools`));
-    await expectAppToast(page, /已添加到工具集|added to the toolset/i);
+    await expectAppToast(page, /宸叉坊鍔犲埌宸ュ叿闆唡added to the toolset/i);
     await expect(page.getByRole("heading", { level: 3, name: toolboxName })).toBeVisible();
   });
 
@@ -89,10 +89,10 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
     const drawer = await openAddCapabilityWizard(page, "toolbox");
 
     await drawer.getByRole("textbox", { name: /cURL/i }).fill(curl);
-    await drawer.getByRole("button", { name: /识别接口信息|Detect API details/i }).click();
-    await drawer.getByLabel(/工具名称|Tool name/i).fill(toolName);
-    await drawer.getByRole("radio", { name: /新建工具集|New toolset/i }).check();
-    await drawer.getByLabel(/工具箱名称|Toolbox Name/i).fill(toolboxName);
+    await drawer.getByRole("button", { name: /璇嗗埆鎺ュ彛淇℃伅|Detect API details/i }).click();
+    await drawer.getByLabel(/宸ュ叿鍚嶇О|Tool name/i).fill(toolName);
+    await drawer.getByRole("radio", { name: /鏂板缓宸ュ叿闆唡New toolset/i }).check();
+    await drawer.getByLabel(/宸ュ叿绠卞悕绉皘Toolbox Name/i).fill(toolboxName);
     await waitForCategoryFieldReady(page, drawer);
     await expectOpenApiOperationsIoPreview(drawer, { containsText: /GET/i });
 
@@ -100,7 +100,7 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
       body.scrollTop = body.scrollHeight;
     });
 
-    const saveButton = drawer.getByRole("button", { name: /保存并完成|Save and finish/i });
+    const saveButton = drawer.getByRole("button", { name: /淇濆瓨骞跺畬鎴恷Save and finish/i });
     await saveButton.scrollIntoViewIfNeeded();
     await expect(saveButton).toBeEnabled();
     await saveButton.click();
@@ -127,10 +127,29 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
     await drawer.getByRole("textbox", { name: /cURL/i }).fill(curl);
 
     await expectOpenApiOperationsIoPreview(drawer, {
-      containsText: /请求体 2 个字段|request body 2 field/i,
+      containsText: /璇锋眰浣?2 涓瓧娈祙request body 2 field/i,
     });
     await expect(drawer.getByText(/username/i).first()).toBeVisible();
     await expect(drawer.getByText(/password/i).first()).toBeVisible();
+  });
+
+  test("QA-01d: quick add API form recognizes full URL inline", async ({ page }) => {
+    const drawer = await openAddCapabilityWizard(page, "toolbox");
+
+    await drawer.getByRole("tab", { name: /\u586b\u8868\u5355|Simple form/i }).click();
+    await drawer
+      .getByLabel(/\u5b8c\u6574 API \u5730\u5740|Full API URL/i)
+      .fill("http://host.docker.internal:8080/proxy/uapis/weather?city=\u5317\u4eac");
+
+    await expect(drawer.locator(".ant-input-search-button")).toBeVisible();
+    await expect(drawer.getByLabel(/\u670d\u52a1\u5730\u5740|Service base URL/i)).toHaveValue(
+      "http://host.docker.internal:8080",
+    );
+    await expect(drawer.getByLabel(/\u63a5\u53e3\u8def\u5f84|Path/i)).toHaveValue("/proxy/uapis/weather");
+    await expect(drawer.getByLabel(/\u5de5\u5177\u540d\u79f0|Tool name/i)).toHaveValue("weather");
+    await expectOpenApiOperationsIoPreview(drawer, {
+      containsText: /city/i,
+    });
   });
 
   test("QA-02: quick added toolset supports publish and export", async ({ page, request }) => {
@@ -157,7 +176,7 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
 
     await gotoToolboxToolsPage(page, boxId, toolboxName, { editMode: true });
     await triggerImpexExport(page, "toolbox", async () => {
-      await page.getByRole("button", { name: /导出|Export/i }).first().click();
+      await page.getByRole("button", { name: /瀵煎嚭|Export/i }).first().click();
     });
   });
 
@@ -206,10 +225,10 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
     const drawer = await openAddCapabilityWizard(page, "toolbox");
     const apiUrl = QUICK_API_CURL.match(/https?:\/\/[^\s'"]+/i)?.[0] ?? "";
 
-    await drawer.getByRole("tab", { name: /填表单|Fill form/i }).click();
-    await drawer.getByLabel(/完整 API 地址|Full API URL/i).fill(apiUrl);
-    await drawer.getByRole("button", { name: /识别接口信息|Detect API details/i }).click();
-    await drawer.getByLabel(/工具名称|Tool name/i).fill(`preview_${Date.now()}`);
+    await drawer.getByRole("tab", { name: /\u586b\u8868\u5355|Fill form|Simple form/i }).click();
+    await drawer.getByLabel(/\u5b8c\u6574 API \u5730\u5740|Full API URL/i).fill(apiUrl);
+    await drawer.locator(".ant-input-search-button").click();
+    await drawer.getByLabel(/\u5de5\u5177\u540d\u79f0|Tool name/i).fill(`preview_${Date.now()}`);
     await expectOpenApiOperationsIoPreview(drawer, { containsText: /GET|POST/i });
     await page.keyboard.press("Escape");
   });
@@ -228,7 +247,7 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
     createdBoxIds.push(boxId);
 
     await gotoToolboxToolsPage(page, boxId, toolboxName);
-    await expect(page.getByText(/输入输出|Input \/ Output/i).first()).toBeVisible();
+    await expect(page.getByText(/杈撳叆杈撳嚭|Input \/ Output/i).first()).toBeVisible();
     const debugResponse = await debugToolFromToolsPage(page, boxId, {
       toolName,
       fromListItem: true,
@@ -241,7 +260,7 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
     request,
   }) => {
     const probe = await request
-      .get("https://uapis.cn/api/v1/misc/weather?city=北京", { timeout: 15_000 })
+      .get("https://uapis.cn/api/v1/misc/weather?city=鍖椾含", { timeout: 15_000 })
       .catch(() => null);
     test.skip(!probe?.ok(), "uapis.cn is unreachable from this environment");
 

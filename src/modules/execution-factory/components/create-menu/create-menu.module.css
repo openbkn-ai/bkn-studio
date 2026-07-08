@@ -148,6 +148,22 @@
   background: rgba(15, 30, 54, 0.03);
 }
 
+.previewValidationSuccess {
+  margin-bottom: 8px;
+  border-color: rgba(21, 94, 117, 0.16);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.previewValidationSuccess :global(.ant-alert-icon) {
+  color: #0f9f6e;
+}
+
+.previewValidationSuccess :global(.ant-alert-message) {
+  color: #17253d;
+  font-weight: 500;
+}
+
 .wizardTypeGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;

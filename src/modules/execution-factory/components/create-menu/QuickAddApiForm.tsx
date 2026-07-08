@@ -6,7 +6,7 @@
  */
 
 import { Alert, Form, Input, Radio, Select, Tabs } from "antd";
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { OpenApiOperationsIoPreview } from "@/modules/execution-factory/components/OpenApiOperationsIoPreview";
@@ -81,6 +81,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
   const [parseHint, setParseHint] = useState<string | null>(null);
   const [toolboxOptions, setToolboxOptions] = useState<Array<{ label: string; value: string }>>([]);
   const toolboxMode = Form.useWatch("toolboxMode", form) ?? (initialBoxId ? "existing" : "new");
+  const apiUrl = Form.useWatch("apiUrl", form) as string | undefined;
   const summary = Form.useWatch("summary", form) as string | undefined;
   const watchedValues = Form.useWatch([], form) as QuickAddApiFormValues | undefined;
 
@@ -118,7 +119,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     })();
   }, []);
 
-  const applyParsedApi = (parsed: {
+  const applyParsedApi = useCallback((parsed: {
     method: string;
     serverUrl: string;
     path: string;
@@ -136,7 +137,40 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
         ? t("executionFactory.quickApiParsedParams", { count: parsed.queryParams.length })
         : t("executionFactory.quickApiParsedOk"),
     );
-  };
+  }, [form, t]);
+
+  const parseUrl = useCallback((showErrors: boolean) => {
+    const currentApiUrl = form.getFieldValue("apiUrl") as string | undefined;
+    const result = parseQuickApiUrl(currentApiUrl ?? "");
+    if (!result.ok) {
+      if (showErrors) {
+        setParseHint(result.reason);
+        form.setFields([{ name: "apiUrl", errors: [result.reason] }]);
+      }
+      return false;
+    }
+
+    form.setFields([{ name: "apiUrl", errors: [] }]);
+    applyParsedApi(result.value);
+    return true;
+  }, [applyParsedApi, form]);
+
+  useEffect(() => {
+    if (inputMode !== "form") {
+      return;
+    }
+
+    const trimmedApiUrl = apiUrl?.trim();
+    if (!trimmedApiUrl || !/^https?:\/\//i.test(trimmedApiUrl)) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      parseUrl(false);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [apiUrl, inputMode, parseUrl]);
 
   const handleParseCurl = () => {
     const curlText = form.getFieldValue("curlText") as string | undefined;
@@ -152,16 +186,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
   };
 
   const handleParseUrl = () => {
-    const apiUrl = form.getFieldValue("apiUrl") as string | undefined;
-    const result = parseQuickApiUrl(apiUrl ?? "");
-    if (!result.ok) {
-      setParseHint(result.reason);
-      form.setFields([{ name: "apiUrl", errors: [result.reason] }]);
-      return;
-    }
-
-    form.setFields([{ name: "apiUrl", errors: [] }]);
-    applyParsedApi(result.value);
+    parseUrl(true);
   };
 
   const handleFinish = (values: QuickAddApiFormValues) => {
@@ -234,11 +259,12 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
                   variant="section"
                 />
                 <Form.Item label={t("executionFactory.quickApiUrlLabel")} name="apiUrl">
-                  <Input placeholder="https://example.com/api/v1/resource" />
+                  <Input.Search
+                    enterButton={t("executionFactory.quickApiRecognizeAction")}
+                    onSearch={handleParseUrl}
+                    placeholder="https://example.com/api/v1/resource?city=北京"
+                  />
                 </Form.Item>
-                <button className={styles.inlineAction} onClick={handleParseUrl} type="button">
-                  {t("executionFactory.quickApiParseAction")}
-                </button>
                 <Form.Item label={t("executionFactory.quickApiServerUrl")} name="serverUrl">
                   <Input />
                 </Form.Item>
@@ -278,9 +304,9 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
       {previewValidation.ok && previewSpec ? (
         <div style={{ marginBottom: 16 }}>
           <Alert
+            className={styles.previewValidationSuccess}
             message={t("executionFactory.quickApiIoPreviewTitle")}
             showIcon
-            style={{ marginBottom: 8 }}
             type="success"
           />
           <OpenApiOperationsIoPreview limit={1} openapiSpec={previewSpec} />
