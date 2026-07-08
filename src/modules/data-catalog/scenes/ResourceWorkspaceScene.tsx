@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ResourceDetailPanel } from "@/modules/data-catalog/components/ResourceDetailPanel";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
@@ -139,13 +140,11 @@ export function ResourceWorkspaceScene({
       <section className={styles.contentSurface}>
         <EmptyStatePanel
           action={
-            <AppButton
+            <SceneBackButton
               onClick={() => {
                 void navigate("/data-directory");
               }}
-            >
-              {t("dataCatalog.backToCatalog")}
-            </AppButton>
+            />
           }
           description=""
           icon={<DatabaseOutlined />}
@@ -163,6 +162,11 @@ export function ResourceWorkspaceScene({
     <>
       <section className={styles.contentSurface}>
         <div className={styles.pageHeader}>
+          <SceneBackButton
+            onClick={() => {
+              void navigate(backTarget);
+            }}
+          />
           <div className={styles.pageHeaderMain}>
             <div className={styles.contextBar}>
               <span className={styles.contextLabel}>
@@ -192,15 +196,6 @@ export function ResourceWorkspaceScene({
                 {formatIndexStateLabel(indexState, t)}
               </span>
             </div>
-          </div>
-          <div className={styles.pageHeaderActions}>
-            <AppButton
-              onClick={() => {
-                void navigate(backTarget);
-              }}
-            >
-              {t("dataCatalog.backToCatalog")}
-            </AppButton>
           </div>
         </div>
 

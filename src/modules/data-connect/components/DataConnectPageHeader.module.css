@@ -1,0 +1,145 @@
+.headerPanel {
+  padding: 20px 24px;
+  border-bottom: 1px solid #eef2f7;
+  background: linear-gradient(180deg, #fbfcfe 0%, #fff 100%);
+}
+
+.headerPanelPlain {
+  padding: 0;
+  border-bottom: none;
+  background: transparent;
+}
+
+.headerPanelStandard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.headerPanelWithTrailing {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.headerPanelInline {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.headerPanelInline .headerBackButton {
+  flex: none;
+}
+
+.headerPanelInline .headerCopy {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 12px;
+  min-width: 0;
+}
+
+.headerPanelInline .pageTitle {
+  flex: none;
+  white-space: nowrap;
+}
+
+.headerPanelInline .pageDescription {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerPanelInline .headerExtra {
+  flex: none;
+  margin-top: 0;
+}
+
+.headerPanelStandard .headerBackButton,
+.headerPanelWithTrailing .headerBackButton {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.headerPanelStandard .headerCopy,
+.headerPanelWithTrailing .headerCopy {
+  grid-column: 2;
+  justify-self: start;
+  min-width: 0;
+}
+
+.headerPanelWithTrailing .headerTrailing {
+  grid-column: 3;
+  justify-self: end;
+  min-width: 0;
+}
+
+.headerCopy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pageTitle {
+  margin: 0;
+  color: #111827;
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.pageDescription {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.headerBackButton {
+  flex: none;
+}
+
+.headerExtra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+@media (max-width: 1200px) {
+  .headerPanel {
+    padding: 16px 18px;
+  }
+
+  .headerPanelWithTrailing {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .headerPanelWithTrailing .headerBackButton {
+    align-self: flex-start;
+  }
+
+  .headerPanelWithTrailing .headerTrailing {
+    width: 100%;
+    max-width: none;
+  }
+
+  .headerPanelInline .headerCopy {
+    flex-wrap: wrap;
+  }
+
+  .headerPanelInline .pageDescription {
+    white-space: normal;
+  }
+}

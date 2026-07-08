@@ -47,6 +47,7 @@ import {
 } from "@/modules/data-connect/components/ScanScheduleFormModal";
 import { ScanRunNowModal } from "@/modules/data-connect/components/ScanRunNowModal";
 import { DataConnectScanTaskDrawer } from "@/modules/data-connect/components/DataConnectScanTaskDrawer";
+import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
 
 import styles from "./DataConnectScanScene.module.css";
 
@@ -556,6 +557,15 @@ export function DataConnectScanScene({
     }
   };
 
+  const handleBackToConnections = () => {
+    if (onBackToConnections) {
+      onBackToConnections();
+      return;
+    }
+
+    void navigate("/data-connect");
+  };
+
   const catalogFilter = (
     <div className={styles.filterField}>
       <span className={styles.filterLabel}>{t("dataConnect.scanCatalog")}</span>
@@ -827,32 +837,26 @@ export function DataConnectScanScene({
   return (
     <>
       <section className={styles.contentSurface}>
-        {catalogError ? <Alert message={catalogError} showIcon type="warning" /> : null}
-        <div className={styles.pageHeader}>
-          <div className={styles.pageHeaderMain}>
-            {catalogLocked && selectedCatalogName ? (
+        <DataConnectPageHeader
+          description={t("dataConnect.scanDescription")}
+          extra={
+            catalogLocked && selectedCatalogName ? (
               <div className={styles.contextBar}>
                 <span className={styles.contextLabel}>
                   {t("dataConnect.scanCurrentConnection")}
                 </span>
                 <strong className={styles.contextName}>{selectedCatalogName}</strong>
               </div>
-            ) : (
+            ) : catalogLocked ? null : (
               catalogFilter
-            )}
-          </div>
-          <AppButton
-            onClick={() => {
-              if (onBackToConnections) {
-                onBackToConnections();
-                return;
-              }
-              void navigate("/data-connect");
-            }}
-          >
-            {t("dataConnect.backToConnections")}
-          </AppButton>
-        </div>
+            )
+          }
+          layout="inline"
+          onBack={handleBackToConnections}
+          title={t("dataConnect.scanTitle")}
+          variant="plain"
+        />
+        {catalogError ? <Alert message={catalogError} showIcon type="warning" /> : null}
         <Tabs
           activeKey={activeTab}
           className={styles.pageTabs}

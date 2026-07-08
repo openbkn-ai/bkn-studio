@@ -19,7 +19,6 @@
 .pageHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   flex-wrap: nowrap;
   flex-shrink: 0;
@@ -33,11 +32,6 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-}
-
-.pageHeaderActions {
-  flex-shrink: 0;
-  margin-left: auto;
 }
 
 .contextBar {
@@ -164,13 +158,12 @@
 
 @media (max-width: 960px) {
   .pageHeader {
-    align-items: stretch;
-    flex-direction: column;
+    align-items: flex-start;
     flex-wrap: wrap;
   }
 
-  .pageHeaderActions {
-    margin-left: 0;
-    align-self: flex-end;
+  .pageHeaderMain {
+    flex: 1;
+    min-width: min(100%, 320px);
   }
 }

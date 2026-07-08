@@ -1,22 +1,22 @@
 .contentSurface {
   composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
   display: grid;
-  gap: 16px;
+  gap: 12px;
   min-height: auto;
 }
 
-.pageHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+.pageTabs {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
 }
 
-.pageHeaderMain {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
+.pageTabs :global(.ant-tabs-nav) {
+  margin-bottom: 12px;
+}
+
+.pageTabs :global(.ant-tabs-nav::before) {
+  border-bottom-color: #e8edf3;
 }
 
 .contextBar {
@@ -27,14 +27,6 @@
   padding: 0 12px;
   border: 1px solid #e5eaf2;
   background: #f8fafc;
-}
-
-.pageTabs :global(.ant-tabs-nav) {
-  margin-bottom: 16px;
-}
-
-.pageTabs :global(.ant-tabs-nav::before) {
-  border-bottom-color: #e8edf3;
 }
 
 .pageTabs :global(.ant-tabs-tab) {
@@ -216,7 +208,6 @@
 }
 
 @media (max-width: 1200px) {
-  .pageHeader,
   .operationBar {
     align-items: stretch;
     flex-direction: column;
