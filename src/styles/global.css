@@ -250,6 +250,8 @@ select {
   display: grid;
   grid-template-columns: 229px minmax(0, 1fr);
   min-height: calc(100vh - 72px);
+  position: relative;
+  isolation: isolate;
   transition: grid-template-columns 0.24s ease;
 }
 
@@ -260,6 +262,7 @@ select {
 .console-sidenav {
   position: sticky;
   top: 72px;
+  z-index: 1100;
   align-self: start;
   display: flex;
   flex-direction: column;
@@ -454,11 +457,13 @@ select {
 }
 
 .console-main {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 72px);
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .workspace-shell {
@@ -643,7 +648,9 @@ select {
   flex: 1;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   margin-top: 0;
+  overflow: hidden;
 }
 
 .workspace-content.is-standalone {

@@ -1,0 +1,149 @@
+.drawer :global(.ant-drawer-body) {
+  background: #f8fafc;
+}
+
+.content {
+  display: grid;
+  gap: 12px;
+}
+
+.sectionCard {
+  padding: 12px 14px;
+  border: 1px solid #e5eaf2;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.sectionTitle {
+  margin: 0 0 10px;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.summaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.summaryMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.grantGroup {
+  display: grid;
+  gap: 10px;
+}
+
+.permissionToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0 12px;
+}
+
+.permissionToolbar :global(.ant-input-affix-wrapper) {
+  flex: 1;
+  max-width: 420px;
+}
+
+.grantItem {
+  padding: 10px 12px;
+  border: 1px solid #e5eaf2;
+  background: #f8fafc;
+}
+
+.grantItemHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.grantOps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.drawer :global(.ant-drawer-body) {
+  background: #f8fafc;
+}
+
+.content {
+  display: grid;
+  gap: 12px;
+}
+
+.sectionCard {
+  padding: 12px 14px;
+  border: 1px solid #e5eaf2;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.sectionTitle {
+  margin: 0 0 10px;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.summaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.summaryMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.grantGroup {
+  display: grid;
+  gap: 10px;
+}
+
+.grantItem {
+  padding: 10px 12px;
+  border: 1px solid #e5eaf2;
+  background: #f8fafc;
+}
+
+.grantItemHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.grantOps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+

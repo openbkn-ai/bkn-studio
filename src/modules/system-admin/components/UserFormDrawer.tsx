@@ -5,9 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { InfoCircleOutlined } from "@ant-design/icons";
-import { Drawer, Form, Input, Select, Spin } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { Drawer, Form, Input, Spin, Tag, TreeSelect } from "antd";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -19,9 +18,9 @@ import {
   getUser,
   updateUser,
 } from "@/modules/system-admin/services/admin.service";
-import type { AdminDepartment, AdminRole, AdminUser } from "@/modules/system-admin/types/admin";
-import { buildDeptTree, rolesOfUser } from "@/modules/system-admin/utils/admin-helpers";
+import type { AdminDepartment, AdminUser } from "@/modules/system-admin/types/admin";
 
+import drawerStyles from "@/modules/system-admin/components/UserFormDrawer.module.css";
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
 type UserFormValues = {
@@ -36,69 +35,121 @@ type UserFormDrawerProps = {
   onClose: () => void;
   onSaved: () => void;
   open: boolean;
-  roles: AdminRole[];
   user: AdminUser | null;
 };
+
+function formatDrawerTime(value: number | undefined, locale: string) {
+  if (!value) {
+    return "";
+  }
+  return new Intl.DateTimeFormat(locale, {
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+    .format(value)
+    .replace(/\//g, "-");
+}
+
+function userInitials(name: string, account: string) {
+  const source = (name.trim() || account.trim()).replace(/\s+/g, "");
+  if (!source) {
+    return "?";
+  }
+  return source.slice(0, 1).toUpperCase();
+}
+
+type DeptTreeNode = {
+  title: string;
+  value: string;
+  key: string;
+  children?: DeptTreeNode[];
+};
+
+function buildDeptTreeData(departments: AdminDepartment[], parentId: string | null): DeptTreeNode[] {
+  return departments
+    .filter((dept) => dept.parentId === parentId)
+    .map((dept) => ({
+      key: dept.id,
+      title: dept.name,
+      value: dept.id,
+      children: buildDeptTreeData(departments, dept.id),
+    }))
+    .filter((node) => node.children?.length || true);
+}
+
+function FormSection({
+  children,
+  description,
+  title,
+}: {
+  children: ReactNode;
+  description: string;
+  title: string;
+}) {
+  return (
+    <section className={drawerStyles.formSectionCard}>
+      <div className={drawerStyles.formSectionHead}>
+        <h3 className={drawerStyles.formSectionTitle}>{title}</h3>
+        <p className={drawerStyles.formSectionDesc}>{description}</p>
+      </div>
+      <div className={drawerStyles.formSectionBody}>{children}</div>
+    </section>
+  );
+}
 
 export function UserFormDrawer({
   departments,
   onClose,
   onSaved,
   open,
-  roles,
   user,
 }: UserFormDrawerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { message } = useAppServices();
   const [form] = Form.useForm<UserFormValues>();
-  const [roleIds, setRoleIds] = useState<string[]>([]);
   const [deptIds, setDeptIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const preservedRoleIds = useRef<string[]>([]);
   const isEdit = Boolean(user);
 
-  const deptTree = useMemo(() => buildDeptTree(departments), [departments]);
-  // 角色按 source 分组：系统角色 vs 业务/非系统角色。
-  const systemRoles = useMemo(() => roles.filter((role) => role.source === "system"), [roles]);
-  const businessRoles = useMemo(() => roles.filter((role) => role.source !== "system"), [roles]);
+  // TreeSelect uses a real tree (not flat indents).
+  const deptTreeData = useMemo(() => buildDeptTreeData(departments, null), [departments]);
 
   useEffect(() => {
     if (!open) {
       return;
     }
+    preservedRoleIds.current = [];
     form.setFieldsValue({
       account: user?.account ?? "",
       name: user?.name ?? "",
       email: user?.email ?? "",
       telephone: user?.telephone ?? "",
     });
-    setRoleIds(user ? rolesOfUser(roles, user.id).map((role) => role.id) : []);
     setDeptIds(user?.departmentIds ?? []);
-    // 列表不返 telephone/departments，编辑时拉详情回显。
     if (user) {
+      preservedRoleIds.current = user.roleIds ?? [];
       setSeeding(true);
       void getUser(user.id)
         .then((detail) => {
-          form.setFieldValue("telephone", detail.telephone);
+          form.setFieldsValue({
+            account: detail.account,
+            name: detail.name,
+            email: detail.email,
+            telephone: detail.telephone,
+          });
           setDeptIds(detail.departmentIds ?? []);
+          preservedRoleIds.current = detail.roleIds ?? [];
         })
         .catch(() => undefined)
         .finally(() => setSeeding(false));
     }
-  }, [form, open, roles, user]);
-
-  const isSystemRole = (roleId: string) => systemRoles.some((role) => role.id === roleId);
-
-  const toggleRole = (roleId: string) => {
-    setRoleIds((current) => {
-      if (current.includes(roleId)) {
-        return current.filter((id) => id !== roleId);
-      }
-      // 系统角色与业务角色互斥：选其一即清掉另一组。
-      const sameGroup = current.filter((id) => isSystemRole(id) === isSystemRole(roleId));
-      return [...sameGroup, roleId];
-    });
-  };
+  }, [form, open, user]);
 
   const handleSubmit = () => {
     void form.validateFields().then(async (values) => {
@@ -111,7 +162,7 @@ export function UserFormDrawer({
             telephone: values.telephone.trim(),
             enabled: user.enabled,
             departmentIds: deptIds,
-            roleIds,
+            roleIds: preservedRoleIds.current,
           });
           message.success(t("systemAdmin.users.toast.userSaved"));
         } else {
@@ -121,7 +172,7 @@ export function UserFormDrawer({
             email: values.email.trim(),
             telephone: values.telephone.trim(),
             departmentIds: deptIds,
-            roleIds,
+            roleIds: [],
           });
           message.success(t("systemAdmin.users.toast.userCreated"));
         }
@@ -135,33 +186,44 @@ export function UserFormDrawer({
     });
   };
 
-  const roleChip = (role: AdminRole) => (
-    <button
-      className={[styles.chipOpt, roleIds.includes(role.id) ? styles.chipOptSelected : ""].join(" ")}
-      key={role.id}
-      onClick={() => toggleRole(role.id)}
-      type="button"
-    >
-      <span className={styles.chipCode}>{role.name}</span>
-      {role.description ? <span className={styles.chipType}>{role.description}</span> : null}
-    </button>
+  const optionalSuffix = (
+    <span className={drawerStyles.optionalMark}>{t("systemAdmin.users.drawer.optional")}</span>
   );
+
+  const watchedName = Form.useWatch("name", form);
+  const watchedAccount = Form.useWatch("account", form);
+  const displayName = watchedName || user?.name || "";
+  const displayAccount = user?.account ?? watchedAccount ?? "";
 
   return (
     <Drawer
+      className={drawerStyles.drawer}
       destroyOnClose
       footer={
-        <div className={styles.drawerFooter}>
-          <span style={{ flex: 1 }} />
-          <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
-          <AppButton loading={submitting} onClick={handleSubmit} type="primary">
-            {isEdit ? t("common.save") : t("common.create")}
-          </AppButton>
+        <div className={drawerStyles.drawerFooter}>
+          {!isEdit ? (
+            <span className={drawerStyles.footerHint}>
+              {t("systemAdmin.users.drawer.createPasswordHint", {
+                password: DEFAULT_NEW_USER_PASSWORD,
+              })}
+            </span>
+          ) : null}
+          <div className={drawerStyles.footerActions}>
+            <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
+            <AppButton loading={submitting} onClick={handleSubmit} type="primary">
+              {isEdit ? t("common.save") : t("common.create")}
+            </AppButton>
+          </div>
         </div>
       }
+      maskClosable={false}
       onClose={onClose}
       open={open}
       rootClassName={styles.adminOverlay}
+      styles={{
+        body: { padding: 16 },
+        header: { padding: "12px 16px" },
+      }}
       title={
         isEdit
           ? t("systemAdmin.users.drawer.editTitle", { name: user?.name })
@@ -170,74 +232,126 @@ export function UserFormDrawer({
       width={560}
     >
       <Spin spinning={seeding}>
-        <Form form={form} layout="vertical" requiredMark>
-          <Form.Item
-            label={t("systemAdmin.users.drawer.account")}
-            name="account"
-            rules={[{ required: true, message: t("common.required") }]}
-          >
-            <Input disabled={isEdit} placeholder={t("systemAdmin.users.drawer.accountPlaceholder")} />
-          </Form.Item>
-          <Form.Item
-            label={t("systemAdmin.users.drawer.displayName")}
-            name="name"
-            rules={[{ required: true, message: t("common.required") }]}
-          >
-            <Input placeholder={t("systemAdmin.users.drawer.displayNamePlaceholder")} />
-          </Form.Item>
-          <Form.Item label={t("systemAdmin.users.drawer.email")} name="email">
-            <Input placeholder={t("systemAdmin.users.drawer.emailPlaceholder")} />
-          </Form.Item>
-          <Form.Item label={t("systemAdmin.users.drawer.telephone")} name="telephone">
-            <Input placeholder={t("systemAdmin.users.drawer.telephonePlaceholder")} />
-          </Form.Item>
-          <Form.Item label={t("systemAdmin.users.drawer.department")}>
-            <Select
-              allowClear
-              mode="multiple"
-              onChange={setDeptIds}
-              optionFilterProp="label"
-              options={deptTree.map(({ dept, depth }) => ({
-                label: `${"　".repeat(depth)}${dept.name}`,
-                value: dept.id,
-              }))}
-              placeholder={t("systemAdmin.users.drawer.departmentPlaceholder")}
-              value={deptIds}
-            />
-          </Form.Item>
-          <Form.Item label={t("systemAdmin.users.drawer.grantRoles")}>
-            <p className={styles.roleExclusiveHint}>
-              {t("systemAdmin.users.drawer.roleExclusiveHint")}
-            </p>
-            {businessRoles.length ? (
-              <>
-                <p className={styles.roleGroupLabel}>{t("systemAdmin.users.drawer.businessRoles")}</p>
-                <div className={styles.chipGroup}>{businessRoles.map(roleChip)}</div>
-              </>
-            ) : null}
-            {systemRoles.length ? (
-              <>
-                <p className={[styles.roleGroupLabel, styles.roleGroupLabelSpaced].join(" ")}>
-                  {t("systemAdmin.users.drawer.systemRoles")}
-                </p>
-                <div className={styles.chipGroup}>{systemRoles.map(roleChip)}</div>
-              </>
-            ) : null}
-            <p className={[styles.subText, styles.sectionNote].join(" ")}>
-              {t("systemAdmin.users.drawer.rolesHint")}
-            </p>
-          </Form.Item>
-          {!isEdit ? (
-            <div className={styles.calloutBox}>
-              <InfoCircleOutlined />
-              <span>
-                {t("systemAdmin.users.drawer.defaultPasswordNote", {
-                  password: DEFAULT_NEW_USER_PASSWORD,
-                })}
-              </span>
+        <div className={drawerStyles.drawerBody}>
+          {isEdit && user ? (
+            <div className={drawerStyles.summaryCard}>
+              <div aria-hidden className={drawerStyles.summaryAvatar}>
+                {userInitials(displayName, displayAccount)}
+              </div>
+              <div className={drawerStyles.summaryMain}>
+                <div className={drawerStyles.summaryTopRow}>
+                  <h3 className={drawerStyles.summaryTitle}>{displayName}</h3>
+                  <div className={drawerStyles.summaryMeta}>
+                    <Tag
+                      className={[
+                        styles.statusTag,
+                        user.enabled ? styles.statusEnabled : styles.statusDisabled,
+                      ].join(" ")}
+                    >
+                      {user.enabled
+                        ? t("systemAdmin.users.statusEnabled")
+                        : t("systemAdmin.users.statusDisabled")}
+                    </Tag>
+                    {user.builtin ? (
+                      <Tag className={styles.roleTag}>{t("systemAdmin.users.builtin")}</Tag>
+                    ) : null}
+                  </div>
+                </div>
+                <div className={drawerStyles.summaryBottomRow}>
+                  <span className={drawerStyles.summaryAccountInline}>
+                    {t("systemAdmin.users.drawer.account")}：{user.account}
+                  </span>
+                  {user.updatedAt ? (
+                    <span className={drawerStyles.summaryUpdated}>
+                      {t("systemAdmin.users.drawer.lastUpdated", {
+                        time: formatDrawerTime(user.updatedAt, i18n.language),
+                      })}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
             </div>
           ) : null}
-        </Form>
+
+          <Form className={drawerStyles.formStack} form={form} layout="vertical" requiredMark={false}>
+            <FormSection
+              description={t("systemAdmin.users.drawer.sectionBasicDesc")}
+              title={t("systemAdmin.users.drawer.sectionBasic")}
+            >
+              <div className={drawerStyles.fieldGrid}>
+                <Form.Item
+                  label={t("systemAdmin.users.drawer.account")}
+                  name="account"
+                  rules={isEdit ? undefined : [{ required: true, message: t("common.required") }]}
+                >
+                  <Input
+                    disabled={isEdit}
+                    placeholder={t("systemAdmin.users.drawer.accountPlaceholder")}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label={t("systemAdmin.users.drawer.displayName")}
+                  name="name"
+                  rules={[{ required: true, message: t("common.required") }]}
+                >
+                  <Input placeholder={t("systemAdmin.users.drawer.displayNamePlaceholder")} />
+                </Form.Item>
+              </div>
+              <div className={drawerStyles.fieldGroup}>
+                <p className={drawerStyles.fieldGroupLabel}>
+                  {t("systemAdmin.users.drawer.fieldGroupContact")}
+                </p>
+                <div className={drawerStyles.fieldGrid}>
+                  <Form.Item
+                    label={
+                      <>
+                        {t("systemAdmin.users.drawer.email")}
+                        {optionalSuffix}
+                      </>
+                    }
+                    name="email"
+                    rules={[
+                      { type: "email", message: t("systemAdmin.users.deptDrawer.emailInvalid") },
+                    ]}
+                  >
+                    <Input placeholder={t("systemAdmin.users.drawer.emailPlaceholder")} />
+                  </Form.Item>
+                  <Form.Item
+                    label={
+                      <>
+                        {t("systemAdmin.users.drawer.telephone")}
+                        {optionalSuffix}
+                      </>
+                    }
+                    name="telephone"
+                  >
+                    <Input placeholder={t("systemAdmin.users.drawer.telephonePlaceholder")} />
+                  </Form.Item>
+                </div>
+              </div>
+            </FormSection>
+
+            <FormSection
+              description={t("systemAdmin.users.drawer.sectionOrganizationDesc")}
+              title={t("systemAdmin.users.drawer.sectionOrganization")}
+            >
+              <Form.Item label={t("systemAdmin.users.drawer.department")}>
+                <TreeSelect
+                  allowClear
+                  multiple
+                  mode="multiple"
+                  onChange={setDeptIds}
+                  placeholder={t("systemAdmin.users.drawer.departmentPlaceholder")}
+                  showSearch
+                  treeData={deptTreeData}
+                  treeDefaultExpandAll
+                  treeNodeFilterProp="title"
+                  value={deptIds}
+                />
+              </Form.Item>
+            </FormSection>
+          </Form>
+        </div>
       </Spin>
     </Drawer>
   );

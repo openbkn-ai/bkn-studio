@@ -12,6 +12,7 @@ import type { AppRouteContribution } from "@/app/router/types";
 import { RouteLoading } from "@/app/router/RouteLoading";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
+import { ObjectAuthorizationCreatePage } from "@/modules/system-admin/pages/ObjectAuthorizationCreatePage";
 
 const UserManagementPage = lazy(async () => {
   const module = await import("@/modules/system-admin/pages/UserManagementPage");
@@ -79,6 +80,16 @@ export const systemAdminRoutes: RouteObject[] = [
       },
     },
     element: guarded(systemAdminPermissions.authorizations, <ObjectAuthorizationPage />),
+  },
+  {
+    path: "system/authorizations/new",
+    handle: {
+      console: {
+        menuKey: "authorization-management",
+        titleKey: "systemAdmin.objectGrants.createPageTitle",
+      },
+    },
+    element: guarded(systemAdminPermissions.authorizations, <ObjectAuthorizationCreatePage />),
   },
   {
     path: "system/audit",

@@ -18,38 +18,44 @@ import {
   ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Alert, Empty, Input, Modal, Segmented, Select, Tag } from "antd";
+import { Alert, Empty, Input, Segmented, Select, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
+import { usePageState } from "@/framework/hooks/use-page-state";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
-import { listUsers } from "@/modules/system-admin/services/admin.service";
+import { listObjectGrants, revokeObjectGrant, summarizeGrants } from "@/modules/system-admin/services/authz.service";
+import type { AdminDepartment } from "@/modules/system-admin/types/admin";
+import type { ObjectGrant } from "@/modules/system-admin/types/authz";
 import {
-  listAuthorizableObjects,
-  listObjectGrants,
-  revokeObjectGrant,
-  summarizeGrants,
-} from "@/modules/system-admin/services/authz.service";
-import type { AdminUser } from "@/modules/system-admin/types/admin";
-import type { AuthorizableObject, ObjectGrant } from "@/modules/system-admin/types/authz";
-import { authzObjectTypeOptions } from "@/modules/system-admin/utils/authz-catalog";
-import {
-  operationLabel,
-  resourceTypeLabel,
-} from "@/modules/system-admin/utils/resource-catalog";
+  getCachedDepartments,
+  getCachedUserSync,
+  hydrateUserLookup,
+} from "@/modules/system-admin/utils/audit-lookup-cache";
+import { AUTHZ_OBJECT_TYPES, authzObjectTypeOptions } from "@/modules/system-admin/utils/authz-catalog";
+import { operationLabel, resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 
 import styles from "./admin.module.css";
 
 type ViewMode = "all" | "object" | "grantee";
 
-type DrawerTarget = { id: string; name: string; sub?: string; type: string };
+const INNER_PAGE_SIZE = 10;
+
+type DrawerTarget = {
+  id: string;
+  name: string;
+  sub?: string;
+  type: string;
+};
 
 const OBJ_ICON: Record<string, ReactNode> = {
   catalog: <DatabaseOutlined />,
@@ -63,41 +69,50 @@ const OBJ_ICON: Record<string, ReactNode> = {
   skill: <BulbOutlined />,
 };
 
-const grantKey = (g: ObjectGrant) => `${g.accessorId}:${g.objType}:${g.objId}`;
+const grantKey = (grant: ObjectGrant) =>
+  `${grant.accessorId}:${grant.objType}:${grant.objId}`;
 
 export function ObjectAuthorizationScene() {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
   const navigate = useNavigate();
+  const { message, modal } = useAppServices();
+  const { pageState, setPagination } = usePageState();
 
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [departments, setDepartments] = useState<AdminDepartment[]>([]);
+  const [lookupRevision, setLookupRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [view, setView] = useState<ViewMode>("all");
   const [keyword, setKeyword] = useState("");
+  const debouncedKeyword = useDebouncedValue(keyword.trim().toLowerCase(), 300);
   const [objTypeFilter, setObjTypeFilter] = useState<string>();
-
+  const [granteeType, setGranteeType] = useState<"all" | "user" | "department">("all");
+  const [objectInnerPage, setObjectInnerPage] = useState<
+    Record<string, { page: number; pageSize: number }>
+  >({});
+  const [granteeInnerPage, setGranteeInnerPage] = useState<
+    Record<string, { page: number; pageSize: number }>
+  >({});
   const [drawer, setDrawer] = useState<{ open: boolean; target: DrawerTarget | null }>({
     open: false,
     target: null,
-  });
-
-  const [picker, setPicker] = useState<{ loading: boolean; objects: AuthorizableObject[]; open: boolean; value?: string }>({
-    loading: false,
-    objects: [],
-    open: false,
-    value: undefined,
   });
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [grantList, userList] = await Promise.all([listObjectGrants(), listUsers()]);
+      const [grantList, deptList] = await Promise.all([
+        listObjectGrants(),
+        getCachedDepartments(),
+      ]);
       setGrants(grantList);
-      setUsers(userList);
+      setDepartments(deptList);
+      const accessorIds = [...new Set(grantList.map((grant) => grant.accessorId))];
+      await hydrateUserLookup(accessorIds);
+      setLookupRevision((revision) => revision + 1);
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
@@ -109,146 +124,255 @@ export function ObjectAuthorizationScene() {
     void loadData();
   }, [loadData]);
 
-  const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
-  const userName = useCallback((id: string) => userMap.get(id)?.name ?? id, [userMap]);
+  const deptMap = useMemo(
+    () => new Map(departments.map((item) => [item.id, item])),
+    [departments],
+  );
+  const objectTypeOptions = useMemo(() => authzObjectTypeOptions(), []);
 
-  const filtered = useMemo(() => {
-    const query = keyword.trim().toLowerCase();
-    return grants.filter((g) => {
-      if (objTypeFilter && g.objType !== objTypeFilter) {
-        return false;
+  const resolveGrantee = useCallback(
+    (id: string) => {
+      void lookupRevision;
+      const user = getCachedUserSync(id);
+      if (user) {
+        return {
+          id,
+          name: user.name,
+          account: user.account,
+          label: user.account,
+          type: "user" as const,
+        };
       }
-      if (query) {
-        const hay = `${g.objName} ${userName(g.accessorId)} ${g.operations.join(" ")}`.toLowerCase();
-        if (!hay.includes(query)) {
+
+      const department = deptMap.get(id);
+      if (department) {
+        return {
+          id,
+          name: department.name,
+          account: undefined,
+          label: department.name,
+          type: "department" as const,
+        };
+      }
+
+      return {
+        id,
+        name: id,
+        account: undefined,
+        label: id,
+        type: "user" as const,
+      };
+    },
+    [deptMap, lookupRevision],
+  );
+
+  const grantsWithMeta = useMemo(() => {
+    void lookupRevision;
+    return grants.map((grant) => {
+      const grantee = resolveGrantee(grant.accessorId);
+      const haystack = [
+        grant.objName,
+        grant.objSub,
+        grantee.name,
+        grantee.account,
+        grantee.label,
+        grant.objType,
+        ...grant.operations,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return { grant, grantee, haystack };
+    });
+  }, [grants, lookupRevision, resolveGrantee]);
+
+  const filteredGrants = useMemo(() => {
+    return grantsWithMeta
+      .filter(({ grant, grantee, haystack }) => {
+        if (objTypeFilter && grant.objType !== objTypeFilter) {
           return false;
         }
-      }
-      return true;
-    });
-  }, [grants, keyword, objTypeFilter, userName]);
+        if (granteeType !== "all" && grantee.type !== granteeType) {
+          return false;
+        }
+        if (debouncedKeyword && !haystack.includes(debouncedKeyword)) {
+          return false;
+        }
+        return true;
+      })
+      .map(({ grant }) => grant);
+  }, [debouncedKeyword, granteeType, grantsWithMeta, objTypeFilter]);
+
+  useEffect(() => {
+    setPagination(1, pageState.pageSize);
+  }, [debouncedKeyword, granteeType, objTypeFilter, pageState.pageSize, setPagination, view]);
+
+  const byObject = useMemo(() => {
+    const groups = new Map<string, ObjectGrant[]>();
+    for (const grant of filteredGrants) {
+      const key = `${grant.objType}::${grant.objId}`;
+      const list = groups.get(key) ?? [];
+      list.push(grant);
+      groups.set(key, list);
+    }
+    return [...groups.values()];
+  }, [filteredGrants]);
+
+  const byGrantee = useMemo(() => {
+    const groups = new Map<string, ObjectGrant[]>();
+    for (const grant of filteredGrants) {
+      const list = groups.get(grant.accessorId) ?? [];
+      list.push(grant);
+      groups.set(grant.accessorId, list);
+    }
+    return [...groups.values()];
+  }, [filteredGrants]);
+
+  const groupList = useMemo(() => {
+    if (view === "object") {
+      return byObject;
+    }
+    if (view === "grantee") {
+      return byGrantee;
+    }
+    return [];
+  }, [byGrantee, byObject, view]);
+
+  const pagedGroups = useMemo(() => {
+    const start = (pageState.page - 1) * pageState.pageSize;
+    return groupList.slice(start, start + pageState.pageSize);
+  }, [groupList, pageState.page, pageState.pageSize]);
+
+  const pagedGrants = useMemo(() => {
+    const start = (pageState.page - 1) * pageState.pageSize;
+    return filteredGrants.slice(start, start + pageState.pageSize);
+  }, [filteredGrants, pageState.page, pageState.pageSize]);
 
   const summary = useMemo(() => summarizeGrants(grants), [grants]);
 
-  const userCell = (accessorId: string) => (
-    <span className={styles.authzWho}>
-      <span className={styles.authzAvatar}>
-        <UserOutlined />
+  const openDrawer = useCallback((target: DrawerTarget) => {
+    setDrawer({ open: true, target });
+  }, []);
+
+  const granteeCell = useCallback(
+    (accessorId: string) => {
+      const grantee = resolveGrantee(accessorId);
+      const label = <span className={styles.authzWhoName}>{grantee.label}</span>;
+      if (grantee.type === "user" && grantee.name !== grantee.label) {
+        return <Tooltip title={grantee.name}>{label}</Tooltip>;
+      }
+      return label;
+    },
+    [resolveGrantee],
+  );
+
+  const opChips = useCallback((grant: ObjectGrant) => {
+    const visibleOperations = grant.operations.slice(0, 3);
+    const hiddenCount = grant.operations.length - visibleOperations.length;
+    const hiddenLabels = grant.operations
+      .slice(3)
+      .map((operation) => operationLabel(grant.objType, operation))
+      .join(" / ");
+
+    return (
+      <span className={styles.chipRow}>
+        {visibleOperations.map((operation) => (
+          <Tag className={styles.permChip} key={`${grantKey(grant)}:${operation}`}>
+            {operationLabel(grant.objType, operation)}
+          </Tag>
+        ))}
+        {hiddenCount > 0 ? (
+          <Tooltip title={hiddenLabels}>
+            <span className={styles.moreHint}>+{hiddenCount}</span>
+          </Tooltip>
+        ) : null}
       </span>
-      <span className={styles.authzWhoName}>{userName(accessorId)}</span>
-    </span>
+    );
+  }, []);
+
+  const confirmRevoke = useCallback(
+    (grant: ObjectGrant) => {
+      const grantee = resolveGrantee(grant.accessorId);
+      void modal.confirm({
+        title: t("systemAdmin.objectGrants.revokeTitle"),
+        content: t("systemAdmin.objectGrants.revokeConfirm", {
+          name: grantee.label,
+          object: grant.objName,
+        }),
+        okText: t("systemAdmin.objectGrants.revoke"),
+        cancelText: t("common.cancel"),
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          try {
+            await revokeObjectGrant(grant.accessorId, grant.objType, grant.objId);
+            setGrants((prev) =>
+              prev.filter(
+                (item) =>
+                  !(
+                    item.accessorId === grant.accessorId &&
+                    item.objType === grant.objType &&
+                    item.objId === grant.objId
+                  ),
+              ),
+            );
+            message.success(t("systemAdmin.objectGrants.toast.revoked"));
+          } catch (error) {
+            void message.error(extractRequestErrorMessage(error));
+          }
+        },
+      });
+    },
+    [message, modal, resolveGrantee, t],
   );
 
-  const opChips = (grant: ObjectGrant) => (
-    <span className={styles.chipRow}>
-      {grant.operations.map((op) => (
-        <Tag className={styles.permChip} key={op} title={op}>
-          {operationLabel(grant.objType, op)}
-        </Tag>
-      ))}
-    </span>
-  );
-
-  const openDrawer = (target: DrawerTarget) => setDrawer({ open: true, target });
-
-  const confirmRevoke = (grant: ObjectGrant) => {
-    void modal.confirm({
-      title: t("systemAdmin.objectGrants.revokeTitle"),
-      content: t("systemAdmin.objectGrants.revokeConfirm", {
-        name: userName(grant.accessorId),
-        object: grant.objName,
-      }),
-      okText: t("systemAdmin.objectGrants.revoke"),
-      cancelText: t("common.cancel"),
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await revokeObjectGrant(grant.accessorId, grant.objType, grant.objId);
-          message.success(t("systemAdmin.objectGrants.toast.revoked"));
-          await loadData();
-        } catch (error) {
-          void message.error(extractRequestErrorMessage(error));
-        }
-      },
-    });
-  };
-
-  // ---- new grant: pick object → open drawer ----
-  const openPicker = async () => {
-    setPicker({ loading: true, objects: [], open: true, value: undefined });
-    try {
-      const objects = await listAuthorizableObjects();
-      setPicker({ loading: false, objects, open: true, value: undefined });
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-      setPicker({ loading: false, objects: [], open: false, value: undefined });
-    }
-  };
-
-  const pickerOptions = useMemo(() => {
-    const byType = new Map<string, AuthorizableObject[]>();
-    for (const obj of picker.objects) {
-      const list = byType.get(obj.type) ?? [];
-      list.push(obj);
-      byType.set(obj.type, list);
-    }
-    return [...byType.entries()].map(([type, list]) => ({
-      label: resourceTypeLabel(type),
-      options: list.map((obj) => ({
-        label: obj.sub ? `${obj.name}（${obj.sub}）` : obj.name,
-        value: `${obj.type}::${obj.id}`,
-      })),
-    }));
-  }, [picker.objects]);
-
-  const confirmPicker = () => {
-    if (!picker.value) {
-      void message.error(t("systemAdmin.objectGrants.pickObjectFirst"));
-      return;
-    }
-    const [type, id] = picker.value.split("::");
-    const obj = picker.objects.find((item) => item.type === type && item.id === id);
-    setPicker((prev) => ({ ...prev, open: false }));
-    if (obj) {
-      openDrawer({ type: obj.type, id: obj.id, name: obj.name, sub: obj.sub });
-    }
-  };
-
-  // ---- views ----
-  const columns: ColumnsType<ObjectGrant> = [
+  const columns: ColumnsType<ObjectGrant> = useMemo(() => [
     {
       title: t("systemAdmin.objectGrants.columns.object"),
-      key: "object",
-      render: (_, g) => (
+      dataIndex: "objName",
+      render: (_, grant) => (
         <div className={styles.nameCell}>
-          <span className={styles.nameTitle}>{g.objName}</span>
-          {g.objSub ? <span className={styles.subText}>{g.objSub}</span> : null}
+          <span className={styles.nameTitle}>
+            <span className={styles.authzAvatar}>
+              {OBJ_ICON[grant.objType] ?? <AppstoreOutlined />}
+            </span>
+            {grant.objName}
+          </span>
+          {grant.objSub ? <span className={styles.subText}>{grant.objSub}</span> : null}
         </div>
       ),
     },
     {
       title: t("systemAdmin.objectGrants.columns.type"),
-      key: "type",
-      render: (_, g) => <Tag className={styles.roleTag}>{resourceTypeLabel(g.objType)}</Tag>,
+      dataIndex: "objType",
+      width: 160,
+      render: (value: string) => <Tag className={styles.roleTag}>{resourceTypeLabel(value)}</Tag>,
     },
     {
       title: t("systemAdmin.objectGrants.columns.grantee"),
-      key: "grantee",
-      render: (_, g) => userCell(g.accessorId),
+      dataIndex: "accessorId",
+      render: (value: string) => granteeCell(value),
     },
     {
       title: t("systemAdmin.objectGrants.columns.operations"),
-      key: "operations",
-      render: (_, g) => opChips(g),
+      dataIndex: "operations",
+      render: (_, grant) => opChips(grant),
     },
     {
       title: t("systemAdmin.objectGrants.columns.actions"),
       key: "actions",
-      render: (_, g) => (
-        <span className={styles.actionGroup}>
+      width: 160,
+      render: (_, grant) => (
+        <div className={[styles.actionGroup, styles.actionGroupInline].join(" ")}>
           <AppButton
             className={styles.actionLink}
-            onClick={() => openDrawer({ type: g.objType, id: g.objId, name: g.objName, sub: g.objSub })}
+            onClick={() =>
+              openDrawer({
+                id: grant.objId,
+                name: grant.objName,
+                sub: grant.objSub,
+                type: grant.objType,
+              })
+            }
             type="link"
           >
             {t("systemAdmin.objectGrants.manage")}
@@ -256,65 +380,46 @@ export function ObjectAuthorizationScene() {
           <AppButton
             className={[styles.actionLink, styles.actionDanger].join(" ")}
             danger
-            onClick={() => confirmRevoke(g)}
+            onClick={() => confirmRevoke(grant)}
             type="link"
           >
             {t("systemAdmin.objectGrants.revoke")}
           </AppButton>
-        </span>
+        </div>
       ),
     },
-  ];
-
-  const byObject = useMemo(() => {
-    const groups = new Map<string, ObjectGrant[]>();
-    for (const g of filtered) {
-      const key = `${g.objType}::${g.objId}`;
-      const list = groups.get(key) ?? [];
-      list.push(g);
-      groups.set(key, list);
-    }
-    return [...groups.values()];
-  }, [filtered]);
-
-  const byGrantee = useMemo(() => {
-    const groups = new Map<string, ObjectGrant[]>();
-    for (const g of filtered) {
-      const list = groups.get(g.accessorId) ?? [];
-      list.push(g);
-      groups.set(g.accessorId, list);
-    }
-    return [...groups.values()];
-  }, [filtered]);
+  ], [confirmRevoke, granteeCell, openDrawer, opChips, t]);
 
   const renderBody = () => {
-    if (loadError) {
+    if (!loading && filteredGrants.length === 0) {
       return (
-        <Alert
-          action={
-            <AppButton onClick={() => void loadData()} type="link">
-              {t("common.retry")}
-            </AppButton>
-          }
-          message={loadError}
-          showIcon
-          type="error"
+        <Empty
+          description={t("systemAdmin.objectGrants.empty")}
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       );
     }
-    if (!loading && !filtered.length) {
-      return <Empty description={t("systemAdmin.objectGrants.empty")} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
-    }
+
     if (view === "object") {
       return (
         <div className={styles.authzGroupList}>
-          {byObject.map((list) => {
+          {pagedGroups.map((list) => {
             const head = list[0];
+            const groupKey = `${head.objType}::${head.objId}`;
+            const inner = objectInnerPage[groupKey] ?? {
+              page: 1,
+              pageSize: INNER_PAGE_SIZE,
+            };
+            const innerStart = (inner.page - 1) * inner.pageSize;
+            const innerPaged = list.slice(innerStart, innerStart + inner.pageSize);
+
             return (
-              <div className={styles.authzGroup} key={`${head.objType}::${head.objId}`}>
+              <div className={styles.authzGroup} key={groupKey}>
                 <div className={styles.authzGroupHead}>
                   <span className={styles.authzGroupTitle}>
-                    <span className={styles.authzAvatar}>{OBJ_ICON[head.objType] ?? <AppstoreOutlined />}</span>
+                    <span className={styles.authzAvatar}>
+                      {OBJ_ICON[head.objType] ?? <AppstoreOutlined />}
+                    </span>
                     <span className={styles.authzGroupName}>{head.objName}</span>
                     <Tag className={styles.roleTag}>{resourceTypeLabel(head.objType)}</Tag>
                     <span className={styles.authzGroupCount}>
@@ -324,26 +429,51 @@ export function ObjectAuthorizationScene() {
                   <AppButton
                     icon={<KeyOutlined />}
                     onClick={() =>
-                      openDrawer({ type: head.objType, id: head.objId, name: head.objName, sub: head.objSub })
+                      openDrawer({
+                        id: head.objId,
+                        name: head.objName,
+                        sub: head.objSub,
+                        type: head.objType,
+                      })
                     }
                   >
                     {t("systemAdmin.objectGrants.manage")}
                   </AppButton>
                 </div>
                 <div className={styles.authzGroupBody}>
-                  {list.map((g) => (
-                    <div className={styles.authzGrantLine} key={grantKey(g)}>
-                      {userCell(g.accessorId)}
-                      {opChips(g)}
+                  {innerPaged.map((grant) => (
+                    <div className={styles.authzGrantLine} key={grantKey(grant)}>
+                      {granteeCell(grant.accessorId)}
+                      {opChips(grant)}
                       <AppButton
                         className={[styles.actionLink, styles.actionDanger].join(" ")}
-                        onClick={() => confirmRevoke(g)}
+                        danger
+                        onClick={() => confirmRevoke(grant)}
                         type="link"
                       >
                         {t("systemAdmin.objectGrants.revoke")}
                       </AppButton>
                     </div>
                   ))}
+                  {list.length > inner.pageSize ? (
+                    <TablePaginationBar
+                      current={inner.page}
+                      onChange={(page, nextPageSize) => {
+                        setObjectInnerPage((prev) => ({
+                          ...prev,
+                          [groupKey]: {
+                            page,
+                            pageSize: nextPageSize ?? inner.pageSize,
+                          },
+                        }));
+                      }}
+                      pageSize={inner.pageSize}
+                      showSizeChanger
+                      showTotal={(count) => t("common.total", { total: count })}
+                      size="small"
+                      total={list.length}
+                    />
+                  ) : null}
                 </div>
               </div>
             );
@@ -351,42 +481,76 @@ export function ObjectAuthorizationScene() {
         </div>
       );
     }
+
     if (view === "grantee") {
       return (
         <div className={styles.authzGroupList}>
-          {byGrantee.map((list) => {
+          {pagedGroups.map((list) => {
             const head = list[0];
+            const grantee = resolveGrantee(head.accessorId);
+            const inner = granteeInnerPage[head.accessorId] ?? {
+              page: 1,
+              pageSize: INNER_PAGE_SIZE,
+            };
+            const innerStart = (inner.page - 1) * inner.pageSize;
+            const innerPaged = list.slice(innerStart, innerStart + inner.pageSize);
+
             return (
               <div className={styles.authzGroup} key={head.accessorId}>
                 <div className={styles.authzGroupHead}>
                   <span className={styles.authzGroupTitle}>
-                    <span className={styles.authzAvatar}>
-                      <UserOutlined />
-                    </span>
-                    <span className={styles.authzGroupName}>{userName(head.accessorId)}</span>
+                    <span className={styles.authzGroupName}>{grantee.label}</span>
                     <span className={styles.authzGroupCount}>
                       {t("systemAdmin.objectGrants.objectCount", { count: list.length })}
                     </span>
                   </span>
                 </div>
                 <div className={styles.authzGroupBody}>
-                  {list.map((g) => (
-                    <div className={styles.authzGrantLine} key={grantKey(g)}>
+                  {innerPaged.map((grant) => (
+                    <div className={styles.authzGrantLine} key={grantKey(grant)}>
                       <span className={styles.authzWho}>
-                        <span className={styles.authzAvatar}>{OBJ_ICON[g.objType] ?? <AppstoreOutlined />}</span>
-                        <span className={styles.authzWhoName}>{g.objName}</span>
-                        <Tag className={styles.roleTag}>{resourceTypeLabel(g.objType)}</Tag>
+                        <span className={styles.authzAvatar}>
+                          {OBJ_ICON[grant.objType] ?? <AppstoreOutlined />}
+                        </span>
+                        <span className={styles.authzWhoName}>{grant.objName}</span>
+                        <Tag className={styles.roleTag}>{resourceTypeLabel(grant.objType)}</Tag>
                       </span>
-                      {opChips(g)}
+                      {opChips(grant)}
                       <AppButton
                         className={styles.actionLink}
-                        onClick={() => openDrawer({ type: g.objType, id: g.objId, name: g.objName, sub: g.objSub })}
+                        onClick={() =>
+                          openDrawer({
+                            id: grant.objId,
+                            name: grant.objName,
+                            sub: grant.objSub,
+                            type: grant.objType,
+                          })
+                        }
                         type="link"
                       >
                         {t("systemAdmin.objectGrants.manage")}
                       </AppButton>
                     </div>
                   ))}
+                  {list.length > inner.pageSize ? (
+                    <TablePaginationBar
+                      current={inner.page}
+                      onChange={(page, nextPageSize) => {
+                        setGranteeInnerPage((prev) => ({
+                          ...prev,
+                          [head.accessorId]: {
+                            page,
+                            pageSize: nextPageSize ?? inner.pageSize,
+                          },
+                        }));
+                      }}
+                      pageSize={inner.pageSize}
+                      showSizeChanger
+                      showTotal={(count) => t("common.total", { total: count })}
+                      size="small"
+                      total={list.length}
+                    />
+                  ) : null}
                 </div>
               </div>
             );
@@ -394,12 +558,13 @@ export function ObjectAuthorizationScene() {
         </div>
       );
     }
+
     return (
       <AppTable<ObjectGrant>
         columns={columns}
-        dataSource={filtered}
+        dataSource={pagedGrants}
         loading={loading}
-        pagination={{ pageSize: 10, hideOnSinglePage: true }}
+        pagination={false}
         rowKey={grantKey}
       />
     );
@@ -423,7 +588,7 @@ export function ObjectAuthorizationScene() {
           </div>
           <div className={styles.statCard}>
             <span className={styles.statLabel}>{t("systemAdmin.objectGrants.stats.types")}</span>
-            <span className={styles.statValue}>{authzObjectTypeOptions().length}</span>
+            <span className={styles.statValue}>{AUTHZ_OBJECT_TYPES.length}</span>
           </div>
         </div>
 
@@ -431,16 +596,18 @@ export function ObjectAuthorizationScene() {
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
               <PermissionGate permissions="admin-authz:grant">
-                <AppButton icon={<PlusOutlined />} onClick={() => void openPicker()} type="primary">
+                <AppButton
+                  icon={<PlusOutlined />}
+                  onClick={() => void navigate("/system/authorizations/new")}
+                  type="primary"
+                >
                   {t("systemAdmin.objectGrants.create")}
                 </AppButton>
               </PermissionGate>
               <AppButton
                 icon={<ReloadOutlined />}
-                onClick={() => {
-                  void loadData();
-                  message.info(t("systemAdmin.objectGrants.toast.refreshed"));
-                }}
+                loading={loading}
+                onClick={() => void loadData()}
               >
                 {t("common.refresh")}
               </AppButton>
@@ -455,6 +622,7 @@ export function ObjectAuthorizationScene() {
               value={view}
             />
           </div>
+
           <div className={[styles.toolbarFilters, styles.filtersInline].join(" ")}>
             <Input.Search
               allowClear
@@ -467,9 +635,28 @@ export function ObjectAuthorizationScene() {
               allowClear
               className={styles.filterSelect}
               onChange={(value) => setObjTypeFilter(value)}
-              options={authzObjectTypeOptions()}
+              options={objectTypeOptions}
               placeholder={t("systemAdmin.objectGrants.filterObjType")}
               value={objTypeFilter}
+            />
+            <Select
+              className={styles.filterSelect}
+              onChange={(value) => setGranteeType(value)}
+              options={[
+                {
+                  label: t("systemAdmin.objectGrants.filterGranteeTypeAll"),
+                  value: "all",
+                },
+                {
+                  label: t("systemAdmin.objectGrants.granteeUser"),
+                  value: "user",
+                },
+                {
+                  label: t("systemAdmin.objectGrants.granteeDept"),
+                  value: "department",
+                },
+              ]}
+              value={granteeType}
             />
           </div>
         </div>
@@ -480,7 +667,7 @@ export function ObjectAuthorizationScene() {
             {t("systemAdmin.objectGrants.calloutPrefix")}
             <AppButton
               className={styles.actionLink}
-              onClick={() => navigate("/system/roles")}
+              onClick={() => void navigate("/system/roles")}
               style={{ fontSize: 13 }}
               type="link"
             >
@@ -490,44 +677,47 @@ export function ObjectAuthorizationScene() {
           </span>
         </div>
 
-        <div className={styles.tableSurface}>{renderBody()}</div>
+        {loadError ? (
+          <Alert
+            action={
+              <AppButton onClick={() => void loadData()} type="link">
+                {t("common.retry")}
+              </AppButton>
+            }
+            message={loadError}
+            showIcon
+            type="error"
+          />
+        ) : (
+          <>
+            <div className={styles.tableSurface}>{renderBody()}</div>
+            {filteredGrants.length > 0 ? (
+              <TablePaginationBar
+                current={pageState.page}
+                onChange={setPagination}
+                pageSize={pageState.pageSize}
+                showSizeChanger
+                showTotal={(count) => t("common.total", { total: count })}
+                size="small"
+                total={view === "all" ? filteredGrants.length : groupList.length}
+              />
+            ) : null}
+          </>
+        )}
       </section>
 
       {drawer.target ? (
         <ObjectAuthorizeDrawer
+          allGrants={grants}
           objId={drawer.target.id}
           objName={drawer.target.name}
           objSub={drawer.target.sub}
           objType={drawer.target.type}
-          onChanged={loadData}
           onClose={() => setDrawer({ open: false, target: null })}
+          onGrantsChange={setGrants}
           open={drawer.open}
         />
       ) : null}
-
-      <Modal
-        cancelText={t("common.cancel")}
-        okText={t("systemAdmin.objectGrants.pickerNext")}
-        onCancel={() => setPicker((prev) => ({ ...prev, open: false }))}
-        onOk={confirmPicker}
-        open={picker.open}
-        rootClassName={styles.adminOverlay}
-        title={t("systemAdmin.objectGrants.create")}
-      >
-        <p className={styles.subText} style={{ marginTop: 0 }}>
-          {t("systemAdmin.objectGrants.pickerHint")}
-        </p>
-        <Select
-          loading={picker.loading}
-          onChange={(value) => setPicker((prev) => ({ ...prev, value }))}
-          optionFilterProp="label"
-          options={pickerOptions}
-          placeholder={t("systemAdmin.objectGrants.pickerPlaceholder")}
-          showSearch
-          style={{ width: "100%" }}
-          value={picker.value}
-        />
-      </Modal>
     </>
   );
 }

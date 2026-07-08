@@ -16,6 +16,7 @@ import { resetUserPassword } from "@/modules/system-admin/services/admin.service
 import type { AdminUser } from "@/modules/system-admin/types/admin";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
+import modalStyles from "@/modules/system-admin/components/ResetPasswordModal.module.css";
 
 type ResetFormValues = {
   confirm: string;
@@ -60,7 +61,7 @@ export function ResetPasswordModal({ onClose, open, user }: ResetPasswordModalPr
       onCancel={onClose}
       onOk={handleSubmit}
       open={open}
-      rootClassName={styles.adminOverlay}
+      rootClassName={[styles.adminOverlay, modalStyles.resetPasswordModal].join(" ")}
       title={t("systemAdmin.users.reset.title", { name: user.name })}
     >
       <Form form={form} layout="vertical" requiredMark>

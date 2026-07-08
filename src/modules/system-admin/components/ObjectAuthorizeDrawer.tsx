@@ -22,16 +22,23 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { listUsers } from "@/modules/system-admin/services/admin.service";
+import { listUsersPage } from "@/modules/system-admin/services/admin.service";
 import {
   listObjectGrants,
   revokeObjectGrant,
   upsertObjectGrant,
 } from "@/modules/system-admin/services/authz.service";
-import type { AdminUser } from "@/modules/system-admin/types/admin";
+import type { AdminDepartment } from "@/modules/system-admin/types/admin";
 import type { ObjectGrant } from "@/modules/system-admin/types/authz";
+import {
+  getCachedDepartments,
+  getCachedUserSync,
+  hydrateUserLookup,
+  primeUserLookupCache,
+} from "@/modules/system-admin/utils/audit-lookup-cache";
 import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog";
 import {
   operationsForType,
@@ -45,6 +52,11 @@ type ObjectAuthorizeDrawerProps = {
   objName: string;
   objSub?: string;
   objType: string;
+  /** 在新建流程中预选被授权方（可选）。 */
+  prefillGranteeId?: string;
+  /** 父级已加载的授权列表；提供时不再重复拉全量 grants。 */
+  allGrants?: ObjectGrant[];
+  onGrantsChange?: (grants: ObjectGrant[]) => void;
   onChanged?: () => void;
   onClose: () => void;
   open: boolean;
@@ -62,11 +74,28 @@ const OBJ_ICON: Record<string, ReactNode> = {
   skill: <BulbOutlined />,
 };
 
+function filterObjectGrants(grants: ObjectGrant[], objType: string, objId: string) {
+  return grants.filter((grant) => grant.objType === objType && grant.objId === objId);
+}
+
+function mergeObjectGrants(
+  allGrants: ObjectGrant[],
+  objType: string,
+  objId: string,
+  objectGrants: ObjectGrant[],
+) {
+  const others = allGrants.filter((grant) => !(grant.objType === objType && grant.objId === objId));
+  return [...others, ...objectGrants];
+}
+
 export function ObjectAuthorizeDrawer({
   objId,
   objName,
   objSub,
   objType,
+  prefillGranteeId,
+  allGrants,
+  onGrantsChange,
   onChanged,
   onClose,
   open,
@@ -74,53 +103,149 @@ export function ObjectAuthorizeDrawer({
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [departments, setDepartments] = useState<AdminDepartment[]>([]);
+  const [lookupRevision, setLookupRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [candidate, setCandidate] = useState<string>();
+  const [candidateKeyword, setCandidateKeyword] = useState("");
+  const debouncedCandidateKeyword = useDebouncedValue(candidateKeyword.trim(), 300);
+  const [candidateUserOptions, setCandidateUserOptions] = useState<
+    Array<{ label: string; value: string }>
+  >([]);
+  const [candidateSearchLoading, setCandidateSearchLoading] = useState(false);
 
-  // 对象授权只给「实例级」操作，隐藏类型级的 create。
   const ops = useMemo(
     () => operationsForType(objType).filter((op) => !HIDDEN_INSTANCE_OPS.has(op.key)),
     [objType],
   );
 
-  const load = useCallback(async () => {
+  const syncLookup = useCallback(async (accessorIds: string[]) => {
+    const deptList = await getCachedDepartments();
+    setDepartments(deptList);
+    await hydrateUserLookup(accessorIds);
+    setLookupRevision((revision) => revision + 1);
+  }, []);
+
+  const loadRemote = useCallback(async () => {
     setLoading(true);
     try {
-      const [grantList, userList] = await Promise.all([listObjectGrants(), listUsers()]);
-      setGrants(grantList.filter((g) => g.objType === objType && g.objId === objId));
-      setUsers(userList);
+      const grantList = await listObjectGrants();
+      const filtered = filterObjectGrants(grantList, objType, objId);
+      setGrants(filtered);
+      await syncLookup(filtered.map((grant) => grant.accessorId));
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [message, objId, objType]);
+  }, [message, objId, objType, syncLookup]);
 
-  useEffect(() => {
-    if (open) {
-      setCandidate(undefined);
-      void load();
-    }
-  }, [load, open]);
-
-  const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
-  const userName = useCallback((id: string) => userMap.get(id)?.name ?? id, [userMap]);
-  const userAccount = useCallback((id: string) => userMap.get(id)?.account ?? "", [userMap]);
-  // 内置(超级)管理员本就拥有全部权限,其授权不可在此调整或移除。
-  const isProtected = useCallback(
-    (id: string) => userMap.get(id)?.builtin === true,
-    [userMap],
+  const applyLocalGrants = useCallback(
+    (nextObjectGrants: ObjectGrant[]) => {
+      setGrants(nextObjectGrants);
+      if (allGrants && onGrantsChange) {
+        onGrantsChange(mergeObjectGrants(allGrants, objType, objId, nextObjectGrants));
+      }
+    },
+    [allGrants, objId, objType, onGrantsChange],
   );
 
-  // 候选用户（排除本对象已授权的）。
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setCandidate(prefillGranteeId);
+    setCandidateKeyword("");
+    if (allGrants) {
+      const filtered = filterObjectGrants(allGrants, objType, objId);
+      setGrants(filtered);
+      setLoading(false);
+      void syncLookup(filtered.map((grant) => grant.accessorId));
+      return;
+    }
+    void loadRemote();
+  }, [allGrants, loadRemote, objId, objType, open, prefillGranteeId, syncLookup]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    let cancelled = false;
+    setCandidateSearchLoading(true);
+    void listUsersPage({ search: debouncedCandidateKeyword || undefined, limit: 20 })
+      .then(({ users }) => {
+        if (cancelled) {
+          return;
+        }
+        primeUserLookupCache(users);
+        setCandidateUserOptions(
+          users.map((user) => ({
+            value: user.id,
+            label: `${user.name}（${user.account}）`,
+          })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCandidateUserOptions([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setCandidateSearchLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedCandidateKeyword, open]);
+
+  const deptMap = useMemo(
+    () => new Map(departments.map((department) => [department.id, department])),
+    [departments],
+  );
+
+  const isProtected = useCallback(
+    (id: string) => {
+      void lookupRevision;
+      return getCachedUserSync(id)?.builtin === true;
+    },
+    [lookupRevision],
+  );
+
+  const resolveGrantee = useCallback(
+    (id: string) => {
+      void lookupRevision;
+      const user = getCachedUserSync(id);
+      if (user) {
+        return { id, name: user.name, sub: user.account, type: "user" as const };
+      }
+      const dept = deptMap.get(id);
+      if (dept) {
+        return { id, name: dept.name, sub: undefined, type: "department" as const };
+      }
+      return { id, name: id, sub: undefined, type: "user" as const };
+    },
+    [deptMap, lookupRevision],
+  );
+
+  const hasProtectedGrant = useMemo(
+    () => grants.some((grant) => isProtected(grant.accessorId)),
+    [grants, isProtected],
+  );
+
   const candidates = useMemo(() => {
-    const taken = new Set(grants.map((g) => g.accessorId));
-    return users
-      .filter((u) => !taken.has(u.id))
-      .map((u) => ({ value: u.id, label: `${u.name}（${u.account}）` }));
-  }, [grants, users]);
+    const taken = new Set(grants.map((grant) => grant.accessorId));
+    const userOptions = candidateUserOptions.filter((option) => !taken.has(option.value));
+    const deptOptions = departments
+      .filter((department) => !taken.has(department.id))
+      .map((department) => ({ value: department.id, label: department.name }));
+    return [
+      { label: t("systemAdmin.objectGrants.granteeUser"), options: userOptions },
+      { label: t("systemAdmin.objectGrants.granteeDept"), options: deptOptions },
+    ];
+  }, [candidateUserOptions, departments, grants, t]);
 
   const targetOf = (grant: ObjectGrant) => ({
     accessorId: grant.accessorId,
@@ -135,17 +260,34 @@ export function ObjectAuthorizeDrawer({
       void message.error(t("systemAdmin.objectGrants.pickGranteeFirst"));
       return;
     }
-    // 默认给一个「只读」类操作占位，再让用户在卡片里调整。
     const defaultOp = ops.find((op) => /view|display|list/.test(op.key))?.key ?? ops[0]?.key;
     if (!defaultOp) {
       return;
     }
     setBusy(true);
     try {
-      await upsertObjectGrant({ accessorId: candidate, objType, objId, objName, objSub, operations: [defaultOp] });
+      await upsertObjectGrant({
+        accessorId: candidate,
+        objType,
+        objId,
+        objName,
+        objSub,
+        operations: [defaultOp],
+      });
       message.success(t("systemAdmin.objectGrants.toast.granteeAdded"));
       setCandidate(undefined);
-      await load();
+      const nextGrant: ObjectGrant = {
+        accessorId: candidate,
+        objType,
+        objId,
+        objName,
+        objSub,
+        operations: [defaultOp],
+      };
+      const nextGrants = [...grants.filter((grant) => grant.accessorId !== candidate), nextGrant];
+      applyLocalGrants(nextGrants);
+      await hydrateUserLookup([candidate]);
+      setLookupRevision((revision) => revision + 1);
       onChanged?.();
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
@@ -162,7 +304,12 @@ export function ObjectAuthorizeDrawer({
       setBusy(true);
       try {
         await upsertObjectGrant({ ...targetOf(grant), operations: next });
-        await load();
+        const nextGrants = next.length
+          ? grants.map((item) =>
+              item.accessorId === grant.accessorId ? { ...item, operations: next } : item,
+            )
+          : grants.filter((item) => item.accessorId !== grant.accessorId);
+        applyLocalGrants(nextGrants);
         onChanged?.();
       } catch (error) {
         void message.error(extractRequestErrorMessage(error));
@@ -185,9 +332,10 @@ export function ObjectAuthorizeDrawer({
   };
 
   const handleRemove = (grant: ObjectGrant) => {
+    const grantee = resolveGrantee(grant.accessorId);
     void modal.confirm({
       title: t("systemAdmin.objectGrants.removeGrantTitle"),
-      content: t("systemAdmin.objectGrants.removeGrantConfirm", { name: userName(grant.accessorId) }),
+      content: t("systemAdmin.objectGrants.removeGrantConfirm", { name: grantee.name }),
       okText: t("common.delete"),
       cancelText: t("common.cancel"),
       okButtonProps: { danger: true },
@@ -195,7 +343,7 @@ export function ObjectAuthorizeDrawer({
         try {
           await revokeObjectGrant(grant.accessorId, grant.objType, grant.objId);
           message.success(t("systemAdmin.objectGrants.toast.revoked"));
-          await load();
+          applyLocalGrants(grants.filter((item) => item.accessorId !== grant.accessorId));
           onChanged?.();
         } catch (error) {
           void message.error(extractRequestErrorMessage(error));
@@ -211,7 +359,7 @@ export function ObjectAuthorizeDrawer({
       open={open}
       rootClassName={styles.adminOverlay}
       title={t("systemAdmin.objectGrants.drawerTitle", { name: objName })}
-      width={640}
+      width={720}
     >
       <div className={styles.authzObjHead}>
         <span className={styles.authzAvatar}>{OBJ_ICON[objType] ?? <AppstoreOutlined />}</span>
@@ -222,86 +370,138 @@ export function ObjectAuthorizeDrawer({
           </div>
           {objSub ? <span className={styles.subText}>{objSub}</span> : null}
         </div>
+        <div className={styles.authzObjStats}>
+          <span className={styles.authzObjStat}>
+            <strong>{grants.length}</strong>
+            <span>
+              {t("systemAdmin.objectGrants.granteeUser")}/{t("systemAdmin.objectGrants.granteeDept")}
+            </span>
+          </span>
+          <span className={styles.authzObjStat}>
+            <strong>{ops.length}</strong>
+            <span>{t("systemAdmin.objectGrants.columns.operations")}</span>
+          </span>
+        </div>
       </div>
 
       <div className={[styles.calloutBox, styles.sectionCalloutBottom].join(" ")}>
         <span>{t("systemAdmin.objectGrants.drawerHint")}</span>
       </div>
 
-      <div className={styles.grantAddRow}>
-        <Select
-          loading={loading}
-          onChange={setCandidate}
-          optionFilterProp="label"
-          options={candidates}
-          placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
-          showSearch
-          style={{ flex: 1, minWidth: 220 }}
-          value={candidate}
-        />
-        <AppButton icon={<PlusOutlined />} loading={busy} onClick={() => void handleAdd()} type="primary">
-          {t("systemAdmin.objectGrants.add")}
-        </AppButton>
-      </div>
+      <section className={styles.createPanel}>
+        <div className={styles.createPanelHead}>
+          <h3 className={styles.createPanelTitle}>{t("systemAdmin.objectGrants.add")}</h3>
+          <p className={styles.createPanelDesc}>{t("systemAdmin.objectGrants.addGranteePlaceholder")}</p>
+        </div>
+        <div className={styles.createPanelBody}>
+          <div className={styles.grantAddRow}>
+            <Select
+              filterOption={false}
+              loading={loading || candidateSearchLoading}
+              notFoundContent={candidateSearchLoading ? <Spin size="small" /> : null}
+              onChange={setCandidate}
+              onSearch={setCandidateKeyword}
+              options={candidates}
+              placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
+              showSearch
+              style={{ flex: 1, minWidth: 220 }}
+              value={candidate}
+            />
+            <AppButton icon={<PlusOutlined />} loading={busy} onClick={() => void handleAdd()} type="primary">
+              {t("systemAdmin.objectGrants.add")}
+            </AppButton>
+          </div>
+        </div>
+      </section>
 
       {loading ? (
-        <div style={{ padding: "32px 0", textAlign: "center" }}>
+        <div className={styles.createLoading}>
           <Spin />
         </div>
       ) : grants.length ? (
-        <div className={styles.authzList}>
-          {grants.map((grant) => {
-            const locked = isProtected(grant.accessorId);
-            return (
-              <div className={styles.authzCard} key={grant.accessorId}>
-                <div className={styles.authzCardHead}>
-                  <span className={styles.authzWho}>
-                    <span className={styles.authzAvatar}>
-                      <UserOutlined />
-                    </span>
-                    <span className={styles.authzWhoName}>{userName(grant.accessorId)}</span>
-                    <span className={styles.authzWhoSub}>{userAccount(grant.accessorId)}</span>
-                  </span>
-                  {locked ? (
-                    <Tooltip title={t("systemAdmin.objectGrants.adminLocked")}>
-                      <span className={styles.subText}>
-                        <LockOutlined />
-                      </span>
-                    </Tooltip>
-                  ) : (
-                    <AppButton
-                      className={[styles.actionLink, styles.actionDanger].join(" ")}
-                      onClick={() => handleRemove(grant)}
-                      type="link"
-                    >
-                      {t("systemAdmin.objectGrants.remove")}
-                    </AppButton>
-                  )}
-                </div>
-                <div className={styles.chipGroup}>
-                  {ops.map((op) => (
-                    <button
-                      className={[styles.chipOpt, grant.operations.includes(op.key) ? styles.chipOptSelected : ""].join(" ")}
-                      disabled={busy || locked}
-                      key={op.key}
-                      onClick={() => void toggleOp(grant, op.key)}
-                      type="button"
-                    >
-                      <span className={styles.chipCode}>{op.label}</span>
-                      <span className={styles.chipType}>{op.key}</span>
-                    </button>
-                  ))}
-                </div>
+        <section className={[styles.createPanel, styles.sectionCallout].join(" ")}>
+          <div className={styles.createPanelHead}>
+            <h3 className={styles.createPanelTitle}>{t("systemAdmin.objectGrants.manage")}</h3>
+            <p className={styles.createPanelDesc}>{t("systemAdmin.objectGrants.drawerHint")}</p>
+          </div>
+          <div className={styles.createPanelBody}>
+            {hasProtectedGrant ? (
+              <div className={[styles.calloutBox, styles.calloutWarn].join(" ")}>
+                <LockOutlined />
+                <span>{t("systemAdmin.objectGrants.adminLocked")}</span>
               </div>
-            );
-          })}
-        </div>
+            ) : null}
+            <div className={styles.authzList}>
+              {grants.map((grant) => {
+                const locked = isProtected(grant.accessorId);
+                const grantee = resolveGrantee(grant.accessorId);
+                return (
+                  <div className={styles.authzCard} key={grant.accessorId}>
+                    <div className={styles.authzCardHead}>
+                      <span className={styles.authzWho}>
+                        <span className={styles.authzAvatar}>
+                          {grantee.type === "department" ? <AppstoreOutlined /> : <UserOutlined />}
+                        </span>
+                        <span className={styles.authzWhoName}>{grantee.name}</span>
+                        {grantee.sub ? <span className={styles.authzWhoSub}>{grantee.sub}</span> : null}
+                        <Tag className={styles.granteeTag}>
+                          {grantee.type === "department"
+                            ? t("systemAdmin.objectGrants.granteeDept")
+                            : t("systemAdmin.objectGrants.granteeUser")}
+                        </Tag>
+                      </span>
+                      {locked ? (
+                        <Tooltip title={t("systemAdmin.objectGrants.adminLocked")}>
+                          <span className={styles.subText}>
+                            <LockOutlined />
+                          </span>
+                        </Tooltip>
+                      ) : (
+                        <AppButton
+                          className={[styles.actionLink, styles.actionDanger].join(" ")}
+                          onClick={() => handleRemove(grant)}
+                          type="link"
+                        >
+                          {t("systemAdmin.objectGrants.remove")}
+                        </AppButton>
+                      )}
+                    </div>
+                    <div className={styles.chipGroup}>
+                      {ops.map((op) => (
+                        <button
+                          className={[
+                            styles.chipOpt,
+                            grant.operations.includes(op.key) ? styles.chipOptSelected : "",
+                          ].join(" ")}
+                          disabled={busy || locked}
+                          key={op.key}
+                          onClick={() => void toggleOp(grant, op.key)}
+                          type="button"
+                        >
+                          <span className={styles.chipCode}>{op.label}</span>
+                          <span className={styles.chipType}>{op.key}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
       ) : (
-        <Empty
-          description={t("systemAdmin.objectGrants.drawerEmpty")}
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          style={{ margin: "20px 0" }}
-        />
+        <section className={[styles.createPanel, styles.sectionCallout].join(" ")}>
+          <div className={styles.createPanelHead}>
+            <h3 className={styles.createPanelTitle}>{t("systemAdmin.objectGrants.manage")}</h3>
+            <p className={styles.createPanelDesc}>{t("systemAdmin.objectGrants.drawerHint")}</p>
+          </div>
+          <div className={styles.createPanelBody}>
+            <Empty
+              description={t("systemAdmin.objectGrants.drawerEmpty")}
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          </div>
+        </section>
       )}
     </Drawer>
   );

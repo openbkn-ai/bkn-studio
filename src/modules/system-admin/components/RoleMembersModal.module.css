@@ -1,0 +1,71 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: nowrap;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.metaCount {
+  color: var(--admin-color-secondary, #4b5563);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.metaChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.memberSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+.addButton {
+  flex-shrink: 0;
+  min-width: 72px;
+}
+
+.searchInput {
+  flex: 0 0 260px;
+  width: 260px;
+}
+
+.memberPanel {
+  border: 1px solid var(--admin-color-border, #d9e0ea);
+  background: var(--admin-color-surface, #fff);
+  overflow: hidden;
+}
+
+.memberPanel :global(.ant-table-tbody > tr > td) {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+.memberPanel :global(.ant-table-tbody > tr:hover > td) {
+  background: var(--admin-color-surface-hover, #f7faff);
+}
+
+.memberTable :global(.ant-table-wrapper) {
+  border: 0;
+}
+
+.memberTable :global(.ant-table) {
+  background: var(--admin-color-surface, #fff);
+}
+
+.memberTable :global(.ant-table-thead > tr > th) {
+  background: var(--admin-color-surface-muted, #f3f6fa);
+}
+

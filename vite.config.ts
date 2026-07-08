@@ -33,6 +33,10 @@ function redirectRootToAppBase(): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, "");
   const devProxyOrigin = env.VITE_DEV_AUTH_ORIGIN || "http://118.196.7.174";
+  const safeProxyTarget =
+    env.VITE_SAFE_PROXY_TARGET?.trim() ||
+    process.env.VITE_SAFE_PROXY_TARGET?.trim() ||
+    "";
   const useMock = env.VITE_USE_MOCK !== "false";
   const agentOperatorProxyTarget =
     process.env.VITE_PROXY_TARGET ?? (useMock ? "http://127.0.0.1:9000" : devProxyOrigin);
@@ -99,6 +103,16 @@ export default defineConfig(({ mode }) => {
         ...(useMock
           ? {}
           : {
+              // 本地 bkn-safe：/api/safe/* → VITE_SAFE_PROXY_TARGET（须在 /api 之前）。
+              ...(safeProxyTarget
+                ? {
+                    "/api/safe": {
+                      changeOrigin: true,
+                      secure: false,
+                      target: safeProxyTarget,
+                    },
+                  }
+                : {}),
               "/api": {
                 changeOrigin: true,
                 // Allow self-signed HTTPS targets used by local gateways.

@@ -1,0 +1,40 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: nowrap;
+}
+
+.memberSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+.searchInput {
+  flex: 0 0 280px;
+  width: 280px;
+}
+
+.memberPanel {
+  border: 1px solid var(--admin-color-border, #d9e0ea);
+  background: var(--admin-color-surface, #fff);
+  overflow: hidden;
+}
+
+.memberTable :global(.ant-table-wrapper) {
+  border: 0;
+}
+
+.memberTable :global(.ant-table) {
+  background: var(--admin-color-surface, #fff);
+}
+
+.memberTable :global(.ant-table-thead > tr > th) {
+  background: var(--admin-color-surface-muted, #f3f6fa);
+}
+
+.addButton {
+  flex-shrink: 0;
+  min-width: 72px;
+}
