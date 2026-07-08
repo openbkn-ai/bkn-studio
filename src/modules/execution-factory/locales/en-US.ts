@@ -129,6 +129,12 @@ export const executionFactoryEnUS = {
     importOpenApiCapabilitySuccess: "Imported {{count}} tool(s) successfully",
     importOpenApiCapabilityPartial: "Imported {{success}} tool(s), {{failed}} failed",
     importOpenApiCapabilityParsed: "Detected {{count}} endpoint(s). Confirm the toolset and import.",
+    importOpenApiRelativeServerResolved:
+      "Detected relative OpenAPI server {{relativeUrl}} and resolved it to {{serviceUrl}}.",
+    importOpenApiServiceUrlRequired:
+      "Please enter a full HTTP(S) service URL before importing.",
+    importOpenApiRelativeServerManual:
+      "This OpenAPI document uses a relative server URL {{relativeUrl}}. Enter the full service URL before importing.",
     importOpenApiCapabilityFileReady: "File ready. It will be parsed and imported on save.",
     importOpenApiCapabilityPreview: "OpenAPI {{version}} · {{count}} endpoint(s)",
     addCapabilityFunctionTitle: "Write a function",

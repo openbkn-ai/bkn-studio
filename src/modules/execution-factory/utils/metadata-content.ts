@@ -66,6 +66,15 @@ export type OpenApiDocumentAnalysis =
     }
   | { ok: false; reason: string };
 
+export type OpenApiSpecSource =
+  | { kind: "paste" }
+  | { kind: "file"; fileName?: string }
+  | { kind: "url"; url: string };
+
+export type ResolvedOpenApiServiceUrl =
+  | { ok: true; source: "absolute" | "resolved-relative"; url: string }
+  | { ok: false; reason: string; relativeUrl?: string };
+
 function isFullOpenApiDocument(value: unknown): value is Record<string, unknown> {
   return (
     typeof value === "object" &&
@@ -371,6 +380,47 @@ export function buildOpenApiDocumentFromMetadata(metadata: BackendMetadata): str
   }
 
   return JSON.stringify(document, null, 2);
+}
+
+export function resolveOpenApiServiceUrl(
+  openapiSpec: string,
+  source?: OpenApiSpecSource,
+): ResolvedOpenApiServiceUrl {
+  const analysis = analyzeOpenApiDocumentText(openapiSpec);
+
+  if (!analysis.ok) {
+    return { ok: false, reason: analysis.reason };
+  }
+
+  const serverUrl = analysis.serverUrl?.trim();
+  if (!serverUrl) {
+    return { ok: false, reason: "servers[0].url 不能为空。" };
+  }
+
+  if (/^https?:\/\//i.test(serverUrl)) {
+    return { ok: true, source: "absolute", url: serverUrl };
+  }
+
+  if (source?.kind === "url") {
+    try {
+      const resolved = new URL(serverUrl, source.url);
+      if (/^https?:$/i.test(resolved.protocol)) {
+        return {
+          ok: true,
+          source: "resolved-relative",
+          url: resolved.toString().replace(/\/$/, ""),
+        };
+      }
+    } catch {
+      // Fall through to the manual input message below.
+    }
+  }
+
+  return {
+    ok: false,
+    relativeUrl: serverUrl,
+    reason: `OpenAPI servers[0].url 是相对路径 ${serverUrl}，请填写完整服务地址。`,
+  };
 }
 
 export function serializeOpenApiSpec(metadata?: BackendMetadata): string | undefined {

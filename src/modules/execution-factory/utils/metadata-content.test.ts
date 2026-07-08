@@ -11,6 +11,7 @@ import {
   analyzeOpenApiDocumentText,
   buildOpenApiDocumentFromMetadata,
   parseOpenApiDataPayload,
+  resolveOpenApiServiceUrl,
   validateOpenApiDocumentText,
 } from "@/modules/execution-factory/utils/metadata-content";
 
@@ -125,6 +126,57 @@ describe("metadata-content OpenAPI helpers", () => {
         path: "/weather",
         summary: "查询天气",
       });
+    }
+  });
+
+  it("resolves a root-relative server URL against an OpenAPI document URL", () => {
+    const spec = JSON.stringify({
+      openapi: "3.0.4",
+      info: { title: "Swagger Petstore", version: "1.0.0" },
+      servers: [{ url: "/api/v3" }],
+      paths: {
+        "/pet": {
+          put: {
+            summary: "Update a pet",
+            responses: { "200": { description: "OK" } },
+          },
+        },
+      },
+    });
+
+    const resolved = resolveOpenApiServiceUrl(spec, {
+      kind: "url",
+      url: "https://petstore3.swagger.io/api/v3/openapi.json",
+    });
+
+    expect(resolved).toEqual({
+      ok: true,
+      source: "resolved-relative",
+      url: "https://petstore3.swagger.io/api/v3",
+    });
+  });
+
+  it("requires a manual service URL for relative servers from pasted OpenAPI documents", () => {
+    const spec = JSON.stringify({
+      openapi: "3.0.4",
+      info: { title: "Swagger Petstore", version: "1.0.0" },
+      servers: [{ url: "/api/v3" }],
+      paths: {
+        "/pet": {
+          put: {
+            summary: "Update a pet",
+            responses: { "200": { description: "OK" } },
+          },
+        },
+      },
+    });
+
+    const resolved = resolveOpenApiServiceUrl(spec, { kind: "paste" });
+
+    expect(resolved.ok).toBe(false);
+    if (!resolved.ok) {
+      expect(resolved.relativeUrl).toBe("/api/v3");
+      expect(resolved.reason).toContain("/api/v3");
     }
   });
 

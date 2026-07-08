@@ -36,6 +36,8 @@ import {
   analyzeOpenApiDocumentText,
 
   extractOpenApiMetadataHints,
+  resolveOpenApiServiceUrl,
+  type OpenApiSpecSource,
 
 } from "@/modules/execution-factory/utils/metadata-content";
 
@@ -96,6 +98,7 @@ export const ImportOpenApiCapabilityForm = forwardRef<
   const [form] = Form.useForm<ImportOpenApiCapabilityFormValues>();
 
   const [openapiSpec, setOpenApiSpec] = useState("");
+  const [openapiSource, setOpenApiSource] = useState<OpenApiSpecSource>({ kind: "paste" });
 
   const [parseHint, setParseHint] = useState<string | null>(null);
 
@@ -158,6 +161,10 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
 
   const analysis = useMemo(() => analyzeOpenApiDocumentText(openapiSpec), [openapiSpec]);
+  const resolvedServiceUrl = useMemo(
+    () => (analysis.ok ? resolveOpenApiServiceUrl(openapiSpec, openapiSource) : undefined),
+    [analysis, openapiSource, openapiSpec],
+  );
 
 
 
@@ -175,11 +182,21 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
     if (analysis.ok) {
 
-      setParseHint(
+      const nextParseHint =
+        resolvedServiceUrl?.ok && resolvedServiceUrl.source === "resolved-relative"
+          ? t("executionFactory.importOpenApiRelativeServerResolved", {
+              relativeUrl: analysis.serverUrl,
+              serviceUrl: resolvedServiceUrl.url,
+            })
+          : resolvedServiceUrl && !resolvedServiceUrl.ok && resolvedServiceUrl.relativeUrl
+            ? t("executionFactory.importOpenApiRelativeServerManual", {
+                relativeUrl: resolvedServiceUrl.relativeUrl,
+              })
+            : t("executionFactory.importOpenApiCapabilityParsed", {
+                count: analysis.operationCount,
+              });
 
-        t("executionFactory.importOpenApiCapabilityParsed", { count: analysis.operationCount }),
-
-      );
+      setParseHint(nextParseHint);
 
 
 
@@ -193,10 +210,24 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
           toolboxDescription: hints.description ?? form.getFieldValue("toolboxDescription"),
 
-          serviceUrl: analysis.serverUrl ?? form.getFieldValue("serviceUrl"),
+          serviceUrl:
+            resolvedServiceUrl?.ok
+              ? resolvedServiceUrl.url
+              : analysis.serverUrl ?? form.getFieldValue("serviceUrl"),
 
         });
 
+      }
+
+      form.setFieldsValue({
+        serviceUrl:
+          resolvedServiceUrl?.ok
+            ? resolvedServiceUrl.url
+            : analysis.serverUrl ?? form.getFieldValue("serviceUrl"),
+      });
+
+      if (resolvedServiceUrl?.ok) {
+        form.setFields([{ name: "serviceUrl", errors: [] }]);
       }
 
       return;
@@ -207,7 +238,7 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
     setParseHint(t("executionFactory.importOpenApiCapabilityFileReady"));
 
-  }, [analysis, form, initialBoxId, openapiSpec, t]);
+  }, [analysis, form, initialBoxId, openapiSpec, resolvedServiceUrl, t]);
 
 
 
@@ -221,9 +252,23 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
     }
 
+    const serviceUrl = values.serviceUrl?.trim();
+    if (!serviceUrl || !/^https?:\/\//i.test(serviceUrl)) {
+      const message =
+        resolvedServiceUrl && !resolvedServiceUrl.ok && resolvedServiceUrl.relativeUrl
+          ? t("executionFactory.importOpenApiRelativeServerManual", {
+              relativeUrl: resolvedServiceUrl.relativeUrl,
+            })
+          : t("executionFactory.importOpenApiServiceUrlRequired");
+      form.setFields([{ name: "serviceUrl", errors: [message] }]);
+      form.scrollToField("serviceUrl", { behavior: "smooth", focus: true });
+      setParseHint(message);
+      return;
+    }
 
 
-    onSubmit({ openapiSpec, values });
+
+    onSubmit({ openapiSpec, values: { ...values, serviceUrl } });
 
   };
 
@@ -237,7 +282,12 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
       <OpenApiSpecInput
 
-        onChange={setOpenApiSpec}
+        onChange={(value, source) => {
+          setOpenApiSpec(value);
+          if (source) {
+            setOpenApiSource(source);
+          }
+        }}
 
         registrationTarget="toolbox"
 
@@ -286,6 +336,12 @@ export const ImportOpenApiCapabilityForm = forwardRef<
       <Form.Item label={t("executionFactory.useRule")} name="useRule">
 
         <Input.TextArea rows={2} />
+
+      </Form.Item>
+
+      <Form.Item label={t("executionFactory.serviceUrl")} name="serviceUrl">
+
+        <Input placeholder="https://api.example.com" />
 
       </Form.Item>
 
@@ -360,13 +416,6 @@ export const ImportOpenApiCapabilityForm = forwardRef<
                 <Input.TextArea rows={2} />
 
               </Form.Item>
-
-              <Form.Item label={t("executionFactory.serviceUrl")} name="serviceUrl">
-
-                <Input placeholder="https://api.example.com" />
-
-              </Form.Item>
-
               <CapabilityCategoryFields />
 
             </>
