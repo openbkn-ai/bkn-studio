@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2026 OpenBKN
  * SPDX-License-Identifier: LicenseRef-OpenBKN
  * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
@@ -52,9 +52,9 @@ type ObjectAuthorizeDrawerProps = {
   objName: string;
   objSub?: string;
   objType: string;
-  /** 在新建流程中预选被授权方（可选）。 */
+  /** 鍦ㄦ柊寤烘祦绋嬩腑棰勯€夎鎺堟潈鏂癸紙鍙€夛級銆?*/
   prefillGranteeId?: string;
-  /** 父级已加载的授权列表；提供时不再重复拉全量 grants。 */
+  /** 鐖剁骇宸插姞杞界殑鎺堟潈鍒楄〃锛涙彁渚涙椂涓嶅啀閲嶅鎷夊叏閲?grants銆?*/
   allGrants?: ObjectGrant[];
   onGrantsChange?: (grants: ObjectGrant[]) => void;
   onChanged?: () => void;
@@ -181,7 +181,7 @@ export function ObjectAuthorizeDrawer({
         setCandidateUserOptions(
           users.map((user) => ({
             value: user.id,
-            label: `${user.name}（${user.account}）`,
+            label: `${user.name}锛?{user.account}锛塦,
           })),
         );
       })
