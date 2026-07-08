@@ -53,3 +53,20 @@ export type AuthzSummary = {
   grants: number;
   objects: number;
 };
+
+/** GET /object-grants 查询参数（真实后端）。 */
+export type ObjectGrantQuery = {
+  accessorId?: string;
+  resourceType?: string;
+  resourceId?: string;
+  search?: string;
+  offset?: number;
+  limit?: number;
+  includeSummary?: boolean;
+};
+
+export type ObjectGrantListResult = {
+  grants: ObjectGrant[];
+  total: number;
+  summary?: AuthzSummary;
+};

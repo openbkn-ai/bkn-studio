@@ -33,9 +33,9 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
-import { listObjectGrants, revokeObjectGrant, summarizeGrants } from "@/modules/system-admin/services/authz.service";
+import { listObjectGrantsPage, revokeObjectGrant } from "@/modules/system-admin/services/authz.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
-import type { ObjectGrant } from "@/modules/system-admin/types/authz";
+import type { AuthzSummary, ObjectGrant } from "@/modules/system-admin/types/authz";
 import {
   getCachedDepartments,
   getCachedUserSync,
@@ -79,6 +79,8 @@ export function ObjectAuthorizationScene() {
   const { pageState, setPagination } = usePageState();
 
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
+  const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState<AuthzSummary>({ grants: 0, objects: 0, grantees: 0 });
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
   const [lookupRevision, setLookupRevision] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -86,7 +88,7 @@ export function ObjectAuthorizationScene() {
 
   const [view, setView] = useState<ViewMode>("all");
   const [keyword, setKeyword] = useState("");
-  const debouncedKeyword = useDebouncedValue(keyword.trim().toLowerCase(), 300);
+  const debouncedKeyword = useDebouncedValue(keyword.trim(), 300);
   const [objTypeFilter, setObjTypeFilter] = useState<string>();
   const [granteeType, setGranteeType] = useState<"all" | "user" | "department">("all");
   const [objectInnerPage, setObjectInnerPage] = useState<
@@ -104,13 +106,28 @@ export function ObjectAuthorizationScene() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [grantList, deptList] = await Promise.all([
-        listObjectGrants(),
-        getCachedDepartments(),
-      ]);
-      setGrants(grantList);
+      const deptList = await getCachedDepartments();
       setDepartments(deptList);
-      const accessorIds = [...new Set(grantList.map((grant) => grant.accessorId))];
+
+      const paginate = view === "all";
+      const result = await listObjectGrantsPage({
+        search: debouncedKeyword || undefined,
+        resourceType: objTypeFilter,
+        offset: paginate ? (pageState.page - 1) * pageState.pageSize : undefined,
+        limit: paginate ? pageState.pageSize : undefined,
+        includeSummary: true,
+      });
+
+      setGrants(result.grants);
+      setTotal(result.total);
+      setSummary(
+        result.summary ?? {
+          grants: result.total,
+          objects: new Set(result.grants.map((grant) => `${grant.objType}:${grant.objId}`)).size,
+          grantees: new Set(result.grants.map((grant) => grant.accessorId)).size,
+        },
+      );
+      const accessorIds = [...new Set(result.grants.map((grant) => grant.accessorId))];
       await hydrateUserLookup(accessorIds);
       setLookupRevision((revision) => revision + 1);
     } catch (error) {
@@ -118,7 +135,13 @@ export function ObjectAuthorizationScene() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [
+    debouncedKeyword,
+    objTypeFilter,
+    pageState.page,
+    pageState.pageSize,
+    view,
+  ]);
 
   useEffect(() => {
     void loadData();
@@ -166,42 +189,12 @@ export function ObjectAuthorizationScene() {
     [deptMap, lookupRevision],
   );
 
-  const grantsWithMeta = useMemo(() => {
-    void lookupRevision;
-    return grants.map((grant) => {
-      const grantee = resolveGrantee(grant.accessorId);
-      const haystack = [
-        grant.objName,
-        grant.objSub,
-        grantee.name,
-        grantee.account,
-        grantee.label,
-        grant.objType,
-        ...grant.operations,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return { grant, grantee, haystack };
-    });
-  }, [grants, lookupRevision, resolveGrantee]);
-
   const filteredGrants = useMemo(() => {
-    return grantsWithMeta
-      .filter(({ grant, grantee, haystack }) => {
-        if (objTypeFilter && grant.objType !== objTypeFilter) {
-          return false;
-        }
-        if (granteeType !== "all" && grantee.type !== granteeType) {
-          return false;
-        }
-        if (debouncedKeyword && !haystack.includes(debouncedKeyword)) {
-          return false;
-        }
-        return true;
-      })
-      .map(({ grant }) => grant);
-  }, [debouncedKeyword, granteeType, grantsWithMeta, objTypeFilter]);
+    if (granteeType === "all") {
+      return grants;
+    }
+    return grants.filter((grant) => resolveGrantee(grant.accessorId).type === granteeType);
+  }, [granteeType, grants, resolveGrantee]);
 
   useEffect(() => {
     setPagination(1, pageState.pageSize);
@@ -244,11 +237,14 @@ export function ObjectAuthorizationScene() {
   }, [groupList, pageState.page, pageState.pageSize]);
 
   const pagedGrants = useMemo(() => {
+    if (view === "all") {
+      return filteredGrants;
+    }
     const start = (pageState.page - 1) * pageState.pageSize;
     return filteredGrants.slice(start, start + pageState.pageSize);
-  }, [filteredGrants, pageState.page, pageState.pageSize]);
+  }, [filteredGrants, pageState.page, pageState.pageSize, view]);
 
-  const summary = useMemo(() => summarizeGrants(grants), [grants]);
+  const listTotal = view === "all" ? total : groupList.length;
 
   const openDrawer = useCallback((target: DrawerTarget) => {
     setDrawer({ open: true, target });
@@ -315,6 +311,12 @@ export function ObjectAuthorizationScene() {
                   ),
               ),
             );
+            setTotal((prev) => Math.max(0, prev - 1));
+            setSummary((prev) => ({
+              grants: Math.max(0, prev.grants - 1),
+              objects: prev.objects,
+              grantees: prev.grantees,
+            }));
             message.success(t("systemAdmin.objectGrants.toast.revoked"));
           } catch (error) {
             void message.error(extractRequestErrorMessage(error));
@@ -691,7 +693,7 @@ export function ObjectAuthorizationScene() {
         ) : (
           <>
             <div className={styles.tableSurface}>{renderBody()}</div>
-            {filteredGrants.length > 0 ? (
+            {listTotal > 0 ? (
               <TablePaginationBar
                 current={pageState.page}
                 onChange={setPagination}
@@ -699,7 +701,7 @@ export function ObjectAuthorizationScene() {
                 showSizeChanger
                 showTotal={(count) => t("common.total", { total: count })}
                 size="small"
-                total={view === "all" ? filteredGrants.length : groupList.length}
+                total={view === "all" ? listTotal : groupList.length}
               />
             ) : null}
           </>
@@ -708,13 +710,12 @@ export function ObjectAuthorizationScene() {
 
       {drawer.target ? (
         <ObjectAuthorizeDrawer
-          allGrants={grants}
           objId={drawer.target.id}
           objName={drawer.target.name}
           objSub={drawer.target.sub}
           objType={drawer.target.type}
+          onChanged={() => void loadData()}
           onClose={() => setDrawer({ open: false, target: null })}
-          onGrantsChange={setGrants}
           open={drawer.open}
         />
       ) : null}

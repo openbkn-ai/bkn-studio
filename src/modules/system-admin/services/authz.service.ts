@@ -15,6 +15,8 @@ import type {
   AuthzSummary,
   ObjectGrant,
   ObjectGrantInput,
+  ObjectGrantListResult,
+  ObjectGrantQuery,
 } from "@/modules/system-admin/types/authz";
 
 /**
@@ -89,14 +91,90 @@ const clone = (grant: ObjectGrant): ObjectGrant => ({ ...grant, operations: [...
 
 // ---- reads ------------------------------------------------------------------
 
-export async function listObjectGrants(): Promise<ObjectGrant[]> {
+function filterMockGrants(query: ObjectGrantQuery): ObjectGrant[] {
+  const search = query.search?.trim().toLowerCase();
+  return grants.filter((grant) => {
+    if (query.accessorId && grant.accessorId !== query.accessorId) {
+      return false;
+    }
+    if (query.resourceType && grant.objType !== query.resourceType) {
+      return false;
+    }
+    if (query.resourceId && grant.objId !== query.resourceId) {
+      return false;
+    }
+    if (search) {
+      const haystack = [grant.objName, grant.objSub, grant.objId, grant.objType, grant.accessorId]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!haystack.includes(search)) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+export async function listObjectGrantsPage(
+  query: ObjectGrantQuery = {},
+): Promise<ObjectGrantListResult> {
   if (useMock) {
-    return wait(grants.map(clone));
+    const filtered = filterMockGrants(query).map(clone);
+    const total = filtered.length;
+    const summary = summarizeGrants(filtered);
+    const offset = query.offset ?? 0;
+    const limit = query.limit;
+    const page =
+      limit === undefined ? filtered : filtered.slice(offset, offset + Math.max(limit, 0));
+    return {
+      grants: page,
+      total,
+      summary: query.includeSummary ? summary : undefined,
+    };
   }
-  const response = await http.get<{ entries?: BackendEntry[] }>(`${ADMIN}/object-grants`);
+
+  const params = new URLSearchParams();
+  if (query.accessorId) {
+    params.set("accessor_id", query.accessorId);
+  }
+  if (query.resourceType) {
+    params.set("resource_type", query.resourceType);
+  }
+  if (query.resourceId) {
+    params.set("resource_id", query.resourceId);
+  }
+  if (query.search) {
+    params.set("search", query.search);
+  }
+  if (query.offset !== undefined) {
+    params.set("offset", String(query.offset));
+  }
+  if (query.limit !== undefined) {
+    params.set("limit", String(query.limit));
+  }
+  if (query.includeSummary) {
+    params.set("include_summary", "true");
+  }
+
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const response = await http.get<{
+    entries?: BackendEntry[];
+    total?: number;
+    summary?: AuthzSummary;
+  }>(`${ADMIN}/object-grants${suffix}`);
   const mapped = (response.data.entries ?? []).map(mapEntry);
-  // bkn-safe 只返 type:id，对象名从各领域服务解析回填。
-  return resolveGrantNames(mapped);
+  const named = await resolveGrantNames(mapped);
+  return {
+    grants: named,
+    total: response.data.total ?? named.length,
+    summary: response.data.summary,
+  };
+}
+
+export async function listObjectGrants(query: ObjectGrantQuery = {}): Promise<ObjectGrant[]> {
+  const { grants: grantList } = await listObjectGrantsPage(query);
+  return grantList;
 }
 
 export async function listAuthorizableObjects(objType?: string): Promise<AuthorizableObject[]> {
