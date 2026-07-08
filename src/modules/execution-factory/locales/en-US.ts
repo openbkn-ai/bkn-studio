@@ -708,8 +708,11 @@ export const executionFactoryEnUS = {
     openapiToolboxHint:
       "Paste JSON, upload a file, or fetch from a URL. After parsing, expand each endpoint to review inputs, request body, and response examples.",
     openapiOperationsIoPreviewHint: "Expand an endpoint to review parameters, request body, and response examples.",
-    openapiOperationIoSummary: "{{paramCount}} input(s) · {{responseCount}} response(s)",
-    openapiOperationIoRequestBody: "with request body",
+    openapiOperationIoSummary:
+      "{{paramCount}} URL/Header parameter(s) · {{responseCount}} response(s)",
+    openapiOperationIoSummaryWithBody:
+      "{{paramCount}} URL/Header parameter(s) · request body {{bodyFieldCount}} field(s) · {{responseCount}} response(s)",
+    openapiOperationIoRequestBody: "request body {{bodyFieldCount}} field(s)",
     openapiInputPaste: "Paste",
     openapiInputFile: "Upload File",
     openapiInputUrl: "URL",

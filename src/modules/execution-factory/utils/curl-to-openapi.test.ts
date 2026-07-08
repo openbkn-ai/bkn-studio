@@ -42,6 +42,130 @@ describe("curl-to-openapi", () => {
     expect(validation.ok).toBe(true);
   });
 
+  it("parses JSON body and content type from a POST curl command", () => {
+    const result = parseCurlCommand(`curl -X POST https://api.example.com/login \\
+  -H "Content-Type: application/json" \\
+  -d '{"username":"test","password":"123456"}'`);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.value.method).toBe("POST");
+    expect(result.value.serverUrl).toBe("https://api.example.com");
+    expect(result.value.path).toBe("/login");
+    expect(result.value.requestBody?.contentType).toBe("application/json");
+    expect(result.value.requestBody?.example).toEqual({
+      username: "test",
+      password: "123456",
+    });
+
+    const spec = JSON.parse(buildOpenApiFromQuickApi(result.value)) as {
+      paths: {
+        "/login": {
+          post: {
+            requestBody?: {
+              content?: {
+                "application/json"?: {
+                  example?: unknown;
+                  schema?: {
+                    properties?: Record<string, { type?: string; example?: unknown }>;
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+
+    const jsonBody = spec.paths["/login"].post.requestBody?.content?.["application/json"];
+    expect(jsonBody?.example).toEqual({ username: "test", password: "123456" });
+    expect(jsonBody?.schema?.properties?.username).toEqual({
+      type: "string",
+      example: "test",
+    });
+    expect(jsonBody?.schema?.properties?.password).toEqual({
+      type: "string",
+      example: "123456",
+    });
+  });
+
+  it("turns -G data fields into query parameters", () => {
+    const result = parseCurlCommand(
+      `curl -G --data-urlencode "city=北京" --data "unit=c" https://api.example.com/weather`,
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.method).toBe("GET");
+      expect(result.value.queryParams.map((item) => [item.name, item.example])).toEqual([
+        ["city", "北京"],
+        ["unit", "c"],
+      ]);
+      expect(result.value.requestBody).toBeUndefined();
+    }
+  });
+
+  it("parses form-urlencoded body fields", () => {
+    const result = parseCurlCommand(
+      `curl https://api.example.com/token -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=password&username=test"`,
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.method).toBe("POST");
+      expect(result.value.requestBody?.contentType).toBe("application/x-www-form-urlencoded");
+      expect(result.value.requestBody?.example).toEqual({
+        grant_type: "password",
+        username: "test",
+      });
+    }
+  });
+
+  it("parses multipart form fields", () => {
+    const result = parseCurlCommand(
+      `curl --request POST --form "name=avatar" --form "file=@avatar.png" https://api.example.com/upload`,
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.method).toBe("POST");
+      expect(result.value.requestBody?.contentType).toBe("multipart/form-data");
+      expect(result.value.requestBody?.example).toEqual({
+        name: "avatar",
+        file: "@avatar.png",
+      });
+    }
+  });
+
+  it("returns specific errors for common malformed curl input", () => {
+    expect(parseCurlCommand(`curl -H "Content-Type application/json" https://api.example.com`).ok).toBe(
+      false,
+    );
+
+    const invalidJson = parseCurlCommand(
+      `curl https://api.example.com/login -H "Content-Type: application/json" -d '{"username":'`,
+    );
+    expect(invalidJson).toEqual({
+      ok: false,
+      reason: "请求体不是合法 JSON，请检查引号、逗号或转义字符。",
+    });
+
+    const fileBody = parseCurlCommand(`curl https://api.example.com/upload -d @payload.json`);
+    expect(fileBody).toEqual({
+      ok: false,
+      reason: "暂不支持读取本地文件，请粘贴文件内容。",
+    });
+
+    const unclosedQuote = parseCurlCommand(`curl "https://api.example.com/login`);
+    expect(unclosedQuote).toEqual({
+      ok: false,
+      reason: "cURL 中存在未闭合的引号。",
+    });
+  });
+
   it("parses a plain api url", () => {
     const result = parseQuickApiUrl("https://example.com/api/v1/items?page=1");
     expect(result.ok).toBe(true);

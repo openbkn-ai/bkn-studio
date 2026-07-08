@@ -117,6 +117,22 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
     createdBoxIds.push(boxId);
   });
 
+  test("QA-01c: quick add API previews JSON request body parsed from cURL", async ({ page }) => {
+    const curl = `curl -X POST https://api.example.com/login \\
+  -H "Content-Type: application/json" \\
+  -d '{"username":"test","password":"123456"}'`;
+
+    const drawer = await openAddCapabilityWizard(page, "toolbox");
+
+    await drawer.getByRole("textbox", { name: /cURL/i }).fill(curl);
+
+    await expectOpenApiOperationsIoPreview(drawer, {
+      containsText: /请求体 2 个字段|request body 2 field/i,
+    });
+    await expect(drawer.getByText(/username/i).first()).toBeVisible();
+    await expect(drawer.getByText(/password/i).first()).toBeVisible();
+  });
+
   test("QA-02: quick added toolset supports publish and export", async ({ page, request }) => {
     const toolboxName = buildToolboxName("quick_api_pub");
     const toolName = `health_probe_${Date.now()}`;
