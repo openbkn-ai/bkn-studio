@@ -143,9 +143,11 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     const result = parseCurlCommand(curlText ?? "");
     if (!result.ok) {
       setParseHint(result.reason);
+      form.setFields([{ name: "curlText", errors: [result.reason] }]);
       return;
     }
 
+    form.setFields([{ name: "curlText", errors: [] }]);
     applyParsedApi(result.value);
   };
 
@@ -154,9 +156,11 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     const result = parseQuickApiUrl(apiUrl ?? "");
     if (!result.ok) {
       setParseHint(result.reason);
+      form.setFields([{ name: "apiUrl", errors: [result.reason] }]);
       return;
     }
 
+    form.setFields([{ name: "apiUrl", errors: [] }]);
     applyParsedApi(result.value);
   };
 

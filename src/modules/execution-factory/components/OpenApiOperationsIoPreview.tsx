@@ -25,6 +25,21 @@ function operationKey(operation: { method: string; path: string }) {
   return `${operation.method}:${operation.path}`;
 }
 
+function countRequestBodyFields(schema: unknown, example: unknown) {
+  if (schema && typeof schema === "object") {
+    const properties = (schema as { properties?: unknown }).properties;
+    if (properties && typeof properties === "object" && !Array.isArray(properties)) {
+      return Object.keys(properties).length;
+    }
+  }
+
+  if (example && typeof example === "object" && !Array.isArray(example)) {
+    return Object.keys(example).length;
+  }
+
+  return 0;
+}
+
 export function OpenApiOperationsIoPreview({
   limit = DEFAULT_LIMIT,
   openapiSpec = "",
@@ -32,16 +47,17 @@ export function OpenApiOperationsIoPreview({
   const { t } = useTranslation();
   const operations = useMemo(() => extractOpenApiOperationsIo(openapiSpec), [openapiSpec]);
   const visibleOperations = operations.slice(0, limit);
+  const firstOperationKey = visibleOperations[0] ? operationKey(visibleOperations[0]) : undefined;
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
 
   useEffect(() => {
-    if (visibleOperations[0]) {
-      setActiveKeys([operationKey(visibleOperations[0])]);
+    if (firstOperationKey) {
+      setActiveKeys([firstOperationKey]);
       return;
     }
 
     setActiveKeys([]);
-  }, [openapiSpec, limit]);
+  }, [firstOperationKey]);
 
   if (operations.length === 0) {
     return null;
@@ -55,7 +71,12 @@ export function OpenApiOperationsIoPreview({
         items={visibleOperations.map((operation) => {
           const paramCount = operation.io.parameters.length;
           const responseCount = Object.keys(operation.io.responses ?? {}).length;
+          const bodyFieldCount = countRequestBodyFields(
+            operation.io.requestBodySchema,
+            operation.io.requestBodyExample,
+          );
           const hasRequestBody =
+            bodyFieldCount > 0 ||
             Boolean(operation.io.requestBodyDescription) ||
             operation.io.requestBodyExample !== undefined ||
             operation.io.requestBodySchema !== undefined;
@@ -71,13 +92,16 @@ export function OpenApiOperationsIoPreview({
                   <span className={styles.summary}>{operation.summary}</span>
                 ) : null}
                 <span className={styles.ioMeta}>
-                  {t("executionFactory.openapiOperationIoSummary", {
-                    paramCount,
-                    responseCount,
-                  })}
                   {hasRequestBody
-                    ? ` · ${t("executionFactory.openapiOperationIoRequestBody")}`
-                    : ""}
+                    ? t("executionFactory.openapiOperationIoSummaryWithBody", {
+                        bodyFieldCount,
+                        paramCount,
+                        responseCount,
+                      })
+                    : t("executionFactory.openapiOperationIoSummary", {
+                        paramCount,
+                        responseCount,
+                      })}
                 </span>
               </div>
             ),

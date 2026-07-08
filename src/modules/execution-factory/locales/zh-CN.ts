@@ -700,8 +700,10 @@ export const executionFactoryZhCN = {
     openapiToolboxHint:
       "支持粘贴 JSON、上传文件或从 URL 拉取。解析成功后展开每个接口，可查看入参、请求体与响应示例。",
     openapiOperationsIoPreviewHint: "展开接口查看输入参数、请求体与响应示例。",
-    openapiOperationIoSummary: "{{paramCount}} 个入参 · {{responseCount}} 个响应",
-    openapiOperationIoRequestBody: "含请求体",
+    openapiOperationIoSummary: "{{paramCount}} 个 URL/Header 参数 · {{responseCount}} 个响应",
+    openapiOperationIoSummaryWithBody:
+      "{{paramCount}} 个 URL/Header 参数 · 请求体 {{bodyFieldCount}} 个字段 · {{responseCount}} 个响应",
+    openapiOperationIoRequestBody: "请求体 {{bodyFieldCount}} 个字段",
     openapiInputPaste: "粘贴",
     openapiInputFile: "上传文件",
     openapiInputUrl: "URL",
