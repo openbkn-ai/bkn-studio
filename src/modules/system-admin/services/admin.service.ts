@@ -6,7 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
-import { childDepartments } from "@/modules/system-admin/utils/admin-helpers";
+import { childDepartments, computeSubtreeMemberCounts } from "@/modules/system-admin/utils/admin-helpers";
 import type {
   AdminDepartment,
   AdminRole,
@@ -18,6 +18,7 @@ import type {
   ResourceGrant,
   RoleInput,
   UpdateUserInput,
+  UserListQuery,
 } from "@/modules/system-admin/types/admin";
 
 /**
@@ -25,8 +26,7 @@ import type {
  * `/api/safe/v1/admin/*`（ISF 退役后的统一入口）。默认走前端 mock；
  * VITE_USE_MOCK=false 时改打真实后端。
  *
- * 后端暂不支持、已从写路径剔除（等后端反馈）：冻结/解冻、部门扩展字段
- * （负责人/编码/邮箱/备注）、用户↔部门归属写入。
+ * 后端暂不支持、已从写路径剔除（等后端反馈）：冻结/解冻、用户↔部门归属写入。
  */
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
@@ -50,7 +50,7 @@ const grant = (type: string, id: string, operations: string[]): ResourceGrant =>
 // ---- mock store -------------------------------------------------------------
 
 let departments: AdminDepartment[] = [
-  { id: "dep-root", parentId: null, name: "BKN 平台", type: "org" },
+  { id: "dep-root", parentId: null, name: "BKN 平台", type: "org", code: "BKN" },
   { id: "dep-data", parentId: "dep-root", name: "数据智能部", type: "dept" },
   { id: "dep-ke", parentId: "dep-data", name: "知识工程组", type: "dept" },
   { id: "dep-gov", parentId: "dep-data", name: "数据治理组", type: "dept" },
@@ -141,20 +141,82 @@ function setBinding(roleId: string, accessorId: string, attach: boolean) {
 
 // ---- reads ------------------------------------------------------------------
 
-export async function listUsers(options?: { skipErrorToast?: boolean }): Promise<AdminUser[]> {
+export async function listUsersPage(
+  query: UserListQuery = {},
+  options?: { skipErrorToast?: boolean },
+): Promise<{ total: number; users: AdminUser[] }> {
   if (useMock) {
-    return wait(users.map((item) => ({ ...item })));
+    const keyword = query.search?.trim().toLowerCase() ?? "";
+    let list = users.filter((user) => {
+      if (keyword && !`${user.name} ${user.account} ${user.email} ${user.telephone}`.toLowerCase().includes(keyword)) {
+        return false;
+      }
+      if (query.enabled !== undefined && user.enabled !== query.enabled) {
+        return false;
+      }
+      if (query.departmentId) {
+        const ids = user.departmentIds ?? [];
+        if (query.includeSubtree) {
+          const subtree = collectDeptSubtree(query.departmentId);
+          if (!ids.some((id) => subtree.has(id))) {
+            return false;
+          }
+        } else if (!ids.includes(query.departmentId)) {
+          return false;
+        }
+      }
+      if (query.roleId) {
+        const bound = roles.some(
+          (role) => role.id === query.roleId && role.accessorIds.includes(user.id),
+        );
+        if (!bound) {
+          return false;
+        }
+      }
+      return true;
+    });
+    const total = list.length;
+    const offset = query.offset ?? 0;
+    const limit = query.limit ?? 50;
+    list = list.slice(offset, offset + limit);
+    return wait({
+      users: list.map((item) => enrichMockUserListItem(item)),
+      total,
+    });
   }
-  const response = await http.get<{ users?: BackendUser[] }>(`${ADMIN}/users`, {
-    params: { offset: 0, limit: 500 },
+  const response = await http.get<{ total?: number; users?: BackendUser[] }>(`${ADMIN}/users`, {
+    params: {
+      search: query.search?.trim() || undefined,
+      enabled: query.enabled === undefined ? undefined : String(query.enabled),
+      department_id: query.departmentId || undefined,
+      include_subtree: query.departmentId && query.includeSubtree ? "true" : undefined,
+      role_id: query.roleId || undefined,
+      offset: query.offset ?? 0,
+      limit: query.limit ?? 50,
+    },
     skipErrorToast: options?.skipErrorToast,
   });
-  return (response.data.users ?? []).map((item) => mapUser(item));
+  return {
+    users: (response.data.users ?? []).map((item) => mapUser(item)),
+    total: response.data.total ?? 0,
+  };
+}
+
+export async function listUsers(options?: { skipErrorToast?: boolean }): Promise<AdminUser[]> {
+  const result = await listUsersPage({ offset: 0, limit: 500 }, options);
+  return result.users;
 }
 
 export async function listDepartments(): Promise<AdminDepartment[]> {
   if (useMock) {
-    return wait(departments.map((item) => ({ ...item })));
+    const subtreeCounts = computeSubtreeMemberCounts(departments, users);
+    return wait(
+      departments.map((item) => ({
+        ...item,
+        memberCount: users.filter((user) => (user.departmentIds ?? []).includes(item.id)).length,
+        subtreeMemberCount: subtreeCounts.get(item.id) ?? 0,
+      })),
+    );
   }
   const response = await http.get<{ departments?: BackendDept[] }>(`${ADMIN}/departments`, {
     params: { offset: 0, limit: 1000 },
@@ -162,24 +224,55 @@ export async function listDepartments(): Promise<AdminDepartment[]> {
   return (response.data.departments ?? []).map(mapDept);
 }
 
-export async function listRoles(): Promise<AdminRole[]> {
+function isRoleListItemComplete(item: BackendRole): boolean {
+  return (
+    Array.isArray(item.permissions) &&
+    (Array.isArray(item.accessor_ids) || Array.isArray(item.members))
+  );
+}
+
+export async function listRoles(options?: { withMembers?: boolean }): Promise<AdminRole[]> {
   if (useMock) {
     return wait(roles.map((item) => ({ ...item, accessorIds: [...item.accessorIds], permissions: item.permissions.map((p) => ({ ...p })) })));
   }
-  // 列表只给基础字段；成员 + 权限要逐角色取详情（角色数量很小）。
   const listResponse = await http.get<{ roles?: BackendRole[] }>(`${ADMIN}/roles`);
   const basics = listResponse.data.roles ?? [];
+  const mapped = basics.map((item) => mapRole(item));
+  if (!options?.withMembers) {
+    return mapped;
+  }
   const detailed = await Promise.all(
-    basics.map(async (basic) => {
+    basics.map(async (basic, index) => {
+      if (isRoleListItemComplete(basic)) {
+        return mapped[index];
+      }
       try {
         const detail = await http.get<BackendRole>(`${ADMIN}/roles/${encodeURIComponent(basic.id)}`);
         return mapRole({ ...basic, ...detail.data });
       } catch {
-        return mapRole(basic);
+        return mapped[index];
       }
     }),
   );
   return detailed;
+}
+
+export async function getRole(id: string, options?: { skipErrorToast?: boolean }): Promise<AdminRole> {
+  if (useMock) {
+    const role = findRole(id);
+    if (!role) {
+      throw new Error("role not found");
+    }
+    return wait({
+      ...role,
+      accessorIds: [...role.accessorIds],
+      permissions: role.permissions.map((grant) => ({ ...grant, operations: [...grant.operations] })),
+    });
+  }
+  const response = await http.get<BackendRole>(`${ADMIN}/roles/${encodeURIComponent(id)}`, {
+    skipErrorToast: options?.skipErrorToast,
+  });
+  return mapRole(response.data);
 }
 
 export async function getUser(id: string): Promise<AdminUser> {
@@ -191,19 +284,37 @@ export async function getUser(id: string): Promise<AdminUser> {
     return wait({ ...user, departmentIds: [...(user.departmentIds ?? [])] });
   }
   const response = await http.get<BackendUser>(`${ADMIN}/users/${encodeURIComponent(id)}`);
-  return mapUser(response.data, true);
+  const mapped = mapUser(response.data, true);
+  if (!mapped.roleIds.length && response.data.roles?.length) {
+    mapped.roleIds = response.data.roles;
+  }
+  return mapped;
 }
 
-export async function listDepartmentMemberIds(deptId: string): Promise<string[]> {
+export async function listDepartmentMemberIds(
+  deptId: string,
+  options?: { skipErrorToast?: boolean },
+): Promise<string[]> {
+  const members = await listDepartmentMembers(deptId, options);
+  return members.map((user) => user.id);
+}
+
+export async function listDepartmentMembers(
+  deptId: string,
+  options?: { skipErrorToast?: boolean },
+): Promise<AdminUser[]> {
   if (useMock) {
-    return wait(users.filter((user) => (user.departmentIds ?? []).includes(deptId)).map((user) => user.id));
+    return wait(
+      users
+        .filter((user) => (user.departmentIds ?? []).includes(deptId))
+        .map((user) => enrichMockUserListItem(user)),
+    );
   }
-  const response = await http.get<{
-    Users?: Array<{ ID?: string; id?: string }>;
-    users?: Array<{ ID?: string; id?: string }>;
-  }>(`${ADMIN}/departments/${encodeURIComponent(deptId)}/members`);
-  const list = response.data.users ?? response.data.Users ?? [];
-  return list.map((item) => item.id ?? item.ID ?? "").filter(Boolean);
+  const response = await http.get<{ users?: BackendUser[] }>(
+    `${ADMIN}/departments/${encodeURIComponent(deptId)}/members`,
+    { skipErrorToast: options?.skipErrorToast },
+  );
+  return (response.data.users ?? []).map((item) => mapUser(item));
 }
 
 /** 部门成员写（幂等）：POST/DELETE /departments/:id/members {user_ids}。 */
@@ -211,6 +322,7 @@ export async function setDepartmentMembers(
   deptId: string,
   userIds: string[],
   attach: boolean,
+  options?: { skipErrorToast?: boolean },
 ): Promise<void> {
   if (useMock) {
     for (const user of users) {
@@ -232,6 +344,7 @@ export async function setDepartmentMembers(
     url: `${ADMIN}/departments/${encodeURIComponent(deptId)}/members`,
     method: attach ? "POST" : "DELETE",
     data: { user_ids: userIds },
+    skipErrorToast: options?.skipErrorToast,
   });
 }
 
@@ -249,6 +362,15 @@ export async function listAuditLogs(
     if (query.actorId) {
       logs = logs.filter((log) => log.actorId === query.actorId);
     }
+    if (query.targetId) {
+      logs = logs.filter((log) => log.targetId === query.targetId);
+    }
+    if (query.from) {
+      logs = logs.filter((log) => log.createdAt >= query.from!);
+    }
+    if (query.to) {
+      logs = logs.filter((log) => log.createdAt <= query.to!);
+    }
     if (query.failedOnly) {
       logs = logs.filter((log) => log.status >= 400);
     }
@@ -261,6 +383,7 @@ export async function listAuditLogs(
       actor_id: query.actorId || undefined,
       resource: query.resource || undefined,
       action: query.action || undefined,
+      target_id: query.targetId || undefined,
       from: query.from || undefined,
       to: query.to || undefined,
       offset: query.offset ?? 0,
@@ -315,6 +438,33 @@ export async function createUser(input: CreateUserInput): Promise<void> {
   );
 }
 
+export async function syncUserRoleBindings(accessorId: string, roleIds: string[]): Promise<void> {
+  if (useMock) {
+    for (const role of roles) {
+      const has = role.accessorIds.includes(accessorId);
+      const want = roleIds.includes(role.id);
+      if (want !== has) {
+        setBinding(role.id, accessorId, want);
+      }
+    }
+    await wait(undefined);
+    return;
+  }
+  const bound = await http.get<{ role_ids?: string[] }>(`${ADMIN}/role-bindings`, {
+    params: { accessor_id: accessorId },
+  });
+  const current = new Set(bound.data.role_ids ?? []);
+  const want = new Set(roleIds);
+  await Promise.all([
+    ...[...want].filter((roleId) => !current.has(roleId)).map((roleId) =>
+      http.post(`${ADMIN}/role-bindings`, { accessor_id: accessorId, role_id: roleId }),
+    ),
+    ...[...current].filter((roleId) => !want.has(roleId)).map((roleId) =>
+      http.delete(`${ADMIN}/role-bindings`, { data: { accessor_id: accessorId, role_id: roleId } }),
+    ),
+  ]);
+}
+
 export async function updateUser(id: string, input: UpdateUserInput): Promise<void> {
   if (useMock) {
     const user = findUser(id);
@@ -329,13 +479,7 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<vo
       departmentIds: [...input.departmentIds],
       updatedAt: now(),
     });
-    for (const role of roles) {
-      const has = role.accessorIds.includes(id);
-      const want = input.roleIds.includes(role.id);
-      if (want !== has) {
-        setBinding(role.id, id, want);
-      }
-    }
+    await syncUserRoleBindings(id, input.roleIds);
     await wait(undefined);
     return;
   }
@@ -347,19 +491,7 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<vo
     enabled: input.enabled,
     department_ids: input.departmentIds,
   });
-  const bound = await http.get<{ role_ids?: string[] }>(`${ADMIN}/role-bindings`, {
-    params: { accessor_id: id },
-  });
-  const current = new Set(bound.data.role_ids ?? []);
-  const want = new Set(input.roleIds);
-  await Promise.all([
-    ...[...want].filter((roleId) => !current.has(roleId)).map((roleId) =>
-      http.post(`${ADMIN}/role-bindings`, { accessor_id: id, role_id: roleId }),
-    ),
-    ...[...current].filter((roleId) => !want.has(roleId)).map((roleId) =>
-      http.delete(`${ADMIN}/role-bindings`, { data: { accessor_id: id, role_id: roleId } }),
-    ),
-  ]);
+  await syncUserRoleBindings(id, input.roleIds);
 }
 
 export async function deleteUser(id: string): Promise<void> {
@@ -419,6 +551,10 @@ export async function createDepartment(input: DepartmentInput): Promise<void> {
         parentId: input.parentId ?? "dep-root",
         name: input.name,
         type: input.type ?? "dept",
+        managerId: input.managerId || undefined,
+        code: input.code || undefined,
+        email: input.email || undefined,
+        remark: input.remark || undefined,
       },
     ];
     await wait(undefined);
@@ -428,6 +564,10 @@ export async function createDepartment(input: DepartmentInput): Promise<void> {
     name: input.name,
     ...(input.parentId ? { parent_id: input.parentId } : {}),
     ...(input.type ? { type: input.type } : {}),
+    ...(input.managerId ? { manager_id: input.managerId } : {}),
+    ...(input.code ? { code: input.code } : {}),
+    ...(input.email ? { email: input.email } : {}),
+    ...(input.remark ? { remark: input.remark } : {}),
   });
 }
 
@@ -442,6 +582,10 @@ export async function updateDepartment(id: string, input: DepartmentInput): Prom
     if (input.type) {
       dept.type = input.type;
     }
+    dept.managerId = input.managerId || undefined;
+    dept.code = input.code || undefined;
+    dept.email = input.email || undefined;
+    dept.remark = input.remark || undefined;
     await wait(undefined);
     return;
   }
@@ -450,6 +594,10 @@ export async function updateDepartment(id: string, input: DepartmentInput): Prom
     name: input.name,
     parent_id: input.parentId ?? "",
     ...(input.type ? { type: input.type } : {}),
+    manager_id: input.managerId ?? "",
+    code: input.code ?? "",
+    email: input.email ?? "",
+    remark: input.remark ?? "",
   });
 }
 
@@ -467,7 +615,9 @@ export async function deleteDepartment(id: string): Promise<void> {
     return;
   }
   // 非级联：有子部门/成员时后端返 409。
-  await http.delete(`${ADMIN}/departments/${encodeURIComponent(id)}`);
+  await http.delete(`${ADMIN}/departments/${encodeURIComponent(id)}`, {
+    skipErrorToast: true,
+  });
 }
 
 // ---- role writes ------------------------------------------------------------
@@ -604,13 +754,19 @@ type BackendUser = {
   Departments?: string[];
   account?: string;
   account_type?: string;
+  department_ids?: string[];
+  department_names?: string[];
   departments?: string[];
   email?: string;
   enabled?: boolean;
   id: string;
   name?: string;
+  role_ids?: string[];
+  role_names?: string[];
+  roles?: string[];
   telephone?: string;
   update_time?: number;
+  updated_at?: string;
 };
 
 type BackendAudit = {
@@ -630,18 +786,31 @@ type BackendAudit = {
 // 注意：departments 端点返 PascalCase（ID/Name/ParentID/Type），与 users/roles
 // 的小写不一致，故两种命名都兼容。
 type BackendDept = {
+  Code?: string;
   CreatedAt?: string;
+  Email?: string;
   ID?: string;
+  ManagerID?: string;
+  ManagerId?: string;
+  ManagerName?: string;
   MemberCount?: number;
   Name?: string;
   ParentID?: string | null;
+  Remark?: string;
+  SubtreeMemberCount?: number;
   Type?: string;
+  code?: string;
   department_name?: string;
   dept_name?: string;
+  email?: string;
   id?: string;
+  manager_id?: string;
+  manager_name?: string;
   member_count?: number;
   name?: string;
   parent_id?: string | null;
+  remark?: string;
+  subtree_member_count?: number;
   type?: string;
 };
 
@@ -657,7 +826,49 @@ type BackendRole = {
   update_time?: number;
 };
 
+function parseUpdatedAt(item: BackendUser): number | undefined {
+  if (item.update_time) {
+    return item.update_time;
+  }
+  if (item.updated_at) {
+    const parsed = Date.parse(item.updated_at);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+  return undefined;
+}
+
+function collectDeptSubtree(rootId: string): Set<string> {
+  const out = new Set<string>([rootId]);
+  const queue = [rootId];
+  while (queue.length) {
+    const parentId = queue.shift()!;
+    for (const dept of departments.filter((item) => item.parentId === parentId)) {
+      if (!out.has(dept.id)) {
+        out.add(dept.id);
+        queue.push(dept.id);
+      }
+    }
+  }
+  return out;
+}
+
+function enrichMockUserListItem(user: AdminUser): AdminUser {
+  const deptIds = user.departmentIds ?? [];
+  const userRoles = roles.filter((role) => role.accessorIds.includes(user.id));
+  return {
+    ...user,
+    departmentIds: [...deptIds],
+    departmentNames: deptIds.map((id) => departments.find((dept) => dept.id === id)?.name ?? id),
+    roleIds: userRoles.map((role) => role.id),
+    roleNames: userRoles.map((role) => role.name),
+  };
+}
+
 function mapUser(item: BackendUser, detail = false): AdminUser {
+  const departmentIds = detail
+    ? (item.departments ?? item.Departments ?? item.department_ids ?? [])
+    : item.department_ids;
+  const roleIds = item.role_ids ?? (detail ? item.roles ?? [] : []);
   return {
     id: item.id,
     account: item.account ?? item.id,
@@ -666,10 +877,11 @@ function mapUser(item: BackendUser, detail = false): AdminUser {
     telephone: item.telephone ?? "",
     enabled: item.enabled ?? true,
     accountType: item.account_type ?? "local",
-    roleIds: [],
-    // 列表接口不返 departments；仅详情(GET /users/:id)有。
-    departmentIds: detail ? (item.departments ?? item.Departments ?? []) : undefined,
-    updatedAt: item.update_time,
+    roleIds: roleIds ?? [],
+    roleNames: item.role_names,
+    departmentIds,
+    departmentNames: item.department_names,
+    updatedAt: parseUpdatedAt(item),
   };
 }
 
@@ -697,7 +909,13 @@ function mapDept(item: BackendDept): AdminDepartment {
     parentId: item.ParentID || item.parent_id || null,
     name: item.Name || item.name || item.dept_name || item.department_name || id,
     type: item.Type ?? item.type ?? "dept",
+    managerId: item.ManagerID || item.ManagerId || item.manager_id || undefined,
+    managerName: item.ManagerName || item.manager_name || undefined,
+    code: item.Code || item.code || undefined,
+    email: item.Email || item.email || undefined,
+    remark: item.Remark || item.remark || undefined,
     memberCount: item.MemberCount ?? item.member_count,
+    subtreeMemberCount: item.SubtreeMemberCount ?? item.subtree_member_count,
   };
 }
 

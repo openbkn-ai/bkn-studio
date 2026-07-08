@@ -6,8 +6,7 @@
  */
 
 // 对齐 bkn-safe `/api/safe/v1/admin/*`(ISF 退役后的统一 admin API)。
-// 注意：冻结/解冻、部门扩展字段(负责人/编码/邮箱/备注)、用户↔部门归属写入
-// 三项后端暂不支持，已从写路径剔除，等后端反馈再补。
+// 注意：冻结/解冻、用户↔部门归属写入 三项后端暂不支持，已从写路径剔除，等后端反馈再补。
 
 export type ResourceRef = {
   /** 资源实例 id；"*" 表示整类。 */
@@ -26,12 +25,16 @@ export type AdminUser = {
   builtin?: boolean;
   /** 用户所属部门 id（多对多；列表接口不返，详情/部门成员反查得到）。 */
   departmentIds?: string[];
+  /** 列表接口返回的部门名称摘要。 */
+  departmentNames?: string[];
   email: string;
   enabled: boolean;
   id: string;
   name: string;
   /** 直接绑定到该用户的角色 id（role-bindings，不含部门继承）。 */
   roleIds: string[];
+  /** 列表接口返回的直接角色名称摘要。 */
+  roleNames?: string[];
   telephone: string;
   updatedAt?: number;
 };
@@ -58,15 +61,23 @@ export type AuditLogQuery = {
   limit?: number;
   offset?: number;
   resource?: string;
+  targetId?: string;
   to?: string;
 };
 
 export type AdminDepartment = {
+  code?: string;
+  email?: string;
   id: string;
   /** 直接成员数（GET /departments/:id/members，只读）。 */
+  managerId?: string;
+  managerName?: string;
   memberCount?: number;
   name: string;
   parentId: string | null;
+  remark?: string;
+  /** 含子部门的成员数（去重用户）。 */
+  subtreeMemberCount?: number;
   type: string;
 };
 
@@ -118,12 +129,26 @@ export type UpdateUserInput = {
 };
 
 export type DepartmentInput = {
+  code?: string;
+  email?: string;
+  managerId?: string;
   name: string;
   parentId: string | null;
+  remark?: string;
   type?: string;
 };
 
 export type RoleInput = {
   description: string;
   name: string;
+};
+
+export type UserListQuery = {
+  departmentId?: string;
+  enabled?: boolean;
+  includeSubtree?: boolean;
+  limit?: number;
+  offset?: number;
+  roleId?: string;
+  search?: string;
 };

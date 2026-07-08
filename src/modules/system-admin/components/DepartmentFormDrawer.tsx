@@ -5,16 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { InfoCircleOutlined } from "@ant-design/icons";
 import { Drawer, Form, Input, Select } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   createDepartment,
+  getUser,
+  listUsersPage,
   updateDepartment,
 } from "@/modules/system-admin/services/admin.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
@@ -22,9 +24,15 @@ import { buildDeptTree } from "@/modules/system-admin/utils/admin-helpers";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
+const MANAGER_SEARCH_LIMIT = 50;
+
 type DeptFormValues = {
+  code: string;
+  email: string;
+  managerId: string;
   name: string;
   parentId: string;
+  remark: string;
   type: string;
 };
 
@@ -49,10 +57,17 @@ export function DepartmentFormDrawer({
   const { message } = useAppServices();
   const [form] = Form.useForm<DeptFormValues>();
   const [submitting, setSubmitting] = useState(false);
+  const [managerSearch, setManagerSearch] = useState("");
+  const [managerOptions, setManagerOptions] = useState<{ label: string; value: string }[]>([]);
+  const [pinnedManagerOption, setPinnedManagerOption] = useState<{ label: string; value: string } | null>(
+    null,
+  );
+  const [managerLoading, setManagerLoading] = useState(false);
+  const debouncedManagerSearch = useDebouncedValue(managerSearch.trim());
+  const managerRequestSeq = useRef(0);
   const isEdit = Boolean(department);
   const isRoot = isEdit && !department?.parentId;
 
-  // value "" = 顶层（根部门），提交时 parent_id 为空。
   const parentOptions = useMemo(
     () => [
       { label: t("systemAdmin.users.deptDrawer.rootNode"), value: "" },
@@ -71,8 +86,73 @@ export function DepartmentFormDrawer({
       name: department?.name ?? "",
       parentId: department?.parentId ?? presetParentId ?? "",
       type: department?.type ?? "dept",
+      managerId: department?.managerId ?? "",
+      code: department?.code ?? "",
+      email: department?.email ?? "",
+      remark: department?.remark ?? "",
     });
   }, [department, form, open, presetParentId]);
+
+  useEffect(() => {
+    if (!open) {
+      setManagerSearch("");
+      setManagerOptions([]);
+      setPinnedManagerOption(null);
+      return;
+    }
+    const managerId = department?.managerId?.trim();
+    if (!managerId) {
+      setPinnedManagerOption(null);
+      return;
+    }
+    void getUser(managerId)
+      .then((user) => {
+        setPinnedManagerOption({ label: `${user.name} (${user.account})`, value: user.id });
+      })
+      .catch(() => {
+        setPinnedManagerOption({ label: managerId, value: managerId });
+      });
+  }, [department?.managerId, open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const requestSeq = ++managerRequestSeq.current;
+    setManagerLoading(true);
+    void listUsersPage(
+      {
+        limit: MANAGER_SEARCH_LIMIT,
+        offset: 0,
+        search: debouncedManagerSearch || undefined,
+      },
+      { skipErrorToast: true },
+    )
+      .then((result) => {
+        if (requestSeq !== managerRequestSeq.current) {
+          return;
+        }
+        const fromSearch = result.users.map((user) => ({
+          label: `${user.name} (${user.account})`,
+          value: user.id,
+        }));
+        const merged = new Map(fromSearch.map((item) => [item.value, item]));
+        if (pinnedManagerOption) {
+          merged.set(pinnedManagerOption.value, pinnedManagerOption);
+        }
+        setManagerOptions([...merged.values()]);
+      })
+      .catch(() => {
+        if (requestSeq === managerRequestSeq.current) {
+          setManagerOptions(pinnedManagerOption ? [pinnedManagerOption] : []);
+        }
+      })
+      .finally(() => {
+        if (requestSeq === managerRequestSeq.current) {
+          setManagerLoading(false);
+        }
+      });
+  }, [debouncedManagerSearch, open, pinnedManagerOption]);
 
   const handleSubmit = () => {
     void form.validateFields().then(async (values) => {
@@ -82,6 +162,10 @@ export function DepartmentFormDrawer({
           name: values.name.trim(),
           parentId: isRoot ? null : values.parentId || null,
           type: values.type,
+          managerId: values.managerId.trim(),
+          code: values.code.trim(),
+          email: values.email.trim(),
+          remark: values.remark.trim(),
         };
         if (isEdit && department) {
           await updateDepartment(department.id, payload);
@@ -120,7 +204,7 @@ export function DepartmentFormDrawer({
           ? t("systemAdmin.users.deptDrawer.editTitle", { name: department?.name })
           : t("systemAdmin.users.deptDrawer.createTitle")
       }
-      width={480}
+      width={520}
     >
       <Form form={form} layout="vertical" requiredMark>
         <Form.Item
@@ -148,11 +232,31 @@ export function DepartmentFormDrawer({
             ]}
           />
         </Form.Item>
+        <Form.Item label={t("systemAdmin.users.deptDrawer.manager")} name="managerId">
+          <Select
+            allowClear
+            filterOption={false}
+            loading={managerLoading}
+            onSearch={setManagerSearch}
+            options={managerOptions}
+            placeholder={t("systemAdmin.users.deptDrawer.managerPlaceholder")}
+            showSearch
+          />
+        </Form.Item>
+        <Form.Item label={t("systemAdmin.users.deptDrawer.code")} name="code">
+          <Input placeholder={t("systemAdmin.users.deptDrawer.codePlaceholder")} />
+        </Form.Item>
+        <Form.Item
+          label={t("systemAdmin.users.deptDrawer.email")}
+          name="email"
+          rules={[{ type: "email", message: t("systemAdmin.users.deptDrawer.emailInvalid") }]}
+        >
+          <Input placeholder={t("systemAdmin.users.deptDrawer.emailPlaceholder")} />
+        </Form.Item>
+        <Form.Item label={t("systemAdmin.users.deptDrawer.remark")} name="remark">
+          <Input.TextArea placeholder={t("systemAdmin.users.deptDrawer.remarkPlaceholder")} rows={3} />
+        </Form.Item>
       </Form>
-      <div className={styles.calloutBox}>
-        <InfoCircleOutlined />
-        <span>{t("systemAdmin.users.deptDrawer.fieldsNote")}</span>
-      </div>
     </Drawer>
   );
 }

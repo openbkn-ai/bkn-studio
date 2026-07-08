@@ -1,0 +1,251 @@
+.drawer :global(.ant-drawer-body) {
+  background: #f8fafc;
+}
+
+.drawerBody {
+  display: grid;
+  gap: 16px;
+}
+
+.formStack {
+  display: grid;
+  gap: 16px;
+}
+
+.summaryCard {
+  display: flex;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid #e5eaf2;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.summaryAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border: 1px solid #e5eaf2;
+  background: var(--admin-color-surface, #fff);
+  color: var(--admin-color-primary, #1e3a8a);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.summaryMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.summaryTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.summaryTitle {
+  margin: 0;
+  color: var(--admin-color-heading, #172033);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.summaryBottomRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.summaryAccountInline {
+  color: var(--admin-color-secondary, #4b5563);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summaryMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.summaryUpdated {
+  color: var(--admin-color-muted, #6b7280);
+  font-size: 12px;
+}
+
+.formSectionCard {
+  padding: 12px 14px;
+  border: 1px solid #e5eaf2;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.formSectionHead {
+  margin-bottom: 10px;
+  padding: 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
+.formSectionBody {
+  padding: 0;
+}
+
+.formSectionBody :global(.ant-form-item) {
+  margin-bottom: 16px;
+}
+
+.formSectionBody :global(.ant-form-item:last-child) {
+  margin-bottom: 0;
+}
+
+.fieldGroup + .fieldGroup {
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px dashed #e8edf3;
+}
+
+.fieldGroup {
+  margin-top: 12px;
+}
+
+.fieldGroup:first-child {
+  margin-top: 0;
+}
+
+.fieldGroupLabel {
+  margin: 0 0 12px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.formSectionTitle {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.formSectionDesc {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.fieldGridSingle {
+  grid-column: 1 / -1;
+}
+
+.optionalMark {
+  margin-left: 4px;
+  color: var(--admin-color-placeholder, #94a3b8);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.roleToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.roleSearch {
+  flex: 1;
+  max-width: 280px;
+}
+
+.roleSelectedCount {
+  color: var(--admin-color-secondary, #4b5563);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.rolePanel {
+  padding: 12px;
+  border: 1px solid #e5eaf2;
+  background: var(--admin-color-surface, #fff);
+}
+
+.rolePanel + .rolePanel {
+  margin-top: 10px;
+}
+
+.rolePanelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.rolePanelTitle {
+  margin: 0;
+  color: var(--admin-color-heading, #172033);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rolePanelCount {
+  color: var(--admin-color-muted, #6b7280);
+  font-size: 12px;
+}
+
+.roleEmpty {
+  margin: 0;
+  color: var(--admin-color-placeholder, #94a3b8);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.drawerFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.footerHint {
+  flex: 1;
+  min-width: 0;
+  margin-right: 8px;
+  color: var(--admin-color-muted, #6b7280);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+}

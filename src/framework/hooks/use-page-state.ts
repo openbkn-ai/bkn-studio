@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 export type PageState = {
   page: number;
@@ -34,28 +34,43 @@ export function usePageState(initialState?: Partial<PageState>) {
     [state],
   );
 
-  const setKeyword = (keyword: string) => {
+  const setKeyword = useCallback((keyword: string) => {
     setState((current) => ({
       ...current,
       keyword,
       page: 1,
     }));
-  };
+  }, []);
 
-  const setPagination = (page: number, pageSize: number) => {
-    setState((current) => ({
-      ...current,
-      page,
-      pageSize,
-    }));
-  };
-
-  const reset = () => {
-    setState({
-      ...defaultPageState,
-      ...initialState,
+  const setPagination = useCallback((page: number, pageSize: number) => {
+    setState((current) => {
+      if (current.page === page && current.pageSize === pageSize) {
+        return current;
+      }
+      return {
+        ...current,
+        page,
+        pageSize,
+      };
     });
-  };
+  }, []);
+
+  const reset = useCallback(() => {
+    setState((current) => {
+      const nextState = {
+        ...defaultPageState,
+        ...initialState,
+      };
+      if (
+        current.page === nextState.page &&
+        current.pageSize === nextState.pageSize &&
+        current.keyword === nextState.keyword
+      ) {
+        return current;
+      }
+      return nextState;
+    });
+  }, [initialState]);
 
   return {
     pageState: state,

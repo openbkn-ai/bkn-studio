@@ -1,0 +1,30 @@
+.detailSection {
+  margin-top: 16px;
+}
+
+.detailSectionTitle {
+  margin: 0 0 8px;
+  color: var(--admin-color-heading, #172033);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.detailJson {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--admin-color-border, #d9e0ea);
+  background: var(--admin-color-surface-muted, #f3f6fa);
+  color: #334155;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.emptyDetail {
+  color: #64748b;
+  font-size: 13px;
+}
