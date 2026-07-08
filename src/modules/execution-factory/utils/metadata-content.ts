@@ -75,6 +75,16 @@ export type ResolvedOpenApiServiceUrl =
   | { ok: true; source: "absolute" | "resolved-relative"; url: string }
   | { ok: false; reason: string; relativeUrl?: string };
 
+export function normalizeGeneratedCapabilityName(value?: string): string | undefined {
+  const normalized = value
+    ?.trim()
+    .replace(/[^\u4e00-\u9fa5A-Za-z0-9_]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  return normalized || undefined;
+}
+
 function isFullOpenApiDocument(value: unknown): value is Record<string, unknown> {
   return (
     typeof value === "object" &&

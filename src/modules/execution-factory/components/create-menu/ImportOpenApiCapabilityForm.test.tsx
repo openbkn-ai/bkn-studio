@@ -111,6 +111,7 @@ describe("ImportOpenApiCapabilityForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Load Petstore OpenAPI" }));
 
     expect(await screen.findByDisplayValue("https://petstore3.swagger.io/api/v3")).toBeTruthy();
+    expect(screen.getByDisplayValue("Swagger_Petstore")).toBeTruthy();
     expect(
       screen.getByText(
         "Detected relative OpenAPI server /api/v3 and resolved it to https://petstore3.swagger.io/api/v3.",

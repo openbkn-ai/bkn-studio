@@ -36,10 +36,13 @@ import {
   analyzeOpenApiDocumentText,
 
   extractOpenApiMetadataHints,
+  normalizeGeneratedCapabilityName,
   resolveOpenApiServiceUrl,
   type OpenApiSpecSource,
 
 } from "@/modules/execution-factory/utils/metadata-content";
+
+import styles from "./create-menu.module.css";
 
 
 
@@ -206,7 +209,8 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
         form.setFieldsValue({
 
-          toolboxName: hints.title?.trim() || form.getFieldValue("toolboxName"),
+          toolboxName:
+            normalizeGeneratedCapabilityName(hints.title) || form.getFieldValue("toolboxName"),
 
           toolboxDescription: hints.description ?? form.getFieldValue("toolboxDescription"),
 
@@ -312,6 +316,8 @@ export const ImportOpenApiCapabilityForm = forwardRef<
       {analysis.ok ? (
 
         <Alert
+
+          className={styles.interfaceSuccessAlert}
 
           message={t("executionFactory.importOpenApiCapabilityPreview", {
 
