@@ -189,12 +189,14 @@ cmd_cluster() {
     cat >&2 <<EOF
 
 [install] done (no-auth). studio served at  https://<gateway-host>/studio
+          (bare https://<gateway-host>/ redirects there)
 [install] OAuth gate OFF — no login, runs as default local-admin. No bkn-safe needed.
 EOF
   else
     cat >&2 <<EOF
 
 [install] done. studio served at  https://<gateway-host>/studio
+          (bare https://<gateway-host>/ redirects there)
 [install] same gateway as /api + /oauth2 → same-origin; OAuth callback
           https://<gateway-host>/studio/callback is already seeded by bkn-safe
           (accessAddress-derived). No callback registration needed.
@@ -213,6 +215,9 @@ server {
     listen 80;
     server_name _;
     root /usr/share/nginx/html;
+
+    # Relative redirects — no scheme/host baked in, so an https front stays https.
+    absolute_redirect off;
 
     gzip on;
     gzip_types text/css application/javascript application/json image/svg+xml;
