@@ -23,7 +23,7 @@ import type {
  * 对象级授权服务层 —— 对接 bkn-safe `/api/safe/v1/admin/object-grants`
  * (GET/POST/DELETE, 管理员 Bearer Token)。默认走前端 mock；
  * `VITE_USE_MOCK=false` 时打真实后端。契约见
- * kowell-core/bkn-safe/docs/frontend-object-grants-integration.md。
+ * bkn-foundry/bkn-safe/docs/frontend-object-grants-integration.md。
  *
  *   - 授权模型 = {accessor_id, resource:{type,id}, operations[]}，被授权方只支持用户。
  *   - POST = 整套替换（set 语义）；operations 非空；resource.id 必须具体，无 `*`。

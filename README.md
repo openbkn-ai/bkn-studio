@@ -137,10 +137,10 @@ hydra 按 `redirect_uri` 精确匹配，**浏览器所在 origin 的 `/studio/ca
 需要注册时三选一：
 
 1. `deploy/install.sh local ... --register` —— 调 `bkn-safe` admin API `POST /api/safe/v1/admin/clients/openbkn-studio/redirect-uris`，token 取自 `$BKN_ADMIN_TOKEN` 或 `openbkn auth token`（需 super-admin）。**临时** —— `bkn-safe` 下次 `helm upgrade` 重新 seed 会冲掉。
-2. 永久：把地址写进 `bkn-safe` chart 的 `clientSeed.extraWebRedirectUris` + `helm upgrade`（在 kowell-core，扛升级）。
+2. 永久：把地址写进 `bkn-safe` chart 的 `clientSeed.extraWebRedirectUris` + `helm upgrade`（在 bkn-foundry，扛升级）。
 3. 用已 seed 的 `--port 8000`，零注册。
 
-> 详见 `bkn-safe/docs/oauth-redirect-uris.md`（kowell-core）。
+> 详见 `bkn-safe/docs/oauth-redirect-uris.md`（bkn-foundry）。
 
 ### 无 bkn-safe（免鉴权直接用）
 
