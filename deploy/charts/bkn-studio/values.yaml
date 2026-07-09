@@ -30,9 +30,7 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/app-root: /studio/
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      rewrite ^/studio$ /studio/ permanent;
-  path: /studio
+  path: /studio/
 
 resources:
   requests:
