@@ -75,14 +75,11 @@ async function confirmQuickApiPersistence(input: {
     toolboxVisible = Boolean(toolbox);
 
     if (toolboxVisible && input.toolboxName?.trim()) {
-      const list = await listToolboxes({
+      void listToolboxes({
         keyword: input.toolboxName.trim(),
         page: 1,
         pageSize: 100,
       }).catch(() => null);
-      toolboxVisible = Boolean(
-        list?.items.some((item) => item.boxId === input.boxId),
-      );
     }
 
     if (toolboxVisible) {
