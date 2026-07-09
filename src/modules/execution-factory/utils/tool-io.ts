@@ -5,7 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { ToolIoParameter, ToolIoSpec } from "@/modules/execution-factory/types/tool";
+import type {
+  ToolDebugInput,
+  ToolIoParameter,
+  ToolIoSpec,
+} from "@/modules/execution-factory/types/tool";
 
 export { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
 
@@ -80,5 +84,67 @@ export function parseToolIoSpec(metadata?: ApiSpecMetadata): ToolIoSpec | undefi
     requestBodyExample: firstRequestContent?.example,
     requestBodySchema: firstRequestContent?.schema,
     responses,
+  };
+}
+
+function pickRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function hasStructuredDebugPayload(input: Record<string, unknown>) {
+  return "query" in input || "header" in input || "body" in input;
+}
+
+export function buildToolDebugRequest(
+  input?: Record<string, unknown>,
+  ioSpec?: ToolIoSpec,
+): ToolDebugInput {
+  if (!input) {
+    return {};
+  }
+
+  if (hasStructuredDebugPayload(input)) {
+    return {
+      body: pickRecord(input.body),
+      header: pickRecord(input.header),
+      query: pickRecord(input.query),
+    };
+  }
+
+  const body: Record<string, unknown> = {};
+  const header: Record<string, unknown> = {};
+  const query: Record<string, unknown> = {};
+  const consumedKeys = new Set<string>();
+
+  for (const parameter of ioSpec?.parameters ?? []) {
+    if (!(parameter.name in input)) {
+      continue;
+    }
+
+    consumedKeys.add(parameter.name);
+
+    if (parameter.in === "header") {
+      header[parameter.name] = input[parameter.name];
+    } else if (parameter.in === "query" || parameter.in === "path") {
+      query[parameter.name] = input[parameter.name];
+    } else {
+      body[parameter.name] = input[parameter.name];
+    }
+  }
+
+  for (const [key, value] of Object.entries(input)) {
+    if (!consumedKeys.has(key)) {
+      body[key] = value;
+    }
+  }
+
+  return {
+    ...(Object.keys(body).length > 0 ? { body } : {}),
+    ...(Object.keys(header).length > 0 ? { header } : {}),
+    ...(Object.keys(query).length > 0 ? { query } : {}),
   };
 }
