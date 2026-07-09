@@ -47,7 +47,8 @@ const HTTP_METHODS = new Set([
 ]);
 
 /** Backend validates metadata description length before applying form description. */
-const OPERATOR_DESCRIPTION_MAX_LENGTH = 500;
+export const CAPABILITY_DESCRIPTION_MAX_LENGTH = 2048;
+export const TOOLBOX_DESCRIPTION_MAX_LENGTH = 500;
 
 export type OpenApiOperationPreview = {
   method: string;
@@ -83,6 +84,24 @@ export function normalizeGeneratedCapabilityName(value?: string): string | undef
     .replace(/^_+|_+$/g, "");
 
   return normalized || undefined;
+}
+
+export function normalizeGeneratedCapabilityDescription(value?: string): string | undefined {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  return normalized.slice(0, CAPABILITY_DESCRIPTION_MAX_LENGTH);
+}
+
+export function normalizeGeneratedToolboxDescription(value?: string): string | undefined {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  return normalized.slice(0, TOOLBOX_DESCRIPTION_MAX_LENGTH);
 }
 
 function isFullOpenApiDocument(value: unknown): value is Record<string, unknown> {
@@ -203,7 +222,7 @@ function findOperationDescriptionTooLong(
 
       if (
         typeof description === "string" &&
-        description.length > OPERATOR_DESCRIPTION_MAX_LENGTH
+        description.length > CAPABILITY_DESCRIPTION_MAX_LENGTH
       ) {
         const summary = (operation as { summary?: unknown }).summary;
 
@@ -433,6 +452,106 @@ export function resolveOpenApiServiceUrl(
   };
 }
 
+export function rewriteOpenApiServerUrl(openapiSpec: string, serviceUrl?: string): string {
+  const normalizedServiceUrl = serviceUrl?.trim();
+
+  if (!normalizedServiceUrl || !/^https?:\/\//i.test(normalizedServiceUrl)) {
+    return openapiSpec;
+  }
+
+  try {
+    const parsed = JSON.parse(openapiSpec) as Record<string, unknown>;
+
+    if (!isFullOpenApiDocument(parsed)) {
+      return openapiSpec;
+    }
+
+    const servers = Array.isArray(parsed.servers) ? [...parsed.servers] : [];
+    const firstServer =
+      servers[0] && typeof servers[0] === "object" && !Array.isArray(servers[0])
+        ? { ...(servers[0] as Record<string, unknown>), url: normalizedServiceUrl }
+        : { url: normalizedServiceUrl };
+
+    servers[0] = firstServer;
+
+    return JSON.stringify(
+      {
+        ...parsed,
+        servers,
+      },
+      null,
+      2,
+    );
+  } catch {
+    return openapiSpec;
+  }
+}
+
+export function rewriteOpenApiOperationSummaries(openapiSpec: string): string {
+  try {
+    const parsed = JSON.parse(openapiSpec) as Record<string, unknown>;
+
+    if (!isFullOpenApiDocument(parsed)) {
+      return openapiSpec;
+    }
+
+    const paths = parsed.paths;
+    if (!paths || typeof paths !== "object" || Array.isArray(paths)) {
+      return openapiSpec;
+    }
+
+    const rewrittenPaths: Record<string, unknown> = {};
+
+    for (const [path, pathItem] of Object.entries(paths as Record<string, unknown>)) {
+      if (!pathItem || typeof pathItem !== "object" || Array.isArray(pathItem)) {
+        rewrittenPaths[path] = pathItem;
+        continue;
+      }
+
+      const rewrittenPathItem: Record<string, unknown> = { ...(pathItem as Record<string, unknown>) };
+
+      for (const [method, operation] of Object.entries(pathItem as Record<string, unknown>)) {
+        if (!HTTP_METHODS.has(method.toLowerCase())) {
+          continue;
+        }
+
+        if (!operation || typeof operation !== "object" || Array.isArray(operation)) {
+          continue;
+        }
+
+        const operationRecord = operation as Record<string, unknown>;
+        const rawSummary =
+          typeof operationRecord.summary === "string" ? operationRecord.summary : "";
+        const safeSummary =
+          normalizeGeneratedCapabilityName(rawSummary) ??
+          normalizeGeneratedCapabilityName(`${method}_${path}`) ??
+          "api_tool";
+
+        rewrittenPathItem[method] = {
+          ...operationRecord,
+          ...(!operationRecord.description && rawSummary && rawSummary !== safeSummary
+            ? { description: rawSummary }
+            : {}),
+          summary: safeSummary,
+        };
+      }
+
+      rewrittenPaths[path] = rewrittenPathItem;
+    }
+
+    return JSON.stringify(
+      {
+        ...parsed,
+        paths: rewrittenPaths,
+      },
+      null,
+      2,
+    );
+  } catch {
+    return openapiSpec;
+  }
+}
+
 export function serializeOpenApiSpec(metadata?: BackendMetadata): string | undefined {
   if (!metadata?.api_spec) {
     return undefined;
@@ -501,7 +620,7 @@ export function validateOpenApiDocumentText(
     if (longDescriptionOperation) {
       return {
         ok: false,
-        reason: `接口 ${longDescriptionOperation.method} ${longDescriptionOperation.path} 的 description 超过 ${OPERATOR_DESCRIPTION_MAX_LENGTH} 字符。请缩短后再保存。`,
+        reason: `接口 ${longDescriptionOperation.method} ${longDescriptionOperation.path} 的 description 超过 ${CAPABILITY_DESCRIPTION_MAX_LENGTH} 字符。请缩短后再保存。`,
       };
     }
   }

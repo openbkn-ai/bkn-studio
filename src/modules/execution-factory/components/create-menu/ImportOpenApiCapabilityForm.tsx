@@ -37,6 +37,7 @@ import {
 
   extractOpenApiMetadataHints,
   normalizeGeneratedCapabilityName,
+  normalizeGeneratedToolboxDescription,
   resolveOpenApiServiceUrl,
   type OpenApiSpecSource,
 
@@ -212,7 +213,9 @@ export const ImportOpenApiCapabilityForm = forwardRef<
           toolboxName:
             normalizeGeneratedCapabilityName(hints.title) || form.getFieldValue("toolboxName"),
 
-          toolboxDescription: hints.description ?? form.getFieldValue("toolboxDescription"),
+          toolboxDescription:
+            normalizeGeneratedToolboxDescription(hints.description) ??
+            form.getFieldValue("toolboxDescription"),
 
           serviceUrl:
             resolvedServiceUrl?.ok

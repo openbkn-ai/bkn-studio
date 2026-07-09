@@ -10,8 +10,12 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeOpenApiDocumentText,
   buildOpenApiDocumentFromMetadata,
+  normalizeGeneratedCapabilityDescription,
+  normalizeGeneratedToolboxDescription,
   parseOpenApiDataPayload,
   resolveOpenApiServiceUrl,
+  rewriteOpenApiOperationSummaries,
+  rewriteOpenApiServerUrl,
   validateOpenApiDocumentText,
 } from "@/modules/execution-factory/utils/metadata-content";
 
@@ -180,6 +184,66 @@ describe("metadata-content OpenAPI helpers", () => {
     }
   });
 
+  it("rewrites the first OpenAPI server URL before submit", () => {
+    const spec = JSON.stringify({
+      openapi: "3.0.4",
+      info: { title: "Swagger Petstore", version: "1.0.0" },
+      servers: [{ url: "/api/v3" }],
+      paths: {
+        "/pet": {
+          put: {
+            summary: "Update a pet",
+            responses: { "200": { description: "OK" } },
+          },
+        },
+      },
+    });
+
+    const rewritten = rewriteOpenApiServerUrl(spec, "https://petstore3.swagger.io/api/v3");
+    const parsed = JSON.parse(rewritten) as { servers?: Array<{ url?: string }> };
+
+    expect(parsed.servers?.[0]?.url).toBe("https://petstore3.swagger.io/api/v3");
+  });
+
+  it("rewrites OpenAPI operation summaries into backend-safe tool names", () => {
+    const spec = JSON.stringify({
+      openapi: "3.0.4",
+      info: { title: "Swagger Petstore", version: "1.0.0" },
+      servers: [{ url: "https://petstore3.swagger.io/api/v3" }],
+      paths: {
+        "/user/createWithList": {
+          post: {
+            summary: "Creates list of users with given input array.",
+            responses: { "200": { description: "OK" } },
+          },
+        },
+      },
+    });
+
+    const rewritten = rewriteOpenApiOperationSummaries(spec);
+    const parsed = JSON.parse(rewritten) as {
+      paths?: Record<string, Record<string, { summary?: string }>>;
+    };
+
+    expect(parsed.paths?.["/user/createWithList"]?.post?.summary).toBe(
+      "Creates_list_of_users_with_given_input_array",
+    );
+  });
+
+  it("limits generated capability descriptions to 2048 characters", () => {
+    expect(normalizeGeneratedCapabilityDescription("x".repeat(2050))?.length).toBe(2048);
+    expect(normalizeGeneratedCapabilityDescription("  short description  ")).toBe(
+      "short description",
+    );
+  });
+
+  it("limits generated toolbox descriptions to the backend toolbox limit", () => {
+    expect(normalizeGeneratedToolboxDescription("x".repeat(501))?.length).toBe(500);
+    expect(normalizeGeneratedToolboxDescription("  toolbox description  ")).toBe(
+      "toolbox description",
+    );
+  });
+
   it("rejects documents with empty info.title", () => {
     const validation = validateOpenApiDocumentText(
       JSON.stringify(
@@ -236,6 +300,31 @@ describe("metadata-content OpenAPI helpers", () => {
     }
   });
 
+  it("accepts operations with description at the backend limit", () => {
+    const validation = validateOpenApiDocumentText(
+      JSON.stringify(
+        {
+          openapi: "3.0.3",
+          info: { title: "demo", version: "1.0.0" },
+          servers: [{ url: "https://example.com" }],
+          paths: {
+            "/weather": {
+              get: {
+                summary: "weather",
+                description: "x".repeat(2048),
+                responses: { "200": { description: "OK" } },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    expect(validation.ok).toBe(true);
+  });
+
   it("rejects operations with description longer than backend limit", () => {
     const validation = validateOpenApiDocumentText(
       JSON.stringify(
@@ -247,7 +336,7 @@ describe("metadata-content OpenAPI helpers", () => {
             "/weather": {
               get: {
                 summary: "查询天气",
-                description: "x".repeat(501),
+                description: "x".repeat(2049),
                 responses: { "200": { description: "OK" } },
               },
             },
@@ -261,7 +350,7 @@ describe("metadata-content OpenAPI helpers", () => {
     expect(validation.ok).toBe(false);
     if (!validation.ok) {
       expect(validation.reason).toContain("description");
-      expect(validation.reason).toContain("500");
+      expect(validation.reason).toContain("2048");
     }
   });
 
