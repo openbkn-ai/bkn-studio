@@ -29,8 +29,7 @@ ingress:
   ingressClass: class-443
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/app-root: /studio/
-  path: /studio/
+  path: /studio
 
 resources:
   requests:
