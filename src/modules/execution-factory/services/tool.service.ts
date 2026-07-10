@@ -473,7 +473,11 @@ export async function debugTool(
     status_code?: number;
   }>(
     `${API_PREFIX}/tool-box/${boxId}/tool/${toolId}/debug`,
-    { body: input.body },
+    {
+      body: input.body,
+      header: input.header,
+      query: input.query,
+    },
     { headers: getBusinessDomainHeaders() },
   );
 

@@ -15,8 +15,9 @@ spec:
   rules:
     - http:
         paths:
-          {{- /* studio adds ONLY /studio; /api, /oauth2, /.well-known, /userinfo
-                 stay on the gateway ingress that routes to bkn-safe. */}}
+          {{- /* studio adds /studio (plus, optionally, an Exact / below);
+                 /api, /oauth2, /.well-known, /userinfo stay on the gateway
+                 ingress that routes to bkn-safe. */}}
           - path: {{ .Values.ingress.path }}
             pathType: ImplementationSpecific
             backend:
@@ -24,4 +25,14 @@ spec:
                 name: {{ .Values.image.name }}
                 port:
                   number: {{ .Values.service.port }}
+          {{- if .Values.ingress.rootRedirect }}
+          {{- /* Exact / only — studio's nginx 302s it to /studio/. */}}
+          - path: /
+            pathType: Exact
+            backend:
+              service:
+                name: {{ .Values.image.name }}
+                port:
+                  number: {{ .Values.service.port }}
+          {{- end }}
 {{- end }}

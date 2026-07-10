@@ -98,6 +98,19 @@
   margin-bottom: 12px;
 }
 
+.interfaceSuccessAlert {
+  border-color: var(--color-interface-panel-border);
+  background: var(--color-interface-panel-bg);
+}
+
+.interfaceSuccessAlert :global(.ant-alert-icon) {
+  color: var(--color-interface-success-dot);
+}
+
+.interfaceSuccessAlert :global(.ant-alert-message) {
+  color: rgba(15, 30, 54, 0.78);
+}
+
 .businessIntro {
   border-left: 3px solid #1677ff;
   background: rgba(15, 30, 54, 0.03);

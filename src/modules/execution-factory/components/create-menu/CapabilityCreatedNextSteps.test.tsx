@@ -17,16 +17,16 @@ vi.mock("react-i18next", () => ({
 }));
 
 describe("CapabilityCreatedNextSteps", () => {
-  it("shows created HTTP capability context and exposes next actions", () => {
+  it("shows created HTTP capability context and maps next actions to existing pages", () => {
     const onViewToolset = vi.fn();
     const onDebug = vi.fn();
-    const onCompleteContract = vi.fn();
+    const onEditTool = vi.fn();
     const onClose = vi.fn();
 
     render(
       <CapabilityCreatedNextSteps
         onClose={onClose}
-        onCompleteContract={onCompleteContract}
+        onCompleteContract={onEditTool}
         onDebug={onDebug}
         onViewToolset={onViewToolset}
         toolName="query_weather"
@@ -37,15 +37,16 @@ describe("CapabilityCreatedNextSteps", () => {
     expect(screen.getByTestId("capability-created-next-steps")).toBeTruthy();
     expect(screen.getByText("query_weather")).toBeTruthy();
     expect(screen.getByText("weather_toolbox")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Agent/i })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /查看工具集|View toolset|鏌ョ湅/i }));
-    fireEvent.click(screen.getByRole("button", { name: /调试|Debug|璋冭瘯/i }));
-    fireEvent.click(screen.getByRole("button", { name: /Agent/i }));
-    fireEvent.click(screen.getByRole("button", { name: /关\s*闭|Close|鍏\s*抽棴/i }));
+    fireEvent.click(screen.getByRole("button", { name: "查看工具集" }));
+    fireEvent.click(screen.getByRole("button", { name: "去调试" }));
+    fireEvent.click(screen.getByRole("button", { name: "编辑工具信息" }));
+    fireEvent.click(screen.getByRole("button", { name: /关\s*闭/ }));
 
     expect(onViewToolset).toHaveBeenCalledTimes(1);
     expect(onDebug).toHaveBeenCalledTimes(1);
-    expect(onCompleteContract).toHaveBeenCalledTimes(1);
+    expect(onEditTool).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

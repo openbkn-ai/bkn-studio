@@ -129,8 +129,22 @@ export const executionFactoryEnUS = {
     importOpenApiCapabilitySuccess: "Imported {{count}} tool(s) successfully",
     importOpenApiCapabilityPartial: "Imported {{success}} tool(s), {{failed}} failed",
     importOpenApiCapabilityParsed: "Detected {{count}} endpoint(s). Confirm the toolset and import.",
+    importOpenApiRelativeServerResolved:
+      "Detected relative OpenAPI server {{relativeUrl}} and resolved it to {{serviceUrl}}.",
+    importOpenApiServiceUrlRequired:
+      "Please enter a full HTTP(S) service URL before importing.",
+    importOpenApiRelativeServerManual:
+      "This OpenAPI document uses a relative server URL {{relativeUrl}}. Enter the full service URL before importing.",
     importOpenApiCapabilityFileReady: "File ready. It will be parsed and imported on save.",
     importOpenApiCapabilityPreview: "OpenAPI {{version}} · {{count}} endpoint(s)",
+    createdNextStepsTitle: "HTTP API added to toolset",
+    createdNextStepsDescription:
+      "Next, debug the tool or edit its description and usage rules. You can also open the toolset to continue managing tools.",
+    createdNextStepsTool: "Tool",
+    createdNextStepsToolbox: "Toolset",
+    createdNextStepsViewToolset: "View toolset",
+    createdNextStepsDebug: "Debug",
+    createdNextStepsEditTool: "Edit tool info",
     addCapabilityFunctionTitle: "Write a function",
     addCapabilityFunctionDesc: "Create a function toolset and add code tools",
     addCapabilityMcpTitle: "MCP service",
@@ -708,8 +722,11 @@ export const executionFactoryEnUS = {
     openapiToolboxHint:
       "Paste JSON, upload a file, or fetch from a URL. After parsing, expand each endpoint to review inputs, request body, and response examples.",
     openapiOperationsIoPreviewHint: "Expand an endpoint to review parameters, request body, and response examples.",
-    openapiOperationIoSummary: "{{paramCount}} input(s) · {{responseCount}} response(s)",
-    openapiOperationIoRequestBody: "with request body",
+    openapiOperationIoSummary:
+      "{{paramCount}} URL/Header parameter(s) · {{responseCount}} response(s)",
+    openapiOperationIoSummaryWithBody:
+      "{{paramCount}} URL/Header parameter(s) · request body {{bodyFieldCount}} field(s) · {{responseCount}} response(s)",
+    openapiOperationIoRequestBody: "request body {{bodyFieldCount}} field(s)",
     openapiInputPaste: "Paste",
     openapiInputFile: "Upload File",
     openapiInputUrl: "URL",

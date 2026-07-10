@@ -276,16 +276,18 @@ export function AddCapabilityWizard({
     setCreatedNextStep(payload);
   };
 
-  const navigateToCreatedToolset = (mode: "view" | "contract" = "view") => {
+  const navigateToCreatedToolset = (mode: "view" | "debug" | "edit" = "view") => {
     if (!createdNextStep) {
       return;
     }
 
     handleClose();
 
-    if (mode === "contract" && createdNextStep.toolId) {
+    if ((mode === "debug" || mode === "edit") && createdNextStep.toolId) {
       void navigate(
-        `/execution-factory/toolboxes/${createdNextStep.boxId}/tools/${createdNextStep.toolId}/edit`,
+        `/execution-factory/toolboxes/${createdNextStep.boxId}/tools/${createdNextStep.toolId}/edit${
+          mode === "debug" ? "?focus=debug" : ""
+        }`,
       );
       return;
     }
@@ -468,10 +470,14 @@ export function AddCapabilityWizard({
           onClose={handleClose}
           onCompleteContract={
             createdNextStep.toolId
-              ? () => navigateToCreatedToolset("contract")
+              ? () => navigateToCreatedToolset("edit")
               : undefined
           }
-          onDebug={() => navigateToCreatedToolset("view")}
+          onDebug={
+            createdNextStep.toolId
+              ? () => navigateToCreatedToolset("debug")
+              : undefined
+          }
           onViewToolset={() => navigateToCreatedToolset("view")}
           toolName={createdNextStep.toolName}
           toolboxName={createdNextStep.toolboxName}

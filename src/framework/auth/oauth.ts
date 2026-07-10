@@ -4,7 +4,7 @@
  * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
  * Conditions. See LICENSE for the full text.
  */
-
+import CryptoJS from "crypto-js";
 import { getAppCallbackPath, getAppHomePath } from "@/app/router/app-paths";
 import { getDevRefreshToken } from "@/framework/auth/dev-auth";
 import {
@@ -80,11 +80,21 @@ function randomUrlSafeString() {
 }
 
 export async function computeCodeChallenge(verifier: string) {
-  const digest = await window.crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(verifier),
-  );
-  return base64UrlEncode(new Uint8Array(digest));
+  // 安全上下文（HTTPS 或 localhost）：使用 Web Crypto API
+  if (window.crypto?.subtle) {
+    const digest = await window.crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(verifier),
+    );
+    return base64UrlEncode(new Uint8Array(digest));
+  }
+
+  // 非安全上下文（HTTP）：使用 crypto-js 替代方案
+  const hash = CryptoJS.SHA256(verifier);
+  return hash.toString(CryptoJS.enc.Base64)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 function redirectUri() {

@@ -19,6 +19,7 @@ import type {
   ToolIoSpec,
 } from "@/modules/execution-factory/types/tool";
 import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
+import { buildToolDebugRequest } from "@/modules/execution-factory/utils/tool-io";
 
 import styles from "./ToolDebugModal.module.css";
 
@@ -93,7 +94,8 @@ export function ToolDebugModal({
         body = JSON.parse(values.requestBody) as Record<string, unknown>;
       }
 
-      const debugResult = await debugTool(boxId, record.toolId, { body });
+      const debugRequest = buildToolDebugRequest(body, ioSpec);
+      const debugResult = await debugTool(boxId, record.toolId, debugRequest);
       setResult(debugResult);
       onRunComplete?.({
         id: `${Date.now()}`,
@@ -102,7 +104,7 @@ export function ToolDebugModal({
         durationMs: debugResult.durationMs,
         error: debugResult.error,
         body: debugResult.body,
-        requestBody: body,
+        requestBody: debugRequest,
       });
     } catch (caughtError) {
       setError(extractRequestErrorMessage(caughtError));

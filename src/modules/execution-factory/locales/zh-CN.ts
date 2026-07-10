@@ -128,6 +128,11 @@ export const executionFactoryZhCN = {
     importOpenApiCapabilitySuccess: "已成功导入 {{count}} 个工具",
     importOpenApiCapabilityPartial: "已导入 {{success}} 个工具，{{failed}} 个失败",
     importOpenApiCapabilityParsed: "已识别 {{count}} 个接口，请确认工具集后导入。",
+    importOpenApiRelativeServerResolved:
+      "检测到 OpenAPI 相对服务地址 {{relativeUrl}}，已解析为 {{serviceUrl}}。",
+    importOpenApiServiceUrlRequired: "导入前请填写完整的 HTTP(S) 服务地址。",
+    importOpenApiRelativeServerManual:
+      "当前 OpenAPI 文档使用相对服务地址 {{relativeUrl}}，请填写完整服务地址后再导入。",
     importOpenApiCapabilityFileReady: "文件已就绪，保存后将解析并导入接口。",
     importOpenApiCapabilityPreview: "OpenAPI {{version}} · 共 {{count}} 个接口",
     addCapabilityFunctionTitle: "写个小函数",
@@ -700,8 +705,10 @@ export const executionFactoryZhCN = {
     openapiToolboxHint:
       "支持粘贴 JSON、上传文件或从 URL 拉取。解析成功后展开每个接口，可查看入参、请求体与响应示例。",
     openapiOperationsIoPreviewHint: "展开接口查看输入参数、请求体与响应示例。",
-    openapiOperationIoSummary: "{{paramCount}} 个入参 · {{responseCount}} 个响应",
-    openapiOperationIoRequestBody: "含请求体",
+    openapiOperationIoSummary: "{{paramCount}} 个 URL/Header 参数 · {{responseCount}} 个响应",
+    openapiOperationIoSummaryWithBody:
+      "{{paramCount}} 个 URL/Header 参数 · 请求体 {{bodyFieldCount}} 个字段 · {{responseCount}} 个响应",
+    openapiOperationIoRequestBody: "请求体 {{bodyFieldCount}} 个字段",
     openapiInputPaste: "粘贴",
     openapiInputFile: "上传文件",
     openapiInputUrl: "URL",

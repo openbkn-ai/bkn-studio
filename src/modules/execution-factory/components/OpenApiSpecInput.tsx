@@ -20,6 +20,7 @@ import {
 import {
   analyzeOpenApiDocumentText,
   extractOpenApiMetadataHints,
+  type OpenApiSpecSource,
   validateOpenApiDocumentText,
 } from "@/modules/execution-factory/utils/metadata-content";
 import { triggerBrowserDownload } from "@/modules/execution-factory/utils/download-file";
@@ -33,7 +34,7 @@ type OpenApiSpecInputProps = {
   rows?: number;
   showEndpointReview?: boolean;
   value?: string;
-  onChange?: (value: string) => void;
+  onChange?: (value: string, source?: OpenApiSpecSource) => void;
 };
 
 type InputMode = "paste" | "file" | "url";
@@ -65,13 +66,13 @@ export function OpenApiSpecInput({
   }, [onMetadataHints, onValidationChange, validation.ok, value]);
 
   const handlePasteChange = (nextValue: string) => {
-    onChange?.(nextValue);
+    onChange?.(nextValue, { kind: "paste" });
   };
 
   const readFileText = async (file: File) => {
     const text = await file.text();
     setFetchError(null);
-    onChange?.(text);
+    onChange?.(text, { kind: "file", fileName: file.name });
   };
 
   const uploadProps: UploadProps = {
@@ -101,7 +102,7 @@ export function OpenApiSpecInput({
       }
 
       const text = await response.text();
-      onChange?.(text);
+      onChange?.(text, { kind: "url", url: trimmed });
       setMode("paste");
     } catch (error) {
       setFetchError(error instanceof Error ? error.message : String(error));

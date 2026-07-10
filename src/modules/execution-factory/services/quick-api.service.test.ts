@@ -126,7 +126,7 @@ describe("registerQuickApi", () => {
     ).rejects.toThrow("Tool creation was not persisted");
   });
 
-  it("does not return a navigable result when the created toolbox is missing from list", async () => {
+  it("returns a navigable result when detail is readable even if toolbox list lags", async () => {
     vi.mocked(listToolboxes).mockResolvedValue({
       items: [],
       page: 1,
@@ -140,6 +140,6 @@ describe("registerQuickApi", () => {
         serviceUrl: "http://127.0.0.1:8095",
         toolboxName: "Quick API Box",
       }),
-    ).rejects.toThrow("Toolbox creation was not persisted");
+    ).resolves.toEqual({ boxId: "box-1", toolIds: ["tool-1"] });
   });
 });

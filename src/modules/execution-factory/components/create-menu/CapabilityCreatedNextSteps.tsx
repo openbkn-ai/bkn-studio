@@ -40,7 +40,7 @@ export function CapabilityCreatedNextSteps({
       <p className={styles.description}>
         {t("executionFactory.createdNextStepsDescription", {
           defaultValue:
-            "建议下一步先调试验证，再补齐 Agent 契约。也可以直接进入工具集继续管理。",
+            "建议下一步先调试验证，或进入工具编辑页补充工具说明与使用规则。也可以直接进入工具集继续管理。",
         })}
       </p>
       <div className={styles.meta}>
@@ -76,8 +76,8 @@ export function CapabilityCreatedNextSteps({
         ) : null}
         {onCompleteContract ? (
           <AppButton onClick={onCompleteContract}>
-            {t("executionFactory.createdNextStepsContract", {
-              defaultValue: "完善 Agent 契约",
+            {t("executionFactory.createdNextStepsEditTool", {
+              defaultValue: "编辑工具信息",
             })}
           </AppButton>
         ) : null}

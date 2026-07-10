@@ -23,13 +23,19 @@ auth:
   enabled: true
 
 # studio is a static SPA. The gateway ingress already routes /api, /oauth2,
-# /.well-known and /userinfo to bkn-safe — studio contributes ONLY /studio.
+# /.well-known and /userinfo to bkn-safe — studio contributes /studio plus an
+# optional Exact-/ rule (rootRedirect) so the bare host lands in the studio.
 ingress:
   enabled: true
   ingressClass: class-443
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
   path: /studio
+  # Also claim the bare root (Exact /) and hand it to studio's nginx, which
+  # 302s / -> /studio/ — so https://<gateway>/ lands in the studio shell.
+  # Exact match only: /api, /oauth2 and every other gateway path are untouched.
+  # Set false if another ingress on this gateway already owns /.
+  rootRedirect: true
 
 resources:
   requests:
