@@ -20,11 +20,12 @@ export function DataCatalogPage({ selectionType }: DataCatalogPageProps) {
     selectionType === "catalog" && routeCatalogId
       ? ({ id: routeCatalogId, type: "catalog" } as const)
       : null;
+  const suppressAutoSelect = selectionType !== "catalog";
 
   return (
     <DataCatalogScene
       selection={selection}
-      suppressAutoSelect={false}
+      suppressAutoSelect={suppressAutoSelect}
     />
   );
 }
