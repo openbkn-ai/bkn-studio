@@ -1,32 +1,54 @@
-.treeShell {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.treePanel {
   height: 100%;
-  min-height: 0;
-}
-
-.deptSearch {
-  flex-shrink: 0;
-}
-
-.deptSearch :global(.ant-input-affix-wrapper) {
-  border-radius: 8px;
+  padding: 12px 10px;
   background: var(--admin-color-surface, #fff);
 }
 
-.treeCard {
+.treeHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.treeHeaderTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.treeHeaderTitleText {
+  min-width: 0;
+  color: var(--admin-color-heading, #172033);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.treeHeaderPrimaryAction {
+  flex: 0 0 auto;
+}
+
+.treeHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.treeBody {
+  min-height: 0;
+}
+
+.treeContent {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
   min-height: 0;
-  padding: 6px;
-  border: 1px solid var(--admin-color-border-soft, #e8edf3);
-  border-radius: 10px;
-  background: var(--admin-color-surface, #fff);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  overflow: hidden;
 }
 
 .treeScroll {
@@ -41,10 +63,10 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  min-height: 36px;
-  padding: 0 10px;
+  min-height: 34px;
+  padding: 0 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
   cursor: pointer;
   text-align: left;
@@ -82,11 +104,11 @@
 }
 
 .navTree {
-  padding: 2px 0 0;
+  padding: 0;
 }
 
 .navTree :global(.ant-tree-list-holder-inner) {
-  gap: 1px;
+  gap: 0;
 }
 
 .navTree :global(.ant-tree-treenode) {
@@ -94,10 +116,10 @@
   box-sizing: border-box;
   display: flex;
   width: 100%;
-  min-height: 34px;
+  min-height: 32px;
   margin: 0 !important;
-  padding: 0 2px 0 4px !important;
-  border-radius: 8px;
+  padding: 0 !important;
+  border-radius: 0;
   transition: background 0.15s ease;
 }
 
@@ -117,13 +139,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
+  width: 18px;
   margin-inline-end: 0;
   color: var(--admin-color-muted, #6b7280);
 }
 
 .navTree :global(.ant-tree-switcher-noop) {
-  width: 22px;
+  width: 18px;
 }
 
 .navTree :global(.ant-tree-indent-unit) {
@@ -136,7 +158,7 @@
   flex: 1;
   min-width: 0;
   padding: 4px 6px 4px 2px !important;
-  border-radius: 6px;
+  border-radius: 0;
   line-height: 1.4;
 }
 
@@ -191,7 +213,7 @@
 .orgBadge {
   flex-shrink: 0;
   padding: 0 5px;
-  border-radius: 4px;
+  border-radius: 0;
   color: var(--admin-color-link, #1d4ed8);
   font-size: 11px;
   line-height: 18px;
@@ -202,7 +224,7 @@
   flex-shrink: 0;
   min-width: 22px;
   padding: 0 6px;
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--admin-color-secondary, #4b5563);
   font-size: 11px;
   font-weight: 600;

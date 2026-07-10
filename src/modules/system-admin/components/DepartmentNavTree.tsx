@@ -8,19 +8,20 @@
 import {
   ApartmentOutlined,
   BankOutlined,
-  SearchOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Input, Tooltip, Tree } from "antd";
+import { Dropdown, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 import type { DataNode } from "antd/es/tree";
 import type { TreeProps } from "antd/es/tree";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { hasPermissions } from "@/framework/permission/has-permissions";
+import { BusinessTree, BusinessTreePanel } from "@/framework/ui/common/BusinessTreePanel";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
@@ -30,6 +31,8 @@ const EXPANDED_STORAGE_KEY = "bkn-studio.system-admin.dept-tree.expanded";
 
 type DepartmentNavTreeProps = {
   departments: AdminDepartment[];
+  headerPrimaryAction?: ReactNode;
+  headerSecondaryActions?: ReactNode;
   onAddChild?: (parentId: string) => void;
   onDelete?: (dept: AdminDepartment) => void;
   onEdit?: (dept: AdminDepartment) => void;
@@ -85,6 +88,8 @@ function DeptTypeIcon({ type }: { type: string }) {
 
 export function DepartmentNavTree({
   departments,
+  headerPrimaryAction,
+  headerSecondaryActions,
   onAddChild,
   onDelete,
   onEdit,
@@ -325,18 +330,28 @@ export function DepartmentNavTree({
   const allUsersActive = !selectedDeptId;
 
   return (
-    <div className={navStyles.treeShell}>
-      <Input
-        allowClear
-        className={navStyles.deptSearch}
-        onChange={(event) => setDeptSearch(event.target.value)}
-        placeholder={t("systemAdmin.users.deptNode.deptSearchPlaceholder")}
-        prefix={<SearchOutlined />}
-        size="small"
-        value={deptSearch}
-      />
-
-      <div className={navStyles.treeCard}>
+    <BusinessTreePanel
+      actionsClassName={navStyles.treeHeaderActions}
+      bodyClassName={navStyles.treeBody}
+      className={navStyles.treePanel}
+      headerClassName={navStyles.treeHeader}
+      headerActions={headerSecondaryActions}
+      onSearchChange={setDeptSearch}
+      scrollBody={false}
+      searchPlaceholder={t("systemAdmin.users.deptNode.deptSearchPlaceholder")}
+      searchValue={deptSearch}
+      title={
+        <div className={navStyles.treeHeaderTitle}>
+          <span className={navStyles.treeHeaderTitleText}>
+            {t("systemAdmin.users.deptTreeTitle")}
+          </span>
+          {headerPrimaryAction ? (
+            <div className={navStyles.treeHeaderPrimaryAction}>{headerPrimaryAction}</div>
+          ) : null}
+        </div>
+      }
+    >
+      <div className={navStyles.treeContent}>
         <button
           className={[navStyles.scopeItem, allUsersActive ? navStyles.scopeItemActive : ""].join(" ")}
           onClick={() => onSelect(null)}
@@ -351,7 +366,7 @@ export function DepartmentNavTree({
 
         {treeData.length ? (
           <div className={navStyles.treeScroll}>
-            <Tree
+            <BusinessTree
               blockNode
               className={[styles.deptTree, navStyles.navTree].join(" ")}
               draggable={
@@ -374,6 +389,6 @@ export function DepartmentNavTree({
           <p className={navStyles.emptySearch}>{t("systemAdmin.users.deptNode.searchEmpty")}</p>
         ) : null}
       </div>
-    </div>
+    </BusinessTreePanel>
   );
 }

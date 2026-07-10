@@ -6,7 +6,7 @@
  */
 
 // 对象 id → 名称解析（各领域服务，bkn-safe 不提供）。
-// 契约见 kowell-core/bkn-safe/docs/frontend-object-grants-integration.md 第七节：
+// 契约见 bkn-foundry/bkn-safe/docs/frontend-object-grants-integration.md 第七节：
 //   7.1 列实例（id+name，搜索分页）—— 喂「新建授权」对象选择器
 //   7.2 按 id 批量取名 —— 授权列表/分组回显对象名
 // 各域接口的字段名/外壳/分页参数不统一，这里按类型归一成 {id,name}。

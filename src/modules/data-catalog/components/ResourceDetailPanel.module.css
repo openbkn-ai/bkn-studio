@@ -124,6 +124,25 @@
   border-radius: 0 !important;
 }
 
+.editingMeta {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.editHint {
+  margin: -4px 0 12px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sectionCaption {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .basicInfo {
   display: grid;
   gap: 8px;
@@ -144,6 +163,22 @@
 
 .basicInfoLabel {
   color: #64748b;
+}
+
+.descriptionInput {
+  display: inline-flex;
+  width: min(100%, 640px);
+  vertical-align: top;
+}
+
+.descriptionInput :global(.ant-input) {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.descriptionInputDirty :global(.ant-input) {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgb(37 99 235 / 10%);
 }
 
 .detailGrid {
@@ -193,6 +228,19 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: bottom;
+}
+
+.inlineInput {
+  min-width: 180px;
+}
+
+.inlineInput :global(.ant-input) {
+  font-size: 13px;
+}
+
+.inlineInputDirty :global(.ant-input) {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgb(37 99 235 / 10%);
 }
 
 .tableSurface {

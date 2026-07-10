@@ -6,15 +6,14 @@
  */
 
 import {
-  ApiOutlined,
   AppstoreOutlined,
+  DatabaseOutlined,
   DeleteOutlined,
-  DownOutlined,
   LeftOutlined,
   PlusOutlined,
-  RightOutlined,
 } from "@ant-design/icons";
-import { Form, Input, Modal, Tabs, Tooltip } from "antd";
+import { Form, Input, Modal, Tooltip } from "antd";
+import type { DataNode } from "antd/es/tree";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -22,12 +21,10 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { BusinessTree, BusinessTreePanel } from "@/framework/ui/common/BusinessTreePanel";
 import { isBuiltinLogicalCatalog } from "@/modules/data-catalog/lib/logical-catalog";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
-import {
-  createLogicalCatalog,
-  deleteCatalog,
-} from "@/shared/catalog";
+import { createLogicalCatalog, deleteCatalog } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
@@ -53,16 +50,89 @@ type CatalogTreePanelProps = {
   selection: CatalogTreeSelection | null;
 };
 
-type ConnectorTypeGroup = {
-  catalogs: CatalogRecord[];
-  key: string;
-  label: string;
-};
-
 type LogicalFormValues = {
   description?: string;
   name: string;
 };
+
+type TreeNodeMeta =
+  | { catalogId?: never; database?: never; key: string; type: "group" | "connector" }
+  | { catalogId: string; key: string; type: "catalog" }
+  | { catalogId: string; database: string; key: string; schema?: undefined; type: "database" }
+  | {
+      catalogId: string;
+      database: string;
+      key: string;
+      schema: string;
+      type: "schema";
+    };
+
+const PHYSICAL_GROUP_KEY = "group:physical";
+const LOGICAL_GROUP_KEY = "group:logical";
+
+function connectorKey(type: string) {
+  return `connector:${type || "unknown"}`;
+}
+
+function catalogKey(catalogId: string) {
+  return `catalog:${catalogId}`;
+}
+
+function databaseKey(catalogId: string, db: string) {
+  return `db:${catalogId}:${db}`;
+}
+
+function schemaKey(catalogId: string, db: string, schema: string) {
+  return `schema:${catalogId}:${db}:${schema}`;
+}
+
+type ScopeGroup = {
+  db: string;
+  schemas: string[];
+};
+
+function parseScopeGroupsByCatalog(resources: CatalogResource[]) {
+  const groupedByCatalog = new Map<string, Map<string, Set<string>>>();
+
+  resources.forEach((item) => {
+    if (!item.catalogId) {
+      return;
+    }
+    const raw = (item.sourceIdentifier ?? "").trim();
+    const fromMatch = raw.match(/\bfrom\s+([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+){0,2})/i);
+    const candidate = (fromMatch?.[1] ?? raw).trim();
+    const parts = candidate
+      .split(".")
+      .map((part) => part.trim().match(/[A-Za-z0-9_]+/g)?.[0] ?? "")
+      .filter(Boolean);
+    if (parts.length >= 2) {
+      const db = parts[0];
+      const schema = parts.length >= 3 ? parts[1] : "";
+      if (!groupedByCatalog.has(item.catalogId)) {
+        groupedByCatalog.set(item.catalogId, new Map());
+      }
+      const catalogGroups = groupedByCatalog.get(item.catalogId)!;
+      if (!catalogGroups.has(db)) {
+        catalogGroups.set(db, new Set());
+      }
+      if (schema) {
+        catalogGroups.get(db)?.add(schema);
+      }
+    }
+  });
+
+  return new Map<string, ScopeGroup[]>(
+    [...groupedByCatalog.entries()].map(([catalogId, groups]) => [
+      catalogId,
+      [...groups.entries()]
+        .map(([db, schemas]) => ({
+          db,
+          schemas: [...schemas].sort((a, b) => a.localeCompare(b, "zh-CN")),
+        }))
+        .sort((a, b) => a.db.localeCompare(b.db, "zh-CN")),
+    ]),
+  );
+}
 
 export function CatalogTreePanel({
   activeDb = "",
@@ -82,7 +152,7 @@ export function CatalogTreePanel({
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const [keyword, setKeyword] = useState("");
-  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(() => new Set());
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([PHYSICAL_GROUP_KEY, LOGICAL_GROUP_KEY]);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form] = Form.useForm<LogicalFormValues>();
@@ -102,63 +172,57 @@ export function CatalogTreePanel({
     return resources.find((item) => item.id === selection.id)?.catalogId;
   }, [resources, selection]);
 
-  const scopeGroups = useMemo(() => {
-    if (!selectedCatalogId) {
-      return [];
-    }
-    const scoped = resources.filter((item) => item.catalogId === selectedCatalogId);
-    const group = new Map<string, Set<string>>();
-    scoped.forEach((item) => {
-      const raw = (item.sourceIdentifier ?? "").trim();
-      const fromMatch = raw.match(/\bfrom\s+([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+){0,2})/i);
-      const candidate = (fromMatch?.[1] ?? raw).trim();
-      const parts = candidate
-        .split(".")
-        .map((part) => part.trim().match(/[A-Za-z0-9_]+/g)?.[0] ?? "")
-        .filter(Boolean);
-      if (parts.length >= 2) {
-        const db = parts[0];
-        const schema = parts.length >= 3 ? parts[1] : "";
-        if (!group.has(db)) {
-          group.set(db, new Set());
-        }
-        if (schema) {
-          group.get(db)?.add(schema);
-        }
-      }
-    });
+  const scopeGroupsByCatalog = useMemo(() => parseScopeGroupsByCatalog(resources), [resources]);
 
-    return [...group.entries()]
-      .map(([db, schemas]) => ({
-        db,
-        schemas: [...schemas].sort((a, b) => a.localeCompare(b, "zh-CN")),
-      }))
-      .sort((a, b) => a.db.localeCompare(b.db, "zh-CN"));
-  }, [resources, selectedCatalogId]);
+  const selectedKey = useMemo(() => {
+    if (selectedCatalogId && activeDb && activeSchema) {
+      return schemaKey(selectedCatalogId, activeDb, activeSchema);
+    }
+    if (selectedCatalogId && activeDb) {
+      return databaseKey(selectedCatalogId, activeDb);
+    }
+    if (selectedCatalogId) {
+      return catalogKey(selectedCatalogId);
+    }
+    return undefined;
+  }, [activeDb, activeSchema, selectedCatalogId]);
 
   const query = keyword.trim().toLowerCase();
 
-  const matchesCatalog = (catalog: CatalogRecord) =>
-    query.length === 0 ||
-    catalog.name.toLowerCase().includes(query) ||
-    catalog.id.toLowerCase().includes(query) ||
-    catalog.connectorType.toLowerCase().includes(query) ||
-    (connectorTypeNameMap.get(catalog.connectorType) ?? "")
-      .toLowerCase()
-      .includes(query);
-
   const physicalCatalogs = useMemo(
     () =>
-      catalogs.filter(
-        (catalog) => catalog.type !== "logical" && matchesCatalog(catalog),
-      ),
-    [catalogs, query, connectorTypeNameMap],
+      catalogs.filter((catalog) => {
+        if (catalog.type === "logical") {
+          return false;
+        }
+        if (!query) {
+          return true;
+        }
+        return (
+          catalog.name.toLowerCase().includes(query) ||
+          catalog.id.toLowerCase().includes(query) ||
+          catalog.connectorType.toLowerCase().includes(query) ||
+          (connectorTypeNameMap.get(catalog.connectorType) ?? "")
+            .toLowerCase()
+            .includes(query)
+        );
+      }),
+    [catalogs, connectorTypeNameMap, query],
   );
 
   const logicalCatalogs = useMemo(() => {
-    const items = catalogs.filter(
-      (catalog) => catalog.type === "logical" && matchesCatalog(catalog),
-    );
+    const items = catalogs.filter((catalog) => {
+      if (catalog.type !== "logical") {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      return (
+        catalog.name.toLowerCase().includes(query) ||
+        catalog.id.toLowerCase().includes(query)
+      );
+    });
 
     return items.sort((left, right) => {
       const leftBuiltin = isBuiltinLogicalCatalog(left) ? 0 : 1;
@@ -168,68 +232,249 @@ export function CatalogTreePanel({
       }
       return left.name.localeCompare(right.name, "zh-CN");
     });
-  }, [catalogs, query, connectorTypeNameMap]);
+  }, [catalogs, query]);
 
-  const physicalGroups = useMemo(() => {
-    const groupMap = new Map<string, CatalogRecord[]>();
+  const treeModel = useMemo(() => {
+    const metaMap = new Map<string, TreeNodeMeta>();
+    const requiredExpanded = new Set<string>([PHYSICAL_GROUP_KEY]);
 
-    physicalCatalogs.forEach((catalog) => {
-      const key = catalog.connectorType || "unknown";
-      groupMap.set(key, [...(groupMap.get(key) ?? []), catalog]);
-    });
+    const attachCatalogChildren = (catalog: CatalogRecord): DataNode[] | undefined => {
+      const scopeGroups = scopeGroupsByCatalog.get(catalog.id) ?? [];
+      if (scopeGroups.length === 0) {
+        return undefined;
+      }
+      if (selectedCatalogId === catalog.id) {
+        requiredExpanded.add(catalogKey(catalog.id));
+      }
+      return scopeGroups.map((group) => {
+        const dbKey = databaseKey(catalog.id, group.db);
+        metaMap.set(dbKey, {
+          catalogId: catalog.id,
+          database: group.db,
+          key: dbKey,
+          type: "database",
+        });
+        if (selectedCatalogId === catalog.id && activeDb === group.db) {
+          requiredExpanded.add(dbKey);
+        }
+        return {
+          children: group.schemas.map((schema) => {
+            const nodeKey = schemaKey(catalog.id, group.db, schema);
+            metaMap.set(nodeKey, {
+              catalogId: catalog.id,
+              database: group.db,
+              key: nodeKey,
+              schema,
+              type: "schema",
+            });
+            return {
+              isLeaf: true,
+              key: nodeKey,
+              title: (
+                <span className={styles.scopeLeafTitle}>
+                  <span className={styles.scopeLeafName}>{schema}</span>
+                </span>
+              ),
+            };
+          }),
+          key: dbKey,
+          title: (
+            <span className={styles.scopeGroupTitle}>
+              <span className={styles.scopeGroupName}>{group.db}</span>
+            </span>
+          ),
+        };
+      });
+    };
 
-    return [...groupMap.entries()]
-      .map(([key, items]) => ({
-        key,
-        label: connectorTypeNameMap.get(key) ?? key,
-        catalogs: items.sort((left, right) =>
-          left.name.localeCompare(right.name, "zh-CN"),
-        ),
+    const physicalGroups = [...new Set(physicalCatalogs.map((catalog) => catalog.connectorType || "unknown"))]
+      .map((type) => ({
+        catalogs: physicalCatalogs
+          .filter((catalog) => (catalog.connectorType || "unknown") === type)
+          .sort((left, right) => left.name.localeCompare(right.name, "zh-CN")),
+        key: connectorKey(type),
+        label: connectorTypeNameMap.get(type) ?? type,
       }))
       .sort((left, right) => left.label.localeCompare(right.label, "zh-CN"));
-  }, [connectorTypeNameMap, physicalCatalogs]);
 
-  // 搜索时展开匹配类型；选中物理 catalog 时仅展开其所属类型。首次加载保持全部收起。
-  useEffect(() => {
-    setExpandedTypes((previous) => {
-      const next = new Set(previous);
-      let changed = false;
-
-      if (query.length > 0) {
-        physicalGroups.forEach((group) => {
-          if (!next.has(group.key)) {
-            next.add(group.key);
-            changed = true;
-          }
-        });
-      }
-
+    const physicalChildren = physicalGroups.map((group) => {
+      metaMap.set(group.key, { key: group.key, type: "connector" });
       if (selectedCatalogId) {
-        const catalog = catalogs.find((item) => item.id === selectedCatalogId);
-        if (catalog && catalog.type !== "logical") {
-          const typeKey = catalog.connectorType || "unknown";
-          if (!next.has(typeKey)) {
-            next.add(typeKey);
-            changed = true;
-          }
+        const selected = group.catalogs.find((item) => item.id === selectedCatalogId);
+        if (selected) {
+          requiredExpanded.add(group.key);
         }
       }
-
-      return changed ? next : previous;
-    });
-  }, [catalogs, physicalGroups, query, selectedCatalogId]);
-
-  const toggleTypeExpanded = (typeKey: string) => {
-    setExpandedTypes((previous) => {
-      const next = new Set(previous);
-      if (next.has(typeKey)) {
-        next.delete(typeKey);
-      } else {
-        next.add(typeKey);
+      if (query) {
+        requiredExpanded.add(group.key);
       }
-      return next;
+
+      return {
+        children: group.catalogs.map((catalog) => {
+          const nodeKey = catalogKey(catalog.id);
+          metaMap.set(nodeKey, { catalogId: catalog.id, key: nodeKey, type: "catalog" });
+          return {
+            children: attachCatalogChildren(catalog),
+            key: nodeKey,
+            title: (
+              <span className={styles.catalogNodeTitle}>
+                <span className={styles.catalogNodeIcon}>
+                  <DatabaseOutlined className={styles.catalogIcon} />
+                </span>
+                <span className={styles.catalogNodeName}>{catalog.name}</span>
+                {scanningCatalogIds.includes(catalog.id) ? (
+                  <span className={[styles.treeMiniTag, styles.treeMiniTagScan].join(" ")}>
+                    {t("dataCatalog.tree.scanning")}
+                  </span>
+                ) : null}
+                {!catalog.enabled ? (
+                  <span className={styles.treeMiniTag}>{t("common.disabled")}</span>
+                ) : null}
+              </span>
+            ),
+          };
+        }),
+        key: group.key,
+        selectable: false,
+        title: (
+          <span className={styles.groupNodeTitle}>
+            <span className={styles.groupNodeName}>{group.label}</span>
+            <span className={styles.groupCount}>{group.catalogs.length}</span>
+          </span>
+        ),
+      };
     });
-  };
+
+    metaMap.set(PHYSICAL_GROUP_KEY, { key: PHYSICAL_GROUP_KEY, type: "group" });
+    const logicalChildren = logicalCatalogs.map((catalog) => {
+      const nodeKey = catalogKey(catalog.id);
+      metaMap.set(nodeKey, { catalogId: catalog.id, key: nodeKey, type: "catalog" });
+      if (selectedCatalogId === catalog.id) {
+        requiredExpanded.add(LOGICAL_GROUP_KEY);
+      }
+      return {
+        key: nodeKey,
+        title: (
+          <span className={styles.catalogNodeTitle}>
+            <span className={styles.catalogNodeIcon}>
+              <AppstoreOutlined className={styles.logicalIcon} />
+            </span>
+            <span className={styles.catalogNodeName}>{catalog.name}</span>
+            {isBuiltinLogicalCatalog(catalog) ? (
+              <span className={styles.treeMiniTag}>{t("dataCatalog.tree.builtin")}</span>
+            ) : (
+              <PermissionGate permissions="catalog:delete">
+                <button
+                  aria-label={t("common.delete")}
+                  className={styles.treeActionBtnVisible}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void modal.confirm({
+                      title: t("dataCatalog.tree.deleteLogicalTitle"),
+                      content: t("dataCatalog.tree.deleteLogicalDescription", {
+                        name: catalog.name,
+                      }),
+                      okText: t("common.delete"),
+                      cancelText: t("common.cancel"),
+                      okButtonProps: { danger: true },
+                      onOk: async () => {
+                        try {
+                          await deleteCatalog(catalog.id);
+                          message.success(t("common.success"));
+                          await onRefresh();
+                        } catch (error) {
+                          void message.error(extractRequestErrorMessage(error));
+                          throw error;
+                        }
+                      },
+                    });
+                  }}
+                  title={t("common.delete")}
+                  type="button"
+                >
+                  <DeleteOutlined />
+                </button>
+              </PermissionGate>
+            )}
+          </span>
+        ),
+      };
+    });
+
+    if (logicalChildren.length > 0 || !query) {
+      requiredExpanded.add(LOGICAL_GROUP_KEY);
+    }
+
+    metaMap.set(LOGICAL_GROUP_KEY, { key: LOGICAL_GROUP_KEY, type: "group" });
+
+    const treeData: DataNode[] = [];
+
+    if (physicalChildren.length > 0 || !query) {
+      treeData.push({
+        children: physicalChildren,
+        key: PHYSICAL_GROUP_KEY,
+        selectable: false,
+        title: (
+          <span className={styles.rootNodeTitle}>
+            <span className={styles.rootNodeIcon}>
+              <DatabaseOutlined className={styles.rootIcon} />
+            </span>
+            <span className={styles.rootNodeName}>{t("dataCatalog.tree.physicalGroup")}</span>
+            <span className={styles.rootCount}>{physicalCatalogs.length}</span>
+          </span>
+        ),
+      });
+    }
+
+    if (logicalChildren.length > 0 || !query) {
+      treeData.push({
+        children: logicalChildren,
+        key: LOGICAL_GROUP_KEY,
+        selectable: false,
+        title: (
+          <span className={styles.rootNodeTitle}>
+            <span className={styles.rootNodeIcon}>
+              <AppstoreOutlined className={styles.rootIcon} />
+            </span>
+            <span className={styles.rootNodeName}>{t("dataCatalog.tree.logicalGroup")}</span>
+            <span className={styles.rootCount}>{logicalCatalogs.length}</span>
+          </span>
+        ),
+      });
+    }
+
+    return {
+      metaMap,
+      requiredExpandedKeys: [...requiredExpanded],
+      treeData,
+    };
+  }, [
+    activeDb,
+    connectorTypeNameMap,
+    logicalCatalogs,
+    message,
+    modal,
+    onRefresh,
+    physicalCatalogs,
+    query,
+    scanningCatalogIds,
+    scopeGroupsByCatalog,
+    selectedCatalogId,
+    t,
+  ]);
+
+  useEffect(() => {
+    setExpandedKeys((current) => {
+      const next = new Set(current);
+      treeModel.requiredExpandedKeys.forEach((key) => next.add(key));
+      const nextKeys = [...next];
+      return nextKeys.length === current.length &&
+        nextKeys.every((key, index) => key === current[index])
+        ? current
+        : nextKeys;
+    });
+  }, [treeModel.requiredExpandedKeys]);
 
   const handleCreateLogical = async () => {
     try {
@@ -253,323 +498,100 @@ export function CatalogTreePanel({
     }
   };
 
-  const handleDeleteLogical = (catalog: CatalogRecord) => {
-    void modal.confirm({
-      title: t("dataCatalog.tree.deleteLogicalTitle"),
-      content: t("dataCatalog.tree.deleteLogicalDescription", { name: catalog.name }),
-      okText: t("common.delete"),
-      cancelText: t("common.cancel"),
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await deleteCatalog(catalog.id);
-          message.success(t("common.success"));
-          await onRefresh();
-        } catch (error) {
-          void message.error(extractRequestErrorMessage(error));
-          throw error;
-        }
-      },
-    });
-  };
-
-  const renderCatalogLeaf = (
-    catalog: CatalogRecord,
-    options?: { indented?: boolean; showDelete?: boolean },
-  ) => {
-    const isSelected = selectedCatalogId === catalog.id;
-    const scanning = scanningCatalogIds.includes(catalog.id);
-    const isPhysical = catalog.type !== "logical";
-    const builtin = !isPhysical && isBuiltinLogicalCatalog(catalog);
-
-    return (
-      <div key={catalog.id}>
-        <div
-          className={[
-            styles.treeNode,
-            options?.indented ? styles.treeNodeCatalog : styles.treeNodeLogical,
-            isSelected ? styles.treeNodeSelected : "",
-            isPhysical && !catalog.enabled ? styles.treeNodeOff : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          onClick={() => onSelectCatalog(catalog.id)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              onSelectCatalog(catalog.id);
-            }
-          }}
-          role="button"
-          tabIndex={0}
-          title={catalog.name}
-        >
-          <span className={styles.treeNodeIcon}>
-            {isPhysical ? <ApiOutlined /> : <AppstoreOutlined />}
-          </span>
-          <span className={styles.treeNodeName}>{catalog.name}</span>
-          {scanning ? (
-            <span className={[styles.treeMiniTag, styles.treeMiniTagScan].join(" ")}>
-              {t("dataCatalog.tree.scanning")}
-            </span>
-          ) : null}
-          {isPhysical && !catalog.enabled ? (
-            <span className={styles.treeMiniTag}>{t("common.disabled")}</span>
-          ) : null}
-          {builtin ? (
-            <span className={styles.treeMiniTag}>{t("dataCatalog.tree.builtin")}</span>
-          ) : options?.showDelete ? (
-            <PermissionGate permissions="catalog:delete">
-              <button
-                aria-label={t("common.delete")}
-                className={styles.treeActionBtnVisible}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleDeleteLogical(catalog);
-                }}
-                title={t("common.delete")}
-                type="button"
-              >
-                <DeleteOutlined />
-              </button>
-            </PermissionGate>
-          ) : null}
-        </div>
-        {isSelected && isPhysical && scopeGroups.length > 0 ? (
-          <div className={styles.scopeBlock}>
-            {scopeGroups.map((group) => (
-              <div key={group.db} className={styles.scopeGroup}>
-                <div
-                  className={[
-                    styles.scopeNode,
-                    activeDb === group.db && !activeSchema ? styles.scopeNodeActive : "",
-                  ].join(" ")}
-                  onClick={() => onSelectScope?.({ database: group.db })}
-                  role="button"
-                  tabIndex={0}
-                  title={group.db}
-                >
-                  <span className={styles.scopeNodeName}>{group.db}</span>
-                </div>
-                {group.schemas.length > 0 ? (
-                  <div className={styles.scopeChildren}>
-                    {group.schemas.map((schema) => (
-                      <div
-                        key={`${group.db}.${schema}`}
-                        className={[
-                          styles.scopeNode,
-                          styles.scopeNodeChild,
-                          activeDb === group.db && activeSchema === schema
-                            ? styles.scopeNodeActive
-                            : "",
-                        ].join(" ")}
-                        onClick={() => onSelectScope?.({ database: group.db, schema })}
-                        role="button"
-                        tabIndex={0}
-                        title={schema}
-                      >
-                        <span className={styles.scopeNodeName}>{schema}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    );
-  };
-
-  const renderPhysicalGroup = (group: ConnectorTypeGroup) => {
-    const isOpen = query.length > 0 || expandedTypes.has(group.key);
-
-    return (
-      <div key={group.key}>
-        <div
-          className={styles.treeNodeType}
-          onClick={() => toggleTypeExpanded(group.key)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              toggleTypeExpanded(group.key);
-            }
-          }}
-          role="button"
-          tabIndex={0}
-        >
-          <button
-            aria-label={isOpen ? t("dataCatalog.tree.collapse") : t("dataCatalog.tree.expand")}
-            className={[styles.treeCaret, isOpen ? styles.treeCaretOpen : ""].join(" ")}
-            onClick={(event) => {
-              event.stopPropagation();
-              toggleTypeExpanded(group.key);
-            }}
-            type="button"
-          >
-            <DownOutlined />
-          </button>
-          <span className={styles.treeNodeIcon}>
-            <ApiOutlined />
-          </span>
-          <span className={styles.treeNodeName} title={group.label}>
-            {group.label}
-          </span>
-          <span className={styles.treeCount}>{group.catalogs.length}</span>
-        </div>
-        {isOpen ? (
-          <div className={styles.treeChildren}>
-            {group.catalogs.map((catalog) =>
-              renderCatalogLeaf(catalog, { indented: true }),
-            )}
-          </div>
-        ) : null}
-      </div>
-    );
-  };
-
-  const hasAny = physicalGroups.length > 0 || logicalCatalogs.length > 0;
-  const hasPhysical = physicalGroups.length > 0;
-  const hasLogical = logicalCatalogs.length > 0;
-  const [activeTab, setActiveTab] = useState<"physical" | "logical">(() =>
-    hasPhysical ? "physical" : "logical",
-  );
-
-  useEffect(() => {
-    if (activeTab === "physical" && !hasPhysical && hasLogical) {
-      setActiveTab("logical");
-    }
-    if (activeTab === "logical" && !hasLogical && hasPhysical) {
-      setActiveTab("physical");
-    }
-  }, [activeTab, hasLogical, hasPhysical]);
-
   if (collapsed) {
     return (
-      <aside className={[styles.treePanel, styles.treePanelCollapsed].join(" ")}>
-        <div className={styles.treeCollapsedHead}>
-          <Tooltip title={t("dataCatalog.title")}>
-            <span className={styles.treeCollapsedIcon}>
-              <ApiOutlined />
-            </span>
-          </Tooltip>
-          <AppButton
-            aria-label={t("dataCatalog.tree.expand")}
-            className={styles.treeCollapseBtn}
-            icon={<RightOutlined />}
-            onClick={() => onToggleCollapsed?.()}
-          />
-        </div>
-      </aside>
+      <BusinessTreePanel
+        collapsed
+        collapsedIcon={<DatabaseOutlined />}
+        expandAriaLabel={t("dataCatalog.tree.expand")}
+        onExpandPanel={() => onToggleCollapsed?.()}
+        title={t("dataCatalog.title")}
+      >
+        {null}
+      </BusinessTreePanel>
     );
   }
 
   return (
-    <aside className={styles.treePanel}>
-      <div className={styles.treeHead}>
-        <span className={styles.treeHeadTitle}>{t("dataCatalog.title")}</span>
-        <div className={styles.treeHeadActions}>
-          <Tooltip title={t("dataCatalog.tree.collapse")}>
-            <AppButton
-              aria-label={t("dataCatalog.tree.collapse")}
-              className={styles.treeCollapseBtn}
-              icon={<LeftOutlined />}
-              onClick={() => onToggleCollapsed?.()}
-            />
-          </Tooltip>
-        </div>
-      </div>
-      <Input
-        allowClear
-        className={styles.treeSearch}
-        onChange={(event) => setKeyword(event.target.value)}
-        placeholder={t("dataCatalog.tree.searchPlaceholder")}
-        value={keyword}
-      />
-      <div className={styles.treeBody}>
-        {!hasAny ? (
-          <div className={styles.treeEmpty}>
-            {query.length > 0
+    <>
+      <BusinessTreePanel
+        empty={
+          treeModel.treeData.length === 0
+            ? query
               ? t("dataCatalog.tree.noMatch")
-              : t("dataCatalog.tree.empty")}
-          </div>
-        ) : (
-          <Tabs
-            activeKey={activeTab}
-            className={styles.treeTabs}
-            items={[
-              {
-                key: "physical",
-                label: (
-                  <span className={styles.treeTabLabel}>
-                    {t("dataCatalog.tree.physicalGroup")}
-                    <span className={styles.treeTabCount}>{physicalCatalogs.length}</span>
-                  </span>
-                ),
-                children: (
-                  <div className={styles.treeTabScroll}>
-                    {physicalGroups.length === 0 ? (
-                      <div className={styles.treeEmptyHint}>
-                        {t("dataCatalog.tree.emptyPhysicalGroup")}
-                      </div>
-                    ) : (
-                      physicalGroups.map(renderPhysicalGroup)
-                    )}
-                  </div>
-                ),
-              },
-              {
-                key: "logical",
-                label: (
-                  <span className={styles.treeTabLabel}>
-                    {t("dataCatalog.tree.logicalGroup")}
-                    <span className={styles.treeTabCount}>{logicalCatalogs.length}</span>
-                  </span>
-                ),
-                children: (
-                  <div className={styles.treeTabScroll}>
-                    {logicalCatalogs.length === 0 ? (
-                      <div className={styles.treeEmptyHint}>
-                        {t("dataCatalog.tree.emptyLogicalGroup")}
-                      </div>
-                    ) : (
-                      logicalCatalogs.map((catalog) =>
-                        renderCatalogLeaf(catalog, { showDelete: true }),
-                      )
-                    )}
-                  </div>
-                ),
-              },
-            ]}
-            tabBarExtraContent={
-              activeTab === "logical" ? (
-                <PermissionGate permissions="catalog:create">
-                  <button
-                    aria-label={t("dataCatalog.tree.addLogical")}
-                    className={styles.treeSectionBtn}
-                    onClick={() => {
-                      form.resetFields();
-                      setCreateOpen(true);
-                    }}
-                    title={t("dataCatalog.tree.addLogical")}
-                    type="button"
-                  >
-                    <PlusOutlined />
-                  </button>
-                </PermissionGate>
-              ) : null
+              : t("dataCatalog.tree.empty")
+            : undefined
+        }
+        footer={
+          <span>
+            {t("dataCatalog.tree.summary", {
+              catalogCount: catalogs.length as never,
+              resourceCount: resourceCount as never,
+            })}
+          </span>
+        }
+        headerActions={
+          <>
+            <PermissionGate permissions="catalog:create">
+              <Tooltip title={t("dataCatalog.tree.addLogical")}>
+                <AppButton
+                  aria-label={t("dataCatalog.tree.addLogical")}
+                  className={styles.treeActionBtn}
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    form.resetFields();
+                    setCreateOpen(true);
+                  }}
+                />
+              </Tooltip>
+            </PermissionGate>
+            <Tooltip title={t("dataCatalog.tree.collapse")}>
+              <AppButton
+                aria-label={t("dataCatalog.tree.collapse")}
+                className={styles.treeActionBtn}
+                icon={<LeftOutlined />}
+                onClick={() => onToggleCollapsed?.()}
+              />
+            </Tooltip>
+          </>
+        }
+        onSearchChange={setKeyword}
+        searchPlaceholder={t("dataCatalog.tree.searchPlaceholder")}
+        searchValue={keyword}
+        title={t("dataCatalog.title")}
+      >
+        <BusinessTree
+          className={styles.catalogTree}
+          expandedKeys={expandedKeys}
+          onExpand={(keys) => setExpandedKeys(keys.map(String))}
+          onSelect={(keys) => {
+            const key = String(keys[0] ?? "");
+            if (!key) {
+              return;
             }
-            onChange={(key) => setActiveTab(key as "physical" | "logical")}
-            size="small"
-          />
-        )}
-      </div>
-      <div className={styles.treeFoot}>
-        <span>
-          {t("dataCatalog.tree.summary", {
-            catalogCount: catalogs.length as never,
-            resourceCount: resourceCount as never,
-          })}
-        </span>
-      </div>
+            const meta = treeModel.metaMap.get(key);
+            if (!meta) {
+              return;
+            }
+            if (meta.type === "catalog") {
+              onSelectScope?.(null);
+              onSelectCatalog(meta.catalogId);
+              return;
+            }
+            if (meta.type === "database") {
+              onSelectCatalog(meta.catalogId);
+              onSelectScope?.({ database: meta.database });
+              return;
+            }
+            if (meta.type === "schema") {
+              onSelectCatalog(meta.catalogId);
+              onSelectScope?.({ database: meta.database, schema: meta.schema });
+            }
+          }}
+          selectedKeys={selectedKey ? [selectedKey] : []}
+          treeData={treeModel.treeData}
+        />
+      </BusinessTreePanel>
 
       <Modal
         cancelText={t("common.cancel")}
@@ -600,10 +622,7 @@ export function CatalogTreePanel({
               placeholder={t("dataCatalog.tree.logicalNamePlaceholder")}
             />
           </Form.Item>
-          <Form.Item
-            label={t("common.description")}
-            name="description"
-          >
+          <Form.Item label={t("common.description")} name="description">
             <Input.TextArea
               maxLength={200}
               placeholder={t("dataCatalog.tree.logicalDescriptionPlaceholder")}
@@ -612,6 +631,6 @@ export function CatalogTreePanel({
           </Form.Item>
         </Form>
       </Modal>
-    </aside>
+    </>
   );
 }

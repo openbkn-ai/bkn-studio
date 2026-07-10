@@ -190,3 +190,96 @@
   justify-content: flex-end;
   margin-top: 16px;
 }
+
+.deleteModalRoot :global(.ant-modal-content) {
+  border-radius: 24px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.16);
+}
+
+.deleteModalRoot :global(.ant-modal-header) {
+  margin: 0;
+  padding: 28px 32px 12px;
+  border-bottom: 0;
+}
+
+.deleteModalRoot :global(.ant-modal-title) {
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.deleteModalRoot :global(.ant-modal-body) {
+  padding: 0 32px 24px;
+}
+
+.deleteModalRoot :global(.ant-modal-close) {
+  inset-inline-end: 20px;
+  top: 18px;
+  width: 36px;
+  height: 36px;
+  color: #94a3b8;
+}
+
+.deleteModalRoot :global(.ant-modal-close):hover {
+  color: #64748b;
+  background: transparent;
+}
+
+.deleteModalClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.deleteAlert {
+  padding: 14px 18px;
+  border: 1px solid #91caff;
+  border-radius: 18px;
+  background: #eff6ff;
+  margin-bottom: 28px;
+}
+
+.deleteAlert :global(.ant-alert-icon) {
+  margin-top: 3px;
+  color: #2563eb;
+}
+
+.deleteAlert :global(.ant-alert-message) {
+  color: #334155;
+  font-size: 15px;
+  line-height: 32px;
+}
+
+.deleteModalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.deleteModalFooter :global(.ant-btn) {
+  min-width: 80px;
+  height: 44px;
+  border-radius: 999px;
+  padding-inline: 24px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.deleteModalFooter :global(.ant-btn-default) {
+  border-color: #dbe3ef;
+  color: #334155;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.deleteModalFooter :global(.ant-btn-color-primary.ant-btn-variant-solid.ant-btn-dangerous) {
+  border-color: #ff4d4f;
+  background: #ff4d4f;
+  box-shadow: none;
+}

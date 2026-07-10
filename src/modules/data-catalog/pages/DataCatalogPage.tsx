@@ -15,11 +15,16 @@ type DataCatalogPageProps = {
 
 export function DataCatalogPage({ selectionType }: DataCatalogPageProps) {
   const params = useParams<{ catalogId?: string }>();
-
+  const routeCatalogId = params.catalogId?.trim();
   const selection =
-    selectionType === "catalog" && params.catalogId
-      ? ({ id: params.catalogId, type: "catalog" } as const)
+    selectionType === "catalog" && routeCatalogId
+      ? ({ id: routeCatalogId, type: "catalog" } as const)
       : null;
 
-  return <DataCatalogScene selection={selection} />;
+  return (
+    <DataCatalogScene
+      selection={selection}
+      suppressAutoSelect={false}
+    />
+  );
 }

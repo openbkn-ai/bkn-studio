@@ -364,6 +364,7 @@ export function DataConnectListScene({
                 className={styles.filterSelect}
                 onChange={(value) => {
                   setSelectedConnectorType(value || undefined);
+                  setPagination(1, pageState.pageSize);
                 }}
                 options={[
                   { label: t("dataConnect.categoryAll"), value: "" },

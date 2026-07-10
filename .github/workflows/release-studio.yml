@@ -3,10 +3,10 @@ name: release-studio
 # Builds the bkn-studio SPA image AND packages the Helm chart, then pushes both
 # to GHCR (image mirrored to Huawei SWR when those secrets are present). The
 # chart's image tag and its own version share one resolved version, so the chart
-# always points at the matching image. kowell-core's bkn-foundry.yaml references
+# always points at the matching image. bkn-foundry's bkn-foundry.yaml references
 # the published chart by name + version.
 #
-# Versioning mirrors the kowell-core convention so image tag == chart version:
+# Versioning mirrors the bkn-foundry convention so image tag == chart version:
 # a `v*` tag IS the release version (leading "v" stripped). Branch / PR runs
 # build-only (no push) unless dispatched with publish=true.
 
