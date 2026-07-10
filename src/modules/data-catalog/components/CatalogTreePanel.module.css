@@ -1,122 +1,168 @@
-.treePanel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 16px 14px;
-  border: 1px solid #e5eaf2;
-  border-radius: 0;
-  background: #ffffff;
-  height: calc(100vh - 110px);
+/* Data Catalog tree: only keep business-specific node hierarchy overrides here.
+   Shared panel shell, search, collapse state, scrolling and base tree behavior
+   live in framework/ui/common/BusinessTreePanel*. */
+.catalogTree:global(.ant-tree) {
+  background: transparent;
+  color: #111827;
 }
 
-@media (max-width: 1200px) {
-  .treePanel {
-    height: auto;
-    max-height: none;
-  }
+.catalogTree :global(.ant-tree-indent-unit) {
+  width: 14px;
 }
 
-.treeHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.treeHeadActions {
+.catalogTree :global(.ant-tree-switcher) {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 7px;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #94a3b8;
 }
 
-.treeCollapseBtn:global(.ant-btn) {
-  width: 32px;
-  height: 32px;
+.catalogTree :global(.ant-tree-list-holder-inner) {
+  gap: 0;
+}
+
+.catalogTree :global(.ant-tree-treenode) {
+  width: 100%;
   padding: 0;
 }
 
-.treeHeadTitle {
-  color: #111827;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.treeHead :global(.ant-btn) {
+.catalogTree :global(.ant-tree-node-content-wrapper) {
+  min-height: 34px;
+  padding: 7px 10px !important;
+  margin-left: 6px;
+  width: calc(100% - 6px);
   border-radius: 0 !important;
 }
 
-.treeSearch:global(.ant-input),
-.treeSearch:global(.ant-input-affix-wrapper) {
-  height: 32px;
-  border-color: #d9e0ea;
-  border-radius: 0 !important;
-  box-shadow: none;
+.catalogTree :global(.ant-tree-node-content-wrapper:hover) {
+  background: #f8fafc;
 }
 
-.treeSearch:global(.ant-input:hover),
-.treeSearch:global(.ant-input:focus),
-.treeSearch:global(.ant-input-affix-wrapper:hover),
-.treeSearch:global(.ant-input-affix-wrapper-focused) {
-  border-color: #2e68ff;
-  box-shadow: none;
+.catalogTree :global(.ant-tree-node-selected),
+.catalogTree :global(.ant-tree-node-selected:hover) {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
 }
 
-.treeBody {
+.catalogTree :global(.ant-tree-title) {
   display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
+  align-items: center;
+  min-width: 0;
 }
 
-.treeTabs:global(.ant-tabs) {
-  min-height: 0;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
+.catalogTree :global(.ant-tree-node-selected) .catalogNodeName,
+.catalogTree :global(.ant-tree-node-selected) .scopeGroupName,
+.catalogTree :global(.ant-tree-node-selected) .scopeLeafName {
+  color: #1d4ed8;
 }
 
-.treeTabs :global(.ant-tabs-nav) {
-  margin: 0;
-  padding: 0 2px;
+.catalogTree :global(.ant-tree-treenode:has(.groupNodeTitle)) :global(.ant-tree-node-content-wrapper) {
+  min-height: 30px;
+  margin-left: 2px;
+  width: calc(100% - 2px);
+  padding-left: 6px !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
 }
 
-.treeTabs :global(.ant-tabs-nav::before) {
-  border-bottom-color: #eef2f7;
+.catalogTree :global(.ant-tree-treenode:has(.scopeGroupTitle)) :global(.ant-tree-node-content-wrapper) {
+  min-height: 30px;
+  margin-left: 10px;
+  width: calc(100% - 10px);
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
 }
 
-.treeTabs :global(.ant-tabs-tab) {
-  padding: 10px 2px;
-  font-size: 13px;
-  font-weight: 700;
+.catalogTree :global(.ant-tree-treenode:has(.scopeLeafTitle)) :global(.ant-tree-node-content-wrapper) {
+  min-height: 28px;
+  margin-left: 16px;
+  width: calc(100% - 16px);
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
 }
 
-.treeTabs :global(.ant-tabs-ink-bar) {
-  height: 2px;
-  border-radius: 0;
-  background: #2e68ff;
+.catalogTree :global(.ant-tree-treenode-selected) {
+  position: static;
 }
 
-.treeTabs :global(.ant-tabs-content-holder) {
-  min-height: 0;
-  flex: 1;
+.catalogTree :global(.ant-tree-treenode:has(.rootNodeTitle)) {
+  margin-top: 2px;
+  margin-bottom: 8px;
 }
 
-.treeTabs :global(.ant-tabs-content) {
-  height: 100%;
+.catalogTree :global(.ant-tree-treenode:has(.rootNodeTitle)) :global(.ant-tree-switcher) {
+  width: 16px;
+  height: 16px;
+  margin-top: 8px;
+  margin-right: 2px;
+  color: #94a3b8;
 }
 
-.treeTabs :global(.ant-tabs-tabpane) {
-  height: 100%;
+.catalogTree :global(.ant-tree-treenode:has(.rootNodeTitle)) :global(.ant-tree-node-content-wrapper) {
+  min-height: 34px;
+  margin-left: 0;
+  width: 100%;
+  padding: 8px 2px 8px 0 !important;
+  background: transparent !important;
 }
 
-.treeTabLabel {
+.catalogTree :global(.ant-tree-treenode:has(.rootNodeTitle)) :global(.ant-tree-node-content-wrapper:hover) {
+  background: transparent !important;
+}
+
+.rootNodeTitle,
+.groupNodeTitle,
+.catalogNodeTitle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  width: 100%;
 }
 
-.treeTabCount {
+.rootNodeIcon,
+.catalogNodeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.rootNodeName {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.groupNodeName {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.catalogNodeName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.rootCount,
+.groupCount {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -126,79 +172,155 @@
   border: 1px solid #e5eaf2;
   background: #f8fafc;
   color: #64748b;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  flex: none;
 }
 
-.treeTabScroll {
-  min-height: 0;
-  height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding-right: 2px;
+.rootNodeTitle {
+  gap: 5px;
 }
 
-.treeTabScroll::-webkit-scrollbar {
-  width: 8px;
-}
-
-.treeTabScroll::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 0;
-  background: rgba(124, 140, 166, 0.22);
-  background-clip: padding-box;
-}
-
-.treeBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 0;
-}
-
-.treeBlockBody {
-  display: grid;
-  gap: 2px;
-}
-
-.treeSection {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 4px 8px;
-  border-bottom: 1px solid #eef2f7;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-.treeSectionActions {
-  display: inline-flex;
-  align-items: center;
+.groupNodeTitle {
   gap: 4px;
 }
 
-.treeSectionBtn,
+.rootNodeTitle .rootCount,
+.groupNodeTitle .groupCount {
+  margin-left: 2px;
+}
+
+.rootIcon,
+.catalogIcon,
+.logicalIcon {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.catalogTree :global(.ant-tree-treenode:has(.rootNodeTitle)) .rootNodeIcon {
+  width: 15px;
+  height: 15px;
+}
+
+.catalogTree :global(.ant-tree-treenode:has(.groupNodeTitle)) {
+  margin-bottom: 2px;
+}
+
+.catalogTree :global(.ant-tree-treenode:has(.groupNodeTitle)) :global(.ant-tree-switcher) {
+  margin-top: 6px;
+  margin-right: 0;
+}
+
+.catalogTree :global(.ant-tree-treenode:has(.groupNodeTitle)) .catalogNodeIcon {
+  display: none;
+}
+
+.catalogTree :global(.ant-tree-node-selected) {
+  position: relative;
+}
+
+.catalogTree :global(.ant-tree-node-selected)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: #2e68ff;
+}
+
+.catalogTree :global(.ant-tree-treenode:has(.groupNodeTitle)) .switcherIcon {
+  font-size: 10px;
+  color: #a3afc2;
+}
+
+.catalogTree :global(.ant-tree-treenode:has(.catalogNodeTitle)) .switcherIcon {
+  font-size: 10px;
+  color: #cbd5e1;
+}
+
+.catalogTree :global(.ant-tree-node-selected) .rootIcon,
+.catalogTree :global(.ant-tree-node-selected) .catalogIcon,
+.catalogTree :global(.ant-tree-node-selected) .logicalIcon {
+  color: #1d4ed8;
+}
+
+.treeActionBtn:global(.ant-btn) {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 0 !important;
+}
+
+.scopeGroupTitle,
+.scopeLeafTitle {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+
+.scopeGroupName,
+.scopeLeafName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scopeGroupName {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.scopeLeafName {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.catalogTree :global(.ant-tree-treenode:has(.scopeGroupTitle)) .switcherIcon {
+  font-size: 9px;
+  color: #cbd5e1;
+}
+
+.treeMiniTag {
+  padding: 0 6px;
+  border: 1px solid #e5eaf2;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 18px;
+  flex: none;
+}
+
+.catalogNodeTitle .treeMiniTag,
+.catalogNodeTitle .treeActionBtnVisible {
+  margin-left: 2px;
+}
+
+.treeMiniTagScan {
+  color: #1d4ed8;
+  border-color: #bfd2ff;
+  background: #f5f8ff;
+}
+
 .treeActionBtnVisible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
   border: 1px solid #e5eaf2;
   background: #fff;
   color: #64748b;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   flex: none;
-}
-
-.treeSectionBtn:hover {
-  border-color: #2e68ff;
-  color: #1d4ed8;
-  background: #f5f8ff;
 }
 
 .treeActionBtnVisible:hover {
@@ -215,243 +337,4 @@
 .logicalModalRoot :global(.ant-input),
 .logicalModalRoot :global(textarea.ant-input) {
   border-radius: 0 !important;
-}
-
-.treeNodeType {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 36px;
-  padding: 8px 10px;
-  color: #111827;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.treeNodeType:hover {
-  background: #f8fafc;
-}
-
-.treeNodeCatalog,
-.treeNodeLogical {
-  font-weight: 400;
-}
-
-.treeNode {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 36px;
-  padding: 8px 10px;
-  border: 0;
-  background: transparent;
-  color: #111827;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.16s ease, color 0.16s ease;
-}
-
-.treeNode:hover {
-  background: #f8fafc;
-}
-
-.treeNodeSelected,
-.treeNodeSelected:hover {
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.treeNodeSelected::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: #2e68ff;
-}
-
-.treeNodeOff .treeNodeName {
-  color: #94a3b8;
-}
-
-.treeCaret {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border: 0;
-  background: none;
-  color: #94a3b8;
-  font-size: 10px;
-  cursor: pointer;
-  transform: rotate(-90deg);
-  transition: transform 0.16s ease;
-  flex: none;
-}
-
-.treeCaret:hover {
-  background: #f1f5f9;
-  color: #64748b;
-}
-
-.treeCaretOpen {
-  transform: rotate(0deg);
-}
-
-.treeNodeIcon {
-  display: inline-flex;
-  width: 16px;
-  justify-content: center;
-  color: #64748b;
-  font-size: 14px;
-  flex: none;
-}
-
-.treeNodeSelected .treeNodeIcon {
-  color: #1d4ed8;
-}
-
-.treeNodeName {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 1.4;
-}
-
-.treeMiniTag {
-  padding: 0 6px;
-  border: 1px solid #e5eaf2;
-  color: #64748b;
-  font-size: 11px;
-  line-height: 18px;
-  flex: none;
-}
-
-.treeMiniTagScan {
-  color: #1d4ed8;
-  border-color: #bfd2ff;
-  background: #f5f8ff;
-}
-
-.treeCount {
-  padding: 0 8px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 12px;
-  line-height: 20px;
-  flex: none;
-}
-
-.treeChildren {
-  display: grid;
-  gap: 2px;
-  margin: 2px 0 8px;
-  padding-left: 28px;
-}
-
-.scopeBlock {
-  margin: 2px 0 8px;
-  padding-left: 24px;
-  display: grid;
-  gap: 2px;
-}
-
-.scopeGroup {
-  display: grid;
-  gap: 2px;
-}
-
-.scopeChildren {
-  display: grid;
-  gap: 2px;
-  padding-left: 18px;
-}
-
-.scopeNode {
-  display: flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 6px 10px;
-  color: #475569;
-  font-size: 12px;
-  cursor: pointer;
-  border-left: 1px solid transparent;
-}
-
-.scopeNode:hover {
-  background: #f8fafc;
-}
-
-.scopeNodeActive,
-.scopeNodeActive:hover {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-left-color: #2e68ff;
-}
-
-.scopeNodeChild {
-  padding-left: 14px;
-}
-
-.scopeNodeName {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.treeEmptyHint {
-  padding: 10px 12px;
-  color: #94a3b8;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.treeFoot {
-  padding-top: 10px;
-  border-top: 1px solid #eef2f7;
-  color: #94a3b8;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.treeEmpty {
-  padding: 32px 12px;
-  color: #94a3b8;
-  font-size: 13px;
-  line-height: 1.6;
-  text-align: center;
-}
-
-.treePanelCollapsed {
-  padding: 10px 6px;
-  gap: 10px;
-}
-
-.treeCollapsedHead {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.treeCollapsedIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid #e5eaf2;
-  background: #fff;
-  color: #64748b;
-  font-size: 16px;
 }

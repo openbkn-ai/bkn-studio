@@ -17,8 +17,6 @@
 
 .deptPanel {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
   height: 100%;
   padding: 14px 12px 16px;
   border-right: 1px solid var(--admin-color-border, #d9e0ea);
@@ -26,31 +24,17 @@
   min-height: 0;
 }
 
-.deptPanelHead {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.deptPanelTitle {
-  margin: 0;
-  color: var(--admin-color-heading, #172033);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.deptPanelActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  align-items: center;
-}
-
 .deptTreeWrap {
   flex: 1;
-  min-height: 420px;
+  min-height: 0;
   overflow: hidden;
+}
+
+.deptActionRowSecondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
 }
 
 .userPanel {

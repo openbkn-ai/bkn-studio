@@ -26,6 +26,7 @@ import type {
   ResourcePreviewQuery,
   ResourcePreviewResult,
   ResourceSchemaField,
+  ResourceUpdateInput,
 } from "@/modules/data-catalog/types/data-catalog";
 
 type BackendSchemaField = {
@@ -36,6 +37,19 @@ type BackendSchemaField = {
   original_type?: string;
   type?: string;
 };
+
+function mapSchemaFieldToBackend(field: ResourceSchemaField): BackendSchemaField {
+  const displayName = field.displayName?.trim() || field.name;
+  const description = field.description?.trim() || "";
+
+  return {
+    description,
+    display_name: displayName,
+    name: field.name,
+    original_name: field.name,
+    type: field.type,
+  };
+}
 
 function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
   const name = field.name ?? field.original_name ?? field.display_name ?? "";
@@ -204,7 +218,8 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       category: input.category,
       description: input.description,
       name: input.name,
-      schema_definition: input.schema.length > 0 ? input.schema : undefined,
+      schema_definition:
+        input.schema.length > 0 ? input.schema.map(mapSchemaFieldToBackend) : undefined,
       source_identifier: input.sourceIdentifier,
     },
   );
@@ -225,6 +240,48 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       updateTime: formatMockTimestamp(Date.now()),
     }
   );
+}
+
+export async function updateCatalogResource(
+  id: string,
+  input: ResourceUpdateInput,
+) {
+  if (useMock) {
+    const index = mockResources.findIndex((item) => item.id === id);
+    if (index < 0) {
+      throw new Error("Resource not found");
+    }
+
+    const current = mockResources[index];
+    const updatedAt = Date.now();
+    const nextResource: CatalogResource = {
+      ...current,
+      catalogId: input.catalogId,
+      category: input.category,
+      description: input.description,
+      name: input.name,
+      schema: input.schema,
+      sourceIdentifier: input.sourceIdentifier,
+      columnCount: input.schema.length,
+      updatedAt,
+      updateTime: formatMockTimestamp(updatedAt),
+    };
+
+    mockResources[index] = nextResource;
+    emitMockChange();
+    return wait(nextResource);
+  }
+
+  await http.put(`/vega-backend/v1/resources/${id}`, {
+    catalog_id: input.catalogId,
+    category: input.category,
+    description: input.description,
+    name: input.name,
+    schema_definition: input.schema.map(mapSchemaFieldToBackend),
+    source_identifier: input.sourceIdentifier,
+  });
+
+  return getCatalogResource(id);
 }
 
 export async function deleteCatalogResource(id: string) {

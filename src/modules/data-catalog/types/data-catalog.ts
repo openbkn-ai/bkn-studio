@@ -45,6 +45,8 @@ export type ResourceCreateInput = {
   sourceIdentifier: string;
 };
 
+export type ResourceUpdateInput = ResourceCreateInput;
+
 export type ResourcePreviewQuery = {
   limit: number;
   offset: number;

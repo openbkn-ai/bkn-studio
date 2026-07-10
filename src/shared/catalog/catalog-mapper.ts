@@ -103,7 +103,7 @@ export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
   };
 }
 
-function matchesCatalogType(item: CatalogRecord, type: CatalogListQuery["type"]) {
+export function matchesCatalogType(item: CatalogRecord, type: CatalogListQuery["type"]) {
   const catalogType = item.type || "physical";
   if (!type || type === "physical") {
     return catalogType === "physical";

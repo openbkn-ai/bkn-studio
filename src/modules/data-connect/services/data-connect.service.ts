@@ -7,6 +7,7 @@
 
 import { http } from "@/framework/request/http";
 import {
+  catalogListAllQuery,
   createLogicalCatalog,
   createPhysicalCatalog,
   deleteCatalog,
@@ -17,6 +18,7 @@ import {
   testCatalogConnection,
   updateCatalog,
 } from "@/shared/catalog";
+import { filterCatalogs } from "@/shared/catalog/catalog-mapper";
 import type {
   DataConnectConnectorType,
   DataConnectListQuery,
@@ -205,7 +207,38 @@ export async function listDataConnectConnectorTypes() {
 export async function listDataConnectRecords(
   query: DataConnectListQuery,
 ): Promise<DataConnectListResult> {
-  return listCatalogs(query);
+  if (useMock) {
+    return listCatalogs({ ...query, type: "physical" });
+  }
+
+  const batchSize = 200;
+  const allItems: DataConnectRecord[] = [];
+  let page = 1;
+  let total = 0;
+
+  do {
+    const result = await listCatalogs(
+      catalogListAllQuery({
+        page,
+        pageSize: batchSize,
+      }),
+    );
+
+    allItems.push(...result.items);
+    total = result.total;
+    page += 1;
+  } while (allItems.length < total);
+
+  const filtered = filterCatalogs(allItems, {
+    ...query,
+    type: "physical",
+  });
+  const startIndex = (query.page - 1) * query.pageSize;
+
+  return {
+    items: filtered.slice(startIndex, startIndex + query.pageSize),
+    total: filtered.length,
+  };
 }
 
 export async function getDataConnectRecord(id: string) {

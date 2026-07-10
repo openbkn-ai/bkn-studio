@@ -32,9 +32,7 @@ import type {
   CatalogResource,
   CatalogScanRecord,
 } from "@/modules/data-catalog/types/data-catalog";
-import {
-  listDataConnectConnectorTypes,
-} from "@/modules/data-connect/services/data-connect.service";
+import { listDataConnectConnectorTypes } from "@/modules/data-connect/services/data-connect.service";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 import { catalogListAllQuery, listCatalogs, type CatalogRecord } from "@/shared/catalog";
 
@@ -42,9 +40,13 @@ import styles from "./DataCatalogScene.module.css";
 
 export type DataCatalogSceneProps = {
   selection: CatalogTreeSelection | null;
+  suppressAutoSelect?: boolean;
 };
 
-export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
+export function DataCatalogScene({
+  selection,
+  suppressAutoSelect = false,
+}: DataCatalogSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -146,7 +148,6 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     void loadScans();
   }, [loadScans]);
 
-  // mock 数据变更(构建进度 / 扫描完成 / 监听增量)即时刷新;真实后端走下方轮询
   useEffect(() => {
     return subscribeMockDb(() => {
       void loadAll();
@@ -197,7 +198,6 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     [scans, tasks],
   );
 
-  // 轮询只刷新会变化的任务/扫描;失败保留旧数据等下一轮
   const pollActive = useCallback(async () => {
     if (!selectedCatalogId) {
       return;
@@ -223,7 +223,6 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     return () => window.clearInterval(timer);
   }, [hasActiveWork, pollActive]);
 
-  // 活跃任务全部结束时整体刷一次,带回资源行数 / 索引状态等结果数据
   const prevActiveRef = useRef(hasActiveWork);
   useEffect(() => {
     if (prevActiveRef.current && !hasActiveWork) {
@@ -232,14 +231,13 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
     prevActiveRef.current = hasActiveWork;
   }, [hasActiveWork, loadAll]);
 
-  // 无选中时默认选第一个物理 catalog；用 layout effect 尽量在首帧绘制前跳转，避免闪空态。
   useLayoutEffect(() => {
-    if (loading || selection || catalogs.length === 0) {
+    if (loading || selection || catalogs.length === 0 || suppressAutoSelect) {
       return;
     }
     const target = catalogs.find((item) => item.type !== "logical") ?? catalogs[0];
     void navigate(`/data-directory/catalog/${target.id}`, { replace: true });
-  }, [catalogs, loading, navigate, selection]);
+  }, [catalogs, loading, navigate, selection, suppressAutoSelect]);
 
   const scanningCatalogIds = useMemo(() => {
     const ids = catalogs
@@ -358,7 +356,16 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
       );
     }
 
-    // /data-directory 根路径：等待默认 catalog 跳转，勿误报「未找到」。
+    if (suppressAutoSelect) {
+      return (
+        <EmptyStatePanel
+          description="请从左侧物理数据源树中选择一个数据连接。"
+          icon={<DatabaseOutlined />}
+          title={t("dataCatalog.title")}
+        />
+      );
+    }
+
     if (catalogs.length > 0) {
       return (
         <div className={styles.placeholder}>
@@ -442,7 +449,6 @@ export function DataCatalogScene({ selection }: DataCatalogSceneProps) {
         }}
         open={resourceDrawer.open}
       />
-
     </>
   );
 }

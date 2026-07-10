@@ -11,7 +11,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Empty, Input, Select, Spin } from "antd";
+import { Alert, Dropdown, Empty, Input, Modal, Select, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -38,7 +38,6 @@ import type {
   KnowledgeNetworkMutationPayload,
   KnowledgeNetworkRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 
 import styles from "./KnowledgeNetworkListScene.module.css";
 
@@ -50,7 +49,7 @@ export function KnowledgeNetworkListScene({
 }: KnowledgeNetworkListSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message, modal } = useAppServices();
+  const { message } = useAppServices();
   const { pageState, query, setKeyword, setPagination } = usePageState({
     pageSize: CARD_GRID_PAGE_SIZE,
   });
@@ -67,6 +66,10 @@ export function KnowledgeNetworkListScene({
   const [formOpen, setFormOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [deletingRecord, setDeletingRecord] = useState<KnowledgeNetworkRecord | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState(false);
 
   const hasActiveFilter = useMemo(
     () => Boolean(pageState.keyword.trim()) || selectedTag !== "all",
@@ -142,6 +145,37 @@ export function KnowledgeNetworkListScene({
     }
 
     void navigate(`/knowledge-network/workspace/${record.id}/overview`);
+  };
+
+  const openDelete = (record: KnowledgeNetworkRecord) => {
+    setDeletingRecord(record);
+  };
+
+  const closeDelete = () => {
+    if (deleting) {
+      return;
+    }
+
+    setDeletingRecord(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingRecord) {
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      await deleteKnowledgeNetwork(deletingRecord.id);
+      void message.success(t("common.success"));
+      setDeletingRecord(null);
+      await reloadData();
+    } catch (error) {
+      void message.error(extractRequestErrorMessage(error));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const submitForm = async (values: KnowledgeNetworkMutationPayload) => {
@@ -305,23 +339,7 @@ export function KnowledgeNetworkListScene({
                 {items.map((record) => (
                   <KnowledgeNetworkCard
                     key={record.id}
-                    onDelete={(nextRecord) => {
-                      void modal.confirm({
-                        title: t("knowledgeNetwork.deleteTitle"),
-                        content: t("knowledgeNetwork.deleteDescription", {
-                          name: nextRecord.name,
-                        }),
-                        className: modalStyles.businessModal,
-                        okButtonProps: { danger: true },
-                        okText: t("common.delete"),
-                        cancelText: t("common.cancel"),
-                        onOk: async () => {
-                          await deleteKnowledgeNetwork(nextRecord.id);
-                          void message.success(t("common.success"));
-                          await reloadData();
-                        },
-                      });
-                    }}
+                    onDelete={openDelete}
                     onEdit={openEdit}
                     onExport={(nextRecord) => {
                       void exportKnowledgeNetwork(nextRecord.id).then(() => {
@@ -359,6 +377,35 @@ export function KnowledgeNetworkListScene({
         open={formOpen}
         record={editingRecord}
       />
+      <Modal
+        centered
+        closable={!deleting}
+        closeIcon={<span className={styles.deleteModalClose}>×</span>}
+        footer={null}
+        maskClosable={!deleting}
+        onCancel={closeDelete}
+        open={Boolean(deletingRecord)}
+        rootClassName={styles.deleteModalRoot}
+        title={t("knowledgeNetwork.deleteTitle")}
+        width={652}
+      >
+        <Alert
+          className={styles.deleteAlert}
+          message={t("knowledgeNetwork.deleteDescription", {
+            name: deletingRecord?.name ?? "",
+          })}
+          showIcon
+          type="info"
+        />
+        <div className={styles.deleteModalFooter}>
+          <AppButton disabled={deleting} onClick={closeDelete}>
+            {t("common.cancel")}
+          </AppButton>
+          <AppButton danger loading={deleting} onClick={() => void confirmDelete()} type="primary">
+            {t("common.delete")}
+          </AppButton>
+        </div>
+      </Modal>
     </section>
   );
 }

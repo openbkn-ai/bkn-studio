@@ -12,11 +12,12 @@ import {
   DownOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Button, Checkbox, Dropdown, Empty, Input, Modal, Pagination, Splitter, Table, Tree } from "antd";
+import { Button, Checkbox, Dropdown, Empty, Input, Modal, Pagination, Splitter, Table } from "antd";
 import type { DataNode } from "antd/es/tree";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { BusinessTree } from "@/framework/ui/common/BusinessTreePanel";
 import {
   getObjectTypeResourcePreview,
   listObjectTypeResourceGroups,
@@ -305,7 +306,7 @@ export function ObjectTypeResourceSelectModal({
             >
               {t("knowledgeNetwork.objectTypeResourceAll")}
             </div>
-            <Tree
+            <BusinessTree
               blockNode
               className={styles.groupTree}
               defaultExpandAll

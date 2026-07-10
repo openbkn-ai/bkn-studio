@@ -208,7 +208,7 @@ export function ResourceWorkspaceScene({
               label: t("dataCatalog.resourceWorkspace.tabDetail"),
               children: (
                 <div className={styles.tabPanel}>
-                  <ResourceDetailPanel catalog={catalog} resource={resource} />
+                  <ResourceDetailPanel catalog={catalog} onUpdated={loadAll} resource={resource} />
                 </div>
               ),
             },

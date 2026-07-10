@@ -367,6 +367,7 @@ export async function importKnowledgeNetwork(
 
   try {
     await http.post("/bkn-backend/v1/knowledge-networks", requestBody, {
+      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         import_mode: importMode,
         validate_dependency: false,
