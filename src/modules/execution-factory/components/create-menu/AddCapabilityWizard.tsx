@@ -335,6 +335,8 @@ export function AddCapabilityWizard({
 
       summary?: string;
 
+      description?: string;
+
       operatorSync?: import("@/modules/execution-factory/types/operator-sync").OperatorSyncPublishInput;
 
     };
@@ -364,6 +366,7 @@ export function AddCapabilityWizard({
         operatorSync: payload.values.operatorSync,
 
         toolName: payload.values.summary,
+        toolDescription: payload.values.description,
 
       });
 

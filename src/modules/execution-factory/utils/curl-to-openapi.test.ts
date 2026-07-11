@@ -92,6 +92,44 @@ describe("curl-to-openapi", () => {
     });
   });
 
+  it("turns curl headers into header parameters except content type", () => {
+    const result = parseCurlCommand(`curl -X GET "https://httpbin.org/get?customerId=1001&region=CN" \
+  -H "accept: application/json" \
+  -H "x-demo-source: openbkn-manual"`);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.value.queryParams.map((item) => [item.name, item.in, item.example])).toEqual([
+      ["customerId", "query", "1001"],
+      ["region", "query", "CN"],
+      ["accept", "header", "application/json"],
+      ["x-demo-source", "header", "openbkn-manual"],
+    ]);
+
+    const spec = JSON.parse(buildOpenApiFromQuickApi(result.value)) as {
+      paths: {
+        "/get": {
+          get: {
+            parameters?: Array<{ in?: string; name?: string; schema?: { example?: unknown } }>;
+          };
+        };
+      };
+    };
+
+    expect(spec.paths["/get"].get.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          in: "header",
+          name: "x-demo-source",
+          schema: expect.objectContaining({ example: "openbkn-manual" }),
+        }),
+      ]),
+    );
+  });
+
   it("turns -G data fields into query parameters", () => {
     const result = parseCurlCommand(
       `curl -G --data-urlencode "city=北京" --data "unit=c" https://api.example.com/weather`,

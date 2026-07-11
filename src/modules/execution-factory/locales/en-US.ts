@@ -166,7 +166,7 @@ export const executionFactoryEnUS = {
     backToCapabilities: "← Back to toolsets / MCP / skills",
     advancedOperatorEntry: "Operator dev",
     advancedOperatorBanner:
-      "Operator list and debug. For everyday HTTP APIs, use Add API under Toolsets and enable Sync as operator.",
+      "Operator list and debug. For everyday HTTP APIs, use Add API under Toolsets; register an operator separately when orchestration metadata is needed.",
     quickApiTabCurl: "Paste cURL",
     quickApiTabForm: "Simple form",
     quickApiCurlLabel: "cURL command",
@@ -387,7 +387,7 @@ export const executionFactoryEnUS = {
       "After creating a function toolbox, configure each tool with code, inputs, and outputs under View Tools.",
     toolboxEditFlowHint: "Editing updates toolbox metadata without replacing the registered spec.",
     functionToolCreateHint:
-      "Provide function code plus input and output parameters. After saving, use the tool IDE for debugging and advanced edits.",
+      "Provide function code plus input and output parameters. After saving, use the tool configuration page for debugging and advanced edits.",
     createToolboxFunctionNextStep:
       "After creation you will be guided to the tools page to add your first function tool.",
     serviceUrl: "Service URL",
@@ -547,16 +547,29 @@ export const executionFactoryEnUS = {
     parameterName: "Name",
     parameterType: "Type",
     parameterDescription: "Description",
-    globalParametersTitle: "Global parameters",
+    globalParametersTitle: "Additional parameters",
     globalParameterName: "Name",
     globalParameterDescription: "Description",
     globalParameterIn: "In",
     globalParameterType: "Type",
     globalParameterRequired: "Required",
     globalParameterValue: "Value (JSON)",
-    toolDetailTitle: "Tool IDE",
-    toolDetailDescription: "Edit tool metadata, OpenAPI spec, or function code.",
-    openToolIde: "Open IDE",
+    toolDetailTitle: "Tool configuration",
+    toolDetailDescription: "Edit tool information, interface configuration, usage rules, and debug settings.",
+    httpToolLifecycleSummaryTitle: "Capability information",
+    httpToolLifecycleSummaryDesc:
+      "Keep the business name, description, and usage rules clear for people and agents.",
+    httpToolLifecyclePreviewTitle: "Interface preview",
+    httpToolLifecyclePreviewDesc:
+      "Review generated request parameters, request body, responses, and debug results before publishing.",
+    httpToolLifecycleAdvancedTitle: "Advanced configuration",
+    httpToolLifecycleAdvancedDesc:
+      "Raw OpenAPI, function definition, and global parameters are kept here for low-level control.",
+    toolDebugWorkbenchTitle: "Debug validation",
+    toolDebugWorkbenchDesc:
+      "Run the current tool in place, review the response, then continue editing without losing context.",
+    toolDebugWorkbenchEmpty: "Run debug to see status, duration, response body, and error details here.",
+    openToolIde: "Edit configuration",
     importResourceTitle: {
       operator: "Import Operator",
       toolbox: "Import Toolbox",

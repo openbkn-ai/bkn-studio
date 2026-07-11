@@ -81,6 +81,8 @@ export type ToolListResult = {
 };
 
 export type ToolCreateInput = {
+  name?: string;
+  description?: string;
   metadataType: ToolMetadataType;
   openapiSpec?: string;
   functionInput?: FunctionInputPayload;

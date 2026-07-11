@@ -467,6 +467,24 @@ function addDataAsQueryParams(scan: CurlScan, queryParams: QuickApiParameter[]) 
   }
 }
 
+function addHeaderParams(scan: CurlScan, queryParams: QuickApiParameter[]) {
+  const skippedHeaders = new Set(["content-type", "content-length"]);
+
+  for (const header of scan.headers) {
+    if (skippedHeaders.has(header.name.toLowerCase())) {
+      continue;
+    }
+
+    queryParams.push({
+      name: header.name,
+      in: "header",
+      required: false,
+      type: "string",
+      example: header.value,
+    });
+  }
+}
+
 export function parseCurlCommand(raw: string): ParseCurlResult {
   const normalized = normalizeCurlInput(raw);
   const tokenized = tokenizeCurl(normalized);
@@ -513,6 +531,7 @@ export function parseCurlCommand(raw: string): ParseCurlResult {
   const queryParams: QuickApiParameter[] = [];
   addQueryParamsFromUrl(parsedUrl, queryParams);
   addDataAsQueryParams(scan, queryParams);
+  addHeaderParams(scan, queryParams);
 
   const lastSegment = path.split("/").filter(Boolean).pop() ?? "api";
   const summary = decodeURIComponent(lastSegment).replace(/[-_]/g, " ");

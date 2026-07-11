@@ -1,0 +1,45 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section {
+  border: 1px solid #dbe5f2;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.sectionHeader {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  margin: 0;
+}
+
+.sectionDesc {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 20px;
+  margin: 4px 0 0;
+}
+
+.metadataTag {
+  flex: 0 0 auto;
+}
+
+.advanced {
+  border-color: #e2e8f0;
+  background: #fbfdff;
+}
+

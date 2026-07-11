@@ -42,18 +42,15 @@ describe("registerOpenApiImport", () => {
     vi.clearAllMocks();
     vi.mocked(createToolbox).mockResolvedValue({
       boxId: "box-1",
-      id: "box-1",
       name: "Swagger_Petstore_OpenAPI_3_0",
       description: "Petstore",
       metadataType: "openapi",
-      source: "custom",
       status: "offline",
-      category: "other_category",
+      categoryType: "other_category",
+      categoryName: "other_category",
       toolCount: 0,
-      creator: "admin",
-      updatedBy: "admin",
-      createdAt: "",
-      updatedAt: "",
+      createUser: "admin",
+      updateUser: "admin",
     });
     vi.mocked(importOpenApiTools).mockResolvedValue({
       successIds: ["tool-1"],

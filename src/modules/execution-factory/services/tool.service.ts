@@ -23,10 +23,12 @@ import type {
 } from "@/modules/execution-factory/types/tool";
 import {
   mapFunctionContent,
+  normalizeGeneratedCapabilityName,
   parseOpenApiDataPayload,
   serializeOpenApiSpec,
 } from "@/modules/execution-factory/utils/metadata-content";
 import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-timestamp";
+import { extractOpenApiOperationsIo } from "@/modules/execution-factory/utils/openapi-operation-io";
 import { parseToolIoSpec } from "@/modules/execution-factory/utils/tool-io";
 import type { ToolGlobalParameter } from "@/modules/execution-factory/types/tool";
 
@@ -77,8 +79,26 @@ type BackendToolListResponse = {
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const DEFAULT_BUSINESS_DOMAIN = "bd_public";
+const HTTP_METHODS = new Set([
+  "delete",
+  "get",
+  "head",
+  "options",
+  "patch",
+  "post",
+  "put",
+]);
 
-const mockToolsByBox: Record<string, ToolRecord[]> = {
+type MockOpenApiOperation = {
+  description?: string;
+  method: string;
+  name: string;
+  openapiSpec: string;
+  path: string;
+  serverUrl?: string;
+};
+
+const mockToolsByBox: Record<string, ToolDetail[]> = {
   tb_context_loader: [
     {
       toolId: "tool_search",
@@ -227,6 +247,99 @@ function getMockTools(boxId: string) {
   return mockToolsByBox[boxId] ?? [];
 }
 
+function parseMockOpenApiIo(openapiSpec?: string) {
+  return extractOpenApiOperationsIo(openapiSpec)[0]?.io;
+}
+
+function extractMockOpenApiOperations(openapiSpec?: string): MockOpenApiOperation[] {
+  if (!openapiSpec?.trim()) {
+    return [];
+  }
+
+  try {
+    const document = JSON.parse(openapiSpec) as Record<string, unknown>;
+    const paths = document.paths;
+    if (!paths || typeof paths !== "object" || Array.isArray(paths)) {
+      return [];
+    }
+
+    const serverUrl = Array.isArray(document.servers)
+      ? ((document.servers[0] as { url?: unknown } | undefined)?.url as string | undefined)
+      : undefined;
+    const operations: MockOpenApiOperation[] = [];
+
+    for (const [path, pathItem] of Object.entries(paths as Record<string, unknown>)) {
+      if (!pathItem || typeof pathItem !== "object" || Array.isArray(pathItem)) {
+        continue;
+      }
+
+      for (const [method, operation] of Object.entries(pathItem as Record<string, unknown>)) {
+        if (!HTTP_METHODS.has(method.toLowerCase())) {
+          continue;
+        }
+
+        if (!operation || typeof operation !== "object" || Array.isArray(operation)) {
+          continue;
+        }
+
+        const operationRecord = operation as Record<string, unknown>;
+        const summary =
+          typeof operationRecord.summary === "string" ? operationRecord.summary : undefined;
+        const description =
+          typeof operationRecord.description === "string"
+            ? operationRecord.description
+            : summary;
+        const name =
+          normalizeGeneratedCapabilityName(summary) ??
+          normalizeGeneratedCapabilityName(`${method}_${path}`) ??
+          "api_tool";
+        const singleOperationDocument = {
+          ...document,
+          paths: {
+            [path]: {
+              [method]: operationRecord,
+            },
+          },
+        };
+
+        operations.push({
+          description,
+          method: method.toUpperCase(),
+          name,
+          openapiSpec: JSON.stringify(singleOperationDocument),
+          path,
+          serverUrl,
+        });
+      }
+    }
+
+    return operations;
+  } catch {
+    return [];
+  }
+}
+
+function buildMockToolDetail(toolId: string, input: ToolCreateInput): ToolDetail {
+  const operation = extractMockOpenApiOperations(input.openapiSpec)[0];
+
+  return {
+    toolId,
+    name: input.name ?? operation?.name ?? `Tool ${toolId}`,
+    description: input.description ?? operation?.description,
+    status: "disabled",
+    metadataType: input.metadataType,
+    useRule: input.useRule,
+    method: operation?.method,
+    path: operation?.path,
+    serverUrl: operation?.serverUrl,
+    updateTime: Date.now(),
+    openapiSpec: input.openapiSpec,
+    functionInput: input.functionInput,
+    globalParameters: input.globalParameters,
+    ioSpec: input.metadataType === "openapi" ? parseMockOpenApiIo(input.openapiSpec) : undefined,
+  };
+}
+
 function filterMockTools(boxId: string, query: ToolListQuery) {
   const keyword = query.keyword?.trim().toLowerCase();
 
@@ -321,11 +434,14 @@ export async function getToolDetail(boxId: string, toolId: string): Promise<Tool
 
     return {
       ...record,
-      openapiSpec: record.metadataType === "openapi" ? '{"openapi":"3.0.3"}' : undefined,
+      openapiSpec:
+        record.openapiSpec ??
+        (record.metadataType === "openapi" ? '{"openapi":"3.0.3"}' : undefined),
       functionInput:
-        record.metadataType === "function"
+        record.functionInput ??
+        (record.metadataType === "function"
           ? { code: "def handler(event):\n    return event\n", script_type: "python" }
-          : undefined,
+          : undefined),
     };
   }
 
@@ -343,14 +459,7 @@ export async function createTool(
 ): Promise<ToolCreateResult> {
   if (useMock) {
     const toolId = `tool_${Date.now()}`;
-    const record: ToolRecord = {
-      toolId,
-      name: `Tool ${toolId}`,
-      status: "disabled",
-      metadataType: input.metadataType,
-      useRule: input.useRule,
-      updateTime: Date.now(),
-    };
+    const record = buildMockToolDetail(toolId, input);
     mockToolsByBox[boxId] = [record, ...getMockTools(boxId)];
     return {
       successIds: [toolId],
@@ -385,6 +494,38 @@ export async function importOpenApiTools(
   openapiSpec: string,
   useRule?: string,
 ): Promise<ToolCreateResult> {
+  if (useMock) {
+    const operations = extractMockOpenApiOperations(openapiSpec);
+
+    if (operations.length <= 1) {
+      return createTool(boxId, {
+        metadataType: "openapi",
+        openapiSpec,
+        useRule,
+      });
+    }
+
+    const now = Date.now();
+    const records = operations.map((operation, index) =>
+      buildMockToolDetail(`tool_${now}_${index}`, {
+        metadataType: "openapi",
+        name: operation.name,
+        description: operation.description,
+        openapiSpec: operation.openapiSpec,
+        useRule,
+      }),
+    );
+
+    mockToolsByBox[boxId] = [...records, ...getMockTools(boxId)];
+
+    return {
+      successIds: records.map((record) => record.toolId),
+      successCount: records.length,
+      failureCount: 0,
+      failures: [],
+    };
+  }
+
   return createTool(boxId, {
     metadataType: "openapi",
     openapiSpec,
@@ -398,6 +539,7 @@ export async function updateTool(
   input: ToolEditInput,
 ): Promise<void> {
   if (useMock) {
+    const metadataType = input.metadataType;
     mockToolsByBox[boxId] = getMockTools(boxId).map((item) =>
       item.toolId === toolId
         ? {
@@ -405,6 +547,14 @@ export async function updateTool(
             name: input.name,
             description: input.description,
             useRule: input.useRule,
+            metadataType: metadataType ?? item.metadataType,
+            openapiSpec: input.openapiSpec ?? item.openapiSpec,
+            functionInput: input.functionInput ?? item.functionInput,
+            globalParameters: input.globalParameters ?? item.globalParameters,
+            ioSpec:
+              metadataType === "openapi" && input.openapiSpec
+                ? parseMockOpenApiIo(input.openapiSpec)
+                : item.ioSpec,
             updateTime: Date.now(),
           }
         : item,
