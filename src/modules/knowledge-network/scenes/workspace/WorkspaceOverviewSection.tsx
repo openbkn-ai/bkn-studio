@@ -29,6 +29,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { OverviewOntologyBlock } from "@/modules/knowledge-network/components/preview/OverviewOntologyBlock";
+import { MarkdownText } from "@/modules/knowledge-network/components/shared/MarkdownText";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import type {
   KnowledgeNetworkRecord,
@@ -168,7 +169,11 @@ export function WorkspaceOverviewSection({
           </div>
         </div>
         <div className={styles.overviewHeaderComment}>
-          {detail?.description || t("knowledgeNetwork.noComment")}
+          {detail?.description ? (
+            <MarkdownText text={detail.description} />
+          ) : (
+            t("knowledgeNetwork.noComment")
+          )}
         </div>
         <div className={styles.overviewHeaderFooter}>
           <UserOutlined />
