@@ -38,6 +38,7 @@ export type RegisterQuickApiInput = {
   operatorSync?: OperatorSyncPublishInput;
 
   toolName?: string;
+  toolDescription?: string;
 
 };
 
@@ -219,6 +220,10 @@ export async function registerQuickApi(
   const result = await createTool(boxId, {
 
     metadataType: "openapi",
+
+    name: input.toolName,
+
+    description: input.toolDescription,
 
     openapiSpec: input.openapiSpec,
 

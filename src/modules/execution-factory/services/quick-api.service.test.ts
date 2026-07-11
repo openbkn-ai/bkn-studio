@@ -95,10 +95,20 @@ describe("registerQuickApi", () => {
       registerQuickApi({
         openapiSpec,
         serviceUrl: "http://127.0.0.1:8095",
+        toolDescription: "Health check endpoint",
+        toolName: "health_check",
         toolboxName: "Quick API Box",
       }),
     ).resolves.toEqual({ boxId: "box-1", toolIds: ["tool-1"] });
 
+    expect(createTool).toHaveBeenCalledWith(
+      "box-1",
+      expect.objectContaining({
+        description: "Health check endpoint",
+        name: "health_check",
+        openapiSpec,
+      }),
+    );
     expect(listToolboxes).toHaveBeenCalledWith(
       expect.objectContaining({ keyword: "Quick API Box" }),
     );

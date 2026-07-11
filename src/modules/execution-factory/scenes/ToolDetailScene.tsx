@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Collapse, Form, Input, Spin } from "antd";
-import { useEffect, useState } from "react";
+import { Alert, Form, Input, Spin } from "antd";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -17,9 +17,8 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { CrudFormPage } from "@/framework/scaffold/CrudFormPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { FunctionDefinitionFields } from "@/modules/execution-factory/components/FunctionDefinitionFields";
-import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
-import { ToolDebugModal } from "@/modules/execution-factory/components/ToolDebugModal";
-import { ToolGlobalParameterFields } from "@/modules/execution-factory/components/ToolGlobalParameterFields";
+import { HttpToolLifecyclePanel } from "@/modules/execution-factory/components/HttpToolLifecyclePanel";
+import { ToolDebugPanel } from "@/modules/execution-factory/components/ToolDebugPanel";
 import { ToolIoPanel } from "@/modules/execution-factory/components/ToolIoPanel";
 import {
   getToolDetail,
@@ -58,8 +57,8 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
   const [submitting, setSubmitting] = useState(false);
   const [metadataType, setMetadataType] = useState<ToolMetadataType>("openapi");
   const [ioSpec, setIoSpec] = useState<ToolIoSpec | undefined>();
-  const [debugOpen, setDebugOpen] = useState(false);
   const [sessionLogs, setSessionLogs] = useState<ToolRunLogEntry[]>([]);
+  const debugSectionRef = useRef<HTMLDivElement | null>(null);
   const functionInputs = Form.useWatch("functionInputs", form);
   const functionOutputs = Form.useWatch("functionOutputs", form);
 
@@ -101,7 +100,7 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
 
   useEffect(() => {
     if (!loading && !loadError && searchParams.get("focus") === "debug") {
-      setDebugOpen(true);
+      debugSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [loadError, loading, searchParams]);
 
@@ -181,53 +180,83 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
         {!loading && !loadError ? (
           <div className={styles.formSurface}>
             <Form form={form} layout="vertical">
-              <Form.Item
-                label={t("executionFactory.toolName")}
-                name="name"
-                rules={[{ required: true, message: t("common.required") }]}
-              >
+              <HttpToolLifecyclePanel
+                advancedConfig={
+                  metadataType === "function" ? <FunctionDefinitionFields /> : undefined
+                }
+                businessFields={
+                  <>
+                    <Form.Item
+                      label={t("executionFactory.toolName")}
+                      name="name"
+                      rules={[{ required: true, message: t("common.required") }]}
+                    >
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label={t("common.description")} name="description">
+                      <Input.TextArea rows={3} />
+                    </Form.Item>
+                    <Form.Item label={t("executionFactory.useRule")} name="useRule">
+                      <Input.TextArea rows={2} />
+                    </Form.Item>
+                  </>
+                }
+                debugWorkbench={
+                  <div ref={debugSectionRef}>
+                    <ToolDebugPanel
+                      boxId={boxId}
+                      functionInput={functionInput}
+                      ioSpec={ioSpec}
+                      onRunComplete={handleDebugRunComplete}
+                      record={{
+                        toolId,
+                        name: form.getFieldValue("name") ?? toolId,
+                        status: "enabled",
+                      }}
+                    />
+                  </div>
+                }
+                ioPreview={
+                  <ToolIoPanel
+                    functionInput={functionInput}
+                    ioSpec={ioSpec}
+                    runLogs={sessionLogs}
+                  />
+                }
+                metadataTypeLabel={t(`executionFactory.metadataTypes.${metadataType}`)}
+              />
+              {metadataType === "openapi" ? (
+                <Form.Item hidden name="openapiSpec">
+                  <Input />
+                </Form.Item>
+              ) : null}
+              <Form.Item hidden name={["globalParameters", "name"]}>
                 <Input />
               </Form.Item>
-              <Form.Item label={t("common.description")} name="description">
-                <Input.TextArea rows={3} />
+              <Form.Item hidden name={["globalParameters", "description"]}>
+                <Input />
               </Form.Item>
-              <Form.Item label={t("executionFactory.useRule")} name="useRule">
-                <Input.TextArea rows={2} />
+              <Form.Item hidden name={["globalParameters", "in"]}>
+                <Input />
               </Form.Item>
-              {metadataType === "openapi" ? (
-                <Form.Item
-                  label={t("executionFactory.openapiSpec")}
-                  name="openapiSpec"
-                  rules={[{ required: true, message: t("common.required") }]}
-                >
-                  <OpenApiSpecInput rows={14} />
-                </Form.Item>
-              ) : (
-                <FunctionDefinitionFields />
-              )}
-              <Collapse
-                ghost
-                items={[
-                  {
-                    key: "globalParameters",
-                    label: t("executionFactory.globalParametersTitle"),
-                    children: <ToolGlobalParameterFields />,
-                  },
-                ]}
-              />
+              <Form.Item hidden name={["globalParameters", "type"]}>
+                <Input />
+              </Form.Item>
+              <Form.Item hidden name={["globalParameters", "value"]}>
+                <Input />
+              </Form.Item>
             </Form>
-            <section style={{ marginTop: 24 }}>
-              <h3 style={{ marginBottom: 12 }}>{t("executionFactory.toolboxInputOutputTitle")}</h3>
-              <ToolIoPanel
-                functionInput={functionInput}
-                ioSpec={ioSpec}
-                runLogs={sessionLogs}
-              />
-            </section>
             <div className={styles.formActions}>
               <AppButton onClick={handleBack}>{t("common.cancel")}</AppButton>
               <PermissionGate permissions="execution-factory:tool:debug">
-                <AppButton onClick={() => setDebugOpen(true)}>
+                <AppButton
+                  onClick={() =>
+                    debugSectionRef.current?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    })
+                  }
+                >
                   {t("executionFactory.debug")}
                 </AppButton>
               </PermissionGate>
@@ -238,26 +267,6 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
           </div>
         ) : null}
       </CrudFormPage>
-      <ToolDebugModal
-        boxId={boxId}
-        functionInput={
-          metadataType === "function"
-            ? {
-                inputs: functionInputs,
-                outputs: functionOutputs,
-              }
-            : undefined
-        }
-        ioSpec={ioSpec}
-        onClose={() => setDebugOpen(false)}
-        onRunComplete={handleDebugRunComplete}
-        open={debugOpen}
-        record={{
-          toolId,
-          name: form.getFieldValue("name") ?? toolId,
-          status: "enabled",
-        }}
-      />
     </PermissionGate>
   );
 }

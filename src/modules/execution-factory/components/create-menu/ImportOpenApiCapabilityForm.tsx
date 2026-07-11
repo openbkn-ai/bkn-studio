@@ -25,8 +25,6 @@ import { CapabilityCategoryFields } from "@/modules/execution-factory/components
 
 import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
 
-import { OperatorSyncPublishFields } from "@/modules/execution-factory/components/OperatorSyncPublishFields";
-
 import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
 
 import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
@@ -109,9 +107,6 @@ export const ImportOpenApiCapabilityForm = forwardRef<
   const [toolboxOptions, setToolboxOptions] = useState<Array<{ label: string; value: string }>>([]);
 
   const toolboxMode = Form.useWatch("toolboxMode", form) ?? (initialBoxId ? "existing" : "new");
-
-  const toolboxName = Form.useWatch("toolboxName", form) as string | undefined;
-
 
 
   useImperativeHandle(ref, () => ({
@@ -353,10 +348,6 @@ export const ImportOpenApiCapabilityForm = forwardRef<
         <Input placeholder="https://api.example.com" />
 
       </Form.Item>
-
-
-
-      <OperatorSyncPublishFields defaultOperatorName={toolboxName} />
 
 
 

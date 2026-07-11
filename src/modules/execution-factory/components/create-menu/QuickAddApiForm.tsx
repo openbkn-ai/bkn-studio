@@ -22,7 +22,6 @@ import {
   ToolboxPlacementIntro,
 } from "@/modules/execution-factory/components/CapabilityBusinessIntro";
 import { CapabilityCategoryFields } from "@/modules/execution-factory/components/CapabilityCategoryFields";
-import { OperatorSyncPublishFields } from "@/modules/execution-factory/components/OperatorSyncPublishFields";
 import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
 import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
 
@@ -81,7 +80,6 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
   const [parseHint, setParseHint] = useState<string | null>(null);
   const [toolboxOptions, setToolboxOptions] = useState<Array<{ label: string; value: string }>>([]);
   const toolboxMode = Form.useWatch("toolboxMode", form) ?? (initialBoxId ? "existing" : "new");
-  const summary = Form.useWatch("summary", form) as string | undefined;
   const watchedValues = Form.useWatch([], form) as QuickAddApiFormValues | undefined;
 
   const previewSpec = useMemo(() => {
@@ -278,6 +276,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
       {previewValidation.ok && previewSpec ? (
         <div style={{ marginBottom: 16 }}>
           <Alert
+            className={styles.interfaceSuccessAlert}
             message={t("executionFactory.quickApiIoPreviewTitle")}
             showIcon
             style={{ marginBottom: 8 }}
@@ -286,8 +285,6 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
           <OpenApiOperationsIoPreview limit={1} openapiSpec={previewSpec} />
         </div>
       ) : null}
-
-      <OperatorSyncPublishFields defaultOperatorName={summary} />
 
       {!initialBoxId ? (
         <>

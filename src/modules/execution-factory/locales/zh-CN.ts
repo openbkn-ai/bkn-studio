@@ -135,6 +135,14 @@ export const executionFactoryZhCN = {
       "当前 OpenAPI 文档使用相对服务地址 {{relativeUrl}}，请填写完整服务地址后再导入。",
     importOpenApiCapabilityFileReady: "文件已就绪，保存后将解析并导入接口。",
     importOpenApiCapabilityPreview: "OpenAPI {{version}} · 共 {{count}} 个接口",
+    createdNextStepsTitle: "HTTP API 已添加到工具集",
+    createdNextStepsDescription:
+      "建议下一步先调试验证，再补齐工具说明与使用规则。也可以直接进入工具集继续管理。",
+    createdNextStepsTool: "工具",
+    createdNextStepsToolbox: "工具集",
+    createdNextStepsViewToolset: "查看工具集",
+    createdNextStepsDebug: "去调试",
+    createdNextStepsEditTool: "编辑工具信息",
     addCapabilityFunctionTitle: "写个小函数",
     addCapabilityFunctionDesc: "创建函数型工具集，在线编写逻辑",
     addCapabilityMcpTitle: "MCP 服务",
@@ -154,7 +162,7 @@ export const executionFactoryZhCN = {
     backToCapabilities: "← 返回工具集 / MCP / Skill",
     advancedOperatorEntry: "算子开发",
     advancedOperatorBanner:
-      "算子列表与调试入口。日常 HTTP 接口请在「工具集」添加 API，并勾选「同步发布为算子」即可一并注册。",
+      "算子列表与调试入口。日常 HTTP 接口请在「工具集」添加 API；需要流程编排算子时，可从算子入口单独注册。",
     quickApiTabCurl: "粘贴 cURL",
     quickApiTabForm: "填表单",
     quickApiCurlLabel: "cURL 命令",
@@ -373,7 +381,7 @@ export const executionFactoryZhCN = {
       "函数工具箱创建后，请在「查看工具详情」中为每个工具配置函数代码、入参和出参。",
     toolboxEditFlowHint: "编辑操作仅更新工具箱元数据，不会替换已注册的规范。",
     functionToolCreateHint:
-      "请填写函数代码、入参和出参。保存后可在工具 IDE 中继续调试与编辑。",
+      "请填写函数代码、入参和出参。保存后可在工具配置页继续调试与编辑。",
     createToolboxFunctionNextStep:
       "创建完成后将引导您进入工具管理页，添加第一个函数工具。",
     serviceUrl: "服务地址",
@@ -532,16 +540,29 @@ export const executionFactoryZhCN = {
     parameterName: "参数名",
     parameterType: "参数类型",
     parameterDescription: "参数描述",
-    globalParametersTitle: "全局参数",
+    globalParametersTitle: "附加参数",
     globalParameterName: "参数名",
     globalParameterDescription: "参数描述",
     globalParameterIn: "参数位置",
     globalParameterType: "参数类型",
     globalParameterRequired: "必填",
     globalParameterValue: "参数值 (JSON)",
-    toolDetailTitle: "工具 IDE",
-    toolDetailDescription: "编辑工具元数据、OpenAPI 规范或函数代码。",
-    openToolIde: "打开 IDE",
+    toolDetailTitle: "工具配置",
+    toolDetailDescription: "编辑工具信息、接口配置、使用规则与调试设置。",
+    httpToolLifecycleSummaryTitle: "能力信息",
+    httpToolLifecycleSummaryDesc:
+      "保持业务名称、描述和使用规则清晰，方便人员和智能体理解。",
+    httpToolLifecyclePreviewTitle: "接口预览",
+    httpToolLifecyclePreviewDesc:
+      "发布前核对生成的请求参数、请求体、响应和调试结果。",
+    httpToolLifecycleAdvancedTitle: "高级配置",
+    httpToolLifecycleAdvancedDesc:
+      "原始 OpenAPI、函数定义和全局参数保留在这里，用于底层配置。",
+    toolDebugWorkbenchTitle: "调试验证",
+    toolDebugWorkbenchDesc:
+      "在当前页面运行工具，查看响应结果，再继续编辑配置，避免丢失上下文。",
+    toolDebugWorkbenchEmpty: "运行调试后，这里会显示状态码、耗时、响应体和错误详情。",
+    openToolIde: "编辑配置",
     importResourceTitle: {
       operator: "导入算子",
       toolbox: "导入工具箱",
