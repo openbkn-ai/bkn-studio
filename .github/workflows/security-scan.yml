@@ -1,0 +1,116 @@
+# Copyright (c) 2026 OpenBKN
+# SPDX-License-Identifier: LicenseRef-OpenBKN
+# Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+# Conditions. See LICENSE for the full text.
+
+name: security-scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 20 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  security-events: write
+
+jobs:
+  secret-scan:
+    name: secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan repository for leaked secrets
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.28.0 \
+            detect --source /repo --no-git --redact --verbose
+
+  codeql:
+    name: codeql
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - uses: github/codeql-action/analyze@v3
+
+  dependency-review:
+    name: dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  trivy-fs-scan:
+    name: trivy filesystem scan
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+          format: table
+
+  security-scan:
+    name: security-scan
+    runs-on: ubuntu-latest
+    needs:
+      - secret-scan
+      - codeql
+      - dependency-review
+      - trivy-fs-scan
+    if: always()
+    steps:
+      - name: Verify security scan results
+        env:
+          SECRET_SCAN_RESULT: ${{ needs.secret-scan.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+          DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
+          TRIVY_FS_SCAN_RESULT: ${{ needs.trivy-fs-scan.result }}
+        run: |
+          set -euo pipefail
+          failed=0
+          for item in \
+            "secret-scan=${SECRET_SCAN_RESULT}" \
+            "codeql=${CODEQL_RESULT}" \
+            "dependency-review=${DEPENDENCY_REVIEW_RESULT}" \
+            "trivy-fs-scan=${TRIVY_FS_SCAN_RESULT}"
+          do
+            name="${item%%=*}"
+            result="${item#*=}"
+            echo "${name}: ${result}"
+            if [ "${result}" != "success" ] && [ "${result}" != "skipped" ]; then
+              failed=1
+            fi
+          done
+          exit "${failed}"

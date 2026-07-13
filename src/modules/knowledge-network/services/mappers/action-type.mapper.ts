@@ -16,7 +16,6 @@ import type {
   ActionTypeSourceKind,
   KnowledgeNetworkActionTypeKind,
   KnowledgeNetworkActionTypeMutationPayload,
-  KnowledgeNetworkActionTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";

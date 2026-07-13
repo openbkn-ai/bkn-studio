@@ -21,7 +21,7 @@ function initials(name: string): string {
   if (!value) return "U";
   if (/[一-龥]/.test(value)) return value.slice(-2);
   const parts = value.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0]! + parts[1][0]!).toUpperCase();
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return value.slice(0, 2).toUpperCase();
 }
 

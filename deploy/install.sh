@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 OpenBKN
+# SPDX-License-Identifier: LicenseRef-OpenBKN
+# Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+# Conditions. See LICENSE for the full text.
+
 # install.sh — deploy bkn-studio in one of two topologies against a BKN Foundry.
 #
 #   cluster  Install the Helm chart INTO the Foundry's k8s cluster. The studio
@@ -20,7 +25,7 @@
 #   deploy/install.sh cluster [--namespace openbkn] [--version 0.1.0 | --latest]
 #                             [--registry ghcr|swr] [--chart <ref>]
 #                             [--kube-context <ctx>] [--no-auth]
-#   deploy/install.sh local --foundry https://10.211.55.4 [--port 8080]
+#   deploy/install.sh local --foundry https://foundry.example.com [--port 8080]
 #                           [--version 0.1.0] [--image <ref>] [--register]
 #                           [--no-auth] [--no-compose]
 #   deploy/install.sh uninstall cluster [--namespace openbkn] [--kube-context <ctx>]

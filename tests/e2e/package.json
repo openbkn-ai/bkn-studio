@@ -15,11 +15,12 @@
     "test:lab": "playwright test specs/execution-factory-lab",
     "test:lab:api": "playwright test specs/execution-factory-lab/e2e-lab-api.spec.ts",
     "test:lab:ui": "playwright test specs/execution-factory-lab/e2e-lab-ui.spec.ts",
+    "test:smoke": "playwright test specs/smoke",
     "pretest:realworld": "npm run cleanup:e2e",
     "install:browsers": "playwright install chromium"
   },
   "devDependencies": {
-    "@playwright/test": "1.52.0",
+    "@playwright/test": "1.61.1",
     "@types/node": "^24.6.1",
     "adm-zip": "^0.5.16",
     "typescript": "~5.9.3"

@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { Select } from "antd";
 import type { RuleObject } from "antd/es/form";
 import { useEffect, useState } from "react";

@@ -365,7 +365,6 @@ export function IndexBuildListScene() {
   const columns: ColumnsType<BuildTask> = [
     {
       dataIndex: "id",
-      title: t("dataCatalog.task.column"),
       width: taskColumnWidth,
       onHeaderCell: () => ({ style: { position: "relative" } }),
       title: (

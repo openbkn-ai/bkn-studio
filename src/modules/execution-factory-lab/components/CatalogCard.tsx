@@ -51,7 +51,7 @@ export function CatalogCard({ entry, installing, onInstall }: CatalogCardProps) 
         {showAdvanced ? (
           <Select
             disabled={entry.installed || installing}
-            onChange={(value) => setInstallMode(value as ImpexImportMode)}
+            onChange={(value) => setInstallMode(value)}
             options={[
               { value: "create", label: t("executionFactoryLab.catalogInstallModeCreate") },
               { value: "upsert", label: t("executionFactoryLab.catalogInstallModeUpsert") },

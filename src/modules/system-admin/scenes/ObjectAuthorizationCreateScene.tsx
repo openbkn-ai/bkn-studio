@@ -186,7 +186,7 @@ export function ObjectAuthorizationCreateScene() {
         ),
       );
       message.success(t("systemAdmin.objectGrants.toast.grantCreated"));
-      navigate("/system/authorizations");
+      void navigate("/system/authorizations");
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {

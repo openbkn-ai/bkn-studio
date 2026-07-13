@@ -33,7 +33,7 @@ export function isBuiltinLogicalCatalog(catalog: CatalogRecord) {
   if (
     name === "adp_bkn_catalog" ||
     name.startsWith("adp_bkn_") ||
-    name.startsWith("kweaver_")
+    name.startsWith("openbkn_")
   ) {
     return true;
   }

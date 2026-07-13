@@ -109,7 +109,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                     disabled={item.disabled}
                     onClick={() => {
                       if (item.path) {
-                        navigate(item.path);
+                        void navigate(item.path);
                       }
                     }}
                     title={t(item.labelKey)}

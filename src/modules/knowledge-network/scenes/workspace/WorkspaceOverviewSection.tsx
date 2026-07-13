@@ -160,7 +160,7 @@ export function WorkspaceOverviewSection({
             <button
               type="button"
               className={styles.experienceButton}
-              onClick={() => navigate(`/knowledge-network/workspace/${networkId}/experience`)}
+              onClick={() => void navigate(`/knowledge-network/workspace/${networkId}/experience`)}
             >
               <ThunderboltFilled />
               <span>{t("knowledgeNetwork.previewExperience")}</span>

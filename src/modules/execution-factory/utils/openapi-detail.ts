@@ -28,8 +28,13 @@ function parseOperationIoSpec(operation: Record<string, unknown>): ToolIoSpec {
   const parameters = Array.isArray(operation.parameters)
     ? operation.parameters
         .filter(
-          (item): item is Record<string, unknown> =>
-            typeof item === "object" && item !== null && typeof item.name === "string",
+          (item): item is Record<string, unknown> => {
+            if (typeof item !== "object" || item === null) {
+              return false;
+            }
+            const record = item as Record<string, unknown>;
+            return typeof record.name === "string";
+          },
         )
         .map((item) => ({
           name: String(item.name),

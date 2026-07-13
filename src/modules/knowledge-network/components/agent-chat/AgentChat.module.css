@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 /* 立即体验 · Agent 对话。复用 ExperienceScene .page 上级联的 --accent/--txt/--line 等变量。 */
 
 .root {

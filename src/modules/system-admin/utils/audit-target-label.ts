@@ -12,7 +12,7 @@ function parseAuditDetail(detail?: string): Record<string, unknown> {
     return {};
   }
   try {
-    const parsed = JSON.parse(detail);
+    const parsed: unknown = JSON.parse(detail);
     return parsed && typeof parsed === "object" && !Array.isArray(parsed)
       ? (parsed as Record<string, unknown>)
       : {};
@@ -22,7 +22,11 @@ function parseAuditDetail(detail?: string): Record<string, unknown> {
 }
 
 function stringValue(value: unknown): string {
-  return typeof value === "string" ? value : value == null ? "" : String(value);
+  return typeof value === "string"
+    ? value
+    : typeof value === "number" || typeof value === "boolean"
+      ? String(value)
+      : "";
 }
 
 type TargetResolver = (resource: string, id: string) => string | undefined;

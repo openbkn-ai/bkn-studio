@@ -1,9 +1,9 @@
-@token = Bearer ory_at_t9Mf7LEuu6NvgUeO1f7T-C8cWqpyaHb7XnaI5lUgCZg.BBk5K5sZ7eBG43zhiPUafpO7Qoul74yUSl_Uj5CNLvM
+@token = Bearer <ACCESS_TOKEN>
 
 ### 删除算子
-DELETE http://localhost:9000/api/agent-operator-integration/v1/operator/delete?token=ory_at_DDlB2PucqHSzaEJygTPoiEwqqc96qGS9sJR93y5sdH8.TcLCi_mQdY1kTYpjBTGY6bX_S4A_q1UEVZ41BSoiPoc
+DELETE http://localhost:9000/api/agent-operator-integration/v1/operator/delete?token=<ACCESS_TOKEN>
 Content-Type: application/json
-Authorization: Bearer ory_at_xpIZ-_vxHKCpkh4iMZHBN-wL6T0wobKD9o-TkkmxVd8.nLmQflLhUdpSEvfoU_n26ulEIUPQgBKHwiP-J-M-VWc
+Authorization: Bearer <ACCESS_TOKEN>
 
 [
     {
@@ -15,7 +15,7 @@ Authorization: Bearer ory_at_xpIZ-_vxHKCpkh4iMZHBN-wL6T0wobKD9o-TkkmxVd8.nLmQflL
 ### 获取算子信息
 GET http://127.0.0.1:9000/api/agent-operator-integration/v1/operator/info/863df62a-2c23-4b30-9939-fd1efc252a99?version=5ceb3030-7025-4577-87c5-98bb63c2d486
 Content-Type: application/json
-Authorization: Bearer ory_at_9tY-7NYmbSExVdNr_lCea88U5G2K7uboFaPNAzoZx04.G4kZt2htkZ4KHxtjphTDyPkIBB4eaaG3Iz0bm5ITHHk
+Authorization: Bearer <ACCESS_TOKEN>
 
 ### 编辑算子
 POST http://127.0.0.1:9000/api/agent-operator-integration/v1/operator/info
@@ -27,7 +27,7 @@ Authorization: {{token}}
     "metadata": {
         "method": "POST",
         "path": "/xgrjfxxhzbzhjk/xgrjfhzbzh",
-        "server_url": "https://117.73.253.229:8443/data-application-gateway",
+        "server_url": "https://127.0.0.1:8443/data-application-gateway",
         "summary": "查询个人缴费信息汇�?,
         "description": "根据身份证号、姓名和时间范围查询个人缴费信息汇�?
     },
@@ -43,9 +43,9 @@ Authorization: {{token}}
 }
 
 ### 更新算子状�?
-POST https://192.168.124.91/api/agent-operator-integration/v1/operator/status
+POST https://127.0.0.1/api/agent-operator-integration/v1/operator/status
 Content-Type: application/json
-Authorization: Bearer ory_at_gzaWB0Ckk2UoIIoumbBK-eXEepDnYWLLGS-oIhNhJm4.-AkbmSptX2vKojc0Ea4JJBGC2COsHOuRLOCqsjiWHYk
+Authorization: Bearer <ACCESS_TOKEN>
 
 [
     {
@@ -64,7 +64,7 @@ Authorization: Bearer ory_at_gzaWB0Ckk2UoIIoumbBK-eXEepDnYWLLGS-oIhNhJm4.-AkbmSp
 ### 算子更新
 POST http://127.0.0.1:9000/api/agent-operator-integration/internal-v1/operator/info/update
 Content-Type: multipart/form-data; boundary=WebAppBoundary
-Authorization: Bearer ory_at_Js67e1IfEMaz11uCcyiwupQeboI5tLw4KMZHmrWaQcU.c4nUBzrsR9WkYPKgbGJHdWcMRoUtI3tPV400vYbvTl8
+Authorization: Bearer <ACCESS_TOKEN>
 
 --WebAppBoundary
 Content-Disposition: form-data; name="operator_metadata_type"
@@ -80,7 +80,7 @@ true
 Content-Disposition: form-data; name="user_token"
 Content-Type: text/plain
 
-ory_at_D7I3fncILJBO4vzqBEzx7jAZRAYzTwvWHp0_k9SFF8A.Ub6G067KdkYDU403hXfaFz204FqERWnofvobJad1NXc
+<ACCESS_TOKEN>
 --WebAppBoundary
 Content-Disposition: form-data; name="operator_id"
 Content-Type: text/plain
@@ -104,7 +104,7 @@ Content-Type: application/json
 ### 算子注册
 POST http://127.0.0.1:9000/api/agent-operator-integration/v1/operator/register
 Content-Type: multipart/form-data; boundary=WebAppBoundary
-Authorization: Bearer ory_at_LOCqj79FOcTFp1WAnLG-YGEXJPKyscITm2eeAcAEVp0.0C1D65dh7VLdw1LahEvIHveNnM_WN5Ayu35ONkOYmpY
+Authorization: Bearer <ACCESS_TOKEN>
 
 --WebAppBoundary
 Content-Disposition: form-data; name="operator_metadata_type"
@@ -143,7 +143,7 @@ Authorization: {{token}}
     "operator_id": "55376ac3-53e5-41ce-b2e4-8376b8ba9bdc",
     "version": "b79f87d0-0e0c-42d9-9c9f-151ec973792e",
     "header": {
-        "Authorization": "Bearer ory_at_4XhbMCnfx1MnO3Gck2Jx51YUe25xIqWn9a51H9oF2GI.ur5yGB4bICTlnD3bFdvCRdZmeo2eBTdVPi5DzkmhNNM",
+        "Authorization": "Bearer <ACCESS_TOKEN>",
         "Content-Type": "application/json"
     },
     "body": {

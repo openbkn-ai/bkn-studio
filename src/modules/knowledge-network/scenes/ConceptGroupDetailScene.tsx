@@ -14,7 +14,7 @@ import {
 import { Alert, Empty, Input, Select, Spin, Table, Tabs, Tag } from "antd";
 import type { TableProps } from "antd";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -142,7 +142,7 @@ export function ConceptGroupDetailScene() {
 
   const listPath = `/knowledge-network/workspace/${networkId}/concept-groups`;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!networkId || !conceptGroupId) {
       return;
     }
@@ -158,11 +158,11 @@ export function ConceptGroupDetailScene() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [conceptGroupId, networkId]);
 
   useEffect(() => {
     void loadData();
-  }, [conceptGroupId, networkId]);
+  }, [loadData]);
 
   useEffect(() => {
     setPage(1);

@@ -45,6 +45,7 @@ export function InstallFromCatalogModal({
   const [form] = Form.useForm<InstallFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<{ title: string; hint?: string } | null>(null);
+  const selectedMode = Form.useWatch<InstallFormValues["mode"]>("mode", form);
 
   useEffect(() => {
     if (!open) {
@@ -74,7 +75,7 @@ export function InstallFromCatalogModal({
     } catch (caughtError) {
       setError(
         resolveCatalogInstallErrorMessage(caughtError, {
-          mode: form.getFieldValue("mode") ?? (alreadyInstalled ? "upsert" : "create"),
+          mode: selectedMode ?? (alreadyInstalled ? "upsert" : "create"),
           componentType,
           t,
         }),

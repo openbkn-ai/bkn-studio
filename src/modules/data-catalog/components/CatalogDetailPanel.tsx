@@ -89,7 +89,7 @@ export function CatalogDetailPanel({
 }: CatalogDetailPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const activeDb = searchParams.get("db")?.trim() || "";
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [resourceKeyword, setResourceKeyword] = useState("");

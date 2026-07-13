@@ -107,6 +107,18 @@ export const ImportOpenApiCapabilityForm = forwardRef<
   const [toolboxOptions, setToolboxOptions] = useState<Array<{ label: string; value: string }>>([]);
 
   const toolboxMode = Form.useWatch("toolboxMode", form) ?? (initialBoxId ? "existing" : "new");
+  const currentToolboxName = Form.useWatch<ImportOpenApiCapabilityFormValues["toolboxName"]>(
+    "toolboxName",
+    form,
+  );
+  const currentToolboxDescription = Form.useWatch<ImportOpenApiCapabilityFormValues["toolboxDescription"]>(
+    "toolboxDescription",
+    form,
+  );
+  const currentServiceUrl = Form.useWatch<ImportOpenApiCapabilityFormValues["serviceUrl"]>(
+    "serviceUrl",
+    form,
+  );
 
 
   useImperativeHandle(ref, () => ({
@@ -206,26 +218,26 @@ export const ImportOpenApiCapabilityForm = forwardRef<
         form.setFieldsValue({
 
           toolboxName:
-            normalizeGeneratedCapabilityName(hints.title) || form.getFieldValue("toolboxName"),
+            normalizeGeneratedCapabilityName(hints.title) || currentToolboxName,
 
           toolboxDescription:
             normalizeGeneratedToolboxDescription(hints.description) ??
-            form.getFieldValue("toolboxDescription"),
+            currentToolboxDescription,
 
           serviceUrl:
             resolvedServiceUrl?.ok
               ? resolvedServiceUrl.url
-              : analysis.serverUrl ?? form.getFieldValue("serviceUrl"),
+              : analysis.serverUrl ?? currentServiceUrl,
 
         });
 
       }
 
       form.setFieldsValue({
-        serviceUrl:
-          resolvedServiceUrl?.ok
-            ? resolvedServiceUrl.url
-            : analysis.serverUrl ?? form.getFieldValue("serviceUrl"),
+          serviceUrl:
+            resolvedServiceUrl?.ok
+              ? resolvedServiceUrl.url
+              : analysis.serverUrl ?? currentServiceUrl,
       });
 
       if (resolvedServiceUrl?.ok) {
@@ -240,7 +252,17 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
     setParseHint(t("executionFactory.importOpenApiCapabilityFileReady"));
 
-  }, [analysis, form, initialBoxId, openapiSpec, resolvedServiceUrl, t]);
+  }, [
+    analysis,
+    currentServiceUrl,
+    currentToolboxDescription,
+    currentToolboxName,
+    form,
+    initialBoxId,
+    openapiSpec,
+    resolvedServiceUrl,
+    t,
+  ]);
 
 
 

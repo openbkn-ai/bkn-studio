@@ -17,8 +17,9 @@ import {
 let cachedMeta: LabMeta | null = null;
 
 function readEnvLabFeatureFlag(key: keyof LabFeatureFlags): boolean | undefined {
-  const envKey = `VITE_LAB_FEATURE_${key.toUpperCase()}` as keyof ImportMetaEnv;
-  const raw = import.meta.env[envKey];
+  const envKey = `VITE_LAB_FEATURE_${key.toUpperCase()}`;
+  const env = import.meta.env as Record<string, string | undefined>;
+  const raw = env[envKey];
   if (raw === "true") {
     return true;
   }

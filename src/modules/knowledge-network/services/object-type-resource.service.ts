@@ -128,11 +128,11 @@ function normalizePreviewCellValue(value: unknown): string | number {
       const serialized = JSON.stringify(value);
       return serialized.length > 120 ? `${serialized.slice(0, 120)}…` : serialized;
     } catch {
-      return String(value);
+      return "[object]";
     }
   }
 
-  return String(value);
+  return "";
 }
 
 function normalizeResourcePreviewRows(rows: Array<Record<string, unknown>> | undefined) {

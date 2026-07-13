@@ -31,7 +31,6 @@ import type {
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 const ADMIN = "/safe/v1/admin";
-export const DEFAULT_NEW_USER_PASSWORD = "openbkn"; // 平台初始密码，首登提示改
 
 const wait = async <T,>(value: T) =>
   new Promise<T>((resolve) => {
@@ -67,11 +66,11 @@ let users: AdminUser[] = [
 ];
 
 const auditLog: AuditLog[] = [
-  { id: "al-1", actorId: "u-admin", method: "POST", resource: "users", action: "users", targetId: "u-chen", status: 201, clientIp: "10.0.0.2", createdAt: new Date(daysAgo(4)).toISOString() },
-  { id: "al-2", actorId: "u-admin", method: "POST", resource: "roles", action: "roles.permissions", targetId: "role-data-steward", status: 204, clientIp: "10.0.0.2", createdAt: new Date(daysAgo(3)).toISOString() },
-  { id: "al-3", actorId: "u-admin", method: "DELETE", resource: "users", action: "users", targetId: "u-ghost", status: 404, clientIp: "10.0.0.2", createdAt: new Date(daysAgo(2)).toISOString() },
-  { id: "al-4", actorId: "u-li", method: "POST", resource: "departments", action: "departments.members", targetId: "dep-gov", status: 204, clientIp: "10.0.0.5", createdAt: new Date(daysAgo(1)).toISOString() },
-  { id: "al-5", actorId: "u-admin", method: "POST", resource: "role-bindings", action: "role-bindings", targetId: "", status: 204, clientIp: "10.0.0.2", createdAt: new Date(daysAgo(1)).toISOString() },
+  { id: "al-1", actorId: "u-admin", method: "POST", resource: "users", action: "users", targetId: "u-chen", status: 201, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(4)).toISOString() },
+  { id: "al-2", actorId: "u-admin", method: "POST", resource: "roles", action: "roles.permissions", targetId: "role-data-steward", status: 204, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(3)).toISOString() },
+  { id: "al-3", actorId: "u-admin", method: "DELETE", resource: "users", action: "users", targetId: "u-ghost", status: 404, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(2)).toISOString() },
+  { id: "al-4", actorId: "u-li", method: "POST", resource: "departments", action: "departments.members", targetId: "dep-gov", status: 204, clientIp: "127.0.0.2", createdAt: new Date(daysAgo(1)).toISOString() },
+  { id: "al-5", actorId: "u-admin", method: "POST", resource: "role-bindings", action: "role-bindings", targetId: "", status: 204, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(1)).toISOString() },
 ];
 
 let roles: AdminRole[] = [
@@ -424,7 +423,7 @@ export async function createUser(input: CreateUserInput): Promise<void> {
   }
   const created = await http.post<{ id: string }>(`${ADMIN}/users`, {
     account: input.account,
-    password: input.password || DEFAULT_NEW_USER_PASSWORD,
+    password: input.password,
     name: input.name,
     email: input.email,
     telephone: input.telephone,

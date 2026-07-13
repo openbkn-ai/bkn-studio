@@ -7,6 +7,8 @@
 
 import { describe, expect, it } from "vitest";
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+
 import {
   CONTEXT_LOADER_OPS,
   buildTestData,

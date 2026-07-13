@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
@@ -130,7 +132,7 @@ export function DetailTableColumnSettingsButton({
     );
     const visibility = Object.fromEntries(
       columns.map((column) => [column.key, isColumnVisible(column.key, draftVisibility)]),
-    ) as ColumnVisibilityPayload;
+    );
 
     writeDetailTableColumnConfig(storageScope, { order, visibility });
     onChange(order, visibility);

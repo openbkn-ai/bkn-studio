@@ -265,8 +265,8 @@ export function CreateMcpDrawer({
     <Form
       form={form}
       layout="vertical"
-      onValuesChange={(changed) => {
-        if (changed.creationType && !isEditMode) {
+      onValuesChange={(changed: object) => {
+        if (Object.prototype.hasOwnProperty.call(changed, "creationType") && !isEditMode) {
           setTools([]);
           setImportedTools([]);
         }

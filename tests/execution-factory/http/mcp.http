@@ -1,4 +1,4 @@
-@token = Bearer ory_at_qMFyP6uU_eBteXQ5mkbh94gNL_osGvsDE_Bik7TX_go.UiJ0HpOAaImKv7advwrQx-bCpAg933B3NuqiIc5StJE
+@token = Bearer <ACCESS_TOKEN>
 
 ### 解析SSE-自定义local mcp server
 POST http://localhost:9000/api/agent-operator-integration/v1/mcp/parse/sse
@@ -81,15 +81,15 @@ Authorization: {{token}}
 
 
 ### 注册MCP服务，sse模式 , remote mcp server
-POST https://10.4.175.99/api/agent-operator-integration/v1/mcp
+POST https://127.0.0.1/api/agent-operator-integration/v1/mcp
 Content-Type: application/json
-Authorization: Bearer ory_at_kiPd1RdefgUa87II7tc6gMaFYZR_ccb36MB6_Dk530M.6lrHvbMhTjWPcso-x3ll0Dkf3Al9GfEHldPTGRMD5l4
+Authorization: Bearer <ACCESS_TOKEN>
 
 {
   "name": "my-mcp-server-test-2",
   "description": "这个一段测试描述,用于描述MCP服务的信息",
   "mode": "sse",
-  "url": "http://10.4.111.182:8080/sse",
+  "url": "http://127.0.0.1:8080/sse",
   "headers": {
     "Content-Type": "application/json",
     "Authorization": "Bearer 1234567890",
@@ -157,9 +157,9 @@ Authorization: {{token}}
 }
 
 ### 发布MCP服务-远程
-POST https://10.4.175.99/api/agent-operator-integration/v1/mcp/release-action
+POST https://127.0.0.1/api/agent-operator-integration/v1/mcp/release-action
 Content-Type: application/json
-Authorization: Bearer ory_at_8n0w-VJ0F2Lc7efeuYJb1BEqQvlN340BH2gPnnKl9WQ.No70fBSdY7scpDJlI5xthsvaCYdFDKxquVIVQT5sY4M
+Authorization: Bearer <ACCESS_TOKEN>
 
 {
   "mcp_id": "526e2e56-38d8-4ccc-8a78-9a65e22dc56b",
@@ -177,7 +177,7 @@ Authorization: {{token}}
 }
 
 ### 获取MCP工具列表
-GET http://10.4.175.99:9000/api/agent-operator-integration/internal-v1/mcp/proxy/29b878b5-a189-4773-8b29-2c9d1b8fef0e/tools
+GET http://127.0.0.1:9000/api/agent-operator-integration/internal-v1/mcp/proxy/29b878b5-a189-4773-8b29-2c9d1b8fef0e/tools
 
 ### 调试MCP工具
 POST http://localhost:9000/api/agent-operator-integration/v1/mcp/8068e7a5-26be-44af-8174-dc7873eb68af/tool/echo/debug

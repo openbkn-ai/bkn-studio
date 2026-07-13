@@ -8,7 +8,7 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { Table } from "antd";
 import type { TableProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -83,33 +83,36 @@ export function RelationTypeDirectMappingRules({
     });
   };
 
-  const loadPropertyOptions = async (objectTypeId: string, target: "source" | "target") => {
-    if (!objectTypeId) {
-      if (target === "source") {
-        setSourcePropertyOptions([]);
-      } else {
-        setTargetPropertyOptions([]);
+  const loadPropertyOptions = useCallback(
+    async (objectTypeId: string, target: "source" | "target") => {
+      if (!objectTypeId) {
+        if (target === "source") {
+          setSourcePropertyOptions([]);
+        } else {
+          setTargetPropertyOptions([]);
+        }
+        return;
       }
-      return;
-    }
 
-    const detail = await getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId);
-    const options = mapPropertyOptions(detail?.dataProperties ?? []);
+      const detail = await getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId);
+      const options = mapPropertyOptions(detail?.dataProperties ?? []);
 
-    if (target === "source") {
-      setSourcePropertyOptions(options);
-    } else {
-      setTargetPropertyOptions(options);
-    }
-  };
+      if (target === "source") {
+        setSourcePropertyOptions(options);
+      } else {
+        setTargetPropertyOptions(options);
+      }
+    },
+    [networkId],
+  );
 
   useEffect(() => {
     void loadPropertyOptions(value.sourceObjectTypeId, "source");
-  }, [networkId, value.sourceObjectTypeId]);
+  }, [loadPropertyOptions, value.sourceObjectTypeId]);
 
   useEffect(() => {
     void loadPropertyOptions(value.targetObjectTypeId, "target");
-  }, [networkId, value.targetObjectTypeId]);
+  }, [loadPropertyOptions, value.targetObjectTypeId]);
 
   const tableRows = useMemo<MappingTableRow[]>(() => {
     const rows: MappingTableRow[] = [

@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { Tag, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 import type { KnowledgeNetworkTaskState } from "@/modules/knowledge-network/types/knowledge-network";

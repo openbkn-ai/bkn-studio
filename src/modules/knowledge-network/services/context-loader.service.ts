@@ -419,7 +419,7 @@ function mcpBase(env: ContextLoaderEnv): string {
 function mcpCallArgs(bodyText: string, queryValues: Record<string, string>): Record<string, unknown> {
   let args: Record<string, unknown> = {};
   try {
-    const parsed = JSON.parse(bodyText || "{}");
+    const parsed: unknown = JSON.parse(bodyText || "{}");
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
       args = parsed as Record<string, unknown>;
     }
@@ -581,7 +581,7 @@ function parseMcpEnvelope(text: string): unknown {
     .filter((line) => line.trimStart().startsWith("data:"))
     .map((line) => line.replace(/^\s*data:/, "").trim())
     .filter(Boolean);
-  const candidate = dataLines.length > 0 ? dataLines[dataLines.length - 1]! : text;
+  const candidate = dataLines.length > 0 ? dataLines[dataLines.length - 1] : text;
   try {
     return JSON.parse(candidate);
   } catch {

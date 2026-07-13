@@ -14,9 +14,9 @@ Prefer foundry paths for backend pytest and HTTP tests to avoid drift.
 
 | Layer | Original path (local clone) | OpenBKN canonical | This mirror |
 | --- | --- | --- | --- |
-| KWeaver ADP Agent AT | `keweaver/adp/execution-factory/tests` | `bkn-foundry/.../tests/` | `agent-at/` |
+| OpenBKN ADP Agent AT | `openbkn/adp/execution-factory/tests` | `bkn-foundry/.../tests/` | `agent-at/` |
 | Backend smoke | `operator-integration/server/tests` | `bkn-foundry/.../server/tests/` | `http/`, `fixtures/`, `tool/` |
-| DIP operator-web UI | `keweaver/web/apps/operator-web` | ? | `operator-web-ui/` |
+| DIP operator-web UI | `openbkn/web/apps/operator-web` | ? | `operator-web-ui/` |
 | bkn-studio frontend mock | `src/modules/execution-factory/services/*.test.ts` | vitest in module | same |
 
 ## Coverage by bkn-studio feature
@@ -36,5 +36,5 @@ Prefer foundry paths for backend pytest and HTTP tests to avoid drift.
 1. `pnpm test:execution-factory` ? no backend required
 2. Foundry `openbkn-smoke` ? token + running backend
 3. REST Client on `http/*.http` ? requires `agent-operator-integration`
-4. Full Agent AT pytest ? KWeaver auth + DB (foundry path)
-5. DIP `operator-web` jest ? original keweaver repo
+4. Full Agent AT pytest ? OpenBKN auth + DB (foundry path)
+5. DIP `operator-web` jest ? original openbkn repo

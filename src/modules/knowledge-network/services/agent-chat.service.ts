@@ -264,7 +264,7 @@ function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
       if (fresh) response = await run(input, init, fresh);
     }
     return response;
-  }) as typeof fetch;
+  });
 }
 
 /** 构造模型工厂 OpenAI 兼容大模型实例（新鲜 token + 401 刷新 + 兼容性 fetch）。 */

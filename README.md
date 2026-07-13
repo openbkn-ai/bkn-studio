@@ -104,7 +104,7 @@ corepack pnpm check
 **1. 本地（指一个远端 Foundry 地址）** —— studio 跑在与 Foundry 不同的机器上：
 
 ```bash
-deploy/install.sh local --foundry https://10.211.55.4 --port 8080 [--register]
+deploy/install.sh local --foundry https://foundry.example.com --port 8080 [--register]
 ```
 
 起一个 docker 容器，容器内 nginx 既发 `/studio` 静态，又把 `/api`、`/oauth2`、`/.well-known`、`/userinfo` **反向代理**到 `--foundry`。这样浏览器对本地容器同源（无跨域，OAuth token 交换在本地解析）——本质是把 dev server 的代理产品化。默认走 `docker compose`（有的话），否则 `docker run`，`--no-compose` 强制后者。
@@ -147,7 +147,7 @@ hydra 按 `redirect_uri` 精确匹配，**浏览器所在 origin 的 `/studio/ca
 部署若**不带 bkn-safe**（没有鉴权服务），加 `--no-auth` 关掉 studio 自带的 OAuth 登录门，以默认 `local-admin`（满权）用户**免登录直接跑**：
 
 ```bash
-deploy/install.sh local   --foundry https://10.211.55.4 --no-auth
+deploy/install.sh local   --foundry https://foundry.example.com --no-auth
 deploy/install.sh cluster --version 0.1.0 --no-auth
 ```
 

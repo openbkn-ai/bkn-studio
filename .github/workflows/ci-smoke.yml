@@ -1,0 +1,64 @@
+# Copyright (c) 2026 OpenBKN
+# SPDX-License-Identifier: LicenseRef-OpenBKN
+# Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+# Conditions. See LICENSE for the full text.
+
+name: ci-smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: ci-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install app dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install smoke test dependencies
+        run: npm install --prefix tests/e2e --no-package-lock
+
+      - name: Install Chromium
+        run: npm run install:browsers --prefix tests/e2e
+
+      - name: Start mock studio
+        env:
+          VITE_USE_MOCK: "true"
+        run: |
+          pnpm exec vite --host 127.0.0.1 --port 5173 --strictPort > /tmp/bkn-studio-vite.log 2>&1 &
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:5173/studio/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/bkn-studio-vite.log
+          exit 1
+
+      - name: Run route smoke tests
+        env:
+          E2E_BASE_URL: http://127.0.0.1:5173
+        run: npm run test:smoke --prefix tests/e2e

@@ -567,7 +567,7 @@ export async function retryBuildTask(
 }
 
 /** 停用连接时,暂停其下所有监听中的 streaming 任务(mock 行为;真实后端由服务端联动) */
-export async function pauseListeningTasksOfCatalog(resourceIds: string[]) {
+export function pauseListeningTasksOfCatalog(resourceIds: string[]) {
   if (!useMock) {
     return;
   }

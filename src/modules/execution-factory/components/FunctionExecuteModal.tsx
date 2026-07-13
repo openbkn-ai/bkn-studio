@@ -37,6 +37,7 @@ export function FunctionExecuteModal({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<FunctionExecuteResult | null>(null);
   const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
+  const codeValue = Form.useWatch<ExecuteFormValues["code"]>("code", form);
 
   useEffect(() => {
     if (!open) {
@@ -116,7 +117,7 @@ export function FunctionExecuteModal({
         />
       ) : null}
       <FunctionAiGenerateModal
-        initialCode={form.getFieldValue("code")}
+        initialCode={codeValue}
         onApply={(content) => {
           if (typeof content === "string") {
             form.setFieldValue("code", content);

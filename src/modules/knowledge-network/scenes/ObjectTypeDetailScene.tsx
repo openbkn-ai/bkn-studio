@@ -12,7 +12,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Dropdown, Empty, Input, Segmented, Spin, Table, Tag } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -30,7 +30,6 @@ import {
   getKnowledgeNetworkObjectTypeDetail,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
-  ObjectTypeDataProperty,
   ObjectTypeDetail,
   ObjectTypeLogicProperty,
   ObjectTypeResourcePreview,
@@ -64,7 +63,7 @@ export function ObjectTypeDetailScene() {
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!networkId || !objectTypeId) {
       return;
     }
@@ -80,11 +79,11 @@ export function ObjectTypeDetailScene() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [networkId, objectTypeId]);
 
   useEffect(() => {
     void loadData();
-  }, [networkId, objectTypeId]);
+  }, [loadData]);
 
   useEffect(() => {
     const resourceId = detail?.dataSource?.id;

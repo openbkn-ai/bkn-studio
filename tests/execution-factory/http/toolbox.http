@@ -1,4 +1,4 @@
-@token = Bearer ory_at_KfIBsltjkJCKBMzuXP3WhuCrYREK6SxNZcQ8_tWUWrQ.yes-1vtOKgGEuIXsJF6m40wYsjzWpsE-zmFIm5pYZNs
+@token = Bearer <ACCESS_TOKEN>
 @box_id = f19f8304-30d7-40bc-bde5-7c73a1eb127e
 @tool_id = c2395a45-fdf0-49f8-a996-8d51762753eb
 
@@ -144,7 +144,7 @@ Authorization: {{token}}
         },
         "servers": [
             {
-                "url": "http://10.4.110.230:8080",
+                "url": "http://127.0.0.1:8080",
                 "description": "Local development server"
             }
         ],
@@ -362,7 +362,7 @@ Authorization: {{token}}
 {
     "headers": {
         "Content-Type": "application/json",
-        "Authorization": "Bearer ory_at_Lg8Cii4PT8sNGv-tA5tDO0WOSbrF2y4uNOUrFtzU3bQ.d87ytSrVr6k1dmVTRk7SK7vmlKF5Q_W9_tCdT8GLVR8"
+        "Authorization": "Bearer <ACCESS_TOKEN>"
     },
     "path_params": {
         "id": "20250609142746"
@@ -422,7 +422,7 @@ Content-Type: application/json
         "openapi": "3.1.0",
         "servers": [
             {
-                "url": "http://10.4.111.136:30778",
+                "url": "http://127.0.0.1:30778",
                 "description": "服务器地址"
             }
         ],
@@ -1444,7 +1444,7 @@ Content-Type: application/json
 user_id: "sss"
 
 {
-    "url": "http://10.4.110.230:8080/api/v1/render",
+    "url": "http://127.0.0.1:8080/api/v1/render",
     "method": "POST",
     "body_param": {
         "content": "# Hello World\n\nThis is a **Markdown** document.",
@@ -1456,7 +1456,7 @@ user_id: "sss"
 
 ### RenderMarkdown
 
-POST http://10.4.110.230:8080/api/v1/render
+POST http://127.0.0.1:8080/api/v1/render
 
 {
     "content": "# Hello World\n\nThis is a **Markdown** document.",

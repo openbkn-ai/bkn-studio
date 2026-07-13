@@ -7,7 +7,7 @@
 
 import { ApartmentOutlined, EditOutlined } from "@ant-design/icons";
 import { Alert, Spin, Tag } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -38,7 +38,7 @@ export function RelationTypeDetailScene() {
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!networkId || !relationTypeId) {
       return;
     }
@@ -54,11 +54,11 @@ export function RelationTypeDetailScene() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [networkId, relationTypeId]);
 
   useEffect(() => {
     void loadData();
-  }, [networkId, relationTypeId]);
+  }, [loadData]);
 
   const confirmDelete = () => {
     if (!detail) {

@@ -43,6 +43,20 @@ function isNumericType(type: string) {
   );
 }
 
+function formatPreviewCell(value: unknown) {
+  if (value === null || value === undefined) {
+    return "NULL";
+  }
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 function resolvePreviewColumnHead(field: ResourceSchemaField) {
   const technicalName = field.name;
   const businessName = field.displayName?.trim();
@@ -187,7 +201,7 @@ export function ResourcePreviewPanel({
                     {columns.map((field) => {
                       const value = row[field.name];
                       const isNull = value === null || value === undefined;
-                      const text = isNull ? "NULL" : String(value);
+                      const text = formatPreviewCell(value);
                       return (
                         <td
                           className={[

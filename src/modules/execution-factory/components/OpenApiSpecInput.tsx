@@ -78,7 +78,7 @@ export function OpenApiSpecInput({
   const uploadProps: UploadProps = {
     accept: ".json,.yaml,.yml",
     beforeUpload: (file) => {
-      void readFileText(file as File);
+      void readFileText(file);
       return false;
     },
     maxCount: 1,

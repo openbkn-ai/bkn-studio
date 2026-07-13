@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin, ViteDevServer } from "vite";
@@ -17,7 +24,7 @@ type TokenPayload = {
 };
 
 export function viteDevAuthPlugin(options: DevAuthPluginOptions = {}): Plugin {
-  const origin = options.origin ?? "http://118.196.7.174";
+  const origin = options.origin ?? "http://127.0.0.1:9000";
   let activeServer: ViteDevServer | undefined;
   let clientCache: OAuthClient | null = null;
   let clientCachePromise: Promise<OAuthClient> | null = null;

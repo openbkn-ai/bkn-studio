@@ -16,7 +16,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { Alert, Empty, Form, Input, Tag } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -97,7 +97,7 @@ export function ToolboxDetailDrawer({
   const { exportComponentById, isExporting } = useImpexExport();
   const auditUserDirectory = useAuditUserDirectory();
 
-  const loadRecord = async (targetBoxId: string) => {
+  const loadRecord = useCallback(async (targetBoxId: string) => {
     setLoading(true);
     setLoadError(null);
     setRecord(null);
@@ -114,7 +114,7 @@ export function ToolboxDetailDrawer({
     } finally {
       setLoading(false);
     }
-  };
+  }, [marketMode]);
 
   useEffect(() => {
     if (!open || !boxId) {
@@ -124,7 +124,7 @@ export function ToolboxDetailDrawer({
     }
 
     void loadRecord(boxId);
-  }, [boxId, form, marketMode, open]);
+  }, [boxId, form, loadRecord, open]);
 
   useEffect(() => {
     if (!open || marketMode) {

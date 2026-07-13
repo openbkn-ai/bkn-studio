@@ -94,7 +94,7 @@ export async function updateMyProfile(payload: ProfileUpdatePayload): Promise<My
     return mockProfile;
   }
   // PUT 的响应体形态不保证（可能 204 / 只回改动字段），不直接用——改后重新 GET 拿权威完整资料。
-  await http.put("/safe/v1/me", payload, { skipErrorToast: true } as Parameters<typeof http.put>[2]);
+  await http.put("/safe/v1/me", payload, { skipErrorToast: true });
   return getMyProfile();
 }
 
@@ -120,6 +120,6 @@ export async function changePassword(
       old_password: oldPassword,
       new_password: newPassword,
     },
-    { skipErrorToast: true } as Parameters<typeof http.post>[2],
+    { skipErrorToast: true },
   );
 }

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { FilterValue, TablePaginationConfig } from "antd/es/table/interface";
+import type { TableProps } from "antd";
 import { useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 
 import {
@@ -15,18 +15,10 @@ import {
 } from "@/modules/knowledge-network/components/shared/DetailTableColumnSettingsButton";
 import { ObjectTypePropertyTableColumns } from "@/modules/knowledge-network/components/object-type/ObjectTypePropertyTableColumns";
 import { useDetailTableColumnStorageScope } from "@/modules/knowledge-network/components/shared/useDetailTableColumnStorageScope";
+import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
 
-type TableSorterPayload =
-  | { columnKey?: string | number; order?: "ascend" | "descend" | null }
-  | Array<{ columnKey?: string | number; order?: "ascend" | "descend" | null }>;
-
-type TableChangeExtra = {
-  action: "paginate" | "sort" | "filter";
-};
-
-type UseObjectTypePropertyTableStateOptions = {
-  attributesLength: number;
-};
+type ObjectTypePropertyTableOnChange = NonNullable<TableProps<ObjectTypeDataProperty>["onChange"]>;
+type TableSorterPayload = Parameters<ObjectTypePropertyTableOnChange>[2];
 
 function uniqueColumns(ids: string[]) {
   const seen = new Set<string>();
@@ -82,7 +74,7 @@ function updateColumnVisibility(
   ids.current = visibleKeys;
   const nextVisibility = Object.fromEntries(
     visibleKeys.map((column) => [column, visibility[column] !== false]),
-  ) as ColumnVisibilityPayload;
+  );
 
   setColumnVisibility(nextVisibility);
 }
@@ -112,9 +104,7 @@ function buildInitialColumnState(storageScope: string) {
   };
 }
 
-export function useObjectTypePropertyTableState({
-  attributesLength,
-}: UseObjectTypePropertyTableStateOptions) {
+export function useObjectTypePropertyTableState() {
   const storageScope = useDetailTableColumnStorageScope("object-property");
   const initialState = useMemo(() => buildInitialColumnState(storageScope), [storageScope]);
   const columnOrderRef = useRef<string[]>(initialState.order);
@@ -129,14 +119,9 @@ export function useObjectTypePropertyTableState({
         ObjectTypePropertyTableColumns.find((column) => column.key === columnKey),
       )
       .filter((column): column is (typeof ObjectTypePropertyTableColumns)[number] => Boolean(column));
-  }, [attributesLength, columnVisibility, columnOrderVersion]);
+  }, [columnOrderVersion]);
 
-  const handleTableChange = (
-    _pagination: TablePaginationConfig,
-    _filters: Record<string, FilterValue | null>,
-    sorter: TableSorterPayload,
-    extra: TableChangeExtra,
-  ) => {
+  const handleTableChange: ObjectTypePropertyTableOnChange = (_pagination, _filters, sorter, extra) => {
     if (extra.action !== "sort") {
       return;
     }

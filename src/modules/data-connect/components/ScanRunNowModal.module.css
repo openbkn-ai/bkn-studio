@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 .modalRoot :global(.ant-modal-content),
 .modalRoot :global(.ant-modal-header),
 .modalRoot :global(.ant-modal-body),

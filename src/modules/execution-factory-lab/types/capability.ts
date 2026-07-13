@@ -6,6 +6,7 @@
  */
 
 export type CapabilityKind = "http" | "mcp" | "skill" | "function" | "all";
+type UnknownCapabilityStatus = string & {};
 
 export type CapabilityGroup = {
   id: string;
@@ -50,7 +51,7 @@ export type CapabilityRecord = {
   kind: CapabilityKind;
   name: string;
   description?: string;
-  status: "draft" | "published" | "offline" | string;
+  status: "draft" | "published" | "offline" | UnknownCapabilityStatus;
   group?: CapabilityGroup;
   endpoint?: CapabilityEndpoint;
   orchestration?: CapabilityOrchestration;

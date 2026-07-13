@@ -407,7 +407,7 @@ flowchart LR
 #### Task 2.6 联调与契约
 
 - [ ] `bkn-safe`：`go test ./server/internal/httpapi/... -run Admin -count=1`
-- [ ] 部署到验证环境（如 10.211.55.4）
+- [ ] 部署到验证环境（如 foundry.example.com）
 - [ ] `bkn-studio` 指向真后端验证：分页 total、部门树 count、子树筛选
 - [ ] 更新 `docs/admin-api-frontend-changes.md` 中「搜索只 account/name」的表述（enabled/dept/role 改服务端）
 

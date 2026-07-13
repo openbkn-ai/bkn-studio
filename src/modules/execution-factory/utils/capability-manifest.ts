@@ -30,7 +30,7 @@ function asSchemaObject(value: unknown): JsonSchemaObject | null {
     return null;
   }
 
-  return value as JsonSchemaObject;
+  return value;
 }
 
 function buildInputFromToolParameter(parameter: ToolIoParameter): CapabilityInputSemantic {

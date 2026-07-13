@@ -112,8 +112,7 @@ export type CreateUserInput = {
   departmentIds: string[];
   email: string;
   name: string;
-  /** 留空 = 平台默认密码(openbkn)，首登强制改。 */
-  password?: string;
+  password: string;
   roleIds: string[];
   telephone: string;
 };

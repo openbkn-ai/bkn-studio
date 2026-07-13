@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -5,7 +12,7 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export const ignoreConfig = {
-  ignores: ["dist", "node_modules", "scripts/**"],
+  ignores: ["dist", "node_modules", "scripts/**", "tests/e2e/**", "tests/execution-factory/**"],
 };
 
 export const reactPluginConfig = {
@@ -44,5 +51,13 @@ export function createTypeScriptConfig({ typeChecked }) {
         : {}),
     },
     ...reactPluginConfig,
+    rules: {
+      ...reactPluginConfig.rules,
+      "@typescript-eslint/no-unsafe-argument": "warn",
+      "@typescript-eslint/no-unsafe-assignment": "warn",
+      "@typescript-eslint/no-unsafe-member-access": "warn",
+      "@typescript-eslint/no-unsafe-return": "warn",
+      "@typescript-eslint/restrict-template-expressions": "warn",
+    },
   };
 }

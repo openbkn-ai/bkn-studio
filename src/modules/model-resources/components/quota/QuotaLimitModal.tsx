@@ -7,7 +7,7 @@
 
 import { Alert, InputNumber, Modal, Radio, Select, Table } from "antd";
 import type { RadioChangeEvent } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -131,7 +131,12 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
     [t],
   );
 
-  const recalculateForecast = (nextRows: QuotaRow[], nextBillingType: "0" | "1") => {
+  const recalculateForecast = useCallback((
+    nextRows: QuotaRow[],
+    nextBillingType: "0" | "1",
+    nextPriceType = priceType,
+    nextCurrencySymbol = currencySymbol,
+  ) => {
     const updatedRows = nextRows.map((row) => {
       if (row.tokens === undefined || row.referPrice === undefined) {
         return { ...row, forecast: undefined };
@@ -143,8 +148,8 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
           row.tokens,
           row.referPrice,
           toBackendNumType(row.numType),
-          priceType,
-          currencySymbol,
+          nextPriceType,
+          nextCurrencySymbol,
         ),
       };
     });
@@ -153,7 +158,7 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
     const outputForecast = updatedRows[1]?.forecast;
     const nextTotal =
       nextBillingType === "1" && inputForecast && outputForecast
-        ? `${currencySymbol}${(
+        ? `${nextCurrencySymbol}${(
             Number(inputForecast.replace(/[^\d.-]/g, "")) +
             Number(outputForecast.replace(/[^\d.-]/g, ""))
           ).toFixed(2)}`
@@ -161,7 +166,7 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
 
     setRows(updatedRows);
     setTotalForecast(nextTotal);
-  };
+  }, [currencySymbol, priceType]);
 
   useEffect(() => {
     if (!open || !record) {
@@ -193,7 +198,7 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
     };
 
     void initialize();
-  }, [message, mode, open, record]);
+  }, [message, mode, open, recalculateForecast, record]);
 
   const updateRow = (rowId: QuotaRow["id"], patch: Partial<QuotaRow>) => {
     const nextRows = rows.map((row) => (row.id === rowId ? { ...row, ...patch } : row));
@@ -376,7 +381,7 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
                   onChange={(value) => {
                     const nextSymbol = value === "USD" ? "$" : "￥";
                     setCurrencySymbol(nextSymbol);
-                    recalculateForecast(rows, billingType);
+                    recalculateForecast(rows, billingType, priceType, nextSymbol);
                   }}
                 />
                 <InputNumber
@@ -396,7 +401,7 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
                   value={priceType}
                   onChange={(value) => {
                     setPriceType(value);
-                    recalculateForecast(rows, billingType);
+                    recalculateForecast(rows, billingType, value, currencySymbol);
                   }}
                 />
                 {showErrors && row.errors.referPrice ? (

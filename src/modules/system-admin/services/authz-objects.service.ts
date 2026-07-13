@@ -19,7 +19,11 @@ import { AUTHZ_OBJECT_TYPES } from "@/modules/system-admin/utils/authz-catalog";
 const PAGE_SIZE = 100;
 
 const str = (value: unknown): string =>
-  typeof value === "string" ? value : value == null ? "" : String(value);
+  typeof value === "string"
+    ? value
+    : typeof value === "number" || typeof value === "boolean"
+      ? String(value)
+      : "";
 
 const domainHeaders = (): Record<string, string> => ({
   "x-business-domain": getRuntimeConfig().currentUser.businessDomainId ?? "bd_public",

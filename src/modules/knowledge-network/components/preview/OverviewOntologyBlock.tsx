@@ -67,7 +67,7 @@ export function OverviewOntologyBlock({
     setRelationPage(1);
     setBindingPage(1);
 
-    (async () => {
+    void (async () => {
       try {
         const [objects, relations] = await Promise.all([
           listKnowledgeNetworkObjectTypes(networkId),
@@ -122,7 +122,7 @@ export function OverviewOntologyBlock({
     let cancelled = false;
     setDetailLoading(true);
 
-    (async () => {
+    void (async () => {
       try {
         const details = await Promise.all(
           missingItems.map((item) =>

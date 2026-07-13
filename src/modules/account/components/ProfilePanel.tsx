@@ -75,7 +75,7 @@ export function ProfilePanel({ profile, onSaved }: { profile: MyProfile; onSaved
       <section className={styles.block}>
         <h3 className={styles.title}>{t("account.profile.basicTitle")}</h3>
         <p className={styles.hint}>{t("account.profile.basicHint")}</p>
-        <Form form={form} layout="vertical" requiredMark={false} onFinish={onFinish} className={styles.form}>
+        <Form form={form} layout="vertical" requiredMark={false} onFinish={(values) => void onFinish(values)} className={styles.form}>
           <Form.Item
             name="name"
             label={t("account.profile.name")}

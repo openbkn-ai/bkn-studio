@@ -12,6 +12,8 @@
  * 工具勾选是硬限定：未勾选的工具不会传给模型（tools/list 实时驱动，后端新工具自动可选）。
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { ClearOutlined, DownOutlined, RightOutlined, SettingOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { App, Select } from "antd";
 import {
@@ -458,7 +460,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       if (prev.length === 0) return prev;
       const next = [...prev];
       const idx = next.length - 1;
-      next[idx] = updater(next[idx]!);
+      next[idx] = updater(next[idx]);
       return next;
     });
   }, []);
@@ -936,7 +938,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             <h3>还没有可用的大模型</h3>
             <p>Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。</p>
             <div className={styles.sugs}>
-              <button type="button" className={styles.sug} onClick={() => navigate("/model-resources/models")}>
+              <button type="button" className={styles.sug} onClick={() => void navigate("/model-resources/models")}>
                 <span className={styles.sugText}>去模型工厂接入大模型</span>
                 <RightOutlined className={styles.sugArrow} />
               </button>

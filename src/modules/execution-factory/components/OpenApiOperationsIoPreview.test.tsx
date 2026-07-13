@@ -10,6 +10,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { OpenApiOperationsIoPreview } from "@/modules/execution-factory/components/OpenApiOperationsIoPreview";
 
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {

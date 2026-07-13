@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { useMemo } from "react";
 
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";

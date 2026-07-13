@@ -7,7 +7,7 @@
 
 import { EditOutlined, FileTextOutlined, PlayCircleOutlined, ThunderboltOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import { Alert, Spin } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
@@ -51,7 +51,7 @@ export function ActionTypeDetailScene() {
   const activeTab: DetailTab = searchParams.get("tab") === "tasks" ? "tasks" : "overview";
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!networkId || !actionTypeId) {
       return;
     }
@@ -71,11 +71,11 @@ export function ActionTypeDetailScene() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [actionTypeId, networkId]);
 
   useEffect(() => {
     void loadData();
-  }, [actionTypeId, networkId]);
+  }, [loadData]);
 
   const setActiveTab = (tab: DetailTab) => {
     if (tab === "overview") {

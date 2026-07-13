@@ -59,6 +59,7 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
   const [ioSpec, setIoSpec] = useState<ToolIoSpec | undefined>();
   const [sessionLogs, setSessionLogs] = useState<ToolRunLogEntry[]>([]);
   const debugSectionRef = useRef<HTMLDivElement | null>(null);
+  const toolName = Form.useWatch<ToolFormValues["name"]>("name", form);
   const functionInputs = Form.useWatch("functionInputs", form);
   const functionOutputs = Form.useWatch("functionOutputs", form);
 
@@ -210,7 +211,7 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
                       onRunComplete={handleDebugRunComplete}
                       record={{
                         toolId,
-                        name: form.getFieldValue("name") ?? toolId,
+                        name: toolName ?? toolId,
                         status: "enabled",
                       }}
                     />

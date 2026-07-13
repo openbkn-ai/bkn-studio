@@ -183,7 +183,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     setToolRunLogs((current) => [entry, ...current].slice(0, 20));
   };
 
-  const handleToggleStatus = (tool: ToolRecord) => {
+  const handleToggleStatus = useCallback((tool: ToolRecord) => {
     const nextStatus: ToolStatus = tool.status === "enabled" ? "disabled" : "enabled";
 
     void modal.confirm({
@@ -200,7 +200,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         await loadTools();
       },
     });
-  };
+  }, [boxId, loadTools, message, modal, t]);
 
   const handleBatchStatus = (nextStatus: ToolStatus) => {
     if (selectedToolIds.length === 0) {

@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 

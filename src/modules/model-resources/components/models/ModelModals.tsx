@@ -50,6 +50,7 @@ export function LlmModelFormModal({
   const [submitting, setSubmitting] = useState(false);
   const [testing, setTesting] = useState(false);
   const authValue = Form.useWatch("auth", form);
+  const modelTypeValue = Form.useWatch<LlmFormValues["modelType"]>("modelType", form);
 
   const modelTypeOptions = useMemo(
     () => [
@@ -207,7 +208,7 @@ export function LlmModelFormModal({
           rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
         >
           {isView ? (
-            <span>{getLlmModelTypeLabel(form.getFieldValue("modelType"), t)}</span>
+            <span>{getLlmModelTypeLabel(modelTypeValue, t)}</span>
           ) : (
             <Select options={modelTypeOptions} />
           )}

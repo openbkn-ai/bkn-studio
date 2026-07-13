@@ -43,8 +43,8 @@ function resolveCollisions(
 
     for (let left = 0; left < nodeIds.length; left += 1) {
       for (let right = left + 1; right < nodeIds.length; right += 1) {
-        const source = positions.get(nodeIds[left]!)!;
-        const target = positions.get(nodeIds[right]!)!;
+        const source = positions.get(nodeIds[left])!;
+        const target = positions.get(nodeIds[right])!;
         let dx = target.x - source.x;
         let dy = target.y - source.y;
         const distance = Math.hypot(dx, dy) || 1;
@@ -94,7 +94,7 @@ export function computePreviewGraphLayout(
   if (graph.nodes.length === 1) {
     return [
       {
-        id: graph.nodes[0]!.id,
+        id: graph.nodes[0].id,
         x: PREVIEW_LAYOUT_WIDTH / 2,
         y: PREVIEW_LAYOUT_HEIGHT / 2,
       },
@@ -135,8 +135,8 @@ export function computePreviewGraphLayout(
   for (let iteration = 0; iteration < iterations; iteration += 1) {
     for (let left = 0; left < movableNodeIds.length; left += 1) {
       for (let right = left + 1; right < movableNodeIds.length; right += 1) {
-        const source = positions.get(movableNodeIds[left]!)!;
-        const target = positions.get(movableNodeIds[right]!)!;
+        const source = positions.get(movableNodeIds[left])!;
+        const target = positions.get(movableNodeIds[right])!;
         let dx = source.x - target.x;
         let dy = source.y - target.y;
         const distance = Math.hypot(dx, dy) || 1;

@@ -73,7 +73,7 @@ export function ImportImpexDrawer({ open, onClose, onImported }: ImportImpexDraw
       <div style={{ marginBottom: 16 }}>
         <div style={{ marginBottom: 8 }}>{t("executionFactoryLab.importImpexMode")}</div>
         <Select
-          onChange={(value) => setMode(value as ImpexImportMode)}
+          onChange={(value) => setMode(value)}
           options={[
             { value: "create", label: t("executionFactoryLab.importImpexModeCreate") },
             { value: "upsert", label: t("executionFactoryLab.importImpexModeUpsert") },

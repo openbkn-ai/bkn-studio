@@ -1,0 +1,57 @@
+# Copyright (c) 2026 OpenBKN
+# SPDX-License-Identifier: LicenseRef-OpenBKN
+# Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+# Conditions. See LICENSE for the full text.
+
+name: ci-quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: ci-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: License header check
+        run: node scripts/check-license-headers.mjs
+
+      - name: Type-aware lint
+        run: pnpm exec eslint . --config eslint.config.typechecked.js --max-warnings 0
+
+      - name: Unit tests
+        run: pnpm exec vitest --run
+
+      - name: Type check
+        run: pnpm exec tsc -b --pretty false
+
+      - name: Production build
+        run: pnpm exec vite build
+
+      - name: Production dependency audit
+        run: pnpm audit --prod

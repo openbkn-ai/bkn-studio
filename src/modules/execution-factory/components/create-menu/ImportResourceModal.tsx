@@ -167,6 +167,11 @@ export function ImportResourceModal({
   const supportsOpenApi = activeTab === "operator" || activeTab === "toolbox";
 
   const adpImportMode = Form.useWatch("mode", adpForm) ?? "create";
+  const currentOpenApiName = Form.useWatch<OpenApiFormValues["name"]>("name", openApiForm);
+  const currentOpenApiServiceUrl = Form.useWatch<OpenApiFormValues["serviceUrl"]>(
+    "serviceUrl",
+    openApiForm,
+  );
 
 
 
@@ -266,13 +271,13 @@ export function ImportResourceModal({
 
     openApiForm.setFieldsValue({
 
-      name: hints.title?.trim() || openApiForm.getFieldValue("name"),
+      name: hints.title?.trim() || currentOpenApiName,
 
-      serviceUrl: analysis.serverUrl ?? openApiForm.getFieldValue("serviceUrl"),
+      serviceUrl: analysis.serverUrl ?? currentOpenApiServiceUrl,
 
     });
 
-  }, [activeTab, openApiForm, openapiSpec]);
+  }, [activeTab, currentOpenApiName, currentOpenApiServiceUrl, openApiForm, openapiSpec]);
 
 
 

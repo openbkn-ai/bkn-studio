@@ -185,7 +185,7 @@ export function OntologyGraphView({
       mode === "circle"
         ? circleLayout(ids)
         : mode === "group"
-          ? groupLayout(ids, groupOf ?? new Map())
+          ? groupLayout(ids, groupOf ?? new Map<string, string>())
           : computePreviewGraphLayout(graph);
     const positionMap = new Map(layout.map((node) => [node.id, { id: node.id, x: node.x, y: node.y }]));
 
@@ -335,7 +335,7 @@ export function OntologyGraphView({
     const base = posOf(id);
     if (!p || !base) return;
     dragRef.current = { id, offsetX: p.x - base.x, offsetY: p.y - base.y, moved: false };
-    (event.currentTarget as SVGGElement).setPointerCapture?.(event.pointerId);
+    (event.currentTarget).setPointerCapture?.(event.pointerId);
   };
 
   // 空白处按下 = 开始平移画布（节点 onPointerDown 已 stopPropagation）。

@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 /* Data Catalog tree: only keep business-specific node hierarchy overrides here.
    Shared panel shell, search, collapse state, scrolling and base tree behavior
    live in framework/ui/common/BusinessTreePanel*. */

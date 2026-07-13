@@ -33,12 +33,12 @@ const MOCK_TOOL_BOXES: ActionTypeToolBox[] = [
   {
     boxId: "box-data-understanding",
     boxName: "数据理解工具箱",
-    description: "数据理解 kweaver",
+    description: "数据理解 openbkn",
     tools: [
       {
         parameters: [{ name: "dataset_id", required: true, type: "string" }],
-        toolId: "kweaver_understand",
-        toolName: "kweaver 数据理解",
+        toolId: "openbkn_understand",
+        toolName: "openbkn 数据理解",
       },
     ],
   },

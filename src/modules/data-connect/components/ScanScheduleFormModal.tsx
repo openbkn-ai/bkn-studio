@@ -6,7 +6,7 @@
  */
 
 import { Form, Input, Modal, Select, Switch } from "antd";
-import type { FormItemProps, Rule } from "antd/es/form";
+import type { Rule } from "antd/es/form";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,6 +29,8 @@ type ScanScheduleFormModalProps = {
   open: boolean;
   submitting: boolean;
 };
+
+type SafeNamePath = string | number | Array<string | number>;
 
 type ScanScheduleFormValues = {
   catalogId: string;
@@ -267,7 +269,7 @@ export function ScanScheduleFormModal({
 type InlineFieldProps = {
   children: ReactNode;
   label: string;
-  name: FormItemProps["name"];
+  name: SafeNamePath;
   required?: boolean;
   rules?: Rule[];
   span?: "full" | "half";

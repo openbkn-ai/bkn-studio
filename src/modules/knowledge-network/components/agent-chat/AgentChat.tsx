@@ -252,7 +252,10 @@ export function AgentChat({
 }) {
   const knId = env.knId;
   const { message } = App.useApp();
-  const llmTokenProvider = modelTokenProvider ?? tokenProvider;
+  const llmTokenProvider = useMemo(
+    () => modelTokenProvider ?? tokenProvider,
+    [modelTokenProvider, tokenProvider],
+  );
 
   const [input, setInput] = useState("");
   const [models, setModels] = useState<LlmModel[]>([]);
@@ -477,11 +480,11 @@ export function AgentChat({
       summaryAbortRef.current = null;
       setSummarizing(false);
     }
-  }, [report, summarizing, env, tokenProvider]);
+  }, [env, llmTokenProvider, report, summarizing]);
 
   const placeholder = useMemo(() => {
     if (noLlm) return "请先在「模型工厂」接入大模型后再对话";
-    if (!compare.on) return `向 Agent 提问，例如：${suggestions[0] ?? FALLBACK_SUGGESTIONS[0]!}`;
+    if (!compare.on) return `向 Agent 提问，例如：${suggestions[0] ?? FALLBACK_SUGGESTIONS[0]}`;
     if (compare.target === "both") return "同一个问题，同时问两侧，对比两种回答";
     return compare.target === "base" ? "仅问左侧「仅基础数据」" : "仅问右侧「业务知识网络」";
   }, [noLlm, compare, suggestions]);
