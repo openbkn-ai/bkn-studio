@@ -51,7 +51,7 @@ export const mockLlmModels: LlmModel[] = [
     updateBy: "admin",
     updateTime: "2025-01-04 10:00:00",
     modelConfig: {
-      apiModel: "claude-3-5-sonnet",
+      apiModel: "demo-chat-model",
       apiUrl: "https://api.anthropic.com/v1/messages",
     },
   },

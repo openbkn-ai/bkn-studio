@@ -6,7 +6,7 @@ Authorization: Bearer <ACCESS_TOKEN>
 
 {
   "mode": "sse",
-  "url": "https://mcp.amap.com/sse?key=4402d421c6333f99f01e751816590472"
+  "url": "https://mcp.amap.com/sse?key={{AMAP_MCP_KEY}}"
 }
 
 
@@ -19,7 +19,7 @@ Authorization: Bearer <ACCESS_TOKEN>
   "name": "amap-sse-server-test",
   "description": "这是高德地图sse mcp server",
   "mode": "sse",
-  "url": "https://mcp.amap.com/sse?key=4402d421c6333f99f01e751816590472",
+  "url": "https://mcp.amap.com/sse?key={{AMAP_MCP_KEY}}",
   "headers": {
     "Content-Type": "application/json",
     "Authorization": "Bearer 1234567890",

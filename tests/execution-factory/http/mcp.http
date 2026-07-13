@@ -17,7 +17,7 @@ Authorization: {{token}}
 
 {
   "mode": "sse",
-  "url": "https://mcp.amap.com/sse?key=4402d421c6333f99f01e751816590472"
+  "url": "https://mcp.amap.com/sse?key={{AMAP_MCP_KEY}}"
 }
 
 ### 注册MCP服务，sse模式
@@ -69,7 +69,7 @@ Authorization: {{token}}
   "name": "amap-sse-server-test1",
   "description": "这是高德地图sse mcp server",
   "mode": "sse",
-  "url": "https://mcp.amap.com/sse?key=4402d421c6333f99f01e751816590472",
+  "url": "https://mcp.amap.com/sse?key={{AMAP_MCP_KEY}}",
   "headers": {
     "Content-Type": "application/json",
     "Authorization": "Bearer 1234567890",
@@ -136,7 +136,7 @@ Authorization: {{token}}
   "name": "amap-sse-server-test2",
   "description": "这是高德地图sse mcp server",
   "mode": "sse",
-  "url": "https://mcp.amap.com/sse?key=4402d421c6333f99f01e751816590472",
+  "url": "https://mcp.amap.com/sse?key={{AMAP_MCP_KEY}}",
   "headers": {
     "Content-Type": "application/json",
     "Authorization": "Bearer 1234567890",
@@ -200,4 +200,3 @@ Authorization: {{token}}
 GET http://localhost:9000/api/agent-operator-integration/v1/mcp/market/8068e7a5-26be-44af-8174-dc7873eb68af
 Content-Type: application/json
 Authorization: {{token}}
-
