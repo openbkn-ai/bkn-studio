@@ -55,6 +55,8 @@ export const relationtypePart = {
     relationTypeMappingObjectRow: "Object type",
     relationTypeMappingPending:
       "Full mapping rules will be migrated in the next phase. This page currently hosts the entry and basic information.",
+    relationTypePreviewPropertyLink: "Property link",
+    relationTypePreviewResource: "Data resource",
     relationTypeMappingPropertyRow: "Data property",
     relationTypeMappingSourcePoint: "Source",
     relationTypeMappingSourcePropertyPlaceholder: "Select a source property",
