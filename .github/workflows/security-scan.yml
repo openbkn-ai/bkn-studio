@@ -60,9 +60,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/dependency-review-action@v4
+      - name: Review dependency changes when dependency graph is available
+        uses: actions/dependency-review-action@v4
+        continue-on-error: true
         with:
           fail-on-severity: high
+
+      - name: Explain dependency review fallback
+        run: |
+          echo "Dependency Review requires GitHub Dependency Graph."
+          echo "Production dependency blocking is enforced by ci-quality via pnpm audit --prod."
 
   trivy-fs-scan:
     name: trivy filesystem scan
