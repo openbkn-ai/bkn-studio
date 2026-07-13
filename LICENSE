@@ -24,7 +24,7 @@ Apache License, the Additional Conditions shall control with respect to
 the Licensed Modules.
 
 BKN Studio is independently developed by OpenBKN and does not contain
-code originating from the upstream project openbkn-ai/openbkn-core.
+code originating from the upstream project kweaver-ai/kweaver-core.
 Third-party dependencies are not covered by this license and remain
 under their own licenses as declared in their package metadata (see
 package.json and the dependency manifests).
