@@ -115,7 +115,7 @@ export function OntologyGraphCard({
         if (cancelled) return;
         const map = new Map<string, string>();
         details.forEach((detail, index) => {
-          detail?.objectTypes.forEach((item) => map.set(item.id, groups[index]!.id));
+          detail?.objectTypes.forEach((item) => map.set(item.id, groups[index].id));
         });
         setGroupOf(map);
         setGroupNames(new Map(groups.map((group) => [group.id, group.name])));

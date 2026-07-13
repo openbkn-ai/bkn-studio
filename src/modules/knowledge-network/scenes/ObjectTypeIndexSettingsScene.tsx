@@ -14,7 +14,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Empty, Input, Select, Spin, Table, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -79,7 +79,7 @@ export function ObjectTypeIndexSettingsScene() {
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!networkId || !objectTypeId) {
       return;
     }
@@ -95,11 +95,11 @@ export function ObjectTypeIndexSettingsScene() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [networkId, objectTypeId]);
 
   useEffect(() => {
     void loadData();
-  }, [networkId, objectTypeId]);
+  }, [loadData]);
 
   const hasActiveFilter = Boolean(keyword.trim() || typeFilter || stateFilter);
 

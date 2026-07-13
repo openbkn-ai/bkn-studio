@@ -5,9 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type LlmModelType = "llm" | "rlm" | "vu" | string;
+type UnknownModelResourceString = string & {};
 
-export type LlmAuthType = "empty" | "auth" | "dual_key" | string;
+export type LlmModelType = "llm" | "rlm" | "vu" | UnknownModelResourceString;
+
+export type LlmAuthType = "empty" | "auth" | "dual_key" | UnknownModelResourceString;
 
 export type LlmModelConfig = {
   apiModel: string;

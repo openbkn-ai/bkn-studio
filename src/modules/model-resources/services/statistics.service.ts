@@ -58,7 +58,7 @@ function unwrapOverviewPayload(payload: unknown): BackendStatisticsOverview {
   const record = payload as Record<string, unknown>;
 
   if ("summary" in record || "trends" in record || "qps_data" in record) {
-    return record as BackendStatisticsOverview;
+    return record;
   }
 
   if ("data" in record) {

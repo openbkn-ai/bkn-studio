@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { expect, type Locator, type Page } from "@playwright/test";
 
 const STUDIO_BASE_PATH = "/studio";
@@ -20,14 +27,14 @@ export async function ensureE2eRuntime(
   page: Page,
   options?: { capabilityUxV2?: boolean },
 ) {
-  await page.addInitScript(({ apiBaseUrl, capabilityUxV2 }) => {
+  await page.addInitScript((runtimeConfig) => {
     window.__BKN_STUDIO_RUNTIME__ = {
       ...(window.__BKN_STUDIO_RUNTIME__ ?? {}),
-      apiBaseUrl,
+      apiBaseUrl: runtimeConfig.baseUrl,
       mode: "hosted",
       features: {
         ...(window.__BKN_STUDIO_RUNTIME__?.features ?? {}),
-        capabilityUxV2,
+        capabilityUxV2: runtimeConfig.capabilityUxV2,
       },
       currentUser: {
         businessDomainId: "bd_public",
@@ -35,7 +42,7 @@ export async function ensureE2eRuntime(
       },
     };
   }, {
-    apiBaseUrl: STUDIO_API_BASE_URL,
+    baseUrl: STUDIO_API_BASE_URL,
     capabilityUxV2: options?.capabilityUxV2 ?? true,
   });
 }

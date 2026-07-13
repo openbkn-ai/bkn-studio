@@ -55,7 +55,10 @@ export function CapabilityLabListScene() {
   const location = useLocation();
   const { features } = useLabFeatures();
   const { runtimeConfig } = useAppServices();
-  const userPermissions = runtimeConfig.currentUser.permissions ?? [];
+  const userPermissions = useMemo(
+    () => runtimeConfig.currentUser.permissions ?? [],
+    [runtimeConfig.currentUser.permissions],
+  );
   const {
     kind,
     setKind,
@@ -176,17 +179,20 @@ export function CapabilityLabListScene() {
     [userPermissions],
   );
 
-  const buildMenuItem = (
-    key: string,
-    title: string,
-    description: string,
-    onClick: () => void,
-  ) => ({
-    key,
-    disabled: !canUseMenuItem(key),
-    label: menuLabel(title, description),
-    onClick: canUseMenuItem(key) ? onClick : undefined,
-  });
+  const buildMenuItem = useCallback(
+    (
+      key: string,
+      title: string,
+      description: string,
+      onClick: () => void,
+    ) => ({
+      key,
+      disabled: !canUseMenuItem(key),
+      label: menuLabel(title, description),
+      onClick: canUseMenuItem(key) ? onClick : undefined,
+    }),
+    [canUseMenuItem],
+  );
 
   const advancedChildren = useMemo(() => {
     const children = [];
@@ -211,7 +217,7 @@ export function CapabilityLabListScene() {
       );
     }
     return children;
-  }, [canUseMenuItem, features.function, features.impex, t]);
+  }, [buildMenuItem, features.function, features.impex, t]);
 
   const addMenuItems: MenuProps["items"] = [
     {

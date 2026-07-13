@@ -88,7 +88,7 @@ export function CatalogLabListScene() {
       message.success(t("executionFactoryLab.catalogInstallSuccess"));
       const installed = result.capabilities[0];
       if (installed?.id) {
-        navigate("/execution-factory-lab/capabilities", {
+        void navigate("/execution-factory-lab/capabilities", {
           state: { openCapabilityId: installed.id },
         });
         return;
@@ -129,7 +129,7 @@ export function CatalogLabListScene() {
           <div className={styles.filters}>
             <Select
               onChange={(value) => {
-                setKind(value as CatalogKind);
+                setKind(value);
                 setPage(1);
               }}
               options={[
@@ -163,7 +163,7 @@ export function CatalogLabListScene() {
                 key={`${entry.kind}:${entry.id}`}
                 entry={entry}
                 installing={installingId === entry.id}
-                onInstall={handleInstall}
+                onInstall={(entry, mode) => void handleInstall(entry, mode)}
               />
             ))}
           </div>

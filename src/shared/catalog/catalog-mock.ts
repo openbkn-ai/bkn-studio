@@ -26,7 +26,7 @@ let mockCatalogs: CatalogRecord[] = [
     creatorName: "Platform Admin",
     tags: ["crm", "core"],
     connectorConfig: {
-      host: "10.0.0.18",
+      host: "127.0.0.1",
       port: 3306,
       database: "customer_center",
       username: "readonly",
@@ -78,7 +78,7 @@ let mockCatalogs: CatalogRecord[] = [
     creatorName: "Data Ops",
     tags: ["finance", "warehouse"],
     connectorConfig: {
-      host: "10.0.2.31",
+      host: "127.0.0.1",
       port: 5432,
       database: "finance_dw",
       username: "etl_reader",
@@ -111,7 +111,7 @@ let mockCatalogs: CatalogRecord[] = [
   },
   {
     id: "cat-005",
-    name: "kweaver_execution_factory",
+    name: "openbkn_execution_factory",
     description: "执行工厂内置逻辑 Catalog。",
     connectorType: "",
     category: "table",

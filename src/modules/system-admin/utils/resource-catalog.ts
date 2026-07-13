@@ -8,7 +8,7 @@
 /**
  * 对象授权的「资源类型 → 操作」词表。
  *
- * 数据来源：对 bkn-safe(VM 10.211.55.4) 9 个内置角色的 permissions 聚合实测，
+ * 数据来源：对 bkn-safe(VM foundry.example.com) 9 个内置角色的 permissions 聚合实测，
  * 即后端权威词表。授权模型 = {resource:{type,id}, operations}（id="*" 整类，
  * 具体 id = 单实例）。新类型/操作以后端为准；未知 type 走自由输入兜底。
  */

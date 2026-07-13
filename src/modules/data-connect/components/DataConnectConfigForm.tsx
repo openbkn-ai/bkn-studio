@@ -6,7 +6,7 @@
  */
 
 import { Form, Input, InputNumber, Select, Switch } from "antd";
-import type { FormItemProps, Rule } from "antd/es/form";
+import type { Rule } from "antd/es/form";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,6 +29,8 @@ type DataConnectConfigFormProps = {
   isEdit?: boolean;
   selectedConnectorType?: DataConnectConnectorType;
 };
+
+type SafeNamePath = string | number | Array<string | number>;
 
 const NAME_MAX_LENGTH = 255;
 const DESCRIPTION_MAX_LENGTH = 1000;
@@ -257,7 +259,7 @@ type InlineFieldProps = {
   children: ReactNode;
   extra?: string;
   label: string;
-  name: FormItemProps["name"];
+  name: SafeNamePath;
   required?: boolean;
   rules?: Rule[];
   span?: "full" | "half";

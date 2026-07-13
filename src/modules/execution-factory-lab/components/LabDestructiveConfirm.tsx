@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { Alert, Modal, Typography } from "antd";
 
 import type { TFunction } from "i18next";

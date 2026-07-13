@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, useLocation, useParams, type RouteObject } from "react-router-dom";
 

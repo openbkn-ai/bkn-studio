@@ -427,7 +427,7 @@ export function AuditLogScene() {
             />
             <DatePicker.RangePicker
               onChange={(value) => {
-                const range = value as [Dayjs | null, Dayjs | null] | null;
+                const range = value;
                 updateUrlFilters({
                   from: range?.[0]?.toISOString(),
                   page: 1,

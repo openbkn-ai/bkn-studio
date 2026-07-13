@@ -1,12 +1,12 @@
 # 环境配置
 base_url: "http://127.0.0.1:9000"
 # token
-token: "ory_at_zRx3_Kc0DjIMgerl56OIGH5Giuq7YSWD5mOd_fWenbI.kem-Bxkcn5-FN4I7ezVRDeVxjEbxk19tgmP61xYedJU"
+token: "<ACCESS_TOKEN>"
 
 # 注册参数
 register:
   metadata_type: "openapi"
-  metadata_path: "/root/go/src/github.com/kweaver-ai/operator-hub/operator-integration/server/tests/file/yaml/test.yaml"
+  metadata_path: "/root/go/src/github.com/openbkn-ai/operator-hub/operator-integration/server/tests/file/yaml/test.yaml"
   direct-publish: false
   operator_info:
     operator_type: "basic"
@@ -30,7 +30,7 @@ update:
   operator_id: "f6fdc41e-fbbc-4446-810b-aee40d56149c"
   version: "1878a26a-03d6-448e-83f0-c5f22a307ce2"
   # metadata_type: "openapi"
-  # metadata_path: "/root/go/src/github.com/kweaver-ai/operator-hub/operator-integration/server/tests/file/yaml/test.yaml"
+  # metadata_path: "/root/go/src/github.com/openbkn-ai/operator-hub/operator-integration/server/tests/file/yaml/test.yaml"
   # direct-publish: false
   # operator_info:
   #   operator_type: "basic"

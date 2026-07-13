@@ -210,8 +210,8 @@ export function BuildTaskFormPanel({
     const payload = {
       buildKeyFields,
       embeddingFields,
-      embeddingModel: useEmbedding ? selectedModel!.id : "",
-      modelDimensions: useEmbedding ? selectedModel!.dimensions : 0,
+      embeddingModel: useEmbedding ? selectedModel.id : "",
+      modelDimensions: useEmbedding ? selectedModel.dimensions : 0,
       fulltextFields,
       fulltextAnalyzer: fulltextFields.length > 0 ? fulltextAnalyzer : undefined,
     };

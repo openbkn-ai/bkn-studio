@@ -12,12 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import {
-  createUser,
-  DEFAULT_NEW_USER_PASSWORD,
-  getUser,
-  updateUser,
-} from "@/modules/system-admin/services/admin.service";
+import { createUser, getUser, updateUser } from "@/modules/system-admin/services/admin.service";
 import type { AdminDepartment, AdminUser } from "@/modules/system-admin/types/admin";
 
 import drawerStyles from "@/modules/system-admin/components/UserFormDrawer.module.css";
@@ -27,6 +22,7 @@ type UserFormValues = {
   account: string;
   email: string;
   name: string;
+  password: string;
   telephone: string;
 };
 
@@ -130,6 +126,7 @@ export function UserFormDrawer({
       name: user?.name ?? "",
       email: user?.email ?? "",
       telephone: user?.telephone ?? "",
+      password: "",
     });
     setDeptIds(user?.departmentIds ?? []);
     if (user) {
@@ -171,6 +168,7 @@ export function UserFormDrawer({
             name: values.name.trim(),
             email: values.email.trim(),
             telephone: values.telephone.trim(),
+            password: values.password,
             departmentIds: deptIds,
             roleIds: [],
           });
@@ -203,9 +201,7 @@ export function UserFormDrawer({
         <div className={drawerStyles.drawerFooter}>
           {!isEdit ? (
             <span className={drawerStyles.footerHint}>
-              {t("systemAdmin.users.drawer.createPasswordHint", {
-                password: DEFAULT_NEW_USER_PASSWORD,
-              })}
+              {t("systemAdmin.users.drawer.createPasswordHint")}
             </span>
           ) : null}
           <div className={drawerStyles.footerActions}>
@@ -297,6 +293,21 @@ export function UserFormDrawer({
                   <Input placeholder={t("systemAdmin.users.drawer.displayNamePlaceholder")} />
                 </Form.Item>
               </div>
+              {!isEdit ? (
+                <Form.Item
+                  label={t("systemAdmin.users.drawer.password")}
+                  name="password"
+                  rules={[
+                    { required: true, message: t("common.required") },
+                    { min: 8, message: t("systemAdmin.users.drawer.passwordMinLength") },
+                  ]}
+                >
+                  <Input.Password
+                    autoComplete="new-password"
+                    placeholder={t("systemAdmin.users.drawer.passwordPlaceholder")}
+                  />
+                </Form.Item>
+              ) : null}
               <div className={drawerStyles.fieldGroup}>
                 <p className={drawerStyles.fieldGroupLabel}>
                   {t("systemAdmin.users.drawer.fieldGroupContact")}
@@ -339,7 +350,6 @@ export function UserFormDrawer({
                 <TreeSelect
                   allowClear
                   multiple
-                  mode="multiple"
                   onChange={setDeptIds}
                   placeholder={t("systemAdmin.users.drawer.departmentPlaceholder")}
                   showSearch

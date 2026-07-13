@@ -5,6 +5,7 @@ node_modules
 **/node_modules
 dist
 tests/e2e
+tests/execution-factory
 tests/**/node_modules
 
 # Local env may hold dev tokens (VITE_DEV_ACCESS_TOKEN) — must not enter the image.

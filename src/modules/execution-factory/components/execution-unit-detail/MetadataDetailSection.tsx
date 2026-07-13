@@ -17,7 +17,7 @@ import styles from "../ToolboxDetailDrawer.module.css";
 
 type MetadataDetailSectionProps = {
   functionInput?: FunctionInputPayload;
-  metadataType?: OperatorMetadataType | string;
+  metadataType?: OperatorMetadataType | (string & {});
   openapiSpec?: string;
 };
 

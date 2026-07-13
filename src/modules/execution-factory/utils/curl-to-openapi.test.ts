@@ -14,6 +14,10 @@ import {
 } from "@/modules/execution-factory/utils/curl-to-openapi";
 import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
 
+function parseJson<T>(value: string): T {
+  return JSON.parse(value) as T;
+}
+
 describe("curl-to-openapi", () => {
   it("parses a simple curl command", () => {
     const result = parseCurlCommand(
@@ -61,7 +65,7 @@ describe("curl-to-openapi", () => {
       password: "123456",
     });
 
-    const spec = JSON.parse(buildOpenApiFromQuickApi(result.value)) as {
+    const spec = parseJson<{
       paths: {
         "/login": {
           post: {
@@ -78,7 +82,7 @@ describe("curl-to-openapi", () => {
           };
         };
       };
-    };
+    }>(buildOpenApiFromQuickApi(result.value));
 
     const jsonBody = spec.paths["/login"].post.requestBody?.content?.["application/json"];
     expect(jsonBody?.example).toEqual({ username: "test", password: "123456" });
@@ -109,7 +113,7 @@ describe("curl-to-openapi", () => {
       ["x-demo-source", "header", "openbkn-manual"],
     ]);
 
-    const spec = JSON.parse(buildOpenApiFromQuickApi(result.value)) as {
+    const spec = parseJson<{
       paths: {
         "/get": {
           get: {
@@ -117,14 +121,14 @@ describe("curl-to-openapi", () => {
           };
         };
       };
-    };
+    }>(buildOpenApiFromQuickApi(result.value));
 
     expect(spec.paths["/get"].get.parameters).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           in: "header",
           name: "x-demo-source",
-          schema: expect.objectContaining({ example: "openbkn-manual" }),
+          schema: expect.objectContaining({ example: "openbkn-manual" }) as unknown,
         }),
       ]),
     );

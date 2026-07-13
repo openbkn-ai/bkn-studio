@@ -172,8 +172,6 @@ export function DeptMembersModal({
     return filteredMembers.slice(start, start + memberPageSize);
   }, [filteredMembers, memberPage, memberPageSize]);
 
-  const muted = <span className={styles.mutedText}>—</span>;
-
   const removeMember = useCallback(
     async (userId: string) => {
       setSaving(true);
@@ -214,7 +212,7 @@ export function DeptMembersModal({
         title: t("systemAdmin.users.columns.telephone"),
         dataIndex: "telephone",
         width: 120,
-        render: (value: string) => value?.trim() || muted,
+        render: (value: string) => value?.trim() || <span className={styles.mutedText}>—</span>,
       },
       {
         title: t("systemAdmin.users.columns.department"),
@@ -276,7 +274,7 @@ export function DeptMembersModal({
         ),
       },
     ],
-    [department.id, departments, i18n.language, muted, removeMember, saving, t],
+    [department.id, departments, i18n.language, removeMember, saving, t],
   );
 
   const addMembers = async () => {

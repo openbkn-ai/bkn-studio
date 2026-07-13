@@ -1,3 +1,8 @@
+# Copyright (c) 2026 OpenBKN
+# SPDX-License-Identifier: LicenseRef-OpenBKN
+# Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+# Conditions. See LICENSE for the full text.
+
 name: release-studio
 
 # Builds the bkn-studio SPA image AND packages the Helm chart, then pushes both
@@ -7,25 +12,13 @@ name: release-studio
 # the published chart by name + version.
 #
 # Versioning mirrors the bkn-foundry convention so image tag == chart version:
-# a `v*` tag IS the release version (leading "v" stripped). Branch / PR runs
-# build-only (no push) unless dispatched with publish=true.
+# a `v*` tag IS the release version (leading "v" stripped). Main branch and
+# workflow_dispatch runs build-only unless dispatched with publish=true.
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
-  pull_request:
-    paths:
-      - 'src/**'
-      - 'index.html'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'tsconfig*.json'
-      - 'vite.config.ts'
-      - 'Dockerfile'
-      - 'deploy/nginx.conf'
-      - 'deploy/charts/**'
-      - '.dockerignore'
-      - '.github/workflows/release-studio.yml'
   workflow_dispatch:
     inputs:
       publish:
@@ -46,6 +39,7 @@ env:
 
 jobs:
   build:
+    name: release-studio build verify
     runs-on: ubuntu-latest
     env:
       # Surfaced so step `if:` can test credential presence — secrets can't be
@@ -81,7 +75,7 @@ jobs:
         id: gate
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "push" || ( "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.publish }}" == "true" ) ]]; then
+          if [[ ( "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ) || ( "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.publish }}" == "true" ) ]]; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
           else
             echo "publish=false" >> "$GITHUB_OUTPUT"

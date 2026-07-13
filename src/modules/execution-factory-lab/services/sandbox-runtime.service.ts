@@ -99,7 +99,10 @@ function textValue(value: unknown): string | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
-  const text = String(value).trim();
+  const text =
+    typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+      ? String(value).trim()
+      : (JSON.stringify(value) ?? "").trim();
   return text || undefined;
 }
 

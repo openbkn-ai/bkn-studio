@@ -5,12 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { createFromIconfontCN } from "@ant-design/icons";
 import { Input, Select, Space } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import legacyIconList from "./resource-iconfont/dip-iconfont.json";
-import "./resource-iconfont/iconfont-dip-object.js";
+import "./resource-iconfont/inject-iconfont-svg";
 import styles from "./ResourceIconSelect.module.css";
 
 const { Search } = Input;

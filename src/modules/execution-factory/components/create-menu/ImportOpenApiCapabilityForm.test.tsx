@@ -10,6 +10,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ImportOpenApiCapabilityForm } from "@/modules/execution-factory/components/create-menu/ImportOpenApiCapabilityForm";
 
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+
 const petstoreSpec = JSON.stringify({
   openapi: "3.0.4",
   info: { title: "Swagger Petstore", version: "1.0.0" },
@@ -68,7 +70,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
-  listToolboxes: vi.fn(async () => ({ items: [] })),
+  listToolboxes: vi.fn(() => Promise.resolve({ items: [] })),
 }));
 
 vi.mock("@/modules/execution-factory/components/CapabilityBusinessIntro", () => ({

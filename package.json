@@ -16,7 +16,9 @@
     "test:execution-factory:e2e": "npm run test:full --prefix tests/e2e",
     "test:execution-factory:e2e:operator": "npm run test:operator --prefix tests/e2e",
     "test:execution-factory:agent-at": "echo Run Agent AT from tests/execution-factory/agent-at — see LOCAL_SETUP.md",
-    "check": "npm run lint:types && npm run test -- --run && npm run build"
+    "check": "npm run license:check && npm run lint:types && npm run test -- --run && npm run build",
+    "license:check": "node scripts/check-license-headers.mjs",
+    "license:fix": "node scripts/check-license-headers.mjs --fix"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.1",
@@ -24,10 +26,10 @@
     "@monaco-editor/react": "^4.7.0",
     "ai": "^7.0.4",
     "antd": "^5.28.0",
-    "axios": "^1.12.2",
+    "axios": "^1.18.1",
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.21",
-    "echarts": "^5.6.0",
+    "echarts": "^6.1.0",
     "i18next": "^25.6.0",
     "monaco-editor": "^0.52.2",
     "react": "^19.2.0",

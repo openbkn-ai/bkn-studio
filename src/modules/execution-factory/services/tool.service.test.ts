@@ -41,7 +41,7 @@ describe("tool.service mock persistence", () => {
       description: "HTTPBin GET test",
       openapiSpec,
     });
-    const detail = await getToolDetail(boxId, result.successIds[0]!);
+    const detail = await getToolDetail(boxId, result.successIds[0]);
 
     expect(detail.name).toBe("httpbin_get");
     expect(detail.description).toBe("HTTPBin GET test");
@@ -91,7 +91,7 @@ describe("tool.service mock persistence", () => {
 
     const result = await importOpenApiTools(boxId, openapiSpec, "Petstore test rules");
     const tools = await listTools(boxId, { page: 1, pageSize: 100 });
-    const firstDetail = await getToolDetail(boxId, result.successIds[0]!);
+    const firstDetail = await getToolDetail(boxId, result.successIds[0]);
 
     expect(result.successCount).toBe(3);
     expect(tools.items.map((item) => item.name)).toEqual([
@@ -133,7 +133,7 @@ describe("tool.service mock persistence", () => {
 
     const result = await importOpenApiTools(boxId, openapiSpec);
     const tools = await listTools(boxId, { page: 1, pageSize: 100 });
-    const lastDetail = await getToolDetail(boxId, result.successIds[18]!);
+    const lastDetail = await getToolDetail(boxId, result.successIds[18]);
 
     expect(result.successCount).toBe(19);
     expect(tools.total).toBe(19);

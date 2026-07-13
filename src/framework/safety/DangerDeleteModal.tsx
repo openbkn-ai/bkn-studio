@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { Alert, Input, Modal, Typography } from "antd";
 import { type ReactNode, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";

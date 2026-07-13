@@ -14,11 +14,9 @@ import {
 } from "@/modules/execution-factory/services/toolbox.service";
 import type { ToolRecord } from "@/modules/execution-factory/types/tool";
 
-import type { MockActionTool } from "@/modules/knowledge-network/types/action-type-tool";
 import type { ActionTypeActionSource } from "@/modules/knowledge-network/types/knowledge-network";
 import {
   findCatalogTool,
-  flattenCatalogTools,
   MOCK_EXECUTION_FACTORY_CATALOG,
 } from "@/modules/knowledge-network/services/mock/action-type-tool-catalog";
 import {

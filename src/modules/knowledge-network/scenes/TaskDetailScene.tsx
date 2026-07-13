@@ -8,7 +8,7 @@
 import { ClockCircleOutlined } from "@ant-design/icons";
 import { Alert, Input, Select, Spin, Table } from "antd";
 import type { TableProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -79,7 +79,7 @@ export function TaskDetailScene() {
 
   const listPath = `/knowledge-network/workspace/${networkId}/tasks`;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!networkId || !taskId) {
       return;
     }
@@ -104,11 +104,11 @@ export function TaskDetailScene() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [networkId, taskId, t]);
 
   useEffect(() => {
     void loadData();
-  }, [networkId, taskId]);
+  }, [loadData]);
 
   const conceptTypeOptions = useMemo(() => {
     const values = new Set(children.map((item) => item.conceptType));

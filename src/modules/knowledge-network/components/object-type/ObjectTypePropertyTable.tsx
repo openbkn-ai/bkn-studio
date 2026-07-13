@@ -37,7 +37,7 @@ export function ObjectTypePropertyTable({
     columnVisibility,
     handleTableChange,
     handleColumnConfigChange,
-  } = useObjectTypePropertyTableState({ attributesLength: properties.length });
+  } = useObjectTypePropertyTableState();
 
   const columns = useMemo<ColumnsType<ObjectTypeDataProperty>>(() => {
     const dataColumns: ColumnsType<ObjectTypeDataProperty> = tableColumns.map((column) => {

@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import type { APIRequestContext } from "@playwright/test";
 
 export const BUSINESS_DOMAIN = process.env.E2E_BUSINESS_DOMAIN ?? "bd_public";

@@ -320,7 +320,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
                 : null,
               { key: "monitor", label: t("modelResources.models.menus.modelMonitoring") },
               { key: "authorize", label: t("modelResources.models.menus.authorizationManagement") },
-            ].filter(Boolean) as { key: string; label: string }[],
+            ].filter(Boolean),
             onClick: ({ key, domEvent }) => {
               domEvent.stopPropagation();
               handleOperate(key, record);

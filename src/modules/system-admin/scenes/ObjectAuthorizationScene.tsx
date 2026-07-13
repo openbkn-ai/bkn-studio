@@ -16,7 +16,6 @@ import {
   PlusOutlined,
   ReloadOutlined,
   ToolOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import { Alert, Empty, Input, Segmented, Select, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";

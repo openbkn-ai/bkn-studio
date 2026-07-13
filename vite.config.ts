@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,7 +39,7 @@ function redirectRootToAppBase(): Plugin {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, "");
-  const devProxyOrigin = env.VITE_DEV_AUTH_ORIGIN || "http://118.196.7.174";
+  const devProxyOrigin = env.VITE_DEV_AUTH_ORIGIN || "http://127.0.0.1:9000";
   const safeProxyTarget =
     env.VITE_SAFE_PROXY_TARGET?.trim() ||
     process.env.VITE_SAFE_PROXY_TARGET?.trim() ||

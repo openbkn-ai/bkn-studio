@@ -29,7 +29,6 @@ import {
 } from "@/modules/execution-factory/services/operator.service";
 import type {
   OperatorCategory,
-  OperatorMetadataType,
   OperatorMutationInput,
   OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
@@ -80,16 +79,10 @@ export function UnitFormScene({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<RequestErrorDetail | null>(null);
   const [sessionLogs, setSessionLogs] = useState<OperatorRunLogEntry[]>([]);
-  const metadataType = Form.useWatch("metadataType", form) as
-    | OperatorMetadataType
-    | undefined;
-  const openapiSpec = Form.useWatch("openapiSpec", form) as string | undefined;
-  const functionInputs = Form.useWatch("functionInputs", form) as
-    | FunctionParameterDef[]
-    | undefined;
-  const functionOutputs = Form.useWatch("functionOutputs", form) as
-    | FunctionParameterDef[]
-    | undefined;
+  const metadataType = Form.useWatch("metadataType", form);
+  const openapiSpec = Form.useWatch("openapiSpec", form);
+  const functionInputs = Form.useWatch("functionInputs", form);
+  const functionOutputs = Form.useWatch("functionOutputs", form);
   const [loadedValues, setLoadedValues] = useState<Partial<FormValues> | null>(null);
   const [debugRecord, setDebugRecord] = useState<Awaited<
     ReturnType<typeof getOperatorDetail>

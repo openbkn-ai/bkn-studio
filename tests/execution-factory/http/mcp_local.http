@@ -1,7 +1,7 @@
 ### 解析SSE-自定义local mcp server
 POST http://localhost:9000/api/agent-operator-integration/v1/mcp/parse/sse
 Content-Type: application/json
-Authorization: Bearer ory_at_xpIZ-_vxHKCpkh4iMZHBN-wL6T0wobKD9o-TkkmxVd8.nLmQflLhUdpSEvfoU_n26ulEIUPQgBKHwiP-J-M-VWc
+Authorization: Bearer <ACCESS_TOKEN>
 
 {
     "mode": "sse",
@@ -12,7 +12,7 @@ Authorization: Bearer ory_at_xpIZ-_vxHKCpkh4iMZHBN-wL6T0wobKD9o-TkkmxVd8.nLmQflL
 ### 注册MCP服务，sse模式
 POST http://localhost:9000/api/agent-operator-integration/v1/mcp
 Content-Type: application/json
-Authorization: Bearer ory_at_xpIZ-_vxHKCpkh4iMZHBN-wL6T0wobKD9o-TkkmxVd8.nLmQflLhUdpSEvfoU_n26ulEIUPQgBKHwiP-J-M-VWc
+Authorization: Bearer <ACCESS_TOKEN>
 
 {
     "name": "my-mcp-server-test",

@@ -56,7 +56,7 @@ copy config.local.yaml.example config.local.yaml
 python operator_client.py --config=config.local.yaml list
 ```
 
-## 5. Full Agent AT (KWeaver platform)
+## 5. Full Agent AT (OpenBKN platform)
 
 Run from **foundry** canonical path:
 
@@ -72,7 +72,7 @@ Requires Hydra auth + MySQL + `eisoo` package. See `agent-at/LOCAL_SETUP.md` in 
 ## 6. DIP operator-web Jest (run in original repo)
 
 ```bash
-cd e:/00_code_workspace/keweaver/web/apps/operator-web
+cd e:/00_code_workspace/openbkn/web/apps/operator-web
 yarn test
 ```
 

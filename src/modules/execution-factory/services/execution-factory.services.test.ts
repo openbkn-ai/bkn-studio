@@ -35,7 +35,7 @@ describe("execution-factory services (mock mode)", () => {
 
     expect(skillId).toBeTruthy();
 
-    const updated = await updateSkillMetadata(skillId!, {
+    const updated = await updateSkillMetadata(skillId, {
       category: "other_category",
       description: "Updated in vitest",
       name: "Vitest Skill",
@@ -48,10 +48,10 @@ describe("execution-factory services (mock mode)", () => {
     const listResult = await listSkills({ page: 1, pageSize: 10 });
     const skillId = listResult.items[0]?.skillId;
 
-    const history = await getSkillReleaseHistory(skillId!);
+    const history = await getSkillReleaseHistory(skillId);
     expect(history.length).toBeGreaterThan(0);
 
-    const republished = await republishSkillHistory(skillId!, history[0]!.version);
+    const republished = await republishSkillHistory(skillId, history[0].version);
     expect(republished.skillId).toBe(skillId);
   });
 
@@ -61,10 +61,10 @@ describe("execution-factory services (mock mode)", () => {
 
     expect(mcpId).toBeTruthy();
 
-    const tools = await listMcpTools(mcpId!);
+    const tools = await listMcpTools(mcpId);
     expect(tools.length).toBeGreaterThan(0);
 
-    const debugResult = await debugMcpTool(mcpId!, tools[0]!.name, {
+    const debugResult = await debugMcpTool(mcpId, tools[0].name, {
       arguments: { query: "test" },
     });
 

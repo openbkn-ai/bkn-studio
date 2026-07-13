@@ -56,7 +56,7 @@ export function SecurityPanel({ account }: { account: string }) {
     <div className={styles.panel}>
       <h3 className={styles.title}>{t("account.security.title")}</h3>
       <p className={styles.hint}>{t("account.security.hint")}</p>
-      <Form form={form} layout="vertical" requiredMark={false} onFinish={onFinish} className={styles.form}>
+      <Form form={form} layout="vertical" requiredMark={false} onFinish={(values) => void onFinish(values)} className={styles.form}>
         <Form.Item
           name="oldPassword"
           label={t("account.security.current")}

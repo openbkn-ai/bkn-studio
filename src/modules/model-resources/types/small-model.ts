@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type SmallModelType = "embedding" | "reranker" | string;
+export type SmallModelType = "embedding" | "reranker" | (string & {});
 
 export type SmallModelConfig = {
   apiModel: string;

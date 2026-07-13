@@ -61,6 +61,20 @@ import styles from "./ExperienceScene.module.css";
 /** 线上有、本地无精选定义的工具（如 get_object_types / get_relation_types）归到 Knowledge Network 组，不单开分类。 */
 const ONLINE_GROUP = "Knowledge Network";
 
+function formatPreviewValue(value: unknown) {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 /** 从单个 JSON Schema 属性生成可编辑示例值。 */
 function sampleForSchemaProp(def: unknown): unknown {
   if (!def || typeof def !== "object") return "";
@@ -145,7 +159,7 @@ function formatResponseView(text: string): ResponseView {
     .filter((line) => line.trimStart().startsWith("data:"))
     .map((line) => line.replace(/^\s*data:/, "").trim())
     .filter(Boolean);
-  const candidate = dataLines.length > 0 ? dataLines[dataLines.length - 1]! : text;
+  const candidate = dataLines.length > 0 ? dataLines[dataLines.length - 1] : text;
   let obj: unknown;
   try {
     obj = JSON.parse(candidate);
@@ -168,7 +182,7 @@ function formatResponseView(text: string): ResponseView {
 function findArrayProp(node: unknown, key: string): unknown[] | null {
   if (!node || typeof node !== "object") return null;
   for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-    if (k === key && Array.isArray(v)) return v;
+    if (k === key && Array.isArray(v)) return v as unknown[];
     if (v && typeof v === "object") {
       const found = findArrayProp(v, key);
       if (found) return found;
@@ -677,7 +691,7 @@ function ObjectTypeCard({
                     <tr key={rowIndex}>
                       {previewColumns.map((col) => {
                         const value = row[col];
-                        const text = value === null || value === undefined ? "—" : String(value);
+                        const text = formatPreviewValue(value);
                         return (
                           <td key={col} title={text}>
                             {text}
@@ -970,7 +984,7 @@ export function ExperienceScene() {
   const token = authMode === "apikey" ? appKey.trim() : sessionToken;
 
   const [filter, setFilter] = useState("");
-  const [selectedId, setSelectedId] = useState(CONTEXT_LOADER_OPS[0]!.id);
+  const [selectedId, setSelectedId] = useState(CONTEXT_LOADER_OPS[0].id);
   const [bodyText, setBodyText] = useState("");
   const [bodyError, setBodyError] = useState<string | null>(null);
   const [queryVals, setQueryVals] = useState<Record<string, string>>({});
@@ -1060,12 +1074,12 @@ export function ExperienceScene() {
   );
   const activeOps = mode === "mcp" ? mcpOps : CONTEXT_LOADER_OPS;
   const op = useMemo(
-    () => activeOps.find((item) => item.id === selectedId) ?? activeOps[0]!,
+    () => activeOps.find((item) => item.id === selectedId) ?? activeOps[0],
     [activeOps, selectedId],
   );
   // selectedId 在当前模式的工具集里失效时（切模式 / 只在另一侧存在）回退到首项，保持侧栏高亮一致。
   useEffect(() => {
-    if (!activeOps.some((item) => item.id === selectedId)) setSelectedId(activeOps[0]!.id);
+    if (!activeOps.some((item) => item.id === selectedId)) setSelectedId(activeOps[0].id);
   }, [activeOps, selectedId]);
 
   // 选中接口 / 模式 / 网络变化时重置请求体与 query 默认值
@@ -1214,7 +1228,7 @@ export function ExperienceScene() {
       }
       // 2) 否则写进请求体 JSON
       try {
-        const obj = JSON.parse(bodyText || "{}");
+        const obj: unknown = JSON.parse(bodyText || "{}");
         if (obj && typeof obj === "object" && !Array.isArray(obj)) {
           (obj as Record<string, unknown>)[key] = value;
           setBodyText(JSON.stringify(obj, null, 2));
@@ -1257,7 +1271,7 @@ export function ExperienceScene() {
   const fillConceptGroup = useCallback(
     (groupId: string) => {
       try {
-        const obj = JSON.parse(bodyText || "{}");
+        const obj: unknown = JSON.parse(bodyText || "{}");
         const arr = findArrayProp(obj, "concept_groups");
         if (arr) {
           if (!arr.includes(groupId)) arr.push(groupId);
@@ -1280,7 +1294,7 @@ export function ExperienceScene() {
     <section className={styles.page}>
       <div className={styles.topbar}>
         {network ? (
-          <button type="button" className={styles.back} onClick={() => navigate(`/knowledge-network/workspace/${id}/overview`)}>
+          <button type="button" className={styles.back} onClick={() => void navigate(`/knowledge-network/workspace/${id}/overview`)}>
             <ArrowLeftOutlined /> 返回 {network.name}
           </button>
         ) : null}
@@ -1646,7 +1660,7 @@ export function ExperienceScene() {
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
         mcpUrl={`${serverAddress}${MCP_PATH}`}
-        onIssueKey={() => navigate("/account")}
+        onIssueKey={() => void navigate("/account")}
         copy={copy}
       />
       <ToolDiscoveryModal

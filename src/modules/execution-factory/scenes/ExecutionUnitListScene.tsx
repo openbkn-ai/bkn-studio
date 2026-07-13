@@ -747,7 +747,7 @@ export function ExecutionUnitListScene({
               }
             } catch (error) {
               void message.error(extractRequestErrorMessage(error));
-              return Promise.reject(error);
+              return Promise.reject(error instanceof Error ? error : new Error(String(error)));
             }
           },
         });
@@ -767,7 +767,7 @@ export function ExecutionUnitListScene({
               reloadList();
             } catch (error) {
               void message.error(extractRequestErrorMessage(error));
-              return Promise.reject(error);
+              return Promise.reject(error instanceof Error ? error : new Error(String(error)));
             }
           },
         });
@@ -1358,7 +1358,7 @@ export function ExecutionUnitListScene({
             onCloseSkillInstallTarget={() => setSkillInstallTarget(null)}
             onCloseUpdateSkillPackage={() => setUpdateSkillPackageTarget(null)}
             onOpenHistorySkill={(skillId) => setHistorySkillId(skillId)}
-            onReloadInstalledResourceIds={reloadInstalledResourceIds}
+            onReloadInstalledResourceIds={() => void reloadInstalledResourceIds()}
             onReloadList={reloadList}
             publishedPermTarget={publishedPermTarget}
             skillInstallTarget={skillInstallTarget}

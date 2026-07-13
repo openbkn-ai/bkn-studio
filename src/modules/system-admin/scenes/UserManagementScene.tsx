@@ -28,7 +28,6 @@ import { ResetPasswordModal } from "@/modules/system-admin/components/ResetPassw
 import { UserFormDrawer } from "@/modules/system-admin/components/UserFormDrawer";
 import { UserRolesDrawer } from "@/modules/system-admin/components/UserRolesDrawer";
 import {
-  DEFAULT_NEW_USER_PASSWORD,
   deleteDepartment,
   deleteUser,
   listDepartments,
@@ -405,7 +404,7 @@ export function UserManagementScene() {
             return;
           }
           if (key === "auditLogs") {
-            navigate(buildAuditLogHref(user.id));
+            void navigate(buildAuditLogHref(user.id));
           }
         },
       };
@@ -662,9 +661,7 @@ export function UserManagementScene() {
                   <div className={styles.toolbarActions}>
                     <PermissionGate permissions="admin-user:create">
                       <Tooltip
-                        title={t("systemAdmin.users.userToolbarHint", {
-                          password: DEFAULT_NEW_USER_PASSWORD,
-                        })}
+                        title={t("systemAdmin.users.userToolbarHint")}
                       >
                         <AppButton
                           icon={<PlusOutlined />}
@@ -758,14 +755,14 @@ export function UserManagementScene() {
       <UserFormDrawer
         departments={departments}
         onClose={() => setUserDrawer({ open: false, user: null })}
-        onSaved={reloadAll}
+        onSaved={() => void reloadAll()}
         open={userDrawer.open}
         user={userDrawer.user}
       />
       {rolesUser ? (
         <UserRolesDrawer
           onClose={() => setRolesUser(null)}
-          onSaved={reloadUsers}
+          onSaved={() => void reloadUsers()}
           open={Boolean(rolesUser)}
           roles={roles}
           user={rolesUser}
@@ -775,7 +772,7 @@ export function UserManagementScene() {
         department={deptDrawer.department}
         departments={departments}
         onClose={() => setDeptDrawer({ department: null, open: false })}
-        onSaved={reloadAll}
+        onSaved={() => void reloadAll()}
         open={deptDrawer.open}
         presetParentId={deptDrawer.presetParentId}
       />
@@ -786,7 +783,7 @@ export function UserManagementScene() {
         <DeptMembersModal
           department={membersDept}
           departments={departments}
-          onChanged={reloadAll}
+          onChanged={() => void reloadAll()}
           onClose={() => setMembersDept(null)}
           open={Boolean(membersDept)}
         />

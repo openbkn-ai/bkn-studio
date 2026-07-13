@@ -770,7 +770,7 @@ export function RoleManagementScene() {
 
         onClose={() => setRoleDrawer({ open: false, role: null })}
 
-        onSaved={loadRoles}
+        onSaved={() => void loadRoles()}
 
         open={roleDrawer.open}
 
@@ -820,7 +820,7 @@ export function RoleManagementScene() {
 
           departments={departments}
 
-          onChanged={loadRoles}
+          onChanged={() => void loadRoles()}
 
           onClose={() => setMembersRole(null)}
 

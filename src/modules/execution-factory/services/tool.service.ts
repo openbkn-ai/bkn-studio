@@ -203,7 +203,7 @@ function serializeToolGlobalParameter(globalParameters?: ToolGlobalParameter) {
 }
 
 function mapToolDetail(item: BackendToolInfo): ToolDetail {
-  const metadata = item.metadata as { api_spec?: unknown } | undefined;
+  const metadata = item.metadata;
 
   return {
     ...mapTool(item),

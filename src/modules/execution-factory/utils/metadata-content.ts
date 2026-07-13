@@ -261,7 +261,7 @@ export function analyzeOpenApiDocumentText(
     };
   }
 
-  const doc = parsed as Record<string, unknown>;
+  const doc = parsed;
   const info = doc.info;
 
   if (!info || typeof info !== "object") {
@@ -283,9 +283,9 @@ export function analyzeOpenApiDocumentText(
     return { ok: false, reason: "info.version 不能为空。" };
   }
 
-  const servers = doc.servers;
+  const servers: unknown[] = Array.isArray(doc.servers) ? doc.servers : [];
 
-  if (!Array.isArray(servers) || servers.length === 0) {
+  if (servers.length === 0) {
     return { ok: false, reason: "servers 至少需要一个服务地址。" };
   }
 
@@ -337,8 +337,9 @@ export function buildOpenApiDocumentFromMetadata(metadata: BackendMetadata): str
   // Probe a cast expression, not the bare `apiSpec` reference: the type guard
   // narrows to Record<string, unknown>, which would otherwise collapse the
   // negative branch (InternalApiSpec) to `never` and break every field read below.
-  if (isFullOpenApiDocument(apiSpec as unknown)) {
-    return JSON.stringify(apiSpec, null, 2);
+  const maybeFullDocument: unknown = apiSpec;
+  if (isFullOpenApiDocument(maybeFullDocument)) {
+    return JSON.stringify(maybeFullDocument, null, 2);
   }
 
   const path = metadata.path ?? "/";
@@ -466,7 +467,9 @@ export function rewriteOpenApiServerUrl(openapiSpec: string, serviceUrl?: string
       return openapiSpec;
     }
 
-    const servers = Array.isArray(parsed.servers) ? [...parsed.servers] : [];
+    const servers: unknown[] = Array.isArray(parsed.servers)
+      ? Array.from(parsed.servers as unknown[])
+      : [];
     const firstServer =
       servers[0] && typeof servers[0] === "object" && !Array.isArray(servers[0])
         ? { ...(servers[0] as Record<string, unknown>), url: normalizedServiceUrl }

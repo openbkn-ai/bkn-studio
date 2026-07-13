@@ -1,6 +1,6 @@
 # Execution Factory UI Parity Checklist
 
-Reference: [kweaver-dip operator-web](https://github.com/kweaver-ai/kweaver-dip/tree/main/web/apps/operator-web)  
+Reference: [openbkn-dip operator-web](https://github.com/openbkn-ai/openbkn-dip/tree/main/web/apps/operator-web)
 Target: `bkn-studio/src/modules/execution-factory`  
 Backend: `bkn-foundry/adp/execution-factory/operator-integration`
 

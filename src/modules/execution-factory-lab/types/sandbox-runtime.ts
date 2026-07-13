@@ -5,8 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type SandboxHealthStatus = "healthy" | "degraded" | "unhealthy" | string;
-export type SandboxSessionStatus = "creating" | "running" | "idle" | "failed" | "terminated" | string;
+type UnknownSandboxStatus = string & {};
+
+export type SandboxHealthStatus = "healthy" | "degraded" | "unhealthy" | UnknownSandboxStatus;
+export type SandboxSessionStatus =
+  | "creating"
+  | "running"
+  | "idle"
+  | "failed"
+  | "terminated"
+  | UnknownSandboxStatus;
 
 export type SandboxRuntimeHealth = {
   status: SandboxHealthStatus;

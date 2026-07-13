@@ -44,7 +44,8 @@ const ALL_CAPABILITY_MODES: CapabilityUxMode[] = [
 ];
 
 function readEnvCapabilityUxV2(): boolean | undefined {
-  const raw = import.meta.env.VITE_CAPABILITY_UX_V2;
+  const env = import.meta.env as Record<string, string | undefined>;
+  const raw = env.VITE_CAPABILITY_UX_V2;
   if (raw === "true") {
     return true;
   }

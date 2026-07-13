@@ -91,7 +91,7 @@ export function CreateSkillForm({ formId, onImported }: CreateSkillFormProps) {
         <Form.Item label={t("executionFactory.skillUpload")} required>
           <Upload.Dragger
             beforeUpload={(file) => {
-              if (!detectSkillFileType(file as File)) {
+              if (!detectSkillFileType(file)) {
                 antMessage.info(t("executionFactory.skillUnsupportedFile"));
                 return Upload.LIST_IGNORE;
               }

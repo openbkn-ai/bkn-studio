@@ -342,7 +342,15 @@ function inferSchemaFromValue(value: unknown): Record<string, unknown> {
     return { type: "boolean", example: value };
   }
 
-  return { type: "string", example: value === undefined || value === null ? "" : String(value) };
+  return {
+    type: "string",
+    example:
+      value === undefined || value === null
+        ? ""
+        : typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+          ? String(value)
+          : JSON.stringify(value),
+  };
 }
 
 function parseKeyValueData(value: string): Array<[string, string]> {
