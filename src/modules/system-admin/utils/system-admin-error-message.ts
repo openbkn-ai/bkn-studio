@@ -19,11 +19,24 @@ const KNOWN_SAFE_ADMIN_ERRORS: Record<string, string> = {
   "not authorized for admin operations": "systemAdmin.errors.notAdmin",
 };
 
+function isUserAccountDuplicate(raw: string) {
+  const normalized = raw.toLowerCase();
+  return (
+    normalized.includes("idx_users_account") ||
+    normalized.includes("user account already exists") ||
+    normalized.includes("account already exists") ||
+    raw.includes("登录名已存在")
+  );
+}
+
 export function extractSystemAdminErrorMessage(error: unknown) {
   const raw = extractRequestErrorMessage(error).trim();
   const key = KNOWN_SAFE_ADMIN_ERRORS[raw];
   if (key) {
     return i18n.t(key);
+  }
+  if (isUserAccountDuplicate(raw)) {
+    return i18n.t("systemAdmin.errors.userAccountDuplicate");
   }
   if (raw.startsWith("unknown user id")) {
     return i18n.t("systemAdmin.errors.unknownUser");

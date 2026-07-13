@@ -397,7 +397,10 @@ export async function listAuditLogs(
 
 // ---- user writes ------------------------------------------------------------
 
-export async function createUser(input: CreateUserInput): Promise<void> {
+export async function createUser(
+  input: CreateUserInput,
+  options?: { skipErrorToast?: boolean },
+): Promise<void> {
   if (useMock) {
     if (users.some((item) => item.account === input.account)) {
       throw new Error(`登录名已存在：${input.account}`);
@@ -421,23 +424,35 @@ export async function createUser(input: CreateUserInput): Promise<void> {
     await wait(undefined);
     return;
   }
-  const created = await http.post<{ id: string }>(`${ADMIN}/users`, {
-    account: input.account,
-    password: input.password,
-    name: input.name,
-    email: input.email,
-    telephone: input.telephone,
-    ...(input.departmentIds.length ? { department_ids: input.departmentIds } : {}),
-  });
+  const created = await http.post<{ id: string }>(
+    `${ADMIN}/users`,
+    {
+      account: input.account,
+      password: input.password,
+      name: input.name,
+      email: input.email,
+      telephone: input.telephone,
+      ...(input.departmentIds.length ? { department_ids: input.departmentIds } : {}),
+    },
+    { skipErrorToast: options?.skipErrorToast },
+  );
   const userId = created.data.id;
   await Promise.all(
     input.roleIds.map((roleId) =>
-      http.post(`${ADMIN}/role-bindings`, { accessor_id: userId, role_id: roleId }),
+      http.post(
+        `${ADMIN}/role-bindings`,
+        { accessor_id: userId, role_id: roleId },
+        { skipErrorToast: options?.skipErrorToast },
+      ),
     ),
   );
 }
 
-export async function syncUserRoleBindings(accessorId: string, roleIds: string[]): Promise<void> {
+export async function syncUserRoleBindings(
+  accessorId: string,
+  roleIds: string[],
+  options?: { skipErrorToast?: boolean },
+): Promise<void> {
   if (useMock) {
     for (const role of roles) {
       const has = role.accessorIds.includes(accessorId);
@@ -451,20 +466,32 @@ export async function syncUserRoleBindings(accessorId: string, roleIds: string[]
   }
   const bound = await http.get<{ role_ids?: string[] }>(`${ADMIN}/role-bindings`, {
     params: { accessor_id: accessorId },
+    skipErrorToast: options?.skipErrorToast,
   });
   const current = new Set(bound.data.role_ids ?? []);
   const want = new Set(roleIds);
   await Promise.all([
     ...[...want].filter((roleId) => !current.has(roleId)).map((roleId) =>
-      http.post(`${ADMIN}/role-bindings`, { accessor_id: accessorId, role_id: roleId }),
+      http.post(
+        `${ADMIN}/role-bindings`,
+        { accessor_id: accessorId, role_id: roleId },
+        { skipErrorToast: options?.skipErrorToast },
+      ),
     ),
     ...[...current].filter((roleId) => !want.has(roleId)).map((roleId) =>
-      http.delete(`${ADMIN}/role-bindings`, { data: { accessor_id: accessorId, role_id: roleId } }),
+      http.delete(`${ADMIN}/role-bindings`, {
+        data: { accessor_id: accessorId, role_id: roleId },
+        skipErrorToast: options?.skipErrorToast,
+      }),
     ),
   ]);
 }
 
-export async function updateUser(id: string, input: UpdateUserInput): Promise<void> {
+export async function updateUser(
+  id: string,
+  input: UpdateUserInput,
+  options?: { skipErrorToast?: boolean },
+): Promise<void> {
   if (useMock) {
     const user = findUser(id);
     if (!user) {
@@ -483,14 +510,18 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<vo
     return;
   }
   // department_ids 替换语义：始终传当前选择集（含 [] 清空）。
-  await http.put(`${ADMIN}/users/${encodeURIComponent(id)}`, {
-    name: input.name,
-    email: input.email,
-    telephone: input.telephone,
-    enabled: input.enabled,
-    department_ids: input.departmentIds,
-  });
-  await syncUserRoleBindings(id, input.roleIds);
+  await http.put(
+    `${ADMIN}/users/${encodeURIComponent(id)}`,
+    {
+      name: input.name,
+      email: input.email,
+      telephone: input.telephone,
+      enabled: input.enabled,
+      department_ids: input.departmentIds,
+    },
+    { skipErrorToast: options?.skipErrorToast },
+  );
+  await syncUserRoleBindings(id, input.roleIds, options);
 }
 
 export async function deleteUser(id: string): Promise<void> {
