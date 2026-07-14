@@ -38,6 +38,10 @@ export const relationtypePart = {
     relationTypeDetailTitle: "Relation type detail",
     relationTypeDirectMapping: "Direct mapping",
     relationTypeDirectMappingOption: "Connect object type properties directly",
+    relationTypeDuplicatePropertyMapping:
+      "Duplicate property mappings exist. Adjust them before saving.",
+    relationTypeDuplicateResourceMapping:
+      "Duplicate resource mappings exist. Adjust them before saving.",
     relationTypeEditDescription: "Edit relation type basics and mapping rules.",
     relationTypeEditTitle: "Edit relation type",
     relationTypeEmptyValue: "—",

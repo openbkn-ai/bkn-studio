@@ -32,6 +32,8 @@ export const relationtypePart = {
     relationTypeDetailTitle: "关系类详情",
     relationTypeDirectMapping: "直接映射",
     relationTypeDirectMappingOption: "对象类属性与对象类属性直接连接",
+    relationTypeDuplicatePropertyMapping: "存在重复的属性映射，请调整后保存。",
+    relationTypeDuplicateResourceMapping: "存在重复的资源映射，请调整后保存。",
     relationTypeEditDescription: "编辑关系类基础信息与映射规则。",
     relationTypeEditTitle: "编辑关系类",
     relationTypeEmptyValue: "—",

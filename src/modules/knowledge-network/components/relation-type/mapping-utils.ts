@@ -79,6 +79,10 @@ export function countValidResourceMappings(
   ).length;
 }
 
+function hasDuplicateValues(values: string[]): boolean {
+  return new Set(values).size !== values.length;
+}
+
 export function normalizeRelationTypeMappingValues(
   value: RelationTypeMappingFormValues,
 ): RelationTypeMappingFormValues {
@@ -151,6 +155,14 @@ export function validateRelationTypeMappingValues(
       return t("knowledgeNetwork.relationTypePropertyMappingRequired");
     }
 
+    const mappingKeys = validMappings.map(
+      (item) => `${item.sourcePropertyName}::${item.targetPropertyName}`,
+    );
+
+    if (hasDuplicateValues(mappingKeys)) {
+      return t("knowledgeNetwork.relationTypeDuplicatePropertyMapping");
+    }
+
     return null;
   }
 
@@ -160,6 +172,22 @@ export function validateRelationTypeMappingValues(
 
   if (countValidResourceMappings(mappingRules.resourceMappings) === 0) {
     return t("knowledgeNetwork.relationTypeResourceMappingRequired");
+  }
+
+  const validResourceMappings = mappingRules.resourceMappings.filter(
+    (item) =>
+      item.sourceObjectPropertyName &&
+      item.resourceSourcePropertyName &&
+      item.resourceTargetPropertyName &&
+      item.targetObjectPropertyName,
+  );
+  const resourceMappingKeys = validResourceMappings.map(
+    (item) =>
+      `${item.sourceObjectPropertyName}::${item.resourceSourcePropertyName}::${item.resourceTargetPropertyName}::${item.targetObjectPropertyName}`,
+  );
+
+  if (hasDuplicateValues(resourceMappingKeys)) {
+    return t("knowledgeNetwork.relationTypeDuplicateResourceMapping");
   }
 
   return null;
