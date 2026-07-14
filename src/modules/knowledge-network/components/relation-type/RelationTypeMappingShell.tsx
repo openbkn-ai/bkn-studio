@@ -20,7 +20,7 @@ type RelationTypeMappingShellProps = {
   mappingMode: "direct" | "resource";
   mappingModeField?: boolean;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
-  propertyMappingCount: number;
+  resourceName?: string;
   sourceObjectTypeId: string;
   targetObjectTypeId: string;
   onMappingModeChange: (mode: "direct" | "resource") => void;
@@ -31,7 +31,7 @@ export function RelationTypeMappingShell({
   mappingMode,
   mappingModeField = true,
   objectTypes,
-  propertyMappingCount,
+  resourceName,
   sourceObjectTypeId,
   targetObjectTypeId,
   onMappingModeChange,
@@ -76,7 +76,12 @@ export function RelationTypeMappingShell({
       ) : null}
 
       <RelationMappingPreview
-        propertyMappingCount={propertyMappingCount}
+        bridgeLabel={
+          mappingMode === "resource"
+            ? resourceName || t("knowledgeNetwork.relationTypePreviewResource")
+            : t("knowledgeNetwork.relationTypePreviewPropertyLink")
+        }
+        mappingMode={mappingMode}
         sourceObject={sourceObject}
         targetObject={targetObject}
       />

@@ -7,14 +7,11 @@
 
 /* eslint-disable react-refresh/only-export-components */
 
-import { useMemo } from "react";
-
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { RelationTypeResourceMappingRules } from "./RelationTypeResourceMappingRules";
 import { RelationTypeDirectMappingRules } from "./RelationTypeDirectMappingRules";
 import {
-  countValidResourceMappings,
   resetMappingRulesForMode,
   type RelationTypeMappingFormValues,
 } from "./mapping-utils";
@@ -44,16 +41,6 @@ export function RelationTypeMappingEditor({
   value,
   onChange,
 }: RelationTypeMappingEditorProps) {
-  const mappingSummaryCount = useMemo(() => {
-    if (value.mappingMode === "resource") {
-      return countValidResourceMappings(value.mappingRules.resourceMappings);
-    }
-
-    return value.mappingRules.propertyMappings.filter(
-      (item) => item.sourcePropertyName && item.targetPropertyName,
-    ).length;
-  }, [value.mappingMode, value.mappingRules.resourceMappings, value.mappingRules.propertyMappings]);
-
   const handleMappingModeChange = (mode: "direct" | "resource") => {
     if (mode === value.mappingMode) {
       return;
@@ -78,7 +65,9 @@ export function RelationTypeMappingEditor({
       mappingModeField={mappingModeField}
       objectTypes={objectTypes}
       onMappingModeChange={handleMappingModeChange}
-      propertyMappingCount={mappingSummaryCount}
+      resourceName={
+        value.mappingRules.backingDataSourceName || value.mappingRules.backingDataSourceId
+      }
       sourceObjectTypeId={value.mappingRules.sourceObjectTypeId}
       targetObjectTypeId={value.mappingRules.targetObjectTypeId}
     >

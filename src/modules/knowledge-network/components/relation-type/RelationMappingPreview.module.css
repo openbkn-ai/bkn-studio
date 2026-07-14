@@ -6,46 +6,39 @@
  */
 
 .previewBox {
-  background: #f5f5f5;
-  border: 1px solid #e5e5e5;
-  border-radius: 4px;
+  background: #f7f9fc;
+  border: 1px solid #d9e2f0;
+  border-radius: 2px;
   margin: 16px 0 24px;
   min-height: 160px;
-  padding: 24px 32px;
+  padding: 26px 32px;
 }
 
 .previewCanvas {
   align-items: center;
   display: flex;
-  gap: 24px;
+  gap: 14px;
   justify-content: center;
   min-height: 112px;
-}
-
-.previewColumn {
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-width: 88px;
 }
 
 .previewNode {
   align-items: center;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  min-width: 112px;
 }
 
 .previewNodeIcon {
   align-items: center;
-  border-radius: 4px;
+  border-radius: 2px;
   color: #fff;
   display: inline-flex;
-  font-size: 16px;
-  height: 32px;
+  font-size: 18px;
+  height: 40px;
   justify-content: center;
-  width: 32px;
+  width: 40px;
 }
 
 .previewNodeLabel {
@@ -58,23 +51,13 @@
   white-space: nowrap;
 }
 
-.previewLinks {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 28px;
-  max-width: 280px;
-  min-width: 160px;
-  padding-top: 8px;
-}
-
 .previewLink {
-  background: linear-gradient(90deg, #91caff 0%, #91caff 100%);
+  background: #91caff;
   border-radius: 999px;
   display: block;
   height: 2px;
   position: relative;
-  width: 100%;
+  width: min(18vw, 220px);
 }
 
 .previewLink::after {
@@ -86,4 +69,42 @@
   right: -2px;
   top: 50%;
   transform: translateY(-50%);
+}
+
+.previewBridge {
+  align-items: center;
+  background: #eaf3ff;
+  border: 1px solid #bfdbff;
+  border-radius: 2px;
+  color: #1d6fe8;
+  display: inline-flex;
+  font-size: 18px;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.previewBridgeNode {
+  align-items: center;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 112px;
+}
+
+.previewBridgeLabel {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 120px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewBridgeResource {
+  background: #ecfdf3;
+  border-color: #b7ebc6;
+  color: #16a34a;
 }
