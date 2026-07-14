@@ -387,7 +387,9 @@ export function DepartmentNavTree({
           </div>
         ) : debouncedDeptSearch ? (
           <p className={navStyles.emptySearch}>{t("systemAdmin.users.deptNode.searchEmpty")}</p>
-        ) : null}
+        ) : (
+          <p className={navStyles.emptySearch}>{t("systemAdmin.users.emptyDepts")}</p>
+        )}
       </div>
     </BusinessTreePanel>
   );
