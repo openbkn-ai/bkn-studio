@@ -578,79 +578,75 @@ export function UserManagementScene() {
         <div className={layoutStyles.explorer}>
           <aside className={layoutStyles.deptPanel}>
             <div className={layoutStyles.deptTreeWrap}>
-              {departments.length ? (
-                <DepartmentNavTree
-                  departments={departments}
-                  headerPrimaryAction={
-                    <PermissionGate permissions="admin-dept:create">
-                      <AppButton
-                        icon={<PlusOutlined />}
-                        onClick={() =>
-                          setDeptDrawer({
-                            department: null,
-                            open: true,
-                            presetParentId: selectedDeptId ?? undefined,
-                          })
-                        }
-                        size="small"
-                        type="primary"
-                      >
-                        {selectedDepartment
-                          ? t("systemAdmin.users.actions.addChild")
-                          : t("systemAdmin.users.createDept")}
-                      </AppButton>
-                    </PermissionGate>
-                  }
-                  headerSecondaryActions={
-                    selectedDepartment ? (
-                      <div className={layoutStyles.deptActionRowSecondary}>
-                        <PermissionGate permissions="admin-dept:edit">
-                          <AppButton
-                            className={styles.actionLink}
-                            onClick={() => setDeptDrawer({ department: selectedDepartment, open: true })}
-                            size="small"
-                            type="link"
-                          >
-                            {t("systemAdmin.users.actions.edit")}
-                          </AppButton>
-                        </PermissionGate>
-                        <PermissionGate permissions="admin-dept:members">
-                          <AppButton
-                            className={styles.actionLink}
-                            onClick={() => setMembersDept(selectedDepartment)}
-                            size="small"
-                            type="link"
-                          >
-                            {t("systemAdmin.users.actions.members")}
-                          </AppButton>
-                        </PermissionGate>
-                        <PermissionGate permissions="admin-dept:delete">
-                          <AppButton
-                            className={[styles.actionLink, styles.actionDanger].join(" ")}
-                            onClick={() => handleDeleteDept(selectedDepartment)}
-                            size="small"
-                            type="link"
-                          >
-                            {t("systemAdmin.users.actions.delete")}
-                          </AppButton>
-                        </PermissionGate>
-                      </div>
-                    ) : null
-                  }
-                  onAddChild={(parentId) =>
-                    setDeptDrawer({ department: null, open: true, presetParentId: parentId })
-                  }
-                  onDelete={handleDeleteDept}
-                  onEdit={(dept) => setDeptDrawer({ department: dept, open: true })}
-                  onMembers={setMembersDept}
-                  onReparent={handleReparent}
-                  onSelect={handleSelectDept}
-                  selectedDeptId={selectedDeptId}
-                  totalUserCount={totalAllUsers}
-                />
-              ) : (
-                <p className={styles.mutedText}>{t("systemAdmin.users.emptyDepts")}</p>
-              )}
+              <DepartmentNavTree
+                departments={departments}
+                headerPrimaryAction={
+                  <PermissionGate permissions="admin-dept:create">
+                    <AppButton
+                      icon={<PlusOutlined />}
+                      onClick={() =>
+                        setDeptDrawer({
+                          department: null,
+                          open: true,
+                          presetParentId: selectedDeptId ?? undefined,
+                        })
+                      }
+                      size="small"
+                      type="primary"
+                    >
+                      {selectedDepartment
+                        ? t("systemAdmin.users.actions.addChild")
+                        : t("systemAdmin.users.createDept")}
+                    </AppButton>
+                  </PermissionGate>
+                }
+                headerSecondaryActions={
+                  selectedDepartment ? (
+                    <div className={layoutStyles.deptActionRowSecondary}>
+                      <PermissionGate permissions="admin-dept:edit">
+                        <AppButton
+                          className={styles.actionLink}
+                          onClick={() => setDeptDrawer({ department: selectedDepartment, open: true })}
+                          size="small"
+                          type="link"
+                        >
+                          {t("systemAdmin.users.actions.edit")}
+                        </AppButton>
+                      </PermissionGate>
+                      <PermissionGate permissions="admin-dept:members">
+                        <AppButton
+                          className={styles.actionLink}
+                          onClick={() => setMembersDept(selectedDepartment)}
+                          size="small"
+                          type="link"
+                        >
+                          {t("systemAdmin.users.actions.members")}
+                        </AppButton>
+                      </PermissionGate>
+                      <PermissionGate permissions="admin-dept:delete">
+                        <AppButton
+                          className={[styles.actionLink, styles.actionDanger].join(" ")}
+                          onClick={() => handleDeleteDept(selectedDepartment)}
+                          size="small"
+                          type="link"
+                        >
+                          {t("systemAdmin.users.actions.delete")}
+                        </AppButton>
+                      </PermissionGate>
+                    </div>
+                  ) : null
+                }
+                onAddChild={(parentId) =>
+                  setDeptDrawer({ department: null, open: true, presetParentId: parentId })
+                }
+                onDelete={handleDeleteDept}
+                onEdit={(dept) => setDeptDrawer({ department: dept, open: true })}
+                onMembers={setMembersDept}
+                onReparent={handleReparent}
+                onSelect={handleSelectDept}
+                selectedDeptId={selectedDeptId}
+                totalUserCount={totalAllUsers}
+              />
             </div>
           </aside>
 
