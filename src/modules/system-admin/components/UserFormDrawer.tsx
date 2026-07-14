@@ -10,10 +10,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { createUser, getUser, updateUser } from "@/modules/system-admin/services/admin.service";
 import type { AdminDepartment, AdminUser } from "@/modules/system-admin/types/admin";
+import { extractSystemAdminErrorMessage } from "@/modules/system-admin/utils/system-admin-error-message";
 
 import drawerStyles from "@/modules/system-admin/components/UserFormDrawer.module.css";
 import styles from "@/modules/system-admin/scenes/admin.module.css";
@@ -149,35 +149,46 @@ export function UserFormDrawer({
   }, [form, open, user]);
 
   const handleSubmit = () => {
+    if (submitting) {
+      return;
+    }
+
     void form.validateFields().then(async (values) => {
       setSubmitting(true);
       try {
         if (isEdit && user) {
-          await updateUser(user.id, {
-            name: values.name.trim(),
-            email: values.email.trim(),
-            telephone: values.telephone.trim(),
-            enabled: user.enabled,
-            departmentIds: deptIds,
-            roleIds: preservedRoleIds.current,
-          });
+          await updateUser(
+            user.id,
+            {
+              name: values.name.trim(),
+              email: values.email.trim(),
+              telephone: values.telephone.trim(),
+              enabled: user.enabled,
+              departmentIds: deptIds,
+              roleIds: preservedRoleIds.current,
+            },
+            { skipErrorToast: true },
+          );
           message.success(t("systemAdmin.users.toast.userSaved"));
         } else {
-          await createUser({
-            account: values.account.trim(),
-            name: values.name.trim(),
-            email: values.email.trim(),
-            telephone: values.telephone.trim(),
-            password: values.password,
-            departmentIds: deptIds,
-            roleIds: [],
-          });
+          await createUser(
+            {
+              account: values.account.trim(),
+              name: values.name.trim(),
+              email: values.email.trim(),
+              telephone: values.telephone.trim(),
+              password: values.password,
+              departmentIds: deptIds,
+              roleIds: [],
+            },
+            { skipErrorToast: true },
+          );
           message.success(t("systemAdmin.users.toast.userCreated"));
         }
         onSaved();
         onClose();
       } catch (error) {
-        void message.error(extractRequestErrorMessage(error));
+        void message.error(extractSystemAdminErrorMessage(error));
       } finally {
         setSubmitting(false);
       }

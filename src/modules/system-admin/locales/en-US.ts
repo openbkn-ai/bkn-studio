@@ -112,6 +112,7 @@ export const systemAdminEnUS = {
       invalidToken: "Session expired. Please sign in again.",
       missingToken: "Not signed in.",
       notAdmin: "Your account is not authorized for admin operations.",
+      userAccountDuplicate: "Login name already exists. Please choose another one.",
     },
     users: {
       title: "User Management",
