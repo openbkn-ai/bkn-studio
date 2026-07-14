@@ -65,7 +65,9 @@ export function RelationTypeMappingEditor({
       mappingModeField={mappingModeField}
       objectTypes={objectTypes}
       onMappingModeChange={handleMappingModeChange}
-      resourceName={value.mappingRules.backingDataSourceName}
+      resourceName={
+        value.mappingRules.backingDataSourceName || value.mappingRules.backingDataSourceId
+      }
       sourceObjectTypeId={value.mappingRules.sourceObjectTypeId}
       targetObjectTypeId={value.mappingRules.targetObjectTypeId}
     >
