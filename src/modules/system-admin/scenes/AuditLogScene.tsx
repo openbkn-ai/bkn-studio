@@ -390,11 +390,11 @@ export function AuditLogScene() {
   return (
     <>
       <section className={[styles.contentSurface, layoutStyles.pageSurface].join(" ")}>
-        <div className={layoutStyles.explorer}>
-          <aside className={layoutStyles.deptPanel}>
+        <div className={[layoutStyles.explorer, layoutStyles.auditExplorer].join(" ")}>
+          <aside className={[layoutStyles.deptPanel, layoutStyles.auditFilterPanel].join(" ")}>
             <div className={layoutStyles.deptPanelHead}>
               <h2 className={layoutStyles.deptPanelTitle}>{t("systemAdmin.audit.title")}</h2>
-              <span className={styles.toolbarMeta}>{t("systemAdmin.audit.description")}</span>
+              <span className={layoutStyles.auditDescription}>{t("systemAdmin.audit.description")}</span>
             </div>
             <Select
               allowClear
@@ -460,7 +460,7 @@ export function AuditLogScene() {
             ) : null}
           </aside>
 
-          <div className={layoutStyles.userPanel}>
+          <div className={[layoutStyles.userPanel, layoutStyles.auditTablePanel].join(" ")}>
             <div className={layoutStyles.userPanelHead}>
               <div className={layoutStyles.userPanelToolbar}>
                 <div className={layoutStyles.userPanelLeading}>
@@ -482,7 +482,7 @@ export function AuditLogScene() {
               />
             ) : null}
 
-            <div className={layoutStyles.tableSection} ref={tableSectionRef}>
+            <div className={[layoutStyles.tableSection, layoutStyles.auditTableSection].join(" ")} ref={tableSectionRef}>
               {loadError ? (
                 <Alert
                   action={

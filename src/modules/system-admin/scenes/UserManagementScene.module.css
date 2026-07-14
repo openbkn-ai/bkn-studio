@@ -24,11 +24,31 @@
 
 .deptPanel {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
   height: 100%;
   padding: 14px 12px 16px;
   border-right: 1px solid var(--admin-color-border, #d9e0ea);
   background: var(--admin-color-surface-muted, #f3f6fa);
   min-height: 0;
+  min-width: 0;
+}
+
+.deptPanelHead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.deptPanelTitle {
+  margin: 0;
+  color: var(--admin-color-heading, #172033);
+  font-size: var(--admin-font-size-body, 14px);
+  font-weight: var(--admin-font-weight-strong, 600);
+  line-height: 1.5;
+  white-space: normal;
 }
 
 .deptTreeWrap {
@@ -129,6 +149,51 @@
   overflow: hidden;
 }
 
+.auditExplorer {
+  grid-template-columns: 280px minmax(0, 1fr);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.auditFilterPanel {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+  overflow: hidden;
+}
+
+.auditDescription {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--admin-color-secondary, #4b5563);
+  font-size: var(--admin-font-size-meta, 13px);
+  font-weight: var(--admin-font-weight-regular, 400);
+  line-height: 1.7;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.auditTablePanel {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.auditTableSection {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.auditTableSection :global(.ant-table-wrapper),
+.auditTableSection :global(.ant-spin-nested-loading),
+.auditTableSection :global(.ant-spin-container),
+.auditTableSection :global(.ant-table-container) {
+  min-width: 0;
+  max-width: 100%;
+}
+
 @media (max-width: 1200px) {
   .explorer {
     grid-template-columns: 1fr;
@@ -139,6 +204,12 @@
     border-bottom: 1px solid var(--admin-color-border, #d9e0ea);
     height: auto;
     max-height: none;
+  }
+
+  .auditFilterPanel {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
   }
 
   .deptTreeWrap {

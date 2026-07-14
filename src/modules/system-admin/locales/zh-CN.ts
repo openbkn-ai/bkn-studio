@@ -111,6 +111,7 @@ export const systemAdminZhCN = {
       invalidToken: "登录已失效，请重新登录。",
       missingToken: "未登录，请先登录。",
       notAdmin: "当前账号无管理权限。",
+      userAccountDuplicate: "登录名已存在，请更换登录名。",
     },
     users: {
       title: "用户管理",
