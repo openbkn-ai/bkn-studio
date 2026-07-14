@@ -41,7 +41,7 @@ export const shellEnUS = {
       roleManagement: "Role Management",
       authorizationManagement: "Authorizations",
       modelManagement: "Model Configuration",
-      traceai: "TraceAI",
+      traceai: "BKN Trace",
       logManagement: "Log Management",
       apiKeys: "API Key",
       account: "Account",
