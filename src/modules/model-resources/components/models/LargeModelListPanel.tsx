@@ -26,6 +26,7 @@ import {
   LlmMonitorDrawer,
 } from "@/modules/model-resources/components/models/ModelModals";
 import { ModelListToolbar } from "@/modules/model-resources/components/models/ModelListToolbar";
+import { getMyPermissions } from "@/modules/model-resources/services/authorization.service";
 import {
   deleteLlmModels,
   getLlmItemPermissions,
@@ -34,6 +35,7 @@ import {
   testLlmModel,
 } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
+import { hasModelResourcesAdminRole } from "@/modules/model-resources/utils/admin-access";
 import { getLlmModelTypeLabel } from "@/modules/model-resources/utils/llm-labels";
 import {
   formatNumberWithCommas,
@@ -78,8 +80,13 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   const [guideOpen, setGuideOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [authorizeRecord, setAuthorizeRecord] = useState<LlmModel | null>(null);
+  /** `/me/permissions`.is_admin — covers super_admin without literal role `"admin"`. */
+  const [meIsAdmin, setMeIsAdmin] = useState(false);
 
-  const showQuotaColumns = !isAdmin && !runtimeConfig.currentUser.roles.includes("admin");
+  const effectiveAdmin =
+    isAdmin || meIsAdmin || hasModelResourcesAdminRole(runtimeConfig.currentUser.roles);
+  // Admins manage quotas via the form switch + quotas page; non-admins see usage columns.
+  const showQuotaColumns = !effectiveAdmin;
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -115,6 +122,24 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getMyPermissions()
+      .then((me) => {
+        if (!cancelled) {
+          setMeIsAdmin(me.isAdmin);
+        }
+      })
+      .catch(() => {
+        // Keep role-based fallback when /me/permissions is unavailable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const sortMenuItems = useMemo(
     () => [
@@ -183,9 +208,9 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     }
   };
 
-  // 真实管理员判定：roles 含 admin，或该项 operations 含 modify（getMyPermissions().isAdmin 会下发全量操作）。
+  // 真实管理员：prop / roles(含 super_admin) / me.isAdmin，或该项 operations 含 modify。
   const canModify = (record: LlmModel) =>
-    isAdmin || runtimeConfig.currentUser.roles.includes("admin") || Boolean(record.operations?.includes("modify"));
+    effectiveAdmin || Boolean(record.operations?.includes("modify"));
   const canSetDefault = (record: LlmModel) => canModify(record) && !record.default;
   const canUnsetDefault = (record: LlmModel) => canModify(record) && Boolean(record.default);
 
@@ -607,7 +632,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
         }}
         open={formOpen}
         record={activeRecord}
-        showQuotaField={isAdmin || runtimeConfig.currentUser.roles.includes("admin")}
+        showQuotaField={effectiveAdmin}
       />
       <LlmApiGuideDrawer
         onClose={() => {
