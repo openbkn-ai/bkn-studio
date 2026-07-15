@@ -28,7 +28,7 @@ import { deptPath } from "@/modules/system-admin/utils/admin-helpers";
 import modalStyles from "@/modules/system-admin/components/RoleMembersModal.module.css";
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 5;
 const CANDIDATE_SEARCH_LIMIT = 50;
 
 type RoleMembersModalProps = {
@@ -310,88 +310,96 @@ export function RoleMembersModal({
 
   return (
     <Modal
+      className={modalStyles.modal}
       footer={null}
       onCancel={onClose}
       open={open}
       rootClassName={styles.adminOverlay}
       title={t("systemAdmin.roles.membersModal.title", { name: role.name })}
-      width={820}
+      width={880}
     >
-      <div className={modalStyles.metaRow}>
-        <span className={modalStyles.metaCount}>
-          {t("common.total", { total: accessorIds.length })}
-        </span>
-        <div className={modalStyles.metaChips}>
-          <Tag className={styles.roleTag}>
-            {t("systemAdmin.roles.membersModal.memberUser")} {memberCounts.userCount}
-          </Tag>
-          <Tag className={styles.permChip}>
-            {t("systemAdmin.roles.membersModal.memberDept")} {memberCounts.deptCount}
-          </Tag>
+      <div className={modalStyles.content}>
+        <div className={modalStyles.summaryGrid}>
+          <div className={modalStyles.summaryCard}>
+            <span className={modalStyles.summaryLabel}>{t("common.total", { total: accessorIds.length })}</span>
+            <strong className={modalStyles.summaryValue}>{accessorIds.length}</strong>
+          </div>
+          <div className={modalStyles.summaryCard}>
+            <span className={modalStyles.summaryLabel}>{t("systemAdmin.roles.membersModal.memberUser")}</span>
+            <strong className={modalStyles.summaryValue}>{memberCounts.userCount}</strong>
+          </div>
+          <div className={modalStyles.summaryCard}>
+            <span className={modalStyles.summaryLabel}>{t("systemAdmin.roles.membersModal.memberDept")}</span>
+            <strong className={modalStyles.summaryValue}>{memberCounts.deptCount}</strong>
+          </div>
         </div>
-      </div>
-      <div className={modalStyles.toolbar}>
-        <Select
-          className={modalStyles.memberSelect}
-          filterOption={false}
-          loading={candidateLoading}
-          mode="multiple"
-          onChange={(values) => setCandidates(values)}
-          onSearch={setCandidateSearch}
-          options={candidateOptions}
-          placeholder={t("systemAdmin.roles.membersModal.addPlaceholder")}
-          showSearch
-          value={candidates}
-        />
-        <AppButton
-          className={modalStyles.addButton}
-          disabled={!candidates.length}
-          loading={adding}
-          onClick={() => void handleAdd()}
-          type="primary"
-        >
-          {t("systemAdmin.roles.membersModal.add")}
-        </AppButton>
-        <Input
-          allowClear
-          className={[styles.searchInput, modalStyles.searchInput].join(" ")}
-          onChange={(event) => setMemberSearch(event.target.value)}
-          placeholder={t("systemAdmin.roles.membersModal.searchPlaceholder")}
-          value={memberSearch}
-        />
-      </div>
-      <div className={modalStyles.memberPanel}>
-        {filteredMembers.length ? (
-          <AppTable<RoleMember>
-            className={modalStyles.memberTable}
-            columns={columns}
-            dataSource={pagedMembers}
-            locale={{ emptyText: muted }}
-            pagination={false}
-            rowKey="id"
-            scroll={{ x: 720 }}
-            size="small"
+
+        <div className={modalStyles.toolbarCard}>
+          <div className={modalStyles.addRow}>
+            <Select
+              className={modalStyles.memberSelect}
+              filterOption={false}
+              loading={candidateLoading}
+              mode="multiple"
+              onChange={(values) => setCandidates(values)}
+              onSearch={setCandidateSearch}
+              options={candidateOptions}
+              placeholder={t("systemAdmin.roles.membersModal.addPlaceholder")}
+              showSearch
+              value={candidates}
+            />
+            <AppButton
+              className={modalStyles.addButton}
+              disabled={!candidates.length}
+              loading={adding}
+              onClick={() => void handleAdd()}
+              type="primary"
+            >
+              {t("systemAdmin.roles.membersModal.add")}
+            </AppButton>
+          </div>
+          <Input
+            allowClear
+            className={[styles.searchInput, modalStyles.searchInput].join(" ")}
+            onChange={(event) => setMemberSearch(event.target.value)}
+            placeholder={t("systemAdmin.roles.membersModal.searchPlaceholder")}
+            value={memberSearch}
           />
-        ) : (
-          <EmptyStatePanel title={t("systemAdmin.roles.membersModal.empty")} />
-        )}
+        </div>
+
+        <div className={modalStyles.memberPanel}>
+          {filteredMembers.length ? (
+            <AppTable<RoleMember>
+              className={modalStyles.memberTable}
+              columns={columns}
+              dataSource={pagedMembers}
+              locale={{ emptyText: muted }}
+              pagination={false}
+              rowKey="id"
+              scroll={{ x: 720 }}
+              size="small"
+            />
+          ) : (
+            <EmptyStatePanel title={t("systemAdmin.roles.membersModal.empty")} />
+          )}
+        </div>
+        {filteredMembers.length ? (
+          <TablePaginationBar
+            current={page}
+            onChange={(nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            }}
+            pageSize={pageSize}
+            showSizeChanger
+            showTotal={(total) => t("common.total", { total })}
+            total={filteredMembers.length}
+          />
+        ) : null}
+        <p className={modalStyles.note}>
+          {t("systemAdmin.roles.membersModal.note", { id: role.id })}
+        </p>
       </div>
-      {filteredMembers.length ? (
-        <TablePaginationBar
-          current={page}
-          onChange={(nextPage, nextPageSize) => {
-            setPage(nextPage);
-            setPageSize(nextPageSize);
-          }}
-          pageSize={pageSize}
-          showSizeChanger
-          showTotal={(total) => t("common.total", { total })}
-          total={filteredMembers.length}
-        />
-      ) : null}
-      <p className={styles.footNote} style={{ marginTop: 16 }}>
-        {t("systemAdmin.roles.membersModal.note", { id: role.id })}
-      </p>
     </Modal>
   );
 }

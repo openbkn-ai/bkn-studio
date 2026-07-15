@@ -88,13 +88,18 @@ export function AuditLogScene() {
   const [actorOptions, setActorOptions] = useState<Array<{ label: string; value: string }>>([]);
   const [actorSearchLoading, setActorSearchLoading] = useState(false);
 
-  const userName = useMemo(() => {
+  const userLookup = useMemo(() => {
     void lookupRevision;
-    const map = new Map(
-      listCachedUsers().map((user) => [user.id, userOptionLabel(user.name, user.account)]),
-    );
-    return (id: string) => map.get(id) ?? id;
+    return new Map(listCachedUsers().map((user) => [user.id, user]));
   }, [lookupRevision]);
+
+  const userName = useCallback(
+    (id: string) => {
+      const user = userLookup.get(id);
+      return user ? userOptionLabel(user.name, user.account) : id;
+    },
+    [userLookup],
+  );
 
   const resolveTarget = useMemo(() => {
     void lookupRevision;
@@ -328,13 +333,19 @@ export function AuditLogScene() {
         dataIndex: "actorId",
         ellipsis: true,
         width: 168,
-        render: (value: string) => (
-          <Tooltip title={userName(value)}>
-            <span className={[styles.modeText, layoutStyles.ellipsisCell].join(" ")}>
-              {userName(value)}
-            </span>
-          </Tooltip>
-        ),
+        render: (value: string) => {
+          const actor = userLookup.get(value);
+          return (
+            <Tooltip title={userName(value)}>
+              <span className={[styles.auditActionChip, layoutStyles.ellipsisCell].join(" ")}>
+                <span className={[styles.modeText, layoutStyles.ellipsisCell].join(" ")}>
+                  {userName(value)}
+                </span>
+                {actor?.builtin ? <Tag className={styles.roleTag}>{t("systemAdmin.users.builtin")}</Tag> : null}
+              </span>
+            </Tooltip>
+          );
+        },
       },
       {
         title: t("systemAdmin.audit.columns.status"),
@@ -384,7 +395,7 @@ export function AuditLogScene() {
         ),
       },
     ],
-    [getTargetLabel, i18n.language, t, userName],
+    [getTargetLabel, i18n.language, t, userLookup, userName],
   );
 
   return (

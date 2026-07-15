@@ -46,6 +46,13 @@ const OPERATION_LABELS: Record<string, string> = {
   publish: "发布",
   unpublish: "取消发布",
   use: "使用",
+  edit: "编辑",
+  toggle: "启停",
+  "reset-password": "重置密码",
+  members: "成员管理",
+  grant: "授权",
+  revoke: "撤权",
+  manage: "管理",
   create_system_agent: "创建系统智能体",
   mgnt_built_in_agent: "管理内置智能体",
   see_trajectory_analysis: "轨迹分析",
@@ -118,6 +125,24 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
     label: "智能体模板",
     operations: ["publish", "unpublish", "unpublish_other_user_agent_tpl"],
   },
+  {
+    type: "admin-user",
+    label: "系统用户管理",
+    operations: ["create", "edit", "delete", "toggle", "reset-password"],
+  },
+  {
+    type: "admin-dept",
+    label: "系统部门管理",
+    operations: ["create", "edit", "delete", "members"],
+  },
+  {
+    type: "admin-role",
+    label: "系统角色管理",
+    operations: ["create", "edit", "delete", "members"],
+  },
+  { type: "admin-authz", label: "系统授权管理", operations: ["grant", "revoke"] },
+  { type: "admin-audit", label: "系统审计日志", operations: ["view"] },
+  { type: "safe_admin", label: "bkn-safe 管理 API", operations: ["manage"] },
 ];
 
 const byType = new Map(RESOURCE_TYPES.map((item) => [item.type, item]));

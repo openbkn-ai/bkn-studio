@@ -5,33 +5,64 @@
  * Conditions. See LICENSE for the full text.
  */
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-  flex-wrap: nowrap;
+.modal :global(.ant-modal-body) {
+  background: #f8fafc;
 }
 
-.metaRow {
+.content {
+  display: grid;
+  gap: 12px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summaryCard {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #dbe5f1;
+  background: #ffffff;
 }
 
-.metaCount {
-  color: var(--admin-color-secondary, #4b5563);
+.summaryLabel {
+  min-width: 0;
+  overflow: hidden;
+  color: #64748b;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.metaChips {
+.summaryValue {
+  flex: 0 0 auto;
+  color: #172033;
+  font-family: "SFMono-Regular", "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.toolbarCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #dbe5f1;
+  background: #ffffff;
+}
+
+.addRow {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: flex-end;
+  min-width: 0;
+  gap: 10px;
 }
 
 .memberSelect {
@@ -40,28 +71,28 @@
 }
 
 .addButton {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   min-width: 72px;
 }
 
 .searchInput {
-  flex: 0 0 260px;
-  width: 260px;
+  width: 100%;
 }
 
 .memberPanel {
-  border: 1px solid var(--admin-color-border, #d9e0ea);
-  background: var(--admin-color-surface, #fff);
   overflow: hidden;
+  border: 1px solid #dbe5f1;
+  background: #ffffff;
 }
 
 .memberPanel :global(.ant-table-tbody > tr > td) {
   padding-top: 12px !important;
   padding-bottom: 12px !important;
+  border-bottom-color: #edf2f7;
 }
 
 .memberPanel :global(.ant-table-tbody > tr:hover > td) {
-  background: var(--admin-color-surface-hover, #f7faff);
+  background: #f8fbff;
 }
 
 .memberTable :global(.ant-table-wrapper) {
@@ -69,10 +100,24 @@
 }
 
 .memberTable :global(.ant-table) {
-  background: var(--admin-color-surface, #fff);
+  background: #ffffff;
 }
 
 .memberTable :global(.ant-table-thead > tr > th) {
-  background: var(--admin-color-surface-muted, #f3f6fa);
+  border-bottom-color: #dbe5f1;
+  background: #f3f6fa;
 }
 
+.note {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .summaryGrid,
+  .toolbarCard {
+    grid-template-columns: 1fr;
+  }
+}

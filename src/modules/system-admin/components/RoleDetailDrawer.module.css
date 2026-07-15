@@ -15,9 +15,8 @@
 }
 
 .sectionCard {
-  padding: 12px 14px;
-  border: 1px solid #e5eaf2;
-  border-radius: 0;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
   background: #ffffff;
 }
 
@@ -26,6 +25,7 @@
   color: #111827;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.4;
 }
 
 .summaryRow {
@@ -46,11 +46,6 @@
   color: #64748b;
   font-size: 12px;
   line-height: 1.6;
-}
-
-.grantGroup {
-  display: grid;
-  gap: 10px;
 }
 
 .permissionToolbar {
@@ -66,91 +61,68 @@
   max-width: 420px;
 }
 
-.grantItem {
-  padding: 10px 12px;
-  border: 1px solid #e5eaf2;
-  background: #f8fafc;
-}
-
-.grantItemHead {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.grantOps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.drawer :global(.ant-drawer-body) {
-  background: #f8fafc;
-}
-
-.content {
+.grantGroup {
   display: grid;
   gap: 12px;
 }
 
-.sectionCard {
-  padding: 12px 14px;
-  border: 1px solid #e5eaf2;
-  border-radius: 0;
+.grantTypeBlock {
+  border: 1px solid #dbe5f1;
   background: #ffffff;
 }
 
-.sectionTitle {
-  margin: 0 0 10px;
-  color: #111827;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.summaryRow {
+.grantTypeHead {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   align-items: center;
-}
-
-.summaryMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-
-.muted {
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.grantGroup {
-  display: grid;
-  gap: 10px;
-}
-
-.grantItem {
-  padding: 10px 12px;
-  border: 1px solid #e5eaf2;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-bottom: 1px solid #e8eef6;
   background: #f8fafc;
 }
 
-.grantItemHead {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  margin-bottom: 8px;
+.grantTypeName {
+  min-width: 0;
+  overflow: hidden;
+  color: #172033;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grantTypeMeta {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.grantList {
+  display: grid;
+}
+
+.grantItem {
+  display: grid;
+  grid-template-columns: minmax(96px, 140px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+}
+
+.grantItem + .grantItem {
+  border-top: 1px solid #edf2f7;
 }
 
 .grantOps {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  min-width: 0;
 }
 
+@media (max-width: 640px) {
+  .grantItem {
+    grid-template-columns: 1fr;
+  }
+}
