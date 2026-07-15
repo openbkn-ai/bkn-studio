@@ -297,7 +297,7 @@ export const systemAdminEnUS = {
         role: "Role",
         permissions: "Permissions",
         members: "Members",
-        updateTime: "Updated",
+        updateTime: "Created",
         actions: "Actions",
       },
       actions: {
@@ -345,7 +345,7 @@ export const systemAdminEnUS = {
       },
       detail: {
         title: "Role Detail · {{name}}",
-        updatedAt: "Updated {{time}}",
+        updatedAt: "Created {{time}}",
         grantCount: "{{count}} grant(s)",
         hasWildcard: "Contains wildcard",
         searchPlaceholder: "Search by type, resource id, or operation…",

@@ -296,7 +296,7 @@ export const systemAdminZhCN = {
         role: "角色",
         permissions: "权限",
         members: "成员",
-        updateTime: "更新时间",
+        updateTime: "创建时间",
         actions: "操作",
       },
       actions: {
@@ -344,7 +344,7 @@ export const systemAdminZhCN = {
       },
       detail: {
         title: "角色详情 · {{name}}",
-        updatedAt: "更新时间 {{time}}",
+        updatedAt: "创建时间 {{time}}",
         grantCount: "{{count}} 条授权",
         hasWildcard: "含全局授权",
         searchPlaceholder: "搜索资源类型、资源 ID 或操作…",

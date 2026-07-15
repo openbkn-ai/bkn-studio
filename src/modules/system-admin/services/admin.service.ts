@@ -871,6 +871,7 @@ type BackendDept = {
 type BackendRole = {
   accessor_ids?: string[];
   built_in?: boolean;
+  created_at?: string;
   description?: string;
   id: string;
   members?: string[];
@@ -889,6 +890,14 @@ function parseUpdatedAt(item: BackendUser): number | undefined {
     return Number.isNaN(parsed) ? undefined : parsed;
   }
   return undefined;
+}
+
+function parseRoleCreatedAt(item: BackendRole): number | undefined {
+  if (item.created_at) {
+    const parsed = Date.parse(item.created_at);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+  return item.update_time;
 }
 
 function collectDeptSubtree(rootId: string): Set<string> {
@@ -985,6 +994,6 @@ function mapRole(item: BackendRole): AdminRole {
       operations: perm.operations ?? [],
     })),
     accessorIds: item.accessor_ids ?? item.members ?? [],
-    updatedAt: item.update_time,
+    updatedAt: parseRoleCreatedAt(item),
   };
 }
