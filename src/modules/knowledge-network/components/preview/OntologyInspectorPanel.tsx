@@ -29,14 +29,6 @@ type OntologyInspectorPanelProps = {
   onSelect: (id: string | null) => void;
 };
 
-function propIndexed(property: ObjectTypeDetail["dataProperties"][number]): boolean {
-  const config = property.indexConfig;
-  if (!config) {
-    return false;
-  }
-  return config.fulltextConfig.enabled || config.keywordConfig.enabled || config.vectorConfig.enabled;
-}
-
 export function OntologyInspectorPanel({
   networkId,
   objectTypes,
@@ -156,7 +148,6 @@ export function OntologyInspectorPanel({
               <code>
                 {property.name}
                 {property.primaryKey ? <span className={styles.pk}>PK</span> : null}
-                {propIndexed(property) ? <span className={styles.idx}>IDX</span> : null}
               </code>
               <span className={styles.propType}>{property.type}</span>
             </div>

@@ -50,11 +50,6 @@ export const ConceptGroupDetailPage = lazyNamedExport(
   "ConceptGroupDetailPage",
 );
 
-export const ObjectTypeIndexSettingsPage = lazyNamedExport(
-  () => import("@/modules/knowledge-network/pages/ObjectTypeIndexSettingsPage"),
-  "ObjectTypeIndexSettingsPage",
-);
-
 export const ObjectTypeCreatePage = lazyNamedExport(
   () => import("@/modules/knowledge-network/pages/ObjectTypeCreatePage"),
   "ObjectTypeCreatePage",

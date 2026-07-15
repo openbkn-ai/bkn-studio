@@ -41,25 +41,9 @@ export type BackendKnowledgeNetwork = {
   embedding_dim?: number;
 };
 
-export type BackendIndexConfig = {
-  fulltext_config?: {
-    analyzer?: string;
-    enabled?: boolean;
-  };
-  keyword_config?: {
-    enabled?: boolean;
-    ignore_above_len?: number;
-  };
-  vector_config?: {
-    enabled?: boolean;
-    model_id?: string;
-  };
-};
-
 export type BackendDataProperty = {
   comment?: string;
   display_name?: string;
-  index_config?: BackendIndexConfig;
   mapped_field?: {
     comment?: string;
     display_name?: string;

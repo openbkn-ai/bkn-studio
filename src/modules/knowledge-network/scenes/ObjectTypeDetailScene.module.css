@@ -21,6 +21,16 @@
   padding: 20px;
 }
 
+.summaryLayout {
+  display: grid;
+  grid-template-columns: minmax(420px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 32px;
+}
+
+.summaryMain {
+  min-width: 0;
+}
+
 .summaryHead {
   display: flex;
   gap: 12px;
@@ -97,19 +107,45 @@
   line-height: 1.6;
 }
 
-.dataViewGrid {
+.summaryDataSource {
+  align-self: stretch;
+  background: #fafcff;
+  border: 1px solid #e5eaf2;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 14px 16px;
+}
+
+.summaryDataSourceHeader {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.summaryDataSourceTitle {
+  color: #1f2329;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.dataViewFields {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(260px, 1.3fr) minmax(260px, 1fr) minmax(140px, 0.55fr);
   gap: 16px;
 }
 
-.dataViewItem {
+.dataViewField {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 16px;
-  border: 1px solid #e5e5e5;
-  background: #fafcff;
+  min-width: 0;
 }
 
 .dataViewLabel {
@@ -127,11 +163,29 @@
 }
 
 .dataViewCode {
+  background: #f7f8fa;
+  border: 1px solid #eef0f3;
+  border-radius: 4px;
   color: #1f2329;
+  display: inline-block;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 13px;
   line-height: 1.5;
+  max-width: 100%;
+  padding: 2px 8px;
   word-break: break-all;
+}
+
+.dataViewStatus {
+  align-self: flex-start;
+  background: #f7f8fa;
+  border: 1px solid #eef0f3;
+  border-radius: 4px;
+  color: #1f2329;
+  display: inline-block;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 2px 8px;
 }
 
 .sectionCard :global(.ant-table),
@@ -198,7 +252,8 @@
 }
 
 @media (max-width: 1080px) {
-  .dataViewGrid {
+  .summaryLayout,
+  .dataViewFields {
     grid-template-columns: 1fr;
   }
 

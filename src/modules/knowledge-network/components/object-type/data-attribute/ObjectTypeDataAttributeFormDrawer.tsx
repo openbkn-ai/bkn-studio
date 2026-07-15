@@ -15,7 +15,6 @@ import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/k
 
 import {
   canBeDisplayKey,
-  canBeIncrementalKey,
   canBePrimaryKey,
   DATA_PROPERTY_NAME_PATTERN,
   DATA_PROPERTY_TYPES,
@@ -70,9 +69,6 @@ export function ObjectTypeDataAttributeFormDrawer({
     if (!canBeDisplayKey(nextType)) {
       form.setFieldValue("displayKey", false);
     }
-    if (!canBeIncrementalKey(nextType)) {
-      form.setFieldValue("incrementalKey", false);
-    }
   };
 
   const renderSwitchLabel = (label: string, tipKey: string) => (
@@ -94,7 +90,7 @@ export function ObjectTypeDataAttributeFormDrawer({
           <AppButton
             onClick={() => {
               void form.validateFields().then((values) => {
-                onSubmit(values);
+                onSubmit({ ...values, incrementalKey: false });
                 onClose();
               });
             }}
@@ -189,15 +185,6 @@ export function ObjectTypeDataAttributeFormDrawer({
             )}
             <Form.Item name="displayKey" noStyle valuePropName="checked">
               <Switch disabled={!canBeDisplayKey(propertyType)} size="small" />
-            </Form.Item>
-          </div>
-          <div className={styles.switchRow}>
-            {renderSwitchLabel(
-              t("knowledgeNetwork.objectTypeIncrementalKeyShort"),
-              "knowledgeNetwork.objectTypeIncrementalKeyTip",
-            )}
-            <Form.Item name="incrementalKey" noStyle valuePropName="checked">
-              <Switch disabled={!canBeIncrementalKey(propertyType)} size="small" />
             </Form.Item>
           </div>
         </div>

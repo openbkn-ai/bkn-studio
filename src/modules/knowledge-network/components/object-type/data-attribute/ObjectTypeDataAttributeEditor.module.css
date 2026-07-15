@@ -116,15 +116,6 @@
   font-size: 14px;
 }
 
-.infoKeyIconIncremental {
-  background: #52c41a;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-  height: 8px;
-  width: 8px;
-}
-
 .countBadge {
   align-items: center;
   background: rgba(0, 0, 0, 0.06);
@@ -418,10 +409,6 @@
 
 .rowActionIconActiveTitle {
   color: #faad14;
-}
-
-.rowActionIconActiveIncremental {
-  color: #52c41a;
 }
 
 .canvasControls {

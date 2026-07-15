@@ -14,7 +14,6 @@ import type {
   KnowledgeNetworkImportMode,
   KnowledgeNetworkObjectTypeMutationPayload,
   KnowledgeNetworkObjectTypeRecord,
-  ObjectTypeDataProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type {
   BackendListResponse,
@@ -24,16 +23,13 @@ import {
   buildBackendObjectTypePayload,
   mapObjectType,
   mapObjectTypeDetail,
-  toBackendDataProperty,
 } from "@/modules/knowledge-network/services/mappers";
 import {
   buildMockObjectTypeDetail,
   cloneDataProperties,
   mockConceptGroups,
-  mockObjectTypeDataProperties,
   mockObjectTypes,
   mockRecentObjects,
-  objectTypeHasIndexFromProperties,
   persistMockObjectTypeProperties,
   removeMockObjectTypeProperties,
   syncKnowledgeNetworkStatistics,
@@ -146,44 +142,6 @@ export async function getKnowledgeNetworkObjectTypeDetail(
   return record ? mapObjectTypeDetail(record) : null;
 }
 
-export async function updateKnowledgeNetworkObjectTypeIndex(
-  networkId: string,
-  objectTypeId: string,
-  propertyNames: string[],
-  properties: ObjectTypeDataProperty[],
-) {
-  if (useMock) {
-    const detail = buildMockObjectTypeDetail(networkId, objectTypeId);
-
-    if (!detail) {
-      throw new Error("Object type not found.");
-    }
-
-    const nextProperties = detail.dataProperties.map((item) => {
-      const updated = properties.find((property) => property.name === item.name);
-
-      return updated ?? item;
-    });
-
-    mockObjectTypeDataProperties[networkId] = {
-      ...(mockObjectTypeDataProperties[networkId] ?? {}),
-      [objectTypeId]: nextProperties.map((item) => ({
-        ...item,
-        indexConfig: item.indexConfig ? { ...item.indexConfig } : undefined,
-      })),
-    };
-
-    return wait(undefined);
-  }
-
-  await http.put(
-    `/bkn-backend/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}/data_properties/${propertyNames.join(",")}`,
-    {
-      entries: properties.map(toBackendDataProperty),
-    },
-  );
-}
-
 export async function createKnowledgeNetworkObjectType(
   networkId: string,
   input: KnowledgeNetworkObjectTypeMutationPayload,
@@ -204,7 +162,7 @@ export async function createKnowledgeNetworkObjectType(
       tags: input.tags,
       conceptGroupIds: input.conceptGroupIds,
       conceptGroupNames: relatedGroups.map((group) => group.name),
-      hasIndex: objectTypeHasIndexFromProperties(dataProperties),
+      hasIndex: false,
       updateTime: formatTimestamp(Date.now()),
       updaterName: "Local Admin",
     };
@@ -277,7 +235,6 @@ export async function updateKnowledgeNetworkObjectType(
             tags: input.tags,
             conceptGroupIds: input.conceptGroupIds,
             conceptGroupNames: relatedGroups.map((group) => group.name),
-            hasIndex: objectTypeHasIndexFromProperties(dataProperties),
             updateTime: formatTimestamp(Date.now()),
             updaterName: "Local Admin",
           }

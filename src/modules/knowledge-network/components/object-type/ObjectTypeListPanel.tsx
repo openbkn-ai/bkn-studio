@@ -15,13 +15,17 @@ import {
 } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Select, Table, Tag } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
+import { indexStateOf } from "@/modules/data-catalog/lib/index-state";
+import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
+import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
@@ -44,6 +48,19 @@ type ObjectTypeListPanelProps = {
   onRefresh: () => Promise<void>;
 };
 
+function readPositiveInteger(value: string | null, fallback: number) {
+  const next = Number(value);
+  return Number.isInteger(next) && next > 0 ? next : fallback;
+}
+
+function readSortBy(value: string | null): "name" | "updateTime" {
+  return value === "name" ? "name" : "updateTime";
+}
+
+function readSortDirection(value: string | null): "asc" | "desc" {
+  return value === "asc" ? "asc" : "desc";
+}
+
 export function ObjectTypeListPanel({
   items,
   loading,
@@ -54,14 +71,144 @@ export function ObjectTypeListPanel({
 }: ObjectTypeListPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { modal } = useAppServices();
-  const [keyword, setKeyword] = useState("");
-  const [selectedTag, setSelectedTag] = useState("all");
-  const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [keyword, setKeyword] = useState(() => searchParams.get("q") ?? "");
+  const [selectedTag, setSelectedTag] = useState(() => searchParams.get("tag") ?? "all");
+  const [sortBy, setSortBy] = useState<"name" | "updateTime">(() =>
+    readSortBy(searchParams.get("sort")),
+  );
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">(() =>
+    readSortDirection(searchParams.get("order")),
+  );
+  const [page, setPage] = useState(() => readPositiveInteger(searchParams.get("page"), 1));
+  const [pageSize, setPageSize] = useState(() =>
+    readPositiveInteger(searchParams.get("pageSize"), 10),
+  );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [resourceBuildTasks, setResourceBuildTasks] = useState<BuildTask[]>([]);
+  const [resourceBuildTasksLoading, setResourceBuildTasksLoading] = useState(false);
+
+  useEffect(() => {
+    const nextKeyword = searchParams.get("q") ?? "";
+    const nextTag = searchParams.get("tag") ?? "all";
+    const nextSortBy = readSortBy(searchParams.get("sort"));
+    const nextSortDirection = readSortDirection(searchParams.get("order"));
+    const nextPage = readPositiveInteger(searchParams.get("page"), 1);
+    const nextPageSize = readPositiveInteger(searchParams.get("pageSize"), 10);
+
+    setKeyword((current) => (current === nextKeyword ? current : nextKeyword));
+    setSelectedTag((current) => (current === nextTag ? current : nextTag));
+    setSortBy((current) => (current === nextSortBy ? current : nextSortBy));
+    setSortDirection((current) =>
+      current === nextSortDirection ? current : nextSortDirection,
+    );
+    setPage((current) => (current === nextPage ? current : nextPage));
+    setPageSize((current) => (current === nextPageSize ? current : nextPageSize));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (keyword.trim()) {
+      nextParams.set("q", keyword.trim());
+    } else {
+      nextParams.delete("q");
+    }
+
+    if (selectedTag !== "all") {
+      nextParams.set("tag", selectedTag);
+    } else {
+      nextParams.delete("tag");
+    }
+
+    if (sortBy !== "updateTime") {
+      nextParams.set("sort", sortBy);
+    } else {
+      nextParams.delete("sort");
+    }
+
+    if (sortDirection !== "desc") {
+      nextParams.set("order", sortDirection);
+    } else {
+      nextParams.delete("order");
+    }
+
+    if (page !== 1) {
+      nextParams.set("page", String(page));
+    } else {
+      nextParams.delete("page");
+    }
+
+    if (pageSize !== 10) {
+      nextParams.set("pageSize", String(pageSize));
+    } else {
+      nextParams.delete("pageSize");
+    }
+
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [
+    keyword,
+    page,
+    pageSize,
+    searchParams,
+    selectedTag,
+    setSearchParams,
+    sortBy,
+    sortDirection,
+  ]);
+
+  const boundResourceIds = useMemo(
+    () =>
+      Array.from(
+        new Set(items.map((item) => item.dataSource?.id).filter((id): id is string => !!id)),
+      ),
+    [items],
+  );
+
+  useEffect(() => {
+    if (boundResourceIds.length === 0) {
+      setResourceBuildTasks([]);
+      setResourceBuildTasksLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setResourceBuildTasksLoading(true);
+
+    void Promise.all(
+      boundResourceIds.map((resourceId) => listBuildTasks({ resourceId, silent: true })),
+    )
+      .then((taskGroups) => {
+        if (!cancelled) {
+          setResourceBuildTasks(taskGroups.flat());
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setResourceBuildTasks([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setResourceBuildTasksLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [boundResourceIds]);
+
+  const buildTasksByResourceId = useMemo(() => {
+    const next = new Map<string, BuildTask[]>();
+    resourceBuildTasks.forEach((task) => {
+      next.set(task.resourceId, [...(next.get(task.resourceId) ?? []), task]);
+    });
+    return next;
+  }, [resourceBuildTasks]);
 
   const tagOptions = useMemo(() => {
     const tags = new Set<string>();
@@ -233,14 +380,54 @@ export function ObjectTypeListPanel({
       },
     },
     {
-      dataIndex: "hasIndex",
-      key: "hasIndex",
-      title: t("knowledgeNetwork.objectTypeHasIndex"),
-      width: 120,
-      render: (value: boolean) =>
-        value
-          ? t("knowledgeNetwork.objectTypeIndexed")
-          : t("knowledgeNetwork.objectTypeNotIndexed"),
+      dataIndex: ["dataSource", "name"],
+      key: "relatedResourceName",
+      title: t("knowledgeNetwork.objectTypeRelatedResourceName"),
+      width: 180,
+      render: (_value, record) => {
+        const resource = record.dataSource;
+        return resource ? (
+          <button
+            className={styles.tableLink}
+            onClick={() => {
+              void navigate(`/data-directory/resource/${resource.id}`);
+            }}
+            title={resource.name || resource.id}
+            type="button"
+          >
+            {resource.name || resource.id}
+          </button>
+        ) : (
+          "--"
+        );
+      },
+    },
+    {
+      key: "resourceIndexState",
+      title: t("knowledgeNetwork.objectTypeResourceIndexState"),
+      width: 140,
+      render: (_value, record) => {
+        const resourceId = record.dataSource?.id;
+        if (!resourceId) {
+          return "--";
+        }
+
+        const label = resourceBuildTasksLoading
+          ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+          : formatIndexStateLabel(indexStateOf(buildTasksByResourceId.get(resourceId) ?? []), t);
+
+        return (
+          <button
+            className={styles.tableLink}
+            onClick={() => {
+              void navigate(`/data-directory/resource/${resourceId}?tab=index`);
+            }}
+            type="button"
+          >
+            {label}
+          </button>
+        );
+      },
     },
     {
       dataIndex: "tags",
@@ -304,6 +491,12 @@ export function ObjectTypeListPanel({
       />
     );
   };
+
+  const tableEmptyText = loading ? (
+    <div className={styles.loadingEmptyState} />
+  ) : (
+    renderEmptyContent()
+  );
 
   return (
     <section className={`${styles.page} ${styles.objectTypePage}`}>
@@ -416,7 +609,7 @@ export function ObjectTypeListPanel({
           columns={columns}
           dataSource={paginatedItems}
           loading={loading}
-          locale={{ emptyText: renderEmptyContent() }}
+          locale={{ emptyText: tableEmptyText }}
           pagination={false}
           rowKey="id"
           rowSelection={{
@@ -425,7 +618,7 @@ export function ObjectTypeListPanel({
               setSelectedRowKeys(nextSelectedRowKeys.map(String));
             },
           }}
-          scroll={{ x: 980 }}
+          scroll={{ x: 1180 }}
           size="middle"
         />
       </div>

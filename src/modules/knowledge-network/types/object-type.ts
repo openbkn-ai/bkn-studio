@@ -9,6 +9,7 @@ export type KnowledgeNetworkObjectTypeRecord = {
   color: string;
   conceptGroupIds: string[];
   conceptGroupNames: string[];
+  dataSource?: ObjectTypeDataSource;
   description: string;
   hasIndex: boolean;
   icon?: string;
@@ -17,21 +18,6 @@ export type KnowledgeNetworkObjectTypeRecord = {
   tags: string[];
   updateTime: string;
   updaterName: string;
-};
-
-export type ObjectTypeIndexConfig = {
-  fulltextConfig: {
-    analyzer: string;
-    enabled: boolean;
-  };
-  keywordConfig: {
-    enabled: boolean;
-    ignoreAboveLen: number;
-  };
-  vectorConfig: {
-    enabled: boolean;
-    modelId: string;
-  };
 };
 
 export type ObjectTypeMappedField = {
@@ -88,7 +74,6 @@ export type ObjectTypeDataProperty = {
   displayKey: boolean;
   displayName: string;
   incrementalKey: boolean;
-  indexConfig?: ObjectTypeIndexConfig;
   mappedField?: ObjectTypeMappedField;
   name: string;
   primaryKey: boolean;
