@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type UserManagementSceneProps = Record<string, never>;
+import { LicenseManagementScene } from "@/modules/system-admin/scenes/LicenseManagementScene";
 
-export type RoleManagementSceneProps = Record<string, never>;
-
-export type LicenseManagementSceneProps = Record<string, never>;
+export function LicenseManagementPage() {
+  return <LicenseManagementScene />;
+}

@@ -238,6 +238,308 @@
   min-width: 150px;
 }
 
+.licenseLayout {
+  display: grid;
+  gap: 14px;
+  padding-top: 14px;
+}
+
+.licenseHero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(280px, 420px);
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid var(--admin-color-border);
+  background:
+    linear-gradient(180deg, rgb(248 251 255 / 92%) 0%, #ffffff 74%),
+    linear-gradient(90deg, rgb(25 80 161 / 8%), transparent 48%);
+}
+
+.licenseHeroIcon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--admin-color-link-border);
+  background: var(--admin-color-link-bg);
+  color: var(--admin-color-primary);
+  font-size: 20px;
+}
+
+.licenseHeroBody {
+  min-width: 0;
+}
+
+.licenseHeroKicker {
+  margin-bottom: 4px;
+  color: var(--admin-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.licenseHeroBody h3 {
+  margin: 0;
+  color: var(--admin-color-heading);
+  font-size: 18px;
+  font-weight: var(--admin-font-weight-strong);
+  line-height: 1.4;
+}
+
+.licenseHeroBody p {
+  margin: 6px 0 0;
+  color: var(--admin-color-secondary);
+  font-size: var(--admin-font-size-meta);
+  line-height: 1.7;
+}
+
+.licenseNextStep {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--admin-color-primary);
+  background: var(--admin-color-link-bg);
+  color: var(--admin-color-heading);
+  font-size: var(--admin-font-size-meta);
+  line-height: 1.6;
+}
+
+.licenseHeroAlert {
+  grid-column: 1 / -1;
+  border-radius: 0;
+}
+
+.licenseMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.licenseMetricItem {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--admin-color-border-soft);
+  background: rgb(255 255 255 / 86%);
+}
+
+.licenseMetricItem span {
+  display: block;
+  overflow: hidden;
+  color: var(--admin-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.licenseMetricItem strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 5px;
+  color: var(--admin-color-heading);
+  font-size: 13px;
+  font-weight: var(--admin-font-weight-strong);
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.licenseSection {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--admin-color-border);
+  background: #ffffff;
+}
+
+.licenseSectionHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--admin-color-border-soft);
+}
+
+.licenseSectionHead h3 {
+  margin: 0;
+  color: var(--admin-color-heading);
+  font-size: var(--admin-font-size-body);
+  font-weight: var(--admin-font-weight-strong);
+  line-height: 1.45;
+}
+
+.licenseSectionHead span {
+  color: var(--admin-color-secondary);
+  font-size: var(--admin-font-size-meta);
+  line-height: 1.6;
+  text-align: right;
+}
+
+.licenseStepTitle {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.licenseStepIndex {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border: 1px solid var(--admin-color-link-border);
+  background: var(--admin-color-link-bg);
+  color: var(--admin-color-primary);
+  font-size: 12px;
+  font-weight: var(--admin-font-weight-strong);
+}
+
+.licenseSplit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.licenseScenarioTabs :global(.ant-tabs-nav) {
+  margin-bottom: 12px;
+}
+
+.licenseScenarioPanel {
+  display: grid;
+  gap: 12px;
+}
+
+.licenseScenarioGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.licenseScenarioStep {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--admin-color-border-soft);
+  background: var(--admin-color-surface-subtle);
+}
+
+.licenseScenarioStep p {
+  margin: 0;
+  color: var(--admin-color-secondary);
+  font-size: var(--admin-font-size-meta);
+  line-height: 1.6;
+}
+
+.licenseScenarioStep .licenseCodeGrid {
+  grid-template-columns: 1fr;
+}
+
+.licenseTagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.licenseLimitList {
+  display: grid;
+  gap: 8px;
+}
+
+.licenseLimitItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--admin-color-border-soft);
+  background: var(--admin-color-surface-subtle);
+}
+
+.licenseLimitItem span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--admin-color-secondary);
+  font-size: var(--admin-font-size-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.licenseLimitItem strong {
+  color: var(--admin-color-heading);
+  font-size: var(--admin-font-size-meta);
+  font-weight: var(--admin-font-weight-strong);
+  white-space: nowrap;
+}
+
+.licenseCodeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.licenseCodeBox {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--admin-color-border-soft);
+  background: var(--admin-color-surface-subtle);
+}
+
+.licenseCodeBox span {
+  color: var(--admin-color-secondary);
+  font-size: var(--admin-font-size-meta);
+}
+
+.licenseCodeBox code {
+  display: block;
+  min-height: 40px;
+  padding: 8px;
+  border: 1px dashed var(--admin-color-border);
+  background: #ffffff;
+  color: var(--admin-color-heading);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.licenseActionRow {
+  margin-top: 12px;
+}
+
+.licenseStateTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 900px) {
+  .licenseHero {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .licenseMetricGrid {
+    grid-column: 1 / -1;
+  }
+
+  .licenseSplit,
+  .licenseScenarioGrid,
+  .licenseCodeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .licenseSectionHead {
+    display: grid;
+  }
+
+  .licenseSectionHead span {
+    text-align: left;
+  }
+}
+
 /* 筛选项强制单行 */
 .filtersInline {
   composes: filtersInline from "../../../framework/ui/common/BusinessPageTemplate.module.css";

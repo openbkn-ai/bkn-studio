@@ -7,10 +7,12 @@
 
 export { systemAdminModuleManifest } from "@/modules/system-admin/module.manifest";
 export type {
+  LicenseManagementSceneProps,
   RoleManagementSceneProps,
   UserManagementSceneProps,
 } from "@/modules/system-admin/contracts/scenes";
 export { UserManagementScene } from "@/modules/system-admin/scenes/UserManagementScene";
 export { RoleManagementScene } from "@/modules/system-admin/scenes/RoleManagementScene";
 export { AuditLogScene } from "@/modules/system-admin/scenes/AuditLogScene";
+export { LicenseManagementScene } from "@/modules/system-admin/scenes/LicenseManagementScene";
 export type * from "@/modules/system-admin/types/admin";
