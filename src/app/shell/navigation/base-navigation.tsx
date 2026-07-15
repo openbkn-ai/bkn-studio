@@ -9,6 +9,7 @@ import {
   AppstoreOutlined,
   ClusterOutlined,
   ExperimentOutlined,
+  FileProtectOutlined,
   FileTextOutlined,
   KeyOutlined,
   SafetyCertificateOutlined,
@@ -60,6 +61,13 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         icon: <KeyOutlined />,
         path: "/system/authorizations",
         permission: systemAdminPermissions.authorizations,
+      },
+      {
+        key: "license-management",
+        labelKey: "shell.items.licenseManagement",
+        icon: <FileProtectOutlined />,
+        path: "/system/license",
+        permission: systemAdminPermissions.license,
       },
       {
         key: "log-management",

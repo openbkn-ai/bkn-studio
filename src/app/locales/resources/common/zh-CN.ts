@@ -12,6 +12,7 @@ export const commonZhCN = {
     refresh: "刷新",
     create: "新建",
     import: "导入",
+    copy: "复制",
     back: "返回",
     backHome: "返回首页",
     previous: "上一步",

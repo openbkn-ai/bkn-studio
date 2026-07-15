@@ -12,6 +12,7 @@ export const commonEnUS = {
     refresh: "Refresh",
     create: "Create",
     import: "Import",
+    copy: "Copy",
     back: "Back",
     backHome: "Back to home",
     previous: "Previous",

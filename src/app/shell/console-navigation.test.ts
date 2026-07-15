@@ -28,6 +28,7 @@ describe("filterNavByPermission — 系统管理 仅对持有 admin 权限者可
       ...systemAdminPermissions.users,
       ...systemAdminPermissions.roles,
       ...systemAdminPermissions.authorizations,
+      ...systemAdminPermissions.license,
       ...systemAdminPermissions.audit,
     ];
     const group = systemGroup(filterNavByPermission(consoleNavigation, all));
@@ -37,6 +38,7 @@ describe("filterNavByPermission — 系统管理 仅对持有 admin 权限者可
         "user-management",
         "role-management",
         "authorization-management",
+        "license-management",
         "log-management",
       ]),
     );
