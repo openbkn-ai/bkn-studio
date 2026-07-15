@@ -27,6 +27,7 @@ import {
   LlmMonitorDrawer,
 } from "@/modules/model-resources/components/models/ModelModals";
 import { ModelListToolbar } from "@/modules/model-resources/components/models/ModelListToolbar";
+import { getMyPermissions } from "@/modules/model-resources/services/authorization.service";
 import {
   deleteLlmModels,
   getLlmItemPermissions,
@@ -35,6 +36,7 @@ import {
   testLlmModel,
 } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
+import { hasModelResourcesAdminRole } from "@/modules/model-resources/utils/admin-access";
 import { getLlmModelTypeLabel } from "@/modules/model-resources/utils/llm-labels";
 import {
   formatNumberWithCommas,
@@ -79,9 +81,12 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   const [guideOpen, setGuideOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [authorizeRecord, setAuthorizeRecord] = useState<LlmModel | null>(null);
+  /** `/me/permissions`.is_admin — covers super_admin without literal role `"admin"`. */
+  const [meIsAdmin, setMeIsAdmin] = useState(false);
 
   const userRoles = runtimeConfig.currentUser.roles;
   const userPermissions = runtimeConfig.currentUser.permissions;
+  const effectiveAdmin = isAdmin || meIsAdmin || hasModelResourcesAdminRole(userRoles);
   const canManageLargeModel = hasPermissions({
     currentPermissions: userPermissions,
     mode: "any",
@@ -101,8 +106,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
       "large_model:modify",
     ],
   });
-  const isPlatformAdmin = isAdmin || userRoles.includes("admin") || userRoles.includes("super_admin");
-  const showQuotaField = isPlatformAdmin || canManageLargeModel || canManageQuota;
+  const showQuotaField = effectiveAdmin || canManageLargeModel || canManageQuota;
   const showQuotaColumns = !showQuotaField;
 
   const loadData = useCallback(async () => {
@@ -139,6 +143,24 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getMyPermissions()
+      .then((me) => {
+        if (!cancelled) {
+          setMeIsAdmin(me.isAdmin);
+        }
+      })
+      .catch(() => {
+        // Keep role-based fallback when /me/permissions is unavailable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const sortMenuItems = useMemo(
     () => [
@@ -207,9 +229,9 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     }
   };
 
-  // 真实管理员判定：roles 含 admin，或该项 operations 含 modify（getMyPermissions().isAdmin 会下发全量操作）。
+  // 真实管理员：prop / roles(含 super_admin) / me.isAdmin，或该项 operations 含 modify。
   const canModify = (record: LlmModel) =>
-    isPlatformAdmin || Boolean(record.operations?.includes("modify"));
+    effectiveAdmin || Boolean(record.operations?.includes("modify"));
   const canSetDefault = (record: LlmModel) => canModify(record) && !record.default;
   const canUnsetDefault = (record: LlmModel) => canModify(record) && Boolean(record.default);
 
