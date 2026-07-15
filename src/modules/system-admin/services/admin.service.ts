@@ -67,7 +67,7 @@ let users: AdminUser[] = [
 
 const auditLog: AuditLog[] = [
   { id: "al-1", actorId: "u-admin", method: "POST", resource: "users", action: "users", targetId: "u-chen", status: 201, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(4)).toISOString() },
-  { id: "al-2", actorId: "u-admin", method: "POST", resource: "roles", action: "roles.permissions", targetId: "role-data-steward", status: 204, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(3)).toISOString() },
+  { id: "al-2", actorId: "u-admin", method: "POST", resource: "roles", action: "roles.permissions", targetId: "role-network-builder", status: 204, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(3)).toISOString() },
   { id: "al-3", actorId: "u-admin", method: "DELETE", resource: "users", action: "users", targetId: "u-ghost", status: 404, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(2)).toISOString() },
   { id: "al-4", actorId: "u-li", method: "POST", resource: "departments", action: "departments.members", targetId: "dep-gov", status: 204, clientIp: "127.0.0.2", createdAt: new Date(daysAgo(1)).toISOString() },
   { id: "al-5", actorId: "u-admin", method: "POST", resource: "role-bindings", action: "role-bindings", targetId: "", status: 204, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(1)).toISOString() },
@@ -75,46 +75,70 @@ const auditLog: AuditLog[] = [
 
 let roles: AdminRole[] = [
   {
-    id: "role-super-admin", name: "super_admin", description: "平台全量权限，含系统管理与授权。",
+    id: "role-super-admin", name: "super_admin", description: "内置隐藏 / 受控：平台全量权限，人数极少。",
     builtin: true, source: "system",
     permissions: [grant("*", "*", ["*"])],
     accessorIds: ["u-admin"], updatedAt: daysAgo(30),
   },
   {
-    id: "role-data-steward", name: "data_steward", description: "管理数据连接、资源与索引构建。",
-    builtin: false, source: "user",
-    permissions: [
-      grant("catalog", "*", ["view", "edit", "delete", "enable", "disable", "test_connection"]),
-      grant("resource", "*", ["view", "edit", "build"]),
-    ],
-    accessorIds: ["u-li", "dep-gov"], updatedAt: daysAgo(8),
-  },
-  {
-    id: "role-kn-admin", name: "kn_admin", description: "管理知识网络本体与索引构建。",
-    builtin: false, source: "user",
-    permissions: [
-      grant("knowledge_network", "*", ["view", "edit", "manage"]),
-      grant("resource", "*", ["view", "build"]),
-    ],
-    accessorIds: ["u-chen"], updatedAt: daysAgo(12),
-  },
-  {
-    id: "role-developer", name: "developer", description: "构建智能体、技能与工具箱，可调用模型。",
-    builtin: false, source: "user",
-    permissions: [
-      grant("agent", "*", ["view", "manage", "invoke"]),
-      grant("skill", "*", ["view", "manage"]),
-    ],
-    accessorIds: ["u-wang", "dep-rd"], updatedAt: daysAgo(20),
-  },
-  {
-    id: "role-viewer", name: "viewer", description: "受限只读：全部数据资源 + 指定一条数据连接。",
+    id: "role-admin", name: "admin", description: "系统管理员：系统运行维护、用户 / 部门基础管理。",
     builtin: true, source: "system",
     permissions: [
-      grant("resource", "*", ["view"]),
-      grant("catalog", "cat-003", ["view"]), // 对象级授权示例：只授某一条数据连接
+      grant("admin-user", "*", ["create", "edit", "delete", "toggle", "reset-password"]),
+      grant("admin-dept", "*", ["create", "edit", "delete", "members"]),
     ],
-    accessorIds: ["u-zhao"], updatedAt: daysAgo(45),
+    accessorIds: [], updatedAt: daysAgo(30),
+  },
+  {
+    id: "role-security", name: "security", description: "安全管理员：角色管理、授权管理、账号安全管理。",
+    builtin: true, source: "system",
+    permissions: [
+      grant("admin-role", "*", ["create", "edit", "delete", "members"]),
+      grant("admin-authz", "*", ["grant", "revoke"]),
+      grant("admin-user", "*", ["edit", "toggle", "reset-password"]),
+    ],
+    accessorIds: [], updatedAt: daysAgo(30),
+  },
+  {
+    id: "role-audit", name: "audit", description: "审计管理员：审计日志、权限配置审查、管理行为监督。",
+    builtin: true, source: "system",
+    permissions: [
+      grant("admin-audit", "*", ["view"]),
+    ],
+    accessorIds: [], updatedAt: daysAgo(30),
+  },
+  {
+    id: "role-network-builder", name: "network_builder", description: "业务网络构建者：数据、知识、模型与执行工厂的业务建设。",
+    builtin: true, source: "business",
+    permissions: [
+      grant("catalog", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
+      grant("resource", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
+      grant("knowledge_network", "*", ["view_detail", "create", "modify", "delete", "data_query", "authorize", "task_manage"]),
+      grant("small_model", "*", ["display", "create", "modify", "execute"]),
+      grant("large_model", "*", ["display", "create", "modify", "execute"]),
+      grant("operator", "*", ["view", "create", "modify", "execute", "public_access", "publish", "unpublish"]),
+      grant("tool_box", "*", ["view", "create", "modify", "execute", "public_access", "publish", "unpublish"]),
+      grant("skill", "*", ["view", "create", "modify", "execute", "public_access", "publish", "unpublish"]),
+      grant("mcp", "*", ["view", "create", "modify", "execute", "public_access", "publish", "unpublish"]),
+    ],
+    accessorIds: ["u-li", "dep-gov", "u-wang", "dep-rd"], updatedAt: daysAgo(8),
+  },
+  {
+    id: "role-normal-user", name: "normal_user", description: "普通用户：各模块查看、查询、执行与调用。",
+    builtin: true, source: "business",
+    permissions: [
+      grant("catalog", "*", ["view_detail"]),
+      grant("resource", "*", ["view_detail"]),
+      grant("knowledge_network", "*", ["view_detail", "data_query"]),
+      grant("small_model", "*", ["display", "execute"]),
+      grant("large_model", "*", ["display", "execute"]),
+      grant("operator", "*", ["view", "execute"]),
+      grant("tool_box", "*", ["view", "execute"]),
+      grant("skill", "*", ["view", "execute"]),
+      grant("mcp", "*", ["view", "execute"]),
+      grant("agent", "*", ["use"]),
+    ],
+    accessorIds: ["u-chen", "u-zhao"], updatedAt: daysAgo(45),
   },
 ];
 
@@ -847,6 +871,7 @@ type BackendDept = {
 type BackendRole = {
   accessor_ids?: string[];
   built_in?: boolean;
+  created_at?: string;
   description?: string;
   id: string;
   members?: string[];
@@ -865,6 +890,14 @@ function parseUpdatedAt(item: BackendUser): number | undefined {
     return Number.isNaN(parsed) ? undefined : parsed;
   }
   return undefined;
+}
+
+function parseRoleCreatedAt(item: BackendRole): number | undefined {
+  if (item.created_at) {
+    const parsed = Date.parse(item.created_at);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+  return item.update_time;
 }
 
 function collectDeptSubtree(rootId: string): Set<string> {
@@ -961,6 +994,6 @@ function mapRole(item: BackendRole): AdminRole {
       operations: perm.operations ?? [],
     })),
     accessorIds: item.accessor_ids ?? item.members ?? [],
-    updatedAt: item.update_time,
+    updatedAt: parseRoleCreatedAt(item),
   };
 }

@@ -357,6 +357,7 @@
   composes: nameCell from "../../../framework/ui/common/BusinessPageTemplate.module.css";
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .nameTitle {
@@ -373,6 +374,80 @@
   composes: subText from "../../../framework/ui/common/BusinessPageTemplate.module.css";
   color: var(--admin-color-secondary);
   font-size: var(--admin-font-size-meta);
+}
+
+.singleLineText {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--admin-color-secondary);
+  font-size: var(--admin-font-size-meta);
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.permissionSummaryRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.permissionSummaryRow > * {
+  flex: 0 0 auto;
+}
+
+.permissionPill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 180px;
+  height: 24px;
+  overflow: hidden;
+  border: 1px solid var(--admin-color-border);
+  background: var(--admin-color-surface);
+  color: var(--admin-color-secondary);
+  font-size: var(--admin-font-size-tag);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.permissionPillLabel {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 8px;
+  text-overflow: ellipsis;
+}
+
+.permissionPillCount {
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
+  padding: 0 7px;
+  border-left: 1px solid var(--admin-color-border);
+  background: var(--admin-color-surface-muted);
+  color: var(--admin-color-muted);
+  font-family: "SFMono-Regular", "JetBrains Mono", monospace;
+  font-size: 11px;
+}
+
+.permissionMore {
+  color: var(--admin-color-muted);
+  font-family: "SFMono-Regular", "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+
+.permissionWildcard {
+  padding: 3px 8px;
+  border: 1px solid var(--admin-color-link-border);
+  background: var(--admin-color-link-bg);
+  color: var(--admin-color-link);
+  font-size: var(--admin-font-size-tag);
+  line-height: 1.3;
 }
 
 .slugChip {
@@ -415,6 +490,7 @@
 
 .permChip {
   composes: neutralTag from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  max-width: 180px;
   margin-inline-end: 0;
   padding: 1px 8px;
   border-radius: 0;
@@ -423,6 +499,9 @@
   color: var(--admin-color-secondary);
   font-size: var(--admin-font-size-tag);
   font-weight: var(--admin-font-weight-regular);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .granteeTag {

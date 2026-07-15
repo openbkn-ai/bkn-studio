@@ -116,7 +116,7 @@ export function RoleDetailDrawer({
       }
       styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }}
       title={t("systemAdmin.roles.detail.title", { name: role.name })}
-      width={560}
+      width={640}
     >
       <div className={styles.content}>
         <section className={styles.sectionCard}>
@@ -167,32 +167,34 @@ export function RoleDetailDrawer({
                   })}
                 </span>
               </div>
-            <div className={styles.grantGroup}>
-              {grantsByType.map(([type, grants]) => (
-                <div key={type}>
-                  <div className={styles.grantItemHead}>
-                    <Tag className={appStyles.roleTag}>{resourceTypeLabel(type)}</Tag>
-                    <span className={styles.muted}>{t("systemAdmin.roles.detail.grantCount", { count: grants.length })}</span>
-                  </div>
-                  {grants.map((grant) => (
-                    <div className={styles.grantItem} key={`${grant.resource.type}:${grant.resource.id}`}>
-                      <div className={styles.grantItemHead}>
-                        <span className={appStyles.slugChip}>
-                          {grant.resource.id === WILDCARD ? t("systemAdmin.grant.wholeType") : grant.resource.id}
-                        </span>
-                      </div>
-                      <div className={styles.grantOps}>
-                        {grant.operations.map((op) => (
-                          <Tag className={appStyles.permChip} key={op}>
-                            {op === "*" ? t("systemAdmin.grant.allOps") : operationLabel(grant.resource.type, op)}
-                          </Tag>
-                        ))}
-                      </div>
+              <div className={styles.grantGroup}>
+                {grantsByType.map(([type, grants]) => (
+                  <div className={styles.grantTypeBlock} key={type}>
+                    <div className={styles.grantTypeHead}>
+                      <span className={styles.grantTypeName}>{resourceTypeLabel(type)}</span>
+                      <span className={styles.grantTypeMeta}>
+                        {t("systemAdmin.roles.detail.grantCount", { count: grants.length })}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              ))}
-            </div>
+                    <div className={styles.grantList}>
+                      {grants.map((grant) => (
+                        <div className={styles.grantItem} key={`${grant.resource.type}:${grant.resource.id}`}>
+                          <span className={appStyles.slugChip}>
+                            {grant.resource.id === WILDCARD ? t("systemAdmin.grant.wholeType") : grant.resource.id}
+                          </span>
+                          <div className={styles.grantOps}>
+                            {grant.operations.map((op) => (
+                              <Tag className={appStyles.permChip} key={op}>
+                                {op === "*" ? t("systemAdmin.grant.allOps") : operationLabel(grant.resource.type, op)}
+                              </Tag>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </>
           )}
         </section>

@@ -14,7 +14,7 @@
 
 import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 
-import { Alert, Input, Space, Tag, Tooltip } from "antd";
+import { Alert, Input, Space, Tooltip } from "antd";
 
 import type { ColumnsType } from "antd/es/table";
 
@@ -58,25 +58,18 @@ import type { AdminDepartment, AdminRole } from "@/modules/system-admin/types/ad
 
 import {
 
+  operationLabel,
+
   resourceTypeLabel,
 
   WILDCARD,
 
 } from "@/modules/system-admin/utils/resource-catalog";
+import { isSuperAdminRole } from "@/modules/system-admin/utils/role-catalog";
 
 
 
 import styles from "./admin.module.css";
-
-
-
-// 超级管理员（最高权限角色）：不可修改，编辑禁用。兼容真实(中文名)与 mock(slug)。
-
-function isSuperAdminRole(role: AdminRole) {
-
-  return role.name === "超级管理员" || role.name === "super_admin";
-
-}
 
 
 
@@ -360,7 +353,15 @@ export function RoleManagementScene() {
 
             </span>
 
-            {role.description ? <span className={styles.subText}>{role.description}</span> : null}
+            {role.description ? (
+
+              <Tooltip title={role.description}>
+
+                <span className={styles.singleLineText}>{role.description}</span>
+
+              </Tooltip>
+
+            ) : null}
 
           </div>
 
@@ -404,33 +405,88 @@ export function RoleManagementScene() {
 
             .slice(0, 3)
 
-            .map(([type, count]) => (
+            .map(([type, count]) => {
 
-              <Tag className={styles.permChip} key={type}>
+              const grants = role.permissions.filter((grant) => grant.resource.type === type);
 
-                {resourceTypeLabel(type)} {count}
+              const operationSummary = [
 
-              </Tag>
+                resourceTypeLabel(type),
 
-            ));
+                ...grants.map((grant) => {
+
+                  const scope =
+
+                    grant.resource.id === WILDCARD
+
+                      ? t("systemAdmin.grant.wholeType")
+
+                      : grant.resource.id;
+
+                  const ops = grant.operations
+
+                    .map((op) =>
+
+                      op === "*" ? t("systemAdmin.grant.allOps") : operationLabel(type, op),
+
+                    )
+
+                    .join("、");
+
+                  return `${scope}: ${ops}`;
+
+                }),
+
+              ].join("\n");
+
+              return (
+
+                <Tooltip key={type} title={<span style={{ whiteSpace: "pre-line" }}>{operationSummary}</span>}>
+
+                  <span className={styles.permissionPill}>
+
+                    <span className={styles.permissionPillLabel}>{resourceTypeLabel(type)}</span>
+                    <span className={styles.permissionPillCount}>{count}</span>
+
+                  </span>
+
+                </Tooltip>
+
+              );
+
+            });
 
           return (
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+            <div className={styles.permissionSummaryRow}>
 
               {tags}
 
               {typeCounts.size > 3 ? (
 
-                <span className={styles.mutedText}>+{typeCounts.size - 3}</span>
+                <span className={styles.permissionMore}>+{typeCounts.size - 3}</span>
 
               ) : null}
 
               {hasWildcard ? (
 
-                <Tag className={styles.roleTag}>{t("systemAdmin.roles.detail.hasWildcard")}</Tag>
+                <span className={styles.permissionWildcard}>{t("systemAdmin.roles.detail.hasWildcard")}</span>
 
               ) : null}
+
+              <AppButton
+
+                className={styles.actionLink}
+
+                onClick={() => setDetailRole(role)}
+
+                type="link"
+
+              >
+
+                {t("common.detail")}
+
+              </AppButton>
 
             </div>
 
@@ -454,7 +510,7 @@ export function RoleManagementScene() {
 
           return (
 
-            <span className={styles.subText}>
+            <span className={styles.singleLineText}>
 
               {t("systemAdmin.roles.membersModal.memberUser")} {userCount} ·{" "}
 
@@ -478,7 +534,7 @@ export function RoleManagementScene() {
 
         render: (value?: number) => (
 
-          <span className={styles.subText}>{formatTime(value)}</span>
+          <span className={styles.singleLineText}>{formatTime(value)}</span>
 
         ),
 
@@ -837,4 +893,3 @@ export function RoleManagementScene() {
   );
 
 }
-

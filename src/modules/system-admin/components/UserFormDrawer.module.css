@@ -192,20 +192,26 @@
 }
 
 .rolePanel {
-  padding: 12px;
-  border: 1px solid #e5eaf2;
-  background: var(--admin-color-surface, #fff);
+  padding-top: 14px;
+  border-top: 1px solid #e5eaf2;
 }
 
+.controlledRolePanel {
+  padding: 12px;
+  border: 1px solid #dbe7f5;
+  background: #f8fbff;
+}
+
+.controlledRolePanel + .rolePanel,
 .rolePanel + .rolePanel {
-  margin-top: 10px;
+  margin-top: 16px;
 }
 
 .rolePanelHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .rolePanelTitle {
@@ -218,6 +224,77 @@
 .rolePanelCount {
   color: var(--admin-color-muted, #6b7280);
   font-size: 12px;
+}
+
+.controlledRoleList {
+  display: grid;
+  gap: 8px;
+}
+
+.controlledRoleItem {
+  display: grid;
+  gap: 3px;
+  padding: 9px 11px;
+  border: 1px dashed #bfd2ea;
+  background: #ffffff;
+}
+
+.roleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.roleOption {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: flex-start;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid #d9e2ef;
+  background: #ffffff;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.roleOption:hover {
+  border-color: var(--admin-color-link, #1d4ed8);
+  background: #f8fbff;
+}
+
+.roleOptionSelected {
+  border-color: var(--admin-color-link, #1d4ed8);
+  background: var(--admin-color-link-bg, #eff6ff);
+  box-shadow: inset 3px 0 0 var(--admin-color-link, #1d4ed8);
+}
+
+.roleOptionCheck {
+  margin-top: 2px;
+}
+
+.roleOptionContent {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.roleOptionName {
+  color: var(--admin-color-heading, #172033);
+  font-family: "SFMono-Regular", "JetBrains Mono", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.roleOptionDesc {
+  color: var(--admin-color-secondary, #4b5563);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .roleEmpty {
@@ -253,6 +330,10 @@
 
 @media (max-width: 640px) {
   .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .roleGrid {
     grid-template-columns: 1fr;
   }
 }
