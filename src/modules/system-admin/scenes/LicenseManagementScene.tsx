@@ -101,7 +101,10 @@ function translatedLicenseKey(
 }
 
 function copySupported() {
-  return typeof navigator !== "undefined" && Boolean(navigator.clipboard?.writeText);
+  return (
+    typeof navigator !== "undefined" &&
+    typeof navigator.clipboard?.writeText === "function"
+  );
 }
 
 export function LicenseManagementScene() {
