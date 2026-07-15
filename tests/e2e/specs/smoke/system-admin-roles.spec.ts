@@ -38,11 +38,11 @@ test.describe("system-admin role system", () => {
 
     const drawer = page.getByRole("dialog", { name: /配置角色/ });
     await expect(drawer).toBeVisible();
-    await expect(drawer.getByRole("button", { name: /super_admin/ })).toHaveCount(0);
-    await expect(drawer.getByRole("button", { name: /normal_user/ })).toBeVisible();
+    await expect(drawer.getByText("super_admin")).toHaveCount(0);
+    await expect(drawer.getByText("normal_user")).toBeVisible();
 
-    await drawer.getByRole("button", { name: /admin/ }).click();
-    await drawer.getByRole("button", { name: /security/ }).click();
+    await drawer.getByText("admin", { exact: true }).click();
+    await drawer.getByText("security", { exact: true }).click();
 
     await expect(drawer.getByText("存在三员职责冲突")).toBeVisible();
     await expect(drawer.getByText("同一普通账号不建议同时拥有多个三员角色")).toBeVisible();
