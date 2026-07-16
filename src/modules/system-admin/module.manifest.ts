@@ -54,7 +54,7 @@ export const systemAdminModuleManifest = {
     {
       id: "system-admin.license",
       exportName: "LicenseManagementScene",
-      description: "Manage the product license for the current OpenBKN cluster: view state, copy fingerprint and activation code, import license text or receipt, activate online, and remove the license.",
+      description: "Manage the product license for the current OpenBKN cluster: view state, copy the device fingerprint, import license or activation certificate text, activate online, and remove the license.",
       inputs: [],
     },
     {

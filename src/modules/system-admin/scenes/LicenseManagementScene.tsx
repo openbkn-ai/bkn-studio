@@ -6,19 +6,14 @@
  */
 
 import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
   CloudSyncOutlined,
   CopyOutlined,
   DeleteOutlined,
-  FileProtectOutlined,
-  KeyOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
   UploadOutlined,
-  WarningOutlined,
 } from "@ant-design/icons";
-import { Alert, Descriptions, Empty, Input, Space, Spin, Tabs, Tag } from "antd";
+import { Alert, Empty, Input, Spin, Tag } from "antd";
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,25 +25,19 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   activateLicense,
   deleteLicense,
-  getLicenseActivationCode,
   getLicenseDetail,
   getLicenseFingerprint,
   importLicense,
-  importLicenseReceipt,
   resolveLicenseRequestErrorCode,
 } from "@/modules/system-admin/services/license.service";
-import type {
-  LicenseActivationCode,
-  LicenseDetail,
-  LicenseState,
-} from "@/modules/system-admin/types/license";
+import type { LicenseDetail } from "@/modules/system-admin/types/license";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 import styles from "./admin.module.css";
 
 const { TextArea } = Input;
 
-type ActionKind = "activate" | "delete" | "import" | "receipt" | null;
+type ActionKind = "delete" | "import" | "online" | null;
 
 function formatUnixSeconds(value: number | undefined, locale: string, permanentText: string) {
   if (value === undefined || value === null) {
@@ -67,19 +56,6 @@ function formatUnixSeconds(value: number | undefined, locale: string, permanentT
   })
     .format(value * 1000)
     .replace(/\//g, "-");
-}
-
-function stateIcon(state: LicenseState) {
-  if (state === "valid") {
-    return <CheckCircleOutlined />;
-  }
-  if (state === "grace") {
-    return <ClockCircleOutlined />;
-  }
-  if (state === "fallback_community") {
-    return <WarningOutlined />;
-  }
-  return <FileProtectOutlined />;
 }
 
 function limitValueLabel(value: number, unlimitedText: string, blockedText: string) {
@@ -112,10 +88,9 @@ export function LicenseManagementScene() {
   const { message, modal } = useAppServices();
 
   const [detail, setDetail] = useState<LicenseDetail | null>(null);
-  const [activation, setActivation] = useState<LicenseActivationCode | null>(null);
   const [fingerprint, setFingerprint] = useState("");
-  const [licenseText, setLicenseText] = useState("");
-  const [receiptText, setReceiptText] = useState("");
+  const [onlineLicenseText, setOnlineLicenseText] = useState("");
+  const [offlineCertificateText, setOfflineCertificateText] = useState("");
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<ActionKind>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -128,15 +103,12 @@ export function LicenseManagementScene() {
       const next = await getLicenseDetail();
       setDetail(next);
       setFingerprint(next.instanceFp ?? "");
-      setActivation(null);
 
       try {
-        const code = await getLicenseActivationCode();
-        setActivation(code);
-        setFingerprint(code.instanceFp || next.instanceFp || "");
-      } catch {
         const fp = await getLicenseFingerprint();
         setFingerprint(fp || next.instanceFp || "");
+      } catch {
+        setFingerprint(next.instanceFp || "");
       }
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
@@ -148,16 +120,6 @@ export function LicenseManagementScene() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  const statusType = useMemo(() => {
-    if (!detail) {
-      return "info" as const;
-    }
-    if (detail.state === "valid" && !detail.renewError && detail.activated) {
-      return "success" as const;
-    }
-    return "warning" as const;
-  }, [detail]);
 
   const statusMessage = useMemo(() => {
     if (!detail) {
@@ -183,7 +145,7 @@ export function LicenseManagementScene() {
       return t("systemAdmin.license.statusDesc.fallback_community");
     }
     if (detail.state === "invalid") {
-      return detail.error || t("systemAdmin.license.statusDesc.invalid");
+      return t("systemAdmin.license.statusDesc.invalid");
     }
     if (detail.renewError) {
       return t("systemAdmin.license.statusDesc.renewError", {
@@ -194,28 +156,6 @@ export function LicenseManagementScene() {
       return t("systemAdmin.license.statusDesc.validUnbound");
     }
     return t("systemAdmin.license.statusDesc.valid");
-  }, [detail, t]);
-
-  const nextStep = useMemo(() => {
-    if (!detail) {
-      return "";
-    }
-    if (detail.state === "invalid") {
-      return t("systemAdmin.license.nextStep.invalid");
-    }
-    if (!detail.activated) {
-      return t("systemAdmin.license.nextStep.unbound");
-    }
-    if (detail.state === "grace") {
-      return t("systemAdmin.license.nextStep.grace");
-    }
-    if (detail.state === "fallback_community") {
-      return t("systemAdmin.license.nextStep.fallback_community");
-    }
-    if (detail.renewError) {
-      return t("systemAdmin.license.nextStep.renewError");
-    }
-    return t("systemAdmin.license.nextStep.valid");
   }, [detail, t]);
 
   const handleCopy = async (value: string) => {
@@ -250,7 +190,7 @@ export function LicenseManagementScene() {
   };
 
   const handleImport = async () => {
-    const text = licenseText.trim();
+    const text = offlineCertificateText.trim();
     if (!text) {
       await message.warning(t("systemAdmin.license.validation.licenseRequired"));
       return;
@@ -258,7 +198,7 @@ export function LicenseManagementScene() {
     setAction("import");
     try {
       const next = await importLicense(text);
-      setLicenseText("");
+      setOfflineCertificateText("");
       await message.success(t("systemAdmin.license.toast.imported"));
       await refreshAfterAction(next);
     } catch (error) {
@@ -268,29 +208,15 @@ export function LicenseManagementScene() {
     }
   };
 
-  const handleReceipt = async () => {
-    const text = receiptText.trim();
-    if (!text) {
-      await message.warning(t("systemAdmin.license.validation.receiptRequired"));
-      return;
-    }
-    setAction("receipt");
+  const handleOnlineActivation = async () => {
+    const text = onlineLicenseText.trim();
+    setAction("online");
     try {
-      const next = await importLicenseReceipt(text);
-      setReceiptText("");
-      await message.success(t("systemAdmin.license.toast.receiptImported"));
-      await refreshAfterAction(next);
-    } catch (error) {
-      await showActionError(error);
-    } finally {
-      setAction(null);
-    }
-  };
-
-  const handleActivate = async () => {
-    setAction("activate");
-    try {
+      if (text) {
+        await importLicense(text);
+      }
       const next = await activateLicense();
+      setOnlineLicenseText("");
       await message.success(t("systemAdmin.license.toast.activated"));
       await refreshAfterAction(next);
     } catch (error) {
@@ -327,56 +253,27 @@ export function LicenseManagementScene() {
     });
   };
 
-  const identityRows = detail
+  const identityItems = detail
     ? [
         {
-          label: t("systemAdmin.license.fields.state"),
-          children: (
-            <Tag className={styles.licenseStateTag} icon={stateIcon(detail.state)}>
-              {statusMessage}
-            </Tag>
-          ),
-        },
-        {
-          label: t("systemAdmin.license.fields.edition"),
-          children: detail.edition ? (
-            <span title={detail.edition}>
-              {translatedLicenseKey(t, "editionLabels", detail.edition)}
-            </span>
-          ) : (
-            "-"
-          ),
-        },
-        {
           label: t("systemAdmin.license.fields.licId"),
-          children: detail.licId || "-",
-        },
-        {
-          label: t("systemAdmin.license.fields.contractExpiresAt"),
-          children: formatUnixSeconds(
-            detail.contractExpiresAt,
-            i18n.language,
-            t("systemAdmin.license.permanent"),
-          ),
+          value: detail.licId || "-",
         },
         {
           label: t("systemAdmin.license.fields.customer"),
-          children: detail.customer?.name || "-",
+          value: detail.customer?.name || "-",
         },
         {
           label: t("systemAdmin.license.fields.project"),
-          children: detail.customer?.project || "-",
+          value: detail.customer?.project || "-",
         },
         {
           label: t("systemAdmin.license.fields.email"),
-          children: detail.customer?.email || "-",
-        },
-        {
-          label: t("systemAdmin.license.fields.instanceFp"),
-          children: fingerprint || detail.instanceFp || "-",
+          value: detail.customer?.email || "-",
         },
       ]
     : [];
+  const fingerprintValue = detail ? fingerprint || detail.instanceFp || "-" : "-";
   const licensedUntil = detail
     ? formatUnixSeconds(
         detail.contractExpiresAt,
@@ -469,6 +366,17 @@ export function LicenseManagementScene() {
                 </div>
                 <h3>{statusMessage}</h3>
                 <p>{statusDescription}</p>
+                <div className={styles.licenseFingerprintInline}>
+                  <span>{t("systemAdmin.license.fields.instanceFp")}</span>
+                  <strong title={fingerprintValue}>{fingerprintValue}</strong>
+                  <AppButton
+                    icon={<CopyOutlined />}
+                    onClick={() => void handleCopy(fingerprintValue)}
+                    size="small"
+                  >
+                    {t("common.copy")}
+                  </AppButton>
+                </div>
               </div>
               <div className={styles.licenseMetricGrid}>
                 {metricItems.map((item) => (
@@ -478,13 +386,16 @@ export function LicenseManagementScene() {
                   </div>
                 ))}
               </div>
-              <Alert
-                className={styles.licenseHeroAlert}
-                message={t("systemAdmin.license.nextStep.title")}
-                showIcon
-                type={statusType}
-                description={nextStep}
-              />
+              <div className={styles.licenseIdentityGrid}>
+                {identityItems.map((item) => (
+                  <div className={styles.licenseIdentityItem} key={item.label}>
+                    <span>{item.label}</span>
+                    <div className={styles.licenseIdentityValue}>
+                      <strong title={item.value}>{item.value}</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </section>
 
             <PermissionGate permissions={systemAdminPermissions.licenseManage}>
@@ -493,232 +404,138 @@ export function LicenseManagementScene() {
                   <h3>{t("systemAdmin.license.sections.activationMode")}</h3>
                   <span>{t("systemAdmin.license.sections.activationModeHint")}</span>
                 </div>
-                <Tabs
-                  className={styles.licenseScenarioTabs}
-                  items={[
-                    {
-                      key: "online",
-                      label: t("systemAdmin.license.scenarios.online"),
-                      children: (
-                        <div className={styles.licenseScenarioPanel}>
-                          <Alert
-                            message={t("systemAdmin.license.scenarios.onlineTitle")}
-                            description={t("systemAdmin.license.scenarios.onlineDesc")}
-                            showIcon
-                            type="info"
-                          />
-                          <div className={styles.licenseScenarioGrid}>
-                            <div className={styles.licenseScenarioStep}>
-                              <div className={styles.licenseStepTitle}>
-                                <span className={styles.licenseStepIndex}>1</span>
-                                <h3>{t("systemAdmin.license.sections.importLicense")}</h3>
-                              </div>
-                              <p>{t("systemAdmin.license.sections.importLicenseHint")}</p>
-                              <TextArea
-                                autoSize={{ minRows: 5, maxRows: 9 }}
-                                onChange={(event) => setLicenseText(event.target.value)}
-                                placeholder={t("systemAdmin.license.placeholders.license")}
-                                value={licenseText}
-                              />
-                              <Space className={styles.licenseActionRow}>
-                                <AppButton
-                                  icon={<UploadOutlined />}
-                                  loading={action === "import"}
-                                  onClick={() => void handleImport()}
-                                  type="primary"
-                                >
-                                  {t("systemAdmin.license.import")}
-                                </AppButton>
-                              </Space>
-                            </div>
-                            <div className={styles.licenseScenarioStep}>
-                              <div className={styles.licenseStepTitle}>
-                                <span className={styles.licenseStepIndex}>2</span>
-                                <h3>{t("systemAdmin.license.activate")}</h3>
-                              </div>
-                              <p>{t("systemAdmin.license.scenarios.onlineActivateHint")}</p>
-                              {!onlineActivationHidden ? (
-                                <AppButton
-                                  icon={<CloudSyncOutlined />}
-                                  loading={action === "activate"}
-                                  onClick={() => void handleActivate()}
-                                  type="primary"
-                                >
-                                  {t("systemAdmin.license.activate")}
-                                </AppButton>
-                              ) : (
-                                <Alert
-                                  message={t("systemAdmin.license.errors.activationUnavailable")}
-                                  showIcon
-                                  type="warning"
-                                />
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: "offline",
-                      label: t("systemAdmin.license.scenarios.offline"),
-                      children: (
-                        <div className={styles.licenseScenarioPanel}>
-                          <Alert
-                            message={t("systemAdmin.license.scenarios.offlineTitle")}
-                            description={t("systemAdmin.license.scenarios.offlineDesc")}
-                            showIcon
-                            type="info"
-                          />
-                          <div className={styles.licenseScenarioGrid}>
-                            <div className={styles.licenseScenarioStep}>
-                              <div className={styles.licenseStepTitle}>
-                                <span className={styles.licenseStepIndex}>1</span>
-                                <h3>{t("systemAdmin.license.sections.activation")}</h3>
-                              </div>
-                              <p>{t("systemAdmin.license.sections.activationHint")}</p>
-                              <div className={styles.licenseCodeGrid}>
-                                <div className={styles.licenseCodeBox}>
-                                  <span>{t("systemAdmin.license.fields.instanceFp")}</span>
-                                  <code>{fingerprint || "-"}</code>
-                                  <AppButton
-                                    icon={<CopyOutlined />}
-                                    size="small"
-                                    onClick={() => void handleCopy(fingerprint)}
-                                  >
-                                    {t("common.copy")}
-                                  </AppButton>
-                                </div>
-                                <div className={styles.licenseCodeBox}>
-                                  <span>{t("systemAdmin.license.fields.activationCode")}</span>
-                                  <code>{activation?.activationCode || "-"}</code>
-                                  <AppButton
-                                    icon={<CopyOutlined />}
-                                    size="small"
-                                    onClick={() => void handleCopy(activation?.activationCode ?? "")}
-                                  >
-                                    {t("common.copy")}
-                                  </AppButton>
-                                </div>
-                              </div>
-                            </div>
-                            <div className={styles.licenseScenarioStep}>
-                              <div className={styles.licenseStepTitle}>
-                                <span className={styles.licenseStepIndex}>2</span>
-                                <h3>{t("systemAdmin.license.sections.importLicense")}</h3>
-                              </div>
-                              <p>{t("systemAdmin.license.sections.importLicenseHint")}</p>
-                              <TextArea
-                                autoSize={{ minRows: 5, maxRows: 9 }}
-                                onChange={(event) => setLicenseText(event.target.value)}
-                                placeholder={t("systemAdmin.license.placeholders.license")}
-                                value={licenseText}
-                              />
-                              <Space className={styles.licenseActionRow}>
-                                <AppButton
-                                  icon={<UploadOutlined />}
-                                  loading={action === "import"}
-                                  onClick={() => void handleImport()}
-                                  type="primary"
-                                >
-                                  {t("systemAdmin.license.import")}
-                                </AppButton>
-                              </Space>
-                            </div>
-                            <div className={styles.licenseScenarioStep}>
-                              <div className={styles.licenseStepTitle}>
-                                <span className={styles.licenseStepIndex}>3</span>
-                                <h3>{t("systemAdmin.license.sections.offlineReceipt")}</h3>
-                              </div>
-                              <p>{t("systemAdmin.license.sections.offlineReceiptHint")}</p>
-                              <TextArea
-                                autoSize={{ minRows: 5, maxRows: 9 }}
-                                onChange={(event) => setReceiptText(event.target.value)}
-                                placeholder={t("systemAdmin.license.placeholders.receipt")}
-                                value={receiptText}
-                              />
-                              <Space className={styles.licenseActionRow}>
-                                <AppButton
-                                  icon={<KeyOutlined />}
-                                  loading={action === "receipt"}
-                                  onClick={() => void handleReceipt()}
-                                  type="primary"
-                                >
-                                  {t("systemAdmin.license.importReceipt")}
-                                </AppButton>
-                              </Space>
-                            </div>
-                          </div>
-                        </div>
-                      ),
-                    },
-                  ]}
-                />
+                <div className={styles.licenseModeGrid}>
+                  <div className={styles.licenseModePanel}>
+                    <div className={styles.licenseModeHead}>
+                      <Tag>{t("systemAdmin.license.scenarios.online")}</Tag>
+                      <h3>{t("systemAdmin.license.sections.onlineActivationTitle")}</h3>
+                      <p>{t("systemAdmin.license.sections.onlineActivationHint")}</p>
+                      <a
+                        className={styles.licensePortalLink}
+                        href="https://license.openbkn.ai/"
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {t("systemAdmin.license.sections.licensePortalLink")}
+                      </a>
+                    </div>
+                    <TextArea
+                      autoSize={{ minRows: 7, maxRows: 11 }}
+                      className={styles.licenseTextArea}
+                      onChange={(event) => setOnlineLicenseText(event.target.value)}
+                      placeholder={t("systemAdmin.license.placeholders.license")}
+                      value={onlineLicenseText}
+                    />
+                    {!onlineActivationHidden ? (
+                      <AppButton
+                        className={styles.licenseFullAction}
+                        icon={<CloudSyncOutlined />}
+                        loading={action === "online"}
+                        onClick={() => void handleOnlineActivation()}
+                        type="primary"
+                      >
+                        {t("systemAdmin.license.onlineActivate")}
+                      </AppButton>
+                    ) : (
+                      <Alert
+                        message={t("systemAdmin.license.errors.activationUnavailable")}
+                        showIcon
+                        type="warning"
+                      />
+                    )}
+                  </div>
+
+                  <div className={styles.licenseModePanel}>
+                    <div className={styles.licenseModeHead}>
+                      <Tag>{t("systemAdmin.license.scenarios.offline")}</Tag>
+                      <h3>{t("systemAdmin.license.sections.offlineActivationTitle")}</h3>
+                      <p>{t("systemAdmin.license.sections.offlineSimpleHint")}</p>
+                      <a
+                        className={styles.licensePortalLink}
+                        href="https://license.openbkn.ai/"
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {t("systemAdmin.license.sections.licensePortalLink")}
+                      </a>
+                    </div>
+                    <TextArea
+                      autoSize={{ minRows: 7, maxRows: 11 }}
+                      className={styles.licenseTextArea}
+                      onChange={(event) => setOfflineCertificateText(event.target.value)}
+                      placeholder={t("systemAdmin.license.placeholders.activationCertificate")}
+                      value={offlineCertificateText}
+                    />
+                    <AppButton
+                      className={styles.licenseFullAction}
+                      icon={<UploadOutlined />}
+                      loading={action === "import"}
+                      onClick={() => void handleImport()}
+                      type="primary"
+                    >
+                      {t("systemAdmin.license.importActivationCertificate")}
+                    </AppButton>
+                  </div>
+                </div>
               </section>
             </PermissionGate>
 
             <section className={styles.licenseSection}>
               <div className={styles.licenseSectionHead}>
-                <h3>{t("systemAdmin.license.sections.summary")}</h3>
-                <span>{t("systemAdmin.license.sections.summaryHint")}</span>
+                <h3>{t("systemAdmin.license.sections.scope")}</h3>
+                <span>{t("systemAdmin.license.sections.scopeHint")}</span>
               </div>
-              <Descriptions
-                bordered
-                column={{ lg: 2, md: 2, sm: 1, xs: 1 }}
-                items={identityRows}
-                size="small"
-              />
-            </section>
-
-            <section className={styles.licenseSplit}>
-              <div className={styles.licenseSection}>
-                <div className={styles.licenseSectionHead}>
-                  <h3>{t("systemAdmin.license.sections.features")}</h3>
-                  <span>{t("systemAdmin.license.sections.featuresHint")}</span>
-                </div>
-                {detail.features.length ? (
-                  <div className={styles.licenseTagList}>
-                    {detail.features.map((feature) => (
-                      <Tag key={feature} title={feature}>
-                        {translatedLicenseKey(t, "featureLabels", feature)}
-                      </Tag>
-                    ))}
+              <div className={styles.licenseScopeGrid}>
+                <div className={styles.licenseScopePanel}>
+                  <div className={styles.licenseScopeHead}>
+                    <h4>{t("systemAdmin.license.sections.features")}</h4>
+                    <span>{detail.features.length}</span>
                   </div>
-                ) : (
-                  <Empty
-                    description={t("systemAdmin.license.emptyFeatures")}
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  />
-                )}
-              </div>
-
-              <div className={styles.licenseSection}>
-                <div className={styles.licenseSectionHead}>
-                  <h3>{t("systemAdmin.license.sections.limits")}</h3>
-                  <span>{t("systemAdmin.license.sections.limitsHint")}</span>
+                  {detail.features.length ? (
+                    <div className={styles.licenseTagList}>
+                      {detail.features.map((feature) => (
+                        <Tag key={feature} title={feature}>
+                          {translatedLicenseKey(t, "featureLabels", feature)}
+                        </Tag>
+                      ))}
+                    </div>
+                  ) : (
+                    <Empty
+                      description={t("systemAdmin.license.emptyFeatures")}
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  )}
                 </div>
-                {Object.keys(detail.limits).length ? (
-                  <div className={styles.licenseLimitList}>
-                    {Object.entries(detail.limits).map(([key, value]) => (
-                      <div className={styles.licenseLimitItem} key={key}>
-                        <span title={key}>
-                          {translatedLicenseKey(t, "limitLabels", key)}
-                        </span>
-                        <strong>
-                          {limitValueLabel(
-                            value,
-                            t("systemAdmin.license.unlimited"),
-                            t("systemAdmin.license.blocked"),
-                          )}
-                        </strong>
-                      </div>
-                    ))}
+
+                <div className={styles.licenseScopePanel}>
+                  <div className={styles.licenseScopeHead}>
+                    <h4>{t("systemAdmin.license.sections.limits")}</h4>
+                    <span>{t("systemAdmin.license.sections.limitsHint")}</span>
                   </div>
-                ) : (
-                  <Empty
-                    description={t("systemAdmin.license.emptyLimits")}
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  />
-                )}
+                  {Object.keys(detail.limits).length ? (
+                    <div className={styles.licenseLimitList}>
+                      {Object.entries(detail.limits).map(([key, value]) => (
+                        <div className={styles.licenseLimitItem} key={key}>
+                          <span title={key}>
+                            {translatedLicenseKey(t, "limitLabels", key)}
+                          </span>
+                          <strong>
+                            {limitValueLabel(
+                              value,
+                              t("systemAdmin.license.unlimited"),
+                              t("systemAdmin.license.blocked"),
+                            )}
+                          </strong>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Empty
+                      description={t("systemAdmin.license.emptyLimits")}
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  )}
+                </div>
               </div>
             </section>
           </div>
