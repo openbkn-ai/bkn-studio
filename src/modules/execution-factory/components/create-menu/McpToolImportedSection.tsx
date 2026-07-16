@@ -22,6 +22,8 @@ type McpToolImportedSectionProps = {
   onChange?: (value: McpToolConfigInput[]) => void;
 };
 
+const TOOL_PAGE_SIZE = 100;
+
 export function McpToolImportedSection({ value = [], onChange }: McpToolImportedSectionProps) {
   const { t } = useTranslation();
   const [toolboxes, setToolboxes] = useState<ToolboxRecord[]>([]);
@@ -61,20 +63,44 @@ export function McpToolImportedSection({ value = [], onChange }: McpToolImported
     setLoadingTools(true);
     setLoadError(null);
 
+    let cancelled = false;
+
     void (async () => {
       try {
-        const result = await listTools(boxId, {
-          page: 1,
-          pageSize: 200,
-        });
-        setTools(result.items);
+        const allTools: ToolRecord[] = [];
+        let page = 1;
+        let total = 0;
+        let received = 0;
+
+        do {
+          const result = await listTools(boxId, {
+            page,
+            pageSize: TOOL_PAGE_SIZE,
+          });
+          allTools.push(...result.items);
+          total = result.total;
+          received = result.items.length;
+          page += 1;
+        } while (allTools.length < total && received > 0);
+
+        if (!cancelled) {
+          setTools(allTools);
+        }
       } catch (error) {
-        setTools([]);
-        setLoadError(extractRequestErrorMessage(error));
+        if (!cancelled) {
+          setTools([]);
+          setLoadError(extractRequestErrorMessage(error));
+        }
       } finally {
-        setLoadingTools(false);
+        if (!cancelled) {
+          setLoadingTools(false);
+        }
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [boxId]);
 
   const selectedRowKeys = useMemo(
