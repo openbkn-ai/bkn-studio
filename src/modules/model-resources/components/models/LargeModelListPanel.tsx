@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -79,7 +80,30 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [authorizeRecord, setAuthorizeRecord] = useState<LlmModel | null>(null);
 
-  const showQuotaColumns = !isAdmin && !runtimeConfig.currentUser.roles.includes("admin");
+  const userRoles = runtimeConfig.currentUser.roles;
+  const userPermissions = runtimeConfig.currentUser.permissions;
+  const canManageLargeModel = hasPermissions({
+    currentPermissions: userPermissions,
+    mode: "any",
+    requiredPermissions: [
+      "large_model:create",
+      "large_model:modify",
+      "model-resources:model:create",
+      "model-resources:model:edit",
+    ],
+  });
+  const canManageQuota = hasPermissions({
+    currentPermissions: userPermissions,
+    mode: "any",
+    requiredPermissions: [
+      "model-resources:quota:edit",
+      "large_model:create",
+      "large_model:modify",
+    ],
+  });
+  const isPlatformAdmin = isAdmin || userRoles.includes("admin") || userRoles.includes("super_admin");
+  const showQuotaField = isPlatformAdmin || canManageLargeModel || canManageQuota;
+  const showQuotaColumns = !showQuotaField;
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -185,7 +209,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
 
   // 真实管理员判定：roles 含 admin，或该项 operations 含 modify（getMyPermissions().isAdmin 会下发全量操作）。
   const canModify = (record: LlmModel) =>
-    isAdmin || runtimeConfig.currentUser.roles.includes("admin") || Boolean(record.operations?.includes("modify"));
+    isPlatformAdmin || Boolean(record.operations?.includes("modify"));
   const canSetDefault = (record: LlmModel) => canModify(record) && !record.default;
   const canUnsetDefault = (record: LlmModel) => canModify(record) && Boolean(record.default);
 
@@ -607,7 +631,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
         }}
         open={formOpen}
         record={activeRecord}
-        showQuotaField={isAdmin || runtimeConfig.currentUser.roles.includes("admin")}
+        showQuotaField={showQuotaField}
       />
       <LlmApiGuideDrawer
         onClose={() => {
