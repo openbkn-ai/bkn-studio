@@ -18,12 +18,10 @@ import {
   type BuildExecuteType,
 } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
-
-const ACTIVE_TASK_STATUSES = new Set<BuildTask["status"]>([
-  "pending",
-  "running",
-  "listening",
-]);
+import {
+  ACTIVE_BUILD_TASK_STATUSES,
+  isBuildStartRejected,
+} from "@/modules/data-catalog/utils/build-task-guards";
 
 export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
   const { message, modal } = useAppServices();
@@ -33,7 +31,7 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
     async (task: BuildTask) => {
       const isStreaming = task.mode === "streaming";
       try {
-        if (ACTIVE_TASK_STATUSES.has(task.status)) {
+        if (ACTIVE_BUILD_TASK_STATUSES.has(task.status)) {
           await pauseBuildTask(task.id);
           message.success(
             t(isStreaming ? "dataCatalog.task.paused" : "dataCatalog.task.stopped"),
@@ -46,7 +44,12 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
         }
         await onRefresh();
       } catch (error) {
-        void message.error(extractRequestErrorMessage(error));
+        const resuming = !ACTIVE_BUILD_TASK_STATUSES.has(task.status);
+        void message.error(
+          resuming && isBuildStartRejected(error)
+            ? t("dataCatalog.task.startRejected")
+            : extractRequestErrorMessage(error),
+        );
       }
     },
     [message, onRefresh, t],
@@ -63,7 +66,11 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
           }
           await onRefresh();
         } catch (error) {
-          void message.error(extractRequestErrorMessage(error));
+          void message.error(
+            isBuildStartRejected(error)
+              ? t("dataCatalog.task.startRejected")
+              : extractRequestErrorMessage(error),
+          );
         }
       };
 

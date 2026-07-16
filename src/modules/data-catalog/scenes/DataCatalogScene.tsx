@@ -265,14 +265,14 @@ export function DataCatalogScene({
     (
       resourceId: string,
       tab: "detail" | "index" | "preview" = "detail",
-      indexView?: "configure",
+      indexView?: "config",
     ) => {
       const params = new URLSearchParams();
       if (tab !== "detail") {
         params.set("tab", tab);
       }
-      if (tab === "index" && indexView === "configure") {
-        params.set("view", "configure");
+      if (tab === "index" && indexView === "config") {
+        params.set("view", "config");
       }
       const query = params.toString();
       void navigate(`/data-directory/resource/${resourceId}${query ? `?${query}` : ""}`);

@@ -18,7 +18,7 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
-import { formatCount } from "@/modules/data-catalog/lib/format";
+import { formatRowCount } from "@/modules/data-catalog/lib/format";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import {
   indexStateOf,
@@ -72,7 +72,7 @@ type CatalogDetailPanelProps = {
   onOpenResource: (
     resourceId: string,
     tab?: "detail" | "index" | "preview",
-    indexView?: "configure",
+    indexView?: "config",
   ) => void;
   resources: CatalogResource[];
   resourcesLoading?: boolean;
@@ -258,10 +258,10 @@ export function CatalogDetailPanel({
     {
       dataIndex: "rowCount",
       title: t("dataCatalog.resource.rowCount"),
-      width: 100,
+      width: 112,
       sorter: (left, right) => (left.rowCount ?? 0) - (right.rowCount ?? 0),
       render: (value: number) =>
-        value > 0 ? <span className={styles.monoText}>{formatCount(value)}</span> : "—",
+        value > 0 ? <span className={styles.monoText}>{formatRowCount(value)}</span> : "—",
     },
     {
       key: "indexState",

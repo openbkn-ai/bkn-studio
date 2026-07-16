@@ -61,6 +61,54 @@
   background: #fff;
 }
 
+.opsCard {
+  border: 1px solid #d9e0ea;
+  background: #fff;
+}
+
+.statusStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e8edf4;
+  background: #f8fafc;
+}
+
+.statusStripMain {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.statusStripLabel {
+  flex-shrink: 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statusStripValue {
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.launchSection {
+  display: grid;
+  gap: 0;
+  padding: 12px 16px 0;
+}
+
+.launchSectionHead {
+  display: grid;
+  gap: 2px;
+}
+
 .sectionHead {
   display: flex;
   align-items: flex-start;
@@ -70,7 +118,7 @@
 }
 
 .sectionTitle {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   color: #111827;
   font-size: 14px;
   font-weight: 600;
@@ -80,8 +128,8 @@
 .sectionSummary {
   margin: 0;
   color: #64748b;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .sectionActions {
@@ -138,13 +186,11 @@
 }
 
 .progressBlock {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #eef2f7;
+  padding: 12px 16px 0;
 }
 
 .statusAlert {
-  margin-top: 12px;
+  margin: 12px 16px 0;
 }
 
 .statusAlert :global(.ant-alert) {
@@ -237,6 +283,11 @@
 
 @media (max-width: 768px) {
   .viewBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .statusStrip {
     align-items: stretch;
     flex-direction: column;
   }

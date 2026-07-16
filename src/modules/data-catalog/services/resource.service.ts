@@ -35,17 +35,23 @@ import type {
 type BackendFieldFeature = {
   config?: Record<string, unknown>;
   description?: string;
+  display_name?: string;
   feature_type?: string;
   is_default?: boolean;
   is_native?: boolean;
+  name?: string;
   ref_property?: string;
+  type?: string;
 };
 
 type BackendSchemaField = {
+  attributes?: Record<string, unknown> | null;
   description?: string;
   display_name?: string;
+  extensions?: Record<string, string>;
   features?: BackendFieldFeature[] | null;
   name?: string;
+  original_description?: string;
   original_name?: string;
   original_type?: string;
   type?: string;
@@ -59,6 +65,8 @@ type BackendIndexConfig = {
 
 function mapFeatureToBackend(feature: ResourceFieldFeature): BackendFieldFeature {
   return {
+    name: feature.name,
+    display_name: feature.displayName,
     feature_type: feature.featureType,
     description: feature.description,
     ref_property: feature.refProperty,
@@ -69,7 +77,7 @@ function mapFeatureToBackend(feature: ResourceFieldFeature): BackendFieldFeature
 }
 
 function mapFeatureFromBackend(feature: BackendFieldFeature): ResourceFieldFeature | null {
-  const featureType = feature.feature_type;
+  const featureType = feature.feature_type ?? feature.type;
   if (
     featureType !== "keyword" &&
     featureType !== "fulltext" &&
@@ -79,6 +87,8 @@ function mapFeatureFromBackend(feature: BackendFieldFeature): ResourceFieldFeatu
   }
 
   return {
+    name: feature.name,
+    displayName: feature.display_name,
     featureType: featureType as ResourceFeatureType,
     description: feature.description,
     refProperty: feature.ref_property,
@@ -130,6 +140,29 @@ function mapSchemaFieldToBackend(field: ResourceSchemaField): BackendSchemaField
   };
 }
 
+function mapSchemaFieldUpdateToBackend(field: ResourceSchemaField): BackendSchemaField {
+  const displayName = field.displayName?.trim() || field.name;
+  const description = field.description?.trim() || "";
+  const base = field.raw
+    ? ({ ...field.raw } as BackendSchemaField)
+    : ({
+        attributes: field.attributes,
+        extensions: field.extensions,
+        name: field.name,
+        original_description: field.originalDescription ?? "",
+        original_name: field.originalName ?? "",
+        original_type: field.originalType ?? "",
+        type: field.type,
+      } satisfies BackendSchemaField);
+
+  return {
+    ...base,
+    description,
+    display_name: displayName,
+    features: field.features?.map(mapFeatureToBackend) ?? [],
+  };
+}
+
 function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
   const name = field.name ?? field.original_name ?? field.display_name ?? "";
   const displayName = field.display_name?.trim();
@@ -139,12 +172,18 @@ function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
     .filter((item): item is ResourceFieldFeature => item !== null);
 
   return {
+    attributes: field.attributes,
     name,
     type: field.type ?? field.original_type ?? "string",
     displayName:
       displayName && displayName !== name ? displayName : undefined,
     description: description || undefined,
+    extensions: field.extensions,
     features: features.length > 0 ? features : undefined,
+    originalDescription: field.original_description,
+    originalName: field.original_name,
+    originalType: field.original_type,
+    raw: { ...field } as Record<string, unknown>,
   };
 }
 
@@ -364,7 +403,7 @@ export async function updateCatalogResource(
     category: input.category,
     description: input.description,
     name: input.name,
-    schema_definition: input.schema.map(mapSchemaFieldToBackend),
+    schema_definition: input.schema.map(mapSchemaFieldUpdateToBackend),
     index_config: mapIndexConfigToBackend(input.indexConfig),
     source_identifier: input.sourceIdentifier,
   });

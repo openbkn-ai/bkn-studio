@@ -70,16 +70,33 @@ export function applyIndexBuildListFilters(
   return next;
 }
 
-export type ResourceIndexView = "configure" | "overview";
+export type ResourceIndexView = "config" | "tasks";
+
+/** True when the URL explicitly names a data-index sub-tab. */
+export function isExplicitResourceIndexView(view: string | null): boolean {
+  return (
+    view === "config" ||
+    view === "tasks" ||
+    view === "configure" ||
+    view === "overview"
+  );
+}
 
 export function readResourceIndexView(
   tab: string | null,
   view: string | null,
 ): ResourceIndexView {
-  if (tab === "index" && view === "configure") {
-    return "configure";
+  if (tab !== "index") {
+    return "tasks";
   }
-  return "overview";
+  if (view === "config" || view === "configure") {
+    return "config";
+  }
+  if (view === "tasks" || view === "overview") {
+    return "tasks";
+  }
+  // No view param: provisional default; panel may auto-pick config when empty.
+  return "tasks";
 }
 
 export function applyResourceIndexView(
@@ -87,11 +104,7 @@ export function applyResourceIndexView(
   indexView: ResourceIndexView,
 ): URLSearchParams {
   const next = new URLSearchParams(base);
-  if (indexView === "configure") {
-    next.set("view", "configure");
-  } else {
-    next.delete("view");
-  }
+  next.set("view", indexView);
   next.delete("action");
   return next;
 }

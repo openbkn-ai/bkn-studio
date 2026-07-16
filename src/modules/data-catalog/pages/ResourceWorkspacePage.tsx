@@ -11,6 +11,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import {
   applyResourceIndexView,
+  isExplicitResourceIndexView,
   readResourceIndexView,
 } from "@/modules/data-catalog/lib/index-build-filters";
 import {
@@ -33,6 +34,7 @@ export function ResourceWorkspacePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = resolveResourceWorkspaceTab(searchParams.get("tab"));
   const indexView = readResourceIndexView(searchParams.get("tab"), searchParams.get("view"));
+  const indexViewExplicit = isExplicitResourceIndexView(searchParams.get("view"));
 
   const setIndexView = useCallback(
     (nextView: ResourceIndexView) => {
@@ -45,6 +47,7 @@ export function ResourceWorkspacePage() {
   return (
     <ResourceWorkspaceScene
       indexView={indexView}
+      indexViewExplicit={indexViewExplicit}
       onIndexViewChange={setIndexView}
       onTabChange={(nextTab) => {
         const nextParams = new URLSearchParams(searchParams);

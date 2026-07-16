@@ -29,10 +29,19 @@ import type {
   IndexHealth,
   IndexHealthState,
 } from "@/modules/data-catalog/types/data-catalog";
+import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
 
 type BackendBuildTaskFieldFeature = {
-  fulltext?: { analyzer?: string };
-  vector?: { dimensions?: number; model_id?: string };
+  fulltext?: { analyzer?: string; config?: { analyzer?: string } };
+  vector?: {
+    config?: {
+      dimensions?: number;
+      embedding_model?: string;
+      model_id?: string;
+    };
+    dimensions?: number;
+    model_id?: string;
+  };
 };
 
 type BackendBuildTaskIndexConfig = {
@@ -148,17 +157,26 @@ function snapshotFieldsOf(item: BackendBuildTask) {
     for (const [fieldName, feature] of Object.entries(snapshot.features ?? {})) {
       if (feature.vector) {
         embeddingFields.push(fieldName);
-        if (feature.vector.model_id && !embeddingModel) {
-          embeddingModel = feature.vector.model_id;
+        const model =
+          feature.vector.model_id ??
+          feature.vector.config?.model_id ??
+          feature.vector.config?.embedding_model ??
+          "";
+        if (model && !embeddingModel) {
+          embeddingModel = model;
         }
-        if (feature.vector.dimensions && !modelDimensions) {
-          modelDimensions = feature.vector.dimensions;
+        const dimensions =
+          feature.vector.dimensions ?? feature.vector.config?.dimensions ?? 0;
+        if (dimensions && !modelDimensions) {
+          modelDimensions = dimensions;
         }
       }
       if (feature.fulltext) {
         fulltextFields.push(fieldName);
-        if (feature.fulltext.analyzer && !fulltextAnalyzer) {
-          fulltextAnalyzer = feature.fulltext.analyzer;
+        const analyzer =
+          feature.fulltext.analyzer ?? feature.fulltext.config?.analyzer ?? "";
+        if (analyzer && !fulltextAnalyzer) {
+          fulltextAnalyzer = analyzer;
         }
       }
     }
@@ -437,28 +455,12 @@ export async function createBuildTask(
 
     const resource = mockResources.find((item) => item.id === input.resourceId);
     const form = resource
-      ? {
-          buildKeyFields: resource.indexConfig?.buildKeyFields ?? [],
-          embeddingFields:
-            resource.schema
-              .filter((field) =>
-                field.features?.some((feature) => feature.featureType === "vector"),
-              )
-              .map((field) => field.name) ?? [],
-          embeddingModel: resource.indexConfig?.defaultEmbeddingModel ?? "",
-          fulltextFields:
-            resource.schema
-              .filter((field) =>
-                field.features?.some((feature) => feature.featureType === "fulltext"),
-              )
-              .map((field) => field.name) ?? [],
-          fulltextAnalyzer: resource.indexConfig?.defaultFulltextAnalyzer ?? "",
-        }
+      ? indexFormValuesFromResource(resource)
       : {
-          buildKeyFields: [],
-          embeddingFields: [],
+          buildKeyFields: [] as string[],
+          embeddingFields: [] as string[],
           embeddingModel: "",
-          fulltextFields: [],
+          fulltextFields: [] as string[],
           fulltextAnalyzer: "",
         };
     const createdAt = Date.now();
@@ -472,7 +474,7 @@ export async function createBuildTask(
       embeddingModel: form.embeddingModel,
       modelDimensions: 0,
       fulltextFields: form.fulltextFields,
-      fulltextAnalyzer: form.fulltextAnalyzer,
+      fulltextAnalyzer: form.fulltextAnalyzer ?? "",
       totalCount: resource?.rowCount ?? 0,
       syncedCount: 0,
       vectorizedCount: 0,

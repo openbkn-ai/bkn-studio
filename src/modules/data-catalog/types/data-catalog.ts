@@ -13,20 +13,28 @@ export type ResourceFeatureType = "keyword" | "fulltext" | "vector";
 export type ResourceFieldFeature = {
   config?: Record<string, unknown>;
   description?: string;
+  displayName?: string;
   featureType: ResourceFeatureType;
   isDefault?: boolean;
   isNative?: boolean;
+  name?: string;
   refProperty?: string;
 };
 
 export type ResourceSchemaField = {
+  attributes?: Record<string, unknown> | null;
   /** 业务字段名（后端 display_name） */
   displayName?: string;
   /** 字段说明（后端 description） */
   description?: string;
+  extensions?: Record<string, string>;
   /** 字段级索引 features（全文 / 向量等） */
   features?: ResourceFieldFeature[];
   name: string;
+  originalDescription?: string;
+  originalName?: string;
+  originalType?: string;
+  raw?: Record<string, unknown>;
   type: string;
 };
 

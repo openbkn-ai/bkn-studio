@@ -61,6 +61,10 @@ type ScanPageTab = "schedules" | "tasks";
 type TaskStatusFilterValue = "all" | DataConnectScanTaskStatus;
 type TaskTriggerTypeFilterValue = "all" | DataConnectScanTask["triggerType"];
 
+function renderTableTime(value?: string) {
+  return <span className={styles.timeText}>{value || "-"}</span>;
+}
+
 export function DataConnectScanScene({
   catalogId,
   onBackToConnections,
@@ -432,30 +436,38 @@ export function DataConnectScanScene({
       dataIndex: "message",
       title: t("dataConnect.scanMessage"),
       render: (value: string) => (
-        <span className={styles.messageText}>{value || "-"}</span>
+        <span className={styles.messageText} title={value || "-"}>
+          {value || "-"}
+        </span>
       ),
     },
     {
       dataIndex: "startTime",
       title: t("dataConnect.scanStartTime"),
+      render: renderTableTime,
     },
     {
       dataIndex: "finishTime",
       title: t("dataConnect.scanFinishTime"),
+      render: renderTableTime,
     },
     {
       dataIndex: "createTime",
       title: t("dataConnect.createTime"),
+      render: renderTableTime,
     },
     {
+      className: styles.creatorCell,
       dataIndex: "creatorName",
       title: t("dataConnect.creator"),
     },
     {
       key: "actions",
+      className: styles.taskActionCell,
       title: t("common.actions"),
+      width: 96,
       render: (_, record) => (
-        <Space className={styles.actionGroup}>
+        <Space className={`${styles.actionGroup} ${styles.taskActionGroup}`}>
           <AppButton
             onClick={() => {
               setDetailTaskId(record.id);

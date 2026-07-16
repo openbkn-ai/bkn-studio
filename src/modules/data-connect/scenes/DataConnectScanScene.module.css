@@ -202,12 +202,42 @@
   padding-inline: 0;
 }
 
+.taskActionCell {
+  min-width: 96px;
+  white-space: nowrap;
+}
+
+.taskActionGroup {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
 .selectedRow :global(td) {
   background: var(--business-color-surface-hover) !important;
 }
 
 .messageText {
+  display: -webkit-box;
+  max-width: 520px;
+  overflow: hidden;
   color: var(--business-color-secondary);
+  line-height: 22px;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.timeText {
+  white-space: nowrap;
+}
+
+.creatorCell {
+  border-left: 0 !important;
+  box-shadow: none !important;
+}
+
+.creatorCell::before {
+  display: none !important;
 }
 
 .emptyHint {
