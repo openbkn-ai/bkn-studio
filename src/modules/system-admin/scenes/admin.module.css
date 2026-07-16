@@ -293,19 +293,96 @@
   line-height: 1.7;
 }
 
-.licenseNextStep {
-  margin-top: 10px;
+.licenseFingerprintInline {
+  display: flex;
+  max-width: min(760px, 100%);
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
   padding: 8px 10px;
-  border-left: 3px solid var(--admin-color-primary);
-  background: var(--admin-color-link-bg);
-  color: var(--admin-color-heading);
-  font-size: var(--admin-font-size-meta);
-  line-height: 1.6;
+  border: 1px dashed var(--admin-color-link-border);
+  background: rgb(239 246 255 / 66%);
 }
 
-.licenseHeroAlert {
+.licenseFingerprintInline span {
+  flex: 0 0 auto;
+  color: var(--admin-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.licenseFingerprintInline strong {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--admin-color-heading);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  font-weight: var(--admin-font-weight-strong);
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.licenseFingerprintInline button {
+  flex: 0 0 auto;
+}
+
+.licenseIdentityGrid {
+  display: grid;
   grid-column: 1 / -1;
-  border-radius: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--admin-color-border-soft);
+  background: #ffffff;
+}
+
+.licenseIdentityItem {
+  min-width: 0;
+  padding: 10px 12px;
+  border-right: 1px solid var(--admin-color-border-soft);
+}
+
+.licenseIdentityItem:last-child {
+  border-right: 0;
+}
+
+.licenseIdentityItem span {
+  display: block;
+  overflow: hidden;
+  color: var(--admin-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.licenseIdentityItem strong {
+  display: block;
+  overflow: hidden;
+  color: var(--admin-color-heading);
+  font-size: 13px;
+  font-weight: var(--admin-font-weight-strong);
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.licenseIdentityValue {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.licenseIdentityValue strong {
+  min-width: 0;
+  flex: 1;
+}
+
+.licenseIdentityValue button {
+  flex: 0 0 auto;
 }
 
 .licenseMetricGrid {
@@ -395,51 +472,115 @@
   font-weight: var(--admin-font-weight-strong);
 }
 
-.licenseSplit {
+.licenseModeGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  align-items: stretch;
 }
 
-.licenseScenarioTabs :global(.ant-tabs-nav) {
-  margin-bottom: 12px;
-}
-
-.licenseScenarioPanel {
+.licenseModePanel {
   display: grid;
-  gap: 12px;
-}
-
-.licenseScenarioGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.licenseScenarioStep {
-  display: grid;
-  gap: 10px;
+  align-content: start;
+  gap: 14px;
   min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--admin-color-border-soft);
-  background: var(--admin-color-surface-subtle);
+  padding: 16px;
+  border: 1px solid var(--admin-color-border);
+  background: #ffffff;
 }
 
-.licenseScenarioStep p {
+.licenseModeHead {
+  display: grid;
+  gap: 6px;
+}
+
+.licenseModeHead h3 {
+  margin: 0;
+  color: var(--admin-color-heading);
+  font-size: 16px;
+  font-weight: var(--admin-font-weight-strong);
+  line-height: 1.45;
+}
+
+.licenseModeHead :global(.ant-tag) {
+  width: fit-content;
+}
+
+.licenseModeHead p {
   margin: 0;
   color: var(--admin-color-secondary);
   font-size: var(--admin-font-size-meta);
   line-height: 1.6;
 }
 
-.licenseScenarioStep .licenseCodeGrid {
-  grid-template-columns: 1fr;
+.licensePortalLink {
+  width: fit-content;
+  color: var(--admin-color-primary);
+  font-size: var(--admin-font-size-meta);
+  line-height: 1.5;
+}
+
+.licensePortalLink:hover {
+  color: var(--admin-color-primary-hover);
+}
+
+.licenseScopeGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 14px;
+}
+
+.licenseScopePanel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--admin-color-border-soft);
+  background: var(--admin-color-surface-subtle);
+}
+
+.licenseScopeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.licenseScopeHead h4 {
+  margin: 0;
+  color: var(--admin-color-heading);
+  font-size: var(--admin-font-size-meta);
+  font-weight: var(--admin-font-weight-strong);
+  line-height: 1.45;
+}
+
+.licenseScopeHead span {
+  color: var(--admin-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.licenseTextArea {
+  min-height: 180px;
+  border-color: var(--admin-color-border);
+  border-radius: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  line-height: 1.65;
 }
 
 .licenseTagList {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.licenseTagList :global(.ant-tag) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .licenseLimitList {
@@ -510,10 +651,8 @@
   margin-top: 12px;
 }
 
-.licenseStateTag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.licenseFullAction {
+  width: 100%;
 }
 
 @media (max-width: 900px) {
@@ -525,8 +664,16 @@
     grid-column: 1 / -1;
   }
 
-  .licenseSplit,
-  .licenseScenarioGrid,
+  .licenseIdentityGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .licenseIdentityItem {
+    border-bottom: 1px solid var(--admin-color-border-soft);
+  }
+
+  .licenseModeGrid,
+  .licenseScopeGrid,
   .licenseCodeGrid {
     grid-template-columns: 1fr;
   }

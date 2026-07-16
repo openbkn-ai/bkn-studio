@@ -8,11 +8,7 @@
 import axios from "axios";
 
 import { http } from "@/framework/request/http";
-import type {
-  LicenseActivationCode,
-  LicenseDetail,
-  LicenseState,
-} from "@/modules/system-admin/types/license";
+import type { LicenseDetail, LicenseState } from "@/modules/system-admin/types/license";
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
@@ -37,12 +33,6 @@ type BackendLicenseDetail = {
   limits?: Record<string, number>;
   renew_error?: string;
   state?: LicenseState;
-};
-
-type BackendActivationCode = {
-  activation_code?: string;
-  instance_fp?: string;
-  lic_id?: string;
 };
 
 type LicenseErrorBody = {
@@ -84,12 +74,7 @@ let mockLicense: LicenseDetail = {
   state: "valid",
 };
 
-const mockActivationCode: LicenseActivationCode = {
-  activationCode:
-    "eyJsaWNfaWQiOiJkZW1vLWxpY2Vuc2UtMjAyNiIsImluc3RhbmNlX2ZwIjoiZnBfMzVkYzljOGM5NWEwOTFjYyJ9",
-  instanceFp: "fp_35dc9c8c95a091cc",
-  licId: "demo-license-2026",
-};
+const mockInstanceFingerprint = "fp_35dc9c8c95a091cc";
 
 export function mapLicenseDetail(item: BackendLicenseDetail): LicenseDetail {
   return {
@@ -107,14 +92,6 @@ export function mapLicenseDetail(item: BackendLicenseDetail): LicenseDetail {
     limits: item.limits ?? {},
     renewError: item.renew_error,
     state: item.state ?? "invalid",
-  };
-}
-
-export function mapActivationCode(item: BackendActivationCode): LicenseActivationCode {
-  return {
-    activationCode: item.activation_code ?? "",
-    instanceFp: item.instance_fp ?? "",
-    licId: item.lic_id,
   };
 }
 
@@ -158,7 +135,7 @@ export async function getLicenseDetail(): Promise<LicenseDetail> {
 
 export async function getLicenseFingerprint(): Promise<string> {
   if (useMock) {
-    return wait(mockLicense.instanceFp ?? mockActivationCode.instanceFp);
+    return wait(mockLicense.instanceFp ?? mockInstanceFingerprint);
   }
 
   const response = await http.get<{ instance_fp?: string }>(
@@ -166,18 +143,6 @@ export async function getLicenseFingerprint(): Promise<string> {
     { skipErrorToast: true },
   );
   return response.data.instance_fp ?? "";
-}
-
-export async function getLicenseActivationCode(): Promise<LicenseActivationCode> {
-  if (useMock) {
-    return wait({ ...mockActivationCode, instanceFp: mockLicense.instanceFp ?? mockActivationCode.instanceFp });
-  }
-
-  const response = await http.get<BackendActivationCode>(
-    `${ADMIN_LICENSE}/activation-code`,
-    { skipErrorToast: true },
-  );
-  return mapActivationCode(response.data);
 }
 
 export async function importLicense(license: string): Promise<LicenseDetail> {
@@ -196,26 +161,6 @@ export async function importLicense(license: string): Promise<LicenseDetail> {
 
   const response = await http.post<BackendLicenseDetail>(
     `${ADMIN_LICENSE}/import`,
-    { license },
-    { skipErrorToast: true },
-  );
-  return mapLicenseDetail(response.data);
-}
-
-export async function importLicenseReceipt(license: string): Promise<LicenseDetail> {
-  if (useMock) {
-    mockLicense = {
-      ...mockLicense,
-      activated: true,
-      error: undefined,
-      renewError: undefined,
-      state: "valid",
-    };
-    return wait({ ...mockLicense });
-  }
-
-  const response = await http.post<BackendLicenseDetail>(
-    `${ADMIN_LICENSE}/receipt`,
     { license },
     { skipErrorToast: true },
   );
@@ -249,7 +194,7 @@ export async function deleteLicense() {
       edition: "community",
       error: "No license has been imported.",
       features: [],
-      instanceFp: mockActivationCode.instanceFp,
+      instanceFp: mockInstanceFingerprint,
       limits: {},
       state: "invalid",
     };

@@ -33,9 +33,3 @@ export type LicenseDetail = {
   renewError?: string;
   state: LicenseState;
 };
-
-export type LicenseActivationCode = {
-  activationCode: string;
-  instanceFp: string;
-  licId?: string;
-};

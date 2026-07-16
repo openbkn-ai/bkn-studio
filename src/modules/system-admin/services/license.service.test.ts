@@ -9,7 +9,6 @@ import axios from "axios";
 import { describe, expect, it } from "vitest";
 
 import {
-  mapActivationCode,
   mapLicenseDetail,
   resolveLicenseRequestErrorCode,
 } from "@/modules/system-admin/services/license.service";
@@ -44,20 +43,6 @@ describe("license.service", () => {
       limits: { max_users: 100 },
       renewError: "issuer timeout",
       state: "grace",
-    });
-  });
-
-  it("maps activation code response", () => {
-    expect(
-      mapActivationCode({
-        activation_code: "code",
-        instance_fp: "fp_001",
-        lic_id: "lic-1",
-      }),
-    ).toEqual({
-      activationCode: "code",
-      instanceFp: "fp_001",
-      licId: "lic-1",
     });
   });
 
