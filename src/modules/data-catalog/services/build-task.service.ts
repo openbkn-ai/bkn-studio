@@ -30,6 +30,16 @@ import type {
   IndexHealthState,
 } from "@/modules/data-catalog/types/data-catalog";
 
+type BackendBuildTaskFieldFeature = {
+  fulltext?: { analyzer?: string };
+  vector?: { dimensions?: number; model_id?: string };
+};
+
+type BackendBuildTaskIndexConfig = {
+  build_key_fields?: string[];
+  features?: Record<string, BackendBuildTaskFieldFeature>;
+};
+
 type BackendBuildTask = {
   build_key_fields?: string | string[];
   create_time?: number;
@@ -40,6 +50,7 @@ type BackendBuildTask = {
   fulltext_analyzer?: string;
   fulltext_fields?: string | string[];
   id: string;
+  index_config?: BackendBuildTaskIndexConfig | null;
   index_health?: { embedding?: string; fulltext?: string; usable?: boolean };
   mode?: string;
   model_dimensions?: number;
@@ -125,15 +136,64 @@ export function embeddingStateOf(task: BuildTask): IndexHealthState {
   );
 }
 
+function snapshotFieldsOf(item: BackendBuildTask) {
+  const snapshot = item.index_config;
+  if (snapshot?.features || snapshot?.build_key_fields) {
+    const embeddingFields: string[] = [];
+    const fulltextFields: string[] = [];
+    let embeddingModel = "";
+    let modelDimensions = 0;
+    let fulltextAnalyzer = "";
+
+    for (const [fieldName, feature] of Object.entries(snapshot.features ?? {})) {
+      if (feature.vector) {
+        embeddingFields.push(fieldName);
+        if (feature.vector.model_id && !embeddingModel) {
+          embeddingModel = feature.vector.model_id;
+        }
+        if (feature.vector.dimensions && !modelDimensions) {
+          modelDimensions = feature.vector.dimensions;
+        }
+      }
+      if (feature.fulltext) {
+        fulltextFields.push(fieldName);
+        if (feature.fulltext.analyzer && !fulltextAnalyzer) {
+          fulltextAnalyzer = feature.fulltext.analyzer;
+        }
+      }
+    }
+
+    return {
+      buildKeyFields: snapshot.build_key_fields ?? [],
+      embeddingFields,
+      embeddingModel,
+      modelDimensions,
+      fulltextFields,
+      fulltextAnalyzer,
+    };
+  }
+
+  // 兼容旧扁平字段（过渡期 / mock）
+  return {
+    buildKeyFields: splitFields(item.build_key_fields),
+    embeddingFields: splitFields(item.embedding_fields),
+    embeddingModel: item.embedding_model ?? "",
+    modelDimensions: item.model_dimensions ?? 0,
+    fulltextFields: splitFields(item.fulltext_fields),
+    fulltextAnalyzer: item.fulltext_analyzer ?? "",
+  };
+}
+
 function mapBuildTask(item: BackendBuildTask): BuildTask {
   const createdAt = item.create_time ?? 0;
   const mode: BuildMode = item.mode === "streaming" ? "streaming" : "batch";
   const status = normalizeStatus(item.status, mode);
+  const snapshot = snapshotFieldsOf(item);
 
   // 已完成但 embedding 没建满（vectorized < synced）= 索引降级：向量化失败/部分失败。
   const synced = item.synced_count ?? 0;
   const vectorized = item.vectorized_count ?? 0;
-  const wantsEmbedding = splitFields(item.embedding_fields).length > 0;
+  const wantsEmbedding = snapshot.embeddingFields.length > 0;
   const embeddingDegraded = wantsEmbedding && status === "succeeded" && vectorized < synced;
 
   // 优先用后端真实 index_health;缺省则按计数兜底,保持与 embeddingDegraded 一致。
@@ -157,13 +217,13 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
     resourceId: item.resource_id ?? "",
     mode,
     status,
-    embeddingFields: splitFields(item.embedding_fields),
-    buildKeyFields: splitFields(item.build_key_fields),
-    embeddingModel: item.embedding_model ?? "",
+    embeddingFields: snapshot.embeddingFields,
+    buildKeyFields: snapshot.buildKeyFields,
+    embeddingModel: snapshot.embeddingModel,
     embeddingDegraded,
-    modelDimensions: item.model_dimensions ?? 0,
-    fulltextFields: splitFields(item.fulltext_fields),
-    fulltextAnalyzer: item.fulltext_analyzer ?? "",
+    modelDimensions: snapshot.modelDimensions,
+    fulltextFields: snapshot.fulltextFields,
+    fulltextAnalyzer: snapshot.fulltextAnalyzer,
     totalCount: item.total_count ?? 0,
     syncedCount: synced,
     vectorizedCount: vectorized,
@@ -376,18 +436,43 @@ export async function createBuildTask(
     }
 
     const resource = mockResources.find((item) => item.id === input.resourceId);
+    const form = resource
+      ? {
+          buildKeyFields: resource.indexConfig?.buildKeyFields ?? [],
+          embeddingFields:
+            resource.schema
+              .filter((field) =>
+                field.features?.some((feature) => feature.featureType === "vector"),
+              )
+              .map((field) => field.name) ?? [],
+          embeddingModel: resource.indexConfig?.defaultEmbeddingModel ?? "",
+          fulltextFields:
+            resource.schema
+              .filter((field) =>
+                field.features?.some((feature) => feature.featureType === "fulltext"),
+              )
+              .map((field) => field.name) ?? [],
+          fulltextAnalyzer: resource.indexConfig?.defaultFulltextAnalyzer ?? "",
+        }
+      : {
+          buildKeyFields: [],
+          embeddingFields: [],
+          embeddingModel: "",
+          fulltextFields: [],
+          fulltextAnalyzer: "",
+        };
     const createdAt = Date.now();
     const task: BuildTask = {
       id: `bt-${mockSlug(8)}`,
       resourceId: input.resourceId,
       mode: input.mode,
       status: "pending",
-      embeddingFields: input.embeddingFields,
-      buildKeyFields: input.buildKeyFields,
-      embeddingModel: input.embeddingModel,
-      modelDimensions: input.modelDimensions,
-      fulltextFields: input.fulltextFields,
-      fulltextAnalyzer: input.fulltextAnalyzer ?? "",
+      embeddingFields: form.embeddingFields,
+      buildKeyFields: form.buildKeyFields,
+      embeddingModel: form.embeddingModel,
+      modelDimensions: 0,
+      fulltextFields: form.fulltextFields,
+      fulltextAnalyzer: form.fulltextAnalyzer,
       totalCount: resource?.rowCount ?? 0,
       syncedCount: 0,
       vectorizedCount: 0,
@@ -406,18 +491,16 @@ export async function createBuildTask(
     return wait(task);
   }
 
-  // 创建仅返回 {id, resource_id, status: "init"},完整任务体再查一次
+  // 创建仅返回 {id, resource_id, status: "init"},完整任务体再查一次。
+  // 索引配置由服务端从 resource 派生快照，客户端不再传字段配置。
   const response = await http.post<BackendBuildTask>(
     "/vega-backend/v1/build-tasks",
     {
-      build_key_fields: input.buildKeyFields.join(","),
-      embedding_fields: input.embeddingFields.join(","),
-      embedding_model: input.embeddingModel,
-      mode: input.mode,
-      model_dimensions: input.modelDimensions,
       resource_id: input.resourceId,
-      fulltext_fields: input.fulltextFields.join(","),
-      fulltext_analyzer: input.fulltextAnalyzer || undefined,
+      mode: input.mode,
+      ...(input.mode === "batch" && input.executeType
+        ? { execute_type: input.executeType }
+        : {}),
     },
   );
 
@@ -453,46 +536,21 @@ export async function resumeBuildTask(id: string) {
     return;
   }
 
-  // 后端语义:start = 恢复运行(body 可选)
-  await http.post(`/vega-backend/v1/build-tasks/${id}/start`);
+  // 后端语义:start = 恢复运行；默认 reset=false 按游标续跑
+  await http.post(`/vega-backend/v1/build-tasks/${id}/start`, { reset: false });
 }
 
+/**
+ * @deprecated 索引配置归属 resource。请 updateCatalogResource 后再 createBuildTask。
+ * 保留空实现会误导调用方，这里直接抛错。
+ */
 export async function updateBuildTask(
-  id: string,
-  input: BuildTaskUpdateInput,
+  _id: string,
+  _input: BuildTaskUpdateInput,
 ): Promise<void> {
-  if (useMock) {
-    const task = mockBuildTasks.find((item) => item.id === id);
-    if (task) {
-      task.embeddingFields = input.embeddingFields;
-      task.buildKeyFields = input.buildKeyFields;
-      task.embeddingModel = input.embeddingModel;
-      task.modelDimensions = input.modelDimensions;
-      task.fulltextFields = input.fulltextFields;
-      task.fulltextAnalyzer = input.fulltextAnalyzer ?? "";
-      task.status = "pending";
-      task.syncedCount = 0;
-      task.vectorizedCount = 0;
-      task.embeddingDegraded = false;
-      task.indexUsable = true;
-      task.failureDetail = "";
-      task.error = null;
-      emitMockChange();
-      ensureMockTicker();
-    }
-    await wait(undefined, 120);
-    return;
-  }
-
-  // 编辑配置 + 触发 full 重建(后端 drop 旧索引按新 mapping 重建)。仅 batch。
-  await http.put(`/vega-backend/v1/build-tasks/${id}`, {
-    build_key_fields: input.buildKeyFields.join(","),
-    embedding_fields: input.embeddingFields.join(","),
-    embedding_model: input.embeddingModel,
-    model_dimensions: input.modelDimensions,
-    fulltext_fields: input.fulltextFields.join(","),
-    fulltext_analyzer: input.fulltextAnalyzer || undefined,
-  });
+  throw new Error(
+    "Build task index config updates are removed; update the resource index config and create a new build task.",
+  );
 }
 
 export async function deleteBuildTask(
@@ -537,32 +595,39 @@ export async function deleteBuildTask(
 
 export type BuildExecuteType = "incremental" | "full";
 
+/**
+ * 重新 start 任务。
+ * - reset=false：按 synced_mark 增量续跑（对应旧 execute_type=incremental）
+ * - reset=true：忽略游标全量重跑（对应旧 execute_type=full）
+ */
 export async function retryBuildTask(
   id: string,
-  executeType: BuildExecuteType = "incremental",
+  resetOrExecuteType: boolean | BuildExecuteType = false,
 ): Promise<BuildTask | null> {
+  const reset =
+    typeof resetOrExecuteType === "boolean"
+      ? resetOrExecuteType
+      : resetOrExecuteType === "full";
+
   if (useMock) {
     const source = mockBuildTasks.find((item) => item.id === id);
     if (!source) {
       return wait(null);
     }
-    return createBuildTask({
-      buildKeyFields: source.buildKeyFields,
-      embeddingFields: source.embeddingFields,
-      embeddingModel: source.embeddingModel,
-      mode: source.mode,
-      modelDimensions: source.modelDimensions,
-      resourceId: source.resourceId,
-      fulltextFields: source.fulltextFields,
-      fulltextAnalyzer: source.fulltextAnalyzer,
-    });
+    if (reset) {
+      source.syncedCount = 0;
+      source.vectorizedCount = 0;
+    }
+    source.status = source.mode === "streaming" ? "listening" : "running";
+    source.error = null;
+    source.failureDetail = "";
+    source.lastEventAt = Date.now();
+    emitMockChange();
+    ensureMockTicker();
+    return wait(source);
   }
 
-  // 后端没有独立 retry:重新 start(支持 completed/stopped/failed)。
-  // execute_type:incremental 从 build key 游标(synced_mark)续传;full 游标清零全表重灌
-  await http.post(`/vega-backend/v1/build-tasks/${id}/start`, {
-    execute_type: executeType,
-  });
+  await http.post(`/vega-backend/v1/build-tasks/${id}/start`, { reset });
   return getBuildTask(id);
 }
 

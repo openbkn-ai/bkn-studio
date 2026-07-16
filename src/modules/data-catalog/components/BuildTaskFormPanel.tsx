@@ -18,9 +18,11 @@ import {
   BuildTaskConflictError,
   createBuildTask,
   listBuildTasks,
-  updateBuildTask,
 } from "@/modules/data-catalog/services/build-task.service";
-import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
+import {
+  getCatalogResource,
+  updateCatalogResource,
+} from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildMode,
   BuildTask,
@@ -28,6 +30,10 @@ import type {
   EmbeddingModelOption,
   ResourceSchemaField,
 } from "@/modules/data-catalog/types/data-catalog";
+import {
+  applyIndexFormToSchema,
+  indexFormValuesFromResource,
+} from "@/modules/data-catalog/utils/resource-index-config";
 import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
 
 import formStyles from "./BuildTaskFormPanel.module.css";
@@ -119,18 +125,32 @@ export function BuildTaskFormPanel({
     setModelsLoaded(false);
     setSchema(resource.schema);
 
-    if (resource.schema.length === 0) {
-      setSchemaLoading(true);
-      void getCatalogResource(resource.id)
-        .then((detail) => {
-          if (detail?.schema.length) {
-            setSchema(detail.schema);
-          }
-        })
-        .finally(() => setSchemaLoading(false));
-    }
+    const hydrateFromResource = (detail: CatalogResource) => {
+      setSchema(detail.schema);
+      const form = indexFormValuesFromResource(detail);
+      setEmbeddingFields(form.embeddingFields);
+      setBuildKeyFields(form.buildKeyFields);
+      setFulltextFields(form.fulltextFields);
+      if (form.fulltextAnalyzer) {
+        setFulltextAnalyzer(form.fulltextAnalyzer);
+      }
+      return form.embeddingModel;
+    };
 
     void (async () => {
+      let preferredModel = "";
+      setSchemaLoading(true);
+      try {
+        const detail = await getCatalogResource(resource.id);
+        if (detail) {
+          preferredModel = hydrateFromResource(detail) || "";
+        } else if (resource.schema.length > 0) {
+          preferredModel = hydrateFromResource(resource) || "";
+        }
+      } finally {
+        setSchemaLoading(false);
+      }
+
       let existing: BuildTask | null = null;
       try {
         const tasks = await listBuildTasks({ resourceId: resource.id });
@@ -141,11 +161,15 @@ export function BuildTaskFormPanel({
       if (existing) {
         setExistingTask(existing);
         setMode(existing.mode);
-        setEmbeddingFields(existing.embeddingFields);
-        setBuildKeyFields(existing.buildKeyFields);
-        setFulltextFields(existing.fulltextFields);
-        if (existing.fulltextAnalyzer) {
-          setFulltextAnalyzer(existing.fulltextAnalyzer);
+        // 无 resource 配置时，回退展示最近任务快照
+        if (!preferredModel && existing.embeddingFields.length + existing.fulltextFields.length > 0) {
+          setEmbeddingFields(existing.embeddingFields);
+          setBuildKeyFields(existing.buildKeyFields);
+          setFulltextFields(existing.fulltextFields);
+          if (existing.fulltextAnalyzer) {
+            setFulltextAnalyzer(existing.fulltextAnalyzer);
+          }
+          preferredModel = existing.embeddingModel;
         }
       }
 
@@ -164,18 +188,16 @@ export function BuildTaskFormPanel({
           }));
         const list = options.length > 0 ? options : FALLBACK_MODELS;
         setModels(list);
-        const preferred = existing?.embeddingModel;
         setModelId(
-          preferred && list.some((item) => item.id === preferred)
-            ? preferred
+          preferredModel && list.some((item) => item.id === preferredModel)
+            ? preferredModel
             : list[0]?.id,
         );
       } catch {
         setModels(FALLBACK_MODELS);
-        const preferred = existing?.embeddingModel;
         setModelId(
-          preferred && FALLBACK_MODELS.some((item) => item.id === preferred)
-            ? preferred
+          preferredModel && FALLBACK_MODELS.some((item) => item.id === preferredModel)
+            ? preferredModel
             : FALLBACK_MODELS[0].id,
         );
       } finally {
@@ -207,28 +229,42 @@ export function BuildTaskFormPanel({
 
   const submitTask = async () => {
     const useEmbedding = embeddingFields.length > 0 && selectedModel;
-    const payload = {
+    const detail =
+      (await getCatalogResource(resource.id)) ??
+      ({
+        ...resource,
+        schema,
+      } satisfies CatalogResource);
+
+    const { schema: nextSchema, indexConfig } = applyIndexFormToSchema(detail.schema.length ? detail.schema : schema, {
       buildKeyFields,
       embeddingFields,
       embeddingModel: useEmbedding ? selectedModel.id : "",
-      modelDimensions: useEmbedding ? selectedModel.dimensions : 0,
       fulltextFields,
       fulltextAnalyzer: fulltextFields.length > 0 ? fulltextAnalyzer : undefined,
-    };
+    });
 
-    if (isEditable && existingTask) {
-      await updateBuildTask(existingTask.id, payload);
-      message.success(t("dataCatalog.build.edited"));
-      onSubmitted(existingTask);
-      return;
-    }
+    // 先写 resource 索引配置，再创建构建任务（任务只触发执行）。
+    await updateCatalogResource(resource.id, {
+      catalogId: detail.catalogId,
+      category: detail.category,
+      description: detail.description,
+      name: detail.name,
+      sourceIdentifier: detail.sourceIdentifier,
+      schema: nextSchema,
+      indexConfig,
+    });
 
     const task = await createBuildTask({
-      ...payload,
       mode,
       resourceId: resource.id,
+      executeType: mode === "batch" ? "full" : undefined,
     });
-    message.success(t("dataCatalog.build.created", { id: task.id }));
+    message.success(
+      isEditable
+        ? t("dataCatalog.build.edited")
+        : t("dataCatalog.build.created", { id: task.id }),
+    );
     onSubmitted(task);
   };
 

@@ -7,13 +7,34 @@
 
 export type ResourceCategory = "dataset" | "logicview" | "table";
 
+/** 字段级索引能力：keyword / fulltext / vector（对齐 Vega feature_type）。 */
+export type ResourceFeatureType = "keyword" | "fulltext" | "vector";
+
+export type ResourceFieldFeature = {
+  config?: Record<string, unknown>;
+  description?: string;
+  featureType: ResourceFeatureType;
+  isDefault?: boolean;
+  isNative?: boolean;
+  refProperty?: string;
+};
+
 export type ResourceSchemaField = {
   /** 业务字段名（后端 display_name） */
   displayName?: string;
   /** 字段说明（后端 description） */
   description?: string;
+  /** 字段级索引 features（全文 / 向量等） */
+  features?: ResourceFieldFeature[];
   name: string;
   type: string;
+};
+
+/** Resource 级默认值与跨字段构建策略（不含字段是否参与索引）。 */
+export type ResourceIndexConfig = {
+  buildKeyFields?: string[];
+  defaultEmbeddingModel?: string;
+  defaultFulltextAnalyzer?: string;
 };
 
 export type CatalogResource = {
@@ -22,6 +43,8 @@ export type CatalogResource = {
   columnCount: number;
   description: string;
   id: string;
+  /** 当前索引配置；列表接口可能缺省，配置页以详情为准 */
+  indexConfig?: ResourceIndexConfig;
   name: string;
   rowCount: number;
   schema: ResourceSchemaField[];
@@ -40,6 +63,7 @@ export type ResourceCreateInput = {
   catalogId: string;
   category: ResourceCategory;
   description: string;
+  indexConfig?: ResourceIndexConfig;
   name: string;
   schema: ResourceSchemaField[];
   sourceIdentifier: string;
@@ -137,19 +161,20 @@ export type BuildTaskPageResult = {
   total: number;
 };
 
+/** 创建任务：索引配置已归属 resource，此处只触发构建。 */
 export type BuildTaskCreateInput = {
-  buildKeyFields: string[];
-  embeddingFields: string[];
-  embeddingModel: string;
-  fulltextAnalyzer?: string;
-  fulltextFields: string[];
+  /** batch only；默认 full。streaming 勿传 unsupported 值。 */
+  executeType?: "full" | "incremental";
   mode: BuildMode;
-  modelDimensions: number;
   resourceId: string;
 };
 
 export type FulltextAnalyzer = "hanlp_index" | "ik_max_word" | "standard";
 
+/**
+ * @deprecated 索引配置改走 resource update；勿再 PUT task 配置。
+ * 保留类型仅用于过渡期 UI 组装 resource 写入载荷。
+ */
 export type BuildTaskUpdateInput = {
   buildKeyFields: string[];
   embeddingFields: string[];
@@ -157,6 +182,11 @@ export type BuildTaskUpdateInput = {
   fulltextAnalyzer?: string;
   fulltextFields: string[];
   modelDimensions: number;
+};
+
+/** start / 重跑：reset=true 忽略游标全量重跑。 */
+export type BuildTaskStartInput = {
+  reset?: boolean;
 };
 
 export type CatalogScanStatus = "failed" | "running" | "succeeded";

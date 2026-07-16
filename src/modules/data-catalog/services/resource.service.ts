@@ -22,6 +22,9 @@ import type {
   CatalogScanRecord,
   ResourceCategory,
   ResourceCreateInput,
+  ResourceFieldFeature,
+  ResourceFeatureType,
+  ResourceIndexConfig,
   ResourceListQuery,
   ResourcePreviewQuery,
   ResourcePreviewResult,
@@ -29,14 +32,89 @@ import type {
   ResourceUpdateInput,
 } from "@/modules/data-catalog/types/data-catalog";
 
+type BackendFieldFeature = {
+  config?: Record<string, unknown>;
+  description?: string;
+  feature_type?: string;
+  is_default?: boolean;
+  is_native?: boolean;
+  ref_property?: string;
+};
+
 type BackendSchemaField = {
   description?: string;
   display_name?: string;
+  features?: BackendFieldFeature[] | null;
   name?: string;
   original_name?: string;
   original_type?: string;
   type?: string;
 };
+
+type BackendIndexConfig = {
+  build_key_fields?: string[];
+  default_embedding_model?: string;
+  default_fulltext_analyzer?: string;
+};
+
+function mapFeatureToBackend(feature: ResourceFieldFeature): BackendFieldFeature {
+  return {
+    feature_type: feature.featureType,
+    description: feature.description,
+    ref_property: feature.refProperty,
+    is_default: feature.isDefault,
+    is_native: feature.isNative,
+    config: feature.config,
+  };
+}
+
+function mapFeatureFromBackend(feature: BackendFieldFeature): ResourceFieldFeature | null {
+  const featureType = feature.feature_type;
+  if (
+    featureType !== "keyword" &&
+    featureType !== "fulltext" &&
+    featureType !== "vector"
+  ) {
+    return null;
+  }
+
+  return {
+    featureType: featureType as ResourceFeatureType,
+    description: feature.description,
+    refProperty: feature.ref_property,
+    isDefault: feature.is_default,
+    isNative: feature.is_native,
+    config: feature.config,
+  };
+}
+
+function mapIndexConfigToBackend(
+  config?: ResourceIndexConfig,
+): BackendIndexConfig | undefined {
+  if (!config) {
+    return undefined;
+  }
+
+  return {
+    build_key_fields: config.buildKeyFields,
+    default_fulltext_analyzer: config.defaultFulltextAnalyzer,
+    default_embedding_model: config.defaultEmbeddingModel,
+  };
+}
+
+function mapIndexConfigFromBackend(
+  config?: BackendIndexConfig | null,
+): ResourceIndexConfig | undefined {
+  if (!config) {
+    return undefined;
+  }
+
+  return {
+    buildKeyFields: config.build_key_fields,
+    defaultFulltextAnalyzer: config.default_fulltext_analyzer,
+    defaultEmbeddingModel: config.default_embedding_model,
+  };
+}
 
 function mapSchemaFieldToBackend(field: ResourceSchemaField): BackendSchemaField {
   const displayName = field.displayName?.trim() || field.name;
@@ -48,6 +126,7 @@ function mapSchemaFieldToBackend(field: ResourceSchemaField): BackendSchemaField
     name: field.name,
     original_name: field.name,
     type: field.type,
+    features: field.features?.map(mapFeatureToBackend),
   };
 }
 
@@ -55,6 +134,9 @@ function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
   const name = field.name ?? field.original_name ?? field.display_name ?? "";
   const displayName = field.display_name?.trim();
   const description = field.description?.trim();
+  const features = (field.features ?? [])
+    .map(mapFeatureFromBackend)
+    .filter((item): item is ResourceFieldFeature => item !== null);
 
   return {
     name,
@@ -62,6 +144,7 @@ function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
     displayName:
       displayName && displayName !== name ? displayName : undefined,
     description: description || undefined,
+    features: features.length > 0 ? features : undefined,
   };
 }
 
@@ -71,6 +154,7 @@ type BackendResource = {
   column_count?: number;
   description?: string;
   id: string;
+  index_config?: BackendIndexConfig | null;
   logic_type?: string;
   name: string;
   row_count?: number;
@@ -122,6 +206,7 @@ function mapResource(item: BackendResource): CatalogResource {
     sourceIdentifier: item.source_identifier ?? "",
     description: item.description ?? "",
     schema: (item.schema_definition ?? []).map(mapSchemaField),
+    indexConfig: mapIndexConfigFromBackend(item.index_config),
     // 列表接口不返回 schema_definition,改用后端标量 column_count;详情接口回退到 schema 长度
     columnCount: item.column_count ?? item.schema_definition?.length ?? 0,
     // 顶层 row_count 后端常缺省,实际行数在 source_metadata.properties 里
@@ -220,6 +305,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       name: input.name,
       schema_definition:
         input.schema.length > 0 ? input.schema.map(mapSchemaFieldToBackend) : undefined,
+      index_config: mapIndexConfigToBackend(input.indexConfig),
       source_identifier: input.sourceIdentifier,
     },
   );
@@ -261,6 +347,7 @@ export async function updateCatalogResource(
       description: input.description,
       name: input.name,
       schema: input.schema,
+      indexConfig: input.indexConfig ?? current.indexConfig,
       sourceIdentifier: input.sourceIdentifier,
       columnCount: input.schema.length,
       updatedAt,
@@ -278,6 +365,7 @@ export async function updateCatalogResource(
     description: input.description,
     name: input.name,
     schema_definition: input.schema.map(mapSchemaFieldToBackend),
+    index_config: mapIndexConfigToBackend(input.indexConfig),
     source_identifier: input.sourceIdentifier,
   });
 

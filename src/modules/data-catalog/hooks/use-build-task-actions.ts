@@ -54,9 +54,10 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
 
   const retry = useCallback(
     async (task: BuildTask, executeType: BuildExecuteType = "incremental") => {
+      const reset = executeType === "full";
       const run = async () => {
         try {
-          const next = await retryBuildTask(task.id, executeType);
+          const next = await retryBuildTask(task.id, reset);
           if (next) {
             message.success(t("dataCatalog.task.retried", { id: next.id }));
           }
@@ -66,7 +67,7 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
         }
       };
 
-      if (executeType === "full") {
+      if (reset) {
         modal.confirm({
           title: t("dataCatalog.task.rebuildFullConfirmTitle"),
           content: t("dataCatalog.task.rebuildFullConfirmContent"),
