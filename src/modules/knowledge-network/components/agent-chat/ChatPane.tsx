@@ -308,8 +308,10 @@ export type ChatPaneProps = {
   /** 知识网络摘要（父级拉取）；是否注入由 profile.injectKnContext 决定。 */
   knContext: string;
   knSummary: { objectTypes: number; relations: number } | null;
-  /** 空态建议问题（父级按面板画像定制）。 */
+  /** 空态建议问题（父级生成，两侧共用一组）。 */
   suggestions: string[];
+  /** 点击建议问题的回调：由父级按发送目标派发（对比模式下两侧同题）。缺省则本面板直发。 */
+  onPick?: (question: string) => void;
   /** 实时 tools/list（父级缓存共享）；send 时懒取，picker 展示用已加载值。 */
   getTools: () => Promise<McpToolDef[]>;
   toolDefs: McpToolDef[] | null;
@@ -330,6 +332,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     knContext,
     knSummary,
     suggestions,
+    onPick,
     getTools,
     toolDefs,
     resourceScope,
@@ -968,7 +971,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             </p>
             <div className={styles.sugs}>
               {sugList.map((s) => (
-                <button key={s} type="button" className={styles.sug} onClick={() => void send(s)}>
+                <button
+                  key={s}
+                  type="button"
+                  className={styles.sug}
+                  onClick={() => (onPick ? onPick(s) : void send(s))}
+                >
                   <span className={styles.sugText}>{s}</span>
                   <RightOutlined className={styles.sugArrow} />
                 </button>

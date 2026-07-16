@@ -49,15 +49,16 @@ import {
 } from "./ChatPane";
 import styles from "./AgentChat.module.css";
 
+/**
+ * 建议问题在两侧（「仅基础数据」/「业务知识网络」）共用同一组，措辞保持业务向、不带本体术语：
+ * 左侧只挂 SQL/表工具，问它「对象类怎么关联」是问一个它定义上就不知道的概念，对比没有说服力；
+ * 业务问题才是左侧用 SQL 抓瞎、右侧靠语义层直接答的对比场。
+ * 拉不到网络结构时的兜底（不含任何具体业务名词）。
+ */
 const FALLBACK_SUGGESTIONS = [
-  "这个知识网络里有哪些对象类和关系？",
-  "帮我查最近活跃的高价值客户",
-  "对象类之间是怎么关联的？",
-];
-
-const FALLBACK_BASE_SUGGESTIONS = [
-  "有哪些数据表？分别存什么数据？",
-  "帮我查最近活跃的高价值客户",
+  "有哪些数据？先给我一个整体概览",
+  "最近有什么值得关注的变化？",
+  "帮我找出最需要重点关注的几条记录",
 ];
 
 /** 对比模式开关 + 发送目标（全局缓存，不分 kn）。 */
@@ -104,6 +105,85 @@ function buildKnContext(detail: KnDetail): string {
     lines.push(`对象类：${shown.join("、")}${otNames.length > shown.length ? ` 等 ${otNames.length} 个` : ""}`);
   }
   return lines.join("\n");
+}
+
+/**
+ * 无默认模型（或生成失败）时的兜底：拿业务名词套模板，同样保持业务向、不出现本体术语。
+ * 概念组实测多数网络为空，故第二条优先用关系名——关系名本身就是业务动词（如「用户下单」）。
+ */
+function templateSuggestions(detail: KnDetail): string[] {
+  const out: string[] = [];
+  const [first, second] = detail.object_types;
+  if (first) out.push(`${first.name ?? first.id}有哪些数据？先看几条`);
+  const groupName = detail.concept_groups.find((g) => g.name)?.name;
+  const relName = detail.relation_types.find((r) => r.name)?.name;
+  if (groupName) out.push(`${groupName}相关的情况怎么样？`);
+  else if (relName) out.push(`${relName}的情况怎么样？`);
+  if (second) out.push(`${second.name ?? second.id}里有什么值得关注的？`);
+  else if (first) out.push(`${first.name ?? first.id}最近有什么变化？`);
+  return out.length >= 2 ? out : FALLBACK_SUGGESTIONS;
+}
+
+/**
+ * 建议问题的生成提示词。输入是 get_kn_detail 的原始 JSON（网络/对象类的 comment、关系名等业务描述都在里面）——
+ * 推荐问题的质量直接取决于 BKN 里这些描述写得好不好，这就是业务侧控制推荐问题的抓手。
+ */
+const SUGGEST_PROMPT =
+  "你在为一个「智能问数」产品的空白对话页写推荐问题。提问的人是不懂技术的业务人员。\n" +
+  "下面是某个业务领域的结构定义 JSON（name/comment 是业务含义，object_types 是业务实体，relation_types 是实体间的业务关联）。\n" +
+  "请据此写 3 个该领域业务人员真正会问的问题。硬性要求：\n" +
+  "1. 只能引用 JSON 里出现过的业务名词，绝对不要编造里面没有的实体或概念（编造的问题一点就会查不到数据）。\n" +
+  "2. 不要出现「对象类」「关系类」「知识网络」「图谱」「schema」「表」「字段」这类技术术语，也不要出现 JSON 里的英文字段名，要像业务人员日常说话。\n" +
+  "3. 每个问题一句话、不超过 25 字，且能用数据回答（可查询、可统计、可对比），不要开放式主观题。\n" +
+  "4. 3 个问题角度各不相同，不要同义重复。\n" +
+  '只输出 JSON 数组，形如 ["问题1","问题2","问题3"]，不要任何其他文字，不要代码块标记。';
+
+/** 从模型输出里抠出 JSON 数组；任何不合预期都返回空数组，由调用方回退模板。 */
+function parseSuggestions(text: string): string[] {
+  const match = text.match(/\[[\s\S]*\]/);
+  if (!match) return [];
+  try {
+    const parsed: unknown = JSON.parse(match[0]);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item): item is string => typeof item === "string")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0 && s.length <= 60)
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
+}
+
+/** 建议问题缓存：按 knId 存，指纹变了（网络结构/描述改过）就重生成。 */
+const SUGS_LS_PREFIX = "bkn-studio:agentchat:sugs:";
+
+function detailFingerprint(detail: KnDetail): string {
+  const ids = detail.object_types.map((o) => o.id).join(",");
+  return [ids.length, detail.object_types.length, detail.relation_types.length, detail.concept_groups.length, (detail.comment ?? "").length].join(
+    "-",
+  );
+}
+
+function loadCachedSuggestions(knId: string, fp: string): string[] | null {
+  try {
+    const raw = localStorage.getItem(SUGS_LS_PREFIX + knId);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { fp?: string; list?: unknown };
+    if (parsed.fp !== fp || !Array.isArray(parsed.list)) return null;
+    const list = parsed.list.filter((s): s is string => typeof s === "string");
+    return list.length >= 2 ? list : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedSuggestions(knId: string, fp: string, list: string[]): void {
+  try {
+    localStorage.setItem(SUGS_LS_PREFIX + knId, JSON.stringify({ fp, list }));
+  } catch {
+    /* 隐私模式/配额满：不缓存即可，不影响功能 */
+  }
 }
 
 const SOLO_PROFILE: PaneProfile = {
@@ -265,8 +345,10 @@ export function AgentChat({
   const [knSummary, setKnSummary] = useState<{ objectTypes: number; relations: number } | null>(null);
   // 当前网络绑定的 resource_id 集（object_type.data_source.id）；用于把 list_resources 默认限定到本网络的数据表。
   const [knResourceIds, setKnResourceIds] = useState<string[] | null>(null);
+  // 建议问题：两侧共用一组。先用模板即时渲染，模型就绪后再换成生成结果（见下方 effect）。
   const [suggestions, setSuggestions] = useState<string[]>(FALLBACK_SUGGESTIONS);
-  const [baseSuggestions, setBaseSuggestions] = useState<string[]>(FALLBACK_BASE_SUGGESTIONS);
+  // 已拉到的网络结构：既派生系统提示词摘要，也作为生成建议问题的业务描述来源。
+  const [knDetail, setKnDetail] = useState<KnDetail | null>(null);
 
   const [compare, setCompare] = useState<CompareState>(loadCompareState);
   const setCompareState = useCallback((updater: (prev: CompareState) => CompareState) => {
@@ -318,23 +400,17 @@ export function AgentChat({
     setKnContext("");
     setKnSummary(null);
     setKnResourceIds(null);
+    setKnDetail(null);
     setSuggestions(FALLBACK_SUGGESTIONS);
-    setBaseSuggestions(FALLBACK_BASE_SUGGESTIONS);
     fetchKnDetail(env, tokenProvider)
       .then((detail) => {
         if (cancelled) return;
         setKnContext(buildKnContext(detail));
         setKnSummary({ objectTypes: detail.object_types.length, relations: detail.relation_types.length });
         setKnResourceIds(detail.object_types.map((o) => o.data_source?.id).filter((id): id is string => !!id));
-        const firstOt = detail.object_types[0];
-        const firstRel = detail.relation_types[0];
-        const tailored: string[] = ["列出这个知识网络的对象类和关系类"];
-        if (firstOt) tailored.push(`${firstOt.name ?? firstOt.id} 有哪些数据？举几条实例`);
-        if (firstRel) tailored.push(`${firstRel.name ?? firstRel.id} 关系连接了哪些对象？`);
-        setSuggestions(tailored.length >= 2 ? tailored : FALLBACK_SUGGESTIONS);
-        const tailoredBase: string[] = ["有哪些数据表？分别存什么数据？"];
-        if (firstOt) tailoredBase.push(`查几条 ${firstOt.name ?? firstOt.id} 相关的数据看看`);
-        setBaseSuggestions(tailoredBase);
+        setKnDetail(detail);
+        // 先给模板结果，空态立刻有东西可点，不等模型。
+        setSuggestions(templateSuggestions(detail));
       })
       .catch(() => {
         /* 占位符 / 无权限网络拉不到结构时，回退默认建议，Agent 仍可用工具探索 */
@@ -343,6 +419,47 @@ export function AgentChat({
       cancelled = true;
     };
   }, [env, tokenProvider]);
+
+  // 有默认模型就用 BKN 的业务描述生成建议问题，替换模板结果；无模型/失败/输出不合预期时留在模板。
+  useEffect(() => {
+    if (!knDetail || !modelsLoaded) return;
+    const modelName = models.find((m) => m.default)?.modelName ?? models[0]?.modelName;
+    if (!modelName) return;
+    const fp = detailFingerprint(knDetail);
+    const cached = loadCachedSuggestions(knId, fp);
+    if (cached) {
+      setSuggestions(cached);
+      return;
+    }
+    const controller = new AbortController();
+    let text = "";
+    runAgentChat({
+      env,
+      modelName,
+      system: SUGGEST_PROMPT,
+      history: [{ role: "user", content: JSON.stringify(knDetail) }],
+      tools: {},
+      config: DEFAULT_AGENT_CONFIG,
+      tokenProvider: llmTokenProvider,
+      signal: controller.signal,
+      onChunk: (chunk) => {
+        if (chunk.type === "text") text += chunk.delta;
+      },
+    })
+      .then(() => {
+        if (controller.signal.aborted) return;
+        const list = parseSuggestions(text);
+        if (list.length < 2) return; // 输出不可用 → 保持模板
+        setSuggestions(list);
+        saveCachedSuggestions(knId, fp, list);
+      })
+      .catch(() => {
+        /* 生成失败不打扰用户：空态继续用模板建议 */
+      });
+    return () => {
+      controller.abort();
+    };
+  }, [knDetail, modelsLoaded, models, env, llmTokenProvider, knId]);
 
   // tools/list 缓存：按 knId 拉一次，多面板共享（send 懒取 promise；picker 用已解析的 toolDefs）。
   const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
@@ -398,6 +515,19 @@ export function AgentChat({
     targets.forEach((key) => refOf(key).current?.send(text));
     setInput("");
   }, [input, targets, anyTargetBusy, refOf]);
+
+  /**
+   * 空态点建议问题：和共享输入框走同一套发送目标。
+   * （此前是 ChatPane 内直发，绕过 targets：对比模式下点谁只发谁、两侧还各是各的问题，
+   * 导致对比报告永远拿不到同题两答。）
+   */
+  const sendQuestion = useCallback(
+    (text: string) => {
+      if (!text.trim() || anyTargetBusy) return;
+      targets.forEach((key) => refOf(key).current?.send(text));
+    },
+    [targets, anyTargetBusy, refOf],
+  );
 
   const stopAll = useCallback(() => {
     (Object.keys(busyMap) as PaneKey[]).forEach((key) => {
@@ -536,7 +666,8 @@ export function AgentChat({
               ref={baseRef}
               {...paneShared}
               profile={BASE_PROFILE}
-              suggestions={baseSuggestions}
+              suggestions={suggestions}
+              onPick={sendQuestion}
               onBusyChange={onBaseBusy}
             />
           </div>
@@ -546,6 +677,7 @@ export function AgentChat({
               {...paneShared}
               profile={KN_PROFILE}
               suggestions={suggestions}
+              onPick={sendQuestion}
               onBusyChange={onKnBusy}
             />
           </div>
@@ -556,6 +688,7 @@ export function AgentChat({
           {...paneShared}
           profile={SOLO_PROFILE}
           suggestions={suggestions}
+          onPick={sendQuestion}
           onBusyChange={onSoloBusy}
         />
       )}
