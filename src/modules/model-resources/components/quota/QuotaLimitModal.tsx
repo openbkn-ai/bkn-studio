@@ -218,7 +218,12 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
   };
 
   const validateRows = () => {
-    const activeRows = billingType === "1" ? rows : [rows[0]];
+    const activeRows = billingType === "1" ? rows : rows.slice(0, 1);
+    if (activeRows.length === 0) {
+      setShowErrors(true);
+      return false;
+    }
+
     const nextRows = rows.map((row) => {
       if (!activeRows.some((activeRow) => activeRow.id === row.id)) {
         return { ...row, errors: {} };
@@ -251,6 +256,10 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
     }
 
     const inputRow = rows[0];
+    if (!inputRow) {
+      return;
+    }
+
     const outputRow = rows[1];
     const payload = {
       modelId: record.modelId,
@@ -292,7 +301,7 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
     }
   };
 
-  const tableRows = billingType === "1" ? rows : [rows[0]];
+  const tableRows = billingType === "1" ? rows : rows.slice(0, 1);
 
   return (
     <Modal
