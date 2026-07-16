@@ -108,6 +108,10 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   };
 
   const handleEdit = (record: ObjectTypeLogicProperty) => {
+    if (record.dataSource?.type === "metric") {
+      return;
+    }
+
     setAttrInfo(record);
     setDrawerOpen(true);
   };
@@ -171,7 +175,11 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
         <Dropdown
           menu={{
             items: [
-              { key: "edit", label: t("common.edit") },
+              {
+                disabled: record.dataSource?.type === "metric",
+                key: "edit",
+                label: t("common.edit"),
+              },
               { key: "delete", label: t("common.delete") },
             ],
             onClick: ({ key, domEvent }) => {
@@ -314,7 +322,9 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
                 ),
               }}
               onRow={(record) => ({
-                onClick: () => handleEdit(record),
+                onClick: () => {
+                  handleEdit(record);
+                },
               })}
               pagination={false}
               rowKey="name"
