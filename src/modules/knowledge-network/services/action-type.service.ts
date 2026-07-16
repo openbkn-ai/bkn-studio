@@ -173,7 +173,7 @@ export async function listKnowledgeNetworkActionTypeExecutionLogs(
   const response = await http.get<{
     entries?: BackendActionExecutionLog[];
     total_count?: number;
-  }>(`/bkn-backend/v1/knowledge-networks/${networkId}/action-logs`, {
+  }>(`/ontology-query/v1/knowledge-networks/${networkId}/action-logs`, {
     params: buildActionExecutionLogQueryParams(query),
   });
 
@@ -190,7 +190,7 @@ export async function getKnowledgeNetworkActionTypeExecutionLogDetail(
   }
 
   const response = await http.get<BackendActionExecutionLog>(
-    `/bkn-backend/v1/knowledge-networks/${networkId}/action-logs/${logId}`,
+    `/ontology-query/v1/knowledge-networks/${networkId}/action-logs/${logId}`,
   );
 
   return mapActionTypeExecutionLogDetail(response.data);
@@ -216,7 +216,7 @@ export async function executeKnowledgeNetworkActionTypeNow(
   }
 
   const response = await http.post<{ execution_id?: string }>(
-    `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}/execute`,
+    `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}/execute`,
     {
       unique_identities: [],
     },
@@ -235,7 +235,7 @@ export async function cancelKnowledgeNetworkActionTypeExecution(
     return;
   }
 
-  await http.post(`/bkn-backend/v1/knowledge-networks/${networkId}/action-logs/${logId}/cancel`);
+  await http.post(`/ontology-query/v1/knowledge-networks/${networkId}/action-logs/${logId}/cancel`);
 }
 
 export async function createKnowledgeNetworkActionType(

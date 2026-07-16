@@ -41,7 +41,9 @@ export type BackendActionAffect = {
 
 export type BackendActionSource = {
   box_id?: string;
+  box_name?: string;
   mcp_id?: string;
+  mcp_name?: string;
   tool_id?: string;
   tool_name?: string;
   type?: "tool" | "mcp" | "manual";
@@ -198,7 +200,9 @@ function mapActionTypeActionSourceFromBackend(
 
   return {
     boxId: actionSource.box_id,
+    boxName: actionSource.box_name,
     mcpId: actionSource.mcp_id,
+    mcpName: actionSource.mcp_name,
     toolId: actionSource.tool_id,
     toolName: actionSource.tool_name,
     type: mapActionSourceKind(actionSource.type),

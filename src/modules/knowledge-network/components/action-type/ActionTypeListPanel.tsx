@@ -226,7 +226,7 @@ export function ActionTypeListPanel({
           }}
           title={value}
         >
-          <span className={styles.objectIconSquare} style={{ backgroundColor: record.color }}>
+          <span className={styles.objectIconSquare} style={{ backgroundColor: record.color || "#90c06b" }}>
             <ThunderboltOutlined />
           </span>
           <span className={styles.objectName}>{value}</span>

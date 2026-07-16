@@ -123,12 +123,29 @@ function buildMappedPropertiesFromViewFields(
   existingProperties: ObjectTypeDataProperty[] = [],
 ): ObjectTypeDataProperty[] {
   const existingByName = new Map(existingProperties.map((item) => [item.name, item]));
+  const usedExistingNames = new Set<string>();
 
-  return fields.map((field) => {
+  const mappedProperties = fields.map((field) => {
     const existing = existingByName.get(field.name);
+    if (existing) {
+      usedExistingNames.add(existing.name);
+
+      return {
+        ...existing,
+        incrementalKey: false,
+        mappedField:
+          existing.type === field.type
+            ? {
+                displayName: field.displayName,
+                name: field.name,
+                type: field.type,
+              }
+            : undefined,
+      };
+    }
 
     return {
-      displayKey: existing?.displayKey ?? false,
+      displayKey: false,
       displayName: field.displayName,
       incrementalKey: false,
       mappedField: {
@@ -137,10 +154,20 @@ function buildMappedPropertiesFromViewFields(
         type: field.type,
       },
       name: field.name,
-      primaryKey: existing?.primaryKey ?? false,
+      primaryKey: false,
       type: field.type,
     };
   });
+
+  const preservedProperties = existingProperties
+    .filter((item) => !usedExistingNames.has(item.name))
+    .map((item) => ({
+      ...item,
+      incrementalKey: false,
+      mappedField: undefined,
+    }));
+
+  return [...mappedProperties, ...preservedProperties];
 }
 
 export const ObjectTypeDataAttributeEditor = forwardRef<
@@ -376,11 +403,8 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
     const filteredFields = await loadViewFields(view.id);
     const mappedProperties = buildMappedPropertiesFromViewFields(filteredFields, dataProperties);
-    const manualProperties = dataProperties.filter(
-      (item) => !filteredFields.some((field) => field.name === item.name),
-    );
 
-    updateProperties([...mappedProperties, ...manualProperties], view);
+    updateProperties(mappedProperties, view);
   };
 
   const handleClearResource = () => {

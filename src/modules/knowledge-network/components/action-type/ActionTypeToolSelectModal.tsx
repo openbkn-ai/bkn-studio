@@ -17,6 +17,7 @@ import {
   loadActionTypeMcpServerTools,
   loadActionTypeToolBoxTools,
   type ActionTypeCatalogSelection,
+  type ActionTypeCatalogTool,
   type ActionTypeExecutionFactoryCatalog,
 } from "@/modules/knowledge-network/services/action-type-tool.service";
 import type { ActionTypeActionSource } from "@/modules/knowledge-network/types/knowledge-network";
@@ -73,6 +74,21 @@ function buildSelectionFromValue(
   return null;
 }
 
+function buildToolFromValue(value: ActionTypeActionSource): ActionTypeCatalogTool | null {
+  const toolId = value.toolId || value.toolName;
+  const toolName = value.toolName || value.toolId;
+
+  if (!toolId || !toolName) {
+    return null;
+  }
+
+  return {
+    parameters: [],
+    toolId,
+    toolName,
+  };
+}
+
 export function ActionTypeToolSelectModal({
   onCancel,
   onConfirm,
@@ -99,7 +115,11 @@ export function ActionTypeToolSelectModal({
 
   const ensureGroupToolsLoaded = useCallback(async (groupKey: string) => {
     if (loadedGroupKeysRef.current.has(groupKey) || loadingGroupKeysRef.current.has(groupKey)) {
-      return;
+      const isToolGroup = groupKey.startsWith("group:tool:");
+      const resourceId = groupKey.replace(/^group:(tool|mcp):/, "");
+      return isToolGroup
+        ? catalogRef.current.toolBoxes.find((box) => box.boxId === resourceId)?.tools ?? []
+        : catalogRef.current.mcpServers.find((server) => server.mcpId === resourceId)?.tools ?? [];
     }
 
     const isToolGroup = groupKey.startsWith("group:tool:");
@@ -115,7 +135,9 @@ export function ActionTypeToolSelectModal({
 
     if (hasCachedTools) {
       loadedGroupKeysRef.current.add(groupKey);
-      return;
+      return isToolGroup
+        ? catalogRef.current.toolBoxes.find((box) => box.boxId === resourceId)?.tools ?? []
+        : catalogRef.current.mcpServers.find((server) => server.mcpId === resourceId)?.tools ?? [];
     }
 
     loadingGroupKeysRef.current.add(groupKey);
@@ -126,6 +148,20 @@ export function ActionTypeToolSelectModal({
         ? await loadActionTypeToolBoxTools(resourceId)
         : await loadActionTypeMcpServerTools(resourceId);
 
+      const nextCatalog = {
+        ...catalogRef.current,
+        mcpServers: isToolGroup
+          ? catalogRef.current.mcpServers
+          : catalogRef.current.mcpServers.map((server) =>
+              server.mcpId === resourceId ? { ...server, tools } : server,
+            ),
+        toolBoxes: isToolGroup
+          ? catalogRef.current.toolBoxes.map((box) =>
+              box.boxId === resourceId ? { ...box, tools } : box,
+            )
+          : catalogRef.current.toolBoxes,
+      };
+      catalogRef.current = nextCatalog;
       setCatalog((prev) => ({
         ...prev,
         mcpServers: isToolGroup
@@ -142,6 +178,7 @@ export function ActionTypeToolSelectModal({
       if (tools.length > 0) {
         loadedGroupKeysRef.current.add(groupKey);
       }
+      return tools;
     } finally {
       loadingGroupKeysRef.current.delete(groupKey);
       setLoadingGroupKeys((prev) => prev.filter((item) => item !== groupKey));
@@ -170,26 +207,52 @@ export function ActionTypeToolSelectModal({
             loadedGroupKeysRef.current.add(`group:mcp:${server.mcpId}`);
           }
         });
-        const initialSelection = buildSelectionFromValue(nextCatalog, value);
-        setSelectedSelection(initialSelection);
         setActiveTab(value?.type === "mcp" ? "mcp" : "tool");
-        if (initialSelection) {
-          const initialGroupKey =
-            initialSelection.kind === "mcp"
-              ? `group:mcp:${initialSelection.mcpId}`
-              : `group:tool:${initialSelection.boxId}`;
+        const initialGroupKey =
+          value?.type === "mcp" && value.mcpId
+            ? `group:mcp:${value.mcpId}`
+            : value?.type === "tool" && value.boxId
+              ? `group:tool:${value.boxId}`
+              : "";
+
+        if (initialGroupKey) {
           setExpandedKeys([initialGroupKey]);
-          if (
-            initialSelection.kind === "mcp"
-              ? !nextCatalog.mcpServers.find((item) => item.mcpId === initialSelection.mcpId)
-                  ?.tools.length
-              : !nextCatalog.toolBoxes.find((item) => item.boxId === initialSelection.boxId)
-                  ?.tools.length
-          ) {
-            await ensureGroupToolsLoaded(initialGroupKey);
-          }
+          await ensureGroupToolsLoaded(initialGroupKey);
         } else {
           setExpandedKeys([]);
+        }
+
+        const initialSelection = buildSelectionFromValue(catalogRef.current, value);
+        if (initialSelection) {
+          setSelectedSelection(initialSelection);
+        } else if (value?.type === "tool" && value.boxId) {
+          const box = catalogRef.current.toolBoxes.find((item) => item.boxId === value.boxId);
+          const fallbackTool = buildToolFromValue(value);
+          setSelectedSelection(
+            box && fallbackTool
+              ? {
+                  boxId: box.boxId,
+                  boxName: box.boxName,
+                  kind: "tool",
+                  tool: fallbackTool,
+                }
+              : null,
+          );
+        } else if (value?.type === "mcp" && value.mcpId) {
+          const server = catalogRef.current.mcpServers.find((item) => item.mcpId === value.mcpId);
+          const fallbackTool = buildToolFromValue(value);
+          setSelectedSelection(
+            server && fallbackTool
+              ? {
+                  kind: "mcp",
+                  mcpId: server.mcpId,
+                  mcpName: server.mcpName,
+                  tool: fallbackTool,
+                }
+              : null,
+          );
+        } else {
+          setSelectedSelection(null);
         }
       } finally {
         setLoading(false);

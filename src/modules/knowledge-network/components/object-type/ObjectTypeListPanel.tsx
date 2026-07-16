@@ -337,7 +337,7 @@ export function ObjectTypeListPanel({
         >
           <span
             className={styles.objectIconSquare}
-            style={{ backgroundColor: record.color }}
+            style={{ backgroundColor: record.color || "#1d4ed8" }}
           >
             {renderResourceIcon(record.icon)}
           </span>
