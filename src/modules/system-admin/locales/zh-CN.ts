@@ -217,7 +217,7 @@ export const systemAdminZhCN = {
         roleExclusiveHint: "三员角色用于系统运维、安全授权和审计监督；业务建设能力请授予业务角色。",
         superAdminControlledHint: "该账号持有 super_admin 受控角色，已拥有平台全量权限；不需要再叠加业务角色或三员角色。",
         threeAdminConflictTitle: "存在三员职责冲突",
-        threeAdminConflictDesc: "同一普通账号不建议同时拥有多个三员角色。请确认这是临时应急或受控配置。",
+        threeAdminConflictDesc: "当前组合：{{roles}}。同一账号不允许同时拥有多个三员角色，请取消冲突角色后再保存。",
         rolesHint: "选择该用户拥有的角色，决定其权限。",
         roleSearchPlaceholder: "搜索角色名称或描述",
         rolesSelected: "已选择 {{count}} 个角色",

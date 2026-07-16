@@ -21,6 +21,7 @@ import {
   isAssignableRole,
   isSuperAdminRole,
   isThreeAdminRole,
+  threeAdminConflictLabels,
 } from "@/modules/system-admin/utils/role-catalog";
 
 import drawerStyles from "@/modules/system-admin/components/UserFormDrawer.module.css";
@@ -79,6 +80,8 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
   const hasControlledSuperAdmin = controlledRoles.some(isSuperAdminRole);
   const canConfigureAssignableRoles = !hasControlledSuperAdmin;
   const hasDutyConflict = hasThreeAdminConflict(selectedRoles);
+  const dutyConflictRoles = useMemo(() => threeAdminConflictLabels(selectedRoles), [selectedRoles]);
+  const dutyConflictText = dutyConflictRoles.join(" + ");
 
   const filteredBusinessRoles = useMemo(
     () => businessRoles.filter((role) => matchesRoleKeyword(role, roleSearch)),
@@ -114,6 +117,9 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
   };
 
   const handleSubmit = () => {
+    if (hasDutyConflict && canConfigureAssignableRoles) {
+      return;
+    }
     setSubmitting(true);
     void syncUserRoleBindings(user.id, roleIds)
       .then(() => {
@@ -158,7 +164,7 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
           <div className={drawerStyles.footerActions}>
             <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
             {canConfigureAssignableRoles ? (
-              <AppButton loading={submitting} onClick={handleSubmit} type="primary">
+              <AppButton disabled={hasDutyConflict} loading={submitting} onClick={handleSubmit} type="primary">
                 {t("common.save")}
               </AppButton>
             ) : null}
@@ -201,7 +207,9 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
                   message={t("systemAdmin.users.drawer.threeAdminConflictTitle")}
                   showIcon
                   type="warning"
-                  description={t("systemAdmin.users.drawer.threeAdminConflictDesc")}
+                  description={t("systemAdmin.users.drawer.threeAdminConflictDesc", {
+                    roles: dutyConflictText,
+                  })}
                 />
               ) : null}
               {roles.length > 6 ? (

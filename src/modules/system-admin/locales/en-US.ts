@@ -218,7 +218,7 @@ export const systemAdminEnUS = {
         roleExclusiveHint: "Three-admin roles separate system operations, security authorization, and audit oversight. Use business roles for business-building permissions.",
         superAdminControlledHint: "This account holds the controlled super_admin role and already has full platform permissions; do not add business or three-admin roles here.",
         threeAdminConflictTitle: "Three-admin duty conflict",
-        threeAdminConflictDesc: "A normal account should not hold multiple three-admin roles. Confirm this is temporary or controlled.",
+        threeAdminConflictDesc: "Current combination: {{roles}}. An account cannot hold multiple three-admin roles. Remove the conflicting role before saving.",
         rolesHint: "Pick the roles this user holds, which decide their permissions.",
         roleSearchPlaceholder: "Search by role name or description",
         rolesSelected: "{{count}} role(s) selected",

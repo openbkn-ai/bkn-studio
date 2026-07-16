@@ -12,6 +12,7 @@ import {
   hasThreeAdminConflict,
   isAssignableRole,
   resolveBuiltinRoleKey,
+  threeAdminConflictLabels,
 } from "@/modules/system-admin/utils/role-catalog";
 
 describe("role-catalog", () => {
@@ -38,5 +39,12 @@ describe("role-catalog", () => {
   it("detects multiple three-admin roles on the same account", () => {
     expect(hasThreeAdminConflict([{ name: "admin" }, { name: "security" }])).toBe(true);
     expect(hasThreeAdminConflict([{ name: "audit" }, { name: "normal_user" }])).toBe(false);
+    expect(hasThreeAdminConflict([{ name: "admin" }, { name: "legacy_system_role", source: "system" }])).toBe(
+      false,
+    );
+    expect(threeAdminConflictLabels([{ name: "admin" }, { name: "security" }])).toEqual([
+      "系统管理员",
+      "安全管理员",
+    ]);
   });
 });

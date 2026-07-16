@@ -52,7 +52,7 @@ export function getRoleDutyCategory(role: Pick<AdminRole, "name" | "source">): R
   if (builtinKey) {
     return BUILTIN_ROLE_META[builtinKey].category;
   }
-  return role.source === "system" ? "three-admin" : "custom";
+  return "custom";
 }
 
 export function isSuperAdminRole(role: Pick<AdminRole, "name">): boolean {
@@ -69,4 +69,13 @@ export function isAssignableRole(role: Pick<AdminRole, "name">): boolean {
 
 export function hasThreeAdminConflict(roles: Pick<AdminRole, "name" | "source">[]): boolean {
   return roles.filter(isThreeAdminRole).length > 1;
+}
+
+export function threeAdminConflictLabels(roles: Pick<AdminRole, "name" | "source">[]): string[] {
+  return roles
+    .filter(isThreeAdminRole)
+    .map((role) => {
+      const builtinKey = resolveBuiltinRoleKey(role);
+      return builtinKey ? BUILTIN_ROLE_META[builtinKey].label : role.name;
+    });
 }
