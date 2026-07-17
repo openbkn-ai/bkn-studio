@@ -126,7 +126,15 @@ jobs:
           context: .
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: ${{ steps.gate.outputs.publish == 'true' }}
+          # Huawei SWR rejects an OCI image index ("Invalid image, fail to parse
+          # 'manifest.json'"), so the multi-arch manifest must stay in the legacy
+          # Docker format. BuildKit v0.31 made OCI media types the default for all
+          # image exports, and setup-buildx-action pulls the floating
+          # moby/buildkit:buildx-stable-1 tag, which moved to v0.31.2 on
+          # 2026-07-16 — pinning the exporter is what keeps SWR pushes working.
+          # `outputs` replaces `push:` here: the two would each add an image
+          # exporter.
+          outputs: type=image,oci-mediatypes=false,push=${{ steps.gate.outputs.publish == 'true' }}
           provenance: false
           sbom: false
           tags: ${{ steps.tags.outputs.tags }}
