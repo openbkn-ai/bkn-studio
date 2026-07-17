@@ -86,7 +86,7 @@ components/
   shared/          # ResourceIconSelect、ResourceFormStepsShell、ResourceListPanel 样式等
   network/         # KnowledgeNetworkCard、KnowledgeNetworkFormModal
   concept-group/   # ConceptGroupListPanel
-  object-type/     # 列表、索引设置、data-attribute/、logic-attribute/
+  object-type/     # 列表、data-attribute/、logic-attribute/
   relation-type/   # 列表、映射编辑
   action-type/     # 列表、SourcePicker、Overview/Task、执行日志（逻辑见 utils/action-type-execution.ts）
   services/

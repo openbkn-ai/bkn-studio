@@ -21,7 +21,6 @@ import type {
   KnowledgeNetworkTaskRecord,
   ObjectTypeDataProperty,
   ObjectTypeDetail,
-  ObjectTypeIndexConfig,
   ObjectTypeLogicParameter,
   ObjectTypeLogicParameterValueFrom,
   ObjectTypeLogicProperty,
@@ -32,7 +31,6 @@ import type {
   BackendActionType,
   BackendConceptGroup,
   BackendDataProperty,
-  BackendIndexConfig,
   BackendKnowledgeNetwork,
   BackendLogicParameter,
   BackendLogicProperty,
@@ -85,16 +83,6 @@ export function mapRecentObject(item: BackendObjectType): KnowledgeNetworkRecent
 }
 
 export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTypeRecord {
-  const hasIndexFromProperties = (item.data_properties ?? []).some((property) => {
-    const indexConfig = property.index_config;
-
-    return Boolean(
-      indexConfig?.keyword_config?.enabled ||
-        indexConfig?.fulltext_config?.enabled ||
-        indexConfig?.vector_config?.enabled,
-    );
-  });
-
   return {
     id: item.id,
     name: item.name,
@@ -106,26 +94,15 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
     conceptGroupNames: (item.concept_groups ?? []).map(
       (group) => group.name ?? group.id,
     ),
-    hasIndex: item.has_index ?? (hasIndexFromProperties || item.status?.index_available || false),
+    dataSource: item.data_source
+      ? {
+          id: item.data_source.id,
+          name: item.data_source.name ?? "",
+        }
+      : undefined,
+    hasIndex: item.has_index ?? item.status?.index_available ?? false,
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
-  };
-}
-
-export function mapIndexConfig(config?: BackendIndexConfig): ObjectTypeIndexConfig {
-  return {
-    keywordConfig: {
-      enabled: config?.keyword_config?.enabled ?? false,
-      ignoreAboveLen: config?.keyword_config?.ignore_above_len ?? 1024,
-    },
-    fulltextConfig: {
-      analyzer: config?.fulltext_config?.analyzer ?? "",
-      enabled: config?.fulltext_config?.enabled ?? false,
-    },
-    vectorConfig: {
-      enabled: config?.vector_config?.enabled ?? false,
-      modelId: config?.vector_config?.model_id ?? "",
-    },
   };
 }
 
@@ -133,7 +110,6 @@ export function mapDataProperty(
   item: BackendDataProperty,
   meta: {
     displayKey: string;
-    incrementalKey: string;
     primaryKeys: string[];
   },
 ): ObjectTypeDataProperty {
@@ -141,8 +117,7 @@ export function mapDataProperty(
     comment: item.comment,
     displayKey: item.name === meta.displayKey,
     displayName: item.display_name ?? item.name,
-    incrementalKey: item.name === meta.incrementalKey,
-    indexConfig: item.index_config ? mapIndexConfig(item.index_config) : undefined,
+    incrementalKey: false,
     mappedField: item.mapped_field
       ? {
           displayName: item.mapped_field.display_name ?? item.mapped_field.name,
@@ -192,7 +167,7 @@ export function mapObjectTypeDetail(item: BackendObjectType): ObjectTypeDetail {
   return {
     ...mapObjectType(item),
     dataProperties: (item.data_properties ?? []).map((property) =>
-      mapDataProperty(property, { displayKey, incrementalKey, primaryKeys }),
+      mapDataProperty(property, { displayKey, primaryKeys }),
     ),
     dataSource: item.data_source
       ? {
@@ -207,30 +182,10 @@ export function mapObjectTypeDetail(item: BackendObjectType): ObjectTypeDetail {
   };
 }
 
-export function toBackendIndexConfig(config: ObjectTypeIndexConfig): BackendIndexConfig {
-  return {
-    keyword_config: {
-      enabled: config.keywordConfig.enabled,
-      ignore_above_len: config.keywordConfig.ignoreAboveLen,
-    },
-    fulltext_config: {
-      analyzer: config.fulltextConfig.analyzer,
-      enabled: config.fulltextConfig.enabled,
-    },
-    vector_config: {
-      enabled: config.vectorConfig.enabled,
-      model_id: config.vectorConfig.modelId,
-    },
-  };
-}
-
 export function toBackendDataProperty(property: ObjectTypeDataProperty): BackendDataProperty {
   return {
     comment: property.comment,
     display_name: property.displayName,
-    index_config: property.indexConfig
-      ? toBackendIndexConfig(property.indexConfig)
-      : undefined,
     mapped_field: property.mappedField
       ? {
           display_name: property.mappedField.displayName,
@@ -301,7 +256,6 @@ export function buildBackendObjectTypePayload(
     display_key: dataProperties.find((item) => item.displayKey)?.name ?? "",
     icon: input.icon,
     id: objectTypeId ?? input.id,
-    incremental_key: dataProperties.find((item) => item.incrementalKey)?.name ?? "",
     logic_properties: (input.logicProperties ?? []).map(toBackendLogicProperty),
     name: input.name,
     primary_keys: dataProperties.filter((item) => item.primaryKey).map((item) => item.name),

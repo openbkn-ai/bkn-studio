@@ -42,7 +42,7 @@ type LegacyMetricModelListResponse = {
 
 async function getLegacyMetricModelDetail(modelId: string): Promise<LegacyMetricModelRecord | null> {
   const response = await http.get<LegacyMetricModelRecord[] | LegacyMetricModelRecord>(
-    `/mdl-data-model/v1/metric-models/${modelId}`,
+    `/mdl-data-model/in/v1/metric-models/${modelId}`,
   );
 
   if (Array.isArray(response.data)) {
@@ -69,14 +69,17 @@ export async function listObjectTypeLogicMetricModels() {
     return wait(mockObjectTypeLogicMetricModels.map((item) => ({ ...item })));
   }
 
-  const response = await http.get<LegacyMetricModelListResponse>("/mdl-data-model/v1/metric-models", {
-    params: {
-      direction: "desc",
-      limit: -1,
-      offset: 0,
-      sort: "update_time",
+  const response = await http.get<LegacyMetricModelListResponse>(
+    "/mdl-data-model/in/v1/metric-models",
+    {
+      params: {
+        direction: "desc",
+        limit: -1,
+        offset: 0,
+        sort: "update_time",
+      },
     },
-  });
+  );
 
   return (response.data.entries ?? []).map((item) => ({
     analysisDimensions: (item.analysis_dimensions ?? []).map((dimension) => ({
@@ -104,7 +107,7 @@ export async function listObjectTypeLogicMetricModelFields(modelId: string) {
 
   try {
     const response = await http.get<LegacyMetricModelDimension[]>(
-      `/mdl-uniquery/v1/metric-models/${modelId}/fields`,
+      `/mdl-uniquery/in/v1/metric-models/${modelId}/fields`,
     );
 
     return (response.data ?? []).map((item) => ({

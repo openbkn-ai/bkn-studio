@@ -48,8 +48,9 @@ export function getActionSourceDisplayName(actionSource?: ActionTypeActionSource
     return actionSource.toolName?.trim() ?? "";
   }
 
-  const containerName = actionSource.boxName || actionSource.mcpName || "";
-  const toolName = actionSource.toolName?.trim() ?? "";
+  const containerName =
+    actionSource.boxName || actionSource.mcpName || actionSource.boxId || actionSource.mcpId || "";
+  const toolName = actionSource.toolName?.trim() || actionSource.toolId || "";
 
   if (containerName && toolName) {
     return `${containerName}/${toolName}`;

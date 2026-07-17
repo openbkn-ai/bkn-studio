@@ -7,11 +7,11 @@
 
 import {
   ArrowRightOutlined,
+  DeleteOutlined,
   EditOutlined,
-  EllipsisOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Empty, Input, Segmented, Spin, Table, Tag } from "antd";
-import type { MenuProps, TableProps } from "antd";
+import { Alert, Empty, Input, Segmented, Spin, Table, Tag } from "antd";
+import type { TableProps } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -20,6 +20,10 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
+import { indexStateOf } from "@/modules/data-catalog/lib/index-state";
+import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
+import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { ObjectTypePropertyTable } from "@/modules/knowledge-network/components/object-type/ObjectTypePropertyTable";
@@ -54,6 +58,8 @@ export function ObjectTypeDetailScene() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewKeyword, setPreviewKeyword] = useState("");
+  const [resourceBuildTasks, setResourceBuildTasks] = useState<BuildTask[]>([]);
+  const [resourceBuildTasksLoading, setResourceBuildTasksLoading] = useState(false);
   const [dataPage, setDataPage] = useState(1);
   const [dataPageSize, setDataPageSize] = useState(10);
   const [logicPage, setLogicPage] = useState(1);
@@ -126,6 +132,40 @@ export function ObjectTypeDetailScene() {
     };
   }, [detail?.dataSource?.id, networkId]);
 
+  useEffect(() => {
+    const resourceId = detail?.dataSource?.id;
+
+    if (!resourceId) {
+      setResourceBuildTasks([]);
+      setResourceBuildTasksLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setResourceBuildTasksLoading(true);
+
+    void listBuildTasks({ resourceId, silent: true })
+      .then((tasks) => {
+        if (!cancelled) {
+          setResourceBuildTasks(tasks);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setResourceBuildTasks([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setResourceBuildTasksLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detail?.dataSource?.id]);
+
   const filteredDataProperties = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
     const items = detail?.dataProperties ?? [];
@@ -174,6 +214,11 @@ export function ObjectTypeDetailScene() {
     [filteredDataProperties, preview?.rowTotalCount],
   );
 
+  const resourceIndexState = useMemo(
+    () => indexStateOf(resourceBuildTasks),
+    [resourceBuildTasks],
+  );
+
   const pagedDataProperties = useMemo(() => {
     const start = (dataPage - 1) * dataPageSize;
     return enrichedDataProperties.slice(start, start + dataPageSize);
@@ -217,14 +262,6 @@ export function ObjectTypeDetailScene() {
       },
     });
   };
-
-  const menuItems: MenuProps["items"] = [
-    {
-      danger: true,
-      key: "delete",
-      label: t("common.delete"),
-    },
-  ];
 
   const logicColumns: TableProps<ObjectTypeLogicProperty>["columns"] = [
     {
@@ -282,27 +319,12 @@ export function ObjectTypeDetailScene() {
             {t("common.edit")}
           </AppButton>
           <AppButton
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/index-settings`,
-              );
-            }}
+            danger
+            icon={<DeleteOutlined />}
+            onClick={confirmDelete}
           >
-            {t("knowledgeNetwork.objectTypeIndexSettingsEntry")}
+            {t("common.delete")}
           </AppButton>
-          <Dropdown
-            menu={{
-              items: menuItems,
-              onClick: ({ key }) => {
-                if (key === "delete") {
-                  confirmDelete();
-                }
-              },
-            }}
-            trigger={["click"]}
-          >
-            <AppButton icon={<EllipsisOutlined style={{ fontSize: 20 }} />} type="text" />
-          </Dropdown>
         </>
       }
       onBack={() => {
@@ -313,91 +335,93 @@ export function ObjectTypeDetailScene() {
     >
       <div className={styles.page}>
         <section className={styles.summaryCard}>
-          <div className={styles.summaryHead}>
-            <span
-              className={styles.objectIconSquare}
-              style={{ backgroundColor: detail.color }}
-            >
-              {renderResourceIcon(detail.icon)}
-            </span>
-            <div>
-              <h2 className={styles.summaryTitle}>{detail.name}</h2>
-              <p className={styles.summaryDescription}>
-                {detail.description || t("knowledgeNetwork.noDescription")}
-              </p>
-            </div>
-          </div>
-          <div className={styles.tagRow}>
-            {detail.tags.length > 0 ? (
-              detail.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
-            ) : (
-              <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
-            )}
-          </div>
-          <div className={styles.metaRow}>
-            <span>
-              {t("knowledgeNetwork.objectTypeHasIndex")}:{" "}
-              {detail.hasIndex
-                ? t("knowledgeNetwork.objectTypeIndexed")
-                : t("knowledgeNetwork.objectTypeNotIndexed")}
-            </span>
-            <span>
-              {t("knowledgeNetwork.modifier")}: {detail.updaterName || "--"}
-            </span>
-            <span>
-              {t("common.updateTime")}: {detail.updateTime || "--"}
-            </span>
-            <span>
-              {t("knowledgeNetwork.objectTypeConceptGroups")}:{" "}
-              {detail.conceptGroupNames.length}
-            </span>
-          </div>
-        </section>
-
-        <section className={styles.sectionCard}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.objectTypeBoundDataView")}</h3>
-              <p className={styles.sectionHint}>
-                {t("knowledgeNetwork.objectTypeBoundDataViewDescription")}
-              </p>
-            </div>
-            {boundDataView ? (
-              <AppButton
-                icon={<ArrowRightOutlined />}
-                onClick={() => {
-                  void navigate(`/data-directory/resource/${boundDataView.id}`);
-                }}
-              >
-                {t("knowledgeNetwork.objectTypeViewDataResource")}
-              </AppButton>
-            ) : null}
-          </div>
-
-          {boundDataView ? (
-            <div className={styles.dataViewGrid}>
-              <div className={styles.dataViewItem}>
-                <span className={styles.dataViewLabel}>
-                  {t("knowledgeNetwork.objectTypeDataViewName")}
+          <div className={styles.summaryLayout}>
+            <div className={styles.summaryMain}>
+              <div className={styles.summaryHead}>
+                <span
+                  className={styles.objectIconSquare}
+                  style={{ backgroundColor: detail.color }}
+                >
+                  {renderResourceIcon(detail.icon)}
                 </span>
-                <span className={styles.dataViewValue}>{boundDataView.name || "--"}</span>
+                <div>
+                  <h2 className={styles.summaryTitle}>{detail.name}</h2>
+                  <p className={styles.summaryDescription}>
+                    {detail.description || t("knowledgeNetwork.noDescription")}
+                  </p>
+                </div>
               </div>
-              <div className={styles.dataViewItem}>
-                <span className={styles.dataViewLabel}>
-                  {t("knowledgeNetwork.objectTypeDataViewResourceId")}
-                </span>
-                <span className={styles.dataViewCode}>{boundDataView.id || "--"}</span>
+              <div className={styles.tagRow}>
+                {detail.tags.length > 0 ? (
+                  detail.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
+                ) : (
+                  <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
+                )}
               </div>
-              <div className={styles.dataViewItem}>
-                <span className={styles.dataViewLabel}>
-                  {t("knowledgeNetwork.objectTypeDataViewCatalogId")}
+              <div className={styles.metaRow}>
+                <span>
+                  {t("knowledgeNetwork.modifier")}: {detail.updaterName || "--"}
                 </span>
-                <span className={styles.dataViewCode}>{boundDataView.dataSourceId || "--"}</span>
+                <span>
+                  {t("common.updateTime")}: {detail.updateTime || "--"}
+                </span>
+                <span>
+                  {t("knowledgeNetwork.objectTypeConceptGroups")}:{" "}
+                  {detail.conceptGroupNames.length}
+                </span>
               </div>
             </div>
-          ) : (
-            <Empty description={t("knowledgeNetwork.objectTypeBoundDataViewEmpty")} />
-          )}
+            <div className={styles.summaryDataSource}>
+              <div className={styles.summaryDataSourceHeader}>
+                <div className={styles.summaryDataSourceTitle}>
+                  {t("knowledgeNetwork.objectTypeBoundDataView")}
+                </div>
+                {boundDataView ? (
+                  <AppButton
+                    icon={<ArrowRightOutlined />}
+                    onClick={() => {
+                      void navigate(`/data-directory/resource/${boundDataView.id}`);
+                    }}
+                    size="small"
+                  >
+                    {t("knowledgeNetwork.objectTypeViewDataResource")}
+                  </AppButton>
+                ) : null}
+              </div>
+              {boundDataView ? (
+                <div className={styles.dataViewFields}>
+                  <div className={styles.dataViewField}>
+                    <span className={styles.dataViewLabel}>
+                      {t("knowledgeNetwork.objectTypeDataViewName")}
+                    </span>
+                    <span className={styles.dataViewValue}>
+                      {boundDataView.name || "--"}
+                    </span>
+                  </div>
+                  <div className={styles.dataViewField}>
+                    <span className={styles.dataViewLabel}>
+                      {t("knowledgeNetwork.objectTypeDataViewResourceId")}
+                    </span>
+                    <span className={styles.dataViewCode}>{boundDataView.id || "--"}</span>
+                  </div>
+                  <div className={styles.dataViewField}>
+                    <span className={styles.dataViewLabel}>
+                      {t("knowledgeNetwork.objectTypeDataViewIndexState")}
+                    </span>
+                    <span className={styles.dataViewStatus}>
+                      {resourceBuildTasksLoading
+                        ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+                        : formatIndexStateLabel(resourceIndexState, t)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <span className={styles.placeholder}>
+                  {t("knowledgeNetwork.objectTypeBoundDataViewEmpty")}
+                </span>
+              )}
+            </div>
+          </div>
         </section>
 
         <section className={styles.sectionCard}>

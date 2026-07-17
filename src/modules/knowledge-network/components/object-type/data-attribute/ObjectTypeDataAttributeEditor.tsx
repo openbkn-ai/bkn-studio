@@ -52,7 +52,6 @@ import type {
 
 import {
   canBeDisplayKey,
-  canBeIncrementalKey,
   canBePrimaryKey,
   DATA_PROPERTY_NAME_PATTERN,
   validateObjectTypeDataProperties,
@@ -124,24 +123,51 @@ function buildMappedPropertiesFromViewFields(
   existingProperties: ObjectTypeDataProperty[] = [],
 ): ObjectTypeDataProperty[] {
   const existingByName = new Map(existingProperties.map((item) => [item.name, item]));
+  const usedExistingNames = new Set<string>();
 
-  return fields.map((field) => {
+  const mappedProperties = fields.map((field) => {
     const existing = existingByName.get(field.name);
+    if (existing) {
+      usedExistingNames.add(existing.name);
+
+      return {
+        ...existing,
+        incrementalKey: false,
+        mappedField:
+          existing.type === field.type
+            ? {
+                displayName: field.displayName,
+                name: field.name,
+                type: field.type,
+              }
+            : undefined,
+      };
+    }
 
     return {
-      displayKey: existing?.displayKey ?? false,
+      displayKey: false,
       displayName: field.displayName,
-      incrementalKey: existing?.incrementalKey ?? false,
+      incrementalKey: false,
       mappedField: {
         displayName: field.displayName,
         name: field.name,
         type: field.type,
       },
       name: field.name,
-      primaryKey: existing?.primaryKey ?? false,
+      primaryKey: false,
       type: field.type,
     };
   });
+
+  const preservedProperties = existingProperties
+    .filter((item) => !usedExistingNames.has(item.name))
+    .map((item) => ({
+      ...item,
+      incrementalKey: false,
+      mappedField: undefined,
+    }));
+
+  return [...mappedProperties, ...preservedProperties];
 }
 
 export const ObjectTypeDataAttributeEditor = forwardRef<
@@ -203,11 +229,6 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     [validProperties],
   );
 
-  const incrementalKeyName = useMemo(
-    () => validProperties.find((item) => item.incrementalKey)?.name ?? "",
-    [validProperties],
-  );
-
   const primaryKeyOptions = useMemo(
     () =>
       validProperties
@@ -223,17 +244,6 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     () =>
       validProperties
         .filter((item) => canBeDisplayKey(item.type))
-        .map((item) => ({
-          label: item.displayName || item.name,
-          value: item.name,
-        })),
-    [validProperties],
-  );
-
-  const incrementalKeyOptions = useMemo(
-    () =>
-      validProperties
-        .filter((item) => canBeIncrementalKey(item.type))
         .map((item) => ({
           label: item.displayName || item.name,
           value: item.name,
@@ -270,7 +280,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const updateProperties = useCallback(
     (nextProperties: ObjectTypeDataProperty[], nextDataSource?: ObjectTypeDataSource) => {
       onChange({
-        dataProperties: nextProperties,
+        dataProperties: nextProperties.map((item) => ({ ...item, incrementalKey: false })),
         dataSource: nextDataSource ?? dataSource,
       });
     },
@@ -393,11 +403,8 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
     const filteredFields = await loadViewFields(view.id);
     const mappedProperties = buildMappedPropertiesFromViewFields(filteredFields, dataProperties);
-    const manualProperties = dataProperties.filter(
-      (item) => !filteredFields.some((field) => field.name === item.name),
-    );
 
-    updateProperties([...mappedProperties, ...manualProperties], view);
+    updateProperties(mappedProperties, view);
   };
 
   const handleClearResource = () => {
@@ -432,15 +439,6 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       dataProperties.map((item) => ({
         ...item,
         displayKey: item.name === name && canBeDisplayKey(item.type),
-      })),
-    );
-  };
-
-  const setIncrementalKey = (name: string) => {
-    updateProperties(
-      dataProperties.map((item) => ({
-        ...item,
-        incrementalKey: item.name === name && canBeIncrementalKey(item.type),
       })),
     );
   };
@@ -501,10 +499,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     const nextProperties = dataProperties.map((item) => ({
       ...item,
       displayKey: property.displayKey && item.displayKey ? false : item.displayKey,
-      incrementalKey: property.incrementalKey && item.incrementalKey ? false : item.incrementalKey,
     }));
 
-    updateProperties([property, ...nextProperties]);
+    updateProperties([{ ...property, incrementalKey: false }, ...nextProperties]);
   };
 
   const handleUpdateProperty = (property: ObjectTypeDataProperty, previousName: string) => {
@@ -526,13 +523,12 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
           return {
             ...item,
             displayKey: property.displayKey && item.displayKey ? false : item.displayKey,
-            incrementalKey:
-              property.incrementalKey && item.incrementalKey ? false : item.incrementalKey,
           };
         }
 
         return {
           ...property,
+          incrementalKey: false,
           mappedField: typeChanged ? undefined : property.mappedField ?? item.mappedField,
         };
       }),
@@ -648,19 +644,6 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         ...item,
         displayKey:
           item.name === name ? !item.displayKey && canBeDisplayKey(item.type) : false,
-      })),
-    );
-  };
-
-  const togglePropertyIncrementalKey = (name: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    updateProperties(
-      dataProperties.map((item) => ({
-        ...item,
-        incrementalKey:
-          item.name === name
-            ? !item.incrementalKey && canBeIncrementalKey(item.type)
-            : false,
       })),
     );
   };
@@ -796,32 +779,6 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
               {renderKeyValue(
                 validProperties.find((item) => item.name === displayKeyName)?.displayName ??
                   displayKeyName,
-                t("knowledgeNetwork.objectTypeKeyNotConfigured"),
-              )}
-            </Popover>
-          </div>
-          <span className={styles.infoDivider} />
-          <div className={styles.infoItem}>
-            <span className={styles.infoKeyIconIncremental} />
-            <span className={styles.infoLabel}>{t("knowledgeNetwork.objectTypeIncrementalKeyShort")}</span>
-            {renderInfoHint("knowledgeNetwork.objectTypeIncrementalKeyTip")}
-            <span className={styles.infoLabel}>:</span>
-            <Popover
-              content={
-                <Select
-                  allowClear
-                  className={styles.keyPopover}
-                  onChange={(value) => setIncrementalKey(value ?? "")}
-                  options={incrementalKeyOptions}
-                  placeholder={t("knowledgeNetwork.objectTypeKeyNotConfigured")}
-                  value={incrementalKeyName || undefined}
-                />
-              }
-              trigger="click"
-            >
-              {renderKeyValue(
-                validProperties.find((item) => item.name === incrementalKeyName)?.displayName ??
-                  incrementalKeyName,
                 t("knowledgeNetwork.objectTypeKeyNotConfigured"),
               )}
             </Popover>
@@ -1109,9 +1066,6 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                         </div>
                       <div className={styles.itemIcons}>
                         <div className={styles.itemIconsStatus}>
-                          {property.incrementalKey ? (
-                            <span className={styles.infoKeyIconIncremental} />
-                          ) : null}
                           {property.displayKey ? (
                             <StarFilled className={styles.infoKeyIconTitle} />
                           ) : null}
@@ -1120,28 +1074,6 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                           ) : null}
                         </div>
                         <div className={styles.itemIconsActions}>
-                          {canBeIncrementalKey(property.type) ? (
-                            <span
-                              className={
-                                property.incrementalKey
-                                  ? styles.rowActionIconActiveIncremental
-                                  : styles.rowActionIcon
-                              }
-                              onClick={(event) =>
-                                togglePropertyIncrementalKey(property.name, event)
-                              }
-                              style={{
-                                background: property.incrementalKey ? "#52c41a" : "transparent",
-                                border: property.incrementalKey
-                                  ? "none"
-                                  : "1px solid rgba(0,0,0,0.25)",
-                                borderRadius: "50%",
-                                display: "inline-block",
-                                height: 10,
-                                width: 10,
-                              }}
-                            />
-                          ) : null}
                           {canBeDisplayKey(property.type) ? (
                             property.displayKey ? (
                               <StarFilled

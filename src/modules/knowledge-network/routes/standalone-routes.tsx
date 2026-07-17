@@ -23,7 +23,6 @@ import {
   ObjectTypeCreatePage,
   ObjectTypeDetailPage,
   ObjectTypeEditPage,
-  ObjectTypeIndexSettingsPage,
   RelationTypeCreatePage,
   RelationTypeDetailPage,
   RelationTypeEditPage,
@@ -170,14 +169,6 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       titleKey: "knowledgeNetwork.objectTypeDetailTitle",
     },
     <ObjectTypeDetailPage />,
-  ),
-  createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/object-types/:objectTypeId/index-settings",
-    {
-      descriptionKey: "knowledgeNetwork.objectTypeIndexSettingsDescription",
-      titleKey: "knowledgeNetwork.objectTypeIndexSettingsTitle",
-    },
-    <ObjectTypeIndexSettingsPage />,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/relation-types/create",

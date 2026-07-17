@@ -137,10 +137,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
   const logicAttributeTypeOptions = useMemo(
     () => [
       {
-        label: t("knowledgeNetwork.objectTypeLogicAttributeTypeMetric"),
-        value: "metric",
-      },
-      {
         label: t("knowledgeNetwork.objectTypeLogicAttributeTypeOperator"),
         value: "operator",
       },
@@ -196,7 +192,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
       });
     } else {
       form.resetFields();
-      form.setFieldValue("type", "metric");
+      form.setFieldValue("type", "operator");
     }
 
     if (attrInfo?.parameters?.length && attrInfo.dataSource?.type === "metric") {

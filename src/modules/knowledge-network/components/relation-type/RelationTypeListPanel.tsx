@@ -332,6 +332,12 @@ export function RelationTypeListPanel({
     );
   };
 
+  const tableEmptyText = loading ? (
+    <div className={styles.loadingEmptyState} />
+  ) : (
+    renderEmptyContent()
+  );
+
   return (
     <section className={`${styles.page} ${styles.objectTypePage} ${styles.relationTypePage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.relationTypesTitle")}</h2>
@@ -492,7 +498,7 @@ export function RelationTypeListPanel({
           columns={columns}
           dataSource={paginatedItems}
           loading={loading}
-          locale={{ emptyText: renderEmptyContent() }}
+          locale={{ emptyText: tableEmptyText }}
           pagination={false}
           rowKey="id"
           rowSelection={{

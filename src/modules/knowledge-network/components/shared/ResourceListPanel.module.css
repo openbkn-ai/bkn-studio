@@ -237,6 +237,24 @@
   gap: 6px;
 }
 
+.tableLink {
+  background: transparent;
+  border: 0;
+  color: #126ee3;
+  cursor: pointer;
+  font: inherit;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tableLink:hover {
+  color: #0b5fc7;
+}
+
 .emptyPanel {
   margin-block: 48px;
 }
@@ -426,6 +444,10 @@
   background: #f8fbff;
 }
 
+.loadingEmptyState {
+  min-height: 260px;
+}
+
 .objectTypePage .objectTitleBox {
   gap: 10px;
 }
@@ -435,8 +457,7 @@
   height: 28px;
   border: 1px solid #e8edf3;
   border-radius: 0;
-  background: #f3f6fa !important;
-  color: #1d4ed8;
+  color: #fff;
   font-size: 14px;
 }
 

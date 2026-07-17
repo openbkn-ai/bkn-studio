@@ -30,7 +30,6 @@ import type {
   ObjectTypeResourceField,
   ObjectTypeResourceGroup,
   ObjectTypeDetail,
-  ObjectTypeIndexConfig,
   ObjectTypeLogicMetricModelRecord,
   ObjectTypeLogicOperatorRecord,
   ObjectTypeLogicProperty,
@@ -314,22 +313,6 @@ export const mockObjectTypes: Record<string, KnowledgeNetworkObjectTypeRecord[]>
   ],
 };
 
-
-const defaultIndexConfig = (): ObjectTypeIndexConfig => ({
-  fulltextConfig: {
-    analyzer: "",
-    enabled: false,
-  },
-  keywordConfig: {
-    enabled: false,
-    ignoreAboveLen: 1024,
-  },
-  vectorConfig: {
-    enabled: false,
-    modelId: "",
-  },
-});
-
 export const mockObjectTypeDataProperties: Record<
   string,
   Record<string, ObjectTypeDataProperty[]>
@@ -340,10 +323,6 @@ export const mockObjectTypeDataProperties: Record<
         displayKey: false,
         displayName: "Order ID",
         incrementalKey: false,
-        indexConfig: {
-          ...defaultIndexConfig(),
-          keywordConfig: { enabled: true, ignoreAboveLen: 256 },
-        },
         name: "order_id",
         primaryKey: true,
         type: "string",
@@ -352,7 +331,6 @@ export const mockObjectTypeDataProperties: Record<
         displayKey: true,
         displayName: "Order Name",
         incrementalKey: false,
-        indexConfig: defaultIndexConfig(),
         name: "order_name",
         primaryKey: false,
         type: "string",
@@ -361,10 +339,6 @@ export const mockObjectTypeDataProperties: Record<
         displayKey: false,
         displayName: "Risk Summary",
         incrementalKey: false,
-        indexConfig: {
-          ...defaultIndexConfig(),
-          fulltextConfig: { enabled: true, analyzer: "standard" },
-        },
         name: "risk_summary",
         primaryKey: false,
         type: "text",
@@ -381,10 +355,6 @@ export const mockObjectTypeDataProperties: Record<
         displayKey: false,
         displayName: "Embedding",
         incrementalKey: false,
-        indexConfig: {
-          ...defaultIndexConfig(),
-          vectorConfig: { enabled: true, modelId: "sm-embedding-v1" },
-        },
         name: "embedding",
         primaryKey: false,
         type: "vector",
@@ -410,7 +380,7 @@ export const mockObjectTypeDataProperties: Record<
       {
         displayKey: false,
         displayName: "Fingerprint",
-        incrementalKey: true,
+        incrementalKey: false,
         name: "fingerprint",
         primaryKey: false,
         type: "text",
@@ -423,10 +393,6 @@ export const mockObjectTypeDataProperties: Record<
         displayKey: false,
         displayName: "Supplier ID",
         incrementalKey: false,
-        indexConfig: {
-          ...defaultIndexConfig(),
-          keywordConfig: { enabled: true, ignoreAboveLen: 128 },
-        },
         name: "supplier_id",
         primaryKey: true,
         type: "string",
@@ -455,10 +421,6 @@ export const mockObjectTypeDataProperties: Record<
         displayKey: false,
         displayName: "Customer ID",
         incrementalKey: false,
-        indexConfig: {
-          ...defaultIndexConfig(),
-          keywordConfig: { enabled: true, ignoreAboveLen: 128 },
-        },
         name: "customer_id",
         primaryKey: true,
         type: "string",
@@ -475,10 +437,6 @@ export const mockObjectTypeDataProperties: Record<
         displayKey: false,
         displayName: "Profile Summary",
         incrementalKey: false,
-        indexConfig: {
-          ...defaultIndexConfig(),
-          fulltextConfig: { enabled: true, analyzer: "ik_max_word" },
-        },
         name: "profile_summary",
         primaryKey: false,
         type: "text",
@@ -565,24 +523,7 @@ export const mockObjectTypeLogicOperators: ObjectTypeLogicOperatorRecord[] = [
 export function cloneDataProperties(properties: ObjectTypeDataProperty[]) {
   return properties.map((item) => ({
     ...item,
-    indexConfig: item.indexConfig
-      ? {
-          fulltextConfig: { ...item.indexConfig.fulltextConfig },
-          keywordConfig: { ...item.indexConfig.keywordConfig },
-          vectorConfig: { ...item.indexConfig.vectorConfig },
-        }
-      : undefined,
   }));
-}
-
-export function objectTypeHasIndexFromProperties(properties: ObjectTypeDataProperty[]) {
-  return properties.some(
-    (property) =>
-      property.indexConfig &&
-      (property.indexConfig.keywordConfig.enabled ||
-        property.indexConfig.fulltextConfig.enabled ||
-        property.indexConfig.vectorConfig.enabled),
-  );
 }
 
 export const mockObjectTypeDataSources: Record<string, Record<string, ObjectTypeDataSource>> = {
@@ -1380,14 +1321,13 @@ export function buildMockObjectTypeDetail(
   ).map((item) => ({ ...item }));
   const primaryKeys = properties.filter((item) => item.primaryKey).map((item) => item.name);
   const displayKey = properties.find((item) => item.displayKey)?.name ?? "";
-  const incrementalKey = properties.find((item) => item.incrementalKey)?.name ?? "";
 
   return {
     ...record,
     dataProperties: properties,
     dataSource: mockObjectTypeDataSources[networkId]?.[objectTypeId],
     displayKey,
-    incrementalKey,
+    incrementalKey: "",
     logicProperties,
     primaryKeys,
   };
