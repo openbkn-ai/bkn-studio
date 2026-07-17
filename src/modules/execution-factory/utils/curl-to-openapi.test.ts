@@ -216,4 +216,67 @@ describe("curl-to-openapi", () => {
       expect(result.value.queryParams[0]?.name).toBe("page");
     }
   });
+
+  it("detects path template parameters as required path parameters", () => {
+    const result = parseQuickApiUrl("https://example.com/api/v1/items/{itemId}");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.queryParams).toContainEqual({
+        name: "itemId",
+        in: "path",
+        required: true,
+        type: "string",
+      });
+    }
+  });
+
+  it("builds editable parameters, request body, and responses into OpenAPI", () => {
+    const spec = parseJson<{
+      paths: {
+        "/items/{itemId}": {
+          put: {
+            parameters: Array<{ name: string; in: string; required: boolean }>;
+            requestBody: { required: boolean };
+            responses: Record<string, { description: string; content?: unknown }>;
+          };
+        };
+      };
+    }>(
+      buildOpenApiFromQuickApi({
+        method: "PUT",
+        serverUrl: "https://example.com",
+        path: "/items/{itemId}",
+        summary: "Update item",
+        parameters: [
+          { name: "itemId", in: "path", required: true, type: "string" },
+          { name: "x-tenant", in: "header", required: true, type: "string" },
+        ],
+        requestBody: {
+          contentType: "application/json",
+          required: false,
+          schema: { type: "object" },
+          example: { name: "updated" },
+        },
+        responses: [
+          {
+            statusCode: "204",
+            description: "Updated",
+          },
+          {
+            statusCode: "400",
+            description: "Invalid input",
+            contentType: "application/json",
+            schema: { type: "object" },
+            example: { error: "invalid" },
+          },
+        ],
+      }),
+    );
+
+    const operation = spec.paths["/items/{itemId}"].put;
+    expect(operation.parameters).toHaveLength(2);
+    expect(operation.requestBody.required).toBe(false);
+    expect(operation.responses).toHaveProperty("204");
+    expect(operation.responses).toHaveProperty("400");
+  });
 });

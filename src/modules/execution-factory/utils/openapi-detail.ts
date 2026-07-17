@@ -6,6 +6,8 @@
  */
 
 import type { ToolIoSpec } from "@/modules/execution-factory/types/tool";
+import { parseOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
+import { parseOpenApiOperationIo } from "@/modules/execution-factory/utils/openapi-operation-io";
 
 export type OpenApiEndpointDetail = {
   ioSpec?: ToolIoSpec;
@@ -24,69 +26,8 @@ const HTTP_METHODS = new Set([
   "put",
 ]);
 
-function parseOperationIoSpec(operation: Record<string, unknown>): ToolIoSpec {
-  const parameters = Array.isArray(operation.parameters)
-    ? operation.parameters
-        .filter(
-          (item): item is Record<string, unknown> => {
-            if (typeof item !== "object" || item === null) {
-              return false;
-            }
-            const record = item as Record<string, unknown>;
-            return typeof record.name === "string";
-          },
-        )
-        .map((item) => ({
-          name: String(item.name),
-          in: typeof item.in === "string" ? item.in : undefined,
-          required: typeof item.required === "boolean" ? item.required : undefined,
-          description:
-            typeof item.description === "string" ? item.description : undefined,
-          type:
-            typeof (item.schema as { type?: string } | undefined)?.type === "string"
-              ? (item.schema as { type: string }).type
-              : undefined,
-        }))
-    : [];
-
-  const requestBody = operation.requestBody as
-    | {
-        content?: Record<string, { example?: unknown; schema?: unknown }>;
-        description?: string;
-        required?: boolean;
-      }
-    | undefined;
-  const requestContent = requestBody?.content ?? {};
-  const firstRequestContent = Object.values(requestContent)[0];
-
-  const responses: ToolIoSpec["responses"] = {};
-  const rawResponses = operation.responses as
-    | Record<
-        string,
-        {
-          content?: Record<string, { example?: unknown; schema?: unknown }>;
-          description?: string;
-        }
-      >
-    | undefined;
-
-  for (const [statusCode, response] of Object.entries(rawResponses ?? {})) {
-    const content = Object.values(response.content ?? {})[0];
-    responses[statusCode] = {
-      description: response.description,
-      example: content?.example,
-      schema: content?.schema,
-    };
-  }
-
-  return {
-    parameters,
-    requestBodyDescription: requestBody?.description,
-    requestBodyRequired: requestBody?.required,
-    requestBodyExample: firstRequestContent?.example,
-    requestBodySchema: firstRequestContent?.schema,
-    responses,
-  };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export function parseOpenApiEndpointDetail(
@@ -96,13 +37,11 @@ export function parseOpenApiEndpointDetail(
     return undefined;
   }
 
-  let document: Record<string, unknown>;
-
-  try {
-    document = JSON.parse(openapiSpec) as Record<string, unknown>;
-  } catch {
+  const parseResult = parseOpenApiDocumentText(openapiSpec);
+  if (!parseResult.ok) {
     return undefined;
   }
+  const document = parseResult.document;
 
   const servers = document.servers as Array<{ url?: string }> | undefined;
   const serverUrl = servers?.[0]?.url;
@@ -122,7 +61,7 @@ export function parseOpenApiEndpointDetail(
         continue;
       }
 
-      if (typeof operation !== "object" || operation === null) {
+      if (!isRecord(operation)) {
         continue;
       }
 
@@ -130,7 +69,7 @@ export function parseOpenApiEndpointDetail(
         serverUrl,
         path,
         method: method.toUpperCase(),
-        ioSpec: parseOperationIoSpec(operation as Record<string, unknown>),
+        ioSpec: parseOpenApiOperationIo(operation, document, pathItem),
       };
     }
   }

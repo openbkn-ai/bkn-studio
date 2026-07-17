@@ -19,6 +19,8 @@ import {
 
   normalizeGeneratedToolboxDescription,
 
+  normalizeOpenApiDocumentText,
+
   rewriteOpenApiOperationSummaries,
 
   rewriteOpenApiServerUrl,
@@ -34,6 +36,7 @@ export type RegisterOpenApiImportInput = {
   openapiSpec: string;
 
   boxId?: string;
+  toolboxMode?: "existing" | "new";
 
   toolboxName?: string;
 
@@ -48,6 +51,24 @@ export type RegisterOpenApiImportInput = {
   operatorSync?: OperatorSyncPublishInput;
 
 };
+
+function resolveToolboxTarget(input: RegisterOpenApiImportInput) {
+  const mode = input.toolboxMode ?? (input.boxId ? "existing" : "new");
+  const boxId = input.boxId?.trim();
+  const toolboxName = input.toolboxName?.trim();
+
+  if (mode === "existing") {
+    if (!boxId) {
+      throw new Error("已选择使用已有工具集，但未提交工具集 ID，请重新选择。");
+    }
+    return { mode, boxId, toolboxName: undefined };
+  }
+
+  if (!toolboxName) {
+    throw new Error("请填写新工具集名称。");
+  }
+  return { mode, boxId: undefined, toolboxName };
+}
 
 
 
@@ -95,16 +116,6 @@ function resolveServiceUrl(openapiSpec: string, override?: string): string {
 
 
 
-function isYamlOpenApiDocument(spec: string): boolean {
-
-  const trimmed = spec.trim();
-
-  return trimmed.startsWith("---") || /^\s*openapi\s*:/m.test(trimmed);
-
-}
-
-
-
 export async function registerOpenApiImport(
 
   input: RegisterOpenApiImportInput,
@@ -121,49 +132,32 @@ export async function registerOpenApiImport(
 
 
 
-  if (!isYamlOpenApiDocument(openapiSpec)) {
-
-    const validation = validateOpenApiDocumentText(openapiSpec);
-
-    if (!validation.ok) {
-
-      throw new Error(validation.reason);
-
-    }
-
+  const validation = validateOpenApiDocumentText(openapiSpec);
+  if (!validation.ok) {
+    throw new Error(validation.reason);
   }
 
 
 
   const serviceUrl = resolveServiceUrl(openapiSpec, input.serviceUrl);
   const normalizedOpenapiSpec = rewriteOpenApiOperationSummaries(
-    rewriteOpenApiServerUrl(openapiSpec, serviceUrl),
+    rewriteOpenApiServerUrl(normalizeOpenApiDocumentText(openapiSpec), serviceUrl),
   );
   const toolboxDescription = normalizeGeneratedToolboxDescription(input.toolboxDescription);
+  const target = resolveToolboxTarget(input);
 
 
 
   if (input.operatorSync?.enabled) {
-
-    const toolboxName = input.toolboxName?.trim();
-
-    if (!input.boxId && !toolboxName) {
-
-      throw new Error("请选择已有工具集或填写新工具集名称。");
-
-    }
-
-
-
     const bundle = await registerOpenApiBundle({
 
       openapiSpec: normalizedOpenapiSpec,
 
       serviceUrl,
 
-      boxId: input.boxId,
+      boxId: target.boxId,
 
-      toolboxName,
+      toolboxName: target.toolboxName,
 
       toolboxDescription,
 
@@ -197,25 +191,14 @@ export async function registerOpenApiImport(
 
 
 
-  let boxId = input.boxId;
+  let boxId = target.boxId;
 
 
 
-  if (!boxId) {
-
-    const toolboxName = input.toolboxName?.trim();
-
-    if (!toolboxName) {
-
-      throw new Error("请选择已有工具集或填写新工具集名称。");
-
-    }
-
-
-
+  if (target.mode === "new") {
     const toolbox = await createToolbox({
 
-      name: toolboxName,
+      name: target.toolboxName,
 
       description: toolboxDescription,
 
@@ -229,6 +212,10 @@ export async function registerOpenApiImport(
 
     boxId = toolbox.boxId;
 
+  }
+
+  if (!boxId) {
+    throw new Error("未能确定目标工具集。");
   }
 
 

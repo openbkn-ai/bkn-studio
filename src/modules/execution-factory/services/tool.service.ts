@@ -453,6 +453,48 @@ export async function getToolDetail(boxId: string, toolId: string): Promise<Tool
   return mapToolDetail(response.data);
 }
 
+type CreateToolFailureDetail = {
+  description?: string;
+  details?: string;
+  message?: string;
+  error?: string;
+};
+
+type CreateToolFailureItem = {
+  tool_name?: string;
+  /** OpenAPI docs historically used `error`; operator-integration serializes as `error_msg`. */
+  error?: string | CreateToolFailureDetail;
+  error_msg?: string | CreateToolFailureDetail;
+};
+
+function pickFirstNonEmpty(...candidates: Array<string | undefined>): string | undefined {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  return undefined;
+}
+
+function readFailureDetail(value: string | CreateToolFailureDetail | undefined): string | undefined {
+  if (typeof value === "string") {
+    return pickFirstNonEmpty(value);
+  }
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  return pickFirstNonEmpty(value.description, value.details, value.message, value.error);
+}
+
+/** Prefer `error_msg` (backend wire format), fall back to `error` for docs/compat. */
+export function extractCreateToolFailureMessage(item: CreateToolFailureItem): string {
+  return (
+    readFailureDetail(item.error_msg) ??
+    readFailureDetail(item.error) ??
+    "Unknown error"
+  );
+}
+
 export async function createTool(
   boxId: string,
   input: ToolCreateInput,
@@ -471,7 +513,7 @@ export async function createTool(
 
   const response = await http.post<{
     failure_count?: number;
-    failures?: Array<{ error?: { description?: string }; tool_name?: string }>;
+    failures?: CreateToolFailureItem[];
     success_count?: number;
     success_ids?: string[];
   }>(`${API_PREFIX}/tool-box/${boxId}/tool`, buildToolMutationBody(input), {
@@ -484,7 +526,7 @@ export async function createTool(
     failureCount: response.data.failure_count ?? 0,
     failures: (response.data.failures ?? []).map((item) => ({
       toolName: item.tool_name,
-      error: item.error?.description ?? "Unknown error",
+      error: extractCreateToolFailureMessage(item),
     })),
   };
 }
@@ -627,6 +669,7 @@ export async function debugTool(
       body: input.body,
       header: input.header,
       query: input.query,
+      path: input.path,
     },
     { headers: getBusinessDomainHeaders() },
   );

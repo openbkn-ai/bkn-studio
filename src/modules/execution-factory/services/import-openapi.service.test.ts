@@ -37,6 +37,21 @@ const petstoreSpec = JSON.stringify({
   },
 });
 
+const petstoreYamlSpec = `openapi: "3.0.3"
+info:
+  title: Swagger Petstore
+  version: "1.0.0"
+servers:
+  - url: https://petstore3.swagger.io/api/v3
+paths:
+  /pet:
+    get:
+      summary: Get pet
+      responses:
+        "200":
+          description: OK
+`;
+
 describe("registerOpenApiImport", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -71,6 +86,51 @@ describe("registerOpenApiImport", () => {
     const submittedDoc = JSON.parse(submittedSpec) as { servers?: Array<{ url?: string }> };
 
     expect(submittedDoc.servers?.[0]?.url).toBe("https://petstore3.swagger.io/api/v3");
+  });
+
+  it("converts an imported YAML document to JSON before submission", async () => {
+    await registerOpenApiImport({
+      openapiSpec: petstoreYamlSpec,
+      toolboxName: "Swagger_Petstore_OpenAPI_3_0",
+    });
+
+    const submittedSpec = vi.mocked(importOpenApiTools).mock.calls[0]?.[1];
+    expect(submittedSpec).toEqual(expect.any(String));
+    const submittedDoc = JSON.parse(String(submittedSpec)) as Record<string, unknown>;
+    expect(submittedDoc).toMatchObject({
+      openapi: "3.0.3",
+      servers: [{ url: "https://petstore3.swagger.io/api/v3" }],
+    });
+  });
+
+  it("uses the selected existing toolbox without creating a new one", async () => {
+    await registerOpenApiImport({
+      boxId: "box-existing",
+      openapiSpec: petstoreSpec,
+      serviceUrl: "https://petstore3.swagger.io/api/v3",
+      toolboxMode: "existing",
+    });
+
+    expect(createToolbox).not.toHaveBeenCalled();
+    expect(importOpenApiTools).toHaveBeenCalledWith(
+      "box-existing",
+      expect.any(String),
+      undefined,
+    );
+  });
+
+  it("does not silently create a toolbox when existing mode has no box id", async () => {
+    await expect(
+      registerOpenApiImport({
+        openapiSpec: petstoreSpec,
+        serviceUrl: "https://petstore3.swagger.io/api/v3",
+        toolboxMode: "existing",
+        toolboxName: "Should Not Be Created",
+      }),
+    ).rejects.toThrow("未提交工具集 ID");
+
+    expect(createToolbox).not.toHaveBeenCalled();
+    expect(importOpenApiTools).not.toHaveBeenCalled();
   });
 
   it("truncates generated toolbox descriptions before creating a toolbox", async () => {

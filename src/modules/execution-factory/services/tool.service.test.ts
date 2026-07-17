@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createTool,
+  extractCreateToolFailureMessage,
   getToolDetail,
   importOpenApiTools,
   listTools,
@@ -143,5 +144,32 @@ describe("tool.service mock persistence", () => {
     expect(lastDetail.path).toBe("/petstore/resource-19");
     expect(lastDetail.method).toBe("GET");
     expect(lastDetail.ioSpec?.parameters[0]?.name).toBe("limit");
+  });
+});
+
+describe("extractCreateToolFailureMessage", () => {
+  it("reads description from backend error_msg object", () => {
+    expect(
+      extractCreateToolFailureMessage({
+        tool_name: "test",
+        error_msg: {
+          description: '工具 “test” 已存在',
+          details: "tool name test exist",
+        },
+      }),
+    ).toBe('工具 “test” 已存在');
+  });
+
+  it("falls back to legacy error.description when error_msg is absent", () => {
+    expect(
+      extractCreateToolFailureMessage({
+        tool_name: "legacy",
+        error: { description: "legacy failure" },
+      }),
+    ).toBe("legacy failure");
+  });
+
+  it("returns Unknown error when no usable message is present", () => {
+    expect(extractCreateToolFailureMessage({ tool_name: "empty" })).toBe("Unknown error");
   });
 });

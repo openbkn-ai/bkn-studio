@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ImportOpenApiCapabilityForm } from "@/modules/execution-factory/components/create-menu/ImportOpenApiCapabilityForm";
 
@@ -107,6 +107,10 @@ vi.mock("@/modules/execution-factory/components/OpenApiSpecInput", () => ({
 }));
 
 describe("ImportOpenApiCapabilityForm", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("resolves a relative server URL from the fetched OpenAPI document URL", async () => {
     render(<ImportOpenApiCapabilityForm formId="import-openapi" onSubmit={vi.fn()} />);
 
@@ -119,5 +123,23 @@ describe("ImportOpenApiCapabilityForm", () => {
         "Detected relative OpenAPI server /api/v3 and resolved it to https://petstore3.swagger.io/api/v3.",
       ),
     ).toBeTruthy();
+  });
+
+  it("keeps a manually edited service URL after OpenAPI autofill", async () => {
+    render(<ImportOpenApiCapabilityForm formId="import-openapi" onSubmit={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Load Petstore OpenAPI" }));
+
+    const serviceUrlInput = await screen.findByDisplayValue("https://petstore3.swagger.io/api/v3");
+    fireEvent.change(serviceUrlInput, {
+      target: { value: "https://custom.example.com/api" },
+    });
+
+    fireEvent.change(screen.getByLabelText("Use rule"), {
+      target: { value: "prefer custom service url" },
+    });
+
+    expect(screen.getByDisplayValue("https://custom.example.com/api")).toBeTruthy();
+    expect(screen.queryByDisplayValue("https://petstore3.swagger.io/api/v3")).toBeNull();
   });
 });

@@ -50,6 +50,7 @@ const openapiSpec = JSON.stringify({
 
 describe("registerQuickApi", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(createToolbox).mockResolvedValue({
       boxId: "box-1",
       name: "Quick API Box",
@@ -116,6 +117,34 @@ describe("registerQuickApi", () => {
       "box-1",
       expect.objectContaining({ all: true }),
     );
+  });
+
+  it("uses the selected existing toolbox without creating a new one", async () => {
+    await expect(
+      registerQuickApi({
+        boxId: "box-1",
+        openapiSpec,
+        serviceUrl: "http://127.0.0.1:8095",
+        toolboxMode: "existing",
+      }),
+    ).resolves.toEqual({ boxId: "box-1", toolIds: ["tool-1"] });
+
+    expect(createToolbox).not.toHaveBeenCalled();
+    expect(createTool).toHaveBeenCalledWith("box-1", expect.any(Object));
+  });
+
+  it("does not silently create a toolbox when existing mode has no box id", async () => {
+    await expect(
+      registerQuickApi({
+        openapiSpec,
+        serviceUrl: "http://127.0.0.1:8095",
+        toolboxMode: "existing",
+        toolboxName: "Should Not Be Created",
+      }),
+    ).rejects.toThrow("未提交工具集 ID");
+
+    expect(createToolbox).not.toHaveBeenCalled();
+    expect(createTool).not.toHaveBeenCalled();
   });
 
   it("does not return a navigable result when the created tool is not persisted", async () => {

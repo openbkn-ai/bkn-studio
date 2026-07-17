@@ -766,7 +766,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         onClose={() => setDebugRecord(null)}
         onRunComplete={handleDebugRunComplete}
         open={Boolean(debugRecord)}
-        record={debugRecord}
+        record={selectedToolDetail ?? debugRecord}
       />
     </>
   );

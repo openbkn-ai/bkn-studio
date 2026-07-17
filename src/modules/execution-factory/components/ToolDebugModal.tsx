@@ -5,11 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Form, Input, Modal, Typography } from "antd";
+import { Alert, Form, Modal, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { HttpDebugRequestFields } from "@/modules/execution-factory/components/HttpDebugRequestFields";
 import { debugTool } from "@/modules/execution-factory/services/tool.service";
 import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
 import type {
@@ -18,8 +19,11 @@ import type {
   ToolRunLogEntry,
   ToolIoSpec,
 } from "@/modules/execution-factory/types/tool";
-import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
-import { buildToolDebugRequest } from "@/modules/execution-factory/utils/tool-io";
+import {
+  buildHttpDebugInitialValues,
+  buildHttpDebugRequest,
+  type HttpDebugFormValues,
+} from "@/modules/execution-factory/utils/http-debug-request";
 
 import styles from "./ToolDebugModal.module.css";
 
@@ -34,10 +38,6 @@ type ToolDebugModalProps = {
   record: ToolRecord | null;
 };
 
-type DebugFormValues = {
-  requestBody?: string;
-};
-
 export function ToolDebugModal({
   boxId,
   defaultRequestBody,
@@ -49,18 +49,13 @@ export function ToolDebugModal({
   record,
 }: ToolDebugModalProps) {
   const { t } = useTranslation();
-  const [form] = Form.useForm<DebugFormValues>();
+  const [form] = Form.useForm<HttpDebugFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ToolDebugResult | null>(null);
 
-  const generatedBody = useMemo(
-    () =>
-      defaultRequestBody ??
-      buildDefaultDebugBody({
-        ioSpec,
-        functionInput,
-      }),
+  const initialValues = useMemo(
+    () => buildHttpDebugInitialValues(ioSpec, functionInput, defaultRequestBody),
     [defaultRequestBody, functionInput, ioSpec],
   );
 
@@ -72,10 +67,8 @@ export function ToolDebugModal({
       return;
     }
 
-    form.setFieldsValue({
-      requestBody: generatedBody,
-    });
-  }, [form, generatedBody, open]);
+    form.setFieldsValue(initialValues);
+  }, [form, initialValues, open]);
 
   const handleDebug = async () => {
     if (!record) {
@@ -88,13 +81,7 @@ export function ToolDebugModal({
 
     try {
       const values = await form.validateFields();
-      let body: Record<string, unknown> | undefined;
-
-      if (values.requestBody?.trim()) {
-        body = JSON.parse(values.requestBody) as Record<string, unknown>;
-      }
-
-      const debugRequest = buildToolDebugRequest(body, ioSpec);
+      const debugRequest = buildHttpDebugRequest(values, ioSpec, record.path);
       const debugResult = await debugTool(boxId, record.toolId, debugRequest);
       setResult(debugResult);
       onRunComplete?.({
@@ -133,9 +120,12 @@ export function ToolDebugModal({
       ) : null}
       <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
       <Form form={form} layout="vertical">
-        <Form.Item label={t("executionFactory.debugRequestBody")} name="requestBody">
-          <Input.TextArea placeholder="{}" rows={8} />
-        </Form.Item>
+        <HttpDebugRequestFields
+          ioSpec={ioSpec}
+          method={record?.method}
+          path={record?.path}
+          serverUrl={record?.serverUrl}
+        />
       </Form>
       {error ? <Alert message={error} showIcon style={{ marginBottom: 16 }} type="error" /> : null}
       {result ? (

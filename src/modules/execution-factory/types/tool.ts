@@ -119,6 +119,7 @@ export type ToolDebugInput = {
   header?: Record<string, unknown>;
   body?: Record<string, unknown>;
   query?: Record<string, unknown>;
+  path?: Record<string, string>;
 };
 
 export type ToolDebugResult = {

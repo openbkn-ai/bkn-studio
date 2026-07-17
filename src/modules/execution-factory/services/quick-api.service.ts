@@ -28,6 +28,7 @@ export type RegisterQuickApiInput = {
   serviceUrl: string;
 
   boxId?: string;
+  toolboxMode?: "existing" | "new";
 
   toolboxName?: string;
 
@@ -41,6 +42,24 @@ export type RegisterQuickApiInput = {
   toolDescription?: string;
 
 };
+
+function resolveToolboxTarget(input: RegisterQuickApiInput) {
+  const mode = input.toolboxMode ?? (input.boxId ? "existing" : "new");
+  const boxId = input.boxId?.trim();
+  const toolboxName = input.toolboxName?.trim();
+
+  if (mode === "existing") {
+    if (!boxId) {
+      throw new Error("已选择使用已有工具集，但未提交工具集 ID，请重新选择。");
+    }
+    return { mode, boxId, toolboxName: undefined };
+  }
+
+  if (!toolboxName) {
+    throw new Error("请填写新工具集名称。");
+  }
+  return { mode, boxId: undefined, toolboxName };
+}
 
 
 
@@ -125,29 +144,20 @@ export async function registerQuickApi(
 
   }
 
+  const target = resolveToolboxTarget(input);
+
 
 
   if (input.operatorSync?.enabled) {
-
-    const toolboxName = input.toolboxName?.trim();
-
-    if (!input.boxId && !toolboxName) {
-
-      throw new Error("请选择已有工具集或填写新工具集名称。");
-
-    }
-
-
-
     const bundle = await registerOpenApiBundle({
 
       openapiSpec: input.openapiSpec,
 
       serviceUrl: input.serviceUrl,
 
-      boxId: input.boxId,
+      boxId: target.boxId,
 
-      toolboxName,
+      toolboxName: target.toolboxName,
 
       toolboxDescription: input.toolboxDescription,
 
@@ -162,7 +172,7 @@ export async function registerQuickApi(
     await confirmQuickApiPersistence({
       boxId: bundle.boxId,
       toolIds: bundle.toolIds,
-      toolboxName,
+      toolboxName: target.toolboxName,
     });
 
     return {
@@ -181,25 +191,14 @@ export async function registerQuickApi(
 
 
 
-  let boxId = input.boxId;
+  let boxId = target.boxId;
 
 
 
-  if (!boxId) {
-
-    const toolboxName = input.toolboxName?.trim();
-
-    if (!toolboxName) {
-
-      throw new Error("请选择已有工具集或填写新工具集名称。");
-
-    }
-
-
-
+  if (target.mode === "new") {
     const toolbox = await createToolbox({
 
-      name: toolboxName,
+      name: target.toolboxName,
 
       description: input.toolboxDescription,
 
@@ -213,6 +212,10 @@ export async function registerQuickApi(
 
     boxId = toolbox.boxId;
 
+  }
+
+  if (!boxId) {
+    throw new Error("未能确定目标工具集。");
   }
 
 
@@ -244,7 +247,7 @@ export async function registerQuickApi(
   await confirmQuickApiPersistence({
     boxId,
     toolIds: result.successIds,
-    toolboxName: input.toolboxName,
+    toolboxName: target.toolboxName,
   });
 
   return {

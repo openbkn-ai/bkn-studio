@@ -5,12 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Form, Input, Typography } from "antd";
+import { Alert, Form, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { HttpDebugRequestFields } from "@/modules/execution-factory/components/HttpDebugRequestFields";
 import { debugOperator } from "@/modules/execution-factory/services/operator.service";
 import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
 import type {
@@ -18,18 +19,18 @@ import type {
   OperatorRecord,
   OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
-import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
-import { extractOpenApiOperationsIo } from "@/modules/execution-factory/utils/openapi-operation-io";
+import {
+  buildHttpDebugInitialValues,
+  buildHttpDebugRequest,
+  type HttpDebugFormValues,
+} from "@/modules/execution-factory/utils/http-debug-request";
+import { parseOpenApiEndpointDetail } from "@/modules/execution-factory/utils/openapi-detail";
 
 type OperatorDebugPanelProps = {
   functionInput?: FunctionInputPayload;
   onRunComplete?: (entry: OperatorRunLogEntry) => void;
   openapiSpec?: string;
   record: OperatorRecord | null;
-};
-
-type DebugFormValues = {
-  requestBody?: string;
 };
 
 export function OperatorDebugPanel({
@@ -39,25 +40,22 @@ export function OperatorDebugPanel({
   record,
 }: OperatorDebugPanelProps) {
   const { t } = useTranslation();
-  const [form] = Form.useForm<DebugFormValues>();
+  const [form] = Form.useForm<HttpDebugFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OperatorDebugResult | null>(null);
 
-  const generatedBody = useMemo(() => {
-    const ioSpec = openapiSpec ? extractOpenApiOperationsIo(openapiSpec)[0]?.io : undefined;
-
-    return buildDefaultDebugBody({
-      functionInput,
-      ioSpec,
-    });
-  }, [functionInput, openapiSpec]);
+  const endpoint = useMemo(() => parseOpenApiEndpointDetail(openapiSpec), [openapiSpec]);
+  const initialValues = useMemo(
+    () => buildHttpDebugInitialValues(endpoint?.ioSpec, functionInput),
+    [endpoint?.ioSpec, functionInput],
+  );
 
   useEffect(() => {
-    form.setFieldsValue({ requestBody: generatedBody });
+    form.setFieldsValue(initialValues);
     setError(null);
     setResult(null);
-  }, [form, generatedBody, record?.operatorId, record?.version]);
+  }, [form, initialValues, record?.operatorId, record?.version]);
 
   const handleDebug = async () => {
     if (!record) {
@@ -70,14 +68,10 @@ export function OperatorDebugPanel({
 
     try {
       const values = await form.validateFields();
-      let body: Record<string, unknown> | undefined;
-
-      if (values.requestBody?.trim()) {
-        body = JSON.parse(values.requestBody) as Record<string, unknown>;
-      }
+      const request = buildHttpDebugRequest(values, endpoint?.ioSpec, endpoint?.path);
 
       const debugResult = await debugOperator({
-        body,
+        ...request,
         operatorId: record.operatorId,
         version: record.version,
       });
@@ -89,7 +83,7 @@ export function OperatorDebugPanel({
         durationMs: debugResult.durationMs,
         error: debugResult.error,
         body: debugResult.body,
-        requestBody: body,
+        requestBody: request,
       });
     } catch (caughtError) {
       setError(extractRequestErrorMessage(caughtError));
@@ -106,9 +100,12 @@ export function OperatorDebugPanel({
     <div>
       <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
       <Form form={form} layout="vertical">
-        <Form.Item label={t("executionFactory.debugRequestBody")} name="requestBody">
-          <Input.TextArea rows={8} />
-        </Form.Item>
+        <HttpDebugRequestFields
+          ioSpec={endpoint?.ioSpec}
+          method={endpoint?.method}
+          path={endpoint?.path}
+          serverUrl={endpoint?.serverUrl}
+        />
       </Form>
       {error ? <Alert message={error} showIcon style={{ marginBottom: 12 }} type="error" /> : null}
       <AppButton loading={submitting} onClick={() => void handleDebug()} type="primary">

@@ -12,6 +12,8 @@ import {
   buildOpenApiDocumentFromMetadata,
   normalizeGeneratedCapabilityDescription,
   normalizeGeneratedToolboxDescription,
+  normalizeOpenApiDocumentText,
+  parseOpenApiDocumentText,
   parseOpenApiDataPayload,
   resolveOpenApiServiceUrl,
   rewriteOpenApiOperationSummaries,
@@ -36,6 +38,21 @@ const validSpec = JSON.stringify(
   null,
   2,
 );
+
+const validYamlSpec = `openapi: "3.0.3"
+info:
+  title: get_weather
+  version: "1.0.0"
+servers:
+  - url: https://example.com
+paths:
+  /weather:
+    get:
+      summary: 查询天气
+      responses:
+        "200":
+          description: OK
+`;
 
 describe("metadata-content OpenAPI helpers", () => {
   it("reconstructs a full OpenAPI document from backend metadata", () => {
@@ -130,6 +147,38 @@ describe("metadata-content OpenAPI helpers", () => {
         path: "/weather",
         summary: "查询天气",
       });
+    }
+  });
+
+  it("parses, analyzes and normalizes a YAML OpenAPI document", () => {
+    const parsed = parseOpenApiDocumentText(validYamlSpec);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.format).toBe("yaml");
+      expect(parsed.document.openapi).toBe("3.0.3");
+    }
+
+    const analysis = analyzeOpenApiDocumentText(validYamlSpec);
+    expect(analysis.ok).toBe(true);
+    if (analysis.ok) {
+      expect(analysis.operationCount).toBe(1);
+      expect(analysis.serverUrl).toBe("https://example.com");
+    }
+
+    const normalized = normalizeOpenApiDocumentText(validYamlSpec);
+    const normalizedDoc = JSON.parse(normalized) as Record<string, unknown>;
+    expect(normalizedDoc).toMatchObject({
+      openapi: "3.0.3",
+      info: { title: "get_weather", version: "1.0.0" },
+    });
+  });
+
+  it("reports malformed YAML with a JSON/YAML parsing error", () => {
+    const parsed = parseOpenApiDocumentText("openapi: [");
+
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) {
+      expect(parsed.reason).toContain("JSON 或 YAML");
     }
   });
 

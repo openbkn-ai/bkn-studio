@@ -6,6 +6,7 @@
  */
 
 import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
+import { parse as parseYaml } from "yaml";
 
 type InternalApiSpec = {
   components?: { schemas?: Record<string, unknown> };
@@ -75,6 +76,57 @@ export type OpenApiSpecSource =
 export type ResolvedOpenApiServiceUrl =
   | { ok: true; source: "absolute" | "resolved-relative"; url: string }
   | { ok: false; reason: string; relativeUrl?: string };
+
+export type OpenApiDocumentParseResult =
+  | {
+      ok: true;
+      document: Record<string, unknown>;
+      format: "json" | "yaml";
+    }
+  | { ok: false; reason: string };
+
+export function parseOpenApiDocumentText(openapiSpec?: string): OpenApiDocumentParseResult {
+  const text = openapiSpec?.trim();
+  if (!text) {
+    return { ok: false, reason: "OpenAPI 规范不能为空。" };
+  }
+
+  let parsed: unknown;
+  let format: "json" | "yaml" = "json";
+
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    format = "yaml";
+    try {
+      parsed = parseYaml(text);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        ok: false,
+        reason: `OpenAPI 文件不是有效的 JSON 或 YAML：${detail}`,
+      };
+    }
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { ok: false, reason: "OpenAPI 文档顶层必须是对象。" };
+  }
+
+  return {
+    ok: true,
+    document: parsed as Record<string, unknown>,
+    format,
+  };
+}
+
+export function normalizeOpenApiDocumentText(openapiSpec: string): string {
+  const parsed = parseOpenApiDocumentText(openapiSpec);
+  if (!parsed.ok) {
+    throw new Error(parsed.reason);
+  }
+  return JSON.stringify(parsed.document, null, 2);
+}
 
 export function normalizeGeneratedCapabilityName(value?: string): string | undefined {
   const normalized = value
@@ -241,18 +293,12 @@ function findOperationDescriptionTooLong(
 export function analyzeOpenApiDocumentText(
   openapiSpec?: string,
 ): OpenApiDocumentAnalysis {
-  if (!openapiSpec?.trim()) {
-    return { ok: false, reason: "OpenAPI 规范不能为空。" };
+  const parseResult = parseOpenApiDocumentText(openapiSpec);
+  if (!parseResult.ok) {
+    return parseResult;
   }
 
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(openapiSpec);
-  } catch {
-    return { ok: false, reason: "JSON 语法无效，无法解析。" };
-  }
-
+  const parsed = parseResult.document;
   if (!isFullOpenApiDocument(parsed)) {
     return {
       ok: false,
@@ -460,99 +506,91 @@ export function rewriteOpenApiServerUrl(openapiSpec: string, serviceUrl?: string
     return openapiSpec;
   }
 
-  try {
-    const parsed = JSON.parse(openapiSpec) as Record<string, unknown>;
-
-    if (!isFullOpenApiDocument(parsed)) {
-      return openapiSpec;
-    }
-
-    const servers: unknown[] = Array.isArray(parsed.servers)
-      ? Array.from(parsed.servers as unknown[])
-      : [];
-    const firstServer =
-      servers[0] && typeof servers[0] === "object" && !Array.isArray(servers[0])
-        ? { ...(servers[0] as Record<string, unknown>), url: normalizedServiceUrl }
-        : { url: normalizedServiceUrl };
-
-    servers[0] = firstServer;
-
-    return JSON.stringify(
-      {
-        ...parsed,
-        servers,
-      },
-      null,
-      2,
-    );
-  } catch {
+  const parseResult = parseOpenApiDocumentText(openapiSpec);
+  if (!parseResult.ok || !isFullOpenApiDocument(parseResult.document)) {
     return openapiSpec;
   }
+  const parsed = parseResult.document;
+
+  const servers: unknown[] = Array.isArray(parsed.servers)
+    ? Array.from(parsed.servers as unknown[])
+    : [];
+  const firstServer =
+    servers[0] && typeof servers[0] === "object" && !Array.isArray(servers[0])
+      ? { ...(servers[0] as Record<string, unknown>), url: normalizedServiceUrl }
+      : { url: normalizedServiceUrl };
+
+  servers[0] = firstServer;
+
+  return JSON.stringify(
+    {
+      ...parsed,
+      servers,
+    },
+    null,
+    2,
+  );
 }
 
 export function rewriteOpenApiOperationSummaries(openapiSpec: string): string {
-  try {
-    const parsed = JSON.parse(openapiSpec) as Record<string, unknown>;
+  const parseResult = parseOpenApiDocumentText(openapiSpec);
+  if (!parseResult.ok || !isFullOpenApiDocument(parseResult.document)) {
+    return openapiSpec;
+  }
+  const parsed = parseResult.document;
 
-    if (!isFullOpenApiDocument(parsed)) {
-      return openapiSpec;
+  const paths = parsed.paths;
+  if (!paths || typeof paths !== "object" || Array.isArray(paths)) {
+    return openapiSpec;
+  }
+
+  const rewrittenPaths: Record<string, unknown> = {};
+
+  for (const [path, pathItem] of Object.entries(paths as Record<string, unknown>)) {
+    if (!pathItem || typeof pathItem !== "object" || Array.isArray(pathItem)) {
+      rewrittenPaths[path] = pathItem;
+      continue;
     }
 
-    const paths = parsed.paths;
-    if (!paths || typeof paths !== "object" || Array.isArray(paths)) {
-      return openapiSpec;
-    }
+    const rewrittenPathItem: Record<string, unknown> = { ...(pathItem as Record<string, unknown>) };
 
-    const rewrittenPaths: Record<string, unknown> = {};
-
-    for (const [path, pathItem] of Object.entries(paths as Record<string, unknown>)) {
-      if (!pathItem || typeof pathItem !== "object" || Array.isArray(pathItem)) {
-        rewrittenPaths[path] = pathItem;
+    for (const [method, operation] of Object.entries(pathItem as Record<string, unknown>)) {
+      if (!HTTP_METHODS.has(method.toLowerCase())) {
         continue;
       }
 
-      const rewrittenPathItem: Record<string, unknown> = { ...(pathItem as Record<string, unknown>) };
-
-      for (const [method, operation] of Object.entries(pathItem as Record<string, unknown>)) {
-        if (!HTTP_METHODS.has(method.toLowerCase())) {
-          continue;
-        }
-
-        if (!operation || typeof operation !== "object" || Array.isArray(operation)) {
-          continue;
-        }
-
-        const operationRecord = operation as Record<string, unknown>;
-        const rawSummary =
-          typeof operationRecord.summary === "string" ? operationRecord.summary : "";
-        const safeSummary =
-          normalizeGeneratedCapabilityName(rawSummary) ??
-          normalizeGeneratedCapabilityName(`${method}_${path}`) ??
-          "api_tool";
-
-        rewrittenPathItem[method] = {
-          ...operationRecord,
-          ...(!operationRecord.description && rawSummary && rawSummary !== safeSummary
-            ? { description: rawSummary }
-            : {}),
-          summary: safeSummary,
-        };
+      if (!operation || typeof operation !== "object" || Array.isArray(operation)) {
+        continue;
       }
 
-      rewrittenPaths[path] = rewrittenPathItem;
+      const operationRecord = operation as Record<string, unknown>;
+      const rawSummary =
+        typeof operationRecord.summary === "string" ? operationRecord.summary : "";
+      const safeSummary =
+        normalizeGeneratedCapabilityName(rawSummary) ??
+        normalizeGeneratedCapabilityName(`${method}_${path}`) ??
+        "api_tool";
+
+      rewrittenPathItem[method] = {
+        ...operationRecord,
+        ...(!operationRecord.description && rawSummary && rawSummary !== safeSummary
+          ? { description: rawSummary }
+          : {}),
+        summary: safeSummary,
+      };
     }
 
-    return JSON.stringify(
-      {
-        ...parsed,
-        paths: rewrittenPaths,
-      },
-      null,
-      2,
-    );
-  } catch {
-    return openapiSpec;
+    rewrittenPaths[path] = rewrittenPathItem;
   }
+
+  return JSON.stringify(
+    {
+      ...parsed,
+      paths: rewrittenPaths,
+    },
+    null,
+    2,
+  );
 }
 
 export function serializeOpenApiSpec(metadata?: BackendMetadata): string | undefined {
@@ -596,13 +634,11 @@ export function validateOpenApiDocumentText(
     };
   }
 
-  let parsed: Record<string, unknown>;
-
-  try {
-    parsed = JSON.parse(openapiSpec ?? "") as Record<string, unknown>;
-  } catch {
-    return { ok: false, reason: "JSON 语法无效，无法解析。" };
+  const parseResult = parseOpenApiDocumentText(openapiSpec);
+  if (!parseResult.ok) {
+    return parseResult;
   }
+  const parsed = parseResult.document;
 
   const brokenRef = findBrokenComponentRef(parsed);
 
@@ -638,18 +674,18 @@ export function extractOpenApiMetadataHints(
     return {};
   }
 
-  try {
-    const parsed = JSON.parse(openapiSpec) as {
-      info?: { description?: string; title?: string };
-    };
-
-    return {
-      title: parsed.info?.title,
-      description: parsed.info?.description,
-    };
-  } catch {
+  const parseResult = parseOpenApiDocumentText(openapiSpec);
+  if (!parseResult.ok) {
     return {};
   }
+  const parsed = parseResult.document as {
+    info?: { description?: string; title?: string };
+  };
+
+  return {
+    title: parsed.info?.title,
+    description: parsed.info?.description,
+  };
 }
 
 export function parseOpenApiDataPayload(
@@ -670,7 +706,11 @@ export function parseOpenApiDataPayload(
   // `/operator/info` and similar edit APIs bind `data` as json.RawMessage.
   // Sending a JSON string here makes the backend try to parse a quoted string
   // instead of an OpenAPI object (see reference operator-web E2E helpers).
-  return JSON.parse(trimmed) as Record<string, unknown>;
+  const parsed = parseOpenApiDocumentText(trimmed);
+  if (!parsed.ok) {
+    throw new Error(parsed.reason);
+  }
+  return parsed.document;
 }
 
 export function mapFunctionContent(
