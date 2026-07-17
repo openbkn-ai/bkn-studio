@@ -1,22 +1,86 @@
+<p align="center">
+  <img src="assets/logo/light.png" alt="OpenBKN" />
+</p>
+
 # BKN Studio
 
-`bkn-studio` 是 `bkn` 平台的统一前端项目，用于承载平台内多个后端模块对应的管理界面与业务工作区。
+中文 | [English](README.en.md)
 
-当前项目已经具备：
-- 统一控制台壳层
-- 分层前端框架
-- `data-connect` 业务模块
-- 面向多人协作和智能体整合的模块化约束
+BKN Studio 是 OpenBKN 的统一产品工作台，面向企业知识网络、数据资源治理、模型资源管理、智能体调试和平台运维等场景，提供一套可视化、可协作、可交付的前端入口。
+
+它不是单一功能页面集合，而是 OpenBKN 面向业务用户、实施人员、数据工程师和 AI 工程师的统一操作界面。用户可以在这里完成知识网络建模、数据资源接入、索引构建、工具能力编排、模型配置和运行调试等工作。
+
+## 产品定位
+
+BKN Studio 关注三类核心问题：
+
+1. **让业务知识可建模**
+   将企业中的业务对象、关系、动作、概念分组等知识结构沉淀为领域知识网络，支撑后续查询、分析、智能体调用和业务应用构建。
+
+2. **让数据资源可治理、可检索、可使用**
+   通过数据连接、数据目录、资源详情和数据索引能力，把数据库、数据视图等资源组织成可理解、可检索、可绑定的资源知识网络。
+
+3. **让平台能力可配置、可运营、可交付**
+   通过模型管理、执行工厂、Agent 调试等模块，将 OpenBKN 后端能力产品化，降低联调、验证和业务交付成本。
+
+## 主要业务模块
+
+### 领域知识网络
+
+面向业务建模和知识组织场景，支持：
+
+- 管理知识网络、对象类、关系类、动作类型和概念分组。
+- 将业务对象与数据资源视图绑定，建立业务语义和数据实体之间的映射关系。
+- 查看对象类、关系类、动作类型详情，以及关联资源信息。
+- 通过 ContextLoader 调试台验证知识网络在智能体检索和工具调用中的表现。
+
+### 数据资源知识网络
+
+面向数据资源治理和检索构建场景，支持：
+
+- 创建和管理数据连接。
+- 扫描并维护数据目录、数据资源、数据视图和资源详情。
+- 在数据目录侧配置全文索引和向量索引。
+- 查看索引构建任务、构建状态、失败信息和重建操作。
+- 为领域知识网络提供稳定的数据资源绑定来源。
+
+### 执行工厂
+
+面向工具能力生产和集成场景，支持：
+
+- 管理算子、工具、工具箱和能力。
+- 从 OpenAPI 或 cURL 导入接口能力。
+- 预览、调试、发布和导出工具能力。
+- 对接沙箱运行时，为智能体和业务流程提供可执行工具。
+
+### 模型管理
+
+面向大模型和小模型统一运营场景，支持：
+
+- 管理大模型、小模型配置。
+- 测试连接、设为默认、查看模型监控。
+- 管理模型授权和 API 使用说明。
+- 配置模型配额、额度限制和用户级用量策略。
+
+### Agent / ContextLoader
+
+面向智能体调试和检索验证场景，支持：
+
+- 调试 Agent 对话和工具调用。
+- 查看工具调用过程、耗时、token 等运行信息。
+- 管理 MCP 工具列表和 API Key。
+- 验证知识网络、数据资源和模型配置是否能被智能体正确使用。
 
 ## 技术栈
 
-- React + TypeScript
+- React
+- TypeScript
 - Vite
 - React Router
 - Ant Design
 - axios
 - react-i18next
-- CSS Modules + 全局主题样式
+- CSS Modules
 - Vitest
 - pnpm
 
@@ -34,8 +98,6 @@ corepack pnpm dev
 http://localhost:8000/studio
 ```
 
-访问 `http://localhost:8000/` 会自动重定向到 `/studio`。
-
 常用命令：
 
 ```bash
@@ -45,235 +107,23 @@ corepack pnpm build
 corepack pnpm check
 ```
 
-## 连接真实后端调试
+## 安装部署
 
-默认 `VITE_USE_MOCK=true`，前端走内置 mock 数据，无需后端即可启动。要连真实后端（通过 Vite dev server 代理转发，免跨域）：
+BKN Studio 随 OpenBKN / BKN Foundry 一起安装和部署。安装脚本、部署参数和环境准备说明请参考 [BKN Foundry 安装部署文档](https://github.com/openbkn-ai/bkn-foundry/blob/main/deploy/README.zh.md)。
 
-1. 复制环境模板：
+## 🤝 加入社群
 
-   ```bash
-   cp .env.example .env.local
-   ```
+扫码加入社群，获取支持、反馈问题、了解最新动态：
 
-2. 在 `.env.local` 中配置：
+<p align="center">
+  <img src="help/qrcode.png" alt="加入 OpenBKN 社群" width="260" />
+</p>
 
-   ```text
-   VITE_USE_MOCK=false                       # 关闭 mock，所有请求走真实 HTTP
-   VITE_API_BASE_URL=/api                    # 前端发同源 /api/...，由 dev proxy 转发
-   VITE_DEV_AUTH_ORIGIN=http://<网关地址>     # 后端网关 origin（代理目标）
-   VITE_DEV_ACCESS_TOKEN=                    # 可选：填则跳过登录直接带 token
-   VITE_DEV_REFRESH_TOKEN=
-   ```
+## 许可 / License
 
-   也可单独用 `VITE_PROXY_TARGET=<url>` 覆盖代理目标（优先级高于 `VITE_DEV_AUTH_ORIGIN`）。
+BKN Studio 是 OpenBKN 项目的一部分。组件和文件的权威归属以本仓库 [LICENSE](LICENSE) 为准。
 
-3. 启动 dev server：`corepack pnpm dev`，访问 `http://localhost:8000/studio`。
+- BKN Studio 采用本仓库随附的许可文件。
+- BKN Foundry 和 BKN SDK 在独立仓库维护，适用各自仓库随附的许可证文件。
 
-   `VITE_USE_MOCK=false` 时，dev server 把以下路径代理到上面配置的 origin：
-
-   | 路径 | 用途 |
-   | --- | --- |
-   | `/api` | 业务接口 |
-   | `/oauth2`、`/.well-known`、`/userinfo` | OAuth2 / OIDC 登录流程 |
-
-4. 登录：未填 token 时走浏览器内 OAuth 登录（需要网关的 hydra 已为 `openbkn-studio` 客户端登记 redirect_uri `http://localhost:8000/studio/callback`）；填了 token 则直接进入，token 失效时页面会弹出表单可现场粘贴新 token。
-
-注意事项：
-
-- 端口锁定 `8000`（`strictPort`），被占用会直接报错而非漂移——因为 OAuth redirect_uri 是写死的。
-- `.env.local` 改动后**必须重启 dev server**，Vite 仅在启动时读取环境变量。
-- 后端代码改动需先部署到目标网关，否则前端连的仍是旧行为。
-
-## 部署
-
-`bkn-studio` 是纯静态 SPA（Vite 产物），与 BKN Foundry 同源通信：浏览器发同源 `/api`、`/oauth2`、`/.well-known`、`/userinfo`，由网关路由到 `bkn-safe` 与后端。部署的核心就是**保证 studio 与这些路径在同一个 origin**。
-
-### 产物
-
-`release-studio.yml`（打 `v*` tag 触发）一条流水线产出两样，推到 GHCR：
-
-| 产物 | 地址 |
-| --- | --- |
-| 镜像（多阶段：`vite build` → `nginx:alpine`，静态资源在 `/studio`） | `ghcr.io/openbkn-ai/bkn-studio:<version>` |
-| Helm chart（只加 `/studio` 一条 ingress，class-443） | `oci://ghcr.io/openbkn-ai/charts/bkn-studio:<version>` |
-
-镜像 tag 与 chart version 共用同一 `v*` 版本号，chart 永远指向匹配镜像。
-
-### 两种安装方式（`deploy/install.sh`）
-
-**1. 本地（指一个远端 Foundry 地址）** —— studio 跑在与 Foundry 不同的机器上：
-
-```bash
-deploy/install.sh local --foundry https://foundry.example.com --port 8080 [--register]
-```
-
-起一个 docker 容器，容器内 nginx 既发 `/studio` 静态，又把 `/api`、`/oauth2`、`/.well-known`、`/userinfo` **反向代理**到 `--foundry`。这样浏览器对本地容器同源（无跨域，OAuth token 交换在本地解析）——本质是把 dev server 的代理产品化。默认走 `docker compose`（有的话），否则 `docker run`，`--no-compose` 强制后者。
-
-**2. 同集群（直接装进 Foundry 的 k8s）：**
-
-```bash
-deploy/install.sh cluster --version 0.1.0 [--namespace openbkn] [--chart <ref>]
-```
-
-`helm upgrade --install` 把 chart 装进集群，`/studio` ingress 并入现有网关，与 `/api`、`/oauth2` 同 host 天然同源。
-
-**卸载：**
-
-```bash
-deploy/install.sh uninstall local   [--name bkn-studio]
-deploy/install.sh uninstall cluster [--namespace openbkn]
-```
-
-### OAuth 回调注册（关键）
-
-hydra 按 `redirect_uri` 精确匹配，**浏览器所在 origin 的 `/studio/callback` 必须在 `openbkn-studio` 客户端白名单里**，否则登录直接报 `redirect_uri mismatch`。按部署形态分三档：
-
-| 形态 | 回调 | 要不要注册 |
-| --- | --- | --- |
-| `cluster`（同网关 host） | `https://<网关host>/studio/callback` | **不用** —— `bkn-safe` 装机时按 `accessAddress` 已 seed |
-| `local --port 8000` | `http://localhost:8000/studio/callback` | **不用** —— `clientSeed.extraWebRedirectUris` 默认已 seed |
-| `local` 其它 origin | `http://<本机>:<port>/studio/callback` | **要**（见下） |
-
-需要注册时三选一：
-
-1. `deploy/install.sh local ... --register` —— 调 `bkn-safe` admin API `POST /api/safe/v1/admin/clients/openbkn-studio/redirect-uris`，token 取自 `$BKN_ADMIN_TOKEN` 或 `openbkn auth token`（需 super-admin）。**临时** —— `bkn-safe` 下次 `helm upgrade` 重新 seed 会冲掉。
-2. 永久：把地址写进 `bkn-safe` chart 的 `clientSeed.extraWebRedirectUris` + `helm upgrade`（在 bkn-foundry，扛升级）。
-3. 用已 seed 的 `--port 8000`，零注册。
-
-> 详见 `bkn-safe/docs/oauth-redirect-uris.md`（bkn-foundry）。
-
-### 无 bkn-safe（免鉴权直接用）
-
-部署若**不带 bkn-safe**（没有鉴权服务），加 `--no-auth` 关掉 studio 自带的 OAuth 登录门，以默认 `local-admin`（满权）用户**免登录直接跑**：
-
-```bash
-deploy/install.sh local   --foundry https://foundry.example.com --no-auth
-deploy/install.sh cluster --version 0.1.0 --no-auth
-```
-
-原理：镜像里 `public/config.js` 默认是空 no-op（标准部署 = 自带 OAuth）；index.html 在主 bundle 前加载它。`--no-auth` 用一份 `window.__BKN_STUDIO_RUNTIME__ = { mode: "hosted" }` **覆盖** config.js（local 走 docker 挂载，cluster 走 chart `auth.enabled=false` 生成的 ConfigMap 挂载）—— 不重打镜像，只换运行时配置。`mode: "hosted"` 让 `shouldUseOAuthGate` 返回 false，[AuthGate](src/framework/auth/AuthGate.tsx) 直接渲染、不走登录、不调 OAuth。
-
-chart 里对应开关（**配置文件中体现**）：
-
-```yaml
-auth:
-  enabled: true   # false = 关 OAuth 门、免登录（无 bkn-safe 时用）
-```
-
-> 免鉴权下 studio 不带 token、不走登录，但仍会请求后端 `/api` —— 需该部署的后端也不强制鉴权。
-
-### 注意事项
-
-- **同源是硬约束**：studio 与 `/api`、`/oauth2` 必须同一公网 host，否则 CORS + OAuth 全断。`local` 模式靠容器内反代满足；`cluster` 模式靠共享网关满足。
-- **base 路径 `/studio`** 接在三处必须一致：vite `base`、ingress path、hydra redirect_uri `<origin>/studio/callback`。改一处要改三处。
-- **镜像与环境无关**：配置走相对 `/api`，不按环境重打镜像。某环境真要不同配置，用 `window.__BKN_STUDIO_RUNTIME__` 注入，别重打。
-
-## 目录概览
-
-```text
-src/
-  app/          应用入口、全局装配、壳层、路由注册、全局文案
-  framework/    跨模块复用能力
-  modules/      业务模块
-specs/          需求、计划、任务文档
-```
-
-## 当前关键组织方式
-
-### 1. 文案按全局与模块拆分
-
-- `src/app/locales/resources/common/*`
-- `src/app/locales/resources/app/*`
-- `src/app/locales/resources/shell/*`
-- `src/modules/<module>/locales/*`
-
-全局入口只负责合并资源，不再把所有中英文长期堆在一个文件里。
-
-### 2. 左侧菜单按“壳层分组 + 模块贡献”组织
-
-- `src/app/shell/navigation/*`
-  定义壳层基础导航分组和导航类型
-- `src/modules/<module>/navigation.tsx`
-  模块提供自己的菜单片段
-
-### 3. 路由按模块注册聚合
-
-- `src/modules/<module>/routes.tsx`
-  模块自身路由和路由贡献
-- `src/app/router/module-routes.ts`
-  聚合所有模块路由
-
-### 4. 运行时默认权限不再集中硬编码
-
-- `src/modules/<module>/module.manifest.ts`
-  模块声明权限与能力
-- `src/framework/runtime/module-manifests.ts`
-  聚合模块 manifest
-- `src/framework/runtime/dev-profile.ts`
-  开发态默认用户与权限种子
-
-## 标准模块结构
-
-推荐业务模块采用如下结构：
-
-```text
-src/modules/<module-name>/
-  components/
-  contracts/
-  locales/
-  pages/
-  scenes/
-  services/
-  types/
-  index.ts
-  module.manifest.ts
-  navigation.tsx
-  routes.tsx
-```
-
-其中：
-- `pages/` 只做路由页包装
-- `scenes/` 负责可组合的业务场景
-- `locales/` 维护模块文案
-- `navigation.tsx` 提供模块菜单片段
-- `routes.tsx` 提供模块路由贡献
-- `module.manifest.ts` 提供模块权限和能力清单
-
-## 核心文档
-
-- [ARCHITECTURE.md](D:/openbkn/bkn-studio/ARCHITECTURE.md)
-  说明分层、壳层、模块注册方式和运行时结构
-- [DEVELOPMENT_GUIDE.md](D:/openbkn/bkn-studio/DEVELOPMENT_GUIDE.md)
-  说明新功能、新模块、文案、菜单、路由和权限如何接入
-- [AGENT_COMPOSITION_CHARTER.md](D:/openbkn/bkn-studio/AGENT_COMPOSITION_CHARTER.md)
-  说明模块如何作为可被其他智能体整合引用的能力单元
-- [CONTRIBUTING.md](D:/openbkn/bkn-studio/CONTRIBUTING.md)
-  说明协作流程、评审和回归要求
-- [MICRO_APP_CONTRACT.md](D:/openbkn/bkn-studio/MICRO_APP_CONTRACT.md)
-  仅在未来宿主接入场景下参考
-
-## 当前状态
-
-- 统一控制台壳层已完成
-- `data-connect` 已完成第一版业务实现
-- 模块文案、菜单、路由、开发态权限已改为按模块贡献组织
-- 新增模块时，应继续沿用“模块自带 locales / navigation / routes / manifest”的接入方式
-
-## 开源协议 / License
-
-BKN Studio 是 OpenBKN 项目的一部分，遵循 **OpenBKN License** —— 在 Apache
-License 2.0 基础上附加额外条件的修改版。
-
-- OpenBKN License 全文：[LICENSE](LICENSE)
-- Apache License 2.0（被 OpenBKN License 引用）：<http://www.apache.org/licenses/LICENSE-2.0>
-
-每个源文件的适用许可以其文件头声明为准。源文件头建议使用如下片段：
-
-```text
-Copyright (c) 2026 OpenBKN
-SPDX-License-Identifier: LicenseRef-OpenBKN
-Licensed under the OpenBKN License, a modified Apache License 2.0 with
-Additional Conditions. See LICENSE for the full text.
-```
-
-商业授权咨询请见 [LICENSE](LICENSE) 中的联系方式。
+每个文件适用的许可证以其文件头注明为准。
