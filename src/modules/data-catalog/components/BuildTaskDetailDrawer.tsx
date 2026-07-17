@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { formatCount } from "@/modules/data-catalog/lib/format";
+import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
@@ -49,7 +50,7 @@ export function BuildTaskDetailDrawer({
   resource,
   task,
 }: BuildTaskDetailDrawerProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [models, setModels] = useState<SmallModel[]>([]);
 
   useEffect(() => {
@@ -91,6 +92,10 @@ export function BuildTaskDetailDrawer({
   const statusLabel = succeededWithWarning
     ? t("dataCatalog.task.statuses.succeededWithWarning")
     : t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`);
+  const failureSummary = summarizeBuildTaskError(
+    task.error || task.failureDetail,
+    i18n.language,
+  );
 
   return (
     <Drawer
@@ -137,7 +142,7 @@ export function BuildTaskDetailDrawer({
             )}
           </div>
 
-          {task.error ? (
+          {failureSummary ? (
             <div
               className={
                 succeededWithWarning ? sharedStyles.calloutNote : sharedStyles.calloutWarn
@@ -145,7 +150,19 @@ export function BuildTaskDetailDrawer({
               style={{ marginBottom: 12 }}
             >
               {succeededWithWarning ? <InfoCircleOutlined /> : <ExclamationCircleOutlined />}
-              <span>{task.error}</span>
+              <span className={styles.failureContent}>
+                <b>{failureSummary.title}</b>
+                <span>{failureSummary.message}</span>
+                {failureSummary.suggestion ? (
+                  <span className={styles.failureSuggestion}>
+                    {failureSummary.suggestion}
+                  </span>
+                ) : null}
+                <details className={styles.failureRaw}>
+                  <summary>{t("dataCatalog.task.rawError")}</summary>
+                  <code>{failureSummary.raw}</code>
+                </details>
+              </span>
             </div>
           ) : null}
 

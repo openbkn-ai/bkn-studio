@@ -35,7 +35,9 @@ export function ConnectorTypePicker({
   const [keyword, setKeyword] = useState("");
   const [family, setFamily] = useState<DataSourceFamilyKey>("structured");
 
-  const familyOptions = getPrimaryDataSourceFamilies();
+  const familyOptions = getPrimaryDataSourceFamilies().filter(
+    (item) => item.key === "structured",
+  );
 
   const filtered = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();

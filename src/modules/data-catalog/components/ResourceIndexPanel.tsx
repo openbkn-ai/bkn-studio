@@ -9,7 +9,7 @@ import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { Alert } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -20,7 +20,8 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTaskDetailDrawer";
-import { BuildTaskFormPanel } from "@/modules/data-catalog/components/BuildTaskFormPanel";
+import { BuildTaskLaunchPanel } from "@/modules/data-catalog/components/BuildTaskLaunchPanel";
+import { IndexConfigFormPanel } from "@/modules/data-catalog/components/IndexConfigFormPanel";
 import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task-actions";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
@@ -29,7 +30,11 @@ import {
   buildTaskStatusLabelKey,
   embeddingStateOf,
 } from "@/modules/data-catalog/services/build-task.service";
+import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
+import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
+import type { SmallModel } from "@/modules/model-resources/types/small-model";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import panelStyles from "./ResourceIndexPanel.module.css";
@@ -39,6 +44,8 @@ export type { ResourceIndexView };
 type ResourceIndexPanelProps = {
   active: boolean;
   catalog: CatalogRecord | null;
+  /** When false, panel may auto-pick config vs tasks once after resource loads. */
+  indexViewExplicit?: boolean;
   indexView: ResourceIndexView;
   onIndexViewChange: (view: ResourceIndexView) => void;
   onRefresh: () => Promise<void> | void;
@@ -74,10 +81,29 @@ function formatEffectiveState(task: BuildTask, t: TFunction) {
   return t("dataCatalog.resource.effectiveActive");
 }
 
+function formatEmbeddingModelDisplay(
+  modelId: string | null | undefined,
+  dimensions: number | null | undefined,
+  models: SmallModel[],
+) {
+  const rawModel = modelId?.trim();
+  if (!rawModel) {
+    return "-";
+  }
+
+  const match = models.find(
+    (item) => item.modelId === rawModel || item.modelName === rawModel,
+  );
+  const name = match?.modelName || rawModel;
+  const resolvedDimensions = match?.embeddingDim ?? dimensions ?? 0;
+  return resolvedDimensions > 0 ? `${name} - ${resolvedDimensions}d` : name;
+}
+
 function buildStatusSummary(
   effective: BuildTask | null,
   t: TFunction,
   language: string,
+  models: SmallModel[],
 ) {
   if (!effective) {
     return null;
@@ -94,7 +120,13 @@ function buildStatusSummary(
   ];
 
   if (effective.embeddingModel) {
-    parts.push(`${effective.embeddingModel} · ${effective.modelDimensions}d`);
+    parts.push(
+      formatEmbeddingModelDisplay(
+        effective.embeddingModel,
+        effective.modelDimensions,
+        models,
+      ),
+    );
   }
 
   if (effective.mode === "streaming") {
@@ -124,11 +156,7 @@ function progressTask(effective: BuildTask | null, latest: BuildTask | null) {
     ) {
       return null;
     }
-    if (
-      effective &&
-      effective.id === latest.id &&
-      latest.status === "succeeded"
-    ) {
+    if (effective && effective.id === latest.id && latest.status === "succeeded") {
       return null;
     }
     return latest;
@@ -140,6 +168,7 @@ export function ResourceIndexPanel({
   active,
   catalog,
   indexView,
+  indexViewExplicit = false,
   onIndexViewChange,
   onRefresh,
   resource,
@@ -151,6 +180,53 @@ export function ResourceIndexPanel({
   const [taskPageSize, setTaskPageSize] = useState(10);
   const [detailTask, setDetailTask] = useState<BuildTask | null>(null);
   const { pauseOrResume, retry } = useBuildTaskActions(onRefresh);
+  const [detailResource, setDetailResource] = useState<CatalogResource>(resource);
+  const [models, setModels] = useState<SmallModel[]>([]);
+  const autoPickedRef = useRef(false);
+
+  const reloadResource = () => {
+    void getCatalogResource(resource.id).then((detail) => {
+      if (detail) {
+        setDetailResource(detail);
+      }
+    });
+  };
+
+  useEffect(() => {
+    setDetailResource(resource);
+    autoPickedRef.current = false;
+    let cancelled = false;
+    void getCatalogResource(resource.id).then((detail) => {
+      if (!cancelled && detail) {
+        setDetailResource(detail);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [resource]);
+
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+
+    let alive = true;
+    void listSmallModels({ modelType: "embedding", page: 1, size: 200 })
+      .then((result) => {
+        if (alive) {
+          setModels(result.items);
+        }
+      })
+      .catch(() => {
+        if (alive) {
+          setModels([]);
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, [active]);
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
   const state = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);
@@ -159,6 +235,33 @@ export function ResourceIndexPanel({
   const latest = state.latest;
   const activeTask = latest && ACTIVE_TASK_STATUSES.has(latest.status) ? latest : null;
   const progressSource = progressTask(effective, latest);
+
+  const resourceConfig = useMemo(
+    () => indexFormValuesFromResource(detailResource),
+    [detailResource],
+  );
+  const hasResourceConfig =
+    resourceConfig.embeddingFields.length > 0 ||
+    resourceConfig.fulltextFields.length > 0;
+
+  useEffect(() => {
+    if (!active || indexViewExplicit || autoPickedRef.current) {
+      return;
+    }
+    const next: ResourceIndexView =
+      hasResourceConfig || sortedTasks.length > 0 ? "tasks" : "config";
+    autoPickedRef.current = true;
+    if (next !== indexView) {
+      onIndexViewChange(next);
+    }
+  }, [
+    active,
+    hasResourceConfig,
+    indexView,
+    indexViewExplicit,
+    onIndexViewChange,
+    sortedTasks.length,
+  ]);
 
   useEffect(() => {
     setTaskPage(1);
@@ -196,7 +299,8 @@ export function ResourceIndexPanel({
     {
       dataIndex: "embeddingModel",
       title: t("dataCatalog.task.model"),
-      render: (value: string, record) => `${value} · ${record.modelDimensions}d`,
+      render: (value: string, record) =>
+        formatEmbeddingModelDisplay(value, record.modelDimensions, models),
     },
     {
       dataIndex: "createTime",
@@ -213,148 +317,141 @@ export function ResourceIndexPanel({
     },
   ];
 
-  const statusSummary = buildStatusSummary(effective, t, i18n.language);
-  const embeddingFieldText = effective?.embeddingFields.join(", ") || "—";
-  const fulltextFieldText = effective?.fulltextFields.join(", ") || "—";
+  const statusSummary = buildStatusSummary(effective, t, i18n.language, models);
 
-  const renderOverview = () => (
+  const gateBanner =
+    !gate.ok && catalog ? (
+      <div className={panelStyles.calloutWarn}>
+        <ExclamationCircleOutlined />
+        <span>
+          {t("dataCatalog.gate.catalogDisabled", { name: catalog.name })}{" "}
+          <button
+            className={panelStyles.textLink}
+            onClick={() => {
+              void navigate("/data-connect");
+            }}
+            type="button"
+          >
+            {t("dataCatalog.gate.goEnable")}
+          </button>
+        </span>
+      </div>
+    ) : null;
+
+  const renderConfigTab = () => (
     <>
-      {!gate.ok && catalog ? (
-        <div className={panelStyles.calloutWarn}>
-          <ExclamationCircleOutlined />
-          <span>
-            {t("dataCatalog.gate.catalogDisabled", { name: catalog.name })}{" "}
-            <button
-              className={panelStyles.textLink}
-              onClick={() => {
-                void navigate("/data-connect");
-              }}
-              type="button"
-            >
-              {t("dataCatalog.gate.goEnable")}
-            </button>
-          </span>
-        </div>
-      ) : null}
+      {gateBanner}
+      <div className={panelStyles.configureCard}>
+        <IndexConfigFormPanel
+          active={active && indexView === "config"}
+          onSaved={() => {
+            reloadResource();
+            void onRefresh();
+          }}
+          resource={detailResource}
+        />
+      </div>
+    </>
+  );
 
-      {!effective && !latest ? (
-        <div className={panelStyles.emptyPanel}>
-          <p className={panelStyles.emptyText}>{t("dataCatalog.resource.noIndexHint")}</p>
+  const renderTasksTab = () => (
+    <>
+      {gateBanner}
+
+      <div className={panelStyles.opsCard}>
+        <div className={panelStyles.statusStrip}>
+          <div className={panelStyles.statusStripMain}>
+            <span className={panelStyles.statusStripLabel}>
+              {t("dataCatalog.indexWorkspace.statusCardTitle")}
+            </span>
+            <span className={panelStyles.statusStripValue}>
+              {statusSummary ?? t("dataCatalog.resource.noEffectiveIndex")}
+            </span>
+          </div>
+          <div className={panelStyles.sectionActions}>
+            {activeTask &&
+            (activeTask.status === "listening" ||
+              activeTask.status === "running" ||
+              activeTask.status === "pending") ? (
+              <PermissionGate permissions="resource:task_manage">
+                <AppButton onClick={() => void pauseOrResume(activeTask)} size="small">
+                  {pauseResumeLabel}
+                </AppButton>
+              </PermissionGate>
+            ) : null}
+            {activeTask?.status === "paused" ? (
+              <PermissionGate permissions="resource:task_manage">
+                <AppButton
+                  disabled={!gate.ok}
+                  onClick={() => void pauseOrResume(activeTask)}
+                  size="small"
+                >
+                  {pauseResumeLabel}
+                </AppButton>
+              </PermissionGate>
+            ) : null}
+            {latest?.status === "failed" ? (
+              <PermissionGate permissions="resource:task_manage">
+                <AppButton
+                  disabled={!gate.ok}
+                  onClick={() => {
+                    if (latest) {
+                      void retry(latest);
+                    }
+                  }}
+                  size="small"
+                >
+                  {t("dataCatalog.task.rebuild")}
+                </AppButton>
+              </PermissionGate>
+            ) : null}
+          </div>
+        </div>
+
+        {progressSource ? (
+          <div className={panelStyles.progressBlock}>
+            <BuildProgress task={progressSource} />
+          </div>
+        ) : null}
+
+        {latest?.status === "failed" && effective ? (
+          <Alert
+            className={panelStyles.statusAlert}
+            message={t("dataCatalog.resource.rebuildFailedHint", {
+              error: latest.error ?? "-",
+              version: effective.id,
+            })}
+            showIcon
+            type="warning"
+          />
+        ) : latest?.error && latest.status === "failed" ? (
+          <Alert
+            className={panelStyles.statusAlert}
+            message={latest.error}
+            showIcon
+            type="error"
+          />
+        ) : null}
+
+        <div className={panelStyles.launchSection}>
+          <div className={panelStyles.launchSectionHead}>
+            <h3 className={panelStyles.sectionTitle}>
+              {t("dataCatalog.indexWorkspace.launchTitle")}
+            </h3>
+          </div>
           <PermissionGate permissions="resource:task_manage">
-            <AppButton
+            <BuildTaskLaunchPanel
+              active={active && indexView === "tasks"}
               disabled={!gate.ok}
-              onClick={() => onIndexViewChange("configure")}
-              type="primary"
-            >
-              {t("dataCatalog.indexWorkspace.startConfigure")}
-            </AppButton>
+              onGoConfigure={() => onIndexViewChange("config")}
+              onStarted={() => {
+                void onRefresh();
+              }}
+              resource={detailResource}
+            />
           </PermissionGate>
         </div>
-      ) : (
-        <div className={panelStyles.sectionCard}>
-          <div className={panelStyles.sectionHead}>
-            <div>
-              <h3 className={panelStyles.sectionTitle}>
-                {t("dataCatalog.indexWorkspace.statusCardTitle")}
-              </h3>
-              {statusSummary ? (
-                <p className={panelStyles.sectionSummary}>{statusSummary}</p>
-              ) : (
-                <p className={panelStyles.sectionSummary}>
-                  {t("dataCatalog.resource.noEffectiveIndex")}
-                </p>
-              )}
-            </div>
-            <div className={panelStyles.sectionActions}>
-              {activeTask &&
-              (activeTask.status === "listening" ||
-                activeTask.status === "running" ||
-                activeTask.status === "pending") ? (
-                <PermissionGate permissions="resource:task_manage">
-                  <AppButton onClick={() => void pauseOrResume(activeTask)}>
-                    {pauseResumeLabel}
-                  </AppButton>
-                </PermissionGate>
-              ) : null}
-              {activeTask?.status === "paused" ? (
-                <PermissionGate permissions="resource:task_manage">
-                  <AppButton disabled={!gate.ok} onClick={() => void pauseOrResume(activeTask)}>
-                    {pauseResumeLabel}
-                  </AppButton>
-                </PermissionGate>
-              ) : null}
-              {latest?.status === "failed" ? (
-                <PermissionGate permissions="resource:task_manage">
-                  <AppButton
-                    disabled={!gate.ok}
-                    onClick={() => {
-                      if (latest) {
-                        void retry(latest);
-                      }
-                    }}
-                  >
-                    {t("dataCatalog.task.rebuild")}
-                  </AppButton>
-                </PermissionGate>
-              ) : null}
-            </div>
-          </div>
-
-          {effective ? (
-            <div className={panelStyles.metaGrid}>
-              <MetaItem
-                label={t("dataCatalog.resource.effectiveVersion")}
-                value={effective.id}
-              />
-              {latest && latest.id !== effective.id ? (
-                <MetaItem
-                  label={t("dataCatalog.resource.latestTask")}
-                  value={formatTaskStatus(latest, t)}
-                />
-              ) : (
-                <MetaItem label={t("common.mode")} value={t(`dataCatalog.modes.${effective.mode}`)} />
-              )}
-              <MetaItem
-                full
-                label={t("dataCatalog.indexWorkspace.embeddingFields")}
-                value={embeddingFieldText}
-              />
-              {effective.fulltextFields.length > 0 ? (
-                <MetaItem
-                  full
-                  label={t("dataCatalog.indexWorkspace.fulltextFields")}
-                  value={fulltextFieldText}
-                />
-              ) : null}
-            </div>
-          ) : null}
-
-          {progressSource ? (
-            <div className={panelStyles.progressBlock}>
-              <BuildProgress task={progressSource} />
-            </div>
-          ) : null}
-
-          {latest?.status === "failed" && effective ? (
-            <Alert
-              className={panelStyles.statusAlert}
-              message={t("dataCatalog.resource.rebuildFailedHint", {
-                error: latest.error ?? "-",
-                version: effective.id,
-              })}
-              showIcon
-              type="warning"
-            />
-          ) : latest?.error && latest.status === "failed" ? (
-            <Alert
-              className={panelStyles.statusAlert}
-              message={latest.error}
-              showIcon
-              type="error"
-            />
-          ) : null}
-        </div>
-      )}
+      </div>
 
       <div className={panelStyles.sectionCard}>
         <div className={panelStyles.historyHead}>
@@ -391,40 +488,6 @@ export function ResourceIndexPanel({
     </>
   );
 
-  const renderConfigure = () => (
-    <>
-      {!gate.ok && catalog ? (
-        <div className={panelStyles.calloutWarn}>
-          <ExclamationCircleOutlined />
-          <span>
-            {t("dataCatalog.gate.catalogDisabled", { name: catalog.name })}{" "}
-            <button
-              className={panelStyles.textLink}
-              onClick={() => {
-                void navigate("/data-connect");
-              }}
-              type="button"
-            >
-              {t("dataCatalog.gate.goEnable")}
-            </button>
-          </span>
-        </div>
-      ) : null}
-
-      <div className={panelStyles.configureCard}>
-        <BuildTaskFormPanel
-          active={active && indexView === "configure"}
-          onSubmitted={() => {
-            onIndexViewChange("overview");
-            void onRefresh();
-          }}
-          resource={resource}
-          showResourceSummary={false}
-        />
-      </div>
-    </>
-  );
-
   return (
     <>
       <div className={panelStyles.panelRoot}>
@@ -432,33 +495,28 @@ export function ResourceIndexPanel({
           <div className={panelStyles.viewTabs} role="tablist">
             <button
               className={
-                indexView === "overview" ? panelStyles.viewTabActive : panelStyles.viewTab
+                indexView === "config" ? panelStyles.viewTabActive : panelStyles.viewTab
               }
-              onClick={() => onIndexViewChange("overview")}
+              onClick={() => onIndexViewChange("config")}
               role="tab"
               type="button"
             >
-              {t("dataCatalog.indexWorkspace.viewOverview")}
+              {t("dataCatalog.indexWorkspace.viewConfig")}
             </button>
             <button
               className={
-                indexView === "configure" ? panelStyles.viewTabActive : panelStyles.viewTab
+                indexView === "tasks" ? panelStyles.viewTabActive : panelStyles.viewTab
               }
-              onClick={() => onIndexViewChange("configure")}
+              onClick={() => onIndexViewChange("tasks")}
               role="tab"
               type="button"
             >
-              {t("dataCatalog.indexWorkspace.viewConfigure")}
+              {t("dataCatalog.indexWorkspace.viewTasks")}
             </button>
           </div>
-          {indexView === "configure" ? (
-            <span className={panelStyles.viewBarHint}>
-              {t("dataCatalog.indexWorkspace.configureHint")}
-            </span>
-          ) : null}
         </div>
 
-        {indexView === "configure" ? renderConfigure() : renderOverview()}
+        {indexView === "config" ? renderConfigTab() : renderTasksTab()}
       </div>
 
       {detailTask ? (
@@ -470,26 +528,5 @@ export function ResourceIndexPanel({
         />
       ) : null}
     </>
-  );
-}
-
-function MetaItem({
-  full = false,
-  label,
-  value,
-}: {
-  full?: boolean;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div
-      className={
-        full ? `${panelStyles.metaItem} ${panelStyles.metaItemFull}` : panelStyles.metaItem
-      }
-    >
-      <span className={panelStyles.metaLabel}>{label}</span>
-      <span className={panelStyles.metaValue}>{value}</span>
-    </div>
   );
 }

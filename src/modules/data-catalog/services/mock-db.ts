@@ -89,12 +89,16 @@ export const mockResources: CatalogResource[] = [
         displayName: "客户ID",
         description: "客户唯一标识",
         type: "bigint",
+        features: [{ featureType: "keyword" }],
       },
       {
         name: "name",
         displayName: "客户名称",
         description: "客户显示名称",
         type: "varchar(128)",
+        features: [
+          { featureType: "fulltext", config: { analyzer: "ik_max_word" } },
+        ],
       },
       {
         name: "segment",
@@ -106,9 +110,18 @@ export const mockResources: CatalogResource[] = [
         displayName: "客户画像",
         description: "结构化画像文本，供检索与向量化",
         type: "text",
+        features: [
+          { featureType: "fulltext", config: { analyzer: "ik_max_word" } },
+          { featureType: "vector", config: { embedding_model: "bge-m3" } },
+        ],
       },
       { name: "updated_at", displayName: "更新时间", type: "datetime" },
     ],
+    indexConfig: {
+      buildKeyFields: ["updated_at"],
+      defaultFulltextAnalyzer: "ik_max_word",
+      defaultEmbeddingModel: "bge-m3",
+    },
     rowCount: 182_340,
     updatedAt: minutesAgo(42),
   }),

@@ -20,7 +20,7 @@ export const shellEnUS = {
       generalBusinessKnowledgeNetwork: "Data Semantic Governance",
       dataConnection: "Data Connection",
       dataCatalog: "Data Directory",
-      indexBuild: "Index Tasks",
+      indexBuild: "Task Management",
       dataResource: "Data Directory",
       dataQuality: "Data Quality",
       executionFactory: "Capability Factory",

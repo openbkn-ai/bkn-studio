@@ -38,6 +38,7 @@ export type ResourceWorkspaceTab = "detail" | "index" | "preview";
 
 type ResourceWorkspaceSceneProps = {
   indexView: ResourceIndexView;
+  indexViewExplicit?: boolean;
   onIndexViewChange: (view: ResourceIndexView) => void;
   onTabChange: (tab: ResourceWorkspaceTab) => void;
   resourceId: string;
@@ -46,6 +47,7 @@ type ResourceWorkspaceSceneProps = {
 
 export function ResourceWorkspaceScene({
   indexView,
+  indexViewExplicit = false,
   onIndexViewChange,
   onTabChange,
   resourceId,
@@ -235,6 +237,7 @@ export function ResourceWorkspaceScene({
                     active={tab === "index"}
                     catalog={catalog}
                     indexView={indexView}
+                    indexViewExplicit={indexViewExplicit}
                     onIndexViewChange={onIndexViewChange}
                     onRefresh={loadAll}
                     resource={resource}

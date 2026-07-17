@@ -52,6 +52,39 @@
   margin-bottom: 12px;
 }
 
+.failureContent {
+  display: grid;
+  gap: 4px;
+}
+
+.failureContent b {
+  color: #92400e;
+  font-size: 13px;
+}
+
+.failureSuggestion {
+  color: #92400e;
+}
+
+.failureRaw {
+  margin-top: 2px;
+  color: #9a6a15;
+}
+
+.failureRaw summary {
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.failureRaw code {
+  display: block;
+  margin-top: 4px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .metaLine {
   margin-top: 8px;
   color: #64748b;
@@ -96,4 +129,3 @@
   line-height: 1.5;
   word-break: break-all;
 }
-

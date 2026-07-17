@@ -49,7 +49,7 @@ export const dataCatalogModuleManifest = {
       id: "data-catalog.resource-workspace",
       exportName: "ResourceWorkspaceScene",
       description:
-        "Resource detail workspace with overview, index configuration, and data preview tabs.",
+        "Resource detail workspace with detail, data preview, and data-index tabs (configure index / task management).",
       inputs: ["resourceId", "tab?", "view?"],
     },
   ],

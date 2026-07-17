@@ -19,19 +19,34 @@ export const dataCatalogEnUS = {
       tabIndex: "Data Index",
     },
     indexWorkspace: {
-      backToOverview: "Back to Overview",
+      backToOverview: "Back to Tasks",
+      configTabHint: "Choose how fields are indexed. Saving does not change the live index yet.",
+      tasksTabHint: "Pick how to build and review history. Live status is at the top of this tab.",
       embeddingFields: "Embedding Fields",
       finishedAtShort: "Finished at {{time}}",
       fulltextFields: "Fulltext Fields",
+      buildKeyFields: "Build Key Fields",
       indexedRowsShort: "{{count}} rows indexed",
       lastEventShort: "Last event {{time}}",
       startConfigure: "Configure Index",
-      statusCardTitle: "Current Index",
-      viewConfigure: "Configure",
-      viewOverview: "Overview",
-      configureHint: "Choose build mode and field roles, then submit to start indexing",
+      statusCardTitle: "Live Index Status",
+      configStatusReady: "Index config saved. Start a build under Task Management.",
+      configStatusIncomplete:
+        "Only build-key fields are configured. Enable at least one embedding or full-text feature before building.",
+      configStatusEmpty: "Not configured yet. Select field roles and save.",
+      launchTitle: "Start a Build",
+      launchHint: "Create and start a build using the resource's current index config.",
+      goConfigure: "Configure Index",
+      launchConfigTitle: "Current resource config",
+      editConfigLink: "Edit",
+      launchConfigSummary:
+        "Embedding {{embedding}} · fulltext {{fulltext}} · build key {{buildKey}} · model {{model}} · analyzer {{analyzer}}",
+      viewConfig: "Configure Index",
+      viewTasks: "Index Tasks",
+      embeddingModel: "Embedding Model",
+      fulltextAnalyzer: "Analyzer",
     },
-    indexBuildTitle: "Index Tasks",
+    indexBuildTitle: "Task Management",
     indexBuildDescription:
       "View and manage index build tasks across resources — filter, pause, retry, and delete.",
     emptyDescription:
@@ -101,8 +116,8 @@ export const dataCatalogEnUS = {
     catalog: {
       notFound: "No resources found for this connection; it may have been deleted",
       resourceSection: "Resources",
-      goConnection: "Connection",
-      goScan: "Scan",
+      goConnection: "Data Connection",
+      goScan: "Scan Tasks",
       goScanToDiscover: "Go scan to discover resources",
       emptyResourcesPhysical:
         "No resources yet. Run a scan from Data Connection to discover resources from the source.",
@@ -172,42 +187,64 @@ export const dataCatalogEnUS = {
       empty: "No data",
     },
     build: {
-      submit: "Create & Start Build",
-      editTitle: "Edit Index Config",
-      editSubmit: "Save & Rebuild",
-      editConfirmTitle: "Save and rebuild the index?",
+      submit: "Start Build",
+      startBuild: "Start Build",
+      saveConfig: "Save Config",
+      saveIndexConfig: "Save Index Config",
+      saveConfigSuccess: "Index config saved",
+      unsavedIndexConfig:
+        "Index config has unsaved changes. Save it before starting a build.",
+      needConfigFirst: "Complete the configuration under Configure Index before starting a build.",
+      editTitle: "Configure Index",
+      editSubmit: "Start Build",
+      editConfirmTitle: "Start a new build?",
       editConfirmContent:
-        "Changing fields rebuilds the index; during the rebuild this resource is served by the old index, then switches to the new config once done.",
-      editConfirmOk: "Save & Rebuild",
-      edited: "Saved; index rebuild started",
-      streamingEditLocked:
-        "Editing config is not supported for streaming tasks yet; delete and recreate to change it.",
+        "A new build task will use the resource's current config. The previous index keeps serving search until the new build succeeds (when still usable).",
+      editConfirmOk: "Start Build",
+      edited: "A new build task was created",
+      streamingActiveLocked:
+        "A streaming task is still running or listening. Pause/stop it before changing config or creating a new streaming build.",
+      streamingRecreateHint:
+        "Streaming tasks cannot be edited in place. Save resource config first, then create a new streaming build under Task Management.",
+      activeTaskLocked:
+        "This resource already has an active build task. Wait for it to finish or stop it before saving config or starting a new build.",
+      configConflict:
+        "An active build task blocks index config updates. Stop the task, then save again.",
+      startRejected:
+        "Could not start this task (config may have changed, or a newer successful build exists). Save the latest config under Configure Index, then create a new build.",
       created: "Build task created: {{id}}",
       conflict:
         "This resource already has an active build task; wait for it or pause listening first.",
       resource: "Resource",
       resourceHint:
-        "Index builds are per resource (one resource = one table); there is no network-level build.",
+        "Configure how fields are indexed under Configure Index; run builds under Task Management.",
       mode: "Build Mode",
-      batchLabel: "batch",
-      batchDescription:
-        "Full sync then vectorize; a build key (time/incremental field) is required.",
-      streamingLabel: "streaming",
+      batchLabel: "Batch",
+      batchDescription: "One-shot sync and indexing.",
+      streamingLabel: "Streaming",
       streamingDescription:
-        "Continuous incremental sync with a standing listener; build key is the row ID field (optional).",
+        "Continuous incremental sync with a standing listener; build key is optional.",
+      executeType: "Execution",
+      executeFull: "Full",
+      executeFullDescription: "Sync all rows from the source and rebuild the index. Use it for first builds or full refreshes.",
+      executeIncremental: "Incremental",
+      executeIncrementalDescription: "Continue from the build-key checkpoint and process only new or changed rows.",
       schemaLoading: "Loading fields...",
       schemaEmpty: "This resource has no fields yet; run a scan to discover its schema.",
       fulltextTypeHint: "Text-type fields only",
       fieldRole: "Field Roles",
-      fieldRoleHint: "Check each field's role in the index; multiple allowed",
+      fieldRoleHint:
+        "Check each field's role in the index; multiple allowed. Select embedding and/or full-text.",
       roleEmbedding: "Embedding",
       roleBuildKey: "Build key",
       roleFulltext: "Full-text search",
       roleEmbeddingHint:
-        "Text fields vectorized by the embedding model for semantic similarity search; select at least one.",
+        "Fields vectorized by the embedding model for semantic search; can be used with or without full-text.",
       roleBuildKeyHintBatch:
         "Field used to detect incremental data in batch builds (e.g. updated_at, auto-increment ID); required.",
       roleBuildKeyHintStreaming: "Row ID field for streaming builds; optional.",
+      roleBuildKeyHintConfig:
+        "Used for incremental builds; required for batch and optional for streaming.",
       roleFulltextHint:
         "Text fields indexed for keyword full-text search; applied immediately during data sync.",
       selectAll: "Select all",
@@ -216,6 +253,41 @@ export const dataCatalogEnUS = {
       fieldFilterPlaceholder: "Filter field name...",
       fieldNoMatch: "No fields match {{keyword}}",
       fulltextAnalyzer: "Analyzer",
+      defaultFulltextAnalyzer: "Default Analyzer",
+      defaultEmbeddingModel: "Default Embedding Model",
+      defaultAnalyzerRequired:
+        "Full-text fields are selected; set the resource default analyzer.",
+      configCanBuild: "Buildable",
+      configCanBuildYes: "Ready",
+      configCannotBuild: "Missing features",
+      resourceDefaultsTitle: "Resource Defaults",
+      resourceDefaultsHint:
+        "Features use these defaults when no override is selected.",
+      fieldEmbeddingModel: "Embedding Model",
+      fieldFulltextAnalyzer: "Analyzer",
+      inheritDefaultAnalyzer: "Use default",
+      inheritDefaultModel: "Use default",
+      featureConfig: "Feature Config",
+      addFeature: "Add Feature",
+      featureModelSelect: "Select model",
+      featureAnalyzerSelect: "Select analyzer",
+      featureNameLabel: "Feature name",
+      featureDescriptionLabel: "Description",
+      featureNamePlaceholder: "Feature name",
+      featureDescriptionPlaceholder: "Feature description",
+      defaultFeature: "Default",
+      extraFeature: "Extra {{index}}",
+      featureGroupHint: "Up to 3 groups. The first group is the default feature.",
+      featureEnableHint: "Enable to create a default feature, then add extra features.",
+      featureEmpty: "No {{feature}} configured",
+      featureNotEnabled: "Off",
+      featureConfiguredCount: "{{count}} groups",
+      enableDefaultFeature: "Enable Default",
+      addExtraFeature: "Add Extra Feature",
+      removeFeatureType: "Remove Type",
+      featureSummaryEmpty: "No features",
+      featureUnsupported: "Unsupported",
+      defaultModelDimensions: "Default dimensions: {{dimensions}}",
       fulltextAnalyzerHint:
         "(use ik / hanlp for Chinese data, standard for English / general)",
       analyzers: {
@@ -224,19 +296,23 @@ export const dataCatalogEnUS = {
         hanlp_index: "hanlp_index · Chinese HanLP",
       },
       fieldsRequired: "Select at least one embedding or full-text field.",
-      buildKeyRequired: "build_key_fields is required for batch mode.",
+      buildKeyRequired:
+        "Batch mode requires a build-key field. Select one under Configure Index.",
       model: "Embedding Model",
       modelRequired: "Select an embedding model.",
-      noModels: "No embedding models connected; build tasks cannot be created.",
+      noModels:
+        "No embedding models connected; cannot save a config that includes embedding fields.",
       goConnectModel: "Connect a model",
       dimensions: "Vector Dimensions",
-      dimensionsHint: "(read-only, follows the model)",
+      dimensionsHint:
+        "(preview from model; server writes actual dimensions when the build runs)",
     },
     task: {
       column: "Task",
       createTime: "Created",
       indexColumn: "Index",
       detail: "Task Detail",
+      rawError: "Raw error",
       modalTitle: "Build Task",
       progress: "Progress",
       searchPlaceholder: "Search by task ID or resource name",
@@ -255,10 +331,12 @@ export const dataCatalogEnUS = {
       rebuild: "Rebuild",
       rebuildIncremental: "Incremental (resume from cursor)",
       rebuildFull: "Full (reset cursor, resync all)",
-      rebuildFullConfirmTitle: "Full rebuild?",
+      rebuildFullConfirmTitle: "Full reset this task?",
       rebuildFullConfirmContent:
-        "A full rebuild drops the old index first, then rebuilds; the index is unavailable until it finishes. Continue?",
+        "This starts the task with reset=true (ignore cursor). If resource index config drifted relative to this task, start may be rejected — create a new build instead.",
       retried: "Build task resubmitted: {{id}}",
+      startRejected:
+        "Could not start this task (config may have changed, or a newer successful build exists). Open Data Index, save config, and create a new build.",
       deleteConfirmTitle: "Delete build task {{id}}?",
       deleteConfirmContent: "The task record cannot be recovered after deletion.",
       deleteConfirmContentActive:
@@ -296,4 +374,3 @@ export const dataCatalogEnUS = {
     },
   },
 } as const;
-

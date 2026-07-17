@@ -343,7 +343,28 @@
 .frtTable {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 13px;
+}
+
+.frtNameCol {
+  width: 32%;
+}
+
+.frtDisplayCol {
+  width: 24%;
+}
+
+.frtTypeCol {
+  width: 18%;
+}
+
+.frtRoleWidthCol {
+  width: 96px;
+}
+
+.frtActionWidthCol {
+  width: 224px;
 }
 
 .frtTable thead th {
@@ -361,7 +382,12 @@
 
 .frtRoleCol {
   text-align: center !important;
-  width: 116px;
+  width: 96px;
+}
+
+.frtRoleCol,
+.frtConfigCol {
+  background: #f6f8fc !important;
 }
 
 .frtRoleHead {
@@ -422,25 +448,78 @@
 }
 
 .frtField {
+  overflow: hidden;
   padding: 8px 14px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .frtFieldMeta {
+  overflow: hidden;
   padding: 8px 14px;
   color: #3e4d66;
   font-size: 12.5px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .frtField code {
+  display: block;
+  overflow: hidden;
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
   font-size: 12.5px;
   color: #152239;
+  text-overflow: ellipsis;
 }
 
 .frtCell {
   padding: 0;
+  text-align: center;
+  background: rgba(248, 250, 252, 0.56);
+}
+
+.frtActionCol {
+  overflow: visible;
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.frtConfigCol {
+  min-width: 188px;
+  text-align: left !important;
+}
+
+.frtConfigHead {
+  display: grid;
+  gap: 2px;
+  color: #152239;
+  line-height: 1.25;
+}
+
+.frtConfigHead small {
+  color: #8b98ac;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.frtConfigCell {
+  padding: 6px 8px;
+  min-width: 188px;
+  background: rgba(248, 250, 252, 0.56);
+}
+
+.frtGroupEnd {
+  border-right: 1px solid rgba(15, 30, 54, 0.12);
+}
+
+.frtConfigCell :global(.ant-select) {
+  width: 100%;
+}
+
+.frtConfigDash {
+  display: block;
+  padding: 0 8px;
+  color: #cbd5e1;
   text-align: center;
 }
 
