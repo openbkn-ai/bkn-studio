@@ -26,6 +26,10 @@ const HTTP_METHODS = new Set([
   "put",
 ]);
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 export function parseOpenApiEndpointDetail(
   openapiSpec?: string,
 ): OpenApiEndpointDetail | undefined {
@@ -57,7 +61,7 @@ export function parseOpenApiEndpointDetail(
         continue;
       }
 
-      if (typeof operation !== "object" || operation === null) {
+      if (!isRecord(operation)) {
         continue;
       }
 
