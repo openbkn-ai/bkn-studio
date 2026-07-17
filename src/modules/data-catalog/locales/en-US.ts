@@ -286,6 +286,7 @@ export const dataCatalogEnUS = {
       addExtraFeature: "Add Extra Feature",
       removeFeatureType: "Remove Type",
       featureSummaryEmpty: "No features",
+      featureUnsupported: "Unsupported",
       defaultModelDimensions: "Default dimensions: {{dimensions}}",
       fulltextAnalyzerHint:
         "(use ik / hanlp for Chinese data, standard for English / general)",

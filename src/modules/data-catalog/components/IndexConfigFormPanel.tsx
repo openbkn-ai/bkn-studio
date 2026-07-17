@@ -53,8 +53,9 @@ const FALLBACK_MODELS: EmbeddingModelOption[] = [
 const FULLTEXT_ANALYZERS = ["standard", "ik_max_word", "hanlp_index"] as const;
 const INHERIT_VALUE = "__inherit__";
 
-const TEXT_TYPE_RE = /text|string|char|clob/i;
-const isTextField = (type: string) => TEXT_TYPE_RE.test(type);
+const normalizeFieldType = (type: string) => type.trim().toLowerCase();
+const isFeatureConfigField = (type: string) => ["string", "text"].includes(normalizeFieldType(type));
+const isTextField = isFeatureConfigField;
 
 type FieldRoleId = "emb" | "key" | "ft";
 
@@ -301,13 +302,40 @@ export function IndexConfigFormPanel({
   const actionsLocked = isActiveBuildTask(activeTask);
   const streamingActive =
     activeTask?.mode === "streaming" && isActiveBuildTask(activeTask);
+  const featureConfigFieldNames = useMemo(
+    () =>
+      new Set(
+        schema
+          .filter((field) => isFeatureConfigField(field.type))
+          .map((field) => field.name),
+      ),
+    [schema],
+  );
+  const eligibleEmbeddingModelGroups = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(fieldEmbeddingModelGroups).filter(([field]) =>
+          featureConfigFieldNames.has(field),
+        ),
+      ),
+    [featureConfigFieldNames, fieldEmbeddingModelGroups],
+  );
+  const eligibleFulltextAnalyzerGroups = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(fieldFulltextAnalyzerGroups).filter(([field]) =>
+          featureConfigFieldNames.has(field),
+        ),
+      ),
+    [featureConfigFieldNames, fieldFulltextAnalyzerGroups],
+  );
   const embeddingFields = useMemo(
-    () => Object.keys(fieldEmbeddingModelGroups).filter((field) => (fieldEmbeddingModelGroups[field]?.length ?? 0) > 0),
-    [fieldEmbeddingModelGroups],
+    () => Object.keys(eligibleEmbeddingModelGroups).filter((field) => (eligibleEmbeddingModelGroups[field]?.length ?? 0) > 0),
+    [eligibleEmbeddingModelGroups],
   );
   const fulltextFields = useMemo(
-    () => Object.keys(fieldFulltextAnalyzerGroups).filter((field) => (fieldFulltextAnalyzerGroups[field]?.length ?? 0) > 0),
-    [fieldFulltextAnalyzerGroups],
+    () => Object.keys(eligibleFulltextAnalyzerGroups).filter((field) => (eligibleFulltextAnalyzerGroups[field]?.length ?? 0) > 0),
+    [eligibleFulltextAnalyzerGroups],
   );
 
   const toggleField = (
@@ -377,9 +405,9 @@ export function IndexConfigFormPanel({
           embeddingFields,
           embeddingModel: defaultModel?.id ?? "",
           fieldEmbeddingModels: {},
-          fieldEmbeddingModelGroups,
+          fieldEmbeddingModelGroups: eligibleEmbeddingModelGroups,
           fieldFulltextAnalyzers: {},
-          fieldFulltextAnalyzerGroups,
+          fieldFulltextAnalyzerGroups: eligibleFulltextAnalyzerGroups,
           fulltextFields,
           fulltextAnalyzer: defaultFulltextAnalyzer,
         },
@@ -529,8 +557,8 @@ export function IndexConfigFormPanel({
 
   const noModels = modelsLoaded && models.length === 0;
   const hasIndexFeatures = embeddingFields.length > 0 || fulltextFields.length > 0;
-  const selectedEmbeddingGroups = featureField ? (fieldEmbeddingModelGroups[featureField.name] ?? []) : [];
-  const selectedFulltextGroups = featureField ? (fieldFulltextAnalyzerGroups[featureField.name] ?? []) : [];
+  const selectedEmbeddingGroups = featureField ? (eligibleEmbeddingModelGroups[featureField.name] ?? []) : [];
+  const selectedFulltextGroups = featureField ? (eligibleFulltextAnalyzerGroups[featureField.name] ?? []) : [];
   const normalizeFeatureDrafts = (
     kind: "embedding" | "fulltext",
     groups: ResourceFeatureDraft[],
@@ -556,11 +584,11 @@ export function IndexConfigFormPanel({
     markDirty();
   };
   const featureCountOf = (fieldName: string) =>
-    (fieldEmbeddingModelGroups[fieldName]?.length ?? 0) +
-    (fieldFulltextAnalyzerGroups[fieldName]?.length ?? 0);
+    (eligibleEmbeddingModelGroups[fieldName]?.length ?? 0) +
+    (eligibleFulltextAnalyzerGroups[fieldName]?.length ?? 0);
   const featureSummaryOf = (fieldName: string) => ({
-    embedding: fieldEmbeddingModelGroups[fieldName]?.length ?? 0,
-    fulltext: fieldFulltextAnalyzerGroups[fieldName]?.length ?? 0,
+    embedding: eligibleEmbeddingModelGroups[fieldName]?.length ?? 0,
+    fulltext: eligibleFulltextAnalyzerGroups[fieldName]?.length ?? 0,
   });
   const renderFeatureRows = (
     kind: "embedding" | "fulltext",
@@ -912,6 +940,7 @@ export function IndexConfigFormPanel({
                       </tr>
                     ) : (
                       visibleFields.map((field) => {
+                        const canConfigureFeature = isFeatureConfigField(field.type);
                         const rowActive = roleDefs.some((role) =>
                           role.list.includes(field.name),
                         ) || featureCountOf(field.name) > 0;
@@ -929,30 +958,38 @@ export function IndexConfigFormPanel({
                             {renderRoleCell(field, buildKeyRole)}
                             <td className={cx(styles.frtFieldMeta, styles.frtActionCol)}>
                               <div className={formStyles.featureActionCell}>
-                                <div className={formStyles.featureMiniSummary}>
-                                  {featureSummary.embedding > 0 ? (
-                                    <span className={formStyles.featureMiniTag}>
-                                      {t("dataCatalog.build.roleEmbedding")} {featureSummary.embedding}
-                                    </span>
-                                  ) : null}
-                                  {featureSummary.fulltext > 0 ? (
-                                    <span className={formStyles.featureMiniTag}>
-                                      {t("dataCatalog.build.roleFulltext")} {featureSummary.fulltext}
-                                    </span>
-                                  ) : null}
-                                  {featureCountOf(field.name) === 0 ? (
-                                    <span className={formStyles.featureMiniEmpty}>
-                                      {t("dataCatalog.build.featureSummaryEmpty")}
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <AppButton
-                                  className={formStyles.featureConfigLink}
-                                  onClick={() => setFeatureField(field)}
-                                  type="link"
-                                >
-                                  {t("dataCatalog.build.featureConfig")}
-                                </AppButton>
+                                {canConfigureFeature ? (
+                                  <>
+                                    <div className={formStyles.featureMiniSummary}>
+                                      {featureSummary.embedding > 0 ? (
+                                        <span className={formStyles.featureMiniTag}>
+                                          {t("dataCatalog.build.roleEmbedding")} {featureSummary.embedding}
+                                        </span>
+                                      ) : null}
+                                      {featureSummary.fulltext > 0 ? (
+                                        <span className={formStyles.featureMiniTag}>
+                                          {t("dataCatalog.build.roleFulltext")} {featureSummary.fulltext}
+                                        </span>
+                                      ) : null}
+                                      {featureCountOf(field.name) === 0 ? (
+                                        <span className={formStyles.featureMiniEmpty}>
+                                          {t("dataCatalog.build.featureSummaryEmpty")}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                    <AppButton
+                                      className={formStyles.featureConfigLink}
+                                      onClick={() => setFeatureField(field)}
+                                      type="link"
+                                    >
+                                      {t("dataCatalog.build.featureConfig")}
+                                    </AppButton>
+                                  </>
+                                ) : (
+                                  <span className={formStyles.featureMiniEmpty}>
+                                    {t("dataCatalog.build.featureUnsupported")}
+                                  </span>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -970,7 +1007,7 @@ export function IndexConfigFormPanel({
       <Drawer
         destroyOnHidden
         onClose={() => setFeatureField(null)}
-        open={Boolean(featureField)}
+        open={Boolean(featureField && isFeatureConfigField(featureField.type))}
         title={featureField ? `${t("dataCatalog.build.featureConfig")}: ${featureField.name}` : t("dataCatalog.build.featureConfig")}
         width={900}
       >

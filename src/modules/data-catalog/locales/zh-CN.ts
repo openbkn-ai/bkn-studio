@@ -270,6 +270,7 @@ export const dataCatalogZhCN = {
       addExtraFeature: "添加扩展特征",
       removeFeatureType: "移除本类",
       featureSummaryEmpty: "未配置特征",
+      featureUnsupported: "暂不支持",
       defaultModelDimensions: "默认向量维度：{{dimensions}}",
       fulltextAnalyzerHint: "(中文数据选 ik / hanlp,英文/通用选 standard)",
       analyzers: {
