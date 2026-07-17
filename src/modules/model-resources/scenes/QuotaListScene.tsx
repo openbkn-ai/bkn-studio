@@ -10,6 +10,7 @@ import { Alert, Dropdown, Input, Select } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
@@ -37,6 +38,7 @@ type QuotaSortRule = "model_name" | "total_price" | "update_time";
 
 export function QuotaListScene() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { message } = useAppServices();
   const { pageState, query, setKeyword, setPagination } = usePageState({
     pageSize: 10,
@@ -325,6 +327,11 @@ export function QuotaListScene() {
           locale={{
             emptyText: (
               <EmptyStatePanel
+                action={
+                  <AppButton type="primary" onClick={() => void navigate("/model-resources/models")}>
+                    {t("modelResources.quotas.goToModelConfig")}
+                  </AppButton>
+                }
                 description={t("modelResources.quotas.emptyDescription")}
                 title={t("modelResources.quotas.emptyTitle")}
               />
