@@ -9,6 +9,7 @@ import { DeploymentUnitOutlined, EllipsisOutlined } from "@ant-design/icons";
 import { Dropdown, Tooltip, type MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 
+import { MarkdownText } from "@/modules/knowledge-network/components/shared/MarkdownText";
 import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./KnowledgeNetworkCard.module.css";
@@ -74,7 +75,16 @@ export function KnowledgeNetworkCard({
           <div className={styles.titleContent}>
             <div className={styles.titleText}>{record.name}</div>
             <div className={styles.slug}>{record.identifier}</div>
-            <Tooltip title={description}>
+            <Tooltip
+              classNames={{ root: styles.descriptionTooltip }}
+              title={
+                record.description ? (
+                  <MarkdownText text={record.description} tone="dark" />
+                ) : (
+                  description
+                )
+              }
+            >
               <div className={styles.description}>{description}</div>
             </Tooltip>
           </div>
