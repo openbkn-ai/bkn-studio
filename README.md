@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="assets/logo/light.png" alt="OpenBKN" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="help/banner-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="help/banner-light.png">
+    <img src="help/banner-light.png" alt="OpenBKN" width="100%">
+  </picture>
 </p>
 
 # BKN Studio
