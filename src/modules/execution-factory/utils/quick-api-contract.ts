@@ -8,6 +8,7 @@
 import {
   buildOpenApiFromQuickApi,
   inferQuickApiSchemaFromValue,
+  parseQuickApiUrl,
   type QuickApiParameter,
   type QuickApiRequestBody,
   type QuickApiResponse,
@@ -36,7 +37,7 @@ export type QuickApiContractFormValues = {
   responses?: QuickApiResponseFormValue[];
 };
 
-function mergeParameters(
+export function mergeQuickApiParameters(
   detected: QuickApiParameter[],
   manual: QuickApiParameter[] | undefined,
 ) {
@@ -68,7 +69,33 @@ export function buildEffectiveQuickApiValues<T extends QuickApiContractFormValue
 
   return {
     ...values,
-    parameters: mergeParameters(detectedUrlParameters, values.parameters),
+    parameters: mergeQuickApiParameters(detectedUrlParameters, values.parameters),
+  };
+}
+
+export function resolveQuickApiFormContract<T extends QuickApiContractFormValues & { apiUrl?: string }>(
+  values: T,
+): T {
+  if (values.serverUrl?.trim() && values.path?.trim()) {
+    return values;
+  }
+
+  const apiUrl = values.apiUrl?.trim();
+  if (!apiUrl) {
+    return values;
+  }
+
+  const parsed = parseQuickApiUrl(apiUrl);
+  if (!parsed.ok) {
+    return values;
+  }
+
+  return {
+    ...values,
+    serverUrl: parsed.value.serverUrl,
+    path: parsed.value.path,
+    summary: values.summary?.trim() ? values.summary : parsed.value.summary,
+    parameters: mergeQuickApiParameters(parsed.value.queryParams, values.parameters),
   };
 }
 

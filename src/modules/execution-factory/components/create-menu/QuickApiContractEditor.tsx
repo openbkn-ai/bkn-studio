@@ -11,6 +11,8 @@ import { useTranslation } from "react-i18next";
 
 import { CapabilityBusinessIntro } from "@/modules/execution-factory/components/CapabilityBusinessIntro";
 
+import styles from "./create-menu.module.css";
+
 const PARAMETER_LOCATIONS = ["query", "path", "header", "cookie"];
 const PARAMETER_TYPES = ["string", "integer", "number", "boolean"];
 const CONTENT_TYPES = [
@@ -48,13 +50,21 @@ export function QuickApiContractEditor() {
                 size="small"
               >
                 <Space align="start" size={8} wrap>
-                  <Form.Item
-                    label={t("executionFactory.parameterName")}
-                    name={[field.name, "name"]}
-                    rules={[{ required: true, message: t("common.required") }]}
-                  >
-                    <Input style={{ width: 160 }} />
-                  </Form.Item>
+                  <div className={styles.parameterIdentityColumn}>
+                    <Form.Item
+                      label={t("executionFactory.parameterName")}
+                      name={[field.name, "name"]}
+                      rules={[{ required: true, message: t("common.required") }]}
+                    >
+                      <Input />
+                    </Form.Item>
+                    <Form.Item
+                      label={t("executionFactory.parameterDescription")}
+                      name={[field.name, "description"]}
+                    >
+                      <Input.TextArea autoSize={{ minRows: 1, maxRows: 3 }} />
+                    </Form.Item>
+                  </div>
                   <Form.Item
                     label={t("executionFactory.globalParameterIn")}
                     name={[field.name, "in"]}
@@ -88,12 +98,6 @@ export function QuickApiContractEditor() {
                     <Input style={{ width: 160 }} />
                   </Form.Item>
                 </Space>
-                <Form.Item
-                  label={t("executionFactory.parameterDescription")}
-                  name={[field.name, "description"]}
-                >
-                  <Input />
-                </Form.Item>
               </Card>
             ))}
             <Button

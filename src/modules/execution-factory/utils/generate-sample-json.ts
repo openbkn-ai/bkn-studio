@@ -101,8 +101,7 @@ export function generateSampleFromJsonSchema(schema: unknown, root?: unknown): u
   }
 
   if (type === "array") {
-    const itemSample = generateSampleFromJsonSchema(current.items ?? { type: "string" }, rootSchema);
-    return itemSample === undefined ? [] : [itemSample];
+    return [];
   }
 
   if (type === "object" || current.properties) {
@@ -199,4 +198,18 @@ export function buildDefaultDebugBody(source?: DebugPayloadSource | ToolIoSpec):
     source && "parameters" in source ? { ioSpec: source } : source;
 
   return JSON.stringify(buildDebugPayloadSample(normalized), null, 2);
+}
+
+/** Prefer explicit example; otherwise derive a request/response payload sample from JSON Schema. */
+export function resolveIoPreviewValue(example?: unknown, schema?: unknown): unknown {
+  if (example !== undefined) {
+    return example;
+  }
+
+  if (schema === undefined) {
+    return undefined;
+  }
+
+  const sample = generateSampleFromJsonSchema(schema);
+  return sample === null ? schema : sample;
 }

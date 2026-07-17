@@ -20,6 +20,8 @@ import {
 import {
   buildEffectiveQuickApiValues,
   buildQuickApiSubmissionFromValues,
+  mergeQuickApiParameters,
+  resolveQuickApiFormContract,
   type QuickApiContractFormValues,
 } from "@/modules/execution-factory/utils/quick-api-contract";
 import {
@@ -99,9 +101,12 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
       return undefined;
     }
 
+    const contractValues =
+      inputMode === "form" ? resolveQuickApiFormContract(watchedValues) : watchedValues;
+
     return buildSpecFromValues(
       buildEffectiveQuickApiValues(
-        watchedValues,
+        contractValues,
         inputMode,
         detectedUrlParameters,
         detectedCurlContract,
@@ -217,12 +222,23 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     }
 
     form.setFields([{ name: "apiUrl", errors: [] }]);
+    const currentParams = (form.getFieldValue("parameters") ?? []) as QuickApiParameter[];
+    const mergedParams = mergeQuickApiParameters(result.value.queryParams, currentParams);
     applyParsedApi(result.value, { preserveManualContract: true });
+    setDetectedUrlParameters([]);
+    form.setFieldsValue({ parameters: mergedParams });
   };
 
   const handleFinish = (values: QuickAddApiFormValues) => {
+    const resolvedValues =
+      inputMode === "form" ? resolveQuickApiFormContract(values) : values;
+
     if (inputMode === "form") {
-      if (!values.serverUrl?.trim() || !values.path?.trim() || !values.method?.trim()) {
+      if (
+        !resolvedValues.serverUrl?.trim() ||
+        !resolvedValues.path?.trim() ||
+        !resolvedValues.method?.trim()
+      ) {
         setParseHint(t("executionFactory.quickApiBuildFailed"));
         return;
       }
@@ -230,7 +246,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
 
     const submission = buildQuickApiSubmissionFromValues(
       buildEffectiveQuickApiValues(
-        values,
+        resolvedValues,
         inputMode,
         detectedUrlParameters,
         detectedCurlContract,
@@ -248,14 +264,14 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     }
 
     const targetValues =
-      values.toolboxMode === "existing"
+      resolvedValues.toolboxMode === "existing"
         ? {
-            ...values,
+            ...resolvedValues,
             toolboxName: undefined,
             toolboxDescription: undefined,
           }
         : {
-            ...values,
+            ...resolvedValues,
             boxId: undefined,
           };
 

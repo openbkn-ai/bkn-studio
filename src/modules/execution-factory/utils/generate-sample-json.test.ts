@@ -11,6 +11,7 @@ import {
   buildDebugPayloadSample,
   buildDefaultDebugBody,
   generateSampleFromJsonSchema,
+  resolveIoPreviewValue,
 } from "@/modules/execution-factory/utils/generate-sample-json";
 
 describe("generate-sample-json", () => {
@@ -28,6 +29,49 @@ describe("generate-sample-json", () => {
       input: "hello",
       count: 0,
     });
+  });
+
+  it("uses empty defaults for string/array/number/boolean fields", () => {
+    const sample = generateSampleFromJsonSchema({
+      description: "业务知识网络创建请求体",
+      required: ["name", "branch"],
+      type: "object",
+      properties: {
+        id: { description: "业务知识网络ID", type: "string" },
+        name: { description: "业务知识网络名称", type: "string" },
+        tags: { description: "标签", type: "array", items: { type: "string" } },
+        comment: { description: "备注", type: "string" },
+        icon: { description: "图标", type: "string" },
+        color: { description: "颜色", type: "string" },
+        branch: { description: "分支ID", type: "string" },
+        enabled: { type: "boolean" },
+        limit: { type: "integer" },
+      },
+    });
+
+    expect(sample).toEqual({
+      id: "",
+      name: "",
+      tags: [],
+      comment: "",
+      icon: "",
+      color: "",
+      branch: "",
+      enabled: false,
+      limit: 0,
+    });
+  });
+
+  it("prefers explicit examples over schema-derived samples in IO preview", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+      },
+    };
+
+    expect(resolveIoPreviewValue({ name: "demo" }, schema)).toEqual({ name: "demo" });
+    expect(resolveIoPreviewValue(undefined, schema)).toEqual({ name: "" });
   });
 
   it("builds debug body from ioSpec request schema", () => {

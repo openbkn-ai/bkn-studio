@@ -12,6 +12,7 @@ import { parseCurlCommand } from "@/modules/execution-factory/utils/curl-to-open
 import {
   buildEffectiveQuickApiValues,
   buildQuickApiSubmissionFromValues,
+  resolveQuickApiFormContract,
 } from "@/modules/execution-factory/utils/quick-api-contract";
 
 function createValues(
@@ -161,6 +162,32 @@ describe("QuickAddApiForm editable contract", () => {
     expect(body.example).toEqual({ query: "search schema", enable_rerank: true });
     expect(body.schema.type).toBe("object");
     expect(body.schema.properties.enable_rerank.type).toBe("boolean");
+  });
+
+  it("derives serverUrl and path from apiUrl when hidden contract fields are empty", () => {
+    const resolved = resolveQuickApiFormContract(
+      createValues({
+        serverUrl: "",
+        path: "",
+        summary: "Describe Resource",
+        apiUrl: "https://14.103.77.23/api/agent-retrieval/v1/kn/describe_resource",
+        method: "POST",
+        parameters: [
+          {
+            name: "Authorization",
+            in: "header",
+            required: false,
+            type: "string",
+          },
+        ],
+      }),
+    );
+
+    const submission = buildQuickApiSubmissionFromValues(resolved);
+
+    expect(submission?.serviceUrl).toBe("https://14.103.77.23");
+    expect(submission?.path).toBe("/api/agent-retrieval/v1/kn/describe_resource");
+    expect(submission?.method).toBe("POST");
   });
 
   it("keeps parameters detected from cURL when form-only fields are not mounted", () => {

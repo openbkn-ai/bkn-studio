@@ -15,6 +15,7 @@ import type {
   ToolRunLogEntry,
 } from "@/modules/execution-factory/types/tool";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
+import { resolveIoPreviewValue } from "@/modules/execution-factory/utils/generate-sample-json";
 
 import styles from "./ToolIoPanel.module.css";
 
@@ -129,7 +130,9 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
     children: (
       <div>
         <p className={styles.emptyHint}>{response.description ?? "-"}</p>
-        <pre className={styles.jsonPreview}>{renderJson(response.example ?? response.schema)}</pre>
+        <pre className={styles.jsonPreview}>
+          {renderJson(resolveIoPreviewValue(response.example, response.schema))}
+        </pre>
       </div>
     ),
   }));
@@ -161,7 +164,9 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
               <p className={styles.emptyHint}>{ioSpec.requestBodyDescription}</p>
             ) : null}
             <pre className={styles.jsonPreview}>
-              {renderJson(ioSpec?.requestBodyExample ?? ioSpec?.requestBodySchema)}
+              {renderJson(
+                resolveIoPreviewValue(ioSpec?.requestBodyExample, ioSpec?.requestBodySchema),
+              )}
             </pre>
           </section>
           {responseTabs.length ? (
