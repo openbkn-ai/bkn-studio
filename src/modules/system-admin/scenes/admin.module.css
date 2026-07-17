@@ -60,9 +60,17 @@
   font-weight: var(--admin-font-weight-medium);
 }
 
-.contentSurface :global(.ant-btn-primary) {
+.contentSurface :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)) {
   border-color: var(--admin-color-primary);
   background: var(--admin-color-primary);
+}
+
+.contentSurface :global(.ant-btn-primary:disabled),
+.contentSurface :global(.ant-btn-primary.ant-btn-disabled) {
+  border-color: var(--admin-color-border) !important;
+  background: var(--admin-color-surface-muted) !important;
+  color: var(--admin-color-muted) !important;
+  opacity: 1;
 }
 
 .contentSurface :global(.ant-input),
@@ -121,7 +129,7 @@
   font-weight: var(--admin-font-weight-medium);
 }
 
-.adminOverlay :global(.ant-btn-primary) {
+.adminOverlay :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)) {
   border-color: var(--admin-color-primary);
   background: var(--admin-color-primary);
   color: #fff;
@@ -133,8 +141,12 @@
   color: #fff;
 }
 
-.adminOverlay :global(.ant-btn-primary:disabled) {
-  color: rgba(255, 255, 255, 0.72);
+.adminOverlay :global(.ant-btn-primary:disabled),
+.adminOverlay :global(.ant-btn-primary.ant-btn-disabled) {
+  border-color: var(--admin-color-border) !important;
+  background: var(--admin-color-surface-muted) !important;
+  color: var(--admin-color-muted) !important;
+  opacity: 1;
 }
 
 .adminOverlay :global(.ant-input),

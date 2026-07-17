@@ -64,6 +64,19 @@ export function summarizeBuildTaskError(
     };
   }
 
+  if (/id is missing/i.test(raw)) {
+    return {
+      title: zh ? "索引文档缺少 ID" : "Index documents are missing IDs",
+      message: zh
+        ? "写入索引失败：部分文档没有生成稳定的 id 字段。"
+        : "Index write failed because some documents did not include a stable id field.",
+      raw,
+      suggestion: zh
+        ? "请检查资源索引配置中的增量键或主键映射，保存配置后重新构建。"
+        : "Check the resource build key or primary-key mapping, save the index configuration, then rebuild.",
+    };
+  }
+
   return {
     title: zh ? "构建任务执行失败" : "Build task failed",
     message: zh

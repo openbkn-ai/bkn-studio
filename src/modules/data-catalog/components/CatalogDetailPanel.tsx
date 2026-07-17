@@ -279,7 +279,7 @@ export function CatalogDetailPanel({
     {
       key: "actions",
       title: t("common.actions"),
-      width: 220,
+      width: 188,
       render: (_, record) => (
         <Space className={styles.actionGroup} size={4}>
           <AppButton onClick={() => onOpenResource(record.id, "detail")} type="link">

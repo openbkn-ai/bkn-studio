@@ -168,6 +168,8 @@ export const dataCatalogEnUS = {
         "No effective index yet - once a build succeeds, vector retrieval becomes available.",
       noIndexHint:
         "This resource has no index yet. Build one to enable vector retrieval in knowledge networks.",
+      rebuildFailedTitle:
+        "Rebuild failed. Retrieval is unaffected and still served by index {{version}}.",
       rebuildFailedHint:
         "Rebuild failed: {{error}}. Retrieval is unaffected and still served by index {{version}}.",
       notFound: "Resource not found; it may have been deleted",
