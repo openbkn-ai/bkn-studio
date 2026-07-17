@@ -45,6 +45,7 @@ test.describe("system-admin role system", () => {
     await drawer.getByText("security", { exact: true }).click();
 
     await expect(drawer.getByText("存在三员职责冲突")).toBeVisible();
-    await expect(drawer.getByText("同一普通账号不建议同时拥有多个三员角色")).toBeVisible();
+    await expect(drawer.getByText("同一账号不允许同时拥有多个三员角色")).toBeVisible();
+    await expect(drawer.getByRole("button").last()).toBeDisabled();
   });
 });
