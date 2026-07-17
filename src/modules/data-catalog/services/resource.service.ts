@@ -63,6 +63,10 @@ type BackendIndexConfig = {
   default_fulltext_analyzer?: string;
 };
 
+function isResourceFeatureType(value: string | undefined): value is ResourceFeatureType {
+  return value === "keyword" || value === "fulltext" || value === "vector";
+}
+
 function mapFeatureToBackend(feature: ResourceFieldFeature): BackendFieldFeature {
   return {
     name: feature.name,
@@ -78,18 +82,14 @@ function mapFeatureToBackend(feature: ResourceFieldFeature): BackendFieldFeature
 
 function mapFeatureFromBackend(feature: BackendFieldFeature): ResourceFieldFeature | null {
   const featureType = feature.feature_type ?? feature.type;
-  if (
-    featureType !== "keyword" &&
-    featureType !== "fulltext" &&
-    featureType !== "vector"
-  ) {
+  if (!isResourceFeatureType(featureType)) {
     return null;
   }
 
   return {
     name: feature.name,
     displayName: feature.display_name,
-    featureType: featureType as ResourceFeatureType,
+    featureType,
     description: feature.description,
     refProperty: feature.ref_property,
     isDefault: feature.is_default,
@@ -144,7 +144,7 @@ function mapSchemaFieldUpdateToBackend(field: ResourceSchemaField): BackendSchem
   const displayName = field.displayName?.trim() || field.name;
   const description = field.description?.trim() || "";
   const base = field.raw
-    ? ({ ...field.raw } as BackendSchemaField)
+    ? { ...field.raw }
     : ({
         attributes: field.attributes,
         extensions: field.extensions,
@@ -183,7 +183,7 @@ function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
     originalDescription: field.original_description,
     originalName: field.original_name,
     originalType: field.original_type,
-    raw: { ...field } as Record<string, unknown>,
+    raw: { ...field },
   };
 }
 

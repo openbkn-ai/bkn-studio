@@ -25,7 +25,6 @@ import type {
   BuildTaskPageQuery,
   BuildTaskPageResult,
   BuildTaskStatus,
-  BuildTaskUpdateInput,
   IndexHealth,
   IndexHealthState,
 } from "@/modules/data-catalog/types/data-catalog";
@@ -540,19 +539,6 @@ export async function resumeBuildTask(id: string) {
 
   // 后端语义:start = 恢复运行；默认 reset=false 按游标续跑
   await http.post(`/vega-backend/v1/build-tasks/${id}/start`, { reset: false });
-}
-
-/**
- * @deprecated 索引配置归属 resource。请 updateCatalogResource 后再 createBuildTask。
- * 保留空实现会误导调用方，这里直接抛错。
- */
-export async function updateBuildTask(
-  _id: string,
-  _input: BuildTaskUpdateInput,
-): Promise<void> {
-  throw new Error(
-    "Build task index config updates are removed; update the resource index config and create a new build task.",
-  );
 }
 
 export async function deleteBuildTask(
