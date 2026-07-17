@@ -627,6 +627,7 @@ export async function debugTool(
       body: input.body,
       header: input.header,
       query: input.query,
+      path: input.path,
     },
     { headers: getBusinessDomainHeaders() },
   );

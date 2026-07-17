@@ -565,7 +565,10 @@ export async function debugOperator(
     `${API_PREFIX}/operator/debug`,
     {
       body: input.body,
+      header: input.header,
       operator_id: input.operatorId,
+      path: input.path,
+      query: input.query,
       version: input.version,
     },
     { headers: getBusinessDomainHeaders() },

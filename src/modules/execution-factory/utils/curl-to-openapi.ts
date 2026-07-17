@@ -7,7 +7,7 @@
 
 export type QuickApiParameter = {
   name: string;
-  in: "query" | "header" | "path";
+  in: "query" | "header" | "path" | "cookie";
   description?: string;
   required?: boolean;
   type?: "string" | "number" | "boolean" | "integer";
@@ -18,7 +18,27 @@ export type QuickApiRequestBody = {
   contentType: string;
   example?: unknown;
   raw?: string;
+  required?: boolean;
   schema?: Record<string, unknown>;
+};
+
+export type QuickApiResponse = {
+  statusCode: string;
+  description: string;
+  contentType?: string;
+  example?: unknown;
+  schema?: Record<string, unknown>;
+};
+
+export type QuickApiDraft = {
+  method: string;
+  serverUrl: string;
+  path: string;
+  summary: string;
+  description?: string;
+  parameters?: QuickApiParameter[];
+  requestBody?: QuickApiRequestBody;
+  responses?: QuickApiResponse[];
 };
 
 export type ParsedQuickApi = {
@@ -313,15 +333,15 @@ function resolveMethod(scan: CurlScan): string {
 function resolveServerAndPath(url: URL): { serverUrl: string; path: string } {
   return {
     serverUrl: url.origin,
-    path: url.pathname || "/",
+    path: (url.pathname || "/").replace(/%7B/gi, "{").replace(/%7D/gi, "}"),
   };
 }
 
-function inferSchemaFromValue(value: unknown): Record<string, unknown> {
+export function inferQuickApiSchemaFromValue(value: unknown): Record<string, unknown> {
   if (Array.isArray(value)) {
     return {
       type: "array",
-      items: value.length > 0 ? inferSchemaFromValue(value[0]) : {},
+      items: value.length > 0 ? inferQuickApiSchemaFromValue(value[0]) : {},
       example: value,
     };
   }
@@ -329,7 +349,7 @@ function inferSchemaFromValue(value: unknown): Record<string, unknown> {
   if (value && typeof value === "object") {
     const properties: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-      properties[key] = inferSchemaFromValue(item);
+      properties[key] = inferQuickApiSchemaFromValue(item);
     }
     return { type: "object", properties };
   }
@@ -415,7 +435,7 @@ function buildRequestBody(scan: CurlScan): RequestBodyResult {
         value: {
           contentType: "application/json",
           example,
-          schema: inferSchemaFromValue(example),
+          schema: inferQuickApiSchemaFromValue(example),
         },
       };
     } catch {
@@ -455,6 +475,25 @@ function addQueryParamsFromUrl(url: URL, queryParams: QuickApiParameter[]) {
       example: value,
     });
   });
+}
+
+function addPathParams(path: string, parameters: QuickApiParameter[]) {
+  const names = Array.from(
+    path.matchAll(/\{([^}]+)\}|:([A-Za-z_][A-Za-z0-9_]*)/g),
+    (match) => match[1] ?? match[2],
+  );
+
+  for (const name of names) {
+    if (parameters.some((parameter) => parameter.in === "path" && parameter.name === name)) {
+      continue;
+    }
+    parameters.push({
+      name,
+      in: "path",
+      required: true,
+      type: "string",
+    });
+  }
 }
 
 function addDataAsQueryParams(scan: CurlScan, queryParams: QuickApiParameter[]) {
@@ -538,6 +577,7 @@ export function parseCurlCommand(raw: string): ParseCurlResult {
   const { path, serverUrl } = resolveServerAndPath(parsedUrl);
   const queryParams: QuickApiParameter[] = [];
   addQueryParamsFromUrl(parsedUrl, queryParams);
+  addPathParams(path, queryParams);
   addDataAsQueryParams(scan, queryParams);
   addHeaderParams(scan, queryParams);
 
@@ -557,17 +597,12 @@ export function parseCurlCommand(raw: string): ParseCurlResult {
   };
 }
 
-export function buildOpenApiFromQuickApi(input: {
-  method: string;
-  serverUrl: string;
-  path: string;
-  summary: string;
-  description?: string;
+export function buildOpenApiFromQuickApi(input: QuickApiDraft & {
+  /** @deprecated Use parameters. */
   queryParams?: QuickApiParameter[];
-  requestBody?: QuickApiRequestBody;
 }): string {
   const method = input.method.toLowerCase();
-  const parameters = (input.queryParams ?? []).map((param) => ({
+  const parameters = (input.parameters ?? input.queryParams ?? []).map((param) => ({
     name: param.name,
     in: param.in,
     description: param.description ?? "",
@@ -578,19 +613,40 @@ export function buildOpenApiFromQuickApi(input: {
     },
   }));
 
+  const responseDefinitions = input.responses?.length
+    ? Object.fromEntries(
+        input.responses.map((response) => [
+          response.statusCode,
+          {
+            description: response.description || "Response",
+            ...(response.contentType
+              ? {
+                  content: {
+                    [response.contentType]: {
+                      schema: response.schema ?? { type: "object" },
+                      ...(response.example !== undefined ? { example: response.example } : {}),
+                    },
+                  },
+                }
+              : {}),
+          },
+        ]),
+      )
+    : {
+        "200": {
+          description: "OK",
+          content: {
+            "application/json": {
+              schema: { type: "object" },
+            },
+          },
+        },
+      };
+
   const operation: Record<string, unknown> = {
     summary: input.summary,
     description: input.description ?? input.summary,
-    responses: {
-      "200": {
-        description: "OK",
-        content: {
-          "application/json": {
-            schema: { type: "object" },
-          },
-        },
-      },
-    },
+    responses: responseDefinitions,
   };
 
   if (parameters.length > 0) {
@@ -599,7 +655,7 @@ export function buildOpenApiFromQuickApi(input: {
 
   if (input.requestBody) {
     operation.requestBody = {
-      required: true,
+      required: input.requestBody.required ?? true,
       content: {
         [input.requestBody.contentType]: {
           schema: input.requestBody.schema ?? { type: "string" },
@@ -651,6 +707,7 @@ export function parseQuickApiUrl(rawUrl: string): ParseCurlResult {
   const { path, serverUrl } = resolveServerAndPath(url);
   const queryParams: QuickApiParameter[] = [];
   addQueryParamsFromUrl(url, queryParams);
+  addPathParams(path, queryParams);
 
   const lastSegment = path.split("/").filter(Boolean).pop() ?? "api";
 

@@ -118,7 +118,10 @@ export type OperatorEditInput = OperatorMutationInput & {
 export type OperatorDebugInput = {
   operatorId: string;
   version: string;
+  header?: Record<string, unknown>;
   body?: Record<string, unknown>;
+  query?: Record<string, unknown>;
+  path?: Record<string, string>;
 };
 
 export type OperatorDebugResult = {

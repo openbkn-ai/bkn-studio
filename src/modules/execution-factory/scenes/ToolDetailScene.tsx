@@ -6,7 +6,7 @@
  */
 
 import { Alert, Form, Input, Spin } from "antd";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -32,6 +32,7 @@ import type {
 } from "@/modules/execution-factory/types/tool";
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
 import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
+import { parseOpenApiEndpointDetail } from "@/modules/execution-factory/utils/openapi-detail";
 
 import styles from "./UnitFormScene.module.css";
 
@@ -60,8 +61,10 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
   const [sessionLogs, setSessionLogs] = useState<ToolRunLogEntry[]>([]);
   const debugSectionRef = useRef<HTMLDivElement | null>(null);
   const toolName = Form.useWatch<ToolFormValues["name"]>("name", form);
+  const openapiSpec = Form.useWatch<ToolFormValues["openapiSpec"]>("openapiSpec", form);
   const functionInputs = Form.useWatch("functionInputs", form);
   const functionOutputs = Form.useWatch("functionOutputs", form);
+  const endpoint = useMemo(() => parseOpenApiEndpointDetail(openapiSpec), [openapiSpec]);
 
   useEffect(() => {
     void (async () => {
@@ -213,6 +216,9 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
                         toolId,
                         name: toolName ?? toolId,
                         status: "enabled",
+                        method: endpoint?.method,
+                        path: endpoint?.path,
+                        serverUrl: endpoint?.serverUrl,
                       }}
                     />
                   </div>

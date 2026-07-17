@@ -356,6 +356,7 @@ export function AddCapabilityWizard({
         serviceUrl: payload.serviceUrl,
 
         boxId: initialBoxId ?? payload.values.boxId,
+        toolboxMode: initialBoxId ? "existing" : payload.values.toolboxMode,
 
         toolboxName: payload.values.toolboxName,
 
@@ -426,6 +427,7 @@ export function AddCapabilityWizard({
       const result = await registerOpenApiImport({
         openapiSpec: payload.openapiSpec,
         boxId: initialBoxId ?? payload.values.boxId,
+        toolboxMode: initialBoxId ? "existing" : payload.values.toolboxMode,
         toolboxName: payload.values.toolboxName,
         toolboxDescription: payload.values.toolboxDescription,
         serviceUrl: payload.values.serviceUrl,

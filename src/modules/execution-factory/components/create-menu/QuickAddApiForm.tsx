@@ -12,11 +12,16 @@ import { useTranslation } from "react-i18next";
 import { OpenApiOperationsIoPreview } from "@/modules/execution-factory/components/OpenApiOperationsIoPreview";
 import { analyzeOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
 import {
-  buildOpenApiFromQuickApi,
   parseCurlCommand,
   parseQuickApiUrl,
   type QuickApiParameter,
+  type QuickApiRequestBody,
 } from "@/modules/execution-factory/utils/curl-to-openapi";
+import {
+  buildEffectiveQuickApiValues,
+  buildQuickApiSubmissionFromValues,
+  type QuickApiContractFormValues,
+} from "@/modules/execution-factory/utils/quick-api-contract";
 import {
   CapabilityBusinessIntro,
   ToolboxPlacementIntro,
@@ -25,16 +30,12 @@ import { CapabilityCategoryFields } from "@/modules/execution-factory/components
 import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
 import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
 
+import { QuickApiContractEditor } from "./QuickApiContractEditor";
 import styles from "./create-menu.module.css";
 
-export type QuickAddApiFormValues = {
+export type QuickAddApiFormValues = QuickApiContractFormValues & {
   curlText?: string;
   apiUrl?: string;
-  method: string;
-  serverUrl: string;
-  path: string;
-  summary: string;
-  description?: string;
   toolboxMode: "existing" | "new";
   boxId?: string;
   toolboxName?: string;
@@ -58,6 +59,13 @@ export type QuickAddApiFormHandle = {
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
+function formatJsonValue(value: unknown) {
+  if (value === undefined) {
+    return undefined;
+  }
+  return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+
 export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiFormProps>(
   function QuickAddApiForm({ formId, initialBoxId, onSubmit }, ref) {
   const { t } = useTranslation();
@@ -78,6 +86,10 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
   }));
   const [inputMode, setInputMode] = useState<"curl" | "form">("curl");
   const [parseHint, setParseHint] = useState<string | null>(null);
+  const [detectedUrlParameters, setDetectedUrlParameters] = useState<QuickApiParameter[]>([]);
+  const [detectedCurlContract, setDetectedCurlContract] = useState<
+    Partial<QuickApiContractFormValues> | undefined
+  >();
   const [toolboxOptions, setToolboxOptions] = useState<Array<{ label: string; value: string }>>([]);
   const toolboxMode = Form.useWatch("toolboxMode", form) ?? (initialBoxId ? "existing" : "new");
   const watchedValues = Form.useWatch([], form) as QuickAddApiFormValues | undefined;
@@ -87,8 +99,15 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
       return undefined;
     }
 
-    return buildSpecFromValues(watchedValues, inputMode);
-  }, [inputMode, watchedValues]);
+    return buildSpecFromValues(
+      buildEffectiveQuickApiValues(
+        watchedValues,
+        inputMode,
+        detectedUrlParameters,
+        detectedCurlContract,
+      ),
+    );
+  }, [detectedCurlContract, detectedUrlParameters, inputMode, watchedValues]);
 
   const previewValidation = useMemo(
     () => (previewSpec ? analyzeOpenApiDocumentText(previewSpec) : { ok: false as const, reason: "" }),
@@ -101,6 +120,17 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
       toolboxMode: initialBoxId ? "existing" : "new",
       boxId: initialBoxId,
       category: "other_category",
+      requestBodyEnabled: false,
+      requestBodyContentType: "application/json",
+      requestBodyRequired: true,
+      responses: [
+        {
+          statusCode: "200",
+          description: "OK",
+          contentType: "application/json",
+          schemaText: '{\n  "type": "object"\n}',
+        },
+      ],
     });
   }, [form, initialBoxId]);
 
@@ -116,15 +146,43 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     })();
   }, []);
 
-  const applyParsedApi = (parsed: {
-    method: string;
-    serverUrl: string;
-    path: string;
-    summary: string;
-    queryParams: QuickApiParameter[];
-  }) => {
+  const applyParsedApi = (
+    parsed: {
+      method: string;
+      serverUrl: string;
+      path: string;
+      summary: string;
+      queryParams: QuickApiParameter[];
+      requestBody?: QuickApiRequestBody;
+    },
+    options?: { preserveManualContract?: boolean },
+  ) => {
+    const preserveManualContract = options?.preserveManualContract === true;
+    setDetectedUrlParameters(preserveManualContract ? parsed.queryParams : []);
+    setDetectedCurlContract(
+      preserveManualContract
+        ? undefined
+        : {
+            method: parsed.method,
+            serverUrl: parsed.serverUrl,
+            path: parsed.path,
+            summary: parsed.summary,
+            parameters: parsed.queryParams,
+            requestBodyEnabled: Boolean(parsed.requestBody),
+            requestBodyContentType: parsed.requestBody?.contentType ?? "application/json",
+            requestBodyRequired: parsed.requestBody?.required ?? true,
+            requestBodySchemaText: formatJsonValue(parsed.requestBody?.schema),
+            requestBodyExampleText:
+              parsed.requestBody?.example !== undefined
+                ? JSON.stringify(parsed.requestBody.example, null, 2)
+                : parsed.requestBody?.raw,
+          },
+    );
+
     form.setFieldsValue({
-      method: parsed.method,
+      method: preserveManualContract
+        ? ((form.getFieldValue("method") as string | undefined) ?? parsed.method)
+        : parsed.method,
       serverUrl: parsed.serverUrl,
       path: parsed.path,
       summary: parsed.summary,
@@ -159,7 +217,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     }
 
     form.setFields([{ name: "apiUrl", errors: [] }]);
-    applyParsedApi(result.value);
+    applyParsedApi(result.value, { preserveManualContract: true });
   };
 
   const handleFinish = (values: QuickAddApiFormValues) => {
@@ -170,7 +228,14 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
       }
     }
 
-    const submission = buildSubmissionFromValues(values, inputMode);
+    const submission = buildQuickApiSubmissionFromValues(
+      buildEffectiveQuickApiValues(
+        values,
+        inputMode,
+        detectedUrlParameters,
+        detectedCurlContract,
+      ),
+    );
     if (!submission) {
       setParseHint(t("executionFactory.quickApiBuildFailed"));
       return;
@@ -182,11 +247,23 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
       return;
     }
 
+    const targetValues =
+      values.toolboxMode === "existing"
+        ? {
+            ...values,
+            toolboxName: undefined,
+            toolboxDescription: undefined,
+          }
+        : {
+            ...values,
+            boxId: undefined,
+          };
+
     onSubmit({
       openapiSpec: submission.openapiSpec,
       serviceUrl: submission.serviceUrl,
       values: {
-        ...values,
+        ...targetValues,
         serverUrl: submission.serviceUrl,
         method: submission.method,
         path: submission.path,
@@ -234,24 +311,30 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
                 <Form.Item label={t("executionFactory.quickApiUrlLabel")} name="apiUrl">
                   <Input placeholder="https://example.com/api/v1/resource" />
                 </Form.Item>
+                <Form.Item
+                  label={t("executionFactory.quickApiMethod")}
+                  name="method"
+                  rules={[{ required: true, message: t("common.required") }]}
+                >
+                  <Select options={HTTP_METHODS.map((value) => ({ label: value, value }))} />
+                </Form.Item>
+                <QuickApiContractEditor />
                 <button className={styles.inlineAction} onClick={handleParseUrl} type="button">
                   {t("executionFactory.quickApiParseAction")}
                 </button>
-                <Form.Item label={t("executionFactory.quickApiServerUrl")} name="serverUrl">
-                  <Input />
-                </Form.Item>
-                <Form.Item label={t("executionFactory.quickApiMethod")} name="method">
-                  <Select options={HTTP_METHODS.map((value) => ({ label: value, value }))} />
-                </Form.Item>
-                <Form.Item label={t("executionFactory.quickApiPath")} name="path">
-                  <Input />
-                </Form.Item>
               </>
             ),
           },
         ]}
         onChange={(key) => setInputMode(key as "curl" | "form")}
       />
+
+      <Form.Item hidden name="serverUrl">
+        <Input />
+      </Form.Item>
+      <Form.Item hidden name="path">
+        <Input />
+      </Form.Item>
 
       <CapabilityBusinessIntro
         messageKey="executionFactory.businessIntro.toolMetadataSection"
@@ -303,6 +386,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
             <Form.Item
               label={t("executionFactory.toolboxName")}
               name="boxId"
+              preserve={false}
               rules={[{ required: true, message: t("common.required") }]}
             >
               <Select options={toolboxOptions} showSearch optionFilterProp="label" />
@@ -312,11 +396,16 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
               <Form.Item
                 label={t("executionFactory.toolboxName")}
                 name="toolboxName"
+                preserve={false}
                 rules={[{ required: true, message: t("common.required") }]}
               >
                 <Input />
               </Form.Item>
-              <Form.Item label={t("common.description")} name="toolboxDescription">
+              <Form.Item
+                label={t("common.description")}
+                name="toolboxDescription"
+                preserve={false}
+              >
                 <Input.TextArea rows={2} />
               </Form.Item>
               <CapabilityCategoryFields />
@@ -329,55 +418,6 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
 },
 );
 
-function buildSpecFromValues(values: QuickAddApiFormValues, inputMode: "curl" | "form") {
-  return buildSubmissionFromValues(values, inputMode)?.openapiSpec;
-}
-
-function buildSubmissionFromValues(values: QuickAddApiFormValues, inputMode: "curl" | "form") {
-  if (inputMode === "curl" && values.curlText?.trim()) {
-    const parsed = parseCurlCommand(values.curlText);
-    if (parsed.ok) {
-      const openapiSpec = buildOpenApiFromQuickApi({
-        ...parsed.value,
-        summary: values.summary || parsed.value.summary,
-        description: values.description,
-        queryParams: parsed.value.queryParams,
-      });
-      return {
-        openapiSpec,
-        serviceUrl: parsed.value.serverUrl,
-        method: parsed.value.method,
-        path: parsed.value.path,
-      };
-    }
-  }
-
-  if (!values.serverUrl || !values.path || !values.summary) {
-    return undefined;
-  }
-
-  let queryParams: QuickApiParameter[] = [];
-
-  if (values.apiUrl?.trim()) {
-    const parsed = parseQuickApiUrl(values.apiUrl);
-    if (parsed.ok) {
-      queryParams = parsed.value.queryParams;
-    }
-  }
-
-  const openapiSpec = buildOpenApiFromQuickApi({
-    method: values.method || "GET",
-    serverUrl: values.serverUrl,
-    path: values.path,
-    summary: values.summary,
-    description: values.description,
-    queryParams,
-  });
-
-  return {
-    openapiSpec,
-    serviceUrl: values.serverUrl,
-    method: values.method || "GET",
-    path: values.path,
-  };
+function buildSpecFromValues(values: QuickAddApiFormValues) {
+  return buildQuickApiSubmissionFromValues(values)?.openapiSpec;
 }

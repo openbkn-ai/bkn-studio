@@ -6,7 +6,10 @@
  */
 
 import type { OpenApiOperationPreview } from "@/modules/execution-factory/utils/metadata-content";
-import { analyzeOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
+import {
+  analyzeOpenApiDocumentText,
+  parseOpenApiDocumentText,
+} from "@/modules/execution-factory/utils/metadata-content";
 import type { ToolIoParameter, ToolIoSpec } from "@/modules/execution-factory/types/tool";
 
 const HTTP_METHODS = new Set([
@@ -23,6 +26,119 @@ export type OpenApiOperationWithIo = OpenApiOperationPreview & {
   description?: string;
   io: ToolIoSpec;
 };
+
+const MAX_REF_DEPTH = 50;
+
+function decodeJsonPointerSegment(segment: string): string {
+  let decoded = segment;
+  try {
+    decoded = decodeURIComponent(segment);
+  } catch {
+    // Keep the original segment when the URI fragment is malformed.
+  }
+  return decoded.replace(/~1/g, "/").replace(/~0/g, "~");
+}
+
+function resolveLocalRef(document: Record<string, unknown>, ref: string): unknown {
+  if (!ref.startsWith("#/")) {
+    return undefined;
+  }
+
+  let current: unknown = document;
+  for (const rawSegment of ref.slice(2).split("/")) {
+    const segment = decodeJsonPointerSegment(rawSegment);
+
+    if (Array.isArray(current)) {
+      const index = Number(segment);
+      if (!Number.isInteger(index) || index < 0 || index >= current.length) {
+        return undefined;
+      }
+      current = current[index];
+      continue;
+    }
+
+    if (
+      !current ||
+      typeof current !== "object" ||
+      !Object.prototype.hasOwnProperty.call(current, segment)
+    ) {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return current;
+}
+
+export function resolveOpenApiLocalRefs(
+  value: unknown,
+  document: Record<string, unknown>,
+  resolvingRefs = new Set<string>(),
+  depth = 0,
+): unknown {
+  if (depth >= MAX_REF_DEPTH || !value || typeof value !== "object") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      resolveOpenApiLocalRefs(item, document, resolvingRefs, depth + 1),
+    );
+  }
+
+  const record = value as Record<string, unknown>;
+  const ref = typeof record.$ref === "string" ? record.$ref : undefined;
+
+  if (ref) {
+    const siblingEntries = Object.entries(record).filter(([key]) => key !== "$ref");
+    if (!ref.startsWith("#/") || resolvingRefs.has(ref)) {
+      return Object.fromEntries([
+        ["$ref", ref],
+        ...siblingEntries.map(([key, item]) => [
+          key,
+          resolveOpenApiLocalRefs(item, document, resolvingRefs, depth + 1),
+        ]),
+      ]);
+    }
+
+    const target = resolveLocalRef(document, ref);
+    if (target !== undefined) {
+      const nextResolvingRefs = new Set(resolvingRefs);
+      nextResolvingRefs.add(ref);
+      const resolvedTarget = resolveOpenApiLocalRefs(
+        target,
+        document,
+        nextResolvingRefs,
+        depth + 1,
+      );
+      const resolvedSiblings = Object.fromEntries(
+        siblingEntries.map(([key, item]) => [
+          key,
+          resolveOpenApiLocalRefs(item, document, resolvingRefs, depth + 1),
+        ]),
+      );
+
+      if (
+        resolvedTarget &&
+        typeof resolvedTarget === "object" &&
+        !Array.isArray(resolvedTarget)
+      ) {
+        return {
+          ...(resolvedTarget as Record<string, unknown>),
+          ...resolvedSiblings,
+        };
+      }
+      return siblingEntries.length > 0 ? resolvedSiblings : resolvedTarget;
+    }
+  }
+
+  return Object.fromEntries(
+    Object.entries(record).map(([key, item]) => [
+      key,
+      resolveOpenApiLocalRefs(item, document, resolvingRefs, depth + 1),
+    ]),
+  );
+}
 
 function resolveSchemaType(schema: unknown): string | undefined {
   if (!schema || typeof schema !== "object") {
@@ -42,18 +158,86 @@ function resolveSchemaType(schema: unknown): string | undefined {
   return undefined;
 }
 
-function firstContentEntry(content?: Record<string, unknown>) {
+type OpenApiMediaContent = {
+  example?: unknown;
+  examples?: Record<string, { value?: unknown; externalValue?: string }>;
+  schema?: unknown;
+};
+
+const PREFERRED_MEDIA_TYPES = [
+  "application/json",
+  "application/problem+json",
+  "text/json",
+  "*/*",
+];
+
+function pickPreferredContentEntry(
+  content?: Record<string, unknown>,
+): OpenApiMediaContent | undefined {
   if (!content) {
     return undefined;
   }
 
-  return Object.values(content)[0] as { example?: unknown; schema?: unknown } | undefined;
+  for (const mediaType of PREFERRED_MEDIA_TYPES) {
+    const entry = content[mediaType];
+    if (entry && typeof entry === "object") {
+      return entry as OpenApiMediaContent;
+    }
+  }
+
+  const jsonLikeKey = Object.keys(content).find((key) => /json/i.test(key) || key.endsWith("+json"));
+  if (jsonLikeKey) {
+    const entry = content[jsonLikeKey];
+    if (entry && typeof entry === "object") {
+      return entry as OpenApiMediaContent;
+    }
+  }
+
+  const first = Object.values(content)[0];
+  return first && typeof first === "object" ? (first as OpenApiMediaContent) : undefined;
 }
 
-function parseOperationIo(operation: Record<string, unknown>): ToolIoSpec {
+function pickContentExample(content?: OpenApiMediaContent): unknown {
+  if (!content) {
+    return undefined;
+  }
+
+  if (content.example !== undefined) {
+    return content.example;
+  }
+
+  if (!content.examples || typeof content.examples !== "object") {
+    return undefined;
+  }
+
+  for (const example of Object.values(content.examples)) {
+    if (!example || typeof example !== "object") {
+      continue;
+    }
+    if ("value" in example && example.value !== undefined) {
+      return example.value;
+    }
+  }
+
+  return undefined;
+}
+
+function parameterKey(name: string, location?: string): string {
+  return `${location ?? ""}:${name}`;
+}
+
+function collectParameters(
+  rawParameters: unknown,
+  document: Record<string, unknown>,
+): ToolIoParameter[] {
+  if (!Array.isArray(rawParameters)) {
+    return [];
+  }
+
   const parameters: ToolIoParameter[] = [];
 
-  for (const item of (operation.parameters as Array<Record<string, unknown>>) ?? []) {
+  for (const rawItem of rawParameters) {
+    const item = resolveOpenApiLocalRefs(rawItem, document) as Record<string, unknown>;
     if (typeof item.name !== "string") {
       continue;
     }
@@ -67,7 +251,39 @@ function parseOperationIo(operation: Record<string, unknown>): ToolIoSpec {
     });
   }
 
-  const requestBody = operation.requestBody as Record<string, unknown> | undefined;
+  return parameters;
+}
+
+export function mergeOpenApiParameters(
+  pathParameters: ToolIoParameter[],
+  operationParameters: ToolIoParameter[],
+): ToolIoParameter[] {
+  const merged = new Map<string, ToolIoParameter>();
+
+  for (const parameter of pathParameters) {
+    merged.set(parameterKey(parameter.name, parameter.in), parameter);
+  }
+
+  for (const parameter of operationParameters) {
+    merged.set(parameterKey(parameter.name, parameter.in), parameter);
+  }
+
+  return Array.from(merged.values());
+}
+
+export function parseOpenApiOperationIo(
+  operation: Record<string, unknown>,
+  document: Record<string, unknown>,
+  pathItem?: Record<string, unknown>,
+): ToolIoSpec {
+  const parameters = mergeOpenApiParameters(
+    collectParameters(pathItem?.parameters, document),
+    collectParameters(operation.parameters, document),
+  );
+
+  const requestBody = resolveOpenApiLocalRefs(operation.requestBody, document) as
+    | Record<string, unknown>
+    | undefined;
   let requestBodyDescription: string | undefined;
   let requestBodyRequired: boolean | undefined;
   let requestBodyExample: unknown;
@@ -77,8 +293,10 @@ function parseOperationIo(operation: Record<string, unknown>): ToolIoSpec {
     requestBodyDescription =
       typeof requestBody.description === "string" ? requestBody.description : undefined;
     requestBodyRequired = requestBody.required === true;
-    const content = firstContentEntry(requestBody.content as Record<string, unknown> | undefined);
-    requestBodyExample = content?.example;
+    const content = pickPreferredContentEntry(
+      requestBody.content as Record<string, unknown> | undefined,
+    );
+    requestBodyExample = pickContentExample(content);
     requestBodySchema = content?.schema;
   }
 
@@ -91,12 +309,12 @@ function parseOperationIo(operation: Record<string, unknown>): ToolIoSpec {
       continue;
     }
 
-    const resp = response as Record<string, unknown>;
-    const content = firstContentEntry(resp.content as Record<string, unknown> | undefined);
+    const resp = resolveOpenApiLocalRefs(response, document) as Record<string, unknown>;
+    const content = pickPreferredContentEntry(resp.content as Record<string, unknown> | undefined);
 
     responses[statusCode] = {
       description: typeof resp.description === "string" ? resp.description : undefined,
-      example: content?.example,
+      example: pickContentExample(content),
       schema: content?.schema,
     };
   }
@@ -122,13 +340,11 @@ export function extractOpenApiOperationsIo(openapiSpec?: string): OpenApiOperati
     return [];
   }
 
-  let parsed: Record<string, unknown>;
-
-  try {
-    parsed = JSON.parse(openapiSpec) as Record<string, unknown>;
-  } catch {
+  const parseResult = parseOpenApiDocumentText(openapiSpec);
+  if (!parseResult.ok) {
     return [];
   }
+  const parsed = parseResult.document;
 
   const paths = parsed.paths;
 
@@ -143,7 +359,9 @@ export function extractOpenApiOperationsIo(openapiSpec?: string): OpenApiOperati
       continue;
     }
 
-    for (const [method, operation] of Object.entries(pathItem as Record<string, unknown>)) {
+    const pathRecord = pathItem as Record<string, unknown>;
+
+    for (const [method, operation] of Object.entries(pathRecord)) {
       if (!HTTP_METHODS.has(method.toLowerCase())) {
         continue;
       }
@@ -161,7 +379,7 @@ export function extractOpenApiOperationsIo(openapiSpec?: string): OpenApiOperati
         method: method.toUpperCase(),
         summary,
         description,
-        io: parseOperationIo(op),
+        io: parseOpenApiOperationIo(op, parsed, pathRecord),
       });
     }
   }

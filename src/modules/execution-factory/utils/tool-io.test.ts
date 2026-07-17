@@ -17,6 +17,7 @@ describe("buildToolDebugRequest", () => {
           accept: "application/json",
           customerId: "1001",
           region: "CN",
+          resourceId: "resource-1",
           "x-demo-source": "openbkn-manual",
         },
         {
@@ -25,6 +26,7 @@ describe("buildToolDebugRequest", () => {
             { in: "query", name: "region", type: "string" },
             { in: "header", name: "accept", type: "string" },
             { in: "header", name: "x-demo-source", type: "string" },
+            { in: "path", name: "resourceId", type: "string" },
           ],
         },
       ),
@@ -37,6 +39,9 @@ describe("buildToolDebugRequest", () => {
         customerId: "1001",
         region: "CN",
       },
+      path: {
+        resourceId: "resource-1",
+      },
     });
   });
 
@@ -45,11 +50,13 @@ describe("buildToolDebugRequest", () => {
       buildToolDebugRequest({
         body: { city: "Beijing" },
         header: { accept: "application/json" },
+        path: { resourceId: 1001 },
         query: { region: "CN" },
       }),
     ).toEqual({
       body: { city: "Beijing" },
       header: { accept: "application/json" },
+      path: { resourceId: "1001" },
       query: { region: "CN" },
     });
   });

@@ -46,6 +46,7 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
     Boolean(ioSpec?.parameters.length) ||
     Boolean(ioSpec?.requestBodyDescription) ||
     Boolean(ioSpec?.requestBodyExample) ||
+    Boolean(ioSpec?.requestBodySchema) ||
     Boolean(Object.keys(ioSpec?.responses ?? {}).length);
 
   const hasFunctionIo = functionParameters.length > 0;

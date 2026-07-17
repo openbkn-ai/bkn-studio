@@ -5,11 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Form, Input, Modal, Typography } from "antd";
+import { Alert, Form, Modal, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { HttpDebugRequestFields } from "@/modules/execution-factory/components/HttpDebugRequestFields";
 import { debugOperator } from "@/modules/execution-factory/services/operator.service";
 import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
 import type {
@@ -17,8 +18,12 @@ import type {
   OperatorRecord,
   OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
-import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
-import { extractOpenApiOperationsIo } from "@/modules/execution-factory/utils/openapi-operation-io";
+import {
+  buildHttpDebugInitialValues,
+  buildHttpDebugRequest,
+  type HttpDebugFormValues,
+} from "@/modules/execution-factory/utils/http-debug-request";
+import { parseOpenApiEndpointDetail } from "@/modules/execution-factory/utils/openapi-detail";
 
 type OperatorDebugModalProps = {
   functionInput?: FunctionInputPayload;
@@ -27,10 +32,6 @@ type OperatorDebugModalProps = {
   open: boolean;
   openapiSpec?: string;
   record: OperatorRecord | null;
-};
-
-type DebugFormValues = {
-  requestBody?: string;
 };
 
 export function OperatorDebugModal({
@@ -42,19 +43,16 @@ export function OperatorDebugModal({
   record,
 }: OperatorDebugModalProps) {
   const { t } = useTranslation();
-  const [form] = Form.useForm<DebugFormValues>();
+  const [form] = Form.useForm<HttpDebugFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OperatorDebugResult | null>(null);
 
-  const generatedBody = useMemo(() => {
-    const ioSpec = openapiSpec ? extractOpenApiOperationsIo(openapiSpec)[0]?.io : undefined;
-
-    return buildDefaultDebugBody({
-      functionInput,
-      ioSpec,
-    });
-  }, [functionInput, openapiSpec]);
+  const endpoint = useMemo(() => parseOpenApiEndpointDetail(openapiSpec), [openapiSpec]);
+  const initialValues = useMemo(
+    () => buildHttpDebugInitialValues(endpoint?.ioSpec, functionInput),
+    [endpoint?.ioSpec, functionInput],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -64,8 +62,8 @@ export function OperatorDebugModal({
       return;
     }
 
-    form.setFieldsValue({ requestBody: generatedBody });
-  }, [form, generatedBody, open]);
+    form.setFieldsValue(initialValues);
+  }, [form, initialValues, open]);
 
   const handleDebug = async () => {
     if (!record) {
@@ -78,14 +76,10 @@ export function OperatorDebugModal({
 
     try {
       const values = await form.validateFields();
-      let body: Record<string, unknown> | undefined;
-
-      if (values.requestBody?.trim()) {
-        body = JSON.parse(values.requestBody) as Record<string, unknown>;
-      }
+      const request = buildHttpDebugRequest(values, endpoint?.ioSpec, endpoint?.path);
 
       const debugResult = await debugOperator({
-        body,
+        ...request,
         operatorId: record.operatorId,
         version: record.version,
       });
@@ -97,7 +91,7 @@ export function OperatorDebugModal({
         durationMs: debugResult.durationMs,
         error: debugResult.error,
         body: debugResult.body,
-        requestBody: body,
+        requestBody: request,
       });
     } catch (caughtError) {
       setError(extractRequestErrorMessage(caughtError));
@@ -126,9 +120,12 @@ export function OperatorDebugModal({
       ) : null}
       <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
       <Form form={form} layout="vertical">
-        <Form.Item label={t("executionFactory.debugRequestBody")} name="requestBody">
-          <Input.TextArea placeholder="{}" rows={8} />
-        </Form.Item>
+        <HttpDebugRequestFields
+          ioSpec={endpoint?.ioSpec}
+          method={endpoint?.method}
+          path={endpoint?.path}
+          serverUrl={endpoint?.serverUrl}
+        />
       </Form>
       {error ? <Alert message={error} showIcon style={{ marginBottom: 16 }} type="error" /> : null}
       {result ? (
