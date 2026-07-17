@@ -547,6 +547,7 @@ export const executionFactoryZhCN = {
     ioPanelEmpty: "暂无可展示的输入输出定义",
     ioPanelEmptyHint: "若文档中未定义参数/响应示例，可直接点击「调试」发送试请求。",
     ioParameters: "请求参数",
+    ioHeaders: "请求头",
     ioRequestBody: "请求体",
     ioResponses: "响应",
     ioDirection: "方向",

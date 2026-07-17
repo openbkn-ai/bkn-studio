@@ -9,7 +9,11 @@ import { Empty, Table, Tabs, Tag } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
-import type { ToolIoSpec, ToolRunLogEntry } from "@/modules/execution-factory/types/tool";
+import type {
+  ToolIoParameter,
+  ToolIoSpec,
+  ToolRunLogEntry,
+} from "@/modules/execution-factory/types/tool";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import styles from "./ToolIoPanel.module.css";
@@ -28,6 +32,57 @@ function renderJson(value: unknown) {
   return JSON.stringify(value, null, 2);
 }
 
+function ParameterTable({
+  emptyText,
+  parameters,
+  showLocation,
+}: {
+  emptyText: string;
+  parameters: ToolIoParameter[];
+  showLocation?: boolean;
+}) {
+  const { t } = useTranslation();
+
+  if (parameters.length === 0) {
+    return <p className={styles.emptyHint}>{emptyText}</p>;
+  }
+
+  return (
+    <Table
+      columns={[
+        { dataIndex: "name", key: "name", title: t("executionFactory.parameterName") },
+        ...(showLocation
+          ? [
+              {
+                dataIndex: "in",
+                key: "in",
+                title: t("executionFactory.globalParameterIn"),
+              },
+            ]
+          : []),
+        { dataIndex: "type", key: "type", title: t("executionFactory.parameterType") },
+        {
+          dataIndex: "required",
+          key: "required",
+          render: (value?: boolean) => (value ? "✓" : "-"),
+          title: t("executionFactory.globalParameterRequired"),
+        },
+        {
+          dataIndex: "description",
+          key: "description",
+          title: t("executionFactory.parameterDescription"),
+        },
+      ]}
+      dataSource={parameters.map((item, index) => ({
+        ...item,
+        key: `${item.in ?? "param"}-${item.name}-${index}`,
+      }))}
+      pagination={false}
+      size="small"
+    />
+  );
+}
+
 export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanelProps) {
   const { t } = useTranslation();
 
@@ -41,6 +96,13 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
       ...item,
     })),
   ];
+
+  const headerParameters = (ioSpec?.parameters ?? []).filter(
+    (parameter) => parameter.in === "header",
+  );
+  const requestParameters = (ioSpec?.parameters ?? []).filter(
+    (parameter) => parameter.in !== "header",
+  );
 
   const hasOpenApiIo =
     Boolean(ioSpec?.parameters.length) ||
@@ -78,32 +140,21 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
         <>
           <section>
             <h4 className={styles.sectionTitle}>{t("executionFactory.ioParameters")}</h4>
-            {ioSpec?.parameters.length ? (
-              <Table
-                columns={[
-                  { dataIndex: "name", key: "name", title: t("executionFactory.parameterName") },
-                  { dataIndex: "in", key: "in", title: t("executionFactory.globalParameterIn") },
-                  { dataIndex: "type", key: "type", title: t("executionFactory.parameterType") },
-                  {
-                    dataIndex: "required",
-                    key: "required",
-                    render: (value?: boolean) => (value ? "✓" : "-"),
-                    title: t("executionFactory.globalParameterRequired"),
-                  },
-                  {
-                    dataIndex: "description",
-                    key: "description",
-                    title: t("executionFactory.parameterDescription"),
-                  },
-                ]}
-                dataSource={ioSpec.parameters.map((item) => ({ ...item, key: item.name }))}
-                pagination={false}
-                size="small"
-              />
-            ) : (
-              <p className={styles.emptyHint}>{t("executionFactory.noParameters")}</p>
-            )}
+            <ParameterTable
+              emptyText={t("executionFactory.noParameters")}
+              parameters={requestParameters}
+              showLocation
+            />
           </section>
+          {headerParameters.length > 0 ? (
+            <section>
+              <h4 className={styles.sectionTitle}>{t("executionFactory.ioHeaders")}</h4>
+              <ParameterTable
+                emptyText={t("executionFactory.noParameters")}
+                parameters={headerParameters}
+              />
+            </section>
+          ) : null}
           <section>
             <h4 className={styles.sectionTitle}>{t("executionFactory.ioRequestBody")}</h4>
             {ioSpec?.requestBodyDescription ? (

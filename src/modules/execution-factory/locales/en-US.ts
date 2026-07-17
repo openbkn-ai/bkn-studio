@@ -554,6 +554,7 @@ export const executionFactoryEnUS = {
     ioPanelEmpty: "No input/output definition available",
     ioPanelEmptyHint: "If the document has no parameter or response examples, you can still click Debug to send a trial request.",
     ioParameters: "Parameters",
+    ioHeaders: "Headers",
     ioRequestBody: "Request body",
     ioResponses: "Responses",
     ioDirection: "Direction",

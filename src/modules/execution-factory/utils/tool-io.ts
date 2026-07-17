@@ -10,36 +10,149 @@ import type {
   ToolIoParameter,
   ToolIoSpec,
 } from "@/modules/execution-factory/types/tool";
+import { resolveOpenApiLocalRefs } from "@/modules/execution-factory/utils/openapi-operation-io";
 
 export { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
 
+type ApiSpecMediaContent = {
+  example?: unknown;
+  examples?: Record<string, { value?: unknown }>;
+  schema?: unknown;
+};
+
+type ApiSpecResponse = {
+  content?: Record<string, ApiSpecMediaContent>;
+  description?: string;
+  status_code?: string;
+  statusCode?: string;
+};
+
 type ApiSpecMetadata = {
   api_spec?: {
+    components?: {
+      schemas?: Record<string, unknown>;
+    };
     parameters?: Array<{
       description?: string;
       in?: string;
       name?: string;
       required?: boolean;
-      schema?: { type?: string };
+      schema?: { type?: string } | unknown;
     }>;
     request_body?: {
-      content?: Record<string, { example?: unknown; schema?: unknown }>;
+      content?: Record<string, ApiSpecMediaContent>;
       description?: string;
       required?: boolean;
     };
-    responses?: Record<
-      string,
-      {
-        content?: Record<string, { example?: unknown; schema?: unknown }>;
-        description?: string;
-      }
-    >;
+    responses?: ApiSpecResponse[] | Record<string, ApiSpecResponse>;
   };
   description?: string;
   method?: string;
   path?: string;
   summary?: string;
 };
+
+const PREFERRED_MEDIA_TYPES = [
+  "application/json",
+  "application/problem+json",
+  "text/json",
+  "*/*",
+];
+
+function pickPreferredContentEntry(
+  content?: Record<string, ApiSpecMediaContent>,
+): ApiSpecMediaContent | undefined {
+  if (!content) {
+    return undefined;
+  }
+
+  for (const mediaType of PREFERRED_MEDIA_TYPES) {
+    const entry = content[mediaType];
+    if (entry && typeof entry === "object") {
+      return entry;
+    }
+  }
+
+  const jsonLikeKey = Object.keys(content).find((key) => /json/i.test(key) || key.endsWith("+json"));
+  if (jsonLikeKey) {
+    return content[jsonLikeKey];
+  }
+
+  return Object.values(content)[0];
+}
+
+function pickContentExample(content?: ApiSpecMediaContent): unknown {
+  if (!content) {
+    return undefined;
+  }
+
+  if (content.example !== undefined) {
+    return content.example;
+  }
+
+  if (!content.examples || typeof content.examples !== "object") {
+    return undefined;
+  }
+
+  for (const example of Object.values(content.examples)) {
+    if (example && typeof example === "object" && example.value !== undefined) {
+      return example.value;
+    }
+  }
+
+  return undefined;
+}
+
+function resolveSchemaType(schema: unknown): string | undefined {
+  if (!schema || typeof schema !== "object") {
+    return undefined;
+  }
+
+  const record = schema as Record<string, unknown>;
+  if (typeof record.type === "string") {
+    return record.type;
+  }
+
+  if (typeof record.$ref === "string") {
+    return record.$ref.split("/").pop();
+  }
+
+  return undefined;
+}
+
+function schemaDescription(schema: unknown): string | undefined {
+  if (!schema || typeof schema !== "object") {
+    return undefined;
+  }
+
+  const description = (schema as { description?: unknown }).description;
+  return typeof description === "string" && description.trim() ? description : undefined;
+}
+
+export function normalizeToolApiSpecResponses(
+  rawResponses: ApiSpecResponse[] | Record<string, ApiSpecResponse> | undefined,
+): Record<string, ApiSpecResponse> {
+  if (!rawResponses) {
+    return {};
+  }
+
+  if (Array.isArray(rawResponses)) {
+    const normalized: Record<string, ApiSpecResponse> = {};
+    for (const item of rawResponses) {
+      if (!item || typeof item !== "object") {
+        continue;
+      }
+      const statusCode = item.status_code ?? item.statusCode;
+      if (typeof statusCode !== "string" || !statusCode.trim()) {
+        continue;
+      }
+      normalized[statusCode.trim()] = item;
+    }
+    return normalized;
+  }
+
+  return rawResponses;
+}
 
 export function parseToolIoSpec(metadata?: ApiSpecMetadata): ToolIoSpec | undefined {
   if (!metadata?.api_spec) {
@@ -54,35 +167,55 @@ export function parseToolIoSpec(metadata?: ApiSpecMetadata): ToolIoSpec | undefi
   }
 
   const apiSpec = metadata.api_spec;
-  const parameters: ToolIoParameter[] = (apiSpec.parameters ?? [])
-    .filter((item) => item.name)
-    .map((item) => ({
-      name: item.name ?? "unknown",
-      in: item.in,
-      required: item.required,
-      description: item.description,
-      type: item.schema?.type,
-    }));
+  const document = apiSpec as Record<string, unknown>;
 
-  const requestContent = apiSpec.request_body?.content ?? {};
-  const firstRequestContent = Object.values(requestContent)[0];
+  const parameters: ToolIoParameter[] = (apiSpec.parameters ?? [])
+    .map((rawItem) => resolveOpenApiLocalRefs(rawItem, document) as Record<string, unknown>)
+    .filter((item) => typeof item.name === "string" && item.name.trim())
+    .map((item) => {
+      const schema = resolveOpenApiLocalRefs(item.schema, document);
+      return {
+        name: String(item.name),
+        in: typeof item.in === "string" ? item.in : undefined,
+        required: item.required === true,
+        description: typeof item.description === "string" ? item.description : undefined,
+        type: resolveSchemaType(schema),
+      };
+    });
+
+  const requestBody = resolveOpenApiLocalRefs(apiSpec.request_body, document) as
+    | NonNullable<ApiSpecMetadata["api_spec"]>["request_body"]
+    | undefined;
+  const requestContent = pickPreferredContentEntry(requestBody?.content);
+  const requestBodySchema = resolveOpenApiLocalRefs(requestContent?.schema, document);
+  const requestBodyExample = pickContentExample(requestContent);
+  const requestBodyDescription =
+    (typeof requestBody?.description === "string" && requestBody.description.trim()
+      ? requestBody.description
+      : undefined) ?? schemaDescription(requestBodySchema);
 
   const responses: ToolIoSpec["responses"] = {};
-  for (const [statusCode, response] of Object.entries(apiSpec.responses ?? {})) {
-    const content = Object.values(response.content ?? {})[0];
+  for (const [statusCode, response] of Object.entries(
+    normalizeToolApiSpecResponses(apiSpec.responses),
+  )) {
+    const resolvedResponse = resolveOpenApiLocalRefs(response, document) as ApiSpecResponse;
+    const content = pickPreferredContentEntry(resolvedResponse.content);
     responses[statusCode] = {
-      description: response.description,
-      example: content?.example,
-      schema: content?.schema,
+      description:
+        typeof resolvedResponse.description === "string"
+          ? resolvedResponse.description
+          : undefined,
+      example: pickContentExample(content),
+      schema: resolveOpenApiLocalRefs(content?.schema, document),
     };
   }
 
   return {
     parameters,
-    requestBodyDescription: apiSpec.request_body?.description,
-    requestBodyRequired: apiSpec.request_body?.required,
-    requestBodyExample: firstRequestContent?.example,
-    requestBodySchema: firstRequestContent?.schema,
+    requestBodyDescription,
+    requestBodyRequired: requestBody?.required === true,
+    requestBodyExample,
+    requestBodySchema,
     responses,
   };
 }
