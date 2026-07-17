@@ -171,6 +171,10 @@ const PREFERRED_MEDIA_TYPES = [
   "*/*",
 ];
 
+function isMediaContent(value: unknown): value is OpenApiMediaContent {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 function pickPreferredContentEntry(
   content?: Record<string, unknown>,
 ): OpenApiMediaContent | undefined {
@@ -180,21 +184,21 @@ function pickPreferredContentEntry(
 
   for (const mediaType of PREFERRED_MEDIA_TYPES) {
     const entry = content[mediaType];
-    if (entry && typeof entry === "object") {
-      return entry as OpenApiMediaContent;
+    if (isMediaContent(entry)) {
+      return entry;
     }
   }
 
   const jsonLikeKey = Object.keys(content).find((key) => /json/i.test(key) || key.endsWith("+json"));
   if (jsonLikeKey) {
     const entry = content[jsonLikeKey];
-    if (entry && typeof entry === "object") {
-      return entry as OpenApiMediaContent;
+    if (isMediaContent(entry)) {
+      return entry;
     }
   }
 
   const first = Object.values(content)[0];
-  return first && typeof first === "object" ? (first as OpenApiMediaContent) : undefined;
+  return isMediaContent(first) ? first : undefined;
 }
 
 function pickContentExample(content?: OpenApiMediaContent): unknown {

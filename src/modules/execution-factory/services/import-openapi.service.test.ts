@@ -95,8 +95,9 @@ describe("registerOpenApiImport", () => {
     });
 
     const submittedSpec = vi.mocked(importOpenApiTools).mock.calls[0]?.[1];
-    expect(() => JSON.parse(submittedSpec)).not.toThrow();
-    expect(JSON.parse(submittedSpec)).toMatchObject({
+    expect(submittedSpec).toEqual(expect.any(String));
+    const submittedDoc = JSON.parse(String(submittedSpec)) as Record<string, unknown>;
+    expect(submittedDoc).toMatchObject({
       openapi: "3.0.3",
       servers: [{ url: "https://petstore3.swagger.io/api/v3" }],
     });

@@ -37,7 +37,7 @@ type ApiSpecMetadata = {
       in?: string;
       name?: string;
       required?: boolean;
-      schema?: { type?: string } | unknown;
+      schema?: unknown;
     }>;
     request_body?: {
       content?: Record<string, ApiSpecMediaContent>;

@@ -65,11 +65,7 @@ export function parseOpenApiEndpointDetail(
         serverUrl,
         path,
         method: method.toUpperCase(),
-        ioSpec: parseOpenApiOperationIo(
-          operation as Record<string, unknown>,
-          document,
-          pathItem as Record<string, unknown>,
-        ),
+        ioSpec: parseOpenApiOperationIo(operation, document, pathItem),
       };
     }
   }

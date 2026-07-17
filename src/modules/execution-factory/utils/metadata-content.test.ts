@@ -166,8 +166,8 @@ describe("metadata-content OpenAPI helpers", () => {
     }
 
     const normalized = normalizeOpenApiDocumentText(validYamlSpec);
-    expect(() => JSON.parse(normalized)).not.toThrow();
-    expect(JSON.parse(normalized)).toMatchObject({
+    const normalizedDoc = JSON.parse(normalized) as Record<string, unknown>;
+    expect(normalizedDoc).toMatchObject({
       openapi: "3.0.3",
       info: { title: "get_weather", version: "1.0.0" },
     });
