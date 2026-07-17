@@ -179,6 +179,7 @@
 }
 
 .actionGroup {
+  display: inline-flex;
   flex-wrap: nowrap;
   white-space: nowrap;
 }

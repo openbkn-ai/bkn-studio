@@ -160,6 +160,7 @@ export const dataCatalogZhCN = {
       latestTask: "最近构建任务",
       noEffectiveIndex: "暂无生效索引——构建成功后即可在知识网络中进行向量检索。",
       noIndexHint: "该资源还没有索引。构建后即可在知识网络中进行向量检索。",
+      rebuildFailedTitle: "重建失败。检索不受影响，仍由旧版索引 {{version}} 提供服务。",
       rebuildFailedHint:
         "重建失败:{{error}}。检索不受影响,仍由旧版索引 {{version}} 提供服务。",
       notFound: "未找到该资源,可能已被删除",

@@ -23,6 +23,7 @@ import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTa
 import { BuildTaskLaunchPanel } from "@/modules/data-catalog/components/BuildTaskLaunchPanel";
 import { IndexConfigFormPanel } from "@/modules/data-catalog/components/IndexConfigFormPanel";
 import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task-actions";
+import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
 import { indexStateOf, resourceGateOf, sortTasks } from "@/modules/data-catalog/lib/index-state";
@@ -161,7 +162,33 @@ function progressTask(effective: BuildTask | null, latest: BuildTask | null) {
     }
     return latest;
   }
+
   return null;
+}
+
+function renderBuildFailureAlert(
+  task: BuildTask,
+  language: string,
+  rawErrorLabel: string,
+) {
+  const summary = summarizeBuildTaskError(task.error || task.failureDetail, language);
+  if (!summary) {
+    return null;
+  }
+
+  return (
+    <div className={panelStyles.failureAlertContent}>
+      <strong>{summary.title}</strong>
+      <span>{summary.message}</span>
+      {summary.suggestion ? (
+        <span className={panelStyles.failureSuggestion}>{summary.suggestion}</span>
+      ) : null}
+      <details className={panelStyles.failureRaw}>
+        <summary>{rawErrorLabel}</summary>
+        <code>{summary.raw}</code>
+      </details>
+    </div>
+  );
 }
 
 export function ResourceIndexPanel({
@@ -417,17 +444,25 @@ export function ResourceIndexPanel({
         {latest?.status === "failed" && effective ? (
           <Alert
             className={panelStyles.statusAlert}
-            message={t("dataCatalog.resource.rebuildFailedHint", {
-              error: latest.error ?? "-",
+            message={t("dataCatalog.resource.rebuildFailedTitle", {
               version: effective.id,
             })}
+            description={renderBuildFailureAlert(
+              latest,
+              i18n.language,
+              t("dataCatalog.task.rawError"),
+            )}
             showIcon
             type="warning"
           />
-        ) : latest?.error && latest.status === "failed" ? (
+        ) : latest?.status === "failed" && (latest.error || latest.failureDetail) ? (
           <Alert
             className={panelStyles.statusAlert}
-            message={latest.error}
+            message={renderBuildFailureAlert(
+              latest,
+              i18n.language,
+              t("dataCatalog.task.rawError"),
+            )}
             showIcon
             type="error"
           />

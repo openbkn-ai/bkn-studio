@@ -197,6 +197,51 @@
   border-radius: 0;
 }
 
+.failureAlertContent {
+  display: grid;
+  gap: 4px;
+  max-width: 100%;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.failureAlertContent strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+.failureSuggestion {
+  color: #92400e;
+}
+
+.failureRaw {
+  margin-top: 2px;
+  color: #64748b;
+}
+
+.failureRaw summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.failureRaw code {
+  display: block;
+  max-height: 160px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .emptyPanel {
   display: flex;
   flex-direction: column;

@@ -59,10 +59,27 @@
   font-weight: var(--business-font-weight-medium);
 }
 
-.surface :global(.ant-btn-primary),
-.overlay :global(.ant-btn-primary) {
+.surface :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)),
+.overlay :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)) {
   border-color: var(--business-color-primary);
   background: var(--business-color-primary);
+}
+
+.surface :global(.ant-btn-primary:disabled),
+.surface :global(.ant-btn-primary.ant-btn-disabled),
+.overlay :global(.ant-btn-primary:disabled),
+.overlay :global(.ant-btn-primary.ant-btn-disabled) {
+  border-color: var(--business-color-border) !important;
+  background: var(--business-color-surface-muted) !important;
+  color: var(--business-color-muted) !important;
+  opacity: 1;
+}
+
+.surface :global(.ant-btn-primary:disabled .anticon),
+.surface :global(.ant-btn-primary.ant-btn-disabled .anticon),
+.overlay :global(.ant-btn-primary:disabled .anticon),
+.overlay :global(.ant-btn-primary.ant-btn-disabled .anticon) {
+  color: var(--business-color-muted) !important;
 }
 
 .surface :global(.ant-input),

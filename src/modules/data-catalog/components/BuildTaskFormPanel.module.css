@@ -429,6 +429,19 @@
   border-radius: 0 !important;
 }
 
+.footer :global(.ant-btn-primary:disabled),
+.footer :global(.ant-btn-primary.ant-btn-disabled) {
+  border-color: #d9e0ea !important;
+  background: #eef2f7 !important;
+  color: #64748b !important;
+  opacity: 1;
+}
+
+.footer :global(.ant-btn-primary:disabled .anticon),
+.footer :global(.ant-btn-primary.ant-btn-disabled .anticon) {
+  color: #64748b !important;
+}
+
 .formCard :global(.ant-select-selector),
 .formCard :global(.ant-input),
 .formCard :global(.ant-input-affix-wrapper),
