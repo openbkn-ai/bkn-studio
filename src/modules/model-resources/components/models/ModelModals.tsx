@@ -259,8 +259,32 @@ export function LlmModelFormModal({
         >
           <InputNumber addonAfter="K" controls={false} min={1} style={{ width: "100%" }} />
         </Form.Item>
-        <Form.Item label={t("modelResources.models.columns.parameterQuantity")} name="modelParameters">
-          <InputNumber addonAfter="B" controls={false} min={0} style={{ width: "100%" }} />
+        <Form.Item
+          label={t("modelResources.models.columns.parameterQuantity")}
+          name="modelParameters"
+          rules={[
+            {
+              validator: (_rule, value: number | null | undefined) => {
+                if (value == null) {
+                  return Promise.resolve();
+                }
+
+                if (Number.isInteger(value) && value > 0) {
+                  return Promise.resolve();
+                }
+
+                return Promise.reject(new Error(t("modelResources.models.modal.positiveInteger")));
+              },
+            },
+          ]}
+        >
+          <InputNumber
+            addonAfter="B"
+            controls={false}
+            min={1}
+            precision={0}
+            style={{ width: "100%" }}
+          />
         </Form.Item>
         {showQuotaField ? (
           <>

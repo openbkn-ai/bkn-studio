@@ -119,6 +119,7 @@ export const modelResourcesEnUS = {
         apiModelPlaceholder: "Enter value (case sensitive)",
         adapterPlaceholder: "Enter Python adapter code",
         required: "Required",
+        positiveInteger: "Enter an integer greater than 0",
         switchToEdit: "Edit",
       },
       apiGuide: {

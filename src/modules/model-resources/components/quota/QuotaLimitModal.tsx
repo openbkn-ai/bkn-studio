@@ -101,11 +101,20 @@ function createRowsFromRecord(
   ];
 }
 
+function extractAmount(value?: string) {
+  if (!value) {
+    return 0;
+  }
+
+  const amount = Number(value.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(amount) ? amount : 0;
+}
+
 export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModalProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [billingType, setBillingType] = useState<"0" | "1">("0");
-  const [currencySymbol, setCurrencySymbol] = useState<"￥" | "$">("￥");
+  const [currencySymbol, setCurrencySymbol] = useState<"\uffe5" | "$">("\uffe5");
   const [priceType, setPriceType] = useState<"thousand" | "million">("thousand");
   const [rows, setRows] = useState<QuotaRow[]>([]);
   const [totalForecast, setTotalForecast] = useState("");
@@ -131,42 +140,42 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
     [t],
   );
 
-  const recalculateForecast = useCallback((
-    nextRows: QuotaRow[],
-    nextBillingType: "0" | "1",
-    nextPriceType = priceType,
-    nextCurrencySymbol = currencySymbol,
-  ) => {
-    const updatedRows = nextRows.map((row) => {
-      if (row.tokens === undefined || row.referPrice === undefined) {
-        return { ...row, forecast: undefined };
-      }
+  const recalculateForecast = useCallback(
+    (
+      nextRows: QuotaRow[],
+      nextBillingType: "0" | "1",
+      nextPriceType = priceType,
+      nextCurrencySymbol = currencySymbol,
+    ) => {
+      const updatedRows = nextRows.map((row) => {
+        if (row.tokens === undefined || row.referPrice === undefined) {
+          return { ...row, forecast: undefined };
+        }
 
-      return {
-        ...row,
-        forecast: formatForecastAmount(
-          row.tokens,
-          row.referPrice,
-          toBackendNumType(row.numType),
-          nextPriceType,
-          nextCurrencySymbol,
-        ),
-      };
-    });
+        return {
+          ...row,
+          forecast: formatForecastAmount(
+            row.tokens,
+            row.referPrice,
+            toBackendNumType(row.numType),
+            nextPriceType,
+            nextCurrencySymbol,
+          ),
+        };
+      });
 
-    const inputForecast = updatedRows[0]?.forecast;
-    const outputForecast = updatedRows[1]?.forecast;
-    const nextTotal =
-      nextBillingType === "1" && inputForecast && outputForecast
-        ? `${nextCurrencySymbol}${(
-            Number(inputForecast.replace(/[^\d.-]/g, "")) +
-            Number(outputForecast.replace(/[^\d.-]/g, ""))
-          ).toFixed(2)}`
-        : inputForecast ?? "";
+      const inputForecast = updatedRows[0]?.forecast;
+      const outputForecast = updatedRows[1]?.forecast;
+      const nextTotal =
+        nextBillingType === "1" && inputForecast && outputForecast
+          ? `${nextCurrencySymbol}${(extractAmount(inputForecast) + extractAmount(outputForecast)).toFixed(2)}`
+          : inputForecast ?? "";
 
-    setRows(updatedRows);
-    setTotalForecast(nextTotal);
-  }, [currencySymbol, priceType]);
+      setRows(updatedRows);
+      setTotalForecast(nextTotal);
+    },
+    [currencySymbol, priceType],
+  );
 
   useEffect(() => {
     if (!open || !record) {
@@ -182,14 +191,15 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
         const source = detail ?? record;
         const nextBillingType =
           source.billingType === 1 ? "1" : source.billingType === 0 ? "0" : "0";
+        const nextCurrencySymbol = source.currencyType === 1 ? "$" : "\uffe5";
+        const nextPriceType = (source.priceType?.[0] as "thousand" | "million") ?? "thousand";
 
         setBillingType(nextBillingType);
-        setCurrencySymbol(source.currencyType === 1 ? "$" : "￥");
-        setPriceType((source.priceType?.[0] as "thousand" | "million") ?? "thousand");
+        setCurrencySymbol(nextCurrencySymbol);
+        setPriceType(nextPriceType);
 
         const nextRows = createRowsFromRecord(source, nextBillingType);
-        setRows(nextRows);
-        recalculateForecast(nextRows, nextBillingType);
+        recalculateForecast(nextRows, nextBillingType, nextPriceType, nextCurrencySymbol);
       } catch (error) {
         message.error(extractRequestErrorMessage(error));
       } finally {
@@ -208,12 +218,6 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
   const handleBillingTypeChange = (event: RadioChangeEvent) => {
     const nextBillingType = event.target.value as "0" | "1";
     setBillingType(nextBillingType);
-
-    if (nextBillingType === "0") {
-      recalculateForecast(rows.slice(0, 1).concat(rows.slice(1)), nextBillingType);
-      return;
-    }
-
     recalculateForecast(rows, nextBillingType);
   };
 
@@ -305,6 +309,7 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
 
   return (
     <Modal
+      className={styles.quotaModal}
       destroyOnHidden
       footer={null}
       maskClosable={false}
@@ -320,118 +325,144 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
             <span className={styles.modelName}>{record.modelName}</span>
           </div>
           <div className={styles.modelMeta}>
-            {t("modelResources.quotas.columns.model")}：{record.model}
+            {t("modelResources.quotas.columns.model")}: {record.model}
           </div>
         </div>
       ) : null}
 
-      <div className={styles.sectionTitle}>{t("modelResources.quotas.modal.billingType")}</div>
-      <Radio.Group
-        disabled={mode === "edit"}
-        onChange={handleBillingTypeChange}
-        value={billingType}
-      >
-        <Radio value="0">{t("modelResources.quotas.modal.unifiedBilling")}</Radio>
-        <Radio value="1">{t("modelResources.quotas.modal.separateBilling")}</Radio>
-      </Radio.Group>
+      <section className={styles.sectionPanel}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <div className={styles.sectionTitle}>{t("modelResources.quotas.modal.billingType")}</div>
+            <div className={styles.sectionHint}>{t("modelResources.quotas.modal.quotaSetting")}</div>
+          </div>
+        </div>
+        <Radio.Group
+          buttonStyle="solid"
+          className={styles.billingGroup}
+          disabled={mode === "edit"}
+          optionType="button"
+          onChange={handleBillingTypeChange}
+          value={billingType}
+        >
+          <Radio.Button value="0">{t("modelResources.quotas.modal.unifiedBilling")}</Radio.Button>
+          <Radio.Button value="1">{t("modelResources.quotas.modal.separateBilling")}</Radio.Button>
+        </Radio.Group>
+      </section>
 
-      <div className={styles.sectionTitle}>{t("modelResources.quotas.modal.quotaSetting")}</div>
-      <Table<QuotaRow>
-        columns={[
-          {
-            title: "",
-            dataIndex: "labelKey",
-            width: 96,
-            render: (labelKey: QuotaRow["labelKey"]) => t(labelKey),
-          },
-          {
-            title: t("modelResources.quotas.modal.tokensAmount"),
-            dataIndex: "tokens",
-            width: 280,
-            render: (_value, row) => (
-              <div className={styles.fieldCell}>
-                <InputNumber
-                  controls={false}
-                  max={9999}
-                  min={1}
-                  onChange={(value) =>
-                    updateRow(row.id, { tokens: typeof value === "number" ? value : undefined })
-                  }
-                  placeholder={t("modelResources.quotas.modal.enterPlaceholder")}
-                  value={row.tokens}
-                />
-                <Select
-                  options={numTypeOptions}
-                  popupMatchSelectWidth={120}
-                  style={{ width: 88 }}
-                  value={row.numType}
-                  onChange={(value) => updateRow(row.id, { numType: value })}
-                />
-                <span>{t("modelResources.quotas.modal.perMonth")}</span>
-                {showErrors && row.errors.tokens ? (
-                  <span className={styles.errorText}>{t("modelResources.quotas.modal.required")}</span>
-                ) : null}
-              </div>
-            ),
-          },
-          {
-            title: t("modelResources.quotas.modal.referencePrice"),
-            dataIndex: "referPrice",
-            width: 280,
-            render: (_value, row) => (
-              <div className={styles.fieldCell}>
-                <Select
-                  options={[
-                    { value: "CNY", label: "￥" },
-                    { value: "USD", label: "$" },
-                  ]}
-                  style={{ width: 72 }}
-                  value={currencySymbol === "$" ? "USD" : "CNY"}
-                  onChange={(value) => {
-                    const nextSymbol = value === "USD" ? "$" : "￥";
-                    setCurrencySymbol(nextSymbol);
-                    recalculateForecast(rows, billingType, priceType, nextSymbol);
-                  }}
-                />
-                <InputNumber
-                  controls={false}
-                  min={0}
-                  onChange={(value) =>
-                    updateRow(row.id, {
-                      referPrice: typeof value === "number" ? value : undefined,
-                    })
-                  }
-                  placeholder={t("modelResources.quotas.modal.enterPlaceholder")}
-                  value={row.referPrice}
-                />
-                <Select
-                  options={priceTypeOptions}
-                  style={{ width: 120 }}
-                  value={priceType}
-                  onChange={(value) => {
-                    setPriceType(value);
-                    recalculateForecast(rows, billingType, value, currencySymbol);
-                  }}
-                />
-                {showErrors && row.errors.referPrice ? (
-                  <span className={styles.errorText}>{t("modelResources.quotas.modal.required")}</span>
-                ) : null}
-              </div>
-            ),
-          },
-          {
-            title: t("modelResources.quotas.modal.forecastTotal"),
-            dataIndex: "forecast",
-            width: 140,
-            render: (value?: string) => value ?? "--",
-          },
-        ]}
-        dataSource={tableRows}
-        loading={loading}
-        pagination={false}
-        rowKey="id"
-        size="small"
-      />
+      <section className={styles.sectionPanel}>
+        <div className={styles.sectionHeader}>
+          <div className={styles.sectionTitle}>{t("modelResources.quotas.modal.quotaSetting")}</div>
+          <div className={styles.sectionMeta}>{t("modelResources.quotas.modal.perMonth")}</div>
+        </div>
+        <Table<QuotaRow>
+          className={styles.quotaTable}
+          columns={[
+            {
+              title: "",
+              dataIndex: "labelKey",
+              width: 96,
+              render: (labelKey: QuotaRow["labelKey"]) => (
+                <span className={styles.rowLabel}>{t(labelKey)}</span>
+              ),
+            },
+            {
+              title: t("modelResources.quotas.modal.tokensAmount"),
+              dataIndex: "tokens",
+              width: 300,
+              render: (_value, row) => (
+                <div className={styles.fieldCell}>
+                  <div className={styles.controlLine}>
+                    <InputNumber
+                      className={styles.numberInput}
+                      controls={false}
+                      max={9999}
+                      min={1}
+                      onChange={(value) =>
+                        updateRow(row.id, { tokens: typeof value === "number" ? value : undefined })
+                      }
+                      placeholder={t("modelResources.quotas.modal.enterPlaceholder")}
+                      value={row.tokens}
+                    />
+                    <Select
+                      className={styles.unitSelect}
+                      options={numTypeOptions}
+                      popupMatchSelectWidth={120}
+                      value={row.numType}
+                      onChange={(value) => updateRow(row.id, { numType: value })}
+                    />
+                    <span className={styles.inlineUnit}>{t("modelResources.quotas.modal.perMonth")}</span>
+                  </div>
+                  {showErrors && row.errors.tokens ? (
+                    <span className={styles.errorText}>{t("modelResources.quotas.modal.required")}</span>
+                  ) : null}
+                </div>
+              ),
+            },
+            {
+              title: t("modelResources.quotas.modal.referencePrice"),
+              dataIndex: "referPrice",
+              width: 300,
+              render: (_value, row) => (
+                <div className={styles.fieldCell}>
+                  <div className={`${styles.controlLine} ${styles.priceControlLine}`}>
+                    <Select
+                      className={styles.currencySelect}
+                      options={[
+                        { value: "CNY", label: "\uffe5" },
+                        { value: "USD", label: "$" },
+                      ]}
+                      value={currencySymbol === "$" ? "USD" : "CNY"}
+                      onChange={(value) => {
+                        const nextSymbol = value === "USD" ? "$" : "\uffe5";
+                        setCurrencySymbol(nextSymbol);
+                        recalculateForecast(rows, billingType, priceType, nextSymbol);
+                      }}
+                    />
+                    <InputNumber
+                      className={styles.priceInput}
+                      controls={false}
+                      min={0}
+                      onChange={(value) =>
+                        updateRow(row.id, {
+                          referPrice: typeof value === "number" ? value : undefined,
+                        })
+                      }
+                      placeholder={t("modelResources.quotas.modal.enterPlaceholder")}
+                      value={row.referPrice}
+                    />
+                    <Select
+                      className={styles.priceTypeSelect}
+                      options={priceTypeOptions}
+                      value={priceType}
+                      onChange={(value) => {
+                        setPriceType(value);
+                        recalculateForecast(rows, billingType, value, currencySymbol);
+                      }}
+                    />
+                  </div>
+                  {showErrors && row.errors.referPrice ? (
+                    <span className={styles.errorText}>{t("modelResources.quotas.modal.required")}</span>
+                  ) : null}
+                </div>
+              ),
+            },
+            {
+              title: t("modelResources.quotas.modal.forecastTotal"),
+              dataIndex: "forecast",
+              width: 140,
+              render: (value?: string) => (
+                <span className={styles.forecastValue}>{value ?? "--"}</span>
+              ),
+            },
+          ]}
+          dataSource={tableRows}
+          loading={loading}
+          pagination={false}
+          rowKey="id"
+          size="small"
+        />
+      </section>
 
       <Alert
         className={styles.summary}
@@ -440,10 +471,12 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
       />
 
       <div className={styles.footer}>
-        <AppButton onClick={() => onClose(false)}>{t("common.cancel")}</AppButton>
-        <AppButton loading={submitting} type="primary" onClick={() => void handleSubmit()}>
-          {t("common.save")}
-        </AppButton>
+        <div className={styles.primaryActions}>
+          <AppButton onClick={() => onClose(false)}>{t("common.cancel")}</AppButton>
+          <AppButton loading={submitting} type="primary" onClick={() => void handleSubmit()}>
+            {t("common.save")}
+          </AppButton>
+        </div>
       </div>
     </Modal>
   );

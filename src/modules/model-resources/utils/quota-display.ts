@@ -8,26 +8,36 @@
 import type { ModelQuota } from "@/modules/model-resources/types/quota";
 
 const CURRENCY_SYMBOL: Record<number, string> = {
-  0: "￥",
+  0: "\uffe5",
   1: "$",
 };
 
 const TOKEN_UNIT_LABEL: Record<number, string> = {
-  1: "千",
-  2: "万",
-  3: "亿",
-  4: "百万",
-  5: "千万",
+  1: "\u5343",
+  2: "\u4e07",
+  3: "\u4ebf",
+  4: "\u767e\u4e07",
+  5: "\u5343\u4e07",
+  6: "\u4ebf",
+};
+
+const TOKEN_UNIT_VALUE: Record<number, number> = {
+  1: 1_000,
+  2: 10_000,
+  3: 100_000_000,
+  4: 1_000_000,
+  5: 10_000_000,
+  6: 100_000_000,
 };
 
 const PRICE_UNIT: Record<string, number> = {
-  thousand: 1000,
+  thousand: 1_000,
   million: 1_000_000,
 };
 
 const PRICE_UNIT_LABEL: Record<string, string> = {
-  thousand: "千",
-  million: "百万",
+  thousand: "\u5343",
+  million: "\u767e\u4e07",
 };
 
 export function isQuotaConfigured(record: Pick<ModelQuota, "inputTokens">) {
@@ -69,15 +79,15 @@ export function formatReferPrice(
     return "--";
   }
 
-  const currency = CURRENCY_SYMBOL[record.currencyType ?? 0] ?? "￥";
+  const currency = CURRENCY_SYMBOL[record.currencyType ?? 0] ?? "\uffe5";
   const priceType = record.priceType?.[0] ?? "thousand";
   const unitLabel =
     priceType === "million"
       ? millionLabel || PRICE_UNIT_LABEL.million
       : thousandLabel || PRICE_UNIT_LABEL.thousand;
-  const prefix = record.billingType === 1 ? `${type === "in" ? inLabel : outLabel}：` : "";
+  const prefix = record.billingType === 1 ? `${type === "in" ? inLabel : outLabel}\uff1a` : "";
 
-  return `${prefix}${currency}${price}${currency === "￥" ? "元" : "美元"}/${unitLabel} tokens`;
+  return `${prefix}${currency}${price}${currency === "\uffe5" ? "\u5143" : "\u7f8e\u5143"}/${unitLabel} tokens`;
 }
 
 function calculateTokenAmount(record: ModelQuota, type: "in" | "out") {
@@ -92,8 +102,8 @@ function calculateTokenAmount(record: ModelQuota, type: "in" | "out") {
   }
 
   return (
-    (tokens * PRICE_UNIT[String(numType)] * referPrice) /
-    (PRICE_UNIT[priceType] ?? 1000)
+    (tokens * (TOKEN_UNIT_VALUE[numType] ?? 1_000) * referPrice) /
+    (PRICE_UNIT[priceType] ?? 1_000)
   );
 }
 
@@ -105,7 +115,7 @@ export function formatEstimatedTotal(record: ModelQuota) {
   const inputAmount = calculateTokenAmount(record, "in");
   const outputAmount = record.billingType === 1 ? calculateTokenAmount(record, "out") : 0;
   const total = inputAmount + outputAmount;
-  const currency = CURRENCY_SYMBOL[record.currencyType ?? 0] ?? "￥";
+  const currency = CURRENCY_SYMBOL[record.currencyType ?? 0] ?? "\uffe5";
 
   return `${currency}${total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 }
@@ -118,7 +128,8 @@ export function formatForecastAmount(
   currencySymbol: string,
 ) {
   const amount =
-    (tokens * PRICE_UNIT[String(numType)] * referPrice) / (PRICE_UNIT[priceType] ?? 1000);
+    (tokens * (TOKEN_UNIT_VALUE[numType] ?? 1_000) * referPrice) /
+    (PRICE_UNIT[priceType] ?? 1_000);
 
   return `${currencySymbol}${amount.toFixed(2)}`;
 }

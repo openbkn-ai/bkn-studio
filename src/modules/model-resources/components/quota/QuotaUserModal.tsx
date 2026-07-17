@@ -185,7 +185,10 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
         }
       }
 
-      await saveUserQuotas(saveItems);
+      if (saveItems.length > 0) {
+        await saveUserQuotas(saveItems);
+      }
+
       message.success(t("modelResources.quotas.userModal.saveSuccess"));
       onClose(true);
     } catch (error) {
@@ -200,13 +203,14 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
 
   return (
     <Modal
+      className={styles.quotaModal}
       destroyOnHidden
       footer={null}
       maskClosable={false}
       onCancel={() => onClose(false)}
       open={open}
       title={t("modelResources.quotas.userModal.title")}
-      width={920}
+      width={900}
     >
       {record ? (
         <div className={styles.header}>
@@ -215,7 +219,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
             <span className={styles.modelName}>{record.modelName}</span>
           </div>
           <div className={styles.modelMeta}>
-            {t("modelResources.quotas.columns.model")}：{record.model}
+            {t("modelResources.quotas.columns.model")}: {record.model}
           </div>
         </div>
       ) : null}
@@ -237,13 +241,13 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
         />
       ) : null}
 
-      <div className={styles.toolbar}>
+      <section className={styles.toolbarPanel}>
         <Select
           allowClear
+          className={styles.userSelect}
           options={userOptions}
           placeholder={t("modelResources.quotas.userModal.selectUser")}
           showSearch
-          style={{ width: 280 }}
           value={selectedUserId}
           onChange={setSelectedUserId}
           onSearch={(value) => {
@@ -258,9 +262,10 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
           }}
         />
         <AppButton onClick={handleAddUser}>{t("modelResources.quotas.userModal.addUser")}</AppButton>
-      </div>
+      </section>
 
       <Table<EditableUserQuota>
+        className={styles.userTable}
         columns={[
           {
             title: t("modelResources.quotas.userModal.userName"),
@@ -274,6 +279,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
             render: (_value, row) => (
               <div className={styles.fieldCell}>
                 <InputNumber
+                  className={styles.numberInput}
                   controls={false}
                   min={0}
                   onChange={(value) =>
@@ -284,8 +290,8 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
                   value={row.inputTokens}
                 />
                 <Select
+                  className={styles.unitSelect}
                   options={numTypeOptions}
-                  style={{ width: 88 }}
                   value={row.numType[0] === 3 ? 6 : row.numType[0]}
                   onChange={(value) =>
                     updateItem(row.userId, {
@@ -293,7 +299,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
                     })
                   }
                 />
-                <span>{monthLabel}</span>
+                <span className={styles.inlineUnit}>{monthLabel}</span>
               </div>
             ),
           },
@@ -306,6 +312,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
                   render: (_value: number | undefined, row: EditableUserQuota) => (
                     <div className={styles.fieldCell}>
                       <InputNumber
+                        className={styles.numberInput}
                         controls={false}
                         min={0}
                         onChange={(value) =>
@@ -316,8 +323,8 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
                         value={row.outputTokens}
                       />
                       <Select
+                        className={styles.unitSelect}
                         options={numTypeOptions}
-                        style={{ width: 88 }}
                         value={row.numType[1] === 3 ? 6 : row.numType[1]}
                         onChange={(value) =>
                           updateItem(row.userId, {
@@ -325,7 +332,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
                           })
                         }
                       />
-                      <span>{monthLabel}</span>
+                      <span className={styles.inlineUnit}>{monthLabel}</span>
                     </div>
                   ),
                 },

@@ -21,6 +21,7 @@ import type {
   UserQuotaRecord,
   UserQuotaSaveItem,
 } from "@/modules/model-resources/types/quota";
+import { listUsersPage } from "@/modules/system-admin/services/admin.service";
 
 const API_PREFIX = "/mf-model-manager/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -327,7 +328,15 @@ export async function listUserQuotas(confId: string): Promise<UserQuotaListResul
 
   const response = await http.get<BackendUserQuotaListResponse>(
     `${API_PREFIX}/user-quota/list`,
-    { params: { conf_id: confId } },
+    {
+      params: {
+        conf_id: confId,
+        page: 1,
+        size: 1000,
+        rule: "update_time",
+        order: "desc",
+      },
+    },
   );
   const payload = response.data;
 
@@ -339,6 +348,10 @@ export async function listUserQuotas(confId: string): Promise<UserQuotaListResul
 }
 
 export async function saveUserQuotas(items: UserQuotaSaveItem[]): Promise<boolean> {
+  if (items.length === 0) {
+    return true;
+  }
+
   if (useMock) {
     items.forEach((item) => {
       const existingIndex = mockUserQuotas.findIndex(
@@ -410,20 +423,14 @@ export async function searchAssignableUsers(keyword?: string): Promise<Assignabl
   }
 
   try {
-    const response = await http.get<{ res?: { user_id: string; user_name: string }[] }>(
-      "/authorization/v1/users",
-      {
-        params: {
-          page: 1,
-          size: 50,
-          keyword: keyword ?? "",
-        },
-      },
+    const result = await listUsersPage(
+      { search: keyword, offset: 0, limit: 50 },
+      { skipErrorToast: true },
     );
 
-    return (response.data?.res ?? []).map((item) => ({
-      userId: item.user_id,
-      userName: item.user_name,
+    return result.users.map((item) => ({
+      userId: item.id,
+      userName: item.name || item.account,
     }));
   } catch {
     return [];

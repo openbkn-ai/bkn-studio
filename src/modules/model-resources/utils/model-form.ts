@@ -18,7 +18,7 @@ export type LlmFormValues = {
   apiKey?: string;
   secretKey?: string;
   maxModelLen: number;
-  modelParameters?: number;
+  modelParameters?: number | null;
   quota?: boolean;
 };
 
@@ -59,6 +59,12 @@ export function buildLlmSavePayload(
   values: LlmFormValues,
   source?: LlmModel,
 ): LlmSavePayload {
+  const modelParameters =
+    typeof values.modelParameters === "number" &&
+    Number.isInteger(values.modelParameters) &&
+    values.modelParameters > 0
+      ? values.modelParameters
+      : undefined;
   const modelConfig = {
     apiModel: values.apiModel.trim(),
     apiUrl: values.apiUrl.trim(),
@@ -80,7 +86,7 @@ export function buildLlmSavePayload(
     modelSeries: values.modelSeries,
     modelType: values.modelType,
     maxModelLen: values.maxModelLen,
-    modelParameters: values.modelParameters,
+    modelParameters,
     quota: values.quota,
     modelConfig,
     change: !source || apiKeyChanged,

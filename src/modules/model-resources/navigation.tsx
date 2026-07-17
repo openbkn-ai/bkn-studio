@@ -8,7 +8,6 @@
 import {
   AppstoreOutlined,
   BarChartOutlined,
-  FundOutlined,
 } from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
@@ -21,12 +20,6 @@ export const modelResourcesNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.modelManagement",
       icon: <AppstoreOutlined />,
       path: "/model-resources/models",
-    },
-    {
-      key: "quota-management",
-      labelKey: "shell.items.quotaManagement",
-      icon: <FundOutlined />,
-      path: "/model-resources/quotas",
     },
     {
       key: "model-statistics",

@@ -5,12 +5,27 @@
  * Conditions. See LICENSE for the full text.
  */
 
-.pageHeader {
-  margin-bottom: 16px;
+.quotaModal :global(.ant-modal-content) {
+  border-radius: 4px;
+  box-shadow: 0 12px 36px rgba(15, 30, 54, 0.22);
+}
+
+.quotaModal :global(.ant-modal-header) {
+  margin-bottom: 10px;
+}
+
+.quotaModal :global(.ant-modal-title) {
+  color: #10233f;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .header {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e4ebf5;
+  border-radius: 4px;
+  background: #f7f9fc;
 }
 
 .modelTitle {
@@ -21,43 +36,170 @@
 
 .modelName {
   color: #10233f;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .modelMeta {
-  margin-top: 8px;
+  margin-top: 6px;
   color: rgba(15, 30, 54, 0.62);
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.sectionPanel {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e7edf6;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .sectionTitle {
-  margin: 20px 0 12px;
   color: #10233f;
   font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.sectionHint {
+  color: rgba(15, 30, 54, 0.52);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.sectionMeta {
+  padding: 2px 8px;
+  border: 1px solid #d8e6ff;
+  border-radius: 3px;
+  background: #f3f7ff;
+  color: #3d5f96;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.billingGroup {
+  display: flex;
+}
+
+.quotaTable {
+  overflow: hidden;
+  border: 1px solid #edf1f7;
+  border-radius: 3px;
+}
+
+.quotaTable :global(.ant-table) {
+  border-radius: 3px;
+}
+
+.quotaTable :global(.ant-table-thead > tr > th) {
+  background: #f7f9fc;
+  color: #10233f;
+  font-weight: 700;
+}
+
+.quotaTable :global(.ant-table-tbody > tr > td) {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.rowLabel {
+  color: #10233f;
   font-weight: 600;
 }
 
 .fieldCell {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 32px;
+}
+
+.controlLine {
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.priceControlLine {
+  flex-wrap: nowrap;
+}
+
+.numberInput,
+.priceInput {
+  width: 96px;
+}
+
+.unitSelect {
+  width: 88px;
+}
+
+.currencySelect {
+  width: 58px;
+}
+
+.priceTypeSelect {
+  width: 108px;
+}
+
+.inlineUnit {
+  color: rgba(15, 30, 54, 0.68);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.forecastValue {
+  color: #10233f;
+  font-weight: 700;
 }
 
 .errorText {
-  width: 100%;
   color: #d4380d;
   font-size: 12px;
+  line-height: 16px;
 }
 
 .summary {
-  margin-top: 16px;
+  margin-top: 10px;
+  border-color: #99c5ff;
+  border-radius: 4px;
+  background: #edf6ff;
+}
+
+.summary :global(.ant-alert-message) {
+  color: #10233f;
+  font-weight: 600;
 }
 
 .footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #edf1f7;
+}
+
+.primaryActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer :global(.ant-btn),
+.billingGroup :global(.ant-radio-button-wrapper),
+.quotaModal :global(.ant-input-number),
+.quotaModal :global(.ant-select-selector) {
+  border-radius: 3px;
 }
