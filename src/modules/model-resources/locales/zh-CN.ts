@@ -117,6 +117,7 @@ export const modelResourcesZhCN = {
         apiModelPlaceholder: "请输入（填写字段时，请注意区分大小写字母）",
         adapterPlaceholder: "请输入 Python 适配代码",
         required: "不能为空",
+        positiveInteger: "请输入大于 0 的整数",
         switchToEdit: "编辑",
       },
       apiGuide: {

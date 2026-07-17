@@ -5,8 +5,27 @@
  * Conditions. See LICENSE for the full text.
  */
 
+.quotaModal :global(.ant-modal-content) {
+  border-radius: 4px;
+  box-shadow: 0 12px 36px rgba(15, 30, 54, 0.22);
+}
+
+.quotaModal :global(.ant-modal-header) {
+  margin-bottom: 10px;
+}
+
+.quotaModal :global(.ant-modal-title) {
+  color: #10233f;
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .header {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e4ebf5;
+  border-radius: 4px;
+  background: #f7f9fc;
 }
 
 .modelTitle {
@@ -17,37 +36,113 @@
 
 .modelName {
   color: #10233f;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .modelMeta {
-  margin-top: 8px;
+  margin-top: 6px;
   color: rgba(15, 30, 54, 0.62);
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .remainAlert {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
+  border-color: #99c5ff;
+  border-radius: 4px;
+  background: #edf6ff;
 }
 
-.toolbar {
+.remainAlert :global(.ant-alert-message) {
+  color: #10233f;
+  font-weight: 600;
+}
+
+.toolbarPanel {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid #e7edf6;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.userSelect {
+  width: 300px;
+}
+
+.userTable {
+  overflow: hidden;
+  border: 1px solid #edf1f7;
+  border-radius: 3px;
+}
+
+.userTable :global(.ant-table) {
+  border-radius: 3px;
+}
+
+.userTable :global(.ant-table-thead > tr > th) {
+  background: #f7f9fc;
+  color: #10233f;
+  font-weight: 700;
+}
+
+.userTable :global(.ant-table-tbody > tr > td) {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.userTable :global(.ant-empty-normal) {
+  margin: 32px 0;
 }
 
 .fieldCell {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  min-height: 32px;
+}
+
+.numberInput {
+  width: 108px;
+}
+
+.unitSelect {
+  width: 88px;
+}
+
+.inlineUnit {
+  color: rgba(15, 30, 54, 0.68);
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #edf1f7;
+}
+
+.footer :global(.ant-btn),
+.quotaModal :global(.ant-input-number),
+.quotaModal :global(.ant-select-selector) {
+  border-radius: 3px;
+}
+
+@media (max-width: 640px) {
+  .toolbarPanel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .userSelect {
+    width: 100%;
+  }
 }

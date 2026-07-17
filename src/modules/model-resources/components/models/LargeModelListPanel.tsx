@@ -106,8 +106,8 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
       "large_model:modify",
     ],
   });
-  const showQuotaField = effectiveAdmin || canManageLargeModel || canManageQuota;
-  const showQuotaColumns = !showQuotaField;
+  const showQuotaField = false;
+  const showQuotaColumns = !(effectiveAdmin || canManageLargeModel || canManageQuota);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -334,11 +334,13 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
         sortOrder,
       ),
       sorter: true,
-      width: 220,
+      width: 300,
       render: (_value, record) => (
         <div className={styles.nameCell}>
           <ModelSeriesIcon modelName={record.modelName} modelSeries={record.modelSeries} />
-          <span title={record.modelName}>{record.modelName}</span>
+          <span className={styles.modelNameText} title={record.modelName}>
+            {record.modelName}
+          </span>
           {record.default ? (
             <Tag color="blue">{t("modelResources.models.defaultTag")}</Tag>
           ) : null}

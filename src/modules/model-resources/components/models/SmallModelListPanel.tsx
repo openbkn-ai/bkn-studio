@@ -287,7 +287,9 @@ export function SmallModelListPanel() {
       render: (_value, record) => (
         <div className={styles.nameCell}>
           <ModelSeriesIcon modelName={record.modelName} />
-          <span title={record.modelName}>{record.modelName}</span>
+          <span className={styles.modelNameText} title={record.modelName}>
+            {record.modelName}
+          </span>
           {record.default ? (
             <Tag color="blue">{t("modelResources.models.defaultTag")}</Tag>
           ) : null}
