@@ -42,7 +42,15 @@ import type {
 import styles from "./ObjectTypeDetailScene.module.css";
 
 function normalizedSearchText(value: unknown) {
-  return String(value ?? "").toLowerCase();
+  if (typeof value === "string") {
+    return value.toLowerCase();
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value).toLowerCase();
+  }
+
+  return "";
 }
 
 export function ObjectTypeDetailScene() {
