@@ -41,6 +41,18 @@ import type {
 
 import styles from "./ObjectTypeDetailScene.module.css";
 
+function normalizedSearchText(value: unknown) {
+  if (typeof value === "string") {
+    return value.toLowerCase();
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value).toLowerCase();
+  }
+
+  return "";
+}
+
 export function ObjectTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -176,8 +188,8 @@ export function ObjectTypeDetailScene() {
 
     return items.filter(
       (item) =>
-        item.name.toLowerCase().includes(normalized) ||
-        item.displayName.toLowerCase().includes(normalized),
+        normalizedSearchText(item.name).includes(normalized) ||
+        normalizedSearchText(item.displayName).includes(normalized),
     );
   }, [detail?.dataProperties, keyword]);
 
@@ -191,8 +203,8 @@ export function ObjectTypeDetailScene() {
 
     return items.filter(
       (item) =>
-        item.name.toLowerCase().includes(normalized) ||
-        item.displayName.toLowerCase().includes(normalized),
+        normalizedSearchText(item.name).includes(normalized) ||
+        normalizedSearchText(item.displayName).includes(normalized),
     );
   }, [detail?.logicProperties, keyword]);
 

@@ -113,20 +113,23 @@ export function mapDataProperty(
     primaryKeys: string[];
   },
 ): ObjectTypeDataProperty {
+  const name = item.name ?? item.original_name ?? item.display_name ?? "";
+  const displayName = item.display_name ?? name;
+
   return {
     comment: item.comment,
-    displayKey: item.name === meta.displayKey,
-    displayName: item.display_name ?? item.name,
+    displayKey: name === meta.displayKey,
+    displayName,
     incrementalKey: false,
     mappedField: item.mapped_field
       ? {
-          displayName: item.mapped_field.display_name ?? item.mapped_field.name,
-          name: item.mapped_field.name,
+          displayName: item.mapped_field.display_name ?? item.mapped_field.name ?? "",
+          name: item.mapped_field.name ?? "",
           type: item.mapped_field.type ?? "string",
         }
       : undefined,
-    name: item.name,
-    primaryKey: meta.primaryKeys.includes(item.name),
+    name,
+    primaryKey: meta.primaryKeys.includes(name),
     type: item.type ?? "string",
   };
 }

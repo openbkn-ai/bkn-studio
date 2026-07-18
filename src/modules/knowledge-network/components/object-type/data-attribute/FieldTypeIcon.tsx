@@ -20,8 +20,24 @@ type FieldTypeIconProps = {
 function getFieldTypeLabel(type?: string) {
   const normalized = (type ?? "string").toLowerCase();
 
-  if (normalized === "integer" || normalized === "double") {
+  if (
+    normalized === "integer" ||
+    normalized === "unsigned integer" ||
+    normalized === "bigint" ||
+    normalized === "smallint"
+  ) {
     return "int";
+  }
+
+  if (
+    normalized === "float" ||
+    normalized === "double" ||
+    normalized === "decimal" ||
+    normalized === "number" ||
+    normalized === "numeric" ||
+    normalized === "real"
+  ) {
+    return "float";
   }
 
   if (normalized === "boolean") {
@@ -51,23 +67,27 @@ export function FieldTypeIcon({ type }: FieldTypeIconProps) {
 
   const label = getFieldTypeLabel(type);
 
-  if (label === "int") {
+  if (label === "int" || label === "float") {
     return (
-      <span className={styles.typeBadge}>
+      <span className={styles.typeBadge} title={type}>
         <NumberOutlined className={styles.typeBadgeIcon} />
-        <span>int</span>
+        <span>{label}</span>
       </span>
     );
   }
 
   if (label === "bool") {
     return (
-      <span className={styles.typeBadge}>
+      <span className={styles.typeBadge} title={type}>
         <FieldBinaryOutlined className={styles.typeBadgeIcon} />
         <span>bool</span>
       </span>
     );
   }
 
-  return <span className={styles.typeBadge}>[{label}]</span>;
+  return (
+    <span className={styles.typeBadge} title={type}>
+      [{label}]
+    </span>
+  );
 }

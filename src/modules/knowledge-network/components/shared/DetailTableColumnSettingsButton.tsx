@@ -44,13 +44,35 @@ type DetailTableColumnSettingsButtonProps = {
 
 const STORAGE_PREFIX = "bkn-detail-table-columns:";
 
+function isColumnVisibilityPayload(value: unknown): value is ColumnVisibilityPayload {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((item) => typeof item === "boolean")
+  );
+}
+
+function isSavedColumnConfig(value: unknown): value is SavedColumnConfig {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Array.isArray((value as Partial<SavedColumnConfig>).order) &&
+    (value as Partial<SavedColumnConfig>).order?.every((item) => typeof item === "string") ===
+      true &&
+    isColumnVisibilityPayload((value as Partial<SavedColumnConfig>).visibility)
+  );
+}
+
 export function readDetailTableColumnConfig(scope: string): SavedColumnConfig | null {
   try {
     const raw = localStorage.getItem(`${STORAGE_PREFIX}${scope}`);
     if (!raw) {
       return null;
     }
-    return JSON.parse(raw) as SavedColumnConfig;
+    const parsed: unknown = JSON.parse(raw);
+    return isSavedColumnConfig(parsed) ? parsed : null;
   } catch {
     return null;
   }
