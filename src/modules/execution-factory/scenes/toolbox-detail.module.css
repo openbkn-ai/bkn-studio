@@ -27,19 +27,10 @@
 .backRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
   color: rgba(0, 0, 0, 0.65);
   font-size: 13px;
-}
-
-.breadcrumbLink {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
 }
 
 .batchBarFixed {

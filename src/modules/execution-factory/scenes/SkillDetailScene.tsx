@@ -13,11 +13,10 @@ import {
   FileTextOutlined,
   HistoryOutlined,
   IdcardOutlined,
-  SettingOutlined,
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Alert, Breadcrumb, Empty, Layout, Space, Spin, Tag, Typography } from "antd";
+import { Alert, Empty, Layout, Space, Spin, Tag, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -26,6 +25,7 @@ import type { SkillDetailSceneProps } from "@/modules/execution-factory/contract
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { SkillFileTreeView } from "@/modules/execution-factory/components/SkillFileTreeView";
 import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
@@ -278,28 +278,7 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
   return (
     <section className={styles.page}>
       <div className={styles.backRow}>
-        <Breadcrumb
-          items={[
-            {
-              title: (
-                <button className={styles.breadcrumbLink} onClick={handleBack} type="button">
-                  {catalogContext
-                    ? t("executionFactory.catalogTitle")
-                    : t("executionFactory.unitManagementTitle")}
-                </button>
-              ),
-            },
-            {
-              title: record?.name ?? t("executionFactory.skillDetailPageTitle"),
-            },
-            {
-              title: t("executionFactory.skillDetailPageTitle"),
-            },
-          ]}
-        />
-        <AppButton icon={<SettingOutlined />} onClick={handleBack} type="link">
-          {t("executionFactory.toolboxDetailBack")}
-        </AppButton>
+        <SceneBackButton onClick={handleBack} />
       </div>
 
       {record ? (

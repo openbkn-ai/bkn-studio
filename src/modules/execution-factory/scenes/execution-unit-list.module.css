@@ -64,21 +64,34 @@
 
 .filterBar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 20px;
 }
 
+/* 每组筛选独占一行,避免换行时标签与其控件被拆散。 */
 .filterLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.filterGroup {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .filterLabel {
+  flex: 0 0 auto;
+  min-width: 4em;
   color: var(--color-text-secondary);
   font-size: 14px;
 }
