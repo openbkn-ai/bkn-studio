@@ -23,7 +23,7 @@ test.describe("Capability Factory navigation", () => {
     });
 
     await page.route(
-      "**/api/agent-operator-integration/internal-v1/sandbox/health",
+      "**/api/agent-operator-integration/v1/sandbox/health",
       async (route) => {
         sandboxRequests.push(route.request().url());
         await route.fulfill({
@@ -41,7 +41,7 @@ test.describe("Capability Factory navigation", () => {
       },
     );
     await page.route(
-      "**/api/agent-operator-integration/internal-v1/sandbox/pool",
+      "**/api/agent-operator-integration/v1/sandbox/pool",
       async (route) => {
         sandboxRequests.push(route.request().url());
         await route.fulfill({
@@ -58,7 +58,7 @@ test.describe("Capability Factory navigation", () => {
       },
     );
     await page.route(
-      "**/api/agent-operator-integration/internal-v1/sandbox/sessions**",
+      "**/api/agent-operator-integration/v1/sandbox/sessions**",
       async (route) => {
         sandboxRequests.push(route.request().url());
         await route.fulfill({
