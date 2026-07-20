@@ -54,6 +54,16 @@ export const objecttypePart = {
     objectTypeResourcePreviewTip: "(Partial preview)",
     objectTypeLogicalDataCatalog: "Logical data catalog",
     objectTypeRelatedResourceName: "Related resource",
+    objectTypeRelatedRelationName: "Relation type",
+    objectTypeRelatedRelationOppositeObject: "Opposite object type",
+    objectTypeRelatedRelationRole: "Role",
+    objectTypeRelatedRelationRoleSource: "As source",
+    objectTypeRelatedRelationRoleTarget: "As target",
+    objectTypeRelatedRelationsAction: "View",
+    objectTypeRelatedRelationsDescription:
+      "View relation types where this object type is used as the source or target.",
+    objectTypeRelatedRelationsEmpty: "No related relation types yet.",
+    objectTypeRelatedRelationsTitle: "Related relations",
     objectTypeResourceIndexState: "Resource index state",
     objectTypeDeleteDescription:
       'Delete "{{name}}"? This action cannot be undone.',

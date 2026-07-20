@@ -9,7 +9,7 @@ import { ApartmentOutlined, EditOutlined } from "@ant-design/icons";
 import { Alert, Spin, Tag } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -24,9 +24,14 @@ import type { RelationTypeDetail } from "@/modules/knowledge-network/types/knowl
 
 import styles from "./RelationTypeDetailScene.module.css";
 
+type RelationTypeDetailLocationState = {
+  knowledgeNetworkReturnTo?: string;
+};
+
 export function RelationTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { message, modal } = useAppServices();
   const { networkId = "", relationTypeId = "" } = useParams<{
     networkId: string;
@@ -38,6 +43,13 @@ export function RelationTypeDetailScene() {
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
+  const locationState = location.state as RelationTypeDetailLocationState | null;
+  const returnPath =
+    locationState?.knowledgeNetworkReturnTo?.startsWith(
+      `/knowledge-network/workspace/${networkId}/`,
+    )
+      ? locationState.knowledgeNetworkReturnTo
+      : listPath;
 
   const loadData = useCallback(async () => {
     if (!networkId || !relationTypeId) {
@@ -122,7 +134,7 @@ export function RelationTypeDetailScene() {
         </>
       }
       onBack={() => {
-        void navigate(listPath);
+        void navigate(returnPath);
       }}
       subtitle={t("knowledgeNetwork.relationTypeDetailDescription")}
       title={detail.name}

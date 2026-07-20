@@ -34,8 +34,10 @@ import { getObjectTypeResourcePreview } from "@/modules/knowledge-network/servic
 import {
   deleteKnowledgeNetworkObjectType,
   getKnowledgeNetworkObjectTypeDetail,
+  listKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
+  KnowledgeNetworkRelationTypeRecord,
   ObjectTypeDetail,
   ObjectTypeLogicProperty,
   ObjectTypeResourcePreview,
@@ -59,6 +61,14 @@ type ObjectTypeDetailLocationState = {
   knowledgeNetworkReturnTo?: string;
 };
 
+type RelatedRelationRole = "source" | "target";
+
+type RelatedRelationRow = KnowledgeNetworkRelationTypeRecord & {
+  oppositeObjectTypeId: string;
+  oppositeObjectTypeName: string;
+  role: RelatedRelationRole;
+};
+
 export function ObjectTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -79,6 +89,14 @@ export function ObjectTypeDetailScene() {
   const [previewKeyword, setPreviewKeyword] = useState("");
   const [dataQueryExpanded, setDataQueryExpanded] = useState(false);
   const [previewLoadedResourceId, setPreviewLoadedResourceId] = useState<string | null>(null);
+  const [relatedRelationsExpanded, setRelatedRelationsExpanded] = useState(false);
+  const [relatedRelations, setRelatedRelations] = useState<RelatedRelationRow[]>([]);
+  const [relatedRelationsLoading, setRelatedRelationsLoading] = useState(false);
+  const [relatedRelationsError, setRelatedRelationsError] = useState<string | null>(null);
+  const [relatedRelationsLoadedObjectTypeId, setRelatedRelationsLoadedObjectTypeId] =
+    useState<string | null>(null);
+  const [relatedRelationsPage, setRelatedRelationsPage] = useState(1);
+  const [relatedRelationsPageSize, setRelatedRelationsPageSize] = useState(10);
   const [resourceBuildTasks, setResourceBuildTasks] = useState<BuildTask[]>([]);
   const [resourceBuildTasksLoading, setResourceBuildTasksLoading] = useState(false);
   const [dataPage, setDataPage] = useState(1);
@@ -89,6 +107,7 @@ export function ObjectTypeDetailScene() {
   const [previewPageSize, setPreviewPageSize] = useState(10);
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
+  const detailPath = `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`;
   const locationState = location.state as ObjectTypeDetailLocationState | null;
   const returnPath =
     locationState?.knowledgeNetworkReturnTo?.startsWith(
@@ -189,7 +208,84 @@ export function ObjectTypeDetailScene() {
     setPreviewKeyword("");
     setPreviewLoadedResourceId(null);
     setPreviewPage(1);
+    setRelatedRelationsExpanded(false);
+    setRelatedRelations([]);
+    setRelatedRelationsError(null);
+    setRelatedRelationsLoadedObjectTypeId(null);
+    setRelatedRelationsPage(1);
   }, [networkId, objectTypeId]);
+
+  useEffect(() => {
+    if (!relatedRelationsExpanded || !networkId || !objectTypeId) {
+      setRelatedRelationsLoading(false);
+      return;
+    }
+
+    if (relatedRelationsLoadedObjectTypeId === objectTypeId) {
+      return;
+    }
+
+    let cancelled = false;
+    setRelatedRelationsLoading(true);
+    setRelatedRelationsError(null);
+
+    void listKnowledgeNetworkRelationTypes(networkId)
+      .then((items) => {
+        if (cancelled) {
+          return;
+        }
+
+        const rows = items.flatMap<RelatedRelationRow>((item) => {
+          if (item.sourceObjectTypeId === objectTypeId) {
+            return [
+              {
+                ...item,
+                oppositeObjectTypeId: item.targetObjectTypeId,
+                oppositeObjectTypeName: item.targetObjectTypeName,
+                role: "source" as const,
+              },
+            ];
+          }
+
+          if (item.targetObjectTypeId === objectTypeId) {
+            return [
+              {
+                ...item,
+                oppositeObjectTypeId: item.sourceObjectTypeId,
+                oppositeObjectTypeName: item.sourceObjectTypeName,
+                role: "target" as const,
+              },
+            ];
+          }
+
+          return [];
+        });
+
+        setRelatedRelations(rows);
+        setRelatedRelationsLoadedObjectTypeId(objectTypeId);
+      })
+      .catch((nextError) => {
+        if (!cancelled) {
+          setRelatedRelations([]);
+          setRelatedRelationsError(extractRequestErrorMessage(nextError));
+          setRelatedRelationsLoadedObjectTypeId(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setRelatedRelationsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    networkId,
+    objectTypeId,
+    relatedRelationsExpanded,
+    relatedRelationsLoadedObjectTypeId,
+  ]);
 
   useEffect(() => {
     const resourceId = detail?.dataSource?.id;
@@ -293,6 +389,11 @@ export function ObjectTypeDetailScene() {
     return filteredPreviewRows.slice(start, start + previewPageSize);
   }, [filteredPreviewRows, previewPage, previewPageSize]);
 
+  const pagedRelatedRelations = useMemo(() => {
+    const start = (relatedRelationsPage - 1) * relatedRelationsPageSize;
+    return relatedRelations.slice(start, start + relatedRelationsPageSize);
+  }, [relatedRelations, relatedRelationsPage, relatedRelationsPageSize]);
+
   const previewColumns: TableProps<Record<string, string | number>>["columns"] = useMemo(
     () =>
       (preview?.columns ?? []).map((column) => ({
@@ -346,6 +447,89 @@ export function ObjectTypeDetailScene() {
       key: "comment",
       title: t("common.description"),
       render: (value?: string) => value || "--",
+    },
+  ];
+
+  const relatedRelationColumns: TableProps<RelatedRelationRow>["columns"] = [
+    {
+      dataIndex: "name",
+      key: "name",
+      title: t("knowledgeNetwork.objectTypeRelatedRelationName"),
+      width: 260,
+      render: (value: string, record) => (
+        <button
+          className={styles.tableLink}
+          onClick={() => {
+            void navigate(
+              `/knowledge-network/workspace/${networkId}/relation-types/${record.id}/detail`,
+              {
+                state: {
+                  knowledgeNetworkReturnTo: detailPath,
+                },
+              },
+            );
+          }}
+          title={value}
+          type="button"
+        >
+          {value || "--"}
+        </button>
+      ),
+    },
+    {
+      dataIndex: "role",
+      key: "role",
+      title: t("knowledgeNetwork.objectTypeRelatedRelationRole"),
+      width: 120,
+      render: (value: RelatedRelationRole) =>
+        value === "source"
+          ? t("knowledgeNetwork.objectTypeRelatedRelationRoleSource")
+          : t("knowledgeNetwork.objectTypeRelatedRelationRoleTarget"),
+    },
+    {
+      dataIndex: "oppositeObjectTypeName",
+      key: "oppositeObjectTypeName",
+      title: t("knowledgeNetwork.objectTypeRelatedRelationOppositeObject"),
+      width: 220,
+      render: (value: string, record) =>
+        record.oppositeObjectTypeId ? (
+          <button
+            className={styles.tableLink}
+            onClick={() => {
+              void navigate(
+                `/knowledge-network/workspace/${networkId}/object-types/${record.oppositeObjectTypeId}/detail`,
+                {
+                  state: {
+                    knowledgeNetworkReturnTo: detailPath,
+                  },
+                },
+              );
+            }}
+            title={value || record.oppositeObjectTypeId}
+            type="button"
+          >
+            {value || record.oppositeObjectTypeId}
+          </button>
+        ) : (
+          value || "--"
+        ),
+    },
+    {
+      dataIndex: "mappingMode",
+      key: "mappingMode",
+      title: t("knowledgeNetwork.relationTypeMappingMode"),
+      width: 140,
+      render: (value: KnowledgeNetworkRelationTypeRecord["mappingMode"]) =>
+        value === "direct"
+          ? t("knowledgeNetwork.relationTypeDirectMapping")
+          : t("knowledgeNetwork.relationTypeResourceMapping"),
+    },
+    {
+      dataIndex: "updateTime",
+      key: "updateTime",
+      title: t("common.updateTime"),
+      width: 180,
+      render: (value: string) => value || "--",
     },
   ];
 
@@ -658,6 +842,69 @@ export function ObjectTypeDetailScene() {
             </>
           ) : (
             <Empty description={t("knowledgeNetwork.objectTypeDataQueryEmpty")} />
+          )}
+        </section>
+
+        <section className={styles.sectionCard}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h3 className={styles.sectionTitle}>
+                {t("knowledgeNetwork.objectTypeRelatedRelationsTitle")}
+              </h3>
+              <p className={styles.sectionHint}>
+                {t("knowledgeNetwork.objectTypeRelatedRelationsDescription")}
+              </p>
+            </div>
+            <div className={styles.previewToolbar}>
+              <AppButton
+                icon={relatedRelationsExpanded ? <DownOutlined /> : <RightOutlined />}
+                onClick={() => {
+                  setRelatedRelationsExpanded((current) => !current);
+                }}
+              >
+                {relatedRelationsExpanded
+                  ? t("knowledgeNetwork.objectTypeDataQueryCollapse")
+                  : t("knowledgeNetwork.objectTypeRelatedRelationsAction")}
+              </AppButton>
+            </div>
+          </div>
+
+          {!relatedRelationsExpanded ? null : relatedRelationsError ? (
+            <Alert message={relatedRelationsError} showIcon type="error" />
+          ) : (
+            <>
+              <Table<RelatedRelationRow>
+                columns={relatedRelationColumns}
+                dataSource={pagedRelatedRelations}
+                loading={relatedRelationsLoading}
+                locale={{
+                  emptyText: (
+                    <Empty
+                      description={t("knowledgeNetwork.objectTypeRelatedRelationsEmpty")}
+                    />
+                  ),
+                }}
+                pagination={false}
+                rowKey="id"
+                scroll={{ x: 920 }}
+                size="small"
+              />
+              {relatedRelations.length > relatedRelationsPageSize ? (
+                <div className={styles.paginationBar}>
+                  <TablePaginationBar
+                    current={relatedRelationsPage}
+                    onChange={(nextPage, nextPageSize) => {
+                      setRelatedRelationsPage(nextPage);
+                      setRelatedRelationsPageSize(nextPageSize);
+                    }}
+                    pageSize={relatedRelationsPageSize}
+                    showSizeChanger
+                    showTotal={(total) => t("common.total", { total })}
+                    total={relatedRelations.length}
+                  />
+                </div>
+              ) : null}
+            </>
           )}
         </section>
       </div>
