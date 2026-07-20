@@ -7,7 +7,7 @@
 
 import { CheckOutlined, DownOutlined } from "@ant-design/icons";
 import { Popover } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import styles from "./ResourceColorSelect.module.css";
 
@@ -42,13 +42,16 @@ export function ResourceColorSelect({
   value,
 }: ResourceColorSelectProps) {
   const [open, setOpen] = useState(false);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
   const selectedColor = value || DEFAULT_RESOURCE_COLOR;
 
+  // Form.Item 的 onChange 引用不稳定；不要放进依赖，避免空值回填更新环（React #185）。
   useEffect(() => {
-    if (!value) {
-      onChange?.(DEFAULT_RESOURCE_COLOR);
+    if (!value && selectedColor !== value) {
+      onChangeRef.current?.(selectedColor);
     }
-  }, [onChange, value]);
+  }, [selectedColor, value]);
 
   const panel = (
     <div className={styles.colorGrid}>

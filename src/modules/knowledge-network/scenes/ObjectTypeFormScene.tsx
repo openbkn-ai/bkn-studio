@@ -123,10 +123,10 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             throw new Error(t("common.notFound"));
           }
           const nextBasic: BasicFormValues = {
-            color: detail.color,
+            color: detail.color || DEFAULT_RESOURCE_COLOR,
             conceptGroupIds: detail.conceptGroupIds,
             description: detail.description,
-            icon: detail.icon,
+            icon: detail.icon || DEFAULT_RESOURCE_ICON,
             id: detail.id,
             name: detail.name,
             tags: detail.tags,

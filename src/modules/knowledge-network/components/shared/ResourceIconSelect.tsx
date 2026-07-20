@@ -9,7 +9,7 @@
 
 import { createFromIconfontCN } from "@ant-design/icons";
 import { Input, Select, Space } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import legacyIconList from "./resource-iconfont/dip-iconfont.json";
 import "./resource-iconfont/inject-iconfont-svg";
@@ -95,6 +95,8 @@ export function ResourceIconSelect({
   const [keyword, setKeyword] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const selectRef = useRef<React.ComponentRef<typeof Select>>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   const filteredGlyphs = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -107,11 +109,22 @@ export function ResourceIconSelect({
     );
   }, [keyword]);
 
+  const displayType = resolveIconType(value) ?? DEFAULT_RESOURCE_ICON;
+
+  // Form.Item 的 onChange 引用不稳定；不要放进依赖，否则空值回填会反复触发更新环（React #185）。
   useEffect(() => {
-    if (!value) {
-      onChange?.(DEFAULT_RESOURCE_ICON);
+    if (!value?.trim()) {
+      if (displayType !== value) {
+        onChangeRef.current?.(displayType);
+      }
+      return;
     }
-  }, [onChange, value]);
+
+    const resolved = resolveIconType(value);
+    if (resolved && resolved !== value) {
+      onChangeRef.current?.(resolved);
+    }
+  }, [displayType, value]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -135,7 +148,16 @@ export function ResourceIconSelect({
     };
   }, [open]);
 
-  const displayType = resolveIconType(value) ?? DEFAULT_RESOURCE_ICON;
+  const getPopupContainer = useCallback(() => {
+    if (inModal) {
+      const modal = document.querySelector(".ant-modal-wrap");
+      if (modal) {
+        return modal as HTMLElement;
+      }
+    }
+
+    return document.getElementById("root") ?? document.body;
+  }, [inModal]);
 
   const prefix = (
     <Space>
@@ -155,7 +177,7 @@ export function ResourceIconSelect({
       <div className={styles.iconBox}>
         {filteredGlyphs.map((glyph) => {
           const iconType = `${ICON_PREFIX}${glyph.font_class}`;
-          const selected = value === iconType;
+          const selected = displayType === iconType;
 
           return (
             <button
@@ -181,16 +203,7 @@ export function ResourceIconSelect({
 
   return (
     <Select
-      getPopupContainer={() => {
-        if (inModal) {
-          const modal = document.querySelector(".ant-modal-wrap");
-          if (modal) {
-            return modal as HTMLElement;
-          }
-        }
-
-        return document.getElementById("root") ?? document.body;
-      }}
+      getPopupContainer={getPopupContainer}
       onChange={onChange}
       onOpenChange={setOpen}
       open={open}
@@ -198,6 +211,7 @@ export function ResourceIconSelect({
       prefix={prefix}
       ref={selectRef}
       style={{ width: "100%" }}
+      value={displayType}
     />
   );
 }
