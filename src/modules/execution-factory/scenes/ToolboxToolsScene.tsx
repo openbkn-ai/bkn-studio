@@ -18,7 +18,7 @@ import {
   SettingOutlined,
   TagOutlined,
 } from "@ant-design/icons";
-import { Alert, Breadcrumb, Checkbox, Empty, Layout, Space, Spin, Switch, Tag, Typography } from "antd";
+import { Alert, Checkbox, Empty, Layout, Space, Spin, Switch, Tag, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -28,6 +28,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { ToolDebugModal } from "@/modules/execution-factory/components/ToolDebugModal";
@@ -378,28 +379,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     <>
       <section className={styles.page}>
         <div className={styles.backRow}>
-          <Breadcrumb
-            items={[
-              {
-                title: (
-                  <button className={styles.breadcrumbLink} onClick={handleBack} type="button">
-                    {catalogContext
-                      ? t("executionFactory.catalogTitle")
-                      : t("executionFactory.unitManagementTitle")}
-                  </button>
-                ),
-              },
-              {
-                title: toolbox?.name ?? t("executionFactory.toolboxToolsPageTitle"),
-              },
-              {
-                title: t("executionFactory.toolboxToolsPageTitle"),
-              },
-            ]}
-          />
-          <AppButton icon={<SettingOutlined />} onClick={handleBack} type="link">
-            {t("executionFactory.toolboxDetailBack")}
-          </AppButton>
+          <SceneBackButton onClick={handleBack} />
         </div>
 
         {toolbox ? (

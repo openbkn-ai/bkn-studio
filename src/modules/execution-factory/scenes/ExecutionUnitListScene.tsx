@@ -1179,7 +1179,7 @@ export function ExecutionUnitListScene({
         <div className={styles.filterBar}>
           <div className={styles.filterLeft}>
             {showOriginFilter ? (
-              <>
+              <div className={styles.filterGroup}>
                 <span className={styles.filterLabel}>{t("executionFactory.originFilter")}</span>
                 <div className={styles.categoryGroup}>
                   {originFilterOptions.map((option) => (
@@ -1195,10 +1195,10 @@ export function ExecutionUnitListScene({
                     </button>
                   ))}
                 </div>
-              </>
+              </div>
             ) : null}
             {showCategoryFilter ? (
-              <>
+              <div className={styles.filterGroup}>
                 <span className={styles.filterLabel}>{t("executionFactory.typeFilter")}</span>
                 <div className={styles.categoryGroup}>
                   {categoryOptions.map((option) => (
@@ -1214,10 +1214,10 @@ export function ExecutionUnitListScene({
                     </button>
                   ))}
                 </div>
-              </>
+              </div>
             ) : null}
             {!marketMode && statusOptions.length > 0 ? (
-              <>
+              <div className={styles.filterGroup}>
                 <span className={styles.filterLabel}>
                   {t("executionFactory.publishStatusFilter")}
                 </span>
@@ -1227,7 +1227,7 @@ export function ExecutionUnitListScene({
                   value={status}
                   onChange={setStatus}
                 />
-              </>
+              </div>
             ) : null}
           </div>
           <div className={styles.filterRight}>

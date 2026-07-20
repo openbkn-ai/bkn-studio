@@ -25,7 +25,7 @@ export function toStudioPath(url: string) {
 /** 强制 UI 请求走 Vite 同源代理，避免 localhost/127.0.0.1 跨域导致 impex 无响应 */
 export async function ensureE2eRuntime(
   page: Page,
-  options?: { capabilityUxV2?: boolean },
+  options?: { capabilityUxV2?: boolean; marketCatalog?: boolean },
 ) {
   await page.addInitScript((runtimeConfig) => {
     window.__BKN_STUDIO_RUNTIME__ = {
@@ -35,6 +35,7 @@ export async function ensureE2eRuntime(
       features: {
         ...(window.__BKN_STUDIO_RUNTIME__?.features ?? {}),
         capabilityUxV2: runtimeConfig.capabilityUxV2,
+        marketCatalog: runtimeConfig.marketCatalog,
       },
       currentUser: {
         businessDomainId: "bd_public",
@@ -44,6 +45,9 @@ export async function ensureE2eRuntime(
   }, {
     baseUrl: STUDIO_API_BASE_URL,
     capabilityUxV2: options?.capabilityUxV2 ?? true,
+    // 市场入口产品上默认关(见 utils/market-catalog.ts),但 /catalog 的 spec
+    // 仍要覆盖 marketMode 代码路径,所以 e2e 里默认开。
+    marketCatalog: options?.marketCatalog ?? true,
   });
 }
 

@@ -15,10 +15,9 @@ import {
   FileTextOutlined,
   KeyOutlined,
   LinkOutlined,
-  SettingOutlined,
   TagOutlined,
 } from "@ant-design/icons";
-import { Alert, Breadcrumb, Empty, Layout, Space, Spin, Tag, Typography } from "antd";
+import { Alert, Empty, Layout, Space, Spin, Tag, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -27,6 +26,7 @@ import type { McpDetailSceneProps } from "@/modules/execution-factory/contracts/
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { CreateMcpDrawer } from "@/modules/execution-factory/components/create-menu/CreateMcpDrawer";
@@ -236,28 +236,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
   return (
     <section className={styles.page}>
       <div className={styles.backRow}>
-        <Breadcrumb
-          items={[
-            {
-              title: (
-                <button className={styles.breadcrumbLink} onClick={handleBack} type="button">
-                  {catalogContext
-                    ? t("executionFactory.catalogTitle")
-                    : t("executionFactory.unitManagementTitle")}
-                </button>
-              ),
-            },
-            {
-              title: record?.name ?? t("executionFactory.mcpDetailPageTitle"),
-            },
-            {
-              title: t("executionFactory.mcpDetailPageTitle"),
-            },
-          ]}
-        />
-        <AppButton icon={<SettingOutlined />} onClick={handleBack} type="link">
-          {t("executionFactory.toolboxDetailBack")}
-        </AppButton>
+        <SceneBackButton onClick={handleBack} />
       </div>
 
       {record ? (

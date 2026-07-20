@@ -68,6 +68,31 @@ function formatJsonValue(value: unknown) {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
 }
 
+function buildCurlContract(parsed: {
+  method: string;
+  serverUrl: string;
+  path: string;
+  summary: string;
+  queryParams: QuickApiParameter[];
+  requestBody?: QuickApiRequestBody;
+}): Partial<QuickApiContractFormValues> {
+  return {
+    method: parsed.method,
+    serverUrl: parsed.serverUrl,
+    path: parsed.path,
+    summary: parsed.summary,
+    parameters: parsed.queryParams,
+    requestBodyEnabled: Boolean(parsed.requestBody),
+    requestBodyContentType: parsed.requestBody?.contentType ?? "application/json",
+    requestBodyRequired: parsed.requestBody?.required ?? true,
+    requestBodySchemaText: formatJsonValue(parsed.requestBody?.schema),
+    requestBodyExampleText:
+      parsed.requestBody?.example !== undefined
+        ? JSON.stringify(parsed.requestBody.example, null, 2)
+        : parsed.requestBody?.raw,
+  };
+}
+
 export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiFormProps>(
   function QuickAddApiForm({ formId, initialBoxId, onSubmit }, ref) {
   const { t } = useTranslation();
@@ -87,7 +112,11 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     },
   }));
   const [inputMode, setInputMode] = useState<"curl" | "form">("curl");
-  const [parseHint, setParseHint] = useState<string | null>(null);
+  const [parseHint, setParseHintState] = useState<{ text: string; tone: "info" | "error" } | null>(
+    null,
+  );
+  const setParseHint = (text: string) => setParseHintState({ text, tone: "error" });
+  const setParseOkHint = (text: string) => setParseHintState({ text, tone: "info" });
   const [detectedUrlParameters, setDetectedUrlParameters] = useState<QuickApiParameter[]>([]);
   const [detectedCurlContract, setDetectedCurlContract] = useState<
     Partial<QuickApiContractFormValues> | undefined
@@ -164,25 +193,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
   ) => {
     const preserveManualContract = options?.preserveManualContract === true;
     setDetectedUrlParameters(preserveManualContract ? parsed.queryParams : []);
-    setDetectedCurlContract(
-      preserveManualContract
-        ? undefined
-        : {
-            method: parsed.method,
-            serverUrl: parsed.serverUrl,
-            path: parsed.path,
-            summary: parsed.summary,
-            parameters: parsed.queryParams,
-            requestBodyEnabled: Boolean(parsed.requestBody),
-            requestBodyContentType: parsed.requestBody?.contentType ?? "application/json",
-            requestBodyRequired: parsed.requestBody?.required ?? true,
-            requestBodySchemaText: formatJsonValue(parsed.requestBody?.schema),
-            requestBodyExampleText:
-              parsed.requestBody?.example !== undefined
-                ? JSON.stringify(parsed.requestBody.example, null, 2)
-                : parsed.requestBody?.raw,
-          },
-    );
+    setDetectedCurlContract(preserveManualContract ? undefined : buildCurlContract(parsed));
 
     form.setFieldsValue({
       method: preserveManualContract
@@ -192,7 +203,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
       path: parsed.path,
       summary: parsed.summary,
     });
-    setParseHint(
+    setParseOkHint(
       parsed.queryParams.length > 0
         ? t("executionFactory.quickApiParsedParams", { count: parsed.queryParams.length })
         : t("executionFactory.quickApiParsedOk"),
@@ -233,6 +244,22 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     const resolvedValues =
       inputMode === "form" ? resolveQuickApiFormContract(values) : values;
 
+    // cURL 模式下「识别接口信息」是可选动作，用户常直接提交。此时没有已识别的
+    // 契约，缺的是解析而不是输入，所以在提交时补一次解析并回报真实原因。
+    let curlContract = detectedCurlContract;
+    if (inputMode === "curl" && !curlContract) {
+      const parsed = parseCurlCommand(values.curlText ?? "");
+      if (!parsed.ok) {
+        setParseHint(parsed.reason);
+        form.setFields([{ name: "curlText", errors: [parsed.reason] }]);
+        form.scrollToField("curlText", { behavior: "smooth", focus: true });
+        return;
+      }
+      curlContract = buildCurlContract(parsed.value);
+      form.setFields([{ name: "curlText", errors: [] }]);
+      setDetectedCurlContract(curlContract);
+    }
+
     if (inputMode === "form") {
       if (
         !resolvedValues.serverUrl?.trim() ||
@@ -249,7 +276,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
         resolvedValues,
         inputMode,
         detectedUrlParameters,
-        detectedCurlContract,
+        curlContract,
       ),
     );
     if (!submission) {
@@ -369,7 +396,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
       </Form.Item>
 
       {parseHint ? (
-        <Alert message={parseHint} showIcon style={{ marginBottom: 16 }} type="info" />
+        <Alert message={parseHint.text} showIcon style={{ marginBottom: 16 }} type={parseHint.tone} />
       ) : null}
 
       {previewValidation.ok && previewSpec ? (

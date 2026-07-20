@@ -29,6 +29,7 @@ export type RuntimeInput = {
   currentUser?: Partial<RuntimeUser>;
   features?: {
     capabilityUxV2?: boolean;
+    marketCatalog?: boolean;
     executionFactoryLab?: Partial<{
       catalog: boolean;
       function: boolean;
@@ -57,6 +58,7 @@ export type RuntimeConfig = {
   currentUser: RuntimeUser;
   features?: {
     capabilityUxV2?: boolean;
+    marketCatalog?: boolean;
     executionFactoryLab?: Partial<{
       catalog: boolean;
       function: boolean;
