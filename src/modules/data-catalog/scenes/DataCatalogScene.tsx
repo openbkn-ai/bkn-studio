@@ -23,6 +23,7 @@ import { ResourceFormDrawer } from "@/modules/data-catalog/components/ResourceFo
 import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
+  countCatalogResources,
   isCatalogScanning,
   listCatalogResources,
   listCatalogScans,
@@ -66,7 +67,6 @@ export function DataCatalogScene({
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [scans, setScans] = useState<CatalogScanRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [resourceDrawer, setResourceDrawer] = useState<{
@@ -112,8 +112,7 @@ export function DataCatalogScene({
   }, []);
 
   const refreshResourceTotal = useCallback(async () => {
-    const items = await listCatalogResources();
-    setResourceTotal(items.length);
+    setResourceTotal(await countCatalogResources());
   }, []);
 
   const loadAll = useCallback(async () => {
@@ -165,27 +164,11 @@ export function DataCatalogScene({
     if (!selectedCatalogId) {
       setResources([]);
       setTasks([]);
-      setDetailLoading(false);
       return;
     }
 
-    let cancelled = false;
-    void loadCatalogDetail(selectedCatalogId).finally(() => {
-      if (!cancelled) {
-        setDetailLoading(false);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
+    void loadCatalogDetail(selectedCatalogId);
   }, [loadCatalogDetail, loading, selectedCatalogId]);
-
-  useLayoutEffect(() => {
-    if (!loading && selectedCatalogId) {
-      setDetailLoading(true);
-    }
-  }, [loading, selectedCatalogId]);
 
   const hasActiveWork = useMemo(
     () =>
@@ -252,14 +235,6 @@ export function DataCatalogScene({
     }
     return ids;
   }, [catalogs, scans, selectedCatalog]);
-
-  const selectedCatalogResources = useMemo(
-    () =>
-      selectedCatalog
-        ? resources.filter((resource) => resource.catalogId === selectedCatalog.id)
-        : [],
-    [resources, selectedCatalog],
-  );
 
   const openResourceWorkspace = useCallback(
     (
@@ -349,8 +324,6 @@ export function DataCatalogScene({
           catalog={selectedCatalog}
           onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
           onOpenResource={openResourceWorkspace}
-          resources={selectedCatalogResources}
-          resourcesLoading={detailLoading}
           tasks={tasks}
         />
       );

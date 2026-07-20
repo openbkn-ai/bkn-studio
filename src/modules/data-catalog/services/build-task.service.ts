@@ -76,6 +76,7 @@ type ListResponse<T> = {
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const BUILD_TASK_LIST_PAGE_SIZE = 200;
 
 const wait = async <T,>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {
@@ -289,20 +290,34 @@ export async function listBuildTasks(
 
   // 后端 status 仅支持单值且枚举与前端不同(completed/stopped),
   // 统一拉全量后在前端按归一化状态过滤。
-  const response = await http.get<ListResponse<BackendBuildTask>>(
-    "/vega-backend/v1/build-tasks",
-    {
-      params: {
-        limit: 200,
-        offset: 0,
-        resource_id: query.resourceId || undefined,
-        catalog_id: query.catalogId || undefined,
-      },
-      skipErrorToast: query.silent,
-    },
-  );
+  const tasks: BuildTask[] = [];
+  let offset = 0;
+  let total = Number.POSITIVE_INFINITY;
 
-  return filterTasks(response.data.entries.map(mapBuildTask), query);
+  while (tasks.length < total) {
+    const response = await http.get<ListResponse<BackendBuildTask>>(
+      "/vega-backend/v1/build-tasks",
+      {
+        params: {
+          limit: BUILD_TASK_LIST_PAGE_SIZE,
+          offset,
+          resource_id: query.resourceId || undefined,
+          catalog_id: query.catalogId || undefined,
+        },
+        skipErrorToast: query.silent,
+      },
+    );
+    const pageItems = response.data.entries.map(mapBuildTask);
+    tasks.push(...pageItems);
+    total = response.data.total_count;
+
+    if (pageItems.length === 0 || pageItems.length < BUILD_TASK_LIST_PAGE_SIZE) {
+      break;
+    }
+    offset += pageItems.length;
+  }
+
+  return filterTasks(tasks, query);
 }
 
 // 前端归一状态 → 后端枚举。paused 同时覆盖 stopping/stopped;listening 即后端 running。
