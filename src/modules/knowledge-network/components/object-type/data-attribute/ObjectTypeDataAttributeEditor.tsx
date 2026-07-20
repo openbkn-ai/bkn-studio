@@ -61,6 +61,13 @@ import styles from "./ObjectTypeDataAttributeEditor.module.css";
 import { ObjectTypeDataAttributePickModal } from "./ObjectTypeDataAttributePickModal";
 import { ObjectTypeResourceSelectModal } from "./ObjectTypeResourceSelectModal";
 import { FieldTypeIcon } from "./FieldTypeIcon";
+import {
+  applyDisplayKeySelection,
+  applyPrimaryKeySelection,
+  areConnectionsEqual,
+  areStringArraysEqualAsSets,
+  type ConnectionPoint,
+} from "./object-type-data-attribute-editor.utils";
 
 type ObjectTypeBasicInfo = {
   color: string;
@@ -89,15 +96,6 @@ export type ObjectTypeDataAttributeEditorHandle = {
     dataProperties: ObjectTypeDataProperty[];
     dataSource?: ObjectTypeDataSource;
   }>;
-};
-
-type ConnectionPoint = {
-  propertyName: string;
-  viewFieldName: string;
-  x1: number;
-  x2: number;
-  y1: number;
-  y2: number;
 };
 
 const VIEW_PANEL_POS = { x: 150, y: 30 };
@@ -317,7 +315,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const recalculateConnections = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
-      setConnections([]);
+      setConnections((current) => (current.length === 0 ? current : []));
       return;
     }
 
@@ -348,7 +346,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       });
     });
 
-    setConnections(nextConnections);
+    setConnections((current) =>
+      areConnectionsEqual(current, nextConnections) ? current : nextConnections,
+    );
   }, [validProperties]);
 
   useLayoutEffect(() => {
@@ -426,21 +426,26 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   };
 
   const setPrimaryKeys = (names: string[]) => {
-    updateProperties(
-      dataProperties.map((item) => ({
-        ...item,
-        primaryKey: names.includes(item.name) && canBePrimaryKey(item.type),
-      })),
-    );
+    if (areStringArraysEqualAsSets(names, primaryKeyNames)) {
+      return;
+    }
+    const { changed, nextProperties } = applyPrimaryKeySelection(dataProperties, names);
+    if (!changed) {
+      return;
+    }
+    updateProperties(nextProperties);
   };
 
   const setDisplayKey = (name: string) => {
-    updateProperties(
-      dataProperties.map((item) => ({
-        ...item,
-        displayKey: item.name === name && canBeDisplayKey(item.type),
-      })),
-    );
+    const nextName = name || "";
+    if (nextName === displayKeyName) {
+      return;
+    }
+    const { changed, nextProperties } = applyDisplayKeySelection(dataProperties, nextName);
+    if (!changed) {
+      return;
+    }
+    updateProperties(nextProperties);
   };
 
   const connectProperty = (property: ObjectTypeDataProperty) => {
@@ -771,7 +776,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                   onChange={(value) => setDisplayKey(value ?? "")}
                   options={displayKeyOptions}
                   placeholder={t("knowledgeNetwork.objectTypeKeyNotConfigured")}
-                  value={displayKeyName || undefined}
+                  value={displayKeyName || null}
                 />
               }
               trigger="click"

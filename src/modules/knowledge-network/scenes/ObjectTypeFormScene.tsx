@@ -6,7 +6,7 @@
  */
 
 import { Form, Input, Select, Spin, Alert } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -160,6 +160,37 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       { title: t("knowledgeNetwork.objectTypeLogicProperty") },
     ],
     [t],
+  );
+
+  const logicPropertyNames = useMemo(
+    () => logicProperties.map((item) => item.name),
+    [logicProperties],
+  );
+
+  const dataAttributeBasicValue = useMemo(
+    () =>
+      basicValue
+        ? {
+            color: basicValue.color,
+            icon: basicValue.icon,
+            name: basicValue.name,
+          }
+        : null,
+    [basicValue],
+  );
+
+  const handleDataAttributeChange = useCallback(
+    ({
+      dataProperties: nextProperties,
+      dataSource: nextDataSource,
+    }: {
+      dataProperties: ObjectTypeDataProperty[];
+      dataSource?: ObjectTypeDataSource;
+    }) => {
+      setDataProperties(nextProperties);
+      setDataSource(nextDataSource);
+    },
+    [],
   );
 
   const goBack = () => {
@@ -442,26 +473,19 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     }
 
     if (currentStep === 1) {
-      if (!basicValue) {
+      if (!dataAttributeBasicValue) {
         return null;
       }
 
       return (
         <div className={styles.dataAttributePanel}>
           <ObjectTypeDataAttributeEditor
-            basicValue={{
-              color: basicValue.color,
-              icon: basicValue.icon,
-              name: basicValue.name,
-            }}
+            basicValue={dataAttributeBasicValue}
             dataProperties={dataProperties}
             dataSource={dataSource}
-            logicPropertyNames={logicProperties.map((item) => item.name)}
+            logicPropertyNames={logicPropertyNames}
             networkId={networkId}
-            onChange={({ dataProperties: nextProperties, dataSource: nextDataSource }) => {
-              setDataProperties(nextProperties);
-              setDataSource(nextDataSource);
-            }}
+            onChange={handleDataAttributeChange}
             ref={dataAttributeRef}
           />
         </div>
