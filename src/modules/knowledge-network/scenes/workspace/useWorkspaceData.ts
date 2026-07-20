@@ -40,6 +40,23 @@ function sectionCacheKey(networkId: string, section: KnowledgeNetworkWorkspaceSe
   return `${networkId}:${section}`;
 }
 
+function withMetricsTotal(
+  detail: KnowledgeNetworkRecord | null,
+  metricsTotal: number,
+): KnowledgeNetworkRecord | null {
+  if (!detail) {
+    return detail;
+  }
+
+  return {
+    ...detail,
+    statistics: {
+      ...detail.statistics,
+      metricsTotal,
+    },
+  };
+}
+
 export function useWorkspaceData(
   networkId: string,
   section: KnowledgeNetworkWorkspaceSection,
@@ -153,6 +170,7 @@ export function useWorkspaceData(
             if (integrateWorkspaceMetrics) {
               const metricResult = await listKnowledgeNetworkMetrics(networkId);
               setMetrics(metricResult.entries);
+              setDetail((prev) => withMetricsTotal(prev, metricResult.totalCount));
               setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
             }
             break;
@@ -242,6 +260,7 @@ export function useWorkspaceData(
     loadedSectionsRef.current.delete(sectionCacheKey(networkId, "metrics"));
     const metricResult = await listKnowledgeNetworkMetrics(networkId);
     setMetrics(metricResult.entries);
+    setDetail((prev) => withMetricsTotal(prev, metricResult.totalCount));
     setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "metrics"));
   }, [networkId]);

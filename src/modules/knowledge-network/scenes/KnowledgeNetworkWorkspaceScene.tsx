@@ -70,7 +70,6 @@ export function KnowledgeNetworkWorkspaceScene({
     detailError,
     detailLoading,
     loadWorkspaceData,
-    metrics,
     recentObjects,
     sectionError,
     sectionLoading,
@@ -127,7 +126,7 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "metrics",
         label: t("knowledgeNetwork.workspaceMetrics"),
         icon: <LineChartOutlined />,
-        count: detail?.statistics.metricsTotal ?? metrics.length,
+        count: detail?.statistics.metricsTotal ?? 0,
       });
     }
 
@@ -140,7 +139,7 @@ export function KnowledgeNetworkWorkspaceScene({
     }
 
     return items;
-  }, [detail, metrics.length, t]);
+  }, [detail, t]);
 
   const primaryNavItems = navigationItems.filter(
     (item) => item.key === "overview",
