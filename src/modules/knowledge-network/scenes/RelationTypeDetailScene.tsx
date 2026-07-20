@@ -37,6 +37,7 @@ export function RelationTypeDetailScene() {
   const [error, setError] = useState<string | null>(null);
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
+  const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
 
   const loadData = useCallback(async () => {
     if (!networkId || !relationTypeId) {
@@ -164,7 +165,20 @@ export function RelationTypeDetailScene() {
 
         <section className={styles.sectionCard}>
           <h3>{t("knowledgeNetwork.relationTypeConfigSection")}</h3>
-          <RelationTypeMappingConfigTable detail={detail} networkId={networkId} />
+          <RelationTypeMappingConfigTable
+            detail={detail}
+            networkId={networkId}
+            onOpenObjectType={(objectTypeId) => {
+              void navigate(
+                `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`,
+                {
+                  state: {
+                    knowledgeNetworkReturnTo: detailPath,
+                  },
+                },
+              );
+            }}
+          />
         </section>
       </div>
     </KnowledgeNetworkResourceConfigShell>

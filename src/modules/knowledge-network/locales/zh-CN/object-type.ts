@@ -32,6 +32,8 @@ export const objecttypePart = {
     objectTypeDataPropertyNamePattern: "属性名须以字母或数字开头，可包含字母、数字、下划线和连字符。",
     objectTypeDataPropertyRequired: "请至少添加一个有效的数据属性。",
     objectTypeDataQueryDescription: "预览已绑定数据视图的样本数据，并支持按关键字过滤。",
+    objectTypeDataQueryAction: "查询",
+    objectTypeDataQueryCollapse: "收起",
     objectTypeDataQueryEmpty: "暂无可预览的样本数据。",
     objectTypeDataQueryResourceName: "资源",
     objectTypeDataQuerySampleCount: "{{count}} 条样本数据",

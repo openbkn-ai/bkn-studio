@@ -35,6 +35,8 @@ export const objecttypePart = {
     objectTypeDataPropertyRequired: "Add at least one valid data property.",
     objectTypeDataQueryDescription:
       "Preview sample rows from the bound data view and filter them by keyword.",
+    objectTypeDataQueryAction: "Query",
+    objectTypeDataQueryCollapse: "Collapse",
     objectTypeDataQueryEmpty: "No sample data available.",
     objectTypeDataQueryResourceName: "Resource",
     objectTypeDataQuerySampleCount: "{{count}} sample rows",

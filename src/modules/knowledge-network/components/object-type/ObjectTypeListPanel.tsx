@@ -28,6 +28,11 @@ import { listBuildTasks } from "@/modules/data-catalog/services/build-task.servi
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import {
+  readPositiveInteger,
+  readStoredPageSize,
+  writeStoredPageSize,
+} from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import type {
   KnowledgeNetworkImportMode,
@@ -48,11 +53,6 @@ type ObjectTypeListPanelProps = {
   onRefresh: () => Promise<void>;
 };
 
-function readPositiveInteger(value: string | null, fallback: number) {
-  const next = Number(value);
-  return Number.isInteger(next) && next > 0 ? next : fallback;
-}
-
 function readSortBy(value: string | null): "name" | "updateTime" {
   return value === "name" ? "name" : "updateTime";
 }
@@ -60,6 +60,8 @@ function readSortBy(value: string | null): "name" | "updateTime" {
 function readSortDirection(value: string | null): "asc" | "desc" {
   return value === "asc" ? "asc" : "desc";
 }
+
+const PAGE_SIZE_STORAGE_SCOPE = "object-types";
 
 export function ObjectTypeListPanel({
   items,
@@ -83,7 +85,9 @@ export function ObjectTypeListPanel({
   );
   const [page, setPage] = useState(() => readPositiveInteger(searchParams.get("page"), 1));
   const [pageSize, setPageSize] = useState(() =>
-    readPositiveInteger(searchParams.get("pageSize"), 10),
+    searchParams.has("pageSize")
+      ? readPositiveInteger(searchParams.get("pageSize"), 10)
+      : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10),
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [resourceBuildTasks, setResourceBuildTasks] = useState<BuildTask[]>([]);
@@ -95,7 +99,9 @@ export function ObjectTypeListPanel({
     const nextSortBy = readSortBy(searchParams.get("sort"));
     const nextSortDirection = readSortDirection(searchParams.get("order"));
     const nextPage = readPositiveInteger(searchParams.get("page"), 1);
-    const nextPageSize = readPositiveInteger(searchParams.get("pageSize"), 10);
+    const nextPageSize = searchParams.has("pageSize")
+      ? readPositiveInteger(searchParams.get("pageSize"), 10)
+      : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10);
 
     setKeyword((current) => (current === nextKeyword ? current : nextKeyword));
     setSelectedTag((current) => (current === nextTag ? current : nextTag));
@@ -109,6 +115,8 @@ export function ObjectTypeListPanel({
 
   useEffect(() => {
     const nextParams = new URLSearchParams(searchParams);
+
+    writeStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, pageSize);
 
     if (keyword.trim()) {
       nextParams.set("q", keyword.trim());
