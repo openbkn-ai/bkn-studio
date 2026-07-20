@@ -5,6 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import {
+  deriveStudioPermissions,
+  flattenSafeGrants,
+} from "@/framework/auth/permission-map";
 import { http } from "@/framework/request/http";
 import { defaultDevPermissions } from "@/framework/runtime/module-manifests";
 import type { RuntimeUser } from "@/framework/runtime/types";
@@ -32,8 +36,10 @@ type MePermissionsResponse = {
 
 /**
  * 登录后拉取当前用户身份 + 权限,组装成 RuntimeUser。
- * 权限展平成 `type:op`(对齐各模块 manifest 的权限点);
- * is_admin(超级管理员/admin)放行全部已注册权限。
+ *
+ * bkn-safe 下发的是 `<resource_type>:<operation>`,与各模块 manifest 声明的权限点并非
+ * 同一套命名,需经 permission-map 翻译(见该文件注释)。is_admin(超级管理员/admin)
+ * 放行全部已注册权限。
  */
 export async function fetchCurrentUser(): Promise<RuntimeUser> {
   const [meResult, permResult] = await Promise.all([
@@ -46,13 +52,7 @@ export async function fetchCurrentUser(): Promise<RuntimeUser> {
   const me = meResult.data;
   const perm = permResult.data;
 
-  const flattened = (perm.permissions ?? []).flatMap((entry) => {
-    const type = entry.resource?.type;
-    if (!type) {
-      return [];
-    }
-    return (entry.operations ?? []).map((operation) => `${type}:${operation}`);
-  });
+  const safeGrants = flattenSafeGrants(perm.permissions);
 
   return {
     businessDomainId: null,
@@ -61,6 +61,6 @@ export async function fetchCurrentUser(): Promise<RuntimeUser> {
     roles: me.roles ?? [],
     permissions: perm.is_admin
       ? [...defaultDevPermissions]
-      : Array.from(new Set(flattened)),
+      : deriveStudioPermissions(defaultDevPermissions, safeGrants, false),
   };
 }
