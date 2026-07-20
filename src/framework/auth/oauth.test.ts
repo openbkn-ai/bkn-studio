@@ -24,6 +24,12 @@ describe("oauth", () => {
       });
     }
     window.sessionStorage.clear();
+    for (const part of document.cookie ? document.cookie.split("; ") : []) {
+      const name = part.split("=")[0];
+      if (name) {
+        document.cookie = `${name}=; path=/; max-age=0`;
+      }
+    }
   });
 
   afterEach(() => {
@@ -81,9 +87,10 @@ describe("oauth", () => {
     expect(body.get("code_verifier")).toBe("verifier-1");
     expect(body.get("redirect_uri")).toBe("http://localhost:3000/studio/callback");
 
-    expect(window.sessionStorage.getItem("bkn_access_token")).toBe("access-1");
-    expect(window.sessionStorage.getItem("bkn_refresh_token")).toBe("refresh-1");
-    expect(window.sessionStorage.getItem("bkn_id_token")).toBe("id-1");
+    expect(document.cookie).toContain("bkn_access_token=access-1");
+    expect(document.cookie).toContain("bkn_refresh_token=refresh-1");
+    expect(document.cookie).toContain("bkn_id_token=id-1");
+    expect(window.sessionStorage.getItem("bkn_access_token")).toBeNull();
     expect(window.sessionStorage.getItem("bkn_oauth_state")).toBeNull();
     expect(window.sessionStorage.getItem("bkn_oauth_verifier")).toBeNull();
     expect(window.sessionStorage.getItem("bkn_oauth_return_to")).toBeNull();
