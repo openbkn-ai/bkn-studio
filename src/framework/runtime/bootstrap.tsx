@@ -10,6 +10,7 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "@/app/App";
 import i18n from "@/app/locales/i18n";
+import { subscribeAuthBroadcast } from "@/framework/auth/token-store";
 import {
   createRuntimeConfig,
   readWindowRuntimeInput,
@@ -19,7 +20,20 @@ import type { RuntimeInput } from "@/framework/runtime/types";
 
 const roots = new WeakMap<Element, ReturnType<typeof createRoot>>();
 
+let authBroadcastUnsub: (() => void) | undefined;
+
+function ensureAuthBroadcastListener() {
+  if (authBroadcastUnsub) {
+    return;
+  }
+  authBroadcastUnsub = subscribeAuthBroadcast(() => {
+    // Another tab cleared cookies; reload so AuthGate drops to sign-in.
+    window.location.reload();
+  });
+}
+
 export function mountApp(container: Element, runtimeInput: RuntimeInput = {}) {
+  ensureAuthBroadcastListener();
   const runtimeConfig = createRuntimeConfig(runtimeInput);
   setRuntimeConfig(runtimeConfig);
   void i18n.changeLanguage(runtimeConfig.locale);
