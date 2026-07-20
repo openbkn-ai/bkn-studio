@@ -100,6 +100,22 @@ function mergeColumnOrder(order: string[], columns: DetailTableColumnDefinition[
   return next;
 }
 
+function areStringArraysEqual(left: string[], right: string[]) {
+  return left.length === right.length && left.every((item, index) => item === right[index]);
+}
+
+function areColumnVisibilityPayloadsEqual(
+  left: ColumnVisibilityPayload,
+  right: ColumnVisibilityPayload,
+) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every((key) => left[key] === right[key])
+  );
+}
+
 function isColumnVisible(key: string, visibility: ColumnVisibilityPayload) {
   return visibility[key] !== false;
 }
@@ -125,8 +141,13 @@ export function DetailTableColumnSettingsButton({
     if (!open) {
       return;
     }
-    setDraftOrder(mergeColumnOrder(columnOrder, columns));
-    setDraftVisibility(value);
+    const nextOrder = mergeColumnOrder(columnOrder, columns);
+    setDraftOrder((current) =>
+      areStringArraysEqual(current, nextOrder) ? current : nextOrder,
+    );
+    setDraftVisibility((current) =>
+      areColumnVisibilityPayloadsEqual(current, value) ? current : value,
+    );
   }, [columnOrder, columns, open, value]);
 
   const moveRow = (index: number, direction: -1 | 1) => {

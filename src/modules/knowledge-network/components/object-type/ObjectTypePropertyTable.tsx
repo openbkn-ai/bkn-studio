@@ -156,11 +156,16 @@ export function ObjectTypePropertyTable({
     [columns],
   );
 
+  const tableColumnKeys = useMemo(
+    () => tableColumns.map((column) => column.key),
+    [tableColumns],
+  );
+
   return (
     <div className={styles.tableSection}>
       <div className={styles.tableToolbar}>
         <DetailTableColumnSettingsButton
-          columnOrder={tableColumns.map((column) => column.key)}
+          columnOrder={tableColumnKeys}
           columns={ObjectTypePropertyTableColumns}
           onChange={handleColumnConfigChange}
           storageScope={storageScope}

@@ -57,6 +57,7 @@ export default defineConfig(({ mode }) => {
       env: {
         VITE_USE_MOCK: "true",
       },
+      setupFiles: ["./src/test/setup.ts"],
       exclude: [
         "**/node_modules/**",
         "**/dist/**",
