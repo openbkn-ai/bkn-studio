@@ -660,7 +660,7 @@ export function ObjectAuthorizationScene() {
                 showSizeChanger
                 showTotal={(count) => t("common.total", { total: count })}
                 size="small"
-                total={view === "all" ? listTotal : groupList.length}
+                total={listTotal}
               />
             ) : null}
           </>
