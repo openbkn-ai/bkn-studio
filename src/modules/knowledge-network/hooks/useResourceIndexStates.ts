@@ -7,8 +7,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
+import { loadResourceIndexBuildTasks } from "@/modules/knowledge-network/utils/load-resource-index-build-tasks";
 
 /** Load data-catalog index build tasks for a deduplicated set of resource ids. */
 export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
@@ -31,12 +31,10 @@ export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
     let cancelled = false;
     setLoading(true);
 
-    void Promise.all(
-      boundResourceIds.map((resourceId) => listBuildTasks({ resourceId, silent: true })),
-    )
-      .then((taskGroups) => {
+    void loadResourceIndexBuildTasks(boundResourceIds)
+      .then((tasks) => {
         if (!cancelled) {
-          setResourceBuildTasks(taskGroups.flat());
+          setResourceBuildTasks(tasks);
         }
       })
       .catch(() => {
