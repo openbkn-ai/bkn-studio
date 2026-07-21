@@ -12,16 +12,16 @@
   gap: 8px;
   margin-bottom: 12px;
   padding: 8px 10px;
-  border: 1px solid rgba(18, 110, 227, 0.18);
-  border-radius: 8px;
-  background: rgba(18, 110, 227, 0.04);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 0;
+  background: var(--color-primary-100);
   font-size: 13px;
 }
 
 .page {
   min-height: calc(100vh - 120px);
   padding: 0 24px 24px;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 
 .backRow {
@@ -29,7 +29,7 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
@@ -44,10 +44,10 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  border: 1px solid rgba(18, 110, 227, 0.18);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 12px 32px rgba(22, 42, 69, 0.12);
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .header {
@@ -56,11 +56,8 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 20px;
-  padding: 20px 22px;
-  border: 1px solid rgba(18, 110, 227, 0.1);
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 8px 24px rgba(18, 110, 227, 0.05);
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .headerMain {
@@ -82,28 +79,28 @@
 
 .description {
   margin-bottom: 12px !important;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
 }
 
 .metaRow {
   display: flex;
   align-items: center;
   gap: 16px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
 .layout {
   min-height: 640px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0;
 }
 
 .sider {
   padding: 16px;
-  background: #fafafa !important;
-  border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
+  background: var(--color-bg-surface) !important;
+  border-right: 1px solid var(--color-border) !important;
 }
 
 .siderHeader {
@@ -130,15 +127,15 @@
 
 .toolItem {
   padding: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-bg-surface);
   cursor: pointer;
 }
 
 .toolItemActive {
-  border-color: #126ee3;
-  box-shadow: 0 0 0 1px rgba(18, 110, 227, 0.15);
+  border-color: var(--color-primary-600);
+  box-shadow: 0 0 0 1px var(--color-primary-border);
 }
 
 .toolItemTop {
@@ -149,27 +146,27 @@
 }
 
 .toolIndex {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
 .toolName {
   flex: 1;
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .methodTag {
   padding: 0 6px;
-  border-radius: 4px;
-  background: rgba(18, 110, 227, 0.1);
-  color: #126ee3;
+  border-radius: 0;
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
   font-size: 12px;
   line-height: 20px;
 }
 
 .toolDesc {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 18px;
 }
@@ -183,14 +180,14 @@
 
 .content {
   padding: 16px 20px;
-  background: #fff !important;
+  background: var(--color-bg-surface) !important;
 }
 
 .infoPanel {
   margin-bottom: 16px;
   padding: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
 }
 
 .infoTitle {
@@ -208,18 +205,18 @@
 }
 
 .infoLabel {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
 }
 
 .infoValue {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   word-break: break-all;
 }
 
 .ioPanel {
   padding: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
 }
 
 .ioHeader {
