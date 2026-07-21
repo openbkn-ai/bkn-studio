@@ -180,6 +180,92 @@ export async function listObjectGrants(query: ObjectGrantQuery = {}): Promise<Ob
   return grantList;
 }
 
+/** 分组视图的一行:一个对象(按对象)或一个成员(按成员)的聚合。 */
+export type AuthzGroup = {
+  objType?: string;
+  objId?: string;
+  objName?: string;
+  accessorId?: string;
+  /** 按对象=授权主体数;按成员=对象数。 */
+  count: number;
+  /** 该组合并后的操作集。 */
+  operations: string[];
+};
+
+/**
+ * 分组视图数据源。后端按对象/成员聚合并分页(group_by=object|grantee + offset/limit),
+ * 每组只回计数 + 合并操作,前端不再一次拉全部 grant 再客户端分组。明细走抽屉(单对象
+ * listObjectGrants)。对象名后端不下发,列表按当前可见页 on-demand 解析(见场景)。
+ */
+export async function listObjectGroups(
+  groupBy: "object" | "grantee",
+  query: { offset?: number; limit?: number; search?: string; resourceType?: string } = {},
+): Promise<{ groups: AuthzGroup[]; total: number }> {
+  if (useMock) {
+    const filtered = filterMockGrants({ search: query.search, resourceType: query.resourceType });
+    const map = new Map<string, AuthzGroup>();
+    for (const grant of filtered) {
+      const key = groupBy === "object" ? `${grant.objType}::${grant.objId}` : grant.accessorId;
+      const row =
+        map.get(key) ??
+        (groupBy === "object"
+          ? { objType: grant.objType, objId: grant.objId, objName: grant.objName, count: 0, operations: [] }
+          : { accessorId: grant.accessorId, count: 0, operations: [] });
+      row.count += 1;
+      row.operations = [...new Set([...row.operations, ...grant.operations])];
+      map.set(key, row);
+    }
+    const all = [...map.values()];
+    const offset = query.offset ?? 0;
+    const limit = query.limit;
+    const page = limit === undefined ? all : all.slice(offset, offset + Math.max(limit, 0));
+    return wait({ groups: page, total: all.length });
+  }
+
+  const params = new URLSearchParams();
+  params.set("group_by", groupBy);
+  if (query.resourceType) {
+    params.set("resource_type", query.resourceType);
+  }
+  if (query.search) {
+    params.set("search", query.search);
+  }
+  if (query.offset !== undefined) {
+    params.set("offset", String(query.offset));
+  }
+  if (query.limit !== undefined) {
+    params.set("limit", String(query.limit));
+  }
+
+  const response = await http.get<{
+    groups?: {
+      object?: { type?: string; id?: string; name?: string };
+      accessor_id?: string;
+      grantee_count?: number;
+      object_count?: number;
+      operations?: string[];
+    }[];
+    total?: number;
+  }>(`${ADMIN}/object-grants?${params.toString()}`);
+
+  const groups: AuthzGroup[] = (response.data.groups ?? []).map((raw) =>
+    groupBy === "object"
+      ? {
+          objType: raw.object?.type ?? "",
+          objId: raw.object?.id ?? "",
+          objName: raw.object?.name || raw.object?.id || "",
+          count: raw.grantee_count ?? 0,
+          operations: raw.operations ?? [],
+        }
+      : {
+          accessorId: raw.accessor_id ?? "",
+          count: raw.object_count ?? 0,
+          operations: raw.operations ?? [],
+        },
+  );
+  return { groups, total: response.data.total ?? groups.length };
+}
+
 export async function listAuthorizableObjects(objType?: string): Promise<AuthorizableObject[]> {
   if (useMock) {
     return wait(authzObjects.filter((item) => !objType || item.type === objType).map((item) => ({ ...item })));
