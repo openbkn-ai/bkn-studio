@@ -10,12 +10,10 @@ import { Alert, Progress, Tag } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type {
-  AgentInvokePolicy,
   AgentVisibility,
   CapabilityManifest,
   CapabilityRiskLevel,
   CapabilitySideEffect,
-  CapabilityTestStatus,
 } from "@/modules/execution-factory/types/capability-manifest";
 import { getCapabilityReadiness } from "@/modules/execution-factory/utils/capability-manifest";
 
@@ -35,19 +33,6 @@ const visibilityColorMap: Record<AgentVisibility, string> = {
   hidden: "default",
   discoverable: "blue",
   callable: "green",
-};
-
-const invokePolicyColorMap: Record<AgentInvokePolicy, string> = {
-  manual_only: "default",
-  approval_required: "gold",
-  auto_allowed: "green",
-};
-
-const testStatusColorMap: Record<CapabilityTestStatus, string> = {
-  untested: "default",
-  passed: "green",
-  failed: "red",
-  stale: "gold",
 };
 
 const sideEffectColorMap: Record<CapabilitySideEffect, string> = {
@@ -81,9 +66,7 @@ export function CapabilityAgentReadinessPanel({
 
   const sideEffects = manifest.sideEffects ?? "unknown";
   const riskLevel = manifest.riskLevel ?? "medium";
-  const testStatus = manifest.testStatus ?? "untested";
   const agentVisibility = manifest.agentVisibility ?? "hidden";
-  const agentInvokePolicy = manifest.agentInvokePolicy ?? "manual_only";
 
   return (
     <section className={styles.panel} data-testid="capability-agent-readiness">
@@ -121,11 +104,6 @@ export function CapabilityAgentReadinessPanel({
 
       <div className={styles.tags}>
         <Tag>{sourceTypeLabel(manifest.sourceType)}</Tag>
-        <Tag color={testStatusColorMap[testStatus]}>
-          {t(`executionFactory.agentReadiness.testStatus.${testStatus}`, {
-            defaultValue: `验证：${testStatus}`,
-          })}
-        </Tag>
         <Tag color={sideEffectColorMap[sideEffects]}>
           {t(`executionFactory.agentReadiness.sideEffects.${sideEffects}`, {
             defaultValue: `副作用：${sideEffects}`,
@@ -139,11 +117,6 @@ export function CapabilityAgentReadinessPanel({
         <Tag color={visibilityColorMap[agentVisibility]}>
           {t(`executionFactory.agentReadiness.visibility.${agentVisibility}`, {
             defaultValue: `Agent：${agentVisibility}`,
-          })}
-        </Tag>
-        <Tag color={invokePolicyColorMap[agentInvokePolicy]}>
-          {t(`executionFactory.agentReadiness.invokePolicy.${agentInvokePolicy}`, {
-            defaultValue: `调用：${agentInvokePolicy}`,
           })}
         </Tag>
         <Tag>
@@ -178,7 +151,7 @@ export function CapabilityAgentReadinessPanel({
       ) : (
         <div className={styles.emptyText}>
           {t("executionFactory.agentReadiness.ready", {
-            defaultValue: "语义、验证和调用策略已基本齐备，可作为 Agent 调用候选。",
+            defaultValue: "业务用途与输入输出语义已基本齐备，Agent 可据此理解调用方式。",
           })}
         </div>
       )}
