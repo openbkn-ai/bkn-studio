@@ -259,7 +259,7 @@ export async function updateLlmModel(payload: LlmSavePayload) {
 
 /**
  * 每个大模型当前账号可执行的操作（来自 /me/permissions，对象类型 large_model）。
- * 真实管理员判定走此处：getMyPermissions().isAdmin 时返回全量操作（含 modify），
+ * scoped 响应带 is_admin，命中时 operationsFor 返回全量操作（含 modify），
  * 据此决定「设为默认 / 取消默认」等高危操作是否可见。
  */
 export async function getLlmItemPermissions(

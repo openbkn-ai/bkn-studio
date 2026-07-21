@@ -57,6 +57,7 @@ export async function fetchCurrentUser(): Promise<RuntimeUser> {
   return {
     businessDomainId: null,
     id: me.id ?? null,
+    isAdmin: Boolean(perm.is_admin),
     name: me.name || me.account || me.id || null,
     roles: me.roles ?? [],
     permissions: perm.is_admin
