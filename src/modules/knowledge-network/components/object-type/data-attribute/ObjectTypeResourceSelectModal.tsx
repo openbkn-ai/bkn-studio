@@ -209,12 +209,6 @@ export function ObjectTypeResourceSelectModal({
 
   useEffect(() => {
     if (!open) {
-      setCheckedItem(null);
-      setPreviewId("");
-      setPreview(null);
-      setSearchValue("");
-      setSelectedGroupId("");
-      setPagination({ page: 1, pageSize: 10 });
       return;
     }
 
@@ -222,6 +216,19 @@ export function ObjectTypeResourceSelectModal({
       setPreviewId(selectedId);
     }
   }, [open, selectedId]);
+
+  useEffect(() => {
+    if (open) {
+      return;
+    }
+
+    setCheckedItem(null);
+    setPreviewId("");
+    setPreview(null);
+    setSearchValue("");
+    setSelectedGroupId("");
+    setPagination({ page: 1, pageSize: 10 });
+  }, [open]);
 
   useEffect(() => {
     if (!open) {

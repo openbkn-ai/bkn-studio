@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/knowledge-network";
+import type {
+  ObjectTypeDataProperty,
+  ObjectTypeDataSource,
+} from "@/modules/knowledge-network/types/knowledge-network";
 
 import { canBeDisplayKey, canBePrimaryKey } from "./constants";
 
@@ -32,6 +35,63 @@ export function areConnectionsEqual(left: ConnectionPoint[], right: ConnectionPo
         item.y2 === other.y2
       );
     })
+  );
+}
+
+function areMappedFieldsEqual(
+  left?: ObjectTypeDataProperty["mappedField"],
+  right?: ObjectTypeDataProperty["mappedField"],
+) {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right) {
+    return !left && !right;
+  }
+  return (
+    left.displayName === right.displayName &&
+    left.name === right.name &&
+    left.type === right.type
+  );
+}
+
+export function areDataPropertiesEqual(
+  left: ObjectTypeDataProperty[],
+  right: ObjectTypeDataProperty[],
+) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((item, index) => {
+    const other = right[index];
+    return (
+      item.comment === other.comment &&
+      item.displayKey === other.displayKey &&
+      item.displayName === other.displayName &&
+      item.name === other.name &&
+      item.primaryKey === other.primaryKey &&
+      item.totalCount === other.totalCount &&
+      item.type === other.type &&
+      areMappedFieldsEqual(item.mappedField, other.mappedField)
+    );
+  });
+}
+
+export function areDataSourcesEqual(
+  left?: ObjectTypeDataSource,
+  right?: ObjectTypeDataSource,
+) {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right) {
+    return !left && !right;
+  }
+  return (
+    left.dataSourceId === right.dataSourceId &&
+    left.id === right.id &&
+    left.name === right.name
   );
 }
 

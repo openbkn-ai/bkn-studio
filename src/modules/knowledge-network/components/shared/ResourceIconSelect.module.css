@@ -9,6 +9,29 @@
   padding: 8px;
 }
 
+.trigger {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  min-height: 32px;
+  padding: 4px 10px;
+  width: 100%;
+}
+
+.prefixIcon {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.triggerIcon {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
 .iconBox {
   display: grid;
   gap: 8px;

@@ -7,7 +7,7 @@
 
 import { CheckOutlined, DownOutlined } from "@ant-design/icons";
 import { Popover } from "antd";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import styles from "./ResourceColorSelect.module.css";
 
@@ -46,6 +46,16 @@ export function ResourceColorSelect({
   onChangeRef.current = onChange;
   const selectedColor = value || DEFAULT_RESOURCE_COLOR;
 
+  const emitColorChange = useCallback(
+    (nextColor: string) => {
+      if (nextColor === value) {
+        return;
+      }
+      onChangeRef.current?.(nextColor);
+    },
+    [value],
+  );
+
   // Form.Item 的 onChange 引用不稳定；不要放进依赖，避免空值回填更新环（React #185）。
   useEffect(() => {
     if (!value && selectedColor !== value) {
@@ -53,28 +63,32 @@ export function ResourceColorSelect({
     }
   }, [selectedColor, value]);
 
-  const panel = (
-    <div className={styles.colorGrid}>
-      {COLOR_OPTIONS.map((color) => (
-        <button
-          className={styles.colorItem}
-          key={color}
-          onClick={() => {
-            onChange?.(color);
-            setOpen(false);
-          }}
-          style={{ backgroundColor: color }}
-          type="button"
-        >
-          {selectedColor === color ? <CheckOutlined className={styles.checkIcon} /> : null}
-        </button>
-      ))}
-    </div>
+  const panel = useMemo(
+    () => (
+      <div className={styles.colorGrid}>
+        {COLOR_OPTIONS.map((color) => (
+          <button
+            className={styles.colorItem}
+            key={color}
+            onClick={() => {
+              emitColorChange(color);
+              setOpen(false);
+            }}
+            style={{ backgroundColor: color }}
+            type="button"
+          >
+            {selectedColor === color ? <CheckOutlined className={styles.checkIcon} /> : null}
+          </button>
+        ))}
+      </div>
+    ),
+    [emitColorChange, selectedColor],
   );
 
   return (
     <Popover
-      content={panel}
+      content={open ? panel : null}
+      destroyOnHidden
       getPopupContainer={
         inModal
           ? () =>

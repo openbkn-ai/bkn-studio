@@ -18,6 +18,10 @@ import {
   type ObjectTypeDataAttributeEditorHandle,
 } from "@/modules/knowledge-network/components/object-type/data-attribute/ObjectTypeDataAttributeEditor";
 import {
+  areDataPropertiesEqual,
+  areDataSourcesEqual,
+} from "@/modules/knowledge-network/components/object-type/data-attribute/object-type-data-attribute-editor.utils";
+import {
   ObjectTypeLogicAttributeEditor,
   type ObjectTypeLogicAttributeEditorHandle,
 } from "@/modules/knowledge-network/components/object-type/logic-attribute/ObjectTypeLogicAttributeEditor";
@@ -167,6 +171,15 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     [logicProperties],
   );
 
+  const conceptGroupOptions = useMemo(
+    () =>
+      conceptGroups.map((item) => ({
+        label: item.name,
+        value: item.id,
+      })),
+    [conceptGroups],
+  );
+
   const dataAttributeBasicValue = useMemo(
     () =>
       basicValue
@@ -187,8 +200,24 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       dataProperties: ObjectTypeDataProperty[];
       dataSource?: ObjectTypeDataSource;
     }) => {
-      setDataProperties(nextProperties);
-      setDataSource(nextDataSource);
+      setDataProperties((current) =>
+        areDataPropertiesEqual(current, nextProperties) ? current : nextProperties,
+      );
+      setDataSource((current) =>
+        areDataSourcesEqual(current, nextDataSource) ? current : nextDataSource,
+      );
+    },
+    [],
+  );
+
+  const syncDataAttributeState = useCallback(
+    (nextProperties: ObjectTypeDataProperty[], nextDataSource?: ObjectTypeDataSource) => {
+      setDataProperties((current) =>
+        areDataPropertiesEqual(current, nextProperties) ? current : nextProperties,
+      );
+      setDataSource((current) =>
+        areDataSourcesEqual(current, nextDataSource) ? current : nextDataSource,
+      );
     },
     [],
   );
@@ -232,8 +261,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     try {
       const values = await dataAttributeRef.current?.getDataProperties();
       if (values) {
-        setDataProperties(values.dataProperties);
-        setDataSource(values.dataSource);
+        syncDataAttributeState(values.dataProperties, values.dataSource);
       }
       setCurrentStep(0);
     } catch {
@@ -247,8 +275,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       if (!values) {
         return;
       }
-      setDataProperties(values.dataProperties);
-      setDataSource(values.dataSource);
+      syncDataAttributeState(values.dataProperties, values.dataSource);
       setDoneStep((prev) => Math.max(prev, 2));
       setCurrentStep(2);
     } catch {
@@ -310,8 +337,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       if (dataValues) {
         normalizedDataProperties = dataValues.dataProperties;
         normalizedDataSource = dataValues.dataSource;
-        setDataProperties(dataValues.dataProperties);
-        setDataSource(dataValues.dataSource);
+        syncDataAttributeState(dataValues.dataProperties, dataValues.dataSource);
       }
     } catch {
       setCurrentStep(1);
@@ -374,16 +400,14 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       if (nextStep === 0 && currentStep >= 1) {
         const values = await dataAttributeRef.current?.getDataProperties();
         if (values) {
-          setDataProperties(values.dataProperties);
-          setDataSource(values.dataSource);
+          syncDataAttributeState(values.dataProperties, values.dataSource);
         }
       }
 
       if (nextStep === 1 && currentStep === 0) {
-        const values = await dataAttributeRef.current?.getDataProperties();
-        if (values) {
-          setDataProperties(values.dataProperties);
-          setDataSource(values.dataSource);
+        const basicValues = await syncBasicValueFromForm();
+        if (!basicValues) {
+          return;
         }
       }
 
@@ -457,10 +481,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
                 allowClear
                 mode="multiple"
                 optionFilterProp="label"
-                options={conceptGroups.map((item) => ({
-                  label: item.name,
-                  value: item.id,
-                }))}
+                options={conceptGroupOptions}
                 placeholder={t("knowledgeNetwork.objectTypeConceptGroupsPlaceholder")}
               />
             </Form.Item>

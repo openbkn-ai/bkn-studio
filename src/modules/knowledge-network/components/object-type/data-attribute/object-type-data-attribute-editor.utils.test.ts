@@ -13,6 +13,8 @@ import {
   applyDisplayKeySelection,
   applyPrimaryKeySelection,
   areConnectionsEqual,
+  areDataPropertiesEqual,
+  areDataSourcesEqual,
   areStringArraysEqualAsSets,
 } from "./object-type-data-attribute-editor.utils";
 
@@ -78,6 +80,67 @@ describe("areStringArraysEqualAsSets", () => {
 
   it("detects missing members", () => {
     expect(areStringArraysEqualAsSets(["a", "b"], ["a"])).toBe(false);
+  });
+});
+
+describe("areDataPropertiesEqual", () => {
+  it("returns true when semantic fields match regardless of object identity", () => {
+    const left = [
+      createProperty({
+        displayKey: true,
+        mappedField: { displayName: "ID", name: "id", type: "integer" },
+        name: "id",
+        primaryKey: true,
+        type: "integer",
+      }),
+    ];
+    const right = left.map((item) => ({
+      ...item,
+      incrementalKey: false,
+      mappedField: item.mappedField ? { ...item.mappedField } : undefined,
+    }));
+
+    expect(areDataPropertiesEqual(left, right)).toBe(true);
+  });
+
+  it("returns false when mapped field changes", () => {
+    const left = [
+      createProperty({
+        mappedField: { displayName: "ID", name: "id", type: "integer" },
+        name: "id",
+        type: "integer",
+      }),
+    ];
+    const right = [
+      createProperty({
+        mappedField: { displayName: "Code", name: "code", type: "string" },
+        name: "id",
+        type: "integer",
+      }),
+    ];
+
+    expect(areDataPropertiesEqual(left, right)).toBe(false);
+  });
+});
+
+describe("areDataSourcesEqual", () => {
+  it("treats undefined pairs as equal", () => {
+    expect(areDataSourcesEqual(undefined, undefined)).toBe(true);
+  });
+
+  it("compares data source ids and names", () => {
+    expect(
+      areDataSourcesEqual(
+        { dataSourceId: "ds-1", id: "view-1", name: "Orders" },
+        { dataSourceId: "ds-1", id: "view-1", name: "Orders" },
+      ),
+    ).toBe(true);
+    expect(
+      areDataSourcesEqual(
+        { id: "view-1", name: "Orders" },
+        { id: "view-2", name: "Orders" },
+      ),
+    ).toBe(false);
   });
 });
 
