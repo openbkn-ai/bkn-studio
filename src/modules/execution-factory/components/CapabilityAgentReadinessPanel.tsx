@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { RobotOutlined } from "@ant-design/icons";
-import { Alert, Progress, Tag } from "antd";
+import { QuestionCircleOutlined, RobotOutlined } from "@ant-design/icons";
+import { Alert, Progress, Tag, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -42,6 +42,16 @@ const sideEffectColorMap: Record<CapabilitySideEffect, string> = {
   external_action: "red",
   unknown: "default",
 };
+
+const READINESS_DIMENSIONS: Array<{ key: string; label: string; weight: number }> = [
+  { key: "business intent", label: "业务用途", weight: 40 },
+  { key: "input semantics", label: "输入语义", weight: 35 },
+  { key: "output semantics", label: "输出语义", weight: 25 },
+];
+
+function readinessDimensionLabel(key: string) {
+  return READINESS_DIMENSIONS.find((dim) => dim.key === key)?.label ?? key;
+}
 
 function sourceTypeLabel(sourceType: CapabilityManifest["sourceType"]) {
   switch (sourceType) {
@@ -94,11 +104,40 @@ export function CapabilityAgentReadinessPanel({
             status={readiness.level === "low" ? "exception" : "normal"}
           />
           <div className={styles.scoreValue}>{readiness.score}</div>
-          <div className={styles.scoreLabel}>
-            {t("executionFactory.agentReadiness.score", {
-              defaultValue: "就绪度",
-            })}
-          </div>
+          <Tooltip
+            title={
+              <div className={styles.scoreRuleTip}>
+                <div className={styles.scoreRuleTitle}>
+                  {t("executionFactory.agentReadiness.scoreRuleTitle", {
+                    defaultValue: "就绪度评分规则",
+                  })}
+                </div>
+                {READINESS_DIMENSIONS.map((dim) => {
+                  const met = !readiness.missing.includes(dim.key);
+                  return (
+                    <div
+                      className={
+                        met
+                          ? styles.scoreRuleRow
+                          : `${styles.scoreRuleRow} ${styles.scoreRuleRowMuted}`
+                      }
+                      key={dim.key}
+                    >
+                      <span>{`${met ? "✓" : "○"} ${dim.label}`}</span>
+                      <span>{dim.weight}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            }
+          >
+            <span className={styles.scoreLabel}>
+              {t("executionFactory.agentReadiness.score", {
+                defaultValue: "就绪度",
+              })}
+              <QuestionCircleOutlined className={styles.scoreInfoIcon} />
+            </span>
+          </Tooltip>
         </div>
       </div>
 
@@ -141,7 +180,7 @@ export function CapabilityAgentReadinessPanel({
           description={
             <div className={styles.missingList}>
               {readiness.missing.map((item) => (
-                <Tag key={item}>{item}</Tag>
+                <Tag key={item}>{readinessDimensionLabel(item)}</Tag>
               ))}
             </div>
           }
