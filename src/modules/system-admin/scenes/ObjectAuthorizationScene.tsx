@@ -251,34 +251,38 @@ export function ObjectAuthorizationScene() {
         operations: [],
       })),
     ];
-    void resolveGrantNames(toResolve).then((named) => {
-      if (cancelled) {
-        return;
-      }
-      const nameByKey = new Map(
-        named
-          .filter((grant) => grant.objName !== grant.objId)
-          .map((grant) => [`${grant.objType}:${grant.objId}`, grant.objName] as const),
-      );
-      if (nameByKey.size === 0) {
-        return;
-      }
-      if (view === "all") {
-        setGrants((prev) =>
-          prev.map((grant) => {
-            const name = nameByKey.get(`${grant.objType}:${grant.objId}`);
-            return name ? { ...grant, objName: name } : grant;
-          }),
+    void resolveGrantNames(toResolve)
+      .then((named) => {
+        if (cancelled) {
+          return;
+        }
+        const nameByKey = new Map(
+          named
+            .filter((grant) => grant.objName !== grant.objId)
+            .map((grant) => [`${grant.objType}:${grant.objId}`, grant.objName] as const),
         );
-      } else {
-        setGroups((prev) =>
-          prev.map((group) => {
-            const name = nameByKey.get(`${group.objType}:${group.objId}`);
-            return name ? { ...group, objName: name } : group;
-          }),
-        );
-      }
-    });
+        if (nameByKey.size === 0) {
+          return;
+        }
+        if (view === "all") {
+          setGrants((prev) =>
+            prev.map((grant) => {
+              const name = nameByKey.get(`${grant.objType}:${grant.objId}`);
+              return name ? { ...grant, objName: name } : grant;
+            }),
+          );
+        } else {
+          setGroups((prev) =>
+            prev.map((group) => {
+              const name = nameByKey.get(`${group.objType}:${group.objId}`);
+              return name ? { ...group, objName: name } : group;
+            }),
+          );
+        }
+      })
+      .catch(() => {
+        // 取名失败保持 id 兜底,不阻断列表。
+      });
     return () => {
       cancelled = true;
     };

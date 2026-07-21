@@ -41,7 +41,9 @@ function foldedResponse(is_admin: boolean, permissions: Row[]) {
 
 /** 末次 http.get 调用携带的 query 参数。 */
 function lastParams(): Record<string, string> {
-  const call = getMock.mock.calls.at(-1);
+  const call = getMock.mock.calls.at(-1) as
+    | [string, { params?: Record<string, string> }]
+    | undefined;
   return call?.[1]?.params ?? {};
 }
 
@@ -146,8 +148,8 @@ describe("authorization.service · getResourceOperations", () => {
 
     // 120 / 50 → 3 批
     expect(getMock).toHaveBeenCalledTimes(3);
-    for (const call of getMock.mock.calls) {
-      const ids = String(call[1].params.resource_id).split(",");
+    for (const call of getMock.mock.calls as [string, { params: { resource_id: string } }][]) {
+      const ids = call[1].params.resource_id.split(",");
       expect(ids.length).toBeLessThanOrEqual(50);
     }
     // 合并后每个资源都拿到类型级 view
@@ -173,7 +175,9 @@ describe("authorization.service · getResourceOperations", () => {
     ]);
 
     const byType = new Set(
-      getMock.mock.calls.map((call) => call[1].params.resource_type),
+      (getMock.mock.calls as [string, { params: { resource_type: string } }][]).map(
+        (call) => call[1].params.resource_type,
+      ),
     );
     expect(byType).toEqual(new Set(["large_model", "small_model"]));
     expect(result[0].operation).toEqual(["modify"]);

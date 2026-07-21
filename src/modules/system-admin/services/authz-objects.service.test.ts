@@ -107,7 +107,7 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
 
     await resolveGrantNames([resourceGrant("im-1")]);
 
-    const call = getMock.mock.calls.at(-1);
+    const call = getMock.mock.calls.at(-1) as [string, { params?: unknown }] | undefined;
     expect(call?.[1]?.params).toEqual({ ignore_missing: true });
   });
 

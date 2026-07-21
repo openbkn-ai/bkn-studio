@@ -210,6 +210,10 @@ export async function resolveGrantNames(grants: ObjectGrant[]): Promise<ObjectGr
     if (grant.objName && grant.objName !== grant.objId) {
       continue;
     }
+    // 缺 type 或 id 无法可靠取名,也会污染 `${type}:${id}` 缓存键,跳过。
+    if (!grant.objType || !grant.objId) {
+      continue;
+    }
     if (nameCache.has(`${grant.objType}:${grant.objId}`)) {
       continue;
     }

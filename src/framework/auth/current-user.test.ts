@@ -7,13 +7,11 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { http } from "@/framework/request/http";
+const mockGet = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: vi.fn() },
+  http: { get: mockGet },
 }));
-
-const mockGet = vi.mocked(http.get);
 
 async function importFetchCurrentUser() {
   const module = await import("@/framework/auth/current-user");
