@@ -42,18 +42,18 @@ export function mergeKnowledgeNetworkMetricsTotal(
   };
 }
 
-export function applyKnowledgeNetworkMetricsTotal(
-  detail: KnowledgeNetworkRecord | null,
+export function commitMetricsTotalUpdate(
+  currentDetail: KnowledgeNetworkRecord | null,
   metricsTotal: number,
   pending: MetricsTotalPending,
 ): KnowledgeNetworkRecord | null {
-  if (!detail) {
+  if (!currentDetail) {
     rememberMetricsTotal(pending, metricsTotal);
-    return detail;
+    return null;
   }
 
   clearMetricsTotalPending(pending);
-  return mergeKnowledgeNetworkMetricsTotal(detail, metricsTotal);
+  return mergeKnowledgeNetworkMetricsTotal(currentDetail, metricsTotal);
 }
 
 export function mergePendingMetricsTotalIntoDetail(

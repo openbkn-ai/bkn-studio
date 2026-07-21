@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 import {
-  applyKnowledgeNetworkMetricsTotal,
+  commitMetricsTotalUpdate,
   createMetricsTotalPending,
   mergePendingMetricsTotalIntoDetail,
 } from "./workspaceMetricsTotal";
@@ -38,16 +38,16 @@ function createDetail(metricsTotal = 0): KnowledgeNetworkRecord {
 }
 
 describe("workspaceMetricsTotal", () => {
-  it("stores total in pending when detail is not loaded yet", () => {
+  it("stores total in pending synchronously when detail is not loaded yet", () => {
     const pending = createMetricsTotalPending();
 
-    expect(applyKnowledgeNetworkMetricsTotal(null, 12, pending)).toBeNull();
+    expect(commitMetricsTotalUpdate(null, 12, pending)).toBeNull();
     expect(pending.value).toBe(12);
   });
 
   it("merges pending total when detail arrives after metrics list", () => {
     const pending = createMetricsTotalPending();
-    applyKnowledgeNetworkMetricsTotal(null, 12, pending);
+    commitMetricsTotalUpdate(null, 12, pending);
 
     const merged = mergePendingMetricsTotalIntoDetail(createDetail(0), pending);
 
@@ -55,10 +55,19 @@ describe("workspaceMetricsTotal", () => {
     expect(pending.value).toBeNull();
   });
 
+  it("survives loadDetail reading pending before React applies detail updates", () => {
+    const pending = createMetricsTotalPending();
+    commitMetricsTotalUpdate(null, 12, pending);
+
+    const merged = mergePendingMetricsTotalIntoDetail(createDetail(0), pending);
+
+    expect(merged.statistics.metricsTotal).toBe(12);
+  });
+
   it("applies total immediately when detail is already loaded", () => {
     const pending = createMetricsTotalPending();
 
-    const updated = applyKnowledgeNetworkMetricsTotal(createDetail(0), 8, pending);
+    const updated = commitMetricsTotalUpdate(createDetail(0), 8, pending);
 
     expect(updated?.statistics.metricsTotal).toBe(8);
     expect(pending.value).toBeNull();
