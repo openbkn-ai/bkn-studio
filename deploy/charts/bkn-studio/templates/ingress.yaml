@@ -4,10 +4,14 @@ kind: Ingress
 metadata:
   name: {{ .Values.image.name }}-ingress
   namespace: {{ .Release.Namespace }}
-  {{- with .Values.ingress.annotations }}
   annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- if eq .Values.accessAddress.scheme "https" }}
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    {{- else }}
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    {{- end }}
 spec:
   {{- if .Values.ingress.ingressClass }}
   ingressClassName: {{ .Values.ingress.ingressClass }}

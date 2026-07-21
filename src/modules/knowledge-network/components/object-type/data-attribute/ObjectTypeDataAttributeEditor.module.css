@@ -136,6 +136,45 @@
   width: 280px;
 }
 
+.keyPanelEmpty {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.keyPanelList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 0;
+}
+
+.keyPanelItem {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+}
+
+.keyPanelRadioGroup {
+  display: block;
+  width: 100%;
+}
+
+.keyPanelClear {
+  background: none;
+  border: 0;
+  color: #1677ff;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 8px;
+  padding: 0;
+}
+
 .canvas {
   background: #fff;
   cursor: grab;
@@ -307,11 +346,23 @@
 }
 
 .panelItemHighlighted {
-  background: #f1f7ff;
+  background: #e6f4ff;
+  box-shadow: inset 3px 0 0 #1677ff;
+}
+
+.panelItemHighlighted:hover {
+  background: #d6ebff;
 }
 
 .panelItemMapped {
   background: rgba(22, 119, 255, 0.04);
+}
+
+/* Pending selection must stay visible even when the field is already mapped. */
+.panelItemMapped.panelItemHighlighted,
+.panelItemMapped.panelItemHighlighted:hover {
+  background: #e6f4ff;
+  box-shadow: inset 3px 0 0 #1677ff;
 }
 
 .itemContent {

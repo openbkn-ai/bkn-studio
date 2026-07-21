@@ -9,6 +9,7 @@ import {
   BookOutlined,
   CompressOutlined,
   DeleteOutlined,
+  DisconnectOutlined,
   EllipsisOutlined,
   InfoCircleFilled,
   MinusOutlined,
@@ -20,17 +21,17 @@ import {
   StarOutlined,
   TableOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Empty, Input, Popover, Select, Tooltip } from "antd";
+import { Alert, Checkbox, Dropdown, Empty, Input, Popover, Radio, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 import {
   useCallback,
   useEffect,
   useImperativeHandle,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   forwardRef,
+  memo,
 } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -61,6 +62,15 @@ import styles from "./ObjectTypeDataAttributeEditor.module.css";
 import { ObjectTypeDataAttributePickModal } from "./ObjectTypeDataAttributePickModal";
 import { ObjectTypeResourceSelectModal } from "./ObjectTypeResourceSelectModal";
 import { FieldTypeIcon } from "./FieldTypeIcon";
+import {
+  applyDisplayKeySelection,
+  applyPrimaryKeySelection,
+  areConnectionsEqual,
+  areDataPropertiesEqual,
+  areDataSourcesEqual,
+  areStringArraysEqualAsSets,
+  type ConnectionPoint,
+} from "./object-type-data-attribute-editor.utils";
 
 type ObjectTypeBasicInfo = {
   color: string;
@@ -91,15 +101,6 @@ export type ObjectTypeDataAttributeEditorHandle = {
   }>;
 };
 
-type ConnectionPoint = {
-  propertyName: string;
-  viewFieldName: string;
-  x1: number;
-  x2: number;
-  y1: number;
-  y2: number;
-};
-
 const VIEW_PANEL_POS = { x: 150, y: 30 };
 const DATA_PANEL_POS = { x: 760, y: 30 };
 const PANEL_WIDTH = 360;
@@ -109,6 +110,94 @@ const PANEL_ROW_HEIGHT = 52;
 const PANEL_EMPTY_HEIGHT = 96;
 const CANVAS_MIN_HEIGHT = 560;
 const CANVAS_STAGE_WIDTH = 1400;
+
+type KeySelectOption = {
+  label: string;
+  value: string;
+};
+
+type PrimaryKeySelectProps = {
+  onChange: (names: string[]) => void;
+  options: KeySelectOption[];
+  placeholder: string;
+  value: string[];
+};
+
+type DisplayKeySelectProps = {
+  onChange: (name: string) => void;
+  options: KeySelectOption[];
+  placeholder: string;
+  value: string | null;
+};
+
+const PrimaryKeyPanel = memo(function PrimaryKeyPanel({
+  onChange,
+  options,
+  placeholder,
+  value,
+}: PrimaryKeySelectProps) {
+  if (options.length === 0) {
+    return <div className={styles.keyPanelEmpty}>{placeholder}</div>;
+  }
+
+  return (
+    <div className={styles.keyPopover}>
+      <ul className={styles.keyPanelList}>
+        {options.map((option) => {
+          const checked = value.includes(option.value);
+          return (
+            <li key={option.value}>
+              <label className={styles.keyPanelItem}>
+                <Checkbox
+                  checked={checked}
+                  onChange={(event) => {
+                    const nextValue = event.target.checked
+                      ? [...value, option.value]
+                      : value.filter((item) => item !== option.value);
+                    onChange(nextValue);
+                  }}
+                />
+                <span>{option.label}</span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+});
+
+const DisplayKeyPanel = memo(function DisplayKeyPanel({
+  onChange,
+  options,
+  placeholder,
+  value,
+}: DisplayKeySelectProps) {
+  if (options.length === 0) {
+    return <div className={styles.keyPanelEmpty}>{placeholder}</div>;
+  }
+
+  return (
+    <div className={styles.keyPopover}>
+      <Radio.Group
+        className={styles.keyPanelRadioGroup}
+        onChange={(event) => onChange(String(event.target.value))}
+        value={value ?? ""}
+      >
+        <ul className={styles.keyPanelList}>
+          <li key="__none__">
+            <Radio value="">{placeholder}</Radio>
+          </li>
+          {options.map((option) => (
+            <li key={option.value}>
+              <Radio value={option.value}>{option.label}</Radio>
+            </li>
+          ))}
+        </ul>
+      </Radio.Group>
+    </div>
+  );
+});
 
 function isSupportedResourceFieldName(name: string) {
   return !name.startsWith("_") && !name.startsWith("@");
@@ -208,6 +297,8 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [primaryKeyPopoverOpen, setPrimaryKeyPopoverOpen] = useState(false);
+  const [displayKeyPopoverOpen, setDisplayKeyPopoverOpen] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
   const validProperties = useMemo(
@@ -279,13 +370,30 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   const updateProperties = useCallback(
     (nextProperties: ObjectTypeDataProperty[], nextDataSource?: ObjectTypeDataSource) => {
+      const normalized = nextProperties.map((item) => ({ ...item, incrementalKey: false }));
+      const resolvedDataSource = nextDataSource ?? dataSource;
+
+      if (
+        areDataPropertiesEqual(dataProperties, normalized) &&
+        areDataSourcesEqual(dataSource, resolvedDataSource)
+      ) {
+        return;
+      }
+
       onChange({
-        dataProperties: nextProperties.map((item) => ({ ...item, incrementalKey: false })),
-        dataSource: nextDataSource ?? dataSource,
+        dataProperties: normalized,
+        dataSource: resolvedDataSource,
       });
     },
-    [dataSource, onChange],
+    [dataProperties, dataSource, onChange],
   );
+
+  const clearPendingViewField = useCallback(() => {
+    setPendingViewField(null);
+    setAlertMessage((current) =>
+      current === t("knowledgeNetwork.objectTypeClickToConnect") ? "" : current,
+    );
+  }, [t]);
 
   const loadViewFields = useCallback(
     async (viewId: string) => {
@@ -317,7 +425,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const recalculateConnections = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
-      setConnections([]);
+      setConnections((current) => (current.length === 0 ? current : []));
       return;
     }
 
@@ -348,23 +456,93 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       });
     });
 
-    setConnections(nextConnections);
+    setConnections((current) =>
+      areConnectionsEqual(current, nextConnections) ? current : nextConnections,
+    );
   }, [validProperties]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     recalculateConnections();
     const timer = window.setTimeout(() => {
       recalculateConnections();
     }, 150);
 
     return () => window.clearTimeout(timer);
-  }, [recalculateConnections, filteredProperties, filteredViewFields, zoom, pan, dataProperties]);
+  }, [recalculateConnections, filteredProperties, filteredViewFields, zoom, pan]);
+
+  const handlePrimaryKeysChange = useCallback(
+    (names: string[]) => {
+      if (areStringArraysEqualAsSets(names, primaryKeyNames)) {
+        return;
+      }
+      const { changed, nextProperties } = applyPrimaryKeySelection(dataProperties, names);
+      if (!changed) {
+        return;
+      }
+      updateProperties(nextProperties);
+    },
+    [dataProperties, primaryKeyNames, updateProperties],
+  );
+
+  const handleDisplayKeyChange = useCallback(
+    (name: string) => {
+      if (name === displayKeyName) {
+        return;
+      }
+      const { changed, nextProperties } = applyDisplayKeySelection(dataProperties, name);
+      if (!changed) {
+        return;
+      }
+      updateProperties(nextProperties);
+    },
+    [dataProperties, displayKeyName, updateProperties],
+  );
+
+  const primaryKeyPopoverContent = useMemo(
+    () => (
+      <PrimaryKeyPanel
+        onChange={handlePrimaryKeysChange}
+        options={primaryKeyOptions}
+        placeholder={t("knowledgeNetwork.objectTypeKeyNotConfigured")}
+        value={primaryKeyNames}
+      />
+    ),
+    [handlePrimaryKeysChange, primaryKeyOptions, primaryKeyNames, t],
+  );
+
+  const displayKeyPopoverContent = useMemo(
+    () => (
+      <DisplayKeyPanel
+        onChange={handleDisplayKeyChange}
+        options={displayKeyOptions}
+        placeholder={t("knowledgeNetwork.objectTypeKeyNotConfigured")}
+        value={displayKeyName || null}
+      />
+    ),
+    [displayKeyName, displayKeyOptions, handleDisplayKeyChange, t],
+  );
 
   useEffect(() => {
     const handleResize = () => recalculateConnections();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [recalculateConnections]);
+
+  useEffect(() => {
+    if (!pendingViewField) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      clearPendingViewField();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [clearPendingViewField, pendingViewField]);
 
   useImperativeHandle(
     ref,
@@ -407,7 +585,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     updateProperties(mappedProperties, view);
   };
 
-  const handleClearResource = () => {
+  const handleClearResource = useCallback(() => {
     void modal.confirm({
       title: t("knowledgeNetwork.objectTypeClearResourceTitle"),
       content: t("knowledgeNetwork.objectTypeClearResourceDescription"),
@@ -423,24 +601,25 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         );
       },
     });
+  }, [dataProperties, modal, t, updateProperties]);
+
+  const selectPendingViewField = (field: ObjectTypeResourceField) => {
+    if (pendingViewField?.name === field.name) {
+      clearPendingViewField();
+      return;
+    }
+    setPendingViewField(field);
+    setAlertMessage(t("knowledgeNetwork.objectTypeClickToConnect"));
   };
 
-  const setPrimaryKeys = (names: string[]) => {
+  const disconnectPropertyMapping = (name: string, event: React.MouseEvent) => {
+    event.stopPropagation();
     updateProperties(
-      dataProperties.map((item) => ({
-        ...item,
-        primaryKey: names.includes(item.name) && canBePrimaryKey(item.type),
-      })),
+      dataProperties.map((item) =>
+        item.name === name ? { ...item, mappedField: undefined } : item,
+      ),
     );
-  };
-
-  const setDisplayKey = (name: string) => {
-    updateProperties(
-      dataProperties.map((item) => ({
-        ...item,
-        displayKey: item.name === name && canBeDisplayKey(item.type),
-      })),
-    );
+    void message.success(t("knowledgeNetwork.objectTypeMappingCleared"));
   };
 
   const connectProperty = (property: ObjectTypeDataProperty) => {
@@ -482,8 +661,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
           : item,
       ),
     );
-    setPendingViewField(null);
-    setAlertMessage("");
+    clearPendingViewField();
   };
 
   const handleAddProperty = (property: ObjectTypeDataProperty) => {
@@ -607,7 +785,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     setPickModalOpen(false);
   };
 
-  const handleClearAllProperties = () => {
+  const handleClearAllProperties = useCallback(() => {
     void modal.confirm({
       title: t("knowledgeNetwork.objectTypeClearAllPropertiesTitle"),
       content: t("knowledgeNetwork.objectTypeClearAllPropertiesDescription"),
@@ -617,7 +795,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         updateProperties([]);
       },
     });
-  };
+  }, [modal, t, updateProperties]);
 
   const handleDeletePropertyFromRow = (name: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -661,35 +839,99 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     </Tooltip>
   );
 
-  const viewPanelMenu: MenuProps["items"] = [
-    {
-      key: "replace",
-      label: t("knowledgeNetwork.objectTypeReplaceResource"),
-    },
-    {
-      key: "clear",
-      label: t("knowledgeNetwork.objectTypeClearResource"),
-    },
-  ];
+  const viewPanelMenu = useMemo<MenuProps["items"]>(
+    () => [
+      {
+        key: "replace",
+        label: t("knowledgeNetwork.objectTypeReplaceResource"),
+      },
+      {
+        key: "clear",
+        label: t("knowledgeNetwork.objectTypeClearResource"),
+      },
+    ],
+    [t],
+  );
 
-  const dataPanelAddMenu: MenuProps["items"] = [
-    {
-      key: "add",
-      label: t("knowledgeNetwork.objectTypeManualCreateProperty"),
+  const handleViewPanelMenuClick = useCallback(
+    ({ key }: { key: string }) => {
+      if (key === "replace") {
+        setResourceModalOpen(true);
+      }
+      if (key === "clear") {
+        handleClearResource();
+      }
     },
-    {
-      disabled: !selectedViewId,
-      key: "pick",
-      label: t("knowledgeNetwork.objectTypeSyncResourceFields"),
-    },
-  ];
+    [handleClearResource],
+  );
 
-  const dataPanelMoreMenu: MenuProps["items"] = [
-    {
-      key: "clearAll",
-      label: t("knowledgeNetwork.objectTypeClearAllProperties"),
+  const viewPanelMenuConfig = useMemo<MenuProps>(
+    () => ({
+      items: viewPanelMenu,
+      onClick: handleViewPanelMenuClick,
+    }),
+    [handleViewPanelMenuClick, viewPanelMenu],
+  );
+
+  const dataPanelAddMenu = useMemo<MenuProps["items"]>(
+    () => [
+      {
+        key: "add",
+        label: t("knowledgeNetwork.objectTypeManualCreateProperty"),
+      },
+      {
+        disabled: !selectedViewId,
+        key: "pick",
+        label: t("knowledgeNetwork.objectTypeSyncResourceFields"),
+      },
+    ],
+    [selectedViewId, t],
+  );
+
+  const handleDataPanelAddMenuClick = useCallback(({ key }: { key: string }) => {
+    if (key === "add") {
+      setEditingProperty(undefined);
+      setDrawerOpen(true);
+    }
+    if (key === "pick") {
+      setPickModalOpen(true);
+    }
+  }, []);
+
+  const dataPanelAddMenuConfig = useMemo<MenuProps>(
+    () => ({
+      items: dataPanelAddMenu,
+      onClick: handleDataPanelAddMenuClick,
+    }),
+    [dataPanelAddMenu, handleDataPanelAddMenuClick],
+  );
+
+  const dataPanelMoreMenu = useMemo<MenuProps["items"]>(
+    () => [
+      {
+        key: "clearAll",
+        label: t("knowledgeNetwork.objectTypeClearAllProperties"),
+      },
+    ],
+    [t],
+  );
+
+  const handleDataPanelMoreMenuClick = useCallback(
+    ({ key }: { key: string }) => {
+      if (key === "clearAll") {
+        handleClearAllProperties();
+      }
     },
-  ];
+    [handleClearAllProperties],
+  );
+
+  const dataPanelMoreMenuConfig = useMemo<MenuProps>(
+    () => ({
+      items: dataPanelMoreMenu,
+      onClick: handleDataPanelMoreMenuClick,
+    }),
+    [dataPanelMoreMenu, handleDataPanelMoreMenuClick],
+  );
 
   const showViewSearch = viewFields.length > 0 || fieldSearch.length > 0;
   const showDataSearch = dataProperties.length > 0 || propertySearch.length > 0;
@@ -713,7 +955,21 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   return (
     <div className={styles.root}>
       {alertMessage ? (
-        <Alert banner closable message={alertMessage} onClose={() => setAlertMessage("")} type="error" />
+        <Alert
+          banner
+          closable
+          message={alertMessage}
+          onClose={() => {
+            if (alertMessage === t("knowledgeNetwork.objectTypeClickToConnect")) {
+              clearPendingViewField();
+              return;
+            }
+            setAlertMessage("");
+          }}
+          type={
+            alertMessage === t("knowledgeNetwork.objectTypeClickToConnect") ? "info" : "error"
+          }
+        />
       ) : null}
 
       <div className={styles.infoBar}>
@@ -733,17 +989,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             {renderInfoHint("knowledgeNetwork.objectTypePrimaryKeyTip")}
             <span className={styles.infoLabel}>:</span>
             <Popover
-              content={
-                <Select
-                  allowClear
-                  className={styles.keyPopover}
-                  mode="multiple"
-                  onChange={(value) => setPrimaryKeys(value)}
-                  options={primaryKeyOptions}
-                  placeholder={t("knowledgeNetwork.objectTypeKeyNotConfigured")}
-                  value={primaryKeyNames}
-                />
-              }
+              content={primaryKeyPopoverOpen ? primaryKeyPopoverContent : null}
+              destroyOnHidden
+              onOpenChange={setPrimaryKeyPopoverOpen}
+              open={primaryKeyPopoverOpen}
               trigger="click"
             >
               {primaryKeyNames.length > 1 ? (
@@ -764,16 +1013,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             {renderInfoHint("knowledgeNetwork.objectTypeDisplayKeyTip")}
             <span className={styles.infoLabel}>:</span>
             <Popover
-              content={
-                <Select
-                  allowClear
-                  className={styles.keyPopover}
-                  onChange={(value) => setDisplayKey(value ?? "")}
-                  options={displayKeyOptions}
-                  placeholder={t("knowledgeNetwork.objectTypeKeyNotConfigured")}
-                  value={displayKeyName || undefined}
-                />
-              }
+              content={displayKeyPopoverOpen ? displayKeyPopoverContent : null}
+              destroyOnHidden
+              onOpenChange={setDisplayKeyPopoverOpen}
+              open={displayKeyPopoverOpen}
               trigger="click"
             >
               {renderKeyValue(
@@ -872,20 +1115,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                         }}
                       />
                     </Tooltip>
-                    <Dropdown
-                      menu={{
-                        items: viewPanelMenu,
-                        onClick: ({ key }) => {
-                          if (key === "replace") {
-                            setResourceModalOpen(true);
-                          }
-                          if (key === "clear") {
-                            handleClearResource();
-                          }
-                        },
-                      }}
-                      trigger={["click"]}
-                    >
+                    <Dropdown menu={viewPanelMenuConfig} trigger={["click"]}>
                       <EllipsisOutlined className={styles.panelActionIcon} />
                     </Dropdown>
                   </>
@@ -929,10 +1159,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                           .filter(Boolean)
                           .join(" ")}
                         key={field.name}
-                        onClick={() => {
-                          setPendingViewField(field);
-                          setAlertMessage(t("knowledgeNetwork.objectTypeClickToConnect"));
-                        }}
+                        onClick={() => selectPendingViewField(field)}
                       >
                         <div className={styles.itemContent}>
                           <FieldTypeIcon type={field.type} />
@@ -975,34 +1202,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                 <span className={styles.panelCount}>{validProperties.length}</span>
               </div>
               <div className={styles.panelActions}>
-                <Dropdown
-                  menu={{
-                    items: dataPanelAddMenu,
-                    onClick: ({ key }) => {
-                      if (key === "add") {
-                        setEditingProperty(undefined);
-                        setDrawerOpen(true);
-                      }
-                      if (key === "pick") {
-                        setPickModalOpen(true);
-                      }
-                    },
-                  }}
-                  trigger={["click"]}
-                >
+                <Dropdown menu={dataPanelAddMenuConfig} trigger={["click"]}>
                   <PlusOutlined className={styles.panelActionIcon} />
                 </Dropdown>
-                <Dropdown
-                  menu={{
-                    items: dataPanelMoreMenu,
-                    onClick: ({ key }) => {
-                      if (key === "clearAll") {
-                        handleClearAllProperties();
-                      }
-                    },
-                  }}
-                  trigger={["click"]}
-                >
+                <Dropdown menu={dataPanelMoreMenuConfig} trigger={["click"]}>
                   <EllipsisOutlined className={styles.panelActionIcon} />
                 </Dropdown>
               </div>
@@ -1074,6 +1277,16 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                           ) : null}
                         </div>
                         <div className={styles.itemIconsActions}>
+                          {property.mappedField ? (
+                            <Tooltip title={t("knowledgeNetwork.objectTypeClearMapping")}>
+                              <DisconnectOutlined
+                                className={styles.rowActionIcon}
+                                onClick={(event) =>
+                                  disconnectPropertyMapping(property.name, event)
+                                }
+                              />
+                            </Tooltip>
+                          ) : null}
                           {canBeDisplayKey(property.type) ? (
                             property.displayKey ? (
                               <StarFilled

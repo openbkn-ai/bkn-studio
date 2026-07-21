@@ -94,6 +94,14 @@ export function ResourceTagsSelect({
           .filter(Boolean)
           .sort();
 
+        const current = value ?? [];
+        if (
+          current.length === normalized.length &&
+          current.every((item, index) => item === normalized[index])
+        ) {
+          return;
+        }
+
         onChange?.(normalized);
       }}
       placeholder={placeholder ?? t("knowledgeNetwork.tagsPlaceholder")}
