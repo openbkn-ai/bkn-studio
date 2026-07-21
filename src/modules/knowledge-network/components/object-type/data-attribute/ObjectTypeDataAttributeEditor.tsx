@@ -9,6 +9,7 @@ import {
   BookOutlined,
   CompressOutlined,
   DeleteOutlined,
+  DisconnectOutlined,
   EllipsisOutlined,
   InfoCircleFilled,
   MinusOutlined,
@@ -387,6 +388,13 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     [dataProperties, dataSource, onChange],
   );
 
+  const clearPendingViewField = useCallback(() => {
+    setPendingViewField(null);
+    setAlertMessage((current) =>
+      current === t("knowledgeNetwork.objectTypeClickToConnect") ? "" : current,
+    );
+  }, [t]);
+
   const loadViewFields = useCallback(
     async (viewId: string) => {
       if (!viewId) {
@@ -520,6 +528,22 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     return () => window.removeEventListener("resize", handleResize);
   }, [recalculateConnections]);
 
+  useEffect(() => {
+    if (!pendingViewField) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      clearPendingViewField();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [clearPendingViewField, pendingViewField]);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -579,6 +603,25 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     });
   }, [dataProperties, modal, t, updateProperties]);
 
+  const selectPendingViewField = (field: ObjectTypeResourceField) => {
+    if (pendingViewField?.name === field.name) {
+      clearPendingViewField();
+      return;
+    }
+    setPendingViewField(field);
+    setAlertMessage(t("knowledgeNetwork.objectTypeClickToConnect"));
+  };
+
+  const disconnectPropertyMapping = (name: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    updateProperties(
+      dataProperties.map((item) =>
+        item.name === name ? { ...item, mappedField: undefined } : item,
+      ),
+    );
+    void message.success(t("knowledgeNetwork.objectTypeMappingCleared"));
+  };
+
   const connectProperty = (property: ObjectTypeDataProperty) => {
     if (logicNameSet.has(property.name)) {
       return;
@@ -618,8 +661,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
           : item,
       ),
     );
-    setPendingViewField(null);
-    setAlertMessage("");
+    clearPendingViewField();
   };
 
   const handleAddProperty = (property: ObjectTypeDataProperty) => {
@@ -913,7 +955,21 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   return (
     <div className={styles.root}>
       {alertMessage ? (
-        <Alert banner closable message={alertMessage} onClose={() => setAlertMessage("")} type="error" />
+        <Alert
+          banner
+          closable
+          message={alertMessage}
+          onClose={() => {
+            if (alertMessage === t("knowledgeNetwork.objectTypeClickToConnect")) {
+              clearPendingViewField();
+              return;
+            }
+            setAlertMessage("");
+          }}
+          type={
+            alertMessage === t("knowledgeNetwork.objectTypeClickToConnect") ? "info" : "error"
+          }
+        />
       ) : null}
 
       <div className={styles.infoBar}>
@@ -1103,10 +1159,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                           .filter(Boolean)
                           .join(" ")}
                         key={field.name}
-                        onClick={() => {
-                          setPendingViewField(field);
-                          setAlertMessage(t("knowledgeNetwork.objectTypeClickToConnect"));
-                        }}
+                        onClick={() => selectPendingViewField(field)}
                       >
                         <div className={styles.itemContent}>
                           <FieldTypeIcon type={field.type} />
@@ -1224,6 +1277,16 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                           ) : null}
                         </div>
                         <div className={styles.itemIconsActions}>
+                          {property.mappedField ? (
+                            <Tooltip title={t("knowledgeNetwork.objectTypeClearMapping")}>
+                              <DisconnectOutlined
+                                className={styles.rowActionIcon}
+                                onClick={(event) =>
+                                  disconnectPropertyMapping(property.name, event)
+                                }
+                              />
+                            </Tooltip>
+                          ) : null}
                           {canBeDisplayKey(property.type) ? (
                             property.displayKey ? (
                               <StarFilled

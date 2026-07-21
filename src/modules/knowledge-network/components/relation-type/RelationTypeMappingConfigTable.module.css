@@ -12,6 +12,21 @@
   min-width: 0;
 }
 
+.objectLink {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  max-width: 100%;
+  padding: 0;
+  text-align: left;
+}
+
+.objectLink:hover .objectName {
+  color: #126ee3;
+}
+
 .objectIcon {
   align-items: center;
   border-radius: 4px;

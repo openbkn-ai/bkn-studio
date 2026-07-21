@@ -34,7 +34,13 @@ import {
   extractRequestStatus,
   isActiveBuildTask,
 } from "@/modules/data-catalog/utils/build-task-guards";
-import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
+import {
+  findUnregisteredEmbeddingModel,
+  isRegisteredEmbeddingModel,
+  loadEmbeddingModelOptions,
+  pickRegisteredEmbeddingModelId,
+  type EmbeddingModelsLoadState,
+} from "@/modules/data-catalog/utils/embedding-model-options";
 
 import formStyles from "./BuildTaskFormPanel.module.css";
 import styles from "./shared.module.css";
@@ -44,11 +50,6 @@ export type IndexConfigFormPanelProps = {
   onSaved?: () => void;
   resource: CatalogResource;
 };
-
-const FALLBACK_MODELS: EmbeddingModelOption[] = [
-  { id: "bge-m3", name: "BGE-M3", dimensions: 1024 },
-  { id: "bge-large-zh-v1.5", name: "BGE-Large-zh v1.5", dimensions: 1024 },
-];
 
 const FULLTEXT_ANALYZERS = ["standard", "ik_max_word", "hanlp_index"] as const;
 const INHERIT_VALUE = "__inherit__";
@@ -142,7 +143,9 @@ export function IndexConfigFormPanel({
   const [defaultFulltextAnalyzer, setDefaultFulltextAnalyzer] = useState<string>("standard");
   const [fieldFilter, setFieldFilter] = useState("");
   const [models, setModels] = useState<EmbeddingModelOption[]>([]);
-  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [modelsLoadState, setModelsLoadState] = useState<EmbeddingModelsLoadState>("idle");
+  const [modelsLoadError, setModelsLoadError] = useState<string | null>(null);
+  const [orphanSavedModel, setOrphanSavedModel] = useState<string | null>(null);
   const [defaultModelId, setDefaultModelId] = useState<string>();
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -210,7 +213,10 @@ export function IndexConfigFormPanel({
     setFieldFilter("");
     setError(null);
     setDirty(false);
-    setModelsLoaded(false);
+    setModelsLoadState("idle");
+    setModelsLoadError(null);
+    setOrphanSavedModel(null);
+    setModels([]);
     setSchema(resource.schema);
 
     const hydrateFromResource = (detail: CatalogResource) => {
@@ -262,37 +268,48 @@ export function IndexConfigFormPanel({
       }
 
       try {
-        const result = await listSmallModels({
-          modelType: "embedding",
-          page: 1,
-          size: 100,
-        });
-        const options = result.items
-          .filter((item) => item.modelType === "embedding")
-          .map((item) => ({
-            dimensions: item.embeddingDim ?? 1024,
-            id: item.modelName,
-            name: item.modelName,
-          }));
-        const list = options.length > 0 ? options : FALLBACK_MODELS;
-        setModels(list);
-        setDefaultModelId(
-          preferredModel && list.some((item) => item.id === preferredModel)
-            ? preferredModel
-            : list[0]?.id,
-        );
-      } catch {
-        setModels(FALLBACK_MODELS);
-        setDefaultModelId(
-          preferredModel && FALLBACK_MODELS.some((item) => item.id === preferredModel)
-            ? preferredModel
-            : FALLBACK_MODELS[0].id,
-        );
-      } finally {
-        setModelsLoaded(true);
+        setModelsLoadState("loading");
+        setModelsLoadError(null);
+        const loaded = await loadEmbeddingModelOptions();
+        setModels(loaded.options);
+        setModelsLoadState(loaded.state);
+        setModelsLoadError(loaded.errorMessage);
+
+        if (loaded.state === "ready") {
+          const orphan = findUnregisteredEmbeddingModel(loaded.options, [preferredModel]);
+          setOrphanSavedModel(orphan);
+          setDefaultModelId(pickRegisteredEmbeddingModelId(loaded.options, preferredModel));
+        } else {
+          setOrphanSavedModel(preferredModel.trim() ? preferredModel.trim() : null);
+          setDefaultModelId(undefined);
+        }
+      } catch (loadError) {
+        setModels([]);
+        setModelsLoadState("error");
+        setModelsLoadError(extractRequestErrorMessage(loadError));
+        setOrphanSavedModel(preferredModel.trim() ? preferredModel.trim() : null);
+        setDefaultModelId(undefined);
       }
     })();
   }, [active, resource]);
+
+  const reloadEmbeddingModels = async () => {
+    setModelsLoadState("loading");
+    setModelsLoadError(null);
+    const preferred = defaultModelId ?? orphanSavedModel ?? "";
+    const loaded = await loadEmbeddingModelOptions();
+    setModels(loaded.options);
+    setModelsLoadState(loaded.state);
+    setModelsLoadError(loaded.errorMessage);
+    if (loaded.state === "ready") {
+      const orphan = findUnregisteredEmbeddingModel(loaded.options, [preferred, orphanSavedModel]);
+      setOrphanSavedModel(orphan);
+      setDefaultModelId(pickRegisteredEmbeddingModelId(loaded.options, preferred));
+    } else {
+      setOrphanSavedModel(preferred.trim() ? preferred.trim() : null);
+      setDefaultModelId(undefined);
+    }
+  };
 
   const defaultModel = useMemo(
     () => models.find((item) => item.id === defaultModelId) ?? null,
@@ -362,15 +379,50 @@ export function IndexConfigFormPanel({
       (fieldFulltextAnalyzerGroups[field] ?? []).some((feature) => !feature.value?.trim()),
     );
     const embeddingNeedsDefault = embeddingFields.some((field) =>
-      (fieldEmbeddingModelGroups[field] ?? []).some((feature) => !feature.value?.trim()),
+      (eligibleEmbeddingModelGroups[field] ?? []).some((feature) => !feature.value?.trim()),
     );
     if (fulltextNeedsDefault && !defaultFulltextAnalyzer) {
       setError(t("dataCatalog.build.defaultAnalyzerRequired"));
       return false;
     }
-    if (embeddingNeedsDefault && !defaultModel) {
-      setError(t("dataCatalog.build.modelRequired"));
-      return false;
+    if (embeddingFields.length > 0) {
+      if (modelsLoadState === "loading" || modelsLoadState === "idle") {
+        setError(t("dataCatalog.build.modelsLoading"));
+        return false;
+      }
+      if (modelsLoadState === "error") {
+        setError(
+          t("dataCatalog.build.modelsLoadError", {
+            message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
+          }),
+        );
+        return false;
+      }
+      if (modelsLoadState === "empty" || models.length === 0) {
+        setError(t("dataCatalog.build.noModels"));
+        return false;
+      }
+      if (embeddingNeedsDefault && !defaultModelId) {
+        setError(t("dataCatalog.build.modelRequired"));
+        return false;
+      }
+      if (
+        embeddingNeedsDefault &&
+        defaultModelId &&
+        !isRegisteredEmbeddingModel(defaultModelId, models)
+      ) {
+        setError(t("dataCatalog.build.savedModelUnavailable", { model: defaultModelId }));
+        return false;
+      }
+      for (const field of embeddingFields) {
+        for (const feature of eligibleEmbeddingModelGroups[field] ?? []) {
+          const override = feature.value?.trim();
+          if (override && !isRegisteredEmbeddingModel(override, models)) {
+            setError(t("dataCatalog.build.savedModelUnavailable", { model: override }));
+            return false;
+          }
+        }
+      }
     }
     return true;
   };
@@ -555,7 +607,11 @@ export function IndexConfigFormPanel({
     );
   };
 
-  const noModels = modelsLoaded && models.length === 0;
+  const noModels =
+    modelsLoadState === "empty" || (modelsLoadState === "ready" && models.length === 0);
+  const modelsLoadFailed = modelsLoadState === "error";
+  const modelsLoading = modelsLoadState === "loading" || modelsLoadState === "idle";
+  const embeddingBlocked = noModels || modelsLoadFailed || modelsLoading;
   const hasIndexFeatures = embeddingFields.length > 0 || fulltextFields.length > 0;
   const selectedEmbeddingGroups = featureField ? (eligibleEmbeddingModelGroups[featureField.name] ?? []) : [];
   const selectedFulltextGroups = featureField ? (eligibleFulltextAnalyzerGroups[featureField.name] ?? []) : [];
@@ -822,7 +878,44 @@ export function IndexConfigFormPanel({
                       {t("dataCatalog.build.defaultEmbeddingModel")}
                     </span>
                   </div>
-                  {noModels ? (
+                  {modelsLoading ? (
+                    <Select
+                      disabled
+                      loading
+                      placeholder={t("dataCatalog.build.modelsLoading")}
+                      style={{ width: "100%" }}
+                    />
+                  ) : modelsLoadFailed ? (
+                    <Alert
+                      action={
+                        <Space size={4}>
+                          <AppButton
+                            onClick={() => {
+                              void reloadEmbeddingModels();
+                            }}
+                            size="small"
+                            type="link"
+                          >
+                            {t("dataCatalog.build.retryLoadModels")}
+                          </AppButton>
+                          <AppButton
+                            onClick={() => {
+                              void navigate("/model-resources/models");
+                            }}
+                            size="small"
+                            type="link"
+                          >
+                            {t("dataCatalog.build.goConnectModel")}
+                          </AppButton>
+                        </Space>
+                      }
+                      message={t("dataCatalog.build.modelsLoadError", {
+                        message: modelsLoadError ?? "",
+                      })}
+                      showIcon
+                      type="error"
+                    />
+                  ) : noModels ? (
                     <Alert
                       action={
                         <AppButton
@@ -840,17 +933,30 @@ export function IndexConfigFormPanel({
                       type="warning"
                     />
                   ) : (
-                    <Select
-                      allowClear
-                      onChange={(value) => {
-                        setDefaultModelId(value);
-                        markDirty();
-                      }}
-                      options={modelOptions}
-                      placeholder={t("dataCatalog.build.defaultEmbeddingModel")}
-                      style={{ width: "100%" }}
-                      value={defaultModelId}
-                    />
+                    <>
+                      {orphanSavedModel ? (
+                        <Alert
+                          message={t("dataCatalog.build.savedModelUnavailable", {
+                            model: orphanSavedModel,
+                          })}
+                          showIcon
+                          style={{ marginBottom: 8 }}
+                          type="warning"
+                        />
+                      ) : null}
+                      <Select
+                        allowClear
+                        onChange={(value) => {
+                          setDefaultModelId(value);
+                          setOrphanSavedModel(null);
+                          markDirty();
+                        }}
+                        options={modelOptions}
+                        placeholder={t("dataCatalog.build.defaultEmbeddingModel")}
+                        style={{ width: "100%" }}
+                        value={defaultModelId}
+                      />
+                    </>
                   )}
                   <div className={formStyles.fieldHint}>
                     {t("dataCatalog.build.defaultModelDimensions", {
@@ -1022,7 +1128,7 @@ export function IndexConfigFormPanel({
               t("dataCatalog.build.roleEmbedding"),
               selectedEmbeddingGroups,
               modelOptions,
-              noModels,
+              embeddingBlocked,
             )}
             {renderFeatureRows(
               "fulltext",
@@ -1050,7 +1156,7 @@ export function IndexConfigFormPanel({
       <div className={formStyles.footer}>
         <Space style={{ marginLeft: "auto" }}>
           <AppButton
-            disabled={actionsLocked || saving || (noModels && embeddingFields.length > 0)}
+            disabled={actionsLocked || saving || (embeddingFields.length > 0 && embeddingBlocked)}
             loading={saving}
             onClick={() => void saveConfig()}
             type="primary"

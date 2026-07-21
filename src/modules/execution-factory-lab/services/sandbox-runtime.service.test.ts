@@ -17,9 +17,7 @@ import {
 
 describe("sandbox-runtime.service", () => {
   it("uses the http client relative API prefix without duplicating /api", () => {
-    expect(SANDBOX_RUNTIME_API_PREFIX).toBe(
-      "/agent-operator-integration/internal-v1/sandbox",
-    );
+    expect(SANDBOX_RUNTIME_API_PREFIX).toBe("/agent-operator-integration/v1/sandbox");
     expect(SANDBOX_RUNTIME_API_PREFIX).not.toMatch(/^\/api\//);
   });
 

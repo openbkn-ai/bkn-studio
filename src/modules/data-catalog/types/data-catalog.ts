@@ -64,7 +64,10 @@ export type CatalogResource = {
 export type ResourceListQuery = {
   catalogId?: string;
   category?: ResourceCategory;
+  database?: string;
   keyword?: string;
+  limit?: number;
+  offset?: number;
 };
 
 export type ResourceCreateInput = {

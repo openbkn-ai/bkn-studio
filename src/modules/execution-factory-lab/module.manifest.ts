@@ -14,7 +14,7 @@ export const executionFactoryLabModuleManifest = {
   requiresShell: true,
   supportsEmbedded: false,
   supportsReadOnly: false,
-  services: ["capabilities-lab/v1", "agent-operator-integration/internal-v1/sandbox"],
+  services: ["capabilities-lab/v1", "agent-operator-integration/v1/sandbox"],
   scenes: [
     {
       id: "execution-factory-lab.capabilities",

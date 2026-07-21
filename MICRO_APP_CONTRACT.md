@@ -99,7 +99,7 @@ token 能力至少应支持：
 当应用不是被宿主挂载时：
 
 - runtime 使用本地默认配置
-- 可以从 `sessionStorage` 读取本地 token
+- 可以从 Cookie 读取本地 token（`bkn_access_token` / `bkn_refresh_token` / `bkn_id_token`；同域 tab 共享。OAuth PKCE 临时态仍在 `sessionStorage`）
 - 应用仍需完整可启动、可调试、可构建
 
 ## 业务域参数约束

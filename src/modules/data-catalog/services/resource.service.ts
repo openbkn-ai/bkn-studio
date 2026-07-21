@@ -213,6 +213,7 @@ type ListResponse<T> = {
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const RESOURCE_LIST_PAGE_SIZE = 500;
 
 const wait = async <T,>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {
@@ -266,16 +267,32 @@ function filterResources(items: CatalogResource[], query: ResourceListQuery) {
       item.id.toLowerCase().includes(keyword);
     const matchesCatalog = !query.catalogId || item.catalogId === query.catalogId;
     const matchesCategory = !query.category || item.category === query.category;
+    const matchesDatabase =
+      !query.database ||
+      item.sourceIdentifier === query.database ||
+      item.sourceIdentifier.startsWith(`${query.database}.`);
 
-    return matchesKeyword && matchesCatalog && matchesCategory;
+    return matchesKeyword && matchesCatalog && matchesCategory && matchesDatabase;
   });
 }
 
-export async function listCatalogResources(
+export type CatalogResourcePage = {
+  items: CatalogResource[];
+  total: number;
+};
+
+export async function listCatalogResourcePage(
   query: ResourceListQuery = {},
-): Promise<CatalogResource[]> {
+): Promise<CatalogResourcePage> {
+  const offset = Math.max(0, query.offset ?? 0);
+  const limit = query.limit ?? RESOURCE_LIST_PAGE_SIZE;
+
   if (useMock) {
-    return wait(filterResources([...mockResources], query));
+    const filtered = filterResources([...mockResources], query);
+    return wait({
+      items: limit === -1 ? filtered.slice(offset) : filtered.slice(offset, offset + limit),
+      total: filtered.length,
+    });
   }
 
   const response = await http.get<ListResponse<BackendResource>>(
@@ -284,14 +301,53 @@ export async function listCatalogResources(
       params: {
         catalog_id: query.catalogId || undefined,
         category: query.category || undefined,
-        limit: 500,
+        database: query.database || undefined,
+        limit,
         name: query.keyword?.trim() || undefined,
-        offset: 0,
+        offset,
       },
     },
   );
 
-  return response.data.entries.map(mapResource);
+  return {
+    items: response.data.entries.map(mapResource),
+    total: response.data.total_count,
+  };
+}
+
+export async function listCatalogResources(
+  query: ResourceListQuery = {},
+): Promise<CatalogResource[]> {
+  if (query.limit !== undefined || query.offset !== undefined) {
+    return (await listCatalogResourcePage(query)).items;
+  }
+
+  const resources: CatalogResource[] = [];
+  let offset = 0;
+  let total = Number.POSITIVE_INFINITY;
+
+  while (resources.length < total) {
+    const page = await listCatalogResourcePage({
+      ...query,
+      limit: RESOURCE_LIST_PAGE_SIZE,
+      offset,
+    });
+    resources.push(...page.items);
+    total = page.total;
+
+    if (page.items.length === 0 || page.items.length < RESOURCE_LIST_PAGE_SIZE) {
+      break;
+    }
+    offset += page.items.length;
+  }
+
+  return resources;
+}
+
+export async function countCatalogResources(
+  query: ResourceListQuery = {},
+): Promise<number> {
+  return (await listCatalogResourcePage({ ...query, limit: 1, offset: 0 })).total;
 }
 
 export async function getCatalogResource(id: string) {

@@ -6,13 +6,14 @@
  */
 
 import { DatabaseOutlined, SearchOutlined } from "@ant-design/icons";
-import { Input, Select, Space, Spin, Tooltip } from "antd";
+import { Alert, Input, Select, Space, Spin, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
@@ -24,11 +25,12 @@ import {
   indexStateOf,
   isCatalogPhysical,
 } from "@/modules/data-catalog/lib/index-state";
+import { parseResourceScope } from "@/modules/data-catalog/lib/resource-identifier";
+import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildTask,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
-import { parseResourceScope } from "@/modules/data-catalog/lib/resource-identifier";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./CatalogDetailPanel.module.css";
@@ -74,8 +76,6 @@ type CatalogDetailPanelProps = {
     tab?: "detail" | "index" | "preview",
     indexView?: "config",
   ) => void;
-  resources: CatalogResource[];
-  resourcesLoading?: boolean;
   tasks: BuildTask[];
 };
 
@@ -83,8 +83,6 @@ export function CatalogDetailPanel({
   catalog,
   onCreateResource,
   onOpenResource,
-  resources,
-  resourcesLoading = false,
   tasks,
 }: CatalogDetailPanelProps) {
   const { t } = useTranslation();
@@ -97,6 +95,11 @@ export function CatalogDetailPanel({
   const [indexFilter, setIndexFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [resources, setResources] = useState<CatalogResource[]>([]);
+  const [resourceTotal, setResourceTotal] = useState(0);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [resourceLoadError, setResourceLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [nameColumnWidth, setNameColumnWidth] = useState(() => {
     try {
       const value = window.localStorage.getItem("data-catalog.resourceNameColumnWidth");
@@ -109,6 +112,8 @@ export function CatalogDetailPanel({
   const resizingRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const physical = isCatalogPhysical(catalog);
+  const hasResourceQuery =
+    resourceKeyword.trim().length > 0 || categoryFilter.length > 0 || indexFilter.length > 0;
 
   const tasksByResource = useMemo(() => {
     const map = new Map<string, BuildTask[]>();
@@ -118,27 +123,13 @@ export function CatalogDetailPanel({
     return map;
   }, [tasks]);
 
-  const filteredResources = useMemo(() => {
-    const kw = resourceKeyword.trim().toLowerCase();
+  const displayResources = useMemo(() => {
     return resources.filter((resource) => {
-      if (activeDb) {
+      if (activeDb && activeSchema) {
         const scope = parseResourceScope(resource.sourceIdentifier);
-        if (!scope.database || scope.database !== activeDb) {
+        if (!scope.schema || scope.schema !== activeSchema) {
           return false;
         }
-        if (activeSchema && (!scope.schema || scope.schema !== activeSchema)) {
-          return false;
-        }
-      }
-      if (
-        kw &&
-        !resource.name.toLowerCase().includes(kw) &&
-        !(resource.sourceIdentifier ?? "").toLowerCase().includes(kw)
-      ) {
-        return false;
-      }
-      if (categoryFilter && resource.category !== categoryFilter) {
-        return false;
       }
       if (indexFilter) {
         const key = indexStateOf(tasksByResource.get(resource.id) ?? []).key;
@@ -148,24 +139,50 @@ export function CatalogDetailPanel({
       }
       return true;
     });
-  }, [
-    resources,
-    resourceKeyword,
-    categoryFilter,
-    indexFilter,
-    tasksByResource,
-    activeDb,
-    activeSchema,
-  ]);
+  }, [activeDb, activeSchema, indexFilter, resources, tasksByResource]);
 
   useEffect(() => {
     setPage(1);
   }, [resourceKeyword, categoryFilter, indexFilter, catalog.id, activeDb, activeSchema]);
 
-  const pagedResources = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredResources.slice(start, start + pageSize);
-  }, [filteredResources, page, pageSize]);
+  useEffect(() => {
+    let cancelled = false;
+    setResourcesLoading(true);
+    setResourceLoadError(null);
+
+    void listCatalogResourcePage({
+      catalogId: catalog.id,
+      category: categoryFilter ? (categoryFilter as CatalogResource["category"]) : undefined,
+      database: activeDb || undefined,
+      keyword: resourceKeyword,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        setResources(result.items);
+        setResourceTotal(result.total);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        setResources([]);
+        setResourceTotal(0);
+        setResourceLoadError(extractRequestErrorMessage(error));
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setResourcesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDb, catalog.id, categoryFilter, page, pageSize, reloadKey, resourceKeyword]);
 
   useEffect(() => {
     const handleMove = (event: MouseEvent) => {
@@ -347,7 +364,7 @@ export function CatalogDetailPanel({
             )}
           </div>
         </div>
-        {resources.length > 0 ? (
+        {resourceTotal > 0 || hasResourceQuery ? (
           <div className={styles.toolbarFilters}>
             <Input
               allowClear
@@ -398,7 +415,18 @@ export function CatalogDetailPanel({
           <div className={styles.tableLoading}>
             <Spin />
           </div>
-        ) : resources.length === 0 ? (
+        ) : resourceLoadError ? (
+          <Alert
+            action={
+              <AppButton onClick={() => setReloadKey((value) => value + 1)} type="link">
+                {t("common.retry")}
+              </AppButton>
+            }
+            message={resourceLoadError}
+            showIcon
+            type="error"
+          />
+        ) : resourceTotal === 0 && !hasResourceQuery ? (
           <EmptyStatePanel
             action={
               physical ? (
@@ -426,7 +454,7 @@ export function CatalogDetailPanel({
             icon={<DatabaseOutlined />}
             title={t("dataCatalog.catalog.resourceSection")}
           />
-        ) : filteredResources.length === 0 ? (
+        ) : displayResources.length === 0 ? (
           <EmptyStatePanel
             description={t("dataCatalog.resource.noMatch")}
             icon={<DatabaseOutlined />}
@@ -435,7 +463,7 @@ export function CatalogDetailPanel({
         ) : (
           <AppTable<CatalogResource>
             columns={resourceColumns}
-            dataSource={pagedResources}
+            dataSource={displayResources}
             locale={{ emptyText: t("dataCatalog.resource.noMatch") }}
             pagination={false}
             rowKey="id"
@@ -444,7 +472,7 @@ export function CatalogDetailPanel({
         )}
       </TableSurface>
 
-      {filteredResources.length > 0 ? (
+      {resourceTotal > 0 ? (
         <TablePaginationBar
           current={page}
           onChange={(nextPage, nextPageSize) => {
@@ -454,7 +482,7 @@ export function CatalogDetailPanel({
           pageSize={pageSize}
           showSizeChanger
           showTotal={(count) => t("common.total", { total: count })}
-          total={filteredResources.length}
+          total={indexFilter || activeSchema ? displayResources.length : resourceTotal}
         />
       ) : null}
     </section>

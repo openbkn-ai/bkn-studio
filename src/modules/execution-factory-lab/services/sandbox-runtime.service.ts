@@ -15,8 +15,7 @@ import type {
   SandboxSessionSummary,
 } from "@/modules/execution-factory-lab/types/sandbox-runtime";
 
-export const SANDBOX_RUNTIME_API_PREFIX =
-  "/agent-operator-integration/internal-v1/sandbox";
+export const SANDBOX_RUNTIME_API_PREFIX = "/agent-operator-integration/v1/sandbox";
 
 type BackendHealth = {
   status?: string;

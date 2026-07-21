@@ -305,6 +305,12 @@ export const dataCatalogEnUS = {
       noModels:
         "No embedding models connected; cannot save a config that includes embedding fields.",
       goConnectModel: "Connect a model",
+      modelsLoading: "Loading embedding models…",
+      modelsLoadError: "Failed to load embedding models: {{message}}",
+      modelsLoadErrorFallback: "Retry later or check model management service",
+      retryLoadModels: "Retry",
+      savedModelUnavailable:
+        'Saved embedding model "{{model}}" is not registered in this environment. Select a connected model.',
       dimensions: "Vector Dimensions",
       dimensionsHint:
         "(preview from model; server writes actual dimensions when the build runs)",

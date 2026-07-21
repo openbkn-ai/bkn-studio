@@ -285,6 +285,12 @@ export const dataCatalogZhCN = {
       modelRequired: "请选择 Embedding 模型。",
       noModels: "尚未接入 embedding 模型,无法保存含向量字段的配置。",
       goConnectModel: "去接入模型",
+      modelsLoading: "正在加载 embedding 模型列表…",
+      modelsLoadError: "加载 embedding 模型失败：{{message}}",
+      modelsLoadErrorFallback: "请稍后重试或检查模型管理服务",
+      retryLoadModels: "重试",
+      savedModelUnavailable:
+        "已保存的 embedding 模型「{{model}}」不在当前环境注册表中，请重新选择已接入的模型。",
       dimensions: "向量维度",
       dimensionsHint: "(随模型联动预览；实际维度由服务端在构建时写入)",
     },
