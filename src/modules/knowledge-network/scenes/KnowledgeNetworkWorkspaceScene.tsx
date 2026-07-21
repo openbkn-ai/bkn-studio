@@ -75,7 +75,6 @@ export function KnowledgeNetworkWorkspaceScene({
     recentLoading,
     recentObjects,
     sectionError,
-    sectionLoading,
   } = workspaceData;
 
   useEffect(() => {
