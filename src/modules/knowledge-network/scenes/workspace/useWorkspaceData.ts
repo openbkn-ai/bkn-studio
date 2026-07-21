@@ -36,25 +36,15 @@ import type {
   KnowledgeNetworkTaskRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
+import {
+  applyKnowledgeNetworkMetricsTotal,
+  clearMetricsTotalPending,
+  createMetricsTotalPending,
+  mergePendingMetricsTotalIntoDetail,
+} from "./workspaceMetricsTotal";
+
 function sectionCacheKey(networkId: string, section: KnowledgeNetworkWorkspaceSection) {
   return `${networkId}:${section}`;
-}
-
-function withMetricsTotal(
-  detail: KnowledgeNetworkRecord | null,
-  metricsTotal: number,
-): KnowledgeNetworkRecord | null {
-  if (!detail) {
-    return detail;
-  }
-
-  return {
-    ...detail,
-    statistics: {
-      ...detail.statistics,
-      metricsTotal,
-    },
-  };
 }
 
 export function useWorkspaceData(
@@ -77,9 +67,11 @@ export function useWorkspaceData(
   const [detailError, setDetailError] = useState<string | null>(null);
   const [sectionError, setSectionError] = useState<string | null>(null);
   const loadedSectionsRef = useRef<Set<string>>(new Set());
+  const pendingMetricsTotalRef = useRef(createMetricsTotalPending());
 
   const clearSectionCache = useCallback(() => {
     loadedSectionsRef.current.clear();
+    clearMetricsTotalPending(pendingMetricsTotalRef.current);
   }, []);
 
   const loadDetail = useCallback(async () => {
@@ -91,7 +83,8 @@ export function useWorkspaceData(
     setDetailError(null);
 
     try {
-      setDetail(await getKnowledgeNetwork(networkId));
+      const fetched = await getKnowledgeNetwork(networkId);
+      setDetail(mergePendingMetricsTotalIntoDetail(fetched, pendingMetricsTotalRef.current));
     } catch (error) {
       setDetail(null);
       setDetailError(extractRequestErrorMessage(error));
@@ -170,7 +163,13 @@ export function useWorkspaceData(
             if (integrateWorkspaceMetrics) {
               const metricResult = await listKnowledgeNetworkMetrics(networkId);
               setMetrics(metricResult.entries);
-              setDetail((prev) => withMetricsTotal(prev, metricResult.totalCount));
+              setDetail((prev) =>
+                applyKnowledgeNetworkMetricsTotal(
+                  prev,
+                  metricResult.totalCount,
+                  pendingMetricsTotalRef.current,
+                ),
+              );
               setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
             }
             break;
@@ -260,7 +259,13 @@ export function useWorkspaceData(
     loadedSectionsRef.current.delete(sectionCacheKey(networkId, "metrics"));
     const metricResult = await listKnowledgeNetworkMetrics(networkId);
     setMetrics(metricResult.entries);
-    setDetail((prev) => withMetricsTotal(prev, metricResult.totalCount));
+    setDetail((prev) =>
+      applyKnowledgeNetworkMetricsTotal(
+        prev,
+        metricResult.totalCount,
+        pendingMetricsTotalRef.current,
+      ),
+    );
     setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "metrics"));
   }, [networkId]);
