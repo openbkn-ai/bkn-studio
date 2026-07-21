@@ -5,17 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-.panel {
+.sectionCard {
   margin-bottom: 16px;
-  padding: 18px 20px;
-  border: 1px solid rgba(18, 110, 227, 0.1);
-  border-radius: 14px;
-  background: linear-gradient(135deg, #f8fbff 0%, #f4f8ff 55%, #ffffff 100%);
-  box-shadow: 0 8px 24px rgba(18, 110, 227, 0.06);
-}
-
-.panelCompact {
-  padding: 14px 16px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .header {
@@ -26,123 +22,13 @@
   margin-bottom: 14px;
 }
 
-.title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #152239;
-  font-size: 15px;
+.sectionTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 16px;
   font-weight: 600;
 }
 
-.titleIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: rgba(18, 110, 227, 0.1);
-  color: #126ee3;
-  font-size: 14px;
-}
-
-.grid {
-  display: grid;
-  gap: 12px;
-}
-
-.cols2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.cols3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.cols4 {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 72px;
-  padding: 12px 14px;
-  border: 1px solid rgba(18, 40, 72, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card:hover {
-  border-color: rgba(18, 110, 227, 0.22);
-  box-shadow: 0 4px 14px rgba(18, 110, 227, 0.08);
-}
-
-.cardAccent {
-  border-color: rgba(18, 110, 227, 0.18);
-  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
-}
-
-.cardFull {
-  grid-column: 1 / -1;
-}
-
-.labelRow {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #64748b;
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.itemIcon {
-  color: #126ee3;
-  font-size: 12px;
-}
-
-.label {
-  color: #64748b;
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.value {
-  color: #152239;
-  font-size: 14px;
-  line-height: 22px;
-  word-break: break-word;
-}
-
-.valueStrong {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.valueMono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
-  font-size: 13px;
-  color: #334155;
-}
-
-.valueMuted {
-  color: #64748b;
-}
-
-@media (max-width: 1200px) {
-  .cols4 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  .cols2,
-  .cols3,
-  .cols4 {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.descriptionBlock {
+  background: var(--color-bg-surface);
 }

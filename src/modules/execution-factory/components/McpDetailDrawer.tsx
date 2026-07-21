@@ -16,6 +16,7 @@ import {
   ToolOutlined,
 } from "@ant-design/icons";
 import { Tag } from "antd";
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -43,11 +44,27 @@ type McpDetailDrawerProps = {
   open: boolean;
 };
 
-const statusColorMap: Record<McpStatus, string> = {
-  published: "green",
-  editing: "gold",
-  offline: "default",
-  unpublish: "blue",
+const statusStyleMap: Record<McpStatus, CSSProperties> = {
+  published: {
+    background: "var(--color-success-bg)",
+    borderColor: "var(--color-success-border)",
+    color: "var(--color-success-text)",
+  },
+  editing: {
+    background: "var(--color-warning-bg)",
+    borderColor: "var(--color-warning-border)",
+    color: "var(--color-warning-text)",
+  },
+  offline: {
+    background: "var(--color-error-bg)",
+    borderColor: "var(--color-error-border)",
+    color: "var(--color-error-text)",
+  },
+  unpublish: {
+    background: "var(--color-info-bg)",
+    borderColor: "var(--color-info-border)",
+    color: "var(--color-info-text)",
+  },
 };
 
 function resolveCreationTypeLabel(
@@ -229,7 +246,7 @@ export function McpDetailDrawer({
                 <p className={styles.summaryDescription}>{record.description || "-"}</p>
               </div>
               <div className={styles.summaryStatus}>
-                <Tag color={statusColorMap[record.status]}>
+                <Tag style={statusStyleMap[record.status]}>
                   {t(`executionFactory.mcpStatuses.${record.status}`)}
                 </Tag>
                 {record.mode ? <Tag>{resolveModeLabel(record.mode, t)}</Tag> : null}
