@@ -29,17 +29,41 @@ export type MyPermissions = {
 };
 
 /**
- * Ops surfaced to an admin so menu/button visibility is complete even when the
- * permission list is grant-driven. The backend still enforces every write.
+ * 完整的 bkn-safe 操作词表 —— 作为「全操作」(`is_admin`、通配行、类型级 `"*"`)
+ * 的展开目标,让按钮显隐在 grant 驱动下也完整。后端仍逐操作强制鉴权。
+ *
+ * 必须覆盖任意消费方可能 `includes(op)` 的每一个操作,否则 `"*"` 授权者反而少显示。
+ * 取自 bkn-safe 实际下发词表(见 permission-map.test.ts 的真实 /me/permissions 响应);
+ * 早前的 `"display"` 后端并不存在,已剔除,并补齐 view/view_detail/publish 等。
  */
 const ADMIN_OPERATIONS = [
   "create",
   "delete",
-  "display",
-  "execute",
   "modify",
+  "view",
+  "view_detail",
+  "execute",
   "authorize",
+  "publish",
+  "unpublish",
+  "public_access",
+  "task_manage",
 ];
+
+/**
+ * 单次 scoped 查询携带的实例 id 数目上限。bkn 网关对 URL 长度有限制,
+ * 大列表(几十上百实例)把 id 逗号拼进 query 会超限,故按此分批多发再并集。
+ * UUID(~36 char)× 50 ≈ 1.8KB resource_id,留足网关余量。
+ */
+const SCOPED_ID_BATCH = 50;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const batches: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    batches.push(items.slice(i, i + size));
+  }
+  return batches;
+}
 
 type MePermissionsResponse = {
   is_admin?: boolean;
@@ -95,24 +119,31 @@ async function fetchScopedPermissions(
   type: string,
   ids: string[],
 ): Promise<MyPermissions> {
-  const params: Record<string, string> = { resource_type: type };
-  const instanceIds = ids.filter((id) => id && id !== "*");
-  if (instanceIds.length > 0) {
-    params.resource_id = instanceIds.join(",");
-  }
+  const instanceIds = [...new Set(ids.filter((id) => id && id !== "*"))];
+  // 至少发一次(仅 resource_type)以取类型级行;实例过多时按 SCOPED_ID_BATCH 分批,
+  // 每批各带一段 resource_id,避免单条 URL 超网关长度限制。
+  const batches = instanceIds.length > 0 ? chunk(instanceIds, SCOPED_ID_BATCH) : [[]];
 
-  const response = await http.get<MePermissionsResponse>(
-    "/safe/v1/me/permissions",
-    { params },
+  const responses = await Promise.all(
+    batches.map((batch) => {
+      const params: Record<string, string> = { resource_type: type };
+      if (batch.length > 0) {
+        params.resource_id = batch.join(",");
+      }
+      return http.get<MePermissionsResponse>("/safe/v1/me/permissions", { params });
+    }),
   );
 
+  // 各批都会带回类型级行(id:"*"),并集时靠 operationsFor 的 Set 去重,无害。
   return {
-    isAdmin: Boolean(response.data?.is_admin),
-    permissions: (response.data?.permissions ?? []).map((item) => ({
-      type: item.resource?.type ?? "",
-      id: item.resource?.id ?? "",
-      operations: item.operations ?? [],
-    })),
+    isAdmin: responses.some((response) => Boolean(response.data?.is_admin)),
+    permissions: responses.flatMap((response) =>
+      (response.data?.permissions ?? []).map((item) => ({
+        type: item.resource?.type ?? "",
+        id: item.resource?.id ?? "",
+        operations: item.operations ?? [],
+      })),
+    ),
   };
 }
 

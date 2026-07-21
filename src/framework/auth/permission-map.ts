@@ -84,6 +84,19 @@ const OVERRIDES: Record<string, string[]> = {
  */
 const ADMIN_ONLY_SUFFIXES = new Set(["sandbox-runtime:view"]);
 
+/**
+ * 折叠契约下 bkn-safe 会下发通配授权:全局通配行 `*:*`(超管等价)与类型级
+ * `${type}:*`(该类型全操作)。判某个 `type:op` 是否被授,须连同这两种通配一并看,
+ * 否则 is_admin=false 但持通配的账号菜单会漏门。
+ */
+function safeGrantsCover(safeGrants: Set<string>, type: string, operation: string): boolean {
+  return (
+    safeGrants.has(`${type}:${operation}`) ||
+    safeGrants.has(`${type}:*`) ||
+    safeGrants.has("*:*")
+  );
+}
+
 /** 把 bkn-safe 的授权条目展平成 `type:op` 集合。 */
 export function flattenSafeGrants(
   grants: { operations?: string[]; resource?: { id?: string; type?: string } }[] | undefined,
@@ -126,6 +139,8 @@ export function isStudioPermissionGranted(
   isAdmin: boolean,
 ): boolean {
   // 1. 直接同名。data-catalog 的 `catalog:view_detail` 等即走这条。
+  //    折叠通配 `*:*` / `${type}:*` 在下方映射的 safeGrantsCover 里统一处理,
+  //    刻意不在此短路 —— 否则会绕过 catalog:install 等有意屏蔽项。
   if (safeGrants.has(studioPermission)) {
     return true;
   }
@@ -141,10 +156,13 @@ export function isStudioPermissionGranted(
     return isAdmin;
   }
 
-  // 3. 覆盖表优先。
+  // 3. 覆盖表优先。命中判定同样要吃类型级 `${type}:*` 通配。
   const override = OVERRIDES[suffix];
   if (override) {
-    return override.some((candidate) => safeGrants.has(candidate));
+    return override.some((candidate) => {
+      const [candidateType, candidateOp] = candidate.split(":");
+      return safeGrantsCover(safeGrants, candidateType, candidateOp);
+    });
   }
 
   const [, entity, action] = segments;
@@ -153,7 +171,7 @@ export function isStudioPermissionGranted(
   if (!resourceType || !operation) {
     return false;
   }
-  return safeGrants.has(`${resourceType}:${operation}`);
+  return safeGrantsCover(safeGrants, resourceType, operation);
 }
 
 /**

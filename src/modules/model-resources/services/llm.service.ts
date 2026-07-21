@@ -284,7 +284,10 @@ export async function getLlmItemPermissions(
     );
 
     return Object.fromEntries(items.map((item) => [item.id, item.operation ?? []]));
-  } catch {
+  } catch (error) {
+    // scoped 权限查询失败(网络/网关)时按钮全隐是 fail-closed 的安全默认,但这与
+    // 「确无权限」难分。http 层已弹通用错误 toast,此处留 debug 便于排障区分二者。
+    console.debug("[model-resources] getLlmItemPermissions scoped fetch failed", error);
     return {};
   }
 }
