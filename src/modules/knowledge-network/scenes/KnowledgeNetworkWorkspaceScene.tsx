@@ -69,10 +69,11 @@ export function KnowledgeNetworkWorkspaceScene({
     detail,
     detailError,
     detailLoading,
+    loadRecentObjects,
     loadWorkspaceData,
+    recentLoading,
     recentObjects,
     sectionError,
-    sectionLoading,
   } = workspaceData;
 
   useEffect(() => {
@@ -189,9 +190,10 @@ export function KnowledgeNetworkWorkspaceScene({
         <WorkspaceOverviewSection
           detail={detail}
           detailLoading={detailLoading}
+          loadRecentObjects={loadRecentObjects}
           networkId={activeNetworkId}
           onEdit={() => setNetworkFormOpen(true)}
-          recentLoading={sectionLoading}
+          recentLoading={recentLoading}
           recentObjects={recentObjects}
         />
       );

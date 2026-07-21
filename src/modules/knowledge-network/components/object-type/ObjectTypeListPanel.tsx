@@ -22,10 +22,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
-import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
-import { indexStateOf } from "@/modules/data-catalog/lib/index-state";
-import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
-import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
+import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
+import { useResourceIndexStates } from "@/modules/knowledge-network/hooks/useResourceIndexStates";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import {
@@ -90,8 +88,12 @@ export function ObjectTypeListPanel({
       : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10),
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  const [resourceBuildTasks, setResourceBuildTasks] = useState<BuildTask[]>([]);
-  const [resourceBuildTasksLoading, setResourceBuildTasksLoading] = useState(false);
+  const boundResourceIds = useMemo(
+    () => items.map((item) => item.dataSource?.id),
+    [items],
+  );
+  const { buildTasksByResourceId, loading: resourceBuildTasksLoading } =
+    useResourceIndexStates(boundResourceIds);
 
   useEffect(() => {
     const nextKeyword = searchParams.get("q") ?? "";
@@ -167,56 +169,6 @@ export function ObjectTypeListPanel({
     sortBy,
     sortDirection,
   ]);
-
-  const boundResourceIds = useMemo(
-    () =>
-      Array.from(
-        new Set(items.map((item) => item.dataSource?.id).filter((id): id is string => !!id)),
-      ),
-    [items],
-  );
-
-  useEffect(() => {
-    if (boundResourceIds.length === 0) {
-      setResourceBuildTasks([]);
-      setResourceBuildTasksLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setResourceBuildTasksLoading(true);
-
-    void Promise.all(
-      boundResourceIds.map((resourceId) => listBuildTasks({ resourceId, silent: true })),
-    )
-      .then((taskGroups) => {
-        if (!cancelled) {
-          setResourceBuildTasks(taskGroups.flat());
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setResourceBuildTasks([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setResourceBuildTasksLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [boundResourceIds]);
-
-  const buildTasksByResourceId = useMemo(() => {
-    const next = new Map<string, BuildTask[]>();
-    resourceBuildTasks.forEach((task) => {
-      next.set(task.resourceId, [...(next.get(task.resourceId) ?? []), task]);
-    });
-    return next;
-  }, [resourceBuildTasks]);
 
   const tagOptions = useMemo(() => {
     const tags = new Set<string>();
@@ -422,7 +374,7 @@ export function ObjectTypeListPanel({
 
         const label = resourceBuildTasksLoading
           ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
-          : formatIndexStateLabel(indexStateOf(buildTasksByResourceId.get(resourceId) ?? []), t);
+          : formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t);
 
         return (
           <button

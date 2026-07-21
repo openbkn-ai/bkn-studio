@@ -6,19 +6,21 @@
  */
 
 /**
- * 概述页本体区块 —— 一次拉取实体类 / 关系类（含明细），渲染本体图谱 +
- * 本体结构 / 数据绑定 表格。所有取数集中在此，避免重复请求。
+ * 概述页本体区块 —— 进入页面默认展示「本体预览」图谱；「本体结构」表格
+ * 在用户展开后再拉取明细，避免一次性加载全部对象类详情。
  */
 
 import { DownOutlined, RightOutlined } from "@ant-design/icons";
 import { Spin, Table, Tabs, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
+import { useResourceIndexStates } from "@/modules/knowledge-network/hooks/useResourceIndexStates";
+import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import {
   getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkObjectTypes,
@@ -50,7 +52,7 @@ export function OverviewOntologyBlock({
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [relationTypes, setRelationTypes] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
   const [detailById, setDetailById] = useState<Record<string, ObjectTypeDetail | null>>({});
-  const [structureLoading, setStructureLoading] = useState(true);
+  const [previewLoading, setPreviewLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [entityPage, setEntityPage] = useState(1);
   const [entityPageSize, setEntityPageSize] = useState(10);
@@ -61,7 +63,9 @@ export function OverviewOntologyBlock({
 
   useEffect(() => {
     let cancelled = false;
-    setStructureLoading(true);
+    setPreviewLoading(true);
+    setObjectTypes([]);
+    setRelationTypes([]);
     setDetailById({});
     setEntityPage(1);
     setRelationPage(1);
@@ -78,20 +82,6 @@ export function OverviewOntologyBlock({
         }
         setObjectTypes(objects);
         setRelationTypes(relations);
-
-        const details = await Promise.all(
-          objects.map((item) =>
-            getKnowledgeNetworkObjectTypeDetail(networkId, item.id).catch(() => null),
-          ),
-        );
-        if (cancelled) {
-          return;
-        }
-        const map: Record<string, ObjectTypeDetail | null> = {};
-        objects.forEach((item, index) => {
-          map[item.id] = details[index] ?? null;
-        });
-        setDetailById(map);
       } catch {
         if (!cancelled) {
           setObjectTypes([]);
@@ -99,7 +89,7 @@ export function OverviewOntologyBlock({
         }
       } finally {
         if (!cancelled) {
-          setStructureLoading(false);
+          setPreviewLoading(false);
         }
       }
     })();
@@ -176,7 +166,31 @@ export function OverviewOntologyBlock({
     [objectTypes],
   );
 
-  const entityColumns: ColumnsType<KnowledgeNetworkObjectTypeRecord> = [
+  const boundResourceIds = useMemo(
+    () => objectTypes.map((item) => item.dataSource?.id),
+    [objectTypes],
+  );
+  const { buildTasksByResourceId, loading: resourceIndexLoading } =
+    useResourceIndexStates(boundResourceIds);
+
+  const renderResourceIndexState = useCallback(
+    (entity: KnowledgeNetworkObjectTypeRecord) => {
+      const resourceId = entity.dataSource?.id;
+      if (!resourceId) {
+        return <span className={styles.muted}>—</span>;
+      }
+
+      const label = resourceIndexLoading
+        ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+        : formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t);
+
+      return <span>{label}</span>;
+    },
+    [buildTasksByResourceId, resourceIndexLoading, t],
+  );
+
+  const entityColumns: ColumnsType<KnowledgeNetworkObjectTypeRecord> = useMemo(
+    () => [
     {
       title: t("knowledgeNetwork.previewEntityClasses"),
       key: "name",
@@ -200,15 +214,8 @@ export function OverviewOntologyBlock({
     {
       title: t("knowledgeNetwork.previewColIndex"),
       key: "index",
-      width: 110,
-      render: (_, entity) =>
-        entity.hasIndex ? (
-          <Tag color="success" bordered={false}>
-            {t("knowledgeNetwork.previewIndexed")}
-          </Tag>
-        ) : (
-          <span className={styles.muted}>{t("knowledgeNetwork.previewNotIndexed")}</span>
-        ),
+      width: 140,
+      render: (_, entity) => renderResourceIndexState(entity),
     },
     {
       title: t("knowledgeNetwork.previewColConceptGroups"),
@@ -224,7 +231,9 @@ export function OverviewOntologyBlock({
           <span className={styles.muted}>—</span>
         ),
     },
-  ];
+  ],
+    [detailById, hubIds, renderResourceIndexState, t],
+  );
 
   const relationColumns: ColumnsType<KnowledgeNetworkRelationTypeRecord> = [
     {
@@ -267,43 +276,39 @@ export function OverviewOntologyBlock({
     },
   ];
 
-  const bindingColumns: ColumnsType<KnowledgeNetworkObjectTypeRecord> = [
-    {
-      title: t("knowledgeNetwork.previewEntityClasses"),
-      key: "name",
-      render: (_, entity) => (
-        <span className={styles.tblName}>
-          <span className={styles.dot} style={{ background: entity.color || DEFAULT_COLOR }} />
-          <span>{entity.name}</span>
-        </span>
-      ),
-    },
-    {
-      title: t("knowledgeNetwork.previewColBoundResource"),
-      key: "resource",
-      render: (_, entity) => {
-        const detail = detailById[entity.id];
-        return detail?.dataSource ? (
-          <span className={styles.resourceName}>{detail.dataSource.name}</span>
-        ) : (
-          <span className={styles.muted}>{t("knowledgeNetwork.previewUnbound")}</span>
-        );
-      },
-    },
-    {
-      title: t("knowledgeNetwork.previewColIndexState"),
-      key: "indexState",
-      width: 120,
-      render: (_, entity) =>
-        entity.hasIndex ? (
-          <Tag color="success" bordered={false}>
-            {t("knowledgeNetwork.previewIndexed")}
-          </Tag>
-        ) : (
-          <Tag bordered={false}>{t("knowledgeNetwork.previewNotIndexed")}</Tag>
+  const bindingColumns: ColumnsType<KnowledgeNetworkObjectTypeRecord> = useMemo(
+    () => [
+      {
+        title: t("knowledgeNetwork.previewEntityClasses"),
+        key: "name",
+        render: (_, entity) => (
+          <span className={styles.tblName}>
+            <span className={styles.dot} style={{ background: entity.color || DEFAULT_COLOR }} />
+            <span>{entity.name}</span>
+          </span>
         ),
-    },
-  ];
+      },
+      {
+        title: t("knowledgeNetwork.previewColBoundResource"),
+        key: "resource",
+        render: (_, entity) => {
+          const resource = entity.dataSource ?? detailById[entity.id]?.dataSource;
+          return resource ? (
+            <span className={styles.resourceName}>{resource.name}</span>
+          ) : (
+            <span className={styles.muted}>{t("knowledgeNetwork.previewUnbound")}</span>
+          );
+        },
+      },
+      {
+        title: t("knowledgeNetwork.previewColIndexState"),
+        key: "indexState",
+        width: 140,
+        render: (_, entity) => renderResourceIndexState(entity),
+      },
+    ],
+    [detailById, renderResourceIndexState, t],
+  );
 
   const pagedObjectTypes = useMemo(() => {
     const start = (entityPage - 1) * entityPageSize;
@@ -322,119 +327,65 @@ export function OverviewOntologyBlock({
 
   return (
     <div className={styles.block}>
-      <OntologyGraphCard
-        networkId={networkId}
-        objectTypes={objectTypes}
-        relationTypes={relationTypes}
-      />
+      <Spin spinning={previewLoading}>
+        <OntologyGraphCard
+          buildTasksByResourceId={buildTasksByResourceId}
+          networkId={networkId}
+          objectTypes={objectTypes}
+          relationTypes={relationTypes}
+          resourceIndexLoading={resourceIndexLoading}
+        />
+      </Spin>
 
-      {objectTypes.length > 0 || structureLoading ? (
-        <Spin spinning={structureLoading}>
-          <div className={styles.structureCard}>
-            <button
-              className={`${styles.structureToggle} ${detailsExpanded ? styles.structureToggleExpanded : ""}`}
-              onClick={onToggleDetails}
-              type="button"
-            >
-              <span>{t("knowledgeNetwork.previewTabOntology")}</span>
-              <span className={styles.structureToggleIcon}>
-                {detailsExpanded ? <DownOutlined /> : <RightOutlined />}
-              </span>
-            </button>
-            {detailsExpanded ? (
+      {objectTypes.length > 0 || previewLoading ? (
+        <div className={styles.structureCard}>
+          <button
+            className={`${styles.structureToggle} ${detailsExpanded ? styles.structureToggleExpanded : ""}`}
+            onClick={onToggleDetails}
+            type="button"
+          >
+            <span>{t("knowledgeNetwork.previewTabOntology")}</span>
+            <span className={styles.structureToggleIcon}>
+              {detailsExpanded ? <DownOutlined /> : <RightOutlined />}
+            </span>
+          </button>
+          {detailsExpanded ? (
+            previewLoading ? (
+              <div className={styles.loadingPlaceholder}>
+                <Spin />
+              </div>
+            ) : (
               <Spin spinning={detailLoading}>
                 <Tabs
-                  className={styles.tabs}
-                  defaultActiveKey="ontology"
-                  items={[
-                    {
-                      key: "ontology",
-                      label: t("knowledgeNetwork.previewTabOntology"),
-                      children: (
-                        <div className={styles.sectionGrid}>
-                          <div className={styles.sectionCard}>
-                            <div className={styles.sectionCardTitle}>
-                              {t("knowledgeNetwork.previewEntityClasses")}
-                              <span className={styles.badge}>{objectTypes.length}</span>
-                            </div>
-                            <Table
-                              rowKey="id"
-                              size="small"
-                              columns={entityColumns}
-                              dataSource={pagedObjectTypes}
-                              pagination={false}
-                            />
-                            {objectTypes.length > 0 ? (
-                              <div className={styles.paginationBar}>
-                                <TablePaginationBar
-                                  current={entityPage}
-                                  onChange={(page, pageSize) => {
-                                    setEntityPage(page);
-                                    setEntityPageSize(pageSize);
-                                  }}
-                                  pageSize={entityPageSize}
-                                  showSizeChanger
-                                  showTotal={(total) => t("common.total", { total })}
-                                  total={objectTypes.length}
-                                />
-                              </div>
-                            ) : null}
-                          </div>
-                          <div className={`${styles.sectionCard} ${styles.sectionCardSecondary}`}>
-                            <div className={styles.sectionCardTitle}>
-                              {t("knowledgeNetwork.previewRelationClasses")}
-                              <span className={styles.badge}>{relationTypes.length}</span>
-                            </div>
-                            <Table
-                              rowKey="id"
-                              size="small"
-                              columns={relationColumns}
-                              dataSource={pagedRelationTypes}
-                              pagination={false}
-                            />
-                            {relationTypes.length > 0 ? (
-                              <div className={styles.paginationBar}>
-                                <TablePaginationBar
-                                  current={relationPage}
-                                  onChange={(page, pageSize) => {
-                                    setRelationPage(page);
-                                    setRelationPageSize(pageSize);
-                                  }}
-                                  pageSize={relationPageSize}
-                                  showSizeChanger
-                                  showTotal={(total) => t("common.total", { total })}
-                                  total={relationTypes.length}
-                                />
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: "binding",
-                      label: t("knowledgeNetwork.previewTabBinding"),
-                      children: (
+                className={styles.tabs}
+                defaultActiveKey="ontology"
+                items={[
+                  {
+                    key: "ontology",
+                    label: t("knowledgeNetwork.previewTabOntology"),
+                    children: (
+                      <div className={styles.sectionGrid}>
                         <div className={styles.sectionCard}>
                           <div className={styles.sectionCardTitle}>
-                            {t("knowledgeNetwork.previewColBoundResource")}
+                            {t("knowledgeNetwork.previewEntityClasses")}
+                            <span className={styles.badge}>{objectTypes.length}</span>
                           </div>
                           <Table
                             rowKey="id"
                             size="small"
-                            columns={bindingColumns}
-                            dataSource={pagedBindingObjectTypes}
+                            columns={entityColumns}
+                            dataSource={pagedObjectTypes}
                             pagination={false}
                           />
                           {objectTypes.length > 0 ? (
                             <div className={styles.paginationBar}>
                               <TablePaginationBar
-                                current={bindingPage}
+                                current={entityPage}
                                 onChange={(page, pageSize) => {
-                                  setBindingPage(page);
-                                  setBindingPageSize(pageSize);
+                                  setEntityPage(page);
+                                  setEntityPageSize(pageSize);
                                 }}
-                                pageSize={bindingPageSize}
+                                pageSize={entityPageSize}
                                 showSizeChanger
                                 showTotal={(total) => t("common.total", { total })}
                                 total={objectTypes.length}
@@ -442,14 +393,76 @@ export function OverviewOntologyBlock({
                             </div>
                           ) : null}
                         </div>
-                      ),
-                    },
-                  ]}
-                />
-              </Spin>
-            ) : null}
-          </div>
-        </Spin>
+                        <div className={`${styles.sectionCard} ${styles.sectionCardSecondary}`}>
+                          <div className={styles.sectionCardTitle}>
+                            {t("knowledgeNetwork.previewRelationClasses")}
+                            <span className={styles.badge}>{relationTypes.length}</span>
+                          </div>
+                          <Table
+                            rowKey="id"
+                            size="small"
+                            columns={relationColumns}
+                            dataSource={pagedRelationTypes}
+                            pagination={false}
+                          />
+                          {relationTypes.length > 0 ? (
+                            <div className={styles.paginationBar}>
+                              <TablePaginationBar
+                                current={relationPage}
+                                onChange={(page, pageSize) => {
+                                  setRelationPage(page);
+                                  setRelationPageSize(pageSize);
+                                }}
+                                pageSize={relationPageSize}
+                                showSizeChanger
+                                showTotal={(total) => t("common.total", { total })}
+                                total={relationTypes.length}
+                              />
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "binding",
+                    label: t("knowledgeNetwork.previewTabBinding"),
+                    children: (
+                      <div className={styles.sectionCard}>
+                        <div className={styles.sectionCardTitle}>
+                          {t("knowledgeNetwork.previewColBoundResource")}
+                        </div>
+                        <Table
+                          rowKey="id"
+                          size="small"
+                          columns={bindingColumns}
+                          dataSource={pagedBindingObjectTypes}
+                          pagination={false}
+                        />
+                        {objectTypes.length > 0 ? (
+                          <div className={styles.paginationBar}>
+                            <TablePaginationBar
+                              current={bindingPage}
+                              onChange={(page, pageSize) => {
+                                setBindingPage(page);
+                                setBindingPageSize(pageSize);
+                              }}
+                              pageSize={bindingPageSize}
+                              showSizeChanger
+                              showTotal={(total) => t("common.total", { total })}
+                              total={objectTypes.length}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+            </Spin>
+            )
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

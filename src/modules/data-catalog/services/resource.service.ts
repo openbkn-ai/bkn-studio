@@ -351,17 +351,32 @@ export async function countCatalogResources(
 }
 
 export async function getCatalogResource(id: string) {
-  if (useMock) {
-    return wait(mockResources.find((item) => item.id === id) ?? null);
+  const [resource] = await getCatalogResources([id]);
+  return resource ?? null;
+}
+
+export async function getCatalogResources(ids: string[]) {
+  const uniqueIds = Array.from(new Set(ids.map((id) => id.trim()).filter(Boolean)));
+  if (uniqueIds.length === 0) {
+    return [];
   }
 
-  // GET /resources/:id 返回 {entries:[...]}(支持逗号多 id)
-  const response = await http.get<{ entries?: BackendResource[] }>(
-    `/vega-backend/v1/resources/${id}`,
-  );
+  if (useMock) {
+    const byId = new Map(mockResources.map((item) => [item.id, item]));
+    return wait(uniqueIds.map((id) => byId.get(id)).filter(Boolean) as CatalogResource[]);
+  }
 
-  const resource = response.data.entries?.[0];
-  return resource ? mapResource(resource) : null;
+  const resources: CatalogResource[] = [];
+  for (let index = 0; index < uniqueIds.length; index += 50) {
+    const chunk = uniqueIds.slice(index, index + 50);
+    const response = await http.get<{ entries?: BackendResource[] }>(
+      `/vega-backend/v1/resources/${chunk.join(",")}`,
+      { skipErrorToast: true },
+    );
+    resources.push(...(response.data.entries ?? []).map(mapResource));
+  }
+
+  return resources;
 }
 
 export async function createCatalogResource(input: ResourceCreateInput) {

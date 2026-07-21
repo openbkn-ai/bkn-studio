@@ -64,15 +64,18 @@ export function useWorkspaceData(
   const [tasks, setTasks] = useState<KnowledgeNetworkTaskRecord[]>([]);
   const [detailLoading, setDetailLoading] = useState(true);
   const [sectionLoading, setSectionLoading] = useState(false);
+  const [recentLoading, setRecentLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [sectionError, setSectionError] = useState<string | null>(null);
   const loadedSectionsRef = useRef<Set<string>>(new Set());
+  const recentLoadedRef = useRef(false);
   const pendingMetricsTotalRef = useRef(createMetricsTotalPending());
   const detailRef = useRef<KnowledgeNetworkRecord | null>(null);
   detailRef.current = detail;
 
   const clearSectionCache = useCallback(() => {
     loadedSectionsRef.current.clear();
+    recentLoadedRef.current = false;
     clearMetricsTotalPending(pendingMetricsTotalRef.current);
   }, []);
 
@@ -89,6 +92,33 @@ export function useWorkspaceData(
     detailRef.current = nextDetail;
     setDetail(nextDetail);
   }, []);
+
+  const loadRecentObjects = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (!networkId) {
+        return;
+      }
+
+      if (!options?.force && recentLoadedRef.current) {
+        return;
+      }
+
+      setRecentLoading(true);
+      setSectionError(null);
+
+      try {
+        setRecentObjects(await listKnowledgeNetworkRecentObjects(networkId));
+        recentLoadedRef.current = true;
+      } catch (error) {
+        logServiceFallback("useWorkspaceData.overview.recentObjects", error);
+        setRecentObjects([]);
+        setSectionError(extractRequestErrorMessage(error));
+      } finally {
+        setRecentLoading(false);
+      }
+    },
+    [networkId],
+  );
 
   const loadDetail = useCallback(async () => {
     if (!networkId) {
@@ -130,23 +160,8 @@ export function useWorkspaceData(
 
       try {
         switch (targetSection) {
-          case "overview": {
-            const recentResult = await Promise.allSettled([
-              listKnowledgeNetworkRecentObjects(networkId),
-            ]);
-
-            if (recentResult[0]?.status === "fulfilled") {
-              setRecentObjects(recentResult[0].value);
-            } else {
-              const recentError: unknown = recentResult[0]?.reason;
-              logServiceFallback("useWorkspaceData.overview.recentObjects", recentError);
-              setRecentObjects([]);
-              setSectionError(
-                extractRequestErrorMessage(recentError ?? "Failed to load recent objects"),
-              );
-            }
+          case "overview":
             break;
-          }
           case "preview": {
             const [objectTypeResult, relationTypeResult] = await Promise.all([
               listKnowledgeNetworkObjectTypes(networkId),
@@ -209,6 +224,7 @@ export function useWorkspaceData(
 
   useEffect(() => {
     clearSectionCache();
+    setRecentObjects([]);
     void loadDetail();
   }, [clearSectionCache, loadDetail, networkId]);
 
@@ -300,10 +316,12 @@ export function useWorkspaceData(
     loadError: detailError,
     loading: sectionLoading,
     loadWorkspaceData,
+    loadRecentObjects,
     metricApiUnavailable,
     metrics,
     objectTypes,
     recentObjects,
+    recentLoading,
     relationTypes,
     reloadActionTypes,
     reloadConceptGroups,

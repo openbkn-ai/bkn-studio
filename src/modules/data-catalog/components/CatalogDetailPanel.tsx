@@ -488,3 +488,5 @@ export function CatalogDetailPanel({
     </section>
   );
 }
+
+export default CatalogDetailPanel;
