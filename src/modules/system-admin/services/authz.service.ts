@@ -118,6 +118,7 @@ function filterMockGrants(query: ObjectGrantQuery): ObjectGrant[] {
 
 export async function listObjectGrantsPage(
   query: ObjectGrantQuery = {},
+  options: { resolveNames?: boolean } = {},
 ): Promise<ObjectGrantListResult> {
   if (useMock) {
     const filtered = filterMockGrants(query).map(clone);
@@ -164,10 +165,12 @@ export async function listObjectGrantsPage(
     summary?: AuthzSummary;
   }>(`${ADMIN}/object-grants${suffix}`);
   const mapped = (response.data.entries ?? []).map(mapEntry);
-  const named = await resolveGrantNames(mapped);
+  // 默认解析对象名(抽屉等调用方直接用)。列表页传 resolveNames:false 先拿 id 占位、
+  // 立即渲染,再自行异步回填名字,避免名字解析阻塞整页。
+  const grants = options.resolveNames === false ? mapped : await resolveGrantNames(mapped);
   return {
-    grants: named,
-    total: response.data.total ?? named.length,
+    grants,
+    total: response.data.total ?? grants.length,
     summary: response.data.summary,
   };
 }

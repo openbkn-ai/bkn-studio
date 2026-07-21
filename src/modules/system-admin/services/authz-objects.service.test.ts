@@ -102,6 +102,34 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
     expect(result[0].objName).toBe("销售数据集");
   });
 
+  it("vega 批量取名带 ignore_missing=true", async () => {
+    getMock.mockResolvedValue({ data: { entries: [] } });
+
+    await resolveGrantNames([resourceGrant("im-1")]);
+
+    const call = getMock.mock.calls.at(-1);
+    expect(call?.[1]?.params).toEqual({ ignore_missing: true });
+  });
+
+  it("部分返回:缺失 id 退回 id 兜底,不牵连其余(按 entry.id 对齐)", async () => {
+    // 后端 ignore_missing 下只回查到的;这里模拟第 2 个已删被略过。
+    getMock.mockImplementation((url: string) => {
+      const ids = String(url).split("/").pop()!.split(",").map(decodeURIComponent);
+      const found = ids.filter((id) => id !== "part-gone");
+      return Promise.resolve({
+        data: { entries: found.map((id) => ({ id, name: `n-${id}` })) },
+      });
+    });
+
+    const result = await resolveGrantNames(
+      ["part-a", "part-gone", "part-c"].map(resourceGrant),
+    );
+
+    expect(result[0].objName).toBe("n-part-a");
+    expect(result[1].objName).toBe("part-gone"); // 缺失 → id 兜底
+    expect(result[2].objName).toBe("n-part-c");
+  });
+
   it("正向缓存:已解析的 id 再次解析不再请求", async () => {
     getMock.mockImplementation((url: string) => {
       const tail = String(url).split("/").pop() ?? "";

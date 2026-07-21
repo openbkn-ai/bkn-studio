@@ -19,7 +19,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Empty, Input, Segmented, Select, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -33,6 +33,7 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { listObjectGrantsPage, revokeObjectGrant } from "@/modules/system-admin/services/authz.service";
+import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
 import type { AuthzSummary, ObjectGrant } from "@/modules/system-admin/types/authz";
 import {
@@ -84,6 +85,8 @@ export function ObjectAuthorizationScene() {
   const [lookupRevision, setLookupRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // 每次加载自增;异步名字回填只在 token 仍是当前值时落地,防止旧一轮解析覆盖新列表。
+  const loadTokenRef = useRef(0);
 
   const [view, setView] = useState<ViewMode>("all");
   const [keyword, setKeyword] = useState("");
@@ -109,15 +112,26 @@ export function ObjectAuthorizationScene() {
       setDepartments(deptList);
 
       const paginate = view === "all";
-      const result = await listObjectGrantsPage({
-        search: debouncedKeyword || undefined,
-        resourceType: objTypeFilter,
-        offset: paginate ? (pageState.page - 1) * pageState.pageSize : undefined,
-        limit: paginate ? pageState.pageSize : undefined,
-        includeSummary: true,
-      });
+      const token = ++loadTokenRef.current;
+      // resolveNames:false —— 列表先用 id 占位立即渲染,不被对象名解析(可能慢/部分缺失)阻塞。
+      const result = await listObjectGrantsPage(
+        {
+          search: debouncedKeyword || undefined,
+          resourceType: objTypeFilter,
+          offset: paginate ? (pageState.page - 1) * pageState.pageSize : undefined,
+          limit: paginate ? pageState.pageSize : undefined,
+          includeSummary: true,
+        },
+        { resolveNames: false },
+      );
 
       setGrants(result.grants);
+      // 名字异步回填;仅当没有更新一轮加载覆盖时才落地。
+      void resolveGrantNames(result.grants).then((named) => {
+        if (loadTokenRef.current === token) {
+          setGrants(named);
+        }
+      });
       setTotal(result.total);
       setSummary(
         result.summary ?? {

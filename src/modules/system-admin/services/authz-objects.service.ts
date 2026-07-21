@@ -152,21 +152,22 @@ async function namesFor(type: string, ids: string[]): Promise<Map<string, string
     return map;
   }
   if (cfg.kind === "vega") {
-    // 旧接口：逗号分隔 path、返回完整对象、任一 id 不存在整批 404。按 NAME_ID_BATCH
-    // 分批,单批失败仅丢该批(名称退化为 id 兜底)。此前是「整批失败 → 逐个重拉」,
-    // 全体 404 的大列表(如已删除的 resource 授权)会瞬间打出上百条 404,已移除。
+    // 逗号分隔 path 批量取名。ignore_missing=true 让后端对已删 id 返 200 + 查到的那些
+    // (而非任一 id 不存在就整批 404),孤儿授权混进本批也不牵连其余。按 NAME_ID_BATCH
+    // 分批控 URL 长度(50 ≈ 1.1KB,远低于网关 ~8KB/414 上限)。回填按 entry.id 对齐,
+    // 不假设返回顺序/数量;请求了但没返的 id = 已删对象 → 名称退化为 id 兜底。
     await Promise.all(
       chunk(ids, NAME_ID_BATCH).map(async (batch) => {
         try {
           const response = await http.get<unknown>(
             `${cfg.path}/${batch.map(encodeURIComponent).join(",")}`,
-            { skipErrorToast: true },
+            { params: { ignore_missing: true }, skipErrorToast: true },
           );
           for (const [id, name] of collectNamePairs(response.data, "id", "name")) {
             map.set(id, name);
           }
         } catch {
-          // 本批不可解析：名称保持 id 兜底,不再逐个重试。
+          // 本批整体失败(非缺 id,而是网络/网关):名称保持 id 兜底,不逐个重试。
         }
       }),
     );
