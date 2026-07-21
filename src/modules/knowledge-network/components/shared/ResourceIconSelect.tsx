@@ -7,9 +7,9 @@
 
 /* eslint-disable react-refresh/only-export-components */
 
-import { createFromIconfontCN } from "@ant-design/icons";
-import { Input, Select, Space } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { DownOutlined, createFromIconfontCN } from "@ant-design/icons";
+import { Input, Popover } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import legacyIconList from "./resource-iconfont/dip-iconfont.json";
 import "./resource-iconfont/inject-iconfont-svg";
@@ -94,7 +94,8 @@ export function ResourceIconSelect({
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
-  const selectRef = useRef<React.ComponentRef<typeof Select>>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   const filteredGlyphs = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -107,97 +108,100 @@ export function ResourceIconSelect({
     );
   }, [keyword]);
 
-  useEffect(() => {
-    if (!value) {
-      onChange?.(DEFAULT_RESOURCE_ICON);
-    }
-  }, [onChange, value]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const selectElement = selectRef.current?.nativeElement;
-
-      if (
-        open &&
-        selectElement &&
-        !selectElement.contains(target) &&
-        containerRef.current &&
-        !containerRef.current.contains(target)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [open]);
-
   const displayType = resolveIconType(value) ?? DEFAULT_RESOURCE_ICON;
 
-  const prefix = (
-    <Space>
-      <ResourceIconFont style={{ fontSize: 16 }} type={displayType} />
-    </Space>
+  const emitIconChange = useCallback(
+    (nextIcon: string) => {
+      const normalized = resolveIconType(nextIcon) ?? DEFAULT_RESOURCE_ICON;
+      const current = resolveIconType(value) ?? DEFAULT_RESOURCE_ICON;
+      if (normalized === current) {
+        return;
+      }
+      onChangeRef.current?.(normalized);
+    },
+    [value],
   );
 
-  const popupRender = () => (
-    <div className={styles.panel} ref={containerRef} tabIndex={-1}>
-      <Search
-        allowClear
-        onChange={(event) => setKeyword(event.target.value)}
-        placeholder="输入关键词筛选图标"
-        style={{ marginBottom: 8 }}
-        value={keyword}
-      />
-      <div className={styles.iconBox}>
-        {filteredGlyphs.map((glyph) => {
-          const iconType = `${ICON_PREFIX}${glyph.font_class}`;
-          const selected = value === iconType;
+  // Form.Item 的 onChange 引用不稳定；不要放进依赖，否则空值回填会反复触发更新环（React #185）。
+  useEffect(() => {
+    if (!value?.trim()) {
+      if (displayType !== value) {
+        onChangeRef.current?.(displayType);
+      }
+      return;
+    }
 
-          return (
-            <button
-              className={styles.iconItem}
-              key={glyph.icon_id}
-              onClick={() => {
-                onChange?.(iconType);
-                setKeyword("");
-                setOpen(false);
-              }}
-              style={{ color: selected ? "#1677ff" : "#000" }}
-              title={glyph.name}
-              type="button"
-            >
-              <ResourceIconFont style={{ fontSize: 20 }} type={iconType} />
-              <p className={styles.iconLabel}>{glyph.name}</p>
-            </button>
-          );
-        })}
+    const resolved = resolveIconType(value);
+    if (resolved && resolved !== value) {
+      onChangeRef.current?.(resolved);
+    }
+  }, [displayType, value]);
+
+  const getPopupContainer = useCallback(() => {
+    if (inModal) {
+      const modal = document.querySelector(".ant-modal-wrap");
+      if (modal) {
+        return modal as HTMLElement;
+      }
+    }
+
+    return document.getElementById("root") ?? document.body;
+  }, [inModal]);
+
+  const popupRender = useCallback(
+    () => (
+      <div className={styles.panel} ref={containerRef} tabIndex={-1}>
+        <Search
+          allowClear
+          onChange={(event) => setKeyword(event.target.value)}
+          placeholder="输入关键词筛选图标"
+          style={{ marginBottom: 8 }}
+          value={keyword}
+        />
+        <div className={styles.iconBox}>
+          {filteredGlyphs.map((glyph) => {
+            const iconType = `${ICON_PREFIX}${glyph.font_class}`;
+            const selected = displayType === iconType;
+
+            return (
+              <button
+                className={styles.iconItem}
+                key={glyph.icon_id}
+                onClick={() => {
+                  emitIconChange(iconType);
+                  setKeyword("");
+                  setOpen(false);
+                }}
+                style={{ color: selected ? "#1677ff" : "#000" }}
+                title={glyph.name}
+                type="button"
+              >
+                <ResourceIconFont style={{ fontSize: 20 }} type={iconType} />
+                <p className={styles.iconLabel}>{glyph.name}</p>
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    ),
+    [displayType, emitIconChange, filteredGlyphs, keyword],
   );
 
   return (
-    <Select
-      getPopupContainer={() => {
-        if (inModal) {
-          const modal = document.querySelector(".ant-modal-wrap");
-          if (modal) {
-            return modal as HTMLElement;
-          }
-        }
-
-        return document.getElementById("root") ?? document.body;
-      }}
-      onChange={onChange}
+    <Popover
+      content={open ? popupRender() : null}
+      destroyOnHidden
+      getPopupContainer={getPopupContainer}
       onOpenChange={setOpen}
       open={open}
-      popupRender={popupRender}
-      prefix={prefix}
-      ref={selectRef}
-      style={{ width: "100%" }}
-    />
+      trigger="click"
+    >
+      <button className={styles.trigger} type="button">
+        <span className={styles.prefixIcon}>
+          <ResourceIconFont style={{ fontSize: 16 }} type={displayType} />
+        </span>
+        <DownOutlined className={styles.triggerIcon} />
+      </button>
+    </Popover>
   );
 }

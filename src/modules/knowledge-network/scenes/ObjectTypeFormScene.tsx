@@ -6,7 +6,7 @@
  */
 
 import { Form, Input, Select, Spin, Alert } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -17,6 +17,10 @@ import {
   ObjectTypeDataAttributeEditor,
   type ObjectTypeDataAttributeEditorHandle,
 } from "@/modules/knowledge-network/components/object-type/data-attribute/ObjectTypeDataAttributeEditor";
+import {
+  areDataPropertiesEqual,
+  areDataSourcesEqual,
+} from "@/modules/knowledge-network/components/object-type/data-attribute/object-type-data-attribute-editor.utils";
 import {
   ObjectTypeLogicAttributeEditor,
   type ObjectTypeLogicAttributeEditorHandle,
@@ -123,10 +127,10 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             throw new Error(t("common.notFound"));
           }
           const nextBasic: BasicFormValues = {
-            color: detail.color,
+            color: detail.color || DEFAULT_RESOURCE_COLOR,
             conceptGroupIds: detail.conceptGroupIds,
             description: detail.description,
-            icon: detail.icon,
+            icon: detail.icon || DEFAULT_RESOURCE_ICON,
             id: detail.id,
             name: detail.name,
             tags: detail.tags,
@@ -160,6 +164,62 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       { title: t("knowledgeNetwork.objectTypeLogicProperty") },
     ],
     [t],
+  );
+
+  const logicPropertyNames = useMemo(
+    () => logicProperties.map((item) => item.name),
+    [logicProperties],
+  );
+
+  const conceptGroupOptions = useMemo(
+    () =>
+      conceptGroups.map((item) => ({
+        label: item.name,
+        value: item.id,
+      })),
+    [conceptGroups],
+  );
+
+  const dataAttributeBasicValue = useMemo(
+    () =>
+      basicValue
+        ? {
+            color: basicValue.color,
+            icon: basicValue.icon,
+            name: basicValue.name,
+          }
+        : null,
+    [basicValue],
+  );
+
+  const handleDataAttributeChange = useCallback(
+    ({
+      dataProperties: nextProperties,
+      dataSource: nextDataSource,
+    }: {
+      dataProperties: ObjectTypeDataProperty[];
+      dataSource?: ObjectTypeDataSource;
+    }) => {
+      setDataProperties((current) =>
+        areDataPropertiesEqual(current, nextProperties) ? current : nextProperties,
+      );
+      setDataSource((current) =>
+        areDataSourcesEqual(current, nextDataSource) ? current : nextDataSource,
+      );
+    },
+    [],
+  );
+
+  const syncDataAttributeState = useCallback(
+    (nextProperties: ObjectTypeDataProperty[], nextDataSource?: ObjectTypeDataSource) => {
+      setDataProperties((current) =>
+        areDataPropertiesEqual(current, nextProperties) ? current : nextProperties,
+      );
+      setDataSource((current) =>
+        areDataSourcesEqual(current, nextDataSource) ? current : nextDataSource,
+      );
+    },
+    [],
   );
 
   const goBack = () => {
@@ -201,8 +261,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     try {
       const values = await dataAttributeRef.current?.getDataProperties();
       if (values) {
-        setDataProperties(values.dataProperties);
-        setDataSource(values.dataSource);
+        syncDataAttributeState(values.dataProperties, values.dataSource);
       }
       setCurrentStep(0);
     } catch {
@@ -216,8 +275,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       if (!values) {
         return;
       }
-      setDataProperties(values.dataProperties);
-      setDataSource(values.dataSource);
+      syncDataAttributeState(values.dataProperties, values.dataSource);
       setDoneStep((prev) => Math.max(prev, 2));
       setCurrentStep(2);
     } catch {
@@ -279,8 +337,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       if (dataValues) {
         normalizedDataProperties = dataValues.dataProperties;
         normalizedDataSource = dataValues.dataSource;
-        setDataProperties(dataValues.dataProperties);
-        setDataSource(dataValues.dataSource);
+        syncDataAttributeState(dataValues.dataProperties, dataValues.dataSource);
       }
     } catch {
       setCurrentStep(1);
@@ -343,16 +400,14 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       if (nextStep === 0 && currentStep >= 1) {
         const values = await dataAttributeRef.current?.getDataProperties();
         if (values) {
-          setDataProperties(values.dataProperties);
-          setDataSource(values.dataSource);
+          syncDataAttributeState(values.dataProperties, values.dataSource);
         }
       }
 
       if (nextStep === 1 && currentStep === 0) {
-        const values = await dataAttributeRef.current?.getDataProperties();
-        if (values) {
-          setDataProperties(values.dataProperties);
-          setDataSource(values.dataSource);
+        const basicValues = await syncBasicValueFromForm();
+        if (!basicValues) {
+          return;
         }
       }
 
@@ -426,10 +481,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
                 allowClear
                 mode="multiple"
                 optionFilterProp="label"
-                options={conceptGroups.map((item) => ({
-                  label: item.name,
-                  value: item.id,
-                }))}
+                options={conceptGroupOptions}
                 placeholder={t("knowledgeNetwork.objectTypeConceptGroupsPlaceholder")}
               />
             </Form.Item>
@@ -442,26 +494,19 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     }
 
     if (currentStep === 1) {
-      if (!basicValue) {
+      if (!dataAttributeBasicValue) {
         return null;
       }
 
       return (
         <div className={styles.dataAttributePanel}>
           <ObjectTypeDataAttributeEditor
-            basicValue={{
-              color: basicValue.color,
-              icon: basicValue.icon,
-              name: basicValue.name,
-            }}
+            basicValue={dataAttributeBasicValue}
             dataProperties={dataProperties}
             dataSource={dataSource}
-            logicPropertyNames={logicProperties.map((item) => item.name)}
+            logicPropertyNames={logicPropertyNames}
             networkId={networkId}
-            onChange={({ dataProperties: nextProperties, dataSource: nextDataSource }) => {
-              setDataProperties(nextProperties);
-              setDataSource(nextDataSource);
-            }}
+            onChange={handleDataAttributeChange}
             ref={dataAttributeRef}
           />
         </div>
