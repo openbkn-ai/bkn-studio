@@ -23,6 +23,8 @@ export const objecttypePart = {
     objectTypeClearResourceDescription: "Clear the current bound resource and its mappings?",
     objectTypeClearResourceTitle: "Clear resource",
     objectTypeClickToConnect: "Click an object type property on the right to complete the mapping.",
+    objectTypeClearMapping: "Clear mapping",
+    objectTypeMappingCleared: "Mapping cleared",
     objectTypeConceptGroups: "Concept groups",
     objectTypeConceptGroupsPlaceholder: "Select related concept groups",
     objectTypeCreateDescription: "Create an object type and its properties through a multi-step form.",

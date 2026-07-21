@@ -22,6 +22,8 @@ export const objecttypePart = {
     objectTypeClearResourceDescription: "确认清空当前绑定资源及其映射关系吗？",
     objectTypeClearResourceTitle: "清空资源",
     objectTypeClickToConnect: "请点击右侧对象类属性完成映射连接。",
+    objectTypeClearMapping: "取消映射",
+    objectTypeMappingCleared: "已取消映射关系",
     objectTypeConceptGroups: "关联概念分组",
     objectTypeConceptGroupsPlaceholder: "选择关联的概念分组",
     objectTypeCreateDescription: "通过多步表单创建对象类及其属性。",
