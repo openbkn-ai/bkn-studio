@@ -7,6 +7,7 @@
 
 import {
   AppstoreOutlined,
+  ArrowLeftOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
   DownloadOutlined,
@@ -16,7 +17,7 @@ import {
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Alert, Empty, Layout, Space, Spin, Tag, Typography } from "antd";
+import { Alert, Empty, Layout, Spin, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -25,7 +26,6 @@ import type { SkillDetailSceneProps } from "@/modules/execution-factory/contract
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { SkillFileTreeView } from "@/modules/execution-factory/components/SkillFileTreeView";
 import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
@@ -54,7 +54,6 @@ import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-aud
 import styles from "./toolbox-detail.module.css";
 
 const { Sider, Content } = Layout;
-const { Paragraph, Title } = Typography;
 
 const statusColorMap: Record<SkillStatus, string> = {
   published: "green",
@@ -277,68 +276,71 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
 
   return (
     <section className={styles.page}>
-      <div className={styles.backRow}>
-        <SceneBackButton onClick={handleBack} />
-      </div>
-
-      {record ? (
-        <div className={styles.header}>
-          <div className={styles.headerMain}>
-            <div className={styles.titleRow}>
-              <Title className={styles.title} level={3}>
-                {record.name}
-              </Title>
-              {statusTag}
-              {record.version ? <Tag>{record.version}</Tag> : null}
-            </div>
-            <Paragraph className={styles.description}>
-              {record.description || "-"}
-            </Paragraph>
-            <div className={styles.metaRow}>
-              <span>
-                <ThunderboltOutlined />{" "}
-                {t("executionFactory.skillFileCountLabel", {
-                  count: fileEntries.length,
-                })}
-              </span>
-              <span>
-                <ClockCircleOutlined />{" "}
-                {formatExecutionUnitTime(record.updateTime)}
-              </span>
-            </div>
-          </div>
-          {viewMode ? (
-            <Space>
+      <div className={styles.pageHeader}>
+        <div className={styles.pageHeaderMain}>
+          <button
+            aria-label={t("common.back")}
+            className={styles.backChevron}
+            onClick={handleBack}
+            type="button"
+          >
+            <ArrowLeftOutlined />
+          </button>
+          <span className={styles.pageHeaderIcon}>
+            <ThunderboltOutlined />
+          </span>
+          <h1 className={styles.pageHeaderTitle}>
+            {record?.name ?? t("executionFactory.skillDetailTitle")}
+          </h1>
+          {record ? statusTag : null}
+          {record?.version ? <Tag>{record.version}</Tag> : null}
+        </div>
+        {record ? (
+          <div className={styles.pageHeaderActions}>
+            {viewMode ? (
               <PermissionGate permissions="execution-factory:skill:edit">
                 <AppButton onClick={handleEnterEditMode} type="primary">
                   {t("executionFactory.skillDetailEnterEdit")}
                 </AppButton>
               </PermissionGate>
-            </Space>
-          ) : (
-            <Space wrap>
-              <PermissionGate permissions="execution-factory:skill:view">
-                <AppButton icon={<HistoryOutlined />} onClick={() => setHistoryOpen(true)}>
-                  {t("executionFactory.skillHistoryTitle")}
-                </AppButton>
-              </PermissionGate>
-              <PermissionGate permissions="execution-factory:skill:edit">
-                <AppButton
-                  onClick={() => {
-                    void navigate(`/execution-factory/skills/${skillId}/edit`);
-                  }}
-                  type="primary"
-                >
-                  {t("executionFactory.cardMenu.edit")}
-                </AppButton>
-              </PermissionGate>
-              <PermissionGate permissions="execution-factory:skill:view">
-                <AppButton icon={<DownloadOutlined />} loading={downloading} onClick={() => void handleDownload()}>
-                  {t("executionFactory.cardMenu.download")}
-                </AppButton>
-              </PermissionGate>
-            </Space>
-          )}
+            ) : (
+              <>
+                <PermissionGate permissions="execution-factory:skill:view">
+                  <AppButton icon={<HistoryOutlined />} onClick={() => setHistoryOpen(true)}>
+                    {t("executionFactory.skillHistoryTitle")}
+                  </AppButton>
+                </PermissionGate>
+                <PermissionGate permissions="execution-factory:skill:edit">
+                  <AppButton
+                    onClick={() => {
+                      void navigate(`/execution-factory/skills/${skillId}/edit`);
+                    }}
+                    type="primary"
+                  >
+                    {t("executionFactory.cardMenu.edit")}
+                  </AppButton>
+                </PermissionGate>
+                <PermissionGate permissions="execution-factory:skill:view">
+                  <AppButton icon={<DownloadOutlined />} loading={downloading} onClick={() => void handleDownload()}>
+                    {t("executionFactory.cardMenu.download")}
+                  </AppButton>
+                </PermissionGate>
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {record ? (
+        <div className={styles.pageSubline}>
+          {record.description ? <span>{record.description}</span> : null}
+          <span>
+            <ThunderboltOutlined />{" "}
+            {t("executionFactory.skillFileCountLabel", { count: fileEntries.length })}
+          </span>
+          <span>
+            <ClockCircleOutlined /> {formatExecutionUnitTime(record.updateTime)}
+          </span>
         </div>
       ) : null}
 

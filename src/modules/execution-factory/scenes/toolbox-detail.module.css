@@ -90,6 +90,96 @@
   font-size: 13px;
 }
 
+/* 知识网络式页头横栏：chevron 返回 + 图标 + 标题 + 右侧动作 */
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.pageHeaderMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.backChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.backChevron:hover {
+  color: var(--color-primary-600);
+}
+
+.pageHeaderIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--color-border);
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
+  font-size: 15px;
+}
+
+.pageHeaderTitle {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pageHeaderActions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageSubline {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.pageSubline .metaRow {
+  color: var(--color-text-muted);
+}
+
+/* 主题 borderRadius:12 让按钮偏圆；详情页统一方角，贴合全站扁平面 */
+.page :global(.ant-btn) {
+  border-radius: 0;
+}
+
 .layout {
   min-height: 640px;
   background: var(--color-bg-surface);

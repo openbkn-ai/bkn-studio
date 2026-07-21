@@ -8,6 +8,7 @@
 import {
   ApiOutlined,
   AppstoreOutlined,
+  ArrowLeftOutlined,
   BugOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
@@ -17,7 +18,7 @@ import {
   LinkOutlined,
   TagOutlined,
 } from "@ant-design/icons";
-import { Alert, Empty, Layout, Space, Spin, Tag, Typography } from "antd";
+import { Alert, Empty, Layout, Spin, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -26,7 +27,6 @@ import type { McpDetailSceneProps } from "@/modules/execution-factory/contracts/
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { CreateMcpDrawer } from "@/modules/execution-factory/components/create-menu/CreateMcpDrawer";
@@ -50,7 +50,6 @@ import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-expo
 import styles from "./toolbox-detail.module.css";
 
 const { Sider, Content } = Layout;
-const { Paragraph, Title } = Typography;
 
 const statusColorMap: Record<McpStatus, string> = {
   published: "green",
@@ -235,63 +234,67 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
 
   return (
     <section className={styles.page}>
-      <div className={styles.backRow}>
-        <SceneBackButton onClick={handleBack} />
-      </div>
-
-      {record ? (
-        <div className={styles.header}>
-          <div className={styles.headerMain}>
-            <div className={styles.titleRow}>
-              <Title className={styles.title} level={3}>
-                {record.name}
-              </Title>
-              {statusTag}
-            </div>
-            <Paragraph className={styles.description}>
-              {record.description || "-"}
-            </Paragraph>
-            <div className={styles.metaRow}>
-              <span>
-                <ApiOutlined />{" "}
-                {t("executionFactory.mcpToolCountLabel", { count: toolCount })}
-              </span>
-              <span>
-                <ClockCircleOutlined />{" "}
-                {formatExecutionUnitTime(record.updateTime)}
-              </span>
-            </div>
-          </div>
-          {viewMode ? (
-            <Space>
+      <div className={styles.pageHeader}>
+        <div className={styles.pageHeaderMain}>
+          <button
+            aria-label={t("common.back")}
+            className={styles.backChevron}
+            onClick={handleBack}
+            type="button"
+          >
+            <ArrowLeftOutlined />
+          </button>
+          <span className={styles.pageHeaderIcon}>
+            <ApiOutlined />
+          </span>
+          <h1 className={styles.pageHeaderTitle}>
+            {record?.name ?? t("executionFactory.mcpDetailTitle")}
+          </h1>
+          {record ? statusTag : null}
+        </div>
+        {record ? (
+          <div className={styles.pageHeaderActions}>
+            {viewMode ? (
               <PermissionGate permissions="execution-factory:mcp:edit">
                 <AppButton onClick={handleEnterEditMode} type="primary">
                   {t("executionFactory.mcpDetailEnterEdit")}
                 </AppButton>
               </PermissionGate>
-            </Space>
-          ) : (
-            <Space>
-              {!record.isInternal ? (
-                <PermissionGate permissions="execution-factory:impex:export">
-                  <AppButton
-                    icon={<DownloadOutlined />}
-                    loading={isExporting("mcp", mcpId)}
-                    onClick={() => {
-                      void exportComponentById("mcp", mcpId, record.name);
-                    }}
-                  >
-                    {t("executionFactory.cardMenu.export")}
+            ) : (
+              <>
+                {!record.isInternal ? (
+                  <PermissionGate permissions="execution-factory:impex:export">
+                    <AppButton
+                      icon={<DownloadOutlined />}
+                      loading={isExporting("mcp", mcpId)}
+                      onClick={() => {
+                        void exportComponentById("mcp", mcpId, record.name);
+                      }}
+                    >
+                      {t("executionFactory.cardMenu.export")}
+                    </AppButton>
+                  </PermissionGate>
+                ) : null}
+                <PermissionGate permissions="execution-factory:mcp:edit">
+                  <AppButton onClick={() => setEditDrawerOpen(true)} type="primary">
+                    {t("executionFactory.cardMenu.edit")}
                   </AppButton>
                 </PermissionGate>
-              ) : null}
-              <PermissionGate permissions="execution-factory:mcp:edit">
-                <AppButton onClick={() => setEditDrawerOpen(true)} type="primary">
-                  {t("executionFactory.cardMenu.edit")}
-                </AppButton>
-              </PermissionGate>
-            </Space>
-          )}
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {record ? (
+        <div className={styles.pageSubline}>
+          {record.description ? <span>{record.description}</span> : null}
+          <span>
+            <ApiOutlined /> {t("executionFactory.mcpToolCountLabel", { count: toolCount })}
+          </span>
+          <span>
+            <ClockCircleOutlined /> {formatExecutionUnitTime(record.updateTime)}
+          </span>
         </div>
       ) : null}
 

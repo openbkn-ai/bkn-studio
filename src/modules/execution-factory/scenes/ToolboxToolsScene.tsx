@@ -7,6 +7,8 @@
 
 import {
   ApiOutlined,
+  AppstoreOutlined,
+  ArrowLeftOutlined,
   BarsOutlined,
   BugOutlined,
   ClockCircleOutlined,
@@ -18,7 +20,7 @@ import {
   SettingOutlined,
   TagOutlined,
 } from "@ant-design/icons";
-import { Alert, Checkbox, Empty, Layout, Space, Spin, Switch, Tag, Typography } from "antd";
+import { Alert, Checkbox, Empty, Layout, Space, Spin, Switch, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -28,7 +30,6 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { ToolDebugModal } from "@/modules/execution-factory/components/ToolDebugModal";
@@ -53,7 +54,6 @@ import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-expo
 import styles from "./toolbox-detail.module.css";
 
 const { Sider, Content } = Layout;
-const { Paragraph, Title } = Typography;
 
 export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const { t } = useTranslation();
@@ -378,69 +378,76 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   return (
     <>
       <section className={styles.page}>
-        <div className={styles.backRow}>
-          <SceneBackButton onClick={handleBack} />
+        <div className={styles.pageHeader}>
+          <div className={styles.pageHeaderMain}>
+            <button
+              aria-label={t("common.back")}
+              className={styles.backChevron}
+              onClick={handleBack}
+              type="button"
+            >
+              <ArrowLeftOutlined />
+            </button>
+            <span className={styles.pageHeaderIcon}>
+              <AppstoreOutlined />
+            </span>
+            <h1 className={styles.pageHeaderTitle}>
+              {toolbox?.name ?? t("executionFactory.toolboxToolsPageTitle")}
+            </h1>
+            {toolbox ? statusTag : null}
+          </div>
+          {toolbox ? (
+            <div className={styles.pageHeaderActions}>
+              {viewMode ? (
+                <Space>
+                  {renderToolboxExportButton()}
+                  <PermissionGate permissions="execution-factory:tool:edit">
+                    <AppButton onClick={handleEnterEditMode} type="primary">
+                      {t("executionFactory.toolboxToolsEnterEdit")}
+                    </AppButton>
+                  </PermissionGate>
+                </Space>
+              ) : (
+                <PermissionGate permissions="execution-factory:tool:create">
+                  <Space>
+                    {renderToolboxExportButton()}
+                    <AppButton
+                      onClick={() => {
+                        if (capabilityUxV2 && !isFunctionToolbox) {
+                          setQuickAddApiOpen(true);
+                          return;
+                        }
+                        setFormMode("create");
+                      }}
+                      type="primary"
+                    >
+                      {capabilityUxV2 && !isFunctionToolbox
+                        ? t("executionFactory.addApiButton")
+                        : t("common.create")}
+                    </AppButton>
+                    {!isFunctionToolbox ? (
+                      <AppButton onClick={() => setImportOpenApiOpen(true)}>
+                        {t("executionFactory.importOpenApiToolsButton")}
+                      </AppButton>
+                    ) : null}
+                  </Space>
+                </PermissionGate>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {toolbox ? (
-          <div className={styles.header}>
-            <div className={styles.headerMain}>
-              <div className={styles.titleRow}>
-                <Title className={styles.title} level={3}>
-                  {toolbox.name}
-                </Title>
-                {statusTag}
-              </div>
-              <Paragraph className={styles.description}>
-                {toolbox.description || "-"}
-              </Paragraph>
-              <div className={styles.metaRow}>
-                <span>
-                  {t("executionFactory.toolCountLabel", {
-                    count: items.length || toolbox.toolCount || 0,
-                  })}
-                </span>
-                <span>
-                  <ClockCircleOutlined />{" "}
-                  {formatExecutionUnitTime(toolbox.updateTime)}
-                </span>
-              </div>
-            </div>
-            {viewMode ? (
-              <Space>
-                {renderToolboxExportButton()}
-                <PermissionGate permissions="execution-factory:tool:edit">
-                  <AppButton onClick={handleEnterEditMode} type="primary">
-                    {t("executionFactory.toolboxToolsEnterEdit")}
-                  </AppButton>
-                </PermissionGate>
-              </Space>
-            ) : (
-              <PermissionGate permissions="execution-factory:tool:create">
-                <Space>
-                  {renderToolboxExportButton()}
-                  <AppButton
-                    onClick={() => {
-                      if (capabilityUxV2 && !isFunctionToolbox) {
-                        setQuickAddApiOpen(true);
-                        return;
-                      }
-                      setFormMode("create");
-                    }}
-                    type="primary"
-                  >
-                    {capabilityUxV2 && !isFunctionToolbox
-                      ? t("executionFactory.addApiButton")
-                      : t("common.create")}
-                  </AppButton>
-                  {!isFunctionToolbox ? (
-                    <AppButton onClick={() => setImportOpenApiOpen(true)}>
-                      {t("executionFactory.importOpenApiToolsButton")}
-                    </AppButton>
-                  ) : null}
-                </Space>
-              </PermissionGate>
-            )}
+          <div className={styles.pageSubline}>
+            {toolbox.description ? <span>{toolbox.description}</span> : null}
+            <span>
+              {t("executionFactory.toolCountLabel", {
+                count: items.length || toolbox.toolCount || 0,
+              })}
+            </span>
+            <span>
+              <ClockCircleOutlined /> {formatExecutionUnitTime(toolbox.updateTime)}
+            </span>
           </div>
         ) : null}
 
