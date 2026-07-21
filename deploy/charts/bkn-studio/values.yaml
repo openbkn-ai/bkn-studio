@@ -25,9 +25,6 @@ service:
 # with mode:"hosted", so studio boots gate-less as the default local-admin user
 # — no login, no auth. Set false only when the deployment has no bkn-safe.
 accessAddress:
-  host: 192.168.89.193
-  path: /
-  port: 443
   scheme: https
 
 auth:
