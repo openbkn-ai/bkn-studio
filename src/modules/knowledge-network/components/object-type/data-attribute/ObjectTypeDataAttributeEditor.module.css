@@ -307,11 +307,23 @@
 }
 
 .panelItemHighlighted {
-  background: #f1f7ff;
+  background: #e6f4ff;
+  box-shadow: inset 3px 0 0 #1677ff;
+}
+
+.panelItemHighlighted:hover {
+  background: #d6ebff;
 }
 
 .panelItemMapped {
   background: rgba(22, 119, 255, 0.04);
+}
+
+/* Pending selection must stay visible even when the field is already mapped. */
+.panelItemMapped.panelItemHighlighted,
+.panelItemMapped.panelItemHighlighted:hover {
+  background: #e6f4ff;
+  box-shadow: inset 3px 0 0 #1677ff;
 }
 
 .itemContent {
