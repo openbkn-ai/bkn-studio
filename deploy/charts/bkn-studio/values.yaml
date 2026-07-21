@@ -24,6 +24,9 @@ service:
 # normal Foundry install). false = NO bkn-safe: a ConfigMap overrides config.js
 # with mode:"hosted", so studio boots gate-less as the default local-admin user
 # — no login, no auth. Set false only when the deployment has no bkn-safe.
+accessAddress:
+  scheme: https
+
 auth:
   enabled: true
 
@@ -33,8 +36,6 @@ auth:
 ingress:
   enabled: true
   ingressClass: class-443
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
   path: /studio
   # Also claim the bare root (Exact /) and hand it to studio's nginx, which
   # 302s / -> /studio/ — so https://<gateway>/ lands in the studio shell.
