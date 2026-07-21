@@ -94,7 +94,8 @@ describe("loadResourceIndexBuildTasks", () => {
       catalogResource("r2", "cat-a"),
       catalogResource("r3", "cat-b"),
     ]);
-    mockedListBuildTasks.mockImplementation(({ catalogId, resourceId }) => {
+    mockedListBuildTasks.mockImplementation((query = {}) => {
+      const { catalogId, resourceId } = query;
       if (catalogId === "cat-a") {
         return Promise.resolve([buildTask("r1"), buildTask("r2"), buildTask("r9", "other-task")]);
       }
@@ -118,7 +119,8 @@ describe("loadResourceIndexBuildTasks", () => {
 
   it("falls back to resource-scoped queries when catalog resolution fails", async () => {
     mockedGetCatalogResources.mockResolvedValue([catalogResource("r1", "cat-a")]);
-    mockedListBuildTasks.mockImplementation(({ catalogId, resourceId }) => {
+    mockedListBuildTasks.mockImplementation((query = {}) => {
+      const { catalogId, resourceId } = query;
       if (catalogId === "cat-a") {
         return Promise.resolve([buildTask("r1")]);
       }
