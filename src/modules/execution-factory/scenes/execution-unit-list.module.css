@@ -11,6 +11,17 @@
   background: var(--color-bg-surface);
 }
 
+/* 主题 borderRadius:12 让控件偏圆；能力管理页统一方角，贴合全站扁平面 */
+.page :global(.ant-btn) {
+  border-radius: 0;
+}
+
+.page :global(.ant-input),
+.page :global(.ant-input-affix-wrapper),
+.page :global(.ant-select-selector) {
+  border-radius: 0;
+}
+
 .pageIntro {
   margin-bottom: 20px;
   padding-bottom: 16px;
@@ -105,7 +116,7 @@
 .categoryChip {
   padding: 4px 12px;
   border: 1px solid var(--color-border);
-  border-radius: 16px;
+  border-radius: 0;
   background: var(--color-bg-surface);
   color: var(--color-text-secondary);
   cursor: pointer;

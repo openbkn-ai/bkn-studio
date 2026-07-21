@@ -10,7 +10,7 @@
   height: 100%;
   cursor: pointer;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--color-bg-surface);
   box-shadow: var(--shadow-card);
   transition: all 0.3s ease;
@@ -32,7 +32,7 @@
   width: 28px;
   height: 28px;
   border: none;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--color-bg-surface);
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -92,7 +92,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 0;
   background: var(--color-primary-100);
   color: var(--color-primary-600);
   font-size: 20px;
@@ -104,7 +104,7 @@
   left: 0;
   min-width: 38px;
   padding: 1px 4px;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0;
   background: var(--color-primary-700);
   color: #ffffff;
   font-size: 10px;

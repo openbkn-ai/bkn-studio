@@ -8,7 +8,7 @@
 .card {
   padding: 20px;
   border: 1px solid rgba(18, 40, 72, 0.08);
-  border-radius: 20px;
+  border-radius: 0;
   background: #fff;
   min-height: 168px;
 }
