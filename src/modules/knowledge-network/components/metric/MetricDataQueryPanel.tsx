@@ -19,6 +19,7 @@ import type {
   MetricDataQueryParams,
   MetricDataQueryResult,
   MetricDataQueryTimeRange,
+  MetricQueryCalendarStep,
   MetricSamePeriodMethod,
   MetricSamePeriodTimeGranularity,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -34,6 +35,13 @@ const TIME_RANGE_OPTIONS: MetricDataQueryTimeRange[] = [
   "calendar_day",
   "custom",
 ];
+const CALENDAR_STEP_OPTIONS: MetricQueryCalendarStep[] = [
+  "day",
+  "week",
+  "month",
+  "quarter",
+  "year",
+];
 const SAME_PERIOD_METHOD_OPTIONS: MetricSamePeriodMethod[] = ["growth_value", "growth_rate"];
 const SAME_PERIOD_GRANULARITY_OPTIONS: MetricSamePeriodTimeGranularity[] = [
   "day",
@@ -41,6 +49,10 @@ const SAME_PERIOD_GRANULARITY_OPTIONS: MetricSamePeriodTimeGranularity[] = [
   "quarter",
   "year",
 ];
+
+function needsCalendarStep(mode: MetricDataQueryMode | undefined) {
+  return mode === "trend" || mode === "sameperiod" || mode === "proportion";
+}
 
 type MetricDataQueryPanelProps = {
   embedded?: boolean;
@@ -163,6 +175,7 @@ export function MetricDataQueryPanel({
             samePeriodGranularity: "day",
             samePeriodMethod: "growth_value",
             samePeriodOffset: 1,
+            step: "day",
             timeRange: "last_24h",
           }}
           layout="inline"
@@ -213,6 +226,21 @@ export function MetricDataQueryPanel({
               </Form.Item>
             </Space>
           ) : null}
+          {needsCalendarStep(queryMode) ? (
+            <Form.Item
+              label={t("knowledgeNetwork.metricQueryStepLabel")}
+              name="step"
+              rules={[{ required: true, message: t("knowledgeNetwork.metricQueryStepRequired") }]}
+            >
+              <Select
+                options={CALENDAR_STEP_OPTIONS.map((value) => ({
+                  label: t(`knowledgeNetwork.metricQueryStep.${value}`),
+                  value,
+                }))}
+                style={{ width: 120 }}
+              />
+            </Form.Item>
+          ) : null}
           {queryMode === "sameperiod" ? (
             <Space>
               <Form.Item label={t("knowledgeNetwork.metricQuerySamePeriodMethod")} name="samePeriodMethod">
@@ -244,9 +272,11 @@ export function MetricDataQueryPanel({
           <Form.Item label={t("knowledgeNetwork.metricQueryLimit")} name="limit">
             <InputNumber min={1} max={1000} style={{ width: 100 }} />
           </Form.Item>
-          <Form.Item label={t("knowledgeNetwork.metricQueryFillNull")} name="fillNull" valuePropName="checked">
-            <Switch />
-          </Form.Item>
+          {needsCalendarStep(queryMode) ? (
+            <Form.Item label={t("knowledgeNetwork.metricQueryFillNull")} name="fillNull" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          ) : null}
           <Form.Item>
             <AppButton loading={queryLoading} onClick={() => void handleQuery()} type="primary">
               {t("knowledgeNetwork.metricQueryRun")}

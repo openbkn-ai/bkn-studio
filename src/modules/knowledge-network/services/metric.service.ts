@@ -352,6 +352,7 @@ function toTimestamp(value: unknown): number | undefined {
 }
 
 function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
+  const isInstant = params.mode === "instant";
   const time =
     params.timeRange === "custom"
       ? {
@@ -364,7 +365,9 @@ function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
     limit: params.limit,
     time: {
       ...time,
-      instant: params.mode === "instant",
+      instant: isInstant,
+      // Backend treats instant=false as trend and requires calendar time.step.
+      ...(!isInstant ? { step: params.step ?? "day" } : {}),
     },
   };
 
