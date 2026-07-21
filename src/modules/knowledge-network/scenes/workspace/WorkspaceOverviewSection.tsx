@@ -41,6 +41,7 @@ import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
 type WorkspaceOverviewSectionProps = {
   detail: KnowledgeNetworkRecord | null;
   detailLoading?: boolean;
+  loadRecentObjects: () => Promise<void>;
   networkId: string;
   onEdit: () => void;
   recentLoading?: boolean;
@@ -54,6 +55,7 @@ function formatOverviewCount(value?: number) {
 export function WorkspaceOverviewSection({
   detail,
   detailLoading = false,
+  loadRecentObjects,
   networkId,
   onEdit,
   recentLoading = false,
@@ -130,6 +132,14 @@ export function WorkspaceOverviewSection({
   useEffect(() => {
     setRecentPage(1);
   }, [networkId]);
+
+  useEffect(() => {
+    if (!recentExpanded) {
+      return;
+    }
+
+    void loadRecentObjects();
+  }, [loadRecentObjects, networkId, recentExpanded]);
 
   return (
     <div className={styles.overviewBox}>

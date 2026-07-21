@@ -7,14 +7,13 @@
 
 import { DatabaseOutlined } from "@ant-design/icons";
 import { Alert, Spin } from "antd";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
-import { CatalogDetailPanel } from "@/modules/data-catalog/components/CatalogDetailPanel";
 import {
   CatalogTreePanel,
   type CatalogTreeSelection,
@@ -38,6 +37,10 @@ import type { DataConnectConnectorType } from "@/modules/data-connect/types/data
 import { catalogListAllQuery, listCatalogs, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./DataCatalogScene.module.css";
+
+const CatalogDetailPanel = lazy(
+  () => import("@/modules/data-catalog/components/CatalogDetailPanel"),
+);
 
 export type DataCatalogSceneProps = {
   selection: CatalogTreeSelection | null;
@@ -320,12 +323,20 @@ export function DataCatalogScene({
 
     if (selectedCatalog) {
       return (
-        <CatalogDetailPanel
-          catalog={selectedCatalog}
-          onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
-          onOpenResource={openResourceWorkspace}
-          tasks={tasks}
-        />
+        <Suspense
+          fallback={
+            <div className={styles.placeholder}>
+              <Spin />
+            </div>
+          }
+        >
+          <CatalogDetailPanel
+            catalog={selectedCatalog}
+            onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
+            onOpenResource={openResourceWorkspace}
+            tasks={tasks}
+          />
+        </Suspense>
       );
     }
 

@@ -46,6 +46,14 @@
   font-size: 12px;
 }
 
+.loadingPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: 24px;
+}
+
 .tabs {
   background: #ffffff;
   border: 1px solid #d9e0ea;

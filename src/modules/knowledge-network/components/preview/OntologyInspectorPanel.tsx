@@ -18,26 +18,62 @@ import type {
   KnowledgeNetworkRelationTypeRecord,
   ObjectTypeDetail,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  formatResourceIndexStateLabel,
+  hasServingResourceIndex,
+} from "@/modules/knowledge-network/utils/resource-index-state";
+import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./OntologyInspectorPanel.module.css";
 
 type OntologyInspectorPanelProps = {
+  buildTasksByResourceId?: Map<string, BuildTask[]>;
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   relationTypes: KnowledgeNetworkRelationTypeRecord[];
+  resourceIndexLoading?: boolean;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 };
 
 export function OntologyInspectorPanel({
+  buildTasksByResourceId,
   networkId,
   objectTypes,
   relationTypes,
+  resourceIndexLoading = false,
   selectedId,
   onSelect,
 }: OntologyInspectorPanelProps) {
   const { t } = useTranslation();
   const entity = objectTypes.find((item) => item.id === selectedId) ?? null;
+
+  const resolveIndexLabel = (record: KnowledgeNetworkObjectTypeRecord) => {
+    const resourceId = record.dataSource?.id;
+    if (!resourceId) {
+      return "—";
+    }
+    if (buildTasksByResourceId) {
+      if (resourceIndexLoading) {
+        return t("knowledgeNetwork.objectTypeDataViewIndexLoading");
+      }
+      return formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t);
+    }
+    return record.hasIndex
+      ? t("knowledgeNetwork.previewIndexed")
+      : t("knowledgeNetwork.previewNotIndexed");
+  };
+
+  const hasIndexedLegend = (record: KnowledgeNetworkObjectTypeRecord) => {
+    const resourceId = record.dataSource?.id;
+    if (buildTasksByResourceId && resourceId) {
+      if (resourceIndexLoading) {
+        return false;
+      }
+      return hasServingResourceIndex(buildTasksByResourceId.get(resourceId) ?? []);
+    }
+    return record.hasIndex;
+  };
 
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -89,7 +125,7 @@ export function OntologyInspectorPanel({
             >
               <span className={styles.dot} style={{ background: item.color || "#2e68ff" }} />
               <span className={styles.legendName}>{item.name}</span>
-              {item.hasIndex ? <span className={styles.legendIndexed} /> : null}
+              {hasIndexedLegend(item) ? <span className={styles.legendIndexed} /> : null}
             </button>
           ))}
         </div>
@@ -107,11 +143,7 @@ export function OntologyInspectorPanel({
         <span className={styles.headDot} style={{ background: entity.color || "#2e68ff" }} />
         <div className={styles.headTitle}>
           <strong>{entity.name}</strong>
-          <span>
-            {entity.hasIndex
-              ? t("knowledgeNetwork.previewIndexed")
-              : t("knowledgeNetwork.previewNotIndexed")}
-          </span>
+          <span>{resolveIndexLabel(entity)}</span>
         </div>
         <button
           type="button"
@@ -162,11 +194,7 @@ export function OntologyInspectorPanel({
         {detail?.dataSource ? (
           <div className={styles.bindCard}>
             <span className={styles.bindName}>{detail.dataSource.name}</span>
-            <Tag color={entity.hasIndex ? "success" : "default"} bordered={false}>
-              {entity.hasIndex
-                ? t("knowledgeNetwork.previewIndexed")
-                : t("knowledgeNetwork.previewNotIndexed")}
-            </Tag>
+            <Tag bordered={false}>{resolveIndexLabel(entity)}</Tag>
           </div>
         ) : (
           <div className={styles.bindNone}>{t("knowledgeNetwork.previewNoBind")}</div>
