@@ -84,7 +84,11 @@ export function useWorkspaceData(
 
     try {
       const fetched = await getKnowledgeNetwork(networkId);
-      setDetail(mergePendingMetricsTotalIntoDetail(fetched, pendingMetricsTotalRef.current));
+      setDetail(
+        fetched
+          ? mergePendingMetricsTotalIntoDetail(fetched, pendingMetricsTotalRef.current)
+          : null,
+      );
     } catch (error) {
       setDetail(null);
       setDetailError(extractRequestErrorMessage(error));
