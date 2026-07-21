@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
+import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import {
   loadResourceIndexBuildTasks,
   uniqueCatalogIdsFromResourceCatalogMap,
@@ -53,6 +53,22 @@ function buildTask(resourceId: string, id = `${resourceId}-task`): BuildTask {
   };
 }
 
+function catalogResource(id: string, catalogId: string): CatalogResource {
+  return {
+    id,
+    catalogId,
+    category: "table",
+    columnCount: 0,
+    description: "",
+    name: id,
+    rowCount: 0,
+    schema: [],
+    sourceIdentifier: "",
+    updateTime: "-",
+    updatedAt: 0,
+  };
+}
+
 describe("uniqueCatalogIdsFromResourceCatalogMap", () => {
   it("deduplicates catalog ids and ignores missing values", () => {
     const map = new Map<string, string | undefined>([
@@ -74,21 +90,21 @@ describe("loadResourceIndexBuildTasks", () => {
 
   it("loads build tasks once per catalog and filters to bound resources", async () => {
     mockedGetCatalogResources.mockResolvedValue([
-      { id: "r1", catalogId: "cat-a" } as never,
-      { id: "r2", catalogId: "cat-a" } as never,
-      { id: "r3", catalogId: "cat-b" } as never,
+      catalogResource("r1", "cat-a"),
+      catalogResource("r2", "cat-a"),
+      catalogResource("r3", "cat-b"),
     ]);
-    mockedListBuildTasks.mockImplementation(async ({ catalogId, resourceId }) => {
+    mockedListBuildTasks.mockImplementation(({ catalogId, resourceId }) => {
       if (catalogId === "cat-a") {
-        return [buildTask("r1"), buildTask("r2"), buildTask("r9", "other-task")];
+        return Promise.resolve([buildTask("r1"), buildTask("r2"), buildTask("r9", "other-task")]);
       }
       if (catalogId === "cat-b") {
-        return [buildTask("r3")];
+        return Promise.resolve([buildTask("r3")]);
       }
-      if (resourceId) {
-        return [buildTask(resourceId, `${resourceId}-fallback`)];
+      if (typeof resourceId === "string" && resourceId.length > 0) {
+        return Promise.resolve([buildTask(resourceId, `${resourceId}-fallback`)]);
       }
-      return [];
+      return Promise.resolve([]);
     });
 
     const tasks = await loadResourceIndexBuildTasks(["r1", "r2", "r3"]);
@@ -101,15 +117,15 @@ describe("loadResourceIndexBuildTasks", () => {
   });
 
   it("falls back to resource-scoped queries when catalog resolution fails", async () => {
-    mockedGetCatalogResources.mockResolvedValue([{ id: "r1", catalogId: "cat-a" } as never]);
-    mockedListBuildTasks.mockImplementation(async ({ catalogId, resourceId }) => {
+    mockedGetCatalogResources.mockResolvedValue([catalogResource("r1", "cat-a")]);
+    mockedListBuildTasks.mockImplementation(({ catalogId, resourceId }) => {
       if (catalogId === "cat-a") {
-        return [buildTask("r1")];
+        return Promise.resolve([buildTask("r1")]);
       }
       if (resourceId === "r2") {
-        return [buildTask("r2")];
+        return Promise.resolve([buildTask("r2")]);
       }
-      return [];
+      return Promise.resolve([]);
     });
 
     const tasks = await loadResourceIndexBuildTasks(["r1", "r2"]);
