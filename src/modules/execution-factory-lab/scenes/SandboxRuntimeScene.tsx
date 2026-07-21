@@ -312,7 +312,18 @@ export function SandboxRuntimeScene() {
   ];
 
   return (
-    <PermissionGate permissions={executionFactoryLabPermissions.sandboxRuntimeView}>
+    <PermissionGate
+      fallback={
+        <section className={styles.page}>
+          <Alert
+            message={t("executionFactoryLab.permissionDeniedHint")}
+            showIcon
+            type="warning"
+          />
+        </section>
+      }
+      permissions={executionFactoryLabPermissions.sandboxRuntimeView}
+    >
       <section className={styles.page}>
         <div className={styles.intro}>
           <div>
