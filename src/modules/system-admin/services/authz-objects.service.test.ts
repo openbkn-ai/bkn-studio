@@ -86,6 +86,22 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
     expect(getMock).toHaveBeenCalledTimes(2);
   });
 
+  it("后端已带真实名(objName ≠ id)则跳过解析,零请求", async () => {
+    getMock.mockRejectedValue(new Error("不该被调用"));
+
+    const named: ObjectGrant = {
+      accessorId: "u1",
+      objId: "res-1",
+      objName: "销售数据集",
+      objType: "resource",
+      operations: ["view"],
+    };
+    const result = await resolveGrantNames([named]);
+
+    expect(getMock).not.toHaveBeenCalled();
+    expect(result[0].objName).toBe("销售数据集");
+  });
+
   it("正向缓存:已解析的 id 再次解析不再请求", async () => {
     getMock.mockImplementation((url: string) => {
       const tail = String(url).split("/").pop() ?? "";

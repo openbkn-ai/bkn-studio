@@ -204,6 +204,11 @@ export async function resolveGrantNames(grants: ObjectGrant[]): Promise<ObjectGr
   // 只对缓存里没有名字的 id 发起请求,按类型分组。
   const pendingByType = new Map<string, Set<string>>();
   for (const grant of grants) {
+    // 后端已带真实名(objName ≠ id)则跳过。前向兼容:一旦 object-grants 直接回 name,
+    // 整套领域服务 fan-out 自动停掉,无需再改这里。
+    if (grant.objName && grant.objName !== grant.objId) {
+      continue;
+    }
     if (nameCache.has(`${grant.objType}:${grant.objId}`)) {
       continue;
     }
@@ -224,6 +229,10 @@ export async function resolveGrantNames(grants: ObjectGrant[]): Promise<ObjectGr
     }),
   );
   return grants.map((grant) => {
+    // 已是后端真实名的保留不动。
+    if (grant.objName && grant.objName !== grant.objId) {
+      return grant;
+    }
     const name = nameCache.get(`${grant.objType}:${grant.objId}`);
     return name ? { ...grant, objName: name } : grant;
   });
