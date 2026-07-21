@@ -13,27 +13,38 @@ import {
   hasServingResourceIndex,
 } from "@/modules/knowledge-network/utils/resource-index-state";
 
-const succeededTask: BuildTask = {
-  createdAt: 2,
-  id: "task-2",
-  mode: "batch",
-  resourceId: "res-1",
-  status: "succeeded",
-  syncedCount: 10,
-  totalCount: 10,
-  vectorizedCount: 10,
-};
+function buildTask(
+  status: BuildTask["status"],
+  overrides: Partial<BuildTask> = {},
+): BuildTask {
+  return {
+    id: "task-1",
+    resourceId: "res-1",
+    mode: "batch",
+    status,
+    embeddingFields: [],
+    buildKeyFields: [],
+    embeddingModel: "",
+    embeddingDegraded: false,
+    modelDimensions: 0,
+    fulltextFields: [],
+    fulltextAnalyzer: "",
+    totalCount: 10,
+    syncedCount: status === "succeeded" ? 10 : 0,
+    vectorizedCount: status === "succeeded" ? 10 : 0,
+    indexUsable: status === "succeeded",
+    failureDetail: "",
+    createdAt: 1,
+    createTime: "-",
+    finishTime: null,
+    lastEventAt: null,
+    error: null,
+    ...overrides,
+  };
+}
 
-const failedTask: BuildTask = {
-  createdAt: 3,
-  id: "task-3",
-  mode: "batch",
-  resourceId: "res-1",
-  status: "failed",
-  syncedCount: 0,
-  totalCount: 10,
-  vectorizedCount: 0,
-};
+const succeededTask = buildTask("succeeded", { id: "task-2", createdAt: 2 });
+const failedTask = buildTask("failed", { id: "task-3", createdAt: 3 });
 
 describe("hasServingResourceIndex", () => {
   it("returns true when a succeeded build exists", () => {
