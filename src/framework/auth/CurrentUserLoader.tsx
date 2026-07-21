@@ -9,7 +9,7 @@ import { Spin } from "antd";
 import type { PropsWithChildren } from "react";
 import { useEffect, useState } from "react";
 
-import { fetchCurrentUser } from "@/framework/auth/current-user";
+import { anonymousRuntimeUser, fetchCurrentUser } from "@/framework/auth/current-user";
 import type { RuntimeUser } from "@/framework/runtime/types";
 
 type CurrentUserLoaderProps = PropsWithChildren<{
@@ -34,7 +34,13 @@ export function CurrentUserLoader({ children, onLoaded }: CurrentUserLoaderProps
         }
       })
       .catch(() => {
-        // 静默:401 由 http 拦截器处理,其它错误退回默认 currentUser
+        // 401 由 http 拦截器处理。其它错误一律退回 fail-closed 用户(无权限),
+        // 绝不沿用调用方的默认 currentUser——那是带全量权限的开发态用户,
+        // 沿用它会让普通用户看到全部系统管理入口(#176)。fetchCurrentUser 已
+        // allSettled 兜底,这里是二次保险。
+        if (!cancelled) {
+          onLoaded(anonymousRuntimeUser);
+        }
       })
       .finally(() => {
         if (!cancelled) {
