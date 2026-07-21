@@ -27,6 +27,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
+import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import type {
   KnowledgeNetworkImportMode,
   KnowledgeNetworkObjectTypeRecord,
@@ -67,7 +68,7 @@ export function RelationTypeListPanel({
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = usePersistentPageSize("relation-types");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   const objectTypeOptions = useMemo(
@@ -186,6 +187,36 @@ export function RelationTypeListPanel({
     }
   };
 
+  const relationTypeListPath = `/knowledge-network/workspace/${networkId}/relation-types`;
+
+  const renderObjectTypeLink = (objectTypeId: string, objectTypeName: string) => {
+    const label = objectTypeName || "--";
+
+    if (!objectTypeId) {
+      return label;
+    }
+
+    return (
+      <button
+        className={styles.tableLink}
+        onClick={() => {
+          void navigate(
+            `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`,
+            {
+              state: {
+                knowledgeNetworkReturnTo: relationTypeListPath,
+              },
+            },
+          );
+        }}
+        title={label}
+        type="button"
+      >
+        {label}
+      </button>
+    );
+  };
+
   const columns: TableProps<KnowledgeNetworkRelationTypeRecord>["columns"] = [
     {
       dataIndex: "name",
@@ -250,14 +281,16 @@ export function RelationTypeListPanel({
       key: "sourceObjectTypeName",
       title: t("knowledgeNetwork.relationTypeListSourceObject"),
       width: 180,
-      render: (value: string) => value || "--",
+      render: (value: string, record) =>
+        renderObjectTypeLink(record.sourceObjectTypeId, value),
     },
     {
       dataIndex: "targetObjectTypeName",
       key: "targetObjectTypeName",
       title: t("knowledgeNetwork.relationTypeListTargetObject"),
       width: 180,
-      render: (value: string) => value || "--",
+      render: (value: string, record) =>
+        renderObjectTypeLink(record.targetObjectTypeId, value),
     },
     {
       dataIndex: "tags",

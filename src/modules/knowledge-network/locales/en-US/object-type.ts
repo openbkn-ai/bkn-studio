@@ -35,6 +35,8 @@ export const objecttypePart = {
     objectTypeDataPropertyRequired: "Add at least one valid data property.",
     objectTypeDataQueryDescription:
       "Preview sample rows from the bound data view and filter them by keyword.",
+    objectTypeDataQueryAction: "Query",
+    objectTypeDataQueryCollapse: "Collapse",
     objectTypeDataQueryEmpty: "No sample data available.",
     objectTypeDataQueryResourceName: "Resource",
     objectTypeDataQuerySampleCount: "{{count}} sample rows",
@@ -52,6 +54,16 @@ export const objecttypePart = {
     objectTypeResourcePreviewTip: "(Partial preview)",
     objectTypeLogicalDataCatalog: "Logical data catalog",
     objectTypeRelatedResourceName: "Related resource",
+    objectTypeRelatedRelationName: "Relation type",
+    objectTypeRelatedRelationOppositeObject: "Opposite object type",
+    objectTypeRelatedRelationRole: "Role",
+    objectTypeRelatedRelationRoleSource: "As source",
+    objectTypeRelatedRelationRoleTarget: "As target",
+    objectTypeRelatedRelationsAction: "View",
+    objectTypeRelatedRelationsDescription:
+      "View relation types where this object type is used as the source or target.",
+    objectTypeRelatedRelationsEmpty: "No related relation types yet.",
+    objectTypeRelatedRelationsTitle: "Related relations",
     objectTypeResourceIndexState: "Resource index state",
     objectTypeDeleteDescription:
       'Delete "{{name}}"? This action cannot be undone.',

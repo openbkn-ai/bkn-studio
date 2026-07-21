@@ -44,6 +44,7 @@ type ResourceConfigRow = {
 type RelationTypeMappingConfigTableProps = {
   detail: RelationTypeDetail;
   networkId: string;
+  onOpenObjectType?: (objectTypeId: string) => void;
 };
 
 function resolvePropertyMeta(
@@ -84,18 +85,22 @@ function PropertyCell({
 function ObjectCell({
   emptyLabel,
   name,
+  objectTypeId,
   objectType,
+  onOpen,
 }: {
   emptyLabel: string;
   name?: string;
+  objectTypeId?: string;
   objectType?: KnowledgeNetworkObjectTypeRecord;
+  onOpen?: (objectTypeId: string) => void;
 }) {
   if (!name) {
     return <span className={styles.emptyValue}>{emptyLabel}</span>;
   }
 
-  return (
-    <div className={styles.objectCell} title={name}>
+  const content = (
+    <>
       <span
         className={styles.objectIcon}
         style={{ backgroundColor: objectType?.color ?? "#5381DF" }}
@@ -103,6 +108,25 @@ function ObjectCell({
         {renderResourceIcon(objectType?.icon)}
       </span>
       <span className={styles.objectName}>{name}</span>
+    </>
+  );
+
+  if (objectTypeId && onOpen) {
+    return (
+      <button
+        className={`${styles.objectCell} ${styles.objectLink}`}
+        onClick={() => onOpen(objectTypeId)}
+        title={name}
+        type="button"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={styles.objectCell} title={name}>
+      {content}
     </div>
   );
 }
@@ -124,6 +148,7 @@ function PropertyNameCell({ name }: { name?: string }) {
 export function RelationTypeMappingConfigTable({
   detail,
   networkId,
+  onOpenObjectType,
 }: RelationTypeMappingConfigTableProps) {
   const { t } = useTranslation();
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
@@ -229,7 +254,9 @@ export function RelationTypeMappingConfigTable({
             <ObjectCell
               emptyLabel={emptyLabel}
               name={detail.sourceObjectTypeName}
+              objectTypeId={detail.sourceObjectTypeId}
               objectType={sourceObject}
+              onOpen={onOpenObjectType}
             />
           ) : (
             <PropertyCell
@@ -249,7 +276,9 @@ export function RelationTypeMappingConfigTable({
             <ObjectCell
               emptyLabel={emptyLabel}
               name={detail.targetObjectTypeName}
+              objectTypeId={detail.targetObjectTypeId}
               objectType={targetObject}
+              onOpen={onOpenObjectType}
             />
           ) : (
             <PropertyCell
@@ -287,7 +316,9 @@ export function RelationTypeMappingConfigTable({
           <ObjectCell
             emptyLabel={emptyLabel}
             name={detail.sourceObjectTypeName}
+            objectTypeId={detail.sourceObjectTypeId}
             objectType={sourceObject}
+            onOpen={onOpenObjectType}
           />
         ) : (
           <PropertyCell
@@ -339,7 +370,9 @@ export function RelationTypeMappingConfigTable({
           <ObjectCell
             emptyLabel={emptyLabel}
             name={detail.targetObjectTypeName}
+            objectTypeId={detail.targetObjectTypeId}
             objectType={targetObject}
+            onOpen={onOpenObjectType}
           />
         ) : (
           <PropertyCell

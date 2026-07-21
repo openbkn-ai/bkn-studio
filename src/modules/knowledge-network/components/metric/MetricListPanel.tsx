@@ -24,6 +24,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import {
   deleteKnowledgeNetworkMetrics,
   listKnowledgeNetworkMetrics,
@@ -90,7 +91,7 @@ export function MetricListPanel({
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = usePersistentPageSize("metrics");
   const [total, setTotal] = useState(metrics.length);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
