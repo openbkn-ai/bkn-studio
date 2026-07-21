@@ -19,7 +19,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Empty, Input, Segmented, Select, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -85,8 +85,6 @@ export function ObjectAuthorizationScene() {
   const [lookupRevision, setLookupRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // 每次加载自增;异步名字回填只在 token 仍是当前值时落地,防止旧一轮解析覆盖新列表。
-  const loadTokenRef = useRef(0);
 
   const [view, setView] = useState<ViewMode>("all");
   const [keyword, setKeyword] = useState("");
@@ -112,8 +110,8 @@ export function ObjectAuthorizationScene() {
       setDepartments(deptList);
 
       const paginate = view === "all";
-      const token = ++loadTokenRef.current;
-      // resolveNames:false —— 列表先用 id 占位立即渲染,不被对象名解析(可能慢/部分缺失)阻塞。
+      // resolveNames:false —— 列表先用 id 占位立即渲染;对象名按「当前页可见行」懒解析(见下方 effect),
+      // 不再一次性为全部(可能数千条)grant 解析,避免把领域取名接口打到连接饱和/超时。
       const result = await listObjectGrantsPage(
         {
           search: debouncedKeyword || undefined,
@@ -126,12 +124,6 @@ export function ObjectAuthorizationScene() {
       );
 
       setGrants(result.grants);
-      // 名字异步回填;仅当没有更新一轮加载覆盖时才落地。
-      void resolveGrantNames(result.grants).then((named) => {
-        if (loadTokenRef.current === token) {
-          setGrants(named);
-        }
-      });
       setTotal(result.total);
       setSummary(
         result.summary ?? {
@@ -256,6 +248,39 @@ export function ObjectAuthorizationScene() {
     const start = (pageState.page - 1) * pageState.pageSize;
     return filteredGrants.slice(start, start + pageState.pageSize);
   }, [filteredGrants, pageState.page, pageState.pageSize, view]);
+
+  // 对象名按需解析:只解析「当前页可见行」的对象名,翻页/切视图再解析新出现的那批。
+  // 用缓存,翻回来的页零请求。避免为全部(数千条)grant 一次性解析导致取名接口连接饱和/超时。
+  useEffect(() => {
+    const visible = view === "all" ? pagedGrants : pagedGroups.flat();
+    const pending = visible.filter((grant) => grant.objName === grant.objId);
+    if (pending.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    void resolveGrantNames(pending).then((named) => {
+      if (cancelled) {
+        return;
+      }
+      const nameByKey = new Map(
+        named
+          .filter((grant) => grant.objName !== grant.objId)
+          .map((grant) => [`${grant.objType}:${grant.objId}`, grant.objName] as const),
+      );
+      if (nameByKey.size === 0) {
+        return;
+      }
+      setGrants((prev) =>
+        prev.map((grant) => {
+          const name = nameByKey.get(`${grant.objType}:${grant.objId}`);
+          return name ? { ...grant, objName: name } : grant;
+        }),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pagedGrants, pagedGroups, view]);
 
   const listTotal = view === "all" ? total : groupList.length;
 
