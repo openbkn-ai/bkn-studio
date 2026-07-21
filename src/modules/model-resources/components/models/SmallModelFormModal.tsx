@@ -81,6 +81,7 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
       modelType: "embedding",
       auth: "empty",
       adapter: false,
+      batchSize: 32,
     });
   }, [form, mode, open, record]);
 
@@ -268,19 +269,38 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
         )}
         {modelTypeValue === "embedding" ? (
           <>
-            <Form.Item label={t("modelResources.models.modal.vectorDimension")} name="embeddingDim">
+            <Form.Item
+              label={t("modelResources.models.modal.vectorDimension")}
+              name="embeddingDim"
+              rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
+            >
               <InputNumber controls={false} min={1} style={{ width: "100%" }} />
             </Form.Item>
-            <Form.Item label={t("modelResources.models.modal.batchSize")} name="batchSize">
+            <Form.Item
+              label={t("modelResources.models.modal.batchSize")}
+              name="batchSize"
+              rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
+            >
               <InputNumber controls={false} min={1} style={{ width: "100%" }} />
             </Form.Item>
-            <Form.Item label={t("modelResources.models.modal.maxNumberOfTokens")} name="maxTokens">
+            <Form.Item
+              label={t("modelResources.models.modal.maxNumberOfTokens")}
+              name="maxTokens"
+              rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
+            >
               <InputNumber controls={false} min={1} style={{ width: "100%" }} />
             </Form.Item>
           </>
         ) : null}
         {modelTypeValue === "reranker" ? (
           <>
+            <Form.Item
+              label={t("modelResources.models.modal.batchSize")}
+              name="batchSize"
+              rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
+            >
+              <InputNumber controls={false} min={1} style={{ width: "100%" }} />
+            </Form.Item>
             <Form.Item label={t("modelResources.models.modal.maxNumberOfDocuments")} name="maxDocuments">
               <InputNumber controls={false} min={1} style={{ width: "100%" }} />
             </Form.Item>
