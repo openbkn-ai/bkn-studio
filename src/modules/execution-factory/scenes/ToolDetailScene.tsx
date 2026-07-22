@@ -178,6 +178,7 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
     >
       <CrudFormPage
         description={t("executionFactory.toolDetailDescription")}
+        onBack={handleBack}
         title={t("executionFactory.toolDetailTitle")}
       >
         {loading ? <Spin /> : null}
