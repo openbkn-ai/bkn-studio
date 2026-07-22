@@ -39,7 +39,7 @@
 .barRow {
   display: grid;
   gap: 12px;
-  grid-template-columns: 120px minmax(0, 1fr) 72px;
+  grid-template-columns: minmax(160px, 200px) minmax(0, 1fr) 72px;
   align-items: center;
 }
 

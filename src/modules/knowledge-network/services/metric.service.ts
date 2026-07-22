@@ -31,6 +31,7 @@ import {
   syncKnowledgeNetworkStatistics,
 } from "@/modules/knowledge-network/services/mock/state";
 import {
+  formatMetricTimeLabel,
   formatTimestamp,
   useMock,
   wait,
@@ -446,7 +447,12 @@ function normalizeMetricDataResponse(
     };
   }
 
-  const times = firstData.time_strs ?? firstData.times ?? [];
+  const times =
+    firstData.time_strs && firstData.time_strs.length > 0
+      ? firstData.time_strs
+      : firstData.times && firstData.times.length > 0
+        ? firstData.times
+        : [];
   const valueKey = mode === "sameperiod" ? "current" : "value";
 
   return {
@@ -466,7 +472,8 @@ function normalizeMetricDataResponse(
     rows: (firstData.values ?? []).map((value, index) => ({
       growthRate: firstData.growth_rates?.[index] ?? "",
       growthValue: firstData.growth_values?.[index] ?? "",
-      timestamp: times[index] ?? index,
+      timestamp:
+        times[index] == null ? "--" : formatMetricTimeLabel(times[index]),
       [valueKey]: value,
     })),
     visualHint: "trend-bars",
