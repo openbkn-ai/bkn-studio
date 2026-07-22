@@ -241,7 +241,7 @@ export type BackendMetric = {
       aggr?: KnowledgeNetworkMetricRecord["calculationFormula"]["aggregation"]["aggr"];
       property?: string;
     };
-    analysis_dimensions?: Array<{ property?: string } | string>;
+    analysis_dimensions?: Array<{ name?: string; property?: string } | string>;
     condition?: BackendMetricCondition;
     group_by?: Array<{ property?: string } | string>;
     having?: {
@@ -254,6 +254,7 @@ export type BackendMetric = {
       property?: string;
     }>;
   };
+  analysis_dimensions?: Array<{ display_name?: string; name?: string; property?: string } | string>;
   comment?: string;
   id: string;
   metric_type?: KnowledgeNetworkMetricRecord["metricType"];

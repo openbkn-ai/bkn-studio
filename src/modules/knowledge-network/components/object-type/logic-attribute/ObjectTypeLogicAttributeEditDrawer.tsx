@@ -25,6 +25,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   FIELD_TYPE_INPUT,
   IDENTIFIER_PATTERN,
+  LOGIC_ATTRIBUTE_TYPE_OPTIONS,
   OPERATOR_TYPE_OPTIONS,
   VALUE_FROM_OPTIONS,
   extractLeafParams,
@@ -55,6 +56,8 @@ type ObjectTypeLogicAttributeEditDrawerProps = {
   allData: ObjectTypeDataProperty[];
   attrInfo: ObjectTypeLogicProperty;
   logicFields: ObjectTypeLogicProperty[];
+  networkId: string;
+  objectTypeId: string;
   onClose: () => void;
   onOk: (data: ObjectTypeLogicProperty) => void;
   open: boolean;
@@ -110,6 +113,8 @@ export function ObjectTypeLogicAttributeEditDrawer({
   allData,
   attrInfo,
   logicFields,
+  networkId,
+  objectTypeId,
   onClose,
   onOk,
   open,
@@ -135,12 +140,11 @@ export function ObjectTypeLogicAttributeEditDrawer({
   const isAddMode = !attrInfo?.name;
 
   const logicAttributeTypeOptions = useMemo(
-    () => [
-      {
-        label: t("knowledgeNetwork.objectTypeLogicAttributeTypeOperator"),
-        value: "operator",
-      },
-    ],
+    () =>
+      LOGIC_ATTRIBUTE_TYPE_OPTIONS.map((item) => ({
+        label: t(`knowledgeNetwork.${item.labelKey}`),
+        value: item.value,
+      })),
     [t],
   );
 
@@ -217,7 +221,13 @@ export function ObjectTypeLogicAttributeEditDrawer({
 
     void (async () => {
       if (type === "metric") {
-        const models = await listObjectTypeLogicMetricModels();
+        if (!networkId || !objectTypeId) {
+          setMetricModelList([]);
+          setNameOptions([]);
+          return;
+        }
+
+        const models = await listObjectTypeLogicMetricModels(networkId, objectTypeId);
         if (requestId !== optionsRequestIdRef.current) {
           return;
         }
@@ -258,7 +268,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
         setNameOptions(flat);
       }
     })();
-  }, [open, t, type]);
+  }, [networkId, objectTypeId, open, t, type]);
 
   useEffect(() => {
     if (!open || type !== "operator" || !resourceId || flatNameOptions.length === 0) {
@@ -282,7 +292,19 @@ export function ObjectTypeLogicAttributeEditDrawer({
 
     const requestId = ++metricFieldsRequestIdRef.current;
     void (async () => {
-      const fields = await listObjectTypeLogicMetricModelFields(resourceId);
+      const selectedMetric = metricModelList.find((item) => item.id === resourceId);
+      if (selectedMetric?.analysisDimensions.length) {
+        setDimensionFields(
+          selectedMetric.analysisDimensions.map((item) => ({
+            label: item.displayName,
+            type: item.type,
+            value: item.name,
+          })),
+        );
+        return;
+      }
+
+      const fields = await listObjectTypeLogicMetricModelFields(networkId, resourceId);
       if (requestId !== metricFieldsRequestIdRef.current) {
         return;
       }
@@ -294,7 +316,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
         })),
       );
     })();
-  }, [open, resourceId, type]);
+  }, [metricModelList, networkId, open, resourceId, type]);
 
   const updateSettingData = (id: string, updateValue: Partial<SettingItem>) => {
     const processNode = (item: SettingItem): SettingItem => {

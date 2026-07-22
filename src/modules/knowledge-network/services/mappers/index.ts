@@ -98,6 +98,7 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
       ? {
           id: item.data_source.id,
           name: item.data_source.name ?? "",
+          type: item.data_source.type,
         }
       : undefined,
     hasIndex: item.has_index ?? item.status?.index_available ?? false,
@@ -176,6 +177,7 @@ export function mapObjectTypeDetail(item: BackendObjectType): ObjectTypeDetail {
       ? {
           id: item.data_source.id,
           name: item.data_source.name ?? "",
+          type: item.data_source.type,
         }
       : undefined,
     displayKey,
@@ -251,7 +253,7 @@ export function buildBackendObjectTypePayload(
     data_properties: dataProperties.map(toBackendDataProperty),
     data_source: input.dataSource
       ? {
-          type: "resource",
+          type: input.dataSource.type ?? "resource",
           id: input.dataSource.id,
           name: input.dataSource.name,
         }

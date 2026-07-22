@@ -30,6 +30,7 @@ export type ObjectTypeDataSource = {
   dataSourceId?: string;
   id: string;
   name: string;
+  type?: "data_view" | "resource";
 };
 
 export type ObjectTypeResourceGroup = {

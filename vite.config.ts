@@ -111,6 +111,25 @@ export default defineConfig(({ mode }) => {
         ...(useMock
           ? {}
           : {
+              // Hybrid dev: local BKN services (must precede the generic /api proxy).
+              ...(env.VITE_BKN_BACKEND_TARGET
+                ? {
+                    "/api/bkn-backend": {
+                      changeOrigin: true,
+                      secure: false,
+                      target: env.VITE_BKN_BACKEND_TARGET,
+                    },
+                  }
+                : {}),
+              ...(env.VITE_ONTOLOGY_QUERY_TARGET
+                ? {
+                    "/api/ontology-query": {
+                      changeOrigin: true,
+                      secure: false,
+                      target: env.VITE_ONTOLOGY_QUERY_TARGET,
+                    },
+                  }
+                : {}),
               // 本地 bkn-safe：/api/safe/* → VITE_SAFE_PROXY_TARGET（须在 /api 之前）。
               ...(safeProxyTarget
                 ? {

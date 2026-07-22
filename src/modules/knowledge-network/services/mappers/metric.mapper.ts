@@ -20,6 +20,20 @@ import type {
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 
+type BackendAnalysisDimension = { display_name?: string; name?: string; property?: string } | string;
+
+function mapAnalysisDimensionName(item: BackendAnalysisDimension): string {
+  if (typeof item === "string") {
+    return item;
+  }
+
+  return item.name ?? item.property ?? "";
+}
+
+function mapAnalysisDimensions(items?: BackendAnalysisDimension[]): string[] {
+  return (items ?? []).map(mapAnalysisDimensionName).filter(Boolean);
+}
+
 function mapMetricConditionFromBackend(
   condition?: BackendMetricCondition,
 ): ActionTypeCondition | undefined {
@@ -73,9 +87,7 @@ function mapCalculationFormula(
       aggr: aggregation?.aggr ?? "count",
       property: aggregation?.property ?? "",
     },
-    analysisDimensions: (value?.analysis_dimensions ?? [])
-      .map((item) => (typeof item === "string" ? item : item.property ?? ""))
-      .filter(Boolean),
+    analysisDimensions: mapAnalysisDimensions(value?.analysis_dimensions),
     condition: mapMetricConditionFromBackend(value?.condition),
     groupBy: (value?.group_by ?? [])
       .map((item) => (typeof item === "string" ? item : item.property ?? ""))
@@ -112,8 +124,17 @@ function mapTimeDimension(
 }
 
 export function mapMetric(item: BackendMetric): KnowledgeNetworkMetricRecord {
+  const calculationFormula = mapCalculationFormula(item.calculation_formula);
+  const rootAnalysisDimensions = mapAnalysisDimensions(item.analysis_dimensions);
+  const analysisDimensions = [
+    ...new Set([...calculationFormula.analysisDimensions, ...rootAnalysisDimensions]),
+  ];
+
   return {
-    calculationFormula: mapCalculationFormula(item.calculation_formula),
+    calculationFormula: {
+      ...calculationFormula,
+      analysisDimensions,
+    },
     description: item.comment ?? "",
     id: item.id,
     metricType: item.metric_type ?? "atomic",

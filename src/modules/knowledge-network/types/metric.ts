@@ -129,6 +129,7 @@ export type MetricListQuery = {
   keyword?: string;
   limit?: number;
   offset?: number;
+  scopeRef?: string;
   sort?: "name" | "update_time";
   tag?: string;
 };

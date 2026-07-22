@@ -47,6 +47,8 @@ type ObjectTypeLogicAttributeEditorProps = {
   basicValue: ObjectTypeBasicInfo;
   dataProperties: ObjectTypeDataProperty[];
   logicProperties: ObjectTypeLogicProperty[];
+  networkId: string;
+  objectTypeId: string;
   onChange: (logicProperties: ObjectTypeLogicProperty[]) => void;
 };
 
@@ -54,7 +56,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   ObjectTypeLogicAttributeEditorHandle,
   ObjectTypeLogicAttributeEditorProps
 >(function ObjectTypeLogicAttributeEditor(
-  { basicValue, dataProperties, logicProperties, onChange },
+  { basicValue, dataProperties, logicProperties, networkId, objectTypeId, onChange },
   ref,
 ) {
   const { t } = useTranslation();
@@ -108,10 +110,6 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   };
 
   const handleEdit = (record: ObjectTypeLogicProperty) => {
-    if (record.dataSource?.type === "metric") {
-      return;
-    }
-
     setAttrInfo(record);
     setDrawerOpen(true);
   };
@@ -176,7 +174,6 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
           menu={{
             items: [
               {
-                disabled: record.dataSource?.type === "metric",
                 key: "edit",
                 label: t("common.edit"),
               },
@@ -353,6 +350,8 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
         ]}
         attrInfo={attrInfo}
         logicFields={localLogicProperties}
+        networkId={networkId}
+        objectTypeId={objectTypeId}
         onClose={() => setDrawerOpen(false)}
         onOk={handleOk}
         open={drawerOpen}

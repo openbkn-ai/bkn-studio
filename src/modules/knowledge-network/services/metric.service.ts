@@ -64,7 +64,8 @@ function filterAndSortMockMetrics(
       item.name.toLowerCase().includes(keyword) ||
       item.id.toLowerCase().includes(keyword);
     const matchesTag = !query.tag || query.tag === "all" || item.tags.includes(query.tag);
-    return matchesKeyword && matchesTag;
+    const matchesScopeRef = !query.scopeRef || item.scopeRef === query.scopeRef;
+    return matchesKeyword && matchesTag && matchesScopeRef;
   });
 
   const sort = query.sort === "name" ? "name" : "update_time";
@@ -102,6 +103,7 @@ export async function listKnowledgeNetworkMetrics(
           limit: query.limit ?? 20,
           name_pattern: query.keyword || undefined,
           offset: query.offset ?? 0,
+          scope_ref: query.scopeRef || undefined,
           sort: query.sort ?? "update_time",
           tag: query.tag && query.tag !== "all" ? query.tag : undefined,
         },
