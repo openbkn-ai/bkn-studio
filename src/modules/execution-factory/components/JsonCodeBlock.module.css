@@ -39,28 +39,3 @@
 .null {
   color: #9333ea;
 }
-
-@media (prefers-color-scheme: dark) {
-  .block {
-    background: #0f172a;
-    color: #cbd5e1;
-    border-color: #1e293b;
-  }
-
-  .key {
-    color: #7dd3fc;
-  }
-
-  .string {
-    color: #86efac;
-  }
-
-  .number {
-    color: #fdba74;
-  }
-
-  .boolean,
-  .null {
-    color: #d8b4fe;
-  }
-}
