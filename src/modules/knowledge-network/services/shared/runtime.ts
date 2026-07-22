@@ -121,8 +121,12 @@ export function formatMetricTimeLabel(value: unknown): string {
     return formatMetricTimeLabel(Number(value));
   }
 
-  if (typeof value !== "string") {
+  if (typeof value === "boolean") {
     return String(value);
+  }
+
+  if (typeof value !== "string") {
+    return "--";
   }
 
   const trimmed = value.trim();

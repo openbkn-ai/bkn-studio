@@ -184,7 +184,7 @@ export function MetricDataQueryPanel({
             timeRange: "last_24h",
           }}
           layout="inline"
-          onValuesChange={(changed) => {
+          onValuesChange={(changed: Partial<MetricDataQueryParams>) => {
             if (changed.mode === "trend" || changed.mode === "proportion") {
               if (!form.getFieldValue("step")) {
                 form.setFieldValue("step", "day");
