@@ -39,7 +39,7 @@
 .barRow {
   display: grid;
   gap: 12px;
-  grid-template-columns: 120px minmax(0, 1fr) 72px;
+  grid-template-columns: minmax(160px, 200px) minmax(0, 1fr) 72px;
   align-items: center;
 }
 
@@ -60,6 +60,19 @@
   color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
   margin-top: 12px;
+}
+
+.resultTableCollapse {
+  background: transparent;
+  margin-top: 8px;
+}
+
+.resultTableCollapse :global(.ant-collapse-header) {
+  padding-inline: 0 !important;
+}
+
+.resultTableCollapse :global(.ant-collapse-content-box) {
+  padding-inline: 0 !important;
 }
 
 .queryForm {

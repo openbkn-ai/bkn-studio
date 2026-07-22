@@ -141,6 +141,8 @@ export type MetricListResult = {
 export type MetricDataQueryMode = "instant" | "trend" | "sameperiod" | "proportion";
 export type MetricSamePeriodMethod = "growth_value" | "growth_rate";
 export type MetricSamePeriodTimeGranularity = "day" | "month" | "quarter" | "year";
+/** Calendar bucket for ontology-query `time.step` (trend / non-instant queries). */
+export type MetricQueryCalendarStep = "day" | "week" | "month" | "quarter" | "year";
 
 export type MetricDataQueryTimeRange =
   | "last_1h"
@@ -159,6 +161,8 @@ export type MetricDataQueryParams = {
   samePeriodGranularity?: MetricSamePeriodTimeGranularity;
   samePeriodMethod?: MetricSamePeriodMethod;
   samePeriodOffset?: number;
+  /** Maps to request body `time.step` when mode is not instant. */
+  step?: MetricQueryCalendarStep;
   timeRange: MetricDataQueryTimeRange;
 };
 

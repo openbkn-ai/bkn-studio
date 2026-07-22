@@ -31,6 +31,7 @@ import {
   syncKnowledgeNetworkStatistics,
 } from "@/modules/knowledge-network/services/mock/state";
 import {
+  formatMetricTimeLabel,
   formatTimestamp,
   useMock,
   wait,
@@ -352,6 +353,7 @@ function toTimestamp(value: unknown): number | undefined {
 }
 
 function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
+  const isInstant = params.mode === "instant";
   const time =
     params.timeRange === "custom"
       ? {
@@ -360,11 +362,19 @@ function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
         }
       : getRelativeTimeWindow(params.timeRange);
 
+  // Same-period: sync time.step from comparison granularity (no separate step UI).
+  const step =
+    params.mode === "sameperiod"
+      ? (params.samePeriodGranularity ?? "day")
+      : (params.step ?? "day");
+
   const payload: Record<string, unknown> = {
     limit: params.limit,
     time: {
       ...time,
-      instant: params.mode === "instant",
+      instant: isInstant,
+      // Backend treats instant=false as trend and requires calendar time.step.
+      ...(!isInstant ? { step } : {}),
     },
   };
 
@@ -437,7 +447,12 @@ function normalizeMetricDataResponse(
     };
   }
 
-  const times = firstData.time_strs ?? firstData.times ?? [];
+  const times =
+    firstData.time_strs && firstData.time_strs.length > 0
+      ? firstData.time_strs
+      : firstData.times && firstData.times.length > 0
+        ? firstData.times
+        : [];
   const valueKey = mode === "sameperiod" ? "current" : "value";
 
   return {
@@ -457,7 +472,8 @@ function normalizeMetricDataResponse(
     rows: (firstData.values ?? []).map((value, index) => ({
       growthRate: firstData.growth_rates?.[index] ?? "",
       growthValue: firstData.growth_values?.[index] ?? "",
-      timestamp: times[index] ?? index,
+      timestamp:
+        times[index] == null ? "--" : formatMetricTimeLabel(times[index]),
       [valueKey]: value,
     })),
     visualHint: "trend-bars",

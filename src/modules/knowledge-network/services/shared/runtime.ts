@@ -57,7 +57,11 @@ export function formatTimestamp(value?: number) {
     return "-";
   }
 
-  const timestamp = value < 1_000_000_000_000 ? value * 1000 : value;
+  const timestamp = normalizeEpochToMillis(value);
+  if (timestamp == null) {
+    return "-";
+  }
+
   const locale = getRuntimeConfig().locale;
 
   const formatted = new Intl.DateTimeFormat(locale, {
@@ -75,6 +79,79 @@ export function formatTimestamp(value?: number) {
   }
 
   return formatted.replace(",", "");
+}
+
+/** Convert epoch seconds / ms / µs / ns to milliseconds; return null if invalid. */
+export function normalizeEpochToMillis(value: number): number | null {
+  if (!Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+
+  // nanoseconds
+  if (value >= 1e18) {
+    return Math.floor(value / 1e6);
+  }
+  // microseconds
+  if (value >= 1e15) {
+    return Math.floor(value / 1e3);
+  }
+  // milliseconds (13 digits around current era)
+  if (value >= 1e12) {
+    return Math.floor(value);
+  }
+  // seconds
+  return Math.floor(value * 1000);
+}
+
+/**
+ * Format metric query time labels for display.
+ * Accepts epoch (s/ms/µs/ns), numeric strings, ISO/RFC3339, and already-readable date strings.
+ */
+export function formatMetricTimeLabel(value: unknown): string {
+  if (value == null || value === "") {
+    return "--";
+  }
+
+  if (typeof value === "number") {
+    const formatted = formatTimestamp(value);
+    return formatted === "-" ? String(value) : formatted;
+  }
+
+  if (typeof value === "bigint") {
+    return formatMetricTimeLabel(Number(value));
+  }
+
+  if (typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (typeof value !== "string") {
+    return "--";
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "--";
+  }
+
+  // Pure numeric epoch string: "1672531200000" / "1672531200"
+  if (/^\d{10,19}$/.test(trimmed)) {
+    const asNumber = Number(trimmed);
+    if (Number.isFinite(asNumber)) {
+      const formatted = formatTimestamp(asNumber);
+      return formatted === "-" ? trimmed : formatted;
+    }
+  }
+
+  // ISO / RFC3339 / common date-time strings
+  const parsed = Date.parse(trimmed);
+  if (Number.isFinite(parsed)) {
+    const formatted = formatTimestamp(parsed);
+    return formatted === "-" ? trimmed : formatted;
+  }
+
+  // Calendar bucket leftovers (e.g. "2023-Q1") — keep original
+  return trimmed;
 }
 
 export function getRequestErrorStatus(error: unknown): number | undefined {

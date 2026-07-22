@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Card, DatePicker, Form, InputNumber, Select, Space, Switch, Table } from "antd";
+import { Card, Collapse, DatePicker, Form, InputNumber, Select, Space, Switch, Table } from "antd";
 import type { TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,6 +19,7 @@ import type {
   MetricDataQueryParams,
   MetricDataQueryResult,
   MetricDataQueryTimeRange,
+  MetricQueryCalendarStep,
   MetricSamePeriodMethod,
   MetricSamePeriodTimeGranularity,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -34,6 +35,13 @@ const TIME_RANGE_OPTIONS: MetricDataQueryTimeRange[] = [
   "calendar_day",
   "custom",
 ];
+const CALENDAR_STEP_OPTIONS: MetricQueryCalendarStep[] = [
+  "day",
+  "week",
+  "month",
+  "quarter",
+  "year",
+];
 const SAME_PERIOD_METHOD_OPTIONS: MetricSamePeriodMethod[] = ["growth_value", "growth_rate"];
 const SAME_PERIOD_GRANULARITY_OPTIONS: MetricSamePeriodTimeGranularity[] = [
   "day",
@@ -41,6 +49,15 @@ const SAME_PERIOD_GRANULARITY_OPTIONS: MetricSamePeriodTimeGranularity[] = [
   "quarter",
   "year",
 ];
+
+function showStepField(mode: MetricDataQueryMode | undefined) {
+  // Trend / proportion: show step. Same-period: hide and sync from comparison granularity.
+  return mode === "trend" || mode === "proportion";
+}
+
+function showFillNullField(mode: MetricDataQueryMode | undefined) {
+  return mode === "trend" || mode === "sameperiod" || mode === "proportion";
+}
 
 type MetricDataQueryPanelProps = {
   embedded?: boolean;
@@ -163,9 +180,17 @@ export function MetricDataQueryPanel({
             samePeriodGranularity: "day",
             samePeriodMethod: "growth_value",
             samePeriodOffset: 1,
+            step: "day",
             timeRange: "last_24h",
           }}
           layout="inline"
+          onValuesChange={(changed: Partial<MetricDataQueryParams>) => {
+            if (changed.mode === "trend" || changed.mode === "proportion") {
+              if (!form.getFieldValue("step")) {
+                form.setFieldValue("step", "day");
+              }
+            }
+          }}
         >
           <Form.Item
             label={t("knowledgeNetwork.metricQueryModeLabel")}
@@ -213,6 +238,24 @@ export function MetricDataQueryPanel({
               </Form.Item>
             </Space>
           ) : null}
+          <Form.Item
+            hidden={!showStepField(queryMode)}
+            label={t("knowledgeNetwork.metricQueryStepLabel")}
+            name="step"
+            rules={
+              showStepField(queryMode)
+                ? [{ required: true, message: t("knowledgeNetwork.metricQueryStepRequired") }]
+                : undefined
+            }
+          >
+            <Select
+              options={CALENDAR_STEP_OPTIONS.map((value) => ({
+                label: t(`knowledgeNetwork.metricQueryStep.${value}`),
+                value,
+              }))}
+              style={{ width: 120 }}
+            />
+          </Form.Item>
           {queryMode === "sameperiod" ? (
             <Space>
               <Form.Item label={t("knowledgeNetwork.metricQuerySamePeriodMethod")} name="samePeriodMethod">
@@ -227,6 +270,7 @@ export function MetricDataQueryPanel({
               <Form.Item
                 label={t("knowledgeNetwork.metricQuerySamePeriodGranularity")}
                 name="samePeriodGranularity"
+                rules={[{ required: true }]}
               >
                 <Select
                   options={SAME_PERIOD_GRANULARITY_OPTIONS.map((value) => ({
@@ -244,7 +288,12 @@ export function MetricDataQueryPanel({
           <Form.Item label={t("knowledgeNetwork.metricQueryLimit")} name="limit">
             <InputNumber min={1} max={1000} style={{ width: 100 }} />
           </Form.Item>
-          <Form.Item label={t("knowledgeNetwork.metricQueryFillNull")} name="fillNull" valuePropName="checked">
+          <Form.Item
+            hidden={!showFillNullField(queryMode)}
+            label={t("knowledgeNetwork.metricQueryFillNull")}
+            name="fillNull"
+            valuePropName="checked"
+          >
             <Switch />
           </Form.Item>
           <Form.Item>
@@ -257,13 +306,26 @@ export function MetricDataQueryPanel({
 
       <Card title={t("knowledgeNetwork.metricQueryResultTitle")}>
         {result?.visualHint ? renderVisualResult(result, metricName) : null}
-        <Table
-          columns={columns}
-          dataSource={(result?.rows ?? []).map((row, index) => ({ ...row, key: index }))}
-          locale={{ emptyText: t("knowledgeNetwork.metricQueryEmpty") }}
-          pagination={false}
-          scroll={{ x: true }}
-          size="small"
+        <Collapse
+          bordered={false}
+          className={styles.resultTableCollapse}
+          defaultActiveKey={[]}
+          items={[
+            {
+              key: "table",
+              label: t("knowledgeNetwork.metricQueryTableTitle"),
+              children: (
+                <Table
+                  columns={columns}
+                  dataSource={(result?.rows ?? []).map((row, index) => ({ ...row, key: index }))}
+                  locale={{ emptyText: t("knowledgeNetwork.metricQueryEmpty") }}
+                  pagination={false}
+                  scroll={{ x: true }}
+                  size="small"
+                />
+              ),
+            },
+          ]}
         />
         {result?.durationMs ? (
           <div className={styles.metaRow}>
