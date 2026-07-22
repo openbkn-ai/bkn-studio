@@ -47,8 +47,15 @@ export const dataCatalogEnUS = {
       fulltextAnalyzer: "Analyzer",
     },
     indexBuildTitle: "Task Management",
-    indexBuildDescription:
-      "View and manage index build tasks across resources — filter, pause, retry, and delete.",
+    indexBuildDescription: "View and manage index build, discover, and semantic-understanding tasks.",
+    taskManagement: {
+      tabs: { indexBuild: "Index Build Tasks", discover: "Discover Tasks", semanticUnderstanding: "Semantic Understanding Tasks" },
+      columns: { task: "Task ID", strategy: "Discover Strategy", trigger: "Trigger", scope: "Scope", confidence: "Confidence", applied: "Applied" },
+      scope: { catalog: "Data Connection", resource: "Data Resource" },
+      semanticStatus: { pending: "Pending", running: "Running", succeeded: "Succeeded", failed: "Failed" },
+      discover: { empty: "No discover tasks" },
+      semantic: { empty: "No semantic-understanding tasks", deleteTitle: "Delete semantic-understanding task", deleteDescription: "Delete semantic-understanding task “{{id}}”?" },
+    },
     emptyDescription:
       "Create and scan a connection first, then browse resources and build indexes here.",
     backToCatalog: "Back to Data Directory",

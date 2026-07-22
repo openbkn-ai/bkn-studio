@@ -5,8 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { TaskManagementScene } from "@/modules/data-catalog/scenes/TaskManagementScene";
-
-export function IndexBuildPage() {
-  return <TaskManagementScene />;
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 16px;
 }
