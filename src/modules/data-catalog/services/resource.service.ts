@@ -559,9 +559,12 @@ export async function previewCatalogResource(
   }>(
     `/vega-backend/v1/resources/${id}/data`,
     {
-      limit: query.limit,
       need_total: true,
-      offset: query.offset,
+      paging: {
+        limit: query.limit,
+        mode: "single",
+        offset: query.offset,
+      },
     },
     { headers: { "X-HTTP-Method-Override": "GET" } },
   );

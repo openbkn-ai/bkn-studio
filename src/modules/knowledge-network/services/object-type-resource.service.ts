@@ -302,9 +302,12 @@ export async function getObjectTypeResourcePreview(
     http.post<BackendResourcePreviewResponse>(
       `/vega-backend/v1/resources/${resourceId}/data`,
       {
-        limit: 20,
         need_total: true,
-        offset: 0,
+        paging: {
+          limit: 20,
+          mode: "single",
+          offset: 0,
+        },
       },
       {
         headers: {
