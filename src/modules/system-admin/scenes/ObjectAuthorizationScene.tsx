@@ -32,7 +32,13 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
-import { listObjectGrantsPage, revokeObjectGrant } from "@/modules/system-admin/services/authz.service";
+import {
+  type AuthzGroup,
+  listObjectGrantsPage,
+  listObjectGroups,
+  revokeObjectGrant,
+} from "@/modules/system-admin/services/authz.service";
+import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
 import type { AuthzSummary, ObjectGrant } from "@/modules/system-admin/types/authz";
 import {
@@ -47,7 +53,6 @@ import styles from "./admin.module.css";
 
 type ViewMode = "all" | "object" | "grantee";
 
-const INNER_PAGE_SIZE = 10;
 
 type DrawerTarget = {
   id: string;
@@ -90,12 +95,8 @@ export function ObjectAuthorizationScene() {
   const debouncedKeyword = useDebouncedValue(keyword.trim(), 300);
   const [objTypeFilter, setObjTypeFilter] = useState<string>();
   const [granteeType, setGranteeType] = useState<"all" | "user" | "department">("all");
-  const [objectInnerPage, setObjectInnerPage] = useState<
-    Record<string, { page: number; pageSize: number }>
-  >({});
-  const [granteeInnerPage, setGranteeInnerPage] = useState<
-    Record<string, { page: number; pageSize: number }>
-  >({});
+  // 分组视图(按对象/按成员)服务端分页返回的聚合行。
+  const [groups, setGroups] = useState<AuthzGroup[]>([]);
   const [drawer, setDrawer] = useState<{ open: boolean; target: DrawerTarget | null }>({
     open: false,
     target: null,
@@ -108,27 +109,53 @@ export function ObjectAuthorizationScene() {
       const deptList = await getCachedDepartments();
       setDepartments(deptList);
 
-      const paginate = view === "all";
-      const result = await listObjectGrantsPage({
-        search: debouncedKeyword || undefined,
-        resourceType: objTypeFilter,
-        offset: paginate ? (pageState.page - 1) * pageState.pageSize : undefined,
-        limit: paginate ? pageState.pageSize : undefined,
-        includeSummary: true,
-      });
+      const offset = (pageState.page - 1) * pageState.pageSize;
 
-      setGrants(result.grants);
-      setTotal(result.total);
-      setSummary(
-        result.summary ?? {
-          grants: result.total,
-          objects: new Set(result.grants.map((grant) => `${grant.objType}:${grant.objId}`)).size,
-          grantees: new Set(result.grants.map((grant) => grant.accessorId)).size,
-        },
-      );
-      const accessorIds = [...new Set(result.grants.map((grant) => grant.accessorId))];
-      await hydrateUserLookup(accessorIds);
-      setLookupRevision((revision) => revision + 1);
+      if (view === "all") {
+        // resolveNames:false —— 列表先用 id 占位立即渲染;对象名按当前可见页 on-demand 回填。
+        const result = await listObjectGrantsPage(
+          {
+            search: debouncedKeyword || undefined,
+            resourceType: objTypeFilter,
+            offset,
+            limit: pageState.pageSize,
+            includeSummary: true,
+          },
+          { resolveNames: false },
+        );
+        setGroups([]);
+        setGrants(result.grants);
+        setTotal(result.total);
+        setSummary(
+          result.summary ?? {
+            grants: result.total,
+            objects: new Set(result.grants.map((grant) => `${grant.objType}:${grant.objId}`)).size,
+            grantees: new Set(result.grants.map((grant) => grant.accessorId)).size,
+          },
+        );
+        await hydrateUserLookup([...new Set(result.grants.map((grant) => grant.accessorId))]);
+        setLookupRevision((revision) => revision + 1);
+      } else {
+        // 按对象/按成员:服务端分组分页,每页只取一屏聚合行,不再全量拉再客户端分组。
+        const { groups: rows, total: groupTotal } = await listObjectGroups(view, {
+          offset,
+          limit: pageState.pageSize,
+          search: debouncedKeyword || undefined,
+          resourceType: objTypeFilter,
+        });
+        setGrants([]);
+        setGroups(rows);
+        setTotal(groupTotal);
+        setSummary((prev) => ({
+          ...prev,
+          objects: view === "object" ? groupTotal : prev.objects,
+          grantees: view === "grantee" ? groupTotal : prev.grantees,
+        }));
+        if (view === "grantee") {
+          await hydrateUserLookup(rows.map((row) => row.accessorId ?? "").filter(Boolean));
+          setLookupRevision((revision) => revision + 1);
+        }
+      }
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
@@ -199,51 +226,69 @@ export function ObjectAuthorizationScene() {
     setPagination(1, pageState.pageSize);
   }, [debouncedKeyword, granteeType, objTypeFilter, pageState.pageSize, setPagination, view]);
 
-  const byObject = useMemo(() => {
-    const groups = new Map<string, ObjectGrant[]>();
-    for (const grant of filteredGrants) {
-      const key = `${grant.objType}::${grant.objId}`;
-      const list = groups.get(key) ?? [];
-      list.push(grant);
-      groups.set(key, list);
-    }
-    return [...groups.values()];
-  }, [filteredGrants]);
-
-  const byGrantee = useMemo(() => {
-    const groups = new Map<string, ObjectGrant[]>();
-    for (const grant of filteredGrants) {
-      const list = groups.get(grant.accessorId) ?? [];
-      list.push(grant);
-      groups.set(grant.accessorId, list);
-    }
-    return [...groups.values()];
-  }, [filteredGrants]);
-
-  const groupList = useMemo(() => {
-    if (view === "object") {
-      return byObject;
-    }
+  // 对象名按需解析:只解析「当前可见页」的对象名,翻页/切视图再解析新出现的。用缓存,
+  // 翻回来的页零请求。避免为全部(数千条)一次性解析导致领域取名接口连接饱和/超时。
+  useEffect(() => {
     if (view === "grantee") {
-      return byGrantee;
+      // 按成员视图行是成员,名字走用户查找(hydrateUserLookup),此处不解析对象名。
+      return;
     }
-    return [];
-  }, [byGrantee, byObject, view]);
-
-  const pagedGroups = useMemo(() => {
-    const start = (pageState.page - 1) * pageState.pageSize;
-    return groupList.slice(start, start + pageState.pageSize);
-  }, [groupList, pageState.page, pageState.pageSize]);
-
-  const pagedGrants = useMemo(() => {
-    if (view === "all") {
-      return filteredGrants;
+    const pendingGrants =
+      view === "all" ? filteredGrants.filter((grant) => grant.objName === grant.objId) : [];
+    const pendingGroups =
+      view === "object" ? groups.filter((group) => group.objName === group.objId) : [];
+    if (pendingGrants.length === 0 && pendingGroups.length === 0) {
+      return;
     }
-    const start = (pageState.page - 1) * pageState.pageSize;
-    return filteredGrants.slice(start, start + pageState.pageSize);
-  }, [filteredGrants, pageState.page, pageState.pageSize, view]);
+    let cancelled = false;
+    const toResolve: ObjectGrant[] = [
+      ...pendingGrants,
+      ...pendingGroups.map((group) => ({
+        accessorId: "",
+        objType: group.objType ?? "",
+        objId: group.objId ?? "",
+        objName: group.objId ?? "",
+        operations: [],
+      })),
+    ];
+    void resolveGrantNames(toResolve)
+      .then((named) => {
+        if (cancelled) {
+          return;
+        }
+        const nameByKey = new Map(
+          named
+            .filter((grant) => grant.objName !== grant.objId)
+            .map((grant) => [`${grant.objType}:${grant.objId}`, grant.objName] as const),
+        );
+        if (nameByKey.size === 0) {
+          return;
+        }
+        if (view === "all") {
+          setGrants((prev) =>
+            prev.map((grant) => {
+              const name = nameByKey.get(`${grant.objType}:${grant.objId}`);
+              return name ? { ...grant, objName: name } : grant;
+            }),
+          );
+        } else {
+          setGroups((prev) =>
+            prev.map((group) => {
+              const name = nameByKey.get(`${group.objType}:${group.objId}`);
+              return name ? { ...group, objName: name } : group;
+            }),
+          );
+        }
+      })
+      .catch(() => {
+        // 取名失败保持 id 兜底,不阻断列表。
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filteredGrants, groups, view]);
 
-  const listTotal = view === "all" ? total : groupList.length;
+  const listTotal = total;
 
   const openDrawer = useCallback((target: DrawerTarget) => {
     setDrawer({ open: true, target });
@@ -392,7 +437,8 @@ export function ObjectAuthorizationScene() {
   ], [confirmRevoke, granteeCell, openDrawer, opChips, t]);
 
   const renderBody = () => {
-    if (!loading && filteredGrants.length === 0) {
+    const isEmpty = view === "all" ? filteredGrants.length === 0 : groups.length === 0;
+    if (!loading && isEmpty) {
       return (
         <Empty
           description={t("systemAdmin.objectGrants.empty")}
@@ -404,77 +450,39 @@ export function ObjectAuthorizationScene() {
     if (view === "object") {
       return (
         <div className={styles.authzGroupList}>
-          {pagedGroups.map((list) => {
-            const head = list[0];
-            const groupKey = `${head.objType}::${head.objId}`;
-            const inner = objectInnerPage[groupKey] ?? {
-              page: 1,
-              pageSize: INNER_PAGE_SIZE,
+          {groups.map((group) => {
+            const objType = group.objType ?? "";
+            const objId = group.objId ?? "";
+            const objName = group.objName || objId;
+            const pseudo: ObjectGrant = {
+              accessorId: "",
+              objType,
+              objId,
+              objName,
+              operations: group.operations,
             };
-            const innerStart = (inner.page - 1) * inner.pageSize;
-            const innerPaged = list.slice(innerStart, innerStart + inner.pageSize);
-
             return (
-              <div className={styles.authzGroup} key={groupKey}>
+              <div className={styles.authzGroup} key={`${objType}::${objId}`}>
                 <div className={styles.authzGroupHead}>
                   <span className={styles.authzGroupTitle}>
                     <span className={styles.authzAvatar}>
-                      {OBJ_ICON[head.objType] ?? <AppstoreOutlined />}
+                      {OBJ_ICON[objType] ?? <AppstoreOutlined />}
                     </span>
-                    <span className={styles.authzGroupName}>{head.objName}</span>
-                    <Tag className={styles.roleTag}>{resourceTypeLabel(head.objType)}</Tag>
+                    <span className={styles.authzGroupName}>{objName}</span>
+                    <Tag className={styles.roleTag}>{resourceTypeLabel(objType)}</Tag>
                     <span className={styles.authzGroupCount}>
-                      {t("systemAdmin.objectGrants.granteeCount", { count: list.length })}
+                      {t("systemAdmin.objectGrants.granteeCount", { count: group.count })}
                     </span>
                   </span>
                   <AppButton
                     icon={<KeyOutlined />}
-                    onClick={() =>
-                      openDrawer({
-                        id: head.objId,
-                        name: head.objName,
-                        sub: head.objSub,
-                        type: head.objType,
-                      })
-                    }
+                    onClick={() => openDrawer({ id: objId, name: objName, type: objType })}
                   >
                     {t("systemAdmin.objectGrants.manage")}
                   </AppButton>
                 </div>
                 <div className={styles.authzGroupBody}>
-                  {innerPaged.map((grant) => (
-                    <div className={styles.authzGrantLine} key={grantKey(grant)}>
-                      {granteeCell(grant.accessorId)}
-                      {opChips(grant)}
-                      <AppButton
-                        className={[styles.actionLink, styles.actionDanger].join(" ")}
-                        danger
-                        onClick={() => confirmRevoke(grant)}
-                        type="link"
-                      >
-                        {t("systemAdmin.objectGrants.revoke")}
-                      </AppButton>
-                    </div>
-                  ))}
-                  {list.length > inner.pageSize ? (
-                    <TablePaginationBar
-                      current={inner.page}
-                      onChange={(page, nextPageSize) => {
-                        setObjectInnerPage((prev) => ({
-                          ...prev,
-                          [groupKey]: {
-                            page,
-                            pageSize: nextPageSize ?? inner.pageSize,
-                          },
-                        }));
-                      }}
-                      pageSize={inner.pageSize}
-                      showSizeChanger
-                      showTotal={(count) => t("common.total", { total: count })}
-                      size="small"
-                      total={list.length}
-                    />
-                  ) : null}
+                  <div className={styles.authzGrantLine}>{opChips(pseudo)}</div>
                 </div>
               </div>
             );
@@ -486,72 +494,28 @@ export function ObjectAuthorizationScene() {
     if (view === "grantee") {
       return (
         <div className={styles.authzGroupList}>
-          {pagedGroups.map((list) => {
-            const head = list[0];
-            const grantee = resolveGrantee(head.accessorId);
-            const inner = granteeInnerPage[head.accessorId] ?? {
-              page: 1,
-              pageSize: INNER_PAGE_SIZE,
+          {groups.map((group) => {
+            const accessorId = group.accessorId ?? "";
+            const grantee = resolveGrantee(accessorId);
+            const pseudo: ObjectGrant = {
+              accessorId,
+              objType: "",
+              objId: accessorId,
+              objName: "",
+              operations: group.operations,
             };
-            const innerStart = (inner.page - 1) * inner.pageSize;
-            const innerPaged = list.slice(innerStart, innerStart + inner.pageSize);
-
             return (
-              <div className={styles.authzGroup} key={head.accessorId}>
+              <div className={styles.authzGroup} key={accessorId}>
                 <div className={styles.authzGroupHead}>
                   <span className={styles.authzGroupTitle}>
                     <span className={styles.authzGroupName}>{grantee.label}</span>
                     <span className={styles.authzGroupCount}>
-                      {t("systemAdmin.objectGrants.objectCount", { count: list.length })}
+                      {t("systemAdmin.objectGrants.objectCount", { count: group.count })}
                     </span>
                   </span>
                 </div>
                 <div className={styles.authzGroupBody}>
-                  {innerPaged.map((grant) => (
-                    <div className={styles.authzGrantLine} key={grantKey(grant)}>
-                      <span className={styles.authzWho}>
-                        <span className={styles.authzAvatar}>
-                          {OBJ_ICON[grant.objType] ?? <AppstoreOutlined />}
-                        </span>
-                        <span className={styles.authzWhoName}>{grant.objName}</span>
-                        <Tag className={styles.roleTag}>{resourceTypeLabel(grant.objType)}</Tag>
-                      </span>
-                      {opChips(grant)}
-                      <AppButton
-                        className={styles.actionLink}
-                        onClick={() =>
-                          openDrawer({
-                            id: grant.objId,
-                            name: grant.objName,
-                            sub: grant.objSub,
-                            type: grant.objType,
-                          })
-                        }
-                        type="link"
-                      >
-                        {t("systemAdmin.objectGrants.manage")}
-                      </AppButton>
-                    </div>
-                  ))}
-                  {list.length > inner.pageSize ? (
-                    <TablePaginationBar
-                      current={inner.page}
-                      onChange={(page, nextPageSize) => {
-                        setGranteeInnerPage((prev) => ({
-                          ...prev,
-                          [head.accessorId]: {
-                            page,
-                            pageSize: nextPageSize ?? inner.pageSize,
-                          },
-                        }));
-                      }}
-                      pageSize={inner.pageSize}
-                      showSizeChanger
-                      showTotal={(count) => t("common.total", { total: count })}
-                      size="small"
-                      total={list.length}
-                    />
-                  ) : null}
+                  <div className={styles.authzGrantLine}>{opChips(pseudo)}</div>
                 </div>
               </div>
             );
@@ -563,7 +527,7 @@ export function ObjectAuthorizationScene() {
     return (
       <AppTable<ObjectGrant>
         columns={columns}
-        dataSource={pagedGrants}
+        dataSource={filteredGrants}
         loading={loading}
         pagination={false}
         rowKey={grantKey}
@@ -700,7 +664,7 @@ export function ObjectAuthorizationScene() {
                 showSizeChanger
                 showTotal={(count) => t("common.total", { total: count })}
                 size="small"
-                total={view === "all" ? listTotal : groupList.length}
+                total={listTotal}
               />
             ) : null}
           </>

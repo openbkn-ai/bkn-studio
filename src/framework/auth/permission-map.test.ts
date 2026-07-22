@@ -185,6 +185,41 @@ describe("执行工厂权限点覆盖", () => {
   });
 });
 
+describe("折叠通配契约", () => {
+  it("类型级 operator:* 放行该类型全部动作,含实例映射", () => {
+    const typeWildcard = flattenSafeGrants([
+      { operations: ["*"], resource: { id: "*", type: "operator" } },
+    ]);
+
+    expect(isStudioPermissionGranted("execution-factory:operator:create", typeWildcard, false)).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory:operator:edit", typeWildcard, false)).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory:operator:debug", typeWildcard, false)).toBe(true);
+    // 另一类型不受影响。
+    expect(isStudioPermissionGranted("execution-factory:toolbox:create", typeWildcard, false)).toBe(false);
+  });
+
+  it("全局通配 *:* 放行所有可映射权限点(非 is_admin 也算)", () => {
+    const globalWildcard = flattenSafeGrants([
+      { operations: ["*"], resource: { id: "*", type: "*" } },
+    ]);
+
+    expect(isStudioPermissionGranted("execution-factory:operator:create", globalWildcard, false)).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory:tool:edit", globalWildcard, false)).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory-lab:catalog:view", globalWildcard, false)).toBe(true);
+  });
+
+  it("通配不绕过有意屏蔽:catalog:install 与 sandbox-runtime:view 仍锁死", () => {
+    const globalWildcard = flattenSafeGrants([
+      { operations: ["*"], resource: { id: "*", type: "*" } },
+    ]);
+
+    // 后端无安装端点,永久屏蔽——通配也不放。
+    expect(isStudioPermissionGranted("execution-factory:catalog:install", globalWildcard, false)).toBe(false);
+    // 沙箱运行时锚在 is_admin,通配的非超管拿不到。
+    expect(isStudioPermissionGranted("execution-factory-lab:sandbox-runtime:view", globalWildcard, false)).toBe(false);
+  });
+});
+
 describe("deriveStudioPermissions", () => {
   it("只在已声明的权限点内推导，不凭空造串", () => {
     const grants = flattenSafeGrants(REAL_NON_ADMIN_GRANTS);

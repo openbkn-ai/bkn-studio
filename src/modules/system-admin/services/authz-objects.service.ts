@@ -18,6 +18,21 @@ import { AUTHZ_OBJECT_TYPES } from "@/modules/system-admin/utils/authz-catalog";
 
 const PAGE_SIZE = 100;
 
+/**
+ * 按 id 批量取名时,单条 URL(逗号拼 id)携带的 id 数上限。旧的 vega/mcp 接口把 id
+ * 拼进 path,几十上百个会撞网关 URL 长度限制;且任一 id 不存在整批 404 —— 分批可把
+ * 单个坏 id 的影响限定在本批,不牵连其它。UUID(~36 char)× 50 ≈ 1.8KB。
+ */
+const NAME_ID_BATCH = 50;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const batches: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    batches.push(items.slice(index, index + size));
+  }
+  return batches;
+}
+
 const str = (value: unknown): string =>
   typeof value === "string"
     ? value
@@ -137,56 +152,81 @@ async function namesFor(type: string, ids: string[]): Promise<Map<string, string
     return map;
   }
   if (cfg.kind === "vega") {
-    // 旧接口：逗号分隔 path、返回完整对象、任一 id 不存在整批 404 → 失败时退化为逐个。
-    try {
-      const response = await http.get<unknown>(`${cfg.path}/${ids.map(encodeURIComponent).join(",")}`, {
-        skipErrorToast: true,
-      });
-      for (const [id, name] of collectNamePairs(response.data, "id", "name")) {
-        map.set(id, name);
-      }
-    } catch {
-      const settled = await Promise.allSettled(
-        ids.map((id) => http.get<unknown>(`${cfg.path}/${encodeURIComponent(id)}`, { skipErrorToast: true })),
-      );
-      settled.forEach((result, index) => {
-        if (result.status === "fulfilled") {
-          // 单条响应同样是 {entries:[{id,name}]} 形态；用同一解析兜住。
-          const name = collectNamePairs(result.value.data, "id", "name")[0]?.[1];
-          if (name) {
-            map.set(ids[index], name);
+    // 逗号分隔 path 批量取名。ignore_missing=true 让后端对已删 id 返 200 + 查到的那些
+    // (而非任一 id 不存在就整批 404),孤儿授权混进本批也不牵连其余。按 NAME_ID_BATCH
+    // 分批控 URL 长度(50 ≈ 1.1KB,远低于网关 ~8KB/414 上限)。回填按 entry.id 对齐,
+    // 不假设返回顺序/数量;请求了但没返的 id = 已删对象 → 名称退化为 id 兜底。
+    await Promise.all(
+      chunk(ids, NAME_ID_BATCH).map(async (batch) => {
+        try {
+          const response = await http.get<unknown>(
+            `${cfg.path}/${batch.map(encodeURIComponent).join(",")}`,
+            { params: { ignore_missing: true }, skipErrorToast: true },
+          );
+          for (const [id, name] of collectNamePairs(response.data, "id", "name")) {
+            map.set(id, name);
           }
+        } catch {
+          // 本批整体失败(非缺 id,而是网络/网关):名称保持 id 兜底,不逐个重试。
         }
-      });
-    }
+      }),
+    );
     return map;
   }
-  // mcp 旧接口：GET .../mcp/market/batch/{ids}/{fields}
-  const response = await http.get<unknown>(
-    `/agent-operator-integration/v1/mcp/market/batch/${ids.map(encodeURIComponent).join(",")}/mcp_id,name`,
-    { headers: domainHeaders(), skipErrorToast: true },
+  // mcp 旧接口：GET .../mcp/market/batch/{ids}/{fields}，同样分批防 URL 超限。
+  await Promise.all(
+    chunk(ids, NAME_ID_BATCH).map(async (batch) => {
+      try {
+        const response = await http.get<unknown>(
+          `/agent-operator-integration/v1/mcp/market/batch/${batch.map(encodeURIComponent).join(",")}/mcp_id,name`,
+          { headers: domainHeaders(), skipErrorToast: true },
+        );
+        for (const [id, name] of collectNamePairs(response.data, "mcp_id", "name")) {
+          map.set(id, name);
+        }
+      } catch {
+        // 本批不可解析：名称保持 id 兜底。
+      }
+    }),
   );
-  for (const [id, name] of collectNamePairs(response.data, "mcp_id", "name")) {
-    map.set(id, name);
-  }
   return map;
 }
 
+/**
+ * 已解析对象名的进程内正向缓存(`${type}:${id}` -> name)。跨分页翻页、列表刷新、
+ * dev StrictMode 的重复加载复用,已有名字的 id 不再重复请求。只缓存成功项:解析不到
+ * 的 id 下次仍会重试(可能是后来才建的对象),但重试也走分批,不会退化成风暴。
+ * 生命周期随 SPA 会话,硬刷新即清空。
+ */
+const nameCache = new Map<string, string>();
+
 /** 用领域服务解析对象名，回填到 grants 的 objName（解析失败的保持原 id 兜底）。 */
 export async function resolveGrantNames(grants: ObjectGrant[]): Promise<ObjectGrant[]> {
-  const idsByType = new Map<string, Set<string>>();
+  // 只对缓存里没有名字的 id 发起请求,按类型分组。
+  const pendingByType = new Map<string, Set<string>>();
   for (const grant of grants) {
-    const set = idsByType.get(grant.objType) ?? new Set<string>();
+    // 后端已带真实名(objName ≠ id)则跳过。前向兼容:一旦 object-grants 直接回 name,
+    // 整套领域服务 fan-out 自动停掉,无需再改这里。
+    if (grant.objName && grant.objName !== grant.objId) {
+      continue;
+    }
+    // 缺 type 或 id 无法可靠取名,也会污染 `${type}:${id}` 缓存键,跳过。
+    if (!grant.objType || !grant.objId) {
+      continue;
+    }
+    if (nameCache.has(`${grant.objType}:${grant.objId}`)) {
+      continue;
+    }
+    const set = pendingByType.get(grant.objType) ?? new Set<string>();
     set.add(grant.objId);
-    idsByType.set(grant.objType, set);
+    pendingByType.set(grant.objType, set);
   }
-  const resolved = new Map<string, string>(); // `${type}:${id}` -> name
   await Promise.all(
-    [...idsByType.entries()].map(async ([type, ids]) => {
+    [...pendingByType.entries()].map(async ([type, ids]) => {
       try {
         const map = await namesFor(type, [...ids]);
         for (const [id, name] of map) {
-          resolved.set(`${type}:${id}`, name);
+          nameCache.set(`${type}:${id}`, name);
         }
       } catch {
         // 单类型解析失败：该类型对象名退化为 id，不影响列表展示。
@@ -194,7 +234,11 @@ export async function resolveGrantNames(grants: ObjectGrant[]): Promise<ObjectGr
     }),
   );
   return grants.map((grant) => {
-    const name = resolved.get(`${grant.objType}:${grant.objId}`);
+    // 已是后端真实名的保留不动。
+    if (grant.objName && grant.objName !== grant.objId) {
+      return grant;
+    }
+    const name = nameCache.get(`${grant.objType}:${grant.objId}`);
     return name ? { ...grant, objName: name } : grant;
   });
 }

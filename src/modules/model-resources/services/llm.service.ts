@@ -259,7 +259,7 @@ export async function updateLlmModel(payload: LlmSavePayload) {
 
 /**
  * 每个大模型当前账号可执行的操作（来自 /me/permissions，对象类型 large_model）。
- * 真实管理员判定走此处：getMyPermissions().isAdmin 时返回全量操作（含 modify），
+ * scoped 响应带 is_admin，命中时 operationsFor 返回全量操作（含 modify），
  * 据此决定「设为默认 / 取消默认」等高危操作是否可见。
  */
 export async function getLlmItemPermissions(
@@ -284,7 +284,10 @@ export async function getLlmItemPermissions(
     );
 
     return Object.fromEntries(items.map((item) => [item.id, item.operation ?? []]));
-  } catch {
+  } catch (error) {
+    // scoped 权限查询失败(网络/网关)时按钮全隐是 fail-closed 的安全默认,但这与
+    // 「确无权限」难分。http 层已弹通用错误 toast,此处留 debug 便于排障区分二者。
+    console.debug("[model-resources] getLlmItemPermissions scoped fetch failed", error);
     return {};
   }
 }
