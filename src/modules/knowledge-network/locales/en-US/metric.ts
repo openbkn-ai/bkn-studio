@@ -84,6 +84,7 @@ export const metricPart = {
     metricQueryStepLabel: "Step",
     metricQueryStepRequired: "Please select a step.",
     metricQuerySuccess: "Query completed",
+    metricQueryTableTitle: "Detail table",
     metricQueryTimeRangeLabel: "Time range",
     metricQueryCustomEndTime: "End time",
     metricQueryCustomStartTime: "Start time",

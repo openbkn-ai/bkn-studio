@@ -82,6 +82,7 @@ export const metricPart = {
     metricQueryStepLabel: "步长",
     metricQueryStepRequired: "请选择步长。",
     metricQuerySuccess: "查询成功",
+    metricQueryTableTitle: "明细表格",
     metricQueryTimeRangeLabel: "时间范围",
     metricQueryCustomEndTime: "结束时间",
     metricQueryCustomStartTime: "开始时间",

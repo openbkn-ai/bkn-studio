@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Card, DatePicker, Form, InputNumber, Select, Space, Switch, Table } from "antd";
+import { Card, Collapse, DatePicker, Form, InputNumber, Select, Space, Switch, Table } from "antd";
 import type { TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -306,13 +306,26 @@ export function MetricDataQueryPanel({
 
       <Card title={t("knowledgeNetwork.metricQueryResultTitle")}>
         {result?.visualHint ? renderVisualResult(result, metricName) : null}
-        <Table
-          columns={columns}
-          dataSource={(result?.rows ?? []).map((row, index) => ({ ...row, key: index }))}
-          locale={{ emptyText: t("knowledgeNetwork.metricQueryEmpty") }}
-          pagination={false}
-          scroll={{ x: true }}
-          size="small"
+        <Collapse
+          bordered={false}
+          className={styles.resultTableCollapse}
+          defaultActiveKey={[]}
+          items={[
+            {
+              key: "table",
+              label: t("knowledgeNetwork.metricQueryTableTitle"),
+              children: (
+                <Table
+                  columns={columns}
+                  dataSource={(result?.rows ?? []).map((row, index) => ({ ...row, key: index }))}
+                  locale={{ emptyText: t("knowledgeNetwork.metricQueryEmpty") }}
+                  pagination={false}
+                  scroll={{ x: true }}
+                  size="small"
+                />
+              ),
+            },
+          ]}
         />
         {result?.durationMs ? (
           <div className={styles.metaRow}>
