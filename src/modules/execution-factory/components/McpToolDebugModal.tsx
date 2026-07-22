@@ -14,6 +14,8 @@ import { debugMcpTool } from "@/modules/execution-factory/services/mcp.service";
 import type { McpToolDebugResult } from "@/modules/execution-factory/types/mcp";
 import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
 
+import { JsonCodeBlock } from "./JsonCodeBlock";
+
 type McpToolDebugModalProps = {
   inputSchema?: unknown;
   mcpId: string;
@@ -103,9 +105,7 @@ export function McpToolDebugModal({
       {result ? (
         <Alert
           description={
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-              {JSON.stringify(result, null, 2)}
-            </pre>
+            <JsonCodeBlock value={result} />
           }
           message={t("executionFactory.debugResultTitle")}
           showIcon

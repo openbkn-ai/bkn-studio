@@ -9,38 +9,13 @@ import { QuestionCircleOutlined, RobotOutlined } from "@ant-design/icons";
 import { Alert, Progress, Tag, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
-import type {
-  AgentVisibility,
-  CapabilityManifest,
-  CapabilityRiskLevel,
-  CapabilitySideEffect,
-} from "@/modules/execution-factory/types/capability-manifest";
+import type { CapabilityManifest } from "@/modules/execution-factory/types/capability-manifest";
 import { getCapabilityReadiness } from "@/modules/execution-factory/utils/capability-manifest";
 
 import styles from "./CapabilityAgentReadinessPanel.module.css";
 
 type CapabilityAgentReadinessPanelProps = {
   manifest: CapabilityManifest;
-};
-
-const riskColorMap: Record<CapabilityRiskLevel, string> = {
-  low: "green",
-  medium: "gold",
-  high: "red",
-};
-
-const visibilityColorMap: Record<AgentVisibility, string> = {
-  hidden: "default",
-  discoverable: "blue",
-  callable: "green",
-};
-
-const sideEffectColorMap: Record<CapabilitySideEffect, string> = {
-  none: "green",
-  read: "blue",
-  write: "gold",
-  external_action: "red",
-  unknown: "default",
 };
 
 const READINESS_DIMENSIONS: Array<{ key: string; label: string; weight: number }> = [
@@ -143,17 +118,17 @@ export function CapabilityAgentReadinessPanel({
 
       <div className={styles.tags}>
         <Tag>{sourceTypeLabel(manifest.sourceType)}</Tag>
-        <Tag color={sideEffectColorMap[sideEffects]}>
+        <Tag>
           {t(`executionFactory.agentReadiness.sideEffects.${sideEffects}`, {
             defaultValue: `副作用：${sideEffects}`,
           })}
         </Tag>
-        <Tag color={riskColorMap[riskLevel]}>
+        <Tag>
           {t(`executionFactory.agentReadiness.risk.${riskLevel}`, {
             defaultValue: `风险：${riskLevel}`,
           })}
         </Tag>
-        <Tag color={visibilityColorMap[agentVisibility]}>
+        <Tag>
           {t(`executionFactory.agentReadiness.visibility.${agentVisibility}`, {
             defaultValue: `Agent：${agentVisibility}`,
           })}

@@ -20,7 +20,7 @@
 
 .page {
   min-height: calc(100vh - 120px);
-  padding: 0 24px 24px;
+  padding: 20px 24px 24px;
   background: var(--color-bg-surface);
 }
 

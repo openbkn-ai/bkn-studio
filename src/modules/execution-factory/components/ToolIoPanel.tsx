@@ -17,6 +17,7 @@ import type {
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 import { resolveIoPreviewValue } from "@/modules/execution-factory/utils/generate-sample-json";
 
+import { JsonCodeBlock } from "./JsonCodeBlock";
 import styles from "./ToolIoPanel.module.css";
 
 type ToolIoPanelProps = {
@@ -24,14 +25,6 @@ type ToolIoPanelProps = {
   ioSpec?: ToolIoSpec;
   runLogs?: ToolRunLogEntry[];
 };
-
-function renderJson(value: unknown) {
-  if (value === undefined || value === null) {
-    return "-";
-  }
-
-  return JSON.stringify(value, null, 2);
-}
 
 function ParameterTable({
   emptyText,
@@ -130,9 +123,7 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
     children: (
       <div>
         <p className={styles.emptyHint}>{response.description ?? "-"}</p>
-        <pre className={styles.jsonPreview}>
-          {renderJson(resolveIoPreviewValue(response.example, response.schema))}
-        </pre>
+        <JsonCodeBlock value={resolveIoPreviewValue(response.example, response.schema)} />
       </div>
     ),
   }));
@@ -163,11 +154,12 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
             {ioSpec?.requestBodyDescription ? (
               <p className={styles.emptyHint}>{ioSpec.requestBodyDescription}</p>
             ) : null}
-            <pre className={styles.jsonPreview}>
-              {renderJson(
-                resolveIoPreviewValue(ioSpec?.requestBodyExample, ioSpec?.requestBodySchema),
+            <JsonCodeBlock
+              value={resolveIoPreviewValue(
+                ioSpec?.requestBodyExample,
+                ioSpec?.requestBodySchema,
               )}
-            </pre>
+            />
           </section>
           {responseTabs.length ? (
             <section>
@@ -224,7 +216,7 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
                   {entry.statusCode ?? "-"} · {entry.durationMs ?? "-"}ms
                   {entry.error ? ` · ${entry.error}` : ""}
                 </div>
-                <pre className={styles.jsonPreview}>{renderJson(entry.body)}</pre>
+                <JsonCodeBlock value={entry.body} />
               </div>
             ))}
           </div>
