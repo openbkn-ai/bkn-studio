@@ -18,6 +18,7 @@ import { CrudFormPage } from "@/framework/scaffold/CrudFormPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { FunctionDefinitionFields } from "@/modules/execution-factory/components/FunctionDefinitionFields";
 import { HttpToolLifecyclePanel } from "@/modules/execution-factory/components/HttpToolLifecyclePanel";
+import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
 import { ToolDebugPanel } from "@/modules/execution-factory/components/ToolDebugPanel";
 import { ToolIoPanel } from "@/modules/execution-factory/components/ToolIoPanel";
 import {
@@ -203,6 +204,15 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
                     <Form.Item label={t("executionFactory.useRule")} name="useRule">
                       <Input.TextArea rows={2} />
                     </Form.Item>
+                    {metadataType === "openapi" ? (
+                      <Form.Item
+                        label={t("executionFactory.openapiSpec")}
+                        name="openapiSpec"
+                        rules={[{ required: true, message: t("common.required") }]}
+                      >
+                        <OpenApiSpecInput rows={10} showEndpointReview />
+                      </Form.Item>
+                    ) : null}
                   </>
                 }
                 debugWorkbench={
@@ -232,11 +242,6 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
                 }
                 metadataTypeLabel={t(`executionFactory.metadataTypes.${metadataType}`)}
               />
-              {metadataType === "openapi" ? (
-                <Form.Item hidden name="openapiSpec">
-                  <Input />
-                </Form.Item>
-              ) : null}
               <Form.Item hidden name={["globalParameters", "name"]}>
                 <Input />
               </Form.Item>
