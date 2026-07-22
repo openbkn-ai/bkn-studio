@@ -9,7 +9,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSkillFileTree,
+  buildSkillFileTreeWithConflicts,
   collectSkillFileTreeKeys,
+  getDefaultSkillFileTreeExpandedKeys,
+  SKILL_FILE_TREE_FULL_EXPAND_LIMIT,
 } from "@/modules/execution-factory/utils/skill-file-tree";
 
 describe("buildSkillFileTree", () => {
@@ -50,12 +53,43 @@ describe("buildSkillFileTree", () => {
     expect(tree[0]?.children?.[0]?.file?.relPath).toBe("scripts/dataset.js");
   });
 
-  it("collects expandable directory keys", () => {
+  it("keeps the first path shape when file and directory collide", () => {
+    const fileFirst = buildSkillFileTreeWithConflicts([
+      { relPath: "bin" },
+      { relPath: "bin/mysql.exe" },
+    ]);
+    expect(fileFirst.nodes).toHaveLength(1);
+    expect(fileFirst.nodes[0]?.isLeaf).toBe(true);
+    expect(fileFirst.nodes[0]?.file?.relPath).toBe("bin");
+    expect(fileFirst.conflicts).toEqual(["bin/mysql.exe"]);
+
+    const dirFirst = buildSkillFileTreeWithConflicts([
+      { relPath: "bin/mysql.exe" },
+      { relPath: "bin" },
+    ]);
+    expect(dirFirst.nodes).toHaveLength(1);
+    expect(dirFirst.nodes[0]?.isLeaf).toBe(false);
+    expect(dirFirst.nodes[0]?.children?.[0]?.file?.relPath).toBe("bin/mysql.exe");
+    expect(dirFirst.conflicts).toEqual(["bin"]);
+  });
+
+  it("collects expandable directory keys with optional depth limit", () => {
     const tree = buildSkillFileTree([
       { relPath: "a/b/c.txt" },
       { relPath: "root.txt" },
     ]);
 
     expect(collectSkillFileTreeKeys(tree)).toEqual(["a/", "a/b/"]);
+    expect(collectSkillFileTreeKeys(tree, { maxDepth: 1 })).toEqual(["a/"]);
+  });
+
+  it("expands only the first level for large packages", () => {
+    const files = Array.from({ length: SKILL_FILE_TREE_FULL_EXPAND_LIMIT + 1 }, (_, index) => ({
+      relPath: `dir/nested/file-${index}.txt`,
+    }));
+    const tree = buildSkillFileTree(files);
+
+    expect(getDefaultSkillFileTreeExpandedKeys(tree, files.length)).toEqual(["dir/"]);
+    expect(getDefaultSkillFileTreeExpandedKeys(tree, 2)).toEqual(["dir/", "dir/nested/"]);
   });
 });

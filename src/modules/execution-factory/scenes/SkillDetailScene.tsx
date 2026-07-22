@@ -10,19 +10,15 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   DownloadOutlined,
-  FileOutlined,
   FileTextOutlined,
-  FolderOpenOutlined,
-  FolderOutlined,
   HistoryOutlined,
   IdcardOutlined,
   SettingOutlined,
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Alert, Breadcrumb, Empty, Layout, Space, Spin, Tag, Tree, Typography } from "antd";
-import type { DataNode } from "antd/es/tree";
-import { useCallback, useEffect, useMemo, useState, type Key } from "react";
+import { Alert, Breadcrumb, Empty, Layout, Space, Spin, Tag, Typography } from "antd";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -31,6 +27,7 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
+import { SkillFileTreeView } from "@/modules/execution-factory/components/SkillFileTreeView";
 import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
 import {
   downloadSkillPackage,
@@ -52,12 +49,6 @@ import {
 } from "@/modules/execution-factory/utils/detail-display";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
-import { formatSkillFileSize } from "@/modules/execution-factory/utils/skill-file-preview";
-import {
-  buildSkillFileTree,
-  collectSkillFileTreeKeys,
-  type SkillFileTreeNode,
-} from "@/modules/execution-factory/utils/skill-file-tree";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 import styles from "./toolbox-detail.module.css";
@@ -86,39 +77,6 @@ function buildFileEntries(content: SkillContentResult | null): SkillFileSummary[
   return summaries;
 }
 
-function toTreeDataNodes(nodes: SkillFileTreeNode[]): DataNode[] {
-  return nodes.map((node) => {
-    if (node.isLeaf) {
-      const meta = [node.file?.mimeType, formatSkillFileSize(node.file?.size)]
-        .filter(Boolean)
-        .join(" · ");
-
-      return {
-        key: node.key,
-        isLeaf: true,
-        selectable: true,
-        icon: <FileOutlined />,
-        title: (
-          <span className={styles.fileTreeLeaf}>
-            <span className={styles.fileTreeTitle}>{node.title}</span>
-            {meta ? <span className={styles.fileTreeMeta}>{meta}</span> : null}
-          </span>
-        ),
-      };
-    }
-
-    return {
-      key: node.key,
-      isLeaf: false,
-      selectable: false,
-      icon: ({ expanded }: { expanded?: boolean }) =>
-        expanded ? <FolderOpenOutlined /> : <FolderOutlined />,
-      title: <span className={styles.fileTreeTitle}>{node.title}</span>,
-      children: toTreeDataNodes(node.children ?? []),
-    };
-  });
-}
-
 export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
   const { t } = useTranslation();
   const auditUserDirectory = useAuditUserDirectory();
@@ -137,11 +95,8 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
   const [contentLoadError, setContentLoadError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
 
   const fileEntries = useMemo(() => buildFileEntries(content), [content]);
-  const fileTree = useMemo(() => buildSkillFileTree(fileEntries), [fileEntries]);
-  const fileTreeData = useMemo(() => toTreeDataNodes(fileTree), [fileTree]);
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -176,10 +131,6 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
   useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
-
-  useEffect(() => {
-    setExpandedKeys(collectSkillFileTreeKeys(fileTree));
-  }, [fileTree]);
 
   useEffect(() => {
     if (fileEntries.length === 0) {
@@ -458,25 +409,16 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
                   </span>
                 </div>
                 <div className={styles.fileTreeWrap}>
-                  <Tree
-                    blockNode
-                    className={styles.fileTree}
-                    expandedKeys={expandedKeys}
-                    onExpand={(keys) => setExpandedKeys(keys)}
-                    onSelect={(selectedKeys) => {
-                      const key = selectedKeys[0];
-                      if (typeof key !== "string") {
-                        return;
-                      }
-
-                      const nextFile = fileEntries.find((item) => item.relPath === key);
+                  <SkillFileTreeView
+                    files={fileEntries}
+                    onSelectFile={(relPath) => {
+                      const nextFile = fileEntries.find((item) => item.relPath === relPath);
                       if (nextFile) {
                         setSelectedFile(nextFile);
                       }
                     }}
-                    selectedKeys={selectedFile ? [selectedFile.relPath] : []}
-                    showIcon
-                    treeData={fileTreeData}
+                    selectedPath={selectedFile?.relPath}
+                    showFileMeta
                   />
                 </div>
               </Sider>

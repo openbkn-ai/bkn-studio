@@ -5,50 +5,22 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { FileOutlined, FolderOpenOutlined, FolderOutlined } from "@ant-design/icons";
-import { Alert, Spin, Tree } from "antd";
-import type { DataNode } from "antd/es/tree";
-import { useEffect, useMemo, useState, type Key } from "react";
+import { Alert, Spin } from "antd";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { SkillFileTreeView } from "@/modules/execution-factory/components/SkillFileTreeView";
 import {
   getSkillContent,
   readSkillFile,
 } from "@/modules/execution-factory-lab/services/capabilities-lab.service";
 import type { SkillFileSummary } from "@/modules/execution-factory-lab/types/capability";
-import {
-  buildSkillFileTree,
-  collectSkillFileTreeKeys,
-  type SkillFileTreeNode,
-} from "@/modules/execution-factory/utils/skill-file-tree";
+
+import styles from "./skill-file-tree-panel.module.css";
 
 type SkillFileTreePanelProps = {
   capabilityId: string;
 };
-
-function toTreeDataNodes(nodes: SkillFileTreeNode[]): DataNode[] {
-  return nodes.map((node) => {
-    if (node.isLeaf) {
-      return {
-        key: node.key,
-        isLeaf: true,
-        selectable: true,
-        icon: <FileOutlined />,
-        title: node.title,
-      };
-    }
-
-    return {
-      key: node.key,
-      isLeaf: false,
-      selectable: false,
-      icon: ({ expanded }: { expanded?: boolean }) =>
-        expanded ? <FolderOpenOutlined /> : <FolderOutlined />,
-      title: node.title,
-      children: toTreeDataNodes(node.children ?? []),
-    };
-  });
-}
 
 export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
   const { t } = useTranslation();
@@ -57,10 +29,6 @@ export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
   const [files, setFiles] = useState<SkillFileSummary[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [preview, setPreview] = useState<string>("");
-  const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
-
-  const fileTree = useMemo(() => buildSkillFileTree(files), [files]);
-  const treeData = useMemo(() => toTreeDataNodes(fileTree), [fileTree]);
 
   useEffect(() => {
     setLoading(true);
@@ -85,10 +53,6 @@ export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
   }, [capabilityId]);
 
   useEffect(() => {
-    setExpandedKeys(collectSkillFileTreeKeys(fileTree));
-  }, [fileTree]);
-
-  useEffect(() => {
     if (!selectedPath) {
       return;
     }
@@ -109,41 +73,18 @@ export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16 }}>
+    <div className={styles.layout}>
       {files.length > 0 ? (
-        <Tree
-          blockNode
-          expandedKeys={expandedKeys}
-          onExpand={(keys) => setExpandedKeys(keys)}
-          onSelect={(selectedKeys) => {
-            const key = selectedKeys[0];
-            if (typeof key === "string" && files.some((item) => item.relPath === key)) {
-              setSelectedPath(key);
-            }
-          }}
-          selectedKeys={selectedPath ? [selectedPath] : []}
-          showIcon
-          style={{
-            background: "#fff",
-            border: "1px solid #f0f0f0",
-            borderRadius: 8,
-            padding: 8,
-          }}
-          treeData={treeData}
+        <SkillFileTreeView
+          className={styles.tree}
+          files={files}
+          onSelectFile={setSelectedPath}
+          selectedPath={selectedPath}
         />
       ) : (
         <Alert message={t("executionFactoryLab.skillFilesEmpty")} showIcon type="info" />
       )}
-      <pre
-        style={{
-          background: "#fafafa",
-          border: "1px solid #f0f0f0",
-          borderRadius: 8,
-          minHeight: 240,
-          padding: 12,
-          whiteSpace: "pre-wrap",
-        }}
-      >
+      <pre className={styles.preview}>
         {preview || t("executionFactoryLab.skillFilePreviewEmpty")}
       </pre>
     </div>
