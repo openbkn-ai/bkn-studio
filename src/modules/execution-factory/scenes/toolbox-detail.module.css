@@ -131,6 +131,41 @@
   overflow: auto;
 }
 
+.fileTreeWrap {
+  max-height: calc(100vh - 320px);
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.fileTree {
+  background: transparent;
+}
+
+.fileTree :global(.ant-tree-node-content-wrapper) {
+  min-width: 0;
+}
+
+.fileTreeLeaf {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fileTreeTitle {
+  overflow: hidden;
+  color: rgba(0, 0, 0, 0.88);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileTreeMeta {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .toolItem {
   padding: 12px;
   border: 1px solid rgba(0, 0, 0, 0.08);

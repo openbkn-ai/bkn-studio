@@ -5,10 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, List, Spin } from "antd";
-
-import { useEffect, useState } from "react";
-
+import { FileOutlined, FolderOpenOutlined, FolderOutlined } from "@ant-design/icons";
+import { Alert, Spin, Tree } from "antd";
+import type { DataNode } from "antd/es/tree";
+import { useEffect, useMemo, useState, type Key } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -16,10 +16,39 @@ import {
   readSkillFile,
 } from "@/modules/execution-factory-lab/services/capabilities-lab.service";
 import type { SkillFileSummary } from "@/modules/execution-factory-lab/types/capability";
+import {
+  buildSkillFileTree,
+  collectSkillFileTreeKeys,
+  type SkillFileTreeNode,
+} from "@/modules/execution-factory/utils/skill-file-tree";
 
 type SkillFileTreePanelProps = {
   capabilityId: string;
 };
+
+function toTreeDataNodes(nodes: SkillFileTreeNode[]): DataNode[] {
+  return nodes.map((node) => {
+    if (node.isLeaf) {
+      return {
+        key: node.key,
+        isLeaf: true,
+        selectable: true,
+        icon: <FileOutlined />,
+        title: node.title,
+      };
+    }
+
+    return {
+      key: node.key,
+      isLeaf: false,
+      selectable: false,
+      icon: ({ expanded }: { expanded?: boolean }) =>
+        expanded ? <FolderOpenOutlined /> : <FolderOutlined />,
+      title: node.title,
+      children: toTreeDataNodes(node.children ?? []),
+    };
+  });
+}
 
 export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
   const { t } = useTranslation();
@@ -28,6 +57,10 @@ export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
   const [files, setFiles] = useState<SkillFileSummary[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [preview, setPreview] = useState<string>("");
+  const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
+
+  const fileTree = useMemo(() => buildSkillFileTree(files), [files]);
+  const treeData = useMemo(() => toTreeDataNodes(fileTree), [fileTree]);
 
   useEffect(() => {
     setLoading(true);
@@ -36,7 +69,11 @@ export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
       .then((content) => {
         setFiles(content.files);
         if (content.files.length > 0) {
-          setSelectedPath(content.files[0].relPath);
+          setSelectedPath(
+            content.files.find((item) => item.relPath === "SKILL.md")?.relPath ??
+              content.files[0]?.relPath ??
+              null,
+          );
         } else if (content.content) {
           setPreview(content.content);
         }
@@ -46,6 +83,10 @@ export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
       })
       .finally(() => setLoading(false));
   }, [capabilityId]);
+
+  useEffect(() => {
+    setExpandedKeys(collectSkillFileTreeKeys(fileTree));
+  }, [fileTree]);
 
   useEffect(() => {
     if (!selectedPath) {
@@ -68,24 +109,31 @@ export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 16 }}>
-      <List
-        bordered
-        dataSource={files}
-        locale={{ emptyText: t("executionFactoryLab.skillFilesEmpty") }}
-        renderItem={(item) => (
-          <List.Item
-            onClick={() => setSelectedPath(item.relPath)}
-            style={{
-              cursor: "pointer",
-              background: selectedPath === item.relPath ? "#f0f7ff" : undefined,
-            }}
-          >
-            {item.relPath}
-          </List.Item>
-        )}
-        size="small"
-      />
+    <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16 }}>
+      {files.length > 0 ? (
+        <Tree
+          blockNode
+          expandedKeys={expandedKeys}
+          onExpand={(keys) => setExpandedKeys(keys)}
+          onSelect={(selectedKeys) => {
+            const key = selectedKeys[0];
+            if (typeof key === "string" && files.some((item) => item.relPath === key)) {
+              setSelectedPath(key);
+            }
+          }}
+          selectedKeys={selectedPath ? [selectedPath] : []}
+          showIcon
+          style={{
+            background: "#fff",
+            border: "1px solid #f0f0f0",
+            borderRadius: 8,
+            padding: 8,
+          }}
+          treeData={treeData}
+        />
+      ) : (
+        <Alert message={t("executionFactoryLab.skillFilesEmpty")} showIcon type="info" />
+      )}
       <pre
         style={{
           background: "#fafafa",
