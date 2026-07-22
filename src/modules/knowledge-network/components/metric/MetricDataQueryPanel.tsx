@@ -51,6 +51,11 @@ const SAME_PERIOD_GRANULARITY_OPTIONS: MetricSamePeriodTimeGranularity[] = [
 ];
 
 function needsCalendarStep(mode: MetricDataQueryMode | undefined) {
+  // Same-period hides step UI and syncs time.step from comparison granularity.
+  return mode === "trend" || mode === "proportion";
+}
+
+function needsFillNull(mode: MetricDataQueryMode | undefined) {
   return mode === "trend" || mode === "sameperiod" || mode === "proportion";
 }
 
@@ -272,7 +277,7 @@ export function MetricDataQueryPanel({
           <Form.Item label={t("knowledgeNetwork.metricQueryLimit")} name="limit">
             <InputNumber min={1} max={1000} style={{ width: 100 }} />
           </Form.Item>
-          {needsCalendarStep(queryMode) ? (
+          {needsFillNull(queryMode) ? (
             <Form.Item label={t("knowledgeNetwork.metricQueryFillNull")} name="fillNull" valuePropName="checked">
               <Switch />
             </Form.Item>

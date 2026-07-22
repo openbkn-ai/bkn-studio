@@ -361,13 +361,19 @@ function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
         }
       : getRelativeTimeWindow(params.timeRange);
 
+  // Same-period: sync time.step from comparison granularity (no separate step UI).
+  const step =
+    params.mode === "sameperiod"
+      ? (params.samePeriodGranularity ?? "day")
+      : (params.step ?? "day");
+
   const payload: Record<string, unknown> = {
     limit: params.limit,
     time: {
       ...time,
       instant: isInstant,
       // Backend treats instant=false as trend and requires calendar time.step.
-      ...(!isInstant ? { step: params.step ?? "day" } : {}),
+      ...(!isInstant ? { step } : {}),
     },
   };
 
