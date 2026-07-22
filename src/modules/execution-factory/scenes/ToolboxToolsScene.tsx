@@ -17,10 +17,10 @@ import {
   FileTextOutlined,
   LinkOutlined,
   NodeIndexOutlined,
-  SettingOutlined,
   TagOutlined,
 } from "@ant-design/icons";
 import { Alert, Checkbox, Empty, Layout, Space, Spin, Switch, Tag } from "antd";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -72,6 +72,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<"create" | null>(null);
+  const [editToolId, setEditToolId] = useState<string | null>(null);
   const [debugRecord, setDebugRecord] = useState<ToolRecord | null>(null);
   const [toolRunLogs, setToolRunLogs] = useState<ToolRunLogEntry[]>([]);
   const [importOpenApiOpen, setImportOpenApiOpen] = useState(false);
@@ -256,15 +257,27 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
       return null;
     }
 
-    const color =
+    const style: CSSProperties =
       toolbox.status === "published"
-        ? "success"
+        ? {
+            background: "var(--color-success-bg)",
+            borderColor: "var(--color-success-border)",
+            color: "var(--color-success-text)",
+          }
         : toolbox.status === "offline"
-          ? "default"
-          : "processing";
+          ? {
+              background: "var(--color-error-bg)",
+              borderColor: "var(--color-error-border)",
+              color: "var(--color-error-text)",
+            }
+          : {
+              background: "var(--color-info-bg)",
+              borderColor: "var(--color-info-border)",
+              color: "var(--color-info-text)",
+            };
 
     return (
-      <Tag color={color}>
+      <Tag style={style}>
         {t(`executionFactory.toolboxStatuses.${toolbox.status}`)}
       </Tag>
     );
@@ -321,7 +334,6 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
           <>
             <Switch
               checked={selectedTool.status === "enabled"}
-              disabled={viewMode}
               onChange={() => handleToggleStatus(selectedTool)}
               size="small"
             />{" "}
@@ -361,7 +373,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         variant: "mono" as const,
       },
     ];
-  }, [handleToggleStatus, selectedTool, t, toolbox?.serviceUrl, viewMode]);
+  }, [handleToggleStatus, selectedTool, t, toolbox?.serviceUrl]);
 
   const selectedToolManifest = useMemo(() => {
     if (selectedToolDetail) {
@@ -613,20 +625,14 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                     items={toolInfoItems}
                     title={t("executionFactory.toolboxToolInfoTitle")}
                     titleExtra={
-                      !viewMode ? (
-                        <PermissionGate permissions="execution-factory:tool:edit">
-                          <AppButton
-                            onClick={() =>
-                              void navigate(
-                                `/execution-factory/toolboxes/${boxId}/tools/${selectedTool.toolId}/edit`,
-                              )
-                            }
-                            type="link"
-                          >
-                            {t("executionFactory.openToolIde")}
-                          </AppButton>
-                        </PermissionGate>
-                      ) : null
+                      <PermissionGate permissions="execution-factory:tool:edit">
+                        <AppButton
+                          onClick={() => setEditToolId(selectedTool.toolId)}
+                          type="link"
+                        >
+                          {t("common.edit")}
+                        </AppButton>
+                      </PermissionGate>
                     }
                   />
                   {selectedToolManifest ? (
@@ -644,19 +650,6 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                             {t("executionFactory.debug")}
                           </AppButton>
                         </PermissionGate>
-                        {!viewMode ? (
-                          <PermissionGate permissions="execution-factory:tool:edit">
-                            <AppButton
-                              icon={<SettingOutlined />}
-                              onClick={() => {
-                                void navigate(
-                                  `/execution-factory/toolboxes/${boxId}/tools/${selectedTool.toolId}/edit`,
-                                );
-                              }}
-                              style={{ marginLeft: 8 }}
-                            />
-                          </PermissionGate>
-                        ) : null}
                       </div>
                     </div>
                     <ToolIoPanel
@@ -719,6 +712,22 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
           void loadTools();
         }}
         open={formMode === "create"}
+        toolboxMetadataType={toolbox?.metadataType}
+      />
+      <ToolFormDrawer
+        boxId={boxId}
+        mode="edit"
+        onClose={() => setEditToolId(null)}
+        onSuccess={() => {
+          const editedId = editToolId;
+          setEditToolId(null);
+          void loadTools();
+          if (editedId && selectedTool?.toolId === editedId) {
+            void handleSelectTool(selectedTool);
+          }
+        }}
+        open={editToolId !== null}
+        toolId={editToolId ?? undefined}
         toolboxMetadataType={toolbox?.metadataType}
       />
       <ImportOpenApiToolsModal

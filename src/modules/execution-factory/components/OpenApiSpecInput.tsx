@@ -25,6 +25,7 @@ import {
 } from "@/modules/execution-factory/utils/metadata-content";
 import { triggerBrowserDownload } from "@/modules/execution-factory/utils/download-file";
 
+import { JsonEditor } from "./JsonEditor";
 import styles from "./OpenApiSpecInput.module.css";
 
 type OpenApiSpecInputProps = {
@@ -152,10 +153,9 @@ export function OpenApiSpecInput({
             key: "paste",
             label: t("executionFactory.openapiInputPaste"),
             children: (
-              <Input.TextArea
-                onChange={(event) => handlePasteChange(event.target.value)}
-                placeholder="{...}"
-                rows={rows}
+              <JsonEditor
+                height={Math.max(rows * 22, 200)}
+                onChange={handlePasteChange}
                 value={value}
               />
             ),
