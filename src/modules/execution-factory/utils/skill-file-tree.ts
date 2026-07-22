@@ -76,8 +76,7 @@ export function buildSkillFileTree(files: SkillFileTreeLeaf[]): SkillFileTreeNod
     let current = root;
     let prefix = "";
 
-    for (let index = 0; index < segments.length; index += 1) {
-      const segment = segments[index]!;
+    for (const [index, segment] of segments.entries()) {
       const isLeaf = index === segments.length - 1;
       prefix = prefix ? `${prefix}/${segment}` : segment;
       const key = isLeaf ? prefix : `${prefix}/`;
