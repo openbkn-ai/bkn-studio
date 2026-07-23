@@ -241,7 +241,7 @@ export type BackendMetric = {
       aggr?: KnowledgeNetworkMetricRecord["calculationFormula"]["aggregation"]["aggr"];
       property?: string;
     };
-    analysis_dimensions?: Array<{ property?: string } | string>;
+    analysis_dimensions?: Array<{ name?: string; property?: string } | string>;
     condition?: BackendMetricCondition;
     group_by?: Array<{ property?: string } | string>;
     having?: {
@@ -254,7 +254,9 @@ export type BackendMetric = {
       property?: string;
     }>;
   };
+  analysis_dimensions?: Array<{ display_name?: string; name?: string; property?: string } | string>;
   comment?: string;
+  creator?: BackendAccountInfo | string;
   id: string;
   metric_type?: KnowledgeNetworkMetricRecord["metricType"];
   name: string;
@@ -268,7 +270,8 @@ export type BackendMetric = {
   unit?: KnowledgeNetworkMetricRecord["unit"];
   unit_type?: KnowledgeNetworkMetricRecord["unitType"];
   update_time?: number;
-  updater?: BackendAccountInfo;
+  updater?: BackendAccountInfo | string;
+  updater_name?: string;
 };
 
 export type BackendTaskChild = {

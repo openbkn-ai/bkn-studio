@@ -5,13 +5,23 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import axios from "axios";
-
 import { http } from "@/framework/request/http";
-import type { ObjectTypeLogicOperatorRecord } from "@/modules/knowledge-network/types/knowledge-network";
+import type {
+  KnowledgeNetworkMetricRecord,
+  ObjectTypeDataProperty,
+  ObjectTypeLogicMetricModelRecord,
+  ObjectTypeLogicOperatorRecord,
+} from "@/modules/knowledge-network/types/knowledge-network";
 import type { BackendSmallModel } from "@/modules/knowledge-network/services/mappers/backend-types";
 import { mapSmallModel } from "@/modules/knowledge-network/services/mappers";
 import {
+  getKnowledgeNetworkMetric,
+  listKnowledgeNetworkMetrics,
+} from "@/modules/knowledge-network/services/metric.service";
+import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/object-type.service";
+import {
+  buildMockObjectTypeDetail,
+  mockMetrics,
   mockObjectTypeLogicMetricModels,
   mockObjectTypeLogicOperators,
   mockObjectTypeSmallModels,
@@ -22,34 +32,33 @@ import {
 } from "@/modules/knowledge-network/services/shared/agent-operator-client";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
 import { getInputParamsFromToolOpenAPISpec } from "@/modules/knowledge-network/utils/tool-input-params";
+import { mapMetricAnalysisDimensionFields } from "@/modules/knowledge-network/utils/metric-property-display";
 
-type LegacyMetricModelDimension = {
-  display_name?: string;
-  name: string;
-  type?: string;
-};
+function mapKnowledgeNetworkMetricToLogicMetricRecord(
+  metric: KnowledgeNetworkMetricRecord,
+  scopeProperties: ObjectTypeDataProperty[] = [],
+): ObjectTypeLogicMetricModelRecord {
+  const analysisDimensions = metric.calculationFormula.analysisDimensions ?? [];
 
-type LegacyMetricModelRecord = {
-  analysis_dimensions?: LegacyMetricModelDimension[];
-  group_name?: string;
-  id: string;
-  name: string;
-};
+  return {
+    analysisDimensions: mapMetricAnalysisDimensionFields(analysisDimensions, scopeProperties),
+    groupName: metric.tags[0] ?? "",
+    id: metric.id,
+    name: metric.name,
+  };
+}
 
-type LegacyMetricModelListResponse = {
-  entries?: LegacyMetricModelRecord[];
-};
-
-async function getLegacyMetricModelDetail(modelId: string): Promise<LegacyMetricModelRecord | null> {
-  const response = await http.get<LegacyMetricModelRecord[] | LegacyMetricModelRecord>(
-    `/mdl-data-model/in/v1/metric-models/${modelId}`,
-  );
-
-  if (Array.isArray(response.data)) {
-    return response.data[0] ?? null;
+async function loadScopeObjectTypeProperties(networkId: string, scopeRef: string) {
+  if (!networkId || !scopeRef) {
+    return [];
   }
 
-  return response.data ?? null;
+  if (useMock) {
+    return buildMockObjectTypeDetail(networkId, scopeRef)?.dataProperties ?? [];
+  }
+
+  const detail = await getKnowledgeNetworkObjectTypeDetail(networkId, scopeRef);
+  return detail?.dataProperties ?? [];
 }
 
 function mapOperatorListItem(item: AgentOperatorListItem): ObjectTypeLogicOperatorRecord {
@@ -64,38 +73,51 @@ function mapOperatorListItem(item: AgentOperatorListItem): ObjectTypeLogicOperat
   };
 }
 
-export async function listObjectTypeLogicMetricModels() {
-  if (useMock) {
-    return wait(mockObjectTypeLogicMetricModels.map((item) => ({ ...item })));
+export async function listObjectTypeLogicMetricModels(networkId: string, scopeRef: string) {
+  if (!networkId || !scopeRef) {
+    return [];
   }
 
-  const response = await http.get<LegacyMetricModelListResponse>(
-    "/mdl-data-model/in/v1/metric-models",
-    {
-      params: {
-        direction: "desc",
-        limit: -1,
-        offset: 0,
-        sort: "update_time",
-      },
-    },
-  );
+  const scopeProperties = await loadScopeObjectTypeProperties(networkId, scopeRef);
 
-  return (response.data.entries ?? []).map((item) => ({
-    analysisDimensions: (item.analysis_dimensions ?? []).map((dimension) => ({
-      displayName: dimension.display_name ?? dimension.name,
-      name: dimension.name,
-      type: dimension.type ?? "string",
-    })),
-    groupName: item.group_name ?? "",
-    id: item.id,
-    name: item.name,
-  }));
+  if (useMock) {
+    const metrics = (mockMetrics[networkId] ?? []).filter((item) => item.scopeRef === scopeRef);
+    return wait(
+      metrics.map((metric) => mapKnowledgeNetworkMetricToLogicMetricRecord(metric, scopeProperties)),
+    );
+  }
+
+  const result = await listKnowledgeNetworkMetrics(networkId, {
+    direction: "desc",
+    limit: -1,
+    offset: 0,
+    scopeRef,
+    sort: "update_time",
+  });
+
+  return result.entries.map((metric) =>
+    mapKnowledgeNetworkMetricToLogicMetricRecord(metric, scopeProperties),
+  );
 }
 
-export async function listObjectTypeLogicMetricModelFields(modelId: string) {
+export async function listObjectTypeLogicMetricModelFields(networkId: string, metricId: string) {
+  if (!networkId || !metricId) {
+    return [];
+  }
+
   if (useMock) {
-    const model = mockObjectTypeLogicMetricModels.find((item) => item.id === modelId);
+    const metric = Object.values(mockMetrics).flat().find((item) => item.id === metricId);
+    if (metric) {
+      const scopeProperties = await loadScopeObjectTypeProperties(networkId, metric.scopeRef);
+      return wait(
+        mapMetricAnalysisDimensionFields(
+          metric.calculationFormula.analysisDimensions ?? [],
+          scopeProperties,
+        ),
+      );
+    }
+
+    const model = mockObjectTypeLogicMetricModels.find((item) => item.id === metricId);
     return wait(
       (model?.analysisDimensions ?? []).map((item) => ({
         displayName: item.displayName,
@@ -105,29 +127,16 @@ export async function listObjectTypeLogicMetricModelFields(modelId: string) {
     );
   }
 
-  try {
-    const response = await http.get<LegacyMetricModelDimension[]>(
-      `/mdl-uniquery/in/v1/metric-models/${modelId}/fields`,
-    );
-
-    return (response.data ?? []).map((item) => ({
-      displayName: item.display_name ?? item.name,
-      name: item.name,
-      type: item.type ?? "string",
-    }));
-  } catch (error) {
-    if (!axios.isAxiosError(error) || error.response?.status !== 404) {
-      throw error;
-    }
-
-    const detail = await getLegacyMetricModelDetail(modelId);
-
-    return (detail?.analysis_dimensions ?? []).map((item) => ({
-      displayName: item.display_name ?? item.name,
-      name: item.name,
-      type: item.type ?? "string",
-    }));
+  const metric = await getKnowledgeNetworkMetric(networkId, metricId);
+  if (!metric) {
+    return [];
   }
+
+  const scopeProperties = await loadScopeObjectTypeProperties(networkId, metric.scopeRef);
+  return mapMetricAnalysisDimensionFields(
+    metric.calculationFormula.analysisDimensions ?? [],
+    scopeProperties,
+  );
 }
 
 export async function listObjectTypeLogicOperators(): Promise<ObjectTypeLogicOperatorRecord[]> {

@@ -5,13 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { MinusCircleOutlined } from "@ant-design/icons";
 import {
   Col,
   Drawer,
   Form,
   Input,
-  InputNumber,
   Row,
   Select,
   Table,
@@ -23,15 +21,13 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
-  FIELD_TYPE_INPUT,
   IDENTIFIER_PATTERN,
-  OPERATOR_TYPE_OPTIONS,
+  LOGIC_ATTRIBUTE_TYPE_OPTIONS,
   VALUE_FROM_OPTIONS,
   extractLeafParams,
   isEmptyExceptZero,
 } from "./constants";
 import {
-  listObjectTypeLogicMetricModelFields,
   listObjectTypeLogicMetricModels,
   listObjectTypeLogicOperators,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -55,6 +51,8 @@ type ObjectTypeLogicAttributeEditDrawerProps = {
   allData: ObjectTypeDataProperty[];
   attrInfo: ObjectTypeLogicProperty;
   logicFields: ObjectTypeLogicProperty[];
+  networkId: string;
+  objectTypeId: string;
   onClose: () => void;
   onOk: (data: ObjectTypeLogicProperty) => void;
   open: boolean;
@@ -110,6 +108,8 @@ export function ObjectTypeLogicAttributeEditDrawer({
   allData,
   attrInfo,
   logicFields,
+  networkId,
+  objectTypeId,
   onClose,
   onOk,
   open,
@@ -123,24 +123,19 @@ export function ObjectTypeLogicAttributeEditDrawer({
     Array<{ label: string; value: string; apiSpec?: unknown; inputParameters?: ObjectTypeLogicOperatorRecord["inputParameters"] }>
   >([]);
   const [settingList, setSettingList] = useState<SettingItem[]>([]);
-  const [dimensionFields, setDimensionFields] = useState<
-    Array<{ label: string; type: string; value: string }>
-  >([]);
   const [metricModelList, setMetricModelList] = useState<ObjectTypeLogicMetricModelRecord[]>([]);
   const type = Form.useWatch("type", form);
   const resourceId = Form.useWatch("resourceId", form);
   const optionsRequestIdRef = useRef(0);
-  const metricFieldsRequestIdRef = useRef(0);
   const isDisplayNameManuallyEdited = useRef(false);
   const isAddMode = !attrInfo?.name;
 
   const logicAttributeTypeOptions = useMemo(
-    () => [
-      {
-        label: t("knowledgeNetwork.objectTypeLogicAttributeTypeOperator"),
-        value: "operator",
-      },
-    ],
+    () =>
+      LOGIC_ATTRIBUTE_TYPE_OPTIONS.map((item) => ({
+        label: t(`knowledgeNetwork.${item.labelKey}`),
+        value: item.value,
+      })),
     [t],
   );
 
@@ -153,18 +148,41 @@ export function ObjectTypeLogicAttributeEditDrawer({
     [t],
   );
 
+  const objectTypePropertyOptions = useMemo(
+    () =>
+      allData.map((item) => ({
+        comment: item.comment,
+        displayName: item.displayName || item.name,
+        label: item.displayName || item.name,
+        name: item.name,
+        type: item.type,
+        value: item.name,
+      })),
+    [allData],
+  );
+
   const propertyOptions = useMemo(
     () => {
       const propertyNames = logicFields.map((item) => item.name);
-      return allData.map((item) => ({
+      return objectTypePropertyOptions.map((item) => ({
         disabled:
           propertyNames.includes(item.name) || (!isAddMode && item.name === attrInfo.name),
-        label: item.name,
+        label: item.label,
         type: item.type,
-        value: item.name,
+        value: item.value,
       }));
     },
-    [allData, attrInfo.name, isAddMode, logicFields],
+    [attrInfo.name, isAddMode, logicFields, objectTypePropertyOptions],
+  );
+
+  const objectTypePropertyNameSet = useMemo(
+    () => new Set(allData.map((item) => item.name)),
+    [allData],
+  );
+
+  const selectedMetric = useMemo(
+    () => metricModelList.find((item) => item.id === resourceId),
+    [metricModelList, resourceId],
   );
 
   useEffect(() => {
@@ -192,16 +210,11 @@ export function ObjectTypeLogicAttributeEditDrawer({
       });
     } else {
       form.resetFields();
-      form.setFieldValue("type", "operator");
+      form.setFieldValue("type", "metric");
     }
 
-    if (attrInfo?.parameters?.length && attrInfo.dataSource?.type === "metric") {
-      setSettingList(
-        attrInfo.parameters.map((item) => ({
-          ...item,
-          id: item.id || createParameterId(),
-        })),
-      );
+    if (attrInfo?.dataSource?.type === "metric") {
+      setSettingList([]);
     }
   }, [attrInfo, form, open]);
 
@@ -213,11 +226,16 @@ export function ObjectTypeLogicAttributeEditDrawer({
     const requestId = ++optionsRequestIdRef.current;
     setNameOptions([]);
     setFlatNameOptions([]);
-    setDimensionFields([]);
 
     void (async () => {
       if (type === "metric") {
-        const models = await listObjectTypeLogicMetricModels();
+        if (!networkId || !objectTypeId) {
+          setMetricModelList([]);
+          setNameOptions([]);
+          return;
+        }
+
+        const models = await listObjectTypeLogicMetricModels(networkId, objectTypeId);
         if (requestId !== optionsRequestIdRef.current) {
           return;
         }
@@ -258,7 +276,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
         setNameOptions(flat);
       }
     })();
-  }, [open, t, type]);
+  }, [networkId, objectTypeId, open, t, type]);
 
   useEffect(() => {
     if (!open || type !== "operator" || !resourceId || flatNameOptions.length === 0) {
@@ -274,27 +292,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
     const existingParams = attrInfo.parameters ?? [];
     setSettingList(operator.inputParameters.map((item) => processOperatorNode(item, existingParams)));
   }, [attrInfo.parameters, flatNameOptions, open, resourceId, type]);
-
-  useEffect(() => {
-    if (!open || type !== "metric" || !resourceId) {
-      return;
-    }
-
-    const requestId = ++metricFieldsRequestIdRef.current;
-    void (async () => {
-      const fields = await listObjectTypeLogicMetricModelFields(resourceId);
-      if (requestId !== metricFieldsRequestIdRef.current) {
-        return;
-      }
-      setDimensionFields(
-        fields.map((item) => ({
-          label: item.displayName,
-          type: item.type,
-          value: item.name,
-        })),
-      );
-    })();
-  }, [open, resourceId, type]);
 
   const updateSettingData = (id: string, updateValue: Partial<SettingItem>) => {
     const processNode = (item: SettingItem): SettingItem => {
@@ -312,34 +309,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
     setSettingList((prev) => prev.map(processNode));
   };
 
-  const handleAddMetricRow = () => {
-    setSettingList((prev) => [
-      ...prev,
-      {
-        id: createParameterId(),
-        name: "",
-        operation: "==",
-        valueFrom: "property",
-      },
-    ]);
-  };
-
-  const handleDeleteMetricRow = (id: string) => {
-    setSettingList((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  const handleResourceChange = (value?: string) => {
-    if (type === "metric" && value) {
-      setSettingList([
-        {
-          id: createParameterId(),
-          name: "",
-          operation: "==",
-          valueFrom: "property",
-        },
-      ]);
-      return;
-    }
+  const handleResourceChange = () => {
     setSettingList([]);
   };
 
@@ -357,9 +327,15 @@ export function ObjectTypeLogicAttributeEditDrawer({
       if (!nextNode.children?.length) {
         const nameError = !nextNode.name ? t("knowledgeNetwork.objectTypeLogicValueRequired") : "";
         const valueError =
-          nextNode.valueFrom !== "input" && isEmptyExceptZero(nextNode.value)
-            ? t("knowledgeNetwork.objectTypeLogicValueRequired")
-            : "";
+          nextNode.valueFrom === "property"
+            ? typeof nextNode.value !== "string" || !nextNode.value
+              ? t("knowledgeNetwork.objectTypeLogicValueRequired")
+              : !objectTypePropertyNameSet.has(nextNode.value)
+                ? t("knowledgeNetwork.objectTypeLogicAttributeMatchedPropertyMissing")
+                : ""
+            : nextNode.valueFrom !== "input" && isEmptyExceptZero(nextNode.value)
+              ? t("knowledgeNetwork.objectTypeLogicValueRequired")
+              : ""
         if (nameError || valueError) {
           hasError = true;
         }
@@ -384,7 +360,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
     if (!resourceId || !type) {
       return;
     }
-    if (validateParams()) {
+    if (type === "operator" && validateParams()) {
       void message.error(t("knowledgeNetwork.objectTypeLogicAttributeFillParameters"));
       return;
     }
@@ -404,12 +380,15 @@ export function ObjectTypeLogicAttributeEditDrawer({
       },
       displayName: formValues.displayName ?? "",
       name: formValues.name ?? "",
-      parameters: extractLeafParams(settingList).map((item) => {
-        const { error, children, ...parameter } = item;
-        void error;
-        void children;
-        return parameter;
-      }),
+      parameters:
+        type === "metric"
+          ? []
+          : extractLeafParams(settingList).map((item) => {
+              const { error, children, ...parameter } = item;
+              void error;
+              void children;
+              return parameter;
+            }),
       type,
     });
   };
@@ -593,9 +572,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
                     .toLowerCase()
                     .includes(input.toLowerCase())
                 }
-                onChange={(value) =>
-                  handleResourceChange(typeof value === "string" ? value : undefined)
-                }
+                onChange={handleResourceChange}
                 options={nameOptions}
                 placeholder={t("knowledgeNetwork.pleaseSelect")}
                 showSearch
@@ -617,8 +594,12 @@ export function ObjectTypeLogicAttributeEditDrawer({
         </Row>
       </Form>
 
-      {settingList.length > 0 ? (
-        <div className={styles.settingTitle}>{t("knowledgeNetwork.objectTypeLogicAttributeSetting")}</div>
+      {type === "operator" && settingList.length > 0 ? (
+        <>
+          <div className={styles.settingTitle}>
+            {t("knowledgeNetwork.objectTypeLogicAttributeSetting")}
+          </div>
+        </>
       ) : null}
 
       {type === "operator" ? (
@@ -632,106 +613,27 @@ export function ObjectTypeLogicAttributeEditDrawer({
       ) : null}
 
       {type === "metric" ? (
-        <>
-          {settingList.map((item) => (
-            <div className={styles.metricRow} key={item.id}>
-              <div style={{ width: 24 }}>
-                {!item.ifSystemGenerate ? (
-                  <MinusCircleOutlined
-                    onClick={() => handleDeleteMetricRow(item.id)}
-                    style={{ color: "rgba(0, 0, 0, 0.25)", cursor: "pointer" }}
-                  />
-                ) : null}
+        <div className={styles.metricSummary}>
+          <div className={styles.metricSummaryTitle}>
+            {t("knowledgeNetwork.objectTypeLogicMetricBindingTitle")}
+          </div>
+          <div className={styles.metricSummaryHint}>
+            {t("knowledgeNetwork.objectTypeLogicMetricBindingHint")}
+          </div>
+          {selectedMetric?.analysisDimensions.length ? (
+            <div className={styles.metricSummaryRow}>
+              <span>{t("knowledgeNetwork.objectTypeLogicMetricAnalysisDimensions")}</span>
+              <div className={styles.metricDimensionList}>
+                {selectedMetric.analysisDimensions.map((item) => (
+                  <span className={styles.metricDimensionTag} key={item.name}>
+                    {item.displayName || item.name}
+                  </span>
+                ))}
               </div>
-              <Select
-                disabled={item.ifSystemGenerate}
-                onChange={(value) => {
-                  const fieldType = dimensionFields.find((field) => field.value === value)?.type;
-                  updateSettingData(item.id, { name: value, type: fieldType, value: undefined });
-                }}
-                options={dimensionFields}
-                placeholder={t("knowledgeNetwork.pleaseSelect")}
-                status={item.error?.name ? "error" : undefined}
-                style={{ width: 256 }}
-                value={item.name || undefined}
-              />
-              <Select
-                disabled={item.ifSystemGenerate}
-                onChange={(value) => updateSettingData(item.id, { operation: value })}
-                options={OPERATOR_TYPE_OPTIONS}
-                placeholder={t("knowledgeNetwork.pleaseSelect")}
-                style={{ width: 120 }}
-                value={item.operation}
-              />
-              <Select
-                disabled={item.ifSystemGenerate}
-                onChange={(value: ObjectTypeLogicParameterValueFrom) =>
-                  updateSettingData(item.id, { value: undefined, valueFrom: value })
-                }
-                options={valueFromOptions}
-                style={{ width: 120 }}
-                value={item.valueFrom || undefined}
-              />
-              {item.valueFrom === "property" ? (
-                <Select
-                  onChange={(value) => {
-                    const fieldType = propertyOptions.find((option) => option.value === value)?.type;
-                    updateSettingData(item.id, { type: fieldType, value });
-                  }}
-                  options={propertyOptions}
-                  placeholder={t("knowledgeNetwork.pleaseSelect")}
-                  status={item.error?.value ? "error" : undefined}
-                  style={{ width: 400 }}
-                  value={(item.value as string | undefined) || undefined}
-                />
-              ) : null}
-              {item.valueFrom === "const" ? (
-                FIELD_TYPE_INPUT.number.includes(item.type ?? "") ? (
-                  <InputNumber
-                    onChange={(value) => updateSettingData(item.id, { value: value ?? undefined })}
-                    placeholder={t("knowledgeNetwork.pleaseInput")}
-                    status={item.error?.value ? "error" : undefined}
-                    style={{ width: 400 }}
-                    value={item.value as number | undefined}
-                  />
-                ) : FIELD_TYPE_INPUT.boolean.includes(item.type ?? "") ? (
-                  <Select
-                    onChange={(value) => updateSettingData(item.id, { value })}
-                    options={[
-                      { label: t("knowledgeNetwork.objectTypeLogicYes"), value: true },
-                      { label: t("knowledgeNetwork.objectTypeLogicNo"), value: false },
-                    ]}
-                    placeholder={t("knowledgeNetwork.pleaseSelect")}
-                    status={item.error?.value ? "error" : undefined}
-                    style={{ width: 400 }}
-                    value={item.value as boolean | undefined}
-                  />
-                ) : (
-                  <Input
-                    onChange={(event) => updateSettingData(item.id, { value: event.target.value })}
-                    placeholder={t("knowledgeNetwork.pleaseInput")}
-                    status={item.error?.value ? "error" : undefined}
-                    style={{ width: 400 }}
-                    value={item.value as string | undefined}
-                  />
-                )
-              ) : null}
-              {item.valueFrom === "input" ? <Input disabled style={{ width: 400 }} /> : null}
-            </div>
-          ))}
-
-          {dimensionFields.length > 0 && settingList.length > 0 ? (
-            <div className={styles.addRow} onClick={handleAddMetricRow}>
-              <PlusOutlinedLabel />
-              <span>{t("common.add")}</span>
             </div>
           ) : null}
-        </>
+        </div>
       ) : null}
     </Drawer>
   );
-}
-
-function PlusOutlinedLabel() {
-  return <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>;
 }

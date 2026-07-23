@@ -1,421 +1,636 @@
 /**
+
  * Copyright (c) 2026 OpenBKN
+
  * SPDX-License-Identifier: LicenseRef-OpenBKN
+
  * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+
  * Conditions. See LICENSE for the full text.
+
  */
 
+
+
 import { Alert, Form, Input, Select, Spin } from "antd";
+
 import { useEffect, useMemo, useState } from "react";
+
 import { useTranslation } from "react-i18next";
+
 import { useNavigate, useParams } from "react-router-dom";
 
+
+
 import { useAppServices } from "@/framework/context/use-app-services";
+
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+
 import { AppButton } from "@/framework/ui/common/AppButton";
+
 import { MetricCalculationEditor } from "@/modules/knowledge-network/components/metric/MetricCalculationEditor";
+
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+
 import {
+
   ResourceTagsSelect,
+
   validateKnowledgeNetworkTags,
+
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
+
 import {
+
   createKnowledgeNetworkMetric,
+
+  getKnowledgeNetworkObjectType,
+
   getKnowledgeNetworkMetric,
+
   listKnowledgeNetworkObjectTypes,
+
   updateKnowledgeNetworkMetric,
+
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+
 import type { MetricFormSceneProps } from "@/modules/knowledge-network/contracts/scenes";
+
 import type {
   KnowledgeNetworkMetricMutationPayload,
-  KnowledgeNetworkMetricScopeType,
   KnowledgeNetworkObjectTypeRecord,
-  MetricUnit,
-  MetricUnitType,
 } from "@/modules/knowledge-network/types/knowledge-network";
+
 import { createDefaultMetricCalculationFormula } from "@/modules/knowledge-network/types/knowledge-network";
+
+import { mergeBoundObjectTypeOption } from "@/modules/knowledge-network/utils/metric-object-type-options";
+
+
 
 import styles from "./MetricFormScene.module.css";
 
-const SCOPE_TYPE_OPTIONS: KnowledgeNetworkMetricScopeType[] = ["object_type", "subgraph"];
+function resetObjectTypeDependentFields(
 
-const UNIT_TYPE_OPTIONS: MetricUnitType[] = [
-  "numUnit",
-  "storeUnit",
-  "percent",
-  "transmissionRate",
-  "timeUnit",
-  "currencyUnit",
-  "percentageUnit",
-  "countUnit",
-  "weightUnit",
-  "ordinalRankUnit",
-];
-
-const UNIT_OPTIONS: MetricUnit[] = [
-  "none",
-  "K",
-  "Mil",
-  "Bil",
-  "Tri",
-  "times",
-  "transaction",
-  "piece",
-  "item",
-  "household",
-  "man_day",
-  "ton",
-  "kg",
-  "rank",
-  "%",
-  "‰",
-  "CNY",
-  "10K_CNY",
-  "1M_CNY",
-  "100M_CNY",
-  "USD",
-  "Fen",
-  "Jiao",
-  "ms",
-  "s",
-  "m",
-  "h",
-  "day",
-  "week",
-  "month",
-  "year",
-];
-
-const UNIT_OPTIONS_BY_TYPE: Record<MetricUnitType, MetricUnit[]> = {
-  countUnit: ["times", "transaction", "piece", "item", "household", "man_day"],
-  currencyUnit: ["CNY", "10K_CNY", "1M_CNY", "100M_CNY", "USD", "Fen", "Jiao"],
-  numUnit: ["none", "K", "Mil", "Bil", "Tri"],
-  ordinalRankUnit: ["rank"],
-  percent: ["%"],
-  percentageUnit: ["‰"],
-  storeUnit: ["none", "K", "Mil", "Bil", "Tri"],
-  timeUnit: ["ms", "s", "m", "h", "day", "week", "month", "year"],
-  transmissionRate: ["none"],
-  weightUnit: ["ton", "kg"],
-};
-
-function getScopeTypeLabel(
-  value: KnowledgeNetworkMetricScopeType,
-  t: (key: string) => string,
-) {
-  switch (value) {
-    case "subgraph":
-      return t("knowledgeNetwork.metricScopeSubgraph");
-    case "object_type":
-    default:
-      return t("knowledgeNetwork.metricScopeObjectType");
-  }
-}
-
-function resetScopeDependentFields(
   form: ReturnType<typeof Form.useForm<KnowledgeNetworkMetricMutationPayload>>[0],
+
 ) {
+
   form.setFieldsValue({
+
     calculationFormula: createDefaultMetricCalculationFormula(),
+
     timeDimension: {
+
       defaultRangePolicy: "last_24h",
+
       property: "",
+
     },
+
     unit: undefined,
+
     unitType: undefined,
+
   });
+
 }
+
+
 
 export function MetricFormScene({
+
   metricId: metricIdProp,
+
   mode,
+
   networkId: networkIdProp,
+
   onBack,
+
   onSubmitSuccess,
+
 }: MetricFormSceneProps) {
+
   const { t } = useTranslation();
+
   const navigate = useNavigate();
+
   const { message } = useAppServices();
+
   const params = useParams<{
+
     metricId?: string;
+
     networkId: string;
+
   }>();
+
   const metricId = metricIdProp ?? params.metricId ?? "";
+
   const networkId = networkIdProp ?? params.networkId ?? "";
+
   const [form] = Form.useForm<KnowledgeNetworkMetricMutationPayload>();
+
   const [loading, setLoading] = useState(mode === "edit");
+
   const [submitting, setSubmitting] = useState(false);
+
   const [loadError, setLoadError] = useState<string | null>(null);
+
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
+
   const [pageTitle, setPageTitle] = useState(t("knowledgeNetwork.metricCreateTitle"));
-  const scopeType = Form.useWatch("scopeType", form);
-  const scopeRef = Form.useWatch("scopeRef", form);
-  const unitType = Form.useWatch("unitType", form);
+
+  const objectTypeId = Form.useWatch("scopeRef", form);
+
+
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
 
+
+
   const objectTypeOptions = useMemo(
+
     () => objectTypes.map((item) => ({ label: item.name, value: item.id })),
+
     [objectTypes],
+
   );
 
-  const availableUnitOptions = useMemo(
-    () => (unitType ? UNIT_OPTIONS_BY_TYPE[unitType] : UNIT_OPTIONS),
-    [unitType],
-  );
+
 
   useEffect(() => {
+
     const loadData = async () => {
+
       if (!networkId) {
+
         return;
+
       }
+
+
 
       setLoadError(null);
 
+
+
       try {
+
         const objectTypeResult = await listKnowledgeNetworkObjectTypes(networkId);
-        setObjectTypes(objectTypeResult);
 
         if (mode === "edit" && metricId) {
+
           setLoading(true);
+
           const detail = await getKnowledgeNetworkMetric(networkId, metricId);
+
           if (!detail) {
+
             throw new Error(t("common.notFound"));
+
           }
 
+
+
+          const boundObjectTypeId =
+
+            detail.scopeType === "object_type" ? detail.scopeRef.trim() : "";
+
+          let boundObjectType: KnowledgeNetworkObjectTypeRecord | null = null;
+
+          if (
+
+            boundObjectTypeId &&
+
+            !objectTypeResult.some((item) => item.id === boundObjectTypeId)
+
+          ) {
+
+            try {
+
+              boundObjectType = await getKnowledgeNetworkObjectType(networkId, boundObjectTypeId);
+
+            } catch {
+
+              boundObjectType = null;
+
+            }
+
+          }
+
+          setObjectTypes(
+
+            mergeBoundObjectTypeOption(objectTypeResult, boundObjectTypeId, boundObjectType),
+
+          );
+
+
+
           form.setFieldsValue({
+
             calculationFormula: detail.calculationFormula,
+
             description: detail.description,
+
             metricType: detail.metricType,
+
             name: detail.name,
-            scopeRef: detail.scopeRef,
-            scopeType: detail.scopeType,
-            tags: detail.tags,
-            timeDimension: detail.timeDimension,
-            unit: detail.unit,
-            unitType: detail.unitType,
-          });
-          setPageTitle(detail.name);
-        } else {
-          form.setFieldsValue({
-            calculationFormula: createDefaultMetricCalculationFormula(),
-            description: "",
-            metricType: "atomic",
-            name: "",
-            scopeRef: objectTypeResult[0]?.id ?? "",
+
+            scopeRef: boundObjectTypeId,
+
             scopeType: "object_type",
-            tags: [],
-            timeDimension: {
-              defaultRangePolicy: "last_24h",
-              property: "",
-            },
+
+            tags: detail.tags,
+
+            timeDimension: detail.timeDimension,
+
+            unit: detail.unit,
+
+            unitType: detail.unitType,
+
           });
+
+          setPageTitle(detail.name);
+
+        } else {
+
+          setObjectTypes(objectTypeResult);
+
+          form.setFieldsValue({
+
+            calculationFormula: createDefaultMetricCalculationFormula(),
+
+            description: "",
+
+            metricType: "atomic",
+
+            name: "",
+
+            scopeRef: objectTypeResult[0]?.id ?? "",
+
+            scopeType: "object_type",
+
+            tags: [],
+
+            timeDimension: {
+
+              defaultRangePolicy: "last_24h",
+
+              property: "",
+
+            },
+
+          });
+
         }
+
       } catch (error) {
+
         setLoadError(extractRequestErrorMessage(error));
+
       } finally {
+
         setLoading(false);
+
       }
+
     };
 
+
+
     void loadData();
+
   }, [form, metricId, mode, networkId, t]);
 
+
+
   const handleSubmit = async () => {
+
     try {
+
       const values = await form.validateFields();
+
       setSubmitting(true);
+
       let savedMetric = null;
 
+
+
+      const payload: KnowledgeNetworkMetricMutationPayload = {
+
+        ...values,
+
+        scopeType: "object_type",
+
+      };
+
+
+
       if (mode === "create") {
-        savedMetric = await createKnowledgeNetworkMetric(networkId, values);
+
+        savedMetric = await createKnowledgeNetworkMetric(networkId, payload);
+
       } else if (metricId) {
-        savedMetric = await updateKnowledgeNetworkMetric(networkId, metricId, values);
+
+        savedMetric = await updateKnowledgeNetworkMetric(networkId, metricId, payload);
+
       }
+
+
 
       void message.success(t("common.success"));
 
+
+
       if (onSubmitSuccess) {
+
         onSubmitSuccess();
+
         return;
+
       }
+
+
 
       void navigate(
+
         mode === "create"
+
           ? listPath
+
           : `/knowledge-network/workspace/${networkId}/metrics/${savedMetric?.id ?? metricId}/detail`,
+
       );
+
     } catch (error) {
+
       void message.error(extractRequestErrorMessage(error));
+
     } finally {
+
       setSubmitting(false);
+
     }
+
   };
 
-  const handleUnitTypeChange = () => {
-    form.setFieldValue("unit", undefined);
-    form.setFieldValue(["calculationFormula", "aggregation", "property"], undefined);
-    form.setFieldValue(["calculationFormula", "aggregation", "aggr"], undefined);
-  };
+
 
   if (loading) {
+
     return (
+
       <div className={styles.loadingState}>
+
         <Spin />
+
       </div>
+
     );
+
   }
 
+
+
   return (
+
     <KnowledgeNetworkResourceConfigShell
+
       actions={
+
         <AppButton loading={submitting} onClick={() => void handleSubmit()} type="primary">
+
           {t("common.save")}
+
         </AppButton>
+
       }
+
       onBack={() => {
+
         if (onBack) {
+
           onBack();
+
           return;
+
         }
 
+
+
         void navigate(listPath);
+
       }}
+
       subtitle={
+
         mode === "create"
+
           ? t("knowledgeNetwork.metricCreateDescription")
+
           : t("knowledgeNetwork.metricEditDescription")
+
       }
+
       title={mode === "create" ? t("knowledgeNetwork.metricCreateTitle") : pageTitle}
+
     >
-      {loadError ? <Alert message={loadError} showIcon type="error" /> : null}
-      <div className={styles.formPanel}>
-        <Form colon={false} form={form} layout="vertical">
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricBasicInfo")}</h3>
 
-            <Form.Item
-              label={t("knowledgeNetwork.metricName")}
-              name="name"
-              rules={[
-                { message: t("knowledgeNetwork.metricNameRequired"), required: true },
-                { max: 40, message: t("knowledgeNetwork.objectTypeNameMaxLength") },
-              ]}
-            >
-              <Input maxLength={40} placeholder={t("knowledgeNetwork.metricNamePlaceholder")} />
+      {loadError ? <Alert message={loadError} showIcon style={{ marginBottom: 12 }} type="error" /> : null}
+
+      <div className={styles.formLayout}>
+
+        <div className={styles.formPanel}>
+
+          <Form colon={false} form={form} layout="vertical" requiredMark>
+
+            <Form.Item hidden name="scopeType">
+
+              <Input />
+
             </Form.Item>
 
-            <Form.Item
-              label={t("knowledgeNetwork.metricType")}
-              name="metricType"
-              rules={[{ message: t("knowledgeNetwork.metricTypeRequired"), required: true }]}
-            >
-              <Select
-                disabled
-                options={[{ label: t("knowledgeNetwork.metricTypeAtomic"), value: "atomic" }]}
-                placeholder={t("knowledgeNetwork.pleaseSelect")}
+
+
+            <section className={styles.sectionCard}>
+
+              <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricBasicInfo")}</h3>
+
+
+
+              <div className={styles.fieldGrid}>
+
+                <Form.Item
+
+                  className={styles.fieldFull}
+
+                  label={t("knowledgeNetwork.metricName")}
+
+                  name="name"
+
+                  rules={[
+
+                    { message: t("knowledgeNetwork.metricNameRequired"), required: true },
+
+                    { max: 40, message: t("knowledgeNetwork.objectTypeNameMaxLength") },
+
+                  ]}
+
+                >
+
+                  <Input maxLength={40} placeholder={t("knowledgeNetwork.metricNamePlaceholder")} />
+
+                </Form.Item>
+
+
+
+                <Form.Item
+
+                  className={styles.fieldFull}
+
+                  label={t("knowledgeNetwork.metricTags")}
+
+                  name="tags"
+
+                  rules={[
+
+                    {
+
+                      validator: (rule, value) => validateKnowledgeNetworkTags(t, rule, value),
+
+                    },
+
+                  ]}
+
+                >
+
+                  <ResourceTagsSelect />
+
+                </Form.Item>
+
+
+
+                <Form.Item
+
+                  className={styles.fieldFull}
+
+                  label={t("knowledgeNetwork.descriptionField")}
+
+                  name="description"
+
+                >
+
+                  <Input.TextArea
+
+                    placeholder={t("knowledgeNetwork.metricDescriptionPlaceholder")}
+
+                    rows={2}
+
+                  />
+
+                </Form.Item>
+
+              </div>
+
+            </section>
+
+
+
+            <section className={styles.sectionCard}>
+
+              <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricConfigSection")}</h3>
+
+
+
+              <div className={styles.fieldGrid}>
+
+                <Form.Item
+
+                  label={t("knowledgeNetwork.metricBoundObjectType")}
+
+                  name="scopeRef"
+
+                  rules={[
+
+                    { message: t("knowledgeNetwork.metricBoundObjectTypeRequired"), required: true },
+
+                  ]}
+
+                >
+
+                  <Select
+
+                    onChange={() => resetObjectTypeDependentFields(form)}
+
+                    optionFilterProp="label"
+
+                    options={objectTypeOptions}
+
+                    placeholder={t("knowledgeNetwork.metricBoundObjectTypePlaceholder")}
+
+                    showSearch
+
+                  />
+
+                </Form.Item>
+
+
+
+                <Form.Item
+
+                  label={t("knowledgeNetwork.metricType")}
+
+                  name="metricType"
+
+                  rules={[{ message: t("knowledgeNetwork.metricTypeRequired"), required: true }]}
+
+                >
+
+                  <Select
+
+                    disabled
+
+                    options={[{ label: t("knowledgeNetwork.metricTypeAtomic"), value: "atomic" }]}
+
+                    placeholder={t("knowledgeNetwork.pleaseSelect")}
+
+                  />
+
+                </Form.Item>
+
+
+
+              </div>
+
+
+
+              <MetricCalculationEditor
+
+                embedded
+
+                form={form}
+
+                networkId={networkId}
+
+                objectTypeId={objectTypeId}
+
+                objectTypes={objectTypes}
+
               />
-            </Form.Item>
 
-            <Form.Item
-              label={t("knowledgeNetwork.metricScopeType")}
-              name="scopeType"
-              rules={[{ message: t("knowledgeNetwork.metricScopeTypeRequired"), required: true }]}
-            >
-              <Select
-                onChange={() => {
-                  form.setFieldValue("scopeRef", undefined);
-                  resetScopeDependentFields(form);
-                }}
-                options={SCOPE_TYPE_OPTIONS.map((value) => ({
-                  label: getScopeTypeLabel(value, t),
-                  value,
-                }))}
-                placeholder={t("knowledgeNetwork.pleaseSelect")}
-              />
-            </Form.Item>
+            </section>
 
-            {scopeType === "object_type" ? (
-              <Form.Item
-                label={t("knowledgeNetwork.metricScopeRef")}
-                name="scopeRef"
-                rules={[{ message: t("knowledgeNetwork.metricScopeRefRequired"), required: true }]}
-              >
-                <Select
-                  onChange={() => resetScopeDependentFields(form)}
-                  optionFilterProp="label"
-                  options={objectTypeOptions}
-                  placeholder={t("knowledgeNetwork.metricScopeRefPlaceholder")}
-                  showSearch
-                />
-              </Form.Item>
-            ) : (
-              <Form.Item
-                label={t("knowledgeNetwork.metricScopeRef")}
-                name="scopeRef"
-                rules={[{ message: t("knowledgeNetwork.metricScopeRefRequired"), required: true }]}
-              >
-                <Input placeholder={t("knowledgeNetwork.metricSubgraphScopePlaceholder")} />
-              </Form.Item>
-            )}
+          </Form>
 
-            <Form.Item label={t("knowledgeNetwork.metricUnitType")} name="unitType">
-              <Select
-                allowClear
-                onChange={handleUnitTypeChange}
-                optionFilterProp="label"
-                options={UNIT_TYPE_OPTIONS.map((value) => ({
-                  label: t(`knowledgeNetwork.metricUnitTypeOption.${value}`),
-                  value,
-                }))}
-                placeholder={t("knowledgeNetwork.metricUnitTypePlaceholder")}
-                showSearch
-              />
-            </Form.Item>
+        </div>
 
-            <Form.Item label={t("knowledgeNetwork.metricUnit")} name="unit">
-              <Select
-                allowClear
-                disabled={!unitType}
-                optionFilterProp="label"
-                options={availableUnitOptions.map((value) => ({
-                  label: t(`knowledgeNetwork.metricUnitOption.${value}`, { defaultValue: value }),
-                  value,
-                }))}
-                placeholder={t("knowledgeNetwork.metricUnitPlaceholder")}
-                showSearch
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={t("common.tag")}
-              name="tags"
-              rules={[
-                {
-                  validator: (rule, value) => validateKnowledgeNetworkTags(t, rule, value),
-                },
-              ]}
-            >
-              <ResourceTagsSelect />
-            </Form.Item>
-
-            <Form.Item label={t("knowledgeNetwork.descriptionField")} name="description">
-              <Input.TextArea
-                placeholder={t("knowledgeNetwork.metricDescriptionPlaceholder")}
-                rows={3}
-              />
-            </Form.Item>
-          </section>
-
-          <MetricCalculationEditor
-            form={form}
-            networkId={networkId}
-            objectTypes={objectTypes}
-            scopeRef={scopeRef}
-            scopeType={scopeType}
-          />
-        </Form>
       </div>
+
     </KnowledgeNetworkResourceConfigShell>
+
   );
+
 }
+
+

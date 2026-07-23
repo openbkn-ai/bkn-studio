@@ -526,16 +526,6 @@
   border-radius: 0;
 }
 
-.metricPage .tableCard {
-  display: flex;
-  flex-direction: column;
-}
-
-.metricPage .tableCard > .paginationBar {
-  padding: 12px 16px 0;
-  border-top: 1px solid #e5eaf2;
-}
-
 .conceptGroupPage .objectSubName {
   color: #6b7280;
   line-height: 1.4;

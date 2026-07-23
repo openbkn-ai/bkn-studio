@@ -34,11 +34,6 @@
   min-width: 100px;
 }
 
-.valueFromSelect {
-  flex: 0 1 96px;
-  min-width: 88px;
-}
-
 .valueInput {
   flex: 1 1 160px;
   min-width: 120px;
@@ -56,7 +51,6 @@
   .objectTypeSelect,
   .fieldSelect,
   .operationSelect,
-  .valueFromSelect,
   .valueInput {
     flex: 1 1 100%;
     min-width: 0;

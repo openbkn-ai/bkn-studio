@@ -17,32 +17,78 @@
   padding: 0 8px;
 }
 
+.settingHint {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 20px;
+  margin: 0 0 10px;
+  padding: 0 8px;
+}
+
 .footer {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
 }
 
-.metricRow {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-  min-height: 50px;
-}
-
-.addRow {
-  align-items: center;
-  color: #126ee3;
-  cursor: pointer;
-  display: flex;
-  font-size: 14px;
-  gap: 8px;
-  margin-top: 10px;
-  padding-left: 16px;
-  width: 80px;
+.fieldError {
+  color: #ff4d4f;
+  font-size: 12px;
+  line-height: 20px;
+  margin-top: 4px;
 }
 
 .description {
   color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
+}
+
+.metricSummary {
+  background: #fafafa;
+  border: 1px solid #e5e6eb;
+  border-radius: 4px;
+  margin-top: 4px;
+  padding: 12px 16px;
+}
+
+.metricSummaryTitle {
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.metricSummaryHint {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  line-height: 20px;
+  margin-top: 4px;
+}
+
+.metricSummaryRow {
+  align-items: flex-start;
+  color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.metricSummaryRow > span {
+  flex: 0 0 72px;
+  line-height: 24px;
+}
+
+.metricDimensionList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.metricDimensionTag {
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 3px;
+  color: rgba(0, 0, 0, 0.88);
+  line-height: 22px;
+  padding: 0 8px;
 }

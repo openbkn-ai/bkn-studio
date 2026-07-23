@@ -225,6 +225,20 @@
   font-size: 13px;
 }
 
+.previewTable :global(.ant-table-thead > tr > th),
+.previewTable :global(.ant-table-tbody > tr > td) {
+  white-space: nowrap;
+}
+
+.previewHeaderText,
+.previewCellText {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tableLink {
   background: transparent;
   border: 0;
@@ -247,6 +261,59 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.bindResourceCell {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.dataResource {
+  align-items: center;
+  border-radius: 3px;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 8px;
+}
+
+.resourceIconMetric {
+  align-items: center;
+  background: #eef4ff;
+  border-radius: 4px;
+  color: #126ee3;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.resourceIconOperator {
+  align-items: center;
+  background: #fff7e6;
+  border-radius: 4px;
+  color: #fa8c16;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.resourceName {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+  line-height: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .keyBadge {

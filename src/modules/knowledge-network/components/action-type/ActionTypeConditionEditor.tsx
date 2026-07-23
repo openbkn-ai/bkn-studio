@@ -32,6 +32,7 @@ const VALUELESS_OPERATIONS = new Set<ActionTypeConditionOperation>(["exist", "no
 
 type ConditionRowProps = {
   boundObjectTypeId?: string;
+  hideObjectTypeSelect?: boolean;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   onChange: (next: ActionTypeCondition) => void;
   onRemove?: () => void;
@@ -43,6 +44,7 @@ type ConditionRowProps = {
 
 function ConditionRow({
   boundObjectTypeId,
+  hideObjectTypeSelect = false,
   objectTypes,
   onAdd,
   onChange,
@@ -98,23 +100,25 @@ function ConditionRow({
 
   return (
     <div className={styles.conditionRow}>
-      <div className={styles.objectTypeSelect}>
-        <RelationTypeObjectTypeSelect
-          allowClear={!boundObjectTypeId}
-          disabled={Boolean(boundObjectTypeId)}
-          objectTypes={selectableObjectTypes}
-          onChange={(nextObjectTypeId) => {
-            updateRow({
-              field: undefined,
-              objectTypeId: nextObjectTypeId,
-              operation: undefined,
-              value: undefined,
-            });
-          }}
-          placeholder={t("knowledgeNetwork.actionTypeConditionObjectPlaceholder")}
-          value={objectTypeId}
-        />
-      </div>
+      {!hideObjectTypeSelect ? (
+        <div className={styles.objectTypeSelect}>
+          <RelationTypeObjectTypeSelect
+            allowClear={!boundObjectTypeId}
+            disabled={Boolean(boundObjectTypeId)}
+            objectTypes={selectableObjectTypes}
+            onChange={(nextObjectTypeId) => {
+              updateRow({
+                field: undefined,
+                objectTypeId: nextObjectTypeId,
+                operation: undefined,
+                value: undefined,
+              });
+            }}
+            placeholder={t("knowledgeNetwork.actionTypeConditionObjectPlaceholder")}
+            value={objectTypeId}
+          />
+        </div>
+      ) : null}
       <div className={styles.fieldSelect}>
         <Select
           allowClear
@@ -147,17 +151,6 @@ function ConditionRow({
         placeholder={t("knowledgeNetwork.actionTypeConditionOperationPlaceholder")}
         value={currentOperation}
       />
-      <Select
-        className={styles.valueFromSelect}
-        disabled={!objectTypeId}
-        options={[
-          {
-            label: t("knowledgeNetwork.actionTypeConditionValueFromConst"),
-            value: "const",
-          },
-        ]}
-        value="const"
-      />
       <Input
         className={styles.valueInput}
         disabled={!objectTypeId || !needsValue}
@@ -188,6 +181,7 @@ function ConditionRow({
 
 type ActionTypeConditionEditorProps = {
   boundObjectTypeId?: string;
+  hideObjectTypeSelect?: boolean;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   propertyOptions: RelationTypePropertyOption[];
   value?: ActionTypeCondition | null;
@@ -196,6 +190,7 @@ type ActionTypeConditionEditorProps = {
 
 export function ActionTypeConditionEditor({
   boundObjectTypeId,
+  hideObjectTypeSelect = false,
   objectTypes,
   propertyOptions,
   value,
@@ -256,6 +251,7 @@ export function ActionTypeConditionEditor({
     <div className={styles.conditionList}>
       <ConditionRow
         boundObjectTypeId={boundObjectTypeId}
+        hideObjectTypeSelect={hideObjectTypeSelect}
         objectTypes={objectTypes}
         onAdd={handleAddRow}
         onChange={updateRoot}
@@ -266,6 +262,7 @@ export function ActionTypeConditionEditor({
       {subConditions.map((item, index) => (
         <ConditionRow
           boundObjectTypeId={boundObjectTypeId}
+          hideObjectTypeSelect={hideObjectTypeSelect}
           key={`condition-${index}`}
           objectTypes={objectTypes}
           onChange={(next) => handleSubConditionChange(index, next)}

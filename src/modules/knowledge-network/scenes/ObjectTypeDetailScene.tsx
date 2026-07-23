@@ -30,10 +30,10 @@ import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { ObjectTypePropertyTable } from "@/modules/knowledge-network/components/object-type/ObjectTypePropertyTable";
 import { enrichDataPropertiesWithRowTotal } from "@/modules/knowledge-network/lib/enrich-data-properties";
-import { getObjectTypeResourcePreview } from "@/modules/knowledge-network/services/object-type-resource.service";
 import {
   deleteKnowledgeNetworkObjectType,
   getKnowledgeNetworkObjectTypeDetail,
+  getObjectTypeSampleData,
   listKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
@@ -57,6 +57,14 @@ function normalizedSearchText(value: unknown) {
   return "";
 }
 
+function getLogicTypeLabel(type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
+  if (type === "operator") {
+    return t("knowledgeNetwork.objectTypeLogicAttributeTypeOperator");
+  }
+
+  return t("knowledgeNetwork.objectTypeLogicAttributeTypeMetric");
+}
+
 type ObjectTypeDetailLocationState = {
   knowledgeNetworkReturnTo?: string;
 };
@@ -68,6 +76,23 @@ type RelatedRelationRow = KnowledgeNetworkRelationTypeRecord & {
   oppositeObjectTypeName: string;
   role: RelatedRelationRole;
 };
+
+const PREVIEW_COLUMN_MIN_WIDTH = 120;
+const PREVIEW_COLUMN_MAX_WIDTH = 260;
+const PREVIEW_COLUMN_PADDING_WIDTH = 44;
+
+function clampPreviewColumnWidth(width: number) {
+  return Math.max(PREVIEW_COLUMN_MIN_WIDTH, Math.min(PREVIEW_COLUMN_MAX_WIDTH, width));
+}
+
+function estimatePreviewTextWidth(value: string | number | undefined) {
+  const text = String(value ?? "");
+  const textWidth = Array.from(text).reduce((width, char) => {
+    return width + (char.charCodeAt(0) > 255 ? 16 : 8);
+  }, 0);
+
+  return textWidth + PREVIEW_COLUMN_PADDING_WIDTH;
+}
 
 export function ObjectTypeDetailScene() {
   const { t } = useTranslation();
@@ -88,7 +113,7 @@ export function ObjectTypeDetailScene() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewKeyword, setPreviewKeyword] = useState("");
   const [dataQueryExpanded, setDataQueryExpanded] = useState(false);
-  const [previewLoadedResourceId, setPreviewLoadedResourceId] = useState<string | null>(null);
+  const [previewLoadedObjectTypeId, setPreviewLoadedObjectTypeId] = useState<string | null>(null);
   const [relatedRelationsExpanded, setRelatedRelationsExpanded] = useState(false);
   const [relatedRelations, setRelatedRelations] = useState<RelatedRelationRow[]>([]);
   const [relatedRelationsLoading, setRelatedRelationsLoading] = useState(false);
@@ -139,27 +164,25 @@ export function ObjectTypeDetailScene() {
   }, [loadData]);
 
   useEffect(() => {
-    const resourceId = detail?.dataSource?.id;
-
-    if (!dataQueryExpanded || !networkId || !resourceId) {
-      if (!resourceId) {
+    if (!dataQueryExpanded || !networkId || !objectTypeId || !detail?.dataSource?.id) {
+      if (!objectTypeId || !detail?.dataSource?.id) {
         setPreview(null);
         setPreviewError(null);
-        setPreviewLoadedResourceId(null);
+        setPreviewLoadedObjectTypeId(null);
       }
       setPreviewLoading(false);
       setPreviewKeyword("");
       return;
     }
 
-    if (previewLoadedResourceId === resourceId && preview) {
+    if (previewLoadedObjectTypeId === objectTypeId && preview) {
       return;
     }
 
-    if (previewLoadedResourceId && previewLoadedResourceId !== resourceId) {
+    if (previewLoadedObjectTypeId && previewLoadedObjectTypeId !== objectTypeId) {
       setPreview(null);
       setPreviewError(null);
-      setPreviewLoadedResourceId(null);
+      setPreviewLoadedObjectTypeId(null);
       setPreviewKeyword("");
     }
 
@@ -170,16 +193,16 @@ export function ObjectTypeDetailScene() {
       setPreviewError(null);
 
       try {
-        const result = await getObjectTypeResourcePreview(networkId, resourceId);
+        const result = await getObjectTypeSampleData(networkId, objectTypeId);
         if (!cancelled) {
           setPreview(result);
-          setPreviewLoadedResourceId(resourceId);
+          setPreviewLoadedObjectTypeId(objectTypeId);
         }
       } catch (nextError) {
         if (!cancelled) {
           setPreview(null);
           setPreviewError(extractRequestErrorMessage(nextError));
-          setPreviewLoadedResourceId(null);
+          setPreviewLoadedObjectTypeId(null);
         }
       } finally {
         if (!cancelled) {
@@ -197,8 +220,9 @@ export function ObjectTypeDetailScene() {
     dataQueryExpanded,
     detail?.dataSource?.id,
     networkId,
+    objectTypeId,
     preview,
-    previewLoadedResourceId,
+    previewLoadedObjectTypeId,
   ]);
 
   useEffect(() => {
@@ -206,7 +230,7 @@ export function ObjectTypeDetailScene() {
     setPreview(null);
     setPreviewError(null);
     setPreviewKeyword("");
-    setPreviewLoadedResourceId(null);
+    setPreviewLoadedObjectTypeId(null);
     setPreviewPage(1);
     setRelatedRelationsExpanded(false);
     setRelatedRelations([]);
@@ -396,12 +420,46 @@ export function ObjectTypeDetailScene() {
 
   const previewColumns: TableProps<Record<string, string | number>>["columns"] = useMemo(
     () =>
-      (preview?.columns ?? []).map((column) => ({
-        dataIndex: column.dataIndex,
-        key: column.dataIndex,
-        title: column.title,
-      })),
-    [preview?.columns],
+      (preview?.columns ?? []).map((column) => {
+        const width = clampPreviewColumnWidth(
+          Math.max(
+            estimatePreviewTextWidth(column.title),
+            estimatePreviewTextWidth(column.dataIndex),
+            ...pagedPreviewRows.map((row) => estimatePreviewTextWidth(row[column.dataIndex])),
+          ),
+        );
+
+        return {
+          dataIndex: column.dataIndex,
+          ellipsis: true,
+          key: column.dataIndex,
+          render: (value: string | number) => {
+            const displayValue = value === "" || value == null ? "--" : String(value);
+
+            return (
+              <span className={styles.previewCellText} title={displayValue}>
+                {displayValue}
+              </span>
+            );
+          },
+          title: (
+            <span className={styles.previewHeaderText} title={column.title || column.dataIndex}>
+              {column.title || column.dataIndex}
+            </span>
+          ),
+          width,
+        };
+      }),
+    [pagedPreviewRows, preview?.columns],
+  );
+
+  const previewTableScrollX = useMemo(
+    () =>
+      previewColumns.reduce((total, column) => {
+        const width = typeof column.width === "number" ? column.width : PREVIEW_COLUMN_MIN_WIDTH;
+        return total + width;
+      }, 0),
+    [previewColumns],
   );
 
   const confirmDelete = () => {
@@ -426,25 +484,54 @@ export function ObjectTypeDetailScene() {
   const logicColumns: TableProps<ObjectTypeLogicProperty>["columns"] = [
     {
       dataIndex: "name",
+      ellipsis: true,
       key: "name",
       title: t("common.name"),
+      width: 220,
     },
     {
       dataIndex: "displayName",
+      ellipsis: true,
       key: "displayName",
       title: t("knowledgeNetwork.objectTypePropertyDisplayName"),
       render: (value: string) => value || "--",
+      width: 220,
     },
     {
       dataIndex: "dataSource",
       key: "bindResource",
-      render: (_value, record) => record.dataSource?.name || "--",
+      render: (_value, record) => {
+        if (!record.dataSource) {
+          return "--";
+        }
+
+        return (
+          <div className={styles.bindResourceCell}>
+            <div className={styles.dataResource}>
+              {record.dataSource.type === "metric" ? (
+                <span className={styles.resourceIconMetric}>M</span>
+              ) : (
+                <span className={styles.resourceIconOperator}>O</span>
+              )}
+              <span className={styles.resourceName}>{record.dataSource.name || "--"}</span>
+            </div>
+          </div>
+        );
+      },
       title: t("knowledgeNetwork.objectTypeBindResource"),
-      width: 220,
+      width: 320,
+    },
+    {
+      dataIndex: "type",
+      key: "type",
+      render: (value: ObjectTypeLogicProperty["type"]) => getLogicTypeLabel(value, t),
+      title: t("knowledgeNetwork.objectTypePropertyType"),
+      width: 120,
     },
     {
       dataIndex: "comment",
       key: "comment",
+      ellipsis: true,
       title: t("common.description"),
       render: (value?: string) => value || "--",
     },
@@ -682,17 +769,19 @@ export function ObjectTypeDetailScene() {
               ]}
               value={propertyType}
             />
-            <Input.Search
-              allowClear
-              onChange={(event) => setKeyword(event.target.value)}
-              onSearch={() => {
-                setDataPage(1);
-                setLogicPage(1);
-              }}
-              placeholder={t("knowledgeNetwork.objectTypeSearchProperty")}
-              style={{ width: 280 }}
-              value={keyword}
-            />
+            {propertyType === "logic" ? (
+              <Input.Search
+                allowClear
+                onChange={(event) => setKeyword(event.target.value)}
+                onSearch={() => {
+                  setDataPage(1);
+                  setLogicPage(1);
+                }}
+                placeholder={t("knowledgeNetwork.objectTypeSearchProperty")}
+                style={{ width: 280 }}
+                value={keyword}
+              />
+            ) : null}
           </div>
 
           {propertyType === "data" ? (
@@ -704,6 +793,19 @@ export function ObjectTypeDetailScene() {
                   <ObjectTypePropertyTable
                     properties={pagedDataProperties}
                     rowIndexOffset={(dataPage - 1) * dataPageSize}
+                    toolbarExtra={
+                      <Input.Search
+                        allowClear
+                        onChange={(event) => setKeyword(event.target.value)}
+                        onSearch={() => {
+                          setDataPage(1);
+                          setLogicPage(1);
+                        }}
+                        placeholder={t("knowledgeNetwork.objectTypeSearchProperty")}
+                        style={{ width: 280 }}
+                        value={keyword}
+                      />
+                    }
                   />
                   <div className={styles.paginationBar}>
                     <TablePaginationBar
@@ -810,6 +912,7 @@ export function ObjectTypeDetailScene() {
                 </span>
               </div>
               <Table<Record<string, string | number>>
+                className={styles.previewTable}
                 columns={previewColumns}
                 dataSource={pagedPreviewRows.map((row, index) => ({
                   ...row,
@@ -821,8 +924,9 @@ export function ObjectTypeDetailScene() {
                   ),
                 }}
                 pagination={false}
-                scroll={{ x: true }}
+                scroll={{ x: previewTableScrollX }}
                 size="small"
+                tableLayout="fixed"
               />
               {filteredPreviewRows.length > 0 ? (
                 <div className={styles.paginationBar}>
