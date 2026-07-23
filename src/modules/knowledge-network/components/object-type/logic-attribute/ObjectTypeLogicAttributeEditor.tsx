@@ -9,6 +9,7 @@ import { EllipsisOutlined, PlusOutlined, QuestionCircleOutlined } from "@ant-des
 import { Dropdown, Empty, Input, Table, Tooltip, type TableProps } from "antd";
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -24,6 +25,7 @@ import {
 import {
   renderResourceIcon,
 } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import { listObjectTypeLogicMetricModels } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { deduplicateByName } from "./constants";
 import { ObjectTypeLogicAttributeEditDrawer } from "./ObjectTypeLogicAttributeEditDrawer";
 import type {
@@ -52,6 +54,13 @@ type ObjectTypeLogicAttributeEditorProps = {
   onChange: (logicProperties: ObjectTypeLogicProperty[]) => void;
 };
 
+function getLogicTypeLabel(type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
+  if (type === "operator") {
+    return t("knowledgeNetwork.objectTypeLogicAttributeTypeOperator");
+  }
+  return t("knowledgeNetwork.objectTypeLogicAttributeTypeMetric");
+}
+
 export const ObjectTypeLogicAttributeEditor = forwardRef<
   ObjectTypeLogicAttributeEditorHandle,
   ObjectTypeLogicAttributeEditorProps
@@ -71,12 +80,40 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   const [searchInput, setSearchInput] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
+  const validateMetricReferences = useCallback(async () => {
+    const metricProperties = localLogicProperties.filter(
+      (item) => item.dataSource?.type === "metric" && item.dataSource.id,
+    );
+    if (!metricProperties.length || !networkId || !objectTypeId) {
+      return true;
+    }
+
+    const metricModels = await listObjectTypeLogicMetricModels(networkId, objectTypeId);
+    const metricIds = new Set(metricModels.map((item) => item.id));
+    const invalidProperty = metricProperties.find(
+      (item) => item.dataSource?.id && !metricIds.has(item.dataSource.id),
+    );
+    if (!invalidProperty) {
+      return true;
+    }
+
+    void message.error(
+      `逻辑属性「${invalidProperty.displayName || invalidProperty.name}」绑定的指标模型不存在，请重新选择或删除该逻辑属性。`,
+    );
+    return false;
+  }, [localLogicProperties, message, networkId, objectTypeId]);
+
   useImperativeHandle(
     ref,
     () => ({
-      validateFields: () => Promise.resolve({ logicProperties: localLogicProperties }),
+      validateFields: async () => {
+        if (!(await validateMetricReferences())) {
+          throw new Error("invalid logic metric reference");
+        }
+        return { logicProperties: localLogicProperties };
+      },
     }),
-    [localLogicProperties],
+    [localLogicProperties, validateMetricReferences],
   );
 
   useEffect(() => {
@@ -210,22 +247,10 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
       width: 260,
     },
     {
-      dataIndex: "comment",
-      ellipsis: true,
-      key: "comment",
-      render: (value?: string) => (
-        <Tooltip title={value}>
-          <span>{value || "--"}</span>
-        </Tooltip>
-      ),
-      title: t("common.description"),
-      width: 200,
-    },
-    {
       dataIndex: "dataSource",
       key: "bindResource",
       render: (_value, record) => {
-        if (!record.parameters?.length || !record.dataSource) {
+        if (!record.dataSource) {
           return null;
         }
 
@@ -244,6 +269,25 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
       },
       title: t("knowledgeNetwork.objectTypeBindResource"),
       width: 350,
+    },
+    {
+      dataIndex: "type",
+      key: "type",
+      render: (value: ObjectTypeLogicProperty["type"]) => getLogicTypeLabel(value, t),
+      title: t("knowledgeNetwork.objectTypePropertyType"),
+      width: 120,
+    },
+    {
+      dataIndex: "comment",
+      ellipsis: true,
+      key: "comment",
+      render: (value?: string) => (
+        <Tooltip title={value}>
+          <span>{value || "--"}</span>
+        </Tooltip>
+      ),
+      title: t("common.description"),
+      width: 200,
     },
   ];
 

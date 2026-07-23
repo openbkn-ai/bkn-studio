@@ -17,55 +17,32 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import type { MetricDetailSceneProps } from "@/modules/knowledge-network/contracts/scenes";
+import { useResolvedUpdaterName } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 import {
   deleteKnowledgeNetworkMetric,
   getKnowledgeNetworkMetric,
+  getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type {
-  ActionTypeCondition,
   KnowledgeNetworkMetricRecord,
-  KnowledgeNetworkMetricScopeType,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  formatMetricUnitLabel,
+  formatMetricUnitTypeLabel,
+  resolveMetricBoundObjectTypeName,
+} from "@/modules/knowledge-network/utils/metric-display";
+import {
+  formatSemanticConditionLabel,
+  formatSemanticOrderByLabel,
+  formatSemanticPropertyList,
+  resolvePropertyDisplayName,
+  toMetricPropertyOptions,
+} from "@/modules/knowledge-network/utils/metric-property-display";
 
 import styles from "./MetricDetailScene.module.css";
-
-function getScopeTypeLabel(
-  value: KnowledgeNetworkMetricScopeType,
-  t: (key: string) => string,
-) {
-  switch (value) {
-    case "subgraph":
-      return t("knowledgeNetwork.metricScopeSubgraph");
-    case "object_type":
-    default:
-      return t("knowledgeNetwork.metricScopeObjectType");
-  }
-}
-
-function formatPropertyList(values: string[] | undefined, emptyLabel: string) {
-  if (!values || values.length === 0) {
-    return emptyLabel;
-  }
-
-  return values.join(", ");
-}
-
-function formatConditionLabel(condition: ActionTypeCondition | undefined, emptyLabel: string): string {
-  if (!condition?.field || !condition.operation) {
-    return emptyLabel;
-  }
-
-  const value =
-    Array.isArray(condition.value) ? condition.value.join(", ") : condition.value;
-  const current = value ? `${condition.field} ${condition.operation} ${value}` : `${condition.field} ${condition.operation}`;
-  const subConditions = condition.subConditions
-    ?.map((item) => formatConditionLabel(item, ""))
-    .filter(Boolean);
-
-  return subConditions?.length ? [current, ...subConditions].join("; ") : current;
-}
 
 export function MetricDetailScene({
   metricId: metricIdProp,
@@ -85,9 +62,11 @@ export function MetricDetailScene({
   const networkId = networkIdProp ?? params.networkId ?? "";
   const [detail, setDetail] = useState<KnowledgeNetworkMetricRecord | null>(null);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
+  const [propertyOptions, setPropertyOptions] = useState<RelationTypePropertyOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("info");
+  const resolvedUpdaterName = useResolvedUpdaterName(detail?.updaterName);
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
 
@@ -106,6 +85,16 @@ export function MetricDetailScene({
       ]);
       setDetail(metricResult);
       setObjectTypes(objectTypeResult);
+
+      if (metricResult?.scopeType === "object_type" && metricResult.scopeRef) {
+        const objectTypeDetail = await getKnowledgeNetworkObjectTypeDetail(
+          networkId,
+          metricResult.scopeRef,
+        );
+        setPropertyOptions(toMetricPropertyOptions(objectTypeDetail?.dataProperties ?? []));
+      } else {
+        setPropertyOptions([]);
+      }
     } catch (nextError) {
       setError(extractRequestErrorMessage(nextError));
     } finally {
@@ -143,9 +132,22 @@ export function MetricDetailScene({
 
   if (loading) {
     return (
-      <div className={styles.loadingState}>
-        <Spin />
-      </div>
+      <KnowledgeNetworkResourceConfigShell
+        onBack={() => {
+          if (onBack) {
+            onBack();
+            return;
+          }
+
+          void navigate(listPath);
+        }}
+        subtitle={t("knowledgeNetwork.metricDetailDescription")}
+        title={t("knowledgeNetwork.metricDetailTitle")}
+      >
+        <div className={styles.loadingState}>
+          <Spin />
+        </div>
+      </KnowledgeNetworkResourceConfigShell>
     );
   }
 
@@ -153,10 +155,7 @@ export function MetricDetailScene({
     return <Alert message={error ?? t("common.notFound")} showIcon type="error" />;
   }
 
-  const scopeRefName =
-    detail.scopeType === "object_type"
-      ? objectTypes.find((item) => item.id === detail.scopeRef)?.name ?? detail.scopeRef
-      : detail.scopeRef;
+  const boundObjectTypeName = resolveMetricBoundObjectTypeName(detail, objectTypes);
   const formula = detail.calculationFormula;
 
   return (
@@ -193,34 +192,41 @@ export function MetricDetailScene({
       title={detail.name}
     >
       <div className={styles.page}>
-        <section className={styles.summaryCard}>
-          <div className={styles.summaryHead}>
-            <span className={styles.summaryIcon} style={{ backgroundColor: "#126ee3" }}>
-              <LineChartOutlined />
-            </span>
-            <div>
-              <h2 className={styles.summaryTitle}>{detail.name}</h2>
-              <p className={styles.summaryDescription}>
-                {detail.description || t("knowledgeNetwork.noDescription")}
-              </p>
-            </div>
-          </div>
-          <div className={styles.tagRow}>
-            {detail.tags.length > 0 ? (
-              detail.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
-            ) : (
-              <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
-            )}
-          </div>
-          <div className={styles.summaryMeta}>
-            <span>
-              {t("common.id")}: {detail.id}
-            </span>
-            <span>{t("knowledgeNetwork.updatedBy", { name: detail.updaterName })}</span>
-            <span>
-              {t("common.updateTime")}: {detail.updateTime}
-            </span>
-          </div>
+        <section className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricBasicInfo")}</h3>
+          <Descriptions bordered className={styles.basicDescriptions} column={2} size="small">
+            <Descriptions.Item label={t("knowledgeNetwork.metricName")} span={2}>
+              <span className={styles.nameCell}>
+                <span className={styles.summaryIcon} style={{ backgroundColor: "#126ee3" }}>
+                  <LineChartOutlined />
+                </span>
+                <span>{detail.name}</span>
+              </span>
+            </Descriptions.Item>
+            <Descriptions.Item label={t("knowledgeNetwork.descriptionField")} span={2}>
+              {detail.description || (
+                <span className={styles.placeholder}>{t("knowledgeNetwork.noDescription")}</span>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("knowledgeNetwork.metricTags")} span={2}>
+              {detail.tags.length > 0 ? (
+                <div className={styles.tagRow}>
+                  {detail.tags.map((tag) => (
+                    <Tag key={tag}>{tag}</Tag>
+                  ))}
+                </div>
+              ) : (
+                <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("common.id")}>{detail.id}</Descriptions.Item>
+            <Descriptions.Item label={t("knowledgeNetwork.modifier")}>
+              {resolvedUpdaterName}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("common.updateTime")} span={2}>
+              {detail.updateTime || "--"}
+            </Descriptions.Item>
+          </Descriptions>
         </section>
 
         <section className={styles.sectionCard}>
@@ -234,64 +240,88 @@ export function MetricDetailScene({
           />
 
           {activeTab === "info" ? (
-            <Descriptions bordered column={2} size="small">
-              <Descriptions.Item label={t("knowledgeNetwork.metricType")}>
-                {t("knowledgeNetwork.metricTypeAtomic")}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricScopeType")}>
-                {getScopeTypeLabel(detail.scopeType, t)}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricScopeRef")}>
-                {scopeRefName}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricUnitType")}>
-                {detail.unitType
-                  ? t(`knowledgeNetwork.metricUnitTypeOption.${detail.unitType}`)
-                  : "--"}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricUnit")}>
-                {detail.unit
-                  ? t(`knowledgeNetwork.metricUnitOption.${detail.unit}`, { defaultValue: detail.unit })
-                  : "--"}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricAggregationProperty")}>
-                {formula.aggregation.property || "--"}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricAggregationAggr")}>
-                {formula.aggregation.aggr
-                  ? t(`knowledgeNetwork.metricAggregationAggrOption.${formula.aggregation.aggr}`)
-                  : "--"}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricFilterCondition")} span={2}>
-                {formatConditionLabel(formula.condition, "--")}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricGroupBy")}>
-                {formatPropertyList(formula.groupBy, t("knowledgeNetwork.noTags"))}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricOrderBy")}>
-                {formula.orderBy?.property
-                  ? `${formula.orderBy.property} (${formula.orderBy.direction})`
-                  : "--"}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricHaving")}>
-                {formula.having?.operator
-                  ? `${formula.having.operator} ${formula.having.value ?? ""}`.trim()
-                  : "--"}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricAnalysisDimensions")}>
-                {formatPropertyList(formula.analysisDimensions, t("knowledgeNetwork.noTags"))}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricTimeDimensionProperty")}>
-                {detail.timeDimension?.property || "--"}
-              </Descriptions.Item>
-              <Descriptions.Item label={t("knowledgeNetwork.metricDefaultRangePolicy")}>
-                {detail.timeDimension?.defaultRangePolicy
-                  ? t(
-                      `knowledgeNetwork.metricDefaultRangePolicyOption.${detail.timeDimension.defaultRangePolicy}`,
-                    )
-                  : "--"}
-              </Descriptions.Item>
-            </Descriptions>
+            <div className={styles.infoSections}>
+              <section className={styles.configBlock}>
+                <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricConfigSection")}</h3>
+                <Descriptions bordered column={2} size="small">
+                  <Descriptions.Item label={t("knowledgeNetwork.metricBoundObjectType")}>
+                    {boundObjectTypeName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t("knowledgeNetwork.metricType")}>
+                    {t("knowledgeNetwork.metricTypeAtomic")}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t("knowledgeNetwork.metricUnitType")}>
+                    {formatMetricUnitTypeLabel(detail.unitType, t)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t("knowledgeNetwork.metricUnit")}>
+                    {formatMetricUnitLabel(detail.unit, t)}
+                  </Descriptions.Item>
+                </Descriptions>
+
+                <h4 className={styles.subsectionTitle}>
+                  {t("knowledgeNetwork.metricCalculationSection")}
+                </h4>
+                <Descriptions bordered column={2} size="small">
+                  <Descriptions.Item label={t("knowledgeNetwork.metricAggregationProperty")}>
+                    {resolvePropertyDisplayName(formula.aggregation.property, propertyOptions)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t("knowledgeNetwork.metricAggregationAggr")}>
+                    {formula.aggregation.aggr
+                      ? t(`knowledgeNetwork.metricAggregationAggrOption.${formula.aggregation.aggr}`)
+                      : "--"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t("knowledgeNetwork.metricFilterCondition")} span={2}>
+                    {formatSemanticConditionLabel(
+                      formula.condition,
+                      propertyOptions,
+                      t,
+                      "--",
+                    )}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t("knowledgeNetwork.metricGroupBy")}>
+                    {formatSemanticPropertyList(formula.groupBy, propertyOptions)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t("knowledgeNetwork.metricOrderBy")}>
+                    {formatSemanticOrderByLabel(
+                      formula.orderBy?.property,
+                      formula.orderBy?.direction,
+                      propertyOptions,
+                      t,
+                    )}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t("knowledgeNetwork.metricHaving")} span={2}>
+                    {formula.having?.operator
+                      ? `${formula.having.operator} ${formula.having.value ?? ""}`.trim()
+                      : "--"}
+                  </Descriptions.Item>
+                </Descriptions>
+
+                <h4 className={styles.subsectionTitle}>
+                  {t("knowledgeNetwork.metricTimeDimensionSection")}
+                </h4>
+                <Descriptions bordered column={2} size="small">
+                  <Descriptions.Item label={t("knowledgeNetwork.metricTimeDimensionProperty")}>
+                    {resolvePropertyDisplayName(detail.timeDimension?.property, propertyOptions)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t("knowledgeNetwork.metricDefaultRangePolicy")}>
+                    {detail.timeDimension?.defaultRangePolicy
+                      ? t(
+                          `knowledgeNetwork.metricDefaultRangePolicyOption.${detail.timeDimension.defaultRangePolicy}`,
+                        )
+                      : "--"}
+                  </Descriptions.Item>
+                </Descriptions>
+
+                <h4 className={styles.subsectionTitle}>
+                  {t("knowledgeNetwork.metricAnalysisDimensionsSection")}
+                </h4>
+                <Descriptions bordered column={1} size="small">
+                  <Descriptions.Item label={t("knowledgeNetwork.metricAnalysisDimensions")}>
+                    {formatSemanticPropertyList(formula.analysisDimensions, propertyOptions)}
+                  </Descriptions.Item>
+                </Descriptions>
+              </section>
+            </div>
           ) : (
             <MetricDataQueryPanel
               embedded

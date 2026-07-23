@@ -14,6 +14,7 @@ import type {
   KnowledgeNetworkImportMode,
   KnowledgeNetworkObjectTypeMutationPayload,
   KnowledgeNetworkObjectTypeRecord,
+  ObjectTypeResourcePreview,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type {
   BackendListResponse,
@@ -74,6 +75,45 @@ function isBackendObjectTypeRecord(value: unknown): value is BackendObjectType {
     value !== null &&
     "id" in value &&
     "name" in value
+  );
+}
+
+type BackendObjectTypeSampleDataResponse = {
+  columns?: Array<{
+    data_index?: string;
+    title?: string;
+  }>;
+  entries?: Array<Record<string, unknown>>;
+  name?: string;
+  total_count?: number;
+};
+
+function normalizeSampleCellValue(value: unknown): string | number {
+  if (value == null) {
+    return "";
+  }
+
+  if (typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (typeof value === "number" || typeof value === "string") {
+    return value;
+  }
+
+  try {
+    const serialized = JSON.stringify(value);
+    return serialized.length > 120 ? `${serialized.slice(0, 120)}...` : serialized;
+  } catch {
+    return "[object]";
+  }
+}
+
+function normalizeSampleRows(rows: Array<Record<string, unknown>> | undefined) {
+  return (rows ?? []).map((row) =>
+    Object.fromEntries(
+      Object.entries(row).map(([key, value]) => [key, normalizeSampleCellValue(value)]),
+    ),
   );
 }
 
@@ -140,6 +180,55 @@ export async function getKnowledgeNetworkObjectTypeDetail(
 
   const record = unwrapSingleEntryResponse(response.data);
   return record ? mapObjectTypeDetail(record) : null;
+}
+
+export async function getObjectTypeSampleData(
+  networkId: string,
+  objectTypeId: string,
+): Promise<ObjectTypeResourcePreview | null> {
+  if (useMock) {
+    const detail = buildMockObjectTypeDetail(networkId, objectTypeId);
+    if (!detail) {
+      return wait(null);
+    }
+
+    const rows = detail.dataProperties.slice(0, 3).map((property, index) => ({
+      [property.name]: `${property.displayName || property.name}-${index + 1}`,
+    }));
+
+    return wait({
+      columns: detail.dataProperties.map((property) => ({
+        dataIndex: property.name,
+        title: property.displayName || property.name,
+      })),
+      name: detail.name,
+      rowTotalCount: rows.length > 0 ? rows.length : 0,
+      rows,
+    });
+  }
+
+  const response = await http.get<BackendObjectTypeSampleDataResponse>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}/sample-data`,
+    {
+      params: {
+        limit: 20,
+        need_total: true,
+        offset: 0,
+      },
+    },
+  );
+
+  const rows = normalizeSampleRows(response.data.entries);
+
+  return {
+    columns: (response.data.columns ?? []).map((column) => ({
+      dataIndex: column.data_index ?? "",
+      title: column.title ?? column.data_index ?? "",
+    })),
+    name: response.data.name ?? objectTypeId,
+    rowTotalCount: response.data.total_count,
+    rows,
+  };
 }
 
 export async function createKnowledgeNetworkObjectType(

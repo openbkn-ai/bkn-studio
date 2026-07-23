@@ -8,7 +8,7 @@
 import { CheckOutlined } from "@ant-design/icons";
 import { Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DetailTableColumnSettingsButton } from "@/modules/knowledge-network/components/shared/DetailTableColumnSettingsButton";
@@ -24,11 +24,13 @@ import styles from "./ObjectTypePropertyTable.module.css";
 type ObjectTypePropertyTableProps = {
   properties: ObjectTypeDataProperty[];
   rowIndexOffset?: number;
+  toolbarExtra?: ReactNode;
 };
 
 export function ObjectTypePropertyTable({
   properties,
   rowIndexOffset = 0,
+  toolbarExtra,
 }: ObjectTypePropertyTableProps) {
   const { t } = useTranslation();
   const {
@@ -164,6 +166,7 @@ export function ObjectTypePropertyTable({
   return (
     <div className={styles.tableSection}>
       <div className={styles.tableToolbar}>
+        {toolbarExtra}
         <DetailTableColumnSettingsButton
           columnOrder={tableColumnKeys}
           columns={ObjectTypePropertyTableColumns}

@@ -19,6 +19,7 @@ import type {
   BackendMetricCondition,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
+import { resolveAccountDisplayName } from "@/modules/knowledge-network/services/mappers/account-info";
 
 type BackendAnalysisDimension = { display_name?: string; name?: string; property?: string } | string;
 
@@ -123,11 +124,25 @@ function mapTimeDimension(
   };
 }
 
+function mapMetricUpdaterName(item: BackendMetric): string {
+  const fromUpdater = resolveAccountDisplayName(item.updater, "");
+  if (fromUpdater) {
+    return fromUpdater;
+  }
+
+  const fromUpdaterName = item.updater_name?.trim();
+  if (fromUpdaterName) {
+    return fromUpdaterName;
+  }
+
+  return resolveAccountDisplayName(item.creator);
+}
+
 export function mapMetric(item: BackendMetric): KnowledgeNetworkMetricRecord {
   const calculationFormula = mapCalculationFormula(item.calculation_formula);
   const rootAnalysisDimensions = mapAnalysisDimensions(item.analysis_dimensions);
   const analysisDimensions = [
-    ...new Set([...calculationFormula.analysisDimensions, ...rootAnalysisDimensions]),
+    ...new Set([...(calculationFormula.analysisDimensions ?? []), ...rootAnalysisDimensions]),
   ];
 
   return {
@@ -146,7 +161,7 @@ export function mapMetric(item: BackendMetric): KnowledgeNetworkMetricRecord {
     unit: item.unit,
     unitType: item.unit_type,
     updateTime: formatTimestamp(item.update_time),
-    updaterName: item.updater?.name ?? item.updater?.id ?? "--",
+    updaterName: mapMetricUpdaterName(item),
   };
 }
 
@@ -163,9 +178,9 @@ export function toBackendMetricEntry(input: KnowledgeNetworkMetricMutationPayloa
     : undefined;
 
   return {
+    analysis_dimensions: analysisDimensions.map((property) => ({ name: property })),
     calculation_formula: {
       aggregation: input.calculationFormula.aggregation,
-      analysis_dimensions: analysisDimensions.map((property) => ({ property })),
       condition: toBackendMetricCondition(input.calculationFormula.condition),
       group_by: groupBy.map((property) => ({ property })),
       having: input.calculationFormula.having?.value

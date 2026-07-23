@@ -28,12 +28,18 @@ import { usePersistentPageSize } from "@/modules/knowledge-network/components/sh
 import {
   deleteKnowledgeNetworkMetrics,
   listKnowledgeNetworkMetrics,
+  listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   KnowledgeNetworkMetricRecord,
-  KnowledgeNetworkMetricScopeType,
   KnowledgeNetworkMetricType,
+  KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  resolveUpdaterDisplayName,
+  useAccountDirectory,
+} from "@/modules/knowledge-network/hooks/useAccountDirectory";
+import { resolveMetricBoundObjectTypeName } from "@/modules/knowledge-network/utils/metric-display";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type MetricListPanelProps = {
@@ -60,19 +66,6 @@ function getMetricTypeLabel(
   }
 }
 
-function getScopeTypeLabel(
-  value: KnowledgeNetworkMetricScopeType,
-  t: (key: string) => string,
-) {
-  switch (value) {
-    case "subgraph":
-      return t("knowledgeNetwork.metricScopeSubgraph");
-    case "object_type":
-    default:
-      return t("knowledgeNetwork.metricScopeObjectType");
-  }
-}
-
 export function MetricListPanel({
   loading,
   metrics,
@@ -86,14 +79,17 @@ export function MetricListPanel({
   const { message, modal } = useAppServices();
   const [tableMetrics, setTableMetrics] = useState(metrics);
   const [tableLoading, setTableLoading] = useState(Boolean(loading));
+  const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [keyword, setKeyword] = useState("");
   const [selectedTag, setSelectedTag] = useState("all");
+  const [selectedBoundObjectType, setSelectedBoundObjectType] = useState("all");
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePersistentPageSize("metrics");
   const [total, setTotal] = useState(metrics.length);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const accountDirectory = useAccountDirectory();
 
   const tagOptions = useMemo(() => {
     const tags = new Set<string>();
@@ -103,9 +99,18 @@ export function MetricListPanel({
     return [...tags].sort((left, right) => left.localeCompare(right));
   }, [metrics, tableMetrics]);
 
+  const boundObjectTypeOptions = useMemo(
+    () =>
+      [...objectTypes]
+        .sort((left, right) => left.name.localeCompare(right.name, "zh-CN"))
+        .map((item) => ({ label: item.name, value: item.id })),
+    [objectTypes],
+  );
+
   const hasActiveFilter = useMemo(
-    () => Boolean(keyword.trim()) || selectedTag !== "all",
-    [keyword, selectedTag],
+    () =>
+      Boolean(keyword.trim()) || selectedTag !== "all" || selectedBoundObjectType !== "all",
+    [keyword, selectedBoundObjectType, selectedTag],
   );
 
   const fetchMetrics = useCallback(async () => {
@@ -116,6 +121,7 @@ export function MetricListPanel({
         keyword,
         limit: pageSize,
         offset: (page - 1) * pageSize,
+        scopeRef: selectedBoundObjectType !== "all" ? selectedBoundObjectType : undefined,
         sort: sortBy === "name" ? "name" : "update_time",
         tag: selectedTag,
       });
@@ -125,7 +131,11 @@ export function MetricListPanel({
     } finally {
       setTableLoading(false);
     }
-  }, [keyword, networkId, page, pageSize, selectedTag, sortBy, sortDirection]);
+  }, [keyword, networkId, page, pageSize, selectedBoundObjectType, selectedTag, sortBy, sortDirection]);
+
+  useEffect(() => {
+    void listKnowledgeNetworkObjectTypes(networkId).then(setObjectTypes);
+  }, [networkId]);
 
   useEffect(() => {
     void fetchMetrics();
@@ -242,11 +252,12 @@ export function MetricListPanel({
       render: (value: KnowledgeNetworkMetricType) => getMetricTypeLabel(value, t),
     },
     {
-      dataIndex: "scopeType",
-      key: "scopeType",
-      title: t("knowledgeNetwork.metricScopeType"),
-      width: 120,
-      render: (value: KnowledgeNetworkMetricScopeType) => getScopeTypeLabel(value, t),
+      dataIndex: "scopeRef",
+      key: "boundObjectType",
+      title: t("knowledgeNetwork.metricBoundObjectType"),
+      width: 180,
+      render: (_value: string, record) =>
+        resolveMetricBoundObjectTypeName(record, objectTypes),
     },
     {
       dataIndex: "tags",
@@ -269,7 +280,7 @@ export function MetricListPanel({
       key: "updaterName",
       title: t("knowledgeNetwork.modifier"),
       width: 140,
-      render: (value: string) => value || "--",
+      render: (value: string) => resolveUpdaterDisplayName(value, accountDirectory),
     },
     {
       dataIndex: "updateTime",
@@ -315,34 +326,19 @@ export function MetricListPanel({
     tableMetrics.length === 0 ? (
       renderEmptyContent()
     ) : (
-      <>
-        <Table
-          columns={columns}
-          dataSource={tableMetrics}
-          loading={tableLoading}
-          pagination={false}
-          rowKey="id"
-          rowSelection={{
-            selectedRowKeys,
-            onChange: (keys) => setSelectedRowKeys(keys as string[]),
-          }}
-          scroll={{ x: 980 }}
-          size="middle"
-        />
-        <div className={styles.paginationBar}>
-          <TablePaginationBar
-            current={page}
-            onChange={(nextPage, nextPageSize) => {
-              setPage(nextPage);
-              setPageSize(nextPageSize);
-            }}
-            pageSize={pageSize}
-            showSizeChanger
-            showTotal={(total) => t("common.total", { total })}
-            total={total}
-          />
-        </div>
-      </>
+      <Table
+        columns={columns}
+        dataSource={tableMetrics}
+        loading={tableLoading}
+        pagination={false}
+        rowKey="id"
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys as string[]),
+        }}
+        scroll={{ x: 980 }}
+        size="middle"
+      />
     );
 
   return (
@@ -396,6 +392,23 @@ export function MetricListPanel({
             value={keyword}
           />
           <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>{t("knowledgeNetwork.metricBoundObjectType")}</span>
+            <Select
+              className={styles.filterSelect}
+              onChange={(value) => {
+                setSelectedBoundObjectType(value);
+                setPage(1);
+              }}
+              optionFilterProp="label"
+              options={[
+                { label: t("common.all"), value: "all" },
+                ...boundObjectTypeOptions,
+              ]}
+              showSearch
+              value={selectedBoundObjectType}
+            />
+          </div>
+          <div className={styles.filterGroup}>
             <span className={styles.filterLabel}>{t("common.tag")}</span>
             <Select
               className={styles.filterSelect}
@@ -445,6 +458,22 @@ export function MetricListPanel({
       </div>
 
       <div className={styles.tableCard}>{tableContent}</div>
+
+      {total > 0 ? (
+        <div className={styles.paginationBar}>
+          <TablePaginationBar
+            current={page}
+            onChange={(nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            }}
+            pageSize={pageSize}
+            showSizeChanger
+            showTotal={(total) => t("common.total", { total })}
+            total={total}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

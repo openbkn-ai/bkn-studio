@@ -104,6 +104,7 @@ export async function listKnowledgeNetworkMetrics(
           name_pattern: query.keyword || undefined,
           offset: query.offset ?? 0,
           scope_ref: query.scopeRef || undefined,
+          scope_type: query.scopeRef ? "object_type" : undefined,
           sort: query.sort ?? "update_time",
           tag: query.tag && query.tag !== "all" ? query.tag : undefined,
         },

@@ -5,13 +5,22 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Form, InputNumber, Select, Space } from "antd";
+import { Form, InputNumber, Select } from "antd";
 import type { FormInstance } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
+import {
+  getAvailableAggrOptionsForPropertyType,
+  isMetricTimePropertyType,
+  METRIC_ALL_AGGR_OPTIONS,
+} from "@/modules/knowledge-network/constants/metric-aggregation";
+import {
+  METRIC_UNIT_TYPE_OPTIONS,
+  resolveMetricUnitOptions,
+} from "@/modules/knowledge-network/constants/metric-units";
 import type {
   MetricAggregationAggr,
   MetricDefaultRangePolicy,
@@ -24,18 +33,6 @@ import type { RelationTypePropertyOption } from "@/modules/knowledge-network/com
 
 import styles from "./MetricCalculationEditor.module.css";
 
-const NUMERIC_TYPES = ["int", "float", "double", "long", "number", "decimal"];
-const TIME_TYPES = ["date", "datetime", "timestamp", "time"];
-
-const AGGR_OPTIONS: MetricAggregationAggr[] = [
-  "sum",
-  "avg",
-  "max",
-  "min",
-  "count",
-  "count_distinct",
-];
-
 const HAVING_OPERATORS: MetricHavingOperator[] = [">", ">=", "<", "<=", "==", "!="];
 
 const RANGE_POLICIES: MetricDefaultRangePolicy[] = [
@@ -46,34 +43,50 @@ const RANGE_POLICIES: MetricDefaultRangePolicy[] = [
 ];
 
 type MetricCalculationEditorProps = {
+  embedded?: boolean;
   form: FormInstance;
   networkId: string;
+  objectTypeId?: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
-  scopeRef?: string;
-  scopeType?: string;
 };
-
-function isNumericProperty(property: ObjectTypeDataProperty) {
-  const normalized = property.type.toLowerCase();
-  return NUMERIC_TYPES.some((type) => normalized.includes(type));
-}
-
-function isTimeProperty(property: ObjectTypeDataProperty) {
-  const normalized = property.type.toLowerCase();
-  return TIME_TYPES.some((type) => normalized.includes(type));
-}
 
 function formatPropertyLabel(property: ObjectTypeDataProperty) {
   const label = property.displayName || property.name;
   return `${label} (${property.type || "unknown"})`;
 }
 
+function Subsection({
+  children,
+  embedded,
+  title,
+}: {
+  children: ReactNode;
+  embedded?: boolean;
+  title: string;
+}) {
+  if (embedded) {
+    return (
+      <div className={styles.embeddedSubsection}>
+        <h4 className={styles.subsectionTitle}>{title}</h4>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <section className={styles.sectionCard}>
+      <h3 className={styles.sectionTitle}>{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 export function MetricCalculationEditor({
+  embedded = false,
   form,
   networkId,
+  objectTypeId,
   objectTypes,
-  scopeRef,
-  scopeType,
 }: MetricCalculationEditorProps) {
   const { t } = useTranslation();
   const [properties, setProperties] = useState<ObjectTypeDataProperty[]>([]);
@@ -82,28 +95,33 @@ export function MetricCalculationEditor({
     ["calculationFormula", "aggregation", "property"],
     form,
   ) as string | undefined;
+  const unitType = Form.useWatch("unitType", form);
+  const unit = Form.useWatch("unit", form);
+  const groupBy = Form.useWatch(["calculationFormula", "groupBy"], form) as string[] | undefined;
+  const analysisDimensions = Form.useWatch(["calculationFormula", "analysisDimensions"], form) as
+    | string[]
+    | undefined;
 
   useEffect(() => {
-    if (scopeType !== "object_type" || !scopeRef || !networkId) {
+    if (!objectTypeId || !networkId) {
       setProperties([]);
       return;
     }
 
     setLoadingProperties(true);
-    void getKnowledgeNetworkObjectTypeDetail(networkId, scopeRef)
+    void getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId)
       .then((detail) => {
         setProperties(detail?.dataProperties ?? []);
       })
       .finally(() => {
         setLoadingProperties(false);
       });
-  }, [networkId, scopeRef, scopeType]);
+  }, [networkId, objectTypeId]);
 
-  const numericProperties = useMemo(
-    () => properties.filter(isNumericProperty),
+  const timeProperties = useMemo(
+    () => properties.filter((item) => isMetricTimePropertyType(item.type)),
     [properties],
   );
-  const timeProperties = useMemo(() => properties.filter(isTimeProperty), [properties]);
   const propertyOptions = useMemo(
     () =>
       properties.map((item) => ({
@@ -112,6 +130,40 @@ export function MetricCalculationEditor({
       })),
     [properties],
   );
+  const groupBySet = useMemo(() => new Set(groupBy ?? []), [groupBy]);
+  const analysisDimensionSet = useMemo(
+    () => new Set(analysisDimensions ?? []),
+    [analysisDimensions],
+  );
+  const groupByOptions = useMemo(
+    () =>
+      propertyOptions.map((item) => ({
+        ...item,
+        disabled: analysisDimensionSet.has(item.value),
+      })),
+    [analysisDimensionSet, propertyOptions],
+  );
+  const analysisDimensionOptions = useMemo(
+    () =>
+      propertyOptions.map((item) => ({
+        ...item,
+        disabled: groupBySet.has(item.value),
+      })),
+    [groupBySet, propertyOptions],
+  );
+  const availableUnitOptions = useMemo(
+    () => resolveMetricUnitOptions(unitType, unit),
+    [unit, unitType],
+  );
+  const aggregationPropertyOptions = useMemo(
+    () =>
+      properties.map((item) => ({
+        label: formatPropertyLabel(item),
+        value: item.name,
+      })),
+    [properties],
+  );
+
   const conditionPropertyOptions = useMemo<RelationTypePropertyOption[]>(
     () =>
       properties.map((item) => ({
@@ -124,177 +176,232 @@ export function MetricCalculationEditor({
       })),
     [properties],
   );
-  const numericPropertyOptions = useMemo(
-    () =>
-      numericProperties.map((item) => ({
-        label: formatPropertyLabel(item),
-        value: item.name,
-      })),
-    [numericProperties],
-  );
 
   const selectedProperty = properties.find((item) => item.name === aggregationProperty);
   const availableAggrOptions = useMemo(() => {
     if (!selectedProperty) {
-      return AGGR_OPTIONS;
+      return METRIC_ALL_AGGR_OPTIONS;
     }
 
-    return isNumericProperty(selectedProperty)
-      ? AGGR_OPTIONS
-      : (["count", "count_distinct"] as MetricAggregationAggr[]);
+    return getAvailableAggrOptionsForPropertyType(selectedProperty.type);
   }, [selectedProperty]);
+  const aggregationAggr = Form.useWatch(
+    ["calculationFormula", "aggregation", "aggr"],
+    form,
+  ) as MetricAggregationAggr | undefined;
+
+  useEffect(() => {
+    if (!aggregationAggr || !selectedProperty) {
+      return;
+    }
+
+    if (!availableAggrOptions.includes(aggregationAggr)) {
+      form.setFieldValue(["calculationFormula", "aggregation", "aggr"], undefined);
+    }
+  }, [aggregationAggr, availableAggrOptions, form, selectedProperty]);
 
   const propertiesDisabled = properties.length === 0;
+  const handleGroupByChange = (value: string[]) => {
+    const nextGroupBySet = new Set(value);
+    const nextAnalysisDimensions = (analysisDimensions ?? []).filter(
+      (item) => !nextGroupBySet.has(item),
+    );
+    form.setFieldValue(["calculationFormula", "analysisDimensions"], nextAnalysisDimensions);
+  };
+
+  const handleAnalysisDimensionsChange = (value: string[]) => {
+    const nextAnalysisDimensionSet = new Set(value);
+    const nextGroupBy = (groupBy ?? []).filter((item) => !nextAnalysisDimensionSet.has(item));
+    form.setFieldValue(["calculationFormula", "groupBy"], nextGroupBy);
+  };
 
   return (
-    <div className={styles.section}>
-      <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricCalculationSection")}</h3>
+    <>
+      <Subsection embedded={embedded} title={t("knowledgeNetwork.metricCalculationSection")}>
+        <div className={styles.fieldGrid}>
+          <Form.Item
+            label={t("knowledgeNetwork.metricAggregationProperty")}
+            name={["calculationFormula", "aggregation", "property"]}
+            rules={[
+              { message: t("knowledgeNetwork.metricAggregationPropertyRequired"), required: true },
+            ]}
+          >
+            <Select
+              disabled={propertiesDisabled}
+              loading={loadingProperties}
+              onChange={() => {
+                form.setFieldValue(["calculationFormula", "aggregation", "aggr"], undefined);
+              }}
+              options={aggregationPropertyOptions}
+              placeholder={t("knowledgeNetwork.metricAggregationPropertyPlaceholder")}
+              showSearch
+            />
+          </Form.Item>
 
-      <Form.Item
-        label={t("knowledgeNetwork.metricAggregationProperty")}
-        name={["calculationFormula", "aggregation", "property"]}
-        rules={[
-          { message: t("knowledgeNetwork.metricAggregationPropertyRequired"), required: true },
-        ]}
-      >
-        <Select
-          disabled={numericPropertyOptions.length === 0}
-          loading={loadingProperties}
-          onChange={() => {
-            form.setFieldValue(["calculationFormula", "aggregation", "aggr"], undefined);
-          }}
-          options={numericPropertyOptions}
-          placeholder={t("knowledgeNetwork.metricAggregationPropertyPlaceholder")}
-          showSearch
-        />
-      </Form.Item>
+          <Form.Item label={t("knowledgeNetwork.metricUnitType")} name="unitType">
+            <Select
+              allowClear
+              onChange={() => form.setFieldValue("unit", undefined)}
+              optionFilterProp="label"
+              options={METRIC_UNIT_TYPE_OPTIONS.map((value) => ({
+                label: t(`knowledgeNetwork.metricUnitTypeOption.${value}`),
+                value,
+              }))}
+              placeholder={t("knowledgeNetwork.metricUnitTypePlaceholder")}
+              showSearch
+            />
+          </Form.Item>
 
-      <Form.Item
-        label={t("knowledgeNetwork.metricAggregationAggr")}
-        name={["calculationFormula", "aggregation", "aggr"]}
-        rules={[{ message: t("knowledgeNetwork.metricAggregationAggrRequired"), required: true }]}
-      >
-        <Select
-          options={availableAggrOptions.map((value) => ({
-            label: t(`knowledgeNetwork.metricAggregationAggrOption.${value}`),
-            value,
-          }))}
-          placeholder={t("knowledgeNetwork.pleaseSelect")}
-        />
-      </Form.Item>
+          <Form.Item label={t("knowledgeNetwork.metricUnit")} name="unit">
+            <Select
+              allowClear
+              disabled={!unitType}
+              optionFilterProp="label"
+              options={availableUnitOptions.map((value) => ({
+                label: t(`knowledgeNetwork.metricUnitOption.${value}`, { defaultValue: value }),
+                value,
+              }))}
+              placeholder={t("knowledgeNetwork.metricUnitPlaceholder")}
+              showSearch
+            />
+          </Form.Item>
 
-      <Form.Item
-        label={t("knowledgeNetwork.metricFilterCondition")}
-        name={["calculationFormula", "condition"]}
-      >
-        <ActionTypeConditionEditor
-          boundObjectTypeId={scopeType === "object_type" ? scopeRef : undefined}
-          objectTypes={objectTypes}
-          propertyOptions={conditionPropertyOptions}
-        />
-      </Form.Item>
+          <Form.Item
+            label={t("knowledgeNetwork.metricAggregationAggr")}
+            name={["calculationFormula", "aggregation", "aggr"]}
+            rules={[{ message: t("knowledgeNetwork.metricAggregationAggrRequired"), required: true }]}
+          >
+            <Select
+              disabled={!aggregationProperty}
+              options={availableAggrOptions.map((value) => ({
+                label: t(`knowledgeNetwork.metricAggregationAggrOption.${value}`),
+                value,
+              }))}
+              placeholder={t("knowledgeNetwork.pleaseSelect")}
+            />
+          </Form.Item>
 
-      <Form.Item label={t("knowledgeNetwork.metricGroupBy")} name={["calculationFormula", "groupBy"]}>
-        <Select
-          allowClear
-          disabled={propertiesDisabled}
-          mode="multiple"
-          options={propertyOptions}
-          placeholder={t("knowledgeNetwork.metricGroupByPlaceholder")}
-        />
-      </Form.Item>
+          <Form.Item
+            className={styles.fieldFull}
+            label={t("knowledgeNetwork.metricFilterCondition")}
+            name={["calculationFormula", "condition"]}
+          >
+            <ActionTypeConditionEditor
+              boundObjectTypeId={objectTypeId}
+              hideObjectTypeSelect
+              objectTypes={objectTypes}
+              propertyOptions={conditionPropertyOptions}
+            />
+          </Form.Item>
 
-      <Form.Item label={t("knowledgeNetwork.metricOrderBy")}>
-        <Space align="start" className={styles.inlineFieldGroup} wrap>
-          <Form.Item name={["calculationFormula", "orderBy", "property"]} noStyle>
+          <Form.Item
+            className={styles.fieldFull}
+            label={t("knowledgeNetwork.metricGroupBy")}
+            name={["calculationFormula", "groupBy"]}
+          >
             <Select
               allowClear
               disabled={propertiesDisabled}
-              options={propertyOptions}
-              placeholder={t("knowledgeNetwork.metricOrderByPropertyPlaceholder")}
-              style={{ width: 200 }}
+              mode="multiple"
+              onChange={handleGroupByChange}
+              options={groupByOptions}
+              placeholder={t("knowledgeNetwork.metricGroupByPlaceholder")}
             />
           </Form.Item>
-          <Form.Item name={["calculationFormula", "orderBy", "direction"]} noStyle>
+
+          <Form.Item className={styles.fieldFull} label={t("knowledgeNetwork.metricOrderBy")}>
+            <div className={styles.compactRow}>
+              <Form.Item name={["calculationFormula", "orderBy", "property"]} noStyle>
+                <Select
+                  allowClear
+                  disabled={propertiesDisabled}
+                  options={propertyOptions}
+                  placeholder={t("knowledgeNetwork.metricOrderByPropertyPlaceholder")}
+                />
+              </Form.Item>
+              <Form.Item name={["calculationFormula", "orderBy", "direction"]} noStyle>
+                <Select
+                  allowClear
+                  options={[
+                    { label: t("knowledgeNetwork.metricOrderAsc"), value: "asc" },
+                    { label: t("knowledgeNetwork.metricOrderDesc"), value: "desc" },
+                  ] satisfies Array<{ label: string; value: MetricOrderDirection }>}
+                  placeholder={t("knowledgeNetwork.pleaseSelect")}
+                />
+              </Form.Item>
+            </div>
+          </Form.Item>
+
+          <Form.Item className={styles.fieldFull} label={t("knowledgeNetwork.metricHaving")}>
+            <div className={styles.compactRowOperator}>
+              <Form.Item name={["calculationFormula", "having", "operator"]} noStyle>
+                <Select
+                  allowClear
+                  options={HAVING_OPERATORS.map((value) => ({ label: value, value }))}
+                  placeholder={t("knowledgeNetwork.metricHavingOperatorPlaceholder")}
+                />
+              </Form.Item>
+              <Form.Item name={["calculationFormula", "having", "value"]} noStyle>
+                <InputNumber
+                  placeholder={t("knowledgeNetwork.metricHavingValuePlaceholder")}
+                  style={{ width: "100%" }}
+                />
+              </Form.Item>
+            </div>
+          </Form.Item>
+        </div>
+      </Subsection>
+
+      <Subsection embedded={embedded} title={t("knowledgeNetwork.metricTimeDimensionSection")}>
+        <div className={styles.fieldGrid}>
+          <Form.Item
+            label={t("knowledgeNetwork.metricTimeDimensionProperty")}
+            name={["timeDimension", "property"]}
+          >
             <Select
               allowClear
-              options={[
-                { label: t("knowledgeNetwork.metricOrderAsc"), value: "asc" },
-                { label: t("knowledgeNetwork.metricOrderDesc"), value: "desc" },
-              ] satisfies Array<{ label: string; value: MetricOrderDirection }>}
+              disabled={timeProperties.length === 0}
+              loading={loadingProperties}
+              options={timeProperties.map((item) => ({
+                label: formatPropertyLabel(item),
+                value: item.name,
+              }))}
+              placeholder={t("knowledgeNetwork.metricTimeDimensionPropertyPlaceholder")}
+              showSearch
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={t("knowledgeNetwork.metricDefaultRangePolicy")}
+            name={["timeDimension", "defaultRangePolicy"]}
+          >
+            <Select
+              allowClear
+              options={RANGE_POLICIES.map((value) => ({
+                label: t(`knowledgeNetwork.metricDefaultRangePolicyOption.${value}`),
+                value,
+              }))}
               placeholder={t("knowledgeNetwork.pleaseSelect")}
-              style={{ width: 100 }}
             />
           </Form.Item>
-        </Space>
-      </Form.Item>
+        </div>
+      </Subsection>
 
-      <Form.Item label={t("knowledgeNetwork.metricHaving")}>
-        <Space align="start" className={styles.inlineFieldGroup} wrap>
-          <Form.Item name={["calculationFormula", "having", "operator"]} noStyle>
-            <Select
-              allowClear
-              options={HAVING_OPERATORS.map((value) => ({ label: value, value }))}
-              placeholder={t("knowledgeNetwork.metricHavingOperatorPlaceholder")}
-              style={{ width: 100 }}
-            />
-          </Form.Item>
-          <Form.Item name={["calculationFormula", "having", "value"]} noStyle>
-            <InputNumber
-              placeholder={t("knowledgeNetwork.metricHavingValuePlaceholder")}
-              style={{ width: 150 }}
-            />
-          </Form.Item>
-        </Space>
-      </Form.Item>
-
-      <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricTimeDimensionSection")}</h3>
-
-      <Form.Item
-        label={t("knowledgeNetwork.metricTimeDimensionProperty")}
-        name={["timeDimension", "property"]}
-      >
-        <Select
-          allowClear
-          disabled={timeProperties.length === 0}
-          loading={loadingProperties}
-          options={timeProperties.map((item) => ({
-            label: formatPropertyLabel(item),
-            value: item.name,
-          }))}
-          placeholder={t("knowledgeNetwork.metricTimeDimensionPropertyPlaceholder")}
-          showSearch
-        />
-      </Form.Item>
-
-      <Form.Item
-        label={t("knowledgeNetwork.metricDefaultRangePolicy")}
-        name={["timeDimension", "defaultRangePolicy"]}
-      >
-        <Select
-          allowClear
-          options={RANGE_POLICIES.map((value) => ({
-            label: t(`knowledgeNetwork.metricDefaultRangePolicyOption.${value}`),
-            value,
-          }))}
-          placeholder={t("knowledgeNetwork.pleaseSelect")}
-        />
-      </Form.Item>
-
-      <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricAnalysisDimensionsSection")}</h3>
-
-      <Form.Item
-        label={t("knowledgeNetwork.metricAnalysisDimensions")}
-        name={["calculationFormula", "analysisDimensions"]}
-      >
-        <Select
-          allowClear
-          disabled={propertiesDisabled}
-          mode="multiple"
-          options={propertyOptions}
-          placeholder={t("knowledgeNetwork.metricAnalysisDimensionsPlaceholder")}
-        />
-      </Form.Item>
-    </div>
+      <Subsection embedded={embedded} title={t("knowledgeNetwork.metricAnalysisDimensionsSection")}>
+        <Form.Item
+          label={t("knowledgeNetwork.metricAnalysisDimensions")}
+          name={["calculationFormula", "analysisDimensions"]}
+        >
+          <Select
+            allowClear
+            disabled={propertiesDisabled}
+            mode="multiple"
+            onChange={handleAnalysisDimensionsChange}
+            options={analysisDimensionOptions}
+            placeholder={t("knowledgeNetwork.metricAnalysisDimensionsPlaceholder")}
+          />
+        </Form.Item>
+      </Subsection>
+    </>
   );
 }

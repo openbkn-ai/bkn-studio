@@ -256,6 +256,7 @@ export type BackendMetric = {
   };
   analysis_dimensions?: Array<{ display_name?: string; name?: string; property?: string } | string>;
   comment?: string;
+  creator?: BackendAccountInfo | string;
   id: string;
   metric_type?: KnowledgeNetworkMetricRecord["metricType"];
   name: string;
@@ -269,7 +270,8 @@ export type BackendMetric = {
   unit?: KnowledgeNetworkMetricRecord["unit"];
   unit_type?: KnowledgeNetworkMetricRecord["unitType"];
   update_time?: number;
-  updater?: BackendAccountInfo;
+  updater?: BackendAccountInfo | string;
+  updater_name?: string;
 };
 
 export type BackendTaskChild = {
