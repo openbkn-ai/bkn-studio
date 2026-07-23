@@ -44,6 +44,8 @@ import {
 
   createKnowledgeNetworkMetric,
 
+  getKnowledgeNetworkObjectType,
+
   getKnowledgeNetworkMetric,
 
   listKnowledgeNetworkObjectTypes,
@@ -60,6 +62,8 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { createDefaultMetricCalculationFormula } from "@/modules/knowledge-network/types/knowledge-network";
+
+import { mergeBoundObjectTypeOption } from "@/modules/knowledge-network/utils/metric-object-type-options";
 
 
 
@@ -175,10 +179,6 @@ export function MetricFormScene({
 
         const objectTypeResult = await listKnowledgeNetworkObjectTypes(networkId);
 
-        setObjectTypes(objectTypeResult);
-
-
-
         if (mode === "edit" && metricId) {
 
           setLoading(true);
@@ -195,13 +195,35 @@ export function MetricFormScene({
 
           const boundObjectTypeId =
 
-            detail.scopeType === "object_type" &&
+            detail.scopeType === "object_type" ? detail.scopeRef.trim() : "";
 
-            objectTypeResult.some((item) => item.id === detail.scopeRef)
+          let boundObjectType: KnowledgeNetworkObjectTypeRecord | null = null;
 
-              ? detail.scopeRef
+          if (
 
-              : "";
+            boundObjectTypeId &&
+
+            !objectTypeResult.some((item) => item.id === boundObjectTypeId)
+
+          ) {
+
+            try {
+
+              boundObjectType = await getKnowledgeNetworkObjectType(networkId, boundObjectTypeId);
+
+            } catch {
+
+              boundObjectType = null;
+
+            }
+
+          }
+
+          setObjectTypes(
+
+            mergeBoundObjectTypeOption(objectTypeResult, boundObjectTypeId, boundObjectType),
+
+          );
 
 
 
@@ -232,6 +254,8 @@ export function MetricFormScene({
           setPageTitle(detail.name);
 
         } else {
+
+          setObjectTypes(objectTypeResult);
 
           form.setFieldsValue({
 
