@@ -5,10 +5,13 @@
 
 name: ci-quality
 
+# Push events cover every branch, so same-repo PRs skip their duplicate run
+# (the push run on the head SHA reports the same check). The pull_request
+# trigger remains for fork PRs, whose pushes cannot run workflows here.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 concurrency:
@@ -21,6 +24,7 @@ permissions:
 jobs:
   quality:
     name: ci-quality
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
