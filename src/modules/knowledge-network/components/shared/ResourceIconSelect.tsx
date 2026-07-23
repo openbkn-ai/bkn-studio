@@ -189,7 +189,7 @@ export function ResourceIconSelect({
 
   return (
     <Popover
-      content={open ? popupRender() : null}
+      content={popupRender()}
       destroyOnHidden
       getPopupContainer={getPopupContainer}
       onOpenChange={setOpen}

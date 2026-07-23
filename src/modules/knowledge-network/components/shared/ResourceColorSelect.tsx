@@ -87,15 +87,18 @@ export function ResourceColorSelect({
 
   return (
     <Popover
-      content={open ? panel : null}
+      content={panel}
       destroyOnHidden
-      getPopupContainer={
-        inModal
-          ? () =>
-              (document.querySelector(".ant-modal-wrap") as HTMLElement) ??
-              document.body
-          : undefined
-      }
+      getPopupContainer={() => {
+        if (inModal) {
+          return (
+            (document.querySelector(".ant-modal-wrap") as HTMLElement) ??
+            document.body
+          );
+        }
+
+        return document.getElementById("root") ?? document.body;
+      }}
       onOpenChange={setOpen}
       open={open}
       trigger="click"
