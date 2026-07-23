@@ -27,6 +27,7 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
+import { SkillFileTreeView } from "@/modules/execution-factory/components/SkillFileTreeView";
 import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
 import {
   downloadSkillPackage,
@@ -48,7 +49,6 @@ import {
 } from "@/modules/execution-factory/utils/detail-display";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
-import { formatSkillFileSize } from "@/modules/execution-factory/utils/skill-file-preview";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 import styles from "./toolbox-detail.module.css";
@@ -408,26 +408,18 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
                     <FileTextOutlined /> {t("executionFactory.skillFilesSectionTitle")}
                   </span>
                 </div>
-                <div className={styles.toolList}>
-                  {fileEntries.map((item, index) => {
-                    const active = selectedFile?.relPath === item.relPath;
-
-                    return (
-                      <div
-                        className={`${styles.toolItem} ${active ? styles.toolItemActive : ""}`}
-                        key={item.relPath}
-                        onClick={() => setSelectedFile(item)}
-                      >
-                        <div className={styles.toolItemTop}>
-                          <span className={styles.toolIndex}>{index + 1}</span>
-                          <span className={styles.toolName}>{item.relPath}</span>
-                        </div>
-                        <div className={styles.toolDesc}>
-                          {[item.mimeType, formatSkillFileSize(item.size)].filter(Boolean).join(" · ") || "-"}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className={styles.fileTreeWrap}>
+                  <SkillFileTreeView
+                    files={fileEntries}
+                    onSelectFile={(relPath) => {
+                      const nextFile = fileEntries.find((item) => item.relPath === relPath);
+                      if (nextFile) {
+                        setSelectedFile(nextFile);
+                      }
+                    }}
+                    selectedPath={selectedFile?.relPath}
+                    showFileMeta
+                  />
                 </div>
               </Sider>
               <Content className={styles.content}>

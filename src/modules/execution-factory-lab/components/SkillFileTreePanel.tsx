@@ -5,17 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, List, Spin } from "antd";
-
+import { Alert, Spin } from "antd";
 import { useEffect, useState } from "react";
-
 import { useTranslation } from "react-i18next";
 
+import { SkillFileTreeView } from "@/modules/execution-factory/components/SkillFileTreeView";
 import {
   getSkillContent,
   readSkillFile,
 } from "@/modules/execution-factory-lab/services/capabilities-lab.service";
 import type { SkillFileSummary } from "@/modules/execution-factory-lab/types/capability";
+
+import styles from "./skill-file-tree-panel.module.css";
 
 type SkillFileTreePanelProps = {
   capabilityId: string;
@@ -36,7 +37,11 @@ export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
       .then((content) => {
         setFiles(content.files);
         if (content.files.length > 0) {
-          setSelectedPath(content.files[0].relPath);
+          setSelectedPath(
+            content.files.find((item) => item.relPath === "SKILL.md")?.relPath ??
+              content.files[0]?.relPath ??
+              null,
+          );
         } else if (content.content) {
           setPreview(content.content);
         }
@@ -68,34 +73,18 @@ export function SkillFileTreePanel({ capabilityId }: SkillFileTreePanelProps) {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 16 }}>
-      <List
-        bordered
-        dataSource={files}
-        locale={{ emptyText: t("executionFactoryLab.skillFilesEmpty") }}
-        renderItem={(item) => (
-          <List.Item
-            onClick={() => setSelectedPath(item.relPath)}
-            style={{
-              cursor: "pointer",
-              background: selectedPath === item.relPath ? "#f0f7ff" : undefined,
-            }}
-          >
-            {item.relPath}
-          </List.Item>
-        )}
-        size="small"
-      />
-      <pre
-        style={{
-          background: "#fafafa",
-          border: "1px solid #f0f0f0",
-          borderRadius: 8,
-          minHeight: 240,
-          padding: 12,
-          whiteSpace: "pre-wrap",
-        }}
-      >
+    <div className={styles.layout}>
+      {files.length > 0 ? (
+        <SkillFileTreeView
+          className={styles.tree}
+          files={files}
+          onSelectFile={setSelectedPath}
+          selectedPath={selectedPath}
+        />
+      ) : (
+        <Alert message={t("executionFactoryLab.skillFilesEmpty")} showIcon type="info" />
+      )}
+      <pre className={styles.preview}>
         {preview || t("executionFactoryLab.skillFilePreviewEmpty")}
       </pre>
     </div>
