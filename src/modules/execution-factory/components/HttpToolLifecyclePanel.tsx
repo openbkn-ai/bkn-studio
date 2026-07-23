@@ -30,52 +30,56 @@ export function HttpToolLifecyclePanel({
 
   return (
     <div className={styles.panel}>
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h3 className={styles.sectionTitle}>
-              {t("executionFactory.httpToolLifecycleSummaryTitle")}
-            </h3>
-            <p className={styles.sectionDesc}>
-              {t("executionFactory.httpToolLifecycleSummaryDesc")}
-            </p>
-          </div>
-          <Tag className={styles.metadataTag}>{metadataTypeLabel}</Tag>
-        </div>
-        {businessFields}
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h3 className={styles.sectionTitle}>
-              {t("executionFactory.httpToolLifecyclePreviewTitle")}
-            </h3>
-            <p className={styles.sectionDesc}>
-              {t("executionFactory.httpToolLifecyclePreviewDesc")}
-            </p>
-          </div>
-        </div>
-        {ioPreview}
-      </section>
-
-      {debugWorkbench ? debugWorkbench : null}
-
-      {advancedConfig ? (
-        <section className={`${styles.section} ${styles.advanced}`}>
+      <div className={styles.primaryColumn}>
+        <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <div>
               <h3 className={styles.sectionTitle}>
-                {t("executionFactory.httpToolLifecycleAdvancedTitle")}
+                {t("executionFactory.httpToolLifecycleSummaryTitle")}
               </h3>
               <p className={styles.sectionDesc}>
-                {t("executionFactory.httpToolLifecycleAdvancedDesc")}
+                {t("executionFactory.httpToolLifecycleSummaryDesc")}
+              </p>
+            </div>
+            <Tag className={styles.metadataTag}>{metadataTypeLabel}</Tag>
+          </div>
+          {businessFields}
+        </section>
+
+        {advancedConfig ? (
+          <section className={`${styles.section} ${styles.advanced}`}>
+            <div className={styles.sectionHeader}>
+              <div>
+                <h3 className={styles.sectionTitle}>
+                  {t("executionFactory.httpToolLifecycleAdvancedTitle")}
+                </h3>
+                <p className={styles.sectionDesc}>
+                  {t("executionFactory.httpToolLifecycleAdvancedDesc")}
+                </p>
+              </div>
+            </div>
+            {advancedConfig}
+          </section>
+        ) : null}
+      </div>
+
+      <div className={styles.sideColumn}>
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h3 className={styles.sectionTitle}>
+                {t("executionFactory.httpToolLifecyclePreviewTitle")}
+              </h3>
+              <p className={styles.sectionDesc}>
+                {t("executionFactory.httpToolLifecyclePreviewDesc")}
               </p>
             </div>
           </div>
-          {advancedConfig}
+          {ioPreview}
         </section>
-      ) : null}
+
+        {debugWorkbench ? debugWorkbench : null}
+      </div>
     </div>
   );
 }

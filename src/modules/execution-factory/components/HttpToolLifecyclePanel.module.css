@@ -6,9 +6,31 @@
  */
 
 .panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 1280px) {
+  .panel {
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  }
+}
+
+.primaryColumn,
+.sideColumn {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-width: 0;
+}
+
+@media (min-width: 1280px) {
+  .sideColumn {
+    position: sticky;
+    top: 24px;
+  }
 }
 
 .section {
@@ -49,4 +71,3 @@
   border-color: #e2e8f0;
   background: #fbfdff;
 }
-

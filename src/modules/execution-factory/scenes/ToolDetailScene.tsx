@@ -182,7 +182,7 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
         {loading ? <Spin /> : null}
         {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
         {!loading && !loadError ? (
-          <div className={styles.formSurface}>
+          <div className={styles.formSurfaceWide}>
             <Form form={form} layout="vertical">
               <HttpToolLifecyclePanel
                 advancedConfig={
