@@ -17,6 +17,7 @@ export const dataCatalogEnUS = {
       tabDetail: "Detail",
       tabPreview: "Data Preview",
       tabIndex: "Data Index",
+      tabSemanticUnderstanding: "Semantic Understanding",
     },
     indexWorkspace: {
       backToOverview: "Back to Tasks",
@@ -60,6 +61,7 @@ export const dataCatalogEnUS = {
       discover: { empty: "No discover tasks" },
       semantic: { empty: "No semantic-understanding tasks", deleteTitle: "Delete semantic-understanding task", deleteDescription: "Delete semantic-understanding task “{{id}}”?" },
     },
+    semanticWorkspace: { summary: "Semantic Understanding Result", applied: "Semantic results loaded", notApplied: "No semantic results loaded", processing: "Semantic understanding is in progress", create: "Create Task", createTitle: "Create Semantic Understanding Task", start: "Start", started: "Semantic understanding task started", empty: "No semantic-understanding tasks", confidenceThreshold: "Confidence threshold", includeSamples: "Include sample data" },
     emptyDescription:
       "Create and scan a connection first, then browse resources and build indexes here.",
     backToCatalog: "Back to Data Directory",

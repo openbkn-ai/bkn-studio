@@ -20,6 +20,7 @@ import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-f
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { ResourceIndexPanel } from "@/modules/data-catalog/components/ResourceIndexPanel";
 import { ResourcePreviewPanel } from "@/modules/data-catalog/components/ResourcePreviewPanel";
+import { ResourceSemanticUnderstandingPanel } from "@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel";
 import {
   indexStateOf,
   resourceGateOf,
@@ -34,7 +35,7 @@ import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ResourceWorkspaceScene.module.css";
 
-export type ResourceWorkspaceTab = "detail" | "index" | "preview";
+export type ResourceWorkspaceTab = "detail" | "index" | "preview" | "semantic-understanding";
 
 type ResourceWorkspaceSceneProps = {
   indexView: ResourceIndexView;
@@ -243,6 +244,15 @@ export function ResourceWorkspaceScene({
                     resource={resource}
                     tasks={sortedTasks}
                   />
+                </div>
+              ),
+            },
+            {
+              key: "semantic-understanding",
+              label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
+              children: (
+                <div className={styles.tabPanel}>
+                  <ResourceSemanticUnderstandingPanel active={tab === "semantic-understanding"} resource={resource} />
                 </div>
               ),
             },

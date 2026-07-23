@@ -1,0 +1,6 @@
+.root { display: grid; gap: 12px; }
+.summaryCard { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px solid #d9e0ea; background: #fff; }
+.summaryCard > div { display: grid; gap: 4px; }
+.summaryLabel { color: #64748b; font-size: 12px; font-weight: 600; }
+.actionGroup { flex-wrap: nowrap; white-space: nowrap; }
+.actionGroup :global(.ant-btn-link) { padding-inline: 0; white-space: nowrap; }
