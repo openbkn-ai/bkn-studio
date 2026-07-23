@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 .root { display: grid; gap: 12px; }
 .summaryCard { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px solid #d9e0ea; background: #fff; }
 .summaryContent { display: grid; gap: 4px; }
