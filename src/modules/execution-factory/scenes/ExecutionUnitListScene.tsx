@@ -58,7 +58,6 @@ import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types
 import type { ToolboxRecord, ToolboxStatus } from "@/modules/execution-factory/types/toolbox";
 import {
   resolveLifecycleActionStatus,
-  type ExecutionUnitLifecycleAction,
 } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
 import {
   collectLocalResourceIds,
@@ -888,7 +887,7 @@ export function ExecutionUnitListScene({
       }
 
       if (action === "publish" || action === "offline") {
-        const nextStatus = resolveLifecycleActionStatus(action as ExecutionUnitLifecycleAction);
+        const nextStatus = resolveLifecycleActionStatus(action);
         if (activeTab === "operator" && item.version) {
           runStatusChange(
             nextStatus,
