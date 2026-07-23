@@ -9,7 +9,6 @@ import { http } from "@/framework/request/http";
 import type {
   KnowledgeNetworkMetricRecord,
   ObjectTypeDataProperty,
-  ObjectTypeLogicMetricModelField,
   ObjectTypeLogicMetricModelRecord,
   ObjectTypeLogicOperatorRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -107,9 +106,7 @@ export async function listObjectTypeLogicMetricModelFields(networkId: string, me
   }
 
   if (useMock) {
-    const metric = (Object.values(mockMetrics).flat() as KnowledgeNetworkMetricRecord[]).find(
-      (item) => item.id === metricId,
-    );
+    const metric = Object.values(mockMetrics).flat().find((item) => item.id === metricId);
     if (metric) {
       const scopeProperties = await loadScopeObjectTypeProperties(networkId, metric.scopeRef);
       return wait(
@@ -139,7 +136,7 @@ export async function listObjectTypeLogicMetricModelFields(networkId: string, me
   return mapMetricAnalysisDimensionFields(
     metric.calculationFormula.analysisDimensions ?? [],
     scopeProperties,
-  ) satisfies ObjectTypeLogicMetricModelField[];
+  );
 }
 
 export async function listObjectTypeLogicOperators(): Promise<ObjectTypeLogicOperatorRecord[]> {

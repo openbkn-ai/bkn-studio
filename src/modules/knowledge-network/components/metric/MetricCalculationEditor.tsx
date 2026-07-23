@@ -26,6 +26,8 @@ import type {
   MetricDefaultRangePolicy,
   MetricHavingOperator,
   MetricOrderDirection,
+  MetricUnit,
+  MetricUnitType,
   ObjectTypeDataProperty,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -95,8 +97,8 @@ export function MetricCalculationEditor({
     ["calculationFormula", "aggregation", "property"],
     form,
   ) as string | undefined;
-  const unitType = Form.useWatch("unitType", form);
-  const unit = Form.useWatch("unit", form);
+  const unitType = Form.useWatch("unitType", form) as MetricUnitType | undefined;
+  const unit = Form.useWatch("unit", form) as MetricUnit | undefined;
   const groupBy = Form.useWatch(["calculationFormula", "groupBy"], form) as string[] | undefined;
   const analysisDimensions = Form.useWatch(["calculationFormula", "analysisDimensions"], form) as
     | string[]
