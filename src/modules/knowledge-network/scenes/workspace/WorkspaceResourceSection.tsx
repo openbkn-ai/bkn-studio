@@ -22,10 +22,7 @@ import {
   deleteKnowledgeNetworkObjectType,
   deleteKnowledgeNetworkRelationType,
   deleteKnowledgeNetworkTask,
-  importKnowledgeNetworkActionTypes,
   importKnowledgeNetworkConceptGroup,
-  importKnowledgeNetworkObjectTypes,
-  importKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
 
@@ -82,9 +79,6 @@ export function WorkspaceResourceSection({
             void message.success(t("common.success"));
             await data.reloadObjectTypes();
           }}
-          onImport={(payload, importMode) =>
-            importKnowledgeNetworkObjectTypes(networkId, payload, importMode)
-          }
           onRefresh={data.reloadObjectTypes}
         />
       );
@@ -104,9 +98,6 @@ export function WorkspaceResourceSection({
             void message.success(t("common.success"));
             await data.reloadRelationTypes();
           }}
-          onImport={(payload, importMode) =>
-            importKnowledgeNetworkRelationTypes(networkId, payload, importMode)
-          }
           onRefresh={data.reloadRelationTypes}
         />
       );
@@ -126,9 +117,6 @@ export function WorkspaceResourceSection({
             void message.success(t("common.success"));
             await data.reloadActionTypes();
           }}
-          onImport={(payload, importMode) =>
-            importKnowledgeNetworkActionTypes(networkId, payload, importMode)
-          }
           onRefresh={data.reloadActionTypes}
         />
       );

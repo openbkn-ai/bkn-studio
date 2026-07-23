@@ -24,7 +24,6 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import { useResourceIndexStates } from "@/modules/knowledge-network/hooks/useResourceIndexStates";
-import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import {
   readPositiveInteger,
@@ -33,7 +32,6 @@ import {
 } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import type {
-  KnowledgeNetworkImportMode,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
@@ -44,10 +42,6 @@ type ObjectTypeListPanelProps = {
   loading?: boolean;
   networkId: string;
   onDelete: (records: KnowledgeNetworkObjectTypeRecord[]) => Promise<void>;
-  onImport: (
-    payload: Record<string, unknown>,
-    importMode?: KnowledgeNetworkImportMode,
-  ) => Promise<void>;
   onRefresh: () => Promise<void>;
 };
 
@@ -66,7 +60,6 @@ export function ObjectTypeListPanel({
   loading,
   networkId,
   onDelete,
-  onImport,
   onRefresh,
 }: ObjectTypeListPanelProps) {
   const { t } = useTranslation();
@@ -483,11 +476,6 @@ export function ObjectTypeListPanel({
           >
             {t("common.delete")}
           </AppButton>
-          <JsonResourceImportButton
-            className={styles.toolbarButton}
-            onImported={onRefresh}
-            onImport={onImport}
-          />
         </div>
         <div className={styles.toolbarRight}>
           <Input
