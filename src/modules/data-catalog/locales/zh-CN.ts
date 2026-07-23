@@ -45,11 +45,13 @@ export const dataCatalogZhCN = {
       tabIndex: "数据索引",
     },
     indexBuildTitle: "任务管理",
-    indexBuildDescription: "统一查看与管理索引构建、探查和语义理解任务。",
+    indexBuildDescription: "管理数据资源相关任务，支持任务查看，暂停，重启，删除等操作。",
     taskManagement: {
       tabs: { indexBuild: "索引构建任务", discover: "探查任务", semanticUnderstanding: "语义理解任务" },
-      columns: { task: "任务 ID", strategy: "探查策略", trigger: "触发方式", scope: "范围", confidence: "置信度", applied: "已应用" },
+      columns: { task: "任务 ID", strategy: "探查策略", trigger: "触发方式", scope: "范围", applyMode: "应用方式", confidence: "置信度", applied: "已应用" },
       scope: { catalog: "数据连接", resource: "数据资源" },
+      applyMode: { dryRun: "仅预览", fillEmpty: "填充空值", force: "强制覆盖" },
+      applied: { applied: "已应用", notApplied: "未应用" },
       semanticStatus: { pending: "等待中", running: "执行中", succeeded: "已完成", failed: "失败" },
       discover: { empty: "暂无探查任务" },
       semantic: { empty: "暂无语义理解任务", deleteTitle: "删除语义理解任务", deleteDescription: "确认删除语义理解任务“{{id}}”吗？" },
@@ -310,7 +312,6 @@ export const dataCatalogZhCN = {
       rawError: "原始错误",
       modalTitle: "构建任务",
       progress: "进度",
-      searchPlaceholder: "按任务 ID 或资源名称搜索",
       statusFilterPlaceholder: "全部状态",
       empty: "暂无索引任务",
       emptyDescription:

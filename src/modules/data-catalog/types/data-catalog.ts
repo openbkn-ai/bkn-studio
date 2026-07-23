@@ -113,6 +113,8 @@ export type IndexHealth = {
 
 export type BuildTask = {
   buildKeyFields: string[];
+  /** 后端任务记录所属 Catalog；mock 旧数据可缺省并由数据资源回填。 */
+  catalogId?: string;
   createTime: string;
   createdAt: number;
   embeddingFields: string[];
@@ -150,15 +152,14 @@ export type BuildTaskListQuery = {
 /** 服务端排序维度:default=后端默认(构建中置顶),不传 order_by。 */
 export type BuildTaskOrderBy =
   | "default"
-  | "status"
   | "created_at"
-  | "updated_at"
-  | "mode";
+  | "updated_at";
 
 export type BuildTaskPageQuery = {
   /** 只看构建中:传 active=true,且不再传 status。 */
   active?: boolean;
   catalogId?: string;
+  mode?: BuildMode;
   order?: "asc" | "desc";
   orderBy?: BuildTaskOrderBy;
   page: number;

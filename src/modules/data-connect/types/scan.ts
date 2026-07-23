@@ -17,6 +17,7 @@ export type DataConnectScanTaskStatus =
   | "running";
 
 export type DataConnectScanTaskTriggerType = "manual" | "scheduled";
+export type DataConnectScanTaskSort = "create_time" | "default";
 
 export type DataConnectScanSchedule = {
   catalogId: string;
@@ -69,7 +70,10 @@ export type DataConnectScanTaskListQuery = {
   page: number;
   pageSize: number;
   scheduleId?: string;
+  direction?: "asc" | "desc";
+  sort?: DataConnectScanTaskSort;
   status?: DataConnectScanTaskStatus;
+  strategy?: DataConnectScanStrategy;
   triggerType?: DataConnectScanTaskTriggerType;
 };
 

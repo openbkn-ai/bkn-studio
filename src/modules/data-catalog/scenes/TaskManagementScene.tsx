@@ -17,25 +17,34 @@ export function TaskManagementScene() {
   const { t } = useTranslation();
 
   return (
-    <Tabs
-      className={styles.tabs}
-      items={[
-        {
-          key: "index-build",
-          label: t("dataCatalog.taskManagement.tabs.indexBuild"),
-          children: <IndexBuildListScene />,
-        },
-        {
-          key: "discover",
-          label: t("dataCatalog.taskManagement.tabs.discover"),
-          children: <DiscoverTaskListPanel />,
-        },
-        {
-          key: "semantic-understanding",
-          label: t("dataCatalog.taskManagement.tabs.semanticUnderstanding"),
-          children: <SemanticUnderstandingTaskListPanel />,
-        },
-      ]}
-    />
+    <section className={styles.page}>
+      <div className={styles.pageIntro}>
+        <h2 className={styles.pageIntroTitle}>{t("dataCatalog.indexBuildTitle")}</h2>
+        <p className={styles.pageIntroDescription}>
+          {t("dataCatalog.indexBuildDescription")}
+        </p>
+      </div>
+
+      <Tabs
+        className={styles.tabs}
+        items={[
+          {
+            key: "index-build",
+            label: t("dataCatalog.taskManagement.tabs.indexBuild"),
+            children: <IndexBuildListScene />,
+          },
+          {
+            key: "discover",
+            label: t("dataCatalog.taskManagement.tabs.discover"),
+            children: <DiscoverTaskListPanel />,
+          },
+          {
+            key: "semantic-understanding",
+            label: t("dataCatalog.taskManagement.tabs.semanticUnderstanding"),
+            children: <SemanticUnderstandingTaskListPanel />,
+          },
+        ]}
+      />
+    </section>
   );
 }

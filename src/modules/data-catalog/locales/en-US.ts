@@ -47,11 +47,14 @@ export const dataCatalogEnUS = {
       fulltextAnalyzer: "Analyzer",
     },
     indexBuildTitle: "Task Management",
-    indexBuildDescription: "View and manage index build, discover, and semantic-understanding tasks.",
+    indexBuildDescription:
+      "Manage data-resource tasks, including viewing, pausing, restarting, and deleting tasks.",
     taskManagement: {
       tabs: { indexBuild: "Index Build Tasks", discover: "Discover Tasks", semanticUnderstanding: "Semantic Understanding Tasks" },
-      columns: { task: "Task ID", strategy: "Discover Strategy", trigger: "Trigger", scope: "Scope", confidence: "Confidence", applied: "Applied" },
+      columns: { task: "Task ID", strategy: "Discover Strategy", trigger: "Trigger", scope: "Scope", applyMode: "Apply Mode", confidence: "Confidence", applied: "Applied" },
       scope: { catalog: "Data Connection", resource: "Data Resource" },
+      applyMode: { dryRun: "Preview only", fillEmpty: "Fill empty fields", force: "Force overwrite" },
+      applied: { applied: "Applied", notApplied: "Not applied" },
       semanticStatus: { pending: "Pending", running: "Running", succeeded: "Succeeded", failed: "Failed" },
       discover: { empty: "No discover tasks" },
       semantic: { empty: "No semantic-understanding tasks", deleteTitle: "Delete semantic-understanding task", deleteDescription: "Delete semantic-understanding task “{{id}}”?" },
@@ -330,7 +333,6 @@ export const dataCatalogEnUS = {
       rawError: "Raw error",
       modalTitle: "Build Task",
       progress: "Progress",
-      searchPlaceholder: "Search by task ID or resource name",
       statusFilterPlaceholder: "All statuses",
       empty: "No index tasks",
       emptyDescription:

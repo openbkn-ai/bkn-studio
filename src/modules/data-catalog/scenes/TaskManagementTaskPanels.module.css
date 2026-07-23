@@ -21,3 +21,29 @@
 .select {
   width: 160px;
 }
+
+.progressCell {
+  overflow: visible;
+  white-space: normal;
+}
+
+.textLink {
+  display: inline;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  color: var(--business-color-link);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.textLink:hover {
+  color: var(--business-color-link-hover);
+  text-decoration: underline;
+}

@@ -127,6 +127,12 @@ export function BuildProgress({ compact = false, task }: BuildProgressProps) {
       : task.status === "failed"
         ? styles.progressFillFailed
         : styles.progressFillVector;
+  const syncedFillClass =
+    task.status === "failed"
+      ? styles.progressFillFailed
+      : task.status === "succeeded" && embeddingState === "ok"
+        ? styles.progressFillDone
+        : undefined;
 
   const syncedLabel = t("dataCatalog.progress.synced", {
     synced: formatCount(task.syncedCount) as never,
@@ -138,7 +144,10 @@ export function BuildProgress({ compact = false, task }: BuildProgressProps) {
   const content = (
     <div className={wrapClass}>
       <div className={styles.progressTrack}>
-        <span className={styles.progressFill} style={{ width: `${syncedPercent}%` }} />
+        <span
+          className={[styles.progressFill, syncedFillClass].filter(Boolean).join(" ")}
+          style={{ width: `${syncedPercent}%` }}
+        />
         <span
           className={[styles.progressFill, fillClass].join(" ")}
           style={{ width: `${vectorPercent}%` }}
