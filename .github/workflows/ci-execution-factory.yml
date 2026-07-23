@@ -5,18 +5,14 @@
 
 name: ci-execution-factory
 
+# Push events cover every branch, so same-repo PRs skip their duplicate run
+# (the push run on the head SHA reports the same check) and pull_request is
+# solely a fork-PR fallback. Paths therefore live only on the push trigger —
+# workflow files don't support YAML anchors, so the list can't be factored.
 on:
   pull_request:
-    paths:
-      - 'src/modules/execution-factory/**'
-      - 'tests/execution-factory/**'
-      - 'specs/execution-factory/**'
-      - 'vite.config.ts'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - '.github/workflows/ci-execution-factory.yml'
   push:
-    branches: [main]
+    branches: ['**']
     paths:
       - 'src/modules/execution-factory/**'
       - 'tests/execution-factory/**'
@@ -29,6 +25,7 @@ on:
 jobs:
   vitest-l1:
     name: L1 vitest (execution-factory)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
