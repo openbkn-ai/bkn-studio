@@ -268,16 +268,30 @@ function filterSchedules(
 }
 
 function filterTasks(items: DataConnectScanTask[], query: DataConnectScanTaskListQuery) {
-  return items.filter((item) => {
+  const filtered = items.filter((item) => {
     const matchesCatalog = !query.catalogId || item.catalogId === query.catalogId;
     const matchesSchedule =
       !query.scheduleId || item.scheduleId === query.scheduleId;
     const matchesStatus = !query.status || item.status === query.status;
+    const matchesStrategy = !query.strategy || item.strategy === query.strategy;
     const matchesTriggerType =
       !query.triggerType || item.triggerType === query.triggerType;
 
-    return matchesCatalog && matchesSchedule && matchesStatus && matchesTriggerType;
+    return (
+      matchesCatalog &&
+      matchesSchedule &&
+      matchesStatus &&
+      matchesStrategy &&
+      matchesTriggerType
+    );
   });
+  if (query.sort === "default") {
+    const rank = { running: 1, pending: 2, failed: 3, completed: 4 };
+    return filtered.sort((left, right) => rank[left.status] - rank[right.status] || right.createTime.localeCompare(left.createTime));
+  }
+  const direction = query.direction === "asc" ? 1 : -1;
+  const valueOf = (item: DataConnectScanTask) => item.createTime;
+  return filtered.sort((left, right) => (valueOf(left) > valueOf(right) ? direction : valueOf(left) < valueOf(right) ? -direction : 0));
 }
 
 export async function listDataConnectScanSchedules(
@@ -454,12 +468,13 @@ export async function listDataConnectScanTasks(
     {
       params: {
         catalog_id: query.catalogId,
-        direction: "desc",
+        direction: query.direction ?? "desc",
         limit: query.pageSize,
         offset: (query.page - 1) * query.pageSize,
         schedule_id: query.scheduleId,
-        sort: "create_time",
+        sort: query.sort ?? "create_time",
         status: query.status,
+        strategy: query.strategy,
         trigger_type: query.triggerType,
       },
     },

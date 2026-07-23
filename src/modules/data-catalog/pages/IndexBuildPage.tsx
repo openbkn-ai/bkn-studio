@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { IndexBuildListScene } from "@/modules/data-catalog/scenes/IndexBuildListScene";
+import { TaskManagementScene } from "@/modules/data-catalog/scenes/TaskManagementScene";
 
 export function IndexBuildPage() {
-  return <IndexBuildListScene />;
+  return <TaskManagementScene />;
 }

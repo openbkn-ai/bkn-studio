@@ -1,0 +1,37 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  min-height: calc(100vh - 144px);
+  padding: 0 25px 25px;
+  background: #fff;
+}
+
+.pageIntro {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
+}
+
+.pageIntroTitle {
+  margin: 0;
+  color: #10233f;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.pageIntroDescription {
+  max-width: 760px;
+  margin: 8px 0 0;
+  color: rgba(15, 30, 54, 0.62);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 16px;
+}

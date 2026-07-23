@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { BuildTaskStatus } from "@/modules/data-catalog/types/data-catalog";
+import type { BuildMode, BuildTaskStatus } from "@/modules/data-catalog/types/data-catalog";
 
 const STATUS_SET = new Set<BuildTaskStatus>([
   "failed",
@@ -35,15 +35,18 @@ export function writeIndexBuildStatusParam(statuses: BuildTaskStatus[]): string 
 
 export type IndexBuildListFilters = {
   catalogId?: string;
+  mode?: BuildMode;
   resourceId?: string;
   statuses: BuildTaskStatus[];
 };
 
 export function readIndexBuildListFilters(params: URLSearchParams): IndexBuildListFilters {
   const catalogId = params.get("catalogId")?.trim() || undefined;
+  const rawMode = params.get("mode");
+  const mode = rawMode === "batch" || rawMode === "streaming" ? rawMode : undefined;
   const resourceId = params.get("resourceId")?.trim() || undefined;
   const statuses = parseIndexBuildStatusParam(params.get("status"));
-  return { catalogId, resourceId, statuses };
+  return { catalogId, mode, resourceId, statuses };
 }
 
 export function applyIndexBuildListFilters(
@@ -55,6 +58,11 @@ export function applyIndexBuildListFilters(
     next.set("catalogId", filters.catalogId);
   } else {
     next.delete("catalogId");
+  }
+  if (filters.mode) {
+    next.set("mode", filters.mode);
+  } else {
+    next.delete("mode");
   }
   if (filters.resourceId) {
     next.set("resourceId", filters.resourceId);

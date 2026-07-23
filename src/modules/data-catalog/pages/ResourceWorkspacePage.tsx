@@ -26,6 +26,9 @@ function resolveResourceWorkspaceTab(value: string | null): ResourceWorkspaceTab
   if (value === "index") {
     return "index";
   }
+  if (value === "semantic-understanding") {
+    return "semantic-understanding";
+  }
   return "detail";
 }
 

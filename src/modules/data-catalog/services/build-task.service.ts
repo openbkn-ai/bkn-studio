@@ -50,6 +50,7 @@ type BackendBuildTaskIndexConfig = {
 
 type BackendBuildTask = {
   build_key_fields?: string | string[];
+  catalog_id?: string;
   create_time?: number;
   embedding_fields?: string | string[];
   embedding_model?: string;
@@ -232,6 +233,7 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
 
   return {
     id: item.id,
+    catalogId: item.catalog_id,
     resourceId: item.resource_id ?? "",
     mode,
     status,
@@ -362,9 +364,7 @@ function sortMockTasks(
       ? task.createdAt
       : orderBy === "updated_at"
         ? (task.lastEventAt ?? task.createdAt)
-        : orderBy === "mode"
-          ? task.mode
-          : task.status;
+        : task.status;
   return arr.sort((a, b) => {
     const ka = keyOf(a);
     const kb = keyOf(b);
@@ -397,6 +397,9 @@ export async function listBuildTaskPage(
     if (query.resourceId) {
       items = items.filter((task) => task.resourceId === query.resourceId);
     }
+    if (query.mode) {
+      items = items.filter((task) => task.mode === query.mode);
+    }
     if (query.active) {
       items = items.filter((task) => ACTIVE_FE_STATUSES.has(task.status));
     } else if (query.statuses?.length) {
@@ -414,6 +417,7 @@ export async function listBuildTaskPage(
     offset: (page - 1) * pageSize,
     resource_id: query.resourceId || undefined,
     catalog_id: query.catalogId || undefined,
+    mode: query.mode || undefined,
   };
   if (query.orderBy && query.orderBy !== "default") {
     params.order_by = query.orderBy;

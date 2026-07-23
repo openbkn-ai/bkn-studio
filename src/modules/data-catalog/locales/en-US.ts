@@ -17,6 +17,7 @@ export const dataCatalogEnUS = {
       tabDetail: "Detail",
       tabPreview: "Data Preview",
       tabIndex: "Data Index",
+      tabSemanticUnderstanding: "Semantic Understanding",
     },
     indexWorkspace: {
       backToOverview: "Back to Tasks",
@@ -48,7 +49,19 @@ export const dataCatalogEnUS = {
     },
     indexBuildTitle: "Task Management",
     indexBuildDescription:
-      "View and manage index build tasks across resources — filter, pause, retry, and delete.",
+      "Manage data-resource tasks, including viewing, pausing, restarting, and deleting tasks.",
+    taskManagement: {
+      tabs: { indexBuild: "Index Build Tasks", discover: "Discover Tasks", semanticUnderstanding: "Semantic Understanding Tasks" },
+      columns: { task: "Task ID", strategy: "Discover Strategy", trigger: "Trigger", scope: "Scope", applyMode: "Apply Mode", confidence: "Confidence", applied: "Applied" },
+      scope: { catalog: "Data Connection", resource: "Data Resource" },
+      applyMode: { dryRun: "Preview only", fillEmpty: "Fill empty fields", force: "Force overwrite" },
+      applied: { applied: "Applied", notApplied: "Not applied" },
+      semanticStatus: { pending: "Pending", running: "Running", succeeded: "Succeeded", failed: "Failed" },
+      details: { taskInformation: "Task Information", scheduleId: "Schedule ID", startTime: "Started", message: "Message", agentId: "Agent ID", failureReason: "Failure Reason" },
+      discover: { empty: "No discover tasks" },
+      semantic: { empty: "No semantic-understanding tasks", deleteTitle: "Delete semantic-understanding task", deleteDescription: "Delete semantic-understanding task “{{id}}”?" },
+    },
+    semanticWorkspace: { summary: "Semantic Understanding Result", applied: "Semantic results loaded", notApplied: "No semantic results loaded", processing: "Semantic understanding is in progress", create: "Create Task", createTitle: "Create Semantic Understanding Task", start: "Start", started: "Semantic understanding task started", empty: "No semantic-understanding tasks", confidenceThreshold: "Confidence threshold", includeSamples: "Include sample data" },
     emptyDescription:
       "Create and scan a connection first, then browse resources and build indexes here.",
     backToCatalog: "Back to Data Directory",
@@ -323,7 +336,6 @@ export const dataCatalogEnUS = {
       rawError: "Raw error",
       modalTitle: "Build Task",
       progress: "Progress",
-      searchPlaceholder: "Search by task ID or resource name",
       statusFilterPlaceholder: "All statuses",
       empty: "No index tasks",
       emptyDescription:

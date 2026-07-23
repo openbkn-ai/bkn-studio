@@ -1,0 +1,59 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.contentSurface {
+  composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  display: grid;
+  gap: 12px;
+  min-height: auto;
+}
+
+.operationBar {
+  composes: operationBar from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.select {
+  width: 160px;
+}
+
+.progressCell {
+  overflow: visible;
+  white-space: normal;
+}
+
+.actionGroup {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.actionGroup :global(.ant-btn-link) {
+  padding-inline: 0;
+  white-space: nowrap;
+}
+
+.textLink {
+  display: inline;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  color: var(--business-color-link);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.textLink:hover {
+  color: var(--business-color-link-hover);
+  text-decoration: underline;
+}

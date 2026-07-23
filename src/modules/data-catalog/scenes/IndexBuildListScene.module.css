@@ -63,7 +63,7 @@
 
   flex: 1 1 520px;
 
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 
   gap: 10px 14px;
 
@@ -71,6 +71,14 @@
 
   min-width: 0;
 
+  overflow-x: auto;
+
+}
+
+.taskFilters {
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 
@@ -435,14 +443,6 @@
 
 
 
-  .searchInput {
-
-    width: 100%;
-
-    flex: 1 1 220px;
-
-  }
-
 }
 
 
@@ -458,36 +458,6 @@
   }
 
 
-
-  .toolbarFilters {
-
-    flex-direction: column;
-
-    align-items: stretch;
-
-  }
-
-
-
-  .filterField {
-
-    width: 100%;
-
-  }
-
-
-
-  .filterSelect,
-
-  .filterSelectWide,
-
-  .filterSelectMultiple {
-
-    flex: 1;
-
-    width: auto;
-
-  }
 
 }
 
@@ -536,4 +506,3 @@
 .tableSurface :global(.ant-table-thead > tr > th:hover) .resizeHandle::after {
   opacity: 1;
 }
-

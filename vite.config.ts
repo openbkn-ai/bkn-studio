@@ -40,6 +40,7 @@ function redirectRootToAppBase(): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, "");
   const devProxyOrigin = env.VITE_DEV_AUTH_ORIGIN || "http://127.0.0.1:9000";
+  const vegaProxyTarget = env.VITE_VEGA_PROXY_TARGET?.trim() || devProxyOrigin;
   const safeProxyTarget =
     env.VITE_SAFE_PROXY_TARGET?.trim() ||
     process.env.VITE_SAFE_PROXY_TARGET?.trim() ||
@@ -121,6 +122,12 @@ export default defineConfig(({ mode }) => {
                     },
                   }
                 : {}),
+              // Vega 可单独指向本地开发服务；须在通用 /api 代理之前注册。
+              "/api/vega-backend": {
+                changeOrigin: true,
+                secure: false,
+                target: vegaProxyTarget,
+              },
               "/api": {
                 changeOrigin: true,
                 // Allow self-signed HTTPS targets used by local gateways.
