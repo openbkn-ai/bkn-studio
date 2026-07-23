@@ -57,6 +57,9 @@ import type { OperatorRecord, PublicOperatorStatus } from "@/modules/execution-f
 import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
 import type { ToolboxRecord, ToolboxStatus } from "@/modules/execution-factory/types/toolbox";
 import {
+  resolveLifecycleActionStatus,
+} from "@/modules/execution-factory/utils/execution-unit-lifecycle";
+import {
   collectLocalResourceIds,
   invalidateLocalResourceIdsCache,
 } from "@/modules/execution-factory/utils/collect-local-resource-ids";
@@ -883,100 +886,35 @@ export function ExecutionUnitListScene({
         return;
       }
 
-      if (action === "publish") {
+      if (action === "publish" || action === "offline") {
+        const nextStatus = resolveLifecycleActionStatus(action);
         if (activeTab === "operator" && item.version) {
           runStatusChange(
-            "published",
+            nextStatus,
             "executionFactory.operatorStatusChangeConfirmTitle",
             "executionFactory.operatorStatusChangeConfirmDescription",
-            () => updateOperatorStatus(item.id, item.version!, "published"),
+            () => updateOperatorStatus(item.id, item.version!, nextStatus),
           );
         } else if (activeTab === "toolbox") {
           runStatusChange(
-            "published",
+            nextStatus,
             "executionFactory.toolboxStatusChangeConfirmTitle",
             "executionFactory.toolboxStatusChangeConfirmDescription",
-            () => updateToolboxStatus(item.id, "published"),
+            () => updateToolboxStatus(item.id, nextStatus),
           );
         } else if (activeTab === "mcp") {
           runStatusChange(
-            "published",
+            nextStatus,
             "executionFactory.mcpStatusChangeConfirmTitle",
             "executionFactory.mcpStatusChangeConfirmDescription",
-            () => updateMcpStatus(item.id, "published"),
+            () => updateMcpStatus(item.id, nextStatus),
           );
         } else if (activeTab === "skill") {
           runStatusChange(
-            "published",
+            nextStatus,
             "executionFactory.skillStatusChangeConfirmTitle",
             "executionFactory.skillStatusChangeConfirmDescription",
-            () => updateSkillStatus(item.id, "published"),
-          );
-        }
-        return;
-      }
-
-      if (action === "unpublish") {
-        if (activeTab === "operator" && item.version) {
-          runStatusChange(
-            "unpublish",
-            "executionFactory.operatorStatusChangeConfirmTitle",
-            "executionFactory.operatorStatusChangeConfirmDescription",
-            () => updateOperatorStatus(item.id, item.version!, "unpublish"),
-          );
-        } else if (activeTab === "toolbox") {
-          runStatusChange(
-            "unpublish",
-            "executionFactory.toolboxStatusChangeConfirmTitle",
-            "executionFactory.toolboxStatusChangeConfirmDescription",
-            () => updateToolboxStatus(item.id, "unpublish"),
-          );
-        } else if (activeTab === "mcp") {
-          runStatusChange(
-            "unpublish",
-            "executionFactory.mcpStatusChangeConfirmTitle",
-            "executionFactory.mcpStatusChangeConfirmDescription",
-            () => updateMcpStatus(item.id, "unpublish"),
-          );
-        } else if (activeTab === "skill") {
-          runStatusChange(
-            "unpublish",
-            "executionFactory.skillStatusChangeConfirmTitle",
-            "executionFactory.skillStatusChangeConfirmDescription",
-            () => updateSkillStatus(item.id, "unpublish"),
-          );
-        }
-        return;
-      }
-
-      if (action === "offline") {
-        if (activeTab === "operator" && item.version) {
-          runStatusChange(
-            "offline",
-            "executionFactory.operatorStatusChangeConfirmTitle",
-            "executionFactory.operatorStatusChangeConfirmDescription",
-            () => updateOperatorStatus(item.id, item.version!, "offline"),
-          );
-        } else if (activeTab === "toolbox") {
-          runStatusChange(
-            "offline",
-            "executionFactory.toolboxStatusChangeConfirmTitle",
-            "executionFactory.toolboxStatusChangeConfirmDescription",
-            () => updateToolboxStatus(item.id, "offline"),
-          );
-        } else if (activeTab === "mcp") {
-          runStatusChange(
-            "offline",
-            "executionFactory.mcpStatusChangeConfirmTitle",
-            "executionFactory.mcpStatusChangeConfirmDescription",
-            () => updateMcpStatus(item.id, "offline"),
-          );
-        } else if (activeTab === "skill") {
-          runStatusChange(
-            "offline",
-            "executionFactory.skillStatusChangeConfirmTitle",
-            "executionFactory.skillStatusChangeConfirmDescription",
-            () => updateSkillStatus(item.id, "offline"),
+            () => updateSkillStatus(item.id, nextStatus),
           );
         }
         return;

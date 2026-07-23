@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { getExecutionUnitLifecycleActions } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
 
 import type { ExecutionUnitCardItem, ExecutionUnitTab } from "./types";
 
@@ -24,7 +25,6 @@ export type ExecutionUnitCardAction =
   | "download"
   | "updatePackage"
   | "publish"
-  | "unpublish"
   | "offline"
   | "delete"
   | "install"
@@ -212,32 +212,17 @@ export function ExecutionUnitCardMenu({
     );
   }
 
-  if (item.status === "unpublish" || item.status === "editing") {
+  for (const lifecycleAction of getExecutionUnitLifecycleActions(item.status)) {
     pushMenuAction(
       menuItems,
-      "publish",
-      t("executionFactory.publish"),
+      lifecycleAction,
+      t(
+        lifecycleAction === "publish"
+          ? "executionFactory.publish"
+          : "executionFactory.offline",
+      ),
       onAction,
-      "publish",
-      item,
-    );
-  }
-
-  if (item.status === "published") {
-    pushMenuAction(
-      menuItems,
-      "unpublish",
-      t("executionFactory.cardMenu.unpublish"),
-      onAction,
-      "unpublish",
-      item,
-    );
-    pushMenuAction(
-      menuItems,
-      "offline",
-      t("executionFactory.statuses.offline"),
-      onAction,
-      "offline",
+      lifecycleAction,
       item,
     );
   }
