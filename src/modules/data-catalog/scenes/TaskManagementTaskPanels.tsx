@@ -565,9 +565,9 @@ export function SemanticUnderstandingTaskListPanel() {
   </TaskDetailDrawer> : null}</TaskPanel>;
 }
 
-function TaskTable<T extends { id: string }>({ error, loading, data, columns, emptyTitle, onRetry, onTableChange, selectedKeys, onSelectionChange }: { error: string | null; loading: boolean; data: T[]; columns: ColumnsType<T>; emptyTitle: string; onRetry: () => void; onTableChange?: TableProps<T>["onChange"]; selectedKeys?: string[]; onSelectionChange?: (keys: string[]) => void }) {
+function TaskTable<T extends { id: string }>({ error, loading, data, columns, emptyTitle, onRetry, onTableChange, selectedKeys, onSelectionChange }: { error: string | null; loading: boolean; data: T[]; columns: ColumnsType<T>; emptyTitle: string; onRetry: () => void | Promise<void>; onTableChange?: TableProps<T>["onChange"]; selectedKeys?: string[]; onSelectionChange?: (keys: string[]) => void }) {
   const { t } = useTranslation();
-  return <TableSurface>{error ? <Alert action={<AppButton type="link" onClick={onRetry}>{t("common.retry")}</AppButton>} message={error} showIcon type="error" /> : !loading && data.length === 0 ? <EmptyStatePanel description={emptyTitle} icon={<UnorderedListOutlined />} title={emptyTitle} /> : <AppTable columns={columns} dataSource={data} loading={loading} onChange={onTableChange} pagination={false} rowKey="id" rowSelection={selectedKeys && onSelectionChange ? { selectedRowKeys: selectedKeys, onChange: (keys) => onSelectionChange(keys.map(String)) } : undefined} tableLayout="fixed" />}</TableSurface>;
+  return <TableSurface>{error ? <Alert action={<AppButton type="link" onClick={() => void onRetry()}>{t("common.retry")}</AppButton>} message={error} showIcon type="error" /> : !loading && data.length === 0 ? <EmptyStatePanel description={emptyTitle} icon={<UnorderedListOutlined />} title={emptyTitle} /> : <AppTable columns={columns} dataSource={data} loading={loading} onChange={onTableChange} pagination={false} rowKey="id" rowSelection={selectedKeys && onSelectionChange ? { selectedRowKeys: selectedKeys, onChange: (keys) => onSelectionChange(keys.map(String)) } : undefined} tableLayout="fixed" />}</TableSurface>;
 }
 
 function Pagination({ page, pageSize, total, onChange }: { page: number; pageSize: number; total: number; onChange: (page: number, pageSize: number) => void }) {
