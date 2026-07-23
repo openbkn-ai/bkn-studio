@@ -24,7 +24,6 @@ export type ExecutionUnitCardAction =
   | "download"
   | "updatePackage"
   | "publish"
-  | "unpublish"
   | "offline"
   | "delete"
   | "install"
@@ -212,7 +211,12 @@ export function ExecutionUnitCardMenu({
     );
   }
 
-  if (item.status === "unpublish" || item.status === "editing") {
+  // 状态机：unpublish/editing/offline → published；published → offline（不可回 unpublish）
+  if (
+    item.status === "unpublish" ||
+    item.status === "editing" ||
+    item.status === "offline"
+  ) {
     pushMenuAction(
       menuItems,
       "publish",
@@ -226,16 +230,8 @@ export function ExecutionUnitCardMenu({
   if (item.status === "published") {
     pushMenuAction(
       menuItems,
-      "unpublish",
-      t("executionFactory.cardMenu.unpublish"),
-      onAction,
-      "unpublish",
-      item,
-    );
-    pushMenuAction(
-      menuItems,
       "offline",
-      t("executionFactory.statuses.offline"),
+      t("executionFactory.offline"),
       onAction,
       "offline",
       item,

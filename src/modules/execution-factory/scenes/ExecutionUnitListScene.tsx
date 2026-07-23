@@ -916,39 +916,6 @@ export function ExecutionUnitListScene({
         return;
       }
 
-      if (action === "unpublish") {
-        if (activeTab === "operator" && item.version) {
-          runStatusChange(
-            "unpublish",
-            "executionFactory.operatorStatusChangeConfirmTitle",
-            "executionFactory.operatorStatusChangeConfirmDescription",
-            () => updateOperatorStatus(item.id, item.version!, "unpublish"),
-          );
-        } else if (activeTab === "toolbox") {
-          runStatusChange(
-            "unpublish",
-            "executionFactory.toolboxStatusChangeConfirmTitle",
-            "executionFactory.toolboxStatusChangeConfirmDescription",
-            () => updateToolboxStatus(item.id, "unpublish"),
-          );
-        } else if (activeTab === "mcp") {
-          runStatusChange(
-            "unpublish",
-            "executionFactory.mcpStatusChangeConfirmTitle",
-            "executionFactory.mcpStatusChangeConfirmDescription",
-            () => updateMcpStatus(item.id, "unpublish"),
-          );
-        } else if (activeTab === "skill") {
-          runStatusChange(
-            "unpublish",
-            "executionFactory.skillStatusChangeConfirmTitle",
-            "executionFactory.skillStatusChangeConfirmDescription",
-            () => updateSkillStatus(item.id, "unpublish"),
-          );
-        }
-        return;
-      }
-
       if (action === "offline") {
         if (activeTab === "operator" && item.version) {
           runStatusChange(
