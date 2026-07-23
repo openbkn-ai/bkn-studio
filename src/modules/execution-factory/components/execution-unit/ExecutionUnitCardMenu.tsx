@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { getExecutionUnitLifecycleActions } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
 
 import type { ExecutionUnitCardItem, ExecutionUnitTab } from "./types";
 
@@ -211,29 +212,17 @@ export function ExecutionUnitCardMenu({
     );
   }
 
-  // 状态机：unpublish/editing/offline → published；published → offline（不可回 unpublish）
-  if (
-    item.status === "unpublish" ||
-    item.status === "editing" ||
-    item.status === "offline"
-  ) {
+  for (const lifecycleAction of getExecutionUnitLifecycleActions(item.status)) {
     pushMenuAction(
       menuItems,
-      "publish",
-      t("executionFactory.publish"),
+      lifecycleAction,
+      t(
+        lifecycleAction === "publish"
+          ? "executionFactory.publish"
+          : "executionFactory.offline",
+      ),
       onAction,
-      "publish",
-      item,
-    );
-  }
-
-  if (item.status === "published") {
-    pushMenuAction(
-      menuItems,
-      "offline",
-      t("executionFactory.offline"),
-      onAction,
-      "offline",
+      lifecycleAction,
       item,
     );
   }
