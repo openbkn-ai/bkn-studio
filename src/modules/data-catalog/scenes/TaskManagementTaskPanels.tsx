@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DeleteOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
-import { Alert, Select, Space, Tag } from "antd";
+import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
+import { Alert, Descriptions, Drawer, Select, Space, Tag } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,7 +21,8 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
-import progressStyles from "@/modules/data-catalog/components/shared.module.css";
+import taskDetailStyles from "@/modules/data-catalog/components/BuildTaskDetailDrawer.module.css";
+import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
 import {
   deleteDataConnectScanTask,
   listDataConnectScanTasks,
@@ -51,6 +52,7 @@ type SemanticTask = {
   applyMode: string;
   agentId: string;
   confidence: number;
+  failureDetail?: string;
   applied: boolean;
   createTime: number;
 };
@@ -120,24 +122,85 @@ function TaskPanel({ children }: { children: React.ReactNode }) {
   return <section className={styles.contentSurface}>{children}</section>;
 }
 
+function TaskDetailDrawer({
+  children,
+  failureReason,
+  onClose,
+  status,
+  statusClass,
+  taskId,
+}: {
+  children: React.ReactNode;
+  failureReason?: string;
+  onClose: () => void;
+  status: string;
+  statusClass: string;
+  taskId: string;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Drawer
+      className={taskDetailStyles.drawer}
+      destroyOnClose
+      onClose={onClose}
+      open
+      styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }}
+      title={`${t("dataCatalog.task.detail")} · ${taskId}`}
+      width={560}
+    >
+      <div className={taskDetailStyles.drawerContent}>
+        <section className={taskDetailStyles.sectionCard}>
+          <h3 className={taskDetailStyles.sectionTitle}>{t("common.status")}</h3>
+          <div className={taskDetailStyles.statusRow}>
+            <span className={[sharedStyles.tag, statusClass].join(" ")}>{status}</span>
+          </div>
+          {failureReason ? (
+            <div className={sharedStyles.calloutWarn}>
+              <ExclamationCircleOutlined />
+              <span className={taskDetailStyles.failureContent}>
+                <b>{t("dataCatalog.taskManagement.details.failureReason")}</b>
+                <span>{failureReason}</span>
+              </span>
+            </div>
+          ) : null}
+        </section>
+        <section className={taskDetailStyles.sectionCard}>
+          <h3 className={taskDetailStyles.sectionTitle}>
+            {t("dataCatalog.taskManagement.details.taskInformation")}
+          </h3>
+          <Descriptions
+            bordered
+            className={taskDetailStyles.descriptionBlock}
+            column={1}
+            size="small"
+          >
+            {children}
+          </Descriptions>
+        </section>
+      </div>
+    </Drawer>
+  );
+}
+
 function DiscoverTaskProgress({ task }: { task: DataConnectScanTask }) {
   const percent = Math.max(0, Math.min(100, task.progress));
   const fillClass =
     task.status === "completed"
-      ? progressStyles.progressFillDone
+      ? sharedStyles.progressFillDone
       : task.status === "failed"
-        ? progressStyles.progressFillFailed
-        : progressStyles.progressFillVector;
+        ? sharedStyles.progressFillFailed
+        : sharedStyles.progressFillVector;
 
   return (
-    <div className={progressStyles.progressWrapCompact}>
-      <div className={progressStyles.progressTrack}>
+    <div className={sharedStyles.progressWrapCompact}>
+      <div className={sharedStyles.progressTrack}>
         <span
-          className={[progressStyles.progressFill, fillClass].join(" ")}
+          className={[sharedStyles.progressFill, fillClass].join(" ")}
           style={{ width: `${percent}%` }}
         />
       </div>
-      <div className={progressStyles.progressMetaCompact}>
+      <div className={sharedStyles.progressMetaCompact}>
         <span>{`${percent}%`}</span>
       </div>
     </div>
@@ -162,6 +225,7 @@ export function DiscoverTaskListPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [detailTask, setDetailTask] = useState<DataConnectScanTask | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -260,8 +324,8 @@ export function DiscoverTaskListPanel() {
     },
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time") },
     {
-      key: "actions", title: t("common.actions"), width: 80,
-      render: (_, record) => <PermissionGate permissions="catalog:task_manage"><AppButton danger type="link" onClick={() => void modal.confirm({ title: t("dataConnect.scanTaskDeleteConfirmTitle"), content: t("dataConnect.scanTaskDeleteConfirmDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteDataConnectScanTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate>,
+      key: "actions", title: t("common.actions"), width: 160, fixed: "right",
+      render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTask(record)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger type="link" onClick={() => void modal.confirm({ title: t("dataConnect.scanTaskDeleteConfirmTitle"), content: t("dataConnect.scanTaskDeleteConfirmDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteDataConnectScanTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space>,
     },
   ];
 
@@ -274,6 +338,17 @@ export function DiscoverTaskListPanel() {
     </Space></div>
     <TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.discover.empty")} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />
     <Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize); }} />
+    {detailTask ? <TaskDetailDrawer failureReason={detailTask.status === "failed" ? detailTask.message : undefined} onClose={() => setDetailTask(null)} status={t(`dataConnect.scanTaskStatuses.${detailTask.status}`)} statusClass={detailTask.status === "failed" ? sharedStyles.taskFailed : detailTask.status === "completed" ? sharedStyles.taskSucceeded : sharedStyles.taskRunning} taskId={detailTask.id}>
+      <Descriptions.Item label={t("dataCatalog.resource.catalog")}>{catalogNameMap.get(detailTask.catalogId) ?? detailTask.catalogId}</Descriptions.Item>
+      <Descriptions.Item label={t("dataCatalog.taskManagement.columns.strategy")}>{t(`dataConnect.scanStrategies.${detailTask.strategy}`)}</Descriptions.Item>
+      <Descriptions.Item label={t("dataCatalog.taskManagement.columns.trigger")}>{t(`dataConnect.scanTriggerTypes.${detailTask.triggerType}`)}</Descriptions.Item>
+      <Descriptions.Item label={t("common.status")}>{t(`dataConnect.scanTaskStatuses.${detailTask.status}`)}</Descriptions.Item>
+      <Descriptions.Item label={t("dataCatalog.task.progress")}>{`${detailTask.progress}%`}</Descriptions.Item>
+      <Descriptions.Item label={t("dataCatalog.taskManagement.details.scheduleId")}>{detailTask.scheduleId || "-"}</Descriptions.Item>
+      <Descriptions.Item label={t("dataCatalog.taskManagement.details.startTime")}>{detailTask.startTime || "-"}</Descriptions.Item>
+      <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>{detailTask.finishTime || "-"}</Descriptions.Item>
+      <Descriptions.Item label={t("dataCatalog.task.createTime")}>{detailTask.createTime || "-"}</Descriptions.Item>
+    </TaskDetailDrawer> : null}
   </TaskPanel>;
 }
 
@@ -305,7 +380,7 @@ async function listSemanticTasks(page: number, pageSize: number, filters: Semant
     });
   }
 
-  const response = await http.get<ListResponse<{ id: string; scope: "catalog" | "resource"; catalog_id: string; resource_id?: string; status: SemanticTaskStatus; apply_mode?: string; agent_id: string; confidence?: number; applied?: boolean; create_time?: number }>>("/vega-backend/v1/semantic-understanding-tasks", {
+  const response = await http.get<ListResponse<{ id: string; scope: "catalog" | "resource"; catalog_id: string; resource_id?: string; status: SemanticTaskStatus; apply_mode?: string; agent_id: string; confidence?: number; applied?: boolean; create_time?: number; failure_detail?: string }>>("/vega-backend/v1/semantic-understanding-tasks", {
     params: {
       direction: filters.direction ?? "desc",
       limit: pageSize,
@@ -319,7 +394,7 @@ async function listSemanticTasks(page: number, pageSize: number, filters: Semant
       applied: filters.applied,
     },
   });
-  return { items: response.data.entries.map((item) => ({ id: item.id, scope: item.scope, catalogId: item.catalog_id, resourceId: item.resource_id, status: item.status, applyMode: item.apply_mode ?? "fill_empty", agentId: item.agent_id, confidence: item.confidence ?? 0, applied: item.applied ?? false, createTime: item.create_time ?? 0 })), total: response.data.total_count };
+  return { items: response.data.entries.map((item) => ({ id: item.id, scope: item.scope, catalogId: item.catalog_id, resourceId: item.resource_id, status: item.status, applyMode: item.apply_mode ?? "fill_empty", agentId: item.agent_id, confidence: item.confidence ?? 0, applied: item.applied ?? false, createTime: item.create_time ?? 0, failureDetail: item.failure_detail })), total: response.data.total_count };
 }
 
 async function deleteSemanticTask(id: string) {
@@ -350,6 +425,7 @@ export function SemanticUnderstandingTaskListPanel() {
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [detailTask, setDetailTask] = useState<SemanticTask | null>(null);
   const load = useCallback(async () => { setLoading(true); setError(null); try { const result = await listSemanticTasks(page, pageSize, { scope, catalogId, resourceId, status, applyMode, applied, sort, direction }); setTasks(result.items); setTotal(result.total); } catch (loadError) { setError(extractRequestErrorMessage(loadError)); } finally { setLoading(false); } }, [applied, applyMode, catalogId, direction, page, pageSize, resourceId, scope, sort, status]);
   useEffect(() => void load(), [load]);
   useEffect(() => {
@@ -467,7 +543,7 @@ export function SemanticUnderstandingTaskListPanel() {
       ),
     },
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
-    { key: "actions", title: t("common.actions"), width: 80, render: (_, record) => <PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={record.status === "pending" || record.status === "running"} type="link" onClick={() => void modal.confirm({ title: t("dataCatalog.taskManagement.semantic.deleteTitle"), content: t("dataCatalog.taskManagement.semantic.deleteDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteSemanticTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate> },
+    { key: "actions", title: t("common.actions"), width: 160, fixed: "right", render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTask(record)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={record.status === "pending" || record.status === "running"} type="link" onClick={() => void modal.confirm({ title: t("dataCatalog.taskManagement.semantic.deleteTitle"), content: t("dataCatalog.taskManagement.semantic.deleteDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteSemanticTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space> },
   ];
   return <TaskPanel><div className={styles.operationBar}><Space><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space wrap>
     <Select allowClear className={styles.select} options={["catalog", "resource"].map((value) => ({ label: t(`dataCatalog.taskManagement.scope.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.scope")} value={scope} onChange={(value) => { setScope(value); if (value === "catalog") setResourceId(undefined); setPage(1); }} />
@@ -476,7 +552,17 @@ export function SemanticUnderstandingTaskListPanel() {
     <Select allowClear className={styles.select} options={["pending", "running", "succeeded", "failed"].map((value) => ({ label: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />
     <Select allowClear className={styles.select} options={["dry_run", "fill_empty", "force"].map((value) => ({ label: t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.applyMode")} value={applyMode} onChange={(value) => { setApplyMode(value); setPage(1); }} />
     <Select allowClear className={styles.select} options={[true, false].map((value) => ({ label: t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied"), value }))} placeholder={t("dataCatalog.taskManagement.columns.applied")} value={applied} onChange={(value) => { setApplied(value); setPage(1); }} />
-  </Space></div><TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize); }} /></TaskPanel>;
+  </Space></div><TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize); }} />{detailTask ? <TaskDetailDrawer failureReason={detailTask.status === "failed" ? detailTask.failureDetail : undefined} onClose={() => setDetailTask(null)} status={t(`dataCatalog.taskManagement.semanticStatus.${detailTask.status}`)} statusClass={detailTask.status === "failed" ? sharedStyles.taskFailed : detailTask.status === "succeeded" ? sharedStyles.taskSucceeded : sharedStyles.taskRunning} taskId={detailTask.id}>
+    <Descriptions.Item label={t("dataCatalog.taskManagement.columns.scope")}>{t(`dataCatalog.taskManagement.scope.${detailTask.scope}`)}</Descriptions.Item>
+    <Descriptions.Item label={t("dataCatalog.resource.catalog")}>{catalogNameMap.get(detailTask.catalogId) ?? detailTask.catalogId}</Descriptions.Item>
+    <Descriptions.Item label={t("dataCatalog.build.resource")}>{detailTask.resourceId ? resourceNameMap.get(detailTask.resourceId) ?? detailTask.resourceId : "-"}</Descriptions.Item>
+    <Descriptions.Item label={t("common.status")}>{t(`dataCatalog.taskManagement.semanticStatus.${detailTask.status}`)}</Descriptions.Item>
+    <Descriptions.Item label={t("dataCatalog.taskManagement.columns.applyMode")}>{detailTask.applyMode === "dry_run" ? t("dataCatalog.taskManagement.applyMode.dryRun") : detailTask.applyMode === "force" ? t("dataCatalog.taskManagement.applyMode.force") : t("dataCatalog.taskManagement.applyMode.fillEmpty")}</Descriptions.Item>
+    <Descriptions.Item label={t("dataCatalog.taskManagement.columns.confidence")}>{`${Math.round(detailTask.confidence * 100)}%`}</Descriptions.Item>
+    <Descriptions.Item label={t("dataCatalog.taskManagement.columns.applied")}>{t(detailTask.applied ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied")}</Descriptions.Item>
+    <Descriptions.Item label={t("dataCatalog.taskManagement.details.agentId")}>{detailTask.agentId || "-"}</Descriptions.Item>
+    <Descriptions.Item label={t("dataCatalog.task.createTime")}>{formatTime(detailTask.createTime)}</Descriptions.Item>
+  </TaskDetailDrawer> : null}</TaskPanel>;
 }
 
 function TaskTable<T extends { id: string }>({ error, loading, data, columns, emptyTitle, onRetry, onTableChange, selectedKeys, onSelectionChange }: { error: string | null; loading: boolean; data: T[]; columns: ColumnsType<T>; emptyTitle: string; onRetry: () => void; onTableChange?: TableProps<T>["onChange"]; selectedKeys?: string[]; onSelectionChange?: (keys: string[]) => void }) {

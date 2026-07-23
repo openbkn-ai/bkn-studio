@@ -53,6 +53,7 @@ export const dataCatalogZhCN = {
       applyMode: { dryRun: "仅预览", fillEmpty: "填充空值", force: "强制覆盖" },
       applied: { applied: "已应用", notApplied: "未应用" },
       semanticStatus: { pending: "等待中", running: "执行中", succeeded: "已完成", failed: "失败" },
+      details: { taskInformation: "任务信息", scheduleId: "计划 ID", startTime: "开始时间", message: "执行信息", agentId: "Agent ID", failureReason: "失败原因" },
       discover: { empty: "暂无探查任务" },
       semantic: { empty: "暂无语义理解任务", deleteTitle: "删除语义理解任务", deleteDescription: "确认删除语义理解任务“{{id}}”吗？" },
     },

@@ -56,6 +56,7 @@ export const dataCatalogEnUS = {
       applyMode: { dryRun: "Preview only", fillEmpty: "Fill empty fields", force: "Force overwrite" },
       applied: { applied: "Applied", notApplied: "Not applied" },
       semanticStatus: { pending: "Pending", running: "Running", succeeded: "Succeeded", failed: "Failed" },
+      details: { taskInformation: "Task Information", scheduleId: "Schedule ID", startTime: "Started", message: "Message", agentId: "Agent ID", failureReason: "Failure Reason" },
       discover: { empty: "No discover tasks" },
       semantic: { empty: "No semantic-understanding tasks", deleteTitle: "Delete semantic-understanding task", deleteDescription: "Delete semantic-understanding task “{{id}}”?" },
     },
