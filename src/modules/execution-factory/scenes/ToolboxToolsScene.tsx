@@ -199,6 +199,11 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   };
 
   const handleToggleStatus = useCallback((tool: ToolRecord) => {
+    // 市场预览态（from=catalog）只读：渲染层门禁能被 ?action=edit 绕过，写操作的闸
+    // 必须落在 handler 里，否则会改到别人域的工具箱。
+    if (catalogContext) {
+      return;
+    }
     const nextStatus: ToolStatus = tool.status === "enabled" ? "disabled" : "enabled";
 
     void modal.confirm({
