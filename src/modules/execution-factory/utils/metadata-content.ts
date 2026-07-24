@@ -332,21 +332,22 @@ export function analyzeOpenApiDocumentText(
     return { ok: false, reason: "info.version 不能为空。" };
   }
 
+  // servers is optional in OpenAPI 3.x. When absent, the import form's service URL
+  // is the runtime base URL and will be injected on submit via rewriteOpenApiServerUrl.
   const servers: unknown[] = Array.isArray(doc.servers) ? doc.servers : [];
+  let serverUrl: string | undefined;
 
-  if (servers.length === 0) {
-    return { ok: false, reason: "servers 至少需要一个服务地址。" };
-  }
-
-  const firstServer = servers[0];
-
-  if (
-    !firstServer ||
-    typeof firstServer !== "object" ||
-    typeof (firstServer as { url?: unknown }).url !== "string" ||
-    !(firstServer as { url: string }).url.trim()
-  ) {
-    return { ok: false, reason: "servers[0].url 不能为空。" };
+  if (servers.length > 0) {
+    const firstServer = servers[0];
+    if (
+      !firstServer ||
+      typeof firstServer !== "object" ||
+      typeof (firstServer as { url?: unknown }).url !== "string" ||
+      !(firstServer as { url: string }).url.trim()
+    ) {
+      return { ok: false, reason: "servers[0].url 不能为空。" };
+    }
+    serverUrl = (firstServer as { url: string }).url.trim();
   }
 
   const paths = doc.paths;
@@ -366,7 +367,7 @@ export function analyzeOpenApiDocumentText(
   return {
     ok: true,
     openApiVersion: String(doc.openapi),
-    serverUrl: (firstServer as { url: string }).url.trim(),
+    serverUrl,
     operationCount: operations.length,
     operations,
     operationsMissingSummary,
@@ -473,7 +474,10 @@ export function resolveOpenApiServiceUrl(
 
   const serverUrl = analysis.serverUrl?.trim();
   if (!serverUrl) {
-    return { ok: false, reason: "servers[0].url 不能为空。" };
+    return {
+      ok: false,
+      reason: "OpenAPI 未声明 servers，请在表单中填写完整的 HTTP(S) 服务地址。",
+    };
   }
 
   if (/^https?:\/\//i.test(serverUrl)) {

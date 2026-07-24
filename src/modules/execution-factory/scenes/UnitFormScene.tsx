@@ -33,7 +33,7 @@ import type {
   OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
-import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
+import { normalizeGeneratedCapabilityName, validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
 import type { RequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 
@@ -229,13 +229,15 @@ export function UnitFormScene({
         }
       }
 
+      const normalizedName = normalizeGeneratedCapabilityName(values.name) ?? values.name;
+
       const functionInput =
         resolvedMetadataType === "function"
           ? {
               code: values.functionCode,
               description: values.description,
               inputs: values.functionInputs,
-              name: values.name,
+              name: normalizedName,
               outputs: values.functionOutputs,
               script_type: "python" as const,
             }
@@ -244,6 +246,7 @@ export function UnitFormScene({
       if (mode === "create") {
         const record = await registerOperator({
           ...values,
+          name: normalizedName,
           metadataType: resolvedMetadataType,
           functionInput,
         });
@@ -257,6 +260,7 @@ export function UnitFormScene({
       if (operatorId) {
         await updateOperator({
           ...values,
+          name: normalizedName,
           metadataType: resolvedMetadataType,
           functionInput,
           operatorId,
@@ -408,7 +412,10 @@ export function UnitFormScene({
                           registrationTarget="operator"
                           onMetadataHints={(hints) => {
                             if (!form.getFieldValue("name") && hints.title) {
-                              form.setFieldValue("name", hints.title);
+                              form.setFieldValue(
+                                "name",
+                                normalizeGeneratedCapabilityName(hints.title) ?? hints.title,
+                              );
                             }
                             if (!form.getFieldValue("description") && hints.description) {
                               form.setFieldValue("description", hints.description);

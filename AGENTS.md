@@ -27,7 +27,7 @@ Read this first, then load the rules under [`rules/`](rules/). Before working in
 - **Only pick up Issues labeled `agent-ready`** (acceptance criteria complete + independently doable) that are unassigned. Self-assign to lock.
 - **Acceptance criteria**: a human approves them (label `ac-approved`) before an Issue becomes `agent-ready`. You may *draft* them for human approval.
 - **Risky operations** (deploy, delete/modify data, schema migration, prod config, secrets/permissions, major dependency bumps, cross-service breaking changes): do **not** execute. Post the three-part confirmation (what / blast radius / rollback), apply label `awaiting-confirmation`, and wait for an Owner to apply `owner-confirmed`.
-- **You may never**: approve or merge a PR, bypass or skip CI, or act without the confirmation above. Code review and the merge gates are human-only.
+- **You may never**: merge a PR, bypass or skip CI, or act without the confirmation above. Merging is human-only. Do not approve PRs yourself either — the sole exception is the automated review workflow ([`automation-claude-review.yml`](.github/workflows/automation-claude-review.yml)), which may submit an approving or change-requesting review as a signal; its approval never merges and never replaces the human merge decision.
 - **Open PRs with `Closes #<issue>`** and write back progress as Issue/PR comments. Label your PRs `by-agent`.
 - **Stuck / off-track / tests won't pass** → comment the blocker, return the Issue to triage, clear your assignee, label `needs-human`.
 

@@ -133,6 +133,16 @@ describe("registerOpenApiImport", () => {
     expect(importOpenApiTools).not.toHaveBeenCalled();
   });
 
+  it("normalizes toolbox name spaces before creating a toolbox", async () => {
+    await registerOpenApiImport({
+      openapiSpec: petstoreSpec,
+      serviceUrl: "https://petstore3.swagger.io/api/v3",
+      toolboxName: "示例工具箱 API",
+    });
+
+    expect(vi.mocked(createToolbox).mock.calls[0]?.[0].name).toBe("示例工具箱_API");
+  });
+
   it("truncates generated toolbox descriptions before creating a toolbox", async () => {
     await registerOpenApiImport({
       openapiSpec: petstoreSpec,
