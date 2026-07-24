@@ -12,14 +12,14 @@ import {
   formatMockTimestamp,
   mockBuildTasks,
   mockResources,
-  mockScanRecords,
-  mockScanningCatalogs,
+  mockDiscoverRecords,
+  mockDiscoveringCatalogs,
   mockSlug,
   mockStartScan,
 } from "@/modules/data-catalog/services/mock-db";
 import type {
   CatalogResource,
-  CatalogScanRecord,
+  CatalogDiscoverRecord,
   ResourceCategory,
   ResourceCreateInput,
   ResourceFieldFeature,
@@ -593,15 +593,15 @@ type BackendDiscoverTask = {
   trigger_type?: string;
 };
 
-export function isCatalogScanning(catalogId: string) {
-  return mockScanningCatalogs.has(catalogId);
+export function isCatalogDiscovering(catalogId: string) {
+  return mockDiscoveringCatalogs.has(catalogId);
 }
 
-export async function listCatalogScans(
+export async function listCatalogDiscovers(
   catalogId: string,
-): Promise<CatalogScanRecord[]> {
+): Promise<CatalogDiscoverRecord[]> {
   if (useMock) {
-    return wait([...(mockScanRecords.get(catalogId) ?? [])]);
+    return wait([...(mockDiscoverRecords.get(catalogId) ?? [])]);
   }
 
   const response = await http.get<ListResponse<BackendDiscoverTask>>(
@@ -614,7 +614,7 @@ export async function listCatalogScans(
   return response.data.entries.map((item) => {
     const startedAt = item.start_time ?? item.create_time ?? 0;
     // 后端枚举:pending/running/completed/failed
-    const status: CatalogScanRecord["status"] =
+    const status: CatalogDiscoverRecord["status"] =
       item.status === "running" || item.status === "pending"
         ? "running"
         : item.status === "failed"

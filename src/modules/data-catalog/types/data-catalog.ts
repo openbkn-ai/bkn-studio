@@ -201,16 +201,16 @@ export type BuildTaskStartInput = {
   reset?: boolean;
 };
 
-export type CatalogScanStatus = "failed" | "running" | "succeeded";
+export type CatalogDiscoverStatus = "failed" | "running" | "succeeded";
 
-export type CatalogScanRecord = {
+export type CatalogDiscoverRecord = {
   durationSec: number | null;
   foundResources: number | null;
   id: string;
   newResources: number | null;
   startTime: string;
   startedAt: number;
-  status: CatalogScanStatus;
+  status: CatalogDiscoverStatus;
   trigger: "manual" | "scheduled";
 };
 

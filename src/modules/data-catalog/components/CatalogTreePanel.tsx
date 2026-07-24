@@ -46,7 +46,7 @@ type CatalogTreePanelProps = {
   onToggleCollapsed?: () => void;
   resourceCount: number;
   resources: CatalogResource[];
-  scanningCatalogIds: string[];
+  discoveringCatalogIds: string[];
   selection: CatalogTreeSelection | null;
 };
 
@@ -146,7 +146,7 @@ export function CatalogTreePanel({
   onToggleCollapsed,
   resourceCount,
   resources,
-  scanningCatalogIds,
+  discoveringCatalogIds,
   selection,
 }: CatalogTreePanelProps) {
   const { t } = useTranslation();
@@ -322,9 +322,9 @@ export function CatalogTreePanel({
                   <DatabaseOutlined className={styles.catalogIcon} />
                 </span>
                 <span className={styles.catalogNodeName}>{catalog.name}</span>
-                {scanningCatalogIds.includes(catalog.id) ? (
+                {discoveringCatalogIds.includes(catalog.id) ? (
                   <span className={[styles.treeMiniTag, styles.treeMiniTagScan].join(" ")}>
-                    {t("dataCatalog.tree.scanning")}
+                    {t("dataCatalog.tree.discovering")}
                   </span>
                 ) : null}
                 {!catalog.enabled ? (
@@ -458,7 +458,7 @@ export function CatalogTreePanel({
     onRefresh,
     physicalCatalogs,
     query,
-    scanningCatalogIds,
+    discoveringCatalogIds,
     scopeGroupsByCatalog,
     selectedCatalogId,
     t,

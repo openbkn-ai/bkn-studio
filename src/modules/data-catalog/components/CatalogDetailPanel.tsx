@@ -342,7 +342,7 @@ export function CatalogDetailPanel({
               <>
                 <AppButton
                   onClick={() => {
-                    void navigate(`/data-connect/scans?catalogId=${catalog.id}`);
+                    void navigate(`/data-connect/discover?catalogId=${catalog.id}`);
                   }}
                 >
                   {t("dataCatalog.catalog.goScan")}
@@ -432,11 +432,11 @@ export function CatalogDetailPanel({
               physical ? (
                 <AppButton
                   onClick={() => {
-                    void navigate(`/data-connect/scans?catalogId=${catalog.id}`);
+                    void navigate(`/data-connect/discover?catalogId=${catalog.id}`);
                   }}
                   type="primary"
                 >
-                  {t("dataCatalog.catalog.goScanToDiscover")}
+                  {t("dataCatalog.catalog.goDiscoverToDiscover")}
                 </AppButton>
               ) : !physical ? (
                 <PermissionGate permissions="resource:create">

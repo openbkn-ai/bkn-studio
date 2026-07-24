@@ -8,7 +8,7 @@
 import type {
   BuildTask,
   CatalogResource,
-  CatalogScanRecord,
+  CatalogDiscoverRecord,
 } from "@/modules/data-catalog/types/data-catalog";
 
 /**
@@ -302,7 +302,7 @@ export const mockBuildTasks: BuildTask[] = [
   }),
 ];
 
-export const mockScanRecords = new Map<string, CatalogScanRecord[]>([
+export const mockDiscoverRecords = new Map<string, CatalogDiscoverRecord[]>([
   [
     "cat-001",
     [
@@ -345,9 +345,9 @@ export const mockScanRecords = new Map<string, CatalogScanRecord[]>([
   ],
 ]);
 
-export const mockScanningCatalogs = new Set<string>();
+export const mockDiscoveringCatalogs = new Set<string>();
 
-/** finance_dw(cat-003)扫描后会“发现”的资源,模拟 discover 行为 */
+/** finance_dw(cat-003)探查后会“发现”的资源，模拟 discover 行为 */
 const discoverableResources: CatalogResource[] = [
   makeResource({
     id: "res-contracts",
@@ -355,7 +355,7 @@ const discoverableResources: CatalogResource[] = [
     name: "contracts",
     category: "table",
     sourceIdentifier: "finance_dw.contracts",
-    description: "合同台账,由 discover 扫描登记。",
+    description: "合同台账，由 discover 探查登记。",
     schema: [
       { name: "contract_id", type: "bigint" },
       { name: "counterparty", type: "varchar(128)" },
@@ -371,7 +371,7 @@ const discoverableResources: CatalogResource[] = [
     name: "invoices",
     category: "table",
     sourceIdentifier: "finance_dw.invoices",
-    description: "发票明细,由 discover 扫描登记。",
+    description: "发票明细，由 discover 探查登记。",
     schema: [
       { name: "invoice_id", type: "bigint" },
       { name: "contract_id", type: "bigint" },
@@ -384,12 +384,12 @@ const discoverableResources: CatalogResource[] = [
 ];
 
 export function mockStartScan(catalogId: string) {
-  if (mockScanningCatalogs.has(catalogId)) {
+  if (mockDiscoveringCatalogs.has(catalogId)) {
     return;
   }
 
-  mockScanningCatalogs.add(catalogId);
-  const record: CatalogScanRecord = {
+  mockDiscoveringCatalogs.add(catalogId);
+  const record: CatalogDiscoverRecord = {
     id: mockSlug(12),
     status: "running",
     trigger: "manual",
@@ -399,12 +399,12 @@ export function mockStartScan(catalogId: string) {
     foundResources: null,
     newResources: null,
   };
-  const records = mockScanRecords.get(catalogId) ?? [];
-  mockScanRecords.set(catalogId, [record, ...records]);
+  const records = mockDiscoverRecords.get(catalogId) ?? [];
+  mockDiscoverRecords.set(catalogId, [record, ...records]);
   emit();
 
   window.setTimeout(() => {
-    mockScanningCatalogs.delete(catalogId);
+    mockDiscoveringCatalogs.delete(catalogId);
     record.status = "succeeded";
     record.durationSec = 8 + Math.floor(Math.random() * 14);
 

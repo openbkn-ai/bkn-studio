@@ -23,14 +23,14 @@ import { listBuildTasks } from "@/modules/data-catalog/services/build-task.servi
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
   countCatalogResources,
-  isCatalogScanning,
+  isCatalogDiscovering,
   listCatalogResources,
-  listCatalogScans,
+  listCatalogDiscovers,
 } from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildTask,
   CatalogResource,
-  CatalogScanRecord,
+  CatalogDiscoverRecord,
 } from "@/modules/data-catalog/types/data-catalog";
 import { listDataConnectConnectorTypes } from "@/modules/data-connect/services/data-connect.service";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
@@ -68,7 +68,7 @@ export function DataCatalogScene({
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [resources, setResources] = useState<CatalogResource[]>([]);
   const [tasks, setTasks] = useState<BuildTask[]>([]);
-  const [scans, setScans] = useState<CatalogScanRecord[]>([]);
+  const [discover, setDiscovers] = useState<CatalogDiscoverRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -130,15 +130,15 @@ export function DataCatalogScene({
     }
   }, [loadCatalogs, refreshResourceTotal]);
 
-  const loadScans = useCallback(async () => {
+  const loadDiscovers = useCallback(async () => {
     if (!selectedCatalog) {
-      setScans([]);
+      setDiscovers([]);
       return;
     }
     try {
-      setScans(await listCatalogScans(selectedCatalog.id));
+      setDiscovers(await listCatalogDiscovers(selectedCatalog.id));
     } catch {
-      setScans([]);
+      setDiscovers([]);
     }
   }, [selectedCatalog]);
 
@@ -147,8 +147,8 @@ export function DataCatalogScene({
   }, [loadAll]);
 
   useEffect(() => {
-    void loadScans();
-  }, [loadScans]);
+    void loadDiscovers();
+  }, [loadDiscovers]);
 
   useEffect(() => {
     return subscribeMockDb(() => {
@@ -156,9 +156,9 @@ export function DataCatalogScene({
       if (selectedCatalogId) {
         void loadCatalogDetail(selectedCatalogId);
       }
-      void loadScans();
+      void loadDiscovers();
     });
-  }, [loadAll, loadCatalogDetail, loadScans, selectedCatalogId]);
+  }, [loadAll, loadCatalogDetail, loadDiscovers, selectedCatalogId]);
 
   useEffect(() => {
     if (loading) {
@@ -180,8 +180,8 @@ export function DataCatalogScene({
           task.status === "pending" ||
           task.status === "running" ||
           task.status === "listening",
-      ) || scans.some((scan) => scan.status === "running"),
-    [scans, tasks],
+      ) || discover.some((discover) => discover.status === "running"),
+    [discover, tasks],
   );
 
   const pollActive = useCallback(async () => {
@@ -193,8 +193,8 @@ export function DataCatalogScene({
     } catch {
       // ignore
     }
-    void loadScans();
-  }, [loadScans, selectedCatalogId]);
+    void loadDiscovers();
+  }, [loadDiscovers, selectedCatalogId]);
 
   useEffect(() => {
     if (!hasActiveWork) {
@@ -225,19 +225,19 @@ export function DataCatalogScene({
     void navigate(`/data-directory/catalog/${target.id}`, { replace: true });
   }, [catalogs, loading, navigate, selection, suppressAutoSelect]);
 
-  const scanningCatalogIds = useMemo(() => {
+  const discoveringCatalogIds = useMemo(() => {
     const ids = catalogs
-      .filter((catalog) => isCatalogScanning(catalog.id))
+      .filter((catalog) => isCatalogDiscovering(catalog.id))
       .map((catalog) => catalog.id);
     if (
       selectedCatalog &&
-      scans.some((scan) => scan.status === "running") &&
+      discover.some((discover) => discover.status === "running") &&
       !ids.includes(selectedCatalog.id)
     ) {
       ids.push(selectedCatalog.id);
     }
     return ids;
-  }, [catalogs, scans, selectedCatalog]);
+  }, [catalogs, discover, selectedCatalog]);
 
   const openResourceWorkspace = useCallback(
     (
@@ -414,7 +414,7 @@ export function DataCatalogScene({
           }}
           resourceCount={resourceTotal}
           resources={resources}
-          scanningCatalogIds={scanningCatalogIds}
+          discoveringCatalogIds={discoveringCatalogIds}
           selection={selection}
         />
         <section className={styles.detailSurface}>{renderDetail()}</section>
