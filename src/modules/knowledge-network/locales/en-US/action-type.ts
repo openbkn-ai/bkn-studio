@@ -66,9 +66,6 @@ export const actiontypePart = {
     actionTypeExecutionConfigSubtitle:
       "Maintain the action execution source and parameter mappings.",
     actionTypeExecutionTitle: "Action type execution",
-    actionTypeImportPending:
-      "JSON import for action types will be aligned with the legacy Vega flow in a later slice.",
-    actionTypeImportTitle: "Import action types",
     actionTypeKind: "Action type",
     actionTypeKindCreate: "Add",
     actionTypeKindDelete: "Delete",
