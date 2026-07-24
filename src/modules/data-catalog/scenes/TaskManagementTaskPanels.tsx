@@ -426,22 +426,8 @@ export function SemanticUnderstandingTaskListPanel() {
   const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [detailTask, setDetailTask] = useState<SemanticTask | null>(null);
-  const load = useCallback(async () => { setLoading(true); setError(null); try { const result = await listSemanticTasks(page, pageSize, { scope, catalogId, resourceId, status, applyMode, applied, sort, direction }); setTasks(result.items); setTotal(result.total); } catch (loadError) { setError(extractRequestErrorMessage(loadError)); } finally { setLoading(false); } }, [applied, applyMode, catalogId, direction, page, pageSize, resourceId, scope, sort, status]);
+  const load = useCallback(async () => { setLoading(true); setError(null); try { const [taskResult, catalogResult, resourceResult] = await Promise.all([listSemanticTasks(page, pageSize, { scope, catalogId, resourceId, status, applyMode, applied, sort, direction }), listCatalogs(catalogListAllQuery()), listCatalogResources()]); setTasks(taskResult.items); setTotal(taskResult.total); setCatalogs(catalogResult.items); setResources(resourceResult); } catch (loadError) { setError(extractRequestErrorMessage(loadError)); } finally { setLoading(false); } }, [applied, applyMode, catalogId, direction, page, pageSize, resourceId, scope, sort, status]);
   useEffect(() => void load(), [load]);
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [catalogResult, resourceResult] = await Promise.all([
-          listCatalogs(catalogListAllQuery()),
-          listCatalogResources(),
-        ]);
-        setCatalogs(catalogResult.items);
-        setResources(resourceResult);
-      } catch {
-        // 元数据加载失败时保留任务中的 ID，避免影响任务列表本身。
-      }
-    })();
-  }, []);
   const catalogNameMap = useMemo(() => new Map(catalogs.map((item) => [item.id, item.name])), [catalogs]);
   const resourceNameMap = useMemo(() => new Map(resources.map((item) => [item.id, item.name])), [resources]);
   const resourceOptions = useMemo(
