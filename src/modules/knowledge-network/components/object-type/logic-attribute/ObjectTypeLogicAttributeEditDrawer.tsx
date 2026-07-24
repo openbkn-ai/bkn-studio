@@ -30,6 +30,7 @@ import {
   LOGIC_ATTRIBUTE_TYPE_OPTIONS,
   PARAMETER_SOURCE_OPTIONS,
   VALUE_FROM_OPTIONS,
+  buildToolLogicParameterSettings,
   extractLeafParams,
   isEmptyExceptZero,
 } from "./constants";
@@ -181,6 +182,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
       return;
     }
 
+    let cancelled = false;
     isDisplayNameManuallyEdited.current = false;
 
     if (attrInfo?.dataSource?.type === "tool") {
@@ -194,6 +196,30 @@ export function ObjectTypeLogicAttributeEditDrawer({
         toolId: attrInfo.dataSource.toolId,
         type: attrInfo.dataSource.type,
       });
+      setSettingList([]);
+
+      if (attrInfo.dataSource.boxId && attrInfo.dataSource.toolId) {
+        const source = {
+          boxId: attrInfo.dataSource.boxId,
+          toolId: attrInfo.dataSource.toolId,
+          toolName: attrInfo.dataSource.name ?? "",
+          type: "tool" as const,
+        };
+        void resolveActionTypeToolInputSchema(source).then((inputParams) => {
+          if (cancelled) {
+            return;
+          }
+          setSettingList(
+            buildToolLogicParameterSettings(
+              inputParams,
+              attrInfo.parameters ?? [],
+              createParameterId,
+            ),
+          );
+        });
+      } else {
+        setSettingList(attrInfo.parameters ?? []);
+      }
     } else if (attrInfo?.dataSource?.id) {
       form.setFieldsValue({
         comment: attrInfo.comment,
@@ -216,6 +242,10 @@ export function ObjectTypeLogicAttributeEditDrawer({
     if (attrInfo?.dataSource?.type === "metric") {
       setSettingList([]);
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [attrInfo, form, open]);
 
   useEffect(() => {
@@ -309,22 +339,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
     };
     const inputParams = await resolveActionTypeToolInputSchema(source);
     setSettingList(
-      inputParams.map((item) => ({
-        children: item.children?.map((child) => ({
-          description: child.description,
-          id: createParameterId(),
-          name: child.key,
-          source: child.source,
-          type: child.type,
-          valueFrom: "input",
-        })),
-        description: item.description,
-        id: createParameterId(),
-        name: item.key,
-        source: item.source,
-        type: item.type,
-        valueFrom: "input",
-      })),
+      buildToolLogicParameterSettings(inputParams, [], createParameterId),
     );
     form.setFieldsValue({
       boxId: selection.boxId,
