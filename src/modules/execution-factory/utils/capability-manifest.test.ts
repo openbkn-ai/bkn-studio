@@ -181,7 +181,7 @@ describe("capability-manifest", () => {
     expect(manifest.authRequirements).toContain("max retry attempts: 3");
   });
 
-  it("scores readiness from semantics, examples, policy, and verification", () => {
+  it("scores readiness from intent and input/output semantics", () => {
     const manifest = buildToolCapabilityManifest({
       toolId: "tool-ready",
       name: "Ready tool",
@@ -195,22 +195,35 @@ describe("capability-manifest", () => {
       },
     });
 
-    const readiness = getCapabilityReadiness({
-      ...manifest,
-      examples: [
-        {
-          title: "Lookup example",
-          input: { id: "A001" },
-          status: "passed",
-        },
-      ],
-      testStatus: "passed",
-      agentVisibility: "callable",
-      agentInvokePolicy: "auto_allowed",
+    const readiness = getCapabilityReadiness(manifest);
+
+    expect(readiness.score).toBe(100);
+    expect(readiness.level).toBe("high");
+    expect(readiness.missing).toEqual([]);
+  });
+
+  it("only flags fillable gaps, never verification or callable policy", () => {
+    const manifest = buildToolCapabilityManifest({
+      toolId: "tool-bare",
+      name: "Bare tool",
+      status: "enabled",
+      metadataType: "openapi",
+      ioSpec: {
+        parameters: [{ name: "id" }],
+        responses: {},
+      },
     });
 
-    expect(readiness.score).toBeGreaterThanOrEqual(80);
-    expect(readiness.missing).toEqual([]);
+    const readiness = getCapabilityReadiness(manifest);
+
+    expect(readiness.missing).toEqual([
+      "business intent",
+      "input semantics",
+      "output semantics",
+    ]);
+    expect(readiness.missing).not.toContain("passed verification");
+    expect(readiness.missing).not.toContain("Agent callable policy");
+    expect(readiness.missing).not.toContain("verified example");
   });
 });
 

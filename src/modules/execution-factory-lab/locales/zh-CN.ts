@@ -9,14 +9,14 @@ export const executionFactoryLabZhCN = {
   executionFactoryLab: {
     capabilitiesTitle: "能力库（实验版）",
     capabilitiesDescription:
-      "以「能力」为主语的统一视图，涵盖 HTTP、MCP 与 Skill。支持调试、发布、版本回滚与编排同步。",
+      "以「能力」为主语的统一视图，涵盖 HTTP、MCP 与 SKILL。支持调试、发布、版本回滚与编排同步。",
     experimentBadge: "实验",
     addCapability: "添加能力",
     addHttpCapability: "添加 HTTP API",
     kindFilterAll: "全部",
     kindFilterHttp: "HTTP",
     kindFilterMcp: "MCP",
-    kindFilterSkill: "Skill",
+    kindFilterSkill: "SKILL",
     kindLabel: "类型",
     groupFilter: "分组",
     groupFilterAll: "全部分组",
@@ -61,7 +61,7 @@ export const executionFactoryLabZhCN = {
     serviceUrlLabel: "服务地址",
     sandboxRuntimeTitle: "沙箱运行时管理",
     sandboxRuntimeDescription:
-      "查看能力工厂可调用能力使用的沙箱健康状态、会话池压力、依赖安装和任务会话，覆盖 HTTP、MCP、Skill 与 Function。",
+      "查看能力工厂可调用能力使用的沙箱健康状态、会话池压力、依赖安装和任务会话，覆盖 HTTP、MCP、SKILL 与 Function。",
     sandboxRuntimeRefresh: "刷新",
     sandboxRuntimeControlPlane: "控制面",
     sandboxRuntimeSessionPool: "会话池",

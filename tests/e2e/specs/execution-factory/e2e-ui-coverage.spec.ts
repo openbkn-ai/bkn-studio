@@ -25,9 +25,10 @@ import {
   openCreateWizard,
   UNITS_PAGE_TITLE,
   openDetailDrawerByCardClick,
+  openDetailPageByCardClick,
   openImportModal,
   openOperatorCreateForm,
-  openToolboxDetailDrawer,
+  openToolboxToolsPageFromCardMenu,
   gotoSkillDetailPage,
   selectSkillFileInDetailPage,
   selectOperatorCreateMode,
@@ -203,9 +204,13 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await expect(card.getByText(/Local Admin|admin/i)).toBeVisible();
       await expect(card.getByText(uuidText)).toHaveCount(0);
 
-      const drawer = await openDetailDrawerByCardClick(page, toolbox.name);
-      await expect(drawer.getByText(/创建人\s*Local Admin|Created By\s*Local Admin/i)).toBeVisible();
-      await expect(drawer.getByText(/更新人\s*Local Admin|Updated By\s*Local Admin/i)).toBeVisible();
+      await openDetailPageByCardClick(
+        page,
+        toolbox.name,
+        new RegExp(`/execution-factory/toolboxes/${toolbox.boxId}/tools`),
+      );
+      await expect(page.getByText(/创建人\s*Local Admin|Created By\s*Local Admin/i)).toBeVisible();
+      await expect(page.getByText(/更新人\s*Local Admin|Updated By\s*Local Admin/i)).toBeVisible();
     });
   });
 
@@ -280,7 +285,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
   });
 
   test.describe("Detail drawers & card menus", () => {
-    test("UI-COV-020: toolbox card click opens detail with view tools CTA", async ({
+    test("UI-COV-020: toolbox card click lands on the tools page directly", async ({
       page,
       request,
     }) => {
@@ -288,10 +293,13 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       createdBoxIds.push(toolbox.boxId);
 
       await gotoUnitsTab(page, "toolbox");
-      const drawer = await openDetailDrawerByCardClick(page, toolbox.name);
-      await expect(drawer.getByText(/工具箱详情|Toolbox Detail/i)).toBeVisible();
-      await drawer.getByRole("button", { name: /查看工具详情|View Tools/i }).click();
-      await expect(page).toHaveURL(new RegExp(`/execution-factory/toolboxes/${toolbox.boxId}/tools`));
+      await openDetailPageByCardClick(
+        page,
+        toolbox.name,
+        new RegExp(`/execution-factory/toolboxes/${toolbox.boxId}/tools`),
+      );
+      // 抽屉里独有的基础信息现在挂在页面上。
+      await expect(page.getByText(toolbox.boxId)).toBeVisible();
     });
 
     test("UI-COV-021: operator detail drawer shows edit and debug actions", async ({
@@ -348,11 +356,12 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       createdMcpIds.push(mcp.mcpId);
 
       await gotoUnitsTab(page, "mcp");
-      const drawer = await openDetailDrawerByCardClick(page, mcp.name);
-      await expect(drawer.locator(".ant-drawer-title")).toHaveText(/MCP 详情|MCP Detail/i);
-      await drawer.getByRole("button", { name: /查看 MCP 详情|View MCP Detail/i }).click();
-      await expect(page).toHaveURL(new RegExp(`/execution-factory/mcp/${mcp.mcpId}`));
-      await expect(page.getByRole("heading", { level: 3, name: mcp.name })).toBeVisible();
+      await openDetailPageByCardClick(
+        page,
+        mcp.name,
+        new RegExp(`/execution-factory/mcp/${mcp.mcpId}`),
+      );
+      await expect(page.getByText(mcp.mcpId)).toBeVisible();
 
       await gotoUnitsTab(page, "mcp");
       await openCardMenu(page, mcp.name, /编辑|Edit/i);
@@ -393,16 +402,17 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await page.keyboard.press("Escape");
     });
 
-    test("UI-COV-027: skill card click opens detail with view detail CTA", async ({ page, request }) => {
+    test("UI-COV-027: skill card click lands on the detail page directly", async ({ page, request }) => {
       const skill = await registerSkillZipViaApi(request, buildSkillName("ui_cov_detail"));
       createdSkillIds.push(skill.skillId);
 
       await gotoUnitsTab(page, "skill");
-      const drawer = await openDetailDrawerByCardClick(page, skill.name);
-      await expect(drawer.locator(".ant-drawer-title")).toHaveText(/Skill 详情|Skill Detail/i);
-      await drawer.getByRole("button", { name: /查看 Skill 详情|View Skill Detail/i }).click();
-      await expect(page).toHaveURL(new RegExp(`/execution-factory/skills/${skill.skillId}`));
-      await expect(page.getByRole("heading", { level: 3, name: skill.name })).toBeVisible();
+      await openDetailPageByCardClick(
+        page,
+        skill.name,
+        new RegExp(`/execution-factory/skills/${skill.skillId}`),
+      );
+      await expect(page.getByRole("button", { name: /发布历史|Release history/i })).toBeVisible();
     });
 
     test("UI-COV-028: skill detail page previews package files", async ({ page, request }) => {
@@ -496,8 +506,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       createdBoxIds.push(toolbox.boxId);
 
       await gotoUnitsTab(page, "toolbox");
-      const drawer = await openToolboxDetailDrawer(page, toolbox.name);
-      await drawer.getByRole("button", { name: /查看工具详情|View Tools/i }).click();
+      await openToolboxToolsPageFromCardMenu(page, toolbox.name);
       await expect(page).toHaveURL(new RegExp(`/toolboxes/${toolbox.boxId}/tools`));
     });
   });

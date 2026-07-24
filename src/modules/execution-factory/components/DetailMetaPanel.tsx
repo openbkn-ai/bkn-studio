@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { Descriptions } from "antd";
 import type { ReactNode } from "react";
 
 import styles from "./DetailMetaPanel.module.css";
@@ -27,20 +27,6 @@ type DetailMetaPanelProps = {
   compact?: boolean;
 };
 
-function resolveValueClassName(variant: DetailMetaItem["variant"]) {
-  switch (variant) {
-    case "accent":
-    case "strong":
-      return `${styles.value} ${styles.valueStrong}`;
-    case "mono":
-      return `${styles.value} ${styles.valueMono}`;
-    case "muted":
-      return `${styles.value} ${styles.valueMuted}`;
-    default:
-      return styles.value;
-  }
-}
-
 export function DetailMetaPanel({
   title,
   titleExtra,
@@ -48,51 +34,27 @@ export function DetailMetaPanel({
   columns = 3,
   compact = false,
 }: DetailMetaPanelProps) {
-  const columnClass =
-    columns === 4 ? styles.cols4 : columns === 2 ? styles.cols2 : styles.cols3;
-
   return (
-    <section
-      className={`${styles.panel} ${compact ? styles.panelCompact : ""}`}
-      data-testid="detail-meta-panel"
-    >
+    <section className={styles.sectionCard} data-testid="detail-meta-panel">
       {title ? (
         <div className={styles.header}>
-          <span className={styles.title}>
-            <span className={styles.titleIcon}>
-              <InfoCircleOutlined />
-            </span>
-            {title}
-          </span>
+          <h3 className={styles.sectionTitle}>{title}</h3>
           {titleExtra}
         </div>
       ) : null}
 
-      <div className={`${styles.grid} ${columnClass}`}>
-        {items.map((item) => {
-          const cardClassName = [
-            styles.card,
-            item.span === "full" ? styles.cardFull : "",
-            item.variant === "accent" || item.variant === "strong" ? styles.cardAccent : "",
-          ]
-            .filter(Boolean)
-            .join(" ");
-
-          return (
-            <div className={cardClassName} key={item.key}>
-              {item.icon ? (
-                <span className={styles.labelRow}>
-                  <span className={styles.itemIcon}>{item.icon}</span>
-                  <span className={styles.label}>{item.label}</span>
-                </span>
-              ) : (
-                <span className={styles.label}>{item.label}</span>
-              )}
-              <div className={resolveValueClassName(item.variant)}>{item.value}</div>
-            </div>
-          );
-        })}
-      </div>
+      <Descriptions
+        bordered
+        className={styles.descriptionBlock}
+        column={columns}
+        items={items.map((item) => ({
+          key: item.key,
+          label: item.label,
+          children: item.value,
+          span: item.span === "full" ? columns : 1,
+        }))}
+        size={compact ? "small" : "middle"}
+      />
     </section>
   );
 }

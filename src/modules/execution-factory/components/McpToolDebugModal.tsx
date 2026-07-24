@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Form, Input, Modal, Typography } from "antd";
+import { Alert, Form, Modal, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -13,6 +13,9 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { debugMcpTool } from "@/modules/execution-factory/services/mcp.service";
 import type { McpToolDebugResult } from "@/modules/execution-factory/types/mcp";
 import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
+
+import { JsonCodeBlock } from "./JsonCodeBlock";
+import { JsonEditor } from "./JsonEditor";
 
 type McpToolDebugModalProps = {
   inputSchema?: unknown;
@@ -96,16 +99,14 @@ export function McpToolDebugModal({
       <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
       <Form form={form} layout="vertical">
         <Form.Item label={t("executionFactory.debugRequestBody")} name="argumentsPayload">
-          <Input.TextArea placeholder="{}" rows={8} />
+          <JsonEditor height={180} />
         </Form.Item>
       </Form>
       {error ? <Alert message={error} showIcon style={{ marginBottom: 16 }} type="error" /> : null}
       {result ? (
         <Alert
           description={
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-              {JSON.stringify(result, null, 2)}
-            </pre>
+            <JsonCodeBlock value={result} />
           }
           message={t("executionFactory.debugResultTitle")}
           showIcon

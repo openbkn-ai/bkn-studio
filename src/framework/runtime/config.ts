@@ -49,7 +49,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
     basename: DEFAULT_APP_BASENAME,
   },
   theme: {
-    borderRadius: 12,
+    borderRadius: 0,
     primaryColor: "#1e3a8a",
   },
 };

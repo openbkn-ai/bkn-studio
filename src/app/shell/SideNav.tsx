@@ -19,6 +19,7 @@ import {
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeatures";
+import { isMarketCatalogEnabled } from "@/modules/execution-factory/utils/market-catalog";
 
 type SelectedItem = {
   key: string;
@@ -45,15 +46,15 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
       filterNavByPermission(
         filterConsoleNavigation(consoleNavigation, {
           hideCatalog: !features.catalog,
-          hideLegacyExecutionFactory: features.hide_legacy_execution_factory_menu,
+          // 执行工厂菜单常驻:不再跟随 capabilities-lab 的
+          // hide_legacy_execution_factory_menu 开关隐藏。
+          hideLegacyExecutionFactory: false,
+          // 跨业务域市场暂未启用,入口与"执行单元管理"内容重叠。
+          hideMarketCatalog: !isMarketCatalogEnabled(),
         }),
         runtimeConfig.currentUser.permissions,
       ),
-    [
-      features.catalog,
-      features.hide_legacy_execution_factory_menu,
-      runtimeConfig.currentUser.permissions,
-    ],
+    [features.catalog, runtimeConfig.currentUser.permissions],
   );
 
   const selectedItem = useMemo(

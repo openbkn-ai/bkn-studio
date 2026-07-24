@@ -7,8 +7,9 @@
 
 import {
   ApiOutlined,
+  CodeOutlined,
   DeploymentUnitOutlined,
-  ThunderboltOutlined,
+  FileZipOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
 import { Avatar, Card, Tag, Typography } from "antd";
@@ -42,16 +43,17 @@ type ExecutionUnitCardProps = {
   onClick?: () => void;
 };
 
-function getTabIcon(activeTab: ExecutionUnitTab) {
+/** 工具集内部还分 OpenAPI 与代码函数，用同一个图标看不出差别。 */
+function getTabIcon(activeTab: ExecutionUnitTab, metadataType?: string) {
   switch (activeTab) {
     case "mcp":
       return <ApiOutlined />;
     case "operator":
       return <DeploymentUnitOutlined />;
     case "skill":
-      return <ThunderboltOutlined />;
+      return <FileZipOutlined />;
     default:
-      return <ToolOutlined />;
+      return metadataType === "function" ? <CodeOutlined /> : <ToolOutlined />;
   }
 }
 
@@ -186,9 +188,19 @@ export function ExecutionUnitCard({
           </div>
         ) : null}
         <div className={styles.iconWrap}>
-          <div className={styles.iconBadge}>{getTabIcon(activeTab)}</div>
+          <div
+            className={`${styles.iconBadge} ${
+              item.metadataType === "function" ? styles.iconBadgeFunction : ""
+            }`}
+          >
+            {getTabIcon(activeTab, item.metadataType)}
+          </div>
           {showMetadataTag && item.metadataType ? (
-            <span className={styles.metadataTag}>
+            <span
+              className={`${styles.metadataTag} ${
+                item.metadataType === "function" ? styles.metadataTagFunction : ""
+              }`}
+            >
               {t(`executionFactory.metadataTypes.${item.metadataType as "openapi" | "function"}`)}
             </span>
           ) : null}

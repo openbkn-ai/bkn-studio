@@ -8,9 +8,9 @@
 .panel {
   margin-bottom: 16px;
   padding: 16px;
-  border: 1px solid rgba(18, 110, 227, 0.14);
-  border-radius: 8px;
-  background: #fbfdff;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-bg-surface);
 }
 
 .header {
@@ -29,13 +29,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .description {
   margin-top: 4px;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 20px;
 }
@@ -46,15 +46,46 @@
 }
 
 .scoreValue {
-  color: #126ee3;
+  color: var(--color-primary-600);
   font-size: 24px;
   font-weight: 700;
   line-height: 28px;
 }
 
 .scoreLabel {
-  color: rgba(0, 0, 0, 0.45);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  color: var(--color-text-muted);
   font-size: 12px;
+  cursor: help;
+}
+
+.scoreInfoIcon {
+  font-size: 12px;
+}
+
+.scoreRuleTip {
+  display: grid;
+  gap: 4px;
+  min-width: 168px;
+}
+
+.scoreRuleTitle {
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.scoreRuleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.scoreRuleRowMuted {
+  opacity: 0.55;
 }
 
 .tags {
@@ -66,7 +97,7 @@
 
 .sectionTitle {
   margin-bottom: 8px;
-  color: rgba(0, 0, 0, 0.72);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
@@ -77,7 +108,6 @@
 }
 
 .emptyText {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-muted);
   font-size: 13px;
 }
-

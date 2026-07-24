@@ -25,6 +25,7 @@ import {
   type HttpDebugFormValues,
 } from "@/modules/execution-factory/utils/http-debug-request";
 
+import { JsonCodeBlock } from "./JsonCodeBlock";
 import styles from "./ToolDebugModal.module.css";
 
 type ToolDebugModalProps = {
@@ -141,7 +142,7 @@ export function ToolDebugModal({
               {typeof result.durationMs === "number" ? ` · ${result.durationMs} ms` : ""}
             </span>
           </div>
-          <pre className={styles.resultCode}>{JSON.stringify(result, null, 2)}</pre>
+          <JsonCodeBlock value={result} />
         </section>
       ) : null}
     </Modal>

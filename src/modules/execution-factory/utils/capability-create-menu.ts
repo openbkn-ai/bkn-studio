@@ -39,6 +39,18 @@ export function getCapabilityCreateMenuSections(): CapabilityCreateMenuSection[]
       ],
     },
     {
+      // 代码函数是自己写逻辑，SKILL 是导入现成技能包，两件事不该并成一组。
+      // 分组顺序和列表 tab 保持一致：API / 代码函数 / MCP / SKILL / 能力包。
+      titleKey: "executionFactory.capabilityCreateMenu.function",
+      items: [
+        {
+          action: "function",
+          titleKey: "executionFactory.capabilityCreateMenu.addFunction",
+          descriptionKey: "executionFactory.capabilityCreateMenu.addFunctionDesc",
+        },
+      ],
+    },
+    {
       titleKey: "executionFactory.capabilityCreateMenu.mcp",
       items: [
         {
@@ -49,17 +61,12 @@ export function getCapabilityCreateMenuSections(): CapabilityCreateMenuSection[]
       ],
     },
     {
-      titleKey: "executionFactory.capabilityCreateMenu.skillFunction",
+      titleKey: "executionFactory.capabilityCreateMenu.skill",
       items: [
         {
           action: "skill",
           titleKey: "executionFactory.capabilityCreateMenu.importSkill",
           descriptionKey: "executionFactory.capabilityCreateMenu.importSkillDesc",
-        },
-        {
-          action: "function",
-          titleKey: "executionFactory.capabilityCreateMenu.addFunction",
-          descriptionKey: "executionFactory.capabilityCreateMenu.addFunctionDesc",
         },
       ],
     },

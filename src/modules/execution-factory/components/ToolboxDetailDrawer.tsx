@@ -16,6 +16,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { Alert, Empty, Form, Input, Tag } from "antd";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -58,10 +59,22 @@ type ToolboxDetailDrawerProps = {
   open: boolean;
 };
 
-const statusColorMap: Record<ToolboxStatus, string> = {
-  published: "green",
-  offline: "default",
-  unpublish: "blue",
+const statusStyleMap: Record<ToolboxStatus, CSSProperties> = {
+  published: {
+    background: "var(--color-success-bg)",
+    borderColor: "var(--color-success-border)",
+    color: "var(--color-success-text)",
+  },
+  offline: {
+    background: "var(--color-error-bg)",
+    borderColor: "var(--color-error-border)",
+    color: "var(--color-error-text)",
+  },
+  unpublish: {
+    background: "var(--color-info-bg)",
+    borderColor: "var(--color-info-border)",
+    color: "var(--color-info-text)",
+  },
 };
 
 function recordToFormValues(record: ToolboxRecord): Partial<ToolboxEditInput> {
@@ -341,7 +354,7 @@ export function ToolboxDetailDrawer({
                 <p className={styles.summaryDescription}>{record.description || "-"}</p>
               </div>
               <div className={styles.summaryStatus}>
-                <Tag color={statusColorMap[record.status]}>
+                <Tag style={statusStyleMap[record.status]}>
                   {t(`executionFactory.toolboxStatuses.${record.status}`)}
                 </Tag>
                 {record.metadataType ? (

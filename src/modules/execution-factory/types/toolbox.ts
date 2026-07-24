@@ -44,6 +44,7 @@ export type ToolboxListQuery = {
   keyword?: string;
   status?: ToolboxStatus;
   category?: string;
+  metadataType?: ToolboxMetadataType;
 };
 
 export type ToolboxListResult = {

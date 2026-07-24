@@ -144,7 +144,7 @@ export function CreateToolboxForm({
                       key={key}
                     >
                       <Radio value={key} />
-                      <Icon style={{ fontSize: 22, color: "#1677ff" }} />
+                      <Icon style={{ fontSize: 22, color: "var(--color-primary-600)" }} />
                       <div className={styles.optionTitle}>{title}</div>
                       <div className={styles.optionDesc}>{desc}</div>
                     </label>

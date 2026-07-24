@@ -6,6 +6,7 @@
  */
 
 import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
+import { parseFunctionParametersFromApiSpec } from "@/modules/execution-factory/utils/function-parameter-schema";
 import { parse as parseYaml } from "yaml";
 
 type InternalApiSpec = {
@@ -29,6 +30,8 @@ export type BackendMetadata = {
   function_content?: {
     code?: string;
     dependencies?: FunctionInputPayload["dependencies"];
+    inputs?: FunctionInputPayload["inputs"];
+    outputs?: FunctionInputPayload["outputs"];
     script_type?: string;
   };
   method?: string;
@@ -726,9 +729,15 @@ export function mapFunctionContent(
     return undefined;
   }
 
+  // 新版后端会在 function_content 里直接回 inputs/outputs；老数据/老后端只能从
+  // api_spec 的 JSON Schema 反解。读不到参数会让编辑表单空着，一保存就覆盖没了。
+  const fallback = parseFunctionParametersFromApiSpec(metadata?.api_spec);
+
   return {
     code: content.code,
     script_type: (content.script_type as "python") ?? "python",
     dependencies: content.dependencies,
+    inputs: content.inputs?.length ? content.inputs : fallback.inputs,
+    outputs: content.outputs?.length ? content.outputs : fallback.outputs,
   };
 }

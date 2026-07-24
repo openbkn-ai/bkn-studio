@@ -1,0 +1,41 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.block {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  background: #f8fafc;
+  color: #334155;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+.key {
+  color: #1d4ed8;
+}
+
+.string {
+  color: #15803d;
+}
+
+.number {
+  color: #b45309;
+}
+
+.boolean {
+  color: #7c3aed;
+}
+
+.null {
+  color: #9333ea;
+}

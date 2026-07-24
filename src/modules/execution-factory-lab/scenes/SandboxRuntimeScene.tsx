@@ -50,21 +50,55 @@ type TimeRange = "all" | "1h" | "24h" | "7d";
 
 const pageSize = 20;
 
-const statusColor: Record<string, string> = {
-  creating: "processing",
-  running: "success",
-  idle: "default",
-  failed: "error",
-  terminated: "default",
+type TagTone = "neutral" | "good" | "warn" | "bad" | "busy";
+
+const statusTone: Record<string, TagTone> = {
+  creating: "busy",
+  running: "good",
+  idle: "neutral",
+  failed: "bad",
+  terminated: "neutral",
 };
 
-const installStatusColor: Record<string, string> = {
-  installed: "success",
-  success: "success",
-  installing: "processing",
-  pending: "warning",
-  failed: "error",
+const installStatusTone: Record<string, TagTone> = {
+  installed: "good",
+  completed: "good",
+  success: "good",
+  installing: "busy",
+  pending: "warn",
+  failed: "bad",
 };
+
+const toneClass: Record<TagTone, string> = {
+  neutral: "",
+  good: styles.tagGood,
+  warn: styles.tagWarn,
+  bad: styles.tagBad,
+  busy: styles.tagBusy,
+};
+
+function tagClass(tone: TagTone = "neutral") {
+  return `${styles.tag} ${toneClass[tone]}`.trim();
+}
+
+type MetricTone = "neutral" | "good" | "warn" | "bad";
+
+function controlPlaneTone(health: SandboxRuntimeHealth | null): MetricTone {
+  if (!health || !health.controlPlaneReachable) {
+    return "bad";
+  }
+  if (health.status === "healthy" || health.status === "ok") {
+    return "good";
+  }
+  if (health.status === "degraded") {
+    return "warn";
+  }
+  return "bad";
+}
+
+function isUnknownText(value?: string | null) {
+  return !value || value === "unknown";
+}
 
 function displayText(value?: string | number | null) {
   if (value === undefined || value === null || value === "") {
@@ -248,22 +282,27 @@ export function SandboxRuntimeScene() {
           <Typography.Text copyable ellipsis className={styles.strongText}>
             {value}
           </Typography.Text>
-          <Tag color={statusColor[item.status] ?? "default"}>{item.status}</Tag>
+          <Tag className={tagClass(statusTone[item.status])}>{item.status}</Tag>
         </Space>
       ),
     },
     {
       title: t("executionFactoryLab.sandboxRuntimeColumnBusiness"),
       width: 220,
-      render: (_, item) => (
-        <Space direction="vertical" size={2}>
-          <Typography.Text className={styles.strongText}>
-            {displayText(item.capabilityName ?? item.capabilityId)}
-          </Typography.Text>
-          <Typography.Text type="secondary">{displayText(item.taskId)}</Typography.Text>
-          <Typography.Text type="secondary">{displayText(item.userName ?? item.userId)}</Typography.Text>
-        </Space>
-      ),
+      render: (_, item) => {
+        const capability = item.capabilityName ?? item.capabilityId;
+        const user = item.userName ?? item.userId;
+        if (!capability && !item.taskId && !user) {
+          return <Typography.Text type="secondary">-</Typography.Text>;
+        }
+        return (
+          <Space direction="vertical" size={2}>
+            <Typography.Text className={styles.strongText}>{displayText(capability)}</Typography.Text>
+            {item.taskId ? <Typography.Text type="secondary">{item.taskId}</Typography.Text> : null}
+            {user ? <Typography.Text type="secondary">{user}</Typography.Text> : null}
+          </Space>
+        );
+      },
     },
     {
       title: t("executionFactoryLab.sandboxRuntimeColumnRuntime"),
@@ -272,7 +311,7 @@ export function SandboxRuntimeScene() {
         <Space direction="vertical" size={2}>
           <Typography.Text>{displayText(item.languageRuntime ?? item.runtimeType)}</Typography.Text>
           <Typography.Text type="secondary">{displayText(item.templateId)}</Typography.Text>
-          <Tag>{item.source}</Tag>
+          {isUnknownText(item.source) ? null : <Tag className={tagClass()}>{item.source}</Tag>}
         </Space>
       ),
     },
@@ -286,7 +325,7 @@ export function SandboxRuntimeScene() {
       dataIndex: "dependencyInstallStatus",
       width: 110,
       render: (value?: string) => (
-        <Tag color={installStatusColor[value ?? ""] ?? "default"}>{displayText(value)}</Tag>
+        <Tag className={tagClass(installStatusTone[value ?? ""])}>{displayText(value)}</Tag>
       ),
     },
     {
@@ -342,11 +381,12 @@ export function SandboxRuntimeScene() {
             label={t("executionFactoryLab.sandboxRuntimeControlPlane")}
             value={health?.status ?? "-"}
             helper={
-              health?.controlPlaneReachable
+              health?.message ??
+              (health?.controlPlaneReachable
                 ? t("executionFactoryLab.sandboxRuntimeReachable")
-                : t("executionFactoryLab.sandboxRuntimeUnreachable")
+                : t("executionFactoryLab.sandboxRuntimeUnreachable"))
             }
-            tone={health?.controlPlaneReachable ? "good" : "bad"}
+            tone={controlPlaneTone(health)}
           />
           <Metric
             label={t("executionFactoryLab.sandboxRuntimeSessionPool")}
@@ -362,7 +402,7 @@ export function SandboxRuntimeScene() {
             label={t("executionFactoryLab.sandboxRuntimeFailedSessions")}
             value={String(health?.failedSessions ?? 0)}
             helper={health?.checkedAt ? formatTime(health.checkedAt) : "-"}
-            tone={(health?.failedSessions ?? 0) > 0 ? "bad" : "good"}
+            tone={(health?.failedSessions ?? 0) > 0 ? "warn" : "good"}
           />
         </div>
 
@@ -394,10 +434,10 @@ export function SandboxRuntimeScene() {
               { value: "all", label: t("executionFactoryLab.sandboxRuntimeAll") },
               { value: "http", label: "HTTP" },
               { value: "mcp", label: "MCP" },
-              { value: "skill", label: "Skill" },
+              { value: "skill", label: "SKILL" },
               { value: "function", label: "Function" },
               { value: "function_debug", label: "Function Debug" },
-              { value: "skill_execution", label: "Skill Execution" },
+              { value: "skill_execution", label: "SKILL Execution" },
             ]}
             placeholder={t("executionFactoryLab.sandboxRuntimeSource")}
             value={source}
@@ -487,7 +527,7 @@ export function SandboxRuntimeScene() {
                   <Typography.Text copyable>{selected.id}</Typography.Text>
                 </Descriptions.Item>
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeStatus")}>
-                  <Tag color={statusColor[selected.status] ?? "default"}>{selected.status}</Tag>
+                  <Tag className={tagClass(statusTone[selected.status])}>{selected.status}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeSource")}>{selected.source}</Descriptions.Item>
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeTaskId")}>
@@ -527,7 +567,7 @@ export function SandboxRuntimeScene() {
 
               <Descriptions bordered column={1} size="small" title={t("executionFactoryLab.sandboxRuntimeDependencySection")}>
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeInstallStatus")}>
-                  <Tag color={installStatusColor[selected.dependencyInstallStatus ?? ""] ?? "default"}>
+                  <Tag className={tagClass(installStatusTone[selected.dependencyInstallStatus ?? ""])}>
                     {displayText(selected.dependencyInstallStatus)}
                   </Tag>
                 </Descriptions.Item>
@@ -572,7 +612,7 @@ function Metric({
 }: {
   helper: string;
   label: string;
-  tone?: "neutral" | "good" | "bad";
+  tone?: MetricTone;
   value: string;
 }) {
   return (

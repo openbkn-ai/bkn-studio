@@ -49,6 +49,13 @@ export default defineConfig(({ mode }) => {
   const agentOperatorProxyTarget =
     process.env.VITE_PROXY_TARGET ?? (useMock ? "http://127.0.0.1:9000" : devProxyOrigin);
   const agentRetrievalTarget = process.env.VITE_AGENT_RETRIEVAL_TARGET ?? devProxyOrigin;
+  // 生产由网关 ingress 按 path 分发(deploy/nginx.conf 不代理任何东西),这里的
+  // 前缀表只是 dev 替身,默认就该跟着网关走。mock 是各 service 内部按
+  // VITE_USE_MOCK 直接返 fixture、不发请求实现的,没有本地 mock server,所以
+  // 默认指向 127.0.0.1 只会让真发出去的请求(如全无 mock 分支的 lab)打到没人
+  // 监听的端口并返 500。要连本地调试实例时显式设 VITE_*_TARGET。
+  const labProxyTarget = process.env.VITE_LAB_PROXY_TARGET ?? devProxyOrigin;
+  const ossProxyTarget = process.env.VITE_OSS_PROXY_TARGET ?? devProxyOrigin;
 
   return {
     base: appBase,
@@ -100,7 +107,7 @@ export default defineConfig(({ mode }) => {
           secure: false,
           timeout: 120_000,
           proxyTimeout: 120_000,
-          target: process.env.VITE_LAB_PROXY_TARGET ?? "http://127.0.0.1:9010",
+          target: labProxyTarget,
         },
         "/api/agent-retrieval": {
           changeOrigin: true,
@@ -174,7 +181,7 @@ export default defineConfig(({ mode }) => {
         "/oss-workspace": {
           changeOrigin: true,
           secure: false,
-          target: process.env.VITE_OSS_PROXY_TARGET ?? "http://127.0.0.1:9080",
+          target: ossProxyTarget,
         },
       },
     },

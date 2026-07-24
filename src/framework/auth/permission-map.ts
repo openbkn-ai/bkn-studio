@@ -97,9 +97,26 @@ function safeGrantsCover(safeGrants: Set<string>, type: string, operation: strin
   );
 }
 
-/** 把 bkn-safe 的授权条目展平成 `type:op` 集合。 */
+/**
+ * 把 bkn-safe 的授权条目展平成 `type:op` 集合。
+ *
+ * 刻意不区分 `resource.id`:本集合驱动的是菜单、路由与按钮门禁,问的是「这类东西我有没有
+ * 一个能看/能改的」,而不是「这一个我能不能改」。所以 scope=type 下后端汇总的
+ * `instance_operations`(仅在某些实例上持有的操作)同样要并进来 —— 否则「只被授了
+ * 某几个对象」的用户会连入口都看不到(对象授权页发出的正是这种授权)。
+ *
+ * 代价是按钮层面偏松:持有任一实例的 modify,所有同类对象的编辑按钮都会亮,点下去由
+ * 后端 403 拦住。要按对象精确显隐,得用 scoped 查询逐对象判权(model-resources 的
+ * getResourceOperations 即此模式),不能靠这个集合。
+ */
 export function flattenSafeGrants(
-  grants: { operations?: string[]; resource?: { id?: string; type?: string } }[] | undefined,
+  grants:
+    | {
+        instance_operations?: string[];
+        operations?: string[];
+        resource?: { id?: string; type?: string };
+      }[]
+    | undefined,
 ): Set<string> {
   const flat = new Set<string>();
   for (const entry of grants ?? []) {
@@ -107,7 +124,7 @@ export function flattenSafeGrants(
     if (!type) {
       continue;
     }
-    for (const operation of entry.operations ?? []) {
+    for (const operation of [...(entry.operations ?? []), ...(entry.instance_operations ?? [])]) {
       flat.add(`${type}:${operation}`);
     }
   }

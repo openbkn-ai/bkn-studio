@@ -39,6 +39,7 @@ export function filterConsoleNavigation(
   options?: {
     hideLegacyExecutionFactory?: boolean;
     hideCatalog?: boolean;
+    hideMarketCatalog?: boolean;
   },
 ): ConsoleNavItem[] {
   return items
@@ -49,7 +50,9 @@ export function filterConsoleNavigation(
       }
 
       const children = item.children.filter(
-        (child) => !(options?.hideCatalog && child.key === "execution-factory-lab-catalog"),
+        (child) =>
+          !(options?.hideCatalog && child.key === "execution-factory-lab-catalog") &&
+          !(options?.hideMarketCatalog && child.key === "all-execution-units"),
       );
 
       return {

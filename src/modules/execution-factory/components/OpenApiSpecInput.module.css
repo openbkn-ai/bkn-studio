@@ -28,7 +28,7 @@
   padding: 0;
   border: none;
   background: none;
-  color: #126ee3;
+  color: var(--color-primary-600);
   cursor: pointer;
   font-size: 12px;
   white-space: nowrap;
@@ -46,10 +46,10 @@
 
 .urlFetchButton {
   padding: 4px 12px;
-  border: 1px solid rgba(18, 110, 227, 0.35);
+  border: 1px solid var(--color-primary-border);
   border-radius: 8px;
-  background: rgba(18, 110, 227, 0.08);
-  color: #126ee3;
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
   cursor: pointer;
   white-space: nowrap;
 }

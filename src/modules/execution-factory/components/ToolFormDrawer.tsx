@@ -134,7 +134,7 @@ export function ToolFormDrawer({
   const handleSubmit = async () => {
     const values = await form.validateFields();
 
-    if (values.metadataType === "openapi") {
+    if (metadataType === "openapi") {
       const openApiValidation = validateOpenApiDocumentText(values.openapiSpec);
       if (!openApiValidation.ok) {
         void message.error(openApiValidation.reason);
@@ -147,12 +147,12 @@ export function ToolFormDrawer({
     try {
       if (mode === "create") {
         const input: ToolCreateInput = {
-          metadataType: values.metadataType,
+          metadataType: metadataType,
           useRule: values.useRule,
           globalParameters: values.globalParameters,
-          openapiSpec: values.metadataType === "openapi" ? values.openapiSpec : undefined,
+          openapiSpec: metadataType === "openapi" ? values.openapiSpec : undefined,
           functionInput:
-            values.metadataType === "function"
+            metadataType === "function"
               ? {
                   code: values.functionCode,
                   description: values.description,
@@ -175,12 +175,12 @@ export function ToolFormDrawer({
         const input: ToolEditInput = {
           name: values.name,
           description: values.description,
-          metadataType: values.metadataType,
+          metadataType: metadataType,
           useRule: values.useRule,
           globalParameters: values.globalParameters,
-          openapiSpec: values.metadataType === "openapi" ? values.openapiSpec : undefined,
+          openapiSpec: metadataType === "openapi" ? values.openapiSpec : undefined,
           functionInput:
-            values.metadataType === "function"
+            metadataType === "function"
               ? {
                   code: values.functionCode,
                   description: values.description,

@@ -68,6 +68,22 @@ describe("flattenSafeGrants", () => {
   it("空输入不炸", () => {
     expect(flattenSafeGrants(undefined)).toEqual(new Set());
   });
+
+  // scope=type 下后端把「仅在某些实例上持有」的操作汇总进 instance_operations。
+  // 丢掉它,只被授了某几个对象的用户会连菜单入口都没有(见函数注释)。
+  it("并入 instance_operations —— 只被授了对象的用户不丢入口", () => {
+    const flat = flattenSafeGrants([
+      {
+        instance_operations: ["modify"],
+        operations: ["view"],
+        resource: { id: "*", type: "tool_box" },
+      },
+      // 纯对象级授权:该类型没有任何类型级操作,只有实例上的。
+      { instance_operations: ["use"], operations: [], resource: { id: "*", type: "agent" } },
+    ]);
+
+    expect(flat).toEqual(new Set(["tool_box:view", "tool_box:modify", "agent:use"]));
+  });
 });
 
 describe("isStudioPermissionGranted", () => {

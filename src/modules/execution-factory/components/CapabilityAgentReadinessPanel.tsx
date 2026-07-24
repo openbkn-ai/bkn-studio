@@ -5,18 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { RobotOutlined } from "@ant-design/icons";
-import { Alert, Progress, Tag } from "antd";
+import { QuestionCircleOutlined, RobotOutlined } from "@ant-design/icons";
+import { Alert, Progress, Tag, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
-import type {
-  AgentInvokePolicy,
-  AgentVisibility,
-  CapabilityManifest,
-  CapabilityRiskLevel,
-  CapabilitySideEffect,
-  CapabilityTestStatus,
-} from "@/modules/execution-factory/types/capability-manifest";
+import type { CapabilityManifest } from "@/modules/execution-factory/types/capability-manifest";
 import { getCapabilityReadiness } from "@/modules/execution-factory/utils/capability-manifest";
 
 import styles from "./CapabilityAgentReadinessPanel.module.css";
@@ -25,38 +18,15 @@ type CapabilityAgentReadinessPanelProps = {
   manifest: CapabilityManifest;
 };
 
-const riskColorMap: Record<CapabilityRiskLevel, string> = {
-  low: "green",
-  medium: "gold",
-  high: "red",
-};
+const READINESS_DIMENSIONS: Array<{ key: string; label: string; weight: number }> = [
+  { key: "business intent", label: "业务用途", weight: 40 },
+  { key: "input semantics", label: "输入语义", weight: 35 },
+  { key: "output semantics", label: "输出语义", weight: 25 },
+];
 
-const visibilityColorMap: Record<AgentVisibility, string> = {
-  hidden: "default",
-  discoverable: "blue",
-  callable: "green",
-};
-
-const invokePolicyColorMap: Record<AgentInvokePolicy, string> = {
-  manual_only: "default",
-  approval_required: "gold",
-  auto_allowed: "green",
-};
-
-const testStatusColorMap: Record<CapabilityTestStatus, string> = {
-  untested: "default",
-  passed: "green",
-  failed: "red",
-  stale: "gold",
-};
-
-const sideEffectColorMap: Record<CapabilitySideEffect, string> = {
-  none: "green",
-  read: "blue",
-  write: "gold",
-  external_action: "red",
-  unknown: "default",
-};
+function readinessDimensionLabel(key: string) {
+  return READINESS_DIMENSIONS.find((dim) => dim.key === key)?.label ?? key;
+}
 
 function sourceTypeLabel(sourceType: CapabilityManifest["sourceType"]) {
   switch (sourceType) {
@@ -81,9 +51,7 @@ export function CapabilityAgentReadinessPanel({
 
   const sideEffects = manifest.sideEffects ?? "unknown";
   const riskLevel = manifest.riskLevel ?? "medium";
-  const testStatus = manifest.testStatus ?? "untested";
   const agentVisibility = manifest.agentVisibility ?? "hidden";
-  const agentInvokePolicy = manifest.agentInvokePolicy ?? "manual_only";
 
   return (
     <section className={styles.panel} data-testid="capability-agent-readiness">
@@ -111,39 +79,58 @@ export function CapabilityAgentReadinessPanel({
             status={readiness.level === "low" ? "exception" : "normal"}
           />
           <div className={styles.scoreValue}>{readiness.score}</div>
-          <div className={styles.scoreLabel}>
-            {t("executionFactory.agentReadiness.score", {
-              defaultValue: "就绪度",
-            })}
-          </div>
+          <Tooltip
+            title={
+              <div className={styles.scoreRuleTip}>
+                <div className={styles.scoreRuleTitle}>
+                  {t("executionFactory.agentReadiness.scoreRuleTitle", {
+                    defaultValue: "就绪度评分规则",
+                  })}
+                </div>
+                {READINESS_DIMENSIONS.map((dim) => {
+                  const met = !readiness.missing.includes(dim.key);
+                  return (
+                    <div
+                      className={
+                        met
+                          ? styles.scoreRuleRow
+                          : `${styles.scoreRuleRow} ${styles.scoreRuleRowMuted}`
+                      }
+                      key={dim.key}
+                    >
+                      <span>{`${met ? "✓" : "○"} ${dim.label}`}</span>
+                      <span>{dim.weight}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            }
+          >
+            <span className={styles.scoreLabel}>
+              {t("executionFactory.agentReadiness.score", {
+                defaultValue: "就绪度",
+              })}
+              <QuestionCircleOutlined className={styles.scoreInfoIcon} />
+            </span>
+          </Tooltip>
         </div>
       </div>
 
       <div className={styles.tags}>
         <Tag>{sourceTypeLabel(manifest.sourceType)}</Tag>
-        <Tag color={testStatusColorMap[testStatus]}>
-          {t(`executionFactory.agentReadiness.testStatus.${testStatus}`, {
-            defaultValue: `验证：${testStatus}`,
-          })}
-        </Tag>
-        <Tag color={sideEffectColorMap[sideEffects]}>
+        <Tag>
           {t(`executionFactory.agentReadiness.sideEffects.${sideEffects}`, {
             defaultValue: `副作用：${sideEffects}`,
           })}
         </Tag>
-        <Tag color={riskColorMap[riskLevel]}>
+        <Tag>
           {t(`executionFactory.agentReadiness.risk.${riskLevel}`, {
             defaultValue: `风险：${riskLevel}`,
           })}
         </Tag>
-        <Tag color={visibilityColorMap[agentVisibility]}>
+        <Tag>
           {t(`executionFactory.agentReadiness.visibility.${agentVisibility}`, {
             defaultValue: `Agent：${agentVisibility}`,
-          })}
-        </Tag>
-        <Tag color={invokePolicyColorMap[agentInvokePolicy]}>
-          {t(`executionFactory.agentReadiness.invokePolicy.${agentInvokePolicy}`, {
-            defaultValue: `调用：${agentInvokePolicy}`,
           })}
         </Tag>
         <Tag>
@@ -168,7 +155,7 @@ export function CapabilityAgentReadinessPanel({
           description={
             <div className={styles.missingList}>
               {readiness.missing.map((item) => (
-                <Tag key={item}>{item}</Tag>
+                <Tag key={item}>{readinessDimensionLabel(item)}</Tag>
               ))}
             </div>
           }
@@ -178,7 +165,7 @@ export function CapabilityAgentReadinessPanel({
       ) : (
         <div className={styles.emptyText}>
           {t("executionFactory.agentReadiness.ready", {
-            defaultValue: "语义、验证和调用策略已基本齐备，可作为 Agent 调用候选。",
+            defaultValue: "业务用途与输入输出语义已基本齐备，Agent 可据此理解调用方式。",
           })}
         </div>
       )}

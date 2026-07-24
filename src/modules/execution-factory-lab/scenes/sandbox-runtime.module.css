@@ -48,36 +48,51 @@
 }
 
 .metric {
-  min-height: 104px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 14px 16px;
-  background: var(--color-bg-surface);
+  min-height: 92px;
+  border: 1px solid #d9e0ea;
+  border-left: 3px solid #d9e0ea;
+  border-radius: 0;
+  padding: 12px 14px;
+  background: #f7f9fc;
 }
 
 .metric.good {
-  border-color: #b7eb8f;
-  background: #f6ffed;
+  border-left-color: #52c41a;
+}
+
+.metric.warn {
+  border-left-color: #faad14;
 }
 
 .metric.bad {
-  border-color: #ffccc7;
-  background: #fff2f0;
+  border-left-color: #ff4d4f;
 }
 
 .metricLabel,
 .metricHelper {
   display: block;
-  color: var(--color-text-secondary);
+  overflow: hidden;
+  color: #4b5563;
   font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metricValue {
   display: block;
-  margin: 8px 0 6px;
-  color: var(--color-text-primary);
-  font-size: 26px;
-  line-height: 1.15;
+  margin: 6px 0 4px;
+  color: #172033;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.metric.warn .metricValue {
+  color: #ad6800;
+}
+
+.metric.bad .metricValue {
+  color: #cf1322;
 }
 
 .toolbar {
@@ -103,7 +118,10 @@
 .page :global(.ant-select .ant-select-selector),
 .page :global(.ant-btn),
 .page :global(.ant-tag),
-.page :global(.ant-checkbox-inner) {
+.page :global(.ant-checkbox-inner),
+.page :global(.ant-pagination-item),
+.page :global(.ant-pagination-item-link),
+.drawerBody :global(.ant-tag) {
   border-radius: 0 !important;
 }
 
@@ -111,8 +129,52 @@
   font-weight: 500;
 }
 
-.page :global(.ant-tag) {
+.page :global(.ant-tag),
+.drawerBody :global(.ant-tag) {
   font-weight: 400;
+}
+
+/*
+ * 状态用低饱和描边标签，靠文字颜色区分，避免大块彩色填充压过表格内容。
+ * 选择器带 .page 前缀是为了压过 antd 运行时注入的 .ant-tag 基础样式（同特异性时
+ * 注入顺序不可控），抽屉里的标签同样走 .drawerBody 前缀。
+ */
+.page .tag,
+.drawerBody .tag {
+  margin: 0;
+  border: 1px solid #d9e0ea;
+  background: #f7f9fc;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.page .tagGood,
+.drawerBody .tagGood {
+  border-color: #cfe6d6;
+  background: #f4faf6;
+  color: #2f7d4f;
+}
+
+.page .tagWarn,
+.drawerBody .tagWarn {
+  border-color: #f0dcb4;
+  background: #fdf8ee;
+  color: #9a6614;
+}
+
+.page .tagBad,
+.drawerBody .tagBad {
+  border-color: #f1cfcc;
+  background: #fdf4f3;
+  color: #b23c34;
+}
+
+.page .tagBusy,
+.drawerBody .tagBusy {
+  border-color: #c9d9f0;
+  background: #f4f8fd;
+  color: #2a5aa8;
 }
 
 .sessionRow {

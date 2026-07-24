@@ -28,7 +28,7 @@ export const shellZhCN = {
       executionFactoryLabCapabilities: "能力库",
       executionFactoryLabCatalog: "能力市场（实验版）",
       executionFactoryLabSandboxRuntime: "沙箱运行时管理",
-      executionUnitManagement: "执行单元管理",
+      executionUnitManagement: "执行单元",
       allExecutionUnits: "全部执行单元",
       executionFactorySandboxRuntime: "沙箱运行时管理",
       executionUnitManagementTooltip:

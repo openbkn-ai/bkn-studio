@@ -26,6 +26,7 @@ import {
   type HttpDebugFormValues,
 } from "@/modules/execution-factory/utils/http-debug-request";
 
+import { JsonCodeBlock } from "./JsonCodeBlock";
 import styles from "./ToolDebugPanel.module.css";
 
 type ToolDebugPanelProps = {
@@ -141,7 +142,7 @@ export function ToolDebugPanel({
                   {typeof result.durationMs === "number" ? ` · ${result.durationMs} ms` : ""}
                 </span>
               </div>
-              <pre className={styles.resultCode}>{JSON.stringify(result, null, 2)}</pre>
+              <JsonCodeBlock value={result} />
             </section>
           ) : (
             <div className={styles.resultEmpty}>
