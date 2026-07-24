@@ -34,6 +34,24 @@ function getBusinessDomainHeaders() {
  */
 const DEPENDENCY_INSTALL_TIMEOUT_MS = 330_000;
 
+/**
+ * 把依赖面板里的行整理成后端能收的形状。
+ *
+ * 名字为空的行是还没填完的占位，带上去后端直接 400（包名只允许 [a-zA-Z0-9._-]）。
+ * 版本留空表示装最新，得整个省略而不是发空串——发 "" 会被拼成 `name==`，同样是
+ * 非法 pip spec。前后空格一律 trim 掉，同理会让后端 400。
+ */
+export function normalizeExecuteDependencies(
+  dependencies: FunctionExecuteInput["dependencies"],
+): Array<{ name: string; version?: string }> {
+  return (dependencies ?? [])
+    .map((item) => ({
+      name: item.name?.trim() ?? "",
+      ...(item.version?.trim() ? { version: item.version.trim() } : {}),
+    }))
+    .filter((item) => item.name.length > 0);
+}
+
 export async function executeFunction(
   input: FunctionExecuteInput,
 ): Promise<FunctionExecuteResult> {
@@ -44,15 +62,7 @@ export async function executeFunction(
     };
   }
 
-  // 名字为空的行是面板上还没填完的占位，带上去后端会直接 400（包名只允许
-  // [a-zA-Z0-9._-]）。版本留空表示装最新，得整个省略而不是发空串——发 ""
-  // 会被拼成 `name==`，同样是非法 pip spec。
-  const dependencies = (input.dependencies ?? [])
-    .map((item) => ({
-      name: item.name?.trim() ?? "",
-      ...(item.version?.trim() ? { version: item.version.trim() } : {}),
-    }))
-    .filter((item) => item.name.length > 0);
+  const dependencies = normalizeExecuteDependencies(input.dependencies);
 
   const response = await http.post<BackendFunctionExecute>(
     `${API_PREFIX}/function/execute`,

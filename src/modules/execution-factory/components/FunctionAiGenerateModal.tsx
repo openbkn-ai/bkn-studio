@@ -134,6 +134,10 @@ export function FunctionAiGenerateModal({
     setReasoning("");
     setReasoningOpen(true);
     contentStartedRef.current = false;
+    // 同一个弹窗里可以再生成一轮。上一轮用户若往上翻过，stick 会停在 false，不重置
+    // 的话新一轮整轮都不跟随；而 setReasoning("") 会把容器卸载重建，onScroll 不会
+    // 自己触发，没有自愈路径。
+    reasoningStickRef.current = true;
 
     try {
       const values = await form.validateFields();

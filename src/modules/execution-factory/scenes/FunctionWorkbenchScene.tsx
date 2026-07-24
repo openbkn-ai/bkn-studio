@@ -102,6 +102,20 @@ function isSamePersistedContent(a: WorkbenchFunction, b: WorkbenchFunction) {
   );
 }
 
+/**
+ * 依赖声明入口暂时下线。
+ *
+ * 沙箱会话是共享池，装依赖这条链路目前不可靠（requested 到 installed 中间会
+ * 静默失败，用户只看到 ModuleNotFoundError，在编辑器里查不出原因）。等沙箱侧
+ * 把依赖安装和会话隔离统一处理完再打开。
+ *
+ * 只藏入口，不动数据链路：已声明的依赖照常保存、照常跟着执行发下去。
+ */
+const SHOW_DEPENDENCY_DOCK = false;
+
+/** 装依赖那条提示要常驻到运行结束，得有个固定 key 才能在 finally 里销毁。 */
+const DEPENDENCY_HINT_KEY = "workbench-installing-dependencies";
+
 type OutputTab = "result" | "stdout" | "stderr" | "metrics";
 
 const OUT_TAB_COLORS: Record<OutputTab, string> = {
@@ -185,6 +199,11 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   const [eventText, setEventText] = useState("{}");
   /** 记住上次自动生成的内容，用来判断用户是否手改过。 */
   const autoEventRef = useRef("{}");
+  /**
+   * 当前选中的函数 key。运行是异步的（带依赖时最长 330s），期间左栏没锁、可以切
+   * 函数；结果回来时得比对这个 ref，确认还是发起它的那个函数才贴上去。
+   */
+  const activeKeyRef = useRef<string | null>(null);
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState<FunctionExecuteResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
@@ -309,6 +328,10 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       setActiveKey(functions[0].key);
     }
   }, [activeKey, functions]);
+
+  useEffect(() => {
+    activeKeyRef.current = activeKey;
+  }, [activeKey]);
 
   const handleBack = () => {
     const leave = () => {
@@ -792,6 +815,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       return;
     }
 
+    const runKey = active.key;
+
     setRunning(true);
     setRunError(null);
     setRunResult(null);
@@ -826,8 +851,16 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       // 依赖得跟着这次执行一起发过去：沙箱镜像不预装三方库，而保存后 Agent 那条
       // 路径是从库里读依赖装的。这里不带的话就会出现"调试报 ModuleNotFoundError、
       // 发布后反而能跑"，用户只会以为自己函数写错了。
+      //
+      // 提示必须常驻到本次运行结束：带依赖时请求超时放宽到了 330s，而沙箱那头每次
+      // 都清空重装。提示只弹 3 秒的话，剩下 5 分多钟就是一个没有任何解释的转圈——
+      // 依赖面板还可能是藏着的（SHOW_DEPENDENCY_DOCK），用户根本无从知道在等什么。
       if (active.dependencies.some((item) => item.name?.trim())) {
-        void message.info(t("executionFactory.workbenchInstallingDependencies"));
+        void message.info({
+          content: t("executionFactory.workbenchInstallingDependencies"),
+          duration: 0,
+          key: DEPENDENCY_HINT_KEY,
+        });
       }
 
       const result = await executeFunction({
@@ -835,12 +868,24 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         dependencies: active.dependencies,
         event,
       });
+
+      // 运行期间可以切函数（左栏没锁），330s 的窗口下这很容易发生。结果只能贴回
+      // 发起它的那个函数，否则会把上一个函数的输出安静地显示在当前函数下面。
+      if (runKey !== activeKeyRef.current) {
+        return;
+      }
+
       setRunResult(result);
       setOutTab(result.error ? "stderr" : "result");
     } catch (error) {
+      if (runKey !== activeKeyRef.current) {
+        return;
+      }
+
       setRunError(extractRequestErrorMessage(error));
       setOutTab("stderr");
     } finally {
+      message.destroy(DEPENDENCY_HINT_KEY);
       setRunning(false);
     }
   };
@@ -861,10 +906,15 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
 
     let inputs = active.inputs;
     if (needsDerive(active)) {
-      const derived = await handleDeriveParams({ silent: true });
-      if (derived) {
-        inputs = derived;
+      // 这是显式按钮，推导失败必须有回音：silent 会把 unsupported 警告和请求错误
+      // 全吞掉，再拿过期的 active.inputs 覆盖用户当前内容，用户只会看到入参莫名
+      // 变了却不知道为什么。失败就原样保留，不动输入框。
+      const derived = await handleDeriveParams();
+      if (!derived) {
+        return;
       }
+
+      inputs = derived;
     }
 
     const next = buildSampleEvent(inputs);
@@ -1214,10 +1264,12 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                           {active.inputs.length + active.outputs.length}
                         </span>
                       </AppButton>
-                      <AppButton icon={<AppstoreOutlined />} onClick={() => setDockTab("deps")}>
-                        {t("executionFactory.workbenchDepsTab")}
-                        <span className={styles.toolCount}>{active.dependencies.length}</span>
-                      </AppButton>
+                      {SHOW_DEPENDENCY_DOCK ? (
+                        <AppButton icon={<AppstoreOutlined />} onClick={() => setDockTab("deps")}>
+                          {t("executionFactory.workbenchDepsTab")}
+                          <span className={styles.toolCount}>{active.dependencies.length}</span>
+                        </AppButton>
+                      ) : null}
                     </div>
                   </div>
                   <div className={styles.editorSurface}>
@@ -1403,17 +1455,19 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         <div className={styles.dockHint}>{t("executionFactory.workbenchParamsHint")}</div>
       </Drawer>
 
-      <Drawer
-        onClose={() => setDockTab(null)}
-        open={dockTab === "deps"}
-        title={t("executionFactory.workbenchDepsTab")}
-        width={480}
-      >
-        <FunctionDependencyPanel
-          onChange={(dependencies) => patchActive({ dependencies })}
-          value={active?.dependencies ?? []}
-        />
-      </Drawer>
+      {SHOW_DEPENDENCY_DOCK ? (
+        <Drawer
+          onClose={() => setDockTab(null)}
+          open={dockTab === "deps"}
+          title={t("executionFactory.workbenchDepsTab")}
+          width={480}
+        >
+          <FunctionDependencyPanel
+            onChange={(dependencies) => patchActive({ dependencies })}
+            value={active?.dependencies ?? []}
+          />
+        </Drawer>
+      ) : null}
 
       <FunctionAiGenerateModal
         initialCode={active?.code}
