@@ -40,6 +40,24 @@ describe("extractRequestErrorDetails", () => {
       errorLink: "暂无",
       solution: "请联系管理员",
     });
+    expect(extractRequestErrorMessage(error)).toBe("创建构建任务失败");
+  });
+
+  it("serializes structured error_details for a local error surface", () => {
+    const error = new axios.AxiosError("Request failed", undefined, undefined, undefined, {
+      config: { headers: new axios.AxiosHeaders() },
+      data: {
+        description: "创建构建任务失败",
+        error_details: { missing_fields: ["id"] },
+      },
+      headers: {},
+      status: 400,
+      statusText: "Bad Request",
+    });
+
+    expect(extractRequestErrorDetails(error).details).toBe(
+      '{"missing_fields":["id"]}',
+    );
   });
 
   it("uses details when description is absent", () => {
@@ -61,6 +79,6 @@ describe("extractRequestErrorDetails", () => {
       }),
     );
 
-    expect(message).toBe("description message: detail message");
+    expect(message).toBe("description message");
   });
 });

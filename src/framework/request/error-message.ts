@@ -38,6 +38,14 @@ function formatErrorDetails(value: unknown): string | undefined {
     return String(value);
   }
 
+  if (value && typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return undefined;
+    }
+  }
+
   return undefined;
 }
 
@@ -85,6 +93,5 @@ export function extractRequestErrorDetails(error: unknown): RequestErrorDetails 
 }
 
 export function extractRequestErrorMessage(error: unknown) {
-  const { description, details } = extractRequestErrorDetails(error);
-  return details ? `${description}: ${details}` : description;
+  return extractRequestErrorDetails(error).description;
 }
