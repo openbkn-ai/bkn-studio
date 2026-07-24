@@ -31,6 +31,7 @@ import {
   formatOptionalTimestamp,
   formatRecordHeaders,
   resolveMcpCategoryLabel,
+  resolveMcpCreationTypeLabel,
 } from "@/modules/execution-factory/utils/detail-display";
 import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-export";
 
@@ -66,19 +67,6 @@ const statusStyleMap: Record<McpStatus, CSSProperties> = {
     color: "var(--color-info-text)",
   },
 };
-
-function resolveCreationTypeLabel(
-  creationType: McpDetail["creationType"],
-  t: (key: string) => string,
-) {
-  if (!creationType) {
-    return "-";
-  }
-
-  const key = `executionFactory.mcpCreationTypes.${creationType}`;
-  const translated = t(key);
-  return translated !== key ? translated : creationType;
-}
 
 function resolveModeLabel(mode: McpDetail["mode"], t: (key: string) => string) {
   if (!mode) {
@@ -162,7 +150,7 @@ export function McpDetailDrawer({
       {
         key: "creationType",
         label: t("executionFactory.mcpCreationType"),
-        value: resolveCreationTypeLabel(record.creationType, t),
+        value: resolveMcpCreationTypeLabel(record.creationType, t),
         icon: <ApiOutlined />,
         variant: "accent" as const,
       },

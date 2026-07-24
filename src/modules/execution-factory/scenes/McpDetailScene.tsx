@@ -14,9 +14,11 @@ import {
   ClockCircleOutlined,
   DownloadOutlined,
   FileTextOutlined,
+  IdcardOutlined,
   KeyOutlined,
   LinkOutlined,
   TagOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 import { Alert, Empty, Layout, Spin, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -43,6 +45,7 @@ import {
   formatOptionalTimestamp,
   formatRecordHeaders,
   resolveMcpCategoryLabel,
+  resolveMcpCreationTypeLabel,
 } from "@/modules/execution-factory/utils/detail-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-export";
@@ -161,6 +164,65 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
   }, [record?.status, t]);
 
   const toolCount = tools.length || record?.toolConfigs?.length || 0;
+
+  // 原来只在 MCP 详情抽屉里露过，卡片改直连本页后搬到页面上，否则这些字段就没入口了。
+  const basicInfoItems = useMemo(() => {
+    if (!record) {
+      return [];
+    }
+
+    return [
+      {
+        key: "mcpId",
+        label: t("executionFactory.mcpIdLabel"),
+        value: record.mcpId,
+        icon: <IdcardOutlined />,
+        variant: "mono" as const,
+        span: "full" as const,
+      },
+      {
+        key: "creationType",
+        label: t("executionFactory.mcpCreationType"),
+        value: resolveMcpCreationTypeLabel(record.creationType, t),
+        icon: <ApiOutlined />,
+        variant: "accent" as const,
+      },
+      {
+        key: "category",
+        label: t("executionFactory.category"),
+        value: resolveMcpCategoryLabel(record.category, t),
+        icon: <AppstoreOutlined />,
+      },
+      {
+        key: "toolCount",
+        label: t("executionFactory.mcpToolCountFieldLabel"),
+        value: t("executionFactory.toolCountLabel", { count: toolCount }),
+        icon: <ToolOutlined />,
+      },
+      {
+        key: "url",
+        label: t("executionFactory.serviceUrl"),
+        value: record.url ?? "-",
+        icon: <LinkOutlined />,
+        span: "full" as const,
+        variant: "mono" as const,
+      },
+      {
+        key: "headers",
+        label: t("executionFactory.mcpHeadersLabel"),
+        value: formatRecordHeaders(record.headers),
+        icon: <KeyOutlined />,
+        span: "full" as const,
+        variant: "muted" as const,
+      },
+      {
+        key: "updateTime",
+        label: t("executionFactory.updateTime"),
+        value: formatOptionalTimestamp(record.updateTime),
+        icon: <CalendarOutlined />,
+      },
+    ];
+  }, [record, t, toolCount]);
 
   const toolInfoItems = useMemo(() => {
     if (!selectedTool || !record) {
@@ -317,6 +379,14 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
 
       {toolsLoadError && catalogContext ? (
         <Alert message={t("executionFactory.mcpDetailCatalogToolsHint")} showIcon style={{ marginBottom: 16 }} type="warning" />
+      ) : null}
+
+      {!loading && record ? (
+        <DetailMetaPanel
+          columns={3}
+          items={basicInfoItems}
+          title={t("common.basicInfo")}
+        />
       ) : null}
 
       {loading ? (

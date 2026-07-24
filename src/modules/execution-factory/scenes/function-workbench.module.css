@@ -1,0 +1,823 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/* 工作台信息密度高，antd 默认控件尺寸在这里显得笨重，整体压一档 */
+.app :global(.ant-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 13px;
+  line-height: 1;
+  box-shadow: none;
+}
+
+/* antd 自带的图标右间距会和上面的 gap 叠加 */
+.app :global(.ant-btn > .anticon + span) {
+  margin-inline-start: 0;
+}
+
+.app :global(.ant-input),
+.app :global(.ant-select-selector) {
+  font-size: 13px;
+}
+
+.app :global(.ant-tag) {
+  font-size: 12px;
+  line-height: 18px;
+  padding: 0 6px;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 96px);
+  min-height: 560px;
+  background: var(--color-bg-layout, #f5f7fa);
+}
+
+/* ---------- 顶部栏 ---------- */
+/* 对齐知识网络工作台页头：60px 高、左右 24px、无边框返回键、30px 图标块、20px/700 标题 */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 60px;
+  padding: 0 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e9e9e9;
+  flex: none;
+}
+
+.backButton {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1f2329;
+  font-size: 16px;
+  cursor: pointer;
+  flex: none;
+}
+
+.backButton:hover {
+  color: var(--color-primary, #2563eb);
+}
+
+.titleIcon {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e8edf3;
+  background: #f3f6fa;
+  color: var(--color-primary, #2563eb);
+  font-size: 15px;
+  flex: none;
+}
+
+.titleMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+  margin-right: 12px;
+}
+
+/* 工具箱名是标题，走和函数名同一套点击即编辑：虚线下划线 + 铅笔 */
+.titleEditable {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  max-width: 320px;
+  color: #152239;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.titleMeta {
+  flex-wrap: nowrap;
+}
+
+.titleMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.titleMeta :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.categorySelect :global(.ant-select-selector) {
+  border-color: var(--color-border);
+  background: #ffffff;
+}
+
+.barActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+/* ---------- 主体 ---------- */
+.body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 240px;
+  background: #ffffff;
+  border-right: 1px solid var(--color-border);
+  min-height: 0;
+}
+
+.railHead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.railTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+/* 列表项的框左缘要和 .railHead 的文字左缘对齐，都落在 12px */
+.railList {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.railItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+}
+
+.railItem:hover {
+  background: var(--color-bg-layout, #f5f7fa);
+}
+
+.railItemActive {
+  border-color: var(--color-primary, #2563eb);
+  background: var(--color-primary-bg, #eef2ff);
+}
+
+/* rail 只做导航和状态速览，操作一律在右侧函数头部。 */
+.railItemOff .railItemName {
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
+.railItemOffTag {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-fill-quaternary, #f5f5f5);
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.railItemName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.railItemMeta {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.railItemDirty {
+  color: var(--color-warning-text, #b45309);
+}
+
+.railFooter {
+  padding: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ---------- 中间 ---------- */
+.main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.fnHead {
+  background: #ffffff;
+  border-bottom: 1px solid var(--color-border);
+  flex: none;
+}
+
+.fnHeadBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+}
+
+.fnHeadActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.fnStatusToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.fnStatusOn {
+  color: var(--color-success-text, #15803d);
+}
+
+.fnStatusOff {
+  color: var(--color-text-tertiary);
+}
+
+.fnHeadTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.fxBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 5px;
+  background: var(--color-primary-bg, #eef2ff);
+  color: var(--color-primary, #2563eb);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.fnHeadFx {
+  color: var(--color-primary, #2563eb);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.fnHeadGrid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.4fr);
+  gap: 16px;
+  padding: 0 16px 14px;
+  align-items: stretch;
+}
+
+/* 名称和描述并排，高度不齐会很跳；统一压到同一高度并禁掉拖拽把手 */
+.fnHeadGrid :global(.ant-input) {
+  height: 60px;
+}
+
+.fnHeadGrid :global(textarea.ant-input) {
+  height: 60px;
+  resize: none;
+}
+
+/* 描述在标题下面单独占一行，点了才展开成输入框 */
+.fnHeadDesc {
+  padding: 0 16px 12px 16px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.fieldRequired {
+  color: var(--color-error-text, #dc2626);
+  margin-right: 4px;
+}
+
+.fieldHint {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.editorArea {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: #ffffff;
+  border-right: 1px solid var(--color-border);
+}
+
+/* 主列左右内边距统一 16px：.bar / .fnHeadBar / .fnHeadGrid / .editorBar / .console* 共用一条轨 */
+.editorBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  row-gap: 6px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  flex: none;
+  min-width: 0;
+}
+
+.editorIcon {
+  display: inline-flex;
+  color: var(--color-primary, #2563eb);
+}
+
+.editorTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.editorLang {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  white-space: nowrap;
+}
+
+.editorTools {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 这两颗是一对动作，一个带图标一个不带会差出一截；给个下限让它们读起来等重 */
+.editorTools :global(.ant-btn) {
+  min-width: 96px;
+  justify-content: center;
+}
+
+.templateOption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.templateOptionTitle {
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.templateOptionDesc {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.editorSurface {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ---------- 右 dock ---------- */
+.dock {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 360px;
+  min-width: 260px;
+  background: #ffffff;
+  min-height: 0;
+  border-left: 1px solid var(--color-border);
+}
+
+.dockBody {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+/* 下划线 tab：dock 顶部、调试输出都用它 */
+.tabStrip {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border);
+  flex: none;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--color-primary, #2563eb);
+}
+
+.tabActive {
+  color: var(--color-primary, #2563eb);
+  border-bottom-color: var(--color-primary, #2563eb);
+  font-weight: 600;
+}
+
+.tabCount {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.tabActive .tabCount {
+  color: inherit;
+}
+
+.tabDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* 输入/输出是同级二选一，用分段控件而不是 tab，避免和上面的 tab 撞层级 */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  margin-bottom: 12px;
+}
+
+.segment {
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.segment + .segment {
+  border-left: 1px solid var(--color-border);
+}
+
+.segmentActive {
+  background: var(--color-primary-bg, #eef2ff);
+  color: var(--color-primary, #2563eb);
+  font-weight: 600;
+}
+
+.dockHint {
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: var(--color-info-bg, #eff6ff);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.depRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  margin-bottom: 8px;
+}
+
+.depName {
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.depVersion {
+  flex: 0 0 130px;
+}
+
+.depRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.depRemove:hover {
+  color: var(--color-error-text, #dc2626);
+  background: var(--color-error-bg, #fef2f2);
+}
+
+.depAdd {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.depIndex {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.depIndexLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* ---------- 调试台 ---------- */
+.console {
+  flex: none;
+  background: #ffffff;
+  border-top: 1px solid var(--color-border);
+}
+
+.consoleHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.consoleTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.consoleNote {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.consoleRun {
+  margin-left: auto;
+  flex: none;
+}
+
+/* 调试是这一屏的主动作，之前那颗按钮太轻，扫一眼找不到 */
+.runButton.runButton {
+  min-width: 84px;
+  font-weight: 600;
+}
+
+.eventEditor {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.consoleInner {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(280px, 1.2fr);
+  gap: 16px;
+  padding: 0 16px 16px;
+  height: 240px;
+}
+
+.consolePane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 6px;
+}
+
+.consoleCaption {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* 调试台左右两栏：左栏 caption 从栏左缘起，右栏首个 tab 也得贴左，
+   否则两栏内容左缘差 12px，看着就是没对齐 */
+.consolePane .tabStrip .tab:first-child {
+  padding-left: 0;
+}
+
+.outBody {
+  flex: 1 1 auto;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  padding: 8px;
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.outEmpty {
+  color: var(--color-text-tertiary);
+}
+
+.outError {
+  color: var(--color-error-text, #dc2626);
+}
+
+.metrics {
+  display: grid;
+  /* 卡片高度由内容撑，不跟着最高的那张一起拉齐 */
+  grid-auto-rows: min-content;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 8px;
+  align-content: start;
+}
+
+.metric {
+  border: 1px solid var(--color-border);
+  padding: 10px 12px;
+}
+
+.metricValue {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.metricUnit {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.metricLabel {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.centered {
+  flex: 1 1 auto;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+}
+
+/* 窄屏（侧边开着 DevTools、或小笔记本）先砍装饰性文字，再砍栏宽 */
+@media (max-width: 1440px) {
+  .editorLang {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .rail {
+    flex-basis: 200px;
+  }
+
+  .dock {
+    flex-basis: 300px;
+    min-width: 240px;
+  }
+
+  .consoleInner {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}
+
+.consoleCaptionHint {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* 工具条右段：参数/依赖入口，和左边的代码动作用一条竖线分开 */
+.toolsDivider {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  margin: 0 2px;
+}
+
+.toolCount {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* 参数为 0 意味着 Agent 拿到的是个无参工具，藏进抽屉后更要在按钮上喊一声 */
+.toolCountEmpty {
+  color: var(--color-warning-text, #b45309);
+  font-weight: 600;
+}
+
+.railAdd.railAdd {
+  margin-top: 4px;
+  border-style: dashed;
+  color: var(--color-text-secondary);
+}
+
+.railAdd.railAdd:hover {
+  border-style: solid;
+  color: var(--color-primary, #2563eb);
+}
+
+.dirtyBadge {
+  padding: 2px 8px;
+  background: var(--color-warning-bg, #fffbeb);
+  color: var(--color-warning-text, #b45309);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.publishedHint {
+  padding: 2px 8px;
+  color: var(--color-success-text, #15803d);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.paramsViewSwitch {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  margin: 0 0 12px 8px;
+}

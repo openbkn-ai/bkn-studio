@@ -11,13 +11,17 @@ import {
   ArrowLeftOutlined,
   BarsOutlined,
   BugOutlined,
+  CalendarOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
   DownloadOutlined,
   FileTextOutlined,
+  IdcardOutlined,
   LinkOutlined,
   NodeIndexOutlined,
   TagOutlined,
+  ToolOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { Alert, Checkbox, Empty, Layout, Space, Spin, Switch, Tag } from "antd";
 import type { CSSProperties } from "react";
@@ -48,7 +52,13 @@ import {
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 import type { ToolRecord, ToolRunLogEntry, ToolStatus } from "@/modules/execution-factory/types/tool";
 import { buildToolCapabilityManifest } from "@/modules/execution-factory/utils/capability-manifest";
+import {
+  formatOptionalTimestamp,
+  resolveToolboxCategoryLabel,
+} from "@/modules/execution-factory/utils/detail-display";
+import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
+import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-export";
 
 import styles from "./toolbox-detail.module.css";
@@ -80,6 +90,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const capabilityUxV2 = isCapabilityUxV2();
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
   const { exportComponentById, isExporting } = useImpexExport();
+  const auditUserDirectory = useAuditUserDirectory();
 
   const loadToolbox = useCallback(async () => {
     try {
@@ -161,10 +172,12 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
       return;
     }
 
+    // 工具集拆成 API / 函数两个视图，回退要落回工具箱本身所属的那个。
+    const viewQuery = `&toolboxView=${isFunctionToolbox ? "function" : "openapi"}`;
     void navigate(
       catalogContext
-        ? "/execution-factory/catalog?activeTab=toolbox"
-        : "/execution-factory/units?activeTab=toolbox",
+        ? `/execution-factory/catalog?activeTab=toolbox${viewQuery}`
+        : `/execution-factory/units?activeTab=toolbox${viewQuery}`,
     );
   };
 
@@ -303,6 +316,88 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     );
   };
 
+  // 原来只在工具箱详情抽屉里露过，卡片改直连本页后搬到页面上，否则这些字段就没入口了。
+  const toolboxInfoItems = useMemo(() => {
+    if (!toolbox) {
+      return [];
+    }
+
+    return [
+      {
+        key: "boxId",
+        label: t("executionFactory.toolboxId"),
+        value: toolbox.boxId,
+        icon: <IdcardOutlined />,
+        variant: "mono" as const,
+        span: "full" as const,
+      },
+      {
+        key: "category",
+        label: t("executionFactory.category"),
+        value: resolveToolboxCategoryLabel(toolbox, t),
+        icon: <AppstoreOutlined />,
+        variant: "accent" as const,
+      },
+      {
+        key: "metadataType",
+        label: t("executionFactory.metadataType"),
+        value: toolbox.metadataType
+          ? t(`executionFactory.metadataTypes.${toolbox.metadataType}`)
+          : "-",
+      },
+      {
+        key: "toolCount",
+        label: t("executionFactory.toolCount"),
+        value: String(items.length || toolbox.toolCount || 0),
+        icon: <ToolOutlined />,
+      },
+      {
+        key: "serviceUrl",
+        label: t("executionFactory.serviceUrl"),
+        value: toolbox.serviceUrl ?? "-",
+        icon: <LinkOutlined />,
+        span: "full" as const,
+        variant: "mono" as const,
+      },
+      {
+        key: "createUser",
+        label: t("executionFactory.createUser"),
+        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.createUser }),
+        icon: <UserOutlined />,
+      },
+      {
+        key: "updateUser",
+        label: t("executionFactory.updateUser"),
+        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.updateUser }),
+        icon: <UserOutlined />,
+      },
+      {
+        key: "createTime",
+        label: t("executionFactory.createTime"),
+        value: formatOptionalTimestamp(toolbox.createTime),
+        icon: <CalendarOutlined />,
+      },
+      {
+        key: "updateTime",
+        label: t("executionFactory.updateTime"),
+        value: formatOptionalTimestamp(toolbox.updateTime),
+        icon: <ClockCircleOutlined />,
+      },
+      {
+        key: "releaseUser",
+        label: t("executionFactory.releaseUser"),
+        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.releaseUser }),
+        icon: <UserOutlined />,
+      },
+      {
+        key: "releaseTime",
+        label: t("executionFactory.releaseTime"),
+        value: formatOptionalTimestamp(toolbox.releaseTime),
+        icon: <CalendarOutlined />,
+      },
+    ];
+  }, [auditUserDirectory, items.length, t, toolbox]);
+
   const toolInfoItems = useMemo(() => {
     if (!selectedTool) {
       return [];
@@ -332,11 +427,19 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         label: t("executionFactory.toolboxToolStatusLabel"),
         value: (
           <>
-            <Switch
-              checked={selectedTool.status === "enabled"}
-              onChange={() => handleToggleStatus(selectedTool)}
-              size="small"
-            />{" "}
+            {/*
+              开关按设计是「不进编辑态也能直接扳」，所以这里不跟着 viewMode 禁用；
+              但仍要门禁：没有 tool:edit 的人不该拿到这个入口，市场预览态（from=catalog）
+              更不该改到别人工具箱里的工具状态。
+            */}
+            <PermissionGate permissions="execution-factory:tool:edit">
+              <Switch
+                checked={selectedTool.status === "enabled"}
+                disabled={catalogContext}
+                onChange={() => handleToggleStatus(selectedTool)}
+                size="small"
+              />{" "}
+            </PermissionGate>
             {selectedTool.status === "enabled"
               ? t("executionFactory.toolboxToolEnabled")
               : t("executionFactory.toolboxToolDisabled")}
@@ -373,7 +476,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         variant: "mono" as const,
       },
     ];
-  }, [handleToggleStatus, selectedTool, t, toolbox?.serviceUrl]);
+  }, [catalogContext, handleToggleStatus, selectedTool, t, toolbox?.serviceUrl]);
 
   const selectedToolManifest = useMemo(() => {
     if (selectedToolDetail) {
@@ -413,6 +516,17 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
               {viewMode ? (
                 <Space>
                   {renderToolboxExportButton()}
+                  {!catalogContext && !toolbox.isInternal ? (
+                    <PermissionGate permissions="execution-factory:toolbox:edit">
+                      <AppButton
+                        onClick={() => {
+                          void navigate(`/execution-factory/toolboxes/${boxId}/edit`);
+                        }}
+                      >
+                        {t("executionFactory.toolboxEditTitle")}
+                      </AppButton>
+                    </PermissionGate>
+                  ) : null}
                   <PermissionGate permissions="execution-factory:tool:edit">
                     <AppButton onClick={handleEnterEditMode} type="primary">
                       {t("executionFactory.toolboxToolsEnterEdit")}
@@ -477,6 +591,14 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
             showIcon
             style={{ marginBottom: 16 }}
             type="info"
+          />
+        ) : null}
+
+        {!loading && toolbox ? (
+          <DetailMetaPanel
+            columns={3}
+            items={toolboxInfoItems}
+            title={t("common.basicInfo")}
           />
         ) : null}
 

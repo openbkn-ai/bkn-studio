@@ -112,6 +112,16 @@
   text-align: center;
 }
 
+/* 代码函数和 OpenAPI 同处「工具集」，徽标同色就区分不出来 */
+.metadataTagFunction {
+  background: #7c3aed;
+}
+
+.iconBadgeFunction {
+  background: #f3eeff;
+  color: #7c3aed;
+}
+
 .titleRow {
   display: flex;
   align-items: flex-start;

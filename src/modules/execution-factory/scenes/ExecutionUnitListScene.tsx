@@ -7,6 +7,7 @@
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Empty, Input, Select, Spin, Tabs } from "antd";
+import type { ReactNode } from "react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -51,6 +52,11 @@ import {
   listToolboxes,
   updateToolboxStatus,
 } from "@/modules/execution-factory/services/toolbox.service";
+import { getToolDetail, listTools } from "@/modules/execution-factory/services/tool.service";
+import {
+  collectToolboxPublishIssues,
+  type ToolboxPublishIssue,
+} from "@/modules/execution-factory/utils/toolbox-publish-preflight";
 import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
 import type { McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
 import type { OperatorRecord, PublicOperatorStatus } from "@/modules/execution-factory/types/operator";
@@ -90,7 +96,11 @@ const ExecutionUnitListOverlays = lazy(async () => {
 });
 
 const PAGE_SIZE = 20;
+/** 逐个取详情才拿得到函数代码，工具多的工具箱不值得为一次发布确认打这么多请求。 */
+const PUBLISH_PREFLIGHT_DETAIL_LIMIT = 20;
 const TAB_STORAGE_KEY = "execution-factory.activeTab";
+/** 工具集下的「API / 函数」子视图，和 activeTab 一样要能被详情页返回时还原。 */
+const TOOLBOX_VIEW_STORAGE_KEY = "execution-factory.toolboxView";
 const DEFAULT_TABS: ExecutionUnitTab[] = ["operator", "toolbox", "mcp", "skill"];
 
 type IdleTaskHandle = {
@@ -109,6 +119,23 @@ function scheduleIdleTask(task: () => void, timeoutMs: number): IdleTaskHandle {
   return {
     cancel: () => window.clearTimeout(id),
   };
+}
+
+type ToolboxView = "openapi" | "function";
+
+function resolveToolboxView(param: string | null): ToolboxView {
+  if (param === "function" || param === "openapi") {
+    return param;
+  }
+
+  if (typeof window !== "undefined") {
+    const stored = window.localStorage.getItem(TOOLBOX_VIEW_STORAGE_KEY);
+    if (stored === "function" || stored === "openapi") {
+      return stored;
+    }
+  }
+
+  return "openapi";
 }
 
 function resolveActiveTab(
@@ -148,6 +175,25 @@ type ExecutionUnitListSceneProps = {
   descriptionKey: string;
   toolbarHintKey: string;
 };
+
+function PublishIssueList({ issues }: { issues: ToolboxPublishIssue[] }) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <p style={{ marginBottom: 4, marginTop: 12 }}>
+        {t("executionFactory.publishPreflightSummary", { count: issues.length })}
+      </p>
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        {issues.map((issue, index) => (
+          <li key={`${issue.key}-${index}`}>
+            {t(`executionFactory.publishIssues.${issue.key}`, issue.params)}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
 
 function mapAuditUser(userId: string | undefined, directory: Map<string, string>) {
   return formatAuditUserDisplay({ directory, id: userId });
@@ -224,8 +270,6 @@ export function ExecutionUnitListScene({
   defaultTab,
   marketMode = false,
   tabs = DEFAULT_TABS,
-  titleKey,
-  descriptionKey,
   toolbarHintKey,
 }: ExecutionUnitListSceneProps) {
   const { t } = useTranslation();
@@ -250,6 +294,13 @@ export function ExecutionUnitListScene({
   const [category, setCategory] = useState("");
   const [categoryOptions, setCategoryOptions] = useState<CategoryChipOption[]>([]);
   const [originFilter, setOriginFilter] = useState<"" | "internal" | "custom">("");
+  /** 工具集下再分一个「代码函数」视图，靠服务端 metadata_type 过滤。 */
+  /** 工具集拆成两个互斥视图：API 工具集 / 函数集。和新建菜单的分类一一对应。 */
+  const [toolboxView, setToolboxView] = useState<ToolboxView>(() =>
+    resolveToolboxView(searchParams.get("toolboxView")),
+  );
+  const functionTabKey = "toolbox:function";
+  const openapiTabKey = "toolbox:openapi";
   const [status, setStatus] = useState<string>("");
   const [items, setItems] = useState<ExecutionUnitCardItem[]>([]);
   const auditUserDirectory = useAuditUserDirectory();
@@ -264,13 +315,11 @@ export function ExecutionUnitListScene({
   const [, setPendingActionKey] = useState<string | null>(null);
   const [detailOperatorId, setDetailOperatorId] = useState<string | null>(null);
   const [detailBoxId, setDetailBoxId] = useState<string | null>(null);
-  const [detailBoxEditMode, setDetailBoxEditMode] = useState(false);
   const [detailMcpId, setDetailMcpId] = useState<string | null>(null);
   const [detailSkillId, setDetailSkillId] = useState<string | null>(null);
   const [authorizeTarget, setAuthorizeTarget] = useState<{ id: string; name: string; type: string } | null>(
     null,
   );
-  const [historySkillId, setHistorySkillId] = useState<string | null>(null);
   const [installTarget, setInstallTarget] = useState<{
     id: string;
     name: string;
@@ -295,6 +344,11 @@ export function ExecutionUnitListScene({
     name: string;
   } | null>(null);
   const [debouncedKeyword, setDebouncedKeyword] = useState(pageState.keyword);
+  const [tabCounts, setTabCounts] = useState<
+    Partial<Record<ExecutionUnitTab | "openapi" | "function", number>>
+  >({});
+  /** 计数只在挂载和显式刷新时重拉；跟着 total 走会在列表加载完后再触发一整轮。 */
+  const [countsVersion, setCountsVersion] = useState(0);
 
   useEffect(() => {
     if (defaultKeyword) {
@@ -343,17 +397,68 @@ export function ExecutionUnitListScene({
   useEffect(() => {
     const param = searchParams.get("activeTab");
     const resolved = resolveActiveTab(param, defaultTab, resolvableTabs);
+    const viewParam = searchParams.get("toolboxView");
+    const resolvedView = resolveToolboxView(viewParam);
 
     setActiveTab(resolved);
+    if (resolved === "toolbox") {
+      setToolboxView(resolvedView);
+      // 直接带 URL 进来时也要落盘，详情页返回没带参数时才有得可依。
+      window.localStorage.setItem(TOOLBOX_VIEW_STORAGE_KEY, resolvedView);
+    }
 
-    if (param && resolvableTabs.includes(param as ExecutionUnitTab)) {
+    const tabParamValid = Boolean(param) && resolvableTabs.includes(param as ExecutionUnitTab);
+    const viewParamValid = resolved !== "toolbox" || viewParam === resolvedView;
+    if (tabParamValid && viewParamValid) {
       return;
     }
 
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("activeTab", resolved);
+    if (resolved === "toolbox") {
+      nextParams.set("toolboxView", resolvedView);
+    } else {
+      nextParams.delete("toolboxView");
+    }
     setSearchParams(nextParams, { replace: true });
   }, [defaultTab, resolvableTabs, searchParams, setSearchParams]);
+
+  /**
+   * 工具箱/MCP/Skill 都有独立详情页，本域列表点卡片直接进页面，不再中转详情抽屉。
+   * 市场态仍走抽屉：引入前只要只读预览，详情页还得靠 ?from=catalog 才拿得到数据。
+   */
+  const openDetail = useCallback(
+    (tab: ExecutionUnitTab, id: string) => {
+      if (tab === "operator") {
+        setDetailOperatorId(id);
+        return;
+      }
+
+      if (marketMode) {
+        if (tab === "toolbox") {
+          setDetailBoxId(id);
+        } else if (tab === "mcp") {
+          setDetailMcpId(id);
+        } else {
+          setDetailSkillId(id);
+        }
+        return;
+      }
+
+      if (tab === "toolbox") {
+        void navigate(`/execution-factory/toolboxes/${id}/tools`);
+        return;
+      }
+
+      if (tab === "mcp") {
+        void navigate(`/execution-factory/mcp/${id}`);
+        return;
+      }
+
+      void navigate(`/execution-factory/skills/${id}`);
+    },
+    [marketMode, navigate],
+  );
 
   useEffect(() => {
     const detailId = searchParams.get("detailId");
@@ -361,20 +466,13 @@ export function ExecutionUnitListScene({
       return;
     }
 
-    if (activeTab === "operator") {
-      setDetailOperatorId(detailId);
-    } else if (activeTab === "toolbox") {
-      setDetailBoxId(detailId);
-    } else if (activeTab === "mcp") {
-      setDetailMcpId(detailId);
-    } else if (activeTab === "skill") {
-      setDetailSkillId(detailId);
-    }
-
+    // 先摘掉 detailId 再打开：openDetail 可能直接路由走，之后再改 searchParams 就落到旧 location 上了。
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("detailId");
     setSearchParams(nextParams, { replace: true });
-  }, [activeTab, marketMode, searchParams, setSearchParams]);
+
+    openDetail(activeTab, detailId);
+  }, [activeTab, marketMode, openDetail, searchParams, setSearchParams]);
 
   const reloadInstalledResourceIds = useCallback(async (options?: { manual?: boolean }) => {
     if (!marketMode) {
@@ -507,8 +605,9 @@ export function ExecutionUnitListScene({
       keyword: debouncedKeyword,
       status: status || undefined,
       category: supportsCategoryFilter(activeTab) && category ? category : undefined,
+      metadataType: activeTab === "toolbox" ? toolboxView : undefined,
     }),
-    [activeTab, category, debouncedKeyword, page, status],
+    [activeTab, category, debouncedKeyword, page, status, toolboxView],
   );
 
   const loadItems = useCallback(async () => {
@@ -615,7 +714,15 @@ export function ExecutionUnitListScene({
     void loadItems();
   }, [loadItems]);
 
-  const tabLabel = t(getExecutionUnitTabLabelKey(activeTab));
+  // 函数视图是工具集的过滤视图，「共 N 个…」也要跟着叫函数集，否则数的东西和说的名字对不上。
+  const tabLabel =
+    activeTab === "toolbox"
+      ? t(
+          toolboxView === "function"
+            ? "executionFactory.functionToolboxTab"
+            : "executionFactory.openapiToolboxTab",
+        )
+      : t(getExecutionUnitTabLabelKey(activeTab));
   const emptyDescription = t(
     marketMode
       ? `executionFactory.catalogEmptyByTab.${activeTab}`
@@ -628,11 +735,51 @@ export function ExecutionUnitListScene({
     () =>
       resolveVisibleManagementTabs(activeTab)
         .filter((tab) => resolvableTabs.includes(tab))
-        .map((tab) => ({
-          key: tab,
-          label: t(getExecutionUnitTabLabelKey(tab)),
-        })),
-    [activeTab, resolvableTabs, t],
+        .flatMap((tab) => {
+          const count = tabCounts[tab];
+          const entry = {
+            key: tab,
+            label: (
+              <span className={styles.tabLabel}>
+                {t(getExecutionUnitTabLabelKey(tab))}
+                {count === undefined ? null : (
+                  <span className={styles.tabLabelCount}>{count}</span>
+                )}
+              </span>
+            ),
+          };
+
+          if (tab !== "toolbox") {
+            return [entry];
+          }
+
+          // 工具集拆成两个互斥视图，都是服务端过滤，不再保留并集入口。
+          return [
+            {
+              key: openapiTabKey,
+              label: (
+                <span className={styles.tabLabel}>
+                  {t("executionFactory.openapiToolboxTab")}
+                  {tabCounts.openapi === undefined ? null : (
+                    <span className={styles.tabLabelCount}>{tabCounts.openapi}</span>
+                  )}
+                </span>
+              ),
+            },
+            {
+              key: functionTabKey,
+              label: (
+                <span className={styles.tabLabel}>
+                  {t("executionFactory.functionToolboxTab")}
+                  {tabCounts.function === undefined ? null : (
+                    <span className={styles.tabLabelCount}>{tabCounts.function}</span>
+                  )}
+                </span>
+              ),
+            },
+          ];
+        }),
+    [activeTab, functionTabKey, openapiTabKey, resolvableTabs, t, tabCounts],
   );
 
   const returnToPrimaryCapabilities = () => {
@@ -670,28 +817,13 @@ export function ExecutionUnitListScene({
   }, [activeTab, t]);
 
   const handleCardClick = (item: ExecutionUnitCardItem) => {
-    if (activeTab === "operator") {
-      setDetailOperatorId(item.id);
-      return;
-    }
-
-    if (activeTab === "toolbox") {
-      setDetailBoxEditMode(false);
-      setDetailBoxId(item.id);
-      return;
-    }
-
-    if (activeTab === "mcp") {
-      setDetailMcpId(item.id);
-      return;
-    }
-
-    setDetailSkillId(item.id);
+    openDetail(activeTab, item.id);
   };
 
   const reloadList = useCallback(() => {
     setPage(1);
     setItems([]);
+    setCountsVersion((current) => current + 1);
     void loadItems();
   }, [loadItems]);
 
@@ -711,12 +843,51 @@ export function ExecutionUnitListScene({
         return;
       }
       if (tab === "mcp") {
-        setDetailMcpId(id);
+        void navigate(`/execution-factory/mcp/${id}`);
         return;
       }
-      setDetailSkillId(id);
+      void navigate(`/execution-factory/skills/${id}`);
     },
     [navigate, reloadList],
+  );
+
+  /**
+   * 工具箱一发布，里面的工具就直接暴露给 Agent 选用——缺描述的工具等于永远不会被调到。
+   * 预检查只提示不拦截：拿不到工具清单时按无问题处理，不能因为预检查失败堵住发布。
+   */
+  const collectPublishIssues = useCallback(
+    async (item: ExecutionUnitCardItem): Promise<ToolboxPublishIssue[]> => {
+      try {
+        const { items: tools } = await listTools(item.id, { page: 1, pageSize: 100 });
+        const shouldLoadCode =
+          item.metadataType === "function" && tools.length <= PUBLISH_PREFLIGHT_DETAIL_LIMIT;
+        const codes = shouldLoadCode
+          ? await Promise.all(
+              tools.map(async (tool) => {
+                try {
+                  const detail = await getToolDetail(item.id, tool.toolId);
+                  return detail.functionInput?.code;
+                } catch {
+                  return undefined;
+                }
+              }),
+            )
+          : [];
+
+        return collectToolboxPublishIssues(
+          tools.map((tool, index) => ({
+            code: codes[index],
+            description: tool.description,
+            metadataType: tool.metadataType,
+            name: tool.name,
+            status: tool.status,
+          })),
+        );
+      } catch {
+        return [];
+      }
+    },
+    [],
   );
 
   const impexTypeForTab = useCallback((tab: ExecutionUnitTab): ImpexComponentType | null => {
@@ -734,11 +905,21 @@ export function ExecutionUnitListScene({
         titleKey: string,
         descriptionKey: string,
         onConfirm: () => Promise<void>,
+        options?: { extraContent?: ReactNode; okTextKey?: string; danger?: boolean },
       ) => {
         void modal.confirm({
           title: t(titleKey),
-          content: t(descriptionKey, { name: item.name, status: t(`executionFactory.statuses.${nextStatus}`) }),
-          okText: t("common.save"),
+          content: (
+            <>
+              {t(descriptionKey, {
+                name: item.name,
+                status: t(`executionFactory.statuses.${nextStatus}`),
+              })}
+              {options?.extraContent}
+            </>
+          ),
+          okButtonProps: options?.danger ? { danger: true } : undefined,
+          okText: t(options?.okTextKey ?? "common.save"),
           cancelText: t("common.cancel"),
           onOk: async () => {
             try {
@@ -806,16 +987,7 @@ export function ExecutionUnitListScene({
       }
 
       if (action === "view") {
-        if (activeTab === "operator") {
-          setDetailOperatorId(item.id);
-        } else if (activeTab === "toolbox") {
-          setDetailBoxEditMode(false);
-          setDetailBoxId(item.id);
-        } else if (activeTab === "mcp") {
-          setDetailMcpId(item.id);
-        } else if (activeTab === "skill") {
-          setDetailSkillId(item.id);
-        }
+        openDetail(activeTab, item.id);
         return;
       }
 
@@ -876,8 +1048,7 @@ export function ExecutionUnitListScene({
         if (activeTab === "operator") {
           void navigate(`/execution-factory/units/${item.id}/edit`);
         } else if (activeTab === "toolbox") {
-          setDetailBoxEditMode(true);
-          setDetailBoxId(item.id);
+          void navigate(`/execution-factory/toolboxes/${item.id}/edit`);
         } else if (activeTab === "mcp") {
           setEditMcpId(item.id);
         } else if (activeTab === "skill") {
@@ -896,12 +1067,33 @@ export function ExecutionUnitListScene({
             () => updateOperatorStatus(item.id, item.version!, nextStatus),
           );
         } else if (activeTab === "toolbox") {
-          runStatusChange(
-            nextStatus,
-            "executionFactory.toolboxStatusChangeConfirmTitle",
-            "executionFactory.toolboxStatusChangeConfirmDescription",
-            () => updateToolboxStatus(item.id, nextStatus),
-          );
+          // 发布前跑一次预检查（缺 summary、broken $ref 等），有问题就在确认框里
+          // 列出并给「仍然发布」。下架（offline）不需要预检查，走 main 的直连即可。
+          if (nextStatus === "published") {
+            void (async () => {
+              const issues = await collectPublishIssues(item);
+              runStatusChange(
+                "published",
+                "executionFactory.toolboxStatusChangeConfirmTitle",
+                "executionFactory.toolboxStatusChangeConfirmDescription",
+                () => updateToolboxStatus(item.id, "published"),
+                issues.length > 0
+                  ? {
+                      danger: true,
+                      extraContent: <PublishIssueList issues={issues} />,
+                      okTextKey: "executionFactory.publishAnyway",
+                    }
+                  : undefined,
+              );
+            })();
+          } else {
+            runStatusChange(
+              nextStatus,
+              "executionFactory.toolboxStatusChangeConfirmTitle",
+              "executionFactory.toolboxStatusChangeConfirmDescription",
+              () => updateToolboxStatus(item.id, nextStatus),
+            );
+          }
         } else if (activeTab === "mcp") {
           runStatusChange(
             nextStatus,
@@ -970,8 +1162,90 @@ export function ExecutionUnitListScene({
         }
       }
     },
-    [activeTab, impexTypeForTab, marketMode, message, modal, navigate, reloadList, t],
+    [
+      activeTab,
+      collectPublishIssues,
+      impexTypeForTab,
+      marketMode,
+      message,
+      modal,
+      navigate,
+      openDetail,
+      reloadList,
+      t,
+    ],
   );
+
+  const countedTabsKey = useMemo(
+    () =>
+      resolveVisibleManagementTabs(activeTab)
+        .filter((tab) => resolvableTabs.includes(tab))
+        .join(","),
+    [activeTab, resolvableTabs],
+  );
+
+  // tab 上的数量各拉一次 total；page_size=1 只为拿计数，不取列表内容。
+  // 依赖 tab 列表本身而不是 activeTab——来回切 tab 时列表没变，不该重拉。
+  useEffect(() => {
+    const tabs = countedTabsKey.split(",").filter(Boolean) as ExecutionUnitTab[];
+    let cancelled = false;
+
+    void (async () => {
+      const entries = await Promise.all(
+        tabs.map(async (tab) => {
+          try {
+            const query = { page: 1, pageSize: 1 };
+            const total = marketMode
+              ? tab === "toolbox"
+                ? (await listToolboxMarket(query)).total
+                : tab === "mcp"
+                  ? (await listMcpMarket(query)).total
+                  : tab === "skill"
+                    ? (await listSkillMarket(query)).total
+                    : (await listOperatorMarket(query)).total
+              : tab === "toolbox"
+                ? (await listToolboxes(query)).total
+                : tab === "mcp"
+                  ? (await listMcps(query)).total
+                  : tab === "skill"
+                    ? (await listSkills(query)).total
+                    : (await listOperators(query)).total;
+            return [tab, total] as const;
+          } catch {
+            return [tab, undefined] as const;
+          }
+        }),
+      );
+
+      // 工具集下面还有「仅 API」「仅函数」两个子视图，各自的数量单独拉一次。
+      const subtotals: Partial<Record<"openapi" | "function", number>> = {};
+      if (tabs.includes("toolbox")) {
+        await Promise.all(
+          (["openapi", "function"] as const).map(async (metadataType) => {
+            try {
+              const query = { page: 1, pageSize: 1, metadataType };
+              subtotals[metadataType] = marketMode
+                ? (await listToolboxMarket(query)).total
+                : (await listToolboxes(query)).total;
+            } catch {
+              subtotals[metadataType] = undefined;
+            }
+          }),
+        );
+      }
+
+      if (!cancelled) {
+        setTabCounts({
+          ...Object.fromEntries(entries.filter(([, total]) => total !== undefined)),
+          ...subtotals,
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [countedTabsKey, countsVersion, marketMode]);
 
   const reload = () => {
     reset();
@@ -989,7 +1263,6 @@ export function ExecutionUnitListScene({
           detailBoxId ||
           detailMcpId ||
           detailSkillId ||
-          historySkillId ||
           installTarget ||
           skillInstallTarget ||
           publishedPermTarget ||
@@ -1002,7 +1275,6 @@ export function ExecutionUnitListScene({
       detailOperatorId,
       detailSkillId,
       editMcpId,
-      historySkillId,
       installTarget,
       publishedPermTarget,
       skillInstallTarget,
@@ -1047,17 +1319,14 @@ export function ExecutionUnitListScene({
   return (
     <>
       <section className={styles.page}>
-        <div className={styles.pageIntro}>
-          <h2 className={styles.pageIntroTitle}>{t(titleKey)}</h2>
-          <p className={styles.pageIntroDescription}>{t(descriptionKey)}</p>
-          {isCapabilityUxV2() && !marketMode && activeTab === "operator" ? (
-            <div className={styles.pageIntroActions}>
-              <Button onClick={returnToPrimaryCapabilities} type="link">
-                {t("executionFactory.backToCapabilities")}
-              </Button>
-            </div>
-          ) : null}
-        </div>
+        {/* 页面标题由面包屑承担，这里不再重复一遍；算子视图仍需要返回入口。 */}
+        {isCapabilityUxV2() && !marketMode && activeTab === "operator" ? (
+          <div className={styles.pageIntroActions}>
+            <Button onClick={returnToPrimaryCapabilities} type="link">
+              {t("executionFactory.backToCapabilities")}
+            </Button>
+          </div>
+        ) : null}
 
         {!marketMode ? (
           <div className={styles.toolbarActions}>
@@ -1072,7 +1341,6 @@ export function ExecutionUnitListScene({
               onRefresh={reloadList}
               onResourceCreated={handleCreateMenuResourceCreated}
             />
-            <span className={styles.toolbarMeta}>{t(toolbarHintKey)}</span>
           </div>
         ) : (
           <div className={styles.toolbarActions}>
@@ -1093,13 +1361,35 @@ export function ExecutionUnitListScene({
         )}
 
         <Tabs
-          activeKey={activeTab}
+          activeKey={
+            activeTab === "toolbox"
+              ? toolboxView === "function"
+                ? functionTabKey
+                : openapiTabKey
+              : activeTab
+          }
           className={styles.tabs}
           items={tabItems}
           onChange={(key) => {
-            const nextTab = key as ExecutionUnitTab;
-            window.localStorage.setItem(TAB_STORAGE_KEY, nextTab);
+            const isFunctionView = key === functionTabKey;
+            const isOpenapiView = key === openapiTabKey;
+            const nextTab = (isFunctionView || isOpenapiView
+              ? "toolbox"
+              : key) as ExecutionUnitTab;
             const nextParams = new URLSearchParams(searchParams);
+
+            if (isFunctionView || isOpenapiView) {
+              const nextView: ToolboxView = isFunctionView ? "function" : "openapi";
+              setToolboxView(nextView);
+              // 子视图跟着进 URL，详情页返回时才落回原来那个 tab。
+              window.localStorage.setItem(TOOLBOX_VIEW_STORAGE_KEY, nextView);
+              nextParams.set("toolboxView", nextView);
+            } else {
+              nextParams.delete("toolboxView");
+            }
+
+            setPage(1);
+            window.localStorage.setItem(TAB_STORAGE_KEY, nextTab);
             nextParams.set("activeTab", nextTab);
             setSearchParams(nextParams);
           }}
@@ -1119,39 +1409,23 @@ export function ExecutionUnitListScene({
             {showOriginFilter ? (
               <div className={styles.filterGroup}>
                 <span className={styles.filterLabel}>{t("executionFactory.originFilter")}</span>
-                <div className={styles.categoryGroup}>
-                  {originFilterOptions.map((option) => (
-                    <button
-                      className={`${styles.categoryChip} ${
-                        originFilter === option.value ? styles.categoryChipActive : ""
-                      }`}
-                      key={option.value || "all"}
-                      onClick={() => setOriginFilter(option.value)}
-                      type="button"
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
+                <Select
+                  onChange={setOriginFilter}
+                  options={originFilterOptions}
+                  style={{ minWidth: 140 }}
+                  value={originFilter}
+                />
               </div>
             ) : null}
             {showCategoryFilter ? (
               <div className={styles.filterGroup}>
                 <span className={styles.filterLabel}>{t("executionFactory.typeFilter")}</span>
-                <div className={styles.categoryGroup}>
-                  {categoryOptions.map((option) => (
-                    <button
-                      className={`${styles.categoryChip} ${
-                        category === option.value ? styles.categoryChipActive : ""
-                      }`}
-                      key={option.value || "all"}
-                      onClick={() => setCategory(option.value)}
-                      type="button"
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
+                <Select
+                  onChange={setCategory}
+                  options={categoryOptions}
+                  style={{ minWidth: 160 }}
+                  value={category}
+                />
               </div>
             ) : null}
             {!marketMode && statusOptions.length > 0 ? (
@@ -1275,27 +1549,22 @@ export function ExecutionUnitListScene({
           <ExecutionUnitListOverlays
             activeTab={activeTab}
             detailBoxId={detailBoxId}
-            detailBoxEditMode={detailBoxEditMode}
             detailMcpId={detailMcpId}
             detailOperatorId={detailOperatorId}
             detailSkillId={detailSkillId}
             editMcpId={editMcpId}
-            historySkillId={historySkillId}
             installTarget={installTarget}
             marketMode={marketMode}
             navigate={navigate}
             onCloseDetailBox={() => setDetailBoxId(null)}
-            onCloseDetailBoxEditMode={() => setDetailBoxEditMode(false)}
             onCloseDetailMcp={() => setDetailMcpId(null)}
             onCloseDetailOperator={() => setDetailOperatorId(null)}
             onCloseDetailSkill={() => setDetailSkillId(null)}
             onCloseEditMcp={() => setEditMcpId(null)}
-            onCloseHistorySkill={() => setHistorySkillId(null)}
             onCloseInstallTarget={() => setInstallTarget(null)}
             onClosePublishedPerm={() => setPublishedPermTarget(null)}
             onCloseSkillInstallTarget={() => setSkillInstallTarget(null)}
             onCloseUpdateSkillPackage={() => setUpdateSkillPackageTarget(null)}
-            onOpenHistorySkill={(skillId) => setHistorySkillId(skillId)}
             onReloadInstalledResourceIds={() => void reloadInstalledResourceIds()}
             onReloadList={reloadList}
             publishedPermTarget={publishedPermTarget}

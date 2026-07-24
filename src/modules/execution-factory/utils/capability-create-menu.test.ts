@@ -18,15 +18,17 @@ describe("capability-create-menu", () => {
 
     expect(sections.map((section) => section.titleKey)).toEqual([
       "executionFactory.capabilityCreateMenu.httpApi",
+      "executionFactory.capabilityCreateMenu.function",
       "executionFactory.capabilityCreateMenu.mcp",
-      "executionFactory.capabilityCreateMenu.skillFunction",
+      "executionFactory.capabilityCreateMenu.skill",
       "executionFactory.capabilityCreateMenu.package",
     ]);
 
     expect(sections.map((section) => section.items.map((item) => item.action))).toEqual([
       ["quick-api", "import-openapi"],
+      ["function"],
       ["mcp"],
-      ["skill", "function"],
+      ["skill"],
       ["import-adp"],
     ]);
   });

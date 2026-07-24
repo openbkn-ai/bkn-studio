@@ -5,30 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import Editor from "@monaco-editor/react";
-
-import styles from "./JsonEditor.module.css";
-
-const EDITOR_OPTIONS = {
-  folding: true,
-  wordWrap: "on" as const,
-  lineHeight: 20,
-  fontSize: 13,
-  automaticLayout: true,
-  renderLineHighlight: "none" as const,
-  scrollBeyondLastLine: false,
-  overviewRulerBorder: false,
-  minimap: { enabled: false },
-  tabSize: 2,
-  scrollbar: {
-    vertical: "auto" as const,
-    horizontal: "auto" as const,
-    verticalScrollbarSize: 8,
-    horizontalScrollbarSize: 8,
-    useShadows: false,
-    alwaysConsumeMouseWheel: false,
-  },
-};
+import { CodeEditor } from "./CodeEditor";
 
 type JsonEditorProps = {
   value?: string;
@@ -44,15 +21,12 @@ export function JsonEditor({
   readOnly = false,
 }: JsonEditorProps) {
   return (
-    <div className={styles.editorBorder}>
-      <Editor
-        defaultLanguage="json"
-        height={height}
-        onChange={(next) => onChange?.(next ?? "")}
-        options={{ ...EDITOR_OPTIONS, readOnly }}
-        theme="vs"
-        value={value}
-      />
-    </div>
+    <CodeEditor
+      height={height}
+      language="json"
+      onChange={onChange}
+      readOnly={readOnly}
+      value={value}
+    />
   );
 }

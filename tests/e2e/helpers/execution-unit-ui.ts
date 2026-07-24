@@ -450,11 +450,10 @@ export async function openToolboxCardMenu(
   await menu.getByRole("menuitem", { name: menuItem }).click();
 }
 
-export async function openToolboxDetailDrawer(page: Page, toolboxName: string) {
+/** 工具箱/MCP/Skill 的「查看」不再中转抽屉，直接落到详情页。 */
+export async function openToolboxToolsPageFromCardMenu(page: Page, toolboxName: string) {
   await openToolboxCardMenu(page, toolboxName, "查看");
-  const drawer = page.locator(".ant-drawer").first();
-  await expect(drawer.getByText(/工具箱详情|Toolbox Detail/i)).toBeVisible();
-  return drawer;
+  await expect(page).toHaveURL(/\/execution-factory\/toolboxes\/[^/]+\/tools/);
 }
 
 export async function openCardMenu(
@@ -469,11 +468,19 @@ export async function openCardMenu(
   await menu.getByRole("menuitem", { name: menuItem }).click();
 }
 
+/** 算子没有独立详情页，点卡片仍开抽屉。 */
 export async function openDetailDrawerByCardClick(page: Page, name: string) {
   await executionUnitCard(page, name).click();
   const drawer = page.locator('.ant-drawer, [role="dialog"]').first();
   await expect(drawer).toBeVisible();
   return drawer;
+}
+
+/** 工具箱/MCP/Skill 点卡片直接进详情页。 */
+export async function openDetailPageByCardClick(page: Page, name: string, urlPattern: RegExp) {
+  await executionUnitCard(page, name).click();
+  await expect(page).toHaveURL(urlPattern);
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
 
 export async function closeImportOrOverlay(page: Page) {
@@ -763,8 +770,8 @@ export async function openOperatorVersionHistoryDrawer(page: Page, name: string)
 }
 
 export async function openSkillReleaseHistoryDrawer(page: Page, name: string) {
-  const drawer = await openDetailDrawerByCardClick(page, name);
-  await drawer.getByRole("button", { name: /发布历史|Release history/i }).click();
+  await openDetailPageByCardClick(page, name, /\/execution-factory\/skills\/[^/?]+/);
+  await page.getByRole("button", { name: /发布历史|Release history/i }).click();
   await expect(page.getByText(/发布历史|Release history/i).first()).toBeVisible();
   return page.locator(".ant-drawer").last();
 }

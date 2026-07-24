@@ -1,0 +1,239 @@
+{
+  "parameters": [
+    {
+      "name": "timeout",
+      "in": "query",
+      "description": "函数执行超时时间，单位毫秒",
+      "required": false,
+      "schema": {
+        "description": "函数执行超时时间，单位毫秒",
+        "type": "number"
+      }
+    }
+  ],
+  "request_body": {
+    "description": "函数输入参数",
+    "content": {
+      "application/json": {
+        "schema": {
+          "properties": {
+            "customers": {
+              "description": "候选客户列表",
+              "items": {
+                "description": "单个客户",
+                "properties": {
+                  "amount_1y": {
+                    "description": "近一年金额",
+                    "type": "number"
+                  },
+                  "id": {
+                    "description": "客户唯一标识",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "min_amount": {
+              "description": "金额阈值",
+              "type": "number"
+            }
+          },
+          "required": [
+            "customers"
+          ],
+          "type": "object"
+        }
+      }
+    },
+    "required": true
+  },
+  "responses": [
+    {
+      "status_code": "200",
+      "description": "成功",
+      "content": {
+        "application/json": {
+          "schema": {
+            "properties": {
+              "metrics": {
+                "description": "指标",
+                "properties": {
+                  "cpu_time_ms": {
+                    "description": "CPU 时间（毫秒）",
+                    "type": "number"
+                  },
+                  "duration_ms": {
+                    "description": "执行总耗时（毫秒）",
+                    "type": "number"
+                  },
+                  "memory_peak_mb": {
+                    "description": "峰值内存占用（MB）",
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              },
+              "result": {
+                "description": "Handler 函数返回的业务结果: any or null",
+                "properties": {
+                  "matched": {
+                    "description": "命中客户",
+                    "items": {
+                      "description": "命中项",
+                      "properties": {
+                        "id": {
+                          "description": "id",
+                          "type": "string"
+                        },
+                        "score": {
+                          "description": "价值分",
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "score"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "total": {
+                    "description": "命中数量",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "matched",
+                  "total"
+                ],
+                "type": "object"
+              },
+              "stderr": {
+                "description": "标准错误流内容",
+                "type": "string"
+              },
+              "stdout": {
+                "description": "标准输出流内容",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "status_code": "400",
+      "description": "参数校验失败",
+      "content": {
+        "application/json": {
+          "schema": {
+            "description": "失败详情",
+            "properties": {
+              "code": {
+                "description": "错误码",
+                "type": "string"
+              },
+              "description": {
+                "description": "错误描述",
+                "type": "string"
+              },
+              "detail": {
+                "description": "错误详情",
+                "type": "object"
+              },
+              "link": {
+                "description": "错误链接",
+                "type": "string"
+              },
+              "solution": {
+                "description": "错误解决办法",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "status_code": "404",
+      "description": "资源不存在",
+      "content": {
+        "application/json": {
+          "schema": {
+            "description": "失败详情",
+            "properties": {
+              "code": {
+                "description": "错误码",
+                "type": "string"
+              },
+              "description": {
+                "description": "错误描述",
+                "type": "string"
+              },
+              "detail": {
+                "description": "错误详情",
+                "type": "object"
+              },
+              "link": {
+                "description": "错误链接",
+                "type": "string"
+              },
+              "solution": {
+                "description": "错误解决办法",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "status_code": "500",
+      "description": "函数执行失败",
+      "content": {
+        "application/json": {
+          "schema": {
+            "description": "失败详情",
+            "properties": {
+              "code": {
+                "description": "错误码",
+                "type": "string"
+              },
+              "description": {
+                "description": "错误描述",
+                "type": "string"
+              },
+              "detail": {
+                "description": "错误详情",
+                "type": "object"
+              },
+              "link": {
+                "description": "错误链接",
+                "type": "string"
+              },
+              "solution": {
+                "description": "错误解决办法",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        }
+      }
+    }
+  ],
+  "components": null,
+  "callbacks": null,
+  "security": null,
+  "tags": null,
+  "external_docs": null
+}

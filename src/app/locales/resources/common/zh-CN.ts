@@ -23,6 +23,8 @@ export const commonZhCN = {
     ok: "确定",
     add: "添加",
     remove: "移除",
+    expand: "展开",
+    collapse: "收起",
     id: "ID",
     edit: "编辑",
     detail: "详情",

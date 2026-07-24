@@ -298,11 +298,21 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
         {record ? (
           <div className={styles.pageHeaderActions}>
             {viewMode ? (
-              <PermissionGate permissions="execution-factory:skill:edit">
-                <AppButton onClick={handleEnterEditMode} type="primary">
-                  {t("executionFactory.skillDetailEnterEdit")}
-                </AppButton>
-              </PermissionGate>
+              <>
+                {/* 发布历史原来挂在 Skill 详情抽屉上，卡片改直连本页后在只读态也要够得着；市场态没这套接口。 */}
+                {!catalogContext ? (
+                  <PermissionGate permissions="execution-factory:skill:view">
+                    <AppButton icon={<HistoryOutlined />} onClick={() => setHistoryOpen(true)}>
+                      {t("executionFactory.skillHistoryTitle")}
+                    </AppButton>
+                  </PermissionGate>
+                ) : null}
+                <PermissionGate permissions="execution-factory:skill:edit">
+                  <AppButton onClick={handleEnterEditMode} type="primary">
+                    {t("executionFactory.skillDetailEnterEdit")}
+                  </AppButton>
+                </PermissionGate>
+              </>
             ) : (
               <>
                 <PermissionGate permissions="execution-factory:skill:view">

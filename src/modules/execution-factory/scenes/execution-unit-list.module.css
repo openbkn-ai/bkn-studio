@@ -75,19 +75,20 @@
 
 .filterBar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 20px;
 }
 
-/* 每组筛选独占一行,避免换行时标签与其控件被拆散。 */
+/* 筛选全部是下拉后，排成一行；放不下再整组换行，标签不会和控件被拆散。 */
 .filterLeft {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -95,39 +96,15 @@
 .filterGroup {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  width: 100%;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 .filterLabel {
   flex: 0 0 auto;
-  min-width: 4em;
   color: var(--color-text-secondary);
-  font-size: 14px;
-}
-
-.categoryGroup {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.categoryChip {
-  padding: 4px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 0;
-  background: var(--color-bg-surface);
-  color: var(--color-text-secondary);
-  cursor: pointer;
   font-size: 13px;
-  line-height: 20px;
-}
-
-.categoryChipActive {
-  border-color: var(--color-primary-border);
-  background: var(--color-primary-100);
-  color: var(--color-primary-700);
+  white-space: nowrap;
 }
 
 .filterRight {
@@ -192,4 +169,15 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tabLabelCount {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
 }

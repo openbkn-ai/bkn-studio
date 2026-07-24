@@ -182,6 +182,7 @@ async function fetchToolboxList(
       name: query.keyword || undefined,
       status: query.status,
       category: query.category || undefined,
+      metadata_type: query.metadataType || undefined,
       sort_by: "update_time",
       sort_order: "desc",
     },

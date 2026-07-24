@@ -75,7 +75,8 @@ function toPretty(value: unknown): string | null {
   try {
     return JSON.stringify(value, null, 2);
   } catch {
-    return String(value);
+    // 循环引用等 stringify 不动的值，退回到能显示的粗略形态。
+    return Object.prototype.toString.call(value);
   }
 }
 

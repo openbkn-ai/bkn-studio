@@ -6,7 +6,7 @@
  */
 
 import { Alert, Form, Input, Radio, Result, Spin } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -44,6 +44,8 @@ export function ToolboxFormScene({
   const [loading, setLoading] = useState(mode === "edit");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** 编辑态类型不可改，但保存时必须回传，先在加载时记下来。 */
+  const loadedMetadataTypeRef = useRef<ToolboxMetadataType | undefined>(undefined);
   const metadataType = Form.useWatch("metadataType", form) as
     | ToolboxMetadataType
     | undefined;
@@ -63,6 +65,7 @@ export function ToolboxFormScene({
 
       try {
         const record = await getToolbox(boxId);
+        loadedMetadataTypeRef.current = record.metadataType;
         form.setFieldsValue({
           category: record.categoryType ?? record.categoryName,
           description: record.description,
@@ -91,13 +94,20 @@ export function ToolboxFormScene({
       ? t("executionFactory.toolboxCreateDescription")
       : t("executionFactory.toolboxEditDescription");
 
+  /** 工具集列表拆成 API / 函数两个视图，回列表时要落回本工具箱所属的那个。 */
+  const buildListUrl = (metadataType?: ToolboxMetadataType) => {
+    const resolved = metadataType ?? loadedMetadataTypeRef.current;
+    const view = resolved === "function" ? "function" : "openapi";
+    return `/execution-factory/units?activeTab=toolbox&toolboxView=${view}`;
+  };
+
   const handleBack = () => {
     if (onBack) {
       onBack();
       return;
     }
 
-    void navigate("/execution-factory/units?activeTab=toolbox");
+    void navigate(buildListUrl(form.getFieldValue("metadataType") as ToolboxMetadataType));
   };
 
   const handleSubmit = async () => {
@@ -129,6 +139,8 @@ export function ToolboxFormScene({
         await updateToolbox({
           ...values,
           boxId,
+          // 编辑态不渲染类型字段，validateFields 取不到；不带这个值后端会拒 400。
+          metadataType: values.metadataType ?? loadedMetadataTypeRef.current,
         });
       }
 
@@ -139,7 +151,7 @@ export function ToolboxFormScene({
         return;
       }
 
-      void navigate("/execution-factory/units?activeTab=toolbox");
+      void navigate(buildListUrl(values.metadataType));
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {

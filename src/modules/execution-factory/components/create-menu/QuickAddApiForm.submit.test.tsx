@@ -104,6 +104,38 @@ describe("QuickAddApiForm cURL submit", () => {
     expect(document.paths["/post"].post).toBeTruthy();
   });
 
+  /**
+   * 回归:点过「识别接口信息」后 detectedCurlContract 不会随输入框失效,而它会整体覆盖
+   * method/serverUrl/path/parameters/requestBody。旧实现提交时只在「从没识别过」才重解析,
+   * 于是识别 A 再改成 B 提交,会静默按 A 建工具,界面上却是 B。
+   */
+  it("re-parses on submit when the cURL changed after 识别接口信息 was clicked", async () => {
+    const onSubmit = vi.fn();
+    const ref = renderForm(onSubmit);
+
+    fillRequiredFields(SCREENSHOT_CURL);
+    fireEvent.click(screen.getAllByText("executionFactory.quickApiParseAction")[0]);
+
+    // 识别之后再把命令换成另一个 host/path/method。
+    fillField("curlText", "curl -X PUT https://beta.example.com/two");
+    ref.current?.submit();
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = onSubmit.mock.calls[0][0] as { openapiSpec: string };
+    const document = JSON.parse(payload.openapiSpec) as {
+      servers: Array<{ url: string }>;
+      paths: Record<string, Record<string, unknown>>;
+    };
+
+    expect(document.servers[0].url).toBe("https://beta.example.com");
+    expect(Object.keys(document.paths)).toEqual(["/two"]);
+    expect(document.paths["/two"].put).toBeTruthy();
+    expect(document.paths["/two"].post).toBeFalsy();
+  });
+
   it("reports the concrete parse reason instead of the generic build failure", async () => {
     const onSubmit = vi.fn();
     const ref = renderForm(onSubmit);
