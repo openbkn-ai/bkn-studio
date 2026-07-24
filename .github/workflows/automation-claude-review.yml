@@ -49,15 +49,19 @@ on:
         type: string
 
 concurrency:
-  # 按事件类别分组，别把评论事件和 PR 推送混在一组。
-  # claude-code-action（track_progress）在评审跑到一半时会以 bot 身份贴 tracking
-  # comment，那条 comment 触发 issue_comment:created 又排一个同组 run；若共用一组，
-  # cancel-in-progress 会在 job `if` 过滤掉 bot 评论之前，就把正在跑的评审取消掉
-  # ——评审每次贴进度评论那刻自杀，永远跑不到绿。concurrency 在 run 排队时求值，
-  # 早于 job if，所以只能靠分组隔离，if 拦不住取消。
-  # push 之间仍在 -push 组内互相取消（连续推送省额度）；评论事件落 -comment 组，
-  # 取消不到正在跑的 PR 评审。
-  group: claude-review-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}-${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && 'comment' || 'push' }}
+  # 按事件类别分组，别把评论事件和 PR 推送混在一组。concurrency 在 run 排队时求值，
+  # 早于 job if，所以隔离只能靠分组，if 拦不住取消。
+  #
+  # push（含 opened/synchronize/…）落 -push 组、cancel-in-progress 生效：连续推送时
+  # 新 run 取消未完成的旧 run，省额度。
+  #
+  # 评论事件（issue_comment / pull_request_review_comment）每条按 comment.id 各自成组。
+  # 否则 claude-code-action（track_progress）在评论触发的复评跑到一半时以 bot 身份贴
+  # tracking comment，那条 comment 又触发 issue_comment、排进同一 -comment 组，
+  # cancel-in-progress 在 job if 过滤掉 bot 评论之前就把正在跑的复评取消了——评论触发的
+  # 复评每次贴进度评论那刻自杀（#243 的「作者回帖复评后放行」因此永远补不上 approve）。
+  # 按 comment.id 分组后每条评论各自独立、互不取消，bot 的进度评论也顶不掉正在跑的复评。
+  group: claude-review-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}-${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && format('comment-{0}', github.event.comment.id) || 'push' }}
   cancel-in-progress: true
 
 jobs:
