@@ -302,31 +302,6 @@
   color: var(--txt2);
 }
 
-.driftChip {
-  padding: 2px 9px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.driftLive {
-  background: #fff3e0;
-  color: #b26a00;
-  border: 1px solid #ffd699;
-}
-
-.driftOurs {
-  background: #fde7ec;
-  color: #b4254a;
-  border: 1px solid #f7b8c7;
-}
-
-.driftOk {
-  background: #e6f7ee;
-  color: #1a7f4b;
-  border: 1px solid #b6e6cd;
-}
-
 .toolList {
   display: flex;
   flex-direction: column;
