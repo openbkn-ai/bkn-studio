@@ -22,7 +22,7 @@ vi.mock("react-router-dom", () => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn() },
+    message: { destroy: vi.fn(), error: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn() },
     modal: { confirm: vi.fn() },
     runtimeConfig: {
       currentUser: {
