@@ -89,6 +89,10 @@ function createParameterId() {
   return `param-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function asOptionalString(value: unknown) {
+  return typeof value === "string" ? value : undefined;
+}
+
 export function ObjectTypeLogicAttributeEditDrawer({
   allData,
   attrInfo,
@@ -112,6 +116,8 @@ export function ObjectTypeLogicAttributeEditDrawer({
   const optionsRequestIdRef = useRef(0);
   const isDisplayNameManuallyEdited = useRef(false);
   const isAddMode = !attrInfo?.name;
+  const getStringFieldValue = (name: keyof LogicAttributeFormValues) =>
+    asOptionalString(form.getFieldValue(name));
 
   const logicAttributeTypeOptions = useMemo(
     () =>
@@ -623,7 +629,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
                   onClick={() => setToolSelectorOpen(true)}
                   placeholder={t("knowledgeNetwork.objectTypeLogicToolSelect")}
                   readOnly
-                  value={form.getFieldValue("resourceName")}
+                  value={getStringFieldValue("resourceName")}
                 />
               </Form.Item>
             ) : (
@@ -726,11 +732,11 @@ export function ObjectTypeLogicAttributeEditDrawer({
         onConfirm={(_source, selection) => void handleToolSelect(selection)}
         open={toolSelectorOpen}
         value={
-          type === "tool" && form.getFieldValue("toolId")
+          type === "tool" && getStringFieldValue("toolId")
             ? {
-                boxId: form.getFieldValue("boxId"),
-                toolId: form.getFieldValue("toolId"),
-                toolName: form.getFieldValue("resourceName"),
+                boxId: getStringFieldValue("boxId"),
+                toolId: getStringFieldValue("toolId") ?? "",
+                toolName: getStringFieldValue("resourceName"),
                 type: "tool",
               }
             : undefined

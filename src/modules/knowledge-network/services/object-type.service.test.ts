@@ -106,23 +106,26 @@ describe("object-type.service · validateKnowledgeNetworkObjectType", () => {
 
     expect(postMock).toHaveBeenCalledWith(
       "/bkn-backend/v1/knowledge-networks/kn-1/object-types/validation",
-      expect.objectContaining({
-        entries: [
-          expect.objectContaining({
-            logic_properties: [
-              expect.objectContaining({
-                data_source: expect.objectContaining({
-                  box_id: "box-1",
-                  name: "Weather",
-                  result_path: "$.data.temperature",
-                  tool_id: "tool-1",
-                  type: "tool",
-                }),
-              }),
-            ],
-          }),
-        ],
-      }),
+      expect.any(Object),
     );
+    const firstCall: unknown = postMock.mock.calls[0];
+    expect(Array.isArray(firstCall)).toBe(true);
+    const [, payload] = firstCall as [
+      string,
+      {
+        entries?: Array<{
+          logic_properties?: Array<{
+            data_source?: unknown;
+          }>;
+        }>;
+      },
+    ];
+    expect(payload.entries?.[0]?.logic_properties?.[0]?.data_source).toEqual({
+      box_id: "box-1",
+      name: "Weather",
+      result_path: "$.data.temperature",
+      tool_id: "tool-1",
+      type: "tool",
+    });
   });
 });
