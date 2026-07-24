@@ -127,6 +127,34 @@ describe("FunctionWorkbenchScene status wiring", () => {
     expect(updateToolStatus).toHaveBeenCalledWith("box-1", ["tool-new"], "enabled");
   });
 
+  /**
+   * 回归:createTool 成功、updateToolStatus 失败时,本地状态必须拉回 disabled 与服务端
+   * 对齐。旧实现 finally 照常清 dirty、本地停在「已启用」,服务端却是 disabled,重试跳过
+   * 这项、再发布就成了「已发布但 Agent 调不到」的静默漂移。
+   */
+  it("pulls a newly created function back to disabled when the enable call fails", async () => {
+    updateToolStatus.mockRejectedValue(new Error("enable boom"));
+
+    render(<FunctionWorkbenchScene boxId="box-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("executionFactory.workbenchFunctionList")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText("common.save"));
+
+    await waitFor(() => {
+      expect(updateToolStatus).toHaveBeenCalledWith("box-1", ["tool-new"], "enabled");
+    });
+
+    // 启用失败后本地必须显示 disabled（与后端一致），而不是停在「已启用」。
+    await waitFor(() => {
+      expect(screen.getByText("executionFactory.workbenchDisabledBanner")).toBeTruthy();
+    });
+    // 不能对同一个函数重复建库。
+    expect(createTool).toHaveBeenCalledTimes(1);
+  });
+
   it("marks a disabled function in the rail so it is visible without opening it", async () => {
     listTools.mockResolvedValue({
       items: [{ toolId: "tool-1", name: "off_fn", status: "disabled" }],

@@ -360,7 +360,11 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   };
 
   const persistFunction = useCallback(
-    async (item: WorkbenchFunction, onCreated?: (toolId: string) => void) => {
+    async (
+      item: WorkbenchFunction,
+      onCreated?: (toolId: string) => void,
+      onEnableFailed?: (toolId: string) => void,
+    ) => {
       const functionInput = {
         code: item.code,
         description: item.description,
@@ -403,7 +407,16 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       // 后端建工具一律落 disabled，而 execute 只放行 enabled（execute.go:142）。
       // 不在这里扳回来的话，新写的函数发布了 Agent 也调不到。
       if (item.status === "enabled") {
-        await updateToolStatus(boxId, [createdId], "enabled");
+        try {
+          await updateToolStatus(boxId, [createdId], "enabled");
+        } catch (error) {
+          // 建库成功、启用失败：服务端此刻仍是创建时的 disabled。通知调用方把本地状态
+          // 拉回 disabled 与后端对齐——否则 finally 会照常清掉 dirty，本地停在「已启用」、
+          // 服务端却是 disabled，重试跳过这项、再发布就成了「已发布但 Agent 调不到」。
+          // 错误照抛：保存整体报错、停批。
+          onEnableFailed?.(createdId);
+          throw error;
+        }
       }
 
       return createdId;
@@ -439,7 +452,10 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     // 保存期间编辑器并不上锁,用户还能改代码、还能新建函数。所以不能拿点击那一刻的
     // functions 快照整体 setFunctions 覆盖回去——那会连同这期间的改动和 dirty 标记
     // 一起抹掉。改成按 key 把「这一轮真落库了的项」合并进最新 state。
-    const persisted = new Map<string, { snapshot: WorkbenchFunction; toolId: string }>();
+    const persisted = new Map<
+      string,
+      { snapshot: WorkbenchFunction; statusOverride?: ToolStatus; toolId: string }
+    >();
 
     // 中途抛错也必须把已经建好的 toolId 写回去:createTool 那几项其实已经落库了,
     // state 里还留着 toolId: undefined 的话,用户重试会对同一个函数再建一遍——
@@ -463,6 +479,9 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
             dirty: !isSamePersistedContent(item, hit.snapshot),
             key: hit.toolId,
             toolId: hit.toolId,
+            // 启用失败的项：把本地状态拉回服务端真实值（disabled），成功项不动，避免
+            // 覆盖保存期间用户对其它项的并发切换。
+            ...(hit.statusOverride ? { status: hit.statusOverride } : {}),
           };
         }),
       );
@@ -475,9 +494,20 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
           continue;
         }
 
-        const toolId = await persistFunction(item, (createdId) => {
-          persisted.set(item.key, { snapshot: item, toolId: createdId });
-        });
+        const toolId = await persistFunction(
+          item,
+          (createdId) => {
+            persisted.set(item.key, { snapshot: item, toolId: createdId });
+          },
+          (createdId) => {
+            // 建库成功、启用失败：记下 toolId 防重建，同时按 disabled 落库与后端对齐。
+            persisted.set(item.key, {
+              snapshot: item,
+              statusOverride: "disabled",
+              toolId: createdId,
+            });
+          },
+        );
         persisted.set(item.key, { snapshot: item, toolId });
       }
     } finally {

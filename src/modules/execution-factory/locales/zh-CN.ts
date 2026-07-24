@@ -820,7 +820,7 @@ export const executionFactoryZhCN = {
     workbenchConsoleNote: "运行的是当前编辑框代码 · 临时、不落库",
     workbenchConsoleEmpty: "填入测试入参后点「运行」，此处显示返回值 / stdout / stderr / 指标。",
     workbenchRun: "运行",
-    workbenchRunShortcut: "运行当前代码（⌘ / Ctrl + Enter）",
+    workbenchRunShortcut: "运行当前代码",
     workbenchEventCaption: "测试入参",
     workbenchEventAuto: "按已声明的输入参数生成，可直接改",
     workbenchEventFill: "按参数重新生成",

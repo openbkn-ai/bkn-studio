@@ -235,6 +235,11 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   }, [boxId, catalogContext, loadTools, message, modal, t]);
 
   const handleBatchStatus = (nextStatus: ToolStatus) => {
+    // 市场预览态只读：批量 UI 靠 viewMode 隐藏进不去，写侧闸仍落在 handler 里，
+    // 与 handleToggleStatus 同口径，别只靠渲染层。
+    if (catalogContext) {
+      return;
+    }
     if (selectedToolIds.length === 0) {
       return;
     }
@@ -256,6 +261,10 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   };
 
   const handleBatchDelete = () => {
+    // 市场预览态只读：同上，写侧闸落在 handler，不只靠渲染层门禁。
+    if (catalogContext) {
+      return;
+    }
     if (selectedToolIds.length === 0) {
       return;
     }

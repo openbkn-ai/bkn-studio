@@ -839,7 +839,7 @@ export const executionFactoryEnUS = {
     workbenchConsoleEmpty:
       "Fill in the test event and hit Run to see the return value, stdout, stderr, and metrics.",
     workbenchRun: "Run",
-    workbenchRunShortcut: "Run the current code (⌘ / Ctrl + Enter)",
+    workbenchRunShortcut: "Run the current code",
     workbenchEventCaption: "Test input",
     workbenchEventAuto: "Generated from the declared inputs — edit freely",
     workbenchEventFill: "Regenerate from inputs",
