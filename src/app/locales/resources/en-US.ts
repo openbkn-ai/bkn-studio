@@ -11,6 +11,7 @@ import { commonEnUS } from "@/app/locales/resources/common/en-US";
 import { shellEnUS } from "@/app/locales/resources/shell/en-US";
 import { accountEnUS } from "@/modules/account/locales/en-US";
 import { apiKeysEnUS } from "@/modules/api-keys/locales/en-US";
+import { bknTraceEnUS } from "@/modules/bkn-trace/locales/en-US";
 import { dataCatalogEnUS } from "@/modules/data-catalog/locales/en-US";
 import { dataConnectEnUS } from "@/modules/data-connect/locales/en-US";
 import { executionFactoryLabEnUS } from "@/modules/execution-factory-lab/locales/en-US";
@@ -32,5 +33,6 @@ export const enUS = {
   ...executionFactoryLabEnUS,
   ...systemAdminEnUS,
   ...apiKeysEnUS,
+  ...bknTraceEnUS,
   ...accountEnUS,
 } as const;
