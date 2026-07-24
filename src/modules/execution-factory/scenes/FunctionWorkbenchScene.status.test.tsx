@@ -22,7 +22,7 @@ vi.mock("react-router-dom", () => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
+    message: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn() },
     modal: { confirm: vi.fn() },
     runtimeConfig: {
       currentUser: {
@@ -207,5 +207,49 @@ describe("FunctionWorkbenchScene status wiring", () => {
       expect(screen.queryByDisplayValue(/numbers/)).toBeNull();
     });
     expect(screen.getByDisplayValue("{}")).toBeTruthy();
+  });
+
+  /**
+   * 回归:沙箱基础镜像不预装任何三方库,依赖必须跟着这次执行一起发过去。旧实现只发
+   * code/event/timeout,于是声明了三方包的函数在调试里必 ModuleNotFoundError,而保存
+   * 发布后 Agent 那条路径是从库里读依赖装的、反而跑得通,用户只会以为自己代码写错了。
+   */
+  it("sends the declared pip dependencies along with the debug run", async () => {
+    listTools.mockResolvedValue({
+      items: [{ toolId: "tool-1", name: "fetch_fn", status: "enabled" }],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      boxId: "box-1",
+    });
+    getToolDetail.mockResolvedValue({
+      toolId: "tool-1",
+      name: "fetch_fn",
+      description: "desc",
+      status: "enabled",
+      functionInput: {
+        code: "import requests\n\ndef handler(event):\n    return {}\n",
+        dependencies: [{ name: "requests", version: "2.31.0" }],
+        inputs: [],
+        outputs: [],
+      },
+    });
+    vi.mocked(inferFunctionSchema).mockResolvedValue({ supported: true });
+    vi.mocked(executeFunction).mockResolvedValue({ output: {}, stdout: "", stderr: "" });
+
+    render(<FunctionWorkbenchScene boxId="box-1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("fetch_fn").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByText("executionFactory.workbenchRun"));
+
+    await waitFor(() => {
+      expect(executeFunction).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(executeFunction).mock.calls[0][0].dependencies).toEqual([
+      { name: "requests", version: "2.31.0" },
+    ]);
   });
 });

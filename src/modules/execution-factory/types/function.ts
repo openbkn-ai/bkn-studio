@@ -9,6 +9,12 @@ import type { FunctionParameterDef } from "@/modules/execution-factory/types/fun
 
 export type FunctionExecuteInput = {
   code: string;
+  /**
+   * 调试运行要装的 pip 依赖。沙箱基础镜像不预装任何三方库，不带这个字段的话，
+   * 凡是 import 了三方包的函数在调试里必 ModuleNotFoundError——而保存发布后
+   * Agent 那条路径是从库里读依赖装的，能跑通，两边行为会对不上。
+   */
+  dependencies?: Array<{ name?: string; version?: string }>;
   event?: Record<string, unknown>;
   timeout?: number;
 };

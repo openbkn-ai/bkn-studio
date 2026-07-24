@@ -791,6 +791,7 @@ export const executionFactoryZhCN = {
     workbenchDeleteFunctionConfirmTitle: "删除函数",
     workbenchDeleteFunctionConfirmContent:
       '确定删除函数"{{name}}"吗？删除后不可恢复，正在使用它的 Agent 将无法再调用。',
+    workbenchInstallingDependencies: "正在沙箱里安装依赖，首次安装大包可能要等一会儿…",
     workbenchLeaveConfirmTitle: "放弃未保存的改动？",
     workbenchLeaveConfirmDescription:
       "当前有未保存的函数改动。草稿只存在浏览器里，离开后这些代码和参数会直接丢失，无法恢复。",

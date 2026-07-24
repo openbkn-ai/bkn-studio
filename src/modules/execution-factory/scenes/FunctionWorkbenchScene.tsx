@@ -823,7 +823,18 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         event = JSON.parse(payloadText) as Record<string, unknown>;
       }
 
-      const result = await executeFunction({ code: active.code, event });
+      // 依赖得跟着这次执行一起发过去：沙箱镜像不预装三方库，而保存后 Agent 那条
+      // 路径是从库里读依赖装的。这里不带的话就会出现"调试报 ModuleNotFoundError、
+      // 发布后反而能跑"，用户只会以为自己函数写错了。
+      if (active.dependencies.some((item) => item.name?.trim())) {
+        void message.info(t("executionFactory.workbenchInstallingDependencies"));
+      }
+
+      const result = await executeFunction({
+        code: active.code,
+        dependencies: active.dependencies,
+        event,
+      });
       setRunResult(result);
       setOutTab(result.error ? "stderr" : "result");
     } catch (error) {

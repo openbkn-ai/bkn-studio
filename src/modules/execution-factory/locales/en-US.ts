@@ -809,6 +809,8 @@ export const executionFactoryEnUS = {
     workbenchDeleteFunctionConfirmTitle: "Delete Function",
     workbenchDeleteFunctionConfirmContent:
       'Delete function "{{name}}"? This cannot be undone, and agents using it will no longer be able to call it.',
+    workbenchInstallingDependencies:
+      "Installing dependencies in the sandbox — the first install of a large package can take a while…",
     workbenchLeaveConfirmTitle: "Discard unsaved changes?",
     workbenchLeaveConfirmDescription:
       "You have unsaved function changes. Drafts live only in this browser — leaving now discards that code and those parameters for good.",

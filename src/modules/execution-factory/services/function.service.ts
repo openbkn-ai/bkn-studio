@@ -28,6 +28,12 @@ function getBusinessDomainHeaders() {
   return { "x-business-domain": businessDomainId };
 }
 
+/**
+ * 沙箱控制面装依赖默认给 300s，这里留一点余量。只在真带依赖时才用这个超时，
+ * 不带依赖的普通执行仍走 http 默认值，免得写错代码的函数把人干等着。
+ */
+const DEPENDENCY_INSTALL_TIMEOUT_MS = 330_000;
+
 export async function executeFunction(
   input: FunctionExecuteInput,
 ): Promise<FunctionExecuteResult> {
@@ -38,14 +44,32 @@ export async function executeFunction(
     };
   }
 
+  // 名字为空的行是面板上还没填完的占位，带上去后端会直接 400（包名只允许
+  // [a-zA-Z0-9._-]）。版本留空表示装最新，得整个省略而不是发空串——发 ""
+  // 会被拼成 `name==`，同样是非法 pip spec。
+  const dependencies = (input.dependencies ?? [])
+    .map((item) => ({
+      name: item.name?.trim() ?? "",
+      ...(item.version?.trim() ? { version: item.version.trim() } : {}),
+    }))
+    .filter((item) => item.name.length > 0);
+
   const response = await http.post<BackendFunctionExecute>(
     `${API_PREFIX}/function/execute`,
     {
       code: input.code,
       event: input.event,
       timeout: input.timeout,
+      // dependencies_url 不传：后端有默认值（pypi 官方源），与
+      // listDependencyVersions 查版本时用的源保持一致，免得"查到的版本装不上"。
+      ...(dependencies.length > 0 ? { dependencies } : {}),
     },
-    { headers: getBusinessDomainHeaders() },
+    {
+      headers: getBusinessDomainHeaders(),
+      // 带依赖的执行要先在沙箱里 pip install，控制面那头默认给到 300s，而 http
+      // 默认超时只有 15s。不放宽的话装个 pandas 必定前端先超时，依赖白传。
+      ...(dependencies.length > 0 ? { timeout: DEPENDENCY_INSTALL_TIMEOUT_MS } : {}),
+    },
   );
 
   return mapFunctionExecuteResult(response.data);
