@@ -197,6 +197,6 @@ describe("ImportOpenApiCapabilityForm", () => {
       await screen.findByText("Document has no servers; use Service URL."),
     ).toBeTruthy();
     expect(screen.queryByDisplayValue("https://first.example.com")).toBeNull();
-    expect((screen.getByLabelText("Service URL") as HTMLInputElement).value).toBe("");
+    expect(screen.getByLabelText("Service URL")).toHaveProperty("value", "");
   });
 });
