@@ -10,32 +10,32 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { getDataConnectScanTask } from "@/modules/data-connect/services/scan.service";
+import { getDataConnectDiscoverTask } from "@/modules/data-connect/services/discover.service";
 import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 import type {
-  DataConnectScanSchedule,
-  DataConnectScanTask,
-} from "@/modules/data-connect/types/scan";
+  DataConnectDiscoverSchedule,
+  DataConnectDiscoverTask,
+} from "@/modules/data-connect/types/discover";
 
-import styles from "./DataConnectScanTaskDrawer.module.css";
+import styles from "./DataConnectDiscoverTaskDrawer.module.css";
 
-type DataConnectScanTaskDrawerProps = {
+type DataConnectDiscoverTaskDrawerProps = {
   catalogs: DataConnectRecord[];
   onClose: () => void;
   open: boolean;
-  schedules: DataConnectScanSchedule[];
+  schedules: DataConnectDiscoverSchedule[];
   taskId: string;
 };
 
-export function DataConnectScanTaskDrawer({
+export function DataConnectDiscoverTaskDrawer({
   catalogs,
   onClose,
   open,
   schedules,
   taskId,
-}: DataConnectScanTaskDrawerProps) {
+}: DataConnectDiscoverTaskDrawerProps) {
   const { t } = useTranslation();
-  const [task, setTask] = useState<DataConnectScanTask | null>(null);
+  const [task, setTask] = useState<DataConnectDiscoverTask | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -50,7 +50,7 @@ export function DataConnectScanTaskDrawer({
       setTask(null);
 
       try {
-        setTask(await getDataConnectScanTask(taskId));
+        setTask(await getDataConnectDiscoverTask(taskId));
       } catch (error) {
         setLoadError(extractRequestErrorMessage(error));
       } finally {
@@ -66,7 +66,7 @@ export function DataConnectScanTaskDrawer({
   const scheduleName = task?.scheduleId
     ? (schedules.find((item) => item.id === task.scheduleId)?.name ??
       task.scheduleId)
-    : t("dataConnect.scanManualTask");
+    : t("dataConnect.discoverManualTask");
 
   return (
     <Drawer
@@ -79,7 +79,7 @@ export function DataConnectScanTaskDrawer({
         body: { padding: 16 },
         header: { padding: "12px 16px" },
       }}
-      title={t("dataConnect.scanTaskDetailTitle")}
+      title={t("dataConnect.discoverTaskDetailTitle")}
       width={520}
     >
       {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
@@ -90,28 +90,28 @@ export function DataConnectScanTaskDrawer({
         <div className={styles.content}>
           <section className={styles.headerCard}>
             <div className={styles.headerRow}>
-              <span className={styles.headerLabel}>{t("dataConnect.scanScheduleName")}</span>
+              <span className={styles.headerLabel}>{t("dataConnect.discoverScheduleName")}</span>
               <span className={styles.headerValue}>{scheduleName}</span>
             </div>
             <div className={styles.headerRow}>
-              <span className={styles.headerLabel}>{t("dataConnect.scanCatalog")}</span>
+              <span className={styles.headerLabel}>{t("dataConnect.discoverCatalog")}</span>
               <span className={styles.headerValue}>{catalogName}</span>
             </div>
             <div className={styles.headerMeta}>
               <div className={styles.headerRow}>
-                <span className={styles.headerLabel}>{t("dataConnect.scanTaskStatus")}</span>
+                <span className={styles.headerLabel}>{t("dataConnect.discoverTaskStatus")}</span>
                 <span className={styles.headerValue}>
-                  {t(`dataConnect.scanTaskStatuses.${task.status}`)}
+                  {t(`dataConnect.discoverTaskStatuses.${task.status}`)}
                 </span>
               </div>
               <div className={styles.headerRow}>
-                <span className={styles.headerLabel}>{t("dataConnect.scanTriggerType")}</span>
+                <span className={styles.headerLabel}>{t("dataConnect.discoverTriggerType")}</span>
                 <span className={styles.headerValue}>
-                  {t(`dataConnect.scanTriggerTypes.${task.triggerType}`)}
+                  {t(`dataConnect.discoverTriggerTypes.${task.triggerType}`)}
                 </span>
               </div>
               <div className={styles.headerRow}>
-                <span className={styles.headerLabel}>{t("dataConnect.scanProgress")}</span>
+                <span className={styles.headerLabel}>{t("dataConnect.discoverProgress")}</span>
                 <span className={styles.headerValue}>{task.progress}%</span>
               </div>
             </div>
@@ -121,15 +121,15 @@ export function DataConnectScanTaskDrawer({
             <div className={styles.detailGrid}>
               <DetailItem label="ID" value={task.id} />
               <DetailItem
-                label={t("dataConnect.scanStrategy")}
-                value={t(`dataConnect.scanStrategies.${task.strategy}`)}
+                label={t("dataConnect.discoverStrategy")}
+                value={t(`dataConnect.discoverStrategies.${task.strategy}`)}
               />
               <DetailItem
-                label={t("dataConnect.scanStartTime")}
+                label={t("dataConnect.discoverStartTime")}
                 value={task.startTime || "-"}
               />
               <DetailItem
-                label={t("dataConnect.scanFinishTime")}
+                label={t("dataConnect.discoverFinishTime")}
                 value={task.finishTime || "-"}
               />
               <DetailItem
@@ -142,7 +142,7 @@ export function DataConnectScanTaskDrawer({
               />
               <DetailItem
                 full
-                label={t("dataConnect.scanMessage")}
+                label={t("dataConnect.discoverMessage")}
                 value={task.message || "-"}
               />
             </div>

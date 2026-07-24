@@ -8,17 +8,17 @@
 import { http } from "@/framework/request/http";
 import { postCatalogDiscover } from "@/shared/catalog";
 import type {
-  DataConnectScanSchedule,
-  DataConnectScanScheduleListQuery,
-  DataConnectScanScheduleListResult,
-  DataConnectScanSchedulePayload,
-  DataConnectScanStrategy,
-  DataConnectScanTask,
-  DataConnectScanTaskListQuery,
-  DataConnectScanTaskListResult,
-  DataConnectScanTaskStatus,
-  DataConnectScanTaskTriggerType,
-} from "@/modules/data-connect/types/scan";
+  DataConnectDiscoverSchedule,
+  DataConnectDiscoverScheduleListQuery,
+  DataConnectDiscoverScheduleListResult,
+  DataConnectDiscoverSchedulePayload,
+  DataConnectDiscoverStrategy,
+  DataConnectDiscoverTask,
+  DataConnectDiscoverTaskListQuery,
+  DataConnectDiscoverTaskListResult,
+  DataConnectDiscoverTaskStatus,
+  DataConnectDiscoverTaskTriggerType,
+} from "@/modules/data-connect/types/discover";
 
 type BackendAccountInfo = {
   id?: string | null;
@@ -64,9 +64,9 @@ type ListResponse<T> = {
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
-let mockSchedules: DataConnectScanSchedule[] = [
+let mockSchedules: DataConnectDiscoverSchedule[] = [
   {
-    id: "scan-schedule-001",
+    id: "discover-schedule-001",
     name: "客户主数据每日同步",
     catalogId: "cat-001",
     cronExpr: "0 2 * * *",
@@ -82,8 +82,8 @@ let mockSchedules: DataConnectScanSchedule[] = [
     updateTime: "2026-06-03 02:00:11",
   },
   {
-    id: "scan-schedule-002",
-    name: "知识索引增量扫描",
+    id: "discover-schedule-002",
+    name: "知识索引增量探查",
     catalogId: "cat-002",
     cronExpr: "*/30 * * * *",
     startTime: "2026-06-02 09:00:00",
@@ -98,7 +98,7 @@ let mockSchedules: DataConnectScanSchedule[] = [
     updateTime: "2026-06-03 11:30:08",
   },
   {
-    id: "scan-schedule-003",
+    id: "discover-schedule-003",
     name: "财务数仓清理任务",
     catalogId: "cat-003",
     cronExpr: "0 3 * * 1",
@@ -115,11 +115,11 @@ let mockSchedules: DataConnectScanSchedule[] = [
   },
 ];
 
-let mockTasks: DataConnectScanTask[] = [
+let mockTasks: DataConnectDiscoverTask[] = [
   {
-    id: "scan-task-1001",
+    id: "discover-task-1001",
     catalogId: "cat-001",
-    scheduleId: "scan-schedule-001",
+    scheduleId: "discover-schedule-001",
     strategy: "full_sync",
     triggerType: "scheduled",
     status: "completed",
@@ -131,9 +131,9 @@ let mockTasks: DataConnectScanTask[] = [
     createTime: "2026-06-03 02:00:11",
   },
   {
-    id: "scan-task-1002",
+    id: "discover-task-1002",
     catalogId: "cat-002",
-    scheduleId: "scan-schedule-002",
+    scheduleId: "discover-schedule-002",
     strategy: "create_only",
     triggerType: "scheduled",
     status: "running",
@@ -145,9 +145,9 @@ let mockTasks: DataConnectScanTask[] = [
     createTime: "2026-06-03 11:30:08",
   },
   {
-    id: "scan-task-1003",
+    id: "discover-task-1003",
     catalogId: "cat-003",
-    scheduleId: "scan-schedule-003",
+    scheduleId: "discover-schedule-003",
     strategy: "cleanup_only",
     triggerType: "manual",
     status: "failed",
@@ -183,7 +183,7 @@ function formatTimestamp(value?: number) {
     .replace(/\//g, "-");
 }
 
-function normalizeStrategy(value?: string): DataConnectScanStrategy {
+function normalizeStrategy(value?: string): DataConnectDiscoverStrategy {
   switch (value) {
     case "create_only":
     case "cleanup_only":
@@ -193,7 +193,7 @@ function normalizeStrategy(value?: string): DataConnectScanStrategy {
   }
 }
 
-function normalizeTaskStatus(value?: string): DataConnectScanTaskStatus {
+function normalizeTaskStatus(value?: string): DataConnectDiscoverTaskStatus {
   switch (value) {
     case "running":
     case "completed":
@@ -204,11 +204,11 @@ function normalizeTaskStatus(value?: string): DataConnectScanTaskStatus {
   }
 }
 
-function normalizeTriggerType(value?: string): DataConnectScanTaskTriggerType {
+function normalizeTriggerType(value?: string): DataConnectDiscoverTaskTriggerType {
   return value === "scheduled" ? "scheduled" : "manual";
 }
 
-function mapSchedule(item: BackendDiscoverSchedule): DataConnectScanSchedule {
+function mapSchedule(item: BackendDiscoverSchedule): DataConnectDiscoverSchedule {
   return {
     id: item.id,
     name: item.name,
@@ -231,7 +231,7 @@ function mapSchedule(item: BackendDiscoverSchedule): DataConnectScanSchedule {
   };
 }
 
-function mapTask(item: BackendDiscoverTask): DataConnectScanTask {
+function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
   return {
     id: item.id,
     catalogId: item.catalog_id,
@@ -251,8 +251,8 @@ function mapTask(item: BackendDiscoverTask): DataConnectScanTask {
 }
 
 function filterSchedules(
-  items: DataConnectScanSchedule[],
-  query: DataConnectScanScheduleListQuery,
+  items: DataConnectDiscoverSchedule[],
+  query: DataConnectDiscoverScheduleListQuery,
 ) {
   const keyword = query.keyword.trim().toLowerCase();
 
@@ -267,7 +267,7 @@ function filterSchedules(
   });
 }
 
-function filterTasks(items: DataConnectScanTask[], query: DataConnectScanTaskListQuery) {
+function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscoverTaskListQuery) {
   const filtered = items.filter((item) => {
     const matchesCatalog = !query.catalogId || item.catalogId === query.catalogId;
     const matchesSchedule =
@@ -290,13 +290,13 @@ function filterTasks(items: DataConnectScanTask[], query: DataConnectScanTaskLis
     return filtered.sort((left, right) => rank[left.status] - rank[right.status] || right.createTime.localeCompare(left.createTime));
   }
   const direction = query.direction === "asc" ? 1 : -1;
-  const valueOf = (item: DataConnectScanTask) => item.createTime;
+  const valueOf = (item: DataConnectDiscoverTask) => item.createTime;
   return filtered.sort((left, right) => (valueOf(left) > valueOf(right) ? direction : valueOf(left) < valueOf(right) ? -direction : 0));
 }
 
-export async function listDataConnectScanSchedules(
-  query: DataConnectScanScheduleListQuery,
-): Promise<DataConnectScanScheduleListResult> {
+export async function listDataConnectDiscoverSchedules(
+  query: DataConnectDiscoverScheduleListQuery,
+): Promise<DataConnectDiscoverScheduleListResult> {
   if (useMock) {
     const filtered = filterSchedules(mockSchedules, query);
     const startIndex = (query.page - 1) * query.pageSize;
@@ -328,7 +328,7 @@ export async function listDataConnectScanSchedules(
   };
 }
 
-export async function getDataConnectScanSchedule(id: string) {
+export async function getDataConnectDiscoverSchedule(id: string) {
   if (useMock) {
     return wait(mockSchedules.find((item) => item.id === id) ?? null);
   }
@@ -340,8 +340,8 @@ export async function getDataConnectScanSchedule(id: string) {
   return mapSchedule(response.data);
 }
 
-export async function createDataConnectScanSchedule(
-  input: DataConnectScanSchedulePayload,
+export async function createDataConnectDiscoverSchedule(
+  input: DataConnectDiscoverSchedulePayload,
 ) {
   if (useMock) {
     const now = Date.now();
@@ -381,9 +381,9 @@ export async function createDataConnectScanSchedule(
   });
 }
 
-export async function updateDataConnectScanSchedule(
+export async function updateDataConnectDiscoverSchedule(
   id: string,
-  input: DataConnectScanSchedulePayload,
+  input: DataConnectDiscoverSchedulePayload,
 ) {
   if (useMock) {
     mockSchedules = mockSchedules.map((item) =>
@@ -416,7 +416,7 @@ export async function updateDataConnectScanSchedule(
   });
 }
 
-export async function setDataConnectScanScheduleEnabled(
+export async function setDataConnectDiscoverScheduleEnabled(
   id: string,
   enabled: boolean,
 ) {
@@ -439,7 +439,7 @@ export async function setDataConnectScanScheduleEnabled(
   );
 }
 
-export async function deleteDataConnectScanSchedule(id: string) {
+export async function deleteDataConnectDiscoverSchedule(id: string) {
   if (useMock) {
     mockSchedules = mockSchedules.filter((item) => item.id !== id);
     mockTasks = mockTasks.filter((item) => item.scheduleId !== id);
@@ -450,9 +450,9 @@ export async function deleteDataConnectScanSchedule(id: string) {
   await http.delete(`/vega-backend/v1/discover-schedules/${id}`);
 }
 
-export async function listDataConnectScanTasks(
-  query: DataConnectScanTaskListQuery,
-): Promise<DataConnectScanTaskListResult> {
+export async function listDataConnectDiscoverTasks(
+  query: DataConnectDiscoverTaskListQuery,
+): Promise<DataConnectDiscoverTaskListResult> {
   if (useMock) {
     const filtered = filterTasks(mockTasks, query);
     const startIndex = (query.page - 1) * query.pageSize;
@@ -486,7 +486,7 @@ export async function listDataConnectScanTasks(
   };
 }
 
-export async function getDataConnectScanTask(id: string) {
+export async function getDataConnectDiscoverTask(id: string) {
   if (useMock) {
     return wait(mockTasks.find((item) => item.id === id) ?? null);
   }
@@ -498,7 +498,7 @@ export async function getDataConnectScanTask(id: string) {
   return mapTask(response.data);
 }
 
-export async function deleteDataConnectScanTask(id: string) {
+export async function deleteDataConnectDiscoverTask(id: string) {
   if (useMock) {
     mockTasks = mockTasks.filter((item) => item.id !== id);
     await wait(undefined);
@@ -510,11 +510,11 @@ export async function deleteDataConnectScanTask(id: string) {
 
 export async function triggerDataConnectDiscover(
   catalogId: string,
-  strategy?: DataConnectScanStrategy,
+  strategy?: DataConnectDiscoverStrategy,
 ) {
   if (useMock) {
     const now = Date.now();
-    const task: DataConnectScanTask = {
+    const task: DataConnectDiscoverTask = {
       id: crypto.randomUUID(),
       catalogId,
       scheduleId: "",
@@ -522,7 +522,7 @@ export async function triggerDataConnectDiscover(
       triggerType: "manual",
       status: "pending",
       progress: 0,
-      message: "手动扫描任务已创建，等待执行。",
+      message: "手动探查任务已创建，等待执行。",
       startTime: formatTimestamp(now),
       startTimeValue: now,
       finishTime: "-",

@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import type { DataConnectScanSceneProps } from "@/modules/data-connect/contracts/scenes";
+import type { DataConnectDiscoverSceneProps } from "@/modules/data-connect/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -24,32 +24,32 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { catalogListPhysicalQuery, listCatalogs } from "@/shared/catalog";
 import {
-  createDataConnectScanSchedule,
-  deleteDataConnectScanTask,
-  deleteDataConnectScanSchedule,
-  getDataConnectScanSchedule,
-  listDataConnectScanSchedules,
-  listDataConnectScanTasks,
-  setDataConnectScanScheduleEnabled,
+  createDataConnectDiscoverSchedule,
+  deleteDataConnectDiscoverTask,
+  deleteDataConnectDiscoverSchedule,
+  getDataConnectDiscoverSchedule,
+  listDataConnectDiscoverSchedules,
+  listDataConnectDiscoverTasks,
+  setDataConnectDiscoverScheduleEnabled,
   triggerDataConnectDiscover,
-  updateDataConnectScanSchedule,
-} from "@/modules/data-connect/services/scan.service";
+  updateDataConnectDiscoverSchedule,
+} from "@/modules/data-connect/services/discover.service";
 import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 import type {
-  DataConnectScanSchedule,
-  DataConnectScanSchedulePayload,
-  DataConnectScanTask,
-  DataConnectScanTaskStatus,
-} from "@/modules/data-connect/types/scan";
+  DataConnectDiscoverSchedule,
+  DataConnectDiscoverSchedulePayload,
+  DataConnectDiscoverTask,
+  DataConnectDiscoverTaskStatus,
+} from "@/modules/data-connect/types/discover";
 import {
-  ScanScheduleFormModal,
-  type ScanScheduleFormModalSubmitPayload,
-} from "@/modules/data-connect/components/ScanScheduleFormModal";
-import { ScanRunNowModal } from "@/modules/data-connect/components/ScanRunNowModal";
-import { DataConnectScanTaskDrawer } from "@/modules/data-connect/components/DataConnectScanTaskDrawer";
+  DiscoverScheduleFormModal,
+  type DiscoverScheduleFormModalSubmitPayload,
+} from "@/modules/data-connect/components/DiscoverScheduleFormModal";
+import { DiscoverRunNowModal } from "@/modules/data-connect/components/DiscoverRunNowModal";
+import { DataConnectDiscoverTaskDrawer } from "@/modules/data-connect/components/DataConnectDiscoverTaskDrawer";
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
 
-import styles from "./DataConnectScanScene.module.css";
+import styles from "./DataConnectDiscoverScene.module.css";
 
 type ScheduleModalState =
   | { mode: "create"; scheduleId?: undefined }
@@ -57,24 +57,24 @@ type ScheduleModalState =
   | null;
 
 type EnabledFilterValue = "all" | "disabled" | "enabled";
-type ScanPageTab = "schedules" | "tasks";
-type TaskStatusFilterValue = "all" | DataConnectScanTaskStatus;
-type TaskTriggerTypeFilterValue = "all" | DataConnectScanTask["triggerType"];
+type DiscoverPageTab = "schedules" | "tasks";
+type TaskStatusFilterValue = "all" | DataConnectDiscoverTaskStatus;
+type TaskTriggerTypeFilterValue = "all" | DataConnectDiscoverTask["triggerType"];
 
 function renderTableTime(value?: string) {
   return <span className={styles.timeText}>{value || "-"}</span>;
 }
 
-export function DataConnectScanScene({
+export function DataConnectDiscoverScene({
   catalogId,
   onBackToConnections,
   onCatalogIdChange,
-}: DataConnectScanSceneProps) {
+}: DataConnectDiscoverSceneProps) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
   const [catalogLocked] = useState(() => Boolean(catalogId));
-  const [activeTab, setActiveTab] = useState<ScanPageTab>("schedules");
+  const [activeTab, setActiveTab] = useState<DiscoverPageTab>("schedules");
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebouncedValue(keyword.trim());
   const [selectedCatalogId, setSelectedCatalogId] = useState<string | undefined>(catalogId);
@@ -85,8 +85,8 @@ export function DataConnectScanScene({
   const [taskTriggerTypeFilter, setTaskTriggerTypeFilter] =
     useState<TaskTriggerTypeFilterValue>("all");
   const [catalogs, setCatalogs] = useState<DataConnectRecord[]>([]);
-  const [schedules, setSchedules] = useState<DataConnectScanSchedule[]>([]);
-  const [tasks, setTasks] = useState<DataConnectScanTask[]>([]);
+  const [schedules, setSchedules] = useState<DataConnectDiscoverSchedule[]>([]);
+  const [tasks, setTasks] = useState<DataConnectDiscoverTask[]>([]);
   const [schedulePage, setSchedulePage] = useState(1);
   const [schedulePageSize, setSchedulePageSize] = useState(10);
   const [scheduleTotal, setScheduleTotal] = useState(0);
@@ -103,7 +103,7 @@ export function DataConnectScanScene({
     useState<ScheduleModalState>(null);
   const [scheduleModalSubmitting, setScheduleModalSubmitting] = useState(false);
   const [editingSchedule, setEditingSchedule] =
-    useState<DataConnectScanSchedule | null>(null);
+    useState<DataConnectDiscoverSchedule | null>(null);
   const [triggeringScheduleId, setTriggeringScheduleId] = useState<string | null>(null);
   const [runNowOpen, setRunNowOpen] = useState(false);
   const [runNowSubmitting, setRunNowSubmitting] = useState(false);
@@ -152,7 +152,7 @@ export function DataConnectScanScene({
     setScheduleError(null);
 
     try {
-      const result = await listDataConnectScanSchedules({
+      const result = await listDataConnectDiscoverSchedules({
         catalogId: selectedCatalogId,
         enabled:
           enabledFilter === "all" ? undefined : enabledFilter === "enabled",
@@ -176,7 +176,7 @@ export function DataConnectScanScene({
     setTaskError(null);
 
     try {
-      const result = await listDataConnectScanTasks({
+      const result = await listDataConnectDiscoverTasks({
         catalogId: selectedCatalogId,
         page: taskPage,
         pageSize: taskPageSize,
@@ -211,9 +211,9 @@ export function DataConnectScanScene({
   }, []);
 
   const runDiscover = useCallback(
-    async (targetCatalogId: string, strategy?: DataConnectScanSchedule["strategy"]) => {
+    async (targetCatalogId: string, strategy?: DataConnectDiscoverSchedule["strategy"]) => {
       const result = await triggerDataConnectDiscover(targetCatalogId, strategy);
-      void message.success(t("dataConnect.scanTriggerSuccess"));
+      void message.success(t("dataConnect.discoverTriggerSuccess"));
       setDetailTaskId(result.id);
       setActiveTab("tasks");
       await Promise.all([loadSchedules(), loadTasks()]);
@@ -256,20 +256,20 @@ export function DataConnectScanScene({
     };
   }, [hasActiveTasks, loadSchedules, loadTasks]);
 
-  const scheduleColumns: ColumnsType<DataConnectScanSchedule> = [
+  const scheduleColumns: ColumnsType<DataConnectDiscoverSchedule> = [
     {
       dataIndex: "name",
-      title: t("dataConnect.scanScheduleName"),
+      title: t("dataConnect.discoverScheduleName"),
     },
     {
       dataIndex: "strategy",
-      title: t("dataConnect.scanStrategy"),
-      render: (value: DataConnectScanSchedule["strategy"]) =>
-        t(`dataConnect.scanStrategies.${value}`),
+      title: t("dataConnect.discoverStrategy"),
+      render: (value: DataConnectDiscoverSchedule["strategy"]) =>
+        t(`dataConnect.discoverStrategies.${value}`),
     },
     {
       dataIndex: "cronExpr",
-      title: t("dataConnect.scanCronExpr"),
+      title: t("dataConnect.discoverCronExpr"),
     },
     {
       dataIndex: "enabled",
@@ -281,13 +281,13 @@ export function DataConnectScanScene({
             onChange={(checked) => {
               void modal.confirm({
                 title: checked
-                  ? t("dataConnect.scanScheduleEnableConfirmTitle")
-                  : t("dataConnect.scanScheduleDisableConfirmTitle"),
+                  ? t("dataConnect.discoverScheduleEnableConfirmTitle")
+                  : t("dataConnect.discoverScheduleDisableConfirmTitle"),
                 content: checked
-                  ? t("dataConnect.scanScheduleEnableConfirmDescription", {
+                  ? t("dataConnect.discoverScheduleEnableConfirmDescription", {
                       name: record.name,
                     })
-                  : t("dataConnect.scanScheduleDisableConfirmDescription", {
+                  : t("dataConnect.discoverScheduleDisableConfirmDescription", {
                       name: record.name,
                     }),
                 okText: checked ? t("common.enabled") : t("common.disabled"),
@@ -295,7 +295,7 @@ export function DataConnectScanScene({
                 okButtonProps: checked ? undefined : { danger: true },
                 onOk: async () => {
                   try {
-                    await setDataConnectScanScheduleEnabled(record.id, checked);
+                    await setDataConnectDiscoverScheduleEnabled(record.id, checked);
                     message.success(t("common.success"));
                     await Promise.all([loadSchedules(), loadTasks()]);
                   } catch (error) {
@@ -311,11 +311,11 @@ export function DataConnectScanScene({
     },
     {
       dataIndex: "lastRun",
-      title: t("dataConnect.scanLastRun"),
+      title: t("dataConnect.discoverLastRun"),
     },
     {
       dataIndex: "nextRun",
-      title: t("dataConnect.scanNextRun"),
+      title: t("dataConnect.discoverNextRun"),
     },
     {
       dataIndex: "updateTime",
@@ -332,7 +332,7 @@ export function DataConnectScanScene({
             }}
             type="link"
           >
-            {t("dataConnect.scanViewTasks")}
+            {t("dataConnect.discoverViewTasks")}
           </AppButton>
           <PermissionGate permissions="catalog:task_manage">
             <AppButton
@@ -349,11 +349,11 @@ export function DataConnectScanScene({
               loading={triggeringScheduleId === record.id}
               onClick={() => {
                 void modal.confirm({
-                  title: t("dataConnect.scanRunScheduleConfirmTitle"),
-                  content: t("dataConnect.scanRunScheduleConfirmDescription", {
+                  title: t("dataConnect.discoverRunScheduleConfirmTitle"),
+                  content: t("dataConnect.discoverRunScheduleConfirmDescription", {
                     name: record.name,
                   }),
-                  okText: t("dataConnect.scanRunSchedule"),
+                  okText: t("dataConnect.discoverRunSchedule"),
                   cancelText: t("common.cancel"),
                     onOk: async () => {
                     try {
@@ -370,7 +370,7 @@ export function DataConnectScanScene({
               }}
               type="link"
             >
-              {t("dataConnect.scanRunSchedule")}
+              {t("dataConnect.discoverRunSchedule")}
             </AppButton>
           </PermissionGate>
           <PermissionGate permissions="catalog:task_manage">
@@ -378,15 +378,15 @@ export function DataConnectScanScene({
               danger
               onClick={() => {
                 void modal.confirm({
-                  title: t("dataConnect.scanDeleteConfirmTitle"),
-                  content: t("dataConnect.scanDeleteConfirmDescription", {
+                  title: t("dataConnect.discoverDeleteConfirmTitle"),
+                  content: t("dataConnect.discoverDeleteConfirmDescription", {
                     name: record.name,
                   }),
                   okText: t("common.delete"),
                   cancelText: t("common.cancel"),
                   okButtonProps: { danger: true },
                   onOk: async () => {
-                    await deleteDataConnectScanSchedule(record.id);
+                    await deleteDataConnectDiscoverSchedule(record.id);
                     void message.success(t("common.success"));
                     await Promise.all([loadSchedules(), loadTasks()]);
                   },
@@ -402,39 +402,39 @@ export function DataConnectScanScene({
     },
   ];
 
-  const taskColumns: ColumnsType<DataConnectScanTask> = [
+  const taskColumns: ColumnsType<DataConnectDiscoverTask> = [
     {
       dataIndex: "status",
-      title: t("dataConnect.scanTaskStatus"),
-      render: (value: DataConnectScanTaskStatus) =>
-        t(`dataConnect.scanTaskStatuses.${value}`),
+      title: t("dataConnect.discoverTaskStatus"),
+      render: (value: DataConnectDiscoverTaskStatus) =>
+        t(`dataConnect.discoverTaskStatuses.${value}`),
     },
     {
       dataIndex: "scheduleId",
-      title: t("dataConnect.scanScheduleName"),
+      title: t("dataConnect.discoverScheduleName"),
       render: (value: string) =>
-        value ? scheduleNameMap.get(value) ?? t("dataConnect.scanManualTask") : "-",
+        value ? scheduleNameMap.get(value) ?? t("dataConnect.discoverManualTask") : "-",
     },
     {
       dataIndex: "triggerType",
-      title: t("dataConnect.scanTriggerType"),
-      render: (value: DataConnectScanTask["triggerType"]) =>
-        t(`dataConnect.scanTriggerTypes.${value}`),
+      title: t("dataConnect.discoverTriggerType"),
+      render: (value: DataConnectDiscoverTask["triggerType"]) =>
+        t(`dataConnect.discoverTriggerTypes.${value}`),
     },
     {
       dataIndex: "strategy",
-      title: t("dataConnect.scanStrategy"),
-      render: (value: DataConnectScanTask["strategy"]) =>
-        t(`dataConnect.scanStrategies.${value}`),
+      title: t("dataConnect.discoverStrategy"),
+      render: (value: DataConnectDiscoverTask["strategy"]) =>
+        t(`dataConnect.discoverStrategies.${value}`),
     },
     {
       dataIndex: "progress",
-      title: t("dataConnect.scanProgress"),
+      title: t("dataConnect.discoverProgress"),
       render: (value: number) => `${value}%`,
     },
     {
       dataIndex: "message",
-      title: t("dataConnect.scanMessage"),
+      title: t("dataConnect.discoverMessage"),
       render: (value: string) => (
         <span className={styles.messageText} title={value || "-"}>
           {value || "-"}
@@ -443,12 +443,12 @@ export function DataConnectScanScene({
     },
     {
       dataIndex: "startTime",
-      title: t("dataConnect.scanStartTime"),
+      title: t("dataConnect.discoverStartTime"),
       render: renderTableTime,
     },
     {
       dataIndex: "finishTime",
-      title: t("dataConnect.scanFinishTime"),
+      title: t("dataConnect.discoverFinishTime"),
       render: renderTableTime,
     },
     {
@@ -481,15 +481,15 @@ export function DataConnectScanScene({
               danger
               onClick={() => {
                 void modal.confirm({
-                  title: t("dataConnect.scanTaskDeleteConfirmTitle"),
-                  content: t("dataConnect.scanTaskDeleteConfirmDescription", {
+                  title: t("dataConnect.discoverTaskDeleteConfirmTitle"),
+                  content: t("dataConnect.discoverTaskDeleteConfirmDescription", {
                     id: record.id,
                   }),
                   okText: t("common.delete"),
                   cancelText: t("common.cancel"),
                   okButtonProps: { danger: true },
                   onOk: async () => {
-                    await deleteDataConnectScanTask(record.id);
+                    await deleteDataConnectDiscoverTask(record.id);
                     void message.success(t("common.success"));
                     if (detailTaskId === record.id) {
                       setDetailTaskId(null);
@@ -516,7 +516,7 @@ export function DataConnectScanScene({
 
     void (async () => {
       try {
-        const schedule = await getDataConnectScanSchedule(scheduleModalState.scheduleId);
+        const schedule = await getDataConnectDiscoverSchedule(scheduleModalState.scheduleId);
         setEditingSchedule(schedule);
       } catch (error) {
         setEditingSchedule(null);
@@ -526,12 +526,12 @@ export function DataConnectScanScene({
   }, [message, scheduleModalState]);
 
   const handleScheduleSubmit = async (
-    payload: ScanScheduleFormModalSubmitPayload,
+    payload: DiscoverScheduleFormModalSubmitPayload,
   ) => {
     setScheduleModalSubmitting(true);
 
     try {
-      const requestPayload: DataConnectScanSchedulePayload = {
+      const requestPayload: DataConnectDiscoverSchedulePayload = {
         ...payload,
         catalogId:
           scheduleModalState?.mode === "edit" && editingSchedule
@@ -550,12 +550,12 @@ export function DataConnectScanScene({
       };
 
       if (scheduleModalState?.mode === "edit" && scheduleModalState.scheduleId) {
-        await updateDataConnectScanSchedule(
+        await updateDataConnectDiscoverSchedule(
           scheduleModalState.scheduleId,
           requestPayload,
         );
       } else {
-        await createDataConnectScanSchedule(requestPayload);
+        await createDataConnectDiscoverSchedule(requestPayload);
       }
 
       setScheduleModalState(null);
@@ -580,7 +580,7 @@ export function DataConnectScanScene({
 
   const catalogFilter = (
     <div className={styles.filterField}>
-      <span className={styles.filterLabel}>{t("dataConnect.scanCatalog")}</span>
+      <span className={styles.filterLabel}>{t("dataConnect.discoverCatalog")}</span>
       <Select
         className={styles.filterSelectWide}
         disabled={catalogLocked}
@@ -617,7 +617,7 @@ export function DataConnectScanScene({
                 }}
                 type="primary"
               >
-                {t("dataConnect.scanCreate")}
+                {t("dataConnect.discoverCreate")}
               </AppButton>
             </PermissionGate>
             <PermissionGate permissions="catalog:task_manage">
@@ -630,7 +630,7 @@ export function DataConnectScanScene({
                   setRunNowOpen(true);
                 }}
               >
-                {t("dataConnect.scanRunNow")}
+                {t("dataConnect.discoverRunNow")}
               </AppButton>
             </PermissionGate>
             <AppButton
@@ -655,12 +655,12 @@ export function DataConnectScanScene({
               setKeyword(event.currentTarget.value);
               setSchedulePage(1);
             }}
-            placeholder={t("dataConnect.scanSearchPlaceholder")}
+            placeholder={t("dataConnect.discoverSearchPlaceholder")}
             prefix={<SearchOutlined className={styles.searchIcon} />}
             value={keyword}
           />
           <div className={styles.filterField}>
-            <span className={styles.filterLabel}>{t("dataConnect.scanStatusFilter")}</span>
+            <span className={styles.filterLabel}>{t("dataConnect.discoverStatusFilter")}</span>
             <Select
               className={styles.filterSelect}
               onChange={(value: EnabledFilterValue) => {
@@ -704,15 +704,15 @@ export function DataConnectScanScene({
                   }}
                   type="primary"
                 >
-                  {t("dataConnect.scanCreate")}
+                  {t("dataConnect.discoverCreate")}
                 </AppButton>
               </PermissionGate>
             }
-            description={t("dataConnect.scanScheduleEmptyDescription")}
-            title={t("dataConnect.scanScheduleEmpty")}
+            description={t("dataConnect.discoverScheduleEmptyDescription")}
+            title={t("dataConnect.discoverScheduleEmpty")}
           />
         ) : (
-          <AppTable<DataConnectScanSchedule>
+          <AppTable<DataConnectDiscoverSchedule>
             columns={scheduleColumns}
             dataSource={schedules}
             loading={loadingSchedules}
@@ -752,12 +752,12 @@ export function DataConnectScanScene({
             </AppButton>
           </div>
           {hasActiveTasks ? (
-            <span className={styles.inlineHint}>{t("dataConnect.scanAutoRefreshHint")}</span>
+            <span className={styles.inlineHint}>{t("dataConnect.discoverAutoRefreshHint")}</span>
           ) : null}
         </div>
         <div className={styles.toolbarFilters}>
           <div className={styles.filterField}>
-            <span className={styles.filterLabel}>{t("dataConnect.scanTaskStatus")}</span>
+            <span className={styles.filterLabel}>{t("dataConnect.discoverTaskStatus")}</span>
             <Select
               className={styles.filterSelect}
               onChange={(value: TaskStatusFilterValue) => {
@@ -766,19 +766,19 @@ export function DataConnectScanScene({
               }}
               options={[
                 { label: t("common.all"), value: "all" },
-                { label: t("dataConnect.scanTaskStatuses.pending"), value: "pending" },
-                { label: t("dataConnect.scanTaskStatuses.running"), value: "running" },
+                { label: t("dataConnect.discoverTaskStatuses.pending"), value: "pending" },
+                { label: t("dataConnect.discoverTaskStatuses.running"), value: "running" },
                 {
-                  label: t("dataConnect.scanTaskStatuses.completed"),
+                  label: t("dataConnect.discoverTaskStatuses.completed"),
                   value: "completed",
                 },
-                { label: t("dataConnect.scanTaskStatuses.failed"), value: "failed" },
+                { label: t("dataConnect.discoverTaskStatuses.failed"), value: "failed" },
               ]}
               value={taskStatusFilter}
             />
           </div>
           <div className={styles.filterField}>
-            <span className={styles.filterLabel}>{t("dataConnect.scanTriggerType")}</span>
+            <span className={styles.filterLabel}>{t("dataConnect.discoverTriggerType")}</span>
             <Select
               className={styles.filterSelect}
               onChange={(value: TaskTriggerTypeFilterValue) => {
@@ -787,9 +787,9 @@ export function DataConnectScanScene({
               }}
               options={[
                 { label: t("common.all"), value: "all" },
-                { label: t("dataConnect.scanTriggerTypes.manual"), value: "manual" },
+                { label: t("dataConnect.discoverTriggerTypes.manual"), value: "manual" },
                 {
-                  label: t("dataConnect.scanTriggerTypes.scheduled"),
+                  label: t("dataConnect.discoverTriggerTypes.scheduled"),
                   value: "scheduled",
                 },
               ]}
@@ -817,11 +817,11 @@ export function DataConnectScanScene({
           />
         ) : !loadingTasks && tasks.length === 0 ? (
           <EmptyStatePanel
-            description={t("dataConnect.scanTaskEmptyDescription")}
-            title={t("dataConnect.scanTaskEmpty")}
+            description={t("dataConnect.discoverTaskEmptyDescription")}
+            title={t("dataConnect.discoverTaskEmpty")}
           />
         ) : (
-          <AppTable<DataConnectScanTask>
+          <AppTable<DataConnectDiscoverTask>
             columns={taskColumns}
             dataSource={tasks}
             loading={loadingTasks}
@@ -850,12 +850,12 @@ export function DataConnectScanScene({
     <>
       <section className={styles.contentSurface}>
         <DataConnectPageHeader
-          description={t("dataConnect.scanDescription")}
+          description={t("dataConnect.discoverDescription")}
           extra={
             catalogLocked && selectedCatalogName ? (
               <div className={styles.contextBar}>
                 <span className={styles.contextLabel}>
-                  {t("dataConnect.scanCurrentConnection")}
+                  {t("dataConnect.discoverCurrentConnection")}
                 </span>
                 <strong className={styles.contextName}>{selectedCatalogName}</strong>
               </div>
@@ -865,7 +865,7 @@ export function DataConnectScanScene({
           }
           layout="inline"
           onBack={handleBackToConnections}
-          title={t("dataConnect.scanTitle")}
+          title={t("dataConnect.discoverTitle")}
           variant="plain"
         />
         {catalogError ? <Alert message={catalogError} showIcon type="warning" /> : null}
@@ -875,25 +875,25 @@ export function DataConnectScanScene({
           items={[
             {
               key: "schedules",
-              label: t("dataConnect.scanTabSchedules"),
+              label: t("dataConnect.discoverTabSchedules"),
               children: schedulesPanel,
             },
             {
               key: "tasks",
               label:
                 activeTaskCount > 0
-                  ? `${t("dataConnect.scanTabTasks")} (${activeTaskCount})`
-                  : t("dataConnect.scanTabTasks"),
+                  ? `${t("dataConnect.discoverTabTasks")} (${activeTaskCount})`
+                  : t("dataConnect.discoverTabTasks"),
               children: tasksPanel,
             },
           ]}
           onChange={(key) => {
-            setActiveTab(key as ScanPageTab);
+            setActiveTab(key as DiscoverPageTab);
           }}
         />
       </section>
       {scheduleModalState ? (
-        <ScanScheduleFormModal
+        <DiscoverScheduleFormModal
           catalogs={catalogs}
           defaultCatalogId={
             scheduleModalState.mode === "create" && catalogLocked
@@ -912,7 +912,7 @@ export function DataConnectScanScene({
         />
       ) : null}
       {selectedCatalogId ? (
-        <ScanRunNowModal
+        <DiscoverRunNowModal
           connectionName={
             catalogNameMap.get(selectedCatalogId) ?? selectedCatalogId
           }
@@ -935,7 +935,7 @@ export function DataConnectScanScene({
         />
       ) : null}
       {detailTaskId ? (
-        <DataConnectScanTaskDrawer
+        <DataConnectDiscoverTaskDrawer
           catalogs={catalogs}
           onClose={() => {
             setDetailTaskId(null);

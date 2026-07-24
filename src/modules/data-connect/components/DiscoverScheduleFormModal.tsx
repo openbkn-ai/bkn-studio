@@ -13,43 +13,43 @@ import { useTranslation } from "react-i18next";
 
 import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 import type {
-  DataConnectScanSchedule,
-  DataConnectScanStrategy,
-} from "@/modules/data-connect/types/scan";
+  DataConnectDiscoverSchedule,
+  DataConnectDiscoverStrategy,
+} from "@/modules/data-connect/types/discover";
 
-import styles from "./ScanScheduleFormModal.module.css";
+import styles from "./DiscoverScheduleFormModal.module.css";
 
-type ScanScheduleFormModalProps = {
+type DiscoverScheduleFormModalProps = {
   catalogs: DataConnectRecord[];
   defaultCatalogId?: string;
-  initialValue?: DataConnectScanSchedule | null;
+  initialValue?: DataConnectDiscoverSchedule | null;
   mode: "create" | "edit";
   onCancel: () => void;
-  onSubmit: (payload: ScanScheduleFormModalSubmitPayload) => Promise<void>;
+  onSubmit: (payload: DiscoverScheduleFormModalSubmitPayload) => Promise<void>;
   open: boolean;
   submitting: boolean;
 };
 
 type SafeNamePath = string | number | Array<string | number>;
 
-type ScanScheduleFormValues = {
+type DiscoverScheduleFormValues = {
   catalogId: string;
   cronExpr: string;
   enabled: boolean;
   endTime?: string;
   name: string;
   startTime?: string;
-  strategy: DataConnectScanStrategy;
+  strategy: DataConnectDiscoverStrategy;
 };
 
-export type ScanScheduleFormModalSubmitPayload = {
+export type DiscoverScheduleFormModalSubmitPayload = {
   catalogId: string;
   cronExpr: string;
   enabled: boolean;
   endTime?: number;
   name: string;
   startTime?: number;
-  strategy: DataConnectScanStrategy;
+  strategy: DataConnectDiscoverStrategy;
 };
 
 /** Vega discover-schedule 使用标准 5 段 cron：分 时 日 月 周 */
@@ -59,7 +59,7 @@ const CRON_PRESETS = [
   { key: "monday2am", value: "0 2 * * 1" },
 ] as const;
 
-export function ScanScheduleFormModal({
+export function DiscoverScheduleFormModal({
   catalogs,
   defaultCatalogId,
   initialValue,
@@ -68,9 +68,9 @@ export function ScanScheduleFormModal({
   onSubmit,
   open,
   submitting,
-}: ScanScheduleFormModalProps) {
+}: DiscoverScheduleFormModalProps) {
   const { t } = useTranslation();
-  const [form] = Form.useForm<ScanScheduleFormValues>();
+  const [form] = Form.useForm<DiscoverScheduleFormValues>();
   const catalogLocked = mode === "edit" || Boolean(defaultCatalogId);
   const cronExpr = Form.useWatch("cronExpr", form);
 
@@ -120,8 +120,8 @@ export function ScanScheduleFormModal({
       rootClassName={styles.modalRoot}
       title={
         mode === "create"
-          ? t("dataConnect.scanCreateTitle")
-          : t("dataConnect.scanEditTitle")
+          ? t("dataConnect.discoverCreateTitle")
+          : t("dataConnect.discoverEditTitle")
       }
       width={640}
     >
@@ -130,7 +130,7 @@ export function ScanScheduleFormModal({
           <div className={styles.sectionTitle}>{t("common.basicInfo")}</div>
           <div className={styles.grid}>
             <InlineField
-              label={t("dataConnect.scanScheduleName")}
+              label={t("dataConnect.discoverScheduleName")}
               name="name"
               required
               rules={[{ required: true, message: t("common.required") }]}
@@ -138,7 +138,7 @@ export function ScanScheduleFormModal({
             >
               <Input
                 maxLength={255}
-                placeholder={t("dataConnect.scanScheduleNamePlaceholder")}
+                placeholder={t("dataConnect.discoverScheduleNamePlaceholder")}
               />
             </InlineField>
             {mode === "create" ? (
@@ -157,7 +157,7 @@ export function ScanScheduleFormModal({
               <div className={styles.spanHalf} />
             )}
             <InlineField
-              label={t("dataConnect.scanCatalog")}
+              label={t("dataConnect.discoverCatalog")}
               name="catalogId"
               required
               rules={[{ required: true, message: t("common.required") }]}
@@ -170,12 +170,12 @@ export function ScanScheduleFormModal({
                   value: item.id,
                 }))}
                 optionFilterProp="label"
-                placeholder={t("dataConnect.scanCatalogFilterPlaceholder")}
+                placeholder={t("dataConnect.discoverCatalogFilterPlaceholder")}
                 showSearch
               />
             </InlineField>
             <InlineField
-              label={t("dataConnect.scanStrategy")}
+              label={t("dataConnect.discoverStrategy")}
               name="strategy"
               required
               rules={[{ required: true, message: t("common.required") }]}
@@ -185,15 +185,15 @@ export function ScanScheduleFormModal({
                 optionLabelProp="label"
                 options={[
                   {
-                    label: t("dataConnect.scanStrategies.full_sync"),
+                    label: t("dataConnect.discoverStrategies.full_sync"),
                     value: "full_sync",
                   },
                   {
-                    label: t("dataConnect.scanStrategies.create_only"),
+                    label: t("dataConnect.discoverStrategies.create_only"),
                     value: "create_only",
                   },
                   {
-                    label: t("dataConnect.scanStrategies.cleanup_only"),
+                    label: t("dataConnect.discoverStrategies.cleanup_only"),
                     value: "cleanup_only",
                   },
                 ]}
@@ -201,7 +201,7 @@ export function ScanScheduleFormModal({
                   <div className={styles.strategyOption}>
                     <span className={styles.strategyTitle}>{option.label}</span>
                     <span className={styles.strategyHint}>
-                      {t(`dataConnect.scanStrategyHints.${String(option.value)}`)}
+                      {t(`dataConnect.discoverStrategyHints.${String(option.value)}`)}
                     </span>
                   </div>
                 )}
@@ -211,20 +211,20 @@ export function ScanScheduleFormModal({
         </div>
 
         <div className={styles.section}>
-          <div className={styles.sectionTitle}>{t("dataConnect.scanScheduleConfig")}</div>
+          <div className={styles.sectionTitle}>{t("dataConnect.discoverScheduleConfig")}</div>
           <div className={styles.grid}>
             <InlineField
-              label={t("dataConnect.scanCronExpr")}
+              label={t("dataConnect.discoverCronExpr")}
               name="cronExpr"
               required
               rules={[{ required: true, message: t("common.required") }]}
               span="full"
             >
-              <Input placeholder={t("dataConnect.scanCronExprPlaceholder")} />
+              <Input placeholder={t("dataConnect.discoverCronExprPlaceholder")} />
             </InlineField>
             <div className={styles.cronPresets}>
               <span className={styles.cronPresetsLabel}>
-                {t("dataConnect.scanCronPresets")}
+                {t("dataConnect.discoverCronPresets")}
               </span>
               <div className={styles.cronPresetList}>
                 {CRON_PRESETS.map((preset) => (
@@ -240,20 +240,20 @@ export function ScanScheduleFormModal({
                     }}
                     type="button"
                   >
-                    {t(`dataConnect.scanCronPresetLabels.${preset.key}`)}
+                    {t(`dataConnect.discoverCronPresetLabels.${preset.key}`)}
                   </button>
                 ))}
               </div>
             </div>
             <InlineField
-              label={t("dataConnect.scanStartTime")}
+              label={t("dataConnect.discoverStartTime")}
               name="startTime"
               span="half"
             >
               <Input type="datetime-local" />
             </InlineField>
             <InlineField
-              label={t("dataConnect.scanEndTime")}
+              label={t("dataConnect.discoverEndTime")}
               name="endTime"
               span="half"
             >

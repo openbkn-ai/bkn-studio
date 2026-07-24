@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
-import { Alert, Descriptions, Drawer, Select, Space, Tag } from "antd";
+import { DeleteOutlined, ExclamationCircleOutlined, FilterOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
+import { Alert, Descriptions, Drawer, Popover, Select, Space, Tag } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,16 +24,16 @@ import { TableSurface } from "@/framework/ui/common/TableSurface";
 import taskDetailStyles from "@/modules/data-catalog/components/BuildTaskDetailDrawer.module.css";
 import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
 import {
-  deleteDataConnectScanTask,
-  listDataConnectScanTasks,
-} from "@/modules/data-connect/services/scan.service";
+  deleteDataConnectDiscoverTask,
+  listDataConnectDiscoverTasks,
+} from "@/modules/data-connect/services/discover.service";
 import type {
-  DataConnectScanStrategy,
-  DataConnectScanTask,
-  DataConnectScanTaskSort,
-  DataConnectScanTaskStatus,
-  DataConnectScanTaskTriggerType,
-} from "@/modules/data-connect/types/scan";
+  DataConnectDiscoverStrategy,
+  DataConnectDiscoverTask,
+  DataConnectDiscoverTaskSort,
+  DataConnectDiscoverTaskStatus,
+  DataConnectDiscoverTaskTriggerType,
+} from "@/modules/data-connect/types/discover";
 import { listCatalogResources } from "@/modules/data-catalog/services/resource.service";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { catalogListAllQuery, catalogListPhysicalQuery, listCatalogs } from "@/shared/catalog";
@@ -183,7 +183,7 @@ function TaskDetailDrawer({
   );
 }
 
-function DiscoverTaskProgress({ task }: { task: DataConnectScanTask }) {
+function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTask }) {
   const percent = Math.max(0, Math.min(100, task.progress));
   const fillClass =
     task.status === "completed"
@@ -211,13 +211,13 @@ export function DiscoverTaskListPanel() {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState<DataConnectScanTask[]>([]);
+  const [tasks, setTasks] = useState<DataConnectDiscoverTask[]>([]);
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
   const [catalogId, setCatalogId] = useState<string>();
-  const [status, setStatus] = useState<DataConnectScanTaskStatus>();
-  const [strategy, setStrategy] = useState<DataConnectScanStrategy>();
-  const [triggerType, setTriggerType] = useState<DataConnectScanTaskTriggerType>();
-  const [sort, setSort] = useState<DataConnectScanTaskSort>("default");
+  const [status, setStatus] = useState<DataConnectDiscoverTaskStatus>();
+  const [strategy, setStrategy] = useState<DataConnectDiscoverStrategy>();
+  const [triggerType, setTriggerType] = useState<DataConnectDiscoverTaskTriggerType>();
+  const [sort, setSort] = useState<DataConnectDiscoverTaskSort>("default");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -225,14 +225,14 @@ export function DiscoverTaskListPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-  const [detailTask, setDetailTask] = useState<DataConnectScanTask | null>(null);
+  const [detailTask, setDetailTask] = useState<DataConnectDiscoverTask | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [taskResult, catalogResult] = await Promise.all([
-        listDataConnectScanTasks({
+        listDataConnectDiscoverTasks({
           catalogId,
           page,
           pageSize,
@@ -273,7 +273,7 @@ export function DiscoverTaskListPanel() {
       cancelText: t("common.cancel"),
       okButtonProps: { danger: true },
       onOk: async () => {
-        const results = await Promise.allSettled(targets.map((task) => deleteDataConnectScanTask(task.id)));
+        const results = await Promise.allSettled(targets.map((task) => deleteDataConnectDiscoverTask(task.id)));
         const failed = results.filter((result) => result.status === "rejected").length;
         if (failed) message.error(t("dataCatalog.task.batchDeletePartial", { failed, total: targets.length }));
         else message.success(t("common.success"));
@@ -282,16 +282,16 @@ export function DiscoverTaskListPanel() {
       },
     });
   };
-  const sortOrderOf = (key: DataConnectScanTaskSort) => sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
-  const handleTableChange: TableProps<DataConnectScanTask>["onChange"] = (_pagination, _filters, sorter, extra) => {
+  const sortOrderOf = (key: DataConnectDiscoverTaskSort) => sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
+  const handleTableChange: TableProps<DataConnectDiscoverTask>["onChange"] = (_pagination, _filters, sorter, extra) => {
     if (extra.action !== "sort") return;
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
-    setSort(single?.columnKey as DataConnectScanTaskSort || "default");
+    setSort(single?.columnKey as DataConnectDiscoverTaskSort || "default");
     setDirection(single?.order === "ascend" ? "asc" : "desc");
     setPage(1);
   };
 
-  const columns: ColumnsType<DataConnectScanTask> = [
+  const columns: ColumnsType<DataConnectDiscoverTask> = [
     { dataIndex: "id", title: t("dataCatalog.taskManagement.columns.task"), width: 160, ellipsis: true },
     {
       dataIndex: "catalogId",
@@ -312,9 +312,9 @@ export function DiscoverTaskListPanel() {
         );
       },
     },
-    { dataIndex: "strategy", title: t("dataCatalog.taskManagement.columns.strategy"), width: 130, render: (value) => t(`dataConnect.scanStrategies.${value}`) },
-    { dataIndex: "triggerType", title: t("dataCatalog.taskManagement.columns.trigger"), width: 120, render: (value) => t(`dataConnect.scanTriggerTypes.${value}`) },
-    { dataIndex: "status", title: t("common.status"), width: 120, render: (value) => t(`dataConnect.scanTaskStatuses.${value}`) },
+    { dataIndex: "strategy", title: t("dataCatalog.taskManagement.columns.strategy"), width: 130, render: (value) => t(`dataConnect.discoverStrategies.${value}`) },
+    { dataIndex: "triggerType", title: t("dataCatalog.taskManagement.columns.trigger"), width: 120, render: (value) => t(`dataConnect.discoverTriggerTypes.${value}`) },
+    { dataIndex: "status", title: t("common.status"), width: 120, render: (value) => t(`dataConnect.discoverTaskStatuses.${value}`) },
     {
       dataIndex: "progress",
       title: t("dataCatalog.task.progress"),
@@ -325,24 +325,24 @@ export function DiscoverTaskListPanel() {
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time") },
     {
       key: "actions", title: t("common.actions"), width: 160, fixed: "right",
-      render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTask(record)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger type="link" onClick={() => void modal.confirm({ title: t("dataConnect.scanTaskDeleteConfirmTitle"), content: t("dataConnect.scanTaskDeleteConfirmDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteDataConnectScanTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space>,
+      render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTask(record)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger type="link" onClick={() => void modal.confirm({ title: t("dataConnect.discoverTaskDeleteConfirmTitle"), content: t("dataConnect.discoverTaskDeleteConfirmDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteDataConnectDiscoverTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space>,
     },
   ];
 
   return <TaskPanel>
-    <div className={styles.operationBar}><Space><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space wrap>
+    <div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
       <Select allowClear className={styles.select} options={catalogs.map((item) => ({ label: item.name, value: item.id }))} placeholder={t("dataCatalog.resource.catalog")} value={catalogId} onChange={(value) => { setCatalogId(value); setPage(1); }} />
-      <Select allowClear className={styles.select} options={["full_sync", "create_only", "cleanup_only"].map((value) => ({ label: t(`dataConnect.scanStrategies.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.strategy")} value={strategy} onChange={(value) => { setStrategy(value); setPage(1); }} />
-      <Select allowClear className={styles.select} options={["manual", "scheduled"].map((value) => ({ label: t(`dataConnect.scanTriggerTypes.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.trigger")} value={triggerType} onChange={(value) => { setTriggerType(value); setPage(1); }} />
-      <Select allowClear className={styles.select} options={["pending", "running", "completed", "failed"].map((value) => ({ label: t(`dataConnect.scanTaskStatuses.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />
+      <Select allowClear className={styles.select} options={["full_sync", "create_only", "cleanup_only"].map((value) => ({ label: t(`dataConnect.discoverStrategies.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.strategy")} value={strategy} onChange={(value) => { setStrategy(value); setPage(1); }} />
+      <Select allowClear className={styles.select} options={["manual", "scheduled"].map((value) => ({ label: t(`dataConnect.discoverTriggerTypes.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.trigger")} value={triggerType} onChange={(value) => { setTriggerType(value); setPage(1); }} />
+      <Select allowClear className={styles.select} options={["pending", "running", "completed", "failed"].map((value) => ({ label: t(`dataConnect.discoverTaskStatuses.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />
     </Space></div>
     <TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.discover.empty")} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />
     <Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize); }} />
-    {detailTask ? <TaskDetailDrawer failureReason={detailTask.status === "failed" ? detailTask.message : undefined} onClose={() => setDetailTask(null)} status={t(`dataConnect.scanTaskStatuses.${detailTask.status}`)} statusClass={detailTask.status === "failed" ? sharedStyles.taskFailed : detailTask.status === "completed" ? sharedStyles.taskSucceeded : sharedStyles.taskRunning} taskId={detailTask.id}>
+    {detailTask ? <TaskDetailDrawer failureReason={detailTask.status === "failed" ? detailTask.message : undefined} onClose={() => setDetailTask(null)} status={t(`dataConnect.discoverTaskStatuses.${detailTask.status}`)} statusClass={detailTask.status === "failed" ? sharedStyles.taskFailed : detailTask.status === "completed" ? sharedStyles.taskSucceeded : sharedStyles.taskRunning} taskId={detailTask.id}>
       <Descriptions.Item label={t("dataCatalog.resource.catalog")}>{catalogNameMap.get(detailTask.catalogId) ?? detailTask.catalogId}</Descriptions.Item>
-      <Descriptions.Item label={t("dataCatalog.taskManagement.columns.strategy")}>{t(`dataConnect.scanStrategies.${detailTask.strategy}`)}</Descriptions.Item>
-      <Descriptions.Item label={t("dataCatalog.taskManagement.columns.trigger")}>{t(`dataConnect.scanTriggerTypes.${detailTask.triggerType}`)}</Descriptions.Item>
-      <Descriptions.Item label={t("common.status")}>{t(`dataConnect.scanTaskStatuses.${detailTask.status}`)}</Descriptions.Item>
+      <Descriptions.Item label={t("dataCatalog.taskManagement.columns.strategy")}>{t(`dataConnect.discoverStrategies.${detailTask.strategy}`)}</Descriptions.Item>
+      <Descriptions.Item label={t("dataCatalog.taskManagement.columns.trigger")}>{t(`dataConnect.discoverTriggerTypes.${detailTask.triggerType}`)}</Descriptions.Item>
+      <Descriptions.Item label={t("common.status")}>{t(`dataConnect.discoverTaskStatuses.${detailTask.status}`)}</Descriptions.Item>
       <Descriptions.Item label={t("dataCatalog.task.progress")}>{`${detailTask.progress}%`}</Descriptions.Item>
       <Descriptions.Item label={t("dataCatalog.taskManagement.details.scheduleId")}>{detailTask.scheduleId || "-"}</Descriptions.Item>
       <Descriptions.Item label={t("dataCatalog.taskManagement.details.startTime")}>{detailTask.startTime || "-"}</Descriptions.Item>
@@ -426,22 +426,8 @@ export function SemanticUnderstandingTaskListPanel() {
   const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [detailTask, setDetailTask] = useState<SemanticTask | null>(null);
-  const load = useCallback(async () => { setLoading(true); setError(null); try { const result = await listSemanticTasks(page, pageSize, { scope, catalogId, resourceId, status, applyMode, applied, sort, direction }); setTasks(result.items); setTotal(result.total); } catch (loadError) { setError(extractRequestErrorMessage(loadError)); } finally { setLoading(false); } }, [applied, applyMode, catalogId, direction, page, pageSize, resourceId, scope, sort, status]);
+  const load = useCallback(async () => { setLoading(true); setError(null); try { const [taskResult, catalogResult, resourceResult] = await Promise.all([listSemanticTasks(page, pageSize, { scope, catalogId, resourceId, status, applyMode, applied, sort, direction }), listCatalogs(catalogListAllQuery()), listCatalogResources()]); setTasks(taskResult.items); setTotal(taskResult.total); setCatalogs(catalogResult.items); setResources(resourceResult); } catch (loadError) { setError(extractRequestErrorMessage(loadError)); } finally { setLoading(false); } }, [applied, applyMode, catalogId, direction, page, pageSize, resourceId, scope, sort, status]);
   useEffect(() => void load(), [load]);
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [catalogResult, resourceResult] = await Promise.all([
-          listCatalogs(catalogListAllQuery()),
-          listCatalogResources(),
-        ]);
-        setCatalogs(catalogResult.items);
-        setResources(resourceResult);
-      } catch {
-        // 元数据加载失败时保留任务中的 ID，避免影响任务列表本身。
-      }
-    })();
-  }, []);
   const catalogNameMap = useMemo(() => new Map(catalogs.map((item) => [item.id, item.name])), [catalogs]);
   const resourceNameMap = useMemo(() => new Map(resources.map((item) => [item.id, item.name])), [resources]);
   const resourceOptions = useMemo(
@@ -545,13 +531,16 @@ export function SemanticUnderstandingTaskListPanel() {
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
     { key: "actions", title: t("common.actions"), width: 160, fixed: "right", render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTask(record)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={record.status === "pending" || record.status === "running"} type="link" onClick={() => void modal.confirm({ title: t("dataCatalog.taskManagement.semantic.deleteTitle"), content: t("dataCatalog.taskManagement.semantic.deleteDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteSemanticTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space> },
   ];
-  return <TaskPanel><div className={styles.operationBar}><Space><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space wrap>
-    <Select allowClear className={styles.select} options={["catalog", "resource"].map((value) => ({ label: t(`dataCatalog.taskManagement.scope.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.scope")} value={scope} onChange={(value) => { setScope(value); if (value === "catalog") setResourceId(undefined); setPage(1); }} />
+  const advancedFilterCount = Number(scope !== undefined) + Number(applyMode !== undefined) + Number(applied !== undefined);
+  const moreFiltersLabel = advancedFilterCount > 0
+    ? t("dataCatalog.taskManagement.moreFiltersWithCount", { count: advancedFilterCount })
+    : t("dataCatalog.taskManagement.moreFilters");
+  const advancedFilters = <Space direction="vertical" size={12}><Select allowClear className={styles.select} options={["catalog", "resource"].map((value) => ({ label: t(`dataCatalog.taskManagement.scope.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.scope")} value={scope} onChange={(value) => { setScope(value); if (value === "catalog") setResourceId(undefined); setPage(1); }} /><Select allowClear className={styles.select} options={["dry_run", "fill_empty", "force"].map((value) => ({ label: t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.applyMode")} value={applyMode} onChange={(value) => { setApplyMode(value); setPage(1); }} /><Select allowClear className={styles.select} options={[true, false].map((value) => ({ label: t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied"), value }))} placeholder={t("dataCatalog.taskManagement.columns.applied")} value={applied} onChange={(value) => { setApplied(value); setPage(1); }} /><AppButton disabled={advancedFilterCount === 0} type="link" onClick={() => { setScope(undefined); setApplyMode(undefined); setApplied(undefined); setPage(1); }}>{t("dataCatalog.taskManagement.clearAdvancedFilters")}</AppButton></Space>;
+  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
     <Select allowClear className={styles.select} options={catalogs.map((item) => ({ label: item.name, value: item.id }))} placeholder={t("dataCatalog.resource.catalog")} value={catalogId} onChange={(value) => { setCatalogId(value); setResourceId(undefined); setPage(1); }} />
     <Select allowClear className={styles.select} disabled={scope === "catalog"} options={resourceOptions} placeholder={t("dataCatalog.build.resource")} value={resourceId} onChange={(value) => { setResourceId(value); setPage(1); }} />
     <Select allowClear className={styles.select} options={["pending", "running", "succeeded", "failed"].map((value) => ({ label: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />
-    <Select allowClear className={styles.select} options={["dry_run", "fill_empty", "force"].map((value) => ({ label: t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.applyMode")} value={applyMode} onChange={(value) => { setApplyMode(value); setPage(1); }} />
-    <Select allowClear className={styles.select} options={[true, false].map((value) => ({ label: t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied"), value }))} placeholder={t("dataCatalog.taskManagement.columns.applied")} value={applied} onChange={(value) => { setApplied(value); setPage(1); }} />
+    <Popover content={advancedFilters} trigger="click"><AppButton icon={<FilterOutlined />}>{moreFiltersLabel}</AppButton></Popover>
   </Space></div><TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize); }} />{detailTask ? <TaskDetailDrawer failureReason={detailTask.status === "failed" ? detailTask.failureDetail : undefined} onClose={() => setDetailTask(null)} status={t(`dataCatalog.taskManagement.semanticStatus.${detailTask.status}`)} statusClass={detailTask.status === "failed" ? sharedStyles.taskFailed : detailTask.status === "succeeded" ? sharedStyles.taskSucceeded : sharedStyles.taskRunning} taskId={detailTask.id}>
     <Descriptions.Item label={t("dataCatalog.taskManagement.columns.scope")}>{t(`dataCatalog.taskManagement.scope.${detailTask.scope}`)}</Descriptions.Item>
     <Descriptions.Item label={t("dataCatalog.resource.catalog")}>{catalogNameMap.get(detailTask.catalogId) ?? detailTask.catalogId}</Descriptions.Item>

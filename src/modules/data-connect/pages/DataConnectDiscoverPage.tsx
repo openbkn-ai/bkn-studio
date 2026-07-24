@@ -7,14 +7,14 @@
 
 import { useSearchParams } from "react-router-dom";
 
-import { DataConnectScanScene } from "@/modules/data-connect/scenes/DataConnectScanScene";
+import { DataConnectDiscoverScene } from "@/modules/data-connect/scenes/DataConnectDiscoverScene";
 
-export function DataConnectScanPage() {
+export function DataConnectDiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const catalogId = searchParams.get("catalogId") ?? undefined;
 
   return (
-    <DataConnectScanScene
+    <DataConnectDiscoverScene
       catalogId={catalogId}
       onCatalogIdChange={(nextCatalogId) => {
         const nextParams = new URLSearchParams(searchParams);

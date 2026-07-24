@@ -47,7 +47,7 @@ export function DataConnectListScene({
   onCreate,
   onEdit,
   onOpenDetail,
-  onOpenScans,
+  onOpenDiscovers,
 }: DataConnectListSceneProps) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
@@ -176,15 +176,15 @@ export function DataConnectListScene({
           <AppButton
             className={styles.actionLink}
             onClick={() => {
-              if (onOpenScans) {
-                onOpenScans(record.id);
+              if (onOpenDiscovers) {
+                onOpenDiscovers(record.id);
                 return;
               }
-              void navigate(`/data-connect/scans?catalogId=${record.id}`);
+              void navigate(`/data-connect/discover?catalogId=${record.id}`);
             }}
             type="link"
           >
-            {t("dataConnect.scanManage")}
+            {t("dataConnect.discoverManage")}
           </AppButton>
           <PermissionGate permissions="catalog:modify">
             <AppButton

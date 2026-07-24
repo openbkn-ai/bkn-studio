@@ -9,10 +9,10 @@ export { dataConnectModuleManifest } from "@/modules/data-connect/module.manifes
 export type {
   DataConnectFormSceneProps,
   DataConnectListSceneProps,
-  DataConnectScanSceneProps,
+  DataConnectDiscoverSceneProps,
 } from "@/modules/data-connect/contracts/scenes";
 export { DataConnectListScene } from "@/modules/data-connect/scenes/DataConnectListScene";
 export { DataConnectFormScene } from "@/modules/data-connect/scenes/DataConnectFormScene";
-export { DataConnectScanScene } from "@/modules/data-connect/scenes/DataConnectScanScene";
+export { DataConnectDiscoverScene } from "@/modules/data-connect/scenes/DataConnectDiscoverScene";
 export type * from "@/modules/data-connect/types/data-connect";
-export type * from "@/modules/data-connect/types/scan";
+export type * from "@/modules/data-connect/types/discover";

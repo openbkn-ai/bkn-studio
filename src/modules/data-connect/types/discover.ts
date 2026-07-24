@@ -5,21 +5,21 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type DataConnectScanStrategy =
+export type DataConnectDiscoverStrategy =
   | "cleanup_only"
   | "create_only"
   | "full_sync";
 
-export type DataConnectScanTaskStatus =
+export type DataConnectDiscoverTaskStatus =
   | "completed"
   | "failed"
   | "pending"
   | "running";
 
-export type DataConnectScanTaskTriggerType = "manual" | "scheduled";
-export type DataConnectScanTaskSort = "create_time" | "default";
+export type DataConnectDiscoverTaskTriggerType = "manual" | "scheduled";
+export type DataConnectDiscoverTaskSort = "create_time" | "default";
 
-export type DataConnectScanSchedule = {
+export type DataConnectDiscoverSchedule = {
   catalogId: string;
   createTime: string;
   creatorName: string;
@@ -35,12 +35,12 @@ export type DataConnectScanSchedule = {
   nextRunValue?: number;
   startTime: string;
   startTimeValue?: number;
-  strategy: DataConnectScanStrategy;
+  strategy: DataConnectDiscoverStrategy;
   updateTime: string;
   updaterName: string;
 };
 
-export type DataConnectScanTask = {
+export type DataConnectDiscoverTask = {
   catalogId: string;
   createTime: string;
   creatorName: string;
@@ -52,12 +52,12 @@ export type DataConnectScanTask = {
   scheduleId: string;
   startTime: string;
   startTimeValue?: number;
-  status: DataConnectScanTaskStatus;
-  strategy: DataConnectScanStrategy;
-  triggerType: DataConnectScanTaskTriggerType;
+  status: DataConnectDiscoverTaskStatus;
+  strategy: DataConnectDiscoverStrategy;
+  triggerType: DataConnectDiscoverTaskTriggerType;
 };
 
-export type DataConnectScanScheduleListQuery = {
+export type DataConnectDiscoverScheduleListQuery = {
   catalogId?: string;
   enabled?: boolean;
   keyword: string;
@@ -65,34 +65,34 @@ export type DataConnectScanScheduleListQuery = {
   pageSize: number;
 };
 
-export type DataConnectScanTaskListQuery = {
+export type DataConnectDiscoverTaskListQuery = {
   catalogId?: string;
   page: number;
   pageSize: number;
   scheduleId?: string;
   direction?: "asc" | "desc";
-  sort?: DataConnectScanTaskSort;
-  status?: DataConnectScanTaskStatus;
-  strategy?: DataConnectScanStrategy;
-  triggerType?: DataConnectScanTaskTriggerType;
+  sort?: DataConnectDiscoverTaskSort;
+  status?: DataConnectDiscoverTaskStatus;
+  strategy?: DataConnectDiscoverStrategy;
+  triggerType?: DataConnectDiscoverTaskTriggerType;
 };
 
-export type DataConnectScanScheduleListResult = {
-  items: DataConnectScanSchedule[];
+export type DataConnectDiscoverScheduleListResult = {
+  items: DataConnectDiscoverSchedule[];
   total: number;
 };
 
-export type DataConnectScanTaskListResult = {
-  items: DataConnectScanTask[];
+export type DataConnectDiscoverTaskListResult = {
+  items: DataConnectDiscoverTask[];
   total: number;
 };
 
-export type DataConnectScanSchedulePayload = {
+export type DataConnectDiscoverSchedulePayload = {
   catalogId: string;
   cronExpr: string;
   enabled: boolean;
   endTime?: number;
   name: string;
   startTime?: number;
-  strategy: DataConnectScanStrategy;
+  strategy: DataConnectDiscoverStrategy;
 };

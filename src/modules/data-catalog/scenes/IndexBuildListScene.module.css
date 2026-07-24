@@ -76,9 +76,18 @@
 }
 
 .taskFilters {
+  flex: 1 1 520px;
   flex-wrap: nowrap;
+  justify-content: flex-end;
   min-width: 0;
   overflow-x: auto;
+}
+
+@media (max-width: 1280px) {
+  .taskFilters {
+    justify-content: flex-start;
+    width: 100%;
+  }
 }
 
 

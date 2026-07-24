@@ -21,9 +21,9 @@ const DataConnectFormPage = lazy(async () => {
   return { default: module.DataConnectFormPage };
 });
 
-const DataConnectScanPage = lazy(async () => {
-  const module = await import("@/modules/data-connect/pages/DataConnectScanPage");
-  return { default: module.DataConnectScanPage };
+const DataConnectDiscoverPage = lazy(async () => {
+  const module = await import("@/modules/data-connect/pages/DataConnectDiscoverPage");
+  return { default: module.DataConnectDiscoverPage };
 });
 
 function withRouteLoading(element: ReactNode) {
@@ -65,15 +65,15 @@ export const dataConnectRoutes: RouteObject[] = [
     element: withRouteLoading(<DataConnectFormPage mode="edit" />),
   },
   {
-    path: "data-connect/scans",
+    path: "data-connect/discover",
     handle: {
       console: {
-        descriptionKey: "dataConnect.scanDescription",
+        descriptionKey: "dataConnect.discoverDescription",
         menuKey: "data-connection",
-        titleKey: "dataConnect.scanTitle",
+        titleKey: "dataConnect.discoverTitle",
       },
     },
-    element: withRouteLoading(<DataConnectScanPage />),
+    element: withRouteLoading(<DataConnectDiscoverPage />),
   },
 ];
 

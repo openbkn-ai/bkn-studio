@@ -65,7 +65,7 @@ export const dataConnectEnUS = {
     enableConfirmDescription: 'Enable "{{name}}"?',
     disableConfirmTitle: "Disable data connection",
     disableConfirmDescription:
-      'Disable "{{name}}"? Scanning and data access for this connection will be unavailable.',
+      'Disable "{{name}}"? Discovery and data access for this connection will be unavailable.',
     dangerDelete: {
       hasRunning: "A build task is still running. Stop it before deleting.",
       catalogImpact: "Connection \"{{name}}\" has {{count}} index(es) built.",
@@ -74,100 +74,100 @@ export const dataConnectEnUS = {
       catalogEmpty:
         "Connection \"{{name}}\" has no built indexes. Deletion cannot be undone.",
     },
-    scanManage: "Scan",
-    scanTitle: "Scan Management",
-    scanDescription:
-      "Manage scheduled scans and review recent discover tasks for data connections.",
-    scanToolbarHint:
+    discoverManage: "Discover",
+    discoverTitle: "Discover Management",
+    discoverDescription:
+      "Manage scheduled discovery plans and review recent discover tasks for data connections.",
+    discoverToolbarHint:
       "Schedules use Vega backend discover-schedules, and recent executions come from discover-tasks.",
-    scanAutoRefreshHint: "Active tasks are refreshing automatically.",
-    scanCurrentConnection: "Current connection",
-    scanScheduleEnableConfirmTitle: "Enable scan schedule",
-    scanScheduleEnableConfirmDescription: 'Enable schedule "{{name}}"?',
-    scanScheduleDisableConfirmTitle: "Disable scan schedule",
-    scanScheduleDisableConfirmDescription:
-      'Disable schedule "{{name}}"? Automatic scans will stop until it is enabled again.',
+    discoverAutoRefreshHint: "Active tasks are refreshing automatically.",
+    discoverCurrentConnection: "Current connection",
+    discoverScheduleEnableConfirmTitle: "Enable discover schedule",
+    discoverScheduleEnableConfirmDescription: 'Enable schedule "{{name}}"?',
+    discoverScheduleDisableConfirmTitle: "Disable discover schedule",
+    discoverScheduleDisableConfirmDescription:
+      'Disable schedule "{{name}}"? Automatic discovery will stop until it is enabled again.',
     backToConnections: "Back to Data Connections",
-    scanCreate: "New Scan Plan",
-    scanRunNow: "Scan Now",
-    scanRunSchedule: "Run Now",
-    scanViewTasks: "View Tasks",
-    scanTabSchedules: "Schedules",
-    scanTabTasks: "Tasks",
-    scanRunNowConfirmTitle: "Scan now",
-    scanRunNowConfirmDescription:
-      'A manual scan task will be created for "{{name}}". Choose a scan strategy.',
-    scanStrategyHints: {
+    discoverCreate: "New Discover Plan",
+    discoverRunNow: "Discover Now",
+    discoverRunSchedule: "Run Now",
+    discoverViewTasks: "View Tasks",
+    discoverTabSchedules: "Schedules",
+    discoverTabTasks: "Tasks",
+    discoverRunNowConfirmTitle: "Discover now",
+    discoverRunNowConfirmDescription:
+      'A manual discover task will be created for "{{name}}". Choose a discover strategy.',
+    discoverStrategyHints: {
       full_sync: "Sync all resources, including new discovery and cleanup.",
       create_only: "Discover new resources only. Existing resources are kept.",
       cleanup_only: "Clean up stale resources only. No new discovery.",
     },
-    scanRunScheduleConfirmTitle: "Run now",
-    scanRunScheduleConfirmDescription:
+    discoverRunScheduleConfirmTitle: "Run now",
+    discoverRunScheduleConfirmDescription:
       'Run schedule "{{name}}" now? A task will be created with this schedule strategy.',
-    scanCreateTitle: "Create Scan Plan",
-    scanEditTitle: "Edit Scan Plan",
-    scanEditHint:
+    discoverCreateTitle: "Create Discover Plan",
+    discoverEditTitle: "Edit Discover Plan",
+    discoverEditHint:
       "Catalog and enabled status are managed separately. Use the table switch to enable or disable a schedule.",
-    scanSearchPlaceholder: "Search schedule name",
-    scanCatalog: "Data Connection",
-    scanCatalogFilterPlaceholder: "Filter by data connection",
-    scanStatusFilter: "Status",
-    scanScheduleName: "Schedule Name",
-    scanScheduleNamePlaceholder: "e.g. Daily full scan",
-    scanScheduleConfig: "Schedule",
-    scanStrategy: "Scan Strategy",
-    scanCronExpr: "Cron",
-    scanCronExprPlaceholder: "Example: 0 2 * * * (min hour day month weekday)",
-    scanCronPresets: "Presets",
-    scanCronPresetLabels: {
+    discoverSearchPlaceholder: "Search schedule name",
+    discoverCatalog: "Data Connection",
+    discoverCatalogFilterPlaceholder: "Filter by data connection",
+    discoverStatusFilter: "Status",
+    discoverScheduleName: "Schedule Name",
+    discoverScheduleNamePlaceholder: "e.g. Daily full discovery",
+    discoverScheduleConfig: "Schedule",
+    discoverStrategy: "Discover Strategy",
+    discoverCronExpr: "Cron",
+    discoverCronExprPlaceholder: "Example: 0 2 * * * (min hour day month weekday)",
+    discoverCronPresets: "Presets",
+    discoverCronPresetLabels: {
       daily2am: "Daily 02:00",
       hourly: "Hourly",
       monday2am: "Monday 02:00",
     },
-    scanStartTime: "Start Time",
-    scanEndTime: "End Time",
-    scanNextRun: "Next Run",
-    scanLastRun: "Last Run",
-    scanTaskStatus: "Task Status",
-    scanTriggerType: "Trigger Type",
-    scanProgress: "Progress",
-    scanMessage: "Message",
-    scanFinishTime: "Finish Time",
-    scanScheduleTableTitle: "Scan Plans",
-    scanTaskTableTitle: "Recent Tasks",
-    scanSelectedSchedule: 'Current schedule filter: "{{name}}"',
-    scanClearSelection: "Clear Filter",
-    scanTaskAutoRefreshing: "Active tasks are auto-refreshing.",
-    scanScheduleEmpty: "No scan plans",
-    scanScheduleEmptyDescription:
-      "Create the first scan plan for a data connection and then review task history here.",
-    scanTaskEmpty: "No scan tasks",
-    scanTaskEmptyDescription:
+    discoverStartTime: "Start Time",
+    discoverEndTime: "End Time",
+    discoverNextRun: "Next Run",
+    discoverLastRun: "Last Run",
+    discoverTaskStatus: "Task Status",
+    discoverTriggerType: "Trigger Type",
+    discoverProgress: "Progress",
+    discoverMessage: "Message",
+    discoverFinishTime: "Finish Time",
+    discoverScheduleTableTitle: "Discover Plans",
+    discoverTaskTableTitle: "Recent Tasks",
+    discoverSelectedSchedule: 'Current schedule filter: "{{name}}"',
+    discoverClearSelection: "Clear Filter",
+    discoverTaskAutoRefreshing: "Active tasks are auto-refreshing.",
+    discoverScheduleEmpty: "No discover plans",
+    discoverScheduleEmptyDescription:
+      "Create the first discover plan for a data connection and then review task history here.",
+    discoverTaskEmpty: "No discover tasks",
+    discoverTaskEmptyDescription:
       "No recent discover tasks match the current filters yet.",
-    scanTaskEmptyByScheduleDescription:
-      "No tasks are linked to this schedule. Manual scans and run-now actions are not attached to a schedule. Clear the filter to see all tasks.",
-    scanDeleteConfirmTitle: "Delete scan plan",
-    scanDeleteConfirmDescription:
-      'Are you sure you want to delete the scan plan "{{name}}"?',
-    scanTaskDeleteConfirmTitle: "Delete scan task",
-    scanTaskDeleteConfirmDescription:
-      'Are you sure you want to delete the scan task "{{id}}"?',
-    scanTriggerSuccess: "Scan task created successfully.",
-    scanTaskDetailTitle: "Scan Task Detail",
-    scanManualTask: "Manual Trigger",
-    scanStrategies: {
+    discoverTaskEmptyByScheduleDescription:
+      "No tasks are linked to this schedule. Manual discovery and run-now actions are not attached to a schedule. Clear the filter to see all tasks.",
+    discoverDeleteConfirmTitle: "Delete discover plan",
+    discoverDeleteConfirmDescription:
+      'Are you sure you want to delete the discover plan "{{name}}"?',
+    discoverTaskDeleteConfirmTitle: "Delete discover task",
+    discoverTaskDeleteConfirmDescription:
+      'Are you sure you want to delete the discover task "{{id}}"?',
+    discoverTriggerSuccess: "Discover task created successfully.",
+    discoverTaskDetailTitle: "Discover Task Detail",
+    discoverManualTask: "Manual Trigger",
+    discoverStrategies: {
       full_sync: "Full Sync",
       create_only: "Incremental Create",
       cleanup_only: "Cleanup Only",
     },
-    scanTaskStatuses: {
+    discoverTaskStatuses: {
       pending: "Pending",
       running: "Running",
       completed: "Completed",
       failed: "Failed",
     },
-    scanTriggerTypes: {
+    discoverTriggerTypes: {
       manual: "Manual",
       scheduled: "Scheduled",
     },

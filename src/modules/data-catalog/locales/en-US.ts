@@ -56,6 +56,9 @@ export const dataCatalogEnUS = {
       scope: { catalog: "Data Connection", resource: "Data Resource" },
       applyMode: { dryRun: "Preview only", fillEmpty: "Fill empty fields", force: "Force overwrite" },
       applied: { applied: "Applied", notApplied: "Not applied" },
+      moreFilters: "More filters",
+      moreFiltersWithCount: "More filters ({{count}})",
+      clearAdvancedFilters: "Clear more filters",
       semanticStatus: { pending: "Pending", running: "Running", succeeded: "Succeeded", failed: "Failed" },
       details: { taskInformation: "Task Information", scheduleId: "Schedule ID", startTime: "Started", message: "Message", agentId: "Agent ID", failureReason: "Failure Reason" },
       discover: { empty: "No discover tasks" },
@@ -63,7 +66,7 @@ export const dataCatalogEnUS = {
     },
     semanticWorkspace: { summary: "Semantic Understanding Result", applied: "Semantic results loaded", notApplied: "No semantic results loaded", processing: "Semantic understanding is in progress", create: "Create Task", createTitle: "Create Semantic Understanding Task", start: "Start", started: "Semantic understanding task started", empty: "No semantic-understanding tasks", confidenceThreshold: "Confidence threshold", includeSamples: "Include sample data" },
     emptyDescription:
-      "Create and scan a connection first, then browse resources and build indexes here.",
+      "Create and discover a connection first, then browse resources and build indexes here.",
     backToCatalog: "Back to Data Directory",
     buildChip: "Building · {{count}}",
     kind: {
@@ -117,7 +120,7 @@ export const dataCatalogEnUS = {
       deleteLogicalTitle: "Delete logical group",
       deleteLogicalDescription:
         'Delete logical group "{{name}}"? Resources under it will also be removed.',
-      scanning: "Scanning",
+      discovering: "Discovering",
       emptyPhysicalGroup: "No physical data source connections",
       emptyLogicalGroup: "No logical groups yet. Use + to add one.",
       empty: "No data connections yet",
@@ -130,10 +133,10 @@ export const dataCatalogEnUS = {
       notFound: "No resources found for this connection; it may have been deleted",
       resourceSection: "Resources",
       goConnection: "Data Connection",
-      goScan: "Scan Tasks",
-      goScanToDiscover: "Go scan to discover resources",
+      goScan: "Discover Tasks",
+      goDiscoverToDiscover: "Discover resources",
       emptyResourcesPhysical:
-        "No resources yet. Run a scan from Data Connection to discover resources from the source.",
+        "No resources yet. Run discovery from Data Connection to discover resources from the source.",
       emptyResourcesLogical: "No resources yet",
     },
     resource: {
@@ -164,7 +167,7 @@ export const dataCatalogEnUS = {
         "Table name / view definition in the source; resources found by discover fill this automatically.",
       schemaDefinition: "Schema Definition",
       schemaHint:
-        "One field per line: name type. Leave empty to use the default schema (id / name / updated_at); scans can complete it later.",
+        "One field per line: name type. Leave empty to use the default schema (id / name / updated_at); discover can complete it later.",
       fieldName: "Field Name",
       fieldDisplayName: "Business Name",
       fieldDescription: "Description",
@@ -245,7 +248,7 @@ export const dataCatalogEnUS = {
       executeIncremental: "Incremental",
       executeIncrementalDescription: "Continue from the build-key checkpoint and process only new or changed rows.",
       schemaLoading: "Loading fields...",
-      schemaEmpty: "This resource has no fields yet; run a scan to discover its schema.",
+      schemaEmpty: "This resource has no fields yet; run a discover to discover its schema.",
       fulltextTypeHint: "Text-type fields only",
       fieldRole: "Field Roles",
       fieldRoleHint:

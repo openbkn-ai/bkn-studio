@@ -9,33 +9,33 @@ import { Modal, Radio, Space } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { DataConnectScanStrategy } from "@/modules/data-connect/types/scan";
+import type { DataConnectDiscoverStrategy } from "@/modules/data-connect/types/discover";
 
-import styles from "./ScanRunNowModal.module.css";
+import styles from "./DiscoverRunNowModal.module.css";
 
-type ScanRunNowModalProps = {
+type DiscoverRunNowModalProps = {
   connectionName: string;
   onCancel: () => void;
-  onSubmit: (strategy: DataConnectScanStrategy) => Promise<void>;
+  onSubmit: (strategy: DataConnectDiscoverStrategy) => Promise<void>;
   open: boolean;
   submitting?: boolean;
 };
 
-const STRATEGY_OPTIONS: DataConnectScanStrategy[] = [
+const STRATEGY_OPTIONS: DataConnectDiscoverStrategy[] = [
   "full_sync",
   "create_only",
   "cleanup_only",
 ];
 
-export function ScanRunNowModal({
+export function DiscoverRunNowModal({
   connectionName,
   onCancel,
   onSubmit,
   open,
   submitting = false,
-}: ScanRunNowModalProps) {
+}: DiscoverRunNowModalProps) {
   const { t } = useTranslation();
-  const [strategy, setStrategy] = useState<DataConnectScanStrategy>("create_only");
+  const [strategy, setStrategy] = useState<DataConnectDiscoverStrategy>("create_only");
 
   useEffect(() => {
     if (open) {
@@ -50,24 +50,24 @@ export function ScanRunNowModal({
       confirmLoading={submitting}
       destroyOnHidden
       maskClosable={!submitting}
-      okText={t("dataConnect.scanRunNow")}
+      okText={t("dataConnect.discoverRunNow")}
       onCancel={submitting ? undefined : onCancel}
       onOk={() => {
         void onSubmit(strategy);
       }}
       open={open}
       rootClassName={styles.modalRoot}
-      title={t("dataConnect.scanRunNowConfirmTitle")}
+      title={t("dataConnect.discoverRunNowConfirmTitle")}
       width={520}
     >
       <p className={styles.summary}>
-        {t("dataConnect.scanRunNowConfirmDescription", { name: connectionName })}
+        {t("dataConnect.discoverRunNowConfirmDescription", { name: connectionName })}
       </p>
-      <div className={styles.fieldLabel}>{t("dataConnect.scanStrategy")}</div>
+      <div className={styles.fieldLabel}>{t("dataConnect.discoverStrategy")}</div>
       <Radio.Group
         className={styles.strategyGroup}
         onChange={(event) => {
-          setStrategy(event.target.value as DataConnectScanStrategy);
+          setStrategy(event.target.value as DataConnectDiscoverStrategy);
         }}
         value={strategy}
       >
@@ -75,10 +75,10 @@ export function ScanRunNowModal({
           {STRATEGY_OPTIONS.map((option) => (
             <Radio className={styles.strategyOption} key={option} value={option}>
               <span className={styles.strategyTitle}>
-                {t(`dataConnect.scanStrategies.${option}`)}
+                {t(`dataConnect.discoverStrategies.${option}`)}
               </span>
               <span className={styles.strategyHint}>
-                {t(`dataConnect.scanStrategyHints.${option}`)}
+                {t(`dataConnect.discoverStrategyHints.${option}`)}
               </span>
             </Radio>
           ))}

@@ -11,7 +11,7 @@ export type DataConnectListSceneProps = {
   onCreate?: () => void;
   onEdit?: (recordId: string) => void;
   onOpenDetail?: (recordId: string) => void;
-  onOpenScans?: (recordId?: string) => void;
+  onOpenDiscovers?: (recordId?: string) => void;
 };
 
 export type DataConnectFormSceneProps = {
@@ -21,7 +21,7 @@ export type DataConnectFormSceneProps = {
   onSubmitSuccess?: () => void;
 };
 
-export type DataConnectScanSceneProps = {
+export type DataConnectDiscoverSceneProps = {
   catalogId?: string;
   onBackToConnections?: () => void;
   onCatalogIdChange?: (catalogId?: string) => void;
