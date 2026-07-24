@@ -57,6 +57,7 @@ export async function listCatalogs(query: CatalogListQuery): Promise<CatalogList
       name: query.keyword.trim() || undefined,
       offset: (query.page - 1) * query.pageSize,
       sort: "update_time",
+      type: query.type === "all" ? undefined : query.type,
     },
   });
 
