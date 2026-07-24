@@ -45,9 +45,16 @@ export type ObjectTypeLogicAttributeEditorHandle = {
   validateFields: () => Promise<{ logicProperties: ObjectTypeLogicProperty[] }>;
 };
 
+export type ObjectTypeLogicAttributeExternalError = {
+  message: string;
+  propertyName: string;
+  serial: number;
+};
+
 type ObjectTypeLogicAttributeEditorProps = {
   basicValue: ObjectTypeBasicInfo;
   dataProperties: ObjectTypeDataProperty[];
+  externalError?: ObjectTypeLogicAttributeExternalError | null;
   logicProperties: ObjectTypeLogicProperty[];
   networkId: string;
   objectTypeId: string;
@@ -55,8 +62,8 @@ type ObjectTypeLogicAttributeEditorProps = {
 };
 
 function getLogicTypeLabel(type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
-  if (type === "operator") {
-    return t("knowledgeNetwork.objectTypeLogicAttributeTypeOperator");
+  if (type === "tool") {
+    return t("knowledgeNetwork.objectTypeLogicAttributeTypeTool");
   }
   return t("knowledgeNetwork.objectTypeLogicAttributeTypeMetric");
 }
@@ -65,7 +72,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   ObjectTypeLogicAttributeEditorHandle,
   ObjectTypeLogicAttributeEditorProps
 >(function ObjectTypeLogicAttributeEditor(
-  { basicValue, dataProperties, logicProperties, networkId, objectTypeId, onChange },
+  { basicValue, dataProperties, externalError, logicProperties, networkId, objectTypeId, onChange },
   ref,
 ) {
   const { t } = useTranslation();
@@ -77,6 +84,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
     displayName: "",
     name: "",
   });
+  const [propertyErrors, setPropertyErrors] = useState<Record<string, string>>({});
   const [searchInput, setSearchInput] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
@@ -123,6 +131,16 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
     }
   }, [drawerOpen, logicProperties]);
 
+  useEffect(() => {
+    if (!externalError) {
+      return;
+    }
+
+    setPropertyErrors({ [externalError.propertyName]: externalError.message });
+    setSearchInput("");
+    setSelectedRowKeys([externalError.propertyName]);
+  }, [externalError]);
+
   const filteredDataSource = useMemo(() => {
     const keyword = searchInput.trim().toLowerCase();
     if (!keyword) {
@@ -137,6 +155,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   }, [localLogicProperties, searchInput]);
 
   const syncProperties = (nextProperties: ObjectTypeLogicProperty[]) => {
+    setPropertyErrors({});
     setLocalLogicProperties(nextProperties);
     onChange(nextProperties);
   };
@@ -199,7 +218,14 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
     {
       dataIndex: "name",
       key: "name",
-      render: (value: string) => <span className={styles.dataName}>{value}</span>,
+      render: (value: string, record) => (
+        <div>
+          <span className={styles.dataName}>{value}</span>
+          {propertyErrors[record.name] ? (
+            <div className={styles.rowError}>{propertyErrors[record.name]}</div>
+          ) : null}
+        </div>
+      ),
       title: t("knowledgeNetwork.objectTypePropertyName"),
       width: 260,
     },
@@ -260,7 +286,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
               {record.dataSource.type === "metric" ? (
                 <span className={styles.resourceIconMetric}>M</span>
               ) : (
-                <span className={styles.resourceIconOperator}>O</span>
+                <span className={styles.resourceIconOperator}>T</span>
               )}
               <span className={styles.resourceName}>{record.dataSource.name || ""}</span>
             </div>
@@ -369,6 +395,9 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
               })}
               pagination={false}
               rowKey="name"
+              rowClassName={(record) =>
+                propertyErrors[record.name] ? styles.errorRow : ""
+              }
               rowSelection={{
                 onChange: (keys) => setSelectedRowKeys(keys as string[]),
                 selectedRowKeys,

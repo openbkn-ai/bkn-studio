@@ -31,7 +31,6 @@ import type {
   ObjectTypeResourceGroup,
   ObjectTypeDetail,
   ObjectTypeLogicMetricModelRecord,
-  ObjectTypeLogicOperatorRecord,
   ObjectTypeLogicProperty,
   ObjectTypeSmallModel,
   RelationTypeResourceRowMapping,
@@ -494,29 +493,6 @@ export const mockObjectTypeLogicMetricModels: ObjectTypeLogicMetricModelRecord[]
     groupName: "设备指标",
     id: "metric-device-score",
     name: "设备风险评分",
-  },
-];
-
-export const mockObjectTypeLogicOperators: ObjectTypeLogicOperatorRecord[] = [
-  {
-    id: "operator-risk-eval",
-    inputParameters: [
-      {
-        description: "设备标识",
-        key: "device_id",
-        name: "device_id",
-        source: "Body",
-        type: "string",
-      },
-      {
-        description: "风险阈值",
-        key: "threshold",
-        name: "threshold",
-        source: "Body",
-        type: "integer",
-      },
-    ],
-    name: "风险评分算子",
   },
 ];
 

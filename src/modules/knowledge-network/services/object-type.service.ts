@@ -370,6 +370,23 @@ export async function updateKnowledgeNetworkObjectType(
     : getKnowledgeNetworkObjectType(networkId, objectTypeId);
 }
 
+export async function validateKnowledgeNetworkObjectType(
+  networkId: string,
+  input: KnowledgeNetworkObjectTypeMutationPayload,
+  objectTypeId?: string,
+) {
+  if (useMock) {
+    await wait(undefined);
+    return;
+  }
+
+  const conceptGroups = await resolveObjectTypeConceptGroups(networkId, input.conceptGroupIds);
+  const payload = buildBackendObjectTypePayload(input, conceptGroups, objectTypeId);
+  await http.post(`/bkn-backend/v1/knowledge-networks/${networkId}/object-types/validation`, {
+    entries: [payload],
+  });
+}
+
 export async function deleteKnowledgeNetworkObjectType(
   networkId: string,
   objectTypeId: string,

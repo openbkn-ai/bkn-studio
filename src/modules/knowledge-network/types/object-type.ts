@@ -82,7 +82,7 @@ export type ObjectTypeDataProperty = {
   type: string;
 };
 
-export type ObjectTypeLogicAttributeType = "metric" | "operator";
+export type ObjectTypeLogicAttributeType = "metric" | "tool";
 
 export type ObjectTypeLogicParameterValueFrom = "property" | "input" | "const";
 
@@ -100,8 +100,11 @@ export type ObjectTypeLogicParameter = {
 };
 
 export type ObjectTypeLogicDataSource = {
-  id: string;
+  boxId?: string;
+  id?: string;
   name?: string;
+  resultPath?: string;
+  toolId?: string;
   type: ObjectTypeLogicAttributeType;
 };
 
@@ -112,20 +115,6 @@ export type ObjectTypeLogicProperty = {
   name: string;
   parameters?: ObjectTypeLogicParameter[] | null;
   type?: string;
-};
-
-export type ObjectTypeLogicOperatorRecord = {
-  apiSpec?: unknown;
-  id: string;
-  inputParameters?: Array<{
-    children?: ObjectTypeLogicOperatorRecord["inputParameters"];
-    description?: string;
-    key: string;
-    name: string;
-    source?: string;
-    type?: string;
-  }>;
-  name: string;
 };
 
 export type ObjectTypeLogicMetricModelRecord = {

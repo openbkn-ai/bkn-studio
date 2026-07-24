@@ -9,7 +9,7 @@ import type { ObjectTypeLogicParameterValueFrom } from "@/modules/knowledge-netw
 
 export const LOGIC_ATTRIBUTE_TYPE_OPTIONS = [
   { labelKey: "objectTypeLogicAttributeTypeMetric", value: "metric" },
-  { labelKey: "objectTypeLogicAttributeTypeOperator", value: "operator" },
+  { labelKey: "objectTypeLogicAttributeTypeTool", value: "tool" },
 ] as const;
 
 export const VALUE_FROM_OPTIONS: Array<{
@@ -22,6 +22,13 @@ export const VALUE_FROM_OPTIONS: Array<{
 ];
 
 export const OPERATOR_TYPE_OPTIONS = [{ label: "==", value: "==" }];
+
+export const PARAMETER_SOURCE_OPTIONS = [
+  { label: "Header", value: "header" },
+  { label: "Query", value: "query" },
+  { label: "Body", value: "body" },
+  { label: "Path", value: "path" },
+];
 
 export const FIELD_TYPE_INPUT = {
   boolean: ["boolean"],

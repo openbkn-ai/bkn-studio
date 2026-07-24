@@ -150,7 +150,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "get_logic_properties_values",
     group: "Skills & Logic",
-    summary: "批量查询对象的逻辑属性值（metric / operator），自动根据 query 生成 dynamic_params。缺参时返回 missing 提示。",
+    summary: "批量查询对象的逻辑属性值（metric / tool），自动根据 query 生成 dynamic_params。缺参时返回 missing 提示。",
     path: `${REST_PREFIX}/kn/get_logic_properties_values`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: {

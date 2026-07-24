@@ -107,6 +107,14 @@
   color: rgba(0, 0, 0, 0.85);
 }
 
+.rowError {
+  color: #ff4d4f;
+  font-size: 12px;
+  line-height: 18px;
+  margin-top: 4px;
+  white-space: normal;
+}
+
 .bindResourceCell {
   align-items: center;
   display: flex;
@@ -173,4 +181,8 @@
 
 .propertyTable :global(.ant-table-row) {
   cursor: pointer;
+}
+
+.propertyTable :global(.ant-table-row).errorRow > td {
+  background: #fff2f0;
 }

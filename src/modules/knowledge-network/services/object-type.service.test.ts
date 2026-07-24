@@ -60,3 +60,69 @@ describe("object-type.service · getObjectTypeSampleData", () => {
     });
   });
 });
+
+describe("object-type.service · validateKnowledgeNetworkObjectType", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+    postMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("validates the mapped object type before mutation", async () => {
+    getMock.mockResolvedValue({ data: { entries: [] } });
+    postMock.mockResolvedValue({ data: undefined });
+    const { validateKnowledgeNetworkObjectType } = await import(
+      "@/modules/knowledge-network/services/object-type.service"
+    );
+
+    await validateKnowledgeNetworkObjectType("kn-1", {
+      color: "#1677ff",
+      conceptGroupIds: [],
+      dataProperties: [],
+      description: "",
+      logicProperties: [
+        {
+          dataSource: {
+            boxId: "box-1",
+            name: "Weather",
+            resultPath: "$.data.temperature",
+            toolId: "tool-1",
+            type: "tool",
+          },
+          displayName: "Weather",
+          name: "weather",
+          parameters: [],
+          type: "tool",
+        },
+      ],
+      name: "Weather object",
+      tags: [],
+    });
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/bkn-backend/v1/knowledge-networks/kn-1/object-types/validation",
+      expect.objectContaining({
+        entries: [
+          expect.objectContaining({
+            logic_properties: [
+              expect.objectContaining({
+                data_source: expect.objectContaining({
+                  box_id: "box-1",
+                  name: "Weather",
+                  result_path: "$.data.temperature",
+                  tool_id: "tool-1",
+                  type: "tool",
+                }),
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+  });
+});

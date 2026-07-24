@@ -25,6 +25,7 @@ import type { ActionTypeActionSource } from "@/modules/knowledge-network/types/k
 import styles from "./ActionTypeToolSelectModal.module.css";
 
 type ActionTypeToolSelectModalProps = {
+  allowedKinds?: Array<"mcp" | "tool">;
   onCancel: () => void;
   onConfirm: (source: ActionTypeActionSource, selection: ActionTypeCatalogSelection) => void;
   open: boolean;
@@ -90,13 +91,14 @@ function buildToolFromValue(value: ActionTypeActionSource): ActionTypeCatalogToo
 }
 
 export function ActionTypeToolSelectModal({
+  allowedKinds = ["tool", "mcp"],
   onCancel,
   onConfirm,
   open,
   value,
 }: ActionTypeToolSelectModalProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"mcp" | "tool">("tool");
+  const [activeTab, setActiveTab] = useState<"mcp" | "tool">(allowedKinds[0] ?? "tool");
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [catalog, setCatalog] = useState<ActionTypeExecutionFactoryCatalog>({
@@ -207,7 +209,7 @@ export function ActionTypeToolSelectModal({
             loadedGroupKeysRef.current.add(`group:mcp:${server.mcpId}`);
           }
         });
-        setActiveTab(value?.type === "mcp" ? "mcp" : "tool");
+        setActiveTab(value?.type === "mcp" && allowedKinds.includes("mcp") ? "mcp" : "tool");
         const initialGroupKey =
           value?.type === "mcp" && value.mcpId
             ? `group:mcp:${value.mcpId}`
@@ -260,7 +262,7 @@ export function ActionTypeToolSelectModal({
     };
 
     void loadCatalog();
-  }, [ensureGroupToolsLoaded, keyword, open, value]);
+  }, [allowedKinds, ensureGroupToolsLoaded, keyword, open, value]);
 
   const selectedKey = useMemo(
     () => (selectedSelection ? buildSelectionKey(selectedSelection) : null),
@@ -496,14 +498,22 @@ export function ActionTypeToolSelectModal({
         <Tabs
           activeKey={activeTab}
           items={[
-            {
-              key: "tool",
-              label: t("knowledgeNetwork.actionTypeExecutionSourceTool"),
-            },
-            {
-              key: "mcp",
-              label: "MCP",
-            },
+            ...(allowedKinds.includes("tool")
+              ? [
+                  {
+                    key: "tool",
+                    label: t("knowledgeNetwork.actionTypeExecutionSourceTool"),
+                  },
+                ]
+              : []),
+            ...(allowedKinds.includes("mcp")
+              ? [
+                  {
+                    key: "mcp",
+                    label: "MCP",
+                  },
+                ]
+              : []),
           ]}
           onChange={(nextTab) => setActiveTab(nextTab as "mcp" | "tool")}
         />
