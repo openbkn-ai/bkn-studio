@@ -83,10 +83,12 @@ vi.mock("@/modules/execution-factory/services/category.service", () => ({
   ),
 }));
 
-const createToolbox = vi.fn(() => Promise.resolve({ boxId: "box-1" }));
+const { createToolbox } = vi.hoisted(() => ({
+  createToolbox: vi.fn(() => Promise.resolve({ boxId: "box-1" })),
+}));
 
 vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
-  createToolbox: (...args: unknown[]) => createToolbox(...args),
+  createToolbox,
 }));
 
 vi.mock("@/modules/execution-factory/services/operator.service", () => ({
