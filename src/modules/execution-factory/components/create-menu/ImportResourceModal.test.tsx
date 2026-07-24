@@ -105,7 +105,9 @@ vi.mock("@/modules/execution-factory/services/category.service", () => ({
 
 const { createToolbox, registerOperator } = vi.hoisted(() => ({
   createToolbox: vi.fn(() => Promise.resolve({ boxId: "box-1" })),
-  registerOperator: vi.fn(() => Promise.resolve({ operatorId: "op-1" })),
+  registerOperator: vi.fn((_input: { openapiSpec?: string }) =>
+    Promise.resolve({ operatorId: "op-1" }),
+  ),
 }));
 
 vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
@@ -212,17 +214,12 @@ describe("ImportResourceModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import" }));
 
     await waitFor(() => {
-      expect(registerOperator).toHaveBeenCalledWith(
-        expect.objectContaining({
-          openapiSpec: expect.stringContaining('"url": "https://api.example.com"'),
-        }),
-      );
+      expect(registerOperator).toHaveBeenCalled();
     });
 
-    expect(registerOperator).toHaveBeenCalledWith(
-      expect.objectContaining({
-        openapiSpec: expect.not.stringContaining("127.0.0.1:9000"),
-      }),
-    );
+    const firstCall = registerOperator.mock.calls[0]?.[0];
+    expect(firstCall).toBeDefined();
+    expect(firstCall?.openapiSpec).toContain('"url": "https://api.example.com"');
+    expect(firstCall?.openapiSpec).not.toContain("127.0.0.1:9000");
   });
 });
