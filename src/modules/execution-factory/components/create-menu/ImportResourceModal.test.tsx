@@ -271,8 +271,10 @@ describe("ImportResourceModal", () => {
       failureCount: 2,
     });
 
+    const onClose = vi.fn();
+    const onSuccess = vi.fn();
     render(
-      <ImportResourceModal activeTab="toolbox" onClose={vi.fn()} onSuccess={vi.fn()} open />,
+      <ImportResourceModal activeTab="toolbox" onClose={onClose} onSuccess={onSuccess} open />,
     );
 
     await screen.findByDisplayValue("http://127.0.0.1:9000");
@@ -284,6 +286,28 @@ describe("ImportResourceModal", () => {
       expect(messageWarning).toHaveBeenCalledWith("Imported 1 tool(s), 2 failed");
     });
     expect(messageSuccess).not.toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("shows success toast and invokes callbacks when all tools import", async () => {
+    const onClose = vi.fn();
+    const onSuccess = vi.fn();
+    render(
+      <ImportResourceModal activeTab="toolbox" onClose={onClose} onSuccess={onSuccess} open />,
+    );
+
+    await screen.findByDisplayValue("http://127.0.0.1:9000");
+    fireEvent.click(screen.getByRole("button", { name: "Load OpenAPI" }));
+    await screen.findByDisplayValue("https://example.com");
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+
+    await waitFor(() => {
+      expect(messageSuccess).toHaveBeenCalledWith("Imported");
+    });
+    expect(messageWarning).not.toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
   });
 
   it("does not call registerOpenApiImport when toolbox Service URL is cleared", async () => {
