@@ -178,7 +178,7 @@ export function BuildTaskDetailDrawer({
           <h3 className={styles.sectionTitle}>{t("dataCatalog.task.modalTitle")}</h3>
           <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
             <Descriptions.Item label={t("dataCatalog.build.resource")}>
-              {resource?.name ?? task.resourceId}
+              {resource?.name ?? task.resourceName ?? task.resourceId}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.resourceId")}>
               {task.resourceId}

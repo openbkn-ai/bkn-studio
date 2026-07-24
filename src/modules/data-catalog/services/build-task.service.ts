@@ -51,6 +51,7 @@ type BackendBuildTaskIndexConfig = {
 type BackendBuildTask = {
   build_key_fields?: string | string[];
   catalog_id?: string;
+  catalog_name?: string;
   create_time?: number;
   embedding_fields?: string | string[];
   embedding_model?: string;
@@ -64,6 +65,7 @@ type BackendBuildTask = {
   mode?: string;
   model_dimensions?: number;
   resource_id?: string;
+  resource_name?: string;
   status?: string;
   synced_count?: number;
   total_count?: number;
@@ -234,7 +236,9 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
   return {
     id: item.id,
     catalogId: item.catalog_id,
+    catalogName: item.catalog_name,
     resourceId: item.resource_id ?? "",
+    resourceName: item.resource_name,
     mode,
     status,
     embeddingFields: snapshot.embeddingFields,

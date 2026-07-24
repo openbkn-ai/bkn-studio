@@ -22,7 +22,7 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
-import { catalogListPhysicalQuery, listCatalogs } from "@/shared/catalog";
+import { listCatalogs } from "@/shared/catalog";
 import {
   createDataConnectDiscoverSchedule,
   deleteDataConnectDiscoverTask,
@@ -77,6 +77,8 @@ export function DataConnectDiscoverScene({
   const [activeTab, setActiveTab] = useState<DiscoverPageTab>("schedules");
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebouncedValue(keyword.trim());
+  const [catalogKeyword, setCatalogKeyword] = useState("");
+  const debouncedCatalogKeyword = useDebouncedValue(catalogKeyword.trim());
   const [selectedCatalogId, setSelectedCatalogId] = useState<string | undefined>(catalogId);
   const [enabledFilter, setEnabledFilter] =
     useState<EnabledFilterValue>("all");
@@ -138,14 +140,19 @@ export function DataConnectDiscoverScene({
     setCatalogError(null);
 
     try {
-      const result = await listCatalogs(catalogListPhysicalQuery());
+      const result = await listCatalogs({
+        keyword: debouncedCatalogKeyword,
+        page: 1,
+        pageSize: 50,
+        type: "physical",
+      });
       setCatalogs(result.items);
     } catch (error) {
       setCatalogError(extractRequestErrorMessage(error));
     } finally {
       setLoadingCatalogs(false);
     }
-  }, []);
+  }, [debouncedCatalogKeyword]);
 
   const loadSchedules = useCallback(async () => {
     setLoadingSchedules(true);
@@ -590,7 +597,8 @@ export function DataConnectDiscoverScene({
           setSchedulePage(1);
           setTaskPage(1);
         }}
-        optionFilterProp="label"
+        filterOption={false}
+        onSearch={setCatalogKeyword}
         options={[
           ...(catalogLocked ? [] : [{ label: t("dataConnect.categoryAll"), value: "" }]),
           ...catalogs.map((item) => ({
@@ -906,6 +914,7 @@ export function DataConnectDiscoverScene({
             setScheduleModalState(null);
             setEditingSchedule(null);
           }}
+          onCatalogSearch={setCatalogKeyword}
           onSubmit={handleScheduleSubmit}
           open
           submitting={scheduleModalSubmitting}

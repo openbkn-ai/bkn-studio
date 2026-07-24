@@ -115,6 +115,8 @@ export type BuildTask = {
   buildKeyFields: string[];
   /** 后端任务记录所属 Catalog；mock 旧数据可缺省并由数据资源回填。 */
   catalogId?: string;
+  /** 任务列表关联返回的 catalog 展示字段，避免列表页再全量加载 catalog。 */
+  catalogName?: string;
   createTime: string;
   createdAt: number;
   embeddingFields: string[];
@@ -136,6 +138,8 @@ export type BuildTask = {
   mode: BuildMode;
   modelDimensions: number;
   resourceId: string;
+  /** 任务列表关联返回的资源名称，避免列表页再全量加载 resources。 */
+  resourceName?: string;
   status: BuildTaskStatus;
   syncedCount: number;
   totalCount: number;
