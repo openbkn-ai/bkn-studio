@@ -29,10 +29,10 @@ export const VALUE_FROM_OPTIONS: Array<{
 export const OPERATOR_TYPE_OPTIONS = [{ label: "==", value: "==" }];
 
 export const PARAMETER_SOURCE_OPTIONS = [
-  { label: "Header", value: "header" },
-  { label: "Query", value: "query" },
-  { label: "Body", value: "body" },
-  { label: "Path", value: "path" },
+  { labelKey: "objectTypeLogicParameterSourceHeader", value: "header" },
+  { labelKey: "objectTypeLogicParameterSourceQuery", value: "query" },
+  { labelKey: "objectTypeLogicParameterSourceBody", value: "body" },
+  { labelKey: "objectTypeLogicParameterSourcePath", value: "path" },
 ];
 
 export const FIELD_TYPE_INPUT = {

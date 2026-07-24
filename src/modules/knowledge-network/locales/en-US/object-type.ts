@@ -130,6 +130,10 @@ export const objecttypePart = {
     objectTypeNoConceptGroups: "No related concept groups yet.",
     objectTypeNotIndexed: "Resource not indexed",
     objectTypeParameterSource: "Parameter source",
+    objectTypeLogicParameterSourceBody: "Body",
+    objectTypeLogicParameterSourceHeader: "Header",
+    objectTypeLogicParameterSourcePath: "Path",
+    objectTypeLogicParameterSourceQuery: "Query",
     objectTypePickAttributes: "Pick attributes",
     objectTypePrimaryKey: "Primary key",
     objectTypePrimaryKeyTip:

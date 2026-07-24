@@ -138,6 +138,15 @@ export function ObjectTypeLogicAttributeEditDrawer({
     [t],
   );
 
+  const parameterSourceOptions = useMemo(
+    () =>
+      PARAMETER_SOURCE_OPTIONS.map((item) => ({
+        label: t(`knowledgeNetwork.${item.labelKey}`),
+        value: item.value,
+      })),
+    [t],
+  );
+
   const objectTypePropertyOptions = useMemo(
     () =>
       allData.map((item) => ({
@@ -484,7 +493,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
         type === "tool" && !record.children?.length ? (
           <Select
             onChange={(source: string) => updateSettingData(record.id, { source })}
-            options={PARAMETER_SOURCE_OPTIONS}
+            options={parameterSourceOptions}
             value={value}
           />
         ) : (

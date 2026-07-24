@@ -122,6 +122,10 @@ export const objecttypePart = {
     objectTypeNoConceptGroups: "当前没有关联概念分组。",
     objectTypeNotIndexed: "资源未建索引",
     objectTypeParameterSource: "参数来源",
+    objectTypeLogicParameterSourceBody: "Body",
+    objectTypeLogicParameterSourceHeader: "Header",
+    objectTypeLogicParameterSourcePath: "Path",
+    objectTypeLogicParameterSourceQuery: "Query",
     objectTypePickAttributes: "挑选属性",
     objectTypePrimaryKey: "主键",
     objectTypePrimaryKeyTip:
