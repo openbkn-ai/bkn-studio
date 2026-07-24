@@ -527,11 +527,15 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                       </AppButton>
                     </PermissionGate>
                   ) : null}
-                  <PermissionGate permissions="execution-factory:tool:edit">
-                    <AppButton onClick={handleEnterEditMode} type="primary">
-                      {t("executionFactory.toolboxToolsEnterEdit")}
-                    </AppButton>
-                  </PermissionGate>
+                  {/* 市场预览态（from=catalog）看的是别的域的工具箱，不该给编辑入口，
+                      与旁边「编辑工具箱」按钮的 !catalogContext 守卫对齐。 */}
+                  {!catalogContext ? (
+                    <PermissionGate permissions="execution-factory:tool:edit">
+                      <AppButton onClick={handleEnterEditMode} type="primary">
+                        {t("executionFactory.toolboxToolsEnterEdit")}
+                      </AppButton>
+                    </PermissionGate>
+                  ) : null}
                 </Space>
               ) : (
                 <PermissionGate permissions="execution-factory:tool:create">
@@ -709,13 +713,19 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                       </div>
                       <div className={styles.toolDesc}>{item.description || "-"}</div>
                       <div className={styles.toolItemFooter}>
+                        {/* 与详情区状态开关同口径：需要 tool:edit，且市场预览态禁用。
+                            手工构造 ?from=catalog&action=edit 会让 viewMode 为假，靠这两道
+                            门禁兜住，避免改到别人域里工具的启用状态。 */}
                         {!viewMode ? (
-                          <Switch
-                            checked={item.status === "enabled"}
-                            onChange={() => handleToggleStatus(item)}
-                            onClick={(_, event) => event.stopPropagation()}
-                            size="small"
-                          />
+                          <PermissionGate permissions="execution-factory:tool:edit">
+                            <Switch
+                              checked={item.status === "enabled"}
+                              disabled={catalogContext}
+                              onChange={() => handleToggleStatus(item)}
+                              onClick={(_, event) => event.stopPropagation()}
+                              size="small"
+                            />
+                          </PermissionGate>
                         ) : null}
                         <PermissionGate permissions="execution-factory:tool:debug">
                           <AppButton
