@@ -241,7 +241,7 @@ export const dataCatalogEnUS = {
       batchDescription: "One-shot sync and indexing.",
       streamingLabel: "Streaming",
       streamingDescription:
-        "Continuous incremental sync with a standing listener; build key is optional.",
+        "Continuous incremental sync with a standing listener; a build key is required.",
       executeType: "Execution",
       executeFull: "Full",
       executeFullDescription: "Sync all rows from the source and rebuild the index. Use it for first builds or full refreshes.",

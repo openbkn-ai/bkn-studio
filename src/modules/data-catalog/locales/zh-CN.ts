@@ -228,7 +228,7 @@ export const dataCatalogZhCN = {
       batchLabel: "批量",
       batchDescription: "一次性同步并建索引。",
       streamingLabel: "流式",
-      streamingDescription: "持续增量同步、常驻监听；增量键可选。",
+      streamingDescription: "持续增量同步、常驻监听；需指定增量键。",
       executeType: "执行方式",
       executeFull: "全量",
       executeFullDescription: "从数据源重新同步全部数据并重建索引，适合首次构建或需要完整刷新时使用。",
