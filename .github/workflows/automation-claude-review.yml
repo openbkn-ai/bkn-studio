@@ -1,0 +1,131 @@
+# Copyright (c) 2026 OpenBKN
+# SPDX-License-Identifier: LicenseRef-OpenBKN
+# Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+# Conditions. See LICENSE for the full text.
+
+name: Claude Code Review
+
+# 由 Claude 对 PR 做代码评审：开启、重开、从 draft 转 ready，以及每次推送新提交时各跑一次。
+#
+# 覆盖每次推送而非只审首版，是因为评审之后追加的提交往往是「按意见快速改一下」，
+# 恰恰最容易引入新问题；只审首版会让这部分完全不过审。
+# 连续推送的浪费由下面的 concurrency 收敛：新一次运行会取消尚未完成的上一次。
+#
+# 需要对任意 PR 重新评审时，手动触发 workflow_dispatch 并填 PR 编号。
+#
+# 只对代码路径生效。纯文档/配置改动不进评审，既省额度也避免噪声。
+# 注意：GitHub Actions 不允许同一事件同时使用 paths 与 paths-ignore，因此这里
+# 只写 include 列表——未列出的路径自动跳过——并用 ! 前缀排除列表内的文档文件。
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'specs/**'
+      - 'scripts/**'
+      - 'deploy/**'
+      - 'Dockerfile'
+      - 'vite.config.ts'
+      - '!**/*.md'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: string
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # fork 发起的 PR 拿不到 secrets，直接跳过避免红叉
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # pull_request 事件下 checkout 会自动落到 PR 的 merge ref；
+          # workflow_dispatch 下只会拿到默认分支，需要下一步显式切到 PR 分支，
+          # 因此这里放开深度以便 gh pr checkout 能建立分支。
+          fetch-depth: ${{ github.event_name == 'workflow_dispatch' && 0 || 1 }}
+
+      - name: Checkout PR branch (manual trigger)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh pr checkout "$PR_NUMBER"
+          echo "已切到 PR #$PR_NUMBER: $(git rev-parse --abbrev-ref HEAD) @ $(git rev-parse --short HEAD)"
+
+      - name: Claude review
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # track_progress 只支持 pull_request / issues / issue_comment /
+          # pull_request_review(_comment) 事件，在 workflow_dispatch 下会直接
+          # 报错退出——手动触发那条路径因此从未可用。按事件类型开关。
+          track_progress: ${{ github.event_name != 'workflow_dispatch' }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ env.PR_NUMBER }}
+
+            对这个 PR 做代码评审。这是 bkn-studio —— React + TypeScript + Vite 的
+            前端单页应用，按 src/modules/<模块> 划分业务模块，通过 Helm chart 部署。
+            协作规范见 CONTRIBUTING.md、AGENTS.md、ARCHITECTURE.md、
+            MICRO_APP_CONTRACT.md。
+
+            重点关注（按优先级）：
+
+            1. **正确性** — 逻辑错误、边界条件、异常与空态未处理、React hook 依赖
+               数组错漏、副作用未清理、请求竞态（切换筛选/分页时旧响应覆盖新结果）、
+               列表 key 用下标导致的状态错位。
+            2. **安全与权限** — 凭据或 token 落到前端可见处、`dangerouslySetInnerHTML`
+               与其它 XSS 面、权限点判断缺失或写死放行、把内部服务地址暴露到浏览器。
+               权限一律走网关暴露的 `/me/permissions`，不要直连内部 authz 接口。
+            3. **真实数据** — 本仓硬性要求：UI 只能用真实后端数据。后端没有的字段就
+               不展示，禁止 mock、占位、编造的兜底值冒充真实数据。这是高频问题，重点查。
+            4. **一致性** — 是否复用了既有组件/hooks/请求封装而不是另起一套；模块边界
+               是否符合 MICRO_APP_CONTRACT；用户可见文案是否 i18n 齐全。
+            5. **测试** — 新增逻辑是否有覆盖，测试是否验证真实行为而不是断言实现细节。
+
+            评审要求：
+            - 用中文。
+            - 具体问题用 inline comment 贴到对应行，说明「问题是什么 + 怎么改」。
+            - 顶层 comment 只写整体判断和阻塞项清单，不要复述 diff。
+            - 不确定的推测标注为「待确认」，不要当成缺陷断言。
+            - 没问题就说没问题，不要为了凑数提格式化/命名类的琐碎意见。
+              lint 由 CI 的 eslint.config.typechecked.js 把关，不用人工复查风格。
+
+            评审结论落成一次 PR review（不是普通评论）：
+            - 确认没有阻塞项时，`gh pr review "$PR_NUMBER" --approve --body "<一句放行理由>"`。
+            - 有阻塞项时，`gh pr review "$PR_NUMBER" --request-changes --body "<阻塞清单>"`。
+              待确认的推测不算阻塞项，别用它触发 request-changes。
+            批准以 github-actions[bot] 身份提交，只表态、不合并。人工仍需自行 merge。
+
+          # 大 PR 只给 gh pr diff 不够：Claude 需要进文件看上下文、比对具体 commit，
+          # 否则会伸手 Read/Grep/git diff 等未授权工具而被拒，撞满轮次后评论冻在
+          # 「进行中」。这里补齐只读检视工具并放宽轮次上限。
+          claude_args: |
+            --model claude-opus-4-8
+            --effort high
+            --max-turns 60
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Grep,Glob,LS,Bash(gh pr comment:*),Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
+
+      - name: Warn when credential missing
+        if: env.CLAUDE_CODE_OAUTH_TOKEN == ''
+        run: |
+          echo "::warning::Secret CLAUDE_CODE_OAUTH_TOKEN not set — skipping Claude review."
