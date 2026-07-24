@@ -98,22 +98,23 @@ export function CodeEditor({
 
   const applyJsonSchema = useCallback(
     (monaco: Monaco | null) => {
-      if (!monaco || language !== "json") {
+      // setDiagnosticsOptions 是全局 json 配置：无 schema 的编辑器（参数预览、AI 结果、
+      // JsonEditor）若写空 schemas，会清掉契约编辑器已注册的 schema，且卸载不恢复。
+      // 只有拿到 schema 才动全局；fileMatch 按 path 限定，残留 schema 对无 schema 的编辑器无害。
+      if (!monaco || language !== "json" || !jsonSchema) {
         return;
       }
 
       monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
         validate: true,
         allowComments: false,
-        schemas: jsonSchema
-          ? [
-              {
-                uri: `inmemory://schema/${EVENT_MODEL_PATH}`,
-                fileMatch: [`*${EVENT_MODEL_PATH}`],
-                schema: jsonSchema,
-              },
-            ]
-          : [],
+        schemas: [
+          {
+            uri: `inmemory://schema/${EVENT_MODEL_PATH}`,
+            fileMatch: [`*${EVENT_MODEL_PATH}`],
+            schema: jsonSchema,
+          },
+        ],
       });
     },
     [jsonSchema, language],

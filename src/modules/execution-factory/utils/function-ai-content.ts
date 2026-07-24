@@ -62,10 +62,15 @@ function mapParameters(value: unknown): FunctionParameterDef[] | undefined {
       return;
     }
 
+    const subParameters = mapParameters(record.sub_parameters);
+
     items.push({
       name,
       type: asString(record.type) ?? "string",
       description: asString(record.description) ?? asString(record.desc),
+      // 保留后端约束字段：array/object 缺子项写回表单会撞 sub_parameters 校验。
+      ...(typeof record.required === "boolean" ? { required: record.required } : {}),
+      ...(subParameters ? { sub_parameters: subParameters } : {}),
     });
   });
 

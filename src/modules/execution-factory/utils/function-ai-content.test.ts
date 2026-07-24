@@ -49,6 +49,45 @@ describe("parseFunctionAiContent", () => {
     });
   });
 
+  it("recurses into sub_parameters and keeps required", () => {
+    const result = parseFunctionAiContent("metadata_param_generator", {
+      name: "segment",
+      inputs: [
+        {
+          name: "customers",
+          type: "array",
+          required: true,
+          sub_parameters: [
+            {
+              name: "profile",
+              type: "object",
+              required: false,
+              sub_parameters: [{ name: "id", type: "string", required: true }],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      inputs: [
+        {
+          name: "customers",
+          type: "array",
+          required: true,
+          sub_parameters: [
+            {
+              name: "profile",
+              type: "object",
+              required: false,
+              sub_parameters: [{ name: "id", type: "string", required: true }],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
   it("parses metadata delivered as a JSON string", () => {
     const result = parseFunctionAiContent(
       "metadata_param_generator",
