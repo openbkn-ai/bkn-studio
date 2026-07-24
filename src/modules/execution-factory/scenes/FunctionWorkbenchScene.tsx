@@ -1047,6 +1047,13 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                         <span className={styles.fnStatusToggle}>
                           <Switch
                             checked={active.status === "enabled"}
+                            /*
+                             * 保存期间锁住：还没落库的函数扳开关只改本地 status，而
+                             * persistFunction 建工具用的是保存开始那一刻的快照状态。
+                             * 保存途中翻转会被静默吞掉——界面显示"已禁用"，服务端却是
+                             * enabled，Agent 照样调得到。锁掉这段窗口最省事也最稳。
+                             */
+                            disabled={saving || publishing}
                             onChange={() => handleToggleStatus(active)}
                             size="small"
                           />

@@ -175,7 +175,8 @@
   color: var(--color-text-muted);
 }
 
-/* 主题 borderRadius:12 让按钮偏圆；详情页统一方角，贴合全站扁平面 */
+/* 主题 borderRadius 已全局归零，这里是冗余保险：万一日后有人把 token 调回非 0，
+   本页仍保持方角。不是在纠正圆角，别照抄到新页面。 */
 .page :global(.ant-btn) {
   border-radius: 0;
 }
