@@ -144,16 +144,17 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
     // Doc servers are a one-shot default for the form. After autofill, the form
     // serviceUrl is the source of truth and is written back into servers on submit.
+    // Always reset on document change so a prior absolute URL does not stick when
+    // the next document omits servers (antd ignores undefined; use "").
     const nextServiceUrl = resolvedServiceUrl?.ok
       ? resolvedServiceUrl.url
       : analysis.serverUrl && /^https?:\/\//i.test(analysis.serverUrl)
         ? analysis.serverUrl
-        : undefined;
+        : "";
 
-    const nextValues: Partial<ImportOpenApiCapabilityFormValues> = {};
-    if (nextServiceUrl) {
-      nextValues.serviceUrl = nextServiceUrl;
-    }
+    const nextValues: Partial<ImportOpenApiCapabilityFormValues> = {
+      serviceUrl: nextServiceUrl,
+    };
 
     if (!initialBoxId && toolboxMode === "new") {
       const hints = extractOpenApiMetadataHints(openapiSpec);
@@ -167,11 +168,9 @@ export const ImportOpenApiCapabilityForm = forwardRef<
       }
     }
 
-    if (Object.keys(nextValues).length > 0) {
-      form.setFieldsValue(nextValues);
-    }
+    form.setFieldsValue(nextValues);
 
-    if (resolvedServiceUrl?.ok) {
+    if (resolvedServiceUrl?.ok || nextServiceUrl) {
       form.setFields([{ name: "serviceUrl", errors: [] }]);
     }
   }, [

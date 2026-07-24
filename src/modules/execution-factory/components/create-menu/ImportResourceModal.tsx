@@ -229,7 +229,7 @@ export function ImportResourceModal({
   }, [adpForm, initialKind, open, openApiForm, supportsOpenApi]);
 
   useEffect(() => {
-    if (!openapiSpec.trim() || activeTab !== "toolbox") {
+    if (!openapiSpec.trim()) {
       return;
     }
 
@@ -246,16 +246,21 @@ export function ImportResourceModal({
     lastOpenApiAutofillKeyRef.current = openapiSpec;
 
     const hints = extractOpenApiMetadataHints(openapiSpec);
-    const nextValues: Partial<OpenApiFormValues> = {
-      name:
+    const nextValues: Partial<OpenApiFormValues> = {};
+
+    if (activeTab === "toolbox") {
+      nextValues.name =
         normalizeGeneratedCapabilityName(hints.title) ||
         normalizeGeneratedCapabilityName(currentOpenApiName) ||
-        currentOpenApiName,
-    };
-
-    if (analysis.serverUrl && /^https?:\/\//i.test(analysis.serverUrl)) {
-      nextValues.serviceUrl = analysis.serverUrl;
+        currentOpenApiName;
     }
+
+    // Always reset serviceUrl on document change so a prior absolute server
+    // does not stick when the next document omits servers.
+    nextValues.serviceUrl =
+      analysis.serverUrl && /^https?:\/\//i.test(analysis.serverUrl)
+        ? analysis.serverUrl
+        : "http://127.0.0.1:9000";
 
     openApiForm.setFieldsValue(nextValues);
   }, [activeTab, currentOpenApiName, openApiForm, openapiSpec]);
@@ -303,16 +308,36 @@ export function ImportResourceModal({
           return;
         }
 
-        const serviceUrl = values.serviceUrl?.trim() || "http://127.0.0.1:9000";
+        const analysis = analyzeOpenApiDocumentText(openapiSpec);
+        const docAbsoluteServerUrl =
+          analysis.ok &&
+          analysis.serverUrl?.trim() &&
+          /^https?:\/\//i.test(analysis.serverUrl)
+            ? analysis.serverUrl.trim()
+            : undefined;
+
+        const formServiceUrl = values.serviceUrl?.trim();
+        // Operator tab has no visible Service URL field. Preserve absolute
+        // servers from the document; only inject a form/default URL when missing.
+        const serviceUrl =
+          activeTab === "operator" && docAbsoluteServerUrl
+            ? docAbsoluteServerUrl
+            : formServiceUrl || "http://127.0.0.1:9000";
+
         if (!/^https?:\/\//i.test(serviceUrl)) {
-          void message.error(t("executionFactory.importOpenApiServiceUrlRequired"));
+          void message.error(
+            docAbsoluteServerUrl
+              ? t("executionFactory.importOpenApiServiceUrlRequired")
+              : t("executionFactory.importOpenApiMissingServerManual"),
+          );
           return;
         }
 
-        const normalizedOpenapiSpec = rewriteOpenApiServerUrl(
-          normalizeOpenApiDocumentText(openapiSpec),
-          serviceUrl,
-        );
+        const normalizedText = normalizeOpenApiDocumentText(openapiSpec);
+        const normalizedOpenapiSpec =
+          activeTab === "operator" && docAbsoluteServerUrl
+            ? normalizedText
+            : rewriteOpenApiServerUrl(normalizedText, serviceUrl);
 
         const hints = extractOpenApiMetadataHints(openapiSpec);
 

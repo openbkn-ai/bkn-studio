@@ -25,6 +25,22 @@ const spacedTitleSpec = JSON.stringify({
   },
 });
 
+const absoluteServerSpec = JSON.stringify({
+  openapi: "3.0.3",
+  info: { title: "remote_ops", version: "1.0.0" },
+  servers: [{ url: "https://api.example.com" }],
+  paths: {
+    "/ping": {
+      get: {
+        summary: "ping",
+        responses: { "200": { description: "OK" } },
+      },
+    },
+  },
+});
+
+let nextOpenApiSpec = spacedTitleSpec;
+
 const translate = (key: string) => {
   const labels: Record<string, string> = {
     "common.required": "Required",
@@ -35,9 +51,13 @@ const translate = (key: string) => {
     "executionFactory.importKindAdp": "ADP",
     "executionFactory.importConfirm": "Import",
     "executionFactory.importResourceTitle.toolbox": "Import toolbox",
+    "executionFactory.importResourceTitle.operator": "Import operator",
     "executionFactory.importSuccess": "Imported",
     "executionFactory.importOpenApiFileRequired": "OpenAPI required",
+    "executionFactory.importOpenApiServiceUrlRequired": "Service URL required",
+    "executionFactory.importOpenApiMissingServerManual": "Missing servers",
     "executionFactory.businessIntro.impexOpenApiToolbox": "Intro",
+    "executionFactory.businessIntro.impexOpenApiOperator": "Intro",
   };
 
   return labels[key] ?? key;
@@ -83,8 +103,9 @@ vi.mock("@/modules/execution-factory/services/category.service", () => ({
   ),
 }));
 
-const { createToolbox } = vi.hoisted(() => ({
+const { createToolbox, registerOperator } = vi.hoisted(() => ({
   createToolbox: vi.fn(() => Promise.resolve({ boxId: "box-1" })),
+  registerOperator: vi.fn(() => Promise.resolve({ operatorId: "op-1" })),
 }));
 
 vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
@@ -92,7 +113,7 @@ vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
 }));
 
 vi.mock("@/modules/execution-factory/services/operator.service", () => ({
-  registerOperator: vi.fn(),
+  registerOperator,
 }));
 
 vi.mock("@/modules/execution-factory/services/impex.service", () => ({
@@ -105,7 +126,7 @@ vi.mock("@/modules/execution-factory/components/CapabilityBusinessIntro", () => 
 
 vi.mock("@/modules/execution-factory/components/OpenApiSpecInput", () => ({
   OpenApiSpecInput: ({ onChange }: { onChange?: (value: string) => void }) => (
-    <button onClick={() => onChange?.(spacedTitleSpec)} type="button">
+    <button onClick={() => onChange?.(nextOpenApiSpec)} type="button">
       Load OpenAPI
     </button>
   ),
@@ -144,6 +165,7 @@ vi.mock("antd", async () => {
 describe("ImportResourceModal", () => {
   afterEach(() => {
     cleanup();
+    nextOpenApiSpec = spacedTitleSpec;
     vi.clearAllMocks();
   });
 
@@ -177,5 +199,25 @@ describe("ImportResourceModal", () => {
         }),
       );
     });
+  });
+
+  it("preserves absolute OpenAPI servers when importing an operator", async () => {
+    nextOpenApiSpec = absoluteServerSpec;
+
+    render(
+      <ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+
+    await waitFor(() => {
+      expect(registerOperator).toHaveBeenCalled();
+    });
+
+    const openapiSpec = vi.mocked(registerOperator).mock.calls[0]?.[0].openapiSpec as string;
+    const parsed = JSON.parse(openapiSpec) as { servers?: Array<{ url?: string }> };
+    expect(parsed.servers?.[0]?.url).toBe("https://api.example.com");
+    expect(openapiSpec).not.toContain("127.0.0.1:9000");
   });
 });
