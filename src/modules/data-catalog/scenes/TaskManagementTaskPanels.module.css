@@ -14,8 +14,27 @@
 
 .operationBar {
   composes: operationBar from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  align-items: flex-start;
   border-bottom: 0;
+  flex-wrap: wrap;
   padding-bottom: 0;
+}
+
+.toolbarActions {
+  flex: 0 0 auto;
+}
+
+.toolbarFilters {
+  display: flex;
+  flex: 1 1 520px;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.toolbarFilters :global(.ant-space-item) {
+  flex: 0 0 auto;
 }
 
 .select {
@@ -56,4 +75,16 @@
 .textLink:hover {
   color: var(--business-color-link-hover);
   text-decoration: underline;
+}
+
+@media (max-width: 1280px) {
+  .operationBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbarFilters {
+    justify-content: flex-start;
+    width: 100%;
+  }
 }
