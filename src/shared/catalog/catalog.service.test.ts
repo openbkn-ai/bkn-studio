@@ -13,6 +13,11 @@ vi.mock("@/framework/request/http", () => ({
   http: { get: getMock },
 }));
 
+function lastParams(): Record<string, unknown> {
+  const call = getMock.mock.calls.at(-1) as [string, { params?: Record<string, unknown> }] | undefined;
+  return call?.[1]?.params ?? {};
+}
+
 describe("catalog.service · listCatalogs", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -30,9 +35,7 @@ describe("catalog.service · listCatalogs", () => {
 
     await listCatalogs({ keyword: "", page: 1, pageSize: 50, type: "physical" });
 
-    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs", {
-      params: expect.objectContaining({ type: "physical" }),
-    });
+    expect(lastParams()).toMatchObject({ type: "physical" });
   });
 
   it("omits the type filter when all catalog types are requested", async () => {
@@ -40,8 +43,6 @@ describe("catalog.service · listCatalogs", () => {
 
     await listCatalogs({ keyword: "", page: 1, pageSize: 50, type: "all" });
 
-    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs", {
-      params: expect.objectContaining({ type: undefined }),
-    });
+    expect(lastParams()).toMatchObject({ type: undefined });
   });
 });

@@ -36,3 +36,18 @@ Read this first, then load the rules under [`rules/`](rules/). Before working in
 - Conventional Commits: `type(scope): subject` (`feat` / `fix` / `chore` / `refactor` / `docs` / `test`; scope = service name).
 - Branch from the Issue's "Create a branch"; one PR per Issue, kept small.
 - Branch names must use a valid type prefix and at most two path segments after it: `<type>/<description>`, `<type>/<issue-number>-<description>`, or `<type>/<module>/<description>`; segments start with lowercase letters or digits and may contain `-`, `.`, or `_`.
+
+## Mandatory pre-commit CI checks
+
+Before **every** commit, run the same quality checks enforced by `.github/workflows/ci-quality.yml`. Do not commit if any command fails or emits warnings where CI requires zero warnings:
+
+```bash
+node scripts/check-license-headers.mjs
+pnpm exec eslint . --config eslint.config.typechecked.js --max-warnings 0
+pnpm exec vitest --run
+pnpm exec tsc -b --pretty false
+pnpm exec vite build
+pnpm audit --prod
+```
+
+For changes under `src/modules/execution-factory/**`, also run `pnpm test:execution-factory`, matching the path-scoped CI workflow. Report every command run and any CI-only check that was not practical to run locally.
