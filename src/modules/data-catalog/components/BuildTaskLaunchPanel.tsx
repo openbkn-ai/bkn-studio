@@ -11,7 +11,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import {
+  extractRequestErrorDetails,
+  type RequestErrorDetails,
+} from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   BuildTaskConflictError,
@@ -39,6 +42,8 @@ export type BuildTaskLaunchPanelProps = {
 function cx(...parts: Array<string | false | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
+
+type BuildTaskLaunchError = RequestErrorDetails;
 
 function formatEmbeddingModelDisplay(
   modelId: string | null | undefined,
@@ -69,7 +74,7 @@ export function BuildTaskLaunchPanel({
   const [mode, setMode] = useState<BuildMode>("batch");
   const [executeType, setExecuteType] = useState<BuildExecuteType>("full");
   const [existingActive, setExistingActive] = useState<BuildTask | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<BuildTaskLaunchError | null>(null);
   const [models, setModels] = useState<SmallModel[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -86,6 +91,7 @@ export function BuildTaskLaunchPanel({
   const hasResourceConfig =
     config.embeddingFields.length > 0 || config.fulltextFields.length > 0;
   const batchNeedsBuildKey = mode === "batch" && config.buildKeyFields.length === 0;
+  const streamingNeedsBuildKey = mode === "streaming" && config.buildKeyFields.length === 0;
   const analyzerLabel = config.fulltextFields.length > 0 && config.fulltextAnalyzer
     ? t(`dataCatalog.build.analyzers.${config.fulltextAnalyzer}`, {
         defaultValue: config.fulltextAnalyzer,
@@ -145,23 +151,28 @@ export function BuildTaskLaunchPanel({
   const streamingActive =
     existingActive?.mode === "streaming" && isActiveBuildTask(existingActive);
   const controlsDisabled = disabled || actionsLocked;
-  const startDisabled = controlsDisabled || !hasResourceConfig || batchNeedsBuildKey;
+  const startDisabled =
+    controlsDisabled || !hasResourceConfig || batchNeedsBuildKey || streamingNeedsBuildKey;
 
   const startBuild = async () => {
     if (!hasResourceConfig) {
-      setError(t("dataCatalog.build.needConfigFirst"));
+      setError({ description: t("dataCatalog.build.needConfigFirst") });
       return;
     }
     if (mode === "batch" && config.buildKeyFields.length === 0) {
-      setError(t("dataCatalog.build.buildKeyRequired"));
+      setError({ description: t("dataCatalog.build.buildKeyRequired") });
+      return;
+    }
+    if (streamingNeedsBuildKey) {
+      setError({ description: t("dataCatalog.build.streamingBuildKeyRequired") });
       return;
     }
     if (actionsLocked) {
-      setError(
-        streamingActive
+      setError({
+        description: streamingActive
           ? t("dataCatalog.build.streamingActiveLocked")
           : t("dataCatalog.build.activeTaskLocked"),
-      );
+      });
       return;
     }
 
@@ -182,9 +193,9 @@ export function BuildTaskLaunchPanel({
       onStarted(task);
     } catch (persistError) {
       if (persistError instanceof BuildTaskConflictError) {
-        setError(t("dataCatalog.build.conflict"));
+        setError({ description: t("dataCatalog.build.conflict") });
       } else {
-        setError(extractRequestErrorMessage(persistError));
+        setError(extractRequestErrorDetails(persistError));
       }
     } finally {
       setSaving(false);
@@ -242,6 +253,9 @@ export function BuildTaskLaunchPanel({
           showIcon
           type="warning"
         />
+      ) : null}
+      {hasResourceConfig && streamingNeedsBuildKey ? (
+        <Alert message={t("dataCatalog.build.streamingBuildKeyRequired")} showIcon type="warning" />
       ) : null}
 
       {hasResourceConfig ? (
@@ -363,7 +377,23 @@ export function BuildTaskLaunchPanel({
         </div>
       </div>
 
-      {error ? <Alert message={error} showIcon type="error" /> : null}
+      {error ? (
+        <Alert
+          description={
+            error.code || error.details || error.solution || error.errorLink ? (
+              <div>
+                {error.code ? <div>{t("dataCatalog.build.errorCode", { value: error.code })}</div> : null}
+                {error.details ? <div>{t("dataCatalog.build.errorDetails", { value: error.details })}</div> : null}
+                {error.solution ? <div>{t("dataCatalog.build.errorSolution", { value: error.solution })}</div> : null}
+                {error.errorLink ? <div>{t("dataCatalog.build.errorLink", { value: error.errorLink })}</div> : null}
+              </div>
+            ) : undefined
+          }
+          message={error.description}
+          showIcon
+          type="error"
+        />
+      ) : null}
 
       <div className={formStyles.launchActionBar}>
         <AppButton

@@ -11,34 +11,76 @@ import i18n from "@/app/locales/i18n";
 
 type ErrorResponseBody = {
   error?: string;
+  error_code?: string;
+  error_details?: unknown;
+  error_link?: string;
   message?: string;
   description?: string;
+  solution?: string;
 };
 
-export function extractRequestErrorMessage(error: unknown) {
+export type RequestErrorDetails = {
+  code?: string;
+  description: string;
+  details?: string;
+  errorLink?: string;
+  solution?: string;
+};
+
+function formatErrorDetails(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return undefined;
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+export function extractRequestErrorDetails(error: unknown): RequestErrorDetails {
   if (axios.isAxiosError<ErrorResponseBody>(error)) {
     const data = error.response?.data;
-    const responseDescription = data?.description;
-    const responseMessage = data?.message;
-    const responseError = data?.error;
+    const description = data?.description;
+    const details = formatErrorDetails(data?.error_details);
+    const common = {
+      code: optionalString(data?.error_code),
+      details,
+      errorLink: optionalString(data?.error_link),
+      solution: optionalString(data?.solution),
+    };
+    const responseMessage = optionalString(data?.message);
+    const responseError = optionalString(data?.error);
 
-    if (typeof responseDescription === "string" && responseDescription.trim()) {
-      return responseDescription;
+    if (typeof description === "string" && description.trim()) {
+      return {
+        ...common,
+        description,
+      };
     }
 
-    if (typeof responseMessage === "string" && responseMessage.trim()) {
-      return responseMessage;
+    if (responseMessage) {
+      return { ...common, description: responseMessage };
     }
 
-    if (typeof responseError === "string" && responseError.trim()) {
-      return responseError;
+    if (responseError) {
+      return { ...common, description: responseError };
     }
   }
 
   if (error instanceof Error && error.message.trim()) {
-    return error.message;
+    return { description: error.message };
   }
 
-  return i18n.t("common.requestFailed");
+  return { description: i18n.t("common.requestFailed") };
 }
 
+export function extractRequestErrorMessage(error: unknown) {
+  const { description, details } = extractRequestErrorDetails(error);
+  return details ? `${description}: ${details}` : description;
+}
