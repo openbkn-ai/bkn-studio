@@ -59,6 +59,9 @@ export function FunctionAiGenerateModal({
   const [reasoningOpen, setReasoningOpen] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
   const contentStartedRef = useRef(false);
+  const reasoningBoxRef = useRef<HTMLDivElement | null>(null);
+  /** 是否还贴着底。用户往上翻去读前面的内容后就停止跟随，别把人拽回底部。 */
+  const reasoningStickRef = useRef(true);
   const generateType = Form.useWatch("type", form) as FunctionAiGenerateType | undefined;
 
   const applyResult = useMemo(
@@ -92,6 +95,16 @@ export function FunctionAiGenerateModal({
     }
   }, [outcome, resultLanguage, streamContent, submitting]);
 
+  // 思考内容是流式追加的，容器不跟着滚就会一直停在顶部，看着像卡住了。
+  useEffect(() => {
+    const node = reasoningBoxRef.current;
+    if (!node || !reasoningStickRef.current) {
+      return;
+    }
+
+    node.scrollTop = node.scrollHeight;
+  }, [reasoning, reasoningOpen]);
+
   useEffect(() => {
     if (!open) {
       abortRef.current?.abort();
@@ -101,6 +114,8 @@ export function FunctionAiGenerateModal({
       setOutcome(null);
       setStreamContent("");
       setReasoning("");
+      // 下次打开是一段全新的思考内容，跟随状态要跟着重置。
+      reasoningStickRef.current = true;
       return;
     }
 
@@ -234,6 +249,14 @@ export function FunctionAiGenerateModal({
             {
               children: (
                 <div
+                  onScroll={(event) => {
+                    const node = event.currentTarget;
+                    // 距底 8px 内算贴底：流式追加时高度一直在变，留点余量免得抖一下
+                    // 就被判成「用户翻上去了」而停住。
+                    reasoningStickRef.current =
+                      node.scrollHeight - node.scrollTop - node.clientHeight <= 8;
+                  }}
+                  ref={reasoningBoxRef}
                   style={{
                     color: "#64748b",
                     fontSize: 12,
