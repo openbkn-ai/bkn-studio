@@ -78,9 +78,6 @@ export const objecttypePart = {
     objectTypeEmptyNoSearchResult: "未找到匹配的对象类",
     objectTypeHasIndex: "资源索引状态",
     objectTypeIdPattern: "仅支持小写字母、数字、下划线和连字符。",
-    objectTypeImportPending:
-      "对象类导入流程会在后续切片中按旧 Vega 体验继续补齐。",
-    objectTypeImportTitle: "导入对象类",
     objectTypeIndexed: "资源已建索引",
     objectTypeKeyNotConfigured: "未配置",
     objectTypeLogicAttributeCreateTitle: "添加逻辑属性",

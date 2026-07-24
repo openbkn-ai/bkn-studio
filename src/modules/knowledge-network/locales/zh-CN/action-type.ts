@@ -59,9 +59,6 @@ export const actiontypePart = {
     actionTypeExecutionSubtitle: "维护执行映射、调度计划与执行日志入口。",
     actionTypeExecutionConfigSubtitle: "维护行动类执行来源与参数映射。",
     actionTypeExecutionTitle: "行动类执行配置",
-    actionTypeImportPending:
-      "行动类 JSON 导入将在后续切片对齐 Vega 体验。",
-    actionTypeImportTitle: "导入行动类",
     actionTypeKind: "行动类型",
     actionTypeKindCreate: "添加",
     actionTypeKindDelete: "删除",
