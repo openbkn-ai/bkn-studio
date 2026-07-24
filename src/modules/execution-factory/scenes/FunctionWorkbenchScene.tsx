@@ -1337,23 +1337,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                           {t("executionFactory.workbenchEventFill")}
                         </AppButton>
                       </span>
-                      <div
-                        className={styles.eventEditor}
-                        onKeyDown={(keyEvent) => {
-                          if ((keyEvent.metaKey || keyEvent.ctrlKey) && keyEvent.key === "Enter") {
-                            keyEvent.preventDefault();
-                            // 运行按钮靠 loading={running} 挡重复点击，快捷键这条也得判 running：
-                            // 并发两次 handleRun，先结束那次的 finally 会 setRunning(false) 并
-                            // message.destroy 掉共用的依赖提示 key，后一次还在飞时 UI 却显示空闲、
-                            // 提示被误清。
-                            if (running) {
-                              return;
-                            }
-
-                            void handleRun();
-                          }
-                        }}
-                      >
+                      <div className={styles.eventEditor}>
                         <CodeEditor
                           height={200}
                           jsonSchema={eventSchema}
