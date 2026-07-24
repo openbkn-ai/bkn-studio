@@ -26,13 +26,11 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
-import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import type {
   KnowledgeNetworkActionTypeKind,
   KnowledgeNetworkActionTypeRecord,
-  KnowledgeNetworkImportMode,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
@@ -44,10 +42,6 @@ type ActionTypeListPanelProps = {
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   onDelete: (records: KnowledgeNetworkActionTypeRecord[]) => Promise<void>;
-  onImport: (
-    payload: Record<string, unknown>,
-    importMode?: KnowledgeNetworkImportMode,
-  ) => Promise<void>;
   onRefresh: () => Promise<void>;
 };
 
@@ -74,7 +68,6 @@ export function ActionTypeListPanel({
   networkId,
   objectTypes,
   onDelete,
-  onImport,
   onRefresh,
 }: ActionTypeListPanelProps) {
   const { t } = useTranslation();
@@ -371,11 +364,6 @@ export function ActionTypeListPanel({
           >
             {t("common.delete")}
           </AppButton>
-          <JsonResourceImportButton
-            className={styles.toolbarButton}
-            onImported={onRefresh}
-            onImport={onImport}
-          />
         </div>
         <div className={styles.toolbarRight}>
           <button

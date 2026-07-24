@@ -83,9 +83,6 @@ export const objecttypePart = {
     objectTypeEmptyNoSearchResult: "No matching object types found",
     objectTypeHasIndex: "Resource index state",
     objectTypeIdPattern: "Only lowercase letters, numbers, underscores, and hyphens are allowed.",
-    objectTypeImportPending:
-      "The legacy Vega import flow for object types will be aligned in a later slice.",
-    objectTypeImportTitle: "Import object types",
     objectTypeIndexed: "Resource indexed",
     objectTypeKeyNotConfigured: "Not configured",
     objectTypeLogicAttributeCreateTitle: "Add logic property",

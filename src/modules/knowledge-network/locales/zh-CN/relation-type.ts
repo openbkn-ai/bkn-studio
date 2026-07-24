@@ -38,9 +38,6 @@ export const relationtypePart = {
     relationTypeEditTitle: "编辑关系类",
     relationTypeEmptyValue: "—",
     relationTypeEmptyNoSearchResult: "未找到匹配的关系类。",
-    relationTypeImportPending:
-      "关系类导入流程会在后续切片中按旧 Vega 体验继续补齐。",
-    relationTypeImportTitle: "导入关系类",
     relationTypeMappingAssociation: "关系关联",
     relationTypeMappingDescription: "维护关系类映射配置。",
     relationTypeMappingEntry: "映射配置",

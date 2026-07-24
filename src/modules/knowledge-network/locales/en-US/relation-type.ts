@@ -46,9 +46,6 @@ export const relationtypePart = {
     relationTypeEditTitle: "Edit relation type",
     relationTypeEmptyValue: "—",
     relationTypeEmptyNoSearchResult: "No matching relation types found.",
-    relationTypeImportPending:
-      "The legacy Vega import flow for relation types will be aligned in a later slice.",
-    relationTypeImportTitle: "Import relation types",
     relationTypeMappingAssociation: "Relation association",
     relationTypeMappingDescription: "Maintain relation type mapping configuration.",
     relationTypeMappingEntry: "Mapping config",
