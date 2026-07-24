@@ -366,40 +366,43 @@ export function ImportResourceModal({
             openapiSpec: normalizedOpenapiSpec,
             category: values.category as OperatorCategory,
           });
+          void message.success(t("executionFactory.importSuccess"));
         } else {
           // Share the same toolbox OpenAPI pipeline as「添加能力 → 导入 OpenAPI」.
-          await registerOpenApiImport({
+          const result = await registerOpenApiImport({
             openapiSpec,
             toolboxMode: "new",
             toolboxName: resolvedName,
             category: values.category,
             serviceUrl,
           });
+          if (result.failureCount > 0) {
+            void message.warning(
+              t("executionFactory.importOpenApiCapabilityPartial", {
+                success: result.successCount,
+                failed: result.failureCount,
+              }),
+            );
+          } else {
+            void message.success(t("executionFactory.importSuccess"));
+          }
         }
 
-      } else {
-
-        const values = await adpForm.validateFields();
-
-        const uploadFile = readUploadFile(adpFileList);
-
-
-
-        if (!uploadFile) {
-
-          void message.info(t("executionFactory.importAdpFileRequired"));
-
-          return;
-
-        }
-
-
-
-        await importComponentFile(impexType, uploadFile, values.mode);
-
+        onSuccess?.();
+        onClose();
+        return;
       }
 
+      const values = await adpForm.validateFields();
 
+      const uploadFile = readUploadFile(adpFileList);
+
+      if (!uploadFile) {
+        void message.info(t("executionFactory.importAdpFileRequired"));
+        return;
+      }
+
+      await importComponentFile(impexType, uploadFile, values.mode);
 
       void message.success(t("executionFactory.importSuccess"));
 
