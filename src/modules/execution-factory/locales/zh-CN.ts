@@ -133,6 +133,8 @@ export const executionFactoryZhCN = {
     importOpenApiServiceUrlRequired: "导入前请填写完整的 HTTP(S) 服务地址。",
     importOpenApiRelativeServerManual:
       "当前 OpenAPI 文档使用相对服务地址 {{relativeUrl}}，请填写完整服务地址后再导入。",
+    importOpenApiMissingServerManual:
+      "当前 OpenAPI 文档未声明 servers，请使用下方「服务地址」作为实际调用基址后再导入。",
     importOpenApiCapabilityFileReady: "文件已就绪，保存后将解析并导入接口。",
     importOpenApiCapabilityPreview: "OpenAPI {{version}} · 共 {{count}} 个接口",
     createdNextStepsTitle: "HTTP API 已添加到工具集",
@@ -739,11 +741,12 @@ export const executionFactoryZhCN = {
       "可先填写最小必填项并保存草稿；开启「注册后立即发布」可在验证通过后一键上线。",
     directPublishHint: "适合 POC 与演示环境，生产环境建议先保存草稿再人工发布。",
     openapiImportHint:
-      "支持粘贴 JSON、上传文件或从 URL 拉取 OpenAPI 规范。注册单个算子时建议只保留 1 个接口。",
+      "支持粘贴 JSON 或 YAML、上传文件或从 URL 拉取 OpenAPI 规范。注册单个算子时建议只保留 1 个接口。",
     openapiOperatorHint:
       "注册算子建议使用单接口 OpenAPI 文档（1 个 path、1 个 method）。整份服务文档会批量注册多个算子。",
     openapiToolboxHint:
-      "支持粘贴 JSON、上传文件或从 URL 拉取。解析成功后展开每个接口，可查看入参、请求体与响应示例。",
+      "支持粘贴 JSON 或 YAML、上传文件或从 URL 拉取。解析成功后展开每个接口，可查看入参、请求体与响应示例。",
+    openapiInputPastePlaceholder: "粘贴标准的OpenAPI格式的json或yaml",
     openapiOperationsIoPreviewHint: "展开接口查看输入参数、请求体与响应示例。",
     openapiOperationIoSummary: "{{paramCount}} 个 URL/Header 参数 · {{responseCount}} 个响应",
     openapiOperationIoSummaryWithBody:
@@ -760,6 +763,7 @@ export const executionFactoryZhCN = {
     openapiValidationOk: "OpenAPI 文档校验通过",
     openapiValidationOkWithCount: "OpenAPI 文档校验通过，检测到 {{count}} 个接口",
     openapiPreviewServer: "服务地址",
+    openapiPreviewServerUnset: "未声明（将使用表单服务地址）",
     openapiPreviewVersion: "规范版本",
     openapiPreviewMore: "另有 {{count}} 个接口未展示",
     openapiMultiOperationWarning:

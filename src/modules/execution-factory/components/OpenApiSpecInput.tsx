@@ -154,7 +154,7 @@ export function OpenApiSpecInput({
             children: (
               <Input.TextArea
                 onChange={(event) => handlePasteChange(event.target.value)}
-                placeholder="{...}"
+                placeholder={t("executionFactory.openapiInputPastePlaceholder")}
                 rows={rows}
                 value={value}
               />
@@ -219,7 +219,10 @@ export function OpenApiSpecInput({
           <div className={styles.previewPanel}>
             <div className={styles.previewMeta}>
               <span>
-                {t("executionFactory.openapiPreviewServer")}: {analysis.serverUrl}
+                {t("executionFactory.openapiPreviewServer")}:{" "}
+                {analysis.serverUrl?.trim()
+                  ? analysis.serverUrl
+                  : t("executionFactory.openapiPreviewServerUnset")}
               </span>
               <span>
                 {t("executionFactory.openapiPreviewVersion")}: {analysis.openApiVersion}

@@ -17,6 +17,8 @@ import {
 
   analyzeOpenApiDocumentText,
 
+  normalizeGeneratedCapabilityName,
+
   normalizeGeneratedToolboxDescription,
 
   normalizeOpenApiDocumentText,
@@ -55,7 +57,7 @@ export type RegisterOpenApiImportInput = {
 function resolveToolboxTarget(input: RegisterOpenApiImportInput) {
   const mode = input.toolboxMode ?? (input.boxId ? "existing" : "new");
   const boxId = input.boxId?.trim();
-  const toolboxName = input.toolboxName?.trim();
+  const toolboxName = normalizeGeneratedCapabilityName(input.toolboxName);
 
   if (mode === "existing") {
     if (!boxId) {
