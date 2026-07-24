@@ -135,15 +135,22 @@ vi.mock("@/modules/execution-factory/services/category.service", () => ({
   ),
 }));
 
-const { createToolbox, registerOperator } = vi.hoisted(() => ({
-  createToolbox: vi.fn(() => Promise.resolve({ boxId: "box-1" })),
+const { registerOpenApiImport, registerOperator } = vi.hoisted(() => ({
+  registerOpenApiImport: vi.fn(() =>
+    Promise.resolve({
+      boxId: "box-1",
+      toolIds: ["tool-1"],
+      successCount: 1,
+      failureCount: 0,
+    }),
+  ),
   registerOperator: vi.fn<(input: { openapiSpec?: string }) => Promise<{ operatorId: string }>>(
     () => Promise.resolve({ operatorId: "op-1" }),
   ),
 }));
 
-vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
-  createToolbox,
+vi.mock("@/modules/execution-factory/services/import-openapi.service", () => ({
+  registerOpenApiImport,
 }));
 
 vi.mock("@/modules/execution-factory/services/operator.service", () => ({
@@ -218,7 +225,7 @@ describe("ImportResourceModal", () => {
     expect(await screen.findByDisplayValue("示例工具箱_API")).toBeTruthy();
   });
 
-  it("submits a normalized toolbox name when creating from OpenAPI", async () => {
+  it("submits a normalized toolbox name via registerOpenApiImport", async () => {
     render(
       <ImportResourceModal activeTab="toolbox" onClose={vi.fn()} onSuccess={vi.fn()} open />,
     );
@@ -232,11 +239,34 @@ describe("ImportResourceModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import" }));
 
     await waitFor(() => {
-      expect(createToolbox).toHaveBeenCalledWith(
+      expect(registerOpenApiImport).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: "示例工具箱_API",
+          openapiSpec: spacedTitleSpec,
+          toolboxMode: "new",
+          toolboxName: "示例工具箱_API",
+          serviceUrl: "https://example.com",
+          category: "other_category",
         }),
       );
+    });
+    expect(registerOperator).not.toHaveBeenCalled();
+  });
+
+  it("does not call registerOpenApiImport when toolbox Service URL is cleared", async () => {
+    render(
+      <ImportResourceModal activeTab="toolbox" onClose={vi.fn()} onSuccess={vi.fn()} open />,
+    );
+
+    await screen.findByDisplayValue("http://127.0.0.1:9000");
+    fireEvent.click(screen.getByRole("button", { name: "Load OpenAPI" }));
+    await screen.findByDisplayValue("https://example.com");
+
+    const serviceUrlInput = screen.getByLabelText("Service URL");
+    fireEvent.change(serviceUrlInput, { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+
+    await waitFor(() => {
+      expect(registerOpenApiImport).not.toHaveBeenCalled();
     });
   });
 

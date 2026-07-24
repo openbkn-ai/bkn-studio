@@ -29,10 +29,10 @@ import { listOperatorCategories } from "@/modules/execution-factory/services/cat
 
 import { importComponentFile } from "@/modules/execution-factory/services/impex.service";
 
+import { registerOpenApiImport } from "@/modules/execution-factory/services/import-openapi.service";
+
 import { registerOperator } from "@/modules/execution-factory/services/operator.service";
 import type { OperatorCategory } from "@/modules/execution-factory/types/operator";
-
-import { createToolbox } from "@/modules/execution-factory/services/toolbox.service";
 
 import type { ImpexComponentType, ImpexImportMode } from "@/modules/execution-factory/types/impex";
 
@@ -346,9 +346,6 @@ export function ImportResourceModal({
           return;
         }
 
-        const normalizedText = normalizeOpenApiDocumentText(openapiSpec);
-        const normalizedOpenapiSpec = rewriteOpenApiServerUrl(normalizedText, serviceUrl);
-
         const hints = extractOpenApiMetadataHints(openapiSpec);
 
         const fallbackName =
@@ -358,6 +355,11 @@ export function ImportResourceModal({
           normalizeGeneratedCapabilityName(values.name) || fallbackName;
 
         if (activeTab === "operator") {
+          // Operator registration keeps its own path; only rewrite servers here.
+          const normalizedOpenapiSpec = rewriteOpenApiServerUrl(
+            normalizeOpenApiDocumentText(openapiSpec),
+            serviceUrl,
+          );
           await registerOperator({
             metadataType: "openapi",
             name: resolvedName,
@@ -365,12 +367,13 @@ export function ImportResourceModal({
             category: values.category as OperatorCategory,
           });
         } else {
-          await createToolbox({
-            name: resolvedName,
+          // Share the same toolbox OpenAPI pipeline as「添加能力 → 导入 OpenAPI」.
+          await registerOpenApiImport({
+            openapiSpec,
+            toolboxMode: "new",
+            toolboxName: resolvedName,
             category: values.category,
-            metadataType: "openapi",
             serviceUrl,
-            openapiSpec: normalizedOpenapiSpec,
           });
         }
 
