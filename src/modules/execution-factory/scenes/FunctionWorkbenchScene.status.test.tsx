@@ -198,10 +198,10 @@ describe("FunctionWorkbenchScene status wiring", () => {
     expect(runArg.event).toEqual({});
     expect(runArg.event).not.toHaveProperty("numbers");
 
-    // 运行完再点回入参框:onFocus 见框里是 "{}" 就用 sampleEvent 回填。只有 derive
-    // 把 active.inputs 真落成 [] 时 sampleEvent 才是 "{}";否则 active.inputs 卡在旧的
-    // numbers,旧参 {"numbers":0} 在这里复活。这一条锁的是 patchActive 那处修复。
-    fireEvent.focusIn(screen.getByDisplayValue("{}"));
+    // 运行完再点「按参数重新生成」:它按 active.inputs 造样例。只有 derive 把
+    // active.inputs 真落成 [] 时才会得到 "{}";否则 active.inputs 卡在旧的 numbers,
+    // 旧参 {"numbers":0} 在这里复活。这一条锁的是 patchActive 那处修复。
+    fireEvent.click(screen.getByText("executionFactory.workbenchEventFill"));
 
     await waitFor(() => {
       expect(screen.queryByDisplayValue(/numbers/)).toBeNull();

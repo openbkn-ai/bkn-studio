@@ -845,6 +845,33 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     }
   };
 
+  /**
+   * 按已声明参数重造一份测试入参。这是显式动作，所以无条件覆盖——用户点它就是
+   * 想要一份干净样例。
+   *
+   * 原来挂在入参框的 onFocus 上，有两个毛病：点进去想手改反而被覆盖；而且代码
+   * 改过时那条分支推导完就直接 return、这一次并不填，指望后面的 effect 补，可
+   * effect 又把「内容 ≠ 上次自动值」判成用户手改而拒绝覆盖，两边互相让，结果谁
+   * 都不填，表现就是「点了半天填不出来」。
+   */
+  const handleFillSampleEvent = async () => {
+    if (!active) {
+      return;
+    }
+
+    let inputs = active.inputs;
+    if (needsDerive(active)) {
+      const derived = await handleDeriveParams({ silent: true });
+      if (derived) {
+        inputs = derived;
+      }
+    }
+
+    const next = buildSampleEvent(inputs);
+    autoEventRef.current = next;
+    setEventText(next);
+  };
+
   const sampleEvent = useMemo(() => buildSampleEvent(active?.inputs), [active?.inputs]);
   // JSON 视图给的就是 Agent 实际拿到的 schema，不是我们内部的参数结构。
   const paramsJsonPreview = useMemo(() => {
@@ -1248,24 +1275,18 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                               : "executionFactory.workbenchEventEmpty",
                           )}
                         </span>
+                        <AppButton
+                          disabled={running}
+                          loading={deriving}
+                          onClick={() => void handleFillSampleEvent()}
+                          size="small"
+                          type="link"
+                        >
+                          {t("executionFactory.workbenchEventFill")}
+                        </AppButton>
                       </span>
                       <div
                         className={styles.eventEditor}
-                        onFocus={() => {
-                          const current = eventText.trim();
-                          if (current && current !== "{}") {
-                            return;
-                          }
-
-                          // 代码改过或还没识别过，先按代码推一次，否则这里填不出东西。
-                          if (needsDerive(active)) {
-                            void handleDeriveParams();
-                            return;
-                          }
-
-                          autoEventRef.current = sampleEvent;
-                          setEventText(sampleEvent);
-                        }}
                         onKeyDown={(keyEvent) => {
                           if ((keyEvent.metaKey || keyEvent.ctrlKey) && keyEvent.key === "Enter") {
                             keyEvent.preventDefault();

@@ -821,6 +821,7 @@ export const executionFactoryZhCN = {
     workbenchRunShortcut: "运行当前代码（⌘ / Ctrl + Enter）",
     workbenchEventCaption: "测试入参",
     workbenchEventAuto: "按已声明的输入参数生成，可直接改",
+    workbenchEventFill: "按参数重新生成",
     workbenchEventEmpty: "还没声明输入参数",
     workbenchStreamAbsent: "后端本次未返回该字段",
     workbenchMetricsAbsent: "本次运行后端未返回任何指标。",

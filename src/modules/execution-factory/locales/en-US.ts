@@ -840,6 +840,7 @@ export const executionFactoryEnUS = {
     workbenchRunShortcut: "Run the current code (⌘ / Ctrl + Enter)",
     workbenchEventCaption: "Test input",
     workbenchEventAuto: "Generated from the declared inputs — edit freely",
+    workbenchEventFill: "Regenerate from inputs",
     workbenchEventEmpty: "No inputs declared yet",
     workbenchStreamAbsent: "The backend did not return this field",
     workbenchMetricsAbsent: "The backend returned no metrics for this run.",
