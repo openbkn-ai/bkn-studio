@@ -72,7 +72,8 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const catalogContext = searchParams.get("from") === "catalog";
   const viewMode =
-    searchParams.get("action") !== "edit" && searchParams.get("create") !== "1";
+    catalogContext ||
+    (searchParams.get("action") !== "edit" && searchParams.get("create") !== "1");
   const [toolbox, setToolbox] = useState<ToolboxRecord | null>(null);
   const [items, setItems] = useState<ToolRecord[]>([]);
   const [selectedTool, setSelectedTool] = useState<ToolRecord | null>(null);
@@ -220,7 +221,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         await loadTools();
       },
     });
-  }, [boxId, loadTools, message, modal, t]);
+  }, [boxId, catalogContext, loadTools, message, modal, t]);
 
   const handleBatchStatus = (nextStatus: ToolStatus) => {
     if (selectedToolIds.length === 0) {
