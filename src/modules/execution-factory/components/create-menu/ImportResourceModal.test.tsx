@@ -271,8 +271,7 @@ describe("ImportResourceModal", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
 
     await waitFor(() => {
-      const serviceUrlInput = screen.getByLabelText("Service URL") as HTMLInputElement;
-      expect(serviceUrlInput.value).toBe("");
+      expect(screen.getByLabelText("Service URL")).toHaveProperty("value", "");
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Import" }));
@@ -292,8 +291,7 @@ describe("ImportResourceModal", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
 
     await waitFor(() => {
-      const serviceUrlInput = screen.getByLabelText("Service URL") as HTMLInputElement;
-      expect(serviceUrlInput.value).toBe("");
+      expect(screen.getByLabelText("Service URL")).toHaveProperty("value", "");
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Import" }));
