@@ -11,6 +11,7 @@ import {
   analyzeOpenApiDocumentText,
   buildOpenApiDocumentFromMetadata,
   normalizeGeneratedCapabilityDescription,
+  normalizeGeneratedCapabilityName,
   normalizeGeneratedToolboxDescription,
   normalizeOpenApiDocumentText,
   parseOpenApiDocumentText,
@@ -291,6 +292,14 @@ describe("metadata-content OpenAPI helpers", () => {
     expect(normalizeGeneratedToolboxDescription("  toolbox description  ")).toBe(
       "toolbox description",
     );
+  });
+
+  it("normalizes OpenAPI title spaces to underscores for toolbox names", () => {
+    expect(normalizeGeneratedCapabilityName("示例工具箱 API")).toBe("示例工具箱_API");
+    expect(normalizeGeneratedCapabilityName("Swagger Petstore  OpenAPI")).toBe(
+      "Swagger_Petstore_OpenAPI",
+    );
+    expect(normalizeGeneratedCapabilityName("合法名称")).toBe("合法名称");
   });
 
   it("rejects documents with empty info.title", () => {

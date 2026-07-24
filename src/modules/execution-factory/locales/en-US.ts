@@ -748,11 +748,12 @@ export const executionFactoryEnUS = {
       "Fill the minimum required fields and save a draft first. Enable publish-on-register for quick POC demos.",
     directPublishHint: "Best for POC environments. Production workflows should publish manually after review.",
     openapiImportHint:
-      "Paste JSON, upload a file, or fetch an OpenAPI document from a URL. For a single operator, keep only one endpoint.",
+      "Paste JSON or YAML, upload a file, or fetch an OpenAPI document from a URL. For a single operator, keep only one endpoint.",
     openapiOperatorHint:
       "Use a single-endpoint OpenAPI document (one path and one method). A full service spec registers multiple operators.",
     openapiToolboxHint:
-      "Paste JSON, upload a file, or fetch from a URL. After parsing, expand each endpoint to review inputs, request body, and response examples.",
+      "Paste JSON or YAML, upload a file, or fetch from a URL. After parsing, expand each endpoint to review inputs, request body, and response examples.",
+    openapiInputPastePlaceholder: "Paste a standard OpenAPI JSON or YAML document",
     openapiOperationsIoPreviewHint: "Expand an endpoint to review parameters, request body, and response examples.",
     openapiOperationIoSummary:
       "{{paramCount}} URL/Header parameter(s) · {{responseCount}} response(s)",

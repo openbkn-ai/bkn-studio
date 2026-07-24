@@ -154,7 +154,7 @@ export function OpenApiSpecInput({
             children: (
               <Input.TextArea
                 onChange={(event) => handlePasteChange(event.target.value)}
-                placeholder="{...}"
+                placeholder={t("executionFactory.openapiInputPastePlaceholder")}
                 rows={rows}
                 value={value}
               />

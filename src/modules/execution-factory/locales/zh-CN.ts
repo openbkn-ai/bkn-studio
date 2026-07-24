@@ -739,11 +739,12 @@ export const executionFactoryZhCN = {
       "可先填写最小必填项并保存草稿；开启「注册后立即发布」可在验证通过后一键上线。",
     directPublishHint: "适合 POC 与演示环境，生产环境建议先保存草稿再人工发布。",
     openapiImportHint:
-      "支持粘贴 JSON、上传文件或从 URL 拉取 OpenAPI 规范。注册单个算子时建议只保留 1 个接口。",
+      "支持粘贴 JSON 或 YAML、上传文件或从 URL 拉取 OpenAPI 规范。注册单个算子时建议只保留 1 个接口。",
     openapiOperatorHint:
       "注册算子建议使用单接口 OpenAPI 文档（1 个 path、1 个 method）。整份服务文档会批量注册多个算子。",
     openapiToolboxHint:
-      "支持粘贴 JSON、上传文件或从 URL 拉取。解析成功后展开每个接口，可查看入参、请求体与响应示例。",
+      "支持粘贴 JSON 或 YAML、上传文件或从 URL 拉取。解析成功后展开每个接口，可查看入参、请求体与响应示例。",
+    openapiInputPastePlaceholder: "粘贴标准的OpenAPI格式的json或yaml",
     openapiOperationsIoPreviewHint: "展开接口查看输入参数、请求体与响应示例。",
     openapiOperationIoSummary: "{{paramCount}} 个 URL/Header 参数 · {{responseCount}} 个响应",
     openapiOperationIoSummaryWithBody:

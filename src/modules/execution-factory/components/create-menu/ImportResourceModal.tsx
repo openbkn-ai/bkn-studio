@@ -42,6 +42,8 @@ import {
 
   extractOpenApiMetadataHints,
 
+  normalizeGeneratedCapabilityName,
+
   validateOpenApiDocumentText,
 
 } from "@/modules/execution-factory/utils/metadata-content";
@@ -271,7 +273,10 @@ export function ImportResourceModal({
 
     openApiForm.setFieldsValue({
 
-      name: hints.title?.trim() || currentOpenApiName,
+      name:
+        normalizeGeneratedCapabilityName(hints.title) ||
+        normalizeGeneratedCapabilityName(currentOpenApiName) ||
+        currentOpenApiName,
 
       serviceUrl: analysis.serverUrl ?? currentOpenApiServiceUrl,
 
@@ -329,7 +334,11 @@ export function ImportResourceModal({
 
         const hints = extractOpenApiMetadataHints(openapiSpec);
 
-        const fallbackName = hints.title?.trim() || `import_${Date.now()}`;
+        const fallbackName =
+          normalizeGeneratedCapabilityName(hints.title) || `import_${Date.now()}`;
+
+        const resolvedName =
+          normalizeGeneratedCapabilityName(values.name) || fallbackName;
 
 
 
@@ -339,7 +348,7 @@ export function ImportResourceModal({
 
             metadataType: "openapi",
 
-            name: fallbackName,
+            name: resolvedName,
 
             openapiSpec,
 
@@ -351,7 +360,7 @@ export function ImportResourceModal({
 
           await createToolbox({
 
-            name: values.name?.trim() || fallbackName,
+            name: resolvedName,
 
             category: values.category,
 
