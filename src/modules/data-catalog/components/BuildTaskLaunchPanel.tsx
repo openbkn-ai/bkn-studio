@@ -16,6 +16,7 @@ import {
   type RequestErrorDetails,
 } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { RequestErrorAlert } from "@/framework/ui/common/RequestErrorAlert";
 import {
   BuildTaskConflictError,
   createBuildTask,
@@ -24,6 +25,7 @@ import {
   type BuildExecuteType,
 } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildMode, BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import { streamingNeedsBuildKey } from "@/modules/data-catalog/lib/build-task-launch-guards";
 import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
 import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
@@ -78,20 +80,11 @@ export function BuildTaskLaunchPanel({
   const [models, setModels] = useState<SmallModel[]>([]);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!error) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => setError(null), 5000);
-    return () => window.clearTimeout(timer);
-  }, [error]);
-
   const config = useMemo(() => indexFormValuesFromResource(resource), [resource]);
   const hasResourceConfig =
     config.embeddingFields.length > 0 || config.fulltextFields.length > 0;
   const batchNeedsBuildKey = mode === "batch" && config.buildKeyFields.length === 0;
-  const streamingNeedsBuildKey = mode === "streaming" && config.buildKeyFields.length === 0;
+  const streamingBuildKeyRequired = streamingNeedsBuildKey(mode, config.buildKeyFields);
   const analyzerLabel = config.fulltextFields.length > 0 && config.fulltextAnalyzer
     ? t(`dataCatalog.build.analyzers.${config.fulltextAnalyzer}`, {
         defaultValue: config.fulltextAnalyzer,
@@ -152,7 +145,7 @@ export function BuildTaskLaunchPanel({
     existingActive?.mode === "streaming" && isActiveBuildTask(existingActive);
   const controlsDisabled = disabled || actionsLocked;
   const startDisabled =
-    controlsDisabled || !hasResourceConfig || batchNeedsBuildKey || streamingNeedsBuildKey;
+    controlsDisabled || !hasResourceConfig || batchNeedsBuildKey || streamingBuildKeyRequired;
 
   const startBuild = async () => {
     if (!hasResourceConfig) {
@@ -163,7 +156,7 @@ export function BuildTaskLaunchPanel({
       setError({ description: t("dataCatalog.build.buildKeyRequired") });
       return;
     }
-    if (streamingNeedsBuildKey) {
+    if (streamingBuildKeyRequired) {
       setError({ description: t("dataCatalog.build.streamingBuildKeyRequired") });
       return;
     }
@@ -254,7 +247,7 @@ export function BuildTaskLaunchPanel({
           type="warning"
         />
       ) : null}
-      {hasResourceConfig && streamingNeedsBuildKey ? (
+      {hasResourceConfig && streamingBuildKeyRequired ? (
         <Alert message={t("dataCatalog.build.streamingBuildKeyRequired")} showIcon type="warning" />
       ) : null}
 
@@ -377,23 +370,7 @@ export function BuildTaskLaunchPanel({
         </div>
       </div>
 
-      {error ? (
-        <Alert
-          description={
-            error.code || error.details || error.solution || error.errorLink ? (
-              <div>
-                {error.code ? <div>{t("dataCatalog.build.errorCode", { value: error.code })}</div> : null}
-                {error.details ? <div>{t("dataCatalog.build.errorDetails", { value: error.details })}</div> : null}
-                {error.solution ? <div>{t("dataCatalog.build.errorSolution", { value: error.solution })}</div> : null}
-                {error.errorLink ? <div>{t("dataCatalog.build.errorLink", { value: error.errorLink })}</div> : null}
-              </div>
-            ) : undefined
-          }
-          message={error.description}
-          showIcon
-          type="error"
-        />
-      ) : null}
+      {error ? <RequestErrorAlert error={error} onDismiss={() => setError(null)} /> : null}
 
       <div className={formStyles.launchActionBar}>
         <AppButton

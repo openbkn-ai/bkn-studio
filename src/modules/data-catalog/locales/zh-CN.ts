@@ -299,10 +299,6 @@ export const dataCatalogZhCN = {
       buildKeyRequired: "批量模式必须指定增量键字段，请回到「配置索引」勾选。",
       streamingBuildKeyRequired:
         "流式构建必须指定增量键字段，请回到「配置索引」勾选后再创建任务。",
-      errorCode: "错误码：{{value}}",
-      errorDetails: "错误详情：{{value}}",
-      errorSolution: "解决方案：{{value}}",
-      errorLink: "错误链接：{{value}}",
       model: "Embedding 模型",
       modelRequired: "请选择 Embedding 模型。",
       noModels: "尚未接入 embedding 模型,无法保存含向量字段的配置。",
