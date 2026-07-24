@@ -105,8 +105,8 @@ vi.mock("@/modules/execution-factory/services/category.service", () => ({
 
 const { createToolbox, registerOperator } = vi.hoisted(() => ({
   createToolbox: vi.fn(() => Promise.resolve({ boxId: "box-1" })),
-  registerOperator: vi.fn((_input: { openapiSpec?: string }) =>
-    Promise.resolve({ operatorId: "op-1" }),
+  registerOperator: vi.fn<(input: { openapiSpec?: string }) => Promise<{ operatorId: string }>>(
+    () => Promise.resolve({ operatorId: "op-1" }),
   ),
 }));
 
