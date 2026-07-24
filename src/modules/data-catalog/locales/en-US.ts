@@ -316,6 +316,12 @@ export const dataCatalogEnUS = {
       fieldsRequired: "Select at least one embedding or full-text field.",
       buildKeyRequired:
         "Batch mode requires a build-key field. Select one under Configure Index.",
+      streamingBuildKeyRequired:
+        "Streaming builds require a build-key field. Select one under Configure Index before creating the task.",
+      errorCode: "Error code: {{value}}",
+      errorDetails: "Error details: {{value}}",
+      errorSolution: "Solution: {{value}}",
+      errorLink: "Error link: {{value}}",
       model: "Embedding Model",
       modelRequired: "Select an embedding model.",
       noModels:
