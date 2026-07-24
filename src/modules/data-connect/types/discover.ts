@@ -21,6 +21,7 @@ export type DataConnectDiscoverTaskSort = "create_time" | "default";
 
 export type DataConnectDiscoverSchedule = {
   catalogId: string;
+  catalogName?: string;
   createTime: string;
   creatorName: string;
   cronExpr: string;
@@ -42,6 +43,7 @@ export type DataConnectDiscoverSchedule = {
 
 export type DataConnectDiscoverTask = {
   catalogId: string;
+  catalogName?: string;
   createTime: string;
   creatorName: string;
   finishTime: string;

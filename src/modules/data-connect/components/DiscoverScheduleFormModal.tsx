@@ -25,6 +25,7 @@ type DiscoverScheduleFormModalProps = {
   initialValue?: DataConnectDiscoverSchedule | null;
   mode: "create" | "edit";
   onCancel: () => void;
+  onCatalogSearch?: (keyword: string) => void;
   onSubmit: (payload: DiscoverScheduleFormModalSubmitPayload) => Promise<void>;
   open: boolean;
   submitting: boolean;
@@ -65,6 +66,7 @@ export function DiscoverScheduleFormModal({
   initialValue,
   mode,
   onCancel,
+  onCatalogSearch,
   onSubmit,
   open,
   submitting,
@@ -165,11 +167,12 @@ export function DiscoverScheduleFormModal({
             >
               <Select
                 disabled={catalogLocked}
+                filterOption={false}
+                onSearch={onCatalogSearch}
                 options={catalogs.map((item) => ({
                   label: item.name,
                   value: item.id,
                 }))}
-                optionFilterProp="label"
                 placeholder={t("dataConnect.discoverCatalogFilterPlaceholder")}
                 showSearch
               />

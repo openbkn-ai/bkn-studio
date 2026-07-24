@@ -60,6 +60,7 @@ export function DataConnectDiscoverTaskDrawer({
   }, [open, taskId]);
 
   const catalogName =
+    task?.catalogName ??
     catalogs.find((item) => item.id === task?.catalogId)?.name ??
     task?.catalogId ??
     "-";

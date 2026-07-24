@@ -28,7 +28,6 @@ import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTaskDetailDrawer";
 import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task-actions";
-import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import {
   applyIndexBuildListFilters,
   readIndexBuildListFilters,
@@ -39,16 +38,18 @@ import {
   listBuildTaskPage,
 } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
-import { listCatalogResources } from "@/modules/data-catalog/services/resource.service";
+import {
+  getCatalogResource,
+  listCatalogResourcePage,
+} from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildMode,
   BuildTask,
   BuildTaskOrderBy,
   BuildTaskPageQuery,
   BuildTaskStatus,
-  CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
-import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
+import { getCatalog, listCatalogs } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import sceneStyles from "./IndexBuildListScene.module.css";
@@ -104,8 +105,10 @@ export function IndexBuildListScene() {
   );
 
   const [tasks, setTasks] = useState<BuildTask[]>([]);
-  const [resources, setResources] = useState<CatalogResource[]>([]);
-  const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
+  const [catalogOptions, setCatalogOptions] = useState<CatalogRecord[]>([]);
+  const [resourceOptions, setResourceOptions] = useState<{ label: string; value: string }[]>([]);
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [resourceSearch, setResourceSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -145,18 +148,13 @@ export function IndexBuildListScene() {
     [listFilters, searchParams, setSearchParams],
   );
 
-  const loadData = useCallback(async () => {
+  const loadTasks = useCallback(async () => {
+    setLoading(true);
     setLoadError(null);
     try {
-      const [taskResult, resourceResult, catalogResult] = await Promise.all([
-        listBuildTaskPage(taskQuery),
-        listCatalogResources(),
-        listCatalogs(catalogListAllQuery()),
-      ]);
+      const taskResult = await listBuildTaskPage(taskQuery);
       setTasks(taskResult.items);
       setTotal(taskResult.total);
-      setResources(resourceResult);
-      setCatalogs(catalogResult.items);
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
@@ -164,8 +162,8 @@ export function IndexBuildListScene() {
     }
   }, [taskQuery]);
 
-  // 轮询只刷新当前页任务;资源/连接等静态数据进页和手动刷新时才拉
-  const loadTasks = useCallback(async () => {
+  // 轮询只刷新当前页任务，避免随着资源量增加而放大请求量。
+  const refreshTasksSilently = useCallback(async () => {
     try {
       const result = await listBuildTaskPage(taskQuery);
       setTasks(result.items);
@@ -176,10 +174,10 @@ export function IndexBuildListScene() {
   }, [taskQuery]);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    void loadTasks();
+  }, [loadTasks]);
 
-  useEffect(() => subscribeMockDb(() => void loadData()), [loadData]);
+  useEffect(() => subscribeMockDb(() => void loadTasks()), [loadTasks]);
 
   const hasActive = useMemo(
     () =>
@@ -200,37 +198,62 @@ export function IndexBuildListScene() {
       if (document.hidden) {
         return;
       }
-      void loadTasks();
+      void refreshTasksSilently();
     }, 10_000);
     return () => window.clearInterval(timer);
-  }, [hasActive, loadTasks]);
+  }, [hasActive, refreshTasksSilently]);
 
-  const resourceMap = useMemo(
-    () => new Map(resources.map((resource) => [resource.id, resource])),
-    [resources],
-  );
-  const catalogMap = useMemo(
-    () => new Map(catalogs.map((catalog) => [catalog.id, catalog])),
-    [catalogs],
-  );
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void listCatalogs({ keyword: catalogSearch, page: 1, pageSize: 50, type: "all" })
+        .then((result) => setCatalogOptions(result.items))
+        .catch(() => setCatalogOptions([]));
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [catalogSearch]);
 
-  const resourceOptions = useMemo(() => {
-    const filteredResources = listFilters.catalogId
-      ? resources.filter((resource) => resource.catalogId === listFilters.catalogId)
-      : resources;
-    return filteredResources.map((resource) => ({
-      label: resource.name,
-      value: resource.id,
-    }));
-  }, [listFilters.catalogId, resources]);
+  useEffect(() => {
+    if (!listFilters.catalogId) {
+      setResourceOptions([]);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void listCatalogResourcePage({
+        catalogId: listFilters.catalogId,
+        keyword: resourceSearch,
+        limit: 50,
+        offset: 0,
+      })
+        .then((result) =>
+          setResourceOptions(result.items.map((resource) => ({ label: resource.name, value: resource.id }))),
+        )
+        .catch(() => setResourceOptions([]));
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [listFilters.catalogId, resourceSearch]);
+
+  useEffect(() => {
+    if (!listFilters.catalogId || catalogOptions.some((item) => item.id === listFilters.catalogId)) {
+      return;
+    }
+    void getCatalog(listFilters.catalogId).then((catalog) => {
+      if (catalog) setCatalogOptions((items) => [catalog, ...items]);
+    }).catch(() => undefined);
+  }, [catalogOptions, listFilters.catalogId]);
+
+  useEffect(() => {
+    if (!listFilters.resourceId || resourceOptions.some((item) => item.value === listFilters.resourceId)) {
+      return;
+    }
+    void getCatalogResource(listFilters.resourceId).then((resource) => {
+      if (resource) {
+        setResourceOptions((items) => [{ label: resource.name, value: resource.id }, ...items]);
+      }
+    }).catch(() => undefined);
+  }, [listFilters.resourceId, resourceOptions]);
 
   const { pauseOrResume: handlePauseResume, remove: handleDelete, retry: handleRetry } =
-    useBuildTaskActions(loadData);
-
-  const gateOf = (task: BuildTask) => {
-    const resource = resourceMap.get(task.resourceId);
-    return resourceGateOf(resource ? (catalogMap.get(resource.catalogId) ?? null) : null);
-  };
+    useBuildTaskActions(loadTasks);
 
   const handleBatchDelete = () => {
     const targets = tasks.filter((task) => selectedKeys.includes(task.id));
@@ -260,7 +283,7 @@ export function IndexBuildListScene() {
           message.success(t("common.success"));
         }
         setSelectedKeys([]);
-        await loadData();
+        await loadTasks();
       },
     });
   };
@@ -351,11 +374,11 @@ export function IndexBuildListScene() {
       title: t("dataCatalog.resource.catalog"),
       width: 180,
       render: (value: string | undefined, record) => {
-        const catalogId = value ?? resourceMap.get(record.resourceId)?.catalogId;
+        const catalogId = value ?? record.catalogId;
         if (!catalogId) {
           return "-";
         }
-        const label = catalogMap.get(catalogId)?.name ?? catalogId;
+        const label = record.catalogName ?? catalogId;
         return (
           <Tooltip title={label}>
             <button
@@ -391,15 +414,14 @@ export function IndexBuildListScene() {
           />
         </div>
       ),
-      render: (value: string) => {
-        const resource = resourceMap.get(value);
-        const label = resource?.name ?? value;
-        return resource ? (
+      render: (value: string, record) => {
+        const label = record.resourceName ?? value;
+        return value ? (
           <Tooltip title={label}>
             <button
               className={sceneStyles.textLink}
               onClick={() => {
-                void navigate(`/data-directory/resource/${resource.id}?tab=index`);
+                void navigate(`/data-directory/resource/${value}?tab=index`);
               }}
               type="button"
             >
@@ -472,7 +494,6 @@ export function IndexBuildListScene() {
             record.status === "paused" ? (
               <PermissionGate permissions="resource:task_manage">
                 <AppButton
-                  disabled={record.status === "paused" && !gateOf(record).ok}
                   onClick={() => void handlePauseResume(record)}
                   type="link"
                 >
@@ -483,7 +504,6 @@ export function IndexBuildListScene() {
             {record.status === "failed" || record.status === "succeeded" ? (
               <PermissionGate permissions="resource:task_manage">
                 <Dropdown
-                  disabled={!gateOf(record).ok}
                   menu={{
                     items: [
                       {
@@ -499,7 +519,7 @@ export function IndexBuildListScene() {
                       void handleRetry(record, key as BuildExecuteType),
                   }}
                 >
-                  <AppButton disabled={!gateOf(record).ok} type="link">
+                  <AppButton type="link">
                     {t("dataCatalog.task.rebuild")}
                   </AppButton>
                 </Dropdown>
@@ -520,7 +540,7 @@ export function IndexBuildListScene() {
     <section className={sceneStyles.contentSurface}>
       <div className={taskPanelStyles.operationBar}>
         <Space>
-            <AppButton icon={<ReloadOutlined />} onClick={() => void loadData()}>
+            <AppButton icon={<ReloadOutlined />} onClick={() => void loadTasks()}>
               {t("common.refresh")}
             </AppButton>
             <PermissionGate permissions="resource:task_manage">
@@ -540,24 +560,32 @@ export function IndexBuildListScene() {
             <Select
               allowClear
               className={taskPanelStyles.select}
+              filterOption={false}
               onChange={(value) => {
+                setResourceSearch("");
                 updateListFilters({
                   catalogId: value ?? undefined,
                   resourceId: undefined,
                 });
               }}
-              options={catalogs.map((catalog) => ({ label: catalog.name, value: catalog.id }))}
+              onSearch={setCatalogSearch}
+              options={catalogOptions.map((catalog) => ({ label: catalog.name, value: catalog.id }))}
               placeholder={t("dataCatalog.resource.catalog")}
+              showSearch
               value={listFilters.catalogId ?? null}
             />
             <Select
               allowClear
               className={taskPanelStyles.select}
+              disabled={!listFilters.catalogId && !listFilters.resourceId}
+              filterOption={false}
               onChange={(value) => {
                 updateListFilters({ resourceId: value ?? undefined });
               }}
+              onSearch={setResourceSearch}
               options={resourceOptions}
               placeholder={t("dataCatalog.build.resource")}
+              showSearch
               value={listFilters.resourceId ?? null}
             />
             <Select
@@ -598,7 +626,7 @@ export function IndexBuildListScene() {
         {loadError ? (
           <Alert
             action={
-              <AppButton onClick={() => void loadData()} type="link">
+              <AppButton onClick={() => void loadTasks()} type="link">
                 {t("common.retry")}
               </AppButton>
             }
@@ -646,7 +674,7 @@ export function IndexBuildListScene() {
         <BuildTaskDetailDrawer
           onClose={() => setDetailTask(null)}
           open
-          resource={resourceMap.get(detailTask.resourceId) ?? null}
+          resource={null}
           task={detailTask}
         />
       ) : null}

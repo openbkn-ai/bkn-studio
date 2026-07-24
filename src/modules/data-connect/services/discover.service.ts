@@ -27,6 +27,7 @@ type BackendAccountInfo = {
 
 type BackendDiscoverSchedule = {
   catalog_id: string;
+  catalog_name?: string;
   create_time?: number;
   creator?: BackendAccountInfo;
   cron_expr: string;
@@ -44,6 +45,7 @@ type BackendDiscoverSchedule = {
 
 type BackendDiscoverTask = {
   catalog_id: string;
+  catalog_name?: string;
   create_time?: number;
   creator?: BackendAccountInfo;
   finish_time?: number;
@@ -213,6 +215,7 @@ function mapSchedule(item: BackendDiscoverSchedule): DataConnectDiscoverSchedule
     id: item.id,
     name: item.name,
     catalogId: item.catalog_id,
+    catalogName: item.catalog_name,
     cronExpr: item.cron_expr,
     startTime: formatTimestamp(item.start_time),
     startTimeValue: item.start_time,
@@ -235,6 +238,7 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
   return {
     id: item.id,
     catalogId: item.catalog_id,
+    catalogName: item.catalog_name,
     scheduleId: item.schedule_id ?? "",
     strategy: normalizeStrategy(item.strategy),
     triggerType: normalizeTriggerType(item.trigger_type),

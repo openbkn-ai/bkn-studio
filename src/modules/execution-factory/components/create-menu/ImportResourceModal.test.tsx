@@ -68,7 +68,7 @@ const relativeServerSpec = JSON.stringify({
 
 let nextOpenApiSpec = spacedTitleSpec;
 
-const translate = (key: string) => {
+const translate = (key: string, options?: Record<string, string | number>) => {
   const labels: Record<string, string> = {
     "common.required": "Required",
     "executionFactory.category": "Category",
@@ -80,6 +80,8 @@ const translate = (key: string) => {
     "executionFactory.importResourceTitle.toolbox": "Import toolbox",
     "executionFactory.importResourceTitle.operator": "Import operator",
     "executionFactory.importSuccess": "Imported",
+    "executionFactory.importOpenApiCapabilityPartial":
+      "Imported {{success}} tool(s), {{failed}} failed",
     "executionFactory.importOpenApiFileRequired": "OpenAPI required",
     "executionFactory.importOpenApiServiceUrlRequired": "Service URL required",
     "executionFactory.importOpenApiMissingServerManual": "Missing servers",
@@ -88,7 +90,13 @@ const translate = (key: string) => {
     "executionFactory.businessIntro.impexOpenApiOperator": "Intro",
   };
 
-  return labels[key] ?? key;
+  let text = labels[key] ?? key;
+  if (options) {
+    for (const [name, value] of Object.entries(options)) {
+      text = text.replaceAll(`{{${name}}}`, String(value));
+    }
+  }
+  return text;
 };
 
 Object.defineProperty(window, "matchMedia", {
@@ -115,8 +123,10 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-const { messageError } = vi.hoisted(() => ({
+const { messageError, messageSuccess, messageWarning } = vi.hoisted(() => ({
   messageError: vi.fn(),
+  messageSuccess: vi.fn(),
+  messageWarning: vi.fn(),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -124,7 +134,8 @@ vi.mock("@/framework/context/use-app-services", () => ({
     message: {
       error: messageError,
       info: vi.fn(),
-      success: vi.fn(),
+      success: messageSuccess,
+      warning: messageWarning,
     },
   }),
 }));
@@ -135,15 +146,22 @@ vi.mock("@/modules/execution-factory/services/category.service", () => ({
   ),
 }));
 
-const { createToolbox, registerOperator } = vi.hoisted(() => ({
-  createToolbox: vi.fn(() => Promise.resolve({ boxId: "box-1" })),
+const { registerOpenApiImport, registerOperator } = vi.hoisted(() => ({
+  registerOpenApiImport: vi.fn(() =>
+    Promise.resolve({
+      boxId: "box-1",
+      toolIds: ["tool-1"],
+      successCount: 1,
+      failureCount: 0,
+    }),
+  ),
   registerOperator: vi.fn<(input: { openapiSpec?: string }) => Promise<{ operatorId: string }>>(
     () => Promise.resolve({ operatorId: "op-1" }),
   ),
 }));
 
-vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
-  createToolbox,
+vi.mock("@/modules/execution-factory/services/import-openapi.service", () => ({
+  registerOpenApiImport,
 }));
 
 vi.mock("@/modules/execution-factory/services/operator.service", () => ({
@@ -218,7 +236,7 @@ describe("ImportResourceModal", () => {
     expect(await screen.findByDisplayValue("示例工具箱_API")).toBeTruthy();
   });
 
-  it("submits a normalized toolbox name when creating from OpenAPI", async () => {
+  it("submits a normalized toolbox name via registerOpenApiImport", async () => {
     render(
       <ImportResourceModal activeTab="toolbox" onClose={vi.fn()} onSuccess={vi.fn()} open />,
     );
@@ -232,11 +250,81 @@ describe("ImportResourceModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import" }));
 
     await waitFor(() => {
-      expect(createToolbox).toHaveBeenCalledWith(
+      expect(registerOpenApiImport).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: "示例工具箱_API",
+          openapiSpec: spacedTitleSpec,
+          toolboxMode: "new",
+          toolboxName: "示例工具箱_API",
+          serviceUrl: "https://example.com",
+          category: "other_category",
         }),
       );
+    });
+    expect(registerOperator).not.toHaveBeenCalled();
+  });
+
+  it("warns when registerOpenApiImport reports partial tool failures", async () => {
+    registerOpenApiImport.mockResolvedValueOnce({
+      boxId: "box-1",
+      toolIds: ["tool-1"],
+      successCount: 1,
+      failureCount: 2,
+    });
+
+    const onClose = vi.fn();
+    const onSuccess = vi.fn();
+    render(
+      <ImportResourceModal activeTab="toolbox" onClose={onClose} onSuccess={onSuccess} open />,
+    );
+
+    await screen.findByDisplayValue("http://127.0.0.1:9000");
+    fireEvent.click(screen.getByRole("button", { name: "Load OpenAPI" }));
+    await screen.findByDisplayValue("https://example.com");
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+
+    await waitFor(() => {
+      expect(messageWarning).toHaveBeenCalledWith("Imported 1 tool(s), 2 failed");
+    });
+    expect(messageSuccess).not.toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("shows success toast and invokes callbacks when all tools import", async () => {
+    const onClose = vi.fn();
+    const onSuccess = vi.fn();
+    render(
+      <ImportResourceModal activeTab="toolbox" onClose={onClose} onSuccess={onSuccess} open />,
+    );
+
+    await screen.findByDisplayValue("http://127.0.0.1:9000");
+    fireEvent.click(screen.getByRole("button", { name: "Load OpenAPI" }));
+    await screen.findByDisplayValue("https://example.com");
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+
+    await waitFor(() => {
+      expect(messageSuccess).toHaveBeenCalledWith("Imported");
+    });
+    expect(messageWarning).not.toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("does not call registerOpenApiImport when toolbox Service URL is cleared", async () => {
+    render(
+      <ImportResourceModal activeTab="toolbox" onClose={vi.fn()} onSuccess={vi.fn()} open />,
+    );
+
+    await screen.findByDisplayValue("http://127.0.0.1:9000");
+    fireEvent.click(screen.getByRole("button", { name: "Load OpenAPI" }));
+    await screen.findByDisplayValue("https://example.com");
+
+    const serviceUrlInput = screen.getByLabelText("Service URL");
+    fireEvent.change(serviceUrlInput, { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+
+    await waitFor(() => {
+      expect(registerOpenApiImport).not.toHaveBeenCalled();
     });
   });
 
