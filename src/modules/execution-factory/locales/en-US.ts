@@ -139,6 +139,8 @@ export const executionFactoryEnUS = {
       "Please enter a full HTTP(S) service URL before importing.",
     importOpenApiRelativeServerManual:
       "This OpenAPI document uses a relative server URL {{relativeUrl}}. Enter the full service URL before importing.",
+    importOpenApiMissingServerManual:
+      "This OpenAPI document has no servers entry. Use the Service URL field below as the runtime base URL before importing.",
     importOpenApiCapabilityFileReady: "File ready. It will be parsed and imported on save.",
     importOpenApiCapabilityPreview: "OpenAPI {{version}} · {{count}} endpoint(s)",
     createdNextStepsTitle: "HTTP API added to toolset",
@@ -880,11 +882,12 @@ export const executionFactoryEnUS = {
       "Fill the minimum required fields and save a draft first. Enable publish-on-register for quick POC demos.",
     directPublishHint: "Best for POC environments. Production workflows should publish manually after review.",
     openapiImportHint:
-      "Paste JSON, upload a file, or fetch an OpenAPI document from a URL. For a single operator, keep only one endpoint.",
+      "Paste JSON or YAML, upload a file, or fetch an OpenAPI document from a URL. For a single operator, keep only one endpoint.",
     openapiOperatorHint:
       "Use a single-endpoint OpenAPI document (one path and one method). A full service spec registers multiple operators.",
     openapiToolboxHint:
-      "Paste JSON, upload a file, or fetch from a URL. After parsing, expand each endpoint to review inputs, request body, and response examples.",
+      "Paste JSON or YAML, upload a file, or fetch from a URL. After parsing, expand each endpoint to review inputs, request body, and response examples.",
+    openapiInputPastePlaceholder: "Paste a standard OpenAPI JSON or YAML document",
     openapiOperationsIoPreviewHint: "Expand an endpoint to review parameters, request body, and response examples.",
     openapiOperationIoSummary:
       "{{paramCount}} URL/Header parameter(s) · {{responseCount}} response(s)",
@@ -903,6 +906,7 @@ export const executionFactoryEnUS = {
     openapiValidationOkWithCount:
       "OpenAPI document validated. Detected {{count}} endpoint(s).",
     openapiPreviewServer: "Server URL",
+    openapiPreviewServerUnset: "Not set (will use the form Service URL)",
     openapiPreviewVersion: "Spec version",
     openapiPreviewMore: "{{count}} more endpoint(s) not shown",
     openapiMultiOperationWarning:

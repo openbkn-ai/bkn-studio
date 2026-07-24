@@ -12,12 +12,18 @@ name: release-studio
 # the published chart by name + version.
 #
 # Versioning mirrors the bkn-foundry convention so image tag == chart version:
-# a `v*` tag IS the release version (leading "v" stripped). Main branch and
-# workflow_dispatch runs build-only unless dispatched with publish=true.
+# a `v*` tag IS the release version (leading "v" stripped); every other push
+# gets a prerelease version stamped with branch, commit date and short SHA.
+#
+# Every branch push publishes, so a branch build is directly deployable without
+# merging or hand-dispatching. Only workflow_dispatch stays build-only by
+# default. Prerelease versions accumulate with no retention policy yet: GHCR
+# cleanup needs a PAT/App token (GITHUB_TOKEN can't wildcard-match tags), and
+# SWR needs its own console-side rule — both deferred.
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
     tags: ['v*']
   workflow_dispatch:
     inputs:
@@ -25,6 +31,13 @@ on:
         description: 'Push to registries (true) or build-only verify (false)'
         type: boolean
         default: false
+
+# A branch that gets several pushes in a row only needs the newest package, so
+# supersede in-flight branch runs. main and tags never cancel — their packages
+# are referenced by version and must all exist.
+concurrency:
+  group: release-studio-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type == 'branch' && github.ref_name != 'main' }}
 
 permissions:
   contents: read
@@ -75,7 +88,10 @@ jobs:
         id: gate
         shell: bash
         run: |
-          if [[ ( "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ) || ( "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.publish }}" == "true" ) ]]; then
+          # Any push publishes — branch, main or tag alike. workflow_dispatch is
+          # the one build-only mode left, for verifying a build without minting
+          # a package.
+          if [[ "${{ github.event_name }}" == "push" || ( "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.publish }}" == "true" ) ]]; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
           else
             echo "publish=false" >> "$GITHUB_OUTPUT"

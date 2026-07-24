@@ -26,6 +26,41 @@ const petstoreSpec = JSON.stringify({
   },
 });
 
+const absoluteServerSpec = JSON.stringify({
+  openapi: "3.0.3",
+  info: { title: "First API", version: "1.0.0" },
+  servers: [{ url: "https://first.example.com" }],
+  paths: {
+    "/ping": {
+      get: {
+        summary: "ping",
+        responses: { "200": { description: "OK" } },
+      },
+    },
+  },
+});
+
+const noServersSpec = JSON.stringify({
+  openapi: "3.0.3",
+  info: { title: "No Servers API", version: "1.0.0" },
+  paths: {
+    "/weather": {
+      get: {
+        summary: "weather",
+        responses: { "200": { description: "OK" } },
+      },
+    },
+  },
+});
+
+let nextOpenApiLoad: {
+  spec: string;
+  source?: { kind: "url"; url: string } | { kind: "paste" };
+} = {
+  spec: petstoreSpec,
+  source: { kind: "url", url: "https://petstore3.swagger.io/api/v3/openapi.json" },
+};
+
 const translate = (key: string, options?: Record<string, unknown>) => {
   const labels: Record<string, string> = {
     "common.description": "Description",
@@ -34,6 +69,9 @@ const translate = (key: string, options?: Record<string, unknown>) => {
     "executionFactory.businessIntro.toolboxPlacementSection": "Toolbox placement.",
     "executionFactory.importOpenApiCapabilityPreview": `OpenAPI ${options?.version} with ${options?.count} endpoint(s)`,
     "executionFactory.importOpenApiRelativeServerResolved": `Detected relative OpenAPI server ${options?.relativeUrl} and resolved it to ${options?.serviceUrl}.`,
+    "executionFactory.importOpenApiRelativeServerManual": `Relative server ${options?.relativeUrl}`,
+    "executionFactory.importOpenApiMissingServerManual": "Document has no servers; use Service URL.",
+    "executionFactory.importOpenApiServiceUrlRequired": "Service URL required",
     "executionFactory.quickApiToolboxExisting": "Existing toolset",
     "executionFactory.quickApiToolboxNew": "New toolset",
     "executionFactory.quickApiToolboxTarget": "Add to toolset",
@@ -90,18 +128,16 @@ vi.mock("@/modules/execution-factory/components/OpenApiSpecInput", () => ({
   OpenApiSpecInput: ({
     onChange,
   }: {
-    onChange?: (value: string, source?: { kind: "url"; url: string }) => void;
+    onChange?: (
+      value: string,
+      source?: { kind: "url"; url: string } | { kind: "paste" },
+    ) => void;
   }) => (
     <button
-      onClick={() =>
-        onChange?.(petstoreSpec, {
-          kind: "url",
-          url: "https://petstore3.swagger.io/api/v3/openapi.json",
-        })
-      }
+      onClick={() => onChange?.(nextOpenApiLoad.spec, nextOpenApiLoad.source)}
       type="button"
     >
-      Load Petstore OpenAPI
+      Load OpenAPI
     </button>
   ),
 }));
@@ -109,12 +145,16 @@ vi.mock("@/modules/execution-factory/components/OpenApiSpecInput", () => ({
 describe("ImportOpenApiCapabilityForm", () => {
   afterEach(() => {
     cleanup();
+    nextOpenApiLoad = {
+      spec: petstoreSpec,
+      source: { kind: "url", url: "https://petstore3.swagger.io/api/v3/openapi.json" },
+    };
   });
 
   it("resolves a relative server URL from the fetched OpenAPI document URL", async () => {
     render(<ImportOpenApiCapabilityForm formId="import-openapi" onSubmit={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Load Petstore OpenAPI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Load OpenAPI" }));
 
     expect(await screen.findByDisplayValue("https://petstore3.swagger.io/api/v3")).toBeTruthy();
     expect(screen.getByDisplayValue("Swagger_Petstore")).toBeTruthy();
@@ -128,7 +168,7 @@ describe("ImportOpenApiCapabilityForm", () => {
   it("keeps a manually edited service URL after OpenAPI autofill", async () => {
     render(<ImportOpenApiCapabilityForm formId="import-openapi" onSubmit={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Load Petstore OpenAPI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Load OpenAPI" }));
 
     const serviceUrlInput = await screen.findByDisplayValue("https://petstore3.swagger.io/api/v3");
     fireEvent.change(serviceUrlInput, {
@@ -141,5 +181,22 @@ describe("ImportOpenApiCapabilityForm", () => {
 
     expect(screen.getByDisplayValue("https://custom.example.com/api")).toBeTruthy();
     expect(screen.queryByDisplayValue("https://petstore3.swagger.io/api/v3")).toBeNull();
+  });
+
+  it("clears service URL when switching from a servers document to one without servers", async () => {
+    render(<ImportOpenApiCapabilityForm formId="import-openapi" onSubmit={vi.fn()} />);
+
+    nextOpenApiLoad = { spec: absoluteServerSpec, source: { kind: "paste" } };
+    fireEvent.click(screen.getByRole("button", { name: "Load OpenAPI" }));
+    expect(await screen.findByDisplayValue("https://first.example.com")).toBeTruthy();
+
+    nextOpenApiLoad = { spec: noServersSpec, source: { kind: "paste" } };
+    fireEvent.click(screen.getByRole("button", { name: "Load OpenAPI" }));
+
+    expect(
+      await screen.findByText("Document has no servers; use Service URL."),
+    ).toBeTruthy();
+    expect(screen.queryByDisplayValue("https://first.example.com")).toBeNull();
+    expect(screen.getByLabelText("Service URL")).toHaveProperty("value", "");
   });
 });

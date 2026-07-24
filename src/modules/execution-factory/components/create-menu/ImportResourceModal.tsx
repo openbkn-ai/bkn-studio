@@ -11,7 +11,7 @@ import { Alert, Form, Input, Modal, Radio, Select, Tabs, Upload } from "antd";
 
 import type { UploadFile } from "antd/es/upload/interface";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -37,13 +37,14 @@ import { createToolbox } from "@/modules/execution-factory/services/toolbox.serv
 import type { ImpexComponentType, ImpexImportMode } from "@/modules/execution-factory/types/impex";
 
 import {
-
   analyzeOpenApiDocumentText,
-
   extractOpenApiMetadataHints,
-
+  normalizeGeneratedCapabilityName,
+  normalizeOpenApiDocumentText,
+  resolveOpenApiServiceUrl,
+  rewriteOpenApiServerUrl,
   validateOpenApiDocumentText,
-
+  type OpenApiSpecSource,
 } from "@/modules/execution-factory/utils/metadata-content";
 
 import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
@@ -149,18 +150,16 @@ export function ImportResourceModal({
   );
 
   const [openapiSpec, setOpenApiSpec] = useState("");
+  const [openapiSource, setOpenApiSource] = useState<OpenApiSpecSource>({ kind: "paste" });
 
   const [adpFileList, setAdpFileList] = useState<UploadFile[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
 
   const [errorDetail, setErrorDetail] = useState<ReturnType<
-
     typeof extractRequestErrorDetail
-
   > | null>(null);
-
-
+  const lastOpenApiAutofillKeyRef = useRef("");
 
   const impexType = tabToImpexType(activeTab);
 
@@ -168,10 +167,6 @@ export function ImportResourceModal({
 
   const adpImportMode = Form.useWatch("mode", adpForm) ?? "create";
   const currentOpenApiName = Form.useWatch<OpenApiFormValues["name"]>("name", openApiForm);
-  const currentOpenApiServiceUrl = Form.useWatch<OpenApiFormValues["serviceUrl"]>(
-    "serviceUrl",
-    openApiForm,
-  );
 
 
 
@@ -224,60 +219,67 @@ export function ImportResourceModal({
       const defaultCategory = options[0]?.value ?? "other_category";
 
       openApiForm.setFieldsValue({
-
         category: defaultCategory,
-
-        serviceUrl: "http://127.0.0.1:9000",
-
+        // Toolbox keeps a visible local default for empty forms. Operator must
+        // not silently inherit localhost when the document has no absolute server.
+        serviceUrl: activeTab === "toolbox" ? "http://127.0.0.1:9000" : "",
       });
-
       adpForm.setFieldsValue({ mode: "create" });
-
       setImportKind(initialKind ?? (supportsOpenApi ? "openapi" : "adp"));
-
       setOpenApiSpec("");
-
+      setOpenApiSource({ kind: "paste" });
       setAdpFileList([]);
-
       setErrorDetail(null);
-
+      lastOpenApiAutofillKeyRef.current = "";
     })();
-
-  }, [adpForm, initialKind, open, openApiForm, supportsOpenApi]);
-
-
+  }, [activeTab, adpForm, initialKind, open, openApiForm, supportsOpenApi]);
 
   useEffect(() => {
-
-    if (!openapiSpec.trim() || activeTab !== "toolbox") {
-
+    if (!openapiSpec.trim()) {
       return;
-
     }
-
-
 
     const analysis = analyzeOpenApiDocumentText(openapiSpec);
-
     if (!analysis.ok) {
-
       return;
-
     }
 
+    const autofillKey = `${openapiSpec}\n#source:${openapiSource.kind}:${
+      openapiSource.kind === "url"
+        ? openapiSource.url
+        : openapiSource.kind === "file"
+          ? (openapiSource.fileName ?? "")
+          : ""
+    }`;
 
+    // One-shot autofill when the document/source changes. Do not overwrite
+    // subsequent manual edits to the form service URL.
+    if (lastOpenApiAutofillKeyRef.current === autofillKey) {
+      return;
+    }
+    lastOpenApiAutofillKeyRef.current = autofillKey;
 
     const hints = extractOpenApiMetadataHints(openapiSpec);
+    const nextValues: Partial<OpenApiFormValues> = {};
 
-    openApiForm.setFieldsValue({
+    if (activeTab === "toolbox") {
+      nextValues.name =
+        normalizeGeneratedCapabilityName(hints.title) ||
+        normalizeGeneratedCapabilityName(currentOpenApiName) ||
+        currentOpenApiName;
+    }
 
-      name: hints.title?.trim() || currentOpenApiName,
+    // Prefer absolute / URL-resolved relative servers. Never invent localhost
+    // when the document omits servers or only declares a relative path.
+    const resolved = resolveOpenApiServiceUrl(openapiSpec, openapiSource);
+    nextValues.serviceUrl = resolved.ok
+      ? resolved.url
+      : analysis.serverUrl && /^https?:\/\//i.test(analysis.serverUrl)
+        ? analysis.serverUrl
+        : "";
 
-      serviceUrl: analysis.serverUrl ?? currentOpenApiServiceUrl,
-
-    });
-
-  }, [activeTab, currentOpenApiName, currentOpenApiServiceUrl, openApiForm, openapiSpec]);
+    openApiForm.setFieldsValue(nextValues);
+  }, [activeTab, currentOpenApiName, openApiForm, openapiSource, openapiSpec]);
 
 
 
@@ -318,51 +320,58 @@ export function ImportResourceModal({
         const validation = validateOpenApiDocumentText(openapiSpec);
 
         if (!validation.ok) {
-
           void message.error(validation.reason);
-
           return;
-
         }
 
+        const analysis = analyzeOpenApiDocumentText(openapiSpec);
+        const resolved = resolveOpenApiServiceUrl(openapiSpec, openapiSource);
+        const formServiceUrl = values.serviceUrl?.trim();
+        // Form Service URL is the runtime base (autofilled from absolute /
+        // URL-resolved relative servers). Never fall back to localhost.
+        const serviceUrl = formServiceUrl || undefined;
 
+        if (!serviceUrl || !/^https?:\/\//i.test(serviceUrl)) {
+          void message.error(
+            !analysis.ok
+              ? t("executionFactory.importOpenApiServiceUrlRequired")
+              : !analysis.serverUrl
+                ? t("executionFactory.importOpenApiMissingServerManual")
+                : !resolved.ok && resolved.relativeUrl
+                  ? t("executionFactory.importOpenApiRelativeServerManual", {
+                      relativeUrl: resolved.relativeUrl,
+                    })
+                  : t("executionFactory.importOpenApiServiceUrlRequired"),
+          );
+          return;
+        }
+
+        const normalizedText = normalizeOpenApiDocumentText(openapiSpec);
+        const normalizedOpenapiSpec = rewriteOpenApiServerUrl(normalizedText, serviceUrl);
 
         const hints = extractOpenApiMetadataHints(openapiSpec);
 
-        const fallbackName = hints.title?.trim() || `import_${Date.now()}`;
+        const fallbackName =
+          normalizeGeneratedCapabilityName(hints.title) || `import_${Date.now()}`;
 
-
+        const resolvedName =
+          normalizeGeneratedCapabilityName(values.name) || fallbackName;
 
         if (activeTab === "operator") {
-
           await registerOperator({
-
             metadataType: "openapi",
-
-            name: fallbackName,
-
-            openapiSpec,
-
+            name: resolvedName,
+            openapiSpec: normalizedOpenapiSpec,
             category: values.category as OperatorCategory,
-
           });
-
         } else {
-
           await createToolbox({
-
-            name: values.name?.trim() || fallbackName,
-
+            name: resolvedName,
             category: values.category,
-
             metadataType: "openapi",
-
-            serviceUrl: values.serviceUrl ?? "http://127.0.0.1:9000",
-
-            openapiSpec,
-
+            serviceUrl,
+            openapiSpec: normalizedOpenapiSpec,
           });
-
         }
 
       } else {
@@ -480,54 +489,35 @@ export function ImportResourceModal({
                 </Form.Item>
 
                 {activeTab === "toolbox" ? (
-
-                  <>
-
-                    <Form.Item
-
-                      label={t("executionFactory.toolboxName")}
-
-                      name="name"
-
-                      rules={[{ required: true, message: t("common.required") }]}
-
-                    >
-
-                      <Input />
-
-                    </Form.Item>
-
-                    <Form.Item
-
-                      label={t("executionFactory.serviceUrl")}
-
-                      name="serviceUrl"
-
-                      rules={[{ required: true, message: t("common.required") }]}
-
-                    >
-
-                      <Input />
-
-                    </Form.Item>
-
-                  </>
-
+                  <Form.Item
+                    label={t("executionFactory.toolboxName")}
+                    name="name"
+                    rules={[{ required: true, message: t("common.required") }]}
+                  >
+                    <Input />
+                  </Form.Item>
                 ) : null}
 
                 <OpenApiSpecInput
-
-                  onChange={setOpenApiSpec}
-
+                  onChange={(value, source) => {
+                    setOpenApiSpec(value);
+                    if (source) {
+                      setOpenApiSource(source);
+                    }
+                  }}
                   registrationTarget={activeTab === "toolbox" ? "toolbox" : "operator"}
-
                   rows={8}
-
                   showEndpointReview
-
                   value={openapiSpec}
-
                 />
+
+                <Form.Item
+                  label={t("executionFactory.serviceUrl")}
+                  name="serviceUrl"
+                  rules={[{ required: true, message: t("common.required") }]}
+                >
+                  <Input placeholder="https://api.example.com" />
+                </Form.Item>
 
               </Form>
 
