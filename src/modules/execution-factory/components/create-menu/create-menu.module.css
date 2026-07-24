@@ -55,7 +55,7 @@
 .inlineAction {
   background: none;
   border: none;
-  color: #1677ff;
+  color: var(--color-primary-600);
   cursor: pointer;
   font-size: 13px;
   margin-bottom: 16px;
@@ -79,11 +79,11 @@
 }
 
 .optionCard:hover {
-  border-color: #1677ff;
+  border-color: var(--color-primary-600);
 }
 
 .optionCardActive {
-  border-color: #1677ff;
+  border-color: var(--color-primary-600);
   box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
 }
 
@@ -119,7 +119,7 @@
 }
 
 .businessIntro {
-  border-left: 3px solid #1677ff;
+  border-left: 3px solid var(--color-primary-600);
   background: rgba(15, 30, 54, 0.03);
   border-radius: 8px;
   color: rgba(0, 0, 0, 0.65);

@@ -15,7 +15,6 @@ import { McpDetailDrawer } from "@/modules/execution-factory/components/McpDetai
 import { OperatorDetailDrawer } from "@/modules/execution-factory/components/OperatorDetailDrawer";
 import { PublishedPermModal } from "@/modules/execution-factory/components/PublishedPermModal";
 import { SkillDetailDrawer } from "@/modules/execution-factory/components/SkillDetailDrawer";
-import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
 import { ToolboxDetailDrawer } from "@/modules/execution-factory/components/ToolboxDetailDrawer";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 import type { ImpexComponentType } from "@/modules/execution-factory/types/impex";
@@ -24,12 +23,10 @@ import { invalidateLocalResourceIdsCache } from "@/modules/execution-factory/uti
 export type ExecutionUnitListOverlaysProps = {
   activeTab: ExecutionUnitTab;
   detailBoxId: string | null;
-  detailBoxEditMode: boolean;
   detailMcpId: string | null;
   detailOperatorId: string | null;
   detailSkillId: string | null;
   editMcpId: string | null;
-  historySkillId: string | null;
   installTarget: {
     id: string;
     name: string;
@@ -39,17 +36,14 @@ export type ExecutionUnitListOverlaysProps = {
   marketMode: boolean;
   navigate: NavigateFunction;
   onCloseDetailBox: () => void;
-  onCloseDetailBoxEditMode: () => void;
   onCloseDetailMcp: () => void;
   onCloseDetailOperator: () => void;
   onCloseDetailSkill: () => void;
   onCloseEditMcp: () => void;
-  onCloseHistorySkill: () => void;
   onCloseInstallTarget: () => void;
   onClosePublishedPerm: () => void;
   onCloseSkillInstallTarget: () => void;
   onCloseUpdateSkillPackage: () => void;
-  onOpenHistorySkill: (skillId: string) => void;
   onReloadInstalledResourceIds: (options?: { manual?: boolean }) => void;
   onReloadList: () => void;
   publishedPermTarget: { name: string } | null;
@@ -64,27 +58,22 @@ export type ExecutionUnitListOverlaysProps = {
 export function ExecutionUnitListOverlays({
   activeTab,
   detailBoxId,
-  detailBoxEditMode,
   detailMcpId,
   detailOperatorId,
   detailSkillId,
   editMcpId,
-  historySkillId,
   installTarget,
   marketMode,
   navigate,
   onCloseDetailBox,
-  onCloseDetailBoxEditMode,
   onCloseDetailMcp,
   onCloseDetailOperator,
   onCloseDetailSkill,
   onCloseEditMcp,
-  onCloseHistorySkill,
   onCloseInstallTarget,
   onClosePublishedPerm,
   onCloseSkillInstallTarget,
   onCloseUpdateSkillPackage,
-  onOpenHistorySkill,
   onReloadInstalledResourceIds,
   onReloadList,
   publishedPermTarget,
@@ -103,68 +92,37 @@ export function ExecutionUnitListOverlays({
         open={Boolean(detailOperatorId)}
         operatorId={detailOperatorId}
       />
-      <ToolboxDetailDrawer
-        boxId={detailBoxId}
-        initialEditMode={detailBoxEditMode}
-        marketMode={marketMode}
-        onClose={() => {
-          onCloseDetailBoxEditMode();
-          onCloseDetailBox();
-        }}
-        onViewTools={(id) => {
-          onCloseDetailBoxEditMode();
-          onCloseDetailBox();
-          void navigate(
+      {/* 本域列表点卡片直接进详情页，这三个抽屉只留给市场态的引入前预览。 */}
+      {marketMode ? (
+        <>
+          <ToolboxDetailDrawer
+            boxId={detailBoxId}
             marketMode
-              ? `/execution-factory/toolboxes/${id}/tools?from=catalog`
-              : `/execution-factory/toolboxes/${id}/tools`,
-          );
-        }}
-        onUpdated={onReloadList}
-        open={Boolean(detailBoxId)}
-      />
-      <McpDetailDrawer
-        marketMode={marketMode}
-        mcpId={detailMcpId}
-        onClose={onCloseDetailMcp}
-        onViewDetail={(id) => {
-          onCloseDetailMcp();
-          void navigate(
+            onClose={onCloseDetailBox}
+            open={Boolean(detailBoxId)}
+          />
+          <McpDetailDrawer
             marketMode
-              ? `/execution-factory/mcp/${id}?from=catalog`
-              : `/execution-factory/mcp/${id}`,
-          );
-        }}
-        open={Boolean(detailMcpId)}
-      />
-      <SkillDetailDrawer
-        marketMode={marketMode}
-        onClose={onCloseDetailSkill}
-        onEdit={(skillId) => {
-          onCloseDetailSkill();
-          void navigate(`/execution-factory/skills/${skillId}/edit`);
-        }}
-        onOpenHistory={(skillId) => {
-          onCloseDetailSkill();
-          onOpenHistorySkill(skillId);
-        }}
-        onViewDetail={(id) => {
-          onCloseDetailSkill();
-          void navigate(
+            mcpId={detailMcpId}
+            onClose={onCloseDetailMcp}
+            onViewDetail={(id) => {
+              onCloseDetailMcp();
+              void navigate(`/execution-factory/mcp/${id}?from=catalog`);
+            }}
+            open={Boolean(detailMcpId)}
+          />
+          <SkillDetailDrawer
             marketMode
-              ? `/execution-factory/skills/${id}?from=catalog`
-              : `/execution-factory/skills/${id}`,
-          );
-        }}
-        open={Boolean(detailSkillId)}
-        skillId={detailSkillId}
-      />
-      <SkillHistoryDrawer
-        onClose={onCloseHistorySkill}
-        onUpdated={onReloadList}
-        open={Boolean(historySkillId)}
-        skillId={historySkillId}
-      />
+            onClose={onCloseDetailSkill}
+            onViewDetail={(id) => {
+              onCloseDetailSkill();
+              void navigate(`/execution-factory/skills/${id}?from=catalog`);
+            }}
+            open={Boolean(detailSkillId)}
+            skillId={detailSkillId}
+          />
+        </>
+      ) : null}
       <InstallFromCatalogModal
         alreadyInstalled={installTarget?.alreadyInstalled ?? false}
         componentId={installTarget?.id ?? ""}

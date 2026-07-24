@@ -23,6 +23,8 @@ export const commonEnUS = {
     ok: "OK",
     add: "Add",
     remove: "Remove",
+    expand: "Expand",
+    collapse: "Collapse",
     id: "ID",
     edit: "Edit",
     detail: "Detail",

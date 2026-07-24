@@ -1,0 +1,63 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.display {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border: 1px solid transparent;
+  /* 常驻虚线下划线：静态文字看不出可编辑，这条线是唯一不靠 hover 的提示 */
+  border-bottom: 1px dashed var(--color-border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: text;
+}
+
+.display:hover {
+  border-color: var(--color-border);
+  border-bottom-style: solid;
+  background: var(--color-bg-layout, #f5f7fa);
+}
+
+.displayBlock {
+  display: flex;
+  width: calc(100% + 12px);
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.textMultiline {
+  white-space: normal;
+  line-height: 1.7;
+}
+
+.placeholder {
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+}
+
+/* 图标常驻但很淡：只在 hover 出现，等于只有用鼠标扫过才知道能编辑 */
+.editIcon {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  opacity: 0.4;
+}
+
+.display:hover .editIcon {
+  opacity: 1;
+  color: var(--color-primary, #2563eb);
+}

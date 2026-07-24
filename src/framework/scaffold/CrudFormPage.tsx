@@ -5,15 +5,17 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import type { PropsWithChildren, ReactNode } from "react";
 
-import { Space, Typography } from "antd";
+import { Button, Space, Typography } from "antd";
 
 import { PageContainer } from "@/framework/ui/common/PageContainer";
 
 type CrudFormPageProps = PropsWithChildren<{
   actions?: ReactNode;
   description?: string;
+  onBack?: () => void;
   title?: string;
 }>;
 
@@ -21,14 +23,29 @@ export function CrudFormPage({
   actions,
   children,
   description,
+  onBack,
   title,
 }: CrudFormPageProps) {
   return (
     <PageContainer>
       <Space className="page-section" direction="vertical" size={20}>
-        {title ? (
+        {title || onBack ? (
           <div className="page-title-block">
-            <Typography.Title level={3}>{title}</Typography.Title>
+            <Space align="center" size={4}>
+              {onBack ? (
+                <Button
+                  aria-label="back"
+                  icon={<ArrowLeftOutlined />}
+                  onClick={onBack}
+                  type="text"
+                />
+              ) : null}
+              {title ? (
+                <Typography.Title level={3} style={{ margin: 0 }}>
+                  {title}
+                </Typography.Title>
+              ) : null}
+            </Space>
             {description ? (
               <Typography.Paragraph className="page-description">
                 {description}

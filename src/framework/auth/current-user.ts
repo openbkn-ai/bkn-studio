@@ -26,9 +26,12 @@ type MeResponse = {
 };
 
 // GET /api/safe/v1/me/permissions — role-inherited grants, type:op pairs.
+// instance_operations 只在 scope=type 下出现:该类型下「至少有一个实例持有、但未
+// 类型级持有」的操作汇总(见 bkn-safe authz.typeWideGrants)。
 type MePermissionsResponse = {
   is_admin?: boolean;
   permissions?: {
+    instance_operations?: string[];
     operations?: string[];
     resource?: { id?: string; type?: string };
   }[];
@@ -62,7 +65,12 @@ export const anonymousRuntimeUser: RuntimeUser = {
 export async function fetchCurrentUser(): Promise<RuntimeUser> {
   const [meResult, permResult] = await Promise.allSettled([
     http.get<MeResponse>("/safe/v1/me", { skipErrorToast: true }),
+    // scope=type:启动只为渲染导航/菜单,只需类型级授权。响应从随逐对象授权数线性涨
+    // 收敛到类型数量级(实测 500 对象授权:501 行 37101B → 1 行 101B)。类型级之外的
+    // 操作由后端汇总进 instance_operations,flattenSafeGrants 一并折入,故入口可见性
+    // 不受影响。老后端忽略未知参数,两侧可独立上线。
     http.get<MePermissionsResponse>("/safe/v1/me/permissions", {
+      params: { scope: "type" },
       skipErrorToast: true,
     }),
   ]);

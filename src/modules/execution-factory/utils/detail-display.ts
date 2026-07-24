@@ -73,6 +73,19 @@ export function resolveMcpCategoryLabel(
   return category;
 }
 
+export function resolveMcpCreationTypeLabel(
+  creationType: string | undefined,
+  t: (key: string) => string,
+) {
+  if (!creationType) {
+    return "-";
+  }
+
+  const key = `executionFactory.mcpCreationTypes.${creationType}`;
+  const translated = t(key);
+  return translated !== key ? translated : creationType;
+}
+
 export function formatExecuteControlDisplay(
   control: OperatorExecuteControl | undefined,
   t: (key: string) => string,

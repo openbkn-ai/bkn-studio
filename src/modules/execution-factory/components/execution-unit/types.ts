@@ -10,6 +10,8 @@ export type ExecutionUnitTab = "mcp" | "toolbox" | "operator" | "skill";
 export type ExecutionUnitCardItem = {
   id: string;
   name: string;
+  /** 「全部」视图里一屏混着多种类型，卡片不能再从 activeTab 推自己是什么。 */
+  unitType?: ExecutionUnitTab;
   description?: string;
   metadataType?: string;
   isInternal?: boolean;

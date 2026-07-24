@@ -195,44 +195,31 @@ export function buildOperatorCapabilityManifest(operator: OperatorDetail): Capab
   };
 }
 
+// Readiness only scores signals a user can actually fill in from the current UI —
+// the business intent and the input/output business semantics. Verification status,
+// callable policy and verified examples have no backing fields or edit path yet, so
+// demanding them would be advice the product cannot act on. Reintroduce them here
+// once real backend fields + an edit flow exist.
 export function getCapabilityReadiness(manifest: CapabilityManifest): CapabilityReadiness {
   const missing: string[] = [];
   let score = 0;
 
   if (manifest.intent) {
-    score += 20;
+    score += 40;
   } else {
     missing.push("business intent");
   }
 
   if ((manifest.inputSemantics ?? []).some((input) => input.businessMeaning)) {
-    score += 20;
+    score += 35;
   } else {
     missing.push("input semantics");
   }
 
   if ((manifest.outputSemantics ?? []).some((output) => output.businessMeaning)) {
-    score += 15;
+    score += 25;
   } else {
     missing.push("output semantics");
-  }
-
-  if ((manifest.examples ?? []).some((example) => example.status === "passed")) {
-    score += 20;
-  } else {
-    missing.push("verified example");
-  }
-
-  if (manifest.testStatus === "passed") {
-    score += 15;
-  } else {
-    missing.push("passed verification");
-  }
-
-  if (manifest.agentVisibility === "callable" && manifest.agentInvokePolicy) {
-    score += 10;
-  } else {
-    missing.push("Agent callable policy");
   }
 
   return {

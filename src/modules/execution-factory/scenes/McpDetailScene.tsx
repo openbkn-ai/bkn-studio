@@ -8,17 +8,19 @@
 import {
   ApiOutlined,
   AppstoreOutlined,
+  ArrowLeftOutlined,
   BugOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
   DownloadOutlined,
   FileTextOutlined,
+  IdcardOutlined,
   KeyOutlined,
   LinkOutlined,
-  SettingOutlined,
   TagOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
-import { Alert, Breadcrumb, Empty, Layout, Space, Spin, Tag, Typography } from "antd";
+import { Alert, Empty, Layout, Spin, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -43,6 +45,7 @@ import {
   formatOptionalTimestamp,
   formatRecordHeaders,
   resolveMcpCategoryLabel,
+  resolveMcpCreationTypeLabel,
 } from "@/modules/execution-factory/utils/detail-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-export";
@@ -50,7 +53,6 @@ import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-expo
 import styles from "./toolbox-detail.module.css";
 
 const { Sider, Content } = Layout;
-const { Paragraph, Title } = Typography;
 
 const statusColorMap: Record<McpStatus, string> = {
   published: "green",
@@ -163,6 +165,65 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
 
   const toolCount = tools.length || record?.toolConfigs?.length || 0;
 
+  // 原来只在 MCP 详情抽屉里露过，卡片改直连本页后搬到页面上，否则这些字段就没入口了。
+  const basicInfoItems = useMemo(() => {
+    if (!record) {
+      return [];
+    }
+
+    return [
+      {
+        key: "mcpId",
+        label: t("executionFactory.mcpIdLabel"),
+        value: record.mcpId,
+        icon: <IdcardOutlined />,
+        variant: "mono" as const,
+        span: "full" as const,
+      },
+      {
+        key: "creationType",
+        label: t("executionFactory.mcpCreationType"),
+        value: resolveMcpCreationTypeLabel(record.creationType, t),
+        icon: <ApiOutlined />,
+        variant: "accent" as const,
+      },
+      {
+        key: "category",
+        label: t("executionFactory.category"),
+        value: resolveMcpCategoryLabel(record.category, t),
+        icon: <AppstoreOutlined />,
+      },
+      {
+        key: "toolCount",
+        label: t("executionFactory.mcpToolCountFieldLabel"),
+        value: t("executionFactory.toolCountLabel", { count: toolCount }),
+        icon: <ToolOutlined />,
+      },
+      {
+        key: "url",
+        label: t("executionFactory.serviceUrl"),
+        value: record.url ?? "-",
+        icon: <LinkOutlined />,
+        span: "full" as const,
+        variant: "mono" as const,
+      },
+      {
+        key: "headers",
+        label: t("executionFactory.mcpHeadersLabel"),
+        value: formatRecordHeaders(record.headers),
+        icon: <KeyOutlined />,
+        span: "full" as const,
+        variant: "muted" as const,
+      },
+      {
+        key: "updateTime",
+        label: t("executionFactory.updateTime"),
+        value: formatOptionalTimestamp(record.updateTime),
+        icon: <CalendarOutlined />,
+      },
+    ];
+  }, [record, t, toolCount]);
+
   const toolInfoItems = useMemo(() => {
     if (!selectedTool || !record) {
       return [];
@@ -235,84 +296,67 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
 
   return (
     <section className={styles.page}>
-      <div className={styles.backRow}>
-        <Breadcrumb
-          items={[
-            {
-              title: (
-                <button className={styles.breadcrumbLink} onClick={handleBack} type="button">
-                  {catalogContext
-                    ? t("executionFactory.catalogTitle")
-                    : t("executionFactory.unitManagementTitle")}
-                </button>
-              ),
-            },
-            {
-              title: record?.name ?? t("executionFactory.mcpDetailPageTitle"),
-            },
-            {
-              title: t("executionFactory.mcpDetailPageTitle"),
-            },
-          ]}
-        />
-        <AppButton icon={<SettingOutlined />} onClick={handleBack} type="link">
-          {t("executionFactory.toolboxDetailBack")}
-        </AppButton>
-      </div>
-
-      {record ? (
-        <div className={styles.header}>
-          <div className={styles.headerMain}>
-            <div className={styles.titleRow}>
-              <Title className={styles.title} level={3}>
-                {record.name}
-              </Title>
-              {statusTag}
-            </div>
-            <Paragraph className={styles.description}>
-              {record.description || "-"}
-            </Paragraph>
-            <div className={styles.metaRow}>
-              <span>
-                <ApiOutlined />{" "}
-                {t("executionFactory.mcpToolCountLabel", { count: toolCount })}
-              </span>
-              <span>
-                <ClockCircleOutlined />{" "}
-                {formatExecutionUnitTime(record.updateTime)}
-              </span>
-            </div>
-          </div>
-          {viewMode ? (
-            <Space>
+      <div className={styles.pageHeader}>
+        <div className={styles.pageHeaderMain}>
+          <button
+            aria-label={t("common.back")}
+            className={styles.backChevron}
+            onClick={handleBack}
+            type="button"
+          >
+            <ArrowLeftOutlined />
+          </button>
+          <span className={styles.pageHeaderIcon}>
+            <ApiOutlined />
+          </span>
+          <h1 className={styles.pageHeaderTitle}>
+            {record?.name ?? t("executionFactory.mcpDetailTitle")}
+          </h1>
+          {record ? statusTag : null}
+        </div>
+        {record ? (
+          <div className={styles.pageHeaderActions}>
+            {viewMode ? (
               <PermissionGate permissions="execution-factory:mcp:edit">
                 <AppButton onClick={handleEnterEditMode} type="primary">
                   {t("executionFactory.mcpDetailEnterEdit")}
                 </AppButton>
               </PermissionGate>
-            </Space>
-          ) : (
-            <Space>
-              {!record.isInternal ? (
-                <PermissionGate permissions="execution-factory:impex:export">
-                  <AppButton
-                    icon={<DownloadOutlined />}
-                    loading={isExporting("mcp", mcpId)}
-                    onClick={() => {
-                      void exportComponentById("mcp", mcpId, record.name);
-                    }}
-                  >
-                    {t("executionFactory.cardMenu.export")}
+            ) : (
+              <>
+                {!record.isInternal ? (
+                  <PermissionGate permissions="execution-factory:impex:export">
+                    <AppButton
+                      icon={<DownloadOutlined />}
+                      loading={isExporting("mcp", mcpId)}
+                      onClick={() => {
+                        void exportComponentById("mcp", mcpId, record.name);
+                      }}
+                    >
+                      {t("executionFactory.cardMenu.export")}
+                    </AppButton>
+                  </PermissionGate>
+                ) : null}
+                <PermissionGate permissions="execution-factory:mcp:edit">
+                  <AppButton onClick={() => setEditDrawerOpen(true)} type="primary">
+                    {t("executionFactory.cardMenu.edit")}
                   </AppButton>
                 </PermissionGate>
-              ) : null}
-              <PermissionGate permissions="execution-factory:mcp:edit">
-                <AppButton onClick={() => setEditDrawerOpen(true)} type="primary">
-                  {t("executionFactory.cardMenu.edit")}
-                </AppButton>
-              </PermissionGate>
-            </Space>
-          )}
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {record ? (
+        <div className={styles.pageSubline}>
+          {record.description ? <span>{record.description}</span> : null}
+          <span>
+            <ApiOutlined /> {t("executionFactory.mcpToolCountLabel", { count: toolCount })}
+          </span>
+          <span>
+            <ClockCircleOutlined /> {formatExecutionUnitTime(record.updateTime)}
+          </span>
         </div>
       ) : null}
 
@@ -335,6 +379,14 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
 
       {toolsLoadError && catalogContext ? (
         <Alert message={t("executionFactory.mcpDetailCatalogToolsHint")} showIcon style={{ marginBottom: 16 }} type="warning" />
+      ) : null}
+
+      {!loading && record ? (
+        <DetailMetaPanel
+          columns={3}
+          items={basicInfoItems}
+          title={t("common.basicInfo")}
+        />
       ) : null}
 
       {loading ? (

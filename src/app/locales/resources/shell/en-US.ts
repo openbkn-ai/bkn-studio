@@ -28,7 +28,7 @@ export const shellEnUS = {
       executionFactoryLabCapabilities: "Capability Library (Lab)",
       executionFactoryLabCatalog: "Capability Catalog (Lab)",
       executionFactoryLabSandboxRuntime: "Sandbox Runtime Management",
-      executionUnitManagement: "Execution Unit Management",
+      executionUnitManagement: "Execution Units",
       allExecutionUnits: "All Execution Units",
       executionFactorySandboxRuntime: "Sandbox Runtime",
       executionUnitManagementTooltip: "Manage operators, toolboxes, MCP servers, and skills in your domain",

@@ -11,6 +11,18 @@
   background: var(--color-bg-surface);
 }
 
+/* 主题 borderRadius 已全局归零，这里是冗余保险：万一日后有人把 token 调回非 0，
+   本页仍保持方角。不是在纠正圆角，别照抄到新页面。 */
+.page :global(.ant-btn) {
+  border-radius: 0;
+}
+
+.page :global(.ant-input),
+.page :global(.ant-input-affix-wrapper),
+.page :global(.ant-select-selector) {
+  border-radius: 0;
+}
+
 .pageIntro {
   margin-bottom: 20px;
   padding-bottom: 16px;
@@ -71,39 +83,29 @@
   margin-bottom: 20px;
 }
 
+/* 筛选全部是下拉后，排成一行；放不下再整组换行，标签不会和控件被拆散。 */
 .filterLeft {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 8px 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 .filterLabel {
+  flex: 0 0 auto;
   color: var(--color-text-secondary);
-  font-size: 14px;
-}
-
-.categoryGroup {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.categoryChip {
-  padding: 4px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  background: var(--color-bg-surface);
-  color: var(--color-text-secondary);
-  cursor: pointer;
   font-size: 13px;
-  line-height: 20px;
-}
-
-.categoryChipActive {
-  border-color: var(--color-primary-border);
-  background: var(--color-primary-100);
-  color: var(--color-primary-700);
+  white-space: nowrap;
 }
 
 .filterRight {
@@ -168,4 +170,15 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tabLabelCount {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
 }

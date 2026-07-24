@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { executeFunction, generateFunction, getFunctionPrompt } from "@/modules/execution-factory/services/function.service";
+import { buildQuery, executeFunction, generateFunction, getFunctionPrompt } from "@/modules/execution-factory/services/function.service";
 import { debugMcpTool, listMcpTools, listMcps } from "@/modules/execution-factory/services/mcp.service";
 import { listOperators, operatorDetailToFormValues, resolveOperatorDescription } from "@/modules/execution-factory/services/operator.service";
 import {
@@ -88,6 +88,28 @@ describe("execution-factory services (mock mode)", () => {
     });
 
     expect(generated.content).toBeTruthy();
+  });
+});
+
+describe("buildQuery", () => {
+  it("appends style directive and current time for python generation without throwing", () => {
+    // 曾用 Intl.DateTimeFormat 同传 dateStyle/timeStyle + timeZoneName，V8 抛
+    // TypeError: Invalid option : option，把弹窗打成报错。锁住这条路径。
+    const query = buildQuery({ query: "对数组求和", type: "python_function_generator" });
+
+    expect(query).toContain("对数组求和");
+    expect(query).toContain("@tool");
+    expect(query).toContain("【当前时间】");
+  });
+
+  it("leaves metadata generation query untouched", () => {
+    expect(
+      buildQuery({ code: "x", query: "keep me", type: "metadata_param_generator" }),
+    ).toBe("keep me");
+  });
+
+  it("returns empty query as-is instead of decorating it", () => {
+    expect(buildQuery({ query: "", type: "python_function_generator" })).toBe("");
   });
 });
 

@@ -1,0 +1,122 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.node {
+  border: 1px solid var(--color-border);
+  background: #ffffff;
+}
+
+.nodeChild {
+  border-left: 2px solid var(--color-border);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+}
+
+.caret {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 0;
+}
+
+.caretPlaceholder {
+  display: inline-block;
+  width: 18px;
+  flex: none;
+}
+
+.name {
+  flex: 1 1 auto;
+  min-width: 90px;
+}
+
+.type {
+  flex: 0 0 106px;
+}
+
+.required {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.remove {
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.remove:hover {
+  color: var(--color-error-text, #dc2626);
+}
+
+.descRow {
+  padding: 0 8px 8px 32px;
+}
+
+.children {
+  padding: 0 8px 8px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.arrayHint {
+  padding: 0 8px 8px 32px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  line-height: 1.6;
+}
+
+.addButton.addButton {
+  align-self: stretch;
+  justify-content: center;
+  border: 1px dashed var(--color-primary-border, #c7d2fe);
+  background: var(--color-primary-bg, #eef2ff);
+  color: var(--color-primary, #2563eb);
+  height: 30px;
+}
+
+.addButton.addButton:hover {
+  border-style: solid;
+  color: var(--color-primary, #2563eb);
+}
+
+.addSubButton.addSubButton {
+  align-self: flex-start;
+  padding-left: 0;
+}
+
+.empty {
+  padding: 16px 8px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}

@@ -13,13 +13,14 @@
 .summaryCard,
 .sectionCard {
   padding: 20px;
-  border: 1px solid rgba(18, 40, 72, 0.08);
-  border-radius: 22px;
-  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .summaryCard {
-  background: linear-gradient(180deg, #f8fbff 0%, #f4f8ff 100%);
+  background: var(--color-primary-100);
 }
 
 .summaryHeader {
@@ -31,14 +32,14 @@
 
 .summaryTitle {
   margin: 0;
-  color: #152239;
+  color: var(--color-text-primary);
   font-size: 24px;
   font-weight: 700;
 }
 
 .summaryDescription {
   margin: 8px 0 0;
-  color: #64748d;
+  color: var(--color-text-secondary);
   line-height: 1.7;
 }
 
@@ -53,21 +54,20 @@
   display: flex;
   gap: 18px;
   margin-top: 16px;
-  color: #64748d;
+  color: var(--color-text-secondary);
   font-size: 13px;
   flex-wrap: wrap;
 }
 
 .sectionTitle {
   margin: 0 0 14px;
-  color: #152239;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
 }
 
 .toolList {
   display: grid;
-  gap: 10px;
 }
 
 .toolItem {
@@ -75,17 +75,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid rgba(18, 40, 72, 0.08);
-  border-radius: 14px;
+  padding: 12px 2px;
+}
+
+.toolItem + .toolItem {
+  border-top: 1px solid var(--color-border);
 }
 
 .toolName {
-  color: #152239;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .toolMeta {
-  color: #64748d;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }

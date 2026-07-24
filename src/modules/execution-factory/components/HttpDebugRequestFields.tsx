@@ -15,6 +15,7 @@ import {
   parseJsonObject,
 } from "@/modules/execution-factory/utils/http-debug-request";
 
+import { JsonEditor } from "./JsonEditor";
 import styles from "./HttpDebugRequestFields.module.css";
 
 type HttpDebugRequestFieldsProps = {
@@ -162,7 +163,7 @@ export function HttpDebugRequestFields({
         />
       ) : null}
       <Form.Item label={t("executionFactory.debugRequestBody")} name="requestBody">
-        <Input.TextArea placeholder="{}" rows={8} />
+        <JsonEditor height={180} />
       </Form.Item>
     </div>
   );
