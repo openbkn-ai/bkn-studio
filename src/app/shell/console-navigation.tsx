@@ -11,6 +11,7 @@ import type {
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
 import { hasPermissions } from "@/framework/permission/has-permissions";
+import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
 import { dataConnectNavigation } from "@/modules/data-connect/navigation";
 import { executionFactoryLabNavigation } from "@/modules/execution-factory-lab/navigation";
@@ -25,6 +26,7 @@ const navigationContributions: ConsoleNavContribution[] = [
   executionFactoryNavigation,
   modelResourcesNavigation,
   executionFactoryLabNavigation,
+  bknTraceNavigation,
 ];
 
 export type { ConsoleNavItem } from "@/app/shell/navigation/types";
