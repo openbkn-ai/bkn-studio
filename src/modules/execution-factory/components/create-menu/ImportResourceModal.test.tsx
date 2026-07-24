@@ -212,12 +212,17 @@ describe("ImportResourceModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import" }));
 
     await waitFor(() => {
-      expect(registerOperator).toHaveBeenCalled();
+      expect(registerOperator).toHaveBeenCalledWith(
+        expect.objectContaining({
+          openapiSpec: expect.stringContaining('"url": "https://api.example.com"'),
+        }),
+      );
     });
 
-    const openapiSpec = vi.mocked(registerOperator).mock.calls[0]?.[0].openapiSpec as string;
-    const parsed = JSON.parse(openapiSpec) as { servers?: Array<{ url?: string }> };
-    expect(parsed.servers?.[0]?.url).toBe("https://api.example.com");
-    expect(openapiSpec).not.toContain("127.0.0.1:9000");
+    expect(registerOperator).toHaveBeenCalledWith(
+      expect.objectContaining({
+        openapiSpec: expect.not.stringContaining("127.0.0.1:9000"),
+      }),
+    );
   });
 });
