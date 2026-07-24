@@ -13,6 +13,8 @@ type ErrorResponseBody = {
   error?: string;
   message?: string;
   description?: string;
+  detail?: unknown;
+  details?: unknown;
 };
 
 export function extractRequestErrorMessage(error: unknown) {
@@ -21,9 +23,14 @@ export function extractRequestErrorMessage(error: unknown) {
     const responseDescription = data?.description;
     const responseMessage = data?.message;
     const responseError = data?.error;
+    const responseDetails = data?.details ?? data?.detail;
 
     if (typeof responseDescription === "string" && responseDescription.trim()) {
       return responseDescription;
+    }
+
+    if (typeof responseDetails === "string" && responseDetails.trim()) {
+      return responseDetails;
     }
 
     if (typeof responseMessage === "string" && responseMessage.trim()) {

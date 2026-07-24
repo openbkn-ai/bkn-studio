@@ -5,15 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { http } from "@/framework/request/http";
 import type {
   KnowledgeNetworkMetricRecord,
   ObjectTypeDataProperty,
   ObjectTypeLogicMetricModelRecord,
-  ObjectTypeLogicOperatorRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import type { BackendSmallModel } from "@/modules/knowledge-network/services/mappers/backend-types";
-import { mapSmallModel } from "@/modules/knowledge-network/services/mappers";
 import {
   getKnowledgeNetworkMetric,
   listKnowledgeNetworkMetrics,
@@ -23,15 +19,8 @@ import {
   buildMockObjectTypeDetail,
   mockMetrics,
   mockObjectTypeLogicMetricModels,
-  mockObjectTypeLogicOperators,
-  mockObjectTypeSmallModels,
 } from "@/modules/knowledge-network/services/mock/state";
-import {
-  type AgentOperatorListItem,
-  listAllPublishedOperators,
-} from "@/modules/knowledge-network/services/shared/agent-operator-client";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
-import { getInputParamsFromToolOpenAPISpec } from "@/modules/knowledge-network/utils/tool-input-params";
 import { mapMetricAnalysisDimensionFields } from "@/modules/knowledge-network/utils/metric-property-display";
 
 function mapKnowledgeNetworkMetricToLogicMetricRecord(
@@ -59,18 +48,6 @@ async function loadScopeObjectTypeProperties(networkId: string, scopeRef: string
 
   const detail = await getKnowledgeNetworkObjectTypeDetail(networkId, scopeRef);
   return detail?.dataProperties ?? [];
-}
-
-function mapOperatorListItem(item: AgentOperatorListItem): ObjectTypeLogicOperatorRecord {
-  const apiSpec = item.metadata?.api_spec;
-  const inputParameters = getInputParamsFromToolOpenAPISpec(apiSpec);
-
-  return {
-    apiSpec,
-    id: item.operator_id,
-    inputParameters: inputParameters.length > 0 ? inputParameters : undefined,
-    name: item.name ?? item.operator_id,
-  };
 }
 
 export async function listObjectTypeLogicMetricModels(networkId: string, scopeRef: string) {
@@ -137,31 +114,4 @@ export async function listObjectTypeLogicMetricModelFields(networkId: string, me
     metric.calculationFormula.analysisDimensions ?? [],
     scopeProperties,
   );
-}
-
-export async function listObjectTypeLogicOperators(): Promise<ObjectTypeLogicOperatorRecord[]> {
-  if (useMock) {
-    return wait(mockObjectTypeLogicOperators.map((item) => ({ ...item })));
-  }
-
-  return listAllPublishedOperators(mapOperatorListItem);
-}
-
-export async function listObjectTypeSmallModels() {
-  if (useMock) {
-    return wait(mockObjectTypeSmallModels.map((item) => ({ ...item })));
-  }
-
-  const response = await http.get<{ data?: BackendSmallModel[] }>(
-    "/bkn-backend/v1/small-models",
-    {
-      params: {
-        model_type: "embedding",
-        page: 1,
-        size: 9999,
-      },
-    },
-  );
-
-  return (response.data.data ?? []).map(mapSmallModel);
 }

@@ -76,8 +76,11 @@ export type BackendLogicParameter = {
 export type BackendLogicProperty = {
   comment?: string;
   data_source?: {
-    id: string;
+    box_id?: string;
+    id?: string;
     name?: string;
+    result_path?: string;
+    tool_id?: string;
     type: string;
   } | null;
   display_name?: string;

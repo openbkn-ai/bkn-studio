@@ -23,6 +23,7 @@ import {
 } from "@/modules/knowledge-network/components/object-type/data-attribute/object-type-data-attribute-editor.utils";
 import {
   ObjectTypeLogicAttributeEditor,
+  type ObjectTypeLogicAttributeExternalError,
   type ObjectTypeLogicAttributeEditorHandle,
 } from "@/modules/knowledge-network/components/object-type/logic-attribute/ObjectTypeLogicAttributeEditor";
 import {
@@ -42,6 +43,7 @@ import {
   getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkConceptGroups,
   updateKnowledgeNetworkObjectType,
+  validateKnowledgeNetworkObjectType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ConceptGroupRecord,
@@ -54,6 +56,10 @@ import type {
 import styles from "./ObjectTypeFormScene.module.css";
 
 const IDENTIFIER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
+const LOGIC_PROPERTY_ERROR_PATTERNS = [
+  /\u903b\u8f91\u5c5e\u6027\[([^\]]+)\]/i,
+  /logic property\[([^\]]+)\]/i,
+];
 
 type BasicFormValues = {
   color: string;
@@ -90,6 +96,8 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
   const [dataProperties, setDataProperties] = useState<ObjectTypeDataProperty[]>([]);
   const [dataSource, setDataSource] = useState<ObjectTypeDataSource | undefined>();
   const [logicProperties, setLogicProperties] = useState<ObjectTypeLogicProperty[]>([]);
+  const [logicValidationError, setLogicValidationError] =
+    useState<ObjectTypeLogicAttributeExternalError | null>(null);
   const [pageTitle, setPageTitle] = useState(
     mode === "edit"
       ? t("knowledgeNetwork.objectTypeEditTitle")
@@ -170,6 +178,16 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     () => logicProperties.map((item) => item.name),
     [logicProperties],
   );
+
+  const extractLogicPropertyNameFromError = (errorMessage: string) => {
+    for (const pattern of LOGIC_PROPERTY_ERROR_PATTERNS) {
+      const matched = pattern.exec(errorMessage);
+      if (matched?.[1]?.trim()) {
+        return matched[1].trim();
+      }
+    }
+    return null;
+  };
 
   const conceptGroupOptions = useMemo(
     () =>
@@ -368,7 +386,13 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     };
 
     setSubmitting(true);
+    setLogicValidationError(null);
     try {
+      await validateKnowledgeNetworkObjectType(
+        networkId,
+        payload,
+        mode === "edit" ? objectTypeId : undefined,
+      );
       if (mode === "edit" && objectTypeId) {
         await updateKnowledgeNetworkObjectType(networkId, objectTypeId, payload);
       } else {
@@ -378,7 +402,17 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       void message.success(t("common.success"));
       void navigate(listPath);
     } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
+      const errorMessage = extractRequestErrorMessage(error);
+      const logicPropertyName = extractLogicPropertyNameFromError(errorMessage);
+      if (logicPropertyName) {
+        setLogicValidationError({
+          message: errorMessage,
+          propertyName: logicPropertyName,
+          serial: Date.now(),
+        });
+        setCurrentStep(2);
+      }
+      void message.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -526,6 +560,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             name: basicValue.name,
           }}
           dataProperties={dataProperties}
+          externalError={logicValidationError}
           logicProperties={logicProperties}
           networkId={networkId}
           objectTypeId={objectTypeId || basicValue.id || ""}

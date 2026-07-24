@@ -21,6 +21,7 @@ import type {
   KnowledgeNetworkTaskRecord,
   ObjectTypeDataProperty,
   ObjectTypeDetail,
+  ObjectTypeLogicAttributeType,
   ObjectTypeLogicParameter,
   ObjectTypeLogicParameterValueFrom,
   ObjectTypeLogicProperty,
@@ -140,9 +141,12 @@ export function mapLogicProperty(item: BackendLogicProperty): ObjectTypeLogicPro
     comment: item.comment,
     dataSource: item.data_source
       ? {
+          boxId: item.data_source.box_id,
           id: item.data_source.id,
           name: item.data_source.name,
-          type: item.data_source.type as "metric" | "operator",
+          resultPath: item.data_source.result_path,
+          toolId: item.data_source.tool_id,
+          type: item.data_source.type as ObjectTypeLogicAttributeType,
         }
       : null,
     displayName: item.display_name ?? item.name,
@@ -223,8 +227,11 @@ export function toBackendLogicProperty(property: ObjectTypeLogicProperty): Backe
     comment: property.comment,
     data_source: property.dataSource
       ? {
+          box_id: property.dataSource.boxId,
           id: property.dataSource.id,
           name: property.dataSource.name,
+          result_path: property.dataSource.resultPath,
+          tool_id: property.dataSource.toolId,
           type: property.dataSource.type,
         }
       : null,

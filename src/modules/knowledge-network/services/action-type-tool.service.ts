@@ -21,7 +21,6 @@ import {
 } from "@/modules/knowledge-network/services/mock/action-type-tool-catalog";
 import {
   AGENT_OPERATOR_API_PREFIX,
-  AGENT_OPERATOR_PAGE_SIZE,
   getAgentOperatorHeaders,
 } from "@/modules/knowledge-network/services/shared/agent-operator-client";
 import {
@@ -35,7 +34,7 @@ import {
 } from "@/modules/knowledge-network/utils/tool-input-params";
 
 /** Backend validates PageSize with a max tag; Vega uses 100. */
-const CATALOG_PAGE_SIZE = AGENT_OPERATOR_PAGE_SIZE;
+const CATALOG_PAGE_SIZE = 100;
 
 type MarketSearchToolBox = {
   box_desc?: string;

@@ -58,8 +58,8 @@ function normalizedSearchText(value: unknown) {
 }
 
 function getLogicTypeLabel(type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
-  if (type === "operator") {
-    return t("knowledgeNetwork.objectTypeLogicAttributeTypeOperator");
+  if (type === "tool") {
+    return t("knowledgeNetwork.objectTypeLogicAttributeTypeTool");
   }
 
   return t("knowledgeNetwork.objectTypeLogicAttributeTypeMetric");
@@ -511,7 +511,7 @@ export function ObjectTypeDetailScene() {
               {record.dataSource.type === "metric" ? (
                 <span className={styles.resourceIconMetric}>M</span>
               ) : (
-                <span className={styles.resourceIconOperator}>O</span>
+                <span className={styles.resourceIconOperator}>T</span>
               )}
               <span className={styles.resourceName}>{record.dataSource.name || "--"}</span>
             </div>

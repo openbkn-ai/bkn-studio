@@ -20,22 +20,27 @@ import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { ActionTypeToolSelectModal } from "@/modules/knowledge-network/components/action-type/ActionTypeToolSelectModal";
+import {
+  resolveActionTypeToolInputSchema,
+  type ActionTypeCatalogSelection,
+} from "@/modules/knowledge-network/services/action-type-tool.service";
 import {
   IDENTIFIER_PATTERN,
   LOGIC_ATTRIBUTE_TYPE_OPTIONS,
+  PARAMETER_SOURCE_OPTIONS,
   VALUE_FROM_OPTIONS,
+  buildToolLogicParameterSettings,
   extractLeafParams,
   isEmptyExceptZero,
 } from "./constants";
 import {
   listObjectTypeLogicMetricModels,
-  listObjectTypeLogicOperators,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ObjectTypeDataProperty,
   ObjectTypeLogicAttributeType,
   ObjectTypeLogicMetricModelRecord,
-  ObjectTypeLogicOperatorRecord,
   ObjectTypeLogicParameter,
   ObjectTypeLogicParameterValueFrom,
   ObjectTypeLogicProperty,
@@ -67,19 +72,17 @@ type NameOption =
         label: string;
         value: string;
       }>;
-    }
-  | {
-      apiSpec?: unknown;
-      inputParameters?: ObjectTypeLogicOperatorRecord["inputParameters"];
-      label: string;
-      value: string;
     };
 
 type LogicAttributeFormValues = {
+  boxId?: string;
   comment?: string;
   displayName?: string;
   name?: string;
+  resultPath?: string;
   resourceId?: string;
+  resourceName?: string;
+  toolId?: string;
   type?: ObjectTypeLogicAttributeType;
 };
 
@@ -87,21 +90,8 @@ function createParameterId() {
   return `param-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function processOperatorNode(
-  item: NonNullable<ObjectTypeLogicOperatorRecord["inputParameters"]>[number],
-  existingParams: ObjectTypeLogicParameter[],
-): SettingItem {
-  const matchedParam = existingParams.find((param) => param.name === item.key);
-  return {
-    description: item.description,
-    id: createParameterId(),
-    name: item.key,
-    source: item.source,
-    type: item.type,
-    value: matchedParam?.value,
-    valueFrom: matchedParam?.valueFrom ?? "input",
-    children: item.children?.map((child) => processOperatorNode(child, existingParams)),
-  };
+function asOptionalString(value: unknown) {
+  return typeof value === "string" ? value : undefined;
 }
 
 export function ObjectTypeLogicAttributeEditDrawer({
@@ -119,16 +109,16 @@ export function ObjectTypeLogicAttributeEditDrawer({
   const { message } = useAppServices();
   const [form] = Form.useForm<LogicAttributeFormValues>();
   const [nameOptions, setNameOptions] = useState<NameOption[]>([]);
-  const [flatNameOptions, setFlatNameOptions] = useState<
-    Array<{ label: string; value: string; apiSpec?: unknown; inputParameters?: ObjectTypeLogicOperatorRecord["inputParameters"] }>
-  >([]);
   const [settingList, setSettingList] = useState<SettingItem[]>([]);
   const [metricModelList, setMetricModelList] = useState<ObjectTypeLogicMetricModelRecord[]>([]);
+  const [toolSelectorOpen, setToolSelectorOpen] = useState(false);
   const type = Form.useWatch("type", form);
   const resourceId = Form.useWatch("resourceId", form);
   const optionsRequestIdRef = useRef(0);
   const isDisplayNameManuallyEdited = useRef(false);
   const isAddMode = !attrInfo?.name;
+  const getStringFieldValue = (name: keyof LogicAttributeFormValues) =>
+    asOptionalString(form.getFieldValue(name));
 
   const logicAttributeTypeOptions = useMemo(
     () =>
@@ -142,6 +132,15 @@ export function ObjectTypeLogicAttributeEditDrawer({
   const valueFromOptions = useMemo(
     () =>
       VALUE_FROM_OPTIONS.map((item) => ({
+        label: t(`knowledgeNetwork.${item.labelKey}`),
+        value: item.value,
+      })),
+    [t],
+  );
+
+  const parameterSourceOptions = useMemo(
+    () =>
+      PARAMETER_SOURCE_OPTIONS.map((item) => ({
         label: t(`knowledgeNetwork.${item.labelKey}`),
         value: item.value,
       })),
@@ -192,9 +191,45 @@ export function ObjectTypeLogicAttributeEditDrawer({
       return;
     }
 
+    let cancelled = false;
     isDisplayNameManuallyEdited.current = false;
 
-    if (attrInfo?.dataSource?.id) {
+    if (attrInfo?.dataSource?.type === "tool") {
+      form.setFieldsValue({
+        boxId: attrInfo.dataSource.boxId,
+        comment: attrInfo.comment,
+        displayName: attrInfo.displayName,
+        name: attrInfo.name,
+        resultPath: attrInfo.dataSource.resultPath,
+        resourceName: attrInfo.dataSource.name,
+        toolId: attrInfo.dataSource.toolId,
+        type: attrInfo.dataSource.type,
+      });
+      setSettingList([]);
+
+      if (attrInfo.dataSource.boxId && attrInfo.dataSource.toolId) {
+        const source = {
+          boxId: attrInfo.dataSource.boxId,
+          toolId: attrInfo.dataSource.toolId,
+          toolName: attrInfo.dataSource.name ?? "",
+          type: "tool" as const,
+        };
+        void resolveActionTypeToolInputSchema(source).then((inputParams) => {
+          if (cancelled) {
+            return;
+          }
+          setSettingList(
+            buildToolLogicParameterSettings(
+              inputParams,
+              attrInfo.parameters ?? [],
+              createParameterId,
+            ),
+          );
+        });
+      } else {
+        setSettingList(attrInfo.parameters ?? []);
+      }
+    } else if (attrInfo?.dataSource?.id) {
       form.setFieldsValue({
         comment: attrInfo.comment,
         displayName: attrInfo.displayName,
@@ -216,6 +251,10 @@ export function ObjectTypeLogicAttributeEditDrawer({
     if (attrInfo?.dataSource?.type === "metric") {
       setSettingList([]);
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [attrInfo, form, open]);
 
   useEffect(() => {
@@ -225,7 +264,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
 
     const requestId = ++optionsRequestIdRef.current;
     setNameOptions([]);
-    setFlatNameOptions([]);
 
     void (async () => {
       if (type === "metric") {
@@ -261,37 +299,8 @@ export function ObjectTypeLogicAttributeEditDrawer({
         return;
       }
 
-      if (type === "operator") {
-        const operators = await listObjectTypeLogicOperators();
-        if (requestId !== optionsRequestIdRef.current) {
-          return;
-        }
-        const flat = operators.map((item) => ({
-          apiSpec: item.apiSpec,
-          inputParameters: item.inputParameters,
-          label: item.name,
-          value: item.id,
-        }));
-        setFlatNameOptions(flat);
-        setNameOptions(flat);
-      }
     })();
   }, [networkId, objectTypeId, open, t, type]);
-
-  useEffect(() => {
-    if (!open || type !== "operator" || !resourceId || flatNameOptions.length === 0) {
-      return;
-    }
-
-    const operator = flatNameOptions.find((item) => item.value === resourceId);
-    if (!operator?.inputParameters?.length) {
-      setSettingList([]);
-      return;
-    }
-
-    const existingParams = attrInfo.parameters ?? [];
-    setSettingList(operator.inputParameters.map((item) => processOperatorNode(item, existingParams)));
-  }, [attrInfo.parameters, flatNameOptions, open, resourceId, type]);
 
   const updateSettingData = (id: string, updateValue: Partial<SettingItem>) => {
     const processNode = (item: SettingItem): SettingItem => {
@@ -311,6 +320,42 @@ export function ObjectTypeLogicAttributeEditDrawer({
 
   const handleResourceChange = () => {
     setSettingList([]);
+  };
+
+  const addToolParameter = () => {
+    setSettingList((prev) => [
+      ...prev,
+      {
+        id: createParameterId(),
+        name: "",
+        source: "body",
+        type: "string",
+        valueFrom: "input",
+      },
+    ]);
+  };
+
+  const handleToolSelect = async (selection: ActionTypeCatalogSelection) => {
+    if (selection.kind !== "tool") {
+      return;
+    }
+
+    const source = {
+      boxId: selection.boxId,
+      toolId: selection.tool.toolId,
+      toolName: selection.tool.toolName,
+      type: "tool" as const,
+    };
+    const inputParams = await resolveActionTypeToolInputSchema(source);
+    setSettingList(
+      buildToolLogicParameterSettings(inputParams, [], createParameterId),
+    );
+    form.setFieldsValue({
+      boxId: selection.boxId,
+      resourceName: selection.tool.toolName,
+      toolId: selection.tool.toolId,
+    });
+    setToolSelectorOpen(false);
   };
 
   const validateParams = () => {
@@ -357,25 +402,34 @@ export function ObjectTypeLogicAttributeEditDrawer({
 
   const handleSubmit = async () => {
     await form.validateFields();
-    if (!resourceId || !type) {
+    if (!type) {
       return;
     }
-    if (type === "operator" && validateParams()) {
+    const formValues = form.getFieldsValue();
+    if (
+      (type !== "tool" && !resourceId) ||
+      (type === "tool" && (!formValues.boxId || !formValues.toolId))
+    ) {
+      return;
+    }
+    if (type === "tool" && settingList.length > 0 && validateParams()) {
       void message.error(t("knowledgeNetwork.objectTypeLogicAttributeFillParameters"));
       return;
     }
 
-    const formValues = form.getFieldsValue();
     const resourceName =
       type === "metric"
         ? metricModelList.find((item) => item.id === resourceId)?.name
-        : flatNameOptions.find((item) => item.value === resourceId)?.label;
+        : formValues.resourceName;
 
     onOk({
       comment: formValues.comment,
       dataSource: {
-        id: resourceId,
+        boxId: formValues.boxId,
+        id: type === "tool" ? undefined : resourceId,
         name: resourceName ?? "",
+        resultPath: formValues.resultPath,
+        toolId: formValues.toolId,
         type,
       },
       displayName: formValues.displayName ?? "",
@@ -393,14 +447,22 @@ export function ObjectTypeLogicAttributeEditDrawer({
     });
   };
 
-  const operatorColumns: TableColumnProps<SettingItem>[] = [
+  const toolParameterColumns: TableColumnProps<SettingItem>[] = [
     {
       dataIndex: "name",
       ellipsis: true,
       key: "name",
       render: (value: string, record: SettingItem) => (
         <div>
-          <div title={value}>{value}</div>
+          {type === "tool" && !record.children?.length ? (
+            <Input
+              onChange={(event) => updateSettingData(record.id, { name: event.target.value })}
+              status={record.error?.name ? "error" : undefined}
+              value={value}
+            />
+          ) : (
+            <div title={value}>{value}</div>
+          )}
           <div className={styles.description} title={record.description}>
             {record.description}
           </div>
@@ -412,12 +474,31 @@ export function ObjectTypeLogicAttributeEditDrawer({
     {
       dataIndex: "type",
       key: "type",
+      render: (value: string, record: SettingItem) =>
+        type === "tool" && !record.children?.length ? (
+          <Input
+            onChange={(event) => updateSettingData(record.id, { type: event.target.value })}
+            value={value}
+          />
+        ) : (
+          value
+        ),
       title: t("knowledgeNetwork.objectTypePropertyType"),
       width: 100,
     },
     {
       dataIndex: "source",
       key: "source",
+      render: (value: string, record: SettingItem) =>
+        type === "tool" && !record.children?.length ? (
+          <Select
+            onChange={(source: string) => updateSettingData(record.id, { source })}
+            options={parameterSourceOptions}
+            value={value}
+          />
+        ) : (
+          value
+        ),
       title: t("knowledgeNetwork.objectTypeParameterSource"),
       width: 100,
     },
@@ -552,6 +633,12 @@ export function ObjectTypeLogicAttributeEditDrawer({
               <Select
                 onChange={() => {
                   setSettingList([]);
+                  form.setFieldsValue({
+                    boxId: undefined,
+                    resourceName: undefined,
+                    resultPath: undefined,
+                    toolId: undefined,
+                  });
                   form.setFieldValue("resourceId", undefined);
                 }}
                 options={logicAttributeTypeOptions}
@@ -560,26 +647,50 @@ export function ObjectTypeLogicAttributeEditDrawer({
             </Form.Item>
           </Col>
           <Col span={6}>
-            <Form.Item
-              label={t("knowledgeNetwork.objectTypeLogicAttributeResource")}
-              name="resourceId"
-              rules={[{ message: t("knowledgeNetwork.pleaseSelect"), required: true }]}
-            >
-              <Select
-                allowClear
-                filterOption={(input, option) =>
-                  String(option?.label ?? "")
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-                onChange={handleResourceChange}
-                options={nameOptions}
-                placeholder={t("knowledgeNetwork.pleaseSelect")}
-                showSearch
-              />
-            </Form.Item>
+            {type === "tool" ? (
+              <Form.Item label={t("knowledgeNetwork.objectTypeLogicAttributeResource")}>
+                <Input
+                  onClick={() => setToolSelectorOpen(true)}
+                  placeholder={t("knowledgeNetwork.objectTypeLogicToolSelect")}
+                  readOnly
+                  value={getStringFieldValue("resourceName")}
+                />
+              </Form.Item>
+            ) : (
+              <Form.Item
+                label={t("knowledgeNetwork.objectTypeLogicAttributeResource")}
+                name="resourceId"
+                rules={[{ message: t("knowledgeNetwork.pleaseSelect"), required: true }]}
+              >
+                <Select
+                  allowClear
+                  filterOption={(input, option) =>
+                    String(option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  onChange={handleResourceChange}
+                  options={nameOptions}
+                  placeholder={t("knowledgeNetwork.pleaseSelect")}
+                  showSearch
+                />
+              </Form.Item>
+            )}
           </Col>
         </Row>
+        {type === "tool" ? (
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                extra={t("knowledgeNetwork.objectTypeLogicResultPathHint")}
+                label={t("knowledgeNetwork.objectTypeLogicResultPath")}
+                name="resultPath"
+              >
+                <Input placeholder="$.data.result" />
+              </Form.Item>
+            </Col>
+          </Row>
+        ) : null}
         <Row gutter={16}>
           <Col span={24}>
             <Form.Item label={t("common.description")} name="comment">
@@ -594,17 +705,22 @@ export function ObjectTypeLogicAttributeEditDrawer({
         </Row>
       </Form>
 
-      {type === "operator" && settingList.length > 0 ? (
+      {type === "tool" ? (
         <>
           <div className={styles.settingTitle}>
             {t("knowledgeNetwork.objectTypeLogicAttributeSetting")}
+            {type === "tool" ? (
+              <AppButton onClick={addToolParameter} style={{ marginLeft: 8 }} type="link">
+                {t("common.create")}
+              </AppButton>
+            ) : null}
           </div>
         </>
       ) : null}
 
-      {type === "operator" ? (
+      {type === "tool" ? (
         <Table
-          columns={operatorColumns}
+          columns={toolParameterColumns}
           dataSource={settingList}
           expandable={{ defaultExpandAllRows: true }}
           pagination={false}
@@ -634,6 +750,22 @@ export function ObjectTypeLogicAttributeEditDrawer({
           ) : null}
         </div>
       ) : null}
+      <ActionTypeToolSelectModal
+        allowedKinds={["tool"]}
+        onCancel={() => setToolSelectorOpen(false)}
+        onConfirm={(_source, selection) => void handleToolSelect(selection)}
+        open={toolSelectorOpen}
+        value={
+          type === "tool" && getStringFieldValue("toolId")
+            ? {
+                boxId: getStringFieldValue("boxId"),
+                toolId: getStringFieldValue("toolId") ?? "",
+                toolName: getStringFieldValue("resourceName"),
+                type: "tool",
+              }
+            : undefined
+        }
+      />
     </Drawer>
   );
 }
