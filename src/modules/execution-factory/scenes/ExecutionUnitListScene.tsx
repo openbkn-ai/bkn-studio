@@ -708,7 +708,9 @@ export function ExecutionUnitListScene({
     setPage(1);
     setItems([]);
     setLoading(true);
-  }, [activeTab, debouncedKeyword, status, marketMode, category]);
+    // toolboxView 也进 listQuery：只改 toolboxView 的 URL 前进/后退不走 Tab onChange，
+    // 漏掉它会带着上一视图的 page>1 去拉另一视图。
+  }, [activeTab, debouncedKeyword, status, marketMode, category, toolboxView]);
 
   useEffect(() => {
     void loadItems();

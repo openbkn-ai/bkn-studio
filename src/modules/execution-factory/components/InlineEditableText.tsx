@@ -43,6 +43,9 @@ export function InlineEditableText({
   const [editing, setEditing] = useState(autoEdit);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<{ focus: () => void } | null>(null);
+  // Escape 取消后，卸载聚焦中的 Input 会再触发一次 onBlur→commit，闭包里仍是改过的
+  // draft，会把 Esc 掉的内容写回。用这个标志让紧随其后的 blur 提交空转。
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     if (!editing) {
@@ -52,18 +55,23 @@ export function InlineEditableText({
 
   useEffect(() => {
     if (editing) {
+      cancelledRef.current = false;
       inputRef.current?.focus();
     }
   }, [editing]);
 
   const commit = () => {
     setEditing(false);
+    if (cancelledRef.current) {
+      return;
+    }
     if (draft !== value) {
       onChange(draft);
     }
   };
 
   const cancel = () => {
+    cancelledRef.current = true;
     setDraft(value);
     setEditing(false);
   };

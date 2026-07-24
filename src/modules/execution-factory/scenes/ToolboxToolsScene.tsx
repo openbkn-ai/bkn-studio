@@ -25,7 +25,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Checkbox, Empty, Layout, Space, Spin, Switch, Tag } from "antd";
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -84,6 +84,8 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<"create" | null>(null);
   const [editToolId, setEditToolId] = useState<string | null>(null);
+  // 工具选择的请求序号，用于丢弃过期的详情回写（快速切换时旧详情盖新选择）。
+  const selectRequestRef = useRef(0);
   const [debugRecord, setDebugRecord] = useState<ToolRecord | null>(null);
   const [toolRunLogs, setToolRunLogs] = useState<ToolRunLogEntry[]>([]);
   const [importOpenApiOpen, setImportOpenApiOpen] = useState(false);
@@ -183,14 +185,23 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   };
 
   const handleSelectTool = async (tool: ToolRecord) => {
+    // 连点两个工具时，先返回的详情别盖住后选中的：给每次选择编号，回写前比对最新编号。
+    const requestId = selectRequestRef.current + 1;
+    selectRequestRef.current = requestId;
     setSelectedTool(tool);
     setToolRunLogs([]);
 
     try {
       const detail = await getToolDetail(boxId, tool.toolId);
+      if (selectRequestRef.current !== requestId) {
+        return;
+      }
       setSelectedTool(detail);
       setSelectedToolDetail(detail);
     } catch {
+      if (selectRequestRef.current !== requestId) {
+        return;
+      }
       setSelectedToolDetail(null);
     }
   };
@@ -763,14 +774,18 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                     items={toolInfoItems}
                     title={t("executionFactory.toolboxToolInfoTitle")}
                     titleExtra={
-                      <PermissionGate permissions="execution-factory:tool:edit">
-                        <AppButton
-                          onClick={() => setEditToolId(selectedTool.toolId)}
-                          type="link"
-                        >
-                          {t("common.edit")}
-                        </AppButton>
-                      </PermissionGate>
+                      // 市场预览态（from=catalog）看的是别的域的工具箱，不给编辑入口，
+                      // 与「编辑工具箱」按钮的 !catalogContext 守卫对齐。写侧闸见下方抽屉 open。
+                      !catalogContext ? (
+                        <PermissionGate permissions="execution-factory:tool:edit">
+                          <AppButton
+                            onClick={() => setEditToolId(selectedTool.toolId)}
+                            type="link"
+                          >
+                            {t("common.edit")}
+                          </AppButton>
+                        </PermissionGate>
+                      ) : undefined
                     }
                   />
                   {selectedToolManifest ? (
@@ -864,7 +879,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
             void handleSelectTool(selectedTool);
           }
         }}
-        open={editToolId !== null}
+        open={!catalogContext && editToolId !== null}
         toolId={editToolId ?? undefined}
         toolboxMetadataType={toolbox?.metadataType}
       />
