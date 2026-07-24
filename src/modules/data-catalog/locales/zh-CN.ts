@@ -228,7 +228,7 @@ export const dataCatalogZhCN = {
       batchLabel: "批量",
       batchDescription: "一次性同步并建索引。",
       streamingLabel: "流式",
-      streamingDescription: "持续增量同步、常驻监听；增量键可选。",
+      streamingDescription: "持续增量同步、常驻监听；需指定增量键。",
       executeType: "执行方式",
       executeFull: "全量",
       executeFullDescription: "从数据源重新同步全部数据并重建索引，适合首次构建或需要完整刷新时使用。",
@@ -297,6 +297,8 @@ export const dataCatalogZhCN = {
       },
       fieldsRequired: "请至少选择一个向量嵌入字段或全文检索字段。",
       buildKeyRequired: "批量模式必须指定增量键字段，请回到「配置索引」勾选。",
+      streamingBuildKeyRequired:
+        "流式构建必须指定增量键字段，请回到「配置索引」勾选后再创建任务。",
       model: "Embedding 模型",
       modelRequired: "请选择 Embedding 模型。",
       noModels: "尚未接入 embedding 模型,无法保存含向量字段的配置。",

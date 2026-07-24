@@ -13,6 +13,8 @@ export const commonEnUS = {
     create: "Create",
     import: "Import",
     copy: "Copy",
+    viewDetails: "View details",
+    hideDetails: "Hide details",
     back: "Back",
     backHome: "Back to home",
     previous: "Previous",
@@ -55,6 +57,12 @@ export const commonEnUS = {
     category: "Category",
     mode: "Mode",
     healthStatus: "Health Status",
+    error: {
+      code: "Error code: {{value}}",
+      details: "Error details: {{value}}",
+      solution: "Solution: {{value}}",
+      link: "Error link: {{value}}",
+    },
     testConnection: "Test Connection",
     dangerDelete: {
       typeNameToConfirm:

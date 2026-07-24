@@ -13,6 +13,8 @@ export const commonZhCN = {
     create: "新建",
     import: "导入",
     copy: "复制",
+    viewDetails: "查看详情",
+    hideDetails: "收起详情",
     back: "返回",
     backHome: "返回首页",
     previous: "上一步",
@@ -54,6 +56,12 @@ export const commonZhCN = {
     category: "分类",
     mode: "模式",
     healthStatus: "健康状态",
+    error: {
+      code: "错误码：{{value}}",
+      details: "错误详情：{{value}}",
+      solution: "解决方案：{{value}}",
+      link: "错误链接：{{value}}",
+    },
     testConnection: "测试连接",
     dangerDelete: {
       typeNameToConfirm: "此操作高危,请输入名称「{{name}}」以确认删除。",

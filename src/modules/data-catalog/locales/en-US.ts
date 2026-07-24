@@ -241,7 +241,7 @@ export const dataCatalogEnUS = {
       batchDescription: "One-shot sync and indexing.",
       streamingLabel: "Streaming",
       streamingDescription:
-        "Continuous incremental sync with a standing listener; build key is optional.",
+        "Continuous incremental sync with a standing listener; a build key is required.",
       executeType: "Execution",
       executeFull: "Full",
       executeFullDescription: "Sync all rows from the source and rebuild the index. Use it for first builds or full refreshes.",
@@ -316,6 +316,8 @@ export const dataCatalogEnUS = {
       fieldsRequired: "Select at least one embedding or full-text field.",
       buildKeyRequired:
         "Batch mode requires a build-key field. Select one under Configure Index.",
+      streamingBuildKeyRequired:
+        "Streaming builds require a build-key field. Select one under Configure Index before creating the task.",
       model: "Embedding Model",
       modelRequired: "Select an embedding model.",
       noModels:
