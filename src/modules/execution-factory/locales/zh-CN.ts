@@ -133,6 +133,8 @@ export const executionFactoryZhCN = {
     importOpenApiServiceUrlRequired: "导入前请填写完整的 HTTP(S) 服务地址。",
     importOpenApiRelativeServerManual:
       "当前 OpenAPI 文档使用相对服务地址 {{relativeUrl}}，请填写完整服务地址后再导入。",
+    importOpenApiMissingServerManual:
+      "当前 OpenAPI 文档未声明 servers，请使用下方「服务地址」作为实际调用基址后再导入。",
     importOpenApiCapabilityFileReady: "文件已就绪，保存后将解析并导入接口。",
     importOpenApiCapabilityPreview: "OpenAPI {{version}} · 共 {{count}} 个接口",
     createdNextStepsTitle: "HTTP API 已添加到工具集",
@@ -761,6 +763,7 @@ export const executionFactoryZhCN = {
     openapiValidationOk: "OpenAPI 文档校验通过",
     openapiValidationOkWithCount: "OpenAPI 文档校验通过，检测到 {{count}} 个接口",
     openapiPreviewServer: "服务地址",
+    openapiPreviewServerUnset: "未声明（将使用表单服务地址）",
     openapiPreviewVersion: "规范版本",
     openapiPreviewMore: "另有 {{count}} 个接口未展示",
     openapiMultiOperationWarning:

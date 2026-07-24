@@ -183,6 +183,41 @@ describe("metadata-content OpenAPI helpers", () => {
     }
   });
 
+  it("accepts documents without servers and leaves serverUrl unset", () => {
+    const spec = JSON.stringify({
+      openapi: "3.0.3",
+      info: { title: "no_servers", version: "1.0.0" },
+      paths: {
+        "/weather": {
+          get: {
+            summary: "查询天气",
+            responses: { "200": { description: "OK" } },
+          },
+        },
+      },
+    });
+
+    const analysis = analyzeOpenApiDocumentText(spec);
+    expect(analysis.ok).toBe(true);
+    if (analysis.ok) {
+      expect(analysis.serverUrl).toBeUndefined();
+      expect(analysis.operationCount).toBe(1);
+    }
+
+    const validation = validateOpenApiDocumentText(spec);
+    expect(validation.ok).toBe(true);
+
+    const resolved = resolveOpenApiServiceUrl(spec, { kind: "paste" });
+    expect(resolved.ok).toBe(false);
+    if (!resolved.ok) {
+      expect(resolved.reason).toContain("未声明 servers");
+    }
+
+    const rewritten = rewriteOpenApiServerUrl(spec, "https://api.example.com");
+    const parsed = JSON.parse(rewritten) as { servers?: Array<{ url?: string }> };
+    expect(parsed.servers?.[0]?.url).toBe("https://api.example.com");
+  });
+
   it("resolves a root-relative server URL against an OpenAPI document URL", () => {
     const spec = JSON.stringify({
       openapi: "3.0.4",

@@ -135,6 +135,8 @@ export const executionFactoryEnUS = {
       "Please enter a full HTTP(S) service URL before importing.",
     importOpenApiRelativeServerManual:
       "This OpenAPI document uses a relative server URL {{relativeUrl}}. Enter the full service URL before importing.",
+    importOpenApiMissingServerManual:
+      "This OpenAPI document has no servers entry. Use the Service URL field below as the runtime base URL before importing.",
     importOpenApiCapabilityFileReady: "File ready. It will be parsed and imported on save.",
     importOpenApiCapabilityPreview: "OpenAPI {{version}} · {{count}} endpoint(s)",
     createdNextStepsTitle: "HTTP API added to toolset",
@@ -772,6 +774,7 @@ export const executionFactoryEnUS = {
     openapiValidationOkWithCount:
       "OpenAPI document validated. Detected {{count}} endpoint(s).",
     openapiPreviewServer: "Server URL",
+    openapiPreviewServerUnset: "Not set (will use the form Service URL)",
     openapiPreviewVersion: "Spec version",
     openapiPreviewMore: "{{count}} more endpoint(s) not shown",
     openapiMultiOperationWarning:

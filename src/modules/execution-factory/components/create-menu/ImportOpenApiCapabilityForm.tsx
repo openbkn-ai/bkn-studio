@@ -117,18 +117,20 @@ export const ImportOpenApiCapabilityForm = forwardRef<
     }
 
     const nextParseHint =
-      resolvedServiceUrl?.ok && resolvedServiceUrl.source === "resolved-relative"
-        ? t("executionFactory.importOpenApiRelativeServerResolved", {
-            relativeUrl: analysis.serverUrl,
-            serviceUrl: resolvedServiceUrl.url,
-          })
-        : resolvedServiceUrl && !resolvedServiceUrl.ok && resolvedServiceUrl.relativeUrl
-          ? t("executionFactory.importOpenApiRelativeServerManual", {
-              relativeUrl: resolvedServiceUrl.relativeUrl,
+      !analysis.serverUrl
+        ? t("executionFactory.importOpenApiMissingServerManual")
+        : resolvedServiceUrl?.ok && resolvedServiceUrl.source === "resolved-relative"
+          ? t("executionFactory.importOpenApiRelativeServerResolved", {
+              relativeUrl: analysis.serverUrl,
+              serviceUrl: resolvedServiceUrl.url,
             })
-          : t("executionFactory.importOpenApiCapabilityParsed", {
-              count: analysis.operationCount,
-            });
+          : resolvedServiceUrl && !resolvedServiceUrl.ok && resolvedServiceUrl.relativeUrl
+            ? t("executionFactory.importOpenApiRelativeServerManual", {
+                relativeUrl: resolvedServiceUrl.relativeUrl,
+              })
+            : t("executionFactory.importOpenApiCapabilityParsed", {
+                count: analysis.operationCount,
+              });
 
     setParseHint(nextParseHint);
 
@@ -140,9 +142,13 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
     lastAutofillKeyRef.current = autofillKey;
 
+    // Doc servers are a one-shot default for the form. After autofill, the form
+    // serviceUrl is the source of truth and is written back into servers on submit.
     const nextServiceUrl = resolvedServiceUrl?.ok
       ? resolvedServiceUrl.url
-      : analysis.serverUrl;
+      : analysis.serverUrl && /^https?:\/\//i.test(analysis.serverUrl)
+        ? analysis.serverUrl
+        : undefined;
 
     const nextValues: Partial<ImportOpenApiCapabilityFormValues> = {};
     if (nextServiceUrl) {
@@ -187,12 +193,15 @@ export const ImportOpenApiCapabilityForm = forwardRef<
 
     const serviceUrl = values.serviceUrl?.trim();
     if (!serviceUrl || !/^https?:\/\//i.test(serviceUrl)) {
-      const message =
-        resolvedServiceUrl && !resolvedServiceUrl.ok && resolvedServiceUrl.relativeUrl
-          ? t("executionFactory.importOpenApiRelativeServerManual", {
-              relativeUrl: resolvedServiceUrl.relativeUrl,
-            })
-          : t("executionFactory.importOpenApiServiceUrlRequired");
+      const message = !analysis.ok
+        ? t("executionFactory.importOpenApiServiceUrlRequired")
+        : !analysis.serverUrl
+          ? t("executionFactory.importOpenApiMissingServerManual")
+          : resolvedServiceUrl && !resolvedServiceUrl.ok && resolvedServiceUrl.relativeUrl
+            ? t("executionFactory.importOpenApiRelativeServerManual", {
+                relativeUrl: resolvedServiceUrl.relativeUrl,
+              })
+            : t("executionFactory.importOpenApiServiceUrlRequired");
       form.setFields([{ name: "serviceUrl", errors: [message] }]);
       form.scrollToField("serviceUrl", { behavior: "smooth", focus: true });
       setParseHint(message);

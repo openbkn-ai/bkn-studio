@@ -11,7 +11,7 @@ import { Alert, Form, Input, Modal, Radio, Select, Tabs, Upload } from "antd";
 
 import type { UploadFile } from "antd/es/upload/interface";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -37,15 +37,12 @@ import { createToolbox } from "@/modules/execution-factory/services/toolbox.serv
 import type { ImpexComponentType, ImpexImportMode } from "@/modules/execution-factory/types/impex";
 
 import {
-
   analyzeOpenApiDocumentText,
-
   extractOpenApiMetadataHints,
-
   normalizeGeneratedCapabilityName,
-
+  normalizeOpenApiDocumentText,
+  rewriteOpenApiServerUrl,
   validateOpenApiDocumentText,
-
 } from "@/modules/execution-factory/utils/metadata-content";
 
 import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
@@ -157,12 +154,9 @@ export function ImportResourceModal({
   const [submitting, setSubmitting] = useState(false);
 
   const [errorDetail, setErrorDetail] = useState<ReturnType<
-
     typeof extractRequestErrorDetail
-
   > | null>(null);
-
-
+  const lastOpenApiAutofillKeyRef = useRef("");
 
   const impexType = tabToImpexType(activeTab);
 
@@ -170,10 +164,6 @@ export function ImportResourceModal({
 
   const adpImportMode = Form.useWatch("mode", adpForm) ?? "create";
   const currentOpenApiName = Form.useWatch<OpenApiFormValues["name"]>("name", openApiForm);
-  const currentOpenApiServiceUrl = Form.useWatch<OpenApiFormValues["serviceUrl"]>(
-    "serviceUrl",
-    openApiForm,
-  );
 
 
 
@@ -226,63 +216,49 @@ export function ImportResourceModal({
       const defaultCategory = options[0]?.value ?? "other_category";
 
       openApiForm.setFieldsValue({
-
         category: defaultCategory,
-
         serviceUrl: "http://127.0.0.1:9000",
-
       });
-
       adpForm.setFieldsValue({ mode: "create" });
-
       setImportKind(initialKind ?? (supportsOpenApi ? "openapi" : "adp"));
-
       setOpenApiSpec("");
-
       setAdpFileList([]);
-
       setErrorDetail(null);
-
+      lastOpenApiAutofillKeyRef.current = "";
     })();
-
   }, [adpForm, initialKind, open, openApiForm, supportsOpenApi]);
 
-
-
   useEffect(() => {
-
     if (!openapiSpec.trim() || activeTab !== "toolbox") {
-
       return;
-
     }
-
-
 
     const analysis = analyzeOpenApiDocumentText(openapiSpec);
-
     if (!analysis.ok) {
-
       return;
-
     }
 
-
+    // One-shot autofill when the document content changes. Do not overwrite
+    // subsequent manual edits to the form service URL.
+    if (lastOpenApiAutofillKeyRef.current === openapiSpec) {
+      return;
+    }
+    lastOpenApiAutofillKeyRef.current = openapiSpec;
 
     const hints = extractOpenApiMetadataHints(openapiSpec);
-
-    openApiForm.setFieldsValue({
-
+    const nextValues: Partial<OpenApiFormValues> = {
       name:
         normalizeGeneratedCapabilityName(hints.title) ||
         normalizeGeneratedCapabilityName(currentOpenApiName) ||
         currentOpenApiName,
+    };
 
-      serviceUrl: analysis.serverUrl ?? currentOpenApiServiceUrl,
+    if (analysis.serverUrl && /^https?:\/\//i.test(analysis.serverUrl)) {
+      nextValues.serviceUrl = analysis.serverUrl;
+    }
 
-    });
-
-  }, [activeTab, currentOpenApiName, currentOpenApiServiceUrl, openApiForm, openapiSpec]);
+    openApiForm.setFieldsValue(nextValues);
+  }, [activeTab, currentOpenApiName, openApiForm, openapiSpec]);
 
 
 
@@ -323,14 +299,20 @@ export function ImportResourceModal({
         const validation = validateOpenApiDocumentText(openapiSpec);
 
         if (!validation.ok) {
-
           void message.error(validation.reason);
-
           return;
-
         }
 
+        const serviceUrl = values.serviceUrl?.trim() || "http://127.0.0.1:9000";
+        if (!/^https?:\/\//i.test(serviceUrl)) {
+          void message.error(t("executionFactory.importOpenApiServiceUrlRequired"));
+          return;
+        }
 
+        const normalizedOpenapiSpec = rewriteOpenApiServerUrl(
+          normalizeOpenApiDocumentText(openapiSpec),
+          serviceUrl,
+        );
 
         const hints = extractOpenApiMetadataHints(openapiSpec);
 
@@ -340,38 +322,21 @@ export function ImportResourceModal({
         const resolvedName =
           normalizeGeneratedCapabilityName(values.name) || fallbackName;
 
-
-
         if (activeTab === "operator") {
-
           await registerOperator({
-
             metadataType: "openapi",
-
             name: resolvedName,
-
-            openapiSpec,
-
+            openapiSpec: normalizedOpenapiSpec,
             category: values.category as OperatorCategory,
-
           });
-
         } else {
-
           await createToolbox({
-
             name: resolvedName,
-
             category: values.category,
-
             metadataType: "openapi",
-
-            serviceUrl: values.serviceUrl ?? "http://127.0.0.1:9000",
-
-            openapiSpec,
-
+            serviceUrl,
+            openapiSpec: normalizedOpenapiSpec,
           });
-
         }
 
       } else {
