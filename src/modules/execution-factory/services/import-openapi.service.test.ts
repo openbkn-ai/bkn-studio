@@ -143,6 +143,34 @@ describe("registerOpenApiImport", () => {
     expect(vi.mocked(createToolbox).mock.calls[0]?.[0].name).toBe("示例工具箱_API");
   });
 
+  it("creates an empty toolbox then imports tools (no openapi data on create)", async () => {
+    await registerOpenApiImport({
+      openapiSpec: petstoreSpec,
+      serviceUrl: "https://petstore3.swagger.io/api/v3",
+      toolboxName: "Swagger_Petstore_OpenAPI_3_0",
+      category: "animals",
+      toolboxMode: "new",
+    });
+
+    expect(createToolbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Swagger_Petstore_OpenAPI_3_0",
+        category: "animals",
+        metadataType: "openapi",
+        serviceUrl: "https://petstore3.swagger.io/api/v3",
+      }),
+    );
+    const createArg = vi.mocked(createToolbox).mock.calls[0]?.[0];
+    expect(createArg).toBeDefined();
+    expect(createArg).not.toHaveProperty("openapiSpec");
+
+    expect(importOpenApiTools).toHaveBeenCalledWith(
+      "box-1",
+      expect.any(String),
+      undefined,
+    );
+  });
+
   it("truncates generated toolbox descriptions before creating a toolbox", async () => {
     await registerOpenApiImport({
       openapiSpec: petstoreSpec,
