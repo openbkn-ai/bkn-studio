@@ -1,2 +1,5 @@
 allowBuilds:
   esbuild: true
+
+overrides:
+  react-router: 8.3.0
