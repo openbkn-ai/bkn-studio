@@ -22,6 +22,9 @@ export type CapabilityCreateMenuSection = {
 };
 
 export function getCapabilityCreateMenuSections(): CapabilityCreateMenuSection[] {
+  // 分组与列表 tab 一一对应：API 工具集 / 函数集 / MCP 服务 / SKILL 包。
+  // 「导入 OpenAPI」「导入 ADP 包」不在此列——导入走工具栏的「导入」按钮，各页面通用，
+  // 添加能力只保留「新建」四类，避免和导入入口重复。
   return [
     {
       titleKey: "executionFactory.capabilityCreateMenu.httpApi",
@@ -31,16 +34,9 @@ export function getCapabilityCreateMenuSections(): CapabilityCreateMenuSection[]
           titleKey: "executionFactory.capabilityCreateMenu.addHttpApi",
           descriptionKey: "executionFactory.capabilityCreateMenu.addHttpApiDesc",
         },
-        {
-          action: "import-openapi",
-          titleKey: "executionFactory.capabilityCreateMenu.importOpenApi",
-          descriptionKey: "executionFactory.capabilityCreateMenu.importOpenApiDesc",
-        },
       ],
     },
     {
-      // 代码函数是自己写逻辑，SKILL 是导入现成技能包，两件事不该并成一组。
-      // 分组顺序和列表 tab 保持一致：API / 代码函数 / MCP / SKILL / 能力包。
       titleKey: "executionFactory.capabilityCreateMenu.function",
       items: [
         {
@@ -67,16 +63,6 @@ export function getCapabilityCreateMenuSections(): CapabilityCreateMenuSection[]
           action: "skill",
           titleKey: "executionFactory.capabilityCreateMenu.importSkill",
           descriptionKey: "executionFactory.capabilityCreateMenu.importSkillDesc",
-        },
-      ],
-    },
-    {
-      titleKey: "executionFactory.capabilityCreateMenu.package",
-      items: [
-        {
-          action: "import-adp",
-          titleKey: "executionFactory.capabilityCreateMenu.importAdp",
-          descriptionKey: "executionFactory.capabilityCreateMenu.importAdpDesc",
         },
       ],
     },

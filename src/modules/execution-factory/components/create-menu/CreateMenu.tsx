@@ -171,11 +171,9 @@ export function CreateMenu({
     openCapabilityMode(action);
   };
 
-  const capabilityMenuItems: MenuProps["items"] = menuSections.map((section) => ({
-    key: section.titleKey,
-    label: t(section.titleKey),
-    type: "group" as const,
-    children: section.items.map((item) => ({
+  // 每组现在只剩一项，分组标题和条目标题重复，直接摊平成一列条目。
+  const capabilityMenuItems: MenuProps["items"] = menuSections.flatMap((section) =>
+    section.items.map((item) => ({
       key: item.action,
       label: (
         <div className={styles.createMenuItem}>
@@ -184,7 +182,7 @@ export function CreateMenu({
         </div>
       ),
     })),
-  }));
+  );
 
   const createButton = capabilityUxV2 && !useLegacyOperatorCreate ? (
     <Dropdown

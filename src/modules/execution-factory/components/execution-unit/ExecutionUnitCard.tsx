@@ -12,7 +12,7 @@ import {
   FileZipOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
-import { Avatar, Card, Tag, Typography } from "antd";
+import { Card, Tag, Typography } from "antd";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -32,7 +32,7 @@ import {
 
 import styles from "./ExecutionUnitCard.module.css";
 
-const { Paragraph, Title } = Typography;
+const { Paragraph } = Typography;
 
 type ExecutionUnitCardProps = {
   activeTab: ExecutionUnitTab;
@@ -133,8 +133,7 @@ export function ExecutionUnitCard({
   onClick,
 }: ExecutionUnitCardProps) {
   const { t } = useTranslation();
-  const showMetadataTag =
-    activeTab === "toolbox" || activeTab === "operator";
+  const showMetadataTag = activeTab === "toolbox" || activeTab === "operator";
   const userLabel = marketMode ? item.releaseUser : item.updateUser;
   const timeLabel = marketMode
     ? t("executionFactory.releaseTimeLabel", {
@@ -149,6 +148,11 @@ export function ExecutionUnitCard({
       ? `executionFactory.toolboxStatuses.${item.status as "published" | "unpublish" | "offline"}`
       : `executionFactory.statuses.${item.status as "published" | "unpublish" | "offline" | "editing"}`;
   const categoryLabel = resolveCardCategoryLabel(activeTab, item, t);
+  const isFunction = item.metadataType === "function";
+  const showCategory = Boolean(categoryLabel) && categoryLabel !== "-";
+  const showToolCount = activeTab === "toolbox";
+  const metadataTagVisible = showMetadataTag && Boolean(item.metadataType);
+  const hasMetaLine = metadataTagVisible || showCategory || showToolCount;
 
   return (
     <Card
@@ -187,64 +191,61 @@ export function ExecutionUnitCard({
             />
           </div>
         ) : null}
-        <div className={styles.iconWrap}>
-          <div
-            className={`${styles.iconBadge} ${
-              item.metadataType === "function" ? styles.iconBadgeFunction : ""
-            }`}
-          >
+
+        <div className={styles.header}>
+          <span className={`${styles.iconBox} ${isFunction ? styles.iconBoxFunction : ""}`}>
             {getTabIcon(activeTab, item.metadataType)}
+          </span>
+          <div className={styles.titleContent}>
+            <div className={styles.titleRow}>
+              <span className={styles.title}>{item.name}</span>
+              {item.status ? (
+                <Tag className={styles.statusTag} style={getStatusStyle(item.status)}>
+                  {t(statusLabelKey)}
+                </Tag>
+              ) : null}
+            </div>
+
+            {hasMetaLine ? (
+              <div className={styles.metaLine}>
+                {metadataTagVisible ? (
+                  <span
+                    className={`${styles.metadataTag} ${
+                      isFunction ? styles.metadataTagFunction : ""
+                    }`}
+                  >
+                    {t(`executionFactory.metadataTypes.${item.metadataType as "openapi" | "function"}`)}
+                  </span>
+                ) : null}
+                {showCategory ? <span className={styles.metaText}>{categoryLabel}</span> : null}
+                {showCategory && showToolCount ? (
+                  <span className={styles.metaDivider}>·</span>
+                ) : null}
+                {showToolCount ? (
+                  <span className={styles.metaText}>
+                    {t("executionFactory.toolCountLabel", { count: item.toolCount ?? 0 })}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+
+            <Paragraph className={styles.description} ellipsis={{ rows: 2 }}>
+              {item.description || "-"}
+            </Paragraph>
           </div>
-          {showMetadataTag && item.metadataType ? (
-            <span
-              className={`${styles.metadataTag} ${
-                item.metadataType === "function" ? styles.metadataTagFunction : ""
-              }`}
-            >
-              {t(`executionFactory.metadataTypes.${item.metadataType as "openapi" | "function"}`)}
-            </span>
-          ) : null}
         </div>
-
-        <div className={styles.titleRow}>
-          <Title className={styles.title} ellipsis={{ rows: 1 }} level={5}>
-            {item.name}
-          </Title>
-          {item.status ? (
-            <Tag style={getStatusStyle(item.status)}>{t(statusLabelKey)}</Tag>
-          ) : null}
-        </div>
-
-        <Paragraph className={styles.description} ellipsis={{ rows: 2 }}>
-          {item.description || "-"}
-        </Paragraph>
-
-        {categoryLabel && categoryLabel !== "-" ? (
-          <div className={styles.cardMetaRow}>
-            <Tag className={styles.categoryTag}>{categoryLabel}</Tag>
-          </div>
-        ) : null}
-
-        {activeTab === "toolbox" ? (
-          <div className={styles.toolCount}>
-            {t("executionFactory.toolCountLabel", { count: item.toolCount ?? 0 })}
-          </div>
-        ) : null}
 
         <div className={styles.footer}>
-          <div className={styles.footerLeft}>
+          <span className={styles.footerLeft}>
             {item.isInternal ? (
               <span className={styles.internalBadge}>
                 <span className={styles.internalDot} />
                 {t("executionFactory.internalTag")}
               </span>
             ) : (
-              <>
-                <Avatar size={20}>{userLabel?.charAt(0) ?? "?"}</Avatar>
-                <span className={styles.userName}>{userLabel ?? "-"}</span>
-              </>
+              <span className={styles.userName}>{userLabel ?? "-"}</span>
             )}
-          </div>
+          </span>
           <span className={styles.footerRight}>{timeLabel}</span>
         </div>
       </div>
