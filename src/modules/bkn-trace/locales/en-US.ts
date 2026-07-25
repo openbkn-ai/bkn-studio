@@ -17,6 +17,19 @@ export const bknTraceEnUS = {
       missingScope: "Enter a trace id or request id.",
       queryFailed: "Query failed.",
     },
+    emptyStates: {
+      businessNodes: "No business semantic nodes returned.",
+      claims: "No claim details returned.",
+      evidenceRefs: "No evidence ref details returned.",
+    },
+    fields: {
+      basis: "Basis",
+      object: "Object",
+      status: "Status",
+      type: "Type",
+      version: "Version",
+      visibility: "Visibility",
+    },
     metrics: {
       businessEdges: "Business edges",
       businessNodes: "Business nodes",
@@ -35,7 +48,10 @@ export const bknTraceEnUS = {
       trace: "Trace",
     },
     sections: {
+      businessDetails: "Business Semantic Node Details",
       businessGraph: "Business Semantic Graph",
+      claimDetails: "Claim Details",
+      evidenceDetails: "Evidence Ref Details",
       evidenceChain: "Evidence Chain",
       snapshot: "Snapshot Preview",
       traceGraph: "Trace Graph",
