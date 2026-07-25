@@ -799,11 +799,11 @@ export function ObjectTypeLogicAttributeEditDrawer({
         onConfirm={(_source, selection) => void handleToolSelect(selection)}
         open={toolSelectorOpen}
         value={
-          type === "tool" && (form.getFieldValue("toolId") || getStringFieldValue("toolId"))
+          type === "tool" && getStringFieldValue("toolId")
             ? {
-                boxId: form.getFieldValue("boxId") ?? getStringFieldValue("boxId"),
-                toolId: form.getFieldValue("toolId") ?? getStringFieldValue("toolId") ?? "",
-                toolName: form.getFieldValue("resourceName") ?? getStringFieldValue("resourceName"),
+                boxId: getStringFieldValue("boxId"),
+                toolId: getStringFieldValue("toolId") ?? "",
+                toolName: getStringFieldValue("resourceName"),
                 type: "tool",
               }
             : undefined

@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildToolLogicParameterSettings } from "./constants";
+import { buildToolLogicParameterSettings, removeParameterById } from "./constants";
 
 describe("buildToolLogicParameterSettings", () => {
   it("merges saved tool parameter mappings into the input schema", () => {
@@ -92,6 +92,44 @@ describe("buildToolLogicParameterSettings", () => {
         type: "string",
         value: "openbkn",
         valueFrom: "const",
+      },
+    ]);
+  });
+});
+
+describe("removeParameterById", () => {
+  it("removes a top-level parameter by id", () => {
+    expect(
+      removeParameterById(
+        [
+          { id: "a", name: "count" },
+          { id: "b", name: "param" },
+        ],
+        "a",
+      ),
+    ).toEqual([{ id: "b", name: "param" }]);
+  });
+
+  it("removes a nested parameter by id", () => {
+    expect(
+      removeParameterById(
+        [
+          {
+            children: [
+              { id: "child", name: "body.city" },
+              { id: "keep", name: "body.name" },
+            ],
+            id: "body",
+            name: "body",
+          },
+        ],
+        "child",
+      ),
+    ).toEqual([
+      {
+        children: [{ id: "keep", name: "body.name" }],
+        id: "body",
+        name: "body",
       },
     ]);
   });
