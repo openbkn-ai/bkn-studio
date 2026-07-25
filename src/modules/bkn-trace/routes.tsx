@@ -22,7 +22,7 @@ function withRouteLoading(element: ReactNode) {
 
 export const bknTraceRoutes: RouteObject[] = [
   {
-    path: "bkn-trace",
+    path: "system/bkn-trace",
     handle: {
       console: {
         descriptionKey: "bknTrace.description",

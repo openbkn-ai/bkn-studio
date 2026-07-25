@@ -15,11 +15,11 @@ import { bknTraceRouteContribution } from "@/modules/bkn-trace/routes";
 describe("bkn-trace module registration", () => {
   it("contributes a shell route and navigation item", () => {
     expect(bknTraceRouteContribution.moduleId).toBe("bkn-trace");
-    expect(bknTraceRouteContribution.routes.map((route) => route.path)).toContain("bkn-trace");
+    expect(bknTraceRouteContribution.routes.map((route) => route.path)).toContain("system/bkn-trace");
     expect(bknTraceNavigation.items[0]).toMatchObject({
       key: "bkn-trace",
-      labelKey: "shell.items.traceai",
-      path: "/bkn-trace",
+      labelKey: "shell.items.bknTrace",
+      path: "/system/bkn-trace",
     });
     expect(
       consoleNavigation
