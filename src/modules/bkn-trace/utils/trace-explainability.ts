@@ -5,6 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type {
+  TraceBusinessNode,
+  TraceClaim,
+  TraceEvidenceRef,
+} from "@/modules/bkn-trace/services/trace.service";
+
 export type ExplainabilityRow = {
   id: string;
   kind: string;
@@ -15,7 +21,7 @@ export type ExplainabilityRow = {
   visibility: string;
 };
 
-export function claimRows(claims: Array<Record<string, unknown>>): ExplainabilityRow[] {
+export function claimRows(claims: TraceClaim[]): ExplainabilityRow[] {
   return claims.map((claim, index) => {
     const subjectRefs = objectField(claim, "subject_refs");
     const operation = stringField(subjectRefs, "operation") || stringField(claim, "operation");
@@ -41,7 +47,7 @@ export function claimRows(claims: Array<Record<string, unknown>>): Explainabilit
   });
 }
 
-export function evidenceRows(refs: Array<Record<string, unknown>>): ExplainabilityRow[] {
+export function evidenceRows(refs: TraceEvidenceRef[]): ExplainabilityRow[] {
   return refs.map((ref, index) => {
     const summary = objectField(ref, "summary");
     const kind = stringField(summary, "kind") || stringField(ref, "ref_type") || "evidence";
@@ -74,7 +80,7 @@ export function evidenceRows(refs: Array<Record<string, unknown>>): Explainabili
   });
 }
 
-export function businessRows(nodes: Array<Record<string, unknown>>): ExplainabilityRow[] {
+export function businessRows(nodes: TraceBusinessNode[]): ExplainabilityRow[] {
   return nodes.map((node, index) => {
     const properties = objectField(node, "properties");
     const nodeType = stringField(node, "node_type") || stringField(properties, "ref_type") || "business";
