@@ -81,6 +81,35 @@ function parseNumericValue(value: string | number | undefined) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function resolveBarChartColumns(result: MetricDataQueryResult) {
+  const reservedKeys = new Set([
+    "value",
+    "current",
+    "timestamp",
+    "growthValue",
+    "growthRate",
+    "metric",
+    "dimension",
+  ]);
+  const columnKeys = result.columns.map((column) => column.key);
+  const valueKey = columnKeys.find((key) => key === "value" || key === "current") ?? "value";
+  const labelKeys = columnKeys.filter((key) => !reservedKeys.has(key));
+
+  return { labelKeys, valueKey };
+}
+
+function formatBarLabel(
+  row: Record<string, string | number>,
+  labelKeys: string[],
+  index: number,
+) {
+  if (labelKeys.length === 0) {
+    return String(row.timestamp ?? row.dimension ?? index + 1);
+  }
+
+  return labelKeys.map((key) => String(row[key] ?? "--")).join(" / ");
+}
+
 function renderVisualResult(result: MetricDataQueryResult, metricName: string) {
   if (result.visualHint === "instant-card") {
     const value = result.rows[0]?.value ?? "--";
@@ -93,8 +122,7 @@ function renderVisualResult(result: MetricDataQueryResult, metricName: string) {
   }
 
   if (result.visualHint === "trend-bars" || result.visualHint === "proportion-bars") {
-    const labelKey = result.columns[0]?.key ?? "label";
-    const valueKey = result.columns[1]?.key ?? "value";
+    const { labelKeys, valueKey } = resolveBarChartColumns(result);
     const maxValue = Math.max(
       ...result.rows.map((row) => parseNumericValue(row[valueKey])),
       1,
@@ -103,7 +131,7 @@ function renderVisualResult(result: MetricDataQueryResult, metricName: string) {
     return (
       <div className={styles.barList}>
         {result.rows.map((row, index) => {
-          const label = String(row[labelKey] ?? index);
+          const label = formatBarLabel(row, labelKeys, index);
           const value = parseNumericValue(row[valueKey]);
           const width = `${Math.max((value / maxValue) * 100, 4)}%`;
 

@@ -407,6 +407,12 @@ function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
 
 type BackendMetricDataSeries = NonNullable<BackendMetricDataResponse["datas"]>[number];
 
+const METRIC_DIMENSION_COLUMN_PREFIX = "dim_";
+
+function toMetricDimensionColumnKey(propertyName: string) {
+  return `${METRIC_DIMENSION_COLUMN_PREFIX}${propertyName}`;
+}
+
 function normalizeLabelRecord(
   labels: BackendMetricDataSeries["labels"],
 ): Record<string, string | number> {
@@ -414,7 +420,9 @@ function normalizeLabelRecord(
     return {};
   }
 
-  return Object.fromEntries(Object.entries(labels));
+  return Object.fromEntries(
+    Object.entries(labels).map(([key, value]) => [toMetricDimensionColumnKey(key), value]),
+  );
 }
 
 function collectLabelKeys(datas: BackendMetricDataSeries[]): string[] {
@@ -426,7 +434,7 @@ function collectLabelKeys(datas: BackendMetricDataSeries[]): string[] {
     }
 
     for (const key of Object.keys(labels)) {
-      keys.add(key);
+      keys.add(toMetricDimensionColumnKey(key));
     }
   }
 
@@ -460,7 +468,7 @@ function resolveSeriesTimes(item: BackendMetricDataSeries) {
   return [];
 }
 
-function normalizeMetricDataResponse(
+export function normalizeMetricDataResponse(
   data: BackendMetricDataResponse | MetricDataQueryResult,
   mode: MetricDataQueryParams["mode"],
 ): MetricDataQueryResult {
@@ -555,8 +563,12 @@ function normalizeMetricDataResponse(
       for (let index = 0; index < values.length; index += 1) {
         rows.push({
           ...labelRecord,
-          growthRate: item.growth_rates?.[index] ?? "",
-          growthValue: item.growth_values?.[index] ?? "",
+          ...(mode === "sameperiod"
+            ? {
+                growthRate: item.growth_rates?.[index] ?? "",
+                growthValue: item.growth_values?.[index] ?? "",
+              }
+            : {}),
           timestamp: times[index] == null ? "--" : formatMetricTimeLabel(times[index]),
           [valueKey]: values[index] ?? "--",
         });
