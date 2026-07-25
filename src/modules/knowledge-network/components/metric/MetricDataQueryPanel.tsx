@@ -60,6 +60,7 @@ function showFillNullField(mode: MetricDataQueryMode | undefined) {
 }
 
 type MetricDataQueryPanelProps = {
+  analysisDimensionOptions?: string[];
   embedded?: boolean;
   metricId: string;
   metricName: string;
@@ -124,6 +125,7 @@ function renderVisualResult(result: MetricDataQueryResult, metricName: string) {
 }
 
 export function MetricDataQueryPanel({
+  analysisDimensionOptions = [],
   embedded = false,
   metricId,
   metricName,
@@ -284,6 +286,23 @@ export function MetricDataQueryPanel({
                 <InputNumber min={1} max={12} style={{ width: 90 }} />
               </Form.Item>
             </Space>
+          ) : null}
+          {analysisDimensionOptions.length > 0 ? (
+            <Form.Item
+              label={t("knowledgeNetwork.metricQueryAnalysisDimensions")}
+              name="analysisDimensions"
+            >
+              <Select
+                allowClear
+                mode="multiple"
+                options={analysisDimensionOptions.map((value) => ({
+                  label: value,
+                  value,
+                }))}
+                placeholder={t("knowledgeNetwork.metricQueryAnalysisDimensionsPlaceholder")}
+                style={{ minWidth: 220 }}
+              />
+            </Form.Item>
           ) : null}
           <Form.Item label={t("knowledgeNetwork.metricQueryLimit")} name="limit">
             <InputNumber min={1} max={1000} style={{ width: 100 }} />

@@ -324,6 +324,7 @@ export function MetricDetailScene({
             </div>
           ) : (
             <MetricDataQueryPanel
+              analysisDimensionOptions={detail.calculationFormula.analysisDimensions ?? []}
               embedded
               metricId={detail.id}
               metricName={detail.name}

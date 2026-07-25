@@ -85,7 +85,12 @@ export function MetricDataQueryScene({
       subtitle={t("knowledgeNetwork.metricDataQueryDescription")}
       title={t("knowledgeNetwork.metricDataQueryTitle", { name: detail.name })}
     >
-      <MetricDataQueryPanel metricId={detail.id} metricName={detail.name} networkId={networkId} />
+      <MetricDataQueryPanel
+        analysisDimensionOptions={detail.calculationFormula.analysisDimensions ?? []}
+        metricId={detail.id}
+        metricName={detail.name}
+        networkId={networkId}
+      />
     </KnowledgeNetworkResourceConfigShell>
   );
 }
