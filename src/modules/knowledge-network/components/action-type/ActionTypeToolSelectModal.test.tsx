@@ -8,6 +8,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ActionTypeCatalogSelection } from "@/modules/knowledge-network/services/action-type-tool.service";
 import type { ActionTypeActionSource } from "@/modules/knowledge-network/types/knowledge-network";
 
 const {
@@ -27,7 +28,9 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@/modules/knowledge-network/services/action-type-tool.service", () => ({
-  buildActionSourceFromCatalogSelection: vi.fn((selection) => {
+  buildActionSourceFromCatalogSelection: (
+    selection: ActionTypeCatalogSelection,
+  ): ActionTypeActionSource => {
     if (selection.kind === "mcp") {
       return {
         mcpId: selection.mcpId,
@@ -45,7 +48,7 @@ vi.mock("@/modules/knowledge-network/services/action-type-tool.service", () => (
       toolName: selection.tool.toolName,
       type: "tool",
     };
-  }),
+  },
   listActionTypeExecutionFactoryCatalog,
   loadActionTypeMcpServerTools,
   loadActionTypeToolBoxTools,
