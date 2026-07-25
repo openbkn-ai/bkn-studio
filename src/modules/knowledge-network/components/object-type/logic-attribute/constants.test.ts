@@ -98,9 +98,11 @@ describe("buildToolLogicParameterSettings", () => {
 });
 
 describe("removeParameterById", () => {
+  type TestNode = { children?: TestNode[]; id: string; name: string };
+
   it("removes a top-level parameter by id", () => {
     expect(
-      removeParameterById(
+      removeParameterById<TestNode>(
         [
           { id: "a", name: "count" },
           { id: "b", name: "param" },
@@ -112,7 +114,7 @@ describe("removeParameterById", () => {
 
   it("removes a nested parameter by id", () => {
     expect(
-      removeParameterById(
+      removeParameterById<TestNode>(
         [
           {
             children: [
