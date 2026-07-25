@@ -175,7 +175,9 @@ export function ExecutionUnitCard({
       styles={{ body: { padding: 0 } }}
     >
       <div className={styles.cardBody}>
-        {onAction ? (
+        {/* 管理态：小菜单按钮浮在右上角。市场态的「引入 / 同步」按钮较宽，
+            卡片变矮后浮在右上角会压住标题，改为正文下方独占一行。 */}
+        {onAction && !marketMode ? (
           <div
             className={styles.cardActions}
             onClick={(event) => {
@@ -234,6 +236,23 @@ export function ExecutionUnitCard({
             </Paragraph>
           </div>
         </div>
+
+        {onAction && marketMode ? (
+          <div
+            className={styles.marketCta}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <ExecutionUnitCardMenu
+              activeTab={activeTab}
+              installedStateReady={installedStateReady}
+              item={item}
+              marketMode={marketMode}
+              onAction={onAction}
+            />
+          </div>
+        ) : null}
 
         <div className={styles.footer}>
           <span className={styles.footerLeft}>

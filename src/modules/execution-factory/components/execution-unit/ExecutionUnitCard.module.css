@@ -197,6 +197,19 @@
   line-height: 19px;
 }
 
+/* 市场态「引入 / 同步」按钮独占一行，右对齐，紧贴页脚上方。 */
+.marketCta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-bottom: 8px;
+}
+
+/* 市场态 CTA 已占据底部弹性空间，页脚不再抢 auto，避免二者被拉开。 */
+.marketCta + .footer {
+  margin-top: 0;
+}
+
 .footer {
   display: flex;
   align-items: center;

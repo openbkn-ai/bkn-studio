@@ -17,7 +17,7 @@ import type { ExecutionUnitTab } from "@/modules/execution-factory/components/ex
 import type { CapabilityUxMode } from "@/modules/execution-factory/utils/capability-ux";
 import { isCapabilityUxV2 } from "@/modules/execution-factory/utils/capability-ux";
 import {
-  getCapabilityCreateMenuSections,
+  getCapabilityCreateMenuItems,
   resolveCapabilityAdpImportTab,
   type CapabilityCreateMenuAction,
 } from "@/modules/execution-factory/utils/capability-create-menu";
@@ -118,7 +118,7 @@ export function CreateMenu({
       : resolveCapabilityCreatePermission(activeTab)
     : getCreatePermission(activeTab);
   const importPermission = getImportPermission(activeTab);
-  const menuSections = useMemo(() => getCapabilityCreateMenuSections(), []);
+  const capabilityCreateItems = useMemo(() => getCapabilityCreateMenuItems(), []);
 
   useEffect(() => {
     if (!autoOpen || !permission) {
@@ -171,18 +171,15 @@ export function CreateMenu({
     openCapabilityMode(action);
   };
 
-  // 每组现在只剩一项，分组标题和条目标题重复，直接摊平成一列条目。
-  const capabilityMenuItems: MenuProps["items"] = menuSections.flatMap((section) =>
-    section.items.map((item) => ({
-      key: item.action,
-      label: (
-        <div className={styles.createMenuItem}>
-          <div className={styles.createMenuItemTitle}>{t(item.titleKey)}</div>
-          <div className={styles.createMenuItemDesc}>{t(item.descriptionKey)}</div>
-        </div>
-      ),
-    })),
-  );
+  const capabilityMenuItems: MenuProps["items"] = capabilityCreateItems.map((item) => ({
+    key: item.action,
+    label: (
+      <div className={styles.createMenuItem}>
+        <div className={styles.createMenuItemTitle}>{t(item.titleKey)}</div>
+        <div className={styles.createMenuItemDesc}>{t(item.descriptionKey)}</div>
+      </div>
+    ),
+  }));
 
   const createButton = capabilityUxV2 && !useLegacyOperatorCreate ? (
     <Dropdown
