@@ -229,12 +229,30 @@
 }
 
 .railItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   color: var(--color-text-tertiary);
 }
 
-.railItemDirty {
+/* in / out 计数拆成两个浅底小标签，比裸文字更醒目、更整齐。 */
+.railItemIoTag {
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-fill-quaternary, #f5f5f5);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.railItemDirtyTag {
+  padding: 0 6px;
+  border: 1px solid var(--color-warning-border, #ffd591);
+  background: var(--color-warning-bg, #fffbe6);
   color: var(--color-warning-text, #b45309);
+  font-size: 11px;
+  line-height: 18px;
 }
 
 .railFooter {

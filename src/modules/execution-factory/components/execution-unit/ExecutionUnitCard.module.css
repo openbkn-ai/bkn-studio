@@ -43,23 +43,30 @@
   gap: 8px;
 }
 
+/* 删除等操作都在这个菜单里，透明按钮太隐蔽找不到，给回白底+描边+阴影当浮层按钮。 */
 .cardMenuButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  border: 0;
+  border: 1px solid #e5e9f0;
   border-radius: 0;
-  background: transparent;
-  color: rgba(0, 0, 0, 0.45);
+  background: #fff;
+  color: var(--color-text-secondary);
   cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .cardMenuButton:hover {
+  border-color: #bfdbfe;
   color: #2e68ff;
-  background: rgba(46, 104, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 .cardInstallButton {
