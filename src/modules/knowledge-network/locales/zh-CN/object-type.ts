@@ -107,7 +107,7 @@ export const objecttypePart = {
     objectTypeLogicPropertyCount: "{{count}} 个逻辑属性",
     objectTypeLogicPropertyEmpty: "当前没有逻辑属性。",
     objectTypeLogicPropertyHint: "可选配置对象类的逻辑属性。",
-    objectTypeLogicPropertyTip: "逻辑属性用于绑定指标或算子，为对象类提供衍生计算能力。",
+    objectTypeLogicPropertyTip: "逻辑属性用于绑定指标或工具，为对象类提供衍生计算能力。",
     objectTypeLogicValue: "值",
     objectTypeLogicValueFrom: "值来源",
     objectTypeLogicValueFromConst: "常量",

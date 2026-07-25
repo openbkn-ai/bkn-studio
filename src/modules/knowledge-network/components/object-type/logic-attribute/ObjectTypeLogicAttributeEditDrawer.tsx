@@ -33,6 +33,7 @@ import {
   buildToolLogicParameterSettings,
   extractLeafParams,
   isEmptyExceptZero,
+  removeParameterById,
 } from "./constants";
 import {
   listObjectTypeLogicMetricModels,
@@ -50,6 +51,8 @@ import styles from "./ObjectTypeLogicAttributeEditDrawer.module.css";
 
 type SettingItem = ObjectTypeLogicParameter & {
   error?: Record<string, string>;
+  /** 用户通过「新建」手动添加的参数，可删除。工具 schema 自动解析的不带此标记。 */
+  manual?: boolean;
 };
 
 type ObjectTypeLogicAttributeEditDrawerProps = {
@@ -327,12 +330,17 @@ export function ObjectTypeLogicAttributeEditDrawer({
       ...prev,
       {
         id: createParameterId(),
+        manual: true,
         name: "",
         source: "body",
         type: "string",
         valueFrom: "input",
       },
     ]);
+  };
+
+  const removeToolParameter = (id: string) => {
+    setSettingList((prev) => removeParameterById(prev, id));
   };
 
   const handleToolSelect = async (selection: ActionTypeCatalogSelection) => {
@@ -401,15 +409,23 @@ export function ObjectTypeLogicAttributeEditDrawer({
   };
 
   const handleSubmit = async () => {
-    await form.validateFields();
+    try {
+      await form.validateFields();
+    } catch {
+      return;
+    }
     if (!type) {
       return;
     }
     const formValues = form.getFieldsValue();
-    if (
-      (type !== "tool" && !resourceId) ||
-      (type === "tool" && (!formValues.boxId || !formValues.toolId))
-    ) {
+    const boxId = formValues.boxId ?? getStringFieldValue("boxId");
+    const toolId = formValues.toolId ?? getStringFieldValue("toolId");
+    const resourceName = formValues.resourceName ?? getStringFieldValue("resourceName");
+    if (type !== "tool" && !resourceId) {
+      return;
+    }
+    if (type === "tool" && (!boxId || !toolId)) {
+      void message.error(t("knowledgeNetwork.objectTypeLogicToolSelect"));
       return;
     }
     if (type === "tool" && settingList.length > 0 && validateParams()) {
@@ -417,19 +433,19 @@ export function ObjectTypeLogicAttributeEditDrawer({
       return;
     }
 
-    const resourceName =
+    const resolvedResourceName =
       type === "metric"
         ? metricModelList.find((item) => item.id === resourceId)?.name
-        : formValues.resourceName;
+        : resourceName;
 
     onOk({
       comment: formValues.comment,
       dataSource: {
-        boxId: formValues.boxId,
+        boxId,
         id: type === "tool" ? undefined : resourceId,
-        name: resourceName ?? "",
+        name: resolvedResourceName ?? "",
         resultPath: formValues.resultPath,
-        toolId: formValues.toolId,
+        toolId,
         type,
       },
       displayName: formValues.displayName ?? "",
@@ -438,9 +454,10 @@ export function ObjectTypeLogicAttributeEditDrawer({
         type === "metric"
           ? []
           : extractLeafParams(settingList).map((item) => {
-              const { error, children, ...parameter } = item;
+              const { error, children, manual, ...parameter } = item;
               void error;
               void children;
+              void manual;
               return parameter;
             }),
       type,
@@ -564,6 +581,18 @@ export function ObjectTypeLogicAttributeEditDrawer({
       title: t("knowledgeNetwork.objectTypeLogicValue"),
       width: 278,
     },
+    {
+      align: "center",
+      key: "actions",
+      render: (_, record) =>
+        record.manual ? (
+          <AppButton danger onClick={() => removeToolParameter(record.id)} type="link">
+            {t("common.delete")}
+          </AppButton>
+        ) : null,
+      title: t("common.actions"),
+      width: 72,
+    },
   ];
 
   return (
@@ -648,12 +677,20 @@ export function ObjectTypeLogicAttributeEditDrawer({
           </Col>
           <Col span={6}>
             {type === "tool" ? (
-              <Form.Item label={t("knowledgeNetwork.objectTypeLogicAttributeResource")}>
+              <Form.Item
+                label={t("knowledgeNetwork.objectTypeLogicAttributeResource")}
+                name="resourceName"
+                rules={[
+                  {
+                    message: t("knowledgeNetwork.objectTypeLogicToolSelect"),
+                    required: true,
+                  },
+                ]}
+              >
                 <Input
                   onClick={() => setToolSelectorOpen(true)}
                   placeholder={t("knowledgeNetwork.objectTypeLogicToolSelect")}
                   readOnly
-                  value={getStringFieldValue("resourceName")}
                 />
               </Form.Item>
             ) : (
@@ -678,6 +715,12 @@ export function ObjectTypeLogicAttributeEditDrawer({
             )}
           </Col>
         </Row>
+        <Form.Item hidden name="boxId">
+          <Input />
+        </Form.Item>
+        <Form.Item hidden name="toolId">
+          <Input />
+        </Form.Item>
         {type === "tool" ? (
           <Row gutter={16}>
             <Col span={24}>
@@ -756,11 +799,11 @@ export function ObjectTypeLogicAttributeEditDrawer({
         onConfirm={(_source, selection) => void handleToolSelect(selection)}
         open={toolSelectorOpen}
         value={
-          type === "tool" && getStringFieldValue("toolId")
+          type === "tool" && (form.getFieldValue("toolId") || getStringFieldValue("toolId"))
             ? {
-                boxId: getStringFieldValue("boxId"),
-                toolId: getStringFieldValue("toolId") ?? "",
-                toolName: getStringFieldValue("resourceName"),
+                boxId: form.getFieldValue("boxId") ?? getStringFieldValue("boxId"),
+                toolId: form.getFieldValue("toolId") ?? getStringFieldValue("toolId") ?? "",
+                toolName: form.getFieldValue("resourceName") ?? getStringFieldValue("resourceName"),
                 type: "tool",
               }
             : undefined
