@@ -35,6 +35,7 @@ import {
   extractLeafParams,
   isEmptyExceptZero,
   isToolLogicBindingComplete,
+  removeParameterById,
   readLogicAttributeToolBinding,
 } from "./constants";
 import {
@@ -53,6 +54,8 @@ import styles from "./ObjectTypeLogicAttributeEditDrawer.module.css";
 
 type SettingItem = ObjectTypeLogicParameter & {
   error?: Record<string, string>;
+  /** 用户通过「新建」手动添加的参数，可删除。工具 schema 自动解析的不带此标记。 */
+  manual?: boolean;
 };
 
 type ObjectTypeLogicAttributeEditDrawerProps = {
@@ -326,12 +329,17 @@ export function ObjectTypeLogicAttributeEditDrawer({
       ...prev,
       {
         id: createParameterId(),
+        manual: true,
         name: "",
         source: "body",
         type: "string",
         valueFrom: "input",
       },
     ]);
+  };
+
+  const removeToolParameter = (id: string) => {
+    setSettingList((prev) => removeParameterById(prev, id));
   };
 
   const handleToolSelect = async (selection: ActionTypeCatalogSelection) => {
@@ -400,7 +408,11 @@ export function ObjectTypeLogicAttributeEditDrawer({
   };
 
   const handleSubmit = async () => {
-    await form.validateFields();
+    try {
+      await form.validateFields();
+    } catch {
+      return;
+    }
     if (!type) {
       return;
     }
@@ -426,7 +438,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
       return;
     }
 
-    const resourceName =
+    const resolvedResourceName =
       type === "metric"
         ? metricModelList.find((item) => item.id === resourceId)?.name
         : toolBinding.resourceName;
@@ -436,7 +448,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
       dataSource: {
         boxId: toolBinding.boxId,
         id: type === "tool" ? undefined : resourceId,
-        name: resourceName ?? "",
+        name: resolvedResourceName ?? "",
         resultPath: formValues.resultPath,
         toolId: toolBinding.toolId,
         type,
@@ -447,9 +459,10 @@ export function ObjectTypeLogicAttributeEditDrawer({
         type === "metric"
           ? []
           : extractLeafParams(settingList).map((item) => {
-              const { error, children, ...parameter } = item;
+              const { error, children, manual, ...parameter } = item;
               void error;
               void children;
+              void manual;
               return parameter;
             }),
       type,
@@ -572,6 +585,18 @@ export function ObjectTypeLogicAttributeEditDrawer({
       },
       title: t("knowledgeNetwork.objectTypeLogicValue"),
       width: 278,
+    },
+    {
+      align: "center",
+      key: "actions",
+      render: (_, record) =>
+        record.manual ? (
+          <AppButton danger onClick={() => removeToolParameter(record.id)} type="link">
+            {t("common.delete")}
+          </AppButton>
+        ) : null,
+      title: t("common.actions"),
+      width: 72,
     },
   ];
 

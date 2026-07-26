@@ -84,6 +84,19 @@ export function deduplicateByName<T extends { name: string }>(items: T[]) {
   return Array.from(map.values());
 }
 
+export function removeParameterById<T extends { children?: T[]; id: string }>(
+  items: T[],
+  id: string,
+): T[] {
+  return items
+    .filter((item) => item.id !== id)
+    .map((item) =>
+      item.children?.length
+        ? { ...item, children: removeParameterById(item.children, id) }
+        : item,
+    );
+}
+
 export function extractLeafParams<T extends { children?: T[] }>(items: T[]): T[] {
   const leafParams: T[] = [];
 

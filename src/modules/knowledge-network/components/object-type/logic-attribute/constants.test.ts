@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildToolLogicParameterSettings,
   isToolLogicBindingComplete,
+  removeParameterById,
   readLogicAttributeToolBinding,
 } from "./constants";
 
@@ -96,6 +97,46 @@ describe("buildToolLogicParameterSettings", () => {
         type: "string",
         value: "openbkn",
         valueFrom: "const",
+      },
+    ]);
+  });
+});
+
+describe("removeParameterById", () => {
+  type TestNode = { children?: TestNode[]; id: string; name: string };
+
+  it("removes a top-level parameter by id", () => {
+    expect(
+      removeParameterById<TestNode>(
+        [
+          { id: "a", name: "count" },
+          { id: "b", name: "param" },
+        ],
+        "a",
+      ),
+    ).toEqual([{ id: "b", name: "param" }]);
+  });
+
+  it("removes a nested parameter by id", () => {
+    expect(
+      removeParameterById<TestNode>(
+        [
+          {
+            children: [
+              { id: "child", name: "body.city" },
+              { id: "keep", name: "body.name" },
+            ],
+            id: "body",
+            name: "body",
+          },
+        ],
+        "child",
+      ),
+    ).toEqual([
+      {
+        children: [{ id: "keep", name: "body.name" }],
+        id: "body",
+        name: "body",
       },
     ]);
   });
