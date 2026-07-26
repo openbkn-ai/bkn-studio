@@ -5,42 +5,68 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* 卡片与业务知识网络列表卡片对齐：平边框、无投影、图标居左、紧凑内边距。
+   颜色沿用 KN 卡片的同一套 hex，保证并排时视觉一致。 */
 .card {
   position: relative;
+  min-height: 120px;
   height: 100%;
+  overflow: hidden;
   cursor: pointer;
-  border: 1px solid var(--color-border);
+  border: 1px solid #d9e0ea;
   border-radius: 0;
-  background: var(--color-bg-surface);
-  box-shadow: var(--shadow-card);
-  transition: all 0.3s ease;
+  background: #fff;
+  box-shadow: none;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: #bfdbfe;
+  background: #f7faff;
+  box-shadow: none;
+  outline: none;
+}
+
+.card:focus-visible {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .cardActions {
   position: absolute;
-  top: 12px;
+  top: 10px;
   right: 12px;
   z-index: 2;
   display: flex;
   gap: 8px;
 }
 
+/* 删除等操作都在这个菜单里，透明按钮太隐蔽找不到，给回白底+描边+阴影当浮层按钮。 */
 .cardMenuButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: none;
+  padding: 0;
+  border: 1px solid #e5e9f0;
   border-radius: 0;
-  background: var(--color-bg-surface);
+  background: #fff;
   color: var(--color-text-secondary);
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .cardMenuButton:hover {
-  color: var(--color-primary-600);
+  border-color: #bfdbfe;
+  color: #2e68ff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 .cardInstallButton {
@@ -59,130 +85,162 @@
   line-height: 20px;
 }
 
-.card:hover,
-.card:focus-visible {
-  border-color: var(--color-primary-border);
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
-  outline: none;
-}
-
-.card:focus-visible {
-  box-shadow:
-    0 0 0 3px rgba(37, 99, 235, 0.12),
-    0 8px 22px rgba(15, 23, 42, 0.08);
-}
-
 .cardBody {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 20px 18px 16px;
+  padding: 12px 14px;
 }
 
-.iconWrap {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  margin-bottom: 14px;
-}
-
-.iconBadge {
+/* 图标 + 标题/描述 一横排，图标居左（对齐 KN 卡片 header）。 */
+.header {
   display: flex;
+  gap: 12px;
+  min-width: 0;
+  padding-right: 30px; /* 让出右上角菜单按钮位置 */
+}
+
+.iconBox {
+  display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e8edf3;
   border-radius: 0;
-  background: var(--color-primary-100);
+  background: #f3f6fa;
   color: var(--color-primary-600);
-  font-size: 20px;
+  font-size: 16px;
 }
 
-.metadataTag {
-  position: absolute;
-  top: 28px;
-  left: 0;
-  min-width: 38px;
-  padding: 1px 4px;
-  border-radius: 0;
-  background: var(--color-primary-700);
-  color: #ffffff;
-  font-size: 10px;
-  line-height: 14px;
-  text-align: center;
-}
-
-/* 代码函数和 OpenAPI 同处「工具集」，徽标同色就区分不出来 */
-.metadataTagFunction {
-  background: #7c3aed;
-}
-
-.iconBadgeFunction {
+/* 代码函数与 OpenAPI 同处「工具集」，用紫色区分。 */
+.iconBoxFunction {
+  border-color: #ece3ff;
   background: #f3eeff;
   color: #7c3aed;
 }
 
+.titleContent {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .titleRow {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  min-width: 0;
 }
 
 .title {
+  flex: 1;
+  min-width: 0;
   margin: 0 !important;
-  color: var(--color-text-primary);
-  font-size: 16px !important;
-  line-height: 24px !important;
+  overflow: hidden;
+  color: #111827;
+  font-size: 14px !important;
+  font-weight: 500;
+  line-height: 22px !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusTag {
+  flex-shrink: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* KN 卡片的 slug 行位置：这里放类型徽标 / 分类 / 工具数。 */
+.metaLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.metaText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metadataTag {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 0;
+  background: var(--color-primary-700);
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.metadataTagFunction {
+  background: #7c3aed;
+}
+
+.metaDivider {
+  flex-shrink: 0;
+  color: #d0d5dd;
 }
 
 .description {
-  flex: 1;
-  min-height: 44px;
-  margin-bottom: 12px !important;
-  color: #64748b;
+  max-height: 38px;
+  min-height: 38px;
+  margin-top: 4px;
+  margin-bottom: 0 !important;
+  overflow: hidden;
+  color: #4b5563;
   font-size: 13px;
-  line-height: 20px;
+  line-height: 19px;
 }
 
-.cardMetaRow {
-  margin-bottom: 8px;
+/* 市场态「引入 / 同步」按钮独占一行，右对齐，紧贴页脚上方。 */
+.marketCta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-bottom: 8px;
 }
 
-.categoryTag {
-  margin: 0;
-  font-size: 12px;
-}
-
-.toolCount {
-  margin-bottom: 16px;
-  color: var(--color-text-muted);
-  font-size: 13px;
+/* 市场态 CTA 已占据底部弹性空间，页脚不再抢 auto，避免二者被拉开。 */
+.marketCta + .footer {
+  margin-top: 0;
 }
 
 .footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-divider);
+  gap: 12px;
+  margin: auto 0 0;
+  padding-top: 9px;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 19px;
+  border-top: 1px solid #e8edf3;
 }
 
 .footerLeft {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1;
   min-width: 0;
-  color: var(--color-text-muted);
-  font-size: 12px;
+  overflow: hidden;
 }
 
 .footerRight {
-  color: var(--color-text-muted);
-  font-size: 12px;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 
@@ -200,7 +258,6 @@
 }
 
 .userName {
-  max-width: 72px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -18,7 +18,7 @@ export function ExecutionUnitCardSkeleton({ count = 8 }: ExecutionUnitCardSkelet
     <>
       {Array.from({ length: count }, (_, index) => (
         <div className={styles.card} key={index}>
-          <Skeleton active paragraph={{ rows: 3 }} title={{ width: "60%" }} />
+          <Skeleton active paragraph={{ rows: 2 }} title={{ width: "60%" }} />
         </div>
       ))}
     </>

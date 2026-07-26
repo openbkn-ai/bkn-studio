@@ -1115,12 +1115,18 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                     </span>
                   ) : null}
                 </span>
-                <span className={`${styles.railItemMeta} ${item.dirty ? styles.railItemDirty : ""}`}>
-                  {t("executionFactory.workbenchIoCount", {
-                    inputs: item.inputs.length,
-                    outputs: item.outputs.length,
-                  })}
-                  {item.dirty ? ` · ${t("executionFactory.workbenchUnsaved")}` : ""}
+                <span className={styles.railItemMeta}>
+                  <span className={styles.railItemIoTag}>
+                    {t("executionFactory.workbenchInCount", { count: item.inputs.length })}
+                  </span>
+                  <span className={styles.railItemIoTag}>
+                    {t("executionFactory.workbenchOutCount", { count: item.outputs.length })}
+                  </span>
+                  {item.dirty ? (
+                    <span className={styles.railItemDirtyTag}>
+                      {t("executionFactory.workbenchUnsaved")}
+                    </span>
+                  ) : null}
                 </span>
               </button>
             ))}
