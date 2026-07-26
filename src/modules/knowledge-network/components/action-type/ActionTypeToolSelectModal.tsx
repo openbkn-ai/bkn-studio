@@ -90,8 +90,30 @@ function buildToolFromValue(value: ActionTypeActionSource): ActionTypeCatalogToo
   };
 }
 
+const DEFAULT_ALLOWED_KINDS: Array<"mcp" | "tool"> = ["tool", "mcp"];
+const CATALOG_SEARCH_DEBOUNCE_MS = 300;
+
+/** Stable key so catalog reloads only when the selected source identity changes. */
+function buildActionSourceValueKey(value?: ActionTypeActionSource) {
+  if (!value) {
+    return "";
+  }
+
+  return [
+    value.type,
+    value.boxId ?? "",
+    value.mcpId ?? "",
+    value.toolId ?? "",
+    value.toolName ?? "",
+  ].join("|");
+}
+
+function buildAllowedKindsKey(allowedKinds: Array<"mcp" | "tool">) {
+  return [...allowedKinds].sort().join("|");
+}
+
 export function ActionTypeToolSelectModal({
-  allowedKinds = ["tool", "mcp"],
+  allowedKinds = DEFAULT_ALLOWED_KINDS,
   onCancel,
   onConfirm,
   open,
@@ -100,6 +122,7 @@ export function ActionTypeToolSelectModal({
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"mcp" | "tool">(allowedKinds[0] ?? "tool");
   const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [catalog, setCatalog] = useState<ActionTypeExecutionFactoryCatalog>({
     mcpServers: [],
@@ -107,13 +130,20 @@ export function ActionTypeToolSelectModal({
   });
   const catalogRef = useRef(catalog);
   catalogRef.current = catalog;
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const allowedKindsRef = useRef(allowedKinds);
+  allowedKindsRef.current = allowedKinds;
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [loadingGroupKeys, setLoadingGroupKeys] = useState<string[]>([]);
   const loadedGroupKeysRef = useRef(new Set<string>());
   const loadingGroupKeysRef = useRef(new Set<string>());
+  const catalogRequestIdRef = useRef(0);
   const [selectedSelection, setSelectedSelection] = useState<ActionTypeCatalogSelection | null>(
     null,
   );
+  const valueKey = useMemo(() => buildActionSourceValueKey(value), [value]);
+  const allowedKindsKey = useMemo(() => buildAllowedKindsKey(allowedKinds), [allowedKinds]);
 
   const ensureGroupToolsLoaded = useCallback(async (groupKey: string) => {
     if (loadedGroupKeysRef.current.has(groupKey) || loadingGroupKeysRef.current.has(groupKey)) {
@@ -187,15 +217,44 @@ export function ActionTypeToolSelectModal({
     }
   }, []);
 
+  const ensureGroupToolsLoadedRef = useRef(ensureGroupToolsLoaded);
+  ensureGroupToolsLoadedRef.current = ensureGroupToolsLoaded;
+
   useEffect(() => {
     if (!open) {
+      setKeyword("");
+      setDebouncedKeyword("");
       return;
     }
+
+    const timer = window.setTimeout(() => {
+      setDebouncedKeyword(keyword.trim());
+    }, CATALOG_SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [keyword, open]);
+
+  useEffect(() => {
+    if (!open) {
+      catalogRequestIdRef.current += 1;
+      setLoading(false);
+      return;
+    }
+
+    const requestId = ++catalogRequestIdRef.current;
+    const currentValue = valueRef.current;
+    const currentAllowedKinds = allowedKindsRef.current;
 
     const loadCatalog = async () => {
       setLoading(true);
       try {
-        const nextCatalog = await listActionTypeExecutionFactoryCatalog(keyword);
+        const nextCatalog = await listActionTypeExecutionFactoryCatalog(debouncedKeyword);
+        if (requestId !== catalogRequestIdRef.current) {
+          return;
+        }
+
+        // Keep ref in sync before optional preload (avoids stale hasCachedTools short-circuit).
+        catalogRef.current = nextCatalog;
         setCatalog(nextCatalog);
         loadedGroupKeysRef.current = new Set();
         loadingGroupKeysRef.current = new Set();
@@ -209,27 +268,32 @@ export function ActionTypeToolSelectModal({
             loadedGroupKeysRef.current.add(`group:mcp:${server.mcpId}`);
           }
         });
-        setActiveTab(value?.type === "mcp" && allowedKinds.includes("mcp") ? "mcp" : "tool");
+        setActiveTab(
+          currentValue?.type === "mcp" && currentAllowedKinds.includes("mcp") ? "mcp" : "tool",
+        );
         const initialGroupKey =
-          value?.type === "mcp" && value.mcpId
-            ? `group:mcp:${value.mcpId}`
-            : value?.type === "tool" && value.boxId
-              ? `group:tool:${value.boxId}`
+          currentValue?.type === "mcp" && currentValue.mcpId
+            ? `group:mcp:${currentValue.mcpId}`
+            : currentValue?.type === "tool" && currentValue.boxId
+              ? `group:tool:${currentValue.boxId}`
               : "";
 
         if (initialGroupKey) {
           setExpandedKeys([initialGroupKey]);
-          await ensureGroupToolsLoaded(initialGroupKey);
+          await ensureGroupToolsLoadedRef.current(initialGroupKey);
+          if (requestId !== catalogRequestIdRef.current) {
+            return;
+          }
         } else {
           setExpandedKeys([]);
         }
 
-        const initialSelection = buildSelectionFromValue(catalogRef.current, value);
+        const initialSelection = buildSelectionFromValue(catalogRef.current, currentValue);
         if (initialSelection) {
           setSelectedSelection(initialSelection);
-        } else if (value?.type === "tool" && value.boxId) {
-          const box = catalogRef.current.toolBoxes.find((item) => item.boxId === value.boxId);
-          const fallbackTool = buildToolFromValue(value);
+        } else if (currentValue?.type === "tool" && currentValue.boxId) {
+          const box = catalogRef.current.toolBoxes.find((item) => item.boxId === currentValue.boxId);
+          const fallbackTool = buildToolFromValue(currentValue);
           setSelectedSelection(
             box && fallbackTool
               ? {
@@ -240,9 +304,11 @@ export function ActionTypeToolSelectModal({
                 }
               : null,
           );
-        } else if (value?.type === "mcp" && value.mcpId) {
-          const server = catalogRef.current.mcpServers.find((item) => item.mcpId === value.mcpId);
-          const fallbackTool = buildToolFromValue(value);
+        } else if (currentValue?.type === "mcp" && currentValue.mcpId) {
+          const server = catalogRef.current.mcpServers.find(
+            (item) => item.mcpId === currentValue.mcpId,
+          );
+          const fallbackTool = buildToolFromValue(currentValue);
           setSelectedSelection(
             server && fallbackTool
               ? {
@@ -257,12 +323,18 @@ export function ActionTypeToolSelectModal({
           setSelectedSelection(null);
         }
       } finally {
-        setLoading(false);
+        if (requestId === catalogRequestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 
     void loadCatalog();
-  }, [allowedKinds, ensureGroupToolsLoaded, keyword, open, value]);
+
+    return () => {
+      catalogRequestIdRef.current += 1;
+    };
+  }, [allowedKindsKey, debouncedKeyword, open, valueKey]);
 
   const selectedKey = useMemo(
     () => (selectedSelection ? buildSelectionKey(selectedSelection) : null),
