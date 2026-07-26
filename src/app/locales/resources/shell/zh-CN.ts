@@ -43,7 +43,7 @@ export const shellZhCN = {
       authorizationManagement: "权限管理",
       licenseManagement: "授权管理",
       modelManagement: "模型配置",
-      traceai: "BKN Trace",
+      bknTrace: "BKN Trace",
       logManagement: "日志管理",
       apiKeys: "API Key",
       account: "个人中心",
