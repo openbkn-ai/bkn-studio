@@ -246,9 +246,9 @@ export const dataCatalogZhCN = {
         "将被 Embedding 模型向量化，用于语义相似度检索；可与全文二选一或同时开启。",
       roleBuildKeyHintBatch:
         "批量构建时用于识别增量数据的字段（如更新时间、自增 ID）；必填。",
-      roleBuildKeyHintStreaming: "流式构建时用于标识行的 ID 字段；可选。",
+      roleBuildKeyHintStreaming: "流式构建时用于标识行的 ID 字段；必填。",
       roleBuildKeyHintConfig:
-        "增量构建使用；批量必填，流式可选。",
+        "增量构建使用；批量与流式均需指定。",
       roleFulltextHint: "建立关键词全文索引的文本字段，随数据同步即时生效。",
       selectAll: "全选",
       clearAll: "清空",

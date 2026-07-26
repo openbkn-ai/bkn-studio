@@ -260,9 +260,9 @@ export const dataCatalogEnUS = {
         "Fields vectorized by the embedding model for semantic search; can be used with or without full-text.",
       roleBuildKeyHintBatch:
         "Field used to detect incremental data in batch builds (e.g. updated_at, auto-increment ID); required.",
-      roleBuildKeyHintStreaming: "Row ID field for streaming builds; optional.",
+      roleBuildKeyHintStreaming: "Row ID field for streaming builds; required.",
       roleBuildKeyHintConfig:
-        "Used for incremental builds; required for batch and optional for streaming.",
+        "Used for incremental builds; required for both batch and streaming.",
       roleFulltextHint:
         "Text fields indexed for keyword full-text search; applied immediately during data sync.",
       selectAll: "Select all",
