@@ -30,9 +30,13 @@ import {
   LOGIC_ATTRIBUTE_TYPE_OPTIONS,
   PARAMETER_SOURCE_OPTIONS,
   VALUE_FROM_OPTIONS,
+  asOptionalString,
   buildToolLogicParameterSettings,
   extractLeafParams,
   isEmptyExceptZero,
+  isToolLogicBindingComplete,
+  removeParameterById,
+  readLogicAttributeToolBinding,
 } from "./constants";
 import {
   listObjectTypeLogicMetricModels,
@@ -50,6 +54,8 @@ import styles from "./ObjectTypeLogicAttributeEditDrawer.module.css";
 
 type SettingItem = ObjectTypeLogicParameter & {
   error?: Record<string, string>;
+  /** 用户通过「新建」手动添加的参数，可删除。工具 schema 自动解析的不带此标记。 */
+  manual?: boolean;
 };
 
 type ObjectTypeLogicAttributeEditDrawerProps = {
@@ -88,10 +94,6 @@ type LogicAttributeFormValues = {
 
 function createParameterId() {
   return `param-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function asOptionalString(value: unknown) {
-  return typeof value === "string" ? value : undefined;
 }
 
 export function ObjectTypeLogicAttributeEditDrawer({
@@ -327,12 +329,17 @@ export function ObjectTypeLogicAttributeEditDrawer({
       ...prev,
       {
         id: createParameterId(),
+        manual: true,
         name: "",
         source: "body",
         type: "string",
         valueFrom: "input",
       },
     ]);
+  };
+
+  const removeToolParameter = (id: string) => {
+    setSettingList((prev) => removeParameterById(prev, id));
   };
 
   const handleToolSelect = async (selection: ActionTypeCatalogSelection) => {
@@ -401,15 +408,29 @@ export function ObjectTypeLogicAttributeEditDrawer({
   };
 
   const handleSubmit = async () => {
-    await form.validateFields();
+    try {
+      await form.validateFields();
+    } catch {
+      return;
+    }
     if (!type) {
       return;
     }
-    const formValues = form.getFieldsValue();
-    if (
-      (type !== "tool" && !resourceId) ||
-      (type === "tool" && (!formValues.boxId || !formValues.toolId))
-    ) {
+    // Ant Design 5: getFieldsValue() only returns registered fields by default.
+    // boxId/toolId/resourceName are kept via hidden Form.Items; true still covers
+    // any store values set before registration during the same tick.
+    const formValues = form.getFieldsValue(true) as LogicAttributeFormValues;
+    const toolBinding = readLogicAttributeToolBinding({
+      boxId: formValues.boxId,
+      resourceName: formValues.resourceName,
+      toolId: formValues.toolId,
+    });
+    if (type !== "tool" && !resourceId) {
+      void message.error(t("knowledgeNetwork.pleaseSelect"));
+      return;
+    }
+    if (type === "tool" && !isToolLogicBindingComplete(toolBinding)) {
+      void message.error(t("knowledgeNetwork.objectTypeLogicToolSelect"));
       return;
     }
     if (type === "tool" && settingList.length > 0 && validateParams()) {
@@ -417,19 +438,19 @@ export function ObjectTypeLogicAttributeEditDrawer({
       return;
     }
 
-    const resourceName =
+    const resolvedResourceName =
       type === "metric"
         ? metricModelList.find((item) => item.id === resourceId)?.name
-        : formValues.resourceName;
+        : toolBinding.resourceName;
 
     onOk({
       comment: formValues.comment,
       dataSource: {
-        boxId: formValues.boxId,
+        boxId: toolBinding.boxId,
         id: type === "tool" ? undefined : resourceId,
-        name: resourceName ?? "",
+        name: resolvedResourceName ?? "",
         resultPath: formValues.resultPath,
-        toolId: formValues.toolId,
+        toolId: toolBinding.toolId,
         type,
       },
       displayName: formValues.displayName ?? "",
@@ -438,9 +459,10 @@ export function ObjectTypeLogicAttributeEditDrawer({
         type === "metric"
           ? []
           : extractLeafParams(settingList).map((item) => {
-              const { error, children, ...parameter } = item;
+              const { error, children, manual, ...parameter } = item;
               void error;
               void children;
+              void manual;
               return parameter;
             }),
       type,
@@ -564,6 +586,18 @@ export function ObjectTypeLogicAttributeEditDrawer({
       title: t("knowledgeNetwork.objectTypeLogicValue"),
       width: 278,
     },
+    {
+      align: "center",
+      key: "actions",
+      render: (_, record) =>
+        record.manual ? (
+          <AppButton danger onClick={() => removeToolParameter(record.id)} type="link">
+            {t("common.delete")}
+          </AppButton>
+        ) : null,
+      title: t("common.actions"),
+      width: 72,
+    },
   ];
 
   return (
@@ -585,6 +619,16 @@ export function ObjectTypeLogicAttributeEditDrawer({
       width={1000}
     >
       <Form form={form} layout="vertical">
+        {/* Register tool binding fields so getFieldsValue() includes them (antd 5). */}
+        <Form.Item hidden name="boxId">
+          <Input />
+        </Form.Item>
+        <Form.Item hidden name="toolId">
+          <Input />
+        </Form.Item>
+        <Form.Item hidden name="resourceName">
+          <Input />
+        </Form.Item>
         <Row gutter={16}>
           <Col span={6}>
             <Form.Item
@@ -648,7 +692,10 @@ export function ObjectTypeLogicAttributeEditDrawer({
           </Col>
           <Col span={6}>
             {type === "tool" ? (
-              <Form.Item label={t("knowledgeNetwork.objectTypeLogicAttributeResource")}>
+              <Form.Item
+                label={t("knowledgeNetwork.objectTypeLogicAttributeResource")}
+                required
+              >
                 <Input
                   onClick={() => setToolSelectorOpen(true)}
                   placeholder={t("knowledgeNetwork.objectTypeLogicToolSelect")}

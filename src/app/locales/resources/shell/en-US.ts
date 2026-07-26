@@ -42,7 +42,7 @@ export const shellEnUS = {
       authorizationManagement: "Permission Management",
       licenseManagement: "License Management",
       modelManagement: "Model Configuration",
-      traceai: "BKN Trace",
+      bknTrace: "BKN Trace",
       logManagement: "Log Management",
       apiKeys: "API Key",
       account: "Account",

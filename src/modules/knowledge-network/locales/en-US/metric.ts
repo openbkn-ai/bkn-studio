@@ -74,6 +74,8 @@ export const metricPart = {
     metricOrderByProperty: "Sort property",
     metricOrderByPropertyPlaceholder: "Select sort property",
     metricOrderDesc: "Descending",
+    metricQueryAnalysisDimensions: "Analysis dimensions",
+    metricQueryAnalysisDimensionsPlaceholder: "Select drill-down dimensions",
     metricQueryDuration: "Query took {{duration}} ms",
     metricQueryEmpty: "Run a query to see results.",
     metricQueryFillNull: "Fill null values",

@@ -5,9 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* 页面外框与业务知识网络列表页对齐：白底、同样的内边距节奏。 */
 .page {
   min-height: calc(100vh - 144px);
-  padding: 0 25px 25px;
+  padding: 14px 16px 20px;
   background: var(--color-bg-surface);
 }
 
@@ -101,11 +102,24 @@
   flex: 0 0 auto;
 }
 
+/* 筛选标签与知识网络列表页统一：主文字色、14px、与 32px 控件垂直居中。 */
 .filterLabel {
+  display: inline-flex;
   flex: 0 0 auto;
-  color: var(--color-text-secondary);
-  font-size: 13px;
+  align-items: center;
+  height: 32px;
+  color: var(--color-text-primary);
+  font-size: 14px;
   white-space: nowrap;
+}
+
+/* 下拉筛选高度对齐 32px（圆角已由页面全局归零）。 */
+.filterGroup :global(.ant-select-selector) {
+  height: 32px !important;
+}
+
+.filterGroup :global(.ant-select-selection-wrap) {
+  align-items: center;
 }
 
 .filterRight {
@@ -114,8 +128,23 @@
   gap: 8px;
 }
 
+/* 搜索框尺寸与知识网络列表页一致：220px、32px 方角、prefix 图标弱化。 */
 .searchInput {
-  width: 240px;
+  width: 220px;
+}
+
+.searchInput :global(.ant-input-affix-wrapper) {
+  height: 32px;
+  padding-inline: 11px;
+}
+
+.searchInput :global(.ant-input) {
+  height: 30px;
+}
+
+.searchInput :global(.ant-input-prefix) {
+  margin-inline-end: 8px;
+  color: rgba(0, 0, 0, 0.35);
 }
 
 .resultCount {
@@ -128,23 +157,13 @@
   min-height: 560px;
 }
 
+/* 卡片栅格与知识网络列表页对齐：按 320px 最小宽自动填充、12px 间距，
+   随容器宽度自适应列数，不再写死 4/3/2 断点。 */
 .cardGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
-}
-
-@media (max-width: 1599px) {
-  .cardGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-  }
-}
-
-@media (max-width: 1199px) {
-  .cardGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+  align-content: start;
 }
 
 .emptyWrap {

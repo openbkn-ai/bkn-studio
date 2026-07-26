@@ -6,9 +6,9 @@
  */
 
 .card {
-  padding: 20px;
-  border: 1px solid rgba(18, 40, 72, 0.08);
+  padding: 12px 14px;
+  border: 1px solid #d9e0ea;
   border-radius: 0;
   background: #fff;
-  min-height: 168px;
+  min-height: 120px;
 }

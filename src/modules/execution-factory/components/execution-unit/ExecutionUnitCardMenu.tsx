@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DownloadOutlined, MoreOutlined, SyncOutlined } from "@ant-design/icons";
+import { DownloadOutlined, EllipsisOutlined, SyncOutlined } from "@ant-design/icons";
 import { Dropdown, Tag } from "antd";
 import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
@@ -252,7 +252,7 @@ export function ExecutionUnitCardMenu({
         onClick={(event) => event.stopPropagation()}
         type="button"
       >
-        <MoreOutlined />
+        <EllipsisOutlined />
       </button>
     </Dropdown>
   );

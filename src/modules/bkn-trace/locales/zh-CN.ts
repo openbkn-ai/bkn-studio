@@ -16,6 +16,19 @@ export const bknTraceZhCN = {
       missingScope: "请输入 trace id 或 request id。",
       queryFailed: "查询失败。",
     },
+    emptyStates: {
+      businessNodes: "未返回业务语义节点",
+      claims: "未返回结论明细",
+      evidenceRefs: "未返回证据引用明细",
+    },
+    fields: {
+      basis: "依据摘要",
+      object: "对象",
+      status: "状态",
+      type: "类型",
+      version: "版本",
+      visibility: "可见性",
+    },
     metrics: {
       businessEdges: "业务边",
       businessNodes: "业务节点",
@@ -34,7 +47,10 @@ export const bknTraceZhCN = {
       trace: "Trace",
     },
     sections: {
+      businessDetails: "业务语义节点明细",
       businessGraph: "业务语义链",
+      claimDetails: "结论明细",
+      evidenceDetails: "证据引用明细",
       evidenceChain: "证据链",
       snapshot: "快照预览",
       traceGraph: "调用链",

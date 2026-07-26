@@ -8,34 +8,30 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  getCapabilityCreateMenuSections,
+  getCapabilityCreateMenuItems,
   resolveCapabilityAdpImportTab,
 } from "./capability-create-menu";
 
 describe("capability-create-menu", () => {
-  it("groups create choices by business creation intent", () => {
-    const sections = getCapabilityCreateMenuSections();
+  it("offers one create entry per capability tab, without import entries", () => {
+    const items = getCapabilityCreateMenuItems();
 
-    expect(sections.map((section) => section.titleKey)).toEqual([
-      "executionFactory.capabilityCreateMenu.httpApi",
-      "executionFactory.capabilityCreateMenu.function",
-      "executionFactory.capabilityCreateMenu.mcp",
-      "executionFactory.capabilityCreateMenu.skill",
-      "executionFactory.capabilityCreateMenu.package",
+    // 与列表 tab 一一对应：API 工具集 / 函数集 / MCP 服务 / SKILL 包。
+    expect(items.map((item) => item.action)).toEqual([
+      "quick-api",
+      "function",
+      "mcp",
+      "skill",
     ]);
 
-    expect(sections.map((section) => section.items.map((item) => item.action))).toEqual([
-      ["quick-api", "import-openapi"],
-      ["function"],
-      ["mcp"],
-      ["skill"],
-      ["import-adp"],
-    ]);
+    // 导入走工具栏「导入」按钮，添加能力里不再出现导入项。
+    expect(items.map((item) => item.action)).not.toContain("import-openapi");
+    expect(items.map((item) => item.action)).not.toContain("import-adp");
   });
 
-  it("returns a fresh shared model for every entry point", () => {
-    const toolbarMenu = getCapabilityCreateMenuSections();
-    const emptyStateMenu = getCapabilityCreateMenuSections();
+  it("returns a fresh model for every entry point", () => {
+    const toolbarMenu = getCapabilityCreateMenuItems();
+    const emptyStateMenu = getCapabilityCreateMenuItems();
 
     expect(emptyStateMenu).toEqual(toolbarMenu);
     expect(emptyStateMenu).not.toBe(toolbarMenu);

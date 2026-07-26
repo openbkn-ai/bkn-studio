@@ -17,7 +17,7 @@ import type { ExecutionUnitTab } from "@/modules/execution-factory/components/ex
 import type { CapabilityUxMode } from "@/modules/execution-factory/utils/capability-ux";
 import { isCapabilityUxV2 } from "@/modules/execution-factory/utils/capability-ux";
 import {
-  getCapabilityCreateMenuSections,
+  getCapabilityCreateMenuItems,
   resolveCapabilityAdpImportTab,
   type CapabilityCreateMenuAction,
 } from "@/modules/execution-factory/utils/capability-create-menu";
@@ -118,7 +118,7 @@ export function CreateMenu({
       : resolveCapabilityCreatePermission(activeTab)
     : getCreatePermission(activeTab);
   const importPermission = getImportPermission(activeTab);
-  const menuSections = useMemo(() => getCapabilityCreateMenuSections(), []);
+  const capabilityCreateItems = useMemo(() => getCapabilityCreateMenuItems(), []);
 
   useEffect(() => {
     if (!autoOpen || !permission) {
@@ -171,19 +171,14 @@ export function CreateMenu({
     openCapabilityMode(action);
   };
 
-  const capabilityMenuItems: MenuProps["items"] = menuSections.map((section) => ({
-    key: section.titleKey,
-    label: t(section.titleKey),
-    type: "group" as const,
-    children: section.items.map((item) => ({
-      key: item.action,
-      label: (
-        <div className={styles.createMenuItem}>
-          <div className={styles.createMenuItemTitle}>{t(item.titleKey)}</div>
-          <div className={styles.createMenuItemDesc}>{t(item.descriptionKey)}</div>
-        </div>
-      ),
-    })),
+  const capabilityMenuItems: MenuProps["items"] = capabilityCreateItems.map((item) => ({
+    key: item.action,
+    label: (
+      <div className={styles.createMenuItem}>
+        <div className={styles.createMenuItemTitle}>{t(item.titleKey)}</div>
+        <div className={styles.createMenuItemDesc}>{t(item.descriptionKey)}</div>
+      </div>
+    ),
   }));
 
   const createButton = capabilityUxV2 && !useLegacyOperatorCreate ? (

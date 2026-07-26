@@ -16,69 +16,30 @@ export type CapabilityCreateMenuItem = {
   descriptionKey: string;
 };
 
-export type CapabilityCreateMenuSection = {
-  titleKey: string;
-  items: CapabilityCreateMenuItem[];
-};
-
-export function getCapabilityCreateMenuSections(): CapabilityCreateMenuSection[] {
+export function getCapabilityCreateMenuItems(): CapabilityCreateMenuItem[] {
+  // 与列表 tab 一一对应：API 工具集 / 函数集 / MCP 服务 / SKILL 包。
+  // 导入走工具栏的「导入」按钮（各页面通用），这里只保留「新建」四类，
+  // 不再分组——每类只有一项，分组标题和条目标题会重复。
   return [
     {
-      titleKey: "executionFactory.capabilityCreateMenu.httpApi",
-      items: [
-        {
-          action: "quick-api",
-          titleKey: "executionFactory.capabilityCreateMenu.addHttpApi",
-          descriptionKey: "executionFactory.capabilityCreateMenu.addHttpApiDesc",
-        },
-        {
-          action: "import-openapi",
-          titleKey: "executionFactory.capabilityCreateMenu.importOpenApi",
-          descriptionKey: "executionFactory.capabilityCreateMenu.importOpenApiDesc",
-        },
-      ],
+      action: "quick-api",
+      titleKey: "executionFactory.capabilityCreateMenu.addHttpApi",
+      descriptionKey: "executionFactory.capabilityCreateMenu.addHttpApiDesc",
     },
     {
-      // 代码函数是自己写逻辑，SKILL 是导入现成技能包，两件事不该并成一组。
-      // 分组顺序和列表 tab 保持一致：API / 代码函数 / MCP / SKILL / 能力包。
-      titleKey: "executionFactory.capabilityCreateMenu.function",
-      items: [
-        {
-          action: "function",
-          titleKey: "executionFactory.capabilityCreateMenu.addFunction",
-          descriptionKey: "executionFactory.capabilityCreateMenu.addFunctionDesc",
-        },
-      ],
+      action: "function",
+      titleKey: "executionFactory.capabilityCreateMenu.addFunction",
+      descriptionKey: "executionFactory.capabilityCreateMenu.addFunctionDesc",
     },
     {
-      titleKey: "executionFactory.capabilityCreateMenu.mcp",
-      items: [
-        {
-          action: "mcp",
-          titleKey: "executionFactory.capabilityCreateMenu.registerMcp",
-          descriptionKey: "executionFactory.capabilityCreateMenu.registerMcpDesc",
-        },
-      ],
+      action: "mcp",
+      titleKey: "executionFactory.capabilityCreateMenu.registerMcp",
+      descriptionKey: "executionFactory.capabilityCreateMenu.registerMcpDesc",
     },
     {
-      titleKey: "executionFactory.capabilityCreateMenu.skill",
-      items: [
-        {
-          action: "skill",
-          titleKey: "executionFactory.capabilityCreateMenu.importSkill",
-          descriptionKey: "executionFactory.capabilityCreateMenu.importSkillDesc",
-        },
-      ],
-    },
-    {
-      titleKey: "executionFactory.capabilityCreateMenu.package",
-      items: [
-        {
-          action: "import-adp",
-          titleKey: "executionFactory.capabilityCreateMenu.importAdp",
-          descriptionKey: "executionFactory.capabilityCreateMenu.importAdpDesc",
-        },
-      ],
+      action: "skill",
+      titleKey: "executionFactory.capabilityCreateMenu.importSkill",
+      descriptionKey: "executionFactory.capabilityCreateMenu.importSkillDesc",
     },
   ];
 }
