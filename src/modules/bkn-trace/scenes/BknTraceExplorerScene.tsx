@@ -36,6 +36,12 @@ import {
   type TraceGraph,
   type TraceGraphNode,
 } from "@/modules/bkn-trace/services/trace.service";
+import {
+  businessRows,
+  claimRows,
+  evidenceRows,
+  type ExplainabilityRow,
+} from "@/modules/bkn-trace/utils/trace-explainability";
 
 type ScopeMode = "request" | "trace";
 
@@ -74,6 +80,29 @@ export function BknTraceExplorerScene() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<TraceExplorerState>({});
+  const explainabilityColumns = useMemo<ColumnsType<ExplainabilityRow>>(
+    () => [
+      { dataIndex: "kind", key: "kind", title: t("bknTrace.fields.type"), width: 160 },
+      { dataIndex: "primary", key: "primary", title: t("bknTrace.fields.object") },
+      { dataIndex: "secondary", key: "secondary", title: t("bknTrace.fields.basis") },
+      {
+        dataIndex: "status",
+        key: "status",
+        render: (status: string) => <Tag color={status === "failed" || status === "error" ? "red" : "blue"}>{status}</Tag>,
+        title: t("bknTrace.fields.status"),
+        width: 120,
+      },
+      {
+        dataIndex: "visibility",
+        key: "visibility",
+        render: (visibility: string) => <Tag color={visibility === "visible" ? "green" : "orange"}>{visibility}</Tag>,
+        title: t("bknTrace.fields.visibility"),
+        width: 120,
+      },
+      { dataIndex: "versionStatus", key: "versionStatus", title: t("bknTrace.fields.version"), width: 140 },
+    ],
+    [t],
+  );
 
   const effectiveScope = useMemo(() => {
     const trimmedTraceId = traceId.trim();
@@ -124,6 +153,18 @@ export function BknTraceExplorerScene() {
     ...(state.businessGraph?.partialReason ?? []),
     ...(state.snapshotPreview?.partialReason ?? []),
   ];
+  const claims = useMemo(
+    () => claimRows(state.evidenceChain?.data.claims ?? []),
+    [state.evidenceChain?.data.claims],
+  );
+  const evidenceRefs = useMemo(
+    () => evidenceRows(state.evidenceChain?.data.evidenceRefs ?? []),
+    [state.evidenceChain?.data.evidenceRefs],
+  );
+  const businessNodes = useMemo(
+    () => businessRows(state.businessGraph?.data.nodes ?? []),
+    [state.businessGraph?.data.nodes],
+  );
 
   return (
     <div className={styles.scene}>
@@ -263,6 +304,42 @@ export function BknTraceExplorerScene() {
                   </Descriptions.Item>
                 </Descriptions>
               </div>
+            </section>
+
+            <section className={styles.panel}>
+              <Typography.Title level={5}>{t("bknTrace.sections.claimDetails")}</Typography.Title>
+              <Table
+                columns={explainabilityColumns}
+                dataSource={claims}
+                locale={{ emptyText: t("bknTrace.emptyStates.claims") }}
+                pagination={{ pageSize: 5, size: "small" }}
+                rowKey="id"
+                size="small"
+              />
+            </section>
+
+            <section className={styles.panel}>
+              <Typography.Title level={5}>{t("bknTrace.sections.evidenceDetails")}</Typography.Title>
+              <Table
+                columns={explainabilityColumns}
+                dataSource={evidenceRefs}
+                locale={{ emptyText: t("bknTrace.emptyStates.evidenceRefs") }}
+                pagination={{ pageSize: 8, size: "small" }}
+                rowKey="id"
+                size="small"
+              />
+            </section>
+
+            <section className={styles.panel}>
+              <Typography.Title level={5}>{t("bknTrace.sections.businessDetails")}</Typography.Title>
+              <Table
+                columns={explainabilityColumns}
+                dataSource={businessNodes}
+                locale={{ emptyText: t("bknTrace.emptyStates.businessNodes") }}
+                pagination={{ pageSize: 8, size: "small" }}
+                rowKey="id"
+                size="small"
+              />
             </section>
           </div>
         )}

@@ -38,6 +38,75 @@ export type TraceGraphEdge = {
   parentSpanId: string;
 };
 
+type ExplainabilityFieldValue = boolean | number | string | null | undefined;
+
+export type TraceClaim = {
+  claim_hash?: ExplainabilityFieldValue;
+  claim_id?: ExplainabilityFieldValue;
+  claim_type?: ExplainabilityFieldValue;
+  operation?: ExplainabilityFieldValue;
+  subject_refs?: {
+    entity_kind?: ExplainabilityFieldValue;
+    model_name?: ExplainabilityFieldValue;
+    operation?: ExplainabilityFieldValue;
+    query_hash?: ExplainabilityFieldValue;
+    resource_id?: ExplainabilityFieldValue;
+    status?: ExplainabilityFieldValue;
+    [key: string]: unknown;
+  };
+  version_status?: ExplainabilityFieldValue;
+  visibility?: ExplainabilityFieldValue;
+  [key: string]: unknown;
+};
+
+export type TraceEvidenceRef = {
+  ref_id?: ExplainabilityFieldValue;
+  ref_type?: ExplainabilityFieldValue;
+  source_system?: ExplainabilityFieldValue;
+  summary?: {
+    catalog_id?: ExplainabilityFieldValue;
+    id?: ExplainabilityFieldValue;
+    kind?: ExplainabilityFieldValue;
+    message_hash?: ExplainabilityFieldValue;
+    model_name?: ExplainabilityFieldValue;
+    model_provider?: ExplainabilityFieldValue;
+    resource_id?: ExplainabilityFieldValue;
+    result_hash?: ExplainabilityFieldValue;
+    row_hash?: ExplainabilityFieldValue;
+    status?: ExplainabilityFieldValue;
+    version_status?: ExplainabilityFieldValue;
+    [key: string]: unknown;
+  };
+  summary_hash?: ExplainabilityFieldValue;
+  validity?: ExplainabilityFieldValue;
+  version_status?: ExplainabilityFieldValue;
+  visibility?: ExplainabilityFieldValue;
+  [key: string]: unknown;
+};
+
+export type TraceBusinessRef = Record<string, unknown>;
+
+export type TraceBusinessNode = {
+  claim_id?: ExplainabilityFieldValue;
+  id?: ExplainabilityFieldValue;
+  label?: ExplainabilityFieldValue;
+  node_type?: ExplainabilityFieldValue;
+  properties?: {
+    ref_type?: ExplainabilityFieldValue;
+    source_system?: ExplainabilityFieldValue;
+    summary_hash?: ExplainabilityFieldValue;
+    validity?: ExplainabilityFieldValue;
+    version_status?: ExplainabilityFieldValue;
+    visibility?: ExplainabilityFieldValue;
+    [key: string]: unknown;
+  };
+  version_status?: ExplainabilityFieldValue;
+  visibility?: ExplainabilityFieldValue;
+  [key: string]: unknown;
+};
+
+export type TraceBusinessEdge = Record<string, unknown>;
+
 export type GraphPage = {
   edgeCount: number;
   nodeCount: number;
@@ -59,9 +128,9 @@ export type TraceGraph = {
 
 export type EvidenceChain = {
   data: {
-    businessRefs: Array<Record<string, unknown>>;
-    claims: Array<Record<string, unknown>>;
-    evidenceRefs: Array<Record<string, unknown>>;
+    businessRefs: TraceBusinessRef[];
+    claims: TraceClaim[];
+    evidenceRefs: TraceEvidenceRef[];
   };
   page: GraphPage;
   partial: boolean;
@@ -73,8 +142,8 @@ export type EvidenceChain = {
 
 export type BusinessGraph = {
   data: {
-    edges: Array<Record<string, unknown>>;
-    nodes: Array<Record<string, unknown>>;
+    edges: TraceBusinessEdge[];
+    nodes: TraceBusinessNode[];
   };
   page: GraphPage;
   partial: boolean;
@@ -149,9 +218,9 @@ type BackendTraceGraph = {
 type BackendEvidenceChain = {
   "bkn.request.id"?: string;
   data?: {
-    business_refs?: Array<Record<string, unknown>>;
-    claims?: Array<Record<string, unknown>>;
-    evidence_refs?: Array<Record<string, unknown>>;
+    business_refs?: TraceBusinessRef[];
+    claims?: TraceClaim[];
+    evidence_refs?: TraceEvidenceRef[];
   };
   page?: BackendGraphPage;
   partial?: boolean;
@@ -163,8 +232,8 @@ type BackendEvidenceChain = {
 type BackendBusinessGraph = {
   "bkn.request.id"?: string;
   data?: {
-    edges?: Array<Record<string, unknown>>;
-    nodes?: Array<Record<string, unknown>>;
+    edges?: TraceBusinessEdge[];
+    nodes?: TraceBusinessNode[];
   };
   page?: BackendGraphPage;
   partial?: boolean;

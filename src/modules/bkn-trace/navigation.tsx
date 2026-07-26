@@ -14,9 +14,9 @@ export const bknTraceNavigation: ConsoleNavContribution = {
   items: [
     {
       key: "bkn-trace",
-      labelKey: "shell.items.traceai",
+      labelKey: "shell.items.bknTrace",
       icon: <BranchesOutlined />,
-      path: "/bkn-trace",
+      path: "/system/bkn-trace",
       permission: ["bkn-trace:view"],
     },
   ],

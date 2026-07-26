@@ -1,5 +1,8 @@
 allowBuilds:
   esbuild: true
 auditConfig:
+  # GHSA-qwww-vcr4-c8h2 affects React Router RSC Mode. Studio is a Vite SPA
+  # and does not enable RSC Mode; remove this once a published patch is
+  # available for react-router-dom.
   ignoreGhsas:
     - GHSA-qwww-vcr4-c8h2
