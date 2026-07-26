@@ -46,6 +46,36 @@ export function isEmptyExceptZero(value: unknown) {
   return value === undefined || value === null || value === "";
 }
 
+export function asOptionalString(value: unknown) {
+  return typeof value === "string" ? value : undefined;
+}
+
+export type LogicAttributeToolBinding = {
+  boxId?: string;
+  resourceName?: string;
+  toolId?: string;
+};
+
+/**
+ * Read tool binding from Ant Design form values.
+ * Callers must pass values that include unregistered store fields
+ * (`getFieldsValue(true)` or registered hidden `Form.Item`s). Default
+ * `getFieldsValue()` omits `boxId`/`toolId` and looks like a silent no-op submit.
+ */
+export function readLogicAttributeToolBinding(
+  formValues: Record<string, unknown>,
+): LogicAttributeToolBinding {
+  return {
+    boxId: asOptionalString(formValues.boxId),
+    resourceName: asOptionalString(formValues.resourceName),
+    toolId: asOptionalString(formValues.toolId),
+  };
+}
+
+export function isToolLogicBindingComplete(binding: LogicAttributeToolBinding) {
+  return Boolean(binding.boxId && binding.toolId);
+}
+
 export function deduplicateByName<T extends { name: string }>(items: T[]) {
   const map = new Map<string, T>();
   items.forEach((item) => {
