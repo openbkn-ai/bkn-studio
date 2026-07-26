@@ -7,7 +7,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildToolLogicParameterSettings } from "./constants";
+import {
+  buildToolLogicParameterSettings,
+  isToolLogicBindingComplete,
+  readLogicAttributeToolBinding,
+} from "./constants";
 
 describe("buildToolLogicParameterSettings", () => {
   it("merges saved tool parameter mappings into the input schema", () => {
@@ -94,5 +98,36 @@ describe("buildToolLogicParameterSettings", () => {
         valueFrom: "const",
       },
     ]);
+  });
+});
+
+describe("readLogicAttributeToolBinding", () => {
+  it("treats antd default getFieldsValue() shape (no boxId/toolId) as incomplete", () => {
+    // Reproduces #261: tool name may be visible while registered-only values omit binding ids.
+    const registeredOnly = {
+      displayName: "Risk Score",
+      name: "risk_score",
+      type: "tool",
+    };
+
+    expect(isToolLogicBindingComplete(readLogicAttributeToolBinding(registeredOnly))).toBe(false);
+  });
+
+  it("accepts complete tool binding when boxId and toolId are present", () => {
+    const allValues = {
+      boxId: "box-1",
+      displayName: "Risk Score",
+      name: "risk_score",
+      resourceName: "Demo Tool",
+      toolId: "tool-1",
+      type: "tool",
+    };
+
+    expect(readLogicAttributeToolBinding(allValues)).toEqual({
+      boxId: "box-1",
+      resourceName: "Demo Tool",
+      toolId: "tool-1",
+    });
+    expect(isToolLogicBindingComplete(readLogicAttributeToolBinding(allValues))).toBe(true);
   });
 });
