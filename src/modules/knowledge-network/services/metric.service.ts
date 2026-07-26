@@ -398,10 +398,77 @@ function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
     };
   }
 
+  if (params.analysisDimensions?.length) {
+    payload.analysis_dimensions = params.analysisDimensions;
+  }
+
   return payload;
 }
 
-function normalizeMetricDataResponse(
+type BackendMetricDataSeries = NonNullable<BackendMetricDataResponse["datas"]>[number];
+
+const METRIC_DIMENSION_COLUMN_PREFIX = "dim_";
+
+function toMetricDimensionColumnKey(propertyName: string) {
+  return `${METRIC_DIMENSION_COLUMN_PREFIX}${propertyName}`;
+}
+
+function normalizeLabelRecord(
+  labels: BackendMetricDataSeries["labels"],
+): Record<string, string | number> {
+  if (!labels || Array.isArray(labels)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(labels).map(([key, value]) => [toMetricDimensionColumnKey(key), value]),
+  );
+}
+
+function collectLabelKeys(datas: BackendMetricDataSeries[]): string[] {
+  const keys = new Set<string>();
+  for (const item of datas) {
+    const labels = item.labels;
+    if (!labels || Array.isArray(labels)) {
+      continue;
+    }
+
+    for (const key of Object.keys(labels)) {
+      keys.add(toMetricDimensionColumnKey(key));
+    }
+  }
+
+  return [...keys];
+}
+
+function hasAnalysisLabels(datas: BackendMetricDataSeries[]): boolean {
+  return datas.some((item) => {
+    const labels = item.labels;
+    if (!labels) {
+      return false;
+    }
+
+    if (Array.isArray(labels)) {
+      return labels.length > 0;
+    }
+
+    return Object.keys(labels).length > 0;
+  });
+}
+
+function resolveSeriesTimes(item: BackendMetricDataSeries) {
+  if (item.time_strs && item.time_strs.length > 0) {
+    return item.time_strs;
+  }
+
+  if (item.times && item.times.length > 0) {
+    return item.times;
+  }
+
+  return [];
+}
+
+export function normalizeMetricDataResponse(
   data: BackendMetricDataResponse | MetricDataQueryResult,
   mode: MetricDataQueryParams["mode"],
 ): MetricDataQueryResult {
@@ -409,7 +476,8 @@ function normalizeMetricDataResponse(
     return data;
   }
 
-  const firstData = data.datas?.[0];
+  const datas = data.datas ?? [];
+  const firstData = datas[0];
   if (!firstData) {
     return {
       columns: [],
@@ -418,19 +486,52 @@ function normalizeMetricDataResponse(
     };
   }
 
+  const durationMs = data.overall_ms ?? data.vega_duration_ms;
+  const multiSeries = datas.length > 1 || hasAnalysisLabels(datas);
+  const labelKeys = multiSeries ? collectLabelKeys(datas) : [];
+
   if (mode === "instant") {
+    if (multiSeries) {
+      return {
+        columns: [
+          ...labelKeys.map((key) => ({ key, title: key })),
+          { key: "value", title: "Value" },
+        ],
+        durationMs,
+        rows: datas.map((item) => ({
+          ...normalizeLabelRecord(item.labels),
+          value: item.values?.[0] ?? "--",
+        })),
+      };
+    }
+
     return {
       columns: [
         { key: "metric", title: "Metric" },
         { key: "value", title: "Value" },
       ],
-      durationMs: data.overall_ms ?? data.vega_duration_ms,
+      durationMs,
       rows: [{ metric: "value", value: firstData.values?.[0] ?? "--" }],
       visualHint: "instant-card",
     };
   }
 
   if (mode === "proportion") {
+    if (multiSeries) {
+      return {
+        columns: [
+          ...labelKeys.map((key) => ({ key, title: key })),
+          { key: "value", title: "Value" },
+        ],
+        durationMs,
+        rows: datas.map((item) => ({
+          ...normalizeLabelRecord(item.labels),
+          value: item.proportions?.[0] ?? item.values?.[0] ?? "--",
+        })),
+        visualHint: "proportion-bars",
+      };
+    }
+
     const labels = Array.isArray(firstData.labels)
       ? firstData.labels
       : Object.values(firstData.labels ?? {});
@@ -441,7 +542,7 @@ function normalizeMetricDataResponse(
         { key: "dimension", title: "Dimension" },
         { key: "value", title: "Value" },
       ],
-      durationMs: data.overall_ms ?? data.vega_duration_ms,
+      durationMs,
       rows: values.map((value, index) => ({
         dimension: labels[index] ?? `Item ${index + 1}`,
         value,
@@ -450,12 +551,52 @@ function normalizeMetricDataResponse(
     };
   }
 
-  const times =
-    firstData.time_strs && firstData.time_strs.length > 0
-      ? firstData.time_strs
-      : firstData.times && firstData.times.length > 0
-        ? firstData.times
-        : [];
+  if (multiSeries) {
+    const valueKey = mode === "sameperiod" ? "current" : "value";
+    const rows: Array<Record<string, string | number>> = [];
+
+    for (const item of datas) {
+      const labelRecord = normalizeLabelRecord(item.labels);
+      const times = resolveSeriesTimes(item);
+      const values = item.values ?? [];
+
+      for (let index = 0; index < values.length; index += 1) {
+        rows.push({
+          ...labelRecord,
+          ...(mode === "sameperiod"
+            ? {
+                growthRate: item.growth_rates?.[index] ?? "",
+                growthValue: item.growth_values?.[index] ?? "",
+              }
+            : {}),
+          timestamp: times[index] == null ? "--" : formatMetricTimeLabel(times[index]),
+          [valueKey]: values[index] ?? "--",
+        });
+      }
+    }
+
+    return {
+      columns:
+        mode === "sameperiod"
+          ? [
+              ...labelKeys.map((key) => ({ key, title: key })),
+              { key: "timestamp", title: "Timestamp" },
+              { key: "current", title: "Current" },
+              { key: "growthValue", title: "Growth value" },
+              { key: "growthRate", title: "Growth rate" },
+            ]
+          : [
+              ...labelKeys.map((key) => ({ key, title: key })),
+              { key: "timestamp", title: "Timestamp" },
+              { key: "value", title: "Value" },
+            ],
+      durationMs,
+      rows,
+      visualHint: "trend-bars",
+    };
+  }
+
+  const times = resolveSeriesTimes(firstData);
   const valueKey = mode === "sameperiod" ? "current" : "value";
 
   return {
@@ -471,7 +612,7 @@ function normalizeMetricDataResponse(
             { key: "timestamp", title: "Timestamp" },
             { key: "value", title: "Value" },
           ],
-    durationMs: data.overall_ms ?? data.vega_duration_ms,
+    durationMs,
     rows: (firstData.values ?? []).map((value, index) => ({
       growthRate: firstData.growth_rates?.[index] ?? "",
       growthValue: firstData.growth_values?.[index] ?? "",

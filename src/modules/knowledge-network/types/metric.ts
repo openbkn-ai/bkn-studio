@@ -172,6 +172,7 @@ export type MetricDataQueryTimeRange =
   | "custom";
 
 export type MetricDataQueryParams = {
+  analysisDimensions?: string[];
   customEndTime?: unknown;
   customStartTime?: unknown;
   fillNull?: boolean;

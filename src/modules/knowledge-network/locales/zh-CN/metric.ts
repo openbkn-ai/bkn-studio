@@ -72,6 +72,8 @@ export const metricPart = {
     metricOrderByProperty: "排序属性",
     metricOrderByPropertyPlaceholder: "选择排序属性",
     metricOrderDesc: "降序",
+    metricQueryAnalysisDimensions: "分析维度",
+    metricQueryAnalysisDimensionsPlaceholder: "选择下钻维度",
     metricQueryDuration: "查询耗时 {{duration}} ms",
     metricQueryEmpty: "请先执行查询。",
     metricQueryFillNull: "填充空值",
