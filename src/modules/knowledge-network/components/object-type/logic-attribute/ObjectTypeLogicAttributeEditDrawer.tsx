@@ -30,10 +30,13 @@ import {
   LOGIC_ATTRIBUTE_TYPE_OPTIONS,
   PARAMETER_SOURCE_OPTIONS,
   VALUE_FROM_OPTIONS,
+  asOptionalString,
   buildToolLogicParameterSettings,
   extractLeafParams,
   isEmptyExceptZero,
+  isToolLogicBindingComplete,
   removeParameterById,
+  readLogicAttributeToolBinding,
 } from "./constants";
 import {
   listObjectTypeLogicMetricModels,
@@ -91,10 +94,6 @@ type LogicAttributeFormValues = {
 
 function createParameterId() {
   return `param-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function asOptionalString(value: unknown) {
-  return typeof value === "string" ? value : undefined;
 }
 
 export function ObjectTypeLogicAttributeEditDrawer({
@@ -417,14 +416,20 @@ export function ObjectTypeLogicAttributeEditDrawer({
     if (!type) {
       return;
     }
-    const formValues = form.getFieldsValue();
-    const boxId = formValues.boxId ?? getStringFieldValue("boxId");
-    const toolId = formValues.toolId ?? getStringFieldValue("toolId");
-    const resourceName = formValues.resourceName ?? getStringFieldValue("resourceName");
+    // Ant Design 5: getFieldsValue() only returns registered fields by default.
+    // boxId/toolId/resourceName are kept via hidden Form.Items; true still covers
+    // any store values set before registration during the same tick.
+    const formValues = form.getFieldsValue(true) as LogicAttributeFormValues;
+    const toolBinding = readLogicAttributeToolBinding({
+      boxId: formValues.boxId,
+      resourceName: formValues.resourceName,
+      toolId: formValues.toolId,
+    });
     if (type !== "tool" && !resourceId) {
+      void message.error(t("knowledgeNetwork.pleaseSelect"));
       return;
     }
-    if (type === "tool" && (!boxId || !toolId)) {
+    if (type === "tool" && !isToolLogicBindingComplete(toolBinding)) {
       void message.error(t("knowledgeNetwork.objectTypeLogicToolSelect"));
       return;
     }
@@ -436,16 +441,16 @@ export function ObjectTypeLogicAttributeEditDrawer({
     const resolvedResourceName =
       type === "metric"
         ? metricModelList.find((item) => item.id === resourceId)?.name
-        : resourceName;
+        : toolBinding.resourceName;
 
     onOk({
       comment: formValues.comment,
       dataSource: {
-        boxId,
+        boxId: toolBinding.boxId,
         id: type === "tool" ? undefined : resourceId,
         name: resolvedResourceName ?? "",
         resultPath: formValues.resultPath,
-        toolId,
+        toolId: toolBinding.toolId,
         type,
       },
       displayName: formValues.displayName ?? "",
@@ -614,6 +619,16 @@ export function ObjectTypeLogicAttributeEditDrawer({
       width={1000}
     >
       <Form form={form} layout="vertical">
+        {/* Register tool binding fields so getFieldsValue() includes them (antd 5). */}
+        <Form.Item hidden name="boxId">
+          <Input />
+        </Form.Item>
+        <Form.Item hidden name="toolId">
+          <Input />
+        </Form.Item>
+        <Form.Item hidden name="resourceName">
+          <Input />
+        </Form.Item>
         <Row gutter={16}>
           <Col span={6}>
             <Form.Item
@@ -679,18 +694,13 @@ export function ObjectTypeLogicAttributeEditDrawer({
             {type === "tool" ? (
               <Form.Item
                 label={t("knowledgeNetwork.objectTypeLogicAttributeResource")}
-                name="resourceName"
-                rules={[
-                  {
-                    message: t("knowledgeNetwork.objectTypeLogicToolSelect"),
-                    required: true,
-                  },
-                ]}
+                required
               >
                 <Input
                   onClick={() => setToolSelectorOpen(true)}
                   placeholder={t("knowledgeNetwork.objectTypeLogicToolSelect")}
                   readOnly
+                  value={getStringFieldValue("resourceName")}
                 />
               </Form.Item>
             ) : (
@@ -715,12 +725,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
             )}
           </Col>
         </Row>
-        <Form.Item hidden name="boxId">
-          <Input />
-        </Form.Item>
-        <Form.Item hidden name="toolId">
-          <Input />
-        </Form.Item>
         {type === "tool" ? (
           <Row gutter={16}>
             <Col span={24}>

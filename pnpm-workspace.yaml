@@ -1,5 +1,13 @@
 allowBuilds:
   esbuild: true
 
-overrides:
-  react-router: 8.3.0
+# GHSA-qwww-vcr4-c8h2 (react-router RSC-mode CSRF bypass): not applicable here.
+# This app is a client-only SPA (createBrowserRouter + RouterProvider); it does
+# not use react-router's RSC / server mode, which is the only code path the
+# advisory affects. No fixed version is published either — react-router-dom
+# latest is 7.18.1 and the advisory only lists 8.3.0 (unreleased) as patched, so
+# there is nothing to upgrade to. Remove this ignore once an upgrade path ships.
+# pnpm 11 reads audit settings here, not from package.json's "pnpm" field.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-qwww-vcr4-c8h2
