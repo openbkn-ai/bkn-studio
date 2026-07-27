@@ -116,6 +116,8 @@ export const actiontypePart = {
     actionTypeConditionOperation_exist: "Exists",
     actionTypeConditionOperation_not_exist: "Does not exist",
     actionTypeExecutionSourceLabel: "Execution source",
+    actionTypeExecutionSourceResolving: "Loading",
+    actionTypeExecutionSourceUnavailable: "Execution source unavailable",
     actionTypeExecutionSelectSource: "Select a tool or execution source",
     actionTypeExecutionSelectSourceTitle: "Select execution source",
     actionTypeExecutionMappingHint: "Map tool parameters to bound object data properties.",

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Table } from "antd";
+import { Spin, Table } from "antd";
 import type { TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,7 +13,12 @@ import { useTranslation } from "react-i18next";
 import { getActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
 import { FieldTypeIcon } from "@/modules/knowledge-network/components/object-type/data-attribute/FieldTypeIcon";
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
+import {
+  needsActionTypeActionSourceDisplayResolution,
+  resolveActionTypeActionSourceDisplay,
+} from "@/modules/knowledge-network/services/action-type-tool.service";
 import type {
+  ActionTypeActionSource,
   ActionTypeDetail,
   ActionTypeExecutionParameter,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -33,6 +38,10 @@ export function ActionTypeExecutionConfigTable({
 }: ActionTypeExecutionConfigTableProps) {
   const { t } = useTranslation();
   const [propertyTypeMap, setPropertyTypeMap] = useState<Record<string, string>>({});
+  const [resolvedActionSource, setResolvedActionSource] = useState<
+    ActionTypeActionSource | undefined
+  >(detail.executionConfig.actionSource);
+  const [isResolvingActionSource, setIsResolvingActionSource] = useState(false);
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -54,6 +63,37 @@ export function ActionTypeExecutionConfigTable({
 
     void loadProperties();
   }, [detail.objectTypeId, networkId]);
+
+  useEffect(() => {
+    const actionSource = detail.executionConfig.actionSource;
+    setResolvedActionSource(actionSource);
+
+    if (!actionSource || !needsActionTypeActionSourceDisplayResolution(actionSource)) {
+      setIsResolvingActionSource(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsResolvingActionSource(true);
+    const resolveDisplay = async () => {
+      try {
+        const resolved = await resolveActionTypeActionSourceDisplay(actionSource);
+        if (!cancelled) {
+          setResolvedActionSource(resolved);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsResolvingActionSource(false);
+        }
+      }
+    };
+
+    void resolveDisplay();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detail.executionConfig.actionSource]);
 
   const rows = useMemo<ParameterRow[]>(
     () =>
@@ -86,16 +126,23 @@ export function ActionTypeExecutionConfigTable({
     },
   ];
 
-  const sourceLabel =
-    getActionSourceDisplayName(detail.executionConfig.actionSource) ||
-    detail.executionConfig.sourceName;
+  const sourceLabel = isResolvingActionSource
+    ? ""
+    : getActionSourceDisplayName(resolvedActionSource) || detail.executionConfig.sourceName;
 
   return (
     <div className={styles.root}>
       <div className={styles.metaRow}>
         <div>
           <span>{t("knowledgeNetwork.actionTypeExecutionSourceLabel")}</span>
-          <strong>{sourceLabel || t("knowledgeNetwork.actionTypeEmptyValue")}</strong>
+          {isResolvingActionSource ? (
+            <strong className={styles.loadingSource}>
+              <Spin size="small" />
+              {t("knowledgeNetwork.actionTypeExecutionSourceResolving")}
+            </strong>
+          ) : (
+            <strong>{sourceLabel || t("knowledgeNetwork.actionTypeEmptyValue")}</strong>
+          )}
         </div>
       </div>
       <Table<ParameterRow>

@@ -6,9 +6,14 @@
  */
 
 import { http } from "@/framework/request/http";
-import { listMcpMarket, listMcpTools } from "@/modules/execution-factory/services/mcp.service";
+import {
+  getMcpMarket,
+  listMcpMarket,
+  listMcpTools,
+} from "@/modules/execution-factory/services/mcp.service";
 import { getToolDetail, listTools } from "@/modules/execution-factory/services/tool.service";
 import {
+  getToolbox,
   getToolboxMarket,
   listToolboxMarket,
 } from "@/modules/execution-factory/services/toolbox.service";
@@ -537,6 +542,148 @@ export async function resolveActionTypeToolParameters(
   }
 
   return fallback;
+}
+
+export function needsActionTypeActionSourceDisplayResolution(
+  actionSource?: ActionTypeActionSource,
+) {
+  if (!actionSource || actionSource.type === "manual") {
+    return false;
+  }
+
+  if (actionSource.type === "mcp") {
+    return Boolean(
+      actionSource.mcpId &&
+        (!actionSource.mcpName || (actionSource.toolId && !actionSource.toolName)),
+    );
+  }
+
+  return Boolean(
+    actionSource.boxId &&
+      (!actionSource.boxName || (actionSource.toolId && !actionSource.toolName)),
+  );
+}
+
+export async function resolveActionTypeActionSourceDisplay(
+  actionSource: ActionTypeActionSource,
+): Promise<ActionTypeActionSource> {
+  if (!needsActionTypeActionSourceDisplayResolution(actionSource)) {
+    return actionSource;
+  }
+
+  if (actionSource.type === "mcp" && actionSource.mcpId) {
+    let mcpName = actionSource.mcpName;
+    let toolId = actionSource.toolId;
+    let toolName = actionSource.toolName;
+
+    if (!mcpName) {
+      try {
+        const server = await getMcpMarket(actionSource.mcpId);
+        if (server) {
+          mcpName = server.name;
+        }
+      } catch (error) {
+        logServiceFallback(
+          "resolveActionTypeActionSourceDisplay.mcp.detail",
+          error,
+          `mcpId=${actionSource.mcpId}`,
+        );
+      }
+    }
+
+    try {
+      const catalog = await listActionTypeExecutionFactoryCatalog();
+      const server = catalog.mcpServers.find((item) => item.mcpId === actionSource.mcpId);
+      const tools = await loadActionTypeMcpServerTools(actionSource.mcpId);
+      const tool = tools.find(
+        (item) =>
+          item.toolId === actionSource.toolId ||
+          item.toolId === actionSource.toolName ||
+          item.toolName === actionSource.toolName,
+      );
+
+      mcpName ||= server?.mcpName;
+      toolId ||= tool?.toolId;
+      toolName ||= tool?.toolName;
+    } catch (error) {
+      logServiceFallback(
+        "resolveActionTypeActionSourceDisplay.mcp.catalog",
+        error,
+        `mcpId=${actionSource.mcpId} toolId=${actionSource.toolId ?? ""}`,
+      );
+    }
+
+    return {
+      ...actionSource,
+      mcpName,
+      toolId,
+      toolName,
+    };
+  }
+
+  if (actionSource.type === "tool" && actionSource.boxId) {
+    let boxName = actionSource.boxName;
+    let toolName = actionSource.toolName;
+
+    if (!boxName || (actionSource.toolId && !toolName)) {
+      const [toolboxResult, toolResult] = await Promise.allSettled([
+        getToolbox(actionSource.boxId),
+        actionSource.toolId
+          ? getToolDetail(actionSource.boxId, actionSource.toolId)
+          : Promise.resolve(undefined),
+      ]);
+
+      if (toolboxResult.status === "fulfilled" && toolboxResult.value) {
+        boxName ||= toolboxResult.value.name;
+      } else {
+        logServiceFallback(
+          "resolveActionTypeActionSourceDisplay.toolbox.detail",
+          toolboxResult.status === "rejected"
+            ? toolboxResult.reason
+            : new Error("Toolbox detail is empty"),
+          `boxId=${actionSource.boxId}`,
+        );
+      }
+
+      if (toolResult.status === "fulfilled" && toolResult.value) {
+        toolName ||= toolResult.value?.name;
+      } else {
+        logServiceFallback(
+          "resolveActionTypeActionSourceDisplay.tool.detail",
+          toolResult.status === "rejected"
+            ? toolResult.reason
+            : new Error("Tool detail is empty"),
+          `boxId=${actionSource.boxId} toolId=${actionSource.toolId ?? ""}`,
+        );
+      }
+    }
+
+    if (!boxName || (actionSource.toolId && !toolName)) {
+      try {
+        const catalog = await listActionTypeExecutionFactoryCatalog();
+        const box = catalog.toolBoxes.find((item) => item.boxId === actionSource.boxId);
+        const tools = await loadActionTypeToolBoxTools(actionSource.boxId);
+        const tool = tools.find((item) => item.toolId === actionSource.toolId);
+
+        boxName ||= box?.boxName;
+        toolName ||= tool?.toolName;
+      } catch (error) {
+        logServiceFallback(
+          "resolveActionTypeActionSourceDisplay.toolbox.catalog",
+          error,
+          `boxId=${actionSource.boxId} toolId=${actionSource.toolId ?? ""}`,
+        );
+      }
+    }
+
+    return {
+      ...actionSource,
+      boxName,
+      toolName,
+    };
+  }
+
+  return actionSource;
 }
 
 export function buildActionSourceFromCatalogSelection(

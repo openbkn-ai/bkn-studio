@@ -11,7 +11,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { resolveActionTypeToolInputSchema } from "@/modules/knowledge-network/services/action-type-tool.service";
+import {
+  needsActionTypeActionSourceDisplayResolution,
+  resolveActionTypeActionSourceDisplay,
+  resolveActionTypeToolInputSchema,
+} from "@/modules/knowledge-network/services/action-type-tool.service";
 import type {
   ActionTypeExecutionConfig,
   ActionTypeExecutionParameter,
@@ -39,20 +43,43 @@ type ActionTypeExecutionEditorProps = {
   onChange: (value: ActionTypeExecutionConfig) => void;
 };
 
+type DisplayResolutionStatus = "failed" | "idle" | "loading";
+
+const DISPLAY_RESOLUTION_TIMEOUT_MS = 3000;
+
 function buildActionSourceKey(actionSource?: ActionTypeExecutionConfig["actionSource"]) {
   if (!actionSource) {
     return "";
   }
 
   if (actionSource.type === "mcp") {
-    return actionSource.mcpId && actionSource.toolName
-      ? `mcp:${actionSource.mcpId}:${actionSource.toolName}`
+    const toolKey = actionSource.toolId || actionSource.toolName;
+    return actionSource.mcpId && toolKey
+      ? `mcp:${actionSource.mcpId}:${toolKey}`
       : "";
   }
 
   return actionSource.boxId && actionSource.toolId
     ? `tool:${actionSource.boxId}:${actionSource.toolId}`
     : "";
+}
+
+async function withDisplayResolutionTimeout<T>(promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error("Action source display resolution timed out")),
+      DISPLAY_RESOLUTION_TIMEOUT_MS,
+    );
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 export function ActionTypeExecutionEditor({
@@ -65,7 +92,19 @@ export function ActionTypeExecutionEditor({
   const valueRef = useRef(value);
   const onChangeRef = useRef(onChange);
   const loadedSourceKeyRef = useRef("");
+  const resolvedDisplaySourceKeyRef = useRef("");
+  const displayActionSourceRef = useRef<ActionTypeExecutionConfig["actionSource"]>(
+    value.actionSource,
+  );
+  const [displayActionSource, setDisplayActionSource] =
+    useState<ActionTypeExecutionConfig["actionSource"]>(value.actionSource);
   const [inputSchema, setInputSchema] = useState<ActionTypeToolInputParam[]>([]);
+  const [displayResolutionStatus, setDisplayResolutionStatus] =
+    useState<DisplayResolutionStatus>(() =>
+      needsActionTypeActionSourceDisplayResolution(value.actionSource)
+        ? "loading"
+        : "idle",
+    );
   const [schemaLoading, setSchemaLoading] = useState(false);
   const [propertyOptions, setPropertyOptions] = useState<
     Array<{
@@ -80,11 +119,17 @@ export function ActionTypeExecutionEditor({
 
   valueRef.current = value;
   onChangeRef.current = onChange;
+  displayActionSourceRef.current = displayActionSource;
 
   const sourceKey = useMemo(
     () => buildActionSourceKey(value.actionSource),
     [value.actionSource],
   );
+  const sourceNeedsDisplayResolution = needsActionTypeActionSourceDisplayResolution(
+    value.actionSource,
+  );
+  const displaySourceNeedsResolution =
+    needsActionTypeActionSourceDisplayResolution(displayActionSource);
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -112,6 +157,7 @@ export function ActionTypeExecutionEditor({
   useEffect(() => {
     if (!sourceKey || !value.actionSource) {
       loadedSourceKeyRef.current = "";
+      resolvedDisplaySourceKeyRef.current = "";
       setInputSchema([]);
       return;
     }
@@ -141,10 +187,85 @@ export function ActionTypeExecutionEditor({
     void loadSchema();
   }, [sourceKey, value.actionSource]);
 
+  useEffect(() => {
+    const actionSource = valueRef.current.actionSource;
+    if (!sourceKey || !actionSource) {
+      resolvedDisplaySourceKeyRef.current = "";
+      setDisplayActionSource(actionSource);
+      setDisplayResolutionStatus("idle");
+      return;
+    }
+
+    if (!sourceNeedsDisplayResolution) {
+      resolvedDisplaySourceKeyRef.current = sourceKey;
+      setDisplayActionSource(actionSource);
+      setDisplayResolutionStatus("idle");
+      return;
+    }
+
+    if (
+      resolvedDisplaySourceKeyRef.current === sourceKey &&
+      !needsActionTypeActionSourceDisplayResolution(displayActionSourceRef.current)
+    ) {
+      setDisplayResolutionStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+    setDisplayActionSource(actionSource);
+    setDisplayResolutionStatus("loading");
+
+    const resolveDisplay = async () => {
+      try {
+        const resolvedSource = await withDisplayResolutionTimeout(
+          resolveActionTypeActionSourceDisplay(actionSource),
+        );
+        if (cancelled) {
+          return;
+        }
+
+        const nextSourceName = getActionSourceDisplayName(resolvedSource);
+        const currentSourceName = getActionSourceDisplayName(valueRef.current.actionSource);
+        setDisplayActionSource(resolvedSource);
+        resolvedDisplaySourceKeyRef.current = sourceKey;
+        if (!nextSourceName || nextSourceName === currentSourceName) {
+          setDisplayResolutionStatus(
+            needsActionTypeActionSourceDisplayResolution(resolvedSource)
+              ? "failed"
+              : "idle",
+          );
+          return;
+        }
+
+        onChangeRef.current({
+          ...valueRef.current,
+          actionSource: resolvedSource,
+          sourceName: nextSourceName,
+          sourceType: resolvedSource.type,
+        });
+        setDisplayResolutionStatus("idle");
+      } catch {
+        if (!cancelled) {
+          resolvedDisplaySourceKeyRef.current = sourceKey;
+          setDisplayResolutionStatus("failed");
+        }
+      }
+    };
+
+    void resolveDisplay();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceKey, sourceNeedsDisplayResolution]);
+
   const hasSource = Boolean(getActionSourceDisplayName(value.actionSource) || value.sourceName.trim());
 
   const handleSourceChange = (nextSource: ActionTypeExecutionConfig["actionSource"]) => {
     loadedSourceKeyRef.current = "";
+    resolvedDisplaySourceKeyRef.current = "";
+    setDisplayActionSource(nextSource);
+    setDisplayResolutionStatus("idle");
     setInputSchema([]);
 
     if (!nextSource) {
@@ -168,6 +289,9 @@ export function ActionTypeExecutionEditor({
 
   const handleSourceSelected = (nextSource: NonNullable<ActionTypeExecutionConfig["actionSource"]>) => {
     loadedSourceKeyRef.current = "";
+    resolvedDisplaySourceKeyRef.current = "";
+    setDisplayActionSource(nextSource);
+    setDisplayResolutionStatus("idle");
     setInputSchema([]);
     onChange({
       ...value,
@@ -190,9 +314,15 @@ export function ActionTypeExecutionEditor({
       <div className={styles.operatorSection}>
         <div className={styles.operatorLabel}>{t("knowledgeNetwork.actionTypeOperatorLabel")}</div>
         <ActionTypeSourcePicker
+          loading={displayResolutionStatus === "loading"}
           onChange={handleSourceChange}
           onSourceSelected={handleSourceSelected}
-          value={value.actionSource}
+          unresolved={
+            displayResolutionStatus === "failed" &&
+            sourceNeedsDisplayResolution &&
+            displaySourceNeedsResolution
+          }
+          value={displayActionSource}
         />
       </div>
 
