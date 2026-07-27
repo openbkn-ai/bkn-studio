@@ -58,7 +58,7 @@ import type { AgentTokenProvider } from "@/modules/knowledge-network/services/ag
 
 import styles from "./ExperienceScene.module.css";
 
-/** 线上有、本地无精选定义的工具（如 get_object_types / get_relation_types）归到 Knowledge Network 组，不单开分类。 */
+/** 线上有、本地无 op 定义的工具（如 get_object_types / get_relation_types）归到 Knowledge Network 组，不单开分类。 */
 const ONLINE_GROUP = "Knowledge Network";
 
 function formatPreviewValue(value: unknown) {
@@ -111,7 +111,7 @@ function exampleBodyFromSchema(schema: unknown): Record<string, unknown> {
   return out;
 }
 
-/** 把线上 MCP 工具（tools/list）合成为 ContextLoaderOp（本地无精选定义时用）。 */
+/** 把线上 MCP 工具（tools/list）合成为 ContextLoaderOp（本地无 op 定义时用）。 */
 function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
   const body = exampleBodyFromSchema(tool.inputSchema);
   return {
@@ -448,23 +448,12 @@ function ToolDiscoveryModal({
   onReload: () => void;
   copy: (text: string, label?: string) => void;
 }) {
-  // 漂移对照：本地硬编码 ops vs 线上 tools/list。
-  const drift = useMemo(() => {
-    if (!tools) return null;
-    const live = new Set(tools.map((tool) => tool.name));
-    const ours = new Set(CONTEXT_LOADER_OPS.map((op) => op.id));
-    return {
-      onlyLive: tools.map((tool) => tool.name).filter((name) => !ours.has(name)),
-      onlyOurs: CONTEXT_LOADER_OPS.map((op) => op.id).filter((id) => !live.has(id)),
-    };
-  }, [tools]);
-
   return (
     <Modal open={open} onCancel={onClose} footer={null} width={720} title="工具发现 · tools/list">
       <div className={styles.guideRoot}>
         <p className={styles.guideNote}>
           直接向 MCP <code>tools/list</code> 拉取所有线上工具及其 <code>inputSchema</code> / <code>outputSchema</code>。
-          左侧 MCP 接口列表已<b>实时由 tools/list 驱动</b>（后端新增工具自动出现）；这里查看各工具完整 schema，并标出哪些本地有精选定义、哪些用 schema 自动合成请求体。
+          左侧 MCP 接口列表已<b>实时由 tools/list 驱动</b>（后端新增工具自动出现）；这里查看各工具完整 schema。
           <button type="button" className={styles.guideLink} onClick={onReload}>
             重新拉取 →
           </button>
@@ -485,17 +474,6 @@ function ToolDiscoveryModal({
           <>
             <div className={styles.driftRow}>
               <span className={styles.driftStat}>线上 {tools.length} 个</span>
-              {drift && drift.onlyLive.length > 0 ? (
-                <span className={`${styles.driftChip} ${styles.driftLive}`}>
-                  本地未精选·用 schema 自动合成：{drift.onlyLive.join("、")}
-                </span>
-              ) : null}
-              {drift && drift.onlyOurs.length > 0 ? (
-                <span className={`${styles.driftChip} ${styles.driftOurs}`}>本地有·线上无：{drift.onlyOurs.join("、")}</span>
-              ) : null}
-              {drift && drift.onlyLive.length === 0 && drift.onlyOurs.length === 0 ? (
-                <span className={`${styles.driftChip} ${styles.driftOk}`}>全部工具均有本地精选定义</span>
-              ) : null}
             </div>
             <div className={styles.toolList}>
               {tools.map((tool) => (
@@ -1064,7 +1042,7 @@ export function ExperienceScene() {
     if (mode === "mcp" && !toolDefs && !toolsLoading && !toolsError) loadTools();
   }, [mode, toolDefs, toolsLoading, toolsError, loadTools]);
 
-  // MCP 模式接口列表实时由 tools/list 驱动：线上每个工具用本地精选 op（若有），否则从 inputSchema 合成 → 后端加工具自动出现，零漂移。
+  // MCP 模式接口列表实时由 tools/list 驱动：线上每个工具用本地 op（若有），否则从 inputSchema 合成，后端加工具自动出现，零漂移。
   const mcpOps = useMemo<ContextLoaderOp[]>(
     () =>
       toolDefs
