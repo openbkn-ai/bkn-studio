@@ -83,15 +83,12 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
-    const menu = screen.getByRole("menu");
-    // 已下线态读作「重新发布」，与 已下线 标签对仗，不像首次发布。
-    expect(within(menu).queryByText("executionFactory.publish")).toBeNull();
-    fireEvent.click(within(menu).getByText("executionFactory.cardMenu.republish"));
+    fireEvent.click(within(screen.getByRole("menu")).getByText("executionFactory.publish"));
 
     expect(onAction).toHaveBeenCalledWith("publish", expect.objectContaining({ status: "offline" }));
   });
 
-  it("keeps the plain publish label for a never-published toolbox", () => {
+  it("offers the same publish action for a never-published toolbox", () => {
     const onAction = vi.fn();
 
     render(

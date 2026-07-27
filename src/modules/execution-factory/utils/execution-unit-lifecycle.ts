@@ -11,6 +11,9 @@
  * Backend status machine (operator-integration):
  * - unpublish / editing / offline → published
  * - published → offline (NOT unpublish)
+ *
+ * The UI collapses `offline` and `unpublish` into a single 未发布 label, so the
+ * take-down action reads as 取消发布 while still submitting `offline`.
  */
 export type ExecutionUnitLifecycleAction = "publish" | "offline";
 
@@ -31,23 +34,18 @@ export function getExecutionUnitLifecycleActions(
 }
 
 /**
- * i18n key for a lifecycle action label.
+ * Statuses to query for one filter选项.
  *
- * Action wording follows the target status: `offline` reads as 下线 → 已下线.
- * Re-publishing something already taken down reads as 重新发布 so it pairs with
- * the 已下线 tag instead of looking like a first-time publish.
+ * 「未发布」covers both `unpublish` (never published) and `offline` (taken down),
+ * but the list API only takes a single status, so that option fans out into two
+ * requests. Anything else queries as-is.
  */
-export function getLifecycleActionLabelKey(
-  action: ExecutionUnitLifecycleAction,
-  status: string | undefined,
-): string {
-  if (action === "offline") {
-    return "executionFactory.offline";
+export function resolveListStatusQueries(status: string | undefined): (string | undefined)[] {
+  if (status === "unpublish") {
+    return ["unpublish", "offline"];
   }
 
-  return status === "offline"
-    ? "executionFactory.cardMenu.republish"
-    : "executionFactory.publish";
+  return [status || undefined];
 }
 
 /**

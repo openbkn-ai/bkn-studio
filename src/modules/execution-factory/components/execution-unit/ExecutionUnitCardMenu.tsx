@@ -12,10 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import {
-  getExecutionUnitLifecycleActions,
-  getLifecycleActionLabelKey,
-} from "@/modules/execution-factory/utils/execution-unit-lifecycle";
+import { getExecutionUnitLifecycleActions } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
 
 import type { ExecutionUnitCardItem, ExecutionUnitTab } from "./types";
 
@@ -219,7 +216,11 @@ export function ExecutionUnitCardMenu({
     pushMenuAction(
       menuItems,
       lifecycleAction,
-      t(getLifecycleActionLabelKey(lifecycleAction, item.status)),
+      t(
+        lifecycleAction === "publish"
+          ? "executionFactory.publish"
+          : "executionFactory.offline",
+      ),
       onAction,
       lifecycleAction,
       item,

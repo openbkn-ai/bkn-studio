@@ -257,7 +257,7 @@ export const executionFactoryZhCN = {
     statuses: {
       unpublish: "未发布",
       published: "已发布",
-      offline: "已下线",
+      offline: "未发布",
       editing: "编辑中",
     },
     metadataTypes: {
@@ -363,14 +363,13 @@ export const executionFactoryZhCN = {
     openapiSpec: "OpenAPI 规范",
     directPublish: "注册后立即发布",
     publish: "发布",
-    offline: "下线",
+    offline: "取消发布",
     cardMenu: {
       view: "查看",
       edit: "编辑",
       export: "导出",
       download: "下载",
       updatePackage: "更新包",
-      republish: "重新发布",
       more: "更多操作",
     },
     operatorStatusChangeConfirmTitle: "更新算子状态",
@@ -415,7 +414,7 @@ export const executionFactoryZhCN = {
     toolboxStatuses: {
       unpublish: "未发布",
       published: "已发布",
-      offline: "已下线",
+      offline: "未发布",
     },
     statusChangeConfirmTitle: "更新算子状态",
     statusChangeConfirmDescription: '确认将“{{name}}”的状态变更为“{{status}}”吗？',
@@ -631,7 +630,7 @@ export const executionFactoryZhCN = {
     mcpStatuses: {
       unpublish: "未发布",
       published: "已发布",
-      offline: "已下线",
+      offline: "未发布",
       editing: "编辑中",
     },
     mcpStatusChangeConfirmTitle: "更新 MCP 状态",
@@ -649,7 +648,7 @@ export const executionFactoryZhCN = {
     skillStatuses: {
       unpublish: "未发布",
       published: "已发布",
-      offline: "已下线",
+      offline: "未发布",
     },
     skillStatusChangeConfirmTitle: "更新 SKILL 状态",
     skillStatusChangeConfirmDescription:
@@ -766,7 +765,7 @@ export const executionFactoryZhCN = {
     workbenchDirty: "有未保存改动",
     workbenchPublishedLive: "已发布 · 保存即生效",
     workbenchPublishedLiveHint:
-      "该工具集已发布，函数改动保存后 Agent 下次调用立即使用，无需再次发布。需要停用请到能力列表下架。",
+      "该工具集已发布，函数改动保存后 Agent 下次调用立即使用，无需再次发布。需要停用请到能力列表取消发布。",
     workbenchSavePublishedTitle: "保存后立即生效",
     workbenchSavePublishedContent: "这个工具集已发布。保存后，Agent 下次调用就会用到新的代码和参数。",
     parameterRequired: "必填",

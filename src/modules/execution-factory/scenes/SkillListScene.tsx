@@ -27,7 +27,6 @@ import {
   updateSkillStatus,
 } from "@/modules/execution-factory/services/skill.service";
 import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
-import { getLifecycleActionLabelKey } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import styles from "./execution-factory-list.module.css";
@@ -184,7 +183,7 @@ export function SkillListScene() {
                 onClick={() => handleStatusChange(record, "published")}
                 type="link"
               >
-                {t(getLifecycleActionLabelKey("publish", record.status))}
+                {t("executionFactory.publish")}
               </AppButton>
             </PermissionGate>
           ) : (

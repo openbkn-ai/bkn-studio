@@ -9,8 +9,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   getExecutionUnitLifecycleActions,
-  getLifecycleActionLabelKey,
   resolveLifecycleActionStatus,
+  resolveListStatusQueries,
 } from "./execution-unit-lifecycle";
 
 describe("getExecutionUnitLifecycleActions", () => {
@@ -34,21 +34,19 @@ describe("getExecutionUnitLifecycleActions", () => {
   });
 });
 
-describe("getLifecycleActionLabelKey", () => {
-  it("labels re-publishing an offline unit as republish", () => {
-    expect(getLifecycleActionLabelKey("publish", "offline")).toBe(
-      "executionFactory.cardMenu.republish",
-    );
+describe("resolveListStatusQueries", () => {
+  it("covers both unpublish and offline behind the single 未发布 filter", () => {
+    expect(resolveListStatusQueries("unpublish")).toEqual(["unpublish", "offline"]);
   });
 
-  it("labels the first publish of a draft or editing unit as publish", () => {
-    expect(getLifecycleActionLabelKey("publish", "unpublish")).toBe("executionFactory.publish");
-    expect(getLifecycleActionLabelKey("publish", "editing")).toBe("executionFactory.publish");
-    expect(getLifecycleActionLabelKey("publish", undefined)).toBe("executionFactory.publish");
+  it("queries a single status for every other filter", () => {
+    expect(resolveListStatusQueries("published")).toEqual(["published"]);
+    expect(resolveListStatusQueries("editing")).toEqual(["editing"]);
   });
 
-  it("always labels take-down as offline", () => {
-    expect(getLifecycleActionLabelKey("offline", "published")).toBe("executionFactory.offline");
+  it("queries once with no status for the all-status filter", () => {
+    expect(resolveListStatusQueries("")).toEqual([undefined]);
+    expect(resolveListStatusQueries(undefined)).toEqual([undefined]);
   });
 });
 
