@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
@@ -56,11 +57,13 @@ export function ResourceWorkspaceScene({
 }: ResourceWorkspaceSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { modal } = useAppServices();
   const [resource, setResource] = useState<CatalogResource | null>(null);
   const [catalog, setCatalog] = useState<CatalogRecord | null>(null);
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [detailEditing, setDetailEditing] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoadError(null);
@@ -110,6 +113,22 @@ export function ResourceWorkspaceScene({
   const previewDisabledMessage = catalog
     ? t("dataCatalog.gate.catalogDisabled", { name: catalog.name })
     : t("dataCatalog.gate.catalogDisabledShort");
+
+  const handleTabChange = (key: string) => {
+    const nextTab = key as ResourceWorkspaceTab;
+    if (tab === "detail" && nextTab !== "detail" && detailEditing) {
+      void modal.confirm({
+        cancelText: t("common.cancel"),
+        content: t("dataCatalog.resourceWorkspace.discardChangesDescription"),
+        okButtonProps: { danger: true },
+        okText: t("dataCatalog.resourceWorkspace.discardChangesConfirm"),
+        onOk: () => onTabChange(nextTab),
+        title: t("dataCatalog.resourceWorkspace.discardChangesTitle"),
+      });
+      return;
+    }
+    onTabChange(nextTab);
+  };
 
   if (loading) {
     return (
@@ -211,7 +230,13 @@ export function ResourceWorkspaceScene({
               label: t("dataCatalog.resourceWorkspace.tabDetail"),
               children: (
                 <div className={styles.tabPanel}>
-                  <ResourceDetailPanel catalog={catalog} onUpdated={loadAll} resource={resource} />
+                  <ResourceDetailPanel
+                    active={tab === "detail"}
+                    catalog={catalog}
+                    onEditingChange={setDetailEditing}
+                    onUpdated={loadAll}
+                    resource={resource}
+                  />
                 </div>
               ),
             },
@@ -257,9 +282,7 @@ export function ResourceWorkspaceScene({
               ),
             },
           ]}
-          onChange={(key) => {
-            onTabChange(key as ResourceWorkspaceTab);
-          }}
+          onChange={handleTabChange}
         />
       </section>
     </>

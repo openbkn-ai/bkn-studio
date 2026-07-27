@@ -6,9 +6,9 @@
  */
 
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Input } from "antd";
+import { Input, Spin } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -19,22 +19,26 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
-import { updateCatalogResource } from "@/modules/data-catalog/services/resource.service";
+import { getCatalogResource, updateCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type { CatalogResource, ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ResourceDetailPanel.module.css";
 
 type ResourceDetailPanelProps = {
+  active: boolean;
   catalog: CatalogRecord | null;
+  onEditingChange?: (editing: boolean) => void;
   onUpdated?: () => Promise<void> | void;
   resource: CatalogResource;
 };
 
 export function ResourceDetailPanel({
+  active,
   catalog,
+  onEditingChange,
   onUpdated,
-  resource,
+  resource: resourceProp,
 }: ResourceDetailPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -43,11 +47,62 @@ export function ResourceDetailPanel({
   const [schemaPageSize, setSchemaPageSize] = useState(10);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [descriptionDraft, setDescriptionDraft] = useState(resource.description);
-  const [schemaDraft, setSchemaDraft] = useState<ResourceSchemaField[]>(resource.schema);
+  const [refreshing, setRefreshing] = useState(false);
+  const [resource, setResource] = useState(resourceProp);
+  const [descriptionDraft, setDescriptionDraft] = useState(resourceProp.description);
+  const [schemaDraft, setSchemaDraft] = useState<ResourceSchemaField[]>(resourceProp.schema);
+  const wasActiveRef = useRef<boolean | null>(null);
 
   const gate = resourceGateOf(catalog);
   const schemaOffset = (schemaPage - 1) * schemaPageSize;
+
+  useEffect(() => {
+    setResource(resourceProp);
+  }, [resourceProp]);
+
+  useEffect(() => {
+    onEditingChange?.(editing);
+  }, [editing, onEditingChange]);
+
+  useEffect(() => {
+    if (!active) {
+      setEditing(false);
+      setDescriptionDraft(resource.description);
+      setSchemaDraft(resource.schema);
+    }
+  }, [active, resource]);
+
+  useEffect(() => {
+    const wasActive = wasActiveRef.current;
+    wasActiveRef.current = active;
+
+    if (!active || wasActive !== false) {
+      return;
+    }
+
+    let cancelled = false;
+    setRefreshing(true);
+    void getCatalogResource(resourceProp.id)
+      .then((latestResource) => {
+        if (!cancelled && latestResource) {
+          setResource(latestResource);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          void message.error(extractRequestErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setRefreshing(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active, message, resourceProp.id]);
 
   useEffect(() => {
     setSchemaPage(1);
@@ -209,7 +264,8 @@ export function ResourceDetailPanel({
   ];
 
   return (
-    <div className={styles.contentSurface}>
+    <Spin spinning={refreshing}>
+      <div className={styles.contentSurface}>
       {!gate.ok && catalog ? (
         <div className={styles.calloutWarn}>
           <ExclamationCircleOutlined />
@@ -320,6 +376,7 @@ export function ResourceDetailPanel({
           />
         ) : null}
       </div>
-    </div>
+      </div>
+    </Spin>
   );
 }
