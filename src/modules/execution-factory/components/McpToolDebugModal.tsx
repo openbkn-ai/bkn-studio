@@ -14,8 +14,10 @@ import { debugMcpTool } from "@/modules/execution-factory/services/mcp.service";
 import type { McpToolDebugResult } from "@/modules/execution-factory/types/mcp";
 import { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
 
-import { JsonCodeBlock } from "./JsonCodeBlock";
+import { DebugResultPanel } from "./DebugResultPanel";
 import { JsonEditor } from "./JsonEditor";
+
+import styles from "./ToolDebugModal.module.css";
 
 type McpToolDebugModalProps = {
   inputSchema?: unknown;
@@ -85,6 +87,9 @@ export function McpToolDebugModal({
 
   return (
     <Modal
+      /* 与 HTTP 工具调试弹窗同宽同滚法：结果 JSON 一长，760 宽会把每行折断，
+         正文不自己滚则底部的「调试」按钮被推出屏幕。 */
+      className={styles.modal}
       confirmLoading={submitting}
       destroyOnClose
       okText={t("executionFactory.debug")}
@@ -94,7 +99,7 @@ export function McpToolDebugModal({
       }}
       open={open}
       title={t("executionFactory.mcpToolDebugTitle", { tool: toolName })}
-      width={760}
+      width="min(1040px, 92vw)"
     >
       <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
       <Form form={form} layout="vertical">
@@ -104,13 +109,10 @@ export function McpToolDebugModal({
       </Form>
       {error ? <Alert message={error} showIcon style={{ marginBottom: 16 }} type="error" /> : null}
       {result ? (
-        <Alert
-          description={
-            <JsonCodeBlock value={result} />
-          }
-          message={t("executionFactory.debugResultTitle")}
-          showIcon
-          type={result.isError ? "warning" : "success"}
+        <DebugResultPanel
+          error={Boolean(result.isError)}
+          testId="mcp-tool-debug-result"
+          value={result}
         />
       ) : null}
     </Modal>
