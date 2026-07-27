@@ -107,6 +107,8 @@ export const actiontypePart = {
     actionTypeConditionOperation_exist: "存在",
     actionTypeConditionOperation_not_exist: "不存在",
     actionTypeExecutionSourceLabel: "执行来源",
+    actionTypeExecutionSourceResolving: "加载中",
+    actionTypeExecutionSourceUnavailable: "执行来源不可用",
     actionTypeExecutionSelectSource: "选择工具或执行来源",
     actionTypeExecutionSelectSourceTitle: "选择执行来源",
     actionTypeExecutionMappingHint: "将工具参数映射到绑定对象的数据属性。",
