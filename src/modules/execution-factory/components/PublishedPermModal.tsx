@@ -8,7 +8,6 @@
 import { Modal } from "antd";
 import { useTranslation } from "react-i18next";
 
-import { useAppServices } from "@/framework/context/use-app-services";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 
 type PublishedPermModalProps = {
@@ -16,6 +15,7 @@ type PublishedPermModalProps = {
   open: boolean;
   resourceName: string;
   onClose: () => void;
+  onConfigure: () => void;
 };
 
 export function PublishedPermModal({
@@ -23,19 +23,16 @@ export function PublishedPermModal({
   open,
   resourceName,
   onClose,
+  onConfigure,
 }: PublishedPermModalProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
 
   return (
     <Modal
       cancelText={t("executionFactory.publishedPermLater")}
       okText={t("executionFactory.publishedPermConfigure")}
       onCancel={onClose}
-      onOk={() => {
-        void message.info(t("executionFactory.publishedPermConfigureHint"));
-        onClose();
-      }}
+      onOk={onConfigure}
       open={open}
       title={t("executionFactory.publishedPermTitle")}
     >

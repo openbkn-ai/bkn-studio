@@ -336,7 +336,9 @@ export function ExecutionUnitListScene({
   const installedSyncAbortRef = useRef<AbortController | null>(null);
   const installedSyncManualRef = useRef(false);
   const [publishedPermTarget, setPublishedPermTarget] = useState<{
+    id: string;
     name: string;
+    type: string;
   } | null>(null);
   const [editMcpId, setEditMcpId] = useState<string | null>(null);
   const [updateSkillPackageTarget, setUpdateSkillPackageTarget] = useState<{
@@ -932,7 +934,11 @@ export function ExecutionUnitListScene({
               void message.success(t("common.success"));
               reloadList();
               if (!marketMode && nextStatus === "published") {
-                setPublishedPermTarget({ name: item.name });
+                setPublishedPermTarget({
+                  id: item.id,
+                  name: item.name,
+                  type: AUTHZ_TYPE_BY_TAB[activeTab],
+                });
               }
             } catch (error) {
               void message.error(extractRequestErrorMessage(error));
@@ -1570,6 +1576,13 @@ export function ExecutionUnitListScene({
             onClosePublishedPerm={() => setPublishedPermTarget(null)}
             onCloseSkillInstallTarget={() => setSkillInstallTarget(null)}
             onCloseUpdateSkillPackage={() => setUpdateSkillPackageTarget(null)}
+            onConfigurePublishedPerm={() => {
+              // 权限中心就在本页：关掉发布提示，直接开对象授权抽屉。
+              if (publishedPermTarget) {
+                setAuthorizeTarget(publishedPermTarget);
+              }
+              setPublishedPermTarget(null);
+            }}
             onReloadInstalledResourceIds={() => void reloadInstalledResourceIds()}
             onReloadList={reloadList}
             publishedPermTarget={publishedPermTarget}

@@ -610,8 +610,6 @@ export const executionFactoryEnUS = {
       '"{{name}}" is now published as a {{type}}. Configure access permissions so only authorized users can use it.',
     publishedPermLater: "Configure Later",
     publishedPermConfigure: "Configure Permissions",
-    publishedPermConfigureHint:
-      "Permission configuration is not wired in Studio yet. Use the platform permission center.",
     mcpToolImportedHint: "Select tools from an existing toolbox to compose an MCP service.",
     mcpToolImportedToolboxLabel: "Source Toolbox",
     mcpToolImportedToolboxPlaceholder: "Select a toolbox",

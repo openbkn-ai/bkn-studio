@@ -44,9 +44,10 @@ export type ExecutionUnitListOverlaysProps = {
   onClosePublishedPerm: () => void;
   onCloseSkillInstallTarget: () => void;
   onCloseUpdateSkillPackage: () => void;
+  onConfigurePublishedPerm: () => void;
   onReloadInstalledResourceIds: (options?: { manual?: boolean }) => void;
   onReloadList: () => void;
-  publishedPermTarget: { name: string } | null;
+  publishedPermTarget: { id: string; name: string; type: string } | null;
   skillInstallTarget: {
     id: string;
     name: string;
@@ -74,6 +75,7 @@ export function ExecutionUnitListOverlays({
   onClosePublishedPerm,
   onCloseSkillInstallTarget,
   onCloseUpdateSkillPackage,
+  onConfigurePublishedPerm,
   onReloadInstalledResourceIds,
   onReloadList,
   publishedPermTarget,
@@ -151,6 +153,7 @@ export function ExecutionUnitListOverlays({
       <PublishedPermModal
         activeTab={activeTab}
         onClose={onClosePublishedPerm}
+        onConfigure={onConfigurePublishedPerm}
         open={Boolean(publishedPermTarget)}
         resourceName={publishedPermTarget?.name ?? ""}
       />
