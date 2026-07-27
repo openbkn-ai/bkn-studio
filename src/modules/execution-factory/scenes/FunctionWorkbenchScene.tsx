@@ -90,6 +90,8 @@ type WorkbenchFunction = {
   key: string;
   name: string;
   outputs: FunctionParameterDef[];
+  /** 后端 function_content.script_type，没回就留空——列表徽标只画查到的值。 */
+  scriptType?: string;
   /** 禁用的函数代码照样能编辑调试，只是 Agent 调不到（后端 execute 直接拒）。 */
   status: ToolStatus;
   /** 没有 toolId 表示还没落库。 */
@@ -156,6 +158,11 @@ let localKeySeed = 0;
 function nextLocalKey() {
   localKeySeed += 1;
   return `local-${localKeySeed}`;
+}
+
+/** 后端回的是小写（python），只做展示大小写，不改写值本身。 */
+function formatScriptType(scriptType: string) {
+  return scriptType.charAt(0).toUpperCase() + scriptType.slice(1);
 }
 
 function emptyFunction(code: string): WorkbenchFunction {
@@ -296,6 +303,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                   key: detail.toolId,
                   name: detail.name,
                   outputs: detail.functionInput?.outputs ?? [],
+                  scriptType: detail.functionInput?.script_type,
                   status: detail.status,
                   toolId: detail.toolId,
                   useRule: detail.useRule ?? "",
@@ -1205,7 +1213,14 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
             }
             icon={<BarsOutlined />}
             items={visibleFunctions.map((item) => ({
-              badge: <span className={styles.langBadge}>Python</span>,
+              /*
+                只画后端 function_content 里真回来的 script_type。写死 "Python" 是
+                前端凭空生成的展示值，也和本页页头「不放写死的 Python 标签」自相矛盾；
+                未落库的新函数还没有这个值，那就不画。
+              */
+              badge: item.scriptType ? (
+                <span className={styles.langBadge}>{formatScriptType(item.scriptType)}</span>
+              ) : null,
               id: item.key,
               muted: item.status === "disabled",
               name: item.name || t("executionFactory.workbenchUnnamedFunction"),

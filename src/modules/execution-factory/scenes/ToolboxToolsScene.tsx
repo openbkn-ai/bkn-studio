@@ -59,7 +59,10 @@ import {
 } from "@/modules/execution-factory/services/tool.service";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 import type { ToolRecord, ToolRunLogEntry, ToolStatus } from "@/modules/execution-factory/types/tool";
-import { buildToolCapabilityManifest } from "@/modules/execution-factory/utils/capability-manifest";
+import {
+  buildToolCapabilityManifest,
+  hasCapabilityIoFacts,
+} from "@/modules/execution-factory/utils/capability-manifest";
 import { buildToolboxBasicInfoItems } from "@/modules/execution-factory/utils/toolbox-info-items";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
@@ -381,6 +384,11 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const renderToolIoTags = (tool: ToolRecord) => {
     const manifest = buildToolCapabilityManifest(tool);
 
+    // 后端没给出可查的出入参事实时不画标签，别把「元数据缺失」说成「0 入参 0 出参」。
+    if (!hasCapabilityIoFacts(manifest)) {
+      return null;
+    }
+
     return (
       <>
         <EntityListTag>
@@ -651,9 +659,9 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                   /*
                     与右侧「输入输出」那行同源：都取 buildToolCapabilityManifest 的口径
                     （入参 = api_spec.parameters，出参 = 响应状态码），免得同一个工具在
-                    一屏里给出两个数。后端没回 metadata 时 ioSpec 为空，这里就不画标签。
+                    一屏里给出两个数。查不到出入参事实时 renderToolIoTags 返回 null。
                   */
-                  tags: item.ioSpec ? renderToolIoTags(item) : null,
+                  tags: renderToolIoTags(item),
                 }))}
                 onSelect={(toolId) => {
                   const target = items.find((item) => item.toolId === toolId);

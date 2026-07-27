@@ -110,6 +110,21 @@ export function buildToolCapabilityManifest(tool: ToolDetail): CapabilityManifes
   };
 }
 
+/**
+ * manifest 里是否真有出入参事实可讲。
+ *
+ * 不能拿 `tool.ioSpec` 是否存在当判据：后端在 metadata 行查不到时会回一个
+ * `api_spec: {}` 空壳（DefaultMetadataInfo），DB 里的 api_spec 串反序列化失败也
+ * 会得到同样的空壳，两种情况前端都会解析出一个非 undefined 的空 ioSpec。照
+ * 「ioSpec 存在」画标签，就会把「元数据丢了」显示成「0 入参 / 0 出参」——那个 0
+ * 是编造的，不是查出来的。
+ *
+ * 代价：真实的零参数工具也不画标签。前端无法把它和元数据缺失区分开，宁可少说。
+ */
+export function hasCapabilityIoFacts(manifest: CapabilityManifest) {
+  return (manifest.inputSemantics?.length ?? 0) > 0 || (manifest.outputSemantics?.length ?? 0) > 0;
+}
+
 export function buildMcpToolCapabilityManifest({
   mcpId,
   serviceName,
