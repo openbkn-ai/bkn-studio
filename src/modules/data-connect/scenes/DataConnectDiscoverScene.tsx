@@ -6,7 +6,7 @@
  */
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Input, Select, Space, Switch, Tabs } from "antd";
+import { Alert, Input, Select, Space, Switch, Tabs, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -48,6 +48,7 @@ import {
 import { DiscoverRunNowModal } from "@/modules/data-connect/components/DiscoverRunNowModal";
 import { DataConnectDiscoverTaskDrawer } from "@/modules/data-connect/components/DataConnectDiscoverTaskDrawer";
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
+import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
 
 import styles from "./DataConnectDiscoverScene.module.css";
 
@@ -63,6 +64,12 @@ type TaskTriggerTypeFilterValue = "all" | DataConnectDiscoverTask["triggerType"]
 
 function renderTableTime(value?: string) {
   return <span className={styles.timeText}>{value || "-"}</span>;
+}
+
+function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTask }) {
+  const percent = Math.max(0, Math.min(100, task.progress));
+  const fillClass = task.status === "completed" ? sharedStyles.progressFillDone : task.status === "failed" ? sharedStyles.progressFillFailed : sharedStyles.progressFillVector;
+  return <div className={sharedStyles.progressWrapCompact}><div className={sharedStyles.progressTrack}><span className={[sharedStyles.progressFill, fillClass].join(" ")} style={{ width: `${percent}%` }} /></div><div className={sharedStyles.progressMetaCompact}><span>{`${percent}%`}</span></div></div>;
 }
 
 export function DataConnectDiscoverScene({
@@ -410,69 +417,61 @@ export function DataConnectDiscoverScene({
   ];
 
   const taskColumns: ColumnsType<DataConnectDiscoverTask> = [
-    {
-      dataIndex: "status",
-      title: t("dataConnect.discoverTaskStatus"),
-      render: (value: DataConnectDiscoverTaskStatus) =>
-        t(`dataConnect.discoverTaskStatuses.${value}`),
-    },
+    { dataIndex: "id", title: "ID", width: 160, ellipsis: true },
     {
       dataIndex: "scheduleId",
       title: t("dataConnect.discoverScheduleName"),
-      render: (value: string) =>
-        value ? scheduleNameMap.get(value) ?? t("dataConnect.discoverManualTask") : "-",
-    },
-    {
-      dataIndex: "triggerType",
-      title: t("dataConnect.discoverTriggerType"),
-      render: (value: DataConnectDiscoverTask["triggerType"]) =>
-        t(`dataConnect.discoverTriggerTypes.${value}`),
+      width: 160,
+      render: (value: string) => value ? scheduleNameMap.get(value) ?? value : t("dataConnect.discoverManualTask"),
     },
     {
       dataIndex: "strategy",
       title: t("dataConnect.discoverStrategy"),
-      render: (value: DataConnectDiscoverTask["strategy"]) =>
-        t(`dataConnect.discoverStrategies.${value}`),
+      width: 130,
+      render: (value: DataConnectDiscoverTask["strategy"]) => t(`dataConnect.discoverStrategies.${value}`),
+    },
+    {
+      dataIndex: "triggerType",
+      title: t("dataConnect.discoverTriggerType"),
+      width: 120,
+      render: (value: DataConnectDiscoverTask["triggerType"]) => t(`dataConnect.discoverTriggerTypes.${value}`),
+    },
+    {
+      dataIndex: "status",
+      title: t("dataConnect.discoverTaskStatus"),
+      width: 120,
+      render: (value: DataConnectDiscoverTaskStatus) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : "processing"}>{t(`dataConnect.discoverTaskStatuses.${value}`)}</Tag>,
     },
     {
       dataIndex: "progress",
       title: t("dataConnect.discoverProgress"),
-      render: (value: number) => `${value}%`,
-    },
-    {
-      dataIndex: "message",
-      title: t("dataConnect.discoverMessage"),
-      render: (value: string) => (
-        <span className={styles.messageText} title={value || "-"}>
-          {value || "-"}
-        </span>
-      ),
+      width: 160,
+      render: (_value, record) => <DiscoverTaskProgress task={record} />,
     },
     {
       dataIndex: "startTime",
       title: t("dataConnect.discoverStartTime"),
+      width: 180,
       render: renderTableTime,
     },
     {
       dataIndex: "finishTime",
       title: t("dataConnect.discoverFinishTime"),
+      width: 180,
       render: renderTableTime,
     },
     {
       dataIndex: "createTime",
       title: t("dataConnect.createTime"),
+      width: 180,
       render: renderTableTime,
-    },
-    {
-      className: styles.creatorCell,
-      dataIndex: "creatorName",
-      title: t("dataConnect.creator"),
     },
     {
       key: "actions",
       className: styles.taskActionCell,
       title: t("common.actions"),
-      width: 96,
+      width: 160,
+      fixed: "right",
       render: (_, record) => (
         <Space className={`${styles.actionGroup} ${styles.taskActionGroup}`}>
           <AppButton
@@ -486,6 +485,7 @@ export function DataConnectDiscoverScene({
           <PermissionGate permissions="catalog:task_manage">
             <AppButton
               danger
+              disabled={record.status === "pending" || record.status === "running"}
               onClick={() => {
                 void modal.confirm({
                   title: t("dataConnect.discoverTaskDeleteConfirmTitle"),

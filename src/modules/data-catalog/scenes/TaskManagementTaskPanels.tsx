@@ -26,9 +26,11 @@ import { SemanticUnderstandingTaskDetailDrawer } from "@/modules/data-catalog/co
 import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
 import {
   deleteDataConnectDiscoverTask,
+  listDataConnectDiscoverSchedules,
   listDataConnectDiscoverTasks,
 } from "@/modules/data-connect/services/discover.service";
 import type {
+  DataConnectDiscoverSchedule,
   DataConnectDiscoverStrategy,
   DataConnectDiscoverTask,
   DataConnectDiscoverTaskSort,
@@ -204,6 +206,7 @@ export function DiscoverTaskListPanel() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<DataConnectDiscoverTask[]>([]);
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
+  const [schedules, setSchedules] = useState<DataConnectDiscoverSchedule[]>([]);
   const [catalogKeyword, setCatalogKeyword] = useState("");
   const [catalogId, setCatalogId] = useState<string>();
   const [status, setStatus] = useState<DataConnectDiscoverTaskStatus>();
@@ -249,6 +252,11 @@ export function DiscoverTaskListPanel() {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [catalogKeyword]);
+  useEffect(() => {
+    void listDataConnectDiscoverSchedules({ keyword: "", page: 1, pageSize: 200 })
+      .then((result) => setSchedules(result.items))
+      .catch(() => setSchedules([]));
+  }, []);
   const active = tasks.some((item) => item.status === "pending" || item.status === "running");
   useEffect(() => {
     if (!active) return;
@@ -305,9 +313,15 @@ export function DiscoverTaskListPanel() {
         );
       },
     },
+    {
+      dataIndex: "scheduleId",
+      title: t("dataConnect.discoverScheduleName"),
+      width: 160,
+      render: (value: string) => value ? schedules.find((schedule) => schedule.id === value)?.name ?? value : t("dataConnect.discoverManualTask"),
+    },
     { dataIndex: "strategy", title: t("dataCatalog.taskManagement.columns.strategy"), width: 130, render: (value) => t(`dataConnect.discoverStrategies.${value}`) },
     { dataIndex: "triggerType", title: t("dataCatalog.taskManagement.columns.trigger"), width: 120, render: (value) => t(`dataConnect.discoverTriggerTypes.${value}`) },
-    { dataIndex: "status", title: t("common.status"), width: 120, render: (value) => t(`dataConnect.discoverTaskStatuses.${value}`) },
+    { dataIndex: "status", title: t("common.status"), width: 120, render: (value) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : "processing"}>{t(`dataConnect.discoverTaskStatuses.${value}`)}</Tag> },
     {
       dataIndex: "progress",
       title: t("dataCatalog.task.progress"),
@@ -315,10 +329,12 @@ export function DiscoverTaskListPanel() {
       onCell: () => ({ className: styles.progressCell }),
       render: (_, record) => <DiscoverTaskProgress task={record} />,
     },
+    { dataIndex: "startTime", title: t("dataCatalog.taskManagement.details.startTime"), width: 180, render: (value: string) => value || "-" },
+    { dataIndex: "finishTime", title: t("dataCatalog.task.finishedAt"), width: 180, render: (value: string) => value || "-" },
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time") },
     {
       key: "actions", title: t("common.actions"), width: 160, fixed: "right",
-      render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTask(record)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger type="link" onClick={() => void modal.confirm({ title: t("dataConnect.discoverTaskDeleteConfirmTitle"), content: t("dataConnect.discoverTaskDeleteConfirmDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteDataConnectDiscoverTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space>,
+      render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTask(record)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={record.status === "pending" || record.status === "running"} type="link" onClick={() => void modal.confirm({ title: t("dataConnect.discoverTaskDeleteConfirmTitle"), content: t("dataConnect.discoverTaskDeleteConfirmDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteDataConnectDiscoverTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space>,
     },
   ];
 
