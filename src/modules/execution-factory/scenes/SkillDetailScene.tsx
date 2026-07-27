@@ -12,6 +12,7 @@ import {
   ClockCircleOutlined,
   DownloadOutlined,
   FileTextOutlined,
+  FileZipOutlined,
   HistoryOutlined,
   IdcardOutlined,
   ThunderboltOutlined,
@@ -26,7 +27,7 @@ import type { SkillDetailSceneProps } from "@/modules/execution-factory/contract
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
+import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import { SkillFileTreeView } from "@/modules/execution-factory/components/SkillFileTreeView";
 import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
 import {
@@ -80,9 +81,8 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
   const { t } = useTranslation();
   const auditUserDirectory = useAuditUserDirectory();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const catalogContext = searchParams.get("from") === "catalog";
-  const viewMode = searchParams.get("action") !== "edit";
   const [record, setRecord] = useState<SkillRecord | null>(null);
   const [content, setContent] = useState<SkillContentResult | null>(null);
   const [selectedFile, setSelectedFile] = useState<SkillFileSummary | null>(null);
@@ -183,12 +183,6 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
     };
   }, [catalogContext, content?.content, selectedFile, skillId]);
 
-  const handleEnterEditMode = () => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("action", "edit");
-    setSearchParams(nextParams, { replace: true });
-  };
-
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -287,7 +281,7 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
             <ArrowLeftOutlined />
           </button>
           <span className={styles.pageHeaderIcon}>
-            <ThunderboltOutlined />
+            <FileZipOutlined />
           </span>
           <h1 className={styles.pageHeaderTitle}>
             {record?.name ?? t("executionFactory.skillDetailTitle")}
@@ -297,46 +291,32 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
         </div>
         {record ? (
           <div className={styles.pageHeaderActions}>
-            {viewMode ? (
+            {/* 进来即可用：不再要求先点「编辑 SKILL」切态。基础信息统一走抽屉；市场预览态（from=catalog）无编辑/历史接口，整块隐藏。 */}
+            <DetailBasicInfoButton items={basicInfoItems} />
+            {!catalogContext ? (
               <>
-                {/* 发布历史原来挂在 Skill 详情抽屉上，卡片改直连本页后在只读态也要够得着；市场态没这套接口。 */}
-                {!catalogContext ? (
-                  <PermissionGate permissions="execution-factory:skill:view">
-                    <AppButton icon={<HistoryOutlined />} onClick={() => setHistoryOpen(true)}>
-                      {t("executionFactory.skillHistoryTitle")}
-                    </AppButton>
-                  </PermissionGate>
-                ) : null}
-                <PermissionGate permissions="execution-factory:skill:edit">
-                  <AppButton onClick={handleEnterEditMode} type="primary">
-                    {t("executionFactory.skillDetailEnterEdit")}
-                  </AppButton>
-                </PermissionGate>
+            <PermissionGate permissions="execution-factory:skill:view">
+              <AppButton icon={<HistoryOutlined />} onClick={() => setHistoryOpen(true)}>
+                {t("executionFactory.skillHistoryTitle")}
+              </AppButton>
+            </PermissionGate>
+            <PermissionGate permissions="execution-factory:skill:edit">
+              <AppButton
+                onClick={() => {
+                  void navigate(`/execution-factory/skills/${skillId}/edit`);
+                }}
+                type="primary"
+              >
+                {t("executionFactory.cardMenu.edit")}
+              </AppButton>
+            </PermissionGate>
+            <PermissionGate permissions="execution-factory:skill:view">
+              <AppButton icon={<DownloadOutlined />} loading={downloading} onClick={() => void handleDownload()}>
+                {t("executionFactory.cardMenu.download")}
+              </AppButton>
+            </PermissionGate>
               </>
-            ) : (
-              <>
-                <PermissionGate permissions="execution-factory:skill:view">
-                  <AppButton icon={<HistoryOutlined />} onClick={() => setHistoryOpen(true)}>
-                    {t("executionFactory.skillHistoryTitle")}
-                  </AppButton>
-                </PermissionGate>
-                <PermissionGate permissions="execution-factory:skill:edit">
-                  <AppButton
-                    onClick={() => {
-                      void navigate(`/execution-factory/skills/${skillId}/edit`);
-                    }}
-                    type="primary"
-                  >
-                    {t("executionFactory.cardMenu.edit")}
-                  </AppButton>
-                </PermissionGate>
-                <PermissionGate permissions="execution-factory:skill:view">
-                  <AppButton icon={<DownloadOutlined />} loading={downloading} onClick={() => void handleDownload()}>
-                    {t("executionFactory.cardMenu.download")}
-                  </AppButton>
-                </PermissionGate>
-              </>
-            )}
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -358,19 +338,6 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
         <Alert message={loadError} showIcon style={{ marginBottom: 16 }} type="error" />
       ) : null}
 
-      {!loading && !loadError ? (
-        <Alert
-          message={
-            viewMode
-              ? t("executionFactory.skillDetailViewHint")
-              : t("executionFactory.skillDetailEditHint")
-          }
-          showIcon
-          style={{ marginBottom: 16 }}
-          type="info"
-        />
-      ) : null}
-
       {catalogContext && !content ? (
         <Alert message={t("executionFactory.skillDetailCatalogContentHint")} showIcon style={{ marginBottom: 16 }} type="warning" />
       ) : null}
@@ -381,12 +348,6 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
         </div>
       ) : record ? (
         <>
-          <DetailMetaPanel
-            columns={3}
-            items={basicInfoItems}
-            title={t("common.basicInfo")}
-          />
-
           {contentLoadError ? (
             <Alert message={contentLoadError} showIcon style={{ marginBottom: 16 }} type="error" />
           ) : null}

@@ -33,6 +33,17 @@
   font-weight: 500;
 }
 
+.loadingSource {
+  align-items: center;
+  color: rgba(0, 0, 0, 0.45);
+  display: inline-flex;
+  gap: 8px;
+}
+
+.unavailableSource {
+  color: rgba(0, 0, 0, 0.45);
+}
+
 .propertyCell {
   align-items: center;
   display: inline-flex;

@@ -15,7 +15,10 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 import type { CapabilityUxMode } from "@/modules/execution-factory/utils/capability-ux";
-import { isCapabilityUxV2 } from "@/modules/execution-factory/utils/capability-ux";
+import {
+  HTTP_API_CAPABILITY_MODES,
+  isCapabilityUxV2,
+} from "@/modules/execution-factory/utils/capability-ux";
 import {
   getCapabilityCreateMenuItems,
   resolveCapabilityAdpImportTab,
@@ -105,6 +108,9 @@ export function CreateMenu({
   const [legacyWizardOpen, setLegacyWizardOpen] = useState(false);
   const [capabilityWizardOpen, setCapabilityWizardOpen] = useState(false);
   const [capabilityInitialMode, setCapabilityInitialMode] = useState<CapabilityUxMode | undefined>();
+  const [capabilityAllowedModes, setCapabilityAllowedModes] = useState<
+    CapabilityUxMode[] | undefined
+  >();
   const [importOpen, setImportOpen] = useState(false);
   const [importActiveTab, setImportActiveTab] = useState<ExecutionUnitTab>(activeTab);
   const [importInitialKind, setImportInitialKind] = useState<"openapi" | "adp" | undefined>();
@@ -126,13 +132,16 @@ export function CreateMenu({
     }
 
     if (capabilityUxV2 && !useLegacyOperatorCreate) {
-      setCapabilityInitialMode(
-        activeTab === "mcp"
-          ? "mcp"
-          : activeTab === "skill"
-            ? "skill"
-            : "quick-api",
-      );
+      if (activeTab === "mcp") {
+        setCapabilityAllowedModes(undefined);
+        setCapabilityInitialMode("mcp");
+      } else if (activeTab === "skill") {
+        setCapabilityAllowedModes(undefined);
+        setCapabilityInitialMode("skill");
+      } else {
+        setCapabilityAllowedModes(HTTP_API_CAPABILITY_MODES);
+        setCapabilityInitialMode(undefined);
+      }
       setCapabilityWizardOpen(true);
     } else {
       setLegacyWizardOpen(true);
@@ -156,7 +165,15 @@ export function CreateMenu({
   };
 
   const openCapabilityMode = (mode: CapabilityUxMode) => {
+    setCapabilityAllowedModes(undefined);
     setCapabilityInitialMode(mode);
+    setCapabilityWizardOpen(true);
+  };
+
+  // HTTP API：进向导先选「添加 API / 导入 API」两卡，不锁死单一模式。
+  const openHttpApiWizard = () => {
+    setCapabilityAllowedModes(HTTP_API_CAPABILITY_MODES);
+    setCapabilityInitialMode(undefined);
     setCapabilityWizardOpen(true);
   };
 
@@ -165,6 +182,11 @@ export function CreateMenu({
       setImportActiveTab(resolveCapabilityAdpImportTab(activeTab));
       setImportInitialKind("adp");
       setImportOpen(true);
+      return;
+    }
+
+    if (action === "quick-api") {
+      openHttpApiWizard();
       return;
     }
 
@@ -245,12 +267,14 @@ export function CreateMenu({
 
       {showAddCapabilityWizard ? (
         <AddCapabilityWizard
+          allowedModesOverride={capabilityAllowedModes}
           contextTab={activeTab}
           initialMode={capabilityInitialMode}
           lockInitialMode={Boolean(capabilityInitialMode)}
           onClose={() => {
             setCapabilityWizardOpen(false);
             setCapabilityInitialMode(undefined);
+            setCapabilityAllowedModes(undefined);
           }}
           onCreated={handleResourceCreated}
           onRefresh={onRefresh}

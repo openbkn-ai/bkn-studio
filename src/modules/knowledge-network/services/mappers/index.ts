@@ -356,7 +356,7 @@ function mapConceptGroupRelationItem(
 
 function mapConceptGroupActionItem(
   item: BackendObjectType & {
-    action_type?: string;
+    action_type?: BackendActionType["action_type"];
     object_type?: {
       color?: string;
       icon?: string;
@@ -365,11 +365,9 @@ function mapConceptGroupActionItem(
     };
   },
 ): ConceptGroupRelatedItem {
-  const actionKind = item.action_type as KnowledgeNetworkActionTypeKind | undefined;
-
   return {
     ...mapConceptGroupRelatedItem(item),
-    actionKind,
+    actionKind: mapActionKind(item.action_type),
     boundObjectType: mapConceptGroupResourceRef(item.object_type),
   };
 }
@@ -428,12 +426,16 @@ export function mapActionKind(
   value?: BackendActionType["action_type"],
 ): KnowledgeNetworkActionTypeKind {
   switch (value) {
+    case "modify":
     case "UPDATE":
       return "update";
+    case "delete":
     case "DELETE":
       return "delete";
+    case "notify":
     case "NOTIFY":
       return "notify";
+    case "add":
     case "ADD":
     default:
       return "create";

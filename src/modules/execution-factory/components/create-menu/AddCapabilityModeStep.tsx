@@ -85,6 +85,7 @@ export function AddCapabilityModeStep({
       <CapabilityBusinessIntro messageKey="executionFactory.businessIntro.addCapabilityWizard" />
       <Radio.Group
         onChange={(event) => onModeChange(event.target.value as CapabilityUxMode)}
+        style={{ display: "block", width: "100%" }}
         value={mode}
       >
         <div
@@ -99,9 +100,11 @@ export function AddCapabilityModeStep({
               onClick={() => onModeChange(key)}
             >
               <Radio value={key} />
-              <Icon style={{ fontSize: 22, color: "var(--color-primary-600)" }} />
-              <div className={styles.optionTitle}>{title}</div>
-              <div className={styles.optionDesc}>{desc}</div>
+              <Icon style={{ fontSize: 26, color: "var(--color-primary-600)" }} />
+              <div className={styles.optionText}>
+                <div className={styles.optionTitle}>{title}</div>
+                <div className={styles.optionDesc}>{desc}</div>
+              </div>
             </label>
           ))}
         </div>

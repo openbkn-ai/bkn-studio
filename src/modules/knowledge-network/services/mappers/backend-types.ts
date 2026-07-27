@@ -16,6 +16,16 @@ export type BackendAccountInfo = {
   name?: string | null;
 };
 
+export type BackendActionTypeEnum =
+  | "ADD"
+  | "UPDATE"
+  | "DELETE"
+  | "NOTIFY"
+  | "add"
+  | "modify"
+  | "delete"
+  | "notify";
+
 export type BackendKnowledgeNetwork = {
   code?: string;
   color?: string;
@@ -143,7 +153,17 @@ export type BackendSmallModel = {
 };
 
 export type BackendConceptGroup = {
-  action_types?: BackendObjectType[];
+  action_types?: Array<
+    BackendObjectType & {
+      action_type?: BackendActionTypeEnum;
+      object_type?: {
+        color?: string;
+        icon?: string;
+        id?: string;
+        name?: string;
+      };
+    }
+  >;
   color?: string;
   comment?: string;
   id: string;
@@ -192,7 +212,7 @@ export type BackendActionType = {
     tool_name?: string;
     type?: "manual" | "mcp" | "tool";
   };
-  action_type?: "ADD" | "UPDATE" | "DELETE" | "NOTIFY" | "add" | "modify" | "delete" | "notify";
+  action_type?: BackendActionTypeEnum;
   affect?: {
     comment?: string;
     object_type_id?: string;

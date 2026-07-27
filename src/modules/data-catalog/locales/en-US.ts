@@ -18,6 +18,9 @@ export const dataCatalogEnUS = {
       tabPreview: "Data Preview",
       tabIndex: "Data Index",
       tabSemanticUnderstanding: "Semantic Understanding",
+      discardChangesTitle: "Discard unsaved changes?",
+      discardChangesDescription: "Switching tabs will discard the current unsaved changes and cannot be undone.",
+      discardChangesConfirm: "Discard and switch",
     },
     indexWorkspace: {
       backToOverview: "Back to Tasks",
@@ -281,6 +284,8 @@ export const dataCatalogEnUS = {
       resourceDefaultsTitle: "Resource Defaults",
       resourceDefaultsHint:
         "Features use these defaults when no override is selected.",
+      fulltextAnalyzerOverrides:
+        "Field analyzers override the default: {{overrides}}. Update them in Field Feature Config or choose Use default.",
       fieldEmbeddingModel: "Embedding Model",
       fieldFulltextAnalyzer: "Analyzer",
       inheritDefaultAnalyzer: "Use default",

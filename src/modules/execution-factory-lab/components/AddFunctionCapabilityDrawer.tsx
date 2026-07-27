@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { CodeEditor } from "@/modules/execution-factory/components/CodeEditor";
 import { LabPermissionHint } from "@/modules/execution-factory-lab/components/LabPermissionHint";
 import { executionFactoryLabPermissions } from "@/modules/execution-factory-lab/permissions";
 import {
@@ -321,10 +322,7 @@ export function AddFunctionCapabilityDrawer({
           name="code"
           rules={[{ required: true, message: t("executionFactoryLab.functionCodeLabel") }]}
         >
-          <Input.TextArea
-            autoSize={{ minRows: 12, maxRows: 24 }}
-            onChange={resetRunState}
-          />
+          <CodeEditor height={320} language="python" />
         </Form.Item>
 
         <Divider orientation="left">{t("executionFactoryLab.functionWizardStepRun")}</Divider>

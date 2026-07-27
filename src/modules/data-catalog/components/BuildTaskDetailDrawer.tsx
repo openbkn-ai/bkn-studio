@@ -44,6 +44,22 @@ function renderFieldList(fields: string[]) {
   );
 }
 
+function renderFulltextAnalyzers(analyzers: Record<string, string>) {
+  const entries = Object.entries(analyzers);
+  if (entries.length === 0) {
+    return "—";
+  }
+  return (
+    <span className={styles.fieldList}>
+      {entries.map(([field, analyzer]) => (
+        <span className={styles.fieldText} key={field}>
+          {field}: {analyzer}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function BuildTaskDetailDrawer({
   onClose,
   open,
@@ -194,7 +210,12 @@ export function BuildTaskDetailDrawer({
             </Descriptions.Item>
             {task.fulltextFields.length > 0 ? (
               <Descriptions.Item label={t("dataCatalog.task.fields.fulltextAnalyzer")}>
-                {task.fulltextAnalyzer || "standard"}
+                {renderFulltextAnalyzers(
+                  task.fulltextAnalyzers ??
+                    Object.fromEntries(
+                      task.fulltextFields.map((field) => [field, task.fulltextAnalyzer || "standard"]),
+                    ),
+                )}
               </Descriptions.Item>
             ) : null}
             <Descriptions.Item label={t("dataCatalog.task.fields.embeddingModel")}>

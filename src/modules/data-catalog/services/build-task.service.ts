@@ -148,7 +148,7 @@ export function embeddingStateOf(task: BuildTask): IndexHealthState {
   );
 }
 
-function snapshotFieldsOf(item: BackendBuildTask) {
+export function snapshotFieldsOf(item: BackendBuildTask) {
   const snapshot = item.index_config;
   if (snapshot?.features || snapshot?.build_key_fields) {
     const embeddingFields: string[] = [];
@@ -156,6 +156,7 @@ function snapshotFieldsOf(item: BackendBuildTask) {
     let embeddingModel = "";
     let modelDimensions = 0;
     let fulltextAnalyzer = "";
+    const fulltextAnalyzers: Record<string, string> = {};
 
     for (const [fieldName, feature] of Object.entries(snapshot.features ?? {})) {
       if (feature.vector) {
@@ -177,10 +178,11 @@ function snapshotFieldsOf(item: BackendBuildTask) {
       if (feature.fulltext) {
         fulltextFields.push(fieldName);
         const analyzer =
-          feature.fulltext.analyzer ?? feature.fulltext.config?.analyzer ?? "";
+          feature.fulltext.analyzer ?? feature.fulltext.config?.analyzer ?? "standard";
         if (analyzer && !fulltextAnalyzer) {
           fulltextAnalyzer = analyzer;
         }
+        fulltextAnalyzers[fieldName] = analyzer;
       }
     }
 
@@ -191,17 +193,25 @@ function snapshotFieldsOf(item: BackendBuildTask) {
       modelDimensions,
       fulltextFields,
       fulltextAnalyzer,
+      fulltextAnalyzers,
     };
   }
 
   // 兼容旧扁平字段（过渡期 / mock）
+  const fulltextFields = splitFields(item.fulltext_fields);
+  const fulltextAnalyzer = item.fulltext_analyzer || "standard";
+  const fulltextAnalyzers: Record<string, string> = {};
+  for (const field of fulltextFields) {
+    fulltextAnalyzers[field] = fulltextAnalyzer;
+  }
   return {
     buildKeyFields: splitFields(item.build_key_fields),
     embeddingFields: splitFields(item.embedding_fields),
     embeddingModel: item.embedding_model ?? "",
     modelDimensions: item.model_dimensions ?? 0,
-    fulltextFields: splitFields(item.fulltext_fields),
-    fulltextAnalyzer: item.fulltext_analyzer ?? "",
+    fulltextFields,
+    fulltextAnalyzer,
+    fulltextAnalyzers,
   };
 }
 
@@ -248,6 +258,7 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
     modelDimensions: snapshot.modelDimensions,
     fulltextFields: snapshot.fulltextFields,
     fulltextAnalyzer: snapshot.fulltextAnalyzer,
+    fulltextAnalyzers: snapshot.fulltextAnalyzers,
     totalCount: item.total_count ?? 0,
     syncedCount: synced,
     vectorizedCount: vectorized,

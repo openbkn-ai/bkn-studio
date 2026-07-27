@@ -13,7 +13,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { FunctionDefinitionFields } from "@/modules/execution-factory/components/FunctionDefinitionFields";
-import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
+import { OpenApiDefinitionFields } from "@/modules/execution-factory/components/OpenApiDefinitionFields";
 import { ToolGlobalParameterFields } from "@/modules/execution-factory/components/ToolGlobalParameterFields";
 import {
   createTool,
@@ -292,17 +292,7 @@ export function ToolFormDrawer({
             <Input.TextArea rows={2} />
           </Form.Item>
           {metadataType === "openapi" ? (
-            <Form.Item
-              label={t("executionFactory.openapiSpec")}
-              name="openapiSpec"
-              rules={
-                mode === "create"
-                  ? [{ required: true, message: t("common.required") }]
-                  : undefined
-              }
-            >
-              <OpenApiSpecInput rows={10} />
-            </Form.Item>
+            <OpenApiDefinitionFields required={mode === "create"} />
           ) : null}
           {metadataType === "function" ? <FunctionDefinitionFields /> : null}
           <Collapse
