@@ -6,7 +6,6 @@
  */
 
 import type {
-  ToolDebugInput,
   ToolIoParameter,
   ToolIoSpec,
 } from "@/modules/execution-factory/types/tool";
@@ -217,83 +216,5 @@ export function parseToolIoSpec(metadata?: ApiSpecMetadata): ToolIoSpec | undefi
     requestBodyExample,
     requestBodySchema,
     responses,
-  };
-}
-
-function pickRecord(value: unknown): Record<string, unknown> | undefined {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return undefined;
-  }
-
-  return value as Record<string, unknown>;
-}
-
-function pickStringRecord(value: unknown): Record<string, string> | undefined {
-  const record = pickRecord(value);
-  if (!record) {
-    return undefined;
-  }
-
-  return Object.fromEntries(
-    Object.entries(record).map(([key, item]) => [key, String(item)]),
-  );
-}
-
-function hasStructuredDebugPayload(input: Record<string, unknown>) {
-  return "query" in input || "header" in input || "body" in input || "path" in input;
-}
-
-export function buildToolDebugRequest(
-  input?: Record<string, unknown>,
-  ioSpec?: ToolIoSpec,
-): ToolDebugInput {
-  if (!input) {
-    return {};
-  }
-
-  if (hasStructuredDebugPayload(input)) {
-    return {
-      body: pickRecord(input.body),
-      header: pickRecord(input.header),
-      query: pickRecord(input.query),
-      path: pickStringRecord(input.path),
-    };
-  }
-
-  const body: Record<string, unknown> = {};
-  const header: Record<string, unknown> = {};
-  const query: Record<string, unknown> = {};
-  const path: Record<string, string> = {};
-  const consumedKeys = new Set<string>();
-
-  for (const parameter of ioSpec?.parameters ?? []) {
-    if (!(parameter.name in input)) {
-      continue;
-    }
-
-    consumedKeys.add(parameter.name);
-
-    if (parameter.in === "header") {
-      header[parameter.name] = input[parameter.name];
-    } else if (parameter.in === "query") {
-      query[parameter.name] = input[parameter.name];
-    } else if (parameter.in === "path") {
-      path[parameter.name] = String(input[parameter.name]);
-    } else {
-      body[parameter.name] = input[parameter.name];
-    }
-  }
-
-  for (const [key, value] of Object.entries(input)) {
-    if (!consumedKeys.has(key)) {
-      body[key] = value;
-    }
-  }
-
-  return {
-    ...(Object.keys(body).length > 0 ? { body } : {}),
-    ...(Object.keys(header).length > 0 ? { header } : {}),
-    ...(Object.keys(query).length > 0 ? { query } : {}),
-    ...(Object.keys(path).length > 0 ? { path } : {}),
   };
 }
