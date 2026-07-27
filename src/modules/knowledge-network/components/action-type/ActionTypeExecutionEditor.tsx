@@ -166,11 +166,17 @@ export function ActionTypeExecutionEditor({
       return;
     }
 
+    let cancelled = false;
+
     const loadSchema = async () => {
       setSchemaLoading(true);
       onParameterSchemaStateChangeRef.current?.({ loaded: false, parameterCount: 0 });
       try {
         const schema = await resolveActionTypeToolInputSchema(value.actionSource!);
+        if (cancelled) {
+          return;
+        }
+
         loadedSourceKeyRef.current = sourceKey;
         setInputSchema(schema);
         onParameterSchemaStateChangeRef.current?.({
@@ -185,13 +191,23 @@ export function ActionTypeExecutionEditor({
           ),
         });
       } catch {
+        if (cancelled) {
+          return;
+        }
+
         onParameterSchemaStateChangeRef.current?.({ loaded: false, parameterCount: 0 });
       } finally {
-        setSchemaLoading(false);
+        if (!cancelled) {
+          setSchemaLoading(false);
+        }
       }
     };
 
     void loadSchema();
+
+    return () => {
+      cancelled = true;
+    };
   }, [sourceKey, value.actionSource]);
 
   useEffect(() => {
