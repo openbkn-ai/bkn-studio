@@ -776,6 +776,10 @@ function resolveActionSourceDisplayNamesFromCatalog(
  * Resolve readable operator names from execution-factory by persisted IDs.
  * Always refreshes names when lookup succeeds so renames are reflected on reopen.
  * On lookup failure, keeps the original source (ID fallback display).
+ *
+ * MCP real path only refreshes `mcpName` (container). Tool names come from
+ * server discovery (`tools/list`) and are not independently renameable in studio,
+ * so persisted `toolName` is kept as-is. Mock catalog may still refresh toolName.
  */
 export async function resolveActionSourceDisplayNames(
   actionSource?: ActionTypeActionSource,
@@ -810,6 +814,7 @@ export async function resolveActionSourceDisplayNames(
     }
   }
 
+  // MCP: refresh container name only; keep persisted toolName from discovery.
   if (actionSource.type === "mcp" && actionSource.mcpId) {
     try {
       const mcp = await getMcpMarket(actionSource.mcpId).catch(() =>
