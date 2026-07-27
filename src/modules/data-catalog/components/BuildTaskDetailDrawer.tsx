@@ -34,9 +34,24 @@ function renderFieldList(fields: string[]) {
     return "—";
   }
   return (
-    <span className={styles.fieldList}>
+    <span className={sharedStyles.chipRow}>
       {fields.map((field) => (
-        <span className={styles.fieldText} key={field}>
+        <span className={sharedStyles.slugChip} key={field}>
+          {field}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function renderFieldTags(fields: string[]) {
+  if (fields.length === 0) {
+    return "—";
+  }
+  return (
+    <span className={sharedStyles.chipRow}>
+      {fields.map((field) => (
+        <span className={sharedStyles.slugChip} key={field}>
           {field}
         </span>
       ))}
@@ -50,14 +65,96 @@ function renderFulltextAnalyzers(analyzers: Record<string, string>) {
     return "—";
   }
   return (
-    <span className={styles.fieldList}>
+    <span className={sharedStyles.chipRow}>
       {entries.map(([field, analyzer]) => (
-        <span className={styles.fieldText} key={field}>
+        <span className={sharedStyles.slugChip} key={field}>
           {field}: {analyzer}
         </span>
       ))}
     </span>
   );
+}
+
+function renderEmbeddingConfigs(task: BuildTask) {
+  const entries = Object.entries(task.embeddingConfigs ?? {});
+  if (entries.length === 0) {
+    return "—";
+  }
+  return (
+    <span className={styles.fieldList}>
+      {entries.map(([field, config]) => (
+        <span className={styles.fieldText} key={field}>
+          {field}: {config.modelId || "—"}
+          {config.dimensions > 0 ? ` · ${config.dimensions}d` : ""}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function renderIndexHealth(task: BuildTask, t: (key: string) => string) {
+  const health = task.indexHealth;
+  if (!health) {
+    return "—";
+  }
+  return (
+    <span className={styles.healthList}>
+      <span>
+        {t("dataCatalog.task.fields.embeddingIndex")}: {t(`dataCatalog.task.health.${health.embedding}`)}
+      </span>
+      <span>
+        {t("dataCatalog.task.fields.fulltextIndex")}: {t(`dataCatalog.task.health.${health.fulltext}`)}
+      </span>
+      <span>
+        {t("dataCatalog.task.fields.indexUsable")}: {t(
+          health.usable
+            ? "dataCatalog.task.health.usable"
+            : "dataCatalog.task.health.unusable",
+        )}
+      </span>
+    </span>
+  );
+}
+
+function formatSyncedMarkValue(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value === null) {
+    return "null";
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function renderSyncedMark(mark?: string) {
+  if (!mark) {
+    return "—";
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(mark);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const entries = Object.entries(parsed);
+      if (entries.length > 0) {
+        return (
+          <span className={sharedStyles.chipRow}>
+            {entries.map(([key, value]) => (
+              <span className={sharedStyles.slugChip} key={key}>
+                {key}: {formatSyncedMarkValue(value)}
+              </span>
+            ))}
+          </span>
+        );
+      }
+    }
+  } catch {
+    // 兼容旧任务中非 JSON 格式的断点值。
+  }
+
+  return <span className={sharedStyles.slugChip}>{mark}</span>;
 }
 
 export function BuildTaskDetailDrawer({
@@ -199,11 +296,14 @@ export function BuildTaskDetailDrawer({
             <Descriptions.Item label={t("dataCatalog.task.fields.resourceId")}>
               {task.resourceId}
             </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.task.fields.embeddingFields")}>
-              {renderFieldList(task.embeddingFields)}
+            <Descriptions.Item label={t("dataCatalog.resource.catalog")}>
+              {task.catalogName ?? task.catalogId ?? "—"}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>
+              {task.creator?.name || task.creator?.id || "—"}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.buildKeyFields")}>
-              {renderFieldList(task.buildKeyFields)}
+              {renderFieldTags(task.buildKeyFields)}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.fulltextFields")}>
               {renderFieldList(task.fulltextFields)}
@@ -218,14 +318,33 @@ export function BuildTaskDetailDrawer({
                 )}
               </Descriptions.Item>
             ) : null}
-            <Descriptions.Item label={t("dataCatalog.task.fields.embeddingModel")}>
-              {modelInfo.name || "—"}
+            <Descriptions.Item label={t("dataCatalog.task.fields.embeddingFields")}>
+              {renderFieldList(task.embeddingFields)}
             </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.task.fields.modelDimensions")}>
-              {modelInfo.dimensions}
+            <Descriptions.Item label={t("dataCatalog.task.fields.embeddingConfig")}>
+              {renderEmbeddingConfigs({
+                ...task,
+                embeddingConfigs:
+                  task.embeddingConfigs ??
+                  Object.fromEntries(
+                    task.embeddingFields.map((field) => [
+                      field,
+                      { dimensions: modelInfo.dimensions, modelId: modelInfo.name },
+                    ]),
+                  ),
+              })}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.indexHealth")}>
+              {renderIndexHealth(task, t)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.syncedMark")}>
+              {renderSyncedMark(task.syncedMark)}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataConnect.createTime")}>
               {task.createTime}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.updateTime")}>
+              {task.updateTime ?? "—"}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>
               {task.finishTime ?? "—"}

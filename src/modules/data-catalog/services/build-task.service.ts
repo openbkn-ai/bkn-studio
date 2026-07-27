@@ -53,6 +53,7 @@ type BackendBuildTask = {
   catalog_id?: string;
   catalog_name?: string;
   create_time?: number;
+  creator?: { id?: string; name?: string; type?: string };
   embedding_fields?: string | string[];
   embedding_model?: string;
   error_msg?: string;
@@ -68,6 +69,7 @@ type BackendBuildTask = {
   resource_name?: string;
   status?: string;
   synced_count?: number;
+  synced_mark?: string;
   total_count?: number;
   update_time?: number;
   vectorized_count?: number;
@@ -157,6 +159,7 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
     let modelDimensions = 0;
     let fulltextAnalyzer = "";
     const fulltextAnalyzers: Record<string, string> = {};
+    const embeddingConfigs: Record<string, { modelId: string; dimensions: number }> = {};
 
     for (const [fieldName, feature] of Object.entries(snapshot.features ?? {})) {
       if (feature.vector) {
@@ -174,6 +177,7 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
         if (dimensions && !modelDimensions) {
           modelDimensions = dimensions;
         }
+        embeddingConfigs[fieldName] = { modelId: model, dimensions };
       }
       if (feature.fulltext) {
         fulltextFields.push(fieldName);
@@ -190,6 +194,7 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
       buildKeyFields: snapshot.build_key_fields ?? [],
       embeddingFields,
       embeddingModel,
+      embeddingConfigs,
       modelDimensions,
       fulltextFields,
       fulltextAnalyzer,
@@ -208,6 +213,12 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
     buildKeyFields: splitFields(item.build_key_fields),
     embeddingFields: splitFields(item.embedding_fields),
     embeddingModel: item.embedding_model ?? "",
+    embeddingConfigs: Object.fromEntries(
+      splitFields(item.embedding_fields).map((field) => [
+        field,
+        { dimensions: item.model_dimensions ?? 0, modelId: item.embedding_model ?? "" },
+      ]),
+    ),
     modelDimensions: item.model_dimensions ?? 0,
     fulltextFields,
     fulltextAnalyzer,
@@ -247,11 +258,15 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
     id: item.id,
     catalogId: item.catalog_id,
     catalogName: item.catalog_name,
+    creator: item.creator?.id
+      ? { id: item.creator.id, name: item.creator.name, type: item.creator.type ?? "" }
+      : undefined,
     resourceId: item.resource_id ?? "",
     resourceName: item.resource_name,
     mode,
     status,
     embeddingFields: snapshot.embeddingFields,
+    embeddingConfigs: snapshot.embeddingConfigs,
     buildKeyFields: snapshot.buildKeyFields,
     embeddingModel: snapshot.embeddingModel,
     embeddingDegraded,
@@ -261,6 +276,7 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
     fulltextAnalyzers: snapshot.fulltextAnalyzers,
     totalCount: item.total_count ?? 0,
     syncedCount: synced,
+    syncedMark: item.synced_mark,
     vectorizedCount: vectorized,
     indexHealth,
     indexUsable: indexHealth.usable,
@@ -271,6 +287,8 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
       (status === "succeeded" || status === "failed") && item.update_time
         ? formatMockTimestamp(item.update_time)
         : null,
+    updatedAt: item.update_time,
+    updateTime: item.update_time ? formatMockTimestamp(item.update_time) : null,
     lastEventAt: mode === "streaming" ? (item.update_time ?? null) : null,
     error: item.error_msg || null,
   };

@@ -129,3 +129,8 @@
   line-height: 1.5;
   word-break: break-all;
 }
+
+.healthList {
+  display: grid;
+  gap: 2px;
+}

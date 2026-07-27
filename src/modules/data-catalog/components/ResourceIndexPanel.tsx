@@ -329,16 +329,18 @@ export function ResourceIndexPanel({
     {
       dataIndex: "id",
       title: t("dataCatalog.taskManagement.columns.task"),
-      width: 180,
+      width: 160,
     },
     {
       dataIndex: "status",
       title: t("common.status"),
+      width: 108,
       render: (_value, record) => formatTaskStatus(record, t),
     },
     {
       dataIndex: "mode",
       title: t("common.mode"),
+      width: 100,
       render: (value: BuildTask["mode"]) => t(`dataCatalog.modes.${value}`),
     },
     {
@@ -350,13 +352,15 @@ export function ResourceIndexPanel({
     {
       dataIndex: "createTime",
       title: t("dataConnect.createTime"),
+      width: 180,
     },
     {
       key: "actions",
       title: t("common.actions"),
-      width: 220,
+      width: 160,
+      fixed: "right",
       render: (_value, record) => (
-        <Space size={4}>
+        <Space className={panelStyles.historyActionGroup} size={4}>
           <AppButton onClick={() => setDetailTask(record)} type="link">
             {t("common.detail")}
           </AppButton>
