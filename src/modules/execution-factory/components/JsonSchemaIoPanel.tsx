@@ -9,6 +9,8 @@ import { Empty, Table } from "antd";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { JsonCodeBlock } from "./JsonCodeBlock";
+
 import styles from "./ToolIoPanel.module.css";
 
 type JsonSchemaIoPanelProps = {
@@ -23,14 +25,6 @@ type SchemaPropertyRow = {
   required: boolean;
   description?: string;
 };
-
-function renderJson(value: unknown) {
-  if (value === undefined || value === null) {
-    return "-";
-  }
-
-  return JSON.stringify(value, null, 2);
-}
 
 function extractSchemaProperties(schema: unknown): SchemaPropertyRow[] {
   if (!schema || typeof schema !== "object") {
@@ -124,7 +118,7 @@ export function JsonSchemaIoPanel({ outputSchema, schema }: JsonSchemaIoPanelPro
       ) : null}
       <section style={{ marginTop: properties.length > 0 ? 16 : 0 }}>
         <h4 className={styles.sectionTitle}>{t("executionFactory.mcpToolSchemaRawTitle")}</h4>
-        <pre className={styles.jsonPreview}>{renderJson(schema)}</pre>
+        <JsonCodeBlock value={schema} />
       </section>
       {/* 面板叫「输入输出」，输出这半边此前从不渲染。MCP 的 outputSchema 是可选的，
           多数服务不给，那就明说没声明，而不是留白让人以为工具没有返回。 */}
@@ -135,12 +129,9 @@ export function JsonSchemaIoPanel({ outputSchema, schema }: JsonSchemaIoPanelPro
         {outputSchema ? (
           <>
             {outputProperties.length > 0 ? propertyTable(outputProperties) : null}
-            <pre
-              className={styles.jsonPreview}
-              style={{ marginTop: outputProperties.length > 0 ? 12 : 0 }}
-            >
-              {renderJson(outputSchema)}
-            </pre>
+            <div style={{ marginTop: outputProperties.length > 0 ? 12 : 0 }}>
+              <JsonCodeBlock value={outputSchema} />
+            </div>
           </>
         ) : (
           <p className={styles.emptyHint}>
