@@ -12,10 +12,19 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
+import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import type { MetricDataQuerySceneProps } from "@/modules/knowledge-network/contracts/scenes";
-import { getKnowledgeNetworkMetric } from "@/modules/knowledge-network/services/knowledge-network.service";
-import type { KnowledgeNetworkMetricRecord } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  getKnowledgeNetworkMetric,
+  getKnowledgeNetworkObjectTypeDetail,
+  listKnowledgeNetworkObjectTypes,
+} from "@/modules/knowledge-network/services/knowledge-network.service";
+import type {
+  KnowledgeNetworkMetricRecord,
+  KnowledgeNetworkObjectTypeRecord,
+} from "@/modules/knowledge-network/types/knowledge-network";
+import { toMetricPropertyOptions } from "@/modules/knowledge-network/utils/metric-property-display";
 
 import styles from "./MetricDetailScene.module.css";
 
@@ -33,6 +42,8 @@ export function MetricDataQueryScene({
   const metricId = metricIdProp ?? params.metricId ?? "";
   const networkId = networkIdProp ?? params.networkId ?? "";
   const [detail, setDetail] = useState<KnowledgeNetworkMetricRecord | null>(null);
+  const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
+  const [propertyOptions, setPropertyOptions] = useState<RelationTypePropertyOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,8 +59,22 @@ export function MetricDataQueryScene({
       setError(null);
 
       try {
-        const metricResult = await getKnowledgeNetworkMetric(networkId, metricId);
+        const [metricResult, objectTypeResult] = await Promise.all([
+          getKnowledgeNetworkMetric(networkId, metricId),
+          listKnowledgeNetworkObjectTypes(networkId),
+        ]);
         setDetail(metricResult);
+        setObjectTypes(objectTypeResult);
+
+        if (metricResult?.scopeType === "object_type" && metricResult.scopeRef) {
+          const objectTypeDetail = await getKnowledgeNetworkObjectTypeDetail(
+            networkId,
+            metricResult.scopeRef,
+          );
+          setPropertyOptions(toMetricPropertyOptions(objectTypeDetail?.dataProperties ?? []));
+        } else {
+          setPropertyOptions([]);
+        }
       } catch (nextError) {
         setError(extractRequestErrorMessage(nextError));
       } finally {
@@ -87,9 +112,12 @@ export function MetricDataQueryScene({
     >
       <MetricDataQueryPanel
         analysisDimensionOptions={detail.calculationFormula.analysisDimensions ?? []}
+        boundObjectTypeId={detail.scopeType === "object_type" ? detail.scopeRef : undefined}
         metricId={detail.id}
         metricName={detail.name}
         networkId={networkId}
+        objectTypes={objectTypes}
+        propertyOptions={propertyOptions}
       />
     </KnowledgeNetworkResourceConfigShell>
   );

@@ -84,6 +84,7 @@ describe("action-type-condition", () => {
     expect(payload.condition).toEqual({
       object_type_id: "sales_order_event",
       operation: "and",
+      value_from: "const",
       sub_conditions: [
         {
           field: "product_name",

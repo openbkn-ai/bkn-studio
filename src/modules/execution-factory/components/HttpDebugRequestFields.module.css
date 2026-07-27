@@ -8,9 +8,52 @@
 .fields {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .fields :global(.ant-form-item) {
   margin-bottom: 0;
+}
+
+/* 端点摘要与工具详情页的端点行同构（图标位留给标签文字，值走等宽字体）。
+   原来这里是一张 antd bordered Descriptions 表格，方框套方框，跟本项目
+   「水平线分区、无表格边框」的调子对不上。 */
+.endpoint {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-layout, #f7f9fc);
+}
+
+.endpointRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.endpointLabel {
+  flex: none;
+  width: 84px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.endpointValue {
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace
+  );
+  font-size: 12px;
+  line-height: 20px;
+  word-break: break-all;
 }

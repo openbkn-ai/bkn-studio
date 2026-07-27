@@ -53,6 +53,11 @@ export type ToolRecord = {
   description?: string;
   status: ToolStatus;
   metadataType?: ToolMetadataType;
+  /**
+   * 列表接口就带 metadata.api_spec，所以出入参在列表态即可用，不必逐个拉详情。
+   * 后端没给 metadata 时为 undefined——此时列表不画出入参标签，不猜。
+   */
+  ioSpec?: ToolIoSpec;
   useRule?: string;
   serverUrl?: string;
   path?: string;
@@ -104,7 +109,6 @@ export type ToolDetail = ToolRecord & {
   apiSpec?: unknown;
   openapiSpec?: string;
   functionInput?: FunctionInputPayload;
-  ioSpec?: ToolIoSpec;
   globalParameters?: ToolGlobalParameter;
 };
 

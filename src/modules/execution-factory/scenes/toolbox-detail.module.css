@@ -211,6 +211,12 @@
   border-right: 1px solid var(--color-border) !important;
 }
 
+/* 工具列表换成 EntityListRail 后，内边距由组件自己管，外壳不再补这 16px。
+   MCP / 技能详情还在用带内边距的 .sider，所以只能加类覆盖，不能改基类。 */
+.siderFlush {
+  padding: 0;
+}
+
 /* 列表高度跟着侧栏走，不再用 vh 魔数：右侧详情比视口高时，vh 算出的上限会把
    列表在半张卡片处截断，下面留一大片空白，看着像被遮罩盖住。 */
 .sider :global(.ant-layout-sider-children) {
@@ -227,73 +233,13 @@
   font-weight: 600;
 }
 
-.toolList {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 8px;
-  /* flex 子项默认 min-height:auto，不写这行压不下去，滚动条也就不会出现。 */
-  min-height: 0;
-  overflow-y: auto;
-  /* 滚动条贴到侧栏最右缘（抵消侧栏 16px 右内边距），卡片再留 16px 不被压住 */
-  margin-right: -16px;
-  padding-right: 16px;
-}
-
+/* 工具 / MCP / 函数三处列表卡片都搬去 EntityListRail 了，这里只留技能详情还在用的
+   .siderHeader 和文件树外壳。 */
 .fileTreeWrap {
   flex: 1;
   min-height: 0;
   overflow: auto;
   padding: 4px 0;
-}
-
-.toolItem {
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 0;
-  background: var(--color-bg-surface);
-  cursor: pointer;
-}
-
-.toolItemActive {
-  border-color: var(--color-primary-600);
-  box-shadow: 0 0 0 1px var(--color-primary-border);
-}
-
-.toolItemTop {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.toolIndex {
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-
-/* 名字占满中间、超出省略；方法徽标定宽靠右，各行徽标对齐成一列。 */
-.toolName {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text-primary);
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.toolDesc {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.toolItemFooter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
 }
 
 /* 右栏自己滚，别把整页拖着走。内边距下放到分区上，分隔线才能通栏。 */
@@ -406,18 +352,40 @@
   word-break: break-word;
 }
 
-/* 端点行：动词徽标 + 路径 + Server，占满 subheader 整行。 */
+/* 端点两行：接口端点（动词 + 路径）和根目录。原来是一枚实心大动词徽标顶在左边，
+   在一屏里比工具名还响；换成图标 + 文字标签后，读者先看到「这是什么」，再看值。
+   上方一条实线把「工具是什么」（名字 + 用途）和「往哪打」分成两段——描述那行本身
+   带的是可编辑态的虚线下划线，不承担分区职责，两块贴在一起会读成一段。 */
 .endpoint {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  display: grid;
+  gap: 6px;
   width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
 }
 
-/* 4px 与 DetailMetaPanel 里 label/value 的行内间距同档。 */
-.endpointMain {
-  display: grid;
-  gap: 4px;
+.endpointRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.endpointLabel {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 84px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 22px;
+}
+
+.endpointValue {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   min-width: 0;
 }
 

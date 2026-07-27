@@ -110,6 +110,7 @@ function toBackendActionCondition(
       object_type_id: normalized.objectTypeId,
       operation: normalized.operation,
       sub_conditions: subConditions,
+      value_from: normalized.valueFrom ?? "const",
     };
   }
 

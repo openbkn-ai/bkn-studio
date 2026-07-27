@@ -24,6 +24,7 @@ import type {
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import {
   mapMetric,
+  toBackendMetricCondition,
   toBackendMetricEntry,
 } from "@/modules/knowledge-network/services/mappers";
 import {
@@ -355,7 +356,7 @@ function toTimestamp(value: unknown): number | undefined {
   return undefined;
 }
 
-function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
+export function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
   const isInstant = params.mode === "instant";
   const time =
     params.timeRange === "custom"
@@ -400,6 +401,11 @@ function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
 
   if (params.analysisDimensions?.length) {
     payload.analysis_dimensions = params.analysisDimensions;
+  }
+
+  const condition = toBackendMetricCondition(params.condition);
+  if (condition) {
+    payload.condition = condition;
   }
 
   return payload;

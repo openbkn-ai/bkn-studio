@@ -59,7 +59,7 @@ function mapMetricConditionFromBackend(
   });
 }
 
-function toBackendMetricCondition(
+export function toBackendMetricCondition(
   condition?: ActionTypeCondition,
 ): BackendMetricCondition | undefined {
   const normalized = promoteLegacyActionCondition(condition);
@@ -78,6 +78,7 @@ function toBackendMetricCondition(
       object_type_id: normalized.objectTypeId,
       operation: normalized.operation,
       sub_conditions: subConditions,
+      value_from: normalized.valueFrom ?? "const",
     };
   }
 

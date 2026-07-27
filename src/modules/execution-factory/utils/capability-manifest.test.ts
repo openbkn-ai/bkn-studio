@@ -17,6 +17,7 @@ import {
   buildSkillCapabilityManifest,
   buildToolCapabilityManifest,
   getCapabilityReadiness,
+  hasCapabilityIoFacts,
 } from "@/modules/execution-factory/utils/capability-manifest";
 
 describe("capability-manifest", () => {
@@ -179,6 +180,42 @@ describe("capability-manifest", () => {
     });
     expect(manifest.authRequirements).toContain("timeout: 5000ms");
     expect(manifest.authRequirements).toContain("max retry attempts: 3");
+  });
+
+  it("reports no IO facts when the backend only returned an empty api_spec shell", () => {
+    // metadata 行查不到时后端回 DefaultMetadataInfo：api_spec 是空壳，不是 null，
+    // 前端因此解析出一个非 undefined 的空 ioSpec。这种工具不能显示成 0 入参 0 出参。
+    const manifest = buildToolCapabilityManifest({
+      toolId: "tool-metadata-missing",
+      name: "Metadata missing",
+      status: "enabled",
+      metadataType: "openapi",
+      ioSpec: { parameters: [], responses: {} },
+    });
+
+    expect(manifest.inputSemantics).toEqual([]);
+    expect(manifest.outputSemantics).toEqual([]);
+    expect(hasCapabilityIoFacts(manifest)).toBe(false);
+  });
+
+  it("reports IO facts when either side is actually known", () => {
+    const inputOnly = buildToolCapabilityManifest({
+      toolId: "tool-input-only",
+      name: "Input only",
+      status: "enabled",
+      metadataType: "openapi",
+      ioSpec: { parameters: [{ name: "id" }], responses: {} },
+    });
+    const outputOnly = buildToolCapabilityManifest({
+      toolId: "tool-output-only",
+      name: "Output only",
+      status: "enabled",
+      metadataType: "openapi",
+      ioSpec: { parameters: [], responses: { "200": { description: "OK" } } },
+    });
+
+    expect(hasCapabilityIoFacts(inputOnly)).toBe(true);
+    expect(hasCapabilityIoFacts(outputOnly)).toBe(true);
   });
 
   it("scores readiness from intent and input/output semantics", () => {

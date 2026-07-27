@@ -735,7 +735,8 @@ export function mapFunctionContent(
 
   return {
     code: content.code,
-    script_type: (content.script_type as "python") ?? "python",
+    // 后端没回就留空，别在读取侧补一个 "python" 冒充查到的值；写入侧另有兜底。
+    script_type: content.script_type as "python" | undefined,
     dependencies: content.dependencies,
     inputs: content.inputs?.length ? content.inputs : fallback.inputs,
     outputs: content.outputs?.length ? content.outputs : fallback.outputs,

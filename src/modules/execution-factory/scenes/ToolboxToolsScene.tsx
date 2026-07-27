@@ -8,15 +8,16 @@
 import {
   ArrowLeftOutlined,
   BarsOutlined,
-  BugOutlined,
   ClockCircleOutlined,
   CodeOutlined,
   DeleteOutlined,
   DownloadOutlined,
+  LinkOutlined,
+  NodeIndexOutlined,
   ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Alert, Checkbox, Empty, Layout, Space, Spin, Switch, Tag } from "antd";
+import { Alert, Empty, Layout, Space, Spin, Switch, Tag } from "antd";
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -34,6 +35,10 @@ import {
 } from "@/modules/execution-factory/components/CapabilityReadiness";
 import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
+import {
+  EntityListRail,
+  EntityListTag,
+} from "@/modules/execution-factory/components/EntityListRail";
 import { HttpMethodTag } from "@/modules/execution-factory/components/HttpMethodTag";
 import { InlineEditableText } from "@/modules/execution-factory/components/InlineEditableText";
 import { ToolDebugModal } from "@/modules/execution-factory/components/ToolDebugModal";
@@ -54,7 +59,10 @@ import {
 } from "@/modules/execution-factory/services/tool.service";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 import type { ToolRecord, ToolRunLogEntry, ToolStatus } from "@/modules/execution-factory/types/tool";
-import { buildToolCapabilityManifest } from "@/modules/execution-factory/utils/capability-manifest";
+import {
+  buildToolCapabilityManifest,
+  hasCapabilityIoFacts,
+} from "@/modules/execution-factory/utils/capability-manifest";
 import { buildToolboxBasicInfoItems } from "@/modules/execution-factory/utils/toolbox-info-items";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
@@ -91,6 +99,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const [quickAddApiOpen, setQuickAddApiOpen] = useState(false);
   const capabilityUxV2 = isCapabilityUxV2();
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
+  const [railKeyword, setRailKeyword] = useState("");
   const { exportComponentById, isExporting } = useImpexExport();
   const auditUserDirectory = useAuditUserDirectory();
 
@@ -368,6 +377,38 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     );
   };
 
+  /**
+   * 列表卡片的出入参标签。口径跟右侧「输入输出」那行完全一致——都过
+   * buildToolCapabilityManifest，避免同一个工具在一屏里给出两个数。
+   */
+  const renderToolIoTags = (tool: ToolRecord) => {
+    const manifest = buildToolCapabilityManifest(tool);
+
+    // 后端没给出可查的出入参事实时不画标签，别把「元数据缺失」说成「0 入参 0 出参」。
+    if (!hasCapabilityIoFacts(manifest)) {
+      return null;
+    }
+
+    return (
+      <>
+        <EntityListTag>
+          {t("executionFactory.ioInCount", { count: manifest.inputSemantics?.length ?? 0 })}
+        </EntityListTag>
+        <EntityListTag>
+          {t("executionFactory.ioOutCount", { count: manifest.outputSemantics?.length ?? 0 })}
+        </EntityListTag>
+      </>
+    );
+  };
+
+  // 列表一次拉满 100 条（loadTools），筛选放本地做就够，不必回后端。
+  const visibleItems = useMemo(() => {
+    const keyword = railKeyword.trim().toLowerCase();
+    return keyword
+      ? items.filter((item) => item.name.toLowerCase().includes(keyword))
+      : items;
+  }, [items, railKeyword]);
+
   const statusTag = useMemo(() => {
     if (!toolbox?.status) {
       return null;
@@ -598,80 +639,52 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
               </div>
             ) : null}
             <Layout className={styles.layout}>
-            <Sider className={styles.sider} width={320}>
-              <div className={styles.siderHeader}>
-                <span>
-                  <BarsOutlined />{" "}
-                  {t("executionFactory.toolboxToolListTitle", {
-                    count: items.length,
-                  })}
-                </span>
-              </div>
-              <div className={styles.toolList}>
-                {items.map((item, index) => {
-                  const active = selectedTool?.toolId === item.toolId;
-
-                  return (
-                    <div
-                      className={`${styles.toolItem} ${active ? styles.toolItemActive : ""}`}
-                      key={item.toolId}
-                      onClick={() => {
-                        void handleSelectTool(item);
-                      }}
-                    >
-                      <div className={styles.toolItemTop}>
-                        {!viewMode ? (
-                          <Checkbox
-                            checked={selectedToolIds.includes(item.toolId)}
-                            onChange={(event) => {
-                              toggleToolSelection(item.toolId, event.target.checked);
-                            }}
-                            onClick={(event) => event.stopPropagation()}
-                          />
-                        ) : null}
-                        <span className={styles.toolIndex}>{index + 1}</span>
-                        <span className={styles.toolName}>{item.name}</span>
-                        {item.method ? (
-                          <HttpMethodTag compact method={item.method} />
-                        ) : null}
-                      </div>
-                      <div className={styles.toolDesc}>{item.description || "-"}</div>
-                      <div className={styles.toolItemFooter}>
-                        {/* 与详情区状态开关同口径：需要 tool:edit，且市场预览态禁用。
-                            手工构造 ?from=catalog&action=edit 会让 viewMode 为假，靠这两道
-                            门禁兜住，避免改到别人域里工具的启用状态。 */}
-                        {!viewMode ? (
-                          <PermissionGate permissions="execution-factory:tool:edit">
-                            <Switch
-                              checked={item.status === "enabled"}
-                              disabled={catalogContext}
-                              onChange={() => handleToggleStatus(item)}
-                              onClick={(_, event) => event.stopPropagation()}
-                              size="small"
-                            />
-                          </PermissionGate>
-                        ) : null}
-                        <PermissionGate permissions="execution-factory:tool:debug">
-                          <AppButton
-                            icon={<BugOutlined />}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void (async () => {
-                                await handleSelectTool(item);
-                                setDebugRecord(item);
-                              })();
-                            }}
-                            size="small"
-                            type="link"
-                          >
-                            {t("executionFactory.debug")}
-                          </AppButton>
-                        </PermissionGate>
-                      </div>
-                    </div>
-                  );
+            <Sider className={`${styles.sider} ${styles.siderFlush}`} width={320}>
+              <EntityListRail
+                activeId={selectedTool?.toolId ?? null}
+                emptyText={t("executionFactory.toolboxToolListEmptyFiltered")}
+                icon={<BarsOutlined />}
+                items={visibleItems.map((item) => ({
+                  badge: <HttpMethodTag compact method={item.method} />,
+                  id: item.toolId,
+                  muted: item.status === "disabled",
+                  name: item.name,
+                  status: {
+                    checked: item.status === "enabled",
+                    // 市场预览态（from=catalog）看的是别人域的工具箱，只展示状态不给切换。
+                    disabled: catalogContext,
+                    label: t(`executionFactory.toolStatuses.${item.status}`),
+                    onChange: viewMode ? undefined : () => handleToggleStatus(item),
+                  },
+                  /*
+                    与右侧「输入输出」那行同源：都取 buildToolCapabilityManifest 的口径
+                    （入参 = api_spec.parameters，出参 = 响应状态码），免得同一个工具在
+                    一屏里给出两个数。查不到出入参事实时 renderToolIoTags 返回 null。
+                  */
+                  tags: renderToolIoTags(item),
+                }))}
+                onSelect={(toolId) => {
+                  const target = items.find((item) => item.toolId === toolId);
+                  if (target) {
+                    void handleSelectTool(target);
+                  }
+                }}
+                onToggleSelect={toggleToolSelection}
+                search={{
+                  onChange: setRailKeyword,
+                  placeholder: t("executionFactory.toolboxFilterTools"),
+                  value: railKeyword,
+                }}
+                selectable={!viewMode}
+                selectedIds={selectedToolIds}
+                /* 与详情区状态开关同口径：需要 tool:edit。手工构造 ?from=catalog&action=edit
+                   会让 viewMode 为假，靠这道门禁 + 上面的 disabled 兜住，避免改到别人域里
+                   工具的启用状态。 */
+                statusPermission="execution-factory:tool:edit"
+                title={t("executionFactory.toolboxToolListTitle", {
+                  count: items.length,
                 })}
-              </div>
+              />
             </Sider>
             <Content className={styles.content}>
               {selectedTool ? (
@@ -740,10 +753,22 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                         */}
                         {selectedTool.method || selectedTool.path ? (
                           <div className={styles.endpoint}>
-                            <HttpMethodTag method={selectedTool.method} />
-                            <div className={styles.endpointMain}>
-                              <span className={styles.endpointPath}>
-                                {selectedTool.path || "-"}
+                            <div className={styles.endpointRow}>
+                              <span className={styles.endpointLabel}>
+                                <NodeIndexOutlined />
+                                {t("executionFactory.toolEndpointLabel")}
+                              </span>
+                              <span className={styles.endpointValue}>
+                                <HttpMethodTag compact method={selectedTool.method} />
+                                <span className={styles.endpointPath}>
+                                  {selectedTool.path || "-"}
+                                </span>
+                              </span>
+                            </div>
+                            <div className={styles.endpointRow}>
+                              <span className={styles.endpointLabel}>
+                                <LinkOutlined />
+                                {t("executionFactory.toolServerRootLabel")}
                               </span>
                               <span className={styles.endpointServer}>
                                 {selectedTool.serverUrl || toolbox?.serviceUrl || "-"}

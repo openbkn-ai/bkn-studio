@@ -13,38 +13,87 @@
 
 .conditionRow {
   align-items: center;
+  align-self: flex-start;
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 8px;
-  width: 100%;
+  max-width: 100%;
+}
+
+.conditionGroup {
+  align-self: flex-start;
+  background: #fafcff;
+  border-left: 2px solid #d9e8ff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 100%;
+  padding: 10px 12px;
+}
+
+.conditionGroup .conditionGroup {
+  margin-left: 16px;
+}
+
+.groupHeader {
+  align-items: center;
+  background: #f5f8ff;
+  border: 1px solid #d6e4ff;
+  border-radius: 2px;
+  color: rgba(0, 0, 0, 0.65);
+  display: inline-flex;
+  font-size: 14px;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  width: max-content;
+}
+
+.groupLabel {
+  flex: 0 0 auto;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.groupSelect {
+  flex: 0 0 88px;
+  width: 88px;
 }
 
 .objectTypeSelect {
-  flex: 1 1 160px;
-  min-width: 140px;
+  flex: 0 0 180px;
+  width: 180px;
 }
 
 .fieldSelect {
-  flex: 1 1 160px;
-  min-width: 140px;
+  flex: 0 0 220px;
+  width: 220px;
 }
 
 .operationSelect {
-  flex: 0 1 120px;
-  min-width: 100px;
+  flex: 0 0 128px;
+  width: 128px;
 }
 
 .valueInput {
-  flex: 1 1 160px;
-  min-width: 120px;
+  flex: 0 0 300px;
+  width: 300px;
+}
+
+.rowActions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  justify-content: flex-start;
 }
 
 .addButton {
   flex: 0 0 32px;
 }
 
-.addConditionButton {
-  align-self: flex-start;
+.deleteButton {
+  flex: 0 0 auto;
 }
 
 @media (max-width: 960px) {
