@@ -55,8 +55,17 @@ export const anonymousRuntimeUser: RuntimeUser = {
  * 登录后拉取当前用户身份 + 权限,组装成 RuntimeUser。
  *
  * bkn-safe 下发的是 `<resource_type>:<operation>`,与各模块 manifest 声明的权限点并非
- * 同一套命名,需经 permission-map 翻译(见该文件注释)。is_admin(超级管理员/admin)
- * 放行全部已注册权限。
+ * 同一套命名,需经 permission-map 翻译(见该文件注释)。
+ *
+ * 全量放行的判据是**资源通配授权**(`*:*` 行),不是 `is_admin`。两者不等价:
+ * `is_admin` 来自后端 CanAdmin,判的是 `safe_admin:console:manage`——「可以进管理
+ * API 面」,系统/安全/审计三员角色都持有它。若按 is_admin 放行全部权限,三员就都
+ * 拿到全量权限点,按点位控制入口的门禁在他们身上直接失效(实测 14.103.77.23:三员
+ * 的 /me/permissions 均为 is_admin=true,而 permissions 只含各自那几行)。超级管理员
+ * 才持有资源通配,其 /me/permissions 折叠成单行 `{type:"*",id:"*",ops:["*"]}`。
+ *
+ * is_admin 仍然有用:它是 ADMIN_ONLY_SUFFIXES(跨租户运维页)的判据,与执行工厂后端
+ * CheckAdminPermission 同口径,所以照常传给 deriveStudioPermissions。
  *
  * 两个请求各自独立降级(allSettled),互不牵连:身份拿不到不影响权限,权限拿不到
  * 一律按无权限处理。permissions 拉取失败绝不放行任何权限(fail-closed)——避免因为
@@ -81,15 +90,18 @@ export async function fetchCurrentUser(): Promise<RuntimeUser> {
     permResult.status === "fulfilled" ? permResult.value.data : {};
 
   const safeGrants = flattenSafeGrants(perm.permissions);
+  const isAdmin = Boolean(perm.is_admin);
+  // 资源通配 = 超级管理员,对每一类资源的每个操作都成立,没有逐点推导的必要。
+  const hasResourceWildcard = safeGrants.has("*:*");
 
   return {
     businessDomainId: null,
     id: me.id ?? null,
-    isAdmin: Boolean(perm.is_admin),
+    isAdmin,
     name: me.name || me.account || me.id || null,
     roles: me.roles ?? [],
-    permissions: perm.is_admin
+    permissions: hasResourceWildcard
       ? [...defaultDevPermissions]
-      : deriveStudioPermissions(defaultDevPermissions, safeGrants, false),
+      : deriveStudioPermissions(defaultDevPermissions, safeGrants, isAdmin),
   };
 }
