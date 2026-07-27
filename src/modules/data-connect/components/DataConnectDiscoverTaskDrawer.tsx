@@ -11,7 +11,6 @@ import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getDataConnectDiscoverTask } from "@/modules/data-connect/services/discover.service";
-import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 import type {
   DataConnectDiscoverSchedule,
   DataConnectDiscoverTask,
@@ -20,7 +19,7 @@ import type {
 import styles from "./DataConnectDiscoverTaskDrawer.module.css";
 
 type DataConnectDiscoverTaskDrawerProps = {
-  catalogs: DataConnectRecord[];
+  catalogs: Array<{ id: string; name: string }>;
   onClose: () => void;
   open: boolean;
   schedules: DataConnectDiscoverSchedule[];
@@ -121,6 +120,8 @@ export function DataConnectDiscoverTaskDrawer({
           <section className={styles.detailCard}>
             <div className={styles.detailGrid}>
               <DetailItem label="ID" value={task.id} />
+              <DetailItem label={t("dataConnect.discoverCatalogId")} value={task.catalogId || "-"} />
+              <DetailItem label={t("dataConnect.discoverScheduleId")} value={task.scheduleId || "-"} />
               <DetailItem
                 label={t("dataConnect.discoverStrategy")}
                 value={t(`dataConnect.discoverStrategies.${task.strategy}`)}
@@ -147,6 +148,18 @@ export function DataConnectDiscoverTaskDrawer({
                 value={task.message || "-"}
               />
             </div>
+          </section>
+          <section className={styles.detailCard}>
+            <h3 className={styles.sectionTitle}>{t("dataConnect.discoverResult")}</h3>
+            {task.result ? <div className={styles.detailGrid}>
+              <DetailItem label={t("dataConnect.discoverResultNew")} value={String(task.result.newCount)} />
+              <DetailItem label={t("dataConnect.discoverResultUpdated")} value={String(task.result.updatedCount)} />
+              <DetailItem label={t("dataConnect.discoverResultStale")} value={String(task.result.staleCount)} />
+              <DetailItem label={t("dataConnect.discoverResultRestored")} value={String(task.result.restoredCount)} />
+              <DetailItem label={t("dataConnect.discoverResultUnchanged")} value={String(task.result.unchangedCount)} />
+              <DetailItem label={t("dataConnect.discoverResultFailed")} value={String(task.result.failedCount)} />
+              <DetailItem full label={t("dataConnect.discoverResultMessage")} value={task.result.message || "-"} />
+            </div> : <div className={styles.emptyResult}>{t("dataConnect.discoverResultEmpty")}</div>}
           </section>
         </div>
       ) : null}

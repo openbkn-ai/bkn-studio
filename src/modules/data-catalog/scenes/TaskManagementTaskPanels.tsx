@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DeleteOutlined, ExclamationCircleOutlined, FilterOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
-import { Alert, Descriptions, Drawer, Popover, Select, Space, Tag } from "antd";
+import { DeleteOutlined, FilterOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
+import { Alert, Popover, Select, Space, Tag } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,7 +21,6 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
-import taskDetailStyles from "@/modules/data-catalog/components/BuildTaskDetailDrawer.module.css";
 import { SemanticUnderstandingTaskDetailDrawer } from "@/modules/data-catalog/components/SemanticUnderstandingTaskDetailDrawer";
 import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
 import {
@@ -29,6 +28,7 @@ import {
   listDataConnectDiscoverSchedules,
   listDataConnectDiscoverTasks,
 } from "@/modules/data-connect/services/discover.service";
+import { DataConnectDiscoverTaskDrawer } from "@/modules/data-connect/components/DataConnectDiscoverTaskDrawer";
 import type {
   DataConnectDiscoverSchedule,
   DataConnectDiscoverStrategy,
@@ -115,67 +115,6 @@ function TaskPanel({ children }: { children: React.ReactNode }) {
   return <section className={styles.contentSurface}>{children}</section>;
 }
 
-function TaskDetailDrawer({
-  children,
-  failureReason,
-  onClose,
-  status,
-  statusClass,
-  taskId,
-}: {
-  children: React.ReactNode;
-  failureReason?: string;
-  onClose: () => void;
-  status: string;
-  statusClass: string;
-  taskId: string;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <Drawer
-      className={taskDetailStyles.drawer}
-      destroyOnClose
-      onClose={onClose}
-      open
-      styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }}
-      title={`${t("dataCatalog.task.detail")} · ${taskId}`}
-      width={560}
-    >
-      <div className={taskDetailStyles.drawerContent}>
-        <section className={taskDetailStyles.sectionCard}>
-          <h3 className={taskDetailStyles.sectionTitle}>{t("common.status")}</h3>
-          <div className={taskDetailStyles.statusRow}>
-            <span className={[sharedStyles.tag, statusClass].join(" ")}>{status}</span>
-          </div>
-          {failureReason ? (
-            <div className={sharedStyles.calloutWarn}>
-              <ExclamationCircleOutlined />
-              <span className={taskDetailStyles.failureContent}>
-                <b>{t("dataCatalog.taskManagement.details.failureReason")}</b>
-                <span>{failureReason}</span>
-              </span>
-            </div>
-          ) : null}
-        </section>
-        <section className={taskDetailStyles.sectionCard}>
-          <h3 className={taskDetailStyles.sectionTitle}>
-            {t("dataCatalog.taskManagement.details.taskInformation")}
-          </h3>
-          <Descriptions
-            bordered
-            className={taskDetailStyles.descriptionBlock}
-            column={1}
-            size="small"
-          >
-            {children}
-          </Descriptions>
-        </section>
-      </div>
-    </Drawer>
-  );
-}
-
 function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTask }) {
   const percent = Math.max(0, Math.min(100, task.progress));
   const fillClass =
@@ -220,7 +159,7 @@ export function DiscoverTaskListPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-  const [detailTask, setDetailTask] = useState<DataConnectDiscoverTask | null>(null);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -334,7 +273,7 @@ export function DiscoverTaskListPanel() {
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time") },
     {
       key: "actions", title: t("common.actions"), width: 160, fixed: "right",
-      render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTask(record)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={record.status === "pending" || record.status === "running"} type="link" onClick={() => void modal.confirm({ title: t("dataConnect.discoverTaskDeleteConfirmTitle"), content: t("dataConnect.discoverTaskDeleteConfirmDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteDataConnectDiscoverTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space>,
+      render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTaskId(record.id)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={record.status === "pending" || record.status === "running"} type="link" onClick={() => void modal.confirm({ title: t("dataConnect.discoverTaskDeleteConfirmTitle"), content: t("dataConnect.discoverTaskDeleteConfirmDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteDataConnectDiscoverTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space>,
     },
   ];
 
@@ -347,17 +286,7 @@ export function DiscoverTaskListPanel() {
     </Space></div>
     <TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.discover.empty")} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />
     <Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize); }} />
-    {detailTask ? <TaskDetailDrawer failureReason={detailTask.status === "failed" ? detailTask.message : undefined} onClose={() => setDetailTask(null)} status={t(`dataConnect.discoverTaskStatuses.${detailTask.status}`)} statusClass={detailTask.status === "failed" ? sharedStyles.taskFailed : detailTask.status === "completed" ? sharedStyles.taskSucceeded : sharedStyles.taskRunning} taskId={detailTask.id}>
-      <Descriptions.Item label={t("dataCatalog.resource.catalog")}>{detailTask.catalogName ?? detailTask.catalogId}</Descriptions.Item>
-      <Descriptions.Item label={t("dataCatalog.taskManagement.columns.strategy")}>{t(`dataConnect.discoverStrategies.${detailTask.strategy}`)}</Descriptions.Item>
-      <Descriptions.Item label={t("dataCatalog.taskManagement.columns.trigger")}>{t(`dataConnect.discoverTriggerTypes.${detailTask.triggerType}`)}</Descriptions.Item>
-      <Descriptions.Item label={t("common.status")}>{t(`dataConnect.discoverTaskStatuses.${detailTask.status}`)}</Descriptions.Item>
-      <Descriptions.Item label={t("dataCatalog.task.progress")}>{`${detailTask.progress}%`}</Descriptions.Item>
-      <Descriptions.Item label={t("dataCatalog.taskManagement.details.scheduleId")}>{detailTask.scheduleId || "-"}</Descriptions.Item>
-      <Descriptions.Item label={t("dataCatalog.taskManagement.details.startTime")}>{detailTask.startTime || "-"}</Descriptions.Item>
-      <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>{detailTask.finishTime || "-"}</Descriptions.Item>
-      <Descriptions.Item label={t("dataCatalog.task.createTime")}>{detailTask.createTime || "-"}</Descriptions.Item>
-    </TaskDetailDrawer> : null}
+    {detailTaskId ? <DataConnectDiscoverTaskDrawer catalogs={catalogs} onClose={() => setDetailTaskId(null)} open schedules={schedules} taskId={detailTaskId} /> : null}
   </TaskPanel>;
 }
 
