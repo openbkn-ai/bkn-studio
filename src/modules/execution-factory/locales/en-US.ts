@@ -299,6 +299,17 @@ export const executionFactoryEnUS = {
       sse: "SSE",
       stream: "Stream (Streamable HTTP)",
     },
+    agentReadiness: {
+      score: "Readiness",
+      scoreRuleTitle: "How readiness is scored",
+      notApplicable: "N/A",
+      notApplicableNote: "Dimensions this capability never declares are left out of the score",
+      ioCounts: "In {{input}} · Out {{output}}",
+      ioUndeclared: "undeclared",
+      missingTitle: "Fill these in before letting agents call it automatically",
+      emptyIntent:
+        "No business intent yet — agents can only infer how to use this from the name and the technical schema.",
+    },
     mcpModeShort: {
       sse: "SSE",
       stream: "Stream",

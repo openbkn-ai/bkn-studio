@@ -730,10 +730,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                           {renderToolEditable(
                             <InlineEditableText
                               block
-                              emptyLabel={t("executionFactory.agentReadiness.emptyIntent", {
-                                defaultValue:
-                                  "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
-                              })}
+                              emptyLabel={t("executionFactory.agentReadiness.emptyIntent")}
                               key={`${selectedTool.toolId}-description`}
                               multiline
                               onChange={(description) => void handleInlinePatch({ description })}
@@ -745,10 +742,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                               title={selectedTool.description}
                             >
                               {selectedTool.description ||
-                                t("executionFactory.agentReadiness.emptyIntent", {
-                                  defaultValue:
-                                    "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
-                                })}
+                                t("executionFactory.agentReadiness.emptyIntent")}
                             </span>,
                           )}
                         </div>

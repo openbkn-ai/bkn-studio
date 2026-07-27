@@ -151,7 +151,7 @@ export function EntityListRail({
                 item.muted ? styles.itemMuted : ""
               }`}
               key={item.id}
-              onClick={() => onSelect(item.id)}
+              onClick={() => onSelect?.(item.id)}
               onKeyDown={(event) => handleKeyDown(event, item.id)}
               role="option"
               tabIndex={0}

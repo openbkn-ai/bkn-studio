@@ -42,9 +42,7 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
         title={
           <div className={styles.scoreRuleTip}>
             <div className={styles.scoreRuleTitle}>
-              {t("executionFactory.agentReadiness.scoreRuleTitle", {
-                defaultValue: "就绪度评分规则",
-              })}
+              {t("executionFactory.agentReadiness.scoreRuleTitle")}
             </div>
             {READINESS_DIMENSIONS.map((dim) => {
               const skipped = readiness.notApplicable.includes(dim.key);
@@ -63,9 +61,7 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
                   <span>{`${skipped ? "—" : met ? "✓" : "○"} ${label}`}</span>
                   <span>
                     {skipped
-                      ? t("executionFactory.agentReadiness.notApplicable", {
-                          defaultValue: "不适用",
-                        })
+                      ? t("executionFactory.agentReadiness.notApplicable")
                       : dim.weight}
                   </span>
                 </div>
@@ -73,18 +69,14 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
             })}
             {readiness.notApplicable.length > 0 ? (
               <div className={styles.scoreRuleNote}>
-                {t("executionFactory.agentReadiness.notApplicableNote", {
-                  defaultValue: "该能力未声明的维度不计入评分",
-                })}
+                {t("executionFactory.agentReadiness.notApplicableNote")}
               </div>
             ) : null}
           </div>
         }
       >
         <span className={styles.scoreLabel}>
-          {t("executionFactory.agentReadiness.score", {
-            defaultValue: "就绪度",
-          })}
+          {t("executionFactory.agentReadiness.score")}
           <QuestionCircleOutlined className={styles.scoreInfoIcon} />
         </span>
       </Tooltip>
@@ -111,16 +103,12 @@ export function CapabilityIoCounts({ manifest }: CapabilityManifestProps) {
   // "returns nothing" is wrong. Say undeclared when nothing was declared.
   const input = String(manifest.inputSemantics?.length ?? 0);
   const output = (manifest.readinessNotApplicable ?? []).includes("output semantics")
-    ? t("executionFactory.agentReadiness.ioUndeclared", { defaultValue: "未声明" })
+    ? t("executionFactory.agentReadiness.ioUndeclared")
     : String(manifest.outputSemantics?.length ?? 0);
 
   return (
     <span className={styles.ioCounts}>
-      {t("executionFactory.agentReadiness.ioCounts", {
-        input,
-        output,
-        defaultValue: `输入 ${input} · 输出 ${output}`,
-      })}
+      {t("executionFactory.agentReadiness.ioCounts", { input, output })}
     </span>
   );
 }
@@ -146,9 +134,7 @@ export function CapabilityReadinessHint({ manifest }: CapabilityManifestProps) {
           ))}
         </div>
       }
-      message={t("executionFactory.agentReadiness.missingTitle", {
-        defaultValue: "建议补齐后再开放给 Agent 自动调用",
-      })}
+      message={t("executionFactory.agentReadiness.missingTitle")}
       showIcon
       type="info"
     />

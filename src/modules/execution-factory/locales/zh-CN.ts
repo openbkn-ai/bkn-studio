@@ -295,6 +295,16 @@ export const executionFactoryZhCN = {
       sse: "SSE",
       stream: "Stream（Streamable HTTP）",
     },
+    agentReadiness: {
+      score: "就绪度",
+      scoreRuleTitle: "就绪度评分规则",
+      notApplicable: "不适用",
+      notApplicableNote: "该能力未声明的维度不计入评分",
+      ioCounts: "输入 {{input}} · 输出 {{output}}",
+      ioUndeclared: "未声明",
+      missingTitle: "建议补齐后再开放给 Agent 自动调用",
+      emptyIntent: "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
+    },
     // 卡片徽标位放不下「Stream（Streamable HTTP）」，这里只要动词。
     mcpModeShort: {
       sse: "SSE",

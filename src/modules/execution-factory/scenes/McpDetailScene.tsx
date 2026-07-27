@@ -383,10 +383,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
                         title={selectedTool.description}
                       >
                         {selectedTool.description ||
-                          t("executionFactory.agentReadiness.emptyIntent", {
-                            defaultValue:
-                              "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
-                          })}
+                          t("executionFactory.agentReadiness.emptyIntent")}
                       </div>
                     </div>
                   }
