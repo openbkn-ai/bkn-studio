@@ -638,8 +638,10 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                 </Space>
               </div>
             ) : null}
-            <Layout className={styles.layout}>
-            <Sider className={`${styles.sider} ${styles.siderFlush}`} width={320}>
+            <Layout
+              className={`${styles.layout} ${styles.layoutHeadAligned}`}
+            >
+            <Sider className={styles.sider} width={320}>
               <EntityListRail
                 activeId={selectedTool?.toolId ?? null}
                 emptyText={t("executionFactory.toolboxToolListEmptyFiltered")}
@@ -728,54 +730,22 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                           {renderToolEditable(
                             <InlineEditableText
                               block
-                              emptyLabel={t("executionFactory.agentReadiness.emptyIntent", {
-                                defaultValue:
-                                  "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
-                              })}
+                              emptyLabel={t("executionFactory.agentReadiness.emptyIntent")}
                               key={`${selectedTool.toolId}-description`}
                               multiline
                               onChange={(description) => void handleInlinePatch({ description })}
                               rows={2}
                               value={selectedTool.description ?? ""}
                             />,
-                            <span>
+                            <span
+                              className={styles.toolIdentityDescClamp}
+                              title={selectedTool.description}
+                            >
                               {selectedTool.description ||
-                                t("executionFactory.agentReadiness.emptyIntent", {
-                                  defaultValue:
-                                    "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
-                                })}
+                                t("executionFactory.agentReadiness.emptyIntent")}
                             </span>,
                           )}
                         </div>
-                        {/*
-                          方法 + 路径 + Server 合成一条端点行：这三个字段分成三格时
-                          读者得自己拼出「往哪打」，合起来才是工具的核心事实。
-                        */}
-                        {selectedTool.method || selectedTool.path ? (
-                          <div className={styles.endpoint}>
-                            <div className={styles.endpointRow}>
-                              <span className={styles.endpointLabel}>
-                                <NodeIndexOutlined />
-                                {t("executionFactory.toolEndpointLabel")}
-                              </span>
-                              <span className={styles.endpointValue}>
-                                <HttpMethodTag compact method={selectedTool.method} />
-                                <span className={styles.endpointPath}>
-                                  {selectedTool.path || "-"}
-                                </span>
-                              </span>
-                            </div>
-                            <div className={styles.endpointRow}>
-                              <span className={styles.endpointLabel}>
-                                <LinkOutlined />
-                                {t("executionFactory.toolServerRootLabel")}
-                              </span>
-                              <span className={styles.endpointServer}>
-                                {selectedTool.serverUrl || toolbox?.serviceUrl || "-"}
-                              </span>
-                            </div>
-                          </div>
-                        ) : null}
                       </div>
                     }
                     title={
@@ -796,6 +766,33 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                     }
                     variant="plain"
                   />
+                  {selectedTool.method || selectedTool.path ? (
+                    /*
+                      端点信息另起一档：头部只放「徽标 + 名字 + 描述」两行，与函数工作台
+                      和 MCP 详情同高；端点挤进头里会把左右两栏的分隔线撑得高低不一。
+                    */
+                    <div className={`${styles.section} ${styles.endpoint}`}>
+                      <div className={styles.endpointRow}>
+                        <span className={styles.endpointLabel}>
+                          <NodeIndexOutlined />
+                          {t("executionFactory.toolEndpointLabel")}
+                        </span>
+                        <span className={styles.endpointValue}>
+                          <HttpMethodTag compact method={selectedTool.method} />
+                          <span className={styles.endpointPath}>{selectedTool.path || "-"}</span>
+                        </span>
+                      </div>
+                      <div className={styles.endpointRow}>
+                        <span className={styles.endpointLabel}>
+                          <LinkOutlined />
+                          {t("executionFactory.toolServerRootLabel")}
+                        </span>
+                        <span className={styles.endpointServer}>
+                          {selectedTool.serverUrl || toolbox?.serviceUrl || "-"}
+                        </span>
+                      </div>
+                    </div>
+                  ) : null}
                   <div className={styles.ioPanel}>
                     <div className={styles.ioHeader}>
                       <span>

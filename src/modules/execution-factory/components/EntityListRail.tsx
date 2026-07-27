@@ -53,12 +53,17 @@ export type EntityListRailItem = {
 
 type EntityListRailProps = {
   activeId?: string | null;
+  /**
+   * 列表区自绘内容，给不了扁平卡片的场景用（技能包的文件树有层级，压平就没了）。
+   * 传了就顶掉 items，标题 / 搜索 / 底栏这些外壳照旧，三处列表栏才长得一样。
+   */
+  children?: ReactNode;
   emptyText?: ReactNode;
   /** 固定底栏，不跟着列表滚（函数工作台的「新建函数」）。 */
   footer?: ReactNode;
   icon?: ReactNode;
-  items: EntityListRailItem[];
-  onSelect: (id: string) => void;
+  items?: EntityListRailItem[];
+  onSelect?: (id: string) => void;
   onToggleSelect?: (id: string, checked: boolean) => void;
   search?: {
     onChange: (value: string) => void;
@@ -82,10 +87,11 @@ type EntityListRailProps = {
  */
 export function EntityListRail({
   activeId,
+  children,
   emptyText,
   footer,
   icon,
-  items,
+  items = [],
   onSelect,
   onToggleSelect,
   search,
@@ -99,7 +105,7 @@ export function EntityListRail({
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>, id: string) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      onSelect(id);
+      onSelect?.(id);
     }
   };
 
@@ -121,8 +127,9 @@ export function EntityListRail({
         ) : null}
       </div>
 
-      <div className={styles.list} role="listbox">
-        {items.length === 0 && emptyText ? (
+      <div className={styles.list} role={children ? undefined : "listbox"}>
+        {children}
+        {!children && items.length === 0 && emptyText ? (
           <div className={styles.empty}>{emptyText}</div>
         ) : null}
         {items.map((item, index) => {
@@ -144,7 +151,7 @@ export function EntityListRail({
                 item.muted ? styles.itemMuted : ""
               }`}
               key={item.id}
-              onClick={() => onSelect(item.id)}
+              onClick={() => onSelect?.(item.id)}
               onKeyDown={(event) => handleKeyDown(event, item.id)}
               role="option"
               tabIndex={0}

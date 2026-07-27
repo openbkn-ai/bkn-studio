@@ -12,11 +12,9 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   DownloadOutlined,
-  FileTextOutlined,
   IdcardOutlined,
   KeyOutlined,
   LinkOutlined,
-  TagOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
 import { Alert, Empty, Layout, Spin, Tag } from "antd";
@@ -195,6 +193,13 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
         variant: "accent" as const,
       },
       {
+        key: "mode",
+        label: t("executionFactory.mcpModeLabel"),
+        value: resolveModeLabel(record.mode, t),
+        icon: <ApiOutlined />,
+        variant: "accent" as const,
+      },
+      {
         key: "category",
         label: t("executionFactory.category"),
         value: resolveMcpCategoryLabel(record.category, t),
@@ -231,63 +236,6 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
     ];
   }, [record, t, toolCount]);
 
-  const toolInfoItems = useMemo(() => {
-    if (!selectedTool || !record) {
-      return [];
-    }
-
-    return [
-      {
-        key: "toolName",
-        label: t("executionFactory.toolboxToolNameLabel"),
-        value: selectedTool.name,
-        icon: <TagOutlined />,
-        variant: "strong" as const,
-      },
-      {
-        key: "mode",
-        label: t("executionFactory.mcpModeLabel"),
-        value: resolveModeLabel(record.mode, t),
-        icon: <ApiOutlined />,
-        variant: "accent" as const,
-      },
-      {
-        key: "category",
-        label: t("executionFactory.category"),
-        value: resolveMcpCategoryLabel(record.category, t),
-        icon: <AppstoreOutlined />,
-      },
-      {
-        key: "description",
-        label: t("common.description"),
-        value: selectedTool.description || "-",
-        icon: <FileTextOutlined />,
-        span: "full" as const,
-      },
-      {
-        key: "serviceUrl",
-        label: t("executionFactory.serviceUrl"),
-        value: record.url ?? "-",
-        icon: <LinkOutlined />,
-        span: "full" as const,
-        variant: "mono" as const,
-      },
-      {
-        key: "headers",
-        label: t("executionFactory.mcpHeadersLabel"),
-        value: formatRecordHeaders(record.headers),
-        icon: <KeyOutlined />,
-        span: "full" as const,
-        variant: "muted" as const,
-      },
-      {
-        key: "updateTime",
-        label: t("executionFactory.updateTime"),
-        value: formatOptionalTimestamp(record.updateTime),
-        icon: <CalendarOutlined />,
-      },
-    ];
-  }, [record, selectedTool, t]);
 
   const selectedToolManifest = useMemo(() => {
     if (!record || !selectedTool) {
@@ -381,8 +329,10 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
           <Empty description={t("executionFactory.mcpToolsEmpty")} />
         </div>
       ) : (
-        <Layout className={styles.layout}>
-          <Sider className={`${styles.sider} ${styles.siderFlush}`} width={320}>
+        <Layout
+          className={`${styles.layout} ${styles.layoutHeadAligned}`}
+        >
+          <Sider className={styles.sider} width={320}>
             <EntityListRail
               activeId={selectedTool?.name ?? null}
               emptyText={t("executionFactory.mcpToolListEmptyFiltered")}
@@ -417,11 +367,32 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
                   }
                   headerAside={
                     selectedToolManifest ? (
-                      <CapabilityReadinessScore manifest={selectedToolManifest} />
+                      <div className={styles.toolHeaderAside}>
+                        <CapabilityReadinessScore manifest={selectedToolManifest} />
+                      </div>
                     ) : undefined
                   }
-                  items={toolInfoItems}
-                  title={t("executionFactory.mcpToolInfoTitle")}
+                  items={[]}
+                  subheader={
+                    // 与 HTTP 工具详情同构：描述直接接在标题下，不再作为 dl 里的一行。
+                    // MCP 工具的名称和描述由服务端 tools/list 给出，本地改不了,
+                    // 所以这里是只读文本，没有 HTTP 那侧的 InlineEditableText。
+                    <div className={styles.toolIdentity}>
+                      <div
+                        className={`${styles.toolIdentityDesc} ${styles.toolIdentityDescClamp}`}
+                        title={selectedTool.description}
+                      >
+                        {selectedTool.description ||
+                          t("executionFactory.agentReadiness.emptyIntent")}
+                      </div>
+                    </div>
+                  }
+                  title={
+                    <span className={styles.toolIdentityTitle}>
+                      <span className={styles.apiBadge}>mcp</span>
+                      <span className={styles.toolIdentityName}>{selectedTool.name}</span>
+                    </span>
+                  }
                   variant="plain"
                 />
                 <div className={styles.ioPanel}>
@@ -438,7 +409,10 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
                       </AppButton>
                     </PermissionGate>
                   </div>
-                  <JsonSchemaIoPanel schema={selectedTool.inputSchema} />
+                  <JsonSchemaIoPanel
+                    outputSchema={selectedTool.outputSchema}
+                    schema={selectedTool.inputSchema}
+                  />
                 </div>
               </>
             ) : (

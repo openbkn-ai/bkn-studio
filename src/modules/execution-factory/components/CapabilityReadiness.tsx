@@ -10,18 +10,21 @@ import { Alert, Tag, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { CapabilityManifest } from "@/modules/execution-factory/types/capability-manifest";
-import { getCapabilityReadiness } from "@/modules/execution-factory/utils/capability-manifest";
+import {
+  getCapabilityReadiness,
+  READINESS_DIMENSIONS,
+} from "@/modules/execution-factory/utils/capability-manifest";
 
 import styles from "./CapabilityReadiness.module.css";
 
-const READINESS_DIMENSIONS: Array<{ key: string; label: string; weight: number }> = [
-  { key: "business intent", label: "业务用途", weight: 40 },
-  { key: "input semantics", label: "输入语义", weight: 35 },
-  { key: "output semantics", label: "输出语义", weight: 25 },
-];
+const DIMENSION_LABELS: Record<string, string> = {
+  "business intent": "业务用途",
+  "input semantics": "输入语义",
+  "output semantics": "输出语义",
+};
 
 function readinessDimensionLabel(key: string) {
-  return READINESS_DIMENSIONS.find((dim) => dim.key === key)?.label ?? key;
+  return DIMENSION_LABELS[key] ?? key;
 }
 
 type CapabilityManifestProps = {
@@ -39,12 +42,13 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
         title={
           <div className={styles.scoreRuleTip}>
             <div className={styles.scoreRuleTitle}>
-              {t("executionFactory.agentReadiness.scoreRuleTitle", {
-                defaultValue: "就绪度评分规则",
-              })}
+              {t("executionFactory.agentReadiness.scoreRuleTitle")}
             </div>
             {READINESS_DIMENSIONS.map((dim) => {
-              const met = !readiness.missing.includes(dim.key);
+              const skipped = readiness.notApplicable.includes(dim.key);
+              const met = !skipped && !readiness.missing.includes(dim.key);
+              const label = readinessDimensionLabel(dim.key);
+
               return (
                 <div
                   className={
@@ -54,18 +58,25 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
                   }
                   key={dim.key}
                 >
-                  <span>{`${met ? "✓" : "○"} ${dim.label}`}</span>
-                  <span>{dim.weight}</span>
+                  <span>{`${skipped ? "—" : met ? "✓" : "○"} ${label}`}</span>
+                  <span>
+                    {skipped
+                      ? t("executionFactory.agentReadiness.notApplicable")
+                      : dim.weight}
+                  </span>
                 </div>
               );
             })}
+            {readiness.notApplicable.length > 0 ? (
+              <div className={styles.scoreRuleNote}>
+                {t("executionFactory.agentReadiness.notApplicableNote")}
+              </div>
+            ) : null}
           </div>
         }
       >
         <span className={styles.scoreLabel}>
-          {t("executionFactory.agentReadiness.score", {
-            defaultValue: "就绪度",
-          })}
+          {t("executionFactory.agentReadiness.score")}
           <QuestionCircleOutlined className={styles.scoreInfoIcon} />
         </span>
       </Tooltip>
@@ -87,16 +98,17 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
  */
 export function CapabilityIoCounts({ manifest }: CapabilityManifestProps) {
   const { t } = useTranslation();
-  const inputCount = manifest.inputSemantics?.length ?? 0;
-  const outputCount = manifest.outputSemantics?.length ?? 0;
+  // "输入 0" is a real fact — the tool takes no arguments. "输出 0" is not:
+  // MCP servers almost never declare an outputSchema, and reading that as
+  // "returns nothing" is wrong. Say undeclared when nothing was declared.
+  const input = String(manifest.inputSemantics?.length ?? 0);
+  const output = (manifest.readinessNotApplicable ?? []).includes("output semantics")
+    ? t("executionFactory.agentReadiness.ioUndeclared")
+    : String(manifest.outputSemantics?.length ?? 0);
 
   return (
     <span className={styles.ioCounts}>
-      {t("executionFactory.agentReadiness.ioCounts", {
-        input: inputCount,
-        output: outputCount,
-        defaultValue: `输入 ${inputCount} · 输出 ${outputCount}`,
-      })}
+      {t("executionFactory.agentReadiness.ioCounts", { input, output })}
     </span>
   );
 }
@@ -122,9 +134,7 @@ export function CapabilityReadinessHint({ manifest }: CapabilityManifestProps) {
           ))}
         </div>
       }
-      message={t("executionFactory.agentReadiness.missingTitle", {
-        defaultValue: "建议补齐后再开放给 Agent 自动调用",
-      })}
+      message={t("executionFactory.agentReadiness.missingTitle")}
       showIcon
       type="info"
     />

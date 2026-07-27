@@ -253,6 +253,9 @@ export const executionFactoryZhCN = {
     skillIdLabel: "SKILL ID",
     skillNameLabel: "SKILL 名称",
     skillFilesSectionTitle: "包内文件",
+    skillFileListTitle: "包内文件 - {{count}}",
+    skillFilterFiles: "筛选文件…",
+    skillFileListEmptyFiltered: "没有匹配的文件",
     internalTag: "系统内置",
     statuses: {
       unpublish: "未发布",
@@ -290,8 +293,27 @@ export const executionFactoryZhCN = {
     },
     mcpModes: {
       sse: "SSE",
+      stream: "Stream（Streamable HTTP）",
+    },
+    agentReadiness: {
+      score: "就绪度",
+      scoreRuleTitle: "就绪度评分规则",
+      notApplicable: "不适用",
+      notApplicableNote: "该能力未声明的维度不计入评分",
+      ioCounts: "输入 {{input}} · 输出 {{output}}",
+      ioUndeclared: "未声明",
+      missingTitle: "建议补齐后再开放给 Agent 自动调用",
+      emptyIntent: "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
+    },
+    // 卡片徽标位放不下「Stream（Streamable HTTP）」，这里只要动词。
+    mcpModeShort: {
+      sse: "SSE",
       stream: "Stream",
     },
+    mcpModeHint:
+      "多数 MCP 服务使用 Streamable HTTP，请选 Stream；仅老式 /sse 端点选 SSE。解析失败时会自动尝试另一种模式。",
+    mcpNameInvalid: "仅支持中文、字母、数字和下划线",
+    mcpParseFallback: "{{from}} 模式解析失败，已自动切换为 {{to}} 模式",
     mcpCreationTypes: {
       custom: "自定义",
       tool_imported: "工具导入",
@@ -694,11 +716,13 @@ export const executionFactoryZhCN = {
     mcpDetailCatalogToolsHint: "目录模式下工具列表需在引入到本业务域后查看；若已引入仍无法加载，请从能力管理进入。",
     mcpToolCountLabel: "{{count}} 个 MCP 工具",
     mcpToolCountFieldLabel: "工具数量",
-    mcpToolInfoTitle: "工具信息",
     mcpToolSchemaEmptyHint: "该工具未返回 input schema，调试时请参考 MCP 服务文档手动填写参数。",
     mcpToolSchemaRawTitle: "Input Schema",
+    mcpToolOutputSchemaTitle: "Output Schema",
+    mcpToolOutputSchemaUndeclared:
+      "该 MCP 服务未声明输出 Schema，返回结构以实际调用结果为准。",
     mcpMarketDetailTitle: "市场 MCP 详情",
-    parseSse: "解析 SSE",
+    parseSse: "解析工具",
     parseSseTitle: "解析 SSE MCP 端点",
     parseSseResultTitle: "发现的工具",
     functionExecuteTitle: "执行函数",

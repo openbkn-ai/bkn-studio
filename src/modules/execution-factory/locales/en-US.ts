@@ -257,6 +257,9 @@ export const executionFactoryEnUS = {
     skillIdLabel: "SKILL ID",
     skillNameLabel: "SKILL Name",
     skillFilesSectionTitle: "Package Files",
+    skillFileListTitle: "Package files - {{count}}",
+    skillFilterFiles: "Filter files…",
+    skillFileListEmptyFiltered: "No matching files",
     internalTag: "System built-in",
     statuses: {
       unpublish: "Unpublished",
@@ -294,8 +297,27 @@ export const executionFactoryEnUS = {
     },
     mcpModes: {
       sse: "SSE",
+      stream: "Stream (Streamable HTTP)",
+    },
+    agentReadiness: {
+      score: "Readiness",
+      scoreRuleTitle: "How readiness is scored",
+      notApplicable: "N/A",
+      notApplicableNote: "Dimensions this capability never declares are left out of the score",
+      ioCounts: "In {{input}} · Out {{output}}",
+      ioUndeclared: "undeclared",
+      missingTitle: "Fill these in before letting agents call it automatically",
+      emptyIntent:
+        "No business intent yet — agents can only infer how to use this from the name and the technical schema.",
+    },
+    mcpModeShort: {
+      sse: "SSE",
       stream: "Stream",
     },
+    mcpModeHint:
+      "Most MCP servers use Streamable HTTP — pick Stream. Pick SSE only for legacy /sse endpoints. The other mode is retried automatically when parsing fails.",
+    mcpNameInvalid: "Only Chinese characters, letters, digits and underscores are allowed",
+    mcpParseFallback: "Parsing with {{from}} failed, switched to {{to}}",
     mcpCreationTypes: {
       custom: "Custom",
       tool_imported: "Tool Imported",
@@ -704,12 +726,14 @@ export const executionFactoryEnUS = {
       "Tool lists in catalog mode are available after introducing to this domain. If already introduced, open from unit management.",
     mcpToolCountLabel: "{{count}} MCP tools",
     mcpToolCountFieldLabel: "Tool count",
-    mcpToolInfoTitle: "Tool Info",
     mcpToolSchemaEmptyHint:
       "This tool has no input schema. Refer to the MCP server docs when filling debug arguments.",
     mcpToolSchemaRawTitle: "Input Schema",
+    mcpToolOutputSchemaTitle: "Output Schema",
+    mcpToolOutputSchemaUndeclared:
+      "This MCP server declares no output schema; the response shape comes from the actual call.",
     mcpMarketDetailTitle: "Market MCP Detail",
-    parseSse: "Parse SSE",
+    parseSse: "Parse tools",
     parseSseTitle: "Parse SSE MCP Endpoint",
     parseSseResultTitle: "Discovered Tools",
     functionExecuteTitle: "Execute Function",

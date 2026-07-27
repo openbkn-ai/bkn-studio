@@ -60,6 +60,13 @@
   opacity: 0.55;
 }
 
+.scoreRuleNote {
+  margin-top: 2px;
+  opacity: 0.55;
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .ioCounts {
   margin-left: 12px;
   color: var(--color-text-secondary);

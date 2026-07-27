@@ -242,6 +242,7 @@ function mapMcp(item: McpRecord, directory: Map<string, string>): ExecutionUnitC
     name: item.name,
     description: item.description,
     category: item.category,
+    mode: item.mode,
     isInternal: item.isInternal,
     releaseUser: mapAuditUser(item.releaseUser, directory),
     updateUser: mapAuditUser(item.createUser, directory),

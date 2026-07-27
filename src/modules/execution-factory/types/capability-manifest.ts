@@ -56,6 +56,11 @@ export type CapabilityExample = {
   status?: CapabilityTestStatus;
 };
 
+export type CapabilityReadinessDimension =
+  | "business intent"
+  | "input semantics"
+  | "output semantics";
+
 export type CapabilityManifest = {
   id: string;
   sourceType: CapabilitySourceType;
@@ -78,11 +83,19 @@ export type CapabilityManifest = {
   agentVisibility?: AgentVisibility;
   agentInvokePolicy?: AgentInvokePolicy;
   updatedAt?: number;
+  /**
+   * Dimensions this capability structurally cannot supply — a no-argument tool
+   * has no input semantics to describe. They are dropped from the denominator
+   * instead of counted as gaps, so the score never punishes a blank the user
+   * has no way to fill.
+   */
+  readinessNotApplicable?: CapabilityReadinessDimension[];
 };
 
 export type CapabilityReadiness = {
   score: number;
   level: "low" | "medium" | "high";
   missing: string[];
+  notApplicable: CapabilityReadinessDimension[];
 };
 

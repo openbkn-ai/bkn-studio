@@ -14,6 +14,8 @@ export type ExecutionUnitCardItem = {
   unitType?: ExecutionUnitTab;
   description?: string;
   metadataType?: string;
+  /** MCP 连接模式（sse / stream），卡片副标题的徽标位用。 */
+  mode?: string;
   isInternal?: boolean;
   toolCount?: number;
   releaseUser?: string;

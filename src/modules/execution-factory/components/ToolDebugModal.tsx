@@ -26,7 +26,7 @@ import {
   type HttpDebugFormValues,
 } from "@/modules/execution-factory/utils/http-debug-request";
 
-import { JsonCodeBlock } from "./JsonCodeBlock";
+import { DebugResultPanel } from "./DebugResultPanel";
 import styles from "./ToolDebugModal.module.css";
 
 type ToolDebugModalProps = {
@@ -136,20 +136,14 @@ export function ToolDebugModal({
       </Form>
       {error ? <Alert message={error} showIcon style={{ marginBottom: 16 }} type="error" /> : null}
       {result ? (
-        <section
-          className={result.error ? styles.resultPanelWarning : styles.resultPanelSuccess}
-          data-testid="tool-debug-result"
-        >
-          <div className={styles.resultHeader}>
-            <span className={result.error ? styles.statusDotWarning : styles.statusDotSuccess} />
-            <span className={styles.resultTitle}>{t("executionFactory.debugResultTitle")}</span>
-            <span className={styles.resultMeta}>
-              HTTP {result.statusCode || "-"}
-              {typeof result.durationMs === "number" ? ` · ${result.durationMs} ms` : ""}
-            </span>
-          </div>
-          <JsonCodeBlock value={result} />
-        </section>
+        <DebugResultPanel
+          error={Boolean(result.error)}
+          meta={`HTTP ${result.statusCode || "-"}${
+            typeof result.durationMs === "number" ? ` · ${result.durationMs} ms` : ""
+          }`}
+          testId="tool-debug-result"
+          value={result}
+        />
       ) : null}
     </Modal>
   );

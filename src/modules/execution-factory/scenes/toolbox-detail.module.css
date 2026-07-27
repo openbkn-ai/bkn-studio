@@ -205,16 +205,26 @@
   border-radius: 0;
 }
 
-.sider {
-  padding: 16px;
-  background: var(--color-bg-surface) !important;
-  border-right: 1px solid var(--color-border) !important;
+/*
+  左栏（EntityListRail 的 .head）和右栏（工具身份区）各画一条自己的底部分隔线，
+  中缝两侧要落在同一 y 上。两边内容高度天然不同（左：标题 + 筛选框；右：名字行 +
+  描述），所以给一个共同下限把两条线钉在一起。
+
+  不画贯穿两栏的单线：右栏是独立滚动区，绝对定位的线不跟着滚，内容一长就被线切成
+  两半。两条各自的线跟着自己那栏滚，初始位置照样对齐。
+
+  96px 与函数工作台同值——三处头部都只放「徽标 + 名字 + 描述」两行，工具箱的端点
+  信息另起一档，不挤进头里。
+*/
+.layoutHeadAligned {
+  --entity-rail-head-height: 96px;
 }
 
-/* 工具列表换成 EntityListRail 后，内边距由组件自己管，外壳不再补这 16px。
-   MCP / 技能详情还在用带内边距的 .sider，所以只能加类覆盖，不能改基类。 */
-.siderFlush {
+/* 工具 / MCP / 技能三处侧栏都由 EntityListRail 自己管内边距，外壳不再补。 */
+.sider {
   padding: 0;
+  background: var(--color-bg-surface) !important;
+  border-right: 1px solid var(--color-border) !important;
 }
 
 /* 列表高度跟着侧栏走，不再用 vh 魔数：右侧详情比视口高时，vh 算出的上限会把
@@ -225,21 +235,13 @@
   height: 100%;
 }
 
-.siderHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  font-weight: 600;
-}
-
-/* 工具 / MCP / 函数三处列表卡片都搬去 EntityListRail 了，这里只留技能详情还在用的
-   .siderHeader 和文件树外壳。 */
-.fileTreeWrap {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 4px 0;
+/* 技能详情的文件树也搬进 EntityListRail 了，只剩筛空时的占位文案要跟组件里的
+   .empty 对齐——文件树是自绘内容，组件的空态走不到。 */
+.railEmpty {
+  padding: 24px 12px;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  text-align: center;
 }
 
 /* 右栏自己滚，别把整页拖着走。内边距下放到分区上，分隔线才能通栏。 */
@@ -260,6 +262,19 @@
 .section:last-child,
 .ioPanel:last-child {
   border-bottom: none;
+}
+
+/* 头部分区：内容压到线上方（flex-end），描述那行才紧贴着线而不是让线飘在半空。
+   行距按函数工作台的头部压紧（10 / 8 / 10）——这里是「头部分区」不是普通卡片，
+   照 16 / 14 / 16 的卡片节奏排，两栏中缝就会顶出一条明显偏高的空带。 */
+.layoutHeadAligned .section:first-child {
+  --detail-meta-header-gap: 8px;
+  --detail-meta-subheader-gap: 0px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: var(--entity-rail-head-height);
+  padding: 10px 20px;
 }
 
 .toolHeaderActions {
@@ -352,16 +367,26 @@
   word-break: break-word;
 }
 
+/* 只读态描述压成一行，与函数工作台的 .fnHeadDesc 同规格：身份区高度被贯穿两栏的
+   分隔线钉死，描述换行会把自己顶到线下面。MCP 工具的描述可能是一整段用法说明，
+   完整内容挂在 title 上，悬停可看。
+   只给只读态——可编辑态里面是 textarea，截了就打不完字。 */
+.toolIdentityDescClamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+}
+
 /* 端点两行：接口端点（动词 + 路径）和根目录。原来是一枚实心大动词徽标顶在左边，
    在一屏里比工具名还响；换成图标 + 文字标签后，读者先看到「这是什么」，再看值。
    上方一条实线把「工具是什么」（名字 + 用途）和「往哪打」分成两段——描述那行本身
    带的是可编辑态的虚线下划线，不承担分区职责，两块贴在一起会读成一段。 */
+/* 端点自成一档，上边界由 .section 的分区线画，这里不再自带 border-top。 */
 .endpoint {
   display: grid;
   gap: 6px;
   width: 100%;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border);
 }
 
 .endpointRow {

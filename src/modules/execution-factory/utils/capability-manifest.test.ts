@@ -262,5 +262,66 @@ describe("capability-manifest", () => {
     expect(readiness.missing).not.toContain("Agent callable policy");
     expect(readiness.missing).not.toContain("verified example");
   });
+
+  it("waives input and output semantics for an MCP tool that declares neither", () => {
+    const tool: McpProxyTool = {
+      name: "hf_whoami",
+      description: "Report which Hugging Face account the tools authenticate as.",
+      inputSchema: { type: "object", properties: {} },
+    };
+
+    const manifest = buildMcpToolCapabilityManifest({ mcpId: "mcp-hf", tool });
+    const readiness = getCapabilityReadiness(manifest);
+
+    expect(readiness.notApplicable).toEqual(["input semantics", "output semantics"]);
+    expect(readiness.missing).toEqual([]);
+    expect(readiness.score).toBe(100);
+    expect(readiness.level).toBe("high");
+  });
+
+  it("still scores an MCP tool against the arguments it does declare", () => {
+    const tool: McpProxyTool = {
+      name: "repo_search",
+      description: "Search Hugging Face repositories.",
+      inputSchema: {
+        type: "object",
+        properties: { query: { type: "string" } },
+      },
+    };
+
+    const readiness = getCapabilityReadiness(
+      buildMcpToolCapabilityManifest({ mcpId: "mcp-hf", tool }),
+    );
+
+    // Intent alone out of the 40 + 35 that apply — the undescribed argument
+    // still costs the tool its input semantics.
+    expect(readiness.notApplicable).toEqual(["output semantics"]);
+    expect(readiness.missing).toEqual(["input semantics"]);
+    expect(readiness.score).toBe(53);
+  });
+
+  it("reads outputSchema when the MCP server advertises one", () => {
+    const tool: McpProxyTool = {
+      name: "list_orders",
+      description: "List orders for a customer.",
+      inputSchema: {
+        type: "object",
+        properties: { customer_id: { type: "string", description: "Customer ID." } },
+      },
+      outputSchema: {
+        type: "object",
+        properties: { orders: { type: "array", description: "Matched orders." } },
+      },
+    };
+
+    const manifest = buildMcpToolCapabilityManifest({ mcpId: "mcp-crm", tool });
+    const readiness = getCapabilityReadiness(manifest);
+
+    expect(manifest.outputSemantics).toEqual([
+      expect.objectContaining({ name: "orders", businessMeaning: "Matched orders." }),
+    ]);
+    expect(readiness.notApplicable).toEqual([]);
+    expect(readiness.score).toBe(100);
+  });
 });
 

@@ -34,9 +34,11 @@ import {
 import type {
   McpCreationType,
   McpMode,
+  McpParseSseResult,
   McpParseSseTool,
   McpToolConfigInput,
 } from "@/modules/execution-factory/types/mcp";
+import { CAPABILITY_NAME_PATTERN } from "@/modules/execution-factory/utils/capability-name";
 
 import { CapabilityBusinessIntro } from "@/modules/execution-factory/components/CapabilityBusinessIntro";
 
@@ -113,7 +115,7 @@ export function CreateMcpDrawer({
             description: detail.description,
             creationType: creation,
             category: detail.category ?? options[0]?.value ?? "other_category",
-            mode: detail.mode ?? "sse",
+            mode: detail.mode ?? "stream",
             url: detail.url,
             headers: mapHeadersToFormList(detail.headers),
           });
@@ -137,7 +139,7 @@ export function CreateMcpDrawer({
         form.setFieldsValue({
           category: options[0]?.value ?? "other_category",
           creationType: "custom",
-          mode: "sse",
+          mode: "stream",
           headers: [],
         });
         setTools([]);
@@ -152,7 +154,15 @@ export function CreateMcpDrawer({
   }, [form, mcpId, message, onClose, open]);
 
   const handleParse = async () => {
-    const values = await form.validateFields(["url", "mode", "headers"]);
+    let values: FormValues;
+
+    try {
+      values = await form.validateFields(["url", "mode", "headers"]);
+    } catch {
+      // antd already marks the offending fields; nothing to report.
+      return;
+    }
+
     setParsing(true);
 
     try {
@@ -165,11 +175,29 @@ export function CreateMcpDrawer({
         },
         {},
       );
-      const result = await parseMcpSse({
-        url: values.url ?? "",
-        mode: values.mode,
-        headers,
-      });
+      const url = values.url ?? "";
+      const mode: McpMode = values.mode ?? "stream";
+      let result: McpParseSseResult;
+
+      try {
+        result = await parseMcpSse({ url, mode, headers });
+      } catch (error) {
+        // Streamable HTTP and SSE endpoints reject each other's handshake, and
+        // the URL alone rarely says which one it is. Retry with the other mode
+        // and keep the form in sync so the registered MCP can actually connect.
+        const fallbackMode: McpMode = mode === "sse" ? "stream" : "sse";
+        result = await parseMcpSse({ url, mode: fallbackMode, headers }).catch(() => {
+          throw error;
+        });
+        form.setFieldValue("mode", fallbackMode);
+        void message.warning(
+          t("executionFactory.mcpParseFallback", {
+            from: t(`executionFactory.mcpModes.${mode}`),
+            to: t(`executionFactory.mcpModes.${fallbackMode}`),
+          }),
+        );
+      }
+
       setTools(result.tools);
       void message.success(t("executionFactory.parseSseSuccess", { count: result.tools.length }));
     } catch (error) {
@@ -180,7 +208,15 @@ export function CreateMcpDrawer({
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
+    let values: FormValues;
+
+    try {
+      values = await form.validateFields();
+    } catch {
+      // antd already marks the offending fields; nothing to report.
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -282,7 +318,13 @@ export function CreateMcpDrawer({
           <Form.Item
             label={t("executionFactory.mcpName")}
             name="name"
-            rules={[{ required: true, message: t("common.required") }]}
+            rules={[
+              { required: true, message: t("common.required") },
+              {
+                pattern: CAPABILITY_NAME_PATTERN,
+                message: t("executionFactory.mcpNameInvalid"),
+              },
+            ]}
           >
             <Input />
           </Form.Item>
@@ -311,9 +353,13 @@ export function CreateMcpDrawer({
 
           {creationType === "custom" ? (
             <>
-              <Form.Item label={t("executionFactory.mcpMode")} name="mode">
+              <Form.Item
+                extra={t("executionFactory.mcpModeHint")}
+                label={t("executionFactory.mcpMode")}
+                name="mode"
+              >
                 <Select
-                  options={(["sse", "stream"] as const).map((value) => ({
+                  options={(["stream", "sse"] as const).map((value) => ({
                     label: t(`executionFactory.mcpModes.${value}`),
                     value,
                   }))}
@@ -324,7 +370,7 @@ export function CreateMcpDrawer({
                 name="url"
                 rules={[{ required: true, message: t("common.required") }]}
               >
-                <Input placeholder="http://127.0.0.1:8080/mcp/sse" />
+                <Input placeholder="https://example.com/mcp" />
               </Form.Item>
               <Form.List name="headers">
                 {(fields, { add, remove }) => (

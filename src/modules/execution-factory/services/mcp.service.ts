@@ -292,7 +292,7 @@ export async function parseMcpSse(input: McpParseSseInput): Promise<McpParseSseR
     `${API_PREFIX}/mcp/parse/sse`,
     {
       headers: input.headers,
-      mode: input.mode ?? "sse",
+      mode: input.mode ?? "stream",
       url: input.url,
     },
     { headers: getBusinessDomainHeaders() },
@@ -454,7 +454,14 @@ export async function listMcpTools(
   }
 
   const response = await http.get<{
-    tools?: Array<{ description?: string; input_schema?: unknown; inputSchema?: unknown; name?: string }>;
+    tools?: Array<{
+      description?: string;
+      input_schema?: unknown;
+      inputSchema?: unknown;
+      name?: string;
+      outputSchema?: unknown;
+      output_schema?: unknown;
+    }>;
   }>(`${API_PREFIX}/mcp/proxy/${mcpId}/tools`, {
     headers: getBusinessDomainHeaders(),
     params: {
@@ -470,6 +477,7 @@ export async function listMcpTools(
     name: tool.name ?? "unknown",
     description: tool.description,
     inputSchema: tool.inputSchema ?? tool.input_schema,
+    outputSchema: tool.outputSchema ?? tool.output_schema,
   }));
 }
 

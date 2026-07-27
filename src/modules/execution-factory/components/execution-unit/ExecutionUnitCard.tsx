@@ -120,6 +120,32 @@ function resolveCardCategoryLabel(
   return item.categoryName ?? item.category ?? "";
 }
 
+/**
+ * 副标题行最左的徽标位，每种单元填自己最有辨识度的那个事实：工具集/算子是
+ * 实现形态，MCP 是连接模式。之前只有前两者有内容，MCP 的整行就只剩一个分类，
+ * 而分类默认值到处都是 other_category，于是每张卡都印着同一个「其他」。
+ *
+ * SKILL 没有可放的：后端返回的 version 是一串 UUID 而不是语义版本号，印出来
+ * 只是噪音；分类同样默认「未分类」。宁可整行不出现，也不占位说废话。
+ */
+function resolveCardBadge(
+  activeTab: ExecutionUnitTab,
+  item: ExecutionUnitCardItem,
+  t: (key: string) => string,
+) {
+  if (activeTab === "toolbox" || activeTab === "operator") {
+    return item.metadataType
+      ? t(`executionFactory.metadataTypes.${item.metadataType as "openapi" | "function"}`)
+      : "";
+  }
+
+  if (activeTab === "mcp") {
+    return item.mode ? t(`executionFactory.mcpModeShort.${item.mode as "sse" | "stream"}`) : "";
+  }
+
+  return "";
+}
+
 export function ExecutionUnitCard({
   activeTab,
   installedStateReady = true,
@@ -129,7 +155,6 @@ export function ExecutionUnitCard({
   onClick,
 }: ExecutionUnitCardProps) {
   const { t } = useTranslation();
-  const showMetadataTag = activeTab === "toolbox" || activeTab === "operator";
   const userLabel = marketMode ? item.releaseUser : item.updateUser;
   const timeLabel = marketMode
     ? t("executionFactory.releaseTimeLabel", {
@@ -145,10 +170,12 @@ export function ExecutionUnitCard({
       : `executionFactory.statuses.${item.status as "published" | "unpublish" | "offline" | "editing"}`;
   const categoryLabel = resolveCardCategoryLabel(activeTab, item, t);
   const isFunction = item.metadataType === "function";
-  const showCategory = Boolean(categoryLabel) && categoryLabel !== "-";
+  // other_category 是所有创建入口的默认值，几乎每张卡都是它，印出来等于没说。
+  const showCategory =
+    Boolean(categoryLabel) && categoryLabel !== "-" && item.category !== "other_category";
   const showToolCount = activeTab === "toolbox";
-  const metadataTagVisible = showMetadataTag && Boolean(item.metadataType);
-  const hasMetaLine = metadataTagVisible || showCategory || showToolCount;
+  const badgeLabel = resolveCardBadge(activeTab, item, t);
+  const hasMetaLine = Boolean(badgeLabel) || showCategory || showToolCount;
 
   return (
     <Card
@@ -206,13 +233,13 @@ export function ExecutionUnitCard({
 
             {hasMetaLine ? (
               <div className={styles.metaLine}>
-                {metadataTagVisible ? (
+                {badgeLabel ? (
                   <span
                     className={`${styles.metadataTag} ${
                       isFunction ? styles.metadataTagFunction : ""
                     }`}
                   >
-                    {t(`executionFactory.metadataTypes.${item.metadataType as "openapi" | "function"}`)}
+                    {badgeLabel}
                   </span>
                 ) : null}
                 {showCategory ? <span className={styles.metaText}>{categoryLabel}</span> : null}
