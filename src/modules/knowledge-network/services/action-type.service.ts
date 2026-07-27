@@ -52,12 +52,14 @@ import {
   removeMockActionTypeExecutionLogs,
   syncKnowledgeNetworkStatistics,
 } from "@/modules/knowledge-network/services/mock/state";
+import { resolveActionSourceDisplayNames } from "@/modules/knowledge-network/services/action-type-tool.service";
 import {
   formatTimestamp,
   rethrowImportConflict,
   useMock,
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
+import { getActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
 
 function resolveActionTypeMutationResultId(
   value: unknown,
@@ -91,6 +93,28 @@ function isBackendActionTypeRecord(value: unknown): value is BackendActionType {
     "id" in value &&
     "name" in value
   );
+}
+
+async function enrichActionTypeDetailDisplayNames(
+  detail: ActionTypeDetail,
+): Promise<ActionTypeDetail> {
+  const resolvedSource = await resolveActionSourceDisplayNames(
+    detail.executionConfig.actionSource,
+  );
+
+  if (!resolvedSource) {
+    return detail;
+  }
+
+  return {
+    ...detail,
+    executionConfig: {
+      ...detail.executionConfig,
+      actionSource: resolvedSource,
+      sourceName:
+        getActionSourceDisplayName(resolvedSource) || detail.executionConfig.sourceName,
+    },
+  };
 }
 
 export async function listKnowledgeNetworkActionTypes(networkId: string) {
@@ -142,7 +166,7 @@ export async function getKnowledgeNetworkActionTypeDetail(
     }
 
     const extras = mockActionTypeDetailExtras[networkId]?.[actionTypeId];
-    return {
+    const detail: ActionTypeDetail = {
       ...record,
       affect: extras?.affect ? { ...extras.affect } : undefined,
       condition: extras?.condition ? { ...extras.condition } : undefined,
@@ -151,6 +175,8 @@ export async function getKnowledgeNetworkActionTypeDetail(
           createDefaultActionTypeExecutionConfig(),
       ),
     };
+
+    return enrichActionTypeDetailDisplayNames(detail);
   }
 
   const response = await http.get<SingleEntryResponse<BackendActionType>>(
@@ -158,7 +184,11 @@ export async function getKnowledgeNetworkActionTypeDetail(
   );
 
   const record = unwrapSingleEntryResponse(response.data);
-  return record ? mapActionTypeDetail(record) : null;
+  if (!record) {
+    return null;
+  }
+
+  return enrichActionTypeDetailDisplayNames(mapActionTypeDetail(record));
 }
 
 export async function listKnowledgeNetworkActionTypeExecutionLogs(
