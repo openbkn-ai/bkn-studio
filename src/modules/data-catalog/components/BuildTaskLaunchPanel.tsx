@@ -33,6 +33,9 @@ import type { SmallModel } from "@/modules/model-resources/types/small-model";
 
 import formStyles from "./BuildTaskFormPanel.module.css";
 
+// 流式构建后端能力仍保留，待重新开放时将此开关改为 true 即可恢复入口。
+export const STREAMING_BUILD_ENTRY_ENABLED = false;
+
 export type BuildTaskLaunchPanelProps = {
   active: boolean;
   disabled?: boolean;
@@ -338,35 +341,37 @@ export function BuildTaskLaunchPanel({
             ) : null}
           </div>
 
-          <button
-            className={cx(
-              formStyles.modeCard,
-              formStyles.modeCardSelectable,
-              mode === "streaming" && formStyles.modeCardActive,
-            )}
-            disabled={controlsDisabled}
-            onClick={() => {
-              setMode("streaming");
-              setError(null);
-            }}
-            type="button"
-          >
-            <span
-              aria-hidden
+          {STREAMING_BUILD_ENTRY_ENABLED ? (
+            <button
               className={cx(
-                formStyles.modeCardRadio,
-                mode === "streaming" && formStyles.modeCardRadioChecked,
+                formStyles.modeCard,
+                formStyles.modeCardSelectable,
+                mode === "streaming" && formStyles.modeCardActive,
               )}
-            />
-            <span className={formStyles.modeCardText}>
-              <span className={formStyles.modeCardTitle}>
-                {t("dataCatalog.build.streamingLabel")}
+              disabled={controlsDisabled}
+              onClick={() => {
+                setMode("streaming");
+                setError(null);
+              }}
+              type="button"
+            >
+              <span
+                aria-hidden
+                className={cx(
+                  formStyles.modeCardRadio,
+                  mode === "streaming" && formStyles.modeCardRadioChecked,
+                )}
+              />
+              <span className={formStyles.modeCardText}>
+                <span className={formStyles.modeCardTitle}>
+                  {t("dataCatalog.build.streamingLabel")}
+                </span>
+                <span className={formStyles.modeCardDesc}>
+                  {t("dataCatalog.build.streamingDescription")}
+                </span>
               </span>
-              <span className={formStyles.modeCardDesc}>
-                {t("dataCatalog.build.streamingDescription")}
-              </span>
-            </span>
-          </button>
+            </button>
+          ) : null}
         </div>
       </div>
 
