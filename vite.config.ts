@@ -69,6 +69,9 @@ export default defineConfig(({ mode }) => {
       exclude: [
         "**/node_modules/**",
         "**/dist/**",
+        // Claude Code 的 git worktree 挂在 .claude/worktrees/ 下，是整仓副本。收进来
+        // 会拿别的分支的测试跑本仓代码（alias @ 恒指根 src），红得没有意义。
+        "**/.claude/**",
         // Playwright e2e specs run via `pnpm test:execution-factory:e2e`, not
         // vitest. They import @playwright/test, so collecting them here fails.
         "tests/e2e/**",
