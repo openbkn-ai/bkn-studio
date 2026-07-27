@@ -602,7 +602,6 @@ export const executionFactoryZhCN = {
       "“{{name}}”已发布为{{type}}。建议立即配置访问权限，确保仅授权用户可用。",
     publishedPermLater: "稍后配置",
     publishedPermConfigure: "去配置权限",
-    publishedPermConfigureHint: "权限配置入口尚未接入当前 Studio，请在平台权限中心完成配置。",
     mcpToolImportedHint: "从已有工具箱中选择工具，组合为 MCP 服务。",
     mcpToolImportedToolboxLabel: "来源工具箱",
     mcpToolImportedToolboxPlaceholder: "请选择工具箱",
