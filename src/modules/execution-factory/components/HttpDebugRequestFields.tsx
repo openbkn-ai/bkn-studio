@@ -42,13 +42,16 @@ function replacePathParameters(path: string | undefined, rawValues?: string) {
 
   try {
     const values = parseJsonObject(rawValues, "Path") ?? {};
-    return Object.entries(values).reduce(
-      (current, [name, value]) =>
-        current
-          .replaceAll(`{${name}}`, encodeURIComponent(String(value)))
-          .replaceAll(`:${name}`, encodeURIComponent(String(value))),
-      path,
-    );
+    // 值为空时保留 {name} 占位，避免预览出现 /operator/market/ 这种拼错的地址。
+    return Object.entries(values)
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .reduce(
+        (current, [name, value]) =>
+          current
+            .replaceAll(`{${name}}`, encodeURIComponent(String(value)))
+            .replaceAll(`:${name}`, encodeURIComponent(String(value))),
+        path,
+      );
   } catch {
     return path;
   }

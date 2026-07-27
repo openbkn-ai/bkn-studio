@@ -61,6 +61,21 @@ describe("HttpDebugRequestFields", () => {
     expect(screen.getByText("executionFactory.debugQueryParameters")).toBeDefined();
   });
 
+  it("keeps the placeholder in the URL preview while the path value is empty", () => {
+    render(
+      <Form initialValues={{ requestPath: '{"resourceId":""}' }} layout="vertical">
+        <HttpDebugRequestFields
+          ioSpec={{ parameters: [{ in: "path", name: "resourceId", type: "string" }] }}
+          method="GET"
+          path="/resources/{resourceId}"
+          serverUrl="https://api.example.com"
+        />
+      </Form>,
+    );
+
+    expect(screen.getByText("https://api.example.com/resources/{resourceId}")).toBeDefined();
+  });
+
   it("previews the endpoint URL alongside the declared header parameters", () => {
     renderFields({
       parameters: [{ in: "header", name: "x-tenant-id", required: true, type: "string" }],
