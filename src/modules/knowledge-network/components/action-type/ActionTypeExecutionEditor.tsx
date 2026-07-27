@@ -41,9 +41,15 @@ type ActionTypeExecutionEditorProps = {
   objectTypeId: string;
   value: ActionTypeExecutionConfig;
   onChange: (value: ActionTypeExecutionConfig) => void;
+  onParameterSchemaStateChange?: (state: ActionTypeExecutionParameterSchemaState) => void;
 };
 
 type DisplayResolutionStatus = "failed" | "idle" | "loading";
+
+export type ActionTypeExecutionParameterSchemaState = {
+  loaded: boolean;
+  parameterCount: number;
+};
 
 function buildActionSourceKey(actionSource?: ActionTypeExecutionConfig["actionSource"]) {
   if (!actionSource) {
@@ -62,15 +68,27 @@ function buildActionSourceKey(actionSource?: ActionTypeExecutionConfig["actionSo
     : "";
 }
 
+function countLeafSchemaParameters(schema: ActionTypeToolInputParam[]): number {
+  return schema.reduce((count, item) => {
+    if (item.children?.length) {
+      return count + countLeafSchemaParameters(item.children);
+    }
+
+    return count + 1;
+  }, 0);
+}
+
 export function ActionTypeExecutionEditor({
   networkId,
   objectTypeId,
   value,
   onChange,
+  onParameterSchemaStateChange,
 }: ActionTypeExecutionEditorProps) {
   const { t } = useTranslation();
   const valueRef = useRef(value);
   const onChangeRef = useRef(onChange);
+  const onParameterSchemaStateChangeRef = useRef(onParameterSchemaStateChange);
   const loadedSourceKeyRef = useRef("");
   const resolvedDisplaySourceKeyRef = useRef("");
   const displayActionSourceRef = useRef<ActionTypeExecutionConfig["actionSource"]>(
@@ -99,6 +117,7 @@ export function ActionTypeExecutionEditor({
 
   valueRef.current = value;
   onChangeRef.current = onChange;
+  onParameterSchemaStateChangeRef.current = onParameterSchemaStateChange;
   displayActionSourceRef.current = displayActionSource;
 
   const sourceKey = useMemo(
@@ -139,6 +158,7 @@ export function ActionTypeExecutionEditor({
       loadedSourceKeyRef.current = "";
       resolvedDisplaySourceKeyRef.current = "";
       setInputSchema([]);
+      onParameterSchemaStateChangeRef.current?.({ loaded: false, parameterCount: 0 });
       return;
     }
 
@@ -148,10 +168,15 @@ export function ActionTypeExecutionEditor({
 
     const loadSchema = async () => {
       setSchemaLoading(true);
+      onParameterSchemaStateChangeRef.current?.({ loaded: false, parameterCount: 0 });
       try {
         const schema = await resolveActionTypeToolInputSchema(value.actionSource!);
         loadedSourceKeyRef.current = sourceKey;
         setInputSchema(schema);
+        onParameterSchemaStateChangeRef.current?.({
+          loaded: true,
+          parameterCount: countLeafSchemaParameters(schema),
+        });
         onChangeRef.current({
           ...valueRef.current,
           parameters: mergeExecutionParametersWithSchema(
@@ -159,6 +184,8 @@ export function ActionTypeExecutionEditor({
             valueRef.current.parameters,
           ),
         });
+      } catch {
+        onParameterSchemaStateChangeRef.current?.({ loaded: false, parameterCount: 0 });
       } finally {
         setSchemaLoading(false);
       }
@@ -246,6 +273,7 @@ export function ActionTypeExecutionEditor({
     setDisplayActionSource(nextSource);
     setDisplayResolutionStatus("idle");
     setInputSchema([]);
+    onParameterSchemaStateChangeRef.current?.({ loaded: false, parameterCount: 0 });
 
     if (!nextSource) {
       onChange({
@@ -272,6 +300,7 @@ export function ActionTypeExecutionEditor({
     setDisplayActionSource(nextSource);
     setDisplayResolutionStatus("idle");
     setInputSchema([]);
+    onParameterSchemaStateChangeRef.current?.({ loaded: false, parameterCount: 0 });
     onChange({
       ...value,
       actionSource: nextSource,
