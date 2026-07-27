@@ -35,6 +35,8 @@ import formStyles from "./BuildTaskFormPanel.module.css";
 
 // 流式构建后端能力仍保留，待重新开放时将此开关改为 true 即可恢复入口。
 export const STREAMING_BUILD_ENTRY_ENABLED = false;
+// 执行方式尚未持久化到构建任务历史；修复前仅允许全量构建，避免历史语义不明确。
+export const INCREMENTAL_BUILD_ENTRY_ENABLED = false;
 
 export type BuildTaskLaunchPanelProps = {
   active: boolean;
@@ -202,18 +204,24 @@ export function BuildTaskLaunchPanel({
     return null;
   }
 
-  const executeOptions = [
+  const executeOptions: Array<{
+    description: string;
+    key: BuildExecuteType;
+    label: string;
+  }> = [
     {
       description: t("dataCatalog.build.executeFullDescription"),
-      key: "full" as const,
+      key: "full",
       label: t("dataCatalog.build.executeFull"),
     },
-    {
-      description: t("dataCatalog.build.executeIncrementalDescription"),
-      key: "incremental" as const,
-      label: t("dataCatalog.build.executeIncremental"),
-    },
   ];
+  if (INCREMENTAL_BUILD_ENTRY_ENABLED) {
+    executeOptions.push({
+      description: t("dataCatalog.build.executeIncrementalDescription"),
+      key: "incremental",
+      label: t("dataCatalog.build.executeIncremental"),
+    });
+  }
   const selectedExecuteOption =
     executeOptions.find((option) => option.key === executeType) ?? executeOptions[0];
 

@@ -10,7 +10,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
-import { BuildTaskLaunchPanel, STREAMING_BUILD_ENTRY_ENABLED } from "./BuildTaskLaunchPanel";
+import {
+  BuildTaskLaunchPanel,
+  INCREMENTAL_BUILD_ENTRY_ENABLED,
+  STREAMING_BUILD_ENTRY_ENABLED,
+} from "./BuildTaskLaunchPanel";
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -56,6 +60,7 @@ const resource: CatalogResource = {
 describe("BuildTaskLaunchPanel", () => {
   it("hides the streaming-build entry while the feature is disabled", () => {
     expect(STREAMING_BUILD_ENTRY_ENABLED).toBe(false);
+    expect(INCREMENTAL_BUILD_ENTRY_ENABLED).toBe(false);
 
     render(
       <BuildTaskLaunchPanel
@@ -68,5 +73,6 @@ describe("BuildTaskLaunchPanel", () => {
 
     expect(screen.getByText("dataCatalog.build.batchLabel")).toBeTruthy();
     expect(screen.queryByText("dataCatalog.build.streamingLabel")).toBeNull();
+    expect(screen.queryByText("dataCatalog.build.executeIncremental")).toBeNull();
   });
 });

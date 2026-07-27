@@ -56,7 +56,7 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
   );
 
   const retry = useCallback(
-    async (task: BuildTask, executeType: BuildExecuteType = "incremental") => {
+    async (task: BuildTask, executeType: BuildExecuteType = "full") => {
       const reset = executeType === "full";
       const run = async () => {
         try {

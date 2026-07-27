@@ -10,7 +10,7 @@ import {
   ReloadOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Select, Space, Tooltip } from "antd";
+import { Alert, Select, Space, Tooltip } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -33,7 +33,6 @@ import {
   readIndexBuildListFilters,
 } from "@/modules/data-catalog/lib/index-build-filters";
 import {
-  type BuildExecuteType,
   deleteBuildTask,
   listBuildTaskPage,
 } from "@/modules/data-catalog/services/build-task.service";
@@ -503,26 +502,9 @@ export function IndexBuildListScene() {
             ) : null}
             {record.status === "failed" || record.status === "succeeded" ? (
               <PermissionGate permissions="resource:task_manage">
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: "incremental",
-                        label: t("dataCatalog.task.rebuildIncremental"),
-                      },
-                      {
-                        key: "full",
-                        label: t("dataCatalog.task.rebuildFull"),
-                      },
-                    ],
-                    onClick: ({ key }) =>
-                      void handleRetry(record, key as BuildExecuteType),
-                  }}
-                >
-                  <AppButton type="link">
-                    {t("dataCatalog.task.rebuild")}
-                  </AppButton>
-                </Dropdown>
+                <AppButton onClick={() => void handleRetry(record, "full")} type="link">
+                  {t("dataCatalog.task.rebuildFull")}
+                </AppButton>
               </PermissionGate>
             ) : null}
             <PermissionGate permissions="resource:task_manage">
