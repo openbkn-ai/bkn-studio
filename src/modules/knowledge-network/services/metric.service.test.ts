@@ -7,7 +7,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { normalizeMetricDataResponse } from "@/modules/knowledge-network/services/metric.service";
+import {
+  buildMetricDataQueryPayload,
+  normalizeMetricDataResponse,
+} from "@/modules/knowledge-network/services/metric.service";
 
 describe("normalizeMetricDataResponse", () => {
   it("expands multi-series trend rows with prefixed dimension columns", () => {
@@ -65,6 +68,167 @@ describe("normalizeMetricDataResponse", () => {
       dim_value: "WH001",
       dim_warehouse_id: "WH001",
       value: 42,
+    });
+  });
+});
+
+describe("buildMetricDataQueryPayload", () => {
+  it("passes drill-down dimensions and filter condition together", () => {
+    const payload = buildMetricDataQueryPayload({
+      analysisDimensions: ["material_name"],
+      condition: {
+        field: "status",
+        objectTypeId: "material_entity",
+        operation: "==",
+        value: "Active",
+        valueFrom: "const",
+      },
+      limit: 100,
+      mode: "instant",
+      timeRange: "last_24h",
+    });
+
+    expect(payload).toMatchObject({
+      analysis_dimensions: ["material_name"],
+      condition: {
+        field: "status",
+        object_type_id: "material_entity",
+        operation: "==",
+        value: "Active",
+        value_from: "const",
+      },
+      limit: 100,
+      time: {
+        instant: true,
+      },
+    });
+  });
+
+  it("omits empty filter condition from the query payload", () => {
+    const payload = buildMetricDataQueryPayload({
+      condition: {
+        objectTypeId: "material_entity",
+        valueFrom: "const",
+      },
+      limit: 100,
+      mode: "instant",
+      timeRange: "last_24h",
+    });
+
+    expect(payload).not.toHaveProperty("condition");
+  });
+
+  it("keeps grouped AND/OR filter conditions in the query payload", () => {
+    const payload = buildMetricDataQueryPayload({
+      condition: {
+        objectTypeId: "material_entity",
+        operation: "or",
+        subConditions: [
+          {
+            field: "status",
+            objectTypeId: "material_entity",
+            operation: "==",
+            value: "Active",
+            valueFrom: "const",
+          },
+          {
+            field: "amount",
+            objectTypeId: "material_entity",
+            operation: ">",
+            value: "100",
+            valueFrom: "const",
+          },
+        ],
+        valueFrom: "const",
+      },
+      limit: 100,
+      mode: "instant",
+      timeRange: "last_24h",
+    });
+
+    expect(payload).toMatchObject({
+      condition: {
+        object_type_id: "material_entity",
+        operation: "or",
+        sub_conditions: [
+          {
+            field: "status",
+            operation: "==",
+          },
+          {
+            field: "amount",
+            operation: ">",
+          },
+        ],
+      },
+    });
+  });
+
+  it("keeps nested AND/OR filter condition groups in the query payload", () => {
+    const payload = buildMetricDataQueryPayload({
+      condition: {
+        objectTypeId: "material_entity",
+        operation: "and",
+        subConditions: [
+          {
+            field: "status",
+            objectTypeId: "material_entity",
+            operation: "==",
+            value: "Active",
+            valueFrom: "const",
+          },
+          {
+            objectTypeId: "material_entity",
+            operation: "or",
+            subConditions: [
+              {
+                field: "amount",
+                objectTypeId: "material_entity",
+                operation: ">",
+                value: "100",
+                valueFrom: "const",
+              },
+              {
+                field: "amount",
+                objectTypeId: "material_entity",
+                operation: "<",
+                value: "10",
+                valueFrom: "const",
+              },
+            ],
+            valueFrom: "const",
+          },
+        ],
+        valueFrom: "const",
+      },
+      limit: 100,
+      mode: "instant",
+      timeRange: "last_24h",
+    });
+
+    expect(payload).toMatchObject({
+      condition: {
+        operation: "and",
+        sub_conditions: [
+          {
+            field: "status",
+            operation: "==",
+          },
+          {
+            operation: "or",
+            sub_conditions: [
+              {
+                field: "amount",
+                operation: ">",
+              },
+              {
+                field: "amount",
+                operation: "<",
+              },
+            ],
+          },
+        ],
+      },
     });
   });
 });

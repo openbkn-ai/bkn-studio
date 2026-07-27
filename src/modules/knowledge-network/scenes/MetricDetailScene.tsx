@@ -325,10 +325,13 @@ export function MetricDetailScene({
           ) : (
             <MetricDataQueryPanel
               analysisDimensionOptions={detail.calculationFormula.analysisDimensions ?? []}
+              boundObjectTypeId={detail.scopeType === "object_type" ? detail.scopeRef : undefined}
               embedded
               metricId={detail.id}
               metricName={detail.name}
               networkId={networkId}
+              objectTypes={objectTypes}
+              propertyOptions={propertyOptions}
             />
           )}
         </section>

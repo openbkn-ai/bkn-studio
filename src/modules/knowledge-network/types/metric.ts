@@ -173,6 +173,7 @@ export type MetricDataQueryTimeRange =
 
 export type MetricDataQueryParams = {
   analysisDimensions?: string[];
+  condition?: import("./action-type").ActionTypeCondition;
   customEndTime?: unknown;
   customStartTime?: unknown;
   fillNull?: boolean;
