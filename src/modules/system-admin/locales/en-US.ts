@@ -73,6 +73,8 @@ export const systemAdminEnUS = {
       drawerTitle: "Permission Rule - {{name}}",
       drawerHint:
         "Add a user/department to this object and pick the allowed operations; clearing all operations removes the subject.",
+      drawerReadOnly:
+        "Read-only: you can review this object\u2019s grants but cannot grant or revoke",
       drawerEmpty: "No users or departments configured yet",
       addGranteePlaceholder: "Pick a user/department to add as subject...",
       removeGrantTitle: "Remove permission rule",

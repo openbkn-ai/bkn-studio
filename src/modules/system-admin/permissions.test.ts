@@ -11,6 +11,7 @@ import { deriveStudioPermissions, flattenSafeGrants } from "@/framework/auth/per
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { systemAdminModuleManifest } from "@/modules/system-admin/module.manifest";
 import { authzPoints, systemAdminPermissions } from "@/modules/system-admin/permissions";
+import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
 
 /**
  * 三员角色在 bkn-safe 种子里的授权（grants.json，bkn-foundry PR #474 之后）。
@@ -141,4 +142,20 @@ describe("授权面权限点", () => {
   // 操作通配(`operations: ["*"]`)不在这里断言:它对 admin-* 点位既不可能来自接口
   // ——bkn-safe 的角色权限写入直接拒绝通配操作(rejectWildcardGrant)——超管也不走
   // 推导,fetchCurrentUser 在 is_admin 为真时直接放行全部已注册权限。
+
+  describe("对象授权抽屉的操作 chip", () => {
+    it("勾选一个未选中的操作 → 覆盖写,落 grant", () => {
+      expect(chipTogglePoint(false, 0)).toBe(authzPoints.grant);
+      expect(chipTogglePoint(false, 3)).toBe(authzPoints.grant);
+    });
+
+    it("取消一个操作但还剩别的 → 仍是覆盖写,落 grant", () => {
+      expect(chipTogglePoint(true, 2)).toBe(authzPoints.grant);
+      expect(chipTogglePoint(true, 5)).toBe(authzPoints.grant);
+    });
+
+    it("取消最后一个操作 = 整条撤权,落 revoke", () => {
+      expect(chipTogglePoint(true, 1)).toBe(authzPoints.revoke);
+    });
+  });
 });
