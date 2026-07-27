@@ -1,0 +1,56 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import { describe, expect, it } from "vitest";
+
+import {
+  mapActionKind,
+  mapActionType,
+  mapConceptGroupDetail,
+} from "@/modules/knowledge-network/services/mappers";
+
+describe("action type list mapper", () => {
+  it("maps backend lowercase action types to frontend action kinds", () => {
+    expect(mapActionKind("add")).toBe("create");
+    expect(mapActionKind("modify")).toBe("update");
+    expect(mapActionKind("delete")).toBe("delete");
+    expect(mapActionKind("notify")).toBe("notify");
+  });
+
+  it("keeps supporting backend uppercase action types", () => {
+    expect(mapActionKind("ADD")).toBe("create");
+    expect(mapActionKind("UPDATE")).toBe("update");
+    expect(mapActionKind("DELETE")).toBe("delete");
+    expect(mapActionKind("NOTIFY")).toBe("notify");
+  });
+
+  it("maps modify records to update for the action type list", () => {
+    expect(
+      mapActionType({
+        action_type: "modify",
+        id: "action-1",
+        name: "Edit order",
+      }).actionKind,
+    ).toBe("update");
+  });
+
+  it("maps concept group action type entries with lowercase backend enums", () => {
+    expect(
+      mapConceptGroupDetail({
+        action_types: [
+          {
+            action_type: "modify",
+            id: "action-1",
+            name: "Edit order",
+          },
+        ],
+        id: "group-1",
+        name: "Order group",
+      }).actionTypes[0]?.actionKind,
+    ).toBe("update");
+  });
+});
