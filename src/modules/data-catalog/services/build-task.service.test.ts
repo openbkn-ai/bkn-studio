@@ -27,4 +27,22 @@ describe("snapshotFieldsOf", () => {
       status: "hanlp_index",
     });
   });
+
+  it("uses standard for fulltext fields without an analyzer in the snapshot", () => {
+    const snapshot = snapshotFieldsOf({
+      id: "task-1",
+      index_config: {
+        features: {
+          title: { fulltext: {} },
+          status: { fulltext: { config: { analyzer: "hanlp_index" } } },
+        },
+      },
+    });
+
+    expect(snapshot.fulltextAnalyzer).toBe("standard");
+    expect(snapshot.fulltextAnalyzers).toEqual({
+      title: "standard",
+      status: "hanlp_index",
+    });
+  });
 });

@@ -178,13 +178,11 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
       if (feature.fulltext) {
         fulltextFields.push(fieldName);
         const analyzer =
-          feature.fulltext.analyzer ?? feature.fulltext.config?.analyzer ?? "";
+          feature.fulltext.analyzer ?? feature.fulltext.config?.analyzer ?? "standard";
         if (analyzer && !fulltextAnalyzer) {
           fulltextAnalyzer = analyzer;
         }
-        if (analyzer) {
-          fulltextAnalyzers[fieldName] = analyzer;
-        }
+        fulltextAnalyzers[fieldName] = analyzer;
       }
     }
 
@@ -201,12 +199,10 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
 
   // 兼容旧扁平字段（过渡期 / mock）
   const fulltextFields = splitFields(item.fulltext_fields);
-  const fulltextAnalyzer = item.fulltext_analyzer ?? "";
+  const fulltextAnalyzer = item.fulltext_analyzer || "standard";
   const fulltextAnalyzers: Record<string, string> = {};
-  if (fulltextAnalyzer) {
-    for (const field of fulltextFields) {
-      fulltextAnalyzers[field] = fulltextAnalyzer;
-    }
+  for (const field of fulltextFields) {
+    fulltextAnalyzers[field] = fulltextAnalyzer;
   }
   return {
     buildKeyFields: splitFields(item.build_key_fields),
