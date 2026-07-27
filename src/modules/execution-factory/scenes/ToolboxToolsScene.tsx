@@ -181,6 +181,9 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     const requestId = selectRequestRef.current + 1;
     selectRequestRef.current = requestId;
     setSelectedTool(tool);
+    // 详情按工具取，切换时先清空。留着上一个工具的详情，输入输出面板会短暂显示
+    // 别人的 schema，内联保存的回填也会拿错快照。
+    setSelectedToolDetail(null);
     setToolRunLogs([]);
 
     try {
@@ -230,7 +233,9 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
       }
 
       const detail = selectedToolDetail;
-      if (!detail) {
+      // 详情是按工具异步取的，切换工具的加载窗口内它可能还是上一个工具的快照。
+      // 只判空不够：拿旧详情回填，会把上一个工具的 openapiSpec 覆盖到当前工具上。
+      if (!detail || detail.toolId !== selectedTool.toolId) {
         void message.error(t("common.requestFailed"));
         return;
       }
