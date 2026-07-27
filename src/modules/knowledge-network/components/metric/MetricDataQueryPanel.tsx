@@ -13,8 +13,11 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
+import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import { queryKnowledgeNetworkMetricData } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
+  KnowledgeNetworkObjectTypeRecord,
   MetricDataQueryMode,
   MetricDataQueryParams,
   MetricDataQueryResult,
@@ -61,10 +64,13 @@ function showFillNullField(mode: MetricDataQueryMode | undefined) {
 
 type MetricDataQueryPanelProps = {
   analysisDimensionOptions?: string[];
+  boundObjectTypeId?: string;
   embedded?: boolean;
   metricId: string;
   metricName: string;
   networkId: string;
+  objectTypes?: KnowledgeNetworkObjectTypeRecord[];
+  propertyOptions?: RelationTypePropertyOption[];
 };
 
 function parseNumericValue(value: string | number | undefined) {
@@ -154,10 +160,13 @@ function renderVisualResult(result: MetricDataQueryResult, metricName: string) {
 
 export function MetricDataQueryPanel({
   analysisDimensionOptions = [],
+  boundObjectTypeId,
   embedded = false,
   metricId,
   metricName,
   networkId,
+  objectTypes = [],
+  propertyOptions = [],
 }: MetricDataQueryPanelProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
@@ -166,6 +175,16 @@ export function MetricDataQueryPanel({
   const [result, setResult] = useState<MetricDataQueryResult | null>(null);
   const queryMode = Form.useWatch("mode", form);
   const timeRange = Form.useWatch("timeRange", form);
+  const propertyDisplayNameMap = useMemo(
+    () =>
+      new Map(
+        propertyOptions.map((item) => [
+          item.name,
+          item.displayName || item.label || item.name,
+        ]),
+      ),
+    [propertyOptions],
+  );
 
   const columns: TableProps<Record<string, string | number>>["columns"] = useMemo(
     () =>
@@ -222,20 +241,21 @@ export function MetricDataQueryPanel({
             }
           }}
         >
-          <Form.Item
-            label={t("knowledgeNetwork.metricQueryModeLabel")}
-            name="mode"
-            rules={[{ required: true }]}
-          >
-            <Select
-              options={QUERY_MODE_OPTIONS.map((value) => ({
-                label: t(`knowledgeNetwork.metricQueryMode.${value}`),
-                value,
-              }))}
-              style={{ width: 160 }}
-            />
-          </Form.Item>
-          {queryMode !== "instant" ? (
+          <div className={styles.primaryQueryRow}>
+            <Form.Item
+              label={t("knowledgeNetwork.metricQueryModeLabel")}
+              name="mode"
+              rules={[{ required: true }]}
+            >
+              <Select
+                options={QUERY_MODE_OPTIONS.map((value) => ({
+                  label: t(`knowledgeNetwork.metricQueryMode.${value}`),
+                  value,
+                }))}
+                style={{ width: 160 }}
+              />
+            </Form.Item>
+            {queryMode !== "instant" ? (
             <Form.Item
               label={t("knowledgeNetwork.metricQueryTimeRangeLabel")}
               name="timeRange"
@@ -249,8 +269,8 @@ export function MetricDataQueryPanel({
                 style={{ width: 180 }}
               />
             </Form.Item>
-          ) : null}
-          {queryMode !== "instant" && timeRange === "custom" ? (
+            ) : null}
+            {queryMode !== "instant" && timeRange === "custom" ? (
             <Space>
               <Form.Item
                 label={t("knowledgeNetwork.metricQueryCustomStartTime")}
@@ -267,26 +287,26 @@ export function MetricDataQueryPanel({
                 <DatePicker showTime />
               </Form.Item>
             </Space>
-          ) : null}
-          <Form.Item
-            hidden={!showStepField(queryMode)}
-            label={t("knowledgeNetwork.metricQueryStepLabel")}
-            name="step"
-            rules={
-              showStepField(queryMode)
-                ? [{ required: true, message: t("knowledgeNetwork.metricQueryStepRequired") }]
-                : undefined
-            }
-          >
-            <Select
-              options={CALENDAR_STEP_OPTIONS.map((value) => ({
-                label: t(`knowledgeNetwork.metricQueryStep.${value}`),
-                value,
-              }))}
-              style={{ width: 120 }}
-            />
-          </Form.Item>
-          {queryMode === "sameperiod" ? (
+            ) : null}
+            <Form.Item
+              hidden={!showStepField(queryMode)}
+              label={t("knowledgeNetwork.metricQueryStepLabel")}
+              name="step"
+              rules={
+                showStepField(queryMode)
+                  ? [{ required: true, message: t("knowledgeNetwork.metricQueryStepRequired") }]
+                  : undefined
+              }
+            >
+              <Select
+                options={CALENDAR_STEP_OPTIONS.map((value) => ({
+                  label: t(`knowledgeNetwork.metricQueryStep.${value}`),
+                  value,
+                }))}
+                style={{ width: 120 }}
+              />
+            </Form.Item>
+            {queryMode === "sameperiod" ? (
             <Space>
               <Form.Item label={t("knowledgeNetwork.metricQuerySamePeriodMethod")} name="samePeriodMethod">
                 <Select
@@ -314,40 +334,57 @@ export function MetricDataQueryPanel({
                 <InputNumber min={1} max={12} style={{ width: 90 }} />
               </Form.Item>
             </Space>
-          ) : null}
-          {analysisDimensionOptions.length > 0 ? (
+            ) : null}
+            {analysisDimensionOptions.length > 0 ? (
+              <Form.Item
+                label={t("knowledgeNetwork.metricQueryAnalysisDimensions")}
+                name="analysisDimensions"
+              >
+                <Select
+                  allowClear
+                  mode="multiple"
+                  options={analysisDimensionOptions.map((value) => ({
+                    label: propertyDisplayNameMap.get(value) ?? value,
+                    value,
+                  }))}
+                  placeholder={t("knowledgeNetwork.metricQueryAnalysisDimensionsPlaceholder")}
+                  style={{ minWidth: 220 }}
+                />
+              </Form.Item>
+            ) : null}
+          </div>
+          {propertyOptions.length > 0 ? (
             <Form.Item
-              label={t("knowledgeNetwork.metricQueryAnalysisDimensions")}
-              name="analysisDimensions"
+              className={styles.conditionFormItem}
+              label={t("knowledgeNetwork.metricFilterCondition")}
+              name="condition"
             >
-              <Select
-                allowClear
-                mode="multiple"
-                options={analysisDimensionOptions.map((value) => ({
-                  label: value,
-                  value,
-                }))}
-                placeholder={t("knowledgeNetwork.metricQueryAnalysisDimensionsPlaceholder")}
-                style={{ minWidth: 220 }}
+              <ActionTypeConditionEditor
+                boundObjectTypeId={boundObjectTypeId}
+                hideObjectTypeSelect
+                objectTypes={objectTypes}
+                propertyOptions={propertyOptions}
               />
             </Form.Item>
           ) : null}
-          <Form.Item label={t("knowledgeNetwork.metricQueryLimit")} name="limit">
-            <InputNumber min={1} max={1000} style={{ width: 100 }} />
-          </Form.Item>
-          <Form.Item
-            hidden={!showFillNullField(queryMode)}
-            label={t("knowledgeNetwork.metricQueryFillNull")}
-            name="fillNull"
-            valuePropName="checked"
-          >
-            <Switch />
-          </Form.Item>
-          <Form.Item>
-            <AppButton loading={queryLoading} onClick={() => void handleQuery()} type="primary">
-              {t("knowledgeNetwork.metricQueryRun")}
-            </AppButton>
-          </Form.Item>
+          <div className={styles.actionQueryRow}>
+            <Form.Item label={t("knowledgeNetwork.metricQueryLimit")} name="limit">
+              <InputNumber min={1} max={1000} style={{ width: 100 }} />
+            </Form.Item>
+            <Form.Item
+              hidden={!showFillNullField(queryMode)}
+              label={t("knowledgeNetwork.metricQueryFillNull")}
+              name="fillNull"
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item>
+              <AppButton loading={queryLoading} onClick={() => void handleQuery()} type="primary">
+                {t("knowledgeNetwork.metricQueryRun")}
+              </AppButton>
+            </Form.Item>
+          </div>
         </Form>
       </Card>
 

@@ -104,6 +104,10 @@ export const actiontypePart = {
     actionTypeConditionHint:
       "Optional. Configure a filter on the bound object type that must match before the action runs.",
     actionTypeConditionClear: "Clear",
+    actionTypeConditionGroupLogic: "Condition relation",
+    actionTypeConditionGroupAnd: "AND",
+    actionTypeConditionGroupOr: "OR",
+    actionTypeConditionAddGroup: "Add group",
     "actionTypeConditionOperation_==": "Equals",
     "actionTypeConditionOperation_!=": "Not equals",
     "actionTypeConditionOperation_>": "Greater than",

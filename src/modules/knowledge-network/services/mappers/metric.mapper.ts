@@ -58,9 +58,26 @@ function mapMetricConditionFromBackend(
   };
 }
 
-function toBackendMetricCondition(
+export function toBackendMetricCondition(
   condition?: ActionTypeCondition,
 ): BackendMetricCondition | undefined {
+  const subConditions = condition?.subConditions
+    ?.map((item) => toBackendMetricCondition(item))
+    .filter((item): item is BackendMetricCondition => Boolean(item));
+
+  if (
+    condition?.operation &&
+    ["and", "or"].includes(condition.operation) &&
+    subConditions?.length
+  ) {
+    return {
+      object_type_id: condition.objectTypeId,
+      operation: condition.operation,
+      sub_conditions: subConditions,
+      value_from: condition.valueFrom ?? "const",
+    };
+  }
+
   if (!condition?.field || !condition.operation) {
     return undefined;
   }
@@ -69,9 +86,7 @@ function toBackendMetricCondition(
     field: condition.field,
     object_type_id: condition.objectTypeId,
     operation: condition.operation,
-    sub_conditions: condition.subConditions
-      ?.map((item) => toBackendMetricCondition(item))
-      .filter((item): item is BackendMetricCondition => Boolean(item)),
+    sub_conditions: subConditions,
     value: condition.value,
     value_from: condition.valueFrom ?? "const",
   };

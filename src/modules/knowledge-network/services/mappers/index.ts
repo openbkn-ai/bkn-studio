@@ -458,7 +458,7 @@ export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTy
 }
 
 
-export { mapMetric, toBackendMetricEntry } from "./metric.mapper";
+export { mapMetric, toBackendMetricCondition, toBackendMetricEntry } from "./metric.mapper";
 
 export function mapTaskChild(item: BackendTaskChild): KnowledgeNetworkTaskChildRecord {
   const durationMs = item.time_cost ?? 0;

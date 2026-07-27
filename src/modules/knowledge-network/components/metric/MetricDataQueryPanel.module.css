@@ -77,6 +77,33 @@
 
 .queryForm {
   display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.primaryQueryRow,
+.actionQueryRow {
+  align-items: center;
+  display: flex;
   flex-wrap: wrap;
   gap: 12px 16px;
+}
+
+.actionQueryRow {
+  border-top: 1px solid #f0f0f0;
+  justify-content: flex-end;
+  padding-top: 12px;
+}
+
+.conditionFormItem {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.conditionFormItem :global(.ant-form-item-control) {
+  min-width: 0;
+}
+
+.conditionFormItem :global(.ant-form-item-row) {
+  align-items: flex-start;
 }

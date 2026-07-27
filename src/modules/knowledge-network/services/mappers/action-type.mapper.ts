@@ -93,6 +93,23 @@ export function toBackendActionTypeEnum(
 function toBackendActionCondition(
   condition?: ActionTypeCondition,
 ): BackendActionCondition | undefined {
+  const subConditions = condition?.subConditions
+    ?.map((item) => toBackendActionCondition(item))
+    .filter((item): item is BackendActionCondition => Boolean(item));
+
+  if (
+    condition?.operation &&
+    ["and", "or"].includes(condition.operation) &&
+    subConditions?.length
+  ) {
+    return {
+      object_type_id: condition.objectTypeId,
+      operation: condition.operation,
+      sub_conditions: subConditions,
+      value_from: condition.valueFrom ?? "const",
+    };
+  }
+
   if (!condition?.field || !condition.operation) {
     return undefined;
   }
@@ -101,7 +118,7 @@ function toBackendActionCondition(
     field: condition.field,
     object_type_id: condition.objectTypeId,
     operation: condition.operation,
-    sub_conditions: condition.subConditions?.map((item) => toBackendActionCondition(item)!),
+    sub_conditions: subConditions,
     value: condition.value,
     value_from: condition.valueFrom ?? "const",
   };
