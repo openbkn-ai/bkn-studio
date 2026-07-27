@@ -11,6 +11,7 @@ import type {
   ToolIoParameter,
   ToolIoSpec,
 } from "@/modules/execution-factory/types/tool";
+import { assertDebugHeadersAllowed } from "@/modules/execution-factory/utils/debug-headers";
 import {
   buildDefaultDebugBody,
   buildSampleFromToolParameters,
@@ -123,6 +124,7 @@ export function buildHttpDebugRequest(
     ? Object.fromEntries(Object.entries(rawPath).map(([key, value]) => [key, String(value)]))
     : undefined;
 
+  assertDebugHeadersAllowed(header);
   assertRequiredParameters(header, parametersAt(ioSpec, "header"), "Header");
   assertRequiredParameters(query, parametersAt(ioSpec, "query"), "Query");
   assertRequiredParameters(path, parametersAt(ioSpec, "path"), "Path");

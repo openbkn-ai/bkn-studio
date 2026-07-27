@@ -20,6 +20,7 @@ import type {
   ToolRecord,
   ToolRunLogEntry,
 } from "@/modules/execution-factory/types/tool";
+import { maskDebugRequestSecrets } from "@/modules/execution-factory/utils/debug-headers";
 import {
   buildHttpDebugInitialValues,
   buildHttpDebugRequest,
@@ -82,7 +83,7 @@ export function ToolDebugPanel({
         durationMs: debugResult.durationMs,
         error: debugResult.error,
         body: debugResult.body,
-        requestBody: debugRequest,
+        requestBody: maskDebugRequestSecrets(debugRequest),
       });
     } catch (caughtError) {
       setError(extractRequestErrorMessage(caughtError));

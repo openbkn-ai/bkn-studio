@@ -109,12 +109,13 @@ export function HttpDebugRequestFields({
     label: string,
     parameters: typeof pathParameters,
     rows = 4,
+    extraHint?: string,
   ) => {
     const names = parameters.map((parameter) => parameter.name);
     const requiredNames = parameters
       .filter((parameter) => parameter.required)
       .map((parameter) => parameter.name);
-    const hint = parameterHint(names, requiredNames);
+    const hint = [parameterHint(names, requiredNames), extraHint].filter(Boolean).join(" · ");
 
     return (
       <Form.Item
@@ -146,22 +147,23 @@ export function HttpDebugRequestFields({
             queryParameters,
           )
         : null}
-      {headerParameters.length > 0 ? (
-        <Collapse
-          items={[
-            {
-              key: "headers",
-              label: t("executionFactory.debugRequestHeaders"),
-              children: renderJsonField(
-                "requestHeaders",
-                t("executionFactory.debugRequestHeaders"),
-                headerParameters,
-              ),
-            },
-          ]}
-          size="small"
-        />
-      ) : null}
+      <Collapse
+        defaultActiveKey={headerParameters.length > 0 ? ["headers"] : undefined}
+        items={[
+          {
+            key: "headers",
+            label: t("executionFactory.debugRequestHeaders"),
+            children: renderJsonField(
+              "requestHeaders",
+              t("executionFactory.debugRequestHeaders"),
+              headerParameters,
+              4,
+              t("executionFactory.debugHeaderSensitiveHint"),
+            ),
+          },
+        ]}
+        size="small"
+      />
       <Form.Item label={t("executionFactory.debugRequestBody")} name="requestBody">
         <JsonEditor height={180} />
       </Form.Item>

@@ -19,6 +19,7 @@ import type {
   OperatorRecord,
   OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
+import { maskDebugRequestSecrets } from "@/modules/execution-factory/utils/debug-headers";
 import {
   buildHttpDebugInitialValues,
   buildHttpDebugRequest,
@@ -83,7 +84,7 @@ export function OperatorDebugPanel({
         durationMs: debugResult.durationMs,
         error: debugResult.error,
         body: debugResult.body,
-        requestBody: request,
+        requestBody: maskDebugRequestSecrets(request),
       });
     } catch (caughtError) {
       setError(extractRequestErrorMessage(caughtError));

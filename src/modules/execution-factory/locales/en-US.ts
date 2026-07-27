@@ -311,6 +311,8 @@ export const executionFactoryEnUS = {
     runDebug: "Run Debug",
     debugRequestBody: "Request Body (JSON)",
     debugRequestHeaders: "Request Headers (JSON)",
+    debugHeaderSensitiveHint:
+      "Credential headers (Authorization, Cookie, X-Api-Key, …) are masked in the run log",
     debugQueryParameters: "Query Parameters (JSON)",
     debugPathParameters: "Path Parameters (JSON)",
     debugMethod: "Method",
