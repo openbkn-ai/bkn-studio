@@ -31,6 +31,26 @@ export function getExecutionUnitLifecycleActions(
 }
 
 /**
+ * i18n key for a lifecycle action label.
+ *
+ * Action wording follows the target status: `offline` reads as 下线 → 已下线.
+ * Re-publishing something already taken down reads as 重新发布 so it pairs with
+ * the 已下线 tag instead of looking like a first-time publish.
+ */
+export function getLifecycleActionLabelKey(
+  action: ExecutionUnitLifecycleAction,
+  status: string | undefined,
+): string {
+  if (action === "offline") {
+    return "executionFactory.offline";
+  }
+
+  return status === "offline"
+    ? "executionFactory.cardMenu.republish"
+    : "executionFactory.publish";
+}
+
+/**
  * Maps a UI lifecycle action to the API status payload.
  * Published take-down must submit `offline`, never `unpublish`.
  */

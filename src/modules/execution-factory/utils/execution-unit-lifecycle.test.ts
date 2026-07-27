@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getExecutionUnitLifecycleActions,
+  getLifecycleActionLabelKey,
   resolveLifecycleActionStatus,
 } from "./execution-unit-lifecycle";
 
@@ -30,6 +31,24 @@ describe("getExecutionUnitLifecycleActions", () => {
     expect(getExecutionUnitLifecycleActions(undefined)).toEqual([]);
     expect(getExecutionUnitLifecycleActions("")).toEqual([]);
     expect(getExecutionUnitLifecycleActions("unknown")).toEqual([]);
+  });
+});
+
+describe("getLifecycleActionLabelKey", () => {
+  it("labels re-publishing an offline unit as republish", () => {
+    expect(getLifecycleActionLabelKey("publish", "offline")).toBe(
+      "executionFactory.cardMenu.republish",
+    );
+  });
+
+  it("labels the first publish of a draft or editing unit as publish", () => {
+    expect(getLifecycleActionLabelKey("publish", "unpublish")).toBe("executionFactory.publish");
+    expect(getLifecycleActionLabelKey("publish", "editing")).toBe("executionFactory.publish");
+    expect(getLifecycleActionLabelKey("publish", undefined)).toBe("executionFactory.publish");
+  });
+
+  it("always labels take-down as offline", () => {
+    expect(getLifecycleActionLabelKey("offline", "published")).toBe("executionFactory.offline");
   });
 });
 

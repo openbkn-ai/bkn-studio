@@ -26,6 +26,7 @@ import {
   updateMcpStatus,
 } from "@/modules/execution-factory/services/mcp.service";
 import type { McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
+import { getLifecycleActionLabelKey } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import styles from "./execution-factory-list.module.css";
@@ -168,7 +169,7 @@ export function McpListScene() {
                 onClick={() => handleStatusChange(record, "published")}
                 type="link"
               >
-                {t("executionFactory.publish")}
+                {t(getLifecycleActionLabelKey("publish", record.status))}
               </AppButton>
             </PermissionGate>
           ) : null}
