@@ -339,6 +339,10 @@ export const dataCatalogZhCN = {
       rebuild: "重新构建",
       rebuildIncremental: "增量更新(从断点续传)",
       rebuildFull: "全量重跑(忽略游标从头同步)",
+      rerun: "重跑",
+      rerunConfirmTitle: "重跑构建任务",
+      rerunResume: "从中断处继续构建",
+      rerunReset: "从头开始重新构建",
       rebuildFullConfirmTitle: "确定全量重跑本任务?",
       rebuildFullConfirmContent:
         "将对该构建任务执行 reset=true：忽略游标从头同步。若资源索引配置相对该任务已变更，启动可能被拒绝，需新建构建。",

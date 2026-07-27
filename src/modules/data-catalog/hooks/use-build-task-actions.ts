@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { useCallback } from "react";
+import { Radio, type RadioChangeEvent } from "antd";
+import { createElement, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -15,7 +16,6 @@ import {
   pauseBuildTask,
   resumeBuildTask,
   retryBuildTask,
-  type BuildExecuteType,
 } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 import {
@@ -56,8 +56,8 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
   );
 
   const retry = useCallback(
-    async (task: BuildTask, executeType: BuildExecuteType = "full") => {
-      const reset = executeType === "full";
+    async (task: BuildTask) => {
+      let reset = false;
       const run = async () => {
         try {
           const next = await retryBuildTask(task.id, reset);
@@ -74,19 +74,23 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
         }
       };
 
-      if (reset) {
-        modal.confirm({
-          title: t("dataCatalog.task.rebuildFullConfirmTitle"),
-          content: t("dataCatalog.task.rebuildFullConfirmContent"),
-          okText: t("common.confirm"),
-          cancelText: t("common.cancel"),
-          okButtonProps: { danger: true },
-          onOk: run,
-        });
-        return;
-      }
-
-      await run();
+      modal.confirm({
+        title: t("dataCatalog.task.rerunConfirmTitle"),
+        content: createElement(
+          Radio.Group,
+          {
+            defaultValue: reset,
+            onChange: (event: RadioChangeEvent) => {
+              reset = event.target.value;
+            },
+          },
+          createElement(Radio, { value: false }, t("dataCatalog.task.rerunResume")),
+          createElement(Radio, { value: true }, t("dataCatalog.task.rerunReset")),
+        ),
+        okText: t("common.confirm"),
+        cancelText: t("common.cancel"),
+        onOk: run,
+      });
     },
     [message, modal, onRefresh, t],
   );

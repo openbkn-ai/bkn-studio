@@ -6,7 +6,7 @@
  */
 
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert } from "antd";
+import { Alert, Space } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -206,7 +206,7 @@ export function ResourceIndexPanel({
   const [taskPage, setTaskPage] = useState(1);
   const [taskPageSize, setTaskPageSize] = useState(10);
   const [detailTask, setDetailTask] = useState<BuildTask | null>(null);
-  const { pauseOrResume, retry } = useBuildTaskActions(onRefresh);
+  const { pauseOrResume, remove, retry } = useBuildTaskActions(onRefresh);
   const [detailResource, setDetailResource] = useState<CatalogResource>(resource);
   const [models, setModels] = useState<SmallModel[]>([]);
   const autoPickedRef = useRef(false);
@@ -312,7 +312,25 @@ export function ResourceIndexPanel({
             : "dataCatalog.task.stopBuild",
         );
 
+  const pauseResumeLabelOf = (task: BuildTask) =>
+    task.status === "paused"
+      ? t(
+          task.mode === "streaming"
+            ? "dataCatalog.task.resumeListening"
+            : "dataCatalog.task.resumeBuild",
+        )
+      : t(
+          task.mode === "streaming"
+            ? "dataCatalog.task.pauseListening"
+            : "dataCatalog.task.stopBuild",
+        );
+
   const taskColumns: ColumnsType<BuildTask> = [
+    {
+      dataIndex: "id",
+      title: t("dataCatalog.taskManagement.columns.task"),
+      width: 180,
+    },
     {
       dataIndex: "status",
       title: t("common.status"),
@@ -324,10 +342,10 @@ export function ResourceIndexPanel({
       render: (value: BuildTask["mode"]) => t(`dataCatalog.modes.${value}`),
     },
     {
-      dataIndex: "embeddingModel",
-      title: t("dataCatalog.task.model"),
-      render: (value: string, record) =>
-        formatEmbeddingModelDisplay(value, record.modelDimensions, models),
+      key: "progress",
+      title: t("dataCatalog.task.progress"),
+      width: 196,
+      render: (_value, record) => <BuildProgress compact task={record} />,
     },
     {
       dataIndex: "createTime",
@@ -336,10 +354,32 @@ export function ResourceIndexPanel({
     {
       key: "actions",
       title: t("common.actions"),
+      width: 220,
       render: (_value, record) => (
-        <AppButton onClick={() => setDetailTask(record)} type="link">
-          {t("common.detail")}
-        </AppButton>
+        <Space size={4}>
+          <AppButton onClick={() => setDetailTask(record)} type="link">
+            {t("common.detail")}
+          </AppButton>
+          {ACTIVE_TASK_STATUSES.has(record.status) ? (
+            <PermissionGate permissions="resource:task_manage">
+              <AppButton onClick={() => void pauseOrResume(record)} type="link">
+                {pauseResumeLabelOf(record)}
+              </AppButton>
+            </PermissionGate>
+          ) : null}
+          {record.status === "failed" ? (
+            <PermissionGate permissions="resource:task_manage">
+              <AppButton onClick={() => void retry(record)} type="link">
+                {t("dataCatalog.task.rerun")}
+              </AppButton>
+            </PermissionGate>
+          ) : null}
+          <PermissionGate permissions="resource:task_manage">
+            <AppButton danger onClick={() => remove(record)} type="link">
+              {t("common.delete")}
+            </AppButton>
+          </PermissionGate>
+        </Space>
       ),
     },
   ];
@@ -428,7 +468,7 @@ export function ResourceIndexPanel({
                   }}
                   size="small"
                 >
-                  {t("dataCatalog.task.rebuild")}
+                  {t("dataCatalog.task.rerun")}
                 </AppButton>
               </PermissionGate>
             ) : null}

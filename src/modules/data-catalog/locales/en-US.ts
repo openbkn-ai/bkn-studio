@@ -361,6 +361,10 @@ export const dataCatalogEnUS = {
       rebuild: "Rebuild",
       rebuildIncremental: "Incremental (resume from cursor)",
       rebuildFull: "Full (reset cursor, resync all)",
+      rerun: "Rerun",
+      rerunConfirmTitle: "Rerun build task",
+      rerunResume: "Resume from the checkpoint",
+      rerunReset: "Restart from the beginning",
       rebuildFullConfirmTitle: "Full reset this task?",
       rebuildFullConfirmContent:
         "This starts the task with reset=true (ignore cursor). If resource index config drifted relative to this task, start may be rejected — create a new build instead.",

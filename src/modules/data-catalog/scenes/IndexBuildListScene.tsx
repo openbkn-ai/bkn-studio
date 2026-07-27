@@ -500,10 +500,10 @@ export function IndexBuildListScene() {
                 </AppButton>
               </PermissionGate>
             ) : null}
-            {record.status === "failed" || record.status === "succeeded" ? (
+            {record.status === "failed" ? (
               <PermissionGate permissions="resource:task_manage">
-                <AppButton onClick={() => void handleRetry(record, "full")} type="link">
-                  {t("dataCatalog.task.rebuildFull")}
+                <AppButton onClick={() => void handleRetry(record)} type="link">
+                  {t("dataCatalog.task.rerun")}
                 </AppButton>
               </PermissionGate>
             ) : null}
