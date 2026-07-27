@@ -715,7 +715,7 @@ export const executionFactoryEnUS = {
     parseSseResultTitle: "Discovered Tools",
     functionExecuteTitle: "Execute Function",
     functionCode: "Function Code",
-    functionLogic: "Processing Logic",
+    functionLogic: "Python Code",
     functionLogicHint:
       "Write the Python handler that reads inputs and returns the outputs structure.",
     runFunction: "Run Function",

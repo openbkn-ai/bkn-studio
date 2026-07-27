@@ -5,60 +5,33 @@
  * Conditions. See LICENSE for the full text.
  */
 
-.panel {
-  margin-bottom: 16px;
-  padding: 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 0;
-  background: var(--color-bg-surface);
-}
-
-.header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-
-.titleWrap {
-  min-width: 0;
-}
-
-.title {
+.score {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--color-text-primary);
-  font-weight: 600;
 }
 
-.description {
-  margin-top: 4px;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  line-height: 20px;
-}
-
-.score {
-  min-width: 104px;
-  text-align: right;
-}
-
+/* 比页头标题（20px/700）小一档：这是卡片里的指标，不该跟页面标题抢层级。 */
 .scoreValue {
   color: var(--color-primary-600);
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
-  line-height: 28px;
+  line-height: 22px;
+}
+
+.scoreBar {
+  width: 72px;
+  margin-bottom: 0;
+  line-height: 1;
 }
 
 .scoreLabel {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 4px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: 12px;
+  line-height: 18px;
   cursor: help;
 }
 
@@ -88,17 +61,12 @@
   opacity: 0.55;
 }
 
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.sectionTitle {
-  margin-bottom: 8px;
+.ioCounts {
+  margin-left: 12px;
   color: var(--color-text-secondary);
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
 }
 
 .missingList {
@@ -107,7 +75,3 @@
   gap: 6px;
 }
 
-.emptyText {
-  color: var(--color-text-muted);
-  font-size: 13px;
-}

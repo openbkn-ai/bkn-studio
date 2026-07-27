@@ -275,22 +275,27 @@ export function ToolFormDrawer({
             </>
           ) : null}
           {mode === "edit" ? (
+            /*
+              名称与描述改在工具卡上点击即改，这里只留隐藏项：updateTool 是整体覆盖，
+              表单里没注册的字段 validateFields() 不会返回，提交就会把原值清空。
+              使用规则同理——它还喂着 manifest 的 business intent，不能悄悄丢。
+            */
             <>
-              <Form.Item
-                label={t("executionFactory.toolName")}
-                name="name"
-                rules={[{ required: true, message: t("common.required") }]}
-              >
+              <Form.Item hidden name="name">
                 <Input />
               </Form.Item>
-              <Form.Item label={t("common.description")} name="description">
-                <Input.TextArea rows={3} />
+              <Form.Item hidden name="description">
+                <Input />
+              </Form.Item>
+              <Form.Item hidden name="useRule">
+                <Input />
               </Form.Item>
             </>
-          ) : null}
-          <Form.Item label={t("executionFactory.useRule")} name="useRule">
-            <Input.TextArea rows={2} />
-          </Form.Item>
+          ) : (
+            <Form.Item label={t("executionFactory.useRule")} name="useRule">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+          )}
           {metadataType === "openapi" ? (
             <OpenApiDefinitionFields required={mode === "create"} />
           ) : null}

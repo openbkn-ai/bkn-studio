@@ -704,7 +704,7 @@ export const executionFactoryZhCN = {
     parseSseResultTitle: "发现的工具",
     functionExecuteTitle: "执行函数",
     functionCode: "函数代码",
-    functionLogic: "处理逻辑",
+    functionLogic: "Python 代码",
     functionLogicHint: "编写 Python handler，从 inputs 读取入参并返回 outputs 结构。",
     runFunction: "运行函数",
     skillEditTitle: "编辑 SKILL",

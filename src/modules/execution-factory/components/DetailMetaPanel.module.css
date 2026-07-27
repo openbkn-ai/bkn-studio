@@ -6,6 +6,8 @@
  */
 
 .sectionCard {
+  /* 列数按卡片自身宽度降级：详情区被 Sider 压窄时，靠视口宽度判断会失真。 */
+  container-type: inline-size;
   margin-bottom: 16px;
   padding: 20px;
   border: 1px solid var(--color-border);
@@ -14,8 +16,18 @@
   box-shadow: var(--shadow-card);
 }
 
+.compact {
+  padding: 16px;
+}
+
+/* 抽屉、弹窗这类宿主自己带边界，卡片外框会变成第二层框。 */
+.plain {
+  container-type: inline-size;
+}
+
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -29,17 +41,124 @@
   font-weight: 600;
 }
 
-.descriptionBlock {
-  background: var(--color-bg-surface);
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
 }
 
-/* 标签保持单行；长值（名字、URL、路径）在单元格内换行，不再溢出压到相邻列。 */
-.descriptionBlock :global(.ant-descriptions-item-label) {
-  white-space: nowrap;
+.subheader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
-.descriptionBlock :global(.ant-descriptions-item-content) {
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 32px;
+  margin: 0;
+}
+
+.grid[data-columns="1"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.compact .grid {
+  gap: 12px 24px;
+}
+
+/* 分隔线模式接管行距，否则 gap 会和行内边距叠成双倍留白。 */
+.grid[data-dividers="true"] {
+  gap: 0;
+}
+
+.grid[data-dividers="true"] .row {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.grid[data-dividers="true"] .row:first-child {
+  padding-top: 0;
+}
+
+.grid[data-dividers="true"] .row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.row {
+  display: grid;
+  gap: 4px;
   min-width: 0;
+}
+
+.row[data-span="full"] {
+  grid-column: 1 / -1;
+}
+
+/* 12px/18px 跟 .toolDesc、抽屉里的 dt 同档；muted(#94a3b8) 在 12px 上只有 2.8:1，
+   标签不能用它，统一走 secondary。 */
+.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.labelIcon {
+  display: inline-flex;
+  font-size: 12px;
+}
+
+/* 长值（名字、URL、路径）自己换行，不再挤压相邻列。 */
+.value {
+  margin: 0;
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 22px;
   word-break: break-word;
   overflow-wrap: anywhere;
+}
+
+.value[data-variant="strong"] {
+  font-weight: 600;
+}
+
+.value[data-variant="accent"] {
+  color: var(--color-primary-600);
+}
+
+.value[data-variant="muted"] {
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+}
+
+.value[data-variant="mono"] {
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace
+  );
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.footer {
+  margin-top: 16px;
+}
+
+@container (max-width: 680px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

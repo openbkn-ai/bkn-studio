@@ -6,7 +6,6 @@
  */
 
 import {
-  ApiOutlined,
   ArrowLeftOutlined,
   BarsOutlined,
   BugOutlined,
@@ -14,15 +13,11 @@ import {
   CodeOutlined,
   DeleteOutlined,
   DownloadOutlined,
-  FileTextOutlined,
-  LinkOutlined,
-  NodeIndexOutlined,
-  TagOutlined,
   ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { Alert, Checkbox, Empty, Layout, Space, Spin, Switch, Tag } from "antd";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -32,9 +27,15 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
+import {
+  CapabilityIoCounts,
+  CapabilityReadinessHint,
+  CapabilityReadinessScore,
+} from "@/modules/execution-factory/components/CapabilityReadiness";
 import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
+import { HttpMethodTag } from "@/modules/execution-factory/components/HttpMethodTag";
+import { InlineEditableText } from "@/modules/execution-factory/components/InlineEditableText";
 import { ToolDebugModal } from "@/modules/execution-factory/components/ToolDebugModal";
 import { ToolFormDrawer } from "@/modules/execution-factory/components/ToolFormDrawer";
 import { ToolIoPanel } from "@/modules/execution-factory/components/ToolIoPanel";
@@ -48,6 +49,7 @@ import {
   deleteTools,
   getToolDetail,
   listTools,
+  updateTool,
   updateToolStatus,
 } from "@/modules/execution-factory/services/tool.service";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
@@ -200,6 +202,86 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     setToolRunLogs((current) => [entry, ...current].slice(0, 20));
   };
 
+  /**
+   * 名称/描述的点击即改。updateTool 是整体覆盖（buildToolMutationBody 会把
+   * data / use_rule / global_parameters 一并重写），所以必须拿 selectedToolDetail
+   * 这份完整快照回填；详情没取到就干脆不保存，宁可让人走编辑抽屉，也不能用半份
+   * 载荷把 OpenAPI spec 冲掉。
+   */
+  const handleInlinePatch = useCallback(
+    async (patch: { description?: string; name?: string }) => {
+      if (catalogContext || !selectedTool) {
+        return;
+      }
+
+      const nextName = (patch.name ?? selectedTool.name).trim();
+      const nextDescription = patch.description ?? selectedTool.description ?? "";
+
+      if (!nextName) {
+        void message.error(t("common.required"));
+        return;
+      }
+
+      if (
+        nextName === selectedTool.name &&
+        nextDescription === (selectedTool.description ?? "")
+      ) {
+        return;
+      }
+
+      const detail = selectedToolDetail;
+      if (!detail) {
+        void message.error(t("common.requestFailed"));
+        return;
+      }
+
+      const { toolId } = selectedTool;
+
+      try {
+        await updateTool(boxId, toolId, {
+          description: nextDescription,
+          functionInput: detail.functionInput,
+          globalParameters: detail.globalParameters,
+          metadataType: detail.metadataType,
+          name: nextName,
+          openapiSpec: detail.openapiSpec,
+          useRule: detail.useRule,
+        });
+        setSelectedTool((current) =>
+          current && current.toolId === toolId
+            ? { ...current, description: nextDescription, name: nextName }
+            : current,
+        );
+        setSelectedToolDetail((current) =>
+          current && current.toolId === toolId
+            ? { ...current, description: nextDescription, name: nextName }
+            : current,
+        );
+        setItems((current) =>
+          current.map((item) =>
+            item.toolId === toolId
+              ? { ...item, description: nextDescription, name: nextName }
+              : item,
+          ),
+        );
+        void message.success(t("common.success"));
+      } catch (error) {
+        void message.error(extractRequestErrorMessage(error));
+      }
+    },
+    [boxId, catalogContext, message, selectedTool, selectedToolDetail, t],
+  );
+
+  /** 市场预览态和无 tool:edit 权限的人看到纯文本，不给点击入口。 */
+  const renderToolEditable = (editable: ReactNode, readOnly: ReactNode) =>
+    catalogContext ? (
+      readOnly
+    ) : (
+      <PermissionGate fallback={readOnly} permissions="execution-factory:tool:edit">
+        {editable}
+      </PermissionGate>
+    );
+
   const handleToggleStatus = useCallback((tool: ToolRecord) => {
     // 市场预览态（from=catalog）只读：渲染层门禁能被 ?action=edit 绕过，写操作的闸
     // 必须落在 handler 里，否则会改到别人域的工具箱。
@@ -345,86 +427,6 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         : [],
     [auditUserDirectory, items.length, t, toolbox],
   );
-
-  const toolInfoItems = useMemo(() => {
-    if (!selectedTool) {
-      return [];
-    }
-
-    return [
-      {
-        key: "toolName",
-        label: t("executionFactory.toolboxToolNameLabel"),
-        value: selectedTool.name,
-        icon: <TagOutlined />,
-        variant: "strong" as const,
-      },
-      {
-        key: "method",
-        label: t("executionFactory.toolboxRequestMethodLabel"),
-        value: selectedTool.method ? (
-          <span className={styles.methodTag}>{selectedTool.method}</span>
-        ) : (
-          "-"
-        ),
-        icon: <ApiOutlined />,
-        variant: "accent" as const,
-      },
-      {
-        key: "status",
-        label: t("executionFactory.toolboxToolStatusLabel"),
-        value: (
-          <>
-            {/*
-              开关按设计是「不进编辑态也能直接扳」，所以这里不跟着 viewMode 禁用；
-              但仍要门禁：没有 tool:edit 的人不该拿到这个入口，市场预览态（from=catalog）
-              更不该改到别人工具箱里的工具状态。
-            */}
-            <PermissionGate permissions="execution-factory:tool:edit">
-              <Switch
-                checked={selectedTool.status === "enabled"}
-                disabled={catalogContext}
-                onChange={() => handleToggleStatus(selectedTool)}
-                size="small"
-              />{" "}
-            </PermissionGate>
-            {selectedTool.status === "enabled"
-              ? t("executionFactory.toolboxToolEnabled")
-              : t("executionFactory.toolboxToolDisabled")}
-          </>
-        ),
-      },
-      {
-        key: "description",
-        label: t("executionFactory.toolboxToolDescLabel"),
-        value: selectedTool.description || t("executionFactory.toolboxNoRule"),
-        icon: <FileTextOutlined />,
-        span: "full" as const,
-      },
-      {
-        key: "useRule",
-        label: t("executionFactory.toolboxToolRuleLabel"),
-        value: selectedTool.useRule || t("executionFactory.toolboxNoRule"),
-        span: "full" as const,
-        variant: "muted" as const,
-      },
-      {
-        key: "serverUrl",
-        label: t("executionFactory.toolboxServerUrlLabel"),
-        value: selectedTool.serverUrl || toolbox?.serviceUrl || "-",
-        icon: <LinkOutlined />,
-        span: "full" as const,
-        variant: "mono" as const,
-      },
-      {
-        key: "path",
-        label: t("executionFactory.toolboxToolPathLabel"),
-        value: selectedTool.path || "-",
-        icon: <NodeIndexOutlined />,
-        variant: "mono" as const,
-      },
-    ];
-  }, [catalogContext, handleToggleStatus, selectedTool, t, toolbox?.serviceUrl]);
 
   const selectedToolManifest = useMemo(() => {
     if (selectedToolDetail) {
@@ -625,7 +627,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                         <span className={styles.toolIndex}>{index + 1}</span>
                         <span className={styles.toolName}>{item.name}</span>
                         {item.method ? (
-                          <span className={styles.methodTag}>{item.method}</span>
+                          <HttpMethodTag compact method={item.method} />
                         ) : null}
                       </div>
                       <div className={styles.toolDesc}>{item.description || "-"}</div>
@@ -670,41 +672,129 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
               {selectedTool ? (
                 <>
                   <DetailMetaPanel
-                    columns={3}
-                    items={toolInfoItems}
-                    title={t("executionFactory.toolboxToolInfoTitle")}
-                    titleExtra={
-                      // 市场预览态（from=catalog）看的是别的域的工具箱，不给编辑入口，
-                      // 与「编辑工具箱」按钮的 !catalogContext 守卫对齐。写侧闸见下方抽屉 open。
-                      !catalogContext ? (
-                        <PermissionGate permissions="execution-factory:tool:edit">
-                          <AppButton
-                            onClick={() => setEditToolId(selectedTool.toolId)}
-                            style={{ fontSize: 15, fontWeight: 500, padding: 0 }}
-                            type="link"
-                          >
-                            {t("common.edit")}
-                          </AppButton>
-                        </PermissionGate>
+                    className={styles.section}
+                    footer={
+                      selectedToolManifest ? (
+                        <CapabilityReadinessHint manifest={selectedToolManifest} />
                       ) : undefined
                     }
+                    headerAside={
+                      <div className={styles.toolHeaderAside}>
+                        <span className={styles.toolStatus}>
+                          {/*
+                            开关按设计是「不进编辑态也能直接扳」，所以这里不跟着 viewMode 禁用；
+                            但仍要门禁：没有 tool:edit 的人不该拿到这个入口，市场预览态（from=catalog）
+                            更不该改到别人工具箱里的工具状态。状态文案不进门禁，只读用户也要看得到。
+                          */}
+                          <PermissionGate permissions="execution-factory:tool:edit">
+                            <Switch
+                              checked={selectedTool.status === "enabled"}
+                              disabled={catalogContext}
+                              onChange={() => handleToggleStatus(selectedTool)}
+                              size="small"
+                            />
+                          </PermissionGate>
+                          {selectedTool.status === "enabled"
+                            ? t("executionFactory.toolboxToolEnabled")
+                            : t("executionFactory.toolboxToolDisabled")}
+                        </span>
+                        {selectedToolManifest ? (
+                          <CapabilityReadinessScore manifest={selectedToolManifest} />
+                        ) : null}
+                      </div>
+                    }
+                    items={[]}
+                    subheader={
+                      <div className={styles.toolIdentity}>
+                        <div className={styles.toolIdentityDesc}>
+                          {renderToolEditable(
+                            <InlineEditableText
+                              block
+                              emptyLabel={t("executionFactory.agentReadiness.emptyIntent", {
+                                defaultValue:
+                                  "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
+                              })}
+                              key={`${selectedTool.toolId}-description`}
+                              multiline
+                              onChange={(description) => void handleInlinePatch({ description })}
+                              rows={2}
+                              value={selectedTool.description ?? ""}
+                            />,
+                            <span>
+                              {selectedTool.description ||
+                                t("executionFactory.agentReadiness.emptyIntent", {
+                                  defaultValue:
+                                    "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
+                                })}
+                            </span>,
+                          )}
+                        </div>
+                        {/*
+                          方法 + 路径 + Server 合成一条端点行：这三个字段分成三格时
+                          读者得自己拼出「往哪打」，合起来才是工具的核心事实。
+                        */}
+                        {selectedTool.method || selectedTool.path ? (
+                          <div className={styles.endpoint}>
+                            <HttpMethodTag method={selectedTool.method} />
+                            <div className={styles.endpointMain}>
+                              <span className={styles.endpointPath}>
+                                {selectedTool.path || "-"}
+                              </span>
+                              <span className={styles.endpointServer}>
+                                {selectedTool.serverUrl || toolbox?.serviceUrl || "-"}
+                              </span>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    }
+                    title={
+                      // 与函数工作台的头对齐：徽标 + 可点改的名字，不再顶一个「工具信息」标题。
+                      <span className={styles.toolIdentityTitle}>
+                        <span className={styles.apiBadge}>api</span>
+                        {renderToolEditable(
+                          <InlineEditableText
+                            className={styles.toolIdentityNameInput}
+                            emptyLabel={t("executionFactory.workbenchClickToName")}
+                            key={`${selectedTool.toolId}-name`}
+                            onChange={(name) => void handleInlinePatch({ name })}
+                            value={selectedTool.name}
+                          />,
+                          <span className={styles.toolIdentityName}>{selectedTool.name}</span>,
+                        )}
+                      </span>
+                    }
+                    variant="plain"
                   />
-                  {selectedToolManifest ? (
-                    <CapabilityAgentReadinessPanel manifest={selectedToolManifest} />
-                  ) : null}
                   <div className={styles.ioPanel}>
                     <div className={styles.ioHeader}>
-                      <span>{t("executionFactory.toolboxInputOutputTitle")}</span>
-                      <div>
+                      <span>
+                        {t("executionFactory.toolboxInputOutputTitle")}
+                        {selectedToolManifest ? (
+                          <CapabilityIoCounts manifest={selectedToolManifest} />
+                        ) : null}
+                      </span>
+                      <span className={styles.toolHeaderActions}>
+                        {/*
+                          市场预览态（from=catalog）看的是别的域的工具箱，不给编辑入口，
+                          与「编辑工具箱」按钮的 !catalogContext 守卫对齐。
+                        */}
+                        {!catalogContext ? (
+                          <PermissionGate permissions="execution-factory:tool:edit">
+                            <AppButton
+                              onClick={() => setEditToolId(selectedTool.toolId)}
+                              type="link"
+                            >
+                              {t("common.edit")}
+                            </AppButton>
+                          </PermissionGate>
+                        ) : null}
                         <PermissionGate permissions="execution-factory:tool:debug">
-                          <AppButton
-                            onClick={() => setDebugRecord(selectedTool)}
-                            type="primary"
-                          >
+                          <AppButton onClick={() => setDebugRecord(selectedTool)} type="primary">
                             {t("executionFactory.debug")}
                           </AppButton>
                         </PermissionGate>
-                      </div>
+                      </span>
                     </div>
                     <ToolIoPanel
                       functionInput={
