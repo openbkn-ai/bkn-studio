@@ -6,10 +6,12 @@
  */
 
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Descriptions, Drawer } from "antd";
+import { Alert, Descriptions, Drawer, Empty } from "antd";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import { getSemanticUnderstandingTask, type SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 
 import styles from "./BuildTaskDetailDrawer.module.css";
 import sharedStyles from "./shared.module.css";
@@ -17,7 +19,7 @@ import sharedStyles from "./shared.module.css";
 type Props = {
   onClose: () => void;
   open: boolean;
-  task: SemanticUnderstandingTask;
+  taskId: string;
 };
 
 function formatTime(value?: number) {
@@ -37,8 +39,32 @@ function jsonDetail(value?: string) {
   return <details className={styles.rawDetail}><summary>JSON</summary><pre>{content}</pre></details>;
 }
 
-export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, task }: Props) {
+export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }: Props) {
   const { t } = useTranslation();
+  const [task, setTask] = useState<SemanticUnderstandingTask | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    void (async () => {
+      setLoading(true);
+      setLoadError(null);
+      setTask(null);
+      try {
+        const nextTask = await getSemanticUnderstandingTask(taskId);
+        if (active) setTask(nextTask);
+      } catch (error) {
+        if (active) setLoadError(extractRequestErrorMessage(error));
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [open, taskId]);
+
+  if (!task) return <Drawer className={styles.drawer} destroyOnClose loading={loading} onClose={onClose} open={open} styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }} title={`${t("dataCatalog.task.detail")} · ${taskId}`} width={640}>{!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}{!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}</Drawer>;
   const applyModeKey = task.applyMode === "dry_run" ? "dryRun" : task.applyMode === "force" ? "force" : "fillEmpty";
   const statusClass = task.status === "failed" ? sharedStyles.taskFailed : task.status === "succeeded" ? sharedStyles.taskSucceeded : sharedStyles.taskRunning;
   const creator = task.creator ? task.creator.name || task.creator.id : "-";

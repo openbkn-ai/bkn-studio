@@ -205,7 +205,7 @@ export function ResourceIndexPanel({
   const navigate = useNavigate();
   const [taskPage, setTaskPage] = useState(1);
   const [taskPageSize, setTaskPageSize] = useState(10);
-  const [detailTask, setDetailTask] = useState<BuildTask | null>(null);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const { pauseOrResume, remove, retry } = useBuildTaskActions(onRefresh);
   const [detailResource, setDetailResource] = useState<CatalogResource>(resource);
   const [models, setModels] = useState<SmallModel[]>([]);
@@ -361,7 +361,7 @@ export function ResourceIndexPanel({
       fixed: "right",
       render: (_value, record) => (
         <Space className={panelStyles.historyActionGroup} size={4}>
-          <AppButton onClick={() => setDetailTask(record)} type="link">
+          <AppButton onClick={() => setDetailTaskId(record.id)} type="link">
             {t("common.detail")}
           </AppButton>
           {ACTIVE_TASK_STATUSES.has(record.status) ? (
@@ -598,12 +598,12 @@ export function ResourceIndexPanel({
         {indexView === "config" ? renderConfigTab() : renderTasksTab()}
       </div>
 
-      {detailTask ? (
+      {detailTaskId ? (
         <BuildTaskDetailDrawer
-          onClose={() => setDetailTask(null)}
+          onClose={() => setDetailTaskId(null)}
           open
           resource={resource}
-          task={detailTask}
+          taskId={detailTaskId}
         />
       ) : null}
     </>

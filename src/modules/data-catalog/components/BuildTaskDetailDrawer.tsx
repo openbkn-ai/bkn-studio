@@ -6,7 +6,7 @@
  */
 
 import { ExclamationCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
-import { Descriptions, Drawer } from "antd";
+import { Alert, Descriptions, Drawer, Empty } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,6 +15,8 @@ import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag
 import { formatCount } from "@/modules/data-catalog/lib/format";
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
+import { getBuildTask } from "@/modules/data-catalog/services/build-task.service";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
 import type { SmallModel } from "@/modules/model-resources/types/small-model";
@@ -26,7 +28,7 @@ type BuildTaskDetailDrawerProps = {
   onClose: () => void;
   open: boolean;
   resource: CatalogResource | null;
-  task: BuildTask;
+  taskId: string;
 };
 
 function renderFieldList(fields: string[]) {
@@ -161,13 +163,35 @@ export function BuildTaskDetailDrawer({
   onClose,
   open,
   resource,
-  task,
+  taskId,
 }: BuildTaskDetailDrawerProps) {
   const { i18n, t } = useTranslation();
   const [models, setModels] = useState<SmallModel[]>([]);
+  const [task, setTask] = useState<BuildTask | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || !task.embeddingModel) {
+    if (!open) return;
+    let active = true;
+    void (async () => {
+      setLoading(true);
+      setLoadError(null);
+      setTask(null);
+      try {
+        const nextTask = await getBuildTask(taskId);
+        if (active) setTask(nextTask);
+      } catch (error) {
+        if (active) setLoadError(extractRequestErrorMessage(error));
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [open, taskId]);
+
+  useEffect(() => {
+    if (!open || !task?.embeddingModel) {
       return;
     }
     let active = true;
@@ -188,18 +212,22 @@ export function BuildTaskDetailDrawer({
     return () => {
       active = false;
     };
-  }, [open, task.embeddingModel]);
+  }, [open, task?.embeddingModel]);
 
   const modelInfo = useMemo(() => {
     const match = models.find(
       (item) =>
-        item.modelId === task.embeddingModel || item.modelName === task.embeddingModel,
+        item.modelId === task?.embeddingModel || item.modelName === task?.embeddingModel,
     );
     return {
-      name: match?.modelName || task.embeddingModel,
-      dimensions: match?.embeddingDim ?? task.modelDimensions,
+      name: match?.modelName || task?.embeddingModel || "",
+      dimensions: match?.embeddingDim ?? task?.modelDimensions ?? 0,
     };
-  }, [models, task.embeddingModel, task.modelDimensions]);
+  }, [models, task?.embeddingModel, task?.modelDimensions]);
+
+  if (!task) {
+    return <Drawer className={styles.drawer} destroyOnClose loading={loading} onClose={onClose} open={open} styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }} title={`${t("dataCatalog.task.detail")} · ${taskId}`} width={560}>{!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}{!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}</Drawer>;
+  }
 
   const succeededWithWarning = task.status === "succeeded" && Boolean(task.error);
   const statusLabel = succeededWithWarning
