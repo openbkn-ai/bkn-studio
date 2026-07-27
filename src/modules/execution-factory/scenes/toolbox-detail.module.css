@@ -264,15 +264,17 @@
   border-bottom: none;
 }
 
-/* 头部分区：内容压到线上方（flex-end），描述那行才紧贴着线而不是让线飘在半空。
-   行距按函数工作台的头部压紧（10 / 8 / 10）——这里是「头部分区」不是普通卡片，
-   照 16 / 14 / 16 的卡片节奏排，两栏中缝就会顶出一条明显偏高的空带。 */
+/* 头部分区：内容顶对齐，与左栏头一致。撑到 96px 的是左栏（标题 + 筛选框），
+   右栏内容只有 72px，多出的那截若压在下面（flex-end），空隙就全落到徽标上方，
+   线紧贴着描述、标题上边反而空一块。留在描述与线之间才是对的。
+
+   行距按函数工作台的头部压紧（10 / 8）——这里是「头部分区」不是普通卡片，
+   照 16 / 14 / 16 的卡片节奏排，两栏中缝会顶出一条明显偏高的空带。 */
 .layoutHeadAligned .section:first-child {
   --detail-meta-header-gap: 8px;
   --detail-meta-subheader-gap: 0px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   min-height: var(--entity-rail-head-height);
   padding: 10px 20px;
 }
