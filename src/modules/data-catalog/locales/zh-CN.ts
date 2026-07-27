@@ -264,6 +264,7 @@ export const dataCatalogZhCN = {
       configCannotBuild: "缺少特征",
       resourceDefaultsTitle: "资源默认配置",
       resourceDefaultsHint: "特征未单独指定时使用默认值。",
+      fulltextAnalyzerOverrides: "字段级分词器覆盖默认值：{{overrides}}。请在字段特征配置中修改或选择“跟随默认”。",
       fieldEmbeddingModel: "Embedding 模型",
       fieldFulltextAnalyzer: "分词器",
       inheritDefaultAnalyzer: "跟随默认",

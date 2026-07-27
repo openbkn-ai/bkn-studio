@@ -124,6 +124,8 @@ export type BuildTask = {
   /** completed 但向量化没建满（vectorized < synced），索引不可用/部分可用。 */
   embeddingDegraded: boolean;
   fulltextAnalyzer: string;
+  /** 任务快照中每个全文字段最终使用的 analyzer。 */
+  fulltextAnalyzers?: Record<string, string>;
   fulltextFields: string[];
   error: string | null;
   /** 后端 failure_detail：向量化失败的详细原因，tooltip 展开用。 */
