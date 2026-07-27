@@ -130,6 +130,14 @@ export const actiontypePart = {
     actionTypeDetailTaskManagement: "Task management",
     actionTypeExecuteImmediately: "Execute now",
     actionTypeExecuteSuccess: "The action type execution has started.",
+    actionTypeExecuteParamsTitle: "Runtime parameters",
+    actionTypeExecuteParamsDescription:
+      'Enter the runtime parameters required to execute "{{name}}".',
+    actionTypeExecuteParamsLoading: "Loading parameter schema...",
+    actionTypeExecuteParamsSchemaFallback:
+      "The parameter schema is unavailable. Values will be submitted as text.",
+    actionTypeExecuteParamRequired: 'Enter a value for "{{name}}".',
+    actionTypeExecuteParamJsonInvalid: "Enter a valid JSON {{type}}.",
     actionTypeExecutionStartTime: "Start time",
     actionTypeExecutionEndTime: "End time",
     actionTypeExecutionDuration: "Duration",

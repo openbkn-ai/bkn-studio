@@ -15,6 +15,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeOverviewPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeOverviewPanel";
+import { ActionTypeExecuteModal } from "@/modules/knowledge-network/components/action-type/ActionTypeExecuteModal";
 import { ActionTypeTaskManagementPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import {
@@ -27,6 +28,7 @@ import type {
   ActionTypeDetail,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { getActionTypeDynamicParameters } from "@/modules/knowledge-network/utils/action-type-dynamic-params";
 
 import styles from "./ActionTypeDetailScene.module.css";
 
@@ -45,6 +47,7 @@ export function ActionTypeDetailScene() {
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
+  const [executeModalOpen, setExecuteModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [taskRefreshToken, setTaskRefreshToken] = useState(0);
 
@@ -105,22 +108,40 @@ export function ActionTypeDetailScene() {
     });
   };
 
-  const handleExecuteNow = async () => {
+  const executeNow = async (dynamicParams?: Record<string, unknown>) => {
     if (!detail) {
-      return;
+      return false;
     }
 
     setExecuting(true);
     try {
-      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id);
+      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id, dynamicParams);
       void message.success(t("knowledgeNetwork.actionTypeExecuteSuccess"));
       setTaskRefreshToken((value) => value + 1);
       setActiveTab("tasks");
+      return true;
     } catch (nextError) {
       void message.error(extractRequestErrorMessage(nextError));
+      return false;
     } finally {
       setExecuting(false);
     }
+  };
+
+  const handleExecuteNow = () => {
+    if (!detail) {
+      return;
+    }
+
+    const dynamicParameters = getActionTypeDynamicParameters(
+      detail.executionConfig.parameters,
+    );
+    if (dynamicParameters.length > 0) {
+      setExecuteModalOpen(true);
+      return;
+    }
+
+    void executeNow();
   };
 
   if (loading) {
@@ -142,7 +163,7 @@ export function ActionTypeDetailScene() {
           <AppButton
             icon={<PlayCircleOutlined />}
             loading={executing}
-            onClick={() => void handleExecuteNow()}
+            onClick={handleExecuteNow}
             type="primary"
           >
             {t("knowledgeNetwork.actionTypeExecuteImmediately")}
@@ -214,6 +235,21 @@ export function ActionTypeDetailScene() {
           )}
         </div>
       </div>
+      <ActionTypeExecuteModal
+        actionSource={detail.executionConfig.actionSource}
+        actionTypeName={detail.name}
+        onCancel={() => setExecuteModalOpen(false)}
+        onSubmit={async (dynamicParams) => {
+          const succeeded = await executeNow(dynamicParams);
+          if (succeeded) {
+            setExecuteModalOpen(false);
+          }
+          return succeeded;
+        }}
+        open={executeModalOpen}
+        parameters={getActionTypeDynamicParameters(detail.executionConfig.parameters)}
+        submitting={executing}
+      />
     </KnowledgeNetworkResourceConfigShell>
   );
 }
