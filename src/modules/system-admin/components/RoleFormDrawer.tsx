@@ -11,9 +11,11 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ResourceGrantEditor } from "@/modules/system-admin/components/ResourceGrantEditor";
+import { authzPoints } from "@/modules/system-admin/permissions";
 import {
   createRole,
   setRolePermission,
@@ -67,12 +69,20 @@ function diffGrants(original: ResourceGrant[], desired: ResourceGrant[]) {
 
 export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const [form] = Form.useForm<RoleFormValues>();
   const [grants, setGrants] = useState<ResourceGrant[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const isEdit = Boolean(role);
   const locked = Boolean(role?.builtin);
+  // 改名/改描述走 admin-role:edit,配置权限走 admin-role:permissions —— 后端把这两
+  // 件事拆成了不同点位(bkn-safe PR #474),所以只持 edit 的调用者进得来抽屉、改得了
+  // 名字,但权限编辑器只读:它提交的是 POST/DELETE roles/:id/permissions,会被 403。
+  const canEditPermissions = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: authzPoints.rolePermissions,
+  });
+  const permissionsReadOnly = locked || !canEditPermissions;
 
   useEffect(() => {
     if (!open) {
@@ -95,12 +105,16 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
             name: values.name.trim(),
             description: values.description.trim(),
           });
-          const { adds, removes } = diffGrants(role.permissions, grants);
-          for (const grant of adds) {
-            await setRolePermission(role.id, true, grant);
-          }
-          for (const grant of removes) {
-            await setRolePermission(role.id, false, grant);
+          // 无 admin-role:permissions 时权限编辑器是只读的,不该有差异;仍然显式跳过,
+          // 免得将来某个改动让只读态也能产生 diff,把一串必然 403 的请求打出去。
+          if (canEditPermissions) {
+            const { adds, removes } = diffGrants(role.permissions, grants);
+            for (const grant of adds) {
+              await setRolePermission(role.id, true, grant);
+            }
+            for (const grant of removes) {
+              await setRolePermission(role.id, false, grant);
+            }
           }
           message.success(t("systemAdmin.roles.toast.saved"));
         } else {
@@ -108,8 +122,10 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
             name: values.name.trim(),
             description: values.description.trim(),
           });
-          for (const grant of grants) {
-            await setRolePermission(newId, true, grant);
+          if (canEditPermissions) {
+            for (const grant of grants) {
+              await setRolePermission(newId, true, grant);
+            }
           }
           message.success(t("systemAdmin.roles.toast.created"));
         }
@@ -168,11 +184,15 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
           label={
             <span>
               {t("systemAdmin.roles.drawer.permissions")}{" "}
-              <span className={styles.subText}>{t("systemAdmin.roles.drawer.permissionsHint")}</span>
+              <span className={styles.subText}>
+                {permissionsReadOnly && !locked
+                  ? t("systemAdmin.roles.drawer.permissionsReadOnly")
+                  : t("systemAdmin.roles.drawer.permissionsHint")}
+              </span>
             </span>
           }
         >
-          <ResourceGrantEditor disabled={locked} onChange={setGrants} value={grants} />
+          <ResourceGrantEditor disabled={permissionsReadOnly} onChange={setGrants} value={grants} />
         </Form.Item>
       </Form>
     </Drawer>

@@ -11,7 +11,7 @@ import type { RouteObject } from "react-router-dom";
 import type { AppRouteContribution } from "@/app/router/types";
 import { RouteLoading } from "@/app/router/RouteLoading";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
-import { systemAdminPermissions } from "@/modules/system-admin/permissions";
+import { authzPoints, systemAdminPermissions } from "@/modules/system-admin/permissions";
 import { ObjectAuthorizationCreatePage } from "@/modules/system-admin/pages/ObjectAuthorizationCreatePage";
 
 const UserManagementPage = lazy(async () => {
@@ -94,7 +94,9 @@ export const systemAdminRoutes: RouteObject[] = [
         titleKey: "systemAdmin.objectGrants.createPageTitle",
       },
     },
-    element: guarded(systemAdminPermissions.authorizations, <ObjectAuthorizationCreatePage />),
+    // 新建授权页只有一件事可做:发对象授权。列表页放行只读审查者(admin-authz:view),
+    // 这里不放——进来也只能看着一个被 PermissionGate 隐掉的提交按钮。
+    element: guarded([authzPoints.grant], <ObjectAuthorizationCreatePage />),
   },
   {
     path: "system/license",

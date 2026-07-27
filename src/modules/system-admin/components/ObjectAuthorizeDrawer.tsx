@@ -25,6 +25,10 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { hasPermissions } from "@/framework/permission/has-permissions";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { authzPoints } from "@/modules/system-admin/permissions";
+import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
 import { listUsersPage } from "@/modules/system-admin/services/admin.service";
 import {
   listObjectGrants,
@@ -101,7 +105,18 @@ export function ObjectAuthorizeDrawer({
   open,
 }: ObjectAuthorizeDrawerProps) {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
+  // 抽屉是完整的写面板(添加授权、改操作集、撤权),但「看谁在这个对象上有授权」对
+  // 只读审查者是合法信息 —— 所以门禁下沉到每个写控件,而不是拦在抽屉入口。
+  const currentPermissions = runtimeConfig.currentUser.permissions;
+  const canGrant = hasPermissions({
+    currentPermissions,
+    requiredPermissions: authzPoints.grant,
+  });
+  const canRevoke = hasPermissions({
+    currentPermissions,
+    requiredPermissions: authzPoints.revoke,
+  });
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
   const [lookupRevision, setLookupRevision] = useState(0);
@@ -384,9 +399,14 @@ export function ObjectAuthorizeDrawer({
       </div>
 
       <div className={[styles.calloutBox, styles.sectionCalloutBottom].join(" ")}>
-        <span>{t("systemAdmin.objectGrants.drawerHint")}</span>
+        <span>
+          {canGrant || canRevoke
+            ? t("systemAdmin.objectGrants.drawerHint")
+            : t("systemAdmin.objectGrants.drawerReadOnly")}
+        </span>
       </div>
 
+      <PermissionGate permissions={authzPoints.grant}>
       <section className={styles.createPanel}>
         <div className={styles.createPanelHead}>
           <h3 className={styles.createPanelTitle}>{t("systemAdmin.objectGrants.add")}</h3>
@@ -412,6 +432,7 @@ export function ObjectAuthorizeDrawer({
           </div>
         </div>
       </section>
+      </PermissionGate>
 
       {loading ? (
         <div className={styles.createLoading}>
@@ -456,23 +477,33 @@ export function ObjectAuthorizeDrawer({
                           </span>
                         </Tooltip>
                       ) : (
-                        <AppButton
-                          className={[styles.actionLink, styles.actionDanger].join(" ")}
-                          onClick={() => handleRemove(grant)}
-                          type="link"
-                        >
-                          {t("systemAdmin.objectGrants.remove")}
-                        </AppButton>
+                        <PermissionGate permissions={authzPoints.revoke}>
+                          <AppButton
+                            className={[styles.actionLink, styles.actionDanger].join(" ")}
+                            onClick={() => handleRemove(grant)}
+                            type="link"
+                          >
+                            {t("systemAdmin.objectGrants.remove")}
+                          </AppButton>
+                        </PermissionGate>
                       )}
                     </div>
                     <div className={styles.chipGroup}>
-                      {ops.map((op) => (
+                      {ops.map((op) => {
+                        const selected = grant.operations.includes(op.key);
+                        // 勾选/取消勾选发的是不同的后端动作(见 chipTogglePoint),
+                        // 所以按方向分别判点位:只持 grant 的人加得了操作、撤不掉
+                        // 最后一个;只持 revoke 的人反之。
+                        const point = chipTogglePoint(selected, grant.operations.length);
+                        const allowed =
+                          point === authzPoints.revoke ? canRevoke : canGrant;
+                        return (
                         <button
                           className={[
                             styles.chipOpt,
-                            grant.operations.includes(op.key) ? styles.chipOptSelected : "",
+                            selected ? styles.chipOptSelected : "",
                           ].join(" ")}
-                          disabled={busy || locked}
+                          disabled={busy || locked || !allowed}
                           key={op.key}
                           onClick={() => void toggleOp(grant, op.key)}
                           type="button"
@@ -480,7 +511,8 @@ export function ObjectAuthorizeDrawer({
                           <span className={styles.chipCode}>{op.label}</span>
                           <span className={styles.chipType}>{op.key}</span>
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );

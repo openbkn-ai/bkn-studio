@@ -72,6 +72,7 @@ export const systemAdminZhCN = {
       createPageGranteeHint: "支持批量选择：提交后会为每个权限主体应用同一组操作。",
       drawerTitle: "权限配置 · {{name}}",
       drawerHint: "为该对象添加用户/部门，并勾选允许的操作；取消全部操作即移除该权限主体。",
+      drawerReadOnly: "只读：当前账号可以查看该对象的授权，但不能授权或撤权",
       drawerEmpty: "尚未配置任何用户或部门",
       addGranteePlaceholder: "选择用户/部门，添加权限主体…",
       removeGrantTitle: "移除权限配置",
@@ -324,6 +325,7 @@ export const systemAdminZhCN = {
         descriptionPlaceholder: "这个角色用来做什么？",
         permissions: "权限",
         permissionsHint: "选择资源类型、范围与允许的操作",
+        permissionsReadOnly: "只读：配置角色权限需要「角色权限配置」权限",
         builtinLocked: "内置角色为只读，不可修改名称、描述或权限。",
       },
       membersModal: {
