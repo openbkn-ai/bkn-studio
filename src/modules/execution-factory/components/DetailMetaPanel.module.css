@@ -32,3 +32,14 @@
 .descriptionBlock {
   background: var(--color-bg-surface);
 }
+
+/* 标签保持单行；长值（名字、URL、路径）在单元格内换行，不再溢出压到相邻列。 */
+.descriptionBlock :global(.ant-descriptions-item-label) {
+  white-space: nowrap;
+}
+
+.descriptionBlock :global(.ant-descriptions-item-content) {
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

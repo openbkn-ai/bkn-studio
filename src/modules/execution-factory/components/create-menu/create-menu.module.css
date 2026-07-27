@@ -71,11 +71,22 @@
 }
 
 .optionCard {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  min-height: 88px;
   border: 1px solid #d9d9d9;
   border-radius: 8px;
-  padding: 16px;
+  padding: 20px 24px;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.optionText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .optionCard:hover {
@@ -88,9 +99,9 @@
 }
 
 .optionTitle {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
-  margin: 8px 0 4px;
+  margin: 0 0 4px;
 }
 
 .optionDesc {

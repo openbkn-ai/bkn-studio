@@ -564,7 +564,10 @@ export function ExecutionUnitListScene({
 
   const showOriginFilter =
     !marketMode &&
-    (activeTab === "toolbox" || activeTab === "mcp" || activeTab === "operator");
+    (activeTab === "toolbox" ||
+      activeTab === "mcp" ||
+      activeTab === "operator" ||
+      activeTab === "skill");
 
   const originFilterOptions = useMemo(
     () => [

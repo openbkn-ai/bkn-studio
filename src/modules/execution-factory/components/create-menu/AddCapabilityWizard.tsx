@@ -82,6 +82,9 @@ type AddCapabilityWizardProps = {
 
   initialMode?: CapabilityUxMode;
 
+  /** 限定并强制展示模式选择步（如 HTTP API 入口只给 quick-api / import-openapi 两卡）。 */
+  allowedModesOverride?: CapabilityUxMode[];
+
   lockInitialMode?: boolean;
 
   onClose: () => void;
@@ -114,6 +117,8 @@ export function AddCapabilityWizard({
 
   initialMode,
 
+  allowedModesOverride,
+
   lockInitialMode = false,
 
   onClose,
@@ -135,16 +140,24 @@ export function AddCapabilityWizard({
   const quickApiFormRef = useRef<QuickAddApiFormHandle>(null);
   const importOpenApiFormRef = useRef<ImportOpenApiCapabilityFormHandle>(null);
 
-  const allowedModes = useMemo(() => getCapabilityModesForTab(contextTab), [contextTab]);
+  const allowedModes = useMemo(
+    () => allowedModesOverride ?? getCapabilityModesForTab(contextTab),
+    [allowedModesOverride, contextTab],
+  );
 
+  // 有 override 时按 override 的数量决定跳不跳（≥2 强制展示两卡，即使锁了工具箱）；
+  // 否则维持原来的上下文规则。
   const skipModeStep =
-    lockInitialMode || shouldSkipCapabilityModeStep(contextTab, { initialBoxId });
+    lockInitialMode ||
+    (allowedModesOverride
+      ? allowedModes.length <= 1
+      : shouldSkipCapabilityModeStep(contextTab, { initialBoxId }));
 
   const [step, setStep] = useState(0);
 
   const [mode, setMode] = useState<CapabilityUxMode | undefined>(
 
-    initialMode ?? getDefaultCapabilityModeForTab(contextTab),
+    initialMode ?? allowedModesOverride?.[0] ?? getDefaultCapabilityModeForTab(contextTab),
 
   );
 
@@ -163,7 +176,8 @@ export function AddCapabilityWizard({
 
 
 
-    const resolvedMode = initialMode ?? getDefaultCapabilityModeForTab(contextTab);
+    const resolvedMode =
+      initialMode ?? allowedModesOverride?.[0] ?? getDefaultCapabilityModeForTab(contextTab);
 
     setMode(resolvedMode);
 
@@ -172,7 +186,7 @@ export function AddCapabilityWizard({
     setSubmitting(false);
     setCreatedNextStep(null);
 
-  }, [contextTab, initialBoxId, initialMode, open, skipModeStep]);
+  }, [allowedModesOverride, contextTab, initialBoxId, initialMode, open, skipModeStep]);
 
 
 

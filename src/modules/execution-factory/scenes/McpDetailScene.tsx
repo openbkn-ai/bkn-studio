@@ -17,6 +17,7 @@ import {
   IdcardOutlined,
   KeyOutlined,
   LinkOutlined,
+  ProfileOutlined,
   TagOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
@@ -30,6 +31,7 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
+import { DetailBasicInfoDrawer } from "@/modules/execution-factory/components/DetailBasicInfoDrawer";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { CreateMcpDrawer } from "@/modules/execution-factory/components/create-menu/CreateMcpDrawer";
 import { JsonSchemaIoPanel } from "@/modules/execution-factory/components/JsonSchemaIoPanel";
@@ -74,9 +76,8 @@ function resolveModeLabel(mode: McpDetail["mode"], t: (key: string) => string) {
 export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const catalogContext = searchParams.get("from") === "catalog";
-  const viewMode = searchParams.get("action") !== "edit";
   const [record, setRecord] = useState<McpDetail | null>(null);
   const [tools, setTools] = useState<McpProxyTool[]>([]);
   const [selectedTool, setSelectedTool] = useState<McpProxyTool | null>(null);
@@ -85,6 +86,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
   const [toolsLoadError, setToolsLoadError] = useState<string | null>(null);
   const [debugToolName, setDebugToolName] = useState<string | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [basicInfoOpen, setBasicInfoOpen] = useState(false);
   const { exportComponentById, isExporting } = useImpexExport();
 
   const loadRecord = useCallback(async () => {
@@ -126,12 +128,6 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
   useEffect(() => {
     void loadTools();
   }, [loadTools]);
-
-  const handleEnterEditMode = () => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("action", "edit");
-    setSearchParams(nextParams, { replace: true });
-  };
 
   const handleBack = () => {
     if (onBack) {
@@ -316,13 +312,13 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
         </div>
         {record ? (
           <div className={styles.pageHeaderActions}>
-            {viewMode ? (
-              <PermissionGate permissions="execution-factory:mcp:edit">
-                <AppButton onClick={handleEnterEditMode} type="primary">
-                  {t("executionFactory.mcpDetailEnterEdit")}
-                </AppButton>
-              </PermissionGate>
-            ) : (
+            {/* 进来即可用：不再要求先点「编辑 MCP」切态。基础信息统一走抽屉；市场预览态（from=catalog）不给编辑/导出入口。 */}
+            <AppButton
+              icon={<ProfileOutlined />}
+              onClick={() => setBasicInfoOpen(true)}
+              title={t("common.basicInfo")}
+            />
+            {!catalogContext ? (
               <>
                 {!record.isInternal ? (
                   <PermissionGate permissions="execution-factory:impex:export">
@@ -343,7 +339,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
                   </AppButton>
                 </PermissionGate>
               </>
-            )}
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -364,30 +360,10 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
         <Alert message={loadError} showIcon style={{ marginBottom: 16 }} type="error" />
       ) : null}
 
-      {!loading && !loadError ? (
-        <Alert
-          message={
-            viewMode
-              ? t("executionFactory.mcpDetailViewHint")
-              : t("executionFactory.mcpDetailEditHint")
-          }
-          showIcon
-          style={{ marginBottom: 16 }}
-          type="info"
-        />
-      ) : null}
-
       {toolsLoadError && catalogContext ? (
         <Alert message={t("executionFactory.mcpDetailCatalogToolsHint")} showIcon style={{ marginBottom: 16 }} type="warning" />
       ) : null}
 
-      {!loading && record ? (
-        <DetailMetaPanel
-          columns={3}
-          items={basicInfoItems}
-          title={t("common.basicInfo")}
-        />
-      ) : null}
 
       {loading ? (
         <div className={styles.emptyWrap}>
@@ -473,6 +449,12 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
           </Content>
         </Layout>
       )}
+
+      <DetailBasicInfoDrawer
+        items={basicInfoItems}
+        onClose={() => setBasicInfoOpen(false)}
+        open={basicInfoOpen}
+      />
 
       <CreateMcpDrawer
         mcpId={mcpId}

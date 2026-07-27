@@ -8,18 +8,25 @@
 import {
   AppstoreOutlined,
   ArrowLeftOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
+  CodeOutlined,
   DownOutlined,
   EllipsisOutlined,
   FileTextOutlined,
+  IdcardOutlined,
+  LinkOutlined,
   PlayCircleFilled,
   PlusOutlined,
   ProfileOutlined,
   ReloadOutlined,
   SearchOutlined,
   ThunderboltOutlined,
+  ToolOutlined,
   UpOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
-import { Alert, Drawer, Dropdown, Input, Select, Spin, Switch, Tag, Tooltip } from "antd";
+import { Alert, Drawer, Dropdown, Input, Spin, Switch, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -29,10 +36,10 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CodeEditor } from "@/modules/execution-factory/components/CodeEditor";
+import { DetailBasicInfoDrawer } from "@/modules/execution-factory/components/DetailBasicInfoDrawer";
 import { FunctionAiGenerateModal } from "@/modules/execution-factory/components/FunctionAiGenerateModal";
 import { FunctionParameterTree } from "@/modules/execution-factory/components/FunctionParameterTree";
 import { InlineEditableText } from "@/modules/execution-factory/components/InlineEditableText";
-import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import {
   executeFunction,
@@ -49,12 +56,17 @@ import {
 import {
   getToolbox,
   updateToolbox,
-  updateToolboxStatus,
 } from "@/modules/execution-factory/services/toolbox.service";
 import type { FunctionExecuteResult } from "@/modules/execution-factory/types/function";
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
 import type { ToolStatus } from "@/modules/execution-factory/types/tool";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
+import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
+import {
+  formatOptionalTimestamp,
+  resolveToolboxCategoryLabel,
+} from "@/modules/execution-factory/utils/detail-display";
+import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import {
   DEFAULT_FUNCTION_TEMPLATE,
   FUNCTION_TEMPLATES,
@@ -176,14 +188,14 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
 
   const [toolbox, setToolbox] = useState<ToolboxRecord | null>(null);
   const [boxName, setBoxName] = useState("");
+  const [basicInfoOpen, setBasicInfoOpen] = useState(false);
+  const auditUserDirectory = useAuditUserDirectory();
   const [boxCategory, setBoxCategory] = useState<string | undefined>();
-  const [categoryOptions, setCategoryOptions] = useState<Array<{ label: string; value: string }>>([]);
   const [functions, setFunctions] = useState<WorkbenchFunction[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [publishing, setPublishing] = useState(false);
 
   const [railKeyword, setRailKeyword] = useState("");
   const [dockTab, setDockTab] = useState<"params" | "deps" | null>(null);
@@ -247,16 +259,6 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     };
   }, []);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const items = await listOperatorCategories();
-        setCategoryOptions(items.map((item) => ({ label: item.name, value: item.categoryType })));
-      } catch {
-        setCategoryOptions([]);
-      }
-    })();
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -709,29 +711,6 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     }
   };
 
-  const handlePublish = async () => {
-    const confirmed = await confirmPublishIssues({
-      okText: t("executionFactory.publish"),
-      title: t("executionFactory.toolboxStatusChangeConfirmTitle"),
-    });
-
-    if (!confirmed) {
-      return;
-    }
-
-    setPublishing(true);
-    try {
-      await saveAll();
-      await updateToolboxStatus(boxId, "published");
-      setToolbox((current) => (current ? { ...current, status: "published" } : current));
-      void message.success(t("common.success"));
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-    } finally {
-      setPublishing(false);
-    }
-  };
-
   /**
    * 让后端从代码推导契约：确定性比 AI 生成器高，也不烧模型额度。
    * 返回推导出的入参，方便调用方（比如「运行」）立刻拿来造测试入参，
@@ -985,6 +964,69 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       : functions;
   }, [functions, railKeyword]);
 
+  const basicInfoItems = toolbox
+    ? [
+        {
+          key: "boxId",
+          label: t("executionFactory.toolboxId"),
+          value: toolbox.boxId,
+          icon: <IdcardOutlined />,
+          variant: "mono" as const,
+          span: "full" as const,
+        },
+        {
+          key: "category",
+          label: t("executionFactory.category"),
+          value: resolveToolboxCategoryLabel(toolbox, t),
+          icon: <AppstoreOutlined />,
+          variant: "accent" as const,
+        },
+        {
+          key: "metadataType",
+          label: t("executionFactory.metadataType"),
+          value: t("executionFactory.metadataTypes.function"),
+        },
+        {
+          key: "toolCount",
+          label: t("executionFactory.toolCount"),
+          value: String(functions.length || toolbox.toolCount || 0),
+          icon: <ToolOutlined />,
+        },
+        {
+          key: "serviceUrl",
+          label: t("executionFactory.serviceUrl"),
+          value: toolbox.serviceUrl ?? "-",
+          icon: <LinkOutlined />,
+          span: "full" as const,
+          variant: "mono" as const,
+        },
+        {
+          key: "createUser",
+          label: t("executionFactory.createUser"),
+          value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.createUser }),
+          icon: <UserOutlined />,
+        },
+        {
+          key: "updateUser",
+          label: t("executionFactory.updateUser"),
+          value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.updateUser }),
+          icon: <UserOutlined />,
+        },
+        {
+          key: "createTime",
+          label: t("executionFactory.createTime"),
+          value: formatOptionalTimestamp(toolbox.createTime),
+          icon: <CalendarOutlined />,
+        },
+        {
+          key: "updateTime",
+          label: t("executionFactory.updateTime"),
+          value: formatOptionalTimestamp(toolbox.updateTime),
+          icon: <ClockCircleOutlined />,
+        },
+      ]
+    : [];
+
   if (loading) {
     return (
       <div className={styles.centered}>
@@ -1009,37 +1051,28 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
           <ArrowLeftOutlined />
         </button>
         <span className={styles.titleIcon}>
-          <ThunderboltOutlined />
+          <CodeOutlined />
         </span>
         <div className={styles.titleMain}>
-          <InlineEditableText
-            className={styles.titleEditable}
-            emptyLabel={t("executionFactory.toolboxName")}
-            onChange={setBoxName}
-            placeholder={t("executionFactory.toolboxName")}
-            value={boxName}
-          />
+          {/* 工具箱改名统一走工具箱编辑表单（卡片菜单「编辑」入口），工作台标题只读。 */}
+          <h1 className={styles.titleEditable}>{boxName || t("executionFactory.toolboxName")}</h1>
           <div className={styles.titleMeta}>
             <Tag color="blue">{t("executionFactory.metadataTypes.function")}</Tag>
             <Tag>Python</Tag>
             <Tag color={toolbox?.status === "published" ? "green" : "default"}>
               {t(`executionFactory.toolboxStatuses.${toolbox?.status ?? "unpublish"}`)}
             </Tag>
-            <Select
-              className={styles.categorySelect}
-              onChange={setBoxCategory}
-              options={categoryOptions}
-              placeholder={t("executionFactory.category")}
-              style={{ minWidth: 116 }}
-              value={boxCategory}
-              variant="borderless"
-            />
           </div>
         </div>
         <div className={styles.barActions}>
           {hasUnsavedChanges ? (
             <span className={styles.dirtyBadge}>{t("executionFactory.workbenchDirty")}</span>
           ) : null}
+          <AppButton
+            icon={<ProfileOutlined />}
+            onClick={() => setBasicInfoOpen(true)}
+            title={t("common.basicInfo")}
+          />
           <PermissionGate permissions="execution-factory:tool:edit">
             <AppButton
               disabled={!hasUnsavedChanges}
@@ -1050,30 +1083,40 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
               {t("common.save")}
             </AppButton>
           </PermissionGate>
-          {/*
-            已发布的工具箱没有「重新发布」这回事：后端状态机不允许 published → published
-            （status_manage.go 的 statusTransitions），而工具改动保存即对 Agent 生效，
-            本来也不需要再发一次。所以这里只在未发布/已下架时给发布按钮。
-          */}
-          {isPublished ? (
-            <Tooltip title={t("executionFactory.workbenchPublishedLiveHint")}>
-              <span className={styles.publishedHint}>
-                {t("executionFactory.workbenchPublishedLive")}
-              </span>
-            </Tooltip>
-          ) : (
-            <PermissionGate permissions="execution-factory:toolbox:edit">
-              <AppButton
-                loading={publishing}
-                onClick={() => void handlePublish()}
-                type="primary"
-              >
-                {t("executionFactory.publish")}
-              </AppButton>
-            </PermissionGate>
-          )}
+          {/* 函数工具箱保存即对 Agent 生效；发布/下线走列表卡片的生命周期菜单，这里只留保存。 */}
         </div>
       </div>
+
+      {toolbox ? (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 16,
+            padding: "10px 24px 12px",
+            background: "#ffffff",
+            borderBottom: "1px solid #e9e9e9",
+            color: "var(--color-text-secondary)",
+            fontSize: 13,
+          }}
+        >
+          {toolbox.description ? <span>{toolbox.description}</span> : null}
+          <span>
+            <ThunderboltOutlined />{" "}
+            {t("executionFactory.toolCountLabel", { count: functions.length })}
+          </span>
+          <span>
+            <ClockCircleOutlined /> {formatOptionalTimestamp(toolbox.updateTime)}
+          </span>
+          {toolbox.updateUser ? (
+            <span>
+              <UserOutlined />{" "}
+              {formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.updateUser })}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className={styles.body}>
         <div className={styles.rail}>
@@ -1177,7 +1220,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                              * 保存途中翻转会被静默吞掉——界面显示"已禁用"，服务端却是
                              * enabled，Agent 照样调得到。锁掉这段窗口最省事也最稳。
                              */
-                            disabled={saving || publishing}
+                            disabled={saving}
                             onChange={() => handleToggleStatus(active)}
                             size="small"
                           />
@@ -1516,6 +1559,12 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         }}
         onClose={() => setAiOpen(false)}
         open={aiOpen}
+      />
+
+      <DetailBasicInfoDrawer
+        items={basicInfoItems}
+        onClose={() => setBasicInfoOpen(false)}
+        open={basicInfoOpen}
       />
     </div>
   );
