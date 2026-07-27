@@ -206,39 +206,18 @@
 }
 
 /*
-  左栏（EntityListRail 的 .head）和右栏（工具身份区）各有一条底部分隔线，中缝两侧
-  必须落在同一 y 上。两边内容高度天然不同（左：标题 + 筛选框；右：名字行 + 描述），
-  各画各的就会错开一截，调 padding 只是把误差挪个地方。
+  左栏（EntityListRail 的 .head）和右栏（工具身份区）各画一条自己的底部分隔线，
+  中缝两侧要落在同一 y 上。两边内容高度天然不同（左：标题 + 筛选框；右：名字行 +
+  描述），所以给一个共同下限把两条线钉在一起。
 
-  照函数工作台的做法：线只画一条、横穿两栏，两栏各自用 min-height 把内容压在线上方。
-  高度按页面给——工具箱那侧多一段端点行，比 MCP 高。
+  不画贯穿两栏的单线：右栏是独立滚动区，绝对定位的线不跟着滚，内容一长就被线切成
+  两半。两条各自的线跟着自己那栏滚，初始位置照样对齐。
+
+  96px 与函数工作台同值——三处头部都只放「徽标 + 名字 + 描述」两行，工具箱的端点
+  信息另起一档，不挤进头里。
 */
 .layoutHeadAligned {
-  position: relative;
-  --entity-rail-head-border: transparent;
-}
-
-/* 与函数工作台同高。右栏内容压紧后是 10 + 22(名字行) + 8 + 22(描述一行) + 10 = 72，
-   真正撑到 96 的是左栏头（14 + 20 标题 + 10 + 32 搜索框 + 14 = 90）。 */
-.layoutHeadAlignedMcp {
   --entity-rail-head-height: 96px;
-}
-
-/* 工具箱那侧多一段端点行：72 + 12(toolIdentity 行距) + 约 42(动词 + 路径 + Server) = 126。 */
-.layoutHeadAlignedToolbox {
-  --entity-rail-head-height: 130px;
-}
-
-.layoutHeadAligned::before {
-  content: "";
-  position: absolute;
-  top: var(--entity-rail-head-height);
-  right: 0;
-  left: 0;
-  z-index: 1;
-  height: 1px;
-  background: var(--color-border);
-  pointer-events: none;
 }
 
 /* 工具 / MCP / 技能三处侧栏都由 EntityListRail 自己管内边距，外壳不再补。 */
@@ -285,10 +264,8 @@
   border-bottom: none;
 }
 
-/* 身份区的线由 .layoutHeadAligned::before 统一画，这里再描一条就是叠影；
-   内容压到线上方（flex-end），描述那行才紧贴着线而不是让线飘在半空。
-
-   行距按函数工作台的头部压紧（10 / 8 / 10）：这里是「头部分区」不是普通卡片，
+/* 头部分区：内容压到线上方（flex-end），描述那行才紧贴着线而不是让线飘在半空。
+   行距按函数工作台的头部压紧（10 / 8 / 10）——这里是「头部分区」不是普通卡片，
    照 16 / 14 / 16 的卡片节奏排，两栏中缝就会顶出一条明显偏高的空带。 */
 .layoutHeadAligned .section:first-child {
   --detail-meta-header-gap: 8px;
@@ -298,7 +275,6 @@
   justify-content: flex-end;
   min-height: var(--entity-rail-head-height);
   padding: 10px 20px;
-  border-bottom: none;
 }
 
 .toolHeaderActions {
@@ -406,12 +382,11 @@
    在一屏里比工具名还响；换成图标 + 文字标签后，读者先看到「这是什么」，再看值。
    上方一条实线把「工具是什么」（名字 + 用途）和「往哪打」分成两段——描述那行本身
    带的是可编辑态的虚线下划线，不承担分区职责，两块贴在一起会读成一段。 */
+/* 端点自成一档，上边界由 .section 的分区线画，这里不再自带 border-top。 */
 .endpoint {
   display: grid;
   gap: 6px;
   width: 100%;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border);
 }
 
 .endpointRow {

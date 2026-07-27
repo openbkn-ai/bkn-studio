@@ -330,7 +330,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
         </div>
       ) : (
         <Layout
-          className={`${styles.layout} ${styles.layoutHeadAligned} ${styles.layoutHeadAlignedMcp}`}
+          className={`${styles.layout} ${styles.layoutHeadAligned}`}
         >
           <Sider className={styles.sider} width={320}>
             <EntityListRail
