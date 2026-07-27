@@ -11,7 +11,7 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 export function isLogicalOperation(
-  operation?: ActionTypeConditionOperation | string,
+  operation?: ActionTypeConditionOperation,
 ): operation is "and" | "or" {
   return operation === "and" || operation === "or";
 }
