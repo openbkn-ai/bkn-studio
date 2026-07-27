@@ -364,7 +364,10 @@ export function ActionTypeConditionEditor({
   const isLogicGroup = isLogicCondition(rootCondition);
   const conditionRows = isLogicGroup
     ? (rootCondition.subConditions ?? [])
-    : [rootCondition, ...(rootCondition.subConditions ?? [])];
+    : [
+        { ...rootCondition, subConditions: undefined },
+        ...(rootCondition.subConditions ?? []),
+      ];
   const rows = conditionRows.length > 0
     ? conditionRows
     : [createEmptyConditionRow(boundObjectTypeId)];
