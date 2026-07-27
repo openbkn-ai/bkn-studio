@@ -5,6 +5,38 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* 正文自己滚，弹窗整体不超过视口——否则请求体和结果一长，底部的运行按钮就被推出屏幕。 */
+.modal :global(.ant-modal-body) {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
+
+.title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* 工具名跟在标题后面，不再单独占一段；toolId 是运维信息，弹窗里不摆。 */
+.titleName {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace
+  );
+  font-size: 13px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .resultPanelSuccess,
 .resultPanelWarning {
   border-radius: 10px;

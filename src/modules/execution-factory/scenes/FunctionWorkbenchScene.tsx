@@ -8,8 +8,10 @@
 import {
   AppstoreOutlined,
   ArrowLeftOutlined,
+  BarsOutlined,
   ClockCircleOutlined,
   CodeOutlined,
+  DeleteOutlined,
   DownOutlined,
   EllipsisOutlined,
   FileTextOutlined,
@@ -17,12 +19,11 @@ import {
   PlusOutlined,
   ProfileOutlined,
   ReloadOutlined,
-  SearchOutlined,
   ThunderboltOutlined,
   UpOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Alert, Drawer, Dropdown, Input, Spin, Switch, Tag, Tooltip } from "antd";
+import { Alert, Drawer, Dropdown, Spin, Switch, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -33,6 +34,10 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CodeEditor } from "@/modules/execution-factory/components/CodeEditor";
 import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
+import {
+  EntityListRail,
+  EntityListTag,
+} from "@/modules/execution-factory/components/EntityListRail";
 import { FunctionAiGenerateModal } from "@/modules/execution-factory/components/FunctionAiGenerateModal";
 import { FunctionParameterTree } from "@/modules/execution-factory/components/FunctionParameterTree";
 import { InlineEditableText } from "@/modules/execution-factory/components/InlineEditableText";
@@ -191,6 +196,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   const [saving, setSaving] = useState(false);
 
   const [railKeyword, setRailKeyword] = useState("");
+  /** 批量操作选中的函数 key（含未落库的本地项）。 */
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [dockTab, setDockTab] = useState<"params" | "deps" | null>(null);
   const [ioTab, setIoTab] = useState<"inputs" | "outputs">("inputs");
   const [aiOpen, setAiOpen] = useState(false);
@@ -571,6 +578,44 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   };
 
   /**
+   * 从列表里摘掉若干函数（本地部分）。单删和批量删共用，占位补齐和焦点转移
+   * 只有这一份实现——分头写过一次，批量那条就会漏掉「删空补占位」，右侧编辑区空掉。
+   *
+   * 落库的删除由调用方先打完接口再进来。
+   */
+  const removeFunctions = useCallback(
+    (keys: string[]) => {
+      const dropped = new Set(keys);
+
+      setFunctions((current) => {
+        // 焦点转移锚在被删的当前项上：删的是别的项时不动焦点，删的是当前项才顺位。
+        const index = current.findIndex((item) => item.key === activeKey);
+        const rest = current.filter((item) => !dropped.has(item.key));
+
+        if (rest.length === 0) {
+          const placeholder = emptyFunction(DEFAULT_FUNCTION_TEMPLATE);
+          setActiveKey(placeholder.key);
+          return [placeholder];
+        }
+
+        if (activeKey && dropped.has(activeKey)) {
+          setActiveKey(rest[Math.min(Math.max(index, 0), rest.length - 1)].key);
+        }
+
+        return rest;
+      });
+
+      for (const key of keys) {
+        delete derivedCodeRef.current[key];
+      }
+      setSelectedKeys((current) => current.filter((key) => !dropped.has(key)));
+      setRunResult(null);
+      setRunError(null);
+    },
+    [activeKey],
+  );
+
+  /**
    * 删函数。还没落库的（无 toolId）只从本地列表摘掉，不打接口。
    * 删完把焦点挪到相邻一项，避免右侧编辑区空掉；全删光则补一个空白函数，
    * 保持「进来就能写」的初始态。
@@ -582,26 +627,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
           await deleteTools(boxId, [target.toolId]);
         }
 
-        setFunctions((current) => {
-          const index = current.findIndex((item) => item.key === target.key);
-          const rest = current.filter((item) => item.key !== target.key);
-
-          if (rest.length === 0) {
-            const placeholder = emptyFunction(DEFAULT_FUNCTION_TEMPLATE);
-            setActiveKey(placeholder.key);
-            return [placeholder];
-          }
-
-          if (target.key === activeKey) {
-            setActiveKey(rest[Math.min(index, rest.length - 1)].key);
-          }
-
-          return rest;
-        });
-
-        delete derivedCodeRef.current[target.key];
-        setRunResult(null);
-        setRunError(null);
+        removeFunctions([target.key]);
 
         if (target.toolId) {
           void message.success(t("common.success"));
@@ -626,6 +652,83 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       okText: t("common.delete"),
       cancelText: t("common.cancel"),
       onOk: runDelete,
+    });
+  };
+
+  const toggleFunctionSelection = (key: string, checked: boolean) => {
+    setSelectedKeys((current) =>
+      checked ? [...new Set([...current, key])] : current.filter((item) => item !== key),
+    );
+  };
+
+  /**
+   * 批量改状态。选中的函数里可能混着没落库的（无 toolId）——那部分只改本地，
+   * 保存时由 persistFunction 带下去；有 toolId 的才进接口，且一次打包发一趟。
+   */
+  const handleBatchStatus = (nextStatus: ToolStatus) => {
+    const targets = functions.filter((item) => selectedKeys.includes(item.key));
+    if (targets.length === 0) {
+      return;
+    }
+
+    const applyLocal = () => {
+      const keys = new Set(targets.map((item) => item.key));
+      setFunctions((current) =>
+        current.map((item) => (keys.has(item.key) ? { ...item, status: nextStatus } : item)),
+      );
+    };
+
+    void modal.confirm({
+      title: t("executionFactory.toolBatchStatusConfirmTitle"),
+      content: t("executionFactory.toolBatchStatusConfirmDescription", {
+        count: targets.length,
+        status: t(`executionFactory.toolStatuses.${nextStatus}`),
+      }),
+      okText: t("common.save"),
+      cancelText: t("common.cancel"),
+      onOk: async () => {
+        try {
+          const toolIds = targets.flatMap((item) => (item.toolId ? [item.toolId] : []));
+          if (toolIds.length > 0) {
+            await updateToolStatus(boxId, toolIds, nextStatus);
+          }
+          applyLocal();
+          setSelectedKeys([]);
+          void message.success(t("common.success"));
+        } catch (error) {
+          void message.error(extractRequestErrorMessage(error));
+        }
+      },
+    });
+  };
+
+  /** 批量删。同上分流：落库的走 batch-delete，本地项直接从列表摘掉。 */
+  const handleBatchDelete = () => {
+    const targets = functions.filter((item) => selectedKeys.includes(item.key));
+    if (targets.length === 0) {
+      return;
+    }
+
+    void modal.confirm({
+      title: t("executionFactory.toolBatchDeleteConfirmTitle"),
+      content: t("executionFactory.toolBatchDeleteConfirmDescription", {
+        count: targets.length,
+      }),
+      okButtonProps: { danger: true },
+      okText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      onOk: async () => {
+        try {
+          const toolIds = targets.flatMap((item) => (item.toolId ? [item.toolId] : []));
+          if (toolIds.length > 0) {
+            await deleteTools(boxId, toolIds);
+          }
+          removeFunctions(targets.map((item) => item.key));
+          void message.success(t("common.success"));
+        } catch (error) {
+          void message.error(extractRequestErrorMessage(error));
+        }
+      },
     });
   };
 
@@ -1009,21 +1112,9 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
           </div>
         </div>
         <div className={styles.barActions}>
-          {hasUnsavedChanges ? (
-            <span className={styles.dirtyBadge}>{t("executionFactory.workbenchDirty")}</span>
-          ) : null}
+          {/* 保存挪到代码区工具条，与「接口参数」同排；页头只剩基础信息入口。
+              函数工具箱保存即对 Agent 生效；发布/下线走列表卡片的生命周期菜单。 */}
           <DetailBasicInfoButton items={basicInfoItems} />
-          <PermissionGate permissions="execution-factory:tool:edit">
-            <AppButton
-              disabled={!hasUnsavedChanges}
-              loading={saving}
-              onClick={() => void handleSaveDraft()}
-              type={hasUnsavedChanges ? "primary" : "default"}
-            >
-              {t("common.save")}
-            </AppButton>
-          </PermissionGate>
-          {/* 函数工具箱保存即对 Agent 生效；发布/下线走列表卡片的生命周期菜单，这里只留保存。 */}
         </div>
       </div>
 
@@ -1046,77 +1137,123 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         </div>
       ) : null}
 
-      <div className={styles.body}>
-        <div className={styles.rail}>
-          <div className={styles.railHead}>
-            <div className={styles.railTitle}>
-              <span>{t("executionFactory.workbenchFunctionList")}</span>
-              <span>{functions.length}</span>
-            </div>
-            <Input
-              allowClear
-              onChange={(event) => setRailKeyword(event.target.value)}
-              placeholder={t("executionFactory.workbenchFilterFunctions")}
-              prefix={<SearchOutlined />}
-              value={railKeyword}
-            />
-          </div>
-          <div className={styles.railList}>
-            {visibleFunctions.map((item) => (
-              <button
-                className={`${styles.railItem} ${
-                  item.key === activeKey ? styles.railItemActive : ""
-                } ${item.status === "disabled" ? styles.railItemOff : ""}`}
-                key={item.key}
-                onClick={() => {
-                  setActiveKey(item.key);
-                  setRunResult(null);
-                  setRunError(null);
-                  const next = buildSampleEvent(item.inputs);
-                  autoEventRef.current = next;
-                  setEventText(next);
-                }}
-                type="button"
-              >
-                <span className={styles.railItemName}>
-                  {item.name || t("executionFactory.workbenchUnnamedFunction")}
-                  {item.status === "disabled" ? (
-                    <span className={styles.railItemOffTag}>
-                      {t("executionFactory.toolStatuses.disabled")}
-                    </span>
-                  ) : null}
-                </span>
-                <span className={styles.railItemMeta}>
-                  <span className={styles.railItemIoTag}>
-                    {t("executionFactory.workbenchInCount", { count: item.inputs.length })}
-                  </span>
-                  <span className={styles.railItemIoTag}>
-                    {t("executionFactory.workbenchOutCount", { count: item.outputs.length })}
-                  </span>
-                  {item.dirty ? (
-                    <span className={styles.railItemDirtyTag}>
-                      {t("executionFactory.workbenchUnsaved")}
-                    </span>
-                  ) : null}
-                </span>
-              </button>
-            ))}
-            <PermissionGate permissions="execution-factory:tool:create">
+      {/* 批量操作栏放在列表区上方全宽处，窄侧栏放不下会换行。与工具箱工具列表同一处理。 */}
+      {selectedKeys.length > 0 ? (
+        <div className={styles.batchBar}>
+          <span>
+            {t("executionFactory.toolBatchSelectedCount", { count: selectedKeys.length })}
+          </span>
+          <span className={styles.batchBarActions}>
+            <AppButton onClick={() => setSelectedKeys([])} size="small">
+              {t("common.cancel")}
+            </AppButton>
+            <PermissionGate permissions="execution-factory:tool:edit">
+              {/*
+                保存期间锁住：还没落库的函数扳状态只改本地 status，而 persistFunction
+                建工具用的是保存开始那一刻的快照状态，保存途中翻转会被静默吞掉。
+                与右侧单个开关同口径。
+              */}
               <AppButton
-                block
-                className={styles.railAdd}
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  const created = emptyFunction(DEFAULT_FUNCTION_TEMPLATE);
-                  setFunctions((current) => [...current, created]);
-                  setActiveKey(created.key);
-                  setRunResult(null);
-                }}
+                disabled={saving}
+                onClick={() => handleBatchStatus("enabled")}
+                size="small"
               >
-                {t("executionFactory.workbenchNewFunction")}
+                {t("executionFactory.enable")}
+              </AppButton>
+              <AppButton
+                disabled={saving}
+                onClick={() => handleBatchStatus("disabled")}
+                size="small"
+              >
+                {t("executionFactory.disable")}
+              </AppButton>
+              <AppButton
+                danger
+                disabled={saving}
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+                size="small"
+              >
+                {t("common.delete")}
               </AppButton>
             </PermissionGate>
-          </div>
+          </span>
+        </div>
+      ) : null}
+
+      <div className={styles.body}>
+        <div className={styles.rail}>
+          <EntityListRail
+            activeId={activeKey}
+            emptyText={t("executionFactory.workbenchFunctionListEmptyFiltered")}
+            footer={
+              <PermissionGate permissions="execution-factory:tool:create">
+                <AppButton
+                  block
+                  className={styles.railAdd}
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    const created = emptyFunction(DEFAULT_FUNCTION_TEMPLATE);
+                    setFunctions((current) => [...current, created]);
+                    setActiveKey(created.key);
+                    setRunResult(null);
+                  }}
+                >
+                  {t("executionFactory.workbenchNewFunction")}
+                </AppButton>
+              </PermissionGate>
+            }
+            icon={<BarsOutlined />}
+            items={visibleFunctions.map((item) => ({
+              badge: <span className={styles.langBadge}>Python</span>,
+              id: item.key,
+              muted: item.status === "disabled",
+              name: item.name || t("executionFactory.workbenchUnnamedFunction"),
+              status: {
+                checked: item.status === "enabled",
+                disabled: saving,
+                label: t(`executionFactory.toolStatuses.${item.status}`),
+                onChange: () => handleToggleStatus(item),
+              },
+              tags: (
+                <>
+                  <EntityListTag>
+                    {t("executionFactory.ioInCount", { count: item.inputs.length })}
+                  </EntityListTag>
+                  <EntityListTag>
+                    {t("executionFactory.ioOutCount", { count: item.outputs.length })}
+                  </EntityListTag>
+                  {item.dirty ? (
+                    <EntityListTag variant="warning">
+                      {t("executionFactory.workbenchUnsaved")}
+                    </EntityListTag>
+                  ) : null}
+                </>
+              ),
+            }))}
+            onSelect={(key) => {
+              const target = functions.find((item) => item.key === key);
+              if (!target) {
+                return;
+              }
+              setActiveKey(key);
+              setRunResult(null);
+              setRunError(null);
+              const next = buildSampleEvent(target.inputs);
+              autoEventRef.current = next;
+              setEventText(next);
+            }}
+            onToggleSelect={toggleFunctionSelection}
+            search={{
+              onChange: setRailKeyword,
+              placeholder: t("executionFactory.workbenchFilterFunctions"),
+              value: railKeyword,
+            }}
+            selectable
+            selectedIds={selectedKeys}
+            statusPermission="execution-factory:tool:edit"
+            title={t("executionFactory.workbenchFunctionList", { count: functions.length })}
+          />
         </div>
 
         <div className={styles.main}>
@@ -1201,14 +1338,18 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                     value={active.description}
                   />
                 </div>
-                {active.status === "disabled" ? (
-                  <Alert
-                    banner
-                    message={t("executionFactory.workbenchDisabledBanner")}
-                    type="warning"
-                  />
-                ) : null}
               </div>
+              {/*
+                停用横幅移出 .fnHead：头部高度被那条贯穿分隔线钉死了（见
+                --entity-rail-head-height），横幅留在里面会把内容顶到线下面去。
+              */}
+              {active.status === "disabled" ? (
+                <Alert
+                  banner
+                  message={t("executionFactory.workbenchDisabledBanner")}
+                  type="warning"
+                />
+              ) : null}
 
               <div className={styles.editorArea}>
                 <div className={styles.editor}>
@@ -1276,6 +1417,28 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                           <span className={styles.toolCount}>{active.dependencies.length}</span>
                         </AppButton>
                       ) : null}
+                      {/*
+                        保存挪到这里：改动几乎都发生在代码区，原来放在页头意味着每写完
+                        一段就要把视线甩到屏幕最上面。注意它保存的是整个工具箱（箱名、
+                        分类和全部函数），不是当前这一个函数——所以「未保存」角标跟着它，
+                        统计的也是全部函数。
+                      */}
+                      <span className={styles.toolsDivider} />
+                      {hasUnsavedChanges ? (
+                        <span className={styles.dirtyBadge}>
+                          {t("executionFactory.workbenchDirty")}
+                        </span>
+                      ) : null}
+                      <PermissionGate permissions="execution-factory:tool:edit">
+                        <AppButton
+                          disabled={!hasUnsavedChanges}
+                          loading={saving}
+                          onClick={() => void handleSaveDraft()}
+                          type={hasUnsavedChanges ? "primary" : "default"}
+                        >
+                          {t("common.save")}
+                        </AppButton>
+                      </PermissionGate>
                     </div>
                   </div>
                   <div className={styles.editorSurface}>

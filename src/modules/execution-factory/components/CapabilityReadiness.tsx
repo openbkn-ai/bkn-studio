@@ -6,7 +6,7 @@
  */
 
 import { QuestionCircleOutlined } from "@ant-design/icons";
-import { Alert, Progress, Tag, Tooltip } from "antd";
+import { Alert, Tag, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { CapabilityManifest } from "@/modules/execution-factory/types/capability-manifest";
@@ -69,14 +69,14 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
           <QuestionCircleOutlined className={styles.scoreInfoIcon} />
         </span>
       </Tooltip>
-      <span className={styles.scoreValue}>{readiness.score}</span>
-      <Progress
-        className={styles.scoreBar}
-        percent={readiness.score}
-        showInfo={false}
-        size="small"
-        status={readiness.level === "low" ? "exception" : "normal"}
-      />
+      {/* 百分数自己就说清了程度，进度条只是把同一个数再画一遍，还得占一段固定宽度。 */}
+      <span
+        className={
+          readiness.level === "low" ? `${styles.scoreValue} ${styles.scoreValueLow}` : styles.scoreValue
+        }
+      >
+        {readiness.score}%
+      </span>
     </div>
   );
 }

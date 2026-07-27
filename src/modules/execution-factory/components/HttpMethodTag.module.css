@@ -5,48 +5,49 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/* 语义映射沿用 swagger 的习惯（读=蓝、增=绿、改=橙、删=红），但换成低饱和实心底 +
-   白字 + 方角，跟本项目的深蓝方角调子对齐；swagger 那套高饱和圆角糖果色在这里会跳。
-   所有底色对白字都过 4.5:1。 */
+/* 语义映射沿用 swagger 的习惯（读=蓝、增=绿、改=橙、删=红），但只留一点点色：
+   浅底 + 同色文字 + 细边框。实心底白字在密集列表里会变成一排色块，比工具名还抢眼——
+   动词是限定语不是主语，降到和出入参标签同一档就够。文字对浅底都过 4.5:1。 */
 .tag {
+  --method-color: var(--color-text-secondary);
   flex-shrink: 0;
   display: inline-block;
-  min-width: 56px;
-  padding: 0 10px;
+  min-width: 48px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--method-color) 28%, transparent);
   border-radius: 0;
-  background: var(--color-text-secondary);
-  color: var(--color-bg-surface);
-  font-size: 12px;
+  background: color-mix(in srgb, var(--method-color) 10%, transparent);
+  color: var(--method-color);
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  line-height: 22px;
+  line-height: 18px;
   text-align: center;
 }
 
 .compact {
-  min-width: 46px;
+  min-width: 44px;
   padding: 0 6px;
-  line-height: 20px;
 }
 
 .tag[data-method="GET"] {
-  background: var(--color-primary-600);
+  --method-color: var(--color-primary-600);
 }
 
 .tag[data-method="POST"] {
-  background: var(--color-success-text);
+  --method-color: var(--color-success-text);
 }
 
 .tag[data-method="PUT"] {
-  background: var(--color-warning-text);
+  --method-color: var(--color-warning-text);
 }
 
 /* PATCH 没有对应的语义 token（青不属于成功/警告/错误任何一档），
-   这是本文件唯一的字面色值；配对白字 4.8:1。 */
+   这是本文件唯一的字面色值。 */
 .tag[data-method="PATCH"] {
-  background: #0f766e;
+  --method-color: #0f766e;
 }
 
 .tag[data-method="DELETE"] {
-  background: var(--color-error-text);
+  --method-color: var(--color-error-text);
 }

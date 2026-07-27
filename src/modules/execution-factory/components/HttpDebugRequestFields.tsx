@@ -5,10 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Collapse, Descriptions, Form, Input, Typography } from "antd";
+import { Collapse, Form, Input, Typography } from "antd";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { HttpMethodTag } from "@/modules/execution-factory/components/HttpMethodTag";
 import type { ToolIoSpec } from "@/modules/execution-factory/types/tool";
 import {
   parametersForLocation,
@@ -83,21 +84,21 @@ export function HttpDebugRequestFields({
           ? {
               key: "method",
               label: t("executionFactory.debugMethod"),
-              children: method,
+              value: <HttpMethodTag compact method={method} />,
             }
           : undefined,
         path
           ? {
               key: "path",
               label: t("executionFactory.debugPathTemplate"),
-              children: path,
+              value: path,
             }
           : undefined,
         resolvedUrl
           ? {
               key: "url",
               label: t("executionFactory.debugResolvedUrl"),
-              children: resolvedUrl,
+              value: resolvedUrl,
             }
           : undefined,
       ].filter((item): item is NonNullable<typeof item> => Boolean(item)),
@@ -106,7 +107,8 @@ export function HttpDebugRequestFields({
 
   const renderJsonField = (
     name: keyof import("@/modules/execution-factory/utils/http-debug-request").HttpDebugFormValues,
-    label: string,
+    /** 折叠面板里传 undefined：面板头已经写了「请求头（JSON）」，再挂一次标题是重复。 */
+    label: string | undefined,
     parameters: typeof pathParameters,
     rows = 4,
   ) => {
@@ -130,7 +132,14 @@ export function HttpDebugRequestFields({
   return (
     <div className={styles.fields}>
       {endpointItems.length > 0 ? (
-        <Descriptions bordered column={1} items={endpointItems} size="small" />
+        <div className={styles.endpoint}>
+          {endpointItems.map((item) => (
+            <div className={styles.endpointRow} key={item.key}>
+              <span className={styles.endpointLabel}>{item.label}</span>
+              <span className={styles.endpointValue}>{item.value}</span>
+            </div>
+          ))}
+        </div>
       ) : null}
       {pathParameters.length > 0
         ? renderJsonField(
@@ -152,11 +161,7 @@ export function HttpDebugRequestFields({
             {
               key: "headers",
               label: t("executionFactory.debugRequestHeaders"),
-              children: renderJsonField(
-                "requestHeaders",
-                t("executionFactory.debugRequestHeaders"),
-                headerParameters,
-              ),
+              children: renderJsonField("requestHeaders", undefined, headerParameters),
             },
           ]}
           size="small"

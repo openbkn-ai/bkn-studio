@@ -19,10 +19,9 @@
   line-height: 22px;
 }
 
-.scoreBar {
-  width: 72px;
-  margin-bottom: 0;
-  line-height: 1;
+/* 进度条撤了以后，低就绪只剩数字本身能出声，所以改用告警色。 */
+.scoreValueLow {
+  color: var(--color-error-text);
 }
 
 .scoreLabel {

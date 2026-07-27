@@ -115,11 +115,8 @@ describe("FunctionWorkbenchScene status wiring", () => {
   it("enables a newly created function, because the backend creates tools disabled", async () => {
     render(<FunctionWorkbenchScene boxId="box-1" />);
 
-    await waitFor(() => {
-      expect(screen.getByText("executionFactory.workbenchFunctionList")).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByText("common.save"));
+    // 保存按钮在代码区工具条里，要等选中函数、编辑区渲染出来才有。
+    fireEvent.click(await screen.findByText("common.save"));
 
     await waitFor(() => {
       expect(createTool).toHaveBeenCalledTimes(1);
@@ -137,11 +134,7 @@ describe("FunctionWorkbenchScene status wiring", () => {
 
     render(<FunctionWorkbenchScene boxId="box-1" />);
 
-    await waitFor(() => {
-      expect(screen.getByText("executionFactory.workbenchFunctionList")).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByText("common.save"));
+    fireEvent.click(await screen.findByText("common.save"));
 
     await waitFor(() => {
       expect(updateToolStatus).toHaveBeenCalledWith("box-1", ["tool-new"], "enabled");
