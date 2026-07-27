@@ -20,7 +20,7 @@ import type {
   ToolRecord,
   ToolRunLogEntry,
 } from "@/modules/execution-factory/types/tool";
-import { maskDebugRequestSecrets } from "@/modules/execution-factory/utils/debug-headers";
+import { maskDebugRequestSecrets } from "@/modules/execution-factory/utils/debug-secrets";
 import {
   buildHttpDebugInitialValues,
   buildHttpDebugRequest,

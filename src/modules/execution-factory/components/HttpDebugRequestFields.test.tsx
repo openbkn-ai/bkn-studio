@@ -56,9 +56,23 @@ describe("HttpDebugRequestFields", () => {
 
     fireEvent.click(screen.getByText("executionFactory.debugRequestHeaders"));
 
-    expect(screen.getByText("executionFactory.debugHeaderSensitiveHint")).toBeDefined();
+    expect(screen.getByText("executionFactory.debugSensitiveMaskHint")).toBeDefined();
     expect(screen.queryByText("executionFactory.debugPathParameters")).toBeNull();
     expect(screen.getByText("executionFactory.debugQueryParameters")).toBeDefined();
+  });
+
+  it("flags the query editor only when the API carries credentials in query", () => {
+    const { unmount } = renderFields({
+      parameters: [{ in: "query", name: "limit", type: "integer" }],
+    });
+
+    expect(screen.getByText("executionFactory.debugQueryParameters")).toBeDefined();
+    expect(screen.queryByText("limit · executionFactory.debugSensitiveMaskHint")).toBeNull();
+    unmount();
+
+    renderFields({ parameters: [{ in: "query", name: "api_key", type: "string" }] });
+
+    expect(screen.getByText("api_key · executionFactory.debugSensitiveMaskHint")).toBeDefined();
   });
 
   it("keeps the placeholder in the URL preview while the path value is empty", () => {
@@ -84,7 +98,7 @@ describe("HttpDebugRequestFields", () => {
     expect(screen.getByText("https://api.example.com/resources/{resourceId}")).toBeDefined();
     expect(
       screen.getByText(
-        "x-tenant-id · required: x-tenant-id · executionFactory.debugHeaderSensitiveHint",
+        "x-tenant-id · required: x-tenant-id · executionFactory.debugSensitiveMaskHint",
       ),
     ).toBeDefined();
   });

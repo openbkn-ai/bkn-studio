@@ -11,7 +11,7 @@ import type {
   ToolIoParameter,
   ToolIoSpec,
 } from "@/modules/execution-factory/types/tool";
-import { assertDebugHeadersAllowed } from "@/modules/execution-factory/utils/debug-headers";
+import { assertDebugHeadersAllowed } from "@/modules/execution-factory/utils/debug-secrets";
 import {
   buildDefaultDebugBody,
   buildSampleFromToolParameters,

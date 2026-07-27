@@ -10,6 +10,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ToolIoSpec } from "@/modules/execution-factory/types/tool";
+import { isSensitiveName } from "@/modules/execution-factory/utils/debug-secrets";
 import {
   parametersForLocation,
   parseJsonObject,
@@ -148,6 +149,11 @@ export function HttpDebugRequestFields({
             "requestQuery",
             t("executionFactory.debugQueryParameters"),
             queryParameters,
+            4,
+            // 只有接口真用 query 带凭据时才提示，别给每个普通查询参数都挂一句噪音。
+            queryParameters.some((parameter) => isSensitiveName(parameter.name))
+              ? t("executionFactory.debugSensitiveMaskHint")
+              : undefined,
           )
         : null}
       <Collapse
@@ -161,7 +167,7 @@ export function HttpDebugRequestFields({
               t("executionFactory.debugRequestHeaders"),
               headerParameters,
               4,
-              t("executionFactory.debugHeaderSensitiveHint"),
+              t("executionFactory.debugSensitiveMaskHint"),
             ),
           },
         ]}

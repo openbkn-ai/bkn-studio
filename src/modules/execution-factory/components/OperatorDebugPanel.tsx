@@ -19,7 +19,7 @@ import type {
   OperatorRecord,
   OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
-import { maskDebugRequestSecrets } from "@/modules/execution-factory/utils/debug-headers";
+import { maskDebugRequestSecrets } from "@/modules/execution-factory/utils/debug-secrets";
 import {
   buildHttpDebugInitialValues,
   buildHttpDebugRequest,

@@ -307,7 +307,7 @@ export const executionFactoryZhCN = {
     runDebug: "运行调试",
     debugRequestBody: "请求体（JSON）",
     debugRequestHeaders: "请求头（JSON）",
-    debugHeaderSensitiveHint: "凭据类请求头（Authorization、Cookie、X-Api-Key 等）的值不会写入运行记录",
+    debugSensitiveMaskHint: "凭据类字段（token、api_key、Authorization 等）的值不会写入运行记录，实际请求仍按原值发送",
     debugQueryParameters: "查询参数（JSON）",
     debugPathParameters: "路径参数（JSON）",
     debugMethod: "请求方法",
