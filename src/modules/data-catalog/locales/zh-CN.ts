@@ -62,7 +62,7 @@ export const dataCatalogZhCN = {
       semanticStatus: { pending: "等待中", running: "执行中", succeeded: "已完成", failed: "失败" },
       details: { taskInformation: "任务信息", scheduleId: "计划 ID", startTime: "开始时间", message: "执行信息", agentId: "Agent ID", failureReason: "失败原因" },
       discover: { empty: "暂无探查任务" },
-      semantic: { empty: "暂无语义理解任务", deleteTitle: "删除语义理解任务", deleteDescription: "确认删除语义理解任务“{{id}}”吗？" },
+      semantic: { empty: "暂无语义理解任务", deleteTitle: "删除语义理解任务", deleteDescription: "确认删除语义理解任务“{{id}}”吗？", detailSections: { task: "任务信息", execution: "执行与应用", payload: "输入与结果", audit: "审计信息" }, fields: { catalogId: "目录 ID", resourceId: "资源 ID", agentTaskId: "Agent 任务 ID", confidenceThreshold: "置信度阈值", confidenceDetail: "置信度明细", appliedTime: "应用时间", applyDetail: "应用明细", inputHash: "输入哈希", input: "输入快照", result: "理解结果" } },
     },
     semanticWorkspace: { summary: "语义理解结果", applied: "已加载语义理解结果", notApplied: "尚未加载语义理解结果", processing: "语义理解任务进行中", create: "新建任务", createTitle: "新建语义理解任务", start: "开始语义理解", started: "已开始语义理解任务", empty: "暂无语义理解任务", confidenceThreshold: "置信度阈值", includeSamples: "包含样本数据" },
     emptyDescription: "在数据连接中新建并探查后，即可在此浏览资源并构建索引。",

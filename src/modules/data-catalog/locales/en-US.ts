@@ -65,7 +65,7 @@ export const dataCatalogEnUS = {
       semanticStatus: { pending: "Pending", running: "Running", succeeded: "Succeeded", failed: "Failed" },
       details: { taskInformation: "Task Information", scheduleId: "Schedule ID", startTime: "Started", message: "Message", agentId: "Agent ID", failureReason: "Failure Reason" },
       discover: { empty: "No discover tasks" },
-      semantic: { empty: "No semantic-understanding tasks", deleteTitle: "Delete semantic-understanding task", deleteDescription: "Delete semantic-understanding task “{{id}}”?" },
+      semantic: { empty: "No semantic-understanding tasks", deleteTitle: "Delete semantic-understanding task", deleteDescription: "Delete semantic-understanding task “{{id}}”?", detailSections: { task: "Task Information", execution: "Execution & Apply", payload: "Input & Result", audit: "Audit Information" }, fields: { catalogId: "Catalog ID", resourceId: "Resource ID", agentTaskId: "Agent Task ID", confidenceThreshold: "Confidence Threshold", confidenceDetail: "Confidence Detail", appliedTime: "Applied At", applyDetail: "Apply Detail", inputHash: "Input Hash", input: "Input Snapshot", result: "Understanding Result" } },
     },
     semanticWorkspace: { summary: "Semantic Understanding Result", applied: "Semantic results loaded", notApplied: "No semantic results loaded", processing: "Semantic understanding is in progress", create: "Create Task", createTitle: "Create Semantic Understanding Task", start: "Start", started: "Semantic understanding task started", empty: "No semantic-understanding tasks", confidenceThreshold: "Confidence threshold", includeSamples: "Include sample data" },
     emptyDescription:
