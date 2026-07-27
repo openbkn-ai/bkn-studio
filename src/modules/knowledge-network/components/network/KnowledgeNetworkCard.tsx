@@ -9,7 +9,7 @@ import { DeploymentUnitOutlined, EllipsisOutlined } from "@ant-design/icons";
 import { Dropdown, Tooltip, type MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 
-import { MarkdownText } from "@/modules/knowledge-network/components/shared/MarkdownText";
+import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./KnowledgeNetworkCard.module.css";

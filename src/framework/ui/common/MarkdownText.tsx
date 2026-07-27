@@ -16,6 +16,11 @@ type MarkdownTextProps = {
   text: string;
   /** dark = 深色容器（如 antd 默认黑底 tooltip）下的配色。 */
   tone?: "dark" | "light";
+  /**
+   * compact = 卡片 / tooltip 里的一段描述（默认）；document = 整篇文档
+   * （技能包的 SKILL.md），正文和标题各放大一档，方角对齐站点其余面板。
+   */
+  variant?: "compact" | "document";
 };
 
 /**
@@ -26,8 +31,14 @@ export const MarkdownText = memo(function MarkdownText({
   className,
   text,
   tone = "light",
+  variant = "compact",
 }: MarkdownTextProps) {
-  const classes = [styles.md, tone === "dark" ? styles.dark : "", className]
+  const classes = [
+    styles.md,
+    tone === "dark" ? styles.dark : "",
+    variant === "document" ? styles.doc : "",
+    className,
+  ]
     .filter(Boolean)
     .join(" ");
   return (

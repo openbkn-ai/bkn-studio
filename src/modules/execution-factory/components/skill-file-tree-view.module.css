@@ -5,31 +5,137 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* 文件行画成卡片（与工具 / 函数列表栏同一套：名字 + 右侧徽标 + 次行元信息），
+   目录行是轻量的一行。卡片自己带边框和选中态，所以 antd 那层节点背景全部清掉，
+   否则会在卡片外再套一块灰底。 */
 .tree {
   background: transparent;
 }
 
+.tree :global(.ant-tree-treenode) {
+  width: 100%;
+  padding: 0 0 8px !important;
+  align-items: stretch;
+}
+
+/* 每层缩进从默认 24px 压到 14px：深目录（refs/api/v1/…）在 320px 侧栏里
+   一层吃掉 24px，三层之后文件名就只剩几个字。 */
+.tree :global(.ant-tree-indent-unit) {
+  width: 14px;
+}
+
+.tree :global(.ant-tree-switcher) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 30px;
+  color: var(--color-text-muted);
+}
+
+/* 叶子节点没有展开箭头，antd 仍占一格空位；不清掉的话根目录下的文件卡片会比
+   头部的标题 / 筛选框窄一截、左缘也对不齐。 */
+.tree :global(.ant-tree-switcher-noop) {
+  width: 0;
+}
+
 .tree :global(.ant-tree-node-content-wrapper) {
+  min-width: 0;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  transition: none;
+}
+
+.tree :global(.ant-tree-title) {
+  display: block;
   min-width: 0;
 }
 
-.leaf {
+/* 目录行：一行、无边框，纯粹交代层级。 */
+.folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 30px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.folderIcon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.folderName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 文件卡片：边框 + 方角，与 EntityListRail 的 .item 同规格（10/12 比列表卡略紧，
+   因为这里每行左边还要让出缩进）。 */
+.card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
   min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.tree :global(.ant-tree-node-content-wrapper:hover) .card {
+  border-color: var(--color-primary-border);
+}
+
+.tree :global(.ant-tree-node-selected) .card {
+  border-color: var(--color-primary-600);
+  box-shadow: 0 0 0 1px var(--color-primary-border);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  line-height: 20px;
+}
+
+.fileIcon {
+  flex: none;
+  color: var(--color-text-muted);
 }
 
 .title {
+  flex: 1;
   overflow: hidden;
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
+  font-size: 13px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.meta {
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 12px;
+/* 扩展名徽标：与列表卡右下角的小标签同一档，浅底细框，不跟文件名抢注意力。 */
+.badge {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-fill-quaternary, #f5f5f5);
+  color: var(--color-text-secondary);
+  font-size: 11px;
   line-height: 18px;
+  white-space: nowrap;
+}
+
+.meta {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

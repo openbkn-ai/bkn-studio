@@ -706,6 +706,8 @@ export const executionFactoryEnUS = {
     skillFilePreviewBinaryHint: "This file is binary and cannot be previewed inline. Use the link below to download it.",
     skillFilePreviewDownloadLink: "Open download link",
     skillFilePreviewSelectHint: "Select a file on the left to preview its contents.",
+    skillFilePreviewRendered: "Preview",
+    skillFilePreviewSource: "Source",
     skillMarketDetailTitle: "Market SKILL Detail",
     skillContentTitle: "SKILL.md Content",
     skillContentEmpty: "No SKILL content available.",

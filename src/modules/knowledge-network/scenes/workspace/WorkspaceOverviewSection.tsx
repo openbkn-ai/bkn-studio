@@ -29,7 +29,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { OverviewOntologyBlock } from "@/modules/knowledge-network/components/preview/OverviewOntologyBlock";
-import { MarkdownText } from "@/modules/knowledge-network/components/shared/MarkdownText";
+import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import type {
   KnowledgeNetworkRecord,

@@ -1,0 +1,92 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/* 右栏整块：头部定高、正文吃掉剩余高度并自己滚，页面本身不跟着长。 */
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+/* 头部按内容高：左栏的标题 + 筛选框天然更高，硬凑成同高会在这侧顶出一大片空白。
+   两栏各画各的底线，不追求落在同一 y 上。 */
+.head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.headMain {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.title {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 路径是「当前在看哪个文件」，等宽字与文件树里的文件名同一套观感。 */
+.path {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace
+  );
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 20px;
+}
+
+/* Monaco 自己带滚动条，外层不要再套一层 overflow，否则两条滚动条会打架。 */
+.code {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 渲染态的正文行长不设上限会横跨整屏，读一行要甩一次头；72em 是常规正文档。 */
+.markdown {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  max-width: 72em;
+}
+
+.placeholder {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}

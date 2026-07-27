@@ -8,8 +8,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isMarkdownSkillFile,
   isTextPreviewableSkillFile,
   resolveSkillFileFetchUrl,
+  resolveSkillFileLanguage,
 } from "@/modules/execution-factory/utils/skill-file-preview";
 
 describe("skill-file-preview", () => {
@@ -47,5 +49,19 @@ describe("skill-file-preview", () => {
     expect(isTextPreviewableSkillFile("text/markdown", "refs/guide.md")).toBe(true);
     expect(isTextPreviewableSkillFile(undefined, "scripts/run.py")).toBe(true);
     expect(isTextPreviewableSkillFile("application/zip", "archive.bin")).toBe(false);
+  });
+
+  it("maps file extensions to monaco languages", () => {
+    expect(resolveSkillFileLanguage("scripts/pick_substitute.py")).toBe("python");
+    expect(resolveSkillFileLanguage("SKILL.md")).toBe("markdown");
+    expect(resolveSkillFileLanguage("config/app.YAML")).toBe("yaml");
+    expect(resolveSkillFileLanguage("Makefile")).toBe("plaintext");
+    expect(resolveSkillFileLanguage("data.unknownext")).toBe("plaintext");
+    expect(resolveSkillFileLanguage()).toBe("plaintext");
+  });
+
+  it("flags markdown files for the rendered/source toggle", () => {
+    expect(isMarkdownSkillFile("refs/guide.markdown")).toBe(true);
+    expect(isMarkdownSkillFile("scripts/run.py")).toBe(false);
   });
 });

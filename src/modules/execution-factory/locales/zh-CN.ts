@@ -698,6 +698,8 @@ export const executionFactoryZhCN = {
     skillFilePreviewBinaryHint: "该文件为二进制格式，暂不支持在线预览，可通过下方链接下载查看。",
     skillFilePreviewDownloadLink: "打开下载链接",
     skillFilePreviewSelectHint: "请从左侧选择一个文件进行预览。",
+    skillFilePreviewRendered: "预览",
+    skillFilePreviewSource: "原文",
     skillMarketDetailTitle: "市场 SKILL 详情",
     skillContentTitle: "SKILL.md 内容",
     skillContentEmpty: "暂无 SKILL 内容。",

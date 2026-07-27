@@ -252,6 +252,14 @@
   background: var(--color-bg-surface) !important;
 }
 
+/* 单块面板铺满右栏（技能包的文件预览）：里面是 Monaco / 长文档，自己管滚动，
+   外层再滚一层就会出现两条滚动条。 */
+.contentFill {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 /* 工作区按水平线分区，不再一块一个卡片（对齐函数工作台的 .fnHead / .editor / .console）。 */
 .section,
 .ioPanel {

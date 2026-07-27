@@ -27,6 +27,24 @@
   border-bottom: 1px solid var(--entity-rail-head-border, var(--color-border));
 }
 
+/* 单行头：标题和筛选框同排。右栏头只有一行内容时用它，两栏的头部分隔线才落在
+   同一 y 上，又不必在矮的那侧垫一大片空白。 */
+.headInline {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+}
+
+.headInline .title {
+  flex: none;
+}
+
+.headInline :global(.ant-input-affix-wrapper) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .title {
   display: flex;
   align-items: center;

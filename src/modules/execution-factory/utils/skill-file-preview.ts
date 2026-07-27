@@ -35,6 +35,12 @@ const TEXT_EXTENSIONS = new Set([
   ".csv",
 ]);
 
+/** 后缀（含点）；没有后缀返回空串。Dockerfile 这类无后缀文件走文件名匹配。 */
+function getExtension(relPath: string): string {
+  const lowerPath = relPath.toLowerCase();
+  return lowerPath.includes(".") ? lowerPath.slice(lowerPath.lastIndexOf(".")) : "";
+}
+
 export function isTextPreviewableSkillFile(mimeType?: string, relPath?: string): boolean {
   const normalizedMime = mimeType?.toLowerCase();
   if (normalizedMime) {
@@ -50,9 +56,60 @@ export function isTextPreviewableSkillFile(mimeType?: string, relPath?: string):
     return false;
   }
 
-  const lowerPath = relPath.toLowerCase();
-  const extension = lowerPath.includes(".") ? lowerPath.slice(lowerPath.lastIndexOf(".")) : "";
-  return TEXT_EXTENSIONS.has(extension);
+  return TEXT_EXTENSIONS.has(getExtension(relPath));
+}
+
+/** 后缀 → Monaco 语言 id。这些语法都在本地打包的 monaco-editor 里，不额外拉包。 */
+const LANGUAGE_BY_EXTENSION: Record<string, SkillFileLanguage> = {
+  ".md": "markdown",
+  ".markdown": "markdown",
+  ".json": "json",
+  ".yaml": "yaml",
+  ".yml": "yaml",
+  ".py": "python",
+  ".js": "javascript",
+  ".jsx": "javascript",
+  ".ts": "typescript",
+  ".tsx": "typescript",
+  ".sh": "shell",
+  ".bash": "shell",
+  ".zsh": "shell",
+  ".sql": "sql",
+  ".xml": "xml",
+  ".html": "html",
+  ".htm": "html",
+  ".css": "css",
+  ".toml": "ini",
+  ".ini": "ini",
+  ".cfg": "ini",
+};
+
+export type SkillFileLanguage =
+  | "css"
+  | "html"
+  | "ini"
+  | "javascript"
+  | "json"
+  | "markdown"
+  | "plaintext"
+  | "python"
+  | "shell"
+  | "sql"
+  | "typescript"
+  | "xml"
+  | "yaml";
+
+/** 高亮按后缀判，认不出来的按纯文本渲染——猜错语言比不高亮更难读。 */
+export function resolveSkillFileLanguage(relPath?: string): SkillFileLanguage {
+  if (!relPath) {
+    return "plaintext";
+  }
+
+  return LANGUAGE_BY_EXTENSION[getExtension(relPath)] ?? "plaintext";
+}
+
+export function isMarkdownSkillFile(relPath?: string): boolean {
+  return resolveSkillFileLanguage(relPath) === "markdown";
 }
 
 /**
