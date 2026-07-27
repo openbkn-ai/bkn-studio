@@ -56,7 +56,7 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
   );
 
   const retry = useCallback(
-    async (task: BuildTask) => {
+    (task: BuildTask) => {
       let reset = false;
       const run = async () => {
         try {
@@ -81,7 +81,7 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
           {
             defaultValue: reset,
             onChange: (event: RadioChangeEvent) => {
-              reset = event.target.value;
+              reset = event.target.value === true;
             },
           },
           createElement(Radio, { value: false }, t("dataCatalog.task.rerunResume")),

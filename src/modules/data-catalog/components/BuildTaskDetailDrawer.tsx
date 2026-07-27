@@ -128,7 +128,13 @@ function formatSyncedMarkValue(value: unknown) {
   if (typeof value === "object") {
     return JSON.stringify(value);
   }
-  return String(value);
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  if (typeof value === "symbol") {
+    return value.description ?? "symbol";
+  }
+  return "undefined";
 }
 
 function renderSyncedMark(mark?: string) {
