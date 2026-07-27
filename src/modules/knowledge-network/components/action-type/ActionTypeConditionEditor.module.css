@@ -43,6 +43,10 @@
   flex: 0 0 32px;
 }
 
+.addConditionButton {
+  align-self: flex-start;
+}
+
 @media (max-width: 960px) {
   .conditionRow {
     flex-wrap: wrap;

@@ -24,6 +24,7 @@ import {
   createDefaultActionTypeExecutionConfig,
   getActionSourceDisplayName,
 } from "@/modules/knowledge-network/utils/action-type-execution";
+import { promoteLegacyActionCondition } from "@/modules/knowledge-network/utils/action-type-condition";
 
 export type BackendActionCondition = {
   field?: string;
@@ -93,17 +94,35 @@ export function toBackendActionTypeEnum(
 function toBackendActionCondition(
   condition?: ActionTypeCondition,
 ): BackendActionCondition | undefined {
-  if (!condition?.field || !condition.operation) {
+  const normalized = promoteLegacyActionCondition(condition);
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (normalized.operation === "and" || normalized.operation === "or") {
+    const subConditions = normalized.subConditions
+      ?.map((item) => toBackendActionCondition(item))
+      .filter((item): item is BackendActionCondition => Boolean(item));
+    if (!subConditions?.length) {
+      return undefined;
+    }
+    return {
+      object_type_id: normalized.objectTypeId,
+      operation: normalized.operation,
+      sub_conditions: subConditions,
+    };
+  }
+
+  if (!normalized.field || !normalized.operation) {
     return undefined;
   }
 
   return {
-    field: condition.field,
-    object_type_id: condition.objectTypeId,
-    operation: condition.operation,
-    sub_conditions: condition.subConditions?.map((item) => toBackendActionCondition(item)!),
-    value: condition.value,
-    value_from: condition.valueFrom ?? "const",
+    field: normalized.field,
+    object_type_id: normalized.objectTypeId,
+    operation: normalized.operation,
+    value: normalized.value,
+    value_from: normalized.valueFrom ?? "const",
   };
 }
 
@@ -220,7 +239,7 @@ function mapActionTypeConditionFromBackend(
     return undefined;
   }
 
-  return {
+  return promoteLegacyActionCondition({
     field: condition.field,
     objectTypeId: condition.object_type_id,
     operation: condition.operation as ActionTypeConditionOperation | undefined,
@@ -229,7 +248,7 @@ function mapActionTypeConditionFromBackend(
       .filter((item): item is ActionTypeCondition => Boolean(item)),
     value: condition.value,
     valueFrom: condition.value_from ?? "const",
-  };
+  });
 }
 
 function mapActionTypeAffectFromBackend(

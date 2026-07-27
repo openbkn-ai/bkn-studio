@@ -25,6 +25,12 @@ import type {
   ActionTypeConditionOperation,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  asLeaf,
+  hasLeafContent,
+  isLogicalOperation,
+  promoteLegacyActionCondition,
+} from "@/modules/knowledge-network/utils/action-type-condition";
 
 import styles from "./ActionTypeConditionEditor.module.css";
 
@@ -37,8 +43,6 @@ type ConditionRowProps = {
   onChange: (next: ActionTypeCondition) => void;
   onRemove?: () => void;
   propertyOptions: RelationTypePropertyOption[];
-  showAddButton?: boolean;
-  onAdd?: () => void;
   value: ActionTypeCondition;
 };
 
@@ -46,11 +50,9 @@ function ConditionRow({
   boundObjectTypeId,
   hideObjectTypeSelect = false,
   objectTypes,
-  onAdd,
   onChange,
   onRemove,
   propertyOptions,
-  showAddButton,
   value,
 }: ConditionRowProps) {
   const { t } = useTranslation();
@@ -160,15 +162,7 @@ function ConditionRow({
         placeholder={t("knowledgeNetwork.actionTypeConditionValueInputPlaceholder")}
         value={scalarValue}
       />
-      {showAddButton ? (
-        <AppButton
-          aria-label={t("knowledgeNetwork.actionTypeConditionAdd")}
-          className={styles.addButton}
-          disabled={!objectTypeId}
-          icon={<PlusOutlined />}
-          onClick={onAdd}
-        />
-      ) : onRemove ? (
+      {onRemove ? (
         <AppButton className={styles.addButton} onClick={onRemove} type="text">
           {t("common.delete")}
         </AppButton>
@@ -188,6 +182,19 @@ type ActionTypeConditionEditorProps = {
   onChange?: (value?: ActionTypeCondition | null) => void;
 };
 
+function rowHasDraftContent(cond?: ActionTypeCondition): boolean {
+  if (!cond) {
+    return false;
+  }
+  return Boolean(
+    cond.field ||
+      cond.operation ||
+      cond.value !== undefined ||
+      cond.objectTypeId ||
+      hasLeafContent(cond),
+  );
+}
+
 export function ActionTypeConditionEditor({
   boundObjectTypeId,
   hideObjectTypeSelect = false,
@@ -196,81 +203,98 @@ export function ActionTypeConditionEditor({
   value,
   onChange,
 }: ActionTypeConditionEditorProps) {
-  const rootCondition: ActionTypeCondition = value ?? {
-    objectTypeId: boundObjectTypeId,
-    valueFrom: "const",
-  };
-  const subConditions = rootCondition.subConditions ?? [];
+  const { t } = useTranslation();
+  const normalized = useMemo(
+    () => promoteLegacyActionCondition(value),
+    [value],
+  );
+  const logicalOperation = isLogicalOperation(normalized?.operation)
+    ? normalized.operation
+    : undefined;
+  const rows = useMemo(() => {
+    if (logicalOperation) {
+      const leaves = (normalized?.subConditions ?? []).map((item) =>
+        asLeaf(item, boundObjectTypeId),
+      );
+      if (leaves.length > 0) {
+        return leaves;
+      }
+    }
+    if (normalized) {
+      return [asLeaf(normalized, boundObjectTypeId)];
+    }
+    return [
+      {
+        objectTypeId: boundObjectTypeId,
+        valueFrom: "const" as const,
+      },
+    ];
+  }, [boundObjectTypeId, logicalOperation, normalized]);
 
-  const updateRoot = (next: ActionTypeCondition) => {
-    const hasContent =
-      next.field ||
-      next.operation ||
-      next.value !== undefined ||
-      (next.subConditions?.length ?? 0) > 0;
-
-    if (!hasContent && !next.objectTypeId) {
+  const emitRows = (nextRows: ActionTypeCondition[]) => {
+    const draftRows = nextRows.filter(rowHasDraftContent);
+    if (draftRows.length === 0) {
       onChange?.(null);
       return;
     }
 
+    if (draftRows.length === 1 && !logicalOperation) {
+      onChange?.(asLeaf(draftRows[0], boundObjectTypeId));
+      return;
+    }
+
+    const op: "and" | "or" = logicalOperation ?? "and";
     onChange?.({
-      ...next,
-      objectTypeId: next.objectTypeId || boundObjectTypeId,
+      objectTypeId: draftRows[0]?.objectTypeId || boundObjectTypeId,
+      operation: op,
+      subConditions: draftRows.map((item) => asLeaf(item, boundObjectTypeId)),
       valueFrom: "const",
     });
   };
 
   const handleAddRow = () => {
-    updateRoot({
-      ...rootCondition,
-      subConditions: [
-        ...subConditions,
-        { objectTypeId: rootCondition.objectTypeId || boundObjectTypeId, valueFrom: "const" },
-      ],
-    });
+    emitRows([
+      ...rows,
+      {
+        objectTypeId: rows[0]?.objectTypeId || boundObjectTypeId,
+        valueFrom: "const",
+      },
+    ]);
   };
 
-  const handleSubConditionChange = (index: number, next: ActionTypeCondition) => {
-    const nextSubConditions = [...subConditions];
-    nextSubConditions[index] = next;
-    updateRoot({
-      ...rootCondition,
-      subConditions: nextSubConditions,
-    });
+  const handleRowChange = (index: number, next: ActionTypeCondition) => {
+    const nextRows = [...rows];
+    nextRows[index] = next;
+    emitRows(nextRows);
   };
 
-  const handleRemoveSubCondition = (index: number) => {
-    updateRoot({
-      ...rootCondition,
-      subConditions: subConditions.filter((_, itemIndex) => itemIndex !== index),
-    });
+  const handleRemoveRow = (index: number) => {
+    emitRows(rows.filter((_, itemIndex) => itemIndex !== index));
   };
 
   return (
     <div className={styles.conditionList}>
-      <ConditionRow
-        boundObjectTypeId={boundObjectTypeId}
-        hideObjectTypeSelect={hideObjectTypeSelect}
-        objectTypes={objectTypes}
-        onAdd={handleAddRow}
-        onChange={updateRoot}
-        propertyOptions={propertyOptions}
-        showAddButton
-        value={rootCondition}
-      />
-      {subConditions.map((item, index) => (
+      {rows.map((item, index) => (
         <ConditionRow
           boundObjectTypeId={boundObjectTypeId}
           hideObjectTypeSelect={hideObjectTypeSelect}
           key={`condition-${index}`}
           objectTypes={objectTypes}
-          onChange={(next) => handleSubConditionChange(index, next)}
-          onRemove={() => handleRemoveSubCondition(index)}
+          onChange={(next) => handleRowChange(index, next)}
+          onRemove={rows.length > 1 ? () => handleRemoveRow(index) : undefined}
           propertyOptions={propertyOptions}
           value={item}
         />
       ))}
+      <AppButton
+        className={styles.addConditionButton}
+        disabled={!rows[0]?.objectTypeId && !boundObjectTypeId}
+        icon={<PlusOutlined />}
+        onClick={handleAddRow}
+        type="dashed"
+      >
+        {t("knowledgeNetwork.actionTypeConditionAdd")}
+      </AppButton>
     </div>
   );
 }

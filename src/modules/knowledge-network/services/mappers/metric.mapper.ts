@@ -20,6 +20,7 @@ import type {
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 import { resolveAccountDisplayName } from "@/modules/knowledge-network/services/mappers/account-info";
+import { promoteLegacyActionCondition } from "@/modules/knowledge-network/utils/action-type-condition";
 
 type BackendAnalysisDimension = { display_name?: string; name?: string; property?: string } | string;
 
@@ -46,7 +47,7 @@ function mapMetricConditionFromBackend(
     return undefined;
   }
 
-  return {
+  return promoteLegacyActionCondition({
     field: condition.field,
     objectTypeId: condition.object_type_id,
     operation: condition.operation as ActionTypeConditionOperation | undefined,
@@ -55,25 +56,41 @@ function mapMetricConditionFromBackend(
       .filter((item): item is ActionTypeCondition => Boolean(item)),
     value: condition.value,
     valueFrom: condition.value_from ?? "const",
-  };
+  });
 }
 
 function toBackendMetricCondition(
   condition?: ActionTypeCondition,
 ): BackendMetricCondition | undefined {
-  if (!condition?.field || !condition.operation) {
+  const normalized = promoteLegacyActionCondition(condition);
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (normalized.operation === "and" || normalized.operation === "or") {
+    const subConditions = normalized.subConditions
+      ?.map((item) => toBackendMetricCondition(item))
+      .filter((item): item is BackendMetricCondition => Boolean(item));
+    if (!subConditions?.length) {
+      return undefined;
+    }
+    return {
+      object_type_id: normalized.objectTypeId,
+      operation: normalized.operation,
+      sub_conditions: subConditions,
+    };
+  }
+
+  if (!normalized.field || !normalized.operation) {
     return undefined;
   }
 
   return {
-    field: condition.field,
-    object_type_id: condition.objectTypeId,
-    operation: condition.operation,
-    sub_conditions: condition.subConditions
-      ?.map((item) => toBackendMetricCondition(item))
-      .filter((item): item is BackendMetricCondition => Boolean(item)),
-    value: condition.value,
-    value_from: condition.valueFrom ?? "const",
+    field: normalized.field,
+    object_type_id: normalized.objectTypeId,
+    operation: normalized.operation,
+    value: normalized.value,
+    value_from: normalized.valueFrom ?? "const",
   };
 }
 
