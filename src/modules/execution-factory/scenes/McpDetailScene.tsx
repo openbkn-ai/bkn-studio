@@ -17,7 +17,6 @@ import {
   IdcardOutlined,
   KeyOutlined,
   LinkOutlined,
-  ProfileOutlined,
   TagOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
@@ -31,7 +30,7 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
-import { DetailBasicInfoDrawer } from "@/modules/execution-factory/components/DetailBasicInfoDrawer";
+import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { CreateMcpDrawer } from "@/modules/execution-factory/components/create-menu/CreateMcpDrawer";
 import { JsonSchemaIoPanel } from "@/modules/execution-factory/components/JsonSchemaIoPanel";
@@ -86,7 +85,6 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
   const [toolsLoadError, setToolsLoadError] = useState<string | null>(null);
   const [debugToolName, setDebugToolName] = useState<string | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  const [basicInfoOpen, setBasicInfoOpen] = useState(false);
   const { exportComponentById, isExporting } = useImpexExport();
 
   const loadRecord = useCallback(async () => {
@@ -313,11 +311,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
         {record ? (
           <div className={styles.pageHeaderActions}>
             {/* 进来即可用：不再要求先点「编辑 MCP」切态。基础信息统一走抽屉；市场预览态（from=catalog）不给编辑/导出入口。 */}
-            <AppButton
-              icon={<ProfileOutlined />}
-              onClick={() => setBasicInfoOpen(true)}
-              title={t("common.basicInfo")}
-            />
+            <DetailBasicInfoButton items={basicInfoItems} />
             {!catalogContext ? (
               <>
                 {!record.isInternal ? (
@@ -449,12 +443,6 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
           </Content>
         </Layout>
       )}
-
-      <DetailBasicInfoDrawer
-        items={basicInfoItems}
-        onClose={() => setBasicInfoOpen(false)}
-        open={basicInfoOpen}
-      />
 
       <CreateMcpDrawer
         mcpId={mcpId}

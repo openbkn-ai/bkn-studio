@@ -15,7 +15,10 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 import type { CapabilityUxMode } from "@/modules/execution-factory/utils/capability-ux";
-import { isCapabilityUxV2 } from "@/modules/execution-factory/utils/capability-ux";
+import {
+  HTTP_API_CAPABILITY_MODES,
+  isCapabilityUxV2,
+} from "@/modules/execution-factory/utils/capability-ux";
 import {
   getCapabilityCreateMenuItems,
   resolveCapabilityAdpImportTab,
@@ -32,9 +35,6 @@ import {
 } from "./CreateExecutionUnitWizard";
 import { ImportResourceModal } from "./ImportResourceModal";
 import styles from "./create-menu.module.css";
-
-/** HTTP API 入口下的两条路径：新增单个 / 导入整份 OpenAPI，走同一向导的两张卡。 */
-const HTTP_API_MODES: CapabilityUxMode[] = ["quick-api", "import-openapi"];
 
 type CreateMenuProps = {
   activeTab: ExecutionUnitTab;
@@ -139,7 +139,7 @@ export function CreateMenu({
         setCapabilityAllowedModes(undefined);
         setCapabilityInitialMode("skill");
       } else {
-        setCapabilityAllowedModes(HTTP_API_MODES);
+        setCapabilityAllowedModes(HTTP_API_CAPABILITY_MODES);
         setCapabilityInitialMode(undefined);
       }
       setCapabilityWizardOpen(true);
@@ -172,7 +172,7 @@ export function CreateMenu({
 
   // HTTP API：进向导先选「添加 API / 导入 API」两卡，不锁死单一模式。
   const openHttpApiWizard = () => {
-    setCapabilityAllowedModes(HTTP_API_MODES);
+    setCapabilityAllowedModes(HTTP_API_CAPABILITY_MODES);
     setCapabilityInitialMode(undefined);
     setCapabilityWizardOpen(true);
   };

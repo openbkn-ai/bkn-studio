@@ -34,6 +34,12 @@ export const TOOLBOX_CAPABILITY_MODES: CapabilityUxMode[] = [
   "function",
 ];
 
+/** HTTP API 入口的两条路径：新增单个 / 导入整份 OpenAPI（共用同一向导的两张卡）。 */
+export const HTTP_API_CAPABILITY_MODES: CapabilityUxMode[] = [
+  "quick-api",
+  "import-openapi",
+];
+
 const ALL_CAPABILITY_MODES: CapabilityUxMode[] = [
   "quick-api",
   "import-openapi",

@@ -61,6 +61,19 @@
   font-size: 14px;
 }
 
+/* 标题栏下方的 meta 行：走主题变量而非硬编码色，暗色主题安全。 */
+.subline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 24px 12px;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
 .backButton {
   display: inline-flex;
   width: 28px;

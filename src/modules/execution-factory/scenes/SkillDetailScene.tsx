@@ -15,7 +15,6 @@ import {
   FileZipOutlined,
   HistoryOutlined,
   IdcardOutlined,
-  ProfileOutlined,
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -28,7 +27,7 @@ import type { SkillDetailSceneProps } from "@/modules/execution-factory/contract
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { DetailBasicInfoDrawer } from "@/modules/execution-factory/components/DetailBasicInfoDrawer";
+import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import { SkillFileTreeView } from "@/modules/execution-factory/components/SkillFileTreeView";
 import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
 import {
@@ -94,7 +93,6 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [contentLoadError, setContentLoadError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [basicInfoOpen, setBasicInfoOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const fileEntries = useMemo(() => buildFileEntries(content), [content]);
@@ -294,11 +292,7 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
         {record ? (
           <div className={styles.pageHeaderActions}>
             {/* 进来即可用：不再要求先点「编辑 SKILL」切态。基础信息统一走抽屉；市场预览态（from=catalog）无编辑/历史接口，整块隐藏。 */}
-            <AppButton
-              icon={<ProfileOutlined />}
-              onClick={() => setBasicInfoOpen(true)}
-              title={t("common.basicInfo")}
-            />
+            <DetailBasicInfoButton items={basicInfoItems} />
             {!catalogContext ? (
               <>
             <PermissionGate permissions="execution-factory:skill:view">
@@ -430,12 +424,6 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
           <Empty />
         </div>
       )}
-
-      <DetailBasicInfoDrawer
-        items={basicInfoItems}
-        onClose={() => setBasicInfoOpen(false)}
-        open={basicInfoOpen}
-      />
 
       <SkillHistoryDrawer
         onClose={() => setHistoryOpen(false)}

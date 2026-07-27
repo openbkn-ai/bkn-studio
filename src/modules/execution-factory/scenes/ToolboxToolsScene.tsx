@@ -7,20 +7,16 @@
 
 import {
   ApiOutlined,
-  AppstoreOutlined,
   ArrowLeftOutlined,
   BarsOutlined,
   BugOutlined,
-  CalendarOutlined,
   ClockCircleOutlined,
   CodeOutlined,
   DeleteOutlined,
   DownloadOutlined,
   FileTextOutlined,
-  IdcardOutlined,
   LinkOutlined,
   NodeIndexOutlined,
-  ProfileOutlined,
   TagOutlined,
   ToolOutlined,
   UserOutlined,
@@ -37,13 +33,16 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
-import { DetailBasicInfoDrawer } from "@/modules/execution-factory/components/DetailBasicInfoDrawer";
+import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { ToolDebugModal } from "@/modules/execution-factory/components/ToolDebugModal";
 import { ToolFormDrawer } from "@/modules/execution-factory/components/ToolFormDrawer";
 import { ToolIoPanel } from "@/modules/execution-factory/components/ToolIoPanel";
 import { AddCapabilityWizard } from "@/modules/execution-factory/components/create-menu/AddCapabilityWizard";
-import { isCapabilityUxV2 } from "@/modules/execution-factory/utils/capability-ux";
+import {
+  HTTP_API_CAPABILITY_MODES,
+  isCapabilityUxV2,
+} from "@/modules/execution-factory/utils/capability-ux";
 import { getToolbox, getToolboxMarket } from "@/modules/execution-factory/services/toolbox.service";
 import {
   deleteTools,
@@ -54,10 +53,7 @@ import {
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 import type { ToolRecord, ToolRunLogEntry, ToolStatus } from "@/modules/execution-factory/types/tool";
 import { buildToolCapabilityManifest } from "@/modules/execution-factory/utils/capability-manifest";
-import {
-  formatOptionalTimestamp,
-  resolveToolboxCategoryLabel,
-} from "@/modules/execution-factory/utils/detail-display";
+import { buildToolboxBasicInfoItems } from "@/modules/execution-factory/utils/toolbox-info-items";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
@@ -93,7 +89,6 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const [quickAddApiOpen, setQuickAddApiOpen] = useState(false);
   const capabilityUxV2 = isCapabilityUxV2();
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
-  const [basicInfoOpen, setBasicInfoOpen] = useState(false);
   const { exportComponentById, isExporting } = useImpexExport();
   const auditUserDirectory = useAuditUserDirectory();
 
@@ -338,86 +333,18 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   };
 
   // 原来只在工具箱详情抽屉里露过，卡片改直连本页后搬到页面上，否则这些字段就没入口了。
-  const toolboxInfoItems = useMemo(() => {
-    if (!toolbox) {
-      return [];
-    }
-
-    return [
-      {
-        key: "boxId",
-        label: t("executionFactory.toolboxId"),
-        value: toolbox.boxId,
-        icon: <IdcardOutlined />,
-        variant: "mono" as const,
-        span: "full" as const,
-      },
-      {
-        key: "category",
-        label: t("executionFactory.category"),
-        value: resolveToolboxCategoryLabel(toolbox, t),
-        icon: <AppstoreOutlined />,
-        variant: "accent" as const,
-      },
-      {
-        key: "metadataType",
-        label: t("executionFactory.metadataType"),
-        value: toolbox.metadataType
-          ? t(`executionFactory.metadataTypes.${toolbox.metadataType}`)
-          : "-",
-      },
-      {
-        key: "toolCount",
-        label: t("executionFactory.toolCount"),
-        value: String(items.length || toolbox.toolCount || 0),
-        icon: <ToolOutlined />,
-      },
-      {
-        key: "serviceUrl",
-        label: t("executionFactory.serviceUrl"),
-        value: toolbox.serviceUrl ?? "-",
-        icon: <LinkOutlined />,
-        span: "full" as const,
-        variant: "mono" as const,
-      },
-      {
-        key: "createUser",
-        label: t("executionFactory.createUser"),
-        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.createUser }),
-        icon: <UserOutlined />,
-      },
-      {
-        key: "updateUser",
-        label: t("executionFactory.updateUser"),
-        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.updateUser }),
-        icon: <UserOutlined />,
-      },
-      {
-        key: "createTime",
-        label: t("executionFactory.createTime"),
-        value: formatOptionalTimestamp(toolbox.createTime),
-        icon: <CalendarOutlined />,
-      },
-      {
-        key: "updateTime",
-        label: t("executionFactory.updateTime"),
-        value: formatOptionalTimestamp(toolbox.updateTime),
-        icon: <ClockCircleOutlined />,
-      },
-      {
-        key: "releaseUser",
-        label: t("executionFactory.releaseUser"),
-        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.releaseUser }),
-        icon: <UserOutlined />,
-      },
-      {
-        key: "releaseTime",
-        label: t("executionFactory.releaseTime"),
-        value: formatOptionalTimestamp(toolbox.releaseTime),
-        icon: <CalendarOutlined />,
-      },
-    ];
-  }, [auditUserDirectory, items.length, t, toolbox]);
+  const toolboxInfoItems = useMemo(
+    () =>
+      toolbox
+        ? buildToolboxBasicInfoItems(toolbox, {
+            t,
+            auditUserDirectory,
+            toolCount: items.length || toolbox.toolCount || 0,
+            includeRelease: true,
+          })
+        : [],
+    [auditUserDirectory, items.length, t, toolbox],
+  );
 
   const toolInfoItems = useMemo(() => {
     if (!selectedTool) {
@@ -535,11 +462,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
           {toolbox ? (
             <div className={styles.pageHeaderActions}>
               <Space>
-                <AppButton
-                  icon={<ProfileOutlined />}
-                  onClick={() => setBasicInfoOpen(true)}
-                  title={t("common.basicInfo")}
-                />
+                <DetailBasicInfoButton items={toolboxInfoItems} />
                 {renderToolboxExportButton()}
                 {/* 市场预览态（from=catalog）看的是别的域的工具箱，只读，不给任何编辑入口。 */}
                 {!catalogContext && !toolbox.isInternal ? (
@@ -805,12 +728,6 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         )}
       </section>
 
-      <DetailBasicInfoDrawer
-        items={toolboxInfoItems}
-        onClose={() => setBasicInfoOpen(false)}
-        open={basicInfoOpen}
-      />
-
       <ToolFormDrawer
         boxId={boxId}
         mode="create"
@@ -838,7 +755,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         toolboxMetadataType={toolbox?.metadataType}
       />
       <AddCapabilityWizard
-        allowedModesOverride={["quick-api", "import-openapi"]}
+        allowedModesOverride={HTTP_API_CAPABILITY_MODES}
         contextTab="toolbox"
         initialBoxId={boxId}
         onClose={() => setQuickAddApiOpen(false)}

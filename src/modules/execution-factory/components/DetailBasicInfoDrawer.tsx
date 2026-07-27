@@ -19,7 +19,7 @@ type DetailBasicInfoDrawerProps = {
 };
 
 const MONO_STACK =
-  'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
+  'var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace)';
 
 /** 值样式随 variant 变化：抽屉里用竖排列表比 bordered 表格好读。 */
 function resolveValueStyle(variant?: DetailMetaItem["variant"]): CSSProperties {

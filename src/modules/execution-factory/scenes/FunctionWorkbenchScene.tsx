@@ -8,21 +8,17 @@
 import {
   AppstoreOutlined,
   ArrowLeftOutlined,
-  CalendarOutlined,
   ClockCircleOutlined,
   CodeOutlined,
   DownOutlined,
   EllipsisOutlined,
   FileTextOutlined,
-  IdcardOutlined,
-  LinkOutlined,
   PlayCircleFilled,
   PlusOutlined,
   ProfileOutlined,
   ReloadOutlined,
   SearchOutlined,
   ThunderboltOutlined,
-  ToolOutlined,
   UpOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -36,7 +32,7 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CodeEditor } from "@/modules/execution-factory/components/CodeEditor";
-import { DetailBasicInfoDrawer } from "@/modules/execution-factory/components/DetailBasicInfoDrawer";
+import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import { FunctionAiGenerateModal } from "@/modules/execution-factory/components/FunctionAiGenerateModal";
 import { FunctionParameterTree } from "@/modules/execution-factory/components/FunctionParameterTree";
 import { InlineEditableText } from "@/modules/execution-factory/components/InlineEditableText";
@@ -62,11 +58,9 @@ import type { FunctionParameterDef } from "@/modules/execution-factory/types/fun
 import type { ToolStatus } from "@/modules/execution-factory/types/tool";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
-import {
-  formatOptionalTimestamp,
-  resolveToolboxCategoryLabel,
-} from "@/modules/execution-factory/utils/detail-display";
+import { formatOptionalTimestamp } from "@/modules/execution-factory/utils/detail-display";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
+import { buildToolboxBasicInfoItems } from "@/modules/execution-factory/utils/toolbox-info-items";
 import {
   DEFAULT_FUNCTION_TEMPLATE,
   FUNCTION_TEMPLATES,
@@ -188,7 +182,6 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
 
   const [toolbox, setToolbox] = useState<ToolboxRecord | null>(null);
   const [boxName, setBoxName] = useState("");
-  const [basicInfoOpen, setBasicInfoOpen] = useState(false);
   const auditUserDirectory = useAuditUserDirectory();
   const [boxCategory, setBoxCategory] = useState<string | undefined>();
   const [functions, setFunctions] = useState<WorkbenchFunction[]>([]);
@@ -964,68 +957,17 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       : functions;
   }, [functions, railKeyword]);
 
-  const basicInfoItems = toolbox
-    ? [
-        {
-          key: "boxId",
-          label: t("executionFactory.toolboxId"),
-          value: toolbox.boxId,
-          icon: <IdcardOutlined />,
-          variant: "mono" as const,
-          span: "full" as const,
-        },
-        {
-          key: "category",
-          label: t("executionFactory.category"),
-          value: resolveToolboxCategoryLabel(toolbox, t),
-          icon: <AppstoreOutlined />,
-          variant: "accent" as const,
-        },
-        {
-          key: "metadataType",
-          label: t("executionFactory.metadataType"),
-          value: t("executionFactory.metadataTypes.function"),
-        },
-        {
-          key: "toolCount",
-          label: t("executionFactory.toolCount"),
-          value: String(functions.length || toolbox.toolCount || 0),
-          icon: <ToolOutlined />,
-        },
-        {
-          key: "serviceUrl",
-          label: t("executionFactory.serviceUrl"),
-          value: toolbox.serviceUrl ?? "-",
-          icon: <LinkOutlined />,
-          span: "full" as const,
-          variant: "mono" as const,
-        },
-        {
-          key: "createUser",
-          label: t("executionFactory.createUser"),
-          value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.createUser }),
-          icon: <UserOutlined />,
-        },
-        {
-          key: "updateUser",
-          label: t("executionFactory.updateUser"),
-          value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.updateUser }),
-          icon: <UserOutlined />,
-        },
-        {
-          key: "createTime",
-          label: t("executionFactory.createTime"),
-          value: formatOptionalTimestamp(toolbox.createTime),
-          icon: <CalendarOutlined />,
-        },
-        {
-          key: "updateTime",
-          label: t("executionFactory.updateTime"),
-          value: formatOptionalTimestamp(toolbox.updateTime),
-          icon: <ClockCircleOutlined />,
-        },
-      ]
-    : [];
+  const basicInfoItems = useMemo(
+    () =>
+      toolbox
+        ? buildToolboxBasicInfoItems(toolbox, {
+            t,
+            auditUserDirectory,
+            toolCount: functions.length || toolbox.toolCount || 0,
+          })
+        : [],
+    [auditUserDirectory, functions.length, t, toolbox],
+  );
 
   if (loading) {
     return (
@@ -1068,11 +1010,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
           {hasUnsavedChanges ? (
             <span className={styles.dirtyBadge}>{t("executionFactory.workbenchDirty")}</span>
           ) : null}
-          <AppButton
-            icon={<ProfileOutlined />}
-            onClick={() => setBasicInfoOpen(true)}
-            title={t("common.basicInfo")}
-          />
+          <DetailBasicInfoButton items={basicInfoItems} />
           <PermissionGate permissions="execution-factory:tool:edit">
             <AppButton
               disabled={!hasUnsavedChanges}
@@ -1088,19 +1026,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       </div>
 
       {toolbox ? (
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: 16,
-            padding: "10px 24px 12px",
-            background: "#ffffff",
-            borderBottom: "1px solid #e9e9e9",
-            color: "var(--color-text-secondary)",
-            fontSize: 13,
-          }}
-        >
+        <div className={styles.subline}>
           {toolbox.description ? <span>{toolbox.description}</span> : null}
           <span>
             <ThunderboltOutlined />{" "}
@@ -1561,11 +1487,6 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         open={aiOpen}
       />
 
-      <DetailBasicInfoDrawer
-        items={basicInfoItems}
-        onClose={() => setBasicInfoOpen(false)}
-        open={basicInfoOpen}
-      />
     </div>
   );
 }
