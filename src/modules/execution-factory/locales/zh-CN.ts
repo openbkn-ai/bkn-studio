@@ -698,7 +698,6 @@ export const executionFactoryZhCN = {
     mcpDetailCatalogToolsHint: "目录模式下工具列表需在引入到本业务域后查看；若已引入仍无法加载，请从能力管理进入。",
     mcpToolCountLabel: "{{count}} 个 MCP 工具",
     mcpToolCountFieldLabel: "工具数量",
-    mcpToolInfoTitle: "工具信息",
     mcpToolSchemaEmptyHint: "该工具未返回 input schema，调试时请参考 MCP 服务文档手动填写参数。",
     mcpToolSchemaRawTitle: "Input Schema",
     mcpMarketDetailTitle: "市场 MCP 详情",

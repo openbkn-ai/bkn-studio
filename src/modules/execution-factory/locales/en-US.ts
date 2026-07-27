@@ -708,7 +708,6 @@ export const executionFactoryEnUS = {
       "Tool lists in catalog mode are available after introducing to this domain. If already introduced, open from unit management.",
     mcpToolCountLabel: "{{count}} MCP tools",
     mcpToolCountFieldLabel: "Tool count",
-    mcpToolInfoTitle: "Tool Info",
     mcpToolSchemaEmptyHint:
       "This tool has no input schema. Refer to the MCP server docs when filling debug arguments.",
     mcpToolSchemaRawTitle: "Input Schema",
