@@ -10,6 +10,7 @@ import type {
   CapabilityManifest,
   CapabilityOutputSemantic,
   CapabilityReadiness,
+  CapabilityReadinessDimension,
 } from "@/modules/execution-factory/types/capability-manifest";
 import type { McpProxyTool } from "@/modules/execution-factory/types/mcp";
 import type { OperatorDetail } from "@/modules/execution-factory/types/operator";
@@ -61,6 +62,27 @@ function buildInputsFromJsonSchema(schema: unknown): CapabilityInputSemantic[] {
     examples: property.examples ?? (property.example === undefined ? undefined : [property.example]),
     sourceHint: property.description ? "schema description" : undefined,
   }));
+}
+
+function buildOutputsFromJsonSchema(schema: unknown): CapabilityOutputSemantic[] {
+  const schemaObject = asSchemaObject(schema);
+  if (!schemaObject?.properties) {
+    return [];
+  }
+
+  return Object.entries(schemaObject.properties).map(([name, property]) => ({
+    name,
+    dataType: property.type,
+    businessMeaning: property.description,
+    examples: property.examples ?? (property.example === undefined ? undefined : [property.example]),
+  }));
+}
+
+/** A schema that declares no properties has nothing for the user to describe. */
+function declaresProperties(schema: unknown): boolean {
+  const properties = asSchemaObject(schema)?.properties;
+
+  return Boolean(properties && Object.keys(properties).length > 0);
 }
 
 function buildToolOutputs(tool: ToolDetail): CapabilityOutputSemantic[] {
@@ -134,6 +156,20 @@ export function buildMcpToolCapabilityManifest({
   serviceName?: string;
   tool: McpProxyTool;
 }): CapabilityManifest {
+  // MCP tools carry only what the server advertises: `inputSchema` is mandatory
+  // but often empty (no-argument tools), and `outputSchema` is optional and
+  // rarely present. Grading either one when the server never declared it would
+  // cap every MCP tool below a passing score for a blank nobody can fill here.
+  const readinessNotApplicable: CapabilityReadinessDimension[] = [];
+
+  if (!declaresProperties(tool.inputSchema)) {
+    readinessNotApplicable.push("input semantics");
+  }
+
+  if (!declaresProperties(tool.outputSchema)) {
+    readinessNotApplicable.push("output semantics");
+  }
+
   return {
     id: `mcp:${mcpId}:${tool.name}`,
     sourceType: "mcp",
@@ -144,12 +180,13 @@ export function buildMcpToolCapabilityManifest({
     status: "discovered",
     intent: tool.description,
     inputSemantics: buildInputsFromJsonSchema(tool.inputSchema),
-    outputSemantics: [],
+    outputSemantics: buildOutputsFromJsonSchema(tool.outputSchema),
     sideEffects: "unknown",
     riskLevel: "medium",
     testStatus: "untested",
     agentVisibility: "discoverable",
     agentInvokePolicy: "approval_required",
+    readinessNotApplicable,
   };
 }
 
@@ -215,32 +252,60 @@ export function buildOperatorCapabilityManifest(operator: OperatorDetail): Capab
 // callable policy and verified examples have no backing fields or edit path yet, so
 // demanding them would be advice the product cannot act on. Reintroduce them here
 // once real backend fields + an edit flow exist.
+export const READINESS_DIMENSIONS: Array<{
+  key: CapabilityReadinessDimension;
+  weight: number;
+  met: (manifest: CapabilityManifest) => boolean;
+}> = [
+  {
+    key: "business intent",
+    weight: 40,
+    met: (manifest) => Boolean(manifest.intent),
+  },
+  {
+    key: "input semantics",
+    weight: 35,
+    met: (manifest) => (manifest.inputSemantics ?? []).some((input) => input.businessMeaning),
+  },
+  {
+    key: "output semantics",
+    weight: 25,
+    met: (manifest) => (manifest.outputSemantics ?? []).some((output) => output.businessMeaning),
+  },
+];
+
 export function getCapabilityReadiness(manifest: CapabilityManifest): CapabilityReadiness {
-  const missing: string[] = [];
-  let score = 0;
+  const skipped = new Set(manifest.readinessNotApplicable ?? []);
+  const missing: CapabilityReadinessDimension[] = [];
+  const notApplicable: CapabilityReadinessDimension[] = [];
+  let earned = 0;
+  let total = 0;
 
-  if (manifest.intent) {
-    score += 40;
-  } else {
-    missing.push("business intent");
+  for (const dimension of READINESS_DIMENSIONS) {
+    if (skipped.has(dimension.key)) {
+      notApplicable.push(dimension.key);
+      continue;
+    }
+
+    total += dimension.weight;
+
+    if (dimension.met(manifest)) {
+      earned += dimension.weight;
+    } else {
+      missing.push(dimension.key);
+    }
   }
 
-  if ((manifest.inputSemantics ?? []).some((input) => input.businessMeaning)) {
-    score += 35;
-  } else {
-    missing.push("input semantics");
-  }
-
-  if ((manifest.outputSemantics ?? []).some((output) => output.businessMeaning)) {
-    score += 25;
-  } else {
-    missing.push("output semantics");
-  }
+  // Rescale over the dimensions that apply, so a capability that fills every
+  // gap it can still reaches 100. `total` is only 0 if every dimension were
+  // waived, which no builder does today.
+  const score = total === 0 ? 0 : Math.round((earned / total) * 100);
 
   return {
     score,
     level: score >= 80 ? "high" : score >= 50 ? "medium" : "low",
     missing,
+    notApplicable,
   };
 }
 

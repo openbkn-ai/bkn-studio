@@ -98,6 +98,7 @@ export type McpProxyTool = {
   name: string;
   description?: string;
   inputSchema?: unknown;
+  outputSchema?: unknown;
 };
 
 export type McpToolDebugInput = {

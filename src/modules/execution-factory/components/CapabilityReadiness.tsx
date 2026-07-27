@@ -10,18 +10,21 @@ import { Alert, Tag, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { CapabilityManifest } from "@/modules/execution-factory/types/capability-manifest";
-import { getCapabilityReadiness } from "@/modules/execution-factory/utils/capability-manifest";
+import {
+  getCapabilityReadiness,
+  READINESS_DIMENSIONS,
+} from "@/modules/execution-factory/utils/capability-manifest";
 
 import styles from "./CapabilityReadiness.module.css";
 
-const READINESS_DIMENSIONS: Array<{ key: string; label: string; weight: number }> = [
-  { key: "business intent", label: "业务用途", weight: 40 },
-  { key: "input semantics", label: "输入语义", weight: 35 },
-  { key: "output semantics", label: "输出语义", weight: 25 },
-];
+const DIMENSION_LABELS: Record<string, string> = {
+  "business intent": "业务用途",
+  "input semantics": "输入语义",
+  "output semantics": "输出语义",
+};
 
 function readinessDimensionLabel(key: string) {
-  return READINESS_DIMENSIONS.find((dim) => dim.key === key)?.label ?? key;
+  return DIMENSION_LABELS[key] ?? key;
 }
 
 type CapabilityManifestProps = {
@@ -44,7 +47,10 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
               })}
             </div>
             {READINESS_DIMENSIONS.map((dim) => {
-              const met = !readiness.missing.includes(dim.key);
+              const skipped = readiness.notApplicable.includes(dim.key);
+              const met = !skipped && !readiness.missing.includes(dim.key);
+              const label = readinessDimensionLabel(dim.key);
+
               return (
                 <div
                   className={
@@ -54,11 +60,24 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
                   }
                   key={dim.key}
                 >
-                  <span>{`${met ? "✓" : "○"} ${dim.label}`}</span>
-                  <span>{dim.weight}</span>
+                  <span>{`${skipped ? "—" : met ? "✓" : "○"} ${label}`}</span>
+                  <span>
+                    {skipped
+                      ? t("executionFactory.agentReadiness.notApplicable", {
+                          defaultValue: "不适用",
+                        })
+                      : dim.weight}
+                  </span>
                 </div>
               );
             })}
+            {readiness.notApplicable.length > 0 ? (
+              <div className={styles.scoreRuleNote}>
+                {t("executionFactory.agentReadiness.notApplicableNote", {
+                  defaultValue: "该能力未声明的维度不计入评分",
+                })}
+              </div>
+            ) : null}
           </div>
         }
       >
