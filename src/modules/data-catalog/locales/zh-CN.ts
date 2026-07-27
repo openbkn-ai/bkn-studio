@@ -228,7 +228,7 @@ export const dataCatalogZhCN = {
       batchLabel: "批量",
       batchDescription: "一次性同步并建索引。",
       streamingLabel: "流式",
-      streamingDescription: "持续增量同步、常驻监听；增量键可选。",
+      streamingDescription: "持续增量同步、常驻监听；需指定增量键。",
       executeType: "执行方式",
       executeFull: "全量",
       executeFullDescription: "从数据源重新同步全部数据并重建索引，适合首次构建或需要完整刷新时使用。",
@@ -246,9 +246,9 @@ export const dataCatalogZhCN = {
         "将被 Embedding 模型向量化，用于语义相似度检索；可与全文二选一或同时开启。",
       roleBuildKeyHintBatch:
         "批量构建时用于识别增量数据的字段（如更新时间、自增 ID）；必填。",
-      roleBuildKeyHintStreaming: "流式构建时用于标识行的 ID 字段；可选。",
+      roleBuildKeyHintStreaming: "流式构建时用于标识行的 ID 字段；必填。",
       roleBuildKeyHintConfig:
-        "增量构建使用；批量必填，流式可选。",
+        "增量构建使用；批量与流式均需指定。",
       roleFulltextHint: "建立关键词全文索引的文本字段，随数据同步即时生效。",
       selectAll: "全选",
       clearAll: "清空",
@@ -297,6 +297,8 @@ export const dataCatalogZhCN = {
       },
       fieldsRequired: "请至少选择一个向量嵌入字段或全文检索字段。",
       buildKeyRequired: "批量模式必须指定增量键字段，请回到「配置索引」勾选。",
+      streamingBuildKeyRequired:
+        "流式构建必须指定增量键字段，请回到「配置索引」勾选后再创建任务。",
       model: "Embedding 模型",
       modelRequired: "请选择 Embedding 模型。",
       noModels: "尚未接入 embedding 模型,无法保存含向量字段的配置。",
