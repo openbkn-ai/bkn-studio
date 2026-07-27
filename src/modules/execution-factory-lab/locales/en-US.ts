@@ -44,7 +44,7 @@ export const executionFactoryLabEnUS = {
     detailOrchestration: "Orchestration",
     detailOrchestrationNone: "Not enabled",
     detailOrchestrationLinked: "Operator ID: {{id}}",
-    loadFailed: "Failed to load. Ensure the capabilities-lab service is running.",
+    loadFailed: "Failed to load. Ensure the execution factory service is running.",
     tabOverview: "Overview",
     tabDebug: "Debug",
     tabVersions: "Versions",
