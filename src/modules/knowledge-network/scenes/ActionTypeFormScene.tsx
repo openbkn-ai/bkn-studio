@@ -18,6 +18,7 @@ import {
   normalizeActionTypeExecutionConfig,
   validateActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
+import type { ActionTypeExecutionParameterSchemaState } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
 import { normalizeActionTypeCondition } from "@/modules/knowledge-network/utils/action-type-execution";
 import { RelationTypeObjectTypeSelect } from "@/modules/knowledge-network/components/relation-type/RelationTypeObjectTypeSelect";
@@ -90,6 +91,11 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   const [executionValue, setExecutionValue] = useState<ActionTypeExecutionConfig>(
     createDefaultActionTypeExecutionConfig(),
   );
+  const [executionSchemaState, setExecutionSchemaState] =
+    useState<ActionTypeExecutionParameterSchemaState>({
+      loaded: false,
+      parameterCount: 0,
+    });
   const [pageTitle, setPageTitle] = useState(
     mode === "edit"
       ? t("knowledgeNetwork.actionTypeEditTitle")
@@ -271,7 +277,10 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       }
     }
 
-    const validationError = validateActionTypeExecutionConfig(t, executionValue);
+    const validationError = validateActionTypeExecutionConfig(t, executionValue, {
+      allowEmptyParameters:
+        executionSchemaState.loaded && executionSchemaState.parameterCount === 0,
+    });
     if (validationError) {
       void message.error(validationError);
       return;
@@ -476,6 +485,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             (basicForm.getFieldValue("objectTypeId") as string | undefined) ??
             ""
           }
+          onParameterSchemaStateChange={setExecutionSchemaState}
           onChange={setExecutionValue}
           value={executionValue}
         />
