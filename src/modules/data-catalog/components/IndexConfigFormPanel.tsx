@@ -354,6 +354,16 @@ export function IndexConfigFormPanel({
     () => Object.keys(eligibleFulltextAnalyzerGroups).filter((field) => (eligibleFulltextAnalyzerGroups[field]?.length ?? 0) > 0),
     [eligibleFulltextAnalyzerGroups],
   );
+  const fulltextAnalyzerOverrides = useMemo(
+    () =>
+      Object.entries(eligibleFulltextAnalyzerGroups).flatMap(([field, groups]) =>
+        groups
+          .map((feature) => feature.value?.trim())
+          .filter((analyzer): analyzer is string => Boolean(analyzer))
+          .map((analyzer) => `${field}: ${analyzer}`),
+      ),
+    [eligibleFulltextAnalyzerGroups],
+  );
 
   const toggleField = (
     field: string,
@@ -870,6 +880,15 @@ export function IndexConfigFormPanel({
                   <div className={formStyles.fieldHint}>
                     {t("dataCatalog.build.fulltextAnalyzerHint")}
                   </div>
+                  {fulltextAnalyzerOverrides.length > 0 ? (
+                    <Alert
+                      message={t("dataCatalog.build.fulltextAnalyzerOverrides", {
+                        overrides: fulltextAnalyzerOverrides.join(", "),
+                      })}
+                      showIcon
+                      type="info"
+                    />
+                  ) : null}
                 </div>
                 <div className={formStyles.resourceDefaultItem}>
                   <div className={formStyles.resourceDefaultItemHead}>
