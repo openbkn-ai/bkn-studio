@@ -18,7 +18,7 @@ import { CrudFormPage } from "@/framework/scaffold/CrudFormPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { FunctionDefinitionFields } from "@/modules/execution-factory/components/FunctionDefinitionFields";
 import { HttpToolLifecyclePanel } from "@/modules/execution-factory/components/HttpToolLifecyclePanel";
-import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
+import { OpenApiDefinitionFields } from "@/modules/execution-factory/components/OpenApiDefinitionFields";
 import { ToolDebugPanel } from "@/modules/execution-factory/components/ToolDebugPanel";
 import { ToolIoPanel } from "@/modules/execution-factory/components/ToolIoPanel";
 import {
@@ -206,13 +206,7 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
                       <Input.TextArea rows={2} />
                     </Form.Item>
                     {metadataType === "openapi" ? (
-                      <Form.Item
-                        label={t("executionFactory.openapiSpec")}
-                        name="openapiSpec"
-                        rules={[{ required: true, message: t("common.required") }]}
-                      >
-                        <OpenApiSpecInput rows={10} showEndpointReview />
-                      </Form.Item>
+                      <OpenApiDefinitionFields showEndpointReview />
                     ) : null}
                   </>
                 }

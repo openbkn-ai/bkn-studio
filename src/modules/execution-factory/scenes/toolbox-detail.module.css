@@ -207,7 +207,10 @@
   flex-direction: column;
   gap: 8px;
   max-height: calc(100vh - 320px);
-  overflow: auto;
+  overflow-y: auto;
+  /* 滚动条贴到侧栏最右缘（抵消侧栏 16px 右内边距），卡片再留 16px 不被压住 */
+  margin-right: -16px;
+  padding-right: 16px;
 }
 
 .fileTreeWrap {
@@ -241,19 +244,28 @@
   font-size: 12px;
 }
 
+/* 名字占满中间、超出省略；方法徽标定宽靠右，各行徽标对齐成一列。 */
 .toolName {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
   color: var(--color-text-primary);
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .methodTag {
+  flex-shrink: 0;
+  display: inline-block;
+  min-width: 46px;
   padding: 0 6px;
   border-radius: 0;
   background: var(--color-primary-100);
   color: var(--color-primary-600);
   font-size: 12px;
   line-height: 20px;
+  text-align: center;
 }
 
 .toolDesc {

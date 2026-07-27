@@ -17,7 +17,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { CrudFormPage } from "@/framework/scaffold/CrudFormPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { FunctionDefinitionFields } from "@/modules/execution-factory/components/FunctionDefinitionFields";
-import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
+import { OpenApiDefinitionFields } from "@/modules/execution-factory/components/OpenApiDefinitionFields";
 import { OperatorDebugPanel } from "@/modules/execution-factory/components/OperatorDebugPanel";
 import { OperatorExecuteControlFields } from "@/modules/execution-factory/components/OperatorExecuteControlFields";
 import { OperatorRunLogPanel } from "@/modules/execution-factory/components/OperatorRunLogPanel";
@@ -402,27 +402,7 @@ export function UnitFormScene({
                   </section>
                   {metadataType === "openapi" ? (
                     <section id="operator-openapi">
-                      <Form.Item
-                        extra={t("executionFactory.openapiImportHint")}
-                        label={t("executionFactory.openapiSpec")}
-                        name="openapiSpec"
-                        rules={[{ required: true, message: t("common.required") }]}
-                      >
-                        <OpenApiSpecInput
-                          registrationTarget="operator"
-                          onMetadataHints={(hints) => {
-                            if (!form.getFieldValue("name") && hints.title) {
-                              form.setFieldValue(
-                                "name",
-                                normalizeGeneratedCapabilityName(hints.title) ?? hints.title,
-                              );
-                            }
-                            if (!form.getFieldValue("description") && hints.description) {
-                              form.setFieldValue("description", hints.description);
-                            }
-                          }}
-                        />
-                      </Form.Item>
+                      <OpenApiDefinitionFields registrationTarget="operator" />
                     </section>
                   ) : null}
                   {metadataType === "function" ? (

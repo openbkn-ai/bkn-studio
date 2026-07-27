@@ -163,7 +163,9 @@ export function ImportResourceModal({
 
   const impexType = tabToImpexType(activeTab);
 
-  const supportsOpenApi = activeTab === "operator" || activeTab === "toolbox";
+  // 工具箱的 OpenAPI 导入已并入「添加 API」向导；这里的导入只做 .adp 备份还原。
+  // （operator 已在 v2 屏蔽，其 OpenAPI 分支留着不影响。）
+  const supportsOpenApi = activeTab === "operator";
 
   const adpImportMode = Form.useWatch("mode", adpForm) ?? "create";
   const currentOpenApiName = Form.useWatch<OpenApiFormValues["name"]>("name", openApiForm);

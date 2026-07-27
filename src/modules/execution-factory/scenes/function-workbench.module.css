@@ -51,8 +51,27 @@
   height: 60px;
   padding: 0 24px;
   background: #ffffff;
-  border-bottom: 1px solid #e9e9e9;
   flex: none;
+}
+
+/* header 按钮回到 antd 默认高度，与其他详情页工具栏一致（正文按钮仍压一档）。 */
+.bar :global(.ant-btn) {
+  height: 32px;
+  padding: 0 15px;
+  font-size: 14px;
+}
+
+/* 标题栏下方的 meta 行：走主题变量而非硬编码色，暗色主题安全。 */
+.subline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 24px 12px;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text-secondary);
+  font-size: 13px;
 }
 
 .backButton {
@@ -80,9 +99,9 @@
   height: 30px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e8edf3;
-  background: #f3f6fa;
-  color: var(--color-primary, #2563eb);
+  border: 1px solid var(--color-border);
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
   font-size: 15px;
   flex: none;
 }
@@ -109,17 +128,13 @@
   line-height: 1.2;
 }
 
-.titleMeta {
-  flex-wrap: nowrap;
-}
-
+/* 标签紧跟标题右侧（对齐工具箱详情页头），不再靠 margin-left:auto 推到最右。 */
 .titleMeta {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: nowrap;
   min-width: 0;
-  margin-left: auto;
 }
 
 .titleMeta :global(.ant-tag) {

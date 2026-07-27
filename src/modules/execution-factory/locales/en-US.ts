@@ -51,7 +51,7 @@ export const executionFactoryEnUS = {
       "Pick a type above, then click Add Capability. Items labeled System built-in are platform presets—use Origin to filter for them.",
     businessIntro: {
       quickApiTop:
-        "Register an HTTP API as a callable tool. Paste cURL or fill in the URL and the system builds OpenAPI for you. After save, the tool appears in a toolset for agents in chat or flows.",
+        "Register an HTTP API as a callable tool. Paste cURL or fill in the URL and the system builds OpenAPI for you.",
       quickApiInputCurl:
         "Paste cURL from a browser or API docs. The system parses method, URL, and parameters into the form.",
       quickApiInputForm:
@@ -63,7 +63,7 @@ export const executionFactoryEnUS = {
       toolboxPlacementExisting:
         "Adds this API to the selected toolset. After the toolset is published, agents can call this API with the rest.",
       importOpenApiTop:
-        "Upload OpenAPI 3.0 (JSON/YAML) to batch-create tools from paths. Best when you already have a full spec. After save, enable, debug, and publish from the toolset.",
+        "Upload OpenAPI 3.0 (JSON/YAML) to batch-create tools from paths. Best when you already have a full spec.",
       functionToolboxTop:
         "Create a function toolset for custom logic (not HTTP). After save, add each function in the tool list, then publish for agents.",
       mcpCreateTop:
@@ -85,7 +85,7 @@ export const executionFactoryEnUS = {
       impexAdpMcp:
         "Upload a backup file you downloaded earlier via Export on the list. Restores MCP service settings; you can debug and publish afterward.",
       addCapabilityWizard:
-        "Pick how to add capability: use Add API for everyday HTTP; Import OpenAPI for full specs; MCP and SKILL for protocol servers and SKILL packs.",
+        "Pick how to add the API: use Add API for everyday HTTP; Import OpenAPI when you already have a full spec.",
       operatorCreateTop:
         "Register an operator for flow orchestration. OpenAPI operators wrap HTTP services; function operators run custom logic. Debug, publish, then use as a node in flows.",
       toolMetadataSection:
@@ -440,7 +440,7 @@ export const executionFactoryEnUS = {
     viewSkillDetail: "View SKILL Detail",
     toolboxToolsEnterEdit: "Edit Tools",
     toolboxToolsViewHint:
-      "Review each tool's inputs and outputs and run debug. Users with edit permission can click Edit Tools to add or modify tools.",
+      "Review each tool's inputs and outputs and run debug.",
     toolboxToolsTitle: "{{name}} Tools",
     toolboxToolsPageTitle: "Toolbox Tools",
     toolboxToolsDescription: "Manage tools inside the selected toolbox.",

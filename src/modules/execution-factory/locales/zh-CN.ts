@@ -51,7 +51,7 @@ export const executionFactoryZhCN = {
       "先选择上方类型，再点「添加能力」创建；带「系统内置」标签的是平台预置项，可用「来源」筛选快速找到。",
     businessIntro: {
       quickApiTop:
-        "将现有 HTTP 接口注册为可调用工具。粘贴 cURL 或填写地址后，系统会自动生成 OpenAPI 定义；保存后工具出现在工具集中，智能体可在对话或流程里调用。",
+        "将现有 HTTP 接口注册为可调用工具。粘贴 cURL 或填写地址后，系统会自动生成 OpenAPI 定义。",
       quickApiInputCurl:
         "从浏览器或接口文档复制 cURL，系统会解析请求方式、地址与参数，并预填工具信息。",
       quickApiInputForm:
@@ -63,7 +63,7 @@ export const executionFactoryZhCN = {
       toolboxPlacementExisting:
         "本接口会加入所选工具集，与已有工具一起管理。发布工具集后，智能体即可调用包括本接口在内的全部工具。",
       importOpenApiTop:
-        "上传 OpenAPI 3.0 规范（JSON/YAML），系统按 paths 批量生成工具。适合已有完整接口文档、需一次导入多个接口的场景；保存后可在工具集中启用、调试与发布。",
+        "上传 OpenAPI 3.0 规范（JSON/YAML），系统按 paths 批量生成工具。适合已有完整接口文档、需一次导入多个接口的场景。",
       functionToolboxTop:
         "创建函数型工具集，用于编写自定义逻辑（非 HTTP 接口）。保存后进入工具列表，为每个函数添加实现代码，再发布供智能体调用。",
       mcpCreateTop:
@@ -85,7 +85,7 @@ export const executionFactoryZhCN = {
       impexAdpMcp:
         "上传此前在列表中「导出」下载的备份文件，可恢复 MCP 服务配置；导入后可继续调试并发布到本业务域。",
       addCapabilityWizard:
-        "选择接入方式：日常 HTTP 接口优先「添加 API」；已有 OpenAPI 文档可选「导入 OpenAPI」；MCP 与 SKILL 分别用于协议服务与技能包。",
+        "选择接入方式：日常 HTTP 接口优先「添加 API」；已有 OpenAPI 文档可选「导入 OpenAPI」。",
       operatorCreateTop:
         "注册算子供流程编排调用。OpenAPI 算子适合 HTTP 服务；函数算子适合自定义逻辑。注册后可调试、发布，并在编排画布中作为节点使用。",
       toolMetadataSection:
@@ -434,7 +434,7 @@ export const executionFactoryZhCN = {
     viewMcpDetail: "查看 MCP 详情",
     viewSkillDetail: "查看 SKILL 详情",
     toolboxToolsEnterEdit: "编辑工具",
-    toolboxToolsViewHint: "可查看每个工具的输入输出并调试；具备编辑权限的用户可点击「编辑工具」添加或修改工具。",
+    toolboxToolsViewHint: "可查看每个工具的输入输出并调试。",
     toolboxToolsTitle: "{{name}} 的工具",
     toolboxToolsPageTitle: "工具箱工具",
     toolboxToolsDescription: "管理所选工具箱内的工具。",
