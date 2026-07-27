@@ -639,7 +639,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
               </div>
             ) : null}
             <Layout className={styles.layout}>
-            <Sider className={`${styles.sider} ${styles.siderFlush}`} width={320}>
+            <Sider className={styles.sider} width={320}>
               <EntityListRail
                 activeId={selectedTool?.toolId ?? null}
                 emptyText={t("executionFactory.toolboxToolListEmptyFiltered")}

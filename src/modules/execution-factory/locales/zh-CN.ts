@@ -253,6 +253,9 @@ export const executionFactoryZhCN = {
     skillIdLabel: "SKILL ID",
     skillNameLabel: "SKILL 名称",
     skillFilesSectionTitle: "包内文件",
+    skillFileListTitle: "包内文件 - {{count}}",
+    skillFilterFiles: "筛选文件…",
+    skillFileListEmptyFiltered: "没有匹配的文件",
     internalTag: "系统内置",
     statuses: {
       unpublish: "未发布",

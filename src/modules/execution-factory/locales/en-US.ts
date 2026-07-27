@@ -257,6 +257,9 @@ export const executionFactoryEnUS = {
     skillIdLabel: "SKILL ID",
     skillNameLabel: "SKILL Name",
     skillFilesSectionTitle: "Package Files",
+    skillFileListTitle: "Package files - {{count}}",
+    skillFilterFiles: "Filter files…",
+    skillFileListEmptyFiltered: "No matching files",
     internalTag: "System built-in",
     statuses: {
       unpublish: "Unpublished",

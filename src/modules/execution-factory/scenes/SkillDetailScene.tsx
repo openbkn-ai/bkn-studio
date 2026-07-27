@@ -28,6 +28,7 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
+import { EntityListRail } from "@/modules/execution-factory/components/EntityListRail";
 import { SkillFileTreeView } from "@/modules/execution-factory/components/SkillFileTreeView";
 import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
 import {
@@ -94,8 +95,18 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
   const [contentLoadError, setContentLoadError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [railKeyword, setRailKeyword] = useState("");
 
   const fileEntries = useMemo(() => buildFileEntries(content), [content]);
+  const visibleFileEntries = useMemo(() => {
+    const keyword = railKeyword.trim().toLowerCase();
+
+    if (!keyword) {
+      return fileEntries;
+    }
+
+    return fileEntries.filter((item) => item.relPath.toLowerCase().includes(keyword));
+  }, [fileEntries, railKeyword]);
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -355,24 +366,35 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
           {fileEntries.length > 0 ? (
             <Layout className={styles.layout}>
               <Sider className={styles.sider} width={320}>
-                <div className={styles.siderHeader}>
-                  <span>
-                    <FileTextOutlined /> {t("executionFactory.skillFilesSectionTitle")}
-                  </span>
-                </div>
-                <div className={styles.fileTreeWrap}>
-                  <SkillFileTreeView
-                    files={fileEntries}
-                    onSelectFile={(relPath) => {
-                      const nextFile = fileEntries.find((item) => item.relPath === relPath);
-                      if (nextFile) {
-                        setSelectedFile(nextFile);
-                      }
-                    }}
-                    selectedPath={selectedFile?.relPath}
-                    showFileMeta
-                  />
-                </div>
+                {/* 与工具 / 函数 / MCP 三处列表栏同一套外壳；文件树有层级，压平成
+                    卡片就没了，所以走 EntityListRail 的自绘出口。 */}
+                <EntityListRail
+                  icon={<FileTextOutlined />}
+                  search={{
+                    onChange: setRailKeyword,
+                    placeholder: t("executionFactory.skillFilterFiles"),
+                    value: railKeyword,
+                  }}
+                  title={t("executionFactory.skillFileListTitle", { count: fileEntries.length })}
+                >
+                  {visibleFileEntries.length === 0 ? (
+                    <div className={styles.railEmpty}>
+                      {t("executionFactory.skillFileListEmptyFiltered")}
+                    </div>
+                  ) : (
+                    <SkillFileTreeView
+                      files={visibleFileEntries}
+                      onSelectFile={(relPath) => {
+                        const nextFile = fileEntries.find((item) => item.relPath === relPath);
+                        if (nextFile) {
+                          setSelectedFile(nextFile);
+                        }
+                      }}
+                      selectedPath={selectedFile?.relPath}
+                      showFileMeta
+                    />
+                  )}
+                </EntityListRail>
               </Sider>
               <Content className={styles.content}>
                 {selectedFile ? (

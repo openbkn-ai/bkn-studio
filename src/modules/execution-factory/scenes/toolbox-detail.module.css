@@ -205,16 +205,11 @@
   border-radius: 0;
 }
 
+/* 工具 / MCP / 技能三处侧栏都由 EntityListRail 自己管内边距，外壳不再补。 */
 .sider {
-  padding: 16px;
+  padding: 0;
   background: var(--color-bg-surface) !important;
   border-right: 1px solid var(--color-border) !important;
-}
-
-/* 工具列表换成 EntityListRail 后，内边距由组件自己管，外壳不再补这 16px。
-   MCP / 技能详情还在用带内边距的 .sider，所以只能加类覆盖，不能改基类。 */
-.siderFlush {
-  padding: 0;
 }
 
 /* 列表高度跟着侧栏走，不再用 vh 魔数：右侧详情比视口高时，vh 算出的上限会把
@@ -225,21 +220,13 @@
   height: 100%;
 }
 
-.siderHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  font-weight: 600;
-}
-
-/* 工具 / MCP / 函数三处列表卡片都搬去 EntityListRail 了，这里只留技能详情还在用的
-   .siderHeader 和文件树外壳。 */
-.fileTreeWrap {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 4px 0;
+/* 技能详情的文件树也搬进 EntityListRail 了，只剩筛空时的占位文案要跟组件里的
+   .empty 对齐——文件树是自绘内容，组件的空态走不到。 */
+.railEmpty {
+  padding: 24px 12px;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  text-align: center;
 }
 
 /* 右栏自己滚，别把整页拖着走。内边距下放到分区上，分隔线才能通栏。 */

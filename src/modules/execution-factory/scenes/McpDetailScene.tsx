@@ -330,7 +330,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
         </div>
       ) : (
         <Layout className={styles.layout}>
-          <Sider className={`${styles.sider} ${styles.siderFlush}`} width={320}>
+          <Sider className={styles.sider} width={320}>
             <EntityListRail
               activeId={selectedTool?.name ?? null}
               emptyText={t("executionFactory.mcpToolListEmptyFiltered")}

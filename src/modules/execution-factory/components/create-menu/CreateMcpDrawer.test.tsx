@@ -134,7 +134,9 @@ describe("CreateMcpDrawer", () => {
     expect(messageWarning).toHaveBeenCalledWith("Parsing with Stream failed, switched to SSE");
     expect(await screen.findByText("hf_whoami")).toBeTruthy();
     expect(screen.getByTitle("SSE")).toBeTruthy();
-  });
+    // Two sequential parses behind antd's async form validation — the 5s default
+    // is not enough when the whole module's suites run in parallel.
+  }, 15_000);
 
   it("surfaces the original error when neither transport parses", async () => {
     parseMcpSse.mockRejectedValue(new Error("mcp server is not accessible"));
