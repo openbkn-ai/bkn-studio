@@ -329,7 +329,9 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
           <Empty description={t("executionFactory.mcpToolsEmpty")} />
         </div>
       ) : (
-        <Layout className={styles.layout}>
+        <Layout
+          className={`${styles.layout} ${styles.layoutHeadAligned} ${styles.layoutHeadAlignedMcp}`}
+        >
           <Sider className={styles.sider} width={320}>
             <EntityListRail
               activeId={selectedTool?.name ?? null}
@@ -376,7 +378,10 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
                     // MCP 工具的名称和描述由服务端 tools/list 给出，本地改不了,
                     // 所以这里是只读文本，没有 HTTP 那侧的 InlineEditableText。
                     <div className={styles.toolIdentity}>
-                      <div className={styles.toolIdentityDesc}>
+                      <div
+                        className={`${styles.toolIdentityDesc} ${styles.toolIdentityDescClamp}`}
+                        title={selectedTool.description}
+                      >
                         {selectedTool.description ||
                           t("executionFactory.agentReadiness.emptyIntent", {
                             defaultValue:

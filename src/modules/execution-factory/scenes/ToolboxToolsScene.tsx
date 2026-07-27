@@ -638,7 +638,9 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                 </Space>
               </div>
             ) : null}
-            <Layout className={styles.layout}>
+            <Layout
+              className={`${styles.layout} ${styles.layoutHeadAligned} ${styles.layoutHeadAlignedToolbox}`}
+            >
             <Sider className={styles.sider} width={320}>
               <EntityListRail
                 activeId={selectedTool?.toolId ?? null}
@@ -738,7 +740,10 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                               rows={2}
                               value={selectedTool.description ?? ""}
                             />,
-                            <span>
+                            <span
+                              className={styles.toolIdentityDescClamp}
+                              title={selectedTool.description}
+                            >
                               {selectedTool.description ||
                                 t("executionFactory.agentReadiness.emptyIntent", {
                                   defaultValue:

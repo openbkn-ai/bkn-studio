@@ -205,6 +205,42 @@
   border-radius: 0;
 }
 
+/*
+  左栏（EntityListRail 的 .head）和右栏（工具身份区）各有一条底部分隔线，中缝两侧
+  必须落在同一 y 上。两边内容高度天然不同（左：标题 + 筛选框；右：名字行 + 描述），
+  各画各的就会错开一截，调 padding 只是把误差挪个地方。
+
+  照函数工作台的做法：线只画一条、横穿两栏，两栏各自用 min-height 把内容压在线上方。
+  高度按页面给——工具箱那侧多一段端点行，比 MCP 高。
+*/
+.layoutHeadAligned {
+  position: relative;
+  --entity-rail-head-border: transparent;
+}
+
+/* 32(section 上下内边距) + 22(名字行) + 14(header 下边距) + 44(描述两行)
+   + 16(subheader 下边距) = 128，取 132 留一点余量。左栏头自然高约 90，被这个值撑开。 */
+.layoutHeadAlignedMcp {
+  --entity-rail-head-height: 132px;
+}
+
+/* 工具箱那侧多一段端点行：128 + 12(toolIdentity 行距) + 约 42(动词 + 路径 + Server) = 182。 */
+.layoutHeadAlignedToolbox {
+  --entity-rail-head-height: 186px;
+}
+
+.layoutHeadAligned::before {
+  content: "";
+  position: absolute;
+  top: var(--entity-rail-head-height);
+  right: 0;
+  left: 0;
+  z-index: 1;
+  height: 1px;
+  background: var(--color-border);
+  pointer-events: none;
+}
+
 /* 工具 / MCP / 技能三处侧栏都由 EntityListRail 自己管内边距，外壳不再补。 */
 .sider {
   padding: 0;
@@ -246,6 +282,16 @@
 
 .section:last-child,
 .ioPanel:last-child {
+  border-bottom: none;
+}
+
+/* 身份区的线由 .layoutHeadAligned::before 统一画，这里再描一条就是叠影；
+   内容压到线上方（flex-end），描述那行才紧贴着线而不是让线飘在半空。 */
+.layoutHeadAligned .section:first-child {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: var(--entity-rail-head-height);
   border-bottom: none;
 }
 
@@ -337,6 +383,16 @@
   font-size: 13px;
   line-height: 22px;
   word-break: break-word;
+}
+
+/* 只读态描述截到两行：身份区高度被贯穿两栏的分隔线钉死，描述再长也不能把线顶穿。
+   MCP 工具的描述可能是一整段用法说明，完整内容挂在 title 上，悬停可看。
+   只给只读态——可编辑态里面是 textarea，截了就打不完字。 */
+.toolIdentityDescClamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 /* 端点两行：接口端点（动词 + 路径）和根目录。原来是一枚实心大动词徽标顶在左边，
