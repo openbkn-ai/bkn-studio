@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeOpenApiDocumentText,
   buildOpenApiDocumentFromMetadata,
+  mapFunctionContent,
   normalizeGeneratedCapabilityDescription,
   normalizeGeneratedCapabilityName,
   normalizeGeneratedToolboxDescription,
@@ -496,5 +497,17 @@ describe("metadata-content OpenAPI helpers", () => {
 
     expect(typeof payload).toBe("object");
     expect(payload).toMatchObject({ openapi: "3.0.3" });
+  });
+
+  it("keeps script_type empty when the backend did not return one", () => {
+    // 读取侧补 "python" 会让「后端回了 python」和「后端没回」看起来一样，
+    // 列表徽标就无从判断该不该画。写入侧另有兜底。
+    expect(mapFunctionContent({ function_content: { code: "def handler(e):\n    return e\n" } })
+      ?.script_type).toBeUndefined();
+    expect(
+      mapFunctionContent({
+        function_content: { code: "def handler(e):\n    return e\n", script_type: "python" },
+      })?.script_type,
+    ).toBe("python");
   });
 });

@@ -104,6 +104,11 @@ export function ToolDebugModal({
 
   return (
     <Modal
+      /*
+        请求体编辑器 + 结果 JSON 是这个弹窗的主体，720 宽会把每行都折断。放到
+        1040 并让正文自己滚（而不是整页滚），底部的「运行调试」才始终点得到。
+      */
+      className={styles.modal}
       confirmLoading={submitting}
       destroyOnClose
       okText={t("executionFactory.runDebug")}
@@ -112,14 +117,14 @@ export function ToolDebugModal({
         void handleDebug();
       }}
       open={open}
-      title={t("executionFactory.toolDebugTitle")}
-      width={720}
+      title={
+        <span className={styles.title}>
+          <span>{t("executionFactory.toolDebugTitle")}</span>
+          {record ? <span className={styles.titleName}>{record.name}</span> : null}
+        </span>
+      }
+      width="min(1040px, 92vw)"
     >
-      {record ? (
-        <Typography.Paragraph type="secondary">
-          {record.name} ({record.toolId})
-        </Typography.Paragraph>
-      ) : null}
       <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
       <Form form={form} layout="vertical">
         <HttpDebugRequestFields

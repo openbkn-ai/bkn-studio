@@ -9,7 +9,6 @@ import {
   ApiOutlined,
   AppstoreOutlined,
   ArrowLeftOutlined,
-  BugOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
   DownloadOutlined,
@@ -36,6 +35,7 @@ import {
 } from "@/modules/execution-factory/components/CapabilityReadiness";
 import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
+import { EntityListRail } from "@/modules/execution-factory/components/EntityListRail";
 import { CreateMcpDrawer } from "@/modules/execution-factory/components/create-menu/CreateMcpDrawer";
 import { JsonSchemaIoPanel } from "@/modules/execution-factory/components/JsonSchemaIoPanel";
 import { McpToolDebugModal } from "@/modules/execution-factory/components/McpToolDebugModal";
@@ -89,7 +89,16 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
   const [toolsLoadError, setToolsLoadError] = useState<string | null>(null);
   const [debugToolName, setDebugToolName] = useState<string | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [railKeyword, setRailKeyword] = useState("");
   const { exportComponentById, isExporting } = useImpexExport();
+
+  // MCP 工具一次性全量拉回来（listMcpTools 没分页），筛选放本地做。
+  const visibleTools = useMemo(() => {
+    const keyword = railKeyword.trim().toLowerCase();
+    return keyword
+      ? tools.filter((item) => item.name.toLowerCase().includes(keyword))
+      : tools;
+  }, [railKeyword, tools]);
 
   const loadRecord = useCallback(async () => {
     try {
@@ -373,48 +382,28 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
         </div>
       ) : (
         <Layout className={styles.layout}>
-          <Sider className={styles.sider} width={320}>
-            <div className={styles.siderHeader}>
-              <span>
-                <ApiOutlined />{" "}
-                {t("executionFactory.mcpToolsSectionTitle")} ({tools.length})
-              </span>
-            </div>
-            <div className={styles.toolList}>
-              {tools.map((item, index) => {
-                const active = selectedTool?.name === item.name;
-
-                return (
-                  <div
-                    className={`${styles.toolItem} ${active ? styles.toolItemActive : ""}`}
-                    key={item.name}
-                    onClick={() => setSelectedTool(item)}
-                  >
-                    <div className={styles.toolItemTop}>
-                      <span className={styles.toolIndex}>{index + 1}</span>
-                      <span className={styles.toolName}>{item.name}</span>
-                    </div>
-                    <div className={styles.toolDesc}>{item.description || "-"}</div>
-                    <div className={styles.toolItemFooter}>
-                      <PermissionGate permissions="execution-factory:mcp:debug">
-                        <AppButton
-                          icon={<BugOutlined />}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setSelectedTool(item);
-                            setDebugToolName(item.name);
-                          }}
-                          size="small"
-                          type="link"
-                        >
-                          {t("executionFactory.debug")}
-                        </AppButton>
-                      </PermissionGate>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <Sider className={`${styles.sider} ${styles.siderFlush}`} width={320}>
+            <EntityListRail
+              activeId={selectedTool?.name ?? null}
+              emptyText={t("executionFactory.mcpToolListEmptyFiltered")}
+              icon={<ApiOutlined />}
+              items={visibleTools.map((item) => ({
+                id: item.name,
+                name: item.name,
+              }))}
+              onSelect={(name) => {
+                const target = tools.find((item) => item.name === name);
+                if (target) {
+                  setSelectedTool(target);
+                }
+              }}
+              search={{
+                onChange: setRailKeyword,
+                placeholder: t("executionFactory.mcpFilterTools"),
+                value: railKeyword,
+              }}
+              title={t("executionFactory.mcpToolListTitle", { count: tools.length })}
+            />
           </Sider>
           <Content className={styles.content}>
             {selectedTool ? (

@@ -35,6 +35,14 @@
 }
 
 .app {
+  /*
+    左栏（EntityListRail 的 .head）和右栏（.fnHead）各有一条底部分隔线，中缝两侧
+    必须落在同一 y 上。两边的内容高度天然不同（左：标题 + 搜索框；右：名字行 + 描述），
+    所以给一个共同下限把两条线钉在一起，值取得比两侧自然高度都大一点。
+  */
+  --entity-rail-head-height: 96px;
+  /* 线由 .body::before 画，左栏不要再自己描一条，否则同一位置两条线叠影。 */
+  --entity-rail-head-border: transparent;
   display: flex;
   flex-direction: column;
   height: calc(100vh - 96px);
@@ -154,125 +162,68 @@
 }
 
 /* ---------- 主体 ---------- */
+/*
+  头部分隔线画在 .body 上，一条横穿两栏——左右各画一条时，两边内容高度不同就会错位，
+  再怎么调 padding 也只是把误差挪个地方。两栏各自的 min-height 只负责把内容压在线上方
+  （见 --entity-rail-head-height），线本身只有这一条，天然贯穿且对齐。
+*/
 .body {
+  position: relative;
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
 }
 
+.body::before {
+  content: "";
+  position: absolute;
+  top: var(--entity-rail-head-height);
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: var(--color-border);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 列表本体是 EntityListRail，与工具箱的工具列表共用一套卡片；这里只管外壳宽度。 */
 .rail {
   display: flex;
   flex-direction: column;
-  flex: 0 0 240px;
+  flex: 0 0 320px;
   background: #ffffff;
   border-right: 1px solid var(--color-border);
   min-height: 0;
 }
 
-.railHead {
+/* 批量操作条：与工具箱工具列表同一套样式，放在列表区上方全宽处。 */
+.batchBar {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.railTitle {
-  display: flex;
+  flex: none;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-}
-
-/* 列表项的框左缘要和 .railHead 的文字左缘对齐，都落在 12px */
-.railList {
-  flex: 1 1 auto;
-  overflow-y: auto;
+  gap: 8px;
   padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.railItem {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
-  border: 1px solid transparent;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-  min-width: 0;
-}
-
-.railItem:hover {
-  background: var(--color-bg-layout, #f5f7fa);
-}
-
-.railItemActive {
-  border-color: var(--color-primary, #2563eb);
-  background: var(--color-primary-bg, #eef2ff);
-}
-
-/* rail 只做导航和状态速览，操作一律在右侧函数头部。 */
-.railItemOff .railItemName {
-  color: var(--color-text-tertiary);
-  font-weight: 500;
-}
-
-.railItemOffTag {
-  margin-left: 6px;
-  padding: 0 4px;
-  border: 1px solid var(--color-border);
-  background: var(--color-fill-quaternary, #f5f5f5);
-  color: var(--color-text-tertiary);
-  font-size: 11px;
-  font-weight: 400;
-}
-
-.railItemName {
+  border-bottom: 1px solid var(--color-primary-border);
+  background: var(--color-primary-100);
   font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.railItemMeta {
-  display: flex;
+.batchBarActions {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--color-text-tertiary);
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-/* in / out 计数拆成两个浅底小标签，比裸文字更醒目、更整齐。 */
-.railItemIoTag {
+/* 语言徽标与 HTTP 动词徽标同一位置、同一尺寸，两个列表的第一行才对得齐。 */
+.langBadge {
   padding: 0 6px;
   border: 1px solid var(--color-border);
   background: var(--color-fill-quaternary, #f5f5f5);
   color: var(--color-text-secondary);
   font-size: 11px;
   line-height: 18px;
-}
-
-.railItemDirtyTag {
-  padding: 0 6px;
-  border: 1px solid var(--color-warning-border, #ffd591);
-  background: var(--color-warning-bg, #fffbe6);
-  color: var(--color-warning-text, #b45309);
-  font-size: 11px;
-  line-height: 18px;
-}
-
-.railFooter {
-  padding: 12px;
-  border-top: 1px solid var(--color-border);
 }
 
 /* ---------- 中间 ---------- */
@@ -284,9 +235,16 @@
   min-height: 0;
 }
 
+/*
+  线由 .body::before 统一画，这里只负责把内容压到线以上：min-height 撑出的余量留在
+  上方（flex-end），描述那行才紧贴着线，而不是让线飘在半空。
+*/
 .fnHead {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: var(--entity-rail-head-height);
   background: #ffffff;
-  border-bottom: 1px solid var(--color-border);
   flex: none;
 }
 
@@ -374,6 +332,17 @@
   padding: 0 16px 12px 16px;
   font-size: 13px;
   color: var(--color-text-secondary);
+}
+
+/*
+  只读态描述压成一行：头部高度被那条贯穿分隔线钉死，描述换行会把自己顶到线下面。
+  完整文字点开就能看（编辑态是 textarea，:has 把它排除在截断之外）。
+*/
+.fnHeadDesc:not(:has(textarea)) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
 }
 
 .field {
@@ -812,7 +781,6 @@
 }
 
 .railAdd.railAdd {
-  margin-top: 4px;
   border-style: dashed;
   color: var(--color-text-secondary);
 }

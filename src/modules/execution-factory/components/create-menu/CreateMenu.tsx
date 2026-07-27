@@ -209,7 +209,9 @@ export function CreateMenu({
         items: capabilityMenuItems,
         onClick: ({ key }) => handleCapabilityAction(key as CapabilityCreateMenuAction),
       }}
-      placement="bottomRight"
+      /* 菜单项是「标题 + 一行说明」的两行结构，左对齐才能让四条说明文字起始于同一列；
+         右对齐时每项宽度不同，说明文字的左缘会参差。 */
+      placement="bottomLeft"
       trigger={["click"]}
     >
       <AppButton icon={<PlusOutlined />} type="primary">
