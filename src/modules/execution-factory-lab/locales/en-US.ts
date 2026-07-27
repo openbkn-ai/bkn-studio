@@ -25,7 +25,7 @@ export const executionFactoryLabEnUS = {
     emptyCapabilities: "No capabilities yet. Click “Add capability” to get started.",
     statusPublished: "Published",
     statusDraft: "Draft",
-    statusOffline: "Offline",
+    statusOffline: "Unpublished",
     orchestrationEnabled: "Orchestration synced",
     groupLabel: "Group: {{name}}",
     endpointLabel: "{{method}} {{path}}",
@@ -69,7 +69,7 @@ export const executionFactoryLabEnUS = {
     importSkillFileRequired: "Please select a SKILL zip file",
     deleteAction: "Delete",
     deleteConfirm: "Delete this capability? This cannot be undone.",
-    offlineAction: "Take offline",
+    offlineAction: "Unpublish",
     saveAction: "Save",
     importImpexTitle: "Import package (.adp)",
     importImpexSubmit: "Import package",
@@ -152,10 +152,10 @@ export const executionFactoryLabEnUS = {
     cancelEditAction: "Cancel",
     moreActions: "More",
     publishConfirm: "Publish this capability?",
-    offlineConfirm: "Take this capability offline?",
+    offlineConfirm: "Unpublish this capability?",
     saveSuccess: "Changes saved",
     publishSuccess: "Capability published",
-    offlineSuccess: "Capability taken offline",
+    offlineSuccess: "Capability unpublished",
     createMenuGroupApi: "HTTP / API",
     createMenuGroupExt: "Extensions",
     createMenuGroupAdvanced: "Advanced",
@@ -201,7 +201,7 @@ export const executionFactoryLabEnUS = {
     stepHintDraftDebug: "Suggested next step: run a debug call, then publish when ready.",
     stepHintDraftPublish: "Suggested next step: publish when metadata looks correct.",
     stepHintPublished: "This capability is published and ready to use.",
-    stepHintOffline: "This capability is offline. Publish again to bring it back.",
+    stepHintOffline: "This capability is unpublished. Publish again to restore it.",
     groupFilterHint: "Groups aggregate capabilities by service host or toolbox.",
     kindFilterHint: "Filter by capability type: HTTP, MCP, SKILL, or Function.",
     dualTrackTitle: "How is Lab different from the production library?",
@@ -235,7 +235,7 @@ export const executionFactoryLabEnUS = {
     destructiveDeleteImpactDraft: "Related drafts and version history will be removed.",
     destructiveOfflineImpactPublished:
       "New calls from workflows, agents, and integrations will be rejected until you publish again.",
-    destructiveOfflineImpactRecoverable: "You can bring this capability back online by publishing again.",
+    destructiveOfflineImpactRecoverable: "Publishing again restores this capability.",
     destructiveRepublishImpact: "Version {{version}} will become the active published release.",
     destructiveRepublishImpactPublished:
       "Callers using the current release may see different behavior after rollback.",
@@ -260,7 +260,7 @@ export const executionFactoryLabEnUS = {
     operationDescPublish:
       "Publish makes the current capability available to workflows, agents, and integrations.",
     operationDescOffline:
-      "Taking offline rejects new calls until the capability is published again.",
+      "Unpublishing rejects new calls until the capability is published again.",
     operationDescEdit:
       "Editing changes the capability metadata or implementation draft; publish again if callers should use the new behavior.",
     operationDescVersion:

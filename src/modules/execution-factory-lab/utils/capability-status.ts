@@ -39,13 +39,7 @@ export function getCapabilityStatusTagStyle(status: string): CSSProperties {
       color: "var(--color-success-text)",
     };
   }
-  if (status === "offline") {
-    return {
-      background: "var(--color-error-bg)",
-      borderColor: "var(--color-error-border)",
-      color: "var(--color-error-text)",
-    };
-  }
+  // 已取消发布与草稿一样是「当前不可调用」，不是错误态，所以走中性底色。
   return {
     background: "#f1f5f9",
     borderColor: "#cbd5e1",
