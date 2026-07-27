@@ -50,6 +50,7 @@ const OPERATION_LABELS: Record<string, string> = {
   toggle: "启停",
   "reset-password": "重置密码",
   members: "成员管理",
+  permissions: "角色权限配置",
   grant: "授权",
   revoke: "撤权",
   manage: "管理",
@@ -138,7 +139,7 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
   {
     type: "admin-role",
     label: "系统角色管理",
-    operations: ["create", "edit", "delete", "members"],
+    operations: ["create", "edit", "delete", "members", "permissions"],
   },
   { type: "admin-authz", label: "系统授权管理", operations: ["grant", "revoke"] },
   { type: "admin-audit", label: "系统审计日志", operations: ["view"] },

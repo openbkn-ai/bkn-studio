@@ -325,6 +325,7 @@ export const systemAdminEnUS = {
         descriptionPlaceholder: "What is this role for?",
         permissions: "Permissions",
         permissionsHint: "Pick the resource type, scope and allowed operations",
+        permissionsReadOnly: "Read-only: configuring role permissions requires the role-permission point",
         builtinLocked: "Built-in roles are read-only — name, description and permissions cannot be changed.",
       },
       membersModal: {

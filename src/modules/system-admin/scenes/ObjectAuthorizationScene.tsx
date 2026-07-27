@@ -32,6 +32,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
+import { authzPoints } from "@/modules/system-admin/permissions";
 import {
   type AuthzGroup,
   listObjectGrantsPage,
@@ -423,14 +424,16 @@ export function ObjectAuthorizationScene() {
           >
             {t("systemAdmin.objectGrants.manage")}
           </AppButton>
-          <AppButton
-            className={[styles.actionLink, styles.actionDanger].join(" ")}
-            danger
-            onClick={() => confirmRevoke(grant)}
-            type="link"
-          >
-            {t("systemAdmin.objectGrants.revoke")}
-          </AppButton>
+          <PermissionGate permissions={authzPoints.revoke}>
+            <AppButton
+              className={[styles.actionLink, styles.actionDanger].join(" ")}
+              danger
+              onClick={() => confirmRevoke(grant)}
+              type="link"
+            >
+              {t("systemAdmin.objectGrants.revoke")}
+            </AppButton>
+          </PermissionGate>
         </div>
       ),
     },
@@ -560,7 +563,7 @@ export function ObjectAuthorizationScene() {
         <div className={styles.operationBar}>
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
-              <PermissionGate permissions="admin-authz:grant">
+              <PermissionGate permissions={authzPoints.grant}>
                 <AppButton
                   icon={<PlusOutlined />}
                   onClick={() => void navigate("/system/authorizations/new")}

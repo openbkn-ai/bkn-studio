@@ -15,6 +15,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { authzPoints } from "@/modules/system-admin/permissions";
 import { listDepartments, listUsers } from "@/modules/system-admin/services/admin.service";
 import {
   listAuthorizableObjects,
@@ -330,7 +331,7 @@ export function ObjectAuthorizationCreateScene() {
             <AppButton onClick={() => void navigate("/system/authorizations")}>
               {t("common.cancel")}
             </AppButton>
-            <PermissionGate permissions="admin-authz:grant">
+            <PermissionGate permissions={authzPoints.grant}>
               <AppButton loading={saving} onClick={() => void handleSubmit()} type="primary">
                 {t("common.confirm")}
               </AppButton>

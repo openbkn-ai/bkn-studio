@@ -324,6 +324,7 @@ export const systemAdminZhCN = {
         descriptionPlaceholder: "这个角色用来做什么？",
         permissions: "权限",
         permissionsHint: "选择资源类型、范围与允许的操作",
+        permissionsReadOnly: "只读：配置角色权限需要「角色权限配置」权限",
         builtinLocked: "内置角色为只读，不可修改名称、描述或权限。",
       },
       membersModal: {
