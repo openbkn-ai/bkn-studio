@@ -29,7 +29,11 @@ import type { McpDetailSceneProps } from "@/modules/execution-factory/contracts/
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { CapabilityAgentReadinessPanel } from "@/modules/execution-factory/components/CapabilityAgentReadinessPanel";
+import {
+  CapabilityIoCounts,
+  CapabilityReadinessHint,
+  CapabilityReadinessScore,
+} from "@/modules/execution-factory/components/CapabilityReadiness";
 import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { CreateMcpDrawer } from "@/modules/execution-factory/components/create-menu/CreateMcpDrawer";
@@ -416,16 +420,29 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
             {selectedTool ? (
               <>
                 <DetailMetaPanel
-                  columns={3}
+                  className={styles.section}
+                  footer={
+                    selectedToolManifest ? (
+                      <CapabilityReadinessHint manifest={selectedToolManifest} />
+                    ) : undefined
+                  }
+                  headerAside={
+                    selectedToolManifest ? (
+                      <CapabilityReadinessScore manifest={selectedToolManifest} />
+                    ) : undefined
+                  }
                   items={toolInfoItems}
                   title={t("executionFactory.mcpToolInfoTitle")}
+                  variant="plain"
                 />
-                {selectedToolManifest ? (
-                  <CapabilityAgentReadinessPanel manifest={selectedToolManifest} />
-                ) : null}
                 <div className={styles.ioPanel}>
                   <div className={styles.ioHeader}>
-                    <span>{t("executionFactory.toolboxInputOutputTitle")}</span>
+                    <span>
+                      {t("executionFactory.toolboxInputOutputTitle")}
+                      {selectedToolManifest ? (
+                        <CapabilityIoCounts manifest={selectedToolManifest} />
+                      ) : null}
+                    </span>
                     <PermissionGate permissions="execution-factory:mcp:debug">
                       <AppButton onClick={() => setDebugToolName(selectedTool.name)} type="primary">
                         {t("executionFactory.debug")}

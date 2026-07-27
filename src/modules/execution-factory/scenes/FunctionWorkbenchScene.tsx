@@ -999,8 +999,10 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
           {/* 工具箱改名统一走工具箱编辑表单（卡片菜单「编辑」入口），工作台标题只读。 */}
           <h1 className={styles.titleEditable}>{boxName || t("executionFactory.toolboxName")}</h1>
           <div className={styles.titleMeta}>
-            <Tag color="blue">{t("executionFactory.metadataTypes.function")}</Tag>
-            <Tag>Python</Tag>
+            {/*
+              不放「函数」「Python」标签：前者与页头 Code 图标、工作台本身重复，
+              后者是写死的 script_type，全平台没有第二种语言。只留真会变的发布状态。
+            */}
             <Tag color={toolbox?.status === "published" ? "green" : "default"}>
               {t(`executionFactory.toolboxStatuses.${toolbox?.status ?? "unpublish"}`)}
             </Tag>
@@ -1217,7 +1219,6 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                     <span className={styles.editorTitle}>
                       {t("executionFactory.functionLogic")}
                     </span>
-                    <span className={styles.editorLang}>handler.py · Python</span>
                     <div className={styles.editorTools}>
                       <Dropdown
                         menu={{

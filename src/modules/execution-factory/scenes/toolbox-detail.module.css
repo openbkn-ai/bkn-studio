@@ -18,8 +18,14 @@
   font-size: 13px;
 }
 
+/* 应用外壳：页面本身不滚，两栏各自滚。与函数工作台的 .app 同一套做法
+   （height 定死 + flex 列 + 子面板 min-height:0 overflow:auto）。
+   视口太矮时 min-height 兜底，此时才回退成整页滚动。 */
 .page {
-  min-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+  min-height: 560px;
   padding: 20px 24px 24px;
   background: var(--color-bg-surface);
 }
@@ -100,6 +106,14 @@
   border-bottom: 1px solid var(--color-divider);
 }
 
+/* subline 是页头的一部分，分隔线要收在整块下面，别夹在标题和 subline 之间把页头劈成两截。
+   记录未加载时没有 subline，那时分隔线仍由 .pageHeader 自己画。 */
+.pageHeader:has(+ .pageSubline) {
+  margin-bottom: 10px;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
 .pageHeaderMain {
   display: flex;
   align-items: center;
@@ -167,6 +181,8 @@
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-divider);
   color: var(--color-text-secondary);
   font-size: 13px;
 }
@@ -182,7 +198,8 @@
 }
 
 .layout {
-  min-height: 640px;
+  flex: 1 1 auto;
+  min-height: 0;
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
   border-radius: 0;
@@ -192,6 +209,14 @@
   padding: 16px;
   background: var(--color-bg-surface) !important;
   border-right: 1px solid var(--color-border) !important;
+}
+
+/* 列表高度跟着侧栏走，不再用 vh 魔数：右侧详情比视口高时，vh 算出的上限会把
+   列表在半张卡片处截断，下面留一大片空白，看着像被遮罩盖住。 */
+.sider :global(.ant-layout-sider-children) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .siderHeader {
@@ -204,9 +229,11 @@
 
 .toolList {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 8px;
-  max-height: calc(100vh - 320px);
+  /* flex 子项默认 min-height:auto，不写这行压不下去，滚动条也就不会出现。 */
+  min-height: 0;
   overflow-y: auto;
   /* 滚动条贴到侧栏最右缘（抵消侧栏 16px 右内边距），卡片再留 16px 不被压住 */
   margin-right: -16px;
@@ -214,7 +241,8 @@
 }
 
 .fileTreeWrap {
-  max-height: calc(100vh - 320px);
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 4px 0;
 }
@@ -255,19 +283,6 @@
   white-space: nowrap;
 }
 
-.methodTag {
-  flex-shrink: 0;
-  display: inline-block;
-  min-width: 46px;
-  padding: 0 6px;
-  border-radius: 0;
-  background: var(--color-primary-100);
-  color: var(--color-primary-600);
-  font-size: 12px;
-  line-height: 20px;
-  text-align: center;
-}
-
 .toolDesc {
   color: var(--color-text-secondary);
   font-size: 12px;
@@ -281,9 +296,162 @@
   margin-top: 8px;
 }
 
+/* 右栏自己滚，别把整页拖着走。内边距下放到分区上，分隔线才能通栏。 */
 .content {
-  padding: 16px 20px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0;
   background: var(--color-bg-surface) !important;
+}
+
+/* 工作区按水平线分区，不再一块一个卡片（对齐函数工作台的 .fnHead / .editor / .console）。 */
+.section,
+.ioPanel {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.section:last-child,
+.ioPanel:last-child {
+  border-bottom: none;
+}
+
+.toolHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 工具信息卡标题行：启停开关 + 就绪度，窄屏时整体换到下一行。 */
+.toolHeaderAside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 12px 对齐 function-workbench 的 .fnStatusToggle，也与同排的就绪度同档。 */
+.toolStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+/* 标题行：api 徽标 + 可点改的工具名。字号/字重/色值全部照 function-workbench 的
+   .fnHeadTitle（14px/600）来，不吃 DetailMetaPanel 默认的 16px 卡片标题。 */
+.toolIdentityTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 与 function-workbench 的 .fxBadge 同规格，只换字面。 */
+.apiBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 5px;
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace
+  );
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.toolIdentityName,
+.toolIdentityNameInput {
+  color: var(--color-primary-600);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace
+  );
+}
+
+.toolIdentity {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 对齐 function-workbench 的 .fnHeadDesc（13px / secondary）。挂在外层容器上，
+   可编辑态的文字是继承来的，只给只读 span 上色会两种形态对不上。 */
+.toolIdentityDesc {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 22px;
+  word-break: break-word;
+}
+
+/* 端点行：动词徽标 + 路径 + Server，占满 subheader 整行。 */
+.endpoint {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 4px 与 DetailMetaPanel 里 label/value 的行内间距同档。 */
+.endpointMain {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.endpointPath {
+  color: var(--color-text-primary);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace
+  );
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 22px;
+  word-break: break-all;
+}
+
+.endpointServer {
+  color: var(--color-text-secondary);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace
+  );
+  font-size: 12px;
+  line-height: 18px;
+  word-break: break-all;
 }
 
 .infoPanel {
@@ -316,11 +484,6 @@
   word-break: break-all;
 }
 
-.ioPanel {
-  padding: 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 0;
-}
 
 .ioHeader {
   display: flex;

@@ -325,9 +325,11 @@
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-text-primary);
 }
 
+/* --color-primary-bg / --color-primary 在 global.css 里没有定义，一直靠字面量兜底；
+   改指真 token，工具详情的 api 徽标才能跟这里保持同一档色。 */
 .fxBadge {
   display: inline-flex;
   align-items: center;
@@ -335,8 +337,8 @@
   min-width: 22px;
   height: 20px;
   padding: 0 5px;
-  background: var(--color-primary-bg, #eef2ff);
-  color: var(--color-primary, #2563eb);
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 12px;
   font-style: italic;
@@ -345,7 +347,7 @@
 }
 
 .fnHeadFx {
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary-600);
   font-family: var(--font-mono, ui-monospace, monospace);
 }
 
@@ -434,13 +436,6 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
-  white-space: nowrap;
-}
-
-.editorLang {
-  font-size: 12px;
-  color: var(--color-text-tertiary);
-  font-family: var(--font-mono, ui-monospace, monospace);
   white-space: nowrap;
 }
 
@@ -773,13 +768,7 @@
   padding: 40px;
 }
 
-/* 窄屏（侧边开着 DevTools、或小笔记本）先砍装饰性文字，再砍栏宽 */
-@media (max-width: 1440px) {
-  .editorLang {
-    display: none;
-  }
-}
-
+/* 窄屏（侧边开着 DevTools、或小笔记本）砍栏宽 */
 @media (max-width: 1200px) {
   .rail {
     flex-basis: 200px;
