@@ -157,4 +157,31 @@ describe("resolveActionTypeActionSourceDisplay", () => {
       type: "tool",
     });
   });
+
+  it("times out display resolution when action source lookup is slow", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+
+    executionFactoryMocks.getToolbox.mockReturnValue(new Promise(() => {}));
+    executionFactoryMocks.getToolDetail.mockReturnValue(new Promise(() => {}));
+
+    const { resolveActionTypeActionSourceDisplayWithTimeout } = await import(
+      "./action-type-tool.service"
+    );
+
+    const promise = resolveActionTypeActionSourceDisplayWithTimeout(
+      {
+        boxId: "box-timeout",
+        toolId: "tool-timeout",
+        type: "tool",
+      },
+      100,
+    );
+
+    const expectation = expect(promise).rejects.toThrow(
+      "Action source display resolution timed out",
+    );
+    await vi.advanceTimersByTimeAsync(100);
+    await expectation;
+  });
 });

@@ -15,7 +15,7 @@ import { FieldTypeIcon } from "@/modules/knowledge-network/components/object-typ
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
   needsActionTypeActionSourceDisplayResolution,
-  resolveActionTypeActionSourceDisplay,
+  resolveActionTypeActionSourceDisplayWithTimeout,
 } from "@/modules/knowledge-network/services/action-type-tool.service";
 import type {
   ActionTypeActionSource,
@@ -41,6 +41,7 @@ export function ActionTypeExecutionConfigTable({
   const [resolvedActionSource, setResolvedActionSource] = useState<
     ActionTypeActionSource | undefined
   >(detail.executionConfig.actionSource);
+  const [actionSourceResolutionFailed, setActionSourceResolutionFailed] = useState(false);
   const [isResolvingActionSource, setIsResolvingActionSource] = useState(false);
 
   useEffect(() => {
@@ -69,17 +70,26 @@ export function ActionTypeExecutionConfigTable({
     setResolvedActionSource(actionSource);
 
     if (!actionSource || !needsActionTypeActionSourceDisplayResolution(actionSource)) {
+      setActionSourceResolutionFailed(false);
       setIsResolvingActionSource(false);
       return;
     }
 
     let cancelled = false;
+    setActionSourceResolutionFailed(false);
     setIsResolvingActionSource(true);
     const resolveDisplay = async () => {
       try {
-        const resolved = await resolveActionTypeActionSourceDisplay(actionSource);
+        const resolved = await resolveActionTypeActionSourceDisplayWithTimeout(actionSource);
         if (!cancelled) {
           setResolvedActionSource(resolved);
+          setActionSourceResolutionFailed(
+            needsActionTypeActionSourceDisplayResolution(resolved),
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setActionSourceResolutionFailed(true);
         }
       } finally {
         if (!cancelled) {
@@ -126,7 +136,10 @@ export function ActionTypeExecutionConfigTable({
     },
   ];
 
-  const sourceLabel = isResolvingActionSource
+  const sourceUnavailable =
+    actionSourceResolutionFailed &&
+    needsActionTypeActionSourceDisplayResolution(resolvedActionSource);
+  const sourceLabel = isResolvingActionSource || sourceUnavailable
     ? ""
     : getActionSourceDisplayName(resolvedActionSource) || detail.executionConfig.sourceName;
 
@@ -141,7 +154,11 @@ export function ActionTypeExecutionConfigTable({
               {t("knowledgeNetwork.actionTypeExecutionSourceResolving")}
             </strong>
           ) : (
-            <strong>{sourceLabel || t("knowledgeNetwork.actionTypeEmptyValue")}</strong>
+            <strong className={sourceUnavailable ? styles.unavailableSource : undefined}>
+              {sourceUnavailable
+                ? t("knowledgeNetwork.actionTypeExecutionSourceUnavailable")
+                : sourceLabel || t("knowledgeNetwork.actionTypeEmptyValue")}
+            </strong>
           )}
         </div>
       </div>

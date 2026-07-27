@@ -40,6 +40,7 @@ import {
 
 /** Backend validates PageSize with a max tag; Vega uses 100. */
 const CATALOG_PAGE_SIZE = 100;
+export const ACTION_TYPE_ACTION_SOURCE_DISPLAY_TIMEOUT_MS = 3000;
 
 type MarketSearchToolBox = {
   box_desc?: string;
@@ -684,6 +685,27 @@ export async function resolveActionTypeActionSourceDisplay(
   }
 
   return actionSource;
+}
+
+export async function resolveActionTypeActionSourceDisplayWithTimeout(
+  actionSource: ActionTypeActionSource,
+  timeoutMs = ACTION_TYPE_ACTION_SOURCE_DISPLAY_TIMEOUT_MS,
+): Promise<ActionTypeActionSource> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error("Action source display resolution timed out")),
+      timeoutMs,
+    );
+  });
+
+  try {
+    return await Promise.race([resolveActionTypeActionSourceDisplay(actionSource), timeout]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 export function buildActionSourceFromCatalogSelection(

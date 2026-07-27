@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
   needsActionTypeActionSourceDisplayResolution,
-  resolveActionTypeActionSourceDisplay,
+  resolveActionTypeActionSourceDisplayWithTimeout,
   resolveActionTypeToolInputSchema,
 } from "@/modules/knowledge-network/services/action-type-tool.service";
 import type {
@@ -45,8 +45,6 @@ type ActionTypeExecutionEditorProps = {
 
 type DisplayResolutionStatus = "failed" | "idle" | "loading";
 
-const DISPLAY_RESOLUTION_TIMEOUT_MS = 3000;
-
 function buildActionSourceKey(actionSource?: ActionTypeExecutionConfig["actionSource"]) {
   if (!actionSource) {
     return "";
@@ -62,24 +60,6 @@ function buildActionSourceKey(actionSource?: ActionTypeExecutionConfig["actionSo
   return actionSource.boxId && actionSource.toolId
     ? `tool:${actionSource.boxId}:${actionSource.toolId}`
     : "";
-}
-
-async function withDisplayResolutionTimeout<T>(promise: Promise<T>): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error("Action source display resolution timed out")),
-      DISPLAY_RESOLUTION_TIMEOUT_MS,
-    );
-  });
-
-  try {
-    return await Promise.race([promise, timeout]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
 }
 
 export function ActionTypeExecutionEditor({
@@ -217,9 +197,8 @@ export function ActionTypeExecutionEditor({
 
     const resolveDisplay = async () => {
       try {
-        const resolvedSource = await withDisplayResolutionTimeout(
-          resolveActionTypeActionSourceDisplay(actionSource),
-        );
+        const resolvedSource =
+          await resolveActionTypeActionSourceDisplayWithTimeout(actionSource);
         if (cancelled) {
           return;
         }

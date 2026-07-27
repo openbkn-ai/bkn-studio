@@ -40,6 +40,10 @@
   gap: 8px;
 }
 
+.unavailableSource {
+  color: rgba(0, 0, 0, 0.45);
+}
+
 .propertyCell {
   align-items: center;
   display: inline-flex;
