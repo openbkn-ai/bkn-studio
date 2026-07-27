@@ -61,6 +61,8 @@ type EntityListRailProps = {
   emptyText?: ReactNode;
   /** 固定底栏，不跟着列表滚（函数工作台的「新建函数」）。 */
   footer?: ReactNode;
+  /** inline = 标题和筛选框同排（右栏头也只有一行时用，两条头线才对得上）。 */
+  headLayout?: "inline" | "stacked";
   icon?: ReactNode;
   items?: EntityListRailItem[];
   onSelect?: (id: string) => void;
@@ -90,6 +92,7 @@ export function EntityListRail({
   children,
   emptyText,
   footer,
+  headLayout = "stacked",
   icon,
   items = [],
   onSelect,
@@ -111,7 +114,11 @@ export function EntityListRail({
 
   return (
     <div className={styles.rail}>
-      <div className={styles.head}>
+      <div
+        className={
+          headLayout === "inline" ? `${styles.head} ${styles.headInline}` : styles.head
+        }
+      >
         <div className={styles.title}>
           {icon}
           <span>{title}</span>

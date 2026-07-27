@@ -60,16 +60,34 @@ function defineTheme(monaco: Monaco) {
   });
 }
 
-export type CodeEditorLanguage = "json" | "python";
+/**
+ * 可编辑场景只用到 json / python；其余是只读预览（技能包文件）要认的语法，
+ * 全部来自本地打包的 monaco-editor，不额外拉包。
+ */
+export type CodeEditorLanguage =
+  | "css"
+  | "html"
+  | "ini"
+  | "javascript"
+  | "json"
+  | "markdown"
+  | "plaintext"
+  | "python"
+  | "shell"
+  | "sql"
+  | "typescript"
+  | "xml"
+  | "yaml";
 
 /** 挂在这个 URI 上的 JSON 文档会用下面注册的 schema 做补全与校验。 */
 const EVENT_MODEL_PATH = "bkn-function-event.json";
 
 // Python 缩进是语法的一部分，2 空格会写出不符合社区习惯的代码。
-const TAB_SIZE_BY_LANGUAGE: Record<CodeEditorLanguage, number> = {
-  json: 2,
+const TAB_SIZE_BY_LANGUAGE: Partial<Record<CodeEditorLanguage, number>> = {
   python: 4,
 };
+
+const DEFAULT_TAB_SIZE = 2;
 
 type CodeEditorProps = {
   /** 内容持续追加时（流式生成）跟随滚动到最后一行，否则每次 setValue 都会跳回顶部。 */
@@ -148,7 +166,14 @@ export function CodeEditor({
         onMount={(editor) => {
           editorRef.current = editor;
         }}
-        options={{ ...EDITOR_OPTIONS, readOnly, tabSize: TAB_SIZE_BY_LANGUAGE[language] }}
+        options={{
+          ...EDITOR_OPTIONS,
+          // 只读时光标和当前行高亮是噪音：读者点不动，闪烁的竖线只会让人以为能改。
+          domReadOnly: readOnly,
+          renderLineHighlight: readOnly ? "none" : EDITOR_OPTIONS.renderLineHighlight,
+          readOnly,
+          tabSize: TAB_SIZE_BY_LANGUAGE[language] ?? DEFAULT_TAB_SIZE,
+        }}
         path={language === "json" && jsonSchema ? EVENT_MODEL_PATH : undefined}
         theme={THEME_NAME}
         value={value}

@@ -29,6 +29,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import { EntityListRail } from "@/modules/execution-factory/components/EntityListRail";
+import { SkillFilePreview } from "@/modules/execution-factory/components/SkillFilePreview";
 import { SkillFileTreeView } from "@/modules/execution-factory/components/SkillFileTreeView";
 import { SkillHistoryDrawer } from "@/modules/execution-factory/components/SkillHistoryDrawer";
 import {
@@ -369,6 +370,7 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
                 {/* 与工具 / 函数 / MCP 三处列表栏同一套外壳；文件树有层级，压平成
                     卡片就没了，所以走 EntityListRail 的自绘出口。 */}
                 <EntityListRail
+                  headLayout="inline"
                   icon={<FileTextOutlined />}
                   search={{
                     onChange: setRailKeyword,
@@ -396,44 +398,19 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
                   )}
                 </EntityListRail>
               </Sider>
-              <Content className={styles.content}>
-                {selectedFile ? (
-                  <div className={styles.ioPanel}>
-                    <div className={styles.ioHeader}>
-                      <span>{t("executionFactory.skillFilePreviewTitle")}</span>
-                      <span className={styles.infoValue}>{selectedFile.relPath}</span>
-                    </div>
-                    {previewLoading ? (
-                      <div className={styles.emptyWrap}>
-                        <Spin />
-                      </div>
-                    ) : previewError ? (
-                      <Alert message={previewError} showIcon type="error" />
-                    ) : preview?.kind === "text" ? (
-                      <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{preview.content}</pre>
-                    ) : preview?.kind === "binary" ? (
-                      <Empty description={t("executionFactory.skillFilePreviewBinaryHint")}>
-                        <AppButton href={preview.url} rel="noreferrer" target="_blank" type="link">
-                          {t("executionFactory.skillFilePreviewDownloadLink")}
-                        </AppButton>
-                      </Empty>
-                    ) : (
-                      <Empty description={t("executionFactory.skillFilePreviewSelectHint")} />
-                    )}
-                  </div>
-                ) : (
-                  <div className={styles.emptyWrap}>
-                    <Empty description={t("executionFactory.skillFilePreviewSelectHint")} />
-                  </div>
-                )}
+              <Content className={`${styles.content} ${styles.contentFill}`}>
+                <SkillFilePreview
+                  downloadUrl={preview?.kind === "binary" ? preview.url : undefined}
+                  errorMessage={previewError}
+                  loading={previewLoading}
+                  relPath={selectedFile?.relPath}
+                  text={preview?.kind === "text" ? preview.content : undefined}
+                />
               </Content>
             </Layout>
           ) : content?.content ? (
-            <div className={styles.ioPanel}>
-              <div className={styles.ioHeader}>
-                <span>{t("executionFactory.skillContentTitle")}</span>
-              </div>
-              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{content.content}</pre>
+            <div className={`${styles.layout} ${styles.contentFill}`}>
+              <SkillFilePreview relPath="SKILL.md" text={content.content} />
             </div>
           ) : (
             <div className={styles.emptyWrap}>

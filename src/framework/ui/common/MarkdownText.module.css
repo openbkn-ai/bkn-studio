@@ -101,6 +101,63 @@
   font-weight: 600;
 }
 
+/* 整篇文档（技能包 SKILL.md 之类）：卡片描述那档字号读一屏正文太挤，正文和标题
+   各放大一档，段距同步放开。圆角归零——站点面板全是方角，只有这块圆着会很跳。 */
+.doc {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--color-text-primary);
+}
+.doc p,
+.doc ul,
+.doc ol,
+.doc pre,
+.doc blockquote,
+.doc table {
+  margin-bottom: 12px;
+}
+.doc h1,
+.doc h2,
+.doc h3,
+.doc h4 {
+  margin: 20px 0 10px;
+}
+.doc h1 {
+  font-size: 20px;
+}
+.doc h2 {
+  font-size: 17px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.doc h3 {
+  font-size: 15px;
+}
+.doc h4 {
+  font-size: 14px;
+}
+.doc code {
+  border-radius: 0;
+  font-size: 13px;
+}
+.doc pre {
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-bg-page);
+}
+.doc pre code {
+  font-size: 13px;
+}
+.doc table {
+  font-size: 13px;
+}
+.doc th,
+.doc td {
+  border-color: var(--color-border);
+  padding: 6px 10px;
+}
+
 /* 深色容器（antd 黑底 tooltip 等）配色覆盖。 */
 .dark a {
   color: #91caff;
