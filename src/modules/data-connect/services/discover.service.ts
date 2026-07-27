@@ -52,6 +52,16 @@ type BackendDiscoverTask = {
   id: string;
   message?: string;
   progress?: number;
+  result?: {
+    catalog_id?: string;
+    failed_count?: number;
+    message?: string;
+    new_count?: number;
+    restored_count?: number;
+    stale_count?: number;
+    unchanged_count?: number;
+    updated_count?: number;
+  };
   schedule_id?: string;
   start_time?: number;
   status?: string;
@@ -244,6 +254,18 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
     triggerType: normalizeTriggerType(item.trigger_type),
     status: normalizeTaskStatus(item.status),
     progress: item.progress ?? 0,
+    result: item.result
+      ? {
+          catalogId: item.result.catalog_id ?? item.catalog_id,
+          failedCount: item.result.failed_count ?? 0,
+          message: item.result.message ?? "",
+          newCount: item.result.new_count ?? 0,
+          restoredCount: item.result.restored_count ?? 0,
+          staleCount: item.result.stale_count ?? 0,
+          unchangedCount: item.result.unchanged_count ?? 0,
+          updatedCount: item.result.updated_count ?? 0,
+        }
+      : undefined,
     message: item.message ?? "",
     startTime: formatTimestamp(item.start_time),
     startTimeValue: item.start_time,

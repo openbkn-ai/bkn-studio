@@ -129,3 +129,26 @@
   line-height: 1.5;
   word-break: break-all;
 }
+
+.healthList {
+  display: grid;
+  gap: 2px;
+}
+
+.rawDetail summary {
+  cursor: pointer;
+  color: #2563eb;
+}
+
+.rawDetail pre {
+  max-height: 260px;
+  margin: 8px 0 0;
+  padding: 8px;
+  overflow: auto;
+  background: #f8fafc;
+  color: #334155;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

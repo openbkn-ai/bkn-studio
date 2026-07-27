@@ -51,12 +51,24 @@ export type DataConnectDiscoverTask = {
   id: string;
   message: string;
   progress: number;
+  result?: DataConnectDiscoverResult;
   scheduleId: string;
   startTime: string;
   startTimeValue?: number;
   status: DataConnectDiscoverTaskStatus;
   strategy: DataConnectDiscoverStrategy;
   triggerType: DataConnectDiscoverTaskTriggerType;
+};
+
+export type DataConnectDiscoverResult = {
+  catalogId: string;
+  failedCount: number;
+  message: string;
+  newCount: number;
+  restoredCount: number;
+  staleCount: number;
+  unchangedCount: number;
+  updatedCount: number;
 };
 
 export type DataConnectDiscoverScheduleListQuery = {

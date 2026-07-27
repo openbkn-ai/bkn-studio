@@ -111,15 +111,30 @@ export type IndexHealth = {
   usable: boolean;
 };
 
+export type BuildTaskCreator = {
+  id: string;
+  name?: string;
+  type: string;
+};
+
+export type EmbeddingFieldConfig = {
+  dimensions: number;
+  modelId: string;
+};
+
 export type BuildTask = {
   buildKeyFields: string[];
   /** 后端任务记录所属 Catalog；mock 旧数据可缺省并由数据资源回填。 */
   catalogId?: string;
   /** 任务列表关联返回的 catalog 展示字段，避免列表页再全量加载 catalog。 */
   catalogName?: string;
+  /** 创建人信息；后端列表与详情接口均会补齐名称。 */
+  creator?: BuildTaskCreator;
   createTime: string;
   createdAt: number;
   embeddingFields: string[];
+  /** 任务快照中每个向量字段实际使用的模型与维度。 */
+  embeddingConfigs?: Record<string, EmbeddingFieldConfig>;
   embeddingModel: string;
   /** completed 但向量化没建满（vectorized < synced），索引不可用/部分可用。 */
   embeddingDegraded: boolean;
@@ -144,7 +159,12 @@ export type BuildTask = {
   resourceName?: string;
   status: BuildTaskStatus;
   syncedCount: number;
+  /** 已同步断点；用于未完成任务的续跑。 */
+  syncedMark?: string;
   totalCount: number;
+  /** 后端最后更新时间，毫秒时间戳及其展示值。 */
+  updatedAt?: number;
+  updateTime?: string | null;
   vectorizedCount: number;
 };
 

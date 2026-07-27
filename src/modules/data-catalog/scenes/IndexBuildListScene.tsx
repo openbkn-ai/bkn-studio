@@ -115,7 +115,7 @@ export function IndexBuildListScene() {
   const [orderBy, setOrderBy] = useState<BuildTaskOrderBy>("default");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [total, setTotal] = useState(0);
-  const [detailTask, setDetailTask] = useState<BuildTask | null>(null);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
   // 服务端分页 + 排序 + 状态过滤的查询参数。
@@ -484,7 +484,7 @@ export function IndexBuildListScene() {
 
         return (
           <Space className={sceneStyles.actionGroup} size={4}>
-            <AppButton onClick={() => setDetailTask(record)} type="link">
+            <AppButton onClick={() => setDetailTaskId(record.id)} type="link">
               {t("common.detail")}
             </AppButton>
             {record.status === "running" ||
@@ -500,10 +500,10 @@ export function IndexBuildListScene() {
                 </AppButton>
               </PermissionGate>
             ) : null}
-            {record.status === "failed" || record.status === "succeeded" ? (
+            {record.status === "failed" ? (
               <PermissionGate permissions="resource:task_manage">
-                <AppButton onClick={() => void handleRetry(record, "full")} type="link">
-                  {t("dataCatalog.task.rebuildFull")}
+                <AppButton onClick={() => void handleRetry(record)} type="link">
+                  {t("dataCatalog.task.rerun")}
                 </AppButton>
               </PermissionGate>
             ) : null}
@@ -652,12 +652,12 @@ export function IndexBuildListScene() {
         />
       ) : null}
 
-      {detailTask ? (
+      {detailTaskId ? (
         <BuildTaskDetailDrawer
-          onClose={() => setDetailTask(null)}
+          onClose={() => setDetailTaskId(null)}
           open
           resource={null}
-          task={detailTask}
+          taskId={detailTaskId}
         />
       ) : null}
     </section>
