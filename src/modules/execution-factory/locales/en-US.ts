@@ -261,7 +261,7 @@ export const executionFactoryEnUS = {
     statuses: {
       unpublish: "Unpublished",
       published: "Published",
-      offline: "Offline",
+      offline: "Unpublished",
       editing: "Editing",
     },
     metadataTypes: {
@@ -369,18 +369,13 @@ export const executionFactoryEnUS = {
     openapiSpec: "OpenAPI Spec",
     directPublish: "Publish immediately after registration",
     publish: "Publish",
-    offline: "Offline",
+    offline: "Unpublish",
     cardMenu: {
       view: "View",
       edit: "Edit",
       export: "Export",
       download: "Download",
       updatePackage: "Update package",
-      unpublish: "Unpublish",
-      republish: "Republish",
-      takeOffline: "Take Offline",
-      backToDraft: "Move to Draft",
-      deleteBlockedByStatus: "Take the resource offline before deleting it",
       more: "More actions",
     },
     operatorStatusChangeConfirmTitle: "Update operator status",
@@ -426,7 +421,7 @@ export const executionFactoryEnUS = {
     toolboxStatuses: {
       unpublish: "Unpublished",
       published: "Published",
-      offline: "Offline",
+      offline: "Unpublished",
     },
     statusChangeConfirmTitle: "Update operator status",
     statusChangeConfirmDescription: 'Change "{{name}}" to "{{status}}"?',
@@ -644,7 +639,7 @@ export const executionFactoryEnUS = {
     mcpStatuses: {
       unpublish: "Unpublished",
       published: "Published",
-      offline: "Offline",
+      offline: "Unpublished",
       editing: "Editing",
     },
     mcpStatusChangeConfirmTitle: "Update MCP status",
@@ -661,7 +656,7 @@ export const executionFactoryEnUS = {
     skillStatuses: {
       unpublish: "Unpublished",
       published: "Published",
-      offline: "Offline",
+      offline: "Unpublished",
     },
     skillStatusChangeConfirmTitle: "Update SKILL status",
     skillStatusChangeConfirmDescription: 'Change "{{name}}" to "{{status}}"?',
@@ -784,7 +779,7 @@ export const executionFactoryEnUS = {
     workbenchDirty: "Unsaved changes",
     workbenchPublishedLive: "Live · saves take effect immediately",
     workbenchPublishedLiveHint:
-      "This toolbox is published. Saved function changes apply to the next agent call — no need to publish again. Take it offline from the capability list.",
+      "This toolbox is published. Saved function changes apply to the next agent call — no need to publish again. Unpublish it from the capability list.",
     workbenchSavePublishedTitle: "Takes effect immediately",
     workbenchSavePublishedContent:
       "This toolset is published. After saving, the next agent call uses the new code and parameters.",

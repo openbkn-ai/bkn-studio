@@ -57,20 +57,16 @@ function getTabIcon(activeTab: ExecutionUnitTab, metadataType?: string) {
   }
 }
 
+/**
+ * `offline` falls through to the neutral style on purpose: the UI shows only
+ * 已发布 / 未发布, so a taken-down unit must look the same as a never-published one.
+ */
 function getStatusStyle(status?: string): CSSProperties {
   if (status === "published") {
     return {
       background: "var(--color-success-bg)",
       borderColor: "var(--color-success-border)",
       color: "var(--color-success-text)",
-    };
-  }
-
-  if (status === "offline") {
-    return {
-      background: "var(--color-error-bg)",
-      borderColor: "var(--color-error-border)",
-      color: "var(--color-error-text)",
     };
   }
 

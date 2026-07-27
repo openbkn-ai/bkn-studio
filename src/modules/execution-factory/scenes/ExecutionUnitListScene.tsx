@@ -64,6 +64,7 @@ import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types
 import type { ToolboxRecord, ToolboxStatus } from "@/modules/execution-factory/types/toolbox";
 import {
   resolveLifecycleActionStatus,
+  resolveListStatusQueries,
 } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
 import {
   collectLocalResourceIds,
@@ -615,6 +616,59 @@ export function ExecutionUnitListScene({
     [activeTab, category, debouncedKeyword, page, status, toolboxView],
   );
 
+  // UI 把 offline 与 unpublish 并成一档「未发布」，但后端 status 只收单值，
+  // 所以这一档要分别拉再拼；否则筛「未发布」会漏掉下线过的资源。
+  const listStatuses = useMemo(() => resolveListStatusQueries(status), [status]);
+
+  const fetchPage = useCallback(
+    async (query: typeof listQuery) => {
+      if (activeTab === "operator") {
+        // status/category are cross-tab filter strings; assert to this tab's
+        // query shape at the call boundary (the select only emits valid values).
+        const tabQuery = query as Parameters<typeof listOperators>[0];
+        const result = marketMode
+          ? await listOperatorMarket(tabQuery)
+          : await listOperators(tabQuery);
+        return {
+          items: result.items.map((item) => mapOperator(item, auditUserDirectory)),
+          total: result.total,
+        };
+      }
+
+      if (activeTab === "toolbox") {
+        const tabQuery = query as Parameters<typeof listToolboxes>[0];
+        const result = marketMode
+          ? await listToolboxMarket(tabQuery)
+          : await listToolboxes(tabQuery);
+        return {
+          items: result.items.map((item) => mapToolbox(item, auditUserDirectory)),
+          total: result.total,
+        };
+      }
+
+      if (activeTab === "mcp") {
+        const tabQuery = query as Parameters<typeof listMcps>[0];
+        const result = marketMode
+          ? await listMcpMarket(tabQuery)
+          : await listMcps(tabQuery);
+        return {
+          items: result.items.map((item) => mapMcp(item, auditUserDirectory)),
+          total: result.total,
+        };
+      }
+
+      const tabQuery = query as Parameters<typeof listSkills>[0];
+      const result = marketMode
+        ? await listSkillMarket(tabQuery)
+        : await listSkills(tabQuery);
+      return {
+        items: result.items.map((item) => mapSkill(item, auditUserDirectory)),
+        total: result.total,
+      };
+    },
+    [activeTab, auditUserDirectory, marketMode],
+  );
+
   const loadItems = useCallback(async () => {
     const generation = listLoadGenerationRef.current + 1;
     listLoadGenerationRef.current = generation;
@@ -627,67 +681,15 @@ export function ExecutionUnitListScene({
     }
 
     try {
-      if (activeTab === "operator") {
-        // status/category are cross-tab filter strings; assert to this tab's
-        // query shape at the call boundary (the select only emits valid values).
-        const query = listQuery as Parameters<typeof listOperators>[0];
-        const result = marketMode
-          ? await listOperatorMarket(query)
-          : await listOperators(query);
-        if (generation !== listLoadGenerationRef.current) {
-          return;
-        }
-        const mapped = result.items.map((item) => mapOperator(item, auditUserDirectory));
-        setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
-        setTotal(result.total);
-        if (page === 1) {
-          scheduleInstalledResourceSync();
-        }
-        return;
-      }
-
-      if (activeTab === "toolbox") {
-        const query = listQuery as Parameters<typeof listToolboxes>[0];
-        const result = marketMode
-          ? await listToolboxMarket(query)
-          : await listToolboxes(query);
-        if (generation !== listLoadGenerationRef.current) {
-          return;
-        }
-      const mapped = result.items.map((item) => mapToolbox(item, auditUserDirectory));
-      setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
-      setTotal(result.total);
-      if (page === 1) {
-        scheduleInstalledResourceSync();
-      }
-      return;
-      }
-
-      if (activeTab === "mcp") {
-        const query = listQuery as Parameters<typeof listMcps>[0];
-        const result = marketMode ? await listMcpMarket(query) : await listMcps(query);
-        if (generation !== listLoadGenerationRef.current) {
-          return;
-        }
-        const mapped = result.items.map((item) => mapMcp(item, auditUserDirectory));
-        setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
-        setTotal(result.total);
-        if (page === 1) {
-          scheduleInstalledResourceSync();
-        }
-        return;
-      }
-
-      const query = listQuery as Parameters<typeof listSkills>[0];
-      const result = marketMode
-        ? await listSkillMarket(query)
-        : await listSkills(query);
+      const pages = await Promise.all(
+        listStatuses.map((listStatus) => fetchPage({ ...listQuery, status: listStatus })),
+      );
       if (generation !== listLoadGenerationRef.current) {
         return;
       }
-      const mapped = result.items.map((item) => mapSkill(item, auditUserDirectory));
+      const mapped = pages.flatMap((result) => result.items);
       setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
-      setTotal(result.total);
+      setTotal(pages.reduce((sum, result) => sum + result.total, 0));
       if (page === 1) {
         scheduleInstalledResourceSync();
       }
@@ -707,7 +709,7 @@ export function ExecutionUnitListScene({
         setLoading(false);
       }
     }
-  }, [activeTab, auditUserDirectory, listQuery, marketMode, page, scheduleInstalledResourceSync]);
+  }, [fetchPage, listQuery, listStatuses, page, scheduleInstalledResourceSync]);
 
   useEffect(() => {
     setPage(1);
@@ -798,11 +800,11 @@ export function ExecutionUnitListScene({
   };
 
   const statusOptions = useMemo(() => {
+    // 没有单独的「已下线」选项：offline 归到「未发布」里，由 listStatuses 一并查。
     const base = [
       { value: "", label: t("executionFactory.allStatus") },
       { value: "published", label: t("executionFactory.statuses.published") },
       { value: "unpublish", label: t("executionFactory.statuses.unpublish") },
-      { value: "offline", label: t("executionFactory.statuses.offline") },
     ];
 
     if (activeTab === "operator") {

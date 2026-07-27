@@ -11,6 +11,9 @@
  * Backend status machine (operator-integration):
  * - unpublish / editing / offline → published
  * - published → offline (NOT unpublish)
+ *
+ * The UI collapses `offline` and `unpublish` into a single 未发布 label, so the
+ * take-down action reads as 取消发布 while still submitting `offline`.
  */
 export type ExecutionUnitLifecycleAction = "publish" | "offline";
 
@@ -28,6 +31,21 @@ export function getExecutionUnitLifecycleActions(
   }
 
   return [];
+}
+
+/**
+ * Statuses to query for one filter选项.
+ *
+ * 「未发布」covers both `unpublish` (never published) and `offline` (taken down),
+ * but the list API only takes a single status, so that option fans out into two
+ * requests. Anything else queries as-is.
+ */
+export function resolveListStatusQueries(status: string | undefined): (string | undefined)[] {
+  if (status === "unpublish") {
+    return ["unpublish", "offline"];
+  }
+
+  return [status || undefined];
 }
 
 /**

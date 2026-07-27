@@ -64,7 +64,7 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
     const menu = screen.getByRole("menu");
-    expect(within(menu).queryByText("executionFactory.cardMenu.unpublish")).toBeNull();
+    expect(within(menu).queryByText("executionFactory.publish")).toBeNull();
     fireEvent.click(within(menu).getByText("executionFactory.offline"));
 
     expect(onAction).toHaveBeenCalledWith("offline", expect.objectContaining({ status: "published" }));
@@ -86,5 +86,22 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
     fireEvent.click(within(screen.getByRole("menu")).getByText("executionFactory.publish"));
 
     expect(onAction).toHaveBeenCalledWith("publish", expect.objectContaining({ status: "offline" }));
+  });
+
+  it("offers the same publish action for a never-published toolbox", () => {
+    const onAction = vi.fn();
+
+    render(
+      <ExecutionUnitCardMenu
+        activeTab="toolbox"
+        item={buildItem("unpublish")}
+        onAction={onAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
+    fireEvent.click(within(screen.getByRole("menu")).getByText("executionFactory.publish"));
+
+    expect(onAction).toHaveBeenCalledWith("publish", expect.objectContaining({ status: "unpublish" }));
   });
 });

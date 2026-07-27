@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   getExecutionUnitLifecycleActions,
   resolveLifecycleActionStatus,
+  resolveListStatusQueries,
 } from "./execution-unit-lifecycle";
 
 describe("getExecutionUnitLifecycleActions", () => {
@@ -30,6 +31,22 @@ describe("getExecutionUnitLifecycleActions", () => {
     expect(getExecutionUnitLifecycleActions(undefined)).toEqual([]);
     expect(getExecutionUnitLifecycleActions("")).toEqual([]);
     expect(getExecutionUnitLifecycleActions("unknown")).toEqual([]);
+  });
+});
+
+describe("resolveListStatusQueries", () => {
+  it("covers both unpublish and offline behind the single 未发布 filter", () => {
+    expect(resolveListStatusQueries("unpublish")).toEqual(["unpublish", "offline"]);
+  });
+
+  it("queries a single status for every other filter", () => {
+    expect(resolveListStatusQueries("published")).toEqual(["published"]);
+    expect(resolveListStatusQueries("editing")).toEqual(["editing"]);
+  });
+
+  it("queries once with no status for the all-status filter", () => {
+    expect(resolveListStatusQueries("")).toEqual([undefined]);
+    expect(resolveListStatusQueries(undefined)).toEqual([undefined]);
   });
 });
 
