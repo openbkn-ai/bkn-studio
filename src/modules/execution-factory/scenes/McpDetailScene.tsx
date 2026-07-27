@@ -407,7 +407,10 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
                       </AppButton>
                     </PermissionGate>
                   </div>
-                  <JsonSchemaIoPanel schema={selectedTool.inputSchema} />
+                  <JsonSchemaIoPanel
+                    outputSchema={selectedTool.outputSchema}
+                    schema={selectedTool.inputSchema}
+                  />
                 </div>
               </>
             ) : (

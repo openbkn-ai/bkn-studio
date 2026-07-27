@@ -711,6 +711,9 @@ export const executionFactoryEnUS = {
     mcpToolSchemaEmptyHint:
       "This tool has no input schema. Refer to the MCP server docs when filling debug arguments.",
     mcpToolSchemaRawTitle: "Input Schema",
+    mcpToolOutputSchemaTitle: "Output Schema",
+    mcpToolOutputSchemaUndeclared:
+      "This MCP server declares no output schema; the response shape comes from the actual call.",
     mcpMarketDetailTitle: "Market MCP Detail",
     parseSse: "Parse tools",
     parseSseTitle: "Parse SSE MCP Endpoint",

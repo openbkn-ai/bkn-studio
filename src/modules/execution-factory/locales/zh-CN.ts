@@ -700,6 +700,9 @@ export const executionFactoryZhCN = {
     mcpToolCountFieldLabel: "工具数量",
     mcpToolSchemaEmptyHint: "该工具未返回 input schema，调试时请参考 MCP 服务文档手动填写参数。",
     mcpToolSchemaRawTitle: "Input Schema",
+    mcpToolOutputSchemaTitle: "Output Schema",
+    mcpToolOutputSchemaUndeclared:
+      "该 MCP 服务未声明输出 Schema，返回结构以实际调用结果为准。",
     mcpMarketDetailTitle: "市场 MCP 详情",
     parseSse: "解析工具",
     parseSseTitle: "解析 SSE MCP 端点",

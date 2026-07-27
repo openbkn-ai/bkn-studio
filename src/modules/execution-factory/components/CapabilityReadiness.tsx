@@ -106,15 +106,20 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
  */
 export function CapabilityIoCounts({ manifest }: CapabilityManifestProps) {
   const { t } = useTranslation();
-  const inputCount = manifest.inputSemantics?.length ?? 0;
-  const outputCount = manifest.outputSemantics?.length ?? 0;
+  // "输入 0" is a real fact — the tool takes no arguments. "输出 0" is not:
+  // MCP servers almost never declare an outputSchema, and reading that as
+  // "returns nothing" is wrong. Say undeclared when nothing was declared.
+  const input = String(manifest.inputSemantics?.length ?? 0);
+  const output = (manifest.readinessNotApplicable ?? []).includes("output semantics")
+    ? t("executionFactory.agentReadiness.ioUndeclared", { defaultValue: "未声明" })
+    : String(manifest.outputSemantics?.length ?? 0);
 
   return (
     <span className={styles.ioCounts}>
       {t("executionFactory.agentReadiness.ioCounts", {
-        input: inputCount,
-        output: outputCount,
-        defaultValue: `输入 ${inputCount} · 输出 ${outputCount}`,
+        input,
+        output,
+        defaultValue: `输入 ${input} · 输出 ${output}`,
       })}
     </span>
   );
