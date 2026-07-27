@@ -19,6 +19,7 @@ import type {
   ToolRunLogEntry,
   ToolIoSpec,
 } from "@/modules/execution-factory/types/tool";
+import { maskDebugRequestSecrets } from "@/modules/execution-factory/utils/debug-secrets";
 import {
   buildHttpDebugInitialValues,
   buildHttpDebugRequest,
@@ -92,7 +93,7 @@ export function ToolDebugModal({
         durationMs: debugResult.durationMs,
         error: debugResult.error,
         body: debugResult.body,
-        requestBody: debugRequest,
+        requestBody: maskDebugRequestSecrets(debugRequest),
       });
     } catch (caughtError) {
       setError(extractRequestErrorMessage(caughtError));

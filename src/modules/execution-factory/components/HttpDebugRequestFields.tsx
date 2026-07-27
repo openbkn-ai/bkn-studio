@@ -10,6 +10,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ToolIoSpec } from "@/modules/execution-factory/types/tool";
+import { isSensitiveName } from "@/modules/execution-factory/utils/debug-secrets";
 import {
   parametersForLocation,
   parseJsonObject,
@@ -42,13 +43,16 @@ function replacePathParameters(path: string | undefined, rawValues?: string) {
 
   try {
     const values = parseJsonObject(rawValues, "Path") ?? {};
-    return Object.entries(values).reduce(
-      (current, [name, value]) =>
-        current
-          .replaceAll(`{${name}}`, encodeURIComponent(String(value)))
-          .replaceAll(`:${name}`, encodeURIComponent(String(value))),
-      path,
-    );
+    // 值为空时保留 {name} 占位，避免预览出现 /operator/market/ 这种拼错的地址。
+    return Object.entries(values)
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .reduce(
+        (current, [name, value]) =>
+          current
+            .replaceAll(`{${name}}`, encodeURIComponent(String(value)))
+            .replaceAll(`:${name}`, encodeURIComponent(String(value))),
+        path,
+      );
   } catch {
     return path;
   }
@@ -109,12 +113,13 @@ export function HttpDebugRequestFields({
     label: string,
     parameters: typeof pathParameters,
     rows = 4,
+    extraHint?: string,
   ) => {
     const names = parameters.map((parameter) => parameter.name);
     const requiredNames = parameters
       .filter((parameter) => parameter.required)
       .map((parameter) => parameter.name);
-    const hint = parameterHint(names, requiredNames);
+    const hint = [parameterHint(names, requiredNames), extraHint].filter(Boolean).join(" · ");
 
     return (
       <Form.Item
@@ -144,24 +149,30 @@ export function HttpDebugRequestFields({
             "requestQuery",
             t("executionFactory.debugQueryParameters"),
             queryParameters,
+            4,
+            // 只有接口真用 query 带凭据时才提示，别给每个普通查询参数都挂一句噪音。
+            queryParameters.some((parameter) => isSensitiveName(parameter.name))
+              ? t("executionFactory.debugSensitiveMaskHint")
+              : undefined,
           )
         : null}
-      {headerParameters.length > 0 ? (
-        <Collapse
-          items={[
-            {
-              key: "headers",
-              label: t("executionFactory.debugRequestHeaders"),
-              children: renderJsonField(
-                "requestHeaders",
-                t("executionFactory.debugRequestHeaders"),
-                headerParameters,
-              ),
-            },
-          ]}
-          size="small"
-        />
-      ) : null}
+      <Collapse
+        defaultActiveKey={headerParameters.length > 0 ? ["headers"] : undefined}
+        items={[
+          {
+            key: "headers",
+            label: t("executionFactory.debugRequestHeaders"),
+            children: renderJsonField(
+              "requestHeaders",
+              t("executionFactory.debugRequestHeaders"),
+              headerParameters,
+              4,
+              t("executionFactory.debugSensitiveMaskHint"),
+            ),
+          },
+        ]}
+        size="small"
+      />
       <Form.Item label={t("executionFactory.debugRequestBody")} name="requestBody">
         <JsonEditor height={180} />
       </Form.Item>
