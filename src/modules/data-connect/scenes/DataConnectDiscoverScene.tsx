@@ -628,19 +628,6 @@ export function DataConnectDiscoverScene({
                 {t("dataConnect.discoverCreate")}
               </AppButton>
             </PermissionGate>
-            <PermissionGate permissions="catalog:task_manage">
-              <AppButton
-                disabled={!selectedCatalogId}
-                onClick={() => {
-                  if (!selectedCatalogId) {
-                    return;
-                  }
-                  setRunNowOpen(true);
-                }}
-              >
-                {t("dataConnect.discoverRunNow")}
-              </AppButton>
-            </PermissionGate>
             <AppButton
               icon={<ReloadOutlined />}
               onClick={() => {
@@ -750,6 +737,20 @@ export function DataConnectDiscoverScene({
       <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
           <div className={styles.toolbarActions}>
+            <PermissionGate permissions="catalog:task_manage">
+              <AppButton
+                disabled={!selectedCatalogId}
+                onClick={() => {
+                  if (!selectedCatalogId) {
+                    return;
+                  }
+                  setRunNowOpen(true);
+                }}
+                type="primary"
+              >
+                {t("dataConnect.discoverRunNow")}
+              </AppButton>
+            </PermissionGate>
             <AppButton
               icon={<ReloadOutlined />}
               onClick={() => {
