@@ -18,6 +18,9 @@ export const dataCatalogEnUS = {
       tabPreview: "Data Preview",
       tabIndex: "Data Index",
       tabSemanticUnderstanding: "Semantic Understanding",
+      discardChangesTitle: "Discard unsaved changes?",
+      discardChangesDescription: "Switching tabs will discard the current unsaved changes and cannot be undone.",
+      discardChangesConfirm: "Discard and switch",
     },
     indexWorkspace: {
       backToOverview: "Back to Tasks",
