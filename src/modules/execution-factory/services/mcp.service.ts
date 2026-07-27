@@ -292,7 +292,7 @@ export async function parseMcpSse(input: McpParseSseInput): Promise<McpParseSseR
     `${API_PREFIX}/mcp/parse/sse`,
     {
       headers: input.headers,
-      mode: input.mode ?? "sse",
+      mode: input.mode ?? "stream",
       url: input.url,
     },
     { headers: getBusinessDomainHeaders() },

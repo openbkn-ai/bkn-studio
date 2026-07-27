@@ -290,8 +290,12 @@ export const executionFactoryZhCN = {
     },
     mcpModes: {
       sse: "SSE",
-      stream: "Stream",
+      stream: "Stream（Streamable HTTP）",
     },
+    mcpModeHint:
+      "多数 MCP 服务使用 Streamable HTTP，请选 Stream；仅老式 /sse 端点选 SSE。解析失败时会自动尝试另一种模式。",
+    mcpNameInvalid: "仅支持中文、字母、数字和下划线",
+    mcpParseFallback: "{{from}} 模式解析失败，已自动切换为 {{to}} 模式",
     mcpCreationTypes: {
       custom: "自定义",
       tool_imported: "工具导入",
@@ -698,7 +702,7 @@ export const executionFactoryZhCN = {
     mcpToolSchemaEmptyHint: "该工具未返回 input schema，调试时请参考 MCP 服务文档手动填写参数。",
     mcpToolSchemaRawTitle: "Input Schema",
     mcpMarketDetailTitle: "市场 MCP 详情",
-    parseSse: "解析 SSE",
+    parseSse: "解析工具",
     parseSseTitle: "解析 SSE MCP 端点",
     parseSseResultTitle: "发现的工具",
     functionExecuteTitle: "执行函数",

@@ -19,6 +19,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { McpParseSseModal } from "@/modules/execution-factory/components/McpParseSseModal";
 import { registerMcp } from "@/modules/execution-factory/services/mcp.service";
 import type { McpCreationType } from "@/modules/execution-factory/types/mcp";
+import { CAPABILITY_NAME_PATTERN } from "@/modules/execution-factory/utils/capability-name";
 
 import styles from "./UnitFormScene.module.css";
 
@@ -87,13 +88,19 @@ export function McpFormScene({ onBack, onSubmitSuccess }: McpFormSceneProps) {
         <div className={styles.formSurface}>
           <Form
             form={form}
-            initialValues={{ creationType: "custom", mode: "sse" }}
+            initialValues={{ creationType: "custom", mode: "stream" }}
             layout="vertical"
           >
             <Form.Item
               label={t("executionFactory.mcpName")}
               name="name"
-              rules={[{ required: true, message: t("common.required") }]}
+              rules={[
+                { required: true, message: t("common.required") },
+                {
+                  pattern: CAPABILITY_NAME_PATTERN,
+                  message: t("executionFactory.mcpNameInvalid"),
+                },
+              ]}
             >
               <Input />
             </Form.Item>

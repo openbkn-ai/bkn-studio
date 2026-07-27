@@ -294,8 +294,12 @@ export const executionFactoryEnUS = {
     },
     mcpModes: {
       sse: "SSE",
-      stream: "Stream",
+      stream: "Stream (Streamable HTTP)",
     },
+    mcpModeHint:
+      "Most MCP servers use Streamable HTTP — pick Stream. Pick SSE only for legacy /sse endpoints. The other mode is retried automatically when parsing fails.",
+    mcpNameInvalid: "Only Chinese characters, letters, digits and underscores are allowed",
+    mcpParseFallback: "Parsing with {{from}} failed, switched to {{to}}",
     mcpCreationTypes: {
       custom: "Custom",
       tool_imported: "Tool Imported",
@@ -709,7 +713,7 @@ export const executionFactoryEnUS = {
       "This tool has no input schema. Refer to the MCP server docs when filling debug arguments.",
     mcpToolSchemaRawTitle: "Input Schema",
     mcpMarketDetailTitle: "Market MCP Detail",
-    parseSse: "Parse SSE",
+    parseSse: "Parse tools",
     parseSseTitle: "Parse SSE MCP Endpoint",
     parseSseResultTitle: "Discovered Tools",
     functionExecuteTitle: "Execute Function",
