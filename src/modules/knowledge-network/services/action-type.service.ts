@@ -199,6 +199,7 @@ export async function getKnowledgeNetworkActionTypeExecutionLogDetail(
 export async function executeKnowledgeNetworkActionTypeNow(
   networkId: string,
   actionTypeId: string,
+  dynamicParams?: Record<string, unknown>,
 ) {
   if (useMock) {
     const record = (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId);
@@ -217,9 +218,9 @@ export async function executeKnowledgeNetworkActionTypeNow(
 
   const response = await http.post<{ execution_id?: string }>(
     `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}/execute`,
-    {
-      unique_identities: [],
-    },
+    dynamicParams && Object.keys(dynamicParams).length > 0
+      ? { dynamic_params: dynamicParams }
+      : {},
   );
 
   return response.data;

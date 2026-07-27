@@ -1,0 +1,56 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.modalRoot :global(.ant-modal-content),
+.modalRoot :global(.ant-modal-header),
+.modalRoot :global(.ant-modal-body),
+.modalRoot :global(.ant-modal-footer) {
+  border-radius: 2px !important;
+}
+
+.summary {
+  margin: 0 0 16px;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-bottom: 12px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.schemaAlert {
+  margin-bottom: 14px;
+}
+
+.form {
+  max-height: min(56vh, 560px);
+  padding-right: 4px;
+  overflow-y: auto;
+}
+
+.fieldLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.typeLabel {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.fullWidth {
+  width: 100%;
+}
