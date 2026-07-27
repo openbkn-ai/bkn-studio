@@ -311,6 +311,8 @@ export const executionFactoryEnUS = {
     runDebug: "Run Debug",
     debugRequestBody: "Request Body (JSON)",
     debugRequestHeaders: "Request Headers (JSON)",
+    debugSensitiveMaskHint:
+      "Credential fields (token, api_key, Authorization, …) are masked in the run log; the real request still sends the original value",
     debugQueryParameters: "Query Parameters (JSON)",
     debugPathParameters: "Path Parameters (JSON)",
     debugMethod: "Method",

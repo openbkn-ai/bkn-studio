@@ -86,9 +86,14 @@ export function normalizeActionTypeCondition(
   };
 }
 
+export type ActionTypeExecutionValidationOptions = {
+  allowEmptyParameters?: boolean;
+};
+
 export function validateActionTypeExecutionConfig(
   t: (key: string) => string,
   value: ActionTypeExecutionConfig,
+  options: ActionTypeExecutionValidationOptions = {},
 ): string | null {
   const sourceLabel =
     getActionSourceDisplayName(value.actionSource) || value.sourceName.trim();
@@ -110,7 +115,7 @@ export function validateActionTypeExecutionConfig(
     return Boolean(item.value?.trim() || item.sourcePropertyName?.trim());
   });
 
-  if (validParameters.length === 0) {
+  if (validParameters.length === 0 && !options.allowEmptyParameters) {
     return t("knowledgeNetwork.actionTypeExecutionParameterRequired");
   }
 

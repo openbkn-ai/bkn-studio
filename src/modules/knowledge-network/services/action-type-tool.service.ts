@@ -7,6 +7,7 @@
 
 import { http } from "@/framework/request/http";
 import {
+  getMcp,
   getMcpMarket,
   listMcpMarket,
   listMcpTools,
@@ -728,4 +729,111 @@ export function buildActionSourceFromCatalogSelection(
     toolName: selection.tool.toolName,
     type: "tool",
   };
+}
+
+function resolveActionSourceDisplayNamesFromCatalog(
+  actionSource: ActionTypeActionSource,
+): ActionTypeActionSource {
+  if (actionSource.type === "tool" && actionSource.boxId && actionSource.toolId) {
+    const box = MOCK_EXECUTION_FACTORY_CATALOG.toolBoxes.find(
+      (item) => item.boxId === actionSource.boxId,
+    );
+    const tool = box?.tools.find((item) => item.toolId === actionSource.toolId);
+    if (!box && !tool) {
+      return actionSource;
+    }
+
+    return {
+      ...actionSource,
+      boxName: box?.boxName || actionSource.boxName,
+      toolName: tool?.toolName || actionSource.toolName,
+    };
+  }
+
+  if (actionSource.type === "mcp" && actionSource.mcpId) {
+    const server = MOCK_EXECUTION_FACTORY_CATALOG.mcpServers.find(
+      (item) => item.mcpId === actionSource.mcpId,
+    );
+    const tool = server?.tools.find(
+      (item) =>
+        item.toolId === actionSource.toolId || item.toolName === actionSource.toolName,
+    );
+    if (!server && !tool) {
+      return actionSource;
+    }
+
+    return {
+      ...actionSource,
+      mcpName: server?.mcpName || actionSource.mcpName,
+      toolName: tool?.toolName || actionSource.toolName,
+    };
+  }
+
+  return actionSource;
+}
+
+/**
+ * Resolve readable operator names from execution-factory by persisted IDs.
+ * Always refreshes names when lookup succeeds so renames are reflected on reopen.
+ * On lookup failure, keeps the original source (ID fallback display).
+ *
+ * MCP real path only refreshes `mcpName` (container). Tool names come from
+ * server discovery (`tools/list`) and are not independently renameable in studio,
+ * so persisted `toolName` is kept as-is. Mock catalog may still refresh toolName.
+ */
+export async function resolveActionSourceDisplayNames(
+  actionSource?: ActionTypeActionSource,
+): Promise<ActionTypeActionSource | undefined> {
+  if (!actionSource || actionSource.type === "manual") {
+    return actionSource;
+  }
+
+  if (useMock) {
+    return resolveActionSourceDisplayNamesFromCatalog(actionSource);
+  }
+
+  if (actionSource.type === "tool" && actionSource.boxId && actionSource.toolId) {
+    try {
+      const [box, tool] = await Promise.all([
+        getToolboxMarket(actionSource.boxId).catch(() => getToolbox(actionSource.boxId!)),
+        getToolDetail(actionSource.boxId, actionSource.toolId),
+      ]);
+
+      return {
+        ...actionSource,
+        boxName: box.name || actionSource.boxName,
+        toolName: tool.name || actionSource.toolName,
+      };
+    } catch (error) {
+      logServiceFallback(
+        "resolveActionSourceDisplayNames.tool",
+        error,
+        `boxId=${actionSource.boxId} toolId=${actionSource.toolId}`,
+      );
+      return actionSource;
+    }
+  }
+
+  // MCP: refresh container name only; keep persisted toolName from discovery.
+  if (actionSource.type === "mcp" && actionSource.mcpId) {
+    try {
+      const mcp = await getMcpMarket(actionSource.mcpId).catch(() =>
+        getMcp(actionSource.mcpId!),
+      );
+
+      return {
+        ...actionSource,
+        mcpName: mcp.name || actionSource.mcpName,
+      };
+    } catch (error) {
+      logServiceFallback(
+        "resolveActionSourceDisplayNames.mcp",
+        error,
+        `mcpId=${actionSource.mcpId}`,
+      );
+      return actionSource;
+    }
+  }
+
+  return actionSource;
 }

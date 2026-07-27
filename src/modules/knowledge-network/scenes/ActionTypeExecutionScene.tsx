@@ -19,6 +19,7 @@ import {
   normalizeActionTypeExecutionConfig,
   validateActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
+import type { ActionTypeExecutionParameterSchemaState } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import {
   getKnowledgeNetworkActionTypeDetail,
@@ -43,6 +44,11 @@ export function ActionTypeExecutionScene() {
   const [executionValue, setExecutionValue] = useState<ActionTypeExecutionConfig>(
     createDefaultActionTypeExecutionConfig(),
   );
+  const [executionSchemaState, setExecutionSchemaState] =
+    useState<ActionTypeExecutionParameterSchemaState>({
+      loaded: false,
+      parameterCount: 0,
+    });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +92,10 @@ export function ActionTypeExecutionScene() {
       return;
     }
 
-    const validationError = validateActionTypeExecutionConfig(t, executionValue);
+    const validationError = validateActionTypeExecutionConfig(t, executionValue, {
+      allowEmptyParameters:
+        executionSchemaState.loaded && executionSchemaState.parameterCount === 0,
+    });
     if (validationError) {
       void message.error(validationError);
       return;
@@ -140,6 +149,7 @@ export function ActionTypeExecutionScene() {
           <ActionTypeExecutionEditor
             networkId={networkId}
             objectTypeId={detail?.objectTypeId ?? ""}
+            onParameterSchemaStateChange={setExecutionSchemaState}
             onChange={setExecutionValue}
             value={executionValue}
           />

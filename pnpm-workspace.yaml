@@ -1,13 +1,10 @@
 allowBuilds:
   esbuild: true
 
-# GHSA-qwww-vcr4-c8h2 (react-router RSC-mode CSRF bypass): not applicable here.
-# This app is a client-only SPA (createBrowserRouter + RouterProvider); it does
-# not use react-router's RSC / server mode, which is the only code path the
-# advisory affects. No fixed version is published either — react-router-dom
-# latest is 7.18.1 and the advisory only lists 8.3.0 (unreleased) as patched, so
-# there is nothing to upgrade to. Remove this ignore once an upgrade path ships.
-# pnpm 11 reads audit settings here, not from package.json's "pnpm" field.
+# GHSA-qwww-vcr4-c8h2: react-router RSC-mode CSRF bypass. Not applicable —
+# bkn-studio is a client-side Vite SPA (createBrowserRouter/RouterProvider),
+# not React Router RSC/server mode. Patched only in react-router >=8.3.0 (major
+# upgrade); tracked separately. Remove this ignore when bumping react-router.
 auditConfig:
   ignoreGhsas:
     - GHSA-qwww-vcr4-c8h2

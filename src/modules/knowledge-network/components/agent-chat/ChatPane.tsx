@@ -654,7 +654,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     [models],
   );
 
-  // 与 MCP 侧栏同款分组：本地精选定义带组名，线上新增的归 Knowledge Network。
+  // 与 MCP 侧栏同款分组：本地 op 定义带组名，线上新增的归 Knowledge Network。
   const toolOptions = useMemo(() => {
     if (!toolDefs) return [];
     const groupOf = (name: string) => CONTEXT_LOADER_OPS.find((op) => op.id === name)?.group ?? "Knowledge Network";

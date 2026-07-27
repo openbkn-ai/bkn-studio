@@ -79,6 +79,14 @@ describe("HTTP debug request helpers", () => {
     ).toThrow("Path: unresolved placeholders: resourceId");
   });
 
+  it("rejects transport headers the forwarder owns", () => {
+    expect(() =>
+      buildHttpDebugRequest({
+        requestHeaders: '{"x-tenant-id":"tenant-1","Transfer-Encoding":"chunked"}',
+      }),
+    ).toThrow("Header: not allowed here (set by the forwarder): Transfer-Encoding");
+  });
+
   it("does not reinterpret body fields named header or query", () => {
     expect(
       buildHttpDebugRequest({
