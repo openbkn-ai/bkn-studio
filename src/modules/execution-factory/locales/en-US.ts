@@ -296,6 +296,10 @@ export const executionFactoryEnUS = {
       sse: "SSE",
       stream: "Stream (Streamable HTTP)",
     },
+    mcpModeShort: {
+      sse: "SSE",
+      stream: "Stream",
+    },
     mcpModeHint:
       "Most MCP servers use Streamable HTTP — pick Stream. Pick SSE only for legacy /sse endpoints. The other mode is retried automatically when parsing fails.",
     mcpNameInvalid: "Only Chinese characters, letters, digits and underscores are allowed",

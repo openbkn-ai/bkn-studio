@@ -292,6 +292,11 @@ export const executionFactoryZhCN = {
       sse: "SSE",
       stream: "Stream（Streamable HTTP）",
     },
+    // 卡片徽标位放不下「Stream（Streamable HTTP）」，这里只要动词。
+    mcpModeShort: {
+      sse: "SSE",
+      stream: "Stream",
+    },
     mcpModeHint:
       "多数 MCP 服务使用 Streamable HTTP，请选 Stream；仅老式 /sse 端点选 SSE。解析失败时会自动尝试另一种模式。",
     mcpNameInvalid: "仅支持中文、字母、数字和下划线",
