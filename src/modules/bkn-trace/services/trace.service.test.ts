@@ -44,7 +44,7 @@ describe("bkn-trace service", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/traces/trace_001/trace-graph",
-      { headers: { "x-business-domain": "bd_demo" } },
+      { headers: { "x-business-domain": "bd_demo" }, skipErrorToast: true },
     );
     expect(result.traceId).toBe("trace_001");
     expect(result.status).toBe("ok");

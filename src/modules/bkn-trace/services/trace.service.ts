@@ -513,7 +513,7 @@ type BackendEvidenceArtifact = {
 export async function getTraceGraph(traceId: string): Promise<TraceGraph> {
   const response = await http.get<BackendTraceGraph>(
     `${TRACE_API_PREFIX}/${encodeURIComponent(traceId)}/trace-graph`,
-    traceRequestConfig(),
+    { ...traceRequestConfig(), skipErrorToast: true },
   );
   return mapTraceGraph(response.data);
 }
