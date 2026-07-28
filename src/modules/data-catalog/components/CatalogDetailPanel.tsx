@@ -25,11 +25,7 @@ import {
   indexStateOf,
   isCatalogPhysical,
 } from "@/modules/data-catalog/lib/index-state";
-import { parseResourceScope } from "@/modules/data-catalog/lib/resource-identifier";
-import {
-  listCatalogResourcePage,
-  listCatalogResources,
-} from "@/modules/data-catalog/services/resource.service";
+import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildTask,
   CatalogResource,
@@ -115,7 +111,6 @@ export function CatalogDetailPanel({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const activeDb = searchParams.get("db")?.trim() || "";
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [resourceKeyword, setResourceKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
@@ -139,8 +134,6 @@ export function CatalogDetailPanel({
   const resizingRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const physical = isCatalogPhysical(catalog);
-  const usesClientScopeFilter =
-    catalog.connectorType === "postgresql" && Boolean(activeDb);
   const hasResourceQuery =
     resourceKeyword.trim().length > 0 || categoryFilter.length > 0 || indexFilter.length > 0;
 
@@ -154,20 +147,6 @@ export function CatalogDetailPanel({
 
   const displayResources = useMemo(() => {
     return resources.filter((resource) => {
-      if (usesClientScopeFilter && activeDb) {
-        const scope = parseResourceScope(resource.sourceIdentifier);
-        if (scope.database !== activeDb) {
-          return false;
-        }
-        if (activeSchema && scope.schema !== activeSchema) {
-          return false;
-        }
-      } else if (activeDb && activeSchema) {
-        const scope = parseResourceScope(resource.sourceIdentifier);
-        if (!scope.schema || scope.schema !== activeSchema) {
-          return false;
-        }
-      }
       if (indexFilter) {
         const key = indexStateOf(tasksByResource.get(resource.id) ?? []).key;
         if (indexFilterBucket(key) !== indexFilter) {
@@ -176,69 +155,21 @@ export function CatalogDetailPanel({
       }
       return true;
     });
-  }, [activeDb, activeSchema, indexFilter, resources, tasksByResource, usesClientScopeFilter]);
+  }, [indexFilter, resources, tasksByResource]);
 
   useEffect(() => {
     setPage(1);
-  }, [resourceKeyword, categoryFilter, indexFilter, catalog.id, activeDb, activeSchema]);
+  }, [resourceKeyword, categoryFilter, indexFilter, catalog.id, activeSchema]);
 
   useEffect(() => {
     let cancelled = false;
     setResourcesLoading(true);
     setResourceLoadError(null);
 
-    if (usesClientScopeFilter) {
-      void listCatalogResources({
-        catalogId: catalog.id,
-        category: categoryFilter ? (categoryFilter as CatalogResource["category"]) : undefined,
-        keyword: resourceKeyword,
-      })
-        .then((all) => {
-          if (cancelled) {
-            return;
-          }
-
-          const filtered = all.filter((resource) => {
-            const scope = parseResourceScope(resource.sourceIdentifier);
-            if (scope.database !== activeDb) {
-              return false;
-            }
-            if (activeSchema && scope.schema !== activeSchema) {
-              return false;
-            }
-            if (indexFilter) {
-              const key = indexStateOf(tasksByResource.get(resource.id) ?? []).key;
-              return indexFilterBucket(key) === indexFilter;
-            }
-            return true;
-          });
-          const offset = (page - 1) * pageSize;
-          setResources(filtered.slice(offset, offset + pageSize));
-          setResourceTotal(filtered.length);
-        })
-        .catch((error) => {
-          if (cancelled) {
-            return;
-          }
-          setResources([]);
-          setResourceTotal(0);
-          setResourceLoadError(extractRequestErrorMessage(error));
-        })
-        .finally(() => {
-          if (!cancelled) {
-            setResourcesLoading(false);
-          }
-        });
-
-      return () => {
-        cancelled = true;
-      };
-    }
-
     void listCatalogResourcePage({
       catalogId: catalog.id,
       category: categoryFilter ? (categoryFilter as CatalogResource["category"]) : undefined,
-      database: activeDb || undefined,
+      schema: activeSchema || undefined,
       keyword: resourceKeyword,
       limit: pageSize,
       offset: (page - 1) * pageSize,
@@ -267,20 +198,7 @@ export function CatalogDetailPanel({
     return () => {
       cancelled = true;
     };
-  }, [
-    activeDb,
-    activeSchema,
-    catalog.connectorType,
-    catalog.id,
-    categoryFilter,
-    indexFilter,
-    page,
-    pageSize,
-    reloadKey,
-    resourceKeyword,
-    tasksByResource,
-    usesClientScopeFilter,
-  ]);
+  }, [activeSchema, catalog.id, categoryFilter, page, pageSize, reloadKey, resourceKeyword]);
 
   useEffect(() => {
     const handleMove = (event: MouseEvent) => {
@@ -580,11 +498,7 @@ export function CatalogDetailPanel({
           pageSize={pageSize}
           showSizeChanger
           showTotal={(count) => t("common.total", { total: count })}
-          total={
-            usesClientScopeFilter || (!indexFilter && !activeSchema)
-              ? resourceTotal
-              : displayResources.length
-          }
+          total={indexFilter ? displayResources.length : resourceTotal}
         />
       ) : null}
     </section>

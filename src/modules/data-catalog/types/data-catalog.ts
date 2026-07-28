@@ -55,6 +55,8 @@ export type CatalogResource = {
   indexConfig?: ResourceIndexConfig;
   name: string;
   rowCount: number;
+  /** 物理数据源中的 schema；与字段定义 schema 区分命名。 */
+  schemaName?: string;
   schema: ResourceSchemaField[];
   sourceIdentifier: string;
   updateTime: string;
@@ -64,10 +66,10 @@ export type CatalogResource = {
 export type ResourceListQuery = {
   catalogId?: string;
   category?: ResourceCategory;
-  database?: string;
   keyword?: string;
   limit?: number;
   offset?: number;
+  schema?: string;
 };
 
 export type ResourceCreateInput = {

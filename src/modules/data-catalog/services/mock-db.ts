@@ -81,6 +81,7 @@ export const mockResources: CatalogResource[] = [
     catalogId: "cat-001",
     name: "customers",
     category: "table",
+    schemaName: "customer_center",
     sourceIdentifier: "crm_core.customers",
     description: "客户主数据表,含联系方式与生命周期状态。",
     schema: [
@@ -130,6 +131,7 @@ export const mockResources: CatalogResource[] = [
     catalogId: "cat-001",
     name: "orders",
     category: "table",
+    schemaName: "customer_center",
     sourceIdentifier: "crm_core.orders",
     description: "订单事实表。",
     schema: [
@@ -147,6 +149,7 @@ export const mockResources: CatalogResource[] = [
     catalogId: "cat-002",
     name: "kn_chunks",
     category: "dataset",
+    schemaName: "knowledge_index",
     sourceIdentifier: "knowledge_index.kn_chunks",
     description: "知识网络切片数据集,供向量检索。",
     schema: [
@@ -354,6 +357,7 @@ const discoverableResources: CatalogResource[] = [
     catalogId: "cat-003",
     name: "contracts",
     category: "table",
+    schemaName: "public",
     sourceIdentifier: "finance_dw.contracts",
     description: "合同台账，由 discover 探查登记。",
     schema: [
@@ -370,6 +374,7 @@ const discoverableResources: CatalogResource[] = [
     catalogId: "cat-003",
     name: "invoices",
     category: "table",
+    schemaName: "public",
     sourceIdentifier: "finance_dw.invoices",
     description: "发票明细，由 discover 探查登记。",
     schema: [

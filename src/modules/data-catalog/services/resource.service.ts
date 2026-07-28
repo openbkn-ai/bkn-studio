@@ -197,6 +197,7 @@ type BackendResource = {
   logic_type?: string;
   name: string;
   row_count?: number;
+  schema?: string;
   schema_definition?: BackendSchemaField[] | null;
   source_identifier?: string;
   source_metadata?: {
@@ -251,6 +252,7 @@ function mapResource(item: BackendResource): CatalogResource {
     columnCount: item.column_count ?? item.schema_definition?.length ?? 0,
     // 顶层 row_count 后端常缺省,实际行数在 source_metadata.properties 里
     rowCount: item.row_count ?? item.source_metadata?.properties?.row_count ?? 0,
+    schemaName: item.schema,
     updatedAt: item.update_time ?? 0,
     updateTime: formatTimestamp(item.update_time),
   };
@@ -267,12 +269,9 @@ function filterResources(items: CatalogResource[], query: ResourceListQuery) {
       item.id.toLowerCase().includes(keyword);
     const matchesCatalog = !query.catalogId || item.catalogId === query.catalogId;
     const matchesCategory = !query.category || item.category === query.category;
-    const matchesDatabase =
-      !query.database ||
-      item.sourceIdentifier === query.database ||
-      item.sourceIdentifier.startsWith(`${query.database}.`);
+    const matchesSchema = !query.schema || item.schemaName === query.schema;
 
-    return matchesKeyword && matchesCatalog && matchesCategory && matchesDatabase;
+    return matchesKeyword && matchesCatalog && matchesCategory && matchesSchema;
   });
 }
 
@@ -301,7 +300,7 @@ export async function listCatalogResourcePage(
       params: {
         catalog_id: query.catalogId || undefined,
         category: query.category || undefined,
-        database: query.database || undefined,
+        schema: query.schema || undefined,
         limit,
         name: query.keyword?.trim() || undefined,
         offset,
