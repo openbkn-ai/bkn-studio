@@ -8,15 +8,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
+const runtimeConfigMock = vi.hoisted(() => ({
+  currentUser: { businessDomainId: "bd_demo" },
+}));
 
 vi.mock("@/framework/request/http", () => ({
   http: { get: getMock },
+}));
+
+vi.mock("@/framework/runtime/config", () => ({
+  getRuntimeConfig: () => runtimeConfigMock,
 }));
 
 describe("bkn-trace service", () => {
   beforeEach(() => {
     vi.resetModules();
     getMock.mockReset();
+    runtimeConfigMock.currentUser.businessDomainId = "bd_demo";
   });
 
   it("fetches trace graph through the BKN Trace API", async () => {
@@ -37,6 +45,7 @@ describe("bkn-trace service", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/traces/trace_001/trace-graph",
+      { headers: { "x-business-domain": "bd_demo" } },
     );
     expect(result.traceId).toBe("trace_001");
     expect(result.status).toBe("ok");
@@ -88,13 +97,38 @@ describe("bkn-trace service", () => {
     expect(getMock).toHaveBeenNthCalledWith(
       1,
       "/agent-observability/v1/traces/by-request",
-      { params: { request_id: "req_001", limit: 50 } },
+      {
+        headers: { "x-business-domain": "bd_demo" },
+        params: { request_id: "req_001", limit: 50 },
+      },
     );
     expect(getMock).toHaveBeenNthCalledWith(
       2,
       "/agent-observability/v1/traces/by-request/business-graph",
-      { params: { request_id: "req_001", limit: 50 } },
+      {
+        headers: { "x-business-domain": "bd_demo" },
+        params: { request_id: "req_001", limit: 50 },
+      },
     );
     expect(getMock.mock.calls.flat().join(" ")).not.toContain("_search");
+  });
+
+  it("falls back to the public business domain when runtime context is empty", async () => {
+    runtimeConfigMock.currentUser.businessDomainId = "";
+    getMock.mockResolvedValue({
+      data: {
+        trace_id: "trace_001",
+        status: "ok",
+        data: { nodes: [], edges: [] },
+      },
+    });
+    const { getTraceGraph } = await import("@/modules/bkn-trace/services/trace.service");
+
+    await getTraceGraph("trace_001");
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/agent-observability/v1/traces/trace_001/trace-graph",
+      { headers: { "x-business-domain": "bd_public" } },
+    );
   });
 });

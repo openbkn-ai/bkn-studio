@@ -6,8 +6,10 @@
  */
 
 import { http } from "@/framework/request/http";
+import { getRuntimeConfig } from "@/framework/runtime/config";
 
 const TRACE_API_PREFIX = "/agent-observability/v1/traces";
+const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
 export type VisibilitySummary = {
   authorizedRefCount: number;
@@ -259,12 +261,14 @@ type BackendSnapshotPreview = {
 export async function getTraceGraph(traceId: string): Promise<TraceGraph> {
   const response = await http.get<BackendTraceGraph>(
     `${TRACE_API_PREFIX}/${encodeURIComponent(traceId)}/trace-graph`,
+    traceRequestConfig(),
   );
   return mapTraceGraph(response.data);
 }
 
 export async function getEvidenceChain(scope: TraceQueryScope): Promise<EvidenceChain> {
   const response = await http.get<BackendEvidenceChain>(targetPath(scope, "evidence-chain"), {
+    headers: traceHeaders(),
     params: targetParams(scope),
   });
   return mapEvidenceChain(response.data);
@@ -272,6 +276,7 @@ export async function getEvidenceChain(scope: TraceQueryScope): Promise<Evidence
 
 export async function getBusinessGraph(scope: TraceQueryScope): Promise<BusinessGraph> {
   const response = await http.get<BackendBusinessGraph>(targetPath(scope, "business-graph"), {
+    headers: traceHeaders(),
     params: targetParams(scope),
   });
   return mapBusinessGraph(response.data);
@@ -279,9 +284,21 @@ export async function getBusinessGraph(scope: TraceQueryScope): Promise<Business
 
 export async function getSnapshotPreview(scope: TraceQueryScope): Promise<SnapshotPreview> {
   const response = await http.get<BackendSnapshotPreview>(targetPath(scope, "snapshot-preview"), {
+    headers: traceHeaders(),
     params: targetParams(scope),
   });
   return mapSnapshotPreview(response.data);
+}
+
+function traceHeaders() {
+  const configuredDomain = getRuntimeConfig().currentUser.businessDomainId?.trim();
+  return {
+    "x-business-domain": configuredDomain || DEFAULT_BUSINESS_DOMAIN,
+  };
+}
+
+function traceRequestConfig() {
+  return { headers: traceHeaders() };
 }
 
 function targetPath(
