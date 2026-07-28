@@ -102,7 +102,7 @@ export function BknTraceRunsScene() {
             }
           : result
       );
-    } catch (caught) {
+    } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
     } finally {
       setLoading(false);
@@ -169,7 +169,7 @@ export function BknTraceRunsScene() {
         summary,
         traces,
       });
-    } catch (caught) {
+    } catch (caught: unknown) {
       setDetail(undefined);
       setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
     } finally {
@@ -574,7 +574,7 @@ function TraceExecutions({ traces }: { traces: TraceExecutionSummary[] }) {
     setError(undefined);
     try {
       setGraph(await getTraceGraph(traceId));
-    } catch (caught) {
+    } catch {
       setGraph(undefined);
       setError(t("bknTrace.emptyStates.traceGraph"));
     } finally {
