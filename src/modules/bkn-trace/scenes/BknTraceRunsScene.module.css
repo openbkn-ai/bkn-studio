@@ -1,0 +1,175 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.scene,
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.detailHeader {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.header,
+.titleBlock {
+  min-width: 0;
+}
+
+.header h3,
+.detailHeader h4 {
+  margin: 0;
+}
+
+.titleBlock h3 {
+  white-space: nowrap;
+}
+
+.filters {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.filters > :not(:global(.ant-btn)) {
+  flex: 1 1 180px;
+  max-width: 360px;
+  min-width: 0;
+}
+
+.filters > .keywordFilter {
+  flex-basis: 260px;
+  max-width: 420px;
+}
+
+.filters > :global(.ant-btn) {
+  flex: 0 0 auto;
+}
+
+.loadMore {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}
+
+.questionButton {
+  height: auto;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
+}
+
+.detailStatus {
+  margin-left: auto;
+}
+
+.identity {
+  overflow-wrap: anywhere;
+}
+
+.diagnostics {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.businessContent {
+  border-block: 1px solid #d9dde5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.businessContent section {
+  min-width: 0;
+  padding: 18px 22px;
+}
+
+.businessContent section + section {
+  border-left: 1px solid #d9dde5;
+}
+
+.contentText {
+  font-size: 16px;
+  line-height: 1.7;
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+}
+
+.contentJson {
+  background: #f6f7f9;
+  border: 1px solid #e4e7ec;
+  border-radius: 4px;
+  margin: 10px 0 0;
+  max-height: 360px;
+  overflow: auto;
+  padding: 14px;
+  white-space: pre-wrap;
+}
+
+.explanation {
+  display: grid;
+  gap: 28px;
+}
+
+.semanticChain,
+.artifactSection {
+  min-width: 0;
+}
+
+.stageGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.stage {
+  border-top: 3px solid #58708f;
+  min-width: 150px;
+  padding-top: 10px;
+}
+
+.node {
+  border-bottom: 1px solid #e5e8ed;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 0;
+}
+
+.artifact {
+  border-top: 1px solid #d9dde5;
+  padding: 16px 0;
+}
+
+@media (max-width: 900px) {
+  .businessContent {
+    grid-template-columns: 1fr;
+  }
+
+  .businessContent section + section {
+    border-left: 0;
+    border-top: 1px solid #d9dde5;
+  }
+}
+
+@media (max-width: 520px) {
+  .filters > :not(:global(.ant-btn)) {
+    flex-basis: 100%;
+    max-width: none;
+    width: 100%;
+  }
+}

@@ -9,7 +9,7 @@ import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 
 const TRACE_API_PREFIX = "/agent-observability/v1/traces";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
+const OBSERVABILITY_API_PREFIX = "/agent-observability/v1";
 
 export type VisibilitySummary = {
   authorizedRefCount: number;
@@ -88,26 +88,39 @@ export type TraceEvidenceRef = {
 
 export type TraceBusinessRef = Record<string, unknown>;
 
-export type TraceBusinessNode = {
-  claim_id?: ExplainabilityFieldValue;
-  id?: ExplainabilityFieldValue;
-  label?: ExplainabilityFieldValue;
-  node_type?: ExplainabilityFieldValue;
-  properties?: {
-    ref_type?: ExplainabilityFieldValue;
-    source_system?: ExplainabilityFieldValue;
-    summary_hash?: ExplainabilityFieldValue;
-    validity?: ExplainabilityFieldValue;
-    version_status?: ExplainabilityFieldValue;
-    visibility?: ExplainabilityFieldValue;
-    [key: string]: unknown;
-  };
-  version_status?: ExplainabilityFieldValue;
-  visibility?: ExplainabilityFieldValue;
-  [key: string]: unknown;
+export type BusinessStoryStage = "action" | "claim" | "evidence" | "execution" | "intent";
+
+export type TraceBusinessDisplay = {
+  businessPath?: string[];
+  controlledSummary?: string;
+  name?: string;
+  resolutionStatus?: string;
+  sourceVersion?: string;
 };
 
-export type TraceBusinessEdge = Record<string, unknown>;
+export type TraceBusinessNode = {
+  actionId?: string;
+  claimId?: string;
+  display?: TraceBusinessDisplay;
+  eventId?: string;
+  id: string;
+  interactionId?: string;
+  label?: string;
+  nodeType: string;
+  operationId?: string;
+  properties: Record<string, unknown>;
+  stage?: BusinessStoryStage;
+  versionStatus?: string;
+  visibility?: string;
+};
+
+export type TraceBusinessEdge = {
+  edgeType: string;
+  id: string;
+  sourceId: string;
+  targetId: string;
+  visibility?: string;
+};
 
 export type GraphPage = {
   edgeCount: number;
@@ -130,6 +143,7 @@ export type TraceGraph = {
 
 export type EvidenceChain = {
   data: {
+    artifactLinks: TraceArtifactLink[];
     businessRefs: TraceBusinessRef[];
     claims: TraceClaim[];
     evidenceRefs: TraceEvidenceRef[];
@@ -140,6 +154,16 @@ export type EvidenceChain = {
   requestId: string;
   traceId: string;
   visibilitySummary: VisibilitySummary;
+};
+
+export type TraceArtifactLink = {
+  artifactRef: string;
+  artifactType: string;
+  claimId?: string;
+  eventId: string;
+  eventType: string;
+  operationId?: string;
+  role: string;
 };
 
 export type BusinessGraph = {
@@ -167,6 +191,110 @@ export type SnapshotPreview = {
   };
   traceId: string;
   visibilitySummary: VisibilitySummary;
+};
+
+export type ActionSummary = {
+  approved: number;
+  completed: number;
+  executed: number;
+  lastStatus?: string;
+  recommended: number;
+};
+
+export type RequestSummary = {
+  actionSummary: ActionSummary;
+  agentOrApp?: string;
+  businessDomain?: string;
+  businessRefs: string[];
+  completedAt?: string;
+  conversationId?: string;
+  durationMs?: number;
+  errorSummary?: string;
+  evidenceCompleteness: string;
+  initiator?: string;
+  interactionId?: string;
+  knowledgeNetworks: string[];
+  partialReasons: string[];
+  questionPreview?: string;
+  requestId: string;
+  resultPreview?: string;
+  startedAt?: string;
+  status: string;
+  traceCount: number;
+};
+
+export type TraceExecutionSummary = {
+  agentOrApp?: string;
+  businessDomain?: string;
+  completedAt?: string;
+  conversationId?: string;
+  durationMs?: number;
+  errorSummary?: string;
+  interactionId?: string;
+  requestId: string;
+  rootOperation?: string;
+  spanCount: number;
+  startedAt?: string;
+  status: string;
+  traceId: string;
+};
+
+export type SummaryPage<T> = {
+  entries: T[];
+  nextCursor?: string;
+  partial: boolean;
+  partialReasons: string[];
+  total: number;
+  truncated: boolean;
+};
+
+export type InteractionSummary = {
+  completedAt?: string;
+  conversationId?: string;
+  durationMs?: number;
+  interactionId: string;
+  requests: RequestSummary[];
+  startedAt?: string;
+  status: string;
+  traces: TraceExecutionSummary[];
+};
+
+export type RequestSummaryQuery = {
+  agentOrApp?: string;
+  businessDomain?: string;
+  conversationId?: string;
+  cursor?: string;
+  evidenceCompleteness?: string;
+  from?: string;
+  interactionId?: string;
+  keyword?: string;
+  knowledgeNetwork?: string;
+  limit?: number;
+  status?: string;
+  to?: string;
+};
+
+export type EvidenceArtifact = {
+  accountId: string;
+  accountType: string;
+  agentOrApp?: string;
+  artifactId: string;
+  artifactType: string;
+  businessDomain?: string;
+  businessRefs: string[];
+  claimId?: string;
+  content: unknown;
+  contentHash: string;
+  contentType: string;
+  interactionId?: string;
+  observedAt: string;
+  operationId?: string;
+  requestId: string;
+  schemaVersion: string;
+  snapshotRef?: string;
+  sourceRef?: string;
+  sourceVersion?: string;
+  traceId?: string;
 };
 
 export type TraceQueryScope =
@@ -220,6 +348,15 @@ type BackendTraceGraph = {
 type BackendEvidenceChain = {
   "bkn.request.id"?: string;
   data?: {
+    artifact_links?: Array<{
+      artifact_ref?: string;
+      artifact_type?: string;
+      claim_id?: string;
+      event_id?: string;
+      event_type?: string;
+      operation_id?: string;
+      role?: string;
+    }>;
     business_refs?: TraceBusinessRef[];
     claims?: TraceClaim[];
     evidence_refs?: TraceEvidenceRef[];
@@ -234,8 +371,34 @@ type BackendEvidenceChain = {
 type BackendBusinessGraph = {
   "bkn.request.id"?: string;
   data?: {
-    edges?: TraceBusinessEdge[];
-    nodes?: TraceBusinessNode[];
+    edges?: Array<{
+      edge_type?: string;
+      id?: string;
+      source_id?: string;
+      target_id?: string;
+      visibility?: string;
+    }>;
+    nodes?: Array<{
+      action_instance_id?: string;
+      claim_id?: string;
+      display?: {
+        business_path?: string[];
+        controlled_summary?: string;
+        name?: string;
+        resolution_status?: string;
+        source_version?: string;
+      };
+      event_id?: string;
+      id?: string;
+      interaction_id?: string;
+      label?: string;
+      node_type?: string;
+      operation_id?: string;
+      properties?: Record<string, unknown>;
+      stage?: BusinessStoryStage;
+      version_status?: string;
+      visibility?: string;
+    }>;
   };
   page?: BackendGraphPage;
   partial?: boolean;
@@ -256,6 +419,95 @@ type BackendSnapshotPreview = {
   };
   trace_id?: string;
   visibility_summary?: BackendVisibilitySummary;
+};
+
+type BackendActionSummary = {
+  approved?: number;
+  completed?: number;
+  executed?: number;
+  last_status?: string;
+  recommended?: number;
+};
+
+type BackendRequestSummary = {
+  action_summary?: BackendActionSummary;
+  agent_or_app?: string;
+  business_domain?: string;
+  business_refs?: string[];
+  completed_at?: string;
+  conversation_id?: string;
+  duration_ms?: number;
+  error_summary?: string;
+  evidence_completeness?: string;
+  initiator?: string;
+  interaction_id?: string;
+  knowledge_networks?: string[];
+  partial_reasons?: string[];
+  question_preview?: string;
+  request_id?: string;
+  result_preview?: string;
+  started_at?: string;
+  status?: string;
+  trace_count?: number;
+};
+
+type BackendTraceExecutionSummary = {
+  agent_or_app?: string;
+  business_domain?: string;
+  completed_at?: string;
+  conversation_id?: string;
+  duration_ms?: number;
+  error_summary?: string;
+  interaction_id?: string;
+  request_id?: string;
+  root_operation?: string;
+  span_count?: number;
+  started_at?: string;
+  status?: string;
+  trace_id?: string;
+};
+
+type BackendSummaryPage<T> = {
+  entries?: T[];
+  next_cursor?: string | null;
+  partial?: boolean;
+  partial_reasons?: string[];
+  total?: number;
+  truncated?: boolean;
+};
+
+type BackendInteractionSummary = {
+  completed_at?: string;
+  conversation_id?: string;
+  duration_ms?: number;
+  interaction_id?: string;
+  requests?: BackendRequestSummary[];
+  started_at?: string;
+  status?: string;
+  traces?: BackendTraceExecutionSummary[];
+};
+
+type BackendEvidenceArtifact = {
+  "bkn.account.id"?: string;
+  "bkn.account.type"?: string;
+  "bkn.request.id"?: string;
+  agent_or_app?: string;
+  artifact_id?: string;
+  artifact_type?: string;
+  business_domain?: string;
+  business_refs?: string[];
+  claim_id?: string;
+  content?: unknown;
+  content_hash?: string;
+  content_type?: string;
+  interaction_id?: string;
+  observed_at?: string;
+  operation_id?: string;
+  schema_version?: string;
+  snapshot_ref?: string;
+  source_ref?: string;
+  source_version?: string;
+  trace_id?: string;
 };
 
 export async function getTraceGraph(traceId: string): Promise<TraceGraph> {
@@ -290,10 +542,65 @@ export async function getSnapshotPreview(scope: TraceQueryScope): Promise<Snapsh
   return mapSnapshotPreview(response.data);
 }
 
-function traceHeaders() {
-  const configuredDomain = getRuntimeConfig().currentUser.businessDomainId?.trim();
+export async function getRequestSummaries(
+  query: RequestSummaryQuery = {},
+): Promise<SummaryPage<RequestSummary>> {
+  const response = await http.get<BackendSummaryPage<BackendRequestSummary>>(
+    `${OBSERVABILITY_API_PREFIX}/requests`,
+    { headers: traceHeaders(), params: summaryParams(query) },
+  );
+  return mapSummaryPage(response.data, mapRequestSummary);
+}
+
+export async function getRequestSummary(requestId: string): Promise<RequestSummary> {
+  const response = await http.get<BackendRequestSummary>(
+    `${OBSERVABILITY_API_PREFIX}/requests/${encodeURIComponent(requestId)}`,
+    traceRequestConfig(),
+  );
+  return mapRequestSummary(response.data);
+}
+
+export async function getInteractionSummary(
+  interactionId: string,
+): Promise<InteractionSummary> {
+  const response = await http.get<BackendInteractionSummary>(
+    `${OBSERVABILITY_API_PREFIX}/interactions/${encodeURIComponent(interactionId)}`,
+    traceRequestConfig(),
+  );
   return {
-    "x-business-domain": configuredDomain || DEFAULT_BUSINESS_DOMAIN,
+    completedAt: response.data.completed_at,
+    conversationId: response.data.conversation_id,
+    durationMs: response.data.duration_ms,
+    interactionId: response.data.interaction_id ?? "",
+    requests: (response.data.requests ?? []).map(mapRequestSummary),
+    startedAt: response.data.started_at,
+    status: response.data.status ?? "unknown",
+    traces: (response.data.traces ?? []).map(mapTraceExecutionSummary),
+  };
+}
+
+export async function getRequestTraces(
+  requestId: string,
+  query: Pick<RequestSummaryQuery, "cursor" | "limit"> = {},
+): Promise<SummaryPage<TraceExecutionSummary>> {
+  const response = await http.get<BackendSummaryPage<BackendTraceExecutionSummary>>(
+    `${OBSERVABILITY_API_PREFIX}/requests/${encodeURIComponent(requestId)}/traces`,
+    { headers: traceHeaders(), params: summaryParams(query) },
+  );
+  return mapSummaryPage(response.data, mapTraceExecutionSummary);
+}
+
+export async function getEvidenceArtifact(artifactId: string): Promise<EvidenceArtifact> {
+  const response = await http.get<BackendEvidenceArtifact>(
+    `${OBSERVABILITY_API_PREFIX}/evidence/artifacts/${encodeURIComponent(artifactId)}`,
+    traceRequestConfig(),
+  );
+  return mapEvidenceArtifact(response.data);
+}
+
+function traceHeaders() {
+  return {
+    "x-business-domain": getRuntimeConfig().currentUser.businessDomainId ?? "bd_public",
   };
 }
 
@@ -322,6 +629,116 @@ function targetParams(scope: TraceQueryScope) {
     params.limit = scope.limit;
   }
   return Object.keys(params).length ? params : undefined;
+}
+
+function summaryParams(query: RequestSummaryQuery) {
+  const params: Record<string, number | string> = {};
+  if (query.limit !== undefined) params.limit = query.limit;
+  if (query.cursor) params.cursor = query.cursor;
+  if (query.from) params.from = query.from;
+  if (query.to) params.to = query.to;
+  if (query.status) params.status = query.status;
+  if (query.agentOrApp) params.agent_or_app = query.agentOrApp;
+  if (query.businessDomain) params.business_domain = query.businessDomain;
+  if (query.conversationId) params.conversation_id = query.conversationId;
+  if (query.interactionId) params.interaction_id = query.interactionId;
+  if (query.knowledgeNetwork) params.knowledge_network = query.knowledgeNetwork;
+  if (query.evidenceCompleteness) {
+    params.evidence_completeness = query.evidenceCompleteness;
+  }
+  if (query.keyword) params.keyword = query.keyword;
+  return Object.keys(params).length ? params : undefined;
+}
+
+function mapSummaryPage<TBackend, T>(
+  data: BackendSummaryPage<TBackend>,
+  mapEntry: (entry: TBackend) => T,
+): SummaryPage<T> {
+  return {
+    entries: (data.entries ?? []).map(mapEntry),
+    nextCursor: data.next_cursor ?? undefined,
+    partial: Boolean(data.partial),
+    partialReasons: data.partial_reasons ?? [],
+    total: data.total ?? 0,
+    truncated: Boolean(data.truncated),
+  };
+}
+
+function mapActionSummary(data?: BackendActionSummary): ActionSummary {
+  return {
+    approved: data?.approved ?? 0,
+    completed: data?.completed ?? 0,
+    executed: data?.executed ?? 0,
+    lastStatus: data?.last_status,
+    recommended: data?.recommended ?? 0,
+  };
+}
+
+function mapRequestSummary(data: BackendRequestSummary): RequestSummary {
+  return {
+    actionSummary: mapActionSummary(data.action_summary),
+    agentOrApp: data.agent_or_app,
+    businessDomain: data.business_domain,
+    businessRefs: data.business_refs ?? [],
+    completedAt: data.completed_at,
+    conversationId: data.conversation_id,
+    durationMs: data.duration_ms,
+    errorSummary: data.error_summary,
+    evidenceCompleteness: data.evidence_completeness ?? "content_unavailable",
+    initiator: data.initiator,
+    interactionId: data.interaction_id,
+    knowledgeNetworks: data.knowledge_networks ?? [],
+    partialReasons: data.partial_reasons ?? [],
+    questionPreview: data.question_preview,
+    requestId: data.request_id ?? "",
+    resultPreview: data.result_preview,
+    startedAt: data.started_at,
+    status: data.status ?? "unknown",
+    traceCount: data.trace_count ?? 0,
+  };
+}
+
+function mapTraceExecutionSummary(data: BackendTraceExecutionSummary): TraceExecutionSummary {
+  return {
+    agentOrApp: data.agent_or_app,
+    businessDomain: data.business_domain,
+    completedAt: data.completed_at,
+    conversationId: data.conversation_id,
+    durationMs: data.duration_ms,
+    errorSummary: data.error_summary,
+    interactionId: data.interaction_id,
+    requestId: data.request_id ?? "",
+    rootOperation: data.root_operation,
+    spanCount: data.span_count ?? 0,
+    startedAt: data.started_at,
+    status: data.status ?? "unknown",
+    traceId: data.trace_id ?? "",
+  };
+}
+
+function mapEvidenceArtifact(data: BackendEvidenceArtifact): EvidenceArtifact {
+  return {
+    accountId: data["bkn.account.id"] ?? "",
+    accountType: data["bkn.account.type"] ?? "",
+    agentOrApp: data.agent_or_app,
+    artifactId: data.artifact_id ?? "",
+    artifactType: data.artifact_type ?? "",
+    businessDomain: data.business_domain,
+    businessRefs: data.business_refs ?? [],
+    claimId: data.claim_id,
+    content: data.content,
+    contentHash: data.content_hash ?? "",
+    contentType: data.content_type ?? "",
+    interactionId: data.interaction_id,
+    observedAt: data.observed_at ?? "",
+    operationId: data.operation_id,
+    requestId: data["bkn.request.id"] ?? "",
+    schemaVersion: data.schema_version ?? "",
+    snapshotRef: data.snapshot_ref,
+    sourceRef: data.source_ref,
+    sourceVersion: data.source_version,
+    traceId: data.trace_id,
+  };
 }
 
 function mapPage(page?: BackendGraphPage): GraphPage {
@@ -377,6 +794,15 @@ function mapTraceGraph(data: BackendTraceGraph): TraceGraph {
 function mapEvidenceChain(data: BackendEvidenceChain): EvidenceChain {
   return {
     data: {
+      artifactLinks: (data.data?.artifact_links ?? []).map((link) => ({
+        artifactRef: link.artifact_ref ?? "",
+        artifactType: link.artifact_type ?? "",
+        claimId: link.claim_id,
+        eventId: link.event_id ?? "",
+        eventType: link.event_type ?? "",
+        operationId: link.operation_id,
+        role: link.role ?? "",
+      })),
       businessRefs: data.data?.business_refs ?? [],
       claims: data.data?.claims ?? [],
       evidenceRefs: data.data?.evidence_refs ?? [],
@@ -393,8 +819,34 @@ function mapEvidenceChain(data: BackendEvidenceChain): EvidenceChain {
 function mapBusinessGraph(data: BackendBusinessGraph): BusinessGraph {
   return {
     data: {
-      edges: data.data?.edges ?? [],
-      nodes: data.data?.nodes ?? [],
+      edges: (data.data?.edges ?? []).map((edge) => ({
+        edgeType: edge.edge_type ?? "",
+        id: edge.id ?? "",
+        sourceId: edge.source_id ?? "",
+        targetId: edge.target_id ?? "",
+        visibility: edge.visibility,
+      })),
+      nodes: (data.data?.nodes ?? []).map((node) => ({
+        actionId: node.action_instance_id,
+        claimId: node.claim_id,
+        display: node.display ? {
+          businessPath: node.display.business_path,
+          controlledSummary: node.display.controlled_summary,
+          name: node.display.name,
+          resolutionStatus: node.display.resolution_status,
+          sourceVersion: node.display.source_version,
+        } : undefined,
+        eventId: node.event_id,
+        id: node.id ?? "",
+        interactionId: node.interaction_id,
+        label: node.label,
+        nodeType: node.node_type ?? "business_ref",
+        operationId: node.operation_id,
+        properties: node.properties ?? {},
+        stage: node.stage,
+        versionStatus: node.version_status,
+        visibility: node.visibility,
+      })),
     },
     page: mapPage(data.page),
     partial: Boolean(data.partial),

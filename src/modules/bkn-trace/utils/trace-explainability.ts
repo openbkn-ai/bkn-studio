@@ -6,10 +6,55 @@
  */
 
 import type {
+  BusinessStoryStage,
   TraceBusinessNode,
   TraceClaim,
   TraceEvidenceRef,
 } from "@/modules/bkn-trace/services/trace.service";
+
+const stageOrder: BusinessStoryStage[] = ["intent", "execution", "evidence", "claim", "action"];
+
+export type BusinessStoryStageGroup = {
+  nodes: TraceBusinessNode[];
+  stage: BusinessStoryStage;
+};
+
+export function businessStoryStages(nodes: TraceBusinessNode[]): BusinessStoryStageGroup[] {
+  return stageOrder.map((stage) => ({
+    nodes: nodes.filter((node) => effectiveBusinessStage(node) === stage),
+    stage,
+  }));
+}
+
+export function explainabilityPartialReasons(
+  reasonGroups: string[][],
+  businessGraph?: {
+    partialReason: string[];
+    visibilitySummary: { authorizedRefCount: number; unresolvedRefCount: number };
+  },
+): string[] {
+  const reasons = [...new Set(reasonGroups.flat())];
+  const businessReferencesResolved = Boolean(
+    businessGraph
+    && businessGraph.visibilitySummary.authorizedRefCount > 0
+    && businessGraph.visibilitySummary.unresolvedRefCount === 0
+    && !businessGraph.partialReason.some((reason) => businessReferenceReasons.has(reason)),
+  );
+  return businessReferencesResolved
+    ? reasons.filter((reason) => !businessReferenceReasons.has(reason))
+    : reasons;
+}
+
+const businessReferenceReasons = new Set([
+  "business_ref_unresolved",
+  "missing_business_refs",
+  "resolver_unresolved",
+]);
+
+function effectiveBusinessStage(node: TraceBusinessNode): BusinessStoryStage | undefined {
+  if (node.stage) return node.stage;
+  return node.id.startsWith("business:") ? "evidence" : undefined;
+}
 
 export type ExplainabilityRow = {
   id: string;
@@ -82,23 +127,23 @@ export function evidenceRows(refs: TraceEvidenceRef[]): ExplainabilityRow[] {
 
 export function businessRows(nodes: TraceBusinessNode[]): ExplainabilityRow[] {
   return nodes.map((node, index) => {
-    const properties = objectField(node, "properties");
-    const nodeType = stringField(node, "node_type") || stringField(properties, "ref_type") || "business";
-    const label = stringField(node, "label");
-    const id = stringField(node, "id") || `business:${index}`;
+    const properties = node.properties;
+    const nodeType = node.nodeType || stringField(properties, "ref_type") || "business";
+    const label = node.label ?? "";
+    const id = node.id || `business:${index}`;
 
     return {
       id,
       kind: nodeType,
       primary: firstNonEmpty(label, id),
       secondary: compactJoin([
-        stringField(node, "claim_id"),
+        node.claimId ?? "",
         stringField(properties, "source_system"),
         stringField(properties, "summary_hash") ? shortValue(stringField(properties, "summary_hash")) : "",
       ]),
       status: stringField(properties, "validity") || "-",
-      versionStatus: stringField(node, "version_status") || stringField(properties, "version_status") || "-",
-      visibility: stringField(node, "visibility") || stringField(properties, "visibility") || "-",
+      versionStatus: node.versionStatus || stringField(properties, "version_status") || "-",
+      visibility: node.visibility || stringField(properties, "visibility") || "-",
     };
   });
 }
