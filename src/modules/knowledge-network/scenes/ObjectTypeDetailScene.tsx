@@ -27,6 +27,7 @@ import { indexStateOf } from "@/modules/data-catalog/lib/index-state";
 import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { ObjectTypePropertyTable } from "@/modules/knowledge-network/components/object-type/ObjectTypePropertyTable";
 import { enrichDataPropertiesWithRowTotal } from "@/modules/knowledge-network/lib/enrich-data-properties";
@@ -471,13 +472,16 @@ export function ObjectTypeDetailScene() {
       title: t("knowledgeNetwork.objectTypeDeleteTitle"),
       content: t("knowledgeNetwork.objectTypeDeleteDescription", { name: detail.name }),
       cancelText: t("common.cancel"),
-      okButtonProps: { danger: true },
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
+      okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
         await deleteKnowledgeNetworkObjectType(networkId, detail.id);
         void message.success(t("common.success"));
         void navigate(listPath);
       },
+      width: 520,
     });
   };
 

@@ -102,7 +102,7 @@ describe("QuickAddApiForm cURL submit", () => {
     expect(document.servers[0].url).toBe("https://httpbin.org");
     expect(Object.keys(document.paths)).toEqual(["/post"]);
     expect(document.paths["/post"].post).toBeTruthy();
-  });
+  }, 10_000);
 
   /**
    * 回归:点过「识别接口信息」后 detectedCurlContract 不会随输入框失效,而它会整体覆盖

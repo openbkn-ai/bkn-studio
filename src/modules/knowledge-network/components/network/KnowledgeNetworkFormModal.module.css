@@ -48,6 +48,71 @@
   margin-bottom: 0;
 }
 
+.resourceDeleteConfirmModal :global(.ant-modal-content) {
+  padding: 28px 30px 24px;
+}
+
+.resourceDeleteConfirmModal :global(.ant-modal-confirm-body-wrapper) {
+  display: flex;
+  flex-direction: column;
+}
+
+.resourceDeleteConfirmModal :global(.ant-modal-confirm-body) {
+  align-items: flex-start;
+}
+
+.resourceDeleteConfirmModal :global(.ant-modal-confirm-body > .anticon) {
+  margin-inline-end: 14px;
+  color: #f5a623;
+  font-size: 24px;
+  line-height: 28px;
+}
+
+.resourceDeleteConfirmModal :global(.ant-modal-confirm-title) {
+  color: #111827;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.resourceDeleteConfirmModal :global(.ant-modal-confirm-content) {
+  margin-top: 10px;
+  color: #111827;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.resourceDeleteConfirmModal :global(.ant-modal-confirm-btns) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.resourceDeleteConfirmModal :global(.ant-modal-confirm-btns .ant-btn) {
+  min-width: 80px;
+  height: 40px;
+  border-radius: 0;
+  font-size: 16px;
+  box-shadow: none;
+}
+
+.resourceDeleteConfirmModal :global(.ant-modal-confirm-btns .ant-btn-default) {
+  border-color: #d9e0ea;
+  background: #fff;
+  color: #111827;
+}
+
+.resourceDeleteConfirmModal :global(.ant-modal-confirm-btns .ant-btn-primary.ant-btn-dangerous) {
+  border-color: #ff4d5a;
+  background: #ff4d5a;
+}
+
+.resourceDeleteConfirmModal :global(.ant-modal-confirm-btns .ant-btn-primary.ant-btn-dangerous:hover) {
+  border-color: #f03d4a;
+  background: #f03d4a;
+}
+
 .form {
   display: grid;
   gap: 0;
