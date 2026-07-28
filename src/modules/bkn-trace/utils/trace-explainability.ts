@@ -73,14 +73,6 @@ export type BusinessNodePresentation = {
   title: string;
 };
 
-const knownNames: Record<string, string> = {
-  supplychain_hd0202: "HD供应链业务知识网络_v3",
-  supplychain_hd0202_forecast: "产品需求预测单",
-  startdate: "预测交货开始日",
-  qty: "预测数量",
-  d9k33o9ft51s73bcntf0: "需求预测数据资源",
-};
-
 const operationNames: Record<string, string> = {
   "data.query.observed": "查询业务数据",
   "knowledge.read.observed": "读取业务知识网络",
@@ -101,7 +93,7 @@ export function businessNodePresentation(node: TraceBusinessNode): BusinessNodeP
   const eventType = stringField(node.properties, "event_type") || node.label || "";
   const artifactType = stringField(node.properties, "artifact_type") || node.label || "";
   const technicalId = firstNonEmpty(refId, stringField(node.properties, "artifact_ref"), node.id);
-  const resolved = resolveKnownBusinessRef(refId || node.id);
+  const resolved = resolveBusinessRef(refId || node.id);
   const displayName = node.display?.name || node.display?.controlledSummary || "";
 
   if (displayName) {
@@ -237,25 +229,22 @@ export function businessRows(nodes: TraceBusinessNode[]): ExplainabilityRow[] {
   });
 }
 
-function resolveKnownBusinessRef(ref: string): Omit<BusinessNodePresentation, "technicalId"> | undefined {
+function resolveBusinessRef(ref: string): Omit<BusinessNodePresentation, "technicalId"> | undefined {
   const normalized = ref.replace(/^evidence:/, "").replace(/^business:/, "");
   const parts = normalized.split(":");
   const refType = parts[0];
   if (refType === "kn") {
-    const knName = knownNames[parts[1]] || parts[1];
-    return { kind: "业务知识网络", subtitle: "业务知识网络 · BKN", title: `BKN：${knName}` };
+    return { kind: "业务知识网络", subtitle: "业务知识网络 · BKN", title: `BKN：${shortValue(parts[1] ?? ref)}` };
   }
   if (refType === "resource") {
-    const resourceName = knownNames[parts[1]] || shortValue(parts[1] ?? ref);
-    return { kind: "数据资源", subtitle: "业务数据 · Vega", title: `数据资源：${resourceName}` };
+    return { kind: "数据资源", subtitle: "业务数据 · Vega", title: `数据资源：${shortValue(parts[1] ?? ref)}` };
   }
   if (refType === "object") {
-    const objectName = knownNames[parts[2]] || parts[2] || ref;
-    return { kind: "业务对象", subtitle: compactJoin([knownNames[parts[1]] ? `BKN：${knownNames[parts[1]]}` : "", "对象"]), title: `业务对象：${objectName}` };
+    return { kind: "业务对象", subtitle: compactJoin([parts[1] ? `BKN：${shortValue(parts[1])}` : "", "对象"]), title: `业务对象：${shortValue(parts[2] || ref)}` };
   }
   if (refType === "property") {
-    const objectName = knownNames[parts[2]] || parts[2] || "";
-    const propertyName = knownNames[parts[3]] || parts[3] || ref;
+    const objectName = parts[2] || "";
+    const propertyName = parts[3] || ref;
     return { kind: "业务属性", subtitle: compactJoin([objectName, "属性"]), title: `业务属性：${propertyName}` };
   }
   return undefined;

@@ -122,7 +122,27 @@ describe("trace explainability rows", () => {
     expect(stages.find((stage) => stage.stage === "evidence")?.nodes).toHaveLength(1);
   });
 
-  it("presents known supply-chain business nodes with readable names and technical refs", () => {
+  it("uses backend display names before falling back to technical refs", () => {
+    expect(businessNodePresentation({
+      id: "evidence:evidence:kn:supplychain_hd0202",
+      nodeType: "evidence_ref",
+      label: "evidence:kn:supplychain_hd0202",
+      display: {
+        name: "HD供应链业务知识网络_v3",
+      },
+      properties: {
+        ref_id: "evidence:kn:supplychain_hd0202",
+        ref_type: "knowledge_network",
+        source_system: "bkn",
+      },
+    })).toMatchObject({
+      title: "HD供应链业务知识网络_v3",
+      subtitle: "业务证据",
+      technicalId: "evidence:kn:supplychain_hd0202",
+    });
+  });
+
+  it("falls back to true business refs when backend display names are absent", () => {
     expect(businessNodePresentation({
       id: "evidence:evidence:kn:supplychain_hd0202",
       nodeType: "evidence_ref",
@@ -133,7 +153,7 @@ describe("trace explainability rows", () => {
         source_system: "bkn",
       },
     })).toMatchObject({
-      title: "BKN：HD供应链业务知识网络_v3",
+      title: "BKN：supplychain_hd0202",
       subtitle: "业务知识网络 · BKN",
       technicalId: "evidence:kn:supplychain_hd0202",
     });
@@ -146,8 +166,8 @@ describe("trace explainability rows", () => {
         ref_type: "property",
       },
     })).toMatchObject({
-      title: "业务属性：预测交货开始日",
-      subtitle: "产品需求预测单 · 属性",
+      title: "业务属性：startdate",
+      subtitle: "supplychain_hd0202_forecast · 属性",
       technicalId: "property:supplychain_hd0202:supplychain_hd0202_forecast:startdate",
     });
   });
