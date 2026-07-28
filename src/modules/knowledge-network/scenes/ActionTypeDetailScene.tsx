@@ -17,6 +17,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeOverviewPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeOverviewPanel";
 import { ActionTypeExecuteModal } from "@/modules/knowledge-network/components/action-type/ActionTypeExecuteModal";
 import { ActionTypeTaskManagementPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import {
   deleteKnowledgeNetworkActionType,
@@ -98,13 +99,16 @@ export function ActionTypeDetailScene() {
       title: t("knowledgeNetwork.actionTypeDeleteTitle"),
       content: t("knowledgeNetwork.actionTypeDeleteDescription", { name: detail.name }),
       cancelText: t("common.cancel"),
-      okButtonProps: { danger: true },
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
+      okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
         await deleteKnowledgeNetworkActionType(networkId, detail.id);
         void message.success(t("common.success"));
         void navigate(listPath);
       },
+      width: 520,
     });
   };
 
