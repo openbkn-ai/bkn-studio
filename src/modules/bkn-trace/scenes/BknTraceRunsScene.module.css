@@ -150,6 +150,31 @@
   padding: 10px 0;
 }
 
+.nodeTitle {
+  color: #171d29;
+  font-weight: 600;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.technicalDetails {
+  color: #8a94a6;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.technicalDetails summary {
+  cursor: pointer;
+  display: inline;
+}
+
+.technicalDetails :global(.ant-typography) {
+  display: block;
+  font-size: 12px;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
 .artifact {
   border-top: 1px solid #d9dde5;
   padding: 16px 0;

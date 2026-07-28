@@ -66,6 +66,95 @@ export type ExplainabilityRow = {
   visibility: string;
 };
 
+export type BusinessNodePresentation = {
+  kind: string;
+  subtitle: string;
+  technicalId: string;
+  title: string;
+};
+
+const knownNames: Record<string, string> = {
+  supplychain_hd0202: "HD供应链业务知识网络_v3",
+  supplychain_hd0202_forecast: "产品需求预测单",
+  startdate: "预测交货开始日",
+  qty: "预测数量",
+  d9k33o9ft51s73bcntf0: "需求预测数据资源",
+};
+
+const operationNames: Record<string, string> = {
+  "data.query.observed": "查询业务数据",
+  "knowledge.read.observed": "读取业务知识网络",
+  "logic.execution.observed": "执行业务计算逻辑",
+  "retrieval.completed": "完成语义检索",
+};
+
+const artifactNames: Record<string, string> = {
+  data_result: "数据查询结果",
+  logic_execution: "逻辑计算结果",
+  query: "查询条件与口径",
+  question: "用户问题",
+  result: "业务回答",
+};
+
+export function businessNodePresentation(node: TraceBusinessNode): BusinessNodePresentation {
+  const refId = stringField(node.properties, "ref_id");
+  const eventType = stringField(node.properties, "event_type") || node.label || "";
+  const artifactType = stringField(node.properties, "artifact_type") || node.label || "";
+  const technicalId = firstNonEmpty(refId, stringField(node.properties, "artifact_ref"), node.id);
+  const resolved = resolveKnownBusinessRef(refId || node.id);
+  const displayName = node.display?.name || node.display?.controlledSummary || "";
+
+  if (displayName) {
+    return {
+      kind: businessKindLabel(node.nodeType),
+      subtitle: compactJoin([businessKindLabel(node.nodeType), node.display?.businessPath?.join(" / ") ?? ""]),
+      technicalId,
+      title: displayName,
+    };
+  }
+  if (resolved) {
+    return { ...resolved, technicalId };
+  }
+  if (node.nodeType === "operation" && operationNames[eventType]) {
+    return {
+      kind: "执行过程",
+      subtitle: eventType,
+      technicalId,
+      title: operationNames[eventType],
+    };
+  }
+  if (node.nodeType === "interaction") {
+    return {
+      kind: "交互意图",
+      subtitle: "用户问题与本轮任务",
+      technicalId,
+      title: "用户发起分析问题",
+    };
+  }
+  if (node.nodeType === "claim") {
+    return {
+      kind: "业务结论",
+      subtitle: stringField(node.properties, "claim_type") || "answer",
+      technicalId,
+      title: "形成业务回答",
+    };
+  }
+  if (node.nodeType === "artifact" && artifactNames[artifactType]) {
+    return {
+      kind: "证据制品",
+      subtitle: artifactType,
+      technicalId,
+      title: artifactNames[artifactType],
+    };
+  }
+  return {
+    kind: businessKindLabel(node.nodeType),
+    subtitle: compactJoin([businessKindLabel(node.nodeType), scalarLike(node.properties.validity), node.versionStatus ?? ""]),
+    technicalId,
+    title: node.label || shortValue(technicalId),
+  };
+}
+
 export function claimRows(claims: TraceClaim[]): ExplainabilityRow[] {
   return claims.map((claim, index) => {
     const subjectRefs = objectField(claim, "subject_refs");
@@ -146,6 +235,59 @@ export function businessRows(nodes: TraceBusinessNode[]): ExplainabilityRow[] {
       visibility: node.visibility || stringField(properties, "visibility") || "-",
     };
   });
+}
+
+function resolveKnownBusinessRef(ref: string): Omit<BusinessNodePresentation, "technicalId"> | undefined {
+  const normalized = ref.replace(/^evidence:/, "").replace(/^business:/, "");
+  const parts = normalized.split(":");
+  const refType = parts[0];
+  if (refType === "kn") {
+    const knName = knownNames[parts[1]] || parts[1];
+    return { kind: "业务知识网络", subtitle: "业务知识网络 · BKN", title: `BKN：${knName}` };
+  }
+  if (refType === "resource") {
+    const resourceName = knownNames[parts[1]] || shortValue(parts[1] ?? ref);
+    return { kind: "数据资源", subtitle: "业务数据 · Vega", title: `数据资源：${resourceName}` };
+  }
+  if (refType === "object") {
+    const objectName = knownNames[parts[2]] || parts[2] || ref;
+    return { kind: "业务对象", subtitle: compactJoin([knownNames[parts[1]] ? `BKN：${knownNames[parts[1]]}` : "", "对象"]), title: `业务对象：${objectName}` };
+  }
+  if (refType === "property") {
+    const objectName = knownNames[parts[2]] || parts[2] || "";
+    const propertyName = knownNames[parts[3]] || parts[3] || ref;
+    return { kind: "业务属性", subtitle: compactJoin([objectName, "属性"]), title: `业务属性：${propertyName}` };
+  }
+  return undefined;
+}
+
+function businessKindLabel(nodeType: string): string {
+  switch (nodeType) {
+  case "artifact":
+    return "证据制品";
+  case "claim":
+    return "业务结论";
+  case "evidence_ref":
+    return "业务证据";
+  case "interaction":
+    return "交互意图";
+  case "object":
+    return "业务对象";
+  case "operation":
+    return "执行过程";
+  case "property":
+    return "业务属性";
+  case "resource":
+    return "数据资源";
+  default:
+    return nodeType || "业务节点";
+  }
+}
+
+function scalarLike(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
 }
 
 export function shortValue(value: string): string {

@@ -244,6 +244,12 @@
   overflow-wrap: anywhere;
 }
 
+.inspectorSubtitle {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
 .inspectorTags {
   display: flex;
   flex-wrap: wrap;
@@ -258,6 +264,19 @@
 
 .nodeDescriptions :global(.ant-descriptions-item-content) {
   overflow-wrap: anywhere;
+}
+
+.technicalDetails {
+  border-top: 1px solid #eef1f5;
+  color: #8a94a6;
+  font-size: 12px;
+  line-height: 18px;
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.technicalDetails summary {
+  cursor: pointer;
 }
 
 .governanceGrid {

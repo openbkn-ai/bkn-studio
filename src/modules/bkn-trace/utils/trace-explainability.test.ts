@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   businessRows,
+  businessNodePresentation,
   businessStoryStages,
   claimRows,
   evidenceRows,
@@ -119,6 +120,36 @@ describe("trace explainability rows", () => {
     ]);
 
     expect(stages.find((stage) => stage.stage === "evidence")?.nodes).toHaveLength(1);
+  });
+
+  it("presents known supply-chain business nodes with readable names and technical refs", () => {
+    expect(businessNodePresentation({
+      id: "evidence:evidence:kn:supplychain_hd0202",
+      nodeType: "evidence_ref",
+      label: "evidence:kn:supplychain_hd0202",
+      properties: {
+        ref_id: "evidence:kn:supplychain_hd0202",
+        ref_type: "knowledge_network",
+        source_system: "bkn",
+      },
+    })).toMatchObject({
+      title: "BKN：HD供应链业务知识网络_v3",
+      subtitle: "业务知识网络 · BKN",
+      technicalId: "evidence:kn:supplychain_hd0202",
+    });
+
+    expect(businessNodePresentation({
+      id: "business:property:supplychain_hd0202:supplychain_hd0202_forecast:startdate",
+      nodeType: "property",
+      properties: {
+        ref_id: "property:supplychain_hd0202:supplychain_hd0202_forecast:startdate",
+        ref_type: "property",
+      },
+    })).toMatchObject({
+      title: "业务属性：预测交货开始日",
+      subtitle: "产品需求预测单 · 属性",
+      technicalId: "property:supplychain_hd0202:supplychain_hd0202_forecast:startdate",
+    });
   });
 
   it("removes stale producer business-ref warnings after the core resolver succeeds", () => {

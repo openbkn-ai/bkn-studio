@@ -53,7 +53,7 @@ import {
 } from "@/modules/bkn-trace/services/trace.service";
 import {
   businessStoryStages,
-  shortValue,
+  businessNodePresentation,
 } from "@/modules/bkn-trace/utils/trace-explainability";
 
 type RequestDetail = {
@@ -534,8 +534,13 @@ function BusinessExplanation({
               <Typography.Text strong>{t(`bknTrace.stages.${stage.stage}`)}</Typography.Text>
               {stage.nodes.length ? stage.nodes.map((node) => (
                 <div className={styles.node} key={node.id}>
-                  <span>{node.display?.name || node.label || shortValue(node.id)}</span>
-                  <Typography.Text type="secondary">{node.nodeType}</Typography.Text>
+                  <span className={styles.nodeTitle}>{businessNodePresentation(node).title}</span>
+                  <Typography.Text type="secondary">{businessNodePresentation(node).subtitle}</Typography.Text>
+                  <details className={styles.technicalDetails}>
+                    <summary>{t("bknTrace.fields.technicalDetails")}</summary>
+                    <Typography.Text copyable type="secondary">{businessNodePresentation(node).technicalId}</Typography.Text>
+                    <Typography.Text type="secondary">{node.nodeType}</Typography.Text>
+                  </details>
                 </div>
               )) : <Typography.Text type="secondary">-</Typography.Text>}
             </div>

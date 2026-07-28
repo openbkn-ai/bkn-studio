@@ -76,6 +76,7 @@ export const bknTraceEnUS = {
       span: "Span",
       startedAt: "Started at",
       status: "Status",
+      technicalDetails: "Show technical details",
       traceId: "Trace ID",
       type: "Type",
       version: "Version",

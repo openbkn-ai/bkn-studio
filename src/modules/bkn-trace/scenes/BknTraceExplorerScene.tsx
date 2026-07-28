@@ -37,6 +37,7 @@ import {
 } from "@/modules/bkn-trace/services/trace.service";
 import {
   businessStoryStages,
+  businessNodePresentation,
   explainabilityPartialReasons,
   shortValue,
 } from "@/modules/bkn-trace/utils/trace-explainability";
@@ -187,12 +188,12 @@ function BknTraceAdvancedExplorerScene() {
   ], state.businessGraph);
 
   const nodeTitle = (node: TraceBusinessNode) => {
-    const refId = scalar(node.properties.ref_id);
-    return node.display?.name || node.label || refId || node.id;
+    return businessNodePresentation(node).title;
   };
   const nodeMeta = (node: TraceBusinessNode) => {
+    const presentation = businessNodePresentation(node);
     const status = scalar(node.properties.status) || scalar(node.properties.validity);
-    return [node.nodeType, status, node.versionStatus].filter(Boolean).join(" · ");
+    return [presentation.subtitle, status, node.versionStatus].filter(Boolean).join(" · ");
   };
 
   const story = (
@@ -255,13 +256,15 @@ function BknTraceAdvancedExplorerScene() {
         {selectedNode ? (
           <>
             <Typography.Text strong className={styles.inspectorTitle}>{nodeTitle(selectedNode)}</Typography.Text>
+            <Typography.Text type="secondary" className={styles.inspectorSubtitle}>
+              {businessNodePresentation(selectedNode).subtitle}
+            </Typography.Text>
             <div className={styles.inspectorTags}>
               <Tag>{t(`bknTrace.stages.${selectedNode.stage ?? "evidence"}`)}</Tag>
               {selectedNode.visibility ? <Tag color={selectedNode.visibility === "visible" ? "green" : "orange"}>{selectedNode.visibility}</Tag> : null}
               {selectedNode.versionStatus ? <Tag>{selectedNode.versionStatus}</Tag> : null}
             </div>
             <Descriptions className={styles.nodeDescriptions} column={1} size="small">
-              <Descriptions.Item label={t("bknTrace.fields.identifier")}>{selectedNode.id}</Descriptions.Item>
               {selectedNode.operationId ? <Descriptions.Item label={t("bknTrace.fields.operationId")}>{selectedNode.operationId}</Descriptions.Item> : null}
               {selectedNode.claimId ? <Descriptions.Item label={t("bknTrace.fields.claimId")}>{selectedNode.claimId}</Descriptions.Item> : null}
               {selectedNode.display?.businessPath?.length ? <Descriptions.Item label={t("bknTrace.fields.businessPath")}>{selectedNode.display.businessPath.join(" / ")}</Descriptions.Item> : null}
@@ -272,6 +275,14 @@ function BknTraceAdvancedExplorerScene() {
                 <Descriptions.Item key={key} label={key}>{displayValue(selectedNode.properties[key])}</Descriptions.Item>
               ))}
             </Descriptions>
+            <details className={styles.technicalDetails}>
+              <summary>{t("bknTrace.fields.technicalDetails")}</summary>
+              <Descriptions className={styles.nodeDescriptions} column={1} size="small">
+                <Descriptions.Item label={t("bknTrace.fields.identifier")}>{selectedNode.id}</Descriptions.Item>
+                <Descriptions.Item label="technical_ref">{businessNodePresentation(selectedNode).technicalId}</Descriptions.Item>
+                <Descriptions.Item label="node_type">{selectedNode.nodeType}</Descriptions.Item>
+              </Descriptions>
+            </details>
           </>
         ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("bknTrace.emptyStates.node")} />}
       </aside>

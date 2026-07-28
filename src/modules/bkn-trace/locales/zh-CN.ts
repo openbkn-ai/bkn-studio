@@ -75,6 +75,7 @@ export const bknTraceZhCN = {
       span: "Span",
       startedAt: "开始时间",
       status: "状态",
+      technicalDetails: "展开技术信息",
       traceId: "Trace ID",
       type: "类型",
       version: "版本",
