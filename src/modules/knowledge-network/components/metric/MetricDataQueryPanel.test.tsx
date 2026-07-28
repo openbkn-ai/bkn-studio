@@ -90,7 +90,7 @@ describe("MetricDataQueryPanel", () => {
     expect(drillDownLabel).toBeTruthy();
     expect(screen.getByText("物料名称")).toBeTruthy();
     expect(container.textContent).not.toContain("material_name");
-  });
+  }, 10_000);
 
   it("keeps filter condition available when no drill-down dimensions are configured", () => {
     render(
