@@ -59,6 +59,42 @@ afterEach(() => {
 });
 
 describe("MetricDataQueryPanel", () => {
+  it("hides quarter step for trend and proportion query modes", () => {
+    render(
+      <MetricDataQueryPanel
+        metricId="metric-1"
+        metricName="Material count"
+        networkId="network-1"
+      />,
+    );
+
+    const modeLabel = screen.getByText("knowledgeNetwork.metricQueryModeLabel");
+    const modeSelect = modeLabel
+      .closest(".ant-form-item")
+      ?.querySelector(".ant-select-selector");
+
+    expect(modeSelect).toBeTruthy();
+    fireEvent.mouseDown(modeSelect!);
+    fireEvent.click(screen.getByText("knowledgeNetwork.metricQueryMode.trend"));
+
+    const stepLabel = screen.getByText("knowledgeNetwork.metricQueryStepLabel");
+    const stepSelect = stepLabel
+      .closest(".ant-form-item")
+      ?.querySelector(".ant-select-selector");
+
+    expect(stepSelect).toBeTruthy();
+    fireEvent.mouseDown(stepSelect!);
+    expect(screen.queryByText("knowledgeNetwork.metricQueryStep.quarter")).toBeNull();
+    expect(screen.getByText("knowledgeNetwork.metricQueryStep.month")).toBeTruthy();
+
+    fireEvent.mouseDown(modeSelect!);
+    fireEvent.click(screen.getByText("knowledgeNetwork.metricQueryMode.proportion"));
+    fireEvent.mouseDown(stepSelect!);
+
+    expect(screen.queryByText("knowledgeNetwork.metricQueryStep.quarter")).toBeNull();
+    expect(screen.getByText("knowledgeNetwork.metricQueryStep.month")).toBeTruthy();
+  }, 10_000);
+
   it("renders drill-down dimensions with semantic property names", () => {
     const { container } = render(
       <MetricDataQueryPanel
