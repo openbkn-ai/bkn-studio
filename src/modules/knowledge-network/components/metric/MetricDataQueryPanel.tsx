@@ -45,6 +45,8 @@ const CALENDAR_STEP_OPTIONS: MetricQueryCalendarStep[] = [
   "quarter",
   "year",
 ];
+const TREND_AND_PROPORTION_STEP_OPTIONS: MetricQueryCalendarStep[] =
+  CALENDAR_STEP_OPTIONS.filter((value) => value !== "quarter");
 const SAME_PERIOD_METHOD_OPTIONS: MetricSamePeriodMethod[] = ["growth_value", "growth_rate"];
 const SAME_PERIOD_GRANULARITY_OPTIONS: MetricSamePeriodTimeGranularity[] = [
   "day",
@@ -60,6 +62,14 @@ function showStepField(mode: MetricDataQueryMode | undefined) {
 
 function showFillNullField(mode: MetricDataQueryMode | undefined) {
   return mode === "trend" || mode === "sameperiod" || mode === "proportion";
+}
+
+function getCalendarStepOptions(mode: MetricDataQueryMode | undefined) {
+  if (mode === "trend" || mode === "proportion") {
+    return TREND_AND_PROPORTION_STEP_OPTIONS;
+  }
+
+  return CALENDAR_STEP_OPTIONS;
 }
 
 type MetricDataQueryPanelProps = {
@@ -175,6 +185,10 @@ export function MetricDataQueryPanel({
   const [result, setResult] = useState<MetricDataQueryResult | null>(null);
   const queryMode = Form.useWatch("mode", form);
   const timeRange = Form.useWatch("timeRange", form);
+  const calendarStepOptions = useMemo(
+    () => getCalendarStepOptions(queryMode),
+    [queryMode],
+  );
   const propertyDisplayNameMap = useMemo(
     () =>
       new Map(
@@ -235,7 +249,8 @@ export function MetricDataQueryPanel({
           layout="inline"
           onValuesChange={(changed: Partial<MetricDataQueryParams>) => {
             if (changed.mode === "trend" || changed.mode === "proportion") {
-              if (!form.getFieldValue("step")) {
+              const currentStep = form.getFieldValue("step") as MetricQueryCalendarStep | undefined;
+              if (!currentStep || currentStep === "quarter") {
                 form.setFieldValue("step", "day");
               }
             }
@@ -299,7 +314,7 @@ export function MetricDataQueryPanel({
               }
             >
               <Select
-                options={CALENDAR_STEP_OPTIONS.map((value) => ({
+                options={calendarStepOptions.map((value) => ({
                   label: t(`knowledgeNetwork.metricQueryStep.${value}`),
                   value,
                 }))}
