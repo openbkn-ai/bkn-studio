@@ -5,8 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import "@/app/locales/i18n";
-import "@/styles/global.css";
-import { startStandaloneApp } from "@/framework/runtime/bootstrap";
+let monacoSetupPromise: Promise<void> | undefined;
 
-startStandaloneApp();
+export function ensureMonacoSetup() {
+  monacoSetupPromise ??= import("@/framework/monaco/setup").then(() => undefined);
+
+  return monacoSetupPromise;
+}
