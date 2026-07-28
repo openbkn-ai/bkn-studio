@@ -5,8 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import Editor, { type OnMount } from "@monaco-editor/react";
+import type { OnMount } from "@monaco-editor/react";
 import { useEffect, useRef, useState } from "react";
+
+import { MonacoEditor } from "@/framework/monaco/MonacoEditor";
 
 import styles from "./AdaptationCodeEditor.module.css";
 
@@ -75,9 +77,10 @@ export function AdaptationCodeEditor({
       {showPlaceholder && placeholder ? (
         <div className={styles.placeholder}>{placeholder}</div>
       ) : null}
-      <Editor
+      <MonacoEditor
         className={`${styles.editor}${readOnly ? ` ${styles.editorReadOnly}` : ""}`}
         defaultLanguage="python"
+        fallback={<div style={{ height }} />}
         height={height}
         onChange={handleChange}
         onMount={handleMount}

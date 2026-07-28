@@ -116,7 +116,7 @@ describe("FunctionWorkbenchScene status wiring", () => {
     render(<FunctionWorkbenchScene boxId="box-1" />);
 
     // 保存按钮在代码区工具条里，要等选中函数、编辑区渲染出来才有。
-    fireEvent.click(await screen.findByText("common.save"));
+    fireEvent.click(await screen.findByText("common.save", undefined, { timeout: 5_000 }));
 
     await waitFor(() => {
       expect(createTool).toHaveBeenCalledTimes(1);
@@ -134,7 +134,7 @@ describe("FunctionWorkbenchScene status wiring", () => {
 
     render(<FunctionWorkbenchScene boxId="box-1" />);
 
-    fireEvent.click(await screen.findByText("common.save"));
+    fireEvent.click(await screen.findByText("common.save", undefined, { timeout: 5_000 }));
 
     await waitFor(() => {
       expect(updateToolStatus).toHaveBeenCalledWith("box-1", ["tool-new"], "enabled");

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import Editor from "@monaco-editor/react";
+import { MonacoEditor } from "@/framework/monaco/MonacoEditor";
 
 import styles from "./ModelApiGuideMonacoEditor.module.css";
 
@@ -48,9 +48,10 @@ export function ModelApiGuideMonacoEditor({
   value,
 }: ModelApiGuideMonacoEditorProps) {
   return (
-    <Editor
+    <MonacoEditor
       className={styles.editor}
       defaultLanguage={language}
+      fallback={<div style={{ height }} />}
       height={height}
       options={READONLY_EDITOR_OPTIONS}
       value={value}
