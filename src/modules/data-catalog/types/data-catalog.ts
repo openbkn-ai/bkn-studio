@@ -95,6 +95,7 @@ export type ResourcePreviewResult = {
 };
 
 export type BuildMode = "batch" | "streaming";
+export type BuildTaskExecuteType = "full" | "incremental";
 
 export type BuildTaskStatus =
   | "failed"
@@ -135,6 +136,8 @@ export type BuildTask = {
   createTime: string;
   createdAt: number;
   embeddingFields: string[];
+  /** batch 任务创建时选择的执行类型；streaming 不适用。 */
+  executeType?: BuildTaskExecuteType;
   /** 任务快照中每个向量字段实际使用的模型与维度。 */
   embeddingConfigs?: Record<string, EmbeddingFieldConfig>;
   embeddingModel: string;
@@ -204,7 +207,7 @@ export type BuildTaskPageResult = {
 /** 创建任务：索引配置已归属 resource，此处只触发构建。 */
 export type BuildTaskCreateInput = {
   /** batch only；默认 full。streaming 勿传 unsupported 值。 */
-  executeType?: "full" | "incremental";
+  executeType?: BuildTaskExecuteType;
   mode: BuildMode;
   resourceId: string;
 };
@@ -224,7 +227,7 @@ export type BuildTaskUpdateInput = {
   modelDimensions: number;
 };
 
-/** start / 重跑：reset=true 忽略游标全量重跑。 */
+/** start / 重跑：reset=true 仅对 full 任务忽略游标全量重跑。 */
 export type BuildTaskStartInput = {
   reset?: boolean;
 };

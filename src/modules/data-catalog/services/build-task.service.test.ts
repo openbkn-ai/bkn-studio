@@ -7,7 +7,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { snapshotFieldsOf } from "@/modules/data-catalog/services/build-task.service";
+import {
+  mapBuildTask,
+  snapshotFieldsOf,
+} from "@/modules/data-catalog/services/build-task.service";
 
 describe("snapshotFieldsOf", () => {
   it("retains the effective analyzer for every fulltext field", () => {
@@ -44,5 +47,23 @@ describe("snapshotFieldsOf", () => {
       title: "standard",
       status: "hanlp_index",
     });
+  });
+});
+
+describe("mapBuildTask", () => {
+  it("retains the persisted batch execute type", () => {
+    const task = mapBuildTask({
+      id: "task-1",
+      mode: "batch",
+      execute_type: "incremental",
+    });
+
+    expect(task.executeType).toBe("incremental");
+  });
+
+  it("does not assign an execution type to streaming tasks", () => {
+    const task = mapBuildTask({ id: "task-1", mode: "streaming" });
+
+    expect(task.executeType).toBeUndefined();
   });
 });
