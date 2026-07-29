@@ -26,7 +26,10 @@ import {
   isCatalogPhysical,
 } from "@/modules/data-catalog/lib/index-state";
 import { parseResourceScope } from "@/modules/data-catalog/lib/resource-identifier";
-import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
+import {
+  listCatalogResourcePage,
+  listCatalogResources,
+} from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildTask,
   CatalogResource,
@@ -112,6 +115,8 @@ export function CatalogDetailPanel({
   const resizingRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const physical = isCatalogPhysical(catalog);
+  const usesClientScopeFilter =
+    catalog.connectorType === "postgresql" && Boolean(activeDb);
   const hasResourceQuery =
     resourceKeyword.trim().length > 0 || categoryFilter.length > 0 || indexFilter.length > 0;
 
@@ -125,7 +130,15 @@ export function CatalogDetailPanel({
 
   const displayResources = useMemo(() => {
     return resources.filter((resource) => {
-      if (activeDb && activeSchema) {
+      if (usesClientScopeFilter && activeDb) {
+        const scope = parseResourceScope(resource.sourceIdentifier);
+        if (scope.database !== activeDb) {
+          return false;
+        }
+        if (activeSchema && scope.schema !== activeSchema) {
+          return false;
+        }
+      } else if (activeDb && activeSchema) {
         const scope = parseResourceScope(resource.sourceIdentifier);
         if (!scope.schema || scope.schema !== activeSchema) {
           return false;
@@ -139,7 +152,7 @@ export function CatalogDetailPanel({
       }
       return true;
     });
-  }, [activeDb, activeSchema, indexFilter, resources, tasksByResource]);
+  }, [activeDb, activeSchema, indexFilter, resources, tasksByResource, usesClientScopeFilter]);
 
   useEffect(() => {
     setPage(1);
@@ -149,6 +162,54 @@ export function CatalogDetailPanel({
     let cancelled = false;
     setResourcesLoading(true);
     setResourceLoadError(null);
+
+    if (usesClientScopeFilter) {
+      void listCatalogResources({
+        catalogId: catalog.id,
+        category: categoryFilter ? (categoryFilter as CatalogResource["category"]) : undefined,
+        keyword: resourceKeyword,
+      })
+        .then((all) => {
+          if (cancelled) {
+            return;
+          }
+
+          const filtered = all.filter((resource) => {
+            const scope = parseResourceScope(resource.sourceIdentifier);
+            if (scope.database !== activeDb) {
+              return false;
+            }
+            if (activeSchema && scope.schema !== activeSchema) {
+              return false;
+            }
+            if (indexFilter) {
+              const key = indexStateOf(tasksByResource.get(resource.id) ?? []).key;
+              return indexFilterBucket(key) === indexFilter;
+            }
+            return true;
+          });
+          const offset = (page - 1) * pageSize;
+          setResources(filtered.slice(offset, offset + pageSize));
+          setResourceTotal(filtered.length);
+        })
+        .catch((error) => {
+          if (cancelled) {
+            return;
+          }
+          setResources([]);
+          setResourceTotal(0);
+          setResourceLoadError(extractRequestErrorMessage(error));
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setResourcesLoading(false);
+          }
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
 
     void listCatalogResourcePage({
       catalogId: catalog.id,
@@ -182,7 +243,20 @@ export function CatalogDetailPanel({
     return () => {
       cancelled = true;
     };
-  }, [activeDb, catalog.id, categoryFilter, page, pageSize, reloadKey, resourceKeyword]);
+  }, [
+    activeDb,
+    activeSchema,
+    catalog.connectorType,
+    catalog.id,
+    categoryFilter,
+    indexFilter,
+    page,
+    pageSize,
+    reloadKey,
+    resourceKeyword,
+    tasksByResource,
+    usesClientScopeFilter,
+  ]);
 
   useEffect(() => {
     const handleMove = (event: MouseEvent) => {
@@ -482,7 +556,11 @@ export function CatalogDetailPanel({
           pageSize={pageSize}
           showSizeChanger
           showTotal={(count) => t("common.total", { total: count })}
-          total={indexFilter || activeSchema ? displayResources.length : resourceTotal}
+          total={
+            usesClientScopeFilter || (!indexFilter && !activeSchema)
+              ? resourceTotal
+              : displayResources.length
+          }
         />
       ) : null}
     </section>
