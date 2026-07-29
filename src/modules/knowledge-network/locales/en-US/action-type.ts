@@ -12,7 +12,7 @@ export const actiontypePart = {
     actionTypeBatchDeleteDescription:
       "Delete the selected {{count}} action types? This action cannot be undone.",
     actionTypeBatchDeleteTitle: "Delete action types",
-    actionTypeBinding: "Binding information",
+    actionTypeBinding: "Action rule configuration",
     actionTypeCreateDescription:
       "Create an action type and its execution mapping through a multi-step form.",
     actionTypeCreateTitle: "Create action type",
@@ -67,7 +67,9 @@ export const actiontypePart = {
     actionTypeExecutionConfigSubtitle:
       "Maintain the action execution source and parameter mappings.",
     actionTypeExecutionTitle: "Action type execution",
-    actionTypeKind: "Action type",
+    actionTypeKind: "Action method",
+    actionTypeKindHelp:
+      "Describes the business operation this action performs on the bound object type, such as add, edit, delete, or notify.",
     actionTypeKindCreate: "Add",
     actionTypeKindDelete: "Delete",
     actionTypeKindNotify: "Notify",
@@ -75,7 +77,7 @@ export const actiontypePart = {
     actionTypeKindUpdate: "Edit",
     actionTypeName: "Action type name",
     actionTypeNameRequired: "Please enter an action type name.",
-    actionTypeObject: "Bound object type",
+    actionTypeObject: "Applicable object",
     actionTypeObjectPlaceholder: "Select a bound object type",
     actionTypeObjectSelectPlaceholder: "Select an object type",
     actionTypeObjectRequired: "Please select a bound object type.",
@@ -86,19 +88,19 @@ export const actiontypePart = {
     actionTypesTitle: "Action types",
     actionTypeToolbarHint:
       "Supports action type list, two-step create/edit, execution config, detail overview, and task management.",
-    actionTypeTriggerCondition: "Trigger condition",
-    actionTypeAffectedObject: "Affected object type",
+    actionTypeTriggerCondition: "Execution condition",
+    actionTypeAffectedObject: "Affected object",
     actionTypeAffectedObjectPlaceholder: "Select an affected object type (optional)",
     actionTypeAffectDescription: "Impact description",
     actionTypeAffectDescriptionPlaceholder: "Describe how this action affects business objects",
     actionTypeConditionField: "Property",
-    actionTypeConditionFieldPlaceholder: "Select a field",
+    actionTypeConditionFieldPlaceholder: "Select a condition field",
     actionTypeConditionObjectPlaceholder: "Select an object type",
     actionTypeConditionValueFromConst: "Constant",
-    actionTypeConditionValueInputPlaceholder: "Enter an attribute value",
+    actionTypeConditionValueInputPlaceholder: "Enter a condition value",
     actionTypeConditionAdd: "Add condition",
     actionTypeConditionOperation: "Operator",
-    actionTypeConditionOperationPlaceholder: "Select an operator",
+    actionTypeConditionOperationPlaceholder: "Select a condition relation",
     actionTypeConditionValue: "Value",
     actionTypeConditionValuePlaceholder: "Enter or select a condition value",
     actionTypeConditionHint:

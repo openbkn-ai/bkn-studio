@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Col, Form, Input, Row, Select, Spin } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Alert, Col, Form, Input, Row, Select, Spin, Tooltip } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -341,136 +342,153 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             layout="vertical"
             requiredMark
           >
-            <Row gutter={24}>
-              <Col span={12}>
-                <Form.Item
-                  label={t("knowledgeNetwork.actionTypeName")}
-                  name="name"
-                  rules={[
-                    {
-                      message: t("knowledgeNetwork.actionTypeNameRequired"),
-                      required: true,
-                    },
-                    {
-                      max: 40,
-                      message: t("knowledgeNetwork.objectTypeNameMaxLength"),
-                    },
-                  ]}
-                >
-                  <Input maxLength={40} placeholder={t("knowledgeNetwork.pleaseInput")} />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  label="ID"
-                  name="id"
-                  rules={[
-                    {
-                      max: 40,
-                      message: t("knowledgeNetwork.objectTypeNameMaxLength"),
-                    },
-                    {
-                      message: t("knowledgeNetwork.objectTypeIdPattern"),
-                      pattern: IDENTIFIER_PATTERN,
-                    },
-                  ]}
-                >
-                  <Input disabled={mode === "edit"} placeholder={t("knowledgeNetwork.pleaseInput")} />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={24}>
-              <Col span={12}>
-                <Form.Item
-                  label={t("common.tag")}
-                  name="tags"
-                  rules={[
-                    {
-                      validator: (rule, value) => validateKnowledgeNetworkTags(t, rule, value),
-                    },
-                  ]}
-                >
-                  <ResourceTagsSelect />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label={t("knowledgeNetwork.color")} name="color">
-                  <ResourceColorSelect inModal={false} />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item label={t("knowledgeNetwork.descriptionField")} name="description">
-              <Input.TextArea
-                autoSize={{ minRows: 4, maxRows: 8 }}
-                maxLength={1000}
-                placeholder={t("knowledgeNetwork.pleaseInput")}
-                showCount
-              />
-            </Form.Item>
-            <Row gutter={24}>
-              <Col span={12}>
-                <Form.Item
-                  label={t("knowledgeNetwork.actionTypeKind")}
-                  name="actionKind"
-                  rules={[
-                    {
-                      message: t("knowledgeNetwork.actionTypeKindRequired"),
-                      required: true,
-                    },
-                  ]}
-                >
-                  <Select
-                    options={buildActionTypeKindSelectOptions(t)}
-                    placeholder={t("knowledgeNetwork.pleaseSelect")}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  label={t("knowledgeNetwork.actionTypeObject")}
-                  name="objectTypeId"
-                  rules={[
-                    {
-                      message: t("knowledgeNetwork.actionTypeObjectRequired"),
-                      required: true,
-                    },
-                  ]}
-                >
-                  <RelationTypeObjectTypeSelect
-                    objectTypes={objectTypes}
-                    placeholder={t("knowledgeNetwork.actionTypeObjectSelectPlaceholder")}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item label={t("knowledgeNetwork.actionTypeTriggerCondition")} name="condition">
-              <ActionTypeConditionEditor
-                boundObjectTypeId={watchedObjectTypeId}
-                objectTypes={objectTypes}
-                propertyOptions={conditionPropertyOptions}
-              />
-            </Form.Item>
-            <Form.Item
-              label={t("knowledgeNetwork.actionTypeAffectedObject")}
-              name="affectObjectTypeId"
-            >
-              <RelationTypeObjectTypeSelect
-                allowClear
-                objectTypes={objectTypes}
-                placeholder={t("knowledgeNetwork.actionTypeAffectedObjectPlaceholder")}
-              />
-            </Form.Item>
-            <Form.Item
-              label={t("knowledgeNetwork.actionTypeAffectDescription")}
-              name="affectComment"
-            >
-              <Input.TextArea
-                autoSize={{ minRows: 3, maxRows: 6 }}
-                maxLength={255}
-                placeholder={t("knowledgeNetwork.actionTypeAffectDescriptionPlaceholder")}
-                showCount
-              />
-            </Form.Item>
+            <section className={styles.formSection}>
+              <h3>{t("knowledgeNetwork.actionTypeBasicInfo")}</h3>
+              <Row gutter={24}>
+                <Col span={12}>
+                  <Form.Item
+                    label={t("knowledgeNetwork.actionTypeName")}
+                    name="name"
+                    rules={[
+                      {
+                        message: t("knowledgeNetwork.actionTypeNameRequired"),
+                        required: true,
+                      },
+                      {
+                        max: 40,
+                        message: t("knowledgeNetwork.objectTypeNameMaxLength"),
+                      },
+                    ]}
+                  >
+                    <Input maxLength={40} placeholder={t("knowledgeNetwork.pleaseInput")} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    label="ID"
+                    name="id"
+                    rules={[
+                      {
+                        max: 40,
+                        message: t("knowledgeNetwork.objectTypeNameMaxLength"),
+                      },
+                      {
+                        message: t("knowledgeNetwork.objectTypeIdPattern"),
+                        pattern: IDENTIFIER_PATTERN,
+                      },
+                    ]}
+                  >
+                    <Input
+                      disabled={mode === "edit"}
+                      placeholder={t("knowledgeNetwork.pleaseInput")}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={24}>
+                <Col span={12}>
+                  <Form.Item
+                    label={t("common.tag")}
+                    name="tags"
+                    rules={[
+                      {
+                        validator: (rule, value) => validateKnowledgeNetworkTags(t, rule, value),
+                      },
+                    ]}
+                  >
+                    <ResourceTagsSelect />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label={t("knowledgeNetwork.color")} name="color">
+                    <ResourceColorSelect inModal={false} />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item label={t("knowledgeNetwork.descriptionField")} name="description">
+                <Input.TextArea
+                  autoSize={{ minRows: 4, maxRows: 8 }}
+                  maxLength={1000}
+                  placeholder={t("knowledgeNetwork.pleaseInput")}
+                  showCount
+                />
+              </Form.Item>
+            </section>
+            <section className={styles.formSection}>
+              <h3>{t("knowledgeNetwork.actionTypeBinding")}</h3>
+              <Row gutter={24}>
+                <Col span={12}>
+                  <Form.Item
+                    label={t("knowledgeNetwork.actionTypeObject")}
+                    name="objectTypeId"
+                    rules={[
+                      {
+                        message: t("knowledgeNetwork.actionTypeObjectRequired"),
+                        required: true,
+                      },
+                    ]}
+                  >
+                    <RelationTypeObjectTypeSelect
+                      objectTypes={objectTypes}
+                      placeholder={t("knowledgeNetwork.actionTypeObjectSelectPlaceholder")}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span className={styles.labelWithHelp}>
+                        {t("knowledgeNetwork.actionTypeKind")}
+                        <Tooltip title={t("knowledgeNetwork.actionTypeKindHelp")}>
+                          <QuestionCircleOutlined className={styles.helpIcon} />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="actionKind"
+                    rules={[
+                      {
+                        message: t("knowledgeNetwork.actionTypeKindRequired"),
+                        required: true,
+                      },
+                    ]}
+                  >
+                    <Select
+                      options={buildActionTypeKindSelectOptions(t)}
+                      placeholder={t("knowledgeNetwork.pleaseSelect")}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item label={t("knowledgeNetwork.actionTypeTriggerCondition")} name="condition">
+                <ActionTypeConditionEditor
+                  boundObjectTypeId={watchedObjectTypeId}
+                  hideObjectTypeSelect
+                  objectTypes={objectTypes}
+                  propertyOptions={conditionPropertyOptions}
+                />
+              </Form.Item>
+              <Form.Item
+                label={t("knowledgeNetwork.actionTypeAffectedObject")}
+                name="affectObjectTypeId"
+              >
+                <RelationTypeObjectTypeSelect
+                  allowClear
+                  objectTypes={objectTypes}
+                  placeholder={t("knowledgeNetwork.actionTypeAffectedObjectPlaceholder")}
+                />
+              </Form.Item>
+              <Form.Item
+                label={t("knowledgeNetwork.actionTypeAffectDescription")}
+                name="affectComment"
+              >
+                <Input.TextArea
+                  autoSize={{ minRows: 3, maxRows: 6 }}
+                  maxLength={255}
+                  placeholder={t("knowledgeNetwork.actionTypeAffectDescriptionPlaceholder")}
+                  showCount
+                />
+              </Form.Item>
+            </section>
           </Form>
         </div>
       );

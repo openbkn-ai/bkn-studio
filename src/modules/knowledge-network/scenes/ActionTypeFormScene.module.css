@@ -26,6 +26,43 @@
   margin-inline-end: 4px;
 }
 
+.formSection {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0 0 20px;
+}
+
+.formSection + .formSection {
+  margin-top: 20px;
+}
+
+.formSection:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.formSection h3 {
+  color: #1f2329;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  margin: 0 0 16px;
+}
+
+.labelWithHelp {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.helpIcon {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+}
+
+.helpIcon:hover {
+  color: #1677ff;
+}
+
 .executionForm {
   margin: 24px auto 32px;
   max-width: 900px;
