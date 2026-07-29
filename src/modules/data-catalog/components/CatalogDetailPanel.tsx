@@ -49,14 +49,22 @@ function indexFilterBucket(key: string) {
   return "failed";
 }
 
-function deriveDisplayName(resource: CatalogResource) {
+function deriveDisplayName(resource: CatalogResource, connectorType: string) {
   const rawName = (resource.name ?? "").trim();
+  const rawIdentifier = (resource.sourceIdentifier ?? "").trim();
+
+  if (connectorType === "opensearch") {
+    if (rawName && rawIdentifier && rawName !== rawIdentifier) {
+      return `${rawName} / ${rawIdentifier}`;
+    }
+    return rawName || rawIdentifier || "-";
+  }
+
   const byName = rawName.includes(".") ? rawName.split(".").filter(Boolean).at(-1) : rawName;
   if (byName) {
     return byName;
   }
 
-  const rawIdentifier = (resource.sourceIdentifier ?? "").trim();
   const fromMatch = rawIdentifier.match(/\bfrom\s+([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+){0,2})/i);
   const candidate = (fromMatch?.[1] ?? rawIdentifier).trim();
   const byIdentifier = candidate.includes(".") ? candidate.split(".").filter(Boolean).at(-1) : candidate;
@@ -69,6 +77,22 @@ function EllipsisText({ text }: { text: string }) {
       <span className={styles.cellEllipsis}>{text}</span>
     </Tooltip>
   );
+}
+
+function getResourceNameTooltip(
+  resource: CatalogResource,
+  connectorType: string,
+  displayName: string,
+) {
+  if (connectorType === "opensearch") {
+    return displayName;
+  }
+
+  if (resource.sourceIdentifier && resource.sourceIdentifier !== resource.name) {
+    return `${resource.name}\n${resource.sourceIdentifier}`;
+  }
+
+  return resource.name || displayName;
 }
 
 type CatalogDetailPanelProps = {
@@ -311,13 +335,13 @@ export function CatalogDetailPanel({
         </div>
       ),
       render: (_, record) => {
-        const tooltip =
-          record.sourceIdentifier && record.sourceIdentifier !== record.name
-            ? `${record.name}\n${record.sourceIdentifier}`
-            : record.name;
-        const displayName = deriveDisplayName(record);
+        const displayName = deriveDisplayName(record, catalog.connectorType);
+        const tooltip = getResourceNameTooltip(record, catalog.connectorType, displayName);
         return (
-          <Tooltip title={tooltip}>
+          <Tooltip
+            overlayClassName={styles.resourceNameTooltip}
+            title={tooltip}
+          >
             <AppButton
               className={styles.ellipsisLink}
               onClick={() => onOpenResource(record.id, "detail")}

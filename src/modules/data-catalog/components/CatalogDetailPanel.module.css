@@ -138,6 +138,16 @@
   min-width: 0;
 }
 
+.resourceNameTooltip:global(.ant-tooltip) {
+  max-width: min(720px, calc(100vw - 48px));
+}
+
+.resourceNameTooltip :global(.ant-tooltip-inner) {
+  overflow-wrap: anywhere;
+  text-align: left;
+  white-space: normal;
+}
+
 .resizableHeader {
   position: relative;
   display: flex;
