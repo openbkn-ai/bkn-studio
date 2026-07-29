@@ -7,12 +7,17 @@
 
 export const actiontypePart = {
     actionTypeBasicInfo: "Basic information",
-    actionTypeConceptDefinitionStep: "Concept definition",
-    actionTypeResourceMappingStep: "Resource mapping",
+    actionTypeConceptDefinitionStep: "Rule definition",
+    actionTypeConfigStep: "Action configuration",
+    actionTypeResourceMappingStep: "Execution tool",
     actionTypeBatchDeleteDescription:
       "Delete the selected {{count}} action types? This action cannot be undone.",
     actionTypeBatchDeleteTitle: "Delete action types",
     actionTypeBinding: "Action rule configuration",
+    actionTypeRuleConfig: "Action rule",
+    actionTypeTriggerRule: "Trigger rule",
+    actionTypeExecutionTool: "Execution tool",
+    actionTypeImpactDeclaration: "Impact declaration",
     actionTypeCreateDescription:
       "Create an action type and its execution mapping through a multi-step form.",
     actionTypeCreateTitle: "Create action type",
@@ -46,7 +51,7 @@ export const actiontypePart = {
     actionTypeExecutionValueFromProperty: "Data property",
     actionTypeExecutionValueConstPlaceholder: "Enter a value",
     actionTypeExecutionSelectToolFirst: "Select a tool before configuring parameters",
-    actionTypeOperatorLabel: "Operator",
+    actionTypeOperatorLabel: "Execution tool",
     actionTypeOperatorSelectPlaceholder: "Select tool name",
     actionTypeExecutionParameterNamePlaceholder: "Enter a parameter name",
     actionTypeExecutionParameterRequired:
@@ -67,9 +72,9 @@ export const actiontypePart = {
     actionTypeExecutionConfigSubtitle:
       "Maintain the action execution source and parameter mappings.",
     actionTypeExecutionTitle: "Action type execution",
-    actionTypeKind: "Action method",
+    actionTypeKind: "Business action",
     actionTypeKindHelp:
-      "Describes the business operation this action performs on the bound object type, such as add, edit, delete, or notify.",
+      "Describes the business operation this action performs on the bound object type, such as add, edit, or delete.",
     actionTypeKindCreate: "Add",
     actionTypeKindDelete: "Delete",
     actionTypeKindNotify: "Notify",
@@ -88,8 +93,8 @@ export const actiontypePart = {
     actionTypesTitle: "Action types",
     actionTypeToolbarHint:
       "Supports action type list, two-step create/edit, execution config, detail overview, and task management.",
-    actionTypeTriggerCondition: "Execution condition",
-    actionTypeAffectedObject: "Affected object",
+    actionTypeTriggerCondition: "Trigger condition",
+    actionTypeAffectedObject: "Affected object type",
     actionTypeAffectedObjectPlaceholder: "Select an affected object type (optional)",
     actionTypeAffectDescription: "Impact description",
     actionTypeAffectDescriptionPlaceholder: "Describe how this action affects business objects",

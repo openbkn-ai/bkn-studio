@@ -11,13 +11,14 @@
 
 .table :global(.ant-table) {
   background: transparent;
+  table-layout: fixed;
 }
 
 .table :global(.ant-table-container),
 .table :global(.ant-table-content),
 .table :global(.ant-table-header) {
   border: none !important;
-  overflow-x: hidden !important;
+  overflow-x: visible !important;
 }
 
 .table :global(.ant-table-thead > tr > th) {
@@ -28,6 +29,7 @@
   font-weight: 500;
   padding: 8px 8px 7px 16px;
   text-align: left;
+  white-space: nowrap;
 }
 
 .table :global(.ant-table-thead > tr > th::before) {
@@ -47,7 +49,7 @@
 }
 
 .valueColumn {
-  min-width: 420px;
+  min-width: 0;
 }
 
 .table :global(.ant-table-tbody > tr:last-child > td) {
@@ -107,10 +109,8 @@
   font-size: 12px;
   line-height: 18px;
   margin-top: 2px;
-  overflow: hidden;
   text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .valueFrom {
@@ -120,8 +120,8 @@
 }
 
 .valueFromSelect {
-  flex: 0 0 128px;
-  width: 128px;
+  flex: 0 0 112px;
+  width: 112px;
 }
 
 .valueFromSelect :global(.ant-select-selector) {

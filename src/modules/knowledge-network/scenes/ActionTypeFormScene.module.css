@@ -48,6 +48,58 @@
   margin: 0 0 16px;
 }
 
+.ruleHeader {
+  align-items: center;
+  color: #1f2329;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 8px;
+  line-height: 22px;
+}
+
+.ruleIndex {
+  align-items: center;
+  background: #1677ff;
+  border-radius: 50%;
+  color: #fff;
+  display: inline-flex;
+  flex: 0 0 22px;
+  font-size: 12px;
+  font-weight: 600;
+  height: 22px;
+  justify-content: center;
+  line-height: 22px;
+  width: 22px;
+}
+
+.ruleSection {
+  padding: 8px 0 0;
+}
+
+.ruleCollapse {
+  background: transparent;
+}
+
+.ruleCollapse :global(.ant-collapse-item) {
+  background: #fff;
+  border: 1px solid #e5e7eb !important;
+  margin-bottom: 10px;
+}
+
+.ruleCollapse :global(.ant-collapse-header) {
+  align-items: center !important;
+  padding: 10px 12px !important;
+}
+
+.ruleCollapse :global(.ant-collapse-content) {
+  border-top: 1px solid #eef0f3 !important;
+}
+
+.ruleCollapse :global(.ant-collapse-content-box) {
+  padding: 12px 14px 4px !important;
+}
+
 .labelWithHelp {
   align-items: center;
   display: inline-flex;
@@ -61,13 +113,6 @@
 
 .helpIcon:hover {
   color: #1677ff;
-}
-
-.executionForm {
-  margin: 24px auto 32px;
-  max-width: 900px;
-  padding: 0 24px;
-  width: 100%;
 }
 
 .loadError {

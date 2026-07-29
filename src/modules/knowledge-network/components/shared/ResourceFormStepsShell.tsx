@@ -30,6 +30,7 @@ type ResourceFormStepsShellProps = {
   children: ReactNode;
   currentStep: number;
   doneStep: number;
+  hideSteps?: boolean;
   onBack: () => void;
   onStepChange?: (step: number) => void;
   steps: Array<{ title: string }>;
@@ -41,6 +42,7 @@ export function ResourceFormStepsShell({
   children,
   currentStep,
   doneStep,
+  hideSteps = false,
   onBack,
   onStepChange,
   steps,
@@ -60,19 +62,21 @@ export function ResourceFormStepsShell({
           </button>
           <h1 className={styles.title}>{title}</h1>
         </div>
-        <div className={styles.headerCenter}>
-          <Steps
-            className={styles.steps}
-            current={currentStep}
-            items={steps}
-            onChange={(nextStep) => {
-              if (nextStep <= doneStep) {
-                onStepChange?.(nextStep);
-              }
-            }}
-            size="small"
-          />
-        </div>
+        {hideSteps ? null : (
+          <div className={styles.headerCenter}>
+            <Steps
+              className={styles.steps}
+              current={currentStep}
+              items={steps}
+              onChange={(nextStep) => {
+                if (nextStep <= doneStep) {
+                  onStepChange?.(nextStep);
+                }
+              }}
+              size="small"
+            />
+          </div>
+        )}
         <div className={styles.headerActions}>
           {actions?.prev ? (
             <AppButton
