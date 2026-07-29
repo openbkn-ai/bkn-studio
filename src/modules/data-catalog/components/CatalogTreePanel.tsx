@@ -91,11 +91,17 @@ type ScopeGroup = {
   schemas: string[];
 };
 
-function parseScopeGroupsByCatalog(resources: CatalogResource[]) {
+function parseScopeGroupsByCatalog(
+  resources: CatalogResource[],
+  catalogConnectorTypes: Map<string, string>,
+) {
   const groupedByCatalog = new Map<string, Map<string, Set<string>>>();
 
   resources.forEach((item) => {
     if (!item.catalogId) {
+      return;
+    }
+    if (catalogConnectorTypes.get(item.catalogId) === "opensearch") {
       return;
     }
     const raw = (item.sourceIdentifier ?? "").trim();
@@ -172,7 +178,15 @@ export function CatalogTreePanel({
     return resources.find((item) => item.id === selection.id)?.catalogId;
   }, [resources, selection]);
 
-  const scopeGroupsByCatalog = useMemo(() => parseScopeGroupsByCatalog(resources), [resources]);
+  const catalogConnectorTypes = useMemo(
+    () => new Map(catalogs.map((catalog) => [catalog.id, catalog.connectorType])),
+    [catalogs],
+  );
+
+  const scopeGroupsByCatalog = useMemo(
+    () => parseScopeGroupsByCatalog(resources, catalogConnectorTypes),
+    [catalogConnectorTypes, resources],
+  );
 
   const selectedKey = useMemo(() => {
     if (selectedCatalogId && activeDb && activeSchema) {

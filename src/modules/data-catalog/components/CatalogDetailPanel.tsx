@@ -26,7 +26,10 @@ import {
   isCatalogPhysical,
 } from "@/modules/data-catalog/lib/index-state";
 import { parseResourceScope } from "@/modules/data-catalog/lib/resource-identifier";
-import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
+import {
+  listCatalogResourcePage,
+  listCatalogResources,
+} from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildTask,
   CatalogResource,
@@ -46,14 +49,22 @@ function indexFilterBucket(key: string) {
   return "failed";
 }
 
-function deriveDisplayName(resource: CatalogResource) {
+function deriveDisplayName(resource: CatalogResource, connectorType: string) {
   const rawName = (resource.name ?? "").trim();
+  const rawIdentifier = (resource.sourceIdentifier ?? "").trim();
+
+  if (connectorType === "opensearch") {
+    if (rawName && rawIdentifier && rawName !== rawIdentifier) {
+      return `${rawName} / ${rawIdentifier}`;
+    }
+    return rawName || rawIdentifier || "-";
+  }
+
   const byName = rawName.includes(".") ? rawName.split(".").filter(Boolean).at(-1) : rawName;
   if (byName) {
     return byName;
   }
 
-  const rawIdentifier = (resource.sourceIdentifier ?? "").trim();
   const fromMatch = rawIdentifier.match(/\bfrom\s+([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+){0,2})/i);
   const candidate = (fromMatch?.[1] ?? rawIdentifier).trim();
   const byIdentifier = candidate.includes(".") ? candidate.split(".").filter(Boolean).at(-1) : candidate;
@@ -66,6 +77,22 @@ function EllipsisText({ text }: { text: string }) {
       <span className={styles.cellEllipsis}>{text}</span>
     </Tooltip>
   );
+}
+
+function getResourceNameTooltip(
+  resource: CatalogResource,
+  connectorType: string,
+  displayName: string,
+) {
+  if (connectorType === "opensearch") {
+    return displayName;
+  }
+
+  if (resource.sourceIdentifier && resource.sourceIdentifier !== resource.name) {
+    return `${resource.name}\n${resource.sourceIdentifier}`;
+  }
+
+  return resource.name || displayName;
 }
 
 type CatalogDetailPanelProps = {
@@ -112,6 +139,8 @@ export function CatalogDetailPanel({
   const resizingRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const physical = isCatalogPhysical(catalog);
+  const usesClientScopeFilter =
+    catalog.connectorType === "postgresql" && Boolean(activeDb);
   const hasResourceQuery =
     resourceKeyword.trim().length > 0 || categoryFilter.length > 0 || indexFilter.length > 0;
 
@@ -125,7 +154,15 @@ export function CatalogDetailPanel({
 
   const displayResources = useMemo(() => {
     return resources.filter((resource) => {
-      if (activeDb && activeSchema) {
+      if (usesClientScopeFilter && activeDb) {
+        const scope = parseResourceScope(resource.sourceIdentifier);
+        if (scope.database !== activeDb) {
+          return false;
+        }
+        if (activeSchema && scope.schema !== activeSchema) {
+          return false;
+        }
+      } else if (activeDb && activeSchema) {
         const scope = parseResourceScope(resource.sourceIdentifier);
         if (!scope.schema || scope.schema !== activeSchema) {
           return false;
@@ -139,7 +176,7 @@ export function CatalogDetailPanel({
       }
       return true;
     });
-  }, [activeDb, activeSchema, indexFilter, resources, tasksByResource]);
+  }, [activeDb, activeSchema, indexFilter, resources, tasksByResource, usesClientScopeFilter]);
 
   useEffect(() => {
     setPage(1);
@@ -149,6 +186,54 @@ export function CatalogDetailPanel({
     let cancelled = false;
     setResourcesLoading(true);
     setResourceLoadError(null);
+
+    if (usesClientScopeFilter) {
+      void listCatalogResources({
+        catalogId: catalog.id,
+        category: categoryFilter ? (categoryFilter as CatalogResource["category"]) : undefined,
+        keyword: resourceKeyword,
+      })
+        .then((all) => {
+          if (cancelled) {
+            return;
+          }
+
+          const filtered = all.filter((resource) => {
+            const scope = parseResourceScope(resource.sourceIdentifier);
+            if (scope.database !== activeDb) {
+              return false;
+            }
+            if (activeSchema && scope.schema !== activeSchema) {
+              return false;
+            }
+            if (indexFilter) {
+              const key = indexStateOf(tasksByResource.get(resource.id) ?? []).key;
+              return indexFilterBucket(key) === indexFilter;
+            }
+            return true;
+          });
+          const offset = (page - 1) * pageSize;
+          setResources(filtered.slice(offset, offset + pageSize));
+          setResourceTotal(filtered.length);
+        })
+        .catch((error) => {
+          if (cancelled) {
+            return;
+          }
+          setResources([]);
+          setResourceTotal(0);
+          setResourceLoadError(extractRequestErrorMessage(error));
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setResourcesLoading(false);
+          }
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
 
     void listCatalogResourcePage({
       catalogId: catalog.id,
@@ -182,7 +267,20 @@ export function CatalogDetailPanel({
     return () => {
       cancelled = true;
     };
-  }, [activeDb, catalog.id, categoryFilter, page, pageSize, reloadKey, resourceKeyword]);
+  }, [
+    activeDb,
+    activeSchema,
+    catalog.connectorType,
+    catalog.id,
+    categoryFilter,
+    indexFilter,
+    page,
+    pageSize,
+    reloadKey,
+    resourceKeyword,
+    tasksByResource,
+    usesClientScopeFilter,
+  ]);
 
   useEffect(() => {
     const handleMove = (event: MouseEvent) => {
@@ -237,13 +335,13 @@ export function CatalogDetailPanel({
         </div>
       ),
       render: (_, record) => {
-        const tooltip =
-          record.sourceIdentifier && record.sourceIdentifier !== record.name
-            ? `${record.name}\n${record.sourceIdentifier}`
-            : record.name;
-        const displayName = deriveDisplayName(record);
+        const displayName = deriveDisplayName(record, catalog.connectorType);
+        const tooltip = getResourceNameTooltip(record, catalog.connectorType, displayName);
         return (
-          <Tooltip title={tooltip}>
+          <Tooltip
+            overlayClassName={styles.resourceNameTooltip}
+            title={tooltip}
+          >
             <AppButton
               className={styles.ellipsisLink}
               onClick={() => onOpenResource(record.id, "detail")}
@@ -482,7 +580,11 @@ export function CatalogDetailPanel({
           pageSize={pageSize}
           showSizeChanger
           showTotal={(count) => t("common.total", { total: count })}
-          total={indexFilter || activeSchema ? displayResources.length : resourceTotal}
+          total={
+            usesClientScopeFilter || (!indexFilter && !activeSchema)
+              ? resourceTotal
+              : displayResources.length
+          }
         />
       ) : null}
     </section>

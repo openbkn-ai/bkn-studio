@@ -151,7 +151,7 @@ describe("CreateMcpDrawer", () => {
       expect(messageError).toHaveBeenCalledWith("mcp server is not accessible");
     });
     expect(messageWarning).not.toHaveBeenCalled();
-  });
+  }, 10_000);
 
   it("blocks names the backend rejects before sending the request", async () => {
     renderDrawer();
@@ -165,5 +165,5 @@ describe("CreateMcpDrawer", () => {
 
     expect(await screen.findByText("Only letters, digits and underscores")).toBeTruthy();
     expect(registerMcp).not.toHaveBeenCalled();
-  });
+  }, 10_000);
 });

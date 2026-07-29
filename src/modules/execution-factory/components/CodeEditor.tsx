@@ -5,8 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import Editor, { type Monaco, type OnMount } from "@monaco-editor/react";
+import type { Monaco, OnMount } from "@monaco-editor/react";
 import { useCallback, useEffect, useRef } from "react";
+
+import { MonacoEditor } from "@/framework/monaco/MonacoEditor";
 
 import styles from "./JsonEditor.module.css";
 
@@ -154,12 +156,13 @@ export function CodeEditor({
 
   return (
     <div className={`${styles.editorBorder} ${height === "fill" ? styles.editorFill : ""}`}>
-      <Editor
+      <MonacoEditor
         beforeMount={(monaco) => {
           monacoRef.current = monaco;
           defineTheme(monaco);
           applyJsonSchema(monaco);
         }}
+        fallback={<div style={{ height: height === "fill" ? "100%" : height }} />}
         height={height === "fill" ? "100%" : height}
         language={language}
         onChange={(next) => onChange?.(next ?? "")}

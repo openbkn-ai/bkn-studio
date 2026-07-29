@@ -7,7 +7,14 @@
 
 import { describe, expect, it } from "vitest";
 
-import { businessRows, claimRows, evidenceRows } from "@/modules/bkn-trace/utils/trace-explainability";
+import {
+  businessRows,
+  businessNodePresentation,
+  businessStoryStages,
+  claimRows,
+  evidenceRows,
+  explainabilityPartialReasons,
+} from "@/modules/bkn-trace/utils/trace-explainability";
 
 describe("trace explainability rows", () => {
   it("formats model call claims without raw prompt or output", () => {
@@ -71,9 +78,9 @@ describe("trace explainability rows", () => {
     const rows = businessRows([
       {
         id: "business_ref:object:customer",
-        node_type: "object",
+        nodeType: "object",
         label: "Customer",
-        version_status: "versioned",
+        versionStatus: "versioned",
         visibility: "visible",
         properties: { source_system: "bkn-backend", validity: "resolved" },
       },
@@ -86,5 +93,92 @@ describe("trace explainability rows", () => {
       versionStatus: "versioned",
       visibility: "visible",
     });
+  });
+
+  it("groups the business story into the five user-facing stages", () => {
+    const stages = businessStoryStages([
+      { id: "interaction:1", nodeType: "interaction", stage: "intent", properties: {} },
+      { id: "event:1", nodeType: "operation", stage: "execution", properties: {} },
+      { id: "evidence:1", nodeType: "evidence_ref", stage: "evidence", properties: {} },
+      { id: "claim:1", nodeType: "claim", stage: "claim", properties: {} },
+      { id: "action:1", nodeType: "action", stage: "action", properties: {} },
+    ]);
+
+    expect(stages.map((stage) => stage.stage)).toEqual([
+      "intent",
+      "execution",
+      "evidence",
+      "claim",
+      "action",
+    ]);
+    expect(stages.map((stage) => stage.nodes.length)).toEqual([1, 1, 1, 1, 1]);
+  });
+
+  it("treats a resolved business object without an explicit stage as business evidence", () => {
+    const stages = businessStoryStages([
+      { id: "business:object:kn:forecast", nodeType: "object", properties: {} },
+    ]);
+
+    expect(stages.find((stage) => stage.stage === "evidence")?.nodes).toHaveLength(1);
+  });
+
+  it("uses backend display names before falling back to technical refs", () => {
+    expect(businessNodePresentation({
+      id: "evidence:evidence:kn:supplychain_hd0202",
+      nodeType: "evidence_ref",
+      label: "evidence:kn:supplychain_hd0202",
+      display: {
+        name: "HD供应链业务知识网络_v3",
+      },
+      properties: {
+        ref_id: "evidence:kn:supplychain_hd0202",
+        ref_type: "knowledge_network",
+        source_system: "bkn",
+      },
+    })).toMatchObject({
+      title: "HD供应链业务知识网络_v3",
+      subtitle: "业务证据",
+      technicalId: "evidence:kn:supplychain_hd0202",
+    });
+  });
+
+  it("falls back to true business refs when backend display names are absent", () => {
+    expect(businessNodePresentation({
+      id: "evidence:evidence:kn:supplychain_hd0202",
+      nodeType: "evidence_ref",
+      label: "evidence:kn:supplychain_hd0202",
+      properties: {
+        ref_id: "evidence:kn:supplychain_hd0202",
+        ref_type: "knowledge_network",
+        source_system: "bkn",
+      },
+    })).toMatchObject({
+      title: "BKN：supplychain_hd0202",
+      subtitle: "业务知识网络 · BKN",
+      technicalId: "evidence:kn:supplychain_hd0202",
+    });
+
+    expect(businessNodePresentation({
+      id: "business:property:supplychain_hd0202:supplychain_hd0202_forecast:startdate",
+      nodeType: "property",
+      properties: {
+        ref_id: "property:supplychain_hd0202:supplychain_hd0202_forecast:startdate",
+        ref_type: "property",
+      },
+    })).toMatchObject({
+      title: "业务属性：startdate",
+      subtitle: "supplychain_hd0202_forecast · 属性",
+      technicalId: "property:supplychain_hd0202:supplychain_hd0202_forecast:startdate",
+    });
+  });
+
+  it("removes stale producer business-ref warnings after the core resolver succeeds", () => {
+    expect(explainabilityPartialReasons(
+      [["orphan_span"], ["business_ref_unresolved"], ["claim_content_unavailable"]],
+      {
+        partialReason: ["claim_content_unavailable"],
+        visibilitySummary: { authorizedRefCount: 1, unresolvedRefCount: 0 },
+      },
+    )).toEqual(["orphan_span", "claim_content_unavailable"]);
   });
 });

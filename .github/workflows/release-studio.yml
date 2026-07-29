@@ -73,6 +73,11 @@ jobs:
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # Tag push (e.g. v0.1.0) cuts a release: the tag IS the version.
             VERSION="${GITHUB_REF_NAME#v}"
+          elif [[ "${GITHUB_REF_NAME}" == release/* ]]; then
+            # Release branches use a stable, Helm-compatible version:
+            # release/0.1.2 -> 0.1.2-release.
+            RELEASE_VERSION="${GITHUB_REF_NAME#release/}"
+            VERSION="${RELEASE_VERSION}-release"
           else
             SANITIZED="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^0-9a-zA-Z.-]+#-#g; s#-+#-#g; s#^[.-]+##; s#[.-]+$##')"
             # Embed the commit date (Asia/Shanghai, fixed-width 14 digits) so the version

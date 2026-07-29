@@ -148,12 +148,13 @@ export function MetricListPanel({
 
     void modal.confirm({
       cancelText: t("common.cancel"),
-      className: modalStyles.businessModal,
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
       content:
         records.length === 1
           ? t("knowledgeNetwork.metricDeleteDescription", { name: records[0].name })
           : t("knowledgeNetwork.metricBatchDeleteDescription", { count: records.length }),
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
         if (records.length === 1) {
@@ -169,6 +170,7 @@ export function MetricListPanel({
         await Promise.all([fetchMetrics(), onRefresh()]);
       },
       title: t("knowledgeNetwork.metricDeleteTitle"),
+      width: 520,
     });
   };
 
