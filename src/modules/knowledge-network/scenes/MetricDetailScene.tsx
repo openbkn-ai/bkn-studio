@@ -15,6 +15,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import type { MetricDetailSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { useResolvedUpdaterName } from "@/modules/knowledge-network/hooks/useAccountDirectory";
@@ -113,8 +114,10 @@ export function MetricDetailScene({
 
     void modal.confirm({
       cancelText: t("common.cancel"),
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
       content: t("knowledgeNetwork.metricDeleteDescription", { name: detail.name }),
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
         await deleteKnowledgeNetworkMetric(networkId, detail.id);
@@ -127,6 +130,7 @@ export function MetricDetailScene({
         void navigate(listPath);
       },
       title: t("knowledgeNetwork.metricDeleteTitle"),
+      width: 520,
     });
   };
 

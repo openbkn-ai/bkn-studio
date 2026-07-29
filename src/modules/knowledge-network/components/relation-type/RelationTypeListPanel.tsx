@@ -143,13 +143,15 @@ export function RelationTypeListPanel({
               name: records[0]?.name ?? "",
             }),
       cancelText: t("common.cancel"),
-      className: modalStyles.businessModal,
-      okButtonProps: { danger: true },
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
+      okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
         await onDelete(records);
         setSelectedRowKeys([]);
       },
+      width: 520,
     });
   };
 

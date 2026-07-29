@@ -14,6 +14,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { RelationTypeMappingConfigTable } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingConfigTable";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import {
@@ -82,13 +83,16 @@ export function RelationTypeDetailScene() {
       title: t("knowledgeNetwork.relationTypeDeleteTitle"),
       content: t("knowledgeNetwork.relationTypeDeleteDescription", { name: detail.name }),
       cancelText: t("common.cancel"),
-      okButtonProps: { danger: true },
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
+      okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
         await deleteKnowledgeNetworkRelationType(networkId, detail.id);
         void message.success(t("common.success"));
         void navigate(listPath);
       },
+      width: 520,
     });
   };
 
