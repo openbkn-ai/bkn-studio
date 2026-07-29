@@ -23,6 +23,11 @@ let departmentsCache: CacheEntry<AdminDepartment[]> | null = null;
 let rolesCache: CacheEntry<AdminRole[]> | null = null;
 const userCache = new Map<string, CacheEntry<AdminUser>>();
 
+/** 审计主体不一定是用户；例如许可证服务使用 system:license 作为 actor。 */
+export function isUserLookupId(id: string) {
+  return Boolean(id.trim()) && !id.trim().startsWith("system:");
+}
+
 function isFresh<T>(entry: CacheEntry<T> | null | undefined) {
   return Boolean(entry && Date.now() - entry.loadedAt < CACHE_TTL_MS);
 }
@@ -53,6 +58,9 @@ export async function getCachedRoles(): Promise<AdminRole[]> {
 }
 
 export async function getCachedUser(id: string): Promise<AdminUser | null> {
+  if (!isUserLookupId(id)) {
+    return null;
+  }
   const cached = userCache.get(id);
   if (isFresh(cached)) {
     return cached!.data;
@@ -67,7 +75,7 @@ export async function getCachedUser(id: string): Promise<AdminUser | null> {
 }
 
 export async function hydrateUserLookup(ids: string[]) {
-  const missing = ids.filter((id) => id && !isFresh(userCache.get(id)));
+  const missing = ids.filter((id) => isUserLookupId(id) && !isFresh(userCache.get(id)));
   if (!missing.length) {
     return;
   }
