@@ -243,7 +243,7 @@ export function ExperienceScene({
   const [network, setNetwork] = useState<{ name: string; slug: string } | null>(null);
   const [mode, setMode] = useState<ContextLoaderMode>(initialMode);
   const showModeTabs = !lockMode;
-  const showEnvSettings = mode !== "agent";
+  const showEnvSettings = mode !== "agent" && !(lockMode && mode === "mcp");
 
   useEffect(() => {
     setMode(initialMode);
@@ -712,6 +712,8 @@ export function ExperienceScene({
           toolsError={toolsError}
           currentTool={currentTool}
           onReloadTools={() => loadTools(true)}
+          mcpUrl={`${serverAddress}${MCP_PATH}`}
+          authLabel={authMode === "apikey" ? "API Key" : "OAuth Token"}
           dataBrowserPanel={
             <DataBrowserPanel
               active={rightTab === "data"}

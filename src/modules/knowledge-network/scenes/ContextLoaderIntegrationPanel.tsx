@@ -120,6 +120,8 @@ type ContextLoaderIntegrationPanelProps = {
   currentTool: McpToolDef | null;
   onReloadTools: () => void;
   dataBrowserPanel: ReactNode;
+  mcpUrl: string;
+  authLabel: string;
 };
 
 function formatBytes(bytes: number): string {
@@ -279,9 +281,12 @@ export function ContextLoaderIntegrationPanel({
   currentTool,
   onReloadTools,
   dataBrowserPanel,
+  mcpUrl,
+  authLabel,
 }: ContextLoaderIntegrationPanelProps) {
   const verb = mode === "mcp" ? "MCP" : "POST";
   const [schemaOpen, setSchemaOpen] = useState(false);
+  const [mcpTab, setMcpTab] = useState<"connect" | "verify">("connect");
   const filterText = filter.trim().toLowerCase();
   const treeGroups = TOOL_GROUPS.map((group) => ({
     ...group,
@@ -293,11 +298,93 @@ export function ContextLoaderIntegrationPanel({
   })).filter(({ items }) => items.length > 0);
 
   return (
-    <div className={styles.main}>
+    <div className={`${styles.main} ${mode === "mcp" ? styles.mainMcpTabbed : ""}`}>
+      {mode === "mcp" ? (
+        <div className={styles.mcpModeTabs}>
+          <button
+            type="button"
+            className={`${styles.mcpModeTab} ${mcpTab === "connect" ? styles.mcpModeTabActive : ""}`}
+            onClick={() => setMcpTab("connect")}
+          >
+            Agent 平台对接
+          </button>
+          <button
+            type="button"
+            className={`${styles.mcpModeTab} ${mcpTab === "verify" ? styles.mcpModeTabActive : ""}`}
+            onClick={() => setMcpTab("verify")}
+          >
+            MCP 能力验证
+          </button>
+        </div>
+      ) : null}
+
+      {mode === "mcp" && mcpTab === "connect" ? (
+        <section className={styles.mcpConnectPage}>
+          <div className={styles.mcpConnectPanel}>
+            <div className={styles.mcpConnectTitleBlock}>
+              <div className={styles.mcpConnectEyebrow}>Agent 平台接入</div>
+              <h2 className={styles.mcpConnectTitle}>配置知识网络 MCP 服务</h2>
+              <p className={styles.mcpConnectDesc}>把当前知识网络发布为 Agent 可调用的 MCP 服务，并通过 tools/list 验证平台是否能发现能力。</p>
+              <ol className={styles.mcpSteps}>
+                <li>复制 MCP 服务地址并填入 Agent 平台的 MCP 服务配置。</li>
+                <li>按平台要求填写认证 Header，保存后发起连接测试。</li>
+                <li>验证 tools/list 能返回能力列表，再进入能力验证页调试参数。</li>
+              </ol>
+            </div>
+            <div className={styles.mcpConnectMain}>
+              <div className={styles.mcpConnectFields}>
+                <div className={styles.mcpConnectField}>
+                  <span className={styles.mcpConnectLabel}>MCP 服务地址</span>
+                  <code title={mcpUrl}>{mcpUrl}</code>
+                  <button type="button" className={styles.mcpCopyBtn} onClick={() => onCopy(mcpUrl, "MCP 服务地址已复制")}>
+                    <CopyOutlined /> 复制
+                  </button>
+                </div>
+                <div className={styles.mcpConnectField}>
+                  <span className={styles.mcpConnectLabel}>认证 Header</span>
+                  <code>Authorization: Bearer &lt;{authLabel}&gt;</code>
+                  <button
+                    type="button"
+                    className={styles.mcpCopyBtn}
+                    onClick={() => onCopy(`Authorization: Bearer <${authLabel}>`, "认证 Header 模板已复制")}
+                  >
+                    <CopyOutlined /> 复制
+                  </button>
+                </div>
+                <div className={styles.mcpConnectField}>
+                  <span className={styles.mcpConnectLabel}>知识网络范围</span>
+                  <code title={knId}>{knId}</code>
+                  <button type="button" className={styles.mcpCopyBtn} onClick={() => onCopy(knId, "KN_ID 已复制")}>
+                    <CopyOutlined /> 复制
+                  </button>
+                </div>
+              </div>
+              <div className={styles.mcpVerifyCard}>
+                <div>
+                  <div className={styles.mcpVerifyTitle}>连接验证</div>
+                  <div className={styles.mcpVerifyDesc}>当前可发现 {activeOps.length} 项 MCP 能力，可先验证工具列表，再按需调试单个能力。</div>
+                </div>
+                <div className={styles.mcpConnectActions}>
+                  <button type="button" className={styles.guideBtn} onClick={onOpenGuide}>
+                    <ReadOutlined /> 接入配置
+                  </button>
+                  <button type="button" className={styles.discoverBtn} onClick={onOpenDiscover}>
+                    <ApiOutlined /> 验证 tools/list
+                  </button>
+                  <button type="button" className={styles.guideBtn} onClick={() => setMcpTab("verify")}>
+                    MCP 能力验证
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <>
       <aside className={styles.list}>
         <div className={styles.listHead}>
           <div>
-            <div className={styles.listTitle}>{mode === "mcp" ? "MCP 工具" : "REST 接口"}</div>
+            <div className={styles.listTitle}>{mode === "mcp" ? "可用能力" : "REST 接口"}</div>
             <div className={styles.listMeta}>{activeOps.length} 项可用</div>
           </div>
           {toolsLoading && mode === "mcp" ? <Spin size="small" /> : null}
@@ -583,6 +670,8 @@ export function ContextLoaderIntegrationPanel({
           {dataBrowserPanel}
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }

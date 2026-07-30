@@ -232,8 +232,219 @@
   flex: 1 1 auto;
   display: grid;
   grid-template-columns: 286px minmax(560px, 1fr) minmax(420px, 0.78fr);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   background: #eef2f7;
+}
+
+.mainMcpTabbed {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.mcpModeTabs {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.mcpModeTab {
+  height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mcpModeTab:hover {
+  color: #1e293b;
+}
+
+.mcpModeTabActive {
+  color: #1d4ed8;
+  border-bottom-color: #2e68ff;
+}
+
+.mcpConnectPage {
+  grid-column: 1 / -1;
+  min-height: 0;
+  overflow: auto;
+  padding: 20px 28px;
+  background: #f5f7fb;
+}
+
+.mcpConnectPanel {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.72fr) minmax(620px, 1.28fr);
+  gap: 20px;
+  align-items: stretch;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.mcpConnectTitleBlock {
+  padding: 24px 26px;
+  border-right: 1px solid var(--line);
+  background: #fbfcff;
+}
+
+.mcpConnectEyebrow {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.mcpConnectTitle {
+  margin: 3px 0 4px;
+  color: #132036;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.mcpConnectDesc {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.mcpSteps {
+  display: grid;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mcpSteps li {
+  position: relative;
+  padding-left: 30px;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.mcpSteps li::before {
+  content: counter(list-item);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #bfd0ea;
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mcpConnectMain {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 22px;
+}
+
+.mcpConnectFields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mcpConnectField {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #f8fafc;
+}
+
+.mcpConnectLabel {
+  color: #7b8798;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mcpConnectField code {
+  min-width: 0;
+  color: #26364f;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcpCopyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+  color: #475569;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.mcpCopyBtn:hover {
+  border-color: #2e68ff;
+  color: #1d4ed8;
+}
+
+.mcpConnectActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mcpVerifyCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #bfd0ea;
+  border-radius: 4px;
+  background: #f1f6ff;
+}
+
+.mcpVerifyTitle {
+  color: #183b7a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mcpVerifyDesc {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12.5px;
+  line-height: 1.5;
 }
 
 .list {
@@ -504,6 +715,7 @@
 
 .toolTreeGroup {
   position: relative;
+  margin: 2px 8px 8px;
 }
 
 .grp {
@@ -511,12 +723,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 9px 14px 6px 18px;
+  min-height: 32px;
+  padding: 6px 8px 4px 10px;
   color: #35445c;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   list-style: none;
+  border-radius: 4px;
 }
 
 .grp::-webkit-details-marker {
@@ -540,6 +754,7 @@
 
 .grpLabel {
   min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -549,7 +764,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
+  min-width: 20px;
   height: 18px;
   padding: 0 6px;
   border: 1px solid var(--line);
@@ -559,33 +774,47 @@
 }
 
 .grpDesc {
-  margin: -2px 14px 4px 40px;
+  margin: -1px 8px 6px 30px;
   color: #8896aa;
   font-size: 11.5px;
   line-height: 1.45;
 }
 
 .ep {
+  position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 9px;
-  width: calc(100% - 24px);
-  margin: 1px 10px 1px 14px;
-  padding: 8px 10px 8px 22px;
+  gap: 8px;
+  width: calc(100% - 30px);
+  min-height: 46px;
+  margin: 1px 10px 1px 20px;
+  padding: 7px 8px 7px 18px;
   border: 0;
-  border-left: 2px solid #dce5f1;
+  border-left: 1px solid #d5dfec;
+  border-radius: 4px;
   background: transparent;
   cursor: pointer;
   text-align: left;
 }
 
+.ep::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 22px;
+  width: 12px;
+  height: 1px;
+  background: #d5dfec;
+}
+
 .ep:hover {
-  background: #eef2f9;
+  background: #f0f5fc;
 }
 
 .epActive {
-  background: #edf4ff;
-  border-left-color: var(--accent);
+  background: #eaf2ff;
+  border-left-color: #2e68ff;
+  box-shadow: inset 2px 0 0 #2e68ff;
 }
 
 .epActive .epName {
@@ -594,7 +823,7 @@
 
 .epVerb {
   flex: 0 0 auto;
-  margin-top: 1px;
+  margin-top: 2px;
   font-family: var(--mono);
   font-size: 9px;
   font-weight: 700;
@@ -605,8 +834,8 @@
 }
 
 .epVerbTool {
-  color: #0f766e;
-  background: #dff7f3;
+  color: #087567;
+  background: #ddf6ef;
 }
 
 .epText {
@@ -620,6 +849,7 @@
   font-family: var(--mono);
   font-size: 11.5px;
   color: #66758b;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -629,7 +859,7 @@
   color: #243248;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1259,6 +1489,33 @@
 @media (max-width: 1360px) {
   .main {
     grid-template-columns: 264px minmax(500px, 1fr) minmax(360px, 0.72fr);
+  }
+
+  .mcpConnectPanel {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .mcpConnectTitleBlock {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .mcpConnectFields {
+    grid-template-columns: 1fr;
+  }
+
+  .mcpConnectField {
+    grid-template-columns: 1fr;
+  }
+
+  .mcpConnectActions {
+    justify-content: flex-start;
+  }
+
+  .mcpVerifyCard {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .schemaGrid,

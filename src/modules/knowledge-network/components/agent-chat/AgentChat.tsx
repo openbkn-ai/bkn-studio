@@ -195,7 +195,7 @@ const SOLO_PROFILE: PaneProfile = {
 
 const BASE_PROFILE: PaneProfile = {
   paneKey: "base",
-  title: "仅基础数据",
+  title: "基础数据",
   defaultPrompt: DEFAULT_BASE_PROMPT,
   injectKnContext: false,
   defaultToolNames: BASE_DATA_TOOL_NAMES,
@@ -256,9 +256,9 @@ function reportToMarkdown(
   const L: string[] = [];
   L.push(`# Agent 对话对比报告 · ${knLabel}`, "");
   L.push(`- 生成时间：${generatedAt}`);
-  L.push(`- 左「仅基础数据」模型：${base.model || "—"}；右「业务知识网络」模型：${kn.model || "—"}`, "");
+  L.push(`- 左「基础数据」模型：${base.model || "—"}；右「业务知识网络」模型：${kn.model || "—"}`, "");
   L.push("## 会话总览", "");
-  L.push("| 指标 | 仅基础数据 | 业务知识网络 |");
+  L.push("| 指标 | 基础数据 | 业务知识网络 |");
   L.push("| --- | --- | --- |");
   L.push(`| 总 token | ${fmtTokens(base.stats.tokens)} | ${fmtTokens(kn.stats.tokens)} |`);
   L.push(`| 总耗时 | ${fmtDuration(base.stats.ms)} | ${fmtDuration(kn.stats.ms)} |`);
@@ -273,7 +273,7 @@ function reportToMarkdown(
     const sameQ = !b || !k || b.question === k.question;
     L.push(`## 第 ${i + 1} 轮`, "");
     L.push(`> ${sameQ ? (k?.question ?? b?.question ?? "—") : `左：${b?.question ?? "—"} ／ 右：${k?.question ?? "—"}`}`, "");
-    L.push("| 指标 | 仅基础数据 | 业务知识网络 |");
+    L.push("| 指标 | 基础数据 | 业务知识网络 |");
     L.push("| --- | --- | --- |");
     L.push(
       `| token | ${b?.tokens != null ? fmtTokens(b.tokens) : "—"} | ${k?.tokens != null ? fmtTokens(k.tokens) : "—"} |`,
@@ -283,7 +283,7 @@ function reportToMarkdown(
     );
     L.push(`| 工具调用 | ${mdCalls(b)} | ${mdCalls(k)} |`);
     L.push(`| 结果 | ${b ? outcomeLabel(b.outcome) : "—"} | ${k ? outcomeLabel(k.outcome) : "—"} |`, "");
-    L.push(`### 仅基础数据 · 回答`, "", answerBlock(b), "");
+    L.push(`### 基础数据 · 回答`, "", answerBlock(b), "");
     L.push(`### 业务知识网络 · 回答`, "", answerBlock(k), "");
   }
   if (summary.trim()) L.push("## AI 总结", "", summary.trim(), "");
@@ -314,7 +314,6 @@ const KN_PROFILE: PaneProfile = {
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: true,
   defaultToolNames: null,
-  highlight: true,
 };
 
 export function AgentChat({
@@ -586,7 +585,7 @@ export function AgentChat({
     if (!report || summarizing) return;
     const modelName = report.kn.model || report.base.model;
     if (!modelName) return;
-    const content = [paneBrief("A · 仅基础数据", report.base), "", paneBrief("B · 业务知识网络", report.kn)].join("\n");
+    const content = [paneBrief("A · 基础数据", report.base), "", paneBrief("B · 业务知识网络", report.kn)].join("\n");
     setSummarizing(true);
     setSummary("");
     const controller = new AbortController();
@@ -616,7 +615,7 @@ export function AgentChat({
     if (noLlm) return "请先在「模型工厂」接入大模型后再对话";
     if (!compare.on) return `向 Agent 提问，例如：${suggestions[0] ?? FALLBACK_SUGGESTIONS[0]}`;
     if (compare.target === "both") return "同一个问题，同时问两侧，对比两种回答";
-    return compare.target === "base" ? "仅问左侧「仅基础数据」" : "仅问右侧「业务知识网络」";
+    return compare.target === "base" ? "发送给「基础数据」" : "发送给「业务知识网络」";
   }, [noLlm, compare, suggestions]);
 
   const paneShared = {
@@ -645,20 +644,22 @@ export function AgentChat({
               onChange={(value) => setCompareState((prev) => ({ ...prev, target: value as CompareTarget }))}
               options={[
                 { label: "两侧同问", value: "both" },
-                { label: "仅基础数据", value: "base" },
-                { label: "仅业务知识网络", value: "kn" },
+                { label: "基础数据", value: "base" },
+                { label: "业务知识网络", value: "kn" },
               ]}
             />
           </div>
-          <button
-            type="button"
-            className={styles.cmpReport}
-            onClick={openReport}
-            disabled={anyBusy}
-            title="对比两侧最近一轮的回答与指标，可生成 AI 总结"
-          >
-            <FileTextOutlined /> 对比报告
-          </button>
+          {compare.target === "both" ? (
+            <button
+              type="button"
+              className={styles.cmpReport}
+              onClick={openReport}
+              disabled={anyBusy}
+              title="对比两侧最近一轮的回答与指标，可生成 AI 总结"
+            >
+              <FileTextOutlined /> 对比报告
+            </button>
+          ) : null}
         </div>
       ) : null}
       <div className={styles.cwrap}>
@@ -694,10 +695,6 @@ export function AgentChat({
   return (
     <div className={styles.root}>
       <header className={styles.agentHeader}>
-        <div className={styles.agentHeading}>
-          <h2>智能问答</h2>
-          <p>基于当前知识网络进行自然语言提问，验证语义检索、数据查询和回答质量。</p>
-        </div>
         <div className={styles.modeTabs}>
           <Segmented
             value={compare.on ? "compare" : "single"}
@@ -714,27 +711,31 @@ export function AgentChat({
       <div className={compare.on ? styles.compareStage : styles.soloStage}>
         {compare.on ? (
           <div className={styles.comparePanel}>
-            <div className={styles.panes}>
-              <div className={styles.pane}>
-                <ChatPane
-                  ref={baseRef}
-                  {...paneShared}
-                  profile={BASE_PROFILE}
-                  suggestions={suggestions}
-                  onPick={sendQuestion}
-                  onBusyChange={onBaseBusy}
-                />
-              </div>
-              <div className={`${styles.pane} ${styles.paneRight} ${styles.paneHl}`}>
-                <ChatPane
-                  ref={knRef}
-                  {...paneShared}
-                  profile={KN_PROFILE}
-                  suggestions={suggestions}
-                  onPick={sendQuestion}
-                  onBusyChange={onKnBusy}
-                />
-              </div>
+            <div className={`${styles.panes} ${compare.target !== "both" ? styles.panesSingle : ""}`}>
+              {compare.target === "both" || compare.target === "base" ? (
+                <div className={styles.pane}>
+                  <ChatPane
+                    ref={baseRef}
+                    {...paneShared}
+                    profile={BASE_PROFILE}
+                    suggestions={suggestions}
+                    onPick={sendQuestion}
+                    onBusyChange={onBaseBusy}
+                  />
+                </div>
+              ) : null}
+              {compare.target === "both" || compare.target === "kn" ? (
+                <div className={styles.pane}>
+                  <ChatPane
+                    ref={knRef}
+                    {...paneShared}
+                    profile={KN_PROFILE}
+                    suggestions={suggestions}
+                    onPick={sendQuestion}
+                    onBusyChange={onKnBusy}
+                  />
+                </div>
+              ) : null}
             </div>
             {composer}
           </div>
@@ -820,7 +821,7 @@ export function AgentChat({
                         <tr>
                           <th>会话总览（{Math.max(ba.rounds, ka.rounds)} 轮）</th>
                           <th>
-                            <span className={styles.paneTitle}>仅基础数据</span>
+                            <span className={styles.paneTitle}>基础数据</span>
                           </th>
                           <th>
                             <span className={`${styles.paneTitle} ${styles.paneTitleHl}`}>业务知识网络</span>
@@ -950,7 +951,7 @@ export function AgentChat({
                       <div className={styles.rptAnsGrid}>
                         {(
                           [
-                            { key: "base", title: "仅基础数据", hl: false, round: b },
+                            { key: "base", title: "基础数据", hl: false, round: b },
                             { key: "kn", title: "业务知识网络", hl: true, round: k },
                           ] as const
                         ).map(({ key, title, hl, round }) => {
