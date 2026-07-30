@@ -13,8 +13,8 @@
  * vs 右「业务知识网络」（全部工具 + 注入摘要）——同一问题两侧同问，直观对比语义层价值。
  */
 
-import { CopyOutlined, DownloadOutlined, FileTextOutlined, PauseOutlined } from "@ant-design/icons";
-import { App, Modal, Segmented, Switch } from "antd";
+import { CopyOutlined, DownloadOutlined, FileTextOutlined } from "@ant-design/icons";
+import { App, Modal, Segmented } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
@@ -633,69 +633,12 @@ export function AgentChat({
     resourceScope: knResourceIds,
   };
 
-  return (
-    <div className={styles.root}>
-      <div className={styles.cmpBar}>
-        <Switch
-          size="small"
-          checked={compare.on}
-          disabled={anyBusy}
-          onChange={(on) => setCompareState((prev) => ({ ...prev, on }))}
-        />
-        <span className={styles.cmpTitle}>
-          <PauseOutlined rotate={90} /> 对比模式
-        </span>
-        <span className={styles.cmpDesc}>同一问题，对比「仅基础数据」与「有业务知识网络」两种回答</span>
-        {compare.on ? (
-          <button
-            type="button"
-            className={styles.cmpReport}
-            onClick={openReport}
-            disabled={anyBusy}
-            title="对比两侧最近一轮的回答与指标，可生成 AI 总结"
-          >
-            <FileTextOutlined /> 对比报告
-          </button>
-        ) : null}
-      </div>
-
+  const composer = (
+    <div className={styles.composer}>
       {compare.on ? (
-        <div className={styles.panes}>
-          <div className={styles.pane}>
-            <ChatPane
-              ref={baseRef}
-              {...paneShared}
-              profile={BASE_PROFILE}
-              suggestions={suggestions}
-              onPick={sendQuestion}
-              onBusyChange={onBaseBusy}
-            />
-          </div>
-          <div className={`${styles.pane} ${styles.paneRight} ${styles.paneHl}`}>
-            <ChatPane
-              ref={knRef}
-              {...paneShared}
-              profile={KN_PROFILE}
-              suggestions={suggestions}
-              onPick={sendQuestion}
-              onBusyChange={onKnBusy}
-            />
-          </div>
-        </div>
-      ) : (
-        <ChatPane
-          ref={soloRef}
-          {...paneShared}
-          profile={SOLO_PROFILE}
-          suggestions={suggestions}
-          onPick={sendQuestion}
-          onBusyChange={onSoloBusy}
-        />
-      )}
-
-      <div className={styles.composer}>
-        {compare.on ? (
-          <div className={styles.targetRow}>
+        <div className={styles.targetBar}>
+          <div className={styles.targetLeft}>
+            <span className={styles.targetLabel}>发送到</span>
             <Segmented
               className={styles.targetSeg}
               value={compare.target}
@@ -707,34 +650,107 @@ export function AgentChat({
               ]}
             />
           </div>
-        ) : null}
-        <div className={styles.cwrap}>
-          <textarea
-            className={styles.cInput}
-            value={input}
-            rows={1}
-            disabled={noLlm}
-            placeholder={placeholder}
-            spellCheck={false}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              // 跳过中文输入法组字中的回车（确认候选词），避免误发送。
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
-                e.preventDefault();
-                sendShared();
-              }
-            }}
-          />
-          {anyTargetBusy ? (
-            <button type="button" className={styles.stopBtn} onClick={stopAll}>
-              停止
-            </button>
-          ) : (
-            <button type="button" className={styles.sendBtn} onClick={sendShared} disabled={!input.trim() || noLlm}>
-              发送
-            </button>
-          )}
+          <button
+            type="button"
+            className={styles.cmpReport}
+            onClick={openReport}
+            disabled={anyBusy}
+            title="对比两侧最近一轮的回答与指标，可生成 AI 总结"
+          >
+            <FileTextOutlined /> 对比报告
+          </button>
         </div>
+      ) : null}
+      <div className={styles.cwrap}>
+        <textarea
+          className={styles.cInput}
+          value={input}
+          rows={1}
+          disabled={noLlm}
+          placeholder={placeholder}
+          spellCheck={false}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            // 跳过中文输入法组字中的回车（确认候选词），避免误发送。
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+              e.preventDefault();
+              sendShared();
+            }
+          }}
+        />
+        {anyTargetBusy ? (
+          <button type="button" className={styles.stopBtn} onClick={stopAll}>
+            停止
+          </button>
+        ) : (
+          <button type="button" className={styles.sendBtn} onClick={sendShared} disabled={!input.trim() || noLlm}>
+            发送
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={styles.root}>
+      <header className={styles.agentHeader}>
+        <div className={styles.agentHeading}>
+          <h2>智能问答</h2>
+          <p>基于当前知识网络进行自然语言提问，验证语义检索、数据查询和回答质量。</p>
+        </div>
+        <div className={styles.modeTabs}>
+          <Segmented
+            value={compare.on ? "compare" : "single"}
+            disabled={anyBusy}
+            onChange={(value) => setCompareState((prev) => ({ ...prev, on: value === "compare" }))}
+            options={[
+              { label: "单独验证", value: "single" },
+              { label: "对比验证", value: "compare" },
+            ]}
+          />
+        </div>
+      </header>
+
+      <div className={compare.on ? styles.compareStage : styles.soloStage}>
+        {compare.on ? (
+          <div className={styles.comparePanel}>
+            <div className={styles.panes}>
+              <div className={styles.pane}>
+                <ChatPane
+                  ref={baseRef}
+                  {...paneShared}
+                  profile={BASE_PROFILE}
+                  suggestions={suggestions}
+                  onPick={sendQuestion}
+                  onBusyChange={onBaseBusy}
+                />
+              </div>
+              <div className={`${styles.pane} ${styles.paneRight} ${styles.paneHl}`}>
+                <ChatPane
+                  ref={knRef}
+                  {...paneShared}
+                  profile={KN_PROFILE}
+                  suggestions={suggestions}
+                  onPick={sendQuestion}
+                  onBusyChange={onKnBusy}
+                />
+              </div>
+            </div>
+            {composer}
+          </div>
+        ) : (
+          <div className={styles.soloPanel}>
+            <ChatPane
+              ref={soloRef}
+              {...paneShared}
+              profile={SOLO_PROFILE}
+              suggestions={suggestions}
+              onPick={sendQuestion}
+              onBusyChange={onSoloBusy}
+            />
+            {composer}
+          </div>
+        )}
       </div>
 
       <Modal

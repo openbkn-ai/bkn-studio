@@ -11,7 +11,9 @@ export type KnowledgeNetworkListSceneProps = {
 
 export type KnowledgeNetworkWorkspaceSection =
   | "overview"
-  | "preview"
+  | "experience-agent"
+  | "experience-mcp"
+  | "experience-rest"
   | "concept-groups"
   | "object-types"
   | "relation-types"

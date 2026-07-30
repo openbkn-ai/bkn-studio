@@ -10,8 +10,9 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { Dropdown } from "antd";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useMatches, useNavigate } from "react-router-dom";
+import { useMatches, useNavigate, useParams } from "react-router-dom";
 
 import { getConsoleNavTrail } from "@/app/shell/console-navigation";
 import openBknLogo from "@/assets/brand/openbkn-logo.png";
@@ -19,18 +20,62 @@ import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { BuildActivityChip } from "@/modules/data-catalog/components/BuildActivityChip";
+import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 
 export function TopBar() {
   const { t } = useTranslation();
   const matches = useMatches();
   const navigate = useNavigate();
+  const { networkId } = useParams<{ networkId?: string }>();
   const runtimeConfig = useRuntimeConfig();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
+  const [networkName, setNetworkName] = useState<string | null>(null);
+  const isKnowledgeNetworkRoute =
+    routeHandle?.console?.menuKey === "domain-knowledge-network";
+
+  useEffect(() => {
+    if (!isKnowledgeNetworkRoute || !networkId) {
+      setNetworkName(null);
+      return;
+    }
+
+    let disposed = false;
+    setNetworkName(null);
+
+    void getKnowledgeNetwork(networkId)
+      .then((record) => {
+        if (!disposed) {
+          setNetworkName(record?.name ?? networkId);
+        }
+      })
+      .catch(() => {
+        if (!disposed) {
+          setNetworkName(networkId);
+        }
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [isKnowledgeNetworkRoute, networkId]);
+
   const rawTrail = getConsoleNavTrail(routeHandle?.console?.menuKey);
-  const trail = rawTrail.map((item) => ({
-    label: t(item.labelKey),
-    path: item.path,
-  }));
+  const trail = [
+    ...rawTrail.map((item) => ({
+      label: t(item.labelKey),
+      path: item.path,
+      title: t(item.labelKey),
+    })),
+    ...(networkName
+      ? [
+          {
+            label: networkName,
+            path: undefined,
+            title: networkName,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <header className="console-topbar">
@@ -40,7 +85,11 @@ export function TopBar() {
           {trail.length > 0 ? (
             <div className="console-brand-path">
               {trail.map((item, index) => (
-                <span className="console-brand-path-item" key={`${item.label}-${index}`}>
+                <span
+                  className="console-brand-path-item"
+                  key={`${item.label}-${index}`}
+                  title={item.title}
+                >
                   {item.path && index < trail.length - 1 ? (
                     <button
                       className="console-brand-path-link"

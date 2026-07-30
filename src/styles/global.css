@@ -131,6 +131,7 @@ select {
   align-items: center;
   gap: 18px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .console-brand-title {
@@ -145,6 +146,7 @@ select {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
   color: var(--color-text-secondary);
   font-size: 15px;
 }
@@ -171,12 +173,16 @@ select {
 .console-brand-path-item .is-current {
   display: inline-flex;
   align-items: center;
+  max-width: min(38vw, 420px);
   min-height: 28px;
   padding: 0 10px;
   border-radius: 999px;
   background: var(--color-primary-100);
   color: var(--color-text-primary);
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .console-brand-path-separator {

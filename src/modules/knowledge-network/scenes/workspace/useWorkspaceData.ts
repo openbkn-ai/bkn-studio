@@ -162,15 +162,10 @@ export function useWorkspaceData(
         switch (targetSection) {
           case "overview":
             break;
-          case "preview": {
-            const [objectTypeResult, relationTypeResult] = await Promise.all([
-              listKnowledgeNetworkObjectTypes(networkId),
-              listKnowledgeNetworkRelationTypes(networkId),
-            ]);
-            setObjectTypes(objectTypeResult);
-            setRelationTypes(relationTypeResult);
+          case "experience-agent":
+          case "experience-mcp":
+          case "experience-rest":
             break;
-          }
           case "concept-groups":
             setConceptGroups(await listKnowledgeNetworkConceptGroups(networkId));
             break;
@@ -253,8 +248,10 @@ export function useWorkspaceData(
       return;
     }
 
-    ["object-types", "preview", "relation-types", "action-types"].forEach((item) => {
-      loadedSectionsRef.current.delete(sectionCacheKey(networkId, item as KnowledgeNetworkWorkspaceSection));
+    ["object-types", "relation-types", "action-types"].forEach((item) => {
+      loadedSectionsRef.current.delete(
+        sectionCacheKey(networkId, item as KnowledgeNetworkWorkspaceSection),
+      );
     });
     setObjectTypes(await listKnowledgeNetworkObjectTypes(networkId));
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "object-types"));
@@ -265,9 +262,7 @@ export function useWorkspaceData(
       return;
     }
 
-    ["relation-types", "preview"].forEach((item) => {
-      loadedSectionsRef.current.delete(sectionCacheKey(networkId, item as KnowledgeNetworkWorkspaceSection));
-    });
+    loadedSectionsRef.current.delete(sectionCacheKey(networkId, "relation-types"));
     setRelationTypes(await listKnowledgeNetworkRelationTypes(networkId));
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "relation-types"));
   }, [networkId]);

@@ -13,8 +13,10 @@ import {
   DeploymentUnitOutlined,
   ExperimentOutlined,
   FileTextOutlined,
+  ForkOutlined,
   LeftOutlined,
   LineChartOutlined,
+  MessageOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Alert } from "antd";
@@ -29,6 +31,7 @@ import type {
 } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
+import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
 import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection";
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -43,7 +46,7 @@ import styles from "./KnowledgeNetworkWorkspaceScene.module.css";
 type WorkspaceNavItem = {
   count?: number;
   icon: React.ReactNode;
-  key: KnowledgeNetworkWorkspaceSection | "experience";
+  key: KnowledgeNetworkWorkspaceSection;
   label: string;
   path?: string;
 };
@@ -100,10 +103,22 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <FileTextOutlined />,
       },
       {
-        key: "experience",
-        label: t("knowledgeNetwork.workspaceAbilityVerification"),
+        key: "experience-agent",
+        label: t("knowledgeNetwork.workspaceExperienceAgent"),
+        icon: <MessageOutlined />,
+        path: `/knowledge-network/workspace/${activeNetworkId}/experience/agent`,
+      },
+      {
+        key: "experience-mcp",
+        label: t("knowledgeNetwork.workspaceExperienceMcp"),
+        icon: <ForkOutlined />,
+        path: `/knowledge-network/workspace/${activeNetworkId}/experience/mcp`,
+      },
+      {
+        key: "experience-rest",
+        label: t("knowledgeNetwork.workspaceExperienceRest"),
         icon: <ExperimentOutlined />,
-        path: `/knowledge-network/workspace/${activeNetworkId}/experience`,
+        path: `/knowledge-network/workspace/${activeNetworkId}/experience/rest`,
       },
       {
         key: "concept-groups",
@@ -152,7 +167,13 @@ export function KnowledgeNetworkWorkspaceScene({
   }, [activeNetworkId, detail, t]);
 
   const primaryNavItems = navigationItems.filter(
-    (item) => item.key === "overview" || item.key === "experience",
+    (item) => item.key === "overview",
+  );
+  const experienceNavItems = navigationItems.filter(
+    (item) =>
+      item.key === "experience-agent" ||
+      item.key === "experience-mcp" ||
+      item.key === "experience-rest",
   );
   const resourceNavItems = navigationItems.filter(
     (item) =>
@@ -169,7 +190,7 @@ export function KnowledgeNetworkWorkspaceScene({
     options?: { showCount?: boolean },
   ) => {
     const isActive =
-      item.path !== undefined ? location.pathname === item.path : item.key === section;
+      item.key === section || (item.path !== undefined && location.pathname === item.path);
     const showCount = options?.showCount ?? item.count !== undefined;
 
     return (
@@ -207,6 +228,17 @@ export function KnowledgeNetworkWorkspaceScene({
       );
     }
 
+    if (
+      section === "experience-agent" ||
+      section === "experience-mcp" ||
+      section === "experience-rest"
+    ) {
+      const initialMode =
+        section === "experience-mcp" ? "mcp" : section === "experience-rest" ? "rest" : "agent";
+
+      return <ExperienceScene embedded initialMode={initialMode} lockMode />;
+    }
+
     return (
       <WorkspaceResourceSection
         data={workspaceData}
@@ -215,7 +247,6 @@ export function KnowledgeNetworkWorkspaceScene({
       />
     );
   };
-
   return (
     <section className={styles.workspace}>
       <div className={styles.workspaceHeader}>
@@ -249,6 +280,9 @@ export function KnowledgeNetworkWorkspaceScene({
       <div className={styles.workspaceLayout}>
         <aside className={styles.workspaceSide}>
           {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+          <div className={styles.sideDivider} />
+          <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceAbilityVerification")}</div>
+          {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
           <div className={styles.sideDivider} />
           <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceOntologyModeling")}</div>
           {resourceNavItems.map((item) => renderSideNavItem(item))}
