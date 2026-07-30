@@ -31,6 +31,10 @@ import styles from "./ActionTypeConditionEditor.module.css";
 const VALUELESS_OPERATIONS = new Set<ActionTypeConditionOperation>(["exist", "not_exist"]);
 const LOGIC_OPERATIONS = new Set<ActionTypeConditionOperation>(["and", "or"]);
 
+function isValuelessOperation(operation?: ActionTypeConditionOperation) {
+  return operation !== undefined && VALUELESS_OPERATIONS.has(operation);
+}
+
 function createEmptyConditionRow(objectTypeId?: string): ActionTypeCondition {
   return {
     objectTypeId,
@@ -118,7 +122,7 @@ function ConditionRow({
   );
 
   const currentOperation = value.operation;
-  const needsValue = currentOperation ? !VALUELESS_OPERATIONS.has(currentOperation) : true;
+  const needsValue = currentOperation ? !isValuelessOperation(currentOperation) : true;
 
   const updateRow = (patch: Partial<ActionTypeCondition>) => {
     onChange({
@@ -188,15 +192,17 @@ function ConditionRow({
         placeholder={t("knowledgeNetwork.actionTypeConditionOperationPlaceholder")}
         value={currentOperation}
       />
-      <Input
-        className={styles.valueInput}
-        disabled={!objectTypeId || !needsValue}
-        onChange={(event) => {
-          updateRow({ value: event.target.value || undefined });
-        }}
-        placeholder={t("knowledgeNetwork.actionTypeConditionValueInputPlaceholder")}
-        value={scalarValue}
-      />
+      {needsValue ? (
+        <Input
+          className={styles.valueInput}
+          disabled={!objectTypeId}
+          onChange={(event) => {
+            updateRow({ value: event.target.value || undefined });
+          }}
+          placeholder={t("knowledgeNetwork.actionTypeConditionValueInputPlaceholder")}
+          value={scalarValue}
+        />
+      ) : null}
       <div className={styles.rowActions}>
         {showAddButton ? (
           <AppButton
@@ -381,6 +387,7 @@ export function ActionTypeConditionEditor({
     const normalizedRows = nextRows.map((item) => ({
       ...item,
       objectTypeId: item.objectTypeId || boundObjectTypeId,
+      value: isValuelessOperation(item.operation) ? undefined : item.value,
       valueFrom: "const" as const,
     }));
     const contentRows = normalizedRows.filter(hasConditionContent);

@@ -240,7 +240,11 @@ export function MetricCalculationEditor({
             />
           </Form.Item>
 
-          <Form.Item label={t("knowledgeNetwork.metricUnitType")} name="unitType">
+          <Form.Item
+            label={t("knowledgeNetwork.metricUnitType")}
+            name="unitType"
+            rules={[{ message: t("knowledgeNetwork.metricUnitTypeRequired"), required: true }]}
+          >
             <Select
               allowClear
               onChange={() => form.setFieldValue("unit", undefined)}
@@ -254,7 +258,11 @@ export function MetricCalculationEditor({
             />
           </Form.Item>
 
-          <Form.Item label={t("knowledgeNetwork.metricUnit")} name="unit">
+          <Form.Item
+            label={t("knowledgeNetwork.metricUnit")}
+            name="unit"
+            rules={[{ message: t("knowledgeNetwork.metricUnitRequired"), required: true }]}
+          >
             <Select
               allowClear
               disabled={!unitType}
