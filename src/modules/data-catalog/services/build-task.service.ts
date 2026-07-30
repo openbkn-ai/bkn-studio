@@ -57,6 +57,7 @@ type BackendBuildTask = {
   embedding_fields?: string | string[];
   embedding_model?: string;
   error_msg?: string;
+  execute_type?: "incremental" | "full";
   failure_detail?: string;
   fulltext_analyzer?: string;
   fulltext_fields?: string | string[];
@@ -226,7 +227,7 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
   };
 }
 
-function mapBuildTask(item: BackendBuildTask): BuildTask {
+export function mapBuildTask(item: BackendBuildTask): BuildTask {
   const createdAt = item.create_time ?? 0;
   const mode: BuildMode = item.mode === "streaming" ? "streaming" : "batch";
   const status = normalizeStatus(item.status, mode);
@@ -264,6 +265,12 @@ function mapBuildTask(item: BackendBuildTask): BuildTask {
     resourceId: item.resource_id ?? "",
     resourceName: item.resource_name,
     mode,
+    executeType:
+      mode === "batch"
+        ? item.execute_type === "incremental"
+          ? "incremental"
+          : "full"
+        : undefined,
     status,
     embeddingFields: snapshot.embeddingFields,
     embeddingConfigs: snapshot.embeddingConfigs,
@@ -633,28 +640,20 @@ export async function deleteBuildTask(
   }
 }
 
-export type BuildExecuteType = "incremental" | "full";
-
 /**
  * 重新 start 任务。
- * - reset=false：按 synced_mark 增量续跑（对应旧 execute_type=incremental）
- * - reset=true：忽略游标全量重跑（对应旧 execute_type=full）
+ * reset 仅对 full 任务有效；incremental 任务由后端强制按游标续跑。
  */
 export async function retryBuildTask(
   id: string,
-  resetOrExecuteType: boolean | BuildExecuteType = false,
+  reset = false,
 ): Promise<BuildTask | null> {
-  const reset =
-    typeof resetOrExecuteType === "boolean"
-      ? resetOrExecuteType
-      : resetOrExecuteType === "full";
-
   if (useMock) {
     const source = mockBuildTasks.find((item) => item.id === id);
     if (!source) {
       return wait(null);
     }
-    if (reset) {
+    if (reset && source.executeType === "full") {
       source.syncedCount = 0;
       source.vectorizedCount = 0;
     }

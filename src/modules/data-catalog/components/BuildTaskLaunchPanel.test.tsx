@@ -12,7 +12,6 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 
 import {
   BuildTaskLaunchPanel,
-  INCREMENTAL_BUILD_ENTRY_ENABLED,
   STREAMING_BUILD_ENTRY_ENABLED,
 } from "./BuildTaskLaunchPanel";
 
@@ -58,9 +57,8 @@ const resource: CatalogResource = {
 };
 
 describe("BuildTaskLaunchPanel", () => {
-  it("hides the streaming-build entry while the feature is disabled", () => {
-    expect(STREAMING_BUILD_ENTRY_ENABLED).toBe(false);
-    expect(INCREMENTAL_BUILD_ENTRY_ENABLED).toBe(false);
+	it("keeps streaming disabled and exposes the persisted incremental batch entry", () => {
+	expect(STREAMING_BUILD_ENTRY_ENABLED).toBe(false);
 
     render(
       <BuildTaskLaunchPanel
@@ -73,6 +71,6 @@ describe("BuildTaskLaunchPanel", () => {
 
     expect(screen.getByText("dataCatalog.build.batchLabel")).toBeTruthy();
     expect(screen.queryByText("dataCatalog.build.streamingLabel")).toBeNull();
-    expect(screen.queryByText("dataCatalog.build.executeIncremental")).toBeNull();
+	expect(screen.getByText("dataCatalog.build.executeIncremental")).toBeTruthy();
   });
 });

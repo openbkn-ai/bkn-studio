@@ -22,9 +22,13 @@ import {
   createBuildTask,
   listBuildTasks,
   resumeBuildTask,
-  type BuildExecuteType,
 } from "@/modules/data-catalog/services/build-task.service";
-import type { BuildMode, BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import type {
+  BuildMode,
+  BuildTask,
+  BuildTaskExecuteType,
+  CatalogResource,
+} from "@/modules/data-catalog/types/data-catalog";
 import { streamingNeedsBuildKey } from "@/modules/data-catalog/lib/build-task-launch-guards";
 import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
@@ -35,8 +39,6 @@ import formStyles from "./BuildTaskFormPanel.module.css";
 
 // 流式构建后端能力仍保留，待重新开放时将此开关改为 true 即可恢复入口。
 export const STREAMING_BUILD_ENTRY_ENABLED = false;
-// 执行方式尚未持久化到构建任务历史；修复前仅允许全量构建，避免历史语义不明确。
-export const INCREMENTAL_BUILD_ENTRY_ENABLED = false;
 
 export type BuildTaskLaunchPanelProps = {
   active: boolean;
@@ -79,7 +81,7 @@ export function BuildTaskLaunchPanel({
   const { message } = useAppServices();
 
   const [mode, setMode] = useState<BuildMode>("batch");
-  const [executeType, setExecuteType] = useState<BuildExecuteType>("full");
+  const [executeType, setExecuteType] = useState<BuildTaskExecuteType>("full");
   const [existingActive, setExistingActive] = useState<BuildTask | null>(null);
   const [error, setError] = useState<BuildTaskLaunchError | null>(null);
   const [models, setModels] = useState<SmallModel[]>([]);
@@ -206,7 +208,7 @@ export function BuildTaskLaunchPanel({
 
   const executeOptions: Array<{
     description: string;
-    key: BuildExecuteType;
+    key: BuildTaskExecuteType;
     label: string;
   }> = [
     {
@@ -214,14 +216,12 @@ export function BuildTaskLaunchPanel({
       key: "full",
       label: t("dataCatalog.build.executeFull"),
     },
-  ];
-  if (INCREMENTAL_BUILD_ENTRY_ENABLED) {
-    executeOptions.push({
+    {
       description: t("dataCatalog.build.executeIncrementalDescription"),
       key: "incremental",
       label: t("dataCatalog.build.executeIncremental"),
-    });
-  }
+    },
+  ];
   const selectedExecuteOption =
     executeOptions.find((option) => option.key === executeType) ?? executeOptions[0];
 

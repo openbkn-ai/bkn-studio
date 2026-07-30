@@ -35,11 +35,11 @@ export function DiscoverRunNowModal({
   submitting = false,
 }: DiscoverRunNowModalProps) {
   const { t } = useTranslation();
-  const [strategy, setStrategy] = useState<DataConnectDiscoverStrategy>("create_only");
+  const [strategy, setStrategy] = useState<DataConnectDiscoverStrategy>("full_sync");
 
   useEffect(() => {
     if (open) {
-      setStrategy("create_only");
+      setStrategy("full_sync");
     }
   }, [open]);
 

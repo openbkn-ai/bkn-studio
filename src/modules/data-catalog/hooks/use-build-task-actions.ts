@@ -76,17 +76,20 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
 
       modal.confirm({
         title: t("dataCatalog.task.rerunConfirmTitle"),
-        content: createElement(
-          Radio.Group,
-          {
-            defaultValue: reset,
-            onChange: (event: RadioChangeEvent) => {
-              reset = event.target.value === true;
-            },
-          },
-          createElement(Radio, { value: false }, t("dataCatalog.task.rerunResume")),
-          createElement(Radio, { value: true }, t("dataCatalog.task.rerunReset")),
-        ),
+        content:
+          task.executeType === "full"
+            ? createElement(
+                Radio.Group,
+                {
+                  defaultValue: reset,
+                  onChange: (event: RadioChangeEvent) => {
+                    reset = event.target.value === true;
+                  },
+                },
+                createElement(Radio, { value: false }, t("dataCatalog.task.rerunResume")),
+                createElement(Radio, { value: true }, t("dataCatalog.task.rerunReset")),
+              )
+            : t("dataCatalog.task.rerunResume"),
         okText: t("common.confirm"),
         cancelText: t("common.cancel"),
         onOk: run,

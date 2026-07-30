@@ -339,6 +339,13 @@ export function BuildTaskDetailDrawer({
             <Descriptions.Item label={t("dataCatalog.task.fields.buildKeyFields")}>
               {renderFieldTags(task.buildKeyFields)}
             </Descriptions.Item>
+            {task.executeType ? (
+              <Descriptions.Item label={t("dataCatalog.build.executeType")}>
+                {task.executeType === "incremental"
+                  ? t("dataCatalog.build.executeIncremental")
+                  : t("dataCatalog.build.executeFull")}
+              </Descriptions.Item>
+            ) : null}
             <Descriptions.Item label={t("dataCatalog.task.fields.fulltextFields")}>
               {renderFieldList(task.fulltextFields)}
             </Descriptions.Item>
