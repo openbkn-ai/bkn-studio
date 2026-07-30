@@ -23,7 +23,7 @@ import {
   createDataConnectRecord,
   getDataConnectRecord,
   listDataConnectConnectorTypes,
-  testDataConnectRecord,
+  testDataConnectConfig,
   updateDataConnectRecord,
 } from "@/modules/data-connect/services/data-connect.service";
 import type {
@@ -53,7 +53,6 @@ export function DataConnectFormScene({
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
   const [currentStep, setCurrentStep] = useState(mode === "edit" ? 1 : 0);
-  const [draftRecordId, setDraftRecordId] = useState<string>();
 
   useEffect(() => {
     void (async () => {
@@ -163,11 +162,8 @@ export function DataConnectFormScene({
     try {
       setSubmitting(true);
       const payload = await buildMutationPayload();
-      const persistedRecordId = mode === "edit" ? recordId : draftRecordId;
 
-      if (mode === "create" && persistedRecordId) {
-        await updateDataConnectRecord(persistedRecordId, payload);
-      } else if (mode === "create") {
+      if (mode === "create") {
         await createDataConnectRecord(payload);
       } else if (recordId) {
         await updateDataConnectRecord(recordId, payload);
@@ -199,20 +195,10 @@ export function DataConnectFormScene({
     try {
       setTestingConnection(true);
       const payload = await buildMutationPayload();
-      let targetRecordId = recordId ?? draftRecordId;
-
-      if (!targetRecordId) {
-        const createdRecordId = await createDataConnectRecord(payload);
-        if (!createdRecordId) {
-          throw new Error(t("common.notFound"));
-        }
-        setDraftRecordId(createdRecordId);
-        targetRecordId = createdRecordId;
-      } else {
-        await updateDataConnectRecord(targetRecordId, payload);
-      }
-
-      await testDataConnectRecord(targetRecordId);
+      await testDataConnectConfig({
+        connectorConfig: payload.connectorConfig,
+        connectorType: payload.connectorType,
+      });
       message.success(t("dataConnect.testConnectionSuccess"));
     } catch (error) {
       if (

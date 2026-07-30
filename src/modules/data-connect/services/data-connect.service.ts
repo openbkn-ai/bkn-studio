@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
 import { http } from "@/framework/request/http";
 import {
   catalogListAllQuery,
@@ -16,9 +17,14 @@ import {
   listCatalogs,
   setCatalogEnabled,
   testCatalogConnection,
+  testCatalogConnectionConfig,
   updateCatalog,
 } from "@/shared/catalog";
 import { filterCatalogs } from "@/shared/catalog/catalog-mapper";
+import type {
+  CatalogConnectionTestInput,
+  CatalogConnectionTestResult,
+} from "@/shared/catalog";
 import type {
   DataConnectConnectorType,
   DataConnectListQuery,
@@ -246,7 +252,11 @@ export async function getDataConnectRecord(id: string) {
 }
 
 export async function testDataConnectRecord(id: string) {
-  return testCatalogConnection(id);
+  assertConnectionTestSucceeded(await testCatalogConnection(id));
+}
+
+export async function testDataConnectConfig(input: CatalogConnectionTestInput) {
+  assertConnectionTestSucceeded(await testCatalogConnectionConfig(input));
 }
 
 export async function setDataConnectRecordEnabled(id: string, enabled: boolean) {
@@ -277,4 +287,14 @@ export async function updateDataConnectRecord(
   input: DataConnectMutationPayload,
 ) {
   return updateCatalog(id, input);
+}
+
+function assertConnectionTestSucceeded(result: CatalogConnectionTestResult) {
+  if (result.success) {
+    return;
+  }
+
+  throw new Error(
+    result.message?.trim() || i18n.t("dataConnect.testConnectionFailed"),
+  );
 }

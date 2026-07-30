@@ -6,6 +6,8 @@
  */
 
 export type {
+  CatalogConnectionTestInput,
+  CatalogConnectionTestResult,
   CatalogHealthStatus,
   CatalogListQuery,
   CatalogListResult,
@@ -24,6 +26,7 @@ export {
   listCatalogs,
   setCatalogEnabled,
   testCatalogConnection,
+  testCatalogConnectionConfig,
   updateCatalog,
   updateMockCatalogRecord,
 } from "@/shared/catalog/catalog.service";

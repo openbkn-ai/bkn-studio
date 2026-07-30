@@ -21,6 +21,8 @@ import {
   type BackendCatalog,
 } from "@/shared/catalog/catalog-mapper";
 import type {
+  CatalogConnectionTestInput,
+  CatalogConnectionTestResult,
   CatalogListQuery,
   CatalogListResult,
   CatalogRecord,
@@ -243,11 +245,43 @@ export async function createPhysicalCatalog(input: {
   return response.data.id ?? "";
 }
 
-export async function testCatalogConnection(id: string) {
+export async function testCatalogConnectionConfig(
+  input: CatalogConnectionTestInput,
+): Promise<CatalogConnectionTestResult> {
   if (useMock) {
-    await wait(undefined);
-    return;
+    return wait({
+      message: "Connection test succeeded.",
+      success: true,
+    });
   }
 
-  await http.post(`/vega-backend/v1/catalogs/${id}/test-connection`);
+  const response = await http.post<CatalogConnectionTestResult>(
+    "/vega-backend/v1/catalogs/test-connection",
+    {
+      connector_config: input.connectorConfig,
+      connector_type: input.connectorType,
+    },
+    { timeout: 60_000 },
+  );
+
+  return response.data;
+}
+
+export async function testCatalogConnection(
+  id: string,
+): Promise<CatalogConnectionTestResult> {
+  if (useMock) {
+    return wait({
+      message: "Connection test succeeded.",
+      success: true,
+    });
+  }
+
+  const response = await http.post<CatalogConnectionTestResult>(
+    `/vega-backend/v1/catalogs/${id}/test-connection`,
+    undefined,
+    { timeout: 60_000 },
+  );
+
+  return response.data;
 }

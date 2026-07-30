@@ -211,6 +211,8 @@ export function DataConnectListScene({
                     message.success(t("dataConnect.testConnectionSuccess"));
                   } catch (error) {
                     void message.error(extractRequestErrorMessage(error));
+                  } finally {
+                    await loadData();
                   }
                 })();
               }}

@@ -14,6 +14,16 @@ export type CatalogHealthStatus =
   | "unchecked"
   | "unhealthy";
 
+export type CatalogConnectionTestInput = {
+  connectorConfig: Record<string, unknown>;
+  connectorType: string;
+};
+
+export type CatalogConnectionTestResult = {
+  message?: string;
+  success: boolean;
+};
+
 export type CatalogRecord = {
   category: string;
   connectorConfig: Record<string, unknown>;
