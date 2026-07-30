@@ -224,6 +224,43 @@ describe("catalog.service · health check schedule", () => {
   });
 });
 
+describe("catalog.service · mock health check schedule", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps schedule updates when the catalog is loaded again", async () => {
+    const {
+      createPhysicalCatalog,
+      getCatalogHealthCheckSchedule,
+      updateCatalogHealthCheckSchedule,
+    } = await import("@/shared/catalog/catalog.service");
+    const catalogId = await createPhysicalCatalog({
+      connectorConfig: { host: "db.example.com" },
+      connectorType: "postgresql",
+      description: "",
+      enabled: true,
+      healthCheckSchedule: { cronExpr: "0 */2 * * *", mode: "enabled" },
+      name: "orders",
+      tags: [],
+    });
+
+    await updateCatalogHealthCheckSchedule(catalogId, { mode: "disabled" });
+
+    await expect(getCatalogHealthCheckSchedule(catalogId)).resolves.toMatchObject({
+      catalogId,
+      cronExpr: "0 */2 * * *",
+      mode: "disabled",
+      nextRun: "-",
+    });
+  });
+});
+
 describe("catalog.service · allow unhealthy", () => {
   beforeEach(() => {
     vi.resetModules();

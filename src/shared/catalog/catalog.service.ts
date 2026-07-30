@@ -45,6 +45,7 @@ type BackendCatalogHealthCheckSchedule = {
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const mockHealthCheckSchedules = new Map<string, CatalogHealthCheckSchedule>();
 
 const wait = async <T,>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {
@@ -100,6 +101,7 @@ export async function getCatalog(id: string) {
 export async function deleteCatalog(id: string) {
   if (useMock) {
     removeMockCatalog(id);
+    mockHealthCheckSchedules.delete(id);
     await wait(undefined);
     return;
   }
@@ -231,6 +233,10 @@ options: CatalogMutationOptions = {},
 ): Promise<string> {
   if (useMock) {
     const id = crypto.randomUUID();
+    mockHealthCheckSchedules.set(id, buildMockHealthCheckSchedule(
+      id,
+      input.healthCheckSchedule ?? { mode: "inherit" },
+    ));
     prependMockCatalog({
       id,
       name: input.name,
@@ -326,13 +332,11 @@ export async function getCatalogHealthCheckSchedule(
   catalogId: string,
 ): Promise<CatalogHealthCheckSchedule> {
   if (useMock) {
-    return wait({
-      catalogId,
-      cronExpr: "",
-      lastRun: "-",
-      mode: "inherit",
-      nextRun: "-",
-    });
+    const schedule =
+      mockHealthCheckSchedules.get(catalogId) ??
+      buildMockHealthCheckSchedule(catalogId, { mode: "inherit" });
+    mockHealthCheckSchedules.set(catalogId, schedule);
+    return wait(schedule);
   }
 
   const response = await http.get<BackendCatalogHealthCheckSchedule>(
@@ -347,13 +351,13 @@ export async function updateCatalogHealthCheckSchedule(
   input: CatalogHealthCheckScheduleInput,
 ): Promise<CatalogHealthCheckSchedule> {
   if (useMock) {
-    return wait({
+    const schedule = buildMockHealthCheckSchedule(
       catalogId,
-      cronExpr: input.cronExpr?.trim() ?? "",
-      lastRun: "-",
-      mode: input.mode,
-      nextRun: input.mode === "disabled" ? "-" : formatCatalogTimestamp(Date.now() + 3_600_000),
-    });
+      input,
+      mockHealthCheckSchedules.get(catalogId),
+    );
+    mockHealthCheckSchedules.set(catalogId, schedule);
+    return wait(schedule);
   }
 
   const response = await http.put<BackendCatalogHealthCheckSchedule>(
@@ -368,6 +372,28 @@ function mapHealthCheckScheduleInput(input: CatalogHealthCheckScheduleInput) {
   return {
     cron_expr: input.mode === "enabled" ? input.cronExpr?.trim() : undefined,
     mode: input.mode,
+  };
+}
+
+function buildMockHealthCheckSchedule(
+  catalogId: string,
+  input: CatalogHealthCheckScheduleInput,
+  previous?: CatalogHealthCheckSchedule,
+): CatalogHealthCheckSchedule {
+  return {
+    catalogId,
+    cronExpr:
+      input.mode === "enabled"
+        ? input.cronExpr?.trim() ?? ""
+        : input.mode === "disabled"
+          ? previous?.cronExpr ?? ""
+          : "",
+    lastRun: "-",
+    mode: input.mode,
+    nextRun:
+      input.mode === "disabled"
+        ? "-"
+        : formatCatalogTimestamp(Date.now() + 3_600_000),
   };
 }
 

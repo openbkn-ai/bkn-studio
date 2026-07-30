@@ -56,6 +56,8 @@ export function DataConnectDetailDrawer({
       return;
     }
 
+    let active = true;
+
     void (async () => {
       setLoading(true);
       setLoadError(null);
@@ -67,6 +69,10 @@ export function DataConnectDetailDrawer({
         getDataConnectRecord(recordId),
         getDataConnectHealthCheckSchedule(recordId),
       ]);
+
+      if (!active) {
+        return;
+      }
 
       if (recordResult.status === "fulfilled") {
         setRecord(recordResult.value);
@@ -82,6 +88,10 @@ export function DataConnectDetailDrawer({
 
       setLoading(false);
     })();
+
+    return () => {
+      active = false;
+    };
   }, [open, recordId]);
 
   const connectorTypeName = useMemo(
@@ -99,6 +109,11 @@ export function DataConnectDetailDrawer({
 
   return (
     <Drawer
+      afterOpenChange={(visible) => {
+        if (!visible) {
+          setScheduleModalOpen(false);
+        }
+      }}
       className={styles.drawer}
       destroyOnClose
       onClose={onClose}
