@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
 const postMock = vi.hoisted(() => vi.fn());
@@ -15,7 +15,7 @@ vi.mock("@/framework/request/http", () => ({
 }));
 
 import {
-	createBuildTask,
+  createBuildTask,
   mapBuildTask,
   snapshotFieldsOf,
 } from "@/modules/data-catalog/services/build-task.service";
@@ -93,6 +93,11 @@ describe("createBuildTask", () => {
       vi.stubEnv("VITE_USE_MOCK", "false");
       getMock.mockReset();
       postMock.mockReset();
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
     });
 
     it("rejects when the created task cannot be retrieved", async () => {
