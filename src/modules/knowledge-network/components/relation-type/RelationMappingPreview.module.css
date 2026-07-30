@@ -9,9 +9,9 @@
   background: #f7f9fc;
   border: 1px solid #d9e2f0;
   border-radius: 2px;
-  margin: 16px 0 24px;
-  min-height: 160px;
-  padding: 26px 32px;
+  margin: 12px 0 18px;
+  min-height: 104px;
+  padding: 14px 28px;
 }
 
 .previewCanvas {
@@ -19,15 +19,15 @@
   display: flex;
   gap: 14px;
   justify-content: center;
-  min-height: 112px;
+  min-height: 74px;
 }
 
 .previewNode {
   align-items: center;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 112px;
+  gap: 6px;
+  min-width: 104px;
 }
 
 .previewNodeIcon {
@@ -36,9 +36,9 @@
   color: #fff;
   display: inline-flex;
   font-size: 18px;
-  height: 40px;
+  height: 36px;
   justify-content: center;
-  width: 40px;
+  width: 36px;
 }
 
 .previewNodeLabel {
@@ -57,7 +57,7 @@
   display: block;
   height: 2px;
   position: relative;
-  width: min(18vw, 220px);
+  width: min(16vw, 180px);
 }
 
 .previewLink::after {
@@ -79,17 +79,17 @@
   color: #1d6fe8;
   display: inline-flex;
   font-size: 18px;
-  height: 40px;
+  height: 36px;
   justify-content: center;
-  width: 40px;
+  width: 36px;
 }
 
 .previewBridgeNode {
   align-items: center;
   display: inline-flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 112px;
+  gap: 6px;
+  min-width: 104px;
 }
 
 .previewBridgeLabel {

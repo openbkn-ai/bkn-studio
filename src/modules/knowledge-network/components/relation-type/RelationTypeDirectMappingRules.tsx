@@ -202,7 +202,7 @@ export function RelationTypeDirectMappingRules({
       dataIndex: "rowType",
       key: "rowType",
       title: "",
-      width: 100,
+      width: 120,
       render: (rowType: MappingTableRow["rowType"]) =>
         rowType === "object"
           ? t("knowledgeNetwork.relationTypeMappingObjectRow")
@@ -212,7 +212,7 @@ export function RelationTypeDirectMappingRules({
       dataIndex: "sourceValue",
       key: "sourceValue",
       title: t("knowledgeNetwork.relationTypeMappingSourcePoint"),
-      width: 415,
+      width: "42%",
       render: (cellValue: string | undefined, row) =>
         row.rowType === "object" ? (
           <RelationTypeObjectTypeSelect
@@ -239,7 +239,7 @@ export function RelationTypeDirectMappingRules({
       dataIndex: "targetValue",
       key: "targetValue",
       title: t("knowledgeNetwork.relationTypeMappingTargetPoint"),
-      width: 415,
+      width: "42%",
       render: (cellValue: string | undefined, row) =>
         row.rowType === "object" ? (
           <RelationTypeObjectTypeSelect
@@ -287,7 +287,6 @@ export function RelationTypeDirectMappingRules({
         dataSource={tableRows}
         pagination={false}
         rowKey="key"
-        scroll={{ x: 960 }}
         size="small"
       />
       <AppButton
