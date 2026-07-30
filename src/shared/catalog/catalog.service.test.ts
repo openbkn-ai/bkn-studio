@@ -81,7 +81,7 @@ describe("catalog.service · test connection", () => {
         connector_config: { database: "orders", host: "db.example.com" },
         connector_type: "postgresql",
       },
-      { timeout: 60_000 },
+      { skipErrorToast: true, timeout: 60_000 },
     );
     expect(result).toEqual({
       message: "Connection test succeeded.",
@@ -102,7 +102,7 @@ describe("catalog.service · test connection", () => {
     expect(postMock).toHaveBeenCalledWith(
       "/vega-backend/v1/catalogs/catalog-1/test-connection",
       undefined,
-      { timeout: 60_000 },
+      { skipErrorToast: true, timeout: 60_000 },
     );
     expect(result).toEqual({
       message: "Connection refused.",
@@ -183,6 +183,7 @@ describe("catalog.service · health check schedule", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       "/vega-backend/v1/catalogs/catalog-1/health-check-schedule",
+      { skipErrorToast: true },
     );
     expect(schedule).toMatchObject({
       catalogId: "catalog-1",
@@ -218,6 +219,7 @@ describe("catalog.service · health check schedule", () => {
         cron_expr: undefined,
         mode: "inherit",
       },
+      { skipErrorToast: true },
     );
     expect(schedule.mode).toBe("inherit");
     expect(schedule.cronExpr).toBe("");

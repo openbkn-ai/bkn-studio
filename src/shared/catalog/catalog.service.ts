@@ -303,7 +303,7 @@ export async function testCatalogConnectionConfig(
       connector_config: input.connectorConfig,
       connector_type: input.connectorType,
     },
-    { timeout: 60_000 },
+    { skipErrorToast: true, timeout: 60_000 },
   );
 
   return response.data;
@@ -322,7 +322,7 @@ export async function testCatalogConnection(
   const response = await http.post<CatalogConnectionTestResult>(
     `/vega-backend/v1/catalogs/${id}/test-connection`,
     undefined,
-    { timeout: 60_000 },
+    { skipErrorToast: true, timeout: 60_000 },
   );
 
   return response.data;
@@ -341,6 +341,7 @@ export async function getCatalogHealthCheckSchedule(
 
   const response = await http.get<BackendCatalogHealthCheckSchedule>(
     `/vega-backend/v1/catalogs/${catalogId}/health-check-schedule`,
+    { skipErrorToast: true },
   );
 
   return mapHealthCheckSchedule(response.data);
@@ -363,6 +364,7 @@ export async function updateCatalogHealthCheckSchedule(
   const response = await http.put<BackendCatalogHealthCheckSchedule>(
     `/vega-backend/v1/catalogs/${catalogId}/health-check-schedule`,
     mapHealthCheckScheduleInput(input),
+    { skipErrorToast: true },
   );
 
   return mapHealthCheckSchedule(response.data);
