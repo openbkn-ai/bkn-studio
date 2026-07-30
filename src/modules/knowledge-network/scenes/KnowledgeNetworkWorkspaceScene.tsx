@@ -11,6 +11,7 @@ import {
   ClockCircleOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
+  ExperimentOutlined,
   FileTextOutlined,
   LeftOutlined,
   LineChartOutlined,
@@ -19,7 +20,7 @@ import {
 import { Alert } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import type {
@@ -42,8 +43,9 @@ import styles from "./KnowledgeNetworkWorkspaceScene.module.css";
 type WorkspaceNavItem = {
   count?: number;
   icon: React.ReactNode;
-  key: KnowledgeNetworkWorkspaceSection;
+  key: KnowledgeNetworkWorkspaceSection | "experience";
   label: string;
+  path?: string;
 };
 
 function formatNavCount(count?: number) {
@@ -60,6 +62,7 @@ export function KnowledgeNetworkWorkspaceScene({
   section,
 }: KnowledgeNetworkWorkspaceSceneProps) {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message } = useAppServices();
   const params = useParams<{ networkId: string }>();
@@ -97,6 +100,18 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <FileTextOutlined />,
       },
       {
+        key: "experience",
+        label: t("knowledgeNetwork.workspaceAbilityVerification"),
+        icon: <ExperimentOutlined />,
+        path: `/knowledge-network/workspace/${activeNetworkId}/experience`,
+      },
+      {
+        key: "concept-groups",
+        label: t("knowledgeNetwork.workspaceConceptGroups"),
+        icon: <ApartmentOutlined />,
+        count: detail?.statistics.conceptGroupsTotal ?? 0,
+      },
+      {
         key: "object-types",
         label: t("knowledgeNetwork.workspaceObjectTypes"),
         icon: <DatabaseOutlined />,
@@ -114,16 +129,10 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <ThunderboltOutlined />,
         count: detail?.statistics.actionTypesTotal ?? 0,
       },
-      {
-        key: "concept-groups",
-        label: t("knowledgeNetwork.workspaceConceptGroups"),
-        icon: <ApartmentOutlined />,
-        count: detail?.statistics.conceptGroupsTotal ?? 0,
-      },
     ];
 
     if (integrateWorkspaceMetrics) {
-      items.splice(5, 0, {
+      items.push({
         key: "metrics",
         label: t("knowledgeNetwork.workspaceMetrics"),
         icon: <LineChartOutlined />,
@@ -140,28 +149,27 @@ export function KnowledgeNetworkWorkspaceScene({
     }
 
     return items;
-  }, [detail, t]);
+  }, [activeNetworkId, detail, t]);
 
   const primaryNavItems = navigationItems.filter(
-    (item) => item.key === "overview",
+    (item) => item.key === "overview" || item.key === "experience",
   );
   const resourceNavItems = navigationItems.filter(
     (item) =>
+      item.key === "concept-groups" ||
       item.key === "object-types" ||
       item.key === "relation-types" ||
-      item.key === "action-types" ||
-      (integrateWorkspaceMetrics && item.key === "metrics"),
+      item.key === "action-types",
   );
-  const conceptGroupNavItem = navigationItems.find(
-    (item) => item.key === "concept-groups",
-  );
+  const metricNavItems = navigationItems.filter((item) => item.key === "metrics");
   const taskNavItem = navigationItems.find((item) => item.key === "tasks");
 
   const renderSideNavItem = (
     item: WorkspaceNavItem,
     options?: { showCount?: boolean },
   ) => {
-    const isActive = item.key === section;
+    const isActive =
+      item.path !== undefined ? location.pathname === item.path : item.key === section;
     const showCount = options?.showCount ?? item.count !== undefined;
 
     return (
@@ -169,7 +177,7 @@ export function KnowledgeNetworkWorkspaceScene({
         className={isActive ? styles.sideItemActive : styles.sideItem}
         key={item.key}
         onClick={() => {
-          void navigate(`/knowledge-network/workspace/${activeNetworkId}/${item.key}`);
+          void navigate(item.path ?? `/knowledge-network/workspace/${activeNetworkId}/${item.key}`);
         }}
         type="button"
       >
@@ -242,11 +250,21 @@ export function KnowledgeNetworkWorkspaceScene({
         <aside className={styles.workspaceSide}>
           {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
           <div className={styles.sideDivider} />
-          <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceResources")}</div>
+          <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceOntologyModeling")}</div>
           {resourceNavItems.map((item) => renderSideNavItem(item))}
-          <div className={styles.sideDivider} />
-          {conceptGroupNavItem ? renderSideNavItem(conceptGroupNavItem) : null}
-          {taskNavItem ? renderSideNavItem(taskNavItem, { showCount: false }) : null}
+          {metricNavItems.length > 0 ? (
+            <>
+              <div className={styles.sideDivider} />
+              <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceMetricModeling")}</div>
+              {metricNavItems.map((item) => renderSideNavItem(item))}
+            </>
+          ) : null}
+          {taskNavItem ? (
+            <>
+              <div className={styles.sideDivider} />
+              {renderSideNavItem(taskNavItem, { showCount: false })}
+            </>
+          ) : null}
         </aside>
         <main
           className={

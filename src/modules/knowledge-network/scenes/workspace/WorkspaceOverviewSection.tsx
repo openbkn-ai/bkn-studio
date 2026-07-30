@@ -14,7 +14,6 @@ import {
   EditOutlined,
   KeyOutlined,
   RightOutlined,
-  ThunderboltFilled,
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -168,14 +167,6 @@ export function WorkspaceOverviewSection({
             <AppButton icon={<EditOutlined />} onClick={onEdit}>
               {t("common.edit")}
             </AppButton>
-            <button
-              type="button"
-              className={styles.experienceButton}
-              onClick={() => void navigate(`/knowledge-network/workspace/${networkId}/experience`)}
-            >
-              <ThunderboltFilled />
-              <span>{t("knowledgeNetwork.previewExperience")}</span>
-            </button>
           </div>
         </div>
         <div className={styles.overviewHeaderComment}>
