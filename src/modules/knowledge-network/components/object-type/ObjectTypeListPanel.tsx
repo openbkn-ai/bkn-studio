@@ -13,7 +13,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Empty, Input, Select, Table, Tag } from "antd";
+import { Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,6 +25,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import { useResourceIndexStates } from "@/modules/knowledge-network/hooks/useResourceIndexStates";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import {
   readPositiveInteger,
   readStoredPageSize,
@@ -391,11 +392,7 @@ export function ObjectTypeListPanel({
       width: 180,
       render: (value: string[]) =>
         value.length > 0 ? (
-          <div className={styles.tableTags}>
-            {value.map((tag) => (
-              <Tag key={tag}>{tag}</Tag>
-            ))}
-          </div>
+          <ResourceTagList tags={value} />
         ) : (
           t("knowledgeNetwork.noTags")
         ),

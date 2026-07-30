@@ -14,7 +14,7 @@ import {
   SortAscendingOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Empty, Input, Select, Table, Tag } from "antd";
+import { Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +24,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import type {
@@ -282,11 +283,7 @@ export function ActionTypeListPanel({
       width: 160,
       render: (value: string[]) =>
         value.length > 0 ? (
-          <div className={styles.tableTags}>
-            {value.map((tag) => (
-              <Tag key={tag}>{tag}</Tag>
-            ))}
-          </div>
+          <ResourceTagList tags={value} />
         ) : (
           t("knowledgeNetwork.noTags")
         ),
