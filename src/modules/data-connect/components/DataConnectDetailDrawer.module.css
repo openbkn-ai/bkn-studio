@@ -48,6 +48,18 @@
   font-weight: 600;
 }
 
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.sectionHeader .sectionTitle {
+  margin: 0;
+}
+
 .descriptionBlock :global(.ant-descriptions-view) {
   border-radius: 0;
   overflow: hidden;

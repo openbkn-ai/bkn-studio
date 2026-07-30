@@ -83,6 +83,9 @@ export function DataConnectFormScene({
             connectorConfig: {},
             description: "",
             enabled: true,
+            healthCheckSchedule: {
+              mode: "inherit",
+            },
             name: "",
             tags: [],
           });
@@ -153,6 +156,16 @@ export function DataConnectFormScene({
       connectorType: selectedConnectorType ?? values.connectorType,
       description: values.description ?? "",
       enabled: record?.enabled ?? values.enabled ?? true,
+      healthCheckSchedule:
+        mode === "create"
+          ? {
+              cronExpr:
+                values.healthCheckSchedule?.mode === "enabled"
+                  ? values.healthCheckSchedule.cronExpr?.trim()
+                  : undefined,
+              mode: values.healthCheckSchedule?.mode ?? "inherit",
+            }
+          : undefined,
       name: values.name.trim(),
       tags: values.tags ?? [],
     } satisfies DataConnectMutationPayload;

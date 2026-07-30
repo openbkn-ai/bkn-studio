@@ -23,6 +23,8 @@ import {
 import type {
   CatalogConnectionTestInput,
   CatalogConnectionTestResult,
+  CatalogHealthCheckSchedule,
+  CatalogHealthCheckScheduleInput,
   CatalogListQuery,
   CatalogListResult,
   CatalogRecord,
@@ -31,6 +33,14 @@ import type {
 type ListResponse<T> = {
   entries: T[];
   total_count: number;
+};
+
+type BackendCatalogHealthCheckSchedule = {
+  catalog_id: string;
+  cron_expr?: string;
+  last_run: number;
+  mode: CatalogHealthCheckSchedule["mode"];
+  next_run: number;
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -202,6 +212,7 @@ export async function createPhysicalCatalog(input: {
   enabled: boolean;
   name: string;
   tags: string[];
+  healthCheckSchedule?: CatalogHealthCheckScheduleInput;
   category?: string;
   mode?: string;
 }): Promise<string> {
@@ -240,6 +251,9 @@ export async function createPhysicalCatalog(input: {
     enabled: input.enabled,
     name: input.name,
     tags: input.tags,
+    health_check_schedule: input.healthCheckSchedule
+      ? mapHealthCheckScheduleInput(input.healthCheckSchedule)
+      : undefined,
   });
 
   return response.data.id ?? "";
@@ -284,4 +298,65 @@ export async function testCatalogConnection(
   );
 
   return response.data;
+}
+
+export async function getCatalogHealthCheckSchedule(
+  catalogId: string,
+): Promise<CatalogHealthCheckSchedule> {
+  if (useMock) {
+    return wait({
+      catalogId,
+      cronExpr: "",
+      lastRun: "-",
+      mode: "inherit",
+      nextRun: "-",
+    });
+  }
+
+  const response = await http.get<BackendCatalogHealthCheckSchedule>(
+    `/vega-backend/v1/catalogs/${catalogId}/health-check-schedule`,
+  );
+
+  return mapHealthCheckSchedule(response.data);
+}
+
+export async function updateCatalogHealthCheckSchedule(
+  catalogId: string,
+  input: CatalogHealthCheckScheduleInput,
+): Promise<CatalogHealthCheckSchedule> {
+  if (useMock) {
+    return wait({
+      catalogId,
+      cronExpr: input.cronExpr?.trim() ?? "",
+      lastRun: "-",
+      mode: input.mode,
+      nextRun: input.mode === "disabled" ? "-" : formatCatalogTimestamp(Date.now() + 3_600_000),
+    });
+  }
+
+  const response = await http.put<BackendCatalogHealthCheckSchedule>(
+    `/vega-backend/v1/catalogs/${catalogId}/health-check-schedule`,
+    mapHealthCheckScheduleInput(input),
+  );
+
+  return mapHealthCheckSchedule(response.data);
+}
+
+function mapHealthCheckScheduleInput(input: CatalogHealthCheckScheduleInput) {
+  return {
+    cron_expr: input.mode === "enabled" ? input.cronExpr?.trim() : undefined,
+    mode: input.mode,
+  };
+}
+
+function mapHealthCheckSchedule(
+  schedule: BackendCatalogHealthCheckSchedule,
+): CatalogHealthCheckSchedule {
+  return {
+    catalogId: schedule.catalog_id,
+    cronExpr: schedule.cron_expr ?? "",
+    lastRun: formatCatalogTimestamp(schedule.last_run),
+    mode: schedule.mode,
+    nextRun: formatCatalogTimestamp(schedule.next_run),
+  };
 }

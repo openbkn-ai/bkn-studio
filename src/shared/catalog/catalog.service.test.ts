@@ -9,9 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
 const postMock = vi.hoisted(() => vi.fn());
+const putMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock, post: postMock },
+  http: { get: getMock, post: postMock, put: putMock },
 }));
 
 function lastParams(): Record<string, unknown> {
@@ -25,6 +26,7 @@ describe("catalog.service · listCatalogs", () => {
     vi.stubEnv("VITE_USE_MOCK", "false");
     getMock.mockReset();
     postMock.mockReset();
+    putMock.mockReset();
     getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
   });
 
@@ -106,5 +108,107 @@ describe("catalog.service · test connection", () => {
       message: "Connection refused.",
       success: false,
     });
+  });
+});
+
+describe("catalog.service · health check schedule", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+    postMock.mockReset();
+    putMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("includes the schedule when creating a physical catalog", async () => {
+    postMock.mockResolvedValue({ data: { id: "catalog-1" } });
+    const { createPhysicalCatalog } = await import(
+      "@/shared/catalog/catalog.service"
+    );
+
+    await createPhysicalCatalog({
+      connectorConfig: { host: "db.example.com" },
+      connectorType: "postgresql",
+      description: "",
+      enabled: true,
+      healthCheckSchedule: { mode: "inherit" },
+      name: "orders",
+      tags: [],
+    });
+
+    expect(postMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs", {
+      connector_config: { host: "db.example.com" },
+      connector_type: "postgresql",
+      description: "",
+      enabled: true,
+      health_check_schedule: {
+        cron_expr: undefined,
+        mode: "inherit",
+      },
+      name: "orders",
+      tags: [],
+    });
+  });
+
+  it("maps a catalog health check schedule", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        catalog_id: "catalog-1",
+        cron_expr: "0 * * * *",
+        last_run: 1_785_398_400_000,
+        mode: "enabled",
+        next_run: 1_785_402_000_000,
+      },
+    });
+    const { getCatalogHealthCheckSchedule } = await import(
+      "@/shared/catalog/catalog.service"
+    );
+
+    const schedule = await getCatalogHealthCheckSchedule("catalog-1");
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/catalogs/catalog-1/health-check-schedule",
+    );
+    expect(schedule).toMatchObject({
+      catalogId: "catalog-1",
+      cronExpr: "0 * * * *",
+      mode: "enabled",
+    });
+    expect(schedule.lastRun).not.toBe("-");
+    expect(schedule.nextRun).not.toBe("-");
+  });
+
+  it("updates a schedule without sending cron for inherit mode", async () => {
+    putMock.mockResolvedValue({
+      data: {
+        catalog_id: "catalog-1",
+        cron_expr: "",
+        last_run: 0,
+        mode: "inherit",
+        next_run: 1_785_402_000_000,
+      },
+    });
+    const { updateCatalogHealthCheckSchedule } = await import(
+      "@/shared/catalog/catalog.service"
+    );
+
+    const schedule = await updateCatalogHealthCheckSchedule(
+      "catalog-1",
+      { cronExpr: "0 0 * * *", mode: "inherit" },
+    );
+
+    expect(putMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/catalogs/catalog-1/health-check-schedule",
+      {
+        cron_expr: undefined,
+        mode: "inherit",
+      },
+    );
+    expect(schedule.mode).toBe("inherit");
+    expect(schedule.cronExpr).toBe("");
   });
 });

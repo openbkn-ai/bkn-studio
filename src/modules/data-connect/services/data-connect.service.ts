@@ -12,6 +12,7 @@ import {
   createLogicalCatalog,
   createPhysicalCatalog,
   deleteCatalog,
+  getCatalogHealthCheckSchedule,
   getCatalog,
   inferConnectorCategory,
   listCatalogs,
@@ -19,11 +20,13 @@ import {
   testCatalogConnection,
   testCatalogConnectionConfig,
   updateCatalog,
+  updateCatalogHealthCheckSchedule,
 } from "@/shared/catalog";
 import { filterCatalogs } from "@/shared/catalog/catalog-mapper";
 import type {
   CatalogConnectionTestInput,
   CatalogConnectionTestResult,
+  CatalogHealthCheckScheduleInput,
 } from "@/shared/catalog";
 import type {
   DataConnectConnectorType,
@@ -251,6 +254,10 @@ export async function getDataConnectRecord(id: string) {
   return getCatalog(id);
 }
 
+export async function getDataConnectHealthCheckSchedule(id: string) {
+  return getCatalogHealthCheckSchedule(id);
+}
+
 export async function testDataConnectRecord(id: string) {
   assertConnectionTestSucceeded(await testCatalogConnection(id));
 }
@@ -287,6 +294,13 @@ export async function updateDataConnectRecord(
   input: DataConnectMutationPayload,
 ) {
   return updateCatalog(id, input);
+}
+
+export async function updateDataConnectHealthCheckSchedule(
+  id: string,
+  input: CatalogHealthCheckScheduleInput,
+) {
+  return updateCatalogHealthCheckSchedule(id, input);
 }
 
 function assertConnectionTestSucceeded(result: CatalogConnectionTestResult) {

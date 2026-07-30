@@ -21,6 +21,7 @@ import {
 } from "@/modules/data-connect/lib/connector-template";
 import type {
   DataConnectConnectorType,
+  DataConnectHealthCheckScheduleMode,
 } from "@/modules/data-connect/types/data-connect";
 
 import styles from "./DataConnectConfigForm.module.css";
@@ -76,6 +77,9 @@ export function DataConnectConfigForm({
   selectedConnectorType,
 }: DataConnectConfigFormProps) {
   const { t } = useTranslation();
+  const healthCheckScheduleMode = Form.useWatch<DataConnectHealthCheckScheduleMode>(
+    ["healthCheckSchedule", "mode"],
+  );
 
   const groupedFields = useMemo(
     () => groupConnectorFields(selectedConnectorType),
@@ -250,6 +254,64 @@ export function DataConnectConfigForm({
           ))}
         </div>
       </section>
+      {!isEdit ? (
+        <section className={styles.section}>
+          <div className={styles.sectionTitle}>
+            {t("dataConnect.healthCheckSchedule.title")}
+          </div>
+          <div className={styles.grid}>
+            <InlineField
+              extra={t("dataConnect.healthCheckSchedule.modeHint")}
+              label={t("dataConnect.healthCheckSchedule.mode")}
+              name={["healthCheckSchedule", "mode"]}
+              required
+              rules={[{ message: t("common.required"), required: true }]}
+              span="half"
+            >
+              <Select
+                options={(["inherit", "enabled", "disabled"] as const).map(
+                  (value) => ({
+                    label: t(`dataConnect.healthCheckSchedule.modes.${value}`),
+                    value,
+                  }),
+                )}
+              />
+            </InlineField>
+            {healthCheckScheduleMode === "enabled" ? (
+              <InlineField
+                extra={t("dataConnect.healthCheckSchedule.cronHint")}
+                label={t("dataConnect.healthCheckSchedule.cronExpr")}
+                name={["healthCheckSchedule", "cronExpr"]}
+                required
+                rules={[
+                  { message: t("common.required"), required: true },
+                  {
+                    validator: (_, value: unknown) => {
+                      if (
+                        typeof value === "string" &&
+                        value.trim().split(/\s+/).length === 5
+                      ) {
+                        return Promise.resolve();
+                      }
+
+                      return Promise.reject(
+                        new Error(t("dataConnect.healthCheckSchedule.cronInvalid")),
+                      );
+                    },
+                  },
+                ]}
+                span="half"
+              >
+                <Input
+                  placeholder={t(
+                    "dataConnect.healthCheckSchedule.cronPlaceholder",
+                  )}
+                />
+              </InlineField>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

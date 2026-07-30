@@ -9,10 +9,19 @@ import { Alert, Descriptions, Drawer, Empty, Spin } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAppServices } from "@/framework/context/use-app-services";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { getDataConnectRecord } from "@/modules/data-connect/services/data-connect.service";
+import { AppButton } from "@/framework/ui/common/AppButton";
+import { HealthCheckScheduleFormModal } from "@/modules/data-connect/components/HealthCheckScheduleFormModal";
+import {
+  getDataConnectHealthCheckSchedule,
+  getDataConnectRecord,
+  updateDataConnectHealthCheckSchedule,
+} from "@/modules/data-connect/services/data-connect.service";
 import type {
   DataConnectConnectorType,
+  DataConnectHealthCheckSchedule,
   DataConnectRecord,
 } from "@/modules/data-connect/types/data-connect";
 
@@ -32,9 +41,15 @@ export function DataConnectDetailDrawer({
   recordId,
 }: DataConnectDetailDrawerProps) {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
+  const [schedule, setSchedule] =
+    useState<DataConnectHealthCheckSchedule | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduleUpdating, setScheduleUpdating] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -44,15 +59,28 @@ export function DataConnectDetailDrawer({
     void (async () => {
       setLoading(true);
       setLoadError(null);
+      setScheduleError(null);
       setRecord(null);
+      setSchedule(null);
 
-      try {
-        setRecord(await getDataConnectRecord(recordId));
-      } catch (error) {
-        setLoadError(extractRequestErrorMessage(error));
-      } finally {
-        setLoading(false);
+      const [recordResult, scheduleResult] = await Promise.allSettled([
+        getDataConnectRecord(recordId),
+        getDataConnectHealthCheckSchedule(recordId),
+      ]);
+
+      if (recordResult.status === "fulfilled") {
+        setRecord(recordResult.value);
+      } else {
+        setLoadError(extractRequestErrorMessage(recordResult.reason));
       }
+
+      if (scheduleResult.status === "fulfilled") {
+        setSchedule(scheduleResult.value);
+      } else {
+        setScheduleError(extractRequestErrorMessage(scheduleResult.reason));
+      }
+
+      setLoading(false);
     })();
   }, [open, recordId]);
 
@@ -158,6 +186,64 @@ export function DataConnectDetailDrawer({
             />
           </section>
           <section className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>
+                {t("dataConnect.healthCheckSchedule.title")}
+              </h3>
+              {schedule ? (
+                <PermissionGate permissions="catalog:modify">
+                  <AppButton
+                    onClick={() => {
+                      setScheduleModalOpen(true);
+                    }}
+                    size="small"
+                    type="link"
+                  >
+                    {t("common.edit")}
+                  </AppButton>
+                </PermissionGate>
+              ) : null}
+            </div>
+            {scheduleError ? (
+              <Alert message={scheduleError} showIcon type="error" />
+            ) : schedule ? (
+              <Descriptions
+                bordered
+                className={styles.descriptionBlock}
+                column={1}
+                items={[
+                  {
+                    key: "mode",
+                    label: t("dataConnect.healthCheckSchedule.mode"),
+                    children: t(
+                      `dataConnect.healthCheckSchedule.modes.${schedule.mode}`,
+                    ),
+                  },
+                  {
+                    key: "cronExpr",
+                    label: t("dataConnect.healthCheckSchedule.cronExpr"),
+                    children:
+                      schedule.mode === "inherit"
+                        ? t("dataConnect.healthCheckSchedule.platformDefault")
+                        : schedule.cronExpr || "-",
+                  },
+                  {
+                    key: "lastRun",
+                    label: t("dataConnect.healthCheckSchedule.lastRun"),
+                    children: schedule.lastRun,
+                  },
+                  {
+                    key: "nextRun",
+                    label: t("dataConnect.healthCheckSchedule.nextRun"),
+                    children: schedule.nextRun,
+                  },
+                ]}
+              />
+            ) : (
+              <Spin size="small" />
+            )}
+          </section>
+          <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("dataConnect.healthResult")}</h3>
             <Descriptions
               bordered
@@ -199,6 +285,30 @@ export function DataConnectDetailDrawer({
             )}
           </section>
         </div>
+      ) : null}
+      {schedule ? (
+        <HealthCheckScheduleFormModal
+          loading={scheduleUpdating}
+          onCancel={() => {
+            setScheduleModalOpen(false);
+          }}
+          onSubmit={async (input) => {
+            try {
+              setScheduleUpdating(true);
+              const nextSchedule =
+                await updateDataConnectHealthCheckSchedule(recordId, input);
+              setSchedule(nextSchedule);
+              setScheduleModalOpen(false);
+              message.success(t("common.success"));
+            } catch (error) {
+              void message.error(extractRequestErrorMessage(error));
+            } finally {
+              setScheduleUpdating(false);
+            }
+          }}
+          open={scheduleModalOpen}
+          schedule={schedule}
+        />
       ) : null}
     </Drawer>
   );

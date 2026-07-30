@@ -24,6 +24,24 @@ export type CatalogConnectionTestResult = {
   success: boolean;
 };
 
+export type CatalogHealthCheckScheduleMode =
+  | "disabled"
+  | "enabled"
+  | "inherit";
+
+export type CatalogHealthCheckScheduleInput = {
+  cronExpr?: string;
+  mode: CatalogHealthCheckScheduleMode;
+};
+
+export type CatalogHealthCheckSchedule = {
+  catalogId: string;
+  cronExpr: string;
+  lastRun: string;
+  mode: CatalogHealthCheckScheduleMode;
+  nextRun: string;
+};
+
 export type CatalogRecord = {
   category: string;
   connectorConfig: Record<string, unknown>;
