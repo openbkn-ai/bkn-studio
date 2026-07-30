@@ -22,6 +22,7 @@ import { getConnectorConfigDefaults } from "@/modules/data-connect/lib/connector
 import {
   createDataConnectRecord,
   getDataConnectRecord,
+  isDataConnectConnectionTestFailure,
   listDataConnectConnectorTypes,
   testDataConnectConfig,
   updateDataConnectRecord,
@@ -42,7 +43,7 @@ export function DataConnectFormScene({
   recordId,
 }: DataConnectFormSceneProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const navigate = useNavigate();
   const [form] = Form.useForm<DataConnectMutationInput>();
   const [loading, setLoading] = useState(mode === "edit");
@@ -172,24 +173,21 @@ export function DataConnectFormScene({
   };
 
   const handleSubmit = async () => {
+    let payload: DataConnectMutationPayload | null = null;
+
     try {
       setSubmitting(true);
-      const payload = await buildMutationPayload();
+      payload = await buildMutationPayload();
 
       if (mode === "create") {
-        await createDataConnectRecord(payload);
+        await createDataConnectRecord(payload, { skipErrorToast: true });
       } else if (recordId) {
-        await updateDataConnectRecord(recordId, payload);
+        await updateDataConnectRecord(recordId, payload, {
+          skipErrorToast: true,
+        });
       }
 
-      message.success(t("common.success"));
-
-      if (onSubmitSuccess) {
-        onSubmitSuccess();
-        return;
-      }
-
-      void navigate("/data-connect");
+      finishSubmit();
     } catch (error) {
       if (
         typeof error === "object" &&
@@ -198,10 +196,59 @@ export function DataConnectFormScene({
       ) {
         return;
       }
+
+      if (payload && isDataConnectConnectionTestFailure(error)) {
+        const retryPayload = payload;
+
+        void modal.confirm({
+          cancelText: t("common.cancel"),
+          content: t("dataConnect.allowUnhealthy.description"),
+          okButtonProps: { danger: true },
+          okText: t("dataConnect.allowUnhealthy.confirm"),
+          onOk: async () => {
+            try {
+              setSubmitting(true);
+
+              if (mode === "create") {
+                await createDataConnectRecord(retryPayload, {
+                  allowUnhealthy: true,
+                  skipErrorToast: true,
+                });
+              } else if (recordId) {
+                await updateDataConnectRecord(recordId, retryPayload, {
+                  allowUnhealthy: true,
+                  skipErrorToast: true,
+                });
+              }
+
+              finishSubmit();
+            } catch (retryError) {
+              void message.error(extractRequestErrorMessage(retryError));
+              throw retryError;
+            } finally {
+              setSubmitting(false);
+            }
+          },
+          title: t("dataConnect.allowUnhealthy.title"),
+        });
+        return;
+      }
+
       void message.error(extractRequestErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const finishSubmit = () => {
+    message.success(t("common.success"));
+
+    if (onSubmitSuccess) {
+      onSubmitSuccess();
+      return;
+    }
+
+    void navigate("/data-connect");
   };
 
   const handleTestConnection = async () => {

@@ -130,15 +130,21 @@ describe("catalog.service · health check schedule", () => {
       "@/shared/catalog/catalog.service"
     );
 
-    await createPhysicalCatalog({
-      connectorConfig: { host: "db.example.com" },
-      connectorType: "postgresql",
-      description: "",
-      enabled: true,
-      healthCheckSchedule: { mode: "inherit" },
-      name: "orders",
-      tags: [],
-    });
+    await createPhysicalCatalog(
+      {
+        connectorConfig: { host: "db.example.com" },
+        connectorType: "postgresql",
+        description: "",
+        enabled: true,
+        healthCheckSchedule: { mode: "inherit" },
+        name: "orders",
+        tags: [],
+      },
+      {
+        allowUnhealthy: true,
+        skipErrorToast: true,
+      },
+    );
 
     expect(postMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs", {
       connector_config: { host: "db.example.com" },
@@ -151,6 +157,11 @@ describe("catalog.service · health check schedule", () => {
       },
       name: "orders",
       tags: [],
+    }, {
+      params: {
+        allow_unhealthy: true,
+      },
+      skipErrorToast: true,
     });
   });
 
@@ -210,5 +221,45 @@ describe("catalog.service · health check schedule", () => {
     );
     expect(schedule.mode).toBe("inherit");
     expect(schedule.cronExpr).toBe("");
+  });
+});
+
+describe("catalog.service · allow unhealthy", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    putMock.mockReset();
+    putMock.mockResolvedValue({ data: undefined });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("only sends allow_unhealthy when explicitly requested", async () => {
+    const { updateCatalog } = await import(
+      "@/shared/catalog/catalog.service"
+    );
+    const input = {
+      connectorConfig: { host: "db.example.com" },
+      connectorType: "postgresql",
+      description: "",
+      enabled: true,
+      name: "orders",
+      tags: [],
+    };
+
+    await updateCatalog("catalog-1", input, { skipErrorToast: true });
+
+    expect(putMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/catalogs/catalog-1",
+      expect.any(Object),
+      {
+        params: {
+          allow_unhealthy: undefined,
+        },
+        skipErrorToast: true,
+      },
+    );
   });
 });

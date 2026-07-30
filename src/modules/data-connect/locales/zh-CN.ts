@@ -52,6 +52,12 @@ export const dataConnectZhCN = {
     },
     testConnectionSuccess: "连接测试成功。",
     testConnectionFailed: "连接测试失败。",
+    allowUnhealthy: {
+      title: "连接测试失败，仍要保存吗？",
+      description:
+        "当前配置无法连接数据源。继续保存后，该连接会被标记为异常，后续可修改配置或重新测试连接。",
+      confirm: "仍然保存",
+    },
     tagsPlaceholder: "输入后回车添加标签",
     connectorTypeStep: "连接器类型",
     configStep: "连接配置",

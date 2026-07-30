@@ -42,6 +42,11 @@ export type CatalogHealthCheckSchedule = {
   nextRun: string;
 };
 
+export type CatalogMutationOptions = {
+  allowUnhealthy?: boolean;
+  skipErrorToast?: boolean;
+};
+
 export type CatalogRecord = {
   category: string;
   connectorConfig: Record<string, unknown>;

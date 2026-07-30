@@ -14,6 +14,7 @@ export type {
   CatalogHealthStatus,
   CatalogListQuery,
   CatalogListResult,
+  CatalogMutationOptions,
   CatalogRecord,
   CatalogRecordStatus,
 } from "@/shared/catalog/types";

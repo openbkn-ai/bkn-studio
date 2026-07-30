@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import axios from "axios";
+
 import i18n from "@/app/locales/i18n";
+import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import {
   catalogListAllQuery,
@@ -27,6 +30,7 @@ import type {
   CatalogConnectionTestInput,
   CatalogConnectionTestResult,
   CatalogHealthCheckScheduleInput,
+  CatalogMutationOptions,
 } from "@/shared/catalog";
 import type {
   DataConnectConnectorType,
@@ -274,7 +278,10 @@ export async function deleteDataConnectRecord(id: string) {
   return deleteCatalog(id);
 }
 
-export async function createDataConnectRecord(input: DataConnectMutationPayload) {
+export async function createDataConnectRecord(
+  input: DataConnectMutationPayload,
+  options: CatalogMutationOptions = {},
+) {
   if (useMock) {
     const connectorType = mockConnectorTypes.find((item) => item.type === input.connectorType);
     return createPhysicalCatalog({
@@ -284,7 +291,7 @@ export async function createDataConnectRecord(input: DataConnectMutationPayload)
     });
   }
 
-  return createPhysicalCatalog(input);
+  return createPhysicalCatalog(input, options);
 }
 
 export { createLogicalCatalog };
@@ -292,8 +299,9 @@ export { createLogicalCatalog };
 export async function updateDataConnectRecord(
   id: string,
   input: DataConnectMutationPayload,
+  options: CatalogMutationOptions = {},
 ) {
-  return updateCatalog(id, input);
+  return updateCatalog(id, input, options);
 }
 
 export async function updateDataConnectHealthCheckSchedule(
@@ -311,4 +319,19 @@ function assertConnectionTestSucceeded(result: CatalogConnectionTestResult) {
   throw new Error(
     result.message?.trim() || i18n.t("dataConnect.testConnectionFailed"),
   );
+}
+
+export function isDataConnectConnectionTestFailure(error: unknown) {
+  const expectedCode =
+    "VegaBackend.Catalog.InternalError.TestConnectionFailed";
+
+  if (extractRequestErrorDetails(error).code === expectedCode) {
+    return true;
+  }
+
+  if (axios.isAxiosError<{ error_code?: unknown }>(error)) {
+    return error.response?.data?.error_code === expectedCode;
+  }
+
+  return false;
 }

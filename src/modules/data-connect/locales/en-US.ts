@@ -55,6 +55,12 @@ export const dataConnectEnUS = {
     },
     testConnectionSuccess: "Connection test succeeded.",
     testConnectionFailed: "Connection test failed.",
+    allowUnhealthy: {
+      title: "Connection Test Failed. Save Anyway?",
+      description:
+        "The current configuration cannot reach the data source. If saved, the connection will be marked unhealthy until its configuration is fixed or it passes a later test.",
+      confirm: "Save Anyway",
+    },
     tagsPlaceholder: "Press Enter to add tags",
     connectorTypeStep: "Connector Type",
     configStep: "Configuration",

@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
@@ -21,6 +22,42 @@ describe("data-connect.service · test connection", () => {
   beforeEach(() => {
     testCatalogConnectionMock.mockReset();
     testCatalogConnectionConfigMock.mockReset();
+  });
+
+  it("recognizes only the backend connection-test failure code", async () => {
+    const { isDataConnectConnectionTestFailure } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    expect(
+      isDataConnectConnectionTestFailure(
+        new axios.AxiosError("Request failed", undefined, undefined, undefined, {
+          config: { headers: new axios.AxiosHeaders() },
+          data: {
+            description: "Connection test failed.",
+            error_code:
+              "VegaBackend.Catalog.InternalError.TestConnectionFailed",
+          },
+          headers: {},
+          status: 400,
+          statusText: "Bad Request",
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isDataConnectConnectionTestFailure(
+        new axios.AxiosError("Request failed", undefined, undefined, undefined, {
+          config: { headers: new axios.AxiosHeaders() },
+          data: {
+            description: "Invalid parameter.",
+            error_code: "VegaBackend.Catalog.InvalidParameter",
+          },
+          headers: {},
+          status: 400,
+          statusText: "Bad Request",
+        }),
+      ),
+    ).toBe(false);
   });
 
   it("rejects an existing catalog business failure with the backend message", async () => {

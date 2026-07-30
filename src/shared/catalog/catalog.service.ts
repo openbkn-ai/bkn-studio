@@ -27,6 +27,7 @@ import type {
   CatalogHealthCheckScheduleInput,
   CatalogListQuery,
   CatalogListResult,
+  CatalogMutationOptions,
   CatalogRecord,
 } from "@/shared/catalog/types";
 
@@ -180,6 +181,7 @@ export async function updateCatalog(
     name: string;
     tags: string[];
   },
+  options: CatalogMutationOptions = {},
 ) {
   if (useMock) {
     updateMockCatalog(id, (record) => ({
@@ -194,15 +196,24 @@ export async function updateCatalog(
     return;
   }
 
-  await http.put(`/vega-backend/v1/catalogs/${id}`, {
-    connector_config: input.connectorConfig,
-    connector_type: input.connectorType,
-    description: input.description,
-    enabled: input.enabled,
-    id,
-    name: input.name,
-    tags: input.tags,
-  });
+  await http.put(
+    `/vega-backend/v1/catalogs/${id}`,
+    {
+      connector_config: input.connectorConfig,
+      connector_type: input.connectorType,
+      description: input.description,
+      enabled: input.enabled,
+      id,
+      name: input.name,
+      tags: input.tags,
+    },
+    {
+      params: {
+        allow_unhealthy: options.allowUnhealthy || undefined,
+      },
+      skipErrorToast: options.skipErrorToast,
+    },
+  );
 }
 
 export async function createPhysicalCatalog(input: {
@@ -215,7 +226,9 @@ export async function createPhysicalCatalog(input: {
   healthCheckSchedule?: CatalogHealthCheckScheduleInput;
   category?: string;
   mode?: string;
-}): Promise<string> {
+},
+options: CatalogMutationOptions = {},
+): Promise<string> {
   if (useMock) {
     const id = crypto.randomUUID();
     prependMockCatalog({
@@ -244,17 +257,26 @@ export async function createPhysicalCatalog(input: {
     return id;
   }
 
-  const response = await http.post<{ id?: string }>("/vega-backend/v1/catalogs", {
-    connector_config: input.connectorConfig,
-    connector_type: input.connectorType,
-    description: input.description,
-    enabled: input.enabled,
-    name: input.name,
-    tags: input.tags,
-    health_check_schedule: input.healthCheckSchedule
-      ? mapHealthCheckScheduleInput(input.healthCheckSchedule)
-      : undefined,
-  });
+  const response = await http.post<{ id?: string }>(
+    "/vega-backend/v1/catalogs",
+    {
+      connector_config: input.connectorConfig,
+      connector_type: input.connectorType,
+      description: input.description,
+      enabled: input.enabled,
+      name: input.name,
+      tags: input.tags,
+      health_check_schedule: input.healthCheckSchedule
+        ? mapHealthCheckScheduleInput(input.healthCheckSchedule)
+        : undefined,
+    },
+    {
+      params: {
+        allow_unhealthy: options.allowUnhealthy || undefined,
+      },
+      skipErrorToast: options.skipErrorToast,
+    },
+  );
 
   return response.data.id ?? "";
 }
