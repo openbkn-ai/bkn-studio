@@ -7,10 +7,8 @@
 
 import {
   ApartmentOutlined,
-  CloseOutlined,
   DeleteOutlined,
   EllipsisOutlined,
-  FilterOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -55,7 +53,6 @@ export function RelationTypeListPanel({
   const navigate = useNavigate();
   const { modal } = useAppServices();
   const [keyword, setKeyword] = useState("");
-  const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState("all");
   const [targetFilter, setTargetFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
@@ -393,21 +390,49 @@ export function RelationTypeListPanel({
           </AppButton>
         </div>
         <div className={styles.toolbarRight}>
-          <button
-            aria-expanded={searchBarOpen}
-            aria-label={t("knowledgeNetwork.toggleSearchBar")}
-            className={
-              searchBarOpen
-                ? `${styles.iconButton} ${styles.iconButtonActive}`
-                : styles.iconButton
-            }
-            onClick={() => {
-              setSearchBarOpen(true);
+          <Input
+            allowClear
+            className={styles.searchInput}
+            onChange={(event) => {
+              setKeyword(event.target.value);
+              setPage(1);
             }}
-            type="button"
-          >
-            <FilterOutlined />
-          </button>
+            placeholder={t("knowledgeNetwork.searchPlaceholder")}
+            prefix={<SearchOutlined className={styles.searchIcon} />}
+            value={keyword}
+          />
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>
+              {t("knowledgeNetwork.relationTypeListSourceObject")}
+            </span>
+            <Select
+              className={styles.filterSelect}
+              onChange={(value) => {
+                setSourceFilter(value);
+                setPage(1);
+              }}
+              optionFilterProp="label"
+              options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
+              showSearch
+              value={sourceFilter}
+            />
+          </div>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>
+              {t("knowledgeNetwork.relationTypeListTargetObject")}
+            </span>
+            <Select
+              className={styles.filterSelect}
+              onChange={(value) => {
+                setTargetFilter(value);
+                setPage(1);
+              }}
+              optionFilterProp="label"
+              options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
+              showSearch
+              value={targetFilter}
+            />
+          </div>
           <Dropdown
             menu={{
               items: [
@@ -457,66 +482,6 @@ export function RelationTypeListPanel({
       </div>
 
       <div className={styles.tableCard}>
-        {searchBarOpen ? (
-          <div className={styles.integratedFilterBar}>
-            <div className={styles.integratedFilterSearch}>
-              <SearchOutlined className={styles.integratedFilterSearchIcon} />
-              <Input
-                allowClear
-                bordered={false}
-                className={styles.integratedFilterSearchInput}
-                onChange={(event) => {
-                  setKeyword(event.target.value);
-                  setPage(1);
-                }}
-                placeholder={t("knowledgeNetwork.searchPlaceholder")}
-                value={keyword}
-              />
-            </div>
-            <div className={styles.integratedFilterDivider} />
-            <div className={styles.integratedFilterField}>
-              <span className={styles.integratedFilterLabel}>
-                {t("knowledgeNetwork.relationTypeListSourceObject")}
-              </span>
-              <Select
-                bordered={false}
-                className={styles.integratedFilterSelect}
-                onChange={(value) => {
-                  setSourceFilter(value);
-                  setPage(1);
-                }}
-                options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
-                value={sourceFilter}
-              />
-            </div>
-            <div className={styles.integratedFilterDivider} />
-            <div className={styles.integratedFilterField}>
-              <span className={styles.integratedFilterLabel}>
-                {t("knowledgeNetwork.relationTypeListTargetObject")}
-              </span>
-              <Select
-                bordered={false}
-                className={styles.integratedFilterSelect}
-                onChange={(value) => {
-                  setTargetFilter(value);
-                  setPage(1);
-                }}
-                options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
-                value={targetFilter}
-              />
-            </div>
-            <button
-              aria-label={t("knowledgeNetwork.closeSearchBar")}
-              className={styles.integratedFilterClear}
-              onClick={() => {
-                setSearchBarOpen(false);
-              }}
-              type="button"
-            >
-              <CloseOutlined />
-            </button>
-          </div>
-        ) : null}
         <Table<KnowledgeNetworkRelationTypeRecord>
           columns={columns}
           dataSource={paginatedItems}
