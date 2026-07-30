@@ -172,6 +172,23 @@ export function DataConnectFormScene({
     } satisfies DataConnectMutationPayload;
   };
 
+  const buildConnectionTestPayload = async () => {
+    const values = (await form.validateFields([["connectorConfig"]], {
+      recursive: true,
+    })) as Pick<DataConnectMutationInput, "connectorConfig">;
+    const currentValues = form.getFieldsValue([
+      "connectorType",
+    ]) as Pick<DataConnectMutationInput, "connectorType">;
+
+    return {
+      connectorConfig: normalizeConnectorConfig(
+        values.connectorConfig ?? {},
+      ),
+      connectorType:
+        selectedConnectorType ?? currentValues.connectorType,
+    };
+  };
+
   const handleSubmit = async () => {
     let payload: DataConnectMutationPayload | null = null;
 
@@ -254,11 +271,7 @@ export function DataConnectFormScene({
   const handleTestConnection = async () => {
     try {
       setTestingConnection(true);
-      const payload = await buildMutationPayload();
-      await testDataConnectConfig({
-        connectorConfig: payload.connectorConfig,
-        connectorType: payload.connectorType,
-      });
+      await testDataConnectConfig(await buildConnectionTestPayload());
       message.success(t("dataConnect.testConnectionSuccess"));
     } catch (error) {
       if (
@@ -376,14 +389,16 @@ export function DataConnectFormScene({
               </AppButton>
             ) : null}
             {((currentStep === 1 && mode === "create") || (mode === "edit" && recordId)) ? (
-              <AppButton
-                loading={testingConnection}
-                onClick={() => {
-                  void handleTestConnection();
-                }}
-              >
-                {t("common.testConnection")}
-              </AppButton>
+              <PermissionGate permissions="catalog:create">
+                <AppButton
+                  loading={testingConnection}
+                  onClick={() => {
+                    void handleTestConnection();
+                  }}
+                >
+                  {t("common.testConnection")}
+                </AppButton>
+              </PermissionGate>
             ) : null}
             <AppButton
               loading={submitting}
