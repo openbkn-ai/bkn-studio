@@ -32,10 +32,10 @@ export type CatalogRecord = {
   creatorName: string;
   description: string;
   enabled: boolean;
-  healthCheckEnabled: boolean;
   healthCheckResult: string;
   healthStatus: CatalogHealthStatus;
   id: string;
+  lastCheckTime: string;
   metadata: Record<string, unknown>;
   mode: string;
   name: string;

@@ -31,6 +31,7 @@ export const dataConnectZhCN = {
     connectorConfig: "连接配置",
     noConnectorConfig: "暂无连接配置信息。",
     healthResult: "健康检查结果",
+    lastCheckTime: "最近检查时间",
     testConnectionSuccess: "连接测试成功。",
     testConnectionFailed: "连接测试失败。",
     tagsPlaceholder: "输入后回车添加标签",

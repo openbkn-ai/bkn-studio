@@ -23,10 +23,10 @@ type BackendCatalog = {
   creator?: BackendAccountInfo;
   description?: string;
   enabled: boolean;
-  health_check_enabled?: boolean;
   health_check_result?: string;
   health_check_status?: string;
   id: string;
+  last_check_time?: number;
   metadata?: Record<string, unknown>;
   name: string;
   operations?: string[];
@@ -89,8 +89,8 @@ export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
     enabled: item.enabled,
     status: item.enabled ? "enabled" : "disabled",
     healthStatus: normalizeHealthStatus(item.health_check_status),
-    healthCheckEnabled: Boolean(item.health_check_enabled),
     healthCheckResult: item.health_check_result ?? "",
+    lastCheckTime: formatCatalogTimestamp(item.last_check_time),
     updateTime: formatCatalogTimestamp(item.update_time),
     createTime: formatCatalogTimestamp(item.create_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",

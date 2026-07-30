@@ -165,6 +165,11 @@ export function DataConnectDetailDrawer({
               column={1}
               items={[
                 {
+                  key: "lastCheckTime",
+                  label: t("dataConnect.lastCheckTime"),
+                  children: record.lastCheckTime,
+                },
+                {
                   key: "healthResult",
                   label: t("dataConnect.healthResult"),
                   children: record.healthCheckResult || "-",

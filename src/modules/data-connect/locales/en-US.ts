@@ -34,6 +34,7 @@ export const dataConnectEnUS = {
     connectorConfig: "Connector Configuration",
     noConnectorConfig: "No connector configuration available.",
     healthResult: "Health Check Result",
+    lastCheckTime: "Last Checked At",
     testConnectionSuccess: "Connection test succeeded.",
     testConnectionFailed: "Connection test failed.",
     tagsPlaceholder: "Press Enter to add tags",
