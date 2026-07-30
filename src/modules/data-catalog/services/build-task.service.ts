@@ -526,6 +526,7 @@ export async function createBuildTask(
       id: `bt-${mockSlug(8)}`,
       resourceId: input.resourceId,
       mode: input.mode,
+      executeType: input.mode === "batch" ? (input.executeType ?? "full") : undefined,
       status: "pending",
       embeddingFields: form.embeddingFields,
       buildKeyFields: form.buildKeyFields,
@@ -551,7 +552,7 @@ export async function createBuildTask(
     return wait(task);
   }
 
-  // 创建仅返回 {id, resource_id, status: "init"},完整任务体再查一次。
+	// 创建仅返回 {id}，完整任务体再查一次。
   // 索引配置由服务端从 resource 派生快照，客户端不再传字段配置。
   const response = await http.post<BackendBuildTask>(
     "/vega-backend/v1/build-tasks",
@@ -564,8 +565,11 @@ export async function createBuildTask(
     },
   );
 
-  const created = await getBuildTask(response.data.id);
-  return created ?? mapBuildTask(response.data);
+	const created = await getBuildTask(response.data.id);
+  if (!created) {
+    throw new Error(`Created build task ${response.data.id} could not be retrieved`);
+  }
+  return created;
 }
 
 export async function pauseBuildTask(id: string) {
