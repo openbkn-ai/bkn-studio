@@ -149,7 +149,6 @@ export const mockResources: CatalogResource[] = [
     catalogId: "cat-002",
     name: "kn_chunks",
     category: "dataset",
-    schemaName: "knowledge_index",
     sourceIdentifier: "knowledge_index.kn_chunks",
     description: "知识网络切片数据集,供向量检索。",
     schema: [

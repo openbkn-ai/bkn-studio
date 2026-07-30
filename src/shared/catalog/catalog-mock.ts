@@ -56,7 +56,7 @@ let mockCatalogs: CatalogRecord[] = [
       endpoint: "https://search.internal:9200",
       username: "search_admin",
     },
-    metadata: { schemas: ["knowledge_index"] },
+    metadata: {},
     operations: ["view", "edit", "delete", "test_connection", "enable", "disable"],
     type: "physical",
   },
