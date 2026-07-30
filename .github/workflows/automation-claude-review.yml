@@ -154,6 +154,37 @@ jobs:
             - 没问题就说没问题，不要为了凑数提格式化/命名类的琐碎意见。
               lint 由 CI 的 eslint.config.typechecked.js 把关，不用人工复查风格。
 
+            评审的对象是**改动带来的整体影响**，不是这份 diff 的文本。diff 只是入口，
+            每一处改动都要先回答：谁在依赖它、它原本承诺了什么、改完之后这些承诺是否
+            仍然成立。至少覆盖下面四个面，逐个用 `git grep` / 读源码确认，而不是推测：
+
+            - **组件与 hook 的全部引用点**：改动的组件 props、hook 返回值、共享工具
+              函数，`git grep` 找出所有调用处逐个核对。改一个共享组件往往同时改了另外
+              几个模块的行为，而那些文件不在 diff 里。
+            - **模块边界与契约**：MICRO_APP_CONTRACT 约定的模块边界、路由注册、共享
+              状态。跨模块直接引用、把业务逻辑塞进公共层，都要按契约核一遍。
+            - **后端接口契约**：请求路径、参数名、分页语义、权限点。前端这侧改了，要
+              确认后端确实如此，而不是凭猜测对齐；同一接口的其它调用点一并 `git grep`。
+              权限点必须与网关 `/me/permissions` 返回的实际取值对得上。
+            - **构建与部署面**：vite 配置、环境变量、base path、Helm chart values 的
+              改动，要分别核存量环境升级（沿用旧值会不会失效）与全新安装两条路径。
+
+            顶层结论里要点明这次改动的影响范围（波及哪些模块、接口、权限点），
+            而不只是逐行问题清单。
+
+            以下三类改动，只读 diff 必然看不出问题，必须走出 diff 去核源码：
+
+            - **整份新增或整体重写的文件**（lock 文件、生成物、大段重排的组件）：
+              不要只读新文件本身。必须 `git show <ref>:<上一版本的同名文件>` 取出前一版
+              逐行比对，确认差异只有本次改动应有的那几处。整份替换最容易夹带无关漂移，
+              而这些在 diff 里全是 `+`，读不出来。
+            - **props / 字段 / i18n key / 权限点的改名或删除**：定义其语义的地方通常
+              不在 diff 里。`git grep` 旧名确认无残留（含各语言的 i18n 资源与权限点
+              声明），并确认新逻辑没有把原本合法的取值判成非法、把可选参数当成必填。
+            - **被删掉的代码**：先问它在维护什么不变量、当初为什么要写。删掉一个空态
+              判断、一个 cleanup、一个竞态守卫，等于不再保证那个不变量，必须确认对应的
+              输入形态确实已经不存在，而不是「当前主路径不会产生」。
+
             这次可能是复评（作者推了新提交或回复了评论）。先把现状摸清再下结论：
             - `gh pr view "$PR_NUMBER" --json reviewDecision,reviewRequests,comments`
               以及 `gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/comments"`
@@ -161,6 +192,9 @@ jobs:
               PR 发起者已经回应、哪些还悬着。
             - `gh pr checks "$PR_NUMBER"` 看必需检查（ci-quality / ci-smoke /
               security-scan）当前状态。
+            - 复评不等于只核这份待确认清单。上一轮漏掉的问题按定义不在清单里，因此
+              仍要按上面「必须走出 diff」三条重新过一遍全量改动，尤其是首轮之后
+              新增的文件。只核清单会让每一轮都收敛在已知项上，漏报永远补不回来。
 
             按下面的优先级落成一次 PR review（不是普通评论），三选一：
 
@@ -185,8 +219,8 @@ jobs:
           # 否则会伸手 Read/Grep/git diff 等未授权工具而被拒，撞满轮次后评论冻在
           # 「进行中」。这里补齐只读检视工具并放宽轮次上限。
           claude_args: |
-            --model claude-opus-4-8
-            --effort high
+            --model claude-opus-5
+            --effort xhigh
             --max-turns 60
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Grep,Glob,LS,Bash(gh pr comment:*),Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr checks:*),Bash(gh api:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
 
