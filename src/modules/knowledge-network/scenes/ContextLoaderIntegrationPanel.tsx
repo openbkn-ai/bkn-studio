@@ -106,7 +106,7 @@ type ContextLoaderIntegrationPanelProps = {
   mode: Exclude<ContextLoaderMode, "agent">;
   knId: string;
   activeOps: ContextLoaderOp[];
-  op: ContextLoaderOp;
+  op: ContextLoaderOp | null;
   selectedId: string;
   onSelectOp: (id: string) => void;
   filter: string;
@@ -337,7 +337,7 @@ export function ContextLoaderIntegrationPanel({
   const isRestVerifyView = mode === "rest";
   const isVerifyView = isMcpVerifyView || isRestVerifyView;
   const queryParamsCollapsible = isVerifyView && visibleQuery.length > 1;
-  const dataAssistantKind = requestDataAssistantKindOf(op.id);
+  const dataAssistantKind = requestDataAssistantKindOf(op?.id ?? "");
   // The request data assistant is a Studio-side debugging aid, not part of the MCP contract.
   const dataAssistantAvailable = mode !== "mcp" && dataAssistantKind !== null;
   const dataAssistantOpen = dataAssistantAvailable && rightTab === "data";
@@ -363,7 +363,7 @@ export function ContextLoaderIntegrationPanel({
   useEffect(() => {
     setQueryParamsOpen(true);
     setCallParamsOpen(true);
-  }, [op.id]);
+  }, [op?.id]);
 
   useEffect(() => {
     if (bodyError) setCallParamsOpen(true);
@@ -375,6 +375,44 @@ export function ContextLoaderIntegrationPanel({
       setMcpResultTab("result");
     }
   }, [sending, response, reqError]);
+
+  if (!op) {
+    return (
+      <div className={mainClassName}>
+        <aside className={styles.list}>
+          <div className={styles.listHead}>
+            <div>
+              <div className={styles.listTitle}>MCP 服务</div>
+              <div className={styles.listMeta}>已获取 0 项服务</div>
+            </div>
+            <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
+              {toolsLoading ? <Spin size="small" /> : null}
+              刷新服务列表
+            </button>
+          </div>
+          <div className={styles.listSearch}>
+            <Input value={filter} onChange={(event) => onFilterChange(event.target.value)} placeholder="筛选 MCP 服务" disabled />
+          </div>
+          <div className={styles.resEmpty}>
+            <h3>暂无 MCP 服务</h3>
+            <p>{toolsError || "MCP 服务端未返回可用工具，请检查服务配置后刷新服务列表。"}</p>
+          </div>
+        </aside>
+        <div className={styles.mcpWork}>
+          <section className={styles.req}>
+            <div className={styles.resEmpty}>
+              <h3>暂无可调试的 MCP 服务</h3>
+              <p>服务列表返回后，可在左侧选择工具并运行。</p>
+              <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
+                {toolsLoading ? <Spin size="small" /> : null}
+                刷新服务列表
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={mainClassName}>

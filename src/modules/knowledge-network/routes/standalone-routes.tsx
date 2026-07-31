@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { Navigate } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 
 import {
@@ -47,7 +48,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.experienceDescription",
       titleKey: "knowledgeNetwork.experienceAgentTitle",
     },
-    workspaceSectionPage("experience-agent"),
+    <Navigate replace to="agent" />,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/experience/agent",

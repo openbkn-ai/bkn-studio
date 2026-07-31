@@ -380,6 +380,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
 
   const abortRef = useRef<AbortController | null>(null);
+  const requestSequenceRef = useRef(0);
   // 是否贴底跟随；用户上滚时置 false，回到底部恢复，避免生成时被强制拽到底。
   const stickRef = useRef(true);
 
@@ -393,6 +394,15 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       abortRef.current?.abort();
     };
   }, []);
+
+  // Route changes reuse this component, so the old stream must not write into
+  // another knowledge network's session while its persisted history is loading.
+  useEffect(() => {
+    requestSequenceRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setBusy(false);
+  }, [knId, profile.paneKey]);
 
   const setDraftConfigField = useCallback(
     (key: keyof AgentConfig, value: number) => {
@@ -592,6 +602,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       }
 
       setBusy(true);
+      const requestSequence = ++requestSequenceRef.current;
       const startedAt = performance.now();
 
       // 多轮上下文压缩：只保留最近若干轮，且单轮文本封顶，防长对话纯文本堆大。
@@ -627,9 +638,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           config,
           tokenProvider: modelTokenProvider ?? tokenProvider,
           signal: controller.signal,
-          onChunk: handleChunk,
+          onChunk: (chunk) => {
+            if (requestSequence === requestSequenceRef.current) handleChunk(chunk);
+          },
         });
       } catch (error) {
+        if (requestSequence !== requestSequenceRef.current) return;
         if (controller.signal.aborted) {
           // 用户中途停止：标记本轮 stopped（对比报告计为负面），保留已生成的部分内容。
           updateAssistant((m) => ({ ...m, stopped: true }));
@@ -641,14 +655,16 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           }));
         }
       } finally {
-        abortRef.current = null;
-        const elapsed = performance.now() - startedAt;
-        // 本轮耗时写到最后一条 assistant 消息 + 累计会话总时长（token 已在 usage chunk 累计）。
-        setMessages((cur) =>
-          cur.map((m, i) => (i === cur.length - 1 && m.role === "assistant" ? { ...m, ms: elapsed } : m)),
-        );
-        setStats((s) => ({ ...s, ms: s.ms + elapsed }));
-        setBusy(false); // 触发下方「完成即持久化」effect
+        if (requestSequence === requestSequenceRef.current) {
+          abortRef.current = null;
+          const elapsed = performance.now() - startedAt;
+          // 本轮耗时写到最后一条 assistant 消息 + 累计会话总时长（token 已在 usage chunk 累计）。
+          setMessages((cur) =>
+            cur.map((m, i) => (i === cur.length - 1 && m.role === "assistant" ? { ...m, ms: elapsed } : m)),
+          );
+          setStats((s) => ({ ...s, ms: s.ms + elapsed }));
+          setBusy(false); // 触发下方「完成即持久化」effect
+        }
       }
     },
     [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, handleChunk, updateAssistant, message],

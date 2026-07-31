@@ -32,6 +32,7 @@ import {
   type KnDetail,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
+import { recommendationFingerprint } from "@/modules/knowledge-network/utils/agent-chat-cache";
 
 import {
   ChatPane,
@@ -157,13 +158,6 @@ function parseSuggestions(text: string): string[] {
 
 /** 建议问题缓存：按 knId 存，指纹变了（网络结构/描述改过）就重生成。 */
 const SUGS_LS_PREFIX = "bkn-studio:agentchat:sugs:";
-
-function detailFingerprint(detail: KnDetail): string {
-  const ids = detail.object_types.map((o) => o.id).join(",");
-  return [ids.length, detail.object_types.length, detail.relation_types.length, detail.concept_groups.length, (detail.comment ?? "").length].join(
-    "-",
-  );
-}
 
 function loadCachedSuggestions(knId: string, fp: string): string[] | null {
   try {
@@ -428,7 +422,7 @@ export function AgentChat({
     if (!knDetail || !modelsLoaded) return;
     const modelName = models.find((m) => m.default)?.modelName ?? models[0]?.modelName;
     if (!modelName) return;
-    const fp = detailFingerprint(knDetail);
+    const fp = recommendationFingerprint(knDetail);
     const cached = loadCachedSuggestions(knId, fp);
     if (cached) {
       setSuggestions(cached);
@@ -467,28 +461,52 @@ export function AgentChat({
   // tools/list 缓存：按 knId 拉一次，多面板共享（send 懒取 promise；picker 用已解析的 toolDefs）。
   const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
   const toolsCacheRef = useRef<{ knId: string; promise: Promise<McpToolDef[]> } | null>(null);
+  const toolsRequestRef = useRef<{ sequence: number; controller: AbortController | null }>({ sequence: 0, controller: null });
   const envRef = useRef(env);
   envRef.current = env;
   const getTools = useCallback((): Promise<McpToolDef[]> => {
     if (!toolsCacheRef.current || toolsCacheRef.current.knId !== knId) {
-      const promise = listMcpTools(envRef.current)
+      const sequence = ++toolsRequestRef.current.sequence;
+      toolsRequestRef.current.controller?.abort();
+      const controller = new AbortController();
+      toolsRequestRef.current.controller = controller;
+      const requestKnId = knId;
+      const promise = listMcpTools(envRef.current, tokenProvider, controller.signal)
         .then((list) => {
-          setToolDefs(list);
+          if (sequence === toolsRequestRef.current.sequence && requestKnId === envRef.current.knId) {
+            setToolDefs(list);
+          }
           return list;
         })
         .catch((error: unknown) => {
           // 失败不缓存，下次重试。
-          toolsCacheRef.current = null;
+          if (sequence === toolsRequestRef.current.sequence) {
+            toolsCacheRef.current = null;
+          }
           throw error;
+        })
+        .finally(() => {
+          if (sequence === toolsRequestRef.current.sequence) {
+            toolsRequestRef.current.controller = null;
+          }
         });
       toolsCacheRef.current = { knId, promise };
     }
     return toolsCacheRef.current.promise;
-  }, [knId]);
+  }, [knId, tokenProvider]);
   useEffect(() => {
+    toolsRequestRef.current.sequence += 1;
+    toolsRequestRef.current.controller?.abort();
+    toolsRequestRef.current.controller = null;
     setToolDefs(null);
     toolsCacheRef.current = null;
   }, [knId]);
+  useEffect(
+    () => () => {
+      toolsRequestRef.current.controller?.abort();
+    },
+    [],
+  );
   // 对比模式下工具选择器需要 options → 打开时预拉一次。
   useEffect(() => {
     if (compare.on && !toolDefs) {

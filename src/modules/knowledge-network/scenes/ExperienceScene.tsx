@@ -279,13 +279,60 @@ export function ExperienceScene({
   const [response, setResponse] = useState<ContextLoaderResponse | null>(null);
   const [reqError, setReqError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const requestSequenceRef = useRef(0);
+  const requestControllerRef = useRef<AbortController | null>(null);
+  const fillSequenceRef = useRef(0);
+  const fillControllerRef = useRef<AbortController | null>(null);
   const [curlOpen, setCurlOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [discoverOpen, setDiscoverOpen] = useState(false);
   const [rightTab, setRightTab] = useState<"res" | "data">("res");
   const [fillingTest, setFillingTest] = useState(false);
+  const toolsSequenceRef = useRef(0);
+  const toolsControllerRef = useRef<AbortController | null>(null);
   // 缓存当前网络的 schema，避免「填充测试数据」每次重拉；换网络时按 knId 失效。
   const knDetailRef = useRef<{ knId: string; detail: KnDetail } | null>(null);
+
+  const invalidateRequest = useCallback(() => {
+    requestSequenceRef.current += 1;
+    requestControllerRef.current?.abort();
+    requestControllerRef.current = null;
+    setSending(false);
+  }, []);
+
+  const invalidateFill = useCallback(() => {
+    fillSequenceRef.current += 1;
+    fillControllerRef.current?.abort();
+    fillControllerRef.current = null;
+    setFillingTest(false);
+  }, []);
+
+  useEffect(
+    () => () => {
+      requestControllerRef.current?.abort();
+      fillControllerRef.current?.abort();
+      toolsControllerRef.current?.abort();
+    },
+    [],
+  );
+
+  const selectOperation = useCallback(
+    (operationId: string) => {
+      invalidateRequest();
+      invalidateFill();
+      setSelectedId(operationId);
+    },
+    [invalidateFill, invalidateRequest],
+  );
+
+  const selectMode = useCallback(
+    (nextMode: ContextLoaderMode) => {
+      invalidateRequest();
+      invalidateFill();
+      setMode(nextMode);
+    },
+    [invalidateFill, invalidateRequest],
+  );
 
   useEffect(() => {
     if (!id) {
@@ -307,6 +354,8 @@ export function ExperienceScene({
   }, [id]);
 
   const knId = network?.slug ?? "kn_legal";
+  const currentKnIdRef = useRef(knId);
+  currentKnIdRef.current = knId;
   const env: ContextLoaderEnv = useMemo(
     () => ({ base, token, knId }),
     [base, token, knId],
@@ -339,18 +388,42 @@ export function ExperienceScene({
   const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
   const [toolsLoading, setToolsLoading] = useState(false);
   const [toolsError, setToolsError] = useState<string | null>(null);
+  useEffect(() => {
+    toolsSequenceRef.current += 1;
+    toolsControllerRef.current?.abort();
+    toolsControllerRef.current = null;
+    setToolDefs(null);
+    setToolsError(null);
+    setToolsLoading(false);
+  }, [knId]);
   const loadTools = useCallback(
     (force = false) => {
       if (toolsLoading) return;
       if (!force && toolDefs) return;
+      const sequence = ++toolsSequenceRef.current;
+      toolsControllerRef.current?.abort();
+      const controller = new AbortController();
+      toolsControllerRef.current = controller;
+      const requestKnId = knId;
       setToolsLoading(true);
       setToolsError(null);
-      listMcpTools(env, tokenProvider)
-        .then((list) => setToolDefs(list))
-        .catch((err) => setToolsError(err instanceof Error ? err.message : "tools/list 失败"))
-        .finally(() => setToolsLoading(false));
+      listMcpTools(env, tokenProvider, controller.signal)
+        .then((list) => {
+          if (sequence === toolsSequenceRef.current && requestKnId === currentKnIdRef.current) setToolDefs(list);
+        })
+        .catch((err) => {
+          if (sequence === toolsSequenceRef.current && requestKnId === currentKnIdRef.current && !controller.signal.aborted) {
+            setToolsError(err instanceof Error ? err.message : "tools/list 失败");
+          }
+        })
+        .finally(() => {
+          if (sequence === toolsSequenceRef.current) {
+            toolsControllerRef.current = null;
+            setToolsLoading(false);
+          }
+        });
     },
-    [env, toolDefs, toolsLoading, tokenProvider],
+    [env, knId, toolDefs, toolsLoading, tokenProvider],
   );
   // 进入 MCP 模式时按需拉一次（同源 fetch，失败仅内联提示，不弹全局 toast）。
   useEffect(() => {
@@ -367,16 +440,26 @@ export function ExperienceScene({
   );
   const activeOps = mode === "mcp" ? mcpOps : CONTEXT_LOADER_OPS;
   const op = useMemo(
-    () => activeOps.find((item) => item.id === selectedId) ?? activeOps[0],
+    () => activeOps.find((item) => item.id === selectedId) ?? activeOps[0] ?? null,
     [activeOps, selectedId],
   );
   // selectedId 在当前模式的工具集里失效时（切模式 / 只在另一侧存在）回退到首项，保持侧栏高亮一致。
   useEffect(() => {
-    if (!activeOps.some((item) => item.id === selectedId)) setSelectedId(activeOps[0].id);
+    if (activeOps.length > 0 && !activeOps.some((item) => item.id === selectedId)) setSelectedId(activeOps[0].id);
   }, [activeOps, selectedId]);
 
   // 选中接口 / 模式 / 网络变化时重置请求体与 query 默认值
   useEffect(() => {
+    invalidateRequest();
+    invalidateFill();
+    if (!op) {
+      setBodyText("");
+      setBodyError(null);
+      setQueryVals({});
+      setResponse(null);
+      setReqError(null);
+      return;
+    }
     setBodyText(exampleBodyText(op, mode, knId));
     setBodyError(null);
     const next: Record<string, string> = {};
@@ -386,25 +469,26 @@ export function ExperienceScene({
     setQueryVals(next);
     setResponse(null);
     setReqError(null);
-  }, [op, mode, knId]);
+  }, [op, mode, knId, invalidateFill, invalidateRequest]);
 
   // cURL 展示真实网关地址（终端可直接跑，无浏览器跨域顾虑）；请求本体仍走 env.base 代理。
   const curl = useMemo(
-    () => buildCurl({ ...env, base: serverAddress }, op, mode, queryVals, bodyText),
+    () => (op ? buildCurl({ ...env, base: serverAddress }, op, mode, queryVals, bodyText) : ""),
     [env, serverAddress, op, mode, queryVals, bodyText],
   );
 
-  const displayPath = mode === "mcp" ? mcpPathOf(op) : op.path;
+  const displayPath = op ? (mode === "mcp" ? mcpPathOf(op) : op.path) : "";
   // MCP 没有 query；但 response_format 必须可调（注入进 arguments），故 MCP 也露出这一项。
-  const visibleQuery = mode === "rest" ? op.query : op.query.filter((param) => param.name === "response_format");
+  const visibleQuery = op ? (mode === "rest" ? op.query : op.query.filter((param) => param.name === "response_format")) : [];
   const responseView = useMemo(() => (response ? formatResponseView(response.text) : null), [response]);
 
   const currentTool = useMemo(
-    () => toolDefs?.find((tool) => tool.name === op.id) ?? null,
-    [toolDefs, op.id],
+    () => (op ? toolDefs?.find((tool) => tool.name === op.id) ?? null : null),
+    [toolDefs, op],
   );
 
   const onSend = useCallback(async () => {
+    if (!op) return;
     if (op.body !== null) {
       try {
         JSON.parse(bodyText || "{}");
@@ -415,6 +499,10 @@ export function ExperienceScene({
       }
     }
     setRightTab("res"); // 发送即切回响应视图，免得停在数据浏览器看不到结果
+    const requestSequence = ++requestSequenceRef.current;
+    requestControllerRef.current?.abort();
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
     setSending(true);
     setResponse(null);
     setReqError(null);
@@ -424,21 +512,34 @@ export function ExperienceScene({
         authMode === "apikey" ? appKey.trim() : runtimeConfig.auth.tokenManager.getAccessToken() ?? env.token;
       const freshEnv = { ...env, token: freshToken };
       // 传 tokenProvider：401（token 过期）时刷新一次再重跑，不用手动重试。
-      const result = await sendRequest(freshEnv, op, mode, queryVals, bodyText, tokenProvider);
+      const result = await sendRequest(freshEnv, op, mode, queryVals, bodyText, tokenProvider, controller.signal);
+      if (requestSequence !== requestSequenceRef.current) return;
       setResponse(result);
     } catch (error) {
+      if (requestSequence !== requestSequenceRef.current || controller.signal.aborted) return;
       setReqError(error instanceof Error ? error.message : "请求失败（可能是跨域或服务不可达）");
     } finally {
-      setSending(false);
+      if (requestSequence === requestSequenceRef.current) {
+        requestControllerRef.current = null;
+        setSending(false);
+      }
     }
   }, [env, op, mode, queryVals, bodyText, runtimeConfig, authMode, appKey, tokenProvider]);
 
   // 一键填充测试数据：用当前网络真实 schema + 样本行生成可直接发送的请求体。
   const onFillTestData = useCallback(async () => {
+    if (!op) return;
+    const fillSequence = ++fillSequenceRef.current;
+    fillControllerRef.current?.abort();
+    const controller = new AbortController();
+    fillControllerRef.current = controller;
     setFillingTest(true);
     try {
       const detail =
-        knDetailRef.current?.knId === knId ? knDetailRef.current.detail : await fetchKnDetail(env, tokenProvider);
+        knDetailRef.current?.knId === knId
+          ? knDetailRef.current.detail
+          : await fetchKnDetail(env, tokenProvider, controller.signal);
+      if (fillSequence !== fillSequenceRef.current) return;
       knDetailRef.current = { knId, detail };
 
       let ot: KnObjectType | null = null;
@@ -451,28 +552,35 @@ export function ExperienceScene({
         }
       }
       if (op.id === "query_object_instance" && ot) {
-        const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider);
+        const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider, controller.signal);
+        if (fillSequence !== fillSequenceRef.current) return;
         sampleRow = rows[0] ?? null;
       }
 
       const fill = buildTestData(op, mode, knId, detail, ot, sampleRow);
+      if (fillSequence !== fillSequenceRef.current) return;
       setBodyText(fill.body);
       setBodyError(null);
       if (fill.query) setQueryVals((prev) => ({ ...prev, ...fill.query }));
       message.success(fill.note ? `已填充测试数据 · ${fill.note}` : "已填充测试数据");
     } catch (error) {
+      if (fillSequence !== fillSequenceRef.current || controller.signal.aborted) return;
       message.error(error instanceof Error ? error.message : "生成测试数据失败");
     } finally {
-      setFillingTest(false);
+      if (fillSequence === fillSequenceRef.current) {
+        fillControllerRef.current = null;
+        setFillingTest(false);
+      }
     }
   }, [env, op, mode, knId, message, tokenProvider]);
 
   // 当前接口是否按对象类型取数（决定数据浏览器卡片是否露出「填入测试请求」）。
-  const opFillsFromObjectType = op.id === "query_object_instance" || op.id === "run_sql";
+  const opFillsFromObjectType = op?.id === "query_object_instance" || op?.id === "run_sql";
 
   // 数据浏览器卡片「填入测试请求」：用指定对象类型的真实样本行填当前接口（用户选实体，不再随机取第一个）。
   const fillTestFromObjectType = useCallback(
     async (ot: KnObjectType) => {
+      if (!op) return;
       try {
         if (op.id === "run_sql" && !ot.data_source?.id) {
           message.warning("该对象类型未绑定数据资源，无法生成 SQL 测试数据");
@@ -513,6 +621,7 @@ export function ExperienceScene({
   // 也可能在请求体里（如 MCP 的 arguments）。按实际位置填，落不到则复制兜底。
   const fillBodyField = useCallback(
     (key: string, value: string) => {
+      if (!op) return;
       // 1) 当前接口把该字段作为 REST query 参数 → 填 query
       if (mode === "rest" && op.query.some((param) => param.name === key)) {
         setQueryVals((prev) => ({ ...prev, [key]: value }));
@@ -597,7 +706,7 @@ export function ExperienceScene({
               key={value}
               type="button"
               className={`${styles.tab} ${mode === value ? styles.tabActive : ""}`}
-              onClick={() => setMode(value)}
+              onClick={() => selectMode(value)}
             >
               {value === "agent" ? "Agent 对话" : value === "rest" ? "REST 接口" : "MCP 工具"}
             </button>
@@ -658,6 +767,7 @@ export function ExperienceScene({
 
       {mode === "agent" ? (
         <AgentChat
+          key={env.knId}
           env={env}
           networkName={network?.name}
           tokenProvider={tokenProvider}
@@ -670,7 +780,7 @@ export function ExperienceScene({
           activeOps={activeOps}
           op={op}
           selectedId={selectedId}
-          onSelectOp={setSelectedId}
+          onSelectOp={selectOperation}
           filter={filter}
           onFilterChange={setFilter}
           visibleQuery={visibleQuery}
@@ -693,7 +803,7 @@ export function ExperienceScene({
           reqError={reqError}
           sending={sending}
           onSend={() => void onSend()}
-          onResetBody={() => setBodyText(exampleBodyText(op, mode, knId))}
+          onResetBody={() => op && setBodyText(exampleBodyText(op, mode, knId))}
           fillingTest={fillingTest}
           onFillTestData={() => void onFillTestData()}
           rightTab={rightTab}
@@ -714,12 +824,12 @@ export function ExperienceScene({
             <DataBrowserPanel
               active={rightTab === "data"}
               env={env}
-              assistantKind={requestDataAssistantKindOf(op.id)}
+              assistantKind={op ? requestDataAssistantKindOf(op.id) : null}
               onFillField={fillBodyField}
               onFillResource={fillResource}
               onFillConceptGroup={fillConceptGroup}
               onFillTest={opFillsFromObjectType ? fillTestFromObjectType : undefined}
-              onFillRelation={op.id === "query_instance_subgraph" ? fillSubgraphFromRelation : undefined}
+              onFillRelation={op?.id === "query_instance_subgraph" ? fillSubgraphFromRelation : undefined}
               copy={copy}
               auth={tokenProvider}
             />
