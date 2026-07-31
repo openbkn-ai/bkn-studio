@@ -75,7 +75,7 @@ function getQuality(...payloads: Array<string | undefined>): ResourceQuality | u
   for (const payload of payloads) {
     const quality = jsonObject(payload)?.quality;
     if (quality && typeof quality === "object" && !Array.isArray(quality)) {
-      return quality as ResourceQuality;
+      return quality;
     }
   }
   return undefined;
