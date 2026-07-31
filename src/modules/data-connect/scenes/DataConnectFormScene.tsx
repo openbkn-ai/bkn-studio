@@ -22,8 +22,9 @@ import { getConnectorConfigDefaults } from "@/modules/data-connect/lib/connector
 import {
   createDataConnectRecord,
   getDataConnectRecord,
+  isDataConnectConnectionTestFailure,
   listDataConnectConnectorTypes,
-  testDataConnectRecord,
+  testDataConnectConfig,
   updateDataConnectRecord,
 } from "@/modules/data-connect/services/data-connect.service";
 import type {
@@ -42,7 +43,7 @@ export function DataConnectFormScene({
   recordId,
 }: DataConnectFormSceneProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const navigate = useNavigate();
   const [form] = Form.useForm<DataConnectMutationInput>();
   const [loading, setLoading] = useState(mode === "edit");
@@ -53,7 +54,6 @@ export function DataConnectFormScene({
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
   const [currentStep, setCurrentStep] = useState(mode === "edit" ? 1 : 0);
-  const [draftRecordId, setDraftRecordId] = useState<string>();
 
   useEffect(() => {
     void (async () => {
@@ -84,6 +84,9 @@ export function DataConnectFormScene({
             connectorConfig: {},
             description: "",
             enabled: true,
+            healthCheckSchedule: {
+              mode: "inherit",
+            },
             name: "",
             tags: [],
           });
@@ -154,33 +157,54 @@ export function DataConnectFormScene({
       connectorType: selectedConnectorType ?? values.connectorType,
       description: values.description ?? "",
       enabled: record?.enabled ?? values.enabled ?? true,
+      healthCheckSchedule:
+        mode === "create"
+          ? {
+              cronExpr:
+                values.healthCheckSchedule?.mode === "enabled"
+                  ? values.healthCheckSchedule.cronExpr?.trim()
+                  : undefined,
+              mode: values.healthCheckSchedule?.mode ?? "inherit",
+            }
+          : undefined,
       name: values.name.trim(),
       tags: values.tags ?? [],
     } satisfies DataConnectMutationPayload;
   };
 
+  const buildConnectionTestPayload = async () => {
+    const values = (await form.validateFields([["connectorConfig"]], {
+      recursive: true,
+    })) as Pick<DataConnectMutationInput, "connectorConfig">;
+    const currentValues = form.getFieldsValue([
+      "connectorType",
+    ]) as Pick<DataConnectMutationInput, "connectorType">;
+
+    return {
+      connectorConfig: normalizeConnectorConfig(
+        values.connectorConfig ?? {},
+      ),
+      connectorType:
+        selectedConnectorType ?? currentValues.connectorType,
+    };
+  };
+
   const handleSubmit = async () => {
+    let payload: DataConnectMutationPayload | null = null;
+
     try {
       setSubmitting(true);
-      const payload = await buildMutationPayload();
-      const persistedRecordId = mode === "edit" ? recordId : draftRecordId;
+      payload = await buildMutationPayload();
 
-      if (mode === "create" && persistedRecordId) {
-        await updateDataConnectRecord(persistedRecordId, payload);
-      } else if (mode === "create") {
-        await createDataConnectRecord(payload);
+      if (mode === "create") {
+        await createDataConnectRecord(payload, { skipErrorToast: true });
       } else if (recordId) {
-        await updateDataConnectRecord(recordId, payload);
+        await updateDataConnectRecord(recordId, payload, {
+          skipErrorToast: true,
+        });
       }
 
-      message.success(t("common.success"));
-
-      if (onSubmitSuccess) {
-        onSubmitSuccess();
-        return;
-      }
-
-      void navigate("/data-connect");
+      finishSubmit();
     } catch (error) {
       if (
         typeof error === "object" &&
@@ -189,30 +213,65 @@ export function DataConnectFormScene({
       ) {
         return;
       }
+
+      if (payload && isDataConnectConnectionTestFailure(error)) {
+        const retryPayload = payload;
+
+        void modal.confirm({
+          cancelText: t("common.cancel"),
+          content: t("dataConnect.allowUnhealthy.description"),
+          okButtonProps: { danger: true },
+          okText: t("dataConnect.allowUnhealthy.confirm"),
+          onOk: async () => {
+            try {
+              setSubmitting(true);
+
+              if (mode === "create") {
+                await createDataConnectRecord(retryPayload, {
+                  allowUnhealthy: true,
+                  skipErrorToast: true,
+                });
+              } else if (recordId) {
+                await updateDataConnectRecord(recordId, retryPayload, {
+                  allowUnhealthy: true,
+                  skipErrorToast: true,
+                });
+              }
+
+              finishSubmit();
+            } catch (retryError) {
+              void message.error(extractRequestErrorMessage(retryError));
+              throw retryError;
+            } finally {
+              setSubmitting(false);
+            }
+          },
+          title: t("dataConnect.allowUnhealthy.title"),
+        });
+        return;
+      }
+
       void message.error(extractRequestErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const finishSubmit = () => {
+    message.success(t("common.success"));
+
+    if (onSubmitSuccess) {
+      onSubmitSuccess();
+      return;
+    }
+
+    void navigate("/data-connect");
+  };
+
   const handleTestConnection = async () => {
     try {
       setTestingConnection(true);
-      const payload = await buildMutationPayload();
-      let targetRecordId = recordId ?? draftRecordId;
-
-      if (!targetRecordId) {
-        const createdRecordId = await createDataConnectRecord(payload);
-        if (!createdRecordId) {
-          throw new Error(t("common.notFound"));
-        }
-        setDraftRecordId(createdRecordId);
-        targetRecordId = createdRecordId;
-      } else {
-        await updateDataConnectRecord(targetRecordId, payload);
-      }
-
-      await testDataConnectRecord(targetRecordId);
+      await testDataConnectConfig(await buildConnectionTestPayload());
       message.success(t("dataConnect.testConnectionSuccess"));
     } catch (error) {
       if (
@@ -330,14 +389,16 @@ export function DataConnectFormScene({
               </AppButton>
             ) : null}
             {((currentStep === 1 && mode === "create") || (mode === "edit" && recordId)) ? (
-              <AppButton
-                loading={testingConnection}
-                onClick={() => {
-                  void handleTestConnection();
-                }}
-              >
-                {t("common.testConnection")}
-              </AppButton>
+              <PermissionGate permissions="catalog:create">
+                <AppButton
+                  loading={testingConnection}
+                  onClick={() => {
+                    void handleTestConnection();
+                  }}
+                >
+                  {t("common.testConnection")}
+                </AppButton>
+              </PermissionGate>
             ) : null}
             <AppButton
               loading={submitting}

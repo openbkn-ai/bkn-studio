@@ -21,8 +21,13 @@ import {
   type BackendCatalog,
 } from "@/shared/catalog/catalog-mapper";
 import type {
+  CatalogConnectionTestInput,
+  CatalogConnectionTestResult,
+  CatalogHealthCheckSchedule,
+  CatalogHealthCheckScheduleInput,
   CatalogListQuery,
   CatalogListResult,
+  CatalogMutationOptions,
   CatalogRecord,
 } from "@/shared/catalog/types";
 
@@ -31,7 +36,16 @@ type ListResponse<T> = {
   total_count: number;
 };
 
+type BackendCatalogHealthCheckSchedule = {
+  catalog_id: string;
+  cron_expr?: string;
+  last_run: number;
+  mode: CatalogHealthCheckSchedule["mode"];
+  next_run: number;
+};
+
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const mockHealthCheckSchedules = new Map<string, CatalogHealthCheckSchedule>();
 
 const wait = async <T,>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {
@@ -87,6 +101,7 @@ export async function getCatalog(id: string) {
 export async function deleteCatalog(id: string) {
   if (useMock) {
     removeMockCatalog(id);
+    mockHealthCheckSchedules.delete(id);
     await wait(undefined);
     return;
   }
@@ -122,8 +137,8 @@ export async function createLogicalCatalog(input: { description?: string; name: 
       enabled: true,
       status: "enabled",
       healthStatus: "healthy",
-      healthCheckEnabled: false,
       healthCheckResult: "",
+      lastCheckTime: "-",
       updateTime: formatCatalogTimestamp(Date.now()),
       createTime: formatCatalogTimestamp(Date.now()),
       updaterName: "Local Admin",
@@ -168,6 +183,7 @@ export async function updateCatalog(
     name: string;
     tags: string[];
   },
+  options: CatalogMutationOptions = {},
 ) {
   if (useMock) {
     updateMockCatalog(id, (record) => ({
@@ -182,15 +198,24 @@ export async function updateCatalog(
     return;
   }
 
-  await http.put(`/vega-backend/v1/catalogs/${id}`, {
-    connector_config: input.connectorConfig,
-    connector_type: input.connectorType,
-    description: input.description,
-    enabled: input.enabled,
-    id,
-    name: input.name,
-    tags: input.tags,
-  });
+  await http.put(
+    `/vega-backend/v1/catalogs/${id}`,
+    {
+      connector_config: input.connectorConfig,
+      connector_type: input.connectorType,
+      description: input.description,
+      enabled: input.enabled,
+      id,
+      name: input.name,
+      tags: input.tags,
+    },
+    {
+      params: {
+        allow_unhealthy: options.allowUnhealthy || undefined,
+      },
+      skipErrorToast: options.skipErrorToast,
+    },
+  );
 }
 
 export async function createPhysicalCatalog(input: {
@@ -200,11 +225,18 @@ export async function createPhysicalCatalog(input: {
   enabled: boolean;
   name: string;
   tags: string[];
+  healthCheckSchedule?: CatalogHealthCheckScheduleInput;
   category?: string;
   mode?: string;
-}): Promise<string> {
+},
+options: CatalogMutationOptions = {},
+): Promise<string> {
   if (useMock) {
     const id = crypto.randomUUID();
+    mockHealthCheckSchedules.set(id, buildMockHealthCheckSchedule(
+      id,
+      input.healthCheckSchedule ?? { mode: "inherit" },
+    ));
     prependMockCatalog({
       id,
       name: input.name,
@@ -215,8 +247,8 @@ export async function createPhysicalCatalog(input: {
       enabled: input.enabled,
       status: input.enabled ? "enabled" : "disabled",
       healthStatus: "unchecked",
-      healthCheckEnabled: true,
       healthCheckResult: "",
+      lastCheckTime: "-",
       updateTime: formatCatalogTimestamp(Date.now()),
       createTime: formatCatalogTimestamp(Date.now()),
       updaterName: "Local Admin",
@@ -231,23 +263,150 @@ export async function createPhysicalCatalog(input: {
     return id;
   }
 
-  const response = await http.post<{ id?: string }>("/vega-backend/v1/catalogs", {
-    connector_config: input.connectorConfig,
-    connector_type: input.connectorType,
-    description: input.description,
-    enabled: input.enabled,
-    name: input.name,
-    tags: input.tags,
-  });
+  const response = await http.post<{ id?: string }>(
+    "/vega-backend/v1/catalogs",
+    {
+      connector_config: input.connectorConfig,
+      connector_type: input.connectorType,
+      description: input.description,
+      enabled: input.enabled,
+      name: input.name,
+      tags: input.tags,
+      health_check_schedule: input.healthCheckSchedule
+        ? mapHealthCheckScheduleInput(input.healthCheckSchedule)
+        : undefined,
+    },
+    {
+      params: {
+        allow_unhealthy: options.allowUnhealthy || undefined,
+      },
+      skipErrorToast: options.skipErrorToast,
+    },
+  );
 
   return response.data.id ?? "";
 }
 
-export async function testCatalogConnection(id: string) {
+export async function testCatalogConnectionConfig(
+  input: CatalogConnectionTestInput,
+): Promise<CatalogConnectionTestResult> {
   if (useMock) {
-    await wait(undefined);
-    return;
+    return wait({
+      message: "Connection test succeeded.",
+      success: true,
+    });
   }
 
-  await http.post(`/vega-backend/v1/catalogs/${id}/test-connection`);
+  const response = await http.post<CatalogConnectionTestResult>(
+    "/vega-backend/v1/catalogs/test-connection",
+    {
+      connector_config: input.connectorConfig,
+      connector_type: input.connectorType,
+    },
+    { skipErrorToast: true, timeout: 60_000 },
+  );
+
+  return response.data;
+}
+
+export async function testCatalogConnection(
+  id: string,
+): Promise<CatalogConnectionTestResult> {
+  if (useMock) {
+    return wait({
+      message: "Connection test succeeded.",
+      success: true,
+    });
+  }
+
+  const response = await http.post<CatalogConnectionTestResult>(
+    `/vega-backend/v1/catalogs/${id}/test-connection`,
+    undefined,
+    { skipErrorToast: true, timeout: 60_000 },
+  );
+
+  return response.data;
+}
+
+export async function getCatalogHealthCheckSchedule(
+  catalogId: string,
+): Promise<CatalogHealthCheckSchedule> {
+  if (useMock) {
+    const schedule =
+      mockHealthCheckSchedules.get(catalogId) ??
+      buildMockHealthCheckSchedule(catalogId, { mode: "inherit" });
+    mockHealthCheckSchedules.set(catalogId, schedule);
+    return wait(schedule);
+  }
+
+  const response = await http.get<BackendCatalogHealthCheckSchedule>(
+    `/vega-backend/v1/catalogs/${catalogId}/health-check-schedule`,
+    { skipErrorToast: true },
+  );
+
+  return mapHealthCheckSchedule(response.data);
+}
+
+export async function updateCatalogHealthCheckSchedule(
+  catalogId: string,
+  input: CatalogHealthCheckScheduleInput,
+): Promise<CatalogHealthCheckSchedule> {
+  if (useMock) {
+    const schedule = buildMockHealthCheckSchedule(
+      catalogId,
+      input,
+      mockHealthCheckSchedules.get(catalogId),
+    );
+    mockHealthCheckSchedules.set(catalogId, schedule);
+    return wait(schedule);
+  }
+
+  const response = await http.put<BackendCatalogHealthCheckSchedule>(
+    `/vega-backend/v1/catalogs/${catalogId}/health-check-schedule`,
+    mapHealthCheckScheduleInput(input),
+    { skipErrorToast: true },
+  );
+
+  return mapHealthCheckSchedule(response.data);
+}
+
+function mapHealthCheckScheduleInput(input: CatalogHealthCheckScheduleInput) {
+  return {
+    cron_expr: input.mode === "enabled" ? input.cronExpr?.trim() : undefined,
+    mode: input.mode,
+  };
+}
+
+function buildMockHealthCheckSchedule(
+  catalogId: string,
+  input: CatalogHealthCheckScheduleInput,
+  previous?: CatalogHealthCheckSchedule,
+): CatalogHealthCheckSchedule {
+  return {
+    catalogId,
+    cronExpr:
+      input.mode === "enabled"
+        ? input.cronExpr?.trim() ?? ""
+        : input.mode === "disabled"
+          ? previous?.cronExpr ?? ""
+          : "",
+    lastRun: "-",
+    mode: input.mode,
+    nextRun:
+      input.mode === "disabled"
+        ? "-"
+        : formatCatalogTimestamp(Date.now() + 3_600_000),
+  };
+}
+
+function mapHealthCheckSchedule(
+  schedule: BackendCatalogHealthCheckSchedule,
+): CatalogHealthCheckSchedule {
+  return {
+    catalogId: schedule.catalog_id,
+    cronExpr: schedule.cron_expr ?? "",
+    lastRun: formatCatalogTimestamp(schedule.last_run),
+    mode: schedule.mode,
+    nextRun: formatCatalogTimestamp(schedule.next_run),
+  };
 }

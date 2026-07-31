@@ -6,12 +6,16 @@
  */
 
 export type {
+  CatalogHealthCheckSchedule as DataConnectHealthCheckSchedule,
+  CatalogHealthCheckScheduleMode as DataConnectHealthCheckScheduleMode,
   CatalogHealthStatus as DataConnectHealthStatus,
   CatalogListQuery as DataConnectListQuery,
   CatalogListResult as DataConnectListResult,
   CatalogRecord as DataConnectRecord,
   CatalogRecordStatus as DataConnectRecordStatus,
 } from "@/shared/catalog/types";
+
+import type { CatalogHealthCheckScheduleInput } from "@/shared/catalog/types";
 
 export type ConnectorFieldConfig = {
   description: string;
@@ -36,6 +40,7 @@ export type DataConnectMutationInput = {
   connectorType: string;
   description: string;
   enabled: boolean;
+  healthCheckSchedule?: CatalogHealthCheckScheduleInput;
   name: string;
   tags: string[];
 };
@@ -45,6 +50,7 @@ export type DataConnectMutationPayload = {
   connectorType: string;
   description: string;
   enabled: boolean;
+  healthCheckSchedule?: CatalogHealthCheckScheduleInput;
   name: string;
   tags: string[];
 };

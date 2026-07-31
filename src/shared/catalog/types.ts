@@ -14,6 +14,39 @@ export type CatalogHealthStatus =
   | "unchecked"
   | "unhealthy";
 
+export type CatalogConnectionTestInput = {
+  connectorConfig: Record<string, unknown>;
+  connectorType: string;
+};
+
+export type CatalogConnectionTestResult = {
+  message?: string;
+  success: boolean;
+};
+
+export type CatalogHealthCheckScheduleMode =
+  | "disabled"
+  | "enabled"
+  | "inherit";
+
+export type CatalogHealthCheckScheduleInput = {
+  cronExpr?: string;
+  mode: CatalogHealthCheckScheduleMode;
+};
+
+export type CatalogHealthCheckSchedule = {
+  catalogId: string;
+  cronExpr: string;
+  lastRun: string;
+  mode: CatalogHealthCheckScheduleMode;
+  nextRun: string;
+};
+
+export type CatalogMutationOptions = {
+  allowUnhealthy?: boolean;
+  skipErrorToast?: boolean;
+};
+
 export type CatalogRecord = {
   category: string;
   connectorConfig: Record<string, unknown>;
@@ -22,10 +55,10 @@ export type CatalogRecord = {
   creatorName: string;
   description: string;
   enabled: boolean;
-  healthCheckEnabled: boolean;
   healthCheckResult: string;
   healthStatus: CatalogHealthStatus;
   id: string;
+  lastCheckTime: string;
   metadata: Record<string, unknown>;
   mode: string;
   name: string;

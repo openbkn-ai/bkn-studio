@@ -62,6 +62,7 @@ export function DataConnectListScene({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
     if (defaultKeyword) {
@@ -122,7 +123,7 @@ export function DataConnectListScene({
 
   useEffect(() => {
     void loadData();
-  }, [loadData]);
+  }, [loadData, refreshVersion]);
 
   const columns: ColumnsType<DataConnectRecord> = [
     {
@@ -211,6 +212,8 @@ export function DataConnectListScene({
                     message.success(t("dataConnect.testConnectionSuccess"));
                   } catch (error) {
                     void message.error(extractRequestErrorMessage(error));
+                  } finally {
+                    setRefreshVersion((version) => version + 1);
                   }
                 })();
               }}
