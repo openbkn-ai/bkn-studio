@@ -52,6 +52,8 @@ export const networkPart = {
     importPending: "导入流程会在后续切片中按旧 Vega 体验继续补齐。",
     importSuccess: "导入成功",
     importTitle: "导入知识网络",
+    integrationDescription: "通过 MCP 或 RESTful 将 OpenBKN 能力接入智能体平台和外部系统。",
+    integrationTitle: "知识网络调用",
     modifier: "修改者",
     name: "知识网络名称",
     nameMaxLength: "长度不能超过 {{len}} 个字符。",

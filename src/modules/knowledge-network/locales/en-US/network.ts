@@ -56,6 +56,8 @@ export const networkPart = {
       "The import flow will be aligned with the legacy Vega experience in a later slice.",
     importSuccess: "Imported successfully",
     importTitle: "Import knowledge network",
+    integrationDescription: "Connect OpenBKN capabilities to agent platforms and external systems through MCP or RESTful APIs.",
+    integrationTitle: "Knowledge Network Integration",
     modifier: "Modified by",
     name: "Knowledge network name",
     nameMaxLength: "Must be {{len}} characters or fewer.",

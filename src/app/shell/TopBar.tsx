@@ -31,7 +31,7 @@ export function TopBar() {
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const [networkName, setNetworkName] = useState<string | null>(null);
   const isKnowledgeNetworkRoute =
-    routeHandle?.console?.menuKey === "domain-knowledge-network";
+    routeHandle?.console?.menuKey?.startsWith("domain-knowledge-network") ?? false;
 
   useEffect(() => {
     if (!isKnowledgeNetworkRoute || !networkId) {

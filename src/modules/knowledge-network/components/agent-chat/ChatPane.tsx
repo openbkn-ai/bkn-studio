@@ -26,6 +26,7 @@ import { App, Drawer, Select, Tooltip } from "antd";
 import {
   forwardRef,
   memo,
+  type RefObject,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -324,6 +325,11 @@ export type ChatPaneProps = {
   toolDefs: McpToolDef[] | null;
   /** 当前知识网络绑定的 resource_id 集；用于默认把 list_resources 限定到本网络的数据表。 */
   resourceScope?: readonly string[] | null;
+  /**
+   * 问答工作区的页面级滚动容器。消息不再在面板内部滚动，
+   * 由该容器统一承载阅读和流式回答的贴底跟随。
+   */
+  pageScrollRef: RefObject<HTMLDivElement | null>;
   onBusyChange?: (busy: boolean) => void;
 };
 
@@ -343,6 +349,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     getTools,
     toolDefs,
     resourceScope,
+    pageScrollRef,
     onBusyChange,
   },
   ref,
@@ -367,7 +374,6 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   // 会话累计 token + 总时长（像 Claude Code 那样累加）。
   const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
 
-  const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   // 是否贴底跟随；用户上滚时置 false，回到底部恢复，避免生成时被强制拽到底。
   const stickRef = useRef(true);
@@ -432,10 +438,19 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     message.success("参数已恢复默认");
   }, [message]);
 
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-  }, []);
+  const updateStickiness = useCallback(() => {
+    const el = pageScrollRef.current;
+    if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  }, [pageScrollRef]);
+
+  useEffect(() => {
+    const el = pageScrollRef.current;
+    if (!el) return;
+
+    el.addEventListener("scroll", updateStickiness, { passive: true });
+    updateStickiness();
+    return () => el.removeEventListener("scroll", updateStickiness);
+  }, [pageScrollRef, updateStickiness]);
 
   // 载入持久化对话（按 kn + 面板隔离）。
   useEffect(() => {
@@ -469,9 +484,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   );
 
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+    const el = pageScrollRef.current;
+    if (!el || !stickRef.current) return;
+
+    const frame = requestAnimationFrame(() => {
+      if (stickRef.current) el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [messages, pageScrollRef]);
 
   // 一轮结束（busy: true→false）把最终 messages+stats（含本轮时长）落盘；流式中不写。
   const prevBusyRef = useRef(false);
@@ -875,7 +895,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         </section>
       </Drawer>
 
-      <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll}>
+      <div className={styles.scroll}>
         {noLlm ? (
           <div className={styles.intro}>
             <div className={styles.introGlyph}>

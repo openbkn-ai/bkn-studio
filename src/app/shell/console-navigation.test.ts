@@ -56,4 +56,14 @@ describe("filterNavByPermission — 系统管理 仅对持有 admin 权限者可
     const filtered = filterNavByPermission(consoleNavigation, []);
     expect(keys(filtered)).toContain("general-business-knowledge-network");
   });
+
+  it("领域知识网络拆分为管理和调用两个入口", () => {
+    const filtered = filterNavByPermission(consoleNavigation, []);
+    const group = filtered.find((item) => item.key === "domain-knowledge-network");
+    expect(group).toBeDefined();
+    expect(keys(group!.children ?? [])).toEqual([
+      "domain-knowledge-network-management",
+      "domain-knowledge-network-integration",
+    ]);
+  });
 });

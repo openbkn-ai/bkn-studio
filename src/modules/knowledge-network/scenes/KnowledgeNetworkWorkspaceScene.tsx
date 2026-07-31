@@ -16,6 +16,8 @@ import {
   ForkOutlined,
   LeftOutlined,
   LineChartOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   MessageOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
@@ -94,6 +96,7 @@ export function KnowledgeNetworkWorkspaceScene({
   }, [activeNetworkId, navigate, section]);
 
   const [networkFormOpen, setNetworkFormOpen] = useState(false);
+  const [sideCollapsed, setSideCollapsed] = useState(false);
 
   const navigationItems: WorkspaceNavItem[] = useMemo(() => {
     const items: WorkspaceNavItem[] = [
@@ -200,13 +203,14 @@ export function KnowledgeNetworkWorkspaceScene({
         onClick={() => {
           void navigate(item.path ?? `/knowledge-network/workspace/${activeNetworkId}/${item.key}`);
         }}
+        title={item.label}
         type="button"
       >
         <span className={styles.sideItemMeta}>
           {item.icon}
-          <span>{item.label}</span>
+          {sideCollapsed ? null : <span>{item.label}</span>}
         </span>
-        {showCount ? (
+        {showCount && !sideCollapsed ? (
           <span className={styles.sideItemCount}>{formatNavCount(item.count)}</span>
         ) : null}
       </button>
@@ -278,27 +282,46 @@ export function KnowledgeNetworkWorkspaceScene({
       </div>
 
       <div className={styles.workspaceLayout}>
-        <aside className={styles.workspaceSide}>
-          {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
-          <div className={styles.sideDivider} />
-          <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceAbilityVerification")}</div>
-          {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
-          <div className={styles.sideDivider} />
-          <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceOntologyModeling")}</div>
-          {resourceNavItems.map((item) => renderSideNavItem(item))}
-          {metricNavItems.length > 0 ? (
-            <>
-              <div className={styles.sideDivider} />
-              <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceMetricModeling")}</div>
-              {metricNavItems.map((item) => renderSideNavItem(item))}
-            </>
-          ) : null}
-          {taskNavItem ? (
-            <>
-              <div className={styles.sideDivider} />
-              {renderSideNavItem(taskNavItem, { showCount: false })}
-            </>
-          ) : null}
+        <aside className={`${styles.workspaceSide} ${sideCollapsed ? styles.workspaceSideCollapsed : ""}`}>
+          <div className={styles.workspaceSideScroll}>
+            {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+            <div className={styles.sideDivider} />
+            {sideCollapsed ? null : (
+              <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceAbilityVerification")}</div>
+            )}
+            {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+            <div className={styles.sideDivider} />
+            {sideCollapsed ? null : (
+              <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceOntologyModeling")}</div>
+            )}
+            {resourceNavItems.map((item) => renderSideNavItem(item))}
+            {metricNavItems.length > 0 ? (
+              <>
+                <div className={styles.sideDivider} />
+                {sideCollapsed ? null : (
+                  <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceMetricModeling")}</div>
+                )}
+                {metricNavItems.map((item) => renderSideNavItem(item))}
+              </>
+            ) : null}
+            {taskNavItem ? (
+              <>
+                <div className={styles.sideDivider} />
+                {renderSideNavItem(taskNavItem, { showCount: false })}
+              </>
+            ) : null}
+          </div>
+          <div className={styles.workspaceSideFooter}>
+            <button
+              aria-label={sideCollapsed ? t("shell.expandSidenav") : t("shell.collapseSidenav")}
+              className={styles.sideCollapseButton}
+              onClick={() => setSideCollapsed((current) => !current)}
+              title={sideCollapsed ? t("shell.expandSidenav") : t("shell.collapseSidenav")}
+              type="button"
+            >
+              {sideCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            </button>
+          </div>
         </aside>
         <main
           className={

@@ -8,11 +8,23 @@
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
-import { KnowledgeNetworkListPage } from "@/modules/knowledge-network/routes/lazy-pages";
+import {
+  KnowledgeNetworkIntegrationPage,
+  KnowledgeNetworkListPage,
+} from "@/modules/knowledge-network/routes/lazy-pages";
 import { createKnowledgeNetworkRoute } from "@/modules/knowledge-network/routes/route-factory";
 import { knowledgeNetworkStandaloneRoutes } from "@/modules/knowledge-network/routes/standalone-routes";
 
 export const knowledgeNetworkRoutes: RouteObject[] = [
+  createKnowledgeNetworkRoute(
+    "knowledge-network/integration",
+    {
+      descriptionKey: "knowledgeNetwork.integrationDescription",
+      menuKey: "domain-knowledge-network-integration",
+      titleKey: "knowledgeNetwork.integrationTitle",
+    },
+    <KnowledgeNetworkIntegrationPage />,
+  ),
   createKnowledgeNetworkRoute(
     "knowledge-network",
     {

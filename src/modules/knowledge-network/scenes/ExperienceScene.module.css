@@ -241,6 +241,44 @@
   grid-template-rows: auto minmax(0, 1fr);
 }
 
+.mainMcpVerifyStack {
+  grid-template-columns: 286px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.mainMcpTabbed.mainMcpVerifyStack {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.mcpWork {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  background: #fff;
+}
+
+.mainMcpTabbed .mcpWork {
+  grid-row: 2;
+}
+
+.mcpWorkInline {
+  display: contents;
+}
+
+.mainMcpVerifyStack .list {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.mainMcpTabbed.mainMcpVerifyStack .list {
+  grid-row: 2;
+}
+
 .mcpModeTabs {
   grid-column: 1 / -1;
   display: flex;
@@ -361,90 +399,85 @@
   padding: 22px;
 }
 
-.mcpConnectFields {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  min-width: 0;
-}
-
-.mcpConnectField {
-  display: grid;
-  grid-template-columns: 128px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: #f8fafc;
-}
-
-.mcpConnectLabel {
-  color: #7b8798;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.mcpConnectField code {
-  min-width: 0;
-  color: #26364f;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mcpCopyBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #fff;
-  color: #475569;
-  font-size: 11.5px;
-  cursor: pointer;
-}
-
-.mcpCopyBtn:hover {
-  border-color: #2e68ff;
-  color: #1d4ed8;
-}
-
-.mcpConnectActions {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.mcpVerifyCard {
+.mcpConfigHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 14px;
-  border: 1px solid #bfd0ea;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mcpConfigTabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mcpConfigTab {
+  height: 32px;
+  padding: 0 13px;
+  border: 1px solid transparent;
   border-radius: 4px;
-  background: #f1f6ff;
-}
-
-.mcpVerifyTitle {
-  color: #183b7a;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.mcpVerifyDesc {
-  margin-top: 4px;
+  background: transparent;
   color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mcpConfigTab:hover {
+  color: #1d4ed8;
+  background: #f2f6ff;
+}
+
+.mcpConfigTabActive {
+  border-color: #bcd0f7;
+  background: #eef4ff;
+  color: #1d4ed8;
+}
+
+.mcpConfigMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mcpIssueKeyBtn {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #bcd0f7;
+  border-radius: 4px;
+  background: #eef4ff;
+  color: #1d4ed8;
   font-size: 12.5px;
-  line-height: 1.5;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mcpIssueKeyBtn:hover {
+  border-color: #2e68ff;
+  background: #e2ecff;
+}
+
+.mcpIssueKeyBtn:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.mcpConfigBody {
+  min-width: 0;
+}
+
+.mcpConfigBody .codeBlk {
+  margin-bottom: 12px;
+}
+
+.mcpConfigBody .codeBlkPre {
+  max-height: 260px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .list {
@@ -477,49 +510,28 @@
   font-size: 12px;
 }
 
-.mcpTools {
+.reloadCapabilitiesBtn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.guideBtn,
-.discoverBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 11px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.guideBtn {
+  gap: 5px;
+  height: 28px;
+  padding: 0 9px;
   border: 1px solid #cbd5e1;
+  border-radius: 4px;
   background: #fff;
-  color: #334155;
+  color: #475569;
+  font-size: 12px;
+  cursor: pointer;
 }
 
-.guideBtn:hover {
+.reloadCapabilitiesBtn:hover {
   border-color: #2e68ff;
   color: #1d4ed8;
-  background: #f8fbff;
 }
 
-.discoverBtn {
-  border: 1px solid #bcd0f7;
-  background: #eef4ff;
-  color: #1d4ed8;
-}
-
-.discoverBtn:hover {
-  border-color: #2e68ff;
-  background: #e2ecff;
+.reloadCapabilitiesBtn:disabled {
+  opacity: 0.65;
+  cursor: default;
 }
 
 /* ---- 工具发现 Modal ---- */
@@ -616,13 +628,6 @@
   color: #718096;
   font-size: 12.5px;
   line-height: 1.5;
-}
-
-.schemaActions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
 }
 
 .listSearch {
@@ -833,11 +838,6 @@
   background: #e3ecff;
 }
 
-.epVerbTool {
-  color: #087567;
-  background: #ddf6ef;
-}
-
 .epText {
   display: flex;
   flex-direction: column;
@@ -879,10 +879,25 @@
   background: #fff;
 }
 
+.mainMcpVerifyStack .req {
+  flex: 0 0 auto;
+  border-right: 0;
+  border-bottom: 1px solid var(--line);
+}
+
 .reqHead {
-  padding: 14px 18px 12px;
+  padding: 14px 20px 12px;
   border-bottom: 1px solid var(--line);
   background: #fbfcff;
+}
+
+.mainMcpVerifyStack .reqHead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 16px 22px 14px;
+  background: #fff;
+  box-shadow: 0 1px 0 var(--line);
 }
 
 .reqToolbar {
@@ -890,6 +905,17 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
+}
+
+.mainMcpVerifyStack .reqToolbar {
+  justify-content: space-between;
+}
+
+.reqActions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
 }
 
 .reqRow1 {
@@ -919,10 +945,90 @@
 }
 
 .reqTitle {
-  margin: 10px 0 4px;
+  margin: 0;
   color: var(--txt);
   font-size: 17px;
   font-weight: 700;
+}
+
+.mainMcpVerifyStack .reqTitle {
+  font-size: 18px;
+}
+
+.reqTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 10px 0 4px;
+}
+
+.mainMcpVerifyStack .reqTitleRow {
+  margin-top: 8px;
+}
+
+.runBtn {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid #2457d6;
+  border-radius: 4px;
+  color: #fff;
+  background: #2457d6;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.runBtn:hover:not(:disabled) {
+  border-color: #1949c2;
+  background: #1949c2;
+}
+
+.runBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.docBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: #475569;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.docBtn:hover {
+  border-color: #8caeff;
+  color: #2457d6;
+  background: #f6f8ff;
+}
+
+.reqId {
+  min-width: 0;
+  max-width: 58%;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #fff;
+  color: #64748b;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reqSum {
@@ -932,23 +1038,9 @@
   line-height: 1.55;
 }
 
-.mcpStatusBar {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.mcpStatusBar span {
-  min-width: 0;
-  padding: 6px 9px;
-  border: 1px solid var(--line);
-  background: #fff;
-  color: #526179;
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.mainMcpVerifyStack .reqSum {
+  max-width: 980px;
+  line-height: 1.6;
 }
 
 .reqBody {
@@ -957,12 +1049,179 @@
   padding: 12px 18px 18px;
 }
 
+.mainMcpVerifyStack .reqBody {
+  flex: 0 0 auto;
+  overflow: visible;
+  padding: 12px 22px 16px;
+}
+
 .sec {
   margin-bottom: 12px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 4px;
   background: #fff;
+}
+
+.mainMcpVerifyStack .sec {
+  max-width: 1120px;
+  margin-bottom: 10px;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--line2);
+  border-radius: 0;
+  background: transparent;
+}
+
+.mainMcpVerifyStack .compactSettingsSec {
+  display: block;
+  padding: 10px 0;
+}
+
+.mainMcpVerifyStack .callParamsSec,
+.mainMcpVerifyStack .schemaSec {
+  padding-top: 14px;
+}
+
+.callParamsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 32px;
+  margin-bottom: 10px;
+}
+
+.callParamsTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.callParamsTitle .secHead {
+  margin-bottom: 0;
+}
+
+.callParamsToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  min-width: 0;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: #475569;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.callParamsToggle:hover {
+  border-color: #8caeff;
+  color: #2457d6;
+  background: #f6f8ff;
+}
+
+.callParamsState {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--txt2);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.callParamsToggle :global(.anticon) {
+  font-size: 10px;
+  transition: transform 160ms ease;
+}
+
+.callParamsChevronOpen {
+  transform: rotate(180deg);
+}
+
+.callParamsTools,
+.editActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.paramToolBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: #334155;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.paramToolBtn:hover:not(:disabled) {
+  border-color: #8caeff;
+  color: #2457d6;
+  background: #f6f8ff;
+}
+
+.paramToolBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.callParamsCollapsedHint {
+  color: var(--txt2);
+  font-size: 12px;
+}
+
+.schemaModalIntro {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-left: 3px solid #8caeff;
+  color: var(--txt2);
+  background: #f7f9fe;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.schemaModal :global(.ant-modal-content) {
+  display: flex;
+  height: calc(100vh - 36px);
+  max-height: 880px;
+  flex-direction: column;
+}
+
+.schemaModal :global(.ant-modal-body) {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.schemaModal .schemaGrid {
+  min-height: 0;
+  flex: 1 1 auto;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.schemaModal .codeBlk {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.schemaModal .codeBlkPre {
+  min-height: 340px;
+  max-height: none;
+  flex: 1 1 auto;
 }
 
 .secHead {
@@ -975,6 +1234,18 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--txt2);
+}
+
+.mainMcpVerifyStack .secHead {
+  margin-bottom: 8px;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #334155;
+}
+
+.mainMcpVerifyStack .compactSettingsSec .secHead {
+  margin-bottom: 0;
 }
 
 .sub {
@@ -1000,6 +1271,23 @@
   align-items: center;
 }
 
+.mainMcpVerifyStack .compactSettingsSec .qp {
+  display: grid;
+  grid-template-columns: max-content minmax(180px, 220px);
+  justify-content: start;
+  gap: 8px 12px;
+}
+
+.mainMcpVerifyStack .compactSettingsSec .qpKey {
+  min-width: 0;
+}
+
+.mainMcpVerifyStack .compactSettingsSec .qpSelect,
+.mainMcpVerifyStack .compactSettingsSec .qpInput {
+  width: 100%;
+  max-width: 240px;
+}
+
 .qpKey {
   display: flex;
   align-items: center;
@@ -1007,6 +1295,11 @@
   font-family: var(--mono);
   font-size: 12px;
   color: var(--txt2);
+}
+
+.qpKey strong {
+  color: var(--txt);
+  font-weight: 700;
 }
 
 .star {
@@ -1134,6 +1427,12 @@
   outline: none;
 }
 
+.mainMcpVerifyStack .ta {
+  height: clamp(260px, 46vh, 640px);
+  min-height: 240px;
+  max-height: none;
+}
+
 /* 文本平时透明（只显示背后高亮层）；选中时给文字上色，让选区可见、可复制 */
 .ta::selection {
   color: var(--txt);
@@ -1164,6 +1463,17 @@
   background: #fbfcff;
 }
 
+.mainMcpVerifyStack .actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  gap: 12px;
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  box-shadow: 0 -8px 18px rgba(15, 30, 54, 0.04);
+}
+
 .sendReq {
   display: inline-flex;
   align-items: center;
@@ -1177,6 +1487,15 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.mainMcpVerifyStack .sendReq,
+.mainMcpVerifyStack .resetBtn,
+.mainMcpVerifyStack .dataBtn,
+.mainMcpVerifyStack .testBtn {
+  height: 36px;
+  padding-right: 16px;
+  padding-left: 16px;
 }
 
 .sendReq:disabled {
@@ -1239,12 +1558,6 @@
   cursor: default;
 }
 
-.kbd {
-  margin-left: auto;
-  color: var(--faint);
-  font-size: 11px;
-}
-
 /* ---------------- response pane ---------------- */
 .res {
   flex: 1 1 56%;
@@ -1253,6 +1566,13 @@
   min-width: 0;
   min-height: 0;
   background: var(--code);
+}
+
+.mainMcpVerifyStack .res {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--line);
+  background: #fff;
+  min-height: 0;
 }
 
 .resHead {
@@ -1264,6 +1584,12 @@
   padding: 14px 20px;
   border-bottom: 1px solid var(--line);
   background: #fbfcff;
+}
+
+.mainMcpVerifyStack .resHead {
+  min-height: 44px;
+  padding: 10px 20px;
+  background: #fff;
 }
 
 .resTitle {
@@ -1327,6 +1653,28 @@
   background: var(--code);
 }
 
+.mainMcpVerifyStack .resBody {
+  flex: 0 1 auto;
+  min-height: 360px;
+  max-height: min(64vh, 760px);
+  background: #f6f8fc;
+  overscroll-behavior: contain;
+}
+
+.mainMcpVerifyStack .resIdle {
+  border-top: 0;
+}
+
+.mainMcpVerifyStack .resIdle .rightTabs {
+  border-bottom: 0;
+}
+
+.mainMcpVerifyStack .resIdle .resHead {
+  min-height: 42px;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+}
+
 .out {
   margin: 0;
   padding: 17px 20px;
@@ -1377,7 +1725,6 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-left: auto;
   padding: 4px 11px;
   border: 1px solid var(--field-bd);
   border-radius: 7px;
@@ -1392,19 +1739,58 @@
   color: var(--accent);
 }
 
+.resActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.resultToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--field-bd);
+  border-radius: 4px;
+  color: var(--txt2);
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.resultToggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.resultToggle :global(.anticon) {
+  font-size: 10px;
+  transition: transform 160ms ease;
+}
+
+.resultToggleOpen {
+  transform: rotate(180deg);
+}
+
 .resEmpty {
   display: grid;
   place-items: center;
   height: 100%;
-  padding: 40px;
+  padding: 28px;
   color: var(--faint);
   text-align: center;
 }
 
+.mainMcpVerifyStack .resEmpty {
+  align-content: center;
+  gap: 4px;
+}
+
 .resEmptyIc {
-  font-size: 30px;
-  opacity: 0.6;
-  margin-bottom: 12px;
+  font-size: 24px;
+  opacity: 0.45;
+  margin-bottom: 6px;
 }
 
 .resEmpty h3 {
@@ -1501,31 +1887,18 @@
     border-bottom: 1px solid var(--line);
   }
 
-  .mcpConnectFields {
-    grid-template-columns: 1fr;
-  }
-
-  .mcpConnectField {
-    grid-template-columns: 1fr;
-  }
-
-  .mcpConnectActions {
-    justify-content: flex-start;
-  }
-
-  .mcpVerifyCard {
+  .mcpConfigHeader {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .schemaGrid,
-  .mcpStatusBar {
-    grid-template-columns: 1fr;
+  .mcpConfigTabs,
+  .mcpConfigMeta {
+    flex-wrap: wrap;
   }
 
-  .mcpTools {
-    flex-wrap: wrap;
-    justify-content: flex-end;
+  .schemaGrid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1779,6 +2152,11 @@
   border-bottom: 1px solid var(--line);
 }
 
+.mainMcpVerifyStack .rightTabs {
+  padding: 8px 18px 0;
+  background: #fff;
+}
+
 .rightTab {
   display: inline-flex;
   align-items: center;
@@ -1797,6 +2175,15 @@
   color: #1e293b;
 }
 
+.rightTab:disabled {
+  color: var(--faint);
+  cursor: not-allowed;
+}
+
+.rightTab:disabled:hover {
+  color: var(--faint);
+}
+
 .rightTabOn {
   color: #2e68ff;
   border-bottom-color: #2e68ff;
@@ -1807,6 +2194,42 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.debugHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.debugHead > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.debugHint {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.debugBody {
+  min-height: 360px;
+  max-height: min(64vh, 760px);
+  overflow: auto;
+  padding: 17px 20px;
+  background: var(--code);
+}
+
+.debugBody .curlPre {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .rightHidden {
@@ -2264,6 +2687,49 @@
 @media (max-width: 1180px) {
   .main {
     flex-direction: column;
+  }
+
+  .mainMcpVerifyStack,
+  .mainMcpTabbed.mainMcpVerifyStack {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+  }
+
+  .mainMcpVerifyStack .list,
+  .mainMcpTabbed.mainMcpVerifyStack .list {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .mainMcpVerifyStack .mcpWork,
+  .mainMcpTabbed.mainMcpVerifyStack .mcpWork {
+    grid-column: 1;
+    grid-row: auto;
+    overflow: visible;
+  }
+
+  .mainMcpVerifyStack .actions {
+    flex-wrap: wrap;
+  }
+
+  .mainMcpVerifyStack .compactSettingsSec {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .mainMcpVerifyStack .compactSettingsSec .qpSelect,
+  .mainMcpVerifyStack .compactSettingsSec .qpInput {
+    width: min(100%, 320px);
+    max-width: none;
+  }
+
+  .callParamsHead {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .callParamsTools {
+    flex-wrap: wrap;
   }
 
   .list {

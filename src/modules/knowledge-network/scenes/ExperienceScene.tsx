@@ -217,12 +217,14 @@ type ExperienceSceneProps = {
   embedded?: boolean;
   initialMode?: ContextLoaderMode;
   lockMode?: boolean;
+  showMcpConnect?: boolean;
 };
 
 export function ExperienceScene({
   embedded = false,
   initialMode = "agent",
   lockMode = false,
+  showMcpConnect = false,
 }: ExperienceSceneProps) {
   const navigate = useNavigate();
   const runtimeConfig = useRuntimeConfig();
@@ -295,6 +297,11 @@ export function ExperienceScene({
   const knDetailRef = useRef<{ knId: string; detail: KnDetail } | null>(null);
 
   useEffect(() => {
+    if (!id) {
+      setNetwork(null);
+      return;
+    }
+
     let cancelled = false;
     getKnowledgeNetwork(id)
       .then((record) => {
@@ -705,15 +712,16 @@ export function ExperienceScene({
           onCurlOpenChange={setCurlOpen}
           curl={curl}
           onCopy={copy}
-          onOpenGuide={() => setGuideOpen(true)}
-          onOpenDiscover={() => setDiscoverOpen(true)}
           toolDefs={toolDefs}
           toolsLoading={toolsLoading}
           toolsError={toolsError}
           currentTool={currentTool}
           onReloadTools={() => loadTools(true)}
           mcpUrl={`${serverAddress}${MCP_PATH}`}
-          authLabel={authMode === "apikey" ? "API Key" : "OAuth Token"}
+          appKeyValue={appKey.trim()}
+          issuingKey={issuingKey}
+          onIssueAppKey={() => void issueAppKey()}
+          showMcpConnect={showMcpConnect}
           dataBrowserPanel={
             <DataBrowserPanel
               active={rightTab === "data"}

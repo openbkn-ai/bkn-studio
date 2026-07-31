@@ -374,6 +374,7 @@ export function AgentChat({
   const soloRef = useRef<ChatPaneHandle>(null);
   const baseRef = useRef<ChatPaneHandle>(null);
   const knRef = useRef<ChatPaneHandle>(null);
+  const pageScrollRef = useRef<HTMLDivElement>(null);
 
   // 拉模型列表（模型工厂）一次，两侧共享；默认模型在 ChatPane 内选。
   useEffect(() => {
@@ -630,6 +631,7 @@ export function AgentChat({
     getTools,
     toolDefs,
     resourceScope: knResourceIds,
+    pageScrollRef,
   };
 
   const composer = (
@@ -693,7 +695,7 @@ export function AgentChat({
   );
 
   return (
-    <div className={styles.root}>
+    <div ref={pageScrollRef} className={styles.root}>
       <header className={styles.agentHeader}>
         <div className={styles.modeTabs}>
           <Segmented
