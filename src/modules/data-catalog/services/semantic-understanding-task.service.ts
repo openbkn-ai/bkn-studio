@@ -122,7 +122,7 @@ export async function createResourceSemanticUnderstandingTask(payload: CreateSem
     apply_mode: payload.applyMode,
     confidence_threshold: payload.confidenceThreshold,
     include_sample_rows: includeSampleRows,
-    sample_policy: includeSampleRows ? { masked: true, max_rows: 10 } : undefined,
+    sample_policy: includeSampleRows ? { masked: false, max_rows: 10 } : undefined,
   });
   return response.data;
 }

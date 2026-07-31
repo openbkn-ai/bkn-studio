@@ -135,6 +135,24 @@
   gap: 2px;
 }
 
+.semanticWarning {
+  margin-top: 10px;
+}
+
+.semanticWarning :global(.ant-alert-description) ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.fieldDetailTable {
+  margin-top: 10px;
+}
+
+.fieldDetailTable :global(.ant-table-cell) {
+  vertical-align: top;
+  word-break: break-word;
+}
+
 .rawDetail summary {
   cursor: pointer;
   color: #2563eb;
