@@ -13,7 +13,6 @@ export type KnowledgeNetworkWorkspaceSection =
   | "overview"
   | "experience-agent"
   | "experience-mcp"
-  | "experience-rest"
   | "concept-groups"
   | "object-types"
   | "relation-types"

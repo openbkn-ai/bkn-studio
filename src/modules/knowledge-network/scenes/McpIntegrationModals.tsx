@@ -10,6 +10,7 @@ import { Modal, Spin, Tabs } from "antd";
 import type { ReactNode } from "react";
 
 import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
+import { createClaudeCodeMcpCommand, createMcpRemoteJsonConfig } from "@/modules/knowledge-network/services/mcp-client-config";
 
 import styles from "./ExperienceScene.module.css";
 
@@ -74,47 +75,32 @@ export function McpSetupModal({
   open,
   onClose,
   mcpUrl,
-  onIssueKey,
+  onManageApiKey,
   copy,
 }: {
   open: boolean;
   onClose: () => void;
   mcpUrl: string;
-  onIssueKey: () => void;
+  onManageApiKey: () => void;
   copy: (text: string, label?: string) => void;
 }) {
-  const tk = "bak_<在「API Key」页签发的长期 Key>";
-  const jsonConfig = JSON.stringify(
-    {
-      mcpServers: {
-        "bkn-agent-retrieval": {
-          type: "http",
-          url: mcpUrl,
-          headers: { Authorization: `Bearer ${tk}` },
-        },
-      },
-    },
-    null,
-    2,
-  );
-  const claudeCli = [
-    `claude mcp add --transport http bkn-agent-retrieval ${mcpUrl} \\`,
-    `  --header "Authorization: Bearer ${tk}"`,
-  ].join("\n");
+  const tk = "bak_<在个人中心 API Key 签发的长期 Key>";
+  const jsonConfig = createMcpRemoteJsonConfig(mcpUrl, tk);
+  const claudeCli = createClaudeCodeMcpCommand(mcpUrl, tk);
 
   return (
     <Modal open={open} onCancel={onClose} footer={null} width={680} title="接入 MCP（Claude Code / Cursor）">
       <div className={styles.guideRoot}>
       <p className={styles.guideNote}>
-        接入指南用于<b>外部 MCP 客户端 / SDK</b>（Cursor、Claude Code 等）。鉴权填 <b>AppKey</b>（<code>bak_</code> 开头的长期 Key），
-        在左下角「API Key」页签发。
-        <button type="button" className={styles.guideLink} onClick={onIssueKey}>
-          去签发 AppKey →
+        接入指南用于<b>外部 MCP 客户端</b>（Cursor、Claude Code 等）。鉴权填 <b>API Key</b>（<code>bak_</code> 开头的长期 Key），
+        在个人中心统一签发和管理。
+        <button type="button" className={styles.guideLink} onClick={onManageApiKey}>
+          签发 API Key →
         </button>
       </p>
       <p className={styles.guideNote}>
         <b>和本页登录态的差异：</b>本页调试用的是你的<b>会话 token</b>（<code>ory_at_</code>，几十分钟就过期，只够即时调试）；
-        外部客户端要长期可用，必须用 <b>AppKey</b>（<code>bak_</code>，长期有效、可撤销、可轮换）。两者都放同一个
+        外部客户端要长期可用，必须用 <b>API Key</b>（<code>bak_</code>，长期有效、可撤销、可轮换）。两者都放同一个
         <code>Authorization: Bearer</code> 头，网关按前缀自动识别。
       </p>
       <Tabs

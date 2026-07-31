@@ -40,6 +40,24 @@ export const REST_PREFIX = "/api/agent-retrieval/v1";
 /** MCP 端点（实测 /api/agent-retrieval/v1/mcp，非根 /mcp）。 */
 export const MCP_PATH = "/api/agent-retrieval/v1/mcp";
 
+export type RequestDataAssistantKind = "concept-group" | "object-type" | "resource" | "relation";
+
+/** 返回可由知识网络模型直接辅助填写的请求参数类型；无匹配时不展示参数助手。 */
+export function requestDataAssistantKindOf(opId: string): RequestDataAssistantKind | null {
+  switch (opId) {
+    case "search_schema":
+      return "concept-group";
+    case "query_object_instance":
+      return "object-type";
+    case "run_sql":
+      return "resource";
+    case "query_instance_subgraph":
+      return "relation";
+    default:
+      return null;
+  }
+}
+
 export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "search_schema",
@@ -840,11 +858,17 @@ function parseRelationTypes(raw: unknown): KnRelationType[] {
  * 走与调试台一致的真实 REST 鉴权路径（get_kn_detail 已验证可用）。
  */
 /** REST POST：注入 fresh Bearer；401（token 过期）时刷新一次再重试。 */
-async function restPost(env: ContextLoaderEnv, auth: McpAuth | undefined, url: string, body: unknown): Promise<Response> {
+async function restPost(
+  env: ContextLoaderEnv,
+  auth: McpAuth | undefined,
+  url: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<Response> {
   const doFetch = (token: string) => {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers.Authorization = `Bearer ${token}`;
-    return fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+    return fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
   };
   let resp = await doFetch(auth?.getToken?.() ?? env.token);
   if (resp.status === 401 && auth?.refresh) {
@@ -854,9 +878,16 @@ async function restPost(env: ContextLoaderEnv, auth: McpAuth | undefined, url: s
   return resp;
 }
 
-export async function fetchKnDetail(env: ContextLoaderEnv, auth?: McpAuth): Promise<KnDetail> {
+export async function fetchKnDetail(env: ContextLoaderEnv, auth?: McpAuth, signal?: AbortSignal): Promise<KnDetail> {
   const base = env.base.replace(/\/+$/, "");
-  const response = await restPost(env, auth, `${base}${REST_PREFIX}/kn/get_kn_detail`, { kn_id: env.knId });
+  const params = new URLSearchParams({ response_format: "json" });
+  const response = await restPost(
+    env,
+    auth,
+    `${base}${REST_PREFIX}/kn/get_kn_detail?${params.toString()}`,
+    { kn_id: env.knId },
+    signal,
+  );
   const text = await response.text();
   if (!response.ok) {
     throw new Error(text || `获取知识网络详情失败（${response.status}）`);

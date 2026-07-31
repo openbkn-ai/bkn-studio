@@ -11,7 +11,6 @@ import {
   ClockCircleOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
-  ExperimentOutlined,
   FileTextOutlined,
   ForkOutlined,
   LeftOutlined,
@@ -118,12 +117,6 @@ export function KnowledgeNetworkWorkspaceScene({
         path: `/knowledge-network/workspace/${activeNetworkId}/experience/mcp`,
       },
       {
-        key: "experience-rest",
-        label: t("knowledgeNetwork.workspaceExperienceRest"),
-        icon: <ExperimentOutlined />,
-        path: `/knowledge-network/workspace/${activeNetworkId}/experience/rest`,
-      },
-      {
         key: "concept-groups",
         label: t("knowledgeNetwork.workspaceConceptGroups"),
         icon: <ApartmentOutlined />,
@@ -175,8 +168,7 @@ export function KnowledgeNetworkWorkspaceScene({
   const experienceNavItems = navigationItems.filter(
     (item) =>
       item.key === "experience-agent" ||
-      item.key === "experience-mcp" ||
-      item.key === "experience-rest",
+      item.key === "experience-mcp",
   );
   const resourceNavItems = navigationItems.filter(
     (item) =>
@@ -234,11 +226,9 @@ export function KnowledgeNetworkWorkspaceScene({
 
     if (
       section === "experience-agent" ||
-      section === "experience-mcp" ||
-      section === "experience-rest"
+      section === "experience-mcp"
     ) {
-      const initialMode =
-        section === "experience-mcp" ? "mcp" : section === "experience-rest" ? "rest" : "agent";
+      const initialMode = section === "experience-mcp" ? "mcp" : "agent";
 
       return <ExperienceScene embedded initialMode={initialMode} lockMode />;
     }

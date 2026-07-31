@@ -191,22 +191,23 @@
   box-shadow: 0 0 0 2px rgba(46, 104, 255, 0.1);
 }
 
-.keyIssue {
+.keyManage {
   flex: 0 0 auto;
   height: 32px;
   padding: 0 10px;
-  border: 1px solid #d9c8f5;
+  border: 1px solid #bcd0f7;
   border-radius: 8px;
-  background: #f6f0ff;
-  color: #7c3aed;
+  background: #eef4ff;
+  color: #1d4ed8;
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
 }
 
-.keyIssue:hover {
-  background: #efe5ff;
+.keyManage:hover {
+  border-color: #2e68ff;
+  background: #e2ecff;
 }
 
 .keyCopy {
@@ -234,20 +235,12 @@
   grid-template-columns: 286px minmax(560px, 1fr) minmax(420px, 0.78fr);
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
-  background: #eef2f7;
-}
-
-.mainMcpTabbed {
-  grid-template-rows: auto minmax(0, 1fr);
+  background: #fff;
 }
 
 .mainMcpVerifyStack {
   grid-template-columns: 286px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
-}
-
-.mainMcpTabbed.mainMcpVerifyStack {
-  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .mcpWork {
@@ -262,10 +255,6 @@
   background: #fff;
 }
 
-.mainMcpTabbed .mcpWork {
-  grid-row: 2;
-}
-
 .mcpWorkInline {
   display: contents;
 }
@@ -275,47 +264,12 @@
   grid-row: 1;
 }
 
-.mainMcpTabbed.mainMcpVerifyStack .list {
-  grid-row: 2;
-}
-
-.mcpModeTabs {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--line);
-  background: #fff;
-}
-
-.mcpModeTab {
-  height: 36px;
-  padding: 0 18px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: #64748b;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.mcpModeTab:hover {
-  color: #1e293b;
-}
-
-.mcpModeTabActive {
-  color: #1d4ed8;
-  border-bottom-color: #2e68ff;
-}
-
 .mcpConnectPage {
   grid-column: 1 / -1;
   min-height: 0;
   overflow: auto;
-  padding: 20px 28px;
-  background: #f5f7fb;
+  padding: 0;
+  background: #fff;
 }
 
 .mcpConnectPanel {
@@ -323,30 +277,21 @@
   grid-template-columns: minmax(300px, 0.72fr) minmax(620px, 1.28fr);
   gap: 20px;
   align-items: stretch;
-  max-width: 1280px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: #fff;
+  background: transparent;
   overflow: hidden;
 }
 
 .mcpConnectTitleBlock {
   padding: 24px 26px;
   border-right: 1px solid var(--line);
-  background: #fbfcff;
-}
-
-.mcpConnectEyebrow {
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  background: #fff;
 }
 
 .mcpConnectTitle {
-  margin: 3px 0 4px;
+  margin: 0 0 4px;
   color: #132036;
   font-size: 22px;
   font-weight: 700;
@@ -445,6 +390,8 @@
 }
 
 .mcpIssueKeyBtn {
+  display: inline-flex;
+  align-items: center;
   height: 30px;
   padding: 0 12px;
   border: 1px solid #bcd0f7;
@@ -453,6 +400,7 @@
   color: #1d4ed8;
   font-size: 12.5px;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -1148,6 +1096,69 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.requestDataAssistantModalTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.requestDataAssistantModal {
+  --line: rgba(15, 30, 54, 0.1);
+  --txt2: #5b6678;
+}
+
+.requestDataAssistantModal :global(.ant-modal-content) {
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.requestDataAssistantModal :global(.ant-modal-body) {
+  padding: 0;
+}
+
+.requestDataAssistantModalIntro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcff;
+}
+
+.requestDataAssistantModalIntro strong {
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.requestDataAssistantModalIntro p {
+  margin: 5px 0 0;
+  color: var(--txt2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.requestDataAssistantModalTip {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid #cddcff;
+  border-radius: 4px;
+  color: #2457d6;
+  background: #f4f7ff;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.requestDataAssistantModalBody {
+  height: min(68vh, 720px);
+  min-height: 420px;
+}
+
+.requestDataAssistantModalBody .dbWrap {
+  height: 100%;
 }
 
 .paramToolBtn {
@@ -2317,6 +2328,23 @@
   word-break: break-all;
 }
 
+.dbRetry {
+  height: 28px;
+  margin-top: 10px;
+  padding: 0 10px;
+  border: 1px solid #bfd1ff;
+  border-radius: 4px;
+  color: #2457d6;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dbRetry:hover {
+  border-color: #7fa5ff;
+  background: #f4f7ff;
+}
+
 .dbSection {
   margin-top: 22px;
 }
@@ -2689,20 +2717,17 @@
     flex-direction: column;
   }
 
-  .mainMcpVerifyStack,
-  .mainMcpTabbed.mainMcpVerifyStack {
+  .mainMcpVerifyStack {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto;
   }
 
-  .mainMcpVerifyStack .list,
-  .mainMcpTabbed.mainMcpVerifyStack .list {
+  .mainMcpVerifyStack .list {
     grid-column: 1;
     grid-row: auto;
   }
 
-  .mainMcpVerifyStack .mcpWork,
-  .mainMcpTabbed.mainMcpVerifyStack .mcpWork {
+  .mainMcpVerifyStack .mcpWork {
     grid-column: 1;
     grid-row: auto;
     overflow: visible;

@@ -22,29 +22,44 @@
   z-index: 4;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   padding: 8px 26px;
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, #fff 0%, #fbfcff 100%);
 }
-.modeTabs {
+.headerLeft,
+.headerActions {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.headerLeft {
+  gap: 14px;
+}
+.headerActions {
+  gap: 6px;
+}
+.modeToggle {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.modeTabs :global(.ant-segmented) {
-  background: #eef2f8;
-  border-radius: 6px;
-  padding: 2px;
-}
-.modeTabs :global(.ant-segmented-item) {
-  min-width: 82px;
-  border-radius: 5px;
-}
-.modeTabs :global(.ant-segmented-item-selected) {
-  color: var(--accent);
+  color: var(--txt);
+  font-size: 14px;
   font-weight: 600;
+}
+.modeToggle :global(.ant-switch) {
+  min-width: 34px;
+  height: 20px;
+  background: #aebbd0;
+}
+.modeToggle :global(.ant-switch.ant-switch-checked) {
+  background: #23489c;
+}
+.modeToggle :global(.ant-switch .ant-switch-handle) {
+  top: 2px;
+  width: 16px;
+  height: 16px;
 }
 .cmpReport {
   flex: 0 0 auto;
@@ -636,14 +651,14 @@
 .intro {
   max-width: 960px;
   margin: 0 auto;
-  padding: 22px 8px 8px;
+  padding: 34px 24px 20px;
   text-align: center;
 }
 .introGlyph {
   display: none;
 }
 .intro h3 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--txt);
   margin: 0 0 6px;
@@ -651,7 +666,7 @@
 .intro p {
   font-size: 13px;
   color: var(--txt2);
-  margin: 0 auto 14px;
+  margin: 0 auto 16px;
   line-height: 1.6;
   max-width: 760px;
 }
@@ -664,18 +679,19 @@
 }
 .sugs {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   justify-content: center;
+  align-items: stretch;
   gap: 8px;
-  max-width: 980px;
+  width: min(620px, 100%);
   margin: 0 auto;
 }
 .sug {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: auto;
-  max-width: 320px;
+  width: 100%;
+  max-width: none;
   text-align: left;
   font-size: 13px;
   color: var(--txt);
@@ -942,9 +958,6 @@
 @media (max-width: 960px) {
   .agentHeader {
     padding: 8px 18px;
-  }
-  .modeTabs {
-    justify-content: space-between;
   }
   .compareStage,
   .soloStage {

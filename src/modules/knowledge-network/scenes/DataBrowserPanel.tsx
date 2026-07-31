@@ -6,7 +6,7 @@
  */
 
 import { ApiOutlined, CopyOutlined, DatabaseOutlined, ThunderboltFilled } from "@ant-design/icons";
-import { Empty, Input, Segmented, Spin, Tooltip } from "antd";
+import { Empty, Input, Spin, Tooltip } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -17,9 +17,12 @@ import {
   type KnObjectType,
   type KnRelationType,
   type McpAuth,
+  type RequestDataAssistantKind,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
 import styles from "./ExperienceScene.module.css";
+
+const DETAIL_LOAD_TIMEOUT_MS = 15_000;
 
 function formatPreviewValue(value: unknown) {
   if (value === null || value === undefined) {
@@ -42,6 +45,8 @@ function ObjectTypeCard({
   onFillField,
   onFillResource,
   onFillTest,
+  showObjectType,
+  showResource,
   copy,
   env,
   auth,
@@ -51,6 +56,8 @@ function ObjectTypeCard({
   onFillResource: (resourceId: string) => void;
   /** 用该对象类型的真实样本行填充当前接口；仅在当前接口按对象类型取数时传入。 */
   onFillTest?: (ot: KnObjectType) => Promise<void>;
+  showObjectType: boolean;
+  showResource: boolean;
   copy: (text: string, label?: string) => void;
   env: ContextLoaderEnv;
   /** 401 自动刷新 token 用（OAuth 续期）。 */
@@ -119,39 +126,43 @@ function ObjectTypeCard({
         </button>
       </div>
 
-      <div className={styles.dbRow}>
-        <span className={styles.dbRowLabel}>对象类型</span>
-        <Tooltip title="点击填入当前接口的 ot_id">
-          <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", ot.id)}>
-            {ot.id}
-          </button>
-        </Tooltip>
-        <Tooltip title="复制 ot_id">
-          <button type="button" className={styles.dbCopy} onClick={() => copy(ot.id, "已复制 ot_id")}>
-            <CopyOutlined />
-          </button>
-        </Tooltip>
-      </div>
+      {showObjectType ? (
+        <div className={styles.dbRow}>
+          <span className={styles.dbRowLabel}>对象类型</span>
+          <Tooltip title="点击填入当前接口的 ot_id">
+            <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", ot.id)}>
+              {ot.id}
+            </button>
+          </Tooltip>
+          <Tooltip title="复制 ot_id">
+            <button type="button" className={styles.dbCopy} onClick={() => copy(ot.id, "已复制 ot_id")}>
+              <CopyOutlined />
+            </button>
+          </Tooltip>
+        </div>
+      ) : null}
 
-      <div className={styles.dbRow}>
-        <span className={styles.dbRowLabel}>数据资源</span>
-        {res?.id ? (
-          <>
-            <Tooltip title="点击填入 run_sql 的 {{资源}} 占位（其它接口则复制）">
-              <button type="button" className={styles.dbRes} onClick={() => onFillResource(res.id)}>
-                <DatabaseOutlined /> {res.name || "资源"} · {res.id}
-              </button>
-            </Tooltip>
-            <Tooltip title="复制资源 id">
-              <button type="button" className={styles.dbCopy} onClick={() => copy(res.id, "已复制资源 id")}>
-                <CopyOutlined />
-              </button>
-            </Tooltip>
-          </>
-        ) : (
-          <span className={styles.dbNoRes}>无绑定</span>
-        )}
-      </div>
+      {showResource ? (
+        <div className={styles.dbRow}>
+          <span className={styles.dbRowLabel}>数据资源</span>
+          {res?.id ? (
+            <>
+              <Tooltip title="点击填入 run_sql 的 {{资源}} 占位">
+                <button type="button" className={styles.dbRes} onClick={() => onFillResource(res.id)}>
+                  <DatabaseOutlined /> {res.name || "资源"} · {res.id}
+                </button>
+              </Tooltip>
+              <Tooltip title="复制资源 id">
+                <button type="button" className={styles.dbCopy} onClick={() => copy(res.id, "已复制资源 id")}>
+                  <CopyOutlined />
+                </button>
+              </Tooltip>
+            </>
+          ) : (
+            <span className={styles.dbNoRes}>无绑定</span>
+          )}
+        </div>
+      ) : null}
 
       {open && props.length > 0 ? (
         <div className={styles.dbPropList}>
@@ -233,7 +244,7 @@ function ObjectTypeCard({
 export function DataBrowserPanel({
   active,
   env,
-  knName,
+  assistantKind,
   onFillField,
   onFillResource,
   onFillConceptGroup,
@@ -244,7 +255,7 @@ export function DataBrowserPanel({
 }: {
   active: boolean;
   env: ContextLoaderEnv;
-  knName: string;
+  assistantKind: RequestDataAssistantKind | null;
   onFillField: (key: string, value: string) => void;
   onFillResource: (resourceId: string) => void;
   onFillConceptGroup: (groupId: string) => void;
@@ -260,7 +271,7 @@ export function DataBrowserPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [view, setView] = useState<"object" | "relation">("object");
+  const [reloadKey, setReloadKey] = useState(0);
   const loadedRef = useRef(false);
 
   // 懒加载：首次切到「数据浏览器」标签时拉一次 schema，之后常驻不再重拉，保留预览/筛选上下文。
@@ -268,25 +279,41 @@ export function DataBrowserPanel({
     if (!active || loadedRef.current) return;
     loadedRef.current = true;
     let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), DETAIL_LOAD_TIMEOUT_MS);
     setLoading(true);
     setError(null);
-    fetchKnDetail(env, auth)
+    fetchKnDetail(env, auth, controller.signal)
       .then((data) => {
         if (!cancelled) setDetail(data);
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "加载失败");
+          setError(
+            controller.signal.aborted
+              ? "加载超时，请检查知识网络服务状态后重新加载。"
+              : err instanceof Error
+                ? err.message
+                : "加载失败",
+          );
           loadedRef.current = false; // 失败可重试
         }
       })
       .finally(() => {
+        window.clearTimeout(timeoutId);
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
+      controller.abort();
     };
-  }, [active, env, auth]);
+  }, [active, auth, env, reloadKey]);
+
+  const reload = () => {
+    loadedRef.current = false;
+    setReloadKey((value) => value + 1);
+  };
 
   const sections = useMemo(() => {
     if (!detail) return [];
@@ -306,8 +333,17 @@ export function DataBrowserPanel({
     const ungrouped = detail.object_types.filter((o) => !inGroup.has(o.id));
     if (ungrouped.length) grouped.push({ id: "", title: "未分组", ots: ungrouped });
     return grouped
-      .map((section) => ({ ...section, ots: section.ots.filter(match) }))
+      .map((section) => ({
+        ...section,
+        ots: section.ots.filter((ot) => match(ot) && (assistantKind !== "resource" || Boolean(ot.data_source?.id))),
+      }))
       .filter((section) => section.ots.length > 0);
+  }, [assistantKind, detail, q]);
+
+  const conceptGroups = useMemo(() => {
+    if (!detail) return [];
+    const needle = q.trim().toLowerCase();
+    return detail.concept_groups.filter((group) => !needle || `${group.id} ${group.name ?? ""}`.toLowerCase().includes(needle));
   }, [detail, q]);
 
   const relations = useMemo(() => {
@@ -322,72 +358,113 @@ export function DataBrowserPanel({
 
   return (
     <div className={styles.dbWrap}>
-      <div className={styles.dbTitle}>
-        <DatabaseOutlined /> 数据浏览器 · {knName || "知识网络"}
-      </div>
-        <p className={styles.dbHint}>
-          点「<b>+ 资源组</b>」→ 加入 <code>concept_groups</code>；点「对象类型」→ 填入当前接口的 <code>ot_id</code>；
-          点「数据资源」→ 填入 run_sql 的 <code>{"{{资源}}"}</code> 占位；点「预览数据」看样本行。
-        </p>
-        <div className={styles.dbSearch}>
+      <div className={styles.dbSearch}>
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={view === "object" ? "筛选对象类型 / 资源…" : "筛选关系类…"}
+            placeholder={
+              assistantKind === "concept-group"
+                ? "筛选资源组…"
+                : assistantKind === "relation"
+                  ? "筛选关系类…"
+                  : assistantKind === "resource"
+                    ? "筛选数据资源…"
+                    : "筛选对象类型…"
+            }
             allowClear
           />
         </div>
-        {detail && !loading && !error ? (
-          <div className={styles.dbViewSwitch}>
-            <Segmented
-              size="small"
-              block
-              value={view}
-              onChange={(value) => setView(value as "object" | "relation")}
-              options={[
-                { label: `对象类型 ${detail.object_types.length}`, value: "object" },
-                { label: `关系类 ${detail.relation_types.length}`, value: "relation" },
-              ]}
-            />
-          </div>
-        ) : null}
         <div className={styles.dbList}>
           {loading ? (
             <div className={styles.dbCenter}>
               <Spin />
             </div>
           ) : error ? (
-            <div className={styles.dbError}>
-              <ApiOutlined />
-              <div>
-                <strong>加载失败</strong>
-                <p>{error}</p>
+              <div className={styles.dbError}>
+                <ApiOutlined />
+                <div>
+                  <strong>加载失败</strong>
+                  <p>{error}</p>
+                  <button type="button" className={styles.dbRetry} onClick={reload}>
+                    重新加载
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : view === "object" ? (
+          ) : assistantKind === "concept-group" ? (
+            conceptGroups.length === 0 ? (
+              <div className={styles.dbCenter}>
+                <Empty description="无匹配资源组" />
+              </div>
+            ) : (
+              <div className={styles.dbSection}>
+                {conceptGroups.map((group) => (
+                  <div key={group.id} className={styles.dbCard}>
+                    <div className={styles.dbCardHead}>
+                      <span className={styles.dbOtName} title={group.name || group.id}>{group.name || group.id}</span>
+                      <Tooltip title={`填入 concept_groups：${group.id}`}>
+                        <button type="button" className={styles.dbTestBtn} onClick={() => onFillConceptGroup(group.id)}>
+                          <ThunderboltFilled /> 填入资源组
+                        </button>
+                      </Tooltip>
+                    </div>
+                    <div className={styles.dbRow}>
+                      <span className={styles.dbRowLabel}>资源组 ID</span>
+                      <span className={styles.dbChip}>{group.id}</span>
+                      <Tooltip title="复制资源组 ID">
+                        <button type="button" className={styles.dbCopy} onClick={() => copy(group.id, "已复制资源组 ID")}>
+                          <CopyOutlined />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : assistantKind === "relation" ? (
+            relations.length === 0 ? (
+              <div className={styles.dbCenter}>
+                <Empty description="无匹配关系类" />
+              </div>
+            ) : (
+              <div className={styles.dbSection}>
+                {relations.map((rel) => (
+                  <div key={rel.id} className={styles.dbCard}>
+                    <div className={styles.dbCardHead}>
+                      <span className={styles.dbOtName} title={rel.name || rel.id}>
+                        {rel.name || rel.id}
+                      </span>
+                      {onFillRelation ? (
+                        <Tooltip title="填入 query_instance_subgraph 的 relation_type_paths">
+                          <button type="button" className={styles.dbTestBtn} onClick={() => onFillRelation(rel)}>
+                            <ThunderboltFilled /> 填入子图
+                          </button>
+                        </Tooltip>
+                      ) : null}
+                    </div>
+                    <div className={styles.dbRow}>
+                      <span className={styles.dbRowLabel}>路径</span>
+                      <span className={styles.dbChip}>{rel.sourceId}</span>
+                      <span className={styles.dbRelArrow}>→</span>
+                      <span className={styles.dbChip}>{rel.targetId}</span>
+                      <Tooltip title="复制关系 ID">
+                        <button type="button" className={styles.dbCopy} onClick={() => copy(rel.id, "已复制关系 ID")}>
+                          <CopyOutlined />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
             sections.length === 0 ? (
               <div className={styles.dbCenter}>
-                <Empty description="无匹配对象类型" />
+                <Empty description={assistantKind === "resource" ? "无匹配数据资源" : "无匹配对象类型"} />
               </div>
             ) : (
               sections.map((section) => (
                 <div key={section.title} className={styles.dbSection}>
-                  {section.id ? (
-                    <div className={styles.dbGroupRow}>
-                      <span className={styles.dbGroup}>{section.title}</span>
-                      <Tooltip title={`加入 concept_groups：${section.id}`}>
-                        <button
-                          type="button"
-                          className={styles.dbGroupAdd}
-                          onClick={() => onFillConceptGroup(section.id)}
-                        >
-                          + 资源组
-                        </button>
-                      </Tooltip>
-                    </div>
-                  ) : (
-                    <div className={styles.dbGroup}>{section.title}</div>
-                  )}
+                  <div className={styles.dbGroup}>{section.title}</div>
                   {section.ots.map((ot) => (
                     <ObjectTypeCard
                       key={ot.id}
@@ -395,6 +472,8 @@ export function DataBrowserPanel({
                       onFillField={onFillField}
                       onFillResource={onFillResource}
                       onFillTest={onFillTest}
+                      showObjectType={assistantKind === "object-type"}
+                      showResource={assistantKind === "resource"}
                       copy={copy}
                       env={env}
                       auth={auth}
@@ -403,48 +482,6 @@ export function DataBrowserPanel({
                 </div>
               ))
             )
-          ) : relations.length === 0 ? (
-            <div className={styles.dbCenter}>
-              <Empty description="无匹配关系类" />
-            </div>
-          ) : (
-            <div className={styles.dbSection}>
-              {relations.map((rel) => (
-                <div key={rel.id} className={styles.dbCard}>
-                  <div className={styles.dbCardHead}>
-                    <span className={styles.dbOtName} title={rel.name || rel.id}>
-                      {rel.name || rel.id}
-                    </span>
-                    {onFillRelation ? (
-                      <Tooltip title="填入 query_instance_subgraph 的 relation_type_paths">
-                        <button type="button" className={styles.dbTestBtn} onClick={() => onFillRelation(rel)}>
-                          <ThunderboltFilled /> 填入子图
-                        </button>
-                      </Tooltip>
-                    ) : null}
-                  </div>
-                  <div className={styles.dbRow}>
-                    <span className={styles.dbRowLabel}>路径</span>
-                    <Tooltip title="点击填入 ot_id">
-                      <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", rel.sourceId)}>
-                        {rel.sourceId}
-                      </button>
-                    </Tooltip>
-                    <span className={styles.dbRelArrow}>→</span>
-                    <Tooltip title="点击填入 ot_id">
-                      <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", rel.targetId)}>
-                        {rel.targetId}
-                      </button>
-                    </Tooltip>
-                    <Tooltip title="复制关系 id">
-                      <button type="button" className={styles.dbCopy} onClick={() => copy(rel.id, "已复制关系 id")}>
-                        <CopyOutlined />
-                      </button>
-                    </Tooltip>
-                  </div>
-                </div>
-              ))}
-            </div>
           )}
         </div>
       </div>

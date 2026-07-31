@@ -13,8 +13,8 @@
  * vs 右「业务知识网络」（全部工具 + 注入摘要）——同一问题两侧同问，直观对比语义层价值。
  */
 
-import { CopyOutlined, DownloadOutlined, FileTextOutlined } from "@ant-design/icons";
-import { App, Modal, Segmented } from "antd";
+import { ClearOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RightOutlined, SettingOutlined } from "@ant-design/icons";
+import { App, Modal, Segmented, Switch } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
@@ -188,6 +188,7 @@ function saveCachedSuggestions(knId: string, fp: string, list: string[]): void {
 
 const SOLO_PROFILE: PaneProfile = {
   paneKey: "solo",
+  emptyTitle: "开始验证",
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: true,
   defaultToolNames: null,
@@ -196,6 +197,7 @@ const SOLO_PROFILE: PaneProfile = {
 const BASE_PROFILE: PaneProfile = {
   paneKey: "base",
   title: "基础数据",
+  emptyTitle: "直接查询数据",
   defaultPrompt: DEFAULT_BASE_PROMPT,
   injectKnContext: false,
   defaultToolNames: BASE_DATA_TOOL_NAMES,
@@ -311,6 +313,7 @@ function paneBrief(label: string, s: PaneSnapshot): string {
 const KN_PROFILE: PaneProfile = {
   paneKey: "kn",
   title: "业务知识网络",
+  emptyTitle: "基于知识网络回答",
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: true,
   defaultToolNames: null,
@@ -697,17 +700,27 @@ export function AgentChat({
   return (
     <div ref={pageScrollRef} className={styles.root}>
       <header className={styles.agentHeader}>
-        <div className={styles.modeTabs}>
-          <Segmented
-            value={compare.on ? "compare" : "single"}
-            disabled={anyBusy}
-            onChange={(value) => setCompareState((prev) => ({ ...prev, on: value === "compare" }))}
-            options={[
-              { label: "单独验证", value: "single" },
-              { label: "对比验证", value: "compare" },
-            ]}
-          />
+        <div className={styles.headerLeft}>
+          <div className={styles.modeToggle}>
+            <Switch
+              checked={compare.on}
+              disabled={anyBusy}
+              onChange={(checked) => setCompareState((prev) => ({ ...prev, on: checked }))}
+            />
+            <span>对比模式</span>
+          </div>
+          {!compare.on ? <span className={styles.paneTitle}>业务知识网络</span> : null}
         </div>
+        {!compare.on ? (
+          <div className={styles.headerActions}>
+            <button type="button" className={styles.barBtn} onClick={() => soloRef.current?.openSettings()}>
+              <SettingOutlined /> 问答配置 <RightOutlined />
+            </button>
+            <button type="button" className={styles.barBtn} onClick={() => soloRef.current?.clear()} disabled={anyBusy}>
+              <ClearOutlined /> 清空
+            </button>
+          </div>
+        ) : null}
       </header>
 
       <div className={compare.on ? styles.compareStage : styles.soloStage}>
@@ -748,6 +761,7 @@ export function AgentChat({
               {...paneShared}
               profile={SOLO_PROFILE}
               suggestions={suggestions}
+              showToolbar={false}
               onPick={sendQuestion}
               onBusyChange={onSoloBusy}
             />

@@ -9,11 +9,11 @@ export const apiKeysEnUS = {
   apiKeys: {
     title: "API Key",
     description:
-      "Issue long-lived API keys (bak_ prefix) and put them in the Authorization header of MCP clients / SDKs to replace short-lived login tokens. Valid only for the Context Loader (MCP / REST); identity and permissions match yours.",
+      "Issue long-lived API keys (bak_ prefix) for Context Loader calls through MCP, CLI, or SDK, replacing short-lived login tokens. Identity and permissions match yours.",
     issue: "Issue key",
     refresh: "Refresh",
     calloutInfo:
-      "A key is a personal Bearer token: paste it into the 立即体验 API Key field, or configure it in a CLI / MCP client. Identity and permissions match yours; the secret is shown only once at issue time.",
+      "A key is a personal Bearer token: paste it into the 立即体验 API Key field, use BKN_TOKEN for CLI / SDK, or configure an MCP client. Identity and permissions match yours; the secret is shown only once at issue time.",
     columns: {
       name: "Name",
       key: "Key",
@@ -27,18 +27,18 @@ export const apiKeysEnUS = {
     never: "Never",
     statusEnabled: "Enabled",
     statusDisabled: "Disabled",
-    actionUsage: "Usage",
     actionRegenerate: "Regenerate",
     actionRevoke: "Revoke",
     usage: {
-      lead: "Use the key as the Authorization: Bearer header to call the ContextLoader REST API or configure an MCP client.",
-      rest: "REST · ContextLoader",
-      mcp: "mcpServers config",
+      lead: "The API Key currently authorizes Context Loader: configure an MCP client, or use BKN_TOKEN for CLI / SDK bkn.context calls.",
       tabClaude: "Claude Code",
+      tabMcp: "MCP integration",
+      tabCli: "CLI integration",
+      tabSdk: "SDK integration",
       tabCodex: "Codex",
       tabCursor: "Cursor",
-      tabGeneric: "Generic mcp.json",
-      tabRest: "REST",
+      cli: "OpenBKN CLI",
+      sdk: "Node.js SDK",
       claudeCli: "① One-line CLI setup",
       claudeJson: "② Or write to the project .mcp.json",
       codexToml: "~/.codex/config.toml (streamable HTTP)",

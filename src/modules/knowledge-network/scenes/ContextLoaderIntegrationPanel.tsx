@@ -8,14 +8,18 @@
 import { ApiOutlined, CaretRightOutlined, CopyOutlined, DatabaseOutlined, DownOutlined, FileTextOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { Input, Modal, Select, Spin, Tooltip } from "antd";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, useLocation } from "react-router-dom";
 
+import { buildApiKeyPagePath } from "@/modules/api-keys/utils/api-key-handoff";
 import {
   opSupportsTestData,
+  requestDataAssistantKindOf,
   type ContextLoaderMode,
   type ContextLoaderOp,
   type ContextLoaderResponse,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
+import { createClaudeCodeMcpCommand, createMcpRemoteJsonConfig, withMcpTrailingSlash } from "@/modules/knowledge-network/services/mcp-client-config";
 
 import styles from "./ExperienceScene.module.css";
 
@@ -120,8 +124,6 @@ type ContextLoaderIntegrationPanelProps = {
   dataBrowserPanel: ReactNode;
   mcpUrl: string;
   appKeyValue: string;
-  issuingKey: boolean;
-  onIssueAppKey: () => void;
   showMcpConnect?: boolean;
 };
 
@@ -131,7 +133,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const JSON_TOKEN_RE = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
+const JSON_TOKEN_RE = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:[.]\d+)?(?:[eE][+-]?\d+)?)/g;
 
 function JsonHighlight({ text }: { text: string }) {
   if (text.length > 200_000) return <>{text}</>;
@@ -286,61 +288,23 @@ export function ContextLoaderIntegrationPanel({
   dataBrowserPanel,
   mcpUrl,
   appKeyValue,
-  issuingKey,
-  onIssueAppKey,
   showMcpConnect = false,
 }: ContextLoaderIntegrationPanelProps) {
+  const location = useLocation();
   const verb = mode === "mcp" ? "MCP" : "POST";
   const [schemaOpen, setSchemaOpen] = useState(false);
+  const [queryParamsOpen, setQueryParamsOpen] = useState(true);
   const [callParamsOpen, setCallParamsOpen] = useState(true);
   const [resultOpen, setResultOpen] = useState(true);
   const [mcpResultTab, setMcpResultTab] = useState<"result" | "debug">("result");
-  const [mcpTab, setMcpTab] = useState<"connect" | "verify">("connect");
   const [mcpConfigTab, setMcpConfigTab] = useState<"claude" | "cursor" | "generic">("claude");
   const filterText = filter.trim().toLowerCase();
-  const appKeyPlaceholder = "bak_<在 API Key 页签发的长期 Key>";
+  const appKeyPlaceholder = "bak_<在个人中心 API Key 签发的长期 Key>";
   const configAppKey = appKeyValue || appKeyPlaceholder;
-  const mcpUrlWithSlash = mcpUrl.endsWith("/") ? mcpUrl : `${mcpUrl}/`;
-  const mcpJsonConfig = JSON.stringify(
-    {
-      mcpServers: {
-        "bkn-agent-retrieval": {
-          type: "http",
-          url: mcpUrlWithSlash,
-          headers: { Authorization: `Bearer ${configAppKey}` },
-        },
-      },
-    },
-    null,
-    2,
-  );
-  const cursorJsonConfig = JSON.stringify(
-    {
-      mcpServers: {
-        "bkn-agent-retrieval": {
-          command: "npx",
-          args: [
-            "-y",
-            "mcp-remote",
-            mcpUrlWithSlash,
-            "--transport",
-            "http-only",
-            "--header",
-            `Authorization: Bearer ${configAppKey}`,
-          ],
-          env: {
-            NODE_TLS_REJECT_UNAUTHORIZED: "0",
-          },
-        },
-      },
-    },
-    null,
-    2,
-  );
-  const claudeCliConfig = [
-    `claude mcp add --transport http bkn-agent-retrieval ${mcpUrlWithSlash} \\`,
-    `  --header "Authorization: Bearer ${configAppKey}"`,
-  ].join("\n");
+  const mcpUrlWithSlash = withMcpTrailingSlash(mcpUrl);
+  const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
+  const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey);
+  const claudeCliConfig = createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey);
   const treeGroups = TOOL_GROUPS.map((group) => ({
     ...group,
     items: activeOps.filter((item) => {
@@ -350,18 +314,34 @@ export function ContextLoaderIntegrationPanel({
     }),
   })).filter(({ items }) => items.length > 0);
 
-  const isMcpVerifyView = mode === "mcp" && (!showMcpConnect || mcpTab === "verify");
+  const isMcpVerifyView = mode === "mcp" && !showMcpConnect;
+  const isRestVerifyView = mode === "rest";
+  const isVerifyView = isMcpVerifyView || isRestVerifyView;
+  const queryParamsCollapsible = isVerifyView && visibleQuery.length > 1;
+  const dataAssistantKind = requestDataAssistantKindOf(op.id);
+  const dataAssistantAvailable = dataAssistantKind !== null;
+  const dataAssistantOpen = dataAssistantAvailable && rightTab === "data";
+  const dataAssistantDescription =
+    dataAssistantKind === "concept-group"
+      ? "选择资源组并填入 concept_groups，缩小语义检索范围。"
+      : dataAssistantKind === "object-type"
+        ? "选择对象类并填入 ot_id；可使用真实样本行生成测试请求。"
+        : dataAssistantKind === "resource"
+          ? "选择数据资源并填入 SQL 的资源占位；可查看字段和样本数据。"
+          : dataAssistantKind === "relation"
+            ? "选择关系类并生成子图查询所需的关系路径。"
+            : "";
   const hasCallState = sending || response !== null || reqError !== null;
-  const resultContentVisible = !isMcpVerifyView || (hasCallState && resultOpen && mcpResultTab === "result");
+  const resultContentVisible = !isVerifyView || (hasCallState && resultOpen && mcpResultTab === "result");
   const mainClassName = [
     styles.main,
-    mode === "mcp" && showMcpConnect ? styles.mainMcpTabbed : "",
-    isMcpVerifyView ? styles.mainMcpVerifyStack : "",
+    isVerifyView ? styles.mainMcpVerifyStack : "",
   ]
     .filter(Boolean)
     .join(" ");
 
   useEffect(() => {
+    setQueryParamsOpen(true);
     setCallParamsOpen(true);
   }, [op.id]);
 
@@ -379,35 +359,15 @@ export function ContextLoaderIntegrationPanel({
   return (
     <div className={mainClassName}>
       {mode === "mcp" && showMcpConnect ? (
-        <div className={styles.mcpModeTabs}>
-          <button
-            type="button"
-            className={`${styles.mcpModeTab} ${mcpTab === "connect" ? styles.mcpModeTabActive : ""}`}
-            onClick={() => setMcpTab("connect")}
-          >
-            Agent 平台对接
-          </button>
-          <button
-            type="button"
-            className={`${styles.mcpModeTab} ${mcpTab === "verify" ? styles.mcpModeTabActive : ""}`}
-            onClick={() => setMcpTab("verify")}
-          >
-            MCP 能力验证
-          </button>
-        </div>
-      ) : null}
-
-      {mode === "mcp" && showMcpConnect && mcpTab === "connect" ? (
         <section className={styles.mcpConnectPage}>
           <div className={styles.mcpConnectPanel}>
             <div className={styles.mcpConnectTitleBlock}>
-              <div className={styles.mcpConnectEyebrow}>平台级 MCP 接入</div>
               <h2 className={styles.mcpConnectTitle}>让智能体调用 OpenBKN 能力</h2>
               <p className={styles.mcpConnectDesc}>
-                这里生成的是平台级 MCP 接入配置。复制到智能体平台后，智能体可通过 MCP 工具访问 OpenBKN 暴露的检索、查询和行动能力。
+                这里生成的是 MCP 接入配置。复制到智能体平台后，智能体可通过 MCP 工具访问 OpenBKN 暴露的检索、查询和行动能力。
               </p>
               <ol className={styles.mcpSteps}>
-                <li>先签发 API Key；签发成功后，右侧配置中的 Bearer Key 会自动填入。</li>
+                <li>前往个人中心签发 API Key，并将 bak_ 开头的长期 Key 填入右侧配置的 Bearer Key。</li>
                 <li>选择智能体平台类型，复制整段配置并粘贴到对应的 MCP 服务配置中。</li>
                 <li>保存后回到智能体对话，直接提问并让智能体通过 MCP 工具完成检索、查询或行动调用。</li>
               </ol>
@@ -431,23 +391,23 @@ export function ContextLoaderIntegrationPanel({
                   ))}
                 </div>
                 <div className={styles.mcpConfigMeta}>
-                  <button type="button" className={styles.mcpIssueKeyBtn} onClick={onIssueAppKey} disabled={issuingKey}>
-                    {issuingKey ? "签发中..." : appKeyValue ? "重新签发 API Key" : "签发 API Key"}
-                  </button>
+                  <Link className={styles.mcpIssueKeyBtn} to={apiKeyPagePath}>
+                    签发 API Key
+                  </Link>
                 </div>
               </div>
               <div className={styles.mcpConfigBody}>
                 {mcpConfigTab === "claude" ? (
                   <>
                     <CodeBlock title="CLI 一行接入" code={claudeCliConfig} onCopy={() => onCopy(claudeCliConfig, "Claude Code 命令已复制")} />
-                    <CodeBlock title="项目 .mcp.json" code={mcpJsonConfig} json onCopy={() => onCopy(mcpJsonConfig, ".mcp.json 配置已复制")} />
+                    <CodeBlock title="项目 .mcp.json" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, ".mcp.json 配置已复制")} />
                   </>
                 ) : null}
                 {mcpConfigTab === "cursor" ? (
-                  <CodeBlock title="~/.cursor/mcp.json 或项目 .cursor/mcp.json" code={cursorJsonConfig} json onCopy={() => onCopy(cursorJsonConfig, "Cursor 配置已复制")} />
+                  <CodeBlock title="~/.cursor/mcp.json 或项目 .cursor/mcp.json" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, "Cursor 配置已复制")} />
                 ) : null}
                 {mcpConfigTab === "generic" ? (
-                  <CodeBlock title="mcpServers 配置" code={cursorJsonConfig} json onCopy={() => onCopy(cursorJsonConfig, "mcp.json 配置已复制")} />
+                  <CodeBlock title="mcpServers 配置" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, "mcp.json 配置已复制")} />
                 ) : null}
               </div>
             </div>
@@ -458,18 +418,18 @@ export function ContextLoaderIntegrationPanel({
       <aside className={styles.list}>
         <div className={styles.listHead}>
           <div>
-            <div className={styles.listTitle}>{mode === "mcp" ? "可用能力" : "REST 接口"}</div>
-            <div className={styles.listMeta}>{mode === "mcp" ? `已获取 ${activeOps.length} 项 MCP 能力` : `${activeOps.length} 项可用`}</div>
+            <div className={styles.listTitle}>{mode === "mcp" ? "MCP 服务" : "REST 接口"}</div>
+            <div className={styles.listMeta}>{mode === "mcp" ? `已获取 ${activeOps.length} 项服务` : `${activeOps.length} 项可用`}</div>
           </div>
           {mode === "mcp" ? (
             <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
               {toolsLoading ? <Spin size="small" /> : null}
-              刷新能力
+              刷新服务列表
             </button>
           ) : null}
         </div>
         <div className={styles.listSearch}>
-          <Input value={filter} onChange={(e) => onFilterChange(e.target.value)} placeholder={mode === "mcp" ? "筛选能力" : "筛选接口"} />
+          <Input value={filter} onChange={(e) => onFilterChange(e.target.value)} placeholder={mode === "mcp" ? "筛选 MCP 服务" : "筛选接口"} />
         </div>
         <div className={styles.eplist}>
           {treeGroups.map(({ key, label, description, items }) => {
@@ -500,7 +460,7 @@ export function ContextLoaderIntegrationPanel({
         </div>
       </aside>
 
-      <div className={isMcpVerifyView ? styles.mcpWork : styles.mcpWorkInline}>
+      <div className={isVerifyView ? styles.mcpWork : styles.mcpWorkInline}>
       <section className={styles.req}>
         <div className={styles.reqHead}>
           <div className={styles.reqToolbar}>
@@ -508,11 +468,13 @@ export function ContextLoaderIntegrationPanel({
               <span className={styles.verb}>{verb}</span>
               <span className={styles.path} title={displayPath}>{displayPath}</span>
             </div>
-            {isMcpVerifyView ? (
+            {isVerifyView ? (
               <div className={styles.reqActions}>
-                <button type="button" className={styles.docBtn} onClick={() => setSchemaOpen(true)}>
-                  <FileTextOutlined /> 接口文档
-                </button>
+                {mode === "mcp" ? (
+                  <button type="button" className={styles.docBtn} onClick={() => setSchemaOpen(true)}>
+                    <FileTextOutlined /> 接口文档
+                  </button>
+                ) : null}
                 <button type="button" className={styles.runBtn} onClick={onSend} disabled={sending}>
                   {sending ? <Spin size="small" /> : <CaretRightOutlined />}
                   {sending ? "运行中..." : "运行"}
@@ -528,31 +490,55 @@ export function ContextLoaderIntegrationPanel({
         </div>
         <div className={styles.reqBody}>
           {visibleQuery.length > 0 ? (
-            <div className={`${styles.sec} ${mode === "mcp" ? styles.compactSettingsSec : ""}`}>
-              {mode !== "mcp" ? (
+            <div className={`${styles.sec} ${isVerifyView ? styles.compactSettingsSec : ""}`}>
+              {isVerifyView ? (
+                <div className={styles.callParamsHead}>
+                  <div className={styles.callParamsTitle}>
+                    <div className={styles.secHead}>
+                      {mode === "mcp" ? "参数" : "QUERY 参数"} <span className={styles.cnt}>{visibleQuery.length}</span>
+                    </div>
+                    {queryParamsCollapsible && !queryParamsOpen ? (
+                      <span className={styles.callParamsCollapsedHint}>已收起，展开后编辑 {visibleQuery.length} 个参数</span>
+                    ) : null}
+                  </div>
+                  {queryParamsCollapsible ? (
+                    <button
+                      type="button"
+                      className={styles.callParamsToggle}
+                      onClick={() => setQueryParamsOpen((value) => !value)}
+                      aria-expanded={queryParamsOpen}
+                    >
+                      <span className={styles.callParamsState}>{queryParamsOpen ? "收起" : "展开"}</span>
+                      <DownOutlined className={queryParamsOpen ? styles.callParamsChevronOpen : undefined} />
+                    </button>
+                  ) : null}
+                </div>
+              ) : mode !== "mcp" ? (
                 <div className={styles.secHead}>
                   QUERY 参数 <span className={styles.cnt}>{visibleQuery.length}</span>
                 </div>
               ) : null}
-              <div className={styles.qp}>
-                {visibleQuery.map((param) => (
-                  <QueryParamRow
-                    key={param.name}
-                    param={param}
-                    locked={param.name === "kn_id"}
-                    label={mode === "mcp" && param.name === "response_format" ? "参数" : undefined}
-                    emphasized={mode === "mcp" && param.name === "response_format"}
-                    value={param.name === "kn_id" ? knId : queryVals[param.name] ?? param.value}
-                    onChange={(value) => onQueryChange(param.name, value)}
-                  />
-                ))}
-              </div>
+              {!queryParamsCollapsible || queryParamsOpen ? (
+                <div className={styles.qp}>
+                  {visibleQuery.map((param) => (
+                    <QueryParamRow
+                      key={param.name}
+                      param={param}
+                      locked={param.name === "kn_id"}
+                      label={mode === "mcp" && param.name === "response_format" ? "参数" : undefined}
+                      emphasized={mode === "mcp" && param.name === "response_format"}
+                      value={param.name === "kn_id" ? knId : queryVals[param.name] ?? param.value}
+                      onChange={(value) => onQueryChange(param.name, value)}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
           {op.body !== null ? (
-            <div className={`${styles.sec} ${mode === "mcp" ? styles.callParamsSec : ""}`}>
-              {mode === "mcp" ? (
+            <div className={`${styles.sec} ${isVerifyView ? styles.callParamsSec : ""}`}>
+              {isVerifyView ? (
                 <div className={styles.callParamsHead}>
                   <div className={styles.callParamsTitle}>
                     <div className={styles.secHead}>
@@ -568,6 +554,16 @@ export function ContextLoaderIntegrationPanel({
                           自动填参
                         </button>
                       </Tooltip>
+                    ) : null}
+                    {dataAssistantAvailable ? (
+                      <button
+                        type="button"
+                        className={styles.paramToolBtn}
+                        onClick={() => onRightTabChange(dataAssistantOpen ? "res" : "data")}
+                        aria-expanded={dataAssistantOpen}
+                      >
+                        <DatabaseOutlined /> {dataAssistantOpen ? "收起助手" : "请求数据助手"}
+                      </button>
                     ) : null}
                     <button
                       type="button"
@@ -585,7 +581,7 @@ export function ContextLoaderIntegrationPanel({
                   请求体 <span className={styles.sub}>application/json</span>
                 </div>
               )}
-              {mode !== "mcp" || callParamsOpen ? (
+              {!isVerifyView || callParamsOpen ? (
                 <div className={styles.editor}>
                   <div className={styles.editbar}>
                     <span className={styles.editLbl}>body.json</span>
@@ -593,7 +589,7 @@ export function ContextLoaderIntegrationPanel({
                       <button type="button" className={styles.mini} onClick={onFormatBody}>
                         格式化
                       </button>
-                      {mode === "mcp" ? (
+                      {isVerifyView ? (
                         <button type="button" className={styles.mini} onClick={onResetBody}>
                           恢复示例
                         </button>
@@ -608,7 +604,7 @@ export function ContextLoaderIntegrationPanel({
           ) : null}
 
         </div>
-        {mode !== "mcp" ? (
+        {!isVerifyView ? (
           <div className={styles.actions}>
             <button type="button" className={styles.sendReq} onClick={onSend} disabled={sending}>
               {sending ? <Spin size="small" /> : null}
@@ -624,12 +620,38 @@ export function ContextLoaderIntegrationPanel({
             <button type="button" className={styles.resetBtn} onClick={onResetBody}>
               恢复示例
             </button>
-            <button type="button" className={styles.dataBtn} onClick={() => onRightTabChange("data")}>
-              <DatabaseOutlined /> 数据浏览器
-            </button>
+            {dataAssistantAvailable ? (
+              <button type="button" className={styles.dataBtn} onClick={() => onRightTabChange(dataAssistantOpen ? "res" : "data")}>
+                <DatabaseOutlined /> {dataAssistantOpen ? "收起助手" : "请求数据助手"}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </section>
+
+      {dataAssistantOpen ? (
+        <Modal
+          open
+          title={
+            <span className={styles.requestDataAssistantModalTitle}>
+              <DatabaseOutlined /> 请求数据助手
+            </span>
+          }
+          footer={null}
+          width={980}
+          className={styles.requestDataAssistantModal}
+          onCancel={() => onRightTabChange("res")}
+        >
+          <div className={styles.requestDataAssistantModalIntro}>
+            <div>
+              <strong>为「{businessInfoOf(op).name}」补充请求参数</strong>
+              <p>{dataAssistantDescription}</p>
+            </div>
+            <span className={styles.requestDataAssistantModalTip}>选择后会写入当前请求体</span>
+          </div>
+          <div className={styles.requestDataAssistantModalBody}>{dataBrowserPanel}</div>
+        </Modal>
+      ) : null}
 
       {mode === "mcp" ? (
         <Modal
@@ -676,9 +698,9 @@ export function ContextLoaderIntegrationPanel({
         </Modal>
       ) : null}
 
-      <section className={`${styles.res} ${isMcpVerifyView && !hasCallState ? styles.resIdle : ""}`}>
+      <section className={`${styles.res} ${isVerifyView && !hasCallState ? styles.resIdle : ""}`}>
         <div className={styles.rightTabs}>
-          {isMcpVerifyView ? (
+          {isVerifyView ? (
             <>
               <button
                 type="button"
@@ -706,17 +728,10 @@ export function ContextLoaderIntegrationPanel({
               >
                 响应结果
               </button>
-              <button
-                type="button"
-                className={`${styles.rightTab} ${rightTab === "data" ? styles.rightTabOn : ""}`}
-                onClick={() => onRightTabChange("data")}
-              >
-                <DatabaseOutlined /> 数据浏览器
-              </button>
             </>
           )}
         </div>
-        <div className={`${styles.rightView} ${!isMcpVerifyView && rightTab !== "res" ? styles.rightHidden : ""} ${isMcpVerifyView && mcpResultTab !== "result" ? styles.rightHidden : ""}`}>
+        <div className={`${styles.rightView} ${!isVerifyView && rightTab !== "res" ? styles.rightHidden : ""} ${isVerifyView && mcpResultTab !== "result" ? styles.rightHidden : ""}`}>
           <div className={styles.resHead}>
             <span className={styles.resTitle}>调用结果</span>
             {response ? (
@@ -736,7 +751,7 @@ export function ContextLoaderIntegrationPanel({
                   >
                     <CopyOutlined /> 复制结果
                   </button>
-                  {isMcpVerifyView ? (
+                  {isVerifyView ? (
                     <button
                       type="button"
                       className={styles.resultToggle}
@@ -781,11 +796,11 @@ export function ContextLoaderIntegrationPanel({
               <div className={styles.resEmpty}>
                 <ApiOutlined className={styles.resEmptyIc} />
                 <h3>等待调用</h3>
-                <p>确认请求体后点击「运行」，这里会展示 MCP 返回结果。</p>
+                <p>确认请求参数后点击「运行」，这里会展示{mode === "mcp" ? " MCP" : " REST"} 返回结果。</p>
               </div>
             )}
           </div> : null}
-          {!isMcpVerifyView && resultContentVisible ? <div className={`${styles.curl} ${curlOpen ? styles.curlOpen : ""}`}>
+          {!isVerifyView && resultContentVisible ? <div className={`${styles.curl} ${curlOpen ? styles.curlOpen : ""}`}>
             <div className={styles.curlHead} onClick={() => onCurlOpenChange(!curlOpen)}>
               <span className={styles.curlLbl}>
                 <span className={styles.chev}>▶</span> cURL
@@ -808,7 +823,7 @@ export function ContextLoaderIntegrationPanel({
             ) : null}
           </div> : null}
         </div>
-        {isMcpVerifyView ? (
+        {isVerifyView ? (
           <div className={`${styles.rightView} ${mcpResultTab === "debug" ? "" : styles.rightHidden}`}>
             <div className={styles.debugHead}>
               <div>
@@ -824,9 +839,6 @@ export function ContextLoaderIntegrationPanel({
             </div>
           </div>
         ) : null}
-        {!isMcpVerifyView ? <div className={`${styles.rightView} ${rightTab === "data" ? "" : styles.rightHidden}`}>
-          {dataBrowserPanel}
-        </div> : null}
       </section>
       </div>
         </>

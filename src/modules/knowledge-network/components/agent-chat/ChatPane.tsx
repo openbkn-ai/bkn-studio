@@ -91,6 +91,7 @@ export type PaneProfile = {
   paneKey: PaneKey;
   /** 分屏时面板头显示的身份标签（solo 不显示）。 */
   title?: string;
+  emptyTitle?: string;
   defaultPrompt: string;
   /** 是否把知识网络摘要拼进系统提示词（「仅基础数据」为 false）。 */
   injectKnContext: boolean;
@@ -124,6 +125,8 @@ export type PaneSnapshot = {
 export type ChatPaneHandle = {
   send: (text: string) => void;
   stop: () => void;
+  openSettings: () => void;
+  clear: () => void;
   getSnapshot: () => PaneSnapshot;
 };
 
@@ -330,6 +333,7 @@ export type ChatPaneProps = {
    * 由该容器统一承载阅读和流式回答的贴底跟随。
    */
   pageScrollRef: RefObject<HTMLDivElement | null>;
+  showToolbar?: boolean;
   onBusyChange?: (busy: boolean) => void;
 };
 
@@ -350,6 +354,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     toolDefs,
     resourceScope,
     pageScrollRef,
+    showToolbar = true,
     onBusyChange,
   },
   ref,
@@ -675,12 +680,6 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     return { model, stats, rounds };
   }, [messages, model, stats]);
 
-  useImperativeHandle(
-    ref,
-    () => ({ send: (text: string) => void send(text), stop, getSnapshot }),
-    [send, stop, getSnapshot],
-  );
-
   const clearChat = useCallback(() => {
     setMessages([]);
     setStats({ tokens: 0, ms: 0 });
@@ -690,6 +689,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       /* ignore */
     }
   }, [knId, profile.paneKey]);
+
+  useImperativeHandle(
+    ref,
+    () => ({ send: (text: string) => void send(text), stop, openSettings, clear: clearChat, getSnapshot }),
+    [send, stop, openSettings, clearChat, getSnapshot],
+  );
 
   const modelOptions = useMemo(
     () => models.map((m) => ({ value: m.modelName, label: m.default ? `${m.modelName} · 默认` : m.modelName })),
@@ -803,7 +808,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
 
   return (
     <div className={styles.paneRoot}>
-      <div className={`${styles.bar} ${compact ? styles.barCompact : ""}`}>
+      {showToolbar ? <div className={`${styles.bar} ${compact ? styles.barCompact : ""}`}>
         <div className={styles.barLeft}>
           {profile.title ? (
             <span
@@ -826,7 +831,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             <ClearOutlined /> 清空
           </button>
         </div>
-      </div>
+      </div> : null}
       <Drawer
         title="问答配置"
         placement="right"
@@ -915,7 +920,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             <div className={styles.introGlyph}>
               <ThunderboltFilled />
             </div>
-            <h3>{profile.title ?? "Agent 对话"}</h3>
+            <h3>{profile.emptyTitle ?? "开始验证"}</h3>
             <p>
               {profile.paneKey === "base" ? (
                 <>

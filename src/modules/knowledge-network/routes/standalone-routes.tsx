@@ -66,14 +66,6 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("experience-mcp"),
   ),
   createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/experience/rest",
-    {
-      descriptionKey: "knowledgeNetwork.experienceRestDescription",
-      titleKey: "knowledgeNetwork.experienceRestTitle",
-    },
-    workspaceSectionPage("experience-rest"),
-  ),
-  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/concept-groups",
     {
       descriptionKey: "knowledgeNetwork.conceptGroupsDescription",

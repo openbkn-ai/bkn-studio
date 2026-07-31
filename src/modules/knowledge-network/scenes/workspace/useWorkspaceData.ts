@@ -164,7 +164,6 @@ export function useWorkspaceData(
             break;
           case "experience-agent":
           case "experience-mcp":
-          case "experience-rest":
             break;
           case "concept-groups":
             setConceptGroups(await listKnowledgeNetworkConceptGroups(networkId));

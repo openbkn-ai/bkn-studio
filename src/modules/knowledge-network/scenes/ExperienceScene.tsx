@@ -18,12 +18,12 @@ import {
 } from "@ant-design/icons";
 import { App, Select, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { gatewayOrigin } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import { buildApiKeyPagePath, consumeApiKeyHandoff } from "@/modules/api-keys/utils/api-key-handoff";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { issueApiKey } from "@/modules/api-keys/services/api-key.service";
 import {
   CONTEXT_LOADER_OPS,
   MCP_PATH,
@@ -34,6 +34,7 @@ import {
   fetchKnDetail,
   fetchObjectInstances,
   pickQueryableObjectType,
+  requestDataAssistantKindOf,
   listMcpTools,
   mcpPathOf,
   sendRequest,
@@ -175,15 +176,13 @@ function maskKey(value: string): string {
 function MaskedKeyInput({
   value,
   onChange,
-  onIssue,
+  onManage,
   onCopy,
-  issuing,
 }: {
   value: string;
   onChange: (next: string) => void;
-  onIssue: () => void;
+  onManage: () => void;
   onCopy: () => void;
-  issuing?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -205,8 +204,8 @@ function MaskedKeyInput({
           </button>
         </Tooltip>
       ) : null}
-      <button type="button" className={styles.keyIssue} onClick={onIssue} disabled={issuing}>
-        {issuing ? "签发中…" : "去签发"}
+      <button type="button" className={styles.keyManage} onClick={onManage}>
+        签发 API Key
       </button>
     </div>
   );
@@ -227,10 +226,13 @@ export function ExperienceScene({
   showMcpConnect = false,
 }: ExperienceSceneProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const runtimeConfig = useRuntimeConfig();
   const { message } = App.useApp();
   const { networkId } = useParams<{ networkId: string }>();
   const id = networkId ?? "";
+  const currentPath = `${location.pathname}${location.search}`;
+  const apiKeyPagePath = buildApiKeyPagePath(currentPath);
 
   const copy = useCallback(
     (text: string, label = "已复制") => {
@@ -245,7 +247,7 @@ export function ExperienceScene({
   const [network, setNetwork] = useState<{ name: string; slug: string } | null>(null);
   const [mode, setMode] = useState<ContextLoaderMode>(initialMode);
   const showModeTabs = !lockMode;
-  const showEnvSettings = mode !== "agent" && !(lockMode && mode === "mcp");
+  const showEnvSettings = mode !== "agent" && !lockMode;
 
   useEffect(() => {
     setMode(initialMode);
@@ -255,29 +257,18 @@ export function ExperienceScene({
   const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "http://agent-retrieval:30779"));
   // 展示/接入指南用真实服务器（网关）地址：dev 取 VITE_DEV_AUTH_ORIGIN，prod 同源。
   const serverAddress = gatewayOrigin() || base;
-  // 认证方式：OAuth 会话令牌（默认，每次现取避免过期）或用户粘贴的长期 API Key（bak_）。
+  // 认证方式：OAuth 会话令牌（默认，每次现取避免过期）或用户从个人中心签发后粘贴的长期 API Key（bak_）。
   const sessionToken = runtimeConfig.auth.tokenManager.getAccessToken() ?? "";
   const [authMode, setAuthMode] = useState<"oauth" | "apikey">("oauth");
   const [appKey, setAppKey] = useState("");
-  const [issuingKey, setIssuingKey] = useState(false);
 
-  // 「去签发」直接签发一个 API Key 并填入（不再跳个人中心）。密钥明文只此一次返回。
-  const issueAppKey = useCallback(async () => {
-    setIssuingKey(true);
-    try {
-      const stamp = new Date().toISOString().slice(0, 19).replace("T", " ");
-      const issued = await issueApiKey({ name: `Studio 调试台 ${stamp}` });
-      setAppKey(issued.key);
-      message.success(
-        `已签发并填入 API Key（${issued.masked}），点输入框右侧图标可复制明文保存；可在「个人中心 · API Key」管理`,
-        6,
-      );
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : "签发失败，请到个人中心手动签发");
-    } finally {
-      setIssuingKey(false);
-    }
-  }, [message]);
+  useEffect(() => {
+    const key = consumeApiKeyHandoff(currentPath);
+    if (!key) return;
+    setAuthMode("apikey");
+    setAppKey(key);
+    message.success("已自动填入新签发的 API Key");
+  }, [currentPath, message]);
   const token = authMode === "apikey" ? appKey.trim() : sessionToken;
 
   const [filter, setFilter] = useState("");
@@ -635,7 +626,7 @@ export function ExperienceScene({
           <div className={styles.ef}>
             <label>
               认证方式
-              <Tooltip title="OAuth Token：用你当前登录态（短期，仅本页调试）。API Key：填长期 bak_ Key（右上角「API Key」页签发），仅对 Context Loader 有效。">
+              <Tooltip title="OAuth Token：使用当前登录态（短期，仅本页调试）。API Key：在个人中心签发长期 bak_ Key 后粘贴到此处，仅对 Context Loader 有效。">
                 <QuestionCircleOutlined className={styles.hintIcon} />
               </Tooltip>
             </label>
@@ -655,9 +646,8 @@ export function ExperienceScene({
               <MaskedKeyInput
                 value={appKey}
                 onChange={setAppKey}
-                onIssue={() => void issueAppKey()}
+                onManage={() => void navigate(apiKeyPagePath)}
                 onCopy={() => copy(appKey.trim(), "API Key 已复制")}
-                issuing={issuingKey}
               />
             </div>
           ) : null}
@@ -719,14 +709,12 @@ export function ExperienceScene({
           onReloadTools={() => loadTools(true)}
           mcpUrl={`${serverAddress}${MCP_PATH}`}
           appKeyValue={appKey.trim()}
-          issuingKey={issuingKey}
-          onIssueAppKey={() => void issueAppKey()}
           showMcpConnect={showMcpConnect}
           dataBrowserPanel={
             <DataBrowserPanel
               active={rightTab === "data"}
               env={env}
-              knName={network?.name ?? ""}
+              assistantKind={requestDataAssistantKindOf(op.id)}
               onFillField={fillBodyField}
               onFillResource={fillResource}
               onFillConceptGroup={fillConceptGroup}
@@ -743,7 +731,7 @@ export function ExperienceScene({
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
         mcpUrl={`${serverAddress}${MCP_PATH}`}
-        onIssueKey={() => void navigate("/account")}
+        onManageApiKey={() => void navigate(apiKeyPagePath)}
         copy={copy}
       />
       <ToolDiscoveryModal
