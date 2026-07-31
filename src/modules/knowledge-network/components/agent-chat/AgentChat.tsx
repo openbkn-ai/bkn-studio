@@ -13,7 +13,7 @@
  * vs 右「业务知识网络」（全部工具 + 注入摘要）——同一问题两侧同问，直观对比语义层价值。
  */
 
-import { CopyOutlined, DownloadOutlined, FileTextOutlined, PauseOutlined } from "@ant-design/icons";
+import { ClearOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RightOutlined, SettingOutlined } from "@ant-design/icons";
 import { App, Modal, Segmented, Switch } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -188,6 +188,7 @@ function saveCachedSuggestions(knId: string, fp: string, list: string[]): void {
 
 const SOLO_PROFILE: PaneProfile = {
   paneKey: "solo",
+  emptyTitle: "开始验证",
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: true,
   defaultToolNames: null,
@@ -195,7 +196,8 @@ const SOLO_PROFILE: PaneProfile = {
 
 const BASE_PROFILE: PaneProfile = {
   paneKey: "base",
-  title: "仅基础数据",
+  title: "基础数据",
+  emptyTitle: "直接查询数据",
   defaultPrompt: DEFAULT_BASE_PROMPT,
   injectKnContext: false,
   defaultToolNames: BASE_DATA_TOOL_NAMES,
@@ -256,9 +258,9 @@ function reportToMarkdown(
   const L: string[] = [];
   L.push(`# Agent 对话对比报告 · ${knLabel}`, "");
   L.push(`- 生成时间：${generatedAt}`);
-  L.push(`- 左「仅基础数据」模型：${base.model || "—"}；右「业务知识网络」模型：${kn.model || "—"}`, "");
+  L.push(`- 左「基础数据」模型：${base.model || "—"}；右「业务知识网络」模型：${kn.model || "—"}`, "");
   L.push("## 会话总览", "");
-  L.push("| 指标 | 仅基础数据 | 业务知识网络 |");
+  L.push("| 指标 | 基础数据 | 业务知识网络 |");
   L.push("| --- | --- | --- |");
   L.push(`| 总 token | ${fmtTokens(base.stats.tokens)} | ${fmtTokens(kn.stats.tokens)} |`);
   L.push(`| 总耗时 | ${fmtDuration(base.stats.ms)} | ${fmtDuration(kn.stats.ms)} |`);
@@ -273,7 +275,7 @@ function reportToMarkdown(
     const sameQ = !b || !k || b.question === k.question;
     L.push(`## 第 ${i + 1} 轮`, "");
     L.push(`> ${sameQ ? (k?.question ?? b?.question ?? "—") : `左：${b?.question ?? "—"} ／ 右：${k?.question ?? "—"}`}`, "");
-    L.push("| 指标 | 仅基础数据 | 业务知识网络 |");
+    L.push("| 指标 | 基础数据 | 业务知识网络 |");
     L.push("| --- | --- | --- |");
     L.push(
       `| token | ${b?.tokens != null ? fmtTokens(b.tokens) : "—"} | ${k?.tokens != null ? fmtTokens(k.tokens) : "—"} |`,
@@ -283,7 +285,7 @@ function reportToMarkdown(
     );
     L.push(`| 工具调用 | ${mdCalls(b)} | ${mdCalls(k)} |`);
     L.push(`| 结果 | ${b ? outcomeLabel(b.outcome) : "—"} | ${k ? outcomeLabel(k.outcome) : "—"} |`, "");
-    L.push(`### 仅基础数据 · 回答`, "", answerBlock(b), "");
+    L.push(`### 基础数据 · 回答`, "", answerBlock(b), "");
     L.push(`### 业务知识网络 · 回答`, "", answerBlock(k), "");
   }
   if (summary.trim()) L.push("## AI 总结", "", summary.trim(), "");
@@ -311,10 +313,10 @@ function paneBrief(label: string, s: PaneSnapshot): string {
 const KN_PROFILE: PaneProfile = {
   paneKey: "kn",
   title: "业务知识网络",
+  emptyTitle: "基于知识网络回答",
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: true,
   defaultToolNames: null,
-  highlight: true,
 };
 
 export function AgentChat({
@@ -375,6 +377,7 @@ export function AgentChat({
   const soloRef = useRef<ChatPaneHandle>(null);
   const baseRef = useRef<ChatPaneHandle>(null);
   const knRef = useRef<ChatPaneHandle>(null);
+  const pageScrollRef = useRef<HTMLDivElement>(null);
 
   // 拉模型列表（模型工厂）一次，两侧共享；默认模型在 ChatPane 内选。
   useEffect(() => {
@@ -586,7 +589,7 @@ export function AgentChat({
     if (!report || summarizing) return;
     const modelName = report.kn.model || report.base.model;
     if (!modelName) return;
-    const content = [paneBrief("A · 仅基础数据", report.base), "", paneBrief("B · 业务知识网络", report.kn)].join("\n");
+    const content = [paneBrief("A · 基础数据", report.base), "", paneBrief("B · 业务知识网络", report.kn)].join("\n");
     setSummarizing(true);
     setSummary("");
     const controller = new AbortController();
@@ -616,7 +619,7 @@ export function AgentChat({
     if (noLlm) return "请先在「模型工厂」接入大模型后再对话";
     if (!compare.on) return `向 Agent 提问，例如：${suggestions[0] ?? FALLBACK_SUGGESTIONS[0]}`;
     if (compare.target === "both") return "同一个问题，同时问两侧，对比两种回答";
-    return compare.target === "base" ? "仅问左侧「仅基础数据」" : "仅问右侧「业务知识网络」";
+    return compare.target === "base" ? "发送给「基础数据」" : "发送给「业务知识网络」";
   }, [noLlm, compare, suggestions]);
 
   const paneShared = {
@@ -631,110 +634,140 @@ export function AgentChat({
     getTools,
     toolDefs,
     resourceScope: knResourceIds,
+    pageScrollRef,
   };
 
-  return (
-    <div className={styles.root}>
-      <div className={styles.cmpBar}>
-        <Switch
-          size="small"
-          checked={compare.on}
-          disabled={anyBusy}
-          onChange={(on) => setCompareState((prev) => ({ ...prev, on }))}
-        />
-        <span className={styles.cmpTitle}>
-          <PauseOutlined rotate={90} /> 对比模式
-        </span>
-        <span className={styles.cmpDesc}>同一问题，对比「仅基础数据」与「有业务知识网络」两种回答</span>
-        {compare.on ? (
-          <button
-            type="button"
-            className={styles.cmpReport}
-            onClick={openReport}
-            disabled={anyBusy}
-            title="对比两侧最近一轮的回答与指标，可生成 AI 总结"
-          >
-            <FileTextOutlined /> 对比报告
-          </button>
-        ) : null}
-      </div>
-
+  const composer = (
+    <div className={styles.composer}>
       {compare.on ? (
-        <div className={styles.panes}>
-          <div className={styles.pane}>
-            <ChatPane
-              ref={baseRef}
-              {...paneShared}
-              profile={BASE_PROFILE}
-              suggestions={suggestions}
-              onPick={sendQuestion}
-              onBusyChange={onBaseBusy}
-            />
-          </div>
-          <div className={`${styles.pane} ${styles.paneRight} ${styles.paneHl}`}>
-            <ChatPane
-              ref={knRef}
-              {...paneShared}
-              profile={KN_PROFILE}
-              suggestions={suggestions}
-              onPick={sendQuestion}
-              onBusyChange={onKnBusy}
-            />
-          </div>
-        </div>
-      ) : (
-        <ChatPane
-          ref={soloRef}
-          {...paneShared}
-          profile={SOLO_PROFILE}
-          suggestions={suggestions}
-          onPick={sendQuestion}
-          onBusyChange={onSoloBusy}
-        />
-      )}
-
-      <div className={styles.composer}>
-        {compare.on ? (
-          <div className={styles.targetRow}>
+        <div className={styles.targetBar}>
+          <div className={styles.targetLeft}>
+            <span className={styles.targetLabel}>发送到</span>
             <Segmented
               className={styles.targetSeg}
               value={compare.target}
               onChange={(value) => setCompareState((prev) => ({ ...prev, target: value as CompareTarget }))}
               options={[
                 { label: "两侧同问", value: "both" },
-                { label: "仅基础数据", value: "base" },
-                { label: "仅业务知识网络", value: "kn" },
+                { label: "基础数据", value: "base" },
+                { label: "业务知识网络", value: "kn" },
               ]}
             />
           </div>
-        ) : null}
-        <div className={styles.cwrap}>
-          <textarea
-            className={styles.cInput}
-            value={input}
-            rows={1}
-            disabled={noLlm}
-            placeholder={placeholder}
-            spellCheck={false}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              // 跳过中文输入法组字中的回车（确认候选词），避免误发送。
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
-                e.preventDefault();
-                sendShared();
-              }
-            }}
-          />
-          {anyTargetBusy ? (
-            <button type="button" className={styles.stopBtn} onClick={stopAll}>
-              停止
+          {compare.target === "both" ? (
+            <button
+              type="button"
+              className={styles.cmpReport}
+              onClick={openReport}
+              disabled={anyBusy}
+              title="对比两侧最近一轮的回答与指标，可生成 AI 总结"
+            >
+              <FileTextOutlined /> 对比报告
             </button>
-          ) : (
-            <button type="button" className={styles.sendBtn} onClick={sendShared} disabled={!input.trim() || noLlm}>
-              发送
-            </button>
-          )}
+          ) : null}
         </div>
+      ) : null}
+      <div className={styles.cwrap}>
+        <textarea
+          className={styles.cInput}
+          value={input}
+          rows={1}
+          disabled={noLlm}
+          placeholder={placeholder}
+          spellCheck={false}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            // 跳过中文输入法组字中的回车（确认候选词），避免误发送。
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+              e.preventDefault();
+              sendShared();
+            }
+          }}
+        />
+        {anyTargetBusy ? (
+          <button type="button" className={styles.stopBtn} onClick={stopAll}>
+            停止
+          </button>
+        ) : (
+          <button type="button" className={styles.sendBtn} onClick={sendShared} disabled={!input.trim() || noLlm}>
+            发送
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div ref={pageScrollRef} className={styles.root}>
+      <header className={styles.agentHeader}>
+        <div className={styles.headerLeft}>
+          <div className={styles.modeToggle}>
+            <Switch
+              checked={compare.on}
+              disabled={anyBusy}
+              onChange={(checked) => setCompareState((prev) => ({ ...prev, on: checked }))}
+            />
+            <span>对比模式</span>
+          </div>
+          {!compare.on ? <span className={styles.paneTitle}>业务知识网络</span> : null}
+        </div>
+        {!compare.on ? (
+          <div className={styles.headerActions}>
+            <button type="button" className={styles.barBtn} onClick={() => soloRef.current?.openSettings()}>
+              <SettingOutlined /> 问答配置 <RightOutlined />
+            </button>
+            <button type="button" className={styles.barBtn} onClick={() => soloRef.current?.clear()} disabled={anyBusy}>
+              <ClearOutlined /> 清空
+            </button>
+          </div>
+        ) : null}
+      </header>
+
+      <div className={compare.on ? styles.compareStage : styles.soloStage}>
+        {compare.on ? (
+          <div className={styles.comparePanel}>
+            <div className={`${styles.panes} ${compare.target !== "both" ? styles.panesSingle : ""}`}>
+              {compare.target === "both" || compare.target === "base" ? (
+                <div className={styles.pane}>
+                  <ChatPane
+                    ref={baseRef}
+                    {...paneShared}
+                    profile={BASE_PROFILE}
+                    suggestions={suggestions}
+                    onPick={sendQuestion}
+                    onBusyChange={onBaseBusy}
+                  />
+                </div>
+              ) : null}
+              {compare.target === "both" || compare.target === "kn" ? (
+                <div className={styles.pane}>
+                  <ChatPane
+                    ref={knRef}
+                    {...paneShared}
+                    profile={KN_PROFILE}
+                    suggestions={suggestions}
+                    onPick={sendQuestion}
+                    onBusyChange={onKnBusy}
+                  />
+                </div>
+              ) : null}
+            </div>
+            {composer}
+          </div>
+        ) : (
+          <div className={styles.soloPanel}>
+            <ChatPane
+              ref={soloRef}
+              {...paneShared}
+              profile={SOLO_PROFILE}
+              suggestions={suggestions}
+              showToolbar={false}
+              onPick={sendQuestion}
+              onBusyChange={onSoloBusy}
+            />
+            {composer}
+          </div>
+        )}
       </div>
 
       <Modal
@@ -804,7 +837,7 @@ export function AgentChat({
                         <tr>
                           <th>会话总览（{Math.max(ba.rounds, ka.rounds)} 轮）</th>
                           <th>
-                            <span className={styles.paneTitle}>仅基础数据</span>
+                            <span className={styles.paneTitle}>基础数据</span>
                           </th>
                           <th>
                             <span className={`${styles.paneTitle} ${styles.paneTitleHl}`}>业务知识网络</span>
@@ -934,7 +967,7 @@ export function AgentChat({
                       <div className={styles.rptAnsGrid}>
                         {(
                           [
-                            { key: "base", title: "仅基础数据", hl: false, round: b },
+                            { key: "base", title: "基础数据", hl: false, round: b },
                             { key: "kn", title: "业务知识网络", hl: true, round: k },
                           ] as const
                         ).map(({ key, title, hl, round }) => {

@@ -14,7 +14,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Empty, Input, Select, Table, Tag } from "antd";
+import { Alert, Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +24,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import {
   deleteKnowledgeNetworkMetrics,
@@ -268,11 +269,7 @@ export function MetricListPanel({
       width: 160,
       render: (tags: string[]) =>
         tags.length > 0 ? (
-          <div className={styles.tableTags}>
-            {tags.map((tag) => (
-              <Tag key={tag}>{tag}</Tag>
-            ))}
-          </div>
+          <ResourceTagList tags={tags} />
         ) : (
           "--"
         ),

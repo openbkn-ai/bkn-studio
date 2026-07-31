@@ -109,4 +109,45 @@ describe("ActionTypeConditionEditor", () => {
       value: "100",
     });
   });
+
+  it("hides value input for valueless operations and clears stale values", () => {
+    const handleChange = vi.fn();
+
+    render(
+      <ActionTypeConditionEditor
+        boundObjectTypeId="material_entity"
+        hideObjectTypeSelect
+        objectTypes={[]}
+        onChange={handleChange}
+        propertyOptions={[
+          {
+            displayName: "Product ID",
+            label: "Product ID",
+            name: "product_id",
+            type: "string",
+            value: "product_id",
+          },
+        ]}
+        value={{
+          field: "product_id",
+          objectTypeId: "material_entity",
+          operation: "exist",
+          value: "stale",
+          valueFrom: "const",
+        }}
+      />,
+    );
+
+    expect(
+      screen.queryByPlaceholderText("knowledgeNetwork.actionTypeConditionValueInputPlaceholder"),
+    ).toBeNull();
+
+    fireEvent.mouseDown(screen.getByText("knowledgeNetwork.actionTypeConditionOperation_exist"));
+    fireEvent.click(screen.getByText("knowledgeNetwork.actionTypeConditionOperation_not_exist"));
+
+    const nextCondition = handleChange.mock.lastCall?.[0] as ActionTypeCondition;
+
+    expect(nextCondition.operation).toBe("not_exist");
+    expect(nextCondition.value).toBeUndefined();
+  });
 });

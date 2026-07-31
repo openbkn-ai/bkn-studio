@@ -17,6 +17,8 @@ export const shellEnUS = {
     items: {
       globalBusinessKnowledgeNetwork: "Global Business Knowledge Network",
       domainKnowledgeNetwork: "Domain Knowledge Network",
+      knowledgeNetworkManagement: "Knowledge Network Management",
+      knowledgeNetworkIntegration: "Knowledge Network Integration",
       generalBusinessKnowledgeNetwork: "Data Semantic Governance",
       dataConnection: "Data Connection",
       dataCatalog: "Data Directory",

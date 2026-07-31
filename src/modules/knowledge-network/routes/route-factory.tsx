@@ -11,10 +11,11 @@ import type { RouteObject } from "react-router-dom";
 
 import { RouteLoading } from "@/app/router/RouteLoading";
 
-const KNOWLEDGE_NETWORK_MENU_KEY = "domain-knowledge-network";
+const KNOWLEDGE_NETWORK_MANAGEMENT_MENU_KEY = "domain-knowledge-network-management";
 
 type KnowledgeNetworkRouteMeta = {
   descriptionKey: string;
+  menuKey?: string;
   titleKey: string;
 };
 
@@ -32,7 +33,7 @@ export function createKnowledgeNetworkRoute(
     handle: {
       console: {
         descriptionKey: meta.descriptionKey,
-        menuKey: KNOWLEDGE_NETWORK_MENU_KEY,
+        menuKey: meta.menuKey ?? KNOWLEDGE_NETWORK_MANAGEMENT_MENU_KEY,
         titleKey: meta.titleKey,
       },
     },

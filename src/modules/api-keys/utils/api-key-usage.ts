@@ -14,23 +14,12 @@ export function serverOrigin(): string {
   return typeof window !== "undefined" ? window.location.origin : "https://your-bkn-host";
 }
 
-const REST_PATH = "/api/agent-retrieval/v1/kn/search_schema";
 const MCP_PATH = "/api/agent-retrieval/v1/mcp";
 const MCP_NAME = "bkn-agent-retrieval";
 
 /** MCP 服务端点（真实网关地址 + /mcp）。 */
 export function mcpUrl(): string {
   return `${serverOrigin()}${MCP_PATH}`;
-}
-
-/** REST 调用示例（真实契约：/v1 前缀，仅 Authorization 头）。 */
-export function buildRestSnippet(keyValue: string): string {
-  return [
-    `curl -X POST '${serverOrigin()}${REST_PATH}?response_format=json' \\`,
-    `  -H 'Authorization: Bearer ${keyValue}' \\`,
-    `  -H 'Content-Type: application/json' \\`,
-    `  -d '{"kn_id":"your_kn_id","query":"查询核心业务对象与关系"}'`,
-  ].join("\n");
 }
 
 /** 通用 mcp.json 配置（Cursor / Claude Code .mcp.json / 大多数 MCP 客户端）。 */
@@ -65,5 +54,36 @@ export function buildCodexSnippet(keyValue: string): string {
     `[mcp_servers.${MCP_NAME}]`,
     `url = "${mcpUrl()}"`,
     `http_headers = { Authorization = "Bearer ${keyValue}" }`,
+  ].join("\n");
+}
+
+/** OpenBKN CLI：复用统一的 BKN_BASE_URL / BKN_TOKEN 环境变量。 */
+export function buildCliSnippet(keyValue: string): string {
+  return [
+    "npm install -g @openbkn/bkn-sdk",
+    "",
+    `export BKN_BASE_URL="${serverOrigin()}"`,
+    `export BKN_TOKEN="${keyValue}"`,
+    "",
+    'openbkn context search-schema <kn-id> "查询核心业务对象与关系"',
+  ].join("\n");
+}
+
+/** Node.js SDK：与 CLI 使用同一对环境变量和同一枚 API Key。 */
+export function buildSdkSnippet(keyValue: string): string {
+  return [
+    "npm install @openbkn/bkn-sdk",
+    "",
+    `export BKN_BASE_URL="${serverOrigin()}"`,
+    `export BKN_TOKEN="${keyValue}"`,
+    "",
+    'import { createClient } from "@openbkn/bkn-sdk";',
+    "",
+    "const bkn = createClient({",
+    "  baseUrl: process.env.BKN_BASE_URL!,",
+    "  token: process.env.BKN_TOKEN!,",
+    "});",
+    "",
+    'const result = await bkn.context.searchSchema("your_kn_id", "查询核心业务对象与关系");',
   ].join("\n");
 }

@@ -233,8 +233,46 @@
 
 .tableTags {
   display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.tableTags :global(.ant-tag) {
+  flex-shrink: 0;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tableTagsMore {
+  cursor: default;
+}
+
+.tableTagsTooltip {
+  display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  max-width: 260px;
+}
+
+.tableTagsTooltipOverlay :global(.ant-tooltip-inner) {
+  background: #fff;
+  border: 1px solid #d9e0ea;
+  border-radius: 0;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  padding: 8px;
+}
+
+.tableTagsTooltipOverlay :global(.ant-tooltip-arrow::before) {
+  background: #fff;
+  border: 1px solid #d9e0ea;
+}
+
+.tableTagsTooltip :global(.ant-tag) {
+  margin-inline-end: 0;
 }
 
 .tableLink {

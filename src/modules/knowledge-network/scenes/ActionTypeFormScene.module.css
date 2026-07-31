@@ -26,11 +26,93 @@
   margin-inline-end: 4px;
 }
 
-.executionForm {
-  margin: 24px auto 32px;
-  max-width: 900px;
-  padding: 0 24px;
-  width: 100%;
+.formSection {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0 0 20px;
+}
+
+.formSection + .formSection {
+  margin-top: 20px;
+}
+
+.formSection:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.formSection h3 {
+  color: #1f2329;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  margin: 0 0 16px;
+}
+
+.ruleHeader {
+  align-items: center;
+  color: #1f2329;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 8px;
+  line-height: 22px;
+}
+
+.ruleIndex {
+  align-items: center;
+  background: #1677ff;
+  border-radius: 50%;
+  color: #fff;
+  display: inline-flex;
+  flex: 0 0 22px;
+  font-size: 12px;
+  font-weight: 600;
+  height: 22px;
+  justify-content: center;
+  line-height: 22px;
+  width: 22px;
+}
+
+.ruleSection {
+  padding: 8px 0 0;
+}
+
+.ruleCollapse {
+  background: transparent;
+}
+
+.ruleCollapse :global(.ant-collapse-item) {
+  background: #fff;
+  border: 1px solid #e5e7eb !important;
+  margin-bottom: 10px;
+}
+
+.ruleCollapse :global(.ant-collapse-header) {
+  align-items: center !important;
+  padding: 10px 12px !important;
+}
+
+.ruleCollapse :global(.ant-collapse-content) {
+  border-top: 1px solid #eef0f3 !important;
+}
+
+.ruleCollapse :global(.ant-collapse-content-box) {
+  padding: 12px 14px 4px !important;
+}
+
+.labelWithHelp {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.helpIcon {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+}
+
+.helpIcon:hover {
+  color: #1677ff;
 }
 
 .loadError {

@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { AccountScene } from "@/modules/account/scenes/AccountScene";
+import { AccountScene, type AccountSection } from "@/modules/account/scenes/AccountScene";
 
-export function AccountPage() {
-  return <AccountScene />;
+export function AccountPage({ section }: { section: AccountSection }) {
+  return <AccountScene section={section} />;
 }

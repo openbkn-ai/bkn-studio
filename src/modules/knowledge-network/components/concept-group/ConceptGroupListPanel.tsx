@@ -14,7 +14,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Empty, Input, Select, Table, Tag } from "antd";
+import { Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,6 +26,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
+import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import {
   getKnowledgeNetworkConceptGroup,
@@ -281,11 +282,7 @@ export function ConceptGroupListPanel({
       width: 160,
       render: (value: string[] | undefined) =>
         value && value.length > 0 ? (
-          <div className={styles.tableTags}>
-            {value.map((tag) => (
-              <Tag key={tag}>{tag}</Tag>
-            ))}
-          </div>
+          <ResourceTagList tags={value} />
         ) : (
           t("knowledgeNetwork.noTags")
         ),

@@ -250,7 +250,7 @@ export function RelationTypeResourceMappingRules({
       dataIndex: "sourceValue",
       key: "sourceValue",
       title: t("knowledgeNetwork.relationTypeMappingSourcePoint"),
-      width: 215,
+      width: "24%",
       render: (cellValue: string | undefined, row) =>
         row.rowType === "object" ? (
           <RelationTypeObjectTypeSelect
@@ -277,7 +277,7 @@ export function RelationTypeResourceMappingRules({
       dataIndex: "resourceValue",
       key: "resourceValue",
       title: t("knowledgeNetwork.relationTypeResourceColumn"),
-      width: 400,
+      width: "40%",
       render: (cellValue: string | undefined, row) => {
         if (row.rowType === "object") {
           return (
@@ -334,7 +334,7 @@ export function RelationTypeResourceMappingRules({
       dataIndex: "targetValue",
       key: "targetValue",
       title: t("knowledgeNetwork.relationTypeMappingTargetPoint"),
-      width: 215,
+      width: "24%",
       render: (cellValue: string | undefined, row) =>
         row.rowType === "object" ? (
           <RelationTypeObjectTypeSelect
@@ -382,7 +382,6 @@ export function RelationTypeResourceMappingRules({
         dataSource={tableRows}
         pagination={false}
         rowKey="key"
-        scroll={{ x: 960 }}
         size="small"
       />
       <AppButton

@@ -9,10 +9,23 @@ export const accountEnUS = {
   account: {
     title: "Account",
     description: "View your profile, change your password, and manage API keys.",
-    tabs: {
-      profile: "Profile",
-      security: "Security",
-      keys: "API keys",
+    navigation: {
+      title: "Account settings",
+      backToWorkspace: "Back to workspace",
+    },
+    sections: {
+      profile: {
+        title: "Personal information",
+        description: "View and maintain your profile and account information.",
+      },
+      security: {
+        title: "Change password",
+        description: "Update your login password to keep your account secure.",
+      },
+      apiKeys: {
+        title: "API keys",
+        description: "Issue and manage API keys for external systems and agent access.",
+      },
     },
     profileSoon: "Profile editing is coming soon.",
     securitySoon: "Self-service password change is coming soon.",

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DownOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
+import { DownOutlined, LeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatches, useNavigate } from "react-router-dom";
@@ -18,6 +18,7 @@ import {
 } from "@/app/shell/console-navigation";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import { accountSideNavigation } from "@/modules/account/navigation";
 import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeatures";
 import { isMarketCatalogEnabled } from "@/modules/execution-factory/utils/market-catalog";
 
@@ -40,10 +41,15 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   const navigate = useNavigate();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const routeMenuKey = routeHandle?.console?.menuKey;
+  const isAccountRoute = location.pathname.startsWith("/account");
 
   const navigationItems = useMemo(
-    () =>
-      filterNavByPermission(
+    () => {
+      if (isAccountRoute) {
+        return accountSideNavigation;
+      }
+
+      return filterNavByPermission(
         filterConsoleNavigation(consoleNavigation, {
           hideCatalog: !features.catalog,
           // 执行工厂菜单常驻:不再跟随 capabilities-lab 的
@@ -53,13 +59,17 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
           hideMarketCatalog: !isMarketCatalogEnabled(),
         }),
         runtimeConfig.currentUser.permissions,
-      ),
-    [features.catalog, runtimeConfig.currentUser.permissions],
+      );
+    },
+    [features.catalog, isAccountRoute, runtimeConfig.currentUser.permissions],
   );
 
   const selectedItem = useMemo(
-    () => findSelectedItem(routeMenuKey, location.pathname),
-    [location.pathname, routeMenuKey],
+    () =>
+      isAccountRoute
+        ? findSelectedAccountItem(location.pathname)
+        : findSelectedItem(routeMenuKey, location.pathname),
+    [isAccountRoute, location.pathname, routeMenuKey],
   );
 
   const [expandedKeys, setExpandedKeys] = useState<string[]>(() =>
@@ -89,6 +99,23 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   return (
     <aside className={collapsed ? "console-sidenav is-collapsed" : "console-sidenav"}>
       <div className="console-sidenav-scroll">
+        {isAccountRoute ? (
+          <>
+            <button
+              className="console-sidenav-return"
+              onClick={() => void navigate("/knowledge-network")}
+              title={t("account.navigation.backToWorkspace")}
+              type="button"
+            >
+              <span className="console-sidenav-icon" aria-hidden>
+                <LeftOutlined />
+              </span>
+              {!collapsed ? (
+                <span className="console-sidenav-label">{t("account.navigation.backToWorkspace")}</span>
+              ) : null}
+            </button>
+          </>
+        ) : null}
         <ul className="console-sidenav-list">
           {navigationItems.map((item) => {
             const hasChildren = Boolean(item.children?.length);
@@ -223,6 +250,14 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
       </div>
     </aside>
   );
+}
+
+function findSelectedAccountItem(pathname: string): SelectedItem | undefined {
+  const matched = accountSideNavigation
+    .filter((item) => item.path && pathname.startsWith(item.path))
+    .sort((left, right) => (right.path?.length ?? 0) - (left.path?.length ?? 0))[0];
+
+  return matched ? { key: matched.key } : undefined;
 }
 
 function findSelectedItem(menuKey: string | undefined, pathname: string): SelectedItem | undefined {

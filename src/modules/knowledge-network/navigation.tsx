@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DeploymentUnitOutlined } from "@ant-design/icons";
+import { ApiOutlined, DeploymentUnitOutlined, FolderOpenOutlined } from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 
@@ -15,7 +15,20 @@ export const knowledgeNetworkNavigation: ConsoleNavContribution = {
       key: "domain-knowledge-network",
       labelKey: "shell.items.domainKnowledgeNetwork",
       icon: <DeploymentUnitOutlined />,
-      path: "/knowledge-network",
+      children: [
+        {
+          key: "domain-knowledge-network-management",
+          labelKey: "shell.items.knowledgeNetworkManagement",
+          icon: <FolderOpenOutlined />,
+          path: "/knowledge-network",
+        },
+        {
+          key: "domain-knowledge-network-integration",
+          labelKey: "shell.items.knowledgeNetworkIntegration",
+          icon: <ApiOutlined />,
+          path: "/knowledge-network/integration",
+        },
+      ],
     },
   ],
 };

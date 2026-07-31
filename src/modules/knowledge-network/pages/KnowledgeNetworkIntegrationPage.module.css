@@ -1,0 +1,372 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 14px 12px 20px;
+  background: #fff;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d9e0ea;
+}
+
+.headerCopy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.title {
+  margin: 0 0 5px;
+  color: #1f2329;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.description {
+  margin: 0;
+  color: #526179;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: nowrap;
+}
+
+.modeSection {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 24px;
+  min-height: 58px;
+  border-bottom: 1px solid #d9e0ea;
+}
+
+.modeLabel {
+  color: #1f2329;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tabs {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 58px;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #64748b;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: #1d4ed8;
+  background: #f8fbff;
+}
+
+.tabActive {
+  border-bottom-color: #2e68ff;
+  background: #fff;
+  color: #1d4ed8;
+}
+
+.tabIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  font-size: 16px;
+}
+
+.tabLabel {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.experienceHost {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.experienceHost > section {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sdkPage {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.62fr) minmax(0, 1.38fr);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.sdkGuide {
+  padding: 28px 26px;
+  border-right: 1px solid #d9e0ea;
+}
+
+.sdkTitle,
+.sdkContentTitle {
+  margin: 0;
+  color: #132036;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.sdkDescription {
+  margin: 8px 0 0;
+  color: #526179;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.sdkSteps {
+  display: grid;
+  gap: 11px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: sdk-step;
+}
+
+.sdkSteps li {
+  position: relative;
+  padding-left: 30px;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.6;
+  counter-increment: sdk-step;
+}
+
+.sdkSteps li::before {
+  content: counter(sdk-step);
+  position: absolute;
+  top: 1px;
+  left: 0;
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid #bfd0ea;
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sdkKeyNote {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5ebf5;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sdkKeyNote > :first-child {
+  color: #1d4ed8;
+}
+
+.sdkKeyNote a,
+.sdkPackageLink {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.sdkKeyNote a:hover,
+.sdkPackageLink:hover {
+  color: #1742b4;
+}
+
+.sdkContent {
+  min-width: 0;
+  padding: 24px 26px;
+}
+
+.sdkContentHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d9e0ea;
+}
+
+.sdkEyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sdkContentTitle {
+  font-size: 18px;
+}
+
+.sdkPackageLink {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid #bcd0f7;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.sdkExampleTabs {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #d9e0ea;
+}
+
+.sdkExampleTab {
+  height: 32px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sdkExampleTab:hover {
+  background: #f2f6ff;
+  color: #1d4ed8;
+}
+
+.sdkExampleTabActive {
+  border-color: #bcd0f7;
+  background: #eef4ff;
+  color: #1d4ed8;
+}
+
+.sdkCodeBlock {
+  margin-top: 16px;
+  border: 1px solid #d9e0ea;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sdkCodeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #d9e0ea;
+  background: #f8faff;
+  color: #526179;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sdkCopyButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid #d9e0ea;
+  border-radius: 4px;
+  background: #fff;
+  color: #526179;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sdkCopyButton:hover {
+  border-color: #9bb9ff;
+  color: #1d4ed8;
+}
+
+.sdkCode {
+  min-height: 290px;
+  margin: 0;
+  padding: 18px;
+  overflow: auto;
+  background: #f5f7fb;
+  color: #17305b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre;
+}
+
+@media (max-width: 1100px) {
+  .headerCopy {
+    width: 100%;
+  }
+
+  .description {
+    white-space: normal;
+  }
+
+  .sdkPage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sdkGuide {
+    border-right: 0;
+    border-bottom: 1px solid #d9e0ea;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 14px;
+  }
+
+  .modeSection {
+    gap: 16px;
+  }
+
+  .tab {
+    padding-inline: 10px;
+  }
+}

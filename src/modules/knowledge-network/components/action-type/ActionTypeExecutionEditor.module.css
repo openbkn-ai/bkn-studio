@@ -11,6 +11,7 @@
 
 .operatorSection {
   margin-bottom: 24px;
+  max-width: 640px;
 }
 
 .operatorLabel {

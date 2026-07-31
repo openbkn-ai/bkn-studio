@@ -11,6 +11,7 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -19,13 +20,13 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ApiKeySecretModal } from "@/modules/api-keys/components/ApiKeySecretModal";
 import { IssueApiKeyModal } from "@/modules/api-keys/components/IssueApiKeyModal";
-import { KeyUsageModal } from "@/modules/api-keys/components/KeyUsageModal";
 import {
   listApiKeys,
   regenerateApiKey,
   revokeApiKey,
 } from "@/modules/api-keys/services/api-key.service";
 import type { ApiKey, IssuedApiKey } from "@/modules/api-keys/types/api-key";
+import { readApiKeyReturnTo, saveApiKeyHandoff } from "@/modules/api-keys/utils/api-key-handoff";
 
 import styles from "./ApiKeyListScene.module.css";
 
@@ -35,12 +36,14 @@ const formatTime = (value?: string | null) =>
 export function ApiKeyListScene({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const returnTo = readApiKeyReturnTo(location.search);
   const [items, setItems] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
   const [secret, setSecret] = useState<IssuedApiKey | null>(null);
-  const [usageKey, setUsageKey] = useState<ApiKey | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -100,6 +103,15 @@ export function ApiKeyListScene({ embedded = false }: { embedded?: boolean } = {
     });
   };
 
+  const handleSecretClose = () => {
+    const issued = secret;
+    setSecret(null);
+    if (issued && returnTo) {
+      saveApiKeyHandoff(returnTo, issued.key);
+      void navigate(returnTo);
+    }
+  };
+
   const columns: ColumnsType<ApiKey> = [
     {
       title: `${t("apiKeys.columns.name")} / ${t("apiKeys.columns.key")}`,
@@ -149,9 +161,6 @@ export function ApiKeyListScene({ embedded = false }: { embedded?: boolean } = {
       width: 170,
       render: (_value, record) => (
         <div className={styles.actions}>
-          <AppButton type="link" onClick={() => setUsageKey(record)}>
-            {t("apiKeys.actionUsage")}
-          </AppButton>
           <AppButton type="link" onClick={() => handleRegenerate(record)}>
             {t("apiKeys.actionRegenerate")}
           </AppButton>
@@ -224,8 +233,7 @@ export function ApiKeyListScene({ embedded = false }: { embedded?: boolean } = {
           void loadData();
         }}
       />
-      <ApiKeySecretModal secret={secret} onClose={() => setSecret(null)} />
-      <KeyUsageModal apiKey={usageKey} onClose={() => setUsageKey(null)} />
+      <ApiKeySecretModal secret={secret} onClose={handleSecretClose} />
     </section>
   );
 }

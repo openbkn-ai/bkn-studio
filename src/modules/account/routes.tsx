@@ -6,7 +6,7 @@
  */
 
 import { lazy, Suspense, type ReactNode } from "react";
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 
 import { RouteLoading } from "@/app/router/RouteLoading";
 import type { AppRouteContribution } from "@/app/router/types";
@@ -23,6 +23,10 @@ function withRouteLoading(element: ReactNode) {
 export const accountRoutes: RouteObject[] = [
   {
     path: "account",
+    element: <Navigate replace to="/account/profile" />,
+  },
+  {
+    path: "account/profile",
     handle: {
       console: {
         descriptionKey: "account.description",
@@ -30,7 +34,29 @@ export const accountRoutes: RouteObject[] = [
         titleKey: "account.title",
       },
     },
-    element: withRouteLoading(<AccountPage />),
+    element: withRouteLoading(<AccountPage section="profile" />),
+  },
+  {
+    path: "account/security",
+    handle: {
+      console: {
+        descriptionKey: "account.description",
+        menuKey: "account",
+        titleKey: "account.title",
+      },
+    },
+    element: withRouteLoading(<AccountPage section="security" />),
+  },
+  {
+    path: "account/api-keys",
+    handle: {
+      console: {
+        descriptionKey: "account.description",
+        menuKey: "account",
+        titleKey: "account.title",
+      },
+    },
+    element: withRouteLoading(<AccountPage section="api-keys" />),
   },
 ];
 

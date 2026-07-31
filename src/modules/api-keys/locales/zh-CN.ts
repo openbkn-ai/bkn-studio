@@ -9,11 +9,11 @@ export const apiKeysZhCN = {
   apiKeys: {
     title: "API Key",
     description:
-      "签发长期 API Key（bak_ 开头），填到 MCP 客户端 / SDK 的 Authorization，替代易过期的登录 token。仅对 Context Loader（MCP / REST）有效，身份与权限同你本人。",
+      "签发长期 API Key（bak_ 开头），用于 MCP、CLI 和 SDK 的 Context Loader 能力调用，替代易过期的登录 token。身份与权限同你本人。",
     issue: "签发 Key",
     refresh: "刷新",
     calloutInfo:
-      "密钥即个人 Bearer 令牌，可填到「立即体验」的 API Key，或配置进 CLI / MCP 客户端。身份与权限同你本人；明文仅在签发时显示一次。",
+      "密钥即个人 Bearer 令牌，可填到「立即体验」的 API Key，或通过 BKN_TOKEN 配置 CLI / SDK，也可配置进 MCP 客户端。身份与权限同你本人；明文仅在签发时显示一次。",
     columns: {
       name: "名称",
       key: "密钥",
@@ -27,18 +27,18 @@ export const apiKeysZhCN = {
     never: "从未",
     statusEnabled: "启用",
     statusDisabled: "停用",
-    actionUsage: "用法",
     actionRegenerate: "重新生成",
     actionRevoke: "撤销",
     usage: {
-      lead: "把密钥作为 Authorization: Bearer 头，调 ContextLoader 的 REST 接口，或配置到 MCP 客户端。",
-      rest: "REST · ContextLoader",
-      mcp: "mcpServers 配置",
+      lead: "API Key 当前用于 Context Loader：配置 MCP 客户端，或通过 BKN_TOKEN 调用 CLI / SDK 的 bkn.context。",
       tabClaude: "Claude Code",
+      tabMcp: "MCP 对接",
+      tabCli: "CLI 对接",
+      tabSdk: "SDK 对接",
       tabCodex: "Codex",
       tabCursor: "Cursor",
-      tabGeneric: "通用 mcp.json",
-      tabRest: "REST",
+      cli: "OpenBKN CLI",
+      sdk: "Node.js SDK",
       claudeCli: "① CLI 一行接入",
       claudeJson: "② 或写入项目 .mcp.json",
       codexToml: "~/.codex/config.toml（streamable HTTP）",

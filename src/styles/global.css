@@ -131,6 +131,7 @@ select {
   align-items: center;
   gap: 18px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .console-brand-title {
@@ -145,6 +146,7 @@ select {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
   color: var(--color-text-secondary);
   font-size: 15px;
 }
@@ -171,12 +173,16 @@ select {
 .console-brand-path-item .is-current {
   display: inline-flex;
   align-items: center;
+  max-width: min(38vw, 420px);
   min-height: 28px;
   padding: 0 10px;
   border-radius: 999px;
   background: var(--color-primary-100);
   color: var(--color-text-primary);
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .console-brand-path-separator {
@@ -344,13 +350,32 @@ select {
   margin-top: 20px;
 }
 
-.console-sidenav-section-title {
-  padding: 0 14px 10px;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+.console-sidenav-return {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 12px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--color-divider);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.console-sidenav-return:hover {
+  background: var(--color-hover);
+  color: var(--color-primary-700);
+}
+
+.console-sidenav.is-collapsed .console-sidenav-return {
+  justify-content: center;
+  padding: 0;
 }
 
 .console-sidenav-list,

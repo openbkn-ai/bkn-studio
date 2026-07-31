@@ -6,7 +6,7 @@
  */
 
 import { DatabaseOutlined } from "@ant-design/icons";
-import { Input, Select, Space, Spin, Table } from "antd";
+import { Input, Select, Spin, Table } from "antd";
 import type { TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -87,7 +87,7 @@ export function ActionTypeToolParamsTable({
       dataIndex: "name",
       key: "name",
       title: t("knowledgeNetwork.actionTypeExecutionParameterName"),
-      width: 260,
+      width: 360,
       render: (cellValue: string, record) => (
         <div className={styles.paramName}>
           <div className={styles.paramTitle} title={cellValue}>
@@ -105,19 +105,21 @@ export function ActionTypeToolParamsTable({
       dataIndex: "type",
       key: "type",
       title: t("knowledgeNetwork.actionTypeExecutionParameterType"),
-      width: 120,
+      width: 76,
     },
     {
       dataIndex: "source",
       key: "source",
       title: t("knowledgeNetwork.actionTypeExecutionParameterSource"),
-      width: 100,
+      width: 76,
       render: (cellValue: string | undefined, record) =>
         record.children?.length ? "" : cellValue || "--",
     },
     {
       key: "value",
+      className: styles.valueColumn,
       title: t("knowledgeNetwork.actionTypeExecutionParameterValue"),
+      width: 300,
       render: (_value, record) => {
         if (record.children?.length) {
           return <div style={{ minHeight: 32 }} />;
@@ -126,7 +128,7 @@ export function ActionTypeToolParamsTable({
         const valueFrom = record.valueFrom ?? "input";
 
         return (
-          <Space.Compact className={styles.valueFrom}>
+          <div className={styles.valueFrom}>
             <Select
               className={styles.valueFromSelect}
               disabled={!hasSource}
@@ -160,7 +162,7 @@ export function ActionTypeToolParamsTable({
             ) : (
               <Input className={styles.valueInput} disabled placeholder="" value="" />
             )}
-          </Space.Compact>
+          </div>
         );
       },
     },
@@ -200,7 +202,6 @@ export function ActionTypeToolParamsTable({
         locale={{ emptyText: emptyContent }}
         pagination={false}
         rowKey="key"
-        scroll={{ x: 920 }}
         size="middle"
       />
     </div>

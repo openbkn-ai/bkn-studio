@@ -14,11 +14,19 @@
 
 /* eslint-disable react-refresh/only-export-components */
 
-import { ClearOutlined, DownOutlined, RightOutlined, SettingOutlined, ThunderboltFilled } from "@ant-design/icons";
-import { App, Select } from "antd";
+import {
+  ClearOutlined,
+  DownOutlined,
+  QuestionCircleOutlined,
+  RightOutlined,
+  SettingOutlined,
+  ThunderboltFilled,
+} from "@ant-design/icons";
+import { App, Drawer, Select, Tooltip } from "antd";
 import {
   forwardRef,
   memo,
+  type RefObject,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -83,6 +91,7 @@ export type PaneProfile = {
   paneKey: PaneKey;
   /** 分屏时面板头显示的身份标签（solo 不显示）。 */
   title?: string;
+  emptyTitle?: string;
   defaultPrompt: string;
   /** 是否把知识网络摘要拼进系统提示词（「仅基础数据」为 false）。 */
   injectKnContext: boolean;
@@ -116,6 +125,8 @@ export type PaneSnapshot = {
 export type ChatPaneHandle = {
   send: (text: string) => void;
   stop: () => void;
+  openSettings: () => void;
+  clear: () => void;
   getSnapshot: () => PaneSnapshot;
 };
 
@@ -317,6 +328,12 @@ export type ChatPaneProps = {
   toolDefs: McpToolDef[] | null;
   /** 当前知识网络绑定的 resource_id 集；用于默认把 list_resources 限定到本网络的数据表。 */
   resourceScope?: readonly string[] | null;
+  /**
+   * 问答工作区的页面级滚动容器。消息不再在面板内部滚动，
+   * 由该容器统一承载阅读和流式回答的贴底跟随。
+   */
+  pageScrollRef: RefObject<HTMLDivElement | null>;
+  showToolbar?: boolean;
   onBusyChange?: (busy: boolean) => void;
 };
 
@@ -336,6 +353,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     getTools,
     toolDefs,
     resourceScope,
+    pageScrollRef,
+    showToolbar = true,
     onBusyChange,
   },
   ref,
@@ -348,18 +367,18 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const [busy, setBusy] = useState(false);
   const [model, setModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState(profile.defaultPrompt);
-  const [promptOpen, setPromptOpen] = useState(false);
-  const [promptView, setPromptView] = useState<"edit" | "full">("edit");
-  // 分屏紧凑模式：提示词 + 参数合并进一个「设置」面板。
+  // 问答配置：模型、工具、系统提示词与参数集中管理，避免主对话界面过载。
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [config, setConfigState] = useState<AgentConfig>(() => loadConfig(profile.paneKey));
-  const [cfgOpen, setCfgOpen] = useState(false);
+  const [draftModel, setDraftModel] = useState("");
+  const [draftSystemPrompt, setDraftSystemPrompt] = useState(profile.defaultPrompt);
+  const [draftConfig, setDraftConfig] = useState<AgentConfig>(() => loadConfig(profile.paneKey));
   // 工具勾选（硬限定）：null = 全部。solo 恒为全部（不显示选择器）。
   const [toolSelection, setToolSelection] = useState<string[] | null>(() => loadToolSelection(profile));
+  const [draftToolSelection, setDraftToolSelection] = useState<string[] | null>(() => loadToolSelection(profile));
   // 会话累计 token + 总时长（像 Claude Code 那样累加）。
   const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
 
-  const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   // 是否贴底跟随；用户上滚时置 false，回到底部恢复，避免生成时被强制拽到底。
   const stickRef = useRef(true);
@@ -375,45 +394,68 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     };
   }, []);
 
-  const setConfigField = useCallback(
+  const setDraftConfigField = useCallback(
     (key: keyof AgentConfig, value: number) => {
-      setConfigState((prev) => {
-        const next = { ...prev, [key]: Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : prev[key] };
-        try {
-          localStorage.setItem(configLsKey(profile.paneKey), JSON.stringify(next));
-        } catch {
-          /* ignore */
-        }
-        return next;
-      });
+      setDraftConfig((prev) => ({ ...prev, [key]: Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : prev[key] }));
     },
-    [profile.paneKey],
+    [],
   );
-  const resetConfig = useCallback(() => {
-    setConfigState({ ...DEFAULT_AGENT_CONFIG });
+  const openSettings = useCallback(() => {
+    setDraftModel(model);
+    setDraftSystemPrompt(systemPrompt);
+    setDraftConfig(config);
+    setDraftToolSelection(toolSelection);
+    setSettingsOpen(true);
+  }, [config, model, systemPrompt, toolSelection]);
+  const cancelSettings = useCallback(() => {
+    setDraftModel(model);
+    setDraftSystemPrompt(systemPrompt);
+    setDraftConfig(config);
+    setDraftToolSelection(toolSelection);
+    setSettingsOpen(false);
+  }, [config, model, systemPrompt, toolSelection]);
+  const saveSettings = useCallback(() => {
+    setModel(draftModel);
+    setSystemPrompt(draftSystemPrompt);
+    setConfigState(draftConfig);
+    if (profile.paneKey !== "solo") setToolSelection(draftToolSelection);
     try {
-      localStorage.removeItem(configLsKey(profile.paneKey));
-    } catch {
-      /* ignore */
-    }
-  }, [profile.paneKey]);
-
-  const setToolSelectionPersist = useCallback(
-    (next: string[] | null) => {
-      setToolSelection(next);
-      try {
-        localStorage.setItem(toolsLsKey(profile.paneKey), JSON.stringify(next));
-      } catch {
-        /* ignore */
+      localStorage.setItem(configLsKey(profile.paneKey), JSON.stringify(draftConfig));
+      if (profile.paneKey !== "solo") {
+        localStorage.setItem(toolsLsKey(profile.paneKey), JSON.stringify(draftToolSelection));
       }
-    },
-    [profile.paneKey],
-  );
+      localStorage.setItem(
+        msgsLsKey(knId, profile.paneKey),
+        JSON.stringify({ messages, model: draftModel, systemPrompt: draftSystemPrompt, stats } satisfies Persisted),
+      );
+    } catch {
+      /* localStorage 不可用时忽略 */
+    }
+    setSettingsOpen(false);
+    message.success("设置已保存");
+  }, [draftConfig, draftModel, draftSystemPrompt, draftToolSelection, knId, message, messages, profile.paneKey, stats]);
+  const resetDraftSystemPrompt = useCallback(() => {
+    setDraftSystemPrompt(profile.defaultPrompt);
+    message.success("系统提示词已恢复默认");
+  }, [message, profile.defaultPrompt]);
+  const resetDraftConfig = useCallback(() => {
+    setDraftConfig({ ...DEFAULT_AGENT_CONFIG });
+    message.success("参数已恢复默认");
+  }, [message]);
 
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-  }, []);
+  const updateStickiness = useCallback(() => {
+    const el = pageScrollRef.current;
+    if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  }, [pageScrollRef]);
+
+  useEffect(() => {
+    const el = pageScrollRef.current;
+    if (!el) return;
+
+    el.addEventListener("scroll", updateStickiness, { passive: true });
+    updateStickiness();
+    return () => el.removeEventListener("scroll", updateStickiness);
+  }, [pageScrollRef, updateStickiness]);
 
   // 载入持久化对话（按 kn + 面板隔离）。
   useEffect(() => {
@@ -447,9 +489,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   );
 
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+    const el = pageScrollRef.current;
+    if (!el || !stickRef.current) return;
+
+    const frame = requestAnimationFrame(() => {
+      if (stickRef.current) el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [messages, pageScrollRef]);
 
   // 一轮结束（busy: true→false）把最终 messages+stats（含本轮时长）落盘；流式中不写。
   const prevBusyRef = useRef(false);
@@ -633,12 +680,6 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     return { model, stats, rounds };
   }, [messages, model, stats]);
 
-  useImperativeHandle(
-    ref,
-    () => ({ send: (text: string) => void send(text), stop, getSnapshot }),
-    [send, stop, getSnapshot],
-  );
-
   const clearChat = useCallback(() => {
     setMessages([]);
     setStats({ tokens: 0, ms: 0 });
@@ -649,11 +690,16 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     }
   }, [knId, profile.paneKey]);
 
+  useImperativeHandle(
+    ref,
+    () => ({ send: (text: string) => void send(text), stop, openSettings, clear: clearChat, getSnapshot }),
+    [send, stop, openSettings, clearChat, getSnapshot],
+  );
+
   const modelOptions = useMemo(
     () => models.map((m) => ({ value: m.modelName, label: m.default ? `${m.modelName} · 默认` : m.modelName })),
     [models],
   );
-
   // 与 MCP 侧栏同款分组：本地 op 定义带组名，线上新增的归 Knowledge Network。
   const toolOptions = useMemo(() => {
     if (!toolDefs) return [];
@@ -661,9 +707,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     const order = [...new Set(CONTEXT_LOADER_OPS.map((op) => op.group))];
     const buckets = new Map<string, { value: string; label: string }[]>();
     for (const t of toolDefs) {
-      const g = groupOf(t.name);
-      if (!buckets.has(g)) buckets.set(g, []);
-      buckets.get(g)!.push({ value: t.name, label: t.name });
+      const group = groupOf(t.name);
+      if (!buckets.has(group)) buckets.set(group, []);
+      buckets.get(group)!.push({ value: t.name, label: t.name });
     }
     return [...buckets.keys()]
       .sort((a, b) => {
@@ -671,12 +717,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         const ib = order.indexOf(b);
         return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
       })
-      .map((g) => ({ label: g, title: g, options: buckets.get(g)! }));
+      .map((group) => ({ label: group, title: group, options: buckets.get(group)! }));
   }, [toolDefs]);
   // 选择器展示值：null（全部）时显示当前已知的全部工具名。
-  const toolValue = useMemo(
-    () => toolSelection ?? (toolDefs ? toolDefs.map((t) => t.name) : []),
-    [toolSelection, toolDefs],
+  const draftToolValue = useMemo(
+    () => draftToolSelection ?? (toolDefs ? toolDefs.map((t) => t.name) : []),
+    [draftToolSelection, toolDefs],
   );
 
   const empty = messages.length === 0;
@@ -686,253 +732,175 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   // 对比分屏时面板只有半宽：压缩头部（去 label、缩 chip/按钮文案），尽量一行放下。
   const compact = profile.paneKey !== "solo";
 
-  // 提示词编辑器（tabs + 文本框）与参数表格：solo 独立面板 / compact「设置」合并面板共用。
   const promptEditor = (
-    <>
-      <div className={styles.promptTabs}>
-        <button
-          type="button"
-          className={`${styles.promptTab} ${promptView === "edit" ? styles.promptTabActive : ""}`}
-          onClick={() => setPromptView("edit")}
-        >
-          编辑
-        </button>
-        <button
-          type="button"
-          className={`${styles.promptTab} ${promptView === "full" ? styles.promptTabActive : ""}`}
-          onClick={() => setPromptView("full")}
-        >
-          完整（实际发送）
-        </button>
-        {promptView === "full" ? (
-          <button
-            type="button"
-            className={styles.linkBtn}
-            style={{ marginLeft: "auto" }}
-            onClick={() => {
-              void navigator.clipboard?.writeText(composedSystem).then(() => message.success("已复制完整提示词"));
-            }}
-          >
-            复制
-          </button>
-        ) : null}
-      </div>
-      {promptView === "edit" ? (
-        <textarea
-          className={styles.promptTa}
-          value={systemPrompt}
-          spellCheck={false}
-          onChange={(e) => setSystemPrompt(e.target.value)}
-          placeholder="系统提示词（修改即时生效，随对话一起发送）"
-        />
-      ) : (
-        <textarea className={`${styles.promptTa} ${styles.promptFull}`} value={composedSystem} readOnly spellCheck={false} />
-      )}
-    </>
+    <textarea
+      className={styles.promptTa}
+      value={draftSystemPrompt}
+      spellCheck={false}
+      onChange={(e) => setDraftSystemPrompt(e.target.value)}
+      placeholder="系统提示词，保存后会随对话一起发送"
+    />
   );
 
   const paramsGrid = (
     <div className={styles.cfgGrid}>
       {CONFIG_FIELDS.map((f) => (
-        <label key={f.key} className={styles.cfgField} title={f.hint}>
-          <span className={styles.cfgLabel}>{f.label}</span>
+        <label key={f.key} className={styles.cfgField}>
+          <span className={styles.cfgLabel}>
+            {f.label}
+            <Tooltip title={f.hint}>
+              <QuestionCircleOutlined className={styles.cfgHintIcon} />
+            </Tooltip>
+          </span>
           <input
             type="number"
             min={0}
             className={styles.cfgInput}
-            value={config[f.key]}
-            onChange={(e) => setConfigField(f.key, Number(e.target.value))}
+            value={draftConfig[f.key]}
+            onChange={(e) => setDraftConfigField(f.key, Number(e.target.value))}
           />
-          <span className={styles.cfgHint}>{f.hint}</span>
         </label>
       ))}
     </div>
   );
-
-  return (
-    <div className={styles.paneRoot}>
-      <div className={`${styles.bar} ${compact ? styles.barCompact : ""}`}>
-        {profile.title ? (
-          <span
-            className={`${styles.paneTitle} ${profile.highlight ? styles.paneTitleHl : ""}`}
-            title={
-              profile.injectKnContext && knSummary
-                ? `已载入网络摘要 · ${knSummary.objectTypes} 对象类 / ${knSummary.relations} 关系类`
-                : undefined
-            }
+  const toolPicker =
+    profile.paneKey !== "solo" ? (
+      <section className={styles.configSection}>
+        <div className={styles.configSectionHead}>
+          <div>
+            <h3>工具范围</h3>
+            <p>限定本侧 Agent 可调用的工具。未选中的工具不会发送给模型。</p>
+          </div>
+          <button
+            type="button"
+            className={styles.linkBtn}
+            onClick={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}
           >
-            {profile.title}
-          </span>
-        ) : null}
-        <div className={styles.barField}>
-          {compact ? null : <span className={styles.barLabel}>模型</span>}
+            恢复默认
+          </button>
+        </div>
+        <div className={styles.configCard}>
+          <div className={styles.configFieldLabel}>可用工具</div>
           <Select
             size="small"
-            className={styles.modelSelect}
+            mode="multiple"
+            className={styles.toolSelect}
             popupClassName={styles.paneMenu}
-            value={model || undefined}
-            onChange={setModel}
-            options={modelOptions}
-            placeholder="选择模型"
+            value={draftToolValue}
+            onChange={(next: string[]) => setDraftToolSelection(next)}
+            options={toolOptions}
+            placeholder={toolDefs ? "选择工具" : "正在加载工具"}
+            loading={!toolDefs}
             disabled={busy}
+            maxTagCount={0}
+            maxTagPlaceholder={() =>
+              draftToolSelection === null
+                ? `全部 · ${draftToolValue.length}`
+                : `已选 ${draftToolValue.length}${toolDefs ? ` / ${toolDefs.length}` : ""}`
+            }
+            allowClear
+            onClear={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}
             popupMatchSelectWidth={false}
           />
         </div>
-        {profile.paneKey !== "solo" ? (
-          <div className={styles.barField} title="勾选本面板可用的 MCP 工具（未勾选的不会传给模型）；清空恢复默认">
-            {compact ? null : <span className={styles.barLabel}>工具</span>}
-            <Select
-              size="small"
-              mode="multiple"
-              className={styles.toolSelect}
-              popupClassName={styles.paneMenu}
-              value={toolValue}
-              onChange={(next: string[]) => setToolSelectionPersist(next)}
-              options={toolOptions}
-              placeholder={toolDefs ? "选择工具" : toolSelection ? "按已存勾选" : "全部工具"}
-              loading={!toolDefs}
-              disabled={busy}
-              maxTagCount={0}
-              maxTagPlaceholder={() =>
-                toolSelection === null
-                  ? `全部 · ${toolValue.length}`
-                  : `已选 ${toolValue.length}${toolDefs ? ` / ${toolDefs.length}` : ""}`
+      </section>
+    ) : null;
+
+  return (
+    <div className={styles.paneRoot}>
+      {showToolbar ? <div className={`${styles.bar} ${compact ? styles.barCompact : ""}`}>
+        <div className={styles.barLeft}>
+          {profile.title ? (
+            <span
+              className={`${styles.paneTitle} ${profile.highlight ? styles.paneTitleHl : ""}`}
+              title={
+                profile.injectKnContext && knSummary
+                  ? `已载入网络摘要 · ${knSummary.objectTypes} 对象类 / ${knSummary.relations} 关系类`
+                  : undefined
               }
-              allowClear
-              onClear={() => setToolSelectionPersist(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}
+            >
+              {profile.title}
+            </span>
+          ) : null}
+        </div>
+        <div className={styles.barActions}>
+          <button type="button" className={styles.barBtn} onClick={settingsOpen ? cancelSettings : openSettings}>
+            <SettingOutlined /> 问答配置 {settingsOpen ? <DownOutlined /> : <RightOutlined />}
+          </button>
+          <button type="button" className={styles.barBtn} onClick={clearChat} disabled={busy || empty} title="清空对话">
+            <ClearOutlined /> 清空
+          </button>
+        </div>
+      </div> : null}
+      <Drawer
+        title="问答配置"
+        placement="right"
+        width={520}
+        open={settingsOpen}
+        onClose={cancelSettings}
+        destroyOnHidden={false}
+        className={styles.configDrawer}
+        footer={
+          <div className={styles.configFooter}>
+            <button type="button" className={styles.cancelBtn} onClick={cancelSettings}>
+              取消
+            </button>
+            <button type="button" className={styles.confirmBtn} onClick={saveSettings}>
+              确定
+            </button>
+          </div>
+        }
+      >
+        <section className={styles.configSection}>
+          <div className={styles.configSectionHead}>
+            <div>
+              <h3>模型配置</h3>
+              <p>选择本次问答使用的模型。</p>
+            </div>
+          </div>
+          <div className={styles.configCard}>
+            <div className={styles.configFieldLabel}>模型</div>
+              <Select
+                size="small"
+                className={styles.modelSelect}
+                popupClassName={styles.paneMenu}
+                value={draftModel || undefined}
+                onChange={setDraftModel}
+              options={modelOptions}
+              placeholder="选择模型"
+              disabled={busy}
               popupMatchSelectWidth={false}
             />
           </div>
-        ) : null}
-        {!compact && profile.injectKnContext && knSummary ? (
-          <span className={styles.knChip}>
-            已载入网络摘要 · {knSummary.objectTypes} 对象类 / {knSummary.relations} 关系类
-          </span>
-        ) : null}
-        {compact ? (
-          // 分屏半宽：提示词 / 参数 / 清空合并到「设置」下拉，头部只留核心（标签 + 模型 + 工具）。
-          <>
-            <button type="button" className={styles.barBtn} onClick={() => setSettingsOpen((v) => !v)}>
-              <SettingOutlined /> 设置 {settingsOpen ? <DownOutlined /> : <RightOutlined />}
+        </section>
+        {toolPicker}
+        <section className={styles.configSection}>
+          <div className={styles.configSectionHead}>
+            <div>
+              <h3><ThunderboltFilled /> 系统提示词</h3>
+              <p>控制 Agent 的身份、工具使用策略和回答风格。</p>
+            </div>
+            <button type="button" className={styles.linkBtn} onClick={resetDraftSystemPrompt}>
+              恢复默认
             </button>
-            <button type="button" className={styles.barBtn} onClick={clearChat} disabled={busy || empty} title="清空对话">
-              <ClearOutlined /> 清空
-            </button>
-          </>
-        ) : (
-          <>
-            <button type="button" className={styles.barBtn} onClick={() => setPromptOpen((v) => !v)}>
-              <ThunderboltFilled /> 系统提示词 {promptOpen ? <DownOutlined /> : <RightOutlined />}
-            </button>
-            <button type="button" className={styles.barBtn} onClick={() => setCfgOpen((v) => !v)}>
-              参数 {cfgOpen ? <DownOutlined /> : <RightOutlined />}
-            </button>
-            <button type="button" className={styles.barBtn} onClick={clearChat} disabled={busy || empty}>
-              清空对话
-            </button>
-          </>
-        )}
-        {stats.tokens > 0 || stats.ms > 0 ? (
-          <span className={styles.statChip} title="本会话累计 token 与总时长">
-            Σ {fmtTokens(stats.tokens)}{compact ? "" : " tokens"} · {fmtDuration(stats.ms)}
-          </span>
-        ) : null}
-      </div>
-      {compact && settingsOpen ? (
-        // 分屏「设置」：系统提示词 + 参数合并在同一面板。
-        <div className={styles.cfgPanel}>
-          <div className={styles.setSecHead}>
-            <ThunderboltFilled /> 系统提示词
-            {promptView === "edit" ? (
-              <button type="button" className={styles.linkBtn} onClick={() => setSystemPrompt(profile.defaultPrompt)}>
-                恢复默认
-              </button>
-            ) : null}
           </div>
           {promptEditor}
-          <div className={styles.setDivider} />
-          <div className={styles.setSecHead}>
-            参数
-            <button type="button" className={styles.linkBtn} onClick={resetConfig}>
+        </section>
+        <section className={styles.configSection}>
+          <div className={styles.configSectionHead}>
+            <div>
+              <h3>参数</h3>
+              <p>限制工具步数、历史保留和输出长度，避免问答跑偏或结果过大。</p>
+            </div>
+            <button type="button" className={styles.linkBtn} onClick={resetDraftConfig}>
               恢复默认
             </button>
           </div>
           {paramsGrid}
-          <div className={styles.promptAct}>
-            <span className={styles.hint}>
-              修改即时生效并保存到本机；参数 0 表示不限制/不截断/不驱逐。kn_id 已锁定为 {knId}。
-            </span>
-            <button
-              type="button"
-              className={styles.confirmBtn}
-              onClick={() => {
-                persist(messages, stats);
-                setSettingsOpen(false);
-                message.success("设置已保存");
-              }}
-            >
-              确认
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {!compact && cfgOpen ? (
-        <div className={styles.cfgPanel}>
-          {paramsGrid}
-          <div className={styles.promptAct}>
-            <button type="button" className={styles.linkBtn} onClick={resetConfig}>
-              恢复默认
-            </button>
-            <span className={styles.hint}>已随输入即时保存到 localStorage，无需重新部署。0 表示不限制/不截断/不驱逐。</span>
-            <button
-              type="button"
-              className={styles.confirmBtn}
-              onClick={() => {
-                setCfgOpen(false);
-                message.success("参数已保存");
-              }}
-            >
-              确认
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {!compact && promptOpen ? (
-        <div className={styles.promptEdit}>
-          {promptEditor}
-          {promptView === "edit" ? (
-            <div className={styles.promptAct}>
-              <button type="button" className={styles.linkBtn} onClick={() => setSystemPrompt(profile.defaultPrompt)}>
-                恢复默认
-              </button>
-              <span className={styles.hint}>
-                kn_id 已锁定为 {knId}
-                {profile.injectKnContext && knSummary ? "；该网络摘要会自动附加（见「完整」）" : ""}。
-              </span>
-              <button
-                type="button"
-                className={styles.confirmBtn}
-                onClick={() => {
-                  persist(messages, stats);
-                  setPromptOpen(false);
-                  message.success("系统提示词已保存");
-                }}
-              >
-                确认
-              </button>
-            </div>
-          ) : (
-            <div className={styles.promptAct}>
-              <span className={styles.hint}>
-                每轮随对话实际发送给模型的完整系统提示词
-                {profile.injectKnContext ? "（你的提示词 + 自动附加的网络摘要）" : "（本面板不附加网络摘要）"}，只读。
-              </span>
-            </div>
-          )}
-        </div>
-      ) : null}
+        </section>
+      </Drawer>
 
-      <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll}>
+      <div className={styles.scroll}>
         {noLlm ? (
           <div className={styles.intro}>
             <div className={styles.introGlyph}>
@@ -952,7 +920,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             <div className={styles.introGlyph}>
               <ThunderboltFilled />
             </div>
-            <h3>{profile.title ?? "Agent 对话"}</h3>
+            <h3>{profile.emptyTitle ?? "开始验证"}</h3>
             <p>
               {profile.paneKey === "base" ? (
                 <>

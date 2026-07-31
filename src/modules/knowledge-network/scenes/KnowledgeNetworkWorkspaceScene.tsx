@@ -12,14 +12,18 @@ import {
   DatabaseOutlined,
   DeploymentUnitOutlined,
   FileTextOutlined,
+  ForkOutlined,
   LeftOutlined,
   LineChartOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  MessageOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Alert } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import type {
@@ -28,6 +32,7 @@ import type {
 } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
+import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
 import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection";
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -44,6 +49,7 @@ type WorkspaceNavItem = {
   icon: React.ReactNode;
   key: KnowledgeNetworkWorkspaceSection;
   label: string;
+  path?: string;
 };
 
 function formatNavCount(count?: number) {
@@ -60,6 +66,7 @@ export function KnowledgeNetworkWorkspaceScene({
   section,
 }: KnowledgeNetworkWorkspaceSceneProps) {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message } = useAppServices();
   const params = useParams<{ networkId: string }>();
@@ -88,6 +95,7 @@ export function KnowledgeNetworkWorkspaceScene({
   }, [activeNetworkId, navigate, section]);
 
   const [networkFormOpen, setNetworkFormOpen] = useState(false);
+  const [sideCollapsed, setSideCollapsed] = useState(false);
 
   const navigationItems: WorkspaceNavItem[] = useMemo(() => {
     const items: WorkspaceNavItem[] = [
@@ -95,6 +103,24 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "overview",
         label: t("knowledgeNetwork.workspaceOverviewShort"),
         icon: <FileTextOutlined />,
+      },
+      {
+        key: "experience-agent",
+        label: t("knowledgeNetwork.workspaceExperienceAgent"),
+        icon: <MessageOutlined />,
+        path: `/knowledge-network/workspace/${activeNetworkId}/experience/agent`,
+      },
+      {
+        key: "experience-mcp",
+        label: t("knowledgeNetwork.workspaceExperienceMcp"),
+        icon: <ForkOutlined />,
+        path: `/knowledge-network/workspace/${activeNetworkId}/experience/mcp`,
+      },
+      {
+        key: "concept-groups",
+        label: t("knowledgeNetwork.workspaceConceptGroups"),
+        icon: <ApartmentOutlined />,
+        count: detail?.statistics.conceptGroupsTotal ?? 0,
       },
       {
         key: "object-types",
@@ -114,16 +140,10 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <ThunderboltOutlined />,
         count: detail?.statistics.actionTypesTotal ?? 0,
       },
-      {
-        key: "concept-groups",
-        label: t("knowledgeNetwork.workspaceConceptGroups"),
-        icon: <ApartmentOutlined />,
-        count: detail?.statistics.conceptGroupsTotal ?? 0,
-      },
     ];
 
     if (integrateWorkspaceMetrics) {
-      items.splice(5, 0, {
+      items.push({
         key: "metrics",
         label: t("knowledgeNetwork.workspaceMetrics"),
         icon: <LineChartOutlined />,
@@ -140,28 +160,32 @@ export function KnowledgeNetworkWorkspaceScene({
     }
 
     return items;
-  }, [detail, t]);
+  }, [activeNetworkId, detail, t]);
 
   const primaryNavItems = navigationItems.filter(
     (item) => item.key === "overview",
   );
+  const experienceNavItems = navigationItems.filter(
+    (item) =>
+      item.key === "experience-agent" ||
+      item.key === "experience-mcp",
+  );
   const resourceNavItems = navigationItems.filter(
     (item) =>
+      item.key === "concept-groups" ||
       item.key === "object-types" ||
       item.key === "relation-types" ||
-      item.key === "action-types" ||
-      (integrateWorkspaceMetrics && item.key === "metrics"),
+      item.key === "action-types",
   );
-  const conceptGroupNavItem = navigationItems.find(
-    (item) => item.key === "concept-groups",
-  );
+  const metricNavItems = navigationItems.filter((item) => item.key === "metrics");
   const taskNavItem = navigationItems.find((item) => item.key === "tasks");
 
   const renderSideNavItem = (
     item: WorkspaceNavItem,
     options?: { showCount?: boolean },
   ) => {
-    const isActive = item.key === section;
+    const isActive =
+      item.key === section || (item.path !== undefined && location.pathname === item.path);
     const showCount = options?.showCount ?? item.count !== undefined;
 
     return (
@@ -169,15 +193,16 @@ export function KnowledgeNetworkWorkspaceScene({
         className={isActive ? styles.sideItemActive : styles.sideItem}
         key={item.key}
         onClick={() => {
-          void navigate(`/knowledge-network/workspace/${activeNetworkId}/${item.key}`);
+          void navigate(item.path ?? `/knowledge-network/workspace/${activeNetworkId}/${item.key}`);
         }}
+        title={item.label}
         type="button"
       >
         <span className={styles.sideItemMeta}>
           {item.icon}
-          <span>{item.label}</span>
+          {sideCollapsed ? null : <span>{item.label}</span>}
         </span>
-        {showCount ? (
+        {showCount && !sideCollapsed ? (
           <span className={styles.sideItemCount}>{formatNavCount(item.count)}</span>
         ) : null}
       </button>
@@ -199,6 +224,15 @@ export function KnowledgeNetworkWorkspaceScene({
       );
     }
 
+    if (
+      section === "experience-agent" ||
+      section === "experience-mcp"
+    ) {
+      const initialMode = section === "experience-mcp" ? "mcp" : "agent";
+
+      return <ExperienceScene embedded initialMode={initialMode} lockMode />;
+    }
+
     return (
       <WorkspaceResourceSection
         data={workspaceData}
@@ -207,7 +241,6 @@ export function KnowledgeNetworkWorkspaceScene({
       />
     );
   };
-
   return (
     <section className={styles.workspace}>
       <div className={styles.workspaceHeader}>
@@ -239,14 +272,46 @@ export function KnowledgeNetworkWorkspaceScene({
       </div>
 
       <div className={styles.workspaceLayout}>
-        <aside className={styles.workspaceSide}>
-          {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
-          <div className={styles.sideDivider} />
-          <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceResources")}</div>
-          {resourceNavItems.map((item) => renderSideNavItem(item))}
-          <div className={styles.sideDivider} />
-          {conceptGroupNavItem ? renderSideNavItem(conceptGroupNavItem) : null}
-          {taskNavItem ? renderSideNavItem(taskNavItem, { showCount: false }) : null}
+        <aside className={`${styles.workspaceSide} ${sideCollapsed ? styles.workspaceSideCollapsed : ""}`}>
+          <div className={styles.workspaceSideScroll}>
+            {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+            <div className={styles.sideDivider} />
+            {sideCollapsed ? null : (
+              <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceAbilityVerification")}</div>
+            )}
+            {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+            <div className={styles.sideDivider} />
+            {sideCollapsed ? null : (
+              <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceOntologyModeling")}</div>
+            )}
+            {resourceNavItems.map((item) => renderSideNavItem(item))}
+            {metricNavItems.length > 0 ? (
+              <>
+                <div className={styles.sideDivider} />
+                {sideCollapsed ? null : (
+                  <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceMetricModeling")}</div>
+                )}
+                {metricNavItems.map((item) => renderSideNavItem(item))}
+              </>
+            ) : null}
+            {taskNavItem ? (
+              <>
+                <div className={styles.sideDivider} />
+                {renderSideNavItem(taskNavItem, { showCount: false })}
+              </>
+            ) : null}
+          </div>
+          <div className={styles.workspaceSideFooter}>
+            <button
+              aria-label={sideCollapsed ? t("shell.expandSidenav") : t("shell.collapseSidenav")}
+              className={styles.sideCollapseButton}
+              onClick={() => setSideCollapsed((current) => !current)}
+              title={sideCollapsed ? t("shell.expandSidenav") : t("shell.collapseSidenav")}
+              type="button"
+            >
+              {sideCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            </button>
+          </div>
         </aside>
         <main
           className={

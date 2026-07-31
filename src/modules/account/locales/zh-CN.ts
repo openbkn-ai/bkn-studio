@@ -9,10 +9,23 @@ export const accountZhCN = {
   account: {
     title: "个人中心",
     description: "查看个人资料、修改密码与管理 API 密钥。",
-    tabs: {
-      profile: "资料",
-      security: "安全",
-      keys: "API 密钥",
+    navigation: {
+      title: "账户设置",
+      backToWorkspace: "返回业务工作台",
+    },
+    sections: {
+      profile: {
+        title: "个人信息",
+        description: "查看和维护您的基本资料与账户信息。",
+      },
+      security: {
+        title: "修改密码",
+        description: "更新登录密码以保障账户安全。",
+      },
+      apiKeys: {
+        title: "API Key",
+        description: "签发和管理用于外部系统或智能体接入的 API Key。",
+      },
     },
     profileSoon: "个人资料编辑开发中，敬请期待。",
     securitySoon: "自助修改密码开发中，敬请期待。",

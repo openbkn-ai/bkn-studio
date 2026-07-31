@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Col, Form, Input, Row, Select, Spin } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Alert, Col, Collapse, Form, Input, Row, Select, Spin, Tooltip } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -85,9 +86,6 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   const [conditionPropertyOptions, setConditionPropertyOptions] = useState<
     RelationTypePropertyOption[]
   >([]);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [doneStep, setDoneStep] = useState(0);
-  const [basicValue, setBasicValue] = useState<BasicFormValues | null>(null);
   const [executionValue, setExecutionValue] = useState<ActionTypeExecutionConfig>(
     createDefaultActionTypeExecutionConfig(),
   );
@@ -183,11 +181,9 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             tags: detail.tags,
           };
 
-          setBasicValue(nextBasic);
           setExecutionValue(detail.executionConfig);
           setPageTitle(detail.name);
           basicForm.setFieldsValue(nextBasic);
-          setDoneStep(1);
         }
       } catch (error) {
         setLoadError(extractRequestErrorMessage(error));
@@ -200,10 +196,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   }, [actionTypeId, basicForm, mode, networkId, t]);
 
   const steps = useMemo(
-    () => [
-      { title: t("knowledgeNetwork.actionTypeConceptDefinitionStep") },
-      { title: t("knowledgeNetwork.actionTypeResourceMappingStep") },
-    ],
+    () => [{ title: t("knowledgeNetwork.actionTypeConfigStep") }],
     [t],
   );
 
@@ -222,7 +215,6 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   const syncBasicValueFromForm = async (): Promise<BasicFormValues | null> => {
     try {
       const values = await basicForm.validateFields();
-      setBasicValue(values);
       if (mode === "edit") {
         setPageTitle(values.name.trim() || t("knowledgeNetwork.actionTypeEditTitle"));
       }
@@ -232,49 +224,10 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     }
   };
 
-  const handleStepChange = (nextStep: number) => {
-    void (async () => {
-      if (nextStep === currentStep) {
-        return;
-      }
-
-      if (nextStep > doneStep) {
-        if (nextStep === 1 && currentStep === 0) {
-          const values = await syncBasicValueFromForm();
-          if (!values) {
-            return;
-          }
-          setDoneStep(1);
-        } else {
-          return;
-        }
-      }
-
-      if (nextStep === 0 && basicValue) {
-        basicForm.setFieldsValue(basicValue);
-      }
-
-      setCurrentStep(nextStep);
-    })();
-  };
-
-  const handleBasicNext = async () => {
-    const values = await syncBasicValueFromForm();
-    if (!values) {
-      return;
-    }
-
-    setDoneStep((prev) => Math.max(prev, 1));
-    setCurrentStep(1);
-  };
-
   const handleSubmit = async () => {
-    let resolvedBasic = basicValue;
-    if (currentStep === 0 || !resolvedBasic) {
-      resolvedBasic = await syncBasicValueFromForm();
-      if (!resolvedBasic) {
-        return;
-      }
+    const resolvedBasic = await syncBasicValueFromForm();
+    if (!resolvedBasic) {
+      return;
     }
 
     const validationError = validateActionTypeExecutionConfig(t, executionValue, {
@@ -325,22 +278,23 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   };
 
   const renderStepContent = () => {
-    if (currentStep === 0) {
-      return (
-        <div className={styles.basicForm}>
-          <Form
-            colon={false}
-            form={basicForm}
-            initialValues={{
-              actionKind: "create",
-              color: DEFAULT_RESOURCE_COLOR,
-              description: "",
-              name: "",
-              tags: [],
-            }}
-            layout="vertical"
-            requiredMark
-          >
+    return (
+      <div className={styles.basicForm}>
+        <Form
+          colon={false}
+          form={basicForm}
+          initialValues={{
+            actionKind: "create",
+            color: DEFAULT_RESOURCE_COLOR,
+            description: "",
+            name: "",
+            tags: [],
+          }}
+          layout="vertical"
+          requiredMark
+        >
+          <section className={styles.formSection}>
+            <h3>{t("knowledgeNetwork.actionTypeBasicInfo")}</h3>
             <Row gutter={24}>
               <Col span={12}>
                 <Form.Item
@@ -407,88 +361,143 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                 showCount
               />
             </Form.Item>
-            <Row gutter={24}>
-              <Col span={12}>
-                <Form.Item
-                  label={t("knowledgeNetwork.actionTypeKind")}
-                  name="actionKind"
-                  rules={[
-                    {
-                      message: t("knowledgeNetwork.actionTypeKindRequired"),
-                      required: true,
-                    },
-                  ]}
-                >
-                  <Select
-                    options={buildActionTypeKindSelectOptions(t)}
-                    placeholder={t("knowledgeNetwork.pleaseSelect")}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  label={t("knowledgeNetwork.actionTypeObject")}
-                  name="objectTypeId"
-                  rules={[
-                    {
-                      message: t("knowledgeNetwork.actionTypeObjectRequired"),
-                      required: true,
-                    },
-                  ]}
-                >
-                  <RelationTypeObjectTypeSelect
-                    objectTypes={objectTypes}
-                    placeholder={t("knowledgeNetwork.actionTypeObjectSelectPlaceholder")}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item label={t("knowledgeNetwork.actionTypeTriggerCondition")} name="condition">
-              <ActionTypeConditionEditor
-                boundObjectTypeId={watchedObjectTypeId}
-                objectTypes={objectTypes}
-                propertyOptions={conditionPropertyOptions}
-              />
-            </Form.Item>
-            <Form.Item
-              label={t("knowledgeNetwork.actionTypeAffectedObject")}
-              name="affectObjectTypeId"
-            >
-              <RelationTypeObjectTypeSelect
-                allowClear
-                objectTypes={objectTypes}
-                placeholder={t("knowledgeNetwork.actionTypeAffectedObjectPlaceholder")}
-              />
-            </Form.Item>
-            <Form.Item
-              label={t("knowledgeNetwork.actionTypeAffectDescription")}
-              name="affectComment"
-            >
-              <Input.TextArea
-                autoSize={{ minRows: 3, maxRows: 6 }}
-                maxLength={255}
-                placeholder={t("knowledgeNetwork.actionTypeAffectDescriptionPlaceholder")}
-                showCount
-              />
-            </Form.Item>
-          </Form>
-        </div>
-      );
-    }
-
-    return (
-      <div className={styles.executionForm}>
-        <ActionTypeExecutionEditor
-          networkId={networkId}
-          objectTypeId={
-            basicValue?.objectTypeId ??
-            (basicForm.getFieldValue("objectTypeId") as string | undefined) ??
-            ""
-          }
-          onParameterSchemaStateChange={setExecutionSchemaState}
-          onChange={setExecutionValue}
-          value={executionValue}
-        />
+          </section>
+          <section className={styles.formSection}>
+            <h3>{t("knowledgeNetwork.actionTypeRuleConfig")}</h3>
+            <Collapse
+              bordered={false}
+              className={styles.ruleCollapse}
+              defaultActiveKey={[]}
+              items={[
+                {
+                  key: "trigger",
+                  label: (
+                    <span className={styles.ruleHeader}>
+                      <span className={styles.ruleIndex}>1</span>
+                      <span>{t("knowledgeNetwork.actionTypeTriggerRule")}</span>
+                    </span>
+                  ),
+                  children: (
+                    <div className={styles.ruleSection}>
+                      <Row gutter={24}>
+                        <Col span={12}>
+                          <Form.Item
+                            label={t("knowledgeNetwork.actionTypeObject")}
+                            name="objectTypeId"
+                            rules={[
+                              {
+                                message: t("knowledgeNetwork.actionTypeObjectRequired"),
+                                required: true,
+                              },
+                            ]}
+                          >
+                            <RelationTypeObjectTypeSelect
+                              objectTypes={objectTypes}
+                              placeholder={t("knowledgeNetwork.actionTypeObjectSelectPlaceholder")}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                          <Form.Item
+                            label={
+                              <span className={styles.labelWithHelp}>
+                                {t("knowledgeNetwork.actionTypeKind")}
+                                <Tooltip title={t("knowledgeNetwork.actionTypeKindHelp")}>
+                                  <QuestionCircleOutlined className={styles.helpIcon} />
+                                </Tooltip>
+                              </span>
+                            }
+                            name="actionKind"
+                            rules={[
+                              {
+                                message: t("knowledgeNetwork.actionTypeKindRequired"),
+                                required: true,
+                              },
+                            ]}
+                          >
+                            <Select
+                              options={buildActionTypeKindSelectOptions(t)}
+                              placeholder={t("knowledgeNetwork.pleaseSelect")}
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                      <Form.Item
+                        label={t("knowledgeNetwork.actionTypeTriggerCondition")}
+                        name="condition"
+                      >
+                        <ActionTypeConditionEditor
+                          boundObjectTypeId={watchedObjectTypeId}
+                          hideObjectTypeSelect
+                          objectTypes={objectTypes}
+                          propertyOptions={conditionPropertyOptions}
+                        />
+                      </Form.Item>
+                    </div>
+                  ),
+                },
+                {
+                  key: "execution",
+                  label: (
+                    <span className={styles.ruleHeader}>
+                      <span className={styles.ruleIndex}>2</span>
+                      <span>{t("knowledgeNetwork.actionTypeExecutionTool")}</span>
+                    </span>
+                  ),
+                  children: (
+                    <div className={styles.ruleSection}>
+                      <ActionTypeExecutionEditor
+                        networkId={networkId}
+                        objectTypeId={
+                          watchedObjectTypeId ??
+                          (basicForm.getFieldValue("objectTypeId") as string | undefined) ??
+                          ""
+                        }
+                        onParameterSchemaStateChange={setExecutionSchemaState}
+                        onChange={setExecutionValue}
+                        value={executionValue}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  key: "impact",
+                  label: (
+                    <span className={styles.ruleHeader}>
+                      <span className={styles.ruleIndex}>3</span>
+                      <span>{t("knowledgeNetwork.actionTypeImpactDeclaration")}</span>
+                    </span>
+                  ),
+                  children: (
+                    <div className={styles.ruleSection}>
+                      <Form.Item
+                        label={t("knowledgeNetwork.actionTypeAffectedObject")}
+                        name="affectObjectTypeId"
+                      >
+                        <RelationTypeObjectTypeSelect
+                          allowClear
+                          objectTypes={objectTypes}
+                          placeholder={t("knowledgeNetwork.actionTypeAffectedObjectPlaceholder")}
+                        />
+                      </Form.Item>
+                      <Form.Item
+                        label={t("knowledgeNetwork.actionTypeAffectDescription")}
+                        name="affectComment"
+                      >
+                        <Input.TextArea
+                          autoSize={{ minRows: 3, maxRows: 6 }}
+                          maxLength={255}
+                          placeholder={t("knowledgeNetwork.actionTypeAffectDescriptionPlaceholder")}
+                          showCount
+                        />
+                      </Form.Item>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          </section>
+        </Form>
       </div>
     );
   };
@@ -498,6 +507,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       <ResourceFormStepsShell
         currentStep={0}
         doneStep={0}
+        hideSteps
         onBack={goBack}
         steps={steps}
         title={pageTitle}
@@ -511,41 +521,27 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
 
   const stepActions = loadError
     ? undefined
-    : currentStep === 0
-      ? {
-          next: {
-            loading: submitting,
-            onClick: () => {
-              void handleBasicNext();
-            },
-            text: t("common.next"),
+    : {
+        save: {
+          loading: submitting,
+          onClick: () => {
+            void handleSubmit();
           },
-        }
-      : {
-          prev: {
-            onClick: () => handleStepChange(0),
-            text: t("common.previous"),
-          },
-          save: {
-            loading: submitting,
-            onClick: () => {
-              void handleSubmit();
-            },
-            text: t("knowledgeNetwork.actionTypeSaveAndExit"),
-          },
-          cancel: {
-            onClick: goBack,
-            text: t("common.cancel"),
-          },
-        };
+          text: t("knowledgeNetwork.actionTypeSaveAndExit"),
+        },
+        cancel: {
+          onClick: goBack,
+          text: t("common.cancel"),
+        },
+      };
 
   return (
     <ResourceFormStepsShell
       actions={stepActions}
-      currentStep={currentStep}
-      doneStep={doneStep}
+      currentStep={0}
+      doneStep={0}
+      hideSteps
       onBack={goBack}
-      onStepChange={handleStepChange}
       steps={steps}
       title={pageTitle}
     >
