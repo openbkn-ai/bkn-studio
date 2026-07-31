@@ -69,4 +69,37 @@ describe("HealthCheckScheduleFormModal", () => {
       }),
     );
   });
+
+  it("rejects a schedule that runs more than once per hour", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <HealthCheckScheduleFormModal
+        loading={false}
+        onCancel={vi.fn()}
+        onSubmit={onSubmit}
+        open
+        schedule={{
+          catalogId: "catalog-1",
+          cronExpr: "0 * * * *",
+          lastRun: "-",
+          mode: "enabled",
+          nextRun: "-",
+        }}
+      />,
+    );
+
+    const cronInput = await screen.findByPlaceholderText(
+      "dataConnect.healthCheckSchedule.cronPlaceholder",
+    );
+    fireEvent.change(cronInput, { target: { value: "*/5 * * * *" } });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("dataConnect.healthCheckSchedule.cronInvalid"),
+      ).toBeTruthy();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });

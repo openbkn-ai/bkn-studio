@@ -47,7 +47,8 @@ export const dataConnectEnUS = {
       },
       cronExpr: "Cron Expression",
       cronHint: "Use a five-field cron expression with an interval of at least one hour.",
-      cronInvalid: "Enter a valid five-field cron expression.",
+      cronInvalid:
+        "Enter a five-field cron with one numeric minute value and an interval of at least one hour.",
       cronPlaceholder: "For example: 0 * * * *",
       platformDefault: "Platform Default Schedule",
       lastRun: "Last Run",

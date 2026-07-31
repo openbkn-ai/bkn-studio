@@ -44,7 +44,7 @@ export const dataConnectZhCN = {
       },
       cronExpr: "Cron 表达式",
       cronHint: "使用五段 Cron，执行间隔不得短于 1 小时。",
-      cronInvalid: "请输入有效的五段 Cron 表达式。",
+      cronInvalid: "请输入分钟字段为单一数值、执行间隔不短于 1 小时的五段 Cron。",
       cronPlaceholder: "例如：0 * * * *",
       platformDefault: "平台默认计划",
       lastRun: "上一次执行",
