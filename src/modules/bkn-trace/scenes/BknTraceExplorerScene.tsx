@@ -134,11 +134,12 @@ export function BknTraceExplorerScene() {
   );
 }
 
-function BknTraceAdvancedExplorerScene() {
+export function BknTraceAdvancedExplorerScene() {
   const { t } = useTranslation();
-  const [scopeMode, setScopeMode] = useState<ScopeMode>("trace");
-  const [traceId, setTraceId] = useState("");
-  const [requestId, setRequestId] = useState("");
+  const [initialScope] = useState(readInitialTraceScope);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>(initialScope.mode);
+  const [traceId, setTraceId] = useState(initialScope.traceId);
+  const [requestId, setRequestId] = useState(initialScope.requestId);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -182,6 +183,7 @@ function BknTraceAdvancedExplorerScene() {
     }
     setLoading(true);
     setError(null);
+    persistTraceScope(scopeMode, traceId.trim(), requestId.trim());
     try {
       const traceGraphResult = effectiveScope.traceId
         ? await getTraceGraph(effectiveScope.traceId)
@@ -399,6 +401,12 @@ function BknTraceAdvancedExplorerScene() {
                 <Typography.Text type="secondary">{t("bknTrace.fields.requestId")}</Typography.Text>
                 <Typography.Text className={styles.resultId}>{state.businessGraph?.requestId || "-"}</Typography.Text>
               </div>
+              <Button
+                href={buildLogDrilldownURL(state.businessGraph?.traceId || state.traceGraph?.traceId, state.businessGraph?.requestId)}
+                icon={<SearchOutlined />}
+              >
+                {t("bknTrace.actions.viewLogs")}
+              </Button>
               <div className={styles.completeness}>
                 {partialReasons.length ? <Tag icon={<ExclamationCircleOutlined />} color="warning">{t("bknTrace.partial")}</Tag> : <Tag icon={<CheckCircleOutlined />} color="success">{t("bknTrace.complete")}</Tag>}
               </div>
@@ -416,6 +424,30 @@ function BknTraceAdvancedExplorerScene() {
       </Spin>
     </div>
   );
+}
+
+function readInitialTraceScope(): { mode: ScopeMode; requestId: string; traceId: string } {
+  const parameters = new URLSearchParams(window.location.search);
+  const requestId = parameters.get("request_id") ?? "";
+  const traceId = parameters.get("trace_id") ?? "";
+  return { mode: requestId ? "request" : "trace", requestId, traceId };
+}
+
+function persistTraceScope(mode: ScopeMode, traceId: string, requestId: string) {
+  const parameters = new URLSearchParams(window.location.search);
+  parameters.delete("trace_id");
+  parameters.delete("request_id");
+  if (mode === "trace" && traceId) parameters.set("trace_id", traceId);
+  if (mode === "request" && requestId) parameters.set("request_id", requestId);
+  const query = parameters.toString();
+  window.history.replaceState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+}
+
+function buildLogDrilldownURL(traceId?: string, requestId?: string) {
+  const parameters = new URLSearchParams();
+  if (traceId) parameters.set("trace_id", traceId);
+  else if (requestId) parameters.set("request_id", requestId);
+  return `/observability/logs?${parameters.toString()}`;
 }
 
 function stageIcon(stage: BusinessStoryStage) {

@@ -134,16 +134,23 @@ export type LogListResult = {
   sourceStatus: LogSourceStatus[];
 };
 
+export type LogDetailResult = {
+  data: LogRecord;
+  policyRevision: string;
+  redactedFields: string[];
+  relatedTraceIds: string[];
+};
+
+export type LogFacet = "deployment_environment" | "event_name" | "log_category" | "service_name" | "severity_text";
+
+export type LogFacetResult = {
+  data: Array<{ count: number; value: string }>;
+  partial: boolean;
+  sourceStatus: LogSourceStatus[];
+};
+
 export async function listLogs(query: LogListQuery): Promise<LogListResult> {
-  const params: Record<string, boolean | number | string | string[]> = {};
-  if (query.categories?.length) params.categories = query.categories;
-  if (query.cursor) params.cursor = query.cursor;
-  if (query.failedOnly !== undefined) params.failed_only = query.failedOnly;
-  if (query.limit !== undefined) params.limit = query.limit;
-  if (query.query) params.q = query.query;
-  if (query.requestId) params.request_id = query.requestId;
-  if (query.services?.length) params.services = query.services;
-  if (query.traceId) params.trace_id = query.traceId;
+	const params = logQueryParams(query);
 
   const response = await http.get<BackendLogList>(`${OBSERVABILITY_API_PREFIX}/logs`, {
     headers: observabilityHeaders(),
@@ -154,6 +161,40 @@ export async function listLogs(query: LogListQuery): Promise<LogListResult> {
     count: response.data.count,
     data: response.data.data.map(mapLogRecord),
     ...(response.data.next_cursor ? { nextCursor: response.data.next_cursor } : {}),
+    partial: response.data.partial,
+    sourceStatus: response.data.source_status.map(mapSourceStatus),
+  };
+}
+
+export async function getLogDetail(logId: string): Promise<LogDetailResult> {
+  const response = await http.get<{
+    data: BackendLogRecord;
+    field_projection: { policy_revision: string; redacted_fields: string[] };
+    request_trace_context: { related_trace_ids?: string[] };
+  }>(`${OBSERVABILITY_API_PREFIX}/logs/${encodeURIComponent(logId)}`, {
+    headers: observabilityHeaders(),
+    skipErrorToast: true,
+  });
+  return {
+    data: mapLogRecord(response.data.data),
+    policyRevision: response.data.field_projection.policy_revision,
+    redactedFields: response.data.field_projection.redacted_fields,
+    relatedTraceIds: response.data.request_trace_context.related_trace_ids ?? [],
+  };
+}
+
+export async function listLogFacets(facet: LogFacet, query: LogListQuery = {}): Promise<LogFacetResult> {
+  const response = await http.get<{
+    data: Array<{ count: number; value: string }>;
+    partial: boolean;
+    source_status: BackendSourceStatus[];
+  }>(`${OBSERVABILITY_API_PREFIX}/log-facets`, {
+    headers: observabilityHeaders(),
+    params: { ...logQueryParams(query), facet },
+    skipErrorToast: true,
+  });
+  return {
+    data: response.data.data,
     partial: response.data.partial,
     sourceStatus: response.data.source_status.map(mapSourceStatus),
   };
@@ -220,6 +261,19 @@ function mapSourceStatus(source: BackendSourceStatus): LogSourceStatus {
     sourceId: source.source_id,
     status: source.status,
   };
+}
+
+function logQueryParams(query: LogListQuery) {
+  const params: Record<string, boolean | number | string | string[]> = {};
+  if (query.categories?.length) params.categories = query.categories;
+  if (query.cursor) params.cursor = query.cursor;
+  if (query.failedOnly !== undefined) params.failed_only = query.failedOnly;
+  if (query.limit !== undefined) params.limit = query.limit;
+  if (query.query) params.q = query.query;
+  if (query.requestId) params.request_id = query.requestId;
+  if (query.services?.length) params.services = query.services;
+  if (query.traceId) params.trace_id = query.traceId;
+  return params;
 }
 
 function observabilityHeaders() {

@@ -6,14 +6,26 @@
  */
 
 import { lazy, Suspense, type ReactNode } from "react";
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 
 import { RouteLoading } from "@/app/router/RouteLoading";
 import type { AppRouteContribution } from "@/app/router/types";
 
-const BknTraceExplorerPage = lazy(async () => {
-  const module = await import("@/modules/bkn-trace/pages/BknTraceExplorerPage");
-  return { default: module.BknTraceExplorerPage };
+const BusinessProvenancePage = lazy(async () => {
+  const module = await import("@/modules/bkn-trace/pages/BusinessProvenancePage");
+  return { default: module.BusinessProvenancePage };
+});
+const TraceAnalysisPage = lazy(async () => {
+  const module = await import("@/modules/bkn-trace/pages/TraceAnalysisPage");
+  return { default: module.TraceAnalysisPage };
+});
+const ObservabilityLogsPage = lazy(async () => {
+  const module = await import("@/modules/bkn-trace/pages/ObservabilityLogsPage");
+  return { default: module.ObservabilityLogsPage };
+});
+const ObservabilitySettingsPage = lazy(async () => {
+  const module = await import("@/modules/bkn-trace/pages/ObservabilitySettingsPage");
+  return { default: module.ObservabilitySettingsPage };
 });
 
 function withRouteLoading(element: ReactNode) {
@@ -22,15 +34,34 @@ function withRouteLoading(element: ReactNode) {
 
 export const bknTraceRoutes: RouteObject[] = [
   {
-    path: "system/bkn-trace",
+    path: "observability/business-provenance",
     handle: {
       console: {
-        descriptionKey: "bknTrace.description",
-        menuKey: "bkn-trace",
-        titleKey: "bknTrace.title",
+        descriptionKey: "bknTrace.businessProvenance.description",
+        menuKey: "business-provenance",
+        titleKey: "bknTrace.businessProvenance.title",
       },
     },
-    element: withRouteLoading(<BknTraceExplorerPage />),
+    element: withRouteLoading(<BusinessProvenancePage />),
+  },
+  {
+    path: "observability/traces",
+    handle: { console: { descriptionKey: "bknTrace.traceAnalysis.description", menuKey: "trace-analysis", titleKey: "bknTrace.traceAnalysis.title" } },
+    element: withRouteLoading(<TraceAnalysisPage />),
+  },
+  {
+    path: "observability/logs",
+    handle: { console: { descriptionKey: "bknTrace.logs.description", menuKey: "observability-logs", titleKey: "bknTrace.logs.title" } },
+    element: withRouteLoading(<ObservabilityLogsPage />),
+  },
+  {
+    path: "observability/settings",
+    handle: { console: { descriptionKey: "bknTrace.settings.description", menuKey: "observability-settings", titleKey: "bknTrace.settings.title" } },
+    element: withRouteLoading(<ObservabilitySettingsPage />),
+  },
+  {
+    path: "system/bkn-trace",
+    element: <Navigate replace to="/observability/business-provenance" />,
   },
 ];
 

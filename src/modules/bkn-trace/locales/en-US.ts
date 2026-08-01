@@ -7,11 +7,43 @@
 
 export const bknTraceEnUS = {
   bknTrace: {
+    businessProvenance: {
+      description: "Explain business outcomes and their data, logic, and action evidence by conversation, interaction, and request.",
+      title: "Business Provenance",
+    },
+    traceAnalysis: {
+      description: "Analyze cross-module traces by business context or technical identifiers.",
+      title: "Trace Analysis",
+    },
+    logs: {
+      categoryPlaceholder: "Log categories",
+      columns: { category: "Category", event: "Event summary", service: "Service", severity: "Severity", time: "Event time", trace: "Trace" },
+      description: "Search authorized platform, business, model, and audit logs and drill down to related traces.",
+      partialWarning: "Some log sources are unavailable. The current result may be incomplete.",
+      searchPlaceholder: "Search safe summaries or events",
+      servicePlaceholder: "Service source",
+      detail: {
+        category: "Log category", logId: "Log ID", openTrace: "Open related trace", outcome: "Outcome",
+        projectedFields: "{{count}} fields are excluded from the current controlled projection.", projection: "Field projection policy",
+        requestId: "Request ID", service: "Service", source: "Source", time: "Event time", title: "Log details", traceId: "Trace ID",
+      },
+      title: "Log Search",
+    },
+    settings: {
+      columns: { category: "Category", collection: "Collection", coverage: "Coverage", policyKind: "Policy type", retention: "Retention", revision: "Revision", source: "Log source", status: "Status" },
+      days: "days",
+      description: "Inspect log source coverage, collection health, and effective retention policies.",
+      policies: "Retention and storage policies",
+      readOnlyNotice: "Version 0.1.3 is read-only. Policy changes use the governed operations workflow.",
+      sources: "Source coverage",
+      title: "Observability Settings",
+    },
     actions: {
       back: "Back to runs",
       loadMore: "Load more",
       query: "Query",
       refresh: "Refresh",
+      viewLogs: "View related logs",
     },
     description:
       "Inspect runtime traces, evidence chains, business semantic graphs, and snapshot previews by trace id or request id.",

@@ -9,7 +9,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import runStyles from "@/modules/bkn-trace/scenes/BknTraceRunsScene.module.css";
-import { BknTraceExplorerScene } from "@/modules/bkn-trace/scenes/BknTraceExplorerScene";
+import { BknTraceAdvancedExplorerScene, BknTraceExplorerScene } from "@/modules/bkn-trace/scenes/BknTraceExplorerScene";
 import {
   getAccessProfile,
   getBusinessGraph,
@@ -89,6 +89,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState({}, "", "/");
     vi.mocked(getAccessProfile).mockResolvedValue({
       accessScopeFingerprint: "sha256:test",
 	  allowedLogCategories: [],
@@ -237,6 +238,13 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
       status: "ok",
       traceId: "trace_001",
     });
+  });
+
+  it("Trace 分析从 URL 恢复 trace_id 深链", async () => {
+    window.history.replaceState({}, "", "/observability/traces?trace_id=trace_001");
+    render(<BknTraceAdvancedExplorerScene />);
+
+    expect((screen.getByPlaceholderText("bknTrace.placeholders.traceId") as HTMLInputElement).value).toBe("trace_001");
   });
 
   it("默认展示可筛选的业务运行列表，而不是要求用户输入内部 ID", async () => {

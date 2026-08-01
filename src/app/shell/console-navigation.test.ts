@@ -18,10 +18,10 @@ const systemGroup = (items: ReturnType<typeof filterNavByPermission>) =>
   items.find((item) => item.key === "system-management");
 
 describe("filterNavByPermission — 系统管理按功能独立授权", () => {
-  it("普通用户可进入 BKN Trace，记录正文由服务端访问画像裁决", () => {
+  it("普通用户的系统管理不再承载 BKN Trace", () => {
     const group = systemGroup(filterNavByPermission(consoleNavigation, []));
-    expect(group).toBeDefined();
-    expect(keys(group!.children ?? [])).toEqual(["bkn-trace"]);
+    expect(group).toBeUndefined();
+    expect(keys(filterNavByPermission(consoleNavigation, []))).toContain("observability");
   });
 
   it("超管(全部权限)→ 系统管理可见,4 个子项齐全", () => {
@@ -45,15 +45,12 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     );
   });
 
-  it("仅持有 admin-audit:view → 系统管理包含 BKN Trace 和日志管理", () => {
+  it("仅持有 admin-audit:view → 系统管理只包含原有管理审计日志", () => {
     const group = systemGroup(
       filterNavByPermission(consoleNavigation, ["admin-audit:view"]),
     );
     expect(group).toBeDefined();
-    expect(keys(group!.children ?? [])).toEqual([
-      "bkn-trace",
-      "log-management",
-    ]);
+    expect(keys(group!.children ?? [])).toEqual(["log-management"]);
   });
 
   it("非系统类菜单不受权限过滤影响", () => {
