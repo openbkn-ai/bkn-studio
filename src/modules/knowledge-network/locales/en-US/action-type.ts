@@ -64,6 +64,7 @@ export const actiontypePart = {
     actionTypeExecutionSourceName: "Execution source name",
     actionTypeExecutionSourceNamePlaceholder: "Enter a tool or execution source name",
     actionTypeExecutionSourceNameRequired: "Please enter an execution source name.",
+    actionTypeExecutionToolRequired: "Please select an execution tool.",
     actionTypeExecutionSourceTool: "Tool",
     actionTypeExecutionSourceType: "Execution source type",
     actionTypeExecutionStep: "Execution mapping",

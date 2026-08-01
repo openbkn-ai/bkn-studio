@@ -9,9 +9,11 @@ import { describe, expect, it } from "vitest";
 
 import type { ActionTypeExecutionConfig } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { validateActionTypeExecutionConfig } from "./action-type-execution";
-
-const t = (key: string) => key;
+import {
+  ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY,
+  ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY,
+  validateActionTypeExecutionConfig,
+} from "./action-type-execution";
 
 function createExecutionConfig(
   patch: Partial<ActionTypeExecutionConfig> = {},
@@ -32,33 +34,32 @@ function createExecutionConfig(
 }
 
 describe("validateActionTypeExecutionConfig", () => {
-  it("keeps requiring an execution source", () => {
+  it("keeps requiring an execution tool", () => {
     expect(
-      validateActionTypeExecutionConfig(t, createExecutionConfig({
+      validateActionTypeExecutionConfig(createExecutionConfig({
         actionSource: undefined,
         sourceName: "",
       })),
-    ).toBe("knowledgeNetwork.actionTypeExecutionSourceNameRequired");
+    ).toBe(ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY);
   });
 
   it("allows empty parameters when the selected tool has no input schema", () => {
     expect(
-      validateActionTypeExecutionConfig(t, createExecutionConfig(), {
+      validateActionTypeExecutionConfig(createExecutionConfig(), {
         allowEmptyParameters: true,
       }),
     ).toBeNull();
   });
 
   it("keeps rejecting empty parameters when the selected tool requires mappings", () => {
-    expect(validateActionTypeExecutionConfig(t, createExecutionConfig())).toBe(
-      "knowledgeNetwork.actionTypeExecutionParameterRequired",
+    expect(validateActionTypeExecutionConfig(createExecutionConfig())).toBe(
+      ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY,
     );
   });
 
   it("accepts configured dynamic input parameters", () => {
     expect(
       validateActionTypeExecutionConfig(
-        t,
         createExecutionConfig({
           parameters: [{ name: "order_id", valueFrom: "input" }],
         }),
@@ -69,11 +70,10 @@ describe("validateActionTypeExecutionConfig", () => {
   it("keeps rejecting incomplete constant or property mappings", () => {
     expect(
       validateActionTypeExecutionConfig(
-        t,
         createExecutionConfig({
           parameters: [{ name: "status", valueFrom: "const", value: "" }],
         }),
       ),
-    ).toBe("knowledgeNetwork.actionTypeExecutionParameterRequired");
+    ).toBe(ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY);
   });
 });

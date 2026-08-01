@@ -15,13 +15,17 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import {
   ActionTypeExecutionEditor,
+  ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY,
   createDefaultActionTypeExecutionConfig,
   normalizeActionTypeExecutionConfig,
   validateActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import type { ActionTypeExecutionParameterSchemaState } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
-import { normalizeActionTypeCondition } from "@/modules/knowledge-network/utils/action-type-execution";
+import {
+  getActionSourceDisplayName,
+  normalizeActionTypeCondition,
+} from "@/modules/knowledge-network/utils/action-type-execution";
 import { RelationTypeObjectTypeSelect } from "@/modules/knowledge-network/components/relation-type/RelationTypeObjectTypeSelect";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import {
@@ -94,6 +98,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       loaded: false,
       parameterCount: 0,
     });
+  const [executionSourceError, setExecutionSourceError] = useState<string | null>(null);
   const [pageTitle, setPageTitle] = useState(
     mode === "edit"
       ? t("knowledgeNetwork.actionTypeEditTitle")
@@ -230,14 +235,21 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       return;
     }
 
-    const validationError = validateActionTypeExecutionConfig(t, executionValue, {
+    const validationErrorKey = validateActionTypeExecutionConfig(executionValue, {
       allowEmptyParameters:
         executionSchemaState.loaded && executionSchemaState.parameterCount === 0,
     });
-    if (validationError) {
+    if (validationErrorKey) {
+      const validationError = t(validationErrorKey);
+      setExecutionSourceError(
+        validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY
+          ? validationError
+          : null,
+      );
       void message.error(validationError);
       return;
     }
+    setExecutionSourceError(null);
 
     const normalizedExecution = normalizeActionTypeExecutionConfig(executionValue);
     const affect =
@@ -454,7 +466,16 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                           ""
                         }
                         onParameterSchemaStateChange={setExecutionSchemaState}
-                        onChange={setExecutionValue}
+                        onChange={(nextValue) => {
+                          setExecutionValue(nextValue);
+                          if (
+                            getActionSourceDisplayName(nextValue.actionSource) ||
+                            nextValue.sourceName.trim()
+                          ) {
+                            setExecutionSourceError(null);
+                          }
+                        }}
+                        sourceError={executionSourceError}
                         value={executionValue}
                       />
                     </div>

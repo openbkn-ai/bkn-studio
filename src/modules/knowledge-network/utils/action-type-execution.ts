@@ -90,8 +90,13 @@ export type ActionTypeExecutionValidationOptions = {
   allowEmptyParameters?: boolean;
 };
 
+export const ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY =
+  "knowledgeNetwork.actionTypeExecutionToolRequired";
+
+export const ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY =
+  "knowledgeNetwork.actionTypeExecutionParameterRequired";
+
 export function validateActionTypeExecutionConfig(
-  t: (key: string) => string,
   value: ActionTypeExecutionConfig,
   options: ActionTypeExecutionValidationOptions = {},
 ): string | null {
@@ -99,7 +104,7 @@ export function validateActionTypeExecutionConfig(
     getActionSourceDisplayName(value.actionSource) || value.sourceName.trim();
 
   if (!sourceLabel) {
-    return t("knowledgeNetwork.actionTypeExecutionSourceNameRequired");
+    return ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY;
   }
 
   const validParameters = value.parameters.filter((item) => {
@@ -116,7 +121,7 @@ export function validateActionTypeExecutionConfig(
   });
 
   if (validParameters.length === 0 && !options.allowEmptyParameters) {
-    return t("knowledgeNetwork.actionTypeExecutionParameterRequired");
+    return ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY;
   }
 
   return null;

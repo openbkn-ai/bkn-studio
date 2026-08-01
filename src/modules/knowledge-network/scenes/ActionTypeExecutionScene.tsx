@@ -15,12 +15,16 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   ActionTypeExecutionEditor,
+  ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY,
   createDefaultActionTypeExecutionConfig,
   normalizeActionTypeExecutionConfig,
   validateActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import type { ActionTypeExecutionParameterSchemaState } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import {
+  getActionSourceDisplayName,
+} from "@/modules/knowledge-network/utils/action-type-execution";
 import {
   getKnowledgeNetworkActionTypeDetail,
   updateKnowledgeNetworkActionType,
@@ -49,6 +53,7 @@ export function ActionTypeExecutionScene() {
       loaded: false,
       parameterCount: 0,
     });
+  const [executionSourceError, setExecutionSourceError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,14 +97,21 @@ export function ActionTypeExecutionScene() {
       return;
     }
 
-    const validationError = validateActionTypeExecutionConfig(t, executionValue, {
+    const validationErrorKey = validateActionTypeExecutionConfig(executionValue, {
       allowEmptyParameters:
         executionSchemaState.loaded && executionSchemaState.parameterCount === 0,
     });
-    if (validationError) {
+    if (validationErrorKey) {
+      const validationError = t(validationErrorKey);
+      setExecutionSourceError(
+        validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY
+          ? validationError
+          : null,
+      );
       void message.error(validationError);
       return;
     }
+    setExecutionSourceError(null);
 
     const normalizedExecution = normalizeActionTypeExecutionConfig(executionValue);
 
@@ -150,7 +162,16 @@ export function ActionTypeExecutionScene() {
             networkId={networkId}
             objectTypeId={detail?.objectTypeId ?? ""}
             onParameterSchemaStateChange={setExecutionSchemaState}
-            onChange={setExecutionValue}
+            onChange={(nextValue) => {
+              setExecutionValue(nextValue);
+              if (
+                getActionSourceDisplayName(nextValue.actionSource) ||
+                nextValue.sourceName.trim()
+              ) {
+                setExecutionSourceError(null);
+              }
+            }}
+            sourceError={executionSourceError}
             value={executionValue}
           />
         </div>
