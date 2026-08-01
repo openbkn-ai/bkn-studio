@@ -91,9 +91,13 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     vi.clearAllMocks();
     vi.mocked(getAccessProfile).mockResolvedValue({
       accessScopeFingerprint: "sha256:test",
+	  allowedLogCategories: [],
       businessProvenanceManagedNetworks: false,
       businessProvenanceOwn: true,
       globalLogSearch: false,
+	  logExport: false,
+	  logPolicyRead: false,
+	  logSensitiveFields: false,
       managementAudit: false,
       securityAudit: false,
       technicalTrace: true,
@@ -247,9 +251,13 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
   it("普通业务用户不显示全局技术 Trace 高级查询入口", async () => {
     vi.mocked(getAccessProfile).mockResolvedValueOnce({
       accessScopeFingerprint: "sha256:normal-user",
+	  allowedLogCategories: [],
       businessProvenanceManagedNetworks: false,
       businessProvenanceOwn: true,
       globalLogSearch: false,
+	  logExport: false,
+	  logPolicyRead: false,
+	  logSensitiveFields: false,
       managementAudit: false,
       securityAudit: false,
       technicalTrace: false,
