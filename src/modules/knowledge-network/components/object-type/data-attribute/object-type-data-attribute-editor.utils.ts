@@ -80,8 +80,11 @@ export function buildMappingAlignedLayout(
   });
 
   const mappedFieldNames = new Set(mappedPairs.map((pair) => pair.field.name));
+  const mappedPropertyNames = new Set(mappedPairs.map((pair) => pair.property.name));
   const unmappedFields = viewFields.filter((field) => !mappedFieldNames.has(field.name));
-  const unmappedProperties = properties.filter((property) => !property.mappedField);
+  const unmappedProperties = properties.filter(
+    (property) => !mappedPropertyNames.has(property.name),
+  );
 
   return {
     viewFieldRows: [

@@ -87,6 +87,43 @@ describe("buildMappingAlignedLayout", () => {
       "unmapped",
     ]);
   });
+
+  it("keeps properties whose mapped field is missing from viewFields in propertyRows", () => {
+    const properties = [
+      createProperty({
+        mappedField: { displayName: "Legacy", name: "legacy_field", type: "string" },
+        name: "legacy_prop",
+      }),
+      createProperty({ name: "prop_unmapped" }),
+    ];
+
+    const layout = buildMappingAlignedLayout([], properties);
+
+    expect(layout.propertyRows.map((row) => row.item.name)).toEqual([
+      "legacy_prop",
+      "prop_unmapped",
+    ]);
+    expect(layout.propertyRows.map((row) => row.section)).toEqual(["unmapped", "unmapped"]);
+  });
+
+  it("keeps orphaned mapped properties when viewFields load asynchronously", () => {
+    const properties = [
+      createProperty({
+        mappedField: { displayName: "Order ID", name: "order_id", type: "string" },
+        name: "order_id",
+      }),
+    ];
+
+    const layoutBeforeLoad = buildMappingAlignedLayout([], properties);
+    expect(layoutBeforeLoad.propertyRows.map((row) => row.item.name)).toEqual(["order_id"]);
+
+    const layoutAfterLoad = buildMappingAlignedLayout(
+      [createField({ displayName: "Order ID", name: "order_id" })],
+      properties,
+    );
+    expect(layoutAfterLoad.propertyRows.map((row) => row.item.name)).toEqual(["order_id"]);
+    expect(layoutAfterLoad.propertyRows[0]?.section).toBe("mapped");
+  });
 });
 
 describe("applyMappingFilter", () => {
