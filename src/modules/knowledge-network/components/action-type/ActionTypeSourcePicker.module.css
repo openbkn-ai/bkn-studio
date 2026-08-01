@@ -29,6 +29,16 @@
   outline: none;
 }
 
+.selectTriggerError {
+  border-color: #ff4d4f;
+}
+
+.selectTriggerError:hover,
+.selectTriggerError:focus-visible {
+  border-color: #ff7875;
+  box-shadow: 0 0 0 2px rgba(255, 38, 5, 0.06);
+}
+
 .placeholder {
   color: rgba(0, 0, 0, 0.25);
   flex: 1;

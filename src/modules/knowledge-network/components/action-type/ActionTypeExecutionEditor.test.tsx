@@ -6,7 +6,7 @@
  */
 
 import { act, cleanup, render, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   ActionTypeActionSource,
@@ -81,6 +81,22 @@ function createExecutionConfig(actionSource: ActionTypeActionSource): ActionType
     sourceType: actionSource.type,
   };
 }
+
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    value: vi.fn().mockImplementation((query: string) => ({
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches: false,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+    writable: true,
+  });
+});
 
 beforeEach(() => {
   getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });

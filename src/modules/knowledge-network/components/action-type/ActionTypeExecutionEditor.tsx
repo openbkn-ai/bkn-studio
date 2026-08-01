@@ -7,6 +7,7 @@
 
 /* eslint-disable react-refresh/only-export-components */
 
+import { Form } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -30,6 +31,8 @@ import { getActionSourceDisplayName } from "@/modules/knowledge-network/utils/ac
 import styles from "./ActionTypeExecutionEditor.module.css";
 
 export {
+  ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY,
+  ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY,
   cloneActionTypeExecutionConfig,
   createDefaultActionTypeExecutionConfig,
   normalizeActionTypeExecutionConfig,
@@ -39,6 +42,7 @@ export {
 type ActionTypeExecutionEditorProps = {
   networkId: string;
   objectTypeId: string;
+  sourceError?: string | null;
   value: ActionTypeExecutionConfig;
   onChange: (value: ActionTypeExecutionConfig) => void;
   onParameterSchemaStateChange?: (state: ActionTypeExecutionParameterSchemaState) => void;
@@ -81,6 +85,7 @@ function countLeafSchemaParameters(schema: ActionTypeToolInputParam[]): number {
 export function ActionTypeExecutionEditor({
   networkId,
   objectTypeId,
+  sourceError,
   value,
   onChange,
   onParameterSchemaStateChange,
@@ -336,18 +341,26 @@ export function ActionTypeExecutionEditor({
   return (
     <div className={styles.panel}>
       <div className={styles.operatorSection}>
-        <div className={styles.operatorLabel}>{t("knowledgeNetwork.actionTypeOperatorLabel")}</div>
-        <ActionTypeSourcePicker
-          loading={displayResolutionStatus === "loading"}
-          onChange={handleSourceChange}
-          onSourceSelected={handleSourceSelected}
-          unresolved={
-            displayResolutionStatus === "failed" &&
-            sourceNeedsDisplayResolution &&
-            displaySourceNeedsResolution
-          }
-          value={displayActionSource}
-        />
+        <Form.Item
+          className={styles.operatorFormItem}
+          help={sourceError ?? undefined}
+          label={t("knowledgeNetwork.actionTypeOperatorLabel")}
+          required
+          validateStatus={sourceError ? "error" : undefined}
+        >
+          <ActionTypeSourcePicker
+            invalid={Boolean(sourceError)}
+            loading={displayResolutionStatus === "loading"}
+            onChange={handleSourceChange}
+            onSourceSelected={handleSourceSelected}
+            unresolved={
+              displayResolutionStatus === "failed" &&
+              sourceNeedsDisplayResolution &&
+              displaySourceNeedsResolution
+            }
+            value={displayActionSource}
+          />
+        </Form.Item>
       </div>
 
       <ActionTypeToolParamsTable

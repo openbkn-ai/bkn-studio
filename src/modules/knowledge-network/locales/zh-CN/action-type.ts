@@ -59,6 +59,7 @@ export const actiontypePart = {
     actionTypeExecutionSourceName: "执行来源名称",
     actionTypeExecutionSourceNamePlaceholder: "输入工具或执行来源名称",
     actionTypeExecutionSourceNameRequired: "请输入执行来源名称。",
+    actionTypeExecutionToolRequired: "请选择执行工具。",
     actionTypeExecutionSourceTool: "工具",
     actionTypeExecutionSourceType: "执行来源类型",
     actionTypeExecutionStep: "执行映射",

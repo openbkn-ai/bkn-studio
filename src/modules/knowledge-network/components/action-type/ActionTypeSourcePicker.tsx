@@ -18,6 +18,7 @@ import { getActionSourceDisplayName } from "@/modules/knowledge-network/utils/ac
 import styles from "./ActionTypeSourcePicker.module.css";
 
 type ActionTypeSourcePickerProps = {
+  invalid?: boolean;
   loading?: boolean;
   onSourceSelected?: (source: ActionTypeActionSource) => void;
   unresolved?: boolean;
@@ -26,6 +27,7 @@ type ActionTypeSourcePickerProps = {
 };
 
 export function ActionTypeSourcePicker({
+  invalid = false,
   loading = false,
   onSourceSelected,
   unresolved = false,
@@ -49,7 +51,12 @@ export function ActionTypeSourcePicker({
   return (
     <>
       <div
-        className={styles.selectTrigger}
+        className={[
+          styles.selectTrigger,
+          invalid ? styles.selectTriggerError : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         onClick={() => setModalOpen(true)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
