@@ -9,7 +9,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-height: calc(100vh - 96px);
+  min-height: 0;
   overflow: hidden;
   width: 100%;
 }
@@ -18,7 +18,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-height: calc(100vh - 96px);
+  min-height: 0;
   overflow: hidden;
   width: 100%;
 }

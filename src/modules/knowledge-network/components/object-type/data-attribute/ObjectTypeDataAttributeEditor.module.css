@@ -106,6 +106,23 @@
   width: 1px;
 }
 
+.mappingToolbar {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-shrink: 0;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 8px 24px;
+}
+
+.mappingSummary {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .infoKeyIconPrimary {
   color: rgba(0, 0, 0, 0.45);
   font-size: 14px;
@@ -175,12 +192,18 @@
   padding: 0;
 }
 
+.canvasWrapper {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
 .canvas {
   background: #fff;
   cursor: grab;
-  flex: 1;
-  min-height: 480px;
-  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
   position: relative;
 }
 
@@ -219,6 +242,16 @@
 .connectionLineHover {
   stroke: #000;
   stroke-width: 2;
+}
+
+.connectionLineSelected {
+  stroke: #1677ff;
+  stroke-width: 2.5;
+}
+
+.connectionLineDimmed {
+  opacity: 0.12;
+  stroke: #d9d9d9;
 }
 
 .panelNode {
@@ -308,6 +341,16 @@
   padding: 24px 16px;
 }
 
+.panelSectionDivider {
+  background: #fafafa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 16px;
+}
+
 .invalidNameIcon {
   color: #ff4d4f;
   flex-shrink: 0;
@@ -363,6 +406,19 @@
 .panelItemMapped.panelItemHighlighted:hover {
   background: #e6f4ff;
   box-shadow: inset 3px 0 0 #1677ff;
+}
+
+.panelItemSelected {
+  background: #e6f4ff;
+  box-shadow: inset 3px 0 0 #1677ff;
+}
+
+.panelItemSelected:hover {
+  background: #d6ebff;
+}
+
+.panelItemDimmed {
+  opacity: 0.45;
 }
 
 .itemContent {
@@ -470,6 +526,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
+  pointer-events: auto;
   position: absolute;
   right: 24px;
   z-index: 3;
