@@ -20,6 +20,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { buildAppPath } from "@/app/router/app-paths";
 import styles from "@/modules/bkn-trace/scenes/BknTraceExplorerScene.module.css";
 import { BknTraceRunsScene } from "@/modules/bkn-trace/scenes/BknTraceRunsScene";
 import {
@@ -447,7 +448,7 @@ function buildLogDrilldownURL(traceId?: string, requestId?: string) {
   const parameters = new URLSearchParams();
   if (traceId) parameters.set("trace_id", traceId);
   else if (requestId) parameters.set("request_id", requestId);
-  return `/observability/logs?${parameters.toString()}`;
+  return buildAppPath(`/observability/logs?${parameters.toString()}`);
 }
 
 function stageIcon(stage: BusinessStoryStage) {

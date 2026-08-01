@@ -128,7 +128,7 @@ describe("observability workspace scenes", () => {
 		 fireEvent.click(summary);
 		 await waitFor(() => expect(getLogDetail).toHaveBeenCalledWith("log-a"));
 		 expect(await screen.findByText("bknTrace.logs.detail.title")).not.toBeNull();
-		 expect(screen.getByRole("link", { name: "bknTrace.logs.detail.openTrace" }).getAttribute("href")).toBe("/observability/traces?trace_id=trace-a");
+		 expect(screen.getByRole("link", { name: "bknTrace.logs.detail.openTrace" }).getAttribute("href")).toBe("/studio/observability/traces?trace_id=trace-a");
 	 });
 
   it("设置页只读展示来源覆盖和保留策略", async () => {

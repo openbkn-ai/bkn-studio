@@ -26,7 +26,7 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import styles from "@/modules/bkn-trace/scenes/BknTraceRunsScene.module.css";
@@ -108,12 +108,15 @@ export function BknTraceRunsScene() {
   const [detail, setDetail] = useState<RequestDetail>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const detailRequestSequence = useRef(0);
+  const provenanceRequestSequence = useRef(0);
 
   const loadProvenance = useCallback(async (
     targetView: ProvenanceView,
     query: RequestSummaryQuery = {},
     append = false,
   ) => {
+    const requestSequence = ++provenanceRequestSequence.current;
     setLoading(true);
     setError(undefined);
     try {
@@ -126,6 +129,7 @@ export function BknTraceRunsScene() {
         : targetView === "interactions"
           ? mapProvenancePage(await getInteractionSummaries(request), mapInteractionRow)
           : mapProvenancePage(await getRequestSummaries(request), mapRequestRow);
+      if (requestSequence !== provenanceRequestSequence.current) return;
       setPage((current) =>
         append && current
           ? {
@@ -135,9 +139,11 @@ export function BknTraceRunsScene() {
           : result
       );
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
+      if (requestSequence === provenanceRequestSequence.current) {
+        setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
+      }
     } finally {
-      setLoading(false);
+      if (requestSequence === provenanceRequestSequence.current) setLoading(false);
     }
   }, [t]);
 
@@ -215,6 +221,7 @@ export function BknTraceRunsScene() {
   }
 
   async function openRequest(requestId: string) {
+    const requestSequence = ++detailRequestSequence.current;
     setSelectedRequestId(requestId);
     setLoading(true);
     setError(undefined);
@@ -242,6 +249,7 @@ export function BknTraceRunsScene() {
       const artifacts = artifactResults.flatMap((result) =>
         result.status === "fulfilled" ? [result.value] : []
       );
+      if (requestSequence !== detailRequestSequence.current) return;
       setDetail({
         artifacts,
         businessGraph,
@@ -252,10 +260,12 @@ export function BknTraceRunsScene() {
         traces,
       });
     } catch (caught: unknown) {
-      setDetail(undefined);
-      setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
+      if (requestSequence === detailRequestSequence.current) {
+        setDetail(undefined);
+        setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
+      }
     } finally {
-      setLoading(false);
+      if (requestSequence === detailRequestSequence.current) setLoading(false);
     }
   }
 

@@ -325,6 +325,62 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 	expect(window.location.search).toContain("interaction_id=interaction_customer_risk");
   });
 
+  it("丢弃晚到的旧层级响应，避免覆盖当前业务溯源视图", async () => {
+    let resolveConversations!: (value: Awaited<ReturnType<typeof getConversationSummaries>>) => void;
+    vi.mocked(getConversationSummaries).mockImplementationOnce(() => new Promise((resolve) => {
+      resolveConversations = resolve;
+    }));
+    vi.mocked(getInteractionSummaries).mockResolvedValueOnce({
+      entries: [{
+        conversationId: "conversation-latest",
+        evidenceCompleteness: "complete",
+        interactionId: "interaction-latest",
+        knowledgeNetworks: [],
+        partialReasons: [],
+        questionPreview: "当前交互结果",
+        requestCount: 1,
+        resultPreview: "当前结果",
+        startedAt: "2026-08-01T10:00:00Z",
+        status: "completed",
+        traceCount: 1,
+      }],
+      partial: false,
+      partialReasons: [],
+      total: 1,
+      truncated: false,
+    });
+
+    render(<BknTraceExplorerScene />);
+    await waitFor(() => expect(getConversationSummaries).toHaveBeenCalled());
+    fireEvent.click(screen.getByText("bknTrace.views.interactions"));
+    expect(await screen.findByText("当前交互结果")).not.toBeNull();
+
+    resolveConversations({
+      entries: [{
+        agentOrApp: "stale-agent",
+        businessDomain: "stale-domain",
+        conversationId: "conversation-stale",
+        durationMs: 1,
+        evidenceCompleteness: "complete",
+        interactionCount: 1,
+        knowledgeNetworks: [],
+        partialReasons: [],
+        questionPreview: "过期会话结果",
+        requestCount: 1,
+        resultPreview: "不应显示",
+        startedAt: "2026-08-01T09:00:00Z",
+        status: "completed",
+        traceCount: 1,
+      }],
+      partial: false,
+      partialReasons: [],
+      total: 1,
+      truncated: false,
+    });
+    await waitFor(() => expect(screen.queryByText("过期会话结果")).toBeNull());
+    expect(screen.getByText("当前交互结果")).not.toBeNull();
+  });
+
   it("从 URL 恢复业务溯源层级和筛选上下文", async () => {
 	window.history.replaceState(
 	  {},

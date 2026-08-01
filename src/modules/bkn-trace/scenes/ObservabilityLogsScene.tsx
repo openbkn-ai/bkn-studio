@@ -11,6 +11,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { buildAppPath } from "@/app/router/app-paths";
 import { LogDetailDrawer } from "@/modules/bkn-trace/components/LogDetailDrawer";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import { listLogFacets, listLogs, type LogCategory, type LogListResult, type LogRecord } from "@/modules/bkn-trace/services/observability.service";
@@ -95,7 +96,7 @@ export function ObservabilityLogsScene() {
     { dataIndex: "severityText", key: "severityText", title: t("bknTrace.logs.columns.severity"), width: 100 },
     {
       dataIndex: "traceId", key: "traceId", title: t("bknTrace.logs.columns.trace"), width: 180,
-      render: (value?: string) => value ? <a href={`/observability/traces?trace_id=${encodeURIComponent(value)}`}>{value.slice(0, 16)}…</a> : "-",
+      render: (value?: string) => value ? <a href={buildAppPath(`/observability/traces?trace_id=${encodeURIComponent(value)}`)}>{value.slice(0, 16)}…</a> : "-",
     },
   ], [t]);
 

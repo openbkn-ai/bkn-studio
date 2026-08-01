@@ -9,6 +9,7 @@ import { Alert, Descriptions, Drawer, Spin, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { buildAppPath } from "@/app/router/app-paths";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import { getLogDetail, type LogDetailResult } from "@/modules/bkn-trace/services/observability.service";
 
@@ -55,7 +56,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
             <Descriptions.Item label={t("bknTrace.logs.detail.logId")}><span className={styles.technicalId}>{record.logId}</span></Descriptions.Item>
             <Descriptions.Item label={t("bknTrace.logs.detail.requestId")}><span className={styles.technicalId}>{record.requestId || "-"}</span></Descriptions.Item>
             <Descriptions.Item label={t("bknTrace.logs.detail.traceId")}>
-              {record.traceId ? <a aria-label={t("bknTrace.logs.detail.openTrace")} href={`/observability/traces?trace_id=${encodeURIComponent(record.traceId)}`}>{record.traceId}</a> : "-"}
+              {record.traceId ? <a aria-label={t("bknTrace.logs.detail.openTrace")} href={buildAppPath(`/observability/traces?trace_id=${encodeURIComponent(record.traceId)}`)}>{record.traceId}</a> : "-"}
             </Descriptions.Item>
             <Descriptions.Item label={t("bknTrace.logs.detail.projection")}>{detail.policyRevision}</Descriptions.Item>
           </Descriptions>
