@@ -239,8 +239,8 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     render(<BknTraceExplorerScene />);
 
     await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
-    expect(screen.getByText("客户 A 的风险为什么上升？")).not.toBeNull();
-    expect(screen.getByText("近 7 天投诉增加，风险等级上升。")).not.toBeNull();
+    expect(await screen.findByText("客户 A 的风险为什么上升？")).not.toBeNull();
+    expect(await screen.findByText("近 7 天投诉增加，风险等级上升。")).not.toBeNull();
     expect(screen.queryByPlaceholderText("bknTrace.placeholders.traceId")).toBeNull();
   });
 
