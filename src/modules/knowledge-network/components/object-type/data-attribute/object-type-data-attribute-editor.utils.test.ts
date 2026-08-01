@@ -7,15 +7,24 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/knowledge-network";
+import type {
+  ObjectTypeDataProperty,
+  ObjectTypeResourceField,
+} from "@/modules/knowledge-network/types/knowledge-network";
 
 import {
   applyDisplayKeySelection,
   applyPrimaryKeySelection,
+  applyMappingFilter,
   areConnectionsEqual,
   areDataPropertiesEqual,
   areDataSourcesEqual,
   areStringArraysEqualAsSets,
+  buildConnectionId,
+  buildMappingAlignedLayout,
+  countMappedProperties,
+  filterPropertyRows,
+  filterViewFieldRows,
 } from "./object-type-data-attribute-editor.utils";
 
 function createProperty(
@@ -30,6 +39,188 @@ function createProperty(
     ...overrides,
   };
 }
+
+function createField(
+  overrides: Partial<ObjectTypeResourceField> & Pick<ObjectTypeResourceField, "name">,
+): ObjectTypeResourceField {
+  return {
+    displayName: overrides.displayName ?? overrides.name,
+    type: "string",
+    ...overrides,
+  };
+}
+
+describe("buildMappingAlignedLayout", () => {
+  it("aligns mapped pairs before unmapped rows on both sides", () => {
+    const viewFields = [
+      createField({ name: "z_field" }),
+      createField({ name: "a_field" }),
+      createField({ name: "m_field" }),
+    ];
+    const properties = [
+      createProperty({
+        mappedField: { displayName: "A", name: "a_field", type: "string" },
+        name: "prop_a",
+      }),
+      createProperty({ name: "prop_unmapped" }),
+      createProperty({
+        mappedField: { displayName: "M", name: "m_field", type: "string" },
+        name: "prop_m",
+      }),
+    ];
+
+    const layout = buildMappingAlignedLayout(viewFields, properties);
+
+    expect(layout.viewFieldRows.map((row) => row.item.name)).toEqual([
+      "a_field",
+      "m_field",
+      "z_field",
+    ]);
+    expect(layout.propertyRows.map((row) => row.item.name)).toEqual([
+      "prop_a",
+      "prop_m",
+      "prop_unmapped",
+    ]);
+    expect(layout.viewFieldRows.map((row) => row.section)).toEqual([
+      "mapped",
+      "mapped",
+      "unmapped",
+    ]);
+  });
+
+  it("keeps properties whose mapped field is missing from viewFields in propertyRows", () => {
+    const properties = [
+      createProperty({
+        mappedField: { displayName: "Legacy", name: "legacy_field", type: "string" },
+        name: "legacy_prop",
+      }),
+      createProperty({ name: "prop_unmapped" }),
+    ];
+
+    const layout = buildMappingAlignedLayout([], properties);
+
+    expect(layout.propertyRows.map((row) => row.item.name)).toEqual([
+      "legacy_prop",
+      "prop_unmapped",
+    ]);
+    expect(layout.propertyRows.map((row) => row.section)).toEqual(["unmapped", "unmapped"]);
+  });
+
+  it("keeps orphaned mapped properties when viewFields load asynchronously", () => {
+    const properties = [
+      createProperty({
+        mappedField: { displayName: "Order ID", name: "order_id", type: "string" },
+        name: "order_id",
+      }),
+    ];
+
+    const layoutBeforeLoad = buildMappingAlignedLayout([], properties);
+    expect(layoutBeforeLoad.propertyRows.map((row) => row.item.name)).toEqual(["order_id"]);
+
+    const layoutAfterLoad = buildMappingAlignedLayout(
+      [createField({ displayName: "Order ID", name: "order_id" })],
+      properties,
+    );
+    expect(layoutAfterLoad.propertyRows.map((row) => row.item.name)).toEqual(["order_id"]);
+    expect(layoutAfterLoad.propertyRows[0]?.section).toBe("mapped");
+  });
+});
+
+describe("applyMappingFilter", () => {
+  it("returns only mapped or unmapped rows", () => {
+    const rows = buildMappingAlignedLayout(
+      [createField({ name: "a" }), createField({ name: "b" })],
+      [
+        createProperty({
+          mappedField: { displayName: "A", name: "a", type: "string" },
+          name: "prop_a",
+        }),
+        createProperty({ name: "prop_b" }),
+      ],
+    ).propertyRows;
+
+    expect(applyMappingFilter(rows, "mapped").map((row) => row.item.name)).toEqual(["prop_a"]);
+    expect(applyMappingFilter(rows, "unmapped").map((row) => row.item.name)).toEqual(["prop_b"]);
+  });
+});
+
+describe("filterViewFieldRows", () => {
+  it("keeps mapped partner visible when property keyword matches", () => {
+    const properties = [
+      createProperty({
+        displayName: "Order ID",
+        mappedField: { displayName: "ID", name: "order_id", type: "string" },
+        name: "order_id",
+      }),
+    ];
+    const layout = buildMappingAlignedLayout(
+      [createField({ displayName: "ID", name: "order_id" })],
+      properties,
+    );
+    const mappedProperty = properties[0];
+    if (!mappedProperty) {
+      throw new Error("expected mapped property");
+    }
+    const mappedPropertyByFieldName = new Map([["order_id", mappedProperty]]);
+
+    const filtered = filterViewFieldRows(
+      layout.viewFieldRows,
+      "",
+      mappedPropertyByFieldName,
+      "order",
+    );
+
+    expect(filtered.map((row) => row.item.name)).toEqual(["order_id"]);
+  });
+});
+
+describe("buildConnectionId", () => {
+  it("builds a stable connection id", () => {
+    expect(buildConnectionId("field_a", "prop_b")).toBe("field_a::prop_b");
+  });
+});
+
+describe("countMappedProperties", () => {
+  it("counts properties with mappedField", () => {
+    expect(
+      countMappedProperties([
+        createProperty({
+          mappedField: { displayName: "A", name: "a", type: "string" },
+          name: "a",
+        }),
+        createProperty({ name: "b" }),
+      ]),
+    ).toBe(1);
+  });
+});
+
+describe("filterPropertyRows", () => {
+  it("keeps mapped partner visible when field keyword matches", () => {
+    const properties = [
+      createProperty({
+        displayName: "Customer Name",
+        mappedField: { displayName: "Name", name: "customer_name", type: "string" },
+        name: "customer_name",
+      }),
+    ];
+    const layout = buildMappingAlignedLayout(
+      [createField({ displayName: "Name", name: "customer_name" })],
+      properties,
+    );
+    const mappedFieldByPropertyName = new Map([
+      ["customer_name", createField({ displayName: "Name", name: "customer_name" })],
+    ]);
+
+    const filtered = filterPropertyRows(
+      layout.propertyRows,
+      "",
+      mappedFieldByPropertyName,
+      "customer",
+    );
+
+    expect(filtered.map((row) => row.item.name)).toEqual(["customer_name"]);
+  });
+});
 
 describe("areConnectionsEqual", () => {
   it("returns true for identical connection lists", () => {

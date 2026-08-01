@@ -21,7 +21,7 @@ import {
   StarOutlined,
   TableOutlined,
 } from "@ant-design/icons";
-import { Alert, Checkbox, Dropdown, Empty, Input, Popover, Radio, Tooltip } from "antd";
+import { Alert, Checkbox, Dropdown, Empty, Input, Popover, Radio, Segmented, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 import {
   useCallback,
@@ -65,11 +65,18 @@ import { FieldTypeIcon } from "./FieldTypeIcon";
 import {
   applyDisplayKeySelection,
   applyPrimaryKeySelection,
+  applyMappingFilter,
   areConnectionsEqual,
   areDataPropertiesEqual,
   areDataSourcesEqual,
   areStringArraysEqualAsSets,
+  buildConnectionId,
+  buildMappingAlignedLayout,
+  countMappedProperties,
+  filterPropertyRows,
+  filterViewFieldRows,
   type ConnectionPoint,
+  type MappingFilter,
 } from "./object-type-data-attribute-editor.utils";
 
 type ObjectTypeBasicInfo = {
@@ -107,9 +114,30 @@ const PANEL_WIDTH = 360;
 const PANEL_HEADER_HEIGHT = 49;
 const PANEL_SEARCH_HEIGHT = 57;
 const PANEL_ROW_HEIGHT = 52;
+const PANEL_SECTION_DIVIDER_HEIGHT = 32;
 const PANEL_EMPTY_HEIGHT = 96;
 const CANVAS_MIN_HEIGHT = 560;
+const CANVAS_STAGE_BOTTOM_PADDING = 64;
 const CANVAS_STAGE_WIDTH = 1400;
+
+function countUnmappedSectionDividers(
+  rows: Array<{ section: "mapped" | "unmapped" }>,
+  mappingFilter: MappingFilter,
+) {
+  if (mappingFilter !== "all") {
+    return 0;
+  }
+
+  return rows.reduce((count, row, index) => {
+    if (
+      row.section === "unmapped" &&
+      (index === 0 || rows[index - 1]?.section === "mapped")
+    ) {
+      return count + 1;
+    }
+    return count;
+  }, 0);
+}
 
 type KeySelectOption = {
   label: string;
@@ -286,6 +314,8 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     null,
   );
   const [hoveredConnection, setHoveredConnection] = useState<string | null>(null);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+  const [mappingFilter, setMappingFilter] = useState<MappingFilter>("all");
   const [connections, setConnections] = useState<ConnectionPoint[]>([]);
   const [alertMessage, setAlertMessage] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -343,30 +373,62 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   );
 
   const filteredViewFields = useMemo(() => {
-    const keyword = fieldSearch.trim().toLowerCase();
-    if (!keyword) {
-      return viewFields;
-    }
-
-    return viewFields.filter(
-      (item) =>
-        item.displayName.toLowerCase().includes(keyword) ||
-        item.name.toLowerCase().includes(keyword),
+    const alignedLayout = buildMappingAlignedLayout(viewFields, dataProperties);
+    const filteredByMapping = applyMappingFilter(alignedLayout.viewFieldRows, mappingFilter);
+    const mappedPropertyByFieldName = new Map(
+      dataProperties
+        .filter((item) => item.mappedField)
+        .map((item) => [item.mappedField!.name, item] as const),
     );
-  }, [fieldSearch, viewFields]);
+
+    return filterViewFieldRows(
+      filteredByMapping,
+      fieldSearch,
+      mappedPropertyByFieldName,
+      propertySearch,
+    );
+  }, [dataProperties, fieldSearch, mappingFilter, propertySearch, viewFields]);
 
   const filteredProperties = useMemo(() => {
-    const keyword = propertySearch.trim().toLowerCase();
-    if (!keyword) {
-      return dataProperties;
-    }
-
-    return dataProperties.filter(
-      (item) =>
-        item.displayName.toLowerCase().includes(keyword) ||
-        item.name.toLowerCase().includes(keyword),
+    const alignedLayout = buildMappingAlignedLayout(viewFields, dataProperties);
+    const filteredByMapping = applyMappingFilter(alignedLayout.propertyRows, mappingFilter);
+    const fieldByName = new Map(viewFields.map((field) => [field.name, field]));
+    const mappedFieldByPropertyName = new Map(
+      dataProperties
+        .filter((item) => item.mappedField)
+        .map((item) => [item.name, fieldByName.get(item.mappedField!.name)!] as const)
+        .filter((entry): entry is [string, ObjectTypeResourceField] => Boolean(entry[1])),
     );
-  }, [dataProperties, propertySearch]);
+
+    return filterPropertyRows(
+      filteredByMapping,
+      propertySearch,
+      mappedFieldByPropertyName,
+      fieldSearch,
+    );
+  }, [dataProperties, fieldSearch, mappingFilter, propertySearch, viewFields]);
+
+  const mappedPropertyCount = useMemo(
+    () => countMappedProperties(validProperties),
+    [validProperties],
+  );
+
+  const mappingFilterOptions = useMemo(
+    () => [
+      { label: t("knowledgeNetwork.objectTypeMappingFilterAll"), value: "all" as const },
+      { label: t("knowledgeNetwork.objectTypeMappingFilterMapped"), value: "mapped" as const },
+      { label: t("knowledgeNetwork.objectTypeMappingFilterUnmapped"), value: "unmapped" as const },
+    ],
+    [t],
+  );
+
+  const selectConnection = useCallback((viewFieldName: string, propertyName: string) => {
+    setSelectedConnectionId(buildConnectionId(viewFieldName, propertyName));
+  }, []);
+
+  const clearSelectedConnection = useCallback(() => {
+    setSelectedConnectionId(null);
+  }, []);
 
   const updateProperties = useCallback(
     (nextProperties: ObjectTypeDataProperty[], nextDataSource?: ObjectTypeDataSource) => {
@@ -608,12 +670,34 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       clearPendingViewField();
       return;
     }
+    clearSelectedConnection();
     setPendingViewField(field);
     setAlertMessage(t("knowledgeNetwork.objectTypeClickToConnect"));
   };
 
+  const handleViewFieldClick = (field: ObjectTypeResourceField, isMapped: boolean) => {
+    if (isMapped) {
+      const mappedProperty = validProperties.find(
+        (item) => item.mappedField?.name === field.name,
+      );
+      if (mappedProperty?.mappedField) {
+        selectConnection(field.name, mappedProperty.name);
+      }
+      return;
+    }
+
+    selectPendingViewField(field);
+  };
+
   const disconnectPropertyMapping = (name: string, event: React.MouseEvent) => {
     event.stopPropagation();
+    const property = validProperties.find((item) => item.name === name);
+    if (
+      property?.mappedField &&
+      selectedConnectionId === buildConnectionId(property.mappedField.name, property.name)
+    ) {
+      clearSelectedConnection();
+    }
     updateProperties(
       dataProperties.map((item) =>
         item.name === name ? { ...item, mappedField: undefined } : item,
@@ -662,6 +746,20 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       ),
     );
     clearPendingViewField();
+  };
+
+  const handlePropertyClick = (property: ObjectTypeDataProperty, isMapped: boolean) => {
+    if (pendingViewField) {
+      connectProperty(property);
+      return;
+    }
+
+    if (isMapped && property.mappedField) {
+      selectConnection(property.mappedField.name, property.name);
+      return;
+    }
+
+    connectProperty(property);
   };
 
   const handleAddProperty = (property: ObjectTypeDataProperty) => {
@@ -935,21 +1033,31 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   const showViewSearch = viewFields.length > 0 || fieldSearch.length > 0;
   const showDataSearch = dataProperties.length > 0 || propertySearch.length > 0;
+  const viewSectionDividerCount = countUnmappedSectionDividers(
+    filteredViewFields,
+    mappingFilter,
+  );
+  const dataSectionDividerCount = countUnmappedSectionDividers(
+    filteredProperties,
+    mappingFilter,
+  );
   const viewPanelHeight =
     PANEL_HEADER_HEIGHT +
     (showViewSearch ? PANEL_SEARCH_HEIGHT : 0) +
     (filteredViewFields.length > 0
-      ? filteredViewFields.length * PANEL_ROW_HEIGHT
+      ? filteredViewFields.length * PANEL_ROW_HEIGHT +
+        viewSectionDividerCount * PANEL_SECTION_DIVIDER_HEIGHT
       : PANEL_EMPTY_HEIGHT);
   const dataPanelHeight =
     PANEL_HEADER_HEIGHT +
     (showDataSearch ? PANEL_SEARCH_HEIGHT : 0) +
     (filteredProperties.length > 0
-      ? filteredProperties.length * PANEL_ROW_HEIGHT
+      ? filteredProperties.length * PANEL_ROW_HEIGHT +
+        dataSectionDividerCount * PANEL_SECTION_DIVIDER_HEIGHT
       : PANEL_EMPTY_HEIGHT);
   const canvasStageHeight = Math.max(
     CANVAS_MIN_HEIGHT,
-    VIEW_PANEL_POS.y + Math.max(viewPanelHeight, dataPanelHeight) + 40,
+    VIEW_PANEL_POS.y + Math.max(viewPanelHeight, dataPanelHeight) + CANVAS_STAGE_BOTTOM_PADDING,
   );
 
   return (
@@ -1029,12 +1137,28 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         </div>
       </div>
 
+      <div className={styles.mappingToolbar}>
+        <Segmented<MappingFilter>
+          onChange={(value) => setMappingFilter(value)}
+          options={mappingFilterOptions}
+          value={mappingFilter}
+        />
+        <span className={styles.mappingSummary}>
+          {t("knowledgeNetwork.objectTypeMappingSummary", {
+            mapped: mappedPropertyCount,
+            total: validProperties.length,
+          })}
+        </span>
+      </div>
+
+      <div className={styles.canvasWrapper}>
       <div
         className={styles.canvas}
         onMouseDown={(event) => {
           if (event.button !== 0 || event.target !== event.currentTarget) {
             return;
           }
+          clearSelectedConnection();
           setIsPanning(true);
           panStartRef.current = {
             x: event.clientX,
@@ -1061,18 +1185,29 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
           style={{ height: canvasStageHeight, width: CANVAS_STAGE_WIDTH }}
         >
           {connections.map((item) => {
-            const connectionId = `${item.viewFieldName}::${item.propertyName}`;
+            const connectionId = buildConnectionId(item.viewFieldName, item.propertyName);
             const midX = (item.x1 + item.x2) / 2;
             const path = `M ${item.x1} ${item.y1} C ${midX} ${item.y1}, ${midX} ${item.y2}, ${item.x2} ${item.y2}`;
+            const isHovered = hoveredConnection === connectionId;
+            const isSelected = selectedConnectionId === connectionId;
+            const isDimmed = Boolean(selectedConnectionId) && !isSelected && !isHovered;
+            const className = [
+              styles.connectionLine,
+              isSelected ? styles.connectionLineSelected : "",
+              isHovered ? styles.connectionLineHover : "",
+              isDimmed ? styles.connectionLineDimmed : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
             return (
               <path
-                className={
-                  hoveredConnection === connectionId
-                    ? `${styles.connectionLine} ${styles.connectionLineHover}`
-                    : styles.connectionLine
-                }
+                className={className}
                 d={path}
                 key={connectionId}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  selectConnection(item.viewFieldName, item.propertyName);
+                }}
                 onMouseEnter={() => setHoveredConnection(connectionId)}
                 onMouseLeave={() => setHoveredConnection(null)}
               />
@@ -1143,24 +1278,45 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             {viewFields.length > 0 ? (
               <div className={styles.panelContent}>
                 {filteredViewFields.length > 0 ? (
-                  filteredViewFields.map((field) => {
+                  filteredViewFields.map((row, index) => {
+                    const field = row.item;
                     const isActive = pendingViewField?.name === field.name;
-                    const isMapped = validProperties.some(
+                    const mappedProperty = validProperties.find(
                       (item) => item.mappedField?.name === field.name,
                     );
+                    const isMapped = Boolean(mappedProperty);
+                    const connectionId =
+                      mappedProperty && isMapped
+                        ? buildConnectionId(field.name, mappedProperty.name)
+                        : null;
+                    const isSelected =
+                      connectionId !== null && selectedConnectionId === connectionId;
+                    const isDimmed =
+                      Boolean(selectedConnectionId) && isMapped && !isSelected && !isActive;
+                    const showSectionDivider =
+                      mappingFilter === "all" &&
+                      row.section === "unmapped" &&
+                      (index === 0 || filteredViewFields[index - 1]?.section === "mapped");
                     return (
-                      <div
-                        className={[
-                          styles.panelItem,
-                          styles.panelItemView,
-                          isActive ? styles.panelItemHighlighted : "",
-                          isMapped ? styles.panelItemMapped : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        key={field.name}
-                        onClick={() => selectPendingViewField(field)}
-                      >
+                      <div key={field.name}>
+                        {showSectionDivider ? (
+                          <div className={styles.panelSectionDivider}>
+                            {t("knowledgeNetwork.objectTypeMappingSectionUnmapped")}
+                          </div>
+                        ) : null}
+                        <div
+                          className={[
+                            styles.panelItem,
+                            styles.panelItemView,
+                            isActive ? styles.panelItemHighlighted : "",
+                            isMapped ? styles.panelItemMapped : "",
+                            isSelected ? styles.panelItemSelected : "",
+                            isDimmed ? styles.panelItemDimmed : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          onClick={() => handleViewFieldClick(field, isMapped)}
+                        >
                         <div className={styles.itemContent}>
                           <FieldTypeIcon type={field.type} />
                           <div>
@@ -1174,6 +1330,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                             viewHandleRefs.current[field.name] = node;
                           }}
                         />
+                      </div>
                       </div>
                     );
                   })
@@ -1226,21 +1383,41 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             {dataProperties.length > 0 ? (
               <div className={styles.panelContent}>
                 {filteredProperties.length > 0 ? (
-                  filteredProperties.map((property) => {
+                  filteredProperties.map((row, index) => {
+                    const property = row.item;
                     const isMapped = Boolean(property.mappedField);
+                    const connectionId =
+                      property.mappedField && isMapped
+                        ? buildConnectionId(property.mappedField.name, property.name)
+                        : null;
+                    const isSelected =
+                      connectionId !== null && selectedConnectionId === connectionId;
+                    const isDimmed =
+                      Boolean(selectedConnectionId) && isMapped && !isSelected;
+                    const showSectionDivider =
+                      mappingFilter === "all" &&
+                      row.section === "unmapped" &&
+                      (index === 0 || filteredProperties[index - 1]?.section === "mapped");
                     const hasInvalidName =
                       Boolean(property.name) && !DATA_PROPERTY_NAME_PATTERN.test(property.name);
                     return (
-                      <div
-                        className={[
-                          styles.panelItem,
-                          isMapped ? styles.panelItemMapped : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        key={property.name || property.displayName}
-                        onClick={() => connectProperty(property)}
-                      >
+                      <div key={property.name || property.displayName}>
+                        {showSectionDivider ? (
+                          <div className={styles.panelSectionDivider}>
+                            {t("knowledgeNetwork.objectTypeMappingSectionUnmapped")}
+                          </div>
+                        ) : null}
+                        <div
+                          className={[
+                            styles.panelItem,
+                            isMapped ? styles.panelItemMapped : "",
+                            isSelected ? styles.panelItemSelected : "",
+                            isDimmed ? styles.panelItemDimmed : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          onClick={() => handlePropertyClick(property, isMapped)}
+                        >
                         <span
                           className={`${styles.panelHandle} ${styles.panelHandleLeft}`}
                           ref={(node) => {
@@ -1320,8 +1497,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                           />
                         </div>
                       </div>
-                    </div>
-                  );
+                      </div>
+                      </div>
+                    );
                   })
                 ) : (
                   <div className={styles.panelEmpty}>
@@ -1332,6 +1510,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             ) : null}
           </div>
         </div>
+      </div>
 
         <div className={styles.canvasControls}>
           <button
