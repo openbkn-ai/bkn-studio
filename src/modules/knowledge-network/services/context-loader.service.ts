@@ -499,6 +499,7 @@ export async function sendRequest(
   queryValues: Record<string, string>,
   bodyText: string,
   auth?: McpAuth,
+  signal?: AbortSignal,
 ): Promise<ContextLoaderResponse> {
   const attempt = async (token: string): Promise<ContextLoaderResponse> => {
     const start = performance.now();
@@ -515,6 +516,7 @@ export async function sendRequest(
       const initResp = await fetch(url, {
         method: "POST",
         headers: baseHeaders,
+        signal,
         body: JSON.stringify({
           jsonrpc: "2.0",
           id: 1,
@@ -539,12 +541,14 @@ export async function sendRequest(
         await fetch(url, {
           method: "POST",
           headers: sessionHeaders,
+          signal,
           body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
         }).catch(() => undefined);
       }
       const response = await fetch(url, {
         method: "POST",
         headers: sessionHeaders,
+        signal,
         body: JSON.stringify({
           jsonrpc: "2.0",
           id: 2,
@@ -564,7 +568,7 @@ export async function sendRequest(
     }
     const url = buildRestUrl(env, op, queryValues);
     const headers = { "Content-Type": "application/json", ...bearer };
-    const init: RequestInit = { method: "POST", headers };
+    const init: RequestInit = { method: "POST", headers, signal };
     if (op.body !== null) {
       init.body = JSON.stringify(JSON.parse(bodyText || "{}"));
     }
@@ -612,7 +616,7 @@ function parseMcpEnvelope(text: string): unknown {
  * 走完整握手：initialize → notifications/initialized → tools/list。
  * 用于「工具发现 / 漂移对照」，也是 schema 驱动表单的数据源。
  */
-export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth): Promise<McpToolDef[]> {
+export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth, signal?: AbortSignal): Promise<McpToolDef[]> {
   // 单次完整握手；401 用哨兵透出，由外层刷新 token 后重跑（token 过期不自动续）。
   const UNAUTHORIZED = Symbol("unauthorized");
   const attempt = async (token: string): Promise<McpToolDef[] | typeof UNAUTHORIZED> => {
@@ -625,6 +629,7 @@ export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth): Promi
     const initResp = await fetch(url, {
       method: "POST",
       headers: baseHeaders,
+      signal,
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 1,
@@ -642,12 +647,14 @@ export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth): Promi
       await fetch(url, {
         method: "POST",
         headers: sessionHeaders,
+        signal,
         body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
       }).catch(() => undefined);
     }
     const resp = await fetch(url, {
       method: "POST",
       headers: sessionHeaders,
+      signal,
       body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
     });
     const text = await resp.text();
@@ -912,6 +919,7 @@ export async function fetchObjectInstances(
   otId: string,
   limit = 5,
   auth?: McpAuth,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>[]> {
   const base = env.base.replace(/\/+$/, "");
   const params = new URLSearchParams({ kn_id: env.knId, ot_id: otId, response_format: "json" });
@@ -920,6 +928,7 @@ export async function fetchObjectInstances(
     auth,
     `${base}${REST_PREFIX}/kn/query_object_instance?${params.toString()}`,
     { limit, need_total: false, properties: [] },
+    signal,
   );
   const text = await response.text();
   if (!response.ok) {
