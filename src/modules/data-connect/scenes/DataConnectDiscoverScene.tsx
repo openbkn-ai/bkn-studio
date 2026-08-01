@@ -81,7 +81,7 @@ export function DataConnectDiscoverScene({
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
   const [catalogLocked] = useState(() => Boolean(catalogId));
-  const [activeTab, setActiveTab] = useState<DiscoverPageTab>("schedules");
+  const [activeTab, setActiveTab] = useState<DiscoverPageTab>("tasks");
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebouncedValue(keyword.trim());
   const [catalogKeyword, setCatalogKeyword] = useState("");
@@ -883,17 +883,17 @@ export function DataConnectDiscoverScene({
           className={styles.pageTabs}
           items={[
             {
-              key: "schedules",
-              label: t("dataConnect.discoverTabSchedules"),
-              children: schedulesPanel,
-            },
-            {
               key: "tasks",
               label:
                 activeTaskCount > 0
                   ? `${t("dataConnect.discoverTabTasks")} (${activeTaskCount})`
                   : t("dataConnect.discoverTabTasks"),
               children: tasksPanel,
+            },
+            {
+              key: "schedules",
+              label: t("dataConnect.discoverTabSchedules"),
+              children: schedulesPanel,
             },
           ]}
           onChange={(key) => {

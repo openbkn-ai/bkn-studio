@@ -5,20 +5,33 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import axios from "axios";
+
+import i18n from "@/app/locales/i18n";
+import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import {
   catalogListAllQuery,
   createLogicalCatalog,
   createPhysicalCatalog,
   deleteCatalog,
+  getCatalogHealthCheckSchedule,
   getCatalog,
   inferConnectorCategory,
   listCatalogs,
   setCatalogEnabled,
   testCatalogConnection,
+  testCatalogConnectionConfig,
   updateCatalog,
+  updateCatalogHealthCheckSchedule,
 } from "@/shared/catalog";
 import { filterCatalogs } from "@/shared/catalog/catalog-mapper";
+import type {
+  CatalogConnectionTestInput,
+  CatalogConnectionTestResult,
+  CatalogHealthCheckScheduleInput,
+  CatalogMutationOptions,
+} from "@/shared/catalog";
 import type {
   DataConnectConnectorType,
   DataConnectListQuery,
@@ -245,8 +258,16 @@ export async function getDataConnectRecord(id: string) {
   return getCatalog(id);
 }
 
+export async function getDataConnectHealthCheckSchedule(id: string) {
+  return getCatalogHealthCheckSchedule(id);
+}
+
 export async function testDataConnectRecord(id: string) {
-  return testCatalogConnection(id);
+  assertConnectionTestSucceeded(await testCatalogConnection(id));
+}
+
+export async function testDataConnectConfig(input: CatalogConnectionTestInput) {
+  assertConnectionTestSucceeded(await testCatalogConnectionConfig(input));
 }
 
 export async function setDataConnectRecordEnabled(id: string, enabled: boolean) {
@@ -257,7 +278,10 @@ export async function deleteDataConnectRecord(id: string) {
   return deleteCatalog(id);
 }
 
-export async function createDataConnectRecord(input: DataConnectMutationPayload) {
+export async function createDataConnectRecord(
+  input: DataConnectMutationPayload,
+  options: CatalogMutationOptions = {},
+) {
   if (useMock) {
     const connectorType = mockConnectorTypes.find((item) => item.type === input.connectorType);
     return createPhysicalCatalog({
@@ -267,7 +291,7 @@ export async function createDataConnectRecord(input: DataConnectMutationPayload)
     });
   }
 
-  return createPhysicalCatalog(input);
+  return createPhysicalCatalog(input, options);
 }
 
 export { createLogicalCatalog };
@@ -275,6 +299,39 @@ export { createLogicalCatalog };
 export async function updateDataConnectRecord(
   id: string,
   input: DataConnectMutationPayload,
+  options: CatalogMutationOptions = {},
 ) {
-  return updateCatalog(id, input);
+  return updateCatalog(id, input, options);
+}
+
+export async function updateDataConnectHealthCheckSchedule(
+  id: string,
+  input: CatalogHealthCheckScheduleInput,
+) {
+  return updateCatalogHealthCheckSchedule(id, input);
+}
+
+function assertConnectionTestSucceeded(result: CatalogConnectionTestResult) {
+  if (result.success) {
+    return;
+  }
+
+  throw new Error(
+    result.message?.trim() || i18n.t("dataConnect.testConnectionFailed"),
+  );
+}
+
+export function isDataConnectConnectionTestFailure(error: unknown) {
+  const expectedCode =
+    "VegaBackend.Catalog.InternalError.TestConnectionFailed";
+
+  if (extractRequestErrorDetails(error).code === expectedCode) {
+    return true;
+  }
+
+  if (axios.isAxiosError<{ error_code?: unknown }>(error)) {
+    return error.response?.data?.error_code === expectedCode;
+  }
+
+  return false;
 }

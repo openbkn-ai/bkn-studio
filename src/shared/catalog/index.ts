@@ -6,9 +6,15 @@
  */
 
 export type {
+  CatalogConnectionTestInput,
+  CatalogConnectionTestResult,
+  CatalogHealthCheckSchedule,
+  CatalogHealthCheckScheduleInput,
+  CatalogHealthCheckScheduleMode,
   CatalogHealthStatus,
   CatalogListQuery,
   CatalogListResult,
+  CatalogMutationOptions,
   CatalogRecord,
   CatalogRecordStatus,
 } from "@/shared/catalog/types";
@@ -20,11 +26,14 @@ export {
   createLogicalCatalog,
   createPhysicalCatalog,
   deleteCatalog,
+  getCatalogHealthCheckSchedule,
   getCatalog,
   listCatalogs,
   setCatalogEnabled,
   testCatalogConnection,
+  testCatalogConnectionConfig,
   updateCatalog,
+  updateCatalogHealthCheckSchedule,
   updateMockCatalogRecord,
 } from "@/shared/catalog/catalog.service";
 

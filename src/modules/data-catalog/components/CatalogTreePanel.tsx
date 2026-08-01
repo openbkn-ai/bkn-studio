@@ -23,7 +23,6 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { BusinessTree, BusinessTreePanel } from "@/framework/ui/common/BusinessTreePanel";
 import { isBuiltinLogicalCatalog } from "@/modules/data-catalog/lib/logical-catalog";
-import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { createLogicalCatalog, deleteCatalog } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
@@ -31,21 +30,18 @@ import type { DataConnectConnectorType } from "@/modules/data-connect/types/data
 import styles from "./CatalogTreePanel.module.css";
 
 export type CatalogTreeSelection =
-  | { id: string; type: "catalog" }
-  | { id: string; type: "resource" };
+  { id: string; type: "catalog" };
 
 type CatalogTreePanelProps = {
-  activeDb?: string;
   activeSchema?: string;
   catalogs: CatalogRecord[];
   collapsed?: boolean;
   connectorTypes: DataConnectConnectorType[];
   onRefresh: () => Promise<void> | void;
   onSelectCatalog: (catalogId: string) => void;
-  onSelectScope?: (scope: { database?: string; schema?: string } | null) => void;
+  onSelectScope?: (scope: { schema: string } | null) => void;
   onToggleCollapsed?: () => void;
   resourceCount: number;
-  resources: CatalogResource[];
   discoveringCatalogIds: string[];
   selection: CatalogTreeSelection | null;
 };
@@ -56,12 +52,10 @@ type LogicalFormValues = {
 };
 
 type TreeNodeMeta =
-  | { catalogId?: never; database?: never; key: string; type: "group" | "connector" }
+  | { catalogId?: never; key: string; type: "group" | "connector" }
   | { catalogId: string; key: string; type: "catalog" }
-  | { catalogId: string; database: string; key: string; schema?: undefined; type: "database" }
   | {
       catalogId: string;
-      database: string;
       key: string;
       schema: string;
       type: "schema";
@@ -78,70 +72,21 @@ function catalogKey(catalogId: string) {
   return `catalog:${catalogId}`;
 }
 
-function databaseKey(catalogId: string, db: string) {
-  return `db:${catalogId}:${db}`;
+function schemaKey(catalogId: string, schema: string) {
+  return `schema:${catalogId}:${schema}`;
 }
 
-function schemaKey(catalogId: string, db: string, schema: string) {
-  return `schema:${catalogId}:${db}:${schema}`;
-}
-
-type ScopeGroup = {
-  db: string;
-  schemas: string[];
-};
-
-function parseScopeGroupsByCatalog(
-  resources: CatalogResource[],
-  catalogConnectorTypes: Map<string, string>,
-) {
-  const groupedByCatalog = new Map<string, Map<string, Set<string>>>();
-
-  resources.forEach((item) => {
-    if (!item.catalogId) {
-      return;
-    }
-    if (catalogConnectorTypes.get(item.catalogId) === "opensearch") {
-      return;
-    }
-    const raw = (item.sourceIdentifier ?? "").trim();
-    const fromMatch = raw.match(/\bfrom\s+([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+){0,2})/i);
-    const candidate = (fromMatch?.[1] ?? raw).trim();
-    const parts = candidate
-      .split(".")
-      .map((part) => part.trim().match(/[A-Za-z0-9_]+/g)?.[0] ?? "")
-      .filter(Boolean);
-    if (parts.length >= 2) {
-      const db = parts[0];
-      const schema = parts.length >= 3 ? parts[1] : "";
-      if (!groupedByCatalog.has(item.catalogId)) {
-        groupedByCatalog.set(item.catalogId, new Map());
-      }
-      const catalogGroups = groupedByCatalog.get(item.catalogId)!;
-      if (!catalogGroups.has(db)) {
-        catalogGroups.set(db, new Set());
-      }
-      if (schema) {
-        catalogGroups.get(db)?.add(schema);
-      }
-    }
-  });
-
-  return new Map<string, ScopeGroup[]>(
-    [...groupedByCatalog.entries()].map(([catalogId, groups]) => [
-      catalogId,
-      [...groups.entries()]
-        .map(([db, schemas]) => ({
-          db,
-          schemas: [...schemas].sort((a, b) => a.localeCompare(b, "zh-CN")),
-        }))
-        .sort((a, b) => a.db.localeCompare(b.db, "zh-CN")),
-    ]),
-  );
+function catalogSchemas(catalog: CatalogRecord) {
+  const schemas = catalog.metadata.schemas;
+  if (!Array.isArray(schemas)) {
+    return [];
+  }
+  return [...new Set(schemas.filter((schema): schema is string => typeof schema === "string" && schema.trim().length > 0))]
+    .map((schema) => schema.trim())
+    .sort((left, right) => left.localeCompare(right, "zh-CN"));
 }
 
 export function CatalogTreePanel({
-  activeDb = "",
   activeSchema = "",
   catalogs,
   collapsed = false,
@@ -151,7 +96,6 @@ export function CatalogTreePanel({
   onSelectScope,
   onToggleCollapsed,
   resourceCount,
-  resources,
   discoveringCatalogIds,
   selection,
 }: CatalogTreePanelProps) {
@@ -168,38 +112,17 @@ export function CatalogTreePanel({
     [connectorTypes],
   );
 
-  const selectedCatalogId = useMemo(() => {
-    if (!selection) {
-      return undefined;
-    }
-    if (selection.type === "catalog") {
-      return selection.id;
-    }
-    return resources.find((item) => item.id === selection.id)?.catalogId;
-  }, [resources, selection]);
-
-  const catalogConnectorTypes = useMemo(
-    () => new Map(catalogs.map((catalog) => [catalog.id, catalog.connectorType])),
-    [catalogs],
-  );
-
-  const scopeGroupsByCatalog = useMemo(
-    () => parseScopeGroupsByCatalog(resources, catalogConnectorTypes),
-    [catalogConnectorTypes, resources],
-  );
+  const selectedCatalogId = selection?.id;
 
   const selectedKey = useMemo(() => {
-    if (selectedCatalogId && activeDb && activeSchema) {
-      return schemaKey(selectedCatalogId, activeDb, activeSchema);
-    }
-    if (selectedCatalogId && activeDb) {
-      return databaseKey(selectedCatalogId, activeDb);
+    if (selectedCatalogId && activeSchema) {
+      return schemaKey(selectedCatalogId, activeSchema);
     }
     if (selectedCatalogId) {
       return catalogKey(selectedCatalogId);
     }
     return undefined;
-  }, [activeDb, activeSchema, selectedCatalogId]);
+  }, [activeSchema, selectedCatalogId]);
 
   const query = keyword.trim().toLowerCase();
 
@@ -253,48 +176,27 @@ export function CatalogTreePanel({
     const requiredExpanded = new Set<string>([PHYSICAL_GROUP_KEY]);
 
     const attachCatalogChildren = (catalog: CatalogRecord): DataNode[] | undefined => {
-      const scopeGroups = scopeGroupsByCatalog.get(catalog.id) ?? [];
-      if (scopeGroups.length === 0) {
+      const schemas = catalogSchemas(catalog);
+      if (schemas.length === 0) {
         return undefined;
       }
       if (selectedCatalogId === catalog.id) {
         requiredExpanded.add(catalogKey(catalog.id));
       }
-      return scopeGroups.map((group) => {
-        const dbKey = databaseKey(catalog.id, group.db);
-        metaMap.set(dbKey, {
+      return schemas.map((schema) => {
+        const nodeKey = schemaKey(catalog.id, schema);
+        metaMap.set(nodeKey, {
           catalogId: catalog.id,
-          database: group.db,
-          key: dbKey,
-          type: "database",
+          key: nodeKey,
+          schema,
+          type: "schema",
         });
-        if (selectedCatalogId === catalog.id && activeDb === group.db) {
-          requiredExpanded.add(dbKey);
-        }
         return {
-          children: group.schemas.map((schema) => {
-            const nodeKey = schemaKey(catalog.id, group.db, schema);
-            metaMap.set(nodeKey, {
-              catalogId: catalog.id,
-              database: group.db,
-              key: nodeKey,
-              schema,
-              type: "schema",
-            });
-            return {
-              isLeaf: true,
-              key: nodeKey,
-              title: (
-                <span className={styles.scopeLeafTitle}>
-                  <span className={styles.scopeLeafName}>{schema}</span>
-                </span>
-              ),
-            };
-          }),
-          key: dbKey,
+          isLeaf: true,
+          key: nodeKey,
           title: (
-            <span className={styles.scopeGroupTitle}>
-              <span className={styles.scopeGroupName}>{group.db}</span>
+            <span className={styles.scopeLeafTitle}>
+              <span className={styles.scopeLeafName}>{schema}</span>
             </span>
           ),
         };
@@ -464,7 +366,6 @@ export function CatalogTreePanel({
       treeData,
     };
   }, [
-    activeDb,
     connectorTypeNameMap,
     logicalCatalogs,
     message,
@@ -473,7 +374,6 @@ export function CatalogTreePanel({
     physicalCatalogs,
     query,
     discoveringCatalogIds,
-    scopeGroupsByCatalog,
     selectedCatalogId,
     t,
   ]);
@@ -592,14 +492,9 @@ export function CatalogTreePanel({
               onSelectCatalog(meta.catalogId);
               return;
             }
-            if (meta.type === "database") {
-              onSelectCatalog(meta.catalogId);
-              onSelectScope?.({ database: meta.database });
-              return;
-            }
             if (meta.type === "schema") {
               onSelectCatalog(meta.catalogId);
-              onSelectScope?.({ database: meta.database, schema: meta.schema });
+              onSelectScope?.({ schema: meta.schema });
             }
           }}
           selectedKeys={selectedKey ? [selectedKey] : []}

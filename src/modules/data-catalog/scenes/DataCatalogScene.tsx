@@ -24,12 +24,10 @@ import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
   countCatalogResources,
   isCatalogDiscovering,
-  listCatalogResources,
   listCatalogDiscovers,
 } from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildTask,
-  CatalogResource,
   CatalogDiscoverRecord,
 } from "@/modules/data-catalog/types/data-catalog";
 import { listDataConnectConnectorTypes } from "@/modules/data-connect/services/data-connect.service";
@@ -54,7 +52,6 @@ export function DataCatalogScene({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeDb = searchParams.get("db")?.trim() || "";
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [treeCollapsed, setTreeCollapsed] = useState(() => {
     try {
@@ -66,7 +63,6 @@ export function DataCatalogScene({
 
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
-  const [resources, setResources] = useState<CatalogResource[]>([]);
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [discover, setDiscovers] = useState<CatalogDiscoverRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,18 +96,12 @@ export function DataCatalogScene({
     }
   }, [connectorTypes.length]);
 
-  const loadCatalogDetail = useCallback(async (catalogId?: string) => {
+  const loadCatalogTasks = useCallback(async (catalogId?: string) => {
     if (!catalogId) {
-      setResources([]);
       setTasks([]);
       return;
     }
-    const [nextResources, nextTasks] = await Promise.all([
-      listCatalogResources({ catalogId }),
-      listBuildTasks({ catalogId }),
-    ]);
-    setResources(nextResources);
-    setTasks(nextTasks);
+    setTasks(await listBuildTasks({ catalogId }));
   }, []);
 
   const refreshResourceTotal = useCallback(async () => {
@@ -154,24 +144,23 @@ export function DataCatalogScene({
     return subscribeMockDb(() => {
       void loadAll();
       if (selectedCatalogId) {
-        void loadCatalogDetail(selectedCatalogId);
+        void loadCatalogTasks(selectedCatalogId);
       }
       void loadDiscovers();
     });
-  }, [loadAll, loadCatalogDetail, loadDiscovers, selectedCatalogId]);
+  }, [loadAll, loadCatalogTasks, loadDiscovers, selectedCatalogId]);
 
   useEffect(() => {
     if (loading) {
       return;
     }
     if (!selectedCatalogId) {
-      setResources([]);
       setTasks([]);
       return;
     }
 
-    void loadCatalogDetail(selectedCatalogId);
-  }, [loadCatalogDetail, loading, selectedCatalogId]);
+    void loadCatalogTasks(selectedCatalogId);
+  }, [loadCatalogTasks, loading, selectedCatalogId]);
 
   const hasActiveWork = useMemo(
     () =>
@@ -372,7 +361,6 @@ export function DataCatalogScene({
       <div className={[styles.explorer, treeCollapsed ? styles.explorerCollapsed : ""].join(" ")}>
         <CatalogTreePanel
           catalogs={catalogs}
-          activeDb={activeDb}
           activeSchema={activeSchema}
           connectorTypes={connectorTypes}
           collapsed={treeCollapsed}
@@ -381,23 +369,16 @@ export function DataCatalogScene({
           }}
           onSelectCatalog={(catalogId) => {
             const next = new URLSearchParams(searchParams);
-            next.delete("db");
             next.delete("schema");
             setSearchParams(next, { replace: true });
             void navigate(`/data-directory/catalog/${catalogId}`);
           }}
           onSelectScope={(scope) => {
             const next = new URLSearchParams(searchParams);
-            if (!scope?.database) {
-              next.delete("db");
+            if (!scope) {
               next.delete("schema");
             } else {
-              next.set("db", scope.database);
-              if (scope.schema) {
-                next.set("schema", scope.schema);
-              } else {
-                next.delete("schema");
-              }
+              next.set("schema", scope.schema);
             }
             setSearchParams(next, { replace: true });
           }}
@@ -413,7 +394,6 @@ export function DataCatalogScene({
             });
           }}
           resourceCount={resourceTotal}
-          resources={resources}
           discoveringCatalogIds={discoveringCatalogIds}
           selection={selection}
         />
@@ -427,7 +407,7 @@ export function DataCatalogScene({
         onCreated={(resource) => {
           void refreshResourceTotal();
           if (selectedCatalogId) {
-            void loadCatalogDetail(selectedCatalogId);
+            void loadCatalogTasks(selectedCatalogId);
           }
           openResourceWorkspace(resource.id);
         }}
