@@ -50,6 +50,11 @@
   cursor: pointer;
 }
 
+.loadMore {
+  display: flex;
+  justify-content: center;
+}
+
 .detailBody,
 .detailSummary {
   display: grid;

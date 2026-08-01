@@ -13,9 +13,11 @@ import { ObservabilitySettingsScene } from "@/modules/bkn-trace/scenes/Observabi
 import { getLogDetail, listLogFacets, listLogPolicies, listLogs, listLogSources } from "@/modules/bkn-trace/services/observability.service";
 import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
 
+const translate = (key: string) => key;
+
 vi.mock("react-i18next", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-i18next")>();
-  return { ...original, useTranslation: () => ({ t: (key: string) => key }) };
+  return { ...original, useTranslation: () => ({ t: translate }) };
 });
 
 vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => {
@@ -66,7 +68,7 @@ describe("observability workspace scenes", () => {
       partial: true,
       sourceStatus: [{ coveredModules: ["openbkn"], reason: "source_query_failed", reliability: "best_effort", sourceId: "safe-audit", status: "unavailable" }],
     });
-    vi.mocked(listLogSources).mockResolvedValue([{ coveredModules: ["openbkn"], collectionMethod: "direct_otlp", reliability: "best_effort", sourceId: "otel-ss4o", status: "available" }]);
+    vi.mocked(listLogSources).mockResolvedValue([{ coveredModules: ["openbkn"], collectionMethod: "direct_otlp", reliability: "best_effort", sourceId: "otel-ss4o", status: "healthy" }]);
     vi.mocked(listLogPolicies).mockResolvedValue([{ category: "runtime.system", legalHold: false, policyKind: "runtime", policyRevision: "r6.2-default", readOnly: true, retentionDays: 7, scope: { tenant_id: "tenant-a" } }]);
 		vi.mocked(listLogFacets).mockResolvedValue({ data: [{ count: 1, value: "context-loader" }], partial: false, sourceStatus: [] });
 		vi.mocked(getLogDetail).mockResolvedValue({
@@ -88,6 +90,36 @@ describe("observability workspace scenes", () => {
     expect(await screen.findByText("读取需求预测对象")).not.toBeNull();
     expect(screen.getByText("bknTrace.logs.partialWarning")).not.toBeNull();
     expect(screen.getByText("runtime.business")).not.toBeNull();
+  });
+
+  it("使用后端签名游标继续加载日志且不重复已有记录", async () => {
+    vi.mocked(listLogs)
+      .mockResolvedValueOnce({
+        count: { accuracy: "partial", value: 1 },
+        data: [{
+          attributes: {}, category: "runtime.system", environment: "production", eventName: "service.started",
+          eventTimestamp: "2026-08-01T10:00:00Z", logId: "log-a", observedTimestamp: "2026-08-01T10:00:01Z",
+          outcome: "success", serviceName: "bkn-trace", severityNumber: 9, severityText: "INFO",
+          sourceId: "otel-runtime", summary: "服务已启动",
+        }],
+        nextCursor: "signed-cursor-a", partial: false, sourceStatus: [],
+      })
+      .mockResolvedValueOnce({
+        count: { accuracy: "exact", value: 1 },
+        data: [{
+          attributes: {}, category: "runtime.system", environment: "production", eventName: "dependency.failed",
+          eventTimestamp: "2026-08-01T09:59:00Z", logId: "log-b", observedTimestamp: "2026-08-01T09:59:01Z",
+          outcome: "failure", serviceName: "bkn-trace", severityNumber: 17, severityText: "ERROR",
+          sourceId: "otel-runtime", summary: "依赖调用失败",
+        }],
+        partial: false, sourceStatus: [],
+      });
+
+    render(<ObservabilityLogsScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "bknTrace.actions.loadMore" }));
+    await waitFor(() => expect(listLogs).toHaveBeenLastCalledWith({ cursor: "signed-cursor-a", limit: 50 }));
+    expect(await screen.findByText("服务已启动")).not.toBeNull();
+    expect(await screen.findByText("依赖调用失败")).not.toBeNull();
   });
 
 	 it("点击日志打开受控详情并可下钻 Trace", async () => {

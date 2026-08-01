@@ -29,6 +29,16 @@ export function ObservabilityLogsScene() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
+	const logQuery = useCallback((cursor?: string) => ({
+		...(categories.length ? { categories } : {}),
+		...(cursor ? { cursor } : {}),
+		limit: 50,
+		...(query.trim() ? { query: query.trim() } : {}),
+		...(services.length ? { services } : {}),
+		...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
+		...(associatedScope.traceId ? { traceId: associatedScope.traceId } : {}),
+	}), [associatedScope, categories, query, services]);
+
   const load = useCallback(async (access: TraceAccessProfile, nextQuery = "", nextCategories: LogCategory[] = [], nextServices: string[] = []) => {
     if (!canSearchLogs(access, associatedScope)) return;
     setLoading(true);
@@ -89,6 +99,22 @@ export function ObservabilityLogsScene() {
     },
   ], [t]);
 
+	const loadMore = useCallback(async () => {
+		if (!result?.nextCursor) return;
+		setLoading(true);
+		setError(undefined);
+		try {
+			const next = await listLogs(logQuery(result.nextCursor));
+			const records = new Map(result.data.map((record) => [record.logId, record]));
+			for (const record of next.data) records.set(record.logId, record);
+			setResult({ ...next, data: [...records.values()] });
+		} catch (caught: unknown) {
+			setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
+		} finally {
+			setLoading(false);
+		}
+	}, [logQuery, result, t]);
+
   if (loading && !profile) return <Spin />;
   if (profile && !canSearchLogs(profile, associatedScope)) return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
 
@@ -106,8 +132,9 @@ export function ObservabilityLogsScene() {
         <Select allowClear mode="multiple" onChange={setServices} options={serviceOptions} placeholder={t("bknTrace.logs.servicePlaceholder")} value={services} />
         <Space><Button icon={<SearchOutlined />} onClick={() => profile && void load(profile, query, categories, services)} type="primary">{t("bknTrace.actions.query")}</Button><Button aria-label={t("bknTrace.actions.refresh")} icon={<ReloadOutlined />} onClick={() => profile && void load(profile, query, categories, services)} /></Space>
       </div> : null}
-      {result?.sourceStatus.length ? <div className={styles.sourceStrip}>{result.sourceStatus.map((source) => <Tag color={source.status === "available" ? "green" : "orange"} key={source.sourceId}>{source.sourceId} · {source.status}</Tag>)}</div> : null}
+      {result?.sourceStatus.length ? <div className={styles.sourceStrip}>{result.sourceStatus.map((source) => <Tag color={source.status === "healthy" ? "green" : "orange"} key={source.sourceId}>{source.sourceId} · {source.status}</Tag>)}</div> : null}
       <Spin spinning={loading}><Table columns={columns} dataSource={result?.data ?? []} onRow={(record) => ({ onClick: () => setSelectedLogId(record.logId) })} pagination={false} rowClassName={styles.clickableRow} rowKey="logId" scroll={{ x: 1050 }} /></Spin>
+      {result?.nextCursor ? <div className={styles.loadMore}><Button disabled={loading} onClick={() => void loadMore()}>{t("bknTrace.actions.loadMore")}</Button></div> : null}
       <LogDetailDrawer logId={selectedLogId} onClose={() => setSelectedLogId(undefined)} />
     </div>
   );
