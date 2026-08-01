@@ -92,6 +92,7 @@ export const bknTraceEnUS = {
       evidenceCompleteness: "Evidence completeness",
       identifier: "Identifier",
       interactionId: "Interaction ID",
+      interactionCount: "Interactions",
       kind: "Kind",
       mode: "Mode",
       object: "Object",
@@ -186,6 +187,11 @@ export const bknTraceEnUS = {
       redacted: "Redacted",
       unauthorized: "Unauthorized",
       unresolved: "Unresolved",
+    },
+    views: {
+      conversations: "Conversations",
+      interactions: "Interactions",
+      requests: "OpenBKN requests",
     },
   },
 } as const;

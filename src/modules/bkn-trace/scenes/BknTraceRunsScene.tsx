@@ -16,6 +16,7 @@ import {
   Descriptions,
   Empty,
   Input,
+  Segmented,
   Select,
   Space,
   Spin,
@@ -31,18 +32,22 @@ import { useTranslation } from "react-i18next";
 import styles from "@/modules/bkn-trace/scenes/BknTraceRunsScene.module.css";
 import {
   getBusinessGraph,
+  getConversationSummaries,
   getEvidenceArtifact,
   getEvidenceChain,
   getInteractionSummary,
+  getInteractionSummaries,
   getRequestSummaries,
   getRequestSummary,
   getRequestTraces,
   getSnapshotPreview,
   getTraceGraph,
   type BusinessGraph,
+  type ConversationSummary,
   type EvidenceArtifact,
   type EvidenceChain,
   type InteractionSummary,
+  type InteractionListSummary,
   type RequestSummaryQuery,
   type RequestSummary,
   type SnapshotPreview,
@@ -66,39 +71,66 @@ type RequestDetail = {
   traces: SummaryPage<TraceExecutionSummary>;
 };
 
+type ProvenanceView = "conversations" | "interactions" | "requests";
+
+type ProvenanceListRow = {
+  agentOrApp?: string;
+  conversationId?: string;
+  durationMs?: number;
+  evidenceCompleteness: string;
+  id: string;
+  interactionCount?: number;
+  interactionId?: string;
+  questionPreview?: string;
+  requestCount?: number;
+  requestId?: string;
+  resultPreview?: string;
+  startedAt?: string;
+  status: string;
+};
+
 export function BknTraceRunsScene() {
   const { t } = useTranslation();
-  const [keyword, setKeyword] = useState("");
-  const [status, setStatus] = useState<string>();
-  const [agentOrApp, setAgentOrApp] = useState("");
-  const [businessDomain, setBusinessDomain] = useState("");
-  const [knowledgeNetwork, setKnowledgeNetwork] = useState("");
-  const [evidenceCompleteness, setEvidenceCompleteness] = useState<string>();
-  const [from, setFrom] = useState<string>();
-  const [to, setTo] = useState<string>();
-  const [activeQuery, setActiveQuery] = useState<RequestSummaryQuery>({});
-  const [page, setPage] = useState<SummaryPage<RequestSummary>>();
+
+  const [initialState] = useState(initialProvenanceState);
+  const [view, setView] = useState<ProvenanceView>(initialState.view);
+  const [keyword, setKeyword] = useState(initialState.query.keyword ?? "");
+  const [status, setStatus] = useState<string | undefined>(initialState.query.status);
+  const [agentOrApp, setAgentOrApp] = useState(initialState.query.agentOrApp ?? "");
+  const [businessDomain, setBusinessDomain] = useState(initialState.query.businessDomain ?? "");
+  const [knowledgeNetwork, setKnowledgeNetwork] = useState(initialState.query.knowledgeNetwork ?? "");
+  const [evidenceCompleteness, setEvidenceCompleteness] = useState<string | undefined>(initialState.query.evidenceCompleteness);
+  const [from, setFrom] = useState<string | undefined>(initialState.query.from);
+  const [to, setTo] = useState<string | undefined>(initialState.query.to);
+  const [activeQuery, setActiveQuery] = useState<RequestSummaryQuery>(initialState.query);
+  const [page, setPage] = useState<SummaryPage<ProvenanceListRow>>();
   const [selectedRequestId, setSelectedRequestId] = useState<string>();
   const [detail, setDetail] = useState<RequestDetail>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
 
-  const loadRequests = useCallback(async (
+  const loadProvenance = useCallback(async (
+    targetView: ProvenanceView,
     query: RequestSummaryQuery = {},
     append = false,
   ) => {
     setLoading(true);
     setError(undefined);
     try {
-      const result = await getRequestSummaries({
+      const request = {
         ...query,
         limit: 30,
-      });
+      };
+      const result = targetView === "conversations"
+        ? mapProvenancePage(await getConversationSummaries(request), mapConversationRow)
+        : targetView === "interactions"
+          ? mapProvenancePage(await getInteractionSummaries(request), mapInteractionRow)
+          : mapProvenancePage(await getRequestSummaries(request), mapRequestRow);
       setPage((current) =>
         append && current
           ? {
               ...result,
-              entries: uniqueRequests([...current.entries, ...result.entries]),
+              entries: uniqueProvenanceRows([...current.entries, ...result.entries]),
             }
           : result
       );
@@ -110,11 +142,17 @@ export function BknTraceRunsScene() {
   }, [t]);
 
   useEffect(() => {
-    void loadRequests();
-  }, [loadRequests]);
+    void loadProvenance(initialState.view, initialState.query);
+  }, [initialState, loadProvenance]);
 
   function currentQuery(): RequestSummaryQuery {
     return {
+	  ...(view !== "conversations" && activeQuery.conversationId
+		? { conversationId: activeQuery.conversationId }
+		: {}),
+	  ...(view === "requests" && activeQuery.interactionId
+		? { interactionId: activeQuery.interactionId }
+		: {}),
       ...(agentOrApp.trim() ? { agentOrApp: agentOrApp.trim() } : {}),
       ...(businessDomain.trim() ? { businessDomain: businessDomain.trim() } : {}),
       ...(evidenceCompleteness ? { evidenceCompleteness } : {}),
@@ -129,7 +167,51 @@ export function BknTraceRunsScene() {
   function searchRequests() {
     const query = currentQuery();
     setActiveQuery(query);
-    void loadRequests(query);
+    syncProvenanceURL(view, query);
+    void loadProvenance(view, query);
+  }
+
+  function changeView(nextView: ProvenanceView) {
+	const query = currentQuery();
+	if (nextView === "conversations") {
+	  delete query.conversationId;
+	  delete query.interactionId;
+	} else if (nextView === "interactions") {
+	  delete query.interactionId;
+	}
+	setView(nextView);
+	setActiveQuery(query);
+	setPage(undefined);
+	syncProvenanceURL(nextView, query);
+	void loadProvenance(nextView, query);
+  }
+
+  function openProvenanceRow(row: ProvenanceListRow) {
+	if (view === "conversations" && row.conversationId) {
+	  const query = { ...currentQuery(), conversationId: row.conversationId };
+	  setView("interactions");
+	  setActiveQuery(query);
+	  setPage(undefined);
+	  syncProvenanceURL("interactions", query);
+	  void loadProvenance("interactions", query);
+	  return;
+	}
+	if (view === "interactions" && row.interactionId) {
+	  const query = {
+		...currentQuery(),
+		conversationId: row.conversationId ?? activeQuery.conversationId,
+		interactionId: row.interactionId,
+	  };
+	  setView("requests");
+	  setActiveQuery(query);
+	  setPage(undefined);
+	  syncProvenanceURL("requests", query);
+	  void loadProvenance("requests", query);
+	  return;
+	}
+	if (row.requestId) {
+	  void openRequest(row.requestId);
+	}
   }
 
   async function openRequest(requestId: string) {
@@ -177,7 +259,7 @@ export function BknTraceRunsScene() {
     }
   }
 
-  const columns: ColumnsType<RequestSummary> = [
+  const columns: ColumnsType<ProvenanceListRow> = [
     {
       dataIndex: "startedAt",
       key: "startedAt",
@@ -191,14 +273,22 @@ export function BknTraceRunsScene() {
       render: (value: string | undefined, row) => (
         <Button
           className={styles.questionButton}
-          onClick={() => void openRequest(row.requestId)}
+          onClick={() => openProvenanceRow(row)}
           type="link"
         >
-          {value || row.requestId}
+          {value || row.id}
         </Button>
       ),
       title: t("bknTrace.fields.question"),
     },
+	...(view !== "requests" ? [{
+	  dataIndex: view === "conversations" ? "interactionCount" : "requestCount",
+	  key: "childCount",
+	  title: view === "conversations"
+		? t("bknTrace.fields.interactionCount")
+		: t("bknTrace.fields.requestCount"),
+	  width: 120,
+	}] as ColumnsType<ProvenanceListRow> : []),
     {
       dataIndex: "resultPreview",
       key: "resultPreview",
@@ -334,6 +424,29 @@ export function BknTraceRunsScene() {
           <Typography.Text type="secondary">{t("bknTrace.runsDescription")}</Typography.Text>
         </div>
       </header>
+	  <div className={styles.viewNavigation}>
+		<Segmented<ProvenanceView>
+		  onChange={changeView}
+		  options={[
+			{ label: t("bknTrace.views.conversations"), value: "conversations" },
+			{ label: t("bknTrace.views.interactions"), value: "interactions" },
+			{ label: t("bknTrace.views.requests"), value: "requests" },
+		  ]}
+		  value={view}
+		/>
+		<Space wrap>
+		  {activeQuery.conversationId ? (
+			<Tag closable onClose={() => changeView("conversations")}>
+			  {t("bknTrace.fields.conversationId")}: {activeQuery.conversationId}
+			</Tag>
+		  ) : null}
+		  {activeQuery.interactionId ? (
+			<Tag closable onClose={() => changeView("interactions")}>
+			  {t("bknTrace.fields.interactionId")}: {activeQuery.interactionId}
+			</Tag>
+		  ) : null}
+		</Space>
+	  </div>
       <div
         aria-label={t("bknTrace.title")}
         className={styles.filters}
@@ -352,11 +465,13 @@ export function BknTraceRunsScene() {
           aria-label={t("bknTrace.placeholders.timeFrom")}
           onChange={(event) => setFrom(toRFC3339(event.target.value))}
           type="datetime-local"
+		  value={toLocalDateTimeInput(from)}
         />
         <Input
           aria-label={t("bknTrace.placeholders.timeTo")}
           onChange={(event) => setTo(toRFC3339(event.target.value))}
           type="datetime-local"
+		  value={toLocalDateTimeInput(to)}
         />
         <Input
           allowClear
@@ -415,13 +530,21 @@ export function BknTraceRunsScene() {
         />
       </div>
       {error ? <Alert message={error} showIcon type="error" /> : null}
+	  {page?.partial || page?.truncated ? (
+		<Alert
+		  description={page.partialReasons.length ? page.partialReasons.join(", ") : undefined}
+		  message={t("bknTrace.partial")}
+		  showIcon
+		  type="warning"
+		/>
+	  ) : null}
       <Spin spinning={loading}>
         <Table
           columns={columns}
           dataSource={page?.entries ?? []}
           locale={{ emptyText: <Empty description={t("bknTrace.emptyStates.runs")} /> }}
           pagination={false}
-          rowKey="requestId"
+          rowKey="id"
           scroll={{ x: 1180 }}
           size="middle"
         />
@@ -429,7 +552,8 @@ export function BknTraceRunsScene() {
           <div className={styles.loadMore}>
             <Button
               onClick={() =>
-                void loadRequests(
+                void loadProvenance(
+				  view,
                   { ...activeQuery, cursor: page.nextCursor },
                   true,
                 )
@@ -716,8 +840,114 @@ function toRFC3339(value: string) {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
-function uniqueRequests(requests: RequestSummary[]) {
-  return [...new Map(requests.map((request) => [request.requestId, request])).values()];
+function toLocalDateTimeInput(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function initialProvenanceState(): { query: RequestSummaryQuery; view: ProvenanceView } {
+  const params = new URLSearchParams(window.location.search);
+  const requestedView = params.get("view");
+  const view: ProvenanceView = requestedView === "interactions" || requestedView === "requests"
+    ? requestedView
+    : "conversations";
+  const conversationId = params.get("conversation_id")?.trim();
+  const interactionId = params.get("interaction_id")?.trim();
+	const read = (name: string) => params.get(name)?.trim() || undefined;
+  return {
+    query: {
+	  ...(read("agent_or_app") ? { agentOrApp: read("agent_or_app") } : {}),
+	  ...(read("business_domain") ? { businessDomain: read("business_domain") } : {}),
+      ...(conversationId ? { conversationId } : {}),
+	  ...(read("evidence_completeness") ? { evidenceCompleteness: read("evidence_completeness") } : {}),
+	  ...(read("from") ? { from: read("from") } : {}),
+      ...(interactionId ? { interactionId } : {}),
+	  ...(read("keyword") ? { keyword: read("keyword") } : {}),
+	  ...(read("knowledge_network") ? { knowledgeNetwork: read("knowledge_network") } : {}),
+	  ...(read("status") ? { status: read("status") } : {}),
+	  ...(read("to") ? { to: read("to") } : {}),
+    },
+    view,
+  };
+}
+
+function syncProvenanceURL(view: ProvenanceView, query: RequestSummaryQuery) {
+  const params = new URLSearchParams();
+  if (view !== "conversations") params.set("view", view);
+  if (query.conversationId) params.set("conversation_id", query.conversationId);
+  if (query.interactionId) params.set("interaction_id", query.interactionId);
+  if (query.keyword) params.set("keyword", query.keyword);
+	if (query.from) params.set("from", query.from);
+	if (query.to) params.set("to", query.to);
+	if (query.status) params.set("status", query.status);
+	if (query.agentOrApp) params.set("agent_or_app", query.agentOrApp);
+	if (query.businessDomain) params.set("business_domain", query.businessDomain);
+	if (query.knowledgeNetwork) params.set("knowledge_network", query.knowledgeNetwork);
+	if (query.evidenceCompleteness) params.set("evidence_completeness", query.evidenceCompleteness);
+  const suffix = params.toString();
+  window.history.replaceState({}, "", `${window.location.pathname}${suffix ? `?${suffix}` : ""}`);
+}
+
+function mapProvenancePage<T>(
+  page: SummaryPage<T>,
+  mapEntry: (entry: T) => ProvenanceListRow,
+): SummaryPage<ProvenanceListRow> {
+  return { ...page, entries: page.entries.map(mapEntry) };
+}
+
+function mapConversationRow(summary: ConversationSummary): ProvenanceListRow {
+  return {
+    agentOrApp: summary.agentOrApp,
+    conversationId: summary.conversationId,
+    durationMs: summary.durationMs,
+    evidenceCompleteness: summary.evidenceCompleteness,
+    id: summary.conversationId,
+    interactionCount: summary.interactionCount,
+    questionPreview: summary.questionPreview,
+    requestCount: summary.requestCount,
+    resultPreview: summary.resultPreview,
+    startedAt: summary.startedAt,
+    status: summary.status,
+  };
+}
+
+function mapInteractionRow(summary: InteractionListSummary): ProvenanceListRow {
+  return {
+    agentOrApp: summary.agentOrApp,
+    conversationId: summary.conversationId,
+    durationMs: summary.durationMs,
+    evidenceCompleteness: summary.evidenceCompleteness,
+    id: summary.interactionId,
+    interactionId: summary.interactionId,
+    questionPreview: summary.questionPreview,
+    requestCount: summary.requestCount,
+    resultPreview: summary.resultPreview,
+    startedAt: summary.startedAt,
+    status: summary.status,
+  };
+}
+
+function mapRequestRow(summary: RequestSummary): ProvenanceListRow {
+  return {
+    agentOrApp: summary.agentOrApp,
+    conversationId: summary.conversationId,
+    durationMs: summary.durationMs,
+    evidenceCompleteness: summary.evidenceCompleteness,
+    id: summary.requestId,
+    interactionId: summary.interactionId,
+    questionPreview: summary.questionPreview,
+    requestId: summary.requestId,
+    resultPreview: summary.resultPreview,
+    startedAt: summary.startedAt,
+    status: summary.status,
+  };
+}
+
+function uniqueProvenanceRows(rows: ProvenanceListRow[]) {
+  return [...new Map(rows.map((row) => [row.id, row])).values()];
 }
 
 function statusColor(value: string) {

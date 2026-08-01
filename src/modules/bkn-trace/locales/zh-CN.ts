@@ -91,6 +91,7 @@ export const bknTraceZhCN = {
       evidenceCompleteness: "证据完整性",
       identifier: "标识",
       interactionId: "交互轮次 ID",
+      interactionCount: "交互轮次",
       kind: "类型",
       mode: "模式",
       object: "对象",
@@ -184,6 +185,11 @@ export const bknTraceZhCN = {
       redacted: "已脱敏",
       unauthorized: "未授权",
       unresolved: "未解析",
+    },
+    views: {
+      conversations: "会话",
+      interactions: "交互轮次",
+      requests: "OpenBKN 请求",
     },
   },
 } as const;

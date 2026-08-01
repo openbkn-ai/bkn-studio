@@ -25,6 +25,14 @@
   min-width: 0;
 }
 
+.viewNavigation {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
 .header h3,
 .detailHeader h4 {
   margin: 0;
