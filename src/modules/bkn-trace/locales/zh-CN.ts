@@ -7,11 +7,43 @@
 
 export const bknTraceZhCN = {
   bknTrace: {
+    businessProvenance: {
+      description: "从会话、交互轮次和请求出发，解释业务结论及其数据、逻辑与行动依据。",
+      title: "业务溯源分析",
+    },
+    traceAnalysis: {
+      description: "按业务上下文或技术标识分析跨模块调用链。",
+      title: "Trace 分析",
+    },
+    logs: {
+      categoryPlaceholder: "日志类别",
+      columns: { category: "类别", event: "事件摘要", service: "服务", severity: "级别", time: "发生时间", trace: "Trace" },
+      description: "检索当前授权范围内的平台、业务、模型和审计日志，并下钻关联 Trace。",
+      partialWarning: "部分日志来源暂不可用，当前结果可能不完整。",
+      searchPlaceholder: "搜索安全摘要或事件",
+      servicePlaceholder: "服务来源",
+      detail: {
+        category: "日志类别", logId: "日志 ID", openTrace: "打开关联 Trace", outcome: "执行结果",
+        projectedFields: "有 {{count}} 个字段未进入当前受控投影。", projection: "字段投影策略",
+        requestId: "Request ID", service: "服务", source: "来源", time: "发生时间", title: "日志详情", traceId: "Trace ID",
+      },
+      title: "日志检索",
+    },
+    settings: {
+      columns: { category: "类别", collection: "采集方式", coverage: "覆盖模块", policyKind: "策略类型", retention: "保留时间", revision: "策略版本", source: "日志来源", status: "状态" },
+      days: "天",
+      description: "查看日志来源覆盖、采集状态与当前生效的存储保留策略。",
+      policies: "保留与存储策略",
+      readOnlyNotice: "0.1.3 仅提供策略查看；策略变更需通过受治理的运维流程完成。",
+      sources: "来源覆盖",
+      title: "可观测性设置",
+    },
     actions: {
       back: "返回运行列表",
       loadMore: "加载更多",
       query: "查询",
       refresh: "刷新",
+      viewLogs: "查看关联日志",
     },
     description: "按 trace id 或 request id 查看运行链路、证据链、业务语义链和快照预览。",
     empty: "输入 trace id 或 request id 后查询",
@@ -59,6 +91,7 @@ export const bknTraceZhCN = {
       evidenceCompleteness: "证据完整性",
       identifier: "标识",
       interactionId: "交互轮次 ID",
+      interactionCount: "交互轮次",
       kind: "类型",
       mode: "模式",
       object: "对象",
@@ -152,6 +185,11 @@ export const bknTraceZhCN = {
       redacted: "已脱敏",
       unauthorized: "未授权",
       unresolved: "未解析",
+    },
+    views: {
+      conversations: "会话",
+      interactions: "交互轮次",
+      requests: "OpenBKN 请求",
     },
   },
 } as const;

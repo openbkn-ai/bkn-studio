@@ -223,6 +223,46 @@ export type RequestSummary = {
   traceCount: number;
 };
 
+export type ConversationSummary = {
+  agentOrApp?: string;
+  businessDomain?: string;
+  completedAt?: string;
+  conversationId: string;
+  durationMs?: number;
+  errorSummary?: string;
+  evidenceCompleteness: string;
+  initiator?: string;
+  interactionCount: number;
+  knowledgeNetworks: string[];
+  partialReasons: string[];
+  questionPreview?: string;
+  requestCount: number;
+  resultPreview?: string;
+  startedAt?: string;
+  status: string;
+  traceCount: number;
+};
+
+export type InteractionListSummary = {
+  agentOrApp?: string;
+  businessDomain?: string;
+  completedAt?: string;
+  conversationId?: string;
+  durationMs?: number;
+  errorSummary?: string;
+  evidenceCompleteness: string;
+  initiator?: string;
+  interactionId: string;
+  knowledgeNetworks: string[];
+  partialReasons: string[];
+  questionPreview?: string;
+  requestCount: number;
+  resultPreview?: string;
+  startedAt?: string;
+  status: string;
+  traceCount: number;
+};
+
 export type TraceExecutionSummary = {
   agentOrApp?: string;
   businessDomain?: string;
@@ -261,9 +301,13 @@ export type InteractionSummary = {
 
 export type TraceAccessProfile = {
   accessScopeFingerprint: string;
+	allowedLogCategories: string[];
   businessProvenanceManagedNetworks: boolean;
   businessProvenanceOwn: boolean;
   globalLogSearch: boolean;
+	logExport: boolean;
+	logPolicyRead: boolean;
+	logSensitiveFields: boolean;
   managementAudit: boolean;
   securityAudit: boolean;
   technicalTrace: boolean;
@@ -271,9 +315,13 @@ export type TraceAccessProfile = {
 
 type BackendTraceAccessProfile = {
   access_scope_fingerprint?: string;
+	allowed_log_categories?: string[];
   business_provenance_managed_networks?: boolean;
   business_provenance_own?: boolean;
   global_log_search?: boolean;
+	log_export?: boolean;
+	log_policy_read?: boolean;
+	log_sensitive_fields?: boolean;
   management_audit?: boolean;
   security_audit?: boolean;
   technical_trace?: boolean;
@@ -471,6 +519,46 @@ type BackendRequestSummary = {
   trace_count?: number;
 };
 
+type BackendConversationSummary = {
+  agent_or_app?: string;
+  business_domain?: string;
+  completed_at?: string;
+  conversation_id?: string;
+  duration_ms?: number;
+  error_summary?: string;
+  evidence_completeness?: string;
+  initiator?: string;
+  interaction_count?: number;
+  knowledge_networks?: string[];
+  partial_reasons?: string[];
+  question_preview?: string;
+  request_count?: number;
+  result_preview?: string;
+  started_at?: string;
+  status?: string;
+  trace_count?: number;
+};
+
+type BackendInteractionListSummary = {
+  agent_or_app?: string;
+  business_domain?: string;
+  completed_at?: string;
+  conversation_id?: string;
+  duration_ms?: number;
+  error_summary?: string;
+  evidence_completeness?: string;
+  initiator?: string;
+  interaction_id?: string;
+  knowledge_networks?: string[];
+  partial_reasons?: string[];
+  question_preview?: string;
+  request_count?: number;
+  result_preview?: string;
+  started_at?: string;
+  status?: string;
+  trace_count?: number;
+};
+
 type BackendTraceExecutionSummary = {
   agent_or_app?: string;
   business_domain?: string;
@@ -537,9 +625,13 @@ export async function getAccessProfile(): Promise<TraceAccessProfile> {
   );
   return {
     accessScopeFingerprint: response.data.access_scope_fingerprint ?? "",
+	allowedLogCategories: response.data.allowed_log_categories ?? [],
     businessProvenanceManagedNetworks: Boolean(response.data.business_provenance_managed_networks),
     businessProvenanceOwn: Boolean(response.data.business_provenance_own),
     globalLogSearch: Boolean(response.data.global_log_search),
+	logExport: Boolean(response.data.log_export),
+	logPolicyRead: Boolean(response.data.log_policy_read),
+	logSensitiveFields: Boolean(response.data.log_sensitive_fields),
     managementAudit: Boolean(response.data.management_audit),
     securityAudit: Boolean(response.data.security_audit),
     technicalTrace: Boolean(response.data.technical_trace),
@@ -586,6 +678,26 @@ export async function getRequestSummaries(
     { headers: traceHeaders(), params: summaryParams(query) },
   );
   return mapSummaryPage(response.data, mapRequestSummary);
+}
+
+export async function getConversationSummaries(
+  query: RequestSummaryQuery = {},
+): Promise<SummaryPage<ConversationSummary>> {
+  const response = await http.get<BackendSummaryPage<BackendConversationSummary>>(
+    `${OBSERVABILITY_API_PREFIX}/business-provenance/conversations`,
+    { headers: traceHeaders(), params: summaryParams(query) },
+  );
+  return mapSummaryPage(response.data, mapConversationSummary);
+}
+
+export async function getInteractionSummaries(
+  query: RequestSummaryQuery = {},
+): Promise<SummaryPage<InteractionListSummary>> {
+  const response = await http.get<BackendSummaryPage<BackendInteractionListSummary>>(
+    `${OBSERVABILITY_API_PREFIX}/business-provenance/interactions`,
+    { headers: traceHeaders(), params: summaryParams(query) },
+  );
+  return mapSummaryPage(response.data, mapInteractionListSummary);
 }
 
 export async function getRequestSummary(requestId: string): Promise<RequestSummary> {
@@ -727,6 +839,50 @@ function mapRequestSummary(data: BackendRequestSummary): RequestSummary {
     partialReasons: data.partial_reasons ?? [],
     questionPreview: data.question_preview,
     requestId: data.request_id ?? "",
+    resultPreview: data.result_preview,
+    startedAt: data.started_at,
+    status: data.status ?? "unknown",
+    traceCount: data.trace_count ?? 0,
+  };
+}
+
+function mapConversationSummary(data: BackendConversationSummary): ConversationSummary {
+  return {
+    agentOrApp: data.agent_or_app,
+    businessDomain: data.business_domain,
+    completedAt: data.completed_at,
+    conversationId: data.conversation_id ?? "",
+    durationMs: data.duration_ms,
+    errorSummary: data.error_summary,
+    evidenceCompleteness: data.evidence_completeness ?? "content_unavailable",
+    initiator: data.initiator,
+    interactionCount: data.interaction_count ?? 0,
+    knowledgeNetworks: data.knowledge_networks ?? [],
+    partialReasons: data.partial_reasons ?? [],
+    questionPreview: data.question_preview,
+    requestCount: data.request_count ?? 0,
+    resultPreview: data.result_preview,
+    startedAt: data.started_at,
+    status: data.status ?? "unknown",
+    traceCount: data.trace_count ?? 0,
+  };
+}
+
+function mapInteractionListSummary(data: BackendInteractionListSummary): InteractionListSummary {
+  return {
+    agentOrApp: data.agent_or_app,
+    businessDomain: data.business_domain,
+    completedAt: data.completed_at,
+    conversationId: data.conversation_id,
+    durationMs: data.duration_ms,
+    errorSummary: data.error_summary,
+    evidenceCompleteness: data.evidence_completeness ?? "content_unavailable",
+    initiator: data.initiator,
+    interactionId: data.interaction_id ?? "",
+    knowledgeNetworks: data.knowledge_networks ?? [],
+    partialReasons: data.partial_reasons ?? [],
+    questionPreview: data.question_preview,
+    requestCount: data.request_count ?? 0,
     resultPreview: data.result_preview,
     startedAt: data.started_at,
     status: data.status ?? "unknown",

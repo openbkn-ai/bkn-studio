@@ -5,18 +5,47 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { BranchesOutlined } from "@ant-design/icons";
+import {
+  BranchesOutlined,
+  FileSearchOutlined,
+  FileTextOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 
 export const bknTraceNavigation: ConsoleNavContribution = {
-  parentKey: "system-management",
   items: [
     {
-      key: "bkn-trace",
-      labelKey: "shell.items.bknTrace",
+      key: "observability",
+      labelKey: "shell.items.observability",
       icon: <BranchesOutlined />,
-      path: "/system/bkn-trace",
+      children: [
+        {
+          key: "business-provenance",
+          labelKey: "shell.items.businessProvenance",
+          icon: <FileSearchOutlined />,
+          path: "/observability/business-provenance",
+        },
+        {
+          key: "trace-analysis",
+          labelKey: "shell.items.traceAnalysis",
+          icon: <BranchesOutlined />,
+          path: "/observability/traces",
+        },
+        {
+          key: "observability-logs",
+          labelKey: "shell.items.observabilityLogs",
+          icon: <FileTextOutlined />,
+          path: "/observability/logs",
+        },
+        {
+          key: "observability-settings",
+          labelKey: "shell.items.observabilitySettings",
+          icon: <SettingOutlined />,
+          path: "/observability/settings",
+        },
+      ],
     },
   ],
 };

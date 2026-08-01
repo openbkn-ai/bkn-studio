@@ -9,13 +9,15 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import runStyles from "@/modules/bkn-trace/scenes/BknTraceRunsScene.module.css";
-import { BknTraceExplorerScene } from "@/modules/bkn-trace/scenes/BknTraceExplorerScene";
+import { BknTraceAdvancedExplorerScene, BknTraceExplorerScene } from "@/modules/bkn-trace/scenes/BknTraceExplorerScene";
 import {
   getAccessProfile,
   getBusinessGraph,
+  getConversationSummaries,
   getEvidenceArtifact,
   getEvidenceChain,
   getInteractionSummary,
+  getInteractionSummaries,
   getRequestSummaries,
   getRequestSummary,
   getRequestTraces,
@@ -44,9 +46,11 @@ vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => 
     ...original,
     getAccessProfile: vi.fn(),
     getBusinessGraph: vi.fn(),
+    getConversationSummaries: vi.fn(),
     getEvidenceArtifact: vi.fn(),
     getEvidenceChain: vi.fn(),
     getInteractionSummary: vi.fn(),
+    getInteractionSummaries: vi.fn(),
     getRequestSummaries: vi.fn(),
     getRequestSummary: vi.fn(),
     getRequestTraces: vi.fn(),
@@ -89,11 +93,16 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState({}, "", "/");
     vi.mocked(getAccessProfile).mockResolvedValue({
       accessScopeFingerprint: "sha256:test",
+	  allowedLogCategories: [],
       businessProvenanceManagedNetworks: false,
       businessProvenanceOwn: true,
       globalLogSearch: false,
+	  logExport: false,
+	  logPolicyRead: false,
+	  logSensitiveFields: false,
       managementAudit: false,
       securityAudit: false,
       technicalTrace: true,
@@ -106,6 +115,48 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
       total: 1,
       truncated: false,
     });
+    vi.mocked(getConversationSummaries).mockResolvedValue({
+	  entries: [{
+		agentOrApp: "risk-agent",
+		businessDomain: "customer-risk",
+		conversationId: "conversation_customer_risk",
+		durationMs: 3000,
+		evidenceCompleteness: "complete",
+		interactionCount: 1,
+		knowledgeNetworks: ["customer-risk-network"],
+		partialReasons: [],
+		questionPreview: "客户 A 的风险为什么上升？",
+		requestCount: 1,
+		resultPreview: "近 7 天投诉增加，风险等级上升。",
+		startedAt: "2026-07-27T09:00:00Z",
+		status: "completed",
+		traceCount: 1,
+	  }],
+	  nextCursor: "cursor-2",
+	  partial: false,
+	  partialReasons: [],
+	  total: 1,
+	  truncated: false,
+	});
+    vi.mocked(getInteractionSummaries).mockResolvedValue({
+	  entries: [{
+		conversationId: "conversation_customer_risk",
+		evidenceCompleteness: "complete",
+		interactionId: "interaction_customer_risk",
+		knowledgeNetworks: ["customer-risk-network"],
+		partialReasons: [],
+		questionPreview: "客户 A 的风险为什么上升？",
+		requestCount: 1,
+		resultPreview: "近 7 天投诉增加，风险等级上升。",
+		startedAt: "2026-07-27T09:00:00Z",
+		status: "completed",
+		traceCount: 1,
+	  }],
+	  partial: false,
+	  partialReasons: [],
+	  total: 1,
+	  truncated: false,
+	});
     vi.mocked(getRequestSummary).mockResolvedValue(requestSummary);
     vi.mocked(getRequestTraces).mockResolvedValue({
       entries: [{
@@ -235,21 +286,129 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     });
   });
 
-  it("默认展示可筛选的业务运行列表，而不是要求用户输入内部 ID", async () => {
+  it("Trace 分析从 URL 恢复 trace_id 深链", () => {
+    window.history.replaceState({}, "", "/observability/traces?trace_id=trace_001");
+    render(<BknTraceAdvancedExplorerScene />);
+
+    const traceInput = screen.getByPlaceholderText("bknTrace.placeholders.traceId");
+    expect(traceInput instanceof HTMLInputElement && traceInput.value).toBe("trace_001");
+  });
+
+  it("默认展示可筛选的会话列表，而不是要求用户输入内部 ID", async () => {
     render(<BknTraceExplorerScene />);
 
-    await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
+    await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ limit: 30 }));
     expect(await screen.findByText("客户 A 的风险为什么上升？")).not.toBeNull();
     expect(await screen.findByText("近 7 天投诉增加，风险等级上升。")).not.toBeNull();
     expect(screen.queryByPlaceholderText("bknTrace.placeholders.traceId")).toBeNull();
   });
 
+  it("按会话、交互轮次、请求的真实层级下钻并同步 URL", async () => {
+	render(<BknTraceExplorerScene />);
+
+	await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ limit: 30 }));
+	fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
+	await waitFor(() => expect(getInteractionSummaries).toHaveBeenCalledWith({
+	  conversationId: "conversation_customer_risk",
+	  limit: 30,
+	}));
+	expect(window.location.search).toContain("view=interactions");
+	expect(window.location.search).toContain("conversation_id=conversation_customer_risk");
+
+	fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
+	await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({
+	  conversationId: "conversation_customer_risk",
+	  interactionId: "interaction_customer_risk",
+	  limit: 30,
+	}));
+	expect(window.location.search).toContain("view=requests");
+	expect(window.location.search).toContain("interaction_id=interaction_customer_risk");
+  });
+
+  it("丢弃晚到的旧层级响应，避免覆盖当前业务溯源视图", async () => {
+    let resolveConversations!: (value: Awaited<ReturnType<typeof getConversationSummaries>>) => void;
+    vi.mocked(getConversationSummaries).mockImplementationOnce(() => new Promise((resolve) => {
+      resolveConversations = resolve;
+    }));
+    vi.mocked(getInteractionSummaries).mockResolvedValueOnce({
+      entries: [{
+        conversationId: "conversation-latest",
+        evidenceCompleteness: "complete",
+        interactionId: "interaction-latest",
+        knowledgeNetworks: [],
+        partialReasons: [],
+        questionPreview: "当前交互结果",
+        requestCount: 1,
+        resultPreview: "当前结果",
+        startedAt: "2026-08-01T10:00:00Z",
+        status: "completed",
+        traceCount: 1,
+      }],
+      partial: false,
+      partialReasons: [],
+      total: 1,
+      truncated: false,
+    });
+
+    render(<BknTraceExplorerScene />);
+    await waitFor(() => expect(getConversationSummaries).toHaveBeenCalled());
+    fireEvent.click(screen.getByText("bknTrace.views.interactions"));
+    expect(await screen.findByText("当前交互结果")).not.toBeNull();
+
+    resolveConversations({
+      entries: [{
+        agentOrApp: "stale-agent",
+        businessDomain: "stale-domain",
+        conversationId: "conversation-stale",
+        durationMs: 1,
+        evidenceCompleteness: "complete",
+        interactionCount: 1,
+        knowledgeNetworks: [],
+        partialReasons: [],
+        questionPreview: "过期会话结果",
+        requestCount: 1,
+        resultPreview: "不应显示",
+        startedAt: "2026-08-01T09:00:00Z",
+        status: "completed",
+        traceCount: 1,
+      }],
+      partial: false,
+      partialReasons: [],
+      total: 1,
+      truncated: false,
+    });
+    await waitFor(() => expect(screen.queryByText("过期会话结果")).toBeNull());
+    expect(screen.getByText("当前交互结果")).not.toBeNull();
+  });
+
+  it("从 URL 恢复业务溯源层级和筛选上下文", async () => {
+	window.history.replaceState(
+	  {},
+	  "",
+	  "/observability/business-provenance?view=interactions&conversation_id=conversation_customer_risk&keyword=%E9%A3%8E%E9%99%A9&status=completed",
+	);
+	render(<BknTraceExplorerScene />);
+
+	await waitFor(() => expect(getInteractionSummaries).toHaveBeenCalledWith({
+	  conversationId: "conversation_customer_risk",
+	  keyword: "风险",
+	  limit: 30,
+	  status: "completed",
+	}));
+	const keywordInput = screen.getByPlaceholderText("bknTrace.placeholders.keyword");
+	expect(keywordInput instanceof HTMLInputElement && keywordInput.value).toBe("风险");
+  });
+
   it("普通业务用户不显示全局技术 Trace 高级查询入口", async () => {
     vi.mocked(getAccessProfile).mockResolvedValueOnce({
       accessScopeFingerprint: "sha256:normal-user",
+	  allowedLogCategories: [],
       businessProvenanceManagedNetworks: false,
       businessProvenanceOwn: true,
       globalLogSearch: false,
+	  logExport: false,
+	  logPolicyRead: false,
+	  logSensitiveFields: false,
       managementAudit: false,
       securityAudit: false,
       technicalTrace: false,
@@ -265,7 +424,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
   it("将页面标题和筛选区放在独立布局块中，避免正式壳层压缩标题", async () => {
     render(<BknTraceExplorerScene />);
 
-    await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
+    await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ limit: 30 }));
 
     const title = screen.getByRole("heading", { name: "bknTrace.title" });
     const header = title.closest("header");
@@ -281,11 +440,11 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
   it("使用服务端游标继续加载业务运行列表", async () => {
     render(<BknTraceExplorerScene />);
 
-    await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
+    await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ limit: 30 }));
     fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.loadMore" }));
 
     await waitFor(() =>
-      expect(getRequestSummaries).toHaveBeenLastCalledWith({
+      expect(getConversationSummaries).toHaveBeenLastCalledWith({
         cursor: "cursor-2",
         limit: 30,
       }),
@@ -293,6 +452,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
   });
 
   it("从业务运行下钻完整问题、结果、业务语义和关联技术 Trace", async () => {
+    window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
     render(<BknTraceExplorerScene />);
 
     await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
@@ -355,6 +515,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
       }],
     });
 
+    window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
     render(<BknTraceExplorerScene />);
     await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
     fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));

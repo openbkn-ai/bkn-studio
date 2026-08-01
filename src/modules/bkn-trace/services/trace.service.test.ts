@@ -35,6 +35,10 @@ describe("bkn-trace service", () => {
         security_audit: false,
         management_audit: false,
         global_log_search: false,
+		allowed_log_categories: [],
+		log_sensitive_fields: false,
+		log_export: false,
+		log_policy_read: false,
         access_scope_fingerprint: "sha256:scope-a",
       },
     });
@@ -51,6 +55,10 @@ describe("bkn-trace service", () => {
       businessProvenanceManagedNetworks: true,
       businessProvenanceOwn: true,
       globalLogSearch: false,
+		allowedLogCategories: [],
+		logSensitiveFields: false,
+		logExport: false,
+		logPolicyRead: false,
       managementAudit: false,
       securityAudit: false,
       technicalTrace: false,
@@ -291,6 +299,69 @@ describe("bkn-trace service", () => {
       traceCount: 2,
     });
     expect(page.nextCursor).toBe("cursor-2");
+  });
+
+  it("lists true conversation and interaction business provenance projections", async () => {
+	getMock
+	  .mockResolvedValueOnce({
+		data: {
+		  entries: [{
+			conversation_id: "conversation_supply",
+			question_preview: "6 月有哪些需求预测单？",
+			result_preview: "6 月共 63 条，合计 11594。",
+			status: "completed",
+			evidence_completeness: "complete",
+			interaction_count: 2,
+			request_count: 3,
+			trace_count: 3,
+		  }],
+		  total: 1,
+		},
+	  })
+	  .mockResolvedValueOnce({
+		data: {
+		  entries: [{
+			interaction_id: "interaction_june",
+			conversation_id: "conversation_supply",
+			question_preview: "6 月有哪些需求预测单？",
+			result_preview: "6 月共 63 条，合计 11594。",
+			status: "completed",
+			evidence_completeness: "complete",
+			request_count: 2,
+			trace_count: 2,
+		  }],
+		  total: 1,
+		},
+	  });
+	const { getConversationSummaries, getInteractionSummaries } = await import(
+	  "@/modules/bkn-trace/services/trace.service"
+	);
+
+	const conversations = await getConversationSummaries({ keyword: "需求预测" });
+	const interactions = await getInteractionSummaries({ conversationId: "conversation_supply" });
+
+	expect(getMock).toHaveBeenNthCalledWith(
+	  1,
+	  "/agent-observability/v1/business-provenance/conversations",
+	  { headers: { "x-business-domain": "bd_demo" }, params: { keyword: "需求预测" } },
+	);
+	expect(getMock).toHaveBeenNthCalledWith(
+	  2,
+	  "/agent-observability/v1/business-provenance/interactions",
+	  { headers: { "x-business-domain": "bd_demo" }, params: { conversation_id: "conversation_supply" } },
+	);
+	expect(conversations.entries[0]).toMatchObject({
+	  conversationId: "conversation_supply",
+	  interactionCount: 2,
+	  requestCount: 3,
+	  traceCount: 3,
+	});
+	expect(interactions.entries[0]).toMatchObject({
+	  conversationId: "conversation_supply",
+	  interactionId: "interaction_june",
+	  requestCount: 2,
+	  traceCount: 2,
+	});
   });
 
   it("loads one request, its traces, and authorized artifact content", async () => {

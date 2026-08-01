@@ -1,0 +1,92 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.workspace {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.header :global(.ant-typography) {
+  margin-bottom: 0;
+}
+
+.filters {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 260px) minmax(180px, 260px) auto;
+}
+
+.sourceStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summaryCell {
+  display: grid;
+  gap: 3px;
+}
+
+.technicalId {
+  color: #8a97aa;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+
+.loadMore {
+  display: flex;
+  justify-content: center;
+}
+
+.detailBody,
+.detailSummary {
+  display: grid;
+  gap: 12px;
+}
+
+.detailSummary :global(.ant-typography) {
+  margin: 0;
+}
+
+.attributeBlock {
+  background: #f5f7fa;
+  border: 1px solid #e2e7ef;
+  margin: 0;
+  max-height: 280px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.section {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    display: grid;
+  }
+}
