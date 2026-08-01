@@ -16,6 +16,8 @@ export const bknTraceZhCN = {
     description: "按 trace id 或 request id 查看运行链路、证据链、业务语义链和快照预览。",
     empty: "输入 trace id 或 request id 后查询",
     errors: {
+      accessDenied: "当前账号没有可用的溯源分析视图。",
+      accessProfileFailed: "无法获取当前溯源分析权限，请刷新后重试。",
       missingScope: "请输入 trace id 或 request id。",
       queryFailed: "查询失败。",
     },

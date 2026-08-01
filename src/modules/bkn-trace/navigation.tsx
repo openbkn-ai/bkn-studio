@@ -17,7 +17,6 @@ export const bknTraceNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.bknTrace",
       icon: <BranchesOutlined />,
       path: "/system/bkn-trace",
-      permission: ["bkn-trace:view"],
     },
   ],
 };

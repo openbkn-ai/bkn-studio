@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { consoleNavigation } from "@/app/shell/console-navigation";
 import { runtimeModuleManifests } from "@/framework/runtime/module-manifests";
 import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
+import { bknTraceModuleManifest } from "@/modules/bkn-trace/module.manifest";
 import { bknTraceRouteContribution } from "@/modules/bkn-trace/routes";
 
 describe("bkn-trace module registration", () => {
@@ -21,6 +22,7 @@ describe("bkn-trace module registration", () => {
       labelKey: "shell.items.bknTrace",
       path: "/system/bkn-trace",
     });
+    expect(bknTraceNavigation.items[0]).not.toHaveProperty("permission");
     expect(
       consoleNavigation
         .flatMap((item) => item.children ?? [])
@@ -30,5 +32,6 @@ describe("bkn-trace module registration", () => {
 
   it("registers permissions in runtime module manifests", () => {
     expect(runtimeModuleManifests.map((manifest) => manifest.id)).toContain("bkn-trace");
+    expect(bknTraceModuleManifest.permissions).toEqual([]);
   });
 });

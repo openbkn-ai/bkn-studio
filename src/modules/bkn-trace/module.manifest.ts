@@ -8,7 +8,7 @@
 export const bknTraceModuleManifest = {
   id: "bkn-trace",
   name: "BKN Trace",
-  permissions: ["bkn-trace:view"],
+  permissions: [],
   requiresShell: true,
   services: ["agent-observability/v1"],
   supportsEmbedded: false,

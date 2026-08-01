@@ -259,6 +259,26 @@ export type InteractionSummary = {
   traces: TraceExecutionSummary[];
 };
 
+export type TraceAccessProfile = {
+  accessScopeFingerprint: string;
+  businessProvenanceManagedNetworks: boolean;
+  businessProvenanceOwn: boolean;
+  globalLogSearch: boolean;
+  managementAudit: boolean;
+  securityAudit: boolean;
+  technicalTrace: boolean;
+};
+
+type BackendTraceAccessProfile = {
+  access_scope_fingerprint?: string;
+  business_provenance_managed_networks?: boolean;
+  business_provenance_own?: boolean;
+  global_log_search?: boolean;
+  management_audit?: boolean;
+  security_audit?: boolean;
+  technical_trace?: boolean;
+};
+
 export type RequestSummaryQuery = {
   agentOrApp?: string;
   businessDomain?: string;
@@ -509,6 +529,22 @@ type BackendEvidenceArtifact = {
   source_version?: string;
   trace_id?: string;
 };
+
+export async function getAccessProfile(): Promise<TraceAccessProfile> {
+  const response = await http.get<BackendTraceAccessProfile>(
+    `${OBSERVABILITY_API_PREFIX}/access-profile`,
+    { headers: traceHeaders() },
+  );
+  return {
+    accessScopeFingerprint: response.data.access_scope_fingerprint ?? "",
+    businessProvenanceManagedNetworks: Boolean(response.data.business_provenance_managed_networks),
+    businessProvenanceOwn: Boolean(response.data.business_provenance_own),
+    globalLogSearch: Boolean(response.data.global_log_search),
+    managementAudit: Boolean(response.data.management_audit),
+    securityAudit: Boolean(response.data.security_audit),
+    technicalTrace: Boolean(response.data.technical_trace),
+  };
+}
 
 export async function getTraceGraph(traceId: string): Promise<TraceGraph> {
   const response = await http.get<BackendTraceGraph>(
