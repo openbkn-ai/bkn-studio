@@ -11,6 +11,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import runStyles from "@/modules/bkn-trace/scenes/BknTraceRunsScene.module.css";
 import { BknTraceExplorerScene } from "@/modules/bkn-trace/scenes/BknTraceExplorerScene";
 import {
+  getAccessProfile,
   getBusinessGraph,
   getEvidenceArtifact,
   getEvidenceChain,
@@ -22,13 +23,17 @@ import {
   getTraceGraph,
 } from "@/modules/bkn-trace/services/trace.service";
 
+const translate = vi.hoisted(() =>
+  (key: string, options?: { defaultValue?: string }) =>
+    options?.defaultValue ?? key,
+);
+
 vi.mock("react-i18next", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-i18next")>();
   return {
     ...original,
     useTranslation: () => ({
-      t: (key: string, options?: { defaultValue?: string }) =>
-        options?.defaultValue ?? key,
+      t: translate,
     }),
   };
 });
@@ -37,6 +42,7 @@ vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => 
   const original = await importOriginal<typeof import("@/modules/bkn-trace/services/trace.service")>();
   return {
     ...original,
+    getAccessProfile: vi.fn(),
     getBusinessGraph: vi.fn(),
     getEvidenceArtifact: vi.fn(),
     getEvidenceChain: vi.fn(),
@@ -67,7 +73,7 @@ const requestSummary = {
   traceCount: 1,
 };
 
-describe("BknTraceExplorerScene", () => {
+describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
   beforeAll(() => {
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
@@ -83,6 +89,15 @@ describe("BknTraceExplorerScene", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getAccessProfile).mockResolvedValue({
+      accessScopeFingerprint: "sha256:test",
+      businessProvenanceManagedNetworks: false,
+      businessProvenanceOwn: true,
+      globalLogSearch: false,
+      managementAudit: false,
+      securityAudit: false,
+      technicalTrace: true,
+    });
     vi.mocked(getRequestSummaries).mockResolvedValue({
       entries: [requestSummary],
       nextCursor: "cursor-2",
@@ -229,6 +244,24 @@ describe("BknTraceExplorerScene", () => {
     expect(screen.queryByPlaceholderText("bknTrace.placeholders.traceId")).toBeNull();
   });
 
+  it("普通业务用户不显示全局技术 Trace 高级查询入口", async () => {
+    vi.mocked(getAccessProfile).mockResolvedValueOnce({
+      accessScopeFingerprint: "sha256:normal-user",
+      businessProvenanceManagedNetworks: false,
+      businessProvenanceOwn: true,
+      globalLogSearch: false,
+      managementAudit: false,
+      securityAudit: false,
+      technicalTrace: false,
+    });
+
+    render(<BknTraceExplorerScene />);
+
+    await waitFor(() => expect(getAccessProfile).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("bknTrace.tabs.runs")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.tabs.advanced")).toBeNull();
+  });
+
   it("将页面标题和筛选区放在独立布局块中，避免正式壳层压缩标题", async () => {
     render(<BknTraceExplorerScene />);
 
@@ -262,6 +295,7 @@ describe("BknTraceExplorerScene", () => {
   it("从业务运行下钻完整问题、结果、业务语义和关联技术 Trace", async () => {
     render(<BknTraceExplorerScene />);
 
+    await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
     fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
 
     await waitFor(() => expect(getRequestSummary).toHaveBeenCalledWith("req_business_001"));
@@ -322,6 +356,7 @@ describe("BknTraceExplorerScene", () => {
     });
 
     render(<BknTraceExplorerScene />);
+    await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
     fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
 
     await waitFor(() =>

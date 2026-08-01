@@ -17,12 +17,13 @@ import {
 } from "@ant-design/icons";
 import { Alert, Button, Descriptions, Empty, Form, Input, Segmented, Spin, Table, Tabs, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import styles from "@/modules/bkn-trace/scenes/BknTraceExplorerScene.module.css";
 import { BknTraceRunsScene } from "@/modules/bkn-trace/scenes/BknTraceRunsScene";
 import {
+  getAccessProfile,
   getBusinessGraph,
   getEvidenceChain,
   getSnapshotPreview,
@@ -32,6 +33,7 @@ import {
   type EvidenceChain,
   type SnapshotPreview,
   type TraceBusinessNode,
+  type TraceAccessProfile,
   type TraceGraph,
   type TraceGraphNode,
 } from "@/modules/bkn-trace/services/trace.service";
@@ -80,22 +82,54 @@ const propertyKeys = [
 
 export function BknTraceExplorerScene() {
   const { t } = useTranslation();
+  const [accessProfile, setAccessProfile] = useState<TraceAccessProfile>();
+  const [accessError, setAccessError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getAccessProfile()
+      .then((profile) => {
+        if (active) setAccessProfile(profile);
+      })
+      .catch(() => {
+        if (active) setAccessError(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (accessError) {
+    return <Alert message={t("bknTrace.errors.accessProfileFailed")} showIcon type="error" />;
+  }
+  if (!accessProfile) {
+    return <Spin />;
+  }
+
+  const items = [];
+  if (accessProfile.businessProvenanceOwn || accessProfile.businessProvenanceManagedNetworks) {
+    items.push({
+      children: <BknTraceRunsScene />,
+      key: "runs",
+      label: t("bknTrace.tabs.runs"),
+    });
+  }
+  if (accessProfile.technicalTrace) {
+    items.push({
+      children: <BknTraceAdvancedExplorerScene />,
+      key: "advanced",
+      label: t("bknTrace.tabs.advanced"),
+    });
+  }
+  if (!items.length) {
+    return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
+  }
+
   return (
     <Tabs
       className={styles.productTabs}
-      defaultActiveKey="runs"
-      items={[
-        {
-          children: <BknTraceRunsScene />,
-          key: "runs",
-          label: t("bknTrace.tabs.runs"),
-        },
-        {
-          children: <BknTraceAdvancedExplorerScene />,
-          key: "advanced",
-          label: t("bknTrace.tabs.advanced"),
-        },
-      ]}
+      defaultActiveKey={items[0].key}
+      items={items}
     />
   );
 }

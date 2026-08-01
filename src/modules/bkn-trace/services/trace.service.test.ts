@@ -26,6 +26,38 @@ describe("bkn-trace service", () => {
     getMock.mockReset();
   });
 
+  it("fetches the server-derived access profile without client-supplied roles", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        business_provenance_own: true,
+        business_provenance_managed_networks: true,
+        technical_trace: false,
+        security_audit: false,
+        management_audit: false,
+        global_log_search: false,
+        access_scope_fingerprint: "sha256:scope-a",
+      },
+    });
+    const { getAccessProfile } = await import("@/modules/bkn-trace/services/trace.service");
+
+    const profile = await getAccessProfile();
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/agent-observability/v1/access-profile",
+      { headers: { "x-business-domain": "bd_demo" } },
+    );
+    expect(profile).toEqual({
+      accessScopeFingerprint: "sha256:scope-a",
+      businessProvenanceManagedNetworks: true,
+      businessProvenanceOwn: true,
+      globalLogSearch: false,
+      managementAudit: false,
+      securityAudit: false,
+      technicalTrace: false,
+    });
+    expect(getMock.mock.calls.flat().join(" ")).not.toContain("roles");
+  });
+
   it("fetches trace graph through the BKN Trace API", async () => {
     getMock.mockResolvedValue({
       data: {

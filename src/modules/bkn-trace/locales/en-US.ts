@@ -17,6 +17,8 @@ export const bknTraceEnUS = {
       "Inspect runtime traces, evidence chains, business semantic graphs, and snapshot previews by trace id or request id.",
     empty: "Enter a trace id or request id to query.",
     errors: {
+      accessDenied: "No provenance analysis view is available for the current account.",
+      accessProfileFailed: "Unable to load the current provenance access profile. Refresh and try again.",
       missingScope: "Enter a trace id or request id.",
       queryFailed: "Query failed.",
     },
