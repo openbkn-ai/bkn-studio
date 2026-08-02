@@ -8,7 +8,7 @@
 export const bknTraceEnUS = {
   bknTrace: {
     businessProvenance: {
-      description: "Explain business outcomes and their data, logic, and action evidence by conversation, interaction, and request.",
+      description: "Explain business outcomes and their data, logic, and action evidence by business conversation, interaction turn, and OpenBKN call.",
       title: "Business Provenance",
     },
     traceAnalysis: {
@@ -99,6 +99,7 @@ export const bknTraceEnUS = {
       observed: "Observed",
       operationId: "Operation ID",
       operation: "Business operation",
+	  operationResult: "Call result",
       question: "User question",
       requestId: "Request ID",
       requestCount: "Calls in interaction",
@@ -152,7 +153,7 @@ export const bknTraceEnUS = {
       evidenceChain: "Evidence Chain",
       nodeDetails: "Node details",
       relations: "Business relationships",
-      requestDetail: "Business run details",
+	  requestDetail: "OpenBKN call details",
       interactionRequests: "OpenBKN calls in this interaction",
       snapshot: "Snapshot Preview",
       traceGraph: "Trace Graph",
@@ -174,6 +175,16 @@ export const bknTraceEnUS = {
     },
     runsDescription:
       "Start from the user question and business result, then inspect analysis, data, logic, action, and technical evidence.",
+	operationResults: {
+	  completed: "Completed with {{count}} business references",
+	  error: "Call failed",
+	  running: "In progress",
+	  unknown: "Status unknown",
+	},
+	operations: {
+	  runSql: "Query business data",
+	  searchSchema: "Inspect knowledge network structure",
+	},
     status: {
       completed: "Completed",
       error: "Error",
@@ -189,9 +200,9 @@ export const bknTraceEnUS = {
       unresolved: "Unresolved",
     },
     views: {
-      conversations: "Conversations",
-      interactions: "Interactions",
-      requests: "OpenBKN requests",
+      conversations: "Business conversations",
+      interactions: "Interaction turns",
+      requests: "OpenBKN calls",
     },
   },
 } as const;

@@ -63,10 +63,10 @@ import {
 
 type RequestDetail = {
   artifacts: EvidenceArtifact[];
-  businessGraph: BusinessGraph;
-  evidenceChain: EvidenceChain;
+  businessGraph?: BusinessGraph;
+  evidenceChain?: EvidenceChain;
   interaction?: InteractionSummary;
-  snapshotPreview: SnapshotPreview;
+  snapshotPreview?: SnapshotPreview;
   summary: RequestSummary;
   traces: SummaryPage<TraceExecutionSummary>;
 };
@@ -81,6 +81,8 @@ type ProvenanceListRow = {
   id: string;
   interactionCount?: number;
   interactionId?: string;
+	operationId?: string;
+	operationLabel?: string;
   questionPreview?: string;
   requestCount?: number;
   requestId?: string;
@@ -128,7 +130,7 @@ export function BknTraceRunsScene() {
         ? mapProvenancePage(await getConversationSummaries(request), mapConversationRow)
         : targetView === "interactions"
           ? mapProvenancePage(await getInteractionSummaries(request), mapInteractionRow)
-          : mapProvenancePage(await getRequestSummaries(request), mapRequestRow);
+          : mapProvenancePage(await getRequestSummaries(request), (entry) => mapRequestRow(entry, t));
       if (requestSequence !== provenanceRequestSequence.current) return;
       setPage((current) =>
         append && current
@@ -228,8 +230,8 @@ export function BknTraceRunsScene() {
     try {
       const scope = { limit: 100, requestId } as const;
       const summary = await getRequestSummary(requestId);
-      const [traces, evidenceChain, businessGraph, snapshotPreview, interaction] =
-        await Promise.all([
+      const [tracesResult, evidenceChainResult, businessGraphResult, snapshotResult, interactionResult] =
+        await Promise.allSettled([
           getRequestTraces(requestId, { limit: 100 }),
           getEvidenceChain(scope),
           getBusinessGraph(scope),
@@ -238,8 +240,13 @@ export function BknTraceRunsScene() {
             ? getInteractionSummary(summary.interactionId)
             : Promise.resolve(undefined),
         ]);
+      const traces = settledValue(tracesResult) ?? emptySummaryPage<TraceExecutionSummary>();
+      const evidenceChain = settledValue(evidenceChainResult);
+      const businessGraph = settledValue(businessGraphResult);
+      const snapshotPreview = settledValue(snapshotResult);
+      const interaction = settledValue(interactionResult);
       const artifactIds = [...new Set(
-        evidenceChain.data.artifactLinks
+        (evidenceChain?.data.artifactLinks ?? [])
           .map((link) => artifactId(link.artifactRef))
           .filter((value): value is string => Boolean(value)),
       )];
@@ -278,8 +285,8 @@ export function BknTraceRunsScene() {
       width: 170,
     },
     {
-      dataIndex: "questionPreview",
-      key: "questionPreview",
+      dataIndex: view === "requests" ? "operationLabel" : "questionPreview",
+      key: view === "requests" ? "operationLabel" : "questionPreview",
       render: (value: string | undefined, row) => (
         <Button
           className={styles.questionButton}
@@ -289,7 +296,7 @@ export function BknTraceRunsScene() {
           {value || row.id}
         </Button>
       ),
-      title: t("bknTrace.fields.question"),
+      title: t(view === "requests" ? "bknTrace.fields.operation" : "bknTrace.fields.question"),
     },
 	...(view !== "requests" ? [{
 	  dataIndex: view === "conversations" ? "interactionCount" : "requestCount",
@@ -303,7 +310,7 @@ export function BknTraceRunsScene() {
       dataIndex: "resultPreview",
       key: "resultPreview",
       render: (value?: string) => value || "-",
-      title: t("bknTrace.fields.result"),
+      title: t(view === "requests" ? "bknTrace.fields.operationResult" : "bknTrace.fields.result"),
     },
     {
       dataIndex: "agentOrApp",
@@ -376,6 +383,12 @@ export function BknTraceRunsScene() {
             <Descriptions.Item label={t("bknTrace.fields.requestId")}>
               {detail.summary.requestId}
             </Descriptions.Item>
+            <Descriptions.Item label={t("bknTrace.fields.operation")}>
+              {operationLabel(detail.summary, t)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("bknTrace.fields.operationId")}>
+              {detail.summary.operationId || "-"}
+            </Descriptions.Item>
             <Descriptions.Item label={t("bknTrace.fields.requestCount")}>
               {detail.interaction?.requests.length ?? 1}
             </Descriptions.Item>
@@ -390,7 +403,16 @@ export function BknTraceRunsScene() {
           <Tabs
             items={[
               {
-                children: <BusinessExplanation graph={detail.businessGraph} artifacts={detail.artifacts} />,
+                children: detail.businessGraph
+                  ? (
+					  <BusinessExplanation
+						artifacts={detail.artifacts}
+						fallbackQuestion={detail.summary.questionPreview}
+						fallbackResult={detail.summary.resultPreview}
+						graph={detail.businessGraph}
+					  />
+					)
+                  : <Empty description={t("bknTrace.emptyStates.businessNodes")} />,
                 key: "business",
                 label: t("bknTrace.tabs.business"),
               },
@@ -648,13 +670,19 @@ function BusinessContent({
 
 function BusinessExplanation({
   artifacts,
+	fallbackQuestion,
+	fallbackResult,
   graph,
 }: {
   artifacts: EvidenceArtifact[];
+	fallbackQuestion?: string;
+	fallbackResult?: string;
   graph: BusinessGraph;
 }) {
   const { t } = useTranslation();
   const stages = businessStoryStages(graph.data.nodes);
+	const question = artifacts.find((artifact) => artifact.artifactType === "question")?.content ?? fallbackQuestion;
+	const result = artifacts.find((artifact) => artifact.artifactType === "result")?.content ?? fallbackResult;
   const supportingArtifacts = artifacts.filter(
     (artifact) => !["question", "result"].includes(artifact.artifactType),
   );
@@ -676,7 +704,11 @@ function BusinessExplanation({
                     <Typography.Text type="secondary">{node.nodeType}</Typography.Text>
                   </details>
                 </div>
-              )) : <Typography.Text type="secondary">-</Typography.Text>}
+			  )) : stage.stage === "intent" && question ? (
+				<ArtifactContent content={question} />
+			  ) : stage.stage === "claim" && result ? (
+				<ArtifactContent content={result} />
+			  ) : <Typography.Text type="secondary">-</Typography.Text>}
             </div>
           ))}
         </div>
@@ -795,8 +827,8 @@ function Governance({
   snapshot,
   summary,
 }: {
-  chain: EvidenceChain;
-  snapshot: SnapshotPreview;
+  chain?: EvidenceChain;
+  snapshot?: SnapshotPreview;
   summary: RequestSummary;
 }) {
   const { t } = useTranslation();
@@ -809,16 +841,16 @@ function Governance({
         {summary.businessDomain || "-"}
       </Descriptions.Item>
       <Descriptions.Item label={t("bknTrace.visibility.authorized")}>
-        {chain.visibilitySummary.authorizedRefCount}
+        {chain?.visibilitySummary.authorizedRefCount ?? "-"}
       </Descriptions.Item>
       <Descriptions.Item label={t("bknTrace.visibility.unresolved")}>
-        {chain.visibilitySummary.unresolvedRefCount}
+        {chain?.visibilitySummary.unresolvedRefCount ?? "-"}
       </Descriptions.Item>
       <Descriptions.Item label={t("bknTrace.fields.snapshotId")}>
-        {snapshot.snapshotRef.snapshotId || "-"}
+        {snapshot?.snapshotRef.snapshotId || "-"}
       </Descriptions.Item>
       <Descriptions.Item label={t("bknTrace.fields.mode")}>
-        {snapshot.snapshotRef.mode}
+        {snapshot?.snapshotRef.mode || "-"}
       </Descriptions.Item>
     </Descriptions>
   );
@@ -940,19 +972,57 @@ function mapInteractionRow(summary: InteractionListSummary): ProvenanceListRow {
   };
 }
 
-function mapRequestRow(summary: RequestSummary): ProvenanceListRow {
+function mapRequestRow(
+  summary: RequestSummary,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): ProvenanceListRow {
   return {
     agentOrApp: summary.agentOrApp,
     conversationId: summary.conversationId,
     durationMs: summary.durationMs,
     evidenceCompleteness: summary.evidenceCompleteness,
-    id: summary.requestId,
+    id: summary.operationId || summary.requestId,
     interactionId: summary.interactionId,
+    operationId: summary.operationId,
+    operationLabel: operationLabel(summary, t),
     questionPreview: summary.questionPreview,
     requestId: summary.requestId,
-    resultPreview: summary.resultPreview,
+    resultPreview: operationResult(summary, t),
     startedAt: summary.startedAt,
     status: summary.status,
+  };
+}
+
+function operationLabel(
+  summary: RequestSummary,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  const standardLabels: Record<string, string> = {
+    run_sql: "bknTrace.operations.runSql",
+    search_schema: "bknTrace.operations.searchSchema",
+  };
+  const key = summary.toolName ? standardLabels[summary.toolName] : undefined;
+  return key ? t(key) : summary.toolName || summary.operationKey || summary.questionPreview || summary.requestId;
+}
+
+function operationResult(
+  summary: RequestSummary,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  return t(`bknTrace.operationResults.${summary.status}`, { count: summary.businessRefs.length });
+}
+
+function settledValue<T>(result: PromiseSettledResult<T>) {
+  return result.status === "fulfilled" ? result.value : undefined;
+}
+
+function emptySummaryPage<T>(): SummaryPage<T> {
+  return {
+    entries: [],
+    partial: true,
+    partialReasons: ["content_unavailable"],
+    total: 0,
+    truncated: false,
   };
 }
 

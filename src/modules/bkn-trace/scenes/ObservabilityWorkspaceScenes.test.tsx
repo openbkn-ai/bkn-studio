@@ -60,10 +60,10 @@ describe("observability workspace scenes", () => {
       count: { accuracy: "partial", value: 1 },
       data: [{
         attributes: {}, category: "runtime.business", environment: "production",
-        eventName: "knowledge.read.completed", eventTimestamp: "2026-08-01T10:00:00Z",
+        eventName: "operation.completed", eventTimestamp: "2026-08-01T10:00:00Z",
         logId: "log-a", observedTimestamp: "2026-08-01T10:00:01Z", outcome: "success",
         serviceName: "context-loader", severityNumber: 9, severityText: "INFO",
-        sourceId: "otel-ss4o", summary: "读取需求预测对象", traceId: "trace-a",
+        sourceId: "otel-ss4o", summary: "OpenBKN operation completed", toolName: "run_sql", traceId: "trace-a",
       }],
       partial: true,
       sourceStatus: [{ coveredModules: ["openbkn"], reason: "source_query_failed", reliability: "best_effort", sourceId: "safe-audit", status: "unavailable" }],
@@ -87,7 +87,8 @@ describe("observability workspace scenes", () => {
   it("日志检索展示授权类别、局部结果和来源状态", async () => {
     render(<ObservabilityLogsScene />);
     await waitFor(() => expect(listLogs).toHaveBeenCalledWith({ limit: 50 }));
-    expect(await screen.findByText("读取需求预测对象")).not.toBeNull();
+    expect(await screen.findByText("bknTrace.operations.runSql")).not.toBeNull();
+    expect(screen.queryByText("OpenBKN operation completed")).toBeNull();
     expect(screen.getByText("bknTrace.logs.partialWarning")).not.toBeNull();
     expect(screen.getByText("runtime.business")).not.toBeNull();
   });
@@ -124,7 +125,7 @@ describe("observability workspace scenes", () => {
 
 	 it("点击日志打开受控详情并可下钻 Trace", async () => {
 		 render(<ObservabilityLogsScene />);
-		 const summary = await screen.findByText("读取需求预测对象");
+		 const summary = await screen.findByText("bknTrace.operations.runSql");
 		 fireEvent.click(summary);
 		 await waitFor(() => expect(getLogDetail).toHaveBeenCalledWith("log-a"));
 		 expect(await screen.findByText("bknTrace.logs.detail.title")).not.toBeNull();

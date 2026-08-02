@@ -8,7 +8,7 @@
 export const bknTraceZhCN = {
   bknTrace: {
     businessProvenance: {
-      description: "从会话、交互轮次和请求出发，解释业务结论及其数据、逻辑与行动依据。",
+      description: "从业务会话、交互轮次和 OpenBKN 调用出发，解释业务结论及其数据、逻辑与行动依据。",
       title: "业务溯源分析",
     },
     traceAnalysis: {
@@ -98,6 +98,7 @@ export const bknTraceZhCN = {
       observed: "已观测",
       operationId: "操作 ID",
       operation: "业务操作",
+	  operationResult: "调用结果",
       question: "用户问题",
       requestId: "Request ID",
       requestCount: "本轮调用数",
@@ -151,7 +152,7 @@ export const bknTraceZhCN = {
       evidenceChain: "证据链",
       nodeDetails: "节点明细",
       relations: "业务关系",
-      requestDetail: "业务运行详情",
+	  requestDetail: "OpenBKN 调用详情",
       interactionRequests: "本轮 OpenBKN 调用",
       snapshot: "快照预览",
       traceGraph: "调用链",
@@ -172,6 +173,16 @@ export const bknTraceZhCN = {
       runs: "业务运行",
     },
     runsDescription: "从用户问题和业务结果出发，查看分析、数据、逻辑、行动与技术调用依据。",
+	operationResults: {
+	  completed: "调用完成，关联 {{count}} 项业务依据",
+	  error: "调用失败",
+	  running: "调用中",
+	  unknown: "状态未知",
+	},
+	operations: {
+	  runSql: "查询业务数据",
+	  searchSchema: "检索知识网络结构",
+	},
     status: {
       completed: "已完成",
       error: "失败",
@@ -187,9 +198,9 @@ export const bknTraceZhCN = {
       unresolved: "未解析",
     },
     views: {
-      conversations: "会话",
+      conversations: "业务会话",
       interactions: "交互轮次",
-      requests: "OpenBKN 请求",
+      requests: "OpenBKN 调用",
     },
   },
 } as const;

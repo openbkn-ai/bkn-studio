@@ -10,6 +10,7 @@ import { getRuntimeConfig } from "@/framework/runtime/config";
 
 const TRACE_API_PREFIX = "/agent-observability/v1/traces";
 const OBSERVABILITY_API_PREFIX = "/agent-observability/v1";
+const BUSINESS_PROVENANCE_PREFIX = `${OBSERVABILITY_API_PREFIX}/business-provenance`;
 
 export type VisibilitySummary = {
   authorizedRefCount: number;
@@ -214,6 +215,8 @@ export type RequestSummary = {
   initiator?: string;
   interactionId?: string;
   knowledgeNetworks: string[];
+	operationId?: string;
+	operationKey?: string;
   partialReasons: string[];
   questionPreview?: string;
   requestId: string;
@@ -221,6 +224,7 @@ export type RequestSummary = {
   startedAt?: string;
   status: string;
   traceCount: number;
+	toolName?: string;
 };
 
 export type ConversationSummary = {
@@ -510,6 +514,8 @@ type BackendRequestSummary = {
   initiator?: string;
   interaction_id?: string;
   knowledge_networks?: string[];
+	operation_id?: string;
+	operation_key?: string;
   partial_reasons?: string[];
   question_preview?: string;
   request_id?: string;
@@ -517,6 +523,7 @@ type BackendRequestSummary = {
   started_at?: string;
   status?: string;
   trace_count?: number;
+	tool_name?: string;
 };
 
 type BackendConversationSummary = {
@@ -650,6 +657,7 @@ export async function getEvidenceChain(scope: TraceQueryScope): Promise<Evidence
   const response = await http.get<BackendEvidenceChain>(targetPath(scope, "evidence-chain"), {
     headers: traceHeaders(),
     params: targetParams(scope),
+	skipErrorToast: true,
   });
   return mapEvidenceChain(response.data);
 }
@@ -658,6 +666,7 @@ export async function getBusinessGraph(scope: TraceQueryScope): Promise<Business
   const response = await http.get<BackendBusinessGraph>(targetPath(scope, "business-graph"), {
     headers: traceHeaders(),
     params: targetParams(scope),
+	skipErrorToast: true,
   });
   return mapBusinessGraph(response.data);
 }
@@ -666,6 +675,7 @@ export async function getSnapshotPreview(scope: TraceQueryScope): Promise<Snapsh
   const response = await http.get<BackendSnapshotPreview>(targetPath(scope, "snapshot-preview"), {
     headers: traceHeaders(),
     params: targetParams(scope),
+	skipErrorToast: true,
   });
   return mapSnapshotPreview(response.data);
 }
@@ -674,7 +684,7 @@ export async function getRequestSummaries(
   query: RequestSummaryQuery = {},
 ): Promise<SummaryPage<RequestSummary>> {
   const response = await http.get<BackendSummaryPage<BackendRequestSummary>>(
-    `${OBSERVABILITY_API_PREFIX}/requests`,
+    `${BUSINESS_PROVENANCE_PREFIX}/requests`,
     { headers: traceHeaders(), params: summaryParams(query) },
   );
   return mapSummaryPage(response.data, mapRequestSummary);
@@ -684,7 +694,7 @@ export async function getConversationSummaries(
   query: RequestSummaryQuery = {},
 ): Promise<SummaryPage<ConversationSummary>> {
   const response = await http.get<BackendSummaryPage<BackendConversationSummary>>(
-    `${OBSERVABILITY_API_PREFIX}/business-provenance/conversations`,
+    `${BUSINESS_PROVENANCE_PREFIX}/conversations`,
     { headers: traceHeaders(), params: summaryParams(query) },
   );
   return mapSummaryPage(response.data, mapConversationSummary);
@@ -694,7 +704,7 @@ export async function getInteractionSummaries(
   query: RequestSummaryQuery = {},
 ): Promise<SummaryPage<InteractionListSummary>> {
   const response = await http.get<BackendSummaryPage<BackendInteractionListSummary>>(
-    `${OBSERVABILITY_API_PREFIX}/business-provenance/interactions`,
+    `${BUSINESS_PROVENANCE_PREFIX}/interactions`,
     { headers: traceHeaders(), params: summaryParams(query) },
   );
   return mapSummaryPage(response.data, mapInteractionListSummary);
@@ -702,7 +712,7 @@ export async function getInteractionSummaries(
 
 export async function getRequestSummary(requestId: string): Promise<RequestSummary> {
   const response = await http.get<BackendRequestSummary>(
-    `${OBSERVABILITY_API_PREFIX}/requests/${encodeURIComponent(requestId)}`,
+    `${BUSINESS_PROVENANCE_PREFIX}/requests/${encodeURIComponent(requestId)}`,
     traceRequestConfig(),
   );
   return mapRequestSummary(response.data);
@@ -712,7 +722,7 @@ export async function getInteractionSummary(
   interactionId: string,
 ): Promise<InteractionSummary> {
   const response = await http.get<BackendInteractionSummary>(
-    `${OBSERVABILITY_API_PREFIX}/interactions/${encodeURIComponent(interactionId)}`,
+    `${BUSINESS_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}`,
     traceRequestConfig(),
   );
   return {
@@ -722,7 +732,7 @@ export async function getInteractionSummary(
     interactionId: response.data.interaction_id ?? "",
     requests: (response.data.requests ?? []).map(mapRequestSummary),
     startedAt: response.data.started_at,
-    status: response.data.status ?? "unknown",
+    status: normalizeExecutionStatus(response.data.status),
     traces: (response.data.traces ?? []).map(mapTraceExecutionSummary),
   };
 }
@@ -732,7 +742,7 @@ export async function getRequestTraces(
   query: Pick<RequestSummaryQuery, "cursor" | "limit"> = {},
 ): Promise<SummaryPage<TraceExecutionSummary>> {
   const response = await http.get<BackendSummaryPage<BackendTraceExecutionSummary>>(
-    `${OBSERVABILITY_API_PREFIX}/requests/${encodeURIComponent(requestId)}/traces`,
+    `${BUSINESS_PROVENANCE_PREFIX}/requests/${encodeURIComponent(requestId)}/traces`,
     { headers: traceHeaders(), params: summaryParams(query) },
   );
   return mapSummaryPage(response.data, mapTraceExecutionSummary);
@@ -822,6 +832,12 @@ function mapActionSummary(data?: BackendActionSummary): ActionSummary {
   };
 }
 
+const EXECUTION_STATUSES = new Set(["completed", "error", "running", "unknown"]);
+
+function normalizeExecutionStatus(status?: string) {
+  return status && EXECUTION_STATUSES.has(status) ? status : "unknown";
+}
+
 function mapRequestSummary(data: BackendRequestSummary): RequestSummary {
   return {
     actionSummary: mapActionSummary(data.action_summary),
@@ -836,13 +852,16 @@ function mapRequestSummary(data: BackendRequestSummary): RequestSummary {
     initiator: data.initiator,
     interactionId: data.interaction_id,
     knowledgeNetworks: data.knowledge_networks ?? [],
+	operationId: data.operation_id,
+	operationKey: data.operation_key,
     partialReasons: data.partial_reasons ?? [],
     questionPreview: data.question_preview,
     requestId: data.request_id ?? "",
     resultPreview: data.result_preview,
     startedAt: data.started_at,
-    status: data.status ?? "unknown",
+    status: normalizeExecutionStatus(data.status),
     traceCount: data.trace_count ?? 0,
+	toolName: data.tool_name,
   };
 }
 
@@ -863,7 +882,7 @@ function mapConversationSummary(data: BackendConversationSummary): ConversationS
     requestCount: data.request_count ?? 0,
     resultPreview: data.result_preview,
     startedAt: data.started_at,
-    status: data.status ?? "unknown",
+    status: normalizeExecutionStatus(data.status),
     traceCount: data.trace_count ?? 0,
   };
 }
@@ -885,7 +904,7 @@ function mapInteractionListSummary(data: BackendInteractionListSummary): Interac
     requestCount: data.request_count ?? 0,
     resultPreview: data.result_preview,
     startedAt: data.started_at,
-    status: data.status ?? "unknown",
+    status: normalizeExecutionStatus(data.status),
     traceCount: data.trace_count ?? 0,
   };
 }
@@ -903,7 +922,7 @@ function mapTraceExecutionSummary(data: BackendTraceExecutionSummary): TraceExec
     rootOperation: data.root_operation,
     spanCount: data.span_count ?? 0,
     startedAt: data.started_at,
-    status: data.status ?? "unknown",
+    status: normalizeExecutionStatus(data.status),
     traceId: data.trace_id ?? "",
   };
 }

@@ -52,6 +52,7 @@ type TraceExplorerState = {
   evidenceChain?: EvidenceChain;
   snapshotPreview?: SnapshotPreview;
   traceGraph?: TraceGraph;
+  unavailableReasons?: string[];
 };
 
 const propertyKeys = [
@@ -186,19 +187,29 @@ export function BknTraceAdvancedExplorerScene() {
     setError(null);
     persistTraceScope(scopeMode, traceId.trim(), requestId.trim());
     try {
-      const traceGraphResult = effectiveScope.traceId
-        ? await getTraceGraph(effectiveScope.traceId)
-            .then((value) => ({ status: "fulfilled" as const, value }))
-            .catch((reason: unknown) => ({ reason, status: "rejected" as const }))
-        : { status: "fulfilled" as const, value: undefined };
-      const [evidenceChain, businessGraph, snapshotPreview] = await Promise.all([
+      const [traceGraphResult, evidenceChainResult, businessGraphResult, snapshotPreviewResult] = await Promise.allSettled([
+        effectiveScope.traceId ? getTraceGraph(effectiveScope.traceId) : Promise.resolve(undefined),
         getEvidenceChain(effectiveScope),
         getBusinessGraph(effectiveScope),
         getSnapshotPreview(effectiveScope),
       ]);
       const traceGraph = traceGraphResult.status === "fulfilled" ? traceGraphResult.value : undefined;
-      setState({ businessGraph, evidenceChain, snapshotPreview, traceGraph });
-      setSelectedNodeId(businessGraph.data.nodes[0]?.id ?? null);
+      const evidenceChain = evidenceChainResult.status === "fulfilled" ? evidenceChainResult.value : undefined;
+      const businessGraph = businessGraphResult.status === "fulfilled" ? businessGraphResult.value : undefined;
+      const snapshotPreview = snapshotPreviewResult.status === "fulfilled" ? snapshotPreviewResult.value : undefined;
+      const unavailableReasons = [
+        traceGraphResult.status === "rejected" ? "trace_graph_unavailable" : "",
+        evidenceChainResult.status === "rejected" ? "evidence_chain_unavailable" : "",
+        businessGraphResult.status === "rejected" ? "business_graph_unavailable" : "",
+        snapshotPreviewResult.status === "rejected" ? "snapshot_preview_unavailable" : "",
+      ].filter(Boolean);
+      if (!traceGraph && !evidenceChain && !businessGraph && !snapshotPreview) {
+        const firstFailure = [traceGraphResult, evidenceChainResult, businessGraphResult, snapshotPreviewResult]
+          .find((result) => result.status === "rejected");
+        throw firstFailure?.status === "rejected" ? firstFailure.reason : new Error(t("bknTrace.errors.queryFailed"));
+      }
+      setState({ businessGraph, evidenceChain, snapshotPreview, traceGraph, unavailableReasons });
+      setSelectedNodeId(businessGraph?.data.nodes[0]?.id ?? null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
     } finally {
@@ -213,11 +224,13 @@ export function BknTraceAdvancedExplorerScene() {
   const selectedNode = selectedNodeId ? nodeById.get(selectedNodeId) : undefined;
   const visibility = state.businessGraph?.visibilitySummary ?? state.evidenceChain?.visibilitySummary;
   const businessPartialReasons = explainabilityPartialReasons([
+    state.unavailableReasons ?? [],
     state.evidenceChain?.partialReason ?? [],
     state.businessGraph?.partialReason ?? [],
     state.snapshotPreview?.partialReason ?? [],
   ], state.businessGraph);
   const partialReasons = explainabilityPartialReasons([
+    state.unavailableReasons ?? [],
     state.traceGraph?.partialReason ?? [],
     state.evidenceChain?.partialReason ?? [],
     state.businessGraph?.partialReason ?? [],
@@ -391,19 +404,22 @@ export function BknTraceAdvancedExplorerScene() {
 
       {error ? <Alert className={styles.alert} type="error" message={error} showIcon /> : null}
       <Spin spinning={loading}>
-        {!state.businessGraph && !state.traceGraph ? <Empty className={styles.empty} description={t("bknTrace.empty")} /> : (
+        {!state.businessGraph && !state.traceGraph && !state.evidenceChain && !state.snapshotPreview ? <Empty className={styles.empty} description={t("bknTrace.empty")} /> : (
           <div className={styles.content}>
             <section className={styles.resultHeader}>
               <div>
                 <Typography.Text type="secondary">{t("bknTrace.fields.traceId")}</Typography.Text>
-                <Typography.Text className={styles.resultId}>{state.businessGraph?.traceId || state.traceGraph?.traceId || "-"}</Typography.Text>
+                <Typography.Text className={styles.resultId}>{state.businessGraph?.traceId || state.traceGraph?.traceId || state.evidenceChain?.traceId || state.snapshotPreview?.traceId || "-"}</Typography.Text>
               </div>
               <div>
                 <Typography.Text type="secondary">{t("bknTrace.fields.requestId")}</Typography.Text>
-                <Typography.Text className={styles.resultId}>{state.businessGraph?.requestId || "-"}</Typography.Text>
+                <Typography.Text className={styles.resultId}>{state.businessGraph?.requestId || state.evidenceChain?.requestId || state.snapshotPreview?.requestId || "-"}</Typography.Text>
               </div>
               <Button
-                href={buildLogDrilldownURL(state.businessGraph?.traceId || state.traceGraph?.traceId, state.businessGraph?.requestId)}
+                href={buildLogDrilldownURL(
+                  state.businessGraph?.traceId || state.traceGraph?.traceId || state.evidenceChain?.traceId || state.snapshotPreview?.traceId,
+                  state.businessGraph?.requestId || state.evidenceChain?.requestId || state.snapshotPreview?.requestId,
+                )}
                 icon={<SearchOutlined />}
               >
                 {t("bknTrace.actions.viewLogs")}
