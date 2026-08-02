@@ -732,7 +732,7 @@ export async function getInteractionSummary(
     interactionId: response.data.interaction_id ?? "",
     requests: (response.data.requests ?? []).map(mapRequestSummary),
     startedAt: response.data.started_at,
-    status: response.data.status ?? "unknown",
+    status: normalizeExecutionStatus(response.data.status),
     traces: (response.data.traces ?? []).map(mapTraceExecutionSummary),
   };
 }
@@ -832,6 +832,12 @@ function mapActionSummary(data?: BackendActionSummary): ActionSummary {
   };
 }
 
+const EXECUTION_STATUSES = new Set(["completed", "error", "running", "unknown"]);
+
+function normalizeExecutionStatus(status?: string) {
+  return status && EXECUTION_STATUSES.has(status) ? status : "unknown";
+}
+
 function mapRequestSummary(data: BackendRequestSummary): RequestSummary {
   return {
     actionSummary: mapActionSummary(data.action_summary),
@@ -853,7 +859,7 @@ function mapRequestSummary(data: BackendRequestSummary): RequestSummary {
     requestId: data.request_id ?? "",
     resultPreview: data.result_preview,
     startedAt: data.started_at,
-    status: data.status ?? "unknown",
+    status: normalizeExecutionStatus(data.status),
     traceCount: data.trace_count ?? 0,
 	toolName: data.tool_name,
   };
@@ -876,7 +882,7 @@ function mapConversationSummary(data: BackendConversationSummary): ConversationS
     requestCount: data.request_count ?? 0,
     resultPreview: data.result_preview,
     startedAt: data.started_at,
-    status: data.status ?? "unknown",
+    status: normalizeExecutionStatus(data.status),
     traceCount: data.trace_count ?? 0,
   };
 }
@@ -898,7 +904,7 @@ function mapInteractionListSummary(data: BackendInteractionListSummary): Interac
     requestCount: data.request_count ?? 0,
     resultPreview: data.result_preview,
     startedAt: data.started_at,
-    status: data.status ?? "unknown",
+    status: normalizeExecutionStatus(data.status),
     traceCount: data.trace_count ?? 0,
   };
 }
@@ -916,7 +922,7 @@ function mapTraceExecutionSummary(data: BackendTraceExecutionSummary): TraceExec
     rootOperation: data.root_operation,
     spanCount: data.span_count ?? 0,
     startedAt: data.started_at,
-    status: data.status ?? "unknown",
+    status: normalizeExecutionStatus(data.status),
     traceId: data.trace_id ?? "",
   };
 }

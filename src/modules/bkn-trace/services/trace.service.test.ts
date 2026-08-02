@@ -309,6 +309,25 @@ describe("bkn-trace service", () => {
     expect(page.nextCursor).toBe("cursor-2");
   });
 
+  it("normalizes unsupported provenance statuses at the API boundary", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [{
+          request_id: "req_future_status",
+          status: "future_status",
+        }],
+        total: 1,
+      },
+    });
+    const { getRequestSummaries } = await import(
+      "@/modules/bkn-trace/services/trace.service"
+    );
+
+    const page = await getRequestSummaries();
+
+    expect(page.entries[0].status).toBe("unknown");
+  });
+
   it("lists true conversation and interaction business provenance projections", async () => {
 	getMock
 	  .mockResolvedValueOnce({
