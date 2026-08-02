@@ -151,6 +151,7 @@ describe("bkn-trace service", () => {
       {
         headers: { "x-business-domain": "bd_demo" },
         params: { request_id: "req_001", limit: 50 },
+		skipErrorToast: true,
       },
     );
     expect(getMock).toHaveBeenNthCalledWith(
@@ -159,6 +160,7 @@ describe("bkn-trace service", () => {
       {
         headers: { "x-business-domain": "bd_demo" },
         params: { request_id: "req_001", limit: 50 },
+		skipErrorToast: true,
       },
     );
     expect(getMock.mock.calls.flat().join(" ")).not.toContain("_search");
@@ -238,6 +240,9 @@ describe("bkn-trace service", () => {
       data: {
         entries: [{
           request_id: "req_business_001",
+		  operation_id: "op_query_customer_risk",
+		  operation_key: "customer-risk-query",
+		  tool_name: "run_sql",
           started_at: "2026-07-27T09:00:00Z",
           completed_at: "2026-07-27T09:00:03Z",
           initiator: "业务分析员",
@@ -276,7 +281,7 @@ describe("bkn-trace service", () => {
       to: "2026-07-28T00:00:00Z",
     });
 
-    expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/requests", {
+    expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/business-provenance/requests", {
       headers: { "x-business-domain": "bd_demo" },
       params: {
         agent_or_app: "risk-agent",
@@ -293,6 +298,9 @@ describe("bkn-trace service", () => {
     });
     expect(page.entries[0]).toMatchObject({
       requestId: "req_business_001",
+	  operationId: "op_query_customer_risk",
+	  operationKey: "customer-risk-query",
+	  toolName: "run_sql",
       questionPreview: "客户 A 的风险为什么上升？",
       resultPreview: "近 7 天投诉增加，风险等级上升。",
       evidenceCompleteness: "complete",
@@ -419,12 +427,12 @@ describe("bkn-trace service", () => {
 
     expect(getMock).toHaveBeenNthCalledWith(
       1,
-      "/agent-observability/v1/requests/req_business_001",
+      "/agent-observability/v1/business-provenance/requests/req_business_001",
       { headers: { "x-business-domain": "bd_demo" } },
     );
     expect(getMock).toHaveBeenNthCalledWith(
       2,
-      "/agent-observability/v1/requests/req_business_001/traces",
+      "/agent-observability/v1/business-provenance/requests/req_business_001/traces",
       { headers: { "x-business-domain": "bd_demo" }, params: { limit: 30 } },
     );
     expect(getMock).toHaveBeenNthCalledWith(
@@ -459,7 +467,7 @@ describe("bkn-trace service", () => {
     });
 
     expect(getMock).toHaveBeenCalledWith(
-      "/agent-observability/v1/requests",
+      "/agent-observability/v1/business-provenance/requests",
       {
         headers: { "x-business-domain": "bd_demo" },
         params: {
@@ -497,7 +505,7 @@ describe("bkn-trace service", () => {
     const interaction = await getInteractionSummary("interaction_june_forecast");
 
     expect(getMock).toHaveBeenCalledWith(
-      "/agent-observability/v1/interactions/interaction_june_forecast",
+      "/agent-observability/v1/business-provenance/interactions/interaction_june_forecast",
       { headers: { "x-business-domain": "bd_demo" } },
     );
     expect(interaction.requests.map((item) => item.requestId)).toEqual([

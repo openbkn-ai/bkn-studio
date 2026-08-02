@@ -39,6 +39,7 @@ type BackendLogRecord = {
   severity_text: string;
   source_id: string;
   span_id?: string;
+  tool_name?: string;
   trace_id?: string;
 };
 
@@ -63,6 +64,7 @@ export type LogRecord = {
   sourceId: string;
   spanId?: string;
   summary: string;
+  toolName?: string;
   traceId?: string;
 };
 
@@ -247,6 +249,7 @@ function mapLogRecord(record: BackendLogRecord): LogRecord {
     sourceId: record.source_id,
     ...(record.span_id ? { spanId: record.span_id } : {}),
     summary: record.safe_summary,
+    ...(record.tool_name ? { toolName: record.tool_name } : {}),
     ...(record.trace_id ? { traceId: record.trace_id } : {}),
   };
 }

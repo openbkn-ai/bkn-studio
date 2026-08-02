@@ -89,7 +89,7 @@ export function ObservabilityLogsScene() {
     { dataIndex: "eventTimestamp", key: "eventTimestamp", title: t("bknTrace.logs.columns.time"), width: 180, render: formatTime },
     {
       dataIndex: "summary", key: "summary", title: t("bknTrace.logs.columns.event"),
-      render: (value: string, record) => <div className={styles.summaryCell}><span>{value || record.eventName}</span><span className={styles.technicalId}>{record.eventName} · {record.logId}</span></div>,
+      render: (value: string, record) => <div className={styles.summaryCell}><span>{operationLabel(record.toolName, value, record.eventName, t)}</span><span className={styles.technicalId}>{record.eventName} · {record.logId}</span></div>,
     },
     { dataIndex: "category", key: "category", title: t("bknTrace.logs.columns.category"), width: 150, render: (value: string) => <Tag>{value}</Tag> },
     { dataIndex: "serviceName", key: "serviceName", title: t("bknTrace.logs.columns.service"), width: 160 },
@@ -154,4 +154,10 @@ function formatTime(value?: string) {
   if (!value) return "-";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function operationLabel(toolName: string | undefined, summary: string, eventName: string, t: (key: string) => string) {
+  if (toolName === "run_sql") return t("bknTrace.operations.runSql");
+  if (toolName === "search_schema") return t("bknTrace.operations.searchSchema");
+  return toolName || summary || eventName;
 }

@@ -294,6 +294,22 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(traceInput instanceof HTMLInputElement && traceInput.value).toBe("trace_001");
   });
 
+  it("业务制品按 Trace 不可用时仍展示技术调用链", async () => {
+    window.history.replaceState({}, "", "/observability/traces?trace_id=trace_001");
+    vi.mocked(getEvidenceChain).mockRejectedValueOnce(new Error("evidence chain not found"));
+    vi.mocked(getBusinessGraph).mockRejectedValueOnce(new Error("business graph not found"));
+    vi.mocked(getSnapshotPreview).mockRejectedValueOnce(new Error("snapshot preview not found"));
+
+    render(<BknTraceAdvancedExplorerScene />);
+    fireEvent.click(screen.getByRole("button", { name: /bknTrace\.actions\.query/ }));
+
+    expect(await screen.findByText("trace_001")).not.toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "bknTrace.tabs.diagnostics" }));
+    expect(await screen.findByText("bkn-agent.chat")).not.toBeNull();
+    expect(screen.queryByText("evidence chain not found")).toBeNull();
+    expect(screen.getByText("bknTrace.partial")).not.toBeNull();
+  });
+
   it("默认展示可筛选的会话列表，而不是要求用户输入内部 ID", async () => {
     render(<BknTraceExplorerScene />);
 
@@ -464,8 +480,8 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(getBusinessGraph).toHaveBeenCalledWith({ requestId: "req_business_001", limit: 100 });
     await waitFor(() => expect(getEvidenceArtifact).toHaveBeenCalledTimes(2));
 
-    expect(await screen.findByText("客户 A 的风险为什么上升？（完整问题）")).not.toBeNull();
-    expect(screen.getByText("近 7 天投诉增加 42%，因此风险等级从中升至高。（完整结论）")).not.toBeNull();
+    expect((await screen.findAllByText("客户 A 的风险为什么上升？（完整问题）")).length).toBeGreaterThan(1);
+    expect(screen.getAllByText("近 7 天投诉增加 42%，因此风险等级从中升至高。（完整结论）").length).toBeGreaterThan(1);
     expect(screen.getByText("客户风险")).not.toBeNull();
 
     fireEvent.click(screen.getByText("bknTrace.tabs.diagnostics"));
@@ -475,6 +491,52 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("bkn-agent.chat")).not.toBeNull();
     expect(screen.getByText("bkn-agent")).not.toBeNull();
   }, 30_000);
+
+  it("OpenBKN 调用以业务操作区分，而不是重复本轮问题和答案", async () => {
+	vi.mocked(getRequestSummaries).mockResolvedValue({
+	  entries: [{
+		...requestSummary,
+		operationId: "op_schema",
+		operationKey: "supply-chain-schema",
+		toolName: "search_schema",
+	  }, {
+		...requestSummary,
+		businessRefs: ["resource:forecast"],
+		operationId: "op_sql",
+		operationKey: "supply-chain-data",
+		requestId: "req_sql",
+		toolName: "run_sql",
+	  }],
+	  partial: false,
+	  partialReasons: [],
+	  total: 2,
+	  truncated: false,
+	});
+
+	window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
+	render(<BknTraceExplorerScene />);
+
+	await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
+	expect(await screen.findByRole("button", { name: "bknTrace.operations.searchSchema" }, { timeout: 5_000 })).not.toBeNull();
+	expect(screen.getByRole("button", { name: "bknTrace.operations.runSql" })).not.toBeNull();
+	expect(screen.getAllByText("bknTrace.fields.operationResult")).not.toHaveLength(0);
+  });
+
+  it("可选证据视图缺失时仍展示 OpenBKN 调用基础详情", async () => {
+	vi.mocked(getRequestTraces).mockRejectedValue(new Error("trace graph not found"));
+	vi.mocked(getEvidenceChain).mockRejectedValue(new Error("evidence chain not found"));
+	vi.mocked(getBusinessGraph).mockRejectedValue(new Error("business graph not found"));
+	vi.mocked(getSnapshotPreview).mockRejectedValue(new Error("snapshot preview not found"));
+
+	window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
+	render(<BknTraceExplorerScene />);
+	await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
+	fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }, { timeout: 5_000 }));
+
+	expect(await screen.findByText("bknTrace.sections.requestDetail")).not.toBeNull();
+	expect(screen.getAllByText("客户 A 的风险为什么上升？").length).toBeGreaterThan(0);
+	expect(screen.queryByText("trace graph not found")).toBeNull();
+  });
 
   it("按 interaction_id 聚合同一轮的多次 OpenBKN 调用", async () => {
     const interactionRequest = {

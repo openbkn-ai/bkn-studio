@@ -43,6 +43,7 @@ describe("observability service", () => {
           outcome: "success",
           safe_summary: "读取需求预测对象",
           service_name: "context-loader",
+          tool_name: "run_sql",
           deployment_environment: "local",
           tenant_id: "tenant-a",
           ingress_principal: "otel-collector",
@@ -73,6 +74,7 @@ describe("observability service", () => {
       category: "runtime.business",
       logId: "log-a",
       summary: "读取需求预测对象",
+      toolName: "run_sql",
     });
     expect(getMock.mock.calls.flat().join(" ")).not.toContain("_search");
   });
