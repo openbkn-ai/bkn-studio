@@ -6,11 +6,13 @@
  */
 
 import {
+  CloudServerOutlined,
   LogoutOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { Dropdown } from "antd";
-import { useEffect, useState } from "react";
+import type { MenuProps } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMatches, useNavigate, useParams } from "react-router-dom";
 
@@ -19,6 +21,8 @@ import openBknLogo from "@/assets/brand/openbkn-logo.png";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import { APP_VERSION } from "@/framework/runtime/app-version";
+import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
 import { BuildActivityChip } from "@/modules/data-catalog/components/BuildActivityChip";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 
@@ -77,6 +81,63 @@ export function TopBar() {
       : []),
   ];
 
+  const installStatusUrl = getInstallStatusUrl();
+  const userMenuItems = useMemo<MenuProps["items"]>(() => {
+    const items: MenuProps["items"] = [
+      {
+        disabled: true,
+        key: "version",
+        label: (
+          <span className="console-user-menu-version">
+            <strong>
+              {t("shell.userMenuProductTitle", {
+                product: t("app.title"),
+                tagline: t("shell.userMenuTagline"),
+              })}
+            </strong>
+            <span>{t("shell.versionLine", { version: APP_VERSION })}</span>
+          </span>
+        ),
+      },
+      { type: "divider" as const },
+    ];
+
+    items.push({
+      icon: <UserOutlined />,
+      key: "account",
+      label: t("shell.items.account"),
+      onClick: () => {
+        void navigate("/account");
+      },
+    });
+
+    if (installStatusUrl) {
+      items.push({
+        icon: <CloudServerOutlined />,
+        key: "install-status",
+        label: t("shell.items.installStatus"),
+        onClick: () => {
+          window.open(installStatusUrl, "_blank", "noopener,noreferrer");
+        },
+      });
+    }
+
+    items.push(
+      { type: "divider" as const },
+      {
+        danger: true,
+        icon: <LogoutOutlined />,
+        key: "logout",
+        label: t("auth.logout"),
+        onClick: () => {
+          logout(runtimeConfig.mode);
+        },
+      },
+    );
+
+    return items;
+  }, [installStatusUrl, navigate, runtimeConfig.mode, t]);
+
   return (
     <header className="console-topbar">
       <div className="console-brand">
@@ -118,28 +179,7 @@ export function TopBar() {
       <div className="console-topbar-actions">
         <BuildActivityChip />
         <Dropdown
-          menu={{
-            items: [
-              {
-                icon: <UserOutlined />,
-                key: "account",
-                label: t("shell.items.account"),
-                onClick: () => {
-                  void navigate("/account");
-                },
-              },
-              { type: "divider" },
-              {
-                danger: true,
-                icon: <LogoutOutlined />,
-                key: "logout",
-                label: t("auth.logout"),
-                onClick: () => {
-                  logout(runtimeConfig.mode);
-                },
-              },
-            ],
-          }}
+          menu={{ items: userMenuItems }}
           placement="bottomRight"
           trigger={["click"]}
         >
