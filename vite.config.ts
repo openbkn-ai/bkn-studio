@@ -97,6 +97,13 @@ export default defineConfig(({ mode }) => {
           }
         : {}),
       proxy: {
+        // Gateway install-status page (same path as production). Dev-only: forwards
+        // to VITE_DEV_AUTH_ORIGIN so local联调 can open the remote status page.
+        "/install-status": {
+          changeOrigin: true,
+          secure: false,
+          target: devProxyOrigin,
+        },
         // Specific API prefixes must be listed before the generic /api proxy.
         "/api/agent-operator-integration": {
           changeOrigin: true,

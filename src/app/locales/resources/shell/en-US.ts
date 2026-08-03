@@ -11,6 +11,9 @@ export const shellEnUS = {
     modeStandalone: "Standalone",
     modeHosted: "Hosted",
     productTagline: "Studio Console",
+    userMenuProductTitle: "{{product}} {{tagline}}",
+    userMenuTagline: "Console",
+    versionLine: "Version {{version}}",
     headerAside: "Application shell baseline",
     collapseSidenav: "Collapse navigation",
     expandSidenav: "Expand navigation",
@@ -53,6 +56,7 @@ export const shellEnUS = {
       logManagement: "Log Management",
       apiKeys: "API Key",
       account: "Account",
+      installStatus: "Backend Service Status",
     },
   },
 } as const;

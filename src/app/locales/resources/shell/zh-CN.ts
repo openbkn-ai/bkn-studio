@@ -11,6 +11,9 @@ export const shellZhCN = {
     modeStandalone: "独立运行",
     modeHosted: "宿主接入",
     productTagline: "控制台",
+    userMenuProductTitle: "{{product}} {{tagline}}",
+    userMenuTagline: "控制台",
+    versionLine: "版本 {{version}}",
     headerAside: "统一应用壳层",
     collapseSidenav: "收起导航",
     expandSidenav: "展开导航",
@@ -54,6 +57,7 @@ export const shellZhCN = {
       logManagement: "日志管理",
       apiKeys: "API Key",
       account: "个人中心",
+      installStatus: "后端服务状态",
     },
   },
 } as const;

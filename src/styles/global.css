@@ -225,6 +225,22 @@ select {
   color: var(--color-primary-700);
 }
 
+.console-user-menu-version {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 160px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.console-user-menu-version strong {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .console-user-pill {
   display: inline-flex;
   align-items: center;
