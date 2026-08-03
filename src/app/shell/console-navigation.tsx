@@ -16,10 +16,12 @@ import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
 import { dataConnectNavigation } from "@/modules/data-connect/navigation";
 import { executionFactoryLabNavigation } from "@/modules/execution-factory-lab/navigation";
 import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
+import { homeNavigation } from "@/modules/home/navigation";
 import { knowledgeNetworkNavigation } from "@/modules/knowledge-network/navigation";
 import { modelResourcesNavigation } from "@/modules/model-resources/navigation";
 
 const navigationContributions: ConsoleNavContribution[] = [
+  homeNavigation,
   knowledgeNetworkNavigation,
   dataConnectNavigation,
   dataCatalogNavigation,

@@ -12,15 +12,11 @@ import { useLocation, useMatches, useNavigate } from "react-router-dom";
 
 import {
   consoleNavigation,
-  filterConsoleNavigation,
-  filterNavByPermission,
   findConsoleNavItemByPath,
 } from "@/app/shell/console-navigation";
+import { useConsoleNavigation } from "@/app/shell/navigation/use-console-navigation";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
-import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { accountSideNavigation } from "@/modules/account/navigation";
-import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeatures";
-import { isMarketCatalogEnabled } from "@/modules/execution-factory/utils/market-catalog";
 
 type SelectedItem = {
   key: string;
@@ -34,8 +30,7 @@ type SideNavProps = {
 
 export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   const { t } = useTranslation();
-  const { features } = useLabFeatures();
-  const runtimeConfig = useRuntimeConfig();
+  const consoleNavigationItems = useConsoleNavigation();
   const location = useLocation();
   const matches = useMatches();
   const navigate = useNavigate();
@@ -44,24 +39,8 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   const isAccountRoute = location.pathname.startsWith("/account");
 
   const navigationItems = useMemo(
-    () => {
-      if (isAccountRoute) {
-        return accountSideNavigation;
-      }
-
-      return filterNavByPermission(
-        filterConsoleNavigation(consoleNavigation, {
-          hideCatalog: !features.catalog,
-          // 执行工厂菜单常驻:不再跟随 capabilities-lab 的
-          // hide_legacy_execution_factory_menu 开关隐藏。
-          hideLegacyExecutionFactory: false,
-          // 跨业务域市场暂未启用,入口与"执行单元管理"内容重叠。
-          hideMarketCatalog: !isMarketCatalogEnabled(),
-        }),
-        runtimeConfig.currentUser.permissions,
-      );
-    },
-    [features.catalog, isAccountRoute, runtimeConfig.currentUser.permissions],
+    () => (isAccountRoute ? accountSideNavigation : consoleNavigationItems),
+    [consoleNavigationItems, isAccountRoute],
   );
 
   const selectedItem = useMemo(
@@ -103,7 +82,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
           <>
             <button
               className="console-sidenav-return"
-              onClick={() => void navigate("/knowledge-network")}
+              onClick={() => void navigate("/home")}
               title={t("account.navigation.backToWorkspace")}
               type="button"
             >

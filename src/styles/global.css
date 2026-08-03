@@ -117,6 +117,22 @@ select {
   min-width: 0;
 }
 
+.console-brand-home {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+}
+
+.console-brand-home:focus-visible {
+  outline: 2px solid var(--color-primary-600);
+  outline-offset: 2px;
+}
+
 .console-brand-logo {
   display: block;
   width: 184px;

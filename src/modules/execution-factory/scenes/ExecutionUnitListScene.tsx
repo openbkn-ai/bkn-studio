@@ -79,6 +79,7 @@ import {
 import { supportsCategoryFilter } from "@/modules/execution-factory/utils/capability-parity";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
+import { useRecordRecentVisit } from "@/modules/home/hooks/use-recent-visits";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./execution-unit-list.module.css";
@@ -90,6 +91,23 @@ const AUTHZ_TYPE_BY_TAB: Record<ExecutionUnitTab, string> = {
   mcp: "mcp",
   skill: "skill",
 };
+
+/** 算子没有独立详情路由（列表页用抽屉），所以只有另外三类能被最近访问回访。 */
+function executionUnitDetailPath(tab: ExecutionUnitTab, id: string) {
+  if (tab === "toolbox") {
+    return `/execution-factory/toolboxes/${id}/tools`;
+  }
+
+  if (tab === "mcp") {
+    return `/execution-factory/mcp/${id}`;
+  }
+
+  if (tab === "skill") {
+    return `/execution-factory/skills/${id}`;
+  }
+
+  return undefined;
+}
 
 const ExecutionUnitListOverlays = lazy(async () => {
   const module = await import("@/modules/execution-factory/scenes/ExecutionUnitListOverlays");
@@ -277,6 +295,7 @@ export function ExecutionUnitListScene({
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
+  const recordRecentVisit = useRecordRecentVisit();
   const [searchParams, setSearchParams] = useSearchParams();
   const { pageState, reset, setKeyword } = usePageState();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -827,6 +846,18 @@ export function ExecutionUnitListScene({
   }, [activeTab, t]);
 
   const handleCardClick = (item: ExecutionUnitCardItem) => {
+    // 算子和市场态都停在抽屉里，没有可回访的详情路由，不记入最近访问。
+    const detailPath = marketMode ? undefined : executionUnitDetailPath(activeTab, item.id);
+
+    if (detailPath) {
+      recordRecentVisit({
+        id: item.id,
+        kind: "execution-unit",
+        path: detailPath,
+        title: item.name,
+      });
+    }
+
     openDetail(activeTab, item.id);
   };
 

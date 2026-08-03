@@ -30,6 +30,7 @@ import type {
   KnowledgeNetworkWorkspaceSceneProps,
   KnowledgeNetworkWorkspaceSection,
 } from "@/modules/knowledge-network/contracts/scenes";
+import { useRecordRecentVisit } from "@/modules/home/hooks/use-recent-visits";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
@@ -82,6 +83,21 @@ export function KnowledgeNetworkWorkspaceScene({
     recentObjects,
     sectionError,
   } = workspaceData;
+
+  const recordRecentVisit = useRecordRecentVisit();
+
+  useEffect(() => {
+    if (!detail) {
+      return;
+    }
+
+    recordRecentVisit({
+      id: detail.id,
+      kind: "knowledge-network",
+      path: `/knowledge-network/workspace/${detail.id}/overview`,
+      title: detail.name,
+    });
+  }, [detail, recordRecentVisit]);
 
   useEffect(() => {
     if (
