@@ -50,6 +50,11 @@ import {
   type AgentTokenProvider,
 } from "@/modules/knowledge-network/services/agent-chat.service";
 import {
+  createBknLifecycle,
+  localExternalKeyStore,
+  type TurnOutcome,
+} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
+import {
   CONTEXT_LOADER_OPS,
   type ContextLoaderEnv,
   type McpToolDef,
@@ -177,6 +182,14 @@ export function fmtDuration(ms: number): string {
 /** 消息历史键：solo 沿用旧键（老对话不丢），对比面板加 :cmp-* 后缀隔离。 */
 function msgsLsKey(knId: string, paneKey: PaneKey): string {
   return paneKey === "solo" ? `bkn-studio:agentchat:${knId}` : `bkn-studio:agentchat:${knId}:cmp-${paneKey}`;
+}
+
+/**
+ * 受管会话身份键。每个面板一条独立 conversation —— 对比模式两侧是两个不同的 Agent
+ * 在各自答题，Trace 里也应当分别溯源、分别统计，不该混进同一条会话。
+ */
+function conversationLsKey(knId: string, paneKey: PaneKey): string {
+  return `bkn-studio:agentchat:conv:${knId}:${paneKey}`;
 }
 
 function loadPersisted(key: string): Partial<Persisted> {
@@ -542,7 +555,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               {
                 id: chunk.id,
                 name: chunk.name,
-                // 展示实际发出的请求体（含注入的 kn_id 与 schema_brief 等默认值），而非模型原始入参。
+                // 展示实际发出的业务请求体（含注入的 kn_id 与 schema_brief 等默认值），而非模型原始入参。
+                // 受管上下文（bkn_context）在 execute 里逐次注入，不在这条流式事件里，故不展示。
                 args: effectiveToolArgs(chunk.name, chunk.args, knId),
                 status: "running",
                 startedAt: performance.now(),
@@ -581,6 +595,18 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       }
     },
     [updateAssistant, knId],
+  );
+
+  /**
+   * 本面板的受管生命周期客户端。会话身份跟着 kn + 面板走，只有「清空对话」才换新
+   * ——刷新页面按 external_conversation_key 幂等复用同一条 conversation。
+   */
+  const lifecycle = useMemo(
+    () =>
+      createBknLifecycle(env, tokenProvider, {
+        externalKeyStore: localExternalKeyStore(conversationLsKey(knId, profile.paneKey)),
+      }),
+    [env, tokenProvider, knId, profile.paneKey],
   );
 
   // 实际发送的完整系统提示词 = 可编辑提示词 + （按画像）自动附加的知识网络摘要。
@@ -623,11 +649,21 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
 
       const controller = new AbortController();
       abortRef.current = controller;
+      // 一轮交互 = 一轮问答。答复正文另行累计：终结交互要把它作为 artifact 交给 Core，
+      // 而消息 state 是异步的，finally 里读不到本轮最终值。
+      let turn: Awaited<ReturnType<typeof lifecycle.beginTurn>> = null;
+      let outcome: TurnOutcome = "completed";
+      let answer = "";
       try {
+        turn = await lifecycle.beginTurn(question);
         const allTools = await getTools();
         // 硬限定：只把勾选的工具传给模型（null = 全部）。
         const activeTools = toolSelection ? allTools.filter((t) => toolSelection.includes(t.name)) : allTools;
-        const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider, resourceScope);
+        const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider, {
+          resourceScope,
+          session: lifecycle.session,
+          turn,
+        });
 
         await runAgentChat({
           env,
@@ -639,6 +675,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           tokenProvider: modelTokenProvider ?? tokenProvider,
           signal: controller.signal,
           onChunk: (chunk) => {
+            if (chunk.type === "text") answer += chunk.delta;
             if (requestSequence === requestSequenceRef.current) handleChunk(chunk);
           },
         });
@@ -646,8 +683,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         if (requestSequence !== requestSequenceRef.current) return;
         if (controller.signal.aborted) {
           // 用户中途停止：标记本轮 stopped（对比报告计为负面），保留已生成的部分内容。
+          outcome = "canceled";
           updateAssistant((m) => ({ ...m, stopped: true }));
         } else {
+          outcome = "failed";
           updateAssistant((m) => ({
             ...m,
             errored: true,
@@ -655,6 +694,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           }));
         }
       } finally {
+        // 终结必须挡在 setBusy(false) 之前：一条 conversation 同时只允许一个 active
+        // interaction（Core 的 uq_..._interaction_active 唯一约束），提前放开输入框会让
+        // 用户手快发出的下一轮直接开不出交互。
+        // 用户点停止时 runAgentChat 是正常返回而非抛错，所以结果要认 aborted 而不是 outcome。
+        // 收尾失败不改写本轮结果：那是可观测面的问题，不该把答出来的一轮显示成失败。
+        if (turn) await turn.finish(controller.signal.aborted ? "canceled" : outcome, answer).catch(() => undefined);
         if (requestSequence === requestSequenceRef.current) {
           abortRef.current = null;
           const elapsed = performance.now() - startedAt;
@@ -667,7 +712,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         }
       }
     },
-    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, handleChunk, updateAssistant, message],
+    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, lifecycle, handleChunk, updateAssistant, message],
   );
 
   const stop = useCallback(() => {
@@ -699,12 +744,15 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const clearChat = useCallback(() => {
     setMessages([]);
     setStats({ tokens: 0, ms: 0 });
+    // 清空对话 = 换一条受管会话。这是 conversation id 唯一的更换点：不清空就一直是同一个，
+    // 刷新页面也会按同一把 external_conversation_key 幂等复用回来。
+    lifecycle.reset();
     try {
       localStorage.removeItem(msgsLsKey(knId, profile.paneKey));
     } catch {
       /* ignore */
     }
-  }, [knId, profile.paneKey]);
+  }, [knId, profile.paneKey, lifecycle]);
 
   useImperativeHandle(
     ref,

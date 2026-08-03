@@ -17,8 +17,11 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { jsonSchema, stepCountIs, streamText, tool, type ModelMessage, type ToolSet } from "ai";
 
+import type { BknTurn } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
   createMcpSession,
+  receiptFromStructured,
+  type BknContext,
   type ContextLoaderEnv,
   type McpSession,
   type McpToolDef,
@@ -101,14 +104,39 @@ const TOOL_ARG_DEFAULTS: Record<string, Record<string, unknown>> = {
   search_schema: { schema_brief: true },
 };
 
-/** 实际发给 MCP 的最终 arguments = 通用默认 ← 工具默认 ← 模型入参 ← 锁定 kn_id。UI 工具卡片也用它展示真实请求。 */
-export function effectiveToolArgs(name: string, input: unknown, knId: string): Record<string, unknown> {
-  return {
+/** 实际发给 MCP 的最终 arguments = 通用默认 ← 工具默认 ← 模型入参 ← 锁定 kn_id ← 受管上下文。UI 工具卡片也用它展示真实请求。 */
+export function effectiveToolArgs(
+  name: string,
+  input: unknown,
+  knId: string,
+  bknContext?: BknContext,
+): Record<string, unknown> {
+  const args: Record<string, unknown> = {
     ...GLOBAL_ARG_DEFAULTS,
     ...TOOL_ARG_DEFAULTS[name],
     ...(input && typeof input === "object" ? (input as Record<string, unknown>) : {}),
     kn_id: knId,
   };
+  // 上下文是平台侧身份，和 kn_id 一样不接受模型覆盖：模型编出来的 id 一定不存在于 Core。
+  if (bknContext) args.bkn_context = bknContext;
+  return args;
+}
+
+/**
+ * 剥掉工具入参 schema 里的 `bkn_context`。后端把它塞进了每个业务工具的
+ * properties + required，原样喂给模型会让模型自己编 conversation/interaction id；
+ * 真值由 execute 注入，模型不该看见这个字段。
+ */
+function stripBknContextSchema(schema: Record<string, unknown>): Record<string, unknown> {
+  const properties = schema.properties;
+  if (!properties || typeof properties !== "object" || !("bkn_context" in properties)) return schema;
+  const nextProperties = { ...(properties as Record<string, unknown>) };
+  delete nextProperties.bkn_context;
+  const next: Record<string, unknown> = { ...schema, properties: nextProperties };
+  if (Array.isArray(schema.required)) {
+    next.required = schema.required.filter((name) => name !== "bkn_context");
+  }
+  return next;
 }
 
 /**
@@ -161,23 +189,41 @@ export type AgentChunk =
  * - execute 走会话级 MCP 客户端，并强制注入锁定 kn_id（模型不可改）。
  * 返回工具集 + 共享的 MCP 会话（复用同一 session）。
  */
+export type AgentToolsOptions = {
+  /** 当前知识网络绑定的 resource_id 集（KnDetail 的 data_source）。传入则默认把 list_resources 限定到本网络的数据表。 */
+  resourceScope?: readonly string[] | null;
+  /** 复用生命周期客户端的 MCP 会话，省一次 initialize 握手。 */
+  session?: McpSession;
+  /**
+   * 本轮受管交互。缺省/null 时不注入 bkn_context —— 只有后端未启用受管生命周期时才该这样，
+   * 启用了却不传会让每个工具调用都被挡在 `conversation_required`。
+   */
+  turn?: BknTurn | null;
+};
+
 export function buildAgentTools(
   mcpTools: McpToolDef[],
   env: ContextLoaderEnv,
   knId: string,
   cfg: AgentConfig,
   tokenProvider: AgentTokenProvider,
-  /** 当前知识网络绑定的 resource_id 集（KnDetail 的 data_source）。传入则默认把 list_resources 限定到本网络的数据表。 */
-  resourceScope?: readonly string[] | null,
+  options: AgentToolsOptions = {},
 ): ToolSet {
-  const session = createMcpSession(env, tokenProvider);
+  const { resourceScope, turn = null } = options;
+  const session = options.session ?? createMcpSession(env, tokenProvider);
   const scopeSet = resourceScope && resourceScope.length ? new Set(resourceScope) : null;
   const tools: ToolSet = {};
+  const call = async (name: string, args: Record<string, unknown>): Promise<string> => {
+    const res = await session.callTool(name, args);
+    // 每次业务调用的回执都要记账：终结本轮交互时清单必须列全，漏一条 Core 就判非法。
+    turn?.recordReceipt(receiptFromStructured(res.structured));
+    return res.text;
+  };
   for (const def of mcpTools) {
     if (!def.name) continue;
     const schema =
       def.inputSchema && typeof def.inputSchema === "object"
-        ? (def.inputSchema as Record<string, unknown>)
+        ? stripBknContextSchema(def.inputSchema as Record<string, unknown>)
         : { type: "object", properties: {} };
     const scopedList = scopeSet !== null && def.name === "list_resources";
     tools[def.name] = tool({
@@ -187,10 +233,10 @@ export function buildAgentTools(
         (scopedList ? " 返回结果已默认限定为当前知识网络绑定的数据表（其他 catalog 的表不会出现）。" : ""),
       inputSchema: jsonSchema(schema),
       execute: async (input: unknown): Promise<string> => {
-        if (scopedList && scopeSet) return listResourcesScoped(session, input, knId, scopeSet, cfg);
-        const args = effectiveToolArgs(def.name, input, knId);
-        const res = await session.callTool(def.name, args);
-        return capToolResult(res.text, def.name, cfg);
+        const bknContext = turn?.nextContext(def.name);
+        if (scopedList && scopeSet) return listResourcesScoped(call, input, knId, scopeSet, cfg, bknContext);
+        const args = effectiveToolArgs(def.name, input, knId, bknContext);
+        return capToolResult(await call(def.name, args), def.name, cfg);
       },
     });
   }
@@ -202,28 +248,29 @@ export function buildAgentTools(
  * 分页无意义），再按 KnDetail 的 resource_id 集过滤，只留本网络绑定的数据表。
  */
 async function listResourcesScoped(
-  session: McpSession,
+  call: (name: string, args: Record<string, unknown>) => Promise<string>,
   input: unknown,
   knId: string,
   scopeSet: Set<string>,
   cfg: AgentConfig,
+  bknContext: BknContext | undefined,
 ): Promise<string> {
   const args = {
-    ...effectiveToolArgs("list_resources", input, knId),
+    ...effectiveToolArgs("list_resources", input, knId, bknContext),
     response_format: "json",
     offset: 0,
     limit: Math.max(scopeSet.size + 5, 200),
   };
-  const res = await session.callTool("list_resources", args);
+  const text = await call("list_resources", args);
   try {
-    const parsed = JSON.parse(res.text) as { entries?: Array<{ resource_id?: string }> };
+    const parsed = JSON.parse(text) as { entries?: Array<{ resource_id?: string }> };
     const entries = Array.isArray(parsed.entries)
       ? parsed.entries.filter((e) => typeof e.resource_id === "string" && scopeSet.has(e.resource_id))
       : [];
     return capToolResult(JSON.stringify({ entries, total_count: entries.length }), "list_resources", cfg);
   } catch {
     // 非预期格式（如仍是 TOON）时不阻断，原样返回。
-    return capToolResult(res.text, "list_resources", cfg);
+    return capToolResult(text, "list_resources", cfg);
   }
 }
 

@@ -10,6 +10,12 @@ import { Empty, Input, Spin, Tooltip } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  createBknLifecycle,
+  memoryExternalKeyStore,
+  withManagedTurn,
+  type BknLifecycle,
+} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
+import {
   fetchKnDetail,
   fetchObjectInstances,
   type ContextLoaderEnv,
@@ -50,6 +56,7 @@ function ObjectTypeCard({
   copy,
   env,
   auth,
+  lifecycle,
 }: {
   ot: KnObjectType;
   onFillField: (key: string, value: string) => void;
@@ -62,6 +69,8 @@ function ObjectTypeCard({
   env: ContextLoaderEnv;
   /** 401 自动刷新 token 用（OAuth 续期）。 */
   auth?: McpAuth;
+  /** 面板级受管生命周期：样本行预览也是受管业务调用。 */
+  lifecycle: BknLifecycle;
 }) {
   const [open, setOpen] = useState(false);
   const [filling, setFilling] = useState(false);
@@ -80,7 +89,9 @@ function ObjectTypeCard({
     if (next && previewRows === null && !previewLoading) {
       setPreviewLoading(true);
       setPreviewError(null);
-      fetchObjectInstances(env, ot.id, 5, auth)
+      withManagedTurn(lifecycle, `预览 ${ot.id} 样本行`, (turn) =>
+        fetchObjectInstances(env, ot.id, 5, auth, undefined, turn ?? undefined),
+      )
         .then((rows) => setPreviewRows(rows))
         .catch((error) => setPreviewError(error instanceof Error ? error.message : "查询失败"))
         .finally(() => setPreviewLoading(false));
@@ -274,6 +285,15 @@ export function DataBrowserPanel({
   const [reloadKey, setReloadKey] = useState(0);
   const loadedRef = useRef(false);
 
+  /**
+   * 数据浏览器读的 get_kn_detail / query_object_instance 都是受管业务工具，
+   * 不带 bkn_context 会被 Context Loader 挡回。这里不是对话，会话按本次挂载算一条。
+   */
+  const lifecycle = useMemo(
+    () => createBknLifecycle(env, auth, { externalKeyStore: memoryExternalKeyStore() }),
+    [env, auth],
+  );
+
   // 懒加载：首次切到「数据浏览器」标签时拉一次 schema，之后常驻不再重拉，保留预览/筛选上下文。
   useEffect(() => {
     if (!active || loadedRef.current) return;
@@ -283,7 +303,9 @@ export function DataBrowserPanel({
     const timeoutId = window.setTimeout(() => controller.abort(), DETAIL_LOAD_TIMEOUT_MS);
     setLoading(true);
     setError(null);
-    fetchKnDetail(env, auth, controller.signal)
+    withManagedTurn(lifecycle, "加载知识网络结构", (turn) =>
+      fetchKnDetail(env, auth, controller.signal, turn ?? undefined),
+    )
       .then((data) => {
         if (!cancelled) setDetail(data);
       })
@@ -308,7 +330,7 @@ export function DataBrowserPanel({
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [active, auth, env, reloadKey]);
+  }, [active, auth, env, reloadKey, lifecycle]);
 
   const reload = () => {
     loadedRef.current = false;
@@ -477,6 +499,7 @@ export function DataBrowserPanel({
                       copy={copy}
                       env={env}
                       auth={auth}
+                      lifecycle={lifecycle}
                     />
                   ))}
                 </div>

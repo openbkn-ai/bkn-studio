@@ -32,6 +32,11 @@ import {
   type KnDetail,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
+import {
+  createBknLifecycle,
+  memoryExternalKeyStore,
+  withManagedTurn,
+} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { recommendationFingerprint } from "@/modules/knowledge-network/utils/agent-chat-cache";
 
 import {
@@ -368,6 +373,12 @@ export function AgentChat({
   const onBaseBusy = useCallback((b: boolean) => setPaneBusy("base", b), [setPaneBusy]);
   const onKnBusy = useCallback((b: boolean) => setPaneBusy("kn", b), [setPaneBusy]);
 
+  /** 平台侧预取用的一次性受管会话（不是任何一侧对话）。 */
+  const summaryLifecycle = useMemo(
+    () => createBknLifecycle(env, tokenProvider, { externalKeyStore: memoryExternalKeyStore(), oneShot: true }),
+    [env, tokenProvider],
+  );
+
   const soloRef = useRef<ChatPaneHandle>(null);
   const baseRef = useRef<ChatPaneHandle>(null);
   const knRef = useRef<ChatPaneHandle>(null);
@@ -399,7 +410,11 @@ export function AgentChat({
     setKnResourceIds(null);
     setKnDetail(null);
     setSuggestions(FALLBACK_SUGGESTIONS);
-    fetchKnDetail(env, tokenProvider)
+    // 摘要预取也是受管业务调用（get_kn_detail 走 /kn/*）。它不属于任何一侧对话，
+    // 因此用一次性会话，不要占用面板的 conversation。
+    withManagedTurn(summaryLifecycle, "载入知识网络摘要", (turn) =>
+      fetchKnDetail(env, tokenProvider, undefined, turn ?? undefined),
+    )
       .then((detail) => {
         if (cancelled) return;
         setKnContext(buildKnContext(detail));
@@ -415,7 +430,7 @@ export function AgentChat({
     return () => {
       cancelled = true;
     };
-  }, [env, tokenProvider]);
+  }, [env, tokenProvider, summaryLifecycle]);
 
   // 有默认模型就用 BKN 的业务描述生成建议问题，替换模板结果；无模型/失败/输出不合预期时留在模板。
   useEffect(() => {
