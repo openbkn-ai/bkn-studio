@@ -130,6 +130,21 @@ describe("createBknLifecycle", () => {
       completion_manifest_version: "1",
       answer: "答",
     });
+    // 带 pending 回执的成功交互要给收敛窗口，否则永远停在 assembling。
+    expect(terminal.args.assembler_deadline).toEqual(expect.any(String));
+  });
+
+  it("omits answer and assembler_deadline on the non-success terminals", async () => {
+    const { session, calls } = fakeSession();
+    const lifecycle = createBknLifecycleOn(session, options());
+    const turn = await lifecycle.beginTurn("问");
+
+    await turn!.cancel("stopped_by_user");
+
+    // cancel / fail 的 schema 没有这两个字段，additionalProperties: false 会直接拒。
+    const terminal = calls.find((call) => call.name === "bkn_cancel_interaction")!;
+    expect(terminal.args).not.toHaveProperty("answer");
+    expect(terminal.args).not.toHaveProperty("assembler_deadline");
   });
 
   it("terminates a turn only once", async () => {

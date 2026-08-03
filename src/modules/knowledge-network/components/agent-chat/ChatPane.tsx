@@ -51,6 +51,7 @@ import {
 } from "@/modules/knowledge-network/services/agent-chat.service";
 import {
   createBknLifecycle,
+  lifecycleEnv,
   localExternalKeyStore,
   type TurnOutcome,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
@@ -603,10 +604,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
    */
   const lifecycle = useMemo(
     () =>
-      createBknLifecycle(env, tokenProvider, {
+      createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
         externalKeyStore: localExternalKeyStore(conversationLsKey(knId, profile.paneKey)),
       }),
-    [env, tokenProvider, knId, profile.paneKey],
+    [env.base, knId, tokenProvider, profile.paneKey],
   );
 
   // 实际发送的完整系统提示词 = 可编辑提示词 + （按画像）自动附加的知识网络摘要。

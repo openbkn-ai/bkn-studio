@@ -34,6 +34,7 @@ import {
 } from "@/modules/knowledge-network/services/context-loader.service";
 import {
   createBknLifecycle,
+  lifecycleEnv,
   memoryExternalKeyStore,
   withManagedTurn,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
@@ -375,8 +376,12 @@ export function AgentChat({
 
   /** 平台侧预取用的一次性受管会话（不是任何一侧对话）。 */
   const summaryLifecycle = useMemo(
-    () => createBknLifecycle(env, tokenProvider, { externalKeyStore: memoryExternalKeyStore(), oneShot: true }),
-    [env, tokenProvider],
+    () =>
+      createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
+        externalKeyStore: memoryExternalKeyStore(),
+        oneShot: true,
+      }),
+    [env.base, knId, tokenProvider],
   );
 
   const soloRef = useRef<ChatPaneHandle>(null);

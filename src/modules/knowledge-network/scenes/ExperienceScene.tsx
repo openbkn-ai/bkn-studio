@@ -50,6 +50,7 @@ import {
 } from "@/modules/knowledge-network/services/context-loader.service";
 import {
   createBknLifecycle,
+  lifecycleEnv,
   memoryExternalKeyStore,
   withManagedTurn,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
@@ -384,8 +385,8 @@ export function ExperienceScene({
    * 会话本身按本次进入调试台算一条，刷新即换新（memory 键），不写 localStorage。
    */
   const lifecycle = useMemo(
-    () => createBknLifecycle(env, tokenProvider, { externalKeyStore: memoryExternalKeyStore() }),
-    [env, tokenProvider],
+    () => createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, { externalKeyStore: memoryExternalKeyStore() }),
+    [base, knId, tokenProvider],
   );
 
   // 大模型（mf-model-api）不认 bak_ AppKey（AppKey 仅对 Context Loader 有效）→ 恒用 OAuth 会话 token，
@@ -538,20 +539,27 @@ export function ExperienceScene({
       const freshEnv = { ...env, token: freshToken };
       // 传 tokenProvider：401（token 过期）时刷新一次再重跑，不用手动重试。
       // 一次点击 = 一轮受管交互：业务调用没有 bkn_context 会被 Context Loader 直接挡回。
-      const result = await withManagedTurn(lifecycle, `调试台调用 ${op.id}`, async (turn) => {
-        const sent = await sendRequest(
-          freshEnv,
-          op,
-          mode,
-          queryVals,
-          bodyText,
-          tokenProvider,
-          controller.signal,
-          turn?.nextContext(op.id),
-        );
-        turn?.recordReceipt(sent.receipt);
-        return sent;
-      });
+      const result = await withManagedTurn(
+        lifecycle,
+        `调试台调用 ${op.id}`,
+        async (turn) => {
+          const sent = await sendRequest(
+            freshEnv,
+            op,
+            mode,
+            queryVals,
+            bodyText,
+            tokenProvider,
+            controller.signal,
+            turn?.nextContext(op.id),
+          );
+          turn?.recordReceipt(sent.receipt);
+          return sent;
+        },
+        // 业务返回 500 时这一轮仍算 completed —— 调用失败记在 Operation 的 Receipt 上
+        // （Core 已判 failed），Interaction 状态表达的是调用方这一轮走完了没有。
+        (sent) => `HTTP ${sent.status} · ${sent.sizeBytes}B`,
+      );
       if (requestSequence !== requestSequenceRef.current) return;
       setResponse(result);
     } catch (error) {

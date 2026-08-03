@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createBknLifecycle,
+  lifecycleEnv,
   memoryExternalKeyStore,
   withManagedTurn,
   type BknLifecycle,
@@ -290,8 +291,8 @@ export function DataBrowserPanel({
    * 不带 bkn_context 会被 Context Loader 挡回。这里不是对话，会话按本次挂载算一条。
    */
   const lifecycle = useMemo(
-    () => createBknLifecycle(env, auth, { externalKeyStore: memoryExternalKeyStore() }),
-    [env, auth],
+    () => createBknLifecycle(lifecycleEnv(env.base, env.knId), auth, { externalKeyStore: memoryExternalKeyStore() }),
+    [env.base, env.knId, auth],
   );
 
   // 懒加载：首次切到「数据浏览器」标签时拉一次 schema，之后常驻不再重拉，保留预览/筛选上下文。

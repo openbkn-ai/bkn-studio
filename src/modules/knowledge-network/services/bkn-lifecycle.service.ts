@@ -39,6 +39,14 @@ const MANIFEST_VERSION = "1";
  */
 const DEFAULT_LEASE_SECONDS = 1800;
 
+/**
+ * 成功终结时给证据组装留的收敛窗口。Context Loader 目前只能把 Receipt 完成为
+ * `evidence_durability=pending`（3.0 Evidence Producer 未落地），而带 pending 回执的
+ * 成功交互必须在清单里给出 assembler_deadline，否则永远停在 assembling ——
+ * 现在没有 assembler 在跑，看不出差别，但 #544 上线后有它才会自动收敛。
+ */
+const ASSEMBLER_DEADLINE_MS = 5 * 60 * 1000;
+
 /** 一轮交互的收尾原因（Core 只存字符串，不校验枚举）。 */
 export type TurnOutcome = "completed" | "failed" | "canceled";
 
@@ -94,6 +102,19 @@ export type ExternalKeyStore = {
   /** 换一把新键（清空对话）。 */
   rotate(): void;
 };
+
+/**
+ * 生命周期客户端的稳定身份：只认 base + kn。
+ *
+ * `env.token` 仅是 auth provider 缺席时的兜底——MCP 会话每次请求都用
+ * `auth.getToken()` 现取，所以 OAuth 续期换掉 env 的对象身份时**不该**重建客户端：
+ * 重建会丢掉串行闸门，让并发的两轮同时开交互，撞上「一条会话只能有一个 active
+ * interaction」；顺带还会多打一次 initialize 握手。调用方用它把 useMemo 的依赖
+ * 收敛到真正稳定的标识上。
+ */
+export function lifecycleEnv(base: string, knId: string): ContextLoaderEnv {
+  return { base, token: "", knId };
+}
 
 /** 随机 id：优先 crypto.randomUUID，测试环境/老浏览器兜底。 */
 export function randomLifecycleId(): string {
@@ -325,7 +346,12 @@ function createTurn(
       expected_operations: receipts.map((r) => ({ operation_id: r.operationId, required: r.required })),
       expected_receipts: receipts.map((r) => ({ receipt_id: r.receiptId, required: r.required })),
     };
-    if (answer !== undefined) args.answer = answer;
+    // answer 只在 complete 的 schema 里声明；cancel / fail 传了会撞
+    // additionalProperties: false。
+    if (answer !== undefined) {
+      args.answer = answer;
+      args.assembler_deadline = new Date(Date.now() + ASSEMBLER_DEADLINE_MS).toISOString();
+    }
     try {
       await callLifecycleTool(session, tool, args);
     } finally {
