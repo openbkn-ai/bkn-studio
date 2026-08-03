@@ -17,10 +17,10 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { jsonSchema, stepCountIs, streamText, tool, type ModelMessage, type ToolSet } from "ai";
 
-import type { BknTurn } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
   createMcpSession,
   receiptFromStructured,
+  type BknCallScope,
   type BknContext,
   type ContextLoaderEnv,
   type McpSession,
@@ -195,10 +195,12 @@ export type AgentToolsOptions = {
   /** 复用生命周期客户端的 MCP 会话，省一次 initialize 握手。 */
   session?: McpSession;
   /**
-   * 本轮受管交互。缺省/null 时不注入 bkn_context —— 只有后端未启用受管生命周期时才该这样，
+   * 本轮受管交互。工具循环只需要「取上下文 + 回执记账」这两件事，故取最小接口
+   * BknCallScope 而非整个 BknTurn —— 终结交互不归工具循环管。
+   * 缺省/null 时不注入 bkn_context：只有后端未启用受管生命周期时才该这样，
    * 启用了却不传会让每个工具调用都被挡在 `conversation_required`。
    */
-  turn?: BknTurn | null;
+  turn?: BknCallScope | null;
 };
 
 export function buildAgentTools(

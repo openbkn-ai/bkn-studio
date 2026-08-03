@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   createBknLifecycleOn,
@@ -244,10 +244,6 @@ describe("createBknLifecycle", () => {
 });
 
 describe("withManagedTurn", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("terminates the interaction even when the business call throws", async () => {
     const { session, calls } = fakeSession();
     const lifecycle = createBknLifecycleOn(session, options());

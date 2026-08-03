@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildAgentTools, DEFAULT_AGENT_CONFIG } from "@/modules/knowledge-network/services/agent-chat.service";
 import type {
+  BknCallScope,
   McpSession,
   McpToolCallResult,
   McpToolDef,
@@ -66,17 +67,17 @@ describe("buildAgentTools", () => {
 
   it("injects the turn context and locked kn_id into the real call", async () => {
     const session = stubSession();
-    const turn = {
-      nextContext: vi.fn((toolName: string) => ({
+    const turn: BknCallScope = {
+      nextContext: (toolName) => ({
         conversation_id: "conv_1",
         interaction_id: "int_1",
         operation_key: `${toolName}#1`,
-      })),
+      }),
       recordReceipt: vi.fn(),
     };
     const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
       session,
-      turn: turn as never,
+      turn,
     });
 
     await runTool(tools.run_sql, { sql: "SELECT 1", kn_id: "模型编的网络" });
@@ -97,12 +98,13 @@ describe("buildAgentTools", () => {
       structured: { bkn_receipt: { operation_id: "op_1", receipt_id: "rcp_1", required: true } },
     });
     const recordReceipt = vi.fn();
+    const turn: BknCallScope = {
+      nextContext: () => ({ conversation_id: "conv_1", interaction_id: "int_1", operation_key: "run_sql#1" }),
+      recordReceipt,
+    };
     const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
       session,
-      turn: {
-        nextContext: () => ({ conversation_id: "conv_1", interaction_id: "int_1", operation_key: "run_sql#1" }),
-        recordReceipt,
-      } as never,
+      turn,
     });
 
     await runTool(tools.run_sql, { sql: "SELECT 1" });
