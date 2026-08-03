@@ -43,10 +43,24 @@ describe("createThemeConfig", () => {
       throw new Error("Table theme tokens are not configured");
     }
 
-    const rowColors = [
-      tableTokens.rowHoverBg,
-      tableTokens.rowSelectedBg,
+    const requiredColor = (value: string | undefined, name: string) => {
+      if (typeof value !== "string") {
+        throw new Error(`${name} table theme token is not configured`);
+      }
+
+      return value;
+    };
+
+    const rowHoverBg = requiredColor(tableTokens.rowHoverBg, "rowHoverBg");
+    const rowSelectedBg = requiredColor(tableTokens.rowSelectedBg, "rowSelectedBg");
+    const rowSelectedHoverBg = requiredColor(
       tableTokens.rowSelectedHoverBg,
+      "rowSelectedHoverBg",
+    );
+    const rowColors = [
+      rowHoverBg,
+      rowSelectedBg,
+      rowSelectedHoverBg,
     ];
 
     expect(new Set(rowColors).size).toBe(3);
@@ -71,11 +85,11 @@ describe("createThemeConfig", () => {
       }, 0);
     };
 
-    expect(luminance(tableTokens.rowHoverBg)).toBeGreaterThan(
-      luminance(tableTokens.rowSelectedBg),
+    expect(luminance(rowHoverBg)).toBeGreaterThan(
+      luminance(rowSelectedBg),
     );
-    expect(luminance(tableTokens.rowSelectedBg)).toBeGreaterThan(
-      luminance(tableTokens.rowSelectedHoverBg),
+    expect(luminance(rowSelectedBg)).toBeGreaterThan(
+      luminance(rowSelectedHoverBg),
     );
   });
 });
