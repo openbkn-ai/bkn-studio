@@ -20,6 +20,14 @@ name: release-studio
 # default. Prerelease versions accumulate with no retention policy yet: GHCR
 # cleanup needs a PAT/App token (GITHUB_TOKEN can't wildcard-match tags), and
 # SWR needs its own console-side rule — both deferred.
+#
+# Each architecture builds on a runner of its own architecture, then the two are
+# stitched into one multi-arch tag. The previous single-job build asked one
+# amd64 runner for `platforms: linux/amd64,linux/arm64`, which ran the arm64 leg
+# under QEMU — and because the Dockerfile builds the SPA in-image, that meant a
+# full `pnpm install` + `vite build` interpreted instruction by instruction.
+# Observed on a634842: every other step finished in 44s while that one build ran
+# past 45 minutes, still inside `[linux/arm64 build 5/7] RUN pnpm install`.
 
 on:
   push:
@@ -51,13 +59,20 @@ env:
   SWR_NAMESPACE: openbkn-ai
 
 jobs:
-  build:
-    name: release-studio build verify
+  # Resolved once and handed to every downstream job: the per-arch legs and the
+  # manifest that unions them must all agree on one version string, and the
+  # chart's version has to match the image tag it points at.
+  setup:
+    name: resolve version
     runs-on: ubuntu-latest
     env:
       # Surfaced so step `if:` can test credential presence — secrets can't be
       # referenced in `if:` directly. Empty when the SWR secrets aren't set.
       SWR_USERNAME: ${{ secrets.HUAWEI_SWR_USERNAME }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.gate.outputs.publish }}
+      swr: ${{ steps.gate.outputs.swr }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -101,42 +116,77 @@ jobs:
           else
             echo "publish=false" >> "$GITHUB_OUTPUT"
           fi
+          # SWR mirroring is credential-gated; downstream jobs need the same
+          # answer without re-reading the secret.
+          if [[ -n "${SWR_USERNAME}" ]]; then
+            echo "swr=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "swr=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - uses: docker/setup-qemu-action@v3
+      # Surface a silent skip: on a real publish the image is supposed to mirror
+      # to SWR, so make a missing credential loud instead of a no-op.
+      - name: Warn if SWR mirror is skipped
+        if: ${{ steps.gate.outputs.publish == 'true' && steps.gate.outputs.swr == 'false' }}
+        run: echo "::warning title=SWR mirror skipped::HUAWEI_SWR_USERNAME/PASSWORD not available to this repo — image pushed to GHCR only, NOT mirrored to ${SWR_REGISTRY}/${SWR_NAMESPACE}."
+
+  # One leg per architecture, each on a runner that natively speaks it. Every
+  # leg publishes an arch-suffixed tag; the manifest job below unions them into
+  # the plain `:<version>` tag that charts and deploys reference.
+  image:
+    name: build ${{ matrix.arch }}
+    needs: setup
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            platform: linux/arm64
+            # Free for public repositories. This label is the whole point of the
+            # split: no QEMU means the in-image `pnpm install` runs at native
+            # speed instead of being interpreted.
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      # No setup-qemu-action: each runner builds only its own architecture.
       - uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
-        if: ${{ steps.gate.outputs.publish == 'true' }}
+        if: ${{ needs.setup.outputs.publish == 'true' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      # Surface a silent skip: on a real publish the image is supposed to mirror
-      # to SWR, so make a missing credential loud instead of a no-op.
-      - name: Warn if SWR mirror is skipped
-        if: ${{ steps.gate.outputs.publish == 'true' && env.SWR_USERNAME == '' }}
-        run: echo "::warning title=SWR mirror skipped::HUAWEI_SWR_USERNAME/PASSWORD not available to this repo — image pushed to GHCR only, NOT mirrored to ${SWR_REGISTRY}/${SWR_NAMESPACE}."
-
       - name: Login to Huawei SWR
-        if: ${{ steps.gate.outputs.publish == 'true' && env.SWR_USERNAME != '' }}
+        if: ${{ needs.setup.outputs.publish == 'true' && needs.setup.outputs.swr == 'true' }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.SWR_REGISTRY }}
           username: ${{ secrets.HUAWEI_SWR_USERNAME }}
           password: ${{ secrets.HUAWEI_SWR_PASSWORD }}
 
-      - name: Compute image tags
+      - name: Compute arch image tags
         id: tags
         shell: bash
         run: |
-          # GHCR always; SWR mirror only when publishing AND credentials present.
+          # Arch-suffixed tags are an intermediate: the manifest job unions them
+          # under the plain version tag. They are left in the registry on
+          # purpose — deleting them would break the manifest that references
+          # their digests, and this repo has no tag retention policy yet either
+          # way (see the header note).
+          VERSION="${{ needs.setup.outputs.version }}"
           {
             echo "tags<<EOF"
-            echo "ghcr.io/${{ github.repository_owner }}/${IMAGE_NAME}:${{ steps.version.outputs.version }}"
-            if [[ "${{ steps.gate.outputs.publish }}" == "true" && -n "${SWR_USERNAME}" ]]; then
-              echo "${SWR_REGISTRY}/${SWR_NAMESPACE}/${IMAGE_NAME}:${{ steps.version.outputs.version }}"
+            echo "ghcr.io/${{ github.repository_owner }}/${IMAGE_NAME}:${VERSION}-${{ matrix.arch }}"
+            if [[ "${{ needs.setup.outputs.publish }}" == "true" && "${{ needs.setup.outputs.swr }}" == "true" ]]; then
+              echo "${SWR_REGISTRY}/${SWR_NAMESPACE}/${IMAGE_NAME}:${VERSION}-${{ matrix.arch }}"
             fi
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
@@ -146,19 +196,76 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           # Huawei SWR rejects an OCI image index ("Invalid image, fail to parse
-          # 'manifest.json'"), so the multi-arch manifest must stay in the legacy
-          # Docker format. BuildKit v0.31 made OCI media types the default for all
-          # image exports, and setup-buildx-action pulls the floating
-          # moby/buildkit:buildx-stable-1 tag, which moved to v0.31.2 on
-          # 2026-07-16 — pinning the exporter is what keeps SWR pushes working.
-          # `outputs` replaces `push:` here: the two would each add an image
-          # exporter.
-          outputs: type=image,oci-mediatypes=false,push=${{ steps.gate.outputs.publish == 'true' }}
+          # 'manifest.json'"), so both the per-arch manifests and the list that
+          # unions them must stay in the legacy Docker format. BuildKit v0.31
+          # made OCI media types the default for all image exports, and
+          # setup-buildx-action pulls the floating moby/buildkit:buildx-stable-1
+          # tag, which moved to v0.31.2 on 2026-07-16 — pinning the exporter is
+          # what keeps SWR pushes working. `outputs` replaces `push:` here: the
+          # two would each add an image exporter.
+          outputs: type=image,oci-mediatypes=false,push=${{ needs.setup.outputs.publish == 'true' }}
+          # Attestations would turn the result into an index even with
+          # oci-mediatypes off, which is the shape SWR refuses.
           provenance: false
           sbom: false
           tags: ${{ steps.tags.outputs.tags }}
+          # The dependency layer keys on package.json + the lockfile, so it
+          # survives ordinary source pushes — which is most of the build. Scoped
+          # per architecture so the two legs do not evict each other.
+          cache-from: type=gha,scope=studio-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=studio-${{ matrix.arch }}
+
+  # Keeps the original job name so branch protection's required check still
+  # resolves. Unions the per-arch images and ships the chart.
+  build:
+    name: release-studio build verify
+    needs: [setup, image]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        if: ${{ needs.setup.outputs.publish == 'true' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Login to Huawei SWR
+        if: ${{ needs.setup.outputs.publish == 'true' && needs.setup.outputs.swr == 'true' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.SWR_REGISTRY }}
+          username: ${{ secrets.HUAWEI_SWR_USERNAME }}
+          password: ${{ secrets.HUAWEI_SWR_PASSWORD }}
+
+      - name: Union arch images into the version tag
+        if: ${{ needs.setup.outputs.publish == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.setup.outputs.version }}"
+          # `docker manifest` emits application/vnd.docker.distribution.manifest.list.v2+json,
+          # the legacy list format SWR accepts. `buildx imagetools create` would
+          # infer its media types from the sources instead, so the format SWR
+          # depends on would rest on inference rather than on the tool's
+          # contract.
+          union() {
+            local repo="$1"
+            docker manifest create "${repo}:${VERSION}" \
+              "${repo}:${VERSION}-amd64" \
+              "${repo}:${VERSION}-arm64"
+            docker manifest push "${repo}:${VERSION}"
+            echo "Pushed multi-arch ${repo}:${VERSION}"
+            docker manifest inspect "${repo}:${VERSION}" | head -20
+          }
+          union "ghcr.io/${{ github.repository_owner }}/${IMAGE_NAME}"
+          if [[ "${{ needs.setup.outputs.swr }}" == "true" ]]; then
+            union "${SWR_REGISTRY}/${SWR_NAMESPACE}/${IMAGE_NAME}"
+          fi
 
       # ---- Helm chart: same resolved version as the image, so the chart's
       #      image.tag and its own version always match. ----
@@ -168,7 +275,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${{ needs.setup.outputs.version }}"
           sed -i "s/^version: .*/version: ${VERSION}/" "${CHART_PATH}/Chart.yaml"
           sed -i "s/^appVersion: .*/appVersion: \"${VERSION}\"/" "${CHART_PATH}/Chart.yaml"
           # Charts reference the image tag via the __VERSION__ placeholder.
@@ -181,9 +288,9 @@ jobs:
         run: helm package "${CHART_PATH}" --destination /tmp/charts
 
       - name: Push chart to GHCR
-        if: ${{ steps.gate.outputs.publish == 'true' }}
+        if: ${{ needs.setup.outputs.publish == 'true' }}
         run: |
           set -euo pipefail
           echo "${{ github.token }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
-          helm push "/tmp/charts/${CHART_NAME}-${{ steps.version.outputs.version }}.tgz" \
+          helm push "/tmp/charts/${CHART_NAME}-${{ needs.setup.outputs.version }}.tgz" \
             "oci://ghcr.io/${{ github.repository_owner }}/charts"
