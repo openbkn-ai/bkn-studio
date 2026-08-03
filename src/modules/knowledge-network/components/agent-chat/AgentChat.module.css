@@ -1032,6 +1032,60 @@
   animation-delay: 0.4s;
 }
 
+/* 执行错误块：一句人话 + 可展开原文，替代过去把报错原文拼进正文的做法 */
+.errs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.errBox {
+  border: 1px solid rgba(214, 58, 58, 0.28);
+  background: rgba(214, 58, 58, 0.05);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.errHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.errMsg {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #a32626;
+  word-break: break-word;
+}
+.errBtn {
+  flex: none;
+  border: 1px solid rgba(214, 58, 58, 0.32);
+  background: transparent;
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-size: 11.5px;
+  color: #a32626;
+  cursor: pointer;
+}
+.errBtn:hover {
+  background: rgba(214, 58, 58, 0.1);
+}
+.errPre {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(214, 58, 58, 0.18);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--txt2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow: auto;
+}
+
 /* Markdown 答复渲染 */
 .md {
   font-size: 13.5px;

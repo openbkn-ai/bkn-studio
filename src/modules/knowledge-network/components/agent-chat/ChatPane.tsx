@@ -50,6 +50,10 @@ import {
   type AgentTokenProvider,
 } from "@/modules/knowledge-network/services/agent-chat.service";
 import {
+  normalizeAgentError,
+  type NormalizedAgentError,
+} from "@/modules/knowledge-network/services/agent-error";
+import {
   createBknLifecycle,
   lifecycleEnv,
   localExternalKeyStore,
@@ -160,6 +164,8 @@ type ChatMessage = {
   stopped?: boolean;
   /** 本轮整体执行失败（非工具级、而是这一轮没跑出结果）。 */
   errored?: boolean;
+  /** 本轮的执行错误。独立渲染成错误块，不再拼进正文——原始报文只在「详情」里出现。 */
+  errors?: NormalizedAgentError[];
 };
 
 type SessionStats = { tokens: number; ms: number };
@@ -315,6 +321,32 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * 一轮的执行错误：一句人话 + 可展开原文。可重试的（上游忙/连接中断）多给一个重试入口，
+ * 免得用户以为只能干等——原始报文一律收进折叠里，不再糊到对话正文上。
+ */
+function ErrorBlock({ err, onRetry }: { err: NormalizedAgentError; onRetry?: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={styles.errBox}>
+      <div className={styles.errHead}>
+        <span className={styles.errMsg}>⚠️ {err.message}</span>
+        {onRetry ? (
+          <button type="button" className={styles.errBtn} onClick={onRetry}>
+            重试本轮
+          </button>
+        ) : null}
+        {err.detail ? (
+          <button type="button" className={styles.errBtn} onClick={() => setOpen((v) => !v)}>
+            详情 {open ? <DownOutlined /> : <RightOutlined />}
+          </button>
+        ) : null}
+      </div>
+      {open && err.detail ? <pre className={styles.errPre}>{err.detail}</pre> : null}
     </div>
   );
 }
@@ -588,7 +620,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           setStats((s) => ({ ...s, tokens: s.tokens + chunk.totalTokens }));
           break;
         case "error":
-          updateAssistant((m) => ({ ...m, content: m.content + (m.content ? "\n\n" : "") + `⚠️ ${chunk.error}` }));
+          updateAssistant((m) => ({
+            ...m,
+            errored: true,
+            errors: [
+              ...(m.errors ?? []),
+              { message: chunk.error, detail: chunk.detail, retryable: chunk.retryable ?? false },
+            ],
+          }));
           break;
         case "finish":
         default:
@@ -688,11 +727,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           updateAssistant((m) => ({ ...m, stopped: true }));
         } else {
           outcome = "failed";
-          updateAssistant((m) => ({
-            ...m,
-            errored: true,
-            content: m.content + (m.content ? "\n\n" : "") + `⚠️ ${error instanceof Error ? error.message : String(error)}`,
-          }));
+          updateAssistant((m) => ({ ...m, errored: true, errors: [...(m.errors ?? []), normalizeAgentError(error)] }));
         }
       } finally {
         // 终结必须挡在 setBusy(false) 之前：一条 conversation 同时只允许一个 active
@@ -1047,6 +1082,22 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                         <i />
                         <i />
                         <i />
+                      </div>
+                    ) : null}
+                    {m.errors?.length ? (
+                      <div className={styles.errs}>
+                        {m.errors.map((e, ei) => (
+                          <ErrorBlock
+                            key={ei}
+                            err={e}
+                            // 重试 = 把上一条用户提问重发一遍；只给最后一轮，历史轮重试会错位。
+                            onRetry={
+                              e.retryable && !busy && isLast && messages[i - 1]?.role === "user"
+                                ? () => void send(messages[i - 1].content)
+                                : undefined
+                            }
+                          />
+                        ))}
                       </div>
                     ) : null}
                     {m.role === "assistant" ? (

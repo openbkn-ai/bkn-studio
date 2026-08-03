@@ -18,6 +18,13 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { jsonSchema, stepCountIs, streamText, tool, type ModelMessage, type ToolSet } from "ai";
 
 import {
+  isRetryableStatus,
+  normalizeAgentError,
+  parseModelFactoryEnvelope,
+  MF_RETRYABLE_CODES,
+  type NormalizedAgentError,
+} from "@/modules/knowledge-network/services/agent-error";
+import {
   createMcpSession,
   receiptFromStructured,
   type BknCallScope,
@@ -180,8 +187,15 @@ export type AgentChunk =
   | { type: "tool-result"; id: string; result: string }
   | { type: "tool-error"; id: string; error: string }
   | { type: "usage"; inputTokens: number; outputTokens: number; totalTokens: number }
-  | { type: "error"; error: string }
+  /** 本轮执行失败。error 已归一化成一句人话，原始报文在 detail 里（UI 折叠展示）。 */
+  | { type: "error"; error: string; detail?: string; retryable?: boolean }
   | { type: "finish" };
+
+/** 把任意错误包成 error chunk：UI 只拿到人话，原文进 detail。 */
+function errorChunk(error: unknown): Extract<AgentChunk, { type: "error" }> {
+  const normalized: NormalizedAgentError = normalizeAgentError(error);
+  return { type: "error", error: normalized.message, detail: normalized.detail, retryable: normalized.retryable };
+}
 
 /**
  * 把 MCP tools/list 的工具定义转成 AI SDK 工具集：
@@ -279,10 +293,55 @@ async function listResourcesScoped(
 /** 鉴权 provider：getToken 每请求取新鲜 token（OAuth 会续期），refresh 在 401 时刷新。 */
 export type AgentTokenProvider = { getToken: () => string; refresh: () => Promise<string | null> };
 
+/** 忙态退避重试的间隔（ms）。数组长度即最大重试次数。 */
+const RETRY_DELAYS_MS = [400, 1200];
+
+/** 加 ±30% 抖动，避免多面板同时重试再把网关按住。 */
+function withJitter(ms: number): number {
+  return Math.round(ms * (0.85 + Math.random() * 0.3));
+}
+
+function sleep(ms: number, signal: AbortSignal | null | undefined): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+}
+
+/**
+ * 这个响应值不值得重试。除了状态码，还要认「200 + 网关自家错误体」——模型工厂忙的时候
+ * 就是这么返的（bkn-foundry#620）。只在非 SSE 时 peek body：流式响应 clone 出来读会把整段
+ * 缓冲下来，代价不可接受。
+ */
+async function isRetryableResponse(response: Response): Promise<boolean> {
+  if (isRetryableStatus(response.status)) return true;
+  if (!response.ok) return false;
+  if ((response.headers.get("content-type") ?? "").includes("text/event-stream")) return false;
+  try {
+    const mf = parseModelFactoryEnvelope(await response.clone().text());
+    return mf?.code !== undefined && MF_RETRYABLE_CODES.has(mf.code);
+  } catch {
+    return false;
+  }
+}
+
+/** fetch 本身抛错（连不上/被 reset）值得重试；AbortError 由调用侧判 signal，不走这里。 */
+function isRetryableFetchError(error: unknown): boolean {
+  return error instanceof TypeError;
+}
+
 /**
  * 模型工厂网关的鉴权 + 兼容性 fetch：
  * - 每请求用 provider.getToken() 的新鲜 token 设 Authorization；401 时 refresh 后重试一次（OAuth 自动续期，
  *   解决长对话/长循环跨过 token 过期而断掉的问题）。
+ * - 忙态（429/5xx，或 200 裹着 50508）与连接失败按 RETRY_DELAYS_MS 退避重试；用户点停止立即让路。
  * - 兼容其严格 router：assistant 消息 `content: null` 归一为 ""，剥掉回灌的 `reasoning_content`。
  */
 function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
@@ -306,12 +365,43 @@ function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
     if (token) headers.set("Authorization", `Bearer ${token}`);
     return fetch(input, { ...init, headers, body });
   };
-  return (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const runWithAuthRetry = async (input: RequestInfo | URL, init: RequestInit | undefined): Promise<Response> => {
     let response = await run(input, init, provider.getToken());
     if (response.status === 401) {
       const fresh = await provider.refresh().catch(() => null);
-      if (fresh) response = await run(input, init, fresh);
+      if (fresh) {
+        void response.body?.cancel().catch(() => undefined);
+        response = await run(input, init, fresh);
+      }
     }
+    return response;
+  };
+
+  return (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const signal = init?.signal;
+    let response: Response | null = null;
+    let failure: unknown = null;
+
+    for (let attempt = 0; ; attempt++) {
+      try {
+        response = await runWithAuthRetry(input, init);
+        failure = null;
+      } catch (error) {
+        // 用户停止时 fetch 抛的是 AbortError，不该被当成可重试的网络抖动。
+        if (signal?.aborted) throw error;
+        response = null;
+        failure = error;
+      }
+      if (attempt >= RETRY_DELAYS_MS.length || signal?.aborted) break;
+      const retry = response ? await isRetryableResponse(response) : isRetryableFetchError(failure);
+      if (!retry) break;
+      // 丢弃的响应要主动关掉 body，否则连接挂在那儿不释放。
+      void response?.body?.cancel().catch(() => undefined);
+      await sleep(withJitter(RETRY_DELAYS_MS[attempt]), signal);
+      if (signal?.aborted) break;
+    }
+
+    if (!response) throw failure;
     return response;
   });
 }
@@ -494,6 +584,9 @@ export async function runAgentChat(params: {
     });
 
     let gotText = false;
+    // 本轮已报过错。收尾兜底不能再跑：那次调用必然也失败，只会把同一个错误再报一遍
+    // （错误从流里出一次、await result.response 再 reject 一次），还白打一次正忙的网关。
+    let errored = false;
     // 文本经泄漏过滤器：真实正文才算 gotText，泄漏的调用块会变成失败工具卡。
     const leakFilter = createLeakFilter((chunk) => {
       if (chunk.type === "text" && chunk.delta.trim()) gotText = true;
@@ -517,13 +610,16 @@ export async function runAgentChat(params: {
             result: typeof part.output === "string" ? part.output : JSON.stringify(part.output, null, 2),
           });
           break;
-        case "tool-error":
+        case "tool-error": {
+          const normalized = normalizeAgentError(part.error);
           onChunk({
             type: "tool-error",
             id: part.toolCallId,
-            error: part.error instanceof Error ? part.error.message : String(part.error),
+            // 工具卡本就是折叠的，人话 + 原文一起给，排障不用再翻控制台。
+            error: normalized.detail ? `${normalized.message}\n\n${normalized.detail}` : normalized.message,
           });
           break;
+        }
         case "finish": {
           const u = part.totalUsage;
           onChunk({
@@ -535,7 +631,8 @@ export async function runAgentChat(params: {
           break;
         }
         case "error":
-          onChunk({ type: "error", error: part.error instanceof Error ? part.error.message : String(part.error) });
+          errored = true;
+          onChunk(errorChunk(part.error));
           break;
         default:
           break;
@@ -544,7 +641,7 @@ export async function runAgentChat(params: {
     leakFilter.flush();
 
     // 跑满工具轮次仍没出最终答复（最后一步还在调工具）→ 强制基于已有信息收尾作答，不再调工具。
-    if (!gotText && !signal?.aborted) {
+    if (!gotText && !errored && !signal?.aborted) {
       const resp = await result.response;
       const finalResult = streamText({
         model: createChatModel(env, modelName, tokenProvider),
@@ -567,8 +664,7 @@ export async function runAgentChat(params: {
             outputTokens: u?.outputTokens ?? 0,
             totalTokens: u?.totalTokens ?? (u?.inputTokens ?? 0) + (u?.outputTokens ?? 0),
           });
-        } else if (part.type === "error")
-          onChunk({ type: "error", error: part.error instanceof Error ? part.error.message : String(part.error) });
+        } else if (part.type === "error") onChunk(errorChunk(part.error));
       }
       finalFilter.flush();
     }
@@ -578,7 +674,7 @@ export async function runAgentChat(params: {
       onChunk({ type: "finish" });
       return;
     }
-    onChunk({ type: "error", error: error instanceof Error ? error.message : String(error) });
+    onChunk(errorChunk(error));
     onChunk({ type: "finish" });
   }
 }
