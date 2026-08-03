@@ -206,6 +206,32 @@ describe("createBknLifecycle", () => {
     });
   });
 
+  it("tells the user how to escape a conversation stuck on an unterminated turn", async () => {
+    const { session } = fakeSession({
+      bkn_start_interaction: () => ({
+        ok: true,
+        text: "interaction_in_progress: the conversation already has an active interaction",
+        latencyMs: 1,
+        isError: true,
+        structured: {
+          error: {
+            code: "interaction_in_progress",
+            message: "the conversation already has an active interaction",
+            required_action: "complete_or_cancel_interaction",
+          },
+        },
+      }),
+    });
+    const lifecycle = createBknLifecycleOn(session, options());
+
+    // 补清单需要按 interaction 列 operation，受管接口不给——前端救不回来，
+    // 但清空对话能换一条新会话，别让用户对着原文干等租约回收。
+    await expect(lifecycle.beginTurn("问")).rejects.toMatchObject({
+      code: "interaction_in_progress",
+      message: expect.stringContaining("清空") as unknown as string,
+    });
+  });
+
   it("queues a second turn until the first one is terminated", async () => {
     const { session, calls } = fakeSession();
     const lifecycle = createBknLifecycleOn(session, options());

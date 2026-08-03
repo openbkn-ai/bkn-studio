@@ -187,13 +187,27 @@ export class BknLifecycleError extends Error {
 
 type LifecycleErrorPayload = { code?: unknown; message?: unknown; required_action?: unknown };
 
+/**
+ * 会话里还挂着一轮没终结的交互。正常路径不会走到这儿（本地闸门会排队），只有上一轮的
+ * 终结真的没送达 Core 时才出现——例如业务调用的响应丢在网络上，前端拿不到回执，
+ * 清单缺一条，终结被判 closure_manifest_invalid。
+ *
+ * 这时前端救不回来：补齐清单需要按 interaction 列出已登记的 operation，而受管接口
+ * 只允许按 id 查（TRACE.md 第三节：第三方 Agent 只能查询 Operation/Receipt）。
+ * 但用户有出路——清空对话会换一条全新 conversation，卡住的那轮留给 Core 的租约回收。
+ * 所以这里把出路写进报错，别让人对着「已有进行中的交互」干等 30 分钟租约。
+ */
+const STUCK_INTERACTION_HINT = "当前会话还有一轮未结束的交互没能正常收尾。点「清空」开一条新对话即可继续；卡住的那轮会由服务端租约自动回收。";
+
 function lifecycleErrorOf(tool: string, structured: unknown, fallbackText: string): BknLifecycleError {
   const envelope = structured && typeof structured === "object" ? (structured as Record<string, unknown>) : {};
   const error = (envelope.error ?? {}) as LifecycleErrorPayload;
+  const code = typeof error.code === "string" ? error.code : "";
+  const message = typeof error.message === "string" ? error.message : fallbackText;
   return new BknLifecycleError(
     tool,
-    typeof error.code === "string" ? error.code : "",
-    typeof error.message === "string" ? error.message : fallbackText,
+    code,
+    code === "interaction_in_progress" ? STUCK_INTERACTION_HINT : message,
     typeof error.required_action === "string" ? error.required_action : "",
   );
 }
