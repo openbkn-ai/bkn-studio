@@ -51,7 +51,13 @@ export function createThemeConfig(runtimeConfig: RuntimeConfig): ThemeConfig {
         itemHoverColor: "#2563eb",
         itemSelectedColor: "#1e3a8a",
       },
+      Table: {
+        // Keep selectable rows easy to scan: hover gives a quiet cue, selection
+        // remains legible, and selected-hover adds only a small amount of emphasis.
+        rowHoverBg: "#f8fafc",
+        rowSelectedBg: "#eff6ff",
+        rowSelectedHoverBg: "#dbeafe",
+      },
     },
   };
 }
-
