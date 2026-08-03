@@ -7,7 +7,7 @@
 
 const INSTALL_STATUS_PATH = "/install-status";
 
-function resolveConfiguredInstallStatusUrl(raw: string): string | null {
+export function resolveConfiguredInstallStatusUrl(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) {
     return null;

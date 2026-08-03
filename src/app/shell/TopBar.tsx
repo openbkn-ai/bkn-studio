@@ -82,6 +82,8 @@ export function TopBar() {
   ];
 
   const installStatusUrl = getInstallStatusUrl();
+  const canViewInstallStatus =
+    runtimeConfig.currentUser.isAdmin && installStatusUrl !== null;
   const userMenuItems = useMemo<MenuProps["items"]>(() => {
     const items: MenuProps["items"] = [
       {
@@ -111,7 +113,7 @@ export function TopBar() {
       },
     });
 
-    if (installStatusUrl) {
+    if (canViewInstallStatus) {
       items.push({
         icon: <CloudServerOutlined />,
         key: "install-status",
@@ -136,7 +138,7 @@ export function TopBar() {
     );
 
     return items;
-  }, [installStatusUrl, navigate, runtimeConfig.mode, t]);
+  }, [canViewInstallStatus, installStatusUrl, navigate, runtimeConfig.mode, t]);
 
   return (
     <header className="console-topbar">
