@@ -357,7 +357,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     render(<BknTraceRunsScene />);
     await waitFor(() => expect(getRequestSummary).toHaveBeenCalledWith("req_business_001"));
     fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.back" }));
-    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.query" }));
+    fireEvent.click(screen.getByRole("button", { name: /bknTrace\.actions\.query$/ }));
 
     await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledTimes(2));
 
@@ -375,7 +375,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     render(<BknTraceRunsScene />);
 
     await waitFor(() => expect(getRequestSummary).toHaveBeenCalledWith("req_business_001"));
-    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.query" }));
+    fireEvent.click(screen.getByRole("button", { name: /bknTrace\.actions\.query$/ }));
 
     expect(window.location.search).not.toContain("request_id=");
     resolveRequestSummary?.(requestSummary);
