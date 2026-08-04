@@ -20,8 +20,14 @@ import {
   runAgentChat,
   type AgentChunk,
 } from "@/modules/knowledge-network/services/agent-chat.service";
-import { LIFECYCLE_TOOL_NAMES } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
-import type { McpSession } from "@/modules/knowledge-network/services/context-loader.service";
+import {
+  isPlatformManagedTool,
+  LIFECYCLE_TOOL_NAMES,
+} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
+import {
+  CONTEXT_LOADER_OPS,
+  type McpSession,
+} from "@/modules/knowledge-network/services/context-loader.service";
 
 type AiModule = typeof import("ai");
 
@@ -85,7 +91,7 @@ describe("buildAgentTools", () => {
   });
 
   it("按前缀过滤，后端新增的溯源工具不用改代码也挡得住", () => {
-    // 工具数在 bkn-foundry#618 之后从 16 涨到 27，新增的全是 bkn_ 前缀的溯源工具。
+    // 平台侧工具集会随后端演进（#618 期间一度扩到十余个溯源工具，之后又裁回两个）。
     // 列名单必漏，漏了模型就会去调，所以这里钉住的是前缀规则而不是具体名字。
     const tools = build([
       "bkn_causality",
@@ -97,6 +103,40 @@ describe("buildAgentTools", () => {
     ]);
 
     expect(Object.keys(tools)).toEqual(["query_object_instance"]);
+  });
+});
+
+describe("本地 op 目录与后端工具面", () => {
+  it("本地 op 全是业务工具，一个都不会被平台前缀规则吃掉", () => {
+    // 这是前缀过滤的安全边界：真误伤了业务工具，模型会静默失去那个能力。
+    const eaten = CONTEXT_LOADER_OPS.filter((op) => isPlatformManagedTool(op.id));
+
+    expect(eaten).toEqual([]);
+  });
+
+  it("覆盖后端 tools/list 的全部 16 个业务工具", () => {
+    // 后端 schemas/tools_meta.json 的业务工具全集（18 个减去两个 bkn_ 生命周期工具）。
+    // 少了的那些不会报错，只是在勾选器里落进默认分组、没有本地示例请求体。
+    const backendBusinessTools = [
+      "describe_resource",
+      "execute_action",
+      "find_skills",
+      "get_action_execution",
+      "get_action_info",
+      "get_kn_detail",
+      "get_logic_properties_values",
+      "get_object_types",
+      "get_relation_types",
+      "list_action_executions",
+      "list_knowledge_networks",
+      "list_resources",
+      "query_instance_subgraph",
+      "query_object_instance",
+      "run_sql",
+      "search_schema",
+    ];
+
+    expect(CONTEXT_LOADER_OPS.map((op) => op.id).sort()).toEqual(backendBusinessTools);
   });
 });
 

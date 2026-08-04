@@ -212,6 +212,53 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { kn_id: "your_kn_id" },
   },
+  {
+    id: "get_object_types",
+    group: "Knowledge Network",
+    summary:
+      "按 id 批量取对象类的完整定义（data_properties 含 mapped_field/condition_operations，logic_properties 含 data_source/parameters）。渐进式下钻：先 get_kn_detail 拿 id，再用本工具展开。",
+    path: `${REST_PREFIX}/kn/get_object_types`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { kn_id: "your_kn_id", ids: ["your_object_type"] },
+  },
+  {
+    id: "get_relation_types",
+    group: "Knowledge Network",
+    summary: "按 id 批量取关系类的完整定义（含 mapping_rules、source/target 对象名）。同样是渐进式下钻用。",
+    path: `${REST_PREFIX}/kn/get_relation_types`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { kn_id: "your_kn_id", ids: ["your_relation_type"] },
+  },
+  {
+    id: "execute_action",
+    group: "Skills & Logic",
+    summary:
+      "执行行动（异步，返回 execution_id）。先用 get_action_info 拿 dynamic_params schema 再填真实参数；_instance_identities 为空时由行动条件扫描全部匹配实例。",
+    path: `${REST_PREFIX}/kn/execute_action`,
+    query: [],
+    body: {
+      kn_id: "your_kn_id",
+      at_id: "your_action_type",
+      _instance_identities: [{ id: "instance_000001" }],
+      dynamic_params: {},
+    },
+  },
+  {
+    id: "get_action_execution",
+    group: "Skills & Logic",
+    summary: "查询单次行动执行的状态与结果（整体 status + 逐对象 results）。execution_id 由 execute_action 返回。",
+    path: `${REST_PREFIX}/kn/get_action_execution`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { kn_id: "your_kn_id", execution_id: "your_execution_id" },
+  },
+  {
+    id: "list_action_executions",
+    group: "Skills & Logic",
+    summary: "列出行动执行历史，可按行动类型 / 状态 / 触发方式过滤并分页（深翻页用 search_after 游标）。",
+    path: `${REST_PREFIX}/kn/list_action_executions`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { kn_id: "your_kn_id", status: "completed", offset: 0, limit: 20 },
+  },
 ];
 
 export function mcpPathOf(op: ContextLoaderOp): string {

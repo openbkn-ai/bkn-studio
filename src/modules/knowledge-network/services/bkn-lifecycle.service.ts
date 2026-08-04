@@ -56,8 +56,9 @@ const PLATFORM_TOOL_PREFIX = "bkn_";
 /**
  * 这个工具是不是平台侧管账的、不该给模型看见的。
  *
- * 按前缀判而不是列名单：tools/list 的工具数在 bkn-foundry#618 之后从 16 涨到 27，
- * 新增的全是溯源工具，而且还会继续加——列名单必漏，漏了模型就会去调。
+ * 按前缀判而不是列名单：平台侧工具集随后端演进反复变动（#618 期间一度扩到十余个
+ * 溯源工具，之后又裁回 bkn_start_interaction / bkn_finish_interaction 两个）。
+ * 列名单必漏，漏了模型就会去调。
  * 实测模型真会调：一轮里连调两次 bkn_start_interaction，被 permission_denied 挡下。
  * 挡不下的话更糟——模型另开一条交互会撞上 Core 的 active interaction 唯一约束。
  */
