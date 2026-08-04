@@ -67,6 +67,9 @@ const NETWORK_PATTERN = /network\s*error|failed to fetch|load failed|networkerro
 const BUSY_PATTERN =
   /too busy|rate.?limit|overloaded|try again later|temporarily unavailable|service unavailable|over capacity|at capacity/i;
 
+/** AI SDK 解析类报错的文案特征。类被重新包装后 isInstance 失效，只能认文本。 */
+const PARSE_FAILURE_PATTERN = /type validation failed|json parsing failed|invalid_union|could not parse/i;
+
 const DETAIL_MAX = 4000;
 const MESSAGE_MAX = 200;
 
@@ -186,6 +189,12 @@ export function normalizeAgentError(error: unknown): NormalizedAgentError {
   // 码已经被 SDK 丢掉，只能按文本认忙态——否则重试入口就没了。
   if (BUSY_PATTERN.test(raw)) {
     return { message: "模型服务繁忙，请稍后重试", detail: stringifyDetail(raw), retryable: true };
+  }
+  // 解析类报错一旦在中途被重新包装成普通 Error，isInstance 就认不出来了，
+  // 兜底分支会把 `Type validation failed: Value: {…` 原样截 200 字贴给用户——
+  // 正是本模块要消灭的那一幕。按前缀再认一道。
+  if (PARSE_FAILURE_PATTERN.test(raw)) {
+    return { message: "模型服务返回了无法解析的响应，请稍后重试或联系管理员", detail: stringifyDetail(raw), retryable: false };
   }
   return {
     message: truncate(raw, MESSAGE_MAX) || "对话执行失败",

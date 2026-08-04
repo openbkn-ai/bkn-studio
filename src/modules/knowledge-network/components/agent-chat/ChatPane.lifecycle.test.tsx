@@ -11,7 +11,7 @@
  * 清空对话忘了换会话，都不会被服务层的测试发现。
  */
 
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -199,6 +199,25 @@ describe("ChatPane 受管生命周期接线", () => {
     expect(finish).not.toHaveBeenCalled();
   });
 
+  it("流里报错时以 failed 终结，不能记成 completed", async () => {
+    // 流里的 error 是 runAgentChat 内部捕获后正常返回的，不会抛到 catch。
+    // 漏了这一笔，面板上是红条而交给 Core 的是 completed —— 失败会被系统性少记。
+    const { finish } = stubLifecycle();
+    runAgentChat.mockImplementation(({ onChunk }) => {
+      onChunk({ type: "error", error: "模型服务繁忙，请稍后重试（50508）", retryable: true });
+      onChunk({ type: "finish" });
+      return Promise.resolve();
+    });
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("问一句");
+      await Promise.resolve();
+    });
+
+    expect(finish).toHaveBeenCalledWith("failed", "");
+  });
+
   it("清空对话换掉受管会话", async () => {
     const { reset } = stubLifecycle();
 
@@ -210,6 +229,34 @@ describe("ChatPane 受管生命周期接线", () => {
 
     // 这是 conversation id 唯一的更换点；漏了会让「清空」后的新对话仍挂在旧会话上。
     expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("失败轮的重试", () => {
+  it("原地重跑那一轮，不追加重复的提问，也不把空 assistant 回灌历史", async () => {
+    stubLifecycle();
+    runAgentChat.mockImplementation(({ onChunk }) => {
+      onChunk({ type: "error", error: "模型服务繁忙，请稍后重试（50508）", retryable: true });
+      onChunk({ type: "finish" });
+      return Promise.resolve();
+    });
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("在途项目有几个?");
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "重试本轮" }));
+      await Promise.resolve();
+    });
+
+    expect(runAgentChat).toHaveBeenCalledTimes(2);
+    // 重跑的历史里只该有这一条提问：追加式重试会变成两条 user，
+    // 失败轮那条 content: "" 的 assistant 也会一并喂回严格 router。
+    expect(runAgentChat.mock.calls[1][0].history).toEqual([{ role: "user", content: "在途项目有几个?" }]);
+    expect(screen.getAllByText("在途项目有几个?")).toHaveLength(1);
   });
 });
 

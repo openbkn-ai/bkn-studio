@@ -144,6 +144,28 @@ describe("normalizeAgentError", () => {
     expect(normalized.message).not.toContain("[object Object]");
   });
 
+  it("解析报错被重新包装成普通 Error 后，仍然不把 zod 原文贴给用户", () => {
+    // isInstance 认不出来了，只剩文本可认——兜底分支不接住的话，气泡里又会出现
+    // `Type validation failed: Value: {…`，正是本模块要消灭的那一幕。
+    const rewrapped = new Error(
+      'Type validation failed: Value: {"code":"ModelFactory.ModelController.Model.Error"}. Error message: [{"code":"invalid_union"}]',
+    );
+
+    const normalized = normalizeAgentError(rewrapped);
+
+    expect(normalized.message).toBe("模型服务返回了无法解析的响应，请稍后重试或联系管理员");
+    expect(normalized.message).not.toContain("Type validation failed");
+    expect(normalized.detail).toContain("invalid_union");
+  });
+
+  it("普通 SQL 报错不会被忙态规则误伤", () => {
+    // tool-error 走同一个归一化，`capacity` 这类宽词收紧前会把它翻成「模型服务繁忙」。
+    const normalized = normalizeAgentError(new Error('column "capacity" does not exist'));
+
+    expect(normalized.message).toBe('column "capacity" does not exist');
+    expect(normalized.retryable).toBe(false);
+  });
+
   it("未知错误保留原文但不判可重试", () => {
     const normalized = normalizeAgentError(new Error("something odd"));
 

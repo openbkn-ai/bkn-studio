@@ -671,7 +671,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   }, [profile.injectKnContext, profile.evidenceHint, systemPrompt, knContext, config]);
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, options: { replaceLastRound?: boolean } = {}) => {
       const question = text.trim();
       if (!question || busy) return;
       if (!model) {
@@ -683,18 +683,32 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       const requestSequence = ++requestSequenceRef.current;
       const startedAt = performance.now();
 
+      // 重试：把失败的那一轮（user + assistant 一对）摘掉再重发，而不是在下面追加一轮
+      // ——否则会多出一条重复的用户气泡，失败轮的空 assistant 也会留在历史里。
+      const kept =
+        options.replaceLastRound &&
+        messages.length >= 2 &&
+        messages[messages.length - 1].role === "assistant" &&
+        messages[messages.length - 2].role === "user"
+          ? messages.slice(0, -2)
+          : messages;
+
       // 多轮上下文压缩：只保留最近若干轮，且单轮文本封顶，防长对话纯文本堆大。
       // （工具结果/思考本就不进历史，见 send() 历史只取 role+content。）
-      const history: AgentChatTurn[] = messages.slice(-config.maxHistoryMessages).map((m) => ({
-        role: m.role,
-        content:
-          config.maxTurnChars > 0 && m.content.length > config.maxTurnChars
-            ? `${m.content.slice(0, config.maxTurnChars)}\n…[历史过长已截断]`
-            : m.content,
-      }));
+      // 空正文的 assistant 轮不进历史：那是出错/被停的轮次，回灌给严格 router 只会添乱。
+      const history: AgentChatTurn[] = kept
+        .filter((m) => m.role === "user" || m.content.trim().length > 0)
+        .slice(-config.maxHistoryMessages)
+        .map((m) => ({
+          role: m.role,
+          content:
+            config.maxTurnChars > 0 && m.content.length > config.maxTurnChars
+              ? `${m.content.slice(0, config.maxTurnChars)}\n…[历史过长已截断]`
+              : m.content,
+        }));
       history.push({ role: "user", content: question });
-      setMessages((prev) => [
-        ...prev,
+      setMessages(() => [
+        ...kept,
         { role: "user", content: question },
         { role: "assistant", content: "", toolCalls: [] },
       ]);
@@ -706,6 +720,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       let turn: Awaited<ReturnType<typeof lifecycle.beginTurn>> = null;
       let outcome: TurnOutcome = "completed";
       let answer = "";
+      /** 本轮流里出过 error chunk。UI 已判 errored，终结也必须记 failed。 */
+      let roundFailed = false;
       try {
         turn = await lifecycle.beginTurn(question);
         const allTools = await getTools();
@@ -728,6 +744,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           signal: controller.signal,
           onChunk: (chunk) => {
             if (chunk.type === "text") answer += chunk.delta;
+            // 流里的错误是 runAgentChat 内部捕获后正常返回的，不会抛到下面的 catch。
+            // 不在这里记一笔，交给 Core 的就是 completed + 空 artifact，
+            // 而面板上明明是红条——#620 那类失败会被系统性少记。
+            if (chunk.type === "error") roundFailed = true;
             if (requestSequence === requestSequenceRef.current) handleChunk(chunk);
           },
         });
@@ -747,7 +767,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         // 用户手快发出的下一轮直接开不出交互。
         // 用户点停止时 runAgentChat 是正常返回而非抛错，所以结果要认 aborted 而不是 outcome。
         // 收尾失败不改写本轮结果：那是可观测面的问题，不该把答出来的一轮显示成失败。
-        if (turn) await turn.finish(controller.signal.aborted ? "canceled" : outcome, answer).catch(() => undefined);
+        const finalOutcome: TurnOutcome = roundFailed && outcome === "completed" ? "failed" : outcome;
+        if (turn) {
+          await turn.finish(controller.signal.aborted ? "canceled" : finalOutcome, answer).catch(() => undefined);
+        }
         if (requestSequence === requestSequenceRef.current) {
           abortRef.current = null;
           const elapsed = performance.now() - startedAt;
@@ -1108,10 +1131,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                           <ErrorBlock
                             key={ei}
                             err={e}
-                            // 重试 = 把上一条用户提问重发一遍；只给最后一轮，历史轮重试会错位。
+                            // 重试 = 把失败的这一轮原地重跑（摘掉旧的一对再重发），
+                            // 不是追加新一轮——否则会多出一条重复的用户气泡。
                             onRetry={
                               e.retryable && !busy && isLast && messages[i - 1]?.role === "user"
-                                ? () => void send(messages[i - 1].content)
+                                ? () => void send(messages[i - 1].content, { replaceLastRound: true })
                                 : undefined
                             }
                           />
