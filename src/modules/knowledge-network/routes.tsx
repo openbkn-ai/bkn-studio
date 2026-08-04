@@ -38,7 +38,6 @@ export const knowledgeNetworkRoutes: RouteObject[] = [
 export { knowledgeNetworkStandaloneRoutes };
 
 export const knowledgeNetworkRouteContribution: AppRouteContribution = {
-  defaultEntryPath: "/knowledge-network",
   moduleId: "knowledge-network",
   routes: knowledgeNetworkRoutes,
   standaloneRoutes: knowledgeNetworkStandaloneRoutes,

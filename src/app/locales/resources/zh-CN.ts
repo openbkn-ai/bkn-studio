@@ -17,6 +17,7 @@ import { dataConnectZhCN } from "@/modules/data-connect/locales/zh-CN";
 import { executionFactoryLabZhCN } from "@/modules/execution-factory-lab/locales/zh-CN";
 import { executionFactoryLabGapFillZh } from "@/modules/execution-factory-lab/utils/gap-fill-i18n-zh";
 import { executionFactoryZhCN } from "@/modules/execution-factory/locales/zh-CN";
+import { homeZhCN } from "@/modules/home/locales/zh-CN";
 import { knowledgeNetworkZhCN } from "@/modules/knowledge-network/locales/zh-CN";
 import { modelResourcesZhCN } from "@/modules/model-resources/locales/zh-CN";
 import { systemAdminZhCN } from "@/modules/system-admin/locales/zh-CN";
@@ -26,6 +27,7 @@ export const zhCN = {
   ...appZhCN,
   ...authZhCN,
   ...shellZhCN,
+  ...homeZhCN,
   ...dataConnectZhCN,
   ...dataCatalogZhCN,
   ...knowledgeNetworkZhCN,
