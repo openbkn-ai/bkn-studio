@@ -86,9 +86,11 @@ describe("observability workspace scenes", () => {
 
   it("日志检索展示授权类别、局部结果和来源状态", async () => {
     render(<ObservabilityLogsScene />);
-    await waitFor(() => expect(listLogs).toHaveBeenCalledWith(expect.objectContaining({
-      page: 1, pageSize: 20, timeFrom: expect.any(String), timeTo: expect.any(String),
-    })));
+    await waitFor(() => expect(listLogs).toHaveBeenCalled());
+    const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
+    expect(query).toMatchObject({ page: 1, pageSize: 20 });
+    expect(query?.timeFrom).toEqual(expect.any(String));
+    expect(query?.timeTo).toEqual(expect.any(String));
     expect(await screen.findByText("bknTrace.operations.runSql")).not.toBeNull();
     expect(screen.queryByText("OpenBKN operation completed")).toBeNull();
     expect(screen.getByText("bknTrace.logs.partialWarning")).not.toBeNull();
@@ -120,9 +122,11 @@ describe("observability workspace scenes", () => {
 
     render(<ObservabilityLogsScene />);
     fireEvent.click(await screen.findByTitle("2"));
-    await waitFor(() => expect(listLogs).toHaveBeenLastCalledWith(expect.objectContaining({
-      page: 2, pageSize: 20, timeFrom: expect.any(String), timeTo: expect.any(String),
-    })));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
+    const [query] = vi.mocked(listLogs).mock.calls[1] ?? [];
+    expect(query).toMatchObject({ page: 2, pageSize: 20 });
+    expect(query?.timeFrom).toEqual(expect.any(String));
+    expect(query?.timeTo).toEqual(expect.any(String));
     expect(await screen.findByText("依赖调用失败")).not.toBeNull();
   });
 
@@ -155,9 +159,11 @@ describe("observability workspace scenes", () => {
 		 window.history.replaceState({}, "", "/observability/logs?trace_id=trace-a");
 		 vi.mocked(getAccessProfile).mockResolvedValue({ ...profile, globalLogSearch: false });
 		 render(<ObservabilityLogsScene />);
-		 await waitFor(() => expect(listLogs).toHaveBeenCalledWith(expect.objectContaining({
-			 page: 1, pageSize: 20, timeFrom: expect.any(String), timeTo: expect.any(String), traceId: "trace-a",
-		 })));
+		 await waitFor(() => expect(listLogs).toHaveBeenCalled());
+		 const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
+		 expect(query).toMatchObject({ page: 1, pageSize: 20, traceId: "trace-a" });
+		 expect(query?.timeFrom).toEqual(expect.any(String));
+		 expect(query?.timeTo).toEqual(expect.any(String));
 		 expect(await screen.findByText("Trace trace-a")).not.toBeNull();
 		 expect(screen.queryByPlaceholderText("bknTrace.logs.searchPlaceholder")).toBeNull();
 		 expect(listLogFacets).not.toHaveBeenCalled();
