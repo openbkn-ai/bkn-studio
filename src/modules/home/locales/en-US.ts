@@ -21,6 +21,7 @@ export const homeEnUS = {
         output: "Primary output",
         scenario: "Use when",
       },
+      skillNameSeparator: ":",
       skills: {
         creator: {
           output: "A runnable knowledge network, data bindings and validation results, and a delivery report.",
@@ -46,8 +47,11 @@ export const homeEnUS = {
     },
     greeting: {
       afternoon: "Good afternoon, {{name}}",
+      afternoonAnonymous: "Good afternoon",
       evening: "Good evening, {{name}}",
+      eveningAnonymous: "Good evening",
       morning: "Good morning, {{name}}",
+      morningAnonymous: "Good morning",
     },
     introduction:
       "Welcome to OpenBKN for business knowledge network construction, organizing enterprise data into understandable, queryable, and invocable business knowledge and capabilities for analysis, decision-making, and automated collaboration.",
@@ -67,11 +71,15 @@ export const homeEnUS = {
     },
     platform: {
       configuration: "Configuration",
+      configurationLabel: "Configuration:",
       details: "View configuration details",
       impact: "If not configured",
+      impactLabel: "If not configured:",
+      noPermission: "User management permission is required. Contact an administrator.",
       optional: "Optional",
       required: "Stage actions",
       role: "Purpose",
+      roleLabel: "Purpose:",
       stages: {
         data: {
           detail: "Connect business data and synchronize it to the data directory. Then enrich business semantics and build retrieval indexes where needed, turning it into data assets that can be modeled and queried.",

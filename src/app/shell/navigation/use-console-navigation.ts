@@ -17,10 +17,6 @@ import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeatures";
 import { isMarketCatalogEnabled } from "@/modules/execution-factory/utils/market-catalog";
 
-/**
- * 侧边栏与工作台首页共用同一份可见导航:两处若各自组合特性开关和权限,
- * 很快会出现「首页有入口、侧边栏没有」之类的漂移。
- */
 export function useConsoleNavigation(): ConsoleNavItem[] {
   const { features } = useLabFeatures();
   const runtimeConfig = useRuntimeConfig();

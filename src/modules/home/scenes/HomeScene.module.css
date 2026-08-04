@@ -28,7 +28,7 @@
 .hero::before {
   position: absolute;
   inset: 0;
-  background-image: url("../assets/home-hero-bg.png");
+  background-image: url("../assets/home-hero-bg.webp");
   background-repeat: no-repeat;
   background-position: right -6px top -66px;
   background-size: 610px auto;
@@ -131,7 +131,7 @@
   z-index: -1;
   width: 860px;
   height: 620px;
-  background-image: url("../assets/home-hero-bg.png");
+  background-image: url("../assets/home-hero-bg.webp");
   background-repeat: no-repeat;
   background-position: right bottom;
   background-size: 860px auto;
@@ -357,9 +357,22 @@
   text-align: left;
 }
 
-.actionRowCompact:hover,
 .actionNavigate:hover {
   background: var(--color-primary-50);
+}
+
+.actionNavigate:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.actionNavigate:disabled:hover {
+  background: transparent;
+}
+
+.actionNavigateTarget {
+  display: block;
+  min-width: 0;
 }
 
 .actionNavigate:hover strong {

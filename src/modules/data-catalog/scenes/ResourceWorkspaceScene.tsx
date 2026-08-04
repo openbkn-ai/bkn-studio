@@ -31,7 +31,6 @@ import { listBuildTasks } from "@/modules/data-catalog/services/build-task.servi
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
-import { useRecordRecentVisit } from "@/modules/home/hooks/use-recent-visits";
 import { getCatalog } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
@@ -106,21 +105,6 @@ export function ResourceWorkspaceScene({
       void loadAll();
     });
   }, [loadAll]);
-
-  const recordRecentVisit = useRecordRecentVisit();
-
-  useEffect(() => {
-    if (!resource) {
-      return;
-    }
-
-    recordRecentVisit({
-      id: resource.id,
-      kind: "data-resource",
-      path: `/data-directory/resource/${resource.id}`,
-      title: resource.name,
-    });
-  }, [recordRecentVisit, resource]);
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
   const indexState = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);

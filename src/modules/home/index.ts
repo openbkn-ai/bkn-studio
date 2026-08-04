@@ -9,12 +9,3 @@ export { homeModuleManifest } from "@/modules/home/module.manifest";
 export { homeNavigation } from "@/modules/home/navigation";
 export { homeRouteContribution } from "@/modules/home/routes";
 export { HomeScene } from "@/modules/home/scenes/HomeScene";
-export {
-  useRecentVisits,
-  useRecordRecentVisit,
-} from "@/modules/home/hooks/use-recent-visits";
-export type {
-  RecentVisit,
-  RecentVisitInput,
-  RecentVisitKind,
-} from "@/modules/home/services/recent-visits.service";

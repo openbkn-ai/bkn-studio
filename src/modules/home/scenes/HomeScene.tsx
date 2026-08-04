@@ -25,6 +25,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import type { PermissionCheckMode } from "@/framework/permission/has-permissions";
+import { canAccessHomeAction } from "@/modules/home/lib/action-access";
+import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 import {
   readHomeBuildState,
   type HomeBuildStage,
@@ -44,6 +47,8 @@ type BuildStage = {
     outcomeKey: string;
     optional?: boolean;
     path: string;
+    permissionMode?: PermissionCheckMode;
+    permissions?: string | string[];
     showDetails?: boolean;
     summaryKey?: string;
     titleKey: string;
@@ -60,6 +65,8 @@ const PLATFORM_STAGES: BuildStage[] = [
         impactKey: "home.platform.stages.environment.required.permission.impact",
         outcomeKey: "home.platform.stages.environment.required.permission.outcome",
         path: "/system/users",
+        permissionMode: "any",
+        permissions: systemAdminPermissions.users,
         showDetails: false,
         summaryKey: "home.platform.stages.environment.required.permission.summary",
         titleKey: "home.platform.stages.environment.required.permission.title",
@@ -132,6 +139,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         outcomeKey: "home.platform.stages.model.required.network.outcome",
         path: "/knowledge-network",
         showDetails: false,
+        summaryKey: "home.platform.stages.model.required.network.summary",
         titleKey: "home.platform.stages.model.required.network.title",
       },
       {
@@ -140,6 +148,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         outcomeKey: "home.platform.stages.model.required.conceptGroup.outcome",
         optional: true,
         path: "/knowledge-network",
+        summaryKey: "home.platform.stages.model.required.conceptGroup.summary",
         titleKey: "home.platform.stages.model.required.conceptGroup.title",
       },
       {
@@ -148,6 +157,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         outcomeKey: "home.platform.stages.model.required.objectType.outcome",
         path: "/knowledge-network",
         showDetails: false,
+        summaryKey: "home.platform.stages.model.required.objectType.summary",
         titleKey: "home.platform.stages.model.required.objectType.title",
       },
       {
@@ -156,6 +166,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         outcomeKey: "home.platform.stages.model.required.relationType.outcome",
         optional: true,
         path: "/knowledge-network",
+        summaryKey: "home.platform.stages.model.required.relationType.summary",
         titleKey: "home.platform.stages.model.required.relationType.title",
       },
       {
@@ -164,6 +175,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         outcomeKey: "home.platform.stages.model.required.metric.outcome",
         optional: true,
         path: "/knowledge-network",
+        summaryKey: "home.platform.stages.model.required.metric.summary",
         titleKey: "home.platform.stages.model.required.metric.title",
       },
       {
@@ -172,6 +184,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         outcomeKey: "home.platform.stages.model.required.metricExecutionTool.outcome",
         optional: true,
         path: "/execution-factory/units",
+        summaryKey: "home.platform.stages.model.required.metricExecutionTool.summary",
         titleKey: "home.platform.stages.model.required.metricExecutionTool.title",
       },
       {
@@ -180,6 +193,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         outcomeKey: "home.platform.stages.model.required.actionType.outcome",
         optional: true,
         path: "/knowledge-network",
+        summaryKey: "home.platform.stages.model.required.actionType.summary",
         titleKey: "home.platform.stages.model.required.actionType.title",
       },
     ],
@@ -251,16 +265,18 @@ const ENGINEERING_SKILLS = [
   },
 ] as const;
 
-function greetingKey(hour: number) {
+function greetingKey(hour: number, hasName: boolean) {
+  const suffix = hasName ? "" : "Anonymous";
+
   if (hour < 12) {
-    return "home.greeting.morning";
+    return `home.greeting.morning${suffix}`;
   }
 
   if (hour < 18) {
-    return "home.greeting.afternoon";
+    return `home.greeting.afternoon${suffix}`;
   }
 
-  return "home.greeting.evening";
+  return `home.greeting.evening${suffix}`;
 }
 
 export function HomeScene() {
@@ -271,9 +287,10 @@ export function HomeScene() {
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
   const { path: activePath, stage: activeStage } = readHomeBuildState(searchParams);
 
-  const greeting = t(greetingKey(new Date().getHours()), {
-    name: runtimeConfig.currentUser.name ?? t("home.title"),
-  });
+  const userName = runtimeConfig.currentUser.name?.trim();
+  const greeting = userName
+    ? t(greetingKey(new Date().getHours(), true), { name: userName })
+    : t(greetingKey(new Date().getHours(), false));
   const currentStage = PLATFORM_STAGES.find((stage) => stage.id === activeStage) ?? PLATFORM_STAGES[0];
 
   const copyInstallCommand = (command: string) => {
@@ -352,23 +369,38 @@ export function HomeScene() {
               </div>
 
               <div className={styles.actionList}>
-                {currentStage.required.map((action, index) => (
+                {currentStage.required.map((action, index) => {
+                  const actionAllowed = canAccessHomeAction(
+                    runtimeConfig.currentUser.permissions,
+                    action,
+                  );
+                  const actionButton = (
+                    <button
+                      aria-disabled={!actionAllowed}
+                      className={styles.actionNavigate}
+                      disabled={!actionAllowed}
+                      onClick={() => void navigate(action.path)}
+                      type="button"
+                    >
+                      <span className={styles.actionOrdinal}>{index + 1}</span>
+                      <span className={styles.actionMain}>
+                        <strong>
+                          {t(action.titleKey)}
+                          {action.optional ? <span className={styles.optionalBadge}>{t("home.platform.optional")}</span> : null}
+                        </strong>
+                        <small>{t(action.summaryKey ?? action.descriptionKey)}</small>
+                      </span>
+                      <ArrowRightOutlined aria-hidden />
+                    </button>
+                  );
+
+                  return (
                     <div className={styles.actionRowCompact} key={action.titleKey}>
-                      <button
-                        className={styles.actionNavigate}
-                        onClick={() => void navigate(action.path)}
-                        type="button"
-                      >
-                        <span className={styles.actionOrdinal}>{index + 1}</span>
-                        <span className={styles.actionMain}>
-                          <strong>
-                            {t(action.titleKey)}
-                            {action.optional ? <span className={styles.optionalBadge}>{t("home.platform.optional")}</span> : null}
-                          </strong>
-                          <small>{t(action.summaryKey ?? action.descriptionKey)}</small>
-                        </span>
-                        <ArrowRightOutlined aria-hidden />
-                      </button>
+                      {actionAllowed ? actionButton : (
+                        <Tooltip title={t("home.platform.noPermission")}>
+                          <span className={styles.actionNavigateTarget}>{actionButton}</span>
+                        </Tooltip>
+                      )}
                       {action.showDetails !== false ? (
                         <Tooltip
                           autoAdjustOverflow
@@ -378,15 +410,15 @@ export function HomeScene() {
                           title={(
                             <div className={styles.actionTooltipContent}>
                               <p>
-                                <strong>{t("home.platform.configuration")}：</strong>
+                                <strong>{t("home.platform.configurationLabel")}</strong>
                                 {t(action.descriptionKey)}
                               </p>
                               <p>
-                                <strong>{t("home.platform.role")}：</strong>
+                                <strong>{t("home.platform.roleLabel")}</strong>
                                 {t(action.outcomeKey)}
                               </p>
                               <p>
-                                <strong>{t("home.platform.impact")}：</strong>
+                                <strong>{t("home.platform.impactLabel")}</strong>
                                 {t(action.impactKey)}
                               </p>
                             </div>
@@ -402,7 +434,8 @@ export function HomeScene() {
                         </Tooltip>
                       ) : null}
                     </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -431,7 +464,7 @@ export function HomeScene() {
                   <div className={styles.skillBody}>
                     <div className={styles.skillTitleRow}>
                       <h3>{t(`home.engineering.skills.${skill.id}.title`)}</h3>
-                      <span aria-hidden>：</span>
+                      <span aria-hidden>{t("home.engineering.skillNameSeparator")}</span>
                       <code>{`bkn-${skill.id === "ontologyBuilder" ? "ontology-builder" : skill.id}`}</code>
                     </div>
                     <dl>
@@ -469,7 +502,7 @@ export function HomeScene() {
               <div>
                 <div className={styles.skillTitleRow}>
                   <h3>{t(`home.engineering.skills.${skill.id}.title`)}</h3>
-                  <span aria-hidden>：</span>
+                  <span aria-hidden>{t("home.engineering.skillNameSeparator")}</span>
                   <code>{`bkn-${skill.id === "ontologyBuilder" ? "ontology-builder" : skill.id}`}</code>
                 </div>
                 <p>{t(`home.engineering.skills.${skill.id}.scenario`)}</p>

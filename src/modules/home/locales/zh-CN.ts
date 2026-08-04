@@ -21,6 +21,7 @@ export const homeZhCN = {
         output: "主要产物",
         scenario: "适用场景",
       },
+      skillNameSeparator: "：",
       skills: {
         creator: {
           output: "可运行的知识网络、数据绑定与校验结果、交付报告。",
@@ -46,8 +47,11 @@ export const homeZhCN = {
     },
     greeting: {
       afternoon: "下午好，{{name}}",
+      afternoonAnonymous: "下午好",
       evening: "晚上好，{{name}}",
+      eveningAnonymous: "晚上好",
       morning: "早上好，{{name}}",
+      morningAnonymous: "早上好",
     },
     introduction:
       "欢迎使用 OpenBKN 构建业务知识网络，将企业数据组织为可理解、可查询、可调用的业务知识与能力，支撑业务分析、决策和自动化协作。",
@@ -67,11 +71,15 @@ export const homeZhCN = {
     },
     platform: {
       configuration: "配置内容",
+      configurationLabel: "配置内容：",
       details: "查看配置说明",
       impact: "未配置影响",
+      impactLabel: "未配置影响：",
+      noPermission: "需要用户管理权限，请联系管理员。",
       optional: "可选",
       required: "本阶段操作",
       role: "作用",
+      roleLabel: "作用：",
       stages: {
         data: {
           detail: "将业务数据接入平台并同步到数据目录；再按资源用途补全业务语义、构建检索索引，沉淀为可建模、可查询的数据资产。",
