@@ -15,6 +15,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   DEFAULT_AGENT_CONFIG,
+  formatToolResultLimits,
   runAgentChat,
   type AgentChunk,
 } from "@/modules/knowledge-network/services/agent-chat.service";
@@ -37,11 +38,11 @@ function stubStream(parts: unknown[], responseRejection?: Error) {
   return { fullStream, response };
 }
 
-async function run(onChunk: (chunk: AgentChunk) => void): Promise<void> {
+async function run(onChunk: (chunk: AgentChunk) => void, system = "sys"): Promise<void> {
   await runAgentChat({
     env: { base: "https://example.test", token: "t", knId: "kn_1" },
     modelName: "test-model",
-    system: "sys",
+    system,
     history: [{ role: "user", content: "在途项目有几个?" }],
     tools: {},
     config: DEFAULT_AGENT_CONFIG,
@@ -49,6 +50,23 @@ async function run(onChunk: (chunk: AgentChunk) => void): Promise<void> {
     onChunk,
   });
 }
+
+describe("formatToolResultLimits", () => {
+  it("报的是当前 config 的真实上限，schema 类不跟数据类混为一谈", () => {
+    const text = formatToolResultLimits(DEFAULT_AGENT_CONFIG);
+
+    expect(text).toContain(String(DEFAULT_AGENT_CONFIG.dataToolCap));
+    expect(text).toContain(String(DEFAULT_AGENT_CONFIG.schemaToolCap));
+  });
+
+  it("跟着调参走：用户改了上限，提示词里的数字也变", () => {
+    expect(formatToolResultLimits({ ...DEFAULT_AGENT_CONFIG, dataToolCap: 1234 })).toContain("1234");
+  });
+
+  it("两个上限都关掉时不拼这一段", () => {
+    expect(formatToolResultLimits({ ...DEFAULT_AGENT_CONFIG, dataToolCap: 0, schemaToolCap: 0 })).toBe("");
+  });
+});
 
 describe("runAgentChat 错误路径", () => {
   it("流里报错后不再跑收尾兜底，同一个错误只报一次", async () => {
@@ -79,6 +97,35 @@ describe("runAgentChat 错误路径", () => {
     expect(streamText).toHaveBeenCalledTimes(2);
     expect(chunks.filter((c) => c.type === "error")).toHaveLength(0);
     expect(chunks.filter((c) => c.type === "text").map((c) => c.delta).join("")).toBe("共 3 个。");
+  });
+
+  it("提示词给了 answer 契约时，标签外的推敲不进正文；没给则原样透传", async () => {
+    const deltas = [
+      { type: "text-delta", text: "我现在写最终答案。" },
+      { type: "text-delta", text: "<answer>共 3 个。</answer>" },
+    ];
+
+    streamText.mockReset();
+    streamText.mockReturnValueOnce(stubStream(deltas));
+    const withContract: AgentChunk[] = [];
+    await run((chunk) => withContract.push(chunk), "回答请包在 <answer> 与 </answer> 之间");
+
+    streamText.mockReset();
+    streamText.mockReturnValueOnce(stubStream(deltas));
+    const without: AgentChunk[] = [];
+    await run((chunk) => without.push(chunk), "sys");
+
+    const textOf = (chunks: AgentChunk[]) =>
+      chunks.filter((c) => c.type === "text").map((c) => c.delta).join("");
+    const reasoningOf = (chunks: AgentChunk[]) =>
+      chunks.filter((c) => c.type === "reasoning").map((c) => c.delta).join("");
+
+    expect(textOf(withContract)).toBe("共 3 个。");
+    expect(reasoningOf(withContract)).toBe("我现在写最终答案。");
+    // 契约没写进提示词就不改道：用户改过提示词时，正文不该憋到 flush 才出现。
+    // 标签本身仍然当噪音吃掉——裸标签不该出现在答案里，跟 <think> 一个待遇。
+    expect(textOf(without)).toBe("我现在写最终答案。共 3 个。");
+    expect(reasoningOf(without)).toBe("");
   });
 
   it("模型工厂忙态的原始报文不会糊到用户脸上", async () => {

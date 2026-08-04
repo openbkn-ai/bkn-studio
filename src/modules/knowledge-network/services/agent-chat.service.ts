@@ -90,6 +90,24 @@ function capToolResult(text: string, toolName: string, cfg: AgentConfig): string
   );
 }
 
+/**
+ * 把**实际生效**的截断上限拼成一段系统提示词。写死数字会和用户在设置面板改过的
+ * config 对不上（schema 类默认就是 24000 而非 8000），模型会照着错的数字过度拆批。
+ */
+export function formatToolResultLimits(cfg: AgentConfig): string {
+  const parts: string[] = [];
+  if (cfg.dataToolCap > 0) parts.push(`数据类工具（run_sql / query_* 等）约 ${cfg.dataToolCap} 字符`);
+  if (cfg.schemaToolCap > 0) {
+    parts.push(`schema/发现类工具（search_schema / describe_resource / list_resources 等）约 ${cfg.schemaToolCap} 字符`);
+  }
+  if (!parts.length) return "";
+  return (
+    `## 工具结果长度限制\n单次工具结果超出上限会被截断，超出部分丢失：${parts.join("；")}。` +
+    `务必把过滤与聚合下推到查询里，必要时分多次小批查询；若看到「已截断」提示说明结果不完整，` +
+    `应缩小范围重查，切勿把截断结果当作完整数据下结论。`
+  );
+}
+
 /** 大结果工具的查询约束，追加到工具 description，逼模型在查询里就缩小结果。 */
 const TOOL_HINTS: Record<string, string> = {
   run_sql:
@@ -427,18 +445,49 @@ function createChatModel(env: ContextLoaderEnv, modelName: string, tokenProvider
  */
 const LEAK_OPENERS = ["<think>", "<tool_call>", "<function="] as const;
 const LEAK_FN_CLOSERS = ["</function>", "</tool_call>"] as const;
-const LEAK_ALL_MARKS = ["<think>", "</think>", "<tool_call>", "</tool_call>", "<function=", "</function>"];
+
+/**
+ * 最终答复的边界标记。推理后端没配 reasoning parser 时模型的推敲会裸奔进正文
+ * （bkn-foundry#622），而裸推敲没有任何标记可认——靠正则猜必然误伤正文。
+ * 所以改成让提示词给出边界：标签内才是答案，标签外一律当思考过程。
+ */
+export const ANSWER_OPEN = "<answer>";
+const ANSWER_CLOSE = "</answer>";
+
+const LEAK_ALL_MARKS = [
+  "<think>",
+  "</think>",
+  "<tool_call>",
+  "</tool_call>",
+  "<function=",
+  "</function>",
+  ANSWER_OPEN,
+  ANSWER_CLOSE,
+];
 
 const LEAK_ERROR_MSG =
   "模型把工具调用当文本输出，调用未真正执行——通常是该模型的推理后端未配置 tool-call parser" +
   "（如 vLLM 的 --enable-auto-tool-choice --tool-call-parser，配套 --reasoning-parser）。" +
   "请修正模型接入配置，或换用可正常调用工具的模型。";
 
-export function createLeakFilter(onChunk: (chunk: AgentChunk) => void) {
+export type LeakFilterOptions = {
+  /**
+   * 系统提示词里给了 `<answer>` 契约。只有此时才启用「标签外算思考」的改道，
+   * 否则用户把提示词改掉后正文会一直等到 flush 才出现，白白毁掉流式体验。
+   */
+  expectAnswerTag?: boolean;
+};
+
+export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: LeakFilterOptions = {}) {
+  const expectAnswerTag = options.expectAnswerTag ?? false;
   let buf = "";
   let mode: "normal" | "think" | "fn" = "normal";
   let fnRaw = "";
   let fnSeq = 0;
+  let sawAnswer = false;
+  let inAnswer = false;
+  /** `<answer>` 之前改道走的内容。模型完全不守约时 flush 回放成正文，不能让一轮没答案。 */
+  let provisional = "";
 
   // 结尾若可能是某个标记的前缀，先兜住不发（跨 delta 的半个标签）。
   const holdLen = (s: string): number => {
@@ -456,6 +505,16 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void) {
   const emitReasoning = (delta: string) => {
     if (delta) onChunk({ type: "reasoning", delta });
   };
+  /** 正文候选。契约生效且还没进 `<answer>` 时改道到思考区并留底。 */
+  const emitBody = (delta: string) => {
+    if (!delta) return;
+    if (!expectAnswerTag || inAnswer) {
+      emitText(delta);
+      return;
+    }
+    provisional += delta;
+    emitReasoning(delta);
+  };
   const reportLeakedCall = (raw: string) => {
     const name =
       /<function=([\w.-]+)/.exec(raw)?.[1] ?? /"name"\s*:\s*"([\w.-]+)"/.exec(raw)?.[1] ?? "未知工具";
@@ -469,7 +528,7 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void) {
       if (mode === "normal") {
         let idx = -1;
         let marker = "";
-        for (const m of [...LEAK_OPENERS, "</think>"]) {
+        for (const m of [...LEAK_OPENERS, "</think>", ANSWER_OPEN, ANSWER_CLOSE]) {
           const i = buf.indexOf(m);
           if (i !== -1 && (idx === -1 || i < idx)) {
             idx = i;
@@ -478,14 +537,20 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void) {
         }
         if (idx === -1) {
           const hold = holdLen(buf);
-          emitText(buf.slice(0, buf.length - hold));
+          emitBody(buf.slice(0, buf.length - hold));
           buf = buf.slice(buf.length - hold);
           return;
         }
-        emitText(buf.slice(0, idx));
+        emitBody(buf.slice(0, idx));
         buf = buf.slice(idx + marker.length);
         if (marker === "<think>") mode = "think";
-        else if (marker === "</think>") {
+        else if (marker === ANSWER_OPEN) {
+          sawAnswer = true;
+          inAnswer = true;
+        } else if (marker === ANSWER_CLOSE) {
+          // 收尾之后模型还可能继续自言自语，那些同样不算答案。
+          inAnswer = false;
+        } else if (marker === "</think>") {
           /* 落单的闭合标签直接丢弃 */
         } else {
           mode = "fn";
@@ -544,9 +609,13 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void) {
     flush() {
       if (mode === "fn" && (fnRaw || buf)) reportLeakedCall(fnRaw + buf);
       else if (mode === "think") emitReasoning(buf);
-      else emitText(buf);
+      else emitBody(buf);
+      // 模型整轮没吐过 <answer>：把改道走的内容回放成正文，否则这一轮就没有答案了。
+      // 思考区里会重复一份，但它默认折叠，代价可接受。
+      if (expectAnswerTag && !sawAnswer && provisional) emitText(provisional);
       buf = "";
       fnRaw = "";
+      provisional = "";
       mode = "normal";
     },
   };
@@ -587,11 +656,13 @@ export async function runAgentChat(params: {
     // 本轮已报过错。收尾兜底不能再跑：那次调用必然也失败，只会把同一个错误再报一遍
     // （错误从流里出一次、await result.response 再 reject 一次），还白打一次正忙的网关。
     let errored = false;
+    // 提示词给了 <answer> 契约才启用标签路由——用户改掉提示词时要退回原行为。
+    const expectAnswerTag = system.includes(ANSWER_OPEN);
     // 文本经泄漏过滤器：真实正文才算 gotText，泄漏的调用块会变成失败工具卡。
     const leakFilter = createLeakFilter((chunk) => {
       if (chunk.type === "text" && chunk.delta.trim()) gotText = true;
       onChunk(chunk);
-    });
+    }, { expectAnswerTag });
     for await (const part of result.fullStream) {
       switch (part.type) {
         case "text-delta":
@@ -647,12 +718,14 @@ export async function runAgentChat(params: {
         model: createChatModel(env, modelName, tokenProvider),
         system:
           system +
-          "\n\n（已达到工具调用上限或需要收尾：请基于以上已获得的信息，直接用中文给出最终答复，不要再调用任何工具。）",
+          "\n\n（已达到工具调用上限或需要收尾：请基于以上已获得的信息，直接用中文给出最终答复，不要再调用任何工具。" +
+          (expectAnswerTag ? `最终答复同样要整段包在 ${ANSWER_OPEN}…${"</answer>"} 之间。` : "") +
+          "）",
         messages: [...messages, ...(resp.messages as ModelMessage[])],
         ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
         abortSignal: signal,
       });
-      const finalFilter = createLeakFilter(onChunk);
+      const finalFilter = createLeakFilter(onChunk, { expectAnswerTag });
       for await (const part of finalResult.fullStream) {
         if (part.type === "text-delta" && part.text) finalFilter.feed(part.text);
         else if (part.type === "reasoning-delta" && part.text) onChunk({ type: "reasoning", delta: part.text });

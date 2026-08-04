@@ -42,6 +42,7 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
   buildAgentTools,
   effectiveToolArgs,
+  formatToolResultLimits,
   runAgentChat,
   DEFAULT_AGENT_CONFIG,
   type AgentChatTurn,
@@ -67,15 +68,26 @@ import {
 
 import styles from "./AgentChat.module.css";
 
+/**
+ * 输出规范。两个画像共用：推理模型在推理后端没配 reasoning parser 时会把推敲裸奔进正文
+ * （bkn-foundry#622），裸推敲没有任何可认的标记，只能靠提示词把边界立起来。
+ * 「结论 / 依据」写死格式也是同一个目的：只说「说明依据」不给格式，模型会在正文里现场推敲格式。
+ */
+const OUTPUT_CONTRACT =
+  "输出规范（务必遵守）：\n" +
+  "- 最终答复必须整段包在 <answer> 与 </answer> 之间；标签外的内容会被当作思考过程折叠，用户看不到。\n" +
+  "- <answer> 内只写给用户看的结果，不要出现「我现在写…」「我选择…」「这样应该可以了」这类自述或推敲。\n" +
+  "- 固定两段：先一句话给出**结论**；再用一行**依据**说明数据怎么来的";
+
 export const DEFAULT_PROMPT =
   "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
   "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
   "kn_id 已锁定为当前网络，无需也不要修改。\n" +
   "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。\n" +
-  "search_schema 默认 schema_brief=true（只返回概要，省 token）；确需完整字段定义时才显式传 schema_brief=false。\n" +
-  "工具结果默认 response_format=toon（TOON 紧凑文本，信息与 JSON 等价、更省 token），直接解读即可；确需 JSON 时显式传 response_format=json。\n" +
-  "重要：单个工具返回的文本会被截断到约 8000 字符，超出部分丢失。务必把过滤/聚合下推到查询里，必要时分多次小批查询；若看到「已截断」提示，说明结果不完整，应缩小查询范围重查，切勿把截断结果当作完整数据下结论。\n" +
-  "回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据。";
+  "\n" +
+  OUTPUT_CONTRACT +
+  "（调了哪个工具、什么过滤条件或 SQL 要点）。\n" +
+  "- 中文，简洁专业，可用 Markdown。";
 
 /** 「仅基础数据」面板默认提示词：只讲表/SQL 工具用法，不提知识网络概念。 */
 export const DEFAULT_BASE_PROMPT =
@@ -83,10 +95,11 @@ export const DEFAULT_BASE_PROMPT =
   "list_resources（列出可访问的数据表）、describe_resource（查看表的列结构）、run_sql（执行 SQL）。\n" +
   "流程：先用 list_resources 找到相关表，再用 describe_resource 确认列，再写 SQL 查询。\n" +
   "SQL 中的表名必须用模板占位 {{.<resource_id>}} 引用（resource_id 取自 list_resources 的 entries[].resource_id），不能写裸表名；跨 catalog 不能 join。\n" +
-  "查询要高效：聚合/排序/计数交给 SQL，用 LIMIT 和精确过滤、只取需要的字段，避免拉全表；" +
-  "单个工具返回的文本会被截断到约 8000 字符，若看到「已截断」提示应缩小查询范围重查，切勿把截断结果当作完整数据下结论。\n" +
-  "工具结果默认 response_format=toon（TOON 紧凑文本，信息与 JSON 等价、更省 token），直接解读即可；确需 JSON 时显式传 response_format=json。\n" +
-  "回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据（用了哪些表 / 什么 SQL）。";
+  "查询要高效：聚合/排序/计数交给 SQL，用 LIMIT 和精确过滤、只取需要的字段，避免拉全表。\n" +
+  "\n" +
+  OUTPUT_CONTRACT +
+  "（用了哪些表、什么 SQL 要点）。\n" +
+  "- 中文，简洁专业，可用 Markdown。";
 
 const FALLBACK_SUGGESTIONS = [
   "这个知识网络里有哪些对象类和关系？",
@@ -649,14 +662,17 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     [env.base, knId, tokenProvider, profile.paneKey],
   );
 
-  // 实际发送的完整系统提示词 = 可编辑提示词 + （按画像）自动附加的知识网络摘要。
-  const composedSystem = useMemo(
-    () =>
-      profile.injectKnContext && knContext
-        ? `${systemPrompt}\n\n## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n${knContext}`
-        : systemPrompt,
-    [profile.injectKnContext, systemPrompt, knContext],
-  );
+  // 实际发送的完整系统提示词 = 可编辑提示词 + （按画像）知识网络摘要 + 当前生效的截断上限。
+  // 上限不写进可编辑提示词：它跟着调参面板变，写死就会和实际行为对不上。
+  const composedSystem = useMemo(() => {
+    const sections = [systemPrompt];
+    if (profile.injectKnContext && knContext) {
+      sections.push(`## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n${knContext}`);
+    }
+    const limits = formatToolResultLimits(config);
+    if (limits) sections.push(limits);
+    return sections.join("\n\n");
+  }, [profile.injectKnContext, systemPrompt, knContext, config]);
 
   const send = useCallback(
     async (text: string) => {

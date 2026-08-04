@@ -19,7 +19,9 @@ import type { BknLifecycle, BknTurn } from "@/modules/knowledge-network/services
 import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 
-import { ChatPane, DEFAULT_PROMPT, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
+import { ANSWER_OPEN } from "@/modules/knowledge-network/services/agent-chat.service";
+
+import { ChatPane, DEFAULT_BASE_PROMPT, DEFAULT_PROMPT, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
 
 type AgentChatModule = typeof import("@/modules/knowledge-network/services/agent-chat.service");
 type LifecycleModule = typeof import("@/modules/knowledge-network/services/bkn-lifecycle.service");
@@ -207,5 +209,16 @@ describe("ChatPane 受管生命周期接线", () => {
 
     // 这是 conversation id 唯一的更换点；漏了会让「清空」后的新对话仍挂在旧会话上。
     expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * 提示词里的标签与过滤器认的标签必须是同一个。改提示词时把标签写错，
+ * 过滤器就静默退回原行为，推敲照样糊进正文——这类错不会有任何报错。
+ */
+describe("默认提示词与 answer 契约对齐", () => {
+  it("两个画像的默认提示词都带过滤器认的标签", () => {
+    expect(DEFAULT_PROMPT).toContain(ANSWER_OPEN);
+    expect(DEFAULT_BASE_PROMPT).toContain(ANSWER_OPEN);
   });
 });
