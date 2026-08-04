@@ -55,6 +55,16 @@ export function isRetryableStatus(status: number | undefined): boolean {
 /** 浏览器/运行时各家的网络失败文案都不一样，统一按特征串识别。 */
 const NETWORK_PATTERN = /network\s*error|failed to fetch|load failed|networkerror|econnreset|socket hang up|terminated/i;
 
+/**
+ * 只剩一句话时按文本认忙态。网关按契约返错后（bkn-foundry#624）流式 HTTP 仍是 200，
+ * 错误走 SSE error 帧；而 AI SDK 的 chat 模型只把 `error.message` 透出来
+ * （`controller.enqueue({ type: "error", error: chunk.value.error.message })`），
+ * **业务码被丢掉了**。没有码就只能认文本，否则这类可重试的忙态会退化成一句英文原文、
+ * 连重试入口都给不出来。
+ */
+const BUSY_PATTERN =
+  /too busy|rate.?limit|overloaded|try again later|temporarily unavailable|service unavailable|capacity/i;
+
 const DETAIL_MAX = 4000;
 const MESSAGE_MAX = 200;
 
@@ -152,11 +162,28 @@ export function normalizeAgentError(error: unknown): NormalizedAgentError {
     return { message: fromStatus(error.statusCode), detail, retryable };
   }
 
-  const raw = error instanceof Error ? error.message : String(error);
+  // 纯对象先按结构解：SSE error 帧可能以对象到达（completion 模型透的是 `value.error` 本身），
+  // 直接 String() 会变成 [object Object]。
+  // 只认纯对象——Error 自带 `.message`，一起丢进结构解析会把普通异常也当成网关错误体。
+  if (!(error instanceof Error) && typeof error !== "string") {
+    const structured = parseModelFactoryEnvelope(error);
+    if (structured) return fromModelFactory(structured, stringifyDetail(error));
+  }
+
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : (stringifyDetail(error) ?? String(error));
   const mf = parseModelFactoryEnvelope(raw);
   if (mf) return fromModelFactory(mf, stringifyDetail(raw));
   if (NETWORK_PATTERN.test(raw)) {
     return { message: "与模型服务的连接中断，请重试", detail: stringifyDetail(raw), retryable: true };
+  }
+  // 码已经被 SDK 丢掉，只能按文本认忙态——否则重试入口就没了。
+  if (BUSY_PATTERN.test(raw)) {
+    return { message: "模型服务繁忙，请稍后重试", detail: stringifyDetail(raw), retryable: true };
   }
   return {
     message: truncate(raw, MESSAGE_MAX) || "对话执行失败",

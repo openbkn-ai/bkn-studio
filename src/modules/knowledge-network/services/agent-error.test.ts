@@ -123,6 +123,27 @@ describe("normalizeAgentError", () => {
     });
   });
 
+  it("网关按契约返错后只剩一句 message 时，仍认得出忙态并给重试", () => {
+    // bkn-foundry#624 之后流式 HTTP 仍是 200，错误走 SSE error 帧，而 AI SDK 的
+    // chat 模型只透 error.message —— 业务码被丢掉，只能按文本认。
+    const normalized = normalizeAgentError(
+      "Service is too busy. We advise users to temporarily switch to alternative LLM API service providers.",
+    );
+
+    expect(normalized.message).toBe("模型服务繁忙，请稍后重试");
+    expect(normalized.retryable).toBe(true);
+  });
+
+  it("error 帧以纯对象到达时按结构解，不退化成 [object Object]", () => {
+    const normalized = normalizeAgentError({
+      error: { message: "Rate limit reached", type: "rate_limit_exceeded", code: "rate_limit_exceeded" },
+    });
+
+    expect(normalized.message).toBe("模型服务被限流，请稍后重试（rate_limit_exceeded）");
+    expect(normalized.retryable).toBe(true);
+    expect(normalized.message).not.toContain("[object Object]");
+  });
+
   it("未知错误保留原文但不判可重试", () => {
     const normalized = normalizeAgentError(new Error("something odd"));
 

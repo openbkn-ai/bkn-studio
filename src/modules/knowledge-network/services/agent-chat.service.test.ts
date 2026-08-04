@@ -59,19 +59,9 @@ describe("buildAgentTools", () => {
     callTool: () => Promise.resolve({ ok: true, latencyMs: 0, isError: false, text: "", structured: undefined }),
   };
 
-  it("生命周期工具不进模型工具集", () => {
-    // tools/list 会把生命周期工具和业务工具一起返回；模型看见就会自己去调，
-    // 结果是另开一条交互撞上前端已开的那条，或者被 permission_denied 挡下白烧步数。
-    const tools = buildAgentTools(
-      [
-        { name: "run_sql" },
-        { name: "bkn_start_interaction" },
-        { name: "bkn_create_conversation" },
-        { name: "bkn_complete_interaction" },
-        { name: "bkn_fail_interaction" },
-        { name: "bkn_cancel_interaction" },
-        { name: "search_schema" },
-      ],
+  const build = (names: string[]) =>
+    buildAgentTools(
+      names.map((name) => ({ name })),
       { base: "https://example.test", token: "t", knId: "kn_1" },
       "kn_1",
       DEFAULT_AGENT_CONFIG,
@@ -79,8 +69,34 @@ describe("buildAgentTools", () => {
       { session },
     );
 
+  it("平台侧工具不进模型工具集", () => {
+    // tools/list 会把平台工具和业务工具一起返回；模型看见就会自己去调，
+    // 结果是另开一条交互撞上前端已开的那条，或者被 permission_denied 挡下白烧步数。
+    const tools = build([
+      "run_sql",
+      "bkn_start_interaction",
+      "bkn_finish_interaction",
+      "bkn_create_conversation",
+      "search_schema",
+    ]);
+
     expect(Object.keys(tools).sort()).toEqual(["run_sql", "search_schema"]);
     for (const name of LIFECYCLE_TOOL_NAMES) expect(tools[name]).toBeUndefined();
+  });
+
+  it("按前缀过滤，后端新增的溯源工具不用改代码也挡得住", () => {
+    // 工具数在 bkn-foundry#618 之后从 16 涨到 27，新增的全是 bkn_ 前缀的溯源工具。
+    // 列名单必漏，漏了模型就会去调，所以这里钉住的是前缀规则而不是具体名字。
+    const tools = build([
+      "bkn_causality",
+      "bkn_get_operation",
+      "bkn_get_receipt",
+      "bkn_retry_operation",
+      "bkn_some_future_trace_tool",
+      "query_object_instance",
+    ]);
+
+    expect(Object.keys(tools)).toEqual(["query_object_instance"]);
   });
 });
 

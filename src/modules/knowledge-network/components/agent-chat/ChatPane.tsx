@@ -58,7 +58,7 @@ import {
   createBknLifecycle,
   lifecycleEnv,
   localExternalKeyStore,
-  LIFECYCLE_TOOL_NAMES,
+  isPlatformManagedTool,
   type TurnOutcome,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
@@ -820,7 +820,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   // 模型可见的工具集：tools/list 会连生命周期工具一起返回，那些是平台侧管账的，
   // 不该出现在给模型的工具集里，也不该出现在勾选器里让用户以为可以开关。
   const agentToolDefs = useMemo(
-    () => toolDefs?.filter((t) => !LIFECYCLE_TOOL_NAMES.has(t.name)) ?? null,
+    () => toolDefs?.filter((t) => !isPlatformManagedTool(t.name)) ?? null,
     [toolDefs],
   );
   // 与 MCP 侧栏同款分组：本地 op 定义带组名，线上新增的归 Knowledge Network。

@@ -34,11 +34,9 @@ import {
 const MANIFEST_VERSION = "1";
 
 /**
- * 受管生命周期工具。tools/list 会把它们和业务工具一起返回，但它们是**平台侧管账的**，
- * 由前端 lifecycle 驱动（beginTurn / finish），绝不能出现在给模型的工具集里：
- * 模型自己调 bkn_start_interaction 会另开一条交互，跟前端已开的那条撞上 Core 的
- * active interaction 唯一约束；即使被 permission_denied 挡住，也白烧掉工具步数、
- * 把失败调用塞进 Trace，还给模型喂一堆和问题无关的报错。
+ * 本客户端自己驱动的受管生命周期工具，供文档与测试对照。
+ *
+ * 注意：这**不是**过滤名单——过滤按前缀走，见 isPlatformManagedTool。
  */
 export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
   "bkn_create_conversation",
@@ -47,6 +45,25 @@ export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
   "bkn_fail_interaction",
   "bkn_cancel_interaction",
 ]);
+
+/**
+ * 平台侧工具前缀。生命周期与业务溯源工具一律 `bkn_` 开头（bkn_start_interaction /
+ * bkn_finish_interaction / bkn_causality / bkn_get_receipt / bkn_retry_operation …），
+ * 业务工具一律不带前缀（search_schema / run_sql / query_object_instance …）。
+ */
+const PLATFORM_TOOL_PREFIX = "bkn_";
+
+/**
+ * 这个工具是不是平台侧管账的、不该给模型看见的。
+ *
+ * 按前缀判而不是列名单：tools/list 的工具数在 bkn-foundry#618 之后从 16 涨到 27，
+ * 新增的全是溯源工具，而且还会继续加——列名单必漏，漏了模型就会去调。
+ * 实测模型真会调：一轮里连调两次 bkn_start_interaction，被 permission_denied 挡下。
+ * 挡不下的话更糟——模型另开一条交互会撞上 Core 的 active interaction 唯一约束。
+ */
+export function isPlatformManagedTool(name: string): boolean {
+  return name.startsWith(PLATFORM_TOOL_PREFIX);
+}
 
 /**
  * 交互租约时长。终结时租约必须还没过期，否则 Core 判 `terminal_conflict`；
