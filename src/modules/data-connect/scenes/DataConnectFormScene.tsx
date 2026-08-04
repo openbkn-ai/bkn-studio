@@ -439,7 +439,7 @@ function sanitizeConnectorConfig(
     Object.entries(config)
       .filter(
         ([key, value]) =>
-          !(fieldConfig[key]?.type === "object" && value === null),
+          !shouldOmitConnectorConfigValue(fieldConfig[key], value),
       )
       .map(([key, value]) => {
         if (
@@ -465,13 +465,10 @@ function normalizeConnectorConfig(
 ) {
   return Object.fromEntries(
     Object.entries(config)
-      .filter(([key, value]) => {
-        if (fieldConfig[key]?.type !== "object") {
-          return true;
-        }
-
-        return value !== null && !(typeof value === "string" && value.trim() === "");
-      })
+      .filter(
+        ([key, value]) =>
+          !shouldOmitConnectorConfigValue(fieldConfig[key], value),
+      )
       .map(([key, value]) => {
         if (typeof value === "string") {
           if (fieldConfig[key]?.encrypted) {
@@ -494,4 +491,18 @@ function normalizeConnectorConfig(
         return [key, value];
       }),
   ) as Record<string, unknown>;
+}
+
+function shouldOmitConnectorConfigValue(
+  field: ConnectorFieldConfig | undefined,
+  value: unknown,
+) {
+  if (field?.encrypted) {
+    return value === undefined || value === null || value === "";
+  }
+
+  return (
+    field?.type === "object" &&
+    (value === null || (typeof value === "string" && value.trim() === ""))
+  );
 }

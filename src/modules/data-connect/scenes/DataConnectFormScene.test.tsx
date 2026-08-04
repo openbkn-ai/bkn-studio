@@ -278,6 +278,33 @@ describe("DataConnectFormScene · connection preflight", () => {
     });
   });
 
+  it("omits empty optional encrypted fields from the connection test", async () => {
+    permissionState.values.add("catalog:create");
+    mockSQLServerEditCatalog({}, { api_token: "" });
+
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.click(
+      screen.getByRole("button", { name: "common.testConnection" }),
+    );
+
+    await waitFor(() => {
+      expect(testDataConnectConfigMock).toHaveBeenCalledWith({
+        connectorConfig: {
+          database: "orders",
+          host: "sqlserver.example.com",
+          options: {},
+          password: "test-password",
+          port: 1433,
+          schemas: ["sales", "audit"],
+          username: "readonly_user",
+        },
+        connectorType: "sqlserver",
+      });
+    });
+  });
+
   it("trims and preserves empty or null-like values outside options", async () => {
     permissionState.values.add("catalog:create");
     mockSQLServerEditCatalog(
@@ -415,6 +442,7 @@ function mockSQLServerEditCatalog(
         options: connectorField("连接参数", "object", false),
         application_name: connectorField("应用名称", "string", false),
         session_settings: connectorField("会话设置", "object", false),
+        api_token: connectorField("API Token", "string", false, true),
       },
       mode: "local",
       name: "SQL Server",
