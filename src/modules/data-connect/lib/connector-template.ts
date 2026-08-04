@@ -89,6 +89,9 @@ const TYPE_TO_TEMPLATE: Record<string, { description?: string; label?: string }>
   postgresql: {
     description: "面向数仓 / 分析型数据。",
   },
+  sqlserver: {
+    description: "连接 Microsoft SQL Server 业务数据库。",
+  },
   opensearch: {
     description: "面向检索索引接入。",
   },
@@ -123,6 +126,9 @@ const TYPE_FIELD_DEFAULTS: Record<string, Record<string, unknown>> = {
     ssl: false,
     use_ssl: false,
   },
+  sqlserver: {
+    port: 1433,
+  },
   opensearch: {
     port: 9200,
   },
@@ -132,6 +138,7 @@ const TYPE_PORT_PLACEHOLDER: Record<string, string> = {
   mariadb: "例如 3306",
   mysql: "例如 3306",
   postgresql: "例如 5432",
+  sqlserver: "例如 1433",
   opensearch: "例如 9200",
 };
 
@@ -343,6 +350,7 @@ export function getConnectorFieldPlaceholder(
   connectorType?: string,
 ) {
   const normalized = fieldName.trim().toLowerCase();
+  const typeKey = connectorType?.trim().toLowerCase() ?? "";
   const placeholderMap: Record<string, string> = {
     account: "例如 readonly_account",
     api_key: "请输入 API Key",
@@ -370,8 +378,11 @@ export function getConnectorFieldPlaceholder(
   };
 
   if (normalized === "port") {
-    const typeKey = connectorType?.trim().toLowerCase() ?? "";
     return TYPE_PORT_PLACEHOLDER[typeKey] ?? "例如 3306";
+  }
+
+  if (normalized === "options" && typeKey === "sqlserver") {
+    return '例如 {"encrypt":true,"trustservercertificate":false}';
   }
 
   if (placeholderMap[normalized]) {
@@ -428,6 +439,27 @@ export function resolveConnectorFieldControl(
   }
 
   return { kind: "text" };
+}
+
+export function isValidJSONObject(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return true;
+  }
+
+  if (typeof value === "object") {
+    return !Array.isArray(value);
+  }
+
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed);
+  } catch {
+    return false;
+  }
 }
 
 type ConnectorConfigDefaultValue = boolean | number | string | string[];

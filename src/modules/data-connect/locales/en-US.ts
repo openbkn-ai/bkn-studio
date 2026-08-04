@@ -70,6 +70,7 @@ export const dataConnectEnUS = {
       "Choose the backend connector type that matches the target data source.",
     connectorTypeSearchPlaceholder: "Search by connector name or type",
     connectorTypeEmpty: "No connector types match the current filters.",
+    jsonObjectInvalid: "Enter a valid JSON object.",
     categoryAll: "All",
     selectConnectorTypeRequired: "Please select a connector type first.",
     configStepTitle: "Configure data connection",

@@ -16,6 +16,7 @@ import {
   getConnectorTemplateMeta,
   groupConnectorFields,
   humanizeConnectorFieldLabel,
+  isValidJSONObject,
   resolveConnectorFieldControl,
   type ConnectorFieldControl,
 } from "@/modules/data-connect/lib/connector-template";
@@ -231,6 +232,18 @@ export function DataConnectConfigForm({
                           message: t("common.required"),
                           required: fieldConfig.required,
                         },
+                        ...(control.kind === "json"
+                          ? [
+                              {
+                                validator: (_: unknown, value: unknown) =>
+                                  isValidJSONObject(value)
+                                    ? Promise.resolve()
+                                    : Promise.reject(
+                                        new Error(t("dataConnect.jsonObjectInvalid")),
+                                      ),
+                              },
+                            ]
+                          : []),
                       ]}
                       span={
                         control.kind === "json" || control.kind === "tags" ? "full" : "half"
