@@ -30,7 +30,7 @@
   inset: 0;
   background-image: url("../assets/home-hero-bg.png");
   background-repeat: no-repeat;
-  background-position: right -36px top -66px;
+  background-position: right -6px top -66px;
   background-size: 610px auto;
   content: "";
   opacity: 0.6;
@@ -108,10 +108,52 @@
 .pathTab:focus-visible,
 .pathTabActive:focus-visible,
 .stageButton:focus-visible,
-.stageButtonActive:focus-visible,
+.stageButtonActive:focus-visible {
+  outline: 2px solid var(--color-primary-300);
+  outline-offset: 2px;
+}
+
 .content {
+  position: relative;
+  isolation: isolate;
   flex: 1 0 auto;
   padding: 28px 40px 44px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(248, 251, 255, 0.76) 0%, rgba(255, 255, 255, 0.96) 260px),
+    var(--color-bg-surface);
+}
+
+.content::before {
+  position: absolute;
+  right: -220px;
+  bottom: -320px;
+  z-index: -1;
+  width: 860px;
+  height: 620px;
+  background-image: url("../assets/home-hero-bg.png");
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: 860px auto;
+  content: "";
+  opacity: 0.11;
+  pointer-events: none;
+}
+
+.content::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 82% 22%, rgba(36, 123, 255, 0.04), transparent 32%),
+    radial-gradient(circle at 76% 78%, rgba(0, 184, 166, 0.035), transparent 34%);
+  content: "";
+  pointer-events: none;
+}
+
+.contentInner {
+  position: relative;
+  z-index: 1;
 }
 
 .buildArea {
@@ -586,6 +628,15 @@
     background-position: right -218px top -62px;
     background-size: 520px auto;
     opacity: 0.34;
+  }
+
+  .content::before {
+    right: -360px;
+    bottom: -260px;
+    width: 680px;
+    height: 520px;
+    background-size: 680px auto;
+    opacity: 0.1;
   }
 
   .pathTabs {
