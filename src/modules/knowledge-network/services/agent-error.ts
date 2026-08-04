@@ -62,8 +62,10 @@ const NETWORK_PATTERN = /network\s*error|failed to fetch|load failed|networkerro
  * **业务码被丢掉了**。没有码就只能认文本，否则这类可重试的忙态会退化成一句英文原文、
  * 连重试入口都给不出来。
  */
+// 词要收紧：tool-error 也走同一个归一化，`capacity` 这种宽词会让
+// `column "capacity" does not exist` 的 SQL 报错被翻成「模型服务繁忙」。
 const BUSY_PATTERN =
-  /too busy|rate.?limit|overloaded|try again later|temporarily unavailable|service unavailable|capacity/i;
+  /too busy|rate.?limit|overloaded|try again later|temporarily unavailable|service unavailable|over capacity|at capacity/i;
 
 const DETAIL_MAX = 4000;
 const MESSAGE_MAX = 200;

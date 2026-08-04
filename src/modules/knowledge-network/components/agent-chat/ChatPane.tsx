@@ -42,6 +42,7 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
   buildAgentTools,
   effectiveToolArgs,
+  formatOutputContract,
   formatToolResultLimits,
   runAgentChat,
   DEFAULT_AGENT_CONFIG,
@@ -70,25 +71,14 @@ import {
 import styles from "./AgentChat.module.css";
 
 /**
- * 输出规范。两个画像共用：推理模型在推理后端没配 reasoning parser 时会把推敲裸奔进正文
- * （bkn-foundry#622），裸推敲没有任何可认的标记，只能靠提示词把边界立起来。
- * 「结论 / 依据」写死格式也是同一个目的：只说「说明依据」不给格式，模型会在正文里现场推敲格式。
+ * 默认提示词只讲「这个面板是干什么的、工具怎么用」。
+ * 输出契约不写在这里 —— 它由 composedSystem 自动拼接，理由见 formatOutputContract。
  */
-const OUTPUT_CONTRACT =
-  "输出规范（务必遵守）：\n" +
-  "- 最终答复必须整段包在 <answer> 与 </answer> 之间；标签外的内容会被当作思考过程折叠，用户看不到。\n" +
-  "- <answer> 内只写给用户看的结果，不要出现「我现在写…」「我选择…」「这样应该可以了」这类自述或推敲。\n" +
-  "- 固定两段：先一句话给出**结论**；再用一行**依据**说明数据怎么来的";
-
 export const DEFAULT_PROMPT =
   "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
   "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
   "kn_id 已锁定为当前网络，无需也不要修改。\n" +
-  "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。\n" +
-  "\n" +
-  OUTPUT_CONTRACT +
-  "（调了哪个工具、什么过滤条件或 SQL 要点）。\n" +
-  "- 中文，简洁专业，可用 Markdown。";
+  "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。";
 
 /** 「仅基础数据」面板默认提示词：只讲表/SQL 工具用法，不提知识网络概念。 */
 export const DEFAULT_BASE_PROMPT =
@@ -96,11 +86,12 @@ export const DEFAULT_BASE_PROMPT =
   "list_resources（列出可访问的数据表）、describe_resource（查看表的列结构）、run_sql（执行 SQL）。\n" +
   "流程：先用 list_resources 找到相关表，再用 describe_resource 确认列，再写 SQL 查询。\n" +
   "SQL 中的表名必须用模板占位 {{.<resource_id>}} 引用（resource_id 取自 list_resources 的 entries[].resource_id），不能写裸表名；跨 catalog 不能 join。\n" +
-  "查询要高效：聚合/排序/计数交给 SQL，用 LIMIT 和精确过滤、只取需要的字段，避免拉全表。\n" +
-  "\n" +
-  OUTPUT_CONTRACT +
-  "（用了哪些表、什么 SQL 要点）。\n" +
-  "- 中文，简洁专业，可用 Markdown。";
+  "查询要高效：聚合/排序/计数交给 SQL，用 LIMIT 和精确过滤、只取需要的字段，避免拉全表。";
+
+/** 知识网络画像的「依据」写法。 */
+export const KN_EVIDENCE_HINT = "调了哪个工具、什么过滤条件或 SQL 要点";
+/** 仅基础数据画像的「依据」写法。 */
+export const BASE_EVIDENCE_HINT = "用了哪些表、什么 SQL 要点";
 
 const FALLBACK_SUGGESTIONS = [
   "这个知识网络里有哪些对象类和关系？",
@@ -121,6 +112,8 @@ export type PaneProfile = {
   injectKnContext: boolean;
   /** 默认勾选的工具名；null = 全部（含后端未来新增）。 */
   defaultToolNames: string[] | null;
+  /** 输出契约里「依据」该怎么写（各画像可用的工具不同）。 */
+  evidenceHint: string;
   /** 视觉高亮（对比模式的「主角」面板：渐变标签 + 面板泛光）。 */
   highlight?: boolean;
 };
@@ -663,8 +656,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     [env.base, knId, tokenProvider, profile.paneKey],
   );
 
-  // 实际发送的完整系统提示词 = 可编辑提示词 + （按画像）知识网络摘要 + 当前生效的截断上限。
-  // 上限不写进可编辑提示词：它跟着调参面板变，写死就会和实际行为对不上。
+  // 实际发送的完整系统提示词 = 可编辑提示词 + （按画像）知识网络摘要 + 截断上限 + 输出契约。
+  // 后两段都不写进可编辑提示词：上限跟着调参面板变，契约必须和过滤器认的标签逐字节一致，
+  // 而提示词是持久化状态（每轮回写、载入优先用存量值），写进默认值对老用户一律不生效。
   const composedSystem = useMemo(() => {
     const sections = [systemPrompt];
     if (profile.injectKnContext && knContext) {
@@ -672,8 +666,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     }
     const limits = formatToolResultLimits(config);
     if (limits) sections.push(limits);
+    sections.push(formatOutputContract(profile.evidenceHint));
     return sections.join("\n\n");
-  }, [profile.injectKnContext, systemPrompt, knContext, config]);
+  }, [profile.injectKnContext, profile.evidenceHint, systemPrompt, knContext, config]);
 
   const send = useCallback(
     async (text: string) => {

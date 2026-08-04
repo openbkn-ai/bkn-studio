@@ -21,7 +21,7 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 
 import { ANSWER_OPEN } from "@/modules/knowledge-network/services/agent-chat.service";
 
-import { ChatPane, DEFAULT_BASE_PROMPT, DEFAULT_PROMPT, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
+import { ChatPane, DEFAULT_PROMPT, KN_EVIDENCE_HINT, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
 
 type AgentChatModule = typeof import("@/modules/knowledge-network/services/agent-chat.service");
 type LifecycleModule = typeof import("@/modules/knowledge-network/services/bkn-lifecycle.service");
@@ -50,6 +50,7 @@ const profile: PaneProfile = {
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: false,
   defaultToolNames: null,
+  evidenceHint: KN_EVIDENCE_HINT,
 };
 
 const toolDefs: McpToolDef[] = [{ name: "run_sql" }];
@@ -213,12 +214,42 @@ describe("ChatPane 受管生命周期接线", () => {
 });
 
 /**
- * 提示词里的标签与过滤器认的标签必须是同一个。改提示词时把标签写错，
- * 过滤器就静默退回原行为，推敲照样糊进正文——这类错不会有任何报错。
+ * 输出契约必须由 composedSystem 自动拼接。提示词是持久化状态：每轮结束回写
+ * localStorage，载入时 `saved.systemPrompt ?? profile.defaultPrompt` 优先用存量值。
+ * 契约一旦写进默认提示词，就只对「从没聊过」的人生效 —— 而会撞上推敲糊进正文
+ * 这个 bug 的恰恰是老用户，他们也不会知道要去设置里点一次「恢复默认」。
  */
-describe("默认提示词与 answer 契约对齐", () => {
-  it("两个画像的默认提示词都带过滤器认的标签", () => {
-    expect(DEFAULT_PROMPT).toContain(ANSWER_OPEN);
-    expect(DEFAULT_BASE_PROMPT).toContain(ANSWER_OPEN);
+describe("输出契约的下发方式", () => {
+  it("存量用户存的是改版前的旧提示词，照样拿得到契约", async () => {
+    stubLifecycle();
+    // 模拟老会话：localStorage 里是不含任何契约的旧提示词。
+    localStorage.setItem(
+      "bkn-studio:agentchat:kn-demo",
+      JSON.stringify({ messages: [], model: "qwen-test", systemPrompt: "旧的自定义提示词，没有任何契约" }),
+    );
+    runAgentChat.mockResolvedValue(undefined);
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("在途项目有几个?");
+      await Promise.resolve();
+    });
+
+    const system = runAgentChat.mock.calls[0][0].system;
+    expect(system).toContain("旧的自定义提示词，没有任何契约");
+    expect(system).toContain(ANSWER_OPEN);
+  });
+
+  it("契约里的依据写法跟着面板画像走", async () => {
+    stubLifecycle();
+    runAgentChat.mockResolvedValue(undefined);
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("在途项目有几个?");
+      await Promise.resolve();
+    });
+
+    expect(runAgentChat.mock.calls[0][0].system).toContain(KN_EVIDENCE_HINT);
   });
 });

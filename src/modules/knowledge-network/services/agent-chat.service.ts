@@ -343,7 +343,10 @@ function sleep(ms: number, signal: AbortSignal | null | undefined): Promise<void
 async function isRetryableResponse(response: Response): Promise<boolean> {
   if (isRetryableStatus(response.status)) return true;
   if (!response.ok) return false;
-  if ((response.headers.get("content-type") ?? "").includes("text/event-stream")) return false;
+  // 正向匹配：只有明确是 JSON 才 peek。反过来写「不是 SSE 就 peek」的话，网关一旦漏标
+  // content-type，clone().text() 要读到流结束才 resolve，SDK 一个 token 都拿不到——
+  // 每一次正常对话的流式打字都会退化成等生成完一次性刷出。而网关不按契约来正是本层的前提。
+  if (!(response.headers.get("content-type") ?? "").includes("application/json")) return false;
   try {
     const mf = parseModelFactoryEnvelope(await response.clone().text());
     return mf?.code !== undefined && MF_RETRYABLE_CODES.has(String(mf.code));
@@ -364,7 +367,7 @@ function isRetryableFetchError(error: unknown): boolean {
  * - 忙态（429/5xx，或 200 裹着 50508）与连接失败按 RETRY_DELAYS_MS 退避重试；用户点停止立即让路。
  * - 兼容其严格 router：assistant 消息 `content: null` 归一为 ""，剥掉回灌的 `reasoning_content`。
  */
-function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
+export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
   const run = (input: RequestInfo | URL, init: RequestInit | undefined, token: string): Promise<Response> => {
     let body = init?.body;
     if (typeof body === "string") {
@@ -455,6 +458,22 @@ const LEAK_FN_CLOSERS = ["</function>", "</tool_call>"] as const;
  */
 export const ANSWER_OPEN = "<answer>";
 const ANSWER_CLOSE = "</answer>";
+
+/**
+ * 输出契约。**必须由系统提示词自动拼接，不能写进可编辑的默认提示词**：
+ * 提示词是持久化状态（`bkn-studio:agentchat:*` 每轮回写、载入优先用存量值），
+ * 写进默认值就只对「从没聊过」的用户生效——而会撞上这个 bug 的恰恰是老用户。
+ * 放这里还顺带消掉了漂移：契约文本和过滤器认的标签用的是同一对常量。
+ */
+export function formatOutputContract(evidenceHint: string): string {
+  return (
+    "## 输出规范（务必遵守）\n" +
+    `- 最终答复必须整段包在 ${ANSWER_OPEN} 与 ${ANSWER_CLOSE} 之间；标签外的内容会被当作思考过程折叠，用户看不到。\n` +
+    `- ${ANSWER_OPEN} 内只写给用户看的结果，不要出现「我现在写…」「我选择…」「这样应该可以了」这类自述或推敲。\n` +
+    `- 固定两段：先一句话给出**结论**；再用一行**依据**说明数据怎么来的（${evidenceHint}）。\n` +
+    "- 中文，简洁专业，可用 Markdown。"
+  );
+}
 
 const LEAK_ALL_MARKS = [
   "<think>",
@@ -613,7 +632,9 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
       else if (mode === "think") emitReasoning(buf);
       else emitBody(buf);
       // 模型整轮没吐过 <answer>：把改道走的内容回放成正文，否则这一轮就没有答案了。
-      // 思考区里会重复一份，但它默认折叠，代价可接受。
+      // 两个代价：思考区里会重复一份（默认折叠，可接受）；以及不守约的这一轮会**失去流式**
+      // ——「整轮没出现过标签」只有流结束才能判定，正文只能在这里一次性刷出。
+      // 守约的模型不受影响（标签一到就开始正常流式）。
       if (expectAnswerTag && !sawAnswer && provisional) emitText(provisional);
       buf = "";
       fnRaw = "";
@@ -648,6 +669,9 @@ export async function runAgentChat(params: {
       messages,
       tools,
       stopWhen: stepCountIs(config.maxSteps),
+      // 重试全归 makeAuthedFetch 那一层。SDK 默认还会自己重试 2 次，叠起来一轮忙态
+      // 最多能打 9 次网关（本层 3 × SDK 3）——正是本 PR 要避免的事。
+      maxRetries: 0,
       ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
       // 每步前驱逐旧工具结果，避免单轮多步累积撑爆上下文。
       prepareStep: ({ messages: stepMessages }) => ({ messages: evictOldToolResults(stepMessages, config.keepToolResults) }),
@@ -725,6 +749,7 @@ export async function runAgentChat(params: {
           "）",
         messages: [...messages, ...(resp.messages as ModelMessage[])],
         ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
+        maxRetries: 0,
         abortSignal: signal,
       });
       const finalFilter = createLeakFilter(onChunk, { expectAnswerTag });
