@@ -114,30 +114,15 @@ describe("本地 op 目录与后端工具面", () => {
     expect(eaten).toEqual([]);
   });
 
-  it("覆盖后端 tools/list 的全部 16 个业务工具", () => {
-    // 后端 schemas/tools_meta.json 的业务工具全集（18 个减去两个 bkn_ 生命周期工具）。
-    // 少了的那些不会报错，只是在勾选器里落进默认分组、没有本地示例请求体。
-    const backendBusinessTools = [
-      "describe_resource",
-      "execute_action",
-      "find_skills",
-      "get_action_execution",
-      "get_action_info",
-      "get_kn_detail",
-      "get_logic_properties_values",
-      "get_object_types",
-      "get_relation_types",
-      "list_action_executions",
-      "list_knowledge_networks",
-      "list_resources",
-      "query_instance_subgraph",
-      "query_object_instance",
-      "run_sql",
-      "search_schema",
-    ];
+  it("op id 不重复", () => {
+    const ids = CONTEXT_LOADER_OPS.map((op) => op.id);
 
-    expect(CONTEXT_LOADER_OPS.map((op) => op.id).sort()).toEqual(backendBusinessTools);
+    expect(new Set(ids).size).toBe(ids.length);
   });
+
+  // 这里**不**断言本地表与后端 tools/list 完全一致：Agent 的工具集是运行时从
+  // tools/list 读的，本地表只喂勾选器分组和调试台示例（MCP 模式还有 synthesizeOp
+  // 兜底）。把它钉死等于后端一加工具我们 CI 就红，而实际什么都没坏。允许滞后。
 });
 
 describe("formatToolResultLimits", () => {
