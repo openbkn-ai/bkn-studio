@@ -442,7 +442,7 @@ export function resolveConnectorFieldControl(
 }
 
 export function isValidJSONObject(value: unknown) {
-  if (value === undefined || value === null || value === "") {
+  if (value === undefined || value === null) {
     return true;
   }
 
@@ -454,8 +454,13 @@ export function isValidJSONObject(value: unknown) {
     return false;
   }
 
+  const trimmed = value.trim();
+  if (trimmed === "" || trimmed === "null") {
+    return true;
+  }
+
   try {
-    const parsed: unknown = JSON.parse(value);
+    const parsed: unknown = JSON.parse(trimmed);
     return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed);
   } catch {
     return false;

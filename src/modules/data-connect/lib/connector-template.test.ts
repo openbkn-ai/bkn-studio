@@ -62,6 +62,9 @@ describe("connector-template · SQL Server", () => {
   it("accepts only JSON objects for object connector fields", () => {
     expect(isValidJSONObject(undefined)).toBe(true);
     expect(isValidJSONObject("")).toBe(true);
+    expect(isValidJSONObject("   ")).toBe(true);
+    expect(isValidJSONObject("null")).toBe(true);
+    expect(isValidJSONObject("  null  ")).toBe(true);
     expect(isValidJSONObject('{"encrypt":true}')).toBe(true);
     expect(isValidJSONObject({ encrypt: true })).toBe(true);
     expect(isValidJSONObject("[]")).toBe(false);

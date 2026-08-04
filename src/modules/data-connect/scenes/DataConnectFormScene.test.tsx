@@ -174,55 +174,7 @@ describe("DataConnectFormScene · connection preflight", () => {
 
   it("normalizes SQL Server schemas and options in the connection test request", async () => {
     permissionState.values.add("catalog:create");
-    listDataConnectConnectorTypesMock.mockResolvedValue([
-      {
-        category: "table",
-        description: "",
-        enabled: true,
-        fieldConfig: {
-          host: connectorField("主机地址", "string", true),
-          port: connectorField("端口号", "integer", true),
-          username: connectorField("用户名", "string", true),
-          password: connectorField("密码", "string", true, true),
-          database: connectorField("数据库名", "string", true),
-          schemas: connectorField("Schema 列表", "array", false),
-          options: connectorField("连接参数", "object", false),
-        },
-        mode: "local",
-        name: "SQL Server",
-        type: "sqlserver",
-      },
-    ]);
-    getDataConnectRecordMock.mockResolvedValue({
-      category: "table",
-      connectorConfig: {
-        database: "orders",
-        host: "sqlserver.example.com",
-        options: { "connection timeout": 15, encrypt: true },
-        password: "test-password",
-        port: 1433,
-        schemas: ["sales", "audit"],
-        username: "readonly_user",
-      },
-      connectorType: "sqlserver",
-      createTime: "-",
-      creatorName: "-",
-      description: "",
-      enabled: true,
-      healthCheckResult: "",
-      healthStatus: "healthy",
-      id: "catalog-sqlserver",
-      lastCheckTime: "-",
-      metadata: {},
-      mode: "local",
-      name: "sqlserver-orders",
-      operations: [],
-      status: "enabled",
-      tags: [],
-      type: "physical",
-      updateTime: "-",
-      updaterName: "-",
-    });
+    mockSQLServerEditCatalog({ "connection timeout": 15, encrypt: true });
 
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
 
@@ -237,6 +189,53 @@ describe("DataConnectFormScene · connection preflight", () => {
           database: "orders",
           host: "sqlserver.example.com",
           options: { "connection timeout": 15, encrypt: true },
+          password: "test-password",
+          port: 1433,
+          schemas: ["sales", "audit"],
+          username: "readonly_user",
+        },
+        connectorType: "sqlserver",
+      });
+    });
+  });
+
+  it("rejects invalid JSON options before testing the connection", async () => {
+    permissionState.values.add("catalog:create");
+    mockSQLServerEditCatalog({ encrypt: true });
+
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        '例如 {"encrypt":true,"trustservercertificate":false}',
+      ),
+      { target: { value: "{invalid" } },
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "common.testConnection" }),
+    );
+
+    expect(await screen.findByText("dataConnect.jsonObjectInvalid")).toBeTruthy();
+    expect(testDataConnectConfigMock).not.toHaveBeenCalled();
+  });
+
+  it("omits null options returned by the backend from the connection test", async () => {
+    permissionState.values.add("catalog:create");
+    mockSQLServerEditCatalog(null);
+
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.click(
+      screen.getByRole("button", { name: "common.testConnection" }),
+    );
+
+    await waitFor(() => {
+      expect(testDataConnectConfigMock).toHaveBeenCalledWith({
+        connectorConfig: {
+          database: "orders",
+          host: "sqlserver.example.com",
           password: "test-password",
           port: 1433,
           schemas: ["sales", "audit"],
@@ -326,4 +325,56 @@ function connectorField(
     required,
     type,
   };
+}
+
+function mockSQLServerEditCatalog(options: unknown) {
+  listDataConnectConnectorTypesMock.mockResolvedValue([
+    {
+      category: "table",
+      description: "",
+      enabled: true,
+      fieldConfig: {
+        host: connectorField("主机地址", "string", true),
+        port: connectorField("端口号", "integer", true),
+        username: connectorField("用户名", "string", true),
+        password: connectorField("密码", "string", true, true),
+        database: connectorField("数据库名", "string", true),
+        schemas: connectorField("Schema 列表", "array", false),
+        options: connectorField("连接参数", "object", false),
+      },
+      mode: "local",
+      name: "SQL Server",
+      type: "sqlserver",
+    },
+  ]);
+  getDataConnectRecordMock.mockResolvedValue({
+    category: "table",
+    connectorConfig: {
+      database: "orders",
+      host: "sqlserver.example.com",
+      options,
+      password: "test-password",
+      port: 1433,
+      schemas: ["sales", "audit"],
+      username: "readonly_user",
+    },
+    connectorType: "sqlserver",
+    createTime: "-",
+    creatorName: "-",
+    description: "",
+    enabled: true,
+    healthCheckResult: "",
+    healthStatus: "healthy",
+    id: "catalog-sqlserver",
+    lastCheckTime: "-",
+    metadata: {},
+    mode: "local",
+    name: "sqlserver-orders",
+    operations: [],
+    status: "enabled",
+    tags: [],
+    type: "physical",
+    updateTime: "-",
+    updaterName: "-",
+  });
 }

@@ -443,7 +443,13 @@ function sanitizeConnectorConfig(config: Record<string, unknown>) {
 function normalizeConnectorConfig(config: Record<string, unknown>) {
   return Object.fromEntries(
     Object.entries(config)
-      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .filter(
+        ([, value]) =>
+          value !== undefined &&
+          value !== null &&
+          value !== "" &&
+          !(typeof value === "string" && ["", "null"].includes(value.trim())),
+      )
       .map(([key, value]) => {
         if (typeof value === "string") {
           const trimmed = value.trim();
