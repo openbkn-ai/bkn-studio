@@ -365,6 +365,22 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(getRequestSummary).toHaveBeenCalledTimes(1);
   });
 
+  it("重新查询会放弃进行中的详情并清除 request_id 深链", async () => {
+    window.history.replaceState({}, "", "/observability/business-provenance?view=requests&request_id=req_business_001");
+    let resolveRequestSummary: ((value: Awaited<ReturnType<typeof getRequestSummary>>) => void) | undefined;
+    vi.mocked(getRequestSummary).mockImplementationOnce(() => new Promise((resolve) => {
+      resolveRequestSummary = resolve;
+    }));
+
+    render(<BknTraceRunsScene />);
+
+    await waitFor(() => expect(getRequestSummary).toHaveBeenCalledWith("req_business_001"));
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.query" }));
+
+    expect(window.location.search).not.toContain("request_id=");
+    resolveRequestSummary?.(requestSummary);
+  });
+
 	it("默认显示 Agent 声明名称并隐藏可信技术主键", async () => {
 		vi.mocked(getConversationSummaries).mockResolvedValue({
 			entries: [{

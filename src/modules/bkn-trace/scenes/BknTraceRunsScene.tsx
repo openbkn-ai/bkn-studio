@@ -247,7 +247,7 @@ export function BknTraceRunsScene() {
     const query = currentQuery();
 		setPagination((current) => ({ ...current, page: 1 }));
     setActiveQuery(query);
-    syncProvenanceURL(view, query, deepLinkedRequestId);
+    syncProvenanceURL(view, query);
     void loadProvenance(view, { ...query, page: 1, pageSize: pagination.pageSize });
   }
 
