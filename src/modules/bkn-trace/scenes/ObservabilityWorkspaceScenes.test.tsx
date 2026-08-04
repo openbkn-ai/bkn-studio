@@ -76,7 +76,7 @@ describe("observability workspace scenes", () => {
 				attributes: {}, category: "runtime.business", environment: "production", eventName: "knowledge.read.completed",
 				eventTimestamp: "2026-08-01T10:00:00Z", logId: "log-a", observedTimestamp: "2026-08-01T10:00:01Z",
 				outcome: "success", serviceName: "context-loader", severityNumber: 9, severityText: "INFO",
-				sourceId: "context-loader", summary: "读取需求预测对象", traceId: "trace-a",
+				requestId: "req-a", sourceId: "context-loader", summary: "读取需求预测对象", traceId: "trace-a",
 			},
 			policyRevision: "r6.2-default", redactedFields: [], relatedTraceIds: ["trace-a"],
 		});
@@ -86,40 +86,43 @@ describe("observability workspace scenes", () => {
 
   it("日志检索展示授权类别、局部结果和来源状态", async () => {
     render(<ObservabilityLogsScene />);
-    await waitFor(() => expect(listLogs).toHaveBeenCalledWith({ limit: 50 }));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledWith(expect.objectContaining({
+      page: 1, pageSize: 20, timeFrom: expect.any(String), timeTo: expect.any(String),
+    })));
     expect(await screen.findByText("bknTrace.operations.runSql")).not.toBeNull();
     expect(screen.queryByText("OpenBKN operation completed")).toBeNull();
     expect(screen.getByText("bknTrace.logs.partialWarning")).not.toBeNull();
     expect(screen.getByText("runtime.business")).not.toBeNull();
   });
 
-  it("使用后端签名游标继续加载日志且不重复已有记录", async () => {
+  it("按页读取日志并保留当前筛选条件", async () => {
     vi.mocked(listLogs)
       .mockResolvedValueOnce({
-        count: { accuracy: "partial", value: 1 },
+        count: { accuracy: "partial", value: 40 },
         data: [{
           attributes: {}, category: "runtime.system", environment: "production", eventName: "service.started",
           eventTimestamp: "2026-08-01T10:00:00Z", logId: "log-a", observedTimestamp: "2026-08-01T10:00:01Z",
           outcome: "success", serviceName: "bkn-trace", severityNumber: 9, severityText: "INFO",
           sourceId: "otel-runtime", summary: "服务已启动",
         }],
-        nextCursor: "signed-cursor-a", partial: false, sourceStatus: [],
+        page: 1, pageSize: 20, partial: false, sourceStatus: [],
       })
       .mockResolvedValueOnce({
-        count: { accuracy: "exact", value: 1 },
+        count: { accuracy: "exact", value: 40 },
         data: [{
           attributes: {}, category: "runtime.system", environment: "production", eventName: "dependency.failed",
           eventTimestamp: "2026-08-01T09:59:00Z", logId: "log-b", observedTimestamp: "2026-08-01T09:59:01Z",
           outcome: "failure", serviceName: "bkn-trace", severityNumber: 17, severityText: "ERROR",
           sourceId: "otel-runtime", summary: "依赖调用失败",
         }],
-        partial: false, sourceStatus: [],
+        page: 2, pageSize: 20, partial: false, sourceStatus: [],
       });
 
     render(<ObservabilityLogsScene />);
-    fireEvent.click(await screen.findByRole("button", { name: "bknTrace.actions.loadMore" }));
-    await waitFor(() => expect(listLogs).toHaveBeenLastCalledWith({ cursor: "signed-cursor-a", limit: 50 }));
-    expect(await screen.findByText("服务已启动")).not.toBeNull();
+    fireEvent.click(await screen.findByTitle("2"));
+    await waitFor(() => expect(listLogs).toHaveBeenLastCalledWith(expect.objectContaining({
+      page: 2, pageSize: 20, timeFrom: expect.any(String), timeTo: expect.any(String),
+    })));
     expect(await screen.findByText("依赖调用失败")).not.toBeNull();
   });
 
@@ -129,6 +132,7 @@ describe("observability workspace scenes", () => {
 		 fireEvent.click(summary);
 		 await waitFor(() => expect(getLogDetail).toHaveBeenCalledWith("log-a"));
 		 expect(await screen.findByText("bknTrace.logs.detail.title")).not.toBeNull();
+		 expect(screen.getByRole("link", { name: "bknTrace.logs.detail.openBusinessProvenance" }).getAttribute("href")).toBe("/studio/observability/business-provenance?view=requests&request_id=req-a");
 		 expect(screen.getByRole("link", { name: "bknTrace.logs.detail.openTrace" }).getAttribute("href")).toBe("/studio/observability/traces?trace_id=trace-a");
 	 });
 
@@ -151,9 +155,22 @@ describe("observability workspace scenes", () => {
 		 window.history.replaceState({}, "", "/observability/logs?trace_id=trace-a");
 		 vi.mocked(getAccessProfile).mockResolvedValue({ ...profile, globalLogSearch: false });
 		 render(<ObservabilityLogsScene />);
-		 await waitFor(() => expect(listLogs).toHaveBeenCalledWith({ limit: 50, traceId: "trace-a" }));
+		 await waitFor(() => expect(listLogs).toHaveBeenCalledWith(expect.objectContaining({
+			 page: 1, pageSize: 20, timeFrom: expect.any(String), timeTo: expect.any(String), traceId: "trace-a",
+		 })));
 		 expect(await screen.findByText("Trace trace-a")).not.toBeNull();
 		 expect(screen.queryByPlaceholderText("bknTrace.logs.searchPlaceholder")).toBeNull();
 		 expect(listLogFacets).not.toHaveBeenCalled();
 	 });
+
+  it("关联 Trace 无日志时说明所选时间范围内没有匹配事件", async () => {
+    window.history.replaceState({}, "", "/observability/logs?trace_id=trace-a");
+    vi.mocked(listLogs).mockResolvedValue({
+      count: { accuracy: "exact", value: 0 }, data: [], partial: false, sourceStatus: [],
+    });
+
+    render(<ObservabilityLogsScene />);
+
+    expect(await screen.findByText("bknTrace.logs.emptyAssociated")).not.toBeNull();
+  });
 });

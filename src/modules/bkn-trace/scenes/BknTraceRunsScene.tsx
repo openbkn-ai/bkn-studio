@@ -26,9 +26,10 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import styles from "@/modules/bkn-trace/scenes/BknTraceRunsScene.module.css";
 import {
   getBusinessGraph,
@@ -60,6 +61,7 @@ import {
   businessStoryStages,
   businessNodePresentation,
 } from "@/modules/bkn-trace/utils/trace-explainability";
+import { formatDuration } from "@/modules/bkn-trace/utils/duration";
 
 type RequestDetail = {
   artifacts: EvidenceArtifact[];
@@ -75,6 +77,9 @@ type ProvenanceView = "conversations" | "interactions" | "requests";
 
 type ProvenanceListRow = {
   agentOrApp?: string;
+	agentName?: string;
+	applicationPrincipalId?: string;
+	effectiveSubjectId?: string;
   conversationId?: string;
   durationMs?: number;
   evidenceCompleteness: string;
@@ -93,6 +98,12 @@ type ProvenanceListRow = {
 
 export function BknTraceRunsScene() {
   const { t } = useTranslation();
+  const durationLabels = useMemo(() => ({
+    hour: t("bknTrace.durationUnits.hour"),
+    millisecond: t("bknTrace.durationUnits.millisecond"),
+    minute: t("bknTrace.durationUnits.minute"),
+    second: t("bknTrace.durationUnits.second"),
+  }), [t]);
 
   const [initialState] = useState(initialProvenanceState);
   const [view, setView] = useState<ProvenanceView>(initialState.view);
@@ -105,6 +116,7 @@ export function BknTraceRunsScene() {
   const [from, setFrom] = useState<string | undefined>(initialState.query.from);
   const [to, setTo] = useState<string | undefined>(initialState.query.to);
   const [activeQuery, setActiveQuery] = useState<RequestSummaryQuery>(initialState.query);
+	const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
   const [page, setPage] = useState<SummaryPage<ProvenanceListRow>>();
   const [selectedRequestId, setSelectedRequestId] = useState<string>();
   const [detail, setDetail] = useState<RequestDetail>();
@@ -116,7 +128,6 @@ export function BknTraceRunsScene() {
   const loadProvenance = useCallback(async (
     targetView: ProvenanceView,
     query: RequestSummaryQuery = {},
-    append = false,
   ) => {
     const requestSequence = ++provenanceRequestSequence.current;
     setLoading(true);
@@ -124,7 +135,8 @@ export function BknTraceRunsScene() {
     try {
       const request = {
         ...query,
-        limit: 30,
+		page: query.page ?? 1,
+		pageSize: query.pageSize ?? 20,
       };
       const result = targetView === "conversations"
         ? mapProvenancePage(await getConversationSummaries(request), mapConversationRow)
@@ -132,14 +144,7 @@ export function BknTraceRunsScene() {
           ? mapProvenancePage(await getInteractionSummaries(request), mapInteractionRow)
           : mapProvenancePage(await getRequestSummaries(request), (entry) => mapRequestRow(entry, t));
       if (requestSequence !== provenanceRequestSequence.current) return;
-      setPage((current) =>
-        append && current
-          ? {
-              ...result,
-              entries: uniqueProvenanceRows([...current.entries, ...result.entries]),
-            }
-          : result
-      );
+		setPage(result);
     } catch (caught: unknown) {
       if (requestSequence === provenanceRequestSequence.current) {
         setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
@@ -150,7 +155,7 @@ export function BknTraceRunsScene() {
   }, [t]);
 
   useEffect(() => {
-    void loadProvenance(initialState.view, initialState.query);
+    void loadProvenance(initialState.view, { ...initialState.query, page: 1, pageSize: 20 });
   }, [initialState, loadProvenance]);
 
   function currentQuery(): RequestSummaryQuery {
@@ -174,9 +179,10 @@ export function BknTraceRunsScene() {
 
   function searchRequests() {
     const query = currentQuery();
+		setPagination((current) => ({ ...current, page: 1 }));
     setActiveQuery(query);
     syncProvenanceURL(view, query);
-    void loadProvenance(view, query);
+    void loadProvenance(view, { ...query, page: 1, pageSize: pagination.pageSize });
   }
 
   function changeView(nextView: ProvenanceView) {
@@ -188,20 +194,22 @@ export function BknTraceRunsScene() {
 	  delete query.interactionId;
 	}
 	setView(nextView);
+	setPagination((current) => ({ ...current, page: 1 }));
 	setActiveQuery(query);
 	setPage(undefined);
 	syncProvenanceURL(nextView, query);
-	void loadProvenance(nextView, query);
+	void loadProvenance(nextView, { ...query, page: 1, pageSize: pagination.pageSize });
   }
 
   function openProvenanceRow(row: ProvenanceListRow) {
 	if (view === "conversations" && row.conversationId) {
 	  const query = { ...currentQuery(), conversationId: row.conversationId };
 	  setView("interactions");
+	  setPagination((current) => ({ ...current, page: 1 }));
 	  setActiveQuery(query);
 	  setPage(undefined);
 	  syncProvenanceURL("interactions", query);
-	  void loadProvenance("interactions", query);
+	  void loadProvenance("interactions", { ...query, page: 1, pageSize: pagination.pageSize });
 	  return;
 	}
 	if (view === "interactions" && row.interactionId) {
@@ -211,10 +219,11 @@ export function BknTraceRunsScene() {
 		interactionId: row.interactionId,
 	  };
 	  setView("requests");
+	  setPagination((current) => ({ ...current, page: 1 }));
 	  setActiveQuery(query);
 	  setPage(undefined);
 	  syncProvenanceURL("requests", query);
-	  void loadProvenance("requests", query);
+	  void loadProvenance("requests", { ...query, page: 1, pageSize: pagination.pageSize });
 	  return;
 	}
 	if (row.requestId) {
@@ -313,15 +322,16 @@ export function BknTraceRunsScene() {
       title: t(view === "requests" ? "bknTrace.fields.operationResult" : "bknTrace.fields.result"),
     },
     {
-      dataIndex: "agentOrApp",
-      key: "agentOrApp",
-      title: t("bknTrace.fields.agentOrApp"),
+	  dataIndex: "agentName",
+	  key: "agentName",
+	  render: (value?: string) => value || t("bknTrace.unnamedAgent"),
+	  title: t("bknTrace.fields.agentName"),
       width: 150,
     },
     {
       dataIndex: "status",
       key: "status",
-      render: (value: string) => <Tag color={statusColor(value)}>{value}</Tag>,
+      render: (value: string) => <Tag color={statusColor(value)}>{statusLabel(value, t)}</Tag>,
       title: t("bknTrace.fields.status"),
       width: 110,
     },
@@ -329,7 +339,7 @@ export function BknTraceRunsScene() {
       dataIndex: "evidenceCompleteness",
       key: "evidenceCompleteness",
       render: (value: string) => (
-        <Tag color={value === "complete" ? "green" : "orange"}>{value}</Tag>
+        <Tag color={value === "complete" ? "green" : "orange"}>{evidenceLabel(value, t)}</Tag>
       ),
       title: t("bknTrace.fields.evidenceCompleteness"),
       width: 150,
@@ -337,7 +347,7 @@ export function BknTraceRunsScene() {
     {
       dataIndex: "durationMs",
       key: "durationMs",
-      render: (value?: number) => value === undefined ? "-" : `${value} ms`,
+      render: (value?: number) => formatDuration(value, durationLabels),
       title: t("bknTrace.fields.duration"),
       width: 110,
     },
@@ -359,12 +369,12 @@ export function BknTraceRunsScene() {
             />
             <div>
               <Typography.Title level={4}>{t("bknTrace.sections.requestDetail")}</Typography.Title>
-              <Typography.Text type="secondary">{detail.summary.requestId}</Typography.Text>
+              <Typography.Text type="secondary">{operationLabel(detail.summary, t)}</Typography.Text>
             </div>
             <Space className={styles.detailStatus}>
-              <Tag color={statusColor(detail.summary.status)}>{detail.summary.status}</Tag>
+              <Tag color={statusColor(detail.summary.status)}>{statusLabel(detail.summary.status, t)}</Tag>
               <Tag color={detail.summary.evidenceCompleteness === "complete" ? "green" : "orange"}>
-                {detail.summary.evidenceCompleteness}
+                {evidenceLabel(detail.summary.evidenceCompleteness, t)}
               </Tag>
             </Space>
           </header>
@@ -374,31 +384,42 @@ export function BknTraceRunsScene() {
             column={{ lg: 3, md: 1, sm: 1, xs: 1 }}
             size="small"
           >
-            <Descriptions.Item label={t("bknTrace.fields.conversationId")}>
-              {detail.summary.conversationId || "-"}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("bknTrace.fields.interactionId")}>
-              {detail.summary.interactionId || "-"}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("bknTrace.fields.requestId")}>
-              {detail.summary.requestId}
+            <Descriptions.Item label={t("bknTrace.fields.agentName")}>
+              {detail.summary.agentName || t("bknTrace.unnamedAgent")}
             </Descriptions.Item>
             <Descriptions.Item label={t("bknTrace.fields.operation")}>
               {operationLabel(detail.summary, t)}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("bknTrace.fields.operationId")}>
-              {detail.summary.operationId || "-"}
             </Descriptions.Item>
             <Descriptions.Item label={t("bknTrace.fields.requestCount")}>
               {detail.interaction?.requests.length ?? 1}
             </Descriptions.Item>
           </Descriptions>
 
-          <BusinessContent
-            artifacts={detail.artifacts}
-            fallbackQuestion={detail.summary.questionPreview}
-            fallbackResult={detail.summary.resultPreview}
-          />
+          <OpenBKNCallContent summary={detail.summary} />
+
+          <details className={styles.technicalDetails}>
+            <summary>{t("bknTrace.fields.technicalDetails")}</summary>
+            <Descriptions column={{ lg: 3, md: 1, sm: 1, xs: 1 }} size="small">
+              <Descriptions.Item label={t("bknTrace.fields.conversationId")}>
+                {detail.summary.conversationId || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("bknTrace.fields.interactionId")}>
+                {detail.summary.interactionId || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("bknTrace.fields.requestId")}>
+                {detail.summary.requestId}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("bknTrace.fields.operationId")}>
+                {detail.summary.operationId || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("bknTrace.fields.applicationPrincipalId")}>
+                {detail.summary.applicationPrincipalId || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("bknTrace.fields.effectiveSubjectId")}>
+                {detail.summary.effectiveSubjectId || "-"}
+              </Descriptions.Item>
+            </Descriptions>
+          </details>
 
           <Tabs
             items={[
@@ -406,9 +427,10 @@ export function BknTraceRunsScene() {
                 children: detail.businessGraph
                   ? (
 					  <BusinessExplanation
-						artifacts={detail.artifacts}
-						fallbackQuestion={detail.summary.questionPreview}
-						fallbackResult={detail.summary.resultPreview}
+						artifacts={detail.artifacts.filter((artifact) =>
+						  !["question", "result"].includes(artifact.artifactType) ||
+						  (Boolean(detail.summary.operationId) && artifact.operationId === detail.summary.operationId)
+						)}
 						graph={detail.businessGraph}
 					  />
 					)
@@ -580,21 +602,19 @@ export function BknTraceRunsScene() {
           scroll={{ x: 1180 }}
           size="middle"
         />
-        {page?.nextCursor ? (
-          <div className={styles.loadMore}>
-            <Button
-              onClick={() =>
-                void loadProvenance(
-				  view,
-                  { ...activeQuery, cursor: page.nextCursor },
-                  true,
-                )
-              }
-            >
-              {t("bknTrace.actions.loadMore")}
-            </Button>
-          </div>
-        ) : null}
+		{page && page.total > 0 ? (
+			<TablePaginationBar
+				current={page.page ?? pagination.page}
+				onChange={(nextPage, nextPageSize) => {
+					setPagination({ page: nextPage, pageSize: nextPageSize });
+					void loadProvenance(view, { ...activeQuery, page: nextPage, pageSize: nextPageSize });
+				}}
+				pageSize={page.pageSize ?? pagination.pageSize}
+				showSizeChanger
+				showTotal={(total) => t("common.total", { total })}
+				total={page.total}
+			/>
+		) : null}
       </Spin>
     </div>
   );
@@ -608,26 +628,25 @@ function InteractionRequests({ requests }: { requests: RequestSummary[] }) {
       <Table
         columns={[
           {
-            dataIndex: "requestId",
-            key: "requestId",
-            title: t("bknTrace.fields.requestId"),
+            key: "operation",
+            render: (_: unknown, value: RequestSummary) => operationLabel(value, t),
+            title: t("bknTrace.fields.operation"),
           },
           {
-            dataIndex: "questionPreview",
-            key: "questionPreview",
+            dataIndex: "controlledSummary",
+            key: "controlledSummary",
             render: (value?: string) => value || "-",
-            title: t("bknTrace.fields.question"),
+            title: t("bknTrace.fields.inputSummary"),
           },
           {
-            dataIndex: "resultPreview",
             key: "resultPreview",
-            render: (value?: string) => value || "-",
-            title: t("bknTrace.fields.result"),
+            render: (_: unknown, value: RequestSummary) => operationResult(value, t),
+            title: t("bknTrace.fields.operationResult"),
           },
           {
             dataIndex: "status",
             key: "status",
-            render: (value: string) => <Tag color={statusColor(value)}>{value}</Tag>,
+            render: (value: string) => <Tag color={statusColor(value)}>{statusLabel(value, t)}</Tag>,
             title: t("bknTrace.fields.status"),
             width: 120,
           },
@@ -642,27 +661,17 @@ function InteractionRequests({ requests }: { requests: RequestSummary[] }) {
   );
 }
 
-function BusinessContent({
-  artifacts,
-  fallbackQuestion,
-  fallbackResult,
-}: {
-  artifacts: EvidenceArtifact[];
-  fallbackQuestion?: string;
-  fallbackResult?: string;
-}) {
+function OpenBKNCallContent({ summary }: { summary: RequestSummary }) {
   const { t } = useTranslation();
-  const question = artifacts.find((artifact) => artifact.artifactType === "question");
-  const result = [...artifacts].reverse().find((artifact) => artifact.artifactType === "result");
   return (
     <div className={styles.businessContent}>
       <section>
-        <Typography.Text type="secondary">{t("bknTrace.fields.question")}</Typography.Text>
-        <ArtifactContent content={question?.content ?? fallbackQuestion} />
+        <Typography.Text type="secondary">{t("bknTrace.fields.inputSummary")}</Typography.Text>
+        <ArtifactContent content={summary.controlledSummary || summary.questionPreview} />
       </section>
       <section>
-        <Typography.Text type="secondary">{t("bknTrace.fields.result")}</Typography.Text>
-        <ArtifactContent content={result?.content ?? fallbackResult} />
+        <Typography.Text type="secondary">{t("bknTrace.fields.operationResult")}</Typography.Text>
+        <ArtifactContent content={summary.errorSummary || operationResult(summary, t)} />
       </section>
     </div>
   );
@@ -670,19 +679,15 @@ function BusinessContent({
 
 function BusinessExplanation({
   artifacts,
-	fallbackQuestion,
-	fallbackResult,
   graph,
 }: {
   artifacts: EvidenceArtifact[];
-	fallbackQuestion?: string;
-	fallbackResult?: string;
   graph: BusinessGraph;
 }) {
   const { t } = useTranslation();
   const stages = businessStoryStages(graph.data.nodes);
-	const question = artifacts.find((artifact) => artifact.artifactType === "question")?.content ?? fallbackQuestion;
-	const result = artifacts.find((artifact) => artifact.artifactType === "result")?.content ?? fallbackResult;
+  const question = artifacts.find((artifact) => artifact.artifactType === "question")?.content;
+  const result = artifacts.find((artifact) => artifact.artifactType === "result")?.content;
   const supportingArtifacts = artifacts.filter(
     (artifact) => !["question", "result"].includes(artifact.artifactType),
   );
@@ -731,6 +736,12 @@ function BusinessExplanation({
 
 function TraceExecutions({ traces }: { traces: TraceExecutionSummary[] }) {
   const { t } = useTranslation();
+  const durationLabels = useMemo(() => ({
+    hour: t("bknTrace.durationUnits.hour"),
+    millisecond: t("bknTrace.durationUnits.millisecond"),
+    minute: t("bknTrace.durationUnits.minute"),
+    second: t("bknTrace.durationUnits.second"),
+  }), [t]);
   const [graph, setGraph] = useState<TraceGraph>();
   const [loadingTraceId, setLoadingTraceId] = useState<string>();
   const [error, setError] = useState<string>();
@@ -764,18 +775,24 @@ function TraceExecutions({ traces }: { traces: TraceExecutionSummary[] }) {
       title: t("bknTrace.fields.traceId"),
     },
     { dataIndex: "rootOperation", key: "rootOperation", title: t("bknTrace.fields.operation") },
-    { dataIndex: "spanCount", key: "spanCount", title: t("bknTrace.metrics.spans"), width: 100 },
+    {
+      dataIndex: "spanCount",
+      key: "spanCount",
+      render: (value: number, record) => record.spanCountStatus === "available" ? value : "-",
+      title: t("bknTrace.metrics.spans"),
+      width: 100,
+    },
     {
       dataIndex: "status",
       key: "status",
-      render: (value: string) => <Tag color={statusColor(value)}>{value}</Tag>,
+      render: (value: string) => <Tag color={statusColor(value)}>{statusLabel(value, t)}</Tag>,
       title: t("bknTrace.fields.status"),
       width: 120,
     },
     {
       dataIndex: "durationMs",
       key: "durationMs",
-      render: (value?: number) => value === undefined ? "-" : `${value} ms`,
+      render: (value?: number) => formatDuration(value, durationLabels),
       title: t("bknTrace.fields.duration"),
       width: 120,
     },
@@ -794,7 +811,7 @@ function TraceExecutions({ traces }: { traces: TraceExecutionSummary[] }) {
     {
       dataIndex: "durationNano",
       key: "durationNano",
-      render: (value: number) => `${Math.round(value / 1_000_000)} ms`,
+      render: (value: number) => formatDuration(value / 1_000_000, durationLabels),
       title: t("bknTrace.fields.duration"),
       width: 120,
     },
@@ -943,6 +960,9 @@ function mapProvenancePage<T>(
 function mapConversationRow(summary: ConversationSummary): ProvenanceListRow {
   return {
     agentOrApp: summary.agentOrApp,
+	agentName: summary.agentName,
+	applicationPrincipalId: summary.applicationPrincipalId,
+	effectiveSubjectId: summary.effectiveSubjectId,
     conversationId: summary.conversationId,
     durationMs: summary.durationMs,
     evidenceCompleteness: summary.evidenceCompleteness,
@@ -959,6 +979,9 @@ function mapConversationRow(summary: ConversationSummary): ProvenanceListRow {
 function mapInteractionRow(summary: InteractionListSummary): ProvenanceListRow {
   return {
     agentOrApp: summary.agentOrApp,
+	agentName: summary.agentName,
+	applicationPrincipalId: summary.applicationPrincipalId,
+	effectiveSubjectId: summary.effectiveSubjectId,
     conversationId: summary.conversationId,
     durationMs: summary.durationMs,
     evidenceCompleteness: summary.evidenceCompleteness,
@@ -978,6 +1001,9 @@ function mapRequestRow(
 ): ProvenanceListRow {
   return {
     agentOrApp: summary.agentOrApp,
+	agentName: summary.agentName,
+	applicationPrincipalId: summary.applicationPrincipalId,
+	effectiveSubjectId: summary.effectiveSubjectId,
     conversationId: summary.conversationId,
     durationMs: summary.durationMs,
     evidenceCompleteness: summary.evidenceCompleteness,
@@ -998,17 +1024,31 @@ function operationLabel(
   t: (key: string, options?: Record<string, unknown>) => string,
 ) {
   const standardLabels: Record<string, string> = {
+    describe_resource: "bknTrace.operations.describeResource",
+    find_skills: "bknTrace.operations.findSkills",
+    get_action_info: "bknTrace.operations.getActionInfo",
+    get_kn_detail: "bknTrace.operations.getKnowledgeNetworkDetail",
+    get_logic_properties_values: "bknTrace.operations.calculateLogic",
+    list_knowledge_networks: "bknTrace.operations.listKnowledgeNetworks",
+    list_resources: "bknTrace.operations.listResources",
+    query_instance_subgraph: "bknTrace.operations.querySubgraph",
+    query_object_instance: "bknTrace.operations.queryObject",
     run_sql: "bknTrace.operations.runSql",
     search_schema: "bknTrace.operations.searchSchema",
   };
   const key = summary.toolName ? standardLabels[summary.toolName] : undefined;
-  return key ? t(key) : summary.toolName || summary.operationKey || summary.questionPreview || summary.requestId;
+  const base = key ? t(key) : summary.toolName || summary.operationKey || summary.questionPreview || summary.requestId;
+  return summary.controlledSummary ? `${base} · ${summary.controlledSummary}` : base;
 }
 
 function operationResult(
   summary: RequestSummary,
   t: (key: string, options?: Record<string, unknown>) => string,
 ) {
+  if (summary.resultCount === 0) return t("bknTrace.operationResults.noData");
+  if (summary.resultCount !== undefined) {
+    return t("bknTrace.operationResults.dataCount", { count: summary.resultCount });
+  }
   return t(`bknTrace.operationResults.${summary.status}`, { count: summary.businessRefs.length });
 }
 
@@ -1026,13 +1066,18 @@ function emptySummaryPage<T>(): SummaryPage<T> {
   };
 }
 
-function uniqueProvenanceRows(rows: ProvenanceListRow[]) {
-  return [...new Map(rows.map((row) => [row.id, row])).values()];
+function statusColor(value: string) {
+  if (value === "completed" || value === "closed" || value === "ok") return "green";
+  if (value === "error" || value === "failed") return "red";
+  if (value === "running" || value === "active") return "blue";
+  if (["abandoned", "canceled", "expired", "handed_off"].includes(value)) return "orange";
+  return "default";
 }
 
-function statusColor(value: string) {
-  if (value === "completed" || value === "ok") return "green";
-  if (value === "error") return "red";
-  if (value === "running") return "blue";
-  return "default";
+function statusLabel(value: string, t: (key: string) => string) {
+  return t(`bknTrace.status.${value || "unknown"}`);
+}
+
+function evidenceLabel(value: string, t: (key: string) => string) {
+  return t(`bknTrace.evidence.${value || "content_unavailable"}`);
 }

@@ -51,6 +51,7 @@ describe("observability service", () => {
           trace_id: "4b3d59daeff5bfbb23d46c47a5051ec9",
         }],
         next_cursor: null,
+        pagination: { page: 2, page_size: 20 },
         partial: false,
         count: { value: 1, accuracy: "exact" },
         source_status: [],
@@ -59,13 +60,23 @@ describe("observability service", () => {
     });
     const { listLogs } = await import("@/modules/bkn-trace/services/observability.service");
 
-    const result = await listLogs({ categories: ["runtime.business"], limit: 20, traceId: "4b3d59daeff5bfbb23d46c47a5051ec9" });
+    const result = await listLogs({
+      categories: ["runtime.business"],
+      page: 2,
+      pageSize: 20,
+      timeFrom: "2026-08-01T00:00:00.000Z",
+      timeTo: "2026-08-02T00:00:00.000Z",
+      traceId: "4b3d59daeff5bfbb23d46c47a5051ec9",
+    });
 
     expect(getMock).toHaveBeenCalledWith("/observability/v1/logs", {
       headers: { "x-business-domain": "bd_demo" },
       params: {
         categories: ["runtime.business"],
-        limit: 20,
+        page: 2,
+        page_size: 20,
+        time_from: "2026-08-01T00:00:00.000Z",
+        time_to: "2026-08-02T00:00:00.000Z",
         trace_id: "4b3d59daeff5bfbb23d46c47a5051ec9",
       },
       skipErrorToast: true,
@@ -76,6 +87,7 @@ describe("observability service", () => {
       summary: "读取需求预测对象",
       toolName: "run_sql",
     });
+    expect(result).toMatchObject({ page: 2, pageSize: 20 });
     expect(getMock.mock.calls.flat().join(" ")).not.toContain("_search");
   });
 

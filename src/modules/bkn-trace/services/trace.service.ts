@@ -143,6 +143,7 @@ export type TraceGraph = {
 };
 
 export type EvidenceChain = {
+  conclusionScope: "interaction" | "trace";
   data: {
     artifactLinks: TraceArtifactLink[];
     businessRefs: TraceBusinessRef[];
@@ -168,6 +169,7 @@ export type TraceArtifactLink = {
 };
 
 export type BusinessGraph = {
+  conclusionScope: "interaction" | "trace";
   data: {
     edges: TraceBusinessEdge[];
     nodes: TraceBusinessNode[];
@@ -205,9 +207,13 @@ export type ActionSummary = {
 export type RequestSummary = {
   actionSummary: ActionSummary;
   agentOrApp?: string;
+	agentName?: string;
+	applicationPrincipalId?: string;
+	effectiveSubjectId?: string;
   businessDomain?: string;
   businessRefs: string[];
   completedAt?: string;
+  controlledSummary?: string;
   conversationId?: string;
   durationMs?: number;
   errorSummary?: string;
@@ -220,6 +226,7 @@ export type RequestSummary = {
   partialReasons: string[];
   questionPreview?: string;
   requestId: string;
+  resultCount?: number;
   resultPreview?: string;
   startedAt?: string;
   status: string;
@@ -229,6 +236,9 @@ export type RequestSummary = {
 
 export type ConversationSummary = {
   agentOrApp?: string;
+	agentName?: string;
+	applicationPrincipalId?: string;
+	effectiveSubjectId?: string;
   businessDomain?: string;
   completedAt?: string;
   conversationId: string;
@@ -249,6 +259,9 @@ export type ConversationSummary = {
 
 export type InteractionListSummary = {
   agentOrApp?: string;
+	agentName?: string;
+	applicationPrincipalId?: string;
+	effectiveSubjectId?: string;
   businessDomain?: string;
   completedAt?: string;
   conversationId?: string;
@@ -269,6 +282,9 @@ export type InteractionListSummary = {
 
 export type TraceExecutionSummary = {
   agentOrApp?: string;
+	agentName?: string;
+	applicationPrincipalId?: string;
+	effectiveSubjectId?: string;
   businessDomain?: string;
   completedAt?: string;
   conversationId?: string;
@@ -278,6 +294,7 @@ export type TraceExecutionSummary = {
   requestId: string;
   rootOperation?: string;
   spanCount: number;
+  spanCountStatus: "available" | "unavailable";
   startedAt?: string;
   status: string;
   traceId: string;
@@ -286,6 +303,8 @@ export type TraceExecutionSummary = {
 export type SummaryPage<T> = {
   entries: T[];
   nextCursor?: string;
+	page?: number;
+	pageSize?: number;
   partial: boolean;
   partialReasons: string[];
   total: number;
@@ -293,11 +312,19 @@ export type SummaryPage<T> = {
 };
 
 export type InteractionSummary = {
+	agentName?: string;
+	applicationPrincipalId?: string;
   completedAt?: string;
   conversationId?: string;
   durationMs?: number;
+	effectiveSubjectId?: string;
+	errorSummary?: string;
+	evidenceCompleteness: string;
   interactionId: string;
+	partialReasons: string[];
+	questionPreview?: string;
   requests: RequestSummary[];
+	resultPreview?: string;
   startedAt?: string;
   status: string;
   traces: TraceExecutionSummary[];
@@ -342,6 +369,8 @@ export type RequestSummaryQuery = {
   keyword?: string;
   knowledgeNetwork?: string;
   limit?: number;
+	page?: number;
+	pageSize?: number;
   status?: string;
   to?: string;
 };
@@ -419,6 +448,7 @@ type BackendTraceGraph = {
 
 type BackendEvidenceChain = {
   "bkn.request.id"?: string;
+  conclusion_scope?: string;
   data?: {
     artifact_links?: Array<{
       artifact_ref?: string;
@@ -442,6 +472,7 @@ type BackendEvidenceChain = {
 
 type BackendBusinessGraph = {
   "bkn.request.id"?: string;
+  conclusion_scope?: string;
   data?: {
     edges?: Array<{
       edge_type?: string;
@@ -504,9 +535,13 @@ type BackendActionSummary = {
 type BackendRequestSummary = {
   action_summary?: BackendActionSummary;
   agent_or_app?: string;
+	agent_name?: string;
+	application_principal_id?: string;
+	effective_subject_id?: string;
   business_domain?: string;
   business_refs?: string[];
   completed_at?: string;
+  controlled_summary?: string;
   conversation_id?: string;
   duration_ms?: number;
   error_summary?: string;
@@ -519,6 +554,7 @@ type BackendRequestSummary = {
   partial_reasons?: string[];
   question_preview?: string;
   request_id?: string;
+  result_count?: number;
   result_preview?: string;
   started_at?: string;
   status?: string;
@@ -528,6 +564,9 @@ type BackendRequestSummary = {
 
 type BackendConversationSummary = {
   agent_or_app?: string;
+	agent_name?: string;
+	application_principal_id?: string;
+	effective_subject_id?: string;
   business_domain?: string;
   completed_at?: string;
   conversation_id?: string;
@@ -548,6 +587,9 @@ type BackendConversationSummary = {
 
 type BackendInteractionListSummary = {
   agent_or_app?: string;
+	agent_name?: string;
+	application_principal_id?: string;
+	effective_subject_id?: string;
   business_domain?: string;
   completed_at?: string;
   conversation_id?: string;
@@ -568,6 +610,9 @@ type BackendInteractionListSummary = {
 
 type BackendTraceExecutionSummary = {
   agent_or_app?: string;
+	agent_name?: string;
+	application_principal_id?: string;
+	effective_subject_id?: string;
   business_domain?: string;
   completed_at?: string;
   conversation_id?: string;
@@ -577,6 +622,7 @@ type BackendTraceExecutionSummary = {
   request_id?: string;
   root_operation?: string;
   span_count?: number;
+  span_count_status?: "available" | "unavailable";
   started_at?: string;
   status?: string;
   trace_id?: string;
@@ -585,6 +631,8 @@ type BackendTraceExecutionSummary = {
 type BackendSummaryPage<T> = {
   entries?: T[];
   next_cursor?: string | null;
+	page?: number;
+	page_size?: number;
   partial?: boolean;
   partial_reasons?: string[];
   total?: number;
@@ -592,11 +640,19 @@ type BackendSummaryPage<T> = {
 };
 
 type BackendInteractionSummary = {
+	agent_name?: string;
+	application_principal_id?: string;
   completed_at?: string;
   conversation_id?: string;
   duration_ms?: number;
+	effective_subject_id?: string;
+	error_summary?: string;
+	evidence_completeness?: string;
   interaction_id?: string;
+	partial_reasons?: string[];
+	question_preview?: string;
   requests?: BackendRequestSummary[];
+	result_preview?: string;
   started_at?: string;
   status?: string;
   traces?: BackendTraceExecutionSummary[];
@@ -726,11 +782,19 @@ export async function getInteractionSummary(
     traceRequestConfig(),
   );
   return {
+	agentName: response.data.agent_name,
+	applicationPrincipalId: response.data.application_principal_id,
     completedAt: response.data.completed_at,
     conversationId: response.data.conversation_id,
     durationMs: response.data.duration_ms,
+	effectiveSubjectId: response.data.effective_subject_id,
+	errorSummary: response.data.error_summary,
+	evidenceCompleteness: response.data.evidence_completeness ?? "content_unavailable",
     interactionId: response.data.interaction_id ?? "",
+	partialReasons: response.data.partial_reasons ?? [],
+	questionPreview: response.data.question_preview,
     requests: (response.data.requests ?? []).map(mapRequestSummary),
+	resultPreview: response.data.result_preview,
     startedAt: response.data.started_at,
     status: normalizeExecutionStatus(response.data.status),
     traces: (response.data.traces ?? []).map(mapTraceExecutionSummary),
@@ -792,6 +856,8 @@ function targetParams(scope: TraceQueryScope) {
 function summaryParams(query: RequestSummaryQuery) {
   const params: Record<string, number | string> = {};
   if (query.limit !== undefined) params.limit = query.limit;
+	if (query.page !== undefined) params.page = query.page;
+	if (query.pageSize !== undefined) params.page_size = query.pageSize;
   if (query.cursor) params.cursor = query.cursor;
   if (query.from) params.from = query.from;
   if (query.to) params.to = query.to;
@@ -815,6 +881,8 @@ function mapSummaryPage<TBackend, T>(
   return {
     entries: (data.entries ?? []).map(mapEntry),
     nextCursor: data.next_cursor ?? undefined,
+	page: data.page ?? 1,
+	pageSize: data.page_size ?? 50,
     partial: Boolean(data.partial),
     partialReasons: data.partial_reasons ?? [],
     total: data.total ?? 0,
@@ -832,7 +900,19 @@ function mapActionSummary(data?: BackendActionSummary): ActionSummary {
   };
 }
 
-const EXECUTION_STATUSES = new Set(["completed", "error", "running", "unknown"]);
+const EXECUTION_STATUSES = new Set([
+  "active",
+	"abandoned",
+	"canceled",
+  "closed",
+  "completed",
+  "error",
+  "expired",
+	"failed",
+	"handed_off",
+  "running",
+  "unknown",
+]);
 
 function normalizeExecutionStatus(status?: string) {
   return status && EXECUTION_STATUSES.has(status) ? status : "unknown";
@@ -842,9 +922,13 @@ function mapRequestSummary(data: BackendRequestSummary): RequestSummary {
   return {
     actionSummary: mapActionSummary(data.action_summary),
     agentOrApp: data.agent_or_app,
+	agentName: data.agent_name,
+	applicationPrincipalId: data.application_principal_id,
+	effectiveSubjectId: data.effective_subject_id,
     businessDomain: data.business_domain,
     businessRefs: data.business_refs ?? [],
     completedAt: data.completed_at,
+    controlledSummary: data.controlled_summary,
     conversationId: data.conversation_id,
     durationMs: data.duration_ms,
     errorSummary: data.error_summary,
@@ -857,6 +941,7 @@ function mapRequestSummary(data: BackendRequestSummary): RequestSummary {
     partialReasons: data.partial_reasons ?? [],
     questionPreview: data.question_preview,
     requestId: data.request_id ?? "",
+    resultCount: data.result_count,
     resultPreview: data.result_preview,
     startedAt: data.started_at,
     status: normalizeExecutionStatus(data.status),
@@ -868,6 +953,9 @@ function mapRequestSummary(data: BackendRequestSummary): RequestSummary {
 function mapConversationSummary(data: BackendConversationSummary): ConversationSummary {
   return {
     agentOrApp: data.agent_or_app,
+	agentName: data.agent_name,
+	applicationPrincipalId: data.application_principal_id,
+	effectiveSubjectId: data.effective_subject_id,
     businessDomain: data.business_domain,
     completedAt: data.completed_at,
     conversationId: data.conversation_id ?? "",
@@ -890,6 +978,9 @@ function mapConversationSummary(data: BackendConversationSummary): ConversationS
 function mapInteractionListSummary(data: BackendInteractionListSummary): InteractionListSummary {
   return {
     agentOrApp: data.agent_or_app,
+	agentName: data.agent_name,
+	applicationPrincipalId: data.application_principal_id,
+	effectiveSubjectId: data.effective_subject_id,
     businessDomain: data.business_domain,
     completedAt: data.completed_at,
     conversationId: data.conversation_id,
@@ -912,6 +1003,9 @@ function mapInteractionListSummary(data: BackendInteractionListSummary): Interac
 function mapTraceExecutionSummary(data: BackendTraceExecutionSummary): TraceExecutionSummary {
   return {
     agentOrApp: data.agent_or_app,
+	agentName: data.agent_name,
+	applicationPrincipalId: data.application_principal_id,
+	effectiveSubjectId: data.effective_subject_id,
     businessDomain: data.business_domain,
     completedAt: data.completed_at,
     conversationId: data.conversation_id,
@@ -921,6 +1015,7 @@ function mapTraceExecutionSummary(data: BackendTraceExecutionSummary): TraceExec
     requestId: data.request_id ?? "",
     rootOperation: data.root_operation,
     spanCount: data.span_count ?? 0,
+    spanCountStatus: data.span_count_status ?? "unavailable",
     startedAt: data.started_at,
     status: normalizeExecutionStatus(data.status),
     traceId: data.trace_id ?? "",
@@ -1004,6 +1099,7 @@ function mapTraceGraph(data: BackendTraceGraph): TraceGraph {
 
 function mapEvidenceChain(data: BackendEvidenceChain): EvidenceChain {
   return {
+    conclusionScope: data.conclusion_scope === "interaction" ? "interaction" : "trace",
     data: {
       artifactLinks: (data.data?.artifact_links ?? []).map((link) => ({
         artifactRef: link.artifact_ref ?? "",
@@ -1029,6 +1125,7 @@ function mapEvidenceChain(data: BackendEvidenceChain): EvidenceChain {
 
 function mapBusinessGraph(data: BackendBusinessGraph): BusinessGraph {
   return {
+    conclusionScope: data.conclusion_scope === "interaction" ? "interaction" : "trace",
     data: {
       edges: (data.data?.edges ?? []).map((edge) => ({
         edgeType: edge.edge_type ?? "",

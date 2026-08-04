@@ -10,6 +10,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import runStyles from "@/modules/bkn-trace/scenes/BknTraceRunsScene.module.css";
 import { BknTraceAdvancedExplorerScene, BknTraceExplorerScene } from "@/modules/bkn-trace/scenes/BknTraceExplorerScene";
+import { BknTraceRunsScene } from "@/modules/bkn-trace/scenes/BknTraceRunsScene";
 import {
   getAccessProfile,
   getBusinessGraph,
@@ -163,6 +164,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
         requestId: requestSummary.requestId,
         rootOperation: "bkn.agent.chat",
         spanCount: 7,
+        spanCountStatus: "available",
         status: "completed",
         traceId: "trace_001",
       }],
@@ -192,6 +194,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
         evidenceRefs: [],
       },
       page: { edgeCount: 0, nodeCount: 2, truncated: false },
+	  conclusionScope: "trace",
       partial: false,
       partialReason: [],
       requestId: requestSummary.requestId,
@@ -218,6 +221,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
         }],
       },
       page: { edgeCount: 0, nodeCount: 1, truncated: false },
+	  conclusionScope: "trace",
       partial: false,
       partialReason: [],
       requestId: requestSummary.requestId,
@@ -294,6 +298,20 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(traceInput instanceof HTMLInputElement && traceInput.value).toBe("trace_001");
   });
 
+	it("单次 OpenBKN 调用把最终结论中性归属到所属交互轮次", async () => {
+		const chain = await vi.mocked(getEvidenceChain)({ traceId: "trace_001" });
+		const graph = await vi.mocked(getBusinessGraph)({ traceId: "trace_001" });
+		vi.mocked(getEvidenceChain).mockResolvedValue({ ...chain, conclusionScope: "interaction" });
+		vi.mocked(getBusinessGraph).mockResolvedValue({ ...graph, conclusionScope: "interaction" });
+		window.history.replaceState({}, "", "/observability/traces?trace_id=trace_001");
+
+		render(<BknTraceAdvancedExplorerScene />);
+		fireEvent.click(screen.getByRole("button", { name: /bknTrace\.actions\.query/ }));
+
+		expect(await screen.findByText("bknTrace.conclusionAtInteraction")).not.toBeNull();
+		expect(screen.queryByText("bknTrace.incompleteBusiness")).toBeNull();
+	});
+
   it("业务制品按 Trace 不可用时仍展示技术调用链", async () => {
     window.history.replaceState({}, "", "/observability/traces?trace_id=trace_001");
     vi.mocked(getEvidenceChain).mockRejectedValueOnce(new Error("evidence chain not found"));
@@ -313,20 +331,49 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
   it("默认展示可筛选的会话列表，而不是要求用户输入内部 ID", async () => {
     render(<BknTraceExplorerScene />);
 
-    await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ limit: 30 }));
+    await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ page: 1, pageSize: 20 }));
     expect(await screen.findByText("客户 A 的风险为什么上升？")).not.toBeNull();
     expect(await screen.findByText("近 7 天投诉增加，风险等级上升。")).not.toBeNull();
     expect(screen.queryByPlaceholderText("bknTrace.placeholders.traceId")).toBeNull();
   });
 
+	it("默认显示 Agent 声明名称并隐藏可信技术主键", async () => {
+		vi.mocked(getConversationSummaries).mockResolvedValue({
+			entries: [{
+				agentName: "供应链分析助手",
+				applicationPrincipalId: "266c6a42-6131-4d62-8f39-853e7093701c",
+				conversationId: "conversation_identity",
+				effectiveSubjectId: "user-001",
+				evidenceCompleteness: "complete",
+				interactionCount: 3,
+				knowledgeNetworks: [],
+				partialReasons: [],
+				questionPreview: "查询供应链库存",
+				requestCount: 9,
+				resultPreview: "库存查询完成",
+				status: "active",
+				traceCount: 9,
+			}],
+			partial: false,
+			partialReasons: [],
+			total: 1,
+			truncated: false,
+		});
+
+		render(<BknTraceRunsScene />);
+
+		expect(await screen.findByText("供应链分析助手")).not.toBeNull();
+		expect(screen.queryByText("266c6a42-6131-4d62-8f39-853e7093701c")).toBeNull();
+	});
+
   it("按会话、交互轮次、请求的真实层级下钻并同步 URL", async () => {
 	render(<BknTraceExplorerScene />);
 
-	await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ limit: 30 }));
+	await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ page: 1, pageSize: 20 }));
 	fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
 	await waitFor(() => expect(getInteractionSummaries).toHaveBeenCalledWith({
 	  conversationId: "conversation_customer_risk",
-	  limit: 30,
+	  page: 1, pageSize: 20,
 	}));
 	expect(window.location.search).toContain("view=interactions");
 	expect(window.location.search).toContain("conversation_id=conversation_customer_risk");
@@ -335,7 +382,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 	await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({
 	  conversationId: "conversation_customer_risk",
 	  interactionId: "interaction_customer_risk",
-	  limit: 30,
+	  page: 1, pageSize: 20,
 	}));
 	expect(window.location.search).toContain("view=requests");
 	expect(window.location.search).toContain("interaction_id=interaction_customer_risk");
@@ -408,7 +455,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 	await waitFor(() => expect(getInteractionSummaries).toHaveBeenCalledWith({
 	  conversationId: "conversation_customer_risk",
 	  keyword: "风险",
-	  limit: 30,
+	  page: 1, pageSize: 20,
 	  status: "completed",
 	}));
 	const keywordInput = screen.getByPlaceholderText("bknTrace.placeholders.keyword");
@@ -440,7 +487,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
   it("将页面标题和筛选区放在独立布局块中，避免正式壳层压缩标题", async () => {
     render(<BknTraceExplorerScene />);
 
-    await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ limit: 30 }));
+    await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ page: 1, pageSize: 20 }));
 
     const title = screen.getByRole("heading", { name: "bknTrace.title" });
     const header = title.closest("header");
@@ -453,25 +500,11 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(header?.contains(filters)).toBe(false);
   });
 
-  it("使用服务端游标继续加载业务运行列表", async () => {
-    render(<BknTraceExplorerScene />);
-
-    await waitFor(() => expect(getConversationSummaries).toHaveBeenCalledWith({ limit: 30 }));
-    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.loadMore" }));
-
-    await waitFor(() =>
-      expect(getConversationSummaries).toHaveBeenLastCalledWith({
-        cursor: "cursor-2",
-        limit: 30,
-      }),
-    );
-  });
-
-  it("从业务运行下钻完整问题、结果、业务语义和关联技术 Trace", async () => {
+  it("OpenBKN 调用详情不复制整轮问题和最终答案，并保留关联技术 Trace", async () => {
     window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
     render(<BknTraceExplorerScene />);
 
-    await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
+    await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ page: 1, pageSize: 20 }));
     fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
 
     await waitFor(() => expect(getRequestSummary).toHaveBeenCalledWith("req_business_001"));
@@ -480,8 +513,8 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(getBusinessGraph).toHaveBeenCalledWith({ requestId: "req_business_001", limit: 100 });
     await waitFor(() => expect(getEvidenceArtifact).toHaveBeenCalledTimes(2));
 
-    expect((await screen.findAllByText("客户 A 的风险为什么上升？（完整问题）")).length).toBeGreaterThan(1);
-    expect(screen.getAllByText("近 7 天投诉增加 42%，因此风险等级从中升至高。（完整结论）").length).toBeGreaterThan(1);
+    expect(screen.queryByText("客户 A 的风险为什么上升？（完整问题）")).toBeNull();
+    expect(screen.queryByText("近 7 天投诉增加 42%，因此风险等级从中升至高。（完整结论）")).toBeNull();
     expect(screen.getByText("客户风险")).not.toBeNull();
 
     fireEvent.click(screen.getByText("bknTrace.tabs.diagnostics"));
@@ -502,9 +535,11 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 	  }, {
 		...requestSummary,
 		businessRefs: ["resource:forecast"],
+		controlledSummary: "需求预测数据",
 		operationId: "op_sql",
 		operationKey: "supply-chain-data",
 		requestId: "req_sql",
+		resultCount: 40,
 		toolName: "run_sql",
 	  }],
 	  partial: false,
@@ -516,9 +551,10 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 	window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
 	render(<BknTraceExplorerScene />);
 
-	await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
+	await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ page: 1, pageSize: 20 }));
 	expect(await screen.findByRole("button", { name: "bknTrace.operations.searchSchema" }, { timeout: 5_000 })).not.toBeNull();
-	expect(screen.getByRole("button", { name: "bknTrace.operations.runSql" })).not.toBeNull();
+	expect(screen.getByRole("button", { name: "bknTrace.operations.runSql · 需求预测数据" })).not.toBeNull();
+	expect(screen.getByText("bknTrace.operationResults.dataCount")).not.toBeNull();
 	expect(screen.getAllByText("bknTrace.fields.operationResult")).not.toHaveLength(0);
   });
 
@@ -530,7 +566,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 
 	window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
 	render(<BknTraceExplorerScene />);
-	await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
+	await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ page: 1, pageSize: 20 }));
 	fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }, { timeout: 5_000 }));
 
 	expect(await screen.findByText("bknTrace.sections.requestDetail")).not.toBeNull();
@@ -542,13 +578,16 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     const interactionRequest = {
       ...requestSummary,
       conversationId: "conversation_supply_chain",
+	  controlledSummary: "HD供应链业务知识网络_v3",
       interactionId: "interaction_june_forecast",
+	  toolName: "search_schema",
     };
     const sqlRequest = {
       ...interactionRequest,
-      questionPreview: "查询 6 月需求预测单",
+	  controlledSummary: "需求预测数据",
       requestId: "req_sql_002",
-      resultPreview: "返回 3 张预测单，共 11594",
+	  resultCount: 3,
+	  toolName: "run_sql",
     };
     vi.mocked(getRequestSummaries).mockResolvedValue({
       entries: [interactionRequest],
@@ -563,7 +602,9 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
       completedAt: "2026-07-27T09:00:03Z",
       conversationId: "conversation_supply_chain",
       durationMs: 3000,
+	  evidenceCompleteness: "complete",
       interactionId: "interaction_june_forecast",
+	  partialReasons: [],
       requests: [interactionRequest, sqlRequest],
       startedAt: "2026-07-27T09:00:00Z",
       status: "completed",
@@ -572,6 +613,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
         requestId: "req_sql_002",
         rootOperation: "context-loader.run_sql",
         spanCount: 4,
+        spanCountStatus: "available",
         status: "completed",
         traceId: "trace_sql_002",
       }],
@@ -579,16 +621,21 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 
     window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
     render(<BknTraceExplorerScene />);
-    await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ limit: 30 }));
-    fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
+    await waitFor(() => expect(getRequestSummaries).toHaveBeenCalledWith({ page: 1, pageSize: 20 }));
+    fireEvent.click(await screen.findByRole("button", {
+      name: "bknTrace.operations.searchSchema · HD供应链业务知识网络_v3",
+    }));
 
     await waitFor(() =>
       expect(getInteractionSummary).toHaveBeenCalledWith("interaction_june_forecast"),
     );
     fireEvent.click(screen.getByText("bknTrace.tabs.diagnostics"));
 
-    expect(await screen.findByText("req_sql_002")).not.toBeNull();
-    expect(screen.getByText("查询 6 月需求预测单")).not.toBeNull();
+    expect((await screen.findAllByText(
+      "bknTrace.operations.searchSchema · HD供应链业务知识网络_v3",
+    )).length).toBeGreaterThan(0);
+    expect(screen.getByText("bknTrace.operations.runSql · 需求预测数据")).not.toBeNull();
+    expect(screen.queryByText("req_sql_002")).toBeNull();
     expect(screen.getByText("trace_sql_002")).not.toBeNull();
   }, 30_000);
 });

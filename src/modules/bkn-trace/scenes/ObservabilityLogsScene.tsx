@@ -6,12 +6,14 @@
  */
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Input, Select, Space, Spin, Table, Tag, Typography } from "antd";
+import { Alert, Button, DatePicker, Input, Select, Space, Spin, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import dayjs, { type Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { buildAppPath } from "@/app/router/app-paths";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { LogDetailDrawer } from "@/modules/bkn-trace/components/LogDetailDrawer";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import { listLogFacets, listLogs, type LogCategory, type LogListResult, type LogRecord } from "@/modules/bkn-trace/services/observability.service";
@@ -24,32 +26,26 @@ export function ObservabilityLogsScene() {
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<LogCategory[]>([]);
   const [services, setServices] = useState<string[]>([]);
+  const [timeRange, setTimeRange] = useState<LogTimeRange>(() => defaultLogTimeRange(associatedScope));
   const [serviceOptions, setServiceOptions] = useState<Array<{ label: string; value: string }>>([]);
   const [selectedLogId, setSelectedLogId] = useState<string>();
   const [result, setResult] = useState<LogListResult>();
+	const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
-	const logQuery = useCallback((cursor?: string) => ({
-		...(categories.length ? { categories } : {}),
-		...(cursor ? { cursor } : {}),
-		limit: 50,
-		...(query.trim() ? { query: query.trim() } : {}),
-		...(services.length ? { services } : {}),
-		...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
-		...(associatedScope.traceId ? { traceId: associatedScope.traceId } : {}),
-	}), [associatedScope, categories, query, services]);
-
-  const load = useCallback(async (access: TraceAccessProfile, nextQuery = "", nextCategories: LogCategory[] = [], nextServices: string[] = []) => {
+  const load = useCallback(async (access: TraceAccessProfile, nextQuery: string, nextCategories: LogCategory[], nextServices: string[], nextTimeRange: LogTimeRange, nextPage = 1, nextPageSize = 20) => {
     if (!canSearchLogs(access, associatedScope)) return;
     setLoading(true);
     setError(undefined);
     try {
       setResult(await listLogs({
         ...(nextCategories.length ? { categories: nextCategories } : {}),
-        limit: 50,
+		page: nextPage,
+		pageSize: nextPageSize,
         ...(nextQuery.trim() ? { query: nextQuery.trim() } : {}),
         ...(nextServices.length ? { services: nextServices } : {}),
+        ...serializeTimeRange(nextTimeRange),
         ...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
         ...(associatedScope.traceId ? { traceId: associatedScope.traceId } : {}),
       }));
@@ -67,7 +63,7 @@ export function ObservabilityLogsScene() {
         if (!active) return;
         setProfile(access);
         if (canSearchLogs(access, associatedScope)) {
-          void load(access, "", [], []);
+          void load(access, "", [], [], timeRange);
           if (access.globalLogSearch) void listLogFacets("service_name")
             .then((facets) => {
               if (active) setServiceOptions(facets.data.map((item) => ({ label: `${item.value} (${item.count})`, value: item.value })));
@@ -83,7 +79,7 @@ export function ObservabilityLogsScene() {
         }
       });
     return () => { active = false; };
-  }, [associatedScope, load, t]);
+  }, [associatedScope, load, t, timeRange]);
 
   const columns = useMemo<ColumnsType<LogRecord>>(() => [
     { dataIndex: "eventTimestamp", key: "eventTimestamp", title: t("bknTrace.logs.columns.time"), width: 180, render: formatTime },
@@ -100,21 +96,11 @@ export function ObservabilityLogsScene() {
     },
   ], [t]);
 
-	const loadMore = useCallback(async () => {
-		if (!result?.nextCursor) return;
-		setLoading(true);
-		setError(undefined);
-		try {
-			const next = await listLogs(logQuery(result.nextCursor));
-			const records = new Map(result.data.map((record) => [record.logId, record]));
-			for (const record of next.data) records.set(record.logId, record);
-			setResult({ ...next, data: [...records.values()] });
-		} catch (caught: unknown) {
-			setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
-		} finally {
-			setLoading(false);
-		}
-	}, [logQuery, result, t]);
+	const changePage = useCallback((nextPage: number, nextPageSize: number) => {
+		if (!profile) return;
+		setPagination({ page: nextPage, pageSize: nextPageSize });
+		void load(profile, query, categories, services, timeRange, nextPage, nextPageSize);
+	}, [categories, load, profile, query, services, timeRange]);
 
   if (loading && !profile) return <Spin />;
   if (profile && !canSearchLogs(profile, associatedScope)) return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
@@ -127,18 +113,37 @@ export function ObservabilityLogsScene() {
       {error ? <Alert message={error} showIcon type="error" /> : null}
       {result?.partial ? <Alert message={t("bknTrace.logs.partialWarning")} showIcon type="warning" /> : null}
       {associatedScope.traceId || associatedScope.requestId ? <div className={styles.sourceStrip}><Tag color="blue">{associatedScope.traceId ? `Trace ${associatedScope.traceId}` : `Request ${associatedScope.requestId}`}</Tag></div> : null}
-      {profile?.globalLogSearch ? <div className={styles.filters}>
-        <Input allowClear onChange={(event) => setQuery(event.target.value)} onPressEnter={() => profile && void load(profile, query, categories, services)} placeholder={t("bknTrace.logs.searchPlaceholder")} prefix={<SearchOutlined />} value={query} />
+		{profile?.globalLogSearch ? <div className={styles.filters}>
+			<Input allowClear onChange={(event) => setQuery(event.target.value)} onPressEnter={() => { setPagination((current) => ({ ...current, page: 1 })); if (profile) void load(profile, query, categories, services, timeRange, 1); }} placeholder={t("bknTrace.logs.searchPlaceholder")} prefix={<SearchOutlined />} value={query} />
         <Select allowClear mode="multiple" onChange={setCategories} options={(profile?.allowedLogCategories ?? []).map((category) => ({ label: category, value: category }))} placeholder={t("bknTrace.logs.categoryPlaceholder")} value={categories} />
         <Select allowClear mode="multiple" onChange={setServices} options={serviceOptions} placeholder={t("bknTrace.logs.servicePlaceholder")} value={services} />
-        <Space><Button icon={<SearchOutlined />} onClick={() => profile && void load(profile, query, categories, services)} type="primary">{t("bknTrace.actions.query")}</Button><Button aria-label={t("bknTrace.actions.refresh")} icon={<ReloadOutlined />} onClick={() => profile && void load(profile, query, categories, services)} /></Space>
+        <DatePicker.RangePicker
+          allowClear={false}
+          aria-label={t("bknTrace.logs.timeRange")}
+          onChange={(value) => { if (value?.[0] && value[1]) setTimeRange([value[0], value[1]]); }}
+          showTime
+          value={timeRange}
+        />
+			<Space><Button icon={<SearchOutlined />} onClick={() => { setPagination((current) => ({ ...current, page: 1 })); if (profile) void load(profile, query, categories, services, timeRange, 1); }} type="primary">{t("bknTrace.actions.query")}</Button><Button aria-label={t("bknTrace.actions.refresh")} icon={<ReloadOutlined />} onClick={() => { if (profile) void load(profile, query, categories, services, timeRange, pagination.page, pagination.pageSize); }} /></Space>
       </div> : null}
       {result?.sourceStatus.length ? <div className={styles.sourceStrip}>{result.sourceStatus.map((source) => <Tag color={source.status === "healthy" ? "green" : "orange"} key={source.sourceId}>{source.sourceId} · {source.status}</Tag>)}</div> : null}
-      <Spin spinning={loading}><Table columns={columns} dataSource={result?.data ?? []} onRow={(record) => ({ onClick: () => setSelectedLogId(record.logId) })} pagination={false} rowClassName={styles.clickableRow} rowKey="logId" scroll={{ x: 1050 }} /></Spin>
-      {result?.nextCursor ? <div className={styles.loadMore}><Button disabled={loading} onClick={() => void loadMore()}>{t("bknTrace.actions.loadMore")}</Button></div> : null}
+      <Spin spinning={loading}><Table columns={columns} dataSource={result?.data ?? []} locale={{ emptyText: t(associatedScope.traceId || associatedScope.requestId ? "bknTrace.logs.emptyAssociated" : "bknTrace.logs.emptyRange") }} onRow={(record) => ({ onClick: () => setSelectedLogId(record.logId) })} pagination={false} rowClassName={styles.clickableRow} rowKey="logId" scroll={{ x: 1050 }} /></Spin>
+		{result?.count.value ? <TablePaginationBar current={result.page ?? pagination.page} onChange={changePage} pageSize={result.pageSize ?? pagination.pageSize} showSizeChanger showTotal={(total) => t("common.total", { total })} total={result.count.value} /> : null}
       <LogDetailDrawer logId={selectedLogId} onClose={() => setSelectedLogId(undefined)} />
     </div>
   );
+}
+
+type LogTimeRange = [Dayjs, Dayjs];
+
+function defaultLogTimeRange(scope: { requestId: string; traceId: string }): LogTimeRange {
+  const end = dayjs();
+  const days = scope.requestId || scope.traceId ? 7 : 1;
+  return [end.subtract(days, "day"), end];
+}
+
+function serializeTimeRange(range: LogTimeRange) {
+  return { timeFrom: range[0].toISOString(), timeTo: range[1].toISOString() };
 }
 
 function readAssociatedLogScope() {
@@ -157,7 +162,19 @@ function formatTime(value?: string) {
 }
 
 function operationLabel(toolName: string | undefined, summary: string, eventName: string, t: (key: string) => string) {
-  if (toolName === "run_sql") return t("bknTrace.operations.runSql");
-  if (toolName === "search_schema") return t("bknTrace.operations.searchSchema");
+	const labels: Record<string, string> = {
+		describe_resource: "bknTrace.operations.describeResource",
+		find_skills: "bknTrace.operations.findSkills",
+		get_action_info: "bknTrace.operations.getActionInfo",
+		get_kn_detail: "bknTrace.operations.getKnowledgeNetworkDetail",
+		get_logic_properties_values: "bknTrace.operations.calculateLogic",
+		list_knowledge_networks: "bknTrace.operations.listKnowledgeNetworks",
+		list_resources: "bknTrace.operations.listResources",
+		query_instance_subgraph: "bknTrace.operations.querySubgraph",
+		query_object_instance: "bknTrace.operations.queryObject",
+		run_sql: "bknTrace.operations.runSql",
+		search_schema: "bknTrace.operations.searchSchema",
+	};
+	if (toolName && labels[toolName]) return t(labels[toolName]);
   return toolName || summary || eventName;
 }
