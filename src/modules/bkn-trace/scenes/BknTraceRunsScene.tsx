@@ -243,6 +243,7 @@ export function BknTraceRunsScene() {
   }
 
   function searchRequests() {
+		abandonRequestDetail();
     const query = currentQuery();
 		setPagination((current) => ({ ...current, page: 1 }));
     setActiveQuery(query);
@@ -251,6 +252,7 @@ export function BknTraceRunsScene() {
   }
 
   function changeView(nextView: ProvenanceView) {
+	abandonRequestDetail();
 	const query = currentQuery();
 	if (nextView === "conversations") {
 	  delete query.conversationId;
@@ -259,7 +261,6 @@ export function BknTraceRunsScene() {
 	  delete query.interactionId;
 	}
 	setView(nextView);
-	setDeepLinkedRequestId(undefined);
 	setPagination((current) => ({ ...current, page: 1 }));
 	setActiveQuery(query);
 	setPage(undefined);
@@ -269,6 +270,7 @@ export function BknTraceRunsScene() {
 
   function openProvenanceRow(row: ProvenanceListRow) {
 	if (view === "conversations" && row.conversationId) {
+	  abandonRequestDetail();
 	  const query = { ...currentQuery(), conversationId: row.conversationId };
 	  setView("interactions");
 	  setPagination((current) => ({ ...current, page: 1 }));
@@ -279,6 +281,7 @@ export function BknTraceRunsScene() {
 	  return;
 	}
 	if (view === "interactions" && row.interactionId) {
+	  abandonRequestDetail();
 	  const query = {
 		...currentQuery(),
 		conversationId: row.conversationId ?? activeQuery.conversationId,
@@ -297,6 +300,15 @@ export function BknTraceRunsScene() {
 	  syncProvenanceURL(view, currentQuery(), row.requestId);
 	  void openRequest(row.requestId);
 	}
+  }
+
+  function abandonRequestDetail() {
+    // List navigation can race an in-flight detail request. Advancing the
+    // sequence makes the abandoned request unable to overwrite the new view.
+    detailRequestSequence.current += 1;
+    setSelectedRequestId(undefined);
+    setDetail(undefined);
+    setDeepLinkedRequestId(undefined);
   }
 
   const columns: ColumnsType<ProvenanceListRow> = [
@@ -376,9 +388,7 @@ export function BknTraceRunsScene() {
               aria-label={t("bknTrace.actions.back")}
               icon={<ArrowLeftOutlined />}
               onClick={() => {
-                setSelectedRequestId(undefined);
-                setDetail(undefined);
-				setDeepLinkedRequestId(undefined);
+				abandonRequestDetail();
 				syncProvenanceURL(view, currentQuery());
               }}
               type="text"
