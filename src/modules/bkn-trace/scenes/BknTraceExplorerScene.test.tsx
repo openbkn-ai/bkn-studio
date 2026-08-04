@@ -351,6 +351,18 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(window.location.search).not.toContain("request_id=");
   });
 
+  it("深链详情关闭后不会因重新渲染再次打开", async () => {
+    window.history.replaceState({}, "", "/observability/business-provenance?view=requests&request_id=req_business_001");
+
+    const { rerender } = render(<BknTraceRunsScene />);
+    await waitFor(() => expect(getRequestSummary).toHaveBeenCalledWith("req_business_001"));
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.back" }));
+    rerender(<BknTraceRunsScene />);
+
+    expect(screen.queryByText("bknTrace.sections.requestDetail")).toBeNull();
+    expect(getRequestSummary).toHaveBeenCalledTimes(1);
+  });
+
 	it("默认显示 Agent 声明名称并隐藏可信技术主键", async () => {
 		vi.mocked(getConversationSummaries).mockResolvedValue({
 			entries: [{

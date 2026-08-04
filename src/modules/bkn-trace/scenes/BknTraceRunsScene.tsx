@@ -125,6 +125,7 @@ export function BknTraceRunsScene() {
   const [error, setError] = useState<string>();
   const detailRequestSequence = useRef(0);
   const provenanceRequestSequence = useRef(0);
+  const deepLinkConsumed = useRef(false);
 
   const loadProvenance = useCallback(async (
     targetView: ProvenanceView,
@@ -202,17 +203,25 @@ export function BknTraceRunsScene() {
     } catch (caught: unknown) {
       if (requestSequence === detailRequestSequence.current) {
         setDetail(undefined);
+		setDeepLinkedRequestId(undefined);
+		setSelectedRequestId(undefined);
+		syncProvenanceURL(view, activeQuery);
         setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
       }
     } finally {
       if (requestSequence === detailRequestSequence.current) setLoading(false);
     }
-  }, [t]);
+  }, [activeQuery, t, view]);
 
   useEffect(() => {
     void loadProvenance(initialState.view, { ...initialState.query, page: 1, pageSize: 20 });
-    if (initialState.requestId) void openRequest(initialState.requestId);
-  }, [initialState, loadProvenance, openRequest]);
+  }, [initialState, loadProvenance]);
+
+  useEffect(() => {
+    if (deepLinkConsumed.current || !initialState.requestId) return;
+    deepLinkConsumed.current = true;
+    void openRequest(initialState.requestId);
+  }, [initialState.requestId, openRequest]);
 
   function currentQuery(): RequestSummaryQuery {
     return {
