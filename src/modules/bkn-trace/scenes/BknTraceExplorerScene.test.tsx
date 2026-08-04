@@ -337,6 +337,20 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(screen.queryByPlaceholderText("bknTrace.placeholders.traceId")).toBeNull();
   });
 
+  it("消费日志传入的 request_id 深链并打开对应 OpenBKN 调用", async () => {
+    window.history.replaceState({}, "", "/observability/business-provenance?view=requests&request_id=req_business_001");
+
+    render(<BknTraceRunsScene />);
+
+    await waitFor(() => expect(getRequestSummary).toHaveBeenCalledWith("req_business_001"));
+    expect(await screen.findByText("bknTrace.sections.requestDetail")).not.toBeNull();
+    expect(window.location.search).toContain("request_id=req_business_001");
+
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.back" }));
+
+    expect(window.location.search).not.toContain("request_id=");
+  });
+
 	it("默认显示 Agent 声明名称并隐藏可信技术主键", async () => {
 		vi.mocked(getConversationSummaries).mockResolvedValue({
 			entries: [{
@@ -555,7 +569,23 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 	expect(await screen.findByRole("button", { name: "bknTrace.operations.searchSchema" }, { timeout: 5_000 })).not.toBeNull();
 	expect(screen.getByRole("button", { name: "bknTrace.operations.runSql · 需求预测数据" })).not.toBeNull();
 	expect(screen.getByText("bknTrace.operationResults.dataCount")).not.toBeNull();
-	expect(screen.getAllByText("bknTrace.fields.operationResult")).not.toHaveLength(0);
+    expect(screen.getAllByText("bknTrace.fields.operationResult")).not.toHaveLength(0);
+  });
+
+  it("未返回结果数的终态调用复用完整状态文案", async () => {
+    vi.mocked(getRequestSummaries).mockResolvedValue({
+      entries: [{ ...requestSummary, requestId: "req_failed", status: "failed" }],
+      partial: false,
+      partialReasons: [],
+      total: 1,
+      truncated: false,
+    });
+    window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
+
+    render(<BknTraceRunsScene />);
+
+    expect((await screen.findAllByText("bknTrace.status.failed")).length).toBeGreaterThan(1);
+    expect(screen.queryByText("bknTrace.operationResults.failed")).toBeNull();
   });
 
   it("可选证据视图缺失时仍展示 OpenBKN 调用基础详情", async () => {

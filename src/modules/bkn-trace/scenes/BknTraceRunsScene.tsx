@@ -118,6 +118,7 @@ export function BknTraceRunsScene() {
   const [activeQuery, setActiveQuery] = useState<RequestSummaryQuery>(initialState.query);
 	const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
   const [page, setPage] = useState<SummaryPage<ProvenanceListRow>>();
+  const [deepLinkedRequestId, setDeepLinkedRequestId] = useState(initialState.requestId);
   const [selectedRequestId, setSelectedRequestId] = useState<string>();
   const [detail, setDetail] = useState<RequestDetail>();
   const [loading, setLoading] = useState(false);
@@ -154,84 +155,7 @@ export function BknTraceRunsScene() {
     }
   }, [t]);
 
-  useEffect(() => {
-    void loadProvenance(initialState.view, { ...initialState.query, page: 1, pageSize: 20 });
-  }, [initialState, loadProvenance]);
-
-  function currentQuery(): RequestSummaryQuery {
-    return {
-	  ...(view !== "conversations" && activeQuery.conversationId
-		? { conversationId: activeQuery.conversationId }
-		: {}),
-	  ...(view === "requests" && activeQuery.interactionId
-		? { interactionId: activeQuery.interactionId }
-		: {}),
-      ...(agentOrApp.trim() ? { agentOrApp: agentOrApp.trim() } : {}),
-      ...(businessDomain.trim() ? { businessDomain: businessDomain.trim() } : {}),
-      ...(evidenceCompleteness ? { evidenceCompleteness } : {}),
-      ...(from ? { from } : {}),
-      ...(keyword.trim() ? { keyword: keyword.trim() } : {}),
-      ...(knowledgeNetwork.trim() ? { knowledgeNetwork: knowledgeNetwork.trim() } : {}),
-      ...(status ? { status } : {}),
-      ...(to ? { to } : {}),
-    };
-  }
-
-  function searchRequests() {
-    const query = currentQuery();
-		setPagination((current) => ({ ...current, page: 1 }));
-    setActiveQuery(query);
-    syncProvenanceURL(view, query);
-    void loadProvenance(view, { ...query, page: 1, pageSize: pagination.pageSize });
-  }
-
-  function changeView(nextView: ProvenanceView) {
-	const query = currentQuery();
-	if (nextView === "conversations") {
-	  delete query.conversationId;
-	  delete query.interactionId;
-	} else if (nextView === "interactions") {
-	  delete query.interactionId;
-	}
-	setView(nextView);
-	setPagination((current) => ({ ...current, page: 1 }));
-	setActiveQuery(query);
-	setPage(undefined);
-	syncProvenanceURL(nextView, query);
-	void loadProvenance(nextView, { ...query, page: 1, pageSize: pagination.pageSize });
-  }
-
-  function openProvenanceRow(row: ProvenanceListRow) {
-	if (view === "conversations" && row.conversationId) {
-	  const query = { ...currentQuery(), conversationId: row.conversationId };
-	  setView("interactions");
-	  setPagination((current) => ({ ...current, page: 1 }));
-	  setActiveQuery(query);
-	  setPage(undefined);
-	  syncProvenanceURL("interactions", query);
-	  void loadProvenance("interactions", { ...query, page: 1, pageSize: pagination.pageSize });
-	  return;
-	}
-	if (view === "interactions" && row.interactionId) {
-	  const query = {
-		...currentQuery(),
-		conversationId: row.conversationId ?? activeQuery.conversationId,
-		interactionId: row.interactionId,
-	  };
-	  setView("requests");
-	  setPagination((current) => ({ ...current, page: 1 }));
-	  setActiveQuery(query);
-	  setPage(undefined);
-	  syncProvenanceURL("requests", query);
-	  void loadProvenance("requests", { ...query, page: 1, pageSize: pagination.pageSize });
-	  return;
-	}
-	if (row.requestId) {
-	  void openRequest(row.requestId);
-	}
-  }
-
-  async function openRequest(requestId: string) {
+  const openRequest = useCallback(async (requestId: string) => {
     const requestSequence = ++detailRequestSequence.current;
     setSelectedRequestId(requestId);
     setLoading(true);
@@ -283,6 +207,87 @@ export function BknTraceRunsScene() {
     } finally {
       if (requestSequence === detailRequestSequence.current) setLoading(false);
     }
+  }, [t]);
+
+  useEffect(() => {
+    void loadProvenance(initialState.view, { ...initialState.query, page: 1, pageSize: 20 });
+    if (initialState.requestId) void openRequest(initialState.requestId);
+  }, [initialState, loadProvenance, openRequest]);
+
+  function currentQuery(): RequestSummaryQuery {
+    return {
+	  ...(view !== "conversations" && activeQuery.conversationId
+		? { conversationId: activeQuery.conversationId }
+		: {}),
+	  ...(view === "requests" && activeQuery.interactionId
+		? { interactionId: activeQuery.interactionId }
+		: {}),
+      ...(agentOrApp.trim() ? { agentOrApp: agentOrApp.trim() } : {}),
+      ...(businessDomain.trim() ? { businessDomain: businessDomain.trim() } : {}),
+      ...(evidenceCompleteness ? { evidenceCompleteness } : {}),
+      ...(from ? { from } : {}),
+      ...(keyword.trim() ? { keyword: keyword.trim() } : {}),
+      ...(knowledgeNetwork.trim() ? { knowledgeNetwork: knowledgeNetwork.trim() } : {}),
+      ...(status ? { status } : {}),
+      ...(to ? { to } : {}),
+    };
+  }
+
+  function searchRequests() {
+    const query = currentQuery();
+		setPagination((current) => ({ ...current, page: 1 }));
+    setActiveQuery(query);
+    syncProvenanceURL(view, query, deepLinkedRequestId);
+    void loadProvenance(view, { ...query, page: 1, pageSize: pagination.pageSize });
+  }
+
+  function changeView(nextView: ProvenanceView) {
+	const query = currentQuery();
+	if (nextView === "conversations") {
+	  delete query.conversationId;
+	  delete query.interactionId;
+	} else if (nextView === "interactions") {
+	  delete query.interactionId;
+	}
+	setView(nextView);
+	setDeepLinkedRequestId(undefined);
+	setPagination((current) => ({ ...current, page: 1 }));
+	setActiveQuery(query);
+	setPage(undefined);
+	syncProvenanceURL(nextView, query);
+	void loadProvenance(nextView, { ...query, page: 1, pageSize: pagination.pageSize });
+  }
+
+  function openProvenanceRow(row: ProvenanceListRow) {
+	if (view === "conversations" && row.conversationId) {
+	  const query = { ...currentQuery(), conversationId: row.conversationId };
+	  setView("interactions");
+	  setPagination((current) => ({ ...current, page: 1 }));
+	  setActiveQuery(query);
+	  setPage(undefined);
+	  syncProvenanceURL("interactions", query);
+	  void loadProvenance("interactions", { ...query, page: 1, pageSize: pagination.pageSize });
+	  return;
+	}
+	if (view === "interactions" && row.interactionId) {
+	  const query = {
+		...currentQuery(),
+		conversationId: row.conversationId ?? activeQuery.conversationId,
+		interactionId: row.interactionId,
+	  };
+	  setView("requests");
+	  setPagination((current) => ({ ...current, page: 1 }));
+	  setActiveQuery(query);
+	  setPage(undefined);
+	  syncProvenanceURL("requests", query);
+	  void loadProvenance("requests", { ...query, page: 1, pageSize: pagination.pageSize });
+	  return;
+	}
+	if (row.requestId) {
+	  setDeepLinkedRequestId(row.requestId);
+	  syncProvenanceURL(view, currentQuery(), row.requestId);
+	  void openRequest(row.requestId);
+	}
   }
 
   const columns: ColumnsType<ProvenanceListRow> = [
@@ -364,6 +369,8 @@ export function BknTraceRunsScene() {
               onClick={() => {
                 setSelectedRequestId(undefined);
                 setDetail(undefined);
+				setDeepLinkedRequestId(undefined);
+				syncProvenanceURL(view, currentQuery());
               }}
               type="text"
             />
@@ -907,7 +914,7 @@ function toLocalDateTimeInput(value?: string) {
   return local.toISOString().slice(0, 16);
 }
 
-function initialProvenanceState(): { query: RequestSummaryQuery; view: ProvenanceView } {
+function initialProvenanceState(): { query: RequestSummaryQuery; requestId?: string; view: ProvenanceView } {
   const params = new URLSearchParams(window.location.search);
   const requestedView = params.get("view");
   const view: ProvenanceView = requestedView === "interactions" || requestedView === "requests"
@@ -929,11 +936,12 @@ function initialProvenanceState(): { query: RequestSummaryQuery; view: Provenanc
 	  ...(read("status") ? { status: read("status") } : {}),
 	  ...(read("to") ? { to: read("to") } : {}),
     },
+	requestId: read("request_id"),
     view,
   };
 }
 
-function syncProvenanceURL(view: ProvenanceView, query: RequestSummaryQuery) {
+function syncProvenanceURL(view: ProvenanceView, query: RequestSummaryQuery, requestId?: string) {
   const params = new URLSearchParams();
   if (view !== "conversations") params.set("view", view);
   if (query.conversationId) params.set("conversation_id", query.conversationId);
@@ -945,7 +953,8 @@ function syncProvenanceURL(view: ProvenanceView, query: RequestSummaryQuery) {
 	if (query.agentOrApp) params.set("agent_or_app", query.agentOrApp);
 	if (query.businessDomain) params.set("business_domain", query.businessDomain);
 	if (query.knowledgeNetwork) params.set("knowledge_network", query.knowledgeNetwork);
-	if (query.evidenceCompleteness) params.set("evidence_completeness", query.evidenceCompleteness);
+  if (query.evidenceCompleteness) params.set("evidence_completeness", query.evidenceCompleteness);
+	if (requestId) params.set("request_id", requestId);
   const suffix = params.toString();
   window.history.replaceState({}, "", `${window.location.pathname}${suffix ? `?${suffix}` : ""}`);
 }
@@ -1049,7 +1058,14 @@ function operationResult(
   if (summary.resultCount !== undefined) {
     return t("bknTrace.operationResults.dataCount", { count: summary.resultCount });
   }
-  return t(`bknTrace.operationResults.${summary.status}`, { count: summary.businessRefs.length });
+	if (summary.status === "completed") {
+	  return t("bknTrace.operationResults.completed", { count: summary.businessRefs.length });
+	}
+	if (summary.status === "error") return t("bknTrace.operationResults.error");
+	if (summary.status === "active" || summary.status === "running") {
+	  return t("bknTrace.operationResults.running");
+	}
+	return statusLabel(summary.status, t);
 }
 
 function settledValue<T>(result: PromiseSettledResult<T>) {
