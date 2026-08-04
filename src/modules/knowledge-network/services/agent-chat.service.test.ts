@@ -14,11 +14,14 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  buildAgentTools,
   DEFAULT_AGENT_CONFIG,
   formatToolResultLimits,
   runAgentChat,
   type AgentChunk,
 } from "@/modules/knowledge-network/services/agent-chat.service";
+import { LIFECYCLE_TOOL_NAMES } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
+import type { McpSession } from "@/modules/knowledge-network/services/context-loader.service";
 
 type AiModule = typeof import("ai");
 
@@ -50,6 +53,36 @@ async function run(onChunk: (chunk: AgentChunk) => void, system = "sys"): Promis
     onChunk,
   });
 }
+
+describe("buildAgentTools", () => {
+  const session: McpSession = {
+    callTool: () => Promise.resolve({ ok: true, latencyMs: 0, isError: false, text: "", structured: undefined }),
+  };
+
+  it("生命周期工具不进模型工具集", () => {
+    // tools/list 会把生命周期工具和业务工具一起返回；模型看见就会自己去调，
+    // 结果是另开一条交互撞上前端已开的那条，或者被 permission_denied 挡下白烧步数。
+    const tools = buildAgentTools(
+      [
+        { name: "run_sql" },
+        { name: "bkn_start_interaction" },
+        { name: "bkn_create_conversation" },
+        { name: "bkn_complete_interaction" },
+        { name: "bkn_fail_interaction" },
+        { name: "bkn_cancel_interaction" },
+        { name: "search_schema" },
+      ],
+      { base: "https://example.test", token: "t", knId: "kn_1" },
+      "kn_1",
+      DEFAULT_AGENT_CONFIG,
+      { getToken: () => "t", refresh: () => Promise.resolve("t") },
+      { session },
+    );
+
+    expect(Object.keys(tools).sort()).toEqual(["run_sql", "search_schema"]);
+    for (const name of LIFECYCLE_TOOL_NAMES) expect(tools[name]).toBeUndefined();
+  });
+});
 
 describe("formatToolResultLimits", () => {
   it("报的是当前 config 的真实上限，schema 类不跟数据类混为一谈", () => {

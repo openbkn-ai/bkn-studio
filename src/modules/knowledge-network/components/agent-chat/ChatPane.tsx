@@ -58,6 +58,7 @@ import {
   createBknLifecycle,
   lifecycleEnv,
   localExternalKeyStore,
+  LIFECYCLE_TOOL_NAMES,
   type TurnOutcome,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
@@ -816,13 +817,19 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     () => models.map((m) => ({ value: m.modelName, label: m.default ? `${m.modelName} · 默认` : m.modelName })),
     [models],
   );
+  // 模型可见的工具集：tools/list 会连生命周期工具一起返回，那些是平台侧管账的，
+  // 不该出现在给模型的工具集里，也不该出现在勾选器里让用户以为可以开关。
+  const agentToolDefs = useMemo(
+    () => toolDefs?.filter((t) => !LIFECYCLE_TOOL_NAMES.has(t.name)) ?? null,
+    [toolDefs],
+  );
   // 与 MCP 侧栏同款分组：本地 op 定义带组名，线上新增的归 Knowledge Network。
   const toolOptions = useMemo(() => {
-    if (!toolDefs) return [];
+    if (!agentToolDefs) return [];
     const groupOf = (name: string) => CONTEXT_LOADER_OPS.find((op) => op.id === name)?.group ?? "Knowledge Network";
     const order = [...new Set(CONTEXT_LOADER_OPS.map((op) => op.group))];
     const buckets = new Map<string, { value: string; label: string }[]>();
-    for (const t of toolDefs) {
+    for (const t of agentToolDefs) {
       const group = groupOf(t.name);
       if (!buckets.has(group)) buckets.set(group, []);
       buckets.get(group)!.push({ value: t.name, label: t.name });
@@ -834,11 +841,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
       })
       .map((group) => ({ label: group, title: group, options: buckets.get(group)! }));
-  }, [toolDefs]);
+  }, [agentToolDefs]);
   // 选择器展示值：null（全部）时显示当前已知的全部工具名。
   const draftToolValue = useMemo(
-    () => draftToolSelection ?? (toolDefs ? toolDefs.map((t) => t.name) : []),
-    [draftToolSelection, toolDefs],
+    () => draftToolSelection ?? (agentToolDefs ? agentToolDefs.map((t) => t.name) : []),
+    [draftToolSelection, agentToolDefs],
   );
 
   const empty = messages.length === 0;
@@ -912,7 +919,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             maxTagPlaceholder={() =>
               draftToolSelection === null
                 ? `全部 · ${draftToolValue.length}`
-                : `已选 ${draftToolValue.length}${toolDefs ? ` / ${toolDefs.length}` : ""}`
+                : `已选 ${draftToolValue.length}${agentToolDefs ? ` / ${agentToolDefs.length}` : ""}`
             }
             allowClear
             onClear={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}

@@ -34,6 +34,21 @@ import {
 const MANIFEST_VERSION = "1";
 
 /**
+ * 受管生命周期工具。tools/list 会把它们和业务工具一起返回，但它们是**平台侧管账的**，
+ * 由前端 lifecycle 驱动（beginTurn / finish），绝不能出现在给模型的工具集里：
+ * 模型自己调 bkn_start_interaction 会另开一条交互，跟前端已开的那条撞上 Core 的
+ * active interaction 唯一约束；即使被 permission_denied 挡住，也白烧掉工具步数、
+ * 把失败调用塞进 Trace，还给模型喂一堆和问题无关的报错。
+ */
+export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
+  "bkn_create_conversation",
+  "bkn_start_interaction",
+  "bkn_complete_interaction",
+  "bkn_fail_interaction",
+  "bkn_cancel_interaction",
+]);
+
+/**
  * 交互租约时长。终结时租约必须还没过期，否则 Core 判 `terminal_conflict`；
  * 一轮 Agent 对话可以跑满 40 步工具，按分钟级留足。
  */

@@ -24,6 +24,7 @@ import {
   MF_RETRYABLE_CODES,
   type NormalizedAgentError,
 } from "@/modules/knowledge-network/services/agent-error";
+import { LIFECYCLE_TOOL_NAMES } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
   createMcpSession,
   receiptFromStructured,
@@ -254,7 +255,8 @@ export function buildAgentTools(
     return res.text;
   };
   for (const def of mcpTools) {
-    if (!def.name) continue;
+    // 生命周期工具由前端驱动，模型看见就会自己去调，见 LIFECYCLE_TOOL_NAMES。
+    if (!def.name || LIFECYCLE_TOOL_NAMES.has(def.name)) continue;
     const schema =
       def.inputSchema && typeof def.inputSchema === "object"
         ? stripBknContextSchema(def.inputSchema as Record<string, unknown>)
