@@ -63,8 +63,8 @@ describe("connector-template · SQL Server", () => {
     expect(isValidJSONObject(undefined)).toBe(true);
     expect(isValidJSONObject("")).toBe(true);
     expect(isValidJSONObject("   ")).toBe(true);
-    expect(isValidJSONObject("null")).toBe(true);
-    expect(isValidJSONObject("  null  ")).toBe(true);
+    expect(isValidJSONObject("null")).toBe(false);
+    expect(isValidJSONObject("  null  ")).toBe(false);
     expect(isValidJSONObject('{"encrypt":true}')).toBe(true);
     expect(isValidJSONObject({ encrypt: true })).toBe(true);
     expect(isValidJSONObject("[]")).toBe(false);

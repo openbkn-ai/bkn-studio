@@ -246,6 +246,40 @@ describe("DataConnectFormScene · connection preflight", () => {
     });
   });
 
+  it("trims and preserves empty or null-like values outside options", async () => {
+    permissionState.values.add("catalog:create");
+    mockSQLServerEditCatalog(
+      {},
+      {
+        application_name: "   ",
+        host: "  null  ",
+      },
+    );
+
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.click(
+      screen.getByRole("button", { name: "common.testConnection" }),
+    );
+
+    await waitFor(() => {
+      expect(testDataConnectConfigMock).toHaveBeenCalledWith({
+        connectorConfig: {
+          application_name: "",
+          database: "orders",
+          host: "null",
+          options: {},
+          password: "test-password",
+          port: 1433,
+          schemas: ["sales", "audit"],
+          username: "readonly_user",
+        },
+        connectorType: "sqlserver",
+      });
+    });
+  });
+
   it("creates a SQL Server catalog with the default port", async () => {
     permissionState.values = new Set(["catalog:create"]);
     listDataConnectConnectorTypesMock.mockResolvedValue([
@@ -327,7 +361,10 @@ function connectorField(
   };
 }
 
-function mockSQLServerEditCatalog(options: unknown) {
+function mockSQLServerEditCatalog(
+  options: unknown,
+  connectorConfigOverrides: Record<string, unknown> = {},
+) {
   listDataConnectConnectorTypesMock.mockResolvedValue([
     {
       category: "table",
@@ -341,6 +378,7 @@ function mockSQLServerEditCatalog(options: unknown) {
         database: connectorField("数据库名", "string", true),
         schemas: connectorField("Schema 列表", "array", false),
         options: connectorField("连接参数", "object", false),
+        application_name: connectorField("应用名称", "string", false),
       },
       mode: "local",
       name: "SQL Server",
@@ -357,6 +395,7 @@ function mockSQLServerEditCatalog(options: unknown) {
       port: 1433,
       schemas: ["sales", "audit"],
       username: "readonly_user",
+      ...connectorConfigOverrides,
     },
     connectorType: "sqlserver",
     createTime: "-",

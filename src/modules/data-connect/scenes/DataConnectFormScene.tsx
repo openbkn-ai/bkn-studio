@@ -422,48 +422,43 @@ export function DataConnectFormScene({
 
 function sanitizeConnectorConfig(config: Record<string, unknown>) {
   return Object.fromEntries(
-    Object.entries(config).map(([key, value]) => {
-      if (
-        typeof value === "string" ||
-        typeof value === "number" ||
-        typeof value === "boolean"
-      ) {
-        return [key, value];
-      }
+    Object.entries(config)
+      .filter(([key, value]) => !(key === "options" && value === null))
+      .map(([key, value]) => {
+        if (
+          typeof value === "string" ||
+          typeof value === "number" ||
+          typeof value === "boolean"
+        ) {
+          return [key, value];
+        }
 
-      if (Array.isArray(value)) {
-        return [key, value.map((item) => String(item))];
-      }
+        if (Array.isArray(value)) {
+          return [key, value.map((item) => String(item))];
+        }
 
-      return [key, JSON.stringify(value)];
-    }),
+        return [key, JSON.stringify(value)];
+      }),
   ) as Record<string, boolean | number | string | string[]>;
 }
 
 function normalizeConnectorConfig(config: Record<string, unknown>) {
   return Object.fromEntries(
     Object.entries(config)
-      .filter(
-        ([, value]) =>
-          value !== undefined &&
-          value !== null &&
-          value !== "" &&
-          !(typeof value === "string" && ["", "null"].includes(value.trim())),
-      )
+      .filter(([key, value]) => !(key === "options" && value === null))
       .map(([key, value]) => {
         if (typeof value === "string") {
           const trimmed = value.trim();
 
-          if (
-            (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-            (trimmed.startsWith("[") && trimmed.endsWith("]"))
-          ) {
+          if (key === "options") {
             try {
               return [key, JSON.parse(trimmed) as unknown];
             } catch {
-              return [key, value];
+              return [key, trimmed];
             }
           }
+
+          return [key, trimmed];
         }
 
         return [key, value];

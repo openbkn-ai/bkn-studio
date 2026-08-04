@@ -455,7 +455,7 @@ export function isValidJSONObject(value: unknown) {
   }
 
   const trimmed = value.trim();
-  if (trimmed === "" || trimmed === "null") {
+  if (trimmed === "") {
     return true;
   }
 
