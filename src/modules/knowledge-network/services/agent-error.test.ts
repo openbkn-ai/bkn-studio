@@ -19,12 +19,38 @@ const busyEnvelope = {
   link: "",
 };
 
+/**
+ * 同一个网关的另一种壳：description 里裹的是上游透传的 OpenAI 风格 error，
+ * 且 code 是字符串。外层 code 恒为分类串，不能被当成错误码。
+ */
+const upstreamBusyEnvelope = {
+  code: "ModelFactory.ModelController.Model.Error",
+  description:
+    '{"error":{"message":"Service is too busy. We advise users to temporarily switch to alternative LLM API service providers.","type":"service_unavailable_error","param":null,"code":"service_unavailable_error"}}',
+  detail:
+    '{"error":{"message":"Service is too busy. We advise users to temporarily switch to alternative LLM API service providers.","type":"service_unavailable_error","param":null,"code":"service_unavailable_error"}}',
+  solution: "请检查配置信息",
+  link: "",
+};
+
 describe("parseModelFactoryEnvelope", () => {
   it("解开双层 JSON 编码的模型工厂 envelope", () => {
     expect(parseModelFactoryEnvelope(busyEnvelope)).toEqual({
       code: 50508,
       message: "System is too busy now. Please try again later.",
     });
+  });
+
+  it("解开 description 里再裹一层的上游 error，并保留字符串码", () => {
+    expect(parseModelFactoryEnvelope(upstreamBusyEnvelope)).toEqual({
+      code: "service_unavailable_error",
+      message: "Service is too busy. We advise users to temporarily switch to alternative LLM API service providers.",
+    });
+  });
+
+  it("不把外层的分类串当错误码", () => {
+    // description 解不开时也只能回落到外层，但那层没有 message，不该冒出 ModelFactory.* 当码。
+    expect(parseModelFactoryEnvelope({ code: "ModelFactory.ModelController.Model.Error", description: "not json" })).toBeNull();
   });
 
   it("同样认 OpenAI 兼容的 error 形态（网关修好后就是这个）", () => {
@@ -51,6 +77,16 @@ describe("normalizeAgentError", () => {
     expect(normalized.message).not.toContain("Type validation failed");
     expect(normalized.message).not.toContain("invalid_union");
     expect(normalized.detail).toContain("ModelFactory.ModelController.Model.Error");
+  });
+
+  it("上游透传的 service_unavailable_error 同样翻成人话且判可重试", () => {
+    const error = new TypeValidationError({ value: upstreamBusyEnvelope, cause: new Error("invalid_union") });
+
+    const normalized = normalizeAgentError(error);
+
+    expect(normalized.message).toBe("模型服务繁忙，上游建议暂时改用其他模型（service_unavailable_error）");
+    expect(normalized.retryable).toBe(true);
+    expect(normalized.message).not.toContain("Type validation failed");
   });
 
   it("解不出业务码的 TypeValidationError 也不把 zod 报错糊给用户", () => {

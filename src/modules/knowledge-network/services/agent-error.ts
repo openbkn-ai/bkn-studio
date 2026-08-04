@@ -25,13 +25,26 @@ export type NormalizedAgentError = {
   retryable: boolean;
 };
 
-/** 模型工厂业务码 → 中文短文案。只映射会打到用户脸上的高频码，其余用后端原文。 */
-const MF_MESSAGE_ZH: Record<number, string> = {
-  50508: "模型服务繁忙，请稍后重试",
+/**
+ * 业务码 → 中文短文案。码可能是数字（模型工厂自己的 50508）也可能是字符串
+ * （上游透传的 OpenAI 风格 `service_unavailable_error`），统一按字符串键查。
+ * 只映射会打到用户脸上的高频码，其余直接用后端原文。
+ */
+const MF_MESSAGE_ZH: Record<string, string> = {
+  "50508": "模型服务繁忙，请稍后重试",
+  service_unavailable_error: "模型服务繁忙，上游建议暂时改用其他模型",
+  rate_limit_exceeded: "模型服务被限流，请稍后重试",
+  server_error: "模型服务内部错误，请稍后重试",
 };
 
-/** 值得重试的模型工厂业务码。 */
-export const MF_RETRYABLE_CODES = new Set([50508]);
+/** 值得重试的业务码（同样按字符串键）。 */
+export const MF_RETRYABLE_CODES = new Set([
+  "50508",
+  "service_unavailable_error",
+  "rate_limit_exceeded",
+  "server_error",
+  "overloaded_error",
+]);
 
 /** 值得重试的 HTTP 状态码。 */
 export function isRetryableStatus(status: number | undefined): boolean {
@@ -60,7 +73,7 @@ function stringifyDetail(value: unknown): string | undefined {
   }
 }
 
-type ModelFactoryError = { code?: number; message?: string };
+type ModelFactoryError = { code?: number | string; message?: string };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
@@ -74,28 +87,40 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 /**
- * 解模型工厂错误体。认三种形态：
- * - 自家 envelope：`description` / `detail` 是 JSON 字符串套 `{code, message}`（双层编码，见 #620）
- * - OpenAI 兼容：`{error: {message, code}}`（网关修好后就是这个）
+ * 解模型工厂错误体。实测至少有这几种壳，且会互相嵌套（见 #620）：
+ * - 自家 envelope：`description` / `detail` 是 JSON 字符串，里面可能是 `{code, message}`，
+ *   也可能又裹一层上游透传的 `{error: {message, type, code}}`
+ * - OpenAI 兼容：`{error: {message, code}}`（网关修好后就该是这个）
  * - 已经摊平的 `{code, message}`
+ *
+ * 由外向内逐层试，**深层优先**：envelope 最外层的 `code` 是
+ * `"ModelFactory.ModelController.Model.Error"` 这种分类串，拿它当错误码毫无信息量。
  */
 export function parseModelFactoryEnvelope(raw: unknown): ModelFactoryError | null {
   const root = asRecord(raw);
   if (!root) return null;
 
-  const inner = asRecord(root.error) ?? asRecord(root.description) ?? asRecord(root.detail) ?? root;
-  const code = typeof inner.code === "number" ? inner.code : undefined;
-  const message = typeof inner.message === "string" && inner.message ? inner.message : undefined;
-  if (code === undefined && message === undefined) return null;
-  return { code, message };
+  const layers = [asRecord(root.description), asRecord(root.detail), root];
+  const candidates = layers.flatMap((layer) => (layer ? [asRecord(layer.error), layer] : []));
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const code =
+      typeof candidate.code === "number" || typeof candidate.code === "string" ? candidate.code : undefined;
+    const message = typeof candidate.message === "string" && candidate.message ? candidate.message : undefined;
+    // 只有字符串码没有 message 的层多半是分类串，跳过继续往里找。
+    if (message !== undefined || typeof code === "number") return { code, message };
+  }
+  return null;
 }
 
 function fromModelFactory(mf: ModelFactoryError, detail?: string, retryable?: boolean): NormalizedAgentError {
-  const base = (mf.code !== undefined ? MF_MESSAGE_ZH[mf.code] : undefined) ?? mf.message ?? "模型服务返回错误";
+  const key = mf.code !== undefined ? String(mf.code) : undefined;
+  const base = (key !== undefined ? MF_MESSAGE_ZH[key] : undefined) ?? mf.message ?? "模型服务返回错误";
   return {
-    message: mf.code !== undefined ? `${base}（${mf.code}）` : base,
+    // 码一并带上：客户截个图，支持就能直接对上后端日志。
+    message: key !== undefined ? `${base}（${key}）` : base,
     detail,
-    retryable: retryable ?? (mf.code !== undefined && MF_RETRYABLE_CODES.has(mf.code)),
+    retryable: retryable ?? (key !== undefined && MF_RETRYABLE_CODES.has(key)),
   };
 }
 

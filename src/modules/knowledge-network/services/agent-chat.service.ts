@@ -326,7 +326,7 @@ async function isRetryableResponse(response: Response): Promise<boolean> {
   if ((response.headers.get("content-type") ?? "").includes("text/event-stream")) return false;
   try {
     const mf = parseModelFactoryEnvelope(await response.clone().text());
-    return mf?.code !== undefined && MF_RETRYABLE_CODES.has(mf.code);
+    return mf?.code !== undefined && MF_RETRYABLE_CODES.has(String(mf.code));
   } catch {
     return false;
   }
