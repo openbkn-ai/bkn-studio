@@ -44,6 +44,7 @@ import {
   explainabilityPartialReasons,
   shortValue,
 } from "@/modules/bkn-trace/utils/trace-explainability";
+import { formatDuration } from "@/modules/bkn-trace/utils/duration";
 
 type ScopeMode = "request" | "trace";
 
@@ -138,6 +139,12 @@ export function BknTraceExplorerScene() {
 
 export function BknTraceAdvancedExplorerScene() {
   const { t } = useTranslation();
+  const durationLabels = useMemo(() => ({
+    hour: t("bknTrace.durationUnits.hour"),
+    millisecond: t("bknTrace.durationUnits.millisecond"),
+    minute: t("bknTrace.durationUnits.minute"),
+    second: t("bknTrace.durationUnits.second"),
+  }), [t]);
   const [initialScope] = useState(readInitialTraceScope);
   const [scopeMode, setScopeMode] = useState<ScopeMode>(initialScope.mode);
   const [traceId, setTraceId] = useState(initialScope.traceId);
@@ -162,12 +169,12 @@ export function BknTraceAdvancedExplorerScene() {
       {
         dataIndex: "durationNano",
         key: "durationNano",
-        render: (value: number) => `${Math.round(value / 1_000_000)} ms`,
+        render: (value: number) => formatDuration(value / 1_000_000, durationLabels),
         title: t("bknTrace.fields.duration"),
         width: 120,
       },
     ],
-    [t],
+    [durationLabels, t],
   );
 
   const effectiveScope = useMemo(() => {
@@ -236,6 +243,7 @@ export function BknTraceAdvancedExplorerScene() {
     state.businessGraph?.partialReason ?? [],
     state.snapshotPreview?.partialReason ?? [],
   ], state.businessGraph);
+  const conclusionScope = state.businessGraph?.conclusionScope ?? state.evidenceChain?.conclusionScope;
 
   const nodeTitle = (node: TraceBusinessNode) => {
     return businessNodePresentation(node).title;
@@ -249,6 +257,14 @@ export function BknTraceAdvancedExplorerScene() {
   const story = (
     <div className={styles.storyWorkspace}>
       <div className={styles.storyMain}>
+        {conclusionScope === "interaction" ? (
+          <Alert
+            className={styles.storyPartial}
+            message={t("bknTrace.conclusionAtInteraction")}
+            showIcon
+            type="info"
+          />
+        ) : null}
         {businessPartialReasons.length ? (
           <Alert
             className={styles.storyPartial}

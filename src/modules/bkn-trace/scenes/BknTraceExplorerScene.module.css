@@ -6,11 +6,13 @@
  */
 
 .scene {
-  display: flex;
+	background: #fff;
+	border: 1px solid #e2e7ef;
+	display: flex;
   flex-direction: column;
   gap: 16px;
   min-height: 100%;
-  padding: 20px 24px 28px;
+	padding: 24px;
 }
 
 .toolbar {

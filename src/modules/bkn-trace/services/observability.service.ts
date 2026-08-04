@@ -94,9 +94,13 @@ export type LogListQuery = {
   cursor?: string;
   failedOnly?: boolean;
   limit?: number;
+	page?: number;
+	pageSize?: number;
   query?: string;
   requestId?: string;
   services?: string[];
+  timeFrom?: string;
+  timeTo?: string;
   traceId?: string;
 };
 
@@ -125,6 +129,7 @@ type BackendLogList = {
   data: BackendLogRecord[];
   next_cursor: string | null;
   partial: boolean;
+	pagination?: { page?: number; page_size?: number };
   source_status: BackendSourceStatus[];
 };
 
@@ -133,6 +138,8 @@ export type LogListResult = {
   data: LogRecord[];
   nextCursor?: string;
   partial: boolean;
+	page?: number;
+	pageSize?: number;
   sourceStatus: LogSourceStatus[];
 };
 
@@ -164,6 +171,8 @@ export async function listLogs(query: LogListQuery): Promise<LogListResult> {
     data: response.data.data.map(mapLogRecord),
     ...(response.data.next_cursor ? { nextCursor: response.data.next_cursor } : {}),
     partial: response.data.partial,
+	page: response.data.pagination?.page ?? 1,
+	pageSize: response.data.pagination?.page_size ?? query.pageSize ?? query.limit ?? 50,
     sourceStatus: response.data.source_status.map(mapSourceStatus),
   };
 }
@@ -272,9 +281,13 @@ function logQueryParams(query: LogListQuery) {
   if (query.cursor) params.cursor = query.cursor;
   if (query.failedOnly !== undefined) params.failed_only = query.failedOnly;
   if (query.limit !== undefined) params.limit = query.limit;
+	if (query.page !== undefined) params.page = query.page;
+	if (query.pageSize !== undefined) params.page_size = query.pageSize;
   if (query.query) params.q = query.query;
   if (query.requestId) params.request_id = query.requestId;
   if (query.services?.length) params.services = query.services;
+  if (query.timeFrom) params.time_from = query.timeFrom;
+  if (query.timeTo) params.time_to = query.timeTo;
   if (query.traceId) params.trace_id = query.traceId;
   return params;
 }

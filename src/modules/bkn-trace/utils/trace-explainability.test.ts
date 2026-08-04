@@ -142,6 +142,50 @@ describe("trace explainability rows", () => {
     });
   });
 
+  it("uses the concrete OpenBKN operation before a generic event type", () => {
+    expect(businessNodePresentation({
+      id: "operation:run-sql",
+      nodeType: "operation",
+      label: "retrieval.completed",
+      properties: {
+        event_type: "retrieval.completed",
+        operation_name: "run_sql",
+      },
+    })).toMatchObject({
+      title: "查询业务数据",
+      subtitle: "run_sql",
+      technicalId: "operation:run-sql",
+    });
+  });
+
+  it("presents namespaced Context Loader operations in business language", () => {
+    expect(businessNodePresentation({
+      id: "operation:context-run-sql",
+      nodeType: "operation",
+      label: "retrieval.completed",
+      properties: {
+        event_type: "retrieval.completed",
+        operation_name: "context.run_sql",
+      },
+    })).toMatchObject({
+      title: "查询业务数据",
+      subtitle: "context.run_sql",
+    });
+
+    expect(businessNodePresentation({
+      id: "operation:context-search-schema",
+      nodeType: "operation",
+      label: "retrieval.completed",
+      properties: {
+        event_type: "retrieval.completed",
+        operation_name: "context.search_schema",
+      },
+    })).toMatchObject({
+      title: "检索知识网络结构",
+      subtitle: "context.search_schema",
+    });
+  });
+
   it("falls back to true business refs when backend display names are absent", () => {
     expect(businessNodePresentation({
       id: "evidence:evidence:kn:supplychain_hd0202",
