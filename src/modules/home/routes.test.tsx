@@ -22,7 +22,7 @@ describe("home module registration", () => {
     expect(moduleRoutes.some((route) => route.path === "home")).toBe(true);
   });
 
-  it("owns the default entry path so / lands on the workspace", () => {
+  it("owns the default entry path so / lands on the home page", () => {
     expect(homeRouteContribution.defaultEntryPath).toBe("/home");
     expect(knowledgeNetworkRouteContribution.defaultEntryPath).toBeUndefined();
     expect(defaultModuleRoutePath).toBe("/home");

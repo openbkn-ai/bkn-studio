@@ -7,6 +7,7 @@
 
 import { Tabs } from "antd";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { LargeModelListPanel } from "@/modules/model-resources/components/models/LargeModelListPanel";
 import { SmallModelListPanel } from "@/modules/model-resources/components/models/SmallModelListPanel";
@@ -16,6 +17,20 @@ import styles from "./ModelListScene.module.css";
 
 export function ModelListScene() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeKey = searchParams.get("tab") === "small-model" ? "small-model" : "llm";
+
+  const handleTabChange = (key: string) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    if (key === "llm") {
+      nextSearchParams.delete("tab");
+    } else {
+      nextSearchParams.set("tab", key);
+    }
+
+    setSearchParams(nextSearchParams, { replace: true });
+  };
 
   return (
     <section className={pageStyles.page}>
@@ -25,6 +40,7 @@ export function ModelListScene() {
       </div>
 
       <Tabs
+        activeKey={activeKey}
         className={styles.tabs}
         items={[
           {
@@ -38,6 +54,7 @@ export function ModelListScene() {
             children: <SmallModelListPanel />,
           },
         ]}
+        onChange={handleTabChange}
       />
     </section>
   );

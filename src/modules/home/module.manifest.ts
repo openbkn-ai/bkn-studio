@@ -7,7 +7,7 @@
 
 export const homeModuleManifest = {
   id: "home",
-  name: "Workspace Home",
+  name: "Home",
   permissions: [],
   requiresShell: true,
   services: [],
@@ -15,9 +15,9 @@ export const homeModuleManifest = {
   supportsReadOnly: true,
   scenes: [
     {
-      id: "home.workspace",
+      id: "home.landing",
       exportName: "HomeScene",
-      description: "Workspace landing page with permission-aware entries and recent visits.",
+      description: "Product home with platform and engineering knowledge-network build guidance.",
       inputs: [],
     },
   ],

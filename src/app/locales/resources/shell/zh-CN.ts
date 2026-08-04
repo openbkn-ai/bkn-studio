@@ -15,7 +15,7 @@ export const shellZhCN = {
     collapseSidenav: "收起导航",
     expandSidenav: "展开导航",
     items: {
-      home: "工作台",
+      home: "首页",
       globalBusinessKnowledgeNetwork: "全局业务知识网络",
       domainKnowledgeNetwork: "领域知识网络",
       knowledgeNetworkManagement: "知识网络管理",

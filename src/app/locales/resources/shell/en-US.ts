@@ -15,7 +15,7 @@ export const shellEnUS = {
     collapseSidenav: "Collapse navigation",
     expandSidenav: "Expand navigation",
     items: {
-      home: "Workspace",
+      home: "Home",
       globalBusinessKnowledgeNetwork: "Global Business Knowledge Network",
       domainKnowledgeNetwork: "Domain Knowledge Network",
       knowledgeNetworkManagement: "Knowledge Network Management",
