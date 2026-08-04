@@ -118,7 +118,6 @@ export function BknTraceRunsScene() {
   const [activeQuery, setActiveQuery] = useState<RequestSummaryQuery>(initialState.query);
 	const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
   const [page, setPage] = useState<SummaryPage<ProvenanceListRow>>();
-  const [deepLinkedRequestId, setDeepLinkedRequestId] = useState(initialState.requestId);
   const [selectedRequestId, setSelectedRequestId] = useState<string>();
   const [detail, setDetail] = useState<RequestDetail>();
   const [loading, setLoading] = useState(false);
@@ -203,7 +202,6 @@ export function BknTraceRunsScene() {
     } catch (caught: unknown) {
       if (requestSequence === detailRequestSequence.current) {
         setDetail(undefined);
-		setDeepLinkedRequestId(undefined);
 		setSelectedRequestId(undefined);
 		syncProvenanceURL(view, activeQuery);
         setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
@@ -296,7 +294,6 @@ export function BknTraceRunsScene() {
 	  return;
 	}
 	if (row.requestId) {
-	  setDeepLinkedRequestId(row.requestId);
 	  syncProvenanceURL(view, currentQuery(), row.requestId);
 	  void openRequest(row.requestId);
 	}
@@ -308,7 +305,6 @@ export function BknTraceRunsScene() {
     detailRequestSequence.current += 1;
     setSelectedRequestId(undefined);
     setDetail(undefined);
-    setDeepLinkedRequestId(undefined);
   }
 
   const columns: ColumnsType<ProvenanceListRow> = [
