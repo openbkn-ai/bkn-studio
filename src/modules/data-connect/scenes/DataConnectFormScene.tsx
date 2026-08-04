@@ -28,6 +28,7 @@ import {
   updateDataConnectRecord,
 } from "@/modules/data-connect/services/data-connect.service";
 import type {
+  ConnectorFieldConfig,
   DataConnectConnectorType,
   DataConnectMutationInput,
   DataConnectMutationPayload,
@@ -69,9 +70,15 @@ export function DataConnectFormScene({
           setRecord(currentRecord);
 
           if (currentRecord) {
+            const connector = types.find(
+              (item) => item.type === currentRecord.connectorType,
+            );
             setSelectedConnectorType(currentRecord.connectorType);
             form.setFieldsValue({
-              connectorConfig: sanitizeConnectorConfig(currentRecord.connectorConfig),
+              connectorConfig: sanitizeConnectorConfig(
+                currentRecord.connectorConfig,
+                connector?.fieldConfig,
+              ),
               connectorType: currentRecord.connectorType,
               description: currentRecord.description,
               enabled: currentRecord.enabled,
@@ -139,7 +146,7 @@ export function DataConnectFormScene({
     const currentConfig = (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>;
     const mergedConfig: DataConnectMutationInput["connectorConfig"] = {
       ...defaults,
-      ...sanitizeConnectorConfig(currentConfig),
+      ...sanitizeConnectorConfig(currentConfig, connector?.fieldConfig),
     };
 
     form.setFieldsValue({
@@ -153,7 +160,10 @@ export function DataConnectFormScene({
     const values = await form.validateFields();
 
     return {
-      connectorConfig: normalizeConnectorConfig(values.connectorConfig ?? {}),
+      connectorConfig: normalizeConnectorConfig(
+        values.connectorConfig ?? {},
+        selectedConnector?.fieldConfig,
+      ),
       connectorType: selectedConnectorType ?? values.connectorType,
       description: values.description ?? "",
       enabled: record?.enabled ?? values.enabled ?? true,
@@ -183,6 +193,7 @@ export function DataConnectFormScene({
     return {
       connectorConfig: normalizeConnectorConfig(
         values.connectorConfig ?? {},
+        selectedConnector?.fieldConfig,
       ),
       connectorType:
         selectedConnectorType ?? currentValues.connectorType,
@@ -420,10 +431,16 @@ export function DataConnectFormScene({
   );
 }
 
-function sanitizeConnectorConfig(config: Record<string, unknown>) {
+function sanitizeConnectorConfig(
+  config: Record<string, unknown>,
+  fieldConfig: Record<string, ConnectorFieldConfig> = {},
+) {
   return Object.fromEntries(
     Object.entries(config)
-      .filter(([key, value]) => !(key === "options" && value === null))
+      .filter(
+        ([key, value]) =>
+          !(fieldConfig[key]?.type === "object" && value === null),
+      )
       .map(([key, value]) => {
         if (
           typeof value === "string" ||
@@ -442,15 +459,28 @@ function sanitizeConnectorConfig(config: Record<string, unknown>) {
   ) as Record<string, boolean | number | string | string[]>;
 }
 
-function normalizeConnectorConfig(config: Record<string, unknown>) {
+function normalizeConnectorConfig(
+  config: Record<string, unknown>,
+  fieldConfig: Record<string, ConnectorFieldConfig> = {},
+) {
   return Object.fromEntries(
     Object.entries(config)
-      .filter(([key, value]) => !(key === "options" && value === null))
+      .filter(([key, value]) => {
+        if (fieldConfig[key]?.type !== "object") {
+          return true;
+        }
+
+        return value !== null && !(typeof value === "string" && value.trim() === "");
+      })
       .map(([key, value]) => {
         if (typeof value === "string") {
+          if (fieldConfig[key]?.encrypted) {
+            return [key, value];
+          }
+
           const trimmed = value.trim();
 
-          if (key === "options") {
+          if (fieldConfig[key]?.type === "object") {
             try {
               return [key, JSON.parse(trimmed) as unknown];
             } catch {

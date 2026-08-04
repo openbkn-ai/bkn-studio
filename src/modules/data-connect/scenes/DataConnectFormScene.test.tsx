@@ -220,6 +220,38 @@ describe("DataConnectFormScene · connection preflight", () => {
     expect(testDataConnectConfigMock).not.toHaveBeenCalled();
   });
 
+  it("omits object fields cleared to an empty string", async () => {
+    permissionState.values.add("catalog:create");
+    mockSQLServerEditCatalog({ encrypt: true });
+
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        '例如 {"encrypt":true,"trustservercertificate":false}',
+      ),
+      { target: { value: "   " } },
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "common.testConnection" }),
+    );
+
+    await waitFor(() => {
+      expect(testDataConnectConfigMock).toHaveBeenCalledWith({
+        connectorConfig: {
+          database: "orders",
+          host: "sqlserver.example.com",
+          password: "test-password",
+          port: 1433,
+          schemas: ["sales", "audit"],
+          username: "readonly_user",
+        },
+        connectorType: "sqlserver",
+      });
+    });
+  });
+
   it("omits null options returned by the backend from the connection test", async () => {
     permissionState.values.add("catalog:create");
     mockSQLServerEditCatalog(null);
@@ -253,6 +285,8 @@ describe("DataConnectFormScene · connection preflight", () => {
       {
         application_name: "   ",
         host: "  null  ",
+        password: "  padded-password  ",
+        session_settings: { ansi_nulls: true },
       },
     );
 
@@ -270,9 +304,10 @@ describe("DataConnectFormScene · connection preflight", () => {
           database: "orders",
           host: "null",
           options: {},
-          password: "test-password",
+          password: "  padded-password  ",
           port: 1433,
           schemas: ["sales", "audit"],
+          session_settings: { ansi_nulls: true },
           username: "readonly_user",
         },
         connectorType: "sqlserver",
@@ -379,6 +414,7 @@ function mockSQLServerEditCatalog(
         schemas: connectorField("Schema 列表", "array", false),
         options: connectorField("连接参数", "object", false),
         application_name: connectorField("应用名称", "string", false),
+        session_settings: connectorField("会话设置", "object", false),
       },
       mode: "local",
       name: "SQL Server",
