@@ -363,16 +363,13 @@
 
 .actionNavigate:disabled {
   color: var(--color-text-muted);
-  cursor: not-allowed;
-}
-
-.actionNavigate:disabled:hover {
-  background: transparent;
+  pointer-events: none;
 }
 
 .actionNavigateTarget {
   display: block;
   min-width: 0;
+  cursor: not-allowed;
 }
 
 .actionNavigate:hover strong {

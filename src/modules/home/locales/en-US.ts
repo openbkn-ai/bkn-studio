@@ -75,7 +75,7 @@ export const homeEnUS = {
       details: "View configuration details",
       impact: "If not configured",
       impactLabel: "If not configured:",
-      noPermission: "User management permission is required. Contact an administrator.",
+      noPermission: "Your account does not have permission for this action. Contact an administrator.",
       optional: "Optional",
       required: "Stage actions",
       role: "Purpose",

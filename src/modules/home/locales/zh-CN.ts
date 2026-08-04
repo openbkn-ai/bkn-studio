@@ -75,7 +75,7 @@ export const homeZhCN = {
       details: "查看配置说明",
       impact: "未配置影响",
       impactLabel: "未配置影响：",
-      noPermission: "需要用户管理权限，请联系管理员。",
+      noPermission: "当前账号没有该操作权限，请联系管理员。",
       optional: "可选",
       required: "本阶段操作",
       role: "作用",
