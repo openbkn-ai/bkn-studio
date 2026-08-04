@@ -48,6 +48,12 @@ import {
   type KnRelationType,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
+import {
+  createBknLifecycle,
+  lifecycleEnv,
+  memoryExternalKeyStore,
+  withManagedTurn,
+} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { AgentChat } from "@/modules/knowledge-network/components/agent-chat/AgentChat";
 import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
 import { ContextLoaderIntegrationPanel } from "./ContextLoaderIntegrationPanel";
@@ -374,6 +380,15 @@ export function ExperienceScene({
     }),
     [authMode, appKey, runtimeConfig],
   );
+  /**
+   * 调试台的受管生命周期。这里不是对话，一次「发送请求」/「填充测试数据」就是一轮交互；
+   * 会话本身按本次进入调试台算一条，刷新即换新（memory 键），不写 localStorage。
+   */
+  const lifecycle = useMemo(
+    () => createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, { externalKeyStore: memoryExternalKeyStore() }),
+    [base, knId, tokenProvider],
+  );
+
   // 大模型（mf-model-api）不认 bak_ AppKey（AppKey 仅对 Context Loader 有效）→ 恒用 OAuth 会话 token，
   // 否则认证方式切到 API Key 后模型第一步就 401。
   const modelTokenProvider = useMemo<AgentTokenProvider>(
@@ -471,9 +486,20 @@ export function ExperienceScene({
     setReqError(null);
   }, [op, mode, knId, invalidateFill, invalidateRequest]);
 
-  // cURL 展示真实网关地址（终端可直接跑，无浏览器跨域顾虑）；请求本体仍走 env.base 代理。
+  /**
+   * cURL 展示真实网关地址（终端可直接跑，无浏览器跨域顾虑）；请求本体仍走 env.base 代理。
+   * bkn_context 用占位串而不是本页真实 id：受管交互一轮一开、终结后即失效，把当下这轮的
+   * id 复制出去，粘到终端时多半已经是 interaction_terminal。占位符至少说清了必须先建会话。
+   */
   const curl = useMemo(
-    () => (op ? buildCurl({ ...env, base: serverAddress }, op, mode, queryVals, bodyText) : ""),
+    () =>
+      op
+        ? buildCurl({ ...env, base: serverAddress }, op, mode, queryVals, bodyText, {
+            conversation_id: "<bkn_create_conversation 返回的 conversation_id>",
+            interaction_id: "<bkn_start_interaction 返回的 interaction_id>",
+            operation_key: `${op.id}#1`,
+          })
+        : "",
     [env, serverAddress, op, mode, queryVals, bodyText],
   );
 
@@ -512,7 +538,28 @@ export function ExperienceScene({
         authMode === "apikey" ? appKey.trim() : runtimeConfig.auth.tokenManager.getAccessToken() ?? env.token;
       const freshEnv = { ...env, token: freshToken };
       // 传 tokenProvider：401（token 过期）时刷新一次再重跑，不用手动重试。
-      const result = await sendRequest(freshEnv, op, mode, queryVals, bodyText, tokenProvider, controller.signal);
+      // 一次点击 = 一轮受管交互：业务调用没有 bkn_context 会被 Context Loader 直接挡回。
+      const result = await withManagedTurn(
+        lifecycle,
+        `调试台调用 ${op.id}`,
+        async (turn) => {
+          const sent = await sendRequest(
+            freshEnv,
+            op,
+            mode,
+            queryVals,
+            bodyText,
+            tokenProvider,
+            controller.signal,
+            turn?.nextContext(op.id),
+          );
+          turn?.recordReceipt(sent.receipt);
+          return sent;
+        },
+        // 业务返回 500 时这一轮仍算 completed —— 调用失败记在 Operation 的 Receipt 上
+        // （Core 已判 failed），Interaction 状态表达的是调用方这一轮走完了没有。
+        (sent) => `HTTP ${sent.status} · ${sent.sizeBytes}B`,
+      );
       if (requestSequence !== requestSequenceRef.current) return;
       setResponse(result);
     } catch (error) {
@@ -524,7 +571,7 @@ export function ExperienceScene({
         setSending(false);
       }
     }
-  }, [env, op, mode, queryVals, bodyText, runtimeConfig, authMode, appKey, tokenProvider]);
+  }, [env, op, mode, queryVals, bodyText, runtimeConfig, authMode, appKey, tokenProvider, lifecycle]);
 
   // 一键填充测试数据：用当前网络真实 schema + 样本行生成可直接发送的请求体。
   const onFillTestData = useCallback(async () => {
@@ -535,30 +582,32 @@ export function ExperienceScene({
     fillControllerRef.current = controller;
     setFillingTest(true);
     try {
-      const detail =
-        knDetailRef.current?.knId === knId
-          ? knDetailRef.current.detail
-          : await fetchKnDetail(env, tokenProvider, controller.signal);
-      if (fillSequence !== fillSequenceRef.current) return;
-      knDetailRef.current = { knId, detail };
+      // 取真实 schema / 样本行同样走 /kn/*，一次填充算一轮交互，两次取数共用它。
+      const fill = await withManagedTurn(lifecycle, `填充 ${op.id} 测试数据`, async (turn) => {
+        const detail =
+          knDetailRef.current?.knId === knId
+            ? knDetailRef.current.detail
+            : await fetchKnDetail(env, tokenProvider, controller.signal, turn ?? undefined);
+        if (fillSequence !== fillSequenceRef.current) return null;
+        knDetailRef.current = { knId, detail };
 
-      let ot: KnObjectType | null = null;
-      let sampleRow: Record<string, unknown> | null = null;
-      if (op.id === "query_object_instance" || op.id === "run_sql") {
-        ot = pickQueryableObjectType(detail);
-        if (!ot) {
-          message.warning("当前知识网络没有绑定数据资源的对象类型，无法生成测试数据");
-          return;
+        let ot: KnObjectType | null = null;
+        let sampleRow: Record<string, unknown> | null = null;
+        if (op.id === "query_object_instance" || op.id === "run_sql") {
+          ot = pickQueryableObjectType(detail);
+          if (!ot) {
+            message.warning("当前知识网络没有绑定数据资源的对象类型，无法生成测试数据");
+            return null;
+          }
         }
-      }
-      if (op.id === "query_object_instance" && ot) {
-        const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider, controller.signal);
-        if (fillSequence !== fillSequenceRef.current) return;
-        sampleRow = rows[0] ?? null;
-      }
-
-      const fill = buildTestData(op, mode, knId, detail, ot, sampleRow);
-      if (fillSequence !== fillSequenceRef.current) return;
+        if (op.id === "query_object_instance" && ot) {
+          const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider, controller.signal, turn ?? undefined);
+          if (fillSequence !== fillSequenceRef.current) return null;
+          sampleRow = rows[0] ?? null;
+        }
+        return buildTestData(op, mode, knId, detail, ot, sampleRow);
+      });
+      if (!fill || fillSequence !== fillSequenceRef.current) return;
       setBodyText(fill.body);
       setBodyError(null);
       if (fill.query) setQueryVals((prev) => ({ ...prev, ...fill.query }));
@@ -572,7 +621,7 @@ export function ExperienceScene({
         setFillingTest(false);
       }
     }
-  }, [env, op, mode, knId, message, tokenProvider]);
+  }, [env, op, mode, knId, message, tokenProvider, lifecycle]);
 
   // 当前接口是否按对象类型取数（决定数据浏览器卡片是否露出「填入测试请求」）。
   const opFillsFromObjectType = op?.id === "query_object_instance" || op?.id === "run_sql";
@@ -588,7 +637,9 @@ export function ExperienceScene({
         }
         let sampleRow: Record<string, unknown> | null = null;
         if (op.id === "query_object_instance") {
-          const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider);
+          const rows = await withManagedTurn(lifecycle, `取 ${ot.id} 样本行`, (turn) =>
+            fetchObjectInstances(env, ot.id, 1, tokenProvider, undefined, turn ?? undefined),
+          );
           sampleRow = rows[0] ?? null;
         }
         const detail = knDetailRef.current?.detail ?? { id: knId, object_types: [], concept_groups: [], relation_types: [] };
@@ -601,7 +652,7 @@ export function ExperienceScene({
         message.error(error instanceof Error ? error.message : "生成测试数据失败");
       }
     },
-    [env, op, mode, knId, message, tokenProvider],
+    [env, op, mode, knId, message, tokenProvider, lifecycle],
   );
 
   // 数据浏览器关系卡「填入子图」：用指定关系类拼 query_instance_subgraph 的 relation_type_paths。

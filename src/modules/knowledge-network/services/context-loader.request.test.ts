@@ -9,12 +9,27 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   CONTEXT_LOADER_OPS,
+  buildCurl,
   createMcpSession,
+  fetchKnDetail,
   listMcpTools,
   sendRequest,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
 const searchSchema = CONTEXT_LOADER_OPS.find((operation) => operation.id === "search_schema")!;
+
+const bknContext = {
+  conversation_id: "conv_1",
+  interaction_id: "int_1",
+  operation_key: "search_schema#1",
+};
+
+function restBody(init: RequestInit | undefined): Record<string, unknown> {
+  if (typeof init?.body !== "string") {
+    throw new Error("Expected a JSON string request body");
+  }
+  return JSON.parse(init.body) as Record<string, unknown>;
+}
 
 function jsonRpcBody(init: RequestInit | undefined): Record<string, unknown> {
   if (typeof init?.body !== "string") {
@@ -68,6 +83,141 @@ describe("sendRequest", () => {
     expect(jsonRpcBody(fetchSpy.mock.calls[1][1])).toMatchObject({ method: "notifications/initialized" });
     expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({ method: "tools/call" });
     expect(fetchSpy.mock.calls[2][1]?.headers).toMatchObject({ "Mcp-Session-Id": "session-1" });
+  });
+
+  it("carries the managed context into the REST body", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+
+    await sendRequest(
+      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+      searchSchema,
+      "rest",
+      {},
+      '{"query":"订单"}',
+      undefined,
+      undefined,
+      bknContext,
+    );
+
+    // 少了 bkn_context 会被 Context Loader 判 conversation_required，下游调用次数为 0。
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: bknContext });
+  });
+
+  it("carries the managed context into the MCP arguments", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(new Response('{"jsonrpc":"2.0","result":{"content":[]}}', { status: 200 }));
+
+    await sendRequest(
+      { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
+      searchSchema,
+      "mcp",
+      {},
+      '{"query":"订单"}',
+      undefined,
+      undefined,
+      bknContext,
+    );
+
+    expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({
+      params: { arguments: { query: "订单", bkn_context: bknContext } },
+    });
+  });
+
+  it("reports the managed receipt from REST headers and from the MCP structured result", async () => {
+    const restSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", {
+        status: 200,
+        headers: { "bkn-receipt-id": "rcp_1", "bkn-operation-id": "op_1" },
+      }),
+    );
+    const rest = await sendRequest(
+      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+      searchSchema,
+      "rest",
+      {},
+      "{}",
+      undefined,
+      undefined,
+      bknContext,
+    );
+    expect(rest.receipt).toEqual({ operationId: "op_1", receiptId: "rcp_1", required: true });
+    restSpy.mockRestore();
+
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(
+        new Response(
+          '{"jsonrpc":"2.0","result":{"content":[],"structuredContent":{"bkn_receipt":{"operation_id":"op_2","receipt_id":"rcp_2","required":true}}}}',
+          { status: 200 },
+        ),
+      );
+    const mcp = await sendRequest(
+      { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
+      searchSchema,
+      "mcp",
+      {},
+      "{}",
+      undefined,
+      undefined,
+      bknContext,
+    );
+    expect(mcp.receipt).toEqual({ operationId: "op_2", receiptId: "rcp_2", required: true });
+  });
+});
+
+describe("fetchKnDetail", () => {
+  it("takes its context from the turn and reports the receipt back to it", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('{"id":"kn-demo","object_types":[],"concept_groups":[],"relation_types":[]}', {
+        status: 200,
+        headers: { "bkn-receipt-id": "rcp_3", "bkn-operation-id": "op_3" },
+      }),
+    );
+    const recordReceipt = vi.fn();
+
+    await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, undefined, undefined, {
+      nextContext: (toolName) => ({ ...bknContext, operation_key: `${toolName}#1` }),
+      recordReceipt,
+    });
+
+    expect(restBody(fetchSpy.mock.calls[0][1])).toMatchObject({
+      kn_id: "kn-demo",
+      bkn_context: { ...bknContext, operation_key: "get_kn_detail#1" },
+    });
+    // 回执要记回本轮，否则终结交互时清单缺一条，Core 判 closure_manifest_invalid。
+    expect(recordReceipt).toHaveBeenCalledWith({ operationId: "op_3", receiptId: "rcp_3", required: true });
+  });
+});
+
+describe("buildCurl", () => {
+  it("includes the managed context so the copied command is the one that was sent", () => {
+    const curl = buildCurl(
+      { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
+      searchSchema,
+      "rest",
+      {},
+      '{"query":"订单"}',
+      bknContext,
+    );
+
+    expect(curl).toContain('"bkn_context":{"conversation_id":"conv_1"');
+  });
+
+  it("keeps a half-written request body readable instead of showing it as empty", () => {
+    const curl = buildCurl(
+      { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
+      searchSchema,
+      "rest",
+      {},
+      '{"query":',
+      bknContext,
+    );
+
+    expect(curl).toContain('{"query":');
   });
 });
 
