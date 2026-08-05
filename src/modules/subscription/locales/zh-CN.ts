@@ -94,7 +94,12 @@ export const subscriptionZhCN = {
         price: "¥49,800",
         unit: "/ 项目 · 年",
       },
-      quota: { maxNodes: "节点数 {{value}}", maxUsers: "用户数 {{value}}", unlimited: "不限" },
+      quota: {
+        fromLicence: "当前档位的配额取自授权文件",
+        maxNodes: "节点数 {{value}}",
+        maxUsers: "用户数 {{value}}",
+        unlimited: "不限",
+      },
     },
     priceNote: "价格为标准报价口径,实际以商务合同为准。授权粒度为项目,一个项目一张授权文件。",
     title: "版本与订阅",

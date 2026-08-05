@@ -34,3 +34,24 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
   { edition: "enterprise", limits: { maxNodes: null, maxUsers: null } },
 ];
+
+/**
+ * 某项配额的显示值:当前档位读证书里的真值,其余档位用产品自带的默认值。
+ *
+ * 三条约定,都来自 ee-design.md §3.0 / §3.5:
+ *
+ * - `-1` = 不限
+ * - **缺失 ≠ 0**。证书约定「缺失 = 0(不允许)」,但那是**判定**语义;这里是展示,
+ *   没写就退回默认值。把「这张证没写这项」显示成「一个都不给」方向正好反了,而
+ *   §3.5 明确记着产品侧今天根本没有配额判定,显示成 0 只会凭空吓人
+ * - 合同可以覆盖默认值(行业版尤其如此,§3.3 说定制只能落在 limits 上),所以当前
+ *   档位必须以证书为准
+ */
+export function resolveQuota(
+  fallback: number | null,
+  licensed: number | undefined,
+): number | null {
+  const value = licensed ?? fallback;
+
+  return value === -1 ? null : value;
+}

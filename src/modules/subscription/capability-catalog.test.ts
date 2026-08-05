@@ -11,6 +11,7 @@ import {
   CAPABILITY_CATALOG,
   capabilitiesIntroducedBy,
 } from "@/modules/subscription/capability-catalog";
+import { resolveQuota } from "@/modules/subscription/subscription-plans";
 
 describe("capability catalog", () => {
   // 登记表里 planned 的行(sso / explorer / business_provenance 等)对客户不可见——
@@ -60,5 +61,28 @@ describe("capability catalog", () => {
 
     expect(keys).toContain("rbac_basic");
     expect(keys).toContain("perm_object_level");
+  });
+});
+
+describe("resolveQuota", () => {
+  // 合同可以覆盖默认配额（ee-design.md §3.3：行业版定制只能落在 limits 上），
+  // 所以当前档位必须以证书为准，照静态表印会和客户签的合同对不上。
+  it("证书里的值覆盖产品默认值", () => {
+    expect(resolveQuota(100, 500)).toBe(500);
+  });
+
+  it("-1 表示不限", () => {
+    expect(resolveQuota(100, -1)).toBeNull();
+    expect(resolveQuota(null, undefined)).toBeNull();
+  });
+
+  // 证书判定语义里「缺失 = 0（不允许）」，但这里是展示：没写就退回默认值。
+  // 显示成 0 方向正好反了，而产品侧今天根本没有配额判定（§3.5）。
+  it("证书没写这项时退回默认值，不当成 0", () => {
+    expect(resolveQuota(100, undefined)).toBe(100);
+  });
+
+  it("证书显式写 0 时照实显示", () => {
+    expect(resolveQuota(100, 0)).toBe(0);
   });
 });

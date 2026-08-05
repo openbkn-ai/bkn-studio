@@ -123,6 +123,7 @@ export const subscriptionEnUS = {
         unit: "/ project · year",
       },
       quota: {
+        fromLicence: "Quotas for the current edition come from the licence file",
         maxNodes: "{{value}} nodes",
         maxUsers: "{{value}} users",
         unlimited: "Unlimited",

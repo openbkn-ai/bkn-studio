@@ -27,7 +27,10 @@ import {
   capabilitiesIntroducedBy,
   type CapabilityCatalogEntry,
 } from "@/modules/subscription/capability-catalog";
-import { SUBSCRIPTION_PLANS } from "@/modules/subscription/subscription-plans";
+import {
+  resolveQuota,
+  SUBSCRIPTION_PLANS,
+} from "@/modules/subscription/subscription-plans";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 import styles from "./SubscriptionScene.module.css";
@@ -65,6 +68,27 @@ export function SubscriptionScene() {
   function editionName(edition: Edition) {
     return t(`common.entitlement.editions.${edition}`);
   }
+
+  /**
+   * 当前档位那张卡的配额读证书里的真值,其余档位用产品自带的默认值。
+   *
+   * 合同可以覆盖默认配额,行业版尤其如此——ee-design.md §3.3 说合同定制**只能**落在
+   * `limits` 与新增的行业专有能力上,所以「按合同拿到的配额」正是这里唯一会与默认值
+   * 不同的地方。照着静态表印,客户看到的数字就和他签的合同对不上。
+   *
+   * `-1` = 不限(证书约定,§3.0);缺失时退回默认值,不当成 0——那个方向反了,会把
+   * 「这张证没写这项」显示成「一个都不给」。
+   */
+  function quotaLabel(fallback: number | null, limitKey: string, isCurrent: boolean) {
+    const value = resolveQuota(fallback, isCurrent ? snapshot?.limits[limitKey] : undefined);
+
+    return value === null ? t("subscription.plans.quota.unlimited") : value;
+  }
+
+  /** 当前档位的配额是否来自证书(而非产品默认表),用于给卡片加一句出处。 */
+  const contractQuota =
+    snapshot !== null &&
+    (snapshot.limits.max_users !== undefined || snapshot.limits.max_nodes !== undefined);
 
   function capabilityRow(entry: CapabilityCatalogEntry) {
     // 只有 bkn-safe 自己实现的能力才有实况可报:capabilities/extensions 是它自己进程的
@@ -177,20 +201,17 @@ export function SubscriptionScene() {
                 <div className={styles.quota}>
                   <Tag>
                     {t("subscription.plans.quota.maxUsers", {
-                      value:
-                        plan.limits.maxUsers === null
-                          ? t("subscription.plans.quota.unlimited")
-                          : plan.limits.maxUsers,
+                      value: quotaLabel(plan.limits.maxUsers, "max_users", isCurrent),
                     })}
                   </Tag>
                   <Tag>
                     {t("subscription.plans.quota.maxNodes", {
-                      value:
-                        plan.limits.maxNodes === null
-                          ? t("subscription.plans.quota.unlimited")
-                          : plan.limits.maxNodes,
+                      value: quotaLabel(plan.limits.maxNodes, "max_nodes", isCurrent),
                     })}
                   </Tag>
+                  {isCurrent && contractQuota ? (
+                    <span className={styles.note}>{t("subscription.plans.quota.fromLicence")}</span>
+                  ) : null}
                 </div>
               ) : null}
 
