@@ -1,0 +1,216 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.scene {
+  display: grid;
+  gap: 32px;
+  padding: 4px 0 40px;
+}
+
+.head {
+  display: grid;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  color: var(--admin-color-heading, #172033);
+  font-size: 20px;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 720px;
+  color: var(--admin-color-secondary, #4b5563);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.planGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+}
+
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 20px;
+  border: 1px solid var(--admin-color-border, #d9e0ea);
+  border-radius: 12px;
+  background: var(--admin-color-surface, #fff);
+}
+
+.planFeatured {
+  border-color: #f0c674;
+  background: linear-gradient(180deg, #fffdf6 0%, #fff 42%);
+}
+
+.planCurrent {
+  border-color: var(--admin-color-link-border, #bfdbfe);
+}
+
+.planHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.planName {
+  color: var(--admin-color-heading, #172033);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.planPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.planPriceNum {
+  color: var(--admin-color-heading, #172033);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.planPriceUnit {
+  color: var(--admin-color-muted, #6b7280);
+  font-size: 12.5px;
+}
+
+.planAudience {
+  margin: 0;
+  min-height: 44px;
+  color: var(--admin-color-secondary, #4b5563);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.planFeats {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planFeats li {
+  display: flex;
+  gap: 8px;
+  color: var(--admin-color-text, #111827);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.tick {
+  color: var(--admin-color-success, #15803d);
+}
+
+.quota {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.industry {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px dashed var(--admin-color-border, #d9e0ea);
+  border-radius: 12px;
+  background: var(--admin-color-surface-subtle, #f7f9fc);
+}
+
+.industryTitle {
+  color: var(--admin-color-heading, #172033);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.industryBody {
+  margin: 0;
+  max-width: 720px;
+  color: var(--admin-color-secondary, #4b5563);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.matrix {
+  display: grid;
+  gap: 12px;
+}
+
+.matrixTitle {
+  margin: 0;
+  color: var(--admin-color-heading, #172033);
+  font-size: 15px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--admin-color-border-soft, #e8edf3);
+  border-radius: 12px;
+  background: var(--admin-color-surface, #fff);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.table th,
+.table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--admin-color-border-soft, #e8edf3);
+  text-align: left;
+}
+
+.table th {
+  color: var(--admin-color-muted, #6b7280);
+  font-weight: 600;
+}
+
+.table th.tier,
+.table td.tier {
+  width: 104px;
+  text-align: center;
+}
+
+.groupRow td {
+  background: var(--admin-color-surface-muted, #f3f6fa);
+  color: var(--admin-color-secondary, #4b5563);
+  font-weight: 600;
+}
+
+.capName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--admin-color-text, #111827);
+}
+
+.capDesc {
+  margin: 2px 0 0;
+  color: var(--admin-color-muted, #6b7280);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.no {
+  color: var(--admin-color-placeholder, #94a3b8);
+}
+
+.note {
+  margin: 0;
+  color: var(--admin-color-muted, #6b7280);
+  font-size: 12px;
+  line-height: 1.7;
+}

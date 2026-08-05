@@ -20,6 +20,7 @@ import { executionFactoryZhCN } from "@/modules/execution-factory/locales/zh-CN"
 import { homeZhCN } from "@/modules/home/locales/zh-CN";
 import { knowledgeNetworkZhCN } from "@/modules/knowledge-network/locales/zh-CN";
 import { modelResourcesZhCN } from "@/modules/model-resources/locales/zh-CN";
+import { subscriptionZhCN } from "@/modules/subscription/locales/zh-CN";
 import { systemAdminZhCN } from "@/modules/system-admin/locales/zh-CN";
 
 export const zhCN = {
@@ -33,6 +34,7 @@ export const zhCN = {
   ...knowledgeNetworkZhCN,
   ...executionFactoryZhCN,
   ...modelResourcesZhCN,
+  ...subscriptionZhCN,
   ...systemAdminZhCN,
   ...apiKeysZhCN,
   ...bknTraceZhCN,

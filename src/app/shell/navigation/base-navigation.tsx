@@ -8,6 +8,7 @@
 import {
   AppstoreOutlined,
   ClusterOutlined,
+  CrownOutlined,
   ExperimentOutlined,
   FileProtectOutlined,
   FileTextOutlined,
@@ -75,6 +76,17 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         path: "/system/audit",
         icon: <FileTextOutlined />,
         permission: systemAdminPermissions.audit,
+      },
+      {
+        // 页面本身对所有登录用户开放(顶栏档位芯片、锁定入口的升级引导都指向它),菜单
+        // 条目却要授权管理权限:把一个人人可见的条目塞进「系统管理」,会让这个分组对每个
+        // 普通用户显形,而它今天的含义是「你管得着系统」。
+        key: "subscription",
+        labelKey: "shell.items.subscription",
+        path: "/system/subscription",
+        icon: <CrownOutlined />,
+        permission: systemAdminPermissions.license,
+        permissionMode: "any",
       },
     ],
   },

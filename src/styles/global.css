@@ -496,6 +496,12 @@ select {
   flex: 1;
 }
 
+/* 顶栏档位芯片里的「升级」尾巴。无生效授权时才出现,别做成常驻广告。 */
+.console-edition-chip-cta {
+  color: var(--color-link, #1d4ed8);
+  font-weight: 600;
+}
+
 /* 档位不够但可换证解锁的入口。只是提示,不拦点击——点进去是升级引导页。 */
 .console-sidenav-lock {
   margin-left: auto;

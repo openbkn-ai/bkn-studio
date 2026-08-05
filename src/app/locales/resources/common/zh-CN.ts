@@ -79,6 +79,7 @@ export const commonZhCN = {
       lockedDescription:
         "当前工作区运行在{{current}}。更换授权证书后即可使用,数据与配置原样保留。",
       viewLicense: "前往授权管理",
+      upgrade: "升级",
       banner: {
         unlicensed: "当前没有可用授权,社区能力照常使用。导入授权文件可解锁付费能力。",
         invalid: "授权文件无效或验签失败,当前按社区能力运行。",

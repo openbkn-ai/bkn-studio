@@ -21,6 +21,7 @@ import openBknLogo from "@/assets/brand/openbkn-logo.png";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import { EditionChip } from "@/framework/entitlement/EditionChip";
 import { APP_VERSION } from "@/framework/runtime/app-version";
 import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
 import { BuildActivityChip } from "@/modules/data-catalog/components/BuildActivityChip";
@@ -190,6 +191,7 @@ export function TopBar() {
 
       <div className="console-topbar-actions">
         <BuildActivityChip />
+        <EditionChip />
         <Dropdown
           menu={{ items: userMenuItems }}
           placement="bottomRight"

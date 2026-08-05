@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useRefreshEntitlement } from "@/framework/entitlement/use-entitlement";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -86,6 +87,7 @@ function copySupported() {
 export function LicenseManagementScene() {
   const { t, i18n } = useTranslation();
   const { message, modal } = useAppServices();
+  const refreshEntitlement = useRefreshEntitlement();
 
   const [detail, setDetail] = useState<LicenseDetail | null>(null);
   const [fingerprint, setFingerprint] = useState("");
@@ -174,6 +176,9 @@ export function LicenseManagementScene() {
     if (next) {
       setDetail(next);
     }
+    // 授权档位随导证/激活/删除立刻变,后端承诺补证下一个请求即生效——菜单与门禁读的是
+    // 启动时拉的那份快照,不在这里重拉就要求用户按 F5,等于把后端的承诺在前端打掉。
+    refreshEntitlement();
     await load();
   };
 

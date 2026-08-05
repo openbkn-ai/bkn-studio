@@ -81,6 +81,7 @@ export const commonEnUS = {
       lockedDescription:
         "This workspace runs on {{current}}. Import a new licence to unlock it — data and configuration are preserved.",
       viewLicense: "Go to licence management",
+      upgrade: "Upgrade",
       banner: {
         unlicensed:
           "No licence is active. Community capabilities keep working; import a licence to unlock paid ones.",
