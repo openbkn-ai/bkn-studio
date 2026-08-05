@@ -100,12 +100,19 @@ export function ConnectorTypePicker({
         {filtered.length > 0 ? (
           <div className={styles.grid}>
             {filtered.map((item) => {
-              const active = item.type === value;
+              const active = item.enabled && item.type === value;
               const templateMeta = getConnectorTemplateMeta(item);
 
               return (
                 <button
-                  className={[styles.card, active ? styles.cardActive : ""].filter(Boolean).join(" ")}
+                  className={[
+                    styles.card,
+                    active ? styles.cardActive : "",
+                    item.enabled ? "" : styles.cardDisabled,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  disabled={!item.enabled}
                   key={item.type}
                   onClick={() => onChange(item.type)}
                   type="button"
@@ -117,7 +124,14 @@ export function ConnectorTypePicker({
                   ) : null}
                   <div className={styles.cardHeader}>
                     <strong>{item.name}</strong>
-                    <span className={styles.badge}>{templateMeta.label}</span>
+                    <span className={styles.badgeGroup}>
+                      <span className={styles.badge}>{templateMeta.label}</span>
+                      {!item.enabled ? (
+                        <span className={styles.disabledBadge}>
+                          {t("dataConnect.connectorTypeUnavailable")}
+                        </span>
+                      ) : null}
+                    </span>
                   </div>
                   <p className={styles.cardDescription}>
                     {templateMeta.description || item.description || "-"}

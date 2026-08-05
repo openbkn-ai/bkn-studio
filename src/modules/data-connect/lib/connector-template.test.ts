@@ -13,6 +13,7 @@ import {
   getConnectorTemplateMeta,
   groupConnectorFields,
   isValidJSONObject,
+  mergeKnownConnectorTypes,
   resolveConnectorFieldControl,
 } from "@/modules/data-connect/lib/connector-template";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
@@ -70,6 +71,26 @@ describe("connector-template · SQL Server", () => {
     expect(isValidJSONObject("[]")).toBe(false);
     expect(isValidJSONObject("true")).toBe(false);
     expect(isValidJSONObject("{invalid")).toBe(false);
+  });
+
+  it("keeps unavailable known connector types alongside backend types", () => {
+    const oracleConnector: DataConnectConnectorType = {
+      category: "table",
+      description: "Oracle connector",
+      enabled: true,
+      fieldConfig: {},
+      mode: "local",
+      name: "Oracle",
+      type: "oracle",
+    };
+
+    const options = mergeKnownConnectorTypes([sqlServerConnector, oracleConnector]);
+    const optionsByType = new Map(options.map((item) => [item.type, item]));
+
+    expect(optionsByType.get("sqlserver")).toBe(sqlServerConnector);
+    expect(optionsByType.get("postgresql")?.enabled).toBe(false);
+    expect(optionsByType.get("postgresql")?.fieldConfig).toEqual({});
+    expect(optionsByType.get("oracle")).toBe(oracleConnector);
   });
 });
 

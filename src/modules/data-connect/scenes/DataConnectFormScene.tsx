@@ -18,7 +18,10 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { ConnectorTypePicker } from "@/modules/data-connect/components/ConnectorTypePicker";
 import { DataConnectConfigForm } from "@/modules/data-connect/components/DataConnectConfigForm";
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
-import { getConnectorConfigDefaults } from "@/modules/data-connect/lib/connector-template";
+import {
+  getConnectorConfigDefaults,
+  mergeKnownConnectorTypes,
+} from "@/modules/data-connect/lib/connector-template";
 import {
   createDataConnectRecord,
   getDataConnectRecord,
@@ -63,7 +66,7 @@ export function DataConnectFormScene({
 
       try {
         const types = await listDataConnectConnectorTypes();
-        setConnectorTypes(types);
+        setConnectorTypes(mergeKnownConnectorTypes(types));
 
         if (mode === "edit" && recordId) {
           const currentRecord = await getDataConnectRecord(recordId);

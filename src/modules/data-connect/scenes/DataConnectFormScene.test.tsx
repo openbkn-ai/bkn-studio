@@ -342,6 +342,22 @@ describe("DataConnectFormScene · connection preflight", () => {
     });
   });
 
+  it("shows known connector types as disabled when the backend omits them", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+
+    render(<DataConnectFormScene mode="create" />);
+
+    const sqlServerButton = await screen.findByRole("button", {
+      name: /SQL Server/,
+    });
+
+    expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
+    expect(sqlServerButton.textContent).toContain("关系型数据库");
+    expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+    fireEvent.click(sqlServerButton);
+    expect(screen.queryByPlaceholderText("例如 供应链主库")).toBeNull();
+  });
+
   it("creates a SQL Server catalog with the default port", async () => {
     permissionState.values = new Set(["catalog:create"]);
     listDataConnectConnectorTypesMock.mockResolvedValue([

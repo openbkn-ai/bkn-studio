@@ -100,6 +100,14 @@ const TYPE_TO_TEMPLATE: Record<string, { description?: string; label?: string }>
   },
 };
 
+const KNOWN_CONNECTOR_TYPES: DataConnectConnectorType[] = [
+  knownConnectorType("mariadb", "MariaDB", "table"),
+  knownConnectorType("mysql", "MySQL", "table"),
+  knownConnectorType("postgresql", "PostgreSQL", "table"),
+  knownConnectorType("sqlserver", "SQL Server", "table"),
+  knownConnectorType("opensearch", "OpenSearch", "index"),
+];
+
 const TYPE_FIELD_DEFAULTS: Record<string, Record<string, unknown>> = {
   mariadb: {
     port: 3306,
@@ -264,6 +272,40 @@ export function getConnectorTemplateMeta(
   return {
     label: byType?.label ?? byCategory?.label ?? connector.name,
     description: byType?.description ?? byCategory?.description ?? connector.description ?? "",
+  };
+}
+
+export function mergeKnownConnectorTypes(
+  availableTypes: DataConnectConnectorType[],
+) {
+  const availableByType = new Map(
+    availableTypes.map((item) => [item.type.trim().toLowerCase(), item]),
+  );
+  const knownTypeNames = new Set(KNOWN_CONNECTOR_TYPES.map((item) => item.type));
+
+  return [
+    ...KNOWN_CONNECTOR_TYPES.map(
+      (item) => availableByType.get(item.type) ?? { ...item, fieldConfig: {} },
+    ),
+    ...availableTypes.filter(
+      (item) => !knownTypeNames.has(item.type.trim().toLowerCase()),
+    ),
+  ];
+}
+
+function knownConnectorType(
+  type: string,
+  name: string,
+  category: string,
+): DataConnectConnectorType {
+  return {
+    category,
+    description: "",
+    enabled: false,
+    fieldConfig: {},
+    mode: "local",
+    name,
+    type,
   };
 }
 

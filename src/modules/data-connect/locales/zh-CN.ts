@@ -66,6 +66,7 @@ export const dataConnectZhCN = {
       "先选择与目标数据源匹配的后端连接器类型。",
     connectorTypeSearchPlaceholder: "按连接器名称或类型搜索",
     connectorTypeEmpty: "当前筛选条件下没有可选连接器类型。",
+    connectorTypeUnavailable: "暂不可用",
     jsonObjectInvalid: "请输入有效的 JSON 对象。",
     categoryAll: "全部",
     selectConnectorTypeRequired: "请先选择连接器类型。",
