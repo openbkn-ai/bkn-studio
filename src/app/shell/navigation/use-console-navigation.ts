@@ -11,7 +11,6 @@ import {
   consoleNavigation,
   filterConsoleNavigation,
   filterNavByCapability,
-  filterNavByEdition,
   filterNavByPermission,
 } from "@/app/shell/console-navigation";
 import type { ConsoleNavItem } from "@/app/shell/navigation/types";
@@ -21,18 +20,19 @@ import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeat
 import { isMarketCatalogEnabled } from "@/modules/execution-factory/utils/market-catalog";
 
 /**
- * 四层过滤,判据各不同源,都不能省:
+ * 三层过滤,判据各不同源,都不能省:
  *
  *   开关 —— 本地/运行时 feature flag,与售卖无关
  *   权限 —— 这个人能不能(用户态)
- *   能力 —— 这套集群买没买某个已登记的付费能力(集群态,后端算好的结果)
- *   档位 —— 尚未登记 capability key 的付费面,退到档位判定(集群态)
+ *   能力 —— 这套集群买没买(集群态)
  *
- * 权限在能力/档位之前:没权限的入口连「升级就能用」都不该暗示——那是别人的能力,不是
- * 自己少买了一档。
+ * **档位不在这里判。** 前端不推档位:`capabilities[]` 是服务端用 `AtLeast(MinEdition)`
+ * 从装配表算好的结果,前端照读即可(ee-design.md §3.2「不让客户端自己推」、§6.1
+ * 「Studio 只消费这一条聚合接口」)。在前端复制一份档位序,是 licensing README 点名的
+ * 唯一大错——两处对「industry 是否高于 enterprise」给出不同答案。
  *
- * 分成四个函数是刻意的:合并之后必然有人把 feature key、capability、minEdition、
- * permission 四种字符串混着传进同一个参数。
+ * 分成三个函数是刻意的:合并之后必然有人把 feature flag、capability、permission 三种
+ * 字符串混着传进同一个参数。
  */
 export function useConsoleNavigation(): ConsoleNavItem[] {
   const { features } = useLabFeatures();
@@ -41,8 +41,7 @@ export function useConsoleNavigation(): ConsoleNavItem[] {
 
   return useMemo(
     () =>
-      filterNavByEdition(
-        filterNavByCapability(
+      filterNavByCapability(
           filterNavByPermission(
             filterConsoleNavigation(consoleNavigation, {
               hideCatalog: !features.catalog,
@@ -54,8 +53,6 @@ export function useConsoleNavigation(): ConsoleNavItem[] {
             }),
             runtimeConfig.currentUser.permissions,
           ),
-          snapshot,
-        ),
         snapshot,
       ),
     [features.catalog, runtimeConfig.currentUser.permissions, snapshot],

@@ -8,11 +8,9 @@
 import { useContext } from "react";
 
 import { capabilityState } from "@/framework/entitlement/capability-state";
-import { atLeast, type Edition } from "@/framework/entitlement/edition";
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import {
   FALLBACK_ENTITLEMENT,
-  isCommunityBuild,
   type CapabilityState,
   type Entitlement,
 } from "@/framework/entitlement/types";
@@ -52,44 +50,4 @@ export function useRefreshEntitlement() {
  */
 export function useCapability(capability: string): CapabilityState {
   return capabilityState(capability, useEntitlementContext().snapshot);
-}
-
-export type EditionGateVerdict = {
-  /** 档位够,正常渲染。 */
-  allowed: boolean;
-  /**
-   * 不可渲染,且不该出升级引导:要么是社区镜像(付费实现物理不在这个二进制里,升级要
-   * 换镜像而不是换证书),要么快照还没到(对着可能是社区客户的人推销是更糟的错)。
-   */
-  hidden: boolean;
-  /** 档位不够,但这是企业镜像——换一张证就能用。渲染锁定态与升级引导。 */
-  locked: boolean;
-};
-
-/**
- * 按**档位**门控。用于还没在后端装配表里登记 capability key 的付费面——有 key 的一律
- * 用 `useCapability`,那是后端算好的结果,不用前端猜哪一档。
- *
- * 藏与锁的分界用 `extensions[]`:后端刻意把「证里有什么」和「这个二进制装了什么」分成
- * 两个字段,正是为了让人分得清「没授权」和「授权了但镜像不对」。
- */
-export function useEditionGate(minEdition: Edition | undefined): EditionGateVerdict {
-  const { snapshot } = useEntitlementContext();
-
-  if (!minEdition) {
-    return { allowed: true, hidden: false, locked: false };
-  }
-
-  // 快照没到:不放行,也不推销。
-  if (!snapshot) {
-    return { allowed: false, hidden: true, locked: false };
-  }
-
-  if (atLeast(snapshot.edition, minEdition)) {
-    return { allowed: true, hidden: false, locked: false };
-  }
-
-  const community = isCommunityBuild(snapshot);
-
-  return { allowed: false, hidden: community, locked: !community };
 }

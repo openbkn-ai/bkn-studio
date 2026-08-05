@@ -67,7 +67,10 @@ export function SubscriptionScene() {
   }
 
   function capabilityRow(entry: CapabilityCatalogEntry) {
-    const clusterStatus = capabilityState(entry.key, snapshot);
+    // 只有 bkn-safe 自己实现的能力才有实况可报:capabilities/extensions 是它自己进程的
+    // 装配表,别的服务的能力在这个端点里永远缺席(ee-design.md §6「A 答不了 B」)。
+    const clusterStatus =
+      entry.servedBy === "bkn-safe" ? capabilityState(entry.key, snapshot) : null;
 
     return (
       <tr key={entry.key}>
@@ -100,17 +103,23 @@ export function SubscriptionScene() {
         ))}
         {showClusterColumn ? (
           <td className={styles.tier}>
-            <Tag color={CLUSTER_TAG_COLOR[clusterStatus]}>
-              {t(
-                `subscription.cluster.${
-                  clusterStatus === "not-licensed"
-                    ? "notLicensed"
-                    : clusterStatus === "not-installed"
-                      ? "notInstalled"
-                      : clusterStatus
-                }`,
-              )}
-            </Tag>
+            {clusterStatus ? (
+              <Tag color={CLUSTER_TAG_COLOR[clusterStatus]}>
+                {t(
+                  `subscription.cluster.${
+                    clusterStatus === "not-licensed"
+                      ? "notLicensed"
+                      : clusterStatus === "not-installed"
+                        ? "notInstalled"
+                        : clusterStatus
+                  }`,
+                )}
+              </Tag>
+            ) : (
+              <span className={styles.no} title={t("subscription.cluster.otherService")}>
+                —
+              </span>
+            )}
           </td>
         ) : null}
       </tr>
@@ -293,7 +302,10 @@ export function SubscriptionScene() {
           </table>
         </div>
         {showClusterColumn ? (
-          <p className={styles.note}>{t("subscription.cluster.hint")}</p>
+          <>
+            <p className={styles.note}>{t("subscription.cluster.hint")}</p>
+            <p className={styles.note}>{t("subscription.cluster.otherService")}</p>
+          </>
         ) : null}
         <p className={styles.note}>{t("subscription.priceNote")}</p>
       </div>

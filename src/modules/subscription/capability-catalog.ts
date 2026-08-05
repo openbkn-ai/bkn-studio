@@ -35,6 +35,18 @@ export type CapabilityCatalogEntry = {
   /** 登记表主键,同时是证书 `features[]` 里的拼写,也是后端装配表 `MarkAssembled` 的名字。 */
   key: string;
   minEdition: Edition;
+  /**
+   * 哪个服务实现它(取自 `ee-features.md` 的能力总账)。
+   *
+   * 决定这一项能不能显示实况:`/api/safe/v1/capabilities` 的 `capabilities[]` /
+   * `extensions[]` 只反映 **bkn-safe 自己进程**的装配表。ee-design.md §6 开篇写死了这条
+   * ——「集群里完全可能 bkn-safe 已换企业镜像、某个业务服务还是社区镜像……**A 答不了 B**」,
+   * 而每服务的形态自述(B)延后未做。
+   *
+   * 所以别的服务的能力在这个端点里永远缺席,把它渲染成「当前镜像不含」是错误结论:真相是
+   * 这个端点答不了。
+   */
+  servedBy: "bkn-safe" | "other";
   /** 首次可签发的产品版本。有值时列表里标「新增」。 */
   sinceVersion?: string;
 };
@@ -49,36 +61,46 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
 ];
 
 export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
-  { category: "dataConnect", key: "source_sync", minEdition: "professional" },
-  { category: "permission", key: "rbac_basic", minEdition: "professional" },
+  { category: "dataConnect", key: "source_sync",
+    servedBy: "other", minEdition: "professional" },
+  { category: "permission", key: "rbac_basic",
+    servedBy: "bkn-safe", minEdition: "professional" },
   {
     category: "semantic",
     key: "impact_graph",
+    servedBy: "other",
     minEdition: "professional",
     sinceVersion: "0.1.2",
   },
   {
     category: "dataConnect",
     key: "connector_certified",
+    servedBy: "other",
     minEdition: "professional",
     sinceVersion: "0.1.3",
   },
   {
     category: "observability",
     key: "bkn_trace",
+    servedBy: "other",
     minEdition: "professional",
     sinceVersion: "0.1.3",
   },
   {
     category: "semantic",
     key: "semantic_task",
+    servedBy: "other",
     minEdition: "professional",
     sinceVersion: "0.1.3",
   },
-  { category: "permission", key: "perm_object_level", minEdition: "enterprise" },
-  { category: "operations", key: "audit", minEdition: "enterprise" },
-  { category: "operations", key: "ops_dashboard", minEdition: "enterprise" },
-  { category: "operations", key: "branding", minEdition: "enterprise" },
+  { category: "permission", key: "perm_object_level",
+    servedBy: "bkn-safe", minEdition: "enterprise" },
+  { category: "operations", key: "audit",
+    servedBy: "bkn-safe", minEdition: "enterprise" },
+  { category: "operations", key: "ops_dashboard",
+    servedBy: "other", minEdition: "enterprise" },
+  { category: "operations", key: "branding",
+    servedBy: "other", minEdition: "enterprise" },
 ];
 
 /** 某一档**新增**的能力(不含从低档继承的)。用于版本卡片列出「这一档多了什么」。 */

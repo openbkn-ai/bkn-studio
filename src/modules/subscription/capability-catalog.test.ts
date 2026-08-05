@@ -41,6 +41,19 @@ describe("capability catalog", () => {
     expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(4);
   });
 
+  /**
+   * `/api/safe/v1/capabilities` 只描述 bkn-safe 自己的镜像(ee-design.md §6「A 答不了 B」),
+   * 所以标成 bkn-safe 的那几条必须与 ee-features.md 的能力总账一致——多标一条,页面就会对
+   * 别的服务的能力下「当前镜像不含」的错误结论。
+   */
+  it("只有 bkn-safe 实现的能力标为可实测", () => {
+    const served = CAPABILITY_CATALOG.filter((entry) => entry.servedBy === "bkn-safe").map(
+      (entry) => entry.key,
+    );
+
+    expect(served.sort()).toEqual(["audit", "perm_object_level", "rbac_basic"]);
+  });
+
   // 后端装配表今天登记的两个 key 必须在册,否则「你的集群」列对不上任何一行。
   it("覆盖后端已装配的能力", () => {
     const keys = CAPABILITY_CATALOG.map((entry) => entry.key);

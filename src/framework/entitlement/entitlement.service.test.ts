@@ -100,6 +100,26 @@ describe("fetchEntitlement", () => {
     await expect((await importFetchEntitlement())()).rejects.toThrow("404");
   });
 
+  /**
+   * ee-design.md §6.1 已写下 capabilities 的下一版形状(每项一个对象)。只认字符串会在
+   * 后端换形状那天静默滤空——付费入口全消失且不报错。
+   */
+  it("capabilities 换成对象形状时照样取到 key", async () => {
+    mockGet.mockReturnValue(
+      ok({
+        capabilities: [{ installed: true, key: "rbac_basic", licensed: true }],
+        edition: "professional",
+        extensions: [{ key: "rbac_basic" }, { key: "perm_object_level" }],
+        licensed: true,
+      }),
+    );
+
+    const entitlement = await (await importFetchEntitlement())();
+
+    expect(entitlement.capabilities).toEqual(["rbac_basic"]);
+    expect(entitlement.extensions).toEqual(["rbac_basic", "perm_object_level"]);
+  });
+
   // mock 模式覆盖三态里的两态,本地开发才走得到升级引导那条路。
   it("mock 模式给出企业镜像 + 专业证,不发请求", async () => {
     const entitlement = await (await importFetchEntitlement("true"))();

@@ -17,10 +17,20 @@ const useMock = import.meta.env.VITE_USE_MOCK !== "false";
  */
 const CAPABILITIES = "/safe/v1/capabilities";
 
+/**
+ * `capabilities[]` / `extensions[]` 今天是字符串数组,但 ee-design.md §6.1 已经写下了下一版
+ * 形状——每项是对象,分别给出 `installed` / `licensed` / `ready` / `reason`(0.1.3
+ * `business_provenance` 要求区分「换镜像」「买证书」「修依赖」三种处置)。
+ *
+ * 所以解析要认两种形状。只认字符串的话,后端换形状那天数组会被静默滤空,前端表现为
+ * 「什么都没买」——付费入口全消失且不报错,是最难查的那类故障。
+ */
+type CapabilityEntry = string | { key?: string; licensed?: boolean };
+
 type CapabilitiesResponse = {
-  capabilities?: string[];
+  capabilities?: CapabilityEntry[];
   edition?: string;
-  extensions?: string[];
+  extensions?: CapabilityEntry[];
   features?: string[];
   licensed?: boolean;
   limits?: Record<string, number>;
@@ -63,6 +73,28 @@ function toStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
 }
 
+/** 字符串数组与对象数组都收,取 key。对象形状见 CapabilityEntry 的注释。 */
+function toCapabilityKeys(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (typeof item === "string") {
+        return item;
+      }
+
+      if (item && typeof item === "object" && "key" in item) {
+        const key = (item as { key?: unknown }).key;
+        return typeof key === "string" ? key : null;
+      }
+
+      return null;
+    })
+    .filter((key): key is string => key !== null);
+}
+
 function toLimits(value: unknown): Record<string, number> {
   if (!value || typeof value !== "object") {
     return {};
@@ -98,9 +130,9 @@ export async function fetchEntitlement(): Promise<Entitlement> {
   const data = response.data;
 
   return {
-    capabilities: toStringArray(data.capabilities),
+    capabilities: toCapabilityKeys(data.capabilities),
     edition: parseEdition(data.edition),
-    extensions: toStringArray(data.extensions),
+    extensions: toCapabilityKeys(data.extensions),
     features: toStringArray(data.features),
     // 字段缺失(#638 之前的后端)当无授权处理:少给,不错给。
     licensed: data.licensed === true,

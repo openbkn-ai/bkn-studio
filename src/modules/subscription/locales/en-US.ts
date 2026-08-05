@@ -62,6 +62,7 @@ export const subscriptionEnUS = {
       semantic: "Semantics",
     },
     cluster: {
+      otherService: "Rows marked “—” are provided by other services. This endpoint only describes the bkn-safe image, so it cannot answer for them.",
       available: "Available",
       hint: "“Your cluster” is computed from the licence and the image in force: Upgrade = shipped in this image but the tier is too low; Unavailable = this image does not carry the implementation.",
       notInstalled: "Unavailable",

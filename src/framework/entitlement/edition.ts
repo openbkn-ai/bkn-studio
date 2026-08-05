@@ -6,10 +6,12 @@
  */
 
 /**
- * 授权档位。四档有序,上层包含下层——`industry` 排在 `enterprise` 之上而不是与它
- * 并列,否则行业版客户会被企业版能力挡在门外(付得更多,功能反而少)。
+ * 授权档位。四档有序,上层包含下层——`industry` 排在 `enterprise` 之上而不是与它并列,
+ * 否则行业版客户会被企业版能力挡在门外(付得更多,功能反而少)。
  *
- * 字典单一源在 license-server 仓 `docs/design/license-service.md` §1.5,这里只是镜像。
+ * 单一源是 `licverify` 的 `Edition` 类型(见 bkn-docs `shared/licensing/README.md` 的
+ * 单一源表);商务形态在 license-server `docs/design/license-service.md` §1.5。这里是
+ * **展示用镜像**,不是判定源。
  */
 export type Edition = "community" | "professional" | "enterprise" | "industry";
 
@@ -37,13 +39,16 @@ export function parseEdition(value: unknown): Edition {
 }
 
 /**
- * 唯一的档位判定入口,对应服务端的 `entitlement.AtLeast(minEdition)`。
+ * 档位比较。**只用于展示**——版本对比页要渲染「上层包含下层」这件事(专业版有的,企业版
+ * 也有)。
  *
- * 判定只看档位,不看 `features[]`——证里的 feature 清单只用于展示与审计核对,任何
- * 代码路径不得据此放行(bkn-docs `shared/licensing/README.md` 决策 4/5)。
+ * **不得用于门控。** 判定源是服务端:`capabilities[]` 已经是它用 `AtLeast(MinEdition)`
+ * 从装配表算好的结果,前端照读即可(ee-design.md §3.2「要按能力显隐,走
+ * /api/capabilities,不让客户端自己推」、§6.1「Studio / SDK / CLI 只消费这一条聚合接口」)。
  *
- * 前端这份判定没有强制力,强制力在服务端每个受控调用点。这里只是别让用户看见一个
- * 点进去必然被拒的入口。
+ * 在前端复制一份档位序本身就是 licensing README 点名的**唯一大错**——两处对「industry
+ * 是否高于 enterprise」给出不同答案。留着这一份的代价由下面的测试钉住:序关系跟着
+ * licverify 的 `Edition` 走,改动必须同步。
  */
 export function atLeast(current: Edition, min: Edition) {
   return EDITION_RANK[current] >= EDITION_RANK[min];

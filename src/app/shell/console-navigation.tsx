@@ -11,8 +11,7 @@ import type {
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
 import { isCapabilityAvailable } from "@/framework/entitlement/capability-state";
-import { atLeast } from "@/framework/entitlement/edition";
-import { isCommunityBuild, type Entitlement } from "@/framework/entitlement/types";
+import type { Entitlement } from "@/framework/entitlement/types";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
@@ -70,59 +69,15 @@ export function filterConsoleNavigation(
 }
 
 /**
- * 按集群授权档位过滤导航。档位不够时分两种下场,判据是 `extensions[]`:
- *
- * - **社区镜像**(插座一个都没填)→ 隐藏。付费实现物理不在这个二进制里,画一个
- *   点开只能看到升级引导的入口是噪音;而且社区升商业要换镜像,不是换证书能解决的。
- * - **企业镜像、档位不够** → 保留并标记 `locked`。换一张证就能用,这个入口正是
- *   升级引导该出现的地方。
- *
- * 这里没有强制力,强制力在服务端每个受控调用点。菜单只是别让用户点进必然被拒的页。
- */
-export function filterNavByEdition(
-  items: ConsoleNavItem[],
-  snapshot: Entitlement | null,
-): ConsoleNavItem[] {
-  // 快照没到:按档位门控的入口一律先不显示,也不画锁——此刻分不清这是社区镜像还是
-  // 企业镜像,而对着社区客户画一个换证书解不开的锁是更糟的那种错。
-  const communityBuild = !snapshot || isCommunityBuild(snapshot);
-  const visible: ConsoleNavItem[] = [];
-
-  for (const item of items) {
-    const gated = item.minEdition && (!snapshot || !atLeast(snapshot.edition, item.minEdition));
-
-    if (gated && communityBuild) {
-      continue;
-    }
-
-    const locked = Boolean(gated);
-
-    if (item.children?.length) {
-      const children = filterNavByEdition(item.children, snapshot);
-
-      // 子项全被档位挡掉且父项本身不可点 → 整组隐藏,不留一个空壳分组。
-      if (children.length === 0 && !item.path) {
-        continue;
-      }
-
-      visible.push({ ...item, children, locked });
-    } else {
-      visible.push(locked ? { ...item, locked } : item);
-    }
-  }
-
-  return visible;
-}
-
-/**
  * 按能力过滤导航:能力不可用 → 隐藏;子项全被过滤且本身不可点 → 整组隐藏。
  *
  * 判据是 isCapabilityAvailable,所以「未知」(快照还没到 / 拉失败)一律隐藏。首屏那一瞬
  * 付费入口不在,拿到快照后出现;反过来先显示再撤掉才是更糟的闪动。
  *
- * 与 filterNavByEdition 并存,分工是:登记过 capability key 的入口走这里(后端算好的
- * 结果),还没登记的付费面退到档位判定。两个函数刻意分开,合成一个迟早有人把两种 key
- * 混着传。
+ * **这是前端唯一的档位相关判据。** `capabilities[]` 已经是服务端用 `AtLeast(MinEdition)`
+ * 从装配表算好的结果,前端不再自己比档位(ee-design.md §3.2「不让客户端自己推」)。
+ * 与 filterNavByPermission 刻意分开:一个集群态、一个用户态,合成一个函数迟早有人把两种
+ * 字符串混着传。
  */
 export function filterNavByCapability(
   items: ConsoleNavItem[],
