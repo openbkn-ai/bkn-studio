@@ -52,7 +52,7 @@ import {
 import {
   createBknLifecycle,
   lifecycleEnv,
-  localExternalKeyStore,
+  localConversationStore,
   type TurnOutcome,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
@@ -186,11 +186,14 @@ function msgsLsKey(knId: string, paneKey: PaneKey): string {
 }
 
 /**
- * 受管会话身份键。每个面板一条独立 conversation —— 对比模式两侧是两个不同的 Agent
+ * 受管会话存放键。每个面板一条独立 conversation —— 对比模式两侧是两个不同的 Agent
  * 在各自答题，Trace 里也应当分别溯源、分别统计，不该混进同一条会话。
+ *
+ * `conv2` 是第二版：老键存的是已下线的 external_conversation_key（前端自造的随机串），
+ * 现在存的是 Core 分配的 conversation_id。换个键免得老值被当会话 id 白打一次请求。
  */
 function conversationLsKey(knId: string, paneKey: PaneKey): string {
-  return `bkn-studio:agentchat:conv:${knId}:${paneKey}`;
+  return `bkn-studio:agentchat:conv2:${knId}:${paneKey}`;
 }
 
 function loadPersisted(key: string): Partial<Persisted> {
@@ -600,12 +603,13 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
 
   /**
    * 本面板的受管生命周期客户端。会话身份跟着 kn + 面板走，只有「清空对话」才换新
-   * ——刷新页面按 external_conversation_key 幂等复用同一条 conversation。
+   * ——conversation_id 落在 localStorage，刷新页面接回同一条 conversation。
    */
   const lifecycle = useMemo(
     () =>
       createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
-        externalKeyStore: localExternalKeyStore(conversationLsKey(knId, profile.paneKey)),
+        conversationStore: localConversationStore(conversationLsKey(knId, profile.paneKey)),
+        agentName: `bkn-studio · ${profile.paneKey}`,
       }),
     [env.base, knId, tokenProvider, profile.paneKey],
   );
@@ -746,7 +750,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     setMessages([]);
     setStats({ tokens: 0, ms: 0 });
     // 清空对话 = 换一条受管会话。这是 conversation id 唯一的更换点：不清空就一直是同一个，
-    // 刷新页面也会按同一把 external_conversation_key 幂等复用回来。
+    // 刷新页面也会从 localStorage 把它读回来。
     lifecycle.reset();
     try {
       localStorage.removeItem(msgsLsKey(knId, profile.paneKey));
@@ -765,13 +769,16 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     () => models.map((m) => ({ value: m.modelName, label: m.default ? `${m.modelName} · 默认` : m.modelName })),
     [models],
   );
+  // 可勾选的工具 = 业务工具。`bkn_*` 是受管生命周期/溯源工具，由本面板自己调，
+  // 既不喂模型（见 buildAgentTools）也不该出现在勾选框里。
+  const agentToolDefs = useMemo(() => toolDefs?.filter((t) => !t.name.startsWith("bkn_")) ?? null, [toolDefs]);
   // 与 MCP 侧栏同款分组：本地 op 定义带组名，线上新增的归 Knowledge Network。
   const toolOptions = useMemo(() => {
-    if (!toolDefs) return [];
+    if (!agentToolDefs) return [];
     const groupOf = (name: string) => CONTEXT_LOADER_OPS.find((op) => op.id === name)?.group ?? "Knowledge Network";
     const order = [...new Set(CONTEXT_LOADER_OPS.map((op) => op.group))];
     const buckets = new Map<string, { value: string; label: string }[]>();
-    for (const t of toolDefs) {
+    for (const t of agentToolDefs) {
       const group = groupOf(t.name);
       if (!buckets.has(group)) buckets.set(group, []);
       buckets.get(group)!.push({ value: t.name, label: t.name });
@@ -783,11 +790,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
       })
       .map((group) => ({ label: group, title: group, options: buckets.get(group)! }));
-  }, [toolDefs]);
+  }, [agentToolDefs]);
   // 选择器展示值：null（全部）时显示当前已知的全部工具名。
   const draftToolValue = useMemo(
-    () => draftToolSelection ?? (toolDefs ? toolDefs.map((t) => t.name) : []),
-    [draftToolSelection, toolDefs],
+    () => draftToolSelection ?? (agentToolDefs ? agentToolDefs.map((t) => t.name) : []),
+    [draftToolSelection, agentToolDefs],
   );
 
   const empty = messages.length === 0;

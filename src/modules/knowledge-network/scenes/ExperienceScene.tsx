@@ -51,7 +51,7 @@ import {
 import {
   createBknLifecycle,
   lifecycleEnv,
-  memoryExternalKeyStore,
+  memoryConversationStore,
   withManagedTurn,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { AgentChat } from "@/modules/knowledge-network/components/agent-chat/AgentChat";
@@ -382,10 +382,14 @@ export function ExperienceScene({
   );
   /**
    * 调试台的受管生命周期。这里不是对话，一次「发送请求」/「填充测试数据」就是一轮交互；
-   * 会话本身按本次进入调试台算一条，刷新即换新（memory 键），不写 localStorage。
+   * 会话本身按本次进入调试台算一条，刷新即换新（内存态），不写 localStorage。
    */
   const lifecycle = useMemo(
-    () => createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, { externalKeyStore: memoryExternalKeyStore() }),
+    () =>
+      createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, {
+        conversationStore: memoryConversationStore(),
+        agentName: "bkn-studio · context-loader-console",
+      }),
     [base, knId, tokenProvider],
   );
 
@@ -495,9 +499,8 @@ export function ExperienceScene({
     () =>
       op
         ? buildCurl({ ...env, base: serverAddress }, op, mode, queryVals, bodyText, {
-            conversation_id: "<bkn_create_conversation 返回的 conversation_id>",
+            conversation_id: "<bkn_start_interaction 返回的 conversation_id>",
             interaction_id: "<bkn_start_interaction 返回的 interaction_id>",
-            operation_key: `${op.id}#1`,
           })
         : "",
     [env, serverAddress, op, mode, queryVals, bodyText],
@@ -542,8 +545,8 @@ export function ExperienceScene({
       const result = await withManagedTurn(
         lifecycle,
         `调试台调用 ${op.id}`,
-        async (turn) => {
-          const sent = await sendRequest(
+        (turn) =>
+          sendRequest(
             freshEnv,
             op,
             mode,
@@ -551,11 +554,8 @@ export function ExperienceScene({
             bodyText,
             tokenProvider,
             controller.signal,
-            turn?.nextContext(op.id),
-          );
-          turn?.recordReceipt(sent.receipt);
-          return sent;
-        },
+            turn?.context(),
+          ),
         // 业务返回 500 时这一轮仍算 completed —— 调用失败记在 Operation 的 Receipt 上
         // （Core 已判 failed），Interaction 状态表达的是调用方这一轮走完了没有。
         (sent) => `HTTP ${sent.status} · ${sent.sizeBytes}B`,

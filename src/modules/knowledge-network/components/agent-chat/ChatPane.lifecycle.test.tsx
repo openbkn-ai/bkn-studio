@@ -58,12 +58,7 @@ function stubLifecycle() {
   const turn: BknTurn = {
     conversationId: "conv_1",
     interactionId: "int_1",
-    nextContext: (toolName) => ({
-      conversation_id: "conv_1",
-      interaction_id: "int_1",
-      operation_key: `${toolName}#1`,
-    }),
-    recordReceipt: vi.fn(),
+    context: () => ({ conversation_id: "conv_1", interaction_id: "int_1" }),
     complete: vi.fn<BknTurn["complete"]>().mockResolvedValue(undefined),
     fail: vi.fn<BknTurn["fail"]>().mockResolvedValue(undefined),
     cancel: vi.fn<BknTurn["cancel"]>().mockResolvedValue(undefined),

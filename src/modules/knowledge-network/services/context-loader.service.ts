@@ -431,50 +431,24 @@ function mcpBase(env: ContextLoaderEnv): string {
 }
 
 /**
- * BKN Trace 3.0 受管调用上下文。Context Loader 对每次业务调用（REST `/kn/*` POST 与
- * 除 `bkn_*` 生命周期工具外的全部 MCP tools/call）都强制要求，缺任一字段直接 400，
- * 且下游调用次数为 0。三个 id 的来源见 bkn-lifecycle.service。
+ * BKN Trace 受管调用上下文。Context Loader 对每次业务调用（REST `/kn/*` POST 与
+ * 除 `bkn_*` 生命周期工具外的全部 MCP tools/call）都强制要求，缺任一字段直接返回
+ * `conversation_required`，且下游调用次数为 0。两个 id 的来源见 bkn-lifecycle.service。
  */
 export type BknContext = {
   conversation_id: string;
   interaction_id: string;
-  operation_key: string;
 };
 
 /**
- * 一次受管业务调用的回执引用。终结 Interaction 时必须把本轮**全部** operation 与 receipt
- * 一条不漏地列进 closure manifest（Core 按数量与归属校验，多一条少一条都报
- * `closure_manifest_invalid`），所以每次业务调用都要把它记下来。
- */
-export type BknReceiptRef = { operationId: string; receiptId: string; required: boolean };
-
-/** 从业务调用回执对象里取 operation/receipt 引用；形状不对返回 undefined。 */
-export function parseBknReceipt(value: unknown): BknReceiptRef | undefined {
-  if (!value || typeof value !== "object") return undefined;
-  const receipt = value as Record<string, unknown>;
-  const operationId = receipt.operation_id;
-  const receiptId = receipt.receipt_id;
-  if (typeof operationId !== "string" || !operationId) return undefined;
-  if (typeof receiptId !== "string" || !receiptId) return undefined;
-  // Context Loader 的受信适配器恒以 required=true 注册 Operation；缺字段时按它兜底，
-  // 因为 manifest 里的 required 必须与 Core 侧登记值一致，猜 false 会被直接判非法。
-  return { operationId, receiptId, required: receipt.required !== false };
-}
-
-/** 从 MCP 业务工具的 structuredContent 里取受管回执（正常执行是 bkn_receipt，重放/pending 是 receipt）。 */
-export function receiptFromStructured(structured: unknown): BknReceiptRef | undefined {
-  if (!structured || typeof structured !== "object") return undefined;
-  const envelope = structured as Record<string, unknown>;
-  return parseBknReceipt(envelope.bkn_receipt) ?? parseBknReceipt(envelope.receipt);
-}
-
-/**
- * 一次受管交互对业务调用暴露的最小接口：取上下文 + 回执记账。
+ * 一次受管交互对业务调用暴露的最小接口：取本轮上下文。
  * bkn-lifecycle 的 BknTurn 结构上满足它 —— 这里不反向 import，避免两个服务互相依赖。
+ *
+ * 老契约还要求把每次调用的回执记账、终结时列成 closure manifest；facade 收回去以后
+ * operation 的登记与收敛全由后端自理，前端只管把 conversation/interaction 带上。
  */
 export type BknCallScope = {
-  nextContext(toolName: string): BknContext;
-  recordReceipt(receipt: BknReceiptRef | undefined): void;
+  context(): BknContext;
 };
 
 /** 把受管上下文并进业务请求体/arguments（已有 bkn_context 不覆盖）。 */
@@ -569,25 +543,7 @@ export type ContextLoaderResponse = {
   latencyMs: number;
   sizeBytes: number;
   text: string;
-  /** 受管回执（REST 走响应头，MCP 走 structuredContent.bkn_receipt）；终结交互时要列全。 */
-  receipt?: BknReceiptRef;
 };
-
-/**
- * REST 业务响应里的受管回执：首次正常执行走响应头 `bkn-receipt-id` / `bkn-operation-id`
- * （业务响应体保持原形），终态重放或 pending 时改由响应体 `receipt` 字段带回。
- */
-function restReceiptRef(response: Response, text: string): BknReceiptRef | undefined {
-  const receiptId = response.headers.get("bkn-receipt-id");
-  const operationId = response.headers.get("bkn-operation-id");
-  if (receiptId && operationId) return { operationId, receiptId, required: true };
-  try {
-    const parsed = JSON.parse(text) as { receipt?: unknown };
-    return parseBknReceipt(parsed.receipt);
-  } catch {
-    return undefined;
-  }
-}
 
 /** 真实发送请求（REST 或 MCP），返回原始响应文本 + 元信息。 */
 export async function sendRequest(
@@ -663,7 +619,6 @@ export async function sendRequest(
         latencyMs: Math.round(performance.now() - start),
         sizeBytes: new Blob([text]).size,
         text,
-        receipt: receiptFromStructured(mcpStructuredContent(parseMcpEnvelope(text))),
       };
     }
     const url = buildRestUrl(env, op, queryValues);
@@ -681,7 +636,6 @@ export async function sendRequest(
       latencyMs: Math.round(performance.now() - start),
       sizeBytes: new Blob([text]).size,
       text,
-      receipt: restReceiptRef(response, text),
     };
   };
 
@@ -824,7 +778,7 @@ export function mcpResultText(parsed: unknown): string {
 
 /**
  * 从 MCP tools/call 信封取 `result.structuredContent`。
- * 业务工具的受管回执（`bkn_receipt`）与生命周期工具的返回体都只在这里，
+ * 生命周期工具的返回体（以及业务工具的受管回执 `bkn_receipt`）都只在这里，
  * 不在 content[].text —— mcpResultText 对生命周期工具只会拿到那句人读的提示语。
  */
 export function mcpStructuredContent(parsed: unknown): unknown {
@@ -1047,11 +1001,10 @@ export async function fetchKnDetail(
     env,
     auth,
     `${base}${REST_PREFIX}/kn/get_kn_detail?${params.toString()}`,
-    withBknContext({ kn_id: env.knId }, scope?.nextContext("get_kn_detail")),
+    withBknContext({ kn_id: env.knId }, scope?.context()),
     signal,
   );
   const text = await response.text();
-  scope?.recordReceipt(restReceiptRef(response, text));
   if (!response.ok) {
     throw new Error(text || `获取知识网络详情失败（${response.status}）`);
   }
@@ -1084,11 +1037,10 @@ export async function fetchObjectInstances(
     env,
     auth,
     `${base}${REST_PREFIX}/kn/query_object_instance?${params.toString()}`,
-    withBknContext({ limit, need_total: false, properties: [] }, scope?.nextContext("query_object_instance")),
+    withBknContext({ limit, need_total: false, properties: [] }, scope?.context()),
     signal,
   );
   const text = await response.text();
-  scope?.recordReceipt(restReceiptRef(response, text));
   if (!response.ok) {
     throw new Error(text || `查询实例失败（${response.status}）`);
   }

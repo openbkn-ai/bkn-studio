@@ -6,57 +6,50 @@
  */
 
 /**
- * BKN Trace 3.0 受管生命周期客户端 —— Context Loader 调用的前置协议边界。
+ * BKN Trace 受管生命周期客户端 —— Context Loader 调用的前置协议边界。
  *
- * 契约见 bkn-foundry `adp/context-loader/agent-retrieval/TRACE.md`：REST `/kn/*` POST 与
- * 除 `bkn_*` 外的全部 MCP `tools/call` 都必须携带 `bkn_context`（conversation_id +
- * interaction_id + operation_key），缺任一字段返回稳定错误码且下游调用次数为 0。
- * 三个 id 都不能前端自造，必须问 Core 要：
+ * 除 `bkn_*` 外的全部 MCP `tools/call` 与 REST `/kn/*` POST 都必须携带
+ * `bkn_context{conversation_id, interaction_id}`，缺了直接返回 `conversation_required`
+ * 且下游调用次数为 0。两个 id 都不能前端自造，只能问 Core 要：
  *
- *   会话（conversation）—— 一条对话的身份，清空对话才换；页面刷新按 external_conversation_key 幂等复用。
+ *   会话（conversation）—— 一条对话的身份，清空对话才换；首轮由 Core 分配，之后回传复用。
  *   交互（interaction）—— 一轮问答，发送时开、出答案/停止/出错时终结。
- *   操作（operation）—— 一轮里的每次工具调用，由 operation_key 在交互内去重。
  *
  * 生命周期只由 MCP 工具暴露（agent-retrieval 没有对应 REST 路由），所以 REST 调试台也要
- * 先走一遍 MCP 才能拿到上下文。
+ * 先走一遍 MCP 才能拿到上下文。契约实测（2026-08-05，foundry #618 之后）只剩两个工具：
+ *
+ *   bkn_start_interaction  {question*, conversation_id?, agent_name?}
+ *     → {interaction_id, conversation_id, execution_status:"active"}
+ *   bkn_finish_interaction {interaction_id*, outcome*, answer?, reason?}
+ *     → {interaction_id, conversation_id, execution_status, evidence_status}
+ *
+ * 租约、终结清单（expected_operations / expected_receipts）、operation_key 全部收回 facade
+ * 内部，调用方不再参与 —— 老契约那套 `bkn_create_conversation` + 三个终结工具已下线。
  */
 
 import {
   createMcpSession,
   type BknContext,
-  type BknReceiptRef,
   type ContextLoaderEnv,
   type McpAuth,
   type McpSession,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
-/** 终结清单版本，与 Core `completion_manifest_version` 对应。 */
-const MANIFEST_VERSION = "1";
-
-/**
- * 交互租约时长。终结时租约必须还没过期，否则 Core 判 `terminal_conflict`；
- * 一轮 Agent 对话可以跑满 40 步工具，按分钟级留足。
- */
-const DEFAULT_LEASE_SECONDS = 1800;
-
-/**
- * 成功终结时给证据组装留的收敛窗口。Context Loader 目前只能把 Receipt 完成为
- * `evidence_durability=pending`（3.0 Evidence Producer 未落地），而带 pending 回执的
- * 成功交互必须在清单里给出 assembler_deadline，否则永远停在 assembling ——
- * 现在没有 assembler 在跑，看不出差别，但 #544 上线后有它才会自动收敛。
- */
-const ASSEMBLER_DEADLINE_MS = 5 * 60 * 1000;
-
-/** 一轮交互的收尾原因（Core 只存字符串，不校验枚举）。 */
+/** 一轮交互的收尾结果。注意线上入参枚举是 `cancelled`（双 l），见 WIRE_OUTCOME。 */
 export type TurnOutcome = "completed" | "failed" | "canceled";
+
+/** 前端枚举 → `bkn_finish_interaction.outcome` 的线上拼写。 */
+const WIRE_OUTCOME: Record<TurnOutcome, string> = {
+  completed: "completed",
+  failed: "failed",
+  canceled: "cancelled",
+};
 
 export type BknTurn = {
   conversationId: string;
   interactionId: string;
-  /** 取下一次业务调用的受管上下文；operation_key 在本轮内唯一。 */
-  nextContext(toolName: string): BknContext;
-  /** 记下一次业务调用的回执；终结时要把本轮全部 operation/receipt 列进清单。 */
-  recordReceipt(receipt: BknReceiptRef | undefined): void;
+  /** 本轮的受管上下文，随每次业务调用一起发出。 */
+  context(): BknContext;
   /** 正常收尾（answer 为本轮最终答复，Core 会存为 interaction artifact）。 */
   complete(answer: string): Promise<void>;
   /** 执行失败收尾。 */
@@ -70,7 +63,7 @@ export type BknTurn = {
 export type BknLifecycle = {
   /** 与业务调用共用的 MCP 会话（复用同一个 Mcp-Session-Id，少一次握手）。 */
   session: McpSession;
-  /** 当前会话 id；还没建立时为 null。 */
+  /** 当前会话 id；还没开过交互时为 null。 */
   conversationId(): string | null;
   /** 后端不支持受管生命周期（老版本 Context Loader）时为 true，此时不注入 bkn_context。 */
   unsupported(): boolean;
@@ -81,26 +74,26 @@ export type BknLifecycle = {
    * 等上一轮终结后才真正开新的一轮。
    */
   beginTurn(question: string): Promise<BknTurn | null>;
-  /** 丢弃当前会话（清空对话）：下一轮会建一条全新 conversation。 */
+  /** 丢弃当前会话（清空对话）：下一轮会开一条全新 conversation。 */
   reset(): void;
 };
 
 export type BknLifecycleOptions = {
   /**
-   * 会话身份键。同一个键 `bkn_create_conversation` 幂等复用同一条 conversation，
-   * 所以它决定了「什么时候还算同一条对话」：刷新页面复用，清空对话换新。
+   * 会话 id 的存放处。新契约没有 `external_conversation_key` 之类的幂等键，
+   * 「刷新页面还是同一条对话」只能靠前端把 Core 分配的 conversation_id 存下来。
    */
-  externalKeyStore: ExternalKeyStore;
-  /** 单轮即弃的场景（如调试台一次点击）传 true，交给 Core 按 one-shot 语义收敛。 */
-  oneShot?: boolean;
-  leaseSeconds?: number;
+  conversationStore: ConversationStore;
+  /** 写进 Trace 的调用方显示名（Core 只在首轮登记，之后传同值即可）。 */
+  agentName?: string;
 };
 
-/** 会话身份键的读写。localStorage 实现见 localExternalKeyStore。 */
-export type ExternalKeyStore = {
-  read(): string;
-  /** 换一把新键（清空对话）。 */
-  rotate(): void;
+/** 会话 id 的读写。localStorage 实现见 localConversationStore。 */
+export type ConversationStore = {
+  /** 还没有会话时返回 null。 */
+  read(): string | null;
+  write(id: string): void;
+  clear(): void;
 };
 
 /**
@@ -124,33 +117,30 @@ export function randomLifecycleId(): string {
 }
 
 /**
- * localStorage 版会话身份键。键值只在 rotate（清空对话）时更换，
- * 因此刷新页面仍会命中同一条 conversation —— 这正是「不清空就一直同一个 id」。
+ * localStorage 版会话存放处。只在 clear（清空对话）时丢弃，
+ * 因此刷新页面仍会接回同一条 conversation —— 这正是「不清空就一直同一个 id」。
  */
-export function localExternalKeyStore(storageKey: string): ExternalKeyStore {
+export function localConversationStore(storageKey: string): ConversationStore {
   let cached: string | null = null;
   return {
     read() {
       if (cached) return cached;
       try {
-        const stored = localStorage.getItem(storageKey);
-        if (stored) {
-          cached = stored;
-          return stored;
-        }
+        cached = localStorage.getItem(storageKey);
       } catch {
-        /* localStorage 不可用时退化为内存键 */
+        /* localStorage 不可用时退化为内存态 */
       }
-      const fresh = randomLifecycleId();
-      cached = fresh;
-      try {
-        localStorage.setItem(storageKey, fresh);
-      } catch {
-        /* 忽略：内存键仍能保证本次会话内稳定 */
-      }
-      return fresh;
+      return cached;
     },
-    rotate() {
+    write(id: string) {
+      cached = id;
+      try {
+        localStorage.setItem(storageKey, id);
+      } catch {
+        /* 忽略：内存态仍能保证本次会话内稳定 */
+      }
+    },
+    clear() {
       cached = null;
       try {
         localStorage.removeItem(storageKey);
@@ -161,13 +151,16 @@ export function localExternalKeyStore(storageKey: string): ExternalKeyStore {
   };
 }
 
-/** 进程内会话身份键：刷新即换新会话，适合一次性面板。 */
-export function memoryExternalKeyStore(): ExternalKeyStore {
-  let value = randomLifecycleId();
+/** 进程内会话存放处：刷新即换新会话，适合一次性面板。 */
+export function memoryConversationStore(): ConversationStore {
+  let value: string | null = null;
   return {
     read: () => value,
-    rotate() {
-      value = randomLifecycleId();
+    write(id: string) {
+      value = id;
+    },
+    clear() {
+      value = null;
     },
   };
 }
@@ -176,26 +169,35 @@ export function memoryExternalKeyStore(): ExternalKeyStore {
 export class BknLifecycleError extends Error {
   readonly code: string;
   readonly requiredAction: string;
+  /** `interaction_in_progress` 时 Core 回带的在途交互 id，用于回收。 */
+  readonly currentInteractionId: string;
 
-  constructor(tool: string, code: string, message: string, requiredAction: string) {
+  constructor(
+    tool: string,
+    code: string,
+    message: string,
+    requiredAction: string,
+    currentInteractionId = "",
+  ) {
     super(message || `${tool} 失败（${code || "unknown"}）`);
     this.name = "BknLifecycleError";
     this.code = code;
     this.requiredAction = requiredAction;
+    this.currentInteractionId = currentInteractionId;
   }
 }
 
-type LifecycleErrorPayload = { code?: unknown; message?: unknown; required_action?: unknown };
+type LifecycleErrorPayload = {
+  code?: unknown;
+  message?: unknown;
+  required_action?: unknown;
+  current_interaction_id?: unknown;
+};
 
 /**
- * 会话里还挂着一轮没终结的交互。正常路径不会走到这儿（本地闸门会排队），只有上一轮的
- * 终结真的没送达 Core 时才出现——例如业务调用的响应丢在网络上，前端拿不到回执，
- * 清单缺一条，终结被判 closure_manifest_invalid。
- *
- * 这时前端救不回来：补齐清单需要按 interaction 列出已登记的 operation，而受管接口
- * 只允许按 id 查（TRACE.md 第三节：第三方 Agent 只能查询 Operation/Receipt）。
- * 但用户有出路——清空对话会换一条全新 conversation，卡住的那轮留给 Core 的租约回收。
- * 所以这里把出路写进报错，别让人对着「已有进行中的交互」干等 30 分钟租约。
+ * 会话里还挂着一轮没终结的交互，且自动回收也没能收掉。正常路径不会走到这儿——本地闸门会
+ * 排队，回收逻辑还会替上一轮收尾——只有回收本身也失败时才出现。用户的出路是清空对话换一条
+ * 全新 conversation，卡住的那轮留给 Core 的租约回收。
  */
 const STUCK_INTERACTION_HINT = "当前会话还有一轮未结束的交互没能正常收尾。点「清空」开一条新对话即可继续；卡住的那轮会由服务端租约自动回收。";
 
@@ -209,6 +211,7 @@ function lifecycleErrorOf(tool: string, structured: unknown, fallbackText: strin
     code,
     code === "interaction_in_progress" ? STUCK_INTERACTION_HINT : message,
     typeof error.required_action === "string" ? error.required_action : "",
+    typeof error.current_interaction_id === "string" ? error.current_interaction_id : "",
   );
 }
 
@@ -246,11 +249,6 @@ function stringField(source: Record<string, unknown>, key: string): string {
   return typeof value === "string" ? value : "";
 }
 
-function numberField(source: Record<string, unknown>, key: string): number {
-  const value = source[key];
-  return typeof value === "number" ? value : 0;
-}
-
 export function createBknLifecycle(
   env: ContextLoaderEnv,
   auth: McpAuth | undefined,
@@ -261,8 +259,7 @@ export function createBknLifecycle(
 
 /** 同上但复用调用方给的 MCP 会话（也是测试注入点）。 */
 export function createBknLifecycleOn(session: McpSession, options: BknLifecycleOptions): BknLifecycle {
-  const { externalKeyStore, oneShot = false, leaseSeconds = DEFAULT_LEASE_SECONDS } = options;
-  let conversationId: string | null = null;
+  const { conversationStore, agentName } = options;
   let notSupported = false;
   /**
    * 上一轮交互的终结闸门。会话内只能有一个 active interaction，抢跑的第二轮会被 Core
@@ -270,23 +267,40 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
    */
   let previousTurnSettled: Promise<void> = Promise.resolve();
 
-  async function ensureConversation(): Promise<string | null> {
-    if (notSupported) return null;
-    if (conversationId) return conversationId;
+  function startArgs(question: string): Record<string, unknown> {
+    const args: Record<string, unknown> = { question };
+    // 首轮不带 conversation_id，由 Core 分配；之后回传拿回同一条会话。
+    const known = conversationStore.read();
+    if (known) args.conversation_id = known;
+    if (agentName) args.agent_name = agentName;
+    return args;
+  }
+
+  /**
+   * 开交互，并处理两类可自愈的失败：
+   *
+   *   resource_not_disclosed —— 存下来的 conversation_id 在当前账户/部署下已不可见
+   *     （后端换库、换租户、会话被清理）。丢掉它重开一条，而不是让面板从此打不开。
+   *   interaction_in_progress —— 会话里挂着一轮没收尾的交互。走到这儿说明本地闸门是空的
+   *     （beginTurn 已经排过队），所以那一轮必定是泄漏的：刷新页面打断了 finish 的多半就是它。
+   *     用 Core 回带的 current_interaction_id 替它收尾再重开；收不掉才把出路提示抛给用户。
+   */
+  async function startInteraction(question: string): Promise<Record<string, unknown>> {
     try {
-      // ensure-current 按 external_conversation_key 幂等：刷新页面拿回同一条会话，
-      // 会话已关闭则由 Core 开新 generation，前端不需要自己判断该 create 还是 resume。
-      const state = await callLifecycleTool(session, "bkn_create_conversation", {
-        external_conversation_key: externalKeyStore.read(),
-        idempotency_key: randomLifecycleId(),
-        one_shot: oneShot,
-      });
-      conversationId = stringField(state, "conversation_id") || null;
-      return conversationId;
+      return await callLifecycleTool(session, "bkn_start_interaction", startArgs(question));
     } catch (error) {
-      if (error instanceof BknLifecycleError && error.code === "lifecycle_not_supported") {
-        notSupported = true;
-        return null;
+      if (!(error instanceof BknLifecycleError)) throw error;
+      if (error.code === "resource_not_disclosed") {
+        conversationStore.clear();
+        return callLifecycleTool(session, "bkn_start_interaction", startArgs(question));
+      }
+      if (error.code === "interaction_in_progress" && error.currentInteractionId) {
+        await callLifecycleTool(session, "bkn_finish_interaction", {
+          interaction_id: error.currentInteractionId,
+          outcome: WIRE_OUTCOME.canceled,
+          reason: "reclaimed_by_client",
+        });
+        return callLifecycleTool(session, "bkn_start_interaction", startArgs(question));
       }
       throw error;
     }
@@ -294,13 +308,13 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
 
   return {
     session,
-    conversationId: () => conversationId,
+    conversationId: () => conversationStore.read(),
     unsupported: () => notSupported,
     reset() {
-      conversationId = null;
-      externalKeyStore.rotate();
+      conversationStore.clear();
     },
     async beginTurn(question: string) {
+      if (notSupported) return null;
       const waitFor = previousTurnSettled;
       let release = () => undefined as void;
       previousTurnSettled = new Promise<void>((resolve) => {
@@ -309,20 +323,20 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
       try {
         // 闸门只会 resolve、不会 reject（终结失败也照样放行），所以这里不会串联失败。
         await waitFor;
-        const currentConversation = await ensureConversation();
-        if (!currentConversation) {
+        if (notSupported) {
           release();
           return null;
         }
-        const state = await callLifecycleTool(session, "bkn_start_interaction", {
-          conversation_id: currentConversation,
-          idempotency_key: randomLifecycleId(),
-          question,
-          lease_seconds: leaseSeconds,
-        });
-        return createTurn(session, currentConversation, state, release);
+        const state = await startInteraction(question);
+        const conversationId = stringField(state, "conversation_id");
+        if (conversationId) conversationStore.write(conversationId);
+        return createTurn(session, conversationId, stringField(state, "interaction_id"), release);
       } catch (error) {
         release();
+        if (error instanceof BknLifecycleError && error.code === "lifecycle_not_supported") {
+          notSupported = true;
+          return null;
+        }
         throw error;
       }
     },
@@ -332,42 +346,26 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
 function createTurn(
   session: McpSession,
   conversationId: string,
-  state: Record<string, unknown>,
+  interactionId: string,
   /** 终结后放行下一轮（成败都放行，否则一次收尾失败会让整条会话再也开不出交互）。 */
   release: () => void,
 ): BknTurn {
-  const interactionId = stringField(state, "interaction_id");
-  const leaseToken = stringField(state, "lease_token");
-  const leaseEpoch = numberField(state, "lease_epoch");
-  const receipts: BknReceiptRef[] = [];
-  let operationSeq = 0;
   let terminated = false;
 
-  async function terminate(tool: string, reason: string, answer?: string): Promise<void> {
+  async function terminate(outcome: TurnOutcome, answer?: string, reason?: string): Promise<void> {
     // 终结只做一次：重复调用会撞 Core 的 terminal_conflict，而调用方在
     // 「停止后又出错」这类路径上很容易两次都触发。
     if (terminated) return;
     terminated = true;
-    // 清单必须一条不漏地列出本轮登记过的 operation / receipt，且 required 与 Core 侧一致，
-    // 数量对不上直接 closure_manifest_invalid。
     const args: Record<string, unknown> = {
       interaction_id: interactionId,
-      terminal_idempotency_key: randomLifecycleId(),
-      lease_token: leaseToken,
-      lease_epoch: leaseEpoch,
-      completion_manifest_version: MANIFEST_VERSION,
-      completion_reason: reason,
-      expected_operations: receipts.map((r) => ({ operation_id: r.operationId, required: r.required })),
-      expected_receipts: receipts.map((r) => ({ receipt_id: r.receiptId, required: r.required })),
+      outcome: WIRE_OUTCOME[outcome],
     };
-    // answer 只在 complete 的 schema 里声明；cancel / fail 传了会撞
-    // additionalProperties: false。
-    if (answer !== undefined) {
-      args.answer = answer;
-      args.assembler_deadline = new Date(Date.now() + ASSEMBLER_DEADLINE_MS).toISOString();
-    }
+    // schema 是 additionalProperties:false，空串也别塞。
+    if (answer) args.answer = answer;
+    if (reason) args.reason = reason;
     try {
-      await callLifecycleTool(session, tool, args);
+      await callLifecycleTool(session, "bkn_finish_interaction", args);
     } finally {
       release();
     }
@@ -376,26 +374,14 @@ function createTurn(
   return {
     conversationId,
     interactionId,
-    nextContext(toolName: string) {
-      operationSeq += 1;
-      return {
-        conversation_id: conversationId,
-        interaction_id: interactionId,
-        operation_key: `${toolName}#${operationSeq}`,
-      };
-    },
-    recordReceipt(receipt) {
-      // 同一 operation 的重放会回同一个 receipt，去重后清单才不会多算。
-      if (!receipt || receipts.some((r) => r.operationId === receipt.operationId)) return;
-      receipts.push(receipt);
-    },
-    complete: (answer: string) => terminate("bkn_complete_interaction", "answer_returned", answer),
-    fail: (reason: string) => terminate("bkn_fail_interaction", reason || "agent_error"),
-    cancel: (reason: string) => terminate("bkn_cancel_interaction", reason || "stopped_by_user"),
+    context: () => ({ conversation_id: conversationId, interaction_id: interactionId }),
+    complete: (answer: string) => terminate("completed", answer),
+    fail: (reason: string) => terminate("failed", undefined, reason || "agent_error"),
+    cancel: (reason: string) => terminate("canceled", undefined, reason || "stopped_by_user"),
     finish(outcome, answer) {
-      if (outcome === "canceled") return terminate("bkn_cancel_interaction", "stopped_by_user");
-      if (outcome === "failed") return terminate("bkn_fail_interaction", "agent_error");
-      return terminate("bkn_complete_interaction", "answer_returned", answer);
+      if (outcome === "canceled") return terminate("canceled", undefined, "stopped_by_user");
+      if (outcome === "failed") return terminate("failed", undefined, "agent_error");
+      return terminate("completed", answer);
     },
   };
 }
