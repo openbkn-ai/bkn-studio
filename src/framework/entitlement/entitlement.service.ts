@@ -6,16 +6,17 @@
  */
 
 import { parseEdition } from "@/framework/entitlement/edition";
-import {
-  FALLBACK_ENTITLEMENT,
-  type Entitlement,
-  type LicenseState,
-} from "@/framework/entitlement/types";
+import type { Entitlement, LicenseState } from "@/framework/entitlement/types";
 import { http } from "@/framework/request/http";
 
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+
+/**
+ * 集群授权状态。只认证不鉴权——它描述这套部署,不描述调用者,所以任何登录用户都读得到,
+ * 前端每次进来靠它铺菜单。网关已放行该路径(bkn-foundry #638)。
+ */
 const CAPABILITIES = "/safe/v1/capabilities";
 
-// GET /api/safe/v1/capabilities — bkn-safe,只认证不鉴权(RequireUser),网关暴露。
 type CapabilitiesResponse = {
   capabilities?: string[];
   edition?: string;
@@ -24,6 +25,23 @@ type CapabilitiesResponse = {
   licensed?: boolean;
   limits?: Record<string, number>;
   state?: string;
+};
+
+/**
+ * mock 模拟「企业镜像 + 专业证」:装了两个能力,只买得起其中一个。
+ *
+ * 选这个组合是因为它同时覆盖三态里的两个——`rbac_basic` 可用、`perm_object_level`
+ * 装了没买——本地开发因此能看见升级引导长什么样。全买或全不买的 mock 会让升级路径
+ * 没人走过。
+ */
+const MOCK_ENTITLEMENT: Entitlement = {
+  capabilities: ["rbac_basic"],
+  edition: "professional",
+  extensions: ["rbac_basic", "perm_object_level"],
+  features: ["rbac_basic", "source_sync"],
+  licensed: true,
+  limits: { max_users: 100 },
+  state: "valid",
 };
 
 const LICENSE_STATES: readonly LicenseState[] = [
@@ -58,30 +76,35 @@ function toLimits(value: unknown): Record<string, number> {
 }
 
 /**
- * 拉取集群授权档位与能力。任何失败都退回社区版兜底(FALLBACK_ENTITLEMENT):
- * 一次瞬时失败不该把付费入口白送出去,也不该把页面拦死——社区能力本来就不受门控。
+ * 拉取集群授权快照。
  *
- * 不弹错误 toast:这是启动期的背景请求,用户没有主动发起,拉不到的表现是少几个
- * 付费入口,不是一条看不懂的报错。
+ * 每个字段都按最保守的值兜底:没有能力、社区档、未授权。缺字段不是假想——`licensed`
+ * 是 #638 才加的,老部署不吐;而缺字段当「有」会让菜单全开而每个调用被拒。
+ *
+ * 失败**抛出**,由 Provider 落成 `snapshot = null`(未知)。这里不吞成社区版兜底:
+ * 「确实是社区版」和「没拿到」必须分得开,否则企业客户的一次网络抖动会被渲染成
+ * 「你没买」并配上一条升级引导。
+ *
+ * `skipErrorToast`:首屏后台请求,用户没发起任何操作,弹红条只会让人莫名其妙。
  */
 export async function fetchEntitlement(): Promise<Entitlement> {
-  try {
-    const response = await http.get<CapabilitiesResponse>(CAPABILITIES, {
-      skipErrorToast: true,
-    });
-    const data = response.data;
-
-    return {
-      capabilities: toStringArray(data.capabilities),
-      edition: parseEdition(data.edition),
-      extensions: toStringArray(data.extensions),
-      features: toStringArray(data.features),
-      // 字段缺失(老后端,#638 之前)当无授权处理:少给,不错给。
-      licensed: data.licensed === true,
-      limits: toLimits(data.limits),
-      state: parseLicenseState(data.state),
-    };
-  } catch {
-    return FALLBACK_ENTITLEMENT;
+  if (useMock) {
+    return { ...MOCK_ENTITLEMENT };
   }
+
+  const response = await http.get<CapabilitiesResponse>(CAPABILITIES, {
+    skipErrorToast: true,
+  });
+  const data = response.data;
+
+  return {
+    capabilities: toStringArray(data.capabilities),
+    edition: parseEdition(data.edition),
+    extensions: toStringArray(data.extensions),
+    features: toStringArray(data.features),
+    // 字段缺失(#638 之前的后端)当无授权处理:少给,不错给。
+    licensed: data.licensed === true,
+    limits: toLimits(data.limits),
+    state: parseLicenseState(data.state),
+  };
 }

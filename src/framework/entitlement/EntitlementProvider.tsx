@@ -8,49 +8,62 @@
 import type { PropsWithChildren } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  EntitlementContext,
-  type EntitlementStatus,
-} from "@/framework/entitlement/entitlement-context";
+import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import { fetchEntitlement } from "@/framework/entitlement/entitlement.service";
-import { FALLBACK_ENTITLEMENT, type Entitlement } from "@/framework/entitlement/types";
+import type { Entitlement } from "@/framework/entitlement/types";
 
 /**
- * 登录后拉一次集群授权档位,供导航与页面门禁使用。
+ * 拉一次集群授权状态并提供给全树。
  *
- * 必须挂在 AuthGate **之内**:接口是 token-gated 的(RequireUser),没有令牌时拿不到。
+ * 拉一次而不是每次用的时候拉:它是集群属性,只在导入/吊销证书时变,与路由和用户都无关。
+ * 每个 Gate 各拉一次会在首屏打出几十个相同请求。
  *
- * 不阻塞渲染。授权档位只影响付费入口的显隐,社区能力本来就不受门控——为它多转一圈
- * 全屏 loading 是拿所有用户的启动时间换少数付费入口的一次闪现。首帧按社区版渲染,
- * 拿到结果再补上付费入口;这段窗口由 `status: "loading"` 标出,调用方据此决定是
- * 「先不渲染」还是「按兜底渲染」。
+ * **必须挂在 AuthGate 之内**:接口 token-gated(RequireUser),而 AuthGate 在拿到令牌前
+ * 根本不渲染 children。挂在它外面会在未登录时打出一个必然 401 的请求,之后又没有第二次
+ * 触发点——快照会一直停在 null,付费入口永久消失。
+ *
+ * **不阻塞首屏。** 社区部署是多数,它们等这个请求毫无意义;而企业部署里付费入口晚半秒
+ * 出现,远好过整个控制台白屏等一个可能超时的请求。加载期间 snapshot 为 null,下游按
+ * 「未知」处理——不可用,但也不出升级引导。
  */
 export function EntitlementProvider({ children }: PropsWithChildren) {
-  const [entitlement, setEntitlement] = useState<Entitlement>(FALLBACK_ENTITLEMENT);
-  const [status, setStatus] = useState<EntitlementStatus>("loading");
-  const disposed = useRef(false);
+  const [snapshot, setSnapshot] = useState<Entitlement | null>(null);
+  const [loading, setLoading] = useState(true);
+  // 卸载后不再 setState。refresh() 可能在页面跳转前后触发,StrictMode 下 effect 还会
+  // 跑两遍。
+  const mounted = useRef(true);
 
-  const load = useCallback(() => {
-    void fetchEntitlement().then((next) => {
-      if (!disposed.current) {
-        setEntitlement(next);
-        setStatus("ready");
+  const load = useCallback(async () => {
+    try {
+      const next = await fetchEntitlement();
+      if (mounted.current) {
+        setSnapshot(next);
       }
-    });
+    } catch {
+      // 拿不到就维持「未知」,绝不退化成「全都能用」。bkn-safe 不可达时整个产品都登不
+      // 进去,这里不是独立故障面,藏掉付费入口是可以接受的降级。
+      if (mounted.current) {
+        setSnapshot(null);
+      }
+    } finally {
+      if (mounted.current) {
+        setLoading(false);
+      }
+    }
   }, []);
 
   useEffect(() => {
-    disposed.current = false;
-    load();
+    mounted.current = true;
+    void load();
 
     return () => {
-      disposed.current = true;
+      mounted.current = false;
     };
   }, [load]);
 
   const value = useMemo(
-    () => ({ entitlement, refresh: load, status }),
-    [entitlement, load, status],
+    () => ({ loading, refresh: load, snapshot }),
+    [loading, load, snapshot],
   );
 
   return (

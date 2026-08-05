@@ -7,46 +7,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { Entitlement } from "@/framework/entitlement/types";
 import {
   CAPABILITY_CATALOG,
   capabilitiesIntroducedBy,
 } from "@/modules/subscription/capability-catalog";
-import { clusterCapabilityStatus } from "@/modules/subscription/cluster-capability-status";
-
-const eeBuild: Entitlement = {
-  capabilities: ["rbac_basic"],
-  edition: "professional",
-  extensions: ["rbac_basic", "perm_object_level"],
-  features: ["rbac_basic", "source_sync"],
-  licensed: true,
-  limits: {},
-  state: "valid",
-};
-
-describe("clusterCapabilityStatus", () => {
-  it("在 capabilities 里 = 可用", () => {
-    expect(clusterCapabilityStatus("rbac_basic", eeBuild, "ready")).toBe("available");
-  });
-
-  // 镜像里有、档位不够——换一张证就能用,这是唯一该出商务信息的状态。
-  it("只在 extensions 里 = 需升级", () => {
-    expect(clusterCapabilityStatus("perm_object_level", eeBuild, "ready")).toBe(
-      "not-licensed",
-    );
-  });
-
-  // 两个都不在 = 这个二进制根本没装,换证也没用,得换镜像。
-  it("两个列表都没有 = 不可用", () => {
-    expect(clusterCapabilityStatus("audit", eeBuild, "ready")).toBe("not-installed");
-  });
-
-  // 快照没到时报「不可用」,会对着一个其实买了的客户显示未安装。
-  it("快照未到一律未知,不借兜底下结论", () => {
-    expect(clusterCapabilityStatus("rbac_basic", eeBuild, "loading")).toBe("unknown");
-    expect(clusterCapabilityStatus("audit", eeBuild, "loading")).toBe("unknown");
-  });
-});
 
 describe("capability catalog", () => {
   // 登记表里 planned 的行(sso / explorer / business_provenance 等)对客户不可见——

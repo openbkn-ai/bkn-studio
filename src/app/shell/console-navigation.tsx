@@ -10,6 +10,7 @@ import type {
   ConsoleNavContribution,
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
+import { isCapabilityAvailable } from "@/framework/entitlement/capability-state";
 import { atLeast } from "@/framework/entitlement/edition";
 import { isCommunityBuild, type Entitlement } from "@/framework/entitlement/types";
 import { hasPermissions } from "@/framework/permission/has-permissions";
@@ -80,13 +81,15 @@ export function filterConsoleNavigation(
  */
 export function filterNavByEdition(
   items: ConsoleNavItem[],
-  entitlement: Entitlement,
+  snapshot: Entitlement | null,
 ): ConsoleNavItem[] {
-  const communityBuild = isCommunityBuild(entitlement);
+  // 快照没到:按档位门控的入口一律先不显示,也不画锁——此刻分不清这是社区镜像还是
+  // 企业镜像,而对着社区客户画一个换证书解不开的锁是更糟的那种错。
+  const communityBuild = !snapshot || isCommunityBuild(snapshot);
   const visible: ConsoleNavItem[] = [];
 
   for (const item of items) {
-    const gated = item.minEdition && !atLeast(entitlement.edition, item.minEdition);
+    const gated = item.minEdition && (!snapshot || !atLeast(snapshot.edition, item.minEdition));
 
     if (gated && communityBuild) {
       continue;
@@ -95,7 +98,7 @@ export function filterNavByEdition(
     const locked = Boolean(gated);
 
     if (item.children?.length) {
-      const children = filterNavByEdition(item.children, entitlement);
+      const children = filterNavByEdition(item.children, snapshot);
 
       // 子项全被档位挡掉且父项本身不可点 → 整组隐藏,不留一个空壳分组。
       if (children.length === 0 && !item.path) {
@@ -105,6 +108,43 @@ export function filterNavByEdition(
       visible.push({ ...item, children, locked });
     } else {
       visible.push(locked ? { ...item, locked } : item);
+    }
+  }
+
+  return visible;
+}
+
+/**
+ * 按能力过滤导航:能力不可用 → 隐藏;子项全被过滤且本身不可点 → 整组隐藏。
+ *
+ * 判据是 isCapabilityAvailable,所以「未知」(快照还没到 / 拉失败)一律隐藏。首屏那一瞬
+ * 付费入口不在,拿到快照后出现;反过来先显示再撤掉才是更糟的闪动。
+ *
+ * 与 filterNavByEdition 并存,分工是:登记过 capability key 的入口走这里(后端算好的
+ * 结果),还没登记的付费面退到档位判定。两个函数刻意分开,合成一个迟早有人把两种 key
+ * 混着传。
+ */
+export function filterNavByCapability(
+  items: ConsoleNavItem[],
+  snapshot: Entitlement | null,
+): ConsoleNavItem[] {
+  const visible: ConsoleNavItem[] = [];
+
+  for (const item of items) {
+    if (item.capability && !isCapabilityAvailable(item.capability, snapshot)) {
+      continue;
+    }
+
+    if (item.children?.length) {
+      const children = filterNavByCapability(item.children, snapshot);
+
+      if (children.length === 0 && !item.path) {
+        continue;
+      }
+
+      visible.push({ ...item, children });
+    } else {
+      visible.push(item);
     }
   }
 

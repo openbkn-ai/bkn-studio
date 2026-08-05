@@ -7,31 +7,31 @@
 
 import { createContext } from "react";
 
-import { FALLBACK_ENTITLEMENT, type Entitlement } from "@/framework/entitlement/types";
-
-/**
- * `loading` 只在首次拉取完成前为真。它不是「有没有授权」——那看 `licensed`——而是
- * 「这份快照可不可信」:未知与已知不可用必须分得开,否则企业镜像每次刷新都要先按社区版
- * 渲染一遍再跳回来,而付费入口一闪一灭比慢半拍更糟。
- *
- * 刷新(导证之后)不回到 loading:旧快照仍然可信,只是即将被新的取代。
- */
-export type EntitlementStatus = "loading" | "ready";
+import type { Entitlement } from "@/framework/entitlement/types";
 
 export type EntitlementContextValue = {
-  entitlement: Entitlement;
-  /** 重新拉取。导入/激活/删除授权后调用——后端承诺补证免重启,前端就不能要求刷新页面。 */
-  refresh: () => void;
-  status: EntitlementStatus;
+  /** 首屏这一次请求还在飞。仅用于渲染骨架,不参与判定。 */
+  loading: boolean;
+  /**
+   * 重新拉一次。
+   *
+   * 后端承诺「补证免重启」——导入证书后下一个请求就生效,不必重启进程。前端就不能反过来
+   * 要求用户按 F5,否则那条承诺在用户眼里不成立。授权管理页在导入/激活/删除成功后调它。
+   */
+  refresh: () => Promise<void>;
+  /** null 表示还没拿到(加载中或失败),下游按「未知」处理。 */
+  snapshot: Entitlement | null;
 };
 
 /**
- * 默认值是社区版兜底 + `ready`,而不是空值 + `loading`。Provider 没挂上时(单测、
- * 微前端宿主直接挂某个场景)读到的是「社区版 + 无证」,付费入口自然不显示,不需要每个
- * 调用点判空;`ready` 是因为那种场景下没有任何请求在飞,永远等不到第二个值。
+ * 默认值是「没有快照、没在加载」,而不是抛错。
+ *
+ * Provider 缺席的场景是真实存在的:单测直接挂某个场景、微前端宿主只嵌一个页面。那时
+ * 判定读到 `null` → 一律 unknown → 付费入口不显示、也不推销,正是想要的 fail-closed。
+ * 抛错会把「没挂 Provider」变成白屏,而这条路径上本来没有任何付费能力要门控。
  */
 export const EntitlementContext = createContext<EntitlementContextValue>({
-  entitlement: FALLBACK_ENTITLEMENT,
-  refresh: () => {},
-  status: "ready",
+  loading: false,
+  refresh: async () => {},
+  snapshot: null,
 });

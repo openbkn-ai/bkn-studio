@@ -12,10 +12,11 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { atLeast, type Edition } from "@/framework/entitlement/edition";
-import { isCommunityBuild } from "@/framework/entitlement/types";
+import { capabilityState } from "@/framework/entitlement/capability-state";
+import { isCommunityBuild, type CapabilityState } from "@/framework/entitlement/types";
 import {
   useEntitlement,
-  useEntitlementStatus,
+  useEntitlementContext,
 } from "@/framework/entitlement/use-entitlement";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
@@ -26,10 +27,6 @@ import {
   capabilitiesIntroducedBy,
   type CapabilityCatalogEntry,
 } from "@/modules/subscription/capability-catalog";
-import {
-  clusterCapabilityStatus,
-  type ClusterCapabilityStatus,
-} from "@/modules/subscription/cluster-capability-status";
 import { SUBSCRIPTION_PLANS } from "@/modules/subscription/subscription-plans";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
@@ -37,7 +34,7 @@ import styles from "./SubscriptionScene.module.css";
 
 const TIER_COLUMNS: Edition[] = ["community", "professional", "enterprise"];
 
-const CLUSTER_TAG_COLOR: Record<ClusterCapabilityStatus, string | undefined> = {
+const CLUSTER_TAG_COLOR: Record<CapabilityState, string | undefined> = {
   available: "success",
   "not-installed": undefined,
   "not-licensed": "warning",
@@ -48,7 +45,7 @@ export function SubscriptionScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const entitlement = useEntitlement();
-  const status = useEntitlementStatus();
+  const { snapshot } = useEntitlementContext();
   const runtimeConfig = useRuntimeConfig();
   const [salesOpen, setSalesOpen] = useState(false);
 
@@ -70,7 +67,7 @@ export function SubscriptionScene() {
   }
 
   function capabilityRow(entry: CapabilityCatalogEntry) {
-    const clusterStatus = clusterCapabilityStatus(entry.key, entitlement, status);
+    const clusterStatus = capabilityState(entry.key, snapshot);
 
     return (
       <tr key={entry.key}>

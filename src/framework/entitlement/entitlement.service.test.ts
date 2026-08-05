@@ -5,9 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { FALLBACK_ENTITLEMENT } from "@/framework/entitlement/types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGet = vi.hoisted(() => vi.fn());
 
@@ -15,7 +13,10 @@ vi.mock("@/framework/request/http", () => ({
   http: { get: mockGet },
 }));
 
-async function importFetchEntitlement() {
+// useMock 是模块加载时求值的常量,所以每个用例先 stub 再动态 import。
+async function importFetchEntitlement(useMock: "false" | "true" = "false") {
+  vi.stubEnv("VITE_USE_MOCK", useMock);
+  vi.resetModules();
   const module = await import("@/framework/entitlement/entitlement.service");
   return module.fetchEntitlement;
 }
@@ -27,6 +28,10 @@ function ok(data: Record<string, unknown>) {
 describe("fetchEntitlement", () => {
   beforeEach(() => {
     mockGet.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("读的是 /safe/v1/capabilities,且不弹错误 toast", async () => {
@@ -84,11 +89,23 @@ describe("fetchEntitlement", () => {
     expect(entitlement.state).toBe("unlicensed");
   });
 
-  it("接口挂了退回社区版兜底,不抛给调用方", async () => {
+  /**
+   * 失败必须抛,不能吞成社区版兜底:调用方(Provider)要把它落成 snapshot = null,
+   * 也就是「未知」。吞成社区版会让企业客户的一次网络抖动被渲染成「你没买」,还配上
+   * 一条升级引导。
+   */
+  it("接口挂了向上抛,由调用方落成未知", async () => {
     mockGet.mockRejectedValue(new Error("404"));
 
-    await expect((await importFetchEntitlement())()).resolves.toEqual(
-      FALLBACK_ENTITLEMENT,
-    );
+    await expect((await importFetchEntitlement())()).rejects.toThrow("404");
+  });
+
+  // mock 模式覆盖三态里的两态,本地开发才走得到升级引导那条路。
+  it("mock 模式给出企业镜像 + 专业证,不发请求", async () => {
+    const entitlement = await (await importFetchEntitlement("true"))();
+
+    expect(mockGet).not.toHaveBeenCalled();
+    expect(entitlement.capabilities).toEqual(["rbac_basic"]);
+    expect(entitlement.extensions).toContain("perm_object_level");
   });
 });

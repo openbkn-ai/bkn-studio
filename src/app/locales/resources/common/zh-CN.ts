@@ -69,6 +69,14 @@ export const commonZhCN = {
       typeNameToConfirm: "此操作高危,请输入名称「{{name}}」以确认删除。",
     },
     entitlement: {
+      // 档位门控的文案。与 noPermission 分开:权限不足是「你不行」,档位不足是
+      // 「这套部署没买」——前者找管理员,后者找商务,混成一句话谁都不知道该找谁。
+      upgradeHint: "该功能属于付费版本,当前集群的授权未包含它",
+      notLicensedTitle: "当前授权未包含该功能",
+      notLicensedDescription:
+        "这套部署具备该功能,但当前证书的版本不覆盖它。导入更高版本的证书后即可使用,无需重启服务。",
+      unknownTitle: "无法确认授权状态",
+      unknownDescription: "读取集群授权状态失败,付费功能暂时不可用。请稍后重试。",
       editions: {
         community: "社区版",
         professional: "专业版",

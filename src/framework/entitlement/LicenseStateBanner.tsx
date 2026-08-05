@@ -9,7 +9,7 @@ import { Alert, Button } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import type { LicenseState } from "@/framework/entitlement/types";
 
 /**
@@ -32,8 +32,12 @@ const NOTICE: Partial<Record<LicenseState, { key: string; type: "error" | "warni
 export function LicenseStateBanner() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { licensed, state } = useEntitlement();
-  const notice = NOTICE[state] ?? (licensed ? undefined : NOTICE.unlicensed);
+  const { snapshot } = useEntitlementContext();
+  // 快照没到时什么都不说:此刻分不清「无证」和「没读到」,而这条横幅的每种措辞都在断言
+  // 授权出了什么问题。
+  const notice = snapshot
+    ? (NOTICE[snapshot.state] ?? (snapshot.licensed ? undefined : NOTICE.unlicensed))
+    : undefined;
 
   if (!notice) {
     return null;

@@ -71,6 +71,16 @@ export const commonEnUS = {
         'This is a high-risk action. Type "{{name}}" to confirm deletion.',
     },
     entitlement: {
+      // Edition gating. Kept apart from noPermission on purpose: "you may not"
+      // sends the user to an administrator, "this deployment did not buy it"
+      // sends them to sales. One sentence covering both helps neither.
+      upgradeHint: "A paid capability. This cluster's licence does not cover it.",
+      notLicensedTitle: "Not covered by the current licence",
+      notLicensedDescription:
+        "This deployment ships the capability, but the installed certificate's edition does not cover it. Import a higher edition and it becomes available — no restart needed.",
+      unknownTitle: "Licence status unavailable",
+      unknownDescription:
+        "Could not read the cluster's licence state, so paid capabilities are unavailable for now. Please retry shortly.",
       editions: {
         community: "Community",
         professional: "Professional",
