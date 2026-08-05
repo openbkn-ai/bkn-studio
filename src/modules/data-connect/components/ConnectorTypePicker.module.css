@@ -52,6 +52,10 @@
   width: 160px;
 }
 
+.tagFilter :global(.ant-select-selector) {
+  border-radius: 0 !important;
+}
+
 .search :global(.ant-input-affix-wrapper),
 .search :global(.ant-input-search),
 .search :global(.ant-input),

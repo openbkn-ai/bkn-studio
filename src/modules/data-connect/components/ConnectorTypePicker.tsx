@@ -14,6 +14,7 @@ import type { DataSourceFamilyKey } from "@/modules/data-connect/lib/connector-t
 import {
   filterConnectorTypes,
   getConnectorTemplateMeta,
+  getConnectorTypeTags,
   getPrimaryDataSourceFamilies,
 } from "@/modules/data-connect/lib/connector-template";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
@@ -41,13 +42,8 @@ export function ConnectorTypePicker({
   );
 
   const tagOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(options.map((item) => getConnectorTemplateMeta(item).label)),
-      )
-        .sort()
-        .map((label) => ({ label, value: label })),
-    [options],
+    () => getConnectorTypeTags(options, family).map((label) => ({ label, value: label })),
+    [family, options],
   );
 
   const filtered = useMemo(
@@ -100,6 +96,7 @@ export function ConnectorTypePicker({
           })}
           onChange={(key) => {
             setFamily(key as DataSourceFamilyKey);
+            setTag(undefined);
           }}
         />
         <div className={styles.toolbar}>

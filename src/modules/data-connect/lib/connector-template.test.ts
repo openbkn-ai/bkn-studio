@@ -12,6 +12,7 @@ import {
   getConnectorConfigDefaults,
   getConnectorFieldPlaceholder,
   getConnectorTemplateMeta,
+  getConnectorTypeTags,
   groupConnectorFields,
   isValidJSONObject,
   mergeKnownConnectorTypes,
@@ -109,6 +110,9 @@ describe("connector-template · SQL Server", () => {
       filterConnectorTypes([sqlServerConnector, openSearchConnector], "structured", "关系型数据库"),
     ).toEqual([]);
     expect(
+      filterConnectorTypes([sqlServerConnector, openSearchConnector], "structured", " Search "),
+    ).toEqual([openSearchConnector]);
+    expect(
       filterConnectorTypes(
         [sqlServerConnector, openSearchConnector],
         "structured",
@@ -116,6 +120,23 @@ describe("connector-template · SQL Server", () => {
         "搜索引擎",
       ),
     ).toEqual([openSearchConnector]);
+
+    const anyShareConnector: DataConnectConnectorType = {
+      category: "fileset",
+      description: "AnyShare connector",
+      enabled: true,
+      fieldConfig: {},
+      mode: "local",
+      name: "AnyShare",
+      type: "anyshare",
+    };
+
+    expect(
+      getConnectorTypeTags(
+        [sqlServerConnector, openSearchConnector, anyShareConnector],
+        "structured",
+      ),
+    ).toEqual(["关系型数据库", "搜索引擎"]);
   });
 });
 

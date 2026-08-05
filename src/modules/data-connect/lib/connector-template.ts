@@ -294,6 +294,19 @@ export function filterConnectorTypes(
   });
 }
 
+export function getConnectorTypeTags(
+  connectors: DataConnectConnectorType[],
+  family: DataSourceFamilyKey,
+) {
+  return Array.from(
+    new Set(
+      connectors
+        .filter((connector) => matchesDataSourceFamily(connector, family))
+        .map((connector) => getConnectorTemplateMeta(connector).label),
+    ),
+  ).sort();
+}
+
 export function mergeKnownConnectorTypes(
   availableTypes: DataConnectConnectorType[],
 ) {
