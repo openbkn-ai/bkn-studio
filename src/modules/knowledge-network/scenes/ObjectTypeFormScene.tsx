@@ -424,28 +424,32 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     }
 
     void (async () => {
-      if (nextStep === 1 && currentStep === 2) {
-        const values = await logicAttributeRef.current?.validateFields();
-        if (values) {
-          setLogicProperties(values.logicProperties);
+      try {
+        if (nextStep === 1 && currentStep === 2) {
+          const values = await logicAttributeRef.current?.validateFields();
+          if (values) {
+            setLogicProperties(values.logicProperties);
+          }
         }
-      }
 
-      if (nextStep === 0 && currentStep >= 1) {
-        const values = await dataAttributeRef.current?.getDataProperties();
-        if (values) {
-          syncDataAttributeState(values.dataProperties, values.dataSource);
+        if (nextStep === 0 && currentStep >= 1) {
+          const values = await dataAttributeRef.current?.getDataProperties();
+          if (values) {
+            syncDataAttributeState(values.dataProperties, values.dataSource);
+          }
         }
-      }
 
-      if (nextStep === 1 && currentStep === 0) {
-        const basicValues = await syncBasicValueFromForm();
-        if (!basicValues) {
-          return;
+        if (nextStep === 1 && currentStep === 0) {
+          const basicValues = await syncBasicValueFromForm();
+          if (!basicValues) {
+            return;
+          }
         }
-      }
 
-      setCurrentStep(nextStep);
+        setCurrentStep(nextStep);
+      } catch {
+        // Validation feedback is displayed by the editor; keep the current step.
+      }
     })();
   };
 
