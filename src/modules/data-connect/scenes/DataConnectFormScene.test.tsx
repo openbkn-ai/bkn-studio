@@ -354,7 +354,12 @@ describe("DataConnectFormScene · connection preflight", () => {
     expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
     expect(sqlServerButton.textContent).toContain("关系型数据库");
     expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+
     fireEvent.click(sqlServerButton);
+
+    expect(sqlServerButton.className).not.toContain("cardActive");
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+
     expect(screen.queryByPlaceholderText("例如 供应链主库")).toBeNull();
   });
 
