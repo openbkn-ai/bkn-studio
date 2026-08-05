@@ -5,12 +5,39 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildMetricDataQueryPayload,
+  listKnowledgeNetworkMetrics,
   normalizeMetricDataResponse,
+  resolveMetricListLimit,
 } from "@/modules/knowledge-network/services/metric.service";
+
+vi.mock("@/modules/knowledge-network/services/shared/runtime", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/knowledge-network/services/shared/runtime")>(
+    "@/modules/knowledge-network/services/shared/runtime",
+  );
+
+  return {
+    ...actual,
+    useMock: true,
+    wait: <T,>(value: T) => Promise.resolve(value),
+  };
+});
+
+describe("listKnowledgeNetworkMetrics", () => {
+  it("applies the backend maximum when limit is -1", async () => {
+    const result = await listKnowledgeNetworkMetrics("kn-domain-risk", {
+      limit: -1,
+      scopeRef: "ot-risk-order",
+    });
+
+    expect(result.totalCount).toBeGreaterThan(0);
+    expect(result.entries.length).toBeLessThanOrEqual(500);
+    expect(resolveMetricListLimit(-1)).toBe(500);
+  });
+});
 
 describe("normalizeMetricDataResponse", () => {
   it("expands multi-series trend rows with prefixed dimension columns", () => {

@@ -10,6 +10,10 @@
   gap: 12px;
 }
 
+.tableSectionCompact {
+  gap: 0;
+}
+
 .tableToolbar {
   align-items: center;
   display: flex;

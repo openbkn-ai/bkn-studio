@@ -169,13 +169,15 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     id: "get_logic_properties_values",
     group: "Skills & Logic",
     summary: "批量查询对象的逻辑属性值（metric / tool），自动根据 query 生成 dynamic_params。缺参时返回 missing 提示。",
-    path: `${REST_PREFIX}/kn/get_logic_properties_values`,
+    // MCP 工具名 get_logic_properties_values；REST 路由为 logic-property-resolver（见 bkn-foundry agent-retrieval）。
+    path: `${REST_PREFIX}/kn/logic-property-resolver`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: {
       kn_id: "your_kn_id",
       ot_id: "your_object_type",
-      query: "示例：批量计算对象的逻辑属性值",
-      _instance_identities: [{ id: "instance_000001" }],
+      query: "查询选中实例的 GMV指标、订单折扣率 当前值",
+      additional_context: "instant=true；对象类详情页实例试算",
+      _instance_identities: [{ order_id: "instance_000001" }],
       properties: ["your_metric_a", "your_metric_b"],
       options: { return_debug: true },
     },

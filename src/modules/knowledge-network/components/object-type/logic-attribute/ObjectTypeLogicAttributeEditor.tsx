@@ -25,7 +25,8 @@ import {
 import {
   renderResourceIcon,
 } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
-import { listObjectTypeLogicMetricModels } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
+import { listObjectTypeLogicMetricModels } from "@/modules/knowledge-network/services/object-type-logic.service";
 import { deduplicateByName } from "./constants";
 import { ObjectTypeLogicAttributeEditDrawer } from "./ObjectTypeLogicAttributeEditDrawer";
 import type {
@@ -106,10 +107,12 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
     }
 
     void message.error(
-      `逻辑属性「${invalidProperty.displayName || invalidProperty.name}」绑定的指标模型不存在，请重新选择或删除该逻辑属性。`,
+      t("knowledgeNetwork.objectTypeLogicMetricReferenceMissing", {
+        name: invalidProperty.displayName || invalidProperty.name,
+      }),
     );
     return false;
-  }, [localLogicProperties, message, networkId, objectTypeId]);
+  }, [localLogicProperties, message, networkId, objectTypeId, t]);
 
   useImperativeHandle(
     ref,
@@ -166,6 +169,10 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   };
 
   const handleEdit = (record: ObjectTypeLogicProperty) => {
+    if (isMetricLogicProperty(record)) {
+      void message.info(t("knowledgeNetwork.objectTypeLogicMetricUnavailable"));
+      return;
+    }
     setAttrInfo(record);
     setDrawerOpen(true);
   };
@@ -237,6 +244,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
           menu={{
             items: [
               {
+                disabled: isMetricLogicProperty(record),
                 key: "edit",
                 label: t("common.edit"),
               },
@@ -423,8 +431,6 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
         ]}
         attrInfo={attrInfo}
         logicFields={localLogicProperties}
-        networkId={networkId}
-        objectTypeId={objectTypeId}
         onClose={() => setDrawerOpen(false)}
         onOk={handleOk}
         open={drawerOpen}
