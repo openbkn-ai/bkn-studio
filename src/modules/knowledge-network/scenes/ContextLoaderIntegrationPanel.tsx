@@ -20,22 +20,23 @@ import {
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 import { createClaudeCodeMcpCommand, createMcpRemoteJsonConfig, withMcpTrailingSlash } from "@/modules/knowledge-network/services/mcp-client-config";
+import {
+  businessInfoOf,
+  compareToolsInBusinessGroup,
+  type ToolBusinessGroupKey,
+} from "@/modules/knowledge-network/scenes/context-loader-tool-business-info";
 
 import styles from "./ExperienceScene.module.css";
 
 export type ResponseView = { kind: "json" | "toon"; text: string };
 
-type ToolBusinessInfo = {
-  groupKey: "model" | "query" | "data" | "logic" | "skill" | "network" | "other";
-  name: string;
-};
-
 const TOOL_GROUPS: Array<{
-  key: ToolBusinessInfo["groupKey"];
+  key: ToolBusinessGroupKey;
   label: string;
   description: string;
 }> = [
   { key: "network", label: "知识网络信息", description: "知识网络列表、当前网络详情" },
+  { key: "lifecycle", label: "交互生命周期", description: "受管会话、交互和操作状态" },
   { key: "model", label: "知识网络模型检索", description: "语义检索、对象类、关系类、行动类、指标定义查询" },
   { key: "query", label: "对象实例与关系子图查询", description: "对象实例查询、关系子图查询" },
   { key: "data", label: "数据资源与 SQL 查询", description: "数据资源列表、字段结构、SQL 数据查询" },
@@ -43,64 +44,6 @@ const TOOL_GROUPS: Array<{
   { key: "skill", label: "技能与动态工具", description: "Skill 检索和线上动态工具" },
   { key: "other", label: "其他能力", description: "暂未归类的 MCP 能力" },
 ];
-
-const TOOL_BUSINESS_NAMES: Record<string, ToolBusinessInfo> = {
-  search_schema: { groupKey: "model", name: "语义检索" },
-  get_object_types: { groupKey: "model", name: "对象类定义查询" },
-  get_relation_types: { groupKey: "model", name: "关系类定义查询" },
-  get_action_types: { groupKey: "model", name: "行动类定义查询" },
-  get_metric_types: { groupKey: "model", name: "指标定义查询" },
-  query_object_instance: { groupKey: "query", name: "对象实例查询" },
-  query_instance_subgraph: { groupKey: "query", name: "关系子图查询" },
-  list_resources: { groupKey: "data", name: "数据资源列表" },
-  describe_resource: { groupKey: "data", name: "资源字段结构" },
-  run_sql: { groupKey: "data", name: "SQL 数据查询" },
-  get_logic_properties_values: { groupKey: "logic", name: "逻辑属性计算" },
-  get_action_info: { groupKey: "logic", name: "行动工具召回" },
-  execute_action: { groupKey: "logic", name: "执行行动" },
-  get_action_execution: { groupKey: "logic", name: "行动执行结果" },
-  find_skills: { groupKey: "skill", name: "Skill 能力检索" },
-  list_knowledge_networks: { groupKey: "network", name: "知识网络列表" },
-  get_kn_detail: { groupKey: "network", name: "知识网络详情" },
-};
-
-const MODEL_TOOL_ORDER = ["search_schema", "get_object_types", "get_relation_types"];
-const QUERY_TOOL_ORDER = ["query_object_instance", "query_instance_subgraph"];
-
-function compareToolsInGroup(groupKey: ToolBusinessInfo["groupKey"], left: ContextLoaderOp, right: ContextLoaderOp): number {
-  const toolOrder = groupKey === "model" ? MODEL_TOOL_ORDER : groupKey === "query" ? QUERY_TOOL_ORDER : null;
-  if (!toolOrder) {
-    return 0;
-  }
-  const leftIndex = toolOrder.indexOf(left.id);
-  const rightIndex = toolOrder.indexOf(right.id);
-  return (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex) - (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex);
-}
-
-function businessInfoOf(op: ContextLoaderOp): ToolBusinessInfo {
-  const exact = TOOL_BUSINESS_NAMES[op.id];
-  if (exact) return exact;
-  const id = op.id.toLowerCase();
-  if (id.includes("object") || id.includes("relation") || id.includes("schema") || id.includes("metric_type")) {
-    return { groupKey: "model", name: "知识模型工具" };
-  }
-  if (id.includes("resource") || id.includes("sql") || id.includes("catalog")) {
-    return { groupKey: "data", name: "数据资源工具" };
-  }
-  if (id.includes("skill")) {
-    return { groupKey: "skill", name: "技能与动态工具" };
-  }
-  if (id.includes("action") || id.includes("logic") || id.includes("metric")) {
-    return { groupKey: "logic", name: "逻辑与行动工具" };
-  }
-  if (id.includes("instance") || id.includes("subgraph") || id.includes("query")) {
-    return { groupKey: "query", name: "对象查询工具" };
-  }
-  if (id.includes("kn") || id.includes("network")) {
-    return { groupKey: "network", name: "知识网络工具" };
-  }
-  return { groupKey: "other", name: "MCP 能力" };
-}
 
 type ContextLoaderIntegrationPanelProps = {
   mode: Exclude<ContextLoaderMode, "agent">;
@@ -330,7 +273,7 @@ export function ContextLoaderIntegrationPanel({
         const searchable = `${info.name} ${item.id} ${item.path} ${item.summary} ${group.label}`.toLowerCase();
         return info.groupKey === group.key && (!filterText || searchable.includes(filterText));
       })
-      .sort((left, right) => compareToolsInGroup(group.key, left, right)),
+      .sort((left, right) => compareToolsInBusinessGroup(group.key, left, right)),
   })).filter(({ items }) => items.length > 0);
 
   const isMcpVerifyView = mode === "mcp" && !showMcpConnect;

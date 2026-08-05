@@ -52,7 +52,7 @@ import {
 import {
   createBknLifecycle,
   lifecycleEnv,
-  localExternalKeyStore,
+  localConversationStore,
   type TurnOutcome,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
@@ -190,6 +190,10 @@ function msgsLsKey(knId: string, paneKey: PaneKey): string {
  * 在各自答题，Trace 里也应当分别溯源、分别统计，不该混进同一条会话。
  */
 function conversationLsKey(knId: string, paneKey: PaneKey): string {
+  return `bkn-studio:agentchat:conv:v2:${knId}:${paneKey}`;
+}
+
+function legacyConversationLsKey(knId: string, paneKey: PaneKey): string {
   return `bkn-studio:agentchat:conv:${knId}:${paneKey}`;
 }
 
@@ -600,12 +604,15 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
 
   /**
    * 本面板的受管生命周期客户端。会话身份跟着 kn + 面板走，只有「清空对话」才换新
-   * ——刷新页面按 external_conversation_key 幂等复用同一条 conversation。
+   * ——刷新页面复用服务端下发的 conversation ID。
    */
   const lifecycle = useMemo(
     () =>
       createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
-        externalKeyStore: localExternalKeyStore(conversationLsKey(knId, profile.paneKey)),
+        conversationStore: localConversationStore(
+          conversationLsKey(knId, profile.paneKey),
+          legacyConversationLsKey(knId, profile.paneKey),
+        ),
       }),
     [env.base, knId, tokenProvider, profile.paneKey],
   );
@@ -746,7 +753,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     setMessages([]);
     setStats({ tokens: 0, ms: 0 });
     // 清空对话 = 换一条受管会话。这是 conversation id 唯一的更换点：不清空就一直是同一个，
-    // 刷新页面也会按同一把 external_conversation_key 幂等复用回来。
+    // 刷新页面会继续使用已保存的服务端 conversation ID。
     lifecycle.reset();
     try {
       localStorage.removeItem(msgsLsKey(knId, profile.paneKey));

@@ -68,12 +68,10 @@ describe("buildAgentTools", () => {
   it("injects the turn context and locked kn_id into the real call", async () => {
     const session = stubSession();
     const turn: BknCallScope = {
-      nextContext: (toolName) => ({
+      nextContext: () => ({
         conversation_id: "conv_1",
         interaction_id: "int_1",
-        operation_key: `${toolName}#1`,
       }),
-      recordReceipt: vi.fn(),
     };
     const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
       session,
@@ -88,28 +86,9 @@ describe("buildAgentTools", () => {
         sql: "SELECT 1",
         // kn_id 与 bkn_context 都是平台侧身份，模型传什么都以锁定值为准。
         kn_id: "kn-demo",
-        bkn_context: { conversation_id: "conv_1", interaction_id: "int_1", operation_key: "run_sql#1" },
+        bkn_context: { conversation_id: "conv_1", interaction_id: "int_1" },
       }),
     );
-  });
-
-  it("records the managed receipt of every business call", async () => {
-    const session = stubSession({
-      structured: { bkn_receipt: { operation_id: "op_1", receipt_id: "rcp_1", required: true } },
-    });
-    const recordReceipt = vi.fn();
-    const turn: BknCallScope = {
-      nextContext: () => ({ conversation_id: "conv_1", interaction_id: "int_1", operation_key: "run_sql#1" }),
-      recordReceipt,
-    };
-    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
-      session,
-      turn,
-    });
-
-    await runTool(tools.run_sql, { sql: "SELECT 1" });
-
-    expect(recordReceipt).toHaveBeenCalledWith({ operationId: "op_1", receiptId: "rcp_1", required: true });
   });
 
   it("sends no managed context when the backend has no lifecycle", async () => {

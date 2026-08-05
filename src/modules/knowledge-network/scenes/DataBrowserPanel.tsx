@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createBknLifecycle,
   lifecycleEnv,
-  memoryExternalKeyStore,
+  memoryConversationStore,
   withManagedTurn,
   type BknLifecycle,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
@@ -291,7 +291,7 @@ export function DataBrowserPanel({
    * 不带 bkn_context 会被 Context Loader 挡回。这里不是对话，会话按本次挂载算一条。
    */
   const lifecycle = useMemo(
-    () => createBknLifecycle(lifecycleEnv(env.base, env.knId), auth, { externalKeyStore: memoryExternalKeyStore() }),
+    () => createBknLifecycle(lifecycleEnv(env.base, env.knId), auth, { conversationStore: memoryConversationStore() }),
     [env.base, env.knId, auth],
   );
 
