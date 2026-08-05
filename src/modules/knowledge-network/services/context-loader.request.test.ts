@@ -21,7 +21,6 @@ const searchSchema = CONTEXT_LOADER_OPS.find((operation) => operation.id === "se
 const bknContext = {
   conversation_id: "conv_1",
   interaction_id: "int_1",
-  operation_key: "search_schema#1",
 };
 
 function restBody(init: RequestInit | undefined): Record<string, unknown> {
@@ -177,19 +176,15 @@ describe("fetchKnDetail", () => {
         headers: { "bkn-receipt-id": "rcp_3", "bkn-operation-id": "op_3" },
       }),
     );
-    const recordReceipt = vi.fn();
-
     await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, undefined, undefined, {
-      nextContext: (toolName) => ({ ...bknContext, operation_key: `${toolName}#1` }),
-      recordReceipt,
+      nextContext: () => bknContext,
     });
 
     expect(restBody(fetchSpy.mock.calls[0][1])).toMatchObject({
       kn_id: "kn-demo",
-      bkn_context: { ...bknContext, operation_key: "get_kn_detail#1" },
+      bkn_context: bknContext,
     });
     // 回执要记回本轮，否则终结交互时清单缺一条，Core 判 closure_manifest_invalid。
-    expect(recordReceipt).toHaveBeenCalledWith({ operationId: "op_3", receiptId: "rcp_3", required: true });
   });
 });
 

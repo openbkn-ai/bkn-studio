@@ -440,7 +440,6 @@ function mcpBase(env: ContextLoaderEnv): string {
 export type BknContext = {
   conversation_id: string;
   interaction_id: string;
-  operation_key: string;
 };
 
 /**
@@ -475,8 +474,7 @@ export function receiptFromStructured(structured: unknown): BknReceiptRef | unde
  * bkn-lifecycle 的 BknTurn 结构上满足它 —— 这里不反向 import，避免两个服务互相依赖。
  */
 export type BknCallScope = {
-  nextContext(toolName: string): BknContext;
-  recordReceipt(receipt: BknReceiptRef | undefined): void;
+  nextContext(): BknContext;
 };
 
 /** 把受管上下文并进业务请求体/arguments（已有 bkn_context 不覆盖）。 */
@@ -1049,11 +1047,10 @@ export async function fetchKnDetail(
     env,
     auth,
     `${base}${REST_PREFIX}/kn/get_kn_detail?${params.toString()}`,
-    withBknContext({ kn_id: env.knId }, scope?.nextContext("get_kn_detail")),
+    withBknContext({ kn_id: env.knId }, scope?.nextContext()),
     signal,
   );
   const text = await response.text();
-  scope?.recordReceipt(restReceiptRef(response, text));
   if (!response.ok) {
     throw new Error(text || `获取知识网络详情失败（${response.status}）`);
   }
@@ -1086,11 +1083,10 @@ export async function fetchObjectInstances(
     env,
     auth,
     `${base}${REST_PREFIX}/kn/query_object_instance?${params.toString()}`,
-    withBknContext({ limit, need_total: false, properties: [] }, scope?.nextContext("query_object_instance")),
+    withBknContext({ limit, need_total: false, properties: [] }, scope?.nextContext()),
     signal,
   );
   const text = await response.text();
-  scope?.recordReceipt(restReceiptRef(response, text));
   if (!response.ok) {
     throw new Error(text || `查询实例失败（${response.status}）`);
   }

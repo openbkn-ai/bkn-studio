@@ -19,7 +19,6 @@ import { jsonSchema, stepCountIs, streamText, tool, type ModelMessage, type Tool
 
 import {
   createMcpSession,
-  receiptFromStructured,
   type BknCallScope,
   type BknContext,
   type ContextLoaderEnv,
@@ -218,7 +217,6 @@ export function buildAgentTools(
   const call = async (name: string, args: Record<string, unknown>): Promise<string> => {
     const res = await session.callTool(name, args);
     // 每次业务调用的回执都要记账：终结本轮交互时清单必须列全，漏一条 Core 就判非法。
-    turn?.recordReceipt(receiptFromStructured(res.structured));
     return res.text;
   };
   for (const def of mcpTools) {
@@ -235,7 +233,7 @@ export function buildAgentTools(
         (scopedList ? " 返回结果已默认限定为当前知识网络绑定的数据表（其他 catalog 的表不会出现）。" : ""),
       inputSchema: jsonSchema(schema),
       execute: async (input: unknown): Promise<string> => {
-        const bknContext = turn?.nextContext(def.name);
+        const bknContext = turn?.nextContext();
         if (scopedList && scopeSet) return listResourcesScoped(call, input, knId, scopeSet, cfg, bknContext);
         const args = effectiveToolArgs(def.name, input, knId, bknContext);
         return capToolResult(await call(def.name, args), def.name, cfg);

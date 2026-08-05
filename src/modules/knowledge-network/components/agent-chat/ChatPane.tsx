@@ -52,7 +52,7 @@ import {
 import {
   createBknLifecycle,
   lifecycleEnv,
-  localExternalKeyStore,
+  localConversationStore,
   type TurnOutcome,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
@@ -190,7 +190,7 @@ function msgsLsKey(knId: string, paneKey: PaneKey): string {
  * 在各自答题，Trace 里也应当分别溯源、分别统计，不该混进同一条会话。
  */
 function conversationLsKey(knId: string, paneKey: PaneKey): string {
-  return `bkn-studio:agentchat:conv:${knId}:${paneKey}`;
+  return `bkn-studio:agentchat:conv:v2:${knId}:${paneKey}`;
 }
 
 function loadPersisted(key: string): Partial<Persisted> {
@@ -605,7 +605,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const lifecycle = useMemo(
     () =>
       createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
-        externalKeyStore: localExternalKeyStore(conversationLsKey(knId, profile.paneKey)),
+        conversationStore: localConversationStore(conversationLsKey(knId, profile.paneKey)),
       }),
     [env.base, knId, tokenProvider, profile.paneKey],
   );

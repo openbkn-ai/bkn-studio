@@ -51,7 +51,7 @@ import {
 import {
   createBknLifecycle,
   lifecycleEnv,
-  memoryExternalKeyStore,
+  memoryConversationStore,
   withManagedTurn,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { AgentChat } from "@/modules/knowledge-network/components/agent-chat/AgentChat";
@@ -385,7 +385,7 @@ export function ExperienceScene({
    * 会话本身按本次进入调试台算一条，刷新即换新（memory 键），不写 localStorage。
    */
   const lifecycle = useMemo(
-    () => createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, { externalKeyStore: memoryExternalKeyStore() }),
+    () => createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, { conversationStore: memoryConversationStore() }),
     [base, knId, tokenProvider],
   );
 
@@ -495,9 +495,8 @@ export function ExperienceScene({
     () =>
       op
         ? buildCurl({ ...env, base: serverAddress }, op, mode, queryVals, bodyText, {
-            conversation_id: "<bkn_create_conversation 返回的 conversation_id>",
+            conversation_id: "<bkn_start_interaction 返回的 conversation_id>",
             interaction_id: "<bkn_start_interaction 返回的 interaction_id>",
-            operation_key: `${op.id}#1`,
           })
         : "",
     [env, serverAddress, op, mode, queryVals, bodyText],
@@ -551,9 +550,8 @@ export function ExperienceScene({
             bodyText,
             tokenProvider,
             controller.signal,
-            turn?.nextContext(op.id),
+            turn?.nextContext(),
           );
-          turn?.recordReceipt(sent.receipt);
           return sent;
         },
         // 业务返回 500 时这一轮仍算 completed —— 调用失败记在 Operation 的 Receipt 上
