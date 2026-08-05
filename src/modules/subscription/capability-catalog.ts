@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import type { Edition } from "@/framework/entitlement/edition";
 
 /**
@@ -63,7 +64,7 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
 export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
   { category: "dataConnect", key: "source_sync",
     servedBy: "other", minEdition: "professional" },
-  { category: "permission", key: "rbac_basic",
+  { category: "permission", key: CAPABILITIES.RBAC_BASIC,
     servedBy: "bkn-safe", minEdition: "professional" },
   {
     category: "semantic",
@@ -93,7 +94,7 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     minEdition: "professional",
     sinceVersion: "0.1.3",
   },
-  { category: "permission", key: "perm_object_level",
+  { category: "permission", key: CAPABILITIES.PERM_OBJECT_LEVEL,
     servedBy: "bkn-safe", minEdition: "enterprise" },
   { category: "operations", key: "audit",
     servedBy: "bkn-safe", minEdition: "enterprise" },

@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import {
   CAPABILITY_CATALOG,
   capabilitiesIntroducedBy,
@@ -55,12 +56,14 @@ describe("capability catalog", () => {
     expect(served.sort()).toEqual(["audit", "perm_object_level", "rbac_basic"]);
   });
 
-  // 后端装配表今天登记的两个 key 必须在册,否则「你的集群」列对不上任何一行。
-  it("覆盖后端已装配的能力", () => {
-    const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
+  // 后端装配表今天登记的能力必须在册且标为可实测,否则「你的集群」列对不上任何一行。
+  it("覆盖后端已装配的能力,且都标成 bkn-safe", () => {
+    for (const key of Object.values(CAPABILITIES)) {
+      const entry = CAPABILITY_CATALOG.find((item) => item.key === key);
 
-    expect(keys).toContain("rbac_basic");
-    expect(keys).toContain("perm_object_level");
+      expect(entry).toBeDefined();
+      expect(entry?.servedBy).toBe("bkn-safe");
+    }
   });
 });
 
