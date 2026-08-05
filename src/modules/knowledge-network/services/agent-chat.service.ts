@@ -194,7 +194,7 @@ export type AgentToolsOptions = {
   /** 复用生命周期客户端的 MCP 会话，省一次 initialize 握手。 */
   session?: McpSession;
   /**
-   * 本轮受管交互。工具循环只需要「取上下文 + 回执记账」这两件事，故取最小接口
+   * 本轮受管交互。工具循环只需要取得上下文，故取最小接口
    * BknCallScope 而非整个 BknTurn —— 终结交互不归工具循环管。
    * 缺省/null 时不注入 bkn_context：只有后端未启用受管生命周期时才该这样，
    * 启用了却不传会让每个工具调用都被挡在 `conversation_required`。
@@ -216,7 +216,6 @@ export function buildAgentTools(
   const tools: ToolSet = {};
   const call = async (name: string, args: Record<string, unknown>): Promise<string> => {
     const res = await session.callTool(name, args);
-    // 每次业务调用的回执都要记账：终结本轮交互时清单必须列全，漏一条 Core 就判非法。
     return res.text;
   };
   for (const def of mcpTools) {

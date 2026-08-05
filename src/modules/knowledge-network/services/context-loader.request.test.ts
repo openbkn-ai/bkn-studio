@@ -125,47 +125,6 @@ describe("sendRequest", () => {
     });
   });
 
-  it("reports the managed receipt from REST headers and from the MCP structured result", async () => {
-    const restSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("{}", {
-        status: 200,
-        headers: { "bkn-receipt-id": "rcp_1", "bkn-operation-id": "op_1" },
-      }),
-    );
-    const rest = await sendRequest(
-      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
-      searchSchema,
-      "rest",
-      {},
-      "{}",
-      undefined,
-      undefined,
-      bknContext,
-    );
-    expect(rest.receipt).toEqual({ operationId: "op_1", receiptId: "rcp_1", required: true });
-    restSpy.mockRestore();
-
-    vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
-      .mockResolvedValueOnce(new Response(null, { status: 202 }))
-      .mockResolvedValueOnce(
-        new Response(
-          '{"jsonrpc":"2.0","result":{"content":[],"structuredContent":{"bkn_receipt":{"operation_id":"op_2","receipt_id":"rcp_2","required":true}}}}',
-          { status: 200 },
-        ),
-      );
-    const mcp = await sendRequest(
-      { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
-      searchSchema,
-      "mcp",
-      {},
-      "{}",
-      undefined,
-      undefined,
-      bknContext,
-    );
-    expect(mcp.receipt).toEqual({ operationId: "op_2", receiptId: "rcp_2", required: true });
-  });
 });
 
 describe("fetchKnDetail", () => {
@@ -184,7 +143,6 @@ describe("fetchKnDetail", () => {
       kn_id: "kn-demo",
       bkn_context: bknContext,
     });
-    // 回执要记回本轮，否则终结交互时清单缺一条，Core 判 closure_manifest_invalid。
   });
 });
 

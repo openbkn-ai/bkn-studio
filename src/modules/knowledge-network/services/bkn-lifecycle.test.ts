@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createBknLifecycleOn,
@@ -115,8 +115,44 @@ describe("createBknLifecycle", () => {
     const lifecycle = createBknLifecycleOn(session, options());
 
     await expect(lifecycle.beginTurn("question")).resolves.toBeNull();
+    await expect(lifecycle.beginTurn("another question")).resolves.toBeNull();
     expect(lifecycle.unsupported()).toBe(true);
     expect(calls).toHaveLength(1);
+  });
+
+  it("starts a new conversation when a persisted conversation is no longer usable", async () => {
+    let starts = 0;
+    const { session, calls } = fakeSession({
+      bkn_start_interaction: () => {
+        starts += 1;
+        if (starts === 1) {
+          return {
+            ok: false,
+            text: "conversation not found",
+            latencyMs: 1,
+            isError: true,
+            structured: { error: { code: "conversation_not_found", message: "conversation not found" } },
+          };
+        }
+        return {
+          ok: true,
+          text: "started",
+          latencyMs: 1,
+          isError: false,
+          structured: { interaction_id: "int_2", conversation_id: "conv_2", execution_status: "active" },
+        };
+      },
+    });
+    const store = { read: () => "stale_conv", write: vi.fn(), clear: vi.fn() };
+    const lifecycle = createBknLifecycleOn(session, { conversationStore: store });
+
+    await expect(lifecycle.beginTurn("question")).resolves.toMatchObject({ conversationId: "conv_2", interactionId: "int_2" });
+    expect(calls).toEqual([
+      { name: "bkn_start_interaction", args: { question: "question", conversation_id: "stale_conv" } },
+      { name: "bkn_start_interaction", args: { question: "question" } },
+    ]);
+    expect(store.clear).toHaveBeenCalledOnce();
+    expect(store.write).toHaveBeenCalledWith("conv_2");
   });
 
   it("releases the next turn when finish fails", async () => {

@@ -73,7 +73,7 @@ export function businessInfoOf(op: ContextLoaderOp): ToolBusinessInfo {
   if (exact) return exact;
   const id = op.id.toLowerCase();
   if (id.startsWith("bkn_")) {
-    return { groupKey: "lifecycle", name: op.summary === op.id ? op.id.replace(/^bkn_/, "") : op.summary };
+    return { groupKey: "lifecycle", name: "交互生命周期工具" };
   }
   if (id.includes("object") || id.includes("relation") || id.includes("schema") || id.includes("metric_type")) {
     return { groupKey: "model", name: "知识模型工具" };
@@ -88,6 +88,6 @@ export function businessInfoOf(op: ContextLoaderOp): ToolBusinessInfo {
   if (id.includes("instance") || id.includes("subgraph") || id.includes("query")) {
     return { groupKey: "query", name: "对象查询工具" };
   }
-  if (id.includes("kn_") || id.includes("network")) return { groupKey: "network", name: "知识网络工具" };
+  if (id.includes("kn") || id.includes("network")) return { groupKey: "network", name: "知识网络工具" };
   return { groupKey: "other", name: "MCP 能力" };
 }

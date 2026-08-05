@@ -33,7 +33,7 @@ export type BknLifecycle = {
   reset(): void;
 };
 
-/** Persist only the server-issued conversation ID, never a client-created identity. */
+/** 只持久化服务端下发的 conversation ID，不生成客户端身份。 */
 export type ConversationStore = {
   read(): string | null;
   write(conversationId: string): void;
@@ -46,10 +46,21 @@ export function lifecycleEnv(base: string, knId: string): ContextLoaderEnv {
   return { base, token: "", knId };
 }
 
-export function localConversationStore(storageKey: string): ConversationStore {
+export function localConversationStore(storageKey: string, legacyStorageKey?: string): ConversationStore {
+  let legacyCleared = false;
+  const clearLegacy = () => {
+    if (legacyCleared || !legacyStorageKey) return;
+    legacyCleared = true;
+    try {
+      localStorage.removeItem(legacyStorageKey);
+    } catch {
+      // 忽略不可用的 localStorage。
+    }
+  };
   return {
     read() {
       try {
+        clearLegacy();
         return localStorage.getItem(storageKey);
       } catch {
         return null;
@@ -59,14 +70,14 @@ export function localConversationStore(storageKey: string): ConversationStore {
       try {
         localStorage.setItem(storageKey, conversationId);
       } catch {
-        // Storage is an optimization; the in-memory ID remains valid.
+        // localStorage 不可用时，内存中的 ID 仍然有效。
       }
     },
     clear() {
       try {
         localStorage.removeItem(storageKey);
       } catch {
-        // Ignore unavailable storage.
+        // 忽略不可用的 localStorage。
       }
     },
   };
@@ -90,7 +101,7 @@ export class BknLifecycleError extends Error {
   readonly requiredAction: string;
 
   constructor(tool: string, code: string, message: string, requiredAction: string) {
-    super(message || `${tool} failed (${code || "unknown"})`);
+    super(message || `${tool} 失败（${code || "未知错误"}）`);
     this.name = "BknLifecycleError";
     this.code = code;
     this.requiredAction = requiredAction;
@@ -109,8 +120,16 @@ function lifecycleErrorOf(tool: string, structured: unknown, fallbackText: strin
   const envelope = structured && typeof structured === "object" ? (structured as Record<string, unknown>) : {};
   const error = (envelope.error ?? {}) as LifecycleErrorPayload;
   const code = typeof error.code === "string" ? error.code : "";
-  const message = typeof error.message === "string" ? error.message : fallbackText;
-  return new BknLifecycleError(tool, code, message, typeof error.required_action === "string" ? error.required_action : "");
+  const fallback = fallbackText || `${tool} 调用失败`;
+  const message = typeof error.message === "string" ? error.message : fallback;
+  const visibleMessage = code === "interaction_in_progress" ? STUCK_INTERACTION_HINT : message;
+  return new BknLifecycleError(tool, code, visibleMessage, typeof error.required_action === "string" ? error.required_action : "");
+}
+
+const STUCK_INTERACTION_HINT = "当前会话仍有未结束的交互。请清空对话后重试。";
+
+function shouldStartNewConversation(error: unknown): boolean {
+  return error instanceof BknLifecycleError && (error.code === "conversation_not_found" || error.code === "interaction_in_progress");
 }
 
 async function callLifecycleTool(
@@ -120,11 +139,11 @@ async function callLifecycleTool(
 ): Promise<Record<string, unknown>> {
   const result = await session.callTool(tool, args);
   if (isToolMissing(result.rpcError)) {
-    throw new BknLifecycleError(tool, "lifecycle_not_supported", `${tool} is not registered`, "");
+    throw new BknLifecycleError(tool, "lifecycle_not_supported", `${tool} 未注册`, "");
   }
   if (result.isError || !result.ok) throw lifecycleErrorOf(tool, result.structured, result.text);
   if (!result.structured || typeof result.structured !== "object") {
-    throw new BknLifecycleError(tool, "lifecycle_malformed", `${tool} did not return structured content`, "");
+    throw new BknLifecycleError(tool, "lifecycle_malformed", `${tool} 未返回结构化内容`, "");
   }
   return result.structured as Record<string, unknown>;
 }
@@ -164,13 +183,28 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
       });
       try {
         await waitFor;
-        const args: Record<string, unknown> = { question };
-        if (conversationId) args.conversation_id = conversationId;
-        const state = await callLifecycleTool(session, "bkn_start_interaction", args);
+        if (notSupported) {
+          release();
+          return null;
+        }
+        const startInteraction = (currentConversationId: string | null) => {
+          const args: Record<string, unknown> = { question };
+          if (currentConversationId) args.conversation_id = currentConversationId;
+          return callLifecycleTool(session, "bkn_start_interaction", args);
+        };
+        let state: Record<string, unknown>;
+        try {
+          state = await startInteraction(conversationId);
+        } catch (error) {
+          if (!conversationId || !shouldStartNewConversation(error)) throw error;
+          conversationId = null;
+          conversationStore.clear();
+          state = await startInteraction(null);
+        }
         const startedConversationId = stringField(state, "conversation_id");
         const interactionId = stringField(state, "interaction_id");
         if (!startedConversationId || !interactionId) {
-          throw new BknLifecycleError("bkn_start_interaction", "lifecycle_malformed", "bkn_start_interaction did not return authority IDs", "");
+          throw new BknLifecycleError("bkn_start_interaction", "lifecycle_malformed", "bkn_start_interaction 未返回会话或交互 ID", "");
         }
         conversationId = startedConversationId;
         conversationStore.write(startedConversationId);
@@ -188,6 +222,8 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
   };
 }
 
+type FinishOutcome = "completed" | "failed" | "cancelled";
+
 function createTurn(
   session: McpSession,
   conversationId: string,
@@ -196,7 +232,7 @@ function createTurn(
 ): BknTurn {
   let terminated = false;
 
-  async function terminate(outcome: "completed" | "failed" | "cancelled", value?: string): Promise<void> {
+  async function terminate(outcome: FinishOutcome, value?: string): Promise<void> {
     if (terminated) return;
     terminated = true;
     const args: Record<string, unknown> = { interaction_id: interactionId, outcome };

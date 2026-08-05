@@ -26,10 +26,10 @@ describe("businessInfoOf", () => {
     expect(businessInfoOf(op("query_metric"))).toEqual({ groupKey: "logic", name: "指标数据查询" });
   });
 
-  it("keeps an unknown lifecycle tool in the lifecycle group", () => {
+  it("keeps an unknown lifecycle tool in the lifecycle group with a compact fallback name", () => {
     expect(businessInfoOf(op("bkn_archive_interaction", "Archive an interaction"))).toEqual({
       groupKey: "lifecycle",
-      name: "Archive an interaction",
+      name: "交互生命周期工具",
     });
   });
 
