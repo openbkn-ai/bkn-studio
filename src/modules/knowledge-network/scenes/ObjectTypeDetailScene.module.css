@@ -14,6 +14,267 @@
   width: 100%;
 }
 
+.tabCard {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tabCard :global(.ant-tabs-nav) {
+  margin-bottom: 16px;
+}
+
+.tabCard :global(.ant-tabs-nav::before) {
+  border-bottom-color: #e8eaed;
+}
+
+.tabPanel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.tabPanelOverview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.overviewHero {
+  align-items: stretch;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.overviewCard {
+  background: #fff;
+  border: 1px solid #e5eaf2;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px 18px;
+}
+
+.overviewCardHeader {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.overviewIdentity {
+  composes: overviewCard;
+}
+
+.overviewIdentityMain {
+  min-width: 0;
+}
+
+.overviewSectionTitle {
+  color: #1f2329;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.overviewMetaSections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.overviewMetaSections > .overviewMetaList + .overviewMetaList {
+  border-top: 1px solid #eef0f3;
+  padding-top: 14px;
+}
+
+.overviewMetaListAudit {
+  opacity: 0.92;
+}
+
+.overviewMetaList {
+  display: grid;
+  gap: 12px 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.overviewMetaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.overviewMetaItem dt {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.overviewMetaItem dd {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  word-break: break-word;
+}
+
+.overviewDescriptionValue {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.overviewMetaItemAudit dt,
+.overviewMetaItemAudit dd {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.overviewMetaItemWide {
+  grid-column: 1 / -1;
+}
+
+.overviewStatsSection {
+  border-top: 1px solid #eef0f3;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 20px;
+}
+
+.quickStatsGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.quickStatButton {
+  background: #fafcff;
+  border: 1px solid #e5eaf2;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px;
+  text-align: left;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.quickStatButton:hover:not(:disabled) {
+  border-color: #c7daf8;
+  box-shadow: 0 4px 12px rgba(18, 110, 227, 0.08);
+  transform: translateY(-1px);
+}
+
+.quickStatButton:hover:not(:disabled) .quickStatArrow {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.quickStatButton:disabled {
+  background: #fafafa;
+  border-color: #ececec;
+  cursor: default;
+}
+
+.quickStatButton:focus-visible {
+  outline: 2px solid #126ee3;
+  outline-offset: 2px;
+}
+
+.quickStatHeader {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.quickStatArrow {
+  color: #126ee3;
+  flex-shrink: 0;
+  font-size: 12px;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.quickStatError {
+  color: #cf1322;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.quickStatLabel {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.quickStatValue {
+  align-items: center;
+  color: #1f2329;
+  display: flex;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
+  min-height: 29px;
+}
+
+.quickStatButton:disabled .quickStatValue {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.subSectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.subSectionToolbarRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.subSectionToolbarActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.subSectionSubtitle {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.tabPanelContent {
+  border-top: 1px solid #eef0f3;
+  padding-top: 16px;
+}
+
 .summaryCard {
   background: #fff;
   border: 1px solid #e5e5e5;
@@ -56,16 +317,10 @@
   font-weight: 500;
 }
 
-.summaryDescription {
-  margin: 0;
-  color: rgba(0, 0, 0, 0.65);
-}
-
 .tagRow {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 16px;
 }
 
 .metaRow {
@@ -108,37 +363,30 @@
 }
 
 .summaryDataSource {
-  align-self: stretch;
-  background: #fafcff;
-  border: 1px solid #e5eaf2;
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  justify-content: flex-start;
-  min-width: 0;
-  padding: 14px 16px;
+  composes: overviewCard;
 }
 
-.summaryDataSourceHeader {
+.cardHeaderLink {
   align-items: center;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: #126ee3;
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 13px;
+  gap: 4px;
+  padding: 0;
 }
 
-.summaryDataSourceTitle {
-  color: #1f2329;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.4;
+.cardHeaderLink:hover {
+  color: #0958d9;
 }
 
 .dataViewFields {
-  display: grid;
-  grid-template-columns: minmax(260px, 1.3fr) minmax(260px, 1fr) minmax(140px, 0.55fr);
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .dataViewField {
@@ -156,8 +404,8 @@
 
 .dataViewValue {
   color: #1f2329;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   line-height: 1.5;
   word-break: break-word;
 }
@@ -203,26 +451,10 @@
   margin-top: 12px;
 }
 
-.sectionToolbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
 .previewToolbar {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-}
-
-.previewSummary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  margin-bottom: 16px;
-  color: rgba(0, 0, 0, 0.65);
-  font-size: 13px;
 }
 
 .previewTable :global(.ant-table-thead > tr > th),
@@ -255,6 +487,12 @@
 
 .tableLink:hover {
   color: #0b5fc7;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .propertyTitle {
@@ -337,8 +575,9 @@
 }
 
 @media (max-width: 1080px) {
-  .summaryLayout,
-  .dataViewFields {
+  .overviewHero,
+  .overviewMetaList,
+  .summaryLayout {
     grid-template-columns: 1fr;
   }
 

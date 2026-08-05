@@ -21,25 +21,50 @@ import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/o
 
 import styles from "./ObjectTypePropertyTable.module.css";
 
+export type ObjectTypePropertyTableState = ReturnType<typeof useObjectTypePropertyTableState>;
+
 type ObjectTypePropertyTableProps = {
   properties: ObjectTypeDataProperty[];
   rowIndexOffset?: number;
+  showToolbar?: boolean;
+  tableState?: ObjectTypePropertyTableState;
   toolbarExtra?: ReactNode;
 };
+
+type ObjectTypePropertyTableColumnSettingsProps = {
+  tableState: ObjectTypePropertyTableState;
+  visibleColumnKeys: string[];
+};
+
+export function ObjectTypePropertyTableColumnSettings({
+  tableState,
+  visibleColumnKeys,
+}: ObjectTypePropertyTableColumnSettingsProps) {
+  const { columnVisibility, handleColumnConfigChange, storageScope, tableColumns } = tableState;
+
+  return (
+    <DetailTableColumnSettingsButton
+      columnOrder={tableColumns.map((column) => column.key)}
+      columns={ObjectTypePropertyTableColumns}
+      onChange={handleColumnConfigChange}
+      storageScope={storageScope}
+      value={columnVisibility}
+      visibleColumnKeys={visibleColumnKeys}
+    />
+  );
+}
 
 export function ObjectTypePropertyTable({
   properties,
   rowIndexOffset = 0,
+  showToolbar = true,
+  tableState: externalTableState,
   toolbarExtra,
 }: ObjectTypePropertyTableProps) {
   const { t } = useTranslation();
-  const {
-    storageScope,
-    tableColumns,
-    columnVisibility,
-    handleTableChange,
-    handleColumnConfigChange,
-  } = useObjectTypePropertyTableState();
+  const internalTableState = useObjectTypePropertyTableState();
+  const tableState = externalTableState ?? internalTableState;
+  const { tableColumns, handleTableChange } = tableState;
 
   const columns = useMemo<ColumnsType<ObjectTypeDataProperty>>(() => {
     const dataColumns: ColumnsType<ObjectTypeDataProperty> = tableColumns.map((column) => {
@@ -158,24 +183,17 @@ export function ObjectTypePropertyTable({
     [columns],
   );
 
-  const tableColumnKeys = useMemo(
-    () => tableColumns.map((column) => column.key),
-    [tableColumns],
-  );
-
   return (
-    <div className={styles.tableSection}>
-      <div className={styles.tableToolbar}>
-        {toolbarExtra}
-        <DetailTableColumnSettingsButton
-          columnOrder={tableColumnKeys}
-          columns={ObjectTypePropertyTableColumns}
-          onChange={handleColumnConfigChange}
-          storageScope={storageScope}
-          value={columnVisibility}
-          visibleColumnKeys={visibleColumnKeys}
-        />
-      </div>
+    <div className={showToolbar ? styles.tableSection : `${styles.tableSection} ${styles.tableSectionCompact}`}>
+      {showToolbar ? (
+        <div className={styles.tableToolbar}>
+          {toolbarExtra}
+          <ObjectTypePropertyTableColumnSettings
+            tableState={tableState}
+            visibleColumnKeys={visibleColumnKeys}
+          />
+        </div>
+      ) : null}
       <Table<ObjectTypeDataProperty>
         className={styles.table}
         columns={columns}

@@ -1,0 +1,70 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.highlightColumn {
+  background: rgba(22, 119, 255, 0.04);
+}
+
+.selectorRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.selectorGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+}
+
+.selectorField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.actionRow {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.selectorLabel {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+}
+
+.selectorControl {
+  min-width: 320px;
+}
+
+@media (max-width: 1080px) {
+  .selectorGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.loadingState {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 240px;
+}
