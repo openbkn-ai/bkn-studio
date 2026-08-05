@@ -489,6 +489,19 @@
   color: #0b5fc7;
 }
 
+.conceptGroupLink {
+  background: transparent;
+  border: 0;
+  color: #126ee3;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+.conceptGroupLink:hover {
+  color: #0b5fc7;
+}
+
 .rowActions {
   display: flex;
   flex-wrap: wrap;

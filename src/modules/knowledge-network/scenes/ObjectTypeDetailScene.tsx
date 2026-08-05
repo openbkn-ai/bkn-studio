@@ -12,7 +12,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Empty, Input, Segmented, Spin, Table, Tabs, Tag, Tooltip } from "antd";
 import type { TableProps } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
@@ -75,10 +75,6 @@ function getLogicTypeLabel(type: ObjectTypeLogicProperty["type"], t: (key: strin
   }
 
   return t("knowledgeNetwork.objectTypeLogicAttributeTypeMetric");
-}
-
-function isMetricBoundLogicProperty(property: ObjectTypeLogicProperty) {
-  return isMetricLogicProperty(property) && Boolean(property.dataSource?.id);
 }
 
 type ObjectTypeDetailTabKey = "overview" | "properties" | "data" | "related";
@@ -178,6 +174,10 @@ export function ObjectTypeDetailScene() {
   const selectedTrialMetricId = searchParams.get("metricId");
   const selectedLogicPropertyName = searchParams.get("logicProperty");
   const selectedSampleRowKey = searchParams.get("sampleRow");
+  const selectedLogicTrialRowKeys = useMemo(
+    () => (selectedSampleRowKey ? [selectedSampleRowKey] : []),
+    [selectedSampleRowKey],
+  );
   const dataSection =
     activeTab === "data"
       ? parseObjectTypeDataSection(searchParams.get("section"), selectedTrialMetricId)
@@ -204,6 +204,7 @@ export function ObjectTypeDetailScene() {
   const [relatedRelationsPage, setRelatedRelationsPage] = useState(1);
   const [relatedRelationsPageSize, setRelatedRelationsPageSize] = useState(10);
   const [relatedMetrics, setRelatedMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
+  const [relatedMetricsTotalCount, setRelatedMetricsTotalCount] = useState(0);
   const [relatedMetricsLoading, setRelatedMetricsLoading] = useState(false);
   const [relatedMetricsError, setRelatedMetricsError] = useState<string | null>(null);
   const [relatedMetricsLoadedObjectTypeId, setRelatedMetricsLoadedObjectTypeId] =
@@ -227,6 +228,7 @@ export function ObjectTypeDetailScene() {
   const [previewPageSize, setPreviewPageSize] = useState(10);
   const [relatedKeyword, setRelatedKeyword] = useState("");
   const propertyTableState = useObjectTypePropertyTableState();
+  const loadedObjectTypeKeyRef = useRef<string | null>(null);
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`;
@@ -414,6 +416,18 @@ export function ObjectTypeDetailScene() {
   ]);
 
   useEffect(() => {
+    const nextObjectTypeKey = `${networkId ?? ""}:${objectTypeId ?? ""}`;
+
+    if (loadedObjectTypeKeyRef.current === null) {
+      loadedObjectTypeKeyRef.current = nextObjectTypeKey;
+      return;
+    }
+
+    if (loadedObjectTypeKeyRef.current === nextObjectTypeKey) {
+      return;
+    }
+
+    loadedObjectTypeKeyRef.current = nextObjectTypeKey;
     setPreview(null);
     setPreviewError(null);
     setPreviewKeyword("");
@@ -424,6 +438,7 @@ export function ObjectTypeDetailScene() {
     setRelatedRelationsLoadedObjectTypeId(null);
     setRelatedRelationsPage(1);
     setRelatedMetrics([]);
+    setRelatedMetricsTotalCount(0);
     setRelatedMetricsError(null);
     setRelatedMetricsLoadedObjectTypeId(null);
     setRelatedMetricsPage(1);
@@ -441,9 +456,7 @@ export function ObjectTypeDetailScene() {
       next.delete("sampleRow");
       return next;
     }, { replace: true });
-    // Reset tab query only when the route object type changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- omit setSearchParams to avoid clearing tab on re-render
-  }, [networkId, objectTypeId]);
+  }, [networkId, objectTypeId, setSearchParams]);
 
   useEffect(() => {
     if (!shouldLoadRelatedMetrics || !networkId || !objectTypeId) {
@@ -469,12 +482,14 @@ export function ObjectTypeDetailScene() {
       .then((result) => {
         if (!cancelled) {
           setRelatedMetrics(result.entries);
+          setRelatedMetricsTotalCount(result.totalCount);
           setRelatedMetricsLoadedObjectTypeId(objectTypeId);
         }
       })
       .catch((nextError) => {
         if (!cancelled) {
           setRelatedMetrics([]);
+          setRelatedMetricsTotalCount(0);
           setRelatedMetricsError(extractRequestErrorMessage(nextError));
           setRelatedMetricsLoadedObjectTypeId(null);
         }
@@ -887,17 +902,18 @@ export function ObjectTypeDetailScene() {
       },
       {
         key: "actions",
-        render: (_value, record) => (
-          <button
-            className={styles.tableLink}
-            onClick={() => {
-              openLogicPropertyTrial(record.name);
-            }}
-            type="button"
-          >
-            {t("knowledgeNetwork.objectTypeDetailTrialAction")}
-          </button>
-        ),
+        render: (_value, record) =>
+          isMetricLogicProperty(record) ? null : (
+            <button
+              className={styles.tableLink}
+              onClick={() => {
+                openLogicPropertyTrial(record.name);
+              }}
+              type="button"
+            >
+              {t("knowledgeNetwork.objectTypeDetailTrialAction")}
+            </button>
+          ),
         title: t("common.actions"),
         width: 100,
       },
@@ -1005,12 +1021,6 @@ export function ObjectTypeDetailScene() {
   const logicPropertyCount = detail.logicProperties.length;
   const objectTypePrimaryKeys = detail.primaryKeys;
   const objectTypeDisplayKey = detail.displayKey;
-
-  const findLogicPropertyByMetricId = (metricId: string) =>
-    detail.logicProperties.find(
-      (property) => isMetricBoundLogicProperty(property) && property.dataSource?.id === metricId,
-    ) ?? null;
-
   const handleTabChange = (nextTab: string) => {
     openTab(nextTab as ObjectTypeDetailTabKey);
   };
@@ -1233,7 +1243,7 @@ export function ObjectTypeDetailScene() {
                 error: relatedMetricsError,
                 loaded: relatedMetricsLoadedObjectTypeId === objectTypeId,
                 loading: relatedMetricsLoading,
-                value: relatedMetrics.length,
+                value: relatedMetricsTotalCount,
               })}
             </span>
           </button>
@@ -1333,12 +1343,6 @@ export function ObjectTypeDetailScene() {
           <button
             className={styles.tableLink}
             onClick={() => {
-              const boundProperty = findLogicPropertyByMetricId(record.id);
-              if (boundProperty) {
-                openLogicPropertyTrial(boundProperty.name);
-                return;
-              }
-
               openMetricTrial(record.id);
             }}
             type="button"
@@ -1727,7 +1731,7 @@ export function ObjectTypeDetailScene() {
             dataProperties={detail.dataProperties}
             displayKey={objectTypeDisplayKey}
             highlightedLogicPropertyName={selectedLogicPropertyName}
-            initialSelectedRowKeys={selectedSampleRowKey ? [selectedSampleRowKey] : []}
+            initialSelectedRowKeys={selectedLogicTrialRowKeys}
             logicProperties={detail.logicProperties}
             networkId={networkId}
             objectTypeId={objectTypeId}
@@ -1759,7 +1763,6 @@ export function ObjectTypeDetailScene() {
           <ObjectTypeDetailMetricTrialPanel
             dataProperties={detail.dataProperties}
             loading={relatedMetricsLoading}
-            logicProperties={detail.logicProperties}
             metrics={relatedMetrics}
             networkId={networkId}
             objectTypeId={objectTypeId}
@@ -1888,6 +1891,16 @@ export function ObjectTypeDetailScene() {
               <Alert message={relatedMetricsError} showIcon type="error" />
             ) : (
               <>
+                {relatedMetricsTotalCount > relatedMetrics.length ? (
+                  <Alert
+                    message={t("knowledgeNetwork.objectTypeDetailRelatedMetricsPartial", {
+                      loaded: relatedMetrics.length,
+                      total: relatedMetricsTotalCount,
+                    })}
+                    showIcon
+                    type="warning"
+                  />
+                ) : null}
                 <Table<KnowledgeNetworkMetricRecord>
                   columns={relatedMetricColumns}
                   dataSource={pagedRelatedMetrics}

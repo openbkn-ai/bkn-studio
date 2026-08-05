@@ -9,40 +9,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   filterInstanceTrialLogicProperties,
-  filterUnboundMetricsForTrial,
-  getLogicPropertyBoundMetricIds,
 } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import {
   buildInstanceIdentityFromSampleRow,
   matchesSampleRowKeyword,
 } from "@/modules/knowledge-network/lib/object-type-instance-identity";
-import type {
-  KnowledgeNetworkMetricRecord,
-  ObjectTypeLogicProperty,
-} from "@/modules/knowledge-network/types/knowledge-network";
+import type { ObjectTypeLogicProperty } from "@/modules/knowledge-network/types/knowledge-network";
 
 describe("object-type trial helpers", () => {
-  it("filters metrics already bound by logic properties", () => {
-    const metrics = [
-      { id: "m-1", name: "A" },
-      { id: "m-2", name: "B" },
-    ] as KnowledgeNetworkMetricRecord[];
-
-    const logicProperties = [
-      {
-        dataSource: { id: "m-1", name: "A", type: "metric" },
-        displayName: "Bound",
-        name: "bound_metric",
-        type: "metric",
-      },
-    ] as ObjectTypeLogicProperty[];
-
-    expect(getLogicPropertyBoundMetricIds(logicProperties)).toEqual(new Set(["m-1"]));
-    expect(filterUnboundMetricsForTrial(metrics, logicProperties).map((item) => item.id)).toEqual([
-      "m-2",
-    ]);
-  });
-
   it("excludes aggregate metric bindings from instance trials", () => {
     const logicProperties = [
       {

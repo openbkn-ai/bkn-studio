@@ -47,6 +47,10 @@ function normalizeLogicPropertyTrialRows(
   }
 
   const datas = root.datas;
+  if (datas.length !== instanceIdentities.length) {
+    throw new Error("Logic property trial returned an unexpected number of rows.");
+  }
+
   return instanceIdentities.map((instanceIdentity, index) => {
     const row = datas[index];
     const record = row && typeof row === "object" ? (row as Record<string, unknown>) : {};

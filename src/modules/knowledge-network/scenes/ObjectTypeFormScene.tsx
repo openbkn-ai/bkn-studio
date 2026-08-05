@@ -562,6 +562,8 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
           dataProperties={dataProperties}
           externalError={logicValidationError}
           logicProperties={logicProperties}
+          networkId={networkId}
+          objectTypeId={objectTypeId ?? ""}
           onChange={setLogicProperties}
           ref={logicAttributeRef}
         />

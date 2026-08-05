@@ -10,13 +10,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
-import { filterUnboundMetricsForTrial } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import { getKnowledgeNetworkMetric } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   KnowledgeNetworkMetricRecord,
   KnowledgeNetworkObjectTypeRecord,
   ObjectTypeDataProperty,
-  ObjectTypeLogicProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { toMetricPropertyOptions } from "@/modules/knowledge-network/utils/metric-property-display";
 
@@ -25,7 +23,6 @@ import styles from "./ObjectTypeDetailTrialPanel.module.css";
 type ObjectTypeDetailMetricTrialPanelProps = {
   dataProperties: ObjectTypeDataProperty[];
   loading?: boolean;
-  logicProperties: ObjectTypeLogicProperty[];
   metrics: KnowledgeNetworkMetricRecord[];
   networkId: string;
   objectTypeId: string;
@@ -37,7 +34,6 @@ type ObjectTypeDetailMetricTrialPanelProps = {
 export function ObjectTypeDetailMetricTrialPanel({
   dataProperties,
   loading = false,
-  logicProperties,
   metrics,
   networkId,
   objectTypeId,
@@ -47,10 +43,7 @@ export function ObjectTypeDetailMetricTrialPanel({
 }: ObjectTypeDetailMetricTrialPanelProps) {
   const { t } = useTranslation();
 
-  const trialMetrics = useMemo(
-    () => filterUnboundMetricsForTrial(metrics, logicProperties),
-    [logicProperties, metrics],
-  );
+  const trialMetrics = metrics;
 
   const selectedMetric = useMemo(
     () => trialMetrics.find((item) => item.id === selectedMetricId) ?? null,
@@ -165,6 +158,3 @@ export function ObjectTypeDetailMetricTrialPanel({
     </div>
   );
 }
-
-/** @deprecated Use ObjectTypeDetailMetricTrialPanel */
-export const ObjectTypeDetailTrialPanel = ObjectTypeDetailMetricTrialPanel;

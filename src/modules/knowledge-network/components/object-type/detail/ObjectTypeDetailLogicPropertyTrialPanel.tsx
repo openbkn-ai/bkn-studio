@@ -124,6 +124,14 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
     return sampleRows.filter((entry) => matchesSampleRowKeyword(entry.row, normalizedKeyword));
   }, [keyword, sampleRows]);
 
+  const selectedRowsWithoutIdentityCount = useMemo(
+    () =>
+      sampleRows.filter(
+        (item) => selectedRowKeys.includes(item.key) && item.identity === null,
+      ).length,
+    [sampleRows, selectedRowKeys],
+  );
+
   const propertyNames = useMemo(
     () => trialLogicProperties.map((property) => property.name),
     [trialLogicProperties],
@@ -339,6 +347,15 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
       </div>
 
       {error ? <Alert message={error} showIcon type="error" /> : null}
+      {selectedRowsWithoutIdentityCount > 0 ? (
+        <Alert
+          message={t("knowledgeNetwork.objectTypeDetailLogicTrialSkippedRows", {
+            count: selectedRowsWithoutIdentityCount,
+          })}
+          showIcon
+          type="warning"
+        />
+      ) : null}
 
       <Table<TrialTableRow>
         columns={columns}

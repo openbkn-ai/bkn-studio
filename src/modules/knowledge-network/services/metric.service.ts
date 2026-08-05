@@ -55,9 +55,9 @@ export function getMetricApiAvailability() {
 }
 
 const METRIC_LIST_DEFAULT_LIMIT = 20;
-const METRIC_LIST_MAX_LIMIT = 500;
+export const METRIC_LIST_MAX_LIMIT = 500;
 
-function resolveMetricListLimit(limit?: number) {
+export function resolveMetricListLimit(limit?: number) {
   if (limit == null) {
     return METRIC_LIST_DEFAULT_LIMIT;
   }
@@ -70,11 +70,7 @@ function resolveMetricListLimit(limit?: number) {
 }
 
 function sliceMetricListPage<T>(items: T[], offset: number, limit?: number) {
-  if (limit != null && limit < 0) {
-    return items.slice(offset);
-  }
-
-  const resolvedLimit = limit ?? items.length;
+  const resolvedLimit = limit == null ? items.length : resolveMetricListLimit(limit);
   return items.slice(offset, offset + resolvedLimit);
 }
 

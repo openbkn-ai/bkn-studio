@@ -11,6 +11,7 @@ import {
   buildMetricDataQueryPayload,
   listKnowledgeNetworkMetrics,
   normalizeMetricDataResponse,
+  resolveMetricListLimit,
 } from "@/modules/knowledge-network/services/metric.service";
 
 vi.mock("@/modules/knowledge-network/services/shared/runtime", async () => {
@@ -26,14 +27,15 @@ vi.mock("@/modules/knowledge-network/services/shared/runtime", async () => {
 });
 
 describe("listKnowledgeNetworkMetrics", () => {
-  it("treats limit -1 as fetch-all for mock lists", async () => {
+  it("applies the backend maximum when limit is -1", async () => {
     const result = await listKnowledgeNetworkMetrics("kn-domain-risk", {
       limit: -1,
       scopeRef: "ot-risk-order",
     });
 
     expect(result.totalCount).toBeGreaterThan(0);
-    expect(result.entries).toHaveLength(result.totalCount);
+    expect(result.entries.length).toBeLessThanOrEqual(500);
+    expect(resolveMetricListLimit(-1)).toBe(500);
   });
 });
 

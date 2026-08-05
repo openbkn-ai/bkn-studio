@@ -9,6 +9,7 @@ import { EllipsisOutlined, PlusOutlined, QuestionCircleOutlined } from "@ant-des
 import { Dropdown, Empty, Input, Table, Tooltip, type TableProps } from "antd";
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -25,6 +26,7 @@ import {
   renderResourceIcon,
 } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
+import { listObjectTypeLogicMetricModels } from "@/modules/knowledge-network/services/object-type-logic.service";
 import { deduplicateByName } from "./constants";
 import { ObjectTypeLogicAttributeEditDrawer } from "./ObjectTypeLogicAttributeEditDrawer";
 import type {
@@ -55,6 +57,8 @@ type ObjectTypeLogicAttributeEditorProps = {
   dataProperties: ObjectTypeDataProperty[];
   externalError?: ObjectTypeLogicAttributeExternalError | null;
   logicProperties: ObjectTypeLogicProperty[];
+  networkId: string;
+  objectTypeId: string;
   onChange: (logicProperties: ObjectTypeLogicProperty[]) => void;
 };
 
@@ -69,7 +73,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   ObjectTypeLogicAttributeEditorHandle,
   ObjectTypeLogicAttributeEditorProps
 >(function ObjectTypeLogicAttributeEditor(
-  { basicValue, dataProperties, externalError, logicProperties, onChange },
+  { basicValue, dataProperties, externalError, logicProperties, networkId, objectTypeId, onChange },
   ref,
 ) {
   const { t } = useTranslation();
@@ -85,12 +89,42 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   const [searchInput, setSearchInput] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
+  const validateMetricReferences = useCallback(async () => {
+    const metricProperties = localLogicProperties.filter(
+      (item) => item.dataSource?.type === "metric" && item.dataSource.id,
+    );
+    if (!metricProperties.length || !networkId || !objectTypeId) {
+      return true;
+    }
+
+    const metricModels = await listObjectTypeLogicMetricModels(networkId, objectTypeId);
+    const metricIds = new Set(metricModels.map((item) => item.id));
+    const invalidProperty = metricProperties.find(
+      (item) => item.dataSource?.id && !metricIds.has(item.dataSource.id),
+    );
+    if (!invalidProperty) {
+      return true;
+    }
+
+    void message.error(
+      t("knowledgeNetwork.objectTypeLogicMetricReferenceMissing", {
+        name: invalidProperty.displayName || invalidProperty.name,
+      }),
+    );
+    return false;
+  }, [localLogicProperties, message, networkId, objectTypeId, t]);
+
   useImperativeHandle(
     ref,
     () => ({
-      validateFields: () => Promise.resolve({ logicProperties: localLogicProperties }),
+      validateFields: async () => {
+        if (!(await validateMetricReferences())) {
+          throw new Error("invalid logic metric reference");
+        }
+        return { logicProperties: localLogicProperties };
+      },
     }),
-    [localLogicProperties],
+    [localLogicProperties, validateMetricReferences],
   );
 
   useEffect(() => {

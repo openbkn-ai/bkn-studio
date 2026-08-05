@@ -836,30 +836,6 @@ export function mcpStructuredContent(parsed: unknown): unknown {
   return (result as Record<string, unknown>).structuredContent;
 }
 
-/** 解析 Context Loader REST 或 MCP 响应体为业务 JSON（或 MCP 文本载荷）。 */
-export function parseContextLoaderPayload(mode: ContextLoaderMode, text: string): unknown {
-  if (mode === "mcp") {
-    const parsed = parseMcpEnvelope(text);
-    const structured = mcpStructuredContent(parsed);
-    if (structured !== undefined) {
-      return structured;
-    }
-
-    const payload = mcpResultText(parsed);
-    if (payload) {
-      try {
-        return JSON.parse(payload) as unknown;
-      } catch {
-        return payload;
-      }
-    }
-
-    return parsed;
-  }
-
-  return JSON.parse(text) as unknown;
-}
-
 /** tools/call 是否为工具级失败（JSON-RPC 200 + result.isError，区别于 HTTP 层失败）。 */
 function mcpIsError(parsed: unknown): boolean {
   if (!parsed || typeof parsed !== "object") return false;

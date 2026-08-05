@@ -15,11 +15,11 @@ vi.mock("@/framework/request/http", () => ({
   },
 }));
 
-const gmvMetric = {
-  dataSource: { id: "metric-1", name: "GMV", type: "metric" as const },
-  displayName: "GMV",
-  name: "gmv_metric",
-  type: "metric" as const,
+const toolProperty = {
+  dataSource: { id: "tool-1", name: "Discount", type: "tool" as const },
+  displayName: "Discount",
+  name: "discount",
+  type: "tool" as const,
 };
 
 describe("object-type-logic-property-trial.service", () => {
@@ -29,7 +29,7 @@ describe("object-type-logic-property-trial.service", () => {
     postMock.mockReset();
     postMock.mockResolvedValue({
       data: {
-        datas: [{ gmv_metric: 42 }],
+        datas: [{ discount: 42 }],
       },
     });
   });
@@ -45,7 +45,7 @@ describe("object-type-logic-property-trial.service", () => {
 
     const rows = await getObjectTypeLogicPropertyValues({
       instanceIdentities: [{ order_id: "1001" }],
-      logicProperties: [gmvMetric],
+      logicProperties: [toolProperty],
       networkId: "kn-route-id",
       objectTypeId: "ot-1",
     });
@@ -55,7 +55,6 @@ describe("object-type-logic-property-trial.service", () => {
       string,
       {
         _instance_identities: Array<Record<string, string>>;
-        dynamic_params: Record<string, { instant: boolean; start: number }>;
         properties: string[];
       },
       { headers: Record<string, string> },
@@ -65,21 +64,18 @@ describe("object-type-logic-property-trial.service", () => {
     );
     expect(body).toMatchObject({
       _instance_identities: [{ order_id: "1001" }],
-      dynamic_params: {
-        gmv_metric: { instant: true, start: 946684800000 },
-      },
-      properties: ["gmv_metric"],
+      properties: ["discount"],
     });
     expect(options).toEqual({ headers: { "X-HTTP-Method-Override": "GET" } });
     expect(rows).toEqual([
-      { instanceIdentity: { order_id: "1001" }, values: { gmv_metric: 42 } },
+      { instanceIdentity: { order_id: "1001" }, values: { discount: 42 } },
     ]);
   });
 
   it("submits selected instances in one request and preserves returned row order", async () => {
     postMock.mockResolvedValueOnce({
       data: {
-        datas: [{ gmv_metric: 1002 }, { gmv_metric: 1001 }],
+        datas: [{ discount: 1002 }, { discount: 1001 }],
       },
     });
 
@@ -89,15 +85,32 @@ describe("object-type-logic-property-trial.service", () => {
 
     const rows = await getObjectTypeLogicPropertyValues({
       instanceIdentities: [{ order_id: "1002" }, { order_id: "1001" }],
-      logicProperties: [gmvMetric],
+      logicProperties: [toolProperty],
       networkId: "kn-1",
       objectTypeId: "ot-1",
     });
 
     expect(postMock).toHaveBeenCalledTimes(1);
     expect(rows).toEqual([
-      { instanceIdentity: { order_id: "1002" }, values: { gmv_metric: 1002 } },
-      { instanceIdentity: { order_id: "1001" }, values: { gmv_metric: 1001 } },
+      { instanceIdentity: { order_id: "1002" }, values: { discount: 1002 } },
+      { instanceIdentity: { order_id: "1001" }, values: { discount: 1001 } },
     ]);
+  });
+
+  it("rejects a response that cannot be mapped to every selected instance", async () => {
+    postMock.mockResolvedValueOnce({ data: { datas: [] } });
+
+    const { getObjectTypeLogicPropertyValues } = await import(
+      "@/modules/knowledge-network/services/object-type-logic-property-trial.service"
+    );
+
+    await expect(
+      getObjectTypeLogicPropertyValues({
+        instanceIdentities: [{ order_id: "1001" }],
+        logicProperties: [toolProperty],
+        networkId: "kn-1",
+        objectTypeId: "ot-1",
+      }),
+    ).rejects.toThrow("unexpected number of rows");
   });
 });

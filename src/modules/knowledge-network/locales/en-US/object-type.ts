@@ -89,30 +89,23 @@ export const objecttypePart = {
     objectTypeDetailRelatedSectionRelations: "Relation types",
     objectTypeDetailRelatedSectionMetrics: "Metrics",
     objectTypeDetailRelatedSectionActions: "Actions",
-    objectTypeDetailLogicTrialDescription:
-      "Review sample instances in a table and trial all logic properties for one or many rows.",
     objectTypeDetailLogicTrialRunSingle: "Trial",
     objectTypeDetailLogicTrialRunBatch: "Batch trial ({{count}})",
     objectTypeDetailLogicTrialRunAll: "Trial all",
-    objectTypeDetailMetricTrialDescription:
-      "Run aggregate queries against related metrics that are not bound as logic properties.",
-    objectTypeDetailLogicTrialEmpty: "No logic properties are available for trial yet.",
-    objectTypeDetailMetricTrialEmpty: "No unbound related metrics are available for trial yet.",
-    objectTypeDetailLogicTrialSelectSample: "Sample instance",
-    objectTypeDetailLogicTrialSelectProperty: "Logic property",
-    objectTypeDetailLogicTrialRun: "Run trial",
+    objectTypeDetailMetricTrialEmpty: "No related metrics are available for trial yet.",
     objectTypeDetailLogicTrialNeedSample: "Load and select a sample row under Sample rows first.",
     objectTypeDetailLogicTrialMissingPrimaryKey:
       "Primary keys are not configured, so instance identity cannot be built.",
+    objectTypeDetailLogicTrialSkippedRows:
+      "Skipped {{count}} sample row(s) without a complete primary key.",
     objectTypeDetailUseSampleForLogicTrial: "Use for logic trial",
     objectTypeDetailTrialSelectMetric: "Trial metric",
-    objectTypeDetailTrialOptionRelated: "Related metric: {{name}}",
-    objectTypeDetailTrialOptionLogicProperty:
-      "Logic property {{propertyName}} ({{metricName}})",
     objectTypeDetailTrialAction: "Trial",
     objectTypeDetailViewDetail: "View detail",
     objectTypeDetailRelatedMetricsDescription: "Metrics scoped to this object type.",
     objectTypeDetailRelatedMetricsEmpty: "No related metrics yet.",
+    objectTypeDetailRelatedMetricsPartial:
+      "Showing the first {{loaded}} of {{total}} related metrics. Use Metric Management to view the complete list.",
     objectTypeDetailRelatedActionsDescription: "Actions bound to this object type.",
     objectTypeDetailRelatedActionsEmpty: "No related actions yet.",
     objectTypeDetailSearchRelated: "Search by name",
@@ -142,22 +135,12 @@ export const objecttypePart = {
       'Property name "{{name}}" already exists in data properties.',
     objectTypeLogicAttributeResource: "Resource",
     objectTypeLogicAttributeSetting: "Parameter settings",
-    objectTypeLogicMetricAnalysisDimensions: "Dimensions",
-    objectTypeLogicMetricBindingHint:
-      "Map the dimensions that should be filtered by each current object. Without mappings, the metric is aggregated globally.",
-    objectTypeLogicMetricBindingTitle: "Metric binding",
-    objectTypeLogicMetricMappingHint:
-      "Map a metric dimension to an object property. During trial, each object's value becomes a filter; leave it empty to omit that filter.",
-    objectTypeLogicMetricMappingProperty: "Select object property",
-    objectTypeLogicMetricMappingTitle: "Instance filter mappings",
-    objectTypeLogicMetricNoAnalysisDimensions:
-      "This metric has no analysis dimensions and is aggregated globally.",
     objectTypeLogicMetricUnavailable:
       "Metric-based logical properties are currently read-only and cannot be edited.",
+    objectTypeLogicMetricReferenceMissing:
+      'The metric bound to logical property "{{name}}" no longer exists. Delete the logical property before saving.',
     objectTypeDetailLogicTrialMetricUnavailable:
       "Metric-based logical properties cannot be run against individual instances yet.",
-    objectTypeDetailLogicTrialGlobalMetricWarning:
-      "{{names}} has no instance filter mapping. The trial aggregates it globally, so all instance rows can show the same result. Edit the logic property and map analysis dimensions to object properties.",
     objectTypeLogicAttributeMatchedPropertyPending: "Select an analysis dimension first",
     objectTypeLogicAttributeMatchedPropertyMissing: "Missing same-name property on object type",
     objectTypeLogicAttributeTypeMetric: "Metric",
