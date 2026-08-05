@@ -18,6 +18,11 @@
   gap: 12px;
 }
 
+.search {
+  margin-left: auto;
+  width: 280px;
+}
+
 .highlightColumn {
   background: rgba(22, 119, 255, 0.04);
 }
@@ -59,6 +64,10 @@
 @media (max-width: 1080px) {
   .selectorGrid {
     grid-template-columns: 1fr;
+  }
+
+  .search {
+    margin-left: 0;
   }
 }
 

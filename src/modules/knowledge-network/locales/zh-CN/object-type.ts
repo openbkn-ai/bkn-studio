@@ -104,7 +104,7 @@ export const objecttypePart = {
     objectTypeDetailTrialOptionLogicProperty: "逻辑属性 {{propertyName}}（{{metricName}}）",
     objectTypeDetailTrialAction: "试算",
     objectTypeDetailViewDetail: "查看详情",
-    objectTypeDetailRelatedMetricsDescription: "查看 scope 绑定到当前对象类的指标。",
+    objectTypeDetailRelatedMetricsDescription: "查看以当前对象类为统计范围的指标。",
     objectTypeDetailRelatedMetricsEmpty: "当前对象类暂未关联指标。",
     objectTypeDetailRelatedActionsDescription: "查看绑定到当前对象类的行动。",
     objectTypeDetailRelatedActionsEmpty: "当前对象类暂未关联行动。",
@@ -135,8 +135,15 @@ export const objecttypePart = {
     objectTypeLogicAttributeSetting: "参数配置",
     objectTypeLogicMetricAnalysisDimensions: "分析维度",
     objectTypeLogicMetricBindingHint:
-      "选择指标后，将作为当前对象类的逻辑属性使用。",
+      "选择指标后，设置需要按当前对象试算的分析维度映射。未设置映射时，指标会按全局条件聚合。",
     objectTypeLogicMetricBindingTitle: "指标绑定",
+    objectTypeLogicMetricMappingHint:
+      "将指标分析维度映射到当前对象属性。试算时会按每一行对象的属性值生成过滤条件；留空表示不按该维度过滤。",
+    objectTypeLogicMetricMappingProperty: "选择对象属性",
+    objectTypeLogicMetricMappingTitle: "实例过滤映射",
+    objectTypeLogicMetricNoAnalysisDimensions: "该指标未配置分析维度，将按全局条件聚合。",
+    objectTypeDetailLogicTrialGlobalMetricWarning:
+      "{{names}} 未配置实例过滤映射，当前试算按全局条件聚合，所有实例行可能显示相同结果。请编辑逻辑属性并映射对应的分析维度与对象属性。",
     objectTypeLogicAttributeMatchedPropertyPending: "请先选择分析维度",
     objectTypeLogicAttributeMatchedPropertyMissing: "对象类缺少同名属性",
     objectTypeLogicAttributeTypeMetric: "指标",
@@ -210,4 +217,6 @@ export const objecttypePart = {
     objectTypeUnsavedLeaveOk: "离开",
     objectTypeUnsavedLeaveTitle: "确认离开",
     objectTypeViewDataResource: "查看资源详情",
+    objectTypeLogicMetricUnavailable: "指标类逻辑属性暂不支持编辑。",
+    objectTypeDetailLogicTrialMetricUnavailable: "指标类逻辑属性暂不支持按实例试算。",
 };

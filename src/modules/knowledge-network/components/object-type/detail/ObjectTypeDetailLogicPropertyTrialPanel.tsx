@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Empty, Spin, Table } from "antd";
+import { Alert, Empty, Input, Spin, Table } from "antd";
 import type { TableProps } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,12 +13,15 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatLogicPropertyTrialValue } from "@/modules/knowledge-network/lib/format-logic-property-trial-value";
 import { resolveObjectTypeDisplayKeyLabel } from "@/modules/knowledge-network/lib/object-type-display-key-label";
+import { filterInstanceTrialLogicProperties } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import {
   buildInstanceIdentityFromSampleRow,
   buildSampleRowKey,
   formatSampleRowLabel,
+  matchesSampleRowKeyword,
 } from "@/modules/knowledge-network/lib/object-type-instance-identity";
 import { getObjectTypeLogicPropertyValues } from "@/modules/knowledge-network/services/object-type-logic-property-trial.service";
 import type {
@@ -49,8 +52,6 @@ type ObjectTypeDetailLogicPropertyTrialPanelProps = {
   displayKey: string;
   highlightedLogicPropertyName?: string | null;
   initialSelectedRowKeys?: string[];
-  /** Agent-retrieval `kn_id`（知识网络 identifier）；缺省回退 networkId。 */
-  knId?: string;
   logicProperties: ObjectTypeLogicProperty[];
   networkId: string;
   objectTypeId: string;
@@ -62,12 +63,13 @@ type ObjectTypeDetailLogicPropertyTrialPanelProps = {
 
 type TrialTableRow = SampleRowEntry;
 
+const DEFAULT_PAGE_SIZE = 10;
+
 export function ObjectTypeDetailLogicPropertyTrialPanel({
   dataProperties,
   displayKey,
   highlightedLogicPropertyName = null,
   initialSelectedRowKeys = [],
-  knId,
   logicProperties,
   networkId,
   objectTypeId,
@@ -82,6 +84,9 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
   const [valuesByRow, setValuesByRow] = useState<Record<string, Record<string, string>>>({});
   const [runningRowKeys, setRunningRowKeys] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [keyword, setKeyword] = useState("");
 
   const displayKeyLabel = useMemo(
     () => resolveObjectTypeDisplayKeyLabel(displayKey, dataProperties, preview?.columns),
@@ -104,10 +109,30 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
     });
   }, [displayKey, preview?.rows, primaryKeys]);
 
-  const propertyNames = useMemo(
-    () => logicProperties.map((property) => property.name),
+  const trialLogicProperties = useMemo(
+    () => filterInstanceTrialLogicProperties(logicProperties),
     [logicProperties],
   );
+
+  const filteredSampleRows = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLowerCase();
+
+    if (!normalizedKeyword) {
+      return sampleRows;
+    }
+
+    return sampleRows.filter((entry) => matchesSampleRowKeyword(entry.row, normalizedKeyword));
+  }, [keyword, sampleRows]);
+
+  const propertyNames = useMemo(
+    () => trialLogicProperties.map((property) => property.name),
+    [trialLogicProperties],
+  );
+
+  const pagedSampleRows = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return filteredSampleRows.slice(startIndex, startIndex + pageSize);
+  }, [filteredSampleRows, page, pageSize]);
 
   useEffect(() => {
     if (initialSelectedRowKeys.length === 0) {
@@ -116,6 +141,10 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
 
     setSelectedRowKeys(initialSelectedRowKeys);
   }, [initialSelectedRowKeys]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [preview?.rows]);
 
   const updateSelectedRowKeys = (nextKeys: string[]) => {
     setSelectedRowKeys(nextKeys);
@@ -138,8 +167,7 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
       try {
         const result = await getObjectTypeLogicPropertyValues({
           instanceIdentities: entries.map((item) => item.identity!),
-          knId,
-          logicProperties,
+          logicProperties: trialLogicProperties,
           networkId,
           objectTypeId,
         });
@@ -172,11 +200,11 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
         });
       }
     },
-    [knId, logicProperties, message, networkId, objectTypeId, propertyNames, sampleRows, t],
+    [message, networkId, objectTypeId, propertyNames, sampleRows, t, trialLogicProperties],
   );
 
   const columns: TableProps<TrialTableRow>["columns"] = useMemo(() => {
-    const logicColumns: NonNullable<TableProps<TrialTableRow>["columns"]> = logicProperties.map(
+    const logicColumns: NonNullable<TableProps<TrialTableRow>["columns"]> = trialLogicProperties.map(
       (property) => ({
         className:
           highlightedLogicPropertyName === property.name ? styles.highlightColumn : undefined,
@@ -233,17 +261,17 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
   }, [
     displayKeyLabel,
     highlightedLogicPropertyName,
-    logicProperties,
     runTrialForRows,
     runningRowKeys,
     t,
+    trialLogicProperties,
     valuesByRow,
   ]);
 
   const batchRunning = selectedRowKeys.some((key) => runningRowKeys.has(key));
   const allRowsRunning =
     sampleRows.length > 0 && sampleRows.every((row) => runningRowKeys.has(row.key));
-  const tableScrollX = 360 + logicProperties.length * 160 + 100;
+  const tableScrollX = 360 + trialLogicProperties.length * 160 + 100;
 
   if (previewLoading) {
     return (
@@ -253,8 +281,16 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
     );
   }
 
-  if (logicProperties.length === 0) {
-    return <Empty description={t("knowledgeNetwork.objectTypeLogicPropertyEmpty")} />;
+  if (trialLogicProperties.length === 0) {
+    return (
+      <Empty
+        description={t(
+          logicProperties.length > 0
+            ? "knowledgeNetwork.objectTypeDetailLogicTrialMetricUnavailable"
+            : "knowledgeNetwork.objectTypeLogicPropertyEmpty",
+        )}
+      />
+    );
   }
 
   if (!preview || sampleRows.length === 0) {
@@ -290,23 +326,46 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
         >
           {t("knowledgeNetwork.objectTypeDetailLogicTrialRunAll")}
         </AppButton>
+        <Input.Search
+          allowClear
+          className={styles.search}
+          onChange={(event) => {
+            setKeyword(event.target.value);
+            setPage(1);
+          }}
+          placeholder={t("knowledgeNetwork.objectTypeDataQuerySearchPlaceholder")}
+          value={keyword}
+        />
       </div>
 
       {error ? <Alert message={error} showIcon type="error" /> : null}
 
       <Table<TrialTableRow>
         columns={columns}
-        dataSource={sampleRows}
+        dataSource={pagedSampleRows}
         pagination={false}
         rowKey="key"
         rowSelection={{
           onChange: (keys) => {
             updateSelectedRowKeys(keys.map(String));
           },
+          preserveSelectedRowKeys: true,
           selectedRowKeys,
         }}
         scroll={{ x: tableScrollX }}
         size="small"
+      />
+
+      <TablePaginationBar
+        current={page}
+        onChange={(nextPage, nextPageSize) => {
+          setPage(nextPage);
+          setPageSize(nextPageSize);
+        }}
+        pageSize={pageSize}
+        showSizeChanger
+        showTotal={(total) => t("common.total", { total })}
+        total={filteredSampleRows.length}
       />
     </div>
   );

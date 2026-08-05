@@ -14,6 +14,11 @@ export function isMetricLogicProperty(property: ObjectTypeLogicProperty) {
   return property.type === "metric" || property.dataSource?.type === "metric";
 }
 
+/** Instance trials can only run properties that produce a value for one object instance. */
+export function filterInstanceTrialLogicProperties(logicProperties: ObjectTypeLogicProperty[]) {
+  return logicProperties.filter((property) => !isMetricLogicProperty(property));
+}
+
 export function getLogicPropertyBoundMetricIds(logicProperties: ObjectTypeLogicProperty[]) {
   const boundMetricIds = new Set<string>();
 

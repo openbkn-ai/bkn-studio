@@ -8,61 +8,32 @@
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import type { ObjectTypeLogicProperty } from "@/modules/knowledge-network/types/knowledge-network";
 
-export function buildLogicPropertyTrialQuery(logicProperties: ObjectTypeLogicProperty[]): string {
-  const labels = logicProperties
-    .map((property) => property.displayName.trim() || property.name)
-    .filter(Boolean);
-
-  if (labels.length === 0) {
-    return "查询选中实例的逻辑属性当前值";
-  }
-
-  return `查询选中实例的${labels.join("、")}当前值`;
-}
-
-export function buildLogicPropertyTrialAdditionalContext(
-  logicProperties: ObjectTypeLogicProperty[],
-  instanceIdentities: Array<Record<string, string | number>>,
-): string {
-  const hasMetric = logicProperties.some(isMetricLogicProperty);
-  const propertyNames = logicProperties.map((property) => property.name).join(", ");
-
-  const parts = [
-    "对象类详情页实例试算。",
-    hasMetric ? "instant=true；metric 型按即时汇总/当前值查询，不输出趋势 step。" : "",
-    propertyNames ? `试算属性：${propertyNames}。` : "",
-  ];
-
-  if (instanceIdentities.length > 0) {
-    parts.push(`实例主键示例：${JSON.stringify(instanceIdentities[0])}。`);
-  }
-
-  return parts.filter(Boolean).join("");
-}
+const LOGIC_PROPERTY_TRIAL_START_AT = Date.UTC(2000, 0, 1);
 
 export function buildLogicPropertyTrialBody(input: {
   instanceIdentities: Array<Record<string, string | number>>;
-  knId: string;
   logicProperties: ObjectTypeLogicProperty[];
-  objectTypeId: string;
-  returnDebug?: boolean;
+  nowMs?: number;
 }) {
-  const propertyNames = input.logicProperties.map((property) => property.name);
+  const metricProperties = input.logicProperties.filter(isMetricLogicProperty);
+  const nowMs = input.nowMs ?? Date.now();
 
   const body: Record<string, unknown> = {
     _instance_identities: input.instanceIdentities,
-    additional_context: buildLogicPropertyTrialAdditionalContext(
-      input.logicProperties,
-      input.instanceIdentities,
-    ),
-    kn_id: input.knId,
-    ot_id: input.objectTypeId,
-    properties: propertyNames,
-    query: buildLogicPropertyTrialQuery(input.logicProperties),
+    properties: input.logicProperties.map((property) => property.name),
   };
 
-  if (input.returnDebug) {
-    body.options = { return_debug: true };
+  if (metricProperties.length > 0) {
+    body.dynamic_params = Object.fromEntries(
+      metricProperties.map((property) => [
+        property.name,
+        {
+          end: nowMs,
+          instant: true,
+          start: LOGIC_PROPERTY_TRIAL_START_AT,
+        },
+      ]),
+    );
   }
 
   return body;

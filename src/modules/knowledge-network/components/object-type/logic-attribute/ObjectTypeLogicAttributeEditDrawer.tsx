@@ -38,13 +38,9 @@ import {
   removeParameterById,
   readLogicAttributeToolBinding,
 } from "./constants";
-import {
-  listObjectTypeLogicMetricModels,
-} from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ObjectTypeDataProperty,
   ObjectTypeLogicAttributeType,
-  ObjectTypeLogicMetricModelRecord,
   ObjectTypeLogicParameter,
   ObjectTypeLogicParameterValueFrom,
   ObjectTypeLogicProperty,
@@ -62,23 +58,11 @@ type ObjectTypeLogicAttributeEditDrawerProps = {
   allData: ObjectTypeDataProperty[];
   attrInfo: ObjectTypeLogicProperty;
   logicFields: ObjectTypeLogicProperty[];
-  networkId: string;
-  objectTypeId: string;
   onClose: () => void;
   onOk: (data: ObjectTypeLogicProperty) => void;
   open: boolean;
   title?: string;
 };
-
-type NameOption =
-  | {
-      label: string;
-      options: Array<{
-        analysisDimensions?: ObjectTypeLogicMetricModelRecord["analysisDimensions"];
-        label: string;
-        value: string;
-      }>;
-    };
 
 type LogicAttributeFormValues = {
   boxId?: string;
@@ -86,7 +70,6 @@ type LogicAttributeFormValues = {
   displayName?: string;
   name?: string;
   resultPath?: string;
-  resourceId?: string;
   resourceName?: string;
   toolId?: string;
   type?: ObjectTypeLogicAttributeType;
@@ -100,8 +83,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
   allData,
   attrInfo,
   logicFields,
-  networkId,
-  objectTypeId,
   onClose,
   onOk,
   open,
@@ -110,13 +91,9 @@ export function ObjectTypeLogicAttributeEditDrawer({
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [form] = Form.useForm<LogicAttributeFormValues>();
-  const [nameOptions, setNameOptions] = useState<NameOption[]>([]);
   const [settingList, setSettingList] = useState<SettingItem[]>([]);
-  const [metricModelList, setMetricModelList] = useState<ObjectTypeLogicMetricModelRecord[]>([]);
   const [toolSelectorOpen, setToolSelectorOpen] = useState(false);
   const type = Form.useWatch("type", form);
-  const resourceId = Form.useWatch("resourceId", form);
-  const optionsRequestIdRef = useRef(0);
   const isDisplayNameManuallyEdited = useRef(false);
   const isAddMode = !attrInfo?.name;
   const getStringFieldValue = (name: keyof LogicAttributeFormValues) =>
@@ -162,6 +139,11 @@ export function ObjectTypeLogicAttributeEditDrawer({
     [allData],
   );
 
+  const objectTypePropertyNameSet = useMemo(
+    () => new Set(allData.map((item) => item.name)),
+    [allData],
+  );
+
   const propertyOptions = useMemo(
     () => {
       const propertyNames = logicFields.map((item) => item.name);
@@ -174,16 +156,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
       }));
     },
     [attrInfo.name, isAddMode, logicFields, objectTypePropertyOptions],
-  );
-
-  const objectTypePropertyNameSet = useMemo(
-    () => new Set(allData.map((item) => item.name)),
-    [allData],
-  );
-
-  const selectedMetric = useMemo(
-    () => metricModelList.find((item) => item.id === resourceId),
-    [metricModelList, resourceId],
   );
 
   useEffect(() => {
@@ -231,14 +203,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
       } else {
         setSettingList(attrInfo.parameters ?? []);
       }
-    } else if (attrInfo?.dataSource?.id) {
-      form.setFieldsValue({
-        comment: attrInfo.comment,
-        displayName: attrInfo.displayName,
-        name: attrInfo.name,
-        resourceId: attrInfo.dataSource.id,
-        type: attrInfo.dataSource.type,
-      });
     } else if (attrInfo?.name) {
       form.setFieldsValue({
         comment: attrInfo.comment,
@@ -247,62 +211,13 @@ export function ObjectTypeLogicAttributeEditDrawer({
       });
     } else {
       form.resetFields();
-      form.setFieldValue("type", "metric");
-    }
-
-    if (attrInfo?.dataSource?.type === "metric") {
-      setSettingList([]);
+      form.setFieldValue("type", "tool");
     }
 
     return () => {
       cancelled = true;
     };
   }, [attrInfo, form, open]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const requestId = ++optionsRequestIdRef.current;
-    setNameOptions([]);
-
-    void (async () => {
-      if (type === "metric") {
-        if (!networkId || !objectTypeId) {
-          setMetricModelList([]);
-          setNameOptions([]);
-          return;
-        }
-
-        const models = await listObjectTypeLogicMetricModels(networkId, objectTypeId);
-        if (requestId !== optionsRequestIdRef.current) {
-          return;
-        }
-        setMetricModelList(models);
-        const grouped = models.reduce<Record<string, ObjectTypeLogicMetricModelRecord[]>>(
-          (acc, item) => {
-            const key = item.groupName || t("knowledgeNetwork.objectTypeLogicAttributeUngrouped");
-            acc[key] = [...(acc[key] ?? []), item];
-            return acc;
-          },
-          {},
-        );
-        setNameOptions(
-          Object.entries(grouped).map(([groupName, entries]) => ({
-            label: groupName,
-            options: entries.map((item) => ({
-              analysisDimensions: item.analysisDimensions,
-              label: item.name,
-              value: item.id,
-            })),
-          })),
-        );
-        return;
-      }
-
-    })();
-  }, [networkId, objectTypeId, open, t, type]);
 
   const updateSettingData = (id: string, updateValue: Partial<SettingItem>) => {
     const processNode = (item: SettingItem): SettingItem => {
@@ -318,10 +233,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
       return item;
     };
     setSettingList((prev) => prev.map(processNode));
-  };
-
-  const handleResourceChange = () => {
-    setSettingList([]);
   };
 
   const addToolParameter = () => {
@@ -425,10 +336,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
       resourceName: formValues.resourceName,
       toolId: formValues.toolId,
     });
-    if (type !== "tool" && !resourceId) {
-      void message.error(t("knowledgeNetwork.pleaseSelect"));
-      return;
-    }
     if (type === "tool" && !isToolLogicBindingComplete(toolBinding)) {
       void message.error(t("knowledgeNetwork.objectTypeLogicToolSelect"));
       return;
@@ -438,33 +345,28 @@ export function ObjectTypeLogicAttributeEditDrawer({
       return;
     }
 
-    const resolvedResourceName =
-      type === "metric"
-        ? metricModelList.find((item) => item.id === resourceId)?.name
-        : toolBinding.resourceName;
+    const parameters = extractLeafParams(settingList)
+      .map((item) => {
+        const { error, children, manual, ...parameter } = item;
+        void error;
+        void children;
+        void manual;
+        return parameter;
+      });
 
     onOk({
       comment: formValues.comment,
       dataSource: {
         boxId: toolBinding.boxId,
-        id: type === "tool" ? undefined : resourceId,
-        name: resolvedResourceName ?? "",
+        id: undefined,
+        name: toolBinding.resourceName ?? "",
         resultPath: formValues.resultPath,
         toolId: toolBinding.toolId,
         type,
       },
       displayName: formValues.displayName ?? "",
       name: formValues.name ?? "",
-      parameters:
-        type === "metric"
-          ? []
-          : extractLeafParams(settingList).map((item) => {
-              const { error, children, manual, ...parameter } = item;
-              void error;
-              void children;
-              void manual;
-              return parameter;
-            }),
+      parameters,
       type,
     });
   };
@@ -683,7 +585,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
                     resultPath: undefined,
                     toolId: undefined,
                   });
-                  form.setFieldValue("resourceId", undefined);
                 }}
                 options={logicAttributeTypeOptions}
                 placeholder={t("knowledgeNetwork.pleaseSelect")}
@@ -703,26 +604,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
                   value={getStringFieldValue("resourceName")}
                 />
               </Form.Item>
-            ) : (
-              <Form.Item
-                label={t("knowledgeNetwork.objectTypeLogicAttributeResource")}
-                name="resourceId"
-                rules={[{ message: t("knowledgeNetwork.pleaseSelect"), required: true }]}
-              >
-                <Select
-                  allowClear
-                  filterOption={(input, option) =>
-                    String(option?.label ?? "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                  onChange={handleResourceChange}
-                  options={nameOptions}
-                  placeholder={t("knowledgeNetwork.pleaseSelect")}
-                  showSearch
-                />
-              </Form.Item>
-            )}
+            ) : null}
           </Col>
         </Row>
         {type === "tool" ? (
@@ -775,28 +657,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
         />
       ) : null}
 
-      {type === "metric" ? (
-        <div className={styles.metricSummary}>
-          <div className={styles.metricSummaryTitle}>
-            {t("knowledgeNetwork.objectTypeLogicMetricBindingTitle")}
-          </div>
-          <div className={styles.metricSummaryHint}>
-            {t("knowledgeNetwork.objectTypeLogicMetricBindingHint")}
-          </div>
-          {selectedMetric?.analysisDimensions.length ? (
-            <div className={styles.metricSummaryRow}>
-              <span>{t("knowledgeNetwork.objectTypeLogicMetricAnalysisDimensions")}</span>
-              <div className={styles.metricDimensionList}>
-                {selectedMetric.analysisDimensions.map((item) => (
-                  <span className={styles.metricDimensionTag} key={item.name}>
-                    {item.displayName || item.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
       <ActionTypeToolSelectModal
         allowedKinds={["tool"]}
         onCancel={() => setToolSelectorOpen(false)}

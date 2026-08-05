@@ -40,7 +40,6 @@ import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-ty
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import {
   deleteKnowledgeNetworkObjectType,
-  getKnowledgeNetwork,
   getKnowledgeNetworkObjectTypeDetail,
   getObjectTypeSampleData,
   listKnowledgeNetworkActionTypes,
@@ -188,7 +187,6 @@ export function ObjectTypeDetailScene() {
       ? parseObjectTypeRelatedSection(searchParams.get("relatedSection"))
       : "relations";
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
-  const [networkKnId, setNetworkKnId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [propertyType, setPropertyType] = useState<"data" | "logic">("data");
@@ -344,31 +342,6 @@ export function ObjectTypeDetailScene() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
-
-  useEffect(() => {
-    if (!networkId) {
-      setNetworkKnId(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    void getKnowledgeNetwork(networkId)
-      .then((record) => {
-        if (!cancelled) {
-          setNetworkKnId(record?.identifier ?? networkId);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setNetworkKnId(networkId);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [networkId]);
 
   const shouldLoadPreview =
     activeTab === "data" &&
@@ -1755,7 +1728,6 @@ export function ObjectTypeDetailScene() {
             displayKey={objectTypeDisplayKey}
             highlightedLogicPropertyName={selectedLogicPropertyName}
             initialSelectedRowKeys={selectedSampleRowKey ? [selectedSampleRowKey] : []}
-            knId={networkKnId ?? networkId}
             logicProperties={detail.logicProperties}
             networkId={networkId}
             objectTypeId={objectTypeId}

@@ -13,7 +13,6 @@ import type {
 import type { ActionTypeToolInputParam } from "@/modules/knowledge-network/utils/tool-input-params";
 
 export const LOGIC_ATTRIBUTE_TYPE_OPTIONS = [
-  { labelKey: "objectTypeLogicAttributeTypeMetric", value: "metric" },
   { labelKey: "objectTypeLogicAttributeTypeTool", value: "tool" },
 ] as const;
 

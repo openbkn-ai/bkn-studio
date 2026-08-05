@@ -9,7 +9,6 @@ import { EllipsisOutlined, PlusOutlined, QuestionCircleOutlined } from "@ant-des
 import { Dropdown, Empty, Input, Table, Tooltip, type TableProps } from "antd";
 import {
   forwardRef,
-  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -25,7 +24,7 @@ import {
 import {
   renderResourceIcon,
 } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
-import { listObjectTypeLogicMetricModels } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import { deduplicateByName } from "./constants";
 import { ObjectTypeLogicAttributeEditDrawer } from "./ObjectTypeLogicAttributeEditDrawer";
 import type {
@@ -56,8 +55,6 @@ type ObjectTypeLogicAttributeEditorProps = {
   dataProperties: ObjectTypeDataProperty[];
   externalError?: ObjectTypeLogicAttributeExternalError | null;
   logicProperties: ObjectTypeLogicProperty[];
-  networkId: string;
-  objectTypeId: string;
   onChange: (logicProperties: ObjectTypeLogicProperty[]) => void;
 };
 
@@ -72,7 +69,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   ObjectTypeLogicAttributeEditorHandle,
   ObjectTypeLogicAttributeEditorProps
 >(function ObjectTypeLogicAttributeEditor(
-  { basicValue, dataProperties, externalError, logicProperties, networkId, objectTypeId, onChange },
+  { basicValue, dataProperties, externalError, logicProperties, onChange },
   ref,
 ) {
   const { t } = useTranslation();
@@ -88,40 +85,12 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   const [searchInput, setSearchInput] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
-  const validateMetricReferences = useCallback(async () => {
-    const metricProperties = localLogicProperties.filter(
-      (item) => item.dataSource?.type === "metric" && item.dataSource.id,
-    );
-    if (!metricProperties.length || !networkId || !objectTypeId) {
-      return true;
-    }
-
-    const metricModels = await listObjectTypeLogicMetricModels(networkId, objectTypeId);
-    const metricIds = new Set(metricModels.map((item) => item.id));
-    const invalidProperty = metricProperties.find(
-      (item) => item.dataSource?.id && !metricIds.has(item.dataSource.id),
-    );
-    if (!invalidProperty) {
-      return true;
-    }
-
-    void message.error(
-      `逻辑属性「${invalidProperty.displayName || invalidProperty.name}」绑定的指标模型不存在，请重新选择或删除该逻辑属性。`,
-    );
-    return false;
-  }, [localLogicProperties, message, networkId, objectTypeId]);
-
   useImperativeHandle(
     ref,
     () => ({
-      validateFields: async () => {
-        if (!(await validateMetricReferences())) {
-          throw new Error("invalid logic metric reference");
-        }
-        return { logicProperties: localLogicProperties };
-      },
+      validateFields: () => Promise.resolve({ logicProperties: localLogicProperties }),
     }),
-    [localLogicProperties, validateMetricReferences],
+    [localLogicProperties],
   );
 
   useEffect(() => {
@@ -166,6 +135,10 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   };
 
   const handleEdit = (record: ObjectTypeLogicProperty) => {
+    if (isMetricLogicProperty(record)) {
+      void message.info(t("knowledgeNetwork.objectTypeLogicMetricUnavailable"));
+      return;
+    }
     setAttrInfo(record);
     setDrawerOpen(true);
   };
@@ -237,6 +210,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
           menu={{
             items: [
               {
+                disabled: isMetricLogicProperty(record),
                 key: "edit",
                 label: t("common.edit"),
               },
@@ -423,8 +397,6 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
         ]}
         attrInfo={attrInfo}
         logicFields={localLogicProperties}
-        networkId={networkId}
-        objectTypeId={objectTypeId}
         onClose={() => setDrawerOpen(false)}
         onOk={handleOk}
         open={drawerOpen}

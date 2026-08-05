@@ -144,8 +144,20 @@ export const objecttypePart = {
     objectTypeLogicAttributeSetting: "Parameter settings",
     objectTypeLogicMetricAnalysisDimensions: "Dimensions",
     objectTypeLogicMetricBindingHint:
-      "The selected metric will be used as a logic property of this object type.",
+      "Map the dimensions that should be filtered by each current object. Without mappings, the metric is aggregated globally.",
     objectTypeLogicMetricBindingTitle: "Metric binding",
+    objectTypeLogicMetricMappingHint:
+      "Map a metric dimension to an object property. During trial, each object's value becomes a filter; leave it empty to omit that filter.",
+    objectTypeLogicMetricMappingProperty: "Select object property",
+    objectTypeLogicMetricMappingTitle: "Instance filter mappings",
+    objectTypeLogicMetricNoAnalysisDimensions:
+      "This metric has no analysis dimensions and is aggregated globally.",
+    objectTypeLogicMetricUnavailable:
+      "Metric-based logical properties are currently read-only and cannot be edited.",
+    objectTypeDetailLogicTrialMetricUnavailable:
+      "Metric-based logical properties cannot be run against individual instances yet.",
+    objectTypeDetailLogicTrialGlobalMetricWarning:
+      "{{names}} has no instance filter mapping. The trial aggregates it globally, so all instance rows can show the same result. Edit the logic property and map analysis dimensions to object properties.",
     objectTypeLogicAttributeMatchedPropertyPending: "Select an analysis dimension first",
     objectTypeLogicAttributeMatchedPropertyMissing: "Missing same-name property on object type",
     objectTypeLogicAttributeTypeMetric: "Metric",

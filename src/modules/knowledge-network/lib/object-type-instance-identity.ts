@@ -55,3 +55,17 @@ export function formatSampleRowLabel(
   const firstValue = Object.values(row).find((value) => value !== "" && value != null);
   return firstValue == null ? "--" : String(firstValue);
 }
+
+export function matchesSampleRowKeyword(
+  row: Record<string, string | number>,
+  keyword: string,
+) {
+  const normalizedKeyword = keyword.trim().toLowerCase();
+
+  return (
+    !normalizedKeyword ||
+    Object.values(row).some((value) =>
+      String(value ?? "").toLowerCase().includes(normalizedKeyword),
+    )
+  );
+}
