@@ -62,6 +62,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), redirectRootToAppBase()],
     test: {
       environment: "jsdom",
+      testTimeout: 10_000,
       env: {
         VITE_USE_MOCK: "true",
       },

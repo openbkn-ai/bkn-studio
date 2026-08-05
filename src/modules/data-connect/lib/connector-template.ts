@@ -28,7 +28,7 @@ export type ConnectorFieldGroup = {
 const FAMILY_REGISTRY: Record<DataSourceFamilyKey, DataSourceFamilyMeta> = {
   structured: {
     key: "structured",
-    label: "结构化数据",
+    label: "结构化/半结构化数据",
     description: "数据库、检索、接口等结构化接入。",
   },
   unstructured: {
@@ -81,21 +81,32 @@ const CATEGORY_TO_TEMPLATE: Record<string, { description: string; label: string 
 
 const TYPE_TO_TEMPLATE: Record<string, { description?: string; label?: string }> = {
   mariadb: {
-    description: "面向业务库接入。",
+    description: "连接 MariaDB 兼容的关系型数据库。",
   },
   mysql: {
-    description: "面向业务库接入。",
+    description: "连接 MySQL 兼容的关系型数据库。",
   },
   postgresql: {
-    description: "面向数仓 / 分析型数据。",
+    description: "连接 PostgreSQL 关系型数据库。",
+  },
+  sqlserver: {
+    description: "连接 Microsoft SQL Server 关系型数据库。",
   },
   opensearch: {
-    description: "面向检索索引接入。",
+    description: "连接 OpenSearch 检索索引。",
   },
   anyshare: {
     description: "面向文件集 / 文档资源接入。",
   },
 };
+
+const KNOWN_CONNECTOR_TYPES: DataConnectConnectorType[] = [
+  knownConnectorType("mariadb", "MariaDB", "table"),
+  knownConnectorType("mysql", "MySQL", "table"),
+  knownConnectorType("postgresql", "PostgreSQL", "table"),
+  knownConnectorType("sqlserver", "SQL Server", "table"),
+  knownConnectorType("opensearch", "OpenSearch", "index"),
+];
 
 const TYPE_FIELD_DEFAULTS: Record<string, Record<string, unknown>> = {
   mariadb: {
@@ -123,6 +134,9 @@ const TYPE_FIELD_DEFAULTS: Record<string, Record<string, unknown>> = {
     ssl: false,
     use_ssl: false,
   },
+  sqlserver: {
+    port: 1433,
+  },
   opensearch: {
     port: 9200,
   },
@@ -132,6 +146,7 @@ const TYPE_PORT_PLACEHOLDER: Record<string, string> = {
   mariadb: "例如 3306",
   mysql: "例如 3306",
   postgresql: "例如 5432",
+  sqlserver: "例如 1433",
   opensearch: "例如 9200",
 };
 
@@ -260,6 +275,72 @@ export function getConnectorTemplateMeta(
   };
 }
 
+export function filterConnectorTypes(
+  connectors: DataConnectConnectorType[],
+  family: DataSourceFamilyKey,
+  nameKeyword: string,
+  tag?: string,
+) {
+  const normalizedNameKeyword = nameKeyword.trim().toLowerCase();
+
+  return connectors.filter((connector) => {
+    const templateMeta = getConnectorTemplateMeta(connector);
+    const matchesName =
+      normalizedNameKeyword.length === 0 ||
+      connector.name.toLowerCase().includes(normalizedNameKeyword);
+    const matchesTag = tag === undefined || templateMeta.label === tag;
+
+    return matchesDataSourceFamily(connector, family) && matchesName && matchesTag;
+  });
+}
+
+export function getConnectorTypeTags(
+  connectors: DataConnectConnectorType[],
+  family: DataSourceFamilyKey,
+) {
+  return Array.from(
+    new Set(
+      connectors
+        .filter((connector) => matchesDataSourceFamily(connector, family))
+        .map((connector) => getConnectorTemplateMeta(connector).label),
+    ),
+  ).sort();
+}
+
+export function mergeKnownConnectorTypes(
+  availableTypes: DataConnectConnectorType[],
+) {
+  const availableByType = new Map(
+    availableTypes.map((item) => [item.type.trim().toLowerCase(), item]),
+  );
+  const knownTypeNames = new Set(KNOWN_CONNECTOR_TYPES.map((item) => item.type));
+
+  return [
+    ...KNOWN_CONNECTOR_TYPES.map(
+      (item) => availableByType.get(item.type) ?? { ...item, fieldConfig: {} },
+    ),
+    ...availableTypes.filter(
+      (item) => !knownTypeNames.has(item.type.trim().toLowerCase()),
+    ),
+  ];
+}
+
+function knownConnectorType(
+  type: string,
+  name: string,
+  category: string,
+): DataConnectConnectorType {
+  return {
+    category,
+    description: "",
+    enabled: false,
+    fieldConfig: {},
+    mode: "local",
+    name,
+    type,
+  };
+}
+
 export function humanizeConnectorFieldLabel(name: string) {
   const labelMap: Record<string, string> = {
     account: "账号",
@@ -343,6 +424,7 @@ export function getConnectorFieldPlaceholder(
   connectorType?: string,
 ) {
   const normalized = fieldName.trim().toLowerCase();
+  const typeKey = connectorType?.trim().toLowerCase() ?? "";
   const placeholderMap: Record<string, string> = {
     account: "例如 readonly_account",
     api_key: "请输入 API Key",
@@ -370,8 +452,11 @@ export function getConnectorFieldPlaceholder(
   };
 
   if (normalized === "port") {
-    const typeKey = connectorType?.trim().toLowerCase() ?? "";
     return TYPE_PORT_PLACEHOLDER[typeKey] ?? "例如 3306";
+  }
+
+  if (normalized === "options" && typeKey === "sqlserver") {
+    return '例如 {"encrypt":true,"trustservercertificate":false}';
   }
 
   if (placeholderMap[normalized]) {
@@ -428,6 +513,32 @@ export function resolveConnectorFieldControl(
   }
 
   return { kind: "text" };
+}
+
+export function isValidJSONObject(value: unknown) {
+  if (value === undefined || value === null) {
+    return true;
+  }
+
+  if (typeof value === "object") {
+    return !Array.isArray(value);
+  }
+
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    return true;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed);
+  } catch {
+    return false;
+  }
 }
 
 type ConnectorConfigDefaultValue = boolean | number | string | string[];

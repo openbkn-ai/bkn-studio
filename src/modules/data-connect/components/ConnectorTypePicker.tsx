@@ -6,15 +6,16 @@
  */
 
 import { CheckOutlined, DatabaseOutlined, FileTextOutlined } from "@ant-design/icons";
-import { Empty, Input, Tabs } from "antd";
+import { Empty, Input, Select, Tabs } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { DataSourceFamilyKey } from "@/modules/data-connect/lib/connector-template";
 import {
+  filterConnectorTypes,
   getConnectorTemplateMeta,
+  getConnectorTypeTags,
   getPrimaryDataSourceFamilies,
-  matchesDataSourceFamily,
 } from "@/modules/data-connect/lib/connector-template";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
@@ -32,30 +33,23 @@ export function ConnectorTypePicker({
   options,
 }: ConnectorTypePickerProps) {
   const { t } = useTranslation();
-  const [keyword, setKeyword] = useState("");
+  const [nameKeyword, setNameKeyword] = useState("");
+  const [tag, setTag] = useState<string>();
   const [family, setFamily] = useState<DataSourceFamilyKey>("structured");
 
   const familyOptions = getPrimaryDataSourceFamilies().filter(
     (item) => item.key === "structured",
   );
 
-  const filtered = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
+  const tagOptions = useMemo(
+    () => getConnectorTypeTags(options, family).map((label) => ({ label, value: label })),
+    [family, options],
+  );
 
-    return options.filter((item) => {
-      const templateMeta = getConnectorTemplateMeta(item);
-      const matchesFamily = matchesDataSourceFamily(item, family);
-      const matchesKeyword =
-        normalizedKeyword.length === 0 ||
-        item.name.toLowerCase().includes(normalizedKeyword) ||
-        item.type.toLowerCase().includes(normalizedKeyword) ||
-        item.description.toLowerCase().includes(normalizedKeyword) ||
-        templateMeta.label.toLowerCase().includes(normalizedKeyword) ||
-        templateMeta.description.toLowerCase().includes(normalizedKeyword);
-
-      return matchesFamily && matchesKeyword;
-    });
-  }, [family, keyword, options]);
+  const filtered = useMemo(
+    () => filterConnectorTypes(options, family, nameKeyword, tag),
+    [family, nameKeyword, options, tag],
+  );
 
   return (
     <div className={styles.picker}>
@@ -64,13 +58,24 @@ export function ConnectorTypePicker({
           <h3 className={styles.title}>{t("dataConnect.connectorTypeStepTitle")}</h3>
           <p className={styles.description}>{t("dataConnect.connectorTypeStepDescription")}</p>
         </div>
-        <Input.Search
-          allowClear
-          className={styles.search}
-          onChange={(event) => setKeyword(event.target.value)}
-          placeholder={t("dataConnect.connectorTypeSearchPlaceholder")}
-          value={keyword}
-        />
+        <div className={styles.filters}>
+          <Input.Search
+            allowClear
+            className={styles.search}
+            onChange={(event) => setNameKeyword(event.target.value)}
+            placeholder={t("dataConnect.connectorTypeNameSearchPlaceholder")}
+            value={nameKeyword}
+          />
+          <Select
+            allowClear
+            aria-label={t("dataConnect.connectorTypeTagFilterPlaceholder")}
+            className={styles.tagFilter}
+            onChange={(value) => setTag(value)}
+            options={tagOptions}
+            placeholder={t("dataConnect.connectorTypeTagFilterPlaceholder")}
+            value={tag}
+          />
+        </div>
       </div>
       <div className={styles.main}>
         <Tabs
@@ -91,21 +96,28 @@ export function ConnectorTypePicker({
           })}
           onChange={(key) => {
             setFamily(key as DataSourceFamilyKey);
+            setTag(undefined);
           }}
         />
         <div className={styles.toolbar}>
-          <div className={styles.toolbarTitle}>接入模板</div>
           <span className={styles.resultText}>共 {filtered.length} 个</span>
         </div>
         {filtered.length > 0 ? (
           <div className={styles.grid}>
             {filtered.map((item) => {
-              const active = item.type === value;
+              const active = item.enabled && item.type === value;
               const templateMeta = getConnectorTemplateMeta(item);
 
               return (
                 <button
-                  className={[styles.card, active ? styles.cardActive : ""].filter(Boolean).join(" ")}
+                  className={[
+                    styles.card,
+                    active ? styles.cardActive : "",
+                    item.enabled ? "" : styles.cardDisabled,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  disabled={!item.enabled}
                   key={item.type}
                   onClick={() => onChange(item.type)}
                   type="button"
@@ -117,7 +129,14 @@ export function ConnectorTypePicker({
                   ) : null}
                   <div className={styles.cardHeader}>
                     <strong>{item.name}</strong>
-                    <span className={styles.badge}>{templateMeta.label}</span>
+                    <span className={styles.badgeGroup}>
+                      <span className={styles.badge}>{templateMeta.label}</span>
+                      {!item.enabled ? (
+                        <span className={styles.disabledBadge}>
+                          {t("dataConnect.connectorTypeUnavailable")}
+                        </span>
+                      ) : null}
+                    </span>
                   </div>
                   <p className={styles.cardDescription}>
                     {templateMeta.description || item.description || "-"}

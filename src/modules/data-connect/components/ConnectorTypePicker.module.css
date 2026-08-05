@@ -38,9 +38,22 @@
   line-height: 1.6;
 }
 
-.search {
-  width: min(280px, 100%);
+.filters {
+  display: flex;
+  gap: 10px;
   flex-shrink: 0;
+}
+
+.search {
+  width: 220px;
+}
+
+.tagFilter {
+  width: 160px;
+}
+
+.tagFilter :global(.ant-select-selector) {
+  border-radius: 0 !important;
 }
 
 .search :global(.ant-input-affix-wrapper),
@@ -97,12 +110,6 @@
   margin: 16px 4px 14px;
 }
 
-.toolbarTitle {
-  color: #111827;
-  font-size: 13px;
-  font-weight: 600;
-}
-
 .resultText {
   color: #94a3b8;
   font-size: 12px;
@@ -139,6 +146,22 @@
   background: #fafcff;
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.08);
   transform: translateY(-1px);
+}
+
+.cardDisabled,
+.cardDisabled:hover {
+  border-color: #e5e7eb;
+  background: #f8fafc;
+  box-shadow: none;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
+}
+
+.cardDisabled .cardHeader strong,
+.cardDisabled .cardDescription {
+  color: #94a3b8;
 }
 
 .cardActive {
@@ -194,10 +217,35 @@
   flex-shrink: 0;
 }
 
+.badgeGroup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
 .cardActive .badge {
   border-color: #bfd2ff;
   background: #fff;
   color: #1d4ed8;
+}
+
+.disabledBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 0;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .cardDescription {
@@ -224,7 +272,13 @@
     align-items: stretch;
   }
 
-  .search {
+  .filters {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .search,
+  .tagFilter {
     width: 100%;
   }
 
