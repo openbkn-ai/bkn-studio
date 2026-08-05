@@ -21,6 +21,7 @@ type CapabilitiesResponse = {
   edition?: string;
   extensions?: string[];
   features?: string[];
+  licensed?: boolean;
   limits?: Record<string, number>;
   state?: string;
 };
@@ -75,6 +76,8 @@ export async function fetchEntitlement(): Promise<Entitlement> {
       edition: parseEdition(data.edition),
       extensions: toStringArray(data.extensions),
       features: toStringArray(data.features),
+      // 字段缺失(老后端,#638 之前)当无授权处理:少给,不错给。
+      licensed: data.licensed === true,
       limits: toLimits(data.limits),
       state: parseLicenseState(data.state),
     };

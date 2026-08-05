@@ -55,6 +55,7 @@ describe("isCommunityBuild", () => {
     edition: "community",
     extensions: [],
     features: [],
+    licensed: false,
     limits: {},
     state: "unlicensed",
   };

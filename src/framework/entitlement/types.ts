@@ -40,9 +40,19 @@ export type Entitlement = {
   extensions: string[];
   /** 证上写了什么。只用于展示与审计核对,任何代码路径不得据此放行。 */
   features: string[];
+  /**
+   * 此刻是否持有生效授权。**「有没有授权」只问它,不要枚举 `state` 反推**——那种
+   * 写法在后端新增一个 state 的当天就会错(后端 `capabilities.go` 加这个字段就是
+   * 为了挡住它)。
+   *
+   * false 覆盖「从未安装」「过期超宽限」「验签失败」三种,产品行为完全一致。它取自
+   * 每个受控调用点读的同一个 gate,不是「有没有 payload」推的:过期超宽限的证书仍
+   * 然有 payload,报成 licensed 会让菜单全开而每个调用都被拒。
+   */
+  licensed: boolean;
   /** 证带的数值配额,如 `max_users` / `max_nodes`。-1 = 不限。 */
   limits: Record<string, number>;
-  /** 授权状态,驱动激活/宽限期横幅。 */
+  /** 授权状态,只驱动横幅**措辞**;判定看 `edition`,有无授权看 `licensed`。 */
   state: LicenseState;
 };
 
@@ -55,6 +65,7 @@ export const FALLBACK_ENTITLEMENT: Entitlement = {
   edition: "community",
   extensions: [],
   features: [],
+  licensed: false,
   limits: {},
   state: "unlicensed",
 };

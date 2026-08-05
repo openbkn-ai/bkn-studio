@@ -16,6 +16,7 @@ const communityBuild: Entitlement = {
   edition: "community",
   extensions: [],
   features: [],
+  licensed: false,
   limits: {},
   state: "unlicensed",
 };
@@ -25,6 +26,7 @@ const eeBuild = (edition: Entitlement["edition"]): Entitlement => ({
   edition,
   extensions: ["permobject"],
   features: [],
+  licensed: true,
   limits: {},
   state: "valid",
 });

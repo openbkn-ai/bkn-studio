@@ -25,12 +25,15 @@ const NOTICE: Partial<Record<LicenseState, { key: string; type: "error" | "warni
 
 /**
  * 授权状态横幅。无证不收走任何功能——社区能力照常,所以这里只提示,不拦路。
+ *
+ * `state` 只挑措辞,「到底有没有授权」问 `licensed`:后端新增一个 state 时,措辞会
+ * 落到通用文案,但横幅不会整条消失——那才是真正会漏的失败方式。
  */
 export function LicenseStateBanner() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { state } = useEntitlement();
-  const notice = NOTICE[state];
+  const { licensed, state } = useEntitlement();
+  const notice = NOTICE[state] ?? (licensed ? undefined : NOTICE.unlicensed);
 
   if (!notice) {
     return null;
