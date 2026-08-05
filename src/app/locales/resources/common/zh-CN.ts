@@ -68,5 +68,24 @@ export const commonZhCN = {
     dangerDelete: {
       typeNameToConfirm: "此操作高危,请输入名称「{{name}}」以确认删除。",
     },
+    entitlement: {
+      editions: {
+        community: "社区版",
+        professional: "专业版",
+        enterprise: "企业版",
+        industry: "行业版",
+      },
+      lockedTitle: "该能力属于{{edition}}",
+      lockedDescription:
+        "当前工作区运行在{{current}}。更换授权证书后即可使用,数据与配置原样保留。",
+      viewLicense: "前往授权管理",
+      banner: {
+        unlicensed: "当前没有可用授权,社区能力照常使用。导入授权文件可解锁付费能力。",
+        invalid: "授权文件无效或验签失败,当前按社区能力运行。",
+        grace: "授权已过期,处于宽限期,能力暂未受影响。请尽快续期。",
+        fallbackCommunity: "商业授权已到期,当前运行社区能力集,数据完整保留。",
+        action: "去处理",
+      },
+    },
   },
 } as const;

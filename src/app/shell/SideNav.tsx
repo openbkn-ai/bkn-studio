@@ -5,7 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DownOutlined, LeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
+import {
+  DownOutlined,
+  LeftOutlined,
+  LockOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+} from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatches, useNavigate } from "react-router-dom";
@@ -126,7 +132,14 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                       {item.icon}
                     </span>
                     {!collapsed ? (
-                      <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                      <>
+                        <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                        {item.locked ? (
+                          <span className="console-sidenav-lock" aria-hidden>
+                            <LockOutlined />
+                          </span>
+                        ) : null}
+                      </>
                     ) : null}
                   </button>
                 </li>
@@ -203,9 +216,16 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                             {child.icon}
                           </span>
                           {!collapsed ? (
-                            <span className="console-sidenav-label">
-                              {t(child.labelKey)}
-                            </span>
+                            <>
+                              <span className="console-sidenav-label">
+                                {t(child.labelKey)}
+                              </span>
+                              {child.locked ? (
+                                <span className="console-sidenav-lock" aria-hidden>
+                                  <LockOutlined />
+                                </span>
+                              ) : null}
+                            </>
                           ) : null}
                         </button>
                       </li>

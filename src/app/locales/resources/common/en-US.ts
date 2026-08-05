@@ -70,5 +70,28 @@ export const commonEnUS = {
       typeNameToConfirm:
         'This is a high-risk action. Type "{{name}}" to confirm deletion.',
     },
+    entitlement: {
+      editions: {
+        community: "Community",
+        professional: "Professional",
+        enterprise: "Enterprise",
+        industry: "Industry",
+      },
+      lockedTitle: "{{edition}} capability",
+      lockedDescription:
+        "This workspace runs on {{current}}. Import a new licence to unlock it — data and configuration are preserved.",
+      viewLicense: "Go to licence management",
+      banner: {
+        unlicensed:
+          "No licence is active. Community capabilities keep working; import a licence to unlock paid ones.",
+        invalid:
+          "The licence is invalid or failed verification. Running on community capabilities.",
+        grace:
+          "The licence has expired and is in its grace period. Capabilities are unaffected for now — please renew.",
+        fallbackCommunity:
+          "The commercial licence has expired. Running the community capability set; data is preserved.",
+        action: "Resolve",
+      },
+    },
   },
 } as const;

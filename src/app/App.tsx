@@ -11,6 +11,7 @@ import { RouterProvider } from "react-router-dom";
 import { AppProviders } from "@/app/providers/AppProviders";
 import { createAppRouter } from "@/app/router/create-router";
 import { AuthGate } from "@/framework/auth/AuthGate";
+import { EntitlementProvider } from "@/framework/entitlement/EntitlementProvider";
 import { setRuntimeConfig } from "@/framework/runtime/config";
 import type { RuntimeConfig, RuntimeUser } from "@/framework/runtime/types";
 
@@ -35,7 +36,10 @@ export function App({ runtimeConfig }: AppProps) {
   return (
     <AppProviders runtimeConfig={config}>
       <AuthGate onCurrentUser={handleCurrentUser}>
-        <RouterProvider router={router} />
+        {/* 授权档位要带令牌才拉得到,所以挂在 AuthGate 之内。 */}
+        <EntitlementProvider>
+          <RouterProvider router={router} />
+        </EntitlementProvider>
       </AuthGate>
     </AppProviders>
   );

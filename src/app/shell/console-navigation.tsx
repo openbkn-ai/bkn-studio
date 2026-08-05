@@ -10,6 +10,8 @@ import type {
   ConsoleNavContribution,
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
+import { atLeast } from "@/framework/entitlement/edition";
+import { isCommunityBuild, type Entitlement } from "@/framework/entitlement/types";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
@@ -64,6 +66,49 @@ export function filterConsoleNavigation(
         children,
       };
     });
+}
+
+/**
+ * 按集群授权档位过滤导航。档位不够时分两种下场,判据是 `extensions[]`:
+ *
+ * - **社区镜像**(插座一个都没填)→ 隐藏。付费实现物理不在这个二进制里,画一个
+ *   点开只能看到升级引导的入口是噪音;而且社区升商业要换镜像,不是换证书能解决的。
+ * - **企业镜像、档位不够** → 保留并标记 `locked`。换一张证就能用,这个入口正是
+ *   升级引导该出现的地方。
+ *
+ * 这里没有强制力,强制力在服务端每个受控调用点。菜单只是别让用户点进必然被拒的页。
+ */
+export function filterNavByEdition(
+  items: ConsoleNavItem[],
+  entitlement: Entitlement,
+): ConsoleNavItem[] {
+  const communityBuild = isCommunityBuild(entitlement);
+  const visible: ConsoleNavItem[] = [];
+
+  for (const item of items) {
+    const gated = item.minEdition && !atLeast(entitlement.edition, item.minEdition);
+
+    if (gated && communityBuild) {
+      continue;
+    }
+
+    const locked = Boolean(gated);
+
+    if (item.children?.length) {
+      const children = filterNavByEdition(item.children, entitlement);
+
+      // 子项全被档位挡掉且父项本身不可点 → 整组隐藏,不留一个空壳分组。
+      if (children.length === 0 && !item.path) {
+        continue;
+      }
+
+      visible.push({ ...item, children, locked });
+    } else {
+      visible.push(locked ? { ...item, locked } : item);
+    }
+  }
+
+  return visible;
 }
 
 // 按当前用户权限过滤导航:自身权限不满足 → 隐藏;子项全被过滤且本身不可点 → 整组隐藏。

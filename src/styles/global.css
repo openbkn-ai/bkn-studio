@@ -496,6 +496,13 @@ select {
   flex: 1;
 }
 
+/* 档位不够但可换证解锁的入口。只是提示,不拦点击——点进去是升级引导页。 */
+.console-sidenav-lock {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
 .console-sidenav-caret {
   margin-left: auto;
   color: var(--color-text-muted);
