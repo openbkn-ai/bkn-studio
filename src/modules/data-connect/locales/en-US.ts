@@ -68,7 +68,8 @@ export const dataConnectEnUS = {
     connectorTypeStepTitle: "Select connector type",
     connectorTypeStepDescription:
       "Choose the backend connector type that matches the target data source.",
-    connectorTypeSearchPlaceholder: "Search by connector name or type",
+    connectorTypeNameSearchPlaceholder: "Search by connector name",
+    connectorTypeTagFilterPlaceholder: "Filter by tag",
     connectorTypeEmpty: "No connector types match the current filters.",
     connectorTypeUnavailable: "Unavailable",
     jsonObjectInvalid: "Enter a valid JSON object.",

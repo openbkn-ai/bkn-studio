@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  filterConnectorTypes,
   getConnectorConfigDefaults,
   getConnectorFieldPlaceholder,
   getConnectorTemplateMeta,
@@ -46,7 +47,7 @@ describe("connector-template · SQL Server", () => {
       '例如 {"encrypt":true,"trustservercertificate":false}',
     );
     expect(getConnectorTemplateMeta(sqlServerConnector).description).toBe(
-      "连接 Microsoft SQL Server 业务数据库。",
+      "连接 Microsoft SQL Server 关系型数据库。",
     );
   });
 
@@ -91,6 +92,30 @@ describe("connector-template · SQL Server", () => {
     expect(optionsByType.get("postgresql")?.enabled).toBe(false);
     expect(optionsByType.get("postgresql")?.fieldConfig).toEqual({});
     expect(optionsByType.get("oracle")).toBe(oracleConnector);
+  });
+
+  it("filters connector types separately by name and tag", () => {
+    const openSearchConnector: DataConnectConnectorType = {
+      category: "index",
+      description: "OpenSearch connector",
+      enabled: true,
+      fieldConfig: {},
+      mode: "local",
+      name: "OpenSearch",
+      type: "opensearch",
+    };
+
+    expect(
+      filterConnectorTypes([sqlServerConnector, openSearchConnector], "structured", "关系型数据库"),
+    ).toEqual([]);
+    expect(
+      filterConnectorTypes(
+        [sqlServerConnector, openSearchConnector],
+        "structured",
+        "",
+        "搜索引擎",
+      ),
+    ).toEqual([openSearchConnector]);
   });
 });
 

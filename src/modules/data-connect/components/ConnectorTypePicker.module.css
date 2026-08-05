@@ -38,9 +38,18 @@
   line-height: 1.6;
 }
 
-.search {
-  width: min(280px, 100%);
+.filters {
+  display: flex;
+  gap: 10px;
   flex-shrink: 0;
+}
+
+.search {
+  width: 220px;
+}
+
+.tagFilter {
+  width: 160px;
 }
 
 .search :global(.ant-input-affix-wrapper),
@@ -95,12 +104,6 @@
   justify-content: space-between;
   gap: 12px;
   margin: 16px 4px 14px;
-}
-
-.toolbarTitle {
-  color: #111827;
-  font-size: 13px;
-  font-weight: 600;
 }
 
 .resultText {
@@ -265,7 +268,13 @@
     align-items: stretch;
   }
 
-  .search {
+  .filters {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .search,
+  .tagFilter {
     width: 100%;
   }
 

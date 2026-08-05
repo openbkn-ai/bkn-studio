@@ -28,7 +28,7 @@ export type ConnectorFieldGroup = {
 const FAMILY_REGISTRY: Record<DataSourceFamilyKey, DataSourceFamilyMeta> = {
   structured: {
     key: "structured",
-    label: "结构化数据",
+    label: "结构化/半结构化数据",
     description: "数据库、检索、接口等结构化接入。",
   },
   unstructured: {
@@ -81,19 +81,19 @@ const CATEGORY_TO_TEMPLATE: Record<string, { description: string; label: string 
 
 const TYPE_TO_TEMPLATE: Record<string, { description?: string; label?: string }> = {
   mariadb: {
-    description: "面向业务库接入。",
+    description: "连接 MariaDB 兼容的关系型数据库。",
   },
   mysql: {
-    description: "面向业务库接入。",
+    description: "连接 MySQL 兼容的关系型数据库。",
   },
   postgresql: {
-    description: "面向数仓 / 分析型数据。",
+    description: "连接 PostgreSQL 关系型数据库。",
   },
   sqlserver: {
-    description: "连接 Microsoft SQL Server 业务数据库。",
+    description: "连接 Microsoft SQL Server 关系型数据库。",
   },
   opensearch: {
-    description: "面向检索索引接入。",
+    description: "连接 OpenSearch 检索索引。",
   },
   anyshare: {
     description: "面向文件集 / 文档资源接入。",
@@ -273,6 +273,25 @@ export function getConnectorTemplateMeta(
     label: byType?.label ?? byCategory?.label ?? connector.name,
     description: byType?.description ?? byCategory?.description ?? connector.description ?? "",
   };
+}
+
+export function filterConnectorTypes(
+  connectors: DataConnectConnectorType[],
+  family: DataSourceFamilyKey,
+  nameKeyword: string,
+  tag?: string,
+) {
+  const normalizedNameKeyword = nameKeyword.trim().toLowerCase();
+
+  return connectors.filter((connector) => {
+    const templateMeta = getConnectorTemplateMeta(connector);
+    const matchesName =
+      normalizedNameKeyword.length === 0 ||
+      connector.name.toLowerCase().includes(normalizedNameKeyword);
+    const matchesTag = tag === undefined || templateMeta.label === tag;
+
+    return matchesDataSourceFamily(connector, family) && matchesName && matchesTag;
+  });
 }
 
 export function mergeKnownConnectorTypes(
