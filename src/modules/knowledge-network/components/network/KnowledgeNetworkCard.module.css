@@ -100,7 +100,7 @@
   word-break: break-all;
 }
 
-/* 描述悬浮层：保持 antd 默认黑底，仅限宽限高内滚，长 Markdown 不再撑满屏幕。 */
+/* 描述悬浮层：白底浅色卡片风格，限宽限高内滚，长 Markdown 不再撑满屏幕。 */
 .descriptionTooltip {
   max-width: 480px;
 }

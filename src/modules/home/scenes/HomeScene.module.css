@@ -487,11 +487,6 @@
   background: var(--color-bg-surface);
 }
 
-.skillFlowItemReview {
-  border-left: 2px solid var(--color-primary-500);
-  background: var(--color-primary-50);
-}
-
 .skillIcon {
   display: inline-flex;
   align-items: center;

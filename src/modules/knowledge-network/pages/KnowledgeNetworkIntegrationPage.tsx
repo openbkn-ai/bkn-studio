@@ -10,6 +10,7 @@ import { App } from "antd";
 import { useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { gatewayOrigin } from "@/framework/auth/oauth";
 import { buildApiKeyPagePath } from "@/modules/api-keys/utils/api-key-handoff";
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 
@@ -19,6 +20,8 @@ type IntegrationTab = "mcp" | "cli" | "sdk";
 type CliExampleKey = "setup" | "context" | "agent-skill";
 type SdkExampleKey = "quick-start" | "instance-query" | "dynamic-tool";
 type CodeExample = { code: string; label: string; title: string };
+
+const platformOrigin = gatewayOrigin() || (typeof window !== "undefined" ? window.location.origin : "https://your-platform");
 
 const tabs: Array<{
   icon: ReactNode;
@@ -48,7 +51,7 @@ const cliExamples: Record<CliExampleKey, CodeExample> = {
     title: "安装 OpenBKN CLI 并配置访问凭证",
     code: `npm install -g @openbkn/bkn-sdk
 
-export BKN_BASE_URL="https://your-platform"
+export BKN_BASE_URL="${platformOrigin}"
 export BKN_TOKEN="bak_<在个人中心 API Key 签发>"
 
 openbkn auth login "$BKN_BASE_URL" --token "$BKN_TOKEN"
@@ -72,7 +75,7 @@ openbkn context tools <kn-id>`,
     code: `npm install -g @openbkn/bkn-sdk
 npx skills add openbkn-ai/bkn-sdk@openbkn -g -y
 
-export BKN_BASE_URL="https://your-platform"
+export BKN_BASE_URL="${platformOrigin}"
 export BKN_TOKEN="bak_<在个人中心 API Key 签发>"
 
 openbkn auth login "$BKN_BASE_URL" --token "$BKN_TOKEN"

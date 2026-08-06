@@ -260,6 +260,7 @@ export function ContextLoaderIntegrationPanel({
   const [mcpConfigTab, setMcpConfigTab] = useState<"claude" | "cursor" | "generic">("claude");
   const [mcpConfigKey, setMcpConfigKey] = useState(appKeyValue);
   const [mcpConfigKeyDraft, setMcpConfigKeyDraft] = useState("");
+  const [mcpConfigKeyError, setMcpConfigKeyError] = useState("");
   const [mcpConfigKeyModalOpen, setMcpConfigKeyModalOpen] = useState(false);
   const filterText = filter.trim().toLowerCase();
   const appKeyPlaceholder = "bak_<在个人中心 API Key 签发的长期 Key>";
@@ -328,11 +329,18 @@ export function ContextLoaderIntegrationPanel({
 
   const openMcpConfigKeyModal = () => {
     setMcpConfigKeyDraft(mcpConfigKey);
+    setMcpConfigKeyError("");
     setMcpConfigKeyModalOpen(true);
   };
 
   const applyMcpConfigKey = () => {
-    setMcpConfigKey(mcpConfigKeyDraft.trim());
+    const nextKey = mcpConfigKeyDraft.trim();
+    if (nextKey && !nextKey.startsWith("bak_")) {
+      setMcpConfigKeyError("请粘贴以 bak_ 开头的长期 API Key");
+      return;
+    }
+
+    setMcpConfigKey(nextKey);
     setMcpConfigKeyModalOpen(false);
   };
 
@@ -451,8 +459,13 @@ export function ContextLoaderIntegrationPanel({
                 autoComplete="off"
                 spellCheck={false}
                 allowClear
-                onChange={(event) => setMcpConfigKeyDraft(event.target.value)}
+                status={mcpConfigKeyError ? "error" : undefined}
+                onChange={(event) => {
+                  setMcpConfigKeyDraft(event.target.value);
+                  setMcpConfigKeyError("");
+                }}
               />
+              {mcpConfigKeyError ? <p className={styles.mcpConfigKeyModalError}>{mcpConfigKeyError}</p> : null}
               <p className={styles.mcpConfigKeyModalHint}>仅用于生成当前页面配置，不会保存。</p>
             </Modal>
           </section>

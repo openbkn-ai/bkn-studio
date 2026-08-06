@@ -8,6 +8,7 @@
 import {
   ApiOutlined,
   ClockCircleOutlined,
+  CopyOutlined,
   DatabaseOutlined,
   DownOutlined,
   DeploymentUnitOutlined,
@@ -17,13 +18,14 @@ import {
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Empty, Spin, Table, Tag } from "antd";
+import { Empty, Spin, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
@@ -62,11 +64,20 @@ export function WorkspaceOverviewSection({
 }: WorkspaceOverviewSectionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { message } = useAppServices();
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [graphExpanded, setGraphExpanded] = useState(false);
   const [recentExpanded, setRecentExpanded] = useState(false);
   const [recentPage, setRecentPage] = useState(1);
   const [recentPageSize, setRecentPageSize] = useState(5);
+  const networkIdentifier = detail?.identifier || networkId;
+
+  const copyNetworkIdentifier = () => {
+    void navigator.clipboard
+      ?.writeText(networkIdentifier)
+      .then(() => message.success("知识网络 ID 已复制"))
+      .catch(() => message.error("复制知识网络 ID 失败"));
+  };
 
   const recentObjectColumns = useMemo<ColumnsType<KnowledgeNetworkRecentObject>>(
     () => [
@@ -189,6 +200,20 @@ export function WorkspaceOverviewSection({
             {t("common.updateTime")}:
           </span>
           <span>{detail?.updateTime || "--"}</span>
+          <span className={styles.overviewHeaderFooterId}>
+            <span className={styles.overviewHeaderFooterLabel}>{t("common.id")}:</span>
+            <code>{networkIdentifier}</code>
+            <Tooltip title="复制知识网络 ID">
+              <button
+                aria-label="复制知识网络 ID"
+                className={styles.overviewHeaderFooterCopy}
+                onClick={copyNetworkIdentifier}
+                type="button"
+              >
+                <CopyOutlined />
+              </button>
+            </Tooltip>
+          </span>
         </div>
       </div>
 

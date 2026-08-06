@@ -54,7 +54,7 @@ export const homeZhCN = {
     paths: {
       engineering: {
         description:
-          "从业务材料出发，使用 AI Skills 完成需求澄清、设计、评审和构建验证，形成可持续迭代的业务知识网络。",
+          "从业务材料出发，使用 AI Skills 完成需求澄清、设计和构建验证，形成可持续迭代的业务知识网络。",
         heading: "AI Skills 辅助构建业务知识网络",
         title: "AI Skills 构建",
       },

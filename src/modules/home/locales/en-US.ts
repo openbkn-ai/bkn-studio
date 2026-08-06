@@ -54,7 +54,7 @@ export const homeEnUS = {
     paths: {
       engineering: {
         description:
-          "Start from business materials and use AI Skills for requirement clarification, design, review, construction, and validation to build an iteratively improvable business knowledge network.",
+          "Start from business materials and use AI Skills for requirement clarification, design, construction, and validation to build an iteratively improvable business knowledge network.",
         heading: "Build a business knowledge network with AI Skills",
         title: "AI Skills build",
       },

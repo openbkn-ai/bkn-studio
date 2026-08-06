@@ -451,6 +451,13 @@
   line-height: 1.5;
 }
 
+.mcpConfigKeyModalError {
+  margin: 8px 0 0;
+  color: #ff4d4f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .mcpConfigBody {
   min-width: 0;
 }

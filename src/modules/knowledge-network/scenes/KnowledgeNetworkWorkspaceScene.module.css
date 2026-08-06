@@ -348,6 +348,7 @@
 .overviewHeaderFooter {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   width: 100%;
   padding: 12px 0;
   font-size: 13px;
@@ -361,6 +362,40 @@
 
 .overviewHeaderFooterValue {
   margin-right: 20px;
+}
+
+.overviewHeaderFooterId {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 20px;
+  min-width: 0;
+}
+
+.overviewHeaderFooterId code {
+  overflow: hidden;
+  font-family: var(--code-font, ui-monospace, monospace);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overviewHeaderFooterCopy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.overviewHeaderFooterCopy:hover {
+  background: #f2f6ff;
+  color: #1d4ed8;
 }
 
 .overviewHeaderFooter :global(svg) {

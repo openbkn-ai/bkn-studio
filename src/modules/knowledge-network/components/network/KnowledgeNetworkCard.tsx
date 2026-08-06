@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
+import { formatKnowledgeNetworkUpdateTime } from "./knowledge-network-card";
 import styles from "./KnowledgeNetworkCard.module.css";
 
 type KnowledgeNetworkCardProps = {
@@ -23,10 +24,6 @@ type KnowledgeNetworkCardProps = {
   record: KnowledgeNetworkRecord;
 };
 
-function formatUpdateTime(value?: string): string {
-  return value?.replace(/:\d{2}$/, "") || "--";
-}
-
 export function KnowledgeNetworkCard({
   onDelete,
   onEdit,
@@ -36,7 +33,7 @@ export function KnowledgeNetworkCard({
 }: KnowledgeNetworkCardProps) {
   const { t } = useTranslation();
   const description = record.description || t("knowledgeNetwork.noDescription");
-  const updateTime = formatUpdateTime(record.updateTime);
+  const updateTime = formatKnowledgeNetworkUpdateTime(record.updateTime);
   const dropdownItems: MenuProps["items"] = [
     {
       key: "view",
