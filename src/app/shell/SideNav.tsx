@@ -126,7 +126,14 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                       {item.icon}
                     </span>
                     {!collapsed ? (
-                      <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                      <>
+                        <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                        {item.lockedEdition ? (
+                          <span className="console-sidenav-tier">
+                            {t(`common.entitlement.editions.${item.lockedEdition}`)}
+                          </span>
+                        ) : null}
+                      </>
                     ) : null}
                   </button>
                 </li>
@@ -162,7 +169,14 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                   </span>
                   {!collapsed ? (
                     <>
-                      <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                      <>
+                        <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                        {item.lockedEdition ? (
+                          <span className="console-sidenav-tier">
+                            {t(`common.entitlement.editions.${item.lockedEdition}`)}
+                          </span>
+                        ) : null}
+                      </>
                       <span
                         className={[
                           "console-sidenav-caret",
@@ -203,9 +217,16 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                             {child.icon}
                           </span>
                           {!collapsed ? (
-                            <span className="console-sidenav-label">
-                              {t(child.labelKey)}
-                            </span>
+                            <>
+                              <span className="console-sidenav-label">
+                                {t(child.labelKey)}
+                              </span>
+                              {child.lockedEdition ? (
+                                <span className="console-sidenav-tier">
+                                  {t(`common.entitlement.editions.${child.lockedEdition}`)}
+                                </span>
+                              ) : null}
+                            </>
                           ) : null}
                         </button>
                       </li>

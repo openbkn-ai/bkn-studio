@@ -114,3 +114,13 @@ export function capabilitiesByCategory(
 ): CapabilityCatalogEntry[] {
   return CAPABILITY_CATALOG.filter((entry) => entry.category === category);
 }
+
+/**
+ * 某个能力的最低档位,用于给锁定入口标徽标(「专业版」/「企业版」)。
+ *
+ * **只用于展示。** 能不能用由服务端算好的 `capabilities[]` 决定,前端不比档位
+ * (ee-design.md §3.2)。这里回答的是另一个问题:客户要买哪一档才能解锁它。
+ */
+export function capabilityMinEdition(key: string): Edition | null {
+  return CAPABILITY_CATALOG.find((entry) => entry.key === key)?.minEdition ?? null;
+}

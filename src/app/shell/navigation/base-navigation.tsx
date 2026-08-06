@@ -18,6 +18,7 @@ import {
 } from "@ant-design/icons";
 
 import type { ConsoleNavItem } from "@/app/shell/navigation/types";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 export const baseConsoleNavigation: ConsoleNavItem[] = [
@@ -61,6 +62,7 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         icon: <KeyOutlined />,
         path: "/system/authorizations",
         permission: systemAdminPermissions.authorizations,
+        capability: CAPABILITIES.PERM_OBJECT_LEVEL,
       },
       {
         key: "license-management",
@@ -75,6 +77,7 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         path: "/system/audit",
         icon: <FileTextOutlined />,
         permission: systemAdminPermissions.audit,
+        capability: CAPABILITIES.AUDIT,
       },
     ],
   },

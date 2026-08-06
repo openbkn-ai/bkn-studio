@@ -496,6 +496,20 @@ select {
   flex: 1;
 }
 
+/* 装了没买的入口:标出解锁它要哪一档。只出现在企业镜像上——社区镜像里这些项被整个
+   过滤掉了,那里换证书也解不开。 */
+.console-sidenav-tier {
+  margin-left: auto;
+  padding: 1px 6px;
+  border: 1px solid #d6cdf3;
+  border-radius: 4px;
+  background: #f5f2ff;
+  color: #5b46a8;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
 /* 顶栏档位芯片里的「升级」尾巴。无生效授权时才出现,别做成常驻广告。 */
 .console-edition-chip-cta {
   color: var(--color-link, #1d4ed8);

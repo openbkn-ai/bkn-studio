@@ -24,6 +24,8 @@ export const CAPABILITIES = {
   RBAC_BASIC: "rbac_basic",
   /** 对象级授权与高级角色控制(显式 deny、有效期)。企业档起。 */
   PERM_OBJECT_LEVEL: "perm_object_level",
+  /** 操作审计与合规报表。企业档起。 */
+  AUDIT: "audit",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];

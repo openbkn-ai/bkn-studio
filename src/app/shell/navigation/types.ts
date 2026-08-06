@@ -7,6 +7,7 @@
 
 import type { ReactNode } from "react";
 
+import type { Edition } from "@/framework/entitlement/edition";
 import type { PermissionCheckMode } from "@/framework/permission/has-permissions";
 
 export type ConsoleNavItem = {
@@ -24,6 +25,13 @@ export type ConsoleNavItem = {
    * 与 minEdition 二选一:有 key 就用 key(后端算好的),没登记才退到档位。
    */
   capability?: string;
+  /**
+   * 「装了没买」时由 filterNavByCapability 打上,菜单据此渲染档位徽标。声明时不要手写
+   * ——它是过滤的产物,不是配置项。
+   */
+  locked?: boolean;
+  /** 徽标上写哪一档(取自能力登记表快照)。仅在 locked 时有值。 */
+  lockedEdition?: Edition;
   children?: ConsoleNavItem[];
   disabled?: boolean;
   icon?: ReactNode;

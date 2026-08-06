@@ -10,10 +10,11 @@ import type {
   ConsoleNavContribution,
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
-import { isCapabilityAvailable } from "@/framework/entitlement/capability-state";
+import { capabilityState } from "@/framework/entitlement/capability-state";
 import type { EntitlementView } from "@/framework/entitlement/types";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
+import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
 import { dataConnectNavigation } from "@/modules/data-connect/navigation";
 import { executionFactoryLabNavigation } from "@/modules/execution-factory-lab/navigation";
@@ -69,15 +70,17 @@ export function filterConsoleNavigation(
 }
 
 /**
- * 按能力过滤导航:能力不可用 → 隐藏;子项全被过滤且本身不可点 → 整组隐藏。
+ * 按能力过滤导航,三态分三种下场(判据是服务端算好的 `capabilities[]` / `extensions[]`,
+ * 前端不比档位——ee-design.md §3.2「不让客户端自己推」):
  *
- * 判据是 isCapabilityAvailable,所以「未知」(快照还没到 / 拉失败)一律隐藏。首屏那一瞬
- * 付费入口不在,拿到快照后出现;反过来先显示再撤掉才是更糟的闪动。
+ * - **能用** → 正常显示
+ * - **装了没买** → 保留并标 `locked`,菜单画档位徽标。这是唯一该出商务信息的状态:
+ *   换一张证就能用,客户看得见才知道有东西可买
+ * - **没装 / 未知** → 隐藏。付费实现不在这个二进制里,画个徽标等于指一条走不通的路
+ *   (社区升商业要换镜像);未知则可能是社区部署,更不该推销
  *
- * **这是前端唯一的档位相关判据。** `capabilities[]` 已经是服务端用 `AtLeast(MinEdition)`
- * 从装配表算好的结果,前端不再自己比档位(ee-design.md §3.2「不让客户端自己推」)。
  * 与 filterNavByPermission 刻意分开:一个集群态、一个用户态,合成一个函数迟早有人把两种
- * 字符串混着传。
+ * 字符串混着传。权限过滤要排在前面——没权限的入口连「升级就能用」都不该暗示。
  */
 export function filterNavByCapability(
   items: ConsoleNavItem[],
@@ -86,9 +89,14 @@ export function filterNavByCapability(
   const visible: ConsoleNavItem[] = [];
 
   for (const item of items) {
-    if (item.capability && !isCapabilityAvailable(item.capability, snapshot)) {
+    const state = item.capability ? capabilityState(item.capability, snapshot) : "available";
+
+    if (state === "not-installed" || state === "unknown") {
       continue;
     }
+
+    const locked = state === "not-licensed";
+    const lockedEdition = locked && item.capability ? capabilityMinEdition(item.capability) : null;
 
     if (item.children?.length) {
       const children = filterNavByCapability(item.children, snapshot);
@@ -97,9 +105,11 @@ export function filterNavByCapability(
         continue;
       }
 
-      visible.push({ ...item, children });
+      visible.push({ ...item, children, locked, ...(lockedEdition ? { lockedEdition } : {}) });
     } else {
-      visible.push(item);
+      visible.push(
+        locked ? { ...item, locked, ...(lockedEdition ? { lockedEdition } : {}) } : item,
+      );
     }
   }
 
