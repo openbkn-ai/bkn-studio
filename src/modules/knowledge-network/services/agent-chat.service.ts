@@ -202,6 +202,10 @@ export type AgentToolsOptions = {
   turn?: BknCallScope | null;
 };
 
+export function isModelVisibleMcpTool(tool: Pick<McpToolDef, "name">): boolean {
+  return !tool.name.startsWith("bkn_");
+}
+
 export function buildAgentTools(
   mcpTools: McpToolDef[],
   env: ContextLoaderEnv,
@@ -220,6 +224,7 @@ export function buildAgentTools(
   };
   for (const def of mcpTools) {
     if (!def.name) continue;
+    if (!isModelVisibleMcpTool(def)) continue;
     const schema =
       def.inputSchema && typeof def.inputSchema === "object"
         ? stripBknContextSchema(def.inputSchema as Record<string, unknown>)

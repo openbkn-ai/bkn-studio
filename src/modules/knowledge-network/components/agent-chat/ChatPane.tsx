@@ -27,6 +27,7 @@ import {
   forwardRef,
   memo,
   type RefObject,
+  type ReactNode,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -42,6 +43,7 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
   buildAgentTools,
   effectiveToolArgs,
+  isModelVisibleMcpTool,
   runAgentChat,
   DEFAULT_AGENT_CONFIG,
   type AgentChatTurn,
@@ -57,9 +59,14 @@ import {
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
   CONTEXT_LOADER_OPS,
+  type ContextLoaderOp,
   type ContextLoaderEnv,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
+import {
+  businessInfoOf,
+  type ToolBusinessGroupKey,
+} from "@/modules/knowledge-network/scenes/context-loader-tool-business-info";
 
 import styles from "./AgentChat.module.css";
 
@@ -89,6 +96,19 @@ const FALLBACK_SUGGESTIONS = [
   "帮我查最近活跃的高价值客户",
   "对象类之间是怎么关联的？",
 ];
+
+const TOOL_BUSINESS_GROUP_LABELS: Record<ToolBusinessGroupKey, string> = {
+  network: "知识网络信息",
+  model: "知识网络模型检索",
+  query: "对象实例与关系子图查询",
+  data: "数据资源与 SQL 查询",
+  logic: "逻辑属性与行动调用",
+  skill: "技能与动态工具",
+  other: "其他能力",
+  lifecycle: "交互生命周期",
+};
+
+const TOOL_BUSINESS_GROUP_ORDER: ToolBusinessGroupKey[] = ["data", "network", "model", "query", "logic", "skill", "other", "lifecycle"];
 
 export type PaneKey = "solo" | "base" | "kn";
 
@@ -665,8 +685,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       try {
         turn = await lifecycle.beginTurn(question);
         const allTools = await getTools();
+        const modelVisibleTools = allTools.filter(isModelVisibleMcpTool);
         // 硬限定：只把勾选的工具传给模型（null = 全部）。
-        const activeTools = toolSelection ? allTools.filter((t) => toolSelection.includes(t.name)) : allTools;
+        const activeTools = toolSelection ? modelVisibleTools.filter((t) => toolSelection.includes(t.name)) : modelVisibleTools;
         const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider, {
           resourceScope,
           session: lifecycle.session,
@@ -772,29 +793,55 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     () => models.map((m) => ({ value: m.modelName, label: m.default ? `${m.modelName} · 默认` : m.modelName })),
     [models],
   );
+  const modelVisibleToolDefs = useMemo(() => {
+    if (!toolDefs) return null;
+    const visibleTools = toolDefs.filter(isModelVisibleMcpTool);
+    if (profile.paneKey !== "base" || !profile.defaultToolNames) return visibleTools;
+    const baseToolNames = new Set(profile.defaultToolNames);
+    return visibleTools.filter((toolDef) => baseToolNames.has(toolDef.name));
+  }, [profile.defaultToolNames, profile.paneKey, toolDefs]);
   // 与 MCP 侧栏同款分组：本地 op 定义带组名，线上新增的归 Knowledge Network。
   const toolOptions = useMemo(() => {
-    if (!toolDefs) return [];
-    const groupOf = (name: string) => CONTEXT_LOADER_OPS.find((op) => op.id === name)?.group ?? "Knowledge Network";
-    const order = [...new Set(CONTEXT_LOADER_OPS.map((op) => op.group))];
-    const buckets = new Map<string, { value: string; label: string }[]>();
-    for (const t of toolDefs) {
-      const group = groupOf(t.name);
+    if (!modelVisibleToolDefs) return [];
+    const opOf = (toolDef: McpToolDef): ContextLoaderOp =>
+      CONTEXT_LOADER_OPS.find((op) => op.id === toolDef.name) ?? {
+        id: toolDef.name,
+        group: "Knowledge Network",
+        summary: toolDef.description ?? toolDef.name,
+        path: "",
+        query: [],
+        body: null,
+        mcpOnly: true,
+      };
+    const buckets = new Map<ToolBusinessGroupKey, { value: string; label: ReactNode; title: string; searchText: string }[]>();
+    for (const t of modelVisibleToolDefs) {
+      const info = businessInfoOf(opOf(t));
+      const group = info.groupKey;
       if (!buckets.has(group)) buckets.set(group, []);
-      buckets.get(group)!.push({ value: t.name, label: t.name });
+      buckets.get(group)!.push({
+        value: t.name,
+        title: `${info.name} · ${t.name}`,
+        searchText: `${info.name} ${t.name}`,
+        label: (
+          <span className={styles.toolOption}>
+            <span className={styles.toolOptionName}>{info.name}</span>
+            <span className={styles.toolOptionId}>{t.name}</span>
+          </span>
+        ),
+      });
     }
     return [...buckets.keys()]
       .sort((a, b) => {
-        const ia = order.indexOf(a);
-        const ib = order.indexOf(b);
-        return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
+        const ia = TOOL_BUSINESS_GROUP_ORDER.indexOf(a);
+        const ib = TOOL_BUSINESS_GROUP_ORDER.indexOf(b);
+        return (ia === -1 ? TOOL_BUSINESS_GROUP_ORDER.length : ia) - (ib === -1 ? TOOL_BUSINESS_GROUP_ORDER.length : ib);
       })
-      .map((group) => ({ label: group, title: group, options: buckets.get(group)! }));
-  }, [toolDefs]);
+      .map((group) => ({ label: TOOL_BUSINESS_GROUP_LABELS[group], title: TOOL_BUSINESS_GROUP_LABELS[group], options: buckets.get(group)! }));
+  }, [modelVisibleToolDefs]);
   // 选择器展示值：null（全部）时显示当前已知的全部工具名。
   const draftToolValue = useMemo(
-    () => draftToolSelection ?? (toolDefs ? toolDefs.map((t) => t.name) : []),
-    [draftToolSelection, toolDefs],
+    () => draftToolSelection ?? (modelVisibleToolDefs ? modelVisibleToolDefs.map((t) => t.name) : []),
+    [draftToolSelection, modelVisibleToolDefs],
   );
 
   const empty = messages.length === 0;
@@ -861,6 +908,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             value={draftToolValue}
             onChange={(next: string[]) => setDraftToolSelection(next)}
             options={toolOptions}
+            showSearch
+            filterOption={(input, option) =>
+              String((option as { searchText?: unknown } | undefined)?.searchText ?? option?.value ?? "")
+                .toLowerCase()
+                .includes(input.trim().toLowerCase())
+            }
             placeholder={toolDefs ? "选择工具" : "正在加载工具"}
             loading={!toolDefs}
             disabled={busy}
@@ -868,7 +921,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             maxTagPlaceholder={() =>
               draftToolSelection === null
                 ? `全部 · ${draftToolValue.length}`
-                : `已选 ${draftToolValue.length}${toolDefs ? ` / ${toolDefs.length}` : ""}`
+                : `已选 ${draftToolValue.length}${modelVisibleToolDefs ? ` / ${modelVisibleToolDefs.length}` : ""}`
             }
             allowClear
             onClear={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}

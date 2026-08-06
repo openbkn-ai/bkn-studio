@@ -50,7 +50,14 @@ const profile: PaneProfile = {
   defaultToolNames: null,
 };
 
-const toolDefs: McpToolDef[] = [{ name: "run_sql" }];
+const baseProfile: PaneProfile = {
+  paneKey: "base",
+  defaultPrompt: DEFAULT_PROMPT,
+  injectKnContext: false,
+  defaultToolNames: ["list_resources", "describe_resource", "run_sql"],
+};
+
+const toolDefs: McpToolDef[] = [{ name: "bkn_start_interaction" }, { name: "run_sql" }, { name: "bkn_finish_interaction" }];
 const models = [{ modelName: "qwen-test", default: true }] as unknown as LlmModel[];
 
 function stubLifecycle() {
@@ -86,21 +93,23 @@ function toolOptions() {
   return buildAgentTools.mock.calls[0][5];
 }
 
-function renderPane() {
+function renderPane(options: { profile?: PaneProfile; toolDefs?: McpToolDef[] } = {}) {
   const ref = createRef<ChatPaneHandle>();
+  const paneProfile = options.profile ?? profile;
+  const paneToolDefs = options.toolDefs ?? toolDefs;
   render(
     <ChatPane
       ref={ref}
       env={{ base: "https://platform.example.com", token: "token-1", knId: "kn-demo" }}
       tokenProvider={{ getToken: () => "token-1", refresh: () => Promise.resolve("token-1") }}
-      profile={profile}
+      profile={paneProfile}
       models={models}
       modelsLoaded
       knContext=""
       knSummary={null}
       suggestions={[]}
-      getTools={() => Promise.resolve(toolDefs)}
-      toolDefs={toolDefs}
+      getTools={() => Promise.resolve(paneToolDefs)}
+      toolDefs={paneToolDefs}
       pageScrollRef={createRef<HTMLDivElement>()}
     />,
   );
@@ -138,7 +147,38 @@ describe("ChatPane 受管生命周期接线", () => {
       session,
       turn: expect.objectContaining({ interactionId: "int_1" }) as unknown,
     });
+    expect(buildAgentTools.mock.calls[0][0]).toEqual([{ name: "run_sql" }]);
     expect(finish).toHaveBeenCalledWith("completed", "答复正文");
+  });
+
+  it("基础数据面板只向模型暴露基础数据工具", async () => {
+    stubLifecycle();
+    runAgentChat.mockImplementation(({ onChunk }) => {
+      onChunk({ type: "finish" });
+      return Promise.resolve();
+    });
+
+    const ref = renderPane({
+      profile: baseProfile,
+      toolDefs: [
+        { name: "bkn_start_interaction" },
+        { name: "list_resources" },
+        { name: "describe_resource" },
+        { name: "run_sql" },
+        { name: "search_schema" },
+        { name: "get_kn_detail" },
+      ],
+    });
+    await act(async () => {
+      ref.current?.send("问一句");
+      await Promise.resolve();
+    });
+
+    expect(buildAgentTools.mock.calls[0][0]).toEqual([
+      { name: "list_resources" },
+      { name: "describe_resource" },
+      { name: "run_sql" },
+    ]);
   });
 
   it("执行失败时以 failed 终结", async () => {
@@ -152,6 +192,21 @@ describe("ChatPane 受管生命周期接线", () => {
     });
 
     expect(finish).toHaveBeenCalledWith("failed", "");
+  });
+
+  it("beginTurn 失败时不继续无上下文调用工具循环", async () => {
+    const { beginTurn, finish } = stubLifecycle();
+    beginTurn.mockRejectedValue(new Error("lifecycle failed"));
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("问一句");
+      await Promise.resolve();
+    });
+
+    expect(buildAgentTools).not.toHaveBeenCalled();
+    expect(runAgentChat).not.toHaveBeenCalled();
+    expect(finish).not.toHaveBeenCalled();
   });
 
   it("用户中途停止时以 canceled 终结", async () => {
