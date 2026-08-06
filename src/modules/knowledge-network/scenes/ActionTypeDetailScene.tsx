@@ -25,6 +25,7 @@ import {
   getKnowledgeNetworkActionTypeDetail,
   listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type {
   ActionTypeDetail,
   KnowledgeNetworkObjectTypeRecord,
@@ -51,6 +52,7 @@ export function ActionTypeDetailScene() {
   const [executeModalOpen, setExecuteModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [taskRefreshToken, setTaskRefreshToken] = useState(0);
+  const canModify = useKnowledgeNetworkCanModify(networkId);
 
   const activeTab: DetailTab = searchParams.get("tab") === "tasks" ? "tasks" : "overview";
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
@@ -163,39 +165,41 @@ export function ActionTypeDetailScene() {
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
-        <>
-          <AppButton
-            icon={<PlayCircleOutlined />}
-            loading={executing}
-            onClick={handleExecuteNow}
-            type="primary"
-          >
-            {t("knowledgeNetwork.actionTypeExecuteImmediately")}
-          </AppButton>
-          <AppButton
-            icon={<EditOutlined />}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/edit`,
-              );
-            }}
-          >
-            {t("common.edit")}
-          </AppButton>
-          <AppButton
-            icon={<ThunderboltOutlined />}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/execution`,
-              );
-            }}
-          >
-            {t("knowledgeNetwork.actionTypeExecutionEntry")}
-          </AppButton>
-          <AppButton danger onClick={confirmDelete}>
-            {t("common.delete")}
-          </AppButton>
-        </>
+        canModify ? (
+          <>
+            <AppButton
+              icon={<PlayCircleOutlined />}
+              loading={executing}
+              onClick={handleExecuteNow}
+              type="primary"
+            >
+              {t("knowledgeNetwork.actionTypeExecuteImmediately")}
+            </AppButton>
+            <AppButton
+              icon={<EditOutlined />}
+              onClick={() => {
+                void navigate(
+                  `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/edit`,
+                );
+              }}
+            >
+              {t("common.edit")}
+            </AppButton>
+            <AppButton
+              icon={<ThunderboltOutlined />}
+              onClick={() => {
+                void navigate(
+                  `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/execution`,
+                );
+              }}
+            >
+              {t("knowledgeNetwork.actionTypeExecutionEntry")}
+            </AppButton>
+            <AppButton danger onClick={confirmDelete}>
+              {t("common.delete")}
+            </AppButton>
+          </>
+        ) : null
       }
       onBack={() => {
         void navigate(listPath);

@@ -38,10 +38,20 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 
+const mockKnowledgeNetworkOperations = [
+  "view_detail",
+  "data_query",
+  "modify",
+  "delete",
+  "authorize",
+  "task_manage",
+];
+
 export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
   {
     id: "kn-domain-risk",
     identifier: "domain_risk_network",
+    operations: mockKnowledgeNetworkOperations,
     name: "领域风控知识网络",
     description:
       "围绕风控对象、风险关系与行动策略组织的领域业务知识网络。",
@@ -63,6 +73,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
   {
     id: "kn-domain-supply",
     identifier: "domain_supply_network",
+    operations: mockKnowledgeNetworkOperations,
     name: "领域供应链知识网络",
     description:
       "用于供应商、仓配、履约行动和经营指标建模的领域知识网络。",
@@ -84,6 +95,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
   {
     id: "kn-domain-customer",
     identifier: "domain_customer_network",
+    operations: mockKnowledgeNetworkOperations,
     name: "领域客户知识网络",
     description:
       "聚焦客户主体、标签体系和营销动作的业务知识网络。",

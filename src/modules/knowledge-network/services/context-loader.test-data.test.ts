@@ -57,6 +57,7 @@ describe("opSupportsTestData", () => {
 describe("REST_CONTEXT_LOADER_OPS", () => {
   it("excludes MCP-only metric queries from the REST debugger", () => {
     expect(REST_CONTEXT_LOADER_OPS.some((op) => op.id === "query_metric")).toBe(false);
+    expect(REST_CONTEXT_LOADER_OPS.some((op) => op.id === "get_kn_detail")).toBe(false);
   });
 });
 
@@ -75,7 +76,7 @@ describe("buildTestData", () => {
   const d = detail([ot("orders", ["status", "amount"], "res_orders")], [{ id: "grp_sales" }]);
 
   it("get_kn_detail fills only kn_id", () => {
-    const fill = buildTestData(opById("get_kn_detail"), "rest", "kn_demo", d, null, null);
+    const fill = buildTestData(opById("get_kn_detail"), "mcp", "kn_demo", d, null, null);
     expect(JSON.parse(fill.body)).toEqual({ kn_id: "kn_demo" });
   });
 

@@ -40,6 +40,7 @@ import type {
 import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
 
 type WorkspaceOverviewSectionProps = {
+  canModify: boolean;
   detail: KnowledgeNetworkRecord | null;
   detailLoading?: boolean;
   loadRecentObjects: () => Promise<void>;
@@ -54,6 +55,7 @@ function formatOverviewCount(value?: number) {
 }
 
 export function WorkspaceOverviewSection({
+  canModify,
   detail,
   detailLoading = false,
   loadRecentObjects,
@@ -179,9 +181,11 @@ export function WorkspaceOverviewSection({
                 {t("systemAdmin.objectGrants.authorize")}
               </AppButton>
             </PermissionGate>
-            <AppButton icon={<EditOutlined />} onClick={onEdit}>
-              {t("common.edit")}
-            </AppButton>
+            {canModify ? (
+              <AppButton icon={<EditOutlined />} onClick={onEdit}>
+                {t("common.edit")}
+              </AppButton>
+            ) : null}
           </div>
         </div>
         <div className={styles.overviewHeaderComment}>
@@ -236,17 +240,19 @@ export function WorkspaceOverviewSection({
               <p>{formatOverviewCount(detail?.statistics.objectTypesTotal)}</p>
             </dd>
           </dl>
-          <AppButton
-            className={styles.overviewStatAction}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/object-types/create`,
-              );
-            }}
-            type="link"
-          >
-            {t("knowledgeNetwork.createObjectTypeEntry")}
-          </AppButton>
+          {canModify ? (
+            <AppButton
+              className={styles.overviewStatAction}
+              onClick={() => {
+                void navigate(
+                  `/knowledge-network/workspace/${networkId}/object-types/create`,
+                );
+              }}
+              type="link"
+            >
+              {t("knowledgeNetwork.createObjectTypeEntry")}
+            </AppButton>
+          ) : null}
         </div>
 
         <div className={styles.overviewStatCard}>
@@ -262,17 +268,19 @@ export function WorkspaceOverviewSection({
               <p>{formatOverviewCount(detail?.statistics.relationTypesTotal)}</p>
             </dd>
           </dl>
-          <AppButton
-            className={styles.overviewStatAction}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/relation-types/create`,
-              );
-            }}
-            type="link"
-          >
-            {t("knowledgeNetwork.createRelationTypeEntry")}
-          </AppButton>
+          {canModify ? (
+            <AppButton
+              className={styles.overviewStatAction}
+              onClick={() => {
+                void navigate(
+                  `/knowledge-network/workspace/${networkId}/relation-types/create`,
+                );
+              }}
+              type="link"
+            >
+              {t("knowledgeNetwork.createRelationTypeEntry")}
+            </AppButton>
+          ) : null}
         </div>
 
         <div className={styles.overviewStatCard}>
@@ -288,17 +296,19 @@ export function WorkspaceOverviewSection({
               <p>{formatOverviewCount(detail?.statistics.actionTypesTotal)}</p>
             </dd>
           </dl>
-          <AppButton
-            className={styles.overviewStatAction}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/action-types/create`,
-              );
-            }}
-            type="link"
-          >
-            {t("knowledgeNetwork.createActionTypeEntry")}
-          </AppButton>
+          {canModify ? (
+            <AppButton
+              className={styles.overviewStatAction}
+              onClick={() => {
+                void navigate(
+                  `/knowledge-network/workspace/${networkId}/action-types/create`,
+                );
+              }}
+              type="link"
+            >
+              {t("knowledgeNetwork.createActionTypeEntry")}
+            </AppButton>
+          ) : null}
         </div>
       </div>
       </Spin>

@@ -31,6 +31,7 @@ export type KnowledgeNetworkRecord = {
   id: string;
   identifier: string;
   name: string;
+  operations: string[];
   statistics: KnowledgeNetworkStatistics;
   tags: string[];
   updateTime: string;

@@ -40,7 +40,7 @@ export type ContextLoaderOp = {
 export const REST_PREFIX = "/api/agent-retrieval/v1";
 
 /** MCP 端点（实测 /api/agent-retrieval/v1/mcp，非根 /mcp）。 */
-export const MCP_PATH = "/api/agent-retrieval/v1/mcp";
+export const MCP_PATH = "/api/agent-retrieval/v1/mcp/";
 
 export type RequestDataAssistantKind = "concept-group" | "object-type" | "resource" | "relation";
 
@@ -224,6 +224,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     id: "get_kn_detail",
     group: "Knowledge Network",
     summary: "查询指定知识网络的详细信息。",
+    mcpOnly: true,
     path: `${REST_PREFIX}/kn/get_kn_detail`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { kn_id: "your_kn_id" },
@@ -1009,6 +1010,44 @@ function parseRelationTypes(raw: unknown): KnRelationType[] {
     .filter((r) => r.id && r.sourceId && r.targetId);
 }
 
+function normalizeKnDetailPayload(
+  data: Partial<KnDetail> & Record<string, unknown>,
+  fallbackId: string,
+): KnDetail {
+  return {
+    id: data.id ?? fallbackId,
+    name: data.name,
+    comment: typeof data.comment === "string" ? data.comment : undefined,
+    object_types: Array.isArray(data.object_types) ? data.object_types : [],
+    concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
+    relation_types: parseRelationTypes(data.relation_types ?? data.relations),
+  };
+}
+
+function knDetailFromMcpPayload(payload: unknown, fallbackId: string): KnDetail | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const record = payload as Partial<KnDetail> & Record<string, unknown>;
+  const data = record.data;
+  const candidate =
+    data && typeof data === "object"
+      ? (data as Partial<KnDetail> & Record<string, unknown>)
+      : record;
+
+  if (
+    !("object_types" in candidate) &&
+    !("concept_groups" in candidate) &&
+    !("relation_types" in candidate) &&
+    !("relations" in candidate)
+  ) {
+    return null;
+  }
+
+  return normalizeKnDetailPayload(candidate, fallbackId);
+}
+
 /**
  * 取知识网络详情（对象类型 + 资源绑定 + 概念分组），供数据浏览器展示与「填入请求体」。
  * 走与调试台一致的真实 REST 鉴权路径（get_kn_detail 已验证可用）。
@@ -1035,6 +1074,49 @@ async function restPost(
 }
 
 export async function fetchKnDetail(
+  env: ContextLoaderEnv,
+  auth?: McpAuth,
+  signal?: AbortSignal,
+  scope?: BknCallScope,
+): Promise<KnDetail> {
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
+  const result = await createMcpSession(env, auth).callTool(
+    "get_kn_detail",
+    withBknContext(
+      { kn_id: env.knId, response_format: "json" },
+      scope?.nextContext(),
+    ),
+  );
+
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
+  if (!result.ok || result.isError || result.rpcError) {
+    throw new Error(result.rpcError?.message || result.text || "get_kn_detail failed");
+  }
+
+  const fromStructured = knDetailFromMcpPayload(result.structured, env.knId);
+  if (fromStructured) {
+    return fromStructured;
+  }
+
+  try {
+    const fromText = knDetailFromMcpPayload(JSON.parse(result.text) as unknown, env.knId);
+    if (fromText) {
+      return fromText;
+    }
+  } catch {
+    // JSON response requested; fall through to the normalized error below.
+  }
+
+  throw new Error("get_kn_detail did not return knowledge network detail");
+}
+
+export async function fetchKnDetailRestLegacy(
   env: ContextLoaderEnv,
   auth?: McpAuth,
   signal?: AbortSignal,

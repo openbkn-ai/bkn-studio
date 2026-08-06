@@ -34,6 +34,7 @@ export const networkPart = {
     emptyObjectTypes: "No object types yet.",
     emptyRecentObjects: "No recent object types yet.",
     emptyRelationTypes: "No relation types yet.",
+    emptyMetrics: "No metrics yet.",
     emptyTasks: "No tasks yet.",
     emptyTitle: "No knowledge networks yet",
     enterWorkspace: "Open workspace",

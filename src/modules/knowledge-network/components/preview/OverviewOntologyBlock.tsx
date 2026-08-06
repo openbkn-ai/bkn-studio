@@ -170,7 +170,11 @@ export function OverviewOntologyBlock({
     () => objectTypes.map((item) => item.dataSource?.id),
     [objectTypes],
   );
-  const { buildTasksByResourceId, loading: resourceIndexLoading } =
+  const {
+    buildTasksByResourceId,
+    canLoadResourceIndexStates,
+    loading: resourceIndexLoading,
+  } =
     useResourceIndexStates(boundResourceIds);
 
   const renderResourceIndexState = useCallback(
@@ -180,13 +184,17 @@ export function OverviewOntologyBlock({
         return <span className={styles.muted}>—</span>;
       }
 
-      const label = resourceIndexLoading
-        ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
-        : formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t);
+      const label = canLoadResourceIndexStates
+        ? resourceIndexLoading
+          ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+          : formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t)
+        : entity.hasIndex
+          ? t("knowledgeNetwork.previewIndexed")
+          : t("knowledgeNetwork.previewNotIndexed");
 
       return <span>{label}</span>;
     },
-    [buildTasksByResourceId, resourceIndexLoading, t],
+    [buildTasksByResourceId, canLoadResourceIndexStates, resourceIndexLoading, t],
   );
 
   const entityColumns: ColumnsType<KnowledgeNetworkObjectTypeRecord> = useMemo(
@@ -329,11 +337,13 @@ export function OverviewOntologyBlock({
     <div className={styles.block}>
       <Spin spinning={previewLoading}>
         <OntologyGraphCard
-          buildTasksByResourceId={buildTasksByResourceId}
+          buildTasksByResourceId={
+            canLoadResourceIndexStates ? buildTasksByResourceId : undefined
+          }
           networkId={networkId}
           objectTypes={objectTypes}
           relationTypes={relationTypes}
-          resourceIndexLoading={resourceIndexLoading}
+          resourceIndexLoading={canLoadResourceIndexStates && resourceIndexLoading}
         />
       </Spin>
 

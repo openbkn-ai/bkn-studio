@@ -13,7 +13,10 @@ import { useTranslation } from "react-i18next";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { formatKnowledgeNetworkUpdateTime } from "./knowledge-network-card";
+import {
+  formatKnowledgeNetworkUpdateTime,
+  getKnowledgeNetworkCardMenuKeys,
+} from "./knowledge-network-card";
 import styles from "./KnowledgeNetworkCard.module.css";
 
 type KnowledgeNetworkCardProps = {
@@ -34,25 +37,20 @@ export function KnowledgeNetworkCard({
   const { t } = useTranslation();
   const description = record.description || t("knowledgeNetwork.noDescription");
   const updateTime = formatKnowledgeNetworkUpdateTime(record.updateTime);
-  const dropdownItems: MenuProps["items"] = [
-    {
-      key: "view",
-      label: t("common.detail"),
-    },
-    {
-      key: "edit",
-      label: t("common.edit"),
-    },
-    {
-      key: "export",
-      label: t("knowledgeNetwork.export"),
-    },
-    {
-      key: "delete",
-      danger: true,
-      label: t("common.delete"),
-    },
-  ];
+  const dropdownItems: MenuProps["items"] = getKnowledgeNetworkCardMenuKeys(record).map(
+    (key) => ({
+      key,
+      danger: key === "delete",
+      label:
+        key === "view"
+          ? t("common.detail")
+          : key === "edit"
+            ? t("common.edit")
+            : key === "export"
+              ? t("knowledgeNetwork.export")
+              : t("common.delete"),
+    }),
+  );
 
   return (
     <article

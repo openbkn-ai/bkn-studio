@@ -7,11 +7,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 import { loadResourceIndexBuildTasks } from "@/modules/knowledge-network/utils/load-resource-index-build-tasks";
 
 /** Load data-catalog index build tasks for a deduplicated set of resource ids. */
 export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
+  const runtimeConfig = useRuntimeConfig();
+  const canLoadResourceIndexStates = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    mode: "any",
+    requiredPermissions: ["resource:view_detail", "resource:task_manage"],
+  });
   const boundResourceIds = useMemo(
     () =>
       Array.from(new Set(resourceIds.filter((id): id is string => Boolean(id)))),
@@ -22,7 +30,7 @@ export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (boundResourceIds.length === 0) {
+    if (!canLoadResourceIndexStates || boundResourceIds.length === 0) {
       setResourceBuildTasks([]);
       setLoading(false);
       return undefined;
@@ -51,7 +59,7 @@ export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
     return () => {
       cancelled = true;
     };
-  }, [boundResourceIds]);
+  }, [boundResourceIds, canLoadResourceIndexStates]);
 
   const buildTasksByResourceId = useMemo(() => {
     const next = new Map<string, BuildTask[]>();
@@ -61,5 +69,5 @@ export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
     return next;
   }, [resourceBuildTasks]);
 
-  return { buildTasksByResourceId, loading };
+  return { buildTasksByResourceId, canLoadResourceIndexStates, loading };
 }

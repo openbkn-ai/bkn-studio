@@ -79,6 +79,9 @@ describe("sendRequest", () => {
     );
 
     expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy.mock.calls[0][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
+    expect(fetchSpy.mock.calls[1][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
+    expect(fetchSpy.mock.calls[2][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
     expect(jsonRpcBody(fetchSpy.mock.calls[0][1])).toMatchObject({ method: "initialize" });
     expect(jsonRpcBody(fetchSpy.mock.calls[1][1])).toMatchObject({ method: "notifications/initialized" });
     expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({ method: "tools/call" });
@@ -129,20 +132,43 @@ describe("sendRequest", () => {
 });
 
 describe("fetchKnDetail", () => {
-  it("takes its context from the turn and reports the receipt back to it", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response('{"id":"kn-demo","object_types":[],"concept_groups":[],"relation_types":[]}', {
-        status: 200,
-        headers: { "bkn-receipt-id": "rcp_3", "bkn-operation-id": "op_3" },
-      }),
-    );
+  it("uses the MCP get_kn_detail tool with managed context", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            result: {
+              structuredContent: {
+                id: "kn-demo",
+                object_types: [],
+                concept_groups: [],
+                relation_types: [],
+              },
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+
     await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, undefined, undefined, {
       nextContext: () => bknContext,
     });
 
-    expect(restBody(fetchSpy.mock.calls[0][1])).toMatchObject({
-      kn_id: "kn-demo",
-      bkn_context: bknContext,
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({
+      method: "tools/call",
+      params: {
+        name: "get_kn_detail",
+        arguments: {
+          kn_id: "kn-demo",
+          response_format: "json",
+          bkn_context: bknContext,
+        },
+      },
     });
   });
 });
@@ -232,6 +258,9 @@ describe("listMcpTools", () => {
     expect(tools).toEqual([{ name: "search_schema", inputSchema: { type: "object" }, outputSchema: undefined }]);
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(fetchSpy).toHaveBeenCalledTimes(4);
+    expect(fetchSpy.mock.calls[1][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
+    expect(fetchSpy.mock.calls[2][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
+    expect(fetchSpy.mock.calls[3][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
     expect(fetchSpy.mock.calls[0][1]?.headers).toMatchObject({ Authorization: "Bearer expired-token" });
     expect(fetchSpy.mock.calls[1][1]?.headers).toMatchObject({ Authorization: "Bearer fresh-token" });
     expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({ method: "notifications/initialized" });
