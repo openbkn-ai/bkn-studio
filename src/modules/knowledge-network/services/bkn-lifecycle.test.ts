@@ -117,7 +117,44 @@ describe("createBknLifecycle", () => {
     await expect(lifecycle.beginTurn("question")).resolves.toBeNull();
     await expect(lifecycle.beginTurn("another question")).resolves.toBeNull();
     expect(lifecycle.unsupported()).toBe(true);
-    expect(calls).toHaveLength(1);
+    // 每轮都重试：不支持是部署态，不该在会话里被latch住。
+    expect(calls).toHaveLength(2);
+  });
+
+  /**
+   * 页面开着的时候后端升级/重启，bkn_start_interaction 就补上了。之前第一次失败即永久降级，
+   * 该标签页余下所有业务调用都不带 bkn_context，每一条都稳定 conversation_required。
+   */
+  it("recovers on the next turn once the deployment gains the lifecycle tools", async () => {
+    let attempts = 0;
+    const { session } = fakeSession({
+      bkn_start_interaction: () => {
+        attempts += 1;
+        if (attempts === 1) {
+          return {
+            ok: false,
+            text: "tool not found",
+            latencyMs: 1,
+            isError: true,
+            rpcError: { code: -32602, message: "tool not found: bkn_start_interaction" },
+          };
+        }
+        return {
+          ok: true,
+          text: "started",
+          latencyMs: 1,
+          isError: false,
+          structured: { interaction_id: "int_9", conversation_id: "conv_9", execution_status: "active" },
+        };
+      },
+    });
+    const lifecycle = createBknLifecycleOn(session, options());
+
+    await expect(lifecycle.beginTurn("before the upgrade")).resolves.toBeNull();
+    const recovered = await lifecycle.beginTurn("after the upgrade");
+
+    expect(recovered?.nextContext()).toEqual({ conversation_id: "conv_9", interaction_id: "int_9" });
+    expect(lifecycle.unsupported()).toBe(false);
   });
 
   it("starts a new conversation when a persisted conversation is no longer usable", async () => {

@@ -194,6 +194,7 @@ export function createBknLifecycle(
 export function createBknLifecycleOn(session: McpSession, options: BknLifecycleOptions): BknLifecycle {
   const { conversationStore } = options;
   let conversationId = conversationStore.read();
+  // 「上一轮是否不支持生命周期」——只作报告用,不作短路用。见 beginTurn。
   let notSupported = false;
   let previousTurnSettled: Promise<void> = Promise.resolve();
 
@@ -213,10 +214,11 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
       });
       try {
         await waitFor;
-        if (notSupported) {
-          release();
-          return null;
-        }
+        // 这里刻意不因为 notSupported 短路。「服务端没有生命周期工具」是部署态而非
+        // 会话态:页面开着的时候后端升级/重启,工具就补上了。之前一次失败就永久置位,
+        // 于是这个标签页余生所有业务调用都不带 bkn_context,每一条都稳定 conversation_required——
+        // 而那个错误的 required_action 又把模型推回 bkn_start_interaction。代价只是不支持
+        // 的部署上每轮多打一次必败的调用,换回可恢复性。
         const startInteraction = (currentConversationId: string | null) => {
           const args: Record<string, unknown> = { question };
           if (currentConversationId) args.conversation_id = currentConversationId;
@@ -238,6 +240,7 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
         }
         conversationId = startedConversationId;
         conversationStore.write(startedConversationId);
+        notSupported = false;
         return createTurn(session, startedConversationId, interactionId, release);
       } catch (error) {
         if (error instanceof BknLifecycleError && error.code === "lifecycle_not_supported") {
