@@ -10,13 +10,27 @@ import { useEffect, useState } from "react";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
-export function useKnowledgeNetworkCanModify(networkId: string) {
-  const [canModify, setCanModify] = useState(false);
+type OperationAccess = Record<string, boolean>;
+
+function createOperationAccess(operations: readonly string[], value: boolean) {
+  return Object.fromEntries(operations.map((operation) => [operation, value]));
+}
+
+export function useKnowledgeNetworkOperationAccess(
+  networkId: string,
+  operations: readonly string[],
+) {
+  const [access, setAccess] = useState<OperationAccess>(() =>
+    createOperationAccess(operations, false),
+  );
+  const operationsKey = operations.join("\u0000");
 
   useEffect(() => {
     let cancelled = false;
+    const requestedOperations =
+      operationsKey.length > 0 ? operationsKey.split("\u0000") : [];
 
-    setCanModify(false);
+    setAccess(createOperationAccess(requestedOperations, false));
 
     if (!networkId) {
       return () => {
@@ -27,19 +41,34 @@ export function useKnowledgeNetworkCanModify(networkId: string) {
     void getKnowledgeNetwork(networkId)
       .then((record) => {
         if (!cancelled) {
-          setCanModify(hasKnowledgeNetworkRecordOperation(record, "modify"));
+          setAccess(
+            Object.fromEntries(
+              requestedOperations.map((operation) => [
+                operation,
+                hasKnowledgeNetworkRecordOperation(record, operation),
+              ]),
+            ),
+          );
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setCanModify(false);
+          setAccess(createOperationAccess(requestedOperations, false));
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [networkId]);
+  }, [networkId, operationsKey]);
 
-  return canModify;
+  return access;
+}
+
+export function useKnowledgeNetworkCanOperate(networkId: string, operation: string) {
+  return useKnowledgeNetworkOperationAccess(networkId, [operation])[operation] ?? false;
+}
+
+export function useKnowledgeNetworkCanModify(networkId: string) {
+  return useKnowledgeNetworkCanOperate(networkId, "modify");
 }

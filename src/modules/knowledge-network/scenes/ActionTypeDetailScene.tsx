@@ -25,7 +25,7 @@ import {
   getKnowledgeNetworkActionTypeDetail,
   listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import { useKnowledgeNetworkOperationAccess } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type {
   ActionTypeDetail,
   KnowledgeNetworkObjectTypeRecord,
@@ -35,6 +35,8 @@ import { getActionTypeDynamicParameters } from "@/modules/knowledge-network/util
 import styles from "./ActionTypeDetailScene.module.css";
 
 type DetailTab = "overview" | "tasks";
+
+const ACTION_TYPE_DETAIL_OPERATIONS = ["modify", "task_manage"] as const;
 
 export function ActionTypeDetailScene() {
   const { t } = useTranslation();
@@ -52,7 +54,12 @@ export function ActionTypeDetailScene() {
   const [executeModalOpen, setExecuteModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [taskRefreshToken, setTaskRefreshToken] = useState(0);
-  const canModify = useKnowledgeNetworkCanModify(networkId);
+  const operationAccess = useKnowledgeNetworkOperationAccess(
+    networkId,
+    ACTION_TYPE_DETAIL_OPERATIONS,
+  );
+  const canModify = operationAccess.modify;
+  const canTaskManage = operationAccess.task_manage;
 
   const activeTab: DetailTab = searchParams.get("tab") === "tasks" ? "tasks" : "overview";
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
@@ -165,39 +172,45 @@ export function ActionTypeDetailScene() {
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
-        canModify ? (
+        canModify || canTaskManage ? (
           <>
-            <AppButton
-              icon={<PlayCircleOutlined />}
-              loading={executing}
-              onClick={handleExecuteNow}
-              type="primary"
-            >
-              {t("knowledgeNetwork.actionTypeExecuteImmediately")}
-            </AppButton>
-            <AppButton
-              icon={<EditOutlined />}
-              onClick={() => {
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/edit`,
-                );
-              }}
-            >
-              {t("common.edit")}
-            </AppButton>
-            <AppButton
-              icon={<ThunderboltOutlined />}
-              onClick={() => {
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/execution`,
-                );
-              }}
-            >
-              {t("knowledgeNetwork.actionTypeExecutionEntry")}
-            </AppButton>
-            <AppButton danger onClick={confirmDelete}>
-              {t("common.delete")}
-            </AppButton>
+            {canTaskManage ? (
+              <AppButton
+                icon={<PlayCircleOutlined />}
+                loading={executing}
+                onClick={handleExecuteNow}
+                type="primary"
+              >
+                {t("knowledgeNetwork.actionTypeExecuteImmediately")}
+              </AppButton>
+            ) : null}
+            {canModify ? (
+              <>
+                <AppButton
+                  icon={<EditOutlined />}
+                  onClick={() => {
+                    void navigate(
+                      `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/edit`,
+                    );
+                  }}
+                >
+                  {t("common.edit")}
+                </AppButton>
+                <AppButton
+                  icon={<ThunderboltOutlined />}
+                  onClick={() => {
+                    void navigate(
+                      `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/execution`,
+                    );
+                  }}
+                >
+                  {t("knowledgeNetwork.actionTypeExecutionEntry")}
+                </AppButton>
+                <AppButton danger onClick={confirmDelete}>
+                  {t("common.delete")}
+                </AppButton>
+              </>
+            ) : null}
           </>
         ) : null
       }

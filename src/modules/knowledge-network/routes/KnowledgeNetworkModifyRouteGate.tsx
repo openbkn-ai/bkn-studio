@@ -5,11 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Spin } from "antd";
+import { Alert, Spin } from "antd";
 import { type ReactNode, useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { getRequestErrorStatus } from "@/modules/knowledge-network/services/shared/runtime";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 type KnowledgeNetworkModifyRouteGateProps = {
@@ -21,20 +23,27 @@ export function KnowledgeNetworkModifyRouteGate({
 }: KnowledgeNetworkModifyRouteGateProps) {
   const { networkId = "" } = useParams<{ networkId: string }>();
   const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     setAllowed(null);
+    setError(null);
     void getKnowledgeNetwork(networkId)
       .then((record) => {
         if (!cancelled) {
           setAllowed(hasKnowledgeNetworkRecordOperation(record, "modify"));
         }
       })
-      .catch(() => {
+      .catch((nextError: unknown) => {
         if (!cancelled) {
-          setAllowed(false);
+          if (getRequestErrorStatus(nextError) === 403) {
+            setAllowed(false);
+            return;
+          }
+
+          setError(extractRequestErrorMessage(nextError));
         }
       });
 
@@ -42,6 +51,10 @@ export function KnowledgeNetworkModifyRouteGate({
       cancelled = true;
     };
   }, [networkId]);
+
+  if (error) {
+    return <Alert message={error} showIcon type="error" />;
+  }
 
   if (allowed === null) {
     return <Spin fullscreen />;

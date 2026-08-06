@@ -190,22 +190,6 @@
   white-space: nowrap;
 }
 
-.objectNameColumn {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.objectSubName {
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .relatedStats {
   display: flex;
   align-items: center;
@@ -562,11 +546,6 @@
 
 .metricPage .noticeBanner :global(.ant-alert) {
   border-radius: 0;
-}
-
-.conceptGroupPage .objectSubName {
-  color: #6b7280;
-  line-height: 1.4;
 }
 
 .dropdownMenu :global(.ant-dropdown-menu) {

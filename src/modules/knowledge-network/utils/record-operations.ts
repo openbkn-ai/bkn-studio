@@ -11,7 +11,13 @@ export function hasKnowledgeNetworkRecordOperation(
   record: KnowledgeNetworkRecord | null | undefined,
   operation: string,
 ) {
-  return Boolean(
-    record?.operations.includes("*") || record?.operations.includes(operation),
-  );
+  if (!record) {
+    return false;
+  }
+
+  if (record.operations === undefined) {
+    return true;
+  }
+
+  return record.operations.includes("*") || record.operations.includes(operation);
 }
