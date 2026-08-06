@@ -51,6 +51,32 @@
   background: linear-gradient(180deg, #fffdf6 0%, #fff 42%);
 }
 
+/* 企业版:淡紫。与专业版的暖金分开,两档一眼可辨,而不是靠读标题。 */
+.planEnterprise {
+  border-color: #b9a7ec;
+  background: linear-gradient(180deg, #f1ebff 0%, #faf8ff 52%, #fff 100%);
+  box-shadow: 0 2px 14px rgba(91, 70, 168, 0.1);
+}
+
+.planEnterprise .planName {
+  color: #4c35a0;
+}
+
+/* 勾也跟着走紫:一张卡里绿勾 + 紫边两种强调色,紫会退成背景噪点。 */
+.planEnterprise .tick {
+  color: #7c5cd6;
+}
+
+.planEnterprise :global(.ant-btn) {
+  border-color: #b9a7ec;
+  color: #4c35a0;
+}
+
+.planEnterprise :global(.ant-btn):hover {
+  border-color: #7c5cd6;
+  color: #3b2880;
+}
+
 .planCurrent {
   border-color: var(--admin-color-link-border, #bfdbfe);
 }
@@ -94,6 +120,10 @@
 
 .planFeats {
   display: grid;
+  /* flex:1 让它吃掉卡片剩余高度(卡片是 flex column,按钮要贴底),而 grid 的
+     align-content 默认 stretch——行会跟着一起被撑开,每条能力变成一格 90px 高的
+     空白。行高必须钉在内容上。 */
+  align-content: start;
   flex: 1;
   gap: 8px;
   margin: 0;
@@ -102,15 +132,35 @@
 }
 
 .planFeats li {
-  display: flex;
+  /* 两列而不是 flex:图标列定宽,文字换行时对齐第二列而不是缩回图标下面。 */
+  display: grid;
+  align-items: start;
   gap: 8px;
+  grid-template-columns: 14px minmax(0, 1fr);
   color: var(--admin-color-text, #111827);
   font-size: 12.5px;
   line-height: 1.6;
 }
 
 .tick {
+  /* 图标基线比文字略高,压 2px 才和首行文字齐平。 */
+  margin-top: 2px;
   color: var(--admin-color-success, #15803d);
+  font-size: 12px;
+}
+
+/* 两个动作并排,窄卡时自动堆叠;按钮各自撑满一列,不留半截宽的孤儿。 */
+.actions {
+  display: grid;
+  gap: 8px;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+@media (max-width: 1180px) {
+  .actions {
+    grid-auto-flow: row;
+  }
 }
 
 .quota {

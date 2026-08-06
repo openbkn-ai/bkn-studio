@@ -46,16 +46,11 @@ export const subscriptionZhCN = {
       title: "你的集群",
       unknown: "读取中",
     },
-    contact: {
-      body: "请联系你的客户经理，或通过官方商务渠道咨询报价、私有化交付与行业定制方案。",
-      title: "联系销售",
-    },
     cta: {
-      current: "当前版本",
       import: "导入授权文件",
       importHint: "已有授权文件?前往授权管理导入,补证下一个请求即生效,无需重启。",
       needAdmin: "导入授权文件需要授权管理权限,请联系管理员。",
-      sales: "联系销售",
+      details: "查看详情",
     },
     current: {
       badge: "当前",
@@ -73,6 +68,8 @@ export const subscriptionZhCN = {
       title: "能力对比",
     },
     plans: {
+      // 价格与授权粒度:暂不在页面展示(见 SubscriptionScene 的注释),留着是因为这是
+      // 对外口径的镜像,单一源在 license-server docs/design/license-service.md §1.5。
       community: {
         audience: "评估、单团队试点,或已经有外部权限系统的场景。",
         highlights: {

@@ -70,17 +70,12 @@ export const subscriptionEnUS = {
       title: "Your cluster",
       unknown: "Loading",
     },
-    contact: {
-      body: "Contact your account manager, or reach the sales team for pricing, on-premise delivery and industry-specific packages.",
-      title: "Contact sales",
-    },
     cta: {
-      current: "Current edition",
       import: "Import licence",
       importHint:
         "Already have a licence file? Import it under licence management — it takes effect on the next request, no restart required.",
       needAdmin: "Importing a licence requires licence management permission. Ask an administrator.",
-      sales: "Contact sales",
+      details: "View details",
     },
     current: {
       badge: "Current",
@@ -98,6 +93,9 @@ export const subscriptionEnUS = {
       title: "Capability comparison",
     },
     plans: {
+      // Pricing and licence granularity: not rendered today (see SubscriptionScene).
+      // Kept because it mirrors the commercial source of truth in license-server
+      // docs/design/license-service.md §1.5.
       community: {
         audience:
           "Evaluation, a single-team pilot, or deployments that already have an external permission system.",

@@ -5,9 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CheckOutlined } from "@ant-design/icons";
-import { Modal, Tag } from "antd";
-import { Fragment, useState } from "react";
+import { CheckOutlined, LeftOutlined } from "@ant-design/icons";
+import { Tag } from "antd";
+import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -27,15 +27,19 @@ import {
   capabilitiesIntroducedBy,
   type CapabilityCatalogEntry,
 } from "@/modules/subscription/capability-catalog";
-import {
-  resolveQuota,
-  SUBSCRIPTION_PLANS,
-} from "@/modules/subscription/subscription-plans";
+import { SUBSCRIPTION_PLANS } from "@/modules/subscription/subscription-plans";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 import styles from "./SubscriptionScene.module.css";
 
 const TIER_COLUMNS: Edition[] = ["community", "professional", "enterprise"];
+
+/**
+ * 版本与服务方案的对外说明。企业版与行业版没有自助购买路径,报价与交付形态由商务侧
+ * 维护,产品页只负责把人送过去——在这里复制一份价格表,改价那天两边必然对不上。
+ */
+const SUBSCRIPTION_DETAIL_URL =
+  "https://openbkn-ai.feishu.cn/wiki/BqXZw5UXtisE5Ikc2Sfc1J6JnCb";
 
 const CLUSTER_TAG_COLOR: Record<CapabilityState, string | undefined> = {
   available: "success",
@@ -50,7 +54,6 @@ export function SubscriptionScene() {
   const entitlement = useEntitlement();
   const { snapshot } = useEntitlementContext();
   const runtimeConfig = useRuntimeConfig();
-  const [salesOpen, setSalesOpen] = useState(false);
 
   const canManageLicense = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
@@ -68,27 +71,6 @@ export function SubscriptionScene() {
   function editionName(edition: Edition) {
     return t(`common.entitlement.editions.${edition}`);
   }
-
-  /**
-   * 当前档位那张卡的配额读证书里的真值,其余档位用产品自带的默认值。
-   *
-   * 合同可以覆盖默认配额,行业版尤其如此——ee-design.md §3.3 说合同定制**只能**落在
-   * `limits` 与新增的行业专有能力上,所以「按合同拿到的配额」正是这里唯一会与默认值
-   * 不同的地方。照着静态表印,客户看到的数字就和他签的合同对不上。
-   *
-   * `-1` = 不限(证书约定,§3.0);缺失时退回默认值,不当成 0——那个方向反了,会把
-   * 「这张证没写这项」显示成「一个都不给」。
-   */
-  function quotaLabel(fallback: number | null, limitKey: string, isCurrent: boolean) {
-    const value = resolveQuota(fallback, isCurrent ? snapshot?.limits[limitKey] : undefined);
-
-    return value === null ? t("subscription.plans.quota.unlimited") : value;
-  }
-
-  /** 当前档位的配额是否来自证书(而非产品默认表),用于给卡片加一句出处。 */
-  const contractQuota =
-    snapshot !== null &&
-    (snapshot.limits.max_users !== undefined || snapshot.limits.max_nodes !== undefined);
 
   function capabilityRow(entry: CapabilityCatalogEntry) {
     // 只有 bkn-safe 自己实现的能力才有实况可报:capabilities/extensions 是它自己进程的
@@ -152,6 +134,21 @@ export function SubscriptionScene() {
 
   return (
     <section className={styles.scene}>
+      {/*
+        菜单里没有这一项(它对所有登录用户开放,而「系统管理」分组的含义是「你管得着
+        系统」),入口是顶栏档位芯片和锁定态的升级引导。所以页面自己得给一条回去的路。
+      */}
+      <div>
+        <AppButton
+          icon={<LeftOutlined />}
+          onClick={() => {
+            void navigate(-1);
+          }}
+        >
+          {t("common.back")}
+        </AppButton>
+      </div>
+
       <header className={styles.head}>
         <h2 className={styles.title}>{t("subscription.title")}</h2>
         <p className={styles.subtitle}>
@@ -170,6 +167,7 @@ export function SubscriptionScene() {
           const className = [
             styles.plan,
             plan.featured ? styles.planFeatured : "",
+            plan.edition === "enterprise" ? styles.planEnterprise : "",
             isCurrent ? styles.planCurrent : "",
           ]
             .filter(Boolean)
@@ -184,36 +182,21 @@ export function SubscriptionScene() {
                 ) : null}
               </div>
 
-              <div className={styles.planPrice}>
-                <span className={styles.planPriceNum}>
-                  {t(`subscription.plans.${plan.edition}.price`)}
-                </span>
-                <span className={styles.planPriceUnit}>
-                  {t(`subscription.plans.${plan.edition}.unit`)}
-                </span>
-              </div>
+              {/*
+                价格暂不展示。口径(专业版 ¥49,800/项目·年,企业与行业按合同)仍留在
+                locales 里,单一源是 license-server docs/design/license-service.md §1.5;
+                对外报价由「查看详情」指向的版本说明维护,产品页不复制一份会漂的数字。
+              */}
 
               <p className={styles.planAudience}>
                 {t(`subscription.plans.${plan.edition}.audience`)}
               </p>
 
-              {plan.limits ? (
-                <div className={styles.quota}>
-                  <Tag>
-                    {t("subscription.plans.quota.maxUsers", {
-                      value: quotaLabel(plan.limits.maxUsers, "max_users", isCurrent),
-                    })}
-                  </Tag>
-                  <Tag>
-                    {t("subscription.plans.quota.maxNodes", {
-                      value: quotaLabel(plan.limits.maxNodes, "max_nodes", isCurrent),
-                    })}
-                  </Tag>
-                  {isCurrent && contractQuota ? (
-                    <span className={styles.note}>{t("subscription.plans.quota.fromLicence")}</span>
-                  ) : null}
-                </div>
-              ) : null}
+              {/*
+                配额(用户数/节点数)暂不展示。数据链路是通的——`resolveQuota` 与它的
+                用例都留着,证书里的真值也已经解析进快照——只是卡片上先不铺开。
+                要恢复:把 quotaTags(plan, isCurrent) 放回这里。
+              */}
 
               <ul className={styles.planFeats}>
                 {plan.edition === "community" ? (
@@ -243,29 +226,34 @@ export function SubscriptionScene() {
                 ))}
               </ul>
 
-              {isCurrent ? (
-                <AppButton disabled>{t("subscription.cta.current")}</AppButton>
-              ) : plan.edition === "community" ? null : plan.edition === "enterprise" ? (
-                // 企业版没有自助路径:合同签完才有证书,页面上放一个「立即升级」是假的。
+              {/*
+                每张卡都给这两个动作,不按档位裁剪:
+                - 导入授权文件:社区版同样可能只是「还没导过证」,而不是不想买;当前档位
+                  也要留着——换一张更高档的证走的是同一条路。
+                - 查看详情:三档的商务形态都在同一篇版本说明里,专业版客户也要看得到
+                  企业档讲什么。
+              */}
+              <div className={styles.actions}>
+                {canManageLicense ? (
+                  <AppButton
+                    onClick={() => {
+                      void navigate("/system/license");
+                    }}
+                    title={t("subscription.cta.importHint")}
+                    type={isCurrent ? "default" : "primary"}
+                  >
+                    {t("subscription.cta.import")}
+                  </AppButton>
+                ) : null}
                 <AppButton
-                  onClick={() => {
-                    setSalesOpen(true);
-                  }}
-                  type={atLeast(entitlement.edition, "professional") ? "primary" : "default"}
+                  href={SUBSCRIPTION_DETAIL_URL}
+                  rel="noopener noreferrer"
+                  target="_blank"
                 >
-                  {t("subscription.cta.sales")}
+                  {t("subscription.cta.details")}
                 </AppButton>
-              ) : canManageLicense ? (
-                <AppButton
-                  onClick={() => {
-                    void navigate("/system/license");
-                  }}
-                  title={t("subscription.cta.importHint")}
-                  type="primary"
-                >
-                  {t("subscription.cta.import")}
-                </AppButton>
-              ) : (
+              </div>
+              {canManageLicense ? null : (
                 // 没有授权管理权限的人点进去只会撞 403,给一句能照做的话比给一个死按钮强。
                 <p className={styles.note}>{t("subscription.cta.needAdmin")}</p>
               )}
@@ -328,19 +316,8 @@ export function SubscriptionScene() {
             <p className={styles.note}>{t("subscription.cluster.otherService")}</p>
           </>
         ) : null}
-        <p className={styles.note}>{t("subscription.priceNote")}</p>
       </div>
 
-      <Modal
-        footer={null}
-        onCancel={() => {
-          setSalesOpen(false);
-        }}
-        open={salesOpen}
-        title={t("subscription.contact.title")}
-      >
-        <p className={styles.note}>{t("subscription.contact.body")}</p>
-      </Modal>
     </section>
   );
 }

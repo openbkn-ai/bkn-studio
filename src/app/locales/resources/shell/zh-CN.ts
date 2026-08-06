@@ -48,7 +48,6 @@ export const shellZhCN = {
       roleManagement: "角色管理",
       authorizationManagement: "权限管理",
       licenseManagement: "授权管理",
-      subscription: "版本与订阅",
       modelManagement: "模型配置",
       bknTrace: "BKN Trace",
       observability: "可观测性",
