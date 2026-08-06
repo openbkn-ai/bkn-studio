@@ -556,7 +556,9 @@ describe("bkn-trace service", () => {
 		evidence_completeness: "complete",
 		partial_reasons: [],
 		question_preview: "查询六月需求预测",
+		question_artifact_ref: "artifact:question_june",
 		result_preview: "六月共 63 条",
+		result_artifact_ref: "artifact:result_june",
         status: "completed",
         requests: [
           { request_id: "req_schema", interaction_id: "interaction_june_forecast" },
@@ -592,7 +594,9 @@ describe("bkn-trace service", () => {
 	  effectiveSubjectId: "user-001",
 	  evidenceCompleteness: "complete",
 	  questionPreview: "查询六月需求预测",
+	  questionArtifactRef: "artifact:question_june",
 	  resultPreview: "六月共 63 条",
+	  resultArtifactRef: "artifact:result_june",
 	});
   });
 });

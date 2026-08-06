@@ -56,10 +56,12 @@ import {
   type TraceExecutionSummary,
   type TraceGraph,
   type TraceGraphNode,
+  type TraceBusinessNode,
 } from "@/modules/bkn-trace/services/trace.service";
 import {
-  businessStoryStages,
+  businessEvidenceGroups,
   businessNodePresentation,
+  businessStoryStages,
 } from "@/modules/bkn-trace/utils/trace-explainability";
 import { formatDuration } from "@/modules/bkn-trace/utils/duration";
 
@@ -74,6 +76,12 @@ type RequestDetail = {
 };
 
 type ProvenanceView = "conversations" | "interactions" | "requests";
+
+type InteractionContext = {
+  question: unknown;
+  result: unknown;
+  summary: InteractionSummary;
+};
 
 type ProvenanceListRow = {
   agentOrApp?: string;
@@ -120,9 +128,11 @@ export function BknTraceRunsScene() {
   const [page, setPage] = useState<SummaryPage<ProvenanceListRow>>();
   const [selectedRequestId, setSelectedRequestId] = useState<string>();
   const [detail, setDetail] = useState<RequestDetail>();
+  const [interactionContext, setInteractionContext] = useState<InteractionContext>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const detailRequestSequence = useRef(0);
+  const interactionRequestSequence = useRef(0);
   const provenanceRequestSequence = useRef(0);
   const deepLinkConsumed = useRef(false);
 
@@ -211,6 +221,25 @@ export function BknTraceRunsScene() {
     }
   }, [activeQuery, t, view]);
 
+  const loadInteractionContext = useCallback(async (interactionId: string) => {
+    const requestSequence = ++interactionRequestSequence.current;
+    try {
+      const summary = await getInteractionSummary(interactionId);
+      const [questionResult, answerResult] = await Promise.allSettled([
+        loadReferencedArtifact(summary.questionArtifactRef),
+        loadReferencedArtifact(summary.resultArtifactRef),
+      ]);
+      if (requestSequence !== interactionRequestSequence.current) return;
+      setInteractionContext({
+        question: settledValue(questionResult)?.content ?? summary.questionPreview,
+        result: settledValue(answerResult)?.content ?? summary.resultPreview,
+        summary,
+      });
+    } catch {
+      if (requestSequence === interactionRequestSequence.current) setInteractionContext(undefined);
+    }
+  }, []);
+
   useEffect(() => {
     void loadProvenance(initialState.view, { ...initialState.query, page: 1, pageSize: 20 });
   }, [initialState, loadProvenance]);
@@ -220,6 +249,15 @@ export function BknTraceRunsScene() {
     deepLinkConsumed.current = true;
     void openRequest(initialState.requestId);
   }, [initialState.requestId, openRequest]);
+
+  useEffect(() => {
+    if (view === "requests" && activeQuery.interactionId) {
+      void loadInteractionContext(activeQuery.interactionId);
+      return;
+    }
+    interactionRequestSequence.current += 1;
+    setInteractionContext(undefined);
+  }, [activeQuery.interactionId, loadInteractionContext, view]);
 
   function currentQuery(): RequestSummaryQuery {
     return {
@@ -523,6 +561,9 @@ export function BknTraceRunsScene() {
 		  ) : null}
 		</Space>
 	  </div>
+	  {view === "requests" && interactionContext ? (
+		<InteractionContextSummary context={interactionContext} />
+	  ) : null}
       <div
         aria-label={t("bknTrace.title")}
         className={styles.filters}
@@ -699,6 +740,30 @@ function OpenBKNCallContent({ summary }: { summary: RequestSummary }) {
   );
 }
 
+function InteractionContextSummary({ context }: { context: InteractionContext }) {
+  const { t } = useTranslation();
+  return (
+    <section className={styles.interactionContext}>
+      <div className={styles.interactionContextHeader}>
+        <Typography.Title level={5}>{t("bknTrace.sections.interactionContext")}</Typography.Title>
+        <Typography.Text type="secondary">
+          {t("bknTrace.interactionCallCount", { count: context.summary.requests.length })}
+        </Typography.Text>
+      </div>
+      <div className={styles.businessContent}>
+        <section>
+          <Typography.Text type="secondary">{t("bknTrace.fields.question")}</Typography.Text>
+          <ArtifactContent content={context.question} />
+        </section>
+        <section>
+          <Typography.Text type="secondary">{t("bknTrace.fields.result")}</Typography.Text>
+          <ArtifactContent content={context.result} />
+        </section>
+      </div>
+    </section>
+  );
+}
+
 function BusinessExplanation({
   artifacts,
   graph,
@@ -708,11 +773,9 @@ function BusinessExplanation({
 }) {
   const { t } = useTranslation();
   const stages = businessStoryStages(graph.data.nodes);
+  const evidenceGroups = businessEvidenceGroups(graph.data.nodes);
   const question = artifacts.find((artifact) => artifact.artifactType === "question")?.content;
   const result = artifacts.find((artifact) => artifact.artifactType === "result")?.content;
-  const supportingArtifacts = artifacts.filter(
-    (artifact) => !["question", "result"].includes(artifact.artifactType),
-  );
   return (
     <div className={styles.explanation}>
       <section className={styles.semanticChain}>
@@ -742,17 +805,73 @@ function BusinessExplanation({
       </section>
       <section className={styles.artifactSection}>
         <Typography.Title level={5}>{t("bknTrace.sections.artifacts")}</Typography.Title>
-        {supportingArtifacts.length ? supportingArtifacts.map((artifact) => (
-          <div className={styles.artifact} key={artifact.artifactId}>
-            <Space>
-              <Tag>{artifact.artifactType}</Tag>
-              <Typography.Text type="secondary">{artifact.observedAt}</Typography.Text>
-            </Space>
-            <ArtifactContent content={artifact.content} />
-          </div>
-        )) : <Empty description={t("bknTrace.emptyStates.artifacts")} />}
+        <div className={styles.evidenceBasisGrid}>
+          <EvidenceBasis
+            artifacts={artifacts.filter((artifact) => ["data", "data_result", "query"].includes(artifact.artifactType))}
+            emptyText={t("bknTrace.evidenceBasis.noData")}
+            nodes={evidenceGroups.data}
+            title={t("bknTrace.evidenceBasis.data")}
+          />
+          <EvidenceBasis
+            artifacts={artifacts.filter((artifact) => ["logic", "logic_execution"].includes(artifact.artifactType))}
+            emptyText={t("bknTrace.evidenceBasis.noLogic")}
+            nodes={evidenceGroups.logic}
+            title={t("bknTrace.evidenceBasis.logic")}
+          />
+          <EvidenceBasis
+            artifacts={artifacts.filter((artifact) => artifact.artifactType.startsWith("action"))}
+            emptyText={t("bknTrace.evidenceBasis.noAction")}
+            nodes={evidenceGroups.action}
+            title={t("bknTrace.evidenceBasis.action")}
+          />
+        </div>
       </section>
     </div>
+  );
+}
+
+function EvidenceBasis({
+  artifacts,
+  emptyText,
+  nodes,
+  title,
+}: {
+  artifacts: EvidenceArtifact[];
+  emptyText: string;
+  nodes: TraceBusinessNode[];
+  title: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <section className={styles.evidenceBasis}>
+      <Typography.Text strong>{title}</Typography.Text>
+      {nodes.map((node) => {
+        const presentation = businessNodePresentation(node);
+        return (
+          <div className={styles.node} key={node.id}>
+            <span className={styles.nodeTitle}>{presentation.title}</span>
+            <Typography.Text type="secondary">{presentation.subtitle}</Typography.Text>
+            <details className={styles.technicalDetails}>
+              <summary>{t("bknTrace.fields.technicalDetails")}</summary>
+              <Typography.Text copyable type="secondary">{presentation.technicalId}</Typography.Text>
+              <Typography.Text type="secondary">{node.nodeType}</Typography.Text>
+            </details>
+          </div>
+        );
+      })}
+      {artifacts.map((artifact) => (
+        <div className={styles.artifact} key={artifact.artifactId}>
+          <Space>
+            <Tag>{artifact.artifactType}</Tag>
+            <Typography.Text type="secondary">{artifact.observedAt}</Typography.Text>
+          </Space>
+          <ArtifactContent content={artifact.content} />
+        </div>
+      ))}
+      {!nodes.length && !artifacts.length ? (
+        <Typography.Text type="secondary">{emptyText}</Typography.Text>
+      ) : null}
+    </section>
   );
 }
 
@@ -907,6 +1026,11 @@ function ArtifactContent({ content }: { content: unknown }) {
 
 function artifactId(ref: string) {
   return ref.startsWith("artifact:") ? ref.slice("artifact:".length) : undefined;
+}
+
+function loadReferencedArtifact(ref?: string) {
+  const id = ref ? artifactId(ref) : undefined;
+  return id ? getEvidenceArtifact(id) : Promise.resolve(undefined);
 }
 
 function formatTime(value?: string) {
