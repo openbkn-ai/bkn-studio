@@ -265,6 +265,7 @@ export async function listDataConnectConnectorTypes() {
     "/vega-backend/v1/connector-types",
     {
       params: {
+        available: true,
         direction: "asc",
         enabled: true,
         limit: 100,
