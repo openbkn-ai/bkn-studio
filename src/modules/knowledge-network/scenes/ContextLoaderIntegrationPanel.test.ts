@@ -24,6 +24,9 @@ describe("businessInfoOf", () => {
     expect(businessInfoOf(op("bkn_get_operation"))).toEqual({ groupKey: "lifecycle", name: "查看操作状态" });
     expect(businessInfoOf(op("list_action_execution"))).toEqual({ groupKey: "logic", name: "行动执行记录" });
     expect(businessInfoOf(op("query_metric"))).toEqual({ groupKey: "logic", name: "指标数据查询" });
+    expect(businessInfoOf(op("list_skills"))).toEqual({ groupKey: "skill", name: "技能列表" });
+    expect(businessInfoOf(op("get_skill_content"))).toEqual({ groupKey: "skill", name: "查看技能内容" });
+    expect(businessInfoOf(op("read_skill_file"))).toEqual({ groupKey: "skill", name: "读取技能文件" });
   });
 
   it("keeps an unknown lifecycle tool in the lifecycle group with a compact fallback name", () => {

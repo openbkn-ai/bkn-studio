@@ -27,10 +27,13 @@ import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowle
 import {
   CONTEXT_LOADER_OPS,
   MCP_PATH,
+  REST_CONTEXT_LOADER_OPS,
   REST_PREFIX,
   buildCurl,
   buildTestData,
+  createMcpSession,
   exampleBodyText,
+  fetchMcpObjectTypes,
   fetchKnDetail,
   fetchObjectInstances,
   pickQueryableObjectType,
@@ -453,7 +456,7 @@ export function ExperienceScene({
         : CONTEXT_LOADER_OPS,
     [toolDefs],
   );
-  const activeOps = mode === "mcp" ? mcpOps : CONTEXT_LOADER_OPS;
+  const activeOps = mode === "mcp" ? mcpOps : REST_CONTEXT_LOADER_OPS;
   const op = useMemo(
     () => activeOps.find((item) => item.id === selectedId) ?? activeOps[0] ?? null,
     [activeOps, selectedId],
@@ -595,6 +598,25 @@ export function ExperienceScene({
           ot = pickQueryableObjectType(detail);
           if (!ot) {
             message.warning("当前知识网络没有绑定数据资源的对象类型，无法生成测试数据");
+            return null;
+          }
+        }
+        if (op.id === "query_metric") {
+          const metricOwner = detail.object_types.find((item) => (item.related_metric_count ?? 0) > 0) ?? detail.object_types[0];
+          if (!metricOwner) {
+            message.warning("当前知识网络没有对象类，无法生成指标测试数据");
+            return null;
+          }
+          const objectTypes = await fetchMcpObjectTypes(
+            createMcpSession(env, tokenProvider),
+            knId,
+            [metricOwner.id],
+            turn ?? undefined,
+          );
+          if (fillSequence !== fillSequenceRef.current) return null;
+          ot = objectTypes.find((item) => item.id === metricOwner.id) ?? objectTypes[0] ?? null;
+          if (!ot?.related_metrics?.length) {
+            message.warning(`对象类 ${metricOwner.name || metricOwner.id} 没有可用指标，无法生成测试数据`);
             return null;
           }
         }
