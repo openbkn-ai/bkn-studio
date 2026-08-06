@@ -67,6 +67,14 @@ export const bknTraceEnUS = {
       stage: "No visible facts in this stage.",
       artifacts: "No visible query, data, logic, or action artifacts.",
     },
+	evidenceBasis: {
+	  action: "Action evidence",
+	  data: "Data evidence",
+	  logic: "Logic evidence",
+	  noAction: "No action was executed in this interaction",
+	  noData: "No visible data evidence was recorded",
+	  noLogic: "No logic evidence was used in this interaction",
+	},
     complete: "Evidence chain complete",
     completeness: {
       complete: "Complete",
@@ -165,10 +173,12 @@ export const bknTraceEnUS = {
       relations: "Business relationships",
 	  requestDetail: "OpenBKN call details",
       interactionRequests: "OpenBKN calls in this interaction",
+	  interactionContext: "Question and result",
       snapshot: "Snapshot Preview",
       traceGraph: "Trace Graph",
       visibility: "Visibility",
     },
+	interactionCallCount: "{{count}} OpenBKN calls",
     stages: {
       action: "Action and result",
       claim: "Business claim",

@@ -19,6 +19,52 @@ export type BusinessStoryStageGroup = {
   stage: BusinessStoryStage;
 };
 
+export type BusinessEvidenceGroups = {
+  action: TraceBusinessNode[];
+  data: TraceBusinessNode[];
+  logic: TraceBusinessNode[];
+};
+
+const dataEvidenceKinds = new Set([
+  "data_resource",
+  "evidence_ref",
+  "field",
+  "knowledge_network",
+  "object",
+  "object_instance",
+  "object_type",
+  "property",
+  "relation",
+  "relation_type",
+  "resource",
+  "row_ref",
+]);
+const logicEvidenceKinds = new Set([
+  "function",
+  "function_type",
+  "logic",
+  "logic_execution",
+  "metric",
+  "metric_type",
+]);
+const actionEvidenceKinds = new Set(["action", "action_instance", "action_type"]);
+
+export function businessEvidenceGroups(nodes: TraceBusinessNode[]): BusinessEvidenceGroups {
+  const groups: BusinessEvidenceGroups = { action: [], data: [], logic: [] };
+  for (const node of nodes) {
+    if (["hidden", "unauthorized"].includes(node.visibility ?? "")) continue;
+    const kind = businessNodeKind(node);
+    if (actionEvidenceKinds.has(kind) || node.stage === "action") {
+      groups.action.push(node);
+    } else if (logicEvidenceKinds.has(kind)) {
+      groups.logic.push(node);
+    } else if (dataEvidenceKinds.has(kind) && node.stage !== "intent") {
+      groups.data.push(node);
+    }
+  }
+  return groups;
+}
+
 export function businessStoryStages(nodes: TraceBusinessNode[]): BusinessStoryStageGroup[] {
   return stageOrder.map((stage) => ({
     nodes: nodes.filter((node) => effectiveBusinessStage(node) === stage),
@@ -100,11 +146,12 @@ export function businessNodePresentation(node: TraceBusinessNode): BusinessNodeP
   const technicalId = firstNonEmpty(refId, stringField(node.properties, "artifact_ref"), node.id);
   const resolved = resolveBusinessRef(refId || node.id);
   const displayName = node.display?.name || node.display?.controlledSummary || "";
+  const kindLabel = businessKindLabel(businessNodeKind(node));
 
   if (displayName) {
     return {
-      kind: businessKindLabel(node.nodeType),
-      subtitle: compactJoin([businessKindLabel(node.nodeType), node.display?.businessPath?.join(" / ") ?? ""]),
+      kind: kindLabel,
+      subtitle: compactJoin([kindLabel, node.display?.businessPath?.join(" / ") ?? ""]),
       technicalId,
       title: displayName,
     };
@@ -266,17 +313,40 @@ function businessKindLabel(nodeType: string): string {
     return "业务证据";
   case "interaction":
     return "交互意图";
+  case "knowledge_network":
+    return "业务知识网络";
   case "object":
+  case "object_type":
     return "业务对象";
   case "operation":
     return "执行过程";
   case "property":
+  case "field":
     return "业务属性";
+  case "relation":
+  case "relation_type":
+    return "业务关系";
   case "resource":
+  case "data_resource":
     return "数据资源";
+  case "metric":
+  case "metric_type":
+  case "function":
+  case "function_type":
+  case "logic":
+  case "logic_execution":
+    return "业务逻辑";
+  case "action":
+  case "action_instance":
+  case "action_type":
+    return "业务行动";
   default:
     return nodeType || "业务节点";
   }
+}
+
+function businessNodeKind(node: TraceBusinessNode): string {
+  return stringField(node.properties, "ref_type") || node.nodeType;
 }
 
 function scalarLike(value: unknown): string {

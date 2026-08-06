@@ -323,8 +323,10 @@ export type InteractionSummary = {
   interactionId: string;
 	partialReasons: string[];
 	questionPreview?: string;
+	questionArtifactRef?: string;
   requests: RequestSummary[];
 	resultPreview?: string;
+	resultArtifactRef?: string;
   startedAt?: string;
   status: string;
   traces: TraceExecutionSummary[];
@@ -651,8 +653,10 @@ type BackendInteractionSummary = {
   interaction_id?: string;
 	partial_reasons?: string[];
 	question_preview?: string;
+	question_artifact_ref?: string;
   requests?: BackendRequestSummary[];
 	result_preview?: string;
+	result_artifact_ref?: string;
   started_at?: string;
   status?: string;
   traces?: BackendTraceExecutionSummary[];
@@ -793,8 +797,10 @@ export async function getInteractionSummary(
     interactionId: response.data.interaction_id ?? "",
 	partialReasons: response.data.partial_reasons ?? [],
 	questionPreview: response.data.question_preview,
+	questionArtifactRef: response.data.question_artifact_ref,
     requests: (response.data.requests ?? []).map(mapRequestSummary),
 	resultPreview: response.data.result_preview,
+	resultArtifactRef: response.data.result_artifact_ref,
     startedAt: response.data.started_at,
     status: normalizeExecutionStatus(response.data.status),
     traces: (response.data.traces ?? []).map(mapTraceExecutionSummary),

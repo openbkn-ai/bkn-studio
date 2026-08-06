@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  businessEvidenceGroups,
   businessRows,
   businessNodePresentation,
   businessStoryStages,
@@ -122,6 +123,45 @@ describe("trace explainability rows", () => {
     expect(stages.find((stage) => stage.stage === "evidence")?.nodes).toHaveLength(1);
   });
 
+  it("groups resolved business references as data, logic, or action evidence", () => {
+    const groups = businessEvidenceGroups([
+      {
+        id: "business:object:supplychain:bom",
+        nodeType: "business_ref",
+        display: { name: "产品BOM" },
+        properties: { ref_type: "object_type" },
+        stage: "evidence",
+        visibility: "visible",
+      },
+      {
+        id: "business:metric:supplychain:available_qty",
+        nodeType: "business_ref",
+        display: { name: "生产可用库存" },
+        properties: { ref_type: "metric" },
+        stage: "evidence",
+        visibility: "visible",
+      },
+      {
+        id: "business:action:supplychain:create_po",
+        nodeType: "business_ref",
+        display: { name: "创建采购申请" },
+        properties: { ref_type: "action_type" },
+        stage: "action",
+        visibility: "visible",
+      },
+      {
+        id: "operation:run-sql",
+        nodeType: "operation",
+        properties: { operation_name: "run_sql" },
+        stage: "execution",
+      },
+    ]);
+
+    expect(groups.data.map((node) => node.display?.name)).toEqual(["产品BOM"]);
+    expect(groups.logic.map((node) => node.display?.name)).toEqual(["生产可用库存"]);
+    expect(groups.action.map((node) => node.display?.name)).toEqual(["创建采购申请"]);
+  });
+
   it("uses backend display names before falling back to technical refs", () => {
     expect(businessNodePresentation({
       id: "evidence:evidence:kn:supplychain_hd0202",
@@ -137,7 +177,7 @@ describe("trace explainability rows", () => {
       },
     })).toMatchObject({
       title: "HD供应链业务知识网络_v3",
-      subtitle: "业务证据",
+      subtitle: "业务知识网络",
       technicalId: "evidence:kn:supplychain_hd0202",
     });
   });
