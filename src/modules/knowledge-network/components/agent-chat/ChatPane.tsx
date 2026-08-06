@@ -909,11 +909,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             onChange={(next: string[]) => setDraftToolSelection(next)}
             options={toolOptions}
             showSearch
-            filterOption={(input, option) =>
-              String((option as { searchText?: unknown } | undefined)?.searchText ?? option?.value ?? "")
-                .toLowerCase()
-                .includes(input.trim().toLowerCase())
-            }
+            filterOption={(input, option) => {
+              const searchText = (option as { searchText?: unknown } | undefined)?.searchText;
+              return typeof searchText === "string" && searchText.toLowerCase().includes(input.trim().toLowerCase());
+            }}
             placeholder={toolDefs ? "选择工具" : "正在加载工具"}
             loading={!toolDefs}
             disabled={busy}
