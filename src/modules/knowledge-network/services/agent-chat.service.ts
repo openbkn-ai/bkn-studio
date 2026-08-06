@@ -220,6 +220,16 @@ export function buildAgentTools(
   };
   for (const def of mcpTools) {
     if (!def.name) continue;
+    // 受管生命周期归客户端管,模型碰不到。
+    //
+    // 后端把 bkn_* 一起列在 tools/list 里,原样注册给模型的后果在真机上见过:模型自己
+    // 调 bkn_start_interaction 拿到一个我们不知道的 conversation_id,而业务调用注入的
+    // bkn_context 取自客户端这一轮 turn,两者对不上 → conversation_required。错误里的
+    // required_action 又正好指回 bkn_start_interaction,模型照办再开一轮,死循环。
+    //
+    // 交互的开始与终结由 ChatPane 的 beginTurn / finish 负责,时机与答复正文绑定,
+    // 模型既不知道何时该终结,也拿不到终结清单要的回执列表。
+    if (def.name.startsWith("bkn_")) continue;
     const schema =
       def.inputSchema && typeof def.inputSchema === "object"
         ? stripBknContextSchema(def.inputSchema as Record<string, unknown>)

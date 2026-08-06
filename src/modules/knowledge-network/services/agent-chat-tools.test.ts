@@ -65,6 +65,30 @@ describe("buildAgentTools", () => {
     expect(schema.required).toEqual(["kn_id", "sql"]);
   });
 
+  /**
+   * 真机上见过的死循环：模型自己调 bkn_start_interaction 拿到一个客户端不知道的
+   * conversation_id，业务调用注入的 bkn_context 却来自客户端这轮 turn，两者对不上 →
+   * conversation_required，而错误里的 required_action 又指回 bkn_start_interaction，
+   * 模型照办再开一轮。
+   */
+  it("不把受管生命周期工具注册给模型", () => {
+    const session = stubSession();
+    const lifecycleTools = [
+      { name: "bkn_start_interaction", description: "开始交互", inputSchema: { type: "object", properties: {} } },
+      { name: "bkn_finish_interaction", description: "结束交互", inputSchema: { type: "object", properties: {} } },
+    ];
+    const tools = buildAgentTools(
+      [...lifecycleTools, runSql],
+      env,
+      "kn-demo",
+      DEFAULT_AGENT_CONFIG,
+      tokenProvider,
+      { session },
+    );
+
+    expect(Object.keys(tools)).toEqual(["run_sql"]);
+  });
+
   it("injects the turn context and locked kn_id into the real call", async () => {
     const session = stubSession();
     const turn: BknCallScope = {
