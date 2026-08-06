@@ -216,6 +216,41 @@ function errorChunk(error: unknown): Extract<AgentChunk, { type: "error" }> {
 }
 
 /**
+ * 受管生命周期类错误：上下文缺失或本轮交互已终结，重试与换工具都救不回来。
+ * 这两条错误的正文里带 `required_action`，原样喂回模型等于给它一条循环指令。
+ */
+const LIFECYCLE_DEAD_END_CODES = new Set(["conversation_required", "interaction_terminal"]);
+
+/**
+ * 把生命周期死局错误换成模型无法照做的终止语。
+ *
+ * 后端的 `{"error":{"code":"conversation_required","required_action":"bkn_start_interaction"}}`
+ * 曾经原样进模型上下文：模型照着 required_action 自己开一轮交互，拿到的 conversation_id
+ * 停在它的对话历史里，跟客户端注入的 bkn_context 对不上，于是再次被拒、再次照办——死循环。
+ * 现在生命周期工具已不注册给模型（见 buildAgentTools），它开不了交互，但仍会对着同一个错误
+ * 反复重试同一个工具，一路烧到 stopWhen 的步数上限。所以这里连"下一步该干什么"一起抹掉。
+ */
+export function sanitizeLifecycleError(text: string): string {
+  let code = "";
+  try {
+    const parsed: unknown = JSON.parse(text);
+    const error = parsed && typeof parsed === "object" ? (parsed as { error?: { code?: unknown } }).error : undefined;
+    if (error && typeof error.code === "string") code = error.code;
+  } catch {
+    return text;
+  }
+  if (!LIFECYCLE_DEAD_END_CODES.has(code)) return text;
+  return JSON.stringify({
+    error: {
+      code,
+      message:
+        "本轮受管上下文不可用，这是客户端问题，重试本工具或改调其他工具都不会恢复。" +
+        "请停止工具调用，直接告诉用户当前无法取数。",
+    },
+  });
+}
+
+/**
  * 把 MCP tools/list 的工具定义转成 AI SDK 工具集：
  * - inputSchema 直接用 MCP 的 JSON Schema（jsonSchema() 包装）。
  * - execute 走会话级 MCP 客户端，并强制注入锁定 kn_id（模型不可改）。
@@ -249,7 +284,7 @@ export function buildAgentTools(
   const tools: ToolSet = {};
   const call = async (name: string, args: Record<string, unknown>): Promise<string> => {
     const res = await session.callTool(name, args);
-    return res.text;
+    return res.isError ? sanitizeLifecycleError(res.text) : res.text;
   };
   for (const def of mcpTools) {
     // 平台侧工具由前端驱动，模型看见就会自己去调，见 isPlatformManagedTool。

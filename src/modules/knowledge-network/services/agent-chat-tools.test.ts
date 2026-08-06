@@ -126,4 +126,51 @@ describe("buildAgentTools", () => {
     // 老版本 Context Loader 不认这个字段，也不强制它；多发一个空壳只会让请求体对不上 schema。
     expect(session.callTool.mock.calls[0][1]).not.toHaveProperty("bkn_context");
   });
+
+  it("strips required_action from lifecycle dead-end errors before they reach the model", async () => {
+    const session = stubSession({
+      isError: true,
+      ok: false,
+      text: JSON.stringify({
+        error: {
+          code: "conversation_required",
+          message: "conversation_id is required",
+          required_action: "bkn_start_interaction",
+          retryable: false,
+        },
+      }),
+    });
+    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, { session });
+
+    const result = await runTool(tools.run_sql, { sql: "SELECT 1" });
+
+    // 把后端的「下一步该调 bkn_start_interaction」原样喂回去，模型就会照办——那正是死循环的燃料。
+    expect(result).not.toContain("required_action");
+    expect(result).not.toContain("bkn_start_interaction");
+    expect(result).toContain("conversation_required");
+    expect(result).toContain("停止工具调用");
+  });
+
+  it("同样处理已终结交互，并且不碰普通业务错误", async () => {
+    const terminal = stubSession({
+      isError: true,
+      ok: false,
+      text: JSON.stringify({ error: { code: "interaction_terminal", required_action: "start_interaction" } }),
+    });
+    const terminalTools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session: terminal,
+    });
+    expect(await runTool(terminalTools.run_sql, { sql: "SELECT 1" })).not.toContain("required_action");
+
+    const plain = stubSession({
+      isError: true,
+      ok: false,
+      text: JSON.stringify({ error: { code: "sql_error", message: "no such table: foo" } }),
+    });
+    const plainTools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session: plain,
+    });
+    // 业务错误要原样给模型：它据此改 SQL 重试是正确行为。
+    expect(await runTool(plainTools.run_sql, { sql: "SELECT 1" })).toContain("no such table: foo");
+  });
 });
