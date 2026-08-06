@@ -41,7 +41,9 @@ export type McpToolGroup<T> = {
  * 未收录的分组键不展示说明，不编造。
  */
 const GROUP_DESCRIPTIONS: Record<string, string> = {
-  lifecycle: "创建会话、开始与结束一次交互、受管上下文写入",
+  // 这组在「Agent 对话」里不出现（客户端自己调，见 isManagedLifecycleTool），只有外部 MCP
+  // 客户端直连时才需要自己调用。目录是服务端暴露面的说明书，所以照列，但要讲清归属。
+  lifecycle: "创建会话、开始与结束一次交互、受管上下文写入。外部 MCP 客户端自行调用；Agent 对话由 Studio 代管，不交给模型",
   discovery: "知识网络列表、网络结构、Schema 探索与对象/关系类详情",
   query: "对象实例、关系子图、逻辑属性、指标与 SQL 查询",
   action: "行动信息召回、执行与执行历史",
