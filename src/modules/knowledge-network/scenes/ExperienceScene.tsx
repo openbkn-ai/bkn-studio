@@ -27,6 +27,7 @@ import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowle
 import {
   CONTEXT_LOADER_OPS,
   MCP_PATH,
+  REST_CONTEXT_LOADER_OPS,
   REST_PREFIX,
   buildCurl,
   buildTestData,
@@ -455,7 +456,7 @@ export function ExperienceScene({
         : CONTEXT_LOADER_OPS,
     [toolDefs],
   );
-  const activeOps = mode === "mcp" ? mcpOps : CONTEXT_LOADER_OPS;
+  const activeOps = mode === "mcp" ? mcpOps : REST_CONTEXT_LOADER_OPS;
   const op = useMemo(
     () => activeOps.find((item) => item.id === selectedId) ?? activeOps[0] ?? null,
     [activeOps, selectedId],

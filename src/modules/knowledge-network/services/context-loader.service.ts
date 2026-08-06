@@ -33,6 +33,8 @@ export type ContextLoaderOp = {
   body: Record<string, unknown> | null;
   /** MCP arguments（默认 = body）。 */
   mcpArgs?: Record<string, unknown>;
+  /** 仅由 MCP tools/list 发现和调用，不在 REST 调试台展示。 */
+  mcpOnly?: boolean;
 };
 
 export const REST_PREFIX = "/api/agent-retrieval/v1";
@@ -185,6 +187,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "query_metric",
     group: "Skills & Logic",
+    mcpOnly: true,
     summary:
       "按已建模指标自身的口径取数。先通过 get_object_types 的 related_metrics 选定 metric_id；" +
       "实例级且已绑定逻辑属性的指标应使用 get_logic_properties_values，未绑定或类级指标使用本工具。",
@@ -226,6 +229,9 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     body: { kn_id: "your_kn_id" },
   },
 ];
+
+/** REST 调试台只展示具有 REST 工作流的操作。 */
+export const REST_CONTEXT_LOADER_OPS = CONTEXT_LOADER_OPS.filter((op) => !op.mcpOnly);
 
 export function mcpPathOf(op: ContextLoaderOp): string {
   return op.path.startsWith(REST_PREFIX) ? op.path.slice(REST_PREFIX.length) : op.path;
@@ -413,7 +419,8 @@ export function buildTestData(
     }
 
     case "query_metric": {
-      const metric = ot?.related_metrics?.find((item) => !item.time_dimension) ?? ot?.related_metrics?.[0];
+      const usableMetrics = (ot?.related_metrics ?? []).filter((item) => Boolean(item.id));
+      const metric = usableMetrics.find((item) => !item.time_dimension) ?? usableMetrics[0];
       if (!metric) {
         return { body: exampleBodyText(op, mode, knId), note: "未在对象类详情中发现可用指标，请先调用 get_object_types" };
       }
