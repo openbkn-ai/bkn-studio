@@ -69,10 +69,13 @@ export const subscriptionZhCN = {
       title: "能力对比",
     },
     plans: {
-      // 价格与授权粒度:暂不在页面展示(见 SubscriptionScene 的注释),留着是因为这是
-      // 对外口径的镜像,单一源在 license-server docs/design/license-service.md §1.5。
+      // 价格暂不在页面展示(见 SubscriptionScene 的注释)。留着的这份是对外版本说明的镜像
+      // ——单一源是飞书《OpenBKN 版本、服务与销售》,不是 license-server 的设计文档:那边
+      // §1.5 记的 ¥49,800/项目/年 是限时五折价且单位不同,已经漂了。标准价 ¥99,600/年,
+      // 2026-12-31 前五折 ¥49,800/年(3 年起订),之后还有六折、八折两档,都带截止日期
+      // ——正因为这套东西会随时间变,才不印在产品页上。
       community: {
-        audience: "评估、单团队试点,或已经有外部权限系统的场景。",
+        audience: "开发者、技术团队和生态伙伴。免费构建和验证完整的业务知识网络底座,适合跑通 Demo、样板项目和基础场景。",
         highlights: {
           catalog: "知识网络与数据目录全量功能",
           index: "索引构建 · 批量与流式",
@@ -82,15 +85,15 @@ export const subscriptionZhCN = {
         unit: "自部署 · 无限期",
       },
       enterprise: {
-        audience: "有合规、审计与私有化交付要求的金融、政企与大型集团。",
+        audience: "将 OpenBKN 作为企业级 AI 平台底座的组织。支持企业级管理、知识探索、版本治理和更完整的生产运维能力。",
         price: "洽谈",
         unit: "按合同授权",
       },
       inheritsFrom: "{{edition}}全部能力",
       professional: {
-        audience: "多团队协作、需要按组织结构划分权限边界的生产环境。",
-        price: "¥49,800",
-        unit: "/ 项目 · 年",
+        audience: "准备做生产试点的客户团队。在 Community 基础上获得更高效的数据更新、企业权限、标准支持和更多连接能力。",
+        price: "¥99,600",
+        unit: "/ 年 · 标准价",
       },
       quota: {
         fromLicence: "当前档位的配额取自授权文件",
@@ -99,7 +102,7 @@ export const subscriptionZhCN = {
         unlimited: "不限",
       },
     },
-    priceNote: "价格为标准报价口径,实际以商务合同为准。授权粒度为项目,一个项目一张授权文件。",
+    contact: "完整能力对比、服务条款与优惠计划见版本说明;商务咨询 business@openbkn.ai。",
     title: "版本与订阅",
     subtitle:
       "BKN 的知识网络与数据能力在所有版本中完整开放;权限边界、审计与合规能力随版本递进。",

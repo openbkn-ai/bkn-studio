@@ -191,9 +191,10 @@ export function SubscriptionScene() {
               </div>
 
               {/*
-                价格暂不展示。口径(专业版 ¥49,800/项目·年,企业与行业按合同)仍留在
-                locales 里,单一源是 license-server docs/design/license-service.md §1.5;
-                对外报价由「查看详情」指向的版本说明维护,产品页不复制一份会漂的数字。
+                价格暂不展示。对外口径在「查看详情」指向的版本说明里:标准价
+                ¥99,600/年,2026-12-31 前五折 ¥49,800/年(3 年起订),之后还有六折、八折
+                两档,各带截止日期。正因为这套东西按日期滚动,才不复制进产品页——
+                license-server 设计文档 §1.5 记的那个 ¥49,800/项目/年 就是这么漂掉的。
               */}
 
               <p className={styles.planAudience}>
@@ -333,6 +334,7 @@ export function SubscriptionScene() {
             </tbody>
           </table>
         </div>
+        <p className={styles.note}>{t("subscription.contact")}</p>
         {showClusterColumn ? (
           <>
             <p className={styles.note}>{t("subscription.cluster.hint")}</p>

@@ -77,11 +77,22 @@ export const commonZhCN = {
         "这套部署具备该功能,但当前证书的版本不覆盖它。导入更高版本的证书后即可使用,无需重启服务。",
       unknownTitle: "无法确认授权状态",
       unknownDescription: "读取集群授权状态失败,付费功能暂时不可用。请稍后重试。",
+      /**
+       * 档位名跟对外版本说明逐字一致(飞书《OpenBKN 版本、服务与销售》):产品名不翻译,
+       * 客户拿着报价单对产品页,两边写法不同会被当成两回事。
+       */
       editions: {
-        community: "社区版",
-        professional: "专业版",
-        enterprise: "企业版",
-        industry: "行业版",
+        community: "Community",
+        professional: "Professional",
+        enterprise: "Enterprise Standard",
+        industry: "Industry Solution",
+      },
+      /** 侧栏徽标位只有一个词的宽度,取档位名的首词——仍是同一套名字,不另造中文短名。 */
+      editionsShort: {
+        community: "Community",
+        professional: "Professional",
+        enterprise: "Enterprise",
+        industry: "Industry",
       },
       upgrade: "升级",
       banner: {

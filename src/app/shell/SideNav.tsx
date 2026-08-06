@@ -130,7 +130,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                         <span className="console-sidenav-label">{t(item.labelKey)}</span>
                         {item.lockedEdition ? (
                           <span className="console-sidenav-tier">
-                            {t(`common.entitlement.editions.${item.lockedEdition}`)}
+                            {t(`common.entitlement.editionsShort.${item.lockedEdition}`)}
                           </span>
                         ) : null}
                       </>
@@ -173,7 +173,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                         <span className="console-sidenav-label">{t(item.labelKey)}</span>
                         {item.lockedEdition ? (
                           <span className="console-sidenav-tier">
-                            {t(`common.entitlement.editions.${item.lockedEdition}`)}
+                            {t(`common.entitlement.editionsShort.${item.lockedEdition}`)}
                           </span>
                         ) : null}
                       </>
@@ -223,7 +223,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                               </span>
                               {child.lockedEdition ? (
                                 <span className="console-sidenav-tier">
-                                  {t(`common.entitlement.editions.${child.lockedEdition}`)}
+                                  {t(`common.entitlement.editionsShort.${child.lockedEdition}`)}
                                 </span>
                               ) : null}
                             </>

@@ -94,12 +94,14 @@ export const subscriptionEnUS = {
       title: "Capability comparison",
     },
     plans: {
-      // Pricing and licence granularity: not rendered today (see SubscriptionScene).
-      // Kept because it mirrors the commercial source of truth in license-server
-      // docs/design/license-service.md §1.5.
+      // Pricing is not rendered today (see SubscriptionScene). What is kept here mirrors the
+      // public pricing page, NOT license-server's design doc — §1.5 there records
+      // ¥49,800/project/year, which is the limited-time half-price figure under a different
+      // unit, and has drifted. List price is ¥99,600/year; discounts run to 2028 in three
+      // steps, each with an expiry — exactly why the number does not belong on this page.
       community: {
         audience:
-          "Evaluation, a single-team pilot, or deployments that already have an external permission system.",
+          "Developers, technical teams and ecosystem partners. Build and validate a complete business knowledge network for free.",
         highlights: {
           catalog: "Full knowledge network and data catalog",
           index: "Index building — batch and streaming",
@@ -110,16 +112,16 @@ export const subscriptionEnUS = {
       },
       enterprise: {
         audience:
-          "Finance, government and large groups with compliance, audit and on-premise delivery requirements.",
+          "Organisations running OpenBKN as an enterprise AI platform. Adds enterprise administration, knowledge exploration, version governance and fuller production operations.",
         price: "Contact us",
         unit: "Per contract",
       },
       inheritsFrom: "Everything in {{edition}}",
       professional: {
         audience:
-          "Multi-team production environments that need permission boundaries along the org structure.",
-        price: "¥49,800",
-        unit: "/ project · year",
+          "Customer teams moving to a production pilot. Adds faster source refresh, enterprise permissions, vendor support and more connectors.",
+        price: "¥99,600",
+        unit: "/ year · list price",
       },
       quota: {
         fromLicence: "Quotas for the current edition come from the licence file",
@@ -128,8 +130,8 @@ export const subscriptionEnUS = {
         unlimited: "Unlimited",
       },
     },
-    priceNote:
-      "List pricing; the commercial contract governs. Licences are granted per project — one project, one licence file.",
+    contact:
+      "Full capability comparison, service terms and current discounts are in the pricing page; for sales, business@openbkn.ai.",
     title: "Editions & subscription",
     subtitle:
       "Knowledge network and data capabilities are complete in every edition. Permission boundaries, audit and compliance scale with the edition.",

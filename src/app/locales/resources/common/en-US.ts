@@ -81,7 +81,15 @@ export const commonEnUS = {
       unknownTitle: "Licence status unavailable",
       unknownDescription:
         "Could not read the cluster's licence state, so paid capabilities are unavailable for now. Please retry shortly.",
+      // Edition names match the public pricing page verbatim; product names are not localised.
       editions: {
+        community: "Community",
+        professional: "Professional",
+        enterprise: "Enterprise Standard",
+        industry: "Industry Solution",
+      },
+      /** The sidebar badge fits one word — first word of the edition name, same vocabulary. */
+      editionsShort: {
         community: "Community",
         professional: "Professional",
         enterprise: "Enterprise",
