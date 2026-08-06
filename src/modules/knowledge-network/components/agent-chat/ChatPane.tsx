@@ -59,7 +59,6 @@ import {
   createBknLifecycle,
   lifecycleEnv,
   localConversationStore,
-  isPlatformManagedTool,
   type TurnOutcome,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
@@ -737,10 +736,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         turn = await lifecycle.beginTurn(question);
         turnContextRef.current = turn?.nextContext() ?? null;
         const allTools = await getTools();
+        // 生命周期工具不在这里滤掉——buildAgentTools 会接管它们的执行（绑到本轮交互）。
+        // 这里只保留「仅基础数据」面板的画像限定。
         const modelVisibleTools = allTools.filter(
-          (toolDef) =>
-            !isPlatformManagedTool(toolDef.name) &&
-            (profile.paneKey !== "base" || !profile.defaultToolNames || profile.defaultToolNames.includes(toolDef.name)),
+          (toolDef) => profile.paneKey !== "base" || !profile.defaultToolNames || profile.defaultToolNames.includes(toolDef.name),
         );
         // 硬限定：只把勾选的工具传给模型（null = 全部）。
         const activeTools = toolSelection ? modelVisibleTools.filter((t) => toolSelection.includes(t.name)) : modelVisibleTools;
@@ -853,13 +852,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     () => models.map((m) => ({ value: m.modelName, label: m.default ? `${m.modelName} · 默认` : m.modelName })),
     [models],
   );
-  // 模型可见的工具集：tools/list 会连生命周期工具一起返回，那些是平台侧管账的，
-  // 不该出现在给模型的工具集里，也不该出现在勾选器里让用户以为可以开关。
+  // 模型可见的工具集。生命周期工具不从这里藏——它们由 buildAgentTools 接管执行
+  // （绑到本轮交互），仍然是模型调得到的能力。「仅基础数据」面板另按画像硬限定。
   const agentToolDefs = useMemo(() => {
-    const visibleTools = toolDefs?.filter((toolDef) => !isPlatformManagedTool(toolDef.name)) ?? null;
-    if (!visibleTools || profile.paneKey !== "base" || !profile.defaultToolNames) return visibleTools;
+    if (!toolDefs || profile.paneKey !== "base" || !profile.defaultToolNames) return toolDefs ?? null;
     const baseToolNames = new Set(profile.defaultToolNames);
-    return visibleTools.filter((toolDef) => baseToolNames.has(toolDef.name));
+    return toolDefs.filter((toolDef) => baseToolNames.has(toolDef.name));
   }, [profile.defaultToolNames, profile.paneKey, toolDefs]);
   // 与 MCP 侧栏同款分组：tools/list 下发的 title / _meta 分组排序为准，老服务端退回本地兜底表。
   const toolOptions = useMemo(() => {
@@ -962,7 +960,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             maxTagPlaceholder={() =>
               draftToolSelection === null
                 ? `全部 · ${draftToolValue.length}`
-                : `已选 ${draftToolValue.length}${agentToolDefs ? ` / ${agentToolDefs.length}` : ""}`
+                : `已选 ${draftToolValue.length}${toolDefs ? ` / ${toolDefs.length}` : ""}`
             }
             allowClear
             onClear={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}

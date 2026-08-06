@@ -151,7 +151,13 @@ describe("ChatPane 受管生命周期接线", () => {
       session,
       turn: expect.objectContaining({ interactionId: "int_1" }) as unknown,
     });
-    expect(buildAgentTools.mock.calls[0][0]).toEqual([{ name: "run_sql" }]);
+    // 生命周期工具照常传给工具循环——buildAgentTools 会接管它们的执行，绑到本轮交互上，
+    // 而不是把它们从模型工具表里拿掉。
+    expect(buildAgentTools.mock.calls[0][0]).toEqual([
+      { name: "bkn_start_interaction" },
+      { name: "run_sql" },
+      { name: "bkn_finish_interaction" },
+    ]);
     expect(finish).toHaveBeenCalledWith("completed", "答复正文");
   });
 

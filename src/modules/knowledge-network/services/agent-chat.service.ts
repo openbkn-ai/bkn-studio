@@ -24,7 +24,10 @@ import {
   MF_RETRYABLE_CODES,
   type NormalizedAgentError,
 } from "@/modules/knowledge-network/services/agent-error";
-import { isPlatformManagedTool } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
+import {
+  isPlatformManagedTool,
+  type TurnOutcome,
+} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
   createMcpSession,
   type BknCallScope,
@@ -251,6 +254,30 @@ export function sanitizeLifecycleError(text: string): string {
 }
 
 /**
+ * 工具循环需要的这一轮交互接口：取上下文 + 终结。
+ * 结构上兼容 bkn-lifecycle 的 BknTurn，这里只取用得到的两件事。
+ */
+export type AgentTurnScope = BknCallScope & {
+  conversationId?: string;
+  interactionId?: string;
+  finish?: (outcome: TurnOutcome, answer: string) => Promise<void>;
+};
+
+/** 模型侧 outcome → 客户端 turn 的终结语义；handed_off 客户端没有对应动作，明确拒绝。 */
+const MODEL_FINISH_OUTCOMES: Record<string, TurnOutcome> = {
+  completed: "completed",
+  failed: "failed",
+  cancelled: "canceled",
+  canceled: "canceled",
+};
+
+function textOf(input: unknown, key: string): string {
+  if (!input || typeof input !== "object") return "";
+  const value = (input as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : "";
+}
+
+/**
  * 把 MCP tools/list 的工具定义转成 AI SDK 工具集：
  * - inputSchema 直接用 MCP 的 JSON Schema（jsonSchema() 包装）。
  * - execute 走会话级 MCP 客户端，并强制注入锁定 kn_id（模型不可改）。
@@ -262,12 +289,12 @@ export type AgentToolsOptions = {
   /** 复用生命周期客户端的 MCP 会话，省一次 initialize 握手。 */
   session?: McpSession;
   /**
-   * 本轮受管交互。工具循环只需要取得上下文，故取最小接口
-   * BknCallScope 而非整个 BknTurn —— 终结交互不归工具循环管。
-   * 缺省/null 时不注入 bkn_context：只有后端未启用受管生命周期时才该这样，
-   * 启用了却不传会让每个工具调用都被挡在 `conversation_required`。
+   * 本轮受管交互：工具循环取上下文注入业务调用，模型调 bkn_finish_interaction 时也从
+   * 这里走终结（`finish` 内部幂等，客户端的收尾因此变成空操作）。
+   * 缺省/null 时不注入 bkn_context、生命周期工具直通后端：只有后端未启用受管生命周期
+   * 时才该这样，启用了却不传会让每个工具调用都被挡在 `conversation_required`。
    */
-  turn?: BknCallScope | null;
+  turn?: AgentTurnScope | null;
 };
 
 export function buildAgentTools(
@@ -287,8 +314,17 @@ export function buildAgentTools(
     return res.isError ? sanitizeLifecycleError(res.text) : res.text;
   };
   for (const def of mcpTools) {
-    // 平台侧工具由前端驱动，模型看见就会自己去调，见 isPlatformManagedTool。
-    if (!def.name || isPlatformManagedTool(def.name)) continue;
+    if (!def.name) continue;
+    // 平台侧生命周期工具：能力照给模型，但接管执行，绑到客户端这一轮交互上。
+    // 见 managedLifecycleTool。没有 turn（后端未启用受管生命周期）时不接管，直通后端，
+    // 模型自己驱动整套生命周期。
+    if (turn && isPlatformManagedTool(def.name)) {
+      const managed = managedLifecycleTool(def, turn);
+      if (managed) {
+        tools[def.name] = managed;
+        continue;
+      }
+    }
     const schema =
       def.inputSchema && typeof def.inputSchema === "object"
         ? stripBknContextSchema(def.inputSchema as Record<string, unknown>)
@@ -309,6 +345,49 @@ export function buildAgentTools(
     });
   }
   return tools;
+}
+
+/**
+ * 把一个受管生命周期工具接到客户端这一轮交互上，返回 null 表示这个工具没接管、按直通处理。
+ *
+ * - `bkn_start_interaction`：返回本轮已经开好的交互，不再向后端多开一条。模型因此拿得到
+ *   一个真实可用的 conversation_id / interaction_id，而不是一条我们不认识的孤儿会话。
+ * - `bkn_finish_interaction`：走 turn 的终结路径。turn 内部的 terminated 幂等位保证
+ *   ChatPane finally 里的收尾变成空操作，模型收过尾就不会再收第二次。
+ *   handed_off 客户端没有对应语义，不接管，直通后端。
+ */
+function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
+  const describe = (extra: string) => `${def.description ?? def.name} ${extra}`;
+  if (def.name === "bkn_start_interaction") {
+    return tool({
+      description: describe("本轮交互已由 Studio 开启，调用它只会返回当前交互的标识，不会新开一轮。"),
+      inputSchema: jsonSchema({ type: "object", properties: {} }),
+      execute: (): Promise<string> =>
+        Promise.resolve(JSON.stringify({ ...turn.nextContext(), execution_status: "active" })),
+    });
+  }
+  if (def.name === "bkn_finish_interaction" && turn.finish) {
+    const finish = turn.finish.bind(turn);
+    return tool({
+      description: describe("答复写完后可以调用它终结本轮交互；不调用 Studio 也会在本轮结束时代为终结。"),
+      inputSchema: jsonSchema({
+        type: "object",
+        properties: {
+          outcome: { type: "string", enum: ["completed", "failed", "cancelled"] },
+          answer: { type: "string" },
+          reason: { type: "string" },
+        },
+        required: ["outcome"],
+      }),
+      execute: async (input: unknown): Promise<string> => {
+        const outcome = MODEL_FINISH_OUTCOMES[textOf(input, "outcome")];
+        if (!outcome) return JSON.stringify({ error: { code: "unsupported_outcome", message: "outcome 只支持 completed / failed / cancelled。" } });
+        await finish(outcome, textOf(input, "answer") || textOf(input, "reason"));
+        return JSON.stringify({ ...turn.nextContext(), execution_status: outcome === "canceled" ? "canceled" : outcome });
+      },
+    });
+  }
+  return null;
 }
 
 /**
