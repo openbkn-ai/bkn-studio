@@ -183,6 +183,17 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     },
   },
   {
+    id: "query_metric",
+    group: "Skills & Logic",
+    summary:
+      "按已建模指标自身的口径取数。先通过 get_object_types 的 related_metrics 选定 metric_id；" +
+      "实例级且已绑定逻辑属性的指标应使用 get_logic_properties_values，未绑定或类级指标使用本工具。",
+    path: `${REST_PREFIX}/kn/query_metric`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { kn_id: "your_kn_id", metric_id: "your_metric_id" },
+    mcpArgs: { kn_id: "your_kn_id", metric_id: "your_metric_id" },
+  },
+  {
     id: "get_action_info",
     group: "Skills & Logic",
     summary: "根据对象实例标识召回关联行动，返回符合 Function Call 规范的 _dynamic_tools 工具定义。支持多个实例标识。",
@@ -259,6 +270,7 @@ const TEST_DATA_OPS = new Set([
   "query_instance_subgraph",
   "get_object_types",
   "get_relation_types",
+  "query_metric",
   "describe_resource",
   "list_resources",
 ]);
@@ -397,6 +409,19 @@ export function buildTestData(
       return {
         body: JSON.stringify({ kn_id: knId, ids }, null, 2),
         note: ids.length ? `前 ${ids.length} 个关系类` : "该网络无关系类，请手填 ids",
+      };
+    }
+
+    case "query_metric": {
+      const metric = ot?.related_metrics?.find((item) => !item.time_dimension) ?? ot?.related_metrics?.[0];
+      if (!metric) {
+        return { body: exampleBodyText(op, mode, knId), note: "未在对象类详情中发现可用指标，请先调用 get_object_types" };
+      }
+      const body: Record<string, unknown> = { kn_id: knId, metric_id: metric.id };
+      if (metric.time_dimension) body.time = { instant: true };
+      return {
+        body: JSON.stringify(body, null, 2),
+        note: `指标 ${metric.name || metric.id}（对象类 ${ot?.name || ot?.id}）`,
       };
     }
 
@@ -915,12 +940,26 @@ export type KnDataSource = { type?: string; id: string; name?: string };
 
 export type KnDataProperty = { name: string; display_name?: string; type?: string; comment?: string };
 
+export type KnRelatedMetric = {
+  id: string;
+  name?: string;
+  comment?: string;
+  metric_type?: string;
+  unit?: string;
+  unit_type?: string;
+  scope_ref?: string;
+  analysis_dimensions?: string[];
+  time_dimension?: string;
+};
+
 export type KnObjectType = {
   id: string;
   name?: string;
   comment?: string;
   data_source?: KnDataSource | null;
   data_properties?: KnDataProperty[] | null;
+  related_metrics?: KnRelatedMetric[];
+  related_metric_count?: number;
 };
 
 export type KnConceptGroup = { id: string; name?: string; object_type_ids?: string[] };
@@ -1016,6 +1055,42 @@ export async function fetchKnDetail(
     concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
     relation_types: parseRelationTypes(data.relation_types ?? data.relations),
   };
+}
+
+/** 通过 MCP 下钻对象类详情，供指标调试从 related_metrics 选择真实 metric_id。 */
+export async function fetchMcpObjectTypes(
+  session: McpSession,
+  knId: string,
+  ids: string[],
+  scope?: BknCallScope,
+): Promise<KnObjectType[]> {
+  const result = await session.callTool(
+    "get_object_types",
+    withBknContext({ kn_id: knId, ids, response_format: "json" }, scope?.nextContext()),
+  );
+  if (!result.ok || result.isError || result.rpcError) {
+    throw new Error(result.rpcError?.message || result.text || "获取对象类详情失败");
+  }
+  const fromStructured = objectTypesFromMcpPayload(result.structured);
+  if (fromStructured) return fromStructured;
+  try {
+    const fromText = objectTypesFromMcpPayload(JSON.parse(result.text) as unknown);
+    if (fromText) return fromText;
+  } catch {
+    // 已明确请求 JSON；若文本仍无法解析，使用下面的统一错误提示。
+  }
+  throw new Error("get_object_types 未返回对象类列表");
+}
+
+function objectTypesFromMcpPayload(payload: unknown): KnObjectType[] | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  if (Array.isArray(record.object_types)) return record.object_types as KnObjectType[];
+  const data = record.data;
+  if (data && typeof data === "object" && Array.isArray((data as Record<string, unknown>).object_types)) {
+    return (data as Record<string, unknown>).object_types as KnObjectType[];
+  }
+  return null;
 }
 
 /**

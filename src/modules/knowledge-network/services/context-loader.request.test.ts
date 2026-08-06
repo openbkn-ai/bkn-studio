@@ -11,6 +11,7 @@ import {
   CONTEXT_LOADER_OPS,
   buildCurl,
   createMcpSession,
+  fetchMcpObjectTypes,
   fetchKnDetail,
   listMcpTools,
   sendRequest,
@@ -143,6 +144,43 @@ describe("fetchKnDetail", () => {
       kn_id: "kn-demo",
       bkn_context: bknContext,
     });
+  });
+});
+
+describe("fetchMcpObjectTypes", () => {
+  it("uses get_object_types with the managed context and returns related metrics", async () => {
+    const session = {
+      callTool: vi.fn().mockResolvedValue({
+        ok: true,
+        text: "",
+        latencyMs: 1,
+        structured: { object_types: [{ id: "orders", related_metrics: [{ id: "m_order_count" }] }] },
+        isError: false,
+      }),
+    };
+    await expect(fetchMcpObjectTypes(session, "kn-demo", ["orders"], { nextContext: () => bknContext })).resolves.toEqual([
+      { id: "orders", related_metrics: [{ id: "m_order_count" }] },
+    ]);
+    expect(session.callTool).toHaveBeenCalledWith("get_object_types", {
+      kn_id: "kn-demo",
+      ids: ["orders"],
+      response_format: "json",
+      bkn_context: bknContext,
+    });
+  });
+
+  it("falls back to a JSON data envelope when structured content is unavailable", async () => {
+    const session = {
+      callTool: vi.fn().mockResolvedValue({
+        ok: true,
+        text: '{"data":{"object_types":[{"id":"orders","related_metrics":[{"id":"m_order_count"}]}]}}',
+        latencyMs: 1,
+        isError: false,
+      }),
+    };
+    await expect(fetchMcpObjectTypes(session, "kn-demo", ["orders"])).resolves.toEqual([
+      { id: "orders", related_metrics: [{ id: "m_order_count" }] },
+    ]);
   });
 });
 

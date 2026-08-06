@@ -20,11 +20,12 @@ import {
 
 const opById = (id: string) => CONTEXT_LOADER_OPS.find((o) => o.id === id)!;
 
-const ot = (id: string, fields: string[], resourceId?: string): KnObjectType => ({
+const ot = (id: string, fields: string[], resourceId?: string, relatedMetrics?: KnObjectType["related_metrics"]): KnObjectType => ({
   id,
   name: id,
   data_source: resourceId ? { id: resourceId } : null,
   data_properties: fields.map((name) => ({ name })),
+  related_metrics: relatedMetrics,
 });
 
 const detail = (
@@ -40,12 +41,13 @@ const detail = (
 });
 
 describe("opSupportsTestData", () => {
-  it("covers data ops, excludes relation/action/metric ops", () => {
+  it("covers data and metric ops, excludes relation/action ops", () => {
     expect(opSupportsTestData("query_object_instance")).toBe(true);
     expect(opSupportsTestData("run_sql")).toBe(true);
     expect(opSupportsTestData("search_schema")).toBe(true);
     expect(opSupportsTestData("get_kn_detail")).toBe(true);
     expect(opSupportsTestData("query_instance_subgraph")).toBe(true);
+    expect(opSupportsTestData("query_metric")).toBe(true);
     expect(opSupportsTestData("find_skills")).toBe(false);
     expect(opSupportsTestData("get_action_info")).toBe(false);
   });
@@ -166,5 +168,20 @@ describe("buildTestData", () => {
   it("query_instance_subgraph notes when no relation type is available", () => {
     const fill = buildTestData(opById("query_instance_subgraph"), "rest", "kn_demo", d, null, null);
     expect(fill.note).toContain("未在 get_kn_detail 发现可用关系类");
+  });
+
+  it("query_metric uses a real metric without a time dimension", () => {
+    const metricOt = ot("orders", ["status"], undefined, [
+      { id: "m_gmv", name: "GMV", time_dimension: "created_at" },
+      { id: "m_order_count", name: "订单数" },
+    ]);
+    const fill = buildTestData(opById("query_metric"), "mcp", "kn_demo", detail([metricOt]), metricOt, null);
+    expect(JSON.parse(fill.body)).toEqual({ kn_id: "kn_demo", metric_id: "m_order_count" });
+  });
+
+  it("query_metric uses an instant query when the metric has a time dimension", () => {
+    const metricOt = ot("orders", ["status"], undefined, [{ id: "m_gmv", name: "GMV", time_dimension: "created_at" }]);
+    const fill = buildTestData(opById("query_metric"), "mcp", "kn_demo", detail([metricOt]), metricOt, null);
+    expect(JSON.parse(fill.body)).toEqual({ kn_id: "kn_demo", metric_id: "m_gmv", time: { instant: true } });
   });
 });
