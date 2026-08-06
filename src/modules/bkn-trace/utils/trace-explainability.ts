@@ -52,13 +52,13 @@ const actionEvidenceKinds = new Set(["action", "action_instance", "action_type"]
 export function businessEvidenceGroups(nodes: TraceBusinessNode[]): BusinessEvidenceGroups {
   const groups: BusinessEvidenceGroups = { action: [], data: [], logic: [] };
   for (const node of nodes) {
-    if (["hidden", "unauthorized"].includes(node.visibility ?? "")) continue;
+    if (!isVisibleBusinessEvidence(node)) continue;
     const kind = businessNodeKind(node);
     if (actionEvidenceKinds.has(kind) || node.stage === "action") {
       groups.action.push(node);
     } else if (logicEvidenceKinds.has(kind)) {
       groups.logic.push(node);
-    } else if (dataEvidenceKinds.has(kind) && node.stage !== "intent") {
+    } else if (dataEvidenceKinds.has(kind) || effectiveBusinessStage(node) === "evidence") {
       groups.data.push(node);
     }
   }
@@ -100,6 +100,10 @@ const businessReferenceReasons = new Set([
 function effectiveBusinessStage(node: TraceBusinessNode): BusinessStoryStage | undefined {
   if (node.stage) return node.stage;
   return node.id.startsWith("business:") ? "evidence" : undefined;
+}
+
+function isVisibleBusinessEvidence(node: TraceBusinessNode): boolean {
+  return !["hidden", "omitted", "unauthorized"].includes(node.visibility ?? "");
 }
 
 export type ExplainabilityRow = {
@@ -146,7 +150,9 @@ export function businessNodePresentation(node: TraceBusinessNode): BusinessNodeP
   const technicalId = firstNonEmpty(refId, stringField(node.properties, "artifact_ref"), node.id);
   const resolved = resolveBusinessRef(refId || node.id);
   const displayName = node.display?.name || node.display?.controlledSummary || "";
-  const kindLabel = businessKindLabel(businessNodeKind(node));
+  const kindLabel = businessKindLabel(businessNodeKind(node))
+    ?? businessKindLabel(node.nodeType)
+    ?? "业务节点";
 
   if (displayName) {
     return {
@@ -192,9 +198,10 @@ export function businessNodePresentation(node: TraceBusinessNode): BusinessNodeP
       title: artifactNames[artifactType],
     };
   }
+  const nodeTypeLabel = businessKindLabel(node.nodeType) ?? "业务节点";
   return {
-    kind: businessKindLabel(node.nodeType),
-    subtitle: compactJoin([businessKindLabel(node.nodeType), scalarLike(node.properties.validity), node.versionStatus ?? ""]),
+    kind: nodeTypeLabel,
+    subtitle: compactJoin([nodeTypeLabel, scalarLike(node.properties.validity), node.versionStatus ?? ""]),
     technicalId,
     title: node.label || shortValue(technicalId),
   };
@@ -303,7 +310,7 @@ function resolveBusinessRef(ref: string): Omit<BusinessNodePresentation, "techni
   return undefined;
 }
 
-function businessKindLabel(nodeType: string): string {
+function businessKindLabel(nodeType: string): string | undefined {
   switch (nodeType) {
   case "artifact":
     return "证据制品";
@@ -341,7 +348,7 @@ function businessKindLabel(nodeType: string): string {
   case "action_type":
     return "业务行动";
   default:
-    return nodeType || "业务节点";
+    return undefined;
   }
 }
 

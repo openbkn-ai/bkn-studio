@@ -587,7 +587,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 
     expect(screen.queryByText("客户 A 的风险为什么上升？（完整问题）")).toBeNull();
     expect(screen.queryByText("近 7 天投诉增加 42%，因此风险等级从中升至高。（完整结论）")).toBeNull();
-    expect(screen.getAllByText("客户风险").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("客户风险")).toHaveLength(2);
 
     fireEvent.click(screen.getByText("bknTrace.tabs.diagnostics"));
     fireEvent.click(await screen.findByRole("button", { name: "trace_001" }));
@@ -634,9 +634,61 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
 
     expect(await screen.findByText("bknTrace.evidenceBasis.data")).not.toBeNull();
-    expect(screen.getAllByText("产品BOM").length).toBeGreaterThan(0);
-    expect(screen.getByText("bknTrace.evidenceBasis.noLogic")).not.toBeNull();
-    expect(screen.getByText("bknTrace.evidenceBasis.noAction")).not.toBeNull();
+    expect(screen.getAllByText("产品BOM")).toHaveLength(2);
+    expect(screen.getByText("bknTrace.evidenceBasis.noLogicAtCall")).not.toBeNull();
+    expect(screen.getByText("bknTrace.evidenceBasis.noActionAtCall")).not.toBeNull();
+  });
+
+  it("保留未分类制品，而不是将其隐藏为无依据", async () => {
+    vi.mocked(getEvidenceChain).mockResolvedValueOnce({
+      data: {
+        artifactLinks: [{
+          artifactRef: "artifact:art_model_note_001",
+          artifactType: "model_note",
+          eventId: "evt_note",
+          eventType: "agent.note.observed",
+          role: "note_artifact_ref",
+        }],
+        businessRefs: [],
+        claims: [],
+        evidenceRefs: [],
+      },
+      page: { edgeCount: 0, nodeCount: 1, truncated: false },
+      conclusionScope: "trace",
+      partial: false,
+      partialReason: [],
+      requestId: requestSummary.requestId,
+      traceId: "trace_001",
+      visibilitySummary: {
+        authorizedRefCount: 1,
+        hiddenRefCount: 0,
+        omittedRefCount: 0,
+        redactedRefCount: 0,
+        unauthorizedRefCount: 0,
+        unresolvedRefCount: 0,
+      },
+    });
+    vi.mocked(getEvidenceArtifact).mockResolvedValueOnce({
+      accountId: "acct-1",
+      accountType: "user",
+      artifactId: "art_model_note_001",
+      artifactType: "model_note",
+      businessRefs: [],
+      content: "模型补充说明",
+      contentHash: "sha256:test",
+      contentType: "application/json",
+      observedAt: "2026-07-27T09:00:00Z",
+      requestId: requestSummary.requestId,
+      schemaVersion: "2.2.0",
+      traceId: "trace_001",
+    });
+    window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
+
+    render(<BknTraceRunsScene />);
+    fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
+
+    expect(await screen.findByText("bknTrace.evidenceBasis.other")).not.toBeNull();
+    expect(screen.getByText("模型补充说明")).not.toBeNull();
   });
 
   it("OpenBKN 调用以业务操作区分，而不是重复本轮问题和答案", async () => {

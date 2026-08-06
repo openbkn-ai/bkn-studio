@@ -162,6 +162,29 @@ describe("trace explainability rows", () => {
     expect(groups.action.map((node) => node.display?.name)).toEqual(["创建采购申请"]);
   });
 
+  it("keeps visible unknown evidence as data while omitting suppressed references", () => {
+    const groups = businessEvidenceGroups([
+      {
+        id: "business:source:supplychain:inventory-feed",
+        nodeType: "business_ref",
+        display: { name: "库存同步来源" },
+        properties: { ref_type: "source_ref" },
+        stage: "evidence",
+        visibility: "visible",
+      },
+      {
+        id: "business:source:supplychain:omitted-feed",
+        nodeType: "business_ref",
+        display: { name: "不应显示的数据来源" },
+        properties: { ref_type: "source_ref" },
+        stage: "evidence",
+        visibility: "omitted",
+      },
+    ]);
+
+    expect(groups.data.map((node) => node.display?.name)).toEqual(["库存同步来源"]);
+  });
+
   it("uses backend display names before falling back to technical refs", () => {
     expect(businessNodePresentation({
       id: "evidence:evidence:kn:supplychain_hd0202",
@@ -179,6 +202,18 @@ describe("trace explainability rows", () => {
       title: "HD供应链业务知识网络_v3",
       subtitle: "业务知识网络",
       technicalId: "evidence:kn:supplychain_hd0202",
+    });
+  });
+
+  it("does not expose an unknown ref type as a business label", () => {
+    expect(businessNodePresentation({
+      id: "business:source:supplychain:inventory-feed",
+      nodeType: "evidence_ref",
+      display: { name: "库存同步来源" },
+      properties: { ref_type: "source_ref" },
+    })).toMatchObject({
+      subtitle: "业务证据",
+      title: "库存同步来源",
     });
   });
 

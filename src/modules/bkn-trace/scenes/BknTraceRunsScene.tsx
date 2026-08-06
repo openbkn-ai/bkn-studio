@@ -774,6 +774,7 @@ function BusinessExplanation({
   const { t } = useTranslation();
   const stages = businessStoryStages(graph.data.nodes);
   const evidenceGroups = businessEvidenceGroups(graph.data.nodes);
+  const artifactGroups = businessEvidenceArtifacts(artifacts);
   const question = artifacts.find((artifact) => artifact.artifactType === "question")?.content;
   const result = artifacts.find((artifact) => artifact.artifactType === "result")?.content;
   return (
@@ -807,27 +808,67 @@ function BusinessExplanation({
         <Typography.Title level={5}>{t("bknTrace.sections.artifacts")}</Typography.Title>
         <div className={styles.evidenceBasisGrid}>
           <EvidenceBasis
-            artifacts={artifacts.filter((artifact) => ["data", "data_result", "query"].includes(artifact.artifactType))}
-            emptyText={t("bknTrace.evidenceBasis.noData")}
+            artifacts={artifactGroups.data}
+            emptyText={t("bknTrace.evidenceBasis.noDataAtCall")}
             nodes={evidenceGroups.data}
             title={t("bknTrace.evidenceBasis.data")}
           />
           <EvidenceBasis
-            artifacts={artifacts.filter((artifact) => ["logic", "logic_execution"].includes(artifact.artifactType))}
-            emptyText={t("bknTrace.evidenceBasis.noLogic")}
+            artifacts={artifactGroups.logic}
+            emptyText={t("bknTrace.evidenceBasis.noLogicAtCall")}
             nodes={evidenceGroups.logic}
             title={t("bknTrace.evidenceBasis.logic")}
           />
           <EvidenceBasis
-            artifacts={artifacts.filter((artifact) => artifact.artifactType.startsWith("action"))}
-            emptyText={t("bknTrace.evidenceBasis.noAction")}
+            artifacts={artifactGroups.action}
+            emptyText={t("bknTrace.evidenceBasis.noActionAtCall")}
             nodes={evidenceGroups.action}
             title={t("bknTrace.evidenceBasis.action")}
           />
+          {artifactGroups.other.length ? (
+            <EvidenceBasis
+              artifacts={artifactGroups.other}
+              emptyText=""
+              nodes={[]}
+              title={t("bknTrace.evidenceBasis.other")}
+            />
+          ) : null}
         </div>
       </section>
     </div>
   );
+}
+
+function businessEvidenceArtifacts(artifacts: EvidenceArtifact[]) {
+  const groups = {
+    action: [] as EvidenceArtifact[],
+    data: [] as EvidenceArtifact[],
+    logic: [] as EvidenceArtifact[],
+    other: [] as EvidenceArtifact[],
+  };
+  for (const artifact of artifacts) {
+    switch (artifact.artifactType) {
+    case "query":
+    case "data":
+    case "data_result":
+      groups.data.push(artifact);
+      break;
+    case "logic":
+    case "logic_execution":
+      groups.logic.push(artifact);
+      break;
+    case "question":
+    case "result":
+      break;
+    default:
+      if (artifact.artifactType.startsWith("action")) {
+        groups.action.push(artifact);
+      } else {
+        groups.other.push(artifact);
+      }
+    }
+  }
+  return groups;
 }
 
 function EvidenceBasis({
