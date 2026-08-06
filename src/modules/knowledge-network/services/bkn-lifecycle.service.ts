@@ -129,16 +129,24 @@ export function memoryConversationStore(): ConversationStore {
 export class BknLifecycleError extends Error {
   readonly code: string;
   readonly requiredAction: string;
+  /** `interaction_in_progress` 会回带卡住的那条交互，够我们自己回收，见 beginTurn。 */
+  readonly currentInteractionId: string;
 
-  constructor(tool: string, code: string, message: string, requiredAction: string) {
+  constructor(tool: string, code: string, message: string, requiredAction: string, currentInteractionId = "") {
     super(message || `${tool} 失败（${code || "未知错误"}）`);
     this.name = "BknLifecycleError";
     this.code = code;
     this.requiredAction = requiredAction;
+    this.currentInteractionId = currentInteractionId;
   }
 }
 
-type LifecycleErrorPayload = { code?: unknown; message?: unknown; required_action?: unknown };
+type LifecycleErrorPayload = {
+  code?: unknown;
+  message?: unknown;
+  required_action?: unknown;
+  current_interaction_id?: unknown;
+};
 
 function isToolMissing(rpcError: { code?: number; message?: string } | undefined): boolean {
   if (!rpcError) return false;
@@ -153,13 +161,43 @@ function lifecycleErrorOf(tool: string, structured: unknown, fallbackText: strin
   const fallback = fallbackText || `${tool} 调用失败`;
   const message = typeof error.message === "string" ? error.message : fallback;
   const visibleMessage = code === "interaction_in_progress" ? STUCK_INTERACTION_HINT : message;
-  return new BknLifecycleError(tool, code, visibleMessage, typeof error.required_action === "string" ? error.required_action : "");
+  return new BknLifecycleError(
+    tool,
+    code,
+    visibleMessage,
+    typeof error.required_action === "string" ? error.required_action : "",
+    typeof error.current_interaction_id === "string" ? error.current_interaction_id : "",
+  );
 }
 
-const STUCK_INTERACTION_HINT = "当前会话仍有未结束的交互。请清空对话后重试。";
+/** 回收也没救回来才会看到这句——正常情况下 beginTurn 已经替用户处理掉了。 */
+const STUCK_INTERACTION_HINT = "当前会话仍有未结束的交互，自动回收失败。请清空对话后重试。";
 
 function shouldStartNewConversation(error: unknown): boolean {
   return error instanceof BknLifecycleError && (error.code === "conversation_not_found" || error.code === "interaction_in_progress");
+}
+
+/**
+ * 把上一轮残留的活跃交互终结掉，让本会话能继续开新一轮；回收不了返回 false。
+ *
+ * 触发场景是上一轮没走完：刷新、关标签页、收尾请求自己失败。Core 一条 conversation
+ * 只允许一个 active interaction，残留不清掉，这条会话之后每一轮都开不出来。
+ * outcome 记 cancelled 而不是 completed——那一轮确实没答完，Trace 上不该记成正常结束。
+ */
+async function reclaimStuckInteraction(session: McpSession, error: unknown): Promise<boolean> {
+  if (!(error instanceof BknLifecycleError) || error.code !== "interaction_in_progress") return false;
+  if (error.requiredAction !== "bkn_finish_interaction" || !error.currentInteractionId) return false;
+  try {
+    await callLifecycleTool(session, "bkn_finish_interaction", {
+      interaction_id: error.currentInteractionId,
+      outcome: "cancelled",
+      reason: "reclaimed by client: previous turn did not finish",
+    });
+    return true;
+  } catch {
+    // 回收失败就交回上层换新会话，别把这一步的错误盖住原始错误。
+    return false;
+  }
 }
 
 async function callLifecycleTool(
@@ -228,10 +266,20 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
         try {
           state = await startInteraction(conversationId);
         } catch (error) {
-          if (!conversationId || !shouldStartNewConversation(error)) throw error;
-          conversationId = null;
-          conversationStore.clear();
-          state = await startInteraction(null);
+          if (!conversationId) throw error;
+          // 先按后端给的 required_action 回收：interaction_in_progress 会回带
+          // current_interaction_id，把那条卡住的交互 finish 掉，本会话就能继续。
+          // 上一轮没走完（刷新、关标签页、收尾请求失败）就会留下这种残留。
+          // 直接换新会话虽然也能开出一轮，但把用户的对话历史在 Trace 上拦腰截断，
+          // 还留下一条永远 active 的孤儿交互，所以回收优先、换会话兜底。
+          if (await reclaimStuckInteraction(session, error)) {
+            state = await startInteraction(conversationId);
+          } else {
+            if (!shouldStartNewConversation(error)) throw error;
+            conversationId = null;
+            conversationStore.clear();
+            state = await startInteraction(null);
+          }
         }
         const startedConversationId = stringField(state, "conversation_id");
         const interactionId = stringField(state, "interaction_id");
