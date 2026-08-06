@@ -15,14 +15,14 @@ import {
 import { resolveQuota } from "@/modules/subscription/subscription-plans";
 
 describe("capability catalog", () => {
-  // 登记表里 planned 的行(sso / explorer / business_provenance 等)对客户不可见——
-  // 写进版本对比页就是在卖还没有的东西。
+  // 登记表里 planned 的行(sso / explorer 等)对客户不可见——写进版本对比页就是在卖
+  // 还没有的东西。business_provenance 不在此列:产品决定按企业能力在售(2026-08-06),
+  // 上游登记表转 active 之前,页面先按在售展示。
   it("不收录任何 planned 能力", () => {
     const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
 
     for (const planned of [
       "bigdata_connect",
-      "business_provenance",
       "explorer",
       "multi_tenant",
       "offline_bundle",
@@ -40,7 +40,7 @@ describe("capability catalog", () => {
     expect(capabilitiesIntroducedBy("community")).toEqual([]);
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
     expect(capabilitiesIntroducedBy("professional")).toHaveLength(6);
-    expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(4);
+    expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(5);
   });
 
   /**
@@ -56,14 +56,26 @@ describe("capability catalog", () => {
     expect(served.sort()).toEqual(["audit", "perm_object_level", "rbac_basic"]);
   });
 
-  // 后端装配表今天登记的能力必须在册且标为可实测,否则「你的集群」列对不上任何一行。
-  it("覆盖后端已装配的能力,且都标成 bkn-safe", () => {
-    for (const key of Object.values(CAPABILITIES)) {
-      const entry = CAPABILITY_CATALOG.find((item) => item.key === key);
+  // 常量表里的每个 key 都要在册,否则页面上少一行在售能力。
+  it("覆盖 CAPABILITIES 里的每个 key", () => {
+    const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
 
-      expect(entry).toBeDefined();
-      expect(entry?.servedBy).toBe("bkn-safe");
+    for (const key of Object.values(CAPABILITIES)) {
+      expect(keys).toContain(key);
     }
+  });
+
+  /**
+   * `/api/safe/v1/capabilities` 只描述 bkn-safe 自己的镜像(ee-design.md §6「A 答不了 B」),
+   * 所以标成 bkn-safe 的必须恰好是它装配的那几个:多标一条,页面就会对别的服务的能力
+   * 下「当前镜像不含」的错误结论;少标一条,本可以实测的能力白白显示成「—」。
+   */
+  it("只有 bkn-safe 装配的能力标为可实测", () => {
+    const served = CAPABILITY_CATALOG.filter((entry) => entry.servedBy === "bkn-safe").map(
+      (entry) => entry.key,
+    );
+
+    expect(served.sort()).toEqual(["audit", "perm_object_level", "rbac_basic"]);
   });
 });
 

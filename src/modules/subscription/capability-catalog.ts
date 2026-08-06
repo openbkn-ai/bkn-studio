@@ -16,8 +16,8 @@ import type { Edition } from "@/framework/entitlement/edition";
  * **产品自带、不在运行时去拉**——决策 7:客户常常完全离线,而离线激活流程正是为拉不到
  * license-server 的客户存在的,那些客户同样拉不到名字。
  *
- * 只收 `status = active` 的行。`planned`(sso / explorer / multi_tenant /
- * version_mgmt / offline_bundle / bigdata_connect / business_provenance)一条都不进:
+ * 只收对客户在售的行。`planned`(sso / explorer / multi_tenant / version_mgmt /
+ * offline_bundle / bigdata_connect)一条都不进:
  * 登记表里它们存在是为了让路线图落在表里而不是散文里,对客户不可见——写进版本对比页
  * 就是在卖还没有的东西。
  *
@@ -96,6 +96,13 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
   },
   { category: "permission", key: CAPABILITIES.PERM_OBJECT_LEVEL,
     servedBy: "bkn-safe", minEdition: "enterprise" },
+  {
+    category: "observability",
+    key: CAPABILITIES.BUSINESS_PROVENANCE,
+    servedBy: "other",
+    minEdition: "enterprise",
+    sinceVersion: "0.1.3",
+  },
   { category: "operations", key: "audit",
     servedBy: "bkn-safe", minEdition: "enterprise" },
   { category: "operations", key: "ops_dashboard",

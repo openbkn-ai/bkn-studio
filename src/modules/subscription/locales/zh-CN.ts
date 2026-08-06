@@ -13,6 +13,10 @@
 export const subscriptionZhCN = {
   subscription: {
     capabilities: {
+      business_provenance: {
+        description: "业务问题与结果的证据链、数据溯源、业务语义图与交互式追溯",
+        name: "业务溯源",
+      },
       audit: { description: "审计治理", name: "审计治理" },
       bkn_trace: {
         description: "技术 Trace 与运行诊断:调用链、耗时与错误定位(不含业务正文与证据链)",

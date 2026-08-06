@@ -14,6 +14,11 @@
 export const subscriptionEnUS = {
   subscription: {
     capabilities: {
+      business_provenance: {
+        description:
+          "Evidence chains, data provenance, the business semantic graph and interactive tracing for business questions and results.",
+        name: "Business provenance",
+      },
       audit: { description: "Audit governance", name: "Audit governance" },
       bkn_trace: {
         description:

@@ -24,6 +24,14 @@ export const CAPABILITIES = {
   RBAC_BASIC: "rbac_basic",
   /** 对象级授权与高级角色控制(显式 deny、有效期)。企业档起。 */
   PERM_OBJECT_LEVEL: "perm_object_level",
+  /**
+   * 业务溯源:证据链、数据溯源、业务语义图、Resolver、交互式追溯与导出。企业档起。
+   *
+   * 由 bkn-trace 实现(走临时分叉 `bkn-foundry-ee`),**不在 bkn-safe 的装配表里**——
+   * 所以 `/api/safe/v1/capabilities` 永远不会报它。别拿它去门控导航:那会把这个页面
+   * 永久隐藏(ee-design.md §6「A 答不了 B」)。它今天只用于版本页的在售清单。
+   */
+  BUSINESS_PROVENANCE: "business_provenance",
   /** 操作审计与合规报表。企业档起。 */
   AUDIT: "audit",
 } as const;
