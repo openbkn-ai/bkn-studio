@@ -456,6 +456,8 @@ export const systemAdminEnUS = {
         max_connectors: "Max Data Connections",
       },
       status: {
+        trial: "Trial period",
+        unlicensed: "No licence imported",
         valid: "License Valid",
         validUnbound: "Activation Pending",
         grace: "Grace Period",
@@ -463,6 +465,10 @@ export const systemAdminEnUS = {
         invalid: "Unactivated or Invalid",
       },
       statusDesc: {
+        trial:
+          "First-run trial window. Community capabilities are fully open and no prompts are shown. Import a licence to run at its edition.",
+        unlicensed:
+          "No licence file has been imported. Community capabilities keep working; request a licence from the portal to unlock paid ones.",
         valid: "The cluster license is active.",
         validUnbound: "A license has been imported but is not bound to this cluster. Complete offline activation for compliance; functionality is not affected.",
         grace: "The license has expired. Grace period remaining: {{days}} day(s). Renewal status: {{reason}}.",
