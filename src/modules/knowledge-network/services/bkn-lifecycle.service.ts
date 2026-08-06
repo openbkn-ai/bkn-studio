@@ -13,6 +13,36 @@ import {
   type McpSession,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
+/**
+ * 本客户端自己驱动的受管生命周期工具，供文档与测试对照。
+ *
+ * 注意：这**不是**过滤名单——过滤按前缀走，见 isPlatformManagedTool。
+ */
+export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
+  "bkn_start_interaction",
+  "bkn_finish_interaction",
+]);
+
+/**
+ * 平台侧工具前缀。生命周期与业务溯源工具一律 `bkn_` 开头（bkn_start_interaction /
+ * bkn_finish_interaction / bkn_causality / bkn_get_receipt / bkn_retry_operation …），
+ * 业务工具一律不带前缀（search_schema / run_sql / query_object_instance …）。
+ */
+const PLATFORM_TOOL_PREFIX = "bkn_";
+
+/**
+ * 这个工具是不是平台侧管账的、不该给模型看见的。
+ *
+ * 按前缀判而不是列名单：平台侧工具集随后端演进反复变动（#618 期间一度扩到十余个
+ * 溯源工具，之后又裁回 bkn_start_interaction / bkn_finish_interaction 两个）。
+ * 列名单必漏，漏了模型就会去调。
+ * 实测模型真会调：一轮里连调两次 bkn_start_interaction，被 permission_denied 挡下。
+ * 挡不下的话更糟——模型另开一条交互会撞上 Core 的 active interaction 唯一约束。
+ */
+export function isPlatformManagedTool(name: string): boolean {
+  return name.startsWith(PLATFORM_TOOL_PREFIX);
+}
+
 export type TurnOutcome = "completed" | "failed" | "canceled";
 
 export type BknTurn = {

@@ -11,7 +11,7 @@
  * 清空对话忘了换会话，都不会被服务层的测试发现。
  */
 
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,7 +19,9 @@ import type { BknLifecycle, BknTurn } from "@/modules/knowledge-network/services
 import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 
-import { ChatPane, DEFAULT_PROMPT, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
+import { ANSWER_OPEN } from "@/modules/knowledge-network/services/agent-chat.service";
+
+import { ChatPane, DEFAULT_PROMPT, KN_EVIDENCE_HINT, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
 
 type AgentChatModule = typeof import("@/modules/knowledge-network/services/agent-chat.service");
 type LifecycleModule = typeof import("@/modules/knowledge-network/services/bkn-lifecycle.service");
@@ -48,6 +50,7 @@ const profile: PaneProfile = {
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: false,
   defaultToolNames: null,
+  evidenceHint: KN_EVIDENCE_HINT,
 };
 
 const baseProfile: PaneProfile = {
@@ -249,6 +252,25 @@ describe("ChatPane 受管生命周期接线", () => {
     expect(finish).not.toHaveBeenCalled();
   });
 
+  it("流里报错时以 failed 终结，不能记成 completed", async () => {
+    // 流里的 error 是 runAgentChat 内部捕获后正常返回的，不会抛到 catch。
+    // 漏了这一笔，面板上是红条而交给 Core 的是 completed —— 失败会被系统性少记。
+    const { finish } = stubLifecycle();
+    runAgentChat.mockImplementation(({ onChunk }) => {
+      onChunk({ type: "error", error: "模型服务繁忙，请稍后重试（50508）", retryable: true });
+      onChunk({ type: "finish" });
+      return Promise.resolve();
+    });
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("问一句");
+      await Promise.resolve();
+    });
+
+    expect(finish).toHaveBeenCalledWith("failed", "");
+  });
+
   it("清空对话换掉受管会话", async () => {
     const { reset } = stubLifecycle();
 
@@ -260,5 +282,74 @@ describe("ChatPane 受管生命周期接线", () => {
 
     // 这是 conversation id 唯一的更换点；漏了会让「清空」后的新对话仍挂在旧会话上。
     expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("失败轮的重试", () => {
+  it("原地重跑那一轮，不追加重复的提问，也不把空 assistant 回灌历史", async () => {
+    stubLifecycle();
+    runAgentChat.mockImplementation(({ onChunk }) => {
+      onChunk({ type: "error", error: "模型服务繁忙，请稍后重试（50508）", retryable: true });
+      onChunk({ type: "finish" });
+      return Promise.resolve();
+    });
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("在途项目有几个?");
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "重试本轮" }));
+      await Promise.resolve();
+    });
+
+    expect(runAgentChat).toHaveBeenCalledTimes(2);
+    // 重跑的历史里只该有这一条提问：追加式重试会变成两条 user，
+    // 失败轮那条 content: "" 的 assistant 也会一并喂回严格 router。
+    expect(runAgentChat.mock.calls[1][0].history).toEqual([{ role: "user", content: "在途项目有几个?" }]);
+    expect(screen.getAllByText("在途项目有几个?")).toHaveLength(1);
+  });
+});
+
+/**
+ * 输出契约必须由 composedSystem 自动拼接。提示词是持久化状态：每轮结束回写
+ * localStorage，载入时 `saved.systemPrompt ?? profile.defaultPrompt` 优先用存量值。
+ * 契约一旦写进默认提示词，就只对「从没聊过」的人生效 —— 而会撞上推敲糊进正文
+ * 这个 bug 的恰恰是老用户，他们也不会知道要去设置里点一次「恢复默认」。
+ */
+describe("输出契约的下发方式", () => {
+  it("存量用户存的是改版前的旧提示词，照样拿得到契约", async () => {
+    stubLifecycle();
+    // 模拟老会话：localStorage 里是不含任何契约的旧提示词。
+    localStorage.setItem(
+      "bkn-studio:agentchat:kn-demo",
+      JSON.stringify({ messages: [], model: "qwen-test", systemPrompt: "旧的自定义提示词，没有任何契约" }),
+    );
+    runAgentChat.mockResolvedValue(undefined);
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("在途项目有几个?");
+      await Promise.resolve();
+    });
+
+    const system = runAgentChat.mock.calls[0][0].system;
+    expect(system).toContain("旧的自定义提示词，没有任何契约");
+    expect(system).toContain(ANSWER_OPEN);
+  });
+
+  it("契约里的依据写法跟着面板画像走", async () => {
+    stubLifecycle();
+    runAgentChat.mockResolvedValue(undefined);
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("在途项目有几个?");
+      await Promise.resolve();
+    });
+
+    expect(runAgentChat.mock.calls[0][0].system).toContain(KN_EVIDENCE_HINT);
   });
 });
