@@ -11,6 +11,7 @@ import {
   DeleteOutlined,
   DisconnectOutlined,
   EllipsisOutlined,
+  EditOutlined,
   InfoCircleFilled,
   MinusOutlined,
   NodeIndexOutlined,
@@ -27,6 +28,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -75,6 +77,7 @@ import {
   countMappedProperties,
   filterPropertyRows,
   filterViewFieldRows,
+  isMappedPropertyConnectionVisible,
   type ConnectionPoint,
   type MappingFilter,
 } from "./object-type-data-attribute-editor.utils";
@@ -330,6 +333,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const [primaryKeyPopoverOpen, setPrimaryKeyPopoverOpen] = useState(false);
   const [displayKeyPopoverOpen, setDisplayKeyPopoverOpen] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const recalculateFrameRef = useRef<number | null>(null);
 
   const validProperties = useMemo(
     () => normalizeProperties(dataProperties),
@@ -407,6 +411,16 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       fieldSearch,
     );
   }, [dataProperties, fieldSearch, mappingFilter, propertySearch, viewFields]);
+
+  const visibleViewFieldNames = useMemo(
+    () => new Set(filteredViewFields.map((row) => row.item.name)),
+    [filteredViewFields],
+  );
+
+  const visiblePropertyNames = useMemo(
+    () => new Set(filteredProperties.map((row) => row.item.name)),
+    [filteredProperties],
+  );
 
   const mappedPropertyCount = useMemo(
     () => countMappedProperties(validProperties),
@@ -495,7 +509,14 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     const nextConnections: ConnectionPoint[] = [];
 
     validProperties.forEach((property) => {
-      if (!property.mappedField) {
+      if (
+        !property.mappedField ||
+        !isMappedPropertyConnectionVisible(
+          property,
+          visibleViewFieldNames,
+          visiblePropertyNames,
+        )
+      ) {
         return;
       }
 
@@ -511,19 +532,46 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       nextConnections.push({
         propertyName: property.name,
         viewFieldName: property.mappedField.name,
-        x1: viewRect.left + viewRect.width / 2 - canvasRect.left,
-        y1: viewRect.top + viewRect.height / 2 - canvasRect.top,
-        x2: propertyRect.left + propertyRect.width / 2 - canvasRect.left,
-        y2: propertyRect.top + propertyRect.height / 2 - canvasRect.top,
+        x1:
+          viewRect.left +
+          viewRect.width / 2 -
+          canvasRect.left +
+          canvas.scrollLeft,
+        y1:
+          viewRect.top +
+          viewRect.height / 2 -
+          canvasRect.top +
+          canvas.scrollTop,
+        x2:
+          propertyRect.left +
+          propertyRect.width / 2 -
+          canvasRect.left +
+          canvas.scrollLeft,
+        y2:
+          propertyRect.top +
+          propertyRect.height / 2 -
+          canvasRect.top +
+          canvas.scrollTop,
       });
     });
 
     setConnections((current) =>
       areConnectionsEqual(current, nextConnections) ? current : nextConnections,
     );
-  }, [validProperties]);
+  }, [validProperties, visiblePropertyNames, visibleViewFieldNames]);
 
-  useEffect(() => {
+  const scheduleConnectionRecalculate = useCallback(() => {
+    if (recalculateFrameRef.current !== null) {
+      window.cancelAnimationFrame(recalculateFrameRef.current);
+    }
+
+    recalculateFrameRef.current = window.requestAnimationFrame(() => {
+      recalculateFrameRef.current = null;
+      recalculateConnections();
+    });
+  }, [recalculateConnections]);
+
+  useLayoutEffect(() => {
     recalculateConnections();
     const timer = window.setTimeout(() => {
       recalculateConnections();
@@ -531,6 +579,15 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
     return () => window.clearTimeout(timer);
   }, [recalculateConnections, filteredProperties, filteredViewFields, zoom, pan]);
+
+  useEffect(
+    () => () => {
+      if (recalculateFrameRef.current !== null) {
+        window.cancelAnimationFrame(recalculateFrameRef.current);
+      }
+    },
+    [],
+  );
 
   const handlePrimaryKeysChange = useCallback(
     (names: string[]) => {
@@ -692,18 +749,38 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const disconnectPropertyMapping = (name: string, event: React.MouseEvent) => {
     event.stopPropagation();
     const property = validProperties.find((item) => item.name === name);
+    const connectionId = property?.mappedField
+      ? buildConnectionId(property.mappedField.name, property.name)
+      : null;
     if (
       property?.mappedField &&
-      selectedConnectionId === buildConnectionId(property.mappedField.name, property.name)
+      selectedConnectionId === connectionId
     ) {
       clearSelectedConnection();
+    }
+    if (hoveredConnection === connectionId) {
+      setHoveredConnection(null);
+    }
+    if (connectionId) {
+      setConnections((current) =>
+        current.filter(
+          (item) => buildConnectionId(item.viewFieldName, item.propertyName) !== connectionId,
+        ),
+      );
     }
     updateProperties(
       dataProperties.map((item) =>
         item.name === name ? { ...item, mappedField: undefined } : item,
       ),
     );
+    scheduleConnectionRecalculate();
     void message.success(t("knowledgeNetwork.objectTypeMappingCleared"));
+  };
+
+  const editPropertyFromRow = (property: ObjectTypeDataProperty, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setEditingProperty(property);
+    setDrawerOpen(true);
   };
 
   const connectProperty = (property: ObjectTypeDataProperty) => {
@@ -746,6 +823,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       ),
     );
     clearPendingViewField();
+    scheduleConnectionRecalculate();
   };
 
   const handlePropertyClick = (property: ObjectTypeDataProperty, isMapped: boolean) => {
@@ -1454,6 +1532,12 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                           ) : null}
                         </div>
                         <div className={styles.itemIconsActions}>
+                          <Tooltip title={t("knowledgeNetwork.objectTypeEditDataProperty")}>
+                            <EditOutlined
+                              className={styles.rowActionIcon}
+                              onClick={(event) => editPropertyFromRow(property, event)}
+                            />
+                          </Tooltip>
                           {property.mappedField ? (
                             <Tooltip title={t("knowledgeNetwork.objectTypeClearMapping")}>
                               <DisconnectOutlined
@@ -1466,35 +1550,45 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                           ) : null}
                           {canBeDisplayKey(property.type) ? (
                             property.displayKey ? (
-                              <StarFilled
-                                className={styles.rowActionIconActiveTitle}
-                                onClick={(event) =>
-                                  togglePropertyDisplayKey(property.name, event)
-                                }
-                              />
+                              <Tooltip title={t("knowledgeNetwork.objectTypeDisplayKeyShort")}>
+                                <StarFilled
+                                  className={styles.rowActionIconActiveTitle}
+                                  onClick={(event) =>
+                                    togglePropertyDisplayKey(property.name, event)
+                                  }
+                                />
+                              </Tooltip>
                             ) : (
-                              <StarOutlined
-                                className={styles.rowActionIcon}
-                                onClick={(event) =>
-                                  togglePropertyDisplayKey(property.name, event)
-                                }
-                              />
+                              <Tooltip title={t("knowledgeNetwork.objectTypeDisplayKeyShort")}>
+                                <StarOutlined
+                                  className={styles.rowActionIcon}
+                                  onClick={(event) =>
+                                    togglePropertyDisplayKey(property.name, event)
+                                  }
+                                />
+                              </Tooltip>
                             )
                           ) : null}
                           {canBePrimaryKey(property.type) ? (
-                            <BookOutlined
-                              className={
-                                property.primaryKey
-                                  ? styles.rowActionIconActivePrimary
-                                  : styles.rowActionIcon
-                              }
-                              onClick={(event) => togglePropertyPrimaryKey(property.name, event)}
-                            />
+                            <Tooltip title={t("knowledgeNetwork.objectTypePrimaryKey")}>
+                              <BookOutlined
+                                className={
+                                  property.primaryKey
+                                    ? styles.rowActionIconActivePrimary
+                                    : styles.rowActionIcon
+                                }
+                                onClick={(event) => togglePropertyPrimaryKey(property.name, event)}
+                              />
+                            </Tooltip>
                           ) : null}
-                          <DeleteOutlined
-                            className={styles.rowActionIcon}
-                            onClick={(event) => handleDeletePropertyFromRow(property.name, event)}
-                          />
+                          <Tooltip title={t("common.delete")}>
+                            <DeleteOutlined
+                              className={styles.rowActionIcon}
+                              onClick={(event) =>
+                                handleDeletePropertyFromRow(property.name, event)
+                              }
+                            />
+                          </Tooltip>
                         </div>
                       </div>
                       </div>

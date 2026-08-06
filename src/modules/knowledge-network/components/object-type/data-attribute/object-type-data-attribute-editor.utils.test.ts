@@ -25,6 +25,7 @@ import {
   countMappedProperties,
   filterPropertyRows,
   filterViewFieldRows,
+  isMappedPropertyConnectionVisible,
 } from "./object-type-data-attribute-editor.utils";
 
 function createProperty(
@@ -191,6 +192,38 @@ describe("countMappedProperties", () => {
         createProperty({ name: "b" }),
       ]),
     ).toBe(1);
+  });
+});
+
+describe("isMappedPropertyConnectionVisible", () => {
+  it("renders a mapped connection only when both endpoints are visible", () => {
+    const property = createProperty({
+      mappedField: { displayName: "Sender name", name: "sender_name", type: "string" },
+      name: "sender_name",
+    });
+
+    expect(
+      isMappedPropertyConnectionVisible(
+        property,
+        new Set(["sender_name"]),
+        new Set(["sender_name"]),
+      ),
+    ).toBe(true);
+
+    expect(
+      isMappedPropertyConnectionVisible(
+        property,
+        new Set(["sender_name"]),
+        new Set(["sender_phone"]),
+      ),
+    ).toBe(false);
+    expect(
+      isMappedPropertyConnectionVisible(
+        property,
+        new Set(["sender_phone"]),
+        new Set(["sender_name"]),
+      ),
+    ).toBe(false);
   });
 });
 
