@@ -5,8 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DeploymentUnitOutlined, EllipsisOutlined } from "@ant-design/icons";
+import { ClockCircleOutlined, DeploymentUnitOutlined, EllipsisOutlined, UserOutlined } from "@ant-design/icons";
 import { Dropdown, Tooltip, type MenuProps } from "antd";
+import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
@@ -22,6 +23,10 @@ type KnowledgeNetworkCardProps = {
   record: KnowledgeNetworkRecord;
 };
 
+function formatUpdateTime(value?: string): string {
+  return value?.replace(/:\d{2}$/, "") || "--";
+}
+
 export function KnowledgeNetworkCard({
   onDelete,
   onEdit,
@@ -31,6 +36,7 @@ export function KnowledgeNetworkCard({
 }: KnowledgeNetworkCardProps) {
   const { t } = useTranslation();
   const description = record.description || t("knowledgeNetwork.noDescription");
+  const updateTime = formatUpdateTime(record.updateTime);
   const dropdownItems: MenuProps["items"] = [
     {
       key: "view",
@@ -54,6 +60,7 @@ export function KnowledgeNetworkCard({
   return (
     <article
       className={styles.card}
+      style={{ "--network-accent": record.color || "#2e68ff" } as CSSProperties}
       onClick={() => onOpen(record)}
       role="button"
       tabIndex={0}
@@ -74,12 +81,11 @@ export function KnowledgeNetworkCard({
           </span>
           <div className={styles.titleContent}>
             <div className={styles.titleText}>{record.name}</div>
-            <div className={styles.slug}>{record.identifier}</div>
             <Tooltip
               classNames={{ root: styles.descriptionTooltip }}
               title={
                 record.description ? (
-                  <MarkdownText text={record.description} tone="dark" />
+                  <MarkdownText text={record.description} />
                 ) : (
                   description
                 )
@@ -128,12 +134,18 @@ export function KnowledgeNetworkCard({
         </Dropdown>
       </div>
       <div className={styles.footer}>
-        <span className={styles.footerLeft}>
-          {t("common.updatedBy")}：{record.updaterName || "--"}
-        </span>
-        <span>
-          {t("common.updateTime")}：{record.updateTime || "--"}
-        </span>
+        <Tooltip title={t("common.updatedBy")}>
+          <span className={`${styles.metaItem} ${styles.footerLeft}`}>
+            <UserOutlined />
+            <span>{record.updaterName || "--"}</span>
+          </span>
+        </Tooltip>
+        <Tooltip title={t("common.updateTime")}>
+          <span className={styles.metaItem}>
+            <ClockCircleOutlined />
+            <span>{updateTime}</span>
+          </span>
+        </Tooltip>
       </div>
     </article>
   );

@@ -8,7 +8,6 @@
 import {
   ApartmentOutlined,
   ArrowRightOutlined,
-  AuditOutlined,
   CheckCircleOutlined,
   CopyOutlined,
   DatabaseOutlined,
@@ -250,12 +249,6 @@ const ENGINEERING_SKILLS = [
     icon: <ApartmentOutlined />,
     id: "ontologyBuilder",
     review: false,
-  },
-  {
-    command: "npx skills add https://github.com/openbkn-ai/bkn-engineering --skill bkn-methodology",
-    icon: <AuditOutlined />,
-    id: "methodology",
-    review: true,
   },
   {
     command: "npx skills add https://github.com/openbkn-ai/bkn-engineering --skill bkn-creator",

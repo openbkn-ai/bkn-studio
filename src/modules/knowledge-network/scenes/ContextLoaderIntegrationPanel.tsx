@@ -258,9 +258,12 @@ export function ContextLoaderIntegrationPanel({
   const [resultOpen, setResultOpen] = useState(true);
   const [mcpResultTab, setMcpResultTab] = useState<"result" | "debug">("result");
   const [mcpConfigTab, setMcpConfigTab] = useState<"claude" | "cursor" | "generic">("claude");
+  const [mcpConfigKey, setMcpConfigKey] = useState(appKeyValue);
+  const [mcpConfigKeyDraft, setMcpConfigKeyDraft] = useState("");
+  const [mcpConfigKeyModalOpen, setMcpConfigKeyModalOpen] = useState(false);
   const filterText = filter.trim().toLowerCase();
   const appKeyPlaceholder = "bak_<在个人中心 API Key 签发的长期 Key>";
-  const configAppKey = appKeyValue || appKeyPlaceholder;
+  const configAppKey = mcpConfigKey || appKeyPlaceholder;
   const mcpUrlWithSlash = withMcpTrailingSlash(mcpUrl);
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
   const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey);
@@ -313,11 +316,25 @@ export function ContextLoaderIntegrationPanel({
   }, [bodyError]);
 
   useEffect(() => {
+    if (appKeyValue) setMcpConfigKey(appKeyValue);
+  }, [appKeyValue]);
+
+  useEffect(() => {
     if (sending || response !== null || reqError !== null) {
       setResultOpen(true);
       setMcpResultTab("result");
     }
   }, [sending, response, reqError]);
+
+  const openMcpConfigKeyModal = () => {
+    setMcpConfigKeyDraft(mcpConfigKey);
+    setMcpConfigKeyModalOpen(true);
+  };
+
+  const applyMcpConfigKey = () => {
+    setMcpConfigKey(mcpConfigKeyDraft.trim());
+    setMcpConfigKeyModalOpen(false);
+  };
 
   if (!op) {
     return (
@@ -395,6 +412,9 @@ export function ContextLoaderIntegrationPanel({
                   <Link className={styles.mcpIssueKeyBtn} to={apiKeyPagePath}>
                     签发 API Key
                   </Link>
+                  <button type="button" className={styles.mcpConfigureKeyBtn} onClick={openMcpConfigKeyModal}>
+                    {mcpConfigKey ? "已配置 API Key" : "配置 API Key"}
+                  </button>
                 </div>
               </div>
               <div className={styles.mcpConfigBody}>
@@ -411,9 +431,31 @@ export function ContextLoaderIntegrationPanel({
                   <CodeBlock title="mcpServers 配置" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, "mcp.json 配置已复制")} />
                 ) : null}
               </div>
+              </div>
             </div>
-          </div>
-        </section>
+            <Modal
+              open={mcpConfigKeyModalOpen}
+              title="配置 API Key"
+              okText="应用配置"
+              cancelText="取消"
+              onCancel={() => setMcpConfigKeyModalOpen(false)}
+              onOk={applyMcpConfigKey}
+              className={styles.mcpConfigKeyModal}
+            >
+              <p className={styles.mcpConfigKeyModalDescription}>
+                粘贴 bak_ 开头的长期 API Key，页面会自动更新下方 MCP 配置中的 Bearer Key。
+              </p>
+              <Input.Password
+                value={mcpConfigKeyDraft}
+                placeholder="粘贴 API Key"
+                autoComplete="off"
+                spellCheck={false}
+                allowClear
+                onChange={(event) => setMcpConfigKeyDraft(event.target.value)}
+              />
+              <p className={styles.mcpConfigKeyModalHint}>仅用于生成当前页面配置，不会保存。</p>
+            </Modal>
+          </section>
       ) : (
         <>
       <aside className={styles.list}>
