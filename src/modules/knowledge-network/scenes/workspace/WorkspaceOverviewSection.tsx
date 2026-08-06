@@ -70,13 +70,17 @@ export function WorkspaceOverviewSection({
   const [recentExpanded, setRecentExpanded] = useState(false);
   const [recentPage, setRecentPage] = useState(1);
   const [recentPageSize, setRecentPageSize] = useState(5);
-  const networkIdentifier = detail?.identifier || networkId;
+  const networkIdentifier = detail?.identifier?.trim() || "";
 
   const copyNetworkIdentifier = () => {
+    if (!networkIdentifier) {
+      return;
+    }
+
     void navigator.clipboard
       ?.writeText(networkIdentifier)
-      .then(() => message.success("知识网络 ID 已复制"))
-      .catch(() => message.error("复制知识网络 ID 失败"));
+      .then(() => message.success(t("knowledgeNetwork.networkIdentifierCopied")))
+      .catch(() => message.error(t("knowledgeNetwork.copyNetworkIdentifierFailed")));
   };
 
   const recentObjectColumns = useMemo<ColumnsType<KnowledgeNetworkRecentObject>>(
@@ -202,11 +206,12 @@ export function WorkspaceOverviewSection({
           <span>{detail?.updateTime || "--"}</span>
           <span className={styles.overviewHeaderFooterId}>
             <span className={styles.overviewHeaderFooterLabel}>{t("common.id")}:</span>
-            <code>{networkIdentifier}</code>
-            <Tooltip title="复制知识网络 ID">
+            <code>{networkIdentifier || "--"}</code>
+            <Tooltip title={t("knowledgeNetwork.copyNetworkIdentifier")}>
               <button
-                aria-label="复制知识网络 ID"
+                aria-label={t("knowledgeNetwork.copyNetworkIdentifier")}
                 className={styles.overviewHeaderFooterCopy}
+                disabled={!networkIdentifier}
                 onClick={copyNetworkIdentifier}
                 type="button"
               >

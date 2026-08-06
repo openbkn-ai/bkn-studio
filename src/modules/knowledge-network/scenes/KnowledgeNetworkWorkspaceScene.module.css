@@ -398,6 +398,11 @@
   color: #1d4ed8;
 }
 
+.overviewHeaderFooterCopy:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .overviewHeaderFooter :global(svg) {
   font-size: 16px;
 }
