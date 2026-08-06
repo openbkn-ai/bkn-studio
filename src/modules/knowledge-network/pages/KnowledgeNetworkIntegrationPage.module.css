@@ -255,10 +255,42 @@
   line-height: 18px;
 }
 
+.sdkInstallBlock {
+  margin-top: 16px;
+  border: 1px solid #d9e0ea;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sdkInstallHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #d9e0ea;
+  background: #f8faff;
+  color: #526179;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sdkInstallCode {
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  background: #f5f7fb;
+  color: #17305b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 20px;
+  white-space: pre;
+}
+
 .sdkExampleTabs {
   display: inline-flex;
   gap: 4px;
-  margin-top: 16px;
+  margin-top: 20px;
   padding-bottom: 10px;
   border-bottom: 1px solid #d9e0ea;
 }

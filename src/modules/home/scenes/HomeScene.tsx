@@ -8,7 +8,6 @@
 import {
   ApartmentOutlined,
   ArrowRightOutlined,
-  AuditOutlined,
   CheckCircleOutlined,
   CopyOutlined,
   DatabaseOutlined,
@@ -243,25 +242,16 @@ const ENGINEERING_SKILLS = [
     command: "npx skills add https://github.com/openbkn-ai/bkn-engineering --skill bkn-requirement",
     icon: <FileTextOutlined />,
     id: "requirement",
-    review: false,
   },
   {
     command: "npx skills add https://github.com/openbkn-ai/bkn-engineering --skill bkn-ontology-builder",
     icon: <ApartmentOutlined />,
     id: "ontologyBuilder",
-    review: false,
-  },
-  {
-    command: "npx skills add https://github.com/openbkn-ai/bkn-engineering --skill bkn-methodology",
-    icon: <AuditOutlined />,
-    id: "methodology",
-    review: true,
   },
   {
     command: "npx skills add https://github.com/openbkn-ai/bkn-engineering --skill bkn-creator",
     icon: <RocketOutlined />,
     id: "creator",
-    review: false,
   },
 ] as const;
 
@@ -455,10 +445,7 @@ export function HomeScene() {
 
             <ol className={styles.skillFlow}>
               {ENGINEERING_SKILLS.map((skill, index) => (
-                <li
-                  className={skill.review ? `${styles.skillFlowItem} ${styles.skillFlowItemReview}` : styles.skillFlowItem}
-                  key={skill.id}
-                >
+                <li className={styles.skillFlowItem} key={skill.id}>
                   <span className={styles.skillNumber}>{index + 1}</span>
                   <span className={styles.skillIcon} aria-hidden>{skill.icon}</span>
                   <div className={styles.skillBody}>

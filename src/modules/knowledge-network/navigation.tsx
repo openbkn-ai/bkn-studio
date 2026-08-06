@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ApiOutlined, DeploymentUnitOutlined, FolderOpenOutlined } from "@ant-design/icons";
+import { ApiOutlined, DeploymentUnitOutlined, ShareAltOutlined } from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 
@@ -19,7 +19,7 @@ export const knowledgeNetworkNavigation: ConsoleNavContribution = {
         {
           key: "domain-knowledge-network-management",
           labelKey: "shell.items.knowledgeNetworkManagement",
-          icon: <FolderOpenOutlined />,
+          icon: <ShareAltOutlined />,
           path: "/knowledge-network",
         },
         {
