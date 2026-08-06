@@ -27,7 +27,6 @@ import {
   forwardRef,
   memo,
   type RefObject,
-  type ReactNode,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -64,15 +63,10 @@ import {
   type TurnOutcome,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
-  CONTEXT_LOADER_OPS,
-  type ContextLoaderOp,
   type ContextLoaderEnv,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
-import {
-  businessInfoOf,
-  type ToolBusinessGroupKey,
-} from "@/modules/knowledge-network/scenes/context-loader-tool-business-info";
+import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
 
 import styles from "./AgentChat.module.css";
 
@@ -104,19 +98,6 @@ const FALLBACK_SUGGESTIONS = [
   "帮我查最近活跃的高价值客户",
   "对象类之间是怎么关联的？",
 ];
-
-const TOOL_BUSINESS_GROUP_LABELS: Record<ToolBusinessGroupKey, string> = {
-  network: "知识网络信息",
-  model: "知识网络模型检索",
-  query: "对象实例与关系子图查询",
-  data: "数据资源与 SQL 查询",
-  logic: "逻辑属性与行动调用",
-  skill: "技能与动态工具",
-  other: "其他能力",
-  lifecycle: "交互生命周期",
-};
-
-const TOOL_BUSINESS_GROUP_ORDER: ToolBusinessGroupKey[] = ["data", "network", "model", "query", "logic", "skill", "other", "lifecycle"];
 
 export type PaneKey = "solo" | "base" | "kn";
 
@@ -868,49 +849,30 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   );
   // 模型可见的工具集：tools/list 会连生命周期工具一起返回，那些是平台侧管账的，
   // 不该出现在给模型的工具集里，也不该出现在勾选器里让用户以为可以开关。
-    const agentToolDefs = useMemo(() => {
-      const visibleTools = toolDefs?.filter((toolDef) => !isPlatformManagedTool(toolDef.name)) ?? null;
-      if (!visibleTools || profile.paneKey !== "base" || !profile.defaultToolNames) return visibleTools;
-      const baseToolNames = new Set(profile.defaultToolNames);
-      return visibleTools.filter((toolDef) => baseToolNames.has(toolDef.name));
-    }, [profile.defaultToolNames, profile.paneKey, toolDefs]);
-  // 与 MCP 侧栏同款分组：本地 op 定义带组名，线上新增的归 Knowledge Network。
+  const agentToolDefs = useMemo(() => {
+    const visibleTools = toolDefs?.filter((toolDef) => !isPlatformManagedTool(toolDef.name)) ?? null;
+    if (!visibleTools || profile.paneKey !== "base" || !profile.defaultToolNames) return visibleTools;
+    const baseToolNames = new Set(profile.defaultToolNames);
+    return visibleTools.filter((toolDef) => baseToolNames.has(toolDef.name));
+  }, [profile.defaultToolNames, profile.paneKey, toolDefs]);
+  // 与 MCP 侧栏同款分组：tools/list 下发的 title / _meta 分组排序为准，老服务端退回本地兜底表。
   const toolOptions = useMemo(() => {
     if (!agentToolDefs) return [];
-      const opOf = (toolDef: McpToolDef): ContextLoaderOp =>
-        CONTEXT_LOADER_OPS.find((op) => op.id === toolDef.name) ?? {
-          id: toolDef.name,
-          group: "Knowledge Network",
-          summary: toolDef.description ?? toolDef.name,
-          path: "",
-          query: [],
-          body: null,
-          mcpOnly: true,
-        };
-      const buckets = new Map<ToolBusinessGroupKey, { value: string; label: ReactNode; title: string; searchText: string }[]>();
-      for (const t of agentToolDefs) {
-        const info = businessInfoOf(opOf(t));
-        const group = info.groupKey;
-        if (!buckets.has(group)) buckets.set(group, []);
-        buckets.get(group)!.push({
-          value: t.name,
-          title: `${info.name} · ${t.name}`,
-          searchText: `${info.name} ${t.name}`,
-          label: (
-            <span className={styles.toolOption}>
-              <span className={styles.toolOptionName}>{info.name}</span>
-              <span className={styles.toolOptionId}>{t.name}</span>
-            </span>
-          ),
-        });
-      }
-      return [...buckets.keys()]
-        .sort((a, b) => {
-          const ia = TOOL_BUSINESS_GROUP_ORDER.indexOf(a);
-          const ib = TOOL_BUSINESS_GROUP_ORDER.indexOf(b);
-          return (ia === -1 ? TOOL_BUSINESS_GROUP_ORDER.length : ia) - (ib === -1 ? TOOL_BUSINESS_GROUP_ORDER.length : ib);
-        })
-        .map((group) => ({ label: TOOL_BUSINESS_GROUP_LABELS[group], title: TOOL_BUSINESS_GROUP_LABELS[group], options: buckets.get(group)! }));
+    return buildMcpToolGroups(agentToolDefs, (tool) => toolDisplayOf(tool.name, tool)).map((group) => ({
+      label: group.label,
+      title: group.label,
+      options: group.items.map(({ item, display }) => ({
+        value: item.name,
+        title: `${display.name} · ${item.name}`,
+        searchText: `${display.name} ${item.name}`,
+        label: (
+          <span className={styles.toolOption}>
+            <span className={styles.toolOptionName}>{display.name}</span>
+            <span className={styles.toolOptionId}>{item.name}</span>
+          </span>
+        ),
+      })),
+    }));
   }, [agentToolDefs]);
   // 选择器展示值：null（全部）时显示当前已知的全部工具名。
   const draftToolValue = useMemo(

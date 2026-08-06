@@ -65,9 +65,6 @@ import { McpSetupModal, ToolDiscoveryModal } from "./McpIntegrationModals";
 
 import styles from "./ExperienceScene.module.css";
 
-/** 线上有、本地无 op 定义的工具（如 get_object_types / get_relation_types）归到 Knowledge Network 组，不单开分类。 */
-const ONLINE_GROUP = "Knowledge Network";
-
 function sampleForSchemaProp(def: unknown): unknown {
   if (!def || typeof def !== "object") return "";
   const d = def as Record<string, unknown>;
@@ -108,7 +105,6 @@ function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
   const body = exampleBodyFromSchema(tool.inputSchema);
   return {
     id: tool.name,
-    group: ONLINE_GROUP,
     summary: tool.description ?? tool.name,
     path: `${REST_PREFIX}/kn/${tool.name}`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
