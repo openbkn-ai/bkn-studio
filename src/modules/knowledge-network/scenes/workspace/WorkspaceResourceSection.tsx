@@ -29,12 +29,14 @@ import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/u
 type WorkspaceData = ReturnType<typeof useWorkspaceData>;
 
 type WorkspaceResourceSectionProps = {
+  canModify: boolean;
   data: WorkspaceData;
   networkId: string;
   section: KnowledgeNetworkWorkspaceSection;
 };
 
 export function WorkspaceResourceSection({
+  canModify,
   data,
   networkId,
   section,
@@ -47,6 +49,7 @@ export function WorkspaceResourceSection({
       return (
         <ConceptGroupListPanel
           items={data.conceptGroups}
+          canModify={canModify}
           loading={data.sectionLoading}
           networkId={networkId}
           onDelete={async (records) => {
@@ -68,6 +71,7 @@ export function WorkspaceResourceSection({
       return (
         <ObjectTypeListPanel
           items={data.objectTypes}
+          canModify={canModify}
           loading={data.sectionLoading}
           networkId={networkId}
           onDelete={async (records) => {
@@ -86,6 +90,7 @@ export function WorkspaceResourceSection({
       return (
         <RelationTypeListPanel
           items={data.relationTypes}
+          canModify={canModify}
           loading={data.sectionLoading}
           networkId={networkId}
           objectTypes={data.objectTypes}
@@ -105,6 +110,7 @@ export function WorkspaceResourceSection({
       return (
         <ActionTypeListPanel
           items={data.actionTypes}
+          canModify={canModify}
           loading={data.sectionLoading}
           networkId={networkId}
           objectTypes={data.objectTypes}
@@ -124,6 +130,7 @@ export function WorkspaceResourceSection({
       return (
         <MetricListPanel
           loading={data.sectionLoading}
+          canModify={canModify}
           metrics={data.metrics}
           networkId={networkId}
           onDelete={async (metricId) => {

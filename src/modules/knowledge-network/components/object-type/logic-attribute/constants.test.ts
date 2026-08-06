@@ -8,11 +8,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  LOGIC_ATTRIBUTE_TYPE_OPTIONS,
   buildToolLogicParameterSettings,
   isToolLogicBindingComplete,
   removeParameterById,
   readLogicAttributeToolBinding,
 } from "./constants";
+
+describe("LOGIC_ATTRIBUTE_TYPE_OPTIONS", () => {
+  it("only exposes tool bindings while instance metrics are unavailable", () => {
+    expect(LOGIC_ATTRIBUTE_TYPE_OPTIONS).toEqual([
+      { labelKey: "objectTypeLogicAttributeTypeTool", value: "tool" },
+    ]);
+  });
+});
 
 describe("buildToolLogicParameterSettings", () => {
   it("merges saved tool parameter mappings into the input schema", () => {

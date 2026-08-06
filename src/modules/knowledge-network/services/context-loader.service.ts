@@ -33,12 +33,14 @@ export type ContextLoaderOp = {
   body: Record<string, unknown> | null;
   /** MCP arguments（默认 = body）。 */
   mcpArgs?: Record<string, unknown>;
+  /** 仅由 MCP tools/list 发现和调用，不在 REST 调试台展示。 */
+  mcpOnly?: boolean;
 };
 
 export const REST_PREFIX = "/api/agent-retrieval/v1";
 
 /** MCP 端点（实测 /api/agent-retrieval/v1/mcp，非根 /mcp）。 */
-export const MCP_PATH = "/api/agent-retrieval/v1/mcp";
+export const MCP_PATH = "/api/agent-retrieval/v1/mcp/";
 
 export type RequestDataAssistantKind = "concept-group" | "object-type" | "resource" | "relation";
 
@@ -169,16 +171,30 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     id: "get_logic_properties_values",
     group: "Skills & Logic",
     summary: "批量查询对象的逻辑属性值（metric / tool），自动根据 query 生成 dynamic_params。缺参时返回 missing 提示。",
-    path: `${REST_PREFIX}/kn/get_logic_properties_values`,
+    // MCP 工具名 get_logic_properties_values；REST 路由为 logic-property-resolver（见 bkn-foundry agent-retrieval）。
+    path: `${REST_PREFIX}/kn/logic-property-resolver`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: {
       kn_id: "your_kn_id",
       ot_id: "your_object_type",
-      query: "示例：批量计算对象的逻辑属性值",
-      _instance_identities: [{ id: "instance_000001" }],
+      query: "查询选中实例的 GMV指标、订单折扣率 当前值",
+      additional_context: "instant=true；对象类详情页实例试算",
+      _instance_identities: [{ order_id: "instance_000001" }],
       properties: ["your_metric_a", "your_metric_b"],
       options: { return_debug: true },
     },
+  },
+  {
+    id: "query_metric",
+    group: "Skills & Logic",
+    mcpOnly: true,
+    summary:
+      "按已建模指标自身的口径取数。先通过 get_object_types 的 related_metrics 选定 metric_id；" +
+      "实例级且已绑定逻辑属性的指标应使用 get_logic_properties_values，未绑定或类级指标使用本工具。",
+    path: `${REST_PREFIX}/kn/query_metric`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { kn_id: "your_kn_id", metric_id: "your_metric_id" },
+    mcpArgs: { kn_id: "your_kn_id", metric_id: "your_metric_id" },
   },
   {
     id: "get_action_info",
@@ -208,6 +224,7 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     id: "get_kn_detail",
     group: "Knowledge Network",
     summary: "查询指定知识网络的详细信息。",
+    mcpOnly: true,
     path: `${REST_PREFIX}/kn/get_kn_detail`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { kn_id: "your_kn_id" },
@@ -261,6 +278,9 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
 ];
 
+/** REST 调试台只展示具有 REST 工作流的操作。 */
+export const REST_CONTEXT_LOADER_OPS = CONTEXT_LOADER_OPS.filter((op) => !op.mcpOnly);
+
 export function mcpPathOf(op: ContextLoaderOp): string {
   return op.path.startsWith(REST_PREFIX) ? op.path.slice(REST_PREFIX.length) : op.path;
 }
@@ -304,6 +324,7 @@ const TEST_DATA_OPS = new Set([
   "query_instance_subgraph",
   "get_object_types",
   "get_relation_types",
+  "query_metric",
   "describe_resource",
   "list_resources",
 ]);
@@ -445,6 +466,20 @@ export function buildTestData(
       };
     }
 
+    case "query_metric": {
+      const usableMetrics = (ot?.related_metrics ?? []).filter((item) => Boolean(item.id));
+      const metric = usableMetrics.find((item) => !item.time_dimension) ?? usableMetrics[0];
+      if (!metric) {
+        return { body: exampleBodyText(op, mode, knId), note: "未在对象类详情中发现可用指标，请先调用 get_object_types" };
+      }
+      const body: Record<string, unknown> = { kn_id: knId, metric_id: metric.id };
+      if (metric.time_dimension) body.time = { instant: true };
+      return {
+        body: JSON.stringify(body, null, 2),
+        note: `指标 ${metric.name || metric.id}（对象类 ${ot?.name || ot?.id}）`,
+      };
+    }
+
     case "describe_resource": {
       const resId = detail.object_types.find((o) => o.data_source?.id)?.data_source?.id ?? "";
       return {
@@ -485,43 +520,14 @@ function mcpBase(env: ContextLoaderEnv): string {
 export type BknContext = {
   conversation_id: string;
   interaction_id: string;
-  operation_key: string;
 };
 
 /**
- * 一次受管业务调用的回执引用。终结 Interaction 时必须把本轮**全部** operation 与 receipt
- * 一条不漏地列进 closure manifest（Core 按数量与归属校验，多一条少一条都报
- * `closure_manifest_invalid`），所以每次业务调用都要把它记下来。
- */
-export type BknReceiptRef = { operationId: string; receiptId: string; required: boolean };
-
-/** 从业务调用回执对象里取 operation/receipt 引用；形状不对返回 undefined。 */
-export function parseBknReceipt(value: unknown): BknReceiptRef | undefined {
-  if (!value || typeof value !== "object") return undefined;
-  const receipt = value as Record<string, unknown>;
-  const operationId = receipt.operation_id;
-  const receiptId = receipt.receipt_id;
-  if (typeof operationId !== "string" || !operationId) return undefined;
-  if (typeof receiptId !== "string" || !receiptId) return undefined;
-  // Context Loader 的受信适配器恒以 required=true 注册 Operation；缺字段时按它兜底，
-  // 因为 manifest 里的 required 必须与 Core 侧登记值一致，猜 false 会被直接判非法。
-  return { operationId, receiptId, required: receipt.required !== false };
-}
-
-/** 从 MCP 业务工具的 structuredContent 里取受管回执（正常执行是 bkn_receipt，重放/pending 是 receipt）。 */
-export function receiptFromStructured(structured: unknown): BknReceiptRef | undefined {
-  if (!structured || typeof structured !== "object") return undefined;
-  const envelope = structured as Record<string, unknown>;
-  return parseBknReceipt(envelope.bkn_receipt) ?? parseBknReceipt(envelope.receipt);
-}
-
-/**
- * 一次受管交互对业务调用暴露的最小接口：取上下文 + 回执记账。
+ * 一次受管交互对业务调用暴露的最小接口：取上下文。
  * bkn-lifecycle 的 BknTurn 结构上满足它 —— 这里不反向 import，避免两个服务互相依赖。
  */
 export type BknCallScope = {
-  nextContext(toolName: string): BknContext;
-  recordReceipt(receipt: BknReceiptRef | undefined): void;
+  nextContext(): BknContext;
 };
 
 /** 把受管上下文并进业务请求体/arguments（已有 bkn_context 不覆盖）。 */
@@ -616,25 +622,7 @@ export type ContextLoaderResponse = {
   latencyMs: number;
   sizeBytes: number;
   text: string;
-  /** 受管回执（REST 走响应头，MCP 走 structuredContent.bkn_receipt）；终结交互时要列全。 */
-  receipt?: BknReceiptRef;
 };
-
-/**
- * REST 业务响应里的受管回执：首次正常执行走响应头 `bkn-receipt-id` / `bkn-operation-id`
- * （业务响应体保持原形），终态重放或 pending 时改由响应体 `receipt` 字段带回。
- */
-function restReceiptRef(response: Response, text: string): BknReceiptRef | undefined {
-  const receiptId = response.headers.get("bkn-receipt-id");
-  const operationId = response.headers.get("bkn-operation-id");
-  if (receiptId && operationId) return { operationId, receiptId, required: true };
-  try {
-    const parsed = JSON.parse(text) as { receipt?: unknown };
-    return parseBknReceipt(parsed.receipt);
-  } catch {
-    return undefined;
-  }
-}
 
 /** 真实发送请求（REST 或 MCP），返回原始响应文本 + 元信息。 */
 export async function sendRequest(
@@ -710,7 +698,6 @@ export async function sendRequest(
         latencyMs: Math.round(performance.now() - start),
         sizeBytes: new Blob([text]).size,
         text,
-        receipt: receiptFromStructured(mcpStructuredContent(parseMcpEnvelope(text))),
       };
     }
     const url = buildRestUrl(env, op, queryValues);
@@ -728,7 +715,6 @@ export async function sendRequest(
       latencyMs: Math.round(performance.now() - start),
       sizeBytes: new Blob([text]).size,
       text,
-      receipt: restReceiptRef(response, text),
     };
   };
 
@@ -1009,12 +995,26 @@ export type KnDataSource = { type?: string; id: string; name?: string };
 
 export type KnDataProperty = { name: string; display_name?: string; type?: string; comment?: string };
 
+export type KnRelatedMetric = {
+  id: string;
+  name?: string;
+  comment?: string;
+  metric_type?: string;
+  unit?: string;
+  unit_type?: string;
+  scope_ref?: string;
+  analysis_dimensions?: string[];
+  time_dimension?: string;
+};
+
 export type KnObjectType = {
   id: string;
   name?: string;
   comment?: string;
   data_source?: KnDataSource | null;
   data_properties?: KnDataProperty[] | null;
+  related_metrics?: KnRelatedMetric[];
+  related_metric_count?: number;
 };
 
 export type KnConceptGroup = { id: string; name?: string; object_type_ids?: string[] };
@@ -1057,6 +1057,44 @@ function parseRelationTypes(raw: unknown): KnRelationType[] {
     .filter((r) => r.id && r.sourceId && r.targetId);
 }
 
+function normalizeKnDetailPayload(
+  data: Partial<KnDetail> & Record<string, unknown>,
+  fallbackId: string,
+): KnDetail {
+  return {
+    id: data.id ?? fallbackId,
+    name: data.name,
+    comment: typeof data.comment === "string" ? data.comment : undefined,
+    object_types: Array.isArray(data.object_types) ? data.object_types : [],
+    concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
+    relation_types: parseRelationTypes(data.relation_types ?? data.relations),
+  };
+}
+
+function knDetailFromMcpPayload(payload: unknown, fallbackId: string): KnDetail | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const record = payload as Partial<KnDetail> & Record<string, unknown>;
+  const data = record.data;
+  const candidate =
+    data && typeof data === "object"
+      ? (data as Partial<KnDetail> & Record<string, unknown>)
+      : record;
+
+  if (
+    !("object_types" in candidate) &&
+    !("concept_groups" in candidate) &&
+    !("relation_types" in candidate) &&
+    !("relations" in candidate)
+  ) {
+    return null;
+  }
+
+  return normalizeKnDetailPayload(candidate, fallbackId);
+}
+
 /**
  * 取知识网络详情（对象类型 + 资源绑定 + 概念分组），供数据浏览器展示与「填入请求体」。
  * 走与调试台一致的真实 REST 鉴权路径（get_kn_detail 已验证可用）。
@@ -1088,17 +1126,59 @@ export async function fetchKnDetail(
   signal?: AbortSignal,
   scope?: BknCallScope,
 ): Promise<KnDetail> {
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
+  const result = await createMcpSession(env, auth).callTool(
+    "get_kn_detail",
+    withBknContext(
+      { kn_id: env.knId, response_format: "json" },
+      scope?.nextContext(),
+    ),
+  );
+
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
+  if (!result.ok || result.isError || result.rpcError) {
+    throw new Error(result.rpcError?.message || result.text || "get_kn_detail failed");
+  }
+
+  const fromStructured = knDetailFromMcpPayload(result.structured, env.knId);
+  if (fromStructured) {
+    return fromStructured;
+  }
+
+  try {
+    const fromText = knDetailFromMcpPayload(JSON.parse(result.text) as unknown, env.knId);
+    if (fromText) {
+      return fromText;
+    }
+  } catch {
+    // JSON response requested; fall through to the normalized error below.
+  }
+
+  throw new Error("get_kn_detail did not return knowledge network detail");
+}
+
+export async function fetchKnDetailRestLegacy(
+  env: ContextLoaderEnv,
+  auth?: McpAuth,
+  signal?: AbortSignal,
+  scope?: BknCallScope,
+): Promise<KnDetail> {
   const base = env.base.replace(/\/+$/, "");
   const params = new URLSearchParams({ response_format: "json" });
   const response = await restPost(
     env,
     auth,
     `${base}${REST_PREFIX}/kn/get_kn_detail?${params.toString()}`,
-    withBknContext({ kn_id: env.knId }, scope?.nextContext("get_kn_detail")),
+    withBknContext({ kn_id: env.knId }, scope?.nextContext()),
     signal,
   );
   const text = await response.text();
-  scope?.recordReceipt(restReceiptRef(response, text));
   if (!response.ok) {
     throw new Error(text || `获取知识网络详情失败（${response.status}）`);
   }
@@ -1111,6 +1191,42 @@ export async function fetchKnDetail(
     concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
     relation_types: parseRelationTypes(data.relation_types ?? data.relations),
   };
+}
+
+/** 通过 MCP 下钻对象类详情，供指标调试从 related_metrics 选择真实 metric_id。 */
+export async function fetchMcpObjectTypes(
+  session: McpSession,
+  knId: string,
+  ids: string[],
+  scope?: BknCallScope,
+): Promise<KnObjectType[]> {
+  const result = await session.callTool(
+    "get_object_types",
+    withBknContext({ kn_id: knId, ids, response_format: "json" }, scope?.nextContext()),
+  );
+  if (!result.ok || result.isError || result.rpcError) {
+    throw new Error(result.rpcError?.message || result.text || "获取对象类详情失败");
+  }
+  const fromStructured = objectTypesFromMcpPayload(result.structured);
+  if (fromStructured) return fromStructured;
+  try {
+    const fromText = objectTypesFromMcpPayload(JSON.parse(result.text) as unknown);
+    if (fromText) return fromText;
+  } catch {
+    // 已明确请求 JSON；若文本仍无法解析，使用下面的统一错误提示。
+  }
+  throw new Error("get_object_types 未返回对象类列表");
+}
+
+function objectTypesFromMcpPayload(payload: unknown): KnObjectType[] | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  if (Array.isArray(record.object_types)) return record.object_types as KnObjectType[];
+  const data = record.data;
+  if (data && typeof data === "object" && Array.isArray((data as Record<string, unknown>).object_types)) {
+    return (data as Record<string, unknown>).object_types as KnObjectType[];
+  }
+  return null;
 }
 
 /**
@@ -1131,11 +1247,10 @@ export async function fetchObjectInstances(
     env,
     auth,
     `${base}${REST_PREFIX}/kn/query_object_instance?${params.toString()}`,
-    withBknContext({ limit, need_total: false, properties: [] }, scope?.nextContext("query_object_instance")),
+    withBknContext({ limit, need_total: false, properties: [] }, scope?.nextContext()),
     signal,
   );
   const text = await response.text();
-  scope?.recordReceipt(restReceiptRef(response, text));
   if (!response.ok) {
     throw new Error(text || `查询实例失败（${response.status}）`);
   }

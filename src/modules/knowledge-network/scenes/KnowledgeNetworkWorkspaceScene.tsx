@@ -41,6 +41,7 @@ import {
   integrateWorkspaceTasks,
 } from "@/modules/knowledge-network/services/shared/runtime";
 import type { KnowledgeNetworkMutationPayload } from "@/modules/knowledge-network/types/knowledge-network";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./KnowledgeNetworkWorkspaceScene.module.css";
 
@@ -96,6 +97,7 @@ export function KnowledgeNetworkWorkspaceScene({
 
   const [networkFormOpen, setNetworkFormOpen] = useState(false);
   const [sideCollapsed, setSideCollapsed] = useState(false);
+  const canModify = hasKnowledgeNetworkRecordOperation(detail, "modify");
 
   const navigationItems: WorkspaceNavItem[] = useMemo(() => {
     const items: WorkspaceNavItem[] = [
@@ -217,6 +219,7 @@ export function KnowledgeNetworkWorkspaceScene({
           detailLoading={detailLoading}
           loadRecentObjects={loadRecentObjects}
           networkId={activeNetworkId}
+          canModify={canModify}
           onEdit={() => setNetworkFormOpen(true)}
           recentLoading={recentLoading}
           recentObjects={recentObjects}
@@ -236,6 +239,7 @@ export function KnowledgeNetworkWorkspaceScene({
     return (
       <WorkspaceResourceSection
         data={workspaceData}
+        canModify={canModify}
         networkId={activeNetworkId}
         section={section}
       />

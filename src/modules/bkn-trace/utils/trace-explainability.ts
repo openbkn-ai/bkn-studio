@@ -78,6 +78,10 @@ const operationNames: Record<string, string> = {
   "knowledge.read.observed": "读取业务知识网络",
   "logic.execution.observed": "执行业务计算逻辑",
   "retrieval.completed": "完成语义检索",
+  "context.run_sql": "查询业务数据",
+  "context.search_schema": "检索知识网络结构",
+  run_sql: "查询业务数据",
+  search_schema: "检索知识网络结构",
 };
 
 const artifactNames: Record<string, string> = {
@@ -91,6 +95,7 @@ const artifactNames: Record<string, string> = {
 export function businessNodePresentation(node: TraceBusinessNode): BusinessNodePresentation {
   const refId = stringField(node.properties, "ref_id");
   const eventType = stringField(node.properties, "event_type") || node.label || "";
+  const operationName = stringField(node.properties, "operation_name");
   const artifactType = stringField(node.properties, "artifact_type") || node.label || "";
   const technicalId = firstNonEmpty(refId, stringField(node.properties, "artifact_ref"), node.id);
   const resolved = resolveBusinessRef(refId || node.id);
@@ -107,12 +112,13 @@ export function businessNodePresentation(node: TraceBusinessNode): BusinessNodeP
   if (resolved) {
     return { ...resolved, technicalId };
   }
-  if (node.nodeType === "operation" && operationNames[eventType]) {
+  const operationTitle = operationNames[operationName] || operationNames[eventType];
+  if (node.nodeType === "operation" && operationTitle) {
     return {
       kind: "执行过程",
-      subtitle: eventType,
+      subtitle: operationName || eventType,
       technicalId,
-      title: operationNames[eventType],
+      title: operationTitle,
     };
   }
   if (node.nodeType === "interaction") {

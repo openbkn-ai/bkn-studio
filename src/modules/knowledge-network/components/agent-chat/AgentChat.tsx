@@ -35,7 +35,7 @@ import {
 import {
   createBknLifecycle,
   lifecycleEnv,
-  memoryExternalKeyStore,
+  memoryConversationStore,
   withManagedTurn,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { recommendationFingerprint } from "@/modules/knowledge-network/utils/agent-chat-cache";
@@ -383,8 +383,7 @@ export function AgentChat({
   const summaryLifecycle = useMemo(
     () =>
       createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
-        externalKeyStore: memoryExternalKeyStore(),
-        oneShot: true,
+        conversationStore: memoryConversationStore(),
       }),
     [env.base, knId, tokenProvider],
   );

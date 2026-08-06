@@ -44,6 +44,7 @@ import { resolveMetricBoundObjectTypeName } from "@/modules/knowledge-network/ut
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type MetricListPanelProps = {
+  canModify: boolean;
   loading?: boolean;
   metrics: KnowledgeNetworkMetricRecord[];
   networkId: string;
@@ -68,6 +69,7 @@ function getMetricTypeLabel(
 }
 
 export function MetricListPanel({
+  canModify,
   loading,
   metrics,
   networkId,
@@ -221,8 +223,12 @@ export function MetricListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          { key: "edit", label: t("common.edit") },
-          { key: "delete", danger: true, label: t("common.delete") },
+          ...(canModify
+            ? [
+                { key: "edit", label: t("common.edit") },
+                { key: "delete", danger: true, label: t("common.delete") },
+              ]
+            : []),
         ];
 
         return (
@@ -300,6 +306,15 @@ export function MetricListPanel({
       );
     }
 
+    if (!canModify) {
+      return (
+        <Empty
+          className={styles.emptyPanel}
+          description={t("knowledgeNetwork.emptyMetrics")}
+        />
+      );
+    }
+
     return (
       <Empty
         className={styles.emptyPanel}
@@ -331,10 +346,14 @@ export function MetricListPanel({
         loading={tableLoading}
         pagination={false}
         rowKey="id"
-        rowSelection={{
-          selectedRowKeys,
-          onChange: (keys) => setSelectedRowKeys(keys as string[]),
-        }}
+        rowSelection={
+          canModify
+            ? {
+                selectedRowKeys,
+                onChange: (keys) => setSelectedRowKeys(keys as string[]),
+              }
+            : undefined
+        }
         scroll={{ x: 980 }}
         size="middle"
       />
@@ -355,28 +374,32 @@ export function MetricListPanel({
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          <AppButton
-            className={styles.toolbarButton}
-            icon={<PlusOutlined />}
-            onClick={() => {
-              void navigate(`/knowledge-network/workspace/${networkId}/metrics/create`);
-            }}
-            type="primary"
-          >
-            {t("common.create")}
-          </AppButton>
-          <AppButton
-            className={styles.toolbarButton}
-            danger
-            disabled={selectedRowKeys.length === 0}
-            icon={<DeleteOutlined />}
-            onClick={() => {
-              const pageSelectedRecords = tableMetrics.filter((item) => selectedRowKeys.includes(item.id));
-              confirmDelete(pageSelectedRecords);
-            }}
-          >
-            {t("common.delete")}
-          </AppButton>
+          {canModify ? (
+            <>
+              <AppButton
+                className={styles.toolbarButton}
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  void navigate(`/knowledge-network/workspace/${networkId}/metrics/create`);
+                }}
+                type="primary"
+              >
+                {t("common.create")}
+              </AppButton>
+              <AppButton
+                className={styles.toolbarButton}
+                danger
+                disabled={selectedRowKeys.length === 0}
+                icon={<DeleteOutlined />}
+                onClick={() => {
+                  const pageSelectedRecords = tableMetrics.filter((item) => selectedRowKeys.includes(item.id));
+                  confirmDelete(pageSelectedRecords);
+                }}
+              >
+                {t("common.delete")}
+              </AppButton>
+            </>
+          ) : null}
         </div>
         <div className={styles.toolbarRight}>
           <Input

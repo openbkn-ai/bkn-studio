@@ -10,6 +10,7 @@ coverage
 *.local
 vite-*.log
 .vite-*.log
+.tmp-*
 tests/execution-factory/agent-at/
 tests/execution-factory/operator-web-ui/
 tests/execution-factory/fixtures/

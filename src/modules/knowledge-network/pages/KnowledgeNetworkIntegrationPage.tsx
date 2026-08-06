@@ -10,6 +10,7 @@ import { App } from "antd";
 import { useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { gatewayOrigin } from "@/framework/auth/oauth";
 import { buildApiKeyPagePath } from "@/modules/api-keys/utils/api-key-handoff";
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 
@@ -19,6 +20,8 @@ type IntegrationTab = "mcp" | "cli" | "sdk";
 type CliExampleKey = "setup" | "context" | "agent-skill";
 type SdkExampleKey = "quick-start" | "instance-query" | "dynamic-tool";
 type CodeExample = { code: string; label: string; title: string };
+
+const platformOrigin = gatewayOrigin() || (typeof window !== "undefined" ? window.location.origin : "https://your-platform");
 
 const tabs: Array<{
   icon: ReactNode;
@@ -48,7 +51,7 @@ const cliExamples: Record<CliExampleKey, CodeExample> = {
     title: "安装 OpenBKN CLI 并配置访问凭证",
     code: `npm install -g @openbkn/bkn-sdk
 
-export BKN_BASE_URL="https://your-platform"
+export BKN_BASE_URL="${platformOrigin}"
 export BKN_TOKEN="bak_<在个人中心 API Key 签发>"
 
 openbkn auth login "$BKN_BASE_URL" --token "$BKN_TOKEN"
@@ -72,7 +75,7 @@ openbkn context tools <kn-id>`,
     code: `npm install -g @openbkn/bkn-sdk
 npx skills add openbkn-ai/bkn-sdk@openbkn -g -y
 
-export BKN_BASE_URL="https://your-platform"
+export BKN_BASE_URL="${platformOrigin}"
 export BKN_TOKEN="bak_<在个人中心 API Key 签发>"
 
 openbkn auth login "$BKN_BASE_URL" --token "$BKN_TOKEN"
@@ -84,9 +87,7 @@ const sdkExamples: Record<SdkExampleKey, CodeExample> = {
   "quick-start": {
     label: "快速开始",
     title: "创建 SDK 客户端并检索知识模型",
-    code: `npm install @openbkn/bkn-sdk
-
-import { createClient } from "@openbkn/bkn-sdk";
+    code: `import { createClient } from "@openbkn/bkn-sdk";
 
 const bkn = createClient({
   baseUrl: process.env.BKN_BASE_URL!,
@@ -130,6 +131,9 @@ type CodeIntegrationPanelProps<T extends string> = {
   guideDescription: string;
   guideSteps: string[];
   guideTitle: string;
+  installCommand?: string;
+  installSuccessMessage?: string;
+  installTitle?: string;
   note: string;
   packageLabel: string;
   packageUrl: string;
@@ -144,6 +148,9 @@ function CodeIntegrationPanel<T extends string>({
   guideDescription,
   guideSteps,
   guideTitle,
+  installCommand,
+  installSuccessMessage,
+  installTitle,
   note,
   packageLabel,
   packageUrl,
@@ -158,10 +165,10 @@ function CodeIntegrationPanel<T extends string>({
   const example = examples[activeExample];
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
 
-  const copyExample = async () => {
+  const copyText = async (text: string, successText: string) => {
     try {
-      await navigator.clipboard.writeText(example.code);
-      void message.success(successMessage);
+      await navigator.clipboard.writeText(text);
+      void message.success(successText);
     } catch {
       void message.error("复制失败，请手动复制代码");
     }
@@ -195,6 +202,22 @@ function CodeIntegrationPanel<T extends string>({
           </a>
         </div>
 
+        {installCommand && installTitle && installSuccessMessage ? (
+          <div className={styles.sdkInstallBlock}>
+            <div className={styles.sdkInstallHeader}>
+              <span>{installTitle}</span>
+              <button
+                type="button"
+                className={styles.sdkCopyButton}
+                onClick={() => void copyText(installCommand, installSuccessMessage)}
+              >
+                <CopyOutlined /> 复制
+              </button>
+            </div>
+            <pre className={styles.sdkInstallCode}>{installCommand}</pre>
+          </div>
+        ) : null}
+
         <div className={styles.sdkExampleTabs} role="tablist" aria-label={ariaLabel}>
           {(Object.keys(examples) as T[]).map((key) => (
             <button
@@ -213,7 +236,7 @@ function CodeIntegrationPanel<T extends string>({
         <div className={styles.sdkCodeBlock}>
           <div className={styles.sdkCodeHeader}>
             <span>{example.title}</span>
-            <button type="button" className={styles.sdkCopyButton} onClick={() => void copyExample()}>
+            <button type="button" className={styles.sdkCopyButton} onClick={() => void copyText(example.code, successMessage)}>
               <CopyOutlined /> 复制
             </button>
           </div>
@@ -259,6 +282,9 @@ function SdkIntegrationPanel() {
         "创建客户端后，通过 bkn.context 调用知识网络能力。",
         "按需查询对象实例，或发现并调用动态 MCP 工具。",
       ]}
+      installCommand="npm install @openbkn/bkn-sdk"
+      installSuccessMessage="SDK 安装命令已复制"
+      installTitle="安装 SDK"
       note="API Key 当前用于 bkn.context；仅在个人中心管理，服务端通过 BKN_TOKEN 环境变量读取。"
       eyebrow="TypeScript / Node.js"
       title="SDK 调用示例"

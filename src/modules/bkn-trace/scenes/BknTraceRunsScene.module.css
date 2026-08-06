@@ -7,10 +7,13 @@
 
 .scene,
 .detail {
-  display: flex;
+	background: #fff;
+	border: 1px solid #e2e7ef;
+	display: flex;
   flex-direction: column;
   gap: 20px;
-  min-width: 0;
+	min-width: 0;
+	padding: 24px;
 }
 
 .detailHeader {
@@ -189,6 +192,11 @@
 }
 
 @media (max-width: 900px) {
+	.scene,
+	.detail {
+		padding: 16px;
+	}
+
   .businessContent {
     grid-template-columns: 1fr;
   }

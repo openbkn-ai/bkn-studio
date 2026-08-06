@@ -54,7 +54,9 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
             <Descriptions.Item label={t("bknTrace.logs.detail.outcome")}>{record.outcome || "-"}</Descriptions.Item>
             <Descriptions.Item label={t("bknTrace.logs.detail.source")}>{record.sourceId}</Descriptions.Item>
             <Descriptions.Item label={t("bknTrace.logs.detail.logId")}><span className={styles.technicalId}>{record.logId}</span></Descriptions.Item>
-            <Descriptions.Item label={t("bknTrace.logs.detail.requestId")}><span className={styles.technicalId}>{record.requestId || "-"}</span></Descriptions.Item>
+            <Descriptions.Item label={t("bknTrace.logs.detail.requestId")}>
+              {record.requestId ? <a aria-label={t("bknTrace.logs.detail.openBusinessProvenance")} href={buildAppPath(`/observability/business-provenance?view=requests&request_id=${encodeURIComponent(record.requestId)}`)}>{record.requestId}</a> : "-"}
+            </Descriptions.Item>
             <Descriptions.Item label={t("bknTrace.logs.detail.traceId")}>
               {record.traceId ? <a aria-label={t("bknTrace.logs.detail.openTrace")} href={buildAppPath(`/observability/traces?trace_id=${encodeURIComponent(record.traceId)}`)}>{record.traceId}</a> : "-"}
             </Descriptions.Item>

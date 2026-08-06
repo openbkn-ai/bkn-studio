@@ -18,7 +18,10 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { ConnectorTypePicker } from "@/modules/data-connect/components/ConnectorTypePicker";
 import { DataConnectConfigForm } from "@/modules/data-connect/components/DataConnectConfigForm";
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
-import { getConnectorConfigDefaults } from "@/modules/data-connect/lib/connector-template";
+import {
+  getConnectorConfigDefaults,
+  mergeKnownConnectorTypes,
+} from "@/modules/data-connect/lib/connector-template";
 import {
   createDataConnectRecord,
   getDataConnectRecord,
@@ -28,6 +31,7 @@ import {
   updateDataConnectRecord,
 } from "@/modules/data-connect/services/data-connect.service";
 import type {
+  ConnectorFieldConfig,
   DataConnectConnectorType,
   DataConnectMutationInput,
   DataConnectMutationPayload,
@@ -62,16 +66,22 @@ export function DataConnectFormScene({
 
       try {
         const types = await listDataConnectConnectorTypes();
-        setConnectorTypes(types);
+        setConnectorTypes(mergeKnownConnectorTypes(types));
 
         if (mode === "edit" && recordId) {
           const currentRecord = await getDataConnectRecord(recordId);
           setRecord(currentRecord);
 
           if (currentRecord) {
+            const connector = types.find(
+              (item) => item.type === currentRecord.connectorType,
+            );
             setSelectedConnectorType(currentRecord.connectorType);
             form.setFieldsValue({
-              connectorConfig: sanitizeConnectorConfig(currentRecord.connectorConfig),
+              connectorConfig: sanitizeConnectorConfig(
+                currentRecord.connectorConfig,
+                connector?.fieldConfig,
+              ),
               connectorType: currentRecord.connectorType,
               description: currentRecord.description,
               enabled: currentRecord.enabled,
@@ -139,7 +149,7 @@ export function DataConnectFormScene({
     const currentConfig = (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>;
     const mergedConfig: DataConnectMutationInput["connectorConfig"] = {
       ...defaults,
-      ...sanitizeConnectorConfig(currentConfig),
+      ...sanitizeConnectorConfig(currentConfig, connector?.fieldConfig),
     };
 
     form.setFieldsValue({
@@ -153,7 +163,10 @@ export function DataConnectFormScene({
     const values = await form.validateFields();
 
     return {
-      connectorConfig: normalizeConnectorConfig(values.connectorConfig ?? {}),
+      connectorConfig: normalizeConnectorConfig(
+        values.connectorConfig ?? {},
+        selectedConnector?.fieldConfig,
+      ),
       connectorType: selectedConnectorType ?? values.connectorType,
       description: values.description ?? "",
       enabled: record?.enabled ?? values.enabled ?? true,
@@ -183,6 +196,7 @@ export function DataConnectFormScene({
     return {
       connectorConfig: normalizeConnectorConfig(
         values.connectorConfig ?? {},
+        selectedConnector?.fieldConfig,
       ),
       connectorType:
         selectedConnectorType ?? currentValues.connectorType,
@@ -420,47 +434,78 @@ export function DataConnectFormScene({
   );
 }
 
-function sanitizeConnectorConfig(config: Record<string, unknown>) {
+function sanitizeConnectorConfig(
+  config: Record<string, unknown>,
+  fieldConfig: Record<string, ConnectorFieldConfig> = {},
+) {
   return Object.fromEntries(
-    Object.entries(config).map(([key, value]) => {
-      if (
-        typeof value === "string" ||
-        typeof value === "number" ||
-        typeof value === "boolean"
-      ) {
-        return [key, value];
-      }
+    Object.entries(config)
+      .filter(
+        ([key, value]) =>
+          !shouldOmitConnectorConfigValue(fieldConfig[key], value),
+      )
+      .map(([key, value]) => {
+        if (
+          typeof value === "string" ||
+          typeof value === "number" ||
+          typeof value === "boolean"
+        ) {
+          return [key, value];
+        }
 
-      if (Array.isArray(value)) {
-        return [key, value.map((item) => String(item))];
-      }
+        if (Array.isArray(value)) {
+          return [key, value.map((item) => String(item))];
+        }
 
-      return [key, JSON.stringify(value)];
-    }),
+        return [key, JSON.stringify(value)];
+      }),
   ) as Record<string, boolean | number | string | string[]>;
 }
 
-function normalizeConnectorConfig(config: Record<string, unknown>) {
+function normalizeConnectorConfig(
+  config: Record<string, unknown>,
+  fieldConfig: Record<string, ConnectorFieldConfig> = {},
+) {
   return Object.fromEntries(
     Object.entries(config)
-      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .filter(
+        ([key, value]) =>
+          !shouldOmitConnectorConfigValue(fieldConfig[key], value),
+      )
       .map(([key, value]) => {
         if (typeof value === "string") {
+          if (fieldConfig[key]?.encrypted) {
+            return [key, value];
+          }
+
           const trimmed = value.trim();
 
-          if (
-            (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-            (trimmed.startsWith("[") && trimmed.endsWith("]"))
-          ) {
+          if (fieldConfig[key]?.type === "object") {
             try {
               return [key, JSON.parse(trimmed) as unknown];
             } catch {
-              return [key, value];
+              return [key, trimmed];
             }
           }
+
+          return [key, trimmed];
         }
 
         return [key, value];
       }),
   ) as Record<string, unknown>;
+}
+
+function shouldOmitConnectorConfigValue(
+  field: ConnectorFieldConfig | undefined,
+  value: unknown,
+) {
+  if (field?.encrypted) {
+    return value === undefined || value === null || value === "";
+  }
+
+  return (
+    field?.type === "object" &&
+    (value === null || (typeof value === "string" && value.trim() === ""))
+  );
 }

@@ -16,6 +16,7 @@ import { dataCatalogEnUS } from "@/modules/data-catalog/locales/en-US";
 import { dataConnectEnUS } from "@/modules/data-connect/locales/en-US";
 import { executionFactoryLabEnUS } from "@/modules/execution-factory-lab/locales/en-US";
 import { executionFactoryEnUS } from "@/modules/execution-factory/locales/en-US";
+import { homeEnUS } from "@/modules/home/locales/en-US";
 import { knowledgeNetworkEnUS } from "@/modules/knowledge-network/locales/en-US";
 import { modelResourcesEnUS } from "@/modules/model-resources/locales/en-US";
 import { systemAdminEnUS } from "@/modules/system-admin/locales/en-US";
@@ -25,6 +26,7 @@ export const enUS = {
   ...appEnUS,
   ...authEnUS,
   ...shellEnUS,
+  ...homeEnUS,
   ...dataConnectEnUS,
   ...dataCatalogEnUS,
   ...knowledgeNetworkEnUS,

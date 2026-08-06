@@ -54,6 +54,26 @@ export function getMetricApiAvailability() {
   return metricApiAvailability;
 }
 
+const METRIC_LIST_DEFAULT_LIMIT = 20;
+export const METRIC_LIST_MAX_LIMIT = 500;
+
+export function resolveMetricListLimit(limit?: number) {
+  if (limit == null) {
+    return METRIC_LIST_DEFAULT_LIMIT;
+  }
+
+  if (limit < 0) {
+    return METRIC_LIST_MAX_LIMIT;
+  }
+
+  return limit;
+}
+
+function sliceMetricListPage<T>(items: T[], offset: number, limit?: number) {
+  const resolvedLimit = limit == null ? items.length : resolveMetricListLimit(limit);
+  return items.slice(offset, offset + resolvedLimit);
+}
+
 function filterAndSortMockMetrics(
   metrics: KnowledgeNetworkMetricRecord[],
   query: MetricListQuery = {},
@@ -78,10 +98,9 @@ function filterAndSortMockMetrics(
     return direction === "asc" ? compared : -compared;
   });
   const offset = query.offset ?? 0;
-  const limit = query.limit ?? sorted.length;
 
   return {
-    entries: sorted.slice(offset, offset + limit),
+    entries: sliceMetricListPage(sorted, offset, query.limit),
     totalCount: sorted.length,
   };
 }
@@ -101,7 +120,7 @@ export async function listKnowledgeNetworkMetrics(
       {
         params: {
           direction: query.direction ?? "desc",
-          limit: query.limit ?? 20,
+          limit: resolveMetricListLimit(query.limit),
           name_pattern: query.keyword || undefined,
           offset: query.offset ?? 0,
           scope_ref: query.scopeRef || undefined,

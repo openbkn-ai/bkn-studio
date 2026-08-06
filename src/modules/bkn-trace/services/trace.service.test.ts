@@ -96,6 +96,7 @@ describe("bkn-trace service", () => {
         data: {
           trace_id: "trace_001",
           "bkn.request.id": "req_001",
+		  conclusion_scope: "interaction",
           partial: false,
           partial_reason: [],
           visibility_summary: {
@@ -125,6 +126,7 @@ describe("bkn-trace service", () => {
         data: {
           trace_id: "trace_001",
           "bkn.request.id": "req_001",
+		  conclusion_scope: "interaction",
           partial: false,
           partial_reason: [],
           visibility_summary: {
@@ -143,7 +145,9 @@ describe("bkn-trace service", () => {
     );
 
     const chain = await getEvidenceChain({ requestId: "req_001", limit: 50 });
-    await getBusinessGraph({ requestId: "req_001", limit: 50 });
+	const graph = await getBusinessGraph({ requestId: "req_001", limit: 50 });
+	expect(chain.conclusionScope).toBe("interaction");
+	expect(graph.conclusionScope).toBe("interaction");
 
     expect(getMock).toHaveBeenNthCalledWith(
       1,
@@ -247,13 +251,18 @@ describe("bkn-trace service", () => {
           completed_at: "2026-07-27T09:00:03Z",
           initiator: "业务分析员",
           agent_or_app: "risk-agent",
+		  agent_name: "供应链分析助手",
+		  application_principal_id: "266c6a42-6131-4d62-8f39-853e7093701c",
+		  effective_subject_id: "user-001",
           business_domain: "customer-risk",
           knowledge_networks: ["customer-risk-network"],
           question_preview: "客户 A 的风险为什么上升？",
           result_preview: "近 7 天投诉增加，风险等级上升。",
+          result_count: 12,
           status: "completed",
           evidence_completeness: "complete",
           business_refs: ["bkn://customer/A"],
+          controlled_summary: "客户风险数据",
           action_summary: { recommended: 1, approved: 0, executed: 0, completed: 0 },
           trace_count: 2,
           duration_ms: 3000,
@@ -301,8 +310,13 @@ describe("bkn-trace service", () => {
 	  operationId: "op_query_customer_risk",
 	  operationKey: "customer-risk-query",
 	  toolName: "run_sql",
+      controlledSummary: "客户风险数据",
+	  agentName: "供应链分析助手",
+	  applicationPrincipalId: "266c6a42-6131-4d62-8f39-853e7093701c",
+	  effectiveSubjectId: "user-001",
       questionPreview: "客户 A 的风险为什么上升？",
       resultPreview: "近 7 天投诉增加，风险等级上升。",
+      resultCount: 12,
       evidenceCompleteness: "complete",
       traceCount: 2,
     });
@@ -328,6 +342,32 @@ describe("bkn-trace service", () => {
     expect(page.entries[0].status).toBe("unknown");
   });
 
+  it("keeps unavailable span counts distinct from a real zero", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [{
+          request_id: "req_trace_stats",
+          span_count: 0,
+          span_count_status: "unavailable",
+          status: "completed",
+          trace_id: "trace_stats",
+        }],
+        total: 1,
+      },
+    });
+    const { getRequestTraces } = await import(
+      "@/modules/bkn-trace/services/trace.service"
+    );
+
+    const page = await getRequestTraces("req_trace_stats");
+
+    expect(page.entries[0]).toMatchObject({
+      spanCount: 0,
+      spanCountStatus: "unavailable",
+      traceId: "trace_stats",
+    });
+  });
+
   it("lists true conversation and interaction business provenance projections", async () => {
 	getMock
 	  .mockResolvedValueOnce({
@@ -336,13 +376,15 @@ describe("bkn-trace service", () => {
 			conversation_id: "conversation_supply",
 			question_preview: "6 月有哪些需求预测单？",
 			result_preview: "6 月共 63 条，合计 11594。",
-			status: "completed",
+			status: "active",
 			evidence_completeness: "complete",
 			interaction_count: 2,
 			request_count: 3,
 			trace_count: 3,
 		  }],
 		  total: 1,
+		  page: 2,
+		  page_size: 20,
 		},
 	  })
 	  .mockResolvedValueOnce({
@@ -364,13 +406,13 @@ describe("bkn-trace service", () => {
 	  "@/modules/bkn-trace/services/trace.service"
 	);
 
-	const conversations = await getConversationSummaries({ keyword: "需求预测" });
+	const conversations = await getConversationSummaries({ keyword: "需求预测", page: 2, pageSize: 20 });
 	const interactions = await getInteractionSummaries({ conversationId: "conversation_supply" });
 
 	expect(getMock).toHaveBeenNthCalledWith(
 	  1,
 	  "/agent-observability/v1/business-provenance/conversations",
-	  { headers: { "x-business-domain": "bd_demo" }, params: { keyword: "需求预测" } },
+	  { headers: { "x-business-domain": "bd_demo" }, params: { keyword: "需求预测", page: 2, page_size: 20 } },
 	);
 	expect(getMock).toHaveBeenNthCalledWith(
 	  2,
@@ -381,8 +423,10 @@ describe("bkn-trace service", () => {
 	  conversationId: "conversation_supply",
 	  interactionCount: 2,
 	  requestCount: 3,
+	  status: "active",
 	  traceCount: 3,
 	});
+	expect(conversations).toMatchObject({ page: 2, pageSize: 20 });
 	expect(interactions.entries[0]).toMatchObject({
 	  conversationId: "conversation_supply",
 	  interactionId: "interaction_june",
@@ -504,8 +548,15 @@ describe("bkn-trace service", () => {
   it("loads a complete interaction spanning multiple requests", async () => {
     getMock.mockResolvedValueOnce({
       data: {
+		agent_name: "供应链分析助手",
+		application_principal_id: "app-001",
         interaction_id: "interaction_june_forecast",
         conversation_id: "thread_supply_chain",
+		effective_subject_id: "user-001",
+		evidence_completeness: "complete",
+		partial_reasons: [],
+		question_preview: "查询六月需求预测",
+		result_preview: "六月共 63 条",
         status: "completed",
         requests: [
           { request_id: "req_schema", interaction_id: "interaction_june_forecast" },
@@ -535,5 +586,13 @@ describe("bkn-trace service", () => {
       "trace_schema",
       "trace_sql",
     ]);
+	expect(interaction).toMatchObject({
+	  agentName: "供应链分析助手",
+	  applicationPrincipalId: "app-001",
+	  effectiveSubjectId: "user-001",
+	  evidenceCompleteness: "complete",
+	  questionPreview: "查询六月需求预测",
+	  resultPreview: "六月共 63 条",
+	});
   });
 });

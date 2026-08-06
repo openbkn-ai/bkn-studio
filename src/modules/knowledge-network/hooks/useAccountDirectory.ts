@@ -11,15 +11,29 @@ import {
   buildAuditUserDirectory,
   formatAuditUserDisplay,
 } from "@/modules/execution-factory-lab/utils/audit-user-display";
+import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { getUser, listUsers } from "@/modules/system-admin/services/admin.service";
+import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function useAccountDirectory() {
+  const runtimeConfig = useRuntimeConfig();
   const [directory, setDirectory] = useState<Map<string, string>>(new Map());
+  const canListUsers = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    mode: "any",
+    requiredPermissions: systemAdminPermissions.users,
+  });
 
   useEffect(() => {
+    if (!canListUsers) {
+      setDirectory(new Map());
+      return;
+    }
+
     void listUsers({ skipErrorToast: true })
       .then((users) => {
         setDirectory(buildAuditUserDirectory(users));
@@ -27,7 +41,7 @@ export function useAccountDirectory() {
       .catch(() => {
         setDirectory(new Map());
       });
-  }, []);
+  }, [canListUsers]);
 
   return directory;
 }
@@ -47,7 +61,13 @@ export function resolveUpdaterDisplayName(
 
 export function useResolvedUpdaterName(updaterName?: string, emptyLabel = "--") {
   const directory = useAccountDirectory();
+  const runtimeConfig = useRuntimeConfig();
   const [resolved, setResolved] = useState(emptyLabel);
+  const canReadUserDetail = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    mode: "any",
+    requiredPermissions: systemAdminPermissions.users,
+  });
 
   useEffect(() => {
     const trimmed = updaterName?.trim();
@@ -64,6 +84,11 @@ export function useResolvedUpdaterName(updaterName?: string, emptyLabel = "--") 
 
     if (!UUID_PATTERN.test(trimmed)) {
       setResolved(trimmed);
+      return;
+    }
+
+    if (!canReadUserDetail) {
+      setResolved(emptyLabel);
       return;
     }
 
@@ -85,7 +110,7 @@ export function useResolvedUpdaterName(updaterName?: string, emptyLabel = "--") 
     return () => {
       cancelled = true;
     };
-  }, [directory, emptyLabel, updaterName]);
+  }, [canReadUserDetail, directory, emptyLabel, updaterName]);
 
   return resolved;
 }

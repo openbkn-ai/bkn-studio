@@ -11,6 +11,7 @@ import {
   CONTEXT_LOADER_OPS,
   buildCurl,
   createMcpSession,
+  fetchMcpObjectTypes,
   fetchKnDetail,
   listMcpTools,
   sendRequest,
@@ -21,7 +22,6 @@ const searchSchema = CONTEXT_LOADER_OPS.find((operation) => operation.id === "se
 const bknContext = {
   conversation_id: "conv_1",
   interaction_id: "int_1",
-  operation_key: "search_schema#1",
 };
 
 function restBody(init: RequestInit | undefined): Record<string, unknown> {
@@ -79,6 +79,9 @@ describe("sendRequest", () => {
     );
 
     expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy.mock.calls[0][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
+    expect(fetchSpy.mock.calls[1][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
+    expect(fetchSpy.mock.calls[2][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
     expect(jsonRpcBody(fetchSpy.mock.calls[0][1])).toMatchObject({ method: "initialize" });
     expect(jsonRpcBody(fetchSpy.mock.calls[1][1])).toMatchObject({ method: "notifications/initialized" });
     expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({ method: "tools/call" });
@@ -126,70 +129,84 @@ describe("sendRequest", () => {
     });
   });
 
-  it("reports the managed receipt from REST headers and from the MCP structured result", async () => {
-    const restSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("{}", {
-        status: 200,
-        headers: { "bkn-receipt-id": "rcp_1", "bkn-operation-id": "op_1" },
-      }),
-    );
-    const rest = await sendRequest(
-      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
-      searchSchema,
-      "rest",
-      {},
-      "{}",
-      undefined,
-      undefined,
-      bknContext,
-    );
-    expect(rest.receipt).toEqual({ operationId: "op_1", receiptId: "rcp_1", required: true });
-    restSpy.mockRestore();
+});
 
-    vi.spyOn(globalThis, "fetch")
+describe("fetchKnDetail", () => {
+  it("uses the MCP get_kn_detail tool with managed context", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
       .mockResolvedValueOnce(new Response(null, { status: 202 }))
       .mockResolvedValueOnce(
         new Response(
-          '{"jsonrpc":"2.0","result":{"content":[],"structuredContent":{"bkn_receipt":{"operation_id":"op_2","receipt_id":"rcp_2","required":true}}}}',
+          JSON.stringify({
+            jsonrpc: "2.0",
+            result: {
+              structuredContent: {
+                id: "kn-demo",
+                object_types: [],
+                concept_groups: [],
+                relation_types: [],
+              },
+            },
+          }),
           { status: 200 },
         ),
       );
-    const mcp = await sendRequest(
-      { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
-      searchSchema,
-      "mcp",
-      {},
-      "{}",
-      undefined,
-      undefined,
-      bknContext,
-    );
-    expect(mcp.receipt).toEqual({ operationId: "op_2", receiptId: "rcp_2", required: true });
+
+    await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, undefined, undefined, {
+      nextContext: () => bknContext,
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({
+      method: "tools/call",
+      params: {
+        name: "get_kn_detail",
+        arguments: {
+          kn_id: "kn-demo",
+          response_format: "json",
+          bkn_context: bknContext,
+        },
+      },
+    });
   });
 });
 
-describe("fetchKnDetail", () => {
-  it("takes its context from the turn and reports the receipt back to it", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response('{"id":"kn-demo","object_types":[],"concept_groups":[],"relation_types":[]}', {
-        status: 200,
-        headers: { "bkn-receipt-id": "rcp_3", "bkn-operation-id": "op_3" },
+describe("fetchMcpObjectTypes", () => {
+  it("uses get_object_types with the managed context and returns related metrics", async () => {
+    const session = {
+      callTool: vi.fn().mockResolvedValue({
+        ok: true,
+        text: "",
+        latencyMs: 1,
+        structured: { object_types: [{ id: "orders", related_metrics: [{ id: "m_order_count" }] }] },
+        isError: false,
       }),
-    );
-    const recordReceipt = vi.fn();
-
-    await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, undefined, undefined, {
-      nextContext: (toolName) => ({ ...bknContext, operation_key: `${toolName}#1` }),
-      recordReceipt,
-    });
-
-    expect(restBody(fetchSpy.mock.calls[0][1])).toMatchObject({
+    };
+    await expect(fetchMcpObjectTypes(session, "kn-demo", ["orders"], { nextContext: () => bknContext })).resolves.toEqual([
+      { id: "orders", related_metrics: [{ id: "m_order_count" }] },
+    ]);
+    expect(session.callTool).toHaveBeenCalledWith("get_object_types", {
       kn_id: "kn-demo",
-      bkn_context: { ...bknContext, operation_key: "get_kn_detail#1" },
+      ids: ["orders"],
+      response_format: "json",
+      bkn_context: bknContext,
     });
-    // 回执要记回本轮，否则终结交互时清单缺一条，Core 判 closure_manifest_invalid。
-    expect(recordReceipt).toHaveBeenCalledWith({ operationId: "op_3", receiptId: "rcp_3", required: true });
+  });
+
+  it("falls back to a JSON data envelope when structured content is unavailable", async () => {
+    const session = {
+      callTool: vi.fn().mockResolvedValue({
+        ok: true,
+        text: '{"data":{"object_types":[{"id":"orders","related_metrics":[{"id":"m_order_count"}]}]}}',
+        latencyMs: 1,
+        isError: false,
+      }),
+    };
+    await expect(fetchMcpObjectTypes(session, "kn-demo", ["orders"])).resolves.toEqual([
+      { id: "orders", related_metrics: [{ id: "m_order_count" }] },
+    ]);
   });
 });
 
@@ -241,6 +258,9 @@ describe("listMcpTools", () => {
     expect(tools).toEqual([{ name: "search_schema", inputSchema: { type: "object" }, outputSchema: undefined }]);
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(fetchSpy).toHaveBeenCalledTimes(4);
+    expect(fetchSpy.mock.calls[1][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
+    expect(fetchSpy.mock.calls[2][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
+    expect(fetchSpy.mock.calls[3][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
     expect(fetchSpy.mock.calls[0][1]?.headers).toMatchObject({ Authorization: "Bearer expired-token" });
     expect(fetchSpy.mock.calls[1][1]?.headers).toMatchObject({ Authorization: "Bearer fresh-token" });
     expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({ method: "notifications/initialized" });

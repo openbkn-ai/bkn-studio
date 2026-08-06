@@ -143,7 +143,17 @@ export function TopBar() {
   return (
     <header className="console-topbar">
       <div className="console-brand">
-        <img className="console-brand-logo" src={openBknLogo} alt={t("app.title")} />
+        <button
+          aria-label={t("shell.items.home")}
+          className="console-brand-home"
+          onClick={() => {
+            void navigate("/home");
+          }}
+          title={t("shell.items.home")}
+          type="button"
+        >
+          <img className="console-brand-logo" src={openBknLogo} alt={t("app.title")} />
+        </button>
         <div className="console-brand-row">
           {trail.length > 0 ? (
             <div className="console-brand-path">
