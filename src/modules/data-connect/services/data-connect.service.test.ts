@@ -6,12 +6,17 @@
  */
 
 import axios from "axios";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 
 const testCatalogConnectionMock = vi.hoisted(() => vi.fn());
 const testCatalogConnectionConfigMock = vi.hoisted(() => vi.fn());
+const getMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/framework/request/http", () => ({
+  http: { get: getMock },
+}));
 
 vi.mock("@/shared/catalog", () => ({
   testCatalogConnection: testCatalogConnectionMock,
@@ -20,8 +25,35 @@ vi.mock("@/shared/catalog", () => ({
 
 describe("data-connect.service · test connection", () => {
   beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
     testCatalogConnectionMock.mockReset();
     testCatalogConnectionConfigMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("filters connector types to enabled implementations available in the backend", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { listDataConnectConnectorTypes } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await listDataConnectConnectorTypes();
+
+    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/connector-types", {
+      params: {
+        available: true,
+        direction: "asc",
+        enabled: true,
+        limit: 100,
+        offset: 0,
+        sort: "name",
+      },
+    });
   });
 
   it("recognizes only the backend connection-test failure code", async () => {

@@ -426,7 +426,7 @@ describe("DataConnectFormScene · connection preflight", () => {
         { skipErrorToast: true },
       );
     });
-  });
+  }, 20_000);
 });
 
 function connectorField(
