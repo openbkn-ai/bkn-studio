@@ -33,6 +33,18 @@ const runSql: McpToolDef = {
   },
 };
 
+const startInteraction: McpToolDef = {
+  name: "bkn_start_interaction",
+  description: "开始交互",
+  inputSchema: { type: "object", properties: { question: { type: "string" } } },
+};
+
+const finishInteraction: McpToolDef = {
+  name: "bkn_finish_interaction",
+  description: "结束交互",
+  inputSchema: { type: "object", properties: { interaction_id: { type: "string" } } },
+};
+
 function stubSession(result?: Partial<McpToolCallResult>) {
   const callTool = vi.fn<McpSession["callTool"]>().mockResolvedValue({
     ok: true,
@@ -55,6 +67,20 @@ function runTool(tool: unknown, input: unknown): Promise<string> {
 }
 
 describe("buildAgentTools", () => {
+  it("does not expose bkn lifecycle tools to the model", () => {
+    const session = stubSession();
+    const tools = buildAgentTools(
+      [startInteraction, runSql, finishInteraction],
+      env,
+      "kn-demo",
+      DEFAULT_AGENT_CONFIG,
+      tokenProvider,
+      { session },
+    );
+
+    expect(Object.keys(tools)).toEqual(["run_sql"]);
+  });
+
   it("hides bkn_context from the model", () => {
     const session = stubSession();
     const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, { session });
