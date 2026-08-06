@@ -230,8 +230,9 @@ const LIFECYCLE_DEAD_END_CODES = new Set(["conversation_required", "interaction_
  * 后端的 `{"error":{"code":"conversation_required","required_action":"bkn_start_interaction"}}`
  * 曾经原样进模型上下文：模型照着 required_action 自己开一轮交互，拿到的 conversation_id
  * 停在它的对话历史里，跟客户端注入的 bkn_context 对不上，于是再次被拒、再次照办——死循环。
- * 现在生命周期工具已不注册给模型（见 buildAgentTools），它开不了交互，但仍会对着同一个错误
- * 反复重试同一个工具，一路烧到 stopWhen 的步数上限。所以这里连"下一步该干什么"一起抹掉。
+ * 生命周期工具现在由 managedLifecycleTool 接管（模型照常调得到，但拿回的是本轮那条交互），
+ * 循环的头已经断了；这里管的是尾——真落到这两个 code 时，模型会对着同一个错误反复重试同一个
+ * 工具，一路烧到 stopWhen 的步数上限，所以连"下一步该干什么"一起抹掉。
  */
 export function sanitizeLifecycleError(text: string): string {
   let code = "";
@@ -255,12 +256,11 @@ export function sanitizeLifecycleError(text: string): string {
 
 /**
  * 工具循环需要的这一轮交互接口：取上下文 + 终结。
- * 结构上兼容 bkn-lifecycle 的 BknTurn，这里只取用得到的两件事。
+ * 结构上兼容 bkn-lifecycle 的 BknTurn，这里只列用得到的两件事。
+ * `finish` 必填——少了它 bkn_finish_interaction 就只能直通后端，凭空多一条隐性分支。
  */
 export type AgentTurnScope = BknCallScope & {
-  conversationId?: string;
-  interactionId?: string;
-  finish?: (outcome: TurnOutcome, answer: string) => Promise<void>;
+  finish: (outcome: TurnOutcome, answer: string) => Promise<void>;
 };
 
 /** 模型侧 outcome → 客户端 turn 的终结语义；handed_off 客户端没有对应动作，明确拒绝。 */
@@ -354,34 +354,45 @@ export function buildAgentTools(
  *   一个真实可用的 conversation_id / interaction_id，而不是一条我们不认识的孤儿会话。
  * - `bkn_finish_interaction`：走 turn 的终结路径。turn 内部的 terminated 幂等位保证
  *   ChatPane finally 里的收尾变成空操作，模型收过尾就不会再收第二次。
- *   handed_off 客户端没有对应语义，不接管，直通后端。
+ *
+ * 两者的 inputSchema 一律照抄后端下发的那份。接管改的是"这次调用落到哪里"，不是工具长什么
+ * 样——在 schema 上删参数（哪怕是我们用不到的 question）或裁枚举（哪怕运行时会拒的
+ * handed_off），对模型来说就是这个能力被悄悄削了一块，它连有过这个选项都不知道。
  */
 function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
   const describe = (extra: string) => `${def.description ?? def.name} ${extra}`;
+  // 后端 schema 原样透传；只有它压根没给 schema 时才退回一个空对象。
+  const backendSchema =
+    def.inputSchema && typeof def.inputSchema === "object"
+      ? (def.inputSchema as Record<string, unknown>)
+      : { type: "object", properties: {} };
   if (def.name === "bkn_start_interaction") {
     return tool({
       description: describe("本轮交互已由 Studio 开启，调用它只会返回当前交互的标识，不会新开一轮。"),
-      inputSchema: jsonSchema({ type: "object", properties: {} }),
+      inputSchema: jsonSchema(backendSchema),
+      // 入参（question 等）照收不误，只是本轮交互已经开好了，不拿它再去开一条。
       execute: (): Promise<string> =>
         Promise.resolve(JSON.stringify({ ...turn.nextContext(), execution_status: "active" })),
     });
   }
-  if (def.name === "bkn_finish_interaction" && turn.finish) {
-    const finish = turn.finish.bind(turn);
+  if (def.name === "bkn_finish_interaction") {
+    const finish = turn.finish;
     return tool({
       description: describe("答复写完后可以调用它终结本轮交互；不调用 Studio 也会在本轮结束时代为终结。"),
-      inputSchema: jsonSchema({
-        type: "object",
-        properties: {
-          outcome: { type: "string", enum: ["completed", "failed", "cancelled"] },
-          answer: { type: "string" },
-          reason: { type: "string" },
-        },
-        required: ["outcome"],
-      }),
+      inputSchema: jsonSchema(backendSchema),
       execute: async (input: unknown): Promise<string> => {
-        const outcome = MODEL_FINISH_OUTCOMES[textOf(input, "outcome")];
-        if (!outcome) return JSON.stringify({ error: { code: "unsupported_outcome", message: "outcome 只支持 completed / failed / cancelled。" } });
+        const raw = textOf(input, "outcome");
+        const outcome = MODEL_FINISH_OUTCOMES[raw];
+        // handed_off 之类客户端没有对应动作的 outcome：明说不支持，而不是假装成功，
+        // 也不是在 schema 里当它不存在——后端支持、这条链路不支持，是两件事。
+        if (!outcome) {
+          return JSON.stringify({
+            error: {
+              code: "unsupported_outcome",
+              message: `Studio 代管的交互只支持 completed / failed / cancelled，收到 ${raw || "空值"}。`,
+            },
+          });
+        }
         await finish(outcome, textOf(input, "answer") || textOf(input, "reason"));
         return JSON.stringify({ ...turn.nextContext(), execution_status: outcome === "canceled" ? "canceled" : outcome });
       },

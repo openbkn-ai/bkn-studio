@@ -9,7 +9,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildAgentTools, DEFAULT_AGENT_CONFIG } from "@/modules/knowledge-network/services/agent-chat.service";
 import type {
-  BknCallScope,
   McpSession,
   McpToolCallResult,
   McpToolDef,
@@ -33,16 +32,30 @@ const runSql: McpToolDef = {
   },
 };
 
+/** schema 照抄真机形状：接管不该改变工具在模型眼里的样子。 */
 const startInteraction: McpToolDef = {
   name: "bkn_start_interaction",
   description: "开始交互",
-  inputSchema: { type: "object", properties: { question: { type: "string" } } },
+  inputSchema: {
+    type: "object",
+    properties: { question: { type: "string" }, conversation_id: { type: "string" } },
+    required: ["question"],
+  },
 };
 
 const finishInteraction: McpToolDef = {
   name: "bkn_finish_interaction",
   description: "结束交互",
-  inputSchema: { type: "object", properties: { interaction_id: { type: "string" } } },
+  inputSchema: {
+    type: "object",
+    properties: {
+      interaction_id: { type: "string" },
+      outcome: { type: "string", enum: ["completed", "failed", "cancelled", "handed_off"] },
+      answer: { type: "string" },
+      reason: { type: "string" },
+    },
+    required: ["interaction_id", "outcome"],
+  },
 };
 
 /** 后端在 tools/list 里一并下发的受管生命周期工具。 */
@@ -147,6 +160,22 @@ describe("buildAgentTools", () => {
     expect(session.callTool).not.toHaveBeenCalled();
   });
 
+  it("接管不改工具形状：后端 schema 原样透传给模型", () => {
+    // 接管改的是"调用落到哪里"，不是工具长什么样。在 schema 上删参数或裁枚举，
+    // 对模型来说就是能力被悄悄削了一块——它连有过这个选项都不知道。
+    const tools = buildAgentTools(lifecycleTools, env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session: stubSession(),
+      turn: managedTurn(),
+    });
+
+    // 我们用不到 question（本轮交互已经开好了），但它仍是后端契约的一部分。
+    expect(schemaOf(tools.bkn_start_interaction).properties).toHaveProperty("question");
+    expect(schemaOf(tools.bkn_start_interaction).required).toEqual(["question"]);
+    // handed_off 运行时会被拒，但不在 schema 上假装它不存在。
+    const outcome = (schemaOf(tools.bkn_finish_interaction).properties as Record<string, { enum?: string[] }>).outcome;
+    expect(outcome.enum).toContain("handed_off");
+  });
+
   it("接管的 bkn_finish_interaction 拒绝客户端没有语义的 outcome", async () => {
     const turn = managedTurn();
     const tools = buildAgentTools(lifecycleTools, env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
@@ -162,15 +191,9 @@ describe("buildAgentTools", () => {
 
   it("injects the turn context and locked kn_id into the real call", async () => {
     const session = stubSession();
-    const turn: BknCallScope = {
-      nextContext: () => ({
-        conversation_id: "conv_1",
-        interaction_id: "int_1",
-      }),
-    };
     const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
       session,
-      turn,
+      turn: managedTurn(),
     });
 
     await runTool(tools.run_sql, { sql: "SELECT 1", kn_id: "模型编的网络" });
