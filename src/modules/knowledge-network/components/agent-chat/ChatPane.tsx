@@ -63,6 +63,7 @@ import {
   type TurnOutcome,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
+  type BknContext,
   type ContextLoaderEnv,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
@@ -437,6 +438,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
 
   const abortRef = useRef<AbortController | null>(null);
+  // 本轮受管上下文，只给工具调用面板显示用；真值仍由 buildAgentTools 从 turn 逐次注入。
+  const turnContextRef = useRef<BknContext | null>(null);
   const requestSequenceRef = useRef(0);
   // 是否贴底跟随；用户上滚时置 false，回到底部恢复，避免生成时被强制拽到底。
   const stickRef = useRef(true);
@@ -599,9 +602,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               {
                 id: chunk.id,
                 name: chunk.name,
-                // 展示实际发出的业务请求体（含注入的 kn_id 与 schema_brief 等默认值），而非模型原始入参。
-                // 受管上下文（bkn_context）在 execute 里逐次注入，不在这条流式事件里，故不展示。
-                args: effectiveToolArgs(chunk.name, chunk.args, knId),
+                // 展示实际发出的业务请求体（含注入的 kn_id、schema_brief 等默认值与 bkn_context），
+                // 而非模型原始入参。bkn_context 是 execute 里注入的，流式事件里没有，取自本轮 turn ——
+                // 少了它，面板看起来就像"前端没传上下文"，排查 conversation_required 时会指错方向。
+                args: effectiveToolArgs(chunk.name, chunk.args, knId, turnContextRef.current ?? undefined),
                 status: "running",
                 startedAt: performance.now(),
               },
@@ -731,6 +735,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       let roundFailed = false;
       try {
         turn = await lifecycle.beginTurn(question);
+        turnContextRef.current = turn?.nextContext() ?? null;
         const allTools = await getTools();
         const modelVisibleTools = allTools.filter(
           (toolDef) =>
@@ -783,6 +788,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         if (turn) {
           await turn.finish(controller.signal.aborted ? "canceled" : finalOutcome, answer).catch(() => undefined);
         }
+        turnContextRef.current = null;
         if (requestSequence === requestSequenceRef.current) {
           abortRef.current = null;
           const elapsed = performance.now() - startedAt;
