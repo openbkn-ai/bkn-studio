@@ -32,8 +32,6 @@ export const CAPABILITIES = {
    * 永久隐藏(ee-design.md §6「A 答不了 B」)。它今天只用于版本页的在售清单。
    */
   BUSINESS_PROVENANCE: "business_provenance",
-  /** 操作审计与合规报表。企业档起。 */
-  AUDIT: "audit",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];

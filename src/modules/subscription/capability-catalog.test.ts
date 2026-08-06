@@ -22,6 +22,10 @@ describe("capability catalog", () => {
     const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
 
     for (const planned of [
+      // 上游 e8fdf2f 退回 planned:EE 侧从未实现,页面不该在卖
+      "audit",
+      "branding",
+      "ops_dashboard",
       "bigdata_connect",
       "explorer",
       "multi_tenant",
@@ -33,14 +37,14 @@ describe("capability catalog", () => {
     }
   });
 
-  it("key 不重复,且档位只有 professional / enterprise 两种", () => {
+  it("key 不重复,档位分布与上游登记表一致", () => {
     const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
 
     expect(new Set(keys).size).toBe(keys.length);
-    expect(capabilitiesIntroducedBy("community")).toEqual([]);
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
-    expect(capabilitiesIntroducedBy("professional")).toHaveLength(6);
-    expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(5);
+    expect(capabilitiesIntroducedBy("community")).toHaveLength(1);
+    expect(capabilitiesIntroducedBy("professional")).toHaveLength(5);
+    expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(2);
   });
 
   /**
@@ -53,7 +57,7 @@ describe("capability catalog", () => {
       (entry) => entry.key,
     );
 
-    expect(served.sort()).toEqual(["audit", "perm_object_level", "rbac_basic"]);
+    expect(served.sort()).toEqual(["perm_object_level", "rbac_basic"]);
   });
 
   // 常量表里的每个 key 都要在册,否则页面上少一行在售能力。
@@ -75,7 +79,7 @@ describe("capability catalog", () => {
       (entry) => entry.key,
     );
 
-    expect(served.sort()).toEqual(["audit", "perm_object_level", "rbac_basic"]);
+    expect(served.sort()).toEqual(["perm_object_level", "rbac_basic"]);
   });
 });
 

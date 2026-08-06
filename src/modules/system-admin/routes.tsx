@@ -144,7 +144,7 @@ export const systemAdminRoutes: RouteObject[] = [
         titleKey: "systemAdmin.audit.title",
       },
     },
-    element: gatedByCapability(CAPABILITIES.AUDIT, systemAdminPermissions.audit, <AuditLogPage />),
+    element: guarded(systemAdminPermissions.audit, <AuditLogPage />),
   },
 ];
 

@@ -17,18 +17,15 @@ export const subscriptionZhCN = {
         description: "业务问题与结果的证据链、数据溯源、业务语义图与交互式追溯",
         name: "业务溯源",
       },
-      audit: { description: "审计治理", name: "审计治理" },
       bkn_trace: {
         description: "技术 Trace 与运行诊断:调用链、耗时与错误定位(不含业务正文与证据链)",
         name: "运行诊断 Trace",
       },
-      branding: { description: "产品名称/Logo/登录页定制", name: "品牌定制" },
       connector_certified: {
         description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
         name: "高级数据连接",
       },
       impact_graph: { description: "OpenBKN Impact Graph 影响关系图", name: "影响关系图" },
-      ops_dashboard: { description: "模型使用策略、使用统计、运营看板", name: "运营看板" },
       perm_object_level: { description: "对象级授权和高级角色控制", name: "对象级授权" },
       rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
       semantic_task: { description: "面向业务语义的理解任务编排与执行", name: "语义理解任务" },

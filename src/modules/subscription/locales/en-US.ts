@@ -19,15 +19,10 @@ export const subscriptionEnUS = {
           "Evidence chains, data provenance, the business semantic graph and interactive tracing for business questions and results.",
         name: "Business provenance",
       },
-      audit: { description: "Audit governance", name: "Audit governance" },
       bkn_trace: {
         description:
           "Technical traces and runtime diagnostics: call chains, latency and error localisation (no business content or evidence chain).",
         name: "Runtime diagnostic traces",
-      },
-      branding: {
-        description: "Custom product name, logo and sign-in page",
-        name: "Branding",
       },
       connector_certified: {
         description:
@@ -37,10 +32,6 @@ export const subscriptionEnUS = {
       impact_graph: {
         description: "OpenBKN Impact Graph",
         name: "Impact graph",
-      },
-      ops_dashboard: {
-        description: "Model usage policies, usage statistics and operations dashboards",
-        name: "Operations dashboard",
       },
       perm_object_level: {
         description: "Object-level authorization and advanced role control",

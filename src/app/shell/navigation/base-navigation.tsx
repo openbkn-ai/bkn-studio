@@ -77,7 +77,6 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         path: "/system/audit",
         icon: <FileTextOutlined />,
         permission: systemAdminPermissions.audit,
-        capability: CAPABILITIES.AUDIT,
       },
     ],
   },
