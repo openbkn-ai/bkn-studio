@@ -106,6 +106,7 @@ const LOCAL_TOOLS: Array<{ id: string; groupKey: string; name: string }> = [
   { id: "list_skills", groupKey: "skill", name: "技能列表" },
   { id: "get_skill_content", groupKey: "skill", name: "查看技能内容" },
   { id: "read_skill_file", groupKey: "skill", name: "读取技能文件" },
+  { id: "execute_skill", groupKey: "skill", name: "执行技能" },
 ];
 
 /** 兜底 order 的起点：服务端 order 是十位量级，兜底整体排在其后。 */

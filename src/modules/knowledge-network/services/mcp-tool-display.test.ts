@@ -49,6 +49,8 @@ describe("toolDisplayOf", () => {
     expect(toolDisplayOf("list_action_execution")).toMatchObject({ groupKey: "logic", name: "行动执行记录" });
     expect(toolDisplayOf("query_metric")).toMatchObject({ groupKey: "logic", name: "指标数据查询" });
     expect(toolDisplayOf("read_skill_file")).toMatchObject({ groupKey: "skill", name: "读取技能文件" });
+    // 兜底表漏了它就掉进 guessLocal，显示成跟 find_skills 一模一样的"技能与动态工具"。
+    expect(toolDisplayOf("execute_skill")).toMatchObject({ groupKey: "skill", name: "执行技能" });
   });
 
   it("keeps an unknown bkn_ tool in the lifecycle group instead of the knowledge-network group", () => {
