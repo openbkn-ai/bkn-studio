@@ -37,6 +37,7 @@ export type BackendKnowledgeNetwork = {
   icon?: string;
   id: string;
   name: string;
+  operations?: string[];
   statistics?: {
     action_types_total?: number;
     concept_groups_total?: number;
