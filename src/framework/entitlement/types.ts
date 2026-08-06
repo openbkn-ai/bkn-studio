@@ -66,6 +66,19 @@ export type Entitlement = {
 };
 
 /**
+ * 组件能看到的那一份:**没有 `features`**。
+ *
+ * ee-design.md §3.2 说这条纪律「会被绕过,必须主动堵」。ESLint 那条
+ * `no-restricted-syntax` 只拦得住 `x.features.includes(...)`,解构之后的裸
+ * `features.includes(...)` 它看不见——类型层没有这个盲区:字段根本不存在,写出来就是
+ * 编译错误。
+ *
+ * 要看证书原文(授权管理页的展示、排障对账)用 `useLicenseFeatures()`,那是显式的一次
+ * 取用,不会被顺手拿去做显隐。
+ */
+export type EntitlementView = Omit<Entitlement, "features">;
+
+/**
  * 一个能力在当前部署下的状态。四态而不是布尔,因为客户报障时「用不了」至少有三种完全
  * 不同的处置:换镜像、买证书、等加载完。压成一个布尔就分不出来了。
  */
@@ -102,6 +115,6 @@ export const FALLBACK_ENTITLEMENT: Entitlement = {
  * 这种集群里把付费入口画成「锁定 + 升级引导」是噪音——点开也装不上,升级要换镜像而不是
  * 换证书。所以社区镜像直接藏,企业镜像才显示升级引导。
  */
-export function isCommunityBuild(entitlement: Entitlement) {
+export function isCommunityBuild(entitlement: EntitlementView) {
   return entitlement.extensions.length === 0;
 }

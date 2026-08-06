@@ -11,7 +11,7 @@ import type {
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
 import { isCapabilityAvailable } from "@/framework/entitlement/capability-state";
-import type { Entitlement } from "@/framework/entitlement/types";
+import type { EntitlementView } from "@/framework/entitlement/types";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
@@ -81,7 +81,7 @@ export function filterConsoleNavigation(
  */
 export function filterNavByCapability(
   items: ConsoleNavItem[],
-  snapshot: Entitlement | null,
+  snapshot: EntitlementView | null,
 ): ConsoleNavItem[] {
   const visible: ConsoleNavItem[] = [];
 

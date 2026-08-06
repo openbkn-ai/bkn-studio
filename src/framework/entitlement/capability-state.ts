@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { CapabilityState, Entitlement } from "@/framework/entitlement/types";
+import type { CapabilityState, EntitlementView } from "@/framework/entitlement/types";
 
 /**
  * 判定一个能力在当前部署下的状态。纯函数,便于单测——门控判据不该只能通过渲染组件来验证。
@@ -21,7 +21,7 @@ import type { CapabilityState, Entitlement } from "@/framework/entitlement/types
  */
 export function capabilityState(
   capability: string,
-  snapshot: Entitlement | null,
+  snapshot: EntitlementView | null,
 ): CapabilityState {
   // null = 还没拿到快照(首屏加载中,或请求失败)。按不可用处理:显示一个点进去只会
   // 404 的入口,正是这个端点存在要防的事。但它与「已知不可用」必须分开——对着社区
@@ -40,7 +40,7 @@ export function capabilityState(
 /** 能不能用。只有 available 算能用——unknown 一律按不能用,绝不 fail-open。 */
 export function isCapabilityAvailable(
   capability: string,
-  snapshot: Entitlement | null,
+  snapshot: EntitlementView | null,
 ): boolean {
   return capabilityState(capability, snapshot) === "available";
 }
@@ -53,7 +53,7 @@ export function isCapabilityAvailable(
  */
 export function shouldOfferUpgrade(
   capability: string,
-  snapshot: Entitlement | null,
+  snapshot: EntitlementView | null,
 ): boolean {
   return capabilityState(capability, snapshot) === "not-licensed";
 }
