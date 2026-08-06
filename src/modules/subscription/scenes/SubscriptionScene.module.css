@@ -13,7 +13,14 @@
 
 .head {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+}
+
+/* 返回与标题同排:菜单里没有这一项,返回是唯一的出口,和标题挤在一行比单独占一层更省。 */
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .title {
@@ -23,8 +30,8 @@
 }
 
 .subtitle {
+  /* 不设窄栏:这句话是一整句,720px 会在半句处折,读起来像被截断。 */
   margin: 0;
-  max-width: 720px;
   color: var(--admin-color-secondary, #4b5563);
   font-size: 13px;
   line-height: 1.7;
@@ -67,14 +74,29 @@
   color: #7c5cd6;
 }
 
-.planEnterprise :global(.ant-btn) {
+/* 次要按钮走紫描边。**不能写成 .ant-btn** —— 那会把 primary 的白字也改成紫,
+   叠在 antd 的深蓝底上直接读不出来。 */
+.planEnterprise :global(.ant-btn-default) {
   border-color: #b9a7ec;
   color: #4c35a0;
 }
 
-.planEnterprise :global(.ant-btn):hover {
+.planEnterprise :global(.ant-btn-default):hover {
   border-color: #7c5cd6;
   color: #3b2880;
+}
+
+/* 主按钮连底色一起换紫,否则一张紫卡上压一块 antd 深蓝。 */
+.planEnterprise :global(.ant-btn-primary) {
+  border-color: #6d4fd0;
+  background: #6d4fd0;
+  color: #fff;
+}
+
+.planEnterprise :global(.ant-btn-primary):hover {
+  border-color: #5b3fbb;
+  background: #5b3fbb;
+  color: #fff;
 }
 
 .planCurrent {
@@ -161,6 +183,11 @@
   .actions {
     grid-auto-flow: row;
   }
+}
+
+/* 「查看详情」是三档共用的同一篇文档,压成链接不跟前两个动作抢注意力。 */
+.detailLink {
+  align-self: center;
 }
 
 .quota {

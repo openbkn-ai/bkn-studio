@@ -41,6 +41,15 @@ const TIER_COLUMNS: Edition[] = ["community", "professional", "enterprise"];
 const SUBSCRIPTION_DETAIL_URL =
   "https://openbkn-ai.feishu.cn/wiki/BqXZw5UXtisE5Ikc2Sfc1J6JnCb";
 
+/**
+ * 授权门户。社区版注册即发,商业档走审批(license-server `license-service.md` §1.5:
+ * 商业版一律双人复核),两条路径都从这里开始。
+ *
+ * 产品页只把人送过去,不在自己这边收表单——申请要填的客户/项目信息、审批状态、证书
+ * 下载都在门户侧,复制一套只会两边不一致。
+ */
+const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
+
 const CLUSTER_TAG_COLOR: Record<CapabilityState, string | undefined> = {
   available: "success",
   "not-installed": undefined,
@@ -134,23 +143,22 @@ export function SubscriptionScene() {
 
   return (
     <section className={styles.scene}>
-      {/*
-        菜单里没有这一项(它对所有登录用户开放,而「系统管理」分组的含义是「你管得着
-        系统」),入口是顶栏档位芯片和锁定态的升级引导。所以页面自己得给一条回去的路。
-      */}
-      <div>
-        <AppButton
-          icon={<LeftOutlined />}
-          onClick={() => {
-            void navigate(-1);
-          }}
-        >
-          {t("common.back")}
-        </AppButton>
-      </div>
-
       <header className={styles.head}>
-        <h2 className={styles.title}>{t("subscription.title")}</h2>
+        <div className={styles.titleRow}>
+          {/*
+            菜单里没有这一项(它对所有登录用户开放,而「系统管理」分组的含义是「你管得着
+            系统」),入口是顶栏档位芯片和锁定态的升级引导。所以页面自己得给一条回去的路。
+          */}
+          <AppButton
+            icon={<LeftOutlined />}
+            onClick={() => {
+              void navigate(-1);
+            }}
+          >
+            {t("common.back")}
+          </AppButton>
+          <h2 className={styles.title}>{t("subscription.title")}</h2>
+        </div>
         <p className={styles.subtitle}>
           {t("subscription.subtitle")}{" "}
           {t("subscription.current.edition", {
@@ -234,25 +242,40 @@ export function SubscriptionScene() {
                   企业档讲什么。
               */}
               <div className={styles.actions}>
+                {/*
+                  三张卡的按钮层级一律相同:申请为主、导入为次、查看详情压成链接。
+                  按 isCurrent 换主次会让当前档位那张卡看起来是另一套控件——用户看到的
+                  是「这张卡怎么和别的不一样」,而不是「这张是我当前的档位」,后者由卡头
+                  的「当前」标签表达就够了。
+                */}
+                <AppButton
+                  href={LICENSE_PORTAL_URL}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  type="primary"
+                >
+                  {t("subscription.cta.apply")}
+                </AppButton>
                 {canManageLicense ? (
                   <AppButton
                     onClick={() => {
                       void navigate("/system/license");
                     }}
                     title={t("subscription.cta.importHint")}
-                    type={isCurrent ? "default" : "primary"}
                   >
                     {t("subscription.cta.import")}
                   </AppButton>
                 ) : null}
-                <AppButton
-                  href={SUBSCRIPTION_DETAIL_URL}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  {t("subscription.cta.details")}
-                </AppButton>
               </div>
+              <AppButton
+                className={styles.detailLink}
+                href={SUBSCRIPTION_DETAIL_URL}
+                rel="noopener noreferrer"
+                target="_blank"
+                type="link"
+              >
+                {t("subscription.cta.details")}
+              </AppButton>
               {canManageLicense ? null : (
                 // 没有授权管理权限的人点进去只会撞 403,给一句能照做的话比给一个死按钮强。
                 <p className={styles.note}>{t("subscription.cta.needAdmin")}</p>

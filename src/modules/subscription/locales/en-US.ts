@@ -75,6 +75,7 @@ export const subscriptionEnUS = {
       importHint:
         "Already have a licence file? Import it under licence management — it takes effect on the next request, no restart required.",
       needAdmin: "Importing a licence requires licence management permission. Ask an administrator.",
+      apply: "Request a licence",
       details: "View details",
     },
     current: {

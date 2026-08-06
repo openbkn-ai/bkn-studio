@@ -50,6 +50,7 @@ export const subscriptionZhCN = {
       import: "导入授权文件",
       importHint: "已有授权文件?前往授权管理导入,补证下一个请求即生效,无需重启。",
       needAdmin: "导入授权文件需要授权管理权限,请联系管理员。",
+      apply: "申请授权",
       details: "查看详情",
     },
     current: {
