@@ -21,7 +21,7 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 
 import { ANSWER_OPEN } from "@/modules/knowledge-network/services/agent-chat.service";
 
-import { ChatPane, DEFAULT_PROMPT, KN_EVIDENCE_HINT, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
+import { BASE_EVIDENCE_HINT, ChatPane, DEFAULT_PROMPT, KN_EVIDENCE_HINT, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
 
 type AgentChatModule = typeof import("@/modules/knowledge-network/services/agent-chat.service");
 type LifecycleModule = typeof import("@/modules/knowledge-network/services/bkn-lifecycle.service");
@@ -58,6 +58,7 @@ const baseProfile: PaneProfile = {
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: false,
   defaultToolNames: ["list_resources", "describe_resource", "run_sql"],
+  evidenceHint: BASE_EVIDENCE_HINT,
 };
 
 const toolDefs: McpToolDef[] = [{ name: "bkn_start_interaction" }, { name: "run_sql" }, { name: "bkn_finish_interaction" }];
