@@ -81,6 +81,34 @@ export const dataCatalogEnUS = {
       rows: "{{count}} rows",
       tenThousandRows: "{{count}} rows",
     },
+    taskErrors: {
+      dataTooLong: {
+        title: "Build checkpoint write failed",
+        syncedMarkMessage:
+          "The sync checkpoint is longer than the task table column can store, so the backend could not update the task status.",
+        columnMessage:
+          "Column {{column}} received a value longer than the database column allows, so the task status update failed.",
+        syncedMarkSuggestion:
+          "Increase the task table f_synced_mark column length, or shorten the connector checkpoint before rebuilding.",
+        columnSuggestion: "Check and increase the column length, then rebuild.",
+      },
+      duplicateEntry: {
+        title: "Task state write conflict",
+        message: "The backend hit a unique-key conflict while writing task state.",
+        suggestion:
+          "Refresh the task list and remove the conflicting task before retrying if needed.",
+      },
+      missingDocumentId: {
+        title: "Index documents are missing IDs",
+        message: "Index write failed because some documents did not include a stable id field.",
+        suggestion:
+          "Check the resource build key or primary-key mapping, save the index configuration, then rebuild.",
+      },
+      unknown: {
+        title: "Build task failed",
+        message: "The backend returned an uncategorized error. See the raw error for details.",
+      },
+    },
     kind: {
       physical: "Physical Data Source",
       logical: "Logical Group",

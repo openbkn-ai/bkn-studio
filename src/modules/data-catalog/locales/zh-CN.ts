@@ -77,6 +77,32 @@ export const dataCatalogZhCN = {
       rows: "{{count}} 行",
       tenThousandRows: "{{count}} 万行",
     },
+    taskErrors: {
+      dataTooLong: {
+        title: "任务进度标记写入失败",
+        syncedMarkMessage:
+          "同步游标内容超过任务表可保存长度，导致后端更新任务状态失败。",
+        columnMessage:
+          "字段 {{column}} 的内容超过数据库可保存长度，导致任务状态更新失败。",
+        syncedMarkSuggestion:
+          "建议将任务表的 f_synced_mark 字段扩容，或缩短连接器返回的同步游标后重新构建。",
+        columnSuggestion: "建议检查对应字段长度配置，扩容后重新构建。",
+      },
+      duplicateEntry: {
+        title: "任务状态写入冲突",
+        message: "后端写入任务状态时遇到唯一键冲突。",
+        suggestion: "请刷新任务列表确认是否已有同名或同批次任务，必要时删除异常任务后重试。",
+      },
+      missingDocumentId: {
+        title: "索引文档缺少 ID",
+        message: "写入索引失败：部分文档没有生成稳定的 id 字段。",
+        suggestion: "请检查资源索引配置中的增量键或主键映射，保存配置后重新构建。",
+      },
+      unknown: {
+        title: "构建任务执行失败",
+        message: "后端返回了未分类错误，请查看原始错误定位具体原因。",
+      },
+    },
     kind: {
       physical: "物理数据源",
       logical: "逻辑分组",
