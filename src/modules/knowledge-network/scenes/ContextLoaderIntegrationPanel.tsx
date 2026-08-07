@@ -7,7 +7,7 @@
 
 import { ApiOutlined, CaretRightOutlined, CopyOutlined, DatabaseOutlined, DownOutlined, FileTextOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { Input, Modal, Select, Spin, Tooltip } from "antd";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { buildApiKeyPagePath } from "@/modules/api-keys/utils/api-key-handoff";
@@ -20,30 +20,11 @@ import {
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 import { createClaudeCodeMcpCommand, createMcpRemoteJsonConfig, withMcpTrailingSlash } from "@/modules/knowledge-network/services/mcp-client-config";
-import {
-  businessInfoOf,
-  compareToolsInBusinessGroup,
-  type ToolBusinessGroupKey,
-} from "@/modules/knowledge-network/scenes/context-loader-tool-business-info";
+import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
 
 import styles from "./ExperienceScene.module.css";
 
 export type ResponseView = { kind: "json" | "toon"; text: string };
-
-const TOOL_GROUPS: Array<{
-  key: ToolBusinessGroupKey;
-  label: string;
-  description: string;
-}> = [
-  { key: "network", label: "知识网络信息", description: "知识网络列表、当前网络详情" },
-  { key: "lifecycle", label: "交互生命周期", description: "受管会话、交互和操作状态" },
-  { key: "model", label: "知识网络模型检索", description: "语义检索、对象类、关系类、行动类、指标定义查询" },
-  { key: "query", label: "对象实例与关系子图查询", description: "对象实例查询、关系子图查询" },
-  { key: "data", label: "数据资源与 SQL 查询", description: "数据资源列表、字段结构、SQL 数据查询" },
-  { key: "logic", label: "逻辑属性与行动调用", description: "逻辑属性计算、行动工具召回与执行" },
-  { key: "skill", label: "技能与动态工具", description: "Skill 检索和线上动态工具" },
-  { key: "other", label: "其他能力", description: "暂未归类的 MCP 能力" },
-];
 
 type ContextLoaderIntegrationPanelProps = {
   mode: Exclude<ContextLoaderMode, "agent">;
@@ -269,16 +250,24 @@ export function ContextLoaderIntegrationPanel({
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
   const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey);
   const claudeCliConfig = createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey);
-  const treeGroups = TOOL_GROUPS.map((group) => ({
-    ...group,
-    items: activeOps
-      .filter((item) => {
-        const info = businessInfoOf(item);
-        const searchable = `${info.name} ${item.id} ${item.path} ${item.summary} ${group.label}`.toLowerCase();
-        return info.groupKey === group.key && (!filterText || searchable.includes(filterText));
-      })
-      .sort((left, right) => compareToolsInBusinessGroup(group.key, left, right)),
-  })).filter(({ items }) => items.length > 0);
+  // 展示名与分组以 tools/list 下发的元数据为准（title + _meta），服务端没给的才走本地兜底。
+  const toolMetaByName = useMemo(() => new Map((toolDefs ?? []).map((tool) => [tool.name, tool])), [toolDefs]);
+  const displayOf = useCallback(
+    (target: ContextLoaderOp) => toolDisplayOf(target.id, toolMetaByName.get(target.id)),
+    [toolMetaByName],
+  );
+  const treeGroups = useMemo(() => {
+    const groups = buildMcpToolGroups(activeOps, displayOf);
+    if (!filterText) return groups;
+    return groups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter(({ item, display }) =>
+          `${display.name} ${item.id} ${item.path} ${item.summary} ${group.label}`.toLowerCase().includes(filterText),
+        ),
+      }))
+      .filter(({ items }) => items.length > 0);
+  }, [activeOps, displayOf, filterText]);
 
   const isMcpVerifyView = mode === "mcp" && !showMcpConnect;
   const isRestVerifyView = mode === "rest";
@@ -381,6 +370,8 @@ export function ContextLoaderIntegrationPanel({
       </div>
     );
   }
+
+  const opDisplay = displayOf(op);
 
   return (
     <div className={mainClassName}>
@@ -495,8 +486,8 @@ export function ContextLoaderIntegrationPanel({
                   <span className={styles.grpLabel}>{label}</span>
                   <span className={styles.grpCount}>{items.length}</span>
                 </summary>
-                <div className={styles.grpDesc}>{description}</div>
-                {items.map((item) => (
+                {description ? <div className={styles.grpDesc}>{description}</div> : null}
+                {items.map(({ item, display }) => (
                   <button
                     key={item.id}
                     type="button"
@@ -505,7 +496,7 @@ export function ContextLoaderIntegrationPanel({
                   >
                     {mode === "mcp" ? null : <span className={styles.epVerb}>POST</span>}
                     <span className={styles.epText}>
-                      <span className={styles.epBusinessName}>{businessInfoOf(item).name}</span>
+                      <span className={styles.epBusinessName}>{display.name}</span>
                       <span className={styles.epName}>{item.id}</span>
                     </span>
                   </button>
@@ -539,7 +530,7 @@ export function ContextLoaderIntegrationPanel({
             ) : null}
           </div>
           <div className={styles.reqTitleRow}>
-            <h2 className={styles.reqTitle}>{mode === "mcp" ? businessInfoOf(op).name : op.id}</h2>
+            <h2 className={styles.reqTitle}>{mode === "mcp" ? opDisplay.name : op.id}</h2>
             {mode === "mcp" ? <span className={styles.reqId}>{op.id}</span> : null}
           </div>
           <p className={styles.reqSum}>{op.summary}</p>
@@ -700,7 +691,7 @@ export function ContextLoaderIntegrationPanel({
         >
           <div className={styles.requestDataAssistantModalIntro}>
             <div>
-              <strong>为「{businessInfoOf(op).name}」补充请求参数</strong>
+              <strong>为「{opDisplay.name}」补充请求参数</strong>
               <p>{dataAssistantDescription}</p>
             </div>
             <span className={styles.requestDataAssistantModalTip}>选择后会写入当前请求体</span>
@@ -712,7 +703,7 @@ export function ContextLoaderIntegrationPanel({
       {mode === "mcp" ? (
         <Modal
           open={schemaOpen}
-          title={`${businessInfoOf(op).name} · 接口文档`}
+          title={`${opDisplay.name} · 接口文档`}
           footer={null}
           width={920}
           className={styles.schemaModal}

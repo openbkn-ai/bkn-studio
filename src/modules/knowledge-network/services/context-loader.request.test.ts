@@ -267,6 +267,36 @@ describe("listMcpTools", () => {
     expect(jsonRpcBody(fetchSpy.mock.calls[3][1])).toMatchObject({ method: "tools/list" });
   });
 
+  it("keeps the display metadata tools/list puts on title and _meta", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-4" } }))
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            result: {
+              tools: [
+                {
+                  name: "run_sql",
+                  title: "SQL 查询",
+                  _meta: { "openbkn.ai/group": "query", "openbkn.ai/group_title": "实例查询", "openbkn.ai/order": 240 },
+                },
+                // 老服务端形态：一个展示字段都没有，解析后必须是 undefined 而不是空串。
+                { name: "legacy_tool" },
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const tools = await listMcpTools({ base: "https://platform.example.com", token: "token-1", knId: "kn-demo" });
+
+    expect(tools[0]).toMatchObject({ name: "run_sql", title: "SQL 查询", group: "query", groupTitle: "实例查询", order: 240 });
+    expect(tools[1]).toMatchObject({ name: "legacy_tool", title: undefined, group: undefined, groupTitle: undefined, order: undefined });
+  });
+
   it("returns an empty list and forwards cancellation to every MCP request", async () => {
     const controller = new AbortController();
     const fetchSpy = vi

@@ -214,6 +214,9 @@ export function ToolDiscoveryModal({
                 <details key={tool.name} className={styles.toolItem}>
                   <summary className={styles.toolSummary}>
                     <span className={styles.toolName}>{tool.name}</span>
+                    {/* title / 分组来自服务端 _meta，老服务端不发就不展示，不用本地映射补。 */}
+                    {tool.title ? <span className={styles.toolTitle}>{tool.title}</span> : null}
+                    {tool.groupTitle ? <span className={styles.toolGroupTag}>{tool.groupTitle}</span> : null}
                     {tool.description ? <span className={styles.toolDesc}>{tool.description}</span> : null}
                   </summary>
                   <SchemaPre title="inputSchema" value={tool.inputSchema} copy={copy} />

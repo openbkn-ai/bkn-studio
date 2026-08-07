@@ -75,24 +75,28 @@ describe("buildAgentTools", () => {
       { session },
     );
 
-  it("平台侧工具不进模型工具集", () => {
-    // tools/list 会把平台工具和业务工具一起返回；模型看见就会自己去调，
-    // 结果是另开一条交互撞上前端已开的那条，或者被 permission_denied 挡下白烧步数。
+  it("平台侧工具照常进模型工具集——生命周期由前端接管执行，不是从工具表里拿掉", () => {
+    // 早先的做法是整体过滤掉 bkn_*，模型因此连「结束本轮交互」这项能力都没有。
+    // 现在改成接管：工具还在，执行时绑到前端这一轮交互上（见 buildAgentTools）。
     const tools = build([
       "run_sql",
       "bkn_start_interaction",
       "bkn_finish_interaction",
-      "bkn_create_conversation",
       "search_schema",
     ]);
 
-    expect(Object.keys(tools).sort()).toEqual(["run_sql", "search_schema"]);
-    for (const name of LIFECYCLE_TOOL_NAMES) expect(tools[name]).toBeUndefined();
+    expect(Object.keys(tools).sort()).toEqual([
+      "bkn_finish_interaction",
+      "bkn_start_interaction",
+      "run_sql",
+      "search_schema",
+    ]);
+    for (const name of LIFECYCLE_TOOL_NAMES) expect(tools[name]).toBeDefined();
   });
 
-  it("按前缀过滤，后端新增的溯源工具不用改代码也挡得住", () => {
+  it("没接管实现的平台工具直通后端，不因为前缀被吃掉", () => {
     // 平台侧工具集会随后端演进（#618 期间一度扩到十余个溯源工具，之后又裁回两个）。
-    // 列名单必漏，漏了模型就会去调，所以这里钉住的是前缀规则而不是具体名字。
+    // 接管只覆盖会跟前端抢账的那两个；溯源类读工具没有冲突，照常给模型用。
     const tools = build([
       "bkn_causality",
       "bkn_get_operation",
@@ -102,7 +106,8 @@ describe("buildAgentTools", () => {
       "query_object_instance",
     ]);
 
-    expect(Object.keys(tools)).toEqual(["query_object_instance"]);
+    expect(Object.keys(tools)).toHaveLength(6);
+    expect(tools.bkn_some_future_trace_tool).toBeDefined();
   });
 });
 

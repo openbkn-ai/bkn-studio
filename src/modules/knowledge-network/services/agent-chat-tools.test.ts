@@ -9,7 +9,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildAgentTools, DEFAULT_AGENT_CONFIG } from "@/modules/knowledge-network/services/agent-chat.service";
 import type {
-  BknCallScope,
   McpSession,
   McpToolCallResult,
   McpToolDef,
@@ -33,17 +32,42 @@ const runSql: McpToolDef = {
   },
 };
 
+/** schema 照抄真机形状：接管不该改变工具在模型眼里的样子。 */
 const startInteraction: McpToolDef = {
   name: "bkn_start_interaction",
   description: "开始交互",
-  inputSchema: { type: "object", properties: { question: { type: "string" } } },
+  inputSchema: {
+    type: "object",
+    properties: { question: { type: "string" }, conversation_id: { type: "string" } },
+    required: ["question"],
+  },
 };
 
 const finishInteraction: McpToolDef = {
   name: "bkn_finish_interaction",
   description: "结束交互",
-  inputSchema: { type: "object", properties: { interaction_id: { type: "string" } } },
+  inputSchema: {
+    type: "object",
+    properties: {
+      interaction_id: { type: "string" },
+      outcome: { type: "string", enum: ["completed", "failed", "cancelled", "handed_off"] },
+      answer: { type: "string" },
+      reason: { type: "string" },
+    },
+    required: ["interaction_id", "outcome"],
+  },
 };
+
+/** 后端在 tools/list 里一并下发的受管生命周期工具。 */
+const lifecycleTools: McpToolDef[] = [startInteraction, finishInteraction];
+
+/** 结构上等价于 ChatPane 传进来的 BknTurn。 */
+function managedTurn() {
+  return {
+    nextContext: () => ({ conversation_id: "conv_1", interaction_id: "int_1" }),
+    finish: vi.fn<(outcome: "completed" | "failed" | "canceled", answer: string) => Promise<void>>().mockResolvedValue(undefined),
+  };
+}
 
 function stubSession(result?: Partial<McpToolCallResult>) {
   const callTool = vi.fn<McpSession["callTool"]>().mockResolvedValue({
@@ -67,7 +91,9 @@ function runTool(tool: unknown, input: unknown): Promise<string> {
 }
 
 describe("buildAgentTools", () => {
-  it("does not expose bkn lifecycle tools to the model", () => {
+  it("生命周期工具照常给模型，不从工具表里拿掉", () => {
+    // 屏蔽版曾经在这里断言只剩 run_sql，代价是模型答完连"结束本轮交互"都做不到。
+    // 现在改成接管：工具还在，执行时绑到客户端这一轮交互上。
     const session = stubSession();
     const tools = buildAgentTools(
       [startInteraction, runSql, finishInteraction],
@@ -75,10 +101,10 @@ describe("buildAgentTools", () => {
       "kn-demo",
       DEFAULT_AGENT_CONFIG,
       tokenProvider,
-      { session },
+      { session, turn: managedTurn() },
     );
 
-    expect(Object.keys(tools)).toEqual(["run_sql"]);
+    expect(Object.keys(tools).sort()).toEqual(["bkn_finish_interaction", "bkn_start_interaction", "run_sql"]);
   });
 
   it("hides bkn_context from the model", () => {
@@ -91,17 +117,83 @@ describe("buildAgentTools", () => {
     expect(schema.required).toEqual(["kn_id", "sql"]);
   });
 
-  it("injects the turn context and locked kn_id into the real call", async () => {
+  it("没有受管交互时生命周期工具直通后端，能力不打折", () => {
     const session = stubSession();
-    const turn: BknCallScope = {
-      nextContext: () => ({
-        conversation_id: "conv_1",
-        interaction_id: "int_1",
-      }),
-    };
-    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+    const tools = buildAgentTools([...lifecycleTools, runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session,
+    });
+
+    expect(Object.keys(tools)).toEqual(["bkn_start_interaction", "bkn_finish_interaction", "run_sql"]);
+  });
+
+  /**
+   * 真机上见过的死循环：模型自己调 bkn_start_interaction，后端给它开了一条客户端不知道的
+   * conversation，而业务调用注入的 bkn_context 来自客户端这轮 turn，两者对不上 →
+   * conversation_required，错误里的 required_action 又指回 bkn_start_interaction，
+   * 模型照办再开一轮。接管之后 start 不再落到后端，返回的就是本轮那条交互。
+   */
+  it("接管 bkn_start_interaction：返回本轮交互，不向后端多开一条", async () => {
+    const session = stubSession();
+    const tools = buildAgentTools([...lifecycleTools, runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session,
+      turn: managedTurn(),
+    });
+
+    const out = await runTool(tools.bkn_start_interaction, { question: "模型自己想开一轮" });
+
+    expect(JSON.parse(out)).toEqual({ conversation_id: "conv_1", interaction_id: "int_1", execution_status: "active" });
+    expect(session.callTool).not.toHaveBeenCalled();
+  });
+
+  it("接管 bkn_finish_interaction：走客户端的终结路径，不向后端直发", async () => {
+    const session = stubSession();
+    const turn = managedTurn();
+    const tools = buildAgentTools([...lifecycleTools, runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
       session,
       turn,
+    });
+
+    const out = await runTool(tools.bkn_finish_interaction, { outcome: "completed", answer: "答完了" });
+
+    expect(turn.finish).toHaveBeenCalledWith("completed", "答完了");
+    expect(JSON.parse(out)).toMatchObject({ interaction_id: "int_1", execution_status: "completed" });
+    expect(session.callTool).not.toHaveBeenCalled();
+  });
+
+  it("接管不改工具形状：后端 schema 原样透传给模型", () => {
+    // 接管改的是"调用落到哪里"，不是工具长什么样。在 schema 上删参数或裁枚举，
+    // 对模型来说就是能力被悄悄削了一块——它连有过这个选项都不知道。
+    const tools = buildAgentTools(lifecycleTools, env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session: stubSession(),
+      turn: managedTurn(),
+    });
+
+    // 我们用不到 question（本轮交互已经开好了），但它仍是后端契约的一部分。
+    expect(schemaOf(tools.bkn_start_interaction).properties).toHaveProperty("question");
+    expect(schemaOf(tools.bkn_start_interaction).required).toEqual(["question"]);
+    // handed_off 运行时会被拒，但不在 schema 上假装它不存在。
+    const outcome = (schemaOf(tools.bkn_finish_interaction).properties as Record<string, { enum?: string[] }>).outcome;
+    expect(outcome.enum).toContain("handed_off");
+  });
+
+  it("接管的 bkn_finish_interaction 拒绝客户端没有语义的 outcome", async () => {
+    const turn = managedTurn();
+    const tools = buildAgentTools(lifecycleTools, env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session: stubSession(),
+      turn,
+    });
+
+    const out = await runTool(tools.bkn_finish_interaction, { outcome: "handed_off" });
+
+    expect(JSON.parse(out)).toMatchObject({ error: { code: "unsupported_outcome" } });
+    expect(turn.finish).not.toHaveBeenCalled();
+  });
+
+  it("injects the turn context and locked kn_id into the real call", async () => {
+    const session = stubSession();
+    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session,
+      turn: managedTurn(),
     });
 
     await runTool(tools.run_sql, { sql: "SELECT 1", kn_id: "模型编的网络" });
@@ -125,5 +217,52 @@ describe("buildAgentTools", () => {
 
     // 老版本 Context Loader 不认这个字段，也不强制它；多发一个空壳只会让请求体对不上 schema。
     expect(session.callTool.mock.calls[0][1]).not.toHaveProperty("bkn_context");
+  });
+
+  it("strips required_action from lifecycle dead-end errors before they reach the model", async () => {
+    const session = stubSession({
+      isError: true,
+      ok: false,
+      text: JSON.stringify({
+        error: {
+          code: "conversation_required",
+          message: "conversation_id is required",
+          required_action: "bkn_start_interaction",
+          retryable: false,
+        },
+      }),
+    });
+    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, { session });
+
+    const result = await runTool(tools.run_sql, { sql: "SELECT 1" });
+
+    // 把后端的「下一步该调 bkn_start_interaction」原样喂回去，模型就会照办——那正是死循环的燃料。
+    expect(result).not.toContain("required_action");
+    expect(result).not.toContain("bkn_start_interaction");
+    expect(result).toContain("conversation_required");
+    expect(result).toContain("停止工具调用");
+  });
+
+  it("同样处理已终结交互，并且不碰普通业务错误", async () => {
+    const terminal = stubSession({
+      isError: true,
+      ok: false,
+      text: JSON.stringify({ error: { code: "interaction_terminal", required_action: "start_interaction" } }),
+    });
+    const terminalTools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session: terminal,
+    });
+    expect(await runTool(terminalTools.run_sql, { sql: "SELECT 1" })).not.toContain("required_action");
+
+    const plain = stubSession({
+      isError: true,
+      ok: false,
+      text: JSON.stringify({ error: { code: "sql_error", message: "no such table: foo" } }),
+    });
+    const plainTools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session: plain,
+    });
+    // 业务错误要原样给模型：它据此改 SQL 重试是正确行为。
+    expect(await runTool(plainTools.run_sql, { sql: "SELECT 1" })).toContain("no such table: foo");
   });
 });
