@@ -12,6 +12,7 @@ import { relationtypePart } from "./relation-type";
 import { actiontypePart } from "./action-type";
 import { integrationPart } from "./integration";
 import { metricPart } from "./metric";
+import { agentChatPart } from "./agent-chat";
 
 export const knowledgeNetworkEnUS = {
   knowledgeNetwork: {
@@ -22,5 +23,6 @@ export const knowledgeNetworkEnUS = {
     ...actiontypePart,
     ...integrationPart,
     ...metricPart,
+    ...agentChatPart,
   },
 } as const;

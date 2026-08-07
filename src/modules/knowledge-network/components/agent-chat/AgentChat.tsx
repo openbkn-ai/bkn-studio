@@ -15,7 +15,9 @@
 
 import { ClearOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RightOutlined, SettingOutlined } from "@ant-design/icons";
 import { App, Modal, Segmented, Switch } from "antd";
+import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
@@ -65,9 +67,9 @@ import styles from "./AgentChat.module.css";
  * 拉不到网络结构时的兜底（不含任何具体业务名词）。
  */
 const FALLBACK_SUGGESTIONS = [
-  "有哪些数据？先给我一个整体概览",
-  "最近有什么值得关注的变化？",
-  "帮我找出最需要重点关注的几条记录",
+  "knowledgeNetwork.agentChat.fallbackSuggestions.overview",
+  "knowledgeNetwork.agentChat.fallbackSuggestions.changes",
+  "knowledgeNetwork.agentChat.fallbackSuggestions.priorityRecords",
 ];
 
 /** 对比模式开关 + 发送目标（全局缓存，不分 kn）。 */
@@ -104,14 +106,36 @@ function loadCompareState(): CompareState {
  * 注入系统提示词的知识网络**摘要**（非完整结构）：名称 + 简介 + 规模 + 对象类名（截断）。
  * 完整本体/实例由 Agent 按需调 get_kn_detail / search_schema 等工具获取。
  */
-function buildKnContext(detail: KnDetail): string {
+function fallbackSuggestions(t: TFunction): string[] {
+  return FALLBACK_SUGGESTIONS.map((key) => t(key));
+}
+
+function buildKnContext(detail: KnDetail, t: TFunction): string {
   const otNames = detail.object_types.map((o) => o.name || o.id);
   const shown = otNames.slice(0, 12);
-  const lines = [`名称：${detail.name ?? detail.id}（${detail.id}）`];
-  if (detail.comment) lines.push(`简介：${detail.comment.replace(/\s+/g, " ").trim().slice(0, 200)}`);
-  lines.push(`规模：${detail.object_types.length} 个对象类、${detail.relation_types.length} 个关系类`);
+  const lines = [t("knowledgeNetwork.agentChat.knContext.name", { name: detail.name ?? detail.id, id: detail.id })];
+  if (detail.comment) {
+    lines.push(
+      t("knowledgeNetwork.agentChat.knContext.description", {
+        description: detail.comment.replace(/\s+/g, " ").trim().slice(0, 200),
+      }),
+    );
+  }
+  lines.push(
+    t("knowledgeNetwork.agentChat.knContext.scale", {
+      objectTypes: detail.object_types.length,
+      relations: detail.relation_types.length,
+    }),
+  );
   if (otNames.length) {
-    lines.push(`对象类：${shown.join("、")}${otNames.length > shown.length ? ` 等 ${otNames.length} 个` : ""}`);
+    lines.push(
+      t(
+        otNames.length > shown.length
+          ? "knowledgeNetwork.agentChat.knContext.objectTypesMore"
+          : "knowledgeNetwork.agentChat.knContext.objectTypes",
+        { names: shown.join(", "), count: otNames.length },
+      ),
+    );
   }
   return lines.join("\n");
 }
@@ -120,32 +144,26 @@ function buildKnContext(detail: KnDetail): string {
  * 无默认模型（或生成失败）时的兜底：拿业务名词套模板，同样保持业务向、不出现本体术语。
  * 概念组实测多数网络为空，故第二条优先用关系名——关系名本身就是业务动词（如「用户下单」）。
  */
-function templateSuggestions(detail: KnDetail): string[] {
+function templateSuggestions(detail: KnDetail, t: TFunction): string[] {
   const out: string[] = [];
   const [first, second] = detail.object_types;
-  if (first) out.push(`${first.name ?? first.id}有哪些数据？先看几条`);
+  if (first) out.push(t("knowledgeNetwork.agentChat.templateSuggestions.firstObject", { name: first.name ?? first.id }));
   const groupName = detail.concept_groups.find((g) => g.name)?.name;
   const relName = detail.relation_types.find((r) => r.name)?.name;
-  if (groupName) out.push(`${groupName}相关的情况怎么样？`);
-  else if (relName) out.push(`${relName}的情况怎么样？`);
-  if (second) out.push(`${second.name ?? second.id}里有什么值得关注的？`);
-  else if (first) out.push(`${first.name ?? first.id}最近有什么变化？`);
-  return out.length >= 2 ? out : FALLBACK_SUGGESTIONS;
+  if (groupName) out.push(t("knowledgeNetwork.agentChat.templateSuggestions.group", { name: groupName }));
+  else if (relName) out.push(t("knowledgeNetwork.agentChat.templateSuggestions.relation", { name: relName }));
+  if (second) out.push(t("knowledgeNetwork.agentChat.templateSuggestions.secondObject", { name: second.name ?? second.id }));
+  else if (first) out.push(t("knowledgeNetwork.agentChat.templateSuggestions.firstObjectRecent", { name: first.name ?? first.id }));
+  return out.length >= 2 ? out : fallbackSuggestions(t);
 }
 
 /**
  * 建议问题的生成提示词。输入是 get_kn_detail 的原始 JSON（网络/对象类的 comment、关系名等业务描述都在里面）——
  * 推荐问题的质量直接取决于 BKN 里这些描述写得好不好，这就是业务侧控制推荐问题的抓手。
  */
-const SUGGEST_PROMPT =
-  "你在为一个「智能问数」产品的空白对话页写推荐问题。提问的人是不懂技术的业务人员。\n" +
-  "下面是某个业务领域的结构定义 JSON（name/comment 是业务含义，object_types 是业务实体，relation_types 是实体间的业务关联）。\n" +
-  "请据此写 3 个该领域业务人员真正会问的问题。硬性要求：\n" +
-  "1. 只能引用 JSON 里出现过的业务名词，绝对不要编造里面没有的实体或概念（编造的问题一点就会查不到数据）。\n" +
-  "2. 不要出现「对象类」「关系类」「知识网络」「图谱」「schema」「表」「字段」这类技术术语，也不要出现 JSON 里的英文字段名，要像业务人员日常说话。\n" +
-  "3. 每个问题一句话、不超过 25 字，且能用数据回答（可查询、可统计、可对比），不要开放式主观题。\n" +
-  "4. 3 个问题角度各不相同，不要同义重复。\n" +
-  '只输出 JSON 数组，形如 ["问题1","问题2","问题3"]，不要任何其他文字，不要代码块标记。';
+function suggestPrompt(t: TFunction): string {
+  return t("knowledgeNetwork.agentChat.suggestPrompt");
+}
 
 /** 从模型输出里抠出 JSON 数组；任何不合预期都返回空数组，由调用方回退模板。 */
 function parseSuggestions(text: string): string[] {
@@ -188,52 +206,61 @@ function saveCachedSuggestions(knId: string, fp: string, list: string[]): void {
   }
 }
 
-const SOLO_PROFILE: PaneProfile = {
-  paneKey: "solo",
-  emptyTitle: "开始验证",
-  defaultPrompt: DEFAULT_PROMPT,
-  injectKnContext: true,
-  defaultToolNames: null,
-  evidenceHint: KN_EVIDENCE_HINT,
-};
-
-const BASE_PROFILE: PaneProfile = {
-  paneKey: "base",
-  title: "基础数据",
-  emptyTitle: "直接查询数据",
-  defaultPrompt: DEFAULT_BASE_PROMPT,
-  injectKnContext: false,
-  defaultToolNames: BASE_DATA_TOOL_NAMES,
-  evidenceHint: BASE_EVIDENCE_HINT,
-};
+function buildProfiles(t: TFunction) {
+  const soloProfile: PaneProfile = {
+    paneKey: "solo",
+    emptyTitle: t("knowledgeNetwork.agentChat.profiles.soloEmptyTitle"),
+    defaultPrompt: DEFAULT_PROMPT,
+    injectKnContext: true,
+    defaultToolNames: null,
+    evidenceHint: KN_EVIDENCE_HINT,
+  };
+  const baseProfile: PaneProfile = {
+    paneKey: "base",
+    title: t("knowledgeNetwork.agentChat.profiles.baseTitle"),
+    emptyTitle: t("knowledgeNetwork.agentChat.profiles.baseEmptyTitle"),
+    defaultPrompt: DEFAULT_BASE_PROMPT,
+    injectKnContext: false,
+    defaultToolNames: BASE_DATA_TOOL_NAMES,
+    evidenceHint: BASE_EVIDENCE_HINT,
+  };
+  const knProfile: PaneProfile = {
+    paneKey: "kn",
+    title: t("knowledgeNetwork.agentChat.profiles.knTitle"),
+    emptyTitle: t("knowledgeNetwork.agentChat.profiles.knEmptyTitle"),
+    defaultPrompt: DEFAULT_PROMPT,
+    injectKnContext: true,
+    defaultToolNames: null,
+    evidenceHint: KN_EVIDENCE_HINT,
+  };
+  return { soloProfile, baseProfile, knProfile };
+}
 
 /** 对比报告 AI 总结的评审提示词。 */
-const JUDGE_PROMPT =
-  "你是对比评审员。同样的问题由两个 Agent 分别回答（可能有多轮）：A「仅基础数据」只能用 SQL/表工具直接查库；B「业务知识网络」可用全部知识网络检索工具（语义 Schema、实例、子图、逻辑属性等）。\n" +
-  "请基于给出的各轮回答与指标，从这些维度对比：①结论正确性与完整度 ②依据是否充分可信 ③效率（工具调用次数、token、耗时）④哪一侧对业务用户更有用、为什么。\n" +
-  "特别注意每轮的『结果状态』：若某侧某轮为『无有效回答 / 被用户停止 / 执行出错』，一律视为该侧该轮的负面结果（未完成任务），应判其明显劣于给出有效答案的一侧；某侧负面轮次越多，总评越应反映其不可靠。\n" +
-  "输出中文 Markdown：先给一行总评（哪侧更好），再逐轮简要对比（每轮 2-3 句，并点明负面结果），最后分点归纳，简洁克制，不要复述全文。";
+function judgePrompt(t: TFunction): string {
+  return t("knowledgeNetwork.agentChat.judgePrompt");
+}
 
 /** 结果状态标签；empty/stopped/error 明确标注为负面。 */
-function outcomeLabel(o: RoundOutcome): string {
+function outcomeLabel(o: RoundOutcome, t: TFunction): string {
   switch (o) {
     case "answered":
-      return "已回答";
+      return t("knowledgeNetwork.agentChat.outcome.answered");
     case "stopped":
-      return "⏹ 被用户停止（负面）";
+      return t("knowledgeNetwork.agentChat.outcome.stopped");
     case "error":
-      return "⚠️ 执行出错（负面）";
+      return t("knowledgeNetwork.agentChat.outcome.error");
     case "empty":
     default:
-      return "⚠️ 无有效回答（负面）";
+      return t("knowledgeNetwork.agentChat.outcome.empty");
   }
 }
 
 /** 一轮的答案块：有效回答直接给正文；否则标注负面状态（有部分内容则附上）。 */
-function answerBlock(r?: PaneRound): string {
-  if (!r) return "（未参与本轮）";
-  if (r.outcome === "answered") return r.answer ?? "（无回答）";
-  const note = `**${outcomeLabel(r.outcome)}**`;
+function answerBlock(r: PaneRound | undefined, t: TFunction): string {
+  if (!r) return t("knowledgeNetwork.agentChat.answer.notParticipated");
+  if (r.outcome === "answered") return r.answer ?? t("knowledgeNetwork.agentChat.answer.empty");
+  const note = `**${outcomeLabel(r.outcome, t)}**`;
   return r.answer && r.answer.trim() ? `${note}\n\n${r.answer}` : note;
 }
 
@@ -243,12 +270,23 @@ function negativeRounds(s: PaneSnapshot): number {
 }
 
 /** 导出 Markdown：一轮的工具调用摘要。 */
-function mdCalls(r?: PaneRound): string {
-  if (!r || r.toolCalls.length === 0) return "0 次";
+function mdCalls(r: PaneRound | undefined, t: TFunction): string {
+  if (!r || r.toolCalls.length === 0) return t("knowledgeNetwork.agentChat.calls.zero");
   const ok = r.toolCalls.filter((t) => t.status === "done").length;
   const err = r.toolCalls.filter((t) => t.status === "error").length;
-  const names = r.toolCalls.map((t) => (t.status === "error" ? `${t.name}(失败)` : t.name)).join(", ");
-  return `${r.toolCalls.length} 次（${ok} 成功${err > 0 ? ` / ${err} 失败` : ""}）：${names}`;
+  const names = r.toolCalls
+    .map((toolCall) =>
+      toolCall.status === "error"
+        ? t("knowledgeNetwork.agentChat.calls.errorName", { name: toolCall.name })
+        : toolCall.name,
+    )
+    .join(", ");
+  return t("knowledgeNetwork.agentChat.calls.summary", {
+    count: r.toolCalls.length,
+    ok,
+    errorPart: err > 0 ? t("knowledgeNetwork.agentChat.calls.errorPart", { err }) : "",
+    names,
+  });
 }
 
 /** 把对比报告导出为 Markdown 文本（总览 + 逐轮问答指标 + 双方答案 + AI 总结）。 */
@@ -258,71 +296,109 @@ function reportToMarkdown(
   summary: string,
   knLabel: string,
   generatedAt: string,
+  t: TFunction,
 ): string {
   const L: string[] = [];
-  L.push(`# Agent 对话对比报告 · ${knLabel}`, "");
-  L.push(`- 生成时间：${generatedAt}`);
-  L.push(`- 左「基础数据」模型：${base.model || "—"}；右「业务知识网络」模型：${kn.model || "—"}`, "");
-  L.push("## 会话总览", "");
-  L.push("| 指标 | 基础数据 | 业务知识网络 |");
+  L.push(`# ${t("knowledgeNetwork.agentChat.report.title", { knLabel })}`, "");
+  L.push(`- ${t("knowledgeNetwork.agentChat.report.generatedAt", { generatedAt })}`);
+  L.push(
+    `- ${t("knowledgeNetwork.agentChat.report.modelLine", { baseModel: base.model || "—", knModel: kn.model || "—" })}`,
+    "",
+  );
+  L.push(`## ${t("knowledgeNetwork.agentChat.report.overview")}`, "");
+  L.push(
+    `| ${t("knowledgeNetwork.agentChat.report.metricHeader")} | ${t("knowledgeNetwork.agentChat.report.baseHeader")} | ${t("knowledgeNetwork.agentChat.report.knHeader")} |`,
+  );
   L.push("| --- | --- | --- |");
-  L.push(`| 总 token | ${fmtTokens(base.stats.tokens)} | ${fmtTokens(kn.stats.tokens)} |`);
-  L.push(`| 总耗时 | ${fmtDuration(base.stats.ms)} | ${fmtDuration(kn.stats.ms)} |`);
-  L.push(`| 轮数 | ${base.rounds.length} | ${kn.rounds.length} |`);
+  L.push(`| ${t("knowledgeNetwork.agentChat.report.totalTokens")} | ${fmtTokens(base.stats.tokens)} | ${fmtTokens(kn.stats.tokens)} |`);
+  L.push(`| ${t("knowledgeNetwork.agentChat.report.totalDuration")} | ${fmtDuration(base.stats.ms)} | ${fmtDuration(kn.stats.ms)} |`);
+  L.push(`| ${t("knowledgeNetwork.agentChat.report.rounds")} | ${base.rounds.length} | ${kn.rounds.length} |`);
   const totalCalls = (s: PaneSnapshot) => s.rounds.reduce((n, r) => n + r.toolCalls.length, 0);
-  L.push(`| 工具调用合计 | ${totalCalls(base)} 次 | ${totalCalls(kn)} 次 |`);
-  L.push(`| 无效轮次(无答/停止/出错) | ${negativeRounds(base)} | ${negativeRounds(kn)} |`, "");
+  L.push(
+    `| ${t("knowledgeNetwork.agentChat.report.totalToolCalls")} | ${totalCalls(base)} | ${totalCalls(kn)} |`,
+  );
+  L.push(
+    `| ${t("knowledgeNetwork.agentChat.report.invalidRounds")} | ${negativeRounds(base)} | ${negativeRounds(kn)} |`,
+    "",
+  );
   const roundCount = Math.max(base.rounds.length, kn.rounds.length);
   for (let i = 0; i < roundCount; i++) {
     const b = base.rounds[i];
     const k = kn.rounds[i];
     const sameQ = !b || !k || b.question === k.question;
-    L.push(`## 第 ${i + 1} 轮`, "");
-    L.push(`> ${sameQ ? (k?.question ?? b?.question ?? "—") : `左：${b?.question ?? "—"} ／ 右：${k?.question ?? "—"}`}`, "");
-    L.push("| 指标 | 基础数据 | 业务知识网络 |");
+    L.push(`## ${t("knowledgeNetwork.agentChat.report.roundTitle", { round: i + 1 })}`, "");
+    L.push(
+      `> ${
+        sameQ
+          ? (k?.question ?? b?.question ?? "—")
+          : t("knowledgeNetwork.agentChat.report.questionBoth", {
+              baseQuestion: b?.question ?? "—",
+              knQuestion: k?.question ?? "—",
+            })
+      }`,
+      "",
+    );
+    L.push(
+      `| ${t("knowledgeNetwork.agentChat.report.metricHeader")} | ${t("knowledgeNetwork.agentChat.report.baseHeader")} | ${t("knowledgeNetwork.agentChat.report.knHeader")} |`,
+    );
     L.push("| --- | --- | --- |");
     L.push(
       `| token | ${b?.tokens != null ? fmtTokens(b.tokens) : "—"} | ${k?.tokens != null ? fmtTokens(k.tokens) : "—"} |`,
     );
     L.push(
-      `| 耗时 | ${b?.ms != null ? fmtDuration(b.ms) : "—"} | ${k?.ms != null ? fmtDuration(k.ms) : "—"} |`,
+      `| ${t("knowledgeNetwork.agentChat.report.duration")} | ${b?.ms != null ? fmtDuration(b.ms) : "—"} | ${k?.ms != null ? fmtDuration(k.ms) : "—"} |`,
     );
-    L.push(`| 工具调用 | ${mdCalls(b)} | ${mdCalls(k)} |`);
-    L.push(`| 结果 | ${b ? outcomeLabel(b.outcome) : "—"} | ${k ? outcomeLabel(k.outcome) : "—"} |`, "");
-    L.push(`### 基础数据 · 回答`, "", answerBlock(b), "");
-    L.push(`### 业务知识网络 · 回答`, "", answerBlock(k), "");
+    L.push(`| ${t("knowledgeNetwork.agentChat.report.toolCalls")} | ${mdCalls(b, t)} | ${mdCalls(k, t)} |`);
+    L.push(
+      `| ${t("knowledgeNetwork.agentChat.report.result")} | ${b ? outcomeLabel(b.outcome, t) : "—"} | ${k ? outcomeLabel(k.outcome, t) : "—"} |`,
+      "",
+    );
+    L.push(`### ${t("knowledgeNetwork.agentChat.report.baseAnswerTitle")}`, "", answerBlock(b, t), "");
+    L.push(`### ${t("knowledgeNetwork.agentChat.report.knAnswerTitle")}`, "", answerBlock(k, t), "");
   }
-  if (summary.trim()) L.push("## AI 总结", "", summary.trim(), "");
+  if (summary.trim()) L.push(`## ${t("knowledgeNetwork.agentChat.report.aiSummary")}`, "", summary.trim(), "");
   return L.join("\n");
 }
 
 /** 报告里单侧全部轮次的评审语料（长回答截断，防提示词爆炸）。 */
-function paneBrief(label: string, s: PaneSnapshot): string {
+function paneBrief(label: string, s: PaneSnapshot, t: TFunction): string {
   const parts = [
-    `### ${label}（模型 ${s.model || "—"}；会话累计 ${fmtTokens(s.stats.tokens)} tokens · ${fmtDuration(s.stats.ms)}）`,
+    `### ${t("knowledgeNetwork.agentChat.report.paneBriefTitle", {
+      label,
+      model: s.model || "—",
+      tokens: fmtTokens(s.stats.tokens),
+      duration: fmtDuration(s.stats.ms),
+    })}`,
   ];
   s.rounds.forEach((r, i) => {
-    const tools = r.toolCalls.map((t) => (t.status === "error" ? `${t.name}(失败)` : t.name)).join(", ") || "无";
-    const answer = r.answer ? (r.answer.length > 1500 ? `${r.answer.slice(0, 1500)}…[已截断]` : r.answer) : "（无回答）";
+    const tools =
+      r.toolCalls
+        .map((toolCall) =>
+          toolCall.status === "error"
+            ? t("knowledgeNetwork.agentChat.calls.errorName", { name: toolCall.name })
+            : toolCall.name,
+        )
+        .join(", ") || t("knowledgeNetwork.agentChat.report.none");
+    const answer = r.answer
+      ? r.answer.length > 1500
+        ? t("knowledgeNetwork.agentChat.report.truncated", { answer: r.answer.slice(0, 1500) })
+        : r.answer
+      : t("knowledgeNetwork.agentChat.answer.empty");
     parts.push(
-      `【第 ${i + 1} 轮】问题：${r.question}\n` +
-        `结果状态：${outcomeLabel(r.outcome)}\n` +
-        `指标：token ${r.tokens ?? "—"}，耗时 ${r.ms != null ? fmtDuration(r.ms) : "—"}，工具 ${r.toolCalls.length} 次（${tools}）\n` +
-        `回答：${answer}`,
+      t("knowledgeNetwork.agentChat.report.paneBriefRound", {
+        round: i + 1,
+        question: r.question,
+        outcome: outcomeLabel(r.outcome, t),
+        tokens: r.tokens ?? "—",
+        duration: r.ms != null ? fmtDuration(r.ms) : "—",
+        toolCount: r.toolCalls.length,
+        tools,
+        answer,
+      }),
     );
   });
   return parts.join("\n\n");
 }
-
-const KN_PROFILE: PaneProfile = {
-  paneKey: "kn",
-  title: "业务知识网络",
-  emptyTitle: "基于知识网络回答",
-  defaultPrompt: DEFAULT_PROMPT,
-  injectKnContext: true,
-  defaultToolNames: null,
-  evidenceHint: KN_EVIDENCE_HINT,
-};
 
 export function AgentChat({
   env,
@@ -339,6 +415,9 @@ export function AgentChat({
 }) {
   const knId = env.knId;
   const { message } = App.useApp();
+  const { t, i18n } = useTranslation();
+  const profiles = useMemo(() => buildProfiles(t), [t]);
+  const defaultSuggestions = useMemo(() => fallbackSuggestions(t), [t]);
   const llmTokenProvider = useMemo(
     () => modelTokenProvider ?? tokenProvider,
     [modelTokenProvider, tokenProvider],
@@ -353,7 +432,7 @@ export function AgentChat({
   // 当前网络绑定的 resource_id 集（object_type.data_source.id）；用于把 list_resources 默认限定到本网络的数据表。
   const [knResourceIds, setKnResourceIds] = useState<string[] | null>(null);
   // 建议问题：两侧共用一组。先用模板即时渲染，模型就绪后再换成生成结果（见下方 effect）。
-  const [suggestions, setSuggestions] = useState<string[]>(FALLBACK_SUGGESTIONS);
+  const [suggestions, setSuggestions] = useState<string[]>(defaultSuggestions);
   // 已拉到的网络结构：既派生系统提示词摘要，也作为生成建议问题的业务描述来源。
   const [knDetail, setKnDetail] = useState<KnDetail | null>(null);
 
@@ -393,6 +472,10 @@ export function AgentChat({
   const knRef = useRef<ChatPaneHandle>(null);
   const pageScrollRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    setSuggestions((prev) => (prev === defaultSuggestions ? prev : defaultSuggestions));
+  }, [defaultSuggestions]);
+
   // 拉模型列表（模型工厂）一次，两侧共享；默认模型在 ChatPane 内选。
   useEffect(() => {
     let cancelled = false;
@@ -418,20 +501,20 @@ export function AgentChat({
     setKnSummary(null);
     setKnResourceIds(null);
     setKnDetail(null);
-    setSuggestions(FALLBACK_SUGGESTIONS);
+    setSuggestions(defaultSuggestions);
     // 摘要预取也是受管业务调用（get_kn_detail 走 /kn/*）。它不属于任何一侧对话，
     // 因此用一次性会话，不要占用面板的 conversation。
-    withManagedTurn(summaryLifecycle, "载入知识网络摘要", (turn) =>
+    withManagedTurn(summaryLifecycle, t("knowledgeNetwork.agentChat.managedTurns.loadSummary"), (turn) =>
       fetchKnDetail(env, tokenProvider, undefined, turn ?? undefined),
     )
       .then((detail) => {
         if (cancelled) return;
-        setKnContext(buildKnContext(detail));
+        setKnContext(buildKnContext(detail, t));
         setKnSummary({ objectTypes: detail.object_types.length, relations: detail.relation_types.length });
         setKnResourceIds(detail.object_types.map((o) => o.data_source?.id).filter((id): id is string => !!id));
         setKnDetail(detail);
         // 先给模板结果，空态立刻有东西可点，不等模型。
-        setSuggestions(templateSuggestions(detail));
+        setSuggestions(templateSuggestions(detail, t));
       })
       .catch(() => {
         /* 占位符 / 无权限网络拉不到结构时，回退默认建议，Agent 仍可用工具探索 */
@@ -439,7 +522,7 @@ export function AgentChat({
     return () => {
       cancelled = true;
     };
-  }, [env, tokenProvider, summaryLifecycle]);
+  }, [env, tokenProvider, summaryLifecycle, defaultSuggestions, t]);
 
   // 有默认模型就用 BKN 的业务描述生成建议问题，替换模板结果；无模型/失败/输出不合预期时留在模板。
   useEffect(() => {
@@ -457,7 +540,7 @@ export function AgentChat({
     runAgentChat({
       env,
       modelName,
-      system: SUGGEST_PROMPT,
+      system: suggestPrompt(t),
       history: [{ role: "user", content: JSON.stringify(knDetail) }],
       tools: {},
       config: DEFAULT_AGENT_CONFIG,
@@ -480,7 +563,7 @@ export function AgentChat({
     return () => {
       controller.abort();
     };
-  }, [knDetail, modelsLoaded, models, env, llmTokenProvider, knId]);
+  }, [knDetail, modelsLoaded, models, env, llmTokenProvider, knId, t]);
 
   // tools/list 缓存：按 knId 拉一次，多面板共享（send 懒取 promise；picker 用已解析的 toolDefs）。
   const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
@@ -602,18 +685,18 @@ export function AgentChat({
 
   const buildMarkdown = useCallback(() => {
     if (!report) return null;
-    const stamp = new Date().toLocaleString("zh-CN", { hour12: false });
-    return reportToMarkdown(report.base, report.kn, summary, networkName ? `${networkName}（${knId}）` : knId, stamp);
-  }, [report, summary, networkName, knId]);
+    const stamp = new Date().toLocaleString(i18n.language, { hour12: false });
+    return reportToMarkdown(report.base, report.kn, summary, networkName ? `${networkName} (${knId})` : knId, stamp, t);
+  }, [report, summary, networkName, knId, t, i18n.language]);
 
   const copyReportMd = useCallback(() => {
     const md = buildMarkdown();
     if (!md) return;
     void navigator.clipboard
       ?.writeText(md)
-      .then(() => message.success("报告 Markdown 已复制"))
-      .catch(() => message.error("复制失败"));
-  }, [buildMarkdown, message]);
+      .then(() => message.success(t("knowledgeNetwork.agentChat.report.copySuccess")))
+      .catch(() => message.error(t("knowledgeNetwork.agentChat.report.copyFailed")));
+  }, [buildMarkdown, message, t]);
 
   const exportReportMd = useCallback(() => {
     const md = buildMarkdown();
@@ -622,16 +705,23 @@ export function AgentChat({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `对比报告-${knId}-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-")}.md`;
+    a.download = t("knowledgeNetwork.agentChat.report.downloadName", {
+      knId,
+      stamp: new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-"),
+    });
     a.click();
     URL.revokeObjectURL(url);
-  }, [buildMarkdown, knId]);
+  }, [buildMarkdown, knId, t]);
 
   const generateSummary = useCallback(async () => {
     if (!report || summarizing) return;
     const modelName = report.kn.model || report.base.model;
     if (!modelName) return;
-    const content = [paneBrief("A · 基础数据", report.base), "", paneBrief("B · 业务知识网络", report.kn)].join("\n");
+    const content = [
+      paneBrief(`A · ${t("knowledgeNetwork.agentChat.profiles.baseTitle")}`, report.base, t),
+      "",
+      paneBrief(`B · ${t("knowledgeNetwork.agentChat.profiles.knTitle")}`, report.kn, t),
+    ].join("\n");
     setSummarizing(true);
     setSummary("");
     const controller = new AbortController();
@@ -640,7 +730,7 @@ export function AgentChat({
       await runAgentChat({
         env,
         modelName,
-        system: JUDGE_PROMPT,
+        system: judgePrompt(t),
         history: [{ role: "user", content }],
         tools: {},
         config: DEFAULT_AGENT_CONFIG,
@@ -648,21 +738,27 @@ export function AgentChat({
         signal: controller.signal,
         onChunk: (chunk) => {
           if (chunk.type === "text") setSummary((s) => s + chunk.delta);
-          else if (chunk.type === "error") setSummary((s) => s + (s ? "\n\n" : "") + `⚠️ ${chunk.error}`);
+          else if (chunk.type === "error") setSummary((s) => s + (s ? "\n\n" : "") + chunk.error);
         },
       });
     } finally {
       summaryAbortRef.current = null;
       setSummarizing(false);
     }
-  }, [env, llmTokenProvider, report, summarizing]);
+  }, [env, llmTokenProvider, report, summarizing, t]);
 
   const placeholder = useMemo(() => {
-    if (noLlm) return "请先在「模型工厂」接入大模型后再对话";
-    if (!compare.on) return `向 Agent 提问，例如：${suggestions[0] ?? FALLBACK_SUGGESTIONS[0]}`;
-    if (compare.target === "both") return "同一个问题，同时问两侧，对比两种回答";
-    return compare.target === "base" ? "发送给「基础数据」" : "发送给「业务知识网络」";
-  }, [noLlm, compare, suggestions]);
+    if (noLlm) return t("knowledgeNetwork.agentChat.placeholders.noLlm");
+    if (!compare.on) {
+      return t("knowledgeNetwork.agentChat.placeholders.askAgent", {
+        suggestion: suggestions[0] ?? defaultSuggestions[0],
+      });
+    }
+    if (compare.target === "both") return t("knowledgeNetwork.agentChat.placeholders.both");
+    return compare.target === "base"
+      ? t("knowledgeNetwork.agentChat.placeholders.base")
+      : t("knowledgeNetwork.agentChat.placeholders.kn");
+  }, [noLlm, compare, suggestions, defaultSuggestions, t]);
 
   const paneShared = {
     env,
@@ -684,15 +780,15 @@ export function AgentChat({
       {compare.on ? (
         <div className={styles.targetBar}>
           <div className={styles.targetLeft}>
-            <span className={styles.targetLabel}>发送到</span>
+            <span className={styles.targetLabel}>{t("knowledgeNetwork.agentChat.composer.sendTo")}</span>
             <Segmented
               className={styles.targetSeg}
               value={compare.target}
               onChange={(value) => setCompareState((prev) => ({ ...prev, target: value as CompareTarget }))}
               options={[
-                { label: "两侧同问", value: "both" },
-                { label: "基础数据", value: "base" },
-                { label: "业务知识网络", value: "kn" },
+                { label: t("knowledgeNetwork.agentChat.composer.both"), value: "both" },
+                { label: t("knowledgeNetwork.agentChat.composer.base"), value: "base" },
+                { label: t("knowledgeNetwork.agentChat.composer.kn"), value: "kn" },
               ]}
             />
           </div>
@@ -702,9 +798,9 @@ export function AgentChat({
               className={styles.cmpReport}
               onClick={openReport}
               disabled={anyBusy}
-              title="对比两侧最近一轮的回答与指标，可生成 AI 总结"
+              title={t("knowledgeNetwork.agentChat.composer.reportTitle")}
             >
-              <FileTextOutlined /> 对比报告
+              <FileTextOutlined /> {t("knowledgeNetwork.agentChat.composer.report")}
             </button>
           ) : null}
         </div>
@@ -728,11 +824,11 @@ export function AgentChat({
         />
         {anyTargetBusy ? (
           <button type="button" className={styles.stopBtn} onClick={stopAll}>
-            停止
+            {t("knowledgeNetwork.agentChat.composer.stop")}
           </button>
         ) : (
           <button type="button" className={styles.sendBtn} onClick={sendShared} disabled={!input.trim() || noLlm}>
-            发送
+            {t("knowledgeNetwork.agentChat.composer.send")}
           </button>
         )}
       </div>
@@ -749,17 +845,17 @@ export function AgentChat({
               disabled={anyBusy}
               onChange={(checked) => setCompareState((prev) => ({ ...prev, on: checked }))}
             />
-            <span>对比模式</span>
+            <span>{t("knowledgeNetwork.agentChat.composer.compareMode")}</span>
           </div>
-          {!compare.on ? <span className={styles.paneTitle}>业务知识网络</span> : null}
+          {!compare.on ? <span className={styles.paneTitle}>{t("knowledgeNetwork.agentChat.profiles.knTitle")}</span> : null}
         </div>
         {!compare.on ? (
           <div className={styles.headerActions}>
             <button type="button" className={styles.barBtn} onClick={() => soloRef.current?.openSettings()}>
-              <SettingOutlined /> 问答配置 <RightOutlined />
+              <SettingOutlined /> {t("knowledgeNetwork.agentChat.composer.settings")} <RightOutlined />
             </button>
             <button type="button" className={styles.barBtn} onClick={() => soloRef.current?.clear()} disabled={anyBusy}>
-              <ClearOutlined /> 清空
+              <ClearOutlined /> {t("knowledgeNetwork.agentChat.composer.clear")}
             </button>
           </div>
         ) : null}
@@ -774,7 +870,7 @@ export function AgentChat({
                   <ChatPane
                     ref={baseRef}
                     {...paneShared}
-                    profile={BASE_PROFILE}
+                    profile={profiles.baseProfile}
                     suggestions={suggestions}
                     onPick={sendQuestion}
                     onBusyChange={onBaseBusy}
@@ -786,7 +882,7 @@ export function AgentChat({
                   <ChatPane
                     ref={knRef}
                     {...paneShared}
-                    profile={KN_PROFILE}
+                    profile={profiles.knProfile}
                     suggestions={suggestions}
                     onPick={sendQuestion}
                     onBusyChange={onKnBusy}
@@ -801,7 +897,7 @@ export function AgentChat({
             <ChatPane
               ref={soloRef}
               {...paneShared}
-              profile={SOLO_PROFILE}
+              profile={profiles.soloProfile}
               suggestions={suggestions}
               showToolbar={false}
               onPick={sendQuestion}
@@ -817,20 +913,20 @@ export function AgentChat({
         onCancel={closeReport}
         footer={null}
         width="min(1120px, 94vw)"
-        title="对比报告"
+        title={t("knowledgeNetwork.agentChat.composer.report")}
       >
         {report ? (
           <div className={styles.rptRoot}>
             {report.base.rounds.length === 0 && report.kn.rounds.length === 0 ? (
-              <p className={styles.rptHint}>两侧还没有对话。先用「两侧同问」发一个问题，再来看对比报告。</p>
+              <p className={styles.rptHint}>{t("knowledgeNetwork.agentChat.report.emptyDialog")}</p>
             ) : (
               <>
                 <div className={styles.rptActions}>
                   <button type="button" className={styles.rptActBtn} onClick={copyReportMd}>
-                    <CopyOutlined /> 复制 Markdown
+                    <CopyOutlined /> {t("knowledgeNetwork.agentChat.report.copyMarkdown")}
                   </button>
                   <button type="button" className={styles.rptActBtn} onClick={exportReportMd}>
-                    <DownloadOutlined /> 导出 .md
+                    <DownloadOutlined /> {t("knowledgeNetwork.agentChat.report.exportMarkdown")}
                   </button>
                 </div>
                 {/* 会话总览（汇总对比） */}
@@ -858,15 +954,19 @@ export function AgentChat({
                   const kBestMs = both && k.stats.ms < b.stats.ms;
                   const callsCell = (a: ReturnType<typeof agg>) => (
                     <>
-                      {a.calls} 次
+                      {a.calls}
                       {a.calls > 0 ? (
                         <>
                           {" · "}
-                          <span className={styles.rptOkTxt}>{a.ok} 成功</span>
+                          <span className={styles.rptOkTxt}>
+                            {a.ok} {t("knowledgeNetwork.agentChat.report.success")}
+                          </span>
                           {a.err > 0 ? (
                             <>
                               {" / "}
-                              <span className={styles.rptErrTxt}>{a.err} 失败</span>
+                              <span className={styles.rptErrTxt}>
+                                {a.err} {t("knowledgeNetwork.agentChat.report.failed")}
+                              </span>
                             </>
                           ) : null}
                         </>
@@ -877,43 +977,49 @@ export function AgentChat({
                     <table className={styles.rptTable}>
                       <thead>
                         <tr>
-                          <th>会话总览（{Math.max(ba.rounds, ka.rounds)} 轮）</th>
                           <th>
-                            <span className={styles.paneTitle}>基础数据</span>
+                            {t("knowledgeNetwork.agentChat.report.overviewRounds", {
+                              rounds: Math.max(ba.rounds, ka.rounds),
+                            })}
                           </th>
                           <th>
-                            <span className={`${styles.paneTitle} ${styles.paneTitleHl}`}>业务知识网络</span>
+                            <span className={styles.paneTitle}>{t("knowledgeNetwork.agentChat.profiles.baseTitle")}</span>
+                          </th>
+                          <th>
+                            <span className={`${styles.paneTitle} ${styles.paneTitleHl}`}>
+                              {t("knowledgeNetwork.agentChat.profiles.knTitle")}
+                            </span>
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td>模型</td>
+                          <td>{t("knowledgeNetwork.agentChat.report.model")}</td>
                           <td>{b.model || "—"}</td>
                           <td>{k.model || "—"}</td>
                         </tr>
                         <tr>
-                          <td>总 token</td>
+                          <td>{t("knowledgeNetwork.agentChat.report.totalTokens")}</td>
                           <td className={bBestTok ? styles.rptBest : ""}>{fmtTokens(b.stats.tokens)}</td>
                           <td className={kBestTok ? styles.rptBest : ""}>{fmtTokens(k.stats.tokens)}</td>
                         </tr>
                         <tr>
-                          <td>总耗时</td>
+                          <td>{t("knowledgeNetwork.agentChat.report.totalDuration")}</td>
                           <td className={bBestMs ? styles.rptBest : ""}>{fmtDuration(b.stats.ms)}</td>
                           <td className={kBestMs ? styles.rptBest : ""}>{fmtDuration(k.stats.ms)}</td>
                         </tr>
                         <tr>
-                          <td>平均每轮</td>
+                          <td>{t("knowledgeNetwork.agentChat.report.averagePerRound")}</td>
                           <td>{ba.rounds > 0 ? `${fmtTokens(ba.avgTokens)} tokens · ${fmtDuration(ba.avgMs)}` : "—"}</td>
                           <td>{ka.rounds > 0 ? `${fmtTokens(ka.avgTokens)} tokens · ${fmtDuration(ka.avgMs)}` : "—"}</td>
                         </tr>
                         <tr>
-                          <td>工具调用合计</td>
+                          <td>{t("knowledgeNetwork.agentChat.report.totalToolCalls")}</td>
                           <td>{callsCell(ba)}</td>
                           <td>{callsCell(ka)}</td>
                         </tr>
                         <tr>
-                          <td>无效轮次(无答/停止/出错)</td>
+                          <td>{t("knowledgeNetwork.agentChat.report.invalidRounds")}</td>
                           <td className={ba.neg > 0 ? styles.rptErrTxt : ""}>{ba.neg}</td>
                           <td className={ka.neg > 0 ? styles.rptErrTxt : ""}>{ka.neg}</td>
                         </tr>
@@ -937,15 +1043,19 @@ export function AgentChat({
                     const err = r.toolCalls.filter((t) => t.status === "error").length;
                     return (
                       <>
-                        {r.toolCalls.length} 次
+                        {r.toolCalls.length}
                         {r.toolCalls.length > 0 ? (
                           <>
                             {" · "}
-                            <span className={styles.rptOkTxt}>{ok} 成功</span>
+                            <span className={styles.rptOkTxt}>
+                              {ok} {t("knowledgeNetwork.agentChat.report.success")}
+                            </span>
                             {err > 0 ? (
                               <>
                                 {" / "}
-                                <span className={styles.rptErrTxt}>{err} 失败</span>
+                                <span className={styles.rptErrTxt}>
+                                  {err} {t("knowledgeNetwork.agentChat.report.failed")}
+                                </span>
                               </>
                             ) : null}
                             <div className={styles.rptToolTags}>
@@ -966,12 +1076,17 @@ export function AgentChat({
                   return (
                     <div key={i} className={styles.rptRound}>
                       <div className={styles.rptQ}>
-                        <span className={styles.rptRoundNo}>第 {i + 1} 轮</span>
-                        <span className={styles.rptQMark}>❝</span>
+                        <span className={styles.rptRoundNo}>
+                          {t("knowledgeNetwork.agentChat.report.roundTitle", { round: i + 1 })}
+                        </span>
+                        <span className={styles.rptQMark}>“</span>
                         <span>
                           {sameQ
                             ? (k?.question ?? b?.question ?? "—")
-                            : `左：${b?.question ?? "—"} ／ 右：${k?.question ?? "—"}`}
+                            : t("knowledgeNetwork.agentChat.report.questionBoth", {
+                                baseQuestion: b?.question ?? "—",
+                                knQuestion: k?.question ?? "—",
+                              })}
                         </span>
                       </div>
                       <table className={styles.rptTable}>
@@ -986,22 +1101,22 @@ export function AgentChat({
                             </td>
                           </tr>
                           <tr>
-                            <td>耗时</td>
+                            <td>{t("knowledgeNetwork.agentChat.report.duration")}</td>
                             <td className={bBestMs ? styles.rptBest : ""}>{b?.ms != null ? fmtDuration(b.ms) : "—"}</td>
                             <td className={kBestMs ? styles.rptBest : ""}>{k?.ms != null ? fmtDuration(k.ms) : "—"}</td>
                           </tr>
                           <tr>
-                            <td>工具调用</td>
+                            <td>{t("knowledgeNetwork.agentChat.report.toolCalls")}</td>
                             <td>{toolCell(b)}</td>
                             <td>{toolCell(k)}</td>
                           </tr>
                           <tr>
-                            <td>结果</td>
+                            <td>{t("knowledgeNetwork.agentChat.report.result")}</td>
                             <td className={b && b.outcome !== "answered" ? styles.rptErrTxt : ""}>
-                              {b ? outcomeLabel(b.outcome) : "—"}
+                              {b ? outcomeLabel(b.outcome, t) : "—"}
                             </td>
                             <td className={k && k.outcome !== "answered" ? styles.rptErrTxt : ""}>
-                              {k ? outcomeLabel(k.outcome) : "—"}
+                              {k ? outcomeLabel(k.outcome, t) : "—"}
                             </td>
                           </tr>
                         </tbody>
@@ -1009,8 +1124,8 @@ export function AgentChat({
                       <div className={styles.rptAnsGrid}>
                         {(
                           [
-                            { key: "base", title: "基础数据", hl: false, round: b },
-                            { key: "kn", title: "业务知识网络", hl: true, round: k },
+                            { key: "base", title: t("knowledgeNetwork.agentChat.profiles.baseTitle"), hl: false, round: b },
+                            { key: "kn", title: t("knowledgeNetwork.agentChat.profiles.knTitle"), hl: true, round: k },
                           ] as const
                         ).map(({ key, title, hl, round }) => {
                           const negative = !!round && round.outcome !== "answered";
@@ -1019,17 +1134,21 @@ export function AgentChat({
                               <summary className={styles.rptAnsHead}>
                                 <span className={`${styles.paneTitle} ${hl ? styles.paneTitleHl : ""}`}>{title}</span>
                                 {negative ? (
-                                  <span className={styles.rptErrTxt}>{outcomeLabel(round.outcome)}</span>
+                                  <span className={styles.rptErrTxt}>{outcomeLabel(round.outcome, t)}</span>
                                 ) : (
-                                  <span className={styles.rptAnsLbl}>回答（点击展开/收起）</span>
+                                  <span className={styles.rptAnsLbl}>
+                                    {t("knowledgeNetwork.agentChat.report.answerToggle")}
+                                  </span>
                                 )}
                               </summary>
                               <div className={styles.rptAnsBody}>
-                                {negative ? <div className={styles.rptErrTxt}>{outcomeLabel(round.outcome)}</div> : null}
+                                {negative ? (
+                                  <div className={styles.rptErrTxt}>{outcomeLabel(round.outcome, t)}</div>
+                                ) : null}
                                 {round?.answer ? (
                                   <MarkdownView text={round.answer} />
                                 ) : negative ? null : (
-                                  <span className={styles.rptHint}>（无回答）</span>
+                                  <span className={styles.rptHint}>{t("knowledgeNetwork.agentChat.answer.empty")}</span>
                                 )}
                               </div>
                             </details>
@@ -1041,14 +1160,18 @@ export function AgentChat({
                 })}
 
                 <div className={styles.rptSumHead}>
-                  <span>AI 总结</span>
+                  <span>{t("knowledgeNetwork.agentChat.report.aiSummary")}</span>
                   <button
                     type="button"
                     className={styles.rptGenBtn}
                     onClick={() => void generateSummary()}
                     disabled={summarizing}
                   >
-                    {summarizing ? "生成中…" : summary ? "重新生成" : "生成总结"}
+                    {summarizing
+                      ? t("knowledgeNetwork.agentChat.report.generating")
+                      : summary
+                        ? t("knowledgeNetwork.agentChat.report.regenerateSummary")
+                        : t("knowledgeNetwork.agentChat.report.generateSummary")}
                   </button>
                 </div>
                 {summary ? (
@@ -1057,7 +1180,9 @@ export function AgentChat({
                   </div>
                 ) : (
                   <p className={styles.rptHint}>
-                    {summarizing ? "评审模型思考中…" : "用右侧模型对全部轮次做正确性 / 依据 / 效率评审。"}
+                    {summarizing
+                      ? t("knowledgeNetwork.agentChat.report.thinking")
+                      : t("knowledgeNetwork.agentChat.report.summaryHint")}
                   </p>
                 )}
               </>
