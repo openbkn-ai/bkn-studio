@@ -11,12 +11,9 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
-import { atLeast, type Edition } from "@/framework/entitlement/edition";
-import { upgradeReason } from "@/framework/entitlement/upgrade-reason";
-import {
-  useEntitlement,
-  useEntitlementContext,
-} from "@/framework/entitlement/use-entitlement";
+import type { Edition } from "@/framework/entitlement/edition";
+import { capabilitySatisfied, upgradeReason } from "@/framework/entitlement/upgrade-reason";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { capabilityServedByBknSafe } from "@/modules/subscription/capability-catalog";
 
@@ -30,22 +27,18 @@ type RequireEditionProps = {
 };
 
 /**
- * 按**档位**守卫整页。只用于 `capabilities[]` 答不了的付费面。
+ * 整页守卫。放行条件是「证够了 **且** 这项能力真的可用」,与档位徽标闭嘴的条件同一个。
  *
- * 正常的门控判据是服务端算好的 `capabilities[]`(ee-design.md §3.2「不让客户端自己推」)。
- * 但那份清单只描述 bkn-safe 自己的镜像:业务溯源由 bkn-trace 实现(走临时分叉),这个
- * 端点永远不报它的 key(§6「A 答不了 B」)——拿 capability 去挡会把页面永久隐藏,不管
- * 客户买没买。
+ * 用于 `capabilities[]` 答不了的付费面:业务溯源由 bkn-trace 实现、语义理解在数据目录侧,
+ * bkn-safe 的那份清单里从来没有它们(ee-design.md §6「A 答不了 B」)。这类能力**永远**判
+ * 为不满足,即使客户已经换过包也照样盖蒙版——等 §6.2 的每服务自述端点落地才解得开。
  *
- * 所以这里退到唯一拿得到的信号:证书档位。代价要认清——**它答不了「那个服务的镜像里
- * 有没有这段代码」**:企业证 + 社区版 bkn-trace 的集群会放行到一个取不到数据的页面。
- * 真正的门控要等 §6.2 的每服务自述端点,或者 bkn-trace 自己按档位伪装 404;在那之前,
- * 前端这层至少让付费能力不再对所有人白开。
+ * 这条取舍认得清:宁可让买了的人多看一层提示,也好过把付费能力对所有人白开。真正的强制力
+ * 始终在服务端,这层只是体验。
  */
 export function RequireEdition({ capability, children, minEdition }: RequireEditionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const entitlement = useEntitlement();
   const { snapshot } = useEntitlementContext();
 
   // 快照没到就先不渲染:放行等于白送,拦下又会在拿到快照后闪一下。
@@ -53,12 +46,27 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
     return null;
   }
 
-  if (atLeast(entitlement.edition, minEdition)) {
+  /*
+    放行的条件与徽标闭嘴的条件是同一个:证够了 **且** 这项能力真的可用。只看档位会在
+    「证是专业版、跑的还是社区包」时放行到一个用不了的页面——那正是客户最常处在的状态。
+
+    代价:别的服务实现的能力确认不了镜像(§6「A 答不了 B」),所以它们**永远**判为不满足,
+    即使客户已经换过包也照样盖蒙版。等 §6.2 的每服务自述端点落地才解得开;在那之前,
+    宁可让买了的人多看一层提示,也好过把付费能力对所有人白开。
+  */
+  if (
+    capabilitySatisfied(
+      capability,
+      snapshot,
+      minEdition,
+      capabilityServedByBknSafe(capability),
+    )
+  ) {
     return <>{children}</>;
   }
 
   const editionName = t(`common.entitlement.editions.${minEdition}`);
-  /** 企业与行业档走紫,专业档走暖金——与版本页的卡片同源。 */
+  /** 专业档走紫,企业与行业档走暖金——与版本页的卡片同源。 */
   const tierClass = minEdition === "professional" ? "" : "is-enterprise";
   /*
     措辞与升级弹窗共用同一条判定与同一批文案:同一件事在两处说成两样,客户会以为是两个
@@ -127,12 +135,12 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
               {t("common.entitlement.compareEditions")}
             </AppButton>
           </div>
-              <p className="console-upgrade-note">
+          <p className="console-upgrade-note">
             {reason === "image"
               ? t("common.entitlement.imageMissingHint", { edition: currentEditionName })
               : reason === "image-likely"
                 ? t("common.entitlement.imageLikelyHint", { edition: currentEditionName })
-                : t("common.entitlement.upgradeEffect")}
+                : ""}
           </p>
         </div>
       </div>

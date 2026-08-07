@@ -74,7 +74,6 @@ export const commonZhCN = {
       imageMissingHint: "已经是{{edition}}证书,请升级{{edition}}镜像以解锁该能力。",
       unlockTitle: "解锁{{edition}}能力",
       upgradeTo: "升级到{{edition}}",
-      upgradeEffect: "导入授权后立即生效,无需重启服务",
       compareEditions: "查看版本对比",
       paidHint: "该能力自 {{edition}} 起提供",
       // 档位门控的文案。与 noPermission 分开:权限不足是「你不行」,档位不足是

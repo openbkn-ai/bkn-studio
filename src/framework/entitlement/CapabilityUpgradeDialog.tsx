@@ -50,7 +50,7 @@ export function CapabilityUpgradeDialog({
   const navigate = useNavigate();
   const { snapshot } = useEntitlementContext();
   const editionName = t(`common.entitlement.editions.${minEdition}`);
-  /** 企业与行业档走紫,专业档走暖金——与版本页的卡片同源。 */
+  /** 专业档走紫,企业与行业档走暖金——与版本页的卡片同源。 */
   const tierClass = minEdition === "professional" ? "" : "is-enterprise";
   /** 提示里说的是**客户手上这张证**的档位,不是这项能力的门槛——两者可能不同。 */
   const currentEditionName = t(
@@ -86,7 +86,7 @@ export function CapabilityUpgradeDialog({
               ? t("common.entitlement.imageMissingHint", { edition: currentEditionName })
               : reason === "image-likely"
                 ? t("common.entitlement.imageLikelyHint", { edition: currentEditionName })
-                : t("common.entitlement.upgradeEffect")}
+                : ""}
           </span>
           <AppButton
             onClick={() => {

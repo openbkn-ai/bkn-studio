@@ -76,7 +76,6 @@ export const commonEnUS = {
       imageMissingHint: "Your licence is already {{edition}} — upgrade to the {{edition}} image to unlock this capability.",
       unlockTitle: "Unlock {{edition}}",
       upgradeTo: "Upgrade to {{edition}}",
-      upgradeEffect: "Takes effect as soon as the licence is imported — no restart",
       compareEditions: "Compare editions",
       paidHint: "Available from {{edition}}",
       // Edition gating. Kept apart from noPermission on purpose: "you may not"

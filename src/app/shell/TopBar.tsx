@@ -123,7 +123,9 @@ export function TopBar() {
         key: "subscription",
         label: (
           <span className="console-user-menu-edition">
-            <span>{t(`common.entitlement.editions.${entitlement.edition}`)}</span>
+            <span className={`console-user-menu-edition-${entitlement.edition}`}>
+              {t(`common.entitlement.editions.${entitlement.edition}`)}
+            </span>
             {entitlement.edition === "industry" ? null : (
               <span className="console-user-menu-edition-cta">
                 {t("common.entitlement.upgrade")}

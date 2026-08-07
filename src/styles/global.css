@@ -525,16 +525,16 @@ select {
 }
 
 .console-edition-badge-professional {
-  border-color: #f0c674;
-  background: #fffaed;
-  color: #96701a;
+  border-color: #b9a7ec;
+  background: #f5f2ff;
+  color: #4c35a0;
 }
 
 .console-edition-badge-enterprise,
 .console-edition-badge-industry {
-  border-color: #b9a7ec;
-  background: #f5f2ff;
-  color: #4c35a0;
+  border-color: #f0c674;
+  background: #fffaed;
+  color: #96701a;
 }
 
 .console-edition-badge-community {
@@ -546,23 +546,23 @@ select {
 /* 企业档的升级面走紫,与版本页那张企业卡同源;专业档保持暖金。两处颜色对不上,客户会
    以为看的是两种东西。 */
 .console-upgrade-hero.is-enterprise {
-  border-color: #b9a7ec;
-  background: linear-gradient(180deg, #f3eeff 0%, #fff 100%);
+  border-color: #f0c674;
+  background: linear-gradient(180deg, #fffaed 0%, #fff 100%);
 }
 
 .console-upgrade-hero.is-enterprise .console-upgrade-hero-icon {
-  color: #6d4fd0;
+  color: #d99b1c;
 }
 
 .console-upgrade-enterprise .ant-btn-primary {
-  border-color: #6d4fd0;
-  background: #6d4fd0;
+  border-color: #d99b1c;
+  background: #d99b1c;
   color: #fff;
 }
 
 .console-upgrade-enterprise .ant-btn-primary:hover {
-  border-color: #5b3fbb;
-  background: #5b3fbb;
+  border-color: #b8830f;
+  background: #b8830f;
   color: #fff;
 }
 
@@ -619,9 +619,9 @@ select {
   display: flex;
   gap: 14px;
   padding: 16px;
-  border: 1px solid #f0c674;
+  border: 1px solid #b9a7ec;
   border-radius: 0;
-  background: linear-gradient(180deg, #fffaed 0%, #fff 100%);
+  background: linear-gradient(180deg, #f3eeff 0%, #fff 100%);
 }
 
 .console-upgrade-hero-icon {
@@ -633,7 +633,7 @@ select {
   flex: 0 0 auto;
   border-radius: 0;
   background: #fff;
-  color: #d99b1c;
+  color: #6d4fd0;
   font-size: 18px;
 }
 
@@ -717,6 +717,18 @@ select {
 
 .console-user-menu-edition-cta {
   color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+/* 菜单里的档位名也带档位色,和徽标、版本页卡片是同一套认知。 */
+.console-user-menu-edition-professional {
+  color: #4c35a0;
+  font-weight: 600;
+}
+
+.console-user-menu-edition-enterprise,
+.console-user-menu-edition-industry {
+  color: #96701a;
   font-weight: 600;
 }
 
