@@ -948,6 +948,7 @@ export const executionFactoryEnUS = {
       newToolboxNameRequired: "Enter a new toolset name.",
       openApiImportAllFailed: "No tools could be imported from the OpenAPI document.",
       openApiSpecRequired: "Upload an OpenAPI 3.0 spec file.",
+      operatorSyncNameRequired: "Enter an operator name before syncing publish.",
       targetToolboxMissing: "Could not determine the target toolset.",
       toolCreateFailed: "Tool creation failed",
     },

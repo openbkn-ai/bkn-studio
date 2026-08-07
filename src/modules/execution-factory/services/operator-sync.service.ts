@@ -6,6 +6,7 @@
  */
 
 /** @deprecated Prefer registerOpenApiBundle when operatorSync is enabled. */
+import i18n from "@/app/locales/i18n";
 import { registerOperator } from "@/modules/execution-factory/services/operator.service";
 import type { OperatorRecord } from "@/modules/execution-factory/types/operator";
 import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
@@ -29,7 +30,7 @@ export async function publishOperatorFromOpenApiSync(
 
   const operatorName = options.sync.name?.trim() || options.defaultName.trim();
   if (!operatorName) {
-    throw new Error("同步发布算子时请填写算子名称。");
+    throw new Error(i18n.t("executionFactory.serviceErrors.operatorSyncNameRequired"));
   }
 
   return registerOperator({

@@ -923,6 +923,7 @@ export const executionFactoryZhCN = {
       newToolboxNameRequired: "请填写新工具集名称。",
       openApiImportAllFailed: "未能从 OpenAPI 文档导入任何工具。",
       openApiSpecRequired: "请上传 OpenAPI 3.0 规范文件。",
+      operatorSyncNameRequired: "同步发布算子时请填写算子名称。",
       targetToolboxMissing: "未能确定目标工具集。",
       toolCreateFailed: "工具创建失败",
     },
