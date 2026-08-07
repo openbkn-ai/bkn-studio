@@ -134,9 +134,8 @@ export function flattenSafeGrants(
 /**
  * 适用本映射的模块前缀。
  *
- * 只翻译执行工厂两个模块。其余模块（knowledge-network、data-catalog、system-admin 等）
- * 的权限点各有各的命名，且部分本就与 bkn-safe 直接同名，不在本次收敛范围内——对它们
- * 保持原有的直接比对行为，避免顺手改动波及未经验证的模块。
+ * 执行工厂两个模块走本通用映射。知识网络只在这里映射类型级的 create；
+ * 实例级操作必须使用后端随资源返回的 operations。
  */
 const MAPPED_MODULE_PREFIXES = ["execution-factory", "execution-factory-lab"];
 

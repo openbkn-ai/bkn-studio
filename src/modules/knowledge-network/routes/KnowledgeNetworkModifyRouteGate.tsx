@@ -7,7 +7,7 @@
 
 import { Alert, Spin } from "antd";
 import { type ReactNode, useEffect, useState } from "react";
-import { Navigate, useLocation, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -22,7 +22,6 @@ export function KnowledgeNetworkModifyRouteGate({
   children,
 }: KnowledgeNetworkModifyRouteGateProps) {
   const { networkId = "" } = useParams<{ networkId: string }>();
-  const location = useLocation();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,10 +51,6 @@ export function KnowledgeNetworkModifyRouteGate({
       cancelled = true;
     };
   }, [networkId]);
-
-  if (/\/knowledge-network\/workspace\/[^/]+\/object-types\/[^/]+\/edit$/.test(location.pathname)) {
-    return children;
-  }
 
   if (error) {
     return <Alert message={error} showIcon type="error" />;

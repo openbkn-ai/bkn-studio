@@ -49,7 +49,7 @@ export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNet
     description: item.comment ?? item.description ?? "",
     color: item.color?.trim() || "#1677ff",
     icon: item.icon,
-    ...(item.operations === undefined ? {} : { operations: item.operations }),
+    operations: item.operations ?? [],
     tags: item.tags ?? [],
     createTime: formatTimestamp(item.create_time),
     updateTime: formatTimestamp(item.update_time),

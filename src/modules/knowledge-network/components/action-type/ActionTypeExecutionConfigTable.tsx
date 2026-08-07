@@ -115,12 +115,14 @@ export function ActionTypeExecutionConfigTable({
     const actionSource = detail.executionConfig.actionSource;
     setResolvedActionSource(actionSource);
 
-    if (
-      !canResolveActionSource ||
-      !actionSource ||
-      !needsActionTypeActionSourceDisplayResolution(actionSource)
-    ) {
+    if (!actionSource || !needsActionTypeActionSourceDisplayResolution(actionSource)) {
       setActionSourceResolutionFailed(false);
+      setIsResolvingActionSource(false);
+      return;
+    }
+
+    if (!canResolveActionSource) {
+      setActionSourceResolutionFailed(true);
       setIsResolvingActionSource(false);
       return;
     }

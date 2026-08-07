@@ -179,7 +179,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.objectTypeEditDescription",
       titleKey: "knowledgeNetwork.objectTypeEditTitle",
     },
-    <ObjectTypeEditPage />,
+    modifyRoute(<ObjectTypeEditPage />),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/object-types/:objectTypeId/detail",

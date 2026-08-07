@@ -213,7 +213,7 @@ export function KnowledgeNetworkListScene({
         className={styles.emptyPanel}
         description={
           <PermissionGate
-            fallback={<span>{t("knowledgeNetwork.emptyCreateHint")}</span>}
+            fallback={<span>{t("knowledgeNetwork.emptyTitle")}</span>}
             permissions="knowledge-network:create"
           >
             <span>

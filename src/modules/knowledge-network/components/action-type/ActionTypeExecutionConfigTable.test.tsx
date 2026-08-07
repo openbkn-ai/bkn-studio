@@ -13,6 +13,7 @@ import type { ActionTypeDetail } from "@/modules/knowledge-network/types/knowled
 import { ActionTypeExecutionConfigTable } from "./ActionTypeExecutionConfigTable";
 
 const getKnowledgeNetworkObjectTypeDetail = vi.hoisted(() => vi.fn());
+const needsActionTypeActionSourceDisplayResolution = vi.hoisted(() => vi.fn());
 const resolveActionTypeActionSourceDisplayWithTimeout = vi.hoisted(() => vi.fn());
 const resolveActionTypeToolInputSchema = vi.hoisted(() => vi.fn());
 
@@ -31,7 +32,7 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
 }));
 
 vi.mock("@/modules/knowledge-network/services/action-type-tool.service", () => ({
-  needsActionTypeActionSourceDisplayResolution: () => false,
+  needsActionTypeActionSourceDisplayResolution,
   resolveActionTypeActionSourceDisplayWithTimeout,
   resolveActionTypeToolInputSchema,
 }));
@@ -54,6 +55,8 @@ beforeAll(() => {
 
 beforeEach(() => {
   getKnowledgeNetworkObjectTypeDetail.mockReset();
+  needsActionTypeActionSourceDisplayResolution.mockReset();
+  needsActionTypeActionSourceDisplayResolution.mockReturnValue(false);
   resolveActionTypeActionSourceDisplayWithTimeout.mockReset();
   resolveActionTypeActionSourceDisplayWithTimeout.mockImplementation((source) =>
     Promise.resolve(source),
@@ -176,7 +179,9 @@ describe("ActionTypeExecutionConfigTable", () => {
     ).toBeTruthy();
   });
 
-  it("does not resolve an action source without toolbox access", () => {
+  it("shows the source as unavailable without toolbox access", () => {
+    needsActionTypeActionSourceDisplayResolution.mockReturnValue(true);
+
     render(
       <ActionTypeExecutionConfigTable
         canResolveActionSource={false}
@@ -187,5 +192,8 @@ describe("ActionTypeExecutionConfigTable", () => {
 
     expect(resolveActionTypeActionSourceDisplayWithTimeout).not.toHaveBeenCalled();
     expect(resolveActionTypeToolInputSchema).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("knowledgeNetwork.actionTypeExecutionSourceUnavailable"),
+    ).toBeTruthy();
   });
 });
