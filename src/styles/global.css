@@ -536,6 +536,46 @@ select {
   color: var(--color-text-secondary);
 }
 
+/* 整页锁:真实页面照常渲染在底下,盖一层蒙版。看得见这块功能长什么样,才知道在买什么。 */
+.console-upgrade-locked {
+  position: relative;
+  min-height: 420px;
+}
+
+.console-upgrade-locked-content {
+  pointer-events: none;
+  user-select: none;
+  filter: blur(2px);
+  opacity: 0.55;
+}
+
+.console-upgrade-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 72px 16px 16px;
+  background: linear-gradient(180deg, rgba(246, 248, 251, 0.55) 0%, rgba(246, 248, 251, 0.9) 100%);
+}
+
+.console-upgrade-card {
+  width: min(560px, 100%);
+  height: fit-content;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-dropdown);
+}
+
+.console-upgrade-page-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
 /* 升级引导弹窗。讲「这项是什么、要哪一档」,不讲价——报价随优惠期滚动,印在这里改一次价
    就要发一次版,所以底部两个出口分别指向版本对比页与授权门户。 */
 .console-upgrade-hero {
