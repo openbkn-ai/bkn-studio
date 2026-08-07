@@ -72,6 +72,7 @@ const requestSummary = {
   partialReasons: [],
   questionPreview: "客户 A 的风险为什么上升？",
   requestId: "req_business_001",
+  interactionId: "interaction_customer_risk",
   resultPreview: "近 7 天投诉增加，风险等级上升。",
   startedAt: "2026-07-27T09:00:00Z",
   status: "completed",
@@ -456,6 +457,16 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
 
     await waitFor(() => expect(getInteractionSummary).toHaveBeenCalledWith("interaction_customer_risk"));
+    expect(getEvidenceArtifact).toHaveBeenNthCalledWith(
+      1,
+      "art_question_001",
+      "interaction_customer_risk",
+    );
+    expect(getEvidenceArtifact).toHaveBeenNthCalledWith(
+      2,
+      "art_result_001",
+      "interaction_customer_risk",
+    );
     expect(await screen.findByText("客户 A 的风险为什么上升？（完整问题）")).not.toBeNull();
     expect(screen.getByText("近 7 天投诉增加 42%，因此风险等级从中升至高。（完整结论）")).not.toBeNull();
   });
@@ -584,6 +595,16 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(getEvidenceChain).toHaveBeenCalledWith({ requestId: "req_business_001", limit: 100 });
     expect(getBusinessGraph).toHaveBeenCalledWith({ requestId: "req_business_001", limit: 100 });
     await waitFor(() => expect(getEvidenceArtifact).toHaveBeenCalledTimes(2));
+    expect(getEvidenceArtifact).toHaveBeenNthCalledWith(
+      1,
+      "art_question_001",
+      "interaction_customer_risk",
+    );
+    expect(getEvidenceArtifact).toHaveBeenNthCalledWith(
+      2,
+      "art_result_001",
+      "interaction_customer_risk",
+    );
 
     expect(screen.queryByText("客户 A 的风险为什么上升？（完整问题）")).toBeNull();
     expect(screen.queryByText("近 7 天投诉增加 42%，因此风险等级从中升至高。（完整结论）")).toBeNull();
