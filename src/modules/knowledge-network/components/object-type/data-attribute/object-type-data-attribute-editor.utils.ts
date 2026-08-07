@@ -253,7 +253,6 @@ export function areDataPropertiesEqual(
       item.displayName === other.displayName &&
       item.name === other.name &&
       item.primaryKey === other.primaryKey &&
-      item.totalCount === other.totalCount &&
       item.type === other.type &&
       areMappedFieldsEqual(item.mappedField, other.mappedField)
     );

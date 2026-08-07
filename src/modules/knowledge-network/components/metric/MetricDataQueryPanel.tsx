@@ -35,7 +35,6 @@ const TIME_RANGE_OPTIONS: MetricDataQueryTimeRange[] = [
   "last_24h",
   "last_7d",
   "last_30d",
-  "calendar_day",
   "custom",
 ];
 const CALENDAR_STEP_OPTIONS: MetricQueryCalendarStep[] = [

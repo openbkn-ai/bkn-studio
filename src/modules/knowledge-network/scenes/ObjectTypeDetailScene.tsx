@@ -36,7 +36,6 @@ import {
 import { useObjectTypePropertyTableState } from "@/modules/knowledge-network/components/object-type/useObjectTypePropertyTableState";
 import { ObjectTypeDetailLogicPropertyTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailLogicPropertyTrialPanel";
 import { ObjectTypeDetailMetricTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailMetricTrialPanel";
-import { enrichDataPropertiesWithRowTotal } from "@/modules/knowledge-network/lib/enrich-data-properties";
 import { buildSampleRowKey } from "@/modules/knowledge-network/lib/object-type-instance-identity";
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
@@ -48,7 +47,7 @@ import {
   listKnowledgeNetworkMetrics,
   listKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type {
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkMetricRecord,
@@ -233,7 +232,12 @@ export function ObjectTypeDetailScene() {
   const [relatedKeyword, setRelatedKeyword] = useState("");
   const propertyTableState = useObjectTypePropertyTableState();
   const loadedObjectTypeKeyRef = useRef<string | null>(null);
-  const canModify = useKnowledgeNetworkCanModify(networkId);
+  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
+    networkId,
+    ["modify", "delete"],
+  );
+  const canModify = operationAccess.modify;
+  const canDelete = operationAccess.delete;
   const canLoadResourceIndexStates = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode: "any",
@@ -744,11 +748,6 @@ export function ObjectTypeDetailScene() {
     return relatedActions.filter((item) => normalizedSearchText(item.name).includes(normalized));
   }, [relatedActions, relatedKeyword]);
 
-  const enrichedDataProperties = useMemo(
-    () => enrichDataPropertiesWithRowTotal(filteredDataProperties, preview?.rowTotalCount),
-    [filteredDataProperties, preview?.rowTotalCount],
-  );
-
   const resourceIndexState = useMemo(
     () => indexStateOf(resourceBuildTasks),
     [resourceBuildTasks],
@@ -756,8 +755,8 @@ export function ObjectTypeDetailScene() {
 
   const pagedDataProperties = useMemo(() => {
     const start = (dataPage - 1) * dataPageSize;
-    return enrichedDataProperties.slice(start, start + dataPageSize);
-  }, [dataPage, dataPageSize, enrichedDataProperties]);
+    return filteredDataProperties.slice(start, start + dataPageSize);
+  }, [dataPage, dataPageSize, filteredDataProperties]);
 
   const pagedLogicProperties = useMemo(() => {
     const start = (logicPage - 1) * logicPageSize;
@@ -1517,7 +1516,7 @@ export function ObjectTypeDetailScene() {
                     pageSize={dataPageSize}
                     showSizeChanger
                     showTotal={(total) => t("common.total", { total })}
-                    total={enrichedDataProperties.length}
+                    total={filteredDataProperties.length}
                   />
                 </div>
               </>
@@ -1995,8 +1994,9 @@ export function ObjectTypeDetailScene() {
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
-        canModify ? (
+        !isPermissionLoading && (canModify || canDelete) ? (
           <>
+            {canModify ? (
             <AppButton
               icon={<EditOutlined />}
               onClick={() => {
@@ -2007,6 +2007,8 @@ export function ObjectTypeDetailScene() {
             >
               {t("common.edit")}
             </AppButton>
+            ) : null}
+            {canDelete ? (
             <AppButton
               danger
               icon={<DeleteOutlined />}
@@ -2014,6 +2016,7 @@ export function ObjectTypeDetailScene() {
             >
               {t("common.delete")}
             </AppButton>
+            ) : null}
           </>
         ) : null
       }

@@ -160,7 +160,8 @@ describe("isStudioPermissionGranted", () => {
     const knowledgeGrants = flattenSafeGrants([
       { operations: ["create"], resource: { id: "*", type: "knowledge_network" } },
     ]);
-    expect(isStudioPermissionGranted("knowledge-network:create", knowledgeGrants, false)).toBe(false);
+    expect(isStudioPermissionGranted("knowledge-network:create", knowledgeGrants, false)).toBe(true);
+    expect(isStudioPermissionGranted("knowledge-network:edit", knowledgeGrants, false)).toBe(false);
   });
 });
 

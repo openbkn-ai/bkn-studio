@@ -141,6 +141,14 @@ export function flattenSafeGrants(
 const MAPPED_MODULE_PREFIXES = ["execution-factory", "execution-factory-lab"];
 
 /**
+ * Knowledge-network creation is type-scoped in bkn-safe. Instance-scoped actions
+ * deliberately stay out of this map and must use the backend-provided operations.
+ */
+const KNOWLEDGE_NETWORK_TYPE_PERMISSIONS: Record<string, string> = {
+  "knowledge-network:create": "create",
+};
+
+/**
  * 判断某个 Studio 权限点在给定的 bkn-safe 授权集下是否成立。
  *
  * 判定顺序：
@@ -160,6 +168,11 @@ export function isStudioPermissionGranted(
   //    刻意不在此短路 —— 否则会绕过 catalog:install 等有意屏蔽项。
   if (safeGrants.has(studioPermission)) {
     return true;
+  }
+
+  const knowledgeNetworkOperation = KNOWLEDGE_NETWORK_TYPE_PERMISSIONS[studioPermission];
+  if (knowledgeNetworkOperation) {
+    return safeGrantsCover(safeGrants, "knowledge_network", knowledgeNetworkOperation);
   }
 
   const segments = studioPermission.split(":");

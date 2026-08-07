@@ -11,7 +11,6 @@ import { objecttypePart } from "./object-type";
 import { relationtypePart } from "./relation-type";
 import { actiontypePart } from "./action-type";
 import { metricPart } from "./metric";
-import { taskPart } from "./task";
 
 export const knowledgeNetworkZhCN = {
   knowledgeNetwork: {
@@ -21,6 +20,5 @@ export const knowledgeNetworkZhCN = {
     ...relationtypePart,
     ...actiontypePart,
     ...metricPart,
-    ...taskPart,
   },
 } as const;

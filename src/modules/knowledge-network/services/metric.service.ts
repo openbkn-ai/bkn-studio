@@ -342,11 +342,6 @@ function getRelativeTimeWindow(timeRange: MetricDataQueryParams["timeRange"]): M
       return { end: now, start: now - 7 * oneDay };
     case "last_30d":
       return { end: now, start: now - 30 * oneDay };
-    case "calendar_day": {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      return { end: now, start: start.getTime() };
-    }
     case "last_24h":
     default:
       return { end: now, start: now - oneDay };

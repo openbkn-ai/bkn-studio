@@ -95,6 +95,37 @@ describe("MetricDataQueryPanel", () => {
     expect(screen.getByText("knowledgeNetwork.metricQueryStep.month")).toBeTruthy();
   }, 10_000);
 
+  it("does not offer calendar day as a query time range", () => {
+    render(
+      <MetricDataQueryPanel
+        metricId="metric-1"
+        metricName="Material count"
+        networkId="network-1"
+      />,
+    );
+
+    const modeLabel = screen.getByText("knowledgeNetwork.metricQueryModeLabel");
+    const modeSelect = modeLabel
+      .closest(".ant-form-item")
+      ?.querySelector(".ant-select-selector");
+
+    expect(modeSelect).toBeTruthy();
+    fireEvent.mouseDown(modeSelect!);
+    fireEvent.click(screen.getByText("knowledgeNetwork.metricQueryMode.trend"));
+
+    const rangeLabel = screen.getByText("knowledgeNetwork.metricQueryTimeRangeLabel");
+    const rangeSelect = rangeLabel
+      .closest(".ant-form-item")
+      ?.querySelector(".ant-select-selector");
+
+    expect(rangeSelect).toBeTruthy();
+    fireEvent.mouseDown(rangeSelect!);
+    expect(screen.queryByText("knowledgeNetwork.metricQueryTimeRange.calendar_day")).toBeNull();
+    expect(
+      screen.getAllByText("knowledgeNetwork.metricQueryTimeRange.last_24h").length,
+    ).toBeGreaterThan(0);
+  }, 10_000);
+
   it("renders drill-down dimensions with semantic property names", () => {
     const { container } = render(
       <MetricDataQueryPanel

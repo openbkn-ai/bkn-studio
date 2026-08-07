@@ -21,7 +21,7 @@ import {
   deleteKnowledgeNetworkRelationType,
   getKnowledgeNetworkRelationTypeDetail,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type { RelationTypeDetail } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./RelationTypeDetailScene.module.css";
@@ -42,7 +42,12 @@ export function RelationTypeDetailScene() {
   const [detail, setDetail] = useState<RelationTypeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const canModify = useKnowledgeNetworkCanModify(networkId);
+  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
+    networkId,
+    ["modify", "delete"],
+  );
+  const canModify = operationAccess.modify;
+  const canDelete = operationAccess.delete;
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
@@ -113,31 +118,37 @@ export function RelationTypeDetailScene() {
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
-        canModify ? (
+        !isPermissionLoading && (canModify || canDelete) ? (
           <>
-            <AppButton
-              icon={<EditOutlined />}
-              onClick={() => {
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/edit`,
-                );
-              }}
-            >
-              {t("common.edit")}
-            </AppButton>
-            <AppButton
-              icon={<ApartmentOutlined />}
-              onClick={() => {
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/mapping`,
-                );
-              }}
-            >
-              {t("knowledgeNetwork.relationTypeMappingEntry")}
-            </AppButton>
+            {canModify ? (
+              <>
+                <AppButton
+                  icon={<EditOutlined />}
+                  onClick={() => {
+                    void navigate(
+                      `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/edit`,
+                    );
+                  }}
+                >
+                  {t("common.edit")}
+                </AppButton>
+                <AppButton
+                  icon={<ApartmentOutlined />}
+                  onClick={() => {
+                    void navigate(
+                      `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/mapping`,
+                    );
+                  }}
+                >
+                  {t("knowledgeNetwork.relationTypeMappingEntry")}
+                </AppButton>
+              </>
+            ) : null}
+            {canDelete ? (
             <AppButton danger onClick={confirmDelete}>
               {t("common.delete")}
             </AppButton>
+            ) : null}
           </>
         ) : null
       }

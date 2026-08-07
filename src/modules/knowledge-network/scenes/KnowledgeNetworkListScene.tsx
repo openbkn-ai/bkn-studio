@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -211,13 +212,18 @@ export function KnowledgeNetworkListScene({
       <Empty
         className={styles.emptyPanel}
         description={
-          <span>
-            {t("knowledgeNetwork.emptyCreateHint")}
-            <AppButton onClick={openCreate} type="link">
-              {t("knowledgeNetwork.emptyCreateAction")}
-            </AppButton>
-            {t("knowledgeNetwork.emptyCreateSuffix")}
-          </span>
+          <PermissionGate
+            fallback={<span>{t("knowledgeNetwork.emptyCreateHint")}</span>}
+            permissions="knowledge-network:create"
+          >
+            <span>
+              {t("knowledgeNetwork.emptyCreateHint")}
+              <AppButton onClick={openCreate} type="link">
+                {t("knowledgeNetwork.emptyCreateAction")}
+              </AppButton>
+              {t("knowledgeNetwork.emptyCreateSuffix")}
+            </span>
+          </PermissionGate>
         }
       />
     );
@@ -228,18 +234,22 @@ export function KnowledgeNetworkListScene({
       {/* 页面标题与顶栏面包屑「领域业务知识网络」重复，去掉避免冗余 */}
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          <AppButton
-            className={styles.toolbarButton}
-            icon={<PlusOutlined />}
-            onClick={openCreate}
-            type="primary"
-          >
-            {t("common.create")}
-          </AppButton>
-          <KnowledgeNetworkImportButton
-            className={styles.toolbarButton}
-            onImported={reloadData}
-          />
+          <PermissionGate permissions="knowledge-network:create">
+            <AppButton
+              className={styles.toolbarButton}
+              icon={<PlusOutlined />}
+              onClick={openCreate}
+              type="primary"
+            >
+              {t("common.create")}
+            </AppButton>
+          </PermissionGate>
+          <PermissionGate permissions="knowledge-network:create">
+            <KnowledgeNetworkImportButton
+              className={styles.toolbarButton}
+              onImported={reloadData}
+            />
+          </PermissionGate>
         </div>
         <div className={styles.toolbarRight}>
           <Input

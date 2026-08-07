@@ -78,7 +78,6 @@ export type ObjectTypeDataProperty = {
   mappedField?: ObjectTypeMappedField;
   name: string;
   primaryKey: boolean;
-  totalCount?: number;
   type: string;
 };
 

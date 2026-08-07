@@ -25,7 +25,7 @@ import {
   getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type {
   KnowledgeNetworkMetricRecord,
@@ -69,7 +69,12 @@ export function MetricDetailScene({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("info");
   const resolvedUpdaterName = useResolvedUpdaterName(detail?.updaterName);
-  const canModify = useKnowledgeNetworkCanModify(networkId);
+  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
+    networkId,
+    ["modify", "delete"],
+  );
+  const canModify = operationAccess.modify;
+  const canDelete = operationAccess.delete;
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
 
@@ -167,8 +172,9 @@ export function MetricDetailScene({
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
-        canModify ? (
+        !isPermissionLoading && (canModify || canDelete) ? (
           <>
+            {canModify ? (
             <AppButton
               icon={<EditOutlined />}
               onClick={() => {
@@ -182,9 +188,12 @@ export function MetricDetailScene({
             >
               {t("common.edit")}
             </AppButton>
+            ) : null}
+            {canDelete ? (
             <AppButton danger onClick={confirmDelete}>
               {t("common.delete")}
             </AppButton>
+            ) : null}
           </>
         ) : null
       }

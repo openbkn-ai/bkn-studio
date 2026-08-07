@@ -27,8 +27,6 @@ import {
   RelationTypeDetailPage,
   RelationTypeEditPage,
   RelationTypeMappingPage,
-  TaskCreatePage,
-  TaskDetailPage,
   workspaceSectionPage,
 } from "@/modules/knowledge-network/routes/lazy-pages";
 import { KnowledgeNetworkModifyRouteGate } from "@/modules/knowledge-network/routes/KnowledgeNetworkModifyRouteGate";
@@ -181,7 +179,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.objectTypeEditDescription",
       titleKey: "knowledgeNetwork.objectTypeEditTitle",
     },
-    modifyRoute(<ObjectTypeEditPage />),
+    <ObjectTypeEditPage />,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/object-types/:objectTypeId/detail",
@@ -254,29 +252,5 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       titleKey: "knowledgeNetwork.actionTypeExecutionTitle",
     },
     modifyRoute(<ActionTypeExecutionPage />),
-  ),
-  createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/tasks",
-    {
-      descriptionKey: "knowledgeNetwork.tasksDescription",
-      titleKey: "knowledgeNetwork.workspaceTaskManagement",
-    },
-    workspaceSectionPage("tasks"),
-  ),
-  createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/tasks/create",
-    {
-      descriptionKey: "knowledgeNetwork.taskCreateDescription",
-      titleKey: "knowledgeNetwork.taskCreateTitle",
-    },
-    <TaskCreatePage />,
-  ),
-  createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/tasks/:taskId/detail",
-    {
-      descriptionKey: "knowledgeNetwork.taskDetailDescription",
-      titleKey: "knowledgeNetwork.taskDetailTitle",
-    },
-    <TaskDetailPage />,
   ),
 ];

@@ -34,6 +34,7 @@ import type {
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type RelationTypeListPanelProps = {
+  canDelete: boolean;
   canModify: boolean;
   items: KnowledgeNetworkRelationTypeRecord[];
   loading?: boolean;
@@ -44,6 +45,7 @@ type RelationTypeListPanelProps = {
 };
 
 export function RelationTypeListPanel({
+  canDelete,
   canModify,
   items,
   loading,
@@ -248,9 +250,9 @@ export function RelationTypeListPanel({
             ? [
                 { key: "edit", label: t("common.edit") },
                 { key: "mapping", label: t("knowledgeNetwork.relationTypeMappingEntry") },
-                { key: "delete", danger: true, label: t("common.delete") },
               ]
             : []),
+          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
         ];
 
         return (
@@ -381,8 +383,9 @@ export function RelationTypeListPanel({
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          {canModify ? (
+          {canModify || canDelete ? (
             <>
+              {canModify ? (
               <AppButton
                 className={styles.toolbarButton}
                 icon={<PlusOutlined />}
@@ -393,6 +396,8 @@ export function RelationTypeListPanel({
               >
                 {t("common.create")}
               </AppButton>
+              ) : null}
+              {canDelete ? (
               <AppButton
                 className={styles.toolbarButton}
                 danger
@@ -402,6 +407,7 @@ export function RelationTypeListPanel({
               >
                 {t("common.delete")}
               </AppButton>
+              ) : null}
             </>
           ) : null}
         </div>
@@ -506,7 +512,7 @@ export function RelationTypeListPanel({
           pagination={false}
           rowKey="id"
           rowSelection={
-            canModify
+            canDelete
               ? {
                   selectedRowKeys,
                   onChange: (nextSelectedRowKeys) => {

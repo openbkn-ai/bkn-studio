@@ -23,8 +23,6 @@ import type {
   KnowledgeNetworkRecentObject,
   KnowledgeNetworkRecord,
   KnowledgeNetworkRelationTypeRecord,
-  KnowledgeNetworkTaskChildRecord,
-  KnowledgeNetworkTaskRecord,
   ObjectTypeDataProperty,
   ObjectTypeDataSource,
   ObjectTypeResourceField,
@@ -1132,46 +1130,6 @@ export const mockMetrics: Record<string, KnowledgeNetworkMetricRecord[]> = {
       unitType: "percent",
       updateTime: "2026-06-04 12:00:00",
       updaterName: "Knowledge Team",
-    },
-  ],
-};
-
-export const mockTasks: Record<string, KnowledgeNetworkTaskRecord[]> = {
-  "kn-domain-risk": [
-    {
-      id: "job-full-001",
-      name: "全量同步任务",
-      jobType: "full",
-      state: "completed",
-      startTime: "2026-06-03 10:00:00",
-      finishTime: "2026-06-03 10:45:00",
-      duration: "45m",
-    },
-  ],
-};
-
-export const mockTaskChildren: Record<string, KnowledgeNetworkTaskChildRecord[]> = {
-  "job-full-001": [
-    {
-      id: "child-001",
-      conceptName: "风险订单",
-      conceptType: "object_type",
-      state: "completed",
-      duration: "12m",
-    },
-    {
-      id: "child-002",
-      conceptName: "命中关系",
-      conceptType: "relation_type",
-      state: "completed",
-      duration: "8m",
-    },
-    {
-      id: "child-003",
-      conceptName: "告警行动",
-      conceptType: "action_type",
-      state: "running",
-      duration: "--",
     },
   ],
 };

@@ -40,6 +40,7 @@ import type {
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type ConceptGroupListPanelProps = {
+  canDelete: boolean;
   canModify: boolean;
   items: ConceptGroupRecord[];
   loading?: boolean;
@@ -65,6 +66,7 @@ function downloadConceptGroupExport(detail: ConceptGroupDetail) {
 }
 
 export function ConceptGroupListPanel({
+  canDelete,
   canModify,
   items,
   loading,
@@ -246,12 +248,8 @@ export function ConceptGroupListPanel({
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
           { key: "export", label: t("knowledgeNetwork.conceptGroupExport") },
-          ...(canModify
-            ? [
-                { key: "edit", label: t("common.edit") },
-                { key: "delete", danger: true, label: t("common.delete") },
-              ]
-            : []),
+          ...(canModify ? [{ key: "edit", label: t("common.edit") }] : []),
+          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
         ];
 
         return (
@@ -350,8 +348,9 @@ export function ConceptGroupListPanel({
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          {canModify ? (
+          {canModify || canDelete ? (
             <>
+              {canModify ? (
               <AppButton
                 className={styles.toolbarButton}
                 icon={<PlusOutlined />}
@@ -362,6 +361,8 @@ export function ConceptGroupListPanel({
               >
                 {t("common.create")}
               </AppButton>
+              ) : null}
+              {canDelete ? (
               <AppButton
                 className={styles.toolbarButton}
                 danger
@@ -371,11 +372,14 @@ export function ConceptGroupListPanel({
               >
                 {t("common.delete")}
               </AppButton>
+              ) : null}
+              {canModify ? (
               <JsonResourceImportButton
                 className={styles.toolbarButton}
                 onImported={onRefresh}
                 onImport={onImport}
               />
+              ) : null}
             </>
           ) : null}
         </div>
@@ -457,7 +461,7 @@ export function ConceptGroupListPanel({
           pagination={false}
           rowKey="id"
           rowSelection={
-            canModify
+            canDelete
               ? {
                   selectedRowKeys,
                   onChange: (nextSelectedRowKeys) => {

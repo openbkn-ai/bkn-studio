@@ -86,6 +86,14 @@ describe("KnowledgeNetworkModifyRouteGate", () => {
     expect(await screen.findByText("overview page")).toBeTruthy();
   });
 
+  it("redirects to overview when the backend omits operations", async () => {
+    mockedGetKnowledgeNetwork.mockResolvedValue(createRecord());
+
+    renderGate();
+
+    expect(await screen.findByText("overview page")).toBeTruthy();
+  });
+
   it("shows the request failure instead of redirecting on non-permission errors", async () => {
     mockedGetKnowledgeNetwork.mockRejectedValue(
       Object.assign(new Error("backend unavailable"), {

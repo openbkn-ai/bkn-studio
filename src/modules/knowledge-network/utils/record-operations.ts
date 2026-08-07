@@ -15,9 +15,5 @@ export function hasKnowledgeNetworkRecordOperation(
     return false;
   }
 
-  if (record.operations === undefined) {
-    return true;
-  }
-
-  return record.operations.includes("*") || record.operations.includes(operation);
+  return record.operations?.includes("*") || record.operations?.includes(operation) || false;
 }

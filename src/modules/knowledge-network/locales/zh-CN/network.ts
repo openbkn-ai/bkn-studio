@@ -34,7 +34,6 @@ export const networkPart = {
     emptyRecentObjects: "当前没有最近修改的对象类。",
     emptyRelationTypes: "当前没有关系类。",
     emptyMetrics: "当前没有指标。",
-    emptyTasks: "当前没有任务。",
     emptyTitle: "暂无知识网络",
     enterWorkspace: "进入工作区",
     export: "导出",
@@ -156,7 +155,5 @@ export const networkPart = {
     workspacePreviewModeling: "建模预览",
     workspaceRelationTypes: "关系类",
     workspaceResources: "资源",
-    workspaceTaskManagement: "任务管理",
-    workspaceTaskPending: "任务管理会在后续阶段补齐。",
     workspaceTitle: "知识网络工作区",
 };

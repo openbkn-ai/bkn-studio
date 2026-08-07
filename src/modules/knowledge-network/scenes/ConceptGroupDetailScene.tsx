@@ -30,7 +30,7 @@ import {
   getKnowledgeNetworkConceptGroup,
   removeObjectTypesFromKnowledgeNetworkConceptGroup,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type {
   ConceptGroupDetail,
   ConceptGroupRelatedItem,
@@ -141,7 +141,12 @@ export function ConceptGroupDetailScene() {
   const [addObjectTypesOpen, setAddObjectTypesOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const canModify = useKnowledgeNetworkCanModify(networkId);
+  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
+    networkId,
+    ["modify", "delete"],
+  );
+  const canModify = operationAccess.modify;
+  const canDelete = operationAccess.delete;
 
   const listPath = `/knowledge-network/workspace/${networkId}/concept-groups`;
 
@@ -435,7 +440,7 @@ export function ConceptGroupDetailScene() {
   return (
     <>
       <KnowledgeNetworkResourceConfigShell
-        actions={
+        actions={!isPermissionLoading ? (
           <>
             {canModify ? (
               <AppButton
@@ -458,13 +463,13 @@ export function ConceptGroupDetailScene() {
             >
               {t("knowledgeNetwork.conceptGroupExport")}
             </AppButton>
-            {canModify ? (
+            {canDelete ? (
               <AppButton danger onClick={confirmDelete}>
                 {t("common.delete")}
               </AppButton>
             ) : null}
           </>
-        }
+        ) : null}
         onBack={() => {
           void navigate(listPath);
         }}

@@ -495,7 +495,9 @@ export async function resolveActionTypeToolInputSchema(
 
   if (actionSource.type === "tool" && actionSource.boxId && actionSource.toolId) {
     try {
-      const detail = await getToolDetail(actionSource.boxId, actionSource.toolId);
+      const detail = await getToolDetail(actionSource.boxId, actionSource.toolId, {
+        skipErrorToast: true,
+      });
       const schema = getInputParamsFromToolOpenAPISpec(detail.apiSpec);
       if (schema.length > 0) {
         return schema;
@@ -629,9 +631,11 @@ export async function resolveActionTypeActionSourceDisplay(
 
     if (!boxName || (actionSource.toolId && !toolName)) {
       const [toolboxResult, toolResult] = await Promise.allSettled([
-        getToolbox(actionSource.boxId),
+        getToolbox(actionSource.boxId, { skipErrorToast: true }),
         actionSource.toolId
-          ? getToolDetail(actionSource.boxId, actionSource.toolId)
+          ? getToolDetail(actionSource.boxId, actionSource.toolId, {
+              skipErrorToast: true,
+            })
           : Promise.resolve(undefined),
       ]);
 
@@ -795,8 +799,10 @@ export async function resolveActionSourceDisplayNames(
   if (actionSource.type === "tool" && actionSource.boxId && actionSource.toolId) {
     try {
       const [box, tool] = await Promise.all([
-        getToolboxMarket(actionSource.boxId).catch(() => getToolbox(actionSource.boxId!)),
-        getToolDetail(actionSource.boxId, actionSource.toolId),
+        getToolboxMarket(actionSource.boxId).catch(() =>
+          getToolbox(actionSource.boxId!, { skipErrorToast: true }),
+        ),
+        getToolDetail(actionSource.boxId, actionSource.toolId, { skipErrorToast: true }),
       ]);
 
       return {
