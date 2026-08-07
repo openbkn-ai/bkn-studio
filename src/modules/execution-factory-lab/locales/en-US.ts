@@ -32,6 +32,11 @@ export const executionFactoryLabEnUS = {
     addDrawerTitle: "Add HTTP API",
     addDrawerHint: "Paste cURL; grouping is derived automatically from the service host.",
     curlLabel: "cURL command",
+    curlErrors: {
+      commandRequired: "Enter a command that starts with curl.",
+      invalidUrl: "The URL format in the cURL command is invalid.",
+      missingUrl: "No http(s) URL was found in the cURL command.",
+    },
     summaryLabel: "Capability name",
     descriptionLabel: "Description",
     orchestrationSwitch: "Use in workflow orchestration",
