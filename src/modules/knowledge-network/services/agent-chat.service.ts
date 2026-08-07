@@ -348,6 +348,18 @@ export function buildAgentTools(
 }
 
 /**
+ * 这个平台侧工具会不会被接管（前提是本轮有 turn）。
+ *
+ * 与 isPlatformManagedTool 的区别在精度：那个是整片 `bkn_` 前缀，而真正改变执行路径的
+ * 只有这两个。溯源类读工具照旧直通后端，请求体仍然是注入后的真实报文——UI 要区分
+ * 「展示模型入参」还是「展示真实请求体」时必须用这个判定，用前缀会把直通的那些也
+ * 显示成没有请求体。
+ */
+export function isTakenOverLifecycleTool(name: string): boolean {
+  return name === "bkn_start_interaction" || name === "bkn_finish_interaction";
+}
+
+/**
  * 把一个受管生命周期工具接到客户端这一轮交互上，返回 null 表示这个工具没接管、按直通处理。
  *
  * - `bkn_start_interaction`：返回本轮已经开好的交互，不再向后端多开一条。模型因此拿得到
@@ -360,6 +372,7 @@ export function buildAgentTools(
  * handed_off），对模型来说就是这个能力被悄悄削了一块，它连有过这个选项都不知道。
  */
 function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
+  if (!isTakenOverLifecycleTool(def.name)) return null;
   const describe = (extra: string) => `${def.description ?? def.name} ${extra}`;
   // 后端 schema 原样透传；只有它压根没给 schema 时才退回一个空对象。
   const backendSchema =

@@ -42,6 +42,7 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
   buildAgentTools,
   effectiveToolArgs,
+  isTakenOverLifecycleTool,
   formatOutputContract,
   formatToolResultLimits,
   runAgentChat,
@@ -57,7 +58,6 @@ import {
 } from "@/modules/knowledge-network/services/agent-error";
 import {
   createBknLifecycle,
-  isPlatformManagedTool,
   lifecycleEnv,
   localConversationStore,
   type TurnOutcome,
@@ -608,9 +608,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                 //
                 // 被接管的生命周期工具没有请求体可展示：本轮有 turn 时它们的 execute 根本不碰
                 // session.callTool，拼上 kn_id / bkn_context 就是编一份从未发出的报文。这类
-                // 照原样显示模型入参。没有 turn 时它们直通后端，仍按真实请求体展示。
+                // 照原样显示模型入参。判定必须用 isTakenOverLifecycleTool 而不是整片 bkn_
+                // 前缀——溯源类平台工具是直通后端的，它们的请求体真实存在，按前缀判会把
+                // 那些也显示成没有请求体，等于反向再造一次失真。没有 turn 时两类都直通。
                 args:
-                  turnContextRef.current && isPlatformManagedTool(chunk.name)
+                  turnContextRef.current && isTakenOverLifecycleTool(chunk.name)
                     ? chunk.args
                     : effectiveToolArgs(chunk.name, chunk.args, knId, turnContextRef.current ?? undefined),
                 status: "running",

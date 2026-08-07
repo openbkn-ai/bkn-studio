@@ -198,6 +198,8 @@ describe("ChatPane 受管生命周期接线", () => {
       // bkn_context 这些「实际发出的请求体」才有的字段——那是编出来的报文。
       onChunk({ type: "tool-call", id: "c1", name: "bkn_finish_interaction", args: { outcome: "completed" } });
       onChunk({ type: "tool-call", id: "c2", name: "run_sql", args: { sql: "SELECT 1" } });
+      // 未被接管的平台工具（溯源类读工具）直通后端，请求体真实存在，照旧按真实报文展示。
+      onChunk({ type: "tool-call", id: "c3", name: "bkn_get_receipt", args: { receipt_id: "r1" } });
       onChunk({ type: "finish" });
       return Promise.resolve();
     });
@@ -209,7 +211,7 @@ describe("ChatPane 受管生命周期接线", () => {
     });
 
     // 工具卡片默认折叠，展开后才渲染请求体。
-    for (const header of screen.getAllByText(/tools\/call →|bkn_finish_interaction|run_sql/)) {
+    for (const header of screen.getAllByText(/^(run_sql|bkn_[a-z_]+)$/)) {
       fireEvent.click(header);
     }
     const texts = [...document.querySelectorAll("pre")].map((node) => node.textContent ?? "");
@@ -221,6 +223,9 @@ describe("ChatPane 受管生命周期接线", () => {
     // 业务工具照旧展示注入后的真实请求体。
     expect(businessCard).toContain("bkn_context");
     expect(businessCard).toContain("kn_id");
+    // 直通的平台工具同样按真实请求体展示——按 bkn_ 前缀一刀切会反向再造一次失真。
+    const passthroughCard = texts.find((text) => text.includes("receipt_id"));
+    expect(passthroughCard).toContain("bkn_context");
   });
 
   it("执行失败时以 failed 终结", async () => {
