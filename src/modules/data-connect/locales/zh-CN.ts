@@ -201,6 +201,15 @@ export const dataConnectZhCN = {
       manual: "手动",
       scheduled: "定时",
     },
+    discoverMock: {
+      cleanupTimeout: "\u8fde\u63a5\u8d85\u65f6\uff0c\u6e05\u7406\u4efb\u52a1\u672a\u80fd\u5b8c\u6210\u3002",
+      customerSyncSchedule: "\u5ba2\u6237\u4e3b\u6570\u636e\u6bcf\u65e5\u540c\u6b65",
+      financeCleanupSchedule: "\u8d22\u52a1\u6570\u4ed3\u6e05\u7406\u4efb\u52a1",
+      knowledgeIndexSchedule: "\u77e5\u8bc6\u7d22\u5f15\u589e\u91cf\u63a2\u67e5",
+      manualTaskCreated: "\u624b\u52a8\u63a2\u67e5\u4efb\u52a1\u5df2\u521b\u5efa\uff0c\u7b49\u5f85\u6267\u884c\u3002",
+      pullingIndexChanges: "\u6b63\u5728\u62c9\u53d6\u7d22\u5f15\u589e\u91cf\u53d8\u66f4\u3002",
+      syncCompleted: "\u540c\u6b65\u5b8c\u6210\uff0c\u5171\u5904\u7406 {{count}} \u5f20\u8868\u3002",
+    },
     connectorTypeResultCount: "共 {{count}} 个",
     connectorTypeResultCount_other: "共 {{count}} 个",
     connectorTemplates: {

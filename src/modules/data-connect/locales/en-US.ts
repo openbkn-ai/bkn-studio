@@ -212,6 +212,15 @@ export const dataConnectEnUS = {
       manual: "Manual",
       scheduled: "Scheduled",
     },
+    discoverMock: {
+      cleanupTimeout: "Connection timed out. The cleanup task could not finish.",
+      customerSyncSchedule: "Daily customer master data sync",
+      financeCleanupSchedule: "Finance warehouse cleanup task",
+      knowledgeIndexSchedule: "Knowledge index incremental discovery",
+      manualTaskCreated: "Manual discover task created and waiting to run.",
+      pullingIndexChanges: "Pulling incremental index changes.",
+      syncCompleted: "Sync completed. Processed {{count}} tables.",
+    },
     connectorTypeResultCount: "{{count}} connector type",
     connectorTypeResultCount_other: "{{count}} connector types",
     connectorTemplates: {
