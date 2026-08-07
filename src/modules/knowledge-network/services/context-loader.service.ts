@@ -23,7 +23,6 @@ export type OpQueryParam = {
 
 export type ContextLoaderOp = {
   id: string;
-  group: string;
   summary: string;
   /** Full REST path. */
   path: string;
@@ -61,7 +60,6 @@ export function requestDataAssistantKindOf(opId: string): RequestDataAssistantKi
 export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "search_schema",
-    group: "Knowledge Network",
     summary: "Unified schema exploration entry. It searches object, relation, action, and metric types from natural language without returning instance data.",
     path: `${REST_PREFIX}/kn/search_schema`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -76,7 +74,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "query_object_instance",
-    group: "Query",
     summary:
       "Queries object instance data for one object type with filtering, sorting, and pagination. " +
       "REST passes kn_id and ot_id through query; MCP passes them through arguments. " +
@@ -107,7 +104,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "query_instance_subgraph",
-    group: "Query",
     summary: "Queries object subgraphs through predefined relation-type paths. Multiple paths are supported, and object_types must align with relation_types order.",
     path: `${REST_PREFIX}/kn/query_instance_subgraph`,
     query: [
@@ -137,7 +133,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "list_resources",
-    group: "Data Resources",
     summary:
       "Lists data-layer resources accessible to the current account, with optional catalog_id/type filters and offset/limit pagination. " +
       "Results are already filtered by token account permissions, so the frontend must not assume global visibility.",
@@ -147,7 +142,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "describe_resource",
-    group: "Data Resources",
     summary: "Describes one data resource schema and returns connector_type plus columns. resource_id comes from list_resources entries[].resource_id.",
     path: `${REST_PREFIX}/kn/describe_resource`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -155,7 +149,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "run_sql",
-    group: "Data Resources",
     summary: "Runs SQL against knowledge-network resources and returns result rows. Table names use {{.<resource_id>}} placeholders; cross-catalog joins are not supported.",
     path: `${REST_PREFIX}/kn/run_sql`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -164,7 +157,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_logic_properties_values",
-    group: "Skills & Logic",
     summary: "Queries logical property values for objects in batch and derives dynamic_params from query when possible.",
     // MCP tool name is get_logic_properties_values; REST route is logic-property-resolver.
     path: `${REST_PREFIX}/kn/logic-property-resolver`,
@@ -181,7 +173,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "query_metric",
-    group: "Skills & Logic",
     mcpOnly: true,
     summary:
       "Queries modeled metrics using their own calculation rules. Select metric_id from get_object_types related_metrics first. " +
@@ -193,7 +184,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_action_info",
-    group: "Skills & Logic",
     summary: "Recalls related actions from object instance identities and returns Function Call-compatible _dynamic_tools definitions.",
     path: `${REST_PREFIX}/kn/get_action_info`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -201,7 +191,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "find_skills",
-    group: "Skills & Logic",
     summary: "Recalls candidate skills from business context. kn_id and object_type_id are object-type level; instance_identities make it instance-level.",
     path: `${REST_PREFIX}/kn/find_skills`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -209,7 +198,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "list_knowledge_networks",
-    group: "Knowledge Network",
     summary: "Lists business knowledge networks accessible to the current account, with filtering, pagination, and sorting.",
     path: `${REST_PREFIX}/kn/list_knowledge_networks`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -217,7 +205,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_kn_detail",
-    group: "Knowledge Network",
     summary: "Returns details for a specified knowledge network.",
     mcpOnly: true,
     path: `${REST_PREFIX}/kn/get_kn_detail`,
@@ -226,7 +213,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_object_types",
-    group: "Knowledge Network",
     summary:
       "Fetches full object-type definitions by id, including data_properties and logic_properties. Use get_kn_detail first, then expand selected ids here.",
     path: `${REST_PREFIX}/kn/get_object_types`,
@@ -235,7 +221,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_relation_types",
-    group: "Knowledge Network",
     summary: "Fetches full relation-type definitions by id, including mapping rules and source/target object names.",
     path: `${REST_PREFIX}/kn/get_relation_types`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -243,7 +228,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "execute_action",
-    group: "Skills & Logic",
     summary:
       "Executes an action asynchronously and returns execution_id. Use get_action_info first to obtain the dynamic_params schema.",
     path: `${REST_PREFIX}/kn/execute_action`,
@@ -257,7 +241,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_action_execution",
-    group: "Skills & Logic",
     summary: "Returns one action execution status and results. execution_id is returned by execute_action.",
     path: `${REST_PREFIX}/kn/get_action_execution`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -265,7 +248,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "list_action_executions",
-    group: "Skills & Logic",
     summary: "Lists action execution history with optional action type, status, trigger, and pagination filters.",
     path: `${REST_PREFIX}/kn/list_action_executions`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -723,7 +705,27 @@ export async function sendRequest(
 }
 
 /* ============================ MCP Tool Discovery (tools/list) ============================ */
-export type McpToolDef = { name: string; description?: string; inputSchema?: unknown; outputSchema?: unknown };
+/**
+ * `_meta` keys for display metadata. MCP reserves `modelcontextprotocol.io/`
+ * and `mcp.dev/`, while vendor fields use `openbkn.ai/`.
+ */
+const TOOL_META_GROUP = "openbkn.ai/group";
+const TOOL_META_GROUP_TITLE = "openbkn.ai/group_title";
+const TOOL_META_ORDER = "openbkn.ai/order";
+
+export type McpToolDef = {
+  name: string;
+  description?: string;
+  /** Display name from MCP 2025-06-18; old servers omit it and fall back to name. */
+  title?: string;
+  /** Display group key and label from `_meta`; local fallback is used when absent. */
+  group?: string;
+  groupTitle?: string;
+  /** In-group sort order from `_meta`; absent entries sort at the group tail. */
+  order?: number;
+  inputSchema?: unknown;
+  outputSchema?: unknown;
+};
 
 /** Parses an MCP response, using the last SSE data line when present. */
 function parseMcpEnvelope(text: string): unknown {
@@ -810,14 +812,25 @@ export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth, signal
   return out;
 }
 
-/** Converts raw tools/list entries to McpToolDef[] with schema fallbacks. */
+/** Treats empty strings as absent so display labels do not render blank. */
+function optionalText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+}
+
+/** Converts raw tools/list entries to McpToolDef[] with display metadata and schema fallbacks. */
 function parseToolDefs(tools: unknown[]): McpToolDef[] {
   return tools
     .map((item) => {
       const tool = (item ?? {}) as Record<string, unknown>;
+      const meta = (tool._meta && typeof tool._meta === "object" ? tool._meta : {}) as Record<string, unknown>;
+      const order = meta[TOOL_META_ORDER];
       return {
         name: typeof tool.name === "string" ? tool.name : "",
         description: typeof tool.description === "string" ? tool.description : undefined,
+        title: optionalText(tool.title),
+        group: optionalText(meta[TOOL_META_GROUP]),
+        groupTitle: optionalText(meta[TOOL_META_GROUP_TITLE]),
+        order: typeof order === "number" && Number.isFinite(order) ? order : undefined,
         inputSchema: tool.inputSchema,
         // MCP specifies outputSchema; tolerate output_schema from some implementations.
         outputSchema: tool.outputSchema ?? tool.output_schema,

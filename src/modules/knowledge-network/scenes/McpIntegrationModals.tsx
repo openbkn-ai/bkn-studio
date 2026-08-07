@@ -256,6 +256,9 @@ export function ToolDiscoveryModal({
                 <details key={tool.name} className={styles.toolItem}>
                   <summary className={styles.toolSummary}>
                     <span className={styles.toolName}>{tool.name}</span>
+                    {/* title / grouping come from server _meta; old servers omit them, so no local mapping is added here. */}
+                    {tool.title ? <span className={styles.toolTitle}>{tool.title}</span> : null}
+                    {tool.groupTitle ? <span className={styles.toolGroupTag}>{tool.groupTitle}</span> : null}
                     {tool.description ? <span className={styles.toolDesc}>{tool.description}</span> : null}
                   </summary>
                   <SchemaPre

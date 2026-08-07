@@ -584,6 +584,22 @@
   color: #1d44b8;
 }
 
+.toolTitle {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--txt);
+}
+
+.toolGroupTag {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--txt2);
+}
+
 .toolDesc {
   font-size: 12px;
   color: var(--txt2);

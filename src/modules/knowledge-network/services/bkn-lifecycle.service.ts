@@ -12,12 +12,11 @@ import {
   type McpAuth,
   type McpSession,
 } from "@/modules/knowledge-network/services/context-loader.service";
-import i18n from "@/app/locales/i18n";
 
 /**
- * Managed lifecycle tools driven by this client, kept for docs and tests.
+ * Managed lifecycle tools driven by this client, kept explicit for docs and tests.
  *
- * This is not the filtering list; filtering is prefix-based via isPlatformManagedTool.
+ * This is not the filtering list; filtering uses the prefix in isPlatformManagedTool.
  */
 export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
   "bkn_start_interaction",
@@ -25,16 +24,19 @@ export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Platform-managed tool prefix. Lifecycle and provenance tools all start with `bkn_`
- * while business tools do not.
+ * Platform-side tool prefix. Lifecycle and trace tools use `bkn_`, while
+ * business tools do not.
  */
 const PLATFORM_TOOL_PREFIX = "bkn_";
 
 /**
- * Whether a tool is platform-managed and should be hidden from the model.
+ * Whether this tool is managed by the platform side.
  *
- * Prefix matching is intentional because platform tool names move with backend changes.
- * An allow-list would miss new tools and let the model call them directly.
+ * Prefix matching is deliberate because the platform tool surface changes with
+ * backend releases and an explicit list would drift.
+ *
+ * Matching does not hide the tool. buildAgentTools decides whether to bind
+ * start/finish to the current client turn or pass other trace tools through.
  */
 export function isPlatformManagedTool(name: string): boolean {
   return name.startsWith(PLATFORM_TOOL_PREFIX);
@@ -60,7 +62,7 @@ export type BknLifecycle = {
   reset(): void;
 };
 
-/** Stores only server-issued conversation IDs; no client identity is generated. */
+/** Persists only server-issued conversation IDs; no client identity is generated. */
 export type ConversationStore = {
   read(): string | null;
   write(conversationId: string): void;
@@ -97,7 +99,7 @@ export function localConversationStore(storageKey: string, legacyStorageKey?: st
       try {
         localStorage.setItem(storageKey, conversationId);
       } catch {
-        // The in-memory ID remains valid if localStorage is unavailable.
+        // The in-memory ID remains valid when localStorage is unavailable.
       }
     },
     clear() {
@@ -126,16 +128,24 @@ export function memoryConversationStore(): ConversationStore {
 export class BknLifecycleError extends Error {
   readonly code: string;
   readonly requiredAction: string;
+  /** `interaction_in_progress` includes the stuck interaction id, enough for beginTurn reclamation. */
+  readonly currentInteractionId: string;
 
-  constructor(tool: string, code: string, message: string, requiredAction: string) {
-    super(message || i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.toolFailed", { tool, code: code || i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.unknownError") }));
+  constructor(tool: string, code: string, message: string, requiredAction: string, currentInteractionId = "") {
+    super(message || `${tool} failed (${code || "unknown error"})`);
     this.name = "BknLifecycleError";
     this.code = code;
     this.requiredAction = requiredAction;
+    this.currentInteractionId = currentInteractionId;
   }
 }
 
-type LifecycleErrorPayload = { code?: unknown; message?: unknown; required_action?: unknown };
+type LifecycleErrorPayload = {
+  code?: unknown;
+  message?: unknown;
+  required_action?: unknown;
+  current_interaction_id?: unknown;
+};
 
 function isToolMissing(rpcError: { code?: number; message?: string } | undefined): boolean {
   if (!rpcError) return false;
@@ -147,16 +157,46 @@ function lifecycleErrorOf(tool: string, structured: unknown, fallbackText: strin
   const envelope = structured && typeof structured === "object" ? (structured as Record<string, unknown>) : {};
   const error = (envelope.error ?? {}) as LifecycleErrorPayload;
   const code = typeof error.code === "string" ? error.code : "";
-  const fallback = fallbackText || i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.callFailed", { tool });
+  const fallback = fallbackText || `${tool} call failed`;
   const message = typeof error.message === "string" ? error.message : fallback;
   const visibleMessage = code === "interaction_in_progress" ? STUCK_INTERACTION_HINT : message;
-  return new BknLifecycleError(tool, code, visibleMessage, typeof error.required_action === "string" ? error.required_action : "");
+  return new BknLifecycleError(
+    tool,
+    code,
+    visibleMessage,
+    typeof error.required_action === "string" ? error.required_action : "",
+    typeof error.current_interaction_id === "string" ? error.current_interaction_id : "",
+  );
 }
 
-const STUCK_INTERACTION_HINT = i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.stuckInteraction");
+/** Shown only when reclamation also fails; normally beginTurn handles this. */
+const STUCK_INTERACTION_HINT = "The current conversation still has an unfinished interaction and automatic recovery failed. Clear the chat and retry.";
 
 function shouldStartNewConversation(error: unknown): boolean {
   return error instanceof BknLifecycleError && (error.code === "conversation_not_found" || error.code === "interaction_in_progress");
+}
+
+/**
+ * Finishes a stale active interaction from the previous turn so this conversation
+ * can start a new turn. Returns false if reclamation fails.
+ *
+ * This covers refreshes, closed tabs, and failed finish requests. Reclaimed turns
+ * are marked cancelled because they did not complete normally.
+ */
+async function reclaimStuckInteraction(session: McpSession, error: unknown): Promise<boolean> {
+  if (!(error instanceof BknLifecycleError) || error.code !== "interaction_in_progress") return false;
+  if (error.requiredAction !== "bkn_finish_interaction" || !error.currentInteractionId) return false;
+  try {
+    await callLifecycleTool(session, "bkn_finish_interaction", {
+      interaction_id: error.currentInteractionId,
+      outcome: "cancelled",
+      reason: "reclaimed by client: previous turn did not finish",
+    });
+    return true;
+  } catch {
+    // Let the caller start a new conversation; do not mask the original error.
+    return false;
+  }
 }
 
 async function callLifecycleTool(
@@ -166,11 +206,11 @@ async function callLifecycleTool(
 ): Promise<Record<string, unknown>> {
   const result = await session.callTool(tool, args);
   if (isToolMissing(result.rpcError)) {
-    throw new BknLifecycleError(tool, "lifecycle_not_supported", i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.toolNotRegistered", { tool }), "");
+    throw new BknLifecycleError(tool, "lifecycle_not_supported", `${tool} is not registered`, "");
   }
   if (result.isError || !result.ok) throw lifecycleErrorOf(tool, result.structured, result.text);
   if (!result.structured || typeof result.structured !== "object") {
-    throw new BknLifecycleError(tool, "lifecycle_malformed", i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.malformedToolResult", { tool }), "");
+    throw new BknLifecycleError(tool, "lifecycle_malformed", `${tool} did not return structured content`, "");
   }
   return result.structured as Record<string, unknown>;
 }
@@ -191,8 +231,14 @@ export function createBknLifecycle(
 export function createBknLifecycleOn(session: McpSession, options: BknLifecycleOptions): BknLifecycle {
   const { conversationStore } = options;
   let conversationId = conversationStore.read();
+  // Whether the previous turn lacked lifecycle support; report only, not a short circuit.
   let notSupported = false;
   let previousTurnSettled: Promise<void> = Promise.resolve();
+  /**
+   * Whether this instance successfully started a turn. Stale interaction
+   * reclamation only runs while false to avoid interrupting another tab.
+   */
+  let startedAnyTurn = false;
 
   return {
     session,
@@ -210,10 +256,8 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
       });
       try {
         await waitFor;
-        if (notSupported) {
-          release();
-          return null;
-        }
+        // Do not short-circuit on notSupported. Lifecycle support is deployment
+        // state and may appear after backend upgrades or restarts while the page is open.
         const startInteraction = (currentConversationId: string | null) => {
           const args: Record<string, unknown> = { question };
           if (currentConversationId) args.conversation_id = currentConversationId;
@@ -223,18 +267,29 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
         try {
           state = await startInteraction(conversationId);
         } catch (error) {
-          if (!conversationId || !shouldStartNewConversation(error)) throw error;
-          conversationId = null;
-          conversationStore.clear();
-          state = await startInteraction(null);
+          if (!conversationId) throw error;
+          // Prefer backend-directed reclamation before starting a new conversation.
+          //
+          // Reclaim only before this instance has started any turn; after that,
+          // a collision is more likely concurrent usage than stale state.
+          if (!startedAnyTurn && (await reclaimStuckInteraction(session, error))) {
+            state = await startInteraction(conversationId);
+          } else {
+            if (!shouldStartNewConversation(error)) throw error;
+            conversationId = null;
+            conversationStore.clear();
+            state = await startInteraction(null);
+          }
         }
         const startedConversationId = stringField(state, "conversation_id");
         const interactionId = stringField(state, "interaction_id");
         if (!startedConversationId || !interactionId) {
-          throw new BknLifecycleError("bkn_start_interaction", "lifecycle_malformed", i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.missingTurnIds"), "");
+          throw new BknLifecycleError("bkn_start_interaction", "lifecycle_malformed", "bkn_start_interaction did not return conversation or interaction ID", "");
         }
         conversationId = startedConversationId;
         conversationStore.write(startedConversationId);
+        notSupported = false;
+        startedAnyTurn = true;
         return createTurn(session, startedConversationId, interactionId, release);
       } catch (error) {
         if (error instanceof BknLifecycleError && error.code === "lifecycle_not_supported") {

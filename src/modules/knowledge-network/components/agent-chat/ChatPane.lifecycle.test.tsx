@@ -153,7 +153,13 @@ describe("ChatPane 受管生命周期接线", () => {
       session,
       turn: expect.objectContaining({ interactionId: "int_1" }) as unknown,
     });
-    expect(buildAgentTools.mock.calls[0][0]).toEqual([{ name: "run_sql" }]);
+    // 生命周期工具照常传给工具循环——buildAgentTools 会接管它们的执行，绑到本轮交互上，
+    // 而不是把它们从模型工具表里拿掉。
+    expect(buildAgentTools.mock.calls[0][0]).toEqual([
+      { name: "bkn_start_interaction" },
+      { name: "run_sql" },
+      { name: "bkn_finish_interaction" },
+    ]);
     expect(finish).toHaveBeenCalledWith("completed", "答复正文");
   });
 
@@ -185,6 +191,43 @@ describe("ChatPane 受管生命周期接线", () => {
       { name: "describe_resource" },
       { name: "run_sql" },
     ]);
+  });
+
+  it("被接管的生命周期工具不展示一份从未发出的请求体", async () => {
+    stubLifecycle();
+    runAgentChat.mockImplementation(({ onChunk }) => {
+      // 被接管的工具：execute 不碰 session.callTool，所以面板上不该出现 kn_id /
+      // bkn_context 这些「实际发出的请求体」才有的字段——那是编出来的报文。
+      onChunk({ type: "tool-call", id: "c1", name: "bkn_finish_interaction", args: { outcome: "completed" } });
+      onChunk({ type: "tool-call", id: "c2", name: "run_sql", args: { sql: "SELECT 1" } });
+      // 未被接管的平台工具（溯源类读工具）直通后端，请求体真实存在，照旧按真实报文展示。
+      onChunk({ type: "tool-call", id: "c3", name: "bkn_get_receipt", args: { receipt_id: "r1" } });
+      onChunk({ type: "finish" });
+      return Promise.resolve();
+    });
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("问一句");
+      await Promise.resolve();
+    });
+
+    // 工具卡片默认折叠，展开后才渲染请求体。
+    for (const header of screen.getAllByText(/^(run_sql|bkn_[a-z_]+)$/)) {
+      fireEvent.click(header);
+    }
+    const texts = [...document.querySelectorAll("pre")].map((node) => node.textContent ?? "");
+    const lifecycleCard = texts.find((text) => text.includes("outcome"));
+    const businessCard = texts.find((text) => text.includes("SELECT 1"));
+    expect(lifecycleCard).toBeDefined();
+    expect(lifecycleCard).not.toContain("bkn_context");
+    expect(lifecycleCard).not.toContain("kn_id");
+    // 业务工具照旧展示注入后的真实请求体。
+    expect(businessCard).toContain("bkn_context");
+    expect(businessCard).toContain("kn_id");
+    // 直通的平台工具同样按真实请求体展示——按 bkn_ 前缀一刀切会反向再造一次失真。
+    const passthroughCard = texts.find((text) => text.includes("receipt_id"));
+    expect(passthroughCard).toContain("bkn_context");
   });
 
   it("执行失败时以 failed 终结", async () => {
@@ -292,27 +335,26 @@ describe("失败轮的重试", () => {
   it("原地重跑那一轮，不追加重复的提问，也不把空 assistant 回灌历史", async () => {
     stubLifecycle();
     runAgentChat.mockImplementation(({ onChunk }) => {
-      onChunk({ type: "error", error: "模型服务繁忙，请稍后重试（50508）", retryable: true });
+      onChunk({ type: "error", error: "Model service is busy; retry later (50508)", retryable: true });
       onChunk({ type: "finish" });
       return Promise.resolve();
     });
 
     const ref = renderPane();
     await act(async () => {
-      ref.current?.send("在途项目有几个?");
+      ref.current?.send("How many projects are in progress?");
       await Promise.resolve();
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "重试本轮" }));
+      fireEvent.click(screen.getByRole("button", { name: "Retry Turn" }));
       await Promise.resolve();
     });
 
     expect(runAgentChat).toHaveBeenCalledTimes(2);
-    // 重跑的历史里只该有这一条提问：追加式重试会变成两条 user，
-    // 失败轮那条 content: "" 的 assistant 也会一并喂回严格 router。
-    expect(runAgentChat.mock.calls[1][0].history).toEqual([{ role: "user", content: "在途项目有几个?" }]);
-    expect(screen.getAllByText("在途项目有几个?")).toHaveLength(1);
+    // Retry keeps only the original question in history instead of appending a duplicate turn.
+    expect(runAgentChat.mock.calls[1][0].history).toEqual([{ role: "user", content: "How many projects are in progress?" }]);
+    expect(screen.getAllByText("How many projects are in progress?")).toHaveLength(1);
   });
 });
 

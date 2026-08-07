@@ -6,10 +6,12 @@
  */
 
 /**
- * Knowledge Network Agent Chat orchestrates real frontend-driven tool loops.
+ * Knowledge Network experience Agent chat, orchestrated in the frontend.
  *
- * It uses Vercel AI SDK streamText and tools, reuses the ContextLoader MCP session,
- * and sends chat requests through the Model Factory OpenAI-compatible gateway.
+ * Hybrid approach: Vercel AI SDK handles multi-step tool loops and streaming;
+ * tool execution reuses the ContextLoader session-level MCP client.
+ * Models go through the Model Factory OpenAI-compatible gateway.
+ * Conversation context is cached in the frontend and replayed each turn.
  */
 
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -22,7 +24,10 @@ import {
   MF_RETRYABLE_CODES,
   type NormalizedAgentError,
 } from "@/modules/knowledge-network/services/agent-error";
-import { isPlatformManagedTool } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
+import {
+  isPlatformManagedTool,
+  type TurnOutcome,
+} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
   createMcpSession,
   type BknCallScope,
@@ -32,30 +37,30 @@ import {
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
-/** Model Factory OpenAI-compatible prefix, aligned with model-api-guide.getModelApiBaseUrl. */
+/** Model Factory OpenAI-compatible prefix, aligned with model-api-guide. */
 export const MODEL_API_PATH = "/api/mf-model-api/v1";
 
 /**
- * Tunable Agent chat parameters stored in localStorage and editable in the UI.
+ * Tunable Agent chat parameters. Stored in localStorage and applied live by the UI.
  */
 export type AgentConfig = {
-  /** Maximum tool steps before fallback. */
+  /** Tool-step cap; normal runs stop when the model returns the final answer. */
   maxSteps: number;
-  /** Full tool results kept between steps; older ones are replaced. 0 disables eviction. */
+  /** Between-step eviction: keep this many recent full tool results; 0 disables eviction. */
   keepToolResults: number;
-  /** Character cap for data tools such as run_sql and query_*. 0 disables truncation. */
+  /** Result character cap for data tools such as run_sql and query_*; 0 disables truncation. */
   dataToolCap: number;
-  /** Character cap for schema/discovery tools. 0 disables truncation. */
+  /** Result character cap for schema/discovery tools; 0 disables truncation. */
   schemaToolCap: number;
-  /** Recent history messages kept across rounds. */
+  /** Number of recent turns retained in multi-turn history. */
   maxHistoryMessages: number;
-  /** Character cap per history message. */
+  /** Per-turn history text character cap. */
   maxTurnChars: number;
-  /** Max output tokens per step, including reasoning. 0 means model default. */
+  /** Max output tokens per step, including reasoning; 0 uses the model default. */
   maxOutputTokens: number;
 };
 
-/** Default Base Data comparison tools: table and SQL capabilities only. */
+/** Default tool set for the base-data pane: table/SQL capabilities only. */
 export const BASE_DATA_TOOL_NAMES = ["list_resources", "describe_resource", "run_sql"];
 
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
@@ -84,13 +89,13 @@ function capToolResult(text: string, toolName: string, cfg: AgentConfig): string
   const dropped = text.length - limit;
   return (
     text.slice(0, limit) +
-    `\n\n...[Result too long; approximately ${dropped} characters were truncated. Use more precise filters, a smaller LIMIT, or only required fields. Do not fetch whole tables or repeat already completed queries.]`
+    `\n\n...[Result too long; about ${dropped} characters were truncated. Query again with narrower filters, a smaller LIMIT, and only necessary fields. Do not scan whole tables or repeat already retrieved information.]`
   );
 }
 
 /**
- * Formats the effective truncation limits into the system prompt.
- * The values must follow runtime config instead of hard-coded defaults.
+ * Formats the currently effective result caps for the system prompt. The values
+ * must reflect live settings rather than hardcoded defaults.
  */
 export function formatToolResultLimits(cfg: AgentConfig): string {
   const parts: string[] = [];
@@ -100,33 +105,33 @@ export function formatToolResultLimits(cfg: AgentConfig): string {
   }
   if (!parts.length) return "";
   return (
-    `## Tool Result Length Limits\nTool results above these limits are truncated and the omitted content is unavailable: ${parts.join("; ")}. ` +
-    "Push filtering and aggregation into queries, split work into smaller batches when needed, and re-query with a narrower scope if a result is marked truncated."
+    `## Tool Result Length Limits\nA single tool result beyond the cap will be truncated and the overflow is lost: ${parts.join("; ")}. ` +
+    "Push filtering and aggregation into queries, split into small batches when needed, and do not treat truncated results as complete data."
   );
 }
 
 /** Query constraints appended to large-result tool descriptions. */
 const TOOL_HINTS: Record<string, string> = {
   run_sql:
-    " Important: use SQL for aggregation/counting/sorting/grouping with LIMIT, select only needed columns, and never SELECT * or fetch whole tables. Oversized results are truncated.",
+    " Important: use SQL for aggregation/counting/sorting/grouping with LIMIT, select only necessary columns, and avoid SELECT * or full table scans. Large results will be truncated.",
   query_object_instance:
-    " Important: use precise filters, small limit values, and properties for needed fields only. Do not return large result sets. Oversized results are truncated.",
-  query_instance_subgraph: " Important: use the smallest practical limit. Oversized results are truncated.",
-  list_resources: " Important: filter by catalog_id/type and use small paginated limits. Oversized results are truncated.",
+    " Important: use precise filters, a small limit, and properties for necessary fields only. Large results will be truncated.",
+  query_instance_subgraph: " Important: use the smallest practical limit. Large results will be truncated.",
+  list_resources: " Important: filter by catalog_id/type and use small paged limits. Large results will be truncated.",
   search_schema:
-    " Recommended: use precise query text and keep max_concepts at 10 or lower by default. schema_brief defaults to true; pass schema_brief=false only when full field definitions are needed.",
+    " Recommendation: use a precise query and keep max_concepts at or below 10 by default. Large results will be truncated. schema_brief defaults to true; pass schema_brief=false only when full field definitions are needed.",
 };
 
-/** Global default arguments; TOON is more token-efficient than JSON. */
+/** Common default arguments for all tools; model-provided values win. */
 const GLOBAL_ARG_DEFAULTS: Record<string, unknown> = { response_format: "toon" };
 
-/** Tool-specific defaults used only when the model omits them. */
+/** Default arguments injected when the model does not provide explicit values. */
 const TOOL_ARG_DEFAULTS: Record<string, Record<string, unknown>> = {
-  // Brief schema is enough for most exploration and saves tokens.
+  // Brief summaries cover most discovery flows and save tokens.
   search_schema: { schema_brief: true },
 };
 
-/** Final MCP arguments are defaults, model input, locked kn_id, and managed context. */
+/** Final MCP arguments combine common defaults, tool defaults, model input, locked kn_id, and managed context. */
 export function effectiveToolArgs(
   name: string,
   input: unknown,
@@ -139,13 +144,15 @@ export function effectiveToolArgs(
     ...(input && typeof input === "object" ? (input as Record<string, unknown>) : {}),
     kn_id: knId,
   };
-  // Platform context identity cannot be overridden by model-generated ids.
+  // Platform context is trusted identity data and must not be overwritten by model output.
   if (bknContext) args.bkn_context = bknContext;
   return args;
 }
 
 /**
- * Removes bkn_context from tool input schemas so the model cannot invent lifecycle ids.
+ * Removes `bkn_context` from tool input schemas. The backend includes it in
+ * business tools, but true values are injected by execute and should not be
+ * invented by the model.
  */
 function stripBknContextSchema(schema: Record<string, unknown>): Record<string, unknown> {
   const properties = schema.properties;
@@ -160,7 +167,7 @@ function stripBknContextSchema(schema: Record<string, unknown>): Record<string, 
 }
 
 /**
- * Evicts old tool results between steps while preserving toolCallId/toolName pairs.
+ * Evicts old tool-result payloads between steps while preserving toolCallId/toolName pairs.
  */
 function evictOldToolResults(messages: ModelMessage[], keep: number): ModelMessage[] {
   if (keep <= 0) return messages;
@@ -178,7 +185,7 @@ function evictOldToolResults(messages: ModelMessage[], keep: number): ModelMessa
             type: "tool-result" as const,
             toolCallId: part.toolCallId,
             toolName: part.toolName,
-            output: { type: "text" as const, value: "[Old tool result omitted to save context]" },
+            output: { type: "text" as const, value: "[Older tool result omitted to save context]" },
           }
         : part,
     );
@@ -188,10 +195,10 @@ function evictOldToolResults(messages: ModelMessage[], keep: number): ModelMessa
 
 export type AgentChatRole = "user" | "assistant";
 
-/** Text-only chat history persisted in localStorage for context replay. */
+/** Chat history item persisted to localStorage. Tool steps are excluded. */
 export type AgentChatTurn = { role: AgentChatRole; content: string };
 
-/** Streaming chunk emitted to the UI. */
+/** Streaming chunk event emitted to the UI. */
 export type AgentChunk =
   | { type: "text"; delta: string }
   | { type: "reasoning"; delta: string }
@@ -199,30 +206,85 @@ export type AgentChunk =
   | { type: "tool-result"; id: string; result: string }
   | { type: "tool-error"; id: string; error: string }
   | { type: "usage"; inputTokens: number; outputTokens: number; totalTokens: number }
-  /** This round failed. error is normalized; detail carries raw troubleshooting data. */
+  /** Current run failed. error is user-facing; raw details stay in detail for collapsed UI. */
   | { type: "error"; error: string; detail?: string; retryable?: boolean }
   | { type: "finish" };
 
-/** Wraps arbitrary errors into UI error chunks. */
+/** Wraps any error as an error chunk. */
 function errorChunk(error: unknown): Extract<AgentChunk, { type: "error" }> {
   const normalized: NormalizedAgentError = normalizeAgentError(error);
   return { type: "error", error: normalized.message, detail: normalized.detail, retryable: normalized.retryable };
 }
 
 /**
- * Converts MCP tools/list definitions into AI SDK tools.
- * execute uses the session-scoped MCP client and injects the locked kn_id.
+ * Managed lifecycle dead ends: missing context or terminal interaction state.
+ * Their payloads contain required_action, which would otherwise become a loop instruction.
+ */
+const LIFECYCLE_DEAD_END_CODES = new Set(["conversation_required", "interaction_terminal"]);
+
+/**
+ * Replaces lifecycle dead-end errors with a terminal message the model cannot act on.
+ *
+ * Lifecycle tools are now taken over by managedLifecycleTool, but this guard
+ * handles payloads that still reach the model and would otherwise be retried
+ * until the stopWhen limit.
+ */
+export function sanitizeLifecycleError(text: string): string {
+  let code = "";
+  try {
+    const parsed: unknown = JSON.parse(text);
+    const error = parsed && typeof parsed === "object" ? (parsed as { error?: { code?: unknown } }).error : undefined;
+    if (error && typeof error.code === "string") code = error.code;
+  } catch {
+    return text;
+  }
+  if (!LIFECYCLE_DEAD_END_CODES.has(code)) return text;
+  return JSON.stringify({
+    error: {
+      code,
+      message:
+        "The managed context for this turn is unavailable. Retrying this tool or switching tools will not recover it. " +
+        "Stop tool calls and tell the user that data cannot be retrieved right now.",
+    },
+  });
+}
+
+/**
+ * Per-turn interaction interface required by the tool loop: context plus finish.
+ * It is structurally compatible with BknTurn.
+ */
+export type AgentTurnScope = BknCallScope & {
+  finish: (outcome: TurnOutcome, answer: string) => Promise<void>;
+};
+
+/** Model outcome to client-side turn outcome mapping. */
+const MODEL_FINISH_OUTCOMES: Record<string, TurnOutcome> = {
+  completed: "completed",
+  failed: "failed",
+  cancelled: "canceled",
+  canceled: "canceled",
+};
+
+function textOf(input: unknown, key: string): string {
+  if (!input || typeof input !== "object") return "";
+  const value = (input as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * Converts MCP tools/list definitions to an AI SDK tool set.
+ * inputSchema uses the MCP JSON Schema, and execute goes through the shared MCP session.
  */
 export type AgentToolsOptions = {
-  /** resource_id set bound to the current knowledge network. */
+  /** resource_id set bound to the current KN; list_resources is scoped to it when provided. */
   resourceScope?: readonly string[] | null;
-  /** Optional shared MCP session from the lifecycle client. */
+  /** Reuses the lifecycle client's MCP session to avoid another initialize handshake. */
   session?: McpSession;
   /**
-   * Managed interaction for this round. Tool execution only needs call context,
-   * not the whole turn lifecycle.
+   * Managed interaction for this turn. Tool calls read context from it, and
+   * bkn_finish_interaction finishes through it. Null means lifecycle tools pass through.
    */
-  turn?: BknCallScope | null;
+  turn?: AgentTurnScope | null;
 };
 
 export function buildAgentTools(
@@ -239,11 +301,18 @@ export function buildAgentTools(
   const tools: ToolSet = {};
   const call = async (name: string, args: Record<string, unknown>): Promise<string> => {
     const res = await session.callTool(name, args);
-    return res.text;
+    return res.isError ? sanitizeLifecycleError(res.text) : res.text;
   };
   for (const def of mcpTools) {
-    // Platform-managed tools are driven by the frontend and hidden from the model.
-    if (!def.name || isPlatformManagedTool(def.name)) continue;
+    if (!def.name) continue;
+    // Lifecycle tools remain visible to the model, but execution is bound to this client turn.
+    if (turn && isPlatformManagedTool(def.name)) {
+      const managed = managedLifecycleTool(def, turn);
+      if (managed) {
+        tools[def.name] = managed;
+        continue;
+      }
+    }
     const schema =
       def.inputSchema && typeof def.inputSchema === "object"
         ? stripBknContextSchema(def.inputSchema as Record<string, unknown>)
@@ -253,7 +322,7 @@ export function buildAgentTools(
       description:
         (def.description ?? def.name) +
         (TOOL_HINTS[def.name] ?? "") +
-        (scopedList ? " Results are limited to data tables bound to the current knowledge network by default." : ""),
+        (scopedList ? " Results are scoped to data tables bound to the current knowledge network by default." : ""),
       inputSchema: jsonSchema(schema),
       execute: async (input: unknown): Promise<string> => {
         const bknContext = turn?.nextContext();
@@ -267,8 +336,69 @@ export function buildAgentTools(
 }
 
 /**
- * Scopes list_resources to the current knowledge network by fetching JSON once and
- * filtering entries against the KnDetail resource_id set.
+ * Whether this platform tool is taken over when the current turn is managed.
+ *
+ * This is narrower than isPlatformManagedTool: only start/finish change the
+ * execution path. Trace read tools still pass through to the backend.
+ */
+export function isTakenOverLifecycleTool(name: string): boolean {
+  return name === "bkn_start_interaction" || name === "bkn_finish_interaction";
+}
+
+/**
+ * Binds a managed lifecycle tool to the current client turn, or returns null for pass-through.
+ *
+ * - `bkn_start_interaction` returns the already-opened turn instead of opening another one.
+ * - `bkn_finish_interaction` goes through the turn finish path.
+ *
+ * Backend inputSchema is preserved. Takeover changes execution routing, not the
+ * tool shape visible to the model.
+ */
+function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
+  if (!isTakenOverLifecycleTool(def.name)) return null;
+  const describe = (extra: string) => `${def.description ?? def.name} ${extra}`;
+  // Preserve backend schema; fall back to an empty object only when absent.
+  const backendSchema =
+    def.inputSchema && typeof def.inputSchema === "object"
+      ? (def.inputSchema as Record<string, unknown>)
+      : { type: "object", properties: {} };
+  if (def.name === "bkn_start_interaction") {
+    return tool({
+      description: describe("Studio already opened this turn; calling it returns current interaction IDs instead of opening another turn."),
+      inputSchema: jsonSchema(backendSchema),
+      // Accept arguments such as question, but do not use them to open another turn.
+      execute: (): Promise<string> =>
+        Promise.resolve(JSON.stringify({ ...turn.nextContext(), execution_status: "active" })),
+    });
+  }
+  if (def.name === "bkn_finish_interaction") {
+    const finish = turn.finish;
+    return tool({
+      description: describe("Call it after the answer is done to finish this turn; Studio also finishes the turn if it is not called."),
+      inputSchema: jsonSchema(backendSchema),
+      execute: async (input: unknown): Promise<string> => {
+        const raw = textOf(input, "outcome");
+        const outcome = MODEL_FINISH_OUTCOMES[raw];
+        // Some backend outcomes, such as handed_off, have no client action here.
+        if (!outcome) {
+          return JSON.stringify({
+            error: {
+              code: "unsupported_outcome",
+              message: `Studio-managed interactions only support completed / failed / cancelled; received ${raw || "empty value"}.`,
+            },
+          });
+        }
+        await finish(outcome, textOf(input, "answer") || textOf(input, "reason"));
+        return JSON.stringify({ ...turn.nextContext(), execution_status: outcome === "canceled" ? "canceled" : outcome });
+      },
+    });
+  }
+  return null;
+}
+
+/**
+ * Scopes list_resources to the current KN by forcing JSON, fetching enough rows,
+ * and filtering by resource_id values from KnDetail.
  */
 async function listResourcesScoped(
   call: (name: string, args: Record<string, unknown>) => Promise<string>,
@@ -292,18 +422,18 @@ async function listResourcesScoped(
       : [];
     return capToolResult(JSON.stringify({ entries, total_count: entries.length }), "list_resources", cfg);
   } catch {
-    // Unexpected formats are passed through instead of blocking the call.
+    // If the format is unexpected, for example TOON, return the original result.
     return capToolResult(text, "list_resources", cfg);
   }
 }
 
-/** Auth provider: getToken reads fresh tokens; refresh handles 401 recovery. */
+/** Auth provider: getToken reads a fresh token per request, refresh handles 401. */
 export type AgentTokenProvider = { getToken: () => string; refresh: () => Promise<string | null> };
 
-/** Busy-state retry delays in milliseconds. */
+/** Backoff delays for busy retries in ms; array length is max retry count. */
 const RETRY_DELAYS_MS = [400, 1200];
 
-/** Adds jitter so multiple panes do not retry in lockstep. */
+/** Adds jitter to avoid synchronized retries from multiple panels. */
 function withJitter(ms: number): number {
   return Math.round(ms * (0.85 + Math.random() * 0.3));
 }
@@ -323,13 +453,14 @@ function sleep(ms: number, signal: AbortSignal | null | undefined): Promise<void
 }
 
 /**
- * Determines whether a response deserves retry. Some busy gateway errors arrive as
- * HTTP 200 with a JSON error envelope, so JSON bodies are inspected when safe.
+ * Whether this response should be retried. Besides status codes, the Model
+ * Factory may return 200 with its own busy error envelope.
  */
 async function isRetryableResponse(response: Response): Promise<boolean> {
   if (isRetryableStatus(response.status)) return true;
   if (!response.ok) return false;
-  // Only inspect explicit JSON. Peeking streams would buffer the whole response.
+  // Only peek when the response is explicitly JSON. Peeking unknown streams can
+  // buffer the whole response and break token-by-token streaming.
   if (!(response.headers.get("content-type") ?? "").includes("application/json")) return false;
   try {
     const mf = parseModelFactoryEnvelope(await response.clone().text());
@@ -339,14 +470,16 @@ async function isRetryableResponse(response: Response): Promise<boolean> {
   }
 }
 
-/** Network fetch errors are retryable; AbortError is handled by the caller. */
+/** Network fetch failures are retryable; AbortError is handled by the caller signal. */
 function isRetryableFetchError(error: unknown): boolean {
   return error instanceof TypeError;
 }
 
 /**
- * Model Factory authenticated fetch with 401 refresh, busy-state retries, and
- * request normalization for strict OpenAI-compatible routing.
+ * Authenticated compatibility fetch for the Model Factory gateway:
+ * - uses a fresh Authorization token per request and retries once after 401;
+ * - retries busy responses and connection failures with backoff;
+ * - normalizes assistant `content: null` and strips replayed reasoning_content.
  */
 export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
   const run = (input: RequestInfo | URL, init: RequestInit | undefined, token: string): Promise<Response> => {
@@ -391,7 +524,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
         response = await runWithAuthRetry(input, init);
         failure = null;
       } catch (error) {
-        // User cancellation should not be treated as retryable network noise.
+        // User stop throws AbortError and should not be retried as a network issue.
         if (signal?.aborted) throw error;
         response = null;
         failure = error;
@@ -399,7 +532,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
       if (attempt >= RETRY_DELAYS_MS.length || signal?.aborted) break;
       const retry = response ? await isRetryableResponse(response) : isRetryableFetchError(failure);
       if (!retry) break;
-      // Cancel discarded response bodies so connections are released.
+      // Close discarded response bodies so connections are released.
       void response?.body?.cancel().catch(() => undefined);
       await sleep(withJitter(RETRY_DELAYS_MS[attempt]), signal);
       if (signal?.aborted) break;
@@ -410,7 +543,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
   });
 }
 
-/** Creates a Model Factory OpenAI-compatible chat model. */
+/** Creates a Model Factory OpenAI-compatible model with authenticated fetch. */
 function createChatModel(env: ContextLoaderEnv, modelName: string, tokenProvider: AgentTokenProvider) {
   const baseURL = `${env.base.replace(/\/+$/, "")}${MODEL_API_PATH}`;
   const provider = createOpenAICompatible({
@@ -421,33 +554,34 @@ function createChatModel(env: ContextLoaderEnv, modelName: string, tokenProvider
   return provider(modelName);
 }
 
-/* ============================ Template marker leak filter ============================ */
+/* ============================ Template Marker Leak Filter ============================ */
 
 /**
- * Fallback for backends without tool-call or reasoning parsers. Leaked template
- * markers are routed to reasoning or converted into failed tool cards.
+ * Streaming fallback for inference backends missing tool-call or reasoning
+ * parsers. Leaked template markers are routed away from the final answer and
+ * leaked tool calls become failed tool cards.
  */
 const LEAK_OPENERS = ["<think>", "<tool_call>", "<function="] as const;
 const LEAK_FN_CLOSERS = ["</function>", "</tool_call>"] as const;
 
 /**
- * Final-answer boundary tags. Content outside these tags can be treated as reasoning
- * when the system prompt includes the contract.
+ * Final-answer boundary markers. Without a reasoning parser, unmarked reasoning
+ * can leak into the answer, so the prompt makes the boundary explicit.
  */
 export const ANSWER_OPEN = "<answer>";
 const ANSWER_CLOSE = "</answer>";
 
 /**
- * Output contract appended automatically to the system prompt. It must stay aligned
- * with the leak filter tags and cannot live in user-editable persisted defaults.
+ * Output contract. It must be appended by the system prompt, not baked into the
+ * editable default prompt, because saved prompt state takes precedence.
  */
 export function formatOutputContract(evidenceHint: string): string {
   return (
-    "## Output Contract (mandatory)\n" +
-    `- Wrap the entire final answer between ${ANSWER_OPEN} and ${ANSWER_CLOSE}. Content outside the tags is treated as hidden reasoning.\n` +
-    `- Inside ${ANSWER_OPEN}, write only user-visible results. Do not include self-talk, deliberation, or planning.\n` +
-    `- Use exactly two parts: first one sentence with the **Conclusion**, then one line of **Evidence** explaining how the data was obtained (${evidenceHint}).\n` +
-    "- Answer in the current conversation language. Be concise and professional. Markdown is allowed."
+    "## Output Rules (must follow)\n" +
+    `- Wrap the final answer entirely between ${ANSWER_OPEN} and ${ANSWER_CLOSE}; content outside the tags is treated as reasoning and hidden from the user.\n` +
+    `- Inside ${ANSWER_OPEN}, write only user-facing results. Do not include self-narration or deliberation.\n` +
+    `- Use two concise parts: first one sentence with the conclusion, then one evidence line explaining how the data was obtained (${evidenceHint}).\n` +
+    "- Answer in the current conversation language. Keep it concise, professional, and Markdown-friendly."
   );
 }
 
@@ -463,13 +597,12 @@ const LEAK_ALL_MARKS = [
 ];
 
 const LEAK_ERROR_MSG =
-  "The model emitted a tool call as plain text, so the call was not executed. " +
-  "This usually means the inference backend is missing a tool-call parser. " +
-  "Fix the model integration or use a model that supports tool calls.";
+  "The model output a tool call as plain text, so the call was not executed. This usually means the inference backend lacks a tool-call parser, such as vLLM --enable-auto-tool-choice with --tool-call-parser and matching --reasoning-parser. Fix the model integration or switch to a model that can call tools correctly.";
 
 export type LeakFilterOptions = {
   /**
-   * Enables outside-answer reasoning routing only when the system prompt has the answer contract.
+   * The system prompt contains the `<answer>` contract. Only then route text
+   * outside tags to reasoning; otherwise custom prompts would break streaming.
    */
   expectAnswerTag?: boolean;
 };
@@ -482,10 +615,10 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
   let fnSeq = 0;
   let sawAnswer = false;
   let inAnswer = false;
-  /** Provisional content routed before <answer>; replayed if the model never follows the contract. */
+  /** Content routed before `<answer>`; replayed as text if the model ignores the contract. */
   let provisional = "";
 
-  // Hold a possible marker prefix split across deltas.
+  // Hold a tail that may be a partial marker crossing delta boundaries.
   const holdLen = (s: string): number => {
     const max = Math.min(s.length, 12);
     for (let n = max; n > 0; n--) {
@@ -501,7 +634,7 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
   const emitReasoning = (delta: string) => {
     if (delta) onChunk({ type: "reasoning", delta });
   };
-  /** Candidate body text; before <answer> it is routed to reasoning and kept as fallback. */
+  /** Candidate answer text; before `<answer>`, route to reasoning and keep a backup. */
   const emitBody = (delta: string) => {
     if (!delta) return;
     if (!expectAnswerTag || inAnswer) {
@@ -544,10 +677,10 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
           sawAnswer = true;
           inAnswer = true;
         } else if (marker === ANSWER_CLOSE) {
-          // Self-talk after the closing tag is not part of the answer.
+          // After closing, the model may keep narrating; that is not answer text.
           inAnswer = false;
         } else if (marker === "</think>") {
-          /* Drop stray closing tags. */
+          /* Drop standalone closing tags. */
         } else {
           mode = "fn";
           fnRaw = marker;
@@ -567,7 +700,7 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
         mode = "normal";
         continue;
       }
-      // Collect function/tool_call text until a closing tag.
+      // Function block: collect until a closing marker.
       let close = -1;
       let closer = "";
       for (const c of LEAK_FN_CLOSERS) {
@@ -582,7 +715,7 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
         fnRaw += buf.slice(0, buf.length - hold);
         buf = buf.slice(buf.length - hold);
         if (fnRaw.length > 20000) {
-          // Prevent unbounded collection.
+          // Prevent unbounded collection; report and reset when too long.
           reportLeakedCall(fnRaw);
           fnRaw = "";
           mode = "normal";
@@ -606,7 +739,8 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
       if (mode === "fn" && (fnRaw || buf)) reportLeakedCall(fnRaw + buf);
       else if (mode === "think") emitReasoning(buf);
       else emitBody(buf);
-      // If the model never emitted <answer>, replay provisional content as answer text.
+      // If the model never emits <answer>, replay routed content as text so the
+      // turn still has an answer. Compliant models keep normal streaming.
       if (expectAnswerTag && !sawAnswer && provisional) emitText(provisional);
       buf = "";
       fnRaw = "";
@@ -617,7 +751,8 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
 }
 
 /**
- * Runs one Agent chat round with streamText and forwards fullStream events to onChunk.
+ * Runs one Agent chat turn. streamText drives the Model Factory and tool loop,
+ * while fullStream chunks are forwarded to onChunk.
  */
 export async function runAgentChat(params: {
   env: ContextLoaderEnv;
@@ -640,20 +775,20 @@ export async function runAgentChat(params: {
       messages,
       tools,
       stopWhen: stepCountIs(config.maxSteps),
-      // Retries are handled by makeAuthedFetch. Disable SDK retries to avoid retry multiplication.
+      // Retries are handled by makeAuthedFetch; disable SDK retries to avoid multiplication.
       maxRetries: 0,
       ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
-      // Evict old tool results before each step to cap accumulated context.
+      // Evict older tool results before each step to avoid context growth.
       prepareStep: ({ messages: stepMessages }) => ({ messages: evictOldToolResults(stepMessages, config.keepToolResults) }),
       abortSignal: signal,
     });
 
     let gotText = false;
-    // If the stream already emitted an error, final fallback must not call the gateway again.
+    // If this run already reported an error, do not run fallback finalization.
     let errored = false;
-    // Enable answer-tag routing only when the system prompt contains the contract.
+    // Enable tag routing only when the prompt contains the <answer> contract.
     const expectAnswerTag = system.includes(ANSWER_OPEN);
-    // Only real body text counts; leaked tool-call blocks become failed tool cards.
+    // Filter leaked template markers; only true answer text counts as gotText.
     const leakFilter = createLeakFilter((chunk) => {
       if (chunk.type === "text" && chunk.delta.trim()) gotText = true;
       onChunk(chunk);
@@ -681,7 +816,7 @@ export async function runAgentChat(params: {
           onChunk({
             type: "tool-error",
             id: part.toolCallId,
-            // Tool cards are collapsed, so include both summary and detail for troubleshooting.
+            // Tool cards are collapsed, so include both the message and raw details.
             error: normalized.detail ? `${normalized.message}\n\n${normalized.detail}` : normalized.message,
           });
           break;
@@ -706,15 +841,16 @@ export async function runAgentChat(params: {
     }
     leakFilter.flush();
 
-    // If tool steps finish without body text, force a no-tools final answer from gathered context.
+    // If the tool loop hits the cap without a final answer, force a final text-only response.
     if (!gotText && !errored && !signal?.aborted) {
       const resp = await result.response;
       const finalResult = streamText({
         model: createChatModel(env, modelName, tokenProvider),
         system:
           system +
-          "\n\nThe tool-call limit was reached or a final answer is needed. Based on the information already gathered, answer directly in the current conversation language and do not call any more tools. " +
-          (expectAnswerTag ? `Wrap the final answer between ${ANSWER_OPEN} and ${"</answer>"}.` : ""),
+          "\n\nTool-call limit reached or finalization required. Based on the information already obtained, answer directly in the current conversation language without calling more tools. " +
+          (expectAnswerTag ? `Wrap the final answer entirely between ${ANSWER_OPEN} and ${"</answer>"}.` : "") +
+          "）",
         messages: [...messages, ...(resp.messages as ModelMessage[])],
         ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
         maxRetries: 0,
