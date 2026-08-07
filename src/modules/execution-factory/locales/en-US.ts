@@ -273,6 +273,7 @@ export const executionFactoryEnUS = {
     },
     operatorCategories: {
       other_category: "Other",
+      system: "System Tools",
       data_process: "Data Process",
       data_transform: "Data Transform",
       data_store: "Data Store",

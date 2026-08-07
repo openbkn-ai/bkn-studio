@@ -7,6 +7,7 @@
 
 import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
+import i18n from "@/app/locales/i18n";
 
 export type OperatorCategoryOption = {
   categoryType: string;
@@ -21,10 +22,18 @@ type BackendCategoryItem = {
 const API_PREFIX = "/agent-operator-integration/v1";
 const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
-const fallbackCategories: OperatorCategoryOption[] = [
-  { categoryType: "other_category", name: "其他" },
-  { categoryType: "system", name: "系统工具" },
-];
+function getFallbackCategories(): OperatorCategoryOption[] {
+  return [
+    {
+      categoryType: "other_category",
+      name: i18n.t("executionFactory.operatorCategories.other_category"),
+    },
+    {
+      categoryType: "system",
+      name: i18n.t("executionFactory.operatorCategories.system"),
+    },
+  ];
+}
 
 function getBusinessDomainHeaders() {
   const businessDomainId =
@@ -43,7 +52,7 @@ export async function listOperatorCategories(): Promise<OperatorCategoryOption[]
     const items = response.data ?? [];
 
     if (items.length === 0) {
-      return fallbackCategories;
+      return getFallbackCategories();
     }
 
     return items.map((item) => ({
@@ -51,6 +60,6 @@ export async function listOperatorCategories(): Promise<OperatorCategoryOption[]
       name: item.name,
     }));
   } catch {
-    return fallbackCategories;
+    return getFallbackCategories();
   }
 }

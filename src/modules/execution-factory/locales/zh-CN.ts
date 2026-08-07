@@ -269,6 +269,7 @@ export const executionFactoryZhCN = {
     },
     operatorCategories: {
       other_category: "其他",
+      system: "\u7cfb\u7edf\u5de5\u5177",
       data_process: "数据处理",
       data_transform: "数据转换",
       data_store: "数据存储",
