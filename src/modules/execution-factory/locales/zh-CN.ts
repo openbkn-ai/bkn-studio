@@ -915,6 +915,9 @@ export const executionFactoryZhCN = {
     openapiVersion31Hint:
       "检测到 OpenAPI 3.1 文档。若保存失败，可尝试改为 3.0.x 或仅保留单个接口后重试。",
     submitErrorTitle: "保存失败",
+    quickApiUrlSubmitError:
+      "保存失败：未能提交有效的服务地址。请检查 cURL 命令中的完整 URL，并重新点击“识别接口信息”后再保存。{{detailSuffix}}",
+    quickApiUrlSubmitErrorDetailSuffix: " 后端返回：{{detail}}",
     installedStateSyncFailed: "安装状态同步失败，已安装标记可能不准确。",
     loadMoreFailed: "加载更多失败，请重试。",
     routeMigrated: "页面地址已更新，已为您跳转到新的能力管理入口。",

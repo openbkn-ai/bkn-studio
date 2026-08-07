@@ -939,6 +939,9 @@ export const executionFactoryEnUS = {
     openapiVersion31Hint:
       "OpenAPI 3.1 detected. If save fails, try OpenAPI 3.0.x or keep a single endpoint only.",
     submitErrorTitle: "Save failed",
+    quickApiUrlSubmitError:
+      "Save failed: could not submit a valid service URL. Check the full URL in the cURL command, then click Detect API again before saving.{{detailSuffix}}",
+    quickApiUrlSubmitErrorDetailSuffix: " Backend returned: {{detail}}",
     installedStateSyncFailed: "Failed to sync installed state. Installed tags may be inaccurate.",
     loadMoreFailed: "Failed to load more items. Please retry.",
     routeMigrated: "This page has moved. You were redirected to the new capability management hub.",
