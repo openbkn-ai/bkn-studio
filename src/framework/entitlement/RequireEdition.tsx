@@ -56,6 +56,8 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
   }
 
   const editionName = t(`common.entitlement.editions.${minEdition}`);
+  /** 企业与行业档走紫,专业档走暖金——与版本页的卡片同源。 */
+  const tierClass = minEdition === "professional" ? "" : "is-enterprise";
 
   return (
     <div className="console-upgrade-locked">
@@ -67,8 +69,8 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
         {children}
       </div>
       <div className="console-upgrade-mask">
-        <div className="console-upgrade-card">
-          <div className="console-upgrade-hero">
+        <div className={`console-upgrade-card ${tierClass ? "console-upgrade-enterprise" : ""}`}>
+          <div className={`console-upgrade-hero ${tierClass}`}>
             <span className="console-upgrade-hero-icon" aria-hidden>
               <CrownOutlined />
             </span>

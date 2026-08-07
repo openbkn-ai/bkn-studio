@@ -536,6 +536,29 @@ select {
   color: var(--color-text-secondary);
 }
 
+/* 企业档的升级面走紫,与版本页那张企业卡同源;专业档保持暖金。两处颜色对不上,客户会
+   以为看的是两种东西。 */
+.console-upgrade-hero.is-enterprise {
+  border-color: #b9a7ec;
+  background: linear-gradient(180deg, #f3eeff 0%, #fff 100%);
+}
+
+.console-upgrade-hero.is-enterprise .console-upgrade-hero-icon {
+  color: #6d4fd0;
+}
+
+.console-upgrade-enterprise .ant-btn-primary {
+  border-color: #6d4fd0;
+  background: #6d4fd0;
+  color: #fff;
+}
+
+.console-upgrade-enterprise .ant-btn-primary:hover {
+  border-color: #5b3fbb;
+  background: #5b3fbb;
+  color: #fff;
+}
+
 /* 整页锁:真实页面照常渲染在底下,盖一层蒙版。看得见这块功能长什么样,才知道在买什么。 */
 .console-upgrade-locked {
   position: relative;

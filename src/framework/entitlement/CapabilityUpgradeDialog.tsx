@@ -50,6 +50,8 @@ export function CapabilityUpgradeDialog({
   const navigate = useNavigate();
   const { snapshot } = useEntitlementContext();
   const editionName = t(`common.entitlement.editions.${minEdition}`);
+  /** 企业与行业档走紫,专业档走暖金——与版本页的卡片同源。 */
+  const tierClass = minEdition === "professional" ? "" : "is-enterprise";
   /** 提示里说的是**客户手上这张证**的档位,不是这项能力的门槛——两者可能不同。 */
   const currentEditionName = t(
     `common.entitlement.editions.${snapshot?.edition ?? "community"}`,
@@ -76,6 +78,7 @@ export function CapabilityUpgradeDialog({
 
   return (
     <Modal
+      className={tierClass ? "console-upgrade-enterprise" : ""}
       footer={
         <div className="console-upgrade-footer">
           <span className="console-upgrade-note">
@@ -114,7 +117,7 @@ export function CapabilityUpgradeDialog({
       }
       width={560}
     >
-      <div className="console-upgrade-hero">
+      <div className={`console-upgrade-hero ${tierClass}`}>
         <span className="console-upgrade-hero-icon" aria-hidden>
           <CrownOutlined />
         </span>
