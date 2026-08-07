@@ -12,11 +12,12 @@ import {
   type McpAuth,
   type McpSession,
 } from "@/modules/knowledge-network/services/context-loader.service";
+import i18n from "@/app/locales/i18n";
 
 /**
- * 本客户端自己驱动的受管生命周期工具，供文档与测试对照。
+ * Managed lifecycle tools driven by this client, kept for docs and tests.
  *
- * 注意：这**不是**过滤名单——过滤按前缀走，见 isPlatformManagedTool。
+ * This is not the filtering list; filtering is prefix-based via isPlatformManagedTool.
  */
 export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
   "bkn_start_interaction",
@@ -24,20 +25,16 @@ export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * 平台侧工具前缀。生命周期与业务溯源工具一律 `bkn_` 开头（bkn_start_interaction /
- * bkn_finish_interaction / bkn_causality / bkn_get_receipt / bkn_retry_operation …），
- * 业务工具一律不带前缀（search_schema / run_sql / query_object_instance …）。
+ * Platform-managed tool prefix. Lifecycle and provenance tools all start with `bkn_`
+ * while business tools do not.
  */
 const PLATFORM_TOOL_PREFIX = "bkn_";
 
 /**
- * 这个工具是不是平台侧管账的、不该给模型看见的。
+ * Whether a tool is platform-managed and should be hidden from the model.
  *
- * 按前缀判而不是列名单：平台侧工具集随后端演进反复变动（#618 期间一度扩到十余个
- * 溯源工具，之后又裁回 bkn_start_interaction / bkn_finish_interaction 两个）。
- * 列名单必漏，漏了模型就会去调。
- * 实测模型真会调：一轮里连调两次 bkn_start_interaction，被 permission_denied 挡下。
- * 挡不下的话更糟——模型另开一条交互会撞上 Core 的 active interaction 唯一约束。
+ * Prefix matching is intentional because platform tool names move with backend changes.
+ * An allow-list would miss new tools and let the model call them directly.
  */
 export function isPlatformManagedTool(name: string): boolean {
   return name.startsWith(PLATFORM_TOOL_PREFIX);
@@ -63,7 +60,7 @@ export type BknLifecycle = {
   reset(): void;
 };
 
-/** 只持久化服务端下发的 conversation ID，不生成客户端身份。 */
+/** Stores only server-issued conversation IDs; no client identity is generated. */
 export type ConversationStore = {
   read(): string | null;
   write(conversationId: string): void;
@@ -84,7 +81,7 @@ export function localConversationStore(storageKey: string, legacyStorageKey?: st
     try {
       localStorage.removeItem(legacyStorageKey);
     } catch {
-      // 忽略不可用的 localStorage。
+      // Ignore unavailable localStorage.
     }
   };
   return {
@@ -100,14 +97,14 @@ export function localConversationStore(storageKey: string, legacyStorageKey?: st
       try {
         localStorage.setItem(storageKey, conversationId);
       } catch {
-        // localStorage 不可用时，内存中的 ID 仍然有效。
+        // The in-memory ID remains valid if localStorage is unavailable.
       }
     },
     clear() {
       try {
         localStorage.removeItem(storageKey);
       } catch {
-        // 忽略不可用的 localStorage。
+        // Ignore unavailable localStorage.
       }
     },
   };
@@ -131,7 +128,7 @@ export class BknLifecycleError extends Error {
   readonly requiredAction: string;
 
   constructor(tool: string, code: string, message: string, requiredAction: string) {
-    super(message || `${tool} 失败（${code || "未知错误"}）`);
+    super(message || i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.toolFailed", { tool, code: code || i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.unknownError") }));
     this.name = "BknLifecycleError";
     this.code = code;
     this.requiredAction = requiredAction;
@@ -150,13 +147,13 @@ function lifecycleErrorOf(tool: string, structured: unknown, fallbackText: strin
   const envelope = structured && typeof structured === "object" ? (structured as Record<string, unknown>) : {};
   const error = (envelope.error ?? {}) as LifecycleErrorPayload;
   const code = typeof error.code === "string" ? error.code : "";
-  const fallback = fallbackText || `${tool} 调用失败`;
+  const fallback = fallbackText || i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.callFailed", { tool });
   const message = typeof error.message === "string" ? error.message : fallback;
   const visibleMessage = code === "interaction_in_progress" ? STUCK_INTERACTION_HINT : message;
   return new BknLifecycleError(tool, code, visibleMessage, typeof error.required_action === "string" ? error.required_action : "");
 }
 
-const STUCK_INTERACTION_HINT = "当前会话仍有未结束的交互。请清空对话后重试。";
+const STUCK_INTERACTION_HINT = i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.stuckInteraction");
 
 function shouldStartNewConversation(error: unknown): boolean {
   return error instanceof BknLifecycleError && (error.code === "conversation_not_found" || error.code === "interaction_in_progress");
@@ -169,11 +166,11 @@ async function callLifecycleTool(
 ): Promise<Record<string, unknown>> {
   const result = await session.callTool(tool, args);
   if (isToolMissing(result.rpcError)) {
-    throw new BknLifecycleError(tool, "lifecycle_not_supported", `${tool} 未注册`, "");
+    throw new BknLifecycleError(tool, "lifecycle_not_supported", i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.toolNotRegistered", { tool }), "");
   }
   if (result.isError || !result.ok) throw lifecycleErrorOf(tool, result.structured, result.text);
   if (!result.structured || typeof result.structured !== "object") {
-    throw new BknLifecycleError(tool, "lifecycle_malformed", `${tool} 未返回结构化内容`, "");
+    throw new BknLifecycleError(tool, "lifecycle_malformed", i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.malformedToolResult", { tool }), "");
   }
   return result.structured as Record<string, unknown>;
 }
@@ -234,7 +231,7 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
         const startedConversationId = stringField(state, "conversation_id");
         const interactionId = stringField(state, "interaction_id");
         if (!startedConversationId || !interactionId) {
-          throw new BknLifecycleError("bkn_start_interaction", "lifecycle_malformed", "bkn_start_interaction 未返回会话或交互 ID", "");
+          throw new BknLifecycleError("bkn_start_interaction", "lifecycle_malformed", i18n.t("knowledgeNetwork.contextLoaderPanel.lifecycleErrors.missingTurnIds"), "");
         }
         conversationId = startedConversationId;
         conversationStore.write(startedConversationId);

@@ -62,6 +62,15 @@ export const contextLoaderPanelPart = {
       fallbackNetwork: "Knowledge Network Tool",
       fallbackOther: "MCP Capability",
     },
+    lifecycleErrors: {
+      unknownError: "unknown error",
+      toolFailed: "{{tool}} failed ({{code}})",
+      callFailed: "{{tool}} call failed",
+      stuckInteraction: "The current session still has an unfinished interaction. Clear the chat and try again.",
+      toolNotRegistered: "{{tool}} is not registered",
+      malformedToolResult: "{{tool}} did not return structured content",
+      missingTurnIds: "bkn_start_interaction did not return conversation or interaction ID",
+    },
     common: {
       copy: "Copy",
       collapse: "Collapse",

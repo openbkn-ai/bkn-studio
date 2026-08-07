@@ -62,6 +62,15 @@ export const contextLoaderPanelPart = {
       fallbackNetwork: "知识网络工具",
       fallbackOther: "MCP 能力",
     },
+    lifecycleErrors: {
+      unknownError: "未知错误",
+      toolFailed: "{{tool}} 失败（{{code}}）",
+      callFailed: "{{tool}} 调用失败",
+      stuckInteraction: "当前会话仍有未结束的交互。请清空对话后重试。",
+      toolNotRegistered: "{{tool}} 未注册",
+      malformedToolResult: "{{tool}} 未返回结构化内容",
+      missingTurnIds: "bkn_start_interaction 未返回会话或交互 ID",
+    },
     common: {
       copy: "复制",
       collapse: "收起",
