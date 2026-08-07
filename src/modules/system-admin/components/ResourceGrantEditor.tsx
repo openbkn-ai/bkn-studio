@@ -124,7 +124,10 @@ export function ResourceGrantEditor({
                   setDraftType(type);
                   setDraftOps([]);
                 }}
-                options={RESOURCE_TYPES.map((item) => ({ label: item.label, value: item.type }))}
+                options={RESOURCE_TYPES.map((item) => ({
+                  label: resourceTypeLabel(item.type),
+                  value: item.type,
+                }))}
                 style={{ minWidth: 160 }}
                 value={draftType}
               />
