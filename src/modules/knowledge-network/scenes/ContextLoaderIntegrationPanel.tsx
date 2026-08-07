@@ -8,6 +8,7 @@
 import { ApiOutlined, CaretRightOutlined, CopyOutlined, DatabaseOutlined, DownOutlined, FileTextOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { Input, Modal, Select, Spin, Tooltip } from "antd";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
 import { buildApiKeyPagePath } from "@/modules/api-keys/utils/api-key-handoff";
@@ -30,20 +31,7 @@ import styles from "./ExperienceScene.module.css";
 
 export type ResponseView = { kind: "json" | "toon"; text: string };
 
-const TOOL_GROUPS: Array<{
-  key: ToolBusinessGroupKey;
-  label: string;
-  description: string;
-}> = [
-  { key: "network", label: "知识网络信息", description: "知识网络列表、当前网络详情" },
-  { key: "lifecycle", label: "交互生命周期", description: "受管会话、交互和操作状态" },
-  { key: "model", label: "知识网络模型检索", description: "语义检索、对象类、关系类、行动类、指标定义查询" },
-  { key: "query", label: "对象实例与关系子图查询", description: "对象实例查询、关系子图查询" },
-  { key: "data", label: "数据资源与 SQL 查询", description: "数据资源列表、字段结构、SQL 数据查询" },
-  { key: "logic", label: "逻辑属性与行动调用", description: "逻辑属性计算、行动工具召回与执行" },
-  { key: "skill", label: "技能与动态工具", description: "Skill 检索和线上动态工具" },
-  { key: "other", label: "其他能力", description: "暂未归类的 MCP 能力" },
-];
+const TOOL_GROUPS: ToolBusinessGroupKey[] = ["network", "lifecycle", "model", "query", "data", "logic", "skill", "other"];
 
 type ContextLoaderIntegrationPanelProps = {
   mode: Exclude<ContextLoaderMode, "agent">;
@@ -154,18 +142,20 @@ function CodeBlock({
   code,
   json,
   onCopy,
+  copyLabel,
 }: {
   title: string;
   code: string;
   json?: boolean;
   onCopy: () => void;
+  copyLabel: string;
 }) {
   return (
     <div className={styles.codeBlk}>
       <div className={styles.codeBlkHead}>
         <span>{title}</span>
         <button type="button" className={styles.mini} onClick={onCopy}>
-          <CopyOutlined /> 复制
+          <CopyOutlined /> {copyLabel}
         </button>
       </div>
       <pre className={styles.codeBlkPre}>{json ? <JsonHighlight text={code} /> : code}</pre>
@@ -251,6 +241,7 @@ export function ContextLoaderIntegrationPanel({
   showMcpConnect = false,
 }: ContextLoaderIntegrationPanelProps) {
   const location = useLocation();
+  const { t } = useTranslation();
   const verb = mode === "mcp" ? "MCP" : "POST";
   const [schemaOpen, setSchemaOpen] = useState(false);
   const [queryParamsOpen, setQueryParamsOpen] = useState(true);
@@ -263,21 +254,24 @@ export function ContextLoaderIntegrationPanel({
   const [mcpConfigKeyError, setMcpConfigKeyError] = useState("");
   const [mcpConfigKeyModalOpen, setMcpConfigKeyModalOpen] = useState(false);
   const filterText = filter.trim().toLowerCase();
-  const appKeyPlaceholder = "bak_<在个人中心 API Key 签发的长期 Key>";
+  const appKeyPlaceholder = t("knowledgeNetwork.contextLoaderPanel.appKey.placeholder");
   const configAppKey = mcpConfigKey || appKeyPlaceholder;
   const mcpUrlWithSlash = withMcpTrailingSlash(mcpUrl);
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
   const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey);
   const claudeCliConfig = createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey);
   const treeGroups = TOOL_GROUPS.map((group) => ({
-    ...group,
+    key: group,
+    label: t(`knowledgeNetwork.contextLoaderPanel.toolGroups.${group}.label`),
+    description: t(`knowledgeNetwork.contextLoaderPanel.toolGroups.${group}.description`),
     items: activeOps
       .filter((item) => {
         const info = businessInfoOf(item);
-        const searchable = `${info.name} ${item.id} ${item.path} ${item.summary} ${group.label}`.toLowerCase();
-        return info.groupKey === group.key && (!filterText || searchable.includes(filterText));
+        const groupLabel = t(`knowledgeNetwork.contextLoaderPanel.toolGroups.${group}.label`);
+        const searchable = `${info.name} ${item.id} ${item.path} ${item.summary} ${groupLabel}`.toLowerCase();
+        return info.groupKey === group && (!filterText || searchable.includes(filterText));
       })
-      .sort((left, right) => compareToolsInBusinessGroup(group.key, left, right)),
+      .sort((left, right) => compareToolsInBusinessGroup(group, left, right)),
   })).filter(({ items }) => items.length > 0);
 
   const isMcpVerifyView = mode === "mcp" && !showMcpConnect;
@@ -290,13 +284,13 @@ export function ContextLoaderIntegrationPanel({
   const dataAssistantOpen = dataAssistantAvailable && rightTab === "data";
   const dataAssistantDescription =
     dataAssistantKind === "concept-group"
-      ? "选择资源组并填入 concept_groups，缩小语义检索范围。"
+      ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.conceptGroup")
       : dataAssistantKind === "object-type"
-        ? "选择对象类并填入 ot_id；可使用真实样本行生成测试请求。"
+        ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.objectType")
         : dataAssistantKind === "resource"
-          ? "选择数据资源并填入 SQL 的资源占位；可查看字段和样本数据。"
+          ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.resource")
           : dataAssistantKind === "relation"
-            ? "选择关系类并生成子图查询所需的关系路径。"
+            ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.relation")
             : "";
   const hasCallState = sending || response !== null || reqError !== null;
   const resultContentVisible = !isVerifyView || (hasCallState && resultOpen && mcpResultTab === "result");
@@ -336,7 +330,7 @@ export function ContextLoaderIntegrationPanel({
   const applyMcpConfigKey = () => {
     const nextKey = mcpConfigKeyDraft.trim();
     if (nextKey && !nextKey.startsWith("bak_")) {
-      setMcpConfigKeyError("请粘贴以 bak_ 开头的长期 API Key");
+      setMcpConfigKeyError(t("knowledgeNetwork.contextLoaderPanel.appKey.invalid"));
       return;
     }
 
@@ -350,30 +344,35 @@ export function ContextLoaderIntegrationPanel({
         <aside className={styles.list}>
           <div className={styles.listHead}>
             <div>
-              <div className={styles.listTitle}>MCP 服务</div>
-              <div className={styles.listMeta}>已获取 0 项服务</div>
+              <div className={styles.listTitle}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpServices")}</div>
+              <div className={styles.listMeta}>0</div>
             </div>
             <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
               {toolsLoading ? <Spin size="small" /> : null}
-              刷新服务列表
+              {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
             </button>
           </div>
           <div className={styles.listSearch}>
-            <Input value={filter} onChange={(event) => onFilterChange(event.target.value)} placeholder="筛选 MCP 服务" disabled />
+            <Input
+              value={filter}
+              onChange={(event) => onFilterChange(event.target.value)}
+              placeholder={t("knowledgeNetwork.contextLoaderPanel.common.filterMcpServices")}
+              disabled
+            />
           </div>
           <div className={styles.resEmpty}>
-            <h3>暂无 MCP 服务</h3>
-            <p>{toolsError || "MCP 服务端未返回可用工具，请检查服务配置后刷新服务列表。"}</p>
+            <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServices")}</h3>
+            <p>{toolsError || t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServicesDescription")}</p>
           </div>
         </aside>
         <div className={styles.mcpWork}>
           <section className={styles.req}>
             <div className={styles.resEmpty}>
-              <h3>暂无可调试的 MCP 服务</h3>
-              <p>服务列表返回后，可在左侧选择工具并运行。</p>
+              <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServices")}</h3>
+              <p>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServicesDescription")}</p>
               <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
                 {toolsLoading ? <Spin size="small" /> : null}
-                刷新服务列表
+                {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
               </button>
             </div>
           </section>
@@ -388,14 +387,14 @@ export function ContextLoaderIntegrationPanel({
         <section className={styles.mcpConnectPage}>
           <div className={styles.mcpConnectPanel}>
             <div className={styles.mcpConnectTitleBlock}>
-              <h2 className={styles.mcpConnectTitle}>让智能体调用 OpenBKN 能力</h2>
+              <h2 className={styles.mcpConnectTitle}>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.title")}</h2>
               <p className={styles.mcpConnectDesc}>
-                这里生成的是 MCP 接入配置。复制到智能体平台后，智能体可通过 MCP 工具访问 OpenBKN 暴露的检索、查询和行动能力。
+                {t("knowledgeNetwork.contextLoaderPanel.mcpConnect.description")}
               </p>
               <ol className={styles.mcpSteps}>
-                <li>前往个人中心签发 API Key，并将 bak_ 开头的长期 Key 填入右侧配置的 Bearer Key。</li>
-                <li>选择智能体平台类型，复制整段配置并粘贴到对应的 MCP 服务配置中。</li>
-                <li>保存后回到智能体对话，直接提问并让智能体通过 MCP 工具完成检索、查询或行动调用。</li>
+                <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepIssueKey")}</li>
+                <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepCopyConfig")}</li>
+                <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepUseAgent")}</li>
               </ol>
             </div>
             <div className={styles.mcpConnectMain}>
@@ -404,7 +403,7 @@ export function ContextLoaderIntegrationPanel({
                   {[
                     ["claude", "Claude Code"],
                     ["cursor", "Cursor"],
-                    ["generic", "通用 mcp.json"],
+                    ["generic", t("knowledgeNetwork.contextLoaderPanel.mcpConnect.genericTab")],
                   ].map(([key, label]) => (
                     <button
                       key={key}
@@ -418,44 +417,69 @@ export function ContextLoaderIntegrationPanel({
                 </div>
                 <div className={styles.mcpConfigMeta}>
                   <Link className={styles.mcpIssueKeyBtn} to={apiKeyPagePath}>
-                    签发 API Key
+                    {t("knowledgeNetwork.contextLoaderPanel.appKey.issue")}
                   </Link>
                   <button type="button" className={styles.mcpConfigureKeyBtn} onClick={openMcpConfigKeyModal}>
-                    {mcpConfigKey ? "已配置 API Key" : "配置 API Key"}
+                    {mcpConfigKey
+                      ? t("knowledgeNetwork.contextLoaderPanel.appKey.configured")
+                      : t("knowledgeNetwork.contextLoaderPanel.appKey.configure")}
                   </button>
                 </div>
               </div>
               <div className={styles.mcpConfigBody}>
                 {mcpConfigTab === "claude" ? (
                   <>
-                    <CodeBlock title="CLI 一行接入" code={claudeCliConfig} onCopy={() => onCopy(claudeCliConfig, "Claude Code 命令已复制")} />
-                    <CodeBlock title="项目 .mcp.json" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, ".mcp.json 配置已复制")} />
+                    <CodeBlock
+                      title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.cliTitle")}
+                      code={claudeCliConfig}
+                      copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                      onCopy={() => onCopy(claudeCliConfig, t("knowledgeNetwork.contextLoaderPanel.mcpConnect.copiedClaude"))}
+                    />
+                    <CodeBlock
+                      title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.projectConfigTitle")}
+                      code={mcpRemoteJsonConfig}
+                      json
+                      copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                      onCopy={() => onCopy(mcpRemoteJsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpConnect.copiedProject"))}
+                    />
                   </>
                 ) : null}
                 {mcpConfigTab === "cursor" ? (
-                  <CodeBlock title="~/.cursor/mcp.json 或项目 .cursor/mcp.json" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, "Cursor 配置已复制")} />
+                  <CodeBlock
+                    title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.cursorConfigTitle")}
+                    code={mcpRemoteJsonConfig}
+                    json
+                    copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                    onCopy={() => onCopy(mcpRemoteJsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpConnect.copiedCursor"))}
+                  />
                 ) : null}
                 {mcpConfigTab === "generic" ? (
-                  <CodeBlock title="mcpServers 配置" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, "mcp.json 配置已复制")} />
+                  <CodeBlock
+                    title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.genericConfigTitle")}
+                    code={mcpRemoteJsonConfig}
+                    json
+                    copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                    onCopy={() => onCopy(mcpRemoteJsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpConnect.copiedGeneric"))}
+                  />
                 ) : null}
               </div>
               </div>
             </div>
             <Modal
               open={mcpConfigKeyModalOpen}
-              title="配置 API Key"
-              okText="应用配置"
-              cancelText="取消"
+              title={t("knowledgeNetwork.contextLoaderPanel.appKey.modalTitle")}
+              okText={t("knowledgeNetwork.contextLoaderPanel.appKey.apply")}
+              cancelText={t("common.cancel")}
               onCancel={() => setMcpConfigKeyModalOpen(false)}
               onOk={applyMcpConfigKey}
               className={styles.mcpConfigKeyModal}
             >
               <p className={styles.mcpConfigKeyModalDescription}>
-                粘贴 bak_ 开头的长期 API Key，页面会自动更新下方 MCP 配置中的 Bearer Key。
+                {t("knowledgeNetwork.contextLoaderPanel.appKey.description")}
               </p>
               <Input.Password
                 value={mcpConfigKeyDraft}
-                placeholder="粘贴 API Key"
+                placeholder={t("knowledgeNetwork.contextLoaderPanel.appKey.inputPlaceholder")}
                 autoComplete="off"
                 spellCheck={false}
                 allowClear
@@ -466,26 +490,38 @@ export function ContextLoaderIntegrationPanel({
                 }}
               />
               {mcpConfigKeyError ? <p className={styles.mcpConfigKeyModalError}>{mcpConfigKeyError}</p> : null}
-              <p className={styles.mcpConfigKeyModalHint}>仅用于生成当前页面配置，不会保存。</p>
+              <p className={styles.mcpConfigKeyModalHint}>{t("knowledgeNetwork.contextLoaderPanel.appKey.hint")}</p>
             </Modal>
           </section>
       ) : (
         <>
       <aside className={styles.list}>
         <div className={styles.listHead}>
-          <div>
-            <div className={styles.listTitle}>{mode === "mcp" ? "MCP 服务" : "REST 接口"}</div>
-            <div className={styles.listMeta}>{mode === "mcp" ? `已获取 ${activeOps.length} 项服务` : `${activeOps.length} 项可用`}</div>
+            <div>
+              <div className={styles.listTitle}>
+                {mode === "mcp"
+                  ? t("knowledgeNetwork.contextLoaderPanel.common.mcpServices")
+                  : t("knowledgeNetwork.contextLoaderPanel.common.restApis")}
+              </div>
+              <div className={styles.listMeta}>{activeOps.length}</div>
+            </div>
+            {mode === "mcp" ? (
+              <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
+                {toolsLoading ? <Spin size="small" /> : null}
+                {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
+              </button>
+            ) : null}
           </div>
-          {mode === "mcp" ? (
-            <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
-              {toolsLoading ? <Spin size="small" /> : null}
-              刷新服务列表
-            </button>
-          ) : null}
-        </div>
-        <div className={styles.listSearch}>
-          <Input value={filter} onChange={(e) => onFilterChange(e.target.value)} placeholder={mode === "mcp" ? "筛选 MCP 服务" : "筛选接口"} />
+          <div className={styles.listSearch}>
+          <Input
+            value={filter}
+            onChange={(e) => onFilterChange(e.target.value)}
+            placeholder={
+              mode === "mcp"
+                ? t("knowledgeNetwork.contextLoaderPanel.common.filterMcpServices")
+                : t("knowledgeNetwork.contextLoaderPanel.common.filterApis")
+            }
+          />
         </div>
         <div className={styles.eplist}>
           {treeGroups.map(({ key, label, description, items }) => {
@@ -528,12 +564,14 @@ export function ContextLoaderIntegrationPanel({
               <div className={styles.reqActions}>
                 {mode === "mcp" ? (
                   <button type="button" className={styles.docBtn} onClick={() => setSchemaOpen(true)}>
-                    <FileTextOutlined /> 接口文档
+                    <FileTextOutlined /> {t("knowledgeNetwork.contextLoaderPanel.request.doc")}
                   </button>
                 ) : null}
                 <button type="button" className={styles.runBtn} onClick={onSend} disabled={sending}>
                   {sending ? <Spin size="small" /> : <CaretRightOutlined />}
-                  {sending ? "运行中..." : "运行"}
+                  {sending
+                    ? t("knowledgeNetwork.contextLoaderPanel.request.running")
+                    : t("knowledgeNetwork.contextLoaderPanel.request.run")}
                 </button>
               </div>
             ) : null}
@@ -551,10 +589,15 @@ export function ContextLoaderIntegrationPanel({
                 <div className={styles.callParamsHead}>
                   <div className={styles.callParamsTitle}>
                     <div className={styles.secHead}>
-                      {mode === "mcp" ? "参数" : "QUERY 参数"} <span className={styles.cnt}>{visibleQuery.length}</span>
+                      {mode === "mcp"
+                        ? t("knowledgeNetwork.contextLoaderPanel.request.params")
+                        : t("knowledgeNetwork.contextLoaderPanel.request.queryParams")}{" "}
+                      <span className={styles.cnt}>{visibleQuery.length}</span>
                     </div>
                     {queryParamsCollapsible && !queryParamsOpen ? (
-                      <span className={styles.callParamsCollapsedHint}>已收起，展开后编辑 {visibleQuery.length} 个参数</span>
+                      <span className={styles.callParamsCollapsedHint}>
+                        {t("knowledgeNetwork.contextLoaderPanel.request.queryCollapsed", { count: visibleQuery.length })}
+                      </span>
                     ) : null}
                   </div>
                   {queryParamsCollapsible ? (
@@ -564,14 +607,18 @@ export function ContextLoaderIntegrationPanel({
                       onClick={() => setQueryParamsOpen((value) => !value)}
                       aria-expanded={queryParamsOpen}
                     >
-                      <span className={styles.callParamsState}>{queryParamsOpen ? "收起" : "展开"}</span>
+                      <span className={styles.callParamsState}>
+                        {queryParamsOpen
+                          ? t("knowledgeNetwork.contextLoaderPanel.common.collapse")
+                          : t("knowledgeNetwork.contextLoaderPanel.common.expand")}
+                      </span>
                       <DownOutlined className={queryParamsOpen ? styles.callParamsChevronOpen : undefined} />
                     </button>
                   ) : null}
                 </div>
               ) : mode !== "mcp" ? (
                 <div className={styles.secHead}>
-                  QUERY 参数 <span className={styles.cnt}>{visibleQuery.length}</span>
+                  {t("knowledgeNetwork.contextLoaderPanel.request.queryParams")} <span className={styles.cnt}>{visibleQuery.length}</span>
                 </div>
               ) : null}
               {!queryParamsCollapsible || queryParamsOpen ? (
@@ -581,7 +628,7 @@ export function ContextLoaderIntegrationPanel({
                       key={param.name}
                       param={param}
                       locked={param.name === "kn_id"}
-                      label={mode === "mcp" && param.name === "response_format" ? "参数" : undefined}
+                      label={mode === "mcp" && param.name === "response_format" ? t("knowledgeNetwork.contextLoaderPanel.request.params") : undefined}
                       emphasized={mode === "mcp" && param.name === "response_format"}
                       value={param.name === "kn_id" ? knId : queryVals[param.name] ?? param.value}
                       onChange={(value) => onQueryChange(param.name, value)}
@@ -598,16 +645,20 @@ export function ContextLoaderIntegrationPanel({
                 <div className={styles.callParamsHead}>
                   <div className={styles.callParamsTitle}>
                     <div className={styles.secHead}>
-                      请求体 <span className={styles.sub}>application/json</span>
+                      {t("knowledgeNetwork.contextLoaderPanel.request.body")} <span className={styles.sub}>application/json</span>
                     </div>
-                    {!callParamsOpen ? <span className={styles.callParamsCollapsedHint}>已收起，可展开编辑 body.json</span> : null}
+                    {!callParamsOpen ? (
+                      <span className={styles.callParamsCollapsedHint}>
+                        {t("knowledgeNetwork.contextLoaderPanel.request.bodyCollapsed")}
+                      </span>
+                    ) : null}
                   </div>
                   <div className={styles.callParamsTools}>
                     {opSupportsTestData(op.id) ? (
-                      <Tooltip title="用当前网络真实 schema 和样本行填充，可直接调用">
+                      <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.request.autoFillTooltip")}>
                         <button type="button" className={styles.paramToolBtn} onClick={onFillTestData} disabled={fillingTest}>
                           {fillingTest ? <Spin size="small" /> : <ThunderboltFilled />}
-                          自动填参
+                          {t("knowledgeNetwork.contextLoaderPanel.request.autoFill")}
                         </button>
                       </Tooltip>
                     ) : null}
@@ -618,7 +669,10 @@ export function ContextLoaderIntegrationPanel({
                         onClick={() => onRightTabChange(dataAssistantOpen ? "res" : "data")}
                         aria-expanded={dataAssistantOpen}
                       >
-                        <DatabaseOutlined /> {dataAssistantOpen ? "收起助手" : "请求数据助手"}
+                        <DatabaseOutlined />{" "}
+                        {dataAssistantOpen
+                          ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.close")
+                          : t("knowledgeNetwork.contextLoaderPanel.dataAssistant.open")}
                       </button>
                     ) : null}
                     <button
@@ -627,14 +681,18 @@ export function ContextLoaderIntegrationPanel({
                       onClick={() => setCallParamsOpen((value) => !value)}
                       aria-expanded={callParamsOpen}
                     >
-                      <span className={styles.callParamsState}>{callParamsOpen ? "收起" : "展开"}</span>
+                      <span className={styles.callParamsState}>
+                        {callParamsOpen
+                          ? t("knowledgeNetwork.contextLoaderPanel.common.collapse")
+                          : t("knowledgeNetwork.contextLoaderPanel.common.expand")}
+                      </span>
                       <DownOutlined className={callParamsOpen ? styles.callParamsChevronOpen : undefined} />
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className={styles.secHead}>
-                  请求体 <span className={styles.sub}>application/json</span>
+                  {t("knowledgeNetwork.contextLoaderPanel.request.body")} <span className={styles.sub}>application/json</span>
                 </div>
               )}
               {!isVerifyView || callParamsOpen ? (
@@ -643,11 +701,11 @@ export function ContextLoaderIntegrationPanel({
                     <span className={styles.editLbl}>body.json</span>
                     <div className={styles.editActions}>
                       <button type="button" className={styles.mini} onClick={onFormatBody}>
-                        格式化
+                        {t("knowledgeNetwork.contextLoaderPanel.common.format")}
                       </button>
                       {isVerifyView ? (
                         <button type="button" className={styles.mini} onClick={onResetBody}>
-                          恢复示例
+                          {t("knowledgeNetwork.contextLoaderPanel.common.resetExample")}
                         </button>
                       ) : null}
                     </div>
@@ -664,21 +722,25 @@ export function ContextLoaderIntegrationPanel({
           <div className={styles.actions}>
             <button type="button" className={styles.sendReq} onClick={onSend} disabled={sending}>
               {sending ? <Spin size="small" /> : null}
-              发送请求
+              {t("knowledgeNetwork.contextLoaderPanel.request.sendRequest")}
             </button>
             {opSupportsTestData(op.id) ? (
-              <Tooltip title="用当前网络真实 schema + 样本行填充，可直接发送">
+              <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.request.autoFillRestTooltip")}>
                 <button type="button" className={styles.testBtn} onClick={onFillTestData} disabled={fillingTest}>
-                  {fillingTest ? <Spin size="small" /> : <ThunderboltFilled />} 填充测试参数
+                  {fillingTest ? <Spin size="small" /> : <ThunderboltFilled />}{" "}
+                  {t("knowledgeNetwork.contextLoaderPanel.request.fillTestParams")}
                 </button>
               </Tooltip>
             ) : null}
             <button type="button" className={styles.resetBtn} onClick={onResetBody}>
-              恢复示例
+              {t("knowledgeNetwork.contextLoaderPanel.common.resetExample")}
             </button>
             {dataAssistantAvailable ? (
               <button type="button" className={styles.dataBtn} onClick={() => onRightTabChange(dataAssistantOpen ? "res" : "data")}>
-                <DatabaseOutlined /> {dataAssistantOpen ? "收起助手" : "请求数据助手"}
+                <DatabaseOutlined />{" "}
+                {dataAssistantOpen
+                  ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.close")
+                  : t("knowledgeNetwork.contextLoaderPanel.dataAssistant.open")}
               </button>
             ) : null}
           </div>
@@ -690,7 +752,7 @@ export function ContextLoaderIntegrationPanel({
           open
           title={
             <span className={styles.requestDataAssistantModalTitle}>
-              <DatabaseOutlined /> 请求数据助手
+              <DatabaseOutlined /> {t("knowledgeNetwork.contextLoaderPanel.dataAssistant.title")}
             </span>
           }
           footer={null}
@@ -700,10 +762,14 @@ export function ContextLoaderIntegrationPanel({
         >
           <div className={styles.requestDataAssistantModalIntro}>
             <div>
-              <strong>为「{businessInfoOf(op).name}」补充请求参数</strong>
+              <strong>
+                {t("knowledgeNetwork.contextLoaderPanel.dataAssistant.modalTitle", { name: businessInfoOf(op).name })}
+              </strong>
               <p>{dataAssistantDescription}</p>
             </div>
-            <span className={styles.requestDataAssistantModalTip}>选择后会写入当前请求体</span>
+            <span className={styles.requestDataAssistantModalTip}>
+              {t("knowledgeNetwork.contextLoaderPanel.dataAssistant.tip")}
+            </span>
           </div>
           <div className={styles.requestDataAssistantModalBody}>{dataBrowserPanel}</div>
         </Modal>
@@ -712,44 +778,52 @@ export function ContextLoaderIntegrationPanel({
       {mode === "mcp" ? (
         <Modal
           open={schemaOpen}
-          title={`${businessInfoOf(op).name} · 接口文档`}
+          title={t("knowledgeNetwork.contextLoaderPanel.schema.title", { name: businessInfoOf(op).name })}
           footer={null}
           width={920}
           className={styles.schemaModal}
           onCancel={() => setSchemaOpen(false)}
         >
           <div className={styles.schemaModalIntro}>
-            输入字段定义说明调用时可传入的参数、类型和填写规则；输出字段定义说明调用后可能返回的数据结构和字段含义。
+            {t("knowledgeNetwork.contextLoaderPanel.schema.intro")}
           </div>
           {toolsLoading ? (
             <div className={styles.schemaHint}>
-              <Spin size="small" /> 正在拉取字段定义…
+              <Spin size="small" /> {t("knowledgeNetwork.contextLoaderPanel.schema.loading")}
             </div>
           ) : toolsError ? (
-            <div className={styles.schemaHint}>加载失败：{toolsError}</div>
+            <div className={styles.schemaHint}>
+              {t("knowledgeNetwork.contextLoaderPanel.schema.loadFailed", { error: toolsError })}
+            </div>
           ) : currentTool ? (
             <div className={styles.schemaGrid}>
               <CodeBlock
-                title="输入字段定义"
+                title={t("knowledgeNetwork.contextLoaderPanel.schema.inputTitle")}
                 code={JSON.stringify(currentTool.inputSchema ?? {}, null, 2)}
                 json
-                onCopy={() => onCopy(JSON.stringify(currentTool.inputSchema ?? {}, null, 2), "输入字段定义已复制")}
+                copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                onCopy={() =>
+                  onCopy(JSON.stringify(currentTool.inputSchema ?? {}, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedInput"))
+                }
               />
               {currentTool.outputSchema !== undefined ? (
                 <CodeBlock
-                  title="输出字段定义"
+                  title={t("knowledgeNetwork.contextLoaderPanel.schema.outputTitle")}
                   code={JSON.stringify(currentTool.outputSchema, null, 2)}
                   json
-                  onCopy={() => onCopy(JSON.stringify(currentTool.outputSchema, null, 2), "输出字段定义已复制")}
+                  copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                  onCopy={() =>
+                    onCopy(JSON.stringify(currentTool.outputSchema, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedOutput"))
+                  }
                 />
               ) : (
-                <div className={styles.schemaHint}>该能力未提供输出字段定义。</div>
+                <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.noOutput")}</div>
               )}
             </div>
           ) : toolDefs ? (
-            <div className={styles.schemaHint}>tools/list 未包含「{op.id}」。</div>
+            <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.missingTool", { id: op.id })}</div>
           ) : (
-            <div className={styles.schemaHint}>尚未获取能力字段定义。</div>
+            <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.notLoaded")}</div>
           )}
         </Modal>
       ) : null}
@@ -763,16 +837,20 @@ export function ContextLoaderIntegrationPanel({
                 className={`${styles.rightTab} ${mcpResultTab === "result" ? styles.rightTabOn : ""}`}
                 onClick={() => setMcpResultTab("result")}
               >
-                调用结果
+                {t("knowledgeNetwork.contextLoaderPanel.response.result")}
               </button>
               <button
                 type="button"
                 className={`${styles.rightTab} ${mcpResultTab === "debug" ? styles.rightTabOn : ""}`}
                 onClick={() => setMcpResultTab("debug")}
                 disabled={!hasCallState}
-                title={hasCallState ? "查看本次调用的 cURL 请求命令" : "运行后生成请求命令"}
+                title={
+                  hasCallState
+                    ? t("knowledgeNetwork.contextLoaderPanel.response.debugReadyTitle")
+                    : t("knowledgeNetwork.contextLoaderPanel.response.debugPendingTitle")
+                }
               >
-                请求调试
+                {t("knowledgeNetwork.contextLoaderPanel.response.debug")}
               </button>
             </>
           ) : (
@@ -782,14 +860,14 @@ export function ContextLoaderIntegrationPanel({
                 className={`${styles.rightTab} ${rightTab === "res" ? styles.rightTabOn : ""}`}
                 onClick={() => onRightTabChange("res")}
               >
-                响应结果
+                {t("knowledgeNetwork.contextLoaderPanel.response.responseResult")}
               </button>
             </>
           )}
         </div>
         <div className={`${styles.rightView} ${!isVerifyView && rightTab !== "res" ? styles.rightHidden : ""} ${isVerifyView && mcpResultTab !== "result" ? styles.rightHidden : ""}`}>
           <div className={styles.resHead}>
-            <span className={styles.resTitle}>调用结果</span>
+            <span className={styles.resTitle}>{t("knowledgeNetwork.contextLoaderPanel.response.result")}</span>
             {response ? (
               <>
                 <span className={`${styles.pill} ${response.ok ? styles.pillOk : styles.pillErr}`}>
@@ -803,9 +881,9 @@ export function ContextLoaderIntegrationPanel({
                   <button
                     type="button"
                     className={styles.copyResp}
-                    onClick={() => onCopy(responseView?.text ?? response.text, "响应已复制")}
+                    onClick={() => onCopy(responseView?.text ?? response.text, t("knowledgeNetwork.contextLoaderPanel.response.copiedResponse"))}
                   >
-                    <CopyOutlined /> 复制结果
+                    <CopyOutlined /> {t("knowledgeNetwork.contextLoaderPanel.response.copyResult")}
                   </button>
                   {isVerifyView ? (
                     <button
@@ -814,14 +892,20 @@ export function ContextLoaderIntegrationPanel({
                       onClick={() => setResultOpen((value) => !value)}
                       aria-expanded={resultOpen}
                     >
-                      {resultOpen ? "收起" : "展开"}
+                      {resultOpen
+                        ? t("knowledgeNetwork.contextLoaderPanel.common.collapse")
+                        : t("knowledgeNetwork.contextLoaderPanel.common.expand")}
                       <DownOutlined className={resultOpen ? styles.resultToggleOpen : undefined} />
                     </button>
                   ) : null}
                 </div>
               </>
             ) : (
-              <span className={styles.resHint}>{mode === "mcp" ? "尚未运行" : "尚未发送请求"}</span>
+              <span className={styles.resHint}>
+                {mode === "mcp"
+                  ? t("knowledgeNetwork.contextLoaderPanel.response.notRun")
+                  : t("knowledgeNetwork.contextLoaderPanel.response.notSent")}
+              </span>
             )}
           </div>
           {resultContentVisible ? <div className={styles.resBody}>
@@ -833,7 +917,7 @@ export function ContextLoaderIntegrationPanel({
               <div className={styles.resError}>
                 <ApiOutlined />
                 <div>
-                  <strong>请求失败</strong>
+                  <strong>{t("knowledgeNetwork.contextLoaderPanel.response.failed")}</strong>
                   <p>{reqError}</p>
                 </div>
               </div>
@@ -851,8 +935,12 @@ export function ContextLoaderIntegrationPanel({
             ) : (
               <div className={styles.resEmpty}>
                 <ApiOutlined className={styles.resEmptyIc} />
-                <h3>等待调用</h3>
-                <p>确认请求参数后点击「运行」，这里会展示{mode === "mcp" ? " MCP" : " REST"} 返回结果。</p>
+                <h3>{t("knowledgeNetwork.contextLoaderPanel.response.waitingTitle")}</h3>
+                <p>
+                  {t("knowledgeNetwork.contextLoaderPanel.response.waitingDescription", {
+                    mode: mode === "mcp" ? "MCP" : "REST",
+                  })}
+                </p>
               </div>
             )}
           </div> : null}
@@ -866,10 +954,10 @@ export function ContextLoaderIntegrationPanel({
                 className={styles.mini}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onCopy(curl, "cURL 已复制");
+                  onCopy(curl, t("knowledgeNetwork.contextLoaderPanel.common.copiedCurl"));
                 }}
               >
-                复制
+                {t("knowledgeNetwork.contextLoaderPanel.common.copy")}
               </button>
             </div>
             {curlOpen ? (
@@ -883,11 +971,11 @@ export function ContextLoaderIntegrationPanel({
           <div className={`${styles.rightView} ${mcpResultTab === "debug" ? "" : styles.rightHidden}`}>
             <div className={styles.debugHead}>
               <div>
-                <span className={styles.resTitle}>请求调试</span>
-                <span className={styles.debugHint}>本次运行对应的 cURL 请求命令</span>
+                <span className={styles.resTitle}>{t("knowledgeNetwork.contextLoaderPanel.response.debug")}</span>
+                <span className={styles.debugHint}>{t("knowledgeNetwork.contextLoaderPanel.response.debugHint")}</span>
               </div>
-              <button type="button" className={styles.copyResp} onClick={() => onCopy(curl, "cURL 已复制")}>
-                <CopyOutlined /> 复制命令
+              <button type="button" className={styles.copyResp} onClick={() => onCopy(curl, t("knowledgeNetwork.contextLoaderPanel.common.copiedCurl"))}>
+                <CopyOutlined /> {t("knowledgeNetwork.contextLoaderPanel.response.copyCommand")}
               </button>
             </div>
             <div className={styles.debugBody}>
