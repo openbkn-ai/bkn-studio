@@ -35,6 +35,7 @@ import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgra
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 
@@ -145,6 +146,13 @@ export function RoleManagementScene() {
 
 
   const { t } = useTranslation();
+
+  /*
+    快照到之前先按加载态渲染。`CapabilityGate` 把 unknown 归进 fallback,而 fallback 这里
+    是升级按钮:不单独分出来的话,一台已经买了 rbac_basic 的集群首屏也会先闪一颗带「专业版」
+    徽标的按钮,这一瞬点下去弹的是升级引导而不是新建抽屉。
+  */
+  const { loading: entitlementLoading } = useEntitlementContext();
 
   /*
     没买时的「新建角色」:按钮照常可点,点开讲清这项是什么、要哪一档——置灰的死按钮
@@ -732,29 +740,37 @@ export function RoleManagementScene() {
                 入口,客户看得见才知道有东西可买。行内操作(编辑/删除)反过来直接藏,
                 每行挂两个置灰按钮只是噪音。
               */}
-              <CapabilityGate
-                capability={CAPABILITIES.RBAC_BASIC}
-                fallback={rbacUpgradeButton}
-                upgrade={rbacUpgradeButton}
-              >
+              {entitlementLoading ? (
                 <PermissionGate permissions="admin-role:create">
-
-                  <AppButton
-
-                    icon={<PlusOutlined />}
-
-                    onClick={() => setRoleDrawer({ open: true, role: null })}
-
-                    type="primary"
-
-                  >
-
+                  <AppButton disabled icon={<PlusOutlined />} loading type="primary">
                     {t("systemAdmin.roles.create")}
-
                   </AppButton>
-
                 </PermissionGate>
-              </CapabilityGate>
+              ) : (
+                <CapabilityGate
+                  capability={CAPABILITIES.RBAC_BASIC}
+                  fallback={rbacUpgradeButton}
+                  upgrade={rbacUpgradeButton}
+                >
+                  <PermissionGate permissions="admin-role:create">
+
+                    <AppButton
+
+                      icon={<PlusOutlined />}
+
+                      onClick={() => setRoleDrawer({ open: true, role: null })}
+
+                      type="primary"
+
+                    >
+
+                      {t("systemAdmin.roles.create")}
+
+                    </AppButton>
+
+                  </PermissionGate>
+                </CapabilityGate>
+              )}
 
               <AppButton
 

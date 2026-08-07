@@ -32,7 +32,11 @@ export function EditionBadge({
 }: {
   /** 讲解语境(升级弹窗的 hero)里即使已经可用也要标出这项属于哪一档。 */
   alwaysShow?: boolean;
-  /** 能力 key。给了才判「镜像里有没有」;不给就只按档位判。 */
+  /**
+   * 能力 key。不给等于「这项由谁实现都说不上」,`capabilitySatisfied` 于是恒为假,徽标
+   * 常驻。这是有意的保守侧:少给一次标记不如多给一次——但别指望它会随档位消失,要那种
+   * 行为就得把 key 传进来。
+   */
   capability?: string;
   edition: Edition;
 }) {

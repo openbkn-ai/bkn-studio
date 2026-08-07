@@ -6,7 +6,8 @@
  */
 
 import { CrownOutlined } from "@ant-design/icons";
-import type { ReactNode } from "react";
+import { Result, Skeleton } from "antd";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -30,20 +31,38 @@ type RequireEditionProps = {
  * 整页守卫。放行条件是「证够了 **且** 这项能力真的可用」,与档位徽标闭嘴的条件同一个。
  *
  * 用于 `capabilities[]` 答不了的付费面:业务溯源由 bkn-trace 实现、语义理解在数据目录侧,
- * bkn-safe 的那份清单里从来没有它们(ee-design.md §6「A 答不了 B」)。这类能力**永远**判
- * 为不满足,即使客户已经换过包也照样盖蒙版——等 §6.2 的每服务自述端点落地才解得开。
+ * bkn-safe 的那份清单里从来没有它们(ee-design.md §6「A 答不了 B」)。这类能力判不出镜像
+ * 状态,所以默认拦下,但蒙版上留一条「已升级,仍要继续」——判不了的事不能当成判定结果:
+ * 买了并且换过包的客户照样会走到这里,没有出口就不是提示,是把已付费功能永久锁死。
  *
- * 这条取舍认得清:宁可让买了的人多看一层提示,也好过把付费能力对所有人白开。真正的强制力
- * 始终在服务端,这层只是体验。
+ * 档位不够则不给出口:那是前端能确定的事,放进去服务端也会拒。真正的强制力始终在服务端,
+ * 这层只是体验。等 §6.2 的每服务自述端点落地,这条出口就该撤掉。
  */
 export function RequireEdition({ capability, children, minEdition }: RequireEditionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { snapshot } = useEntitlementContext();
+  const { loading, snapshot } = useEntitlementContext();
+  /*
+    「我已经升过了」的出口,见下面 image-likely 分支。只在本次挂载内有效:这是一次用户
+    声明,不是判定结果,不该被记下来当成事实。
+  */
+  const [dismissed, setDismissed] = useState(false);
 
-  // 快照没到就先不渲染:放行等于白送,拦下又会在拿到快照后闪一下。
+  /*
+    快照没到不能白屏。null 有两种来路:这一次请求还在飞,以及 fetchEntitlement() 抛错后
+    Provider 落成 null——后者没有重试触发点,会一直停在 null。整块内容区空着,用户既看
+    不到功能也看不到原因,只能去查路由配置。与 RequireCapability 同一套下场。
+  */
   if (!snapshot) {
-    return null;
+    return loading ? (
+      <Skeleton active paragraph={{ rows: 6 }} />
+    ) : (
+      <Result
+        status="warning"
+        subTitle={t("common.entitlement.unknownDescription")}
+        title={t("common.entitlement.unknownTitle")}
+      />
+    );
   }
 
   /*
@@ -54,13 +73,23 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
     即使客户已经换过包也照样盖蒙版。等 §6.2 的每服务自述端点落地才解得开;在那之前,
     宁可让买了的人多看一层提示,也好过把付费能力对所有人白开。
   */
+  const servedByBknSafe = capabilityServedByBknSafe(capability);
+  /*
+    与升级弹窗共用同一条判定和同一批文案:同一件事在两处说成两样,客户会以为是两个问题。
+  */
+  const reason = upgradeReason(capability, snapshot, minEdition, servedByBknSafe);
+  /*
+    判不出镜像状态时(reason === "image-likely":档位够了,但这项能力由别的服务实现,
+    bkn-safe 答不了),蒙版只能是提示,不能是终点。买了企业证、也换过企业包的客户照样
+    会走到这里,而前端永远确认不了——没有出口就等于把已付费功能永久锁死。
+
+    档位不够(reason === "buy")不给出口:那是前端能确定的事,放进去服务端也会拒。
+  */
+  const canOverride = reason === "image-likely";
+
   if (
-    capabilitySatisfied(
-      capability,
-      snapshot,
-      minEdition,
-      capabilityServedByBknSafe(capability),
-    )
+    (canOverride && dismissed) ||
+    capabilitySatisfied(capability, snapshot, minEdition, servedByBknSafe)
   ) {
     return <>{children}</>;
   }
@@ -68,17 +97,6 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
   const editionName = t(`common.entitlement.editions.${minEdition}`);
   /** 专业档走紫,企业与行业档走暖金——与版本页的卡片同源。 */
   const tierClass = minEdition === "professional" ? "" : "is-enterprise";
-  /*
-    措辞与升级弹窗共用同一条判定与同一批文案:同一件事在两处说成两样,客户会以为是两个
-    问题。这里今天只会走到 buy(档位不够才拦),但判定放在一处,将来 §6.2 的自述端点落地
-    后自动跟着变。
-  */
-  const reason = upgradeReason(
-    capability,
-    snapshot,
-    minEdition,
-    capabilityServedByBknSafe(capability),
-  );
   const imageIssue = reason !== "buy";
   const currentEditionName = t(
     `common.entitlement.editions.${snapshot?.edition ?? "community"}`,
@@ -134,6 +152,19 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
             >
               {t("common.entitlement.compareEditions")}
             </AppButton>
+            {/*
+              判不出镜像状态时给的出口。已经换过包的客户点这里就能进去用;真没换的点进去
+              也只会撞上服务端的拒绝——那才是强制力所在,这一层从来只是体验。
+            */}
+            {canOverride ? (
+              <AppButton
+                onClick={() => {
+                  setDismissed(true);
+                }}
+              >
+                {t("common.entitlement.continueAnyway")}
+              </AppButton>
+            ) : null}
           </div>
           <p className="console-upgrade-note">
             {reason === "image"

@@ -49,7 +49,7 @@ export const bknTraceRoutes: RouteObject[] = [
         capability={CAPABILITIES.BUSINESS_PROVENANCE}
         minEdition="enterprise"
       >
-        withRouteLoading(<BusinessProvenancePage />)
+        {withRouteLoading(<BusinessProvenancePage />)}
       </RequireEdition>
     ),
   },

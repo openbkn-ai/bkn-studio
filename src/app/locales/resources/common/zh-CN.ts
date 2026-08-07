@@ -82,6 +82,12 @@ export const commonZhCN = {
       notLicensedTitle: "当前授权未包含该功能",
       notLicensedDescription:
         "这套部署具备该功能,但当前证书的版本不覆盖它。导入更高版本的证书后即可使用,无需重启服务。",
+      /*
+        判不出镜像状态时的出口。别的服务实现的能力(业务溯源、语义理解)在 bkn-safe 的
+        清单里从来没有,缺席说明不了任何事;买了并且换过包的客户会照样撞上蒙版。没有这
+        条出口,那就是把已付费功能永久锁死,而不是提示。
+      */
+      continueAnyway: "已升级,仍要继续",
       unknownTitle: "无法确认授权状态",
       unknownDescription: "读取集群授权状态失败,付费功能暂时不可用。请稍后重试。",
       /**

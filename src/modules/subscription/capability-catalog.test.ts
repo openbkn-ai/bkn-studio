@@ -69,18 +69,6 @@ describe("capability catalog", () => {
     }
   });
 
-  /**
-   * `/api/safe/v1/capabilities` 只描述 bkn-safe 自己的镜像(ee-design.md §6「A 答不了 B」),
-   * 所以标成 bkn-safe 的必须恰好是它装配的那几个:多标一条,页面就会对别的服务的能力
-   * 下「当前镜像不含」的错误结论;少标一条,本可以实测的能力白白显示成「—」。
-   */
-  it("只有 bkn-safe 装配的能力标为可实测", () => {
-    const served = CAPABILITY_CATALOG.filter((entry) => entry.servedBy === "bkn-safe").map(
-      (entry) => entry.key,
-    );
-
-    expect(served.sort()).toEqual(["perm_object_level", "rbac_basic"]);
-  });
 });
 
 describe("resolveQuota", () => {

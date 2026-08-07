@@ -75,10 +75,16 @@ describe("filterNavByCapability", () => {
     expect(result.map((i) => i.key)).toEqual(["users"]);
   });
 
-  // 快照没到时可能是社区部署,不能对着他们推销。
-  it("快照未到 → 隐藏,且不标档位", () => {
+  /*
+    快照缺席可能是端点不存在(旧版 bkn-safe、网关没放行),不是「没装」。按没装隐藏会让
+    只升 studio 的存量部署整项丢入口,还查不出原因。原样放行,由页面上的 RequireCapability
+    交代未知态;推销信息一律不给——可能对面就是社区部署。
+  */
+  it("快照未到 → 原样放行,且不标档位", () => {
     const result = filterNavByCapability(items, null);
 
-    expect(result.map((i) => i.key)).toEqual(["users"]);
+    expect(result.map((i) => i.key)).toEqual(["users", "authorizations"]);
+    expect(result[1]?.locked).toBeUndefined();
+    expect(result[1]?.lockedEdition).toBeUndefined();
   });
 });
