@@ -145,10 +145,14 @@ export function ConnectorTypePicker({
                     </span>
                   ) : null}
                   <div className={styles.cardHeader}>
-                    <strong>{item.name}</strong>
+                    {/* 档位徽标跟在连接器名后面:它说的是「这个连接器要哪一档」,右侧那组
+                        标签说的是「它属于哪类数据源」,两件事别挤在同一排。 */}
+                    <strong className={styles.cardName}>
+                      {item.name}
+                      {certified ? <EditionBadge edition="professional" /> : null}
+                    </strong>
                     <span className={styles.badgeGroup}>
                       <span className={styles.badge}>{templateMeta.label}</span>
-                      {certified ? <EditionBadge edition="professional" /> : null}
                       {!item.enabled && !locked ? (
                         <span className={styles.disabledBadge}>
                           {t("dataConnect.connectorTypeUnavailable")}

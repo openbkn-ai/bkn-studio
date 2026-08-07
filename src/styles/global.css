@@ -503,6 +503,123 @@ select {
 
 /* 装了没买的入口:标出解锁它要哪一档。只出现在企业镜像上——社区镜像里这些项被整个
    过滤掉了,那里换证书也解不开。 */
+/* 档位徽标。配色与版本与订阅页的卡片同源:专业版暖金、企业版淡紫——两处对不上的话,
+   客户在菜单上看到的颜色和他在版本页上认的那张卡就成了两回事。 */
+.console-edition-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.console-edition-badge-professional {
+  border-color: #f0c674;
+  background: #fffaed;
+  color: #96701a;
+}
+
+.console-edition-badge-enterprise,
+.console-edition-badge-industry {
+  border-color: #b9a7ec;
+  background: #f5f2ff;
+  color: #4c35a0;
+}
+
+.console-edition-badge-community {
+  border-color: var(--color-border);
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+}
+
+/* 升级引导弹窗。讲「这项是什么、要哪一档」,不讲价——报价随优惠期滚动,印在这里改一次价
+   就要发一次版,所以底部两个出口分别指向版本对比页与授权门户。 */
+.console-upgrade-hero {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #f0c674;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fffaed 0%, #fff 100%);
+}
+
+.console-upgrade-hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: #fff;
+  color: #d99b1c;
+  font-size: 18px;
+}
+
+.console-upgrade-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.console-upgrade-hero-desc {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.console-upgrade-list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.console-upgrade-list li {
+  display: grid;
+  align-items: start;
+  gap: 10px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.console-upgrade-list li .anticon {
+  margin-top: 4px;
+  color: var(--color-success-text);
+}
+
+.console-upgrade-current {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-divider);
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+}
+
+.console-upgrade-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.console-upgrade-note {
+  margin-right: auto;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-align: left;
+}
+
 .console-sidenav-tier {
   /* 不许被标签挤扁,也不许把标签挤到换行:徽标固定宽度,长菜单名自己省略。 */
   flex: 0 0 auto;
