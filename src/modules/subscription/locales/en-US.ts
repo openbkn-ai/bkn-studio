@@ -101,10 +101,6 @@ export const subscriptionEnUS = {
       edition: "This workspace runs on {{edition}}.",
       unlicensed: "No licence is in force. Running the community capability set.",
     },
-    industry: {
-      body: "Industry-specific capabilities and quotas added on top of Enterprise by contract. Under the ordered tier model an industry licence carries every enterprise capability — contracts only add.",
-      title: "Industry solution",
-    },
     matrix: {
       capability: "Capability",
       new: "New",

@@ -316,12 +316,10 @@ export function SubscriptionScene() {
         })}
       </div>
 
-      <div className={styles.industry}>
-        <span className={styles.industryTitle}>
-          {editionName("industry")} · {t("subscription.industry.title")}
-        </span>
-        <p className={styles.industryBody}>{t("subscription.industry.body")}</p>
-      </div>
+      {/*
+        行业版那块说明暂不展示:它没有可列举的能力清单(合同只做加法),放在三张卡下面
+        只是一段没有下一步的文字。要谈行业方案走「查看详情」里的商务渠道。
+      */}
 
       <div className={styles.matrix}>
         <h3 className={styles.matrixTitle}>{t("subscription.matrix.title")}</h3>

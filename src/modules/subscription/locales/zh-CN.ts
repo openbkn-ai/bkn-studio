@@ -87,10 +87,6 @@ export const subscriptionZhCN = {
       edition: "当前工作区运行在 {{edition}}。",
       unlicensed: "当前没有生效授权,按社区能力运行。",
     },
-    industry: {
-      body: "在企业版基础上,按合同追加行业专有能力与配额。有序档位下行业版包含企业版全部能力,合同只做加法。",
-      title: "行业解决方案",
-    },
     matrix: {
       capability: "能力",
       new: "新增",
