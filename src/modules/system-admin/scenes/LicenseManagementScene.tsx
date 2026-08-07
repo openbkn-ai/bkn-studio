@@ -14,7 +14,7 @@ import {
   SafetyCertificateOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import { Alert, Empty, Input, Spin, Tag } from "antd";
+import { Alert, Input, Spin, Tag } from "antd";
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -60,16 +60,6 @@ function formatUnixSeconds(value: number | undefined, locale: string, permanentT
   })
     .format(value * 1000)
     .replace(/\//g, "-");
-}
-
-function limitValueLabel(value: number, unlimitedText: string, blockedText: string) {
-  if (value === -1) {
-    return unlimitedText;
-  }
-  if (value === 0) {
-    return blockedText;
-  }
-  return String(value);
 }
 
 function translatedLicenseKey(
@@ -308,13 +298,6 @@ export function LicenseManagementScene() {
             ? t("systemAdmin.license.metrics.activationBound")
             : t("systemAdmin.license.metrics.activationPending"),
         },
-        {
-          label: t("systemAdmin.license.metrics.scope"),
-          value: t("systemAdmin.license.metrics.scopeValue", {
-            features: detail.features.length,
-            limits: Object.keys(detail.limits).length,
-          }),
-        },
       ]
     : [];
 
@@ -502,64 +485,12 @@ export function LicenseManagementScene() {
               </section>
             </PermissionGate>
 
-            <section className={styles.licenseSection}>
-              <div className={styles.licenseSectionHead}>
-                <h3>{t("systemAdmin.license.sections.scope")}</h3>
-                <span>{t("systemAdmin.license.sections.scopeHint")}</span>
-              </div>
-              <div className={styles.licenseScopeGrid}>
-                <div className={styles.licenseScopePanel}>
-                  <div className={styles.licenseScopeHead}>
-                    <h4>{t("systemAdmin.license.sections.features")}</h4>
-                    <span>{detail.features.length}</span>
-                  </div>
-                  {detail.features.length ? (
-                    <div className={styles.licenseTagList}>
-                      {detail.features.map((feature) => (
-                        <Tag key={feature} title={feature}>
-                          {translatedLicenseKey(t, "featureLabels", feature)}
-                        </Tag>
-                      ))}
-                    </div>
-                  ) : (
-                    <Empty
-                      description={t("systemAdmin.license.emptyFeatures")}
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                  )}
-                </div>
-
-                <div className={styles.licenseScopePanel}>
-                  <div className={styles.licenseScopeHead}>
-                    <h4>{t("systemAdmin.license.sections.limits")}</h4>
-                    <span>{t("systemAdmin.license.sections.limitsHint")}</span>
-                  </div>
-                  {Object.keys(detail.limits).length ? (
-                    <div className={styles.licenseLimitList}>
-                      {Object.entries(detail.limits).map(([key, value]) => (
-                        <div className={styles.licenseLimitItem} key={key}>
-                          <span title={key}>
-                            {translatedLicenseKey(t, "limitLabels", key)}
-                          </span>
-                          <strong>
-                            {limitValueLabel(
-                              value,
-                              t("systemAdmin.license.unlimited"),
-                              t("systemAdmin.license.blocked"),
-                            )}
-                          </strong>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <Empty
-                      description={t("systemAdmin.license.emptyLimits")}
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                  )}
-                </div>
-              </div>
-            </section>
+            {/*
+              「授权范围」两块(证书 features 清单、limits 配额)暂时下架。features 只发
+              不判(ee-design.md §3.2),limits 产品侧今天也没有判定落点(§3.5),两块摆在
+              这里只会让人以为它们在起作用;社区证的 features 本来就是空的,渲染出来是
+              「0 项能力 / 0 项限额」。要看买到了什么,走工具栏的「查看授权范围」。
+            */}
           </div>
         ) : null}
       </Spin>
