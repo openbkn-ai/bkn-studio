@@ -10,9 +10,12 @@ import { Modal } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { capabilityState } from "@/framework/entitlement/capability-state";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
-import type { Edition } from "@/framework/entitlement/edition";
+import { atLeast, type Edition } from "@/framework/entitlement/edition";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { capabilityServedByBknSafe } from "@/modules/subscription/capability-catalog";
 
 /** 授权门户。与版本页同一个去处:申请与续期都在那边办。 */
 const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
@@ -45,7 +48,22 @@ export function CapabilityUpgradeDialog({
 }: CapabilityUpgradeDialogProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { snapshot } = useEntitlementContext();
   const editionName = t(`common.entitlement.editions.${minEdition}`);
+
+  /*
+    「证够了但镜像不含」是一种独立的处置:客户已经买了,该换的是镜像不是证书,这时候还
+    劝他升级就是把人往回赶。判据是后端刻意分开的两个列表——key 不在 extensions 里、而
+    档位又够,说明这个二进制根本没装这段代码(ee-design.md §6.1)。
+
+    只对 bkn-safe 自己实现的能力成立:别的服务的能力从来不出现在这两个列表里,缺席说明
+    不了任何事(§6「A 答不了 B」)。
+  */
+  const missingFromImage =
+    capabilityServedByBknSafe(capability) &&
+    snapshot !== null &&
+    capabilityState(capability, snapshot) === "not-installed" &&
+    atLeast(snapshot.edition, minEdition);
   const bullets = BULLET_KEYS.map((key) =>
     t(`subscription.capabilities.${capability}.bullets.${key}`, { defaultValue: "" }),
   ).filter(Boolean);
@@ -54,7 +72,11 @@ export function CapabilityUpgradeDialog({
     <Modal
       footer={
         <div className="console-upgrade-footer">
-          <span className="console-upgrade-note">{t("common.entitlement.upgradeEffect")}</span>
+          <span className="console-upgrade-note">
+            {missingFromImage
+              ? t("common.entitlement.imageMissingHint")
+              : t("common.entitlement.upgradeEffect")}
+          </span>
           <AppButton
             onClick={() => {
               onClose();
@@ -63,19 +85,25 @@ export function CapabilityUpgradeDialog({
           >
             {t("common.entitlement.compareEditions")}
           </AppButton>
-          <AppButton
-            href={LICENSE_PORTAL_URL}
-            rel="noopener noreferrer"
-            target="_blank"
-            type="primary"
-          >
-            {t("common.entitlement.upgradeTo", { edition: editionName })}
-          </AppButton>
+          {missingFromImage ? null : (
+            <AppButton
+              href={LICENSE_PORTAL_URL}
+              rel="noopener noreferrer"
+              target="_blank"
+              type="primary"
+            >
+              {t("common.entitlement.upgradeTo", { edition: editionName })}
+            </AppButton>
+          )}
         </div>
       }
       onCancel={onClose}
       open={open}
-      title={t("common.entitlement.unlockTitle", { edition: editionName })}
+      title={
+        missingFromImage
+          ? t("common.entitlement.imageMissingTitle")
+          : t("common.entitlement.unlockTitle", { edition: editionName })
+      }
       width={560}
     >
       <div className="console-upgrade-hero">

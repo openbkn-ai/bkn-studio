@@ -71,6 +71,8 @@ export const commonEnUS = {
         'This is a high-risk action. Type "{{name}}" to confirm deletion.',
     },
     entitlement: {
+      imageMissingTitle: "Licensed, but this deployment does not ship it",
+      imageMissingHint: "The licence covers this tier, but the running image does not carry the implementation — paid capabilities live in the enterprise image. Switching images keeps data and configuration.",
       unlockTitle: "Unlock {{edition}}",
       upgradeTo: "Upgrade to {{edition}}",
       upgradeEffect: "Takes effect as soon as the licence is imported — no restart",

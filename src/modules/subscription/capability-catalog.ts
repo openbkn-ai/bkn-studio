@@ -124,3 +124,13 @@ export function capabilitiesByCategory(
 export function capabilityMinEdition(key: string): Edition | null {
   return CAPABILITY_CATALOG.find((entry) => entry.key === key)?.minEdition ?? null;
 }
+
+/**
+ * 这个能力是不是 bkn-safe 自己实现的。
+ *
+ * 只有它成立时,`capabilities[]` / `extensions[]` 的缺席才说明得了问题——别的服务的能力
+ * 从来不出现在那两个列表里(ee-design.md §6「A 答不了 B」),缺席是常态而不是结论。
+ */
+export function capabilityServedByBknSafe(key: string): boolean {
+  return CAPABILITY_CATALOG.find((entry) => entry.key === key)?.servedBy === "bkn-safe";
+}

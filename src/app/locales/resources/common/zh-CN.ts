@@ -69,6 +69,8 @@ export const commonZhCN = {
       typeNameToConfirm: "此操作高危,请输入名称「{{name}}」以确认删除。",
     },
     entitlement: {
+      imageMissingTitle: "授权已覆盖,当前部署缺少该能力包",
+      imageMissingHint: "证书档位够了,但这套镜像里没有这项实现——付费能力在企业镜像中,换镜像后即可使用,数据与配置保留。",
       unlockTitle: "解锁{{edition}}能力",
       upgradeTo: "升级到{{edition}}",
       upgradeEffect: "导入授权后立即生效,无需重启服务",
