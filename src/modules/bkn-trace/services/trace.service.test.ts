@@ -486,7 +486,7 @@ describe("bkn-trace service", () => {
 
     const summary = await getRequestSummary("req_business_001");
     const traces = await getRequestTraces("req_business_001", { limit: 30 });
-    const artifact = await getEvidenceArtifact("art_result_001");
+	const artifact = await getEvidenceArtifact("art_result_001", "int_business_001");
 
     expect(getMock).toHaveBeenNthCalledWith(
       1,
@@ -498,11 +498,11 @@ describe("bkn-trace service", () => {
       "/agent-observability/v1/business-provenance/requests/req_business_001/traces",
       { headers: { "x-business-domain": "bd_demo" }, params: { limit: 30 } },
     );
-    expect(getMock).toHaveBeenNthCalledWith(
-      3,
-      "/agent-observability/v1/evidence/artifacts/art_result_001",
-      { headers: { "x-business-domain": "bd_demo" } },
-    );
+	expect(getMock).toHaveBeenNthCalledWith(
+		3,
+		"/agent-observability/v1/evidence/artifacts/art_result_001",
+		{ headers: { "x-business-domain": "bd_demo" }, params: { interaction_id: "int_business_001" } },
+	);
     expect(summary.requestId).toBe("req_business_001");
     expect(traces.entries[0].requestId).toBe("req_business_001");
     expect(artifact.content).toEqual({ conclusion: "业务结论", score: 0.91 });
