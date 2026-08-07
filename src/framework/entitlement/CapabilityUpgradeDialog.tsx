@@ -12,7 +12,6 @@ import { useNavigate } from "react-router-dom";
 
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { Edition } from "@/framework/entitlement/edition";
-import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
 /** 授权门户。与版本页同一个去处:申请与续期都在那边办。 */
@@ -46,7 +45,6 @@ export function CapabilityUpgradeDialog({
 }: CapabilityUpgradeDialogProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const entitlement = useEntitlement();
   const editionName = t(`common.entitlement.editions.${minEdition}`);
   const bullets = BULLET_KEYS.map((key) =>
     t(`subscription.capabilities.${capability}.bullets.${key}`, { defaultValue: "" }),
@@ -106,11 +104,6 @@ export function CapabilityUpgradeDialog({
         </ul>
       ) : null}
 
-      <p className="console-upgrade-current">
-        {t("common.entitlement.currentEdition", {
-          edition: t(`common.entitlement.editions.${entitlement.edition}`),
-        })}
-      </p>
     </Modal>
   );
 }

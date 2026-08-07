@@ -75,7 +75,6 @@ export const commonEnUS = {
       upgradeTo: "Upgrade to {{edition}}",
       upgradeEffect: "Takes effect as soon as the licence is imported — no restart",
       compareEditions: "Compare editions",
-      currentEdition: "This workspace runs on {{edition}}",
       paidHint: "Available from {{edition}}",
       // Edition gating. Kept apart from noPermission on purpose: "you may not"
       // sends the user to an administrator, "this deployment did not buy it"

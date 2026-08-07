@@ -73,7 +73,6 @@ export const commonZhCN = {
       upgradeTo: "升级到{{edition}}",
       upgradeEffect: "导入授权后立即生效,无需重启服务",
       compareEditions: "查看版本对比",
-      currentEdition: "当前工作区版本:{{edition}}",
       paidHint: "该能力自 {{edition}} 起提供",
       // 档位门控的文案。与 noPermission 分开:权限不足是「你不行」,档位不足是
       // 「这套部署没买」——前者找管理员,后者找商务,混成一句话谁都不知道该找谁。
@@ -95,15 +94,15 @@ export const commonZhCN = {
         industry: "行业版",
       },
       /**
-       * 徽标位专用短名,中文取两字。侧栏只有 229px,再算上图标、缩进与徽标本身的边框,
-       * 「企业版」三个字会把「业务溯源分析」挤成「业务溯源…」——菜单名被截断比徽标少
-       * 一个字严重得多。
+       * 徽标位的短名。中文用全称三字(「专业版」而不是「专业」):档位是产品名的一部分,
+       * 掉一个字读起来像另一个东西。挤得下靠的是徽标本身小一号(10px/4px padding),
+       * 不是砍字。
        */
       editionsShort: {
-        community: "社区",
-        professional: "专业",
-        enterprise: "企业",
-        industry: "行业",
+        community: "社区版",
+        professional: "专业版",
+        enterprise: "企业版",
+        industry: "行业版",
       },
       upgrade: "升级",
       banner: {

@@ -143,7 +143,27 @@ export function RoleManagementScene() {
   const [rbacUpgradeOpen, setRbacUpgradeOpen] = useState(false);
 
 
+
   const { t } = useTranslation();
+
+  /*
+    没买时的「新建角色」:按钮照常可点,点开讲清这项是什么、要哪一档——置灰的死按钮
+    说不清是坏了还是没买。fallback 与 upgrade 用同一个节点:社区镜像上这项是
+    not-installed,只配 upgrade 的话按钮会整个消失,而那恰恰是最该告诉客户有东西可买的
+    部署。
+  */
+  const rbacUpgradeButton = (
+    <PermissionGate permissions="admin-role:create">
+      <AppButton
+        icon={<PlusOutlined />}
+        onClick={() => setRbacUpgradeOpen(true)}
+        type="primary"
+      >
+        {t("systemAdmin.roles.create")}
+        <EditionBadge edition="professional" />
+      </AppButton>
+    </PermissionGate>
+  );
 
   const { message, modal } = useAppServices();
 
@@ -714,22 +734,8 @@ export function RoleManagementScene() {
               */}
               <CapabilityGate
                 capability={CAPABILITIES.RBAC_BASIC}
-                upgrade={
-                  <PermissionGate permissions="admin-role:create">
-                    {/*
-                      不置灰成一个死按钮:按钮照常可点,点开讲清这项是什么、要哪一档。
-                      徽标画在按钮里,一眼看出这是付费能力而不是坏了。
-                    */}
-                    <AppButton
-                      icon={<PlusOutlined />}
-                      onClick={() => setRbacUpgradeOpen(true)}
-                      type="primary"
-                    >
-                      {t("systemAdmin.roles.create")}
-                      <EditionBadge edition="professional" />
-                    </AppButton>
-                  </PermissionGate>
-                }
+                fallback={rbacUpgradeButton}
+                upgrade={rbacUpgradeButton}
               >
                 <PermissionGate permissions="admin-role:create">
 
