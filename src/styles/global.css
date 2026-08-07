@@ -593,6 +593,13 @@ select {
   box-shadow: var(--shadow-dropdown);
 }
 
+.console-upgrade-card-title {
+  margin: 16px 0 0;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
 .console-upgrade-page-actions {
   display: flex;
   gap: 12px;

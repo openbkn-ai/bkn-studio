@@ -12,11 +12,13 @@ import { useNavigate } from "react-router-dom";
 
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { atLeast, type Edition } from "@/framework/entitlement/edition";
+import { upgradeReason } from "@/framework/entitlement/upgrade-reason";
 import {
   useEntitlement,
   useEntitlementContext,
 } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { capabilityServedByBknSafe } from "@/modules/subscription/capability-catalog";
 
 const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
 
@@ -58,6 +60,21 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
   const editionName = t(`common.entitlement.editions.${minEdition}`);
   /** 企业与行业档走紫,专业档走暖金——与版本页的卡片同源。 */
   const tierClass = minEdition === "professional" ? "" : "is-enterprise";
+  /*
+    措辞与升级弹窗共用同一条判定与同一批文案:同一件事在两处说成两样,客户会以为是两个
+    问题。这里今天只会走到 buy(档位不够才拦),但判定放在一处,将来 §6.2 的自述端点落地
+    后自动跟着变。
+  */
+  const reason = upgradeReason(
+    capability,
+    snapshot,
+    minEdition,
+    capabilityServedByBknSafe(capability),
+  );
+  const imageIssue = reason !== "buy";
+  const currentEditionName = t(
+    `common.entitlement.editions.${snapshot?.edition ?? "community"}`,
+  );
 
   return (
     <div className="console-upgrade-locked">
@@ -85,15 +102,23 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
             </div>
           </div>
 
+          <h3 className="console-upgrade-card-title">
+            {imageIssue
+              ? t("common.entitlement.imageMissingTitle", { edition: currentEditionName })
+              : t("common.entitlement.unlockTitle", { edition: editionName })}
+          </h3>
+
           <div className="console-upgrade-page-actions">
-            <AppButton
-              href={LICENSE_PORTAL_URL}
-              rel="noopener noreferrer"
-              target="_blank"
-              type="primary"
-            >
-              {t("common.entitlement.upgradeTo", { edition: editionName })}
-            </AppButton>
+            {imageIssue ? null : (
+              <AppButton
+                href={LICENSE_PORTAL_URL}
+                rel="noopener noreferrer"
+                target="_blank"
+                type="primary"
+              >
+                {t("common.entitlement.upgradeTo", { edition: editionName })}
+              </AppButton>
+            )}
             <AppButton
               onClick={() => {
                 void navigate("/system/subscription");
@@ -102,7 +127,13 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
               {t("common.entitlement.compareEditions")}
             </AppButton>
           </div>
-          <p className="console-upgrade-note">{t("common.entitlement.upgradeEffect")}</p>
+              <p className="console-upgrade-note">
+            {reason === "image"
+              ? t("common.entitlement.imageMissingHint", { edition: currentEditionName })
+              : reason === "image-likely"
+                ? t("common.entitlement.imageLikelyHint", { edition: currentEditionName })
+                : t("common.entitlement.upgradeEffect")}
+          </p>
         </div>
       </div>
     </div>
