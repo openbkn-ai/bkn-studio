@@ -54,6 +54,7 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         labelKey: "shell.items.roleManagement",
         // 只标不挡:角色列表与内置角色是社区能力,收费的是写操作(页面里由
         // CapabilityGate 包着)。整项藏掉等于把社区能力也收了。
+        paidCapability: CAPABILITIES.RBAC_BASIC,
         paidEdition: "professional",
         icon: <SafetyCertificateOutlined />,
         path: "/system/roles",

@@ -9,6 +9,9 @@ import { Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { Edition } from "@/framework/entitlement/edition";
+import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+import { capabilityServedByBknSafe } from "@/modules/subscription/capability-catalog";
 
 /**
  * 「这项能力从哪一档起提供」的标签。
@@ -22,9 +25,35 @@ import type { Edition } from "@/framework/entitlement/edition";
  * 服务实现,bkn-safe 的 `capabilities[]` 永远报不出来(业务溯源),拿它门控会永久隐藏
  * (ee-design.md §6「A 答不了 B」)。这两种都只能标,不能挡。
  */
-export function EditionBadge({ edition }: { edition: Edition }) {
+export function EditionBadge({
+  alwaysShow = false,
+  capability,
+  edition,
+}: {
+  /** 讲解语境(升级弹窗的 hero)里即使已经可用也要标出这项属于哪一档。 */
+  alwaysShow?: boolean;
+  /** 能力 key。给了才判「镜像里有没有」;不给就只按档位判。 */
+  capability?: string;
+  edition: Edition;
+}) {
   const { t } = useTranslation();
+  const { snapshot } = useEntitlementContext();
   const label = t(`common.entitlement.editionsShort.${edition}`);
+
+  /*
+    徽标闭嘴的条件是**两个都满足**:证够了、镜像里也有。只满足一半时仍要标——客户
+    此刻还用不了,这时候把标记撤掉等于让他以为一切正常。
+  */
+  const satisfied = capabilitySatisfied(
+    capability ?? "",
+    snapshot,
+    edition,
+    capability ? capabilityServedByBknSafe(capability) : false,
+  );
+
+  if (!alwaysShow && satisfied) {
+    return null;
+  }
 
   return (
     <Tooltip

@@ -149,7 +149,12 @@ export function ConnectorTypePicker({
                         标签说的是「它属于哪类数据源」,两件事别挤在同一排。 */}
                     <strong className={styles.cardName}>
                       {item.name}
-                      {certified ? <EditionBadge edition="professional" /> : null}
+                      {certified ? (
+                        <EditionBadge
+                          capability={CAPABILITIES.CONNECTOR_CERTIFIED}
+                          edition="professional"
+                        />
+                      ) : null}
                     </strong>
                     <span className={styles.badgeGroup}>
                       <span className={styles.badge}>{templateMeta.label}</span>

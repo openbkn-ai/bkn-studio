@@ -160,7 +160,7 @@ export function RoleManagementScene() {
         type="primary"
       >
         {t("systemAdmin.roles.create")}
-        <EditionBadge edition="professional" />
+        <EditionBadge capability={CAPABILITIES.RBAC_BASIC} edition="professional" />
       </AppButton>
     </PermissionGate>
   );

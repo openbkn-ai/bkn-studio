@@ -34,6 +34,11 @@ export type ConsoleNavItem = {
    */
   paidEdition?: Edition;
   /**
+   * 与 paidEdition 配套的能力 key。给了才判得出「镜像里到底有没有」——只按档位判会在
+   * 「证够了、包没换」时把徽标撤掉,而那时客户根本用不了。
+   */
+  paidCapability?: string;
+  /**
    * 「装了没买」时由 filterNavByCapability 打上,菜单据此渲染档位徽标。声明时不要手写
    * ——它是过滤的产物,不是配置项。
    */

@@ -75,7 +75,7 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
             <div>
               <div className="console-upgrade-hero-title">
                 {t(`subscription.capabilities.${capability}.name`)}
-                <EditionBadge edition={minEdition} />
+                <EditionBadge alwaysShow edition={minEdition} />
               </div>
               <p className="console-upgrade-hero-desc">
                 {t(`subscription.capabilities.${capability}.description`)}

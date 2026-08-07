@@ -120,7 +120,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
           */}
           <AppButton icon={<PlusOutlined />} type="primary" onClick={() => setSemanticUpgradeOpen(true)}>
             {t("dataCatalog.semanticWorkspace.create")}
-            <EditionBadge edition="professional" />
+            <EditionBadge capability={CAPABILITIES.SEMANTIC_TASK} edition="professional" />
           </AppButton>
         </PermissionGate>
       </Space>

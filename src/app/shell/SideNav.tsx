@@ -10,6 +10,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatches, useNavigate } from "react-router-dom";
 
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+
 import {
   consoleNavigation,
   findConsoleNavItemByPath,
@@ -129,12 +131,11 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                       <>
                         <span className="console-sidenav-label">{t(item.labelKey)}</span>
                         {item.lockedEdition ?? item.paidEdition ? (
-                          <span
-                            className={`console-sidenav-tier console-edition-badge console-edition-badge-${item.lockedEdition ?? item.paidEdition}`}
-                          >
-                            {t(
-                              `common.entitlement.editionsShort.${item.lockedEdition ?? item.paidEdition}`,
-                            )}
+                          <span className="console-sidenav-tier">
+                            <EditionBadge
+                              capability={item.paidCapability}
+                              edition={(item.lockedEdition ?? item.paidEdition)!}
+                            />
                           </span>
                         ) : null}
                       </>
@@ -176,12 +177,11 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                       <>
                         <span className="console-sidenav-label">{t(item.labelKey)}</span>
                         {item.lockedEdition ?? item.paidEdition ? (
-                          <span
-                            className={`console-sidenav-tier console-edition-badge console-edition-badge-${item.lockedEdition ?? item.paidEdition}`}
-                          >
-                            {t(
-                              `common.entitlement.editionsShort.${item.lockedEdition ?? item.paidEdition}`,
-                            )}
+                          <span className="console-sidenav-tier">
+                            <EditionBadge
+                              capability={item.paidCapability}
+                              edition={(item.lockedEdition ?? item.paidEdition)!}
+                            />
                           </span>
                         ) : null}
                       </>
@@ -230,14 +230,13 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                                 {t(child.labelKey)}
                               </span>
                               {child.lockedEdition ?? child.paidEdition ? (
-                                <span
-                                  className={`console-sidenav-tier console-edition-badge console-edition-badge-${child.lockedEdition ?? child.paidEdition}`}
-                                >
-                                  {t(
-                                    `common.entitlement.editionsShort.${child.lockedEdition ?? child.paidEdition}`,
-                                  )}
-                                </span>
-                              ) : null}
+                          <span className="console-sidenav-tier">
+                            <EditionBadge
+                              capability={child.paidCapability}
+                              edition={(child.lockedEdition ?? child.paidEdition)!}
+                            />
+                          </span>
+                        ) : null}
                             </>
                           ) : null}
                         </button>
