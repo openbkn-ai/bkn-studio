@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
 import {
   emitMockChange,
@@ -508,7 +509,7 @@ const PREVIEW_CELL_POOL: Record<string, (row: number) => unknown> = {
   text: (row) =>
     row % 7 === 0
       ? null
-      : `这是第 ${row + 1} 行的长文本内容,用于验证截断与悬停展示。`,
+      : i18n.t("dataCatalog.preview.mockLongText", { row: row + 1 }),
   varchar: (row) => `value_${row + 1}`,
 };
 

@@ -233,6 +233,8 @@ export const dataCatalogZhCN = {
     preview: {
       summary: "展示 {{count}} 行 · 总计 {{total}} 行",
       empty: "没有数据",
+      mockLongText:
+        "\u8fd9\u662f\u7b2c {{row}} \u884c\u7684\u957f\u6587\u672c\u5185\u5bb9\uff0c\u7528\u4e8e\u9a8c\u8bc1\u622a\u65ad\u4e0e\u60ac\u505c\u5c55\u793a\u3002",
     },
     build: {
       submit: "开始构建",

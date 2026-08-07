@@ -244,6 +244,8 @@ export const dataCatalogEnUS = {
     preview: {
       summary: "Showing {{count}} rows · {{total}} rows total",
       empty: "No data",
+      mockLongText:
+        "This is the long text content in row {{row}}, used to verify truncation and hover display.",
     },
     build: {
       submit: "Start Build",
