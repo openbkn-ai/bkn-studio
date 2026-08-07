@@ -8,6 +8,7 @@
 import { ApiOutlined, CopyOutlined } from "@ant-design/icons";
 import { Modal, Spin, Tabs } from "antd";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
 import { createClaudeCodeMcpCommand, createMcpRemoteJsonConfig } from "@/modules/knowledge-network/services/mcp-client-config";
@@ -17,7 +18,7 @@ import styles from "./ExperienceScene.module.css";
 const JSON_TOKEN_RE = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
 
 function JsonHighlight({ text }: { text: string }) {
-  // 超大响应不逐 token 渲染，避免卡顿。
+  // Avoid token-by-token rendering for very large responses.
   if (text.length > 200_000) return <>{text}</>;
   const nodes: ReactNode[] = [];
   let last = 0;
@@ -28,7 +29,7 @@ function JsonHighlight({ text }: { text: string }) {
     if (m.index > last) nodes.push(text.slice(last, m.index));
     if (m[1] !== undefined) {
       if (m[2] !== undefined) {
-        // 字符串后紧跟冒号 → 属性名（key）
+        // A string followed by a colon is a JSON property key.
         nodes.push(<span key={key++} className={styles.jKey}>{m[1]}</span>);
         nodes.push(<span key={key++} className={styles.jPunct}>{m[2]}</span>);
       } else {
@@ -45,25 +46,27 @@ function JsonHighlight({ text }: { text: string }) {
   return <>{nodes}</>;
 }
 
-/* ============================ API Key 掩码输入（失焦掩码头+尾，聚焦显全编辑） ============================ */
+/* ============================ Code blocks ============================ */
 
 function CodeBlock({
   title,
   code,
   json,
   onCopy,
+  copyLabel,
 }: {
   title: string;
   code: string;
   json?: boolean;
   onCopy: () => void;
+  copyLabel: string;
 }) {
   return (
     <div className={styles.codeBlk}>
       <div className={styles.codeBlkHead}>
         <span>{title}</span>
         <button type="button" className={styles.mini} onClick={onCopy}>
-          <CopyOutlined /> 复制
+          <CopyOutlined /> {copyLabel}
         </button>
       </div>
       <pre className={styles.codeBlkPre}>{json ? <JsonHighlight text={code} /> : code}</pre>
@@ -84,24 +87,28 @@ export function McpSetupModal({
   onManageApiKey: () => void;
   copy: (text: string, label?: string) => void;
 }) {
-  const tk = "bak_<在个人中心 API Key 签发的长期 Key>";
+  const { t } = useTranslation();
+  const tk = t("knowledgeNetwork.contextLoaderPanel.appKey.placeholder");
   const jsonConfig = createMcpRemoteJsonConfig(mcpUrl, tk);
   const claudeCli = createClaudeCodeMcpCommand(mcpUrl, tk);
 
   return (
-    <Modal open={open} onCancel={onClose} footer={null} width={680} title="接入 MCP（Claude Code / Cursor）">
+    <Modal open={open} onCancel={onClose} footer={null} width={680} title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.title")}>
       <div className={styles.guideRoot}>
       <p className={styles.guideNote}>
-        接入指南用于<b>外部 MCP 客户端</b>（Cursor、Claude Code 等）。鉴权填 <b>API Key</b>（<code>bak_</code> 开头的长期 Key），
-        在个人中心统一签发和管理。
+        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalPrefix")}<b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalClient")}</b>
+        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalMiddle")}<b>API Key</b>
+        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalSuffix")}
         <button type="button" className={styles.guideLink} onClick={onManageApiKey}>
-          签发 API Key →
+          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.issueApiKey")}
         </button>
       </p>
       <p className={styles.guideNote}>
-        <b>和本页登录态的差异：</b>本页调试用的是你的<b>会话 token</b>（<code>ory_at_</code>，几十分钟就过期，只够即时调试）；
-        外部客户端要长期可用，必须用 <b>API Key</b>（<code>bak_</code>，长期有效、可撤销、可轮换）。两者都放同一个
-        <code>Authorization: Bearer</code> 头，网关按前缀自动识别。
+        <b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceTitle")}</b>
+        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferencePrefix")}<b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.sessionToken")}</b>
+        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceMiddle")}<b>API Key</b>
+        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceSuffix")}<code>Authorization: Bearer</code>
+        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceEnd")}
       </p>
       <Tabs
         defaultActiveKey="claude"
@@ -111,12 +118,18 @@ export function McpSetupModal({
             label: "Claude Code",
             children: (
               <>
-                <CodeBlock title="① CLI 一行接入" code={claudeCli} onCopy={() => copy(claudeCli, "命令已复制")} />
                 <CodeBlock
-                  title="② 或写入项目 .mcp.json"
+                  title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cliTitle")}
+                  code={claudeCli}
+                  onCopy={() => copy(claudeCli, t("knowledgeNetwork.contextLoaderPanel.mcpSetup.commandCopied"))}
+                  copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                />
+                <CodeBlock
+                  title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.projectConfigTitle")}
                   code={jsonConfig}
                   json
-                  onCopy={() => copy(jsonConfig, "配置已复制")}
+                  onCopy={() => copy(jsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpSetup.configCopied"))}
+                  copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
                 />
               </>
             ),
@@ -127,17 +140,31 @@ export function McpSetupModal({
             children: (
               <>
                 <p className={styles.guideNote}>
-                  写入 <code>~/.cursor/mcp.json</code>（全局）或项目内 <code>.cursor/mcp.json</code>，重启 Cursor 后生效。
+                  {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintPrefix")}<code>~/.cursor/mcp.json</code>
+                  {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintMiddle")}<code>.cursor/mcp.json</code>
+                  {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintSuffix")}
                 </p>
-                <CodeBlock title="~/.cursor/mcp.json" code={jsonConfig} json onCopy={() => copy(jsonConfig, "配置已复制")} />
+                <CodeBlock
+                  title="~/.cursor/mcp.json"
+                  code={jsonConfig}
+                  json
+                  onCopy={() => copy(jsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpSetup.configCopied"))}
+                  copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                />
               </>
             ),
           },
           {
             key: "generic",
-            label: "通用 (mcp.json)",
+            label: t("knowledgeNetwork.contextLoaderPanel.mcpSetup.genericTab"),
             children: (
-              <CodeBlock title="mcpServers 配置" code={jsonConfig} json onCopy={() => copy(jsonConfig, "配置已复制")} />
+              <CodeBlock
+                title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.genericConfigTitle")}
+                code={jsonConfig}
+                json
+                onCopy={() => copy(jsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpSetup.configCopied"))}
+                copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+              />
             ),
           },
         ]}
@@ -147,15 +174,27 @@ export function McpSetupModal({
   );
 }
 
-/* ============================ 工具发现（tools/list：动态发现 + 与本地硬编码漂移对照） ============================ */
-function SchemaPre({ title, value, copy }: { title: string; value: unknown; copy: (text: string, label?: string) => void }) {
+/* ============================ Tool discovery ============================ */
+function SchemaPre({
+  title,
+  value,
+  copy,
+  copyLabel,
+  copiedLabel,
+}: {
+  title: string;
+  value: unknown;
+  copy: (text: string, label?: string) => void;
+  copyLabel: string;
+  copiedLabel: string;
+}) {
   const text = JSON.stringify(value ?? {}, null, 2);
   return (
     <div className={styles.toolSchema}>
       <div className={styles.codeBlkHead}>
         <span>{title}</span>
-        <button type="button" className={styles.mini} onClick={() => copy(text, `${title} 已复制`)}>
-          <CopyOutlined /> 复制
+        <button type="button" className={styles.mini} onClick={() => copy(text, copiedLabel)}>
+          <CopyOutlined /> {copyLabel}
         </button>
       </div>
       <pre className={styles.codeBlkPre}>
@@ -182,14 +221,17 @@ export function ToolDiscoveryModal({
   onReload: () => void;
   copy: (text: string, label?: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
-    <Modal open={open} onCancel={onClose} footer={null} width={720} title="工具发现 · tools/list">
+    <Modal open={open} onCancel={onClose} footer={null} width={720} title={t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.title")}>
       <div className={styles.guideRoot}>
         <p className={styles.guideNote}>
-          直接向 MCP <code>tools/list</code> 拉取所有线上工具及其 <code>inputSchema</code> / <code>outputSchema</code>。
-          左侧 MCP 接口列表已<b>实时由 tools/list 驱动</b>（后端新增工具自动出现）；这里查看各工具完整 schema。
+          {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionPrefix")}<code>tools/list</code>
+          {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionMiddle")}<code>inputSchema</code> / <code>outputSchema</code>
+          {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionSuffix")}<b>{t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.realtimeList")}</b>
+          {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionEnd")}
           <button type="button" className={styles.guideLink} onClick={onReload}>
-            重新拉取 →
+            {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.reload")}
           </button>
         </p>
         {loading ? (
@@ -200,14 +242,14 @@ export function ToolDiscoveryModal({
           <div className={styles.resError}>
             <ApiOutlined />
             <div>
-              <strong>拉取失败</strong>
+              <strong>{t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.loadFailed")}</strong>
               <p>{error}</p>
             </div>
           </div>
         ) : tools ? (
           <>
             <div className={styles.driftRow}>
-              <span className={styles.driftStat}>线上 {tools.length} 个</span>
+              <span className={styles.driftStat}>{t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.onlineCount", { count: tools.length })}</span>
             </div>
             <div className={styles.toolList}>
               {tools.map((tool) => (
@@ -216,9 +258,21 @@ export function ToolDiscoveryModal({
                     <span className={styles.toolName}>{tool.name}</span>
                     {tool.description ? <span className={styles.toolDesc}>{tool.description}</span> : null}
                   </summary>
-                  <SchemaPre title="inputSchema" value={tool.inputSchema} copy={copy} />
+                  <SchemaPre
+                    title="inputSchema"
+                    value={tool.inputSchema}
+                    copy={copy}
+                    copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                    copiedLabel={t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.schemaCopied", { title: "inputSchema" })}
+                  />
                   {tool.outputSchema !== undefined ? (
-                    <SchemaPre title="outputSchema" value={tool.outputSchema} copy={copy} />
+                    <SchemaPre
+                      title="outputSchema"
+                      value={tool.outputSchema}
+                      copy={copy}
+                      copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                      copiedLabel={t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.schemaCopied", { title: "outputSchema" })}
+                    />
                   ) : null}
                 </details>
               ))}
@@ -229,5 +283,3 @@ export function ToolDiscoveryModal({
     </Modal>
   );
 }
-
-/* ============================ 数据浏览器（右侧抽屉：schema + 资源 id，点击填入请求体） ============================ */
