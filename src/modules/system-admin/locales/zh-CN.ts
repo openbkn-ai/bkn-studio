@@ -453,6 +453,7 @@ export const systemAdminZhCN = {
         max_models: "模型数上限",
         max_connectors: "数据连接数上限",
       },
+      viewSubscription: "查看授权范围",
       status: {
         trial: "试用期",
         unlicensed: "未导入授权",

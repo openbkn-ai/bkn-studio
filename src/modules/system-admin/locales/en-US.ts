@@ -455,6 +455,7 @@ export const systemAdminEnUS = {
         max_models: "Max Models",
         max_connectors: "Max Data Connections",
       },
+      viewSubscription: "View entitlements",
       status: {
         trial: "Trial period",
         unlicensed: "No licence imported",

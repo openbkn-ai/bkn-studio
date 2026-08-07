@@ -8,6 +8,7 @@
 import {
   CloudSyncOutlined,
   CopyOutlined,
+  CrownOutlined,
   DeleteOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
@@ -17,6 +18,7 @@ import { Alert, Empty, Input, Spin, Tag } from "antd";
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { LicenseStateBanner } from "@/framework/entitlement/LicenseStateBanner";
@@ -87,6 +89,7 @@ function copySupported() {
 
 export function LicenseManagementScene() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { message, modal } = useAppServices();
   const refreshEntitlement = useRefreshEntitlement();
 
@@ -329,6 +332,18 @@ export function LicenseManagementScene() {
           </div>
         </div>
         <div className={styles.toolbarActions}>
+          {/*
+            这一页答的是「这张证是什么、怎么导」;买了哪些能力、还能买什么在版本与订阅页。
+            两页互为上下文,但那一页在菜单里没有入口,所以这里给一条明路。
+          */}
+          <AppButton
+            icon={<CrownOutlined />}
+            onClick={() => {
+              void navigate("/system/subscription");
+            }}
+          >
+            {t("systemAdmin.license.viewSubscription")}
+          </AppButton>
           <AppButton icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
             {t("common.refresh")}
           </AppButton>

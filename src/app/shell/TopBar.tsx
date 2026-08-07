@@ -113,7 +113,9 @@ export function TopBar() {
 
     /*
       档位入口。快照没到就不放这一项:先显示「社区版」再跳成「企业版」,比晚半秒出现更糟。
-      「升级」尾巴只在无生效授权时出现——已经买了的人不需要天天看见一条广告。
+
+      「升级」尾巴按「还有没有更高的档」出现,而不是按「有没有证」:专业版客户也可能想
+      看企业档,有证不等于到顶。只有行业版(最高档)不再提示。
     */
     if (snapshot) {
       items.push({
@@ -122,7 +124,7 @@ export function TopBar() {
         label: (
           <span className="console-user-menu-edition">
             <span>{t(`common.entitlement.editions.${entitlement.edition}`)}</span>
-            {entitlement.licensed ? null : (
+            {entitlement.edition === "industry" ? null : (
               <span className="console-user-menu-edition-cta">
                 {t("common.entitlement.upgrade")}
               </span>
@@ -172,7 +174,6 @@ export function TopBar() {
   }, [
     canViewInstallStatus,
     entitlement.edition,
-    entitlement.licensed,
     installStatusUrl,
     navigate,
     runtimeConfig.mode,
