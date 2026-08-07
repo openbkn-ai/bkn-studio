@@ -32,7 +32,15 @@ export const subscriptionZhCN = {
       },
       perm_object_level: { description: "对象级授权和高级角色控制", name: "对象级授权" },
       rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
-      semantic_task: { description: "面向业务语义的理解任务编排与执行", name: "语义理解任务" },
+      semantic_task: {
+        bullets: {
+          b1: "自动识别字段业务含义,批量补齐对象类与属性的语义描述",
+          b2: "结果按置信度分档,支持只补空值或全量覆盖两种落库方式",
+          b3: "任务化执行,可查看进度、结果明细与应用记录",
+        },
+        description: "面向业务语义的理解任务编排与执行",
+        name: "语义理解任务",
+      },
       source_sync: { description: "跟踪数据源变化并自动更新", name: "数据源变化跟踪" },
     },
     categories: {

@@ -11,6 +11,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -29,6 +32,7 @@ function formatTime(value: number) {
 }
 
 export function ResourceSemanticUnderstandingPanel({ active, resource }: { active: boolean; resource: CatalogResource }) {
+  const [semanticUpgradeOpen, setSemanticUpgradeOpen] = useState(false);
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const [form] = Form.useForm<CreateSemanticUnderstandingTaskPayload>();
@@ -109,7 +113,15 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       <Space>
         <AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton>
         <PermissionGate permissions="resource:task_manage">
-          <AppButton icon={<PlusOutlined />} type="primary" onClick={() => { form.setFieldsValue({ applyMode: "fill_empty", confidenceThreshold: 0.75, includeSampleRows: false }); setOpen(true); }}>{t("dataCatalog.semanticWorkspace.create")}</AppButton>
+          {/*
+            语义理解任务是专业档能力,但服务端今天还没挡(登记表 active、EE 侧未落地),
+            所以先在前端拦:按钮照常可点,点开是升级引导而不是发起任务——发出去也只会
+            让客户以为自己买到了。等服务端按档位判定,这里换成 CapabilityGate 即可。
+          */}
+          <AppButton icon={<PlusOutlined />} type="primary" onClick={() => setSemanticUpgradeOpen(true)}>
+            {t("dataCatalog.semanticWorkspace.create")}
+            <EditionBadge edition="professional" />
+          </AppButton>
         </PermissionGate>
       </Space>
     </section>
@@ -130,5 +142,6 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       </Form>
     </Modal>
     {detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}
+    <CapabilityUpgradeDialog capability={CAPABILITIES.SEMANTIC_TASK} minEdition="professional" onClose={() => setSemanticUpgradeOpen(false)} open={semanticUpgradeOpen} />
   </div>;
 }

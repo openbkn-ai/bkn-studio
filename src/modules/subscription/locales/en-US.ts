@@ -43,6 +43,11 @@ export const subscriptionEnUS = {
         name: "Custom roles and permissions",
       },
       semantic_task: {
+        bullets: {
+          b1: "Infers the business meaning of columns and fills in semantic descriptions in bulk",
+          b2: "Results are scored by confidence; apply to empty fields only, or overwrite",
+          b3: "Runs as a task with progress, per-field results and an apply history",
+        },
         description: "Authoring and execution of business-semantic understanding tasks",
         name: "Semantic understanding tasks",
       },

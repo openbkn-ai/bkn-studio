@@ -34,6 +34,10 @@ export const CAPABILITIES = {
   BUSINESS_PROVENANCE: "business_provenance",
   /** 认证/高级数据源连接器(SQL Server 等商业库)。专业档起,由 Vega 实现。 */
   CONNECTOR_CERTIFIED: "connector_certified",
+  /** 语义理解任务。专业档起,由数据目录侧实现——服务端今天不挡,前端先标先拦。 */
+  SEMANTIC_TASK: "semantic_task",
+  /** 数据源变化跟踪与自动更新。专业档起,同样是前端先行的门控。 */
+  SOURCE_SYNC: "source_sync",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];

@@ -30,7 +30,9 @@ import { usePageState } from "@/framework/hooks/use-page-state";
 
 import { CapabilityGate } from "@/framework/entitlement/CapabilityGate";
 
-import { CapabilityUpgradeTooltip } from "@/framework/entitlement/CapabilityUpgradeTooltip";
+import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
+
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 
@@ -138,6 +140,8 @@ function formatTime(value?: number) {
 
 
 export function RoleManagementScene() {
+  const [rbacUpgradeOpen, setRbacUpgradeOpen] = useState(false);
+
 
   const { t } = useTranslation();
 
@@ -712,11 +716,18 @@ export function RoleManagementScene() {
                 capability={CAPABILITIES.RBAC_BASIC}
                 upgrade={
                   <PermissionGate permissions="admin-role:create">
-                    <CapabilityUpgradeTooltip>
-                      <AppButton disabled icon={<PlusOutlined />} type="primary">
-                        {t("systemAdmin.roles.create")}
-                      </AppButton>
-                    </CapabilityUpgradeTooltip>
+                    {/*
+                      不置灰成一个死按钮:按钮照常可点,点开讲清这项是什么、要哪一档。
+                      徽标画在按钮里,一眼看出这是付费能力而不是坏了。
+                    */}
+                    <AppButton
+                      icon={<PlusOutlined />}
+                      onClick={() => setRbacUpgradeOpen(true)}
+                      type="primary"
+                    >
+                      {t("systemAdmin.roles.create")}
+                      <EditionBadge edition="professional" />
+                    </AppButton>
                   </PermissionGate>
                 }
               >
@@ -920,6 +931,18 @@ export function RoleManagementScene() {
         />
 
       ) : null}
+
+    <CapabilityUpgradeDialog
+
+      capability={CAPABILITIES.RBAC_BASIC}
+
+      minEdition="professional"
+
+      onClose={() => setRbacUpgradeOpen(false)}
+
+      open={rbacUpgradeOpen}
+
+    />
 
     </>
 
