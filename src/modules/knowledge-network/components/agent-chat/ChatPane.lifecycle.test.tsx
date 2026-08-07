@@ -15,7 +15,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import "@/app/locales/i18n";
+import i18n from "@/app/locales/i18n";
 import type { BknLifecycle, BknTurn } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
@@ -121,7 +121,8 @@ function renderPane(options: { profile?: PaneProfile; toolDefs?: McpToolDef[] } 
   return ref;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage("zh-CN");
   localStorage.clear();
   vi.clearAllMocks();
   buildAgentTools.mockReturnValue({});
