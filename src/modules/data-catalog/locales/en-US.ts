@@ -143,6 +143,7 @@ export const dataCatalogEnUS = {
     },
     catalog: {
       notFound: "No resources found for this connection; it may have been deleted",
+      selectPhysicalDescription: "Select a data connection from the physical data source tree.",
       resourceSection: "Resources",
       goConnection: "Data Connection",
       goScan: "Discover Tasks",
