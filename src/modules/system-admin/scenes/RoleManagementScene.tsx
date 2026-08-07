@@ -28,6 +28,12 @@ import { useAppServices } from "@/framework/context/use-app-services";
 
 import { usePageState } from "@/framework/hooks/use-page-state";
 
+import { CapabilityGate } from "@/framework/entitlement/CapabilityGate";
+
+import { CapabilityUpgradeTooltip } from "@/framework/entitlement/CapabilityUpgradeTooltip";
+
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -560,6 +566,9 @@ export function RoleManagementScene() {
 
             </PermissionGate>
 
+            {/* 行内操作直接藏,不置灰:每行都挂一排点不动的按钮只是噪音,想买的
+                信息由工具栏那个入口给。 */}
+            <CapabilityGate capability={CAPABILITIES.RBAC_BASIC}>
             <PermissionGate permissions="admin-role:edit">
 
               {role.builtin ? null : isSuperAdminRole(role) ? (
@@ -593,9 +602,11 @@ export function RoleManagementScene() {
               )}
 
             </PermissionGate>
+            </CapabilityGate>
 
             {!role.builtin ? (
 
+              <CapabilityGate capability={CAPABILITIES.RBAC_BASIC}>
               <PermissionGate permissions="admin-role:delete">
 
                 <AppButton
@@ -659,6 +670,7 @@ export function RoleManagementScene() {
                 </AppButton>
 
               </PermissionGate>
+              </CapabilityGate>
 
             ) : null}
 
@@ -688,23 +700,44 @@ export function RoleManagementScene() {
 
             <div className={styles.toolbarActions}>
 
-              <PermissionGate permissions="admin-role:create">
+              {/*
+                档位包在权限外层:集群没买 rbac_basic 时,谁的权限齐全都不该看到写
+                入口——档位是集群属性,权限是人的属性。
 
-                <AppButton
+                这里(工具栏,独一份)置灰+提示而不是藏掉:它是这套付费能力最显眼的
+                入口,客户看得见才知道有东西可买。行内操作(编辑/删除)反过来直接藏,
+                每行挂两个置灰按钮只是噪音。
+              */}
+              <CapabilityGate
+                capability={CAPABILITIES.RBAC_BASIC}
+                upgrade={
+                  <PermissionGate permissions="admin-role:create">
+                    <CapabilityUpgradeTooltip>
+                      <AppButton disabled icon={<PlusOutlined />} type="primary">
+                        {t("systemAdmin.roles.create")}
+                      </AppButton>
+                    </CapabilityUpgradeTooltip>
+                  </PermissionGate>
+                }
+              >
+                <PermissionGate permissions="admin-role:create">
 
-                  icon={<PlusOutlined />}
+                  <AppButton
 
-                  onClick={() => setRoleDrawer({ open: true, role: null })}
+                    icon={<PlusOutlined />}
 
-                  type="primary"
+                    onClick={() => setRoleDrawer({ open: true, role: null })}
 
-                >
+                    type="primary"
 
-                  {t("systemAdmin.roles.create")}
+                  >
 
-                </AppButton>
+                    {t("systemAdmin.roles.create")}
 
-              </PermissionGate>
+                  </AppButton>
+
+                </PermissionGate>
+              </CapabilityGate>
 
               <AppButton
 
