@@ -26,6 +26,14 @@ export type ConsoleNavItem = {
    */
   capability?: string;
   /**
+   * 展示用的档位标签(「这项从哪一档起提供」),**不参与显隐**。
+   *
+   * 与 capability 分工:capability 管能不能用(藏 / 锁 / 放行),这个只管标。用于两种
+   * capability 挡不了的面——整页是社区能力、只有写操作收费的(角色管理),以及由别的
+   * 服务实现、bkn-safe 的 capabilities[] 永远报不出来的(业务溯源,ee-design.md §6)。
+   */
+  paidEdition?: Edition;
+  /**
    * 「装了没买」时由 filterNavByCapability 打上,菜单据此渲染档位徽标。声明时不要手写
    * ——它是过滤的产物,不是配置项。
    */

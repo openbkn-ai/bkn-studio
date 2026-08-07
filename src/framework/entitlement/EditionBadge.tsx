@@ -1,0 +1,36 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import { Tag, Tooltip } from "antd";
+import { useTranslation } from "react-i18next";
+
+import type { Edition } from "@/framework/entitlement/edition";
+
+/**
+ * 「这项能力从哪一档起提供」的标签。
+ *
+ * **这是产品目录里的事实,不是运行期判定**——它回答「要买哪一档」,不回答「你现在能不能
+ * 用」。所以它不看快照,也不随档位消失:一个已经买了企业版的客户看到「Enterprise」标签,
+ * 读到的仍是「这项属于企业档」,并没有错。
+ *
+ * 能不能用由 `capabilityState` 决定(菜单藏/锁、按钮置灰、路由守卫)。两者刻意分开:
+ * 有些面**整页是社区能力、只有写操作收费**(角色管理),整项藏掉是错的;有些面由别的
+ * 服务实现,bkn-safe 的 `capabilities[]` 永远报不出来(业务溯源),拿它门控会永久隐藏
+ * (ee-design.md §6「A 答不了 B」)。这两种都只能标,不能挡。
+ */
+export function EditionBadge({ edition }: { edition: Edition }) {
+  const { t } = useTranslation();
+  const label = t(`common.entitlement.editionsShort.${edition}`);
+
+  return (
+    <Tooltip title={t("common.entitlement.paidHint", { edition: t(`common.entitlement.editions.${edition}`) })}>
+      <Tag className="console-edition-badge" color={edition === "professional" ? "gold" : "purple"}>
+        {label}
+      </Tag>
+    </Tooltip>
+  );
+}

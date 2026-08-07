@@ -71,6 +71,7 @@ export const commonEnUS = {
         'This is a high-risk action. Type "{{name}}" to confirm deletion.',
     },
     entitlement: {
+      paidHint: "Available from {{edition}}",
       // Edition gating. Kept apart from noPermission on purpose: "you may not"
       // sends the user to an administrator, "this deployment did not buy it"
       // sends them to sales. One sentence covering both helps neither.

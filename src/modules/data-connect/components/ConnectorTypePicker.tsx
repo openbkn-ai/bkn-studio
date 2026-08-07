@@ -16,7 +16,9 @@ import {
   getConnectorTemplateMeta,
   getConnectorTypeTags,
   getPrimaryDataSourceFamilies,
+  isCertifiedConnectorType,
 } from "@/modules/data-connect/lib/connector-template";
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 import styles from "./ConnectorTypePicker.module.css";
@@ -131,6 +133,14 @@ export function ConnectorTypePicker({
                     <strong>{item.name}</strong>
                     <span className={styles.badgeGroup}>
                       <span className={styles.badge}>{templateMeta.label}</span>
+                      {/*
+                        认证连接器(SQL Server 等商业库)属于专业档能力
+                        `connector_certified`。这里只标不挡:能不能建连由服务端判,
+                        前端把入口藏掉反而让客户不知道有这个东西可买。
+                      */}
+                      {isCertifiedConnectorType(item.type) ? (
+                        <EditionBadge edition="professional" />
+                      ) : null}
                       {!item.enabled ? (
                         <span className={styles.disabledBadge}>
                           {t("dataConnect.connectorTypeUnavailable")}

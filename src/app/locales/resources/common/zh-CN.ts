@@ -69,6 +69,7 @@ export const commonZhCN = {
       typeNameToConfirm: "此操作高危,请输入名称「{{name}}」以确认删除。",
     },
     entitlement: {
+      paidHint: "该能力自 {{edition}} 起提供",
       // 档位门控的文案。与 noPermission 分开:权限不足是「你不行」,档位不足是
       // 「这套部署没买」——前者找管理员,后者找商务,混成一句话谁都不知道该找谁。
       upgradeHint: "该功能属于付费版本,当前集群的授权未包含它",
