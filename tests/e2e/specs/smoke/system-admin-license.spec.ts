@@ -22,7 +22,9 @@ test.describe("system-admin license management", () => {
     await expect(main.getByText("授权管理", { exact: true })).toBeVisible();
     await expect(main.getByText("设备指纹", { exact: true })).toBeVisible();
     await expect(main.getByText("激活方式")).toBeVisible();
-    await expect(main.getByRole("heading", { name: "授权范围" })).toBeVisible();
+    // 授权范围不再印在本页——空证书时那块只会显示「0 项能力 / 0 项限额」,看买到了
+    // 什么改走工具栏入口,跳版本与订阅页。
+    await expect(main.getByRole("button", { name: "查看授权范围" })).toBeVisible();
 
     await expect(page.getByRole("button", { name: /权限管理/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /授权管理/ })).toBeVisible();

@@ -77,6 +77,30 @@ vi.mock("@/modules/data-connect/services/data-connect.service", () => ({
   updateDataConnectRecord: vi.fn(),
 }));
 
+/**
+ * 走完整卡片选择 + 连接器表单的两条用例,本机就要 3s 出头,占掉默认 10s 超时的三分之一。
+ * CI 的 runner 慢上数倍,那点余量不够——已经因此红过一次。这两条是真的重,不是卡住了。
+ */
+const HEAVY_SCENE_TIMEOUT_MS = 30_000;
+
+/**
+ * 按名字取连接器卡片。
+ *
+ * 走 `findByText` 再上溯到按钮,而不是 `findByRole("button", { name })`:后者要对整片
+ * 卡片逐个算 accessible name,而且每轮轮询重算一次——本机单条查询就要 3s,CI 的机器慢
+ * 上数倍,直接把用例顶穿 10s 超时。
+ */
+async function findConnectorCard(name: string) {
+  const label = await screen.findByText(name);
+  const card = label.closest("button");
+
+  if (!card) {
+    throw new Error(`connector card not found: ${name}`);
+  }
+
+  return card;
+}
+
 describe("DataConnectFormScene · connection preflight", () => {
   beforeAll(() => {
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -351,9 +375,7 @@ describe("DataConnectFormScene · connection preflight", () => {
 
     render(<DataConnectFormScene mode="create" />);
 
-    const sqlServerButton = await screen.findByRole("button", {
-      name: /SQL Server/,
-    });
+    const sqlServerButton = await findConnectorCard("SQL Server");
 
     expect(sqlServerButton.hasAttribute("disabled")).toBe(false);
     expect(sqlServerButton.textContent).toContain("关系型数据库");
@@ -371,7 +393,7 @@ describe("DataConnectFormScene · connection preflight", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
 
     expect(screen.queryByPlaceholderText("例如 供应链主库")).toBeNull();
-  });
+  }, HEAVY_SCENE_TIMEOUT_MS);
 
   it("creates a SQL Server catalog with the default port", async () => {
     permissionState.values = new Set(["catalog:create"]);
@@ -395,7 +417,7 @@ describe("DataConnectFormScene · connection preflight", () => {
 
     render(<DataConnectFormScene mode="create" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /SQL Server/ }));
+    fireEvent.click(await findConnectorCard("SQL Server"));
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
 
     fireEvent.change(screen.getByPlaceholderText("例如 供应链主库"), {
@@ -436,7 +458,7 @@ describe("DataConnectFormScene · connection preflight", () => {
         { skipErrorToast: true },
       );
     });
-  });
+  }, HEAVY_SCENE_TIMEOUT_MS);
 });
 
 function connectorField(
