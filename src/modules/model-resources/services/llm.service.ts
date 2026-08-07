@@ -30,7 +30,7 @@ type BackendLlmModel = {
   model_series: string;
   max_model_len?: number;
   model_parameters?: number;
-  /** 列表用 f_default 标默认（1 = 当前系统默认）。旧字段 default 作兜底。 */
+  /** Lists use f_default for the current system default; legacy default is a fallback. */
   f_default?: number;
   default?: boolean;
   quota?: boolean;
@@ -258,9 +258,9 @@ export async function updateLlmModel(payload: LlmSavePayload) {
 }
 
 /**
- * 每个大模型当前账号可执行的操作（来自 /me/permissions，对象类型 large_model）。
- * scoped 响应带 is_admin，命中时 operationsFor 返回全量操作（含 modify），
- * 据此决定「设为默认 / 取消默认」等高危操作是否可见。
+ * Operations the current account can perform on each large model.
+ * Scoped responses include is_admin; when true, operationsFor returns full actions,
+ * including modify, so high-risk default-model actions can be shown.
  */
 export async function getLlmItemPermissions(
   modelIds: string[],
@@ -285,17 +285,17 @@ export async function getLlmItemPermissions(
 
     return Object.fromEntries(items.map((item) => [item.id, item.operation ?? []]));
   } catch (error) {
-    // scoped 权限查询失败(网络/网关)时按钮全隐是 fail-closed 的安全默认,但这与
-    // 「确无权限」难分。http 层已弹通用错误 toast,此处留 debug 便于排障区分二者。
+    // Fail closed when scoped permission lookup fails. The http layer shows a toast,
+    // and this debug log distinguishes lookup failure from a real lack of permission.
     console.debug("[model-resources] getLlmItemPermissions scoped fetch failed", error);
     return {};
   }
 }
 
 /**
- * 设置 / 清除某大模型为系统默认（管理员）。设默认按 model_id，不是名称。
- * - asDefault=true：设为默认；后端取消原默认（互斥）。ContextLoader 之后自动使用该默认模型。
- * - asDefault=false：清除该模型的默认标记，系统回到「无默认」。
+ * Sets or clears a large model as the system default. Defaults are keyed by model_id.
+ * - asDefault=true sets this model as default and clears the previous one.
+ * - asDefault=false clears this model's default flag and leaves the system with no default.
  */
 export async function setDefaultLlmModel(modelId: string, asDefault = true) {
   if (useMock) {
