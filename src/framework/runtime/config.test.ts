@@ -27,4 +27,9 @@ describe("createRuntimeConfig", () => {
     expect(runtimeConfig.theme.primaryColor).toBe("#123456");
     expect(runtimeConfig.router.basename).toBe("/studio");
   });
+
+  it("normalizes runtime locale input", () => {
+    expect(createRuntimeConfig({ locale: "en-GB" }).locale).toBe("en-US");
+    expect(createRuntimeConfig({ locale: "zh_Hans_CN" }).locale).toBe("zh-CN");
+  });
 });

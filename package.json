@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "lint:types": "eslint . --config eslint.config.typechecked.js",
     "test": "vitest",
+    "i18n:scan-hardcoded-zh": "node scripts/scan-hardcoded-zh.mjs",
     "test:execution-factory": "vitest run src/modules/execution-factory",
     "test:execution-factory:e2e": "npm run test:full --prefix tests/e2e",
     "test:execution-factory:e2e:operator": "npm run test:operator --prefix tests/e2e",

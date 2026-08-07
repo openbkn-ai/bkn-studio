@@ -41,7 +41,7 @@ export type RuntimeInput = {
       hide_legacy_execution_factory_menu: boolean;
     }>;
   };
-  locale?: SupportedLocale;
+  locale?: string;
   mode?: "hosted" | "standalone";
   router?: {
     basename?: string;

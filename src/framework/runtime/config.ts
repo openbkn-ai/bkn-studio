@@ -12,6 +12,7 @@ import {
   handleDevAuthFailure,
   shouldUseDevAuth,
 } from "@/framework/auth/dev-auth";
+import { resolveSupportedLocale } from "@/framework/i18n/locale";
 import { refreshOAuthTokens, shouldUseOAuthGate } from "@/framework/auth/oauth";
 import { clearStoredTokens } from "@/framework/auth/token-store";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
@@ -57,9 +58,15 @@ const defaultRuntimeConfig: RuntimeConfig = {
 let runtimeConfig = defaultRuntimeConfig;
 
 export function createRuntimeConfig(runtimeInput: RuntimeInput = {}): RuntimeConfig {
+  const locale = resolveSupportedLocale({
+    deploymentDefaultLocale: defaultRuntimeConfig.locale,
+    runtimeLocale: runtimeInput.locale,
+  });
+
   return {
     ...defaultRuntimeConfig,
     ...runtimeInput,
+    locale,
     auth: {
       tokenManager:
         runtimeInput.auth?.tokenManager ?? defaultRuntimeConfig.auth.tokenManager,
