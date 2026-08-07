@@ -424,7 +424,6 @@ function auditDescriptionItems(
   return [
     {
       key: "createUser",
-      label: "创建人",
       children: formatAuditUserDisplay({
         id: audit?.createUser,
         name: audit?.createUserName,
@@ -434,12 +433,10 @@ function auditDescriptionItems(
     },
     {
       key: "createTime",
-      label: "创建时间",
       children: formatAuditTime(audit?.createTime),
     },
     {
       key: "updateUser",
-      label: "更新人",
       children: formatAuditUserDisplay({
         id: audit?.updateUser,
         name: audit?.updateUserName,
@@ -449,12 +446,10 @@ function auditDescriptionItems(
     },
     {
       key: "updateTime",
-      label: "更新时间",
       children: formatAuditTime(audit?.updateTime),
     },
     {
       key: "releaseUser",
-      label: "发布人",
       children: formatAuditUserDisplay({
         id: audit?.releaseUser,
         name: audit?.releaseUserName,
@@ -464,7 +459,6 @@ function auditDescriptionItems(
     },
     {
       key: "releaseTime",
-      label: "发布时间",
       children: formatAuditTime(audit?.releaseTime),
     },
   ];
