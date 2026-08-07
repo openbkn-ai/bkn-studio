@@ -68,6 +68,15 @@ export const dataCatalogZhCN = {
     emptyDescription: "在数据连接中新建并探查后，即可在此浏览资源并构建索引。",
     backToCatalog: "返回数据目录",
     buildChip: "构建中 · {{count}}",
+    format: {
+      daysAgo: "{{count}} 天前",
+      hoursAgo: "{{count}} 小时前",
+      hundredMillionRows: "{{count}} 亿行",
+      justNow: "刚刚",
+      minutesAgo: "{{count}} 分钟前",
+      rows: "{{count}} 行",
+      tenThousandRows: "{{count}} 万行",
+    },
     kind: {
       physical: "物理数据源",
       logical: "逻辑分组",

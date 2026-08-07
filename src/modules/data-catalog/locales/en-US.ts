@@ -72,6 +72,15 @@ export const dataCatalogEnUS = {
       "Create and discover a connection first, then browse resources and build indexes here.",
     backToCatalog: "Back to Data Directory",
     buildChip: "Building · {{count}}",
+    format: {
+      daysAgo: "{{count}}d ago",
+      hoursAgo: "{{count}}h ago",
+      hundredMillionRows: "{{count}} rows",
+      justNow: "just now",
+      minutesAgo: "{{count}}m ago",
+      rows: "{{count}} rows",
+      tenThousandRows: "{{count}} rows",
+    },
     kind: {
       physical: "Physical Data Source",
       logical: "Logical Group",

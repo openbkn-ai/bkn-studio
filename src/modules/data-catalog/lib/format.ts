@@ -5,25 +5,51 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export function formatCount(value: number) {
-  return value.toLocaleString("en-US");
+import i18n from "@/app/locales/i18n";
+
+export function formatCount(value: number, locale = i18n.language) {
+  return value.toLocaleString(locale || "en-US");
 }
 
 function trimUnitValue(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
 }
 
-export function formatRowCount(value: number) {
+export function formatRowCount(value: number, locale = i18n.language) {
   if (!Number.isFinite(value) || value <= 0) {
     return "-";
   }
+  const compactUnit = locale.startsWith("zh")
+    ? compactChineseRowUnit(value)
+    : null;
+  if (compactUnit) {
+    return i18n.t(`dataCatalog.format.${compactUnit.key}`, {
+      count: compactUnit.value,
+      defaultValue: "{{count}} rows",
+      lng: locale,
+    });
+  }
+  return i18n.t("dataCatalog.format.rows", {
+    count: formatCount(value, locale),
+    defaultValue: "{{count}} rows",
+    lng: locale,
+  });
+}
+
+function compactChineseRowUnit(value: number) {
   if (value >= 100_000_000) {
-    return `${trimUnitValue(value / 100_000_000)} 亿行`;
+    return {
+      key: "hundredMillionRows",
+      value: trimUnitValue(value / 100_000_000),
+    };
   }
   if (value >= 10_000) {
-    return `${trimUnitValue(value / 10_000)} 万行`;
+    return {
+      key: "tenThousandRows",
+      value: trimUnitValue(value / 10_000),
+    };
   }
-  return `${formatCount(value)} 行`;
+  return null;
 }
 
 export function timeAgo(timestamp: number | null, locale: string) {
@@ -31,21 +57,35 @@ export function timeAgo(timestamp: number | null, locale: string) {
     return "—";
   }
 
-  const zh = locale.startsWith("zh");
   const diffMinutes = Math.round((Date.now() - timestamp) / 60_000);
 
   if (diffMinutes < 1) {
-    return zh ? "刚刚" : "just now";
+    return i18n.t("dataCatalog.format.justNow", {
+      defaultValue: "just now",
+      lng: locale,
+    });
   }
   if (diffMinutes < 60) {
-    return zh ? `${diffMinutes} 分钟前` : `${diffMinutes}m ago`;
+    return i18n.t("dataCatalog.format.minutesAgo", {
+      count: diffMinutes,
+      defaultValue: "{{count}}m ago",
+      lng: locale,
+    });
   }
 
   const diffHours = Math.round(diffMinutes / 60);
   if (diffHours < 24) {
-    return zh ? `${diffHours} 小时前` : `${diffHours}h ago`;
+    return i18n.t("dataCatalog.format.hoursAgo", {
+      count: diffHours,
+      defaultValue: "{{count}}h ago",
+      lng: locale,
+    });
   }
 
   const diffDays = Math.round(diffHours / 24);
-  return zh ? `${diffDays} 天前` : `${diffDays}d ago`;
+  return i18n.t("dataCatalog.format.daysAgo", {
+    count: diffDays,
+    defaultValue: "{{count}}d ago",
+    lng: locale,
+  });
 }
