@@ -7,9 +7,10 @@
 
 import { Input } from "antd";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { AppButton } from "@/framework/ui/common/AppButton";
 import { setDevTokens } from "@/framework/auth/dev-auth";
+import { AppButton } from "@/framework/ui/common/AppButton";
 
 import styles from "./DevTokenSetupForm.module.css";
 
@@ -18,6 +19,7 @@ type DevTokenSetupFormProps = {
 };
 
 export function DevTokenSetupForm({ onSaved }: DevTokenSetupFormProps) {
+  const { t } = useTranslation();
   const [accessToken, setAccessToken] = useState("");
   const [refreshToken, setRefreshToken] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export function DevTokenSetupForm({ onSaved }: DevTokenSetupFormProps) {
     const trimmedAccess = accessToken.trim();
 
     if (!trimmedAccess) {
-      setError("请填写 Access Token");
+      setError(t("auth.devTokenAccessRequired"));
       return;
     }
 
@@ -38,31 +40,29 @@ export function DevTokenSetupForm({ onSaved }: DevTokenSetupFormProps) {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}>开发环境 Token 配置</h1>
-        <p className={styles.description}>
-          当前为远程联调模式（Mock 已关闭）。请粘贴从测试环境获取的 Bearer Token，保存后即可访问
-          API。
-        </p>
+        <h1 className={styles.title}>{t("auth.devTokenTitle")}</h1>
+        <p className={styles.description}>{t("auth.devTokenDescription")}</p>
         <p className={styles.hint}>
-          也可在 <code>.env.local</code> 中设置 <code>VITE_DEV_ACCESS_TOKEN</code>，重启 dev server
-          后自动生效。
+          {t("auth.devTokenEnvPrefix")} <code>.env.local</code>{" "}
+          {t("auth.devTokenEnvMiddle")} <code>VITE_DEV_ACCESS_TOKEN</code>
+          {t("auth.devTokenEnvSuffix")}
         </p>
 
         <label className={styles.field}>
           <span className={styles.label}>Access Token</span>
           <Input.TextArea
             autoSize={{ minRows: 4, maxRows: 8 }}
-            placeholder="粘贴 access_token（不含 Bearer 前缀）"
+            placeholder={t("auth.devTokenAccessPlaceholder")}
             value={accessToken}
             onChange={(event) => setAccessToken(event.target.value)}
           />
         </label>
 
         <label className={styles.field}>
-          <span className={styles.label}>Refresh Token（可选）</span>
+          <span className={styles.label}>{t("auth.devTokenRefreshLabel")}</span>
           <Input.TextArea
             autoSize={{ minRows: 2, maxRows: 4 }}
-            placeholder="可选，用于 token 过期后刷新"
+            placeholder={t("auth.devTokenRefreshPlaceholder")}
             value={refreshToken}
             onChange={(event) => setRefreshToken(event.target.value)}
           />
@@ -71,7 +71,7 @@ export function DevTokenSetupForm({ onSaved }: DevTokenSetupFormProps) {
         {error ? <p className={styles.error}>{error}</p> : null}
 
         <AppButton type="primary" onClick={handleSubmit}>
-          保存并进入
+          {t("auth.devTokenSave")}
         </AppButton>
       </div>
     </div>

@@ -49,7 +49,7 @@ const mockApiKeys: BackendApiKey[] = [
   {
     id: "mock-1",
     key_id: "b3ffa7f4mock",
-    name: "我的 Cursor",
+    name: "My Cursor",
     masked: "bak_b3ff****mock",
     enabled: true,
     expires_at: "2027-06-26T11:49:59+08:00",
