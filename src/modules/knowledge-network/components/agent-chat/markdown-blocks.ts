@@ -25,10 +25,32 @@ function isListish(line: string): boolean {
   return LIST_RE.test(line) || LIST_CONT_RE.test(line);
 }
 
+/** 从 from 往前找最近的非空行。 */
+function lastNonBlank(lines: readonly string[], from: number): string | undefined {
+  for (let i = from; i >= 0; i--) {
+    if (lines[i].trim() !== "") return lines[i];
+  }
+  return undefined;
+}
+
+/** 从 from 往后找最近的非空行。 */
+function firstNonBlank(lines: readonly string[], from: number): string | undefined {
+  for (let i = from; i < lines.length; i++) {
+    if (lines[i].trim() !== "") return lines[i];
+  }
+  return undefined;
+}
+
 /**
  * 把 Markdown 正文按块级边界（空行）切开。两处不切：
  * - 围栏代码块内部的空行；
  * - loose list 的项间空行（切了会变成两个 <ul>，有序列表还会重新从 1 编号）。
+ *
+ * 已知边界：正文主体是一个长的松散列表时（LLM 答复很常见的「1. …\n\n2. …」），
+ * 整份列表始终是同一个尾块，那一段的重复 parse 并没有消掉，收益显著低于预期。
+ * 这是 loose list 语义逼出来的取舍——切了就断编号——不比切分前差，但别拿
+ * 「已经按块渲染了」当结论去排查这类答复的卡顿。真要根治得让已完成的项单独成块、
+ * 并给续接块补 `start=`，成本远超收益。
  */
 export function splitMarkdownBlocks(text: string): string[] {
   const lines = text.split("\n");
@@ -62,8 +84,10 @@ export function splitMarkdownBlocks(text: string): string[] {
 
     if (line.trim() === "") {
       // 空行是块边界，除非它夹在同一个 loose list 的两个列表项之间。
-      const prev = [...cur].reverse().find((l) => l.trim() !== "");
-      const next = lines.slice(i + 1).find((l) => l.trim() !== "");
+      // 前后各扫一次找最近的非空行，不切数组：这函数在流式热路径上每个 token 跑一次，
+      // 拷贝版本会给它自己加一个二次项。
+      const prev = lastNonBlank(cur, cur.length - 1);
+      const next = firstNonBlank(lines, i + 1);
       if (prev && next && isListish(prev) && isListish(next)) {
         cur.push(line);
         continue;
@@ -111,14 +135,27 @@ export function closeOpenMarkdown(block: string): string {
   if (fence !== null) return `${block}${block.endsWith("\n") ? "" : "\n"}${fence}`;
 
   const lines = block.split("\n");
-  const last = lines[lines.length - 1];
-  // 围栏行本身（``` 收尾）不参与行内语法配对，否则那三个反引号会被当成没闭合的行内代码。
-  if (last.trim() === "" || FENCE_RE.test(last)) return block;
+  // 行内语法按「当前正在写的这一段」配对，而不是只看最后一行：加粗/行内代码都可以跨行，
+  // 只扫最后一行会漏掉 `**开头在上一行、还没闭合` 这种，正是本该消掉的症状。
+  // 段落 = 尾块里最后一个空行之后的全部行（loose list 尾块里就是最后那个列表项）。
+  let start = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].trim() === "") {
+      start = i + 1;
+      break;
+    }
+  }
+  const para = lines.slice(start);
+  if (para.length === 0 || para.join("").trim() === "") return block;
+  // 段里出现围栏行（列表项内嵌的代码块）就不配对：那些反引号会把计数带偏，
+  // 补错比不补更糟。
+  if (para.some((l) => FENCE_RE.test(l))) return block;
 
+  const text = para.join("\n");
   let tail = "";
   // 先补加粗再补行内代码：**`x 的闭合顺序是 `** 反过来。
-  if (countOccurrences(last, "**") % 2 === 1) tail = `**${tail}`;
-  const backticks = countOccurrences(last, "`") - countOccurrences(last, "``") * 2;
+  if (countOccurrences(text, "**") % 2 === 1) tail = `**${tail}`;
+  const backticks = countOccurrences(text, "`") - countOccurrences(text, "``") * 2;
   if (backticks % 2 === 1) tail = `\`${tail}`;
   return tail ? block + tail : block;
 }

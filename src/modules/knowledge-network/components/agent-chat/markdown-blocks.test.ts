@@ -58,6 +58,22 @@ describe("closeOpenMarkdown", () => {
     expect(closeOpenMarkdown("**`run_sql")).toBe("**`run_sql`**");
   });
 
+  it("补跨行的加粗（只扫最后一行会漏）", () => {
+    expect(closeOpenMarkdown("**结论：这里是一段比较长的加粗\n还在往下写")).toBe(
+      "**结论：这里是一段比较长的加粗\n还在往下写**",
+    );
+  });
+
+  it("配对只看当前段落，前面已闭合的段落不参与", () => {
+    const block = "1. **甲**\n\n2. **乙";
+    expect(closeOpenMarkdown(block)).toBe(`${block}**`);
+  });
+
+  it("段里有围栏行就不配对（反引号会把计数带偏）", () => {
+    const block = "- 例子：\n\n  ```sql\n  SELECT 1\n  ```";
+    expect(closeOpenMarkdown(block)).toBe(block);
+  });
+
   it("成对的语法不动", () => {
     const done = "**鹿岛**体育场 `run_sql` 完事";
     expect(closeOpenMarkdown(done)).toBe(done);

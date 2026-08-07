@@ -284,15 +284,21 @@ const MarkdownBlock = memo(function MarkdownBlock({ text }: { text: string }) {
  */
 export const MarkdownView = memo(function MarkdownView({ text, streaming = false }: { text: string; streaming?: boolean }) {
   const blocks = useMemo(() => {
+    // 非流式正文一次成型，没有重复 parse 的开销，就不该冒分块启发式的风险：
+    // 跨块构造（引用式链接定义、GFM 脚注）被切开会解析失败，而落在已完成的正文上
+    // 是永久错误显示，不像流式尾巴那样流一结束就自愈。整段 parse 走老路。
+    if (!streaming) return null;
     const bs = splitMarkdownBlocks(text);
-    if (!streaming || bs.length === 0) return bs;
+    if (bs.length === 0) return bs;
     return [...bs.slice(0, -1), closeOpenMarkdown(bs[bs.length - 1])];
   }, [text, streaming]);
   return (
     <div className={styles.md}>
-      {blocks.map((b, i) => (
-        <MarkdownBlock key={i} text={b} />
-      ))}
+      {blocks === null ? (
+        <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+      ) : (
+        blocks.map((b, i) => <MarkdownBlock key={i} text={b} />)
+      )}
     </div>
   );
 });

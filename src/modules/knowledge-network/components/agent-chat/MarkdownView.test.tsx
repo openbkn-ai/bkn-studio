@@ -24,6 +24,14 @@ describe("MarkdownView", () => {
     expect(container.textContent).not.toContain("**");
   });
 
+  it("非流式不分块：跨块的引用式链接定义照常解析（分块会把它切坏）", () => {
+    const { container } = render(<MarkdownView text={"见 [文档][d] 说明。\n\n[d]: https://example.com"} />);
+    const link = container.querySelector("a");
+    expect(link?.getAttribute("href")).toBe("https://example.com");
+    expect(link?.textContent).toBe("文档");
+    expect(container.textContent).not.toContain("[d]");
+  });
+
   it("流式中未闭合的代码围栏渲染成 pre，而不是漏出 ```", () => {
     const { container } = render(<MarkdownView text={"查询：\n\n```sql\nSELECT 1"} streaming />);
     expect(container.querySelector("pre code")?.textContent?.trim()).toBe("SELECT 1");
