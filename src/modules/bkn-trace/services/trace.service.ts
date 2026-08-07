@@ -818,11 +818,16 @@ export async function getRequestTraces(
   return mapSummaryPage(response.data, mapTraceExecutionSummary);
 }
 
-export async function getEvidenceArtifact(artifactId: string): Promise<EvidenceArtifact> {
-  const response = await http.get<BackendEvidenceArtifact>(
-    `${OBSERVABILITY_API_PREFIX}/evidence/artifacts/${encodeURIComponent(artifactId)}`,
-    traceRequestConfig(),
-  );
+export async function getEvidenceArtifact(
+  artifactId: string,
+  interactionId?: string,
+): Promise<EvidenceArtifact> {
+	const response = await http.get<BackendEvidenceArtifact>(
+		`${OBSERVABILITY_API_PREFIX}/evidence/artifacts/${encodeURIComponent(artifactId)}`,
+		interactionId
+			? { ...traceRequestConfig(), params: { interaction_id: interactionId } }
+			: traceRequestConfig(),
+	);
   return mapEvidenceArtifact(response.data);
 }
 

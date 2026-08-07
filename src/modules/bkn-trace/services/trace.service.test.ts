@@ -479,6 +479,23 @@ describe("bkn-trace service", () => {
           "bkn.account.id": "acct-1",
           "bkn.account.type": "user",
         },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          artifact_id: "art_question_001",
+          artifact_type: "question",
+          "bkn.request.id": "req_business_001",
+          trace_id: "trace_001",
+          content_type: "application/json",
+          schema_version: "2.2.0",
+          observed_at: "2026-07-27T09:00:00Z",
+          content_hash: "sha256:question",
+          content: { question: "业务问题" },
+          business_refs: ["bkn://customer/A"],
+          business_domain: "customer-risk",
+          "bkn.account.id": "acct-1",
+          "bkn.account.type": "user",
+        },
       });
     const { getEvidenceArtifact, getRequestSummary, getRequestTraces } = await import(
       "@/modules/bkn-trace/services/trace.service"
@@ -486,7 +503,8 @@ describe("bkn-trace service", () => {
 
     const summary = await getRequestSummary("req_business_001");
     const traces = await getRequestTraces("req_business_001", { limit: 30 });
-    const artifact = await getEvidenceArtifact("art_result_001");
+	const artifact = await getEvidenceArtifact("art_result_001", "int_business_001");
+	await getEvidenceArtifact("art_question_001");
 
     expect(getMock).toHaveBeenNthCalledWith(
       1,
@@ -498,11 +516,16 @@ describe("bkn-trace service", () => {
       "/agent-observability/v1/business-provenance/requests/req_business_001/traces",
       { headers: { "x-business-domain": "bd_demo" }, params: { limit: 30 } },
     );
-    expect(getMock).toHaveBeenNthCalledWith(
-      3,
-      "/agent-observability/v1/evidence/artifacts/art_result_001",
-      { headers: { "x-business-domain": "bd_demo" } },
-    );
+	expect(getMock).toHaveBeenNthCalledWith(
+		3,
+		"/agent-observability/v1/evidence/artifacts/art_result_001",
+		{ headers: { "x-business-domain": "bd_demo" }, params: { interaction_id: "int_business_001" } },
+	);
+	expect(getMock).toHaveBeenNthCalledWith(
+		4,
+		"/agent-observability/v1/evidence/artifacts/art_question_001",
+		{ headers: { "x-business-domain": "bd_demo" } },
+	);
     expect(summary.requestId).toBe("req_business_001");
     expect(traces.entries[0].requestId).toBe("req_business_001");
     expect(artifact.content).toEqual({ conclusion: "业务结论", score: 0.91 });

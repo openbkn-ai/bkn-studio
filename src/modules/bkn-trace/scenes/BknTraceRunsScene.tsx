@@ -188,13 +188,14 @@ export function BknTraceRunsScene() {
       const businessGraph = settledValue(businessGraphResult);
       const snapshotPreview = settledValue(snapshotResult);
       const interaction = settledValue(interactionResult);
+      const interactionId = summary.interactionId ?? activeQuery.interactionId;
       const artifactIds = [...new Set(
         (evidenceChain?.data.artifactLinks ?? [])
           .map((link) => artifactId(link.artifactRef))
           .filter((value): value is string => Boolean(value)),
       )];
       const artifactResults = await Promise.allSettled(
-        artifactIds.map((id) => getEvidenceArtifact(id)),
+		artifactIds.map((id) => getEvidenceArtifact(id, interactionId)),
       );
       const artifacts = artifactResults.flatMap((result) =>
         result.status === "fulfilled" ? [result.value] : []
@@ -226,8 +227,8 @@ export function BknTraceRunsScene() {
     try {
       const summary = await getInteractionSummary(interactionId);
       const [questionResult, answerResult] = await Promise.allSettled([
-        loadReferencedArtifact(summary.questionArtifactRef),
-        loadReferencedArtifact(summary.resultArtifactRef),
+		loadReferencedArtifact(summary.questionArtifactRef, interactionId),
+		loadReferencedArtifact(summary.resultArtifactRef, interactionId),
       ]);
       if (requestSequence !== interactionRequestSequence.current) return;
       setInteractionContext({
@@ -1028,9 +1029,9 @@ function artifactId(ref: string) {
   return ref.startsWith("artifact:") ? ref.slice("artifact:".length) : undefined;
 }
 
-function loadReferencedArtifact(ref?: string) {
-  const id = ref ? artifactId(ref) : undefined;
-  return id ? getEvidenceArtifact(id) : Promise.resolve(undefined);
+function loadReferencedArtifact(ref?: string, interactionId?: string) {
+	const id = ref ? artifactId(ref) : undefined;
+	return id ? getEvidenceArtifact(id, interactionId) : Promise.resolve(undefined);
 }
 
 function formatTime(value?: string) {
