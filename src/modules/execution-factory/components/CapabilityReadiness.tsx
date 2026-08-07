@@ -7,6 +7,7 @@
 
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import { Alert, Tag, Tooltip } from "antd";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import type { CapabilityManifest } from "@/modules/execution-factory/types/capability-manifest";
@@ -18,13 +19,25 @@ import {
 import styles from "./CapabilityReadiness.module.css";
 
 const DIMENSION_LABELS: Record<string, string> = {
-  "business intent": "业务用途",
-  "input semantics": "输入语义",
-  "output semantics": "输出语义",
+  "business intent": "Business intent",
+  "input semantics": "Input semantics",
+  "output semantics": "Output semantics",
 };
 
-function readinessDimensionLabel(key: string) {
-  return DIMENSION_LABELS[key] ?? key;
+const DIMENSION_LABEL_KEYS: Record<string, string> = {
+  "business intent": "businessIntent",
+  "input semantics": "inputSemantics",
+  "output semantics": "outputSemantics",
+};
+
+function readinessDimensionLabel(key: string, t: TFunction) {
+  const labelKey = DIMENSION_LABEL_KEYS[key];
+  if (!labelKey) {
+    return key;
+  }
+  return t(`executionFactory.agentReadiness.dimensions.${labelKey}`, {
+    defaultValue: DIMENSION_LABELS[key] ?? key,
+  });
 }
 
 type CapabilityManifestProps = {
@@ -47,7 +60,7 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
             {READINESS_DIMENSIONS.map((dim) => {
               const skipped = readiness.notApplicable.includes(dim.key);
               const met = !skipped && !readiness.missing.includes(dim.key);
-              const label = readinessDimensionLabel(dim.key);
+              const label = readinessDimensionLabel(dim.key, t);
 
               return (
                 <div
@@ -130,7 +143,7 @@ export function CapabilityReadinessHint({ manifest }: CapabilityManifestProps) {
       description={
         <div className={styles.missingList}>
           {readiness.missing.map((item) => (
-            <Tag key={item}>{readinessDimensionLabel(item)}</Tag>
+            <Tag key={item}>{readinessDimensionLabel(item, t)}</Tag>
           ))}
         </div>
       }

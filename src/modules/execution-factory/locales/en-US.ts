@@ -309,6 +309,11 @@ export const executionFactoryEnUS = {
       missingTitle: "Fill these in before letting agents call it automatically",
       emptyIntent:
         "No business intent yet — agents can only infer how to use this from the name and the technical schema.",
+      dimensions: {
+        businessIntent: "Business intent",
+        inputSemantics: "Input semantics",
+        outputSemantics: "Output semantics",
+      },
     },
     mcpModeShort: {
       sse: "SSE",

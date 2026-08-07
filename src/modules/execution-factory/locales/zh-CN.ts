@@ -304,6 +304,11 @@ export const executionFactoryZhCN = {
       ioUndeclared: "未声明",
       missingTitle: "建议补齐后再开放给 Agent 自动调用",
       emptyIntent: "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
+      dimensions: {
+        businessIntent: "业务用途",
+        inputSemantics: "输入语义",
+        outputSemantics: "输出语义",
+      },
     },
     // 卡片徽标位放不下「Stream（Streamable HTTP）」，这里只要动词。
     mcpModeShort: {
