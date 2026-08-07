@@ -409,9 +409,53 @@
   background: #e2ecff;
 }
 
+.mcpConfigureKeyBtn {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #d9e0ea;
+  border-radius: 4px;
+  background: #fff;
+  color: #526179;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mcpConfigureKeyBtn:hover {
+  border-color: #9bb9ff;
+  color: #1d4ed8;
+}
+
 .mcpIssueKeyBtn:disabled {
   opacity: 0.65;
   cursor: default;
+}
+
+.mcpConfigKeyModal :global(.ant-modal-body) {
+  padding-top: 4px;
+}
+
+.mcpConfigKeyModalDescription {
+  margin: 0 0 16px;
+  color: #526179;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.mcpConfigKeyModalHint {
+  margin: 10px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mcpConfigKeyModalError {
+  margin: 8px 0 0;
+  color: #ff4d4f;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .mcpConfigBody {
@@ -538,6 +582,22 @@
   font-size: 13px;
   font-weight: 600;
   color: #1d44b8;
+}
+
+.toolTitle {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--txt);
+}
+
+.toolGroupTag {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--txt2);
 }
 
 .toolDesc {

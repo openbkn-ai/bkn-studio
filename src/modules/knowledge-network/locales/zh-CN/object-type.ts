@@ -180,7 +180,6 @@ export const objecttypePart = {
     objectTypePropertyMappedField: "映射字段",
     objectTypePropertyPrimaryKey: "主键",
     objectTypePropertyTitle: "对象类名称",
-    objectTypePropertyTotalCount: "total_count",
     objectTypePropertyIndex: "序号",
     objectTypeReplaceResource: "更换资源",
     objectTypes: "对象类",

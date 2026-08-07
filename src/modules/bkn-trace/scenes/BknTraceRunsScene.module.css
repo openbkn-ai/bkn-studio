@@ -111,6 +111,22 @@
   border-left: 1px solid #d9dde5;
 }
 
+.interactionContext {
+  border-block: 1px solid #d9dde5;
+  padding-block: 16px;
+}
+
+.interactionContextHeader {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.interactionContextHeader h5 {
+  margin: 0;
+}
+
 .contentText {
   font-size: 16px;
   line-height: 1.7;
@@ -191,6 +207,18 @@
   padding: 16px 0;
 }
 
+.evidenceBasisGrid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.evidenceBasis {
+  border-top: 3px solid #58708f;
+  min-width: 0;
+  padding-top: 10px;
+}
+
 @media (max-width: 900px) {
 	.scene,
 	.detail {
@@ -204,6 +232,10 @@
   .businessContent section + section {
     border-left: 0;
     border-top: 1px solid #d9dde5;
+  }
+
+  .evidenceBasisGrid {
+    grid-template-columns: 1fr;
   }
 }
 

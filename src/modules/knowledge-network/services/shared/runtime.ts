@@ -45,7 +45,6 @@ export const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 /** Metrics are visible in every environment and degrade with a warning if the backend is absent. */
 export const integrateWorkspaceMetrics = true;
-export const integrateWorkspaceTasks = useMock;
 
 export const wait = async <T,>(value: T) =>
   new Promise<T>((resolve) => {

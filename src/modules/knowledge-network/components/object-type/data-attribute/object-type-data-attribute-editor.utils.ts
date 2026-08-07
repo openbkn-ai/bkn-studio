@@ -191,6 +191,18 @@ export function countMappedProperties(properties: ObjectTypeDataProperty[]) {
   return properties.filter((property) => Boolean(property.mappedField)).length;
 }
 
+export function isMappedPropertyConnectionVisible(
+  property: ObjectTypeDataProperty,
+  visibleViewFieldNames: ReadonlySet<string>,
+  visiblePropertyNames: ReadonlySet<string>,
+) {
+  return (
+    Boolean(property.mappedField) &&
+    visiblePropertyNames.has(property.name) &&
+    visibleViewFieldNames.has(property.mappedField?.name ?? "")
+  );
+}
+
 export function areConnectionsEqual(left: ConnectionPoint[], right: ConnectionPoint[]) {
   return (
     left.length === right.length &&
@@ -241,7 +253,6 @@ export function areDataPropertiesEqual(
       item.displayName === other.displayName &&
       item.name === other.name &&
       item.primaryKey === other.primaryKey &&
-      item.totalCount === other.totalCount &&
       item.type === other.type &&
       areMappedFieldsEqual(item.mappedField, other.mappedField)
     );

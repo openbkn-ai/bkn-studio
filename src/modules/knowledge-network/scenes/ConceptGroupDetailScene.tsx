@@ -30,6 +30,7 @@ import {
   getKnowledgeNetworkConceptGroup,
   removeObjectTypesFromKnowledgeNetworkConceptGroup,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type {
   ConceptGroupDetail,
   ConceptGroupRelatedItem,
@@ -140,6 +141,12 @@ export function ConceptGroupDetailScene() {
   const [addObjectTypesOpen, setAddObjectTypesOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
+    networkId,
+    ["modify", "delete"],
+  );
+  const canModify = operationAccess.modify;
+  const canDelete = operationAccess.delete;
 
   const listPath = `/knowledge-network/workspace/${networkId}/concept-groups`;
 
@@ -433,18 +440,20 @@ export function ConceptGroupDetailScene() {
   return (
     <>
       <KnowledgeNetworkResourceConfigShell
-        actions={
+        actions={!isPermissionLoading ? (
           <>
-            <AppButton
-              icon={<EditOutlined />}
-              onClick={() => {
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/concept-groups/${conceptGroupId}/edit`,
-                );
-              }}
-            >
-              {t("common.edit")}
-            </AppButton>
+            {canModify ? (
+              <AppButton
+                icon={<EditOutlined />}
+                onClick={() => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/concept-groups/${conceptGroupId}/edit`,
+                  );
+                }}
+              >
+                {t("common.edit")}
+              </AppButton>
+            ) : null}
             <AppButton
               icon={<DownloadOutlined />}
               onClick={() => {
@@ -454,11 +463,13 @@ export function ConceptGroupDetailScene() {
             >
               {t("knowledgeNetwork.conceptGroupExport")}
             </AppButton>
-            <AppButton danger onClick={confirmDelete}>
-              {t("common.delete")}
-            </AppButton>
+            {canDelete ? (
+              <AppButton danger onClick={confirmDelete}>
+                {t("common.delete")}
+              </AppButton>
+            ) : null}
           </>
-        }
+        ) : null}
         onBack={() => {
           void navigate(listPath);
         }}
@@ -516,7 +527,7 @@ export function ConceptGroupDetailScene() {
             />
             <div className={styles.sectionToolbar}>
               <div className={styles.toolbarLeft}>
-                {activeTab === "object" ? (
+                {activeTab === "object" && canModify ? (
                   <>
                     <AppButton
                       icon={<PlusOutlined />}
@@ -585,7 +596,7 @@ export function ConceptGroupDetailScene() {
               }}
               rowKey="id"
               rowSelection={
-                activeTab === "object"
+                activeTab === "object" && canModify
                   ? {
                       onChange: (keys) => setSelectedObjectTypeIds(keys.map(String)),
                       selectedRowKeys: selectedObjectTypeIds,

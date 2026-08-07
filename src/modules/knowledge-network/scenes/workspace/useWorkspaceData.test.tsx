@@ -31,7 +31,6 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   listKnowledgeNetworkObjectTypes: vi.fn(() => []),
   listKnowledgeNetworkRecentObjects: vi.fn(() => []),
   listKnowledgeNetworkRelationTypes: vi.fn(() => []),
-  listKnowledgeNetworkTasks: vi.fn(() => []),
 }));
 
 function createDetail(metricsTotal = 0): KnowledgeNetworkRecord {
@@ -43,6 +42,7 @@ function createDetail(metricsTotal = 0): KnowledgeNetworkRecord {
     id: "kn-1",
     identifier: "kn-1",
     name: "Test KN",
+    operations: [],
     statistics: {
       actionTypesTotal: 0,
       conceptGroupsTotal: 0,

@@ -125,16 +125,6 @@ export const MetricDataQueryPage = lazyNamedExport(
   "MetricDataQueryPage",
 );
 
-export const TaskCreatePage = lazyNamedExport(
-  () => import("@/modules/knowledge-network/pages/TaskCreatePage"),
-  "TaskCreatePage",
-);
-
-export const TaskDetailPage = lazyNamedExport(
-  () => import("@/modules/knowledge-network/pages/TaskDetailPage"),
-  "TaskDetailPage",
-);
-
 export function workspaceSectionPage(section: KnowledgeNetworkWorkspaceSection) {
   return <KnowledgeNetworkWorkspaceStandalonePage section={section} />;
 }

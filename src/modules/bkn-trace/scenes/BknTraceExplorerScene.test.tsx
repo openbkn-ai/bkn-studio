@@ -432,6 +432,34 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 	expect(window.location.search).toContain("interaction_id=interaction_customer_risk");
   });
 
+  it("进入交互轮次后按权限读取完整问题和完整结果", async () => {
+    vi.mocked(getInteractionSummary).mockResolvedValue({
+      conversationId: "conversation_customer_risk",
+      evidenceCompleteness: "complete",
+      interactionId: "interaction_customer_risk",
+      partialReasons: [],
+      questionArtifactRef: "artifact:art_question_001",
+      questionPreview: "客户 A 的风险为什么上升？",
+      requests: [requestSummary],
+      resultArtifactRef: "artifact:art_result_001",
+      resultPreview: "近 7 天投诉增加，风险等级上升。",
+      status: "completed",
+      traces: [],
+    });
+    window.history.replaceState(
+      {},
+      "",
+      "/observability/business-provenance?view=interactions&conversation_id=conversation_customer_risk",
+    );
+
+    render(<BknTraceRunsScene />);
+    fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
+
+    await waitFor(() => expect(getInteractionSummary).toHaveBeenCalledWith("interaction_customer_risk"));
+    expect(await screen.findByText("客户 A 的风险为什么上升？（完整问题）")).not.toBeNull();
+    expect(screen.getByText("近 7 天投诉增加 42%，因此风险等级从中升至高。（完整结论）")).not.toBeNull();
+  });
+
   it("丢弃晚到的旧层级响应，避免覆盖当前业务溯源视图", async () => {
     let resolveConversations!: (value: Awaited<ReturnType<typeof getConversationSummaries>>) => void;
     vi.mocked(getConversationSummaries).mockImplementationOnce(() => new Promise((resolve) => {
@@ -559,7 +587,7 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
 
     expect(screen.queryByText("客户 A 的风险为什么上升？（完整问题）")).toBeNull();
     expect(screen.queryByText("近 7 天投诉增加 42%，因此风险等级从中升至高。（完整结论）")).toBeNull();
-    expect(screen.getByText("客户风险")).not.toBeNull();
+    expect(screen.getAllByText("客户风险").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByText("bknTrace.tabs.diagnostics"));
     fireEvent.click(await screen.findByRole("button", { name: "trace_001" }));
@@ -568,6 +596,48 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("bkn-agent.chat")).not.toBeNull();
     expect(screen.getByText("bkn-agent")).not.toBeNull();
   }, 30_000);
+
+  it("把已解析业务节点展示为数据、逻辑与行动依据", async () => {
+    vi.mocked(getBusinessGraph).mockResolvedValueOnce({
+      data: {
+        edges: [],
+        nodes: [{
+          display: { name: "产品BOM" },
+          id: "business:object:supplychain_hd0202:bom",
+          nodeType: "business_ref",
+          properties: {
+            ref_id: "object:supplychain_hd0202:supplychain_hd0202_bom",
+            ref_type: "object_type",
+          },
+          stage: "evidence",
+          visibility: "visible",
+        }],
+      },
+      page: { edgeCount: 0, nodeCount: 1, truncated: false },
+      conclusionScope: "trace",
+      partial: false,
+      partialReason: [],
+      requestId: requestSummary.requestId,
+      traceId: "trace_001",
+      visibilitySummary: {
+        authorizedRefCount: 1,
+        hiddenRefCount: 0,
+        omittedRefCount: 0,
+        redactedRefCount: 0,
+        unauthorizedRefCount: 0,
+        unresolvedRefCount: 0,
+      },
+    });
+    window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
+
+    render(<BknTraceRunsScene />);
+    fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
+
+    expect(await screen.findByText("bknTrace.evidenceBasis.data")).not.toBeNull();
+    expect(screen.getAllByText("产品BOM").length).toBeGreaterThan(0);
+    expect(screen.getByText("bknTrace.evidenceBasis.noLogic")).not.toBeNull();
+    expect(screen.getByText("bknTrace.evidenceBasis.noAction")).not.toBeNull();
+  });
 
   it("OpenBKN 调用以业务操作区分，而不是重复本轮问题和答案", async () => {
 	vi.mocked(getRequestSummaries).mockResolvedValue({

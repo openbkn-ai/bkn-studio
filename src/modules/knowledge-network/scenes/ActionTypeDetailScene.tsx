@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeOverviewPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeOverviewPanel";
@@ -25,6 +26,7 @@ import {
   getKnowledgeNetworkActionTypeDetail,
   listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type {
   ActionTypeDetail,
   KnowledgeNetworkObjectTypeRecord,
@@ -35,10 +37,12 @@ import styles from "./ActionTypeDetailScene.module.css";
 
 type DetailTab = "overview" | "tasks";
 
+const ACTION_TYPE_DETAIL_OPERATIONS = ["modify", "delete", "task_manage"] as const;
+
 export function ActionTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const [searchParams, setSearchParams] = useSearchParams();
   const { actionTypeId = "", networkId = "" } = useParams<{
     actionTypeId: string;
@@ -51,6 +55,26 @@ export function ActionTypeDetailScene() {
   const [executeModalOpen, setExecuteModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [taskRefreshToken, setTaskRefreshToken] = useState(0);
+  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
+    networkId,
+    ACTION_TYPE_DETAIL_OPERATIONS,
+  );
+  const canModify = operationAccess.modify;
+  const canDelete = operationAccess.delete;
+  const canTaskManage = operationAccess.task_manage;
+  const canViewToolbox = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "execution-factory:toolbox:view",
+  });
+  const canViewMcp = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "execution-factory:mcp:view",
+  });
+  const actionSource = detail?.executionConfig.actionSource;
+  const canResolveActionSource =
+    !actionSource ||
+    actionSource.type === "manual" ||
+    (actionSource.type === "tool" ? canViewToolbox : canViewMcp);
 
   const activeTab: DetailTab = searchParams.get("tab") === "tasks" ? "tasks" : "overview";
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
@@ -163,39 +187,49 @@ export function ActionTypeDetailScene() {
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
-        <>
-          <AppButton
-            icon={<PlayCircleOutlined />}
-            loading={executing}
-            onClick={handleExecuteNow}
-            type="primary"
-          >
-            {t("knowledgeNetwork.actionTypeExecuteImmediately")}
-          </AppButton>
-          <AppButton
-            icon={<EditOutlined />}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/edit`,
-              );
-            }}
-          >
-            {t("common.edit")}
-          </AppButton>
-          <AppButton
-            icon={<ThunderboltOutlined />}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/execution`,
-              );
-            }}
-          >
-            {t("knowledgeNetwork.actionTypeExecutionEntry")}
-          </AppButton>
-          <AppButton danger onClick={confirmDelete}>
-            {t("common.delete")}
-          </AppButton>
-        </>
+        !isPermissionLoading && (canModify || canDelete || canTaskManage) ? (
+          <>
+            {canTaskManage ? (
+              <AppButton
+                icon={<PlayCircleOutlined />}
+                loading={executing}
+                onClick={handleExecuteNow}
+                type="primary"
+              >
+                {t("knowledgeNetwork.actionTypeExecuteImmediately")}
+              </AppButton>
+            ) : null}
+            {canModify ? (
+              <>
+                <AppButton
+                  icon={<EditOutlined />}
+                  onClick={() => {
+                    void navigate(
+                      `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/edit`,
+                    );
+                  }}
+                >
+                  {t("common.edit")}
+                </AppButton>
+                <AppButton
+                  icon={<ThunderboltOutlined />}
+                  onClick={() => {
+                    void navigate(
+                      `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/execution`,
+                    );
+                  }}
+                >
+                  {t("knowledgeNetwork.actionTypeExecutionEntry")}
+                </AppButton>
+              </>
+            ) : null}
+            {canDelete ? (
+              <AppButton danger onClick={confirmDelete}>
+                {t("common.delete")}
+              </AppButton>
+            ) : null}
+          </>
+        ) : null
       }
       onBack={() => {
         void navigate(listPath);
@@ -226,6 +260,7 @@ export function ActionTypeDetailScene() {
         <div className={styles.contentPanel}>
           {activeTab === "overview" ? (
             <ActionTypeOverviewPanel
+              canResolveActionSource={canResolveActionSource}
               detail={detail}
               networkId={networkId}
               objectTypes={objectTypes}

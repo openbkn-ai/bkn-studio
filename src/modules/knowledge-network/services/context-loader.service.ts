@@ -25,7 +25,6 @@ export type OpQueryParam = {
 
 export type ContextLoaderOp = {
   id: string;
-  group: string;
   summary: string;
   /** REST 全路径。 */
   path: string;
@@ -40,7 +39,7 @@ export type ContextLoaderOp = {
 export const REST_PREFIX = "/api/agent-retrieval/v1";
 
 /** MCP 端点（实测 /api/agent-retrieval/v1/mcp，非根 /mcp）。 */
-export const MCP_PATH = "/api/agent-retrieval/v1/mcp";
+export const MCP_PATH = "/api/agent-retrieval/v1/mcp/";
 
 export type RequestDataAssistantKind = "concept-group" | "object-type" | "resource" | "relation";
 
@@ -63,7 +62,6 @@ export function requestDataAssistantKindOf(opId: string): RequestDataAssistantKi
 export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "search_schema",
-    group: "Knowledge Network",
     summary: "统一的 Schema 探索入口：根据自然语言探索 object / relation / action / metric types。固定 Schema-only，不返回实例数据。",
     path: `${REST_PREFIX}/kn/search_schema`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -78,7 +76,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "query_object_instance",
-    group: "查询",
     summary:
       "根据单个对象类查询对象实例数据，支持过滤、排序与分页。REST 经 query 传 kn_id / ot_id；MCP 经 arguments 传入。" +
       "推荐用 filters 扁平糖衣——[{field, op, value}]，op: == != > >= < <= in not_in like not_like exist not_exist match" +
@@ -110,7 +107,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "query_instance_subgraph",
-    group: "查询",
     summary: "基于预定义关系类路径查询知识图谱中的对象子图。支持多条路径；object_types 与 relation_types 顺序必须严格对应。",
     path: `${REST_PREFIX}/kn/query_instance_subgraph`,
     query: [
@@ -140,7 +136,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "list_resources",
-    group: "数据资源",
     summary:
       "列出当前账户可访问的数据层资源（table / file …），按 catalog_id / type 过滤并分页（offset / limit）；req 字段全可选。" +
       "列表已按 token 账户的 view_detail 权限过滤——前端不要假设能看到全部；空账户 / 无 token 后端返 403，按未授权处理。" +
@@ -151,7 +146,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "describe_resource",
-    group: "数据资源",
     summary: "查看单个数据资源的列结构，返回 connector_type 与 columns:[{name,type,description}]。resource_id 取自 list_resources 的 entries[].resource_id。",
     path: `${REST_PREFIX}/kn/describe_resource`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -159,7 +153,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "run_sql",
-    group: "数据资源",
     summary: "在知识网络上直接执行 SQL 查询并返回结果集。表名用模板占位 {{.<resource_id>}} 引用资源；跨 catalog 不能 join。",
     path: `${REST_PREFIX}/kn/run_sql`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -169,7 +162,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_logic_properties_values",
-    group: "Skills & Logic",
     summary: "批量查询对象的逻辑属性值（metric / tool），自动根据 query 生成 dynamic_params。缺参时返回 missing 提示。",
     // MCP 工具名 get_logic_properties_values；REST 路由为 logic-property-resolver（见 bkn-foundry agent-retrieval）。
     path: `${REST_PREFIX}/kn/logic-property-resolver`,
@@ -186,7 +178,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "query_metric",
-    group: "Skills & Logic",
     mcpOnly: true,
     summary:
       "按已建模指标自身的口径取数。先通过 get_object_types 的 related_metrics 选定 metric_id；" +
@@ -198,7 +189,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_action_info",
-    group: "Skills & Logic",
     summary: "根据对象实例标识召回关联行动，返回符合 Function Call 规范的 _dynamic_tools 工具定义。支持多个实例标识。",
     path: `${REST_PREFIX}/kn/get_action_info`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -206,7 +196,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "find_skills",
-    group: "Skills & Logic",
     summary: "基于业务上下文召回 Skill 候选列表。kn_id + object_type_id 为对象类级；附带 instance_identities 为实例级召回。",
     path: `${REST_PREFIX}/kn/find_skills`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -214,7 +203,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "list_knowledge_networks",
-    group: "Knowledge Network",
     summary: "列出当前账户可访问的业务知识网络。支持 name_pattern 过滤、limit/offset 分页、sort/direction 排序。",
     path: `${REST_PREFIX}/kn/list_knowledge_networks`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -222,11 +210,53 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_kn_detail",
-    group: "Knowledge Network",
     summary: "查询指定知识网络的详细信息。",
+    mcpOnly: true,
     path: `${REST_PREFIX}/kn/get_kn_detail`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { kn_id: "your_kn_id" },
+  },
+  {
+    id: "get_object_types",
+    summary:
+      "按 id 批量取对象类的完整定义（data_properties 含 mapped_field/condition_operations，logic_properties 含 data_source/parameters）。渐进式下钻：先 get_kn_detail 拿 id，再用本工具展开。",
+    path: `${REST_PREFIX}/kn/get_object_types`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { kn_id: "your_kn_id", ids: ["your_object_type"] },
+  },
+  {
+    id: "get_relation_types",
+    summary: "按 id 批量取关系类的完整定义（含 mapping_rules、source/target 对象名）。同样是渐进式下钻用。",
+    path: `${REST_PREFIX}/kn/get_relation_types`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { kn_id: "your_kn_id", ids: ["your_relation_type"] },
+  },
+  {
+    id: "execute_action",
+    summary:
+      "执行行动（异步，返回 execution_id）。先用 get_action_info 拿 dynamic_params schema 再填真实参数；_instance_identities 为空时由行动条件扫描全部匹配实例。",
+    path: `${REST_PREFIX}/kn/execute_action`,
+    query: [],
+    body: {
+      kn_id: "your_kn_id",
+      at_id: "your_action_type",
+      _instance_identities: [{ id: "instance_000001" }],
+      dynamic_params: {},
+    },
+  },
+  {
+    id: "get_action_execution",
+    summary: "查询单次行动执行的状态与结果（整体 status + 逐对象 results）。execution_id 由 execute_action 返回。",
+    path: `${REST_PREFIX}/kn/get_action_execution`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { kn_id: "your_kn_id", execution_id: "your_execution_id" },
+  },
+  {
+    id: "list_action_executions",
+    summary: "列出行动执行历史，可按行动类型 / 状态 / 触发方式过滤并分页（深翻页用 search_after 游标）。",
+    path: `${REST_PREFIX}/kn/list_action_executions`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body: { kn_id: "your_kn_id", status: "completed", offset: 0, limit: 20 },
   },
 ];
 
@@ -680,7 +710,27 @@ export async function sendRequest(
 }
 
 /* ============================ MCP 工具发现（tools/list）============================ */
-export type McpToolDef = { name: string; description?: string; inputSchema?: unknown; outputSchema?: unknown };
+/**
+ * 展示元数据的 `_meta` 键（foundry#666 起下发）。协议只给自己保留 `modelcontextprotocol.io/`
+ * 与 `mcp.dev/` 前缀，厂商字段带 `openbkn.ai/`；老版本服务端不发，调用方各自兜底。
+ */
+const TOOL_META_GROUP = "openbkn.ai/group";
+const TOOL_META_GROUP_TITLE = "openbkn.ai/group_title";
+const TOOL_META_ORDER = "openbkn.ai/order";
+
+export type McpToolDef = {
+  name: string;
+  description?: string;
+  /** 展示名（MCP 2025-06-18 协议字段）；老服务端不发，回退 name。 */
+  title?: string;
+  /** 展示分组键与组名（`_meta`）；不发时按本地兜底分组。 */
+  group?: string;
+  groupTitle?: string;
+  /** 组内排序（`_meta`）；不发的排在组尾。 */
+  order?: number;
+  inputSchema?: unknown;
+  outputSchema?: unknown;
+};
 
 /** 解析 MCP 响应（SSE event:/data: 取最后一条 data，再 JSON.parse）。失败返回 null。 */
 function parseMcpEnvelope(text: string): unknown {
@@ -768,14 +818,25 @@ export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth, signal
   return out;
 }
 
-/** tools/list 原始条目 → McpToolDef[]（含 inputSchema / outputSchema 兜底）。 */
+/** 只认非空字符串，空串按「没下发」处理，免得展示名被渲染成空白。 */
+function optionalText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+}
+
+/** tools/list 原始条目 → McpToolDef[]（含展示元数据与 inputSchema / outputSchema 兜底）。 */
 function parseToolDefs(tools: unknown[]): McpToolDef[] {
   return tools
     .map((item) => {
       const tool = (item ?? {}) as Record<string, unknown>;
+      const meta = (tool._meta && typeof tool._meta === "object" ? tool._meta : {}) as Record<string, unknown>;
+      const order = meta[TOOL_META_ORDER];
       return {
         name: typeof tool.name === "string" ? tool.name : "",
         description: typeof tool.description === "string" ? tool.description : undefined,
+        title: optionalText(tool.title),
+        group: optionalText(meta[TOOL_META_GROUP]),
+        groupTitle: optionalText(meta[TOOL_META_GROUP_TITLE]),
+        order: typeof order === "number" && Number.isFinite(order) ? order : undefined,
         inputSchema: tool.inputSchema,
         // MCP 规格用 outputSchema；个别实现用 output_schema，做兜底。
         outputSchema: tool.outputSchema ?? tool.output_schema,
@@ -1009,6 +1070,44 @@ function parseRelationTypes(raw: unknown): KnRelationType[] {
     .filter((r) => r.id && r.sourceId && r.targetId);
 }
 
+function normalizeKnDetailPayload(
+  data: Partial<KnDetail> & Record<string, unknown>,
+  fallbackId: string,
+): KnDetail {
+  return {
+    id: data.id ?? fallbackId,
+    name: data.name,
+    comment: typeof data.comment === "string" ? data.comment : undefined,
+    object_types: Array.isArray(data.object_types) ? data.object_types : [],
+    concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
+    relation_types: parseRelationTypes(data.relation_types ?? data.relations),
+  };
+}
+
+function knDetailFromMcpPayload(payload: unknown, fallbackId: string): KnDetail | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const record = payload as Partial<KnDetail> & Record<string, unknown>;
+  const data = record.data;
+  const candidate =
+    data && typeof data === "object"
+      ? (data as Partial<KnDetail> & Record<string, unknown>)
+      : record;
+
+  if (
+    !("object_types" in candidate) &&
+    !("concept_groups" in candidate) &&
+    !("relation_types" in candidate) &&
+    !("relations" in candidate)
+  ) {
+    return null;
+  }
+
+  return normalizeKnDetailPayload(candidate, fallbackId);
+}
+
 /**
  * 取知识网络详情（对象类型 + 资源绑定 + 概念分组），供数据浏览器展示与「填入请求体」。
  * 走与调试台一致的真实 REST 鉴权路径（get_kn_detail 已验证可用）。
@@ -1035,6 +1134,49 @@ async function restPost(
 }
 
 export async function fetchKnDetail(
+  env: ContextLoaderEnv,
+  auth?: McpAuth,
+  signal?: AbortSignal,
+  scope?: BknCallScope,
+): Promise<KnDetail> {
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
+  const result = await createMcpSession(env, auth).callTool(
+    "get_kn_detail",
+    withBknContext(
+      { kn_id: env.knId, response_format: "json" },
+      scope?.nextContext(),
+    ),
+  );
+
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
+  if (!result.ok || result.isError || result.rpcError) {
+    throw new Error(result.rpcError?.message || result.text || "get_kn_detail failed");
+  }
+
+  const fromStructured = knDetailFromMcpPayload(result.structured, env.knId);
+  if (fromStructured) {
+    return fromStructured;
+  }
+
+  try {
+    const fromText = knDetailFromMcpPayload(JSON.parse(result.text) as unknown, env.knId);
+    if (fromText) {
+      return fromText;
+    }
+  } catch {
+    // JSON response requested; fall through to the normalized error below.
+  }
+
+  throw new Error("get_kn_detail did not return knowledge network detail");
+}
+
+export async function fetchKnDetailRestLegacy(
   env: ContextLoaderEnv,
   auth?: McpAuth,
   signal?: AbortSignal,

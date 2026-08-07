@@ -184,4 +184,20 @@ describe("resolveActionTypeActionSourceDisplay", () => {
     await vi.advanceTimersByTimeAsync(100);
     await expectation;
   });
+
+  it("does not return mock input parameters when the real tool lookup fails", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    executionFactoryMocks.getToolDetail.mockRejectedValue(new Error("forbidden"));
+
+    const { resolveActionTypeToolInputSchema } = await import("./action-type-tool.service");
+
+    await expect(
+      resolveActionTypeToolInputSchema({
+        boxId: "box-risk",
+        toolId: "block_order_tool",
+        type: "tool",
+      }),
+    ).resolves.toEqual([]);
+  });
 });

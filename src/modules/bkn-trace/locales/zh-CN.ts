@@ -66,6 +66,14 @@ export const bknTraceZhCN = {
       stage: "该阶段暂无可见事实",
       artifacts: "暂无可见的查询、数据、逻辑或行动制品",
     },
+	evidenceBasis: {
+	  action: "行动依据",
+	  data: "数据依据",
+	  logic: "逻辑依据",
+	  noAction: "本轮未执行行动",
+	  noData: "本轮未记录可见数据依据",
+	  noLogic: "本轮未使用逻辑依据",
+	},
     complete: "证据链完整",
     completeness: {
       complete: "完整",
@@ -164,10 +172,12 @@ export const bknTraceZhCN = {
       relations: "业务关系",
 	  requestDetail: "OpenBKN 调用详情",
       interactionRequests: "本轮 OpenBKN 调用",
+	  interactionContext: "本轮问题与结果",
       snapshot: "快照预览",
       traceGraph: "调用链",
       visibility: "可见性",
     },
+	interactionCallCount: "共 {{count}} 次 OpenBKN 调用",
     stages: {
       action: "行动与结果",
       claim: "业务结论",

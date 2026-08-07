@@ -53,6 +53,14 @@ import {
 } from "@/modules/knowledge-network/services/shared/runtime";
 
 const DEFAULT_BUSINESS_DOMAIN_ID = "bd_public";
+const MOCK_KNOWLEDGE_NETWORK_OPERATIONS = [
+  "view_detail",
+  "data_query",
+  "modify",
+  "delete",
+  "authorize",
+  "task_manage",
+];
 
 function getKnowledgeNetworkDomainHeaders() {
   const runtimeConfig = getRuntimeConfig();
@@ -167,6 +175,7 @@ export async function createKnowledgeNetwork(input: KnowledgeNetworkMutationPayl
       description: input.description,
       color: input.color,
       icon: "deployment-unit",
+      operations: MOCK_KNOWLEDGE_NETWORK_OPERATIONS,
       tags: input.tags,
       createTime: formatTimestamp(Date.now()),
       updateTime: formatTimestamp(Date.now()),
@@ -343,6 +352,7 @@ export async function importKnowledgeNetwork(
       ),
       color: stringFromUnknown(payload.color, "#1677ff"),
       icon: stringFromUnknown(payload.icon, "deployment-unit"),
+      operations: MOCK_KNOWLEDGE_NETWORK_OPERATIONS,
       tags: Array.isArray(payload.tags) ? (payload.tags as string[]) : [],
       createTime: formatTimestamp(Date.now()),
       updateTime: formatTimestamp(Date.now()),

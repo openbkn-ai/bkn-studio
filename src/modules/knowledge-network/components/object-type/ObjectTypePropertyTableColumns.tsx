@@ -16,7 +16,6 @@ export const ObjectTypePropertyTableColumns: DetailTableColumnDefinition[] = [
   { key: "mappedField", labelKey: "knowledgeNetwork.objectTypePropertyMappedField" },
   { key: "primaryKey", labelKey: "knowledgeNetwork.objectTypePropertyPrimaryKey" },
   { key: "displayKey", labelKey: "knowledgeNetwork.objectTypePropertyTitle" },
-  { key: "total_count", labelKey: "knowledgeNetwork.objectTypePropertyTotalCount" },
 ];
 
 export function getObjectTypePropertyTableColumnLabel(

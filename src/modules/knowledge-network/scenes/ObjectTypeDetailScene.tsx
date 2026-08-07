@@ -17,6 +17,8 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -34,7 +36,6 @@ import {
 import { useObjectTypePropertyTableState } from "@/modules/knowledge-network/components/object-type/useObjectTypePropertyTableState";
 import { ObjectTypeDetailLogicPropertyTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailLogicPropertyTrialPanel";
 import { ObjectTypeDetailMetricTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailMetricTrialPanel";
-import { enrichDataPropertiesWithRowTotal } from "@/modules/knowledge-network/lib/enrich-data-properties";
 import { buildSampleRowKey } from "@/modules/knowledge-network/lib/object-type-instance-identity";
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
@@ -46,6 +47,7 @@ import {
   listKnowledgeNetworkMetrics,
   listKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type {
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkMetricRecord,
@@ -164,6 +166,7 @@ export function ObjectTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const runtimeConfig = useRuntimeConfig();
   const { message, modal } = useAppServices();
   const { networkId = "", objectTypeId = "" } = useParams<{
     networkId: string;
@@ -229,6 +232,17 @@ export function ObjectTypeDetailScene() {
   const [relatedKeyword, setRelatedKeyword] = useState("");
   const propertyTableState = useObjectTypePropertyTableState();
   const loadedObjectTypeKeyRef = useRef<string | null>(null);
+  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
+    networkId,
+    ["modify", "delete"],
+  );
+  const canModify = operationAccess.modify;
+  const canDelete = operationAccess.delete;
+  const canLoadResourceIndexStates = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    mode: "any",
+    requiredPermissions: ["resource:view_detail", "resource:task_manage"],
+  });
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`;
@@ -629,7 +643,7 @@ export function ObjectTypeDetailScene() {
   useEffect(() => {
     const resourceId = detail?.dataSource?.id;
 
-    if (!resourceId) {
+    if (!canLoadResourceIndexStates || !resourceId) {
       setResourceBuildTasks([]);
       setResourceBuildTasksLoading(false);
       return;
@@ -658,7 +672,7 @@ export function ObjectTypeDetailScene() {
     return () => {
       cancelled = true;
     };
-  }, [detail?.dataSource?.id]);
+  }, [canLoadResourceIndexStates, detail?.dataSource?.id]);
 
   const filteredDataProperties = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -734,11 +748,6 @@ export function ObjectTypeDetailScene() {
     return relatedActions.filter((item) => normalizedSearchText(item.name).includes(normalized));
   }, [relatedActions, relatedKeyword]);
 
-  const enrichedDataProperties = useMemo(
-    () => enrichDataPropertiesWithRowTotal(filteredDataProperties, preview?.rowTotalCount),
-    [filteredDataProperties, preview?.rowTotalCount],
-  );
-
   const resourceIndexState = useMemo(
     () => indexStateOf(resourceBuildTasks),
     [resourceBuildTasks],
@@ -746,8 +755,8 @@ export function ObjectTypeDetailScene() {
 
   const pagedDataProperties = useMemo(() => {
     const start = (dataPage - 1) * dataPageSize;
-    return enrichedDataProperties.slice(start, start + dataPageSize);
-  }, [dataPage, dataPageSize, enrichedDataProperties]);
+    return filteredDataProperties.slice(start, start + dataPageSize);
+  }, [dataPage, dataPageSize, filteredDataProperties]);
 
   const pagedLogicProperties = useMemo(() => {
     const start = (logicPage - 1) * logicPageSize;
@@ -1176,9 +1185,13 @@ export function ObjectTypeDetailScene() {
                   {t("knowledgeNetwork.objectTypeDataViewIndexState")}
                 </span>
                 <span className={styles.dataViewStatus}>
-                  {resourceBuildTasksLoading
-                    ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
-                    : formatIndexStateLabel(resourceIndexState, t)}
+                  {canLoadResourceIndexStates
+                    ? resourceBuildTasksLoading
+                      ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+                      : formatIndexStateLabel(resourceIndexState, t)
+                    : detail.hasIndex
+                      ? t("knowledgeNetwork.previewIndexed")
+                      : t("knowledgeNetwork.previewNotIndexed")}
                 </span>
               </div>
             </div>
@@ -1503,7 +1516,7 @@ export function ObjectTypeDetailScene() {
                     pageSize={dataPageSize}
                     showSizeChanger
                     showTotal={(total) => t("common.total", { total })}
-                    total={enrichedDataProperties.length}
+                    total={filteredDataProperties.length}
                   />
                 </div>
               </>
@@ -1981,25 +1994,31 @@ export function ObjectTypeDetailScene() {
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
-        <>
-          <AppButton
-            icon={<EditOutlined />}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
-              );
-            }}
-          >
-            {t("common.edit")}
-          </AppButton>
-          <AppButton
-            danger
-            icon={<DeleteOutlined />}
-            onClick={confirmDelete}
-          >
-            {t("common.delete")}
-          </AppButton>
-        </>
+        !isPermissionLoading && (canModify || canDelete) ? (
+          <>
+            {canModify ? (
+            <AppButton
+              icon={<EditOutlined />}
+              onClick={() => {
+                void navigate(
+                  `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
+                );
+              }}
+            >
+              {t("common.edit")}
+            </AppButton>
+            ) : null}
+            {canDelete ? (
+            <AppButton
+              danger
+              icon={<DeleteOutlined />}
+              onClick={confirmDelete}
+            >
+              {t("common.delete")}
+            </AppButton>
+            ) : null}
+          </>
+        ) : null
       }
       onBack={() => {
         void navigate(returnPath);

@@ -22,6 +22,7 @@ import type {
 import styles from "./ActionTypeOverviewPanel.module.css";
 
 type ActionTypeOverviewPanelProps = {
+  canResolveActionSource: boolean;
   detail: ActionTypeDetail;
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
@@ -92,6 +93,7 @@ function ObjectTypeCell({
 }
 
 export function ActionTypeOverviewPanel({
+  canResolveActionSource,
   detail,
   networkId,
   objectTypes,
@@ -180,7 +182,11 @@ export function ActionTypeOverviewPanel({
         <h3>
           <ProfileOutlined /> {t("knowledgeNetwork.actionTypeExecutionItemMapping")}
         </h3>
-        <ActionTypeExecutionConfigTable detail={detail} networkId={networkId} />
+        <ActionTypeExecutionConfigTable
+          canResolveActionSource={canResolveActionSource}
+          detail={detail}
+          networkId={networkId}
+        />
       </section>
     </div>
   );

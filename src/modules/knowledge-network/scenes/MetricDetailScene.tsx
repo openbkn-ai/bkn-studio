@@ -25,6 +25,7 @@ import {
   getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type {
   KnowledgeNetworkMetricRecord,
@@ -68,6 +69,12 @@ export function MetricDetailScene({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("info");
   const resolvedUpdaterName = useResolvedUpdaterName(detail?.updaterName);
+  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
+    networkId,
+    ["modify", "delete"],
+  );
+  const canModify = operationAccess.modify;
+  const canDelete = operationAccess.delete;
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
 
@@ -165,24 +172,30 @@ export function MetricDetailScene({
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
-        <>
-          <AppButton
-            icon={<EditOutlined />}
-            onClick={() => {
-              if (onEdit) {
-                onEdit();
-                return;
-              }
+        !isPermissionLoading && (canModify || canDelete) ? (
+          <>
+            {canModify ? (
+            <AppButton
+              icon={<EditOutlined />}
+              onClick={() => {
+                if (onEdit) {
+                  onEdit();
+                  return;
+                }
 
-              void navigate(`/knowledge-network/workspace/${networkId}/metrics/${metricId}/edit`);
-            }}
-          >
-            {t("common.edit")}
-          </AppButton>
-          <AppButton danger onClick={confirmDelete}>
-            {t("common.delete")}
-          </AppButton>
-        </>
+                void navigate(`/knowledge-network/workspace/${networkId}/metrics/${metricId}/edit`);
+              }}
+            >
+              {t("common.edit")}
+            </AppButton>
+            ) : null}
+            {canDelete ? (
+            <AppButton danger onClick={confirmDelete}>
+              {t("common.delete")}
+            </AppButton>
+            ) : null}
+          </>
+        ) : null
       }
       onBack={() => {
         if (onBack) {

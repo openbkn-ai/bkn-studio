@@ -33,11 +33,6 @@ export const homeEnUS = {
           scenario: "You have a PRD, process description, or business materials and need to agree how the knowledge network represents business semantics before creation.",
           title: "Business knowledge network design Skill",
         },
-        methodology: {
-          output: "Classification guidance, rationale, boundary risks, and questions requiring business confirmation.",
-          scenario: "A requirement or modeling scheme exists, but object boundaries, relation semantics, metric definitions, actions, or governance boundaries remain unclear.",
-          title: "Knowledge network modeling review Skill",
-        },
         requirement: {
           output: "A scenario-centered PRD, acceptance cases, and a BKN Creator handoff summary.",
           scenario: "Interview notes, a PRD, process documents, or early ideas need to be organized into business goals, scope, rules, and acceptance criteria.",
@@ -54,17 +49,17 @@ export const homeEnUS = {
       morningAnonymous: "Good morning",
     },
     introduction:
-      "Welcome to OpenBKN for business knowledge network construction, organizing enterprise data into understandable, queryable, and invocable business knowledge and capabilities for analysis, decision-making, and automated collaboration.",
+      "Welcome to OpenBKN. For all types of enterprise agents, OpenBKN builds business knowledge networks driven by ontology, uniformly organizing the enterprise's data, logic, actions and risks, combining the creativity of agents with the certainty of enterprise business, and supporting accurate, secure and reliable analysis, execution and decision-making.",
     pathLabel: "Build path",
     paths: {
       engineering: {
         description:
-          "Start from business materials and use AI Skills for requirement clarification, design, review, construction, and validation to build an iteratively improvable business knowledge network.",
+          "Start from business materials and use AI Skills for requirement clarification, design, construction, and validation to build an iteratively improvable business knowledge network.",
         heading: "Build a business knowledge network with AI Skills",
         title: "AI Skills build",
       },
       platform: {
-        description: "Start with the platform environment and business data. Prepare the environment, govern data, and model the knowledge network; then validate business outcomes and expose capabilities for invocation to create a usable, continuously evolving business knowledge network.",
+        description: "Start with the platform environment and business data. Prepare the environment and data, then model the knowledge network; validate business outcomes and expose capabilities for invocation to create a usable, continuously evolving business knowledge network.",
         heading: "Build a knowledge network manually",
         title: "Manual build",
       },
@@ -87,14 +82,14 @@ export const homeEnUS = {
             connection: {
               description: "Configure the data source type, address, credentials, and database scope, then test the connection to confirm that the platform can access the target business data.",
               impact: "The platform cannot read target business data, so discovery, semantic understanding, index building, and resource-based knowledge network modeling cannot proceed.",
-              outcome: "The platform has a reliable data access path and can discover and govern business resources.",
+              outcome: "The platform has a reliable data access path and can continue discovering and preparing business resources.",
               summary: "Create a platform-to-data connection and verify connectivity.",
               title: "Configure a data connection",
             },
             discovery: {
               description: "Run discovery immediately or create a schedule for a data connection to synchronize databases, tables, views, and fields to the data directory, while continuing to discover added or stale resources.",
-              impact: "The data directory has no governable resources or field structures, so semantic understanding, index building, and object type modeling cannot select a resource.",
-              outcome: "The platform has governable resources and current structures to use in subsequent modeling.",
+              impact: "The data directory has no available resources or field structures, so semantic understanding, index building, and object type modeling cannot select a resource.",
+              outcome: "The platform has available business data resources and current structures to use in subsequent modeling.",
               summary: "Synchronize business resources and field structures to the data directory.",
               title: "Run data discovery",
             },
@@ -113,8 +108,8 @@ export const homeEnUS = {
               title: "Run semantic understanding",
             },
           },
-          summary: "Govern business data assets",
-          title: "Data governance",
+          summary: "Prepare business data resources",
+          title: "Data preparation",
         },
         environment: {
           detail: "First establish the modules and operations that each participant can access, then set the default large and retrieval models needed for Q&A, semantic understanding, and retrieval.",

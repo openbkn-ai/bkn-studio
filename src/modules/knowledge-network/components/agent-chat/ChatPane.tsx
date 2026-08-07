@@ -42,6 +42,9 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
   buildAgentTools,
   effectiveToolArgs,
+  isTakenOverLifecycleTool,
+  formatOutputContract,
+  formatToolResultLimits,
   runAgentChat,
   DEFAULT_AGENT_CONFIG,
   type AgentChatTurn,
@@ -50,28 +53,34 @@ import {
   type AgentTokenProvider,
 } from "@/modules/knowledge-network/services/agent-chat.service";
 import {
+  normalizeAgentError,
+  type NormalizedAgentError,
+} from "@/modules/knowledge-network/services/agent-error";
+import {
   createBknLifecycle,
   lifecycleEnv,
   localConversationStore,
   type TurnOutcome,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import {
-  CONTEXT_LOADER_OPS,
+  type BknContext,
   type ContextLoaderEnv,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
+import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
 
 import styles from "./AgentChat.module.css";
+import { closeOpenMarkdown, splitMarkdownBlocks } from "./markdown-blocks";
 
+/**
+ * 默认提示词只讲「这个面板是干什么的、工具怎么用」。
+ * 输出契约不写在这里 —— 它由 composedSystem 自动拼接，理由见 formatOutputContract。
+ */
 export const DEFAULT_PROMPT =
   "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
   "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
   "kn_id 已锁定为当前网络，无需也不要修改。\n" +
-  "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。\n" +
-  "search_schema 默认 schema_brief=true（只返回概要，省 token）；确需完整字段定义时才显式传 schema_brief=false。\n" +
-  "工具结果默认 response_format=toon（TOON 紧凑文本，信息与 JSON 等价、更省 token），直接解读即可；确需 JSON 时显式传 response_format=json。\n" +
-  "重要：单个工具返回的文本会被截断到约 8000 字符，超出部分丢失。务必把过滤/聚合下推到查询里，必要时分多次小批查询；若看到「已截断」提示，说明结果不完整，应缩小查询范围重查，切勿把截断结果当作完整数据下结论。\n" +
-  "回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据。";
+  "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。";
 
 /** 「仅基础数据」面板默认提示词：只讲表/SQL 工具用法，不提知识网络概念。 */
 export const DEFAULT_BASE_PROMPT =
@@ -79,10 +88,12 @@ export const DEFAULT_BASE_PROMPT =
   "list_resources（列出可访问的数据表）、describe_resource（查看表的列结构）、run_sql（执行 SQL）。\n" +
   "流程：先用 list_resources 找到相关表，再用 describe_resource 确认列，再写 SQL 查询。\n" +
   "SQL 中的表名必须用模板占位 {{.<resource_id>}} 引用（resource_id 取自 list_resources 的 entries[].resource_id），不能写裸表名；跨 catalog 不能 join。\n" +
-  "查询要高效：聚合/排序/计数交给 SQL，用 LIMIT 和精确过滤、只取需要的字段，避免拉全表；" +
-  "单个工具返回的文本会被截断到约 8000 字符，若看到「已截断」提示应缩小查询范围重查，切勿把截断结果当作完整数据下结论。\n" +
-  "工具结果默认 response_format=toon（TOON 紧凑文本，信息与 JSON 等价、更省 token），直接解读即可；确需 JSON 时显式传 response_format=json。\n" +
-  "回答简洁、专业，使用中文（可用 Markdown），并在结论里说明依据（用了哪些表 / 什么 SQL）。";
+  "查询要高效：聚合/排序/计数交给 SQL，用 LIMIT 和精确过滤、只取需要的字段，避免拉全表。";
+
+/** 知识网络画像的「依据」写法。 */
+export const KN_EVIDENCE_HINT = "调了哪个工具、什么过滤条件或 SQL 要点";
+/** 仅基础数据画像的「依据」写法。 */
+export const BASE_EVIDENCE_HINT = "用了哪些表、什么 SQL 要点";
 
 const FALLBACK_SUGGESTIONS = [
   "这个知识网络里有哪些对象类和关系？",
@@ -103,6 +114,8 @@ export type PaneProfile = {
   injectKnContext: boolean;
   /** 默认勾选的工具名；null = 全部（含后端未来新增）。 */
   defaultToolNames: string[] | null;
+  /** 输出契约里「依据」该怎么写（各画像可用的工具不同）。 */
+  evidenceHint: string;
   /** 视觉高亮（对比模式的「主角」面板：渐变标签 + 面板泛光）。 */
   highlight?: boolean;
 };
@@ -160,6 +173,8 @@ type ChatMessage = {
   stopped?: boolean;
   /** 本轮整体执行失败（非工具级、而是这一轮没跑出结果）。 */
   errored?: boolean;
+  /** 本轮的执行错误。独立渲染成错误块，不再拼进正文——原始报文只在「详情」里出现。 */
+  errors?: NormalizedAgentError[];
 };
 
 type SessionStats = { tokens: number; ms: number };
@@ -258,11 +273,32 @@ function formatArgs(args: unknown): string {
   }
 }
 
-/** Markdown 渲染（GFM：表格/删除线/任务列表）。对比报告的 AI 总结也复用。 */
-export const MarkdownView = memo(function MarkdownView({ text }: { text: string }) {
+/** 单个 Markdown 块。memo 是关键：流式下只有尾块的 text 在变，前面的块不会重新 parse。 */
+const MarkdownBlock = memo(function MarkdownBlock({ text }: { text: string }) {
+  return <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>;
+});
+
+/**
+ * Markdown 渲染（GFM：表格/删除线/任务列表）。对比报告的 AI 总结也复用。
+ * streaming = 正文还在流：按块渲染 + 尾块补全未闭合语法，避免整段重 parse 的 O(n²)。
+ */
+export const MarkdownView = memo(function MarkdownView({ text, streaming = false }: { text: string; streaming?: boolean }) {
+  const blocks = useMemo(() => {
+    // 非流式正文一次成型，没有重复 parse 的开销，就不该冒分块启发式的风险：
+    // 跨块构造（引用式链接定义、GFM 脚注）被切开会解析失败，而落在已完成的正文上
+    // 是永久错误显示，不像流式尾巴那样流一结束就自愈。整段 parse 走老路。
+    if (!streaming) return null;
+    const bs = splitMarkdownBlocks(text);
+    if (bs.length === 0) return bs;
+    return [...bs.slice(0, -1), closeOpenMarkdown(bs[bs.length - 1])];
+  }, [text, streaming]);
   return (
     <div className={styles.md}>
-      <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+      {blocks === null ? (
+        <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+      ) : (
+        blocks.map((b, i) => <MarkdownBlock key={i} text={b} />)
+      )}
     </div>
   );
 });
@@ -319,6 +355,32 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * 一轮的执行错误：一句人话 + 可展开原文。可重试的（上游忙/连接中断）多给一个重试入口，
+ * 免得用户以为只能干等——原始报文一律收进折叠里，不再糊到对话正文上。
+ */
+function ErrorBlock({ err, onRetry }: { err: NormalizedAgentError; onRetry?: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={styles.errBox}>
+      <div className={styles.errHead}>
+        <span className={styles.errMsg}>⚠️ {err.message}</span>
+        {onRetry ? (
+          <button type="button" className={styles.errBtn} onClick={onRetry}>
+            重试本轮
+          </button>
+        ) : null}
+        {err.detail ? (
+          <button type="button" className={styles.errBtn} onClick={() => setOpen((v) => !v)}>
+            详情 {open ? <DownOutlined /> : <RightOutlined />}
+          </button>
+        ) : null}
+      </div>
+      {open && err.detail ? <pre className={styles.errPre}>{err.detail}</pre> : null}
     </div>
   );
 }
@@ -398,6 +460,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
 
   const abortRef = useRef<AbortController | null>(null);
+  // 本轮受管上下文，只给工具调用面板显示用；真值仍由 buildAgentTools 从 turn 逐次注入。
+  const turnContextRef = useRef<BknContext | null>(null);
   const requestSequenceRef = useRef(0);
   // 是否贴底跟随；用户上滚时置 false，回到底部恢复，避免生成时被强制拽到底。
   const stickRef = useRef(true);
@@ -560,9 +624,19 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               {
                 id: chunk.id,
                 name: chunk.name,
-                // 展示实际发出的业务请求体（含注入的 kn_id 与 schema_brief 等默认值），而非模型原始入参。
-                // 受管上下文（bkn_context）在 execute 里逐次注入，不在这条流式事件里，故不展示。
-                args: effectiveToolArgs(chunk.name, chunk.args, knId),
+                // 展示实际发出的业务请求体（含注入的 kn_id、schema_brief 等默认值与 bkn_context），
+                // 而非模型原始入参。bkn_context 是 execute 里注入的，流式事件里没有，取自本轮 turn ——
+                // 少了它，面板看起来就像"前端没传上下文"，排查 conversation_required 时会指错方向。
+                //
+                // 被接管的生命周期工具没有请求体可展示：本轮有 turn 时它们的 execute 根本不碰
+                // session.callTool，拼上 kn_id / bkn_context 就是编一份从未发出的报文。这类
+                // 照原样显示模型入参。判定必须用 isTakenOverLifecycleTool 而不是整片 bkn_
+                // 前缀——溯源类平台工具是直通后端的，它们的请求体真实存在，按前缀判会把
+                // 那些也显示成没有请求体，等于反向再造一次失真。没有 turn 时两类都直通。
+                args:
+                  turnContextRef.current && isTakenOverLifecycleTool(chunk.name)
+                    ? chunk.args
+                    : effectiveToolArgs(chunk.name, chunk.args, knId, turnContextRef.current ?? undefined),
                 status: "running",
                 startedAt: performance.now(),
               },
@@ -592,7 +666,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           setStats((s) => ({ ...s, tokens: s.tokens + chunk.totalTokens }));
           break;
         case "error":
-          updateAssistant((m) => ({ ...m, content: m.content + (m.content ? "\n\n" : "") + `⚠️ ${chunk.error}` }));
+          updateAssistant((m) => ({
+            ...m,
+            errored: true,
+            errors: [
+              ...(m.errors ?? []),
+              { message: chunk.error, detail: chunk.detail, retryable: chunk.retryable ?? false },
+            ],
+          }));
           break;
         case "finish":
         default:
@@ -617,17 +698,22 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     [env.base, knId, tokenProvider, profile.paneKey],
   );
 
-  // 实际发送的完整系统提示词 = 可编辑提示词 + （按画像）自动附加的知识网络摘要。
-  const composedSystem = useMemo(
-    () =>
-      profile.injectKnContext && knContext
-        ? `${systemPrompt}\n\n## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n${knContext}`
-        : systemPrompt,
-    [profile.injectKnContext, systemPrompt, knContext],
-  );
+  // 实际发送的完整系统提示词 = 可编辑提示词 + （按画像）知识网络摘要 + 截断上限 + 输出契约。
+  // 后两段都不写进可编辑提示词：上限跟着调参面板变，契约必须和过滤器认的标签逐字节一致，
+  // 而提示词是持久化状态（每轮回写、载入优先用存量值），写进默认值对老用户一律不生效。
+  const composedSystem = useMemo(() => {
+    const sections = [systemPrompt];
+    if (profile.injectKnContext && knContext) {
+      sections.push(`## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n${knContext}`);
+    }
+    const limits = formatToolResultLimits(config);
+    if (limits) sections.push(limits);
+    sections.push(formatOutputContract(profile.evidenceHint));
+    return sections.join("\n\n");
+  }, [profile.injectKnContext, profile.evidenceHint, systemPrompt, knContext, config]);
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, options: { replaceLastRound?: boolean } = {}) => {
       const question = text.trim();
       if (!question || busy) return;
       if (!model) {
@@ -639,18 +725,32 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       const requestSequence = ++requestSequenceRef.current;
       const startedAt = performance.now();
 
+      // 重试：把失败的那一轮（user + assistant 一对）摘掉再重发，而不是在下面追加一轮
+      // ——否则会多出一条重复的用户气泡，失败轮的空 assistant 也会留在历史里。
+      const kept =
+        options.replaceLastRound &&
+        messages.length >= 2 &&
+        messages[messages.length - 1].role === "assistant" &&
+        messages[messages.length - 2].role === "user"
+          ? messages.slice(0, -2)
+          : messages;
+
       // 多轮上下文压缩：只保留最近若干轮，且单轮文本封顶，防长对话纯文本堆大。
       // （工具结果/思考本就不进历史，见 send() 历史只取 role+content。）
-      const history: AgentChatTurn[] = messages.slice(-config.maxHistoryMessages).map((m) => ({
-        role: m.role,
-        content:
-          config.maxTurnChars > 0 && m.content.length > config.maxTurnChars
-            ? `${m.content.slice(0, config.maxTurnChars)}\n…[历史过长已截断]`
-            : m.content,
-      }));
+      // 空正文的 assistant 轮不进历史：那是出错/被停的轮次，回灌给严格 router 只会添乱。
+      const history: AgentChatTurn[] = kept
+        .filter((m) => m.role === "user" || m.content.trim().length > 0)
+        .slice(-config.maxHistoryMessages)
+        .map((m) => ({
+          role: m.role,
+          content:
+            config.maxTurnChars > 0 && m.content.length > config.maxTurnChars
+              ? `${m.content.slice(0, config.maxTurnChars)}\n…[历史过长已截断]`
+              : m.content,
+        }));
       history.push({ role: "user", content: question });
-      setMessages((prev) => [
-        ...prev,
+      setMessages(() => [
+        ...kept,
         { role: "user", content: question },
         { role: "assistant", content: "", toolCalls: [] },
       ]);
@@ -662,11 +762,19 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       let turn: Awaited<ReturnType<typeof lifecycle.beginTurn>> = null;
       let outcome: TurnOutcome = "completed";
       let answer = "";
+      /** 本轮流里出过 error chunk。UI 已判 errored，终结也必须记 failed。 */
+      let roundFailed = false;
       try {
         turn = await lifecycle.beginTurn(question);
+        turnContextRef.current = turn?.nextContext() ?? null;
         const allTools = await getTools();
+        // 生命周期工具不在这里滤掉——buildAgentTools 会接管它们的执行（绑到本轮交互）。
+        // 这里只保留「仅基础数据」面板的画像限定。
+        const modelVisibleTools = allTools.filter(
+          (toolDef) => profile.paneKey !== "base" || !profile.defaultToolNames || profile.defaultToolNames.includes(toolDef.name),
+        );
         // 硬限定：只把勾选的工具传给模型（null = 全部）。
-        const activeTools = toolSelection ? allTools.filter((t) => toolSelection.includes(t.name)) : allTools;
+        const activeTools = toolSelection ? modelVisibleTools.filter((t) => toolSelection.includes(t.name)) : modelVisibleTools;
         const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider, {
           resourceScope,
           session: lifecycle.session,
@@ -684,6 +792,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           signal: controller.signal,
           onChunk: (chunk) => {
             if (chunk.type === "text") answer += chunk.delta;
+            // 流里的错误是 runAgentChat 内部捕获后正常返回的，不会抛到下面的 catch。
+            // 不在这里记一笔，交给 Core 的就是 completed + 空 artifact，
+            // 而面板上明明是红条——#620 那类失败会被系统性少记。
+            if (chunk.type === "error") roundFailed = true;
             if (requestSequence === requestSequenceRef.current) handleChunk(chunk);
           },
         });
@@ -695,11 +807,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           updateAssistant((m) => ({ ...m, stopped: true }));
         } else {
           outcome = "failed";
-          updateAssistant((m) => ({
-            ...m,
-            errored: true,
-            content: m.content + (m.content ? "\n\n" : "") + `⚠️ ${error instanceof Error ? error.message : String(error)}`,
-          }));
+          updateAssistant((m) => ({ ...m, errored: true, errors: [...(m.errors ?? []), normalizeAgentError(error)] }));
         }
       } finally {
         // 终结必须挡在 setBusy(false) 之前：一条 conversation 同时只允许一个 active
@@ -707,8 +815,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         // 用户手快发出的下一轮直接开不出交互。
         // 用户点停止时 runAgentChat 是正常返回而非抛错，所以结果要认 aborted 而不是 outcome。
         // 收尾失败不改写本轮结果：那是可观测面的问题，不该把答出来的一轮显示成失败。
-        if (turn) await turn.finish(controller.signal.aborted ? "canceled" : outcome, answer).catch(() => undefined);
+        const finalOutcome: TurnOutcome = roundFailed && outcome === "completed" ? "failed" : outcome;
+        if (turn) {
+          await turn.finish(controller.signal.aborted ? "canceled" : finalOutcome, answer).catch(() => undefined);
+        }
         if (requestSequence === requestSequenceRef.current) {
+          // 只有仍是当前这一轮才清：并发下一轮已经写进自己的上下文，越权清掉会让它
+          // 后续的工具调用卡片显示不出 bkn_context。
+          turnContextRef.current = null;
           abortRef.current = null;
           const elapsed = performance.now() - startedAt;
           // 本轮耗时写到最后一条 assistant 消息 + 累计会话总时长（token 已在 usage chunk 累计）。
@@ -720,7 +834,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         }
       }
     },
-    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, lifecycle, handleChunk, updateAssistant, message],
+    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, lifecycle, handleChunk, updateAssistant, message, profile],
   );
 
   const stop = useCallback(() => {
@@ -772,29 +886,36 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     () => models.map((m) => ({ value: m.modelName, label: m.default ? `${m.modelName} · 默认` : m.modelName })),
     [models],
   );
-  // 与 MCP 侧栏同款分组：本地 op 定义带组名，线上新增的归 Knowledge Network。
+  // 模型可见的工具集。生命周期工具不从这里藏——它们由 buildAgentTools 接管执行
+  // （绑到本轮交互），仍然是模型调得到的能力。「仅基础数据」面板另按画像硬限定。
+  const agentToolDefs = useMemo(() => {
+    if (!toolDefs || profile.paneKey !== "base" || !profile.defaultToolNames) return toolDefs ?? null;
+    const baseToolNames = new Set(profile.defaultToolNames);
+    return toolDefs.filter((toolDef) => baseToolNames.has(toolDef.name));
+  }, [profile.defaultToolNames, profile.paneKey, toolDefs]);
+  // 与 MCP 侧栏同款分组：tools/list 下发的 title / _meta 分组排序为准，老服务端退回本地兜底表。
   const toolOptions = useMemo(() => {
-    if (!toolDefs) return [];
-    const groupOf = (name: string) => CONTEXT_LOADER_OPS.find((op) => op.id === name)?.group ?? "Knowledge Network";
-    const order = [...new Set(CONTEXT_LOADER_OPS.map((op) => op.group))];
-    const buckets = new Map<string, { value: string; label: string }[]>();
-    for (const t of toolDefs) {
-      const group = groupOf(t.name);
-      if (!buckets.has(group)) buckets.set(group, []);
-      buckets.get(group)!.push({ value: t.name, label: t.name });
-    }
-    return [...buckets.keys()]
-      .sort((a, b) => {
-        const ia = order.indexOf(a);
-        const ib = order.indexOf(b);
-        return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
-      })
-      .map((group) => ({ label: group, title: group, options: buckets.get(group)! }));
-  }, [toolDefs]);
+    if (!agentToolDefs) return [];
+    return buildMcpToolGroups(agentToolDefs, (tool) => toolDisplayOf(tool.name, tool)).map((group) => ({
+      label: group.label,
+      title: group.label,
+      options: group.items.map(({ item, display }) => ({
+        value: item.name,
+        title: `${display.name} · ${item.name}`,
+        searchText: `${display.name} ${item.name}`,
+        label: (
+          <span className={styles.toolOption}>
+            <span className={styles.toolOptionName}>{display.name}</span>
+            <span className={styles.toolOptionId}>{item.name}</span>
+          </span>
+        ),
+      })),
+    }));
+  }, [agentToolDefs]);
   // 选择器展示值：null（全部）时显示当前已知的全部工具名。
   const draftToolValue = useMemo(
-    () => draftToolSelection ?? (toolDefs ? toolDefs.map((t) => t.name) : []),
-    [draftToolSelection, toolDefs],
+    () => draftToolSelection ?? (agentToolDefs ? agentToolDefs.map((t) => t.name) : []),
+    [draftToolSelection, agentToolDefs],
   );
 
   const empty = messages.length === 0;
@@ -861,6 +982,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             value={draftToolValue}
             onChange={(next: string[]) => setDraftToolSelection(next)}
             options={toolOptions}
+            showSearch
+            filterOption={(input, option) => {
+              const searchText = (option as { searchText?: unknown } | undefined)?.searchText;
+              return typeof searchText === "string" && searchText.toLowerCase().includes(input.trim().toLowerCase());
+            }}
             placeholder={toolDefs ? "选择工具" : "正在加载工具"}
             loading={!toolDefs}
             disabled={busy}
@@ -868,7 +994,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             maxTagPlaceholder={() =>
               draftToolSelection === null
                 ? `全部 · ${draftToolValue.length}`
-                : `已选 ${draftToolValue.length}${toolDefs ? ` / ${toolDefs.length}` : ""}`
+                : `已选 ${draftToolValue.length}${agentToolDefs ? ` / ${agentToolDefs.length}` : ""}`
             }
             allowClear
             onClear={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}
@@ -1042,10 +1168,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                       </div>
                     ) : null}
                     {m.content ? (
-                      // 流式进行中的最后一条用纯文本，结束后再渲染 Markdown：
-                      // 避免每来一个 token 就整段重新解析 Markdown（长答复 O(n²) 卡 UI）。
-                      m.role === "assistant" && !(busy && isLast) ? (
-                        <MarkdownView text={m.content} />
+                      // 流式进行中也渲染 Markdown：MarkdownView 按块 memo，只有尾块重 parse，
+                      // 不再是每来一个 token 就整段重解析（长答复 O(n²) 卡 UI）。
+                      m.role === "assistant" ? (
+                        <MarkdownView text={m.content} streaming={busy && isLast} />
                       ) : (
                         <div className={styles.txt}>{m.content}</div>
                       )
@@ -1054,6 +1180,23 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                         <i />
                         <i />
                         <i />
+                      </div>
+                    ) : null}
+                    {m.errors?.length ? (
+                      <div className={styles.errs}>
+                        {m.errors.map((e, ei) => (
+                          <ErrorBlock
+                            key={ei}
+                            err={e}
+                            // 重试 = 把失败的这一轮原地重跑（摘掉旧的一对再重发），
+                            // 不是追加新一轮——否则会多出一条重复的用户气泡。
+                            onRetry={
+                              e.retryable && !busy && isLast && messages[i - 1]?.role === "user"
+                                ? () => void send(messages[i - 1].content, { replaceLastRound: true })
+                                : undefined
+                            }
+                          />
+                        ))}
                       </div>
                     ) : null}
                     {m.role === "assistant" ? (

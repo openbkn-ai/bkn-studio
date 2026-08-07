@@ -39,6 +39,8 @@ import type {
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type ObjectTypeListPanelProps = {
+  canDelete: boolean;
+  canModify: boolean;
   items: KnowledgeNetworkObjectTypeRecord[];
   loading?: boolean;
   networkId: string;
@@ -57,6 +59,8 @@ function readSortDirection(value: string | null): "asc" | "desc" {
 const PAGE_SIZE_STORAGE_SCOPE = "object-types";
 
 export function ObjectTypeListPanel({
+  canDelete,
+  canModify,
   items,
   loading,
   networkId,
@@ -86,7 +90,11 @@ export function ObjectTypeListPanel({
     () => items.map((item) => item.dataSource?.id),
     [items],
   );
-  const { buildTasksByResourceId, loading: resourceBuildTasksLoading } =
+  const {
+    buildTasksByResourceId,
+    canLoadResourceIndexStates,
+    loading: resourceBuildTasksLoading,
+  } =
     useResourceIndexStates(boundResourceIds);
 
   useEffect(() => {
@@ -309,8 +317,8 @@ export function ObjectTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          { key: "edit", label: t("common.edit") },
-          { key: "delete", danger: true, label: t("common.delete") },
+          ...(canModify ? [{ key: "edit", label: t("common.edit") }] : []),
+          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
         ];
 
         return (
@@ -368,9 +376,13 @@ export function ObjectTypeListPanel({
           return "--";
         }
 
-        const label = resourceBuildTasksLoading
-          ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
-          : formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t);
+        const label = canLoadResourceIndexStates
+          ? resourceBuildTasksLoading
+            ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+            : formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t)
+          : record.hasIndex
+            ? t("knowledgeNetwork.previewIndexed")
+            : t("knowledgeNetwork.previewNotIndexed");
 
         return (
           <button
@@ -423,6 +435,15 @@ export function ObjectTypeListPanel({
       );
     }
 
+    if (!canModify) {
+      return (
+        <Empty
+          className={styles.emptyPanel}
+          description={t("knowledgeNetwork.emptyObjectTypes")}
+        />
+      );
+    }
+
     return (
       <Empty
         className={styles.emptyPanel}
@@ -456,25 +477,33 @@ export function ObjectTypeListPanel({
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          <AppButton
-            className={styles.toolbarButton}
-            icon={<PlusOutlined />}
-            onClick={() => {
-              void navigate(`/knowledge-network/workspace/${networkId}/object-types/create`);
-            }}
-            type="primary"
-          >
-            {t("common.create")}
-          </AppButton>
-          <AppButton
-            className={styles.toolbarButton}
-            danger
-            disabled={selectedRows.length === 0}
-            icon={<DeleteOutlined />}
-            onClick={() => confirmDelete(selectedRows)}
-          >
-            {t("common.delete")}
-          </AppButton>
+          {canModify || canDelete ? (
+            <>
+              {canModify ? (
+              <AppButton
+                className={styles.toolbarButton}
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  void navigate(`/knowledge-network/workspace/${networkId}/object-types/create`);
+                }}
+                type="primary"
+              >
+                {t("common.create")}
+              </AppButton>
+              ) : null}
+              {canDelete ? (
+              <AppButton
+                className={styles.toolbarButton}
+                danger
+                disabled={selectedRows.length === 0}
+                icon={<DeleteOutlined />}
+                onClick={() => confirmDelete(selectedRows)}
+              >
+                {t("common.delete")}
+              </AppButton>
+              ) : null}
+            </>
+          ) : null}
         </div>
         <div className={styles.toolbarRight}>
           <Input
@@ -559,12 +588,16 @@ export function ObjectTypeListPanel({
           locale={{ emptyText: tableEmptyText }}
           pagination={false}
           rowKey="id"
-          rowSelection={{
-            selectedRowKeys,
-            onChange: (nextSelectedRowKeys) => {
-              setSelectedRowKeys(nextSelectedRowKeys.map(String));
-            },
-          }}
+          rowSelection={
+            canDelete
+              ? {
+                  selectedRowKeys,
+                  onChange: (nextSelectedRowKeys) => {
+                    setSelectedRowKeys(nextSelectedRowKeys.map(String));
+                  },
+                }
+              : undefined
+          }
           scroll={{ x: 1180 }}
           size="middle"
         />

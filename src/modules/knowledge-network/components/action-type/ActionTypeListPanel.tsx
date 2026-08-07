@@ -36,6 +36,8 @@ import type {
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type ActionTypeListPanelProps = {
+  canDelete: boolean;
+  canModify: boolean;
   items: KnowledgeNetworkActionTypeRecord[];
   loading?: boolean;
   networkId: string;
@@ -62,6 +64,8 @@ function getActionKindLabel(
 }
 
 export function ActionTypeListPanel({
+  canDelete,
+  canModify,
   items,
   loading,
   networkId,
@@ -235,9 +239,13 @@ export function ActionTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          { key: "edit", label: t("common.edit") },
-          { key: "execution", label: t("knowledgeNetwork.actionTypeExecutionEntry") },
-          { key: "delete", danger: true, label: t("common.delete") },
+          ...(canModify
+            ? [
+                { key: "edit", label: t("common.edit") },
+                { key: "execution", label: t("knowledgeNetwork.actionTypeExecutionEntry") },
+              ]
+            : []),
+          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
         ];
 
         return (
@@ -314,6 +322,15 @@ export function ActionTypeListPanel({
       );
     }
 
+    if (!canModify) {
+      return (
+        <Empty
+          className={styles.emptyPanel}
+          description={t("knowledgeNetwork.emptyActionTypes")}
+        />
+      );
+    }
+
     return (
       <Empty
         className={styles.emptyPanel}
@@ -341,25 +358,33 @@ export function ActionTypeListPanel({
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          <AppButton
-            className={styles.toolbarButton}
-            icon={<PlusOutlined />}
-            onClick={() => {
-              void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`);
-            }}
-            type="primary"
-          >
-            {t("common.create")}
-          </AppButton>
-          <AppButton
-            className={styles.toolbarButton}
-            danger
-            disabled={selectedRows.length === 0}
-            icon={<DeleteOutlined />}
-            onClick={() => confirmDelete(selectedRows)}
-          >
-            {t("common.delete")}
-          </AppButton>
+          {canModify || canDelete ? (
+            <>
+              {canModify ? (
+              <AppButton
+                className={styles.toolbarButton}
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`);
+                }}
+                type="primary"
+              >
+                {t("common.create")}
+              </AppButton>
+              ) : null}
+              {canDelete ? (
+              <AppButton
+                className={styles.toolbarButton}
+                danger
+                disabled={selectedRows.length === 0}
+                icon={<DeleteOutlined />}
+                onClick={() => confirmDelete(selectedRows)}
+              >
+                {t("common.delete")}
+              </AppButton>
+              ) : null}
+            </>
+          ) : null}
         </div>
         <div className={styles.toolbarRight}>
           <Input
@@ -456,12 +481,16 @@ export function ActionTypeListPanel({
           locale={{ emptyText: renderEmptyContent() }}
           pagination={false}
           rowKey="id"
-          rowSelection={{
-            selectedRowKeys,
-            onChange: (nextSelectedRowKeys) => {
-              setSelectedRowKeys(nextSelectedRowKeys.map(String));
-            },
-          }}
+          rowSelection={
+            canDelete
+              ? {
+                  selectedRowKeys,
+                  onChange: (nextSelectedRowKeys) => {
+                    setSelectedRowKeys(nextSelectedRowKeys.map(String));
+                  },
+                }
+              : undefined
+          }
           scroll={{ x: 1180 }}
           size="middle"
         />

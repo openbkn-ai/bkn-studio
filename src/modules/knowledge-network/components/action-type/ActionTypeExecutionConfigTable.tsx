@@ -28,6 +28,7 @@ import type { ActionTypeToolInputParam } from "@/modules/knowledge-network/utils
 import styles from "./ActionTypeExecutionConfigTable.module.css";
 
 type ActionTypeExecutionConfigTableProps = {
+  canResolveActionSource: boolean;
   detail: ActionTypeDetail;
   networkId: string;
 };
@@ -74,6 +75,7 @@ function flattenParameterSchema(
 }
 
 export function ActionTypeExecutionConfigTable({
+  canResolveActionSource,
   detail,
   networkId,
 }: ActionTypeExecutionConfigTableProps) {
@@ -119,6 +121,12 @@ export function ActionTypeExecutionConfigTable({
       return;
     }
 
+    if (!canResolveActionSource) {
+      setActionSourceResolutionFailed(true);
+      setIsResolvingActionSource(false);
+      return;
+    }
+
     let cancelled = false;
     setActionSourceResolutionFailed(false);
     setIsResolvingActionSource(true);
@@ -147,11 +155,11 @@ export function ActionTypeExecutionConfigTable({
     return () => {
       cancelled = true;
     };
-  }, [detail.executionConfig.actionSource]);
+  }, [canResolveActionSource, detail.executionConfig.actionSource]);
 
   useEffect(() => {
     const actionSource = detail.executionConfig.actionSource;
-    if (!actionSource) {
+    if (!canResolveActionSource || !actionSource) {
       setParameterSchemaMap({});
       return;
     }
@@ -175,7 +183,7 @@ export function ActionTypeExecutionConfigTable({
     return () => {
       cancelled = true;
     };
-  }, [detail.executionConfig.actionSource]);
+  }, [canResolveActionSource, detail.executionConfig.actionSource]);
 
   const rows = useMemo<ParameterRow[]>(
     () =>

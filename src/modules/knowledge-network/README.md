@@ -92,7 +92,6 @@ components/
   services/
     action-type-tool.service.ts  # 工具目录（mock / GET /tools/catalog）
   metric/          # MetricListPanel
-  task/            # TaskListPanel、TaskStateTag
 ```
 
 ## 分层规则
@@ -126,7 +125,6 @@ services/
   action-type.service.ts         # 行动类 CRUD / 执行日志
   concept-group.service.ts       # 概念分组 CRUD / 资源归组
   metric.service.ts              # 指标 CRUD / 数据查询
-  task.service.ts                # 任务 CRUD / 子任务详情
   shared/runtime.ts              # useMock、wait、formatTimestamp、导入冲突等
   mappers/
     backend-types.ts             # 后端 DTO 类型
@@ -145,7 +143,6 @@ services/
 | 关系类 | `RelationTypeFormScene` / `RelationTypeMappingScene` | `.../relation-types/create` |
 | 行动类 | `ActionTypeFormScene` / `ActionTypeExecutionScene` | `.../action-types/create` |
 | 指标 | `MetricFormScene` / `MetricDataQueryScene` | `.../metrics/create` |
-| 任务 | `TaskFormScene` / `TaskDetailScene` | `.../tasks/create` |
 
 ## 开发 Mock
 

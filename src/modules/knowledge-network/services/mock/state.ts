@@ -23,8 +23,6 @@ import type {
   KnowledgeNetworkRecentObject,
   KnowledgeNetworkRecord,
   KnowledgeNetworkRelationTypeRecord,
-  KnowledgeNetworkTaskChildRecord,
-  KnowledgeNetworkTaskRecord,
   ObjectTypeDataProperty,
   ObjectTypeDataSource,
   ObjectTypeResourceField,
@@ -38,10 +36,20 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 
+const mockKnowledgeNetworkOperations = [
+  "view_detail",
+  "data_query",
+  "modify",
+  "delete",
+  "authorize",
+  "task_manage",
+];
+
 export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
   {
     id: "kn-domain-risk",
     identifier: "domain_risk_network",
+    operations: mockKnowledgeNetworkOperations,
     name: "领域风控知识网络",
     description:
       "围绕风控对象、风险关系与行动策略组织的领域业务知识网络。",
@@ -63,6 +71,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
   {
     id: "kn-domain-supply",
     identifier: "domain_supply_network",
+    operations: mockKnowledgeNetworkOperations,
     name: "领域供应链知识网络",
     description:
       "用于供应商、仓配、履约行动和经营指标建模的领域知识网络。",
@@ -84,6 +93,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
   {
     id: "kn-domain-customer",
     identifier: "domain_customer_network",
+    operations: mockKnowledgeNetworkOperations,
     name: "领域客户知识网络",
     description:
       "聚焦客户主体、标签体系和营销动作的业务知识网络。",
@@ -1120,46 +1130,6 @@ export const mockMetrics: Record<string, KnowledgeNetworkMetricRecord[]> = {
       unitType: "percent",
       updateTime: "2026-06-04 12:00:00",
       updaterName: "Knowledge Team",
-    },
-  ],
-};
-
-export const mockTasks: Record<string, KnowledgeNetworkTaskRecord[]> = {
-  "kn-domain-risk": [
-    {
-      id: "job-full-001",
-      name: "全量同步任务",
-      jobType: "full",
-      state: "completed",
-      startTime: "2026-06-03 10:00:00",
-      finishTime: "2026-06-03 10:45:00",
-      duration: "45m",
-    },
-  ],
-};
-
-export const mockTaskChildren: Record<string, KnowledgeNetworkTaskChildRecord[]> = {
-  "job-full-001": [
-    {
-      id: "child-001",
-      conceptName: "风险订单",
-      conceptType: "object_type",
-      state: "completed",
-      duration: "12m",
-    },
-    {
-      id: "child-002",
-      conceptName: "命中关系",
-      conceptType: "relation_type",
-      state: "completed",
-      duration: "8m",
-    },
-    {
-      id: "child-003",
-      conceptName: "告警行动",
-      conceptType: "action_type",
-      state: "running",
-      duration: "--",
     },
   ],
 };

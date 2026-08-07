@@ -7,8 +7,6 @@
 
 import type {
   KnowledgeNetworkMetricRecord,
-  KnowledgeNetworkTaskChildRecord,
-  KnowledgeNetworkTaskRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 export type BackendAccountInfo = {
@@ -37,6 +35,7 @@ export type BackendKnowledgeNetwork = {
   icon?: string;
   id: string;
   name: string;
+  operations?: string[];
   statistics?: {
     action_types_total?: number;
     concept_groups_total?: number;
@@ -295,24 +294,4 @@ export type BackendMetric = {
   update_time?: number;
   updater?: BackendAccountInfo | string;
   updater_name?: string;
-};
-
-export type BackendTaskChild = {
-  concept_id?: string;
-  concept_name?: string;
-  concept_type?: string;
-  id: string;
-  state?: KnowledgeNetworkTaskChildRecord["state"];
-  state_detail?: string;
-  time_cost?: number;
-};
-
-export type BackendTask = {
-  finish_time?: number;
-  id: string;
-  job_type?: KnowledgeNetworkTaskRecord["jobType"];
-  name?: string;
-  start_time?: number;
-  state?: KnowledgeNetworkTaskRecord["state"];
-  state_detail?: string;
 };

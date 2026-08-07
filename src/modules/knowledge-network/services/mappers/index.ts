@@ -17,8 +17,6 @@ import type {
   KnowledgeNetworkRecord,
   KnowledgeNetworkRecentObject,
   KnowledgeNetworkRelationTypeRecord,
-  KnowledgeNetworkTaskChildRecord,
-  KnowledgeNetworkTaskRecord,
   ObjectTypeDataProperty,
   ObjectTypeDetail,
   ObjectTypeLogicAttributeType,
@@ -39,8 +37,6 @@ import type {
   BackendObjectTypeMutation,
   BackendRelationType,
   BackendSmallModel,
-  BackendTask,
-  BackendTaskChild,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 import { mapRelationTypeMappingsFromBackend } from "./relation-type.mapper";
@@ -53,6 +49,7 @@ export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNet
     description: item.comment ?? item.description ?? "",
     color: item.color?.trim() || "#1677ff",
     icon: item.icon,
+    operations: item.operations ?? [],
     tags: item.tags ?? [],
     createTime: formatTimestamp(item.create_time),
     updateTime: formatTimestamp(item.update_time),
@@ -459,43 +456,6 @@ export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTy
 
 
 export { mapMetric, toBackendMetricCondition, toBackendMetricEntry } from "./metric.mapper";
-
-export function mapTaskChild(item: BackendTaskChild): KnowledgeNetworkTaskChildRecord {
-  const durationMs = item.time_cost ?? 0;
-  return {
-    id: item.id,
-    conceptName: item.concept_name ?? item.concept_id ?? "--",
-    conceptType: item.concept_type ?? "object_type",
-    state: item.state ?? "pending",
-    stateDetail: item.state_detail,
-    duration:
-      durationMs > 0 ? `${Math.max(Math.round(durationMs / 60000), 1)}m` : "--",
-  };
-}
-
-export function mapTask(item: BackendTask): KnowledgeNetworkTaskRecord {
-  const start = item.start_time ? formatTimestamp(item.start_time) : "--";
-  const finish = item.finish_time ? formatTimestamp(item.finish_time) : "--";
-  const durationMs =
-    item.start_time && item.finish_time
-      ? Math.max(item.finish_time - item.start_time, 0)
-      : 0;
-  const duration =
-    durationMs > 0
-      ? `${Math.max(Math.round(durationMs / 60000), 1)}m`
-      : "--";
-
-  return {
-    id: item.id,
-    name: item.name ?? item.id,
-    jobType: item.job_type ?? "full",
-    state: item.state ?? "pending",
-    stateDetail: item.state_detail,
-    startTime: start,
-    finishTime: finish,
-    duration,
-  };
-}
 
 export {
   mapRelationTypeMappingsFromBackend,

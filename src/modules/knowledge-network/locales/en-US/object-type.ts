@@ -196,7 +196,6 @@ export const objecttypePart = {
     objectTypePropertyMappedField: "Mapped field",
     objectTypePropertyPrimaryKey: "Primary key",
     objectTypePropertyTitle: "Display title",
-    objectTypePropertyTotalCount: "total_count",
     objectTypePropertyIndex: "No.",
     objectTypeReplaceResource: "Replace resource",
     objectTypes: "Object types",

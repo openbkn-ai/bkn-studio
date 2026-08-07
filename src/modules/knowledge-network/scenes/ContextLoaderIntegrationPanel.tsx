@@ -7,7 +7,7 @@
 
 import { ApiOutlined, CaretRightOutlined, CopyOutlined, DatabaseOutlined, DownOutlined, FileTextOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { Input, Modal, Select, Spin, Tooltip } from "antd";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { buildApiKeyPagePath } from "@/modules/api-keys/utils/api-key-handoff";
@@ -20,30 +20,11 @@ import {
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 import { createClaudeCodeMcpCommand, createMcpRemoteJsonConfig, withMcpTrailingSlash } from "@/modules/knowledge-network/services/mcp-client-config";
-import {
-  businessInfoOf,
-  compareToolsInBusinessGroup,
-  type ToolBusinessGroupKey,
-} from "@/modules/knowledge-network/scenes/context-loader-tool-business-info";
+import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
 
 import styles from "./ExperienceScene.module.css";
 
 export type ResponseView = { kind: "json" | "toon"; text: string };
-
-const TOOL_GROUPS: Array<{
-  key: ToolBusinessGroupKey;
-  label: string;
-  description: string;
-}> = [
-  { key: "network", label: "知识网络信息", description: "知识网络列表、当前网络详情" },
-  { key: "lifecycle", label: "交互生命周期", description: "受管会话、交互和操作状态" },
-  { key: "model", label: "知识网络模型检索", description: "语义检索、对象类、关系类、行动类、指标定义查询" },
-  { key: "query", label: "对象实例与关系子图查询", description: "对象实例查询、关系子图查询" },
-  { key: "data", label: "数据资源与 SQL 查询", description: "数据资源列表、字段结构、SQL 数据查询" },
-  { key: "logic", label: "逻辑属性与行动调用", description: "逻辑属性计算、行动工具召回与执行" },
-  { key: "skill", label: "技能与动态工具", description: "Skill 检索和线上动态工具" },
-  { key: "other", label: "其他能力", description: "暂未归类的 MCP 能力" },
-];
 
 type ContextLoaderIntegrationPanelProps = {
   mode: Exclude<ContextLoaderMode, "agent">;
@@ -258,23 +239,35 @@ export function ContextLoaderIntegrationPanel({
   const [resultOpen, setResultOpen] = useState(true);
   const [mcpResultTab, setMcpResultTab] = useState<"result" | "debug">("result");
   const [mcpConfigTab, setMcpConfigTab] = useState<"claude" | "cursor" | "generic">("claude");
+  const [mcpConfigKey, setMcpConfigKey] = useState(appKeyValue);
+  const [mcpConfigKeyDraft, setMcpConfigKeyDraft] = useState("");
+  const [mcpConfigKeyError, setMcpConfigKeyError] = useState("");
+  const [mcpConfigKeyModalOpen, setMcpConfigKeyModalOpen] = useState(false);
   const filterText = filter.trim().toLowerCase();
   const appKeyPlaceholder = "bak_<在个人中心 API Key 签发的长期 Key>";
-  const configAppKey = appKeyValue || appKeyPlaceholder;
+  const configAppKey = mcpConfigKey || appKeyPlaceholder;
   const mcpUrlWithSlash = withMcpTrailingSlash(mcpUrl);
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
   const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey);
   const claudeCliConfig = createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey);
-  const treeGroups = TOOL_GROUPS.map((group) => ({
-    ...group,
-    items: activeOps
-      .filter((item) => {
-        const info = businessInfoOf(item);
-        const searchable = `${info.name} ${item.id} ${item.path} ${item.summary} ${group.label}`.toLowerCase();
-        return info.groupKey === group.key && (!filterText || searchable.includes(filterText));
-      })
-      .sort((left, right) => compareToolsInBusinessGroup(group.key, left, right)),
-  })).filter(({ items }) => items.length > 0);
+  // 展示名与分组以 tools/list 下发的元数据为准（title + _meta），服务端没给的才走本地兜底。
+  const toolMetaByName = useMemo(() => new Map((toolDefs ?? []).map((tool) => [tool.name, tool])), [toolDefs]);
+  const displayOf = useCallback(
+    (target: ContextLoaderOp) => toolDisplayOf(target.id, toolMetaByName.get(target.id)),
+    [toolMetaByName],
+  );
+  const treeGroups = useMemo(() => {
+    const groups = buildMcpToolGroups(activeOps, displayOf);
+    if (!filterText) return groups;
+    return groups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter(({ item, display }) =>
+          `${display.name} ${item.id} ${item.path} ${item.summary} ${group.label}`.toLowerCase().includes(filterText),
+        ),
+      }))
+      .filter(({ items }) => items.length > 0);
+  }, [activeOps, displayOf, filterText]);
 
   const isMcpVerifyView = mode === "mcp" && !showMcpConnect;
   const isRestVerifyView = mode === "rest";
@@ -313,11 +306,32 @@ export function ContextLoaderIntegrationPanel({
   }, [bodyError]);
 
   useEffect(() => {
+    if (appKeyValue) setMcpConfigKey(appKeyValue);
+  }, [appKeyValue]);
+
+  useEffect(() => {
     if (sending || response !== null || reqError !== null) {
       setResultOpen(true);
       setMcpResultTab("result");
     }
   }, [sending, response, reqError]);
+
+  const openMcpConfigKeyModal = () => {
+    setMcpConfigKeyDraft(mcpConfigKey);
+    setMcpConfigKeyError("");
+    setMcpConfigKeyModalOpen(true);
+  };
+
+  const applyMcpConfigKey = () => {
+    const nextKey = mcpConfigKeyDraft.trim();
+    if (nextKey && !nextKey.startsWith("bak_")) {
+      setMcpConfigKeyError("请粘贴以 bak_ 开头的长期 API Key");
+      return;
+    }
+
+    setMcpConfigKey(nextKey);
+    setMcpConfigKeyModalOpen(false);
+  };
 
   if (!op) {
     return (
@@ -357,6 +371,8 @@ export function ContextLoaderIntegrationPanel({
     );
   }
 
+  const opDisplay = displayOf(op);
+
   return (
     <div className={mainClassName}>
       {mode === "mcp" && showMcpConnect ? (
@@ -395,6 +411,9 @@ export function ContextLoaderIntegrationPanel({
                   <Link className={styles.mcpIssueKeyBtn} to={apiKeyPagePath}>
                     签发 API Key
                   </Link>
+                  <button type="button" className={styles.mcpConfigureKeyBtn} onClick={openMcpConfigKeyModal}>
+                    {mcpConfigKey ? "已配置 API Key" : "配置 API Key"}
+                  </button>
                 </div>
               </div>
               <div className={styles.mcpConfigBody}>
@@ -411,9 +430,36 @@ export function ContextLoaderIntegrationPanel({
                   <CodeBlock title="mcpServers 配置" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, "mcp.json 配置已复制")} />
                 ) : null}
               </div>
+              </div>
             </div>
-          </div>
-        </section>
+            <Modal
+              open={mcpConfigKeyModalOpen}
+              title="配置 API Key"
+              okText="应用配置"
+              cancelText="取消"
+              onCancel={() => setMcpConfigKeyModalOpen(false)}
+              onOk={applyMcpConfigKey}
+              className={styles.mcpConfigKeyModal}
+            >
+              <p className={styles.mcpConfigKeyModalDescription}>
+                粘贴 bak_ 开头的长期 API Key，页面会自动更新下方 MCP 配置中的 Bearer Key。
+              </p>
+              <Input.Password
+                value={mcpConfigKeyDraft}
+                placeholder="粘贴 API Key"
+                autoComplete="off"
+                spellCheck={false}
+                allowClear
+                status={mcpConfigKeyError ? "error" : undefined}
+                onChange={(event) => {
+                  setMcpConfigKeyDraft(event.target.value);
+                  setMcpConfigKeyError("");
+                }}
+              />
+              {mcpConfigKeyError ? <p className={styles.mcpConfigKeyModalError}>{mcpConfigKeyError}</p> : null}
+              <p className={styles.mcpConfigKeyModalHint}>仅用于生成当前页面配置，不会保存。</p>
+            </Modal>
+          </section>
       ) : (
         <>
       <aside className={styles.list}>
@@ -440,8 +486,8 @@ export function ContextLoaderIntegrationPanel({
                   <span className={styles.grpLabel}>{label}</span>
                   <span className={styles.grpCount}>{items.length}</span>
                 </summary>
-                <div className={styles.grpDesc}>{description}</div>
-                {items.map((item) => (
+                {description ? <div className={styles.grpDesc}>{description}</div> : null}
+                {items.map(({ item, display }) => (
                   <button
                     key={item.id}
                     type="button"
@@ -450,7 +496,7 @@ export function ContextLoaderIntegrationPanel({
                   >
                     {mode === "mcp" ? null : <span className={styles.epVerb}>POST</span>}
                     <span className={styles.epText}>
-                      <span className={styles.epBusinessName}>{businessInfoOf(item).name}</span>
+                      <span className={styles.epBusinessName}>{display.name}</span>
                       <span className={styles.epName}>{item.id}</span>
                     </span>
                   </button>
@@ -484,7 +530,7 @@ export function ContextLoaderIntegrationPanel({
             ) : null}
           </div>
           <div className={styles.reqTitleRow}>
-            <h2 className={styles.reqTitle}>{mode === "mcp" ? businessInfoOf(op).name : op.id}</h2>
+            <h2 className={styles.reqTitle}>{mode === "mcp" ? opDisplay.name : op.id}</h2>
             {mode === "mcp" ? <span className={styles.reqId}>{op.id}</span> : null}
           </div>
           <p className={styles.reqSum}>{op.summary}</p>
@@ -645,7 +691,7 @@ export function ContextLoaderIntegrationPanel({
         >
           <div className={styles.requestDataAssistantModalIntro}>
             <div>
-              <strong>为「{businessInfoOf(op).name}」补充请求参数</strong>
+              <strong>为「{opDisplay.name}」补充请求参数</strong>
               <p>{dataAssistantDescription}</p>
             </div>
             <span className={styles.requestDataAssistantModalTip}>选择后会写入当前请求体</span>
@@ -657,7 +703,7 @@ export function ContextLoaderIntegrationPanel({
       {mode === "mcp" ? (
         <Modal
           open={schemaOpen}
-          title={`${businessInfoOf(op).name} · 接口文档`}
+          title={`${opDisplay.name} · 接口文档`}
           footer={null}
           width={920}
           className={styles.schemaModal}

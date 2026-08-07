@@ -41,9 +41,11 @@ import {
 import { recommendationFingerprint } from "@/modules/knowledge-network/utils/agent-chat-cache";
 
 import {
+  BASE_EVIDENCE_HINT,
   ChatPane,
   DEFAULT_BASE_PROMPT,
   DEFAULT_PROMPT,
+  KN_EVIDENCE_HINT,
   MarkdownView,
   fmtDuration,
   fmtTokens,
@@ -192,6 +194,7 @@ const SOLO_PROFILE: PaneProfile = {
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: true,
   defaultToolNames: null,
+  evidenceHint: KN_EVIDENCE_HINT,
 };
 
 const BASE_PROFILE: PaneProfile = {
@@ -201,6 +204,7 @@ const BASE_PROFILE: PaneProfile = {
   defaultPrompt: DEFAULT_BASE_PROMPT,
   injectKnContext: false,
   defaultToolNames: BASE_DATA_TOOL_NAMES,
+  evidenceHint: BASE_EVIDENCE_HINT,
 };
 
 /** 对比报告 AI 总结的评审提示词。 */
@@ -317,6 +321,7 @@ const KN_PROFILE: PaneProfile = {
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: true,
   defaultToolNames: null,
+  evidenceHint: KN_EVIDENCE_HINT,
 };
 
 export function AgentChat({

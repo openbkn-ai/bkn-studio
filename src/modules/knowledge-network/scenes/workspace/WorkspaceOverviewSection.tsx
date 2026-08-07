@@ -8,6 +8,7 @@
 import {
   ApiOutlined,
   ClockCircleOutlined,
+  CopyOutlined,
   DatabaseOutlined,
   DownOutlined,
   DeploymentUnitOutlined,
@@ -17,13 +18,14 @@ import {
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Empty, Spin, Table, Tag } from "antd";
+import { Empty, Spin, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
@@ -38,6 +40,7 @@ import type {
 import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
 
 type WorkspaceOverviewSectionProps = {
+  canModify: boolean;
   detail: KnowledgeNetworkRecord | null;
   detailLoading?: boolean;
   loadRecentObjects: () => Promise<void>;
@@ -52,6 +55,7 @@ function formatOverviewCount(value?: number) {
 }
 
 export function WorkspaceOverviewSection({
+  canModify,
   detail,
   detailLoading = false,
   loadRecentObjects,
@@ -62,11 +66,24 @@ export function WorkspaceOverviewSection({
 }: WorkspaceOverviewSectionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { message } = useAppServices();
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [graphExpanded, setGraphExpanded] = useState(false);
   const [recentExpanded, setRecentExpanded] = useState(false);
   const [recentPage, setRecentPage] = useState(1);
   const [recentPageSize, setRecentPageSize] = useState(5);
+  const networkIdentifier = detail?.identifier?.trim() || "";
+
+  const copyNetworkIdentifier = () => {
+    if (!networkIdentifier) {
+      return;
+    }
+
+    void navigator.clipboard
+      ?.writeText(networkIdentifier)
+      .then(() => message.success(t("knowledgeNetwork.networkIdentifierCopied")))
+      .catch(() => message.error(t("knowledgeNetwork.copyNetworkIdentifierFailed")));
+  };
 
   const recentObjectColumns = useMemo<ColumnsType<KnowledgeNetworkRecentObject>>(
     () => [
@@ -164,9 +181,11 @@ export function WorkspaceOverviewSection({
                 {t("systemAdmin.objectGrants.authorize")}
               </AppButton>
             </PermissionGate>
-            <AppButton icon={<EditOutlined />} onClick={onEdit}>
-              {t("common.edit")}
-            </AppButton>
+            {canModify ? (
+              <AppButton icon={<EditOutlined />} onClick={onEdit}>
+                {t("common.edit")}
+              </AppButton>
+            ) : null}
           </div>
         </div>
         <div className={styles.overviewHeaderComment}>
@@ -189,6 +208,21 @@ export function WorkspaceOverviewSection({
             {t("common.updateTime")}:
           </span>
           <span>{detail?.updateTime || "--"}</span>
+          <span className={styles.overviewHeaderFooterId}>
+            <span className={styles.overviewHeaderFooterLabel}>{t("common.id")}:</span>
+            <code>{networkIdentifier || "--"}</code>
+            <Tooltip title={t("knowledgeNetwork.copyNetworkIdentifier")}>
+              <button
+                aria-label={t("knowledgeNetwork.copyNetworkIdentifier")}
+                className={styles.overviewHeaderFooterCopy}
+                disabled={!networkIdentifier}
+                onClick={copyNetworkIdentifier}
+                type="button"
+              >
+                <CopyOutlined />
+              </button>
+            </Tooltip>
+          </span>
         </div>
       </div>
 
@@ -206,17 +240,19 @@ export function WorkspaceOverviewSection({
               <p>{formatOverviewCount(detail?.statistics.objectTypesTotal)}</p>
             </dd>
           </dl>
-          <AppButton
-            className={styles.overviewStatAction}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/object-types/create`,
-              );
-            }}
-            type="link"
-          >
-            {t("knowledgeNetwork.createObjectTypeEntry")}
-          </AppButton>
+          {canModify ? (
+            <AppButton
+              className={styles.overviewStatAction}
+              onClick={() => {
+                void navigate(
+                  `/knowledge-network/workspace/${networkId}/object-types/create`,
+                );
+              }}
+              type="link"
+            >
+              {t("knowledgeNetwork.createObjectTypeEntry")}
+            </AppButton>
+          ) : null}
         </div>
 
         <div className={styles.overviewStatCard}>
@@ -232,17 +268,19 @@ export function WorkspaceOverviewSection({
               <p>{formatOverviewCount(detail?.statistics.relationTypesTotal)}</p>
             </dd>
           </dl>
-          <AppButton
-            className={styles.overviewStatAction}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/relation-types/create`,
-              );
-            }}
-            type="link"
-          >
-            {t("knowledgeNetwork.createRelationTypeEntry")}
-          </AppButton>
+          {canModify ? (
+            <AppButton
+              className={styles.overviewStatAction}
+              onClick={() => {
+                void navigate(
+                  `/knowledge-network/workspace/${networkId}/relation-types/create`,
+                );
+              }}
+              type="link"
+            >
+              {t("knowledgeNetwork.createRelationTypeEntry")}
+            </AppButton>
+          ) : null}
         </div>
 
         <div className={styles.overviewStatCard}>
@@ -258,17 +296,19 @@ export function WorkspaceOverviewSection({
               <p>{formatOverviewCount(detail?.statistics.actionTypesTotal)}</p>
             </dd>
           </dl>
-          <AppButton
-            className={styles.overviewStatAction}
-            onClick={() => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/action-types/create`,
-              );
-            }}
-            type="link"
-          >
-            {t("knowledgeNetwork.createActionTypeEntry")}
-          </AppButton>
+          {canModify ? (
+            <AppButton
+              className={styles.overviewStatAction}
+              onClick={() => {
+                void navigate(
+                  `/knowledge-network/workspace/${networkId}/action-types/create`,
+                );
+              }}
+              type="link"
+            >
+              {t("knowledgeNetwork.createActionTypeEntry")}
+            </AppButton>
+          ) : null}
         </div>
       </div>
       </Spin>
