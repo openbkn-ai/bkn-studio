@@ -11,6 +11,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -109,7 +111,16 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       <Space>
         <AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton>
         <PermissionGate permissions="resource:task_manage">
-          <AppButton icon={<PlusOutlined />} type="primary" onClick={() => { form.setFieldsValue({ applyMode: "fill_empty", confidenceThreshold: 0.75, includeSampleRows: false }); setOpen(true); }}>{t("dataCatalog.semanticWorkspace.create")}</AppButton>
+          {/*
+            语义理解任务是专业档能力,拦在页面层(ResourceWorkspaceScene 的 RequireEdition):
+            能走到这颗按钮,说明那一层已经放行。这里只标不挡——再挡一道,上面解开了这里
+            还锁着,客户没有任何办法发起任务。徽标留着,因为档位够不够与镜像换没换是两件
+            事,标记该跟着能力走。
+          */}
+          <AppButton icon={<PlusOutlined />} type="primary" onClick={() => setOpen(true)}>
+            {t("dataCatalog.semanticWorkspace.create")}
+            <EditionBadge capability={CAPABILITIES.SEMANTIC_TASK} edition="professional" />
+          </AppButton>
         </PermissionGate>
       </Space>
     </section>

@@ -28,6 +28,15 @@ import { useAppServices } from "@/framework/context/use-app-services";
 
 import { usePageState } from "@/framework/hooks/use-page-state";
 
+import { CapabilityGate } from "@/framework/entitlement/CapabilityGate";
+
+import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
+
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -132,8 +141,37 @@ function formatTime(value?: number) {
 
 
 export function RoleManagementScene() {
+  const [rbacUpgradeOpen, setRbacUpgradeOpen] = useState(false);
+
+
 
   const { t } = useTranslation();
+
+  /*
+    快照到之前先按加载态渲染。`CapabilityGate` 把 unknown 归进 fallback,而 fallback 这里
+    是升级按钮:不单独分出来的话,一台已经买了 rbac_basic 的集群首屏也会先闪一颗带「专业版」
+    徽标的按钮,这一瞬点下去弹的是升级引导而不是新建抽屉。
+  */
+  const { loading: entitlementLoading } = useEntitlementContext();
+
+  /*
+    没买时的「新建角色」:按钮照常可点,点开讲清这项是什么、要哪一档——置灰的死按钮
+    说不清是坏了还是没买。fallback 与 upgrade 用同一个节点:社区镜像上这项是
+    not-installed,只配 upgrade 的话按钮会整个消失,而那恰恰是最该告诉客户有东西可买的
+    部署。
+  */
+  const rbacUpgradeButton = (
+    <PermissionGate permissions="admin-role:create">
+      <AppButton
+        icon={<PlusOutlined />}
+        onClick={() => setRbacUpgradeOpen(true)}
+        type="primary"
+      >
+        {t("systemAdmin.roles.create")}
+        <EditionBadge capability={CAPABILITIES.RBAC_BASIC} edition="professional" />
+      </AppButton>
+    </PermissionGate>
+  );
 
   const { message, modal } = useAppServices();
 
@@ -560,6 +598,9 @@ export function RoleManagementScene() {
 
             </PermissionGate>
 
+            {/* 行内操作直接藏,不置灰:每行都挂一排点不动的按钮只是噪音,想买的
+                信息由工具栏那个入口给。 */}
+            <CapabilityGate capability={CAPABILITIES.RBAC_BASIC}>
             <PermissionGate permissions="admin-role:edit">
 
               {role.builtin ? null : isSuperAdminRole(role) ? (
@@ -593,9 +634,11 @@ export function RoleManagementScene() {
               )}
 
             </PermissionGate>
+            </CapabilityGate>
 
             {!role.builtin ? (
 
+              <CapabilityGate capability={CAPABILITIES.RBAC_BASIC}>
               <PermissionGate permissions="admin-role:delete">
 
                 <AppButton
@@ -659,6 +702,7 @@ export function RoleManagementScene() {
                 </AppButton>
 
               </PermissionGate>
+              </CapabilityGate>
 
             ) : null}
 
@@ -688,23 +732,45 @@ export function RoleManagementScene() {
 
             <div className={styles.toolbarActions}>
 
-              <PermissionGate permissions="admin-role:create">
+              {/*
+                档位包在权限外层:集群没买 rbac_basic 时,谁的权限齐全都不该看到写
+                入口——档位是集群属性,权限是人的属性。
 
-                <AppButton
-
-                  icon={<PlusOutlined />}
-
-                  onClick={() => setRoleDrawer({ open: true, role: null })}
-
-                  type="primary"
-
+                这里(工具栏,独一份)置灰+提示而不是藏掉:它是这套付费能力最显眼的
+                入口,客户看得见才知道有东西可买。行内操作(编辑/删除)反过来直接藏,
+                每行挂两个置灰按钮只是噪音。
+              */}
+              {entitlementLoading ? (
+                <PermissionGate permissions="admin-role:create">
+                  <AppButton disabled icon={<PlusOutlined />} loading type="primary">
+                    {t("systemAdmin.roles.create")}
+                  </AppButton>
+                </PermissionGate>
+              ) : (
+                <CapabilityGate
+                  capability={CAPABILITIES.RBAC_BASIC}
+                  fallback={rbacUpgradeButton}
+                  upgrade={rbacUpgradeButton}
                 >
+                  <PermissionGate permissions="admin-role:create">
 
-                  {t("systemAdmin.roles.create")}
+                    <AppButton
 
-                </AppButton>
+                      icon={<PlusOutlined />}
 
-              </PermissionGate>
+                      onClick={() => setRoleDrawer({ open: true, role: null })}
+
+                      type="primary"
+
+                    >
+
+                      {t("systemAdmin.roles.create")}
+
+                    </AppButton>
+
+                  </PermissionGate>
+                </CapabilityGate>
+              )}
 
               <AppButton
 
@@ -887,6 +953,18 @@ export function RoleManagementScene() {
         />
 
       ) : null}
+
+    <CapabilityUpgradeDialog
+
+      capability={CAPABILITIES.RBAC_BASIC}
+
+      minEdition="professional"
+
+      onClose={() => setRbacUpgradeOpen(false)}
+
+      open={rbacUpgradeOpen}
+
+    />
 
     </>
 

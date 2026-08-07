@@ -70,5 +70,45 @@ export const commonEnUS = {
       typeNameToConfirm:
         'This is a high-risk action. Type "{{name}}" to confirm deletion.',
     },
+    entitlement: {
+      imageLikelyHint: "Your licence is already {{edition}} — upgrade to the {{edition}} image to unlock this capability.",
+      imageMissingTitle: "{{edition}} licence — community image, upgrade needed",
+      imageMissingHint: "Your licence is already {{edition}} — upgrade to the {{edition}} image to unlock this capability.",
+      unlockTitle: "Unlock {{edition}}",
+      upgradeTo: "Upgrade to {{edition}}",
+      compareEditions: "Compare editions",
+      paidHint: "Available from {{edition}}",
+      // Edition gating. Kept apart from noPermission on purpose: "you may not"
+      // sends the user to an administrator, "this deployment did not buy it"
+      // sends them to sales. One sentence covering both helps neither.
+      upgradeHint: "A paid capability. This cluster's licence does not cover it.",
+      notLicensedTitle: "Not covered by the current licence",
+      notLicensedDescription:
+        "This deployment ships the capability, but the installed certificate's edition does not cover it. Import a higher edition and it becomes available — no restart needed.",
+      continueAnyway: "Already upgraded — continue anyway",
+      unknownTitle: "Licence status unavailable",
+      unknownDescription:
+        "Could not read the cluster's licence state, so paid capabilities are unavailable for now. Please retry shortly.",
+      // Edition names match the public pricing page verbatim; product names are not localised.
+      editions: {
+        community: "Community",
+        professional: "Professional",
+        enterprise: "Enterprise Standard",
+        industry: "Industry Solution",
+      },
+      /** Sidebar badge: one short word. "Pro" is the accepted short form on the pricing page. */
+      editionsShort: {
+        community: "Community",
+        professional: "Pro",
+        enterprise: "Enterprise",
+        industry: "Industry",
+      },
+      upgrade: "Upgrade",
+      banner: {
+        unlicensed:
+          "No licence is active. Community capabilities keep working; import a licence to unlock paid ones.",
+        action: "Resolve",
+      },
+    },
   },
 } as const;

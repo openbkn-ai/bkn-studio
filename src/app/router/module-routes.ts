@@ -18,6 +18,7 @@ import { executionFactoryRouteContribution } from "@/modules/execution-factory/r
 import { homeRouteContribution } from "@/modules/home/routes";
 import { knowledgeNetworkRouteContribution } from "@/modules/knowledge-network/routes";
 import { modelResourcesRouteContribution } from "@/modules/model-resources/routes";
+import { subscriptionRouteContribution } from "@/modules/subscription/routes";
 import { systemAdminRouteContribution } from "@/modules/system-admin/routes";
 
 const routeContributions: AppRouteContribution[] = [
@@ -30,6 +31,7 @@ const routeContributions: AppRouteContribution[] = [
   executionFactoryLabRouteContribution,
   bknTraceRouteContribution,
   systemAdminRouteContribution,
+  subscriptionRouteContribution,
   apiKeysRouteContribution,
   accountRouteContribution,
 ];

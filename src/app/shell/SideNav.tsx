@@ -10,6 +10,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatches, useNavigate } from "react-router-dom";
 
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+
 import {
   consoleNavigation,
   findConsoleNavItemByPath,
@@ -126,7 +128,17 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                       {item.icon}
                     </span>
                     {!collapsed ? (
-                      <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                      <>
+                        <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                        {item.lockedEdition ?? item.paidEdition ? (
+                          <span className="console-sidenav-tier">
+                            <EditionBadge
+                              capability={item.paidCapability}
+                              edition={(item.lockedEdition ?? item.paidEdition)!}
+                            />
+                          </span>
+                        ) : null}
+                      </>
                     ) : null}
                   </button>
                 </li>
@@ -162,7 +174,17 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                   </span>
                   {!collapsed ? (
                     <>
-                      <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                      <>
+                        <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                        {item.lockedEdition ?? item.paidEdition ? (
+                          <span className="console-sidenav-tier">
+                            <EditionBadge
+                              capability={item.paidCapability}
+                              edition={(item.lockedEdition ?? item.paidEdition)!}
+                            />
+                          </span>
+                        ) : null}
+                      </>
                       <span
                         className={[
                           "console-sidenav-caret",
@@ -203,9 +225,19 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                             {child.icon}
                           </span>
                           {!collapsed ? (
-                            <span className="console-sidenav-label">
-                              {t(child.labelKey)}
-                            </span>
+                            <>
+                              <span className="console-sidenav-label">
+                                {t(child.labelKey)}
+                              </span>
+                              {child.lockedEdition ?? child.paidEdition ? (
+                          <span className="console-sidenav-tier">
+                            <EditionBadge
+                              capability={child.paidCapability}
+                              edition={(child.lockedEdition ?? child.paidEdition)!}
+                            />
+                          </span>
+                        ) : null}
+                            </>
                           ) : null}
                         </button>
                       </li>

@@ -290,3 +290,11 @@
     white-space: normal;
   }
 }
+
+/* 连接器名与档位徽标同排,名字长时徽标不被挤走。 */
+.cardName {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}

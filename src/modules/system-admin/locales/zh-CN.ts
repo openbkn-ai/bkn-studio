@@ -453,7 +453,10 @@ export const systemAdminZhCN = {
         max_models: "模型数上限",
         max_connectors: "数据连接数上限",
       },
+      viewSubscription: "查看授权范围",
       status: {
+        trial: "试用期",
+        unlicensed: "未导入授权",
         valid: "授权有效",
         validUnbound: "待激活绑定",
         grace: "授权宽限期",
@@ -461,6 +464,8 @@ export const systemAdminZhCN = {
         invalid: "未激活或授权无效",
       },
       statusDesc: {
+        trial: "首次启动的试用窗口，社区能力全开，暂不打扰。导入正式授权后按证书档位运行。",
+        unlicensed: "尚未导入任何授权文件。社区能力照常使用；需要付费能力请到授权平台申请后导入。",
         valid: "当前集群授权正常。",
         validUnbound: "授权已导入但尚未绑定本集群，请完成离线激活以满足合规要求；功能不受影响。",
         grace: "授权已过期，宽限剩余 {{days}} 天。续期状态：{{reason}}。",

@@ -1,0 +1,306 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.scene {
+  display: grid;
+  gap: 32px;
+  padding: 4px 0 40px;
+}
+
+.head {
+  display: grid;
+  gap: 10px;
+}
+
+/* 返回与标题同排:菜单里没有这一项,返回是唯一的出口,和标题挤在一行比单独占一层更省。 */
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  color: var(--admin-color-heading, #172033);
+  font-size: 20px;
+}
+
+.subtitle {
+  /* 不设窄栏:这句话是一整句,720px 会在半句处折,读起来像被截断。 */
+  margin: 0;
+  color: var(--admin-color-secondary, #4b5563);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.planGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+}
+
+/* 悬停轻微浮起:三张卡是要对比着看的,给一点「这张被选中」的反馈,不做位移之外的花样。 */
+.plan {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 20px;
+  border: 1px solid var(--admin-color-border, #d9e0ea);
+  border-radius: 0;
+  background: var(--admin-color-surface, #fff);
+}
+
+/* 当前档位:用内描边标出,不去改边框颜色——边框承载的是档位色,盖掉就分不出专业/企业。 */
+.planCurrent {
+  box-shadow: inset 0 0 0 1px var(--admin-color-link-border, #bfdbfe);
+}
+
+.planFeatured {
+  border-color: #b9a7ec;
+  background: linear-gradient(180deg, #f1ebff 0%, #faf8ff 52%, #fff 100%);
+  box-shadow: 0 2px 14px rgba(91, 70, 168, 0.1);
+}
+
+/* 专业版的按钮跟着卡片走紫;不写的话是 antd 深蓝,一张紫卡上压一块蓝。 */
+.planFeatured :global(.ant-btn-primary) {
+  border-color: #6d4fd0;
+  background: #6d4fd0;
+  color: #fff;
+}
+
+.planFeatured :global(.ant-btn-primary):hover {
+  border-color: #5b3fbb;
+  background: #5b3fbb;
+  color: #fff;
+}
+
+.planFeatured :global(.ant-btn-default) {
+  border-color: #b9a7ec;
+  color: #4c35a0;
+}
+
+.planFeatured :global(.ant-btn-default):hover {
+  border-color: #7c5cd6;
+  color: #3b2880;
+}
+
+/* 企业版:暖金。与专业版的淡紫分开,两档一眼可辨,而不是靠读标题。 */
+.planEnterprise {
+  border-color: #f0c674;
+  background: linear-gradient(180deg, #fff7e2 0%, #fffdf6 52%, #fff 100%);
+  box-shadow: 0 2px 14px rgba(180, 131, 15, 0.12);
+}
+
+.planEnterprise .planName {
+  color: #8a6216;
+}
+
+/* 勾也跟着走紫:一张卡里绿勾 + 紫边两种强调色,紫会退成背景噪点。 */
+.planEnterprise .tick {
+  color: #c08a17;
+}
+
+/* 次要按钮走紫描边。**不能写成 .ant-btn** —— 那会把 primary 的白字也改成紫,
+   叠在 antd 的深蓝底上直接读不出来。 */
+.planEnterprise :global(.ant-btn-default) {
+  border-color: #f0c674;
+  color: #8a6216;
+}
+
+.planEnterprise :global(.ant-btn-default):hover {
+  border-color: #d99b1c;
+  color: #6b4a10;
+}
+
+/* 主按钮连底色一起换紫,否则一张紫卡上压一块 antd 深蓝。 */
+.planEnterprise :global(.ant-btn-primary) {
+  border-color: #d99b1c;
+  background: #d99b1c;
+  color: #fff;
+}
+
+.planEnterprise :global(.ant-btn-primary):hover {
+  border-color: #b8830f;
+  background: #b8830f;
+  color: #fff;
+}
+
+
+
+.plan:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+}
+
+.planHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.planName {
+  color: var(--admin-color-heading, #172033);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.planPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.planPriceNum {
+  color: var(--admin-color-heading, #172033);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.planPriceUnit {
+  color: var(--admin-color-muted, #6b7280);
+  font-size: 12.5px;
+}
+
+.planAudience {
+  margin: 0;
+  min-height: 44px;
+  color: var(--admin-color-secondary, #4b5563);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.planFeats {
+  display: grid;
+  /* flex:1 让它吃掉卡片剩余高度(卡片是 flex column,按钮要贴底),而 grid 的
+     align-content 默认 stretch——行会跟着一起被撑开,每条能力变成一格 90px 高的
+     空白。行高必须钉在内容上。 */
+  align-content: start;
+  flex: 1;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planFeats li {
+  /* 两列而不是 flex:图标列定宽,文字换行时对齐第二列而不是缩回图标下面。 */
+  display: grid;
+  align-items: start;
+  gap: 8px;
+  grid-template-columns: 14px minmax(0, 1fr);
+  color: var(--admin-color-text, #111827);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.tick {
+  /* 图标基线比文字略高,压 2px 才和首行文字齐平。 */
+  margin-top: 2px;
+  color: var(--admin-color-success, #15803d);
+  font-size: 12px;
+}
+
+/* 两个动作并排,窄卡时自动堆叠;按钮各自撑满一列,不留半截宽的孤儿。 */
+.actions {
+  display: grid;
+  gap: 8px;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+@media (max-width: 1180px) {
+  .actions {
+    grid-auto-flow: row;
+  }
+}
+
+/* 「查看详情」是三档共用的同一篇文档,压成链接不跟前两个动作抢注意力。 */
+.detailLink {
+  align-self: center;
+}
+
+.quota {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.matrix {
+  display: grid;
+  gap: 12px;
+}
+
+.matrixTitle {
+  margin: 0;
+  color: var(--admin-color-heading, #172033);
+  font-size: 15px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--admin-color-border-soft, #e8edf3);
+  border-radius: 0;
+  background: var(--admin-color-surface, #fff);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.table th,
+.table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--admin-color-border-soft, #e8edf3);
+  text-align: left;
+}
+
+.table th {
+  color: var(--admin-color-muted, #6b7280);
+  font-weight: 600;
+}
+
+.table th.tier,
+.table td.tier {
+  width: 104px;
+  text-align: center;
+}
+
+.groupRow td {
+  background: var(--admin-color-surface-muted, #f3f6fa);
+  color: var(--admin-color-secondary, #4b5563);
+  font-weight: 600;
+}
+
+.capName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--admin-color-text, #111827);
+}
+
+.capDesc {
+  margin: 2px 0 0;
+  color: var(--admin-color-muted, #6b7280);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.no {
+  color: var(--admin-color-placeholder, #94a3b8);
+}
+
+.note {
+  margin: 0;
+  color: var(--admin-color-muted, #6b7280);
+  font-size: 12px;
+  line-height: 1.7;
+}

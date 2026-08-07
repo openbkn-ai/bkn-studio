@@ -18,6 +18,7 @@ import {
 } from "@ant-design/icons";
 
 import type { ConsoleNavItem } from "@/app/shell/navigation/types";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 export const baseConsoleNavigation: ConsoleNavItem[] = [
@@ -51,6 +52,10 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
       {
         key: "role-management",
         labelKey: "shell.items.roleManagement",
+        // 只标不挡:角色列表与内置角色是社区能力,收费的是写操作(页面里由
+        // CapabilityGate 包着)。整项藏掉等于把社区能力也收了。
+        paidCapability: CAPABILITIES.RBAC_BASIC,
+        paidEdition: "professional",
         icon: <SafetyCertificateOutlined />,
         path: "/system/roles",
         permission: systemAdminPermissions.roles,
@@ -61,6 +66,7 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         icon: <KeyOutlined />,
         path: "/system/authorizations",
         permission: systemAdminPermissions.authorizations,
+        capability: CAPABILITIES.PERM_OBJECT_LEVEL,
       },
       {
         key: "license-management",

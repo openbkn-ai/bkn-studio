@@ -7,6 +7,7 @@
 
 import {
   CloudServerOutlined,
+  CrownOutlined,
   LogoutOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -21,6 +22,10 @@ import openBknLogo from "@/assets/brand/openbkn-logo.png";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import {
+  useEntitlement,
+  useEntitlementContext,
+} from "@/framework/entitlement/use-entitlement";
 import { APP_VERSION } from "@/framework/runtime/app-version";
 import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
 import { BuildActivityChip } from "@/modules/data-catalog/components/BuildActivityChip";
@@ -32,6 +37,8 @@ export function TopBar() {
   const navigate = useNavigate();
   const { networkId } = useParams<{ networkId?: string }>();
   const runtimeConfig = useRuntimeConfig();
+  const entitlement = useEntitlement();
+  const { snapshot } = useEntitlementContext();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const [networkName, setNetworkName] = useState<string | null>(null);
   const isKnowledgeNetworkRoute =
@@ -104,6 +111,34 @@ export function TopBar() {
       { type: "divider" as const },
     ];
 
+    /*
+      档位入口。快照没到就不放这一项:先显示「社区版」再跳成「企业版」,比晚半秒出现更糟。
+
+      「升级」尾巴按「还有没有更高的档」出现,而不是按「有没有证」:专业版客户也可能想
+      看企业档,有证不等于到顶。只有行业版(最高档)不再提示。
+    */
+    if (snapshot) {
+      items.push({
+        icon: <CrownOutlined />,
+        key: "subscription",
+        label: (
+          <span className="console-user-menu-edition">
+            <span className={`console-user-menu-edition-${entitlement.edition}`}>
+              {t(`common.entitlement.editions.${entitlement.edition}`)}
+            </span>
+            {entitlement.edition === "industry" ? null : (
+              <span className="console-user-menu-edition-cta">
+                {t("common.entitlement.upgrade")}
+              </span>
+            )}
+          </span>
+        ),
+        onClick: () => {
+          void navigate("/system/subscription");
+        },
+      });
+    }
+
     items.push({
       icon: <UserOutlined />,
       key: "account",
@@ -138,7 +173,15 @@ export function TopBar() {
     );
 
     return items;
-  }, [canViewInstallStatus, installStatusUrl, navigate, runtimeConfig.mode, t]);
+  }, [
+    canViewInstallStatus,
+    entitlement.edition,
+    installStatusUrl,
+    navigate,
+    runtimeConfig.mode,
+    snapshot,
+    t,
+  ]);
 
   return (
     <header className="console-topbar">

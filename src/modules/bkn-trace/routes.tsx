@@ -9,6 +9,8 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import type { AppRouteContribution } from "@/app/router/types";
 
 const BusinessProvenancePage = lazy(async () => {
@@ -42,7 +44,14 @@ export const bknTraceRoutes: RouteObject[] = [
         titleKey: "bknTrace.businessProvenance.title",
       },
     },
-    element: withRouteLoading(<BusinessProvenancePage />),
+    element: (
+      <RequireEdition
+        capability={CAPABILITIES.BUSINESS_PROVENANCE}
+        minEdition="enterprise"
+      >
+        {withRouteLoading(<BusinessProvenancePage />)}
+      </RequireEdition>
+    ),
   },
   {
     path: "observability/traces",

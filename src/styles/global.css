@@ -493,7 +493,243 @@ select {
 }
 
 .console-sidenav-label {
+  /* 与档位徽标同排时,长名省略而不是折行(截图里「角色管理」被挤成了两行)。 */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   flex: 1;
+}
+
+/* 装了没买的入口:标出解锁它要哪一档。只出现在企业镜像上——社区镜像里这些项被整个
+   过滤掉了,那里换证书也解不开。 */
+/* 页签标题带档位徽标。 */
+.console-tab-with-tier {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 档位徽标。配色与版本与订阅页的卡片同源:专业版暖金、企业版淡紫——两处对不上的话,
+   客户在菜单上看到的颜色和他在版本页上认的那张卡就成了两回事。 */
+.console-edition-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.console-edition-badge-professional {
+  border-color: #b9a7ec;
+  background: #f5f2ff;
+  color: #4c35a0;
+}
+
+.console-edition-badge-enterprise,
+.console-edition-badge-industry {
+  border-color: #f0c674;
+  background: #fffaed;
+  color: #96701a;
+}
+
+.console-edition-badge-community {
+  border-color: var(--color-border);
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+}
+
+/* 企业档的升级面走紫,与版本页那张企业卡同源;专业档保持暖金。两处颜色对不上,客户会
+   以为看的是两种东西。 */
+.console-upgrade-hero.is-enterprise {
+  border-color: #f0c674;
+  background: linear-gradient(180deg, #fffaed 0%, #fff 100%);
+}
+
+.console-upgrade-hero.is-enterprise .console-upgrade-hero-icon {
+  color: #d99b1c;
+}
+
+.console-upgrade-enterprise .ant-btn-primary {
+  border-color: #d99b1c;
+  background: #d99b1c;
+  color: #fff;
+}
+
+.console-upgrade-enterprise .ant-btn-primary:hover {
+  border-color: #b8830f;
+  background: #b8830f;
+  color: #fff;
+}
+
+/* 整页锁:真实页面照常渲染在底下,盖一层蒙版。看得见这块功能长什么样,才知道在买什么。 */
+.console-upgrade-locked {
+  position: relative;
+  min-height: 420px;
+}
+
+.console-upgrade-locked-content {
+  pointer-events: none;
+  user-select: none;
+  filter: blur(2px);
+  opacity: 0.55;
+}
+
+.console-upgrade-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 72px 16px 16px;
+  background: linear-gradient(180deg, rgba(246, 248, 251, 0.55) 0%, rgba(246, 248, 251, 0.9) 100%);
+}
+
+.console-upgrade-card {
+  width: min(560px, 100%);
+  height: fit-content;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-dropdown);
+}
+
+.console-upgrade-card-title {
+  margin: 16px 0 0;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.console-upgrade-page-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* 升级引导弹窗。讲「这项是什么、要哪一档」,不讲价——报价随优惠期滚动,印在这里改一次价
+   就要发一次版,所以底部两个出口分别指向版本对比页与授权门户。 */
+.console-upgrade-hero {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #b9a7ec;
+  border-radius: 0;
+  background: linear-gradient(180deg, #f3eeff 0%, #fff 100%);
+}
+
+.console-upgrade-hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 0;
+  background: #fff;
+  color: #6d4fd0;
+  font-size: 18px;
+}
+
+.console-upgrade-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.console-upgrade-hero-desc {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.console-upgrade-list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.console-upgrade-list li {
+  display: grid;
+  align-items: start;
+  gap: 10px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.console-upgrade-list li .anticon {
+  margin-top: 4px;
+  color: var(--color-success-text);
+}
+
+.console-upgrade-current {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-divider);
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+}
+
+.console-upgrade-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.console-upgrade-note {
+  margin-right: auto;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-align: left;
+}
+
+/* 侧栏里的档位徽标只管布局,配色走 .console-edition-badge-*(与版本页卡片同源)。
+   229px 的侧栏再算上图标、子项缩进与边框,徽标必须比正文小一号并且只占自己那点宽度,
+   否则「业务溯源分析」会被省略成「业务溯源…」——菜单名被截断比徽标小一号严重得多。 */
+.console-sidenav-tier {
+  flex: 0 0 auto;
+  margin-left: 6px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 15px;
+}
+
+/* 用户菜单里的档位行。「升级」尾巴只在无生效授权时出现,别做成常驻广告。 */
+.console-user-menu-edition {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.console-user-menu-edition-cta {
+  color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+/* 菜单里的档位名也带档位色,和徽标、版本页卡片是同一套认知。 */
+.console-user-menu-edition-professional {
+  color: #4c35a0;
+  font-weight: 600;
+}
+
+.console-user-menu-edition-enterprise,
+.console-user-menu-edition-industry {
+  color: #96701a;
+  font-weight: 600;
 }
 
 .console-sidenav-caret {
