@@ -143,20 +143,6 @@ export function ObjectTypePropertyTable({
             render: (value: boolean) =>
               value ? <CheckOutlined className={styles.titleIcon} /> : "—",
           };
-        case "total_count":
-          return {
-            key: "total_count",
-            dataIndex: "totalCount",
-            title: t("knowledgeNetwork.objectTypePropertyTotalCount"),
-            width: 120,
-            align: "right",
-            render: (value: number | undefined) => {
-              if (value === undefined || value === null) {
-                return "—";
-              }
-              return value.toLocaleString();
-            },
-          };
         default:
           return {
             key: column.key,

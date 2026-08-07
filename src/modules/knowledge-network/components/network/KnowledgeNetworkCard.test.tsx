@@ -64,9 +64,9 @@ describe("getKnowledgeNetworkCardMenuKeys", () => {
     ).toEqual(["view", "edit", "export", "delete"]);
   });
 
-  it("treats missing records as no access and missing operations as fallback allow", () => {
+  it("denies actions when operation data is missing", () => {
     expect(hasKnowledgeNetworkRecordOperation(null, "modify")).toBe(false);
-    expect(hasKnowledgeNetworkRecordOperation(createRecord(), "modify")).toBe(true);
+    expect(hasKnowledgeNetworkRecordOperation(createRecord(), "modify")).toBe(false);
     expect(hasKnowledgeNetworkRecordOperation(createRecord(["view_detail"]), "modify")).toBe(false);
   });
 });

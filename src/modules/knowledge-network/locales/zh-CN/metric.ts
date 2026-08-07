@@ -108,7 +108,6 @@ export const metricPart = {
     "metricQueryStep.month": "月",
     "metricQueryStep.quarter": "季度",
     "metricQueryStep.year": "年",
-    "metricQueryTimeRange.calendar_day": "自然日",
     "metricQueryTimeRange.custom": "自定义",
     "metricQueryTimeRange.last_1h": "最近 1 小时",
     "metricQueryTimeRange.last_24h": "最近 24 小时",

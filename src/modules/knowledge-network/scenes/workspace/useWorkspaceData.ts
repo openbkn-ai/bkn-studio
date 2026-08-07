@@ -18,11 +18,9 @@ import {
   listKnowledgeNetworkObjectTypes,
   listKnowledgeNetworkRecentObjects,
   listKnowledgeNetworkRelationTypes,
-  listKnowledgeNetworkTasks,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
   integrateWorkspaceMetrics,
-  integrateWorkspaceTasks,
   logServiceFallback,
 } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
@@ -33,7 +31,6 @@ import type {
   KnowledgeNetworkRecord,
   KnowledgeNetworkRecentObject,
   KnowledgeNetworkRelationTypeRecord,
-  KnowledgeNetworkTaskRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import {
@@ -61,7 +58,6 @@ export function useWorkspaceData(
   const [actionTypes, setActionTypes] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
   const [metrics, setMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
   const [metricApiUnavailable, setMetricApiUnavailable] = useState(false);
-  const [tasks, setTasks] = useState<KnowledgeNetworkTaskRecord[]>([]);
   const [detailLoading, setDetailLoading] = useState(true);
   const [sectionLoading, setSectionLoading] = useState(false);
   const [recentLoading, setRecentLoading] = useState(false);
@@ -197,11 +193,6 @@ export function useWorkspaceData(
               setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
             }
             break;
-          case "tasks":
-            if (integrateWorkspaceTasks) {
-              setTasks(await listKnowledgeNetworkTasks(networkId));
-            }
-            break;
           default:
             break;
         }
@@ -289,16 +280,6 @@ export function useWorkspaceData(
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "metrics"));
   }, [networkId, applyMetricsTotalToDetail]);
 
-  const reloadTasks = useCallback(async () => {
-    if (!networkId || !integrateWorkspaceTasks) {
-      return;
-    }
-
-    loadedSectionsRef.current.delete(sectionCacheKey(networkId, "tasks"));
-    setTasks(await listKnowledgeNetworkTasks(networkId));
-    loadedSectionsRef.current.add(sectionCacheKey(networkId, "tasks"));
-  }, [networkId]);
-
   return {
     actionTypes,
     conceptGroups,
@@ -306,7 +287,6 @@ export function useWorkspaceData(
     detailError,
     detailLoading,
     integrateMetrics: integrateWorkspaceMetrics,
-    integrateTasks: integrateWorkspaceTasks,
     loadError: detailError,
     loading: sectionLoading,
     loadWorkspaceData,
@@ -322,9 +302,7 @@ export function useWorkspaceData(
     reloadMetrics,
     reloadObjectTypes,
     reloadRelationTypes,
-    reloadTasks,
     sectionError,
     sectionLoading,
-    tasks,
   };
 }

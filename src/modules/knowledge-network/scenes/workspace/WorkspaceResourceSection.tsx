@@ -14,14 +14,12 @@ import { ConceptGroupListPanel } from "@/modules/knowledge-network/components/co
 import { MetricListPanel } from "@/modules/knowledge-network/components/metric/MetricListPanel";
 import { ObjectTypeListPanel } from "@/modules/knowledge-network/components/object-type/ObjectTypeListPanel";
 import { RelationTypeListPanel } from "@/modules/knowledge-network/components/relation-type/RelationTypeListPanel";
-import { TaskListPanel } from "@/modules/knowledge-network/components/task/TaskListPanel";
 import {
   deleteKnowledgeNetworkActionType,
   deleteKnowledgeNetworkConceptGroup,
   deleteKnowledgeNetworkMetric,
   deleteKnowledgeNetworkObjectType,
   deleteKnowledgeNetworkRelationType,
-  deleteKnowledgeNetworkTask,
   importKnowledgeNetworkConceptGroup,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
@@ -29,6 +27,7 @@ import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/u
 type WorkspaceData = ReturnType<typeof useWorkspaceData>;
 
 type WorkspaceResourceSectionProps = {
+  canDelete: boolean;
   canModify: boolean;
   data: WorkspaceData;
   networkId: string;
@@ -36,6 +35,7 @@ type WorkspaceResourceSectionProps = {
 };
 
 export function WorkspaceResourceSection({
+  canDelete,
   canModify,
   data,
   networkId,
@@ -50,6 +50,7 @@ export function WorkspaceResourceSection({
         <ConceptGroupListPanel
           items={data.conceptGroups}
           canModify={canModify}
+          canDelete={canDelete}
           loading={data.sectionLoading}
           networkId={networkId}
           onDelete={async (records) => {
@@ -72,6 +73,7 @@ export function WorkspaceResourceSection({
         <ObjectTypeListPanel
           items={data.objectTypes}
           canModify={canModify}
+          canDelete={canDelete}
           loading={data.sectionLoading}
           networkId={networkId}
           onDelete={async (records) => {
@@ -91,6 +93,7 @@ export function WorkspaceResourceSection({
         <RelationTypeListPanel
           items={data.relationTypes}
           canModify={canModify}
+          canDelete={canDelete}
           loading={data.sectionLoading}
           networkId={networkId}
           objectTypes={data.objectTypes}
@@ -111,6 +114,7 @@ export function WorkspaceResourceSection({
         <ActionTypeListPanel
           items={data.actionTypes}
           canModify={canModify}
+          canDelete={canDelete}
           loading={data.sectionLoading}
           networkId={networkId}
           objectTypes={data.objectTypes}
@@ -131,6 +135,7 @@ export function WorkspaceResourceSection({
         <MetricListPanel
           loading={data.sectionLoading}
           canModify={canModify}
+          canDelete={canDelete}
           metrics={data.metrics}
           networkId={networkId}
           onDelete={async (metricId) => {
@@ -138,17 +143,6 @@ export function WorkspaceResourceSection({
           }}
           onRefresh={data.reloadMetrics}
           unsupported={data.metricApiUnavailable}
-        />
-      );
-    case "tasks":
-      return (
-        <TaskListPanel
-          networkId={networkId}
-          onDelete={async (taskId) => {
-            await deleteKnowledgeNetworkTask(networkId, taskId);
-          }}
-          onRefresh={data.reloadTasks}
-          tasks={data.tasks}
         />
       );
     default:

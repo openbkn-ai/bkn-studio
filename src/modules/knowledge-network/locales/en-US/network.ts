@@ -35,7 +35,6 @@ export const networkPart = {
     emptyRecentObjects: "No recent object types yet.",
     emptyRelationTypes: "No relation types yet.",
     emptyMetrics: "No metrics yet.",
-    emptyTasks: "No tasks yet.",
     emptyTitle: "No knowledge networks yet",
     enterWorkspace: "Open workspace",
     export: "Export",
@@ -162,7 +161,5 @@ export const networkPart = {
     workspacePreviewModeling: "Model preview",
     workspaceRelationTypes: "Relation types",
     workspaceResources: "Resources",
-    workspaceTaskManagement: "Task management",
-    workspaceTaskPending: "Task management will be aligned in a later phase.",
     workspaceTitle: "Knowledge network workspace",
 };

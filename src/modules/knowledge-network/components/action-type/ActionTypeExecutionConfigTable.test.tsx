@@ -13,6 +13,8 @@ import type { ActionTypeDetail } from "@/modules/knowledge-network/types/knowled
 import { ActionTypeExecutionConfigTable } from "./ActionTypeExecutionConfigTable";
 
 const getKnowledgeNetworkObjectTypeDetail = vi.hoisted(() => vi.fn());
+const needsActionTypeActionSourceDisplayResolution = vi.hoisted(() => vi.fn());
+const resolveActionTypeActionSourceDisplayWithTimeout = vi.hoisted(() => vi.fn());
 const resolveActionTypeToolInputSchema = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", () => ({
@@ -30,10 +32,8 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
 }));
 
 vi.mock("@/modules/knowledge-network/services/action-type-tool.service", () => ({
-  needsActionTypeActionSourceDisplayResolution: () => false,
-  resolveActionTypeActionSourceDisplayWithTimeout: vi.fn((source) =>
-    Promise.resolve(source),
-  ),
+  needsActionTypeActionSourceDisplayResolution,
+  resolveActionTypeActionSourceDisplayWithTimeout,
   resolveActionTypeToolInputSchema,
 }));
 
@@ -55,6 +55,12 @@ beforeAll(() => {
 
 beforeEach(() => {
   getKnowledgeNetworkObjectTypeDetail.mockReset();
+  needsActionTypeActionSourceDisplayResolution.mockReset();
+  needsActionTypeActionSourceDisplayResolution.mockReturnValue(false);
+  resolveActionTypeActionSourceDisplayWithTimeout.mockReset();
+  resolveActionTypeActionSourceDisplayWithTimeout.mockImplementation((source) =>
+    Promise.resolve(source),
+  );
   resolveActionTypeToolInputSchema.mockReset();
 });
 
@@ -113,6 +119,7 @@ describe("ActionTypeExecutionConfigTable", () => {
 
     render(
       <ActionTypeExecutionConfigTable
+        canResolveActionSource
         detail={createDetail([
           {
             name: "path_order_id",
@@ -161,6 +168,7 @@ describe("ActionTypeExecutionConfigTable", () => {
 
     render(
       <ActionTypeExecutionConfigTable
+        canResolveActionSource
         detail={createDetail([{ name: " ", valueFrom: "input" }])}
         networkId="network-1"
       />,
@@ -168,6 +176,24 @@ describe("ActionTypeExecutionConfigTable", () => {
 
     expect(
       screen.getByText("knowledgeNetwork.actionTypeExecutionParameterEmpty"),
+    ).toBeTruthy();
+  });
+
+  it("shows the source as unavailable without toolbox access", () => {
+    needsActionTypeActionSourceDisplayResolution.mockReturnValue(true);
+
+    render(
+      <ActionTypeExecutionConfigTable
+        canResolveActionSource={false}
+        detail={createDetail([{ name: "body_reason", valueFrom: "input" }])}
+        networkId="network-1"
+      />,
+    );
+
+    expect(resolveActionTypeActionSourceDisplayWithTimeout).not.toHaveBeenCalled();
+    expect(resolveActionTypeToolInputSchema).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("knowledgeNetwork.actionTypeExecutionSourceUnavailable"),
     ).toBeTruthy();
   });
 });

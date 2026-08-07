@@ -425,7 +425,11 @@ export async function getTool(boxId: string, toolId: string): Promise<ToolRecord
   return mapTool(response.data);
 }
 
-export async function getToolDetail(boxId: string, toolId: string): Promise<ToolDetail> {
+export async function getToolDetail(
+  boxId: string,
+  toolId: string,
+  options?: { skipErrorToast?: boolean },
+): Promise<ToolDetail> {
   if (useMock) {
     const record = getMockTools(boxId).find((item) => item.toolId === toolId);
 
@@ -448,7 +452,7 @@ export async function getToolDetail(boxId: string, toolId: string): Promise<Tool
 
   const response = await http.get<BackendToolInfo>(
     `${API_PREFIX}/tool-box/${boxId}/tool/${toolId}`,
-    { headers: getBusinessDomainHeaders() },
+    { headers: getBusinessDomainHeaders(), skipErrorToast: options?.skipErrorToast },
   );
 
   return mapToolDetail(response.data);

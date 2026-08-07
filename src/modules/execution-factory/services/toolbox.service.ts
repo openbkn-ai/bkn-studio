@@ -239,7 +239,10 @@ export async function getToolboxMarket(boxId: string): Promise<ToolboxRecord> {
   return mapToolbox(response.data);
 }
 
-export async function getToolbox(boxId: string): Promise<ToolboxRecord> {
+export async function getToolbox(
+  boxId: string,
+  options?: { skipErrorToast?: boolean },
+): Promise<ToolboxRecord> {
   if (useMock) {
     const record = mockToolboxes.find((item) => item.boxId === boxId);
 
@@ -252,7 +255,7 @@ export async function getToolbox(boxId: string): Promise<ToolboxRecord> {
 
   const response = await http.get<BackendToolboxInfo>(
     `${API_PREFIX}/tool-box/${boxId}`,
-    { headers: getBusinessDomainHeaders() },
+    { headers: getBusinessDomainHeaders(), skipErrorToast: options?.skipErrorToast },
   );
 
   return mapToolbox(response.data);

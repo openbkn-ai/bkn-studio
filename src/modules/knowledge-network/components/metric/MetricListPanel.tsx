@@ -44,6 +44,7 @@ import { resolveMetricBoundObjectTypeName } from "@/modules/knowledge-network/ut
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type MetricListPanelProps = {
+  canDelete: boolean;
   canModify: boolean;
   loading?: boolean;
   metrics: KnowledgeNetworkMetricRecord[];
@@ -69,6 +70,7 @@ function getMetricTypeLabel(
 }
 
 export function MetricListPanel({
+  canDelete,
   canModify,
   loading,
   metrics,
@@ -223,12 +225,8 @@ export function MetricListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canModify
-            ? [
-                { key: "edit", label: t("common.edit") },
-                { key: "delete", danger: true, label: t("common.delete") },
-              ]
-            : []),
+          ...(canModify ? [{ key: "edit", label: t("common.edit") }] : []),
+          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
         ];
 
         return (
@@ -347,7 +345,7 @@ export function MetricListPanel({
         pagination={false}
         rowKey="id"
         rowSelection={
-          canModify
+          canDelete
             ? {
                 selectedRowKeys,
                 onChange: (keys) => setSelectedRowKeys(keys as string[]),
@@ -374,8 +372,9 @@ export function MetricListPanel({
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          {canModify ? (
+          {canModify || canDelete ? (
             <>
+              {canModify ? (
               <AppButton
                 className={styles.toolbarButton}
                 icon={<PlusOutlined />}
@@ -386,6 +385,8 @@ export function MetricListPanel({
               >
                 {t("common.create")}
               </AppButton>
+              ) : null}
+              {canDelete ? (
               <AppButton
                 className={styles.toolbarButton}
                 danger
@@ -398,6 +399,7 @@ export function MetricListPanel({
               >
                 {t("common.delete")}
               </AppButton>
+              ) : null}
             </>
           ) : null}
         </div>

@@ -110,7 +110,6 @@ export const metricPart = {
     "metricQueryStep.month": "Month",
     "metricQueryStep.quarter": "Quarter",
     "metricQueryStep.year": "Year",
-    "metricQueryTimeRange.calendar_day": "Calendar day",
     "metricQueryTimeRange.custom": "Custom",
     "metricQueryTimeRange.last_1h": "Last 1 hour",
     "metricQueryTimeRange.last_24h": "Last 24 hours",

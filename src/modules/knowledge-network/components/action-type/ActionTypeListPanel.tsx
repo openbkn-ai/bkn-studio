@@ -36,6 +36,7 @@ import type {
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type ActionTypeListPanelProps = {
+  canDelete: boolean;
   canModify: boolean;
   items: KnowledgeNetworkActionTypeRecord[];
   loading?: boolean;
@@ -63,6 +64,7 @@ function getActionKindLabel(
 }
 
 export function ActionTypeListPanel({
+  canDelete,
   canModify,
   items,
   loading,
@@ -241,9 +243,9 @@ export function ActionTypeListPanel({
             ? [
                 { key: "edit", label: t("common.edit") },
                 { key: "execution", label: t("knowledgeNetwork.actionTypeExecutionEntry") },
-                { key: "delete", danger: true, label: t("common.delete") },
               ]
             : []),
+          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
         ];
 
         return (
@@ -356,8 +358,9 @@ export function ActionTypeListPanel({
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          {canModify ? (
+          {canModify || canDelete ? (
             <>
+              {canModify ? (
               <AppButton
                 className={styles.toolbarButton}
                 icon={<PlusOutlined />}
@@ -368,6 +371,8 @@ export function ActionTypeListPanel({
               >
                 {t("common.create")}
               </AppButton>
+              ) : null}
+              {canDelete ? (
               <AppButton
                 className={styles.toolbarButton}
                 danger
@@ -377,6 +382,7 @@ export function ActionTypeListPanel({
               >
                 {t("common.delete")}
               </AppButton>
+              ) : null}
             </>
           ) : null}
         </div>
@@ -476,7 +482,7 @@ export function ActionTypeListPanel({
           pagination={false}
           rowKey="id"
           rowSelection={
-            canModify
+            canDelete
               ? {
                   selectedRowKeys,
                   onChange: (nextSelectedRowKeys) => {

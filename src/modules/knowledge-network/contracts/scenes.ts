@@ -17,8 +17,7 @@ export type KnowledgeNetworkWorkspaceSection =
   | "object-types"
   | "relation-types"
   | "action-types"
-  | "metrics"
-  | "tasks";
+  | "metrics";
 
 export type KnowledgeNetworkWorkspaceSceneProps = {
   networkId?: string;

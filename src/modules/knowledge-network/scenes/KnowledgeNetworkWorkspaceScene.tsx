@@ -8,7 +8,6 @@
 import {
   ApiOutlined,
   ApartmentOutlined,
-  ClockCircleOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
   FileTextOutlined,
@@ -38,7 +37,6 @@ import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/wor
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
   integrateWorkspaceMetrics,
-  integrateWorkspaceTasks,
 } from "@/modules/knowledge-network/services/shared/runtime";
 import type { KnowledgeNetworkMutationPayload } from "@/modules/knowledge-network/types/knowledge-network";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
@@ -85,10 +83,7 @@ export function KnowledgeNetworkWorkspaceScene({
   } = workspaceData;
 
   useEffect(() => {
-    if (
-      (!integrateWorkspaceMetrics && section === "metrics") ||
-      (!integrateWorkspaceTasks && section === "tasks")
-    ) {
+    if (!integrateWorkspaceMetrics && section === "metrics") {
       void navigate(`/knowledge-network/workspace/${activeNetworkId}/overview`, {
         replace: true,
       });
@@ -98,6 +93,7 @@ export function KnowledgeNetworkWorkspaceScene({
   const [networkFormOpen, setNetworkFormOpen] = useState(false);
   const [sideCollapsed, setSideCollapsed] = useState(false);
   const canModify = hasKnowledgeNetworkRecordOperation(detail, "modify");
+  const canDelete = hasKnowledgeNetworkRecordOperation(detail, "delete");
 
   const navigationItems: WorkspaceNavItem[] = useMemo(() => {
     const items: WorkspaceNavItem[] = [
@@ -153,14 +149,6 @@ export function KnowledgeNetworkWorkspaceScene({
       });
     }
 
-    if (integrateWorkspaceTasks) {
-      items.push({
-        key: "tasks",
-        label: t("knowledgeNetwork.workspaceTaskManagement"),
-        icon: <ClockCircleOutlined />,
-      });
-    }
-
     return items;
   }, [activeNetworkId, detail, t]);
 
@@ -180,7 +168,6 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "action-types",
   );
   const metricNavItems = navigationItems.filter((item) => item.key === "metrics");
-  const taskNavItem = navigationItems.find((item) => item.key === "tasks");
 
   const renderSideNavItem = (
     item: WorkspaceNavItem,
@@ -240,6 +227,7 @@ export function KnowledgeNetworkWorkspaceScene({
       <WorkspaceResourceSection
         data={workspaceData}
         canModify={canModify}
+        canDelete={canDelete}
         networkId={activeNetworkId}
         section={section}
       />
@@ -296,12 +284,6 @@ export function KnowledgeNetworkWorkspaceScene({
                   <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceMetricModeling")}</div>
                 )}
                 {metricNavItems.map((item) => renderSideNavItem(item))}
-              </>
-            ) : null}
-            {taskNavItem ? (
-              <>
-                <div className={styles.sideDivider} />
-                {renderSideNavItem(taskNavItem, { showCount: false })}
               </>
             ) : null}
           </div>

@@ -12,4 +12,3 @@ export { createDefaultMetricCalculationFormula } from "./metric";
 export type * from "./network";
 export type * from "./object-type";
 export type * from "./relation-type";
-export type * from "./task";

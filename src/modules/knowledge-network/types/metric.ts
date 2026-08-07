@@ -168,7 +168,6 @@ export type MetricDataQueryTimeRange =
   | "last_24h"
   | "last_7d"
   | "last_30d"
-  | "calendar_day"
   | "custom";
 
 export type MetricDataQueryParams = {

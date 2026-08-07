@@ -39,6 +39,7 @@ import type {
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type ObjectTypeListPanelProps = {
+  canDelete: boolean;
   canModify: boolean;
   items: KnowledgeNetworkObjectTypeRecord[];
   loading?: boolean;
@@ -58,6 +59,7 @@ function readSortDirection(value: string | null): "asc" | "desc" {
 const PAGE_SIZE_STORAGE_SCOPE = "object-types";
 
 export function ObjectTypeListPanel({
+  canDelete,
   canModify,
   items,
   loading,
@@ -315,12 +317,8 @@ export function ObjectTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canModify
-            ? [
-                { key: "edit", label: t("common.edit") },
-                { key: "delete", danger: true, label: t("common.delete") },
-              ]
-            : []),
+          ...(canModify ? [{ key: "edit", label: t("common.edit") }] : []),
+          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
         ];
 
         return (
@@ -479,8 +477,9 @@ export function ObjectTypeListPanel({
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          {canModify ? (
+          {canModify || canDelete ? (
             <>
+              {canModify ? (
               <AppButton
                 className={styles.toolbarButton}
                 icon={<PlusOutlined />}
@@ -491,6 +490,8 @@ export function ObjectTypeListPanel({
               >
                 {t("common.create")}
               </AppButton>
+              ) : null}
+              {canDelete ? (
               <AppButton
                 className={styles.toolbarButton}
                 danger
@@ -500,6 +501,7 @@ export function ObjectTypeListPanel({
               >
                 {t("common.delete")}
               </AppButton>
+              ) : null}
             </>
           ) : null}
         </div>
@@ -587,7 +589,7 @@ export function ObjectTypeListPanel({
           pagination={false}
           rowKey="id"
           rowSelection={
-            canModify
+            canDelete
               ? {
                   selectedRowKeys,
                   onChange: (nextSelectedRowKeys) => {
