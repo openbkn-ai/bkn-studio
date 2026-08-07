@@ -149,8 +149,13 @@ export function ConnectorTypePicker({
                         标签说的是「它属于哪类数据源」,两件事别挤在同一排。 */}
                     <strong className={styles.cardName}>
                       {item.name}
-                      {certified ? (
+                      {/*
+                        这里有比 capabilities[] 更强的信号:后端自己说这个连接器能不能用。
+                        能用就不标——标了等于对着一个正在工作的连接器喊「要付费」。
+                      */}
+                      {locked ? (
                         <EditionBadge
+                          alwaysShow
                           capability={CAPABILITIES.CONNECTOR_CERTIFIED}
                           edition="professional"
                         />

@@ -8,7 +8,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { Entitlement } from "@/framework/entitlement/types";
-import { upgradeReason } from "@/framework/entitlement/upgrade-reason";
+import {
+  capabilitySatisfied,
+  upgradeReason,
+} from "@/framework/entitlement/upgrade-reason";
 
 /** 客户实际会处在的三种部署组合,加上「都齐了」那种。 */
 function deployment(overrides: Partial<Entitlement>): Entitlement {
@@ -89,5 +92,29 @@ describe("upgradeReason — 快照缺席", () => {
   // 拿不到快照时不能凭空断言客户已经买了。
   it("按未购买处理", () => {
     expect(upgradeReason(RBAC, null, "professional", true)).toBe("buy");
+  });
+});
+
+describe("capabilitySatisfied — 判不了就不算满足", () => {
+  const licensed = deployment({ edition: "professional", licensed: true, state: "valid" });
+
+  // 别的服务的能力确认不了镜像；「证够了但包没换」恰恰是客户最常处在的状态，
+  // 当成满足会让标记消失，客户以为一切正常，点下去才发现用不了。
+  it("别的服务实现的能力：档位够也不算满足", () => {
+    expect(capabilitySatisfied("semantic_task", licensed, "professional", false)).toBe(false);
+  });
+
+  it("bkn-safe 的能力：证够 + 装了才算满足", () => {
+    expect(capabilitySatisfied(RBAC, licensed, "professional", true)).toBe(false);
+
+    const ready = deployment({
+      capabilities: [RBAC],
+      edition: "professional",
+      extensions: [RBAC],
+      licensed: true,
+      state: "valid",
+    });
+
+    expect(capabilitySatisfied(RBAC, ready, "professional", true)).toBe(true);
   });
 });

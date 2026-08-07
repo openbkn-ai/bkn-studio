@@ -61,5 +61,9 @@ export function capabilitySatisfied(
     return false;
   }
 
-  return servedByBknSafe ? capabilityState(capability, snapshot) === "available" : true;
+  // 判不了就不算满足。别的服务的能力确认不了镜像(ee-design.md §6「A 答不了 B」),
+  // 而「证够了但包没换」恰恰是客户最常处在的状态——把它当满足会让标记消失,客户以为
+  // 一切正常,点下去才发现用不了。有更强信号的调用点(比如连接器有后端的 enabled)自己
+  // 决定要不要画。
+  return servedByBknSafe && capabilityState(capability, snapshot) === "available";
 }
