@@ -966,6 +966,29 @@ export const executionFactoryEnUS = {
       multipleUrls: "Multiple URLs detected. Keep only one API URL.",
       unclosedQuote: "The cURL command contains an unclosed quote.",
     },
+    openApiDocumentErrors: {
+      componentRefMissing:
+        "The document references an undefined component {{ref}}. Add it to components or inline the response definition.",
+      infoRequired: "info must be an object and include title and version.",
+      infoTitleRequired: "info.title is required.",
+      infoVersionRequired: "info.version is required.",
+      invalidJsonOrYaml: "The OpenAPI file is not valid JSON or YAML: {{detail}}",
+      manualServerRequired:
+        "OpenAPI does not declare servers. Enter the full HTTP(S) service URL in the form.",
+      missingOpenApiField:
+        "Missing OpenAPI top-level field openapi. The edit page should show the full document, not an api_spec fragment.",
+      operationDescriptionTooLong:
+        "Endpoint {{method}} {{path}} description exceeds {{limit}} characters. Shorten it before saving.",
+      operationSummaryRequired:
+        "Endpoint {{method}} {{path}} is missing summary. Add it before saving.",
+      operationsRequired: "No valid HTTP endpoint definitions were found in paths.",
+      pathsRequired: "Missing required top-level field paths.",
+      relativeServerRequiresManualUrl:
+        "OpenAPI servers[0].url is a relative path {{serverUrl}}. Enter the full service URL.",
+      serverUrlRequired: "servers[0].url is required.",
+      specRequired: "OpenAPI spec cannot be empty.",
+      topLevelObjectRequired: "The OpenAPI document top level must be an object.",
+    },
     installedStateSyncFailed: "Failed to sync installed state. Installed tags may be inaccurate.",
     loadMoreFailed: "Failed to load more items. Please retry.",
     routeMigrated: "This page has moved. You were redirected to the new capability management hub.",

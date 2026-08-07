@@ -7,6 +7,7 @@
 
 import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
 import { parseFunctionParametersFromApiSpec } from "@/modules/execution-factory/utils/function-parameter-schema";
+import i18n from "@/app/locales/i18n";
 import { parse as parseYaml } from "yaml";
 
 type InternalApiSpec = {
@@ -88,10 +89,14 @@ export type OpenApiDocumentParseResult =
     }
   | { ok: false; reason: string };
 
+function openApiDocumentError(key: string, options?: Record<string, unknown>) {
+  return i18n.t(`executionFactory.openApiDocumentErrors.${key}`, options);
+}
+
 export function parseOpenApiDocumentText(openapiSpec?: string): OpenApiDocumentParseResult {
   const text = openapiSpec?.trim();
   if (!text) {
-    return { ok: false, reason: "OpenAPI 规范不能为空。" };
+    return { ok: false, reason: openApiDocumentError("specRequired") };
   }
 
   let parsed: unknown;
@@ -107,13 +112,13 @@ export function parseOpenApiDocumentText(openapiSpec?: string): OpenApiDocumentP
       const detail = error instanceof Error ? error.message : String(error);
       return {
         ok: false,
-        reason: `OpenAPI 文件不是有效的 JSON 或 YAML：${detail}`,
+        reason: openApiDocumentError("invalidJsonOrYaml", { detail }),
       };
     }
   }
 
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return { ok: false, reason: "OpenAPI 文档顶层必须是对象。" };
+    return { ok: false, reason: openApiDocumentError("topLevelObjectRequired") };
   }
 
   return {
@@ -305,8 +310,7 @@ export function analyzeOpenApiDocumentText(
   if (!isFullOpenApiDocument(parsed)) {
     return {
       ok: false,
-      reason:
-        "缺少 OpenAPI 顶层字段 openapi。编辑页应展示完整文档，而不是 api_spec 片段。",
+      reason: openApiDocumentError("missingOpenApiField"),
     };
   }
 
@@ -316,7 +320,7 @@ export function analyzeOpenApiDocumentText(
   if (!info || typeof info !== "object") {
     return {
       ok: false,
-      reason: "info 必须为对象，且包含 title 与 version。",
+      reason: openApiDocumentError("infoRequired"),
     };
   }
 
@@ -325,11 +329,11 @@ export function analyzeOpenApiDocumentText(
   const version = infoRecord.version;
 
   if (typeof title !== "string" || !title.trim()) {
-    return { ok: false, reason: "info.title 不能为空。" };
+    return { ok: false, reason: openApiDocumentError("infoTitleRequired") };
   }
 
   if (typeof version !== "string" || !version.trim()) {
-    return { ok: false, reason: "info.version 不能为空。" };
+    return { ok: false, reason: openApiDocumentError("infoVersionRequired") };
   }
 
   // servers is optional in OpenAPI 3.x. When absent, the import form's service URL
@@ -345,7 +349,7 @@ export function analyzeOpenApiDocumentText(
       typeof (firstServer as { url?: unknown }).url !== "string" ||
       !(firstServer as { url: string }).url.trim()
     ) {
-      return { ok: false, reason: "servers[0].url 不能为空。" };
+      return { ok: false, reason: openApiDocumentError("serverUrlRequired") };
     }
     serverUrl = (firstServer as { url: string }).url.trim();
   }
@@ -353,13 +357,13 @@ export function analyzeOpenApiDocumentText(
   const paths = doc.paths;
 
   if (!paths || typeof paths !== "object") {
-    return { ok: false, reason: "缺少必填顶层字段 paths。" };
+    return { ok: false, reason: openApiDocumentError("pathsRequired") };
   }
 
   const operations = collectOpenApiOperations(paths as Record<string, unknown>);
 
   if (operations.length === 0) {
-    return { ok: false, reason: "paths 中未找到有效的 HTTP 接口定义。" };
+    return { ok: false, reason: openApiDocumentError("operationsRequired") };
   }
 
   const operationsMissingSummary = operations.filter((operation) => !operation.summary?.trim());
@@ -476,7 +480,7 @@ export function resolveOpenApiServiceUrl(
   if (!serverUrl) {
     return {
       ok: false,
-      reason: "OpenAPI 未声明 servers，请在表单中填写完整的 HTTP(S) 服务地址。",
+      reason: openApiDocumentError("manualServerRequired"),
     };
   }
 
@@ -502,7 +506,7 @@ export function resolveOpenApiServiceUrl(
   return {
     ok: false,
     relativeUrl: serverUrl,
-    reason: `OpenAPI servers[0].url 是相对路径 ${serverUrl}，请填写完整服务地址。`,
+    reason: openApiDocumentError("relativeServerRequiresManualUrl", { serverUrl }),
   };
 }
 
@@ -637,7 +641,10 @@ export function validateOpenApiDocumentText(
 
     return {
       ok: false,
-      reason: `接口 ${first.method} ${first.path} 缺少 summary，请补充后再保存。`,
+      reason: openApiDocumentError("operationSummaryRequired", {
+        method: first.method,
+        path: first.path,
+      }),
     };
   }
 
@@ -652,7 +659,7 @@ export function validateOpenApiDocumentText(
   if (brokenRef) {
     return {
       ok: false,
-      reason: `文档引用了未定义的组件 ${brokenRef}。请补齐 components 段，或改为内联响应定义。`,
+      reason: openApiDocumentError("componentRefMissing", { ref: brokenRef }),
     };
   }
 
@@ -666,7 +673,11 @@ export function validateOpenApiDocumentText(
     if (longDescriptionOperation) {
       return {
         ok: false,
-        reason: `接口 ${longDescriptionOperation.method} ${longDescriptionOperation.path} 的 description 超过 ${CAPABILITY_DESCRIPTION_MAX_LENGTH} 字符。请缩短后再保存。`,
+        reason: openApiDocumentError("operationDescriptionTooLong", {
+          limit: CAPABILITY_DESCRIPTION_MAX_LENGTH,
+          method: longDescriptionOperation.method,
+          path: longDescriptionOperation.path,
+        }),
       };
     }
   }

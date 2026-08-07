@@ -941,6 +941,30 @@ export const executionFactoryZhCN = {
       multipleUrls: "检测到多个 URL，请保留一个接口地址。",
       unclosedQuote: "cURL 中存在未闭合的引号。",
     },
+    openApiDocumentErrors: {
+      componentRefMissing:
+        "\u6587\u6863\u5f15\u7528\u4e86\u672a\u5b9a\u4e49\u7684\u7ec4\u4ef6 {{ref}}\u3002\u8bf7\u8865\u9f50 components \u6bb5\uff0c\u6216\u6539\u4e3a\u5185\u8054\u54cd\u5e94\u5b9a\u4e49\u3002",
+      infoRequired: "info \u5fc5\u987b\u4e3a\u5bf9\u8c61\uff0c\u4e14\u5305\u542b title \u4e0e version\u3002",
+      infoTitleRequired: "info.title \u4e0d\u80fd\u4e3a\u7a7a\u3002",
+      infoVersionRequired: "info.version \u4e0d\u80fd\u4e3a\u7a7a\u3002",
+      invalidJsonOrYaml:
+        "OpenAPI \u6587\u4ef6\u4e0d\u662f\u6709\u6548\u7684 JSON \u6216 YAML\uff1a{{detail}}",
+      manualServerRequired:
+        "OpenAPI \u672a\u58f0\u660e servers\uff0c\u8bf7\u5728\u8868\u5355\u4e2d\u586b\u5199\u5b8c\u6574\u7684 HTTP(S) \u670d\u52a1\u5730\u5740\u3002",
+      missingOpenApiField:
+        "\u7f3a\u5c11 OpenAPI \u9876\u5c42\u5b57\u6bb5 openapi\u3002\u7f16\u8f91\u9875\u5e94\u5c55\u793a\u5b8c\u6574\u6587\u6863\uff0c\u800c\u4e0d\u662f api_spec \u7247\u6bb5\u3002",
+      operationDescriptionTooLong:
+        "\u63a5\u53e3 {{method}} {{path}} \u7684 description \u8d85\u8fc7 {{limit}} \u5b57\u7b26\u3002\u8bf7\u7f29\u77ed\u540e\u518d\u4fdd\u5b58\u3002",
+      operationSummaryRequired:
+        "\u63a5\u53e3 {{method}} {{path}} \u7f3a\u5c11 summary\uff0c\u8bf7\u8865\u5145\u540e\u518d\u4fdd\u5b58\u3002",
+      operationsRequired: "paths \u4e2d\u672a\u627e\u5230\u6709\u6548\u7684 HTTP \u63a5\u53e3\u5b9a\u4e49\u3002",
+      pathsRequired: "\u7f3a\u5c11\u5fc5\u586b\u9876\u5c42\u5b57\u6bb5 paths\u3002",
+      relativeServerRequiresManualUrl:
+        "OpenAPI servers[0].url \u662f\u76f8\u5bf9\u8def\u5f84 {{serverUrl}}\uff0c\u8bf7\u586b\u5199\u5b8c\u6574\u670d\u52a1\u5730\u5740\u3002",
+      serverUrlRequired: "servers[0].url \u4e0d\u80fd\u4e3a\u7a7a\u3002",
+      specRequired: "OpenAPI \u89c4\u8303\u4e0d\u80fd\u4e3a\u7a7a\u3002",
+      topLevelObjectRequired: "OpenAPI \u6587\u6863\u9876\u5c42\u5fc5\u987b\u662f\u5bf9\u8c61\u3002",
+    },
     installedStateSyncFailed: "安装状态同步失败，已安装标记可能不准确。",
     loadMoreFailed: "加载更多失败，请重试。",
     routeMigrated: "页面地址已更新，已为您跳转到新的能力管理入口。",
