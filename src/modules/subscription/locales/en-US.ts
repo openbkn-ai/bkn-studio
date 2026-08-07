@@ -25,6 +25,11 @@ export const subscriptionEnUS = {
         name: "Runtime diagnostic traces",
       },
       connector_certified: {
+        bullets: {
+          b1: "Connect straight to SQL Server and other commercial databases — no export step in between",
+          b2: "Connection parameters, drivers and dialects are vendor-maintained and validated each release",
+          b3: "Same modelling, indexing and query path as the community connectors — switching changes no model",
+        },
         description:
           "Certified and advanced source connectors (SQL Server and other commercial databases). Community ships the basic connectors only.",
         name: "Advanced data connectivity",

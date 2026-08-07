@@ -342,7 +342,11 @@ describe("DataConnectFormScene · connection preflight", () => {
     });
   });
 
-  it("shows known connector types as disabled when the backend omits them", async () => {
+  /**
+   * 后端关掉认证连接器时,原因几乎一定是「没买」而不是「坏了」——所以卡片不画
+   * 「暂不可用」,画档位徽标并且可点,点击给升级引导而不是选中。
+   */
+  it("认证连接器被后端关掉时给升级引导,不画「暂不可用」", async () => {
     permissionState.values = new Set(["catalog:create"]);
 
     render(<DataConnectFormScene mode="create" />);
@@ -351,13 +355,19 @@ describe("DataConnectFormScene · connection preflight", () => {
       name: /SQL Server/,
     });
 
-    expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
+    expect(sqlServerButton.hasAttribute("disabled")).toBe(false);
     expect(sqlServerButton.textContent).toContain("关系型数据库");
-    expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+    expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
+    expect(sqlServerButton.textContent).toContain(
+      "common.entitlement.editionsShort.professional",
+    );
 
     fireEvent.click(sqlServerButton);
 
+    // 点击不选中,只弹引导;下一步仍走不通。
     expect(sqlServerButton.className).not.toContain("cardActive");
+    expect(screen.getAllByText("common.entitlement.unlockTitle").length).toBeGreaterThan(0);
+
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
 
     expect(screen.queryByPlaceholderText("例如 供应链主库")).toBeNull();

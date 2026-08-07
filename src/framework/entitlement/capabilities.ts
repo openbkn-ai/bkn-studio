@@ -32,6 +32,8 @@ export const CAPABILITIES = {
    * 永久隐藏(ee-design.md §6「A 答不了 B」)。它今天只用于版本页的在售清单。
    */
   BUSINESS_PROVENANCE: "business_provenance",
+  /** 认证/高级数据源连接器(SQL Server 等商业库)。专业档起,由 Vega 实现。 */
+  CONNECTOR_CERTIFIED: "connector_certified",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];

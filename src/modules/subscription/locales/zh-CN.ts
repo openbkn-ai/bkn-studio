@@ -22,6 +22,11 @@ export const subscriptionZhCN = {
         name: "运行诊断 Trace",
       },
       connector_certified: {
+        bullets: {
+          b1: "SQL Server 等商业数据库直连,不必再导出中间文件",
+          b2: "连接参数、驱动与方言由官方维护并随版本验证",
+          b3: "与社区连接器同一套建模、索引与查询链路,切换不改模型",
+        },
         description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
         name: "高级数据连接",
       },
