@@ -5,20 +5,36 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export const MODEL_SERIES_OPTIONS = [
+import type { TFunction } from "i18next";
+
+const MODEL_SERIES_DEFINITIONS = [
   { value: "openai", label: "OpenAI" },
-  { value: "qwen", label: "通义千问" },
+  { value: "qwen", labelKey: "modelResources.models.series.qwen" },
   { value: "claude", label: "Claude" },
   { value: "deepseek", label: "DeepSeek" },
   { value: "internlm", label: "InternLM" },
   { value: "chatglm", label: "ChatGLM" },
   { value: "llama", label: "Llama" },
   { value: "baidu", label: "Baidu" },
-  { value: "others", label: "其他" },
+  { value: "others", labelKey: "modelResources.models.series.others" },
 ];
 
-export function getModelSeriesLabel(series?: string) {
-  return MODEL_SERIES_OPTIONS.find((item) => item.value === series)?.label ?? series ?? "--";
+export const MODEL_SERIES_OPTIONS = MODEL_SERIES_DEFINITIONS.map((item) => ({
+  value: item.value,
+  label: item.label ?? item.value,
+}));
+
+export function getModelSeriesOptions(t: TFunction) {
+  return MODEL_SERIES_DEFINITIONS.map((item) => ({
+    value: item.value,
+    label: item.labelKey ? t(item.labelKey) : item.label,
+  }));
+}
+
+export function getModelSeriesLabel(series?: string, t?: TFunction) {
+  const item = MODEL_SERIES_DEFINITIONS.find((entry) => entry.value === series);
+  if (!item) return series ?? "--";
+  return item.labelKey && t ? t(item.labelKey) : item.label ?? series ?? "--";
 }
 
 export function formatNumberWithCommas(value?: number | string) {

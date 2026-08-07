@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import i18n from "@/app/locales/i18n";
 import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
@@ -273,10 +274,10 @@ export async function importKnowledgeNetworkConceptGroup(
 
     if (!importMode) {
       if (existingById) {
-        throwImportConflict(`概念分组 ID「${id}」已存在。`);
+        throwImportConflict(i18n.t("knowledgeNetwork.conceptGroupIdExists", { id }));
       }
       if (existingByName) {
-        throwImportConflict(`概念分组名称「${name}」已存在。`);
+        throwImportConflict(i18n.t("knowledgeNetwork.conceptGroupNameExists", { name }));
       }
     } else if (importMode === "ignore" && (existingById || existingByName)) {
       await wait(undefined);

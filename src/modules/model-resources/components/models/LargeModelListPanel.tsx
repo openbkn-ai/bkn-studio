@@ -376,7 +376,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
       title: t("modelResources.models.columns.baseModel"),
       dataIndex: "modelSeries",
       width: 140,
-      render: (value?: string) => getModelSeriesLabel(value),
+      render: (value?: string) => getModelSeriesLabel(value, t),
     },
     {
       title: t("modelResources.models.columns.document"),

@@ -61,6 +61,10 @@ export const modelResourcesZhCN = {
         rlmFull: "推理语言模型（RLM）",
         vuFull: "视觉理解（VU）",
       },
+      series: {
+        qwen: "通义千问",
+        others: "其他",
+      },
       auth: {
         empty: "无",
       },

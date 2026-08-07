@@ -25,7 +25,7 @@ function isUserAccountDuplicate(raw: string) {
     normalized.includes("idx_users_account") ||
     normalized.includes("user account already exists") ||
     normalized.includes("account already exists") ||
-    raw.includes("登录名已存在")
+    raw.includes("\u767b\u5f55\u540d\u5df2\u5b58\u5728")
   );
 }
 
