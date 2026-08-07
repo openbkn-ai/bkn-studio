@@ -388,7 +388,7 @@ describe("DataConnectFormScene · connection preflight", () => {
     fireEvent.click(await screen.findByRole("button", { name: /SQL Server/ }));
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
 
-    fireEvent.change(screen.getByPlaceholderText("例如 供应链主库"), {
+    fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
       target: { value: "sqlserver-orders" },
     });
     fireEvent.change(screen.getByPlaceholderText("例如 db.example.internal"), {
