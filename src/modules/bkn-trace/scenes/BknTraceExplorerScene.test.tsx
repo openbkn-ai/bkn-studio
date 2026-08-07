@@ -584,6 +584,21 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
   });
 
   it("OpenBKN 调用详情不复制整轮问题和最终答案，并保留关联技术 Trace", async () => {
+    vi.mocked(getInteractionSummary).mockResolvedValueOnce({
+      evidenceCompleteness: "complete",
+      interactionId: "interaction_customer_risk",
+      partialReasons: [],
+      requests: [requestSummary],
+      status: "completed",
+      traces: [{
+        requestId: "req_business_001",
+        rootOperation: "bkn.agent.chat",
+        spanCount: 7,
+        spanCountStatus: "available",
+        status: "completed",
+        traceId: "trace_001",
+      }],
+    });
     window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
     render(<BknTraceExplorerScene />);
 
