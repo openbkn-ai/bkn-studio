@@ -70,6 +70,7 @@ import {
 import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
 
 import styles from "./AgentChat.module.css";
+import { closeOpenMarkdown, splitMarkdownBlocks } from "./markdown-blocks";
 
 /**
  * 默认提示词只讲「这个面板是干什么的、工具怎么用」。
@@ -272,11 +273,26 @@ function formatArgs(args: unknown): string {
   }
 }
 
-/** Markdown 渲染（GFM：表格/删除线/任务列表）。对比报告的 AI 总结也复用。 */
-export const MarkdownView = memo(function MarkdownView({ text }: { text: string }) {
+/** 单个 Markdown 块。memo 是关键：流式下只有尾块的 text 在变，前面的块不会重新 parse。 */
+const MarkdownBlock = memo(function MarkdownBlock({ text }: { text: string }) {
+  return <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>;
+});
+
+/**
+ * Markdown 渲染（GFM：表格/删除线/任务列表）。对比报告的 AI 总结也复用。
+ * streaming = 正文还在流：按块渲染 + 尾块补全未闭合语法，避免整段重 parse 的 O(n²)。
+ */
+export const MarkdownView = memo(function MarkdownView({ text, streaming = false }: { text: string; streaming?: boolean }) {
+  const blocks = useMemo(() => {
+    const bs = splitMarkdownBlocks(text);
+    if (!streaming || bs.length === 0) return bs;
+    return [...bs.slice(0, -1), closeOpenMarkdown(bs[bs.length - 1])];
+  }, [text, streaming]);
   return (
     <div className={styles.md}>
-      <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+      {blocks.map((b, i) => (
+        <MarkdownBlock key={i} text={b} />
+      ))}
     </div>
   );
 });
@@ -1146,10 +1162,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                       </div>
                     ) : null}
                     {m.content ? (
-                      // 流式进行中的最后一条用纯文本，结束后再渲染 Markdown：
-                      // 避免每来一个 token 就整段重新解析 Markdown（长答复 O(n²) 卡 UI）。
-                      m.role === "assistant" && !(busy && isLast) ? (
-                        <MarkdownView text={m.content} />
+                      // 流式进行中也渲染 Markdown：MarkdownView 按块 memo，只有尾块重 parse，
+                      // 不再是每来一个 token 就整段重解析（长答复 O(n²) 卡 UI）。
+                      m.role === "assistant" ? (
+                        <MarkdownView text={m.content} streaming={busy && isLast} />
                       ) : (
                         <div className={styles.txt}>{m.content}</div>
                       )
