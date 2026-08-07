@@ -51,12 +51,28 @@ export const subscriptionEnUS = {
         description: "Authoring and execution of business-semantic understanding tasks",
         name: "Semantic understanding tasks",
       },
-      source_sync: {
-        description: "Track source changes and refresh automatically",
-        name: "Source change tracking",
-      },
+    },
+    /**
+     * Community capabilities (display only). The registry does not record community
+     * capabilities (`ee-features.md`: a community certificate carries an empty
+     * features list), so these have no key and gate nothing — they mirror the rows
+     * ticked for every edition on the public pricing page.
+     */
+    community: {
+      actionSandbox: "Action execution in a secure sandbox",
+      cliTrace: "Query run traces, latency, evidence and reasoning via CLI / SDK",
+      commonSources: "Common databases, OpenSearch and CSV ingestion",
+      indexing: "Data discovery, batch indexing and vectorisation",
+      localAuth: "Local sign-in, user management and basic activity records",
+      mcpTooling: "Connect, debug and invoke MCP servers, tools and Skills",
+      modelingSurfaces:
+        "Model and manage knowledge networks from BKN Studio, CLI, SDK and Skills",
+      modelingTypes: "Object, relation, action and metric modelling",
+      queryAndSearch: "Relation queries, path queries and semantic search",
+      selfHosted: "Source builds, basic deployment, health checks and upgrade docs",
     },
     categories: {
+      modeling: "Knowledge modelling",
       dataConnect: "Data connectivity",
       observability: "Observability",
       operations: "Operations",
@@ -104,11 +120,6 @@ export const subscriptionEnUS = {
       community: {
         audience:
           "Developers, technical teams and ecosystem partners. Build and validate a complete business knowledge network for free.",
-        highlights: {
-          catalog: "Full knowledge network and data catalog",
-          index: "Index building — batch and streaming",
-          model: "Model integration and invocation",
-        },
         price: "Free",
         unit: "Self-hosted · perpetual",
       },

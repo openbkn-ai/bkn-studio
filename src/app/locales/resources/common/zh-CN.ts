@@ -94,12 +94,16 @@ export const commonZhCN = {
         enterprise: "企业版",
         industry: "行业版",
       },
-      /** 侧栏徽标位窄,中文三字正好;英文那边才需要取首词。 */
+      /**
+       * 徽标位专用短名,中文取两字。侧栏只有 229px,再算上图标、缩进与徽标本身的边框,
+       * 「企业版」三个字会把「业务溯源分析」挤成「业务溯源…」——菜单名被截断比徽标少
+       * 一个字严重得多。
+       */
       editionsShort: {
-        community: "社区版",
-        professional: "专业版",
-        enterprise: "企业版",
-        industry: "行业版",
+        community: "社区",
+        professional: "专业",
+        enterprise: "企业",
+        industry: "行业",
       },
       upgrade: "升级",
       banner: {

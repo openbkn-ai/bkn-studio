@@ -620,18 +620,15 @@ select {
   text-align: left;
 }
 
+/* 侧栏里的档位徽标只管布局,配色走 .console-edition-badge-*(与版本页卡片同源)。
+   229px 的侧栏再算上图标、子项缩进与边框,徽标必须比正文小一号并且只占自己那点宽度,
+   否则「业务溯源分析」会被省略成「业务溯源…」——菜单名被截断比徽标小一号严重得多。 */
 .console-sidenav-tier {
-  /* 不许被标签挤扁,也不许把标签挤到换行:徽标固定宽度,长菜单名自己省略。 */
   flex: 0 0 auto;
-  margin-left: auto;
-  padding: 1px 6px;
-  border: 1px solid #d6cdf3;
-  border-radius: 4px;
-  background: #f5f2ff;
-  color: #5b46a8;
-  font-size: 11px;
-  line-height: 16px;
-  white-space: nowrap;
+  margin-left: 6px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 15px;
 }
 
 /* 用户菜单里的档位行。「升级」尾巴只在无生效授权时出现,别做成常驻广告。 */

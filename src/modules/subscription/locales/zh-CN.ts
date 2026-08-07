@@ -41,9 +41,25 @@ export const subscriptionZhCN = {
         description: "面向业务语义的理解任务编排与执行",
         name: "语义理解任务",
       },
-      source_sync: { description: "跟踪数据源变化并自动更新", name: "数据源变化跟踪" },
+    },
+    /**
+     * 社区版能力(展示用)。登记表不登记社区能力(`ee-features.md`:社区证的 features 为空),
+     * 所以这些条目没有 key、不参与门控,来源是对外版本说明里三档都打 ✓ 的那些行。
+     */
+    community: {
+      actionSandbox: "行动运行与安全沙箱环境",
+      cliTrace: "通过 CLI / SDK 查询运行链路、性能、证据与推理过程",
+      commonSources: "常用数据库、OpenSearch 与 CSV 接入",
+      indexing: "数据发现、批量索引与向量化",
+      localAuth: "本地登录、用户管理与基础操作记录",
+      mcpTooling: "MCP、工具与 Skill 的接入、调试和调用",
+      modelingSurfaces: "通过 BKN Studio、CLI、SDK 与 Skill 建模并管理知识网络",
+      modelingTypes: "对象、关系、行动与指标建模",
+      queryAndSearch: "关系查询、路径查询与语义检索",
+      selfHosted: "源码构建、基础部署、状态检查与升级文档",
     },
     categories: {
+      modeling: "知识网络建模",
       dataConnect: "数据连接",
       observability: "可观测",
       operations: "运营",
@@ -89,11 +105,6 @@ export const subscriptionZhCN = {
       // ——正因为这套东西会随时间变,才不印在产品页上。
       community: {
         audience: "开发者、技术团队和生态伙伴。免费构建和验证完整的业务知识网络底座,适合跑通 Demo、样板项目和基础场景。",
-        highlights: {
-          catalog: "知识网络与数据目录全量功能",
-          index: "索引构建 · 批量与流式",
-          model: "模型接入与调用",
-        },
         price: "免费",
         unit: "自部署 · 无限期",
       },

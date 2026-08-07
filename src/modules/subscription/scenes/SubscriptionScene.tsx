@@ -27,6 +27,10 @@ import {
   capabilitiesIntroducedBy,
   type CapabilityCatalogEntry,
 } from "@/modules/subscription/capability-catalog";
+import {
+  COMMUNITY_CAPABILITIES,
+  communityCapabilitiesByCategory,
+} from "@/modules/subscription/community-capabilities";
 import { SUBSCRIPTION_PLANS } from "@/modules/subscription/subscription-plans";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
@@ -79,6 +83,31 @@ export function SubscriptionScene() {
 
   function editionName(edition: Edition) {
     return t(`common.entitlement.editions.${edition}`);
+  }
+
+  /**
+   * 社区能力行:三档都打 ✓,没有 key 所以「你的集群」列留空。
+   *
+   * 少了这些行,整张表只剩付费项,社区版那一列全是「—」,读起来像社区版什么都没有。
+   */
+  function communityRow(id: string) {
+    return (
+      <tr key={`community-${id}`}>
+        <td>
+          <span className={styles.capName}>{t(`subscription.community.${id}`)}</span>
+        </td>
+        {TIER_COLUMNS.map((tier) => (
+          <td className={styles.tier} key={tier}>
+            <CheckOutlined className={styles.tick} />
+          </td>
+        ))}
+        {showClusterColumn ? (
+          <td className={styles.tier}>
+            <span className={styles.no}>—</span>
+          </td>
+        ) : null}
+      </tr>
+    );
   }
 
   function capabilityRow(entry: CapabilityCatalogEntry) {
@@ -209,10 +238,11 @@ export function SubscriptionScene() {
 
               <ul className={styles.planFeats}>
                 {plan.edition === "community" ? (
-                  ["catalog", "index", "model"].map((key) => (
-                    <li key={key}>
+                  // 卡片只放前四条,完整清单在下面的对比表里——卡片是选购视角,表是核对视角。
+                  COMMUNITY_CAPABILITIES.slice(0, 4).map((entry) => (
+                    <li key={entry.id}>
                       <CheckOutlined className={styles.tick} />
-                      <span>{t(`subscription.plans.community.highlights.${key}`)}</span>
+                      <span>{t(`subscription.community.${entry.id}`)}</span>
                     </li>
                   ))
                 ) : (
@@ -314,9 +344,10 @@ export function SubscriptionScene() {
             </thead>
             <tbody>
               {CAPABILITY_CATEGORIES.map((category) => {
+                const communityRows = communityCapabilitiesByCategory(category);
                 const rows = capabilitiesByCategory(category);
 
-                if (rows.length === 0) {
+                if (communityRows.length === 0 && rows.length === 0) {
                   return null;
                 }
 
@@ -327,6 +358,7 @@ export function SubscriptionScene() {
                         {t(`subscription.categories.${category}`)}
                       </td>
                     </tr>
+                    {communityRows.map((entry) => communityRow(entry.id))}
                     {rows.map(capabilityRow)}
                   </Fragment>
                 );

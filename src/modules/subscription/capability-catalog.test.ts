@@ -43,7 +43,7 @@ describe("capability catalog", () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
     expect(capabilitiesIntroducedBy("community")).toHaveLength(1);
-    expect(capabilitiesIntroducedBy("professional")).toHaveLength(4);
+    expect(capabilitiesIntroducedBy("professional")).toHaveLength(3);
     expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(2);
   });
 
