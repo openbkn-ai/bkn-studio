@@ -918,6 +918,14 @@ export const executionFactoryZhCN = {
     quickApiUrlSubmitError:
       "保存失败：未能提交有效的服务地址。请检查 cURL 命令中的完整 URL，并重新点击“识别接口信息”后再保存。{{detailSuffix}}",
     quickApiUrlSubmitErrorDetailSuffix: " 后端返回：{{detail}}",
+    serviceErrors: {
+      existingToolboxMissingId: "已选择使用已有工具集，但未提交工具集 ID，请重新选择。",
+      newToolboxNameRequired: "请填写新工具集名称。",
+      openApiImportAllFailed: "未能从 OpenAPI 文档导入任何工具。",
+      openApiSpecRequired: "请上传 OpenAPI 3.0 规范文件。",
+      targetToolboxMissing: "未能确定目标工具集。",
+      toolCreateFailed: "工具创建失败",
+    },
     installedStateSyncFailed: "安装状态同步失败，已安装标记可能不准确。",
     loadMoreFailed: "加载更多失败，请重试。",
     routeMigrated: "页面地址已更新，已为您跳转到新的能力管理入口。",

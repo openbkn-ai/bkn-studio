@@ -942,6 +942,15 @@ export const executionFactoryEnUS = {
     quickApiUrlSubmitError:
       "Save failed: could not submit a valid service URL. Check the full URL in the cURL command, then click Detect API again before saving.{{detailSuffix}}",
     quickApiUrlSubmitErrorDetailSuffix: " Backend returned: {{detail}}",
+    serviceErrors: {
+      existingToolboxMissingId:
+        "An existing toolset was selected, but no toolset ID was submitted. Please select again.",
+      newToolboxNameRequired: "Enter a new toolset name.",
+      openApiImportAllFailed: "No tools could be imported from the OpenAPI document.",
+      openApiSpecRequired: "Upload an OpenAPI 3.0 spec file.",
+      targetToolboxMissing: "Could not determine the target toolset.",
+      toolCreateFailed: "Tool creation failed",
+    },
     installedStateSyncFailed: "Failed to sync installed state. Installed tags may be inaccurate.",
     loadMoreFailed: "Failed to load more items. Please retry.",
     routeMigrated: "This page has moved. You were redirected to the new capability management hub.",
