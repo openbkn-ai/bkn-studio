@@ -55,6 +55,11 @@ describe("toolDisplayOf", () => {
 
   it("keeps an unknown bkn_ tool in the lifecycle group instead of the knowledge-network group", () => {
     expect(toolDisplayOf("bkn_archive_interaction")).toMatchObject({ groupKey: "lifecycle", name: "会话生命周期工具" });
+    // 名字里没有 interaction / conversation 的平台工具靠前缀兜住：`bkn_xxx` 自带子串
+    // `kn`，少了前缀判就会掉进「知识网络信息」。后端的平台工具面一直在变，兜底表滞后
+    // 于后端正是这层兜底存在的理由。
+    expect(toolDisplayOf("bkn_causality")).toMatchObject({ groupKey: "lifecycle" });
+    expect(toolDisplayOf("bkn_some_future_trace_tool")).toMatchObject({ groupKey: "lifecycle" });
   });
 
   it("falls back to the tool name for a tool no side knows", () => {

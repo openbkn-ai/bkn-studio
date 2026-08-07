@@ -31,13 +31,16 @@ export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
 const PLATFORM_TOOL_PREFIX = "bkn_";
 
 /**
- * 这个工具是不是平台侧管账的、不该给模型看见的。
+ * 这个工具是不是平台侧管账的。
  *
- * 按前缀判而不是列名单：平台侧工具集随后端演进反复变动（#618 期间一度扩到十余个
- * 溯源工具，之后又裁回 bkn_start_interaction / bkn_finish_interaction 两个）。
- * 列名单必漏，漏了模型就会去调。
- * 实测模型真会调：一轮里连调两次 bkn_start_interaction，被 permission_denied 挡下。
- * 挡不下的话更糟——模型另开一条交互会撞上 Core 的 active interaction 唯一约束。
+ * 判定按前缀而不是列名单：平台侧工具集随后端演进反复变动（#618 期间一度扩到十余个
+ * 溯源工具，之后又裁回 bkn_start_interaction / bkn_finish_interaction 两个），
+ * 列名单必漏。
+ *
+ * 命中之后**不是**把工具藏起来，而是交给 buildAgentTools 决定怎么执行：
+ * bkn_start_interaction / bkn_finish_interaction 绑到客户端这一轮交互上（模型调 start
+ * 拿回的就是本轮那条，不会另开一条去撞 Core 的 active interaction 唯一约束），其余
+ * 溯源类读工具直通后端。屏蔽掉整片前缀会连「结束本轮交互」这项能力一起拿走。
  */
 export function isPlatformManagedTool(name: string): boolean {
   return name.startsWith(PLATFORM_TOOL_PREFIX);
@@ -235,6 +238,11 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
   // 「上一轮是否不支持生命周期」——只作报告用,不作短路用。见 beginTurn。
   let notSupported = false;
   let previousTurnSettled: Promise<void> = Promise.resolve();
+  /**
+   * 本实例是否成功开过交互。回收残留交互只在它为 false 时做——见 beginTurn 里的说明：
+   * 同一个 kn + 面板在另一个标签页里跑着的那一轮，从这里看跟"残留"长得一模一样。
+   */
+  let startedAnyTurn = false;
 
   return {
     session,
@@ -272,7 +280,13 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
           // 上一轮没走完（刷新、关标签页、收尾请求失败）就会留下这种残留。
           // 直接换新会话虽然也能开出一轮，但把用户的对话历史在 Trace 上拦腰截断，
           // 还留下一条永远 active 的孤儿交互，所以回收优先、换会话兜底。
-          if (await reclaimStuckInteraction(session, error)) {
+          //
+          // 只在本实例还没成功开过任何一轮时回收：conversation 键只按 kn + 面板取，
+          // 同一个网络在另一个标签页里开着时，那边正在跑的交互从这里看跟"残留"完全
+          // 一样，回收就是把别人答到一半的一轮掐掉。本实例开过之后再撞上，更可能是
+          // 并发而不是残留，交给换新会话处理更安全。刷新与关标签页都会重建实例，
+          // 主要场景仍然覆盖得到。
+          if (!startedAnyTurn && (await reclaimStuckInteraction(session, error))) {
             state = await startInteraction(conversationId);
           } else {
             if (!shouldStartNewConversation(error)) throw error;
@@ -289,6 +303,7 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
         conversationId = startedConversationId;
         conversationStore.write(startedConversationId);
         notSupported = false;
+        startedAnyTurn = true;
         return createTurn(session, startedConversationId, interactionId, release);
       } catch (error) {
         if (error instanceof BknLifecycleError && error.code === "lifecycle_not_supported") {

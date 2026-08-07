@@ -57,6 +57,7 @@ import {
 } from "@/modules/knowledge-network/services/agent-error";
 import {
   createBknLifecycle,
+  isPlatformManagedTool,
   lifecycleEnv,
   localConversationStore,
   type TurnOutcome,
@@ -604,7 +605,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                 // 展示实际发出的业务请求体（含注入的 kn_id、schema_brief 等默认值与 bkn_context），
                 // 而非模型原始入参。bkn_context 是 execute 里注入的，流式事件里没有，取自本轮 turn ——
                 // 少了它，面板看起来就像"前端没传上下文"，排查 conversation_required 时会指错方向。
-                args: effectiveToolArgs(chunk.name, chunk.args, knId, turnContextRef.current ?? undefined),
+                //
+                // 被接管的生命周期工具没有请求体可展示：本轮有 turn 时它们的 execute 根本不碰
+                // session.callTool，拼上 kn_id / bkn_context 就是编一份从未发出的报文。这类
+                // 照原样显示模型入参。没有 turn 时它们直通后端，仍按真实请求体展示。
+                args:
+                  turnContextRef.current && isPlatformManagedTool(chunk.name)
+                    ? chunk.args
+                    : effectiveToolArgs(chunk.name, chunk.args, knId, turnContextRef.current ?? undefined),
                 status: "running",
                 startedAt: performance.now(),
               },
@@ -787,8 +795,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         if (turn) {
           await turn.finish(controller.signal.aborted ? "canceled" : finalOutcome, answer).catch(() => undefined);
         }
-        turnContextRef.current = null;
         if (requestSequence === requestSequenceRef.current) {
+          // 只有仍是当前这一轮才清：并发下一轮已经写进自己的上下文，越权清掉会让它
+          // 后续的工具调用卡片显示不出 bkn_context。
+          turnContextRef.current = null;
           abortRef.current = null;
           const elapsed = performance.now() - startedAt;
           // 本轮耗时写到最后一条 assistant 消息 + 累计会话总时长（token 已在 usage chunk 累计）。
@@ -960,7 +970,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             maxTagPlaceholder={() =>
               draftToolSelection === null
                 ? `全部 · ${draftToolValue.length}`
-                : `已选 ${draftToolValue.length}${toolDefs ? ` / ${toolDefs.length}` : ""}`
+                : `已选 ${draftToolValue.length}${agentToolDefs ? ` / ${agentToolDefs.length}` : ""}`
             }
             allowClear
             onClear={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}

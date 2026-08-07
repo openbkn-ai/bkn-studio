@@ -191,6 +191,38 @@ describe("ChatPane 受管生命周期接线", () => {
     ]);
   });
 
+  it("被接管的生命周期工具不展示一份从未发出的请求体", async () => {
+    stubLifecycle();
+    runAgentChat.mockImplementation(({ onChunk }) => {
+      // 被接管的工具：execute 不碰 session.callTool，所以面板上不该出现 kn_id /
+      // bkn_context 这些「实际发出的请求体」才有的字段——那是编出来的报文。
+      onChunk({ type: "tool-call", id: "c1", name: "bkn_finish_interaction", args: { outcome: "completed" } });
+      onChunk({ type: "tool-call", id: "c2", name: "run_sql", args: { sql: "SELECT 1" } });
+      onChunk({ type: "finish" });
+      return Promise.resolve();
+    });
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("问一句");
+      await Promise.resolve();
+    });
+
+    // 工具卡片默认折叠，展开后才渲染请求体。
+    for (const header of screen.getAllByText(/tools\/call →|bkn_finish_interaction|run_sql/)) {
+      fireEvent.click(header);
+    }
+    const texts = [...document.querySelectorAll("pre")].map((node) => node.textContent ?? "");
+    const lifecycleCard = texts.find((text) => text.includes("outcome"));
+    const businessCard = texts.find((text) => text.includes("SELECT 1"));
+    expect(lifecycleCard).toBeDefined();
+    expect(lifecycleCard).not.toContain("bkn_context");
+    expect(lifecycleCard).not.toContain("kn_id");
+    // 业务工具照旧展示注入后的真实请求体。
+    expect(businessCard).toContain("bkn_context");
+    expect(businessCard).toContain("kn_id");
+  });
+
   it("执行失败时以 failed 终结", async () => {
     const { finish } = stubLifecycle();
     runAgentChat.mockRejectedValue(new Error("模型不可用"));

@@ -41,9 +41,9 @@ export type McpToolGroup<T> = {
  * 未收录的分组键不展示说明，不编造。
  */
 const GROUP_DESCRIPTIONS: Record<string, string> = {
-  // 这组在「Agent 对话」里不出现（客户端自己调，见 isManagedLifecycleTool），只有外部 MCP
-  // 客户端直连时才需要自己调用。目录是服务端暴露面的说明书，所以照列，但要讲清归属。
-  lifecycle: "创建会话、开始与结束一次交互、受管上下文写入。外部 MCP 客户端自行调用；Agent 对话由 Studio 代管，不交给模型",
+  // Agent 对话里这组照常给模型，只是 bkn_start_interaction / bkn_finish_interaction 的
+  // 执行被 buildAgentTools 接管、绑到 Studio 这一轮交互上；外部 MCP 客户端直连时自行驱动。
+  lifecycle: "创建会话、开始与结束一次交互、受管上下文写入。Agent 对话里由 Studio 绑定到当前这一轮交互",
   discovery: "知识网络列表、网络结构、Schema 探索与对象/关系类详情",
   query: "对象实例、关系子图、逻辑属性、指标与 SQL 查询",
   action: "行动信息召回、执行与执行历史",
@@ -135,8 +135,12 @@ const LOCAL_TOOL_INDEX = new Map<string, { groupKey: string; name: string; order
 /** 工具名猜分组：服务端没声明、本地表也没收录时的最后一层兜底。 */
 function guessLocal(toolId: string): { groupKey: string; name: string } {
   const id = toolId.toLowerCase();
-  // 生命周期要抢在 action 之前判：`interaction` 里含 `action`，漏了这一条，
-  // bkn_start_interaction / bkn_finish_interaction 会被归进「逻辑属性与行动调用」。
+  // 平台侧工具一律 bkn_ 前缀，前缀判必须排在所有关键字之前，两条都不能少：
+  // - `bkn_xxx` 自带子串 `kn`，漏了前缀判就会被最后那条 includes("kn") 归进「知识网络信息」；
+  // - `interaction` 里含 `action`，漏了它 bkn_*_interaction 会掉进「逻辑属性与行动调用」。
+  // 后端的平台工具面一直在变（#618 期间扩到十余个溯源工具，之后又裁回两个），
+  // 兜底表滞后于后端正是这层兜底存在的理由，所以这里按前缀兜、不按名单兜。
+  if (id.startsWith("bkn_")) return { groupKey: "lifecycle", name: "会话生命周期工具" };
   if (id.includes("interaction") || id.includes("conversation")) return { groupKey: "lifecycle", name: "会话生命周期工具" };
   if (id.includes("object") || id.includes("relation") || id.includes("schema") || id.includes("metric_type")) {
     return { groupKey: "model", name: "知识模型工具" };

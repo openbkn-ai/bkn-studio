@@ -244,6 +244,50 @@ describe("createBknLifecycle", () => {
     expect(store.clear).not.toHaveBeenCalled();
   });
 
+  it("本实例已经开过交互后不再回收，避免掐掉另一个标签页正在跑的那一轮", async () => {
+    // conversation 键只按 kn + 面板取，同一个网络在另一个标签页里开着时，那边正在跑的
+    // 交互从这里看跟"残留"完全一样。本实例成功开过之后再撞上，更可能是并发而不是残留。
+    let starts = 0;
+    const { session, calls } = fakeSession({
+      bkn_start_interaction: () => {
+        starts += 1;
+        if (starts === 2) {
+          return {
+            ok: false,
+            text: "in progress",
+            latencyMs: 1,
+            isError: true,
+            structured: {
+              error: {
+                code: "interaction_in_progress",
+                message: "the conversation already has an active interaction",
+                required_action: "bkn_finish_interaction",
+                current_interaction_id: "int_other_tab",
+              },
+            },
+          };
+        }
+        return {
+          ok: true,
+          text: "started",
+          latencyMs: 1,
+          isError: false,
+          structured: { interaction_id: `int_${starts}`, conversation_id: `conv_${starts}`, execution_status: "active" },
+        };
+      },
+    });
+    const lifecycle = createBknLifecycleOn(session, options());
+
+    const first = await lifecycle.beginTurn("第一轮");
+    await first?.complete("答复");
+    await expect(lifecycle.beginTurn("第二轮")).resolves.toMatchObject({ conversationId: "conv_3" });
+
+    // 没有替别人 finish：只有本轮自己那次 complete。
+    expect(calls.filter((call) => call.name === "bkn_finish_interaction").map((call) => call.args.interaction_id)).toEqual([
+      "int_1",
+    ]);
+  });
+
   it("回收失败时退回换新会话，不把用户卡死", async () => {
     let starts = 0;
     const { session, calls } = fakeSession({
