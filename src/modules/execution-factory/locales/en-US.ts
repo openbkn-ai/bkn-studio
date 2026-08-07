@@ -939,6 +939,14 @@ export const executionFactoryEnUS = {
       "This document contains {{count}} endpoints and will register {{count}} operators. Keep only the target endpoint for a single operator.",
     openapiVersion31Hint:
       "OpenAPI 3.1 detected. If save fails, try OpenAPI 3.0.x or keep a single endpoint only.",
+    openapiTemplate: {
+      operatorDescription: "Describe the operator's functionality and purpose",
+      operatorSummary: "Execute operator",
+      operatorTitle: "Sample Operator API",
+      successResponse: "Success",
+      toolboxSummary: "Sample tool",
+      toolboxTitle: "Sample Toolbox API",
+    },
     submitErrorTitle: "Save failed",
     quickApiUrlSubmitError:
       "Save failed: could not submit a valid service URL. Check the full URL in the cURL command, then click Detect API again before saving.{{detailSuffix}}",

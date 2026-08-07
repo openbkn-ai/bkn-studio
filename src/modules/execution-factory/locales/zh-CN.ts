@@ -915,6 +915,14 @@ export const executionFactoryZhCN = {
       "该文档包含 {{count}} 个接口，保存后将批量注册 {{count}} 个算子。若只需注册一个算子，请只保留目标接口。",
     openapiVersion31Hint:
       "检测到 OpenAPI 3.1 文档。若保存失败，可尝试改为 3.0.x 或仅保留单个接口后重试。",
+    openapiTemplate: {
+      operatorDescription: "\u8bf7\u63cf\u8ff0\u7b97\u5b50\u7684\u529f\u80fd\u4e0e\u7528\u9014",
+      operatorSummary: "\u6267\u884c\u7b97\u5b50",
+      operatorTitle: "\u793a\u4f8b\u7b97\u5b50 API",
+      successResponse: "\u6210\u529f",
+      toolboxSummary: "\u793a\u4f8b\u5de5\u5177",
+      toolboxTitle: "\u793a\u4f8b\u5de5\u5177\u7bb1 API",
+    },
     submitErrorTitle: "保存失败",
     quickApiUrlSubmitError:
       "保存失败：未能提交有效的服务地址。请检查 cURL 命令中的完整 URL，并重新点击“识别接口信息”后再保存。{{detailSuffix}}",
