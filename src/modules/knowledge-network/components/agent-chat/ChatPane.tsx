@@ -891,18 +891,19 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           mcpOnly: true,
         };
       const buckets = new Map<ToolBusinessGroupKey, { value: string; label: ReactNode; title: string; searchText: string }[]>();
-      for (const t of agentToolDefs) {
-        const info = businessInfoOf(opOf(t));
+      for (const toolDef of agentToolDefs) {
+        const info = businessInfoOf(opOf(toolDef));
+        const businessName = t(info.nameKey, { defaultValue: info.name });
         const group = info.groupKey;
         if (!buckets.has(group)) buckets.set(group, []);
         buckets.get(group)!.push({
-          value: t.name,
-          title: `${info.name} · ${t.name}`,
-          searchText: `${info.name} ${t.name}`,
+          value: toolDef.name,
+          title: `${businessName} · ${toolDef.name}`,
+          searchText: `${businessName} ${toolDef.name}`,
           label: (
             <span className={styles.toolOption}>
-              <span className={styles.toolOptionName}>{info.name}</span>
-              <span className={styles.toolOptionId}>{t.name}</span>
+              <span className={styles.toolOptionName}>{businessName}</span>
+              <span className={styles.toolOptionId}>{toolDef.name}</span>
             </span>
           ),
         });

@@ -260,6 +260,7 @@ export function ContextLoaderIntegrationPanel({
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
   const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey);
   const claudeCliConfig = createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey);
+  const toolBusinessName = (info: ReturnType<typeof businessInfoOf>) => t(info.nameKey, { defaultValue: info.name });
   const treeGroups = TOOL_GROUPS.map((group) => ({
     key: group,
     label: t(`knowledgeNetwork.contextLoaderPanel.toolGroups.${group}.label`),
@@ -268,7 +269,7 @@ export function ContextLoaderIntegrationPanel({
       .filter((item) => {
         const info = businessInfoOf(item);
         const groupLabel = t(`knowledgeNetwork.contextLoaderPanel.toolGroups.${group}.label`);
-        const searchable = `${info.name} ${item.id} ${item.path} ${item.summary} ${groupLabel}`.toLowerCase();
+        const searchable = `${toolBusinessName(info)} ${item.id} ${item.path} ${item.summary} ${groupLabel}`.toLowerCase();
         return info.groupKey === group && (!filterText || searchable.includes(filterText));
       })
       .sort((left, right) => compareToolsInBusinessGroup(group, left, right)),
@@ -541,7 +542,7 @@ export function ContextLoaderIntegrationPanel({
                   >
                     {mode === "mcp" ? null : <span className={styles.epVerb}>POST</span>}
                     <span className={styles.epText}>
-                      <span className={styles.epBusinessName}>{businessInfoOf(item).name}</span>
+                      <span className={styles.epBusinessName}>{toolBusinessName(businessInfoOf(item))}</span>
                       <span className={styles.epName}>{item.id}</span>
                     </span>
                   </button>
@@ -577,7 +578,7 @@ export function ContextLoaderIntegrationPanel({
             ) : null}
           </div>
           <div className={styles.reqTitleRow}>
-            <h2 className={styles.reqTitle}>{mode === "mcp" ? businessInfoOf(op).name : op.id}</h2>
+            <h2 className={styles.reqTitle}>{mode === "mcp" ? toolBusinessName(businessInfoOf(op)) : op.id}</h2>
             {mode === "mcp" ? <span className={styles.reqId}>{op.id}</span> : null}
           </div>
           <p className={styles.reqSum}>{op.summary}</p>
@@ -763,7 +764,7 @@ export function ContextLoaderIntegrationPanel({
           <div className={styles.requestDataAssistantModalIntro}>
             <div>
               <strong>
-                {t("knowledgeNetwork.contextLoaderPanel.dataAssistant.modalTitle", { name: businessInfoOf(op).name })}
+                {t("knowledgeNetwork.contextLoaderPanel.dataAssistant.modalTitle", { name: toolBusinessName(businessInfoOf(op)) })}
               </strong>
               <p>{dataAssistantDescription}</p>
             </div>
@@ -778,7 +779,7 @@ export function ContextLoaderIntegrationPanel({
       {mode === "mcp" ? (
         <Modal
           open={schemaOpen}
-          title={t("knowledgeNetwork.contextLoaderPanel.schema.title", { name: businessInfoOf(op).name })}
+          title={t("knowledgeNetwork.contextLoaderPanel.schema.title", { name: toolBusinessName(businessInfoOf(op)) })}
           footer={null}
           width={920}
           className={styles.schemaModal}

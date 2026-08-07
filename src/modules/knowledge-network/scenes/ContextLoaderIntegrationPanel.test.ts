@@ -18,27 +18,36 @@ function op(id: string, summary = id): ContextLoaderOp {
 }
 
 describe("businessInfoOf", () => {
-  it("assigns lifecycle tools distinct Chinese business names", () => {
-    expect(businessInfoOf(op("bkn_start_interaction"))).toEqual({ groupKey: "lifecycle", name: "开始交互" });
-    expect(businessInfoOf(op("bkn_finish_interaction"))).toEqual({ groupKey: "lifecycle", name: "结束交互" });
-    expect(businessInfoOf(op("bkn_get_operation"))).toEqual({ groupKey: "lifecycle", name: "查看操作状态" });
-    expect(businessInfoOf(op("list_action_execution"))).toEqual({ groupKey: "logic", name: "行动执行记录" });
-    expect(businessInfoOf(op("query_metric"))).toEqual({ groupKey: "logic", name: "指标数据查询" });
-    expect(businessInfoOf(op("list_skills"))).toEqual({ groupKey: "skill", name: "技能列表" });
-    expect(businessInfoOf(op("get_skill_content"))).toEqual({ groupKey: "skill", name: "查看技能内容" });
-    expect(businessInfoOf(op("read_skill_file"))).toEqual({ groupKey: "skill", name: "读取技能文件" });
+  it("assigns lifecycle tools distinct localizable business names", () => {
+    expect(businessInfoOf(op("bkn_start_interaction"))).toEqual({
+      groupKey: "lifecycle",
+      nameKey: "knowledgeNetwork.contextLoaderPanel.toolNames.bkn_start_interaction",
+      name: "Start Interaction",
+    });
+    expect(businessInfoOf(op("bkn_finish_interaction"))).toMatchObject({ groupKey: "lifecycle", name: "Finish Interaction" });
+    expect(businessInfoOf(op("bkn_get_operation"))).toMatchObject({ groupKey: "lifecycle", name: "View Operation Status" });
+    expect(businessInfoOf(op("list_action_execution"))).toMatchObject({ groupKey: "logic", name: "Action Execution History" });
+    expect(businessInfoOf(op("query_metric"))).toMatchObject({ groupKey: "logic", name: "Metric Data Query" });
+    expect(businessInfoOf(op("list_skills"))).toMatchObject({ groupKey: "skill", name: "Skill List" });
+    expect(businessInfoOf(op("get_skill_content"))).toMatchObject({ groupKey: "skill", name: "View Skill Content" });
+    expect(businessInfoOf(op("read_skill_file"))).toMatchObject({ groupKey: "skill", name: "Read Skill File" });
   });
 
   it("keeps an unknown lifecycle tool in the lifecycle group with a compact fallback name", () => {
     expect(businessInfoOf(op("bkn_archive_interaction", "Archive an interaction"))).toEqual({
       groupKey: "lifecycle",
-      name: "交互生命周期工具",
+      nameKey: "knowledgeNetwork.contextLoaderPanel.toolNames.fallbackLifecycle",
+      name: "Interaction Lifecycle Tool",
     });
   });
 
   it("does not classify bkn names as knowledge-network tools", () => {
     expect(businessInfoOf(op("bkn_unknown"))).not.toMatchObject({ groupKey: "network" });
-    expect(businessInfoOf(op("search_schema"))).toEqual({ groupKey: "model", name: "语义检索" });
+    expect(businessInfoOf(op("search_schema"))).toEqual({
+      groupKey: "model",
+      nameKey: "knowledgeNetwork.contextLoaderPanel.toolNames.search_schema",
+      name: "Semantic Search",
+    });
   });
 
   it("orders lifecycle tools from start to finish", () => {

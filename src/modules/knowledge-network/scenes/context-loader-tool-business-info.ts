@@ -11,46 +11,51 @@ export type ToolBusinessGroupKey = "model" | "query" | "data" | "logic" | "skill
 
 export type ToolBusinessInfo = {
   groupKey: ToolBusinessGroupKey;
+  nameKey: string;
   name: string;
 };
 
 const TOOL_BUSINESS_NAMES: Record<string, ToolBusinessInfo> = {
-  search_schema: { groupKey: "model", name: "语义检索" },
-  get_object_types: { groupKey: "model", name: "对象类定义查询" },
-  get_relation_types: { groupKey: "model", name: "关系类定义查询" },
-  get_action_types: { groupKey: "model", name: "行动类定义查询" },
-  get_metric_types: { groupKey: "model", name: "指标定义查询" },
-  query_object_instance: { groupKey: "query", name: "对象实例查询" },
-  query_instance_subgraph: { groupKey: "query", name: "关系子图查询" },
-  list_resources: { groupKey: "data", name: "数据资源列表" },
-  describe_resource: { groupKey: "data", name: "资源字段结构" },
-  run_sql: { groupKey: "data", name: "SQL 数据查询" },
-  get_logic_properties_values: { groupKey: "logic", name: "逻辑属性计算" },
-  get_action_info: { groupKey: "logic", name: "行动工具召回" },
-  execute_action: { groupKey: "logic", name: "执行行动" },
-  get_action_execution: { groupKey: "logic", name: "行动执行结果" },
-  list_action_execution: { groupKey: "logic", name: "行动执行记录" },
-  list_action_executions: { groupKey: "logic", name: "行动执行记录" },
-  query_metric: { groupKey: "logic", name: "指标数据查询" },
-  find_skills: { groupKey: "skill", name: "Skill 能力检索" },
-  list_skills: { groupKey: "skill", name: "技能列表" },
-  get_skill_content: { groupKey: "skill", name: "查看技能内容" },
-  read_skill_file: { groupKey: "skill", name: "读取技能文件" },
-  list_knowledge_networks: { groupKey: "network", name: "知识网络列表" },
-  get_kn_detail: { groupKey: "network", name: "知识网络详情" },
-  bkn_create_conversation: { groupKey: "lifecycle", name: "创建会话" },
-  bkn_resume_conversation: { groupKey: "lifecycle", name: "恢复会话" },
-  bkn_close_conversation: { groupKey: "lifecycle", name: "关闭会话" },
-  bkn_start_interaction: { groupKey: "lifecycle", name: "开始交互" },
-  bkn_finish_interaction: { groupKey: "lifecycle", name: "结束交互" },
-  bkn_complete_interaction: { groupKey: "lifecycle", name: "完成交互" },
-  bkn_fail_interaction: { groupKey: "lifecycle", name: "标记交互失败" },
-  bkn_cancel_interaction: { groupKey: "lifecycle", name: "取消交互" },
-  bkn_handoff_interaction: { groupKey: "lifecycle", name: "移交交互" },
-  bkn_get_operation: { groupKey: "lifecycle", name: "查看操作状态" },
-  bkn_retry_operation: { groupKey: "lifecycle", name: "重试操作" },
-  bkn_get_receipt: { groupKey: "lifecycle", name: "查看调用回执" },
+  search_schema: toolInfo("model", "search_schema", "Semantic Search"),
+  get_object_types: toolInfo("model", "get_object_types", "Object Type Definitions"),
+  get_relation_types: toolInfo("model", "get_relation_types", "Relation Type Definitions"),
+  get_action_types: toolInfo("model", "get_action_types", "Action Type Definitions"),
+  get_metric_types: toolInfo("model", "get_metric_types", "Metric Definitions"),
+  query_object_instance: toolInfo("query", "query_object_instance", "Object Instance Query"),
+  query_instance_subgraph: toolInfo("query", "query_instance_subgraph", "Relation Subgraph Query"),
+  list_resources: toolInfo("data", "list_resources", "Data Resource List"),
+  describe_resource: toolInfo("data", "describe_resource", "Resource Field Schema"),
+  run_sql: toolInfo("data", "run_sql", "SQL Data Query"),
+  get_logic_properties_values: toolInfo("logic", "get_logic_properties_values", "Logical Attribute Calculation"),
+  get_action_info: toolInfo("logic", "get_action_info", "Action Tool Recall"),
+  execute_action: toolInfo("logic", "execute_action", "Execute Action"),
+  get_action_execution: toolInfo("logic", "get_action_execution", "Action Execution Result"),
+  list_action_execution: toolInfo("logic", "list_action_execution", "Action Execution History"),
+  list_action_executions: toolInfo("logic", "list_action_executions", "Action Execution History"),
+  query_metric: toolInfo("logic", "query_metric", "Metric Data Query"),
+  find_skills: toolInfo("skill", "find_skills", "Skill Capability Search"),
+  list_skills: toolInfo("skill", "list_skills", "Skill List"),
+  get_skill_content: toolInfo("skill", "get_skill_content", "View Skill Content"),
+  read_skill_file: toolInfo("skill", "read_skill_file", "Read Skill File"),
+  list_knowledge_networks: toolInfo("network", "list_knowledge_networks", "Knowledge Network List"),
+  get_kn_detail: toolInfo("network", "get_kn_detail", "Knowledge Network Details"),
+  bkn_create_conversation: toolInfo("lifecycle", "bkn_create_conversation", "Create Conversation"),
+  bkn_resume_conversation: toolInfo("lifecycle", "bkn_resume_conversation", "Resume Conversation"),
+  bkn_close_conversation: toolInfo("lifecycle", "bkn_close_conversation", "Close Conversation"),
+  bkn_start_interaction: toolInfo("lifecycle", "bkn_start_interaction", "Start Interaction"),
+  bkn_finish_interaction: toolInfo("lifecycle", "bkn_finish_interaction", "Finish Interaction"),
+  bkn_complete_interaction: toolInfo("lifecycle", "bkn_complete_interaction", "Complete Interaction"),
+  bkn_fail_interaction: toolInfo("lifecycle", "bkn_fail_interaction", "Mark Interaction Failed"),
+  bkn_cancel_interaction: toolInfo("lifecycle", "bkn_cancel_interaction", "Cancel Interaction"),
+  bkn_handoff_interaction: toolInfo("lifecycle", "bkn_handoff_interaction", "Handoff Interaction"),
+  bkn_get_operation: toolInfo("lifecycle", "bkn_get_operation", "View Operation Status"),
+  bkn_retry_operation: toolInfo("lifecycle", "bkn_retry_operation", "Retry Operation"),
+  bkn_get_receipt: toolInfo("lifecycle", "bkn_get_receipt", "View Call Receipt"),
 };
+
+function toolInfo(groupKey: ToolBusinessGroupKey, key: string, name: string): ToolBusinessInfo {
+  return { groupKey, nameKey: `knowledgeNetwork.contextLoaderPanel.toolNames.${key}`, name };
+}
 
 const MODEL_TOOL_ORDER = ["search_schema", "get_object_types", "get_relation_types"];
 const QUERY_TOOL_ORDER = ["query_object_instance", "query_instance_subgraph"];
@@ -76,21 +81,21 @@ export function businessInfoOf(op: ContextLoaderOp): ToolBusinessInfo {
   if (exact) return exact;
   const id = op.id.toLowerCase();
   if (id.startsWith("bkn_")) {
-    return { groupKey: "lifecycle", name: "交互生命周期工具" };
+    return toolInfo("lifecycle", "fallbackLifecycle", "Interaction Lifecycle Tool");
   }
   if (id.includes("object") || id.includes("relation") || id.includes("schema") || id.includes("metric_type")) {
-    return { groupKey: "model", name: "知识模型工具" };
+    return toolInfo("model", "fallbackModel", "Knowledge Model Tool");
   }
   if (id.includes("resource") || id.includes("sql") || id.includes("catalog")) {
-    return { groupKey: "data", name: "数据资源工具" };
+    return toolInfo("data", "fallbackData", "Data Resource Tool");
   }
-  if (id.includes("skill")) return { groupKey: "skill", name: "技能与动态工具" };
+  if (id.includes("skill")) return toolInfo("skill", "fallbackSkill", "Skills and Dynamic Tools");
   if (id.includes("action") || id.includes("logic") || id.includes("metric")) {
-    return { groupKey: "logic", name: "逻辑与行动工具" };
+    return toolInfo("logic", "fallbackLogic", "Logic and Action Tool");
   }
   if (id.includes("instance") || id.includes("subgraph") || id.includes("query")) {
-    return { groupKey: "query", name: "对象查询工具" };
+    return toolInfo("query", "fallbackQuery", "Object Query Tool");
   }
-  if (id.includes("kn") || id.includes("network")) return { groupKey: "network", name: "知识网络工具" };
-  return { groupKey: "other", name: "MCP 能力" };
+  if (id.includes("kn") || id.includes("network")) return toolInfo("network", "fallbackNetwork", "Knowledge Network Tool");
+  return toolInfo("other", "fallbackOther", "MCP Capability");
 }
