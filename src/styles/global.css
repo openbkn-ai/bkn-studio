@@ -517,9 +517,15 @@ select {
   white-space: nowrap;
 }
 
-/* 顶栏档位芯片里的「升级」尾巴。无生效授权时才出现,别做成常驻广告。 */
-.console-edition-chip-cta {
-  color: var(--color-link, #1d4ed8);
+/* 用户菜单里的档位行。「升级」尾巴只在无生效授权时出现,别做成常驻广告。 */
+.console-user-menu-edition {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.console-user-menu-edition-cta {
+  color: var(--color-primary-600);
   font-weight: 600;
 }
 

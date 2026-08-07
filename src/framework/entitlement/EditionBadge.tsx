@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Tag, Tooltip } from "antd";
+import { Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { Edition } from "@/framework/entitlement/edition";
@@ -27,10 +27,13 @@ export function EditionBadge({ edition }: { edition: Edition }) {
   const label = t(`common.entitlement.editionsShort.${edition}`);
 
   return (
-    <Tooltip title={t("common.entitlement.paidHint", { edition: t(`common.entitlement.editions.${edition}`) })}>
-      <Tag className="console-edition-badge" color={edition === "professional" ? "gold" : "purple"}>
-        {label}
-      </Tag>
+    <Tooltip
+      title={t("common.entitlement.paidHint", {
+        edition: t(`common.entitlement.editions.${edition}`),
+      })}
+    >
+      {/* 配色统一走 global.css 的 .console-edition-badge-*,与版本页卡片同源。 */}
+      <span className={`console-edition-badge console-edition-badge-${edition}`}>{label}</span>
     </Tooltip>
   );
 }

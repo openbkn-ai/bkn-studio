@@ -129,7 +129,9 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                       <>
                         <span className="console-sidenav-label">{t(item.labelKey)}</span>
                         {item.lockedEdition ?? item.paidEdition ? (
-                          <span className="console-sidenav-tier">
+                          <span
+                            className={`console-sidenav-tier console-edition-badge console-edition-badge-${item.lockedEdition ?? item.paidEdition}`}
+                          >
                             {t(
                               `common.entitlement.editionsShort.${item.lockedEdition ?? item.paidEdition}`,
                             )}
@@ -174,7 +176,9 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                       <>
                         <span className="console-sidenav-label">{t(item.labelKey)}</span>
                         {item.lockedEdition ?? item.paidEdition ? (
-                          <span className="console-sidenav-tier">
+                          <span
+                            className={`console-sidenav-tier console-edition-badge console-edition-badge-${item.lockedEdition ?? item.paidEdition}`}
+                          >
                             {t(
                               `common.entitlement.editionsShort.${item.lockedEdition ?? item.paidEdition}`,
                             )}
@@ -226,7 +230,9 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                                 {t(child.labelKey)}
                               </span>
                               {child.lockedEdition ?? child.paidEdition ? (
-                                <span className="console-sidenav-tier">
+                                <span
+                                  className={`console-sidenav-tier console-edition-badge console-edition-badge-${child.lockedEdition ?? child.paidEdition}`}
+                                >
                                   {t(
                                     `common.entitlement.editionsShort.${child.lockedEdition ?? child.paidEdition}`,
                                   )}

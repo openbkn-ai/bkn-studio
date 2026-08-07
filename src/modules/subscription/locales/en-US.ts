@@ -29,10 +29,6 @@ export const subscriptionEnUS = {
           "Certified and advanced source connectors (SQL Server and other commercial databases). Community ships the basic connectors only.",
         name: "Advanced data connectivity",
       },
-      impact_graph: {
-        description: "OpenBKN Impact Graph",
-        name: "Impact graph",
-      },
       perm_object_level: {
         description: "Object-level authorization and advanced role control",
         name: "Object-level authorization",

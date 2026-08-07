@@ -18,7 +18,9 @@ import type { Edition } from "@/framework/entitlement/edition";
  *
  * 只收对客户在售的行。`planned`(sso / explorer / multi_tenant / version_mgmt /
  * offline_bundle / bigdata_connect,以及上游 e8fdf2f 退回 planned 的 audit /
- * ops_dashboard / branding——EE 侧从未实现)一条都不进:
+ * ops_dashboard / branding——EE 侧从未实现)一条都不进。`impact_graph` 同样不进:
+ * 登记表里是 active,但这一版产品里没有,列出来就是在卖交付不了的东西——登记表管的是
+ * 「在售能力集」,产品页管的是「这一版真有什么」,两者不一致时以后者为准。
  * 登记表里它们存在是为了让路线图落在表里而不是散文里,对客户不可见——写进版本对比页
  * 就是在卖还没有的东西。
  *
@@ -67,13 +69,6 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     servedBy: "other", minEdition: "professional" },
   { category: "permission", key: CAPABILITIES.RBAC_BASIC,
     servedBy: "bkn-safe", minEdition: "professional" },
-  {
-    category: "semantic",
-    key: "impact_graph",
-    servedBy: "other",
-    minEdition: "professional",
-    sinceVersion: "0.1.2",
-  },
   {
     category: "dataConnect",
     key: "connector_certified",

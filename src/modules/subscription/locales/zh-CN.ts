@@ -25,7 +25,6 @@ export const subscriptionZhCN = {
         description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
         name: "高级数据连接",
       },
-      impact_graph: { description: "OpenBKN Impact Graph 影响关系图", name: "影响关系图" },
       perm_object_level: { description: "对象级授权和高级角色控制", name: "对象级授权" },
       rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
       semantic_task: { description: "面向业务语义的理解任务编排与执行", name: "语义理解任务" },
@@ -92,7 +91,7 @@ export const subscriptionZhCN = {
       },
       inheritsFrom: "{{edition}}全部能力",
       professional: {
-        audience: "准备做生产试点的客户团队。在 Community 基础上获得更高效的数据更新、企业权限、标准支持和更多连接能力。",
+        audience: "准备做生产试点的客户团队。在社区版基础上获得更高效的数据更新、企业权限、标准支持和更多连接能力。",
         price: "¥99,600",
         unit: "/ 年 · 标准价",
       },

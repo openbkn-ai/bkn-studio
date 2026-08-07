@@ -7,6 +7,7 @@
 
 import {
   CloudServerOutlined,
+  CrownOutlined,
   LogoutOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -21,7 +22,10 @@ import openBknLogo from "@/assets/brand/openbkn-logo.png";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import { EditionChip } from "@/framework/entitlement/EditionChip";
+import {
+  useEntitlement,
+  useEntitlementContext,
+} from "@/framework/entitlement/use-entitlement";
 import { APP_VERSION } from "@/framework/runtime/app-version";
 import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
 import { BuildActivityChip } from "@/modules/data-catalog/components/BuildActivityChip";
@@ -33,6 +37,8 @@ export function TopBar() {
   const navigate = useNavigate();
   const { networkId } = useParams<{ networkId?: string }>();
   const runtimeConfig = useRuntimeConfig();
+  const entitlement = useEntitlement();
+  const { snapshot } = useEntitlementContext();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const [networkName, setNetworkName] = useState<string | null>(null);
   const isKnowledgeNetworkRoute =
@@ -105,6 +111,30 @@ export function TopBar() {
       { type: "divider" as const },
     ];
 
+    /*
+      档位入口。快照没到就不放这一项:先显示「社区版」再跳成「企业版」,比晚半秒出现更糟。
+      「升级」尾巴只在无生效授权时出现——已经买了的人不需要天天看见一条广告。
+    */
+    if (snapshot) {
+      items.push({
+        icon: <CrownOutlined />,
+        key: "subscription",
+        label: (
+          <span className="console-user-menu-edition">
+            <span>{t(`common.entitlement.editions.${entitlement.edition}`)}</span>
+            {entitlement.licensed ? null : (
+              <span className="console-user-menu-edition-cta">
+                {t("common.entitlement.upgrade")}
+              </span>
+            )}
+          </span>
+        ),
+        onClick: () => {
+          void navigate("/system/subscription");
+        },
+      });
+    }
+
     items.push({
       icon: <UserOutlined />,
       key: "account",
@@ -139,7 +169,16 @@ export function TopBar() {
     );
 
     return items;
-  }, [canViewInstallStatus, installStatusUrl, navigate, runtimeConfig.mode, t]);
+  }, [
+    canViewInstallStatus,
+    entitlement.edition,
+    entitlement.licensed,
+    installStatusUrl,
+    navigate,
+    runtimeConfig.mode,
+    snapshot,
+    t,
+  ]);
 
   return (
     <header className="console-topbar">
@@ -191,7 +230,6 @@ export function TopBar() {
 
       <div className="console-topbar-actions">
         <BuildActivityChip />
-        <EditionChip />
         <Dropdown
           menu={{ items: userMenuItems }}
           placement="bottomRight"
