@@ -493,12 +493,19 @@ select {
 }
 
 .console-sidenav-label {
+  /* 与档位徽标同排时,长名省略而不是折行(截图里「角色管理」被挤成了两行)。 */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   flex: 1;
 }
 
 /* 装了没买的入口:标出解锁它要哪一档。只出现在企业镜像上——社区镜像里这些项被整个
    过滤掉了,那里换证书也解不开。 */
 .console-sidenav-tier {
+  /* 不许被标签挤扁,也不许把标签挤到换行:徽标固定宽度,长菜单名自己省略。 */
+  flex: 0 0 auto;
   margin-left: auto;
   padding: 1px 6px;
   border: 1px solid #d6cdf3;

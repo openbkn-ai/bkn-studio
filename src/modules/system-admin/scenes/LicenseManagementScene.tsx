@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { LicenseStateBanner } from "@/framework/entitlement/LicenseStateBanner";
 import { useRefreshEntitlement } from "@/framework/entitlement/use-entitlement";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -316,6 +317,8 @@ export function LicenseManagementScene() {
 
   return (
     <div className={styles.contentSurface}>
+      {/* 无证提示只落在能处理它的这一页,不再跟着整个控制台走。 */}
+      <LicenseStateBanner />
       <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
           <div>

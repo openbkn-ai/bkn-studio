@@ -79,21 +79,22 @@ export const commonZhCN = {
       unknownTitle: "无法确认授权状态",
       unknownDescription: "读取集群授权状态失败,付费功能暂时不可用。请稍后重试。",
       /**
-       * 档位名跟对外版本说明逐字一致(飞书《OpenBKN 版本、服务与销售》):产品名不翻译,
-       * 客户拿着报价单对产品页,两边写法不同会被当成两回事。
+       * 中文界面用中文档位名。对外版本说明(飞书《OpenBKN 版本、服务与销售》)里用的是
+       * Community / Professional / Enterprise Standard / Industry Solution,对应关系
+       * 一一对得上;英文界面见 en-US 那份,那里逐字用对外写法。
        */
       editions: {
-        community: "Community",
-        professional: "Professional",
-        enterprise: "Enterprise Standard",
-        industry: "Industry Solution",
+        community: "社区版",
+        professional: "专业版",
+        enterprise: "企业版",
+        industry: "行业版",
       },
-      /** 侧栏徽标位只有一个词的宽度,取档位名的首词——仍是同一套名字,不另造中文短名。 */
+      /** 侧栏徽标位窄,中文三字正好;英文那边才需要取首词。 */
       editionsShort: {
-        community: "Community",
-        professional: "Professional",
-        enterprise: "Enterprise",
-        industry: "Industry",
+        community: "社区版",
+        professional: "专业版",
+        enterprise: "企业版",
+        industry: "行业版",
       },
       upgrade: "升级",
       banner: {

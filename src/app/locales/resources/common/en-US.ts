@@ -89,10 +89,10 @@ export const commonEnUS = {
         enterprise: "Enterprise Standard",
         industry: "Industry Solution",
       },
-      /** The sidebar badge fits one word — first word of the edition name, same vocabulary. */
+      /** Sidebar badge: one short word. "Pro" is the accepted short form on the pricing page. */
       editionsShort: {
         community: "Community",
-        professional: "Professional",
+        professional: "Pro",
         enterprise: "Enterprise",
         industry: "Industry",
       },

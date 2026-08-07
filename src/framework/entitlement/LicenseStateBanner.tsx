@@ -5,14 +5,19 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button } from "antd";
+import { Alert } from "antd";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 /**
- * 授权状态横幅。无证不收走任何功能——社区能力照常,所以这里只提示,不拦路。
+ * 授权状态横幅。**只挂在授权管理页**。
+ *
+ * 之前挂在整个控制台顶部:无证部署里它会跟着每一页,而社区能力照常可用,等于把一条与
+ * 当前操作无关的提示钉在所有人眼前。导入授权是授权管理页的事,提示放在能处理它的地方
+ * 才有用——也因此这里不再画「去处理」按钮:人已经在那一页上了。
+ *
+ * 无证不收走任何功能——社区能力照常,所以这里只提示,不拦路。
  *
  * **只看 `licensed`,不按 `state` 分措辞。** ee-design.md §3.4:证书是过期、宽限还是从未
  * 安装,属于运维排查细节,留在 bkn-safe 的 license 详情面,「不进给前端的那个接口——多一个
@@ -24,7 +29,6 @@ import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
  */
 export function LicenseStateBanner() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { snapshot } = useEntitlementContext();
 
   // 快照没到时什么都不说:此刻分不清「无证」和「没读到」,而这条横幅在断言授权出了问题。
@@ -34,11 +38,6 @@ export function LicenseStateBanner() {
 
   return (
     <Alert
-      action={
-        <Button onClick={() => void navigate("/system/license")} size="small" type="link">
-          {t("common.entitlement.banner.action")}
-        </Button>
-      }
       banner
       closable
       message={t("common.entitlement.banner.unlicensed")}
