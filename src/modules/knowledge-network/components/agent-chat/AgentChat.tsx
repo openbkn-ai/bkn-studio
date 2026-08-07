@@ -43,11 +43,7 @@ import {
 import { recommendationFingerprint } from "@/modules/knowledge-network/utils/agent-chat-cache";
 
 import {
-  BASE_EVIDENCE_HINT,
   ChatPane,
-  DEFAULT_BASE_PROMPT,
-  DEFAULT_PROMPT,
-  KN_EVIDENCE_HINT,
   MarkdownView,
   fmtDuration,
   fmtTokens,
@@ -210,28 +206,28 @@ function buildProfiles(t: TFunction) {
   const soloProfile: PaneProfile = {
     paneKey: "solo",
     emptyTitle: t("knowledgeNetwork.agentChat.profiles.soloEmptyTitle"),
-    defaultPrompt: DEFAULT_PROMPT,
+    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.defaultPrompt"),
     injectKnContext: true,
     defaultToolNames: null,
-    evidenceHint: KN_EVIDENCE_HINT,
+    evidenceHint: t("knowledgeNetwork.agentChat.chatPane.evidenceHint.kn"),
   };
   const baseProfile: PaneProfile = {
     paneKey: "base",
     title: t("knowledgeNetwork.agentChat.profiles.baseTitle"),
     emptyTitle: t("knowledgeNetwork.agentChat.profiles.baseEmptyTitle"),
-    defaultPrompt: DEFAULT_BASE_PROMPT,
+    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.basePrompt"),
     injectKnContext: false,
     defaultToolNames: BASE_DATA_TOOL_NAMES,
-    evidenceHint: BASE_EVIDENCE_HINT,
+    evidenceHint: t("knowledgeNetwork.agentChat.chatPane.evidenceHint.base"),
   };
   const knProfile: PaneProfile = {
     paneKey: "kn",
     title: t("knowledgeNetwork.agentChat.profiles.knTitle"),
     emptyTitle: t("knowledgeNetwork.agentChat.profiles.knEmptyTitle"),
-    defaultPrompt: DEFAULT_PROMPT,
+    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.defaultPrompt"),
     injectKnContext: true,
     defaultToolNames: null,
-    evidenceHint: KN_EVIDENCE_HINT,
+    evidenceHint: t("knowledgeNetwork.agentChat.chatPane.evidenceHint.kn"),
   };
   return { soloProfile, baseProfile, knProfile };
 }

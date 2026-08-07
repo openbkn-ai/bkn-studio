@@ -35,6 +35,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -81,40 +82,22 @@ import styles from "./AgentChat.module.css";
  * 输出契约不写在这里 —— 它由 composedSystem 自动拼接，理由见 formatOutputContract。
  */
 export const DEFAULT_PROMPT =
-  "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
-  "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
-  "kn_id 已锁定为当前网络，无需也不要修改。\n" +
-  "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。";
+  "You are the BKN business knowledge network retrieval assistant. Answer user questions based on the current knowledge network.";
 
 /** 「仅基础数据」面板默认提示词：只讲表/SQL 工具用法，不提知识网络概念。 */
 export const DEFAULT_BASE_PROMPT =
-  "你是数据查询助手。你只能使用三个工具直接查询底层数据表回答用户问题：\n" +
-  "list_resources（列出可访问的数据表）、describe_resource（查看表的列结构）、run_sql（执行 SQL）。\n" +
-  "流程：先用 list_resources 找到相关表，再用 describe_resource 确认列，再写 SQL 查询。\n" +
-  "SQL 中的表名必须用模板占位 {{.<resource_id>}} 引用（resource_id 取自 list_resources 的 entries[].resource_id），不能写裸表名；跨 catalog 不能 join。\n" +
-  "查询要高效：聚合/排序/计数交给 SQL，用 LIMIT 和精确过滤、只取需要的字段，避免拉全表。";
+  "You are a data query assistant. Answer by directly querying underlying data tables with list_resources, describe_resource, and run_sql.";
 
 /** 知识网络画像的「依据」写法。 */
-export const KN_EVIDENCE_HINT = "调了哪个工具、什么过滤条件或 SQL 要点";
+export const KN_EVIDENCE_HINT = "which tool was called, what filter conditions were used, or the key SQL points";
 /** 仅基础数据画像的「依据」写法。 */
-export const BASE_EVIDENCE_HINT = "用了哪些表、什么 SQL 要点";
+export const BASE_EVIDENCE_HINT = "which tables were used and the key SQL points";
 
 const FALLBACK_SUGGESTIONS = [
-  "这个知识网络里有哪些对象类和关系？",
-  "帮我查最近活跃的高价值客户",
-  "对象类之间是怎么关联的？",
+  "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.relations",
+  "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.customers",
+  "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.links",
 ];
-
-const TOOL_BUSINESS_GROUP_LABELS: Record<ToolBusinessGroupKey, string> = {
-  network: "知识网络信息",
-  model: "知识网络模型检索",
-  query: "对象实例与关系子图查询",
-  data: "数据资源与 SQL 查询",
-  logic: "逻辑属性与行动调用",
-  skill: "技能与动态工具",
-  other: "其他能力",
-  lifecycle: "交互生命周期",
-};
 
 const TOOL_BUSINESS_GROUP_ORDER: ToolBusinessGroupKey[] = ["data", "network", "model", "query", "logic", "skill", "other", "lifecycle"];
 
@@ -272,14 +255,14 @@ function loadToolSelection(profile: PaneProfile): string[] | null {
 }
 
 /** 参数面板字段定义（label + 说明 + key）。 */
-const CONFIG_FIELDS: { key: keyof AgentConfig; label: string; hint: string }[] = [
-  { key: "maxSteps", label: "工具步数上限", hint: "一轮最多调多少步工具（防跑飞兜底）" },
-  { key: "keepToolResults", label: "步间保留结果数", hint: "每步只保留最近 N 个工具结果全文（0=不驱逐）" },
-  { key: "dataToolCap", label: "数据类结果上限(字)", hint: "run_sql / query_* 结果字符上限（0=不截断）" },
-  { key: "schemaToolCap", label: "Schema类结果上限(字)", hint: "get_kn_detail / search_schema 等（0=不截断）" },
-  { key: "maxHistoryMessages", label: "多轮保留条数", hint: "跨轮历史只保留最近 N 条消息" },
-  { key: "maxTurnChars", label: "单轮文本上限(字)", hint: "每条历史消息文本封顶" },
-  { key: "maxOutputTokens", label: "最大输出token", hint: "单步最大输出(含思考)；推理模型(deepseek)调大，0=模型默认" },
+const CONFIG_FIELDS: { key: keyof AgentConfig; labelKey: string; hintKey: string }[] = [
+  { key: "maxSteps", labelKey: "maxSteps.label", hintKey: "maxSteps.hint" },
+  { key: "keepToolResults", labelKey: "keepToolResults.label", hintKey: "keepToolResults.hint" },
+  { key: "dataToolCap", labelKey: "dataToolCap.label", hintKey: "dataToolCap.hint" },
+  { key: "schemaToolCap", labelKey: "schemaToolCap.label", hintKey: "schemaToolCap.hint" },
+  { key: "maxHistoryMessages", labelKey: "maxHistoryMessages.label", hintKey: "maxHistoryMessages.hint" },
+  { key: "maxTurnChars", labelKey: "maxTurnChars.label", hintKey: "maxTurnChars.hint" },
+  { key: "maxOutputTokens", labelKey: "maxOutputTokens.label", hintKey: "maxOutputTokens.hint" },
 ];
 
 function formatArgs(args: unknown): string {
@@ -301,13 +284,14 @@ export const MarkdownView = memo(function MarkdownView({ text }: { text: string 
 
 /** 思考过程（reasoning_content）流式展示：进行中自动展开，结束后可折叠。 */
 function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
+  const { t } = useTranslation();
   // 默认收起（思考中靠头部闪烁点体现在跑）；用户可手动展开。
   const [open, setOpen] = useState(false);
   return (
     <div className={styles.reasoning}>
       <button type="button" className={`${styles.reasoningHead} ${live ? styles.reasoningLive : ""}`} onClick={() => setOpen((v) => !v)}>
         <span>
-          💭 {live ? "思考中" : "思考过程"}
+          💭 {live ? t("knowledgeNetwork.agentChat.chatPane.reasoning.live") : t("knowledgeNetwork.agentChat.chatPane.reasoning.done")}
           {live ? (
             <span className={styles.thinkDots}>
               <i />
@@ -325,11 +309,16 @@ function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
 
 /** 单条工具调用卡片（可折叠，展开看真实请求参数与响应）。 */
 function ToolCallCard({ call }: { call: ToolCallView }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const statusDot =
     call.status === "running" ? styles.dotRunning : call.status === "error" ? styles.dotError : styles.dotOk;
   const statusText =
-    call.status === "running" ? "调用中…" : call.status === "error" ? "失败" : `200 · ${call.latencyMs ?? "—"}ms`;
+    call.status === "running"
+      ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
+      : call.status === "error"
+        ? t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")
+        : `200 · ${call.latencyMs ?? "—"}ms`;
   return (
     <div className={`${styles.call} ${open ? styles.callOpen : ""}`}>
       <button type="button" className={styles.callHead} onClick={() => setOpen((v) => !v)}>
@@ -342,11 +331,17 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
       {open ? (
         <div className={styles.callBody}>
           <div className={styles.callSec}>
-            <div className={styles.callLbl}>请求 · tools/call → {call.name}</div>
+            <div className={styles.callLbl}>
+              {t("knowledgeNetwork.agentChat.chatPane.toolCall.request", { name: call.name })}
+            </div>
             <pre className={styles.callPre}>{formatArgs(call.args)}</pre>
           </div>
           <div className={styles.callSec}>
-            <div className={styles.callLbl}>{call.status === "error" ? "错误" : "响应"}</div>
+            <div className={styles.callLbl}>
+              {call.status === "error"
+                ? t("knowledgeNetwork.agentChat.chatPane.toolCall.error")
+                : t("knowledgeNetwork.agentChat.chatPane.toolCall.response")}
+            </div>
             <pre className={styles.callPre}>{call.status === "error" ? call.error : call.result ?? "—"}</pre>
           </div>
         </div>
@@ -360,6 +355,7 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
  * 免得用户以为只能干等——原始报文一律收进折叠里，不再糊到对话正文上。
  */
 function ErrorBlock({ err, onRetry }: { err: NormalizedAgentError; onRetry?: () => void }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
     <div className={styles.errBox}>
@@ -367,12 +363,12 @@ function ErrorBlock({ err, onRetry }: { err: NormalizedAgentError; onRetry?: () 
         <span className={styles.errMsg}>⚠️ {err.message}</span>
         {onRetry ? (
           <button type="button" className={styles.errBtn} onClick={onRetry}>
-            重试本轮
+            {t("knowledgeNetwork.agentChat.chatPane.error.retry")}
           </button>
         ) : null}
         {err.detail ? (
           <button type="button" className={styles.errBtn} onClick={() => setOpen((v) => !v)}>
-            详情 {open ? <DownOutlined /> : <RightOutlined />}
+            {t("knowledgeNetwork.agentChat.chatPane.error.detail")} {open ? <DownOutlined /> : <RightOutlined />}
           </button>
         ) : null}
       </div>
@@ -436,6 +432,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   ref,
 ) {
   const { message } = App.useApp();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const knId = env.knId;
 
@@ -518,16 +515,16 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       /* localStorage 不可用时忽略 */
     }
     setSettingsOpen(false);
-    message.success("设置已保存");
-  }, [draftConfig, draftModel, draftSystemPrompt, draftToolSelection, knId, message, messages, profile.paneKey, stats]);
+    message.success(t("knowledgeNetwork.agentChat.chatPane.messages.settingsSaved"));
+  }, [draftConfig, draftModel, draftSystemPrompt, draftToolSelection, knId, message, messages, profile.paneKey, stats, t]);
   const resetDraftSystemPrompt = useCallback(() => {
     setDraftSystemPrompt(profile.defaultPrompt);
-    message.success("系统提示词已恢复默认");
-  }, [message, profile.defaultPrompt]);
+    message.success(t("knowledgeNetwork.agentChat.chatPane.messages.promptReset"));
+  }, [message, profile.defaultPrompt, t]);
   const resetDraftConfig = useCallback(() => {
     setDraftConfig({ ...DEFAULT_AGENT_CONFIG });
-    message.success("参数已恢复默认");
-  }, [message]);
+    message.success(t("knowledgeNetwork.agentChat.chatPane.messages.configReset"));
+  }, [message, t]);
 
   const updateStickiness = useCallback(() => {
     const el = pageScrollRef.current;
@@ -688,20 +685,20 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const composedSystem = useMemo(() => {
     const sections = [systemPrompt];
     if (profile.injectKnContext && knContext) {
-      sections.push(`## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n${knContext}`);
+      sections.push(t("knowledgeNetwork.agentChat.chatPane.system.contextSection", { context: knContext }));
     }
     const limits = formatToolResultLimits(config);
     if (limits) sections.push(limits);
     sections.push(formatOutputContract(profile.evidenceHint));
     return sections.join("\n\n");
-  }, [profile.injectKnContext, profile.evidenceHint, systemPrompt, knContext, config]);
+  }, [profile.injectKnContext, profile.evidenceHint, systemPrompt, knContext, config, t]);
 
   const send = useCallback(
     async (text: string, options: { replaceLastRound?: boolean } = {}) => {
       const question = text.trim();
       if (!question || busy) return;
       if (!model) {
-        message.error("当前没有可用的大模型，请先在「模型工厂」配置默认模型");
+        message.error(t("knowledgeNetwork.agentChat.chatPane.messages.noModel"));
         return;
       }
 
@@ -729,7 +726,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           role: m.role,
           content:
             config.maxTurnChars > 0 && m.content.length > config.maxTurnChars
-              ? `${m.content.slice(0, config.maxTurnChars)}\n…[历史过长已截断]`
+              ? t("knowledgeNetwork.agentChat.chatPane.system.historyTruncated", {
+                  content: m.content.slice(0, config.maxTurnChars),
+                })
               : m.content,
         }));
       history.push({ role: "user", content: question });
@@ -814,7 +813,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         }
       }
     },
-    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, lifecycle, handleChunk, updateAssistant, message, profile],
+    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, lifecycle, handleChunk, updateAssistant, message, profile, t],
   );
 
   const stop = useCallback(() => {
@@ -863,8 +862,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   );
 
   const modelOptions = useMemo(
-    () => models.map((m) => ({ value: m.modelName, label: m.default ? `${m.modelName} · 默认` : m.modelName })),
-    [models],
+    () =>
+      models.map((m) => ({
+        value: m.modelName,
+        label: m.default ? t("knowledgeNetwork.agentChat.chatPane.model.defaultSuffix", { modelName: m.modelName }) : m.modelName,
+      })),
+    [models, t],
   );
   // 模型可见的工具集：tools/list 会连生命周期工具一起返回，那些是平台侧管账的，
   // 不该出现在给模型的工具集里，也不该出现在勾选器里让用户以为可以开关。
@@ -910,8 +913,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           const ib = TOOL_BUSINESS_GROUP_ORDER.indexOf(b);
           return (ia === -1 ? TOOL_BUSINESS_GROUP_ORDER.length : ia) - (ib === -1 ? TOOL_BUSINESS_GROUP_ORDER.length : ib);
         })
-        .map((group) => ({ label: TOOL_BUSINESS_GROUP_LABELS[group], title: TOOL_BUSINESS_GROUP_LABELS[group], options: buckets.get(group)! }));
-  }, [agentToolDefs]);
+        .map((group) => {
+          const label = t(`knowledgeNetwork.contextLoaderPanel.toolGroups.${group}.label`);
+          return { label, title: label, options: buckets.get(group)! };
+        });
+  }, [agentToolDefs, t]);
   // 选择器展示值：null（全部）时显示当前已知的全部工具名。
   const draftToolValue = useMemo(
     () => draftToolSelection ?? (agentToolDefs ? agentToolDefs.map((t) => t.name) : []),
@@ -921,7 +927,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const empty = messages.length === 0;
   const lastIdx = messages.length - 1;
   const noLlm = modelsLoaded && models.length === 0;
-  const sugList = suggestions.length > 0 ? suggestions : FALLBACK_SUGGESTIONS;
+  const sugList = suggestions.length > 0 ? suggestions : FALLBACK_SUGGESTIONS.map((key) => t(key));
   // 对比分屏时面板只有半宽：压缩头部（去 label、缩 chip/按钮文案），尽量一行放下。
   const compact = profile.paneKey !== "solo";
 
@@ -931,7 +937,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       value={draftSystemPrompt}
       spellCheck={false}
       onChange={(e) => setDraftSystemPrompt(e.target.value)}
-      placeholder="系统提示词，保存后会随对话一起发送"
+      placeholder={t("knowledgeNetwork.agentChat.chatPane.settings.promptPlaceholder")}
     />
   );
 
@@ -940,8 +946,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       {CONFIG_FIELDS.map((f) => (
         <label key={f.key} className={styles.cfgField}>
           <span className={styles.cfgLabel}>
-            {f.label}
-            <Tooltip title={f.hint}>
+            {t(`knowledgeNetwork.agentChat.chatPane.configFields.${f.labelKey}`)}
+            <Tooltip title={t(`knowledgeNetwork.agentChat.chatPane.configFields.${f.hintKey}`)}>
               <QuestionCircleOutlined className={styles.cfgHintIcon} />
             </Tooltip>
           </span>
@@ -961,19 +967,19 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       <section className={styles.configSection}>
         <div className={styles.configSectionHead}>
           <div>
-            <h3>工具范围</h3>
-            <p>限定本侧 Agent 可调用的工具。未选中的工具不会发送给模型。</p>
+            <h3>{t("knowledgeNetwork.agentChat.chatPane.settings.toolScopeTitle")}</h3>
+            <p>{t("knowledgeNetwork.agentChat.chatPane.settings.toolScopeDescription")}</p>
           </div>
           <button
             type="button"
             className={styles.linkBtn}
             onClick={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}
           >
-            恢复默认
+            {t("knowledgeNetwork.agentChat.chatPane.settings.resetDefault")}
           </button>
         </div>
         <div className={styles.configCard}>
-          <div className={styles.configFieldLabel}>可用工具</div>
+          <div className={styles.configFieldLabel}>{t("knowledgeNetwork.agentChat.chatPane.settings.availableTools")}</div>
           <Select
             size="small"
             mode="multiple"
@@ -987,14 +993,21 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               const searchText = (option as { searchText?: unknown } | undefined)?.searchText;
               return typeof searchText === "string" && searchText.toLowerCase().includes(input.trim().toLowerCase());
             }}
-            placeholder={toolDefs ? "选择工具" : "正在加载工具"}
+            placeholder={
+              toolDefs
+                ? t("knowledgeNetwork.agentChat.chatPane.settings.selectTool")
+                : t("knowledgeNetwork.agentChat.chatPane.settings.loadingTools")
+            }
             loading={!toolDefs}
             disabled={busy}
             maxTagCount={0}
             maxTagPlaceholder={() =>
               draftToolSelection === null
-                ? `全部 · ${draftToolValue.length}`
-                : `已选 ${draftToolValue.length}${agentToolDefs ? ` / ${agentToolDefs.length}` : ""}`
+                ? t("knowledgeNetwork.agentChat.chatPane.settings.allTools", { count: draftToolValue.length })
+                : t("knowledgeNetwork.agentChat.chatPane.settings.selectedTools", {
+                    count: draftToolValue.length,
+                    total: agentToolDefs ? ` / ${agentToolDefs.length}` : "",
+                  })
             }
             allowClear
             onClear={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}
@@ -1013,7 +1026,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               className={`${styles.paneTitle} ${profile.highlight ? styles.paneTitleHl : ""}`}
               title={
                 profile.injectKnContext && knSummary
-                  ? `已载入网络摘要 · ${knSummary.objectTypes} 对象类 / ${knSummary.relations} 关系类`
+                  ? t("knowledgeNetwork.agentChat.chatPane.settings.loadedSummary", {
+                      objectTypes: knSummary.objectTypes,
+                      relations: knSummary.relations,
+                    })
                   : undefined
               }
             >
@@ -1023,15 +1039,22 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         </div>
         <div className={styles.barActions}>
           <button type="button" className={styles.barBtn} onClick={settingsOpen ? cancelSettings : openSettings}>
-            <SettingOutlined /> 问答配置 {settingsOpen ? <DownOutlined /> : <RightOutlined />}
+            <SettingOutlined /> {t("knowledgeNetwork.agentChat.chatPane.settings.configTitle")}{" "}
+            {settingsOpen ? <DownOutlined /> : <RightOutlined />}
           </button>
-          <button type="button" className={styles.barBtn} onClick={clearChat} disabled={busy || empty} title="清空对话">
-            <ClearOutlined /> 清空
+          <button
+            type="button"
+            className={styles.barBtn}
+            onClick={clearChat}
+            disabled={busy || empty}
+            title={t("knowledgeNetwork.agentChat.chatPane.settings.clearTitle")}
+          >
+            <ClearOutlined /> {t("knowledgeNetwork.agentChat.chatPane.settings.clear")}
           </button>
         </div>
       </div> : null}
       <Drawer
-        title="问答配置"
+        title={t("knowledgeNetwork.agentChat.chatPane.settings.configTitle")}
         placement="right"
         width={520}
         open={settingsOpen}
@@ -1041,10 +1064,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         footer={
           <div className={styles.configFooter}>
             <button type="button" className={styles.cancelBtn} onClick={cancelSettings}>
-              取消
+              {t("knowledgeNetwork.agentChat.chatPane.settings.cancel")}
             </button>
             <button type="button" className={styles.confirmBtn} onClick={saveSettings}>
-              确定
+              {t("knowledgeNetwork.agentChat.chatPane.settings.confirm")}
             </button>
           </div>
         }
@@ -1052,12 +1075,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         <section className={styles.configSection}>
           <div className={styles.configSectionHead}>
             <div>
-              <h3>模型配置</h3>
-              <p>选择本次问答使用的模型。</p>
+              <h3>{t("knowledgeNetwork.agentChat.chatPane.settings.modelConfigTitle")}</h3>
+              <p>{t("knowledgeNetwork.agentChat.chatPane.settings.modelConfigDescription")}</p>
             </div>
           </div>
           <div className={styles.configCard}>
-            <div className={styles.configFieldLabel}>模型</div>
+            <div className={styles.configFieldLabel}>{t("knowledgeNetwork.agentChat.chatPane.settings.modelLabel")}</div>
               <Select
                 size="small"
                 className={styles.modelSelect}
@@ -1065,7 +1088,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                 value={draftModel || undefined}
                 onChange={setDraftModel}
               options={modelOptions}
-              placeholder="选择模型"
+              placeholder={t("knowledgeNetwork.agentChat.chatPane.settings.selectModel")}
               disabled={busy}
               popupMatchSelectWidth={false}
             />
@@ -1075,11 +1098,13 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         <section className={styles.configSection}>
           <div className={styles.configSectionHead}>
             <div>
-              <h3><ThunderboltFilled /> 系统提示词</h3>
-              <p>控制 Agent 的身份、工具使用策略和回答风格。</p>
+              <h3>
+                <ThunderboltFilled /> {t("knowledgeNetwork.agentChat.chatPane.settings.promptTitle")}
+              </h3>
+              <p>{t("knowledgeNetwork.agentChat.chatPane.settings.promptDescription")}</p>
             </div>
             <button type="button" className={styles.linkBtn} onClick={resetDraftSystemPrompt}>
-              恢复默认
+              {t("knowledgeNetwork.agentChat.chatPane.settings.resetDefault")}
             </button>
           </div>
           {promptEditor}
@@ -1087,11 +1112,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         <section className={styles.configSection}>
           <div className={styles.configSectionHead}>
             <div>
-              <h3>参数</h3>
-              <p>限制工具步数、历史保留和输出长度，避免问答跑偏或结果过大。</p>
+              <h3>{t("knowledgeNetwork.agentChat.chatPane.settings.paramsTitle")}</h3>
+              <p>{t("knowledgeNetwork.agentChat.chatPane.settings.paramsDescription")}</p>
             </div>
             <button type="button" className={styles.linkBtn} onClick={resetDraftConfig}>
-              恢复默认
+              {t("knowledgeNetwork.agentChat.chatPane.settings.resetDefault")}
             </button>
           </div>
           {paramsGrid}
@@ -1104,11 +1129,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             <div className={styles.introGlyph}>
               <ThunderboltFilled />
             </div>
-            <h3>还没有可用的大模型</h3>
-            <p>Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。</p>
+            <h3>{t("knowledgeNetwork.agentChat.chatPane.empty.noLlmTitle")}</h3>
+            <p>{t("knowledgeNetwork.agentChat.chatPane.empty.noLlmDescription")}</p>
             <div className={styles.sugs}>
               <button type="button" className={styles.sug} onClick={() => void navigate("/model-resources/models")}>
-                <span className={styles.sugText}>去模型工厂接入大模型</span>
+                <span className={styles.sugText}>{t("knowledgeNetwork.agentChat.chatPane.empty.goModelFactory")}</span>
                 <RightOutlined className={styles.sugArrow} />
               </button>
             </div>
@@ -1118,20 +1143,24 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             <div className={styles.introGlyph}>
               <ThunderboltFilled />
             </div>
-            <h3>{profile.emptyTitle ?? "开始验证"}</h3>
+            <h3>{profile.emptyTitle ?? t("knowledgeNetwork.agentChat.chatPane.empty.start")}</h3>
             <p>
               {profile.paneKey === "base" ? (
-                <>
-                  用自然语言提问，Agent 只能用基础数据工具（list_resources / describe_resource / run_sql）直接查表作答，
-                  不借助知识网络语义。
-                </>
+                t("knowledgeNetwork.agentChat.chatPane.empty.baseIntro")
               ) : (
                 <>
-                  用自然语言向 Agent 提问，它会基于知识网络 <code>{knId}</code>
-                  {networkName ? `（${networkName}）` : ""} 调用检索工具并作答。
-                  {knSummary
-                    ? `已自动载入网络摘要（${knSummary.objectTypes} 对象类 / ${knSummary.relations} 关系类），无需先浏览。`
-                    : ""}
+                  {t("knowledgeNetwork.agentChat.chatPane.empty.knIntro", {
+                    knId,
+                    networkName: networkName
+                      ? t("knowledgeNetwork.agentChat.chatPane.empty.networkName", { networkName })
+                      : "",
+                    summary: knSummary
+                      ? t("knowledgeNetwork.agentChat.chatPane.empty.summary", {
+                          objectTypes: knSummary.objectTypes,
+                          relations: knSummary.relations,
+                        })
+                      : "",
+                  })}
                 </>
               )}
             </p>
@@ -1156,9 +1185,15 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               const hasTools = !!m.toolCalls && m.toolCalls.length > 0;
               return (
                 <div key={i} className={`${styles.msg} ${m.role === "user" ? styles.msgUser : styles.msgBot}`}>
-                  <div className={styles.avatar}>{m.role === "user" ? "我" : <ThunderboltFilled />}</div>
+                  <div className={styles.avatar}>
+                    {m.role === "user" ? t("knowledgeNetwork.agentChat.chatPane.message.user") : <ThunderboltFilled />}
+                  </div>
                   <div className={styles.bubble}>
-                    <div className={styles.who}>{m.role === "user" ? "我" : "Agent"}</div>
+                    <div className={styles.who}>
+                      {m.role === "user"
+                        ? t("knowledgeNetwork.agentChat.chatPane.message.user")
+                        : t("knowledgeNetwork.agentChat.chatPane.message.agent")}
+                    </div>
                     {m.reasoning ? <ReasoningBlock text={m.reasoning} live={busy && isLast && !m.content} /> : null}
                     {hasTools ? (
                       <div className={styles.calls}>

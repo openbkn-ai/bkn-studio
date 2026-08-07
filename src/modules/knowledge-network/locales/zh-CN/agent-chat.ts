@@ -130,5 +130,103 @@ export const agentChatPart = {
       settings: "问答配置",
       clear: "清空",
     },
+    chatPane: {
+      defaultPrompt:
+        "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
+        "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
+        "kn_id 已锁定为当前网络，无需也不要修改。\n" +
+        "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。",
+      basePrompt:
+        "你是数据查询助手。你只能使用三个工具直接查询底层数据表回答用户问题：\n" +
+        "list_resources（列出可访问的数据表）、describe_resource（查看表的列结构）、run_sql（执行 SQL）。\n" +
+        "流程：先用 list_resources 找到相关表，再用 describe_resource 确认列，再写 SQL 查询。\n" +
+        "SQL 中的表名必须用模板占位 {{.<resource_id>}} 引用（resource_id 取自 list_resources 的 entries[].resource_id），不能写裸表名；跨 catalog 不能 join。\n" +
+        "查询要高效：聚合/排序/计数交给 SQL，用 LIMIT 和精确过滤、只取需要的字段，避免拉全表。",
+      evidenceHint: {
+        kn: "调了哪个工具、什么过滤条件或 SQL 要点",
+        base: "用了哪些表、什么 SQL 要点",
+      },
+      fallbackSuggestions: {
+        relations: "这个知识网络里有哪些对象类和关系？",
+        customers: "帮我查最近活跃的高价值客户",
+        links: "对象类之间是怎么关联的？",
+      },
+      configFields: {
+        maxSteps: { label: "工具步数上限", hint: "一轮最多调多少步工具（防跑飞兜底）" },
+        keepToolResults: { label: "步间保留结果数", hint: "每步只保留最近 N 个工具结果全文（0=不驱逐）" },
+        dataToolCap: { label: "数据类结果上限(字)", hint: "run_sql / query_* 结果字符上限（0=不截断）" },
+        schemaToolCap: { label: "Schema类结果上限(字)", hint: "get_kn_detail / search_schema 等（0=不截断）" },
+        maxHistoryMessages: { label: "多轮保留条数", hint: "跨轮历史只保留最近 N 条消息" },
+        maxTurnChars: { label: "单轮文本上限(字)", hint: "每条历史消息文本封顶" },
+        maxOutputTokens: { label: "最大输出token", hint: "单步最大输出(含思考)；推理模型(deepseek)调大，0=模型默认" },
+      },
+      reasoning: {
+        live: "思考中",
+        done: "思考过程",
+      },
+      toolCall: {
+        running: "调用中…",
+        failed: "失败",
+        request: "请求 · tools/call → {{name}}",
+        error: "错误",
+        response: "响应",
+      },
+      error: {
+        retry: "重试本轮",
+        detail: "详情",
+      },
+      messages: {
+        settingsSaved: "设置已保存",
+        promptReset: "系统提示词已恢复默认",
+        configReset: "参数已恢复默认",
+        noModel: "当前没有可用的大模型，请先在「模型工厂」配置默认模型",
+      },
+      system: {
+        contextSection: "## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n{{context}}",
+        historyTruncated: "{{content}}\n…[历史过长已截断]",
+      },
+      model: {
+        defaultSuffix: "{{modelName}} · 默认",
+      },
+      settings: {
+        promptPlaceholder: "系统提示词，保存后会随对话一起发送",
+        toolScopeTitle: "工具范围",
+        toolScopeDescription: "限定本侧 Agent 可调用的工具。未选中的工具不会发送给模型。",
+        resetDefault: "恢复默认",
+        availableTools: "可用工具",
+        selectTool: "选择工具",
+        loadingTools: "正在加载工具",
+        allTools: "全部 · {{count}}",
+        selectedTools: "已选 {{count}}{{total}}",
+        loadedSummary: "已载入网络摘要 · {{objectTypes}} 对象类 / {{relations}} 关系类",
+        configTitle: "问答配置",
+        clearTitle: "清空对话",
+        clear: "清空",
+        cancel: "取消",
+        confirm: "确定",
+        modelConfigTitle: "模型配置",
+        modelConfigDescription: "选择本次问答使用的模型。",
+        modelLabel: "模型",
+        selectModel: "选择模型",
+        promptTitle: "系统提示词",
+        promptDescription: "控制 Agent 的身份、工具使用策略和回答风格。",
+        paramsTitle: "参数",
+        paramsDescription: "限制工具步数、历史保留和输出长度，避免问答跑偏或结果过大。",
+      },
+      empty: {
+        noLlmTitle: "还没有可用的大模型",
+        noLlmDescription: "Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。",
+        goModelFactory: "去模型工厂接入大模型",
+        start: "开始验证",
+        baseIntro: "用自然语言提问，Agent 只能用基础数据工具（list_resources / describe_resource / run_sql）直接查表作答，不借助知识网络语义。",
+        knIntro: "用自然语言向 Agent 提问，它会基于知识网络 {{knId}}{{networkName}} 调用检索工具并作答。{{summary}}",
+        networkName: "（{{networkName}}）",
+        summary: "已自动载入网络摘要（{{objectTypes}} 对象类 / {{relations}} 关系类），无需先浏览。",
+      },
+      message: {
+        user: "我",
+        agent: "Agent",
+      },
+    },
   },
 } as const;

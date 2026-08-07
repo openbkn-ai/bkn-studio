@@ -130,5 +130,103 @@ export const agentChatPart = {
       settings: "Chat Settings",
       clear: "Clear",
     },
+    chatPane: {
+      defaultPrompt:
+        "You are the BKN business knowledge network retrieval assistant. Answer user questions based on object types, relation types, and logical attributes in the current knowledge network.\n" +
+        "Call the provided retrieval tools when data is needed, such as search_schema, query_object_instance, query_instance_subgraph, and run_sql. Do not fabricate answers.\n" +
+        "kn_id is locked to the current network. You do not need to change it and must not change it.\n" +
+        "Query efficiently: push aggregation, sorting, and counting to SQL where possible, use LIMIT and precise filters, return only needed fields, avoid loading entire tables or oversized results, and do not repeat queries for information already obtained.",
+      basePrompt:
+        "You are a data query assistant. You can only answer user questions by directly querying underlying data tables with three tools:\n" +
+        "list_resources lists accessible data tables, describe_resource inspects table columns, and run_sql executes SQL.\n" +
+        "Workflow: first use list_resources to find relevant tables, then use describe_resource to confirm columns, then write SQL queries.\n" +
+        "Table names in SQL must use template placeholders like {{.<resource_id>}}, where resource_id comes from list_resources entries[].resource_id. Do not write raw table names and do not join across catalogs.\n" +
+        "Query efficiently: push aggregation, sorting, and counting to SQL, use LIMIT and precise filters, and return only needed fields.",
+      evidenceHint: {
+        kn: "which tool was called, what filter conditions were used, or the key SQL points",
+        base: "which tables were used and the key SQL points",
+      },
+      fallbackSuggestions: {
+        relations: "What object types and relations are in this knowledge network?",
+        customers: "Find recently active high-value customers.",
+        links: "How are the object types related?",
+      },
+      configFields: {
+        maxSteps: { label: "Tool Step Limit", hint: "Maximum tool steps per round to prevent runaway calls" },
+        keepToolResults: { label: "Retained Tool Results", hint: "Keep only the latest N full tool results between steps. 0 means no eviction" },
+        dataToolCap: { label: "Data Result Limit (chars)", hint: "Character limit for run_sql / query_* results. 0 means no truncation" },
+        schemaToolCap: { label: "Schema Result Limit (chars)", hint: "Character limit for get_kn_detail / search_schema and similar tools. 0 means no truncation" },
+        maxHistoryMessages: { label: "History Messages", hint: "Only keep the latest N messages across rounds" },
+        maxTurnChars: { label: "Per-Turn Text Limit (chars)", hint: "Maximum text length for each history message" },
+        maxOutputTokens: { label: "Max Output Tokens", hint: "Maximum output per step including reasoning. Increase for reasoning models such as deepseek. 0 means model default" },
+      },
+      reasoning: {
+        live: "Thinking",
+        done: "Reasoning",
+      },
+      toolCall: {
+        running: "Calling...",
+        failed: "Failed",
+        request: "Request · tools/call → {{name}}",
+        error: "Error",
+        response: "Response",
+      },
+      error: {
+        retry: "Retry Round",
+        detail: "Details",
+      },
+      messages: {
+        settingsSaved: "Settings saved",
+        promptReset: "System prompt reset to default",
+        configReset: "Parameters reset to default",
+        noModel: "No LLM is available. Configure a default model in Model Factory first.",
+      },
+      system: {
+        contextSection: "## Current Knowledge Network Summary (loaded automatically; call tools for full structure and instances as needed)\n{{context}}",
+        historyTruncated: "{{content}}\n...[history truncated]",
+      },
+      model: {
+        defaultSuffix: "{{modelName}} · Default",
+      },
+      settings: {
+        promptPlaceholder: "System prompt. After saving, it will be sent with the conversation.",
+        toolScopeTitle: "Tool Scope",
+        toolScopeDescription: "Limit which tools this Agent side can call. Unselected tools are not sent to the model.",
+        resetDefault: "Reset Default",
+        availableTools: "Available Tools",
+        selectTool: "Select tools",
+        loadingTools: "Loading tools",
+        allTools: "All · {{count}}",
+        selectedTools: "Selected {{count}}{{total}}",
+        loadedSummary: "Network summary loaded · {{objectTypes}} object types / {{relations}} relation types",
+        configTitle: "Chat Settings",
+        clearTitle: "Clear conversation",
+        clear: "Clear",
+        cancel: "Cancel",
+        confirm: "Confirm",
+        modelConfigTitle: "Model Settings",
+        modelConfigDescription: "Choose the model used for this chat.",
+        modelLabel: "Model",
+        selectModel: "Select model",
+        promptTitle: "System Prompt",
+        promptDescription: "Control the Agent identity, tool strategy, and response style.",
+        paramsTitle: "Parameters",
+        paramsDescription: "Limit tool steps, retained history, and output size to keep answers focused and bounded.",
+      },
+      empty: {
+        noLlmTitle: "No LLM Available",
+        noLlmDescription: "Agent chat needs an LLM. Connect one in Model Factory, set it as default, and come back.",
+        goModelFactory: "Connect an LLM in Model Factory",
+        start: "Start Validation",
+        baseIntro: "Ask in natural language. The Agent can only answer by directly querying tables with base data tools: list_resources, describe_resource, and run_sql. It does not use knowledge-network semantics.",
+        knIntro: "Ask the Agent in natural language. It will use retrieval tools and answer based on knowledge network {{knId}}{{networkName}}. {{summary}}",
+        networkName: " ({{networkName}})",
+        summary: "The network summary has been loaded automatically ({{objectTypes}} object types / {{relations}} relation types), so you do not need to browse first.",
+      },
+      message: {
+        user: "Me",
+        agent: "Agent",
+      },
+    },
   },
 } as const;
