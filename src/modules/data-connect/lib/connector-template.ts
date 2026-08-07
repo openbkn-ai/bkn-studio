@@ -9,6 +9,7 @@ import type {
   ConnectorFieldConfig,
   DataConnectConnectorType,
 } from "@/modules/data-connect/types/data-connect";
+import i18n from "@/app/locales/i18n";
 
 export type DataSourceFamilyKey = "structured" | "unstructured";
 export type ConnectorFieldGroupKey = "connection" | "auth" | "advanced";
@@ -25,16 +26,14 @@ export type ConnectorFieldGroup = {
   title: string;
 };
 
-const FAMILY_REGISTRY: Record<DataSourceFamilyKey, DataSourceFamilyMeta> = {
+const FAMILY_FALLBACKS: Record<DataSourceFamilyKey, Omit<DataSourceFamilyMeta, "key">> = {
   structured: {
-    key: "structured",
-    label: "结构化/半结构化数据",
-    description: "数据库、检索、接口等结构化接入。",
+    label: "Structured and semi-structured data",
+    description: "Structured access for databases, search, APIs, and similar sources.",
   },
   unstructured: {
-    key: "unstructured",
-    label: "非结构化数据",
-    description: "文件、文档库等非结构化接入。",
+    label: "Unstructured data",
+    description: "Access for files, document libraries, and similar unstructured sources.",
   },
 };
 
@@ -48,55 +47,55 @@ const CATEGORY_TO_FAMILY: Record<string, DataSourceFamilyKey> = {
   topic: "structured",
 };
 
-const CATEGORY_TO_TEMPLATE: Record<string, { description: string; label: string }> = {
+const CATEGORY_TO_TEMPLATE_FALLBACKS: Record<string, { description: string; label: string }> = {
   api: {
-    label: "API 服务",
-    description: "通过接口协议接入外部业务系统或第三方数据服务。",
+    label: "API service",
+    description: "Connect external business systems or third-party services through API protocols.",
   },
   file: {
-    label: "文件数据",
-    description: "导入本地或网络文件中的业务数据。",
+    label: "File data",
+    description: "Import business data from local or remote files.",
   },
   fileset: {
-    label: "文件集 / 文档库",
-    description: "接入文档库、文件目录或批量文件资源。",
+    label: "Fileset / document library",
+    description: "Connect document libraries, file directories, or bulk file resources.",
   },
   index: {
-    label: "搜索引擎",
-    description: "连接全文检索或索引引擎，承载检索与召回能力。",
+    label: "Search engine",
+    description: "Connect full-text search or index engines for retrieval.",
   },
   metric: {
-    label: "时序数据",
-    description: "接入指标、监控与时序型业务数据。",
+    label: "Time series data",
+    description: "Connect metrics, monitoring, and other time-series business data.",
   },
   table: {
-    label: "关系型数据库",
-    description: "连接数据库实例，接入结构化业务数据。",
+    label: "Relational database",
+    description: "Connect database instances for structured business data.",
   },
   topic: {
-    label: "消息主题",
-    description: "接入消息流或主题通道，处理持续更新的数据。",
+    label: "Message topic",
+    description: "Connect message streams or topic channels for continuously updated data.",
   },
 };
 
-const TYPE_TO_TEMPLATE: Record<string, { description?: string; label?: string }> = {
+const TYPE_TO_TEMPLATE_FALLBACKS: Record<string, { description?: string; label?: string }> = {
   mariadb: {
-    description: "连接 MariaDB 兼容的关系型数据库。",
+    description: "Connect MariaDB-compatible relational databases.",
   },
   mysql: {
-    description: "连接 MySQL 兼容的关系型数据库。",
+    description: "Connect MySQL-compatible relational databases.",
   },
   postgresql: {
-    description: "连接 PostgreSQL 关系型数据库。",
+    description: "Connect PostgreSQL relational databases.",
   },
   sqlserver: {
-    description: "连接 Microsoft SQL Server 关系型数据库。",
+    description: "Connect Microsoft SQL Server relational databases.",
   },
   opensearch: {
-    description: "连接 OpenSearch 检索索引。",
+    description: "Connect OpenSearch indexes.",
   },
   anyshare: {
-    description: "面向文件集 / 文档资源接入。",
+    description: "Connect fileset and document resources.",
   },
 };
 
@@ -143,11 +142,11 @@ const TYPE_FIELD_DEFAULTS: Record<string, Record<string, unknown>> = {
 };
 
 const TYPE_PORT_PLACEHOLDER: Record<string, string> = {
-  mariadb: "例如 3306",
-  mysql: "例如 3306",
-  postgresql: "例如 5432",
-  sqlserver: "例如 1433",
-  opensearch: "例如 9200",
+  mariadb: "For example: 3306",
+  mysql: "For example: 3306",
+  postgresql: "For example: 5432",
+  sqlserver: "For example: 1433",
+  opensearch: "For example: 9200",
 };
 
 const BOOLEAN_FIELD_NAMES = new Set([
@@ -179,17 +178,17 @@ const ENCODING_OPTIONS = [
 ];
 
 const SSL_MODE_OPTIONS = [
-  { label: "禁用", value: "disable" },
-  { label: "优先", value: "prefer" },
-  { label: "要求", value: "require" },
-  { label: "校验 CA", value: "verify-ca" },
-  { label: "完整校验", value: "verify-full" },
+  { label: "Disable", value: "disable" },
+  { label: "Prefer", value: "prefer" },
+  { label: "Require", value: "require" },
+  { label: "Verify CA", value: "verify-ca" },
+  { label: "Verify full", value: "verify-full" },
 ];
 
 const CONNECTION_MODE_OPTIONS = [
-  { label: "默认", value: "default" },
-  { label: "只读", value: "readonly" },
-  { label: "读写", value: "readwrite" },
+  { label: "Default", value: "default" },
+  { label: "Read only", value: "readonly" },
+  { label: "Read/write", value: "readwrite" },
 ];
 
 export type ConnectorFieldControlOption = {
@@ -245,11 +244,19 @@ const AUTH_KEYS = new Set([
 ]);
 
 export function getDataSourceFamilyMeta(key: DataSourceFamilyKey) {
-  return FAMILY_REGISTRY[key];
+  const fallback = FAMILY_FALLBACKS[key];
+  return {
+    key,
+    label: dataConnectText(`connectorTemplates.families.${key}.label`, fallback.label),
+    description: dataConnectText(
+      `connectorTemplates.families.${key}.description`,
+      fallback.description,
+    ),
+  };
 }
 
 export function getPrimaryDataSourceFamilies(): DataSourceFamilyMeta[] {
-  return [FAMILY_REGISTRY.structured, FAMILY_REGISTRY.unstructured];
+  return [getDataSourceFamilyMeta("structured"), getDataSourceFamilyMeta("unstructured")];
 }
 
 export function resolveDataSourceFamily(connector: Pick<DataConnectConnectorType, "category">) {
@@ -266,12 +273,19 @@ export function matchesDataSourceFamily(
 export function getConnectorTemplateMeta(
   connector: Pick<DataConnectConnectorType, "category" | "description" | "name" | "type">,
 ) {
-  const byCategory = CATEGORY_TO_TEMPLATE[connector.category];
-  const byType = TYPE_TO_TEMPLATE[connector.type];
+  const byCategory = CATEGORY_TO_TEMPLATE_FALLBACKS[connector.category];
+  const byType = TYPE_TO_TEMPLATE_FALLBACKS[connector.type];
 
   return {
-    label: byType?.label ?? byCategory?.label ?? connector.name,
-    description: byType?.description ?? byCategory?.description ?? connector.description ?? "",
+    label:
+      templateTypeText(connector.type, "label", byType?.label) ??
+      templateCategoryText(connector.category, "label", byCategory?.label) ??
+      connector.name,
+    description:
+      templateTypeText(connector.type, "description", byType?.description) ??
+      templateCategoryText(connector.category, "description", byCategory?.description) ??
+      connector.description ??
+      "",
   };
 }
 
@@ -343,48 +357,48 @@ function knownConnectorType(
 
 export function humanizeConnectorFieldLabel(name: string) {
   const labelMap: Record<string, string> = {
-    account: "账号",
+    account: "Account",
     api_key: "API Key",
     catalog: "Catalog",
-    character_encoding: "字符编码",
-    character_set: "字符集",
-    charset: "字符集",
-    connection_mode: "连接模式",
-    database: "数据库",
-    database_list: "数据库列表",
-    databases: "数据库列表",
-    db: "数据库",
-    enable_ssl: "启用 SSL",
-    encoding: "字符编码",
-    endpoint: "访问地址",
-    host: "主机地址",
-    mode: "模式",
-    password: "密码",
-    path: "路径",
-    port: "端口号",
-    project: "项目",
+    character_encoding: "Character encoding",
+    character_set: "Character set",
+    charset: "Character set",
+    connection_mode: "Connection mode",
+    database: "Database",
+    database_list: "Database list",
+    databases: "Database list",
+    db: "Database",
+    enable_ssl: "Enable SSL",
+    encoding: "Character encoding",
+    endpoint: "Endpoint",
+    host: "Host",
+    mode: "Mode",
+    password: "Password",
+    path: "Path",
+    port: "Port",
+    project: "Project",
     schema: "Schema",
-    schema_list: "Schema 列表",
-    secret: "密钥",
-    secret_key: "密钥",
-    server: "主机地址",
+    schema_list: "Schema list",
+    secret: "Secret",
+    secret_key: "Secret key",
+    server: "Host",
     ssl: "SSL",
-    ssl_enabled: "启用 SSL",
-    ssl_mode: "SSL 模式",
-    sslmode: "SSL 模式",
-    table: "数据表",
-    token: "访问令牌",
-    uri: "连接地址",
-    url: "连接地址",
-    use_ssl: "启用 SSL",
-    user: "用户名",
-    username: "用户名",
-    warehouse: "仓库",
+    ssl_enabled: "Enable SSL",
+    ssl_mode: "SSL mode",
+    sslmode: "SSL mode",
+    table: "Table",
+    token: "Access token",
+    uri: "Connection URI",
+    url: "Connection URL",
+    use_ssl: "Enable SSL",
+    user: "User",
+    username: "Username",
+    warehouse: "Warehouse",
   };
 
   const normalized = name.trim().toLowerCase();
   if (labelMap[normalized]) {
-    return labelMap[normalized];
+    return dataConnectText(`connectorTemplates.fieldLabels.${normalized}`, labelMap[normalized]);
   }
 
   return name
@@ -426,56 +440,62 @@ export function getConnectorFieldPlaceholder(
   const normalized = fieldName.trim().toLowerCase();
   const typeKey = connectorType?.trim().toLowerCase() ?? "";
   const placeholderMap: Record<string, string> = {
-    account: "例如 readonly_account",
-    api_key: "请输入 API Key",
-    database: "例如 supply_chain",
-    database_list: "例如 supply_chain, finance_dw",
-    databases: "例如 supply_chain, finance_dw",
-    db: "例如 supply_chain",
-    endpoint: "例如 https://search.internal:9200",
-    host: "例如 db.example.internal",
-    password: "请输入密码",
-    path: "例如 /data/import",
-    project: "例如 demo_project",
-    schema: "例如 public",
-    schema_list: "例如 public, ods",
-    secret: "请输入密钥",
-    secret_key: "请输入密钥",
-    server: "例如 db.example.internal",
-    table: "例如 order_detail",
-    token: "请输入访问令牌",
-    uri: "例如 mysql://db.example.internal:3306",
-    url: "例如 https://api.example.com/v1",
-    user: "例如 readonly_user",
-    username: "例如 readonly_user",
-    warehouse: "例如 analytics_wh",
+    account: "For example: readonly_account",
+    api_key: "Enter API Key",
+    database: "For example: supply_chain",
+    database_list: "For example: supply_chain, finance_dw",
+    databases: "For example: supply_chain, finance_dw",
+    db: "For example: supply_chain",
+    endpoint: "For example: https://search.internal:9200",
+    host: "For example: db.example.internal",
+    password: "Enter password",
+    path: "For example: /data/import",
+    project: "For example: demo_project",
+    schema: "For example: public",
+    schema_list: "For example: public, ods",
+    secret: "Enter secret",
+    secret_key: "Enter secret",
+    server: "For example: db.example.internal",
+    table: "For example: order_detail",
+    token: "Enter access token",
+    uri: "For example: mysql://db.example.internal:3306",
+    url: "For example: https://api.example.com/v1",
+    user: "For example: readonly_user",
+    username: "For example: readonly_user",
+    warehouse: "For example: analytics_wh",
   };
 
   if (normalized === "port") {
-    return TYPE_PORT_PLACEHOLDER[typeKey] ?? "例如 3306";
+    return templatePortPlaceholder(typeKey);
   }
 
   if (normalized === "options" && typeKey === "sqlserver") {
-    return '例如 {"encrypt":true,"trustservercertificate":false}';
+    return dataConnectText(
+      "connectorTemplates.placeholders.sqlserverOptions",
+      'For example: {"encrypt":true,"trustservercertificate":false}',
+    );
   }
 
   if (placeholderMap[normalized]) {
-    return placeholderMap[normalized];
+    return dataConnectText(`connectorTemplates.placeholders.${normalized}`, placeholderMap[normalized]);
   }
 
   if (fieldType === "array") {
-    return "回车后可继续添加多个值";
+    return dataConnectText("connectorTemplates.placeholders.array", "Press Enter to add more values");
   }
 
   if (fieldType === "object") {
-    return "请输入 JSON 配置";
+    return dataConnectText("connectorTemplates.placeholders.object", "Enter JSON configuration");
   }
 
   if (fieldType === "integer" || fieldType === "number") {
-    return "请输入数值";
+    return dataConnectText("connectorTemplates.placeholders.number", "Enter a number");
   }
 
-  return `请输入${humanizeConnectorFieldLabel(fieldName)}`;
+  return i18n.t("dataConnect.connectorTemplates.placeholders.default", {
+    defaultValue: "Enter {{field}}",
+    field: humanizeConnectorFieldLabel(fieldName),
+  });
 }
 
 export function resolveConnectorFieldControl(
@@ -493,11 +513,11 @@ export function resolveConnectorFieldControl(
   }
 
   if (SSL_MODE_FIELD_NAMES.has(normalized)) {
-    return { kind: "select", options: SSL_MODE_OPTIONS };
+    return { kind: "select", options: localizedOptions("sslModes", SSL_MODE_OPTIONS) };
   }
 
   if (normalized === "mode" || normalized === "connection_mode") {
-    return { kind: "select", options: CONNECTION_MODE_OPTIONS };
+    return { kind: "select", options: localizedOptions("connectionModes", CONNECTION_MODE_OPTIONS) };
   }
 
   if (fieldType === "integer" || fieldType === "number") {
@@ -597,16 +617,57 @@ export function groupConnectorFields(
   });
 
   return ([
-    ["connection", "连接参数"],
-    ["auth", "认证信息"],
-    ["advanced", "高级设置"],
+    ["connection", "Connection parameters"],
+    ["auth", "Authentication"],
+    ["advanced", "Advanced settings"],
   ] as const)
     .map(([key, title]) => ({
       key,
-      title,
+      title: dataConnectText(`connectorTemplates.fieldGroups.${key}`, title),
       fields: grouped.get(key) ?? [],
     }))
     .filter((group) => group.fields.length > 0);
+}
+
+function dataConnectText(key: string, defaultValue: string): string {
+  return i18n.t(`dataConnect.${key}`, { defaultValue });
+}
+
+function templateCategoryText(
+  category: string,
+  field: "description" | "label",
+  defaultValue?: string,
+) {
+  if (!defaultValue) {
+    return undefined;
+  }
+  return dataConnectText(`connectorTemplates.categories.${category}.${field}`, defaultValue);
+}
+
+function templateTypeText(
+  type: string,
+  field: "description" | "label",
+  defaultValue?: string,
+) {
+  if (!defaultValue) {
+    return undefined;
+  }
+  return dataConnectText(`connectorTemplates.types.${type}.${field}`, defaultValue);
+}
+
+function templatePortPlaceholder(typeKey: string) {
+  const defaultValue = TYPE_PORT_PLACEHOLDER[typeKey] ?? "For example: 3306";
+  return dataConnectText(`connectorTemplates.portPlaceholders.${typeKey || "default"}`, defaultValue);
+}
+
+function localizedOptions(
+  group: "connectionModes" | "sslModes",
+  options: ConnectorFieldControlOption[],
+) {
+  return options.map((option) => ({
+    ...option,
+    label: dataConnectText(`connectorTemplates.options.${group}.${option.value}`, option.label),
+  }));
 }
 
 function connectorFieldGroupRank(key: ConnectorFieldGroupKey) {
