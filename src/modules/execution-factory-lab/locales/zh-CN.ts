@@ -37,6 +37,11 @@ export const executionFactoryLabZhCN = {
       invalidUrl: "cURL \u4e2d\u7684 URL \u683c\u5f0f\u65e0\u6548\u3002",
       missingUrl: "\u672a\u5728 cURL \u4e2d\u8bc6\u522b\u5230 http(s) \u5730\u5740\u3002",
     },
+    serviceErrors: {
+      httpCapabilityCreateFailed: "\u521b\u5efa HTTP \u80fd\u529b\u5931\u8d25",
+      mcpCapabilityRegisterFailed: "MCP \u80fd\u529b\u6ce8\u518c\u5931\u8d25",
+      skillCapabilityRegisterFailed: "Skill \u80fd\u529b\u6ce8\u518c\u5931\u8d25",
+    },
     summaryLabel: "能力名称",
     descriptionLabel: "描述",
     orchestrationSwitch: "同时用于流程编排",

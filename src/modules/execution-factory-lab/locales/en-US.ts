@@ -37,6 +37,11 @@ export const executionFactoryLabEnUS = {
       invalidUrl: "The URL format in the cURL command is invalid.",
       missingUrl: "No http(s) URL was found in the cURL command.",
     },
+    serviceErrors: {
+      httpCapabilityCreateFailed: "HTTP capability creation failed",
+      mcpCapabilityRegisterFailed: "MCP capability registration failed",
+      skillCapabilityRegisterFailed: "SKILL capability registration failed",
+    },
     summaryLabel: "Capability name",
     descriptionLabel: "Description",
     orchestrationSwitch: "Use in workflow orchestration",

@@ -7,6 +7,7 @@
 
 import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
+import i18n from "@/app/locales/i18n";
 
 import type {
   CapabilityListResult,
@@ -44,6 +45,10 @@ import type { LabMeta } from "@/modules/execution-factory-lab/types/lab-meta";
 
 const API_PREFIX = "/capabilities-lab/v1";
 const DEFAULT_BUSINESS_DOMAIN = "bd_public";
+
+function labServiceError(key: string) {
+  return i18n.t(`executionFactoryLab.serviceErrors.${key}`);
+}
 
 function getBusinessDomainHeaders() {
   const businessDomainId =
@@ -216,7 +221,7 @@ export async function createHttpCapability(
   );
 
   if (!response.data.capability) {
-    throw new Error("创建 HTTP 能力失败");
+    throw new Error(labServiceError("httpCapabilityCreateFailed"));
   }
 
   return mapCapability(response.data.capability);
@@ -540,7 +545,7 @@ export async function registerMcpCapability(
   );
 
   if (!response.data.capability) {
-    throw new Error("MCP 能力注册失败");
+    throw new Error(labServiceError("mcpCapabilityRegisterFailed"));
   }
 
   return mapCapability(response.data.capability);
@@ -575,7 +580,7 @@ export async function registerSkillCapability(
   );
 
   if (!response.data.capability) {
-    throw new Error("Skill 能力注册失败");
+    throw new Error(labServiceError("skillCapabilityRegisterFailed"));
   }
 
   return mapCapability(response.data.capability);
