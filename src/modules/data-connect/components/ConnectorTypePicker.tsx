@@ -20,10 +20,17 @@ import {
 } from "@/modules/data-connect/lib/connector-template";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import type { Edition } from "@/framework/entitlement/edition";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+import { capabilityServedByBknSafe } from "@/modules/subscription/capability-catalog";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 import styles from "./ConnectorTypePicker.module.css";
+
+/** 认证连接器的门槛档,与能力登记表一致(`connector_certified` 属 Professional)。 */
+const CERTIFIED_MIN_EDITION: Edition = "professional";
 
 type ConnectorTypePickerProps = {
   onChange: (value: string) => void;
@@ -41,6 +48,7 @@ export function ConnectorTypePicker({
   const [tag, setTag] = useState<string>();
   const [family, setFamily] = useState<DataSourceFamilyKey>("structured");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const { snapshot } = useEntitlementContext();
 
   const familyOptions = getPrimaryDataSourceFamilies().filter(
     (item) => item.key === "structured",
@@ -117,11 +125,25 @@ export function ConnectorTypePicker({
                 (ee-design.md §6「A 答不了 B」)——照它判会让 SQL Server 在所有部署上都
                 点不进去,包括买了的。
 
-                认证连接器被后端关掉时,原因几乎一定是「没买」而不是「坏了」,所以那种
-                情况不画「暂不可用」,画档位徽标 + 点击给升级引导。普通连接器的
-                enabled: false 仍是真不可用,照旧禁用。
+                后端关掉认证连接器,原因分两种,得看客户手上的证:
+
+                - **证不够** → 几乎一定是「没买」。这时画档位徽标 + 点击给升级引导,
+                  客户看得见才知道有东西可买。
+                - **证够了** → 那就不是钱的事,是这套部署还没提供它。这时照普通连接器
+                  画「暂不可用」:对一个已经买了企业版的客户说「请升级镜像」,既指错了
+                  方向,也把 bkn-safe 的镜像状态硬安到 Vega 头上。
+
+                普通连接器的 enabled: false 一直是真不可用,照旧禁用。
               */
-              const locked = certified && !item.enabled;
+              const locked =
+                certified &&
+                !item.enabled &&
+                !capabilitySatisfied(
+                  CAPABILITIES.CONNECTOR_CERTIFIED,
+                  snapshot,
+                  CERTIFIED_MIN_EDITION,
+                  capabilityServedByBknSafe(CAPABILITIES.CONNECTOR_CERTIFIED),
+                );
               const active = item.enabled && !locked && item.type === value;
               const templateMeta = getConnectorTemplateMeta(item);
 

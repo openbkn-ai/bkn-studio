@@ -14,6 +14,11 @@ import { DataConnectFormScene } from "@/modules/data-connect/scenes/DataConnectF
 const permissionState = vi.hoisted(() => ({
   values: new Set<string>(),
 }));
+/** 集群档位。默认没有快照——社区部署,也是卖点该出现的那一侧。 */
+const entitlementState = vi.hoisted(() => ({
+  loading: false,
+  snapshot: null as { capabilities: string[]; edition: string; extensions: string[] } | null,
+}));
 const createDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const getDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const listDataConnectConnectorTypesMock = vi.hoisted(() => vi.fn());
@@ -31,6 +36,10 @@ vi.mock("@/framework/context/use-app-services", () => ({
       confirm: vi.fn(),
     },
   }),
+}));
+
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useEntitlementContext: () => entitlementState,
 }));
 
 vi.mock("@/framework/permission/PermissionGate", () => ({
@@ -117,6 +126,7 @@ describe("DataConnectFormScene · connection preflight", () => {
 
   beforeEach(() => {
     permissionState.values = new Set(["catalog:modify"]);
+    entitlementState.snapshot = null;
     messageSuccessMock.mockReset();
     createDataConnectRecordMock.mockReset();
     createDataConnectRecordMock.mockResolvedValue(undefined);
@@ -393,6 +403,29 @@ describe("DataConnectFormScene · connection preflight", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
 
     expect(screen.queryByPlaceholderText("例如 供应链主库")).toBeNull();
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  /**
+   * 证书已经覆盖这项能力时,后端仍然关着它就不是钱的事,是这套部署没提供。这时说
+   * 「请升级镜像」既指错方向,也把 bkn-safe 的镜像状态硬安到 Vega 头上。
+   */
+  it("证书已覆盖时不再推销,照普通连接器画「暂不可用」", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    entitlementState.snapshot = {
+      capabilities: ["rbac_basic"],
+      edition: "enterprise",
+      extensions: ["rbac_basic"],
+    };
+
+    render(<DataConnectFormScene mode="create" />);
+
+    const sqlServerButton = await findConnectorCard("SQL Server");
+
+    expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
+    expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+    expect(sqlServerButton.textContent).not.toContain(
+      "common.entitlement.editionsShort.professional",
+    );
   }, HEAVY_SCENE_TIMEOUT_MS);
 
   it("creates a SQL Server catalog with the default port", async () => {
