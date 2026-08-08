@@ -85,7 +85,6 @@ export const commonEnUS = {
       notLicensedTitle: "Not covered by the current licence",
       notLicensedDescription:
         "This deployment ships the capability, but the installed certificate's edition does not cover it. Import a higher edition and it becomes available — no restart needed.",
-      continueAnyway: "Already upgraded — continue anyway",
       unknownTitle: "Licence status unavailable",
       unknownDescription:
         "Could not read the cluster's licence state, so paid capabilities are unavailable for now. Please retry shortly.",

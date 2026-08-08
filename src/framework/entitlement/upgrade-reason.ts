@@ -45,11 +45,17 @@ export function upgradeReason(
 }
 
 /**
- * 这项能力在当前部署上是不是**真的可用**——证够了 **且** 镜像里有。徽标据此闭嘴:
- * 只满足一半的时候仍要提示,因为客户此刻还用不了。
+ * 这项能力在当前部署上是不是**真的可用**。徽标与整页守卫据此放行。
  *
- * 别的服务实现的能力没法确认镜像(ee-design.md §6「A 答不了 B」),只能退到档位;
- * 那种情况下「档位够」就是我们能拿到的最强判据。
+ * 判据按「能核实到什么程度」分两档:
+ *
+ * - **bkn-safe 自己实现的**:`capabilities[]` 就是它这个进程的实况,证够了还得在册才算数。
+ * - **别的服务实现的**:它们从来不出现在这两个列表里,缺席说明不了任何事(ee-design.md
+ *   §6「A 答不了 B」)。这时以证书为准——买了企业版证、也换了企业版包的客户,前端永远
+ *   核实不了那个包,拿「核实不了」当「没装」就是把已付费能力锁死在门外。
+ *
+ * 少数几个「档位够但确实用不了」的位置有更强的信号(比如连接器有后端给的 `enabled`),
+ * 由调用点自己判,不该让所有人陪着一起被拦。
  */
 export function capabilitySatisfied(
   capability: string,
@@ -61,9 +67,5 @@ export function capabilitySatisfied(
     return false;
   }
 
-  // 判不了就不算满足。别的服务的能力确认不了镜像(ee-design.md §6「A 答不了 B」),
-  // 而「证够了但包没换」恰恰是客户最常处在的状态——把它当满足会让标记消失,客户以为
-  // 一切正常,点下去才发现用不了。有更强信号的调用点(比如连接器有后端的 enabled)自己
-  // 决定要不要画。
-  return servedByBknSafe && capabilityState(capability, snapshot) === "available";
+  return servedByBknSafe ? capabilityState(capability, snapshot) === "available" : true;
 }

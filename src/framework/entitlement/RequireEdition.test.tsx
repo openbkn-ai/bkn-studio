@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
@@ -44,8 +44,6 @@ function entitlement(overrides: Partial<Entitlement>): Entitlement {
   };
 }
 
-const CONTINUE = "common.entitlement.continueAnyway";
-
 beforeEach(() => {
   contextState.loading = false;
   contextState.snapshot = null;
@@ -81,13 +79,13 @@ describe("RequireEdition · 快照缺席", () => {
   });
 });
 
-describe("RequireEdition · 判不出镜像状态时留出口", () => {
+describe("RequireEdition · 核实不了镜像的能力以证书为准", () => {
   /*
-    业务溯源由 bkn-trace 实现,bkn-safe 的清单里从来没有它(ee-design.md §6)。买了企业证、
-    也换过企业包的客户照样会走到蒙版,而前端永远确认不了——没有出口就是把已付费功能永久
-    锁死,而不是提示。
+    业务溯源由 bkn-trace 实现,bkn-safe 的清单里从来没有它(ee-design.md §6)。前端核实
+    不了那个包,不等于那个包没装——买了企业版证、也换了企业版包的客户,不该被自己付过钱
+    的功能挡在门外。
   */
-  it("档位够但确认不了 → 可以「仍要继续」", () => {
+  it("档位够 → 直接放行,不盖蒙版", () => {
     contextState.snapshot = entitlement({
       edition: "enterprise",
       licensed: true,
@@ -96,19 +94,18 @@ describe("RequireEdition · 判不出镜像状态时留出口", () => {
 
     renderGuard(CAPABILITIES.BUSINESS_PROVENANCE, "enterprise");
 
-    expect(screen.queryByText("protected")).not.toBeNull(); // 蒙版底下照常渲染
-    fireEvent.click(screen.getByRole("button", { name: CONTINUE }));
-
-    expect(screen.queryByText("common.entitlement.imageLikelyHint")).toBeNull();
+    expect(screen.queryByText("protected")).not.toBeNull();
+    expect(screen.queryByText("common.entitlement.imageMissingTitle")).toBeNull();
+    expect(screen.queryByText("common.entitlement.unlockTitle")).toBeNull();
   });
 
-  // 档位不够是前端能确定的事,放进去服务端也会拒——这时给出口只会让人白跑一趟。
-  it("档位不够 → 不给出口", () => {
+  // 档位不够是前端能确定的事,这时候拦得住,也该拦。
+  it("档位不够 → 拦下并给升级引导", () => {
     contextState.snapshot = entitlement({});
 
     renderGuard(CAPABILITIES.BUSINESS_PROVENANCE, "enterprise");
 
-    expect(screen.queryByRole("button", { name: CONTINUE })).toBeNull();
+    expect(screen.getByText("common.entitlement.unlockTitle")).toBeTruthy();
   });
 });
 
