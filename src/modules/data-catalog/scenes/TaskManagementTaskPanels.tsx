@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { formatDateTime } from "@/framework/i18n/format";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -99,17 +100,14 @@ function formatTime(value?: number) {
     return "-";
   }
   const timestamp = value < 100_000_000_000 ? value * 1000 : value;
-  return new Intl.DateTimeFormat("zh-CN", {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
+  return formatDateTime(timestamp, {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    month: "2-digit",
     second: "2-digit",
-  })
-    .format(timestamp)
-    .replace(/\//g, "-");
+    year: "numeric",
+  }).replace(/\//g, "-");
 }
 
 function TaskPanel({ children }: { children: React.ReactNode }) {

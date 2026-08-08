@@ -10,6 +10,7 @@ import type {
   CatalogResource,
   CatalogDiscoverRecord,
 } from "@/modules/data-catalog/types/data-catalog";
+import { formatDateTime } from "@/framework/i18n/format";
 
 /**
  * 共享 mock 存储:数据资源 / 构建任务 / 扫描记录。
@@ -48,17 +49,14 @@ export function mockSlug(length = 20) {
 }
 
 export function formatMockTimestamp(value: number) {
-  return new Intl.DateTimeFormat("zh-CN", {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
+  return formatDateTime(value, {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    month: "2-digit",
     second: "2-digit",
-  })
-    .format(value)
-    .replace(/\//g, "-");
+    year: "numeric",
+  }).replace(/\//g, "-");
 }
 
 const now = Date.now();

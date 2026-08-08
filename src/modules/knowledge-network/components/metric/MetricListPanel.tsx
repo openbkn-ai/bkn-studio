@@ -79,7 +79,7 @@ export function MetricListPanel({
   onRefresh,
   unsupported = false,
 }: MetricListPanelProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
   const [tableMetrics, setTableMetrics] = useState(metrics);
@@ -107,9 +107,9 @@ export function MetricListPanel({
   const boundObjectTypeOptions = useMemo(
     () =>
       [...objectTypes]
-        .sort((left, right) => left.name.localeCompare(right.name, "zh-CN"))
+        .sort((left, right) => left.name.localeCompare(right.name, i18n.language || undefined))
         .map((item) => ({ label: item.name, value: item.id })),
-    [objectTypes],
+    [i18n.language, objectTypes],
   );
 
   const hasActiveFilter = useMemo(

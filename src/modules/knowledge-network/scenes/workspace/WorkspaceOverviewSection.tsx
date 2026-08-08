@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { formatNumber } from "@/framework/i18n/format";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -51,7 +52,7 @@ type WorkspaceOverviewSectionProps = {
 };
 
 function formatOverviewCount(value?: number) {
-  return new Intl.NumberFormat("en-US").format(value ?? 0);
+  return formatNumber(value ?? 0);
 }
 
 export function WorkspaceOverviewSection({

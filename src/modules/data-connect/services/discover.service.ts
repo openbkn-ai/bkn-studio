@@ -187,7 +187,7 @@ function formatTimestamp(value?: number) {
     return "-";
   }
 
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(i18n.language || "en-US", {
     hour12: false,
     year: "numeric",
     month: "2-digit",

@@ -101,7 +101,7 @@ function resolveMemberSummary(role: AdminRole, deptIdSet: Set<string>) {
 
 
 
-function formatTime(value?: number) {
+function formatTime(value: number | undefined, locale: string) {
 
   if (!value) {
 
@@ -109,7 +109,7 @@ function formatTime(value?: number) {
 
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(locale, {
 
     hour12: false,
 
@@ -135,7 +135,7 @@ function formatTime(value?: number) {
 
 export function RoleManagementScene() {
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const { message, modal, runtimeConfig } = useAppServices();
   const rolePermissions = runtimeConfig.currentUser.permissions;
@@ -624,7 +624,7 @@ export function RoleManagementScene() {
 
         render: (value?: number) => (
 
-          <span className={styles.singleLineText}>{formatTime(value)}</span>
+          <span className={styles.singleLineText}>{formatTime(value, i18n.language)}</span>
 
         ),
 
@@ -669,7 +669,7 @@ export function RoleManagementScene() {
 
     ],
 
-    [buildRoleActionMenu, canEditRole, deptIdSet, t],
+    [buildRoleActionMenu, canEditRole, deptIdSet, i18n.language, t],
 
   );
 

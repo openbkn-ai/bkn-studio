@@ -41,7 +41,7 @@ export function DataConnectDetailDrawer({
   open,
   recordId,
 }: DataConnectDetailDrawerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { message } = useAppServices();
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
   const [schedule, setSchedule] =
@@ -283,7 +283,7 @@ export function DataConnectDetailDrawer({
             <h3 className={styles.sectionTitle}>{t("dataConnect.connectorConfig")}</h3>
             {Object.entries(record.connectorConfig).length > 0 ? (
               <div className={styles.configGrid}>
-                {buildConfigEntries(record, t, selectedConnectorType).map((item) => (
+                {buildConfigEntries(record, t, selectedConnectorType, i18n.language || undefined).map((item) => (
                   <div className={styles.configItem} key={item.key}>
                     <span className={styles.configLabel}>{item.label}</span>
                     {item.description ? (
@@ -350,6 +350,7 @@ function buildConfigEntries(
   record: DataConnectRecord,
   t: TFunction,
   connectorType?: DataConnectConnectorType,
+  locale?: string,
 ) {
   const config = record.connectorConfig ?? {};
   const fieldConfig = connectorType?.fieldConfig ?? {};
@@ -363,7 +364,7 @@ function buildConfigEntries(
 
     const leftName = fieldConfig[left]?.name ?? humanizeConfigKey(left, t);
     const rightName = fieldConfig[right]?.name ?? humanizeConfigKey(right, t);
-    return leftName.localeCompare(rightName, "zh-CN");
+    return leftName.localeCompare(rightName, locale);
   });
 
   return keys.map((key) => {

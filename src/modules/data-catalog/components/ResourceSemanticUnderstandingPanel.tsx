@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { formatDateTime } from "@/framework/i18n/format";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -25,7 +26,7 @@ import styles from "./ResourceSemanticUnderstandingPanel.module.css";
 
 function formatTime(value: number) {
   if (!value) return "-";
-  return new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "medium", hour12: false }).format(value < 100_000_000_000 ? value * 1000 : value);
+  return formatDateTime(value < 100_000_000_000 ? value * 1000 : value);
 }
 
 export function ResourceSemanticUnderstandingPanel({ active, resource }: { active: boolean; resource: CatalogResource }) {
