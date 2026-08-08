@@ -7,59 +7,65 @@
 
 import { http } from "@/framework/request/http";
 
-export type SemanticUnderstandingTask = {
+export type SemanticUnderstandingTaskSummary = {
   agentId: string;
   agentTaskId?: string;
   applied: boolean;
   appliedTime?: number;
   applyMode: "dry_run" | "fill_empty" | "force";
-  applyDetailJson?: string;
   catalogId: string;
   catalogName?: string;
   confidence: number;
-  confidenceDetailJson?: string;
   confidenceThreshold: number;
   createTime: number;
   creator?: { id: string; name?: string; type?: string };
-  failureDetail?: string;
   id: string;
-  input?: string;
-  inputHash?: string;
   resourceId?: string;
   resourceName?: string;
-  resultJson?: string;
   scope: "catalog" | "resource";
   status: "pending" | "running" | "succeeded" | "failed";
   updateTime?: number;
 };
 
-export type BackendSemanticUnderstandingTask = {
+export type SemanticUnderstandingTask = SemanticUnderstandingTaskSummary & {
+  applyDetailJson?: string;
+  confidenceDetailJson?: string;
+  failureDetail?: string;
+  input?: string;
+  inputHash?: string;
+  resultJson?: string;
+};
+
+export type BackendSemanticUnderstandingTaskSummary = {
   agent_id?: string;
   agent_task_id?: string;
   applied?: boolean;
   applied_time?: number;
-  apply_detail_json?: string;
-  apply_mode?: SemanticUnderstandingTask["applyMode"];
+  apply_mode?: SemanticUnderstandingTaskSummary["applyMode"];
   catalog_id?: string;
   catalog_name?: string;
   confidence?: number;
-  confidence_detail_json?: string;
   confidence_threshold?: number;
   create_time?: number;
   creator?: { id?: string; name?: string; type?: string };
-  failure_detail?: string;
   id: string;
-  input?: string;
-  input_hash?: string;
   resource_id?: string;
   resource_name?: string;
-  result_json?: string;
-  scope?: SemanticUnderstandingTask["scope"];
-  status: SemanticUnderstandingTask["status"];
+  scope?: SemanticUnderstandingTaskSummary["scope"];
+  status: SemanticUnderstandingTaskSummary["status"];
   update_time?: number;
 };
 
-export function mapSemanticUnderstandingTask(task: BackendSemanticUnderstandingTask): SemanticUnderstandingTask {
+export type BackendSemanticUnderstandingTask = BackendSemanticUnderstandingTaskSummary & {
+  apply_detail_json?: string;
+  confidence_detail_json?: string;
+  failure_detail?: string;
+  input?: string;
+  input_hash?: string;
+  result_json?: string;
+};
+
+export function mapSemanticUnderstandingTaskSummary(task: BackendSemanticUnderstandingTaskSummary): SemanticUnderstandingTaskSummary {
   return {
     id: task.id,
     scope: task.scope ?? "resource",
@@ -73,17 +79,23 @@ export function mapSemanticUnderstandingTask(task: BackendSemanticUnderstandingT
     applyMode: task.apply_mode ?? "fill_empty",
     confidenceThreshold: task.confidence_threshold ?? 0,
     confidence: task.confidence ?? 0,
+    applied: task.applied ?? false,
+    appliedTime: task.applied_time,
+    creator: task.creator?.id ? { id: task.creator.id, name: task.creator.name, type: task.creator.type } : undefined,
+    createTime: task.create_time ?? 0,
+    updateTime: task.update_time,
+  };
+}
+
+export function mapSemanticUnderstandingTask(task: BackendSemanticUnderstandingTask): SemanticUnderstandingTask {
+  return {
+    ...mapSemanticUnderstandingTaskSummary(task),
     confidenceDetailJson: task.confidence_detail_json,
     input: task.input,
     inputHash: task.input_hash,
     resultJson: task.result_json,
     applyDetailJson: task.apply_detail_json,
-    applied: task.applied ?? false,
-    appliedTime: task.applied_time,
     failureDetail: task.failure_detail,
-    creator: task.creator?.id ? { id: task.creator.id, name: task.creator.name, type: task.creator.type } : undefined,
-    createTime: task.create_time ?? 0,
-    updateTime: task.update_time,
   };
 }
 
@@ -97,10 +109,10 @@ export type CreateSemanticUnderstandingTaskPayload = {
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 let mockTasks: Array<SemanticUnderstandingTask & { resourceId: string }> = [];
 
-export async function listResourceSemanticUnderstandingTasks(resourceId: string) {
+export async function listResourceSemanticUnderstandingTasks(resourceId: string): Promise<SemanticUnderstandingTaskSummary[]> {
   if (useMock) return mockTasks.filter((task) => task.resourceId === resourceId).sort((left, right) => right.createTime - left.createTime);
-  const response = await http.get<{ entries: BackendSemanticUnderstandingTask[] }>("/vega-backend/v1/semantic-understanding-tasks", { params: { resource_id: resourceId, scope: "resource", limit: 100, offset: 0, sort: "create_time", direction: "desc" } });
-  return response.data.entries.map(mapSemanticUnderstandingTask);
+  const response = await http.get<{ entries: BackendSemanticUnderstandingTaskSummary[] }>("/vega-backend/v1/semantic-understanding-tasks", { params: { resource_id: resourceId, scope: "resource", limit: 100, offset: 0, sort: "create_time", direction: "desc" } });
+  return response.data.entries.map(mapSemanticUnderstandingTaskSummary);
 }
 
 export async function getSemanticUnderstandingTask(id: string) {

@@ -38,15 +38,15 @@ import type {
   DataConnectDiscoverTaskTriggerType,
 } from "@/modules/data-connect/types/discover";
 import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
-import { deleteSemanticUnderstandingTask, mapSemanticUnderstandingTask, type BackendSemanticUnderstandingTask, type SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import { deleteSemanticUnderstandingTask, mapSemanticUnderstandingTaskSummary, type BackendSemanticUnderstandingTaskSummary, type SemanticUnderstandingTaskSummary } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { listCatalogs } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./TaskManagementTaskPanels.module.css";
 
-type SemanticTaskStatus = SemanticUnderstandingTask["status"];
-type SemanticTask = SemanticUnderstandingTask;
+type SemanticTaskStatus = SemanticUnderstandingTaskSummary["status"];
+type SemanticTask = SemanticUnderstandingTaskSummary;
 type SemanticTaskFilters = {
   scope?: SemanticTask["scope"];
   catalogId?: string;
@@ -55,7 +55,7 @@ type SemanticTaskFilters = {
   applyMode?: string;
   applied?: boolean;
   direction?: "asc" | "desc";
-  sort?: "create_time" | "default";
+  sort?: "create_time";
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -303,10 +303,6 @@ async function listSemanticTasks(page: number, pageSize: number, filters: Semant
     );
     const direction = filters.direction === "asc" ? 1 : -1;
     const sorted = filtered.sort((left, right) => {
-      if (filters.sort === "default") {
-        const rank = { running: 1, pending: 2, failed: 3, succeeded: 4 };
-        return rank[left.status] - rank[right.status] || right.createTime - left.createTime;
-      }
       const leftValue = left.createTime;
       const rightValue = right.createTime;
       return leftValue > rightValue ? direction : leftValue < rightValue ? -direction : 0;
@@ -318,12 +314,12 @@ async function listSemanticTasks(page: number, pageSize: number, filters: Semant
     });
   }
 
-  const response = await http.get<{ entries: BackendSemanticUnderstandingTask[]; total_count: number }>("/vega-backend/v1/semantic-understanding-tasks", {
+  const response = await http.get<{ entries: BackendSemanticUnderstandingTaskSummary[]; total_count: number }>("/vega-backend/v1/semantic-understanding-tasks", {
     params: {
       direction: filters.direction ?? "desc",
       limit: pageSize,
       offset: (page - 1) * pageSize,
-      sort: filters.sort ?? "default",
+      sort: filters.sort ?? "create_time",
       scope: filters.scope,
       catalog_id: filters.catalogId,
       resource_id: filters.resourceId,
@@ -332,7 +328,7 @@ async function listSemanticTasks(page: number, pageSize: number, filters: Semant
       applied: filters.applied,
     },
   });
-  return { items: response.data.entries.map(mapSemanticUnderstandingTask), total: response.data.total_count };
+  return { items: response.data.entries.map(mapSemanticUnderstandingTaskSummary), total: response.data.total_count };
 }
 
 async function deleteSemanticTask(id: string) {
@@ -361,7 +357,7 @@ export function SemanticUnderstandingTaskListPanel() {
   const [status, setStatus] = useState<SemanticTaskStatus>();
   const [applyMode, setApplyMode] = useState<string>();
   const [applied, setApplied] = useState<boolean>();
-  const [sort, setSort] = useState<NonNullable<SemanticTaskFilters["sort"]>>("default");
+  const [sort, setSort] = useState<NonNullable<SemanticTaskFilters["sort"]>>("create_time");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -406,7 +402,7 @@ export function SemanticUnderstandingTaskListPanel() {
   const handleTableChange: TableProps<SemanticTask>["onChange"] = (_pagination, _filters, sorter, extra) => {
     if (extra.action !== "sort") return;
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
-    setSort(single?.columnKey as NonNullable<SemanticTaskFilters["sort"]> || "default");
+    setSort(single?.columnKey as NonNullable<SemanticTaskFilters["sort"]> || "create_time");
     setDirection(single?.order === "ascend" ? "asc" : "desc");
     setPage(1);
   };
