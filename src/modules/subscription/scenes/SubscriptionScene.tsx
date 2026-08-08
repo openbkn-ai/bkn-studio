@@ -12,11 +12,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { atLeast, type Edition } from "@/framework/entitlement/edition";
-import { capabilityState } from "@/framework/entitlement/capability-state";
-import { isCommunityBuild, type CapabilityState } from "@/framework/entitlement/types";
 import {
   useEntitlement,
-  useEntitlementContext,
 } from "@/framework/entitlement/use-entitlement";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
@@ -54,18 +51,10 @@ const SUBSCRIPTION_DETAIL_URL =
  */
 const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
 
-const CLUSTER_TAG_COLOR: Record<CapabilityState, string | undefined> = {
-  available: "success",
-  "not-installed": undefined,
-  "not-licensed": "warning",
-  unknown: undefined,
-};
-
 export function SubscriptionScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const entitlement = useEntitlement();
-  const { snapshot } = useEntitlementContext();
   const runtimeConfig = useRuntimeConfig();
 
   const canManageLicense = hasPermissions({
@@ -74,19 +63,12 @@ export function SubscriptionScene() {
     requiredPermissions: systemAdminPermissions.license,
   });
 
-  /**
-   * 社区镜像里付费实现物理不存在,「你的集群」整列会是清一色的不可用——一列全灰只是噪音,
-   * 而且等于对着一台装不上这些能力的机器铺开一份它永远拿不到的清单。企业镜像才有意义:
-   * 那里「需升级」与「不可用」真的会同时出现,正是支持要的那个区分。
-   */
-  const showClusterColumn = !isCommunityBuild(entitlement);
-
   function editionName(edition: Edition) {
     return t(`common.entitlement.editions.${edition}`);
   }
 
   /**
-   * 社区能力行:三档都打 ✓,没有 key 所以「你的集群」列留空。
+   * 社区能力行:三档都打 ✓。
    *
    * 少了这些行,整张表只剩付费项,社区版那一列全是「—」,读起来像社区版什么都没有。
    */
@@ -101,21 +83,16 @@ export function SubscriptionScene() {
             <CheckOutlined className={styles.tick} />
           </td>
         ))}
-        {showClusterColumn ? (
-          <td className={styles.tier}>
-            <span className={styles.no}>—</span>
-          </td>
-        ) : null}
       </tr>
     );
   }
 
+  /*
+    这张表只答「哪一档卖什么」,不报当前集群的实况。端点只覆盖已登记的那几个能力,整列
+    大半是「—」,读的人分不清是「这一档没有」还是「答不了」。装没装该在功能入口本身说
+    ——那里有徽标、蒙版和升级引导,离客户要做的动作最近。
+  */
   function capabilityRow(entry: CapabilityCatalogEntry) {
-    // 只有 bkn-safe 自己实现的能力才有实况可报:capabilities/extensions 是它自己进程的
-    // 装配表,别的服务的能力在这个端点里永远缺席(ee-design.md §6「A 答不了 B」)。
-    const clusterStatus =
-      entry.reportedByEndpoint ? capabilityState(entry.key, snapshot) : null;
-
     return (
       <tr key={entry.key}>
         <td>
@@ -145,27 +122,6 @@ export function SubscriptionScene() {
             )}
           </td>
         ))}
-        {showClusterColumn ? (
-          <td className={styles.tier}>
-            {clusterStatus ? (
-              <Tag color={CLUSTER_TAG_COLOR[clusterStatus]}>
-                {t(
-                  `subscription.cluster.${
-                    clusterStatus === "not-licensed"
-                      ? "notLicensed"
-                      : clusterStatus === "not-installed"
-                        ? "notInstalled"
-                        : clusterStatus
-                  }`,
-                )}
-              </Tag>
-            ) : (
-              <span className={styles.no} title={t("subscription.cluster.otherService")}>
-                —
-              </span>
-            )}
-          </td>
-        ) : null}
       </tr>
     );
   }
@@ -333,11 +289,6 @@ export function SubscriptionScene() {
                     {editionName(tier)}
                   </th>
                 ))}
-                {showClusterColumn ? (
-                  <th className={styles.tier} title={t("subscription.cluster.hint")}>
-                    {t("subscription.cluster.title")}
-                  </th>
-                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -352,7 +303,7 @@ export function SubscriptionScene() {
                 return (
                   <Fragment key={category}>
                     <tr className={styles.groupRow}>
-                      <td colSpan={TIER_COLUMNS.length + (showClusterColumn ? 2 : 1)}>
+                      <td colSpan={TIER_COLUMNS.length + 1}>
                         {t(`subscription.categories.${category}`)}
                       </td>
                     </tr>
@@ -365,12 +316,6 @@ export function SubscriptionScene() {
           </table>
         </div>
         <p className={styles.note}>{t("subscription.contact")}</p>
-        {showClusterColumn ? (
-          <>
-            <p className={styles.note}>{t("subscription.cluster.hint")}</p>
-            <p className={styles.note}>{t("subscription.cluster.otherService")}</p>
-          </>
-        ) : null}
       </div>
 
     </section>
