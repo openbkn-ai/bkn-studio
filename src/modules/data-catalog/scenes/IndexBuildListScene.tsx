@@ -112,7 +112,7 @@ export function IndexBuildListScene() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [orderBy, setOrderBy] = useState<BuildTaskOrderBy>("default");
+  const [orderBy, setOrderBy] = useState<BuildTaskOrderBy>("created_at");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [total, setTotal] = useState(0);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
@@ -326,7 +326,7 @@ export function IndexBuildListScene() {
     };
   }, [resourceColumnWidth, taskColumnWidth]);
 
-  // 列头排序:有方向 → order_by=列key + order;清除 → 回 default(不显箭头)。
+  // 列头排序:有方向 → order_by=列key + order;清除 → 回创建时间倒序。
   const handleTableChange: TableProps<BuildTask>["onChange"] = (
     _pagination,
     _filters,
@@ -338,7 +338,7 @@ export function IndexBuildListScene() {
     }
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
     if (!single || !single.order || !single.columnKey) {
-      setOrderBy("default");
+      setOrderBy("created_at");
       setOrder("desc");
     } else {
       setOrderBy(single.columnKey as BuildTaskOrderBy);
