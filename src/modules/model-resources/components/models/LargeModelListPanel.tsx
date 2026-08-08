@@ -332,7 +332,8 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
       title: t("modelResources.models.columns.operation"),
       dataIndex: "operation",
       fixed: "left",
-      width: 72,
+      align: "center",
+      width: 96,
       render: (_value, record) => (
         <Dropdown
           menu={{
@@ -359,6 +360,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
         >
           <AppButton
             aria-label={t("modelResources.models.columns.operation")}
+            className={styles.actionMore}
             icon={<EllipsisOutlined />}
             type="text"
             onClick={(event) => event.stopPropagation()}
@@ -399,13 +401,13 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     {
       title: t("modelResources.models.columns.maximumContext"),
       dataIndex: "maxModelLen",
-      width: 110,
+      width: 150,
       render: (value?: number) => (value ? `${value} K` : "--"),
     },
     {
       title: t("modelResources.models.columns.parameterQuantity"),
       dataIndex: "modelParameters",
-      width: 100,
+      width: 150,
       render: (value?: number) => (value ? `${value} B` : "--"),
     },
     {

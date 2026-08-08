@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ReloadOutlined } from "@ant-design/icons";
-import { Alert, Checkbox, DatePicker, Select, Tag, Tooltip } from "antd";
+import { EllipsisOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Alert, Checkbox, DatePicker, Dropdown, Select, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -387,11 +387,26 @@ export function AuditLogScene() {
         align: "center",
         fixed: "right",
         key: "detail",
-        width: 80,
+        width: 84,
         render: (_, log) => (
-          <AppButton onClick={() => setDetailLog(log)} type="link">
-            {t("systemAdmin.audit.viewDetail")}
-          </AppButton>
+          <Dropdown
+            menu={{
+              items: [{ key: "detail", label: t("systemAdmin.audit.viewDetail") }],
+              onClick: ({ domEvent }) => {
+                domEvent.stopPropagation();
+                setDetailLog(log);
+              },
+            }}
+            trigger={["click"]}
+          >
+            <AppButton
+              aria-label={t("systemAdmin.audit.columns.detail")}
+              className={styles.actionMore}
+              icon={<EllipsisOutlined />}
+              onClick={(event) => event.stopPropagation()}
+              type="text"
+            />
+          </Dropdown>
         ),
       },
     ],

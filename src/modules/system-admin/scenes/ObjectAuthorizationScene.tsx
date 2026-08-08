@@ -11,13 +11,15 @@ import {
   BulbOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
+  EllipsisOutlined,
   FunctionOutlined,
   KeyOutlined,
   PlusOutlined,
   ReloadOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
-import { Alert, Empty, Input, Segmented, Select, Tag, Tooltip } from "antd";
+import { Alert, Dropdown, Empty, Input, Segmented, Select, Tag, Tooltip } from "antd";
+import type { MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,6 +29,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -80,7 +83,11 @@ const grantKey = (grant: ObjectGrant) =>
 export function ObjectAuthorizationScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
+  const canRevokeGrant = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: authzPoints.revoke,
+  });
   const { pageState, setPagination } = usePageState();
 
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
@@ -372,6 +379,40 @@ export function ObjectAuthorizationScene() {
     [message, modal, resolveGrantee, t],
   );
 
+  const buildGrantActionMenu = useCallback(
+    (grant: ObjectGrant): MenuProps => ({
+      items: [
+        {
+          key: "manage",
+          label: t("systemAdmin.objectGrants.manage"),
+        },
+        canRevokeGrant
+          ? {
+              danger: true,
+              key: "revoke",
+              label: t("systemAdmin.objectGrants.revoke"),
+            }
+          : null,
+      ].filter(Boolean),
+      onClick: ({ key, domEvent }) => {
+        domEvent.stopPropagation();
+        if (key === "manage") {
+          openDrawer({
+            id: grant.objId,
+            name: grant.objName,
+            sub: grant.objSub,
+            type: grant.objType,
+          });
+          return;
+        }
+        if (key === "revoke") {
+          confirmRevoke(grant);
+        }
+      },
+    }),
+    [canRevokeGrant, confirmRevoke, openDrawer, t],
+  );
+
   const columns: ColumnsType<ObjectGrant> = useMemo(() => [
     {
       title: t("systemAdmin.objectGrants.columns.object"),
@@ -407,37 +448,21 @@ export function ObjectAuthorizationScene() {
     {
       title: t("systemAdmin.objectGrants.columns.actions"),
       key: "actions",
-      width: 160,
+      align: "center",
+      width: 84,
       render: (_, grant) => (
-        <div className={[styles.actionGroup, styles.actionGroupInline].join(" ")}>
+        <Dropdown menu={buildGrantActionMenu(grant)} trigger={["click"]}>
           <AppButton
-            className={styles.actionLink}
-            onClick={() =>
-              openDrawer({
-                id: grant.objId,
-                name: grant.objName,
-                sub: grant.objSub,
-                type: grant.objType,
-              })
-            }
-            type="link"
-          >
-            {t("systemAdmin.objectGrants.manage")}
-          </AppButton>
-          <PermissionGate permissions={authzPoints.revoke}>
-            <AppButton
-              className={[styles.actionLink, styles.actionDanger].join(" ")}
-              danger
-              onClick={() => confirmRevoke(grant)}
-              type="link"
-            >
-              {t("systemAdmin.objectGrants.revoke")}
-            </AppButton>
-          </PermissionGate>
-        </div>
+            aria-label={t("systemAdmin.objectGrants.columns.actions")}
+            className={styles.actionMore}
+            icon={<EllipsisOutlined />}
+            onClick={(event) => event.stopPropagation()}
+            type="text"
+          />
+        </Dropdown>
       ),
     },
-  ], [confirmRevoke, granteeCell, openDrawer, opChips, t]);
+  ], [buildGrantActionMenu, granteeCell, opChips, t]);
 
   const renderBody = () => {
     const isEmpty = view === "all" ? filteredGrants.length === 0 : groups.length === 0;

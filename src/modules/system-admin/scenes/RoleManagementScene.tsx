@@ -12,9 +12,10 @@
 
 
 
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { EllipsisOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 
-import { Alert, Input, Space, Tooltip } from "antd";
+import { Alert, Dropdown, Input, Tooltip } from "antd";
+import type { MenuProps } from "antd";
 
 import type { ColumnsType } from "antd/es/table";
 
@@ -29,6 +30,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 
@@ -135,7 +137,20 @@ export function RoleManagementScene() {
 
   const { t } = useTranslation();
 
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
+  const rolePermissions = runtimeConfig.currentUser.permissions;
+  const canManageRoleMembers = hasPermissions({
+    currentPermissions: rolePermissions,
+    requiredPermissions: "admin-role:members",
+  });
+  const canEditRole = hasPermissions({
+    currentPermissions: rolePermissions,
+    requiredPermissions: "admin-role:edit",
+  });
+  const canDeleteRole = hasPermissions({
+    currentPermissions: rolePermissions,
+    requiredPermissions: "admin-role:delete",
+  });
 
   const { pageState, setPagination } = usePageState();
 
@@ -309,6 +324,79 @@ export function RoleManagementScene() {
 
   };
 
+  const handleDeleteRole = useCallback(
+    (role: AdminRole) => {
+      void modal.confirm({
+        title: t("systemAdmin.roles.deleteTitle"),
+        content: role.accessorIds.length
+          ? t("systemAdmin.roles.deleteConfirmWithMembers", {
+              name: role.name,
+              count: role.accessorIds.length,
+            })
+          : t("systemAdmin.roles.deleteConfirm", { name: role.name }),
+        okText: t("common.delete"),
+        cancelText: t("common.cancel"),
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          try {
+            await deleteRole(role.id);
+            message.success(t("systemAdmin.roles.toast.deleted"));
+            await loadRoles();
+          } catch (error) {
+            void message.error(extractRequestErrorMessage(error));
+          }
+        },
+      });
+    },
+    [loadRoles, message, modal, t],
+  );
+
+  const buildRoleActionMenu = useCallback(
+    (role: AdminRole): MenuProps => {
+      const items: NonNullable<MenuProps["items"]> = [];
+
+      if (canManageRoleMembers) {
+        items.push({
+          key: "members",
+          label: t("systemAdmin.roles.actions.members"),
+        });
+      }
+      if (canEditRole && !role.builtin) {
+        items.push({
+          disabled: isSuperAdminRole(role),
+          key: "edit",
+          label: t("systemAdmin.roles.actions.edit"),
+        });
+      }
+      if (canDeleteRole && !role.builtin) {
+        items.push({
+          danger: true,
+          key: "delete",
+          label: t("systemAdmin.roles.actions.delete"),
+        });
+      }
+
+      return {
+        items,
+        onClick: ({ key, domEvent }) => {
+          domEvent.stopPropagation();
+          if (key === "members") {
+            setMembersRole(role);
+            return;
+          }
+          if (key === "edit") {
+            setRoleDrawer({ open: true, role });
+            return;
+          }
+          if (key === "delete") {
+            handleDeleteRole(role);
+          }
+        },
+      };
+    },
+    [canDeleteRole, canEditRole, canManageRoleMembers, handleDeleteRole, t],
+  );
+
 
 
   const columns: ColumnsType<AdminRole> = useMemo(
@@ -320,6 +408,7 @@ export function RoleManagementScene() {
         title: t("systemAdmin.roles.columns.role"),
 
         dataIndex: "name",
+        width: 260,
 
         render: (_, role) => (
 
@@ -374,6 +463,7 @@ export function RoleManagementScene() {
         title: t("systemAdmin.roles.columns.permissions"),
 
         key: "permissions",
+        width: 520,
 
         render: (_, role) => {
 
@@ -403,7 +493,7 @@ export function RoleManagementScene() {
 
             .sort(([a], [b]) => a.localeCompare(b))
 
-            .slice(0, 3)
+            .slice(0, 2)
 
             .map(([type, count]) => {
 
@@ -462,9 +552,9 @@ export function RoleManagementScene() {
 
               {tags}
 
-              {typeCounts.size > 3 ? (
+              {typeCounts.size > 2 ? (
 
-                <span className={styles.permissionMore}>+{typeCounts.size - 3}</span>
+                <span className={styles.permissionMore}>+{typeCounts.size - 2}</span>
 
               ) : null}
 
@@ -502,7 +592,7 @@ export function RoleManagementScene() {
 
         key: "members",
 
-        width: 140,
+        width: 170,
 
         render: (_, role) => {
 
@@ -530,7 +620,7 @@ export function RoleManagementScene() {
 
         dataIndex: "updatedAt",
 
-        width: 132,
+        width: 160,
 
         render: (value?: number) => (
 
@@ -545,132 +635,41 @@ export function RoleManagementScene() {
         title: t("systemAdmin.roles.columns.actions"),
 
         key: "actions",
+        align: "center",
+        width: 84,
 
-        render: (_, role) => (
+        render: (_, role) => {
+          const menu = buildRoleActionMenu(role);
+          const hasActions = Boolean(menu.items?.length);
 
-          <Space className={[styles.actionGroup, styles.actionGroupInline].join(" ")}>
+          if (!hasActions) {
+            return <span className={styles.mutedText}>—</span>;
+          }
 
-            <PermissionGate permissions="admin-role:members">
+          const trigger = (
+            <Dropdown menu={menu} trigger={["click"]}>
+              <AppButton
+                aria-label={t("systemAdmin.roles.columns.actions")}
+                className={styles.actionMore}
+                icon={<EllipsisOutlined />}
+                onClick={(event) => event.stopPropagation()}
+                type="text"
+              />
+            </Dropdown>
+          );
 
-              <AppButton className={styles.actionLink} onClick={() => setMembersRole(role)} type="link">
-
-                {t("systemAdmin.roles.actions.members")}
-
-              </AppButton>
-
-            </PermissionGate>
-
-            <PermissionGate permissions="admin-role:edit">
-
-              {role.builtin ? null : isSuperAdminRole(role) ? (
-
-                <Tooltip title={t("systemAdmin.roles.superAdminLocked")}>
-
-                  <AppButton className={styles.actionLink} disabled type="link">
-
-                    {t("systemAdmin.roles.actions.edit")}
-
-                  </AppButton>
-
-                </Tooltip>
-
-              ) : (
-
-                <AppButton
-
-                  className={styles.actionLink}
-
-                  onClick={() => setRoleDrawer({ open: true, role })}
-
-                  type="link"
-
-                >
-
-                  {t("systemAdmin.roles.actions.edit")}
-
-                </AppButton>
-
-              )}
-
-            </PermissionGate>
-
-            {!role.builtin ? (
-
-              <PermissionGate permissions="admin-role:delete">
-
-                <AppButton
-
-                  className={[styles.actionLink, styles.actionDanger].join(" ")}
-
-                  danger
-
-                  onClick={() => {
-
-                    void modal.confirm({
-
-                      title: t("systemAdmin.roles.deleteTitle"),
-
-                      content: role.accessorIds.length
-
-                        ? t("systemAdmin.roles.deleteConfirmWithMembers", {
-
-                            name: role.name,
-
-                            count: role.accessorIds.length,
-
-                          })
-
-                        : t("systemAdmin.roles.deleteConfirm", { name: role.name }),
-
-                      okText: t("common.delete"),
-
-                      cancelText: t("common.cancel"),
-
-                      okButtonProps: { danger: true },
-
-                      onOk: async () => {
-
-                        try {
-
-                          await deleteRole(role.id);
-
-                          message.success(t("systemAdmin.roles.toast.deleted"));
-
-                          await loadRoles();
-
-                        } catch (error) {
-
-                          void message.error(extractRequestErrorMessage(error));
-
-                        }
-
-                      },
-
-                    });
-
-                  }}
-
-                  type="link"
-
-                >
-
-                  {t("systemAdmin.roles.actions.delete")}
-
-                </AppButton>
-
-              </PermissionGate>
-
-            ) : null}
-
-          </Space>
-
-        ),
+          return isSuperAdminRole(role) && canEditRole ? (
+            <Tooltip title={t("systemAdmin.roles.superAdminLocked")}>{trigger}</Tooltip>
+          ) : (
+            trigger
+          );
+        },
 
       },
 
     ],
 
-    [deptIdSet, loadRoles, message, modal, t],
+    [buildRoleActionMenu, canEditRole, deptIdSet, t],
 
   );
 
@@ -791,6 +790,7 @@ export function RoleManagementScene() {
               pagination={false}
 
               rowKey="id"
+              tableLayout="fixed"
 
             />
 

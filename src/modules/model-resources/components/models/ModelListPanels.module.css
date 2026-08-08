@@ -120,6 +120,15 @@
   white-space: nowrap;
 }
 
+.panel :global(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
+.actionMore {
+  min-width: 24px;
+  padding-inline: 0 !important;
+}
+
 .modelNameText {
   min-width: 0;
   overflow: hidden;

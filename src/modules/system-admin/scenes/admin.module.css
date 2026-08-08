@@ -791,6 +791,14 @@
   color: var(--admin-color-text);
   font-size: var(--admin-font-size-body);
   font-weight: var(--admin-font-weight-strong);
+  white-space: nowrap;
+}
+
+.tableSurface :global(.ant-table-cell-fix-right-first::after),
+.tableSurface :global(.ant-table-cell-fix-right-last::after),
+.tableSurface :global(.ant-table-cell-fix-left-first::after),
+.tableSurface :global(.ant-table-cell-fix-left-last::after) {
+  box-shadow: none;
 }
 
 .tableSurface :global(.ant-table-tbody > tr > td) {
@@ -866,7 +874,7 @@
 .permissionPill {
   display: inline-flex;
   align-items: center;
-  max-width: 180px;
+  max-width: 150px;
   height: 24px;
   overflow: hidden;
   border: 1px solid var(--admin-color-border);
@@ -1035,6 +1043,11 @@
 .actionDanger {
   composes: actionDanger from "../../../framework/ui/common/BusinessPageTemplate.module.css";
   color: var(--admin-color-danger);
+}
+
+.actionMore {
+  min-width: 24px;
+  padding-inline: 0 !important;
 }
 
 .treeIndent {

@@ -5,14 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DeleteOutlined, FilterOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
-import { Alert, Popover, Select, Space, Tag } from "antd";
+import { DeleteOutlined, EllipsisOutlined, FilterOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
+import { Alert, Dropdown, Popover, Select, Space, Tag, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
@@ -141,7 +142,7 @@ function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTask }) {
 
 export function DiscoverTaskListPanel() {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<DataConnectDiscoverTask[]>([]);
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
@@ -160,6 +161,10 @@ export function DiscoverTaskListPanel() {
   const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const canManageCatalogTasks = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "catalog:task_manage",
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -272,8 +277,42 @@ export function DiscoverTaskListPanel() {
     { dataIndex: "finishTime", title: t("dataCatalog.task.finishedAt"), width: 180, render: (value: string) => value || "-" },
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time") },
     {
-      key: "actions", title: t("common.actions"), width: 160, fixed: "right",
-      render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTaskId(record.id)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={record.status === "pending" || record.status === "running"} type="link" onClick={() => void modal.confirm({ title: t("dataConnect.discoverTaskDeleteConfirmTitle"), content: t("dataConnect.discoverTaskDeleteConfirmDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteDataConnectDiscoverTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space>,
+      align: "center",
+      fixed: "right",
+      key: "actions",
+      title: t("common.actions"),
+      width: 84,
+      render: (_, record) => {
+        const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
+        if (canManageCatalogTasks) {
+          menuItems.push({
+            danger: true,
+            disabled: record.status === "pending" || record.status === "running",
+            key: "delete",
+            label: t("common.delete"),
+          });
+        }
+        return (
+          <Dropdown
+            menu={{
+              items: menuItems,
+              onClick: ({ key, domEvent }) => {
+                domEvent.stopPropagation();
+                if (key === "detail") {
+                  setDetailTaskId(record.id);
+                  return;
+                }
+                if (key === "delete") {
+                  void modal.confirm({ title: t("dataConnect.discoverTaskDeleteConfirmTitle"), content: t("dataConnect.discoverTaskDeleteConfirmDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteDataConnectDiscoverTask(record.id); message.success(t("common.success")); await load(); } });
+                }
+              },
+            }}
+            trigger={["click"]}
+          >
+            <AppButton aria-label={t("dataConnect.moreActions")} className={styles.actionMore} icon={<EllipsisOutlined />} type="link" />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -347,7 +386,7 @@ async function deleteSemanticTask(id: string) {
 
 export function SemanticUnderstandingTaskListPanel() {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<SemanticTask[]>([]);
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
@@ -366,6 +405,10 @@ export function SemanticUnderstandingTaskListPanel() {
   const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const canManageCatalogTasks = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "catalog:task_manage",
+  });
   const load = useCallback(async () => { setLoading(true); setError(null); try { const taskResult = await listSemanticTasks(page, pageSize, { scope, catalogId, resourceId, status, applyMode, applied, sort, direction }); setTasks(taskResult.items); setTotal(taskResult.total); } catch (loadError) { setError(extractRequestErrorMessage(loadError)); } finally { setLoading(false); } }, [applied, applyMode, catalogId, direction, page, pageSize, resourceId, scope, sort, status]);
   useEffect(() => void load(), [load]);
   useEffect(() => {
@@ -476,7 +519,44 @@ export function SemanticUnderstandingTaskListPanel() {
       ),
     },
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
-    { key: "actions", title: t("common.actions"), width: 160, fixed: "right", render: (_, record) => <Space className={styles.actionGroup} size={4}><AppButton type="link" onClick={() => setDetailTaskId(record.id)}>{t("common.detail")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={record.status === "pending" || record.status === "running"} type="link" onClick={() => void modal.confirm({ title: t("dataCatalog.taskManagement.semantic.deleteTitle"), content: t("dataCatalog.taskManagement.semantic.deleteDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteSemanticTask(record.id); message.success(t("common.success")); await load(); } })}>{t("common.delete")}</AppButton></PermissionGate></Space> },
+    {
+      align: "center",
+      fixed: "right",
+      key: "actions",
+      title: t("common.actions"),
+      width: 84,
+      render: (_, record) => {
+        const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
+        if (canManageCatalogTasks) {
+          menuItems.push({
+            danger: true,
+            disabled: record.status === "pending" || record.status === "running",
+            key: "delete",
+            label: t("common.delete"),
+          });
+        }
+        return (
+          <Dropdown
+            menu={{
+              items: menuItems,
+              onClick: ({ key, domEvent }) => {
+                domEvent.stopPropagation();
+                if (key === "detail") {
+                  setDetailTaskId(record.id);
+                  return;
+                }
+                if (key === "delete") {
+                  void modal.confirm({ title: t("dataCatalog.taskManagement.semantic.deleteTitle"), content: t("dataCatalog.taskManagement.semantic.deleteDescription", { id: record.id }), okButtonProps: { danger: true }, onOk: async () => { await deleteSemanticTask(record.id); message.success(t("common.success")); await load(); } });
+                }
+              },
+            }}
+            trigger={["click"]}
+          >
+            <AppButton aria-label={t("dataConnect.moreActions")} className={styles.actionMore} icon={<EllipsisOutlined />} type="link" />
+          </Dropdown>
+        );
+      },
+    },
   ];
   const advancedFilterCount = Number(scope !== undefined) + Number(applyMode !== undefined) + Number(applied !== undefined);
   const moreFiltersLabel = advancedFilterCount > 0
@@ -493,7 +573,7 @@ export function SemanticUnderstandingTaskListPanel() {
 
 function TaskTable<T extends { id: string }>({ error, loading, data, columns, emptyTitle, onRetry, onTableChange, selectedKeys, onSelectionChange }: { error: string | null; loading: boolean; data: T[]; columns: ColumnsType<T>; emptyTitle: string; onRetry: () => void | Promise<void>; onTableChange?: TableProps<T>["onChange"]; selectedKeys?: string[]; onSelectionChange?: (keys: string[]) => void }) {
   const { t } = useTranslation();
-  return <TableSurface>{error ? <Alert action={<AppButton type="link" onClick={() => void onRetry()}>{t("common.retry")}</AppButton>} message={error} showIcon type="error" /> : !loading && data.length === 0 ? <EmptyStatePanel description={emptyTitle} icon={<UnorderedListOutlined />} title={emptyTitle} /> : <AppTable columns={columns} dataSource={data} loading={loading} onChange={onTableChange} pagination={false} rowKey="id" rowSelection={selectedKeys && onSelectionChange ? { selectedRowKeys: selectedKeys, onChange: (keys) => onSelectionChange(keys.map(String)) } : undefined} tableLayout="fixed" />}</TableSurface>;
+  return <TableSurface className={styles.tableSurface}>{error ? <Alert action={<AppButton type="link" onClick={() => void onRetry()}>{t("common.retry")}</AppButton>} message={error} showIcon type="error" /> : !loading && data.length === 0 ? <EmptyStatePanel description={emptyTitle} icon={<UnorderedListOutlined />} title={emptyTitle} /> : <AppTable columns={columns} dataSource={data} loading={loading} onChange={onTableChange} pagination={false} rowKey="id" rowSelection={selectedKeys && onSelectionChange ? { selectedRowKeys: selectedKeys, onChange: (keys) => onSelectionChange(keys.map(String)) } : undefined} tableLayout="fixed" />}</TableSurface>;
 }
 
 function Pagination({ page, pageSize, total, onChange }: { page: number; pageSize: number; total: number; onChange: (page: number, pageSize: number) => void }) {
