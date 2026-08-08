@@ -11,11 +11,8 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { ToolDebugPanel } from "@/modules/execution-factory/components/ToolDebugPanel";
 import { debugTool } from "@/modules/execution-factory/services/tool.service";
 
-vi.mock("react-i18next", () => ({
-  initReactI18next: {
-    type: "3rdParty",
-    init: vi.fn(),
-  },
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
     t: (key: string) => key,
   }),

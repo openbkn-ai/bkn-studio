@@ -17,11 +17,8 @@ const needsActionTypeActionSourceDisplayResolution = vi.hoisted(() => vi.fn());
 const resolveActionTypeActionSourceDisplayWithTimeout = vi.hoisted(() => vi.fn());
 const resolveActionTypeToolInputSchema = vi.hoisted(() => vi.fn());
 
-vi.mock("react-i18next", () => ({
-  initReactI18next: {
-    init: vi.fn(),
-    type: "3rdParty",
-  },
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
     t: (key: string) => key,
   }),

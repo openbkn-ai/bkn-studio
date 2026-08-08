@@ -8,6 +8,7 @@
 import { ApiOutlined, CaretRightOutlined, CopyOutlined, DatabaseOutlined, DownOutlined, FileTextOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { Input, Modal, Select, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
 import { buildApiKeyPagePath } from "@/modules/api-keys/utils/api-key-handoff";
@@ -141,12 +142,13 @@ function CodeBlock({
   json?: boolean;
   onCopy: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className={styles.codeBlk}>
       <div className={styles.codeBlkHead}>
         <span>{title}</span>
         <button type="button" className={styles.mini} onClick={onCopy}>
-          <CopyOutlined /> Copy
+          <CopyOutlined /> {t("knowledgeNetwork.contextLoaderPanel.common.copy")}
         </button>
       </div>
       <pre className={styles.codeBlkPre}>{json ? <JsonHighlight text={code} /> : code}</pre>
@@ -231,6 +233,7 @@ export function ContextLoaderIntegrationPanel({
   appKeyValue,
   showMcpConnect = false,
 }: ContextLoaderIntegrationPanelProps) {
+  const { t } = useTranslation();
   const location = useLocation();
   const verb = mode === "mcp" ? "MCP" : "POST";
   const [schemaOpen, setSchemaOpen] = useState(false);
@@ -244,7 +247,7 @@ export function ContextLoaderIntegrationPanel({
   const [mcpConfigKeyError, setMcpConfigKeyError] = useState("");
   const [mcpConfigKeyModalOpen, setMcpConfigKeyModalOpen] = useState(false);
   const filterText = filter.trim().toLowerCase();
-  const appKeyPlaceholder = "bak_<long-lived API Key issued from Profile>";
+  const appKeyPlaceholder = t("knowledgeNetwork.contextLoaderPanel.appKey.placeholder");
   const configAppKey = mcpConfigKey || appKeyPlaceholder;
   const mcpUrlWithSlash = withMcpTrailingSlash(mcpUrl);
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
@@ -253,8 +256,17 @@ export function ContextLoaderIntegrationPanel({
   // Display names and groups come from tools/list metadata first, with local fallback for old servers.
   const toolMetaByName = useMemo(() => new Map((toolDefs ?? []).map((tool) => [tool.name, tool])), [toolDefs]);
   const displayOf = useCallback(
-    (target: ContextLoaderOp) => toolDisplayOf(target.id, toolMetaByName.get(target.id)),
-    [toolMetaByName],
+    (target: ContextLoaderOp) => {
+      const display = toolDisplayOf(target.id, toolMetaByName.get(target.id));
+      const groupPrefix = `knowledgeNetwork.contextLoaderPanel.toolGroups.${display.groupKey}`;
+      return {
+        ...display,
+        groupLabel: t(`${groupPrefix}.label`, { defaultValue: display.groupLabel }),
+        groupDescription: display.groupDescription === null ? null : t(`${groupPrefix}.description`, { defaultValue: display.groupDescription }),
+        name: t(`knowledgeNetwork.contextLoaderPanel.toolNames.${target.id}`, { defaultValue: display.name }),
+      };
+    },
+    [t, toolMetaByName],
   );
   const treeGroups = useMemo(() => {
     const groups = buildMcpToolGroups(activeOps, displayOf);
@@ -279,13 +291,13 @@ export function ContextLoaderIntegrationPanel({
   const dataAssistantOpen = dataAssistantAvailable && rightTab === "data";
   const dataAssistantDescription =
     dataAssistantKind === "concept-group"
-      ? "Select a concept group and fill concept_groups to narrow semantic search."
+      ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.conceptGroup")
       : dataAssistantKind === "object-type"
-        ? "Select an object type and fill ot_id; real sample rows can generate test requests."
+        ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.objectType")
         : dataAssistantKind === "resource"
-          ? "Select a data resource and fill SQL resource placeholders; fields and samples are available."
+          ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.resource")
           : dataAssistantKind === "relation"
-            ? "Select a relation type and generate the relation path required for subgraph queries."
+            ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.relation")
             : "";
   const hasCallState = sending || response !== null || reqError !== null;
   const resultContentVisible = !isVerifyView || (hasCallState && resultOpen && mcpResultTab === "result");
@@ -326,7 +338,7 @@ export function ContextLoaderIntegrationPanel({
   const applyMcpConfigKey = () => {
     const nextKey = mcpConfigKeyDraft.trim();
     if (nextKey && !nextKey.startsWith("bak_")) {
-      setMcpConfigKeyError("Paste a long-lived API Key starting with bak_");
+      setMcpConfigKeyError(t("knowledgeNetwork.contextLoaderPanel.appKey.invalid"));
       return;
     }
 
@@ -340,30 +352,30 @@ export function ContextLoaderIntegrationPanel({
         <aside className={styles.list}>
           <div className={styles.listHead}>
             <div>
-              <div className={styles.listTitle}>MCP Services</div>
-              <div className={styles.listMeta}>0 services loaded</div>
+              <div className={styles.listTitle}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpServices")}</div>
+              <div className={styles.listMeta}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpLoaded", { count: 0 })}</div>
             </div>
             <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
               {toolsLoading ? <Spin size="small" /> : null}
-              Refresh Service List
+              {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
             </button>
           </div>
           <div className={styles.listSearch}>
-            <Input value={filter} onChange={(event) => onFilterChange(event.target.value)} placeholder="Filter MCP services" disabled />
+            <Input value={filter} onChange={(event) => onFilterChange(event.target.value)} placeholder={t("knowledgeNetwork.contextLoaderPanel.common.filterMcpServices")} disabled />
           </div>
           <div className={styles.resEmpty}>
-            <h3>No MCP Services</h3>
-            <p>{toolsError || "The MCP server returned no available tools. Check the service configuration and refresh the service list."}</p>
+            <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServices")}</h3>
+            <p>{toolsError || t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServicesDescription")}</p>
           </div>
         </aside>
         <div className={styles.mcpWork}>
           <section className={styles.req}>
             <div className={styles.resEmpty}>
-              <h3>No Debuggable MCP Services</h3>
-              <p>After the service list loads, select a tool on the left and run it.</p>
+              <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServices")}</h3>
+              <p>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServicesDescription")}</p>
               <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
                 {toolsLoading ? <Spin size="small" /> : null}
-                Refresh Service List
+                {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
               </button>
             </div>
           </section>
@@ -380,14 +392,14 @@ export function ContextLoaderIntegrationPanel({
         <section className={styles.mcpConnectPage}>
           <div className={styles.mcpConnectPanel}>
             <div className={styles.mcpConnectTitleBlock}>
-              <h2 className={styles.mcpConnectTitle}>Let Agents Call OpenBKN Capabilities</h2>
+              <h2 className={styles.mcpConnectTitle}>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.title")}</h2>
               <p className={styles.mcpConnectDesc}>
-                This generates MCP connection config. After copying it into an agent platform, the agent can access OpenBKN retrieval, query, and action capabilities through MCP tools.
+                {t("knowledgeNetwork.contextLoaderPanel.mcpConnect.description")}
               </p>
               <ol className={styles.mcpSteps}>
-                <li>Issue an API Key from Profile, then paste the long-lived bak_ key as the Bearer Key in the config.</li>
-                <li>Choose the agent platform type, copy the full config, and paste it into the corresponding MCP service config.</li>
-                <li>After saving, return to the agent chat and ask questions directly; the agent can use MCP tools for retrieval, queries, or actions.</li>
+                <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepIssueKey")}</li>
+                <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepCopyConfig")}</li>
+                <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepUseAgent")}</li>
               </ol>
             </div>
             <div className={styles.mcpConnectMain}>
@@ -396,7 +408,7 @@ export function ContextLoaderIntegrationPanel({
                   {[
                     ["claude", "Claude Code"],
                     ["cursor", "Cursor"],
-                    ["generic", "Generic mcp.json"],
+                    ["generic", t("knowledgeNetwork.contextLoaderPanel.mcpConnect.genericTab")],
                   ].map(([key, label]) => (
                     <button
                       key={key}
@@ -410,44 +422,44 @@ export function ContextLoaderIntegrationPanel({
                 </div>
                 <div className={styles.mcpConfigMeta}>
                   <Link className={styles.mcpIssueKeyBtn} to={apiKeyPagePath}>
-                    Issue API Key
+                    {t("knowledgeNetwork.contextLoaderPanel.appKey.issue")}
                   </Link>
                   <button type="button" className={styles.mcpConfigureKeyBtn} onClick={openMcpConfigKeyModal}>
-                    {mcpConfigKey ? "API Key Configured" : "Configure API Key"}
+                    {mcpConfigKey ? t("knowledgeNetwork.contextLoaderPanel.appKey.configured") : t("knowledgeNetwork.contextLoaderPanel.appKey.configure")}
                   </button>
                 </div>
               </div>
               <div className={styles.mcpConfigBody}>
                 {mcpConfigTab === "claude" ? (
                   <>
-                    <CodeBlock title="CLI One-Line Setup" code={claudeCliConfig} onCopy={() => onCopy(claudeCliConfig, "Claude Code command copied")} />
-                    <CodeBlock title="Project .mcp.json" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, ".mcp.json config copied")} />
+                    <CodeBlock title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.cliTitle")} code={claudeCliConfig} onCopy={() => onCopy(claudeCliConfig, t("knowledgeNetwork.contextLoaderPanel.mcpConnect.copiedClaude"))} />
+                    <CodeBlock title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.projectConfigTitle")} code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpConnect.copiedProject"))} />
                   </>
                 ) : null}
                 {mcpConfigTab === "cursor" ? (
-                  <CodeBlock title="~/.cursor/mcp.json or project .cursor/mcp.json" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, "Cursor config copied")} />
+                  <CodeBlock title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.cursorConfigTitle")} code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpConnect.copiedCursor"))} />
                 ) : null}
                 {mcpConfigTab === "generic" ? (
-                  <CodeBlock title="mcpServers Config" code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, "mcp.json config copied")} />
+                  <CodeBlock title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.genericConfigTitle")} code={mcpRemoteJsonConfig} json onCopy={() => onCopy(mcpRemoteJsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpConnect.copiedGeneric"))} />
                 ) : null}
               </div>
               </div>
             </div>
             <Modal
               open={mcpConfigKeyModalOpen}
-              title="Configure API Key"
-              okText="Apply Config"
-              cancelText="Cancel"
+              title={t("knowledgeNetwork.contextLoaderPanel.appKey.modalTitle")}
+              okText={t("knowledgeNetwork.contextLoaderPanel.appKey.apply")}
+              cancelText={t("common.cancel")}
               onCancel={() => setMcpConfigKeyModalOpen(false)}
               onOk={applyMcpConfigKey}
               className={styles.mcpConfigKeyModal}
             >
               <p className={styles.mcpConfigKeyModalDescription}>
-                Paste a long-lived API Key starting with bak_. The page will update the Bearer Key in the MCP config below.
+                {t("knowledgeNetwork.contextLoaderPanel.appKey.description")}
               </p>
               <Input.Password
                 value={mcpConfigKeyDraft}
-                placeholder="Paste API Key"
+                placeholder={t("knowledgeNetwork.contextLoaderPanel.appKey.inputPlaceholder")}
                 autoComplete="off"
                 spellCheck={false}
                 allowClear
@@ -458,7 +470,7 @@ export function ContextLoaderIntegrationPanel({
                 }}
               />
               {mcpConfigKeyError ? <p className={styles.mcpConfigKeyModalError}>{mcpConfigKeyError}</p> : null}
-              <p className={styles.mcpConfigKeyModalHint}>Only used to generate config on this page; it is not saved.</p>
+              <p className={styles.mcpConfigKeyModalHint}>{t("knowledgeNetwork.contextLoaderPanel.appKey.hint")}</p>
             </Modal>
           </section>
       ) : (
@@ -466,18 +478,18 @@ export function ContextLoaderIntegrationPanel({
       <aside className={styles.list}>
         <div className={styles.listHead}>
           <div>
-            <div className={styles.listTitle}>{mode === "mcp" ? "MCP Services" : "REST APIs"}</div>
-            <div className={styles.listMeta}>{mode === "mcp" ? `${activeOps.length} services loaded` : `${activeOps.length} available`}</div>
+            <div className={styles.listTitle}>{mode === "mcp" ? t("knowledgeNetwork.contextLoaderPanel.common.mcpServices") : t("knowledgeNetwork.contextLoaderPanel.common.restApis")}</div>
+            <div className={styles.listMeta}>{mode === "mcp" ? t("knowledgeNetwork.contextLoaderPanel.common.mcpLoaded", { count: activeOps.length }) : t("knowledgeNetwork.contextLoaderPanel.common.restAvailable", { count: activeOps.length })}</div>
           </div>
           {mode === "mcp" ? (
             <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
               {toolsLoading ? <Spin size="small" /> : null}
-              Refresh Service List
+              {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
             </button>
           ) : null}
         </div>
         <div className={styles.listSearch}>
-          <Input value={filter} onChange={(e) => onFilterChange(e.target.value)} placeholder={mode === "mcp" ? "Filter MCP services" : "Filter APIs"} />
+          <Input value={filter} onChange={(e) => onFilterChange(e.target.value)} placeholder={mode === "mcp" ? t("knowledgeNetwork.contextLoaderPanel.common.filterMcpServices") : t("knowledgeNetwork.contextLoaderPanel.common.filterApis")} />
         </div>
         <div className={styles.eplist}>
           {treeGroups.map(({ key, label, description, items }) => {
@@ -520,12 +532,12 @@ export function ContextLoaderIntegrationPanel({
               <div className={styles.reqActions}>
                 {mode === "mcp" ? (
                   <button type="button" className={styles.docBtn} onClick={() => setSchemaOpen(true)}>
-                    <FileTextOutlined /> API Docs
+                    <FileTextOutlined /> {t("knowledgeNetwork.contextLoaderPanel.request.doc")}
                   </button>
                 ) : null}
                 <button type="button" className={styles.runBtn} onClick={onSend} disabled={sending}>
                   {sending ? <Spin size="small" /> : <CaretRightOutlined />}
-                  {sending ? "Running..." : "Run"}
+                  {sending ? t("knowledgeNetwork.contextLoaderPanel.request.running") : t("knowledgeNetwork.contextLoaderPanel.request.run")}
                 </button>
               </div>
             ) : null}
@@ -543,10 +555,10 @@ export function ContextLoaderIntegrationPanel({
                 <div className={styles.callParamsHead}>
                   <div className={styles.callParamsTitle}>
                     <div className={styles.secHead}>
-                      {mode === "mcp" ? "Parameters" : "QUERY Parameters"} <span className={styles.cnt}>{visibleQuery.length}</span>
+                      {mode === "mcp" ? t("knowledgeNetwork.contextLoaderPanel.request.params") : t("knowledgeNetwork.contextLoaderPanel.request.queryParams")} <span className={styles.cnt}>{visibleQuery.length}</span>
                     </div>
                     {queryParamsCollapsible && !queryParamsOpen ? (
-                      <span className={styles.callParamsCollapsedHint}>Collapsed; expand to edit {visibleQuery.length} parameters</span>
+                      <span className={styles.callParamsCollapsedHint}>{t("knowledgeNetwork.contextLoaderPanel.request.queryCollapsed", { count: visibleQuery.length })}</span>
                     ) : null}
                   </div>
                   {queryParamsCollapsible ? (
@@ -556,14 +568,14 @@ export function ContextLoaderIntegrationPanel({
                       onClick={() => setQueryParamsOpen((value) => !value)}
                       aria-expanded={queryParamsOpen}
                     >
-                      <span className={styles.callParamsState}>{queryParamsOpen ? "Collapse" : "Expand"}</span>
+                      <span className={styles.callParamsState}>{queryParamsOpen ? t("knowledgeNetwork.contextLoaderPanel.common.collapse") : t("knowledgeNetwork.contextLoaderPanel.common.expand")}</span>
                       <DownOutlined className={queryParamsOpen ? styles.callParamsChevronOpen : undefined} />
                     </button>
                   ) : null}
                 </div>
               ) : mode !== "mcp" ? (
                 <div className={styles.secHead}>
-                  QUERY Parameters <span className={styles.cnt}>{visibleQuery.length}</span>
+                  {t("knowledgeNetwork.contextLoaderPanel.request.queryParams")} <span className={styles.cnt}>{visibleQuery.length}</span>
                 </div>
               ) : null}
               {!queryParamsCollapsible || queryParamsOpen ? (
@@ -573,7 +585,7 @@ export function ContextLoaderIntegrationPanel({
                       key={param.name}
                       param={param}
                       locked={param.name === "kn_id"}
-                      label={mode === "mcp" && param.name === "response_format" ? "Parameter" : undefined}
+                      label={mode === "mcp" && param.name === "response_format" ? t("knowledgeNetwork.contextLoaderPanel.request.params") : undefined}
                       emphasized={mode === "mcp" && param.name === "response_format"}
                       value={param.name === "kn_id" ? knId : queryVals[param.name] ?? param.value}
                       onChange={(value) => onQueryChange(param.name, value)}
@@ -590,16 +602,16 @@ export function ContextLoaderIntegrationPanel({
                 <div className={styles.callParamsHead}>
                   <div className={styles.callParamsTitle}>
                     <div className={styles.secHead}>
-                      Request Body <span className={styles.sub}>application/json</span>
+                      {t("knowledgeNetwork.contextLoaderPanel.request.body")} <span className={styles.sub}>application/json</span>
                     </div>
-                    {!callParamsOpen ? <span className={styles.callParamsCollapsedHint}>Collapsed; expand to edit body.json</span> : null}
+                    {!callParamsOpen ? <span className={styles.callParamsCollapsedHint}>{t("knowledgeNetwork.contextLoaderPanel.request.bodyCollapsed")}</span> : null}
                   </div>
                   <div className={styles.callParamsTools}>
                     {opSupportsTestData(op.id) ? (
-                      <Tooltip title="Fill from the current network schema and sample rows; ready to call">
+                      <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.request.autoFillTooltip")}>
                         <button type="button" className={styles.paramToolBtn} onClick={onFillTestData} disabled={fillingTest}>
                           {fillingTest ? <Spin size="small" /> : <ThunderboltFilled />}
-                          Auto-Fill Params
+                          {t("knowledgeNetwork.contextLoaderPanel.request.autoFill")}
                         </button>
                       </Tooltip>
                     ) : null}
@@ -610,7 +622,7 @@ export function ContextLoaderIntegrationPanel({
                         onClick={() => onRightTabChange(dataAssistantOpen ? "res" : "data")}
                         aria-expanded={dataAssistantOpen}
                       >
-                        <DatabaseOutlined /> {dataAssistantOpen ? "Collapse Assistant" : "Request Data Assistant"}
+                        <DatabaseOutlined /> {dataAssistantOpen ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.close") : t("knowledgeNetwork.contextLoaderPanel.dataAssistant.open")}
                       </button>
                     ) : null}
                     <button
@@ -619,14 +631,14 @@ export function ContextLoaderIntegrationPanel({
                       onClick={() => setCallParamsOpen((value) => !value)}
                       aria-expanded={callParamsOpen}
                     >
-                      <span className={styles.callParamsState}>{callParamsOpen ? "Collapse" : "Expand"}</span>
+                      <span className={styles.callParamsState}>{callParamsOpen ? t("knowledgeNetwork.contextLoaderPanel.common.collapse") : t("knowledgeNetwork.contextLoaderPanel.common.expand")}</span>
                       <DownOutlined className={callParamsOpen ? styles.callParamsChevronOpen : undefined} />
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className={styles.secHead}>
-                  Request Body <span className={styles.sub}>application/json</span>
+                  {t("knowledgeNetwork.contextLoaderPanel.request.body")} <span className={styles.sub}>application/json</span>
                 </div>
               )}
               {!isVerifyView || callParamsOpen ? (
@@ -635,11 +647,11 @@ export function ContextLoaderIntegrationPanel({
                     <span className={styles.editLbl}>body.json</span>
                     <div className={styles.editActions}>
                       <button type="button" className={styles.mini} onClick={onFormatBody}>
-                        Format
+                        {t("knowledgeNetwork.contextLoaderPanel.common.format")}
                       </button>
                       {isVerifyView ? (
                         <button type="button" className={styles.mini} onClick={onResetBody}>
-                          Restore Example
+                          {t("knowledgeNetwork.contextLoaderPanel.common.resetExample")}
                         </button>
                       ) : null}
                     </div>
@@ -656,21 +668,21 @@ export function ContextLoaderIntegrationPanel({
           <div className={styles.actions}>
             <button type="button" className={styles.sendReq} onClick={onSend} disabled={sending}>
               {sending ? <Spin size="small" /> : null}
-              Send Request
+              {t("knowledgeNetwork.contextLoaderPanel.request.sendRequest")}
             </button>
             {opSupportsTestData(op.id) ? (
-              <Tooltip title="Fill from current network schema and sample rows; ready to send">
+              <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.request.autoFillRestTooltip")}>
                 <button type="button" className={styles.testBtn} onClick={onFillTestData} disabled={fillingTest}>
-                  {fillingTest ? <Spin size="small" /> : <ThunderboltFilled />} Fill Test Params
+                  {fillingTest ? <Spin size="small" /> : <ThunderboltFilled />} {t("knowledgeNetwork.contextLoaderPanel.request.fillTestParams")}
                 </button>
               </Tooltip>
             ) : null}
             <button type="button" className={styles.resetBtn} onClick={onResetBody}>
-              Restore Example
+              {t("knowledgeNetwork.contextLoaderPanel.common.resetExample")}
             </button>
             {dataAssistantAvailable ? (
               <button type="button" className={styles.dataBtn} onClick={() => onRightTabChange(dataAssistantOpen ? "res" : "data")}>
-                <DatabaseOutlined /> {dataAssistantOpen ? "Collapse Assistant" : "Request Data Assistant"}
+                <DatabaseOutlined /> {dataAssistantOpen ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.close") : t("knowledgeNetwork.contextLoaderPanel.dataAssistant.open")}
               </button>
             ) : null}
           </div>
@@ -682,7 +694,7 @@ export function ContextLoaderIntegrationPanel({
           open
           title={
             <span className={styles.requestDataAssistantModalTitle}>
-              <DatabaseOutlined /> Request Data Assistant
+              <DatabaseOutlined /> {t("knowledgeNetwork.contextLoaderPanel.dataAssistant.title")}
             </span>
           }
           footer={null}
@@ -692,10 +704,10 @@ export function ContextLoaderIntegrationPanel({
         >
           <div className={styles.requestDataAssistantModalIntro}>
             <div>
-              <strong>Add request parameters for {opDisplay.name}</strong>
+              <strong>{t("knowledgeNetwork.contextLoaderPanel.dataAssistant.modalTitle", { name: opDisplay.name })}</strong>
               <p>{dataAssistantDescription}</p>
             </div>
-            <span className={styles.requestDataAssistantModalTip}>Selection will be written into the current request body</span>
+            <span className={styles.requestDataAssistantModalTip}>{t("knowledgeNetwork.contextLoaderPanel.dataAssistant.tip")}</span>
           </div>
           <div className={styles.requestDataAssistantModalBody}>{dataBrowserPanel}</div>
         </Modal>
@@ -704,44 +716,44 @@ export function ContextLoaderIntegrationPanel({
       {mode === "mcp" ? (
         <Modal
           open={schemaOpen}
-          title={`${opDisplay.name} · API Docs`}
+          title={t("knowledgeNetwork.contextLoaderPanel.schema.title", { name: opDisplay.name })}
           footer={null}
           width={920}
           className={styles.schemaModal}
           onCancel={() => setSchemaOpen(false)}
         >
           <div className={styles.schemaModalIntro}>
-            Input schema describes accepted parameters, types, and rules. Output schema describes possible returned data structures and fields.
+            {t("knowledgeNetwork.contextLoaderPanel.schema.intro")}
           </div>
           {toolsLoading ? (
             <div className={styles.schemaHint}>
-              <Spin size="small" /> Fetching field definitions...
+              <Spin size="small" /> {t("knowledgeNetwork.contextLoaderPanel.schema.loading")}
             </div>
           ) : toolsError ? (
-            <div className={styles.schemaHint}>Load failed: {toolsError}</div>
+            <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.loadFailed", { error: toolsError })}</div>
           ) : currentTool ? (
             <div className={styles.schemaGrid}>
               <CodeBlock
-                title="Input Schema"
+                title={t("knowledgeNetwork.contextLoaderPanel.schema.inputTitle")}
                 code={JSON.stringify(currentTool.inputSchema ?? {}, null, 2)}
                 json
-                onCopy={() => onCopy(JSON.stringify(currentTool.inputSchema ?? {}, null, 2), "Input schema copied")}
+                onCopy={() => onCopy(JSON.stringify(currentTool.inputSchema ?? {}, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedInput"))}
               />
               {currentTool.outputSchema !== undefined ? (
                 <CodeBlock
-                  title="Output Schema"
+                  title={t("knowledgeNetwork.contextLoaderPanel.schema.outputTitle")}
                   code={JSON.stringify(currentTool.outputSchema, null, 2)}
                   json
-                  onCopy={() => onCopy(JSON.stringify(currentTool.outputSchema, null, 2), "Output schema copied")}
+                  onCopy={() => onCopy(JSON.stringify(currentTool.outputSchema, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedOutput"))}
                 />
               ) : (
-                <div className={styles.schemaHint}>This capability does not provide an output schema.</div>
+                <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.noOutput")}</div>
               )}
             </div>
           ) : toolDefs ? (
-            <div className={styles.schemaHint}>tools/list does not include {op.id}.</div>
+            <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.missingTool", { id: op.id })}</div>
           ) : (
-            <div className={styles.schemaHint}>Capability schemas have not been loaded yet.</div>
+            <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.notLoaded")}</div>
           )}
         </Modal>
       ) : null}
@@ -755,16 +767,16 @@ export function ContextLoaderIntegrationPanel({
                 className={`${styles.rightTab} ${mcpResultTab === "result" ? styles.rightTabOn : ""}`}
                 onClick={() => setMcpResultTab("result")}
               >
-                Call Result
+                {t("knowledgeNetwork.contextLoaderPanel.response.result")}
               </button>
               <button
                 type="button"
                 className={`${styles.rightTab} ${mcpResultTab === "debug" ? styles.rightTabOn : ""}`}
                 onClick={() => setMcpResultTab("debug")}
                 disabled={!hasCallState}
-                title={hasCallState ? "View the cURL command for this call" : "Run to generate the request command"}
+                title={hasCallState ? t("knowledgeNetwork.contextLoaderPanel.response.debugReadyTitle") : t("knowledgeNetwork.contextLoaderPanel.response.debugPendingTitle")}
               >
-                Request Debug
+                {t("knowledgeNetwork.contextLoaderPanel.response.debug")}
               </button>
             </>
           ) : (
@@ -774,14 +786,14 @@ export function ContextLoaderIntegrationPanel({
                 className={`${styles.rightTab} ${rightTab === "res" ? styles.rightTabOn : ""}`}
                 onClick={() => onRightTabChange("res")}
               >
-                Response Result
+                {t("knowledgeNetwork.contextLoaderPanel.response.responseResult")}
               </button>
             </>
           )}
         </div>
         <div className={`${styles.rightView} ${!isVerifyView && rightTab !== "res" ? styles.rightHidden : ""} ${isVerifyView && mcpResultTab !== "result" ? styles.rightHidden : ""}`}>
           <div className={styles.resHead}>
-            <span className={styles.resTitle}>Call Result</span>
+            <span className={styles.resTitle}>{t("knowledgeNetwork.contextLoaderPanel.response.result")}</span>
             {response ? (
               <>
                 <span className={`${styles.pill} ${response.ok ? styles.pillOk : styles.pillErr}`}>
@@ -795,9 +807,9 @@ export function ContextLoaderIntegrationPanel({
                   <button
                     type="button"
                     className={styles.copyResp}
-                    onClick={() => onCopy(responseView?.text ?? response.text, "Response copied")}
+                    onClick={() => onCopy(responseView?.text ?? response.text, t("knowledgeNetwork.contextLoaderPanel.response.copiedResponse"))}
                   >
-                    <CopyOutlined /> Copy Result
+                    <CopyOutlined /> {t("knowledgeNetwork.contextLoaderPanel.response.copyResult")}
                   </button>
                   {isVerifyView ? (
                     <button
@@ -806,14 +818,14 @@ export function ContextLoaderIntegrationPanel({
                       onClick={() => setResultOpen((value) => !value)}
                       aria-expanded={resultOpen}
                     >
-                      {resultOpen ? "Collapse" : "Expand"}
+                      {resultOpen ? t("knowledgeNetwork.contextLoaderPanel.common.collapse") : t("knowledgeNetwork.contextLoaderPanel.common.expand")}
                       <DownOutlined className={resultOpen ? styles.resultToggleOpen : undefined} />
                     </button>
                   ) : null}
                 </div>
               </>
             ) : (
-              <span className={styles.resHint}>{mode === "mcp" ? "Not run yet" : "Request not sent yet"}</span>
+              <span className={styles.resHint}>{mode === "mcp" ? t("knowledgeNetwork.contextLoaderPanel.response.notRun") : t("knowledgeNetwork.contextLoaderPanel.response.notSent")}</span>
             )}
           </div>
           {resultContentVisible ? <div className={styles.resBody}>
@@ -825,7 +837,7 @@ export function ContextLoaderIntegrationPanel({
               <div className={styles.resError}>
                 <ApiOutlined />
                 <div>
-                  <strong>Request Failed</strong>
+                  <strong>{t("knowledgeNetwork.contextLoaderPanel.response.failed")}</strong>
                   <p>{reqError}</p>
                 </div>
               </div>
@@ -843,8 +855,8 @@ export function ContextLoaderIntegrationPanel({
             ) : (
               <div className={styles.resEmpty}>
                 <ApiOutlined className={styles.resEmptyIc} />
-                <h3>Waiting to Call</h3>
-                <p>Confirm request parameters and click Run. This panel will show the{mode === "mcp" ? " MCP" : " REST"} response.</p>
+                <h3>{t("knowledgeNetwork.contextLoaderPanel.response.waitingTitle")}</h3>
+                <p>{t("knowledgeNetwork.contextLoaderPanel.response.waitingDescription", { mode: mode === "mcp" ? "MCP" : "REST" })}</p>
               </div>
             )}
           </div> : null}
@@ -858,10 +870,10 @@ export function ContextLoaderIntegrationPanel({
                 className={styles.mini}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onCopy(curl, "cURL copied");
+                  onCopy(curl, t("knowledgeNetwork.contextLoaderPanel.common.copiedCurl"));
                 }}
               >
-                Copy
+                {t("knowledgeNetwork.contextLoaderPanel.common.copy")}
               </button>
             </div>
             {curlOpen ? (
@@ -875,11 +887,11 @@ export function ContextLoaderIntegrationPanel({
           <div className={`${styles.rightView} ${mcpResultTab === "debug" ? "" : styles.rightHidden}`}>
             <div className={styles.debugHead}>
               <div>
-                <span className={styles.resTitle}>Request Debug</span>
-                <span className={styles.debugHint}>cURL request command for this run</span>
+                <span className={styles.resTitle}>{t("knowledgeNetwork.contextLoaderPanel.response.debug")}</span>
+                <span className={styles.debugHint}>{t("knowledgeNetwork.contextLoaderPanel.response.debugHint")}</span>
               </div>
-              <button type="button" className={styles.copyResp} onClick={() => onCopy(curl, "cURL copied")}>
-                <CopyOutlined /> Copy Command
+              <button type="button" className={styles.copyResp} onClick={() => onCopy(curl, t("knowledgeNetwork.contextLoaderPanel.common.copiedCurl"))}>
+                <CopyOutlined /> {t("knowledgeNetwork.contextLoaderPanel.response.copyCommand")}
               </button>
             </div>
             <div className={styles.debugBody}>

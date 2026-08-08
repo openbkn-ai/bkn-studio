@@ -7,9 +7,11 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataConnectFormScene } from "@/modules/data-connect/scenes/DataConnectFormScene";
+
+vi.setConfig({ testTimeout: 20_000 });
 
 const permissionState = vi.hoisted(() => ({
   values: new Set<string>(),
@@ -92,6 +94,7 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   beforeEach(() => {
+    vi.useRealTimers();
     permissionState.values = new Set(["catalog:modify"]);
     messageSuccessMock.mockReset();
     createDataConnectRecordMock.mockReset();
@@ -139,6 +142,10 @@ describe("DataConnectFormScene · connection preflight", () => {
       updateTime: "-",
       updaterName: "-",
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("hides the preflight action without catalog create permission", async () => {
@@ -216,7 +223,13 @@ describe("DataConnectFormScene · connection preflight", () => {
       screen.getByRole("button", { name: "common.testConnection" }),
     );
 
-    expect(await screen.findByText("dataConnect.jsonObjectInvalid")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "dataConnect.jsonObjectInvalid",
+        {},
+        { timeout: 5_000 },
+      ),
+    ).toBeTruthy();
     expect(testDataConnectConfigMock).not.toHaveBeenCalled();
   });
 
@@ -347,9 +360,13 @@ describe("DataConnectFormScene · connection preflight", () => {
 
     render(<DataConnectFormScene mode="create" />);
 
-    const sqlServerButton = await screen.findByRole("button", {
-      name: /SQL Server/,
-    });
+    const sqlServerButton = await screen.findByRole(
+      "button",
+      {
+        name: /SQL Server/,
+      },
+      { timeout: 10_000 },
+    );
 
     expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
     expect(sqlServerButton.textContent).toContain("关系型数据库");

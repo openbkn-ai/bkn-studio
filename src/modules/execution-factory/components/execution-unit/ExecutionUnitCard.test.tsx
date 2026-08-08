@@ -11,8 +11,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ExecutionUnitCard } from "@/modules/execution-factory/components/execution-unit/ExecutionUnitCard";
 import type { ExecutionUnitCardItem } from "@/modules/execution-factory/components/execution-unit/types";
 
-vi.mock("react-i18next", () => ({
-  initReactI18next: { type: "3rdParty", init: vi.fn() },
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 

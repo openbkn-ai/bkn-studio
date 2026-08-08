@@ -175,7 +175,7 @@ describe("buildTestData", () => {
 
   it("query_instance_subgraph notes when no relation type is available", () => {
     const fill = buildTestData(opById("query_instance_subgraph"), "rest", "kn_demo", d, null, null);
-    expect(fill.note).toContain("未在 get_kn_detail 发现可用关系类");
+    expect(fill.note).toContain("No relation types found in get_kn_detail");
   });
 
   it("query_metric uses a real metric without a time dimension", () => {
@@ -205,7 +205,7 @@ describe("buildTestData", () => {
   it("query_metric does not generate a request when no related metric has an id", () => {
     const metricOt = ot("orders", ["status"], undefined, [{ id: "", name: "invalid" }]);
     const fill = buildTestData(opById("query_metric"), "mcp", "kn_demo", detail([metricOt]), metricOt, null);
-    expect(fill.note).toContain("未在对象类详情中发现可用指标");
+    expect(fill.note).toContain("No metrics found in object-type details");
     expect(JSON.parse(fill.body).metric_id).toBe("your_metric_id");
   });
 });

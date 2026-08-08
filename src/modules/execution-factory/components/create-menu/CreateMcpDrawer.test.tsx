@@ -55,8 +55,8 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
-vi.mock("react-i18next", () => ({
-  initReactI18next: { init: vi.fn(), type: "3rdParty" },
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({ t: translate }),
 }));
 

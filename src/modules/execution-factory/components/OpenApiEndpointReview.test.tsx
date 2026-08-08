@@ -10,12 +10,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import { OpenApiEndpointReview } from "@/modules/execution-factory/components/OpenApiEndpointReview";
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (_key: string, options?: { defaultValue?: string; count?: number }) =>
-      options?.defaultValue ?? String(options?.count ?? _key),
-  }),
-}));
+vi.mock("react-i18next", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-i18next")>();
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (_key: string, options?: { defaultValue?: string; count?: number }) =>
+        options?.defaultValue ?? String(options?.count ?? _key),
+    }),
+  };
+});
 
 describe("OpenApiEndpointReview", () => {
   it("renders endpoint method, path, summary, risk, and IO counts", () => {
