@@ -38,7 +38,7 @@ import type {
   DataConnectDiscoverTaskTriggerType,
 } from "@/modules/data-connect/types/discover";
 import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
-import { deleteSemanticUnderstandingTask, mapSemanticUnderstandingTaskSummary, type BackendSemanticUnderstandingTaskSummary, type SemanticUnderstandingTaskSummary } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import { buildSemanticUnderstandingTaskListParams, deleteSemanticUnderstandingTask, mapSemanticUnderstandingTaskSummary, type BackendSemanticUnderstandingTaskSummary, type SemanticUnderstandingTaskListFilters, type SemanticUnderstandingTaskSummary } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { listCatalogs } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
@@ -47,16 +47,7 @@ import styles from "./TaskManagementTaskPanels.module.css";
 
 type SemanticTaskStatus = SemanticUnderstandingTaskSummary["status"];
 type SemanticTask = SemanticUnderstandingTaskSummary;
-type SemanticTaskFilters = {
-  scope?: SemanticTask["scope"];
-  catalogId?: string;
-  resourceId?: string;
-  status?: SemanticTaskStatus;
-  applyMode?: string;
-  applied?: boolean;
-  direction?: "asc" | "desc";
-  sort?: "create_time";
-};
+type SemanticTaskFilters = SemanticUnderstandingTaskListFilters;
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
@@ -315,18 +306,7 @@ async function listSemanticTasks(page: number, pageSize: number, filters: Semant
   }
 
   const response = await http.get<{ entries: BackendSemanticUnderstandingTaskSummary[]; total_count: number }>("/vega-backend/v1/semantic-understanding-tasks", {
-    params: {
-      direction: filters.direction ?? "desc",
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
-      sort: filters.sort ?? "create_time",
-      scope: filters.scope,
-      catalog_id: filters.catalogId,
-      resource_id: filters.resourceId,
-      status: filters.status,
-      apply_mode: filters.applyMode,
-      applied: filters.applied,
-    },
+    params: buildSemanticUnderstandingTaskListParams(page, pageSize, filters),
   });
   return { items: response.data.entries.map(mapSemanticUnderstandingTaskSummary), total: response.data.total_count };
 }

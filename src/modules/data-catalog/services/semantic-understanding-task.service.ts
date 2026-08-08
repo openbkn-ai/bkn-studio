@@ -37,23 +37,23 @@ export type SemanticUnderstandingTask = SemanticUnderstandingTaskSummary & {
 };
 
 export type BackendSemanticUnderstandingTaskSummary = {
-  agent_id?: string;
+  agent_id: string;
   agent_task_id?: string;
-  applied?: boolean;
+  applied: boolean;
   applied_time?: number;
-  apply_mode?: SemanticUnderstandingTaskSummary["applyMode"];
-  catalog_id?: string;
+  apply_mode: SemanticUnderstandingTaskSummary["applyMode"];
+  catalog_id: string;
   catalog_name?: string;
-  confidence?: number;
-  confidence_threshold?: number;
-  create_time?: number;
-  creator?: { id?: string; name?: string; type?: string };
+  confidence: number;
+  confidence_threshold: number;
+  create_time: number;
+  creator: { id: string; name?: string; type: string };
   id: string;
   resource_id?: string;
   resource_name?: string;
-  scope?: SemanticUnderstandingTaskSummary["scope"];
+  scope: SemanticUnderstandingTaskSummary["scope"];
   status: SemanticUnderstandingTaskSummary["status"];
-  update_time?: number;
+  update_time: number;
 };
 
 export type BackendSemanticUnderstandingTask = BackendSemanticUnderstandingTaskSummary & {
@@ -68,22 +68,52 @@ export type BackendSemanticUnderstandingTask = BackendSemanticUnderstandingTaskS
 export function mapSemanticUnderstandingTaskSummary(task: BackendSemanticUnderstandingTaskSummary): SemanticUnderstandingTaskSummary {
   return {
     id: task.id,
-    scope: task.scope ?? "resource",
-    catalogId: task.catalog_id ?? "",
+    scope: task.scope,
+    catalogId: task.catalog_id,
     catalogName: task.catalog_name,
     resourceId: task.resource_id,
     resourceName: task.resource_name,
-    agentId: task.agent_id ?? "",
+    agentId: task.agent_id,
     agentTaskId: task.agent_task_id,
     status: task.status,
-    applyMode: task.apply_mode ?? "fill_empty",
-    confidenceThreshold: task.confidence_threshold ?? 0,
-    confidence: task.confidence ?? 0,
-    applied: task.applied ?? false,
+    applyMode: task.apply_mode,
+    confidenceThreshold: task.confidence_threshold,
+    confidence: task.confidence,
+    applied: task.applied,
     appliedTime: task.applied_time,
-    creator: task.creator?.id ? { id: task.creator.id, name: task.creator.name, type: task.creator.type } : undefined,
-    createTime: task.create_time ?? 0,
+    creator: { id: task.creator.id, name: task.creator.name, type: task.creator.type },
+    createTime: task.create_time,
     updateTime: task.update_time,
+  };
+}
+
+export type SemanticUnderstandingTaskListFilters = {
+  applied?: boolean;
+  applyMode?: string;
+  catalogId?: string;
+  direction?: "asc" | "desc";
+  resourceId?: string;
+  scope?: SemanticUnderstandingTaskSummary["scope"];
+  sort?: "create_time";
+  status?: SemanticUnderstandingTaskSummary["status"];
+};
+
+export function buildSemanticUnderstandingTaskListParams(
+  page: number,
+  pageSize: number,
+  filters: SemanticUnderstandingTaskListFilters,
+) {
+  return {
+    direction: filters.direction ?? "desc",
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+    sort: filters.sort ?? "create_time",
+    scope: filters.scope,
+    catalog_id: filters.catalogId,
+    resource_id: filters.resourceId,
+    status: filters.status,
+    apply_mode: filters.applyMode,
+    applied: filters.applied,
   };
 }
 
