@@ -6,7 +6,9 @@
  */
 
 import {
+  CheckOutlined,
   CloudServerOutlined,
+  GlobalOutlined,
   LogoutOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -20,9 +22,13 @@ import { getConsoleNavTrail } from "@/app/shell/console-navigation";
 import openBknLogo from "@/assets/brand/openbkn-logo.png";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
-import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import {
+  useRuntimeConfig,
+  useUpdateLocale,
+} from "@/framework/context/use-runtime-config";
 import { APP_VERSION } from "@/framework/runtime/app-version";
 import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
+import type { SupportedLocale } from "@/framework/runtime/types";
 import { BuildActivityChip } from "@/modules/data-catalog/components/BuildActivityChip";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 
@@ -32,6 +38,7 @@ export function TopBar() {
   const navigate = useNavigate();
   const { networkId } = useParams<{ networkId?: string }>();
   const runtimeConfig = useRuntimeConfig();
+  const updateLocale = useUpdateLocale();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const [networkName, setNetworkName] = useState<string | null>(null);
   const isKnowledgeNetworkRoute =
@@ -125,6 +132,37 @@ export function TopBar() {
     }
 
     items.push(
+      {
+        children: [
+          {
+            key: "locale:zh-CN",
+            label: (
+              <span className="console-language-menu-option">
+                <span>{t("shell.language.zhCN")}</span>
+                {runtimeConfig.locale === "zh-CN" ? <CheckOutlined /> : null}
+              </span>
+            ),
+            onClick: () => {
+              void updateLocale("zh-CN" satisfies SupportedLocale);
+            },
+          },
+          {
+            key: "locale:en-US",
+            label: (
+              <span className="console-language-menu-option">
+                <span>{t("shell.language.enUS")}</span>
+                {runtimeConfig.locale === "en-US" ? <CheckOutlined /> : null}
+              </span>
+            ),
+            onClick: () => {
+              void updateLocale("en-US" satisfies SupportedLocale);
+            },
+          },
+        ],
+        icon: <GlobalOutlined />,
+        key: "language",
+        label: t("shell.language.label"),
+      },
       { type: "divider" as const },
       {
         danger: true,
@@ -138,7 +176,15 @@ export function TopBar() {
     );
 
     return items;
-  }, [canViewInstallStatus, installStatusUrl, navigate, runtimeConfig.mode, t]);
+  }, [
+    canViewInstallStatus,
+    installStatusUrl,
+    navigate,
+    runtimeConfig.locale,
+    runtimeConfig.mode,
+    t,
+    updateLocale,
+  ]);
 
   return (
     <header className="console-topbar">

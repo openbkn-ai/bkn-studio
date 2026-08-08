@@ -8,11 +8,13 @@
 import { useCallback, useState } from "react";
 import { RouterProvider } from "react-router-dom";
 
+import i18n from "@/app/locales/i18n";
 import { AppProviders } from "@/app/providers/AppProviders";
 import { createAppRouter } from "@/app/router/create-router";
 import { AuthGate } from "@/framework/auth/AuthGate";
+import { persistLocale } from "@/framework/i18n/locale";
 import { setRuntimeConfig } from "@/framework/runtime/config";
-import type { RuntimeConfig, RuntimeUser } from "@/framework/runtime/types";
+import type { RuntimeConfig, RuntimeUser, SupportedLocale } from "@/framework/runtime/types";
 
 type AppProps = {
   runtimeConfig: RuntimeConfig;
@@ -32,8 +34,18 @@ export function App({ runtimeConfig }: AppProps) {
     });
   }, []);
 
+  const handleLocaleChange = useCallback(async (locale: SupportedLocale) => {
+    persistLocale(locale);
+    await i18n.changeLanguage(locale);
+    setConfig((previous) => {
+      const next = { ...previous, locale };
+      setRuntimeConfig(next);
+      return next;
+    });
+  }, []);
+
   return (
-    <AppProviders runtimeConfig={config}>
+    <AppProviders runtimeConfig={config} updateLocale={handleLocaleChange}>
       <AuthGate onCurrentUser={handleCurrentUser}>
         <RouterProvider router={router} />
       </AuthGate>

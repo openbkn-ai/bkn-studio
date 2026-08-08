@@ -58,6 +58,7 @@ function renderModal() {
         } as never,
         modal: {} as never,
         runtimeConfig: {} as never,
+        updateLocale: vi.fn(),
       }}
     >
       <QuotaLimitModal mode="edit" onClose={vi.fn()} open record={quotaRecord} />

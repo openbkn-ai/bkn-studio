@@ -17,6 +17,11 @@ export const shellZhCN = {
     headerAside: "统一应用壳层",
     collapseSidenav: "收起导航",
     expandSidenav: "展开导航",
+    language: {
+      label: "语言",
+      zhCN: "中文",
+      enUS: "English",
+    },
     items: {
       home: "首页",
       globalBusinessKnowledgeNetwork: "全局业务知识网络",

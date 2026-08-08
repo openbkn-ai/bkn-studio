@@ -257,6 +257,14 @@ select {
   font-weight: 600;
 }
 
+.console-language-menu-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-width: 88px;
+}
+
 .console-user-pill {
   display: inline-flex;
   align-items: center;

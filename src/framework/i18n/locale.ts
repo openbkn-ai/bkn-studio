@@ -13,6 +13,8 @@ export const FALLBACK_LOCALE: SupportedLocale = "en-US";
 
 export const DEPLOYMENT_DEFAULT_LOCALE: SupportedLocale = "zh-CN";
 
+export const LOCALE_STORAGE_KEY = "bkn-studio:locale";
+
 const supportedLocaleSet = new Set<string>(SUPPORTED_LOCALES);
 
 export type LocaleResolutionInput = {
@@ -46,7 +48,7 @@ export function normalizeSupportedLocale(locale: string | null | undefined): Sup
 export function resolveSupportedLocale({
   browserLanguages = readBrowserLanguages(),
   deploymentDefaultLocale = DEPLOYMENT_DEFAULT_LOCALE,
-  persistedLocale,
+  persistedLocale = readPersistedLocale(),
   runtimeLocale,
 }: LocaleResolutionInput = {}): SupportedLocale {
   return (
@@ -56,6 +58,22 @@ export function resolveSupportedLocale({
     deploymentDefaultLocale ??
     FALLBACK_LOCALE
   );
+}
+
+export function readPersistedLocale(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(LOCALE_STORAGE_KEY);
+}
+
+export function persistLocale(locale: SupportedLocale) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
 }
 
 function firstSupportedLocale(locales: readonly string[]) {

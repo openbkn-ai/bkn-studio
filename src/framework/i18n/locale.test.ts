@@ -5,11 +5,21 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { normalizeSupportedLocale, resolveSupportedLocale } from "@/framework/i18n/locale";
+import {
+  LOCALE_STORAGE_KEY,
+  normalizeSupportedLocale,
+  persistLocale,
+  readPersistedLocale,
+  resolveSupportedLocale,
+} from "@/framework/i18n/locale";
 
 describe("locale resolution", () => {
+  afterEach(() => {
+    window.localStorage.removeItem(LOCALE_STORAGE_KEY);
+  });
+
   it("normalizes supported locale aliases", () => {
     expect(normalizeSupportedLocale("en")).toBe("en-US");
     expect(normalizeSupportedLocale("en-GB")).toBe("en-US");
@@ -35,6 +45,17 @@ describe("locale resolution", () => {
         persistedLocale: "zh-CN",
       }),
     ).toBe("zh-CN");
+  });
+
+  it("persists the selected locale for future app starts", () => {
+    persistLocale("en-US");
+
+    expect(readPersistedLocale()).toBe("en-US");
+    expect(
+      resolveSupportedLocale({
+        browserLanguages: ["zh-CN"],
+      }),
+    ).toBe("en-US");
   });
 
   it("falls back to deployment default when no requested locale is supported", () => {

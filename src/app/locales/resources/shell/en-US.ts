@@ -17,6 +17,11 @@ export const shellEnUS = {
     headerAside: "Application shell baseline",
     collapseSidenav: "Collapse navigation",
     expandSidenav: "Expand navigation",
+    language: {
+      label: "Language",
+      zhCN: "中文",
+      enUS: "English",
+    },
     items: {
       home: "Home",
       globalBusinessKnowledgeNetwork: "Global Business Knowledge Network",
