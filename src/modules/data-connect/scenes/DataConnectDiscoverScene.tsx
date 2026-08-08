@@ -39,6 +39,7 @@ import type {
   DataConnectDiscoverSchedule,
   DataConnectDiscoverSchedulePayload,
   DataConnectDiscoverTask,
+  DataConnectDiscoverTaskSummary,
   DataConnectDiscoverTaskStatus,
 } from "@/modules/data-connect/types/discover";
 import {
@@ -66,7 +67,7 @@ function renderTableTime(value?: string) {
   return <span className={styles.timeText}>{value || "-"}</span>;
 }
 
-function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTask }) {
+function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }) {
   const percent = Math.max(0, Math.min(100, task.progress));
   const fillClass = task.status === "completed" ? sharedStyles.progressFillDone : task.status === "failed" ? sharedStyles.progressFillFailed : sharedStyles.progressFillVector;
   return <div className={sharedStyles.progressWrapCompact}><div className={sharedStyles.progressTrack}><span className={[sharedStyles.progressFill, fillClass].join(" ")} style={{ width: `${percent}%` }} /></div><div className={sharedStyles.progressMetaCompact}><span>{`${percent}%`}</span></div></div>;
@@ -95,7 +96,7 @@ export function DataConnectDiscoverScene({
     useState<TaskTriggerTypeFilterValue>("all");
   const [catalogs, setCatalogs] = useState<DataConnectRecord[]>([]);
   const [schedules, setSchedules] = useState<DataConnectDiscoverSchedule[]>([]);
-  const [tasks, setTasks] = useState<DataConnectDiscoverTask[]>([]);
+  const [tasks, setTasks] = useState<DataConnectDiscoverTaskSummary[]>([]);
   const [schedulePage, setSchedulePage] = useState(1);
   const [schedulePageSize, setSchedulePageSize] = useState(10);
   const [scheduleTotal, setScheduleTotal] = useState(0);
@@ -416,7 +417,7 @@ export function DataConnectDiscoverScene({
     },
   ];
 
-  const taskColumns: ColumnsType<DataConnectDiscoverTask> = [
+  const taskColumns: ColumnsType<DataConnectDiscoverTaskSummary> = [
     { dataIndex: "id", title: "ID", width: 160, ellipsis: true },
     {
       dataIndex: "scheduleId",
@@ -428,13 +429,13 @@ export function DataConnectDiscoverScene({
       dataIndex: "strategy",
       title: t("dataConnect.discoverStrategy"),
       width: 130,
-      render: (value: DataConnectDiscoverTask["strategy"]) => t(`dataConnect.discoverStrategies.${value}`),
+      render: (value: DataConnectDiscoverTaskSummary["strategy"]) => t(`dataConnect.discoverStrategies.${value}`),
     },
     {
       dataIndex: "triggerType",
       title: t("dataConnect.discoverTriggerType"),
       width: 120,
-      render: (value: DataConnectDiscoverTask["triggerType"]) => t(`dataConnect.discoverTriggerTypes.${value}`),
+      render: (value: DataConnectDiscoverTaskSummary["triggerType"]) => t(`dataConnect.discoverTriggerTypes.${value}`),
     },
     {
       dataIndex: "status",
@@ -830,7 +831,7 @@ export function DataConnectDiscoverScene({
             title={t("dataConnect.discoverTaskEmpty")}
           />
         ) : (
-          <AppTable<DataConnectDiscoverTask>
+          <AppTable<DataConnectDiscoverTaskSummary>
             columns={taskColumns}
             dataSource={tasks}
             loading={loadingTasks}

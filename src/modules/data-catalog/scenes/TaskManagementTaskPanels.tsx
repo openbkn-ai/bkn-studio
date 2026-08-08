@@ -32,9 +32,9 @@ import { DataConnectDiscoverTaskDrawer } from "@/modules/data-connect/components
 import type {
   DataConnectDiscoverSchedule,
   DataConnectDiscoverStrategy,
-  DataConnectDiscoverTask,
   DataConnectDiscoverTaskSort,
   DataConnectDiscoverTaskStatus,
+  DataConnectDiscoverTaskSummary,
   DataConnectDiscoverTaskTriggerType,
 } from "@/modules/data-connect/types/discover";
 import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
@@ -115,7 +115,7 @@ function TaskPanel({ children }: { children: React.ReactNode }) {
   return <section className={styles.contentSurface}>{children}</section>;
 }
 
-function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTask }) {
+function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }) {
   const percent = Math.max(0, Math.min(100, task.progress));
   const fillClass =
     task.status === "completed"
@@ -143,7 +143,7 @@ export function DiscoverTaskListPanel() {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState<DataConnectDiscoverTask[]>([]);
+  const [tasks, setTasks] = useState<DataConnectDiscoverTaskSummary[]>([]);
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
   const [schedules, setSchedules] = useState<DataConnectDiscoverSchedule[]>([]);
   const [catalogKeyword, setCatalogKeyword] = useState("");
@@ -151,7 +151,7 @@ export function DiscoverTaskListPanel() {
   const [status, setStatus] = useState<DataConnectDiscoverTaskStatus>();
   const [strategy, setStrategy] = useState<DataConnectDiscoverStrategy>();
   const [triggerType, setTriggerType] = useState<DataConnectDiscoverTaskTriggerType>();
-  const [sort, setSort] = useState<DataConnectDiscoverTaskSort>("default");
+  const [sort, setSort] = useState<DataConnectDiscoverTaskSort>("create_time");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -223,15 +223,15 @@ export function DiscoverTaskListPanel() {
     });
   };
   const sortOrderOf = (key: DataConnectDiscoverTaskSort) => sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
-  const handleTableChange: TableProps<DataConnectDiscoverTask>["onChange"] = (_pagination, _filters, sorter, extra) => {
+  const handleTableChange: TableProps<DataConnectDiscoverTaskSummary>["onChange"] = (_pagination, _filters, sorter, extra) => {
     if (extra.action !== "sort") return;
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
-    setSort(single?.columnKey as DataConnectDiscoverTaskSort || "default");
+    setSort(single?.columnKey as DataConnectDiscoverTaskSort || "create_time");
     setDirection(single?.order === "ascend" ? "asc" : "desc");
     setPage(1);
   };
 
-  const columns: ColumnsType<DataConnectDiscoverTask> = [
+  const columns: ColumnsType<DataConnectDiscoverTaskSummary> = [
     { dataIndex: "id", title: t("dataCatalog.taskManagement.columns.task"), width: 160, ellipsis: true },
     {
       dataIndex: "catalogId",
