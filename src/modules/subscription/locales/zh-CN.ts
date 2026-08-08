@@ -66,15 +66,6 @@ export const subscriptionZhCN = {
       permission: "权限",
       semantic: "语义",
     },
-    cluster: {
-      otherService: "标「—」的能力由其他服务提供,集群授权端点只描述 bkn-safe 自身的镜像,答不了它们。",
-      available: "可用",
-      hint: "「你的集群」按当前授权与镜像实算:需升级 = 镜像里有、证书档位不够;不可用 = 当前镜像不含该实现。",
-      notInstalled: "不可用",
-      notLicensed: "需升级",
-      title: "你的集群",
-      unknown: "读取中",
-    },
     cta: {
       import: "导入授权文件",
       importHint: "已有授权文件?前往授权管理导入,补证下一个请求即生效,无需重启。",
