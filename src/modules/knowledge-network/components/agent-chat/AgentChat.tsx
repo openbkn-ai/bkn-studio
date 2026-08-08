@@ -19,6 +19,7 @@ import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { normalizeSupportedLocale } from "@/framework/i18n/locale";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
@@ -157,8 +158,12 @@ function templateSuggestions(detail: KnDetail, t: TFunction): string[] {
  * 建议问题的生成提示词。输入是 get_kn_detail 的原始 JSON（网络/对象类的 comment、关系名等业务描述都在里面）——
  * 推荐问题的质量直接取决于 BKN 里这些描述写得好不好，这就是业务侧控制推荐问题的抓手。
  */
-function suggestPrompt(t: TFunction): string {
-  return t("knowledgeNetwork.agentChat.suggestPrompt");
+function suggestPrompt(t: TFunction, locale: string): string {
+  const languageInstruction =
+    locale === "zh-CN"
+      ? "Current UI locale: zh-CN. Output all recommended questions in Simplified Chinese."
+      : "Current UI locale: en-US. Output all recommended questions in English. Keep untranslated business names only when no English business label is available.";
+  return `${t("knowledgeNetwork.agentChat.suggestPrompt")}\n${languageInstruction}`;
 }
 
 /** 从模型输出里抠出 JSON 数组；任何不合预期都返回空数组，由调用方回退模板。 */
@@ -181,9 +186,13 @@ function parseSuggestions(text: string): string[] {
 /** 建议问题缓存：按 knId 存，指纹变了（网络结构/描述改过）就重生成。 */
 const SUGS_LS_PREFIX = "bkn-studio:agentchat:sugs:";
 
-function loadCachedSuggestions(knId: string, fp: string): string[] | null {
+function suggestionCacheKey(knId: string, locale: string): string {
+  return `${SUGS_LS_PREFIX}${locale}:${knId}`;
+}
+
+function loadCachedSuggestions(knId: string, locale: string, fp: string): string[] | null {
   try {
-    const raw = localStorage.getItem(SUGS_LS_PREFIX + knId);
+    const raw = localStorage.getItem(suggestionCacheKey(knId, locale));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { fp?: string; list?: unknown };
     if (parsed.fp !== fp || !Array.isArray(parsed.list)) return null;
@@ -194,9 +203,9 @@ function loadCachedSuggestions(knId: string, fp: string): string[] | null {
   }
 }
 
-function saveCachedSuggestions(knId: string, fp: string, list: string[]): void {
+function saveCachedSuggestions(knId: string, locale: string, fp: string, list: string[]): void {
   try {
-    localStorage.setItem(SUGS_LS_PREFIX + knId, JSON.stringify({ fp, list }));
+    localStorage.setItem(suggestionCacheKey(knId, locale), JSON.stringify({ fp, list }));
   } catch {
     /* 隐私模式/配额满：不缓存即可，不影响功能 */
   }
@@ -412,6 +421,7 @@ export function AgentChat({
   const knId = env.knId;
   const { message } = App.useApp();
   const { t, i18n } = useTranslation();
+  const activeLocale = normalizeSupportedLocale(i18n.resolvedLanguage ?? i18n.language) ?? "en-US";
   const profiles = useMemo(() => buildProfiles(t), [t]);
   const defaultSuggestions = useMemo(() => fallbackSuggestions(t), [t]);
   const llmTokenProvider = useMemo(
@@ -526,7 +536,7 @@ export function AgentChat({
     const modelName = models.find((m) => m.default)?.modelName ?? models[0]?.modelName;
     if (!modelName) return;
     const fp = recommendationFingerprint(knDetail);
-    const cached = loadCachedSuggestions(knId, fp);
+    const cached = loadCachedSuggestions(knId, activeLocale, fp);
     if (cached) {
       setSuggestions(cached);
       return;
@@ -536,7 +546,7 @@ export function AgentChat({
     runAgentChat({
       env,
       modelName,
-      system: suggestPrompt(t),
+      system: suggestPrompt(t, activeLocale),
       history: [{ role: "user", content: JSON.stringify(knDetail) }],
       tools: {},
       config: DEFAULT_AGENT_CONFIG,
@@ -551,7 +561,7 @@ export function AgentChat({
         const list = parseSuggestions(text);
         if (list.length < 2) return; // 输出不可用 → 保持模板
         setSuggestions(list);
-        saveCachedSuggestions(knId, fp, list);
+        saveCachedSuggestions(knId, activeLocale, fp, list);
       })
       .catch(() => {
         /* 生成失败不打扰用户：空态继续用模板建议 */
@@ -559,7 +569,7 @@ export function AgentChat({
     return () => {
       controller.abort();
     };
-  }, [knDetail, modelsLoaded, models, env, llmTokenProvider, knId, t]);
+  }, [knDetail, modelsLoaded, models, env, llmTokenProvider, knId, activeLocale, t]);
 
   // tools/list 缓存：按 knId 拉一次，多面板共享（send 懒取 promise；picker 用已解析的 toolDefs）。
   const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);

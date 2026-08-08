@@ -347,7 +347,7 @@ describe("失败轮的重试", () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Retry Turn" }));
+      fireEvent.click(screen.getByRole("button", { name: i18n.t("knowledgeNetwork.agentChat.chatPane.error.retry") }));
       await Promise.resolve();
     });
 
