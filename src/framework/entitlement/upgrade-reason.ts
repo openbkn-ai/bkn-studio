@@ -17,7 +17,7 @@ import type { EntitlementView } from "@/framework/entitlement/types";
  * | 证书 | 镜像 | reason | 客户要做什么 |
  * |---|---|---|---|
  * | 档位不够 | 任意 | `buy` | 买/换证书 |
- * | 档位够 | 社区版 | `image` | 升级镜像(bkn-safe 的能力能确定判出) |
+ * | 档位够 | 社区版 | `image` | 升级镜像(端点报得出的能力能确定判出) |
  * | 档位够 | 未知 | `image-likely` | 多半是别的服务的镜像还没升(判不了,给方向) |
  * | 档位够 | 企业版 | — | 能用,根本不会弹这个窗 |
  */
@@ -27,19 +27,19 @@ export function upgradeReason(
   capability: string,
   snapshot: EntitlementView | null,
   minEdition: Edition,
-  servedByBknSafe: boolean,
+  reportedByEndpoint: boolean,
 ): UpgradeReason {
   // 快照没到就按「还没买」说——不能凭空断言客户的证书已经够了。
   if (!snapshot || !atLeast(snapshot.edition, minEdition)) {
     return "buy";
   }
 
-  // bkn-safe 自己的能力:extensions[] 是它这个进程的装配表,缺席即确定没装。
-  if (servedByBknSafe) {
+  // 端点报得出的能力:extensions[] 就是这套部署的装配实况,缺席即确定没装。
+  if (reportedByEndpoint) {
     return capabilityState(capability, snapshot) === "not-installed" ? "image" : "buy";
   }
 
-  // 别的服务的能力从来不出现在这两个列表里,缺席说明不了任何事(ee-design.md §6
+  // 端点报不出的能力不会出现在那两个列表里,缺席说明不了任何事(ee-design.md §6
   // 「A 答不了 B」)。档位够却仍走到这里,最可能是那个服务的镜像没升——只能给方向。
   return "image-likely";
 }
@@ -49,10 +49,11 @@ export function upgradeReason(
  *
  * 判据按「能核实到什么程度」分两档:
  *
- * - **bkn-safe 自己实现的**:`capabilities[]` 就是它这个进程的实况,证够了还得在册才算数。
- * - **别的服务实现的**:它们从来不出现在这两个列表里,缺席说明不了任何事(ee-design.md
- *   §6「A 答不了 B」)。这时以证书为准——买了企业版证、也换了企业版包的客户,前端永远
- *   核实不了那个包,拿「核实不了」当「没装」就是把已付费能力锁死在门外。
+ * - **端点报得出的**(`reportedByEndpoint`):`capabilities[]` 就是这套部署的实况,证够了
+ *   还得在册才算数——那份名单能分清「换镜像」和「买证书」。
+ * - **端点报不出的**:它们不会出现在那两个列表里,缺席说明不了任何事(ee-design.md §6
+ *   「A 答不了 B」)。这时以证书为准——买了企业版证、也换了企业版包的客户,前端核实不了
+ *   那个包,拿「核实不了」当「没装」就是把已付费能力锁死在门外。
  *
  * 少数几个「档位够但确实用不了」的位置有更强的信号(比如连接器有后端给的 `enabled`),
  * 由调用点自己判,不该让所有人陪着一起被拦。
@@ -61,11 +62,11 @@ export function capabilitySatisfied(
   capability: string,
   snapshot: EntitlementView | null,
   minEdition: Edition,
-  servedByBknSafe: boolean,
+  reportedByEndpoint: boolean,
 ): boolean {
   if (!snapshot || !atLeast(snapshot.edition, minEdition)) {
     return false;
   }
 
-  return servedByBknSafe ? capabilityState(capability, snapshot) === "available" : true;
+  return reportedByEndpoint ? capabilityState(capability, snapshot) === "available" : true;
 }

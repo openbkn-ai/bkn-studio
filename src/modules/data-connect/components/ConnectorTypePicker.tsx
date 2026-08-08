@@ -24,7 +24,7 @@ import type { Edition } from "@/framework/entitlement/edition";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
-import { capabilityServedByBknSafe } from "@/modules/subscription/capability-catalog";
+import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 import styles from "./ConnectorTypePicker.module.css";
@@ -142,7 +142,7 @@ export function ConnectorTypePicker({
                   CAPABILITIES.CONNECTOR_CERTIFIED,
                   snapshot,
                   CERTIFIED_MIN_EDITION,
-                  capabilityServedByBknSafe(CAPABILITIES.CONNECTOR_CERTIFIED),
+                  capabilityReportedByEndpoint(CAPABILITIES.CONNECTOR_CERTIFIED),
                 );
               const active = item.enabled && !locked && item.type === value;
               const templateMeta = getConnectorTemplateMeta(item);

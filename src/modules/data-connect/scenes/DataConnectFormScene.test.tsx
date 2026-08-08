@@ -409,12 +409,12 @@ describe("DataConnectFormScene · connection preflight", () => {
    * 证书已经覆盖这项能力时,后端仍然关着它就不是钱的事,是这套部署没提供。这时说
    * 「请升级镜像」既指错方向,也把 bkn-safe 的镜像状态硬安到 Vega 头上。
    */
-  it("证书已覆盖时不再推销,照普通连接器画「暂不可用」", async () => {
+  it("装了且证够时不再推销,照普通连接器画「暂不可用」", async () => {
     permissionState.values = new Set(["catalog:create"]);
     entitlementState.snapshot = {
-      capabilities: ["rbac_basic"],
+      capabilities: ["connector_certified", "rbac_basic"],
       edition: "enterprise",
-      extensions: ["rbac_basic"],
+      extensions: ["connector_certified", "rbac_basic"],
     };
 
     render(<DataConnectFormScene mode="create" />);
@@ -424,6 +424,28 @@ describe("DataConnectFormScene · connection preflight", () => {
     expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
     expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
     expect(sqlServerButton.textContent).not.toContain(
+      "common.entitlement.editionsShort.professional",
+    );
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  /**
+   * 企业镜像 + 社区证:能力在 `extensions[]` 里、不在 `capabilities[]` 里。这是唯一
+   * 「换一张证就能用」的状态,也是唯一该出商务信息的地方。
+   */
+  it("装了没买 → 画档位徽标并给升级引导", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    entitlementState.snapshot = {
+      capabilities: [],
+      edition: "community",
+      extensions: ["connector_certified", "rbac_basic"],
+    };
+
+    render(<DataConnectFormScene mode="create" />);
+
+    const sqlServerButton = await findConnectorCard("SQL Server");
+
+    expect(sqlServerButton.hasAttribute("disabled")).toBe(false);
+    expect(sqlServerButton.textContent).toContain(
       "common.entitlement.editionsShort.professional",
     );
   }, HEAVY_SCENE_TIMEOUT_MS);

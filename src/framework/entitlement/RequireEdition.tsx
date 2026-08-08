@@ -16,7 +16,7 @@ import type { Edition } from "@/framework/entitlement/edition";
 import { capabilitySatisfied, upgradeReason } from "@/framework/entitlement/upgrade-reason";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { capabilityServedByBknSafe } from "@/modules/subscription/capability-catalog";
+import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";
 
 const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
 
@@ -60,13 +60,13 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
     );
   }
 
-  const servedByBknSafe = capabilityServedByBknSafe(capability);
+  const reportedByEndpoint = capabilityReportedByEndpoint(capability);
   /*
     与升级弹窗共用同一条判定和同一批文案:同一件事在两处说成两样,客户会以为是两个问题。
   */
-  const reason = upgradeReason(capability, snapshot, minEdition, servedByBknSafe);
+  const reason = upgradeReason(capability, snapshot, minEdition, reportedByEndpoint);
 
-  if (capabilitySatisfied(capability, snapshot, minEdition, servedByBknSafe)) {
+  if (capabilitySatisfied(capability, snapshot, minEdition, reportedByEndpoint)) {
     return <>{children}</>;
   }
 
