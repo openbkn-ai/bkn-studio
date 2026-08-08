@@ -18,7 +18,7 @@ export type SemanticUnderstandingTaskSummary = {
   confidence: number;
   confidenceThreshold: number;
   createTime: number;
-  creator?: { id: string; name?: string; type?: string };
+  creator: { id: string; name?: string; type: string };
   id: string;
   resourceId?: string;
   resourceName?: string;
@@ -153,7 +153,7 @@ export async function getSemanticUnderstandingTask(id: string) {
 
 export async function createResourceSemanticUnderstandingTask(payload: CreateSemanticUnderstandingTaskPayload) {
   if (useMock) {
-    const task = { id: `semantic-task-${Date.now()}`, scope: "resource" as const, catalogId: "", resourceId: payload.resourceId, agentId: "resource-semantic-understanding", status: "pending" as const, applyMode: payload.applyMode, confidenceThreshold: payload.confidenceThreshold ?? 0.75, confidence: 0, applied: false, createTime: Date.now() };
+    const task = { id: `semantic-task-${Date.now()}`, scope: "resource" as const, catalogId: "", resourceId: payload.resourceId, agentId: "resource-semantic-understanding", status: "pending" as const, applyMode: payload.applyMode, confidenceThreshold: payload.confidenceThreshold ?? 0.75, confidence: 0, applied: false, creator: { id: "mock-user", name: "Mock User", type: "user" }, createTime: Date.now() };
     mockTasks = [task, ...mockTasks];
     return task;
   }

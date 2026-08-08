@@ -63,6 +63,7 @@ let mockSemanticTasks: SemanticTask[] = [
     confidenceThreshold: 0.75,
     confidence: 0.94,
     applied: true,
+    creator: { id: "mock-user", name: "Mock User", type: "user" },
     createTime: Date.now() - 1000 * 60 * 45,
   },
   {
@@ -75,6 +76,7 @@ let mockSemanticTasks: SemanticTask[] = [
     confidenceThreshold: 0.75,
     confidence: 0,
     applied: false,
+    creator: { id: "mock-user", name: "Mock User", type: "user" },
     createTime: Date.now() - 1000 * 60 * 8,
   },
 ];
