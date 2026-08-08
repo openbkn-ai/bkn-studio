@@ -20,7 +20,7 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { SemanticUnderstandingTaskDetailDrawer } from "@/modules/data-catalog/components/SemanticUnderstandingTaskDetailDrawer";
-import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTask, listResourceSemanticUnderstandingTasks, type CreateSemanticUnderstandingTaskPayload, type SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTask, listResourceSemanticUnderstandingTasks, type CreateSemanticUnderstandingTaskPayload, type SemanticUnderstandingTaskSummary } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./ResourceSemanticUnderstandingPanel.module.css";
@@ -34,7 +34,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const [form] = Form.useForm<CreateSemanticUnderstandingTaskPayload>();
-  const [tasks, setTasks] = useState<SemanticUnderstandingTask[]>([]);
+  const [tasks, setTasks] = useState<SemanticUnderstandingTaskSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -88,7 +88,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     { dataIndex: "createTime", title: t("dataCatalog.task.createTime"), render: formatTime },
     {
       key: "actions", title: t("common.actions"), width: 160, fixed: "right" as const,
-      render: (_: unknown, task: SemanticUnderstandingTask) => <Space className={styles.actionGroup} size={4}>
+      render: (_: unknown, task: SemanticUnderstandingTaskSummary) => <Space className={styles.actionGroup} size={4}>
         <AppButton type="link" onClick={() => setDetailTaskId(task.id)}>{t("common.detail")}</AppButton>
         <PermissionGate permissions="resource:task_manage">
           <AppButton danger disabled={task.status === "pending" || task.status === "running"} type="link" onClick={() => void modal.confirm({

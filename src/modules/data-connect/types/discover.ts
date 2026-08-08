@@ -17,7 +17,7 @@ export type DataConnectDiscoverTaskStatus =
   | "running";
 
 export type DataConnectDiscoverTaskTriggerType = "manual" | "scheduled";
-export type DataConnectDiscoverTaskSort = "create_time" | "default";
+export type DataConnectDiscoverTaskSort = "create_time";
 
 export type DataConnectDiscoverSchedule = {
   catalogId: string;
@@ -60,6 +60,13 @@ export type DataConnectDiscoverTask = {
   triggerType: DataConnectDiscoverTaskTriggerType;
 };
 
+export type DataConnectDiscoverTaskSummary = Omit<
+  DataConnectDiscoverTask,
+  "message" | "result"
+> & {
+  result?: DataConnectDiscoverTaskResultSummary;
+};
+
 export type DataConnectDiscoverResult = {
   catalogId: string;
   failedCount: number;
@@ -70,6 +77,11 @@ export type DataConnectDiscoverResult = {
   unchangedCount: number;
   updatedCount: number;
 };
+
+export type DataConnectDiscoverTaskResultSummary = Omit<
+  DataConnectDiscoverResult,
+  "message"
+>;
 
 export type DataConnectDiscoverScheduleListQuery = {
   catalogId?: string;
@@ -97,7 +109,7 @@ export type DataConnectDiscoverScheduleListResult = {
 };
 
 export type DataConnectDiscoverTaskListResult = {
-  items: DataConnectDiscoverTask[];
+  items: DataConnectDiscoverTaskSummary[];
   total: number;
 };
 

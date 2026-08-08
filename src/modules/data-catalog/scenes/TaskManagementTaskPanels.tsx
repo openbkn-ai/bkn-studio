@@ -32,31 +32,22 @@ import { DataConnectDiscoverTaskDrawer } from "@/modules/data-connect/components
 import type {
   DataConnectDiscoverSchedule,
   DataConnectDiscoverStrategy,
-  DataConnectDiscoverTask,
   DataConnectDiscoverTaskSort,
   DataConnectDiscoverTaskStatus,
+  DataConnectDiscoverTaskSummary,
   DataConnectDiscoverTaskTriggerType,
 } from "@/modules/data-connect/types/discover";
 import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
-import { deleteSemanticUnderstandingTask, mapSemanticUnderstandingTask, type BackendSemanticUnderstandingTask, type SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import { buildSemanticUnderstandingTaskListParams, deleteSemanticUnderstandingTask, mapSemanticUnderstandingTaskSummary, type BackendSemanticUnderstandingTaskSummary, type SemanticUnderstandingTaskListFilters, type SemanticUnderstandingTaskSummary } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { listCatalogs } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./TaskManagementTaskPanels.module.css";
 
-type SemanticTaskStatus = SemanticUnderstandingTask["status"];
-type SemanticTask = SemanticUnderstandingTask;
-type SemanticTaskFilters = {
-  scope?: SemanticTask["scope"];
-  catalogId?: string;
-  resourceId?: string;
-  status?: SemanticTaskStatus;
-  applyMode?: string;
-  applied?: boolean;
-  direction?: "asc" | "desc";
-  sort?: "create_time" | "default";
-};
+type SemanticTaskStatus = SemanticUnderstandingTaskSummary["status"];
+type SemanticTask = SemanticUnderstandingTaskSummary;
+type SemanticTaskFilters = SemanticUnderstandingTaskListFilters;
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
@@ -72,6 +63,7 @@ let mockSemanticTasks: SemanticTask[] = [
     confidenceThreshold: 0.75,
     confidence: 0.94,
     applied: true,
+    creator: { id: "mock-user", name: "Mock User", type: "user" },
     createTime: Date.now() - 1000 * 60 * 45,
   },
   {
@@ -84,6 +76,7 @@ let mockSemanticTasks: SemanticTask[] = [
     confidenceThreshold: 0.75,
     confidence: 0,
     applied: false,
+    creator: { id: "mock-user", name: "Mock User", type: "user" },
     createTime: Date.now() - 1000 * 60 * 8,
   },
 ];
@@ -115,7 +108,7 @@ function TaskPanel({ children }: { children: React.ReactNode }) {
   return <section className={styles.contentSurface}>{children}</section>;
 }
 
-function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTask }) {
+function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }) {
   const percent = Math.max(0, Math.min(100, task.progress));
   const fillClass =
     task.status === "completed"
@@ -143,7 +136,7 @@ export function DiscoverTaskListPanel() {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState<DataConnectDiscoverTask[]>([]);
+  const [tasks, setTasks] = useState<DataConnectDiscoverTaskSummary[]>([]);
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
   const [schedules, setSchedules] = useState<DataConnectDiscoverSchedule[]>([]);
   const [catalogKeyword, setCatalogKeyword] = useState("");
@@ -151,7 +144,7 @@ export function DiscoverTaskListPanel() {
   const [status, setStatus] = useState<DataConnectDiscoverTaskStatus>();
   const [strategy, setStrategy] = useState<DataConnectDiscoverStrategy>();
   const [triggerType, setTriggerType] = useState<DataConnectDiscoverTaskTriggerType>();
-  const [sort, setSort] = useState<DataConnectDiscoverTaskSort>("default");
+  const [sort, setSort] = useState<DataConnectDiscoverTaskSort>("create_time");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -223,15 +216,15 @@ export function DiscoverTaskListPanel() {
     });
   };
   const sortOrderOf = (key: DataConnectDiscoverTaskSort) => sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
-  const handleTableChange: TableProps<DataConnectDiscoverTask>["onChange"] = (_pagination, _filters, sorter, extra) => {
+  const handleTableChange: TableProps<DataConnectDiscoverTaskSummary>["onChange"] = (_pagination, _filters, sorter, extra) => {
     if (extra.action !== "sort") return;
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
-    setSort(single?.columnKey as DataConnectDiscoverTaskSort || "default");
+    setSort(single?.columnKey as DataConnectDiscoverTaskSort || "create_time");
     setDirection(single?.order === "ascend" ? "asc" : "desc");
     setPage(1);
   };
 
-  const columns: ColumnsType<DataConnectDiscoverTask> = [
+  const columns: ColumnsType<DataConnectDiscoverTaskSummary> = [
     { dataIndex: "id", title: t("dataCatalog.taskManagement.columns.task"), width: 160, ellipsis: true },
     {
       dataIndex: "catalogId",
@@ -303,10 +296,6 @@ async function listSemanticTasks(page: number, pageSize: number, filters: Semant
     );
     const direction = filters.direction === "asc" ? 1 : -1;
     const sorted = filtered.sort((left, right) => {
-      if (filters.sort === "default") {
-        const rank = { running: 1, pending: 2, failed: 3, succeeded: 4 };
-        return rank[left.status] - rank[right.status] || right.createTime - left.createTime;
-      }
       const leftValue = left.createTime;
       const rightValue = right.createTime;
       return leftValue > rightValue ? direction : leftValue < rightValue ? -direction : 0;
@@ -318,21 +307,10 @@ async function listSemanticTasks(page: number, pageSize: number, filters: Semant
     });
   }
 
-  const response = await http.get<{ entries: BackendSemanticUnderstandingTask[]; total_count: number }>("/vega-backend/v1/semantic-understanding-tasks", {
-    params: {
-      direction: filters.direction ?? "desc",
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
-      sort: filters.sort ?? "default",
-      scope: filters.scope,
-      catalog_id: filters.catalogId,
-      resource_id: filters.resourceId,
-      status: filters.status,
-      apply_mode: filters.applyMode,
-      applied: filters.applied,
-    },
+  const response = await http.get<{ entries: BackendSemanticUnderstandingTaskSummary[]; total_count: number }>("/vega-backend/v1/semantic-understanding-tasks", {
+    params: buildSemanticUnderstandingTaskListParams(page, pageSize, filters),
   });
-  return { items: response.data.entries.map(mapSemanticUnderstandingTask), total: response.data.total_count };
+  return { items: response.data.entries.map(mapSemanticUnderstandingTaskSummary), total: response.data.total_count };
 }
 
 async function deleteSemanticTask(id: string) {
@@ -361,7 +339,7 @@ export function SemanticUnderstandingTaskListPanel() {
   const [status, setStatus] = useState<SemanticTaskStatus>();
   const [applyMode, setApplyMode] = useState<string>();
   const [applied, setApplied] = useState<boolean>();
-  const [sort, setSort] = useState<NonNullable<SemanticTaskFilters["sort"]>>("default");
+  const [sort, setSort] = useState<NonNullable<SemanticTaskFilters["sort"]>>("create_time");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -406,7 +384,7 @@ export function SemanticUnderstandingTaskListPanel() {
   const handleTableChange: TableProps<SemanticTask>["onChange"] = (_pagination, _filters, sorter, extra) => {
     if (extra.action !== "sort") return;
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
-    setSort(single?.columnKey as NonNullable<SemanticTaskFilters["sort"]> || "default");
+    setSort(single?.columnKey as NonNullable<SemanticTaskFilters["sort"]> || "create_time");
     setDirection(single?.order === "ascend" ? "asc" : "desc");
     setPage(1);
   };

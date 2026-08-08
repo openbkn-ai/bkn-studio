@@ -180,11 +180,8 @@ export type BuildTaskListQuery = {
   statuses?: BuildTaskStatus[];
 };
 
-/** 服务端排序维度:default=后端默认(构建中置顶),不传 order_by。 */
-export type BuildTaskOrderBy =
-  | "default"
-  | "created_at"
-  | "updated_at";
+/** 服务端排序维度；缺省按创建时间倒序。 */
+export type BuildTaskOrderBy = "created_at" | "updated_at";
 
 export type BuildTaskPageQuery = {
   /** 只看构建中:传 active=true,且不再传 status。 */
