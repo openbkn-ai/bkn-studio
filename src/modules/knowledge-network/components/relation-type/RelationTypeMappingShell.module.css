@@ -17,6 +17,18 @@
 
 .modeField :global(.ant-form-item-label > label) {
   color: #1f2329;
+  white-space: normal;
+}
+
+.modeField :global(.ant-radio-group) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.modeField :global(.ant-radio-wrapper) {
+  margin-inline-end: 0;
+  white-space: nowrap;
 }
 
 .rulesPanel {

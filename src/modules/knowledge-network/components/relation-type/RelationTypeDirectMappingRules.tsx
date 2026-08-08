@@ -202,7 +202,7 @@ export function RelationTypeDirectMappingRules({
       dataIndex: "rowType",
       key: "rowType",
       title: "",
-      width: 120,
+      width: 150,
       render: (rowType: MappingTableRow["rowType"]) =>
         rowType === "object"
           ? t("knowledgeNetwork.relationTypeMappingObjectRow")

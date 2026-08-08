@@ -161,9 +161,9 @@
 }
 
 .sectionHeading {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 24px;
   padding-bottom: 18px;
   border-bottom: 1px solid var(--color-divider);
@@ -175,16 +175,17 @@
 }
 
 .sectionHeading p {
-  max-width: 700px;
   margin: 6px 0 0;
   color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
-.sectionHeading .platformDescription {
-  max-width: none;
-  white-space: nowrap;
+.sectionAction,
+.sectionActionSpacer {
+  justify-self: end;
+  width: 110px;
 }
 
 .stageRail {
@@ -216,7 +217,7 @@
   align-items: flex-start;
   gap: 9px;
   width: 100%;
-  min-height: 76px;
+  height: 96px;
   padding: 12px 14px;
   border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
@@ -274,25 +275,35 @@
   color: var(--color-primary-600);
 }
 
+.stageCopy {
+  min-width: 0;
+}
+
 .stageButton strong,
 .stageButtonActive strong {
-  display: block;
+  display: -webkit-box;
+  overflow: hidden;
   color: inherit;
   font-size: 14px;
   line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .stageButton small,
 .stageButtonActive small {
-  display: block;
+  display: -webkit-box;
+  overflow: hidden;
   margin-top: 3px;
   color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .stageDetail {
-  margin-top: 28px;
+  margin-top: 22px;
 }
 
 .engineeringIcon {
@@ -308,9 +319,8 @@
 }
 
 .actionSectionHeader {
-  padding: 16px 18px;
+  padding: 6px 0 12px 16px;
   border-left: 3px solid var(--color-primary-600);
-  background: var(--color-bg-layout);
 }
 
 .actionSectionHeader h3 {
@@ -321,7 +331,7 @@
 }
 
 .actionSectionHeader p {
-  max-width: 900px;
+  max-width: 880px;
   margin: 5px 0 0;
   color: var(--color-text-secondary);
   font-size: 13px;
@@ -329,8 +339,8 @@
 }
 
 .actionList {
+  margin-top: 2px;
   border: 1px solid var(--color-divider);
-  border-top: 0;
 }
 
 .actionRowCompact {
@@ -571,8 +581,9 @@
 
 .installItem {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 1.4fr);
-  gap: 20px;
+  grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.1fr) 150px;
+  align-items: start;
+  gap: 24px;
   padding: 16px 0;
   border-bottom: 1px solid var(--color-divider);
 }
@@ -584,19 +595,47 @@
   line-height: 1.6;
 }
 
-.installCommand {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+.installTitleBlock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
   min-width: 0;
-  padding: 9px 10px;
-  background: var(--color-bg-layout);
+}
+
+.installTitleBlock h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.installTitleBlock > span {
+  display: none;
+}
+
+.installTitleBlock code {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.installCommand {
+  display: contents;
 }
 
 .installCommand code {
-  flex: 1 1 auto;
+  display: block;
   min-width: 0;
+  min-height: 42px;
+  padding: 9px 10px;
   overflow-wrap: anywhere;
+  background: var(--color-bg-layout);
   color: var(--color-text-primary);
   font-family: var(--font-family-mono);
   font-size: 12px;
@@ -604,14 +643,35 @@
 }
 
 .installCommand :global(.ant-btn) {
-  flex: 0 0 auto;
+  justify-self: end;
+  width: 150px;
+}
+
+@media (max-width: 980px) {
+  .installItem {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .installCommand {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .installCommand code {
+    flex: 1 1 auto;
+  }
+
+  .installCommand :global(.ant-btn) {
+    flex: 0 0 auto;
+    justify-self: auto;
+    width: auto;
+  }
 }
 
 @media (max-width: 960px) {
-  .sectionHeading .platformDescription {
-    white-space: normal;
-  }
-
   .actionNavigate .actionMain small {
     display: block;
     margin: 3px 0 0;

@@ -311,7 +311,7 @@ export function OverviewOntologyBlock({
       {
         title: t("knowledgeNetwork.previewColIndexState"),
         key: "indexState",
-        width: 140,
+        width: 180,
         render: (_, entity) => renderResourceIndexState(entity),
       },
     ],

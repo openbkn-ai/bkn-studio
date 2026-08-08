@@ -451,6 +451,7 @@
   color: #111827;
   font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .objectTypePage .tableCard :global(.ant-table-tbody > tr > td) {

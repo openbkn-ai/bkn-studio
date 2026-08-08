@@ -53,8 +53,8 @@ export function RelationTypeMappingShell({
         <Form.Item
           className={styles.modeField}
           label={t("knowledgeNetwork.relationTypeMappingAssociation")}
-          labelCol={{ span: 3 }}
-          wrapperCol={{ span: 21 }}
+          labelCol={{ flex: "170px" }}
+          wrapperCol={{ flex: "auto" }}
         >
           <Radio.Group
             onChange={(event) => {

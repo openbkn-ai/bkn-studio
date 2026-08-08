@@ -314,7 +314,7 @@ select {
 
 .console-body {
   display: grid;
-  grid-template-columns: 229px minmax(0, 1fr);
+  grid-template-columns: 264px minmax(0, 1fr);
   min-height: calc(100vh - 72px);
   position: relative;
   isolation: isolate;
@@ -502,6 +502,10 @@ select {
 
 .console-sidenav-label {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .console-sidenav-caret {

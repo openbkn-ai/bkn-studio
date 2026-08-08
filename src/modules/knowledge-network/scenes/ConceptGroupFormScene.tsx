@@ -144,8 +144,8 @@ export function ConceptGroupFormScene({ mode }: ConceptGroupFormSceneProps) {
             tags: [],
           }}
           labelAlign="left"
-          labelCol={{ span: 4 }}
-          wrapperCol={{ span: 20 }}
+          labelCol={{ flex: "160px" }}
+          wrapperCol={{ flex: "auto" }}
         >
           <Form.Item
             label={t("knowledgeNetwork.conceptGroupName")}

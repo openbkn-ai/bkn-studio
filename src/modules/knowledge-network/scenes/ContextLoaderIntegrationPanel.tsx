@@ -292,6 +292,7 @@ export function ContextLoaderIntegrationPanel({
   const mainClassName = [
     styles.main,
     isVerifyView ? styles.mainMcpVerifyStack : "",
+    mode === "mcp" && showMcpConnect ? styles.mainMcpConnectStack : "",
   ]
     .filter(Boolean)
     .join(" ");

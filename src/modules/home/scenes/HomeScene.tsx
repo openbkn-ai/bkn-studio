@@ -330,6 +330,7 @@ export function HomeScene() {
                 <h2 id="platform-build-title">{t("home.paths.platform.heading")}</h2>
                 <p className={styles.platformDescription}>{t("home.paths.platform.description")}</p>
               </div>
+              <div className={styles.sectionActionSpacer} aria-hidden />
             </div>
 
             <ol className={styles.stageRail}>
@@ -343,7 +344,7 @@ export function HomeScene() {
                   >
                     <span className={styles.stageNumber}>{index + 1}</span>
                     <span className={styles.stageFlowIcon} aria-hidden>{stage.icon}</span>
-                    <span>
+                    <span className={styles.stageCopy}>
                       <strong>{t(`home.platform.stages.${stage.id}.title`)}</strong>
                       <small>{t(`home.platform.stages.${stage.id}.summary`)}</small>
                     </span>
@@ -437,6 +438,7 @@ export function HomeScene() {
                 <p>{t("home.paths.engineering.description")}</p>
               </div>
               <AppButton
+                className={styles.sectionAction}
                 onClick={() => setSkillsModalOpen(true)}
               >
                 {t("home.engineering.install.trigger")}
@@ -487,7 +489,7 @@ export function HomeScene() {
           {ENGINEERING_SKILLS.map((skill) => (
             <section className={styles.installItem} key={skill.id}>
               <div>
-                <div className={styles.skillTitleRow}>
+                <div className={styles.installTitleBlock}>
                   <h3>{t(`home.engineering.skills.${skill.id}.title`)}</h3>
                   <span aria-hidden>{t("home.engineering.skillNameSeparator")}</span>
                   <code>{`bkn-${skill.id === "ontologyBuilder" ? "ontology-builder" : skill.id}`}</code>
