@@ -429,6 +429,28 @@ describe("DataConnectFormScene · connection preflight", () => {
   }, HEAVY_SCENE_TIMEOUT_MS);
 
   /**
+   * 企业证 + 社区 vega:能力两个列表里都没有,是 `not-installed` 而不是 `unknown`。
+   * 该说的是「换镜像」,不是「买证书」——客户已经买过了,弹窗里不该再出购买按钮。
+   */
+  it("证够了但镜像不含 → 说换镜像,不出购买按钮", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    entitlementState.snapshot = {
+      capabilities: ["rbac_basic"],
+      edition: "enterprise",
+      extensions: ["rbac_basic"],
+    };
+
+    render(<DataConnectFormScene mode="create" />);
+
+    fireEvent.click(await findConnectorCard("SQL Server"));
+
+    expect(screen.getAllByText("common.entitlement.imageMissingTitle").length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByText("common.entitlement.upgradeTo")).toBeNull();
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  /**
    * 企业镜像 + 社区证:能力在 `extensions[]` 里、不在 `capabilities[]` 里。这是唯一
    * 「换一张证就能用」的状态,也是唯一该出商务信息的地方。
    */

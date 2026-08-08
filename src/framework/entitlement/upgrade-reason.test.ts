@@ -106,6 +106,21 @@ describe("capabilitySatisfied — 核实到哪一步就按哪一步判", () => {
     expect(capabilitySatisfied("semantic_task", licensed, "professional", false)).toBe(true);
   });
 
+  /*
+    档位是端点报不出时的唯一判据,而「异常一律回落 community」是后端的兜底行为、不是这里
+    能保证的事。再问一次 licensed,免得某天失效证仍报出证面档位时付费页照开。
+  */
+  it("端点报不出的能力：证失效就不算满足", () => {
+    const expired = deployment({ edition: "professional", licensed: false, state: "invalid" });
+
+    expect(capabilitySatisfied("semantic_task", expired, "professional", false)).toBe(false);
+  });
+
+  // 社区档能力例外:无证部署的 licensed 本来就是 false,一并要求会把免费能力也拦掉。
+  it("端点报不出的社区档能力：无证也算满足", () => {
+    expect(capabilitySatisfied("bkn_trace", deployment({}), "community", false)).toBe(true);
+  });
+
   it("别的服务实现的能力：档位不够仍不算满足", () => {
     expect(capabilitySatisfied("business_provenance", licensed, "enterprise", false)).toBe(
       false,

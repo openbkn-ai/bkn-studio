@@ -129,12 +129,15 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
               {t("common.entitlement.compareEditions")}
             </AppButton>
           </div>
+          {/*
+            这里取不到 image-likely:那条 reason 的唯一来路是「端点报不出 + 档位够」,
+            而那种情况上面已经放行了。整页守卫只会拦下档位不够(buy)与端点说没装(image)
+            两种。判不出镜像的说法仍留在 CapabilityUpgradeDialog——连接器那条路走得到。
+          */}
           <p className="console-upgrade-note">
             {reason === "image"
               ? t("common.entitlement.imageMissingHint", { edition: currentEditionName })
-              : reason === "image-likely"
-                ? t("common.entitlement.imageLikelyHint", { edition: currentEditionName })
-                : ""}
+              : ""}
           </p>
         </div>
       </div>

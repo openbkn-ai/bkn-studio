@@ -68,5 +68,16 @@ export function capabilitySatisfied(
     return false;
   }
 
-  return reportedByEndpoint ? capabilityState(capability, snapshot) === "available" : true;
+  if (reportedByEndpoint) {
+    return capabilityState(capability, snapshot) === "available";
+  }
+
+  /*
+    端点报不出时,档位是唯一判据——但不能只看它。`edition.ts` 记着「后端在一切异常下都
+    回落 community」,那是别人的兜底行为,不是这里能保证的事;万一某天失效证仍报出证面上
+    的档位,付费页就会对着一张废证打开。再问一次 `licensed` 把这条腿钉住。
+
+    社区档的能力例外:无证部署的 `licensed` 本来就是 false,一并要求会把免费能力也拦掉。
+  */
+  return minEdition === "community" || snapshot.licensed;
 }
