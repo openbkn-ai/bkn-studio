@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -91,6 +91,13 @@ vi.mock("@/modules/data-connect/services/data-connect.service", () => ({
  * CI 的 runner 慢上数倍,那点余量不够——已经因此红过一次。这两条是真的重,不是卡住了。
  */
 const HEAVY_SCENE_TIMEOUT_MS = 30_000;
+
+/*
+  `findBy*` 默认只等 1s。这一整页是真场景渲染 + antd 的异步表单校验,CI 的 runner 慢上
+  数倍,断言会在提示渲染出来之前就放弃——已经因此红过一次(「rejects invalid JSON
+  options」找不到 dataConnect.jsonObjectInvalid)。放宽只影响失败路径要多等多久。
+*/
+configure({ asyncUtilTimeout: 5_000 });
 
 /**
  * 按名字取连接器卡片。
