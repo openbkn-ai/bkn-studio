@@ -106,7 +106,9 @@
 
 .actionGroup {
   composes: actionGroup from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-  max-width: 280px;
+  align-items: center;
+  flex-wrap: nowrap;
+  max-width: none;
 }
 
 .statusTag {
@@ -185,6 +187,11 @@
 
 .actionDanger {
   composes: actionDanger from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+}
+
+.actionMore {
+  min-width: 24px;
+  padding-inline: 0;
 }
 
 @media (max-width: 1200px) {

@@ -13,6 +13,7 @@ import {
 import {
   Alert,
   Button,
+  DatePicker,
   Descriptions,
   Empty,
   Input,
@@ -26,6 +27,7 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -105,8 +107,7 @@ type ProvenanceListRow = {
 };
 
 export function BknTraceRunsScene() {
-  const { i18n, t } = useTranslation();
-  const dateTimeInputLang = i18n?.resolvedLanguage?.startsWith("zh") ? "zh-CN" : "en-US";
+  const { t } = useTranslation();
   const durationLabels = useMemo(() => ({
     hour: t("bknTrace.durationUnits.hour"),
     millisecond: t("bknTrace.durationUnits.millisecond"),
@@ -579,21 +580,23 @@ export function BknTraceRunsScene() {
           prefix={<SearchOutlined />}
           value={keyword}
         />
-        <Input
+        <DatePicker
+          allowClear
           aria-label={t("bknTrace.placeholders.timeFrom")}
-          lang={dateTimeInputLang}
-          onChange={(event) => setFrom(toRFC3339(event.target.value))}
+          format="YYYY-MM-DD HH:mm"
+          onChange={(value) => setFrom(toRFC3339(value))}
           placeholder={t("bknTrace.placeholders.timeFrom")}
-          type="datetime-local"
-		  value={toLocalDateTimeInput(from)}
+          showTime={{ format: "HH:mm" }}
+		  value={toDateTimePickerValue(from)}
         />
-        <Input
+        <DatePicker
+          allowClear
           aria-label={t("bknTrace.placeholders.timeTo")}
-          lang={dateTimeInputLang}
-          onChange={(event) => setTo(toRFC3339(event.target.value))}
+          format="YYYY-MM-DD HH:mm"
+          onChange={(value) => setTo(toRFC3339(value))}
           placeholder={t("bknTrace.placeholders.timeTo")}
-          type="datetime-local"
-		  value={toLocalDateTimeInput(to)}
+          showTime={{ format: "HH:mm" }}
+		  value={toDateTimePickerValue(to)}
         />
         <Input
           allowClear
@@ -1044,18 +1047,15 @@ function formatTime(value?: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-function toRFC3339(value: string) {
+function toRFC3339(value: dayjs.Dayjs | null) {
   if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+  return value.isValid() ? value.toISOString() : undefined;
 }
 
-function toLocalDateTimeInput(value?: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
+function toDateTimePickerValue(value?: string) {
+  if (!value) return null;
+  const date = dayjs(value);
+  return date.isValid() ? date : null;
 }
 
 function initialProvenanceState(): { query: RequestSummaryQuery; requestId?: string; view: ProvenanceView } {

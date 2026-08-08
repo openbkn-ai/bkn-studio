@@ -23,6 +23,7 @@ export const dataConnectEnUS = {
     empty: "No data connections",
     emptyDescription:
       "No data connection records are available yet. Use create to add the first connector instance.",
+    moreActions: "More actions",
     detailTitle: "Connection Detail",
     name: "Connection Name",
     connectorType: "Connector Type",

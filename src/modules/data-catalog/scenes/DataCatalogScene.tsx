@@ -367,6 +367,12 @@ export function DataCatalogScene({
           onRefresh={async () => {
             await loadAll();
           }}
+          onOpenConnections={() => {
+            void navigate("/data-connect");
+          }}
+          onOpenDiscoverTasks={(catalogId) => {
+            void navigate(`/data-connect/discover${catalogId ? `?catalogId=${catalogId}` : ""}`);
+          }}
           onSelectCatalog={(catalogId) => {
             const next = new URLSearchParams(searchParams);
             next.delete("schema");

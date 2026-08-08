@@ -10,7 +10,9 @@ import {
   DatabaseOutlined,
   DeleteOutlined,
   LeftOutlined,
+  LinkOutlined,
   PlusOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import { Form, Input, Modal, Tooltip } from "antd";
 import type { DataNode } from "antd/es/tree";
@@ -38,6 +40,8 @@ type CatalogTreePanelProps = {
   collapsed?: boolean;
   connectorTypes: DataConnectConnectorType[];
   onRefresh: () => Promise<void> | void;
+  onOpenConnections?: () => void;
+  onOpenDiscoverTasks?: (catalogId?: string) => void;
   onSelectCatalog: (catalogId: string) => void;
   onSelectScope?: (scope: { schema: string } | null) => void;
   onToggleCollapsed?: () => void;
@@ -92,6 +96,8 @@ export function CatalogTreePanel({
   collapsed = false,
   connectorTypes,
   onRefresh,
+  onOpenConnections,
+  onOpenDiscoverTasks,
   onSelectCatalog,
   onSelectScope,
   onToggleCollapsed,
@@ -446,6 +452,22 @@ export function CatalogTreePanel({
         }
         headerActions={
           <>
+            <Tooltip title={t("dataCatalog.catalog.goScan")}>
+              <AppButton
+                aria-label={t("dataCatalog.catalog.goScan")}
+                className={styles.treeActionBtn}
+                icon={<SearchOutlined />}
+                onClick={() => onOpenDiscoverTasks?.(selectedCatalogId)}
+              />
+            </Tooltip>
+            <Tooltip title={t("dataCatalog.catalog.goConnection")}>
+              <AppButton
+                aria-label={t("dataCatalog.catalog.goConnection")}
+                className={styles.treeActionBtn}
+                icon={<LinkOutlined />}
+                onClick={() => onOpenConnections?.()}
+              />
+            </Tooltip>
             <PermissionGate permissions="catalog:create">
               <Tooltip title={t("dataCatalog.tree.addLogical")}>
                 <AppButton

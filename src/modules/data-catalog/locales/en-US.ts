@@ -7,7 +7,7 @@
 
 export const dataCatalogEnUS = {
   dataCatalog: {
-    title: "Data Directory",
+    title: "Data Catalog",
     description:
       "Browse and govern data resources. Filter by connection to inspect tables, views, and index status.",
     catalogDetailTitle: "Resources",
@@ -70,7 +70,7 @@ export const dataCatalogEnUS = {
     semanticWorkspace: { summary: "Semantic Understanding Result", applied: "Semantic results loaded", notApplied: "No semantic results loaded", processing: "Semantic understanding is in progress", create: "Create Task", createTitle: "Create Semantic Understanding Task", start: "Start", started: "Semantic understanding task started", empty: "No semantic-understanding tasks", confidenceThreshold: "Confidence threshold", includeSamples: "Include sample data", includeSamplesHint: "Sample data will be sent to the semantic-understanding service without masking." },
     emptyDescription:
       "Create and discover a connection first, then browse resources and build indexes here.",
-    backToCatalog: "Back to Data Directory",
+    backToCatalog: "Back to Data Catalog",
     buildChip: "Building · {{count}}",
     format: {
       daysAgo: "{{count}}d ago",
@@ -234,6 +234,7 @@ export const dataCatalogEnUS = {
     actions: {
       preview: "Preview Data",
       buildIndex: "Data Index",
+      more: "More actions",
     },
     gate: {
       catalogDisabled:
@@ -389,7 +390,7 @@ export const dataCatalogEnUS = {
       statusFilterPlaceholder: "All statuses",
       empty: "No index tasks",
       emptyDescription:
-        "No tasks match the current filters. Configure and submit a build from a resource's Data Index tab in Data Directory.",
+        "No tasks match the current filters. Configure and submit a build from a resource's Data Index tab in Data Catalog.",
       pauseListening: "Pause Listening",
       resumeListening: "Resume Listening",
       paused: "Listening paused",
