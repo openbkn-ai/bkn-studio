@@ -29,4 +29,19 @@ describe("locale format helpers", () => {
     );
     expect(formatDateTime("")).toBe("-");
   });
+
+  it("supports explicit date-time component options", () => {
+    expect(() =>
+      formatDateTime("2026-08-07T06:00:00Z", {
+        day: "2-digit",
+        hour: "2-digit",
+        locale: "en-US",
+        minute: "2-digit",
+        month: "2-digit",
+        second: "2-digit",
+        timeZone: "UTC",
+        year: "numeric",
+      }),
+    ).not.toThrow();
+  });
 });

@@ -16,6 +16,24 @@ type DateTimeInput = Date | number | string | null | undefined;
 
 const DEFAULT_EMPTY_VALUE = "-";
 
+const dateTimeComponentOptionKeys = [
+  "weekday",
+  "era",
+  "year",
+  "month",
+  "day",
+  "dayPeriod",
+  "hour",
+  "minute",
+  "second",
+  "fractionalSecondDigits",
+  "timeZoneName",
+] as const satisfies readonly (keyof Intl.DateTimeFormatOptions)[];
+
+function hasExplicitDateTimeComponentOptions(options: Intl.DateTimeFormatOptions) {
+  return dateTimeComponentOptionKeys.some((key) => options[key] !== undefined);
+}
+
 export function formatDateTime(
   value: DateTimeInput,
   options: Intl.DateTimeFormatOptions & LocaleFormatOptions = {},
@@ -26,9 +44,14 @@ export function formatDateTime(
   }
 
   const { locale = getRuntimeConfig().locale, ...dateTimeOptions } = options;
+  const defaultStyleOptions: Intl.DateTimeFormatOptions = hasExplicitDateTimeComponentOptions(dateTimeOptions)
+    ? {}
+    : {
+        dateStyle: "medium",
+        timeStyle: "medium",
+      };
   return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "medium",
+    ...defaultStyleOptions,
     hour12: false,
     ...dateTimeOptions,
   }).format(date);
