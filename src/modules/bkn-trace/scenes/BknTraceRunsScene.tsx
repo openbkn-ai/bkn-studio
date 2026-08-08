@@ -105,7 +105,8 @@ type ProvenanceListRow = {
 };
 
 export function BknTraceRunsScene() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const dateTimeInputLang = i18n?.resolvedLanguage?.startsWith("zh") ? "zh-CN" : "en-US";
   const durationLabels = useMemo(() => ({
     hour: t("bknTrace.durationUnits.hour"),
     millisecond: t("bknTrace.durationUnits.millisecond"),
@@ -402,7 +403,7 @@ export function BknTraceRunsScene() {
         <Tag color={value === "complete" ? "green" : "orange"}>{evidenceLabel(value, t)}</Tag>
       ),
       title: t("bknTrace.fields.evidenceCompleteness"),
-      width: 150,
+      width: 180,
     },
     {
       dataIndex: "durationMs",
@@ -580,13 +581,17 @@ export function BknTraceRunsScene() {
         />
         <Input
           aria-label={t("bknTrace.placeholders.timeFrom")}
+          lang={dateTimeInputLang}
           onChange={(event) => setFrom(toRFC3339(event.target.value))}
+          placeholder={t("bknTrace.placeholders.timeFrom")}
           type="datetime-local"
 		  value={toLocalDateTimeInput(from)}
         />
         <Input
           aria-label={t("bknTrace.placeholders.timeTo")}
+          lang={dateTimeInputLang}
           onChange={(event) => setTo(toRFC3339(event.target.value))}
+          placeholder={t("bknTrace.placeholders.timeTo")}
           type="datetime-local"
 		  value={toLocalDateTimeInput(to)}
         />
