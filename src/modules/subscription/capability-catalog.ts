@@ -42,17 +42,18 @@ export type CapabilityCatalogEntry = {
   key: string;
   minEdition: Edition;
   /**
-   * 哪个服务实现它(取自 `ee-features.md` 的能力总账)。
+   * `/api/safe/v1/capabilities` 报不报得出这一项。
    *
-   * 决定这一项能不能显示实况:`/api/safe/v1/capabilities` 的 `capabilities[]` /
-   * `extensions[]` 只反映 **bkn-safe 自己进程**的装配表。ee-design.md §6 开篇写死了这条
-   * ——「集群里完全可能 bkn-safe 已换企业镜像、某个业务服务还是社区镜像……**A 答不了 B**」,
-   * 而每服务的形态自述(B)延后未做。
+   * 注意问的**不是**「谁实现的」:能力在别的服务里实现,只要那个服务的 ee 构建把它登记进
+   * 装配表,这个端点就能一并报出来(`connector_certified` 由 vega 实现,2026-08-08 起已在
+   * 两个列表里)。报得出就以 `capabilities[]` / `extensions[]` 为准——那是实况,能分清
+   * 「换镜像」和「买证书」。
    *
-   * 所以别的服务的能力在这个端点里永远缺席,把它渲染成「当前镜像不含」是错误结论:真相是
-   * 这个端点答不了。
+   * 报不出的只能退到证书档位。ee-design.md §6「A 答不了 B」说的是这种:端点里的缺席说明
+   * 不了任何事,当成「当前镜像不含」就会把买了的客户挡在门外。等每服务自述(§6.2)或各服务
+   * 补登记之后,这个字段会归零,判定收敛成一条 `capabilityState()`。
    */
-  servedBy: "bkn-safe" | "other";
+  reportedByEndpoint: boolean;
   /** 首次可签发的产品版本。有值时列表里标「新增」。 */
   sinceVersion?: string;
 };
@@ -69,11 +70,12 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
 
 export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
   { category: "permission", key: CAPABILITIES.RBAC_BASIC,
-    servedBy: "bkn-safe", minEdition: "professional" },
+    reportedByEndpoint: true, minEdition: "professional" },
   {
     category: "dataConnect",
     key: "connector_certified",
-    servedBy: "other",
+    // vega 侧已登记(2026-08-08 实测两个列表里都有),判定回到端点实况。
+    reportedByEndpoint: true,
     minEdition: "professional",
     sinceVersion: "0.1.3",
   },
@@ -82,23 +84,24 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     // 查询本来就列在社区行。留在表里是为了让对比矩阵显示「三档都有」,不是付费项。
     category: "observability",
     key: "bkn_trace",
-    servedBy: "other",
+    reportedByEndpoint: false,
     minEdition: "community",
     sinceVersion: "0.1.3",
   },
   {
     category: "semantic",
     key: "semantic_task",
-    servedBy: "other",
+    reportedByEndpoint: false,
     minEdition: "professional",
     sinceVersion: "0.1.3",
   },
   { category: "permission", key: CAPABILITIES.PERM_OBJECT_LEVEL,
-    servedBy: "bkn-safe", minEdition: "enterprise" },
+    reportedByEndpoint: true, minEdition: "enterprise" },
   {
     category: "observability",
     key: CAPABILITIES.BUSINESS_PROVENANCE,
-    servedBy: "other",
+    // 上游状态仍是 planned,没有真实现,端点里自然没有它;今天由前端按档位判。
+    reportedByEndpoint: false,
     minEdition: "enterprise",
     sinceVersion: "0.1.3",
   },
@@ -126,11 +129,11 @@ export function capabilityMinEdition(key: string): Edition | null {
 }
 
 /**
- * 这个能力是不是 bkn-safe 自己实现的。
+ * `/api/safe/v1/capabilities` 报不报得出这一项。
  *
- * 只有它成立时,`capabilities[]` / `extensions[]` 的缺席才说明得了问题——别的服务的能力
- * 从来不出现在那两个列表里(ee-design.md §6「A 答不了 B」),缺席是常态而不是结论。
+ * 只有它成立时,`capabilities[]` / `extensions[]` 的缺席才说明得了问题;报不出的能力缺席
+ * 是常态而不是结论(ee-design.md §6「A 答不了 B」),那时只能退到证书档位。
  */
-export function capabilityServedByBknSafe(key: string): boolean {
-  return CAPABILITY_CATALOG.find((entry) => entry.key === key)?.servedBy === "bkn-safe";
+export function capabilityReportedByEndpoint(key: string): boolean {
+  return CAPABILITY_CATALOG.find((entry) => entry.key === key)?.reportedByEndpoint === true;
 }

@@ -114,7 +114,7 @@ export function SubscriptionScene() {
     // 只有 bkn-safe 自己实现的能力才有实况可报:capabilities/extensions 是它自己进程的
     // 装配表,别的服务的能力在这个端点里永远缺席(ee-design.md §6「A 答不了 B」)。
     const clusterStatus =
-      entry.servedBy === "bkn-safe" ? capabilityState(entry.key, snapshot) : null;
+      entry.reportedByEndpoint ? capabilityState(entry.key, snapshot) : null;
 
     return (
       <tr key={entry.key}>

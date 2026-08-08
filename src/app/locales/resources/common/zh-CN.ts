@@ -69,9 +69,17 @@ export const commonZhCN = {
       typeNameToConfirm: "此操作高危,请输入名称「{{name}}」以确认删除。",
     },
     entitlement: {
-      imageLikelyHint: "已经是{{edition}}证书,请升级{{edition}}镜像以解锁该能力。",
-      imageMissingTitle: "{{edition}}授权 — 社区版镜像,需要升级",
-      imageMissingHint: "已经是{{edition}}证书,请升级{{edition}}镜像以解锁该能力。",
+      /*
+        按**能力**说,不按镜像说。`extensions[]` 现在是部署级的(vega 也登记进来了),
+        某个 key 缺席只说明那个能力的 ee 代码不在这套部署里,推不出「整套是社区版镜像」
+        ——企业镜像上 business_provenance 照样不在里面,因为它还没实现。
+      */
+      imageMissingTitle: "{{edition}}授权 — 该能力尚未在本部署提供",
+      imageMissingHint:
+        "证书已包含该能力,但当前部署里没有它的实现。请升级到包含该能力的{{edition}}镜像。",
+      // 判不出实况时(端点报不了这个 key)的说法。断言不了「没有实现」,只能给方向。
+      imageLikelyHint:
+        "证书已包含该能力,但当前部署没有报告它的实现。多半是提供该能力的服务还没升级到{{edition}}镜像。",
       unlockTitle: "解锁{{edition}}能力",
       upgradeTo: "升级到{{edition}}",
       compareEditions: "查看版本对比",
@@ -82,12 +90,6 @@ export const commonZhCN = {
       notLicensedTitle: "当前授权未包含该功能",
       notLicensedDescription:
         "这套部署具备该功能,但当前证书的版本不覆盖它。导入更高版本的证书后即可使用,无需重启服务。",
-      /*
-        判不出镜像状态时的出口。别的服务实现的能力(业务溯源、语义理解)在 bkn-safe 的
-        清单里从来没有,缺席说明不了任何事;买了并且换过包的客户会照样撞上蒙版。没有这
-        条出口,那就是把已付费功能永久锁死,而不是提示。
-      */
-      continueAnyway: "已升级,仍要继续",
       unknownTitle: "无法确认授权状态",
       unknownDescription: "读取集群授权状态失败,付费功能暂时不可用。请稍后重试。",
       /**

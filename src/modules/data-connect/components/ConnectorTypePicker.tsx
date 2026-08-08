@@ -20,10 +20,17 @@ import {
 } from "@/modules/data-connect/lib/connector-template";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import type { Edition } from "@/framework/entitlement/edition";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 import styles from "./ConnectorTypePicker.module.css";
+
+/** 认证连接器的门槛档,与能力登记表一致(`connector_certified` 属 Professional)。 */
+const CERTIFIED_MIN_EDITION: Edition = "professional";
 
 type ConnectorTypePickerProps = {
   onChange: (value: string) => void;
@@ -41,6 +48,7 @@ export function ConnectorTypePicker({
   const [tag, setTag] = useState<string>();
   const [family, setFamily] = useState<DataSourceFamilyKey>("structured");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const { loading, snapshot } = useEntitlementContext();
 
   const familyOptions = getPrimaryDataSourceFamilies().filter(
     (item) => item.key === "structured",
@@ -112,16 +120,35 @@ export function ConnectorTypePicker({
             {filtered.map((item) => {
               const certified = isCertifiedConnectorType(item.type);
               /*
-                能不能用**只信后端的 enabled**,不看 capabilities[]:认证连接器由 Vega
-                实现,不在 bkn-safe 的装配表里,那个端点永远不报这个 key
-                (ee-design.md §6「A 答不了 B」)——照它判会让 SQL Server 在所有部署上都
-                点不进去,包括买了的。
+                后端关掉认证连接器,原因分两种,得看这套部署的授权实况:
 
-                认证连接器被后端关掉时,原因几乎一定是「没买」而不是「坏了」,所以那种
-                情况不画「暂不可用」,画档位徽标 + 点击给升级引导。普通连接器的
-                enabled: false 仍是真不可用,照旧禁用。
+                - **没买 / 镜像里没有** → 画档位徽标 + 点击给升级引导,客户看得见才知道
+                  有东西可买。
+                - **买了也装了** → 那就不是授权的事。Vega 的 `enabled` 是运维开关
+                  (`POST /connector-types/:type/enable`),`available` 才是「这个二进制
+                  里有没有这段实现」,两者都不由证书推导。这时照普通连接器画「暂不可用」:
+                  对一个已经买了企业版的客户说「请升级镜像」,是拿授权去解释一个跟授权
+                  无关的开关。
+
+                判据用 capabilities[]:vega 的 ee 构建已经把 `connector_certified` 登记进
+                装配表(2026-08-08 实测端点报得出),所以这里不再需要退到档位。
+
+                普通连接器的 enabled: false 一直是真不可用,照旧禁用。
+
+                快照没到时不当作「没买」:那段窗口里企业集群会先闪一下专业版徽标,点开正是
+                本轮要修掉的那句话。窗口长短取决于 Vega 与 bkn-safe 两个后端的相对延迟,
+                连接器列表先回来就看得见。
               */
-              const locked = certified && !item.enabled;
+              const locked =
+                certified &&
+                !item.enabled &&
+                !loading &&
+                !capabilitySatisfied(
+                  CAPABILITIES.CONNECTOR_CERTIFIED,
+                  snapshot,
+                  CERTIFIED_MIN_EDITION,
+                  capabilityReportedByEndpoint(CAPABILITIES.CONNECTOR_CERTIFIED),
+                );
               const active = item.enabled && !locked && item.type === value;
               const templateMeta = getConnectorTemplateMeta(item);
 

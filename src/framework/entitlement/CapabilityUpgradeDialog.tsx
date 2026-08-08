@@ -15,7 +15,7 @@ import type { Edition } from "@/framework/entitlement/edition";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { upgradeReason } from "@/framework/entitlement/upgrade-reason";
-import { capabilityServedByBknSafe } from "@/modules/subscription/capability-catalog";
+import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";
 
 /** 授权门户。与版本页同一个去处:申请与续期都在那边办。 */
 const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
@@ -69,7 +69,7 @@ export function CapabilityUpgradeDialog({
     capability,
     snapshot,
     minEdition,
-    capabilityServedByBknSafe(capability),
+    capabilityReportedByEndpoint(capability),
   );
   const imageIssue = reason !== "buy";
   const bullets = BULLET_KEYS.map((key) =>

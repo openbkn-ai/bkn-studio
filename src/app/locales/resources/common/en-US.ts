@@ -71,9 +71,11 @@ export const commonEnUS = {
         'This is a high-risk action. Type "{{name}}" to confirm deletion.',
     },
     entitlement: {
-      imageLikelyHint: "Your licence is already {{edition}} — upgrade to the {{edition}} image to unlock this capability.",
-      imageMissingTitle: "{{edition}} licence — community image, upgrade needed",
-      imageMissingHint: "Your licence is already {{edition}} — upgrade to the {{edition}} image to unlock this capability.",
+      imageMissingTitle: "{{edition}} licence — capability not present in this deployment",
+      imageMissingHint:
+        "Your licence covers this capability, but no implementation of it is present in this deployment. Upgrade to a {{edition}} image that includes it.",
+      imageLikelyHint:
+        "Your licence covers this capability, but this deployment does not report an implementation of it. Most likely the service providing it has not been upgraded to a {{edition}} image.",
       unlockTitle: "Unlock {{edition}}",
       upgradeTo: "Upgrade to {{edition}}",
       compareEditions: "Compare editions",
@@ -85,7 +87,6 @@ export const commonEnUS = {
       notLicensedTitle: "Not covered by the current licence",
       notLicensedDescription:
         "This deployment ships the capability, but the installed certificate's edition does not cover it. Import a higher edition and it becomes available — no restart needed.",
-      continueAnyway: "Already upgraded — continue anyway",
       unknownTitle: "Licence status unavailable",
       unknownDescription:
         "Could not read the cluster's licence state, so paid capabilities are unavailable for now. Please retry shortly.",

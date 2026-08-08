@@ -95,13 +95,36 @@ describe("upgradeReason — 快照缺席", () => {
   });
 });
 
-describe("capabilitySatisfied — 判不了就不算满足", () => {
+describe("capabilitySatisfied — 核实到哪一步就按哪一步判", () => {
   const licensed = deployment({ edition: "professional", licensed: true, state: "valid" });
 
-  // 别的服务的能力确认不了镜像；「证够了但包没换」恰恰是客户最常处在的状态，
-  // 当成满足会让标记消失，客户以为一切正常，点下去才发现用不了。
-  it("别的服务实现的能力：档位够也不算满足", () => {
-    expect(capabilitySatisfied("semantic_task", licensed, "professional", false)).toBe(false);
+  /*
+    别的服务实现的能力核实不了镜像(§6「A 答不了 B」)。核实不了不等于没装:把它判成
+    不满足,买了证也换了包的客户会被自己付过钱的功能永久挡在门外。这时以证书为准。
+  */
+  it("别的服务实现的能力：档位够就算满足", () => {
+    expect(capabilitySatisfied("semantic_task", licensed, "professional", false)).toBe(true);
+  });
+
+  /*
+    档位是端点报不出时的唯一判据,而「异常一律回落 community」是后端的兜底行为、不是这里
+    能保证的事。再问一次 licensed,免得某天失效证仍报出证面档位时付费页照开。
+  */
+  it("端点报不出的能力：证失效就不算满足", () => {
+    const expired = deployment({ edition: "professional", licensed: false, state: "invalid" });
+
+    expect(capabilitySatisfied("semantic_task", expired, "professional", false)).toBe(false);
+  });
+
+  // 社区档能力例外:无证部署的 licensed 本来就是 false,一并要求会把免费能力也拦掉。
+  it("端点报不出的社区档能力：无证也算满足", () => {
+    expect(capabilitySatisfied("bkn_trace", deployment({}), "community", false)).toBe(true);
+  });
+
+  it("别的服务实现的能力：档位不够仍不算满足", () => {
+    expect(capabilitySatisfied("business_provenance", licensed, "enterprise", false)).toBe(
+      false,
+    );
   });
 
   it("bkn-safe 的能力：证够 + 装了才算满足", () => {

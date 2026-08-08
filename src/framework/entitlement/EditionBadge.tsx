@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import type { Edition } from "@/framework/entitlement/edition";
 import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
-import { capabilityServedByBknSafe } from "@/modules/subscription/capability-catalog";
+import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";
 
 /**
  * 「这项能力从哪一档起提供」的标签。
@@ -52,7 +52,7 @@ export function EditionBadge({
     capability ?? "",
     snapshot,
     edition,
-    capability ? capabilityServedByBknSafe(capability) : false,
+    capability ? capabilityReportedByEndpoint(capability) : false,
   );
 
   if (!alwaysShow && satisfied) {

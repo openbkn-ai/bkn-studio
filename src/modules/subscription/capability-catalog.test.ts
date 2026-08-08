@@ -48,16 +48,23 @@ describe("capability catalog", () => {
   });
 
   /**
-   * `/api/safe/v1/capabilities` 只描述 bkn-safe 自己的镜像(ee-design.md §6「A 答不了 B」),
-   * 所以标成 bkn-safe 的那几条必须与 ee-features.md 的能力总账一致——多标一条,页面就会对
-   * 别的服务的能力下「当前镜像不含」的错误结论。
+   * 标成「端点报得出」的必须恰好是后端真登记了的那几个:多标一条,页面就会对一个端点答
+   * 不了的能力下「当前镜像不含」的错误结论(ee-design.md §6「A 答不了 B」);少标一条,
+   * 本可以按实况判的能力白白退回只看档位。
+   *
+   * 与后端装配表对齐(2026-08-08 实测 VM 返回):`connector_certified` 由 vega 登记进来,
+   * 加上 bkn-safe 自己的两个。`business_provenance` 上游仍是 planned,没有真实现。
    */
-  it("只有 bkn-safe 实现的能力标为可实测", () => {
-    const served = CAPABILITY_CATALOG.filter((entry) => entry.servedBy === "bkn-safe").map(
+  it("标为可实测的能力与后端装配表一致", () => {
+    const served = CAPABILITY_CATALOG.filter((entry) => entry.reportedByEndpoint).map(
       (entry) => entry.key,
     );
 
-    expect(served.sort()).toEqual(["perm_object_level", "rbac_basic"]);
+    expect(served.sort()).toEqual([
+      "connector_certified",
+      "perm_object_level",
+      "rbac_basic",
+    ]);
   });
 
   // 常量表里的每个 key 都要在册,否则页面上少一行在售能力。
