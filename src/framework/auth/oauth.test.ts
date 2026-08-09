@@ -10,9 +10,16 @@ import { webcrypto } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  canAutoStartLogin,
   completeLogin,
   computeCodeChallenge,
+  consumeCsrfRetry,
+  isCsrfConflictCallback,
+  releaseFlowLock,
   shouldUseOAuthGate,
+  stashCallbackError,
+  subscribeFlowLockRelease,
+  takeStashedCallbackError,
 } from "@/framework/auth/oauth";
 
 describe("oauth", () => {
@@ -24,6 +31,7 @@ describe("oauth", () => {
       });
     }
     window.sessionStorage.clear();
+    window.localStorage.clear();
     for (const part of document.cookie ? document.cookie.split("; ") : []) {
       const name = part.split("=")[0];
       if (name) {
@@ -110,6 +118,227 @@ describe("oauth", () => {
     await expect(completeLogin("?code=abc&state=state-1")).rejects.toThrow(
       "invalid_grant",
     );
+  });
+});
+
+// Regression: forced first-login password change. The user sits on the
+// bkn-safe login + change-password pages for a minute or more, which is long
+// enough for another Studio tab to start its own /oauth2/auth and overwrite
+// the browser's single login CSRF cookie — hydra then rejects the original
+// flow with request_forbidden. See issue #387.
+describe("login CSRF flow lock", () => {
+  const FLOW_LOCK_KEY = "bkn_oauth_flow_lock";
+
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    window.localStorage.clear();
+  });
+
+  it("allows an automatic redirect when no flow is in progress", () => {
+    expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("blocks an automatic redirect while another page load owns the flow", () => {
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "some-other-page-load", startedAt: Date.now() }),
+    );
+
+    expect(canAutoStartLogin()).toBe(false);
+  });
+
+  // Ownership must never key on a *persistent* per-tab id: sessionStorage is
+  // copied into tabs opened with window.open / "duplicate tab", so such an id
+  // would hand every clone a permanent pass through the lock.
+  it("grants no ownership from a persistent tab id", () => {
+    window.sessionStorage.setItem("bkn_oauth_tab_id", "cloned-tab");
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "cloned-tab", startedAt: Date.now() }),
+    );
+
+    expect(canAutoStartLogin()).toBe(false);
+  });
+
+  // The accepted edge of that trade-off, asserted so it stays deliberate: the
+  // owner record is also copied by a clone, so a tab duplicated while a flow
+  // is in the air does inherit ownership. Bounded by the flow's lifetime
+  // rather than permanent, and the callback's one-shot retry recovers from it.
+  it("does hand ownership to a tab cloned mid-flow", () => {
+    window.sessionStorage.setItem("bkn_oauth_flow_owner", "the-load-that-started-it");
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "the-load-that-started-it", startedAt: Date.now() }),
+    );
+
+    expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("releases an abandoned lock once it ages out", () => {
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({
+        loadId: "some-other-page-load",
+        startedAt: Date.now() - 4 * 60 * 1000,
+      }),
+    );
+
+    expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("ignores a malformed lock rather than deadlocking sign-in", () => {
+    window.localStorage.setItem(FLOW_LOCK_KEY, "not json");
+    expect(canAutoStartLogin()).toBe(true);
+
+    window.localStorage.setItem(FLOW_LOCK_KEY, JSON.stringify({ loadId: 42 }));
+    expect(canAutoStartLogin()).toBe(true);
+  });
+
+  // The tab that started the flow keeps ownership across page loads, so
+  // pressing Back from the login page can restart it instead of being told to
+  // finish in "another tab" that does not exist.
+  it("lets a later page load in the starting tab reclaim the lock", () => {
+    window.sessionStorage.setItem("bkn_oauth_flow_owner", "the-load-that-started-it");
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "the-load-that-started-it", startedAt: Date.now() }),
+    );
+
+    expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("releases a lock this tab owns", () => {
+    window.sessionStorage.setItem("bkn_oauth_flow_owner", "the-load-that-started-it");
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "the-load-that-started-it", startedAt: Date.now() }),
+    );
+
+    releaseFlowLock();
+
+    expect(window.localStorage.getItem(FLOW_LOCK_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem("bkn_oauth_flow_owner")).toBeNull();
+  });
+
+  // A stale callback page reloaded in some other tab must not delete a live
+  // flow's lock — that would free every waiting tab to overwrite its CSRF
+  // cookie while the user is still on the change-password page.
+  it("refuses to release a lock another tab owns", () => {
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "some-other-page-load", startedAt: Date.now() }),
+    );
+
+    releaseFlowLock();
+
+    expect(window.localStorage.getItem(FLOW_LOCK_KEY)).not.toBeNull();
+    expect(canAutoStartLogin()).toBe(false);
+  });
+
+  it("notifies subscribers when another tab releases the lock", () => {
+    const onRelease = vi.fn();
+    const unsubscribe = subscribeFlowLockRelease(onRelease);
+
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: FLOW_LOCK_KEY, newValue: null }),
+    );
+    expect(onRelease).toHaveBeenCalledTimes(1);
+
+    // An unrelated key must not wake the wait screen.
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: "something_else", newValue: null }),
+    );
+    expect(onRelease).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: FLOW_LOCK_KEY, newValue: null }),
+    );
+    expect(onRelease).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("callback CSRF recovery", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("recognises hydra's stale-CSRF rejection", () => {
+    expect(isCsrfConflictCallback("?error=request_forbidden")).toBe(true);
+    expect(
+      isCsrfConflictCallback(
+        "?error=some_other&error_description=" +
+          encodeURIComponent(
+            "The CSRF value from the token does not match the CSRF value from the data store.",
+          ),
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves unrelated callback errors alone", () => {
+    expect(isCsrfConflictCallback("?error=access_denied")).toBe(false);
+    expect(isCsrfConflictCallback("?code=abc&state=state-1")).toBe(false);
+  });
+
+  it("permits exactly one automatic retry per tab", () => {
+    expect(consumeCsrfRetry()).toBe(true);
+    expect(consumeCsrfRetry()).toBe(false);
+  });
+
+  // request_forbidden is not CSRF-specific, so a retry can be spent on an
+  // unrelated rejection. The user must still see why the first attempt failed.
+  it("keeps the first failure's reason across the retry", () => {
+    stashCallbackError(
+      "?error=request_forbidden&error_description=" + encodeURIComponent("login rejected"),
+    );
+
+    expect(takeStashedCallbackError()).toBe("login rejected");
+    expect(takeStashedCallbackError()).toBeNull();
+  });
+
+  it("clears the stashed reason on a successful login", async () => {
+    window.sessionStorage.setItem("bkn_oauth_state", "state-1");
+    window.sessionStorage.setItem("bkn_oauth_verifier", "verifier-1");
+    stashCallbackError("?error=request_forbidden");
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ access_token: "access-1" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      }),
+    );
+
+    await completeLogin("?code=abc&state=state-1");
+
+    expect(takeStashedCallbackError()).toBeNull();
+  });
+
+  it("clears the retry budget and the flow lock on a successful login", async () => {
+    window.sessionStorage.setItem("bkn_oauth_state", "state-1");
+    window.sessionStorage.setItem("bkn_oauth_verifier", "verifier-1");
+    window.localStorage.setItem(
+      "bkn_oauth_flow_lock",
+      JSON.stringify({ startedAt: Date.now(), tabId: "some-other-tab" }),
+    );
+    // Spend the retry budget, as a first failed attempt would.
+    expect(consumeCsrfRetry()).toBe(true);
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ access_token: "access-1" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      }),
+    );
+
+    await completeLogin("?code=abc&state=state-1");
+
+    expect(window.localStorage.getItem("bkn_oauth_flow_lock")).toBeNull();
+    expect(consumeCsrfRetry()).toBe(true);
   });
 });
 
