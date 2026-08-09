@@ -10,6 +10,8 @@ export const authZhCN = {
     signInSubtitle: "登录后访问业务知识网络控制台",
     signInButton: "登 录",
     devTokenToggle: "使用 Token 登录（开发模式）",
+    signInOtherTabTitle: "另一个标签页正在登录",
+    signInOtherTabHint: "请在那个标签页完成登录。也可以点击下方按钮，改由本页面重新发起登录。",
     callbackProcessing: "正在完成登录…",
     callbackErrorTitle: "登录失败",
     backToSignIn: "返回登录",

@@ -10,6 +10,9 @@ export const authEnUS = {
     signInSubtitle: "Sign in to access the business knowledge network console",
     signInButton: "Sign In",
     devTokenToggle: "Sign in with a token (dev mode)",
+    signInOtherTabTitle: "Another tab is signing in",
+    signInOtherTabHint:
+      "Finish signing in there, or use the button below to restart the sign-in from this tab.",
     callbackProcessing: "Completing sign-in…",
     callbackErrorTitle: "Sign-in failed",
     backToSignIn: "Back to sign-in",
