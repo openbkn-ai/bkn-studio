@@ -675,6 +675,161 @@ describe("BknTraceExplorerScene", { timeout: 30_000 }, () => {
     expect(screen.getByText("bknTrace.evidenceBasis.noAction")).not.toBeNull();
   });
 
+  it("把 search_schema 返回项展示为发现候选而不是数据依据", async () => {
+    vi.mocked(getBusinessGraph).mockResolvedValueOnce({
+      data: {
+        edges: [{
+          edgeType: "uses_business_ref",
+          id: "edge-schema-inventory",
+          sourceId: "event:search-schema",
+          targetId: "business:object:supplychain:inventory",
+        }],
+        nodes: [{
+          id: "event:search-schema",
+          nodeType: "operation",
+          properties: { operation_name: "context.search_schema" },
+          stage: "execution",
+        }, {
+          display: { name: "库存" },
+          id: "business:object:supplychain:inventory",
+          nodeType: "object_type",
+          properties: {
+            ref_id: "object:supplychain:inventory",
+            ref_type: "object_type",
+          },
+          stage: "evidence",
+          visibility: "visible",
+        }],
+      },
+      page: { edgeCount: 1, nodeCount: 2, truncated: false },
+      conclusionScope: "interaction",
+      partial: false,
+      partialReason: [],
+      requestId: requestSummary.requestId,
+      traceId: "trace_001",
+      visibilitySummary: {
+        authorizedRefCount: 1,
+        hiddenRefCount: 0,
+        omittedRefCount: 0,
+        redactedRefCount: 0,
+        unauthorizedRefCount: 0,
+        unresolvedRefCount: 0,
+      },
+    });
+    window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
+
+    render(<BknTraceRunsScene />);
+    fireEvent.click(await screen.findByRole("button", { name: /客户 A 的风险为什么上升/ }));
+
+    expect(await screen.findByText("bknTrace.evidenceBasis.discovered")).not.toBeNull();
+    expect(screen.getByText("bknTrace.evidenceBasis.noData")).not.toBeNull();
+    expect(screen.getAllByText("库存")).toHaveLength(1);
+  });
+
+  it("把 run_sql 查询制品解析为可复查的 SQL 事实", async () => {
+    const sqlSummary = {
+      ...requestSummary,
+      businessRefs: ["resource:inventory"],
+      controlledSummary: "库存数据",
+      operationId: "op_run_sql",
+      requestId: "req_run_sql",
+      resultCount: 10,
+      toolName: "run_sql",
+    };
+    vi.mocked(getRequestSummaries).mockResolvedValueOnce({
+      entries: [sqlSummary],
+      partial: false,
+      partialReasons: [],
+      total: 1,
+      truncated: false,
+    });
+    vi.mocked(getRequestSummary).mockResolvedValueOnce(sqlSummary);
+    vi.mocked(getEvidenceChain).mockResolvedValueOnce({
+      data: {
+        artifactLinks: [{
+          artifactRef: "artifact:art_query_inventory",
+          artifactType: "query",
+          eventId: "evt_run_sql",
+          eventType: "data.query.observed",
+          operationId: "op_run_sql",
+          role: "query_artifact_ref",
+        }],
+        businessRefs: [],
+        claims: [],
+        evidenceRefs: [],
+      },
+      page: { edgeCount: 0, nodeCount: 1, truncated: false },
+      conclusionScope: "interaction",
+      partial: false,
+      partialReason: [],
+      requestId: "req_run_sql",
+      traceId: "trace_001",
+      visibilitySummary: {
+        authorizedRefCount: 1,
+        hiddenRefCount: 0,
+        omittedRefCount: 0,
+        redactedRefCount: 0,
+        unauthorizedRefCount: 0,
+        unresolvedRefCount: 0,
+      },
+    });
+    vi.mocked(getEvidenceArtifact).mockResolvedValueOnce({
+      accountId: "acct-1",
+      accountType: "user",
+      artifactId: "art_query_inventory",
+      artifactType: "query",
+      businessRefs: ["resource:inventory"],
+      content: {
+        resource_ids: ["inventory"],
+        sql: "SELECT material_id, SUM(quantity) AS total_qty FROM {{.inventory}} WHERE warehouse = '昆山' GROUP BY material_id ORDER BY total_qty DESC LIMIT 10",
+      },
+      contentHash: "sha256:query",
+      contentType: "application/json",
+      observedAt: "2026-08-08T08:00:00Z",
+      operationId: "op_run_sql",
+      requestId: "req_run_sql",
+      schemaVersion: "2.2.0",
+      traceId: "trace_001",
+    });
+    vi.mocked(getBusinessGraph).mockResolvedValueOnce({
+      data: {
+        edges: [],
+        nodes: [{
+          id: "event:run-sql",
+          nodeType: "operation",
+          properties: { operation_name: "context.run_sql", row_count: 10 },
+          stage: "execution",
+        }],
+      },
+      page: { edgeCount: 0, nodeCount: 1, truncated: false },
+      conclusionScope: "interaction",
+      partial: false,
+      partialReason: [],
+      requestId: "req_run_sql",
+      traceId: "trace_001",
+      visibilitySummary: {
+        authorizedRefCount: 0,
+        hiddenRefCount: 0,
+        omittedRefCount: 0,
+        redactedRefCount: 0,
+        unauthorizedRefCount: 0,
+        unresolvedRefCount: 1,
+      },
+    });
+    window.history.replaceState({}, "", "/observability/business-provenance?view=requests");
+
+    render(<BknTraceRunsScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "bknTrace.operations.runSql · 库存数据" }));
+
+    expect(await screen.findByText("bknTrace.sections.sqlFacts")).not.toBeNull();
+    expect(screen.getByText("material_id, SUM(quantity) AS total_qty")).not.toBeNull();
+    expect(screen.getByText("warehouse = '昆山'")).not.toBeNull();
+    expect(screen.getByText("material_id")).not.toBeNull();
+    expect(screen.getByText("total_qty DESC")).not.toBeNull();
+    expect(screen.getAllByText("10")).toHaveLength(2);
+    expect(screen.getByText("bknTrace.sql.unresolvedMapping")).not.toBeNull();
+  });
+
   it("OpenBKN 调用以业务操作区分，而不是重复本轮问题和答案", async () => {
 	vi.mocked(getRequestSummaries).mockResolvedValue({
 	  entries: [{

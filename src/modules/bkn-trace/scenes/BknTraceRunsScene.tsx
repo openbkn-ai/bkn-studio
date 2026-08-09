@@ -781,12 +781,13 @@ function BusinessExplanation({
   graph: BusinessGraph;
 }) {
   const { t } = useTranslation();
-  const stages = businessStoryStages(graph.data.nodes);
-  const evidenceGroups = businessEvidenceGroups(graph.data.nodes);
+  const evidenceGroups = businessEvidenceGroups(graph.data.nodes, graph.data.edges);
+  const stages = businessStoryStages(graph.data.nodes.filter((node) => !node.id.startsWith("business:")));
   const question = artifacts.find((artifact) => artifact.artifactType === "question")?.content;
   const result = artifacts.find((artifact) => artifact.artifactType === "result")?.content;
   return (
     <div className={styles.explanation}>
+      <RunSQLFacts artifacts={artifacts} graph={graph} />
       <section className={styles.semanticChain}>
         <Typography.Title level={5}>{t("bknTrace.sections.businessGraph")}</Typography.Title>
         <div className={styles.stageGrid}>
@@ -815,8 +816,16 @@ function BusinessExplanation({
       <section className={styles.artifactSection}>
         <Typography.Title level={5}>{t("bknTrace.sections.artifacts")}</Typography.Title>
         <div className={styles.evidenceBasisGrid}>
+          {evidenceGroups.discovered.length ? (
+            <EvidenceBasis
+              artifacts={[]}
+              emptyText=""
+              nodes={evidenceGroups.discovered}
+              title={t("bknTrace.evidenceBasis.discovered")}
+            />
+          ) : null}
           <EvidenceBasis
-            artifacts={artifacts.filter((artifact) => ["data", "data_result", "query"].includes(artifact.artifactType))}
+            artifacts={artifacts.filter((artifact) => ["data", "data_result"].includes(artifact.artifactType))}
             emptyText={t("bknTrace.evidenceBasis.noData")}
             nodes={evidenceGroups.data}
             title={t("bknTrace.evidenceBasis.data")}
@@ -837,6 +846,65 @@ function BusinessExplanation({
       </section>
     </div>
   );
+}
+
+function RunSQLFacts({ artifacts, graph }: { artifacts: EvidenceArtifact[]; graph: BusinessGraph }) {
+  const { t } = useTranslation();
+  const query = artifacts.find((artifact) => artifact.artifactType === "query");
+  const content = recordValue(query?.content);
+  const sql = typeof content.sql === "string" ? content.sql.trim() : "";
+  if (!sql) return null;
+
+  const clauses = parseSQLClauses(sql);
+  const resources = Array.isArray(content.resource_ids)
+    ? content.resource_ids.filter((value): value is string => typeof value === "string")
+    : [];
+  const mapping = graph.data.nodes
+    .filter((node) => node.id.startsWith("business:") && !["data_resource", "knowledge_network", "resource"].includes(
+      typeof node.properties.ref_type === "string" ? node.properties.ref_type : node.nodeType,
+    ))
+    .map((node) => businessNodePresentation(node).title);
+  const rowCount = graph.data.nodes
+    .map((node) => node.properties.row_count)
+    .find((value): value is number => typeof value === "number");
+
+  return (
+    <section className={styles.evidenceBasis}>
+      <Typography.Title level={5}>{t("bknTrace.sections.sqlFacts")}</Typography.Title>
+      <Descriptions column={2} size="small">
+        <Descriptions.Item label={t("bknTrace.fields.sql")} span={2}>
+          <Typography.Paragraph copyable className={styles.contentText}>{sql}</Typography.Paragraph>
+        </Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.fields.resources")}>{resources.join(", ") || "-"}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.fields.resultCount")}>{rowCount ?? "-"}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.fields.sqlFields")}>{clauses.fields || "-"}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.fields.sqlCondition")}>{clauses.condition || "-"}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.fields.sqlGroupBy")}>{clauses.groupBy || "-"}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.fields.sqlOrderBy")}>{clauses.orderBy || "-"}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.fields.sqlLimit")}>{clauses.limit || "-"}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.fields.semanticMapping")}>
+          {mapping.join(", ") || t("bknTrace.sql.unresolvedMapping")}
+        </Descriptions.Item>
+      </Descriptions>
+    </section>
+  );
+}
+
+function parseSQLClauses(sql: string) {
+  const capture = (pattern: RegExp) => pattern.exec(sql)?.[1]?.trim() ?? "";
+  return {
+    condition: capture(/\bwhere\s+([\s\S]*?)(?=\bgroup\s+by\b|\border\s+by\b|\blimit\b|$)/i),
+    fields: capture(/^\s*select\s+([\s\S]*?)\s+from\b/i),
+    groupBy: capture(/\bgroup\s+by\s+([\s\S]*?)(?=\border\s+by\b|\blimit\b|$)/i),
+    limit: capture(/\blimit\s+(\d+)/i),
+    orderBy: capture(/\border\s+by\s+([\s\S]*?)(?=\blimit\b|$)/i),
+  };
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
 }
 
 function EvidenceBasis({

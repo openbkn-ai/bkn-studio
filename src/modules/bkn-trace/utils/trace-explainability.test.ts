@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import type { TraceBusinessEdge, TraceBusinessNode } from "@/modules/bkn-trace/services/trace.service";
 import {
   businessEvidenceGroups,
   businessRows,
@@ -160,6 +161,33 @@ describe("trace explainability rows", () => {
     expect(groups.data.map((node) => node.display?.name)).toEqual(["产品BOM"]);
     expect(groups.logic.map((node) => node.display?.name)).toEqual(["生产可用库存"]);
     expect(groups.action.map((node) => node.display?.name)).toEqual(["创建采购申请"]);
+  });
+
+  it("keeps search_schema results as discovered candidates instead of evidence", () => {
+    const nodes: TraceBusinessNode[] = [{
+      id: "operation:search-schema",
+      nodeType: "operation",
+      properties: { operation_name: "context.search_schema" },
+      stage: "execution" as const,
+    }, {
+      id: "business:object:supplychain:inventory",
+      nodeType: "object_type",
+      display: { name: "库存" },
+      properties: { ref_id: "object:supplychain:inventory", ref_type: "object_type" },
+      stage: "evidence" as const,
+      visibility: "visible",
+    }];
+    const edges: TraceBusinessEdge[] = [{
+      edgeType: "uses_business_ref",
+      id: "edge-schema-inventory",
+      sourceId: "operation:search-schema",
+      targetId: "business:object:supplychain:inventory",
+    }];
+
+    const groups = businessEvidenceGroups(nodes, edges);
+
+    expect(groups.discovered.map((node) => node.display?.name)).toEqual(["库存"]);
+    expect(groups.data).toHaveLength(0);
   });
 
   it("uses backend display names before falling back to technical refs", () => {

@@ -7,6 +7,7 @@
 
 import type {
   BusinessStoryStage,
+  TraceBusinessEdge,
   TraceBusinessNode,
   TraceClaim,
   TraceEvidenceRef,
@@ -23,6 +24,7 @@ export type BusinessStoryStageGroup = {
 export type BusinessEvidenceGroups = {
   action: TraceBusinessNode[];
   data: TraceBusinessNode[];
+  discovered: TraceBusinessNode[];
   logic: TraceBusinessNode[];
 };
 
@@ -50,10 +52,29 @@ const logicEvidenceKinds = new Set([
 ]);
 const actionEvidenceKinds = new Set(["action", "action_instance", "action_type"]);
 
-export function businessEvidenceGroups(nodes: TraceBusinessNode[]): BusinessEvidenceGroups {
-  const groups: BusinessEvidenceGroups = { action: [], data: [], logic: [] };
+export function businessEvidenceGroups(
+  nodes: TraceBusinessNode[],
+  edges: TraceBusinessEdge[] = [],
+): BusinessEvidenceGroups {
+  const discoveryOperations = new Set(nodes
+    .filter((node) => node.nodeType === "operation" && isSearchSchemaOperation(node))
+    .map((node) => node.id));
+  const otherOperations = new Set(nodes
+    .filter((node) => node.nodeType === "operation" && !isSearchSchemaOperation(node))
+    .map((node) => node.id));
+  const discoveredTargets = new Set(edges
+    .filter((edge) => discoveryOperations.has(edge.sourceId))
+    .map((edge) => edge.targetId));
+  const usedTargets = new Set(edges
+    .filter((edge) => otherOperations.has(edge.sourceId))
+    .map((edge) => edge.targetId));
+  const groups: BusinessEvidenceGroups = { action: [], data: [], discovered: [], logic: [] };
   for (const node of nodes) {
     if (["hidden", "unauthorized"].includes(node.visibility ?? "")) continue;
+    if (discoveredTargets.has(node.id) && !usedTargets.has(node.id)) {
+      groups.discovered.push(node);
+      continue;
+    }
     const kind = businessNodeKind(node);
     if (actionEvidenceKinds.has(kind) || node.stage === "action") {
       groups.action.push(node);
@@ -64,6 +85,11 @@ export function businessEvidenceGroups(nodes: TraceBusinessNode[]): BusinessEvid
     }
   }
   return groups;
+}
+
+function isSearchSchemaOperation(node: TraceBusinessNode): boolean {
+  const operation = stringField(node.properties, "operation_name");
+  return operation === "search_schema" || operation === "context.search_schema";
 }
 
 export function businessStoryStages(nodes: TraceBusinessNode[]): BusinessStoryStageGroup[] {
