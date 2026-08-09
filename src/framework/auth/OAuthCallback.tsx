@@ -16,6 +16,9 @@ import {
   consumeCsrfRetry,
   getStoredReturnTo,
   isCsrfConflictCallback,
+  releaseFlowLock,
+  stashCallbackError,
+  takeStashedCallbackError,
 } from "@/framework/auth/oauth";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
@@ -37,10 +40,18 @@ export function OAuthCallback() {
     // cookie belongs to another flow. A fresh /oauth2/auth rewrites the cookie,
     // so retry once instead of stranding the user on a dead error page — this
     // is the path a forced first-login password change lands on.
+    const fail = (cause: unknown) => {
+      // This flow is dead — hand the lock back so other tabs stop waiting on
+      // it instead of sitting out the full TTL. Prefer the stashed reason: on
+      // a failed retry the current message describes the retry, not the cause.
+      releaseFlowLock();
+      const original = takeStashedCallbackError();
+      setError(original ?? (cause instanceof Error ? cause.message : String(cause)));
+    };
+
     if (isCsrfConflictCallback() && consumeCsrfRetry()) {
-      beginLogin(getStoredReturnTo()).catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : String(cause));
-      });
+      stashCallbackError();
+      beginLogin(getStoredReturnTo()).catch(fail);
       return;
     }
 
@@ -48,9 +59,7 @@ export function OAuthCallback() {
       .then((returnTo) => {
         window.location.replace(returnTo);
       })
-      .catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : String(cause));
-      });
+      .catch(fail);
   }, []);
 
   return (

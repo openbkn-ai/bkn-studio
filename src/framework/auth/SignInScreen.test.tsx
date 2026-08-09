@@ -10,10 +10,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SignInScreen } from "@/framework/auth/SignInScreen";
 
-const oauth = vi.hoisted(() => ({
-  beginLogin: vi.fn(() => Promise.resolve()),
-  canAutoStartLogin: vi.fn(() => true),
-}));
+const oauth = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  return {
+    beginLogin: vi.fn(() => Promise.resolve()),
+    canAutoStartLogin: vi.fn(() => true),
+    /** Stand-in for the cross-tab `storage` event; `emit` fires the release. */
+    subscribeFlowLockRelease: vi.fn((onRelease: () => void) => {
+      listeners.add(onRelease);
+      return () => listeners.delete(onRelease);
+    }),
+    emitFlowLockRelease: () => {
+      for (const listener of listeners) {
+        listener();
+      }
+    },
+  };
+});
 
 vi.mock("@/framework/auth/oauth", () => oauth);
 
@@ -62,6 +75,22 @@ describe("SignInScreen auto-redirect gating", () => {
     setVisibility("visible");
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(oauth.beginLogin).toHaveBeenCalledTimes(1);
+  });
+
+  // Side-by-side windows are never hidden, so visibilitychange never fires for
+  // them — without the lock-release signal they would sit on the wait screen
+  // even after the owning tab finished and the credentials became available.
+  it("proceeds on its own once the owning tab releases the lock", async () => {
+    oauth.canAutoStartLogin.mockReturnValue(false);
+    render(<SignInScreen onDevTokenSaved={vi.fn()} />);
+    expect(await screen.findByText("auth.signInOtherTabTitle")).toBeTruthy();
+
+    oauth.canAutoStartLogin.mockReturnValue(true);
+    act(() => {
+      oauth.emitFlowLockRelease();
     });
 
     expect(oauth.beginLogin).toHaveBeenCalledTimes(1);

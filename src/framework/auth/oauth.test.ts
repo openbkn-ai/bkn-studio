@@ -15,7 +15,11 @@ import {
   computeCodeChallenge,
   consumeCsrfRetry,
   isCsrfConflictCallback,
+  releaseFlowLock,
   shouldUseOAuthGate,
+  stashCallbackError,
+  subscribeFlowLockRelease,
+  takeStashedCallbackError,
 } from "@/framework/auth/oauth";
 
 describe("oauth", () => {
@@ -130,41 +134,38 @@ describe("login CSRF flow lock", () => {
     window.localStorage.clear();
   });
 
-  function currentTabId() {
-    // canAutoStartLogin seeds the per-tab id on first use.
-    canAutoStartLogin();
-    return window.sessionStorage.getItem("bkn_oauth_tab_id") ?? "";
-  }
-
   it("allows an automatic redirect when no flow is in progress", () => {
     expect(canAutoStartLogin()).toBe(true);
   });
 
-  it("blocks an automatic redirect while another tab owns the flow", () => {
+  it("blocks an automatic redirect while another page load owns the flow", () => {
     window.localStorage.setItem(
       FLOW_LOCK_KEY,
-      JSON.stringify({ startedAt: Date.now(), tabId: "some-other-tab" }),
+      JSON.stringify({ loadId: "some-other-page-load", startedAt: Date.now() }),
     );
 
     expect(canAutoStartLogin()).toBe(false);
   });
 
-  it("ignores this tab's own lock so navigating back can restart the flow", () => {
-    const tabId = currentTabId();
+  // sessionStorage is copied into tabs opened with window.open / "duplicate
+  // tab", so ownership must not be keyed on anything stored there — a clone
+  // would inherit the id and walk straight past the lock.
+  it("does not treat a cloned tab's sessionStorage as proof of ownership", () => {
+    window.sessionStorage.setItem("bkn_oauth_tab_id", "cloned-tab");
     window.localStorage.setItem(
       FLOW_LOCK_KEY,
-      JSON.stringify({ startedAt: Date.now(), tabId }),
+      JSON.stringify({ loadId: "cloned-tab", startedAt: Date.now() }),
     );
 
-    expect(canAutoStartLogin()).toBe(true);
+    expect(canAutoStartLogin()).toBe(false);
   });
 
   it("releases an abandoned lock once it ages out", () => {
     window.localStorage.setItem(
       FLOW_LOCK_KEY,
       JSON.stringify({
+        loadId: "some-other-page-load",
         startedAt: Date.now() - 4 * 60 * 1000,
-        tabId: "some-other-tab",
       }),
     );
 
@@ -175,8 +176,42 @@ describe("login CSRF flow lock", () => {
     window.localStorage.setItem(FLOW_LOCK_KEY, "not json");
     expect(canAutoStartLogin()).toBe(true);
 
-    window.localStorage.setItem(FLOW_LOCK_KEY, JSON.stringify({ tabId: 42 }));
+    window.localStorage.setItem(FLOW_LOCK_KEY, JSON.stringify({ loadId: 42 }));
     expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("unblocks waiting tabs as soon as the lock is released", () => {
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "some-other-page-load", startedAt: Date.now() }),
+    );
+    expect(canAutoStartLogin()).toBe(false);
+
+    releaseFlowLock();
+
+    expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("notifies subscribers when another tab releases the lock", () => {
+    const onRelease = vi.fn();
+    const unsubscribe = subscribeFlowLockRelease(onRelease);
+
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: FLOW_LOCK_KEY, newValue: null }),
+    );
+    expect(onRelease).toHaveBeenCalledTimes(1);
+
+    // An unrelated key must not wake the wait screen.
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: "something_else", newValue: null }),
+    );
+    expect(onRelease).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: FLOW_LOCK_KEY, newValue: null }),
+    );
+    expect(onRelease).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -210,6 +245,34 @@ describe("callback CSRF recovery", () => {
   it("permits exactly one automatic retry per tab", () => {
     expect(consumeCsrfRetry()).toBe(true);
     expect(consumeCsrfRetry()).toBe(false);
+  });
+
+  // request_forbidden is not CSRF-specific, so a retry can be spent on an
+  // unrelated rejection. The user must still see why the first attempt failed.
+  it("keeps the first failure's reason across the retry", () => {
+    stashCallbackError(
+      "?error=request_forbidden&error_description=" + encodeURIComponent("login rejected"),
+    );
+
+    expect(takeStashedCallbackError()).toBe("login rejected");
+    expect(takeStashedCallbackError()).toBeNull();
+  });
+
+  it("clears the stashed reason on a successful login", async () => {
+    window.sessionStorage.setItem("bkn_oauth_state", "state-1");
+    window.sessionStorage.setItem("bkn_oauth_verifier", "verifier-1");
+    stashCallbackError("?error=request_forbidden");
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ access_token: "access-1" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      }),
+    );
+
+    await completeLogin("?code=abc&state=state-1");
+
+    expect(takeStashedCallbackError()).toBeNull();
   });
 
   it("clears the retry budget and the flow lock on a successful login", async () => {

@@ -10,7 +10,11 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DevTokenSetupForm } from "@/framework/auth/DevTokenSetupForm";
-import { beginLogin, canAutoStartLogin } from "@/framework/auth/oauth";
+import {
+  beginLogin,
+  canAutoStartLogin,
+  subscribeFlowLockRelease,
+} from "@/framework/auth/oauth";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
 import styles from "./SignInScreen.module.css";
@@ -64,10 +68,15 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
     setRedirecting(false);
     setDeferredToOtherTab(true);
 
+    // Two wake-ups: coming to the front, and the owning tab releasing the lock
+    // (side-by-side windows are never hidden, so visibilitychange alone would
+    // strand them on the wait screen after the other tab finished).
     const retry = () => void startIfAllowed();
     document.addEventListener("visibilitychange", retry);
+    const unsubscribe = subscribeFlowLockRelease(retry);
     return () => {
       document.removeEventListener("visibilitychange", retry);
+      unsubscribe();
     };
   }, [showDevTokenForm]);
 

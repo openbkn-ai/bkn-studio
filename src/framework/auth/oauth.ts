@@ -43,8 +43,8 @@ export const OAUTH_CALLBACK_PATH = getAppCallbackPath();
 const STATE_KEY = "bkn_oauth_state";
 const VERIFIER_KEY = "bkn_oauth_verifier";
 const RETURN_TO_KEY = "bkn_oauth_return_to";
-const TAB_ID_KEY = "bkn_oauth_tab_id";
 const CSRF_RETRY_KEY = "bkn_oauth_csrf_retried";
+const CSRF_ORIGINAL_ERROR_KEY = "bkn_oauth_original_error";
 const FLOW_LOCK_KEY = "bkn_oauth_flow_lock";
 
 // hydra keeps a single login CSRF cookie per browser, so a second
@@ -114,18 +114,21 @@ function redirectUri() {
   return `${window.location.origin}${getAppCallbackPath()}`;
 }
 
-/** Stable per-tab id (sessionStorage survives navigations within the tab). */
-function tabId() {
-  const existing = window.sessionStorage.getItem(TAB_ID_KEY);
-  if (existing) {
-    return existing;
-  }
-  const created = randomUrlSafeString();
-  window.sessionStorage.setItem(TAB_ID_KEY, created);
-  return created;
+/**
+ * Identifies this page load, held in memory only. sessionStorage is *cloned*
+ * into a tab opened via window.open / target="_blank" / "duplicate tab", so a
+ * sessionStorage-backed id would let a cloned tab mistake another tab's lock
+ * for its own — and cloned tabs are exactly the ones most likely to race on
+ * /oauth2/auth.
+ */
+let pageLoadId: string | null = null;
+
+function loadId() {
+  pageLoadId ??= randomUrlSafeString();
+  return pageLoadId;
 }
 
-type FlowLock = { startedAt: number; tabId: string };
+type FlowLock = { loadId: string; startedAt: number };
 
 function readFlowLock(): FlowLock | null {
   const raw = window.localStorage.getItem(FLOW_LOCK_KEY);
@@ -144,42 +147,69 @@ function readFlowLock(): FlowLock | null {
     return null;
   }
 
-  const { startedAt, tabId: owner } = parsed as Partial<FlowLock>;
+  const { loadId: owner, startedAt } = parsed as Partial<FlowLock>;
   if (typeof startedAt !== "number" || typeof owner !== "string") {
     return null;
   }
 
-  return { startedAt, tabId: owner };
+  return { loadId: owner, startedAt };
 }
 
 function writeFlowLock() {
-  const lock: FlowLock = { startedAt: Date.now(), tabId: tabId() };
+  const lock: FlowLock = { loadId: loadId(), startedAt: Date.now() };
   window.localStorage.setItem(FLOW_LOCK_KEY, JSON.stringify(lock));
 }
 
-function clearFlowLock() {
+/**
+ * Hand the lock back. Called when a flow reaches a terminal state — success or
+ * failure — so other tabs stop waiting on a flow that is already dead instead
+ * of sitting out the full TTL.
+ */
+export function releaseFlowLock() {
   window.localStorage.removeItem(FLOW_LOCK_KEY);
 }
 
 /**
- * Whether this tab may redirect to hydra on its own. A tab that started a flow
- * inside the lock window owns the browser's login CSRF cookie — redirecting
- * now would overwrite it and break that tab's callback. Our own stale lock
- * (the user navigated back to Studio in this same tab) never blocks us.
+ * Whether this page may redirect to hydra on its own. A page that started a
+ * flow inside the lock window owns the browser's login CSRF cookie —
+ * redirecting now would overwrite it and break that flow's callback.
  */
 export function canAutoStartLogin() {
-  const self = tabId();
+  const self = loadId();
   const lock = readFlowLock();
-  if (!lock || lock.tabId === self) {
+  if (!lock || lock.loadId === self) {
     return true;
   }
   return Date.now() - lock.startedAt > FLOW_LOCK_TTL_MS;
 }
 
 /**
- * True when hydra bounced the authorize request because the browser's login
- * CSRF cookie belongs to a different flow. Recoverable: a fresh /oauth2/auth
- * rewrites the cookie.
+ * Notifies when another tab releases the lock. `storage` fires only in *other*
+ * tabs, which is exactly the audience that needs waking: a tab that has been
+ * visible the whole time (side-by-side windows) never gets a visibilitychange
+ * to re-check on, and would otherwise sit on the wait screen after the owning
+ * tab has already finished.
+ */
+export function subscribeFlowLockRelease(onRelease: () => void) {
+  const handle = (event: StorageEvent) => {
+    // key === null is storage.clear(), which also drops the lock.
+    if ((event.key === FLOW_LOCK_KEY && event.newValue === null) || event.key === null) {
+      onRelease();
+    }
+  };
+
+  window.addEventListener("storage", handle);
+  return () => {
+    window.removeEventListener("storage", handle);
+  };
+}
+
+/**
+ * True when hydra bounced the authorize request in a way a fresh /oauth2/auth
+ * can plausibly clear — the browser's login CSRF cookie belonging to a
+ * different flow. `request_forbidden` is not CSRF-specific (hydra also uses it
+ * for rejected login/consent), so a retry can be spent on an unrelated
+ * rejection; stashCallbackError keeps the real reason for the error page.
  */
 export function isCsrfConflictCallback(search = window.location.search) {
   const params = new URLSearchParams(search);
@@ -188,6 +218,25 @@ export function isCsrfConflictCallback(search = window.location.search) {
     return false;
   }
   return error === "request_forbidden" || (params.get("error_description") ?? "").includes("CSRF");
+}
+
+/**
+ * Preserve the first failure's reason. If the retry fails too, the second
+ * callback's message describes the retry, not what actually went wrong — the
+ * user needs the original.
+ */
+export function stashCallbackError(search = window.location.search) {
+  const params = new URLSearchParams(search);
+  const reason = params.get("error_description") ?? params.get("error");
+  if (reason) {
+    window.sessionStorage.setItem(CSRF_ORIGINAL_ERROR_KEY, reason);
+  }
+}
+
+export function takeStashedCallbackError() {
+  const stashed = window.sessionStorage.getItem(CSRF_ORIGINAL_ERROR_KEY);
+  window.sessionStorage.removeItem(CSRF_ORIGINAL_ERROR_KEY);
+  return stashed;
 }
 
 /** One automatic CSRF recovery per tab, so a persistent failure cannot loop. */
@@ -302,7 +351,8 @@ export async function completeLogin(search = window.location.search) {
   window.sessionStorage.removeItem(STATE_KEY);
   window.sessionStorage.removeItem(VERIFIER_KEY);
   window.sessionStorage.removeItem(CSRF_RETRY_KEY);
-  clearFlowLock();
+  window.sessionStorage.removeItem(CSRF_ORIGINAL_ERROR_KEY);
+  releaseFlowLock();
 
   const returnTo = window.sessionStorage.getItem(RETURN_TO_KEY) ?? getAppHomePath();
   window.sessionStorage.removeItem(RETURN_TO_KEY);
@@ -341,7 +391,8 @@ export function logout(mode: "hosted" | "standalone") {
   const idToken = getStoredIdToken();
   clearStoredTokens();
   window.sessionStorage.removeItem(CSRF_RETRY_KEY);
-  clearFlowLock();
+  window.sessionStorage.removeItem(CSRF_ORIGINAL_ERROR_KEY);
+  releaseFlowLock();
 
   if (!shouldUseOAuthGate(mode)) {
     // Mock / hosted mode has no hydra session to revoke.
