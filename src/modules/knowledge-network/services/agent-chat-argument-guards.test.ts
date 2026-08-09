@@ -52,15 +52,20 @@ function buildTool(name: string, session: McpSession) {
 describe("agent MCP argument guards", () => {
   it("blocks get_action_info when instance identities are missing", async () => {
     const session = stubSession();
-    const result = await runTool(buildTool("get_action_info", session), { at_id: "at_1" });
+    await expect(runTool(buildTool("get_action_info", session), { at_id: "at_1" })).rejects.toThrow(
+      "missing_action_recall_scope",
+    );
 
     expect(session.callTool).not.toHaveBeenCalled();
-    expect(JSON.parse(result)).toMatchObject({
-      error: {
-        code: "missing_action_recall_scope",
-        required_fields: ["_instance_identities"],
-      },
-    });
+  });
+
+  it("blocks get_action_info when instance identities are empty", async () => {
+    const session = stubSession();
+    await expect(
+      runTool(buildTool("get_action_info", session), { at_id: "at_1", _instance_identities: [] }),
+    ).rejects.toThrow("missing_action_recall_scope");
+
+    expect(session.callTool).not.toHaveBeenCalled();
   });
 
   it("allows get_action_info when the target instances are explicit", async () => {
@@ -84,15 +89,35 @@ describe("agent MCP argument guards", () => {
 
   it("blocks execute_action when target instances or dynamic params are missing", async () => {
     const session = stubSession();
-    const result = await runTool(buildTool("execute_action", session), { at_id: "at_1" });
+    await expect(runTool(buildTool("execute_action", session), { at_id: "at_1" })).rejects.toThrow("unsafe_action_call");
 
     expect(session.callTool).not.toHaveBeenCalled();
-    expect(JSON.parse(result)).toMatchObject({
-      error: {
-        code: "unsafe_action_call",
-        required_fields: ["_instance_identities", "dynamic_params"],
-      },
-    });
+  });
+
+  it("blocks execute_action when instance identities are empty", async () => {
+    const session = stubSession();
+    await expect(
+      runTool(buildTool("execute_action", session), {
+        at_id: "at_1",
+        _instance_identities: [],
+        dynamic_params: {},
+      }),
+    ).rejects.toThrow("unsafe_action_call");
+
+    expect(session.callTool).not.toHaveBeenCalled();
+  });
+
+  it("blocks execute_action when dynamic params are not an object", async () => {
+    const session = stubSession();
+    await expect(
+      runTool(buildTool("execute_action", session), {
+        at_id: "at_1",
+        _instance_identities: [{ id: "instance_1" }],
+        dynamic_params: null,
+      }),
+    ).rejects.toThrow("unsafe_action_call");
+
+    expect(session.callTool).not.toHaveBeenCalled();
   });
 
   it("allows execute_action when the execution target and params are explicit", async () => {
@@ -111,6 +136,20 @@ describe("agent MCP argument guards", () => {
         at_id: "at_1",
         _instance_identities: [{ id: "instance_1" }],
         dynamic_params: {},
+      }),
+    );
+  });
+
+  it("does not block non-action tools", async () => {
+    const session = stubSession();
+    const result = await runTool(buildTool("run_sql", session), { sql: "select 1" });
+
+    expect(result).toBe("ok");
+    expect(session.callTool).toHaveBeenCalledWith(
+      "run_sql",
+      expect.objectContaining({
+        kn_id: "kn-demo",
+        sql: "select 1",
       }),
     );
   });

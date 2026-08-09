@@ -42,6 +42,8 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
   buildAgentTools,
   effectiveToolArgs,
+  guardAgentToolArgs,
+  isClientGuardedActionTool,
   isTakenOverLifecycleTool,
   formatOutputContract,
   formatToolResultLimits,
@@ -156,6 +158,7 @@ type ToolCallView = {
   status: "running" | "done" | "error";
   result?: string;
   error?: string;
+  clientBlocked?: boolean;
   startedAt: number;
   latencyMs?: number;
 };
@@ -333,7 +336,14 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
   const statusDot =
     call.status === "running" ? styles.dotRunning : call.status === "error" ? styles.dotError : styles.dotOk;
   const statusText =
-    call.status === "running" ? "调用中…" : call.status === "error" ? "失败" : `200 · ${call.latencyMs ?? "—"}ms`;
+    call.clientBlocked
+      ? "客户端拦截"
+      : call.status === "running"
+        ? "调用中…"
+        : call.status === "error"
+          ? "失败"
+          : `200 · ${call.latencyMs ?? "—"}ms`;
+  const requestLabel = call.clientBlocked ? `模型入参 · 客户端拦截未发出 → ${call.name}` : `请求 · tools/call → ${call.name}`;
   return (
     <div className={`${styles.call} ${open ? styles.callOpen : ""}`}>
       <button type="button" className={styles.callHead} onClick={() => setOpen((v) => !v)}>
@@ -346,11 +356,11 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
       {open ? (
         <div className={styles.callBody}>
           <div className={styles.callSec}>
-            <div className={styles.callLbl}>请求 · tools/call → {call.name}</div>
+            <div className={styles.callLbl}>{requestLabel}</div>
             <pre className={styles.callPre}>{formatArgs(call.args)}</pre>
           </div>
           <div className={styles.callSec}>
-            <div className={styles.callLbl}>{call.status === "error" ? "错误" : "响应"}</div>
+            <div className={styles.callLbl}>{call.clientBlocked ? "拦截原因" : call.status === "error" ? "错误" : "响应"}</div>
             <pre className={styles.callPre}>{call.status === "error" ? call.error : call.result ?? "—"}</pre>
           </div>
         </div>
@@ -621,9 +631,13 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             ...m,
             toolCalls: [
               ...(m.toolCalls ?? []),
-              {
-                id: chunk.id,
-                name: chunk.name,
+              (() => {
+                const bknContext = turnContextRef.current ?? undefined;
+                const effectiveArgs = effectiveToolArgs(chunk.name, chunk.args, knId, bknContext);
+                const clientBlocked = isClientGuardedActionTool(chunk.name) && !!guardAgentToolArgs(chunk.name, effectiveArgs);
+                return {
+                  id: chunk.id,
+                  name: chunk.name,
                 // 展示实际发出的业务请求体（含注入的 kn_id、schema_brief 等默认值与 bkn_context），
                 // 而非模型原始入参。bkn_context 是 execute 里注入的，流式事件里没有，取自本轮 turn ——
                 // 少了它，面板看起来就像"前端没传上下文"，排查 conversation_required 时会指错方向。
@@ -633,13 +647,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                 // 照原样显示模型入参。判定必须用 isTakenOverLifecycleTool 而不是整片 bkn_
                 // 前缀——溯源类平台工具是直通后端的，它们的请求体真实存在，按前缀判会把
                 // 那些也显示成没有请求体，等于反向再造一次失真。没有 turn 时两类都直通。
-                args:
-                  turnContextRef.current && isTakenOverLifecycleTool(chunk.name)
-                    ? chunk.args
-                    : effectiveToolArgs(chunk.name, chunk.args, knId, turnContextRef.current ?? undefined),
-                status: "running",
-                startedAt: performance.now(),
-              },
+                  args: turnContextRef.current && (isTakenOverLifecycleTool(chunk.name) || clientBlocked) ? chunk.args : effectiveArgs,
+                  status: "running" as const,
+                  clientBlocked,
+                  startedAt: performance.now(),
+                };
+              })(),
             ],
           }));
           break;

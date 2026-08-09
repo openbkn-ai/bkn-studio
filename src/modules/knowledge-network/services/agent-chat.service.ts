@@ -121,6 +121,10 @@ const TOOL_HINTS: Record<string, string> = {
   list_resources: " 【重要】用 catalog_id/type 过滤 + 小 limit 分页；结果过大会被截断。",
   search_schema:
     " 建议：用精确的 query，max_concepts 默认不超过 10；结果过大会被截断。schema_brief 默认 true（只返回概要），需要完整字段定义时显式传 schema_brief=false。",
+  get_action_info:
+    " 【重要】必须先从 query_object_instance 或 query_instance_subgraph 的 _instance_identity 取得真实实例标识，再传非空 _instance_identities；不要自己编实例标识。",
+  execute_action:
+    " 【重要】必须传非空 _instance_identities 和 dynamic_params；智能问答中不允许空实例扫描执行，目标实例必须来自上游查询返回的 _instance_identity。",
 };
 
 /** 所有工具通用的默认 arguments：TOON 紧凑文本比 JSON 省大量 token（模型显式传值优先）。 */
@@ -155,6 +159,18 @@ export function effectiveToolArgs(
  * properties + required，原样喂给模型会让模型自己编 conversation/interaction id；
  * 真值由 execute 注入，模型不该看见这个字段。
  */
+function stripBknContextSchema(schema: Record<string, unknown>): Record<string, unknown> {
+  const properties = schema.properties;
+  if (!properties || typeof properties !== "object" || !("bkn_context" in properties)) return schema;
+  const nextProperties = { ...(properties as Record<string, unknown>) };
+  delete nextProperties.bkn_context;
+  const next: Record<string, unknown> = { ...schema, properties: nextProperties };
+  if (Array.isArray(schema.required)) {
+    next.required = schema.required.filter((name) => name !== "bkn_context");
+  }
+  return next;
+}
+
 function isNonEmptyArray(value: unknown): value is unknown[] {
   return Array.isArray(value) && value.length > 0;
 }
@@ -187,7 +203,7 @@ export function guardAgentToolArgs(name: string, args: Record<string, unknown>):
     if (missing.length) {
       return toolGuardError(
         "missing_action_recall_scope",
-        "get_action_info requires at_id and non-empty _instance_identities. Ask the user to select target instances, or query candidate instances first.",
+        "get_action_info 需要 at_id 和非空 _instance_identities。请先让用户选择目标实例，或先查询候选实例并使用返回的 _instance_identity。",
         missing,
       );
     }
@@ -203,7 +219,7 @@ export function guardAgentToolArgs(name: string, args: Record<string, unknown>):
     if (missing.length) {
       return toolGuardError(
         "unsafe_action_call",
-        "execute_action was blocked because target instances or dynamic_params are missing. Confirm the execution target and parameters before executing the action.",
+        "execute_action 已被客户端拦截：缺少目标实例或 dynamic_params。请先确认执行对象和动态参数，再重新调用本工具。",
         missing,
       );
     }
@@ -212,16 +228,8 @@ export function guardAgentToolArgs(name: string, args: Record<string, unknown>):
   return null;
 }
 
-function stripBknContextSchema(schema: Record<string, unknown>): Record<string, unknown> {
-  const properties = schema.properties;
-  if (!properties || typeof properties !== "object" || !("bkn_context" in properties)) return schema;
-  const nextProperties = { ...(properties as Record<string, unknown>) };
-  delete nextProperties.bkn_context;
-  const next: Record<string, unknown> = { ...schema, properties: nextProperties };
-  if (Array.isArray(schema.required)) {
-    next.required = schema.required.filter((name) => name !== "bkn_context");
-  }
-  return next;
+export function isClientGuardedActionTool(name: string): boolean {
+  return name === "get_action_info" || name === "execute_action";
 }
 
 /**
@@ -398,7 +406,7 @@ export function buildAgentTools(
         if (scopedList && scopeSet) return listResourcesScoped(call, input, knId, scopeSet, cfg, bknContext);
         const args = effectiveToolArgs(def.name, input, knId, bknContext);
         const guardError = guardAgentToolArgs(def.name, args);
-        if (guardError) return guardError;
+        if (guardError) throw new Error(guardError);
         return capToolResult(await call(def.name, args), def.name, cfg);
       },
     });
