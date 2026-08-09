@@ -17,6 +17,10 @@ const BusinessProvenancePage = lazy(async () => {
   const module = await import("@/modules/bkn-trace/pages/BusinessProvenancePage");
   return { default: module.BusinessProvenancePage };
 });
+const BknTracePrototypePage = lazy(async () => {
+  const module = await import("@/modules/bkn-trace/pages/BknTracePrototypePage");
+  return { default: module.BknTracePrototypePage };
+});
 const TraceAnalysisPage = lazy(async () => {
   const module = await import("@/modules/bkn-trace/pages/TraceAnalysisPage");
   return { default: module.TraceAnalysisPage };
@@ -35,6 +39,17 @@ function withRouteLoading(element: ReactNode) {
 }
 
 export const bknTraceRoutes: RouteObject[] = [
+  {
+    path: "observability/business-provenance/prototype",
+    element: (
+      <RequireEdition
+        capability={CAPABILITIES.BUSINESS_PROVENANCE}
+        minEdition="enterprise"
+      >
+        {withRouteLoading(<BknTracePrototypePage />)}
+      </RequireEdition>
+    ),
+  },
   {
     path: "observability/business-provenance",
     handle: {

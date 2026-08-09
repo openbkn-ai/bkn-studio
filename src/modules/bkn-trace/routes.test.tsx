@@ -19,6 +19,7 @@ describe("bkn-trace module registration", () => {
     expect(bknTraceRouteContribution.routes.map((route) => route.path)).toEqual(
       expect.arrayContaining([
         "observability/business-provenance",
+        "observability/business-provenance/prototype",
         "observability/traces",
         "observability/logs",
         "observability/settings",
@@ -37,6 +38,7 @@ describe("bkn-trace module registration", () => {
       "observability-settings",
     ]);
     expect(consoleNavigation.map((item) => item.key)).toContain("observability");
+    expect(bknTraceNavigation.items[0].children?.map((item) => item.key)).not.toContain("business-provenance-prototype");
   });
 
   it("registers permissions in runtime module manifests", () => {

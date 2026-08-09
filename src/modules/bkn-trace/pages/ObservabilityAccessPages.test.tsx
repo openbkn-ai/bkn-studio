@@ -9,6 +9,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BusinessProvenancePage } from "@/modules/bkn-trace/pages/BusinessProvenancePage";
+import { BknTracePrototypePage } from "@/modules/bkn-trace/pages/BknTracePrototypePage";
 import { TraceAnalysisPage } from "@/modules/bkn-trace/pages/TraceAnalysisPage";
 import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
 
@@ -22,6 +23,7 @@ vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => 
 });
 vi.mock("@/modules/bkn-trace/scenes/BknTraceRunsScene", () => ({ BknTraceRunsScene: () => <div>business-provenance-content</div> }));
 vi.mock("@/modules/bkn-trace/scenes/BknTraceExplorerScene", () => ({ BknTraceAdvancedExplorerScene: () => <div>trace-analysis-content</div> }));
+vi.mock("@/modules/bkn-trace/prototype/BknTracePrototypeScene", () => ({ BknTracePrototypeScene: () => <div>business-provenance-prototype</div> }));
 
 const baseProfile = {
   accessScopeFingerprint: "sha256:test", allowedLogCategories: [],
@@ -44,6 +46,12 @@ describe("observability capability pages", () => {
     vi.mocked(getAccessProfile).mockResolvedValue(baseProfile);
     render(<BusinessProvenancePage />);
     expect(await screen.findByText("bknTrace.errors.accessDenied")).not.toBeNull();
+  });
+
+  it("高保真原型沿用业务溯源能力边界", async () => {
+    vi.mocked(getAccessProfile).mockResolvedValue({ ...baseProfile, businessProvenanceOwn: true });
+    render(<BknTracePrototypePage />);
+    expect(await screen.findByText("business-provenance-prototype")).not.toBeNull();
   });
 
   it("Trace 分析页面只消费 technicalTrace 能力", async () => {
