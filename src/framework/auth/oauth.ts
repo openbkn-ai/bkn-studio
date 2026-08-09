@@ -46,6 +46,12 @@ const RETURN_TO_KEY = "bkn_oauth_return_to";
 const CSRF_RETRY_KEY = "bkn_oauth_csrf_retried";
 const CSRF_ORIGINAL_ERROR_KEY = "bkn_oauth_original_error";
 const FLOW_LOCK_KEY = "bkn_oauth_flow_lock";
+// Proof that *this tab* started the in-flight flow, so a later page load in
+// the same tab (the callback page, or a back-navigation to Studio) can claim
+// the lock the previous load wrote. Unlike a persistent tab id this exists
+// only while a flow is actually in the air, so a cloned tab can only inherit
+// it in the instant between writing the lock and navigating away.
+const FLOW_OWNER_KEY = "bkn_oauth_flow_owner";
 
 // hydra keeps a single login CSRF cookie per browser, so a second
 // /oauth2/auth overwrites the first flow's value and the older flow fails to
@@ -157,30 +163,57 @@ function readFlowLock(): FlowLock | null {
 
 function writeFlowLock() {
   const lock: FlowLock = { loadId: loadId(), startedAt: Date.now() };
+  window.sessionStorage.setItem(FLOW_OWNER_KEY, lock.loadId);
   window.localStorage.setItem(FLOW_LOCK_KEY, JSON.stringify(lock));
 }
 
+function ownsFlowLock(lock: FlowLock) {
+  return lock.loadId === loadId() || lock.loadId === window.sessionStorage.getItem(FLOW_OWNER_KEY);
+}
+
+function dropFlowLock() {
+  window.sessionStorage.removeItem(FLOW_OWNER_KEY);
+  window.localStorage.removeItem(FLOW_LOCK_KEY);
+}
+
 /**
- * Hand the lock back. Called when a flow reaches a terminal state — success or
- * failure — so other tabs stop waiting on a flow that is already dead instead
- * of sitting out the full TTL.
+ * Hand the lock back when a flow reaches a terminal state — success or failure
+ * — so other tabs stop waiting on a flow that is already dead instead of
+ * sitting out the full TTL. Only the owning tab may release: otherwise a stale
+ * callback page reloaded in some other tab would delete a live flow's lock and
+ * let the waiting tabs overwrite its CSRF cookie.
  */
 export function releaseFlowLock() {
-  window.localStorage.removeItem(FLOW_LOCK_KEY);
+  const lock = readFlowLock();
+  if (!lock || ownsFlowLock(lock)) {
+    dropFlowLock();
+  }
 }
 
 /**
  * Whether this page may redirect to hydra on its own. A page that started a
  * flow inside the lock window owns the browser's login CSRF cookie —
- * redirecting now would overwrite it and break that flow's callback.
+ * redirecting now would overwrite it and break that flow's callback. A later
+ * page load in the tab that started the flow still counts as the owner, so
+ * navigating back to Studio from the login page can restart it.
  */
 export function canAutoStartLogin() {
-  const self = loadId();
   const lock = readFlowLock();
-  if (!lock || lock.loadId === self) {
+  if (!lock || ownsFlowLock(lock)) {
     return true;
   }
   return Date.now() - lock.startedAt > FLOW_LOCK_TTL_MS;
+}
+
+/**
+ * Re-evaluate auth state from scratch after another tab's flow ended. Tokens
+ * live in cookies shared by same-origin tabs, so by the time the lock is
+ * released a waiting tab is usually already signed in and a reload drops it
+ * straight into the app. Racing to start our own flow instead would put every
+ * waiting tab on the wire at once — the very pile-up this lock exists to stop.
+ */
+export function reloadForSharedAuthState() {
+  window.location.reload();
 }
 
 /**
@@ -392,7 +425,8 @@ export function logout(mode: "hosted" | "standalone") {
   clearStoredTokens();
   window.sessionStorage.removeItem(CSRF_RETRY_KEY);
   window.sessionStorage.removeItem(CSRF_ORIGINAL_ERROR_KEY);
-  releaseFlowLock();
+  // Signing out is a deliberate global reset, so drop the lock whoever holds it.
+  dropFlowLock();
 
   if (!shouldUseOAuthGate(mode)) {
     // Mock / hosted mode has no hydra session to revoke.

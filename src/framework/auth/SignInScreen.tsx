@@ -13,6 +13,7 @@ import { DevTokenSetupForm } from "@/framework/auth/DevTokenSetupForm";
 import {
   beginLogin,
   canAutoStartLogin,
+  reloadForSharedAuthState,
   subscribeFlowLockRelease,
 } from "@/framework/auth/oauth";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -68,12 +69,13 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
     setRedirecting(false);
     setDeferredToOtherTab(true);
 
-    // Two wake-ups: coming to the front, and the owning tab releasing the lock
-    // (side-by-side windows are never hidden, so visibilitychange alone would
-    // strand them on the wait screen after the other tab finished).
+    // Two wake-ups, deliberately different. visibilitychange reaches one tab at
+    // a time, so that tab may start its own flow. A lock release reaches every
+    // waiting tab at once — starting there would put them all on the wire
+    // together, so they reload and pick up the shared cookie instead.
     const retry = () => void startIfAllowed();
     document.addEventListener("visibilitychange", retry);
-    const unsubscribe = subscribeFlowLockRelease(retry);
+    const unsubscribe = subscribeFlowLockRelease(reloadForSharedAuthState);
     return () => {
       document.removeEventListener("visibilitychange", retry);
       unsubscribe();

@@ -180,16 +180,45 @@ describe("login CSRF flow lock", () => {
     expect(canAutoStartLogin()).toBe(true);
   });
 
-  it("unblocks waiting tabs as soon as the lock is released", () => {
+  // The tab that started the flow keeps ownership across page loads, so
+  // pressing Back from the login page can restart it instead of being told to
+  // finish in "another tab" that does not exist.
+  it("lets a later page load in the starting tab reclaim the lock", () => {
+    window.sessionStorage.setItem("bkn_oauth_flow_owner", "the-load-that-started-it");
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "the-load-that-started-it", startedAt: Date.now() }),
+    );
+
+    expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("releases a lock this tab owns", () => {
+    window.sessionStorage.setItem("bkn_oauth_flow_owner", "the-load-that-started-it");
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "the-load-that-started-it", startedAt: Date.now() }),
+    );
+
+    releaseFlowLock();
+
+    expect(window.localStorage.getItem(FLOW_LOCK_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem("bkn_oauth_flow_owner")).toBeNull();
+  });
+
+  // A stale callback page reloaded in some other tab must not delete a live
+  // flow's lock — that would free every waiting tab to overwrite its CSRF
+  // cookie while the user is still on the change-password page.
+  it("refuses to release a lock another tab owns", () => {
     window.localStorage.setItem(
       FLOW_LOCK_KEY,
       JSON.stringify({ loadId: "some-other-page-load", startedAt: Date.now() }),
     );
-    expect(canAutoStartLogin()).toBe(false);
 
     releaseFlowLock();
 
-    expect(canAutoStartLogin()).toBe(true);
+    expect(window.localStorage.getItem(FLOW_LOCK_KEY)).not.toBeNull();
+    expect(canAutoStartLogin()).toBe(false);
   });
 
   it("notifies subscribers when another tab releases the lock", () => {

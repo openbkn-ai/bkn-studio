@@ -15,6 +15,7 @@ const oauth = vi.hoisted(() => {
   return {
     beginLogin: vi.fn(() => Promise.resolve()),
     canAutoStartLogin: vi.fn(() => true),
+    reloadForSharedAuthState: vi.fn(),
     /** Stand-in for the cross-tab `storage` event; `emit` fires the release. */
     subscribeFlowLockRelease: vi.fn((onRelease: () => void) => {
       listeners.add(onRelease);
@@ -83,7 +84,11 @@ describe("SignInScreen auto-redirect gating", () => {
   // Side-by-side windows are never hidden, so visibilitychange never fires for
   // them — without the lock-release signal they would sit on the wait screen
   // even after the owning tab finished and the credentials became available.
-  it("proceeds on its own once the owning tab releases the lock", async () => {
+  //
+  // A release reaches every waiting tab at once, so they must NOT each start
+  // their own flow: by then the owning tab has written the shared token cookie,
+  // and reloading picks it up without another /oauth2/auth on the wire.
+  it("reloads instead of racing when the owning tab releases the lock", async () => {
     oauth.canAutoStartLogin.mockReturnValue(false);
     render(<SignInScreen onDevTokenSaved={vi.fn()} />);
     expect(await screen.findByText("auth.signInOtherTabTitle")).toBeTruthy();
@@ -93,7 +98,8 @@ describe("SignInScreen auto-redirect gating", () => {
       oauth.emitFlowLockRelease();
     });
 
-    expect(oauth.beginLogin).toHaveBeenCalledTimes(1);
+    expect(oauth.reloadForSharedAuthState).toHaveBeenCalledTimes(1);
+    expect(oauth.beginLogin).not.toHaveBeenCalled();
   });
 
   it("defers to another tab's in-flight login and offers a manual takeover", async () => {
