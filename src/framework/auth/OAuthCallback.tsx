@@ -10,7 +10,13 @@ import { Alert, Spin } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { completeLogin } from "@/framework/auth/oauth";
+import {
+  beginLogin,
+  completeLogin,
+  consumeCsrfRetry,
+  getStoredReturnTo,
+  isCsrfConflictCallback,
+} from "@/framework/auth/oauth";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
 import styles from "./SignInScreen.module.css";
@@ -26,6 +32,17 @@ export function OAuthCallback() {
       return;
     }
     startedRef.current = true;
+
+    // hydra rejected the authorize request because the browser's login CSRF
+    // cookie belongs to another flow. A fresh /oauth2/auth rewrites the cookie,
+    // so retry once instead of stranding the user on a dead error page — this
+    // is the path a forced first-login password change lands on.
+    if (isCsrfConflictCallback() && consumeCsrfRetry()) {
+      beginLogin(getStoredReturnTo()).catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : String(cause));
+      });
+      return;
+    }
 
     completeLogin()
       .then((returnTo) => {

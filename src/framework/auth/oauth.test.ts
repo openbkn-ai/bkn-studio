@@ -10,8 +10,11 @@ import { webcrypto } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  canAutoStartLogin,
   completeLogin,
   computeCodeChallenge,
+  consumeCsrfRetry,
+  isCsrfConflictCallback,
   shouldUseOAuthGate,
 } from "@/framework/auth/oauth";
 
@@ -24,6 +27,7 @@ describe("oauth", () => {
       });
     }
     window.sessionStorage.clear();
+    window.localStorage.clear();
     for (const part of document.cookie ? document.cookie.split("; ") : []) {
       const name = part.split("=")[0];
       if (name) {
@@ -110,6 +114,125 @@ describe("oauth", () => {
     await expect(completeLogin("?code=abc&state=state-1")).rejects.toThrow(
       "invalid_grant",
     );
+  });
+});
+
+// Regression: forced first-login password change. The user sits on the
+// bkn-safe login + change-password pages for a minute or more, which is long
+// enough for another Studio tab to start its own /oauth2/auth and overwrite
+// the browser's single login CSRF cookie — hydra then rejects the original
+// flow with request_forbidden. See issue #387.
+describe("login CSRF flow lock", () => {
+  const FLOW_LOCK_KEY = "bkn_oauth_flow_lock";
+
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    window.localStorage.clear();
+  });
+
+  function currentTabId() {
+    // canAutoStartLogin seeds the per-tab id on first use.
+    canAutoStartLogin();
+    return window.sessionStorage.getItem("bkn_oauth_tab_id") ?? "";
+  }
+
+  it("allows an automatic redirect when no flow is in progress", () => {
+    expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("blocks an automatic redirect while another tab owns the flow", () => {
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ startedAt: Date.now(), tabId: "some-other-tab" }),
+    );
+
+    expect(canAutoStartLogin()).toBe(false);
+  });
+
+  it("ignores this tab's own lock so navigating back can restart the flow", () => {
+    const tabId = currentTabId();
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ startedAt: Date.now(), tabId }),
+    );
+
+    expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("releases an abandoned lock once it ages out", () => {
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({
+        startedAt: Date.now() - 4 * 60 * 1000,
+        tabId: "some-other-tab",
+      }),
+    );
+
+    expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("ignores a malformed lock rather than deadlocking sign-in", () => {
+    window.localStorage.setItem(FLOW_LOCK_KEY, "not json");
+    expect(canAutoStartLogin()).toBe(true);
+
+    window.localStorage.setItem(FLOW_LOCK_KEY, JSON.stringify({ tabId: 42 }));
+    expect(canAutoStartLogin()).toBe(true);
+  });
+});
+
+describe("callback CSRF recovery", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("recognises hydra's stale-CSRF rejection", () => {
+    expect(isCsrfConflictCallback("?error=request_forbidden")).toBe(true);
+    expect(
+      isCsrfConflictCallback(
+        "?error=some_other&error_description=" +
+          encodeURIComponent(
+            "The CSRF value from the token does not match the CSRF value from the data store.",
+          ),
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves unrelated callback errors alone", () => {
+    expect(isCsrfConflictCallback("?error=access_denied")).toBe(false);
+    expect(isCsrfConflictCallback("?code=abc&state=state-1")).toBe(false);
+  });
+
+  it("permits exactly one automatic retry per tab", () => {
+    expect(consumeCsrfRetry()).toBe(true);
+    expect(consumeCsrfRetry()).toBe(false);
+  });
+
+  it("clears the retry budget and the flow lock on a successful login", async () => {
+    window.sessionStorage.setItem("bkn_oauth_state", "state-1");
+    window.sessionStorage.setItem("bkn_oauth_verifier", "verifier-1");
+    window.localStorage.setItem(
+      "bkn_oauth_flow_lock",
+      JSON.stringify({ startedAt: Date.now(), tabId: "some-other-tab" }),
+    );
+    // Spend the retry budget, as a first failed attempt would.
+    expect(consumeCsrfRetry()).toBe(true);
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ access_token: "access-1" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      }),
+    );
+
+    await completeLogin("?code=abc&state=state-1");
+
+    expect(window.localStorage.getItem("bkn_oauth_flow_lock")).toBeNull();
+    expect(consumeCsrfRetry()).toBe(true);
   });
 });
 

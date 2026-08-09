@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DevTokenSetupForm } from "@/framework/auth/DevTokenSetupForm";
-import { beginLogin } from "@/framework/auth/oauth";
+import { beginLogin, canAutoStartLogin } from "@/framework/auth/oauth";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
 import styles from "./SignInScreen.module.css";
@@ -24,30 +24,64 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
   const startedRef = useRef(false);
   const [redirecting, setRedirecting] = useState(true);
   const [redirectError, setRedirectError] = useState<string | null>(null);
+  const [deferredToOtherTab, setDeferredToOtherTab] = useState(false);
   const [showDevTokenForm, setShowDevTokenForm] = useState(false);
 
   useEffect(() => {
-    if (showDevTokenForm || startedRef.current) {
+    if (showDevTokenForm) {
       return;
     }
 
-    startedRef.current = true;
-    const { hash, pathname, search } = window.location;
+    // Redirecting to hydra rewrites the browser's single login CSRF cookie, so
+    // a background tab waking up mid-login would break the tab the user is
+    // actually looking at. Only a visible tab that no other flow owns may go on
+    // its own; otherwise wait and offer the manual button, which takes over.
+    const startIfAllowed = () => {
+      if (startedRef.current) {
+        return true;
+      }
+      if (document.visibilityState !== "visible" || !canAutoStartLogin()) {
+        return false;
+      }
 
-    beginLogin(`${pathname}${search}${hash}`).catch((cause: unknown) => {
-      setRedirectError(cause instanceof Error ? cause.message : String(cause));
-      setRedirecting(false);
-      startedRef.current = false;
-    });
+      startedRef.current = true;
+      setDeferredToOtherTab(false);
+      setRedirecting(true);
+      const { hash, pathname, search } = window.location;
+
+      beginLogin(`${pathname}${search}${hash}`).catch((cause: unknown) => {
+        setRedirectError(cause instanceof Error ? cause.message : String(cause));
+        setRedirecting(false);
+        startedRef.current = false;
+      });
+      return true;
+    };
+
+    if (startIfAllowed()) {
+      return;
+    }
+
+    setRedirecting(false);
+    setDeferredToOtherTab(true);
+
+    const retry = () => void startIfAllowed();
+    document.addEventListener("visibilitychange", retry);
+    return () => {
+      document.removeEventListener("visibilitychange", retry);
+    };
   }, [showDevTokenForm]);
 
   if (showDevTokenForm) {
     return <DevTokenSetupForm onSaved={onDevTokenSaved} />;
   }
 
+  // Explicit intent overrides the other-tab lock: the user is here, so this is
+  // the flow that should own the CSRF cookie.
   const handleSignIn = () => {
+    startedRef.current = true;
     setRedirecting(true);
     setRedirectError(null);
+    setDeferredToOtherTab(false);
     const { hash, pathname, search } = window.location;
     void beginLogin(`${pathname}${search}${hash}`).catch((cause: unknown) => {
       setRedirectError(cause instanceof Error ? cause.message : String(cause));
@@ -68,6 +102,25 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
               showIcon
               style={{ marginBottom: 20, textAlign: "left" }}
               type="error"
+            />
+            <AppButton
+              className={styles.submit}
+              loading={redirecting}
+              size="large"
+              type="primary"
+              onClick={handleSignIn}
+            >
+              {t("auth.signInButton")}
+            </AppButton>
+          </>
+        ) : deferredToOtherTab ? (
+          <>
+            <Alert
+              message={t("auth.signInOtherTabTitle")}
+              description={t("auth.signInOtherTabHint")}
+              showIcon
+              style={{ marginBottom: 20, textAlign: "left" }}
+              type="info"
             />
             <AppButton
               className={styles.submit}
