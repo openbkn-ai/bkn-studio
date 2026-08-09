@@ -48,9 +48,15 @@ const CSRF_ORIGINAL_ERROR_KEY = "bkn_oauth_original_error";
 const FLOW_LOCK_KEY = "bkn_oauth_flow_lock";
 // Proof that *this tab* started the in-flight flow, so a later page load in
 // the same tab (the callback page, or a back-navigation to Studio) can claim
-// the lock the previous load wrote. Unlike a persistent tab id this exists
-// only while a flow is actually in the air, so a cloned tab can only inherit
-// it in the instant between writing the lock and navigating away.
+// the lock the previous load wrote.
+//
+// Known trade-off: sessionStorage is copied into a cloned tab, so a tab
+// duplicated between writeFlowLock and dropFlowLock — the whole flow,
+// including the minutes a forced password change takes — inherits ownership
+// and can start its own /oauth2/auth. That is narrower than a persistent tab
+// id (which would hand ownership to every clone forever) but wider than "an
+// instant". Accepted: cloning a tab mid-login is rare, and the callback's
+// one-shot retry recovers from it. See the paired tests in oauth.test.ts.
 const FLOW_OWNER_KEY = "bkn_oauth_flow_owner";
 
 // hydra keeps a single login CSRF cookie per browser, so a second

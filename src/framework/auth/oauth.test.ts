@@ -147,10 +147,10 @@ describe("login CSRF flow lock", () => {
     expect(canAutoStartLogin()).toBe(false);
   });
 
-  // sessionStorage is copied into tabs opened with window.open / "duplicate
-  // tab", so ownership must not be keyed on anything stored there — a clone
-  // would inherit the id and walk straight past the lock.
-  it("does not treat a cloned tab's sessionStorage as proof of ownership", () => {
+  // Ownership must never key on a *persistent* per-tab id: sessionStorage is
+  // copied into tabs opened with window.open / "duplicate tab", so such an id
+  // would hand every clone a permanent pass through the lock.
+  it("grants no ownership from a persistent tab id", () => {
     window.sessionStorage.setItem("bkn_oauth_tab_id", "cloned-tab");
     window.localStorage.setItem(
       FLOW_LOCK_KEY,
@@ -158,6 +158,20 @@ describe("login CSRF flow lock", () => {
     );
 
     expect(canAutoStartLogin()).toBe(false);
+  });
+
+  // The accepted edge of that trade-off, asserted so it stays deliberate: the
+  // owner record is also copied by a clone, so a tab duplicated while a flow
+  // is in the air does inherit ownership. Bounded by the flow's lifetime
+  // rather than permanent, and the callback's one-shot retry recovers from it.
+  it("does hand ownership to a tab cloned mid-flow", () => {
+    window.sessionStorage.setItem("bkn_oauth_flow_owner", "the-load-that-started-it");
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "the-load-that-started-it", startedAt: Date.now() }),
+    );
+
+    expect(canAutoStartLogin()).toBe(true);
   });
 
   it("releases an abandoned lock once it ages out", () => {
