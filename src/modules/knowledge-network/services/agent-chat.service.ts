@@ -155,6 +155,63 @@ export function effectiveToolArgs(
  * properties + required，原样喂给模型会让模型自己编 conversation/interaction id；
  * 真值由 execute 注入，模型不该看见这个字段。
  */
+function isNonEmptyArray(value: unknown): value is unknown[] {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function toolGuardError(code: string, message: string, requiredFields: string[]): string {
+  return JSON.stringify({
+    error: {
+      code,
+      message,
+      required_fields: requiredFields,
+      retryable: false,
+    },
+  });
+}
+
+/**
+ * Blocks high-risk business tools when missing fields would broaden the call
+ * from an instance-level intent into broad recall, broad query, or execution.
+ */
+export function guardAgentToolArgs(name: string, args: Record<string, unknown>): string | null {
+  if (name === "get_action_info") {
+    const missing = [
+      ...(typeof args.at_id === "string" && args.at_id.trim() ? [] : ["at_id"]),
+      ...(isNonEmptyArray(args._instance_identities) ? [] : ["_instance_identities"]),
+    ];
+    if (missing.length) {
+      return toolGuardError(
+        "missing_action_recall_scope",
+        "get_action_info requires at_id and non-empty _instance_identities. Ask the user to select target instances, or query candidate instances first.",
+        missing,
+      );
+    }
+  }
+
+  if (name === "execute_action") {
+    const hasDynamicParams = Object.prototype.hasOwnProperty.call(args, "dynamic_params") && isPlainObject(args.dynamic_params);
+    const missing = [
+      ...(typeof args.at_id === "string" && args.at_id.trim() ? [] : ["at_id"]),
+      ...(isNonEmptyArray(args._instance_identities) ? [] : ["_instance_identities"]),
+      ...(hasDynamicParams ? [] : ["dynamic_params"]),
+    ];
+    if (missing.length) {
+      return toolGuardError(
+        "unsafe_action_call",
+        "execute_action was blocked because target instances or dynamic_params are missing. Confirm the execution target and parameters before executing the action.",
+        missing,
+      );
+    }
+  }
+
+  return null;
+}
+
 function stripBknContextSchema(schema: Record<string, unknown>): Record<string, unknown> {
   const properties = schema.properties;
   if (!properties || typeof properties !== "object" || !("bkn_context" in properties)) return schema;
@@ -340,6 +397,8 @@ export function buildAgentTools(
         const bknContext = turn?.nextContext();
         if (scopedList && scopeSet) return listResourcesScoped(call, input, knId, scopeSet, cfg, bknContext);
         const args = effectiveToolArgs(def.name, input, knId, bknContext);
+        const guardError = guardAgentToolArgs(def.name, args);
+        if (guardError) return guardError;
         return capToolResult(await call(def.name, args), def.name, cfg);
       },
     });
