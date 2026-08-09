@@ -43,7 +43,6 @@ import {
   buildAgentTools,
   effectiveToolArgs,
   guardAgentToolArgs,
-  isClientGuardedActionTool,
   isTakenOverLifecycleTool,
   formatOutputContract,
   formatToolResultLimits,
@@ -634,7 +633,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               (() => {
                 const bknContext = turnContextRef.current ?? undefined;
                 const effectiveArgs = effectiveToolArgs(chunk.name, chunk.args, knId, bknContext);
-                const clientBlocked = isClientGuardedActionTool(chunk.name) && !!guardAgentToolArgs(chunk.name, effectiveArgs);
+                const clientBlocked = !!guardAgentToolArgs(chunk.name, effectiveArgs);
                 return {
                   id: chunk.id,
                   name: chunk.name,
@@ -647,7 +646,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                 // 照原样显示模型入参。判定必须用 isTakenOverLifecycleTool 而不是整片 bkn_
                 // 前缀——溯源类平台工具是直通后端的，它们的请求体真实存在，按前缀判会把
                 // 那些也显示成没有请求体，等于反向再造一次失真。没有 turn 时两类都直通。
-                  args: turnContextRef.current && (isTakenOverLifecycleTool(chunk.name) || clientBlocked) ? chunk.args : effectiveArgs,
+                  args: clientBlocked || (turnContextRef.current && isTakenOverLifecycleTool(chunk.name)) ? chunk.args : effectiveArgs,
                   status: "running" as const,
                   clientBlocked,
                   startedAt: performance.now(),

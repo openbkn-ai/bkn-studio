@@ -228,10 +228,6 @@ export function guardAgentToolArgs(name: string, args: Record<string, unknown>):
   return null;
 }
 
-export function isClientGuardedActionTool(name: string): boolean {
-  return name === "get_action_info" || name === "execute_action";
-}
-
 /**
  * 步间驱逐旧工具结果：每步前只保留最近 keep 个工具结果的全文，更早的把内容替换成占位，
  * 但**保留 toolCallId / toolName 配对**（OpenAI 要求每个 tool_call 都有对应 tool 响应）。keep<=0 不驱逐。
