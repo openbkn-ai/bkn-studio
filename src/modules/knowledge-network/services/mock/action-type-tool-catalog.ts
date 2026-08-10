@@ -14,6 +14,19 @@ import type {
 
 const MOCK_TOOL_BOXES: ActionTypeToolBox[] = [
   {
+    boxId: "box-function-demo",
+    boxName: "Function Demo",
+    description: "Code functions for logical attributes.",
+    metadataType: "function",
+    tools: [
+      {
+        parameters: [{ name: "value", required: true, type: "number" }],
+        toolId: "calculate_score",
+        toolName: "Calculate Score",
+      },
+    ],
+  },
+  {
     boxId: "box-data-analyst",
     boxName: "数据分析员工具",
     description: "包含数据分析工具，支持意图理解、问数、找数等功能",
