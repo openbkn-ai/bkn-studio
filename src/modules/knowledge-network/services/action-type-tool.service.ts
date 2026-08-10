@@ -18,6 +18,7 @@ import {
   listToolboxMarket,
 } from "@/modules/execution-factory/services/toolbox.service";
 import type { ToolRecord } from "@/modules/execution-factory/types/tool";
+import type { ToolboxMetadataType } from "@/modules/execution-factory/types/toolbox";
 
 import type { ActionTypeActionSource } from "@/modules/knowledge-network/types/knowledge-network";
 import {
@@ -105,6 +106,7 @@ export type ActionTypeToolBox = {
   boxId: string;
   boxName: string;
   description?: string;
+  metadataType?: ToolboxMetadataType;
   tools: ActionTypeCatalogTool[];
 };
 
@@ -155,7 +157,7 @@ function filterCatalogByKeyword(
             ? true
             : matches([tool.toolName, tool.description, server.mcpName, server.description]),
         );
-        return tools.length > 0 ? { ...server, tools } : null;
+        return serverMatched || tools.length > 0 ? { ...server, tools } : null;
       })
       .filter((item): item is ActionTypeMcpServer => Boolean(item)),
     toolBoxes: catalog.toolBoxes
@@ -164,9 +166,25 @@ function filterCatalogByKeyword(
         const tools = box.tools.filter((tool) =>
           boxMatched ? true : matches([tool.toolName, tool.description, box.boxName, box.description]),
         );
-        return tools.length > 0 ? { ...box, tools } : null;
+        return boxMatched || tools.length > 0 ? { ...box, tools } : null;
       })
       .filter((item): item is ActionTypeToolBox => Boolean(item)),
+  };
+}
+
+function filterCatalogByToolboxMetadataType(
+  catalog: ActionTypeExecutionFactoryCatalog,
+  toolboxMetadataType?: ToolboxMetadataType,
+): ActionTypeExecutionFactoryCatalog {
+  if (!toolboxMetadataType) {
+    return catalog;
+  }
+
+  return {
+    ...catalog,
+    toolBoxes: catalog.toolBoxes.filter(
+      (toolbox) => toolbox.metadataType === toolboxMetadataType,
+    ),
   };
 }
 
@@ -235,11 +253,12 @@ async function searchMarketToolBoxes(keyword: string): Promise<ActionTypeToolBox
 
 async function fetchAgentOperatorCatalog(
   keyword = "",
+  toolboxMetadataType?: ToolboxMetadataType,
 ): Promise<ActionTypeExecutionFactoryCatalog> {
   const normalizedKeyword = keyword.trim();
 
   if (normalizedKeyword) {
-    const [toolBoxes, mcpResult] = await Promise.all([
+    const [searchedToolBoxes, mcpResult, filteredToolboxResult] = await Promise.all([
       searchMarketToolBoxes(normalizedKeyword),
       listMcpMarket({
         all: true,
@@ -247,7 +266,29 @@ async function fetchAgentOperatorCatalog(
         pageSize: CATALOG_PAGE_SIZE,
         keyword: normalizedKeyword,
       }),
+      toolboxMetadataType
+        ? listToolboxMarket({
+            all: true,
+            metadataType: toolboxMetadataType,
+            page: 1,
+            pageSize: CATALOG_PAGE_SIZE,
+          })
+        : Promise.resolve(undefined),
     ]);
+
+    const metadataTypeByBoxId = new Map(
+      (filteredToolboxResult?.items ?? [])
+        .filter((box) => box.metadataType === toolboxMetadataType)
+        .map((box) => [box.boxId, box.metadataType]),
+    );
+    const toolBoxes = toolboxMetadataType
+      ? searchedToolBoxes
+          .filter((box) => metadataTypeByBoxId.has(box.boxId))
+          .map((box) => ({
+            ...box,
+            metadataType: metadataTypeByBoxId.get(box.boxId),
+          }))
+      : searchedToolBoxes;
 
     return {
       mcpServers: mcpResult.items.map((server) => ({
@@ -263,6 +304,7 @@ async function fetchAgentOperatorCatalog(
   const [toolboxResult, mcpResult] = await Promise.all([
     listToolboxMarket({
       all: true,
+      metadataType: toolboxMetadataType,
       page: 1,
       pageSize: CATALOG_PAGE_SIZE,
     }),
@@ -285,6 +327,7 @@ async function fetchAgentOperatorCatalog(
       boxId: box.boxId,
       boxName: box.name,
       description: box.description,
+      metadataType: box.metadataType,
       tools: [],
     })),
   };
@@ -375,20 +418,29 @@ export async function loadActionTypeMcpServerTools(
   }
 }
 
-function resolveMockCatalog(keyword: string) {
-  return wait(filterCatalogByKeyword(MOCK_EXECUTION_FACTORY_CATALOG, keyword));
+function resolveMockCatalog(keyword: string, toolboxMetadataType?: ToolboxMetadataType) {
+  return wait(
+    filterCatalogByKeyword(
+      filterCatalogByToolboxMetadataType(MOCK_EXECUTION_FACTORY_CATALOG, toolboxMetadataType),
+      keyword,
+    ),
+  );
 }
 
 export async function listActionTypeExecutionFactoryCatalog(
   keyword = "",
+  toolboxMetadataType?: ToolboxMetadataType,
 ): Promise<ActionTypeExecutionFactoryCatalog> {
   if (useMock) {
-    return resolveMockCatalog(keyword);
+    return resolveMockCatalog(keyword, toolboxMetadataType);
   }
 
   try {
-    const catalog = await fetchAgentOperatorCatalog(keyword);
-    return filterCatalogByKeyword(catalog, keyword);
+    const catalog = await fetchAgentOperatorCatalog(keyword, toolboxMetadataType);
+    return filterCatalogByKeyword(
+      filterCatalogByToolboxMetadataType(catalog, toolboxMetadataType),
+      keyword,
+    );
   } catch (error) {
     logServiceFallback("listActionTypeExecutionFactoryCatalog", error, `keyword=${keyword}`);
     return {
