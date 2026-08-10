@@ -69,7 +69,7 @@ function coerceFeatureDrafts(
   kind: "embedding" | "fulltext",
   groups: Array<ResourceFeatureDraft | string> = [],
 ): ResourceFeatureDraft[] {
-  const normalized = groups.slice(0, 3).map((item, index) =>
+  const normalized = groups.map((item, index) =>
     typeof item === "string"
       ? {
           isDefault: index === 0,
@@ -166,7 +166,7 @@ export function IndexConfigFormPanel({
   const analyzerOptions = useMemo(
     () =>
       analyzers.map((analyzer) => ({
-        label: t(`dataCatalog.build.analyzers.${analyzer}`),
+        label: t(`dataCatalog.build.analyzers.${analyzer}`, { defaultValue: analyzer }),
         value: analyzer,
       })),
     [analyzers, t],
@@ -396,6 +396,33 @@ export function IndexConfigFormPanel({
     );
     return findUnavailableAnalyzers(analyzers, effective);
   }, [analyzers, defaultFulltextAnalyzer, eligibleFulltextAnalyzerGroups]);
+  const duplicateUnsupportedFeatureTypes = useMemo(() => {
+    const duplicates: string[] = [];
+    for (const field of schema) {
+      const seen = new Set<string>();
+      for (const feature of field.features ?? []) {
+        // These two feature types are represented by the editable form state below.
+        if (feature.featureType === "vector" || feature.featureType === "fulltext") {
+          continue;
+        }
+        if (seen.has(feature.featureType)) {
+          duplicates.push(`${field.name}: ${feature.featureType}`);
+        }
+        seen.add(feature.featureType);
+      }
+    }
+    for (const [field, groups] of Object.entries(eligibleEmbeddingModelGroups)) {
+      if (groups.length > 1) {
+        duplicates.push(`${field}: vector`);
+      }
+    }
+    for (const [field, groups] of Object.entries(eligibleFulltextAnalyzerGroups)) {
+      if (groups.length > 1) {
+        duplicates.push(`${field}: fulltext`);
+      }
+    }
+    return duplicates;
+  }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups, schema]);
 
   const toggleField = (
     field: string,
@@ -413,6 +440,10 @@ export function IndexConfigFormPanel({
   };
 
   const validateForm = () => {
+    if (duplicateUnsupportedFeatureTypes.length > 0) {
+      setError(t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") }));
+      return false;
+    }
     if (embeddingFields.length === 0 && fulltextFields.length === 0) {
       setError(t("dataCatalog.build.fieldsRequired"));
       return false;
@@ -764,7 +795,7 @@ export function IndexConfigFormPanel({
             </div>
           </div>
           <AppButton
-            disabled={disabled || groups.length >= 3}
+            disabled={disabled || groups.length > 0}
             onClick={addFeature}
             size="small"
             type={groups.length === 0 ? "primary" : "default"}
@@ -888,6 +919,12 @@ export function IndexConfigFormPanel({
       ) : unavailableSavedAnalyzers.length > 0 ? (
         <Alert
           message={t("dataCatalog.build.savedAnalyzerUnavailable", { analyzers: unavailableSavedAnalyzers.join(", ") })}
+          showIcon
+          type="error"
+        />
+      ) : duplicateUnsupportedFeatureTypes.length > 0 ? (
+        <Alert
+          message={t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") })}
           showIcon
           type="error"
         />
@@ -1247,7 +1284,7 @@ export function IndexConfigFormPanel({
       <div className={formStyles.footer}>
         <Space style={{ marginLeft: "auto" }}>
           <AppButton
-            disabled={actionsLocked || saving || analyzerBlocked || (embeddingFields.length > 0 && embeddingBlocked)}
+            disabled={actionsLocked || saving || analyzerBlocked || duplicateUnsupportedFeatureTypes.length > 0 || (embeddingFields.length > 0 && embeddingBlocked)}
             loading={saving}
             onClick={() => void saveConfig()}
             type="primary"
