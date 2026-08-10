@@ -315,9 +315,15 @@ export const dataCatalogEnUS = {
         "(use ik / hanlp for Chinese data, standard for English / general)",
       analyzers: {
         standard: "standard · English / general",
+        english: "english · English stemming",
         ik_max_word: "ik_max_word · Chinese fine-grained",
         hanlp_index: "hanlp_index · Chinese HanLP",
       },
+      analyzersLoading: "Loading full-text analyzer capabilities…",
+      analyzersLoadError: "Unable to load full-text analyzer capabilities: {{message}}",
+      analyzersLoadErrorFallback: "Please retry or check the index service.",
+      noAnalyzers: "No full-text analyzers are available; index configuration cannot be saved.",
+      savedAnalyzerUnavailable: "Saved analyzer configuration is unavailable: {{analyzers}}. Choose an available analyzer to continue.",
       fieldsRequired: "Select at least one embedding or full-text field.",
       buildKeyRequired:
         "Batch mode requires a build-key field. Select one under Configure Index.",

@@ -296,9 +296,15 @@ export const dataCatalogZhCN = {
       fulltextAnalyzerHint: "(中文数据选 ik / hanlp,英文/通用选 standard)",
       analyzers: {
         standard: "standard · 英文/通用",
+        english: "english · 英文词干分析",
         ik_max_word: "ik_max_word · 中文细粒度",
         hanlp_index: "hanlp_index · 中文 HanLP",
       },
+      analyzersLoading: "正在加载全文分词器能力…",
+      analyzersLoadError: "加载全文分词器能力失败：{{message}}",
+      analyzersLoadErrorFallback: "请稍后重试或检查索引服务。",
+      noAnalyzers: "当前没有可用的全文分词器，无法保存索引配置。",
+      savedAnalyzerUnavailable: "已保存的分词器配置不可用：{{analyzers}}。请选择可用分词器后继续。",
       fieldsRequired: "请至少选择一个向量嵌入字段或全文检索字段。",
       buildKeyRequired: "批量模式必须指定增量键字段，请回到「配置索引」勾选。",
       streamingBuildKeyRequired:
