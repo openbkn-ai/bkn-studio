@@ -21,6 +21,7 @@ import {
   type ActionTypeExecutionFactoryCatalog,
 } from "@/modules/knowledge-network/services/action-type-tool.service";
 import type { ActionTypeActionSource } from "@/modules/knowledge-network/types/knowledge-network";
+import type { ToolboxMetadataType } from "@/modules/execution-factory/types/toolbox";
 
 import styles from "./ActionTypeToolSelectModal.module.css";
 
@@ -29,6 +30,8 @@ type ActionTypeToolSelectModalProps = {
   onCancel: () => void;
   onConfirm: (source: ActionTypeActionSource, selection: ActionTypeCatalogSelection) => void;
   open: boolean;
+  toolboxTabLabel?: string;
+  toolboxMetadataType?: ToolboxMetadataType;
   value?: ActionTypeActionSource;
 };
 
@@ -92,6 +95,7 @@ function buildToolFromValue(value: ActionTypeActionSource): ActionTypeCatalogToo
 
 const DEFAULT_ALLOWED_KINDS: Array<"mcp" | "tool"> = ["tool", "mcp"];
 const CATALOG_SEARCH_DEBOUNCE_MS = 300;
+type ActionTypeExecutionUnitTab = "function" | "mcp" | "openapi";
 
 /** Stable key so catalog reloads only when the selected source identity changes. */
 function buildActionSourceValueKey(value?: ActionTypeActionSource) {
@@ -112,15 +116,70 @@ function buildAllowedKindsKey(allowedKinds: Array<"mcp" | "tool">) {
   return [...allowedKinds].sort().join("|");
 }
 
+function getExecutionUnitTabs(
+  allowedKinds: Array<"mcp" | "tool">,
+  toolboxMetadataType?: ToolboxMetadataType,
+): ActionTypeExecutionUnitTab[] {
+  const tabs: ActionTypeExecutionUnitTab[] = [];
+
+  if (allowedKinds.includes("tool")) {
+    if (toolboxMetadataType) {
+      tabs.push(toolboxMetadataType);
+    } else {
+      tabs.push("openapi", "function");
+    }
+  }
+
+  if (allowedKinds.includes("mcp")) {
+    tabs.push("mcp");
+  }
+
+  return tabs;
+}
+
+function resolveExecutionUnitTab(
+  tabs: ActionTypeExecutionUnitTab[],
+  value?: ActionTypeActionSource,
+  toolboxMetadataType?: ToolboxMetadataType,
+): ActionTypeExecutionUnitTab {
+  if (value?.type === "mcp" && tabs.includes("mcp")) {
+    return "mcp";
+  }
+
+  if (toolboxMetadataType && tabs.includes(toolboxMetadataType)) {
+    return toolboxMetadataType;
+  }
+
+  return tabs[0] ?? "openapi";
+}
+
 export function ActionTypeToolSelectModal({
   allowedKinds = DEFAULT_ALLOWED_KINDS,
   onCancel,
   onConfirm,
   open,
+  toolboxTabLabel,
+  toolboxMetadataType,
   value,
 }: ActionTypeToolSelectModalProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"mcp" | "tool">(allowedKinds[0] ?? "tool");
+  const allowedKindsKey = useMemo(() => buildAllowedKindsKey(allowedKinds), [allowedKinds]);
+  const executionUnitTabs = useMemo(
+    () =>
+      getExecutionUnitTabs(
+        allowedKindsKey ? (allowedKindsKey.split("|") as Array<"mcp" | "tool">) : [],
+        toolboxMetadataType,
+      ),
+    [allowedKindsKey, toolboxMetadataType],
+  );
+  const executionUnitTabsKey = useMemo(() => executionUnitTabs.join("|"), [executionUnitTabs]);
+  const [activeTab, setActiveTab] = useState<ActionTypeExecutionUnitTab>(() =>
+    resolveExecutionUnitTab(
+      getExecutionUnitTabs(allowedKinds, toolboxMetadataType),
+      value,
+      toolboxMetadataType,
+    ),
+  );
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -132,8 +191,6 @@ export function ActionTypeToolSelectModal({
   catalogRef.current = catalog;
   const valueRef = useRef(value);
   valueRef.current = value;
-  const allowedKindsRef = useRef(allowedKinds);
-  allowedKindsRef.current = allowedKinds;
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [loadingGroupKeys, setLoadingGroupKeys] = useState<string[]>([]);
   const loadedGroupKeysRef = useRef(new Set<string>());
@@ -143,7 +200,16 @@ export function ActionTypeToolSelectModal({
     null,
   );
   const valueKey = useMemo(() => buildActionSourceValueKey(value), [value]);
-  const allowedKindsKey = useMemo(() => buildAllowedKindsKey(allowedKinds), [allowedKinds]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setActiveTab(
+      resolveExecutionUnitTab(executionUnitTabs, valueRef.current, toolboxMetadataType),
+    );
+  }, [executionUnitTabs, executionUnitTabsKey, open, toolboxMetadataType, valueKey]);
 
   const ensureGroupToolsLoaded = useCallback(async (groupKey: string) => {
     if (loadedGroupKeysRef.current.has(groupKey) || loadingGroupKeysRef.current.has(groupKey)) {
@@ -243,12 +309,13 @@ export function ActionTypeToolSelectModal({
 
     const requestId = ++catalogRequestIdRef.current;
     const currentValue = valueRef.current;
-    const currentAllowedKinds = allowedKindsRef.current;
-
     const loadCatalog = async () => {
       setLoading(true);
       try {
-        const nextCatalog = await listActionTypeExecutionFactoryCatalog(debouncedKeyword);
+        const nextCatalog =
+          activeTab === "mcp"
+            ? await listActionTypeExecutionFactoryCatalog(debouncedKeyword)
+            : await listActionTypeExecutionFactoryCatalog(debouncedKeyword, activeTab);
         if (requestId !== catalogRequestIdRef.current) {
           return;
         }
@@ -268,9 +335,6 @@ export function ActionTypeToolSelectModal({
             loadedGroupKeysRef.current.add(`group:mcp:${server.mcpId}`);
           }
         });
-        setActiveTab(
-          currentValue?.type === "mcp" && currentAllowedKinds.includes("mcp") ? "mcp" : "tool",
-        );
         const initialGroupKey =
           currentValue?.type === "mcp" && currentValue.mcpId
             ? `group:mcp:${currentValue.mcpId}`
@@ -334,7 +398,7 @@ export function ActionTypeToolSelectModal({
     return () => {
       catalogRequestIdRef.current += 1;
     };
-  }, [allowedKindsKey, debouncedKeyword, open, valueKey]);
+  }, [activeTab, debouncedKeyword, open, valueKey]);
 
   const selectedKey = useMemo(
     () => (selectedSelection ? buildSelectionKey(selectedSelection) : null),
@@ -569,31 +633,28 @@ export function ActionTypeToolSelectModal({
       <div className={styles.catalogPanel}>
         <Tabs
           activeKey={activeTab}
-          items={[
-            ...(allowedKinds.includes("tool")
-              ? [
-                  {
-                    key: "tool",
-                    label: t("knowledgeNetwork.actionTypeExecutionSourceTool"),
-                  },
-                ]
-              : []),
-            ...(allowedKinds.includes("mcp")
-              ? [
-                  {
-                    key: "mcp",
-                    label: "MCP",
-                  },
-                ]
-              : []),
-          ]}
-          onChange={(nextTab) => setActiveTab(nextTab as "mcp" | "tool")}
+          items={executionUnitTabs.map((tab) => ({
+            key: tab,
+            label:
+              tab === "openapi"
+                ? t("executionFactory.openapiToolboxTab")
+                : tab === "function"
+                  ? toolboxTabLabel ?? t("executionFactory.functionToolboxTab")
+                  : t("executionFactory.executionUnitTabsV2.mcp"),
+          }))}
+          onChange={(nextTab) => setActiveTab(nextTab as ActionTypeExecutionUnitTab)}
         />
         <Input
           allowClear
           className={styles.searchInput}
           onChange={(event) => setKeyword(event.target.value)}
-          placeholder={t("knowledgeNetwork.actionTypeToolSearchPlaceholder")}
+          placeholder={t(
+            activeTab === "mcp"
+              ? "knowledgeNetwork.actionTypeMcpSearchPlaceholder"
+              : activeTab === "function"
+                ? "knowledgeNetwork.actionTypeFunctionToolSearchPlaceholder"
+                : "knowledgeNetwork.actionTypeOpenapiToolSearchPlaceholder",
+          )}
           suffix={<SearchOutlined />}
           value={keyword}
         />
@@ -602,10 +663,10 @@ export function ActionTypeToolSelectModal({
             <div className={styles.loadingState}>
               <Spin />
             </div>
-          ) : activeTab === "tool" ? (
-            renderToolBoxes()
-          ) : (
+          ) : activeTab === "mcp" ? (
             renderMcpServers()
+          ) : (
+            renderToolBoxes()
           )}
         </div>
       </div>
