@@ -214,6 +214,61 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
     expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it("restores a stored function tool by switching from the API toolset", async () => {
+    listActionTypeExecutionFactoryCatalog.mockImplementation(
+      (_keyword: string, metadataType?: string) => ({
+        mcpServers: [],
+        toolBoxes:
+          metadataType === "function"
+            ? [
+                {
+                  boxId: "function-box",
+                  boxName: "Function Box",
+                  description: "function set",
+                  tools: [],
+                },
+              ]
+            : [
+                {
+                  boxId: "openapi-box",
+                  boxName: "API Box",
+                  description: "API toolset",
+                  tools: [],
+                },
+              ],
+      }),
+    );
+    loadActionTypeToolBoxTools.mockImplementation((boxId: string) =>
+      boxId === "function-box"
+        ? [{ parameters: [], toolId: "function-tool", toolName: "Stored Function" }]
+        : [],
+    );
+
+    render(
+      <ActionTypeToolSelectModal
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+        value={createSource({
+          boxId: "function-box",
+          boxName: "Function Box",
+          toolId: "function-tool",
+          toolName: "Stored Function",
+        })}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenLastCalledWith("", "function");
+    });
+    expect(await screen.findByText("Function Box")).toBeTruthy();
+    expect(loadActionTypeToolBoxTools).toHaveBeenCalledWith("function-box");
+
+    const confirmButton = screen.getByText("common.confirm").closest("button");
+    expect(confirmButton).not.toBeNull();
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("does not reload when value object identity changes but source key stays the same", async () => {
     const onCancel = vi.fn();
     const onConfirm = vi.fn();
