@@ -18,6 +18,17 @@ const executionFactoryMocks = vi.hoisted(() => ({
   listTools: vi.fn(),
 }));
 
+const httpGet = vi.hoisted(() => vi.fn());
+
+vi.mock("@/framework/request/http", () => ({
+  http: { get: httpGet },
+}));
+
+vi.mock("@/modules/knowledge-network/services/shared/agent-operator-client", () => ({
+  AGENT_OPERATOR_API_PREFIX: "/agent-operator-integration/v1",
+  getAgentOperatorHeaders: () => ({}),
+}));
+
 vi.mock("@/modules/execution-factory/services/mcp.service", () => ({
   getMcpMarket: executionFactoryMocks.getMcpMarket,
   listMcpMarket: executionFactoryMocks.listMcpMarket,
@@ -53,6 +64,7 @@ describe("resolveActionTypeActionSourceDisplay", () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
     vi.useFakeTimers();
+    httpGet.mockReset();
   });
 
   afterEach(() => {
@@ -199,5 +211,86 @@ describe("resolveActionTypeActionSourceDisplay", () => {
         type: "tool",
       }),
     ).resolves.toEqual([]);
+  });
+
+  it("keeps a function set returned by tool-name search after metadata filtering", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    httpGet.mockResolvedValue({
+      data: {
+        data: [
+          {
+            box_id: "function-box",
+            box_name: "Score Functions",
+            tools: [{ name: "calculate_score", tool_id: "calculate_score" }],
+          },
+        ],
+      },
+    });
+    executionFactoryMocks.listMcpMarket.mockResolvedValue({
+      items: [],
+      page: 1,
+      pageSize: 100,
+      total: 0,
+    });
+    executionFactoryMocks.listToolboxMarket.mockResolvedValue({
+      items: [
+        {
+          boxId: "function-box",
+          metadataType: "function",
+          name: "Score Functions",
+          status: "published",
+        },
+      ],
+      page: 1,
+      pageSize: 100,
+      total: 1,
+    });
+
+    const { listActionTypeExecutionFactoryCatalog } = await import(
+      "./action-type-tool.service"
+    );
+    const result = await listActionTypeExecutionFactoryCatalog("score", "function");
+
+    expect(executionFactoryMocks.listToolboxMarket).toHaveBeenCalledWith({
+      all: true,
+      metadataType: "function",
+      page: 1,
+      pageSize: 100,
+    });
+    expect(result.toolBoxes).toMatchObject([
+      {
+        boxId: "function-box",
+        metadataType: "function",
+        tools: [{ toolId: "calculate_score" }],
+      },
+    ]);
+  });
+
+  it("keeps an MCP service name match before its tools are expanded", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    httpGet.mockResolvedValue({ data: { data: [] } });
+    executionFactoryMocks.listMcpMarket.mockResolvedValue({
+      items: [
+        {
+          mcpId: "mcp-score",
+          name: "Score MCP",
+          status: "published",
+        },
+      ],
+      page: 1,
+      pageSize: 100,
+      total: 1,
+    });
+
+    const { listActionTypeExecutionFactoryCatalog } = await import(
+      "./action-type-tool.service"
+    );
+    const result = await listActionTypeExecutionFactoryCatalog("score");
+
+    expect(result.mcpServers).toMatchObject([
+      { mcpId: "mcp-score", mcpName: "Score MCP", tools: [] },
+    ]);
   });
 });
