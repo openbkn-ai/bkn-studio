@@ -157,7 +157,7 @@ function filterCatalogByKeyword(
             ? true
             : matches([tool.toolName, tool.description, server.mcpName, server.description]),
         );
-        return tools.length > 0 ? { ...server, tools } : null;
+        return serverMatched || tools.length > 0 ? { ...server, tools } : null;
       })
       .filter((item): item is ActionTypeMcpServer => Boolean(item)),
     toolBoxes: catalog.toolBoxes
@@ -166,7 +166,7 @@ function filterCatalogByKeyword(
         const tools = box.tools.filter((tool) =>
           boxMatched ? true : matches([tool.toolName, tool.description, box.boxName, box.description]),
         );
-        return tools.length > 0 ? { ...box, tools } : null;
+        return boxMatched || tools.length > 0 ? { ...box, tools } : null;
       })
       .filter((item): item is ActionTypeToolBox => Boolean(item)),
   };
@@ -257,8 +257,8 @@ async function fetchAgentOperatorCatalog(
 ): Promise<ActionTypeExecutionFactoryCatalog> {
   const normalizedKeyword = keyword.trim();
 
-  if (normalizedKeyword && !toolboxMetadataType) {
-    const [toolBoxes, mcpResult] = await Promise.all([
+  if (normalizedKeyword) {
+    const [searchedToolBoxes, mcpResult, filteredToolboxResult] = await Promise.all([
       searchMarketToolBoxes(normalizedKeyword),
       listMcpMarket({
         all: true,
@@ -266,7 +266,29 @@ async function fetchAgentOperatorCatalog(
         pageSize: CATALOG_PAGE_SIZE,
         keyword: normalizedKeyword,
       }),
+      toolboxMetadataType
+        ? listToolboxMarket({
+            all: true,
+            metadataType: toolboxMetadataType,
+            page: 1,
+            pageSize: CATALOG_PAGE_SIZE,
+          })
+        : Promise.resolve(undefined),
     ]);
+
+    const metadataTypeByBoxId = new Map(
+      (filteredToolboxResult?.items ?? [])
+        .filter((box) => box.metadataType === toolboxMetadataType)
+        .map((box) => [box.boxId, box.metadataType]),
+    );
+    const toolBoxes = toolboxMetadataType
+      ? searchedToolBoxes
+          .filter((box) => metadataTypeByBoxId.has(box.boxId))
+          .map((box) => ({
+            ...box,
+            metadataType: metadataTypeByBoxId.get(box.boxId),
+          }))
+      : searchedToolBoxes;
 
     return {
       mcpServers: mcpResult.items.map((server) => ({
