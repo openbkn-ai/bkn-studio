@@ -370,6 +370,7 @@ export function ActionTypeToolSelectModal({
             currentValue?.type === "tool" &&
             !toolboxMetadataType &&
             activeTab === "openapi" &&
+            !hasInitialGroup &&
             executionUnitTabs.includes("function")
           ) {
             setActiveTab("function");

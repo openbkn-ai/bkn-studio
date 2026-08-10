@@ -269,6 +269,30 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
     expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it("keeps a stored API-tool fallback when its toolbox is still available", async () => {
+    render(
+      <ActionTypeToolSelectModal
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+        value={createSource({ toolId: "removed-tool", toolName: "Removed Tool" })}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledWith("", "openapi");
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledTimes(1);
+    const confirmButton = screen.getByText("common.confirm").closest("button");
+    expect(confirmButton).not.toBeNull();
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("does not reload when value object identity changes but source key stays the same", async () => {
     const onCancel = vi.fn();
     const onConfirm = vi.fn();
