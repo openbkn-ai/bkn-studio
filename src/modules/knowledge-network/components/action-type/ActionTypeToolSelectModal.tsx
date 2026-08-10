@@ -196,6 +196,7 @@ export function ActionTypeToolSelectModal({
   const loadedGroupKeysRef = useRef(new Set<string>());
   const loadingGroupKeysRef = useRef(new Set<string>());
   const catalogRequestIdRef = useRef(0);
+  const restoredSelectionValueKeyRef = useRef<string | null>(null);
   const [selectedSelection, setSelectedSelection] = useState<ActionTypeCatalogSelection | null>(
     null,
   );
@@ -203,6 +204,7 @@ export function ActionTypeToolSelectModal({
 
   useEffect(() => {
     if (!open) {
+      restoredSelectionValueKeyRef.current = null;
       return;
     }
 
@@ -335,56 +337,62 @@ export function ActionTypeToolSelectModal({
             loadedGroupKeysRef.current.add(`group:mcp:${server.mcpId}`);
           }
         });
-        const initialGroupKey =
-          currentValue?.type === "mcp" && currentValue.mcpId
-            ? `group:mcp:${currentValue.mcpId}`
-            : currentValue?.type === "tool" && currentValue.boxId
-              ? `group:tool:${currentValue.boxId}`
-              : "";
-
-        if (initialGroupKey) {
-          setExpandedKeys([initialGroupKey]);
-          await ensureGroupToolsLoadedRef.current(initialGroupKey);
-          if (requestId !== catalogRequestIdRef.current) {
-            return;
-          }
-        } else {
+        if (restoredSelectionValueKeyRef.current === valueKey) {
           setExpandedKeys([]);
-        }
-
-        const initialSelection = buildSelectionFromValue(catalogRef.current, currentValue);
-        if (initialSelection) {
-          setSelectedSelection(initialSelection);
-        } else if (currentValue?.type === "tool" && currentValue.boxId) {
-          const box = catalogRef.current.toolBoxes.find((item) => item.boxId === currentValue.boxId);
-          const fallbackTool = buildToolFromValue(currentValue);
-          setSelectedSelection(
-            box && fallbackTool
-              ? {
-                  boxId: box.boxId,
-                  boxName: box.boxName,
-                  kind: "tool",
-                  tool: fallbackTool,
-                }
-              : null,
-          );
-        } else if (currentValue?.type === "mcp" && currentValue.mcpId) {
-          const server = catalogRef.current.mcpServers.find(
-            (item) => item.mcpId === currentValue.mcpId,
-          );
-          const fallbackTool = buildToolFromValue(currentValue);
-          setSelectedSelection(
-            server && fallbackTool
-              ? {
-                  kind: "mcp",
-                  mcpId: server.mcpId,
-                  mcpName: server.mcpName,
-                  tool: fallbackTool,
-                }
-              : null,
-          );
         } else {
-          setSelectedSelection(null);
+          const initialGroupKey =
+            currentValue?.type === "mcp" && currentValue.mcpId
+              ? `group:mcp:${currentValue.mcpId}`
+              : currentValue?.type === "tool" && currentValue.boxId
+                ? `group:tool:${currentValue.boxId}`
+                : "";
+
+          if (initialGroupKey) {
+            setExpandedKeys([initialGroupKey]);
+            await ensureGroupToolsLoadedRef.current(initialGroupKey);
+            if (requestId !== catalogRequestIdRef.current) {
+              return;
+            }
+          } else {
+            setExpandedKeys([]);
+          }
+
+          const initialSelection = buildSelectionFromValue(catalogRef.current, currentValue);
+          if (initialSelection) {
+            setSelectedSelection(initialSelection);
+          } else if (currentValue?.type === "tool" && currentValue.boxId) {
+            const box = catalogRef.current.toolBoxes.find((item) => item.boxId === currentValue.boxId);
+            const fallbackTool = buildToolFromValue(currentValue);
+            setSelectedSelection(
+              box && fallbackTool
+                ? {
+                    boxId: box.boxId,
+                    boxName: box.boxName,
+                    kind: "tool",
+                    tool: fallbackTool,
+                  }
+                : null,
+            );
+          } else if (currentValue?.type === "mcp" && currentValue.mcpId) {
+            const server = catalogRef.current.mcpServers.find(
+              (item) => item.mcpId === currentValue.mcpId,
+            );
+            const fallbackTool = buildToolFromValue(currentValue);
+            setSelectedSelection(
+              server && fallbackTool
+                ? {
+                    kind: "mcp",
+                    mcpId: server.mcpId,
+                    mcpName: server.mcpName,
+                    tool: fallbackTool,
+                  }
+                : null,
+            );
+          } else {
+            setSelectedSelection(null);
+          }
+
+          restoredSelectionValueKeyRef.current = valueKey;
         }
       } finally {
         if (requestId === catalogRequestIdRef.current) {

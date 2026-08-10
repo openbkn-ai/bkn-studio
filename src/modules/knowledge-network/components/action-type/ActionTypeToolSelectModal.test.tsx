@@ -186,6 +186,34 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
     ).toBeTruthy();
   });
 
+  it("keeps an unconfirmed selection when switching execution-unit tabs", async () => {
+    render(
+      <ActionTypeToolSelectModal
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+      />,
+    );
+
+    fireEvent.click(await screen.findByText("Demo Box"));
+    fireEvent.click(await screen.findByText("Demo Tool"));
+
+    const confirmButton = screen.getByText("common.confirm").closest("button");
+    expect(confirmButton).not.toBeNull();
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(screen.getByText("executionFactory.functionToolboxTab"));
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenLastCalledWith("", "function");
+    });
+    fireEvent.click(screen.getByText("executionFactory.openapiToolboxTab"));
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenLastCalledWith("", "openapi");
+    });
+
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("does not reload when value object identity changes but source key stays the same", async () => {
     const onCancel = vi.fn();
     const onConfirm = vi.fn();
