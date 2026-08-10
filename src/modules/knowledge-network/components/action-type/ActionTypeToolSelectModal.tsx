@@ -346,8 +346,14 @@ export function ActionTypeToolSelectModal({
               : currentValue?.type === "tool" && currentValue.boxId
                 ? `group:tool:${currentValue.boxId}`
                 : "";
+          const hasInitialGroup =
+            currentValue?.type === "mcp"
+              ? nextCatalog.mcpServers.some((server) => server.mcpId === currentValue.mcpId)
+              : currentValue?.type === "tool"
+                ? nextCatalog.toolBoxes.some((box) => box.boxId === currentValue.boxId)
+                : false;
 
-          if (initialGroupKey) {
+          if (initialGroupKey && hasInitialGroup) {
             setExpandedKeys([initialGroupKey]);
             await ensureGroupToolsLoadedRef.current(initialGroupKey);
             if (requestId !== catalogRequestIdRef.current) {
@@ -360,6 +366,15 @@ export function ActionTypeToolSelectModal({
           const initialSelection = buildSelectionFromValue(catalogRef.current, currentValue);
           if (initialSelection) {
             setSelectedSelection(initialSelection);
+          } else if (
+            currentValue?.type === "tool" &&
+            !toolboxMetadataType &&
+            activeTab === "openapi" &&
+            !hasInitialGroup &&
+            executionUnitTabs.includes("function")
+          ) {
+            setActiveTab("function");
+            return;
           } else if (currentValue?.type === "tool" && currentValue.boxId) {
             const box = catalogRef.current.toolBoxes.find((item) => item.boxId === currentValue.boxId);
             const fallbackTool = buildToolFromValue(currentValue);
@@ -406,7 +421,7 @@ export function ActionTypeToolSelectModal({
     return () => {
       catalogRequestIdRef.current += 1;
     };
-  }, [activeTab, debouncedKeyword, open, valueKey]);
+  }, [activeTab, debouncedKeyword, executionUnitTabs, open, toolboxMetadataType, valueKey]);
 
   const selectedKey = useMemo(
     () => (selectedSelection ? buildSelectionKey(selectedSelection) : null),
