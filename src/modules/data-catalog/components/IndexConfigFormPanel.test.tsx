@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 const loadAnalyzerCapabilitiesMock = vi.hoisted(() => vi.fn());
+const loadEmbeddingModelOptionsMock = vi.hoisted(() => vi.fn());
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -40,7 +41,7 @@ vi.mock("@/modules/data-catalog/utils/analyzer-capabilities", async (importOrigi
 vi.mock("@/modules/data-catalog/utils/embedding-model-options", () => ({
   findUnregisteredEmbeddingModel: vi.fn().mockReturnValue(null),
   isRegisteredEmbeddingModel: vi.fn().mockReturnValue(true),
-  loadEmbeddingModelOptions: vi.fn().mockResolvedValue({ errorMessage: null, options: [], state: "empty" }),
+  loadEmbeddingModelOptions: loadEmbeddingModelOptionsMock,
   pickRegisteredEmbeddingModelId: vi.fn().mockReturnValue(undefined),
 }));
 
@@ -65,6 +66,11 @@ describe("IndexConfigFormPanel", () => {
     vi.clearAllMocks();
     getCatalogResourceMock.mockResolvedValue(resource);
     loadAnalyzerCapabilitiesMock.mockResolvedValue({ errorMessage: null, options: ["standard"], state: "ready" });
+    loadEmbeddingModelOptionsMock.mockResolvedValue({
+      errorMessage: null,
+      options: [{ dimensions: 1024, id: "model-1", name: "Model 1" }],
+      state: "ready",
+    });
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
       addListener: vi.fn(),
@@ -95,7 +101,7 @@ describe("IndexConfigFormPanel", () => {
     await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(2));
   });
 
-  it("does not show analyzer failures for a vector-only resource", async () => {
+  it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {
     const vectorResource: CatalogResource = {
       ...resource,
       schema: [{
@@ -119,5 +125,8 @@ describe("IndexConfigFormPanel", () => {
 
     await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByText("dataCatalog.build.analyzersLoadError")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }).getAttribute("disabled"),
+    ).toBeNull();
   });
 });

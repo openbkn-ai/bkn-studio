@@ -694,6 +694,14 @@ export function IndexConfigFormPanel({
   const analyzersLoadFailed = analyzersLoadState === "error";
   const analyzerSelectionDisabled = analyzersLoading || analyzersLoadFailed || analyzersLoadState === "empty";
   const analyzerBlocked = analyzerSelectionDisabled || unavailableSavedAnalyzers.length > 0;
+  const embeddingSelectionDisabledReason = modelsLoading
+    ? t("dataCatalog.build.modelsLoading")
+    : modelsLoadFailed
+      ? t("dataCatalog.build.modelsLoadErrorFallback")
+      : t("dataCatalog.build.noModels");
+  const analyzerSelectionDisabledReason = analyzersLoading
+    ? t("dataCatalog.build.analyzersLoading")
+    : t("dataCatalog.build.analyzerSelectionUnavailable");
   const hasIndexFeatures = embeddingFields.length > 0 || fulltextFields.length > 0;
   const selectedEmbeddingGroups = featureField ? (eligibleEmbeddingModelGroups[featureField.name] ?? []) : [];
   const selectedFulltextGroups = featureField ? (eligibleFulltextAnalyzerGroups[featureField.name] ?? []) : [];
@@ -751,13 +759,11 @@ export function IndexConfigFormPanel({
         : []),
       ...options,
     ];
-    const disabledReason = !disabled
-      ? ""
-      : isEmbedding
-        ? t("dataCatalog.build.noModels")
+    const disabledReason = !disabled ? "" : isEmbedding
+        ? embeddingSelectionDisabledReason
         : !isTextField(featureField.type)
           ? t("dataCatalog.build.fulltextTypeHint")
-          : t("dataCatalog.build.analyzerSelectionUnavailable");
+          : analyzerSelectionDisabledReason;
     const addFeature = () => {
       updateFeatureGroups(kind, featureField.name, [
         ...groups,
@@ -777,7 +783,7 @@ export function IndexConfigFormPanel({
               {title}
               <span className={formStyles.featureStatus}>
                 {groups.length > 0
-                  ? t("dataCatalog.build.featureConfiguredCount", { count: groups.length })
+                  ? t("dataCatalog.build.featureConfiguredCount")
                   : t("dataCatalog.build.featureNotEnabled")}
               </span>
             </div>
@@ -980,6 +986,11 @@ export function IndexConfigFormPanel({
                   <div className={formStyles.fieldHint}>
                     {t("dataCatalog.build.fulltextAnalyzerHint")}
                   </div>
+                  {analyzerSelectionDisabled ? (
+                    <div className={formStyles.fieldHint}>
+                      {analyzerSelectionDisabledReason}
+                    </div>
+                  ) : null}
                   {fulltextAnalyzerOverrides.length > 0 ? (
                     <Alert
                       message={t("dataCatalog.build.fulltextAnalyzerOverrides", {
