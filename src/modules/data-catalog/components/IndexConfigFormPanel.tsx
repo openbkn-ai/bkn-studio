@@ -7,7 +7,7 @@
 
 import { QuestionCircleOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Drawer, Input, Select, Space, Tooltip } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -148,6 +148,7 @@ export function IndexConfigFormPanel({
   const [analyzers, setAnalyzers] = useState<string[]>([]);
   const [analyzersLoadState, setAnalyzersLoadState] = useState<AnalyzerCapabilitiesLoadState>("idle");
   const [analyzersLoadError, setAnalyzersLoadError] = useState<string | null>(null);
+  const analyzerResourceIdRef = useRef<string | null>(null);
   const [orphanSavedModel, setOrphanSavedModel] = useState<string | null>(null);
   const [defaultModelId, setDefaultModelId] = useState<string>();
   const [error, setError] = useState<string | null>(null);
@@ -206,6 +207,8 @@ export function IndexConfigFormPanel({
     if (!active) {
       return;
     }
+    const resourceChanged = analyzerResourceIdRef.current !== resource.id;
+    analyzerResourceIdRef.current = resource.id;
 
     setActiveTask(null);
     setBuildKeyFields([]);
@@ -218,9 +221,11 @@ export function IndexConfigFormPanel({
     setDirty(false);
     setModelsLoadState("idle");
     setModelsLoadError(null);
-    setAnalyzersLoadState("idle");
-    setAnalyzersLoadError(null);
-    setAnalyzers([]);
+    if (resourceChanged) {
+      setAnalyzersLoadState("idle");
+      setAnalyzersLoadError(null);
+      setAnalyzers([]);
+    }
     setOrphanSavedModel(null);
     setModels([]);
     setSchema(resource.schema);
@@ -317,7 +322,7 @@ export function IndexConfigFormPanel({
     return () => {
       cancelled = true;
     };
-  }, [active, resource]);
+  }, [active, resource.id]);
 
   const reloadEmbeddingModels = async () => {
     setModelsLoadState("loading");
@@ -703,6 +708,10 @@ export function IndexConfigFormPanel({
       : t("dataCatalog.build.noModels");
   const analyzerSelectionDisabledReason = analyzersLoading
     ? t("dataCatalog.build.analyzersLoading")
+    : analyzersLoadFailed
+      ? t("dataCatalog.build.analyzersLoadError", {
+          message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback"),
+        })
     : t("dataCatalog.build.analyzerSelectionUnavailable");
   const hasIndexFeatures = embeddingFields.length > 0 || fulltextFields.length > 0;
   const selectedEmbeddingGroups = featureField ? (eligibleEmbeddingModelGroups[featureField.name] ?? []) : [];
@@ -1042,7 +1051,7 @@ export function IndexConfigFormPanel({
                         </Space>
                       }
                       message={t("dataCatalog.build.modelsLoadError", {
-                        message: modelsLoadError ?? "",
+                        message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
                       })}
                       showIcon
                       type="error"

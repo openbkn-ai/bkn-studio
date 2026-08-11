@@ -83,7 +83,7 @@ describe("IndexConfigFormPanel", () => {
     }));
   });
 
-  it("reloads analyzer capabilities when the same resource is refreshed", async () => {
+  it("preserves analyzer capabilities when the same resource is refreshed", async () => {
     const { rerender } = render(
       <MemoryRouter>
         <IndexConfigFormPanel active resource={resource} />
@@ -98,7 +98,7 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1));
   });
 
   it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {
@@ -123,9 +123,9 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    await screen.findByText("dataCatalog.build.analyzerSelectionUnavailable");
+    await screen.findByText("dataCatalog.build.analyzersLoadError");
     expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText("dataCatalog.build.analyzersLoadError")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
     expect(
       screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }).getAttribute("disabled"),
     ).toBeNull();
