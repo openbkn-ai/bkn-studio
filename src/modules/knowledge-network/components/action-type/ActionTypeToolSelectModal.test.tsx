@@ -114,7 +114,7 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
     await waitFor(() => {
       expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledTimes(1);
     });
-    expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledWith("");
+    expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledWith("", "openapi");
 
     await act(async () => {
       await Promise.resolve();
@@ -123,6 +123,175 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
 
     expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("Demo Box")).toBeTruthy();
+  });
+
+  it("passes the function toolbox filter to the catalog request", async () => {
+    render(
+      <ActionTypeToolSelectModal
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+        toolboxMetadataType="function"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledWith("", "function");
+    });
+  });
+
+  it("uses the supplied toolbox tab label", async () => {
+    render(
+      <ActionTypeToolSelectModal
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+        toolboxTabLabel="Function Sets"
+      />,
+    );
+
+    expect(await screen.findByText("Function Sets")).toBeTruthy();
+  });
+
+  it("separates API toolsets, function sets, and MCP services without showing skills", async () => {
+    render(
+      <ActionTypeToolSelectModal
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+      />,
+    );
+
+    expect(await screen.findByText("executionFactory.openapiToolboxTab")).toBeTruthy();
+    expect(screen.getByText("executionFactory.functionToolboxTab")).toBeTruthy();
+    expect(screen.getByText("executionFactory.executionUnitTabsV2.mcp")).toBeTruthy();
+    expect(screen.queryByText("executionFactory.executionUnitTabsV2.skill")).toBeNull();
+    expect(
+      screen.getByPlaceholderText("knowledgeNetwork.actionTypeOpenapiToolSearchPlaceholder"),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByText("executionFactory.functionToolboxTab"));
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenLastCalledWith("", "function");
+    });
+    expect(
+      screen.getByPlaceholderText("knowledgeNetwork.actionTypeFunctionToolSearchPlaceholder"),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByText("executionFactory.executionUnitTabsV2.mcp"));
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenLastCalledWith("");
+    });
+    expect(
+      screen.getByPlaceholderText("knowledgeNetwork.actionTypeMcpSearchPlaceholder"),
+    ).toBeTruthy();
+  });
+
+  it("keeps an unconfirmed selection when switching execution-unit tabs", async () => {
+    render(
+      <ActionTypeToolSelectModal
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+      />,
+    );
+
+    fireEvent.click(await screen.findByText("Demo Box"));
+    fireEvent.click(await screen.findByText("Demo Tool"));
+
+    const confirmButton = screen.getByText("common.confirm").closest("button");
+    expect(confirmButton).not.toBeNull();
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(screen.getByText("executionFactory.functionToolboxTab"));
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenLastCalledWith("", "function");
+    });
+    fireEvent.click(screen.getByText("executionFactory.openapiToolboxTab"));
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenLastCalledWith("", "openapi");
+    });
+
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("restores a stored function tool by switching from the API toolset", async () => {
+    listActionTypeExecutionFactoryCatalog.mockImplementation(
+      (_keyword: string, metadataType?: string) => ({
+        mcpServers: [],
+        toolBoxes:
+          metadataType === "function"
+            ? [
+                {
+                  boxId: "function-box",
+                  boxName: "Function Box",
+                  description: "function set",
+                  tools: [],
+                },
+              ]
+            : [
+                {
+                  boxId: "openapi-box",
+                  boxName: "API Box",
+                  description: "API toolset",
+                  tools: [],
+                },
+              ],
+      }),
+    );
+    loadActionTypeToolBoxTools.mockImplementation((boxId: string) =>
+      boxId === "function-box"
+        ? [{ parameters: [], toolId: "function-tool", toolName: "Stored Function" }]
+        : [],
+    );
+
+    render(
+      <ActionTypeToolSelectModal
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+        value={createSource({
+          boxId: "function-box",
+          boxName: "Function Box",
+          toolId: "function-tool",
+          toolName: "Stored Function",
+        })}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenLastCalledWith("", "function");
+    });
+    expect(await screen.findByText("Function Box")).toBeTruthy();
+    expect(loadActionTypeToolBoxTools).toHaveBeenCalledWith("function-box");
+
+    const confirmButton = screen.getByText("common.confirm").closest("button");
+    expect(confirmButton).not.toBeNull();
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("keeps a stored API-tool fallback when its toolbox is still available", async () => {
+    render(
+      <ActionTypeToolSelectModal
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+        value={createSource({ toolId: "removed-tool", toolName: "Removed Tool" })}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledWith("", "openapi");
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledTimes(1);
+    const confirmButton = screen.getByText("common.confirm").closest("button");
+    expect(confirmButton).not.toBeNull();
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("does not reload when value object identity changes but source key stays the same", async () => {
@@ -205,7 +374,7 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
     expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledTimes(1);
 
     const searchInput = screen.getByPlaceholderText(
-      "knowledgeNetwork.actionTypeToolSearchPlaceholder",
+      "knowledgeNetwork.actionTypeOpenapiToolSearchPlaceholder",
     );
     fireEvent.change(searchInput, { target: { value: "demo" } });
 
@@ -222,7 +391,7 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
     });
 
     expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledTimes(2);
-    expect(listActionTypeExecutionFactoryCatalog).toHaveBeenLastCalledWith("demo");
+    expect(listActionTypeExecutionFactoryCatalog).toHaveBeenLastCalledWith("demo", "openapi");
   });
 
   it("does not keep requesting after the modal is closed", async () => {

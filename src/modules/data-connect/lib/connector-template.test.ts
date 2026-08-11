@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 import {
+  isCertifiedConnectorType,
   filterConnectorTypes,
   getConnectorConfigDefaults,
   getDataSourceFamilyMeta,
@@ -179,3 +180,17 @@ function field(name: string, type: string, required: boolean, encrypted = false)
     type,
   };
 }
+
+describe("isCertifiedConnectorType", () => {
+  // connector_certified（登记表专业档）覆盖的是商业数据库；权威清单在 Vega 侧，
+  // 这里只是展示快照，漏一条只是少个徽标，不会放行任何东西。
+  it("SQL Server 属于认证连接器", () => {
+    expect(isCertifiedConnectorType("sqlserver")).toBe(true);
+    expect(isCertifiedConnectorType(" SQLServer ".toLowerCase().trim())).toBe(true);
+  });
+
+  it("社区基础连接器不打标", () => {
+    expect(isCertifiedConnectorType("mysql")).toBe(false);
+    expect(isCertifiedConnectorType("postgresql")).toBe(false);
+  });
+});

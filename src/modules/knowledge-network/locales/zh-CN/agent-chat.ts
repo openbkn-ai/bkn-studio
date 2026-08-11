@@ -182,6 +182,9 @@ export const agentChatPart = {
       toolCall: {
         running: "调用中…",
         failed: "失败",
+        clientBlocked: "客户端拦截",
+        clientBlockedRequest: "模型入参；客户端拦截未发出 → {{name}}",
+        clientBlockedReason: "拦截原因",
         request: "请求 · tools/call → {{name}}",
         error: "错误",
         response: "响应",

@@ -76,6 +76,11 @@ type BackendBuildTask = {
   vectorized_count?: number;
 };
 
+type BackendBuildTaskSummary = Omit<
+  BackendBuildTask,
+  "failure_detail" | "index_config"
+>;
+
 type ListResponse<T> = {
   entries: T[];
   total_count: number;
@@ -237,7 +242,10 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
   const synced = item.synced_count ?? 0;
   const vectorized = item.vectorized_count ?? 0;
   const wantsEmbedding = snapshot.embeddingFields.length > 0;
-  const embeddingDegraded = wantsEmbedding && status === "succeeded" && vectorized < synced;
+  const embeddingDegraded =
+    item.index_health?.embedding === "failed" ||
+    item.index_health?.embedding === "partial" ||
+    (wantsEmbedding && status === "succeeded" && vectorized < synced);
 
   // Prefer real backend index_health; otherwise fall back to counts consistently with embeddingDegraded.
   const toHealthState = (value: string | undefined): IndexHealthState =>
@@ -337,7 +345,7 @@ export async function listBuildTasks(
   let total = Number.POSITIVE_INFINITY;
 
   while (tasks.length < total) {
-    const response = await http.get<ListResponse<BackendBuildTask>>(
+    const response = await http.get<ListResponse<BackendBuildTaskSummary>>(
       "/vega-backend/v1/build-tasks",
       {
         params: {
@@ -399,12 +407,10 @@ function sortMockTasks(
     });
   }
   const dir = order === "asc" ? 1 : -1;
-  const keyOf = (task: BuildTask): number | string =>
+  const keyOf = (task: BuildTask): number =>
     orderBy === "created_at"
       ? task.createdAt
-      : orderBy === "updated_at"
-        ? (task.lastEventAt ?? task.createdAt)
-        : task.status;
+      : (task.lastEventAt ?? task.createdAt);
   return arr.sort((a, b) => {
     const ka = keyOf(a);
     const kb = keyOf(b);
@@ -446,7 +452,7 @@ export async function listBuildTaskPage(
       const set = new Set(query.statuses);
       items = items.filter((task) => set.has(task.status));
     }
-    items = sortMockTasks(items, query.orderBy ?? "default", query.order ?? "desc");
+    items = sortMockTasks(items, query.orderBy ?? "created_at", query.order ?? "desc");
     const total = items.length;
     const start = (page - 1) * pageSize;
     return wait({ items: items.slice(start, start + pageSize), total }, 120);
@@ -459,7 +465,7 @@ export async function listBuildTaskPage(
     catalog_id: query.catalogId || undefined,
     mode: query.mode || undefined,
   };
-  if (query.orderBy && query.orderBy !== "default") {
+  if (query.orderBy) {
     params.order_by = query.orderBy;
     params.order = query.order ?? "desc";
   }
@@ -469,7 +475,7 @@ export async function listBuildTaskPage(
     params.status = backendStatusParam(query.statuses);
   }
 
-  const response = await http.get<ListResponse<BackendBuildTask>>(
+  const response = await http.get<ListResponse<BackendBuildTaskSummary>>(
     "/vega-backend/v1/build-tasks",
     { params },
   );

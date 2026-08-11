@@ -18,6 +18,7 @@ import type {
   DataConnectDiscoverTaskListQuery,
   DataConnectDiscoverTaskListResult,
   DataConnectDiscoverTaskStatus,
+  DataConnectDiscoverTaskSummary,
   DataConnectDiscoverTaskTriggerType,
 } from "@/modules/data-connect/types/discover";
 
@@ -68,6 +69,10 @@ type BackendDiscoverTask = {
   status?: string;
   strategy?: string;
   trigger_type?: string;
+};
+
+type BackendDiscoverTaskSummary = Omit<BackendDiscoverTask, "message" | "result"> & {
+  result?: Omit<NonNullable<BackendDiscoverTask["result"]>, "message">;
 };
 
 type ListResponse<T> = {
@@ -281,6 +286,43 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
   };
 }
 
+function toTaskSummary(task: DataConnectDiscoverTask): DataConnectDiscoverTaskSummary {
+  const fullResult = task.result;
+  const result = fullResult
+    ? {
+        catalogId: fullResult.catalogId,
+        failedCount: fullResult.failedCount,
+        newCount: fullResult.newCount,
+        restoredCount: fullResult.restoredCount,
+        staleCount: fullResult.staleCount,
+        unchangedCount: fullResult.unchangedCount,
+        updatedCount: fullResult.updatedCount,
+      }
+    : undefined;
+
+  return {
+    catalogId: task.catalogId,
+    catalogName: task.catalogName,
+    createTime: task.createTime,
+    creatorName: task.creatorName,
+    finishTime: task.finishTime,
+    finishTimeValue: task.finishTimeValue,
+    id: task.id,
+    progress: task.progress,
+    result,
+    scheduleId: task.scheduleId,
+    startTime: task.startTime,
+    startTimeValue: task.startTimeValue,
+    status: task.status,
+    strategy: task.strategy,
+    triggerType: task.triggerType,
+  };
+}
+
+function mapTaskSummary(item: BackendDiscoverTaskSummary): DataConnectDiscoverTaskSummary {
+  return toTaskSummary(mapTask(item));
+}
+
 function filterSchedules(
   items: DataConnectDiscoverSchedule[],
   query: DataConnectDiscoverScheduleListQuery,
@@ -316,10 +358,6 @@ function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscove
       matchesTriggerType
     );
   });
-  if (query.sort === "default") {
-    const rank = { running: 1, pending: 2, failed: 3, completed: 4 };
-    return filtered.sort((left, right) => rank[left.status] - rank[right.status] || right.createTime.localeCompare(left.createTime));
-  }
   const direction = query.direction === "asc" ? 1 : -1;
   const valueOf = (item: DataConnectDiscoverTask) => item.createTime;
   return filtered.sort((left, right) => (valueOf(left) > valueOf(right) ? direction : valueOf(left) < valueOf(right) ? -direction : 0));
@@ -489,12 +527,12 @@ export async function listDataConnectDiscoverTasks(
     const startIndex = (query.page - 1) * query.pageSize;
 
     return wait({
-      items: filtered.slice(startIndex, startIndex + query.pageSize),
+      items: filtered.slice(startIndex, startIndex + query.pageSize).map(toTaskSummary),
       total: filtered.length,
     });
   }
 
-  const response = await http.get<ListResponse<BackendDiscoverTask>>(
+  const response = await http.get<ListResponse<BackendDiscoverTaskSummary>>(
     "/vega-backend/v1/discover-tasks",
     {
       params: {
@@ -512,7 +550,7 @@ export async function listDataConnectDiscoverTasks(
   );
 
   return {
-    items: response.data.entries.map(mapTask),
+    items: response.data.entries.map(mapTaskSummary),
     total: response.data.total_count,
   };
 }

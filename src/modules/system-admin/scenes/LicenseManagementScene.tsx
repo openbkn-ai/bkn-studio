@@ -8,17 +8,21 @@
 import {
   CloudSyncOutlined,
   CopyOutlined,
+  CrownOutlined,
   DeleteOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import { Alert, Empty, Input, Spin, Tag } from "antd";
+import { Alert, Input, Spin, Tag } from "antd";
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { LicenseStateBanner } from "@/framework/entitlement/LicenseStateBanner";
+import { useRefreshEntitlement } from "@/framework/entitlement/use-entitlement";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -58,16 +62,6 @@ function formatUnixSeconds(value: number | undefined, locale: string, permanentT
     .replace(/\//g, "-");
 }
 
-function limitValueLabel(value: number, unlimitedText: string, blockedText: string) {
-  if (value === -1) {
-    return unlimitedText;
-  }
-  if (value === 0) {
-    return blockedText;
-  }
-  return String(value);
-}
-
 function translatedLicenseKey(
   t: ReturnType<typeof useTranslation>["t"],
   category: "editionLabels" | "featureLabels" | "limitLabels",
@@ -85,7 +79,9 @@ function copySupported() {
 
 export function LicenseManagementScene() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { message, modal } = useAppServices();
+  const refreshEntitlement = useRefreshEntitlement();
 
   const [detail, setDetail] = useState<LicenseDetail | null>(null);
   const [fingerprint, setFingerprint] = useState("");
@@ -174,7 +170,9 @@ export function LicenseManagementScene() {
     if (next) {
       setDetail(next);
     }
-    await load();
+    // 授权档位随导证/激活/删除立刻变,后端承诺补证下一个请求即生效——菜单与门禁读的是
+    // 启动时拉的那份快照,不在这里重拉就要求用户按 F5,等于把后端的承诺在前端打掉。
+    await Promise.all([refreshEntitlement(), load()]);
   };
 
   const showActionError = async (error: unknown) => {
@@ -300,18 +298,13 @@ export function LicenseManagementScene() {
             ? t("systemAdmin.license.metrics.activationBound")
             : t("systemAdmin.license.metrics.activationPending"),
         },
-        {
-          label: t("systemAdmin.license.metrics.scope"),
-          value: t("systemAdmin.license.metrics.scopeValue", {
-            features: detail.features.length,
-            limits: Object.keys(detail.limits).length,
-          }),
-        },
       ]
     : [];
 
   return (
     <div className={styles.contentSurface}>
+      {/* 无证提示只落在能处理它的这一页,不再跟着整个控制台走。 */}
+      <LicenseStateBanner />
       <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
           <div>
@@ -322,6 +315,18 @@ export function LicenseManagementScene() {
           </div>
         </div>
         <div className={styles.toolbarActions}>
+          {/*
+            这一页答的是「这张证是什么、怎么导」;买了哪些能力、还能买什么在版本与订阅页。
+            两页互为上下文,但那一页在菜单里没有入口,所以这里给一条明路。
+          */}
+          <AppButton
+            icon={<CrownOutlined />}
+            onClick={() => {
+              void navigate("/system/subscription");
+            }}
+          >
+            {t("systemAdmin.license.viewSubscription")}
+          </AppButton>
           <AppButton icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
             {t("common.refresh")}
           </AppButton>
@@ -480,64 +485,12 @@ export function LicenseManagementScene() {
               </section>
             </PermissionGate>
 
-            <section className={styles.licenseSection}>
-              <div className={styles.licenseSectionHead}>
-                <h3>{t("systemAdmin.license.sections.scope")}</h3>
-                <span>{t("systemAdmin.license.sections.scopeHint")}</span>
-              </div>
-              <div className={styles.licenseScopeGrid}>
-                <div className={styles.licenseScopePanel}>
-                  <div className={styles.licenseScopeHead}>
-                    <h4>{t("systemAdmin.license.sections.features")}</h4>
-                    <span>{detail.features.length}</span>
-                  </div>
-                  {detail.features.length ? (
-                    <div className={styles.licenseTagList}>
-                      {detail.features.map((feature) => (
-                        <Tag key={feature} title={feature}>
-                          {translatedLicenseKey(t, "featureLabels", feature)}
-                        </Tag>
-                      ))}
-                    </div>
-                  ) : (
-                    <Empty
-                      description={t("systemAdmin.license.emptyFeatures")}
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                  )}
-                </div>
-
-                <div className={styles.licenseScopePanel}>
-                  <div className={styles.licenseScopeHead}>
-                    <h4>{t("systemAdmin.license.sections.limits")}</h4>
-                    <span>{t("systemAdmin.license.sections.limitsHint")}</span>
-                  </div>
-                  {Object.keys(detail.limits).length ? (
-                    <div className={styles.licenseLimitList}>
-                      {Object.entries(detail.limits).map(([key, value]) => (
-                        <div className={styles.licenseLimitItem} key={key}>
-                          <span title={key}>
-                            {translatedLicenseKey(t, "limitLabels", key)}
-                          </span>
-                          <strong>
-                            {limitValueLabel(
-                              value,
-                              t("systemAdmin.license.unlimited"),
-                              t("systemAdmin.license.blocked"),
-                            )}
-                          </strong>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <Empty
-                      description={t("systemAdmin.license.emptyLimits")}
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                  )}
-                </div>
-              </div>
-            </section>
+            {/*
+              「授权范围」两块(证书 features 清单、limits 配额)暂时下架。features 只发
+              不判(ee-design.md §3.2),limits 产品侧今天也没有判定落点(§3.5),两块摆在
+              这里只会让人以为它们在起作用;社区证的 features 本来就是空的,渲染出来是
+              「0 项能力 / 0 项限额」。要看买到了什么,走工具栏的「查看授权范围」。
+            */}
           </div>
         ) : null}
       </Spin>

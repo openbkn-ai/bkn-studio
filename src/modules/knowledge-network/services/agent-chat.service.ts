@@ -120,6 +120,10 @@ const TOOL_HINTS: Record<string, string> = {
   list_resources: " Important: filter by catalog_id/type and use small paged limits. Large results will be truncated.",
   search_schema:
     " Recommendation: use a precise query and keep max_concepts at or below 10 by default. Large results will be truncated. schema_brief defaults to true; pass schema_brief=false only when full field definitions are needed.",
+  get_action_info:
+    " Important: obtain real instance identifiers from _instance_identity returned by query_object_instance or query_instance_subgraph, then provide nonempty _instance_identities. Never invent instance identifiers.",
+  execute_action:
+    " Important: provide nonempty _instance_identities and dynamic_params. Conversational execution cannot scan empty instances; targets must come from upstream _instance_identity values.",
 };
 
 /** Common default arguments for all tools; model-provided values win. */
@@ -164,6 +168,63 @@ function stripBknContextSchema(schema: Record<string, unknown>): Record<string, 
     next.required = schema.required.filter((name) => name !== "bkn_context");
   }
   return next;
+}
+
+function isNonEmptyArray(value: unknown): value is unknown[] {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function toolGuardError(code: string, message: string, requiredFields: string[]): string {
+  return JSON.stringify({
+    error: {
+      code,
+      message,
+      required_fields: requiredFields,
+      retryable: false,
+    },
+  });
+}
+
+/**
+ * Blocks high-risk business tools when missing fields would broaden the call
+ * from an instance-level intent into broad recall, broad query, or execution.
+ */
+export function guardAgentToolArgs(name: string, args: Record<string, unknown>): string | null {
+  if (name === "get_action_info") {
+    const missing = [
+      ...(typeof args.at_id === "string" && args.at_id.trim() ? [] : ["at_id"]),
+      ...(isNonEmptyArray(args._instance_identities) ? [] : ["_instance_identities"]),
+    ];
+    if (missing.length) {
+      return toolGuardError(
+        "missing_action_recall_scope",
+        "get_action_info 需要 at_id 和非空 _instance_identities。请先让用户选择目标实例，或先查询候选实例并使用返回的 _instance_identity。",
+        missing,
+      );
+    }
+  }
+
+  if (name === "execute_action") {
+    const hasDynamicParams = Object.prototype.hasOwnProperty.call(args, "dynamic_params") && isPlainObject(args.dynamic_params);
+    const missing = [
+      ...(typeof args.at_id === "string" && args.at_id.trim() ? [] : ["at_id"]),
+      ...(isNonEmptyArray(args._instance_identities) ? [] : ["_instance_identities"]),
+      ...(hasDynamicParams ? [] : ["dynamic_params"]),
+    ];
+    if (missing.length) {
+      return toolGuardError(
+        "unsafe_action_call",
+        "execute_action 已被客户端拦截：缺少目标实例或 dynamic_params。请先确认执行对象和动态参数，再重新调用本工具。",
+        missing,
+      );
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -328,6 +389,8 @@ export function buildAgentTools(
         const bknContext = turn?.nextContext();
         if (scopedList && scopeSet) return listResourcesScoped(call, input, knId, scopeSet, cfg, bknContext);
         const args = effectiveToolArgs(def.name, input, knId, bknContext);
+        const guardError = guardAgentToolArgs(def.name, args);
+        if (guardError) throw new Error(guardError);
         return capToolResult(await call(def.name, args), def.name, cfg);
       },
     });

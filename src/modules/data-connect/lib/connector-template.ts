@@ -699,3 +699,20 @@ function resolveFieldGroupKey(fieldName: string, fieldConfig: ConnectorFieldConf
 
   return "connection";
 }
+
+/**
+ * 需要专业档授权的「认证 / 高级连接器」。
+ *
+ * `connector_certified`(登记表专业档)覆盖的正是这批商业数据库。**权威清单在 Vega 侧
+ * 维护**——license-server `capability-registry.md` §8 明写登记表只登 key 与最低档、不列
+ * 具体连接器。这里是产品侧的展示快照,用来给选择器上的卡片标一个档位徽标;它不参与任何
+ * 判定,能不能建连由服务端说了算。
+ *
+ * 新增认证连接器时两边都要改,漏了这边只是少一个徽标,不会放行任何东西。
+ */
+const CERTIFIED_CONNECTOR_TYPES = new Set(["sqlserver"]);
+
+/** 该连接器类型是否属于认证连接器(专业档起)。只用于展示。 */
+export function isCertifiedConnectorType(type: string): boolean {
+  return CERTIFIED_CONNECTOR_TYPES.has(type.trim().toLowerCase());
+}

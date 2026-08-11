@@ -28,6 +28,7 @@ export const dataCatalogModuleManifest = {
     "vega-backend/catalogs",
     "vega-backend/connector-types",
     "vega-backend/resources",
+    "vega-backend/index-capabilities",
     "vega-backend/build-tasks",
     "vega-backend/discover-tasks",
     "vega-backend/semantic-understanding-tasks",

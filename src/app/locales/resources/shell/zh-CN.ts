@@ -56,7 +56,8 @@ export const shellZhCN = {
       modelManagement: "模型配置",
       bknTrace: "BKN Trace",
       observability: "可观测性",
-      businessProvenance: "业务溯源分析",
+      // 侧栏 229px 里要与「企业版」徽标同排,六字放不下;页面标题仍是「业务溯源分析」。
+      businessProvenance: "业务溯源",
       traceAnalysis: "Trace 分析",
       observabilityLogs: "日志检索",
       observabilitySettings: "可观测性设置",

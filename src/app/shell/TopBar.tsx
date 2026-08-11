@@ -9,6 +9,7 @@ import {
   CheckOutlined,
   CloudServerOutlined,
   GlobalOutlined,
+  CrownOutlined,
   LogoutOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -22,10 +23,8 @@ import { getConsoleNavTrail } from "@/app/shell/console-navigation";
 import openBknLogo from "@/assets/brand/openbkn-logo.png";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
-import {
-  useRuntimeConfig,
-  useUpdateLocale,
-} from "@/framework/context/use-runtime-config";
+import { useRuntimeConfig, useUpdateLocale } from "@/framework/context/use-runtime-config";
+import { useEntitlement, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { APP_VERSION } from "@/framework/runtime/app-version";
 import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
 import type { SupportedLocale } from "@/framework/runtime/types";
@@ -39,6 +38,8 @@ export function TopBar() {
   const { networkId } = useParams<{ networkId?: string }>();
   const runtimeConfig = useRuntimeConfig();
   const updateLocale = useUpdateLocale();
+  const entitlement = useEntitlement();
+  const { snapshot } = useEntitlementContext();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const [networkName, setNetworkName] = useState<string | null>(null);
   const isKnowledgeNetworkRoute =
@@ -111,6 +112,33 @@ export function TopBar() {
       { type: "divider" as const },
     ];
 
+    /*
+      Do not render the edition entry until the snapshot arrives, preventing an inaccurate edition
+      from flashing before the real one. Show an upgrade CTA while a higher edition exists; only
+      the top industry edition has no upgrade path.
+    */
+    if (snapshot) {
+      items.push({
+        icon: <CrownOutlined />,
+        key: "subscription",
+        label: (
+          <span className="console-user-menu-edition">
+            <span className={`console-user-menu-edition-${entitlement.edition}`}>
+              {t(`common.entitlement.editions.${entitlement.edition}`)}
+            </span>
+            {entitlement.edition === "industry" ? null : (
+              <span className="console-user-menu-edition-cta">
+                {t("common.entitlement.upgrade")}
+              </span>
+            )}
+          </span>
+        ),
+        onClick: () => {
+          void navigate("/system/subscription");
+        },
+      });
+    }
+
     items.push({
       icon: <UserOutlined />,
       key: "account",
@@ -178,10 +206,12 @@ export function TopBar() {
     return items;
   }, [
     canViewInstallStatus,
+    entitlement.edition,
     installStatusUrl,
     navigate,
     runtimeConfig.locale,
     runtimeConfig.mode,
+    snapshot,
     t,
     updateLocale,
   ]);

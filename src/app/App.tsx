@@ -12,6 +12,7 @@ import i18n from "@/app/locales/i18n";
 import { AppProviders } from "@/app/providers/AppProviders";
 import { createAppRouter } from "@/app/router/create-router";
 import { AuthGate } from "@/framework/auth/AuthGate";
+import { EntitlementProvider } from "@/framework/entitlement/EntitlementProvider";
 import { persistLocale } from "@/framework/i18n/locale";
 import { setRuntimeConfig } from "@/framework/runtime/config";
 import type { RuntimeConfig, RuntimeUser, SupportedLocale } from "@/framework/runtime/types";
@@ -47,7 +48,10 @@ export function App({ runtimeConfig }: AppProps) {
   return (
     <AppProviders runtimeConfig={config} updateLocale={handleLocaleChange}>
       <AuthGate onCurrentUser={handleCurrentUser}>
-        <RouterProvider router={router} />
+        {/* Entitlements require an authentication token, so load them inside AuthGate. */}
+        <EntitlementProvider>
+          <RouterProvider router={router} />
+        </EntitlementProvider>
       </AuthGate>
     </AppProviders>
   );

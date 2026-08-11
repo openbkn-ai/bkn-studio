@@ -29,6 +29,15 @@ import { useAppServices } from "@/framework/context/use-app-services";
 
 import { usePageState } from "@/framework/hooks/use-page-state";
 
+import { CapabilityGate } from "@/framework/entitlement/CapabilityGate";
+
+import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
+
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { useCapability, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 
@@ -134,6 +143,9 @@ function formatTime(value: number | undefined, locale: string) {
 
 
 export function RoleManagementScene() {
+  const [rbacUpgradeOpen, setRbacUpgradeOpen] = useState(false);
+
+
 
   const { t, i18n } = useTranslation();
 
@@ -143,14 +155,33 @@ export function RoleManagementScene() {
     currentPermissions: rolePermissions,
     requiredPermissions: "admin-role:members",
   });
-  const canEditRole = hasPermissions({
+  const rbacBasicAvailable = useCapability(CAPABILITIES.RBAC_BASIC) === "available";
+  const canEditRole = rbacBasicAvailable && hasPermissions({
     currentPermissions: rolePermissions,
     requiredPermissions: "admin-role:edit",
   });
-  const canDeleteRole = hasPermissions({
+  const canDeleteRole = rbacBasicAvailable && hasPermissions({
     currentPermissions: rolePermissions,
     requiredPermissions: "admin-role:delete",
   });
+
+  // Keep the first render in a loading state so an entitled cluster never briefly shows an upgrade CTA.
+  const { loading: entitlementLoading } = useEntitlementContext();
+
+  // Keep the upgrade CTA available for unlicensed and community installations.
+  const rbacUpgradeButton = (
+    <PermissionGate permissions="admin-role:create">
+      <AppButton
+        icon={<PlusOutlined />}
+        onClick={() => setRbacUpgradeOpen(true)}
+        type="primary"
+      >
+        {t("systemAdmin.roles.create")}
+        <EditionBadge capability={CAPABILITIES.RBAC_BASIC} edition="professional" />
+      </AppButton>
+    </PermissionGate>
+  );
+
 
   const { pageState, setPagination } = usePageState();
 
@@ -687,23 +718,38 @@ export function RoleManagementScene() {
 
             <div className={styles.toolbarActions}>
 
-              <PermissionGate permissions="admin-role:create">
-
-                <AppButton
-
-                  icon={<PlusOutlined />}
-
-                  onClick={() => setRoleDrawer({ open: true, role: null })}
-
-                  type="primary"
-
+              {/* The toolbar exposes the only upgrade path; row-level edit and delete actions stay hidden. */}
+              {entitlementLoading ? (
+                <PermissionGate permissions="admin-role:create">
+                  <AppButton disabled icon={<PlusOutlined />} loading type="primary">
+                    {t("systemAdmin.roles.create")}
+                  </AppButton>
+                </PermissionGate>
+              ) : (
+                <CapabilityGate
+                  capability={CAPABILITIES.RBAC_BASIC}
+                  fallback={rbacUpgradeButton}
+                  upgrade={rbacUpgradeButton}
                 >
+                  <PermissionGate permissions="admin-role:create">
 
-                  {t("systemAdmin.roles.create")}
+                    <AppButton
 
-                </AppButton>
+                      icon={<PlusOutlined />}
 
-              </PermissionGate>
+                      onClick={() => setRoleDrawer({ open: true, role: null })}
+
+                      type="primary"
+
+                    >
+
+                      {t("systemAdmin.roles.create")}
+
+                    </AppButton>
+
+                  </PermissionGate>
+                </CapabilityGate>
+              )}
 
               <AppButton
 
@@ -887,6 +933,18 @@ export function RoleManagementScene() {
         />
 
       ) : null}
+
+    <CapabilityUpgradeDialog
+
+      capability={CAPABILITIES.RBAC_BASIC}
+
+      minEdition="professional"
+
+      onClose={() => setRbacUpgradeOpen(false)}
+
+      open={rbacUpgradeOpen}
+
+    />
 
     </>
 

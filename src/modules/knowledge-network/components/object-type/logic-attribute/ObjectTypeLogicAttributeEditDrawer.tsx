@@ -662,6 +662,8 @@ export function ObjectTypeLogicAttributeEditDrawer({
         onCancel={() => setToolSelectorOpen(false)}
         onConfirm={(_source, selection) => void handleToolSelect(selection)}
         open={toolSelectorOpen}
+        toolboxTabLabel={t("executionFactory.functionToolboxTab")}
+        toolboxMetadataType="function"
         value={
           type === "tool" && getStringFieldValue("toolId")
             ? {

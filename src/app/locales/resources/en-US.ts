@@ -19,6 +19,7 @@ import { executionFactoryEnUS } from "@/modules/execution-factory/locales/en-US"
 import { homeEnUS } from "@/modules/home/locales/en-US";
 import { knowledgeNetworkEnUS } from "@/modules/knowledge-network/locales/en-US";
 import { modelResourcesEnUS } from "@/modules/model-resources/locales/en-US";
+import { subscriptionEnUS } from "@/modules/subscription/locales/en-US";
 import { systemAdminEnUS } from "@/modules/system-admin/locales/en-US";
 
 export const enUS = {
@@ -33,6 +34,7 @@ export const enUS = {
   ...executionFactoryEnUS,
   ...modelResourcesEnUS,
   ...executionFactoryLabEnUS,
+  ...subscriptionEnUS,
   ...systemAdminEnUS,
   ...apiKeysEnUS,
   ...bknTraceEnUS,

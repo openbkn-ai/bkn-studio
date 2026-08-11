@@ -42,6 +42,7 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
   buildAgentTools,
   effectiveToolArgs,
+  guardAgentToolArgs,
   isTakenOverLifecycleTool,
   formatOutputContract,
   formatToolResultLimits,
@@ -156,6 +157,7 @@ type ToolCallView = {
   status: "running" | "done" | "error";
   result?: string;
   error?: string;
+  clientBlocked?: boolean;
   startedAt: number;
   latencyMs?: number;
 };
@@ -332,11 +334,16 @@ function ToolCallCard({ call, t }: { call: ToolCallView; t: ReturnType<typeof us
   const statusDot =
     call.status === "running" ? styles.dotRunning : call.status === "error" ? styles.dotError : styles.dotOk;
   const statusText =
-    call.status === "running"
-      ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
-      : call.status === "error"
-        ? t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")
-        : `200 - ${call.latencyMs ?? "-"}ms`;
+    call.clientBlocked
+      ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlocked")
+      : call.status === "running"
+        ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
+        : call.status === "error"
+          ? t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")
+          : `200 - ${call.latencyMs ?? "-"}ms`;
+  const requestLabel = call.clientBlocked
+    ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlockedRequest", { name: call.name })
+    : t("knowledgeNetwork.agentChat.chatPane.toolCall.request", { name: call.name });
   return (
     <div className={`${styles.call} ${open ? styles.callOpen : ""}`}>
       <button type="button" className={styles.callHead} onClick={() => setOpen((v) => !v)}>
@@ -349,11 +356,17 @@ function ToolCallCard({ call, t }: { call: ToolCallView; t: ReturnType<typeof us
       {open ? (
         <div className={styles.callBody}>
           <div className={styles.callSec}>
-            <div className={styles.callLbl}>{t("knowledgeNetwork.agentChat.chatPane.toolCall.request", { name: call.name })}</div>
+            <div className={styles.callLbl}>{requestLabel}</div>
             <pre className={styles.callPre}>{formatArgs(call.args)}</pre>
           </div>
           <div className={styles.callSec}>
-            <div className={styles.callLbl}>{call.status === "error" ? t("knowledgeNetwork.agentChat.chatPane.toolCall.error") : t("knowledgeNetwork.agentChat.chatPane.toolCall.response")}</div>
+            <div className={styles.callLbl}>
+              {call.clientBlocked
+                ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlockedReason")
+                : call.status === "error"
+                  ? t("knowledgeNetwork.agentChat.chatPane.toolCall.error")
+                  : t("knowledgeNetwork.agentChat.chatPane.toolCall.response")}
+            </div>
             <pre className={styles.callPre}>{call.status === "error" ? call.error : call.result ?? "-"}</pre>
           </div>
         </div>
@@ -633,21 +646,22 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             ...m,
             toolCalls: [
               ...(m.toolCalls ?? []),
-              {
-                id: chunk.id,
-                name: chunk.name,
-                // Show the actual business request body, including injected defaults and bkn_context,
-                // instead of raw model input.
-                //
-                // Taken-over lifecycle tools have no outgoing request body because they do not call
-                // session.callTool for this turn. Trace platform tools still pass through.
-                args:
-                  turnContextRef.current && isTakenOverLifecycleTool(chunk.name)
-                    ? chunk.args
-                    : effectiveToolArgs(chunk.name, chunk.args, knId, turnContextRef.current ?? undefined),
-                status: "running",
-                startedAt: performance.now(),
-              },
+              (() => {
+                const bknContext = turnContextRef.current ?? undefined;
+                const effectiveArgs = effectiveToolArgs(chunk.name, chunk.args, knId, bknContext);
+                const clientBlocked = !!guardAgentToolArgs(chunk.name, effectiveArgs);
+                return {
+                  id: chunk.id,
+                  name: chunk.name,
+                  // Show the effective business request, including injected defaults and bkn_context,
+                  // rather than raw model input. Taken-over lifecycle tools do not call session.callTool
+                  // for a turn, so retain their original arguments instead of displaying a fictitious request.
+                  args: clientBlocked || (turnContextRef.current && isTakenOverLifecycleTool(chunk.name)) ? chunk.args : effectiveArgs,
+                  status: "running" as const,
+                  clientBlocked,
+                  startedAt: performance.now(),
+                };
+              })(),
             ],
           }));
           break;

@@ -11,6 +11,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { formatDateTime } from "@/framework/i18n/format";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -19,7 +21,7 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { SemanticUnderstandingTaskDetailDrawer } from "@/modules/data-catalog/components/SemanticUnderstandingTaskDetailDrawer";
-import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTask, listResourceSemanticUnderstandingTasks, type CreateSemanticUnderstandingTaskPayload, type SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTask, listResourceSemanticUnderstandingTasks, type CreateSemanticUnderstandingTaskPayload, type SemanticUnderstandingTaskSummary } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./ResourceSemanticUnderstandingPanel.module.css";
@@ -33,7 +35,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const [form] = Form.useForm<CreateSemanticUnderstandingTaskPayload>();
-  const [tasks, setTasks] = useState<SemanticUnderstandingTask[]>([]);
+  const [tasks, setTasks] = useState<SemanticUnderstandingTaskSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -64,6 +66,15 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
 
   const summary = useMemo(() => tasks.find((task) => task.status === "succeeded" && task.applied) ?? tasks[0], [tasks]);
 
+  useEffect(() => {
+    if (!open) return;
+    form.setFieldsValue({
+      applyMode: "fill_empty",
+      confidenceThreshold: 0.75,
+      includeSampleRows: false,
+    });
+  }, [form, open]);
+
   const start = async () => {
     const values = await form.validateFields();
     setCreating(true);
@@ -87,7 +98,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     { dataIndex: "createTime", title: t("dataCatalog.task.createTime"), render: formatTime },
     {
       key: "actions", title: t("common.actions"), width: 160, fixed: "right" as const,
-      render: (_: unknown, task: SemanticUnderstandingTask) => <Space className={styles.actionGroup} size={4}>
+      render: (_: unknown, task: SemanticUnderstandingTaskSummary) => <Space className={styles.actionGroup} size={4}>
         <AppButton type="link" onClick={() => setDetailTaskId(task.id)}>{t("common.detail")}</AppButton>
         <PermissionGate permissions="resource:task_manage">
           <AppButton danger disabled={task.status === "pending" || task.status === "running"} type="link" onClick={() => void modal.confirm({
@@ -110,7 +121,16 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       <Space>
         <AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton>
         <PermissionGate permissions="resource:task_manage">
-          <AppButton icon={<PlusOutlined />} type="primary" onClick={() => { form.setFieldsValue({ applyMode: "fill_empty", confidenceThreshold: 0.75, includeSampleRows: false }); setOpen(true); }}>{t("dataCatalog.semanticWorkspace.create")}</AppButton>
+          {/*
+            语义理解任务是专业档能力,拦在页面层(ResourceWorkspaceScene 的 RequireEdition):
+            能走到这颗按钮,说明那一层已经放行。这里只标不挡——再挡一道,上面解开了这里
+            还锁着,客户没有任何办法发起任务。徽标留着,因为档位够不够与镜像换没换是两件
+            事,标记该跟着能力走。
+          */}
+          <AppButton icon={<PlusOutlined />} type="primary" onClick={() => setOpen(true)}>
+            {t("dataCatalog.semanticWorkspace.create")}
+            <EditionBadge capability={CAPABILITIES.SEMANTIC_TASK} edition="professional" />
+          </AppButton>
         </PermissionGate>
       </Space>
     </section>

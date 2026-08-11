@@ -1,0 +1,143 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import { describe, expect, it } from "vitest";
+
+import type { Entitlement } from "@/framework/entitlement/types";
+import {
+  capabilitySatisfied,
+  upgradeReason,
+} from "@/framework/entitlement/upgrade-reason";
+
+/** 客户实际会处在的三种部署组合,加上「都齐了」那种。 */
+function deployment(overrides: Partial<Entitlement>): Entitlement {
+  return {
+    capabilities: [],
+    edition: "community",
+    extensions: [],
+    features: [],
+    licensed: false,
+    limits: {},
+    state: "unlicensed",
+    ...overrides,
+  };
+}
+
+const RBAC = "rbac_basic";
+
+describe("upgradeReason — 三种部署组合", () => {
+  // 1. 无授权、无镜像:社区版的常态。要买证,也要换镜像,但第一步是买。
+  it("无授权 + 社区镜像 → 买证书", () => {
+    expect(upgradeReason(RBAC, deployment({}), "professional", true)).toBe("buy");
+  });
+
+  // 2. 有授权、无镜像:证是专业版,跑的还是社区包。这时劝人升级证书就把人指错了地方。
+  it("有授权 + 社区镜像 → 升级镜像", () => {
+    const snapshot = deployment({ edition: "professional", licensed: true, state: "valid" });
+
+    expect(upgradeReason(RBAC, snapshot, "professional", true)).toBe("image");
+  });
+
+  // 3. 有授权、有镜像:能力在 capabilities 里,压根不会弹这个窗;真弹了也不该说「没装」。
+  it("有授权 + 企业镜像 → 不是镜像问题", () => {
+    const snapshot = deployment({
+      capabilities: [RBAC],
+      edition: "professional",
+      extensions: [RBAC],
+      licensed: true,
+      state: "valid",
+    });
+
+    expect(upgradeReason(RBAC, snapshot, "professional", true)).toBe("buy");
+  });
+
+  // 4. 镜像装了但档位不够:换证书,不是换镜像。
+  it("镜像装了、档位不够 → 买证书", () => {
+    const snapshot = deployment({
+      edition: "professional",
+      extensions: ["perm_object_level"],
+      licensed: true,
+      state: "valid",
+    });
+
+    expect(upgradeReason("perm_object_level", snapshot, "enterprise", true)).toBe("buy");
+  });
+});
+
+describe("upgradeReason — 别的服务实现的能力", () => {
+  /**
+   * bkn-safe 的清单里从来没有它们,缺席说明不了任何事(ee-design.md §6「A 答不了 B」)。
+   * 档位够却仍走到升级引导,只能给方向,不能断言「没装」。
+   */
+  it("档位够 → 给方向而不是结论", () => {
+    const snapshot = deployment({ edition: "professional", licensed: true, state: "valid" });
+
+    expect(upgradeReason("connector_certified", snapshot, "professional", false)).toBe(
+      "image-likely",
+    );
+  });
+
+  it("档位不够 → 仍是买证书", () => {
+    expect(upgradeReason("business_provenance", deployment({}), "enterprise", false)).toBe(
+      "buy",
+    );
+  });
+});
+
+describe("upgradeReason — 快照缺席", () => {
+  // 拿不到快照时不能凭空断言客户已经买了。
+  it("按未购买处理", () => {
+    expect(upgradeReason(RBAC, null, "professional", true)).toBe("buy");
+  });
+});
+
+describe("capabilitySatisfied — 核实到哪一步就按哪一步判", () => {
+  const licensed = deployment({ edition: "professional", licensed: true, state: "valid" });
+
+  /*
+    别的服务实现的能力核实不了镜像(§6「A 答不了 B」)。核实不了不等于没装:把它判成
+    不满足,买了证也换了包的客户会被自己付过钱的功能永久挡在门外。这时以证书为准。
+  */
+  it("别的服务实现的能力：档位够就算满足", () => {
+    expect(capabilitySatisfied("semantic_task", licensed, "professional", false)).toBe(true);
+  });
+
+  /*
+    档位是端点报不出时的唯一判据,而「异常一律回落 community」是后端的兜底行为、不是这里
+    能保证的事。再问一次 licensed,免得某天失效证仍报出证面档位时付费页照开。
+  */
+  it("端点报不出的能力：证失效就不算满足", () => {
+    const expired = deployment({ edition: "professional", licensed: false, state: "invalid" });
+
+    expect(capabilitySatisfied("semantic_task", expired, "professional", false)).toBe(false);
+  });
+
+  // 社区档能力例外:无证部署的 licensed 本来就是 false,一并要求会把免费能力也拦掉。
+  it("端点报不出的社区档能力：无证也算满足", () => {
+    expect(capabilitySatisfied("bkn_trace", deployment({}), "community", false)).toBe(true);
+  });
+
+  it("别的服务实现的能力：档位不够仍不算满足", () => {
+    expect(capabilitySatisfied("business_provenance", licensed, "enterprise", false)).toBe(
+      false,
+    );
+  });
+
+  it("bkn-safe 的能力：证够 + 装了才算满足", () => {
+    expect(capabilitySatisfied(RBAC, licensed, "professional", true)).toBe(false);
+
+    const ready = deployment({
+      capabilities: [RBAC],
+      edition: "professional",
+      extensions: [RBAC],
+      licensed: true,
+      state: "valid",
+    });
+
+    expect(capabilitySatisfied(RBAC, ready, "professional", true)).toBe(true);
+  });
+});

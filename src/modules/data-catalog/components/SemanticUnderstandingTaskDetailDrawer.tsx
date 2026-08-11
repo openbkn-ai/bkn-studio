@@ -138,7 +138,7 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
 
   const applyModeKey = task.applyMode === "dry_run" ? "dryRun" : task.applyMode === "force" ? "force" : "fillEmpty";
   const statusClass = task.status === "failed" ? sharedStyles.taskFailed : task.status === "succeeded" ? sharedStyles.taskSucceeded : sharedStyles.taskRunning;
-  const creator = task.creator ? task.creator.name || task.creator.id : "-";
+  const creator = task.creator.name || task.creator.id;
   const quality = getQuality(task.confidenceDetailJson, task.resultJson);
   const warnings = getWarnings(task.confidenceDetailJson, task.resultJson);
   const fieldDetails = getFieldDetails(task.applyDetailJson);

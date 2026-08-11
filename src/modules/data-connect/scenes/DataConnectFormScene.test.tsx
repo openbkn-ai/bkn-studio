@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +15,11 @@ vi.setConfig({ testTimeout: 20_000 });
 
 const permissionState = vi.hoisted(() => ({
   values: new Set<string>(),
+}));
+/** 集群档位。默认没有快照——社区部署,也是卖点该出现的那一侧。 */
+const entitlementState = vi.hoisted(() => ({
+  loading: false,
+  snapshot: null as { capabilities: string[]; edition: string; extensions: string[] } | null,
 }));
 const createDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const getDataConnectRecordMock = vi.hoisted(() => vi.fn());
@@ -33,6 +38,10 @@ vi.mock("@/framework/context/use-app-services", () => ({
       confirm: vi.fn(),
     },
   }),
+}));
+
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useEntitlementContext: () => entitlementState,
 }));
 
 vi.mock("@/framework/permission/PermissionGate", () => ({
@@ -79,6 +88,37 @@ vi.mock("@/modules/data-connect/services/data-connect.service", () => ({
   updateDataConnectRecord: vi.fn(),
 }));
 
+/**
+ * 走完整卡片选择 + 连接器表单的两条用例,本机就要 3s 出头,占掉默认 10s 超时的三分之一。
+ * CI 的 runner 慢上数倍,那点余量不够——已经因此红过一次。这两条是真的重,不是卡住了。
+ */
+const HEAVY_SCENE_TIMEOUT_MS = 30_000;
+
+/*
+  `findBy*` 默认只等 1s。这一整页是真场景渲染 + antd 的异步表单校验,CI 的 runner 慢上
+  数倍,断言会在提示渲染出来之前就放弃——已经因此红过一次(「rejects invalid JSON
+  options」找不到 dataConnect.jsonObjectInvalid)。放宽只影响失败路径要多等多久。
+*/
+configure({ asyncUtilTimeout: 5_000 });
+
+/**
+ * 按名字取连接器卡片。
+ *
+ * 走 `findByText` 再上溯到按钮,而不是 `findByRole("button", { name })`:后者要对整片
+ * 卡片逐个算 accessible name,而且每轮轮询重算一次——本机单条查询就要 3s,CI 的机器慢
+ * 上数倍,直接把用例顶穿 10s 超时。
+ */
+async function findConnectorCard(name: string) {
+  const label = await screen.findByText(name);
+  const card = label.closest("button");
+
+  if (!card) {
+    throw new Error(`connector card not found: ${name}`);
+  }
+
+  return card;
+}
+
 describe("DataConnectFormScene · connection preflight", () => {
   beforeAll(() => {
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -96,6 +136,7 @@ describe("DataConnectFormScene · connection preflight", () => {
   beforeEach(() => {
     vi.useRealTimers();
     permissionState.values = new Set(["catalog:modify"]);
+    entitlementState.snapshot = null;
     messageSuccessMock.mockReset();
     createDataConnectRecordMock.mockReset();
     createDataConnectRecordMock.mockResolvedValue(undefined);
@@ -355,30 +396,101 @@ describe("DataConnectFormScene · connection preflight", () => {
     });
   });
 
-  it("shows known connector types as disabled when the backend omits them", async () => {
+  /**
+   * When the backend disables an authenticated connector, treat it as an entitlement restriction:
+   * render a selectable edition badge and show upgrade guidance instead of an unavailable state.
+   */
+  it("认证连接器被后端关掉时给升级引导,不画「暂不可用」", async () => {
     permissionState.values = new Set(["catalog:create"]);
 
     render(<DataConnectFormScene mode="create" />);
 
-    const sqlServerButton = await screen.findByRole(
-      "button",
-      {
-        name: /SQL Server/,
-      },
-      { timeout: 10_000 },
-    );
+    const sqlServerButton = await findConnectorCard("SQL Server");
 
-    expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
+    expect(sqlServerButton.hasAttribute("disabled")).toBe(false);
     expect(sqlServerButton.textContent).toContain("关系型数据库");
-    expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+    expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
+    expect(sqlServerButton.textContent).toContain(
+      "common.entitlement.editionsShort.professional",
+    );
 
     fireEvent.click(sqlServerButton);
 
+    // 点击不选中,只弹引导;下一步仍走不通。
     expect(sqlServerButton.className).not.toContain("cardActive");
+    expect(screen.getAllByText("common.entitlement.unlockTitle").length).toBeGreaterThan(0);
+
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
 
     expect(screen.queryByPlaceholderText("例如 供应链主库")).toBeNull();
-  });
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  /**
+   * 证书已经覆盖这项能力时,后端仍然关着它就不是钱的事,是这套部署没提供。这时说
+   * 「请升级镜像」既指错方向,也把 bkn-safe 的镜像状态硬安到 Vega 头上。
+   */
+  it("装了且证够时不再推销,照普通连接器画「暂不可用」", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    entitlementState.snapshot = {
+      capabilities: ["connector_certified", "rbac_basic"],
+      edition: "enterprise",
+      extensions: ["connector_certified", "rbac_basic"],
+    };
+
+    render(<DataConnectFormScene mode="create" />);
+
+    const sqlServerButton = await findConnectorCard("SQL Server");
+
+    expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
+    expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+    expect(sqlServerButton.textContent).not.toContain(
+      "common.entitlement.editionsShort.professional",
+    );
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  /**
+   * 企业证 + 社区 vega:能力两个列表里都没有,是 `not-installed` 而不是 `unknown`。
+   * 该说的是「换镜像」,不是「买证书」——客户已经买过了,弹窗里不该再出购买按钮。
+   */
+  it("证够了但镜像不含 → 说换镜像,不出购买按钮", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    entitlementState.snapshot = {
+      capabilities: ["rbac_basic"],
+      edition: "enterprise",
+      extensions: ["rbac_basic"],
+    };
+
+    render(<DataConnectFormScene mode="create" />);
+
+    fireEvent.click(await findConnectorCard("SQL Server"));
+
+    expect(screen.getAllByText("common.entitlement.imageMissingTitle").length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByText("common.entitlement.upgradeTo")).toBeNull();
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  /**
+   * 企业镜像 + 社区证:能力在 `extensions[]` 里、不在 `capabilities[]` 里。这是唯一
+   * 「换一张证就能用」的状态,也是唯一该出商务信息的地方。
+   */
+  it("装了没买 → 画档位徽标并给升级引导", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    entitlementState.snapshot = {
+      capabilities: [],
+      edition: "community",
+      extensions: ["connector_certified", "rbac_basic"],
+    };
+
+    render(<DataConnectFormScene mode="create" />);
+
+    const sqlServerButton = await findConnectorCard("SQL Server");
+
+    expect(sqlServerButton.hasAttribute("disabled")).toBe(false);
+    expect(sqlServerButton.textContent).toContain(
+      "common.entitlement.editionsShort.professional",
+    );
+  }, HEAVY_SCENE_TIMEOUT_MS);
 
   it("creates a SQL Server catalog with the default port", async () => {
     permissionState.values = new Set(["catalog:create"]);
@@ -402,7 +514,7 @@ describe("DataConnectFormScene · connection preflight", () => {
 
     render(<DataConnectFormScene mode="create" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /SQL Server/ }));
+    fireEvent.click(await findConnectorCard("SQL Server"));
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
 
     fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
@@ -443,7 +555,7 @@ describe("DataConnectFormScene · connection preflight", () => {
         { skipErrorToast: true },
       );
     });
-  }, 20_000);
+  }, HEAVY_SCENE_TIMEOUT_MS);
 });
 
 function connectorField(

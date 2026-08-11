@@ -182,6 +182,9 @@ export const agentChatPart = {
       toolCall: {
         running: "Calling...",
         failed: "Failed",
+        clientBlocked: "Blocked by client",
+        clientBlockedRequest: "Model input; request blocked by client -> {{name}}",
+        clientBlockedReason: "Block reason",
         request: "Request · tools/call → {{name}}",
         error: "Error",
         response: "Response",

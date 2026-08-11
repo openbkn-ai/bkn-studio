@@ -10,6 +10,8 @@ import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { RequireCapability } from "@/framework/entitlement/RequireCapability";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { authzPoints, systemAdminPermissions } from "@/modules/system-admin/permissions";
 import { ObjectAuthorizationCreatePage } from "@/modules/system-admin/pages/ObjectAuthorizationCreatePage";
@@ -52,6 +54,22 @@ function guarded(permissions: readonly string[], element: ReactNode) {
   );
 }
 
+/**
+ * 档位 + 权限双守卫,**能力包在权限外层**:集群没买的东西,不该因为某个管理员权限齐全
+ * 就点得进去。服务端也是这个顺序——档位不够时路由伪装成不存在,authz 根本不跑
+ * (ee-design.md §7.5)。
+ *
+ * 三种不可用各渲染各的:没装 → 404(与服务端应答同义)、装了没买 → 升级引导、
+ * 快照未到 → 骨架。
+ */
+function gatedByCapability(
+  capability: string,
+  permissions: readonly string[],
+  element: ReactNode,
+) {
+  return <RequireCapability capability={capability}>{guarded(permissions, element)}</RequireCapability>;
+}
+
 export const systemAdminRoutes: RouteObject[] = [
   {
     path: "system/users",
@@ -84,7 +102,11 @@ export const systemAdminRoutes: RouteObject[] = [
         titleKey: "systemAdmin.objectGrants.title",
       },
     },
-    element: guarded(systemAdminPermissions.authorizations, <ObjectAuthorizationPage />),
+    element: gatedByCapability(
+      CAPABILITIES.PERM_OBJECT_LEVEL,
+      systemAdminPermissions.authorizations,
+      <ObjectAuthorizationPage />,
+    ),
   },
   {
     path: "system/authorizations/new",
@@ -95,8 +117,12 @@ export const systemAdminRoutes: RouteObject[] = [
       },
     },
     // The create-grant page can only issue object grants. List pages allow read-only reviewers with
-    // admin-authz:view, but this route does not because they would see only a PermissionGate-hidden submit button.
-    element: guarded([authzPoints.grant], <ObjectAuthorizationCreatePage />),
+    // admin-authz:view, but this route requires grant permission because submitting is its only workflow.
+    element: gatedByCapability(
+      CAPABILITIES.PERM_OBJECT_LEVEL,
+      [authzPoints.grant],
+      <ObjectAuthorizationCreatePage />,
+    ),
   },
   {
     path: "system/license",

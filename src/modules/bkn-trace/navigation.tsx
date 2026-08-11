@@ -13,6 +13,7 @@ import {
 } from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 
 export const bknTraceNavigation: ConsoleNavContribution = {
   items: [
@@ -24,6 +25,11 @@ export const bknTraceNavigation: ConsoleNavContribution = {
         {
           key: "business-provenance",
           labelKey: "shell.items.businessProvenance",
+          // 只标不挡:业务溯源由 bkn-trace 实现,不在 bkn-safe 的装配表里,
+          // /api/safe/v1/capabilities 永远不报这个 key(ee-design.md §6「A 答不了 B」)。
+          // 拿它做 capability 门控会让这一项永久隐藏。
+          paidCapability: CAPABILITIES.BUSINESS_PROVENANCE,
+          paidEdition: "enterprise",
           icon: <FileSearchOutlined />,
           path: "/observability/business-provenance",
         },

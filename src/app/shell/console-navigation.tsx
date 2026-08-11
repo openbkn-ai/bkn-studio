@@ -10,8 +10,11 @@ import type {
   ConsoleNavContribution,
   ConsoleNavItem,
 } from "@/app/shell/navigation/types";
+import { capabilityState } from "@/framework/entitlement/capability-state";
+import type { EntitlementView } from "@/framework/entitlement/types";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
+import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
 import { dataConnectNavigation } from "@/modules/data-connect/navigation";
 import { executionFactoryLabNavigation } from "@/modules/execution-factory-lab/navigation";
@@ -66,7 +69,58 @@ export function filterConsoleNavigation(
     });
 }
 
-// Filter navigation by the current user's permissions: hide an unauthorized item; hide the whole
+/**
+ * Filter navigation by capability state derived on the server from capabilities and extensions.
+ *
+ * - Available items remain visible.
+ * - Installed but unlicensed items remain visible and locked so users can see an upgrade path.
+ * - Uninstalled items are hidden because their implementation is absent from the binary.
+ *
+ * A missing snapshot is distinct from an uninstalled capability. Return unchanged navigation in
+ * that case so RequireCapability can explain the unknown entitlement state.
+ *
+ * Keep this separate from user permission filtering. Permission filtering runs first so an
+ * unauthorized item never advertises an upgrade path.
+ */
+export function filterNavByCapability(
+  items: ConsoleNavItem[],
+  snapshot: EntitlementView | null,
+): ConsoleNavItem[] {
+  if (!snapshot) {
+    return items;
+  }
+
+  const visible: ConsoleNavItem[] = [];
+
+  for (const item of items) {
+    const state = item.capability ? capabilityState(item.capability, snapshot) : "available";
+
+    if (state === "not-installed" || state === "unknown") {
+      continue;
+    }
+
+    const locked = state === "not-licensed";
+    const lockedEdition = locked && item.capability ? capabilityMinEdition(item.capability) : null;
+
+    if (item.children?.length) {
+      const children = filterNavByCapability(item.children, snapshot);
+
+      if (children.length === 0 && !item.path) {
+        continue;
+      }
+
+      visible.push({ ...item, children, locked, ...(lockedEdition ? { lockedEdition } : {}) });
+    } else {
+      visible.push(
+        locked ? { ...item, locked, ...(lockedEdition ? { lockedEdition } : {}) } : item,
+      );
+    }
+  }
+
+  return visible;
+}
+
+// Filter navigation by the current user's permissions. Hide an unauthorized item and hide a
 // group when all children are filtered and the group itself is not navigable.
 export function filterNavByPermission(
   items: ConsoleNavItem[],
