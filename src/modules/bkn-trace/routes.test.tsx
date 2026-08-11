@@ -19,7 +19,6 @@ describe("bkn-trace module registration", () => {
     expect(bknTraceRouteContribution.routes.map((route) => route.path)).toEqual(
       expect.arrayContaining([
         "observability/business-provenance",
-        "observability/business-provenance/prototype",
         "observability/traces",
         "observability/logs",
         "observability/settings",

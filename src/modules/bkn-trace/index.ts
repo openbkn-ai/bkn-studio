@@ -6,3 +6,4 @@
  */
 
 export { bknTraceModuleManifest } from "@/modules/bkn-trace/module.manifest";
+export { TraceAnalysisScene } from "@/modules/bkn-trace/trace-analysis/TraceAnalysisScene";
