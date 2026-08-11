@@ -8,18 +8,20 @@
 import type { PropsWithChildren } from "react";
 
 import { AppServicesProvider } from "@/framework/context/app-context";
-import type { RuntimeConfig } from "@/framework/runtime/types";
+import type { RuntimeConfig, SupportedLocale } from "@/framework/runtime/types";
 
 type AppProvidersProps = PropsWithChildren<{
   runtimeConfig: RuntimeConfig;
+  updateLocale: (locale: SupportedLocale) => Promise<void>;
 }>;
 
 export function AppProviders({
   children,
   runtimeConfig,
+  updateLocale,
 }: AppProvidersProps) {
   return (
-    <AppServicesProvider runtimeConfig={runtimeConfig}>
+    <AppServicesProvider runtimeConfig={runtimeConfig} updateLocale={updateLocale}>
       {children}
     </AppServicesProvider>
   );

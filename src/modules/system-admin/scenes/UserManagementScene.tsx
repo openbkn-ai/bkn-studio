@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DownOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Select, Space, Tag, Tooltip } from "antd";
+import { EllipsisOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Alert, Dropdown, Input, Select, Tag, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -357,6 +357,16 @@ export function UserManagementScene() {
     (user: AdminUser): MenuProps => {
       const items: NonNullable<MenuProps["items"]> = [];
 
+      if (canEditUser) {
+        items.push({
+          key: "edit",
+          label: t("systemAdmin.users.actions.edit"),
+        });
+        items.push({
+          key: "configureRoles",
+          label: t("systemAdmin.users.actions.configureRoles"),
+        });
+      }
       if (canResetPassword) {
         items.push({
           key: "resetPassword",
@@ -391,6 +401,14 @@ export function UserManagementScene() {
         items,
         onClick: ({ key, domEvent }) => {
           domEvent.stopPropagation();
+          if (key === "edit") {
+            setUserDrawer({ open: true, user });
+            return;
+          }
+          if (key === "configureRoles") {
+            setRolesUser(user);
+            return;
+          }
           if (key === "resetPassword") {
             setResetUser(user);
             return;
@@ -409,7 +427,17 @@ export function UserManagementScene() {
         },
       };
     },
-    [canDeleteUser, canResetPassword, canToggleUser, canViewAudit, handleDeleteUser, handleToggle, navigate, t],
+    [
+      canDeleteUser,
+      canEditUser,
+      canResetPassword,
+      canToggleUser,
+      canViewAudit,
+      handleDeleteUser,
+      handleToggle,
+      navigate,
+      t,
+    ],
   );
 
   const muted = <span className={styles.mutedText}>—</span>;
@@ -486,41 +514,27 @@ export function UserManagementScene() {
     {
       title: t("systemAdmin.users.columns.actions"),
       key: "actions",
-      width: 148,
+      align: "center",
       fixed: "right",
+      width: 84,
       render: (_, user) => {
         const moreMenu = buildUserMoreMenu(user);
         const hasMoreActions = Boolean(moreMenu.items?.length);
 
+        if (!hasMoreActions) {
+          return muted;
+        }
+
         return (
-          <Space className={styles.actionGroup} size={4}>
-            {canEditUser ? (
-              <AppButton
-                className={styles.actionLink}
-                onClick={() => setUserDrawer({ open: true, user })}
-                type="link"
-              >
-                {t("systemAdmin.users.actions.edit")}
-              </AppButton>
-            ) : null}
-            {canEditUser ? (
-              <AppButton className={styles.actionLink} onClick={() => setRolesUser(user)} type="link">
-                {t("systemAdmin.users.actions.configureRoles")}
-              </AppButton>
-            ) : null}
-            {hasMoreActions ? (
-              <Dropdown menu={moreMenu} trigger={["click"]}>
-                <AppButton
-                  className={styles.actionLink}
-                  onClick={(event) => event.stopPropagation()}
-                  type="link"
-                >
-                  {t("systemAdmin.users.actions.more")}
-                  <DownOutlined className={layoutStyles.moreIcon} />
-                </AppButton>
-              </Dropdown>
-            ) : null}
-          </Space>
+          <Dropdown menu={moreMenu} trigger={["click"]}>
+            <AppButton
+              aria-label={t("systemAdmin.users.columns.actions")}
+              className={styles.actionMore}
+              icon={<EllipsisOutlined />}
+              onClick={(event) => event.stopPropagation()}
+              type="text"
+            />
+          </Dropdown>
         );
       },
     },

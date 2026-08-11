@@ -163,8 +163,8 @@ export function ImportResourceModal({
 
   const impexType = tabToImpexType(activeTab);
 
-  // 工具箱的 OpenAPI 导入已并入「添加 API」向导；这里的导入只做 .adp 备份还原。
-  // （operator 已在 v2 屏蔽，其 OpenAPI 分支留着不影响。）
+  // Toolbox OpenAPI import moved into the Add API wizard; this import handles only .adp backup restoration.
+  // Operator is hidden in v2, so retaining its OpenAPI branch is harmless.
   const supportsOpenApi = activeTab === "operator";
 
   const adpImportMode = Form.useWatch("mode", adpForm) ?? "create";
@@ -370,7 +370,7 @@ export function ImportResourceModal({
           });
           void message.success(t("executionFactory.importSuccess"));
         } else {
-          // Share the same toolbox OpenAPI pipeline as「添加能力 → 导入 OpenAPI」.
+          // Share the same toolbox OpenAPI pipeline as Add capability -> Import OpenAPI.
           const result = await registerOpenApiImport({
             openapiSpec,
             toolboxMode: "new",

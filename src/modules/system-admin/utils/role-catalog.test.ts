@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import i18n from "@/app/locales/i18n";
 import {
   getRoleDutyCategory,
   hasThreeAdminConflict,
@@ -36,12 +37,14 @@ describe("role-catalog", () => {
     expect(isAssignableRole({ name: "network_builder" })).toBe(true);
   });
 
-  it("detects multiple three-admin roles on the same account", () => {
+  it("detects multiple three-admin roles on the same account", async () => {
+    await i18n.changeLanguage("zh-CN");
+
     expect(hasThreeAdminConflict([{ name: "admin" }, { name: "security" }])).toBe(true);
     expect(hasThreeAdminConflict([{ name: "audit" }, { name: "normal_user" }])).toBe(false);
-    expect(hasThreeAdminConflict([{ name: "admin" }, { name: "legacy_system_role", source: "system" }])).toBe(
-      false,
-    );
+    expect(
+      hasThreeAdminConflict([{ name: "admin" }, { name: "legacy_system_role", source: "system" }]),
+    ).toBe(false);
     expect(threeAdminConflictLabels([{ name: "admin" }, { name: "security" }])).toEqual([
       "系统管理员",
       "安全管理员",

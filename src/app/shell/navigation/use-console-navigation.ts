@@ -20,19 +20,9 @@ import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeat
 import { isMarketCatalogEnabled } from "@/modules/execution-factory/utils/market-catalog";
 
 /**
- * 三层过滤,判据各不同源,都不能省:
- *
- *   开关 —— 本地/运行时 feature flag,与售卖无关
- *   权限 —— 这个人能不能(用户态)
- *   能力 —— 这套集群买没买(集群态)
- *
- * **档位不在这里判。** 前端不推档位:`capabilities[]` 是服务端用 `AtLeast(MinEdition)`
- * 从装配表算好的结果,前端照读即可(ee-design.md §3.2「不让客户端自己推」、§6.1
- * 「Studio 只消费这一条聚合接口」)。在前端复制一份档位序,是 licensing README 点名的
- * 唯一大错——两处对「industry 是否高于 enterprise」给出不同答案。
- *
- * 分成三个函数是刻意的:合并之后必然有人把 feature flag、capability、permission 三种
- * 字符串混着传进同一个参数。
+ * Apply three independent filters: local feature flags, user permissions, and cluster
+ * capabilities. Capability availability is calculated by the server; the client does not infer
+ * it from edition ordering.
  */
 export function useConsoleNavigation(): ConsoleNavItem[] {
   const { features } = useLabFeatures();
@@ -42,17 +32,17 @@ export function useConsoleNavigation(): ConsoleNavItem[] {
   return useMemo(
     () =>
       filterNavByCapability(
-          filterNavByPermission(
-            filterConsoleNavigation(consoleNavigation, {
-              hideCatalog: !features.catalog,
-              // 执行工厂菜单常驻:不再跟随 capabilities-lab 的
-              // hide_legacy_execution_factory_menu 开关隐藏。
-              hideLegacyExecutionFactory: false,
-              // 跨业务域市场暂未启用,入口与"执行单元管理"内容重叠。
-              hideMarketCatalog: !isMarketCatalogEnabled(),
-            }),
-            runtimeConfig.currentUser.permissions,
-          ),
+        filterNavByPermission(
+          filterConsoleNavigation(consoleNavigation, {
+            hideCatalog: !features.catalog,
+            // Keep the execution-factory menu visible; it no longer follows the capabilities-lab
+            // hide_legacy_execution_factory_menu flag.
+            hideLegacyExecutionFactory: false,
+            // The cross-business-domain marketplace is not enabled yet and overlaps with Execution Unit Management.
+            hideMarketCatalog: !isMarketCatalogEnabled(),
+          }),
+          runtimeConfig.currentUser.permissions,
+        ),
         snapshot,
       ),
     [features.catalog, runtimeConfig.currentUser.permissions, snapshot],

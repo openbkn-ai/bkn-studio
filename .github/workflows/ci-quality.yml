@@ -48,6 +48,9 @@ jobs:
       - name: Type-aware lint
         run: pnpm exec eslint . --config eslint.config.typechecked.js --max-warnings 0
 
+      - name: Internationalization checks
+        run: pnpm run i18n:check
+
       - name: Unit tests
         run: pnpm exec vitest --run
 

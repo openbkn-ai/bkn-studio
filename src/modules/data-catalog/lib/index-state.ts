@@ -12,14 +12,14 @@ import type {
   ResourceGate,
 } from "@/modules/data-catalog/types/data-catalog";
 
-/** 资源的全部任务,按创建时间倒序 */
+/** All tasks for a resource, ordered by creation time descending. */
 export function sortTasks(tasks: BuildTask[]) {
   return [...tasks].sort((left, right) => right.createdAt - left.createdAt);
 }
 
 /**
- * 当前生效索引:最近一次成功构建,或仍在服务的 streaming 任务
- * (监听中 / 已暂停且已同步过数据)。检索由该版本提供。
+ * Current effective index: the most recent successful build or a streaming task still serving
+ * data (listening, or paused after synchronizing data). Queries use this version.
  */
 export function effectiveIndexOf(tasks: BuildTask[]): BuildTask | null {
   return (
@@ -34,8 +34,8 @@ export function effectiveIndexOf(tasks: BuildTask[]): BuildTask | null {
 }
 
 /**
- * 索引状态 = 生效索引 × 最近任务 的组合:
- * 最近任务失败但旧索引仍生效时为 failed-stale(重建失败 · 沿用旧索引)。
+ * Index state combines the effective index and latest task. When the latest task fails but an
+ * older index still serves, the state is failed-stale (rebuild failed, retaining old index).
  */
 export function indexStateOf(tasks: BuildTask[]): IndexState {
   const sorted = sortTasks(tasks);
@@ -70,8 +70,8 @@ export function indexStateOf(tasks: BuildTask[]): IndexState {
 }
 
 /**
- * 停用闸门:physical 连接停用后,其下资源禁止预览 / 构建。
- * logical catalog 是平台内部命名空间,不受启停控制。
+ * Disable gate: after a physical connection is disabled, its resources cannot be previewed or built.
+ * A logical catalog is a platform-internal namespace and is not governed by connection state.
  */
 export function resourceGateOf(catalog: CatalogRecord | null): ResourceGate {
   if (!catalog) {

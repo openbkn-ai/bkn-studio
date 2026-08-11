@@ -17,9 +17,9 @@ export type CapabilityCreateMenuItem = {
 };
 
 export function getCapabilityCreateMenuItems(): CapabilityCreateMenuItem[] {
-  // 与列表 tab 一一对应：API 工具集 / 函数集 / MCP 服务 / SKILL 包。
-  // 导入走工具栏的「导入」按钮（各页面通用），这里只保留「新建」四类，
-  // 不再分组——每类只有一项，分组标题和条目标题会重复。
+  // Matches list tabs one-to-one: API toolboxes, function sets, MCP services, and SKILL packages.
+  // Import uses the shared toolbar Import action. Keep only four creation types here without groups
+  // because each group would contain one item and repeat its title.
   return [
     {
       action: "quick-api",

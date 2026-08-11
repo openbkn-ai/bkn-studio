@@ -51,7 +51,7 @@ export type ConsoleNavItem = {
   key: string;
   labelKey: string;
   path?: string;
-  /** 渲染该项所需权限(任一/全部由 permissionMode 决定)。不设则人人可见。 */
+  /** Permissions required to render this item (any/all is determined by permissionMode). Omit for universal visibility. */
   permission?: string | string[];
   permissionMode?: PermissionCheckMode;
 };

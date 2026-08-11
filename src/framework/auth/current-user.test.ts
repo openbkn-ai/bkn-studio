@@ -40,7 +40,7 @@ describe("fetchCurrentUser — 权限来源不可用时 fail-closed", () => {
     expect(user.permissions).toEqual([]);
     expect(user.permissions).not.toContain("admin-audit:view");
     expect(user.permissions).not.toContain("admin-license:view");
-    // 身份仍从 /me 拿到,不被权限失败牵连。
+    // Identity still comes from /me and is unaffected by the permission failure.
     expect(user.name).toBe("Sec Builder");
   });
 
@@ -64,7 +64,7 @@ describe("fetchCurrentUser — 权限来源不可用时 fail-closed", () => {
         ? meOk({ id: "root" })
         : meOk({
             is_admin: true,
-            // 超管的实际响应形态(实测 14.103.77.23):折叠成单行资源通配。
+            // Actual super-admin response shape: compacted into one resource wildcard entry.
             permissions: [{ operations: ["*"], resource: { id: "*", type: "*" } }],
           }),
     );
@@ -77,16 +77,16 @@ describe("fetchCurrentUser — 权限来源不可用时 fail-closed", () => {
     expect(user.permissions).toContain("admin-license:view");
   });
 
-  // 后端 CanAdmin 判的是 safe_admin:console:manage,三员角色都持有,所以 is_admin
-  // 对三员一律为 true。若按它放行全部权限,按点位控制入口的门禁在三员身上就失效了
-  // (审计员会看到授权/撤权按钮,点下去才被后端 403)。
+  // Backend CanAdmin checks safe_admin:console:manage, which all three administrator roles hold,
+  // so is_admin is true for each. Granting every permission from it would disable point-level guards:
+  // auditors would see grant/revoke buttons and only receive 403 after clicking them.
   it("is_admin=true 但无资源通配(三员角色) → 只给实际持有的点位", async () => {
     mockGet.mockImplementation((url: string) =>
       url === "/safe/v1/me"
         ? meOk({ id: "u-audit", roles: ["audit"] })
         : meOk({
             is_admin: true,
-            // 审计管理员的实际响应形态(实测 14.103.77.23)。
+            // Actual audit-administrator response shape.
             permissions: [
               { operations: ["view"], resource: { id: "*", type: "admin-audit" } },
               { operations: ["view"], resource: { id: "*", type: "admin-user" } },
@@ -104,12 +104,12 @@ describe("fetchCurrentUser — 权限来源不可用时 fail-closed", () => {
     expect(user.permissions).toContain("admin-audit:view");
     expect(user.permissions).toContain("admin-authz:view");
     expect(user.permissions).toContain("admin-role:view");
-    // 授权面的写点位一个都不该有。
+    // No authorization write permission should be present.
     expect(user.permissions).not.toContain("admin-authz:grant");
     expect(user.permissions).not.toContain("admin-authz:revoke");
     expect(user.permissions).not.toContain("admin-role:members");
     expect(user.permissions).not.toContain("admin-role:permissions");
-    // 其他模块的写权限同样不该被 is_admin 顺带放行。
+    // is_admin must not implicitly grant write permissions in other modules either.
     expect(user.permissions).not.toContain("admin-user:create");
     expect(user.permissions).not.toContain("admin-license:manage");
   });

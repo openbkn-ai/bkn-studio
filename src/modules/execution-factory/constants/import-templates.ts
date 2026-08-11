@@ -5,17 +5,20 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export const OPENAPI_OPERATOR_TEMPLATE = `openapi: "3.0.3"
+import type { TFunction } from "i18next";
+
+export function buildOpenApiOperatorTemplate(t: TFunction) {
+  return `openapi: "3.0.3"
 info:
-  title: "示例算子 API"
-  description: "请描述算子的功能与用途"
+  title: "${t("executionFactory.openapiTemplate.operatorTitle")}"
+  description: "${t("executionFactory.openapiTemplate.operatorDescription")}"
   version: "1.0.0"
 servers:
   - url: "http://127.0.0.1:9000"
 paths:
   /execute:
     post:
-      summary: "执行算子"
+      summary: "${t("executionFactory.openapiTemplate.operatorSummary")}"
       requestBody:
         required: true
         content:
@@ -24,20 +27,23 @@ paths:
               type: object
       responses:
         "200":
-          description: "成功"
+          description: "${t("executionFactory.openapiTemplate.successResponse")}"
 `;
+}
 
-export const OPENAPI_TOOLBOX_TEMPLATE = `openapi: "3.0.3"
+export function buildOpenApiToolboxTemplate(t: TFunction) {
+  return `openapi: "3.0.3"
 info:
-  title: "示例工具箱 API"
+  title: "${t("executionFactory.openapiTemplate.toolboxTitle")}"
   version: "1.0.0"
 servers:
   - url: "http://127.0.0.1:9000"
 paths:
   /sample:
     get:
-      summary: "示例工具"
+      summary: "${t("executionFactory.openapiTemplate.toolboxSummary")}"
       responses:
         "200":
-          description: "成功"
+          description: "${t("executionFactory.openapiTemplate.successResponse")}"
 `;
+}

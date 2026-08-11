@@ -257,6 +257,14 @@ select {
   font-weight: 600;
 }
 
+.console-language-menu-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-width: 88px;
+}
+
 .console-user-pill {
   display: inline-flex;
   align-items: center;
@@ -306,7 +314,7 @@ select {
 
 .console-body {
   display: grid;
-  grid-template-columns: 229px minmax(0, 1fr);
+  grid-template-columns: 264px minmax(0, 1fr);
   min-height: calc(100vh - 72px);
   position: relative;
   isolation: isolate;
@@ -499,6 +507,10 @@ select {
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 装了没买的入口:标出解锁它要哪一档。只出现在企业镜像上——社区镜像里这些项被整个

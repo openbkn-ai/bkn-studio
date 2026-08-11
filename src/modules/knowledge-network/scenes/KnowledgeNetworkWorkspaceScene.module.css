@@ -534,6 +534,7 @@
   color: #1f2329;
   font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .overviewContentCard :global(.ant-table-tbody > tr > td) {

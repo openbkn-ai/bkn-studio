@@ -6,7 +6,9 @@
  */
 
 import {
+  CheckOutlined,
   CloudServerOutlined,
+  GlobalOutlined,
   CrownOutlined,
   LogoutOutlined,
   UserOutlined,
@@ -21,13 +23,11 @@ import { getConsoleNavTrail } from "@/app/shell/console-navigation";
 import openBknLogo from "@/assets/brand/openbkn-logo.png";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
-import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import {
-  useEntitlement,
-  useEntitlementContext,
-} from "@/framework/entitlement/use-entitlement";
+import { useRuntimeConfig, useUpdateLocale } from "@/framework/context/use-runtime-config";
+import { useEntitlement, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { APP_VERSION } from "@/framework/runtime/app-version";
 import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
+import type { SupportedLocale } from "@/framework/runtime/types";
 import { BuildActivityChip } from "@/modules/data-catalog/components/BuildActivityChip";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 
@@ -37,6 +37,7 @@ export function TopBar() {
   const navigate = useNavigate();
   const { networkId } = useParams<{ networkId?: string }>();
   const runtimeConfig = useRuntimeConfig();
+  const updateLocale = useUpdateLocale();
   const entitlement = useEntitlement();
   const { snapshot } = useEntitlementContext();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
@@ -112,10 +113,9 @@ export function TopBar() {
     ];
 
     /*
-      档位入口。快照没到就不放这一项:先显示「社区版」再跳成「企业版」,比晚半秒出现更糟。
-
-      「升级」尾巴按「还有没有更高的档」出现,而不是按「有没有证」:专业版客户也可能想
-      看企业档,有证不等于到顶。只有行业版(最高档)不再提示。
+      Do not render the edition entry until the snapshot arrives, preventing an inaccurate edition
+      from flashing before the real one. Show an upgrade CTA while a higher edition exists; only
+      the top industry edition has no upgrade path.
     */
     if (snapshot) {
       items.push({
@@ -160,6 +160,37 @@ export function TopBar() {
     }
 
     items.push(
+      {
+        children: [
+          {
+            key: "locale:zh-CN",
+            label: (
+              <span className="console-language-menu-option">
+                <span>{t("shell.language.zhCN")}</span>
+                {runtimeConfig.locale === "zh-CN" ? <CheckOutlined /> : null}
+              </span>
+            ),
+            onClick: () => {
+              void updateLocale("zh-CN" satisfies SupportedLocale);
+            },
+          },
+          {
+            key: "locale:en-US",
+            label: (
+              <span className="console-language-menu-option">
+                <span>{t("shell.language.enUS")}</span>
+                {runtimeConfig.locale === "en-US" ? <CheckOutlined /> : null}
+              </span>
+            ),
+            onClick: () => {
+              void updateLocale("en-US" satisfies SupportedLocale);
+            },
+          },
+        ],
+        icon: <GlobalOutlined />,
+        key: "language",
+        label: t("shell.language.label"),
+      },
       { type: "divider" as const },
       {
         danger: true,
@@ -178,9 +209,11 @@ export function TopBar() {
     entitlement.edition,
     installStatusUrl,
     navigate,
+    runtimeConfig.locale,
     runtimeConfig.mode,
     snapshot,
     t,
+    updateLocale,
   ]);
 
   return (

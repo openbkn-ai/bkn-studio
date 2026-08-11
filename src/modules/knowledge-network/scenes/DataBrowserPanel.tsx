@@ -8,6 +8,7 @@
 import { ApiOutlined, CopyOutlined, DatabaseOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { Empty, Input, Spin, Tooltip } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   createBknLifecycle,
@@ -45,7 +46,7 @@ function formatPreviewValue(value: unknown) {
   }
 }
 
-/** 从单个 JSON Schema 属性生成可编辑示例值。 */
+/** Generates an editable example value from one JSON Schema property. */
 
 function ObjectTypeCard({
   ot,
@@ -62,23 +63,24 @@ function ObjectTypeCard({
   ot: KnObjectType;
   onFillField: (key: string, value: string) => void;
   onFillResource: (resourceId: string) => void;
-  /** 用该对象类型的真实样本行填充当前接口；仅在当前接口按对象类型取数时传入。 */
+  /** Fills the current endpoint with a real sample row for this object type; provided only when the endpoint queries by object type. */
   onFillTest?: (ot: KnObjectType) => Promise<void>;
   showObjectType: boolean;
   showResource: boolean;
   copy: (text: string, label?: string) => void;
   env: ContextLoaderEnv;
-  /** 401 自动刷新 token 用（OAuth 续期）。 */
+  /** Used to refresh tokens automatically on 401 through OAuth renewal. */
   auth?: McpAuth;
-  /** 面板级受管生命周期：样本行预览也是受管业务调用。 */
+  /** Panel-level managed lifecycle because sample-row preview is also a managed business call. */
   lifecycle: BknLifecycle;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [filling, setFilling] = useState(false);
   const res = ot.data_source ?? null;
   const props = ot.data_properties ?? [];
 
-  // 样本行预览（按需拉取 query_object_instance）
+  // Sample-row preview, loading query_object_instance on demand.
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[] | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -90,11 +92,13 @@ function ObjectTypeCard({
     if (next && previewRows === null && !previewLoading) {
       setPreviewLoading(true);
       setPreviewError(null);
-      withManagedTurn(lifecycle, `预览 ${ot.id} 样本行`, (turn) =>
+      withManagedTurn(lifecycle, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.previewTurn", { id: ot.id }), (turn) =>
         fetchObjectInstances(env, ot.id, 5, auth, undefined, turn ?? undefined),
       )
         .then((rows) => setPreviewRows(rows))
-        .catch((error) => setPreviewError(error instanceof Error ? error.message : "查询失败"))
+        .catch((error) =>
+          setPreviewError(error instanceof Error ? error.message : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.previewFailed")),
+        )
         .finally(() => setPreviewLoading(false));
     }
   };
@@ -113,7 +117,7 @@ function ObjectTypeCard({
           {ot.name || ot.id}
         </span>
         {onFillTest && res?.id ? (
-          <Tooltip title="用该对象类型的真实样本行填充当前接口请求体">
+          <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillTestTooltip")}>
             <button
               type="button"
               className={styles.dbTestBtn}
@@ -124,7 +128,8 @@ function ObjectTypeCard({
                 void onFillTest(ot).finally(() => setFilling(false));
               }}
             >
-              {filling ? <Spin size="small" /> : <ThunderboltFilled />} 填入测试请求
+              {filling ? <Spin size="small" /> : <ThunderboltFilled />}{" "}
+              {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillTest")}
             </button>
           </Tooltip>
         ) : null}
@@ -134,20 +139,21 @@ function ObjectTypeCard({
           onClick={() => setOpen((value) => !value)}
           disabled={props.length === 0}
         >
-          {props.length} 字段 <span className={styles.dbChev}>▾</span>
+          {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fieldCount", { count: props.length })}{" "}
+          <span className={styles.dbChev}>▾</span>
         </button>
       </div>
 
       {showObjectType ? (
         <div className={styles.dbRow}>
-          <span className={styles.dbRowLabel}>对象类型</span>
-          <Tooltip title="点击填入当前接口的 ot_id">
+          <span className={styles.dbRowLabel}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.objectType")}</span>
+          <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillOtIdTooltip")}>
             <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", ot.id)}>
               {ot.id}
             </button>
           </Tooltip>
-          <Tooltip title="复制 ot_id">
-            <button type="button" className={styles.dbCopy} onClick={() => copy(ot.id, "已复制 ot_id")}>
+          <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyOtId")}>
+            <button type="button" className={styles.dbCopy} onClick={() => copy(ot.id, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedOtId"))}>
               <CopyOutlined />
             </button>
           </Tooltip>
@@ -156,35 +162,35 @@ function ObjectTypeCard({
 
       {showResource ? (
         <div className={styles.dbRow}>
-          <span className={styles.dbRowLabel}>数据资源</span>
+          <span className={styles.dbRowLabel}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.dataResource")}</span>
           {res?.id ? (
             <>
-              <Tooltip title="点击填入 run_sql 的 {{资源}} 占位">
+              <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillResourceTooltip", { resource: "resource" })}>
                 <button type="button" className={styles.dbRes} onClick={() => onFillResource(res.id)}>
-                  <DatabaseOutlined /> {res.name || "资源"} · {res.id}
+                  <DatabaseOutlined /> {res.name || t("knowledgeNetwork.contextLoaderPanel.dataBrowser.resourceFallback")} · {res.id}
                 </button>
               </Tooltip>
-              <Tooltip title="复制资源 id">
-                <button type="button" className={styles.dbCopy} onClick={() => copy(res.id, "已复制资源 id")}>
+              <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyResourceId")}>
+                <button type="button" className={styles.dbCopy} onClick={() => copy(res.id, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedResourceId"))}>
                   <CopyOutlined />
                 </button>
               </Tooltip>
             </>
           ) : (
-            <span className={styles.dbNoRes}>无绑定</span>
+            <span className={styles.dbNoRes}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noBinding")}</span>
           )}
         </div>
       ) : null}
 
       {open && props.length > 0 ? (
         <div className={styles.dbPropList}>
-          <div className={styles.dbPropHead}>字段 · 点击复制名称</div>
+          <div className={styles.dbPropHead}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fieldsHeader")}</div>
           {props.map((prop) => (
-            <Tooltip key={prop.name} title={`复制字段名 ${prop.name}`}>
+            <Tooltip key={prop.name} title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyFieldName", { name: prop.name })}>
               <button
                 type="button"
                 className={styles.dbProp}
-                onClick={() => copy(prop.name, `已复制 ${prop.name}`)}
+                onClick={() => copy(prop.name, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedFieldName", { name: prop.name }))}
               >
                 <span className={styles.dbPropName}>{prop.name}</span>
                 {prop.display_name && prop.display_name !== prop.name ? (
@@ -199,13 +205,16 @@ function ObjectTypeCard({
       ) : null}
 
       <div className={styles.dbRow}>
-        <span className={styles.dbRowLabel}>样本数据</span>
+        <span className={styles.dbRowLabel}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.sampleData")}</span>
         <button
           type="button"
           className={`${styles.dbFields} ${previewOpen ? styles.dbFieldsOpen : ""}`}
           onClick={togglePreview}
         >
-          {previewOpen ? "收起预览" : "预览数据"} <span className={styles.dbChev}>▾</span>
+          {previewOpen
+            ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.collapsePreview")
+            : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.previewData")}{" "}
+          <span className={styles.dbChev}>▾</span>
         </button>
       </div>
 
@@ -213,7 +222,7 @@ function ObjectTypeCard({
         <div className={styles.dbPreview}>
           {previewLoading ? (
             <div className={styles.dbPreviewMsg}>
-              <Spin size="small" /> 加载中…
+              <Spin size="small" /> {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.loading")}
             </div>
           ) : previewError ? (
             <div className={styles.dbPreviewErr}>{previewError}</div>
@@ -245,7 +254,7 @@ function ObjectTypeCard({
               </table>
             </div>
           ) : (
-            <div className={styles.dbPreviewMsg}>无数据</div>
+            <div className={styles.dbPreviewMsg}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noData")}</div>
           )}
         </div>
       ) : null}
@@ -271,14 +280,15 @@ export function DataBrowserPanel({
   onFillField: (key: string, value: string) => void;
   onFillResource: (resourceId: string) => void;
   onFillConceptGroup: (groupId: string) => void;
-  /** 当前接口按对象类型取数时传入，使每张卡片可一键填充测试请求。 */
+  /** Provided when the endpoint queries by object type, letting each card fill a test request in one action. */
   onFillTest?: (ot: KnObjectType) => Promise<void>;
-  /** 当前接口为 query_instance_subgraph 时传入，使关系卡可一键填入子图路径。 */
+  /** Provided for query_instance_subgraph so relation cards can fill a subgraph path in one action. */
   onFillRelation?: (rel: KnRelationType) => void;
   copy: (text: string, label?: string) => void;
-  /** 401 自动刷新 token 用（OAuth 续期）。 */
+  /** Used to refresh tokens automatically on 401 through OAuth renewal. */
   auth?: McpAuth;
 }) {
+  const { t } = useTranslation();
   const [detail, setDetail] = useState<KnDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -287,15 +297,15 @@ export function DataBrowserPanel({
   const loadedRef = useRef(false);
 
   /**
-   * 数据浏览器读的 get_kn_detail / query_object_instance 都是受管业务工具，
-   * 不带 bkn_context 会被 Context Loader 挡回。这里不是对话，会话按本次挂载算一条。
+   * Data Browser reads get_kn_detail and query_object_instance through managed business tools. They
+   * require bkn_context or Context Loader rejects them. This is not a chat, so one session lasts for this mount.
    */
   const lifecycle = useMemo(
     () => createBknLifecycle(lifecycleEnv(env.base, env.knId), auth, { conversationStore: memoryConversationStore() }),
     [env.base, env.knId, auth],
   );
 
-  // 懒加载：首次切到「数据浏览器」标签时拉一次 schema，之后常驻不再重拉，保留预览/筛选上下文。
+  // Lazy load schema on the first Data Browser tab visit, then keep it to preserve preview and filter context.
   useEffect(() => {
     if (!active || loadedRef.current) return;
     loadedRef.current = true;
@@ -304,7 +314,7 @@ export function DataBrowserPanel({
     const timeoutId = window.setTimeout(() => controller.abort(), DETAIL_LOAD_TIMEOUT_MS);
     setLoading(true);
     setError(null);
-    withManagedTurn(lifecycle, "加载知识网络结构", (turn) =>
+    withManagedTurn(lifecycle, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.loadStructureTurn"), (turn) =>
       fetchKnDetail(env, auth, controller.signal, turn ?? undefined),
     )
       .then((data) => {
@@ -314,10 +324,10 @@ export function DataBrowserPanel({
         if (!cancelled) {
           setError(
             controller.signal.aborted
-              ? "加载超时，请检查知识网络服务状态后重新加载。"
+              ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.loadTimeout")
               : err instanceof Error
                 ? err.message
-                : "加载失败",
+                : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.loadFailed"),
           );
           loadedRef.current = false; // 失败可重试
         }
@@ -331,7 +341,7 @@ export function DataBrowserPanel({
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [active, auth, env, reloadKey, lifecycle]);
+  }, [active, auth, env, reloadKey, lifecycle, t]);
 
   const reload = () => {
     loadedRef.current = false;
@@ -354,14 +364,14 @@ export function DataBrowserPanel({
     }));
     const inGroup = new Set(detail.concept_groups.flatMap((g) => g.object_type_ids ?? []));
     const ungrouped = detail.object_types.filter((o) => !inGroup.has(o.id));
-    if (ungrouped.length) grouped.push({ id: "", title: "未分组", ots: ungrouped });
+    if (ungrouped.length) grouped.push({ id: "", title: t("knowledgeNetwork.contextLoaderPanel.dataBrowser.ungrouped"), ots: ungrouped });
     return grouped
       .map((section) => ({
         ...section,
         ots: section.ots.filter((ot) => match(ot) && (assistantKind !== "resource" || Boolean(ot.data_source?.id))),
       }))
       .filter((section) => section.ots.length > 0);
-  }, [assistantKind, detail, q]);
+  }, [assistantKind, detail, q, t]);
 
   const conceptGroups = useMemo(() => {
     if (!detail) return [];
@@ -387,12 +397,12 @@ export function DataBrowserPanel({
             onChange={(e) => setQ(e.target.value)}
             placeholder={
               assistantKind === "concept-group"
-                ? "筛选资源组…"
+                ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterConceptGroup")
                 : assistantKind === "relation"
-                  ? "筛选关系类…"
+                  ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterRelation")
                   : assistantKind === "resource"
-                    ? "筛选数据资源…"
-                    : "筛选对象类型…"
+                    ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterResource")
+                    : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterObjectType")
             }
             allowClear
           />
@@ -406,17 +416,17 @@ export function DataBrowserPanel({
               <div className={styles.dbError}>
                 <ApiOutlined />
                 <div>
-                  <strong>加载失败</strong>
+                  <strong>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.loadFailed")}</strong>
                   <p>{error}</p>
                   <button type="button" className={styles.dbRetry} onClick={reload}>
-                    重新加载
+                    {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.retry")}
                   </button>
                 </div>
               </div>
           ) : assistantKind === "concept-group" ? (
             conceptGroups.length === 0 ? (
               <div className={styles.dbCenter}>
-                <Empty description="无匹配资源组" />
+                <Empty description={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noConceptGroup")} />
               </div>
             ) : (
               <div className={styles.dbSection}>
@@ -424,17 +434,21 @@ export function DataBrowserPanel({
                   <div key={group.id} className={styles.dbCard}>
                     <div className={styles.dbCardHead}>
                       <span className={styles.dbOtName} title={group.name || group.id}>{group.name || group.id}</span>
-                      <Tooltip title={`填入 concept_groups：${group.id}`}>
+                      <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillConceptGroupTooltip", { id: group.id })}>
                         <button type="button" className={styles.dbTestBtn} onClick={() => onFillConceptGroup(group.id)}>
-                          <ThunderboltFilled /> 填入资源组
+                          <ThunderboltFilled /> {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillConceptGroup")}
                         </button>
                       </Tooltip>
                     </div>
                     <div className={styles.dbRow}>
-                      <span className={styles.dbRowLabel}>资源组 ID</span>
+                      <span className={styles.dbRowLabel}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.conceptGroupId")}</span>
                       <span className={styles.dbChip}>{group.id}</span>
-                      <Tooltip title="复制资源组 ID">
-                        <button type="button" className={styles.dbCopy} onClick={() => copy(group.id, "已复制资源组 ID")}>
+                      <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyConceptGroupId")}>
+                        <button
+                          type="button"
+                          className={styles.dbCopy}
+                          onClick={() => copy(group.id, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedConceptGroupId"))}
+                        >
                           <CopyOutlined />
                         </button>
                       </Tooltip>
@@ -446,7 +460,7 @@ export function DataBrowserPanel({
           ) : assistantKind === "relation" ? (
             relations.length === 0 ? (
               <div className={styles.dbCenter}>
-                <Empty description="无匹配关系类" />
+                <Empty description={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noRelation")} />
               </div>
             ) : (
               <div className={styles.dbSection}>
@@ -457,20 +471,20 @@ export function DataBrowserPanel({
                         {rel.name || rel.id}
                       </span>
                       {onFillRelation ? (
-                        <Tooltip title="填入 query_instance_subgraph 的 relation_type_paths">
+                        <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillSubgraphTooltip")}>
                           <button type="button" className={styles.dbTestBtn} onClick={() => onFillRelation(rel)}>
-                            <ThunderboltFilled /> 填入子图
+                            <ThunderboltFilled /> {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillSubgraph")}
                           </button>
                         </Tooltip>
                       ) : null}
                     </div>
                     <div className={styles.dbRow}>
-                      <span className={styles.dbRowLabel}>路径</span>
+                      <span className={styles.dbRowLabel}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.path")}</span>
                       <span className={styles.dbChip}>{rel.sourceId}</span>
                       <span className={styles.dbRelArrow}>→</span>
                       <span className={styles.dbChip}>{rel.targetId}</span>
-                      <Tooltip title="复制关系 ID">
-                        <button type="button" className={styles.dbCopy} onClick={() => copy(rel.id, "已复制关系 ID")}>
+                      <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyRelationId")}>
+                        <button type="button" className={styles.dbCopy} onClick={() => copy(rel.id, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedRelationId"))}>
                           <CopyOutlined />
                         </button>
                       </Tooltip>
@@ -482,7 +496,13 @@ export function DataBrowserPanel({
           ) : (
             sections.length === 0 ? (
               <div className={styles.dbCenter}>
-                <Empty description={assistantKind === "resource" ? "无匹配数据资源" : "无匹配对象类型"} />
+                <Empty
+                  description={
+                    assistantKind === "resource"
+                      ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noResource")
+                      : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noObjectType")
+                  }
+                />
               </div>
             ) : (
               sections.map((section) => (
@@ -512,4 +532,4 @@ export function DataBrowserPanel({
   );
 }
 
-/* ============================ 主场景 ============================ */
+/* ============================ Main scene ============================ */

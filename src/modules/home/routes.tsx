@@ -35,8 +35,8 @@ export const homeRoutes: RouteObject[] = [
 ];
 
 /**
- * 工作台走真实路径而不是 index 路由:根路径继续由 create-router 统一重定向,
- * 首页回滚只需要把 defaultEntryPath 改回模块路径,不必动应用壳层路由表。
+ * Workbench uses a real path rather than an index route. create-router continues to redirect the
+ * root, and homepage rollback only changes defaultEntryPath without modifying the application-shell route table.
  */
 export const homeRouteContribution: AppRouteContribution = {
   defaultEntryPath: "/home",

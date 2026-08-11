@@ -10,7 +10,10 @@ import { conceptgroupPart } from "./concept-group";
 import { objecttypePart } from "./object-type";
 import { relationtypePart } from "./relation-type";
 import { actiontypePart } from "./action-type";
+import { integrationPart } from "./integration";
 import { metricPart } from "./metric";
+import { agentChatPart } from "./agent-chat";
+import { contextLoaderPanelPart } from "./context-loader-panel";
 
 export const knowledgeNetworkEnUS = {
   knowledgeNetwork: {
@@ -19,6 +22,9 @@ export const knowledgeNetworkEnUS = {
     ...objecttypePart,
     ...relationtypePart,
     ...actiontypePart,
+    ...integrationPart,
     ...metricPart,
+    ...agentChatPart,
+    ...contextLoaderPanelPart,
   },
 } as const;

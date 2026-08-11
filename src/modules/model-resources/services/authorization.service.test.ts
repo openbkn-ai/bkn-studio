@@ -17,7 +17,7 @@ vi.mock("@/framework/request/http", () => ({
 
 import { getResourceOperations } from "@/modules/model-resources/services/authorization.service";
 
-/** 完整 bkn-safe 词表 —— `"*"` / is_admin 的展开目标。与被测常量同步。 */
+/** Complete bkn-safe vocabulary used to expand `"*"` and is_admin; kept in sync with the tested constant. */
 const FULL_VOCAB = new Set([
   "create",
   "delete",
@@ -34,12 +34,12 @@ const FULL_VOCAB = new Set([
 
 type Row = { resource?: { type?: string; id?: string }; operations?: string[] };
 
-/** 折叠形态响应:每型一行类型级(id:"*"),可选实例例外行(仅增量)。 */
+/** Compact response: one type-level row (id:"*") per type plus optional instance exception rows containing only deltas. */
 function foldedResponse(is_admin: boolean, permissions: Row[]) {
   return { data: { is_admin, permissions } };
 }
 
-/** 末次 http.get 调用携带的 query 参数。 */
+/** Query parameters passed by the latest http.get call. */
 function lastParams(): Record<string, string> {
   const call = getMock.mock.calls.at(-1) as
     | [string, { params?: Record<string, string> }]
@@ -69,7 +69,7 @@ describe("authorization.service · getResourceOperations", () => {
     const [item] = await getResourceOperations([{ id: "m1", type: "large_model" }]);
 
     expect(new Set(item.operation)).toEqual(FULL_VOCAB);
-    // 幽灵操作 display 已剔除。
+    // The phantom display operation has been removed.
     expect(item.operation).not.toContain("display");
   });
 
@@ -106,9 +106,9 @@ describe("authorization.service · getResourceOperations", () => {
       { id: "m2", type: "large_model" },
     ]);
 
-    // m1 = 类型级 view ∪ 实例增量 modify
+    // m1 = type-level view union instance-delta modify.
     expect(new Set(result[0].operation)).toEqual(new Set(["view", "modify"]));
-    // m2 无例外行,只吃类型级
+    // m2 has no exception row and uses only type-level grants.
     expect(result[1].operation).toEqual(["view"]);
   });
 
@@ -146,13 +146,13 @@ describe("authorization.service · getResourceOperations", () => {
 
     const result = await getResourceOperations(resources);
 
-    // 120 / 50 → 3 批
+    // 120 / 50 produces three batches.
     expect(getMock).toHaveBeenCalledTimes(3);
     for (const call of getMock.mock.calls as [string, { params: { resource_id: string } }][]) {
       const ids = call[1].params.resource_id.split(",");
       expect(ids.length).toBeLessThanOrEqual(50);
     }
-    // 合并后每个资源都拿到类型级 view
+    // After merging, every resource receives the type-level view grant.
     expect(result).toHaveLength(120);
     expect(result.every((item) => item.operation?.includes("view"))).toBe(true);
   });

@@ -22,6 +22,7 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL,
+    locale: "zh-CN",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     ...devices["Desktop Chrome"],

@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import i18n from "@/app/locales/i18n";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   unwrapSingleEntryResponse,
@@ -334,7 +335,7 @@ export async function importKnowledgeNetwork(
     );
 
     if (exists && !importMode) {
-      throwImportConflict("知识网络 ID 或名称已存在。");
+      throwImportConflict(i18n.t("knowledgeNetwork.networkIdOrNameExists"));
     }
 
     if (exists && importMode === "ignore") {
@@ -392,7 +393,7 @@ export async function importKnowledgeNetwork(
       response?.error_code === "OntologyManager.KnowledgeNetwork.KNIDExisted" ||
       response?.error_code === "OntologyManager.KnowledgeNetwork.KNNameExisted"
     ) {
-      throwImportConflict(response.description ?? "导入冲突");
+      throwImportConflict(response.description ?? i18n.t("knowledgeNetwork.importConflictTitle"));
     }
 
     throw error;

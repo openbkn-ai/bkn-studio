@@ -18,8 +18,8 @@ import { executionFactoryModuleManifest } from "@/modules/execution-factory/modu
 import { defaultDevPermissions } from "@/framework/runtime/module-manifests";
 
 /**
- * 取自测试环境 10.211.55.4 上普通用户 test 的 /api/safe/v1/me/permissions 实际响应，
- * 用真实授权形态而非臆造的数据做基准。
+ * Actual /api/safe/v1/me/permissions response for a regular test user in the test environment.
+ * Use a real grant shape as the baseline rather than invented data.
  */
 const REAL_NON_ADMIN_GRANTS = [
   {
@@ -69,8 +69,8 @@ describe("flattenSafeGrants", () => {
     expect(flattenSafeGrants(undefined)).toEqual(new Set());
   });
 
-  // scope=type 下后端把「仅在某些实例上持有」的操作汇总进 instance_operations。
-  // 丢掉它,只被授了某几个对象的用户会连菜单入口都没有(见函数注释)。
+  // Under scope=type, the backend aggregates operations held only on some instances into
+  // instance_operations. Omitting them would hide menu entries from users granted only a few objects.
   it("并入 instance_operations —— 只被授了对象的用户不丢入口", () => {
     const flat = flattenSafeGrants([
       {
@@ -78,7 +78,7 @@ describe("flattenSafeGrants", () => {
         operations: ["view"],
         resource: { id: "*", type: "tool_box" },
       },
-      // 纯对象级授权:该类型没有任何类型级操作,只有实例上的。
+      // Pure object-level grant: this type has no type-level operations, only instance-level ones.
       { instance_operations: ["use"], operations: [], resource: { id: "*", type: "agent" } },
     ]);
 
@@ -90,7 +90,7 @@ describe("isStudioPermissionGranted", () => {
   const grants = flattenSafeGrants(REAL_NON_ADMIN_GRANTS);
 
   it("直接同名的权限点保持既有行为", () => {
-    // data-catalog 声明的就是 bkn-safe 的原生串，不经翻译即成立。
+    // data-catalog declares bkn-safe's native strings, so no translation is required.
     expect(isStudioPermissionGranted("catalog:view_detail", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("catalog:task_manage", grants, false)).toBe(true);
   });
@@ -118,7 +118,7 @@ describe("isStudioPermissionGranted", () => {
   });
 
   it("市场浏览按 public_access 判定，不误用 bkn-safe 的同名 catalog 数据目录", () => {
-    // 只有 catalog 数据目录授权、没有任何 public_access 时，市场入口不应成立。
+    // A catalog data-directory grant without any public_access must not enable the marketplace entry.
     const onlyDataCatalog = flattenSafeGrants([
       { operations: ["view_detail", "create"], resource: { id: "*", type: "catalog" } },
     ]);
@@ -155,8 +155,8 @@ describe("isStudioPermissionGranted", () => {
   });
 
   it("未纳入映射的模块保持原样，不因翻译而误得权限", () => {
-    // bkn-safe 发的是 knowledge_network（下划线），Studio 声明的是 knowledge-network，
-    // 两者本就不匹配；本映射不涉及该模块，行为维持不变。
+    // bkn-safe emits knowledge_network with an underscore while Studio declares knowledge-network.
+    // They do not match by design; this mapping does not cover the module and behavior remains unchanged.
     const knowledgeGrants = flattenSafeGrants([
       { operations: ["create"], resource: { id: "*", type: "knowledge_network" } },
     ]);
@@ -167,7 +167,7 @@ describe("isStudioPermissionGranted", () => {
 
 describe("执行工厂权限点覆盖", () => {
   it("除去有意不映的三条，其余全部可由 bkn-safe 授权解析", () => {
-    // 四类资源全量授权的用户，理应命中执行工厂的每一个权限点。
+    // A user granted every operation on all four resource types should match every execution-factory permission point.
     const fullGrants = flattenSafeGrants(
       ["operator", "tool_box", "mcp", "skill"].map((type) => ({
         operations: [
@@ -193,7 +193,7 @@ describe("执行工厂权限点覆盖", () => {
       (permission) => !isStudioPermissionGranted(permission, fullGrants, false),
     );
 
-    // catalog:install 暂时屏蔽（后端无对应端点）；sandbox-runtime:view 锚在 is_admin。
+    // catalog:install remains blocked because the backend has no endpoint; sandbox-runtime:view is based on is_admin.
     expect(unresolved.sort()).toEqual([
       "execution-factory-lab:catalog:install",
       "execution-factory-lab:sandbox-runtime:view",
@@ -211,7 +211,7 @@ describe("折叠通配契约", () => {
     expect(isStudioPermissionGranted("execution-factory:operator:create", typeWildcard, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory:operator:edit", typeWildcard, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory:operator:debug", typeWildcard, false)).toBe(true);
-    // 另一类型不受影响。
+    // Other resource types remain unaffected.
     expect(isStudioPermissionGranted("execution-factory:toolbox:create", typeWildcard, false)).toBe(false);
   });
 
@@ -230,9 +230,9 @@ describe("折叠通配契约", () => {
       { operations: ["*"], resource: { id: "*", type: "*" } },
     ]);
 
-    // 后端无安装端点,永久屏蔽——通配也不放。
+    // The backend has no installation endpoint, so it remains permanently blocked even by a wildcard.
     expect(isStudioPermissionGranted("execution-factory:catalog:install", globalWildcard, false)).toBe(false);
-    // 沙箱运行时锚在 is_admin,通配的非超管拿不到。
+    // Sandbox runtime is based on is_admin, so a wildcard without super-admin status does not grant it.
     expect(isStudioPermissionGranted("execution-factory-lab:sandbox-runtime:view", globalWildcard, false)).toBe(false);
   });
 });

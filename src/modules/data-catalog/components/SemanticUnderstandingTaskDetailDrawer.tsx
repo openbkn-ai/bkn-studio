@@ -10,6 +10,7 @@ import { Alert, Descriptions, Drawer, Empty, Table, Tag } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { formatDateTime } from "@/framework/i18n/format";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getSemanticUnderstandingTask, type SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 
@@ -38,11 +39,7 @@ type FieldApplyDetail = {
 function formatTime(value?: number) {
   if (!value) return "-";
   const timestamp = value < 100_000_000_000 ? value * 1000 : value;
-  return new Intl.DateTimeFormat("zh-CN", {
-    dateStyle: "medium",
-    timeStyle: "medium",
-    hour12: false,
-  }).format(timestamp);
+  return formatDateTime(timestamp);
 }
 
 function jsonDetail(value?: string) {
@@ -51,7 +48,7 @@ function jsonDetail(value?: string) {
   try {
     content = JSON.stringify(JSON.parse(value), null, 2);
   } catch {
-    // 服务端兼容返回非 JSON 的历史数据。
+    // The server supports returning legacy data that is not JSON.
   }
   return <details className={styles.rawDetail}>
     <summary>JSON</summary>

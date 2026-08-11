@@ -108,8 +108,8 @@ function splitFields(value?: string | string[]): string[] {
 }
 
 /**
- * vega 后端枚举:init/running/completed/stopping/stopped/failed。
- * streaming 模式的 running 即“常驻监听”,stopped/stopping 即“已暂停”。
+ * Vega backend enum values: init, running, completed, stopping, stopped, and failed.
+ * In streaming mode, running means persistent listening, while stopped/stopping means paused.
  */
 function normalizeStatus(value: string | undefined, mode: BuildMode): BuildTaskStatus {
   switch (value) {
@@ -134,8 +134,8 @@ function normalizeStatus(value: string | undefined, mode: BuildMode): BuildTaskS
 }
 
 /**
- * 状态文案 key:内部统一用 paused,但 batch 的 stop 是中止而非可续传的暂停,
- * 显示上 batch 用"已停止"(statuses.stopped)、streaming 用"已暂停"(statuses.paused)。
+ * Status label keys use paused internally, but stopping a batch aborts rather than creates a
+ * resumable pause. Display batch as statuses.stopped and streaming as statuses.paused.
  */
 export function buildTaskStatusLabelKey(status: BuildTaskStatus, mode: BuildMode) {
   if (status === "paused" && mode === "batch") {
@@ -144,7 +144,7 @@ export function buildTaskStatusLabelKey(status: BuildTaskStatus, mode: BuildMode
   return status;
 }
 
-/** 向量化健康态:优先后端 index_health.embedding,缺省按计数兜底。 */
+/** Vectorization health: prefer backend index_health.embedding and fall back to counts when absent. */
 export function embeddingStateOf(task: BuildTask): IndexHealthState {
   return (
     task.indexHealth?.embedding ??
@@ -208,7 +208,7 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
     };
   }
 
-  // 兼容旧扁平字段（过渡期 / mock）
+  // Supports legacy flattened fields used during transition or by mocks.
   const fulltextFields = splitFields(item.fulltext_fields);
   const fulltextAnalyzer = item.fulltext_analyzer || "standard";
   const fulltextAnalyzers: Record<string, string> = {};
@@ -238,7 +238,7 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
   const status = normalizeStatus(item.status, mode);
   const snapshot = snapshotFieldsOf(item);
 
-  // 已完成但 embedding 没建满（vectorized < synced）= 索引降级：向量化失败/部分失败。
+  // Completed with incomplete embeddings (vectorized < synced) means a degraded index due to vectorization failure or partial failure.
   const synced = item.synced_count ?? 0;
   const vectorized = item.vectorized_count ?? 0;
   const wantsEmbedding = snapshot.embeddingFields.length > 0;
@@ -247,7 +247,7 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     item.index_health?.embedding === "partial" ||
     (wantsEmbedding && status === "succeeded" && vectorized < synced);
 
-  // 优先用后端真实 index_health;缺省则按计数兜底,保持与 embeddingDegraded 一致。
+  // Prefer real backend index_health; otherwise fall back to counts consistently with embeddingDegraded.
   const toHealthState = (value: string | undefined): IndexHealthState =>
     value === "failed" || value === "partial" || value === "building" ? value : "ok";
   const derivedEmbedding: IndexHealthState = embeddingDegraded
@@ -327,7 +327,7 @@ export async function listBuildTasks(
     ensureMockTicker();
     let tasks = [...mockBuildTasks];
     if (query.catalogId) {
-      // mock 无 catalog_id 过滤,经 mockResources 解析 catalog → resourceIds。
+      // Mocks do not filter by catalog_id, so resolve catalog to resourceIds through mockResources.
       const resourceIds = new Set(
         mockResources
           .filter((resource) => resource.catalogId === query.catalogId)
@@ -338,8 +338,8 @@ export async function listBuildTasks(
     return wait(filterTasks(tasks, query), 120);
   }
 
-  // 后端 status 仅支持单值且枚举与前端不同(completed/stopped),
-  // 统一拉全量后在前端按归一化状态过滤。
+  // The backend supports only one status value and uses different enum values, so load all and
+  // filter in the frontend by normalized status.
   const tasks: BuildTask[] = [];
   let offset = 0;
   let total = Number.POSITIVE_INFINITY;
@@ -370,7 +370,7 @@ export async function listBuildTasks(
   return filterTasks(tasks, query);
 }
 
-// 前端归一状态 → 后端枚举。paused 同时覆盖 stopping/stopped;listening 即后端 running。
+// Frontend normalized states mapped to backend enums. paused covers stopping/stopped; listening maps to backend running.
 const FE_TO_BACKEND_STATUS: Record<BuildTaskStatus, string[]> = {
   pending: ["init"],
   running: ["running"],
@@ -398,6 +398,14 @@ function sortMockTasks(
   order: "asc" | "desc",
 ): BuildTask[] {
   const arr = [...items];
+  if (orderBy === "default") {
+    // Active builds first, then descending createdAt within each bucket.
+    return arr.sort((a, b) => {
+      const aActive = ACTIVE_FE_STATUSES.has(a.status) ? 0 : 1;
+      const bActive = ACTIVE_FE_STATUSES.has(b.status) ? 0 : 1;
+      return aActive !== bActive ? aActive - bActive : b.createdAt - a.createdAt;
+    });
+  }
   const dir = order === "asc" ? 1 : -1;
   const keyOf = (task: BuildTask): number =>
     orderBy === "created_at"
@@ -413,8 +421,8 @@ function sortMockTasks(
 }
 
 /**
- * 服务端分页 + 排序 + 状态过滤的列表。对接后端真分页:
- * limit/offset、order_by/order、status(多值逗号)、active=true(只看构建中)。
+ * Server-paginated list with sorting and status filtering. Integrates backend pagination through
+ * limit/offset, order_by/order, comma-separated status values, and active=true for active builds only.
  */
 export async function listBuildTaskPage(
   query: BuildTaskPageQuery,
@@ -550,8 +558,8 @@ export async function createBuildTask(
     return wait(task);
   }
 
-  // 创建仅返回 {id}，完整任务体再查一次。
-  // 索引配置由服务端从 resource 派生快照，客户端不再传字段配置。
+  // Creation returns only {id}, so load the complete task afterward.
+  // The server derives an index-configuration snapshot from the resource; clients no longer send field configuration.
   const response = await http.post<BackendBuildTask>(
     "/vega-backend/v1/build-tasks",
     {
@@ -581,7 +589,7 @@ export async function pauseBuildTask(id: string) {
     return;
   }
 
-  // 后端语义:stop = 暂停(streaming 监听停止 / batch 中止)
+  // Backend semantics: stop pauses streaming listeners and aborts batches.
   await http.post(`/vega-backend/v1/build-tasks/${id}/stop`);
 }
 
@@ -598,7 +606,7 @@ export async function resumeBuildTask(id: string) {
     return;
   }
 
-  // 后端语义:start = 恢复运行；默认 reset=false 按游标续跑
+  // Backend semantics: start resumes execution; reset=false resumes from the checkpoint by default.
   await http.post(`/vega-backend/v1/build-tasks/${id}/start`, { reset: false });
 }
 
@@ -617,7 +625,7 @@ export async function deleteBuildTask(
   }
 
   if (options.stopFirst) {
-    // 已停止/已完成时 stop 会报错,忽略即可
+    // Stopping an already stopped or completed task errors and can be ignored.
     await http
       .post(`/vega-backend/v1/build-tasks/${id}/stop`, undefined, {
         skipErrorToast: true,
@@ -625,7 +633,7 @@ export async function deleteBuildTask(
       .catch(() => undefined);
   }
 
-  // 后端拒删 running/stopping(409);stop 后短暂处于 stopping,小退避重试
+  // The backend rejects deleting running/stopping tasks with 409; retry after a short backoff while stop transitions through stopping.
   for (let attempt = 0; ; attempt += 1) {
     try {
       await http.delete(`/vega-backend/v1/build-tasks/${id}`, {
@@ -643,8 +651,7 @@ export async function deleteBuildTask(
 }
 
 /**
- * 重新 start 任务。
- * reset 仅对 full 任务有效；incremental 任务由后端强制按游标续跑。
+ * Restarts a task. reset applies only to full tasks; the backend forces incremental tasks to resume from their checkpoint.
  */
 export async function retryBuildTask(
   id: string,
@@ -672,7 +679,7 @@ export async function retryBuildTask(
   return getBuildTask(id);
 }
 
-/** 停用连接时,暂停其下所有监听中的 streaming 任务(mock 行为;真实后端由服务端联动) */
+/** Pauses all listening streaming tasks when a connection is disabled; this is mock behavior and the real backend coordinates it server-side. */
 export function pauseListeningTasksOfCatalog(resourceIds: string[]) {
   if (!useMock) {
     return;

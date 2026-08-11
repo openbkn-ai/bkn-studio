@@ -79,8 +79,8 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const catalogContext = searchParams.get("from") === "catalog";
-  // 进来即可编辑：只有市场预览（from=catalog，看的是别人域的工具箱）保持只读，
-  // 不再要求先点「编辑工具」切到编辑态。写侧仍靠各自的 PermissionGate 兜底。
+  // Enter in editing mode. Only marketplace preview (from=catalog, another domain's toolbox) stays
+  // read-only; do not require an Edit tool action first. Individual PermissionGates still protect writes.
   const viewMode = catalogContext;
   const [toolbox, setToolbox] = useState<ToolboxRecord | null>(null);
   const [items, setItems] = useState<ToolRecord[]>([]);
@@ -92,7 +92,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<"create" | null>(null);
   const [editToolId, setEditToolId] = useState<string | null>(null);
-  // 工具选择的请求序号，用于丢弃过期的详情回写（快速切换时旧详情盖新选择）。
+  // Request sequence for tool selection, used to discard stale detail responses during rapid changes.
   const selectRequestRef = useRef(0);
   const [debugRecord, setDebugRecord] = useState<ToolRecord | null>(null);
   const [toolRunLogs, setToolRunLogs] = useState<ToolRunLogEntry[]>([]);
@@ -176,7 +176,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
       return;
     }
 
-    // 工具集拆成 API / 函数两个视图，回退要落回工具箱本身所属的那个。
+    // Toolboxes split into API and function views; return to the one containing the toolbox.
     const viewQuery = `&toolboxView=${isFunctionToolbox ? "function" : "openapi"}`;
     void navigate(
       catalogContext
@@ -186,12 +186,12 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   };
 
   const handleSelectTool = async (tool: ToolRecord) => {
-    // 连点两个工具时，先返回的详情别盖住后选中的：给每次选择编号，回写前比对最新编号。
+    // During rapid selection, do not let the first detail response overwrite the later selection; number requests and compare the latest before writing.
     const requestId = selectRequestRef.current + 1;
     selectRequestRef.current = requestId;
     setSelectedTool(tool);
-    // 详情按工具取，切换时先清空。留着上一个工具的详情，输入输出面板会短暂显示
-    // 别人的 schema，内联保存的回填也会拿错快照。
+    // Details are per tool, so clear them on switch. Retaining a previous tool's details briefly
+    // shows its schema and makes inline saves use the wrong snapshot.
     setSelectedToolDetail(null);
     setToolRunLogs([]);
 
@@ -215,10 +215,9 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   };
 
   /**
-   * 名称/描述的点击即改。updateTool 是整体覆盖（buildToolMutationBody 会把
-   * data / use_rule / global_parameters 一并重写），所以必须拿 selectedToolDetail
-   * 这份完整快照回填；详情没取到就干脆不保存，宁可让人走编辑抽屉，也不能用半份
-   * 载荷把 OpenAPI spec 冲掉。
+   * Click-to-edit names/descriptions. updateTool replaces the whole payload, including data,
+   * use_rule, and global_parameters, so write from the complete selectedToolDetail snapshot. If
+   * details are unavailable, do not save: use the edit drawer rather than overwrite an OpenAPI spec with a partial payload.
    */
   const handleInlinePatch = useCallback(
     async (patch: { description?: string; name?: string }) => {
@@ -242,8 +241,8 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
       }
 
       const detail = selectedToolDetail;
-      // 详情是按工具异步取的，切换工具的加载窗口内它可能还是上一个工具的快照。
-      // 只判空不够：拿旧详情回填，会把上一个工具的 openapiSpec 覆盖到当前工具上。
+      // Details load asynchronously and may remain a prior tool's snapshot while switching. A
+      // non-null check is insufficient: using it would write the previous tool's openapiSpec onto the current tool.
       if (!detail || detail.toolId !== selectedTool.toolId) {
         void message.error(t("common.requestFailed"));
         return;
@@ -286,7 +285,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     [boxId, catalogContext, message, selectedTool, selectedToolDetail, t],
   );
 
-  /** 市场预览态和无 tool:edit 权限的人看到纯文本，不给点击入口。 */
+  /** Marketplace preview and users without tool:edit see plain text with no click entry point. */
   const renderToolEditable = (editable: ReactNode, readOnly: ReactNode) =>
     catalogContext ? (
       readOnly
@@ -297,8 +296,8 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     );
 
   const handleToggleStatus = useCallback((tool: ToolRecord) => {
-    // 市场预览态（from=catalog）只读：渲染层门禁能被 ?action=edit 绕过，写操作的闸
-    // 必须落在 handler 里，否则会改到别人域的工具箱。
+    // Marketplace preview is read-only. A render-layer guard can be bypassed with ?action=edit,
+    // so enforce the write gate in the handler to avoid changing another domain's toolbox.
     if (catalogContext) {
       return;
     }
@@ -321,8 +320,8 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   }, [boxId, catalogContext, loadTools, message, modal, t]);
 
   const handleBatchStatus = (nextStatus: ToolStatus) => {
-    // 市场预览态只读：批量 UI 靠 viewMode 隐藏进不去，写侧闸仍落在 handler 里，
-    // 与 handleToggleStatus 同口径，别只靠渲染层。
+    // Marketplace preview is read-only. viewMode hides bulk UI, but keep the write-side handler
+    // gate consistent with handleToggleStatus rather than relying on rendering alone.
     if (catalogContext) {
       return;
     }
@@ -347,7 +346,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   };
 
   const handleBatchDelete = () => {
-    // 市场预览态只读：同上，写侧闸落在 handler，不只靠渲染层门禁。
+    // Marketplace preview is read-only: enforce the write gate in the handler, not only the render-layer guard.
     if (catalogContext) {
       return;
     }
@@ -378,13 +377,13 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   };
 
   /**
-   * 列表卡片的出入参标签。口径跟右侧「输入输出」那行完全一致——都过
-   * buildToolCapabilityManifest，避免同一个工具在一屏里给出两个数。
+   * Input/output tags for list cards. They use buildToolCapabilityManifest just like the right-side
+   * Input/Output row, preventing one tool from showing two different counts on the same screen.
    */
   const renderToolIoTags = (tool: ToolRecord) => {
     const manifest = buildToolCapabilityManifest(tool);
 
-    // 后端没给出可查的出入参事实时不画标签，别把「元数据缺失」说成「0 入参 0 出参」。
+    // Do not render labels without queryable input/output facts from the backend; missing metadata is not zero inputs and zero outputs.
     if (!hasCapabilityIoFacts(manifest)) {
       return null;
     }
@@ -401,7 +400,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     );
   };
 
-  // 列表一次拉满 100 条（loadTools），筛选放本地做就够，不必回后端。
+  // Load up to 100 tools once with loadTools and filter locally; no backend filtering is needed.
   const visibleItems = useMemo(() => {
     const keyword = railKeyword.trim().toLowerCase();
     return keyword
@@ -460,7 +459,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     );
   };
 
-  // 原来只在工具箱详情抽屉里露过，卡片改直连本页后搬到页面上，否则这些字段就没入口了。
+  // These fields were previously visible only in the toolbox detail drawer. Move them here now that cards link directly to this page.
   const toolboxInfoItems = useMemo(
     () =>
       toolbox
@@ -653,7 +652,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                   name: item.name,
                   status: {
                     checked: item.status === "enabled",
-                    // 市场预览态（from=catalog）看的是别人域的工具箱，只展示状态不给切换。
+                    // Marketplace preview (from=catalog) views another domain's toolbox, so show status without a toggle.
                     disabled: catalogContext,
                     label: t(`executionFactory.toolStatuses.${item.status}`),
                     onChange: viewMode ? undefined : () => handleToggleStatus(item),
@@ -749,7 +748,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                       </div>
                     }
                     title={
-                      // 与函数工作台的头对齐：徽标 + 可点改的名字，不再顶一个「工具信息」标题。
+                      // Align with the function-workbench header: badge plus clickable name instead of a Tool information heading.
                       <span className={styles.toolIdentityTitle}>
                         <span className={styles.apiBadge}>api</span>
                         {renderToolEditable(

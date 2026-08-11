@@ -87,8 +87,8 @@ export function McpToolDebugModal({
 
   return (
     <Modal
-      /* 与 HTTP 工具调试弹窗同宽同滚法：结果 JSON 一长，760 宽会把每行折断，
-         正文不自己滚则底部的「调试」按钮被推出屏幕。 */
+      /* Use the same width and scroll behavior as the HTTP tool debug modal. Long result JSON
+         needs its own body scrolling, or it pushes the Debug button below the viewport. */
       className={styles.modal}
       confirmLoading={submitting}
       destroyOnClose

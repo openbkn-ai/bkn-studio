@@ -153,7 +153,7 @@ function mapTool(item: BackendToolInfo): ToolRecord {
     method: typeof item.metadata === "object" && item.metadata && "method" in item.metadata
       ? String((item.metadata as { method?: string }).method ?? "")
       : undefined,
-    // 列表接口同样回 metadata.api_spec，出入参在列表态就能算，不用逐个拉详情。
+    // List endpoints also return metadata.api_spec, so input/output can be calculated without loading each detail.
     ioSpec: parseToolIoSpec(item.metadata as Parameters<typeof parseToolIoSpec>[0]),
     createTime: normalizeTimestamp(item.create_time),
     updateTime: normalizeTimestamp(item.update_time),

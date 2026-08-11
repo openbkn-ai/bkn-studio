@@ -41,6 +41,10 @@
   width: 160px;
 }
 
+.tableSurface :global(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
 .progressCell {
   overflow: visible;
   white-space: normal;
@@ -54,6 +58,11 @@
 .actionGroup :global(.ant-btn-link) {
   padding-inline: 0;
   white-space: nowrap;
+}
+
+.actionMore {
+  min-width: 24px;
+  padding-inline: 0 !important;
 }
 
 .textLink {

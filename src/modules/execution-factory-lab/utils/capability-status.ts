@@ -39,7 +39,7 @@ export function getCapabilityStatusTagStyle(status: string): CSSProperties {
       color: "var(--color-success-text)",
     };
   }
-  // 已取消发布与草稿一样是「当前不可调用」，不是错误态，所以走中性底色。
+  // Unpublished, like draft, is currently not callable rather than an error state, so use a neutral background.
   return {
     background: "#f1f5f9",
     borderColor: "#cbd5e1",

@@ -70,23 +70,17 @@ export function filterConsoleNavigation(
 }
 
 /**
- * 按能力过滤导航,三态分三种下场(判据是服务端算好的 `capabilities[]` / `extensions[]`,
- * 前端不比档位——ee-design.md §3.2「不让客户端自己推」):
+ * Filter navigation by capability state derived on the server from capabilities and extensions.
  *
- * - **能用** → 正常显示
- * - **装了没买** → 保留并标 `locked`,菜单画档位徽标。这是唯一该出商务信息的状态:
- *   换一张证就能用,客户看得见才知道有东西可买
- * - **没装** → 隐藏。付费实现不在这个二进制里,画个徽标等于指一条走不通的路(社区升
- *   商业要换镜像)
+ * - Available items remain visible.
+ * - Installed but unlicensed items remain visible and locked so users can see an upgrade path.
+ * - Uninstalled items are hidden because their implementation is absent from the binary.
  *
- * 拿不到快照是**第四种**情况,不能并进「没装」:端点可能压根不存在(bkn-safe 还是旧版、
- * 网关没放行、一次网络抖动之后不再重试)。那时按「没装」隐藏,会让升级前一直好用的入口
- * 在只升 studio 的部署上整项消失,而且没有任何线索指向真正的原因。所以快照缺席时原样
- * 返回:入口照常在,点进去由 RequireCapability 说清「无法确认授权状态」,真正的强制力
- * 本来也在服务端。
+ * A missing snapshot is distinct from an uninstalled capability. Return unchanged navigation in
+ * that case so RequireCapability can explain the unknown entitlement state.
  *
- * 与 filterNavByPermission 刻意分开:一个集群态、一个用户态,合成一个函数迟早有人把两种
- * 字符串混着传。权限过滤要排在前面——没权限的入口连「升级就能用」都不该暗示。
+ * Keep this separate from user permission filtering. Permission filtering runs first so an
+ * unauthorized item never advertises an upgrade path.
  */
 export function filterNavByCapability(
   items: ConsoleNavItem[],
@@ -126,7 +120,8 @@ export function filterNavByCapability(
   return visible;
 }
 
-// 按当前用户权限过滤导航:自身权限不满足 → 隐藏;子项全被过滤且本身不可点 → 整组隐藏。
+// Filter navigation by the current user's permissions. Hide an unauthorized item and hide a
+// group when all children are filtered and the group itself is not navigable.
 export function filterNavByPermission(
   items: ConsoleNavItem[],
   permissions: string[],

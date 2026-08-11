@@ -12,9 +12,10 @@
 
 
 
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { EllipsisOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 
-import { Alert, Input, Space, Tooltip } from "antd";
+import { Alert, Dropdown, Input, Tooltip } from "antd";
+import type { MenuProps } from "antd";
 
 import type { ColumnsType } from "antd/es/table";
 
@@ -35,9 +36,10 @@ import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgra
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
-import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+import { useCapability, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 
@@ -108,7 +110,7 @@ function resolveMemberSummary(role: AdminRole, deptIdSet: Set<string>) {
 
 
 
-function formatTime(value?: number) {
+function formatTime(value: number | undefined, locale: string) {
 
   if (!value) {
 
@@ -116,7 +118,7 @@ function formatTime(value?: number) {
 
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(locale, {
 
     hour12: false,
 
@@ -145,21 +147,28 @@ export function RoleManagementScene() {
 
 
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
-  /*
-    快照到之前先按加载态渲染。`CapabilityGate` 把 unknown 归进 fallback,而 fallback 这里
-    是升级按钮:不单独分出来的话,一台已经买了 rbac_basic 的集群首屏也会先闪一颗带「专业版」
-    徽标的按钮,这一瞬点下去弹的是升级引导而不是新建抽屉。
-  */
+  const { message, modal, runtimeConfig } = useAppServices();
+  const rolePermissions = runtimeConfig.currentUser.permissions;
+  const canManageRoleMembers = hasPermissions({
+    currentPermissions: rolePermissions,
+    requiredPermissions: "admin-role:members",
+  });
+  const rbacBasicAvailable = useCapability(CAPABILITIES.RBAC_BASIC) === "available";
+  const canEditRole = rbacBasicAvailable && hasPermissions({
+    currentPermissions: rolePermissions,
+    requiredPermissions: "admin-role:edit",
+  });
+  const canDeleteRole = rbacBasicAvailable && hasPermissions({
+    currentPermissions: rolePermissions,
+    requiredPermissions: "admin-role:delete",
+  });
+
+  // Keep the first render in a loading state so an entitled cluster never briefly shows an upgrade CTA.
   const { loading: entitlementLoading } = useEntitlementContext();
 
-  /*
-    没买时的「新建角色」:按钮照常可点,点开讲清这项是什么、要哪一档——置灰的死按钮
-    说不清是坏了还是没买。fallback 与 upgrade 用同一个节点:社区镜像上这项是
-    not-installed,只配 upgrade 的话按钮会整个消失,而那恰恰是最该告诉客户有东西可买的
-    部署。
-  */
+  // Keep the upgrade CTA available for unlicensed and community installations.
   const rbacUpgradeButton = (
     <PermissionGate permissions="admin-role:create">
       <AppButton
@@ -173,7 +182,6 @@ export function RoleManagementScene() {
     </PermissionGate>
   );
 
-  const { message, modal } = useAppServices();
 
   const { pageState, setPagination } = usePageState();
 
@@ -347,6 +355,79 @@ export function RoleManagementScene() {
 
   };
 
+  const handleDeleteRole = useCallback(
+    (role: AdminRole) => {
+      void modal.confirm({
+        title: t("systemAdmin.roles.deleteTitle"),
+        content: role.accessorIds.length
+          ? t("systemAdmin.roles.deleteConfirmWithMembers", {
+              name: role.name,
+              count: role.accessorIds.length,
+            })
+          : t("systemAdmin.roles.deleteConfirm", { name: role.name }),
+        okText: t("common.delete"),
+        cancelText: t("common.cancel"),
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          try {
+            await deleteRole(role.id);
+            message.success(t("systemAdmin.roles.toast.deleted"));
+            await loadRoles();
+          } catch (error) {
+            void message.error(extractRequestErrorMessage(error));
+          }
+        },
+      });
+    },
+    [loadRoles, message, modal, t],
+  );
+
+  const buildRoleActionMenu = useCallback(
+    (role: AdminRole): MenuProps => {
+      const items: NonNullable<MenuProps["items"]> = [];
+
+      if (canManageRoleMembers) {
+        items.push({
+          key: "members",
+          label: t("systemAdmin.roles.actions.members"),
+        });
+      }
+      if (canEditRole && !role.builtin) {
+        items.push({
+          disabled: isSuperAdminRole(role),
+          key: "edit",
+          label: t("systemAdmin.roles.actions.edit"),
+        });
+      }
+      if (canDeleteRole && !role.builtin) {
+        items.push({
+          danger: true,
+          key: "delete",
+          label: t("systemAdmin.roles.actions.delete"),
+        });
+      }
+
+      return {
+        items,
+        onClick: ({ key, domEvent }) => {
+          domEvent.stopPropagation();
+          if (key === "members") {
+            setMembersRole(role);
+            return;
+          }
+          if (key === "edit") {
+            setRoleDrawer({ open: true, role });
+            return;
+          }
+          if (key === "delete") {
+            handleDeleteRole(role);
+          }
+        },
+      };
+    },
+    [canDeleteRole, canEditRole, canManageRoleMembers, handleDeleteRole, t],
+  );
+
 
 
   const columns: ColumnsType<AdminRole> = useMemo(
@@ -358,6 +439,7 @@ export function RoleManagementScene() {
         title: t("systemAdmin.roles.columns.role"),
 
         dataIndex: "name",
+        width: 260,
 
         render: (_, role) => (
 
@@ -412,6 +494,7 @@ export function RoleManagementScene() {
         title: t("systemAdmin.roles.columns.permissions"),
 
         key: "permissions",
+        width: 520,
 
         render: (_, role) => {
 
@@ -441,7 +524,7 @@ export function RoleManagementScene() {
 
             .sort(([a], [b]) => a.localeCompare(b))
 
-            .slice(0, 3)
+            .slice(0, 2)
 
             .map(([type, count]) => {
 
@@ -500,9 +583,9 @@ export function RoleManagementScene() {
 
               {tags}
 
-              {typeCounts.size > 3 ? (
+              {typeCounts.size > 2 ? (
 
-                <span className={styles.permissionMore}>+{typeCounts.size - 3}</span>
+                <span className={styles.permissionMore}>+{typeCounts.size - 2}</span>
 
               ) : null}
 
@@ -540,7 +623,7 @@ export function RoleManagementScene() {
 
         key: "members",
 
-        width: 140,
+        width: 170,
 
         render: (_, role) => {
 
@@ -568,11 +651,11 @@ export function RoleManagementScene() {
 
         dataIndex: "updatedAt",
 
-        width: 132,
+        width: 160,
 
         render: (value?: number) => (
 
-          <span className={styles.singleLineText}>{formatTime(value)}</span>
+          <span className={styles.singleLineText}>{formatTime(value, i18n.language)}</span>
 
         ),
 
@@ -583,138 +666,41 @@ export function RoleManagementScene() {
         title: t("systemAdmin.roles.columns.actions"),
 
         key: "actions",
+        align: "center",
+        width: 84,
 
-        render: (_, role) => (
+        render: (_, role) => {
+          const menu = buildRoleActionMenu(role);
+          const hasActions = Boolean(menu.items?.length);
 
-          <Space className={[styles.actionGroup, styles.actionGroupInline].join(" ")}>
+          if (!hasActions) {
+            return <span className={styles.mutedText}>—</span>;
+          }
 
-            <PermissionGate permissions="admin-role:members">
+          const trigger = (
+            <Dropdown menu={menu} trigger={["click"]}>
+              <AppButton
+                aria-label={t("systemAdmin.roles.columns.actions")}
+                className={styles.actionMore}
+                icon={<EllipsisOutlined />}
+                onClick={(event) => event.stopPropagation()}
+                type="text"
+              />
+            </Dropdown>
+          );
 
-              <AppButton className={styles.actionLink} onClick={() => setMembersRole(role)} type="link">
-
-                {t("systemAdmin.roles.actions.members")}
-
-              </AppButton>
-
-            </PermissionGate>
-
-            {/* 行内操作直接藏,不置灰:每行都挂一排点不动的按钮只是噪音,想买的
-                信息由工具栏那个入口给。 */}
-            <CapabilityGate capability={CAPABILITIES.RBAC_BASIC}>
-            <PermissionGate permissions="admin-role:edit">
-
-              {role.builtin ? null : isSuperAdminRole(role) ? (
-
-                <Tooltip title={t("systemAdmin.roles.superAdminLocked")}>
-
-                  <AppButton className={styles.actionLink} disabled type="link">
-
-                    {t("systemAdmin.roles.actions.edit")}
-
-                  </AppButton>
-
-                </Tooltip>
-
-              ) : (
-
-                <AppButton
-
-                  className={styles.actionLink}
-
-                  onClick={() => setRoleDrawer({ open: true, role })}
-
-                  type="link"
-
-                >
-
-                  {t("systemAdmin.roles.actions.edit")}
-
-                </AppButton>
-
-              )}
-
-            </PermissionGate>
-            </CapabilityGate>
-
-            {!role.builtin ? (
-
-              <CapabilityGate capability={CAPABILITIES.RBAC_BASIC}>
-              <PermissionGate permissions="admin-role:delete">
-
-                <AppButton
-
-                  className={[styles.actionLink, styles.actionDanger].join(" ")}
-
-                  danger
-
-                  onClick={() => {
-
-                    void modal.confirm({
-
-                      title: t("systemAdmin.roles.deleteTitle"),
-
-                      content: role.accessorIds.length
-
-                        ? t("systemAdmin.roles.deleteConfirmWithMembers", {
-
-                            name: role.name,
-
-                            count: role.accessorIds.length,
-
-                          })
-
-                        : t("systemAdmin.roles.deleteConfirm", { name: role.name }),
-
-                      okText: t("common.delete"),
-
-                      cancelText: t("common.cancel"),
-
-                      okButtonProps: { danger: true },
-
-                      onOk: async () => {
-
-                        try {
-
-                          await deleteRole(role.id);
-
-                          message.success(t("systemAdmin.roles.toast.deleted"));
-
-                          await loadRoles();
-
-                        } catch (error) {
-
-                          void message.error(extractRequestErrorMessage(error));
-
-                        }
-
-                      },
-
-                    });
-
-                  }}
-
-                  type="link"
-
-                >
-
-                  {t("systemAdmin.roles.actions.delete")}
-
-                </AppButton>
-
-              </PermissionGate>
-              </CapabilityGate>
-
-            ) : null}
-
-          </Space>
-
-        ),
+          return isSuperAdminRole(role) && canEditRole ? (
+            <Tooltip title={t("systemAdmin.roles.superAdminLocked")}>{trigger}</Tooltip>
+          ) : (
+            trigger
+          );
+        },
 
       },
 
     ],
 
-    [deptIdSet, loadRoles, message, modal, t],
+    [buildRoleActionMenu, canEditRole, deptIdSet, i18n.language, t],
 
   );
 
@@ -732,14 +718,7 @@ export function RoleManagementScene() {
 
             <div className={styles.toolbarActions}>
 
-              {/*
-                档位包在权限外层:集群没买 rbac_basic 时,谁的权限齐全都不该看到写
-                入口——档位是集群属性,权限是人的属性。
-
-                这里(工具栏,独一份)置灰+提示而不是藏掉:它是这套付费能力最显眼的
-                入口,客户看得见才知道有东西可买。行内操作(编辑/删除)反过来直接藏,
-                每行挂两个置灰按钮只是噪音。
-              */}
+              {/* The toolbar exposes the only upgrade path; row-level edit and delete actions stay hidden. */}
               {entitlementLoading ? (
                 <PermissionGate permissions="admin-role:create">
                   <AppButton disabled icon={<PlusOutlined />} loading type="primary">
@@ -857,6 +836,7 @@ export function RoleManagementScene() {
               pagination={false}
 
               rowKey="id"
+              tableLayout="fixed"
 
             />
 

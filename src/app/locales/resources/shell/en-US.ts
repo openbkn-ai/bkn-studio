@@ -17,6 +17,11 @@ export const shellEnUS = {
     headerAside: "Application shell baseline",
     collapseSidenav: "Collapse navigation",
     expandSidenav: "Expand navigation",
+    language: {
+      label: "Language",
+      zhCN: "中文",
+      enUS: "English",
+    },
     items: {
       home: "Home",
       globalBusinessKnowledgeNetwork: "Global Business Knowledge Network",
@@ -25,9 +30,9 @@ export const shellEnUS = {
       knowledgeNetworkIntegration: "Knowledge Network Integration",
       generalBusinessKnowledgeNetwork: "Data Semantic Governance",
       dataConnection: "Data Connection",
-      dataCatalog: "Data Directory",
+      dataCatalog: "Data Catalog",
       indexBuild: "Task Management",
-      dataResource: "Data Directory",
+      dataResource: "Data Catalog",
       dataQuality: "Data Quality",
       executionFactory: "Capability Factory",
       executionFactoryLab: "Execution Factory (Lab)",

@@ -13,7 +13,7 @@ import { isMarketCatalogEnabled } from "@/modules/execution-factory/utils/market
 export function CatalogListPage() {
   const location = useLocation();
 
-  // 市场入口未启用时,旧书签/直敲 URL 都落回执行单元列表(保留 activeTab)。
+  // When the marketplace entry is disabled, old bookmarks and direct URLs fall back to Execution Unit List while retaining activeTab.
   if (!isMarketCatalogEnabled()) {
     return <Navigate replace to={`/execution-factory/units${location.search}`} />;
   }

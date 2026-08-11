@@ -7,7 +7,8 @@
 
 import { ApiOutlined, CodeOutlined, CopyOutlined, ForkOutlined, KeyOutlined } from "@ant-design/icons";
 import { App } from "antd";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
 import { gatewayOrigin } from "@/framework/auth/oauth";
@@ -21,143 +22,57 @@ type CliExampleKey = "setup" | "context" | "agent-skill";
 type SdkExampleKey = "quick-start" | "instance-query" | "dynamic-tool";
 type CodeExample = { code: string; label: string; title: string };
 
-const platformOrigin = gatewayOrigin() || (typeof window !== "undefined" ? window.location.origin : "https://your-platform");
+const platformOrigin =
+  gatewayOrigin() ||
+  (typeof window !== "undefined" ? window.location.origin : "https://your-platform");
 
-const tabs: Array<{
-  icon: ReactNode;
-  key: IntegrationTab;
-  label: string;
-}> = [
-  {
-    key: "mcp",
-    label: "MCP 对接",
-    icon: <ForkOutlined />,
-  },
-  {
-    key: "cli",
-    label: "CLI 对接",
-    icon: <CodeOutlined />,
-  },
-  {
-    key: "sdk",
-    label: "SDK 对接",
-    icon: <ApiOutlined />,
-  },
-];
-
-const cliExamples: Record<CliExampleKey, CodeExample> = {
-  setup: {
-    label: "安装与认证",
-    title: "安装 OpenBKN CLI 并配置访问凭证",
-    code: `npm install -g @openbkn/bkn-sdk
-
-export BKN_BASE_URL="${platformOrigin}"
-export BKN_TOKEN="bak_<在个人中心 API Key 签发>"
-
-openbkn auth login "$BKN_BASE_URL" --token "$BKN_TOKEN"
-openbkn --version`,
-  },
-  context: {
-    label: "知识网络查询",
-    title: "从终端检索知识模型、查询实例和发现工具",
-    code: `openbkn context search-schema <kn-id> "查询订单相关对象和关系"
-
-openbkn context query-object-instance <kn-id> --args '{
-  "ot_id": "order",
-  "limit": 20
-}'
-
-openbkn context tools <kn-id>`,
-  },
-  "agent-skill": {
-    label: "Agent Skill",
-    title: "为具备终端能力的 Agent 安装 OpenBKN Skill",
-    code: `npm install -g @openbkn/bkn-sdk
-npx skills add openbkn-ai/bkn-sdk@openbkn -g -y
-
-export BKN_BASE_URL="${platformOrigin}"
-export BKN_TOKEN="bak_<在个人中心 API Key 签发>"
-
-openbkn auth login "$BKN_BASE_URL" --token "$BKN_TOKEN"
-openbkn help all`,
-  },
+const tabIcons: Record<IntegrationTab, ReactNode> = {
+  cli: <CodeOutlined />,
+  mcp: <ForkOutlined />,
+  sdk: <ApiOutlined />,
 };
 
-const sdkExamples: Record<SdkExampleKey, CodeExample> = {
-  "quick-start": {
-    label: "快速开始",
-    title: "创建 SDK 客户端并检索知识模型",
-    code: `import { createClient } from "@openbkn/bkn-sdk";
-
-const bkn = createClient({
-  baseUrl: process.env.BKN_BASE_URL!,
-  token: process.env.BKN_TOKEN!,
-});
-
-const result = await bkn.context.searchSchema(
-  "your_kn_id",
-  "查询订单相关对象和关系",
-  { searchScope: ["object", "relation"], maxConcepts: 10 },
-);`,
-  },
-  "instance-query": {
-    label: "查询实例",
-    title: "按对象类与条件查询对象实例",
-    code: `const result = await bkn.context.queryObjectInstance("your_kn_id", {
-  ot_id: "order",
-  condition: {
-    operation: "and",
-    sub_conditions: [
-      { field: "status", operation: "==", value_from: "const", value: "paid" },
-    ],
-  },
-  limit: 20,
-});`,
-  },
-  "dynamic-tool": {
-    label: "动态工具",
-    title: "发现并调用当前知识网络开放的 MCP 工具",
-    code: `const tools = await bkn.context.tools("your_kn_id");
-
-const result = await bkn.context.toolCall("your_kn_id", "search_schema", {
-  query: "查询订单相关对象和关系",
-  response_format: "json",
-});`,
-  },
-};
+const cliExampleKeys: CliExampleKey[] = ["setup", "context", "agent-skill"];
+const sdkExampleKeys: SdkExampleKey[] = ["quick-start", "instance-query", "dynamic-tool"];
 
 type CodeIntegrationPanelProps<T extends string> = {
+  ariaLabel: string;
+  copyFailedMessage: string;
+  copyLabel: string;
   examples: Record<T, CodeExample>;
+  eyebrow: string;
   guideDescription: string;
   guideSteps: string[];
   guideTitle: string;
   installCommand?: string;
   installSuccessMessage?: string;
   installTitle?: string;
+  issueApiKeyLabel: string;
   note: string;
   packageLabel: string;
   packageUrl: string;
-  title: string;
-  eyebrow: string;
-  ariaLabel: string;
   successMessage: string;
+  title: string;
 };
 
 function CodeIntegrationPanel<T extends string>({
+  ariaLabel,
+  copyFailedMessage,
+  copyLabel,
   examples,
+  eyebrow,
   guideDescription,
   guideSteps,
   guideTitle,
   installCommand,
   installSuccessMessage,
   installTitle,
+  issueApiKeyLabel,
   note,
   packageLabel,
   packageUrl,
-  title,
-  eyebrow,
-  ariaLabel,
   successMessage,
+  title,
 }: CodeIntegrationPanelProps<T>) {
   const { message } = App.useApp();
   const location = useLocation();
@@ -170,7 +85,7 @@ function CodeIntegrationPanel<T extends string>({
       await navigator.clipboard.writeText(text);
       void message.success(successText);
     } catch {
-      void message.error("复制失败，请手动复制代码");
+      void message.error(copyFailedMessage);
     }
   };
 
@@ -187,7 +102,7 @@ function CodeIntegrationPanel<T extends string>({
         <div className={styles.sdkKeyNote}>
           <KeyOutlined aria-hidden />
           <span>{note}</span>
-          <Link to={apiKeyPagePath}>签发 API Key</Link>
+          <Link to={apiKeyPagePath}>{issueApiKeyLabel}</Link>
         </div>
       </aside>
 
@@ -211,7 +126,7 @@ function CodeIntegrationPanel<T extends string>({
                 className={styles.sdkCopyButton}
                 onClick={() => void copyText(installCommand, installSuccessMessage)}
               >
-                <CopyOutlined /> 复制
+                <CopyOutlined /> {copyLabel}
               </button>
             </div>
             <pre className={styles.sdkInstallCode}>{installCommand}</pre>
@@ -225,7 +140,9 @@ function CodeIntegrationPanel<T extends string>({
               type="button"
               role="tab"
               aria-selected={activeExample === key}
-              className={`${styles.sdkExampleTab} ${activeExample === key ? styles.sdkExampleTabActive : ""}`}
+              className={`${styles.sdkExampleTab} ${
+                activeExample === key ? styles.sdkExampleTabActive : ""
+              }`}
               onClick={() => setActiveExample(key)}
             >
               {examples[key].label}
@@ -236,8 +153,12 @@ function CodeIntegrationPanel<T extends string>({
         <div className={styles.sdkCodeBlock}>
           <div className={styles.sdkCodeHeader}>
             <span>{example.title}</span>
-            <button type="button" className={styles.sdkCopyButton} onClick={() => void copyText(example.code, successMessage)}>
-              <CopyOutlined /> 复制
+            <button
+              type="button"
+              className={styles.sdkCopyButton}
+              onClick={() => void copyText(example.code, successMessage)}
+            >
+              <CopyOutlined /> {copyLabel}
             </button>
           </div>
           <pre className={styles.sdkCode}>{example.code}</pre>
@@ -247,85 +168,143 @@ function CodeIntegrationPanel<T extends string>({
   );
 }
 
+function useCliExamples() {
+  const { t } = useTranslation();
+  return useMemo(
+    () =>
+      Object.fromEntries(
+        cliExampleKeys.map((key) => [
+          key,
+          {
+            code: t(`knowledgeNetwork.integration.cli.examples.${key}.code`, {
+              platformOrigin,
+            }),
+            label: t(`knowledgeNetwork.integration.cli.examples.${key}.label`),
+            title: t(`knowledgeNetwork.integration.cli.examples.${key}.title`),
+          },
+        ]),
+      ) as Record<CliExampleKey, CodeExample>,
+    [t],
+  );
+}
+
+function useSdkExamples() {
+  const { t } = useTranslation();
+  return useMemo(
+    () =>
+      Object.fromEntries(
+        sdkExampleKeys.map((key) => [
+          key,
+          {
+            code: t(`knowledgeNetwork.integration.sdk.examples.${key}.code`),
+            label: t(`knowledgeNetwork.integration.sdk.examples.${key}.label`),
+            title: t(`knowledgeNetwork.integration.sdk.examples.${key}.title`),
+          },
+        ]),
+      ) as Record<SdkExampleKey, CodeExample>,
+    [t],
+  );
+}
+
 function CliIntegrationPanel() {
+  const { t } = useTranslation();
+  const examples = useCliExamples();
+
   return (
     <CodeIntegrationPanel
-      examples={cliExamples}
-      guideTitle="通过 CLI 调用 OpenBKN"
-      guideDescription="适用于本地终端、CI/CD 和具备 Shell 能力的 Agent。CLI 使用同一套平台能力，无需自行实现接口协议。"
-      guideSteps={[
-        "全局安装 @openbkn/bkn-sdk，获得 openbkn 命令。",
-        "在个人中心签发 API Key，并通过 BKN_TOKEN 环境变量登录目标 OpenBKN 环境。",
-        "通过 context 命令检索知识模型、查询实例或发现 MCP 工具。",
-        "为 Agent 安装 OpenBKN Skill 后，可按自然语言选择对应命令。",
-      ]}
-      note="API Key 当前用于 Context Loader 命令；在个人中心签发后通过 BKN_TOKEN 注入终端环境。"
+      ariaLabel={t("knowledgeNetwork.integration.cli.ariaLabel")}
+      copyFailedMessage={t("knowledgeNetwork.integration.copyFailed")}
+      copyLabel={t("knowledgeNetwork.integration.copy")}
+      examples={examples}
       eyebrow="Terminal / CI/CD / Agent"
-      title="CLI 调用示例"
-      packageLabel="查看 npm 包"
+      guideDescription={t("knowledgeNetwork.integration.cli.guideDescription")}
+      guideSteps={[
+        t("knowledgeNetwork.integration.cli.steps.install"),
+        t("knowledgeNetwork.integration.cli.steps.token"),
+        t("knowledgeNetwork.integration.cli.steps.context"),
+        t("knowledgeNetwork.integration.cli.steps.skill"),
+      ]}
+      guideTitle={t("knowledgeNetwork.integration.cli.guideTitle")}
+      issueApiKeyLabel={t("knowledgeNetwork.integration.issueApiKey")}
+      note={t("knowledgeNetwork.integration.cli.note")}
+      packageLabel={t("knowledgeNetwork.integration.packageLabel")}
       packageUrl="https://www.npmjs.com/package/@openbkn/bkn-sdk"
-      ariaLabel="CLI 示例"
-      successMessage="CLI 示例已复制"
+      successMessage={t("knowledgeNetwork.integration.cli.successMessage")}
+      title={t("knowledgeNetwork.integration.cli.title")}
     />
   );
 }
 
 function SdkIntegrationPanel() {
+  const { t } = useTranslation();
+  const examples = useSdkExamples();
+
   return (
     <CodeIntegrationPanel
-      examples={sdkExamples}
-      guideTitle="通过 SDK 集成 OpenBKN"
-      guideDescription="适用于 Node.js 服务端项目。SDK 已封装认证、MCP 会话、JSON-RPC 调用与响应解析，无需自行维护 HTTP 请求协议。"
-      guideSteps={[
-        "安装 @openbkn/bkn-sdk。",
-        "在个人中心签发 API Key，并通过 BKN_BASE_URL 和 BKN_TOKEN 配置服务端。",
-        "创建客户端后，通过 bkn.context 调用知识网络能力。",
-        "按需查询对象实例，或发现并调用动态 MCP 工具。",
-      ]}
-      installCommand="npm install @openbkn/bkn-sdk"
-      installSuccessMessage="SDK 安装命令已复制"
-      installTitle="安装 SDK"
-      note="API Key 当前用于 bkn.context；仅在个人中心管理，服务端通过 BKN_TOKEN 环境变量读取。"
+      ariaLabel={t("knowledgeNetwork.integration.sdk.ariaLabel")}
+      copyFailedMessage={t("knowledgeNetwork.integration.copyFailed")}
+      copyLabel={t("knowledgeNetwork.integration.copy")}
+      examples={examples}
       eyebrow="TypeScript / Node.js"
-      title="SDK 调用示例"
-      packageLabel="查看 npm 包"
+      guideDescription={t("knowledgeNetwork.integration.sdk.guideDescription")}
+      guideSteps={[
+        t("knowledgeNetwork.integration.sdk.steps.install"),
+        t("knowledgeNetwork.integration.sdk.steps.token"),
+        t("knowledgeNetwork.integration.sdk.steps.client"),
+        t("knowledgeNetwork.integration.sdk.steps.tools"),
+      ]}
+      guideTitle={t("knowledgeNetwork.integration.sdk.guideTitle")}
+      installCommand="npm install @openbkn/bkn-sdk"
+      installSuccessMessage={t("knowledgeNetwork.integration.sdk.installSuccessMessage")}
+      installTitle={t("knowledgeNetwork.integration.sdk.installTitle")}
+      issueApiKeyLabel={t("knowledgeNetwork.integration.issueApiKey")}
+      note={t("knowledgeNetwork.integration.sdk.note")}
+      packageLabel={t("knowledgeNetwork.integration.packageLabel")}
       packageUrl="https://www.npmjs.com/package/@openbkn/bkn-sdk"
-      ariaLabel="SDK 示例"
-      successMessage="SDK 示例已复制"
+      successMessage={t("knowledgeNetwork.integration.sdk.successMessage")}
+      title={t("knowledgeNetwork.integration.sdk.title")}
     />
   );
 }
 
 export function KnowledgeNetworkIntegrationPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<IntegrationTab>("mcp");
+  const tabs: IntegrationTab[] = ["mcp", "cli", "sdk"];
 
   return (
     <section className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerCopy}>
-          <h1 className={styles.title}>对接 OpenBKN 能力</h1>
+          <h1 className={styles.title}>{t("knowledgeNetwork.integration.title")}</h1>
           <p className={styles.description}>
-            面向智能体平台和业务系统提供统一调用入口。MCP 用于智能体工具调用，CLI 用于终端与 Agent，SDK 用于 Node.js 服务端集成。
+            {t("knowledgeNetwork.integration.description")}
           </p>
         </div>
       </header>
 
       <div className={styles.modeSection}>
-        <span className={styles.modeLabel}>接入方式</span>
-        <div className={styles.tabs} role="tablist" aria-label="知识网络对接方式">
-          {tabs.map((item) => (
+        <span className={styles.modeLabel}>{t("knowledgeNetwork.integration.modeLabel")}</span>
+        <div
+          className={styles.tabs}
+          role="tablist"
+          aria-label={t("knowledgeNetwork.integration.tabsAriaLabel")}
+        >
+          {tabs.map((key) => (
             <button
-              key={item.key}
+              key={key}
               type="button"
               role="tab"
-              aria-selected={activeTab === item.key}
-              className={`${styles.tab} ${activeTab === item.key ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab(item.key)}
+              aria-selected={activeTab === key}
+              className={`${styles.tab} ${activeTab === key ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab(key)}
             >
               <span className={styles.tabIcon} aria-hidden>
-                {item.icon}
+                {tabIcons[key]}
               </span>
-              <span className={styles.tabLabel}>{item.label}</span>
+              <span className={styles.tabLabel}>
+                {t(`knowledgeNetwork.integration.tabs.${key}`)}
+              </span>
             </button>
           ))}
         </div>

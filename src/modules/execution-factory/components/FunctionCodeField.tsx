@@ -20,7 +20,7 @@ const FALLBACK_TEMPLATE = "def handler(event):\n    return event\n";
 
 type FunctionCodeFieldProps = {
   onChange?: (code: string) => void;
-  /** 反推出来的名称/描述/参数落在兄弟字段上，本组件只管代码，交给上层写回表单。 */
+  /** Inferred names, descriptions, and parameters belong to sibling fields; this component owns only code and lets the parent update the form. */
   onMetadataApply?: (result: Extract<FunctionAiApplyResult, { type: "metadata" }>) => void;
   value?: string;
 };

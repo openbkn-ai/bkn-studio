@@ -113,7 +113,9 @@ export function ConnectorTypePicker({
           }}
         />
         <div className={styles.toolbar}>
-          <span className={styles.resultText}>共 {filtered.length} 个</span>
+          <span className={styles.resultText}>
+            {t("dataConnect.connectorTypeResultCount", { count: filtered.length })}
+          </span>
         </div>
         {filtered.length > 0 ? (
           <div className={styles.grid}>

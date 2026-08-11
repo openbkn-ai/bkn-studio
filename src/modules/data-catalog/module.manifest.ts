@@ -8,7 +8,7 @@
 export const dataCatalogModuleManifest = {
   id: "data-catalog",
   name: "Data Catalog",
-  // 权限点对齐 bkn-safe authz 目录(resource_type:operation)
+  // Permission points align with the bkn-safe authorization catalog (resource_type:operation).
   permissions: [
     "catalog:view_detail",
     "catalog:create",

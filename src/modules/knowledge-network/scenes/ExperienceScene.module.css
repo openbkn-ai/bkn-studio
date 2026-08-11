@@ -243,6 +243,13 @@
   grid-template-rows: minmax(0, 1fr);
 }
 
+.mainMcpConnectStack {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+  overflow-x: hidden;
+}
+
 .mcpWork {
   grid-column: 2;
   grid-row: 1;
@@ -267,16 +274,19 @@
 .mcpConnectPage {
   grid-column: 1 / -1;
   min-height: 0;
+  min-width: 0;
   overflow: auto;
+  overflow-x: hidden;
   padding: 0;
   background: #fff;
 }
 
 .mcpConnectPanel {
   display: grid;
-  grid-template-columns: minmax(300px, 0.72fr) minmax(620px, 1.28fr);
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
   gap: 20px;
   align-items: stretch;
+  min-width: 0;
   max-width: none;
   margin: 0;
   padding: 0;
@@ -348,7 +358,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 14px;
+  min-width: 0;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--line);
 }
@@ -356,7 +368,10 @@
 .mcpConfigTabs {
   display: inline-flex;
   align-items: center;
+  flex: 1 1 360px;
+  flex-wrap: wrap;
   gap: 4px;
+  min-width: 0;
 }
 
 .mcpConfigTab {
@@ -385,6 +400,8 @@
 .mcpConfigMeta {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
 }
@@ -460,9 +477,11 @@
 
 .mcpConfigBody {
   min-width: 0;
+  max-width: 100%;
 }
 
 .mcpConfigBody .codeBlk {
+  max-width: 100%;
   margin-bottom: 12px;
 }
 
@@ -688,11 +707,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 11.5px;
   color: var(--txt2);
+}
+
+.codeBlkHead > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .codeBlkPre {
@@ -1438,6 +1466,7 @@
 }
 
 .mini {
+  flex: 0 0 auto;
   font-family: var(--mono);
   font-size: 11px;
   color: var(--txt2);

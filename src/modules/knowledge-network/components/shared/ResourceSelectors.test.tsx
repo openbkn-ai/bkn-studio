@@ -6,10 +6,16 @@
  */
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import i18n from "@/app/locales/i18n";
 
 import { ResourceColorSelect } from "./ResourceColorSelect";
 import { ResourceIconSelect } from "./ResourceIconSelect";
+
+beforeEach(async () => {
+  await i18n.changeLanguage("en-US");
+});
 
 afterEach(() => {
   cleanup();
@@ -35,7 +41,7 @@ describe("resource appearance selectors", () => {
 
     fireEvent.click(screen.getByRole("button"));
 
-    expect(screen.getByPlaceholderText("输入关键词筛选图标")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Search icons by keyword")).toBeTruthy();
 
     const iconButtons = screen.getAllByRole("button");
     fireEvent.click(iconButtons[2]);

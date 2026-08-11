@@ -10,11 +10,11 @@ export type ExecutionUnitTab = "mcp" | "toolbox" | "operator" | "skill";
 export type ExecutionUnitCardItem = {
   id: string;
   name: string;
-  /** 「全部」视图里一屏混着多种类型，卡片不能再从 activeTab 推自己是什么。 */
+  /** The All view mixes types on one screen, so cards cannot infer their type from activeTab. */
   unitType?: ExecutionUnitTab;
   description?: string;
   metadataType?: string;
-  /** MCP 连接模式（sse / stream），卡片副标题的徽标位用。 */
+  /** MCP connection mode (sse / stream), used by the badge in the card subtitle. */
   mode?: string;
   isInternal?: boolean;
   toolCount?: number;

@@ -369,7 +369,7 @@ export function ObjectTypeListPanel({
     {
       key: "resourceIndexState",
       title: t("knowledgeNetwork.objectTypeResourceIndexState"),
-      width: 140,
+      width: 180,
       render: (_value, record) => {
         const resourceId = record.dataSource?.id;
         if (!resourceId) {

@@ -269,6 +269,7 @@ export const executionFactoryZhCN = {
     },
     operatorCategories: {
       other_category: "其他",
+      system: "\u7cfb\u7edf\u5de5\u5177",
       data_process: "数据处理",
       data_transform: "数据转换",
       data_store: "数据存储",
@@ -304,8 +305,13 @@ export const executionFactoryZhCN = {
       ioUndeclared: "未声明",
       missingTitle: "建议补齐后再开放给 Agent 自动调用",
       emptyIntent: "暂未补充业务用途，Agent 只能基于名称和技术 schema 推断使用方式。",
+      dimensions: {
+        businessIntent: "业务用途",
+        inputSemantics: "输入语义",
+        outputSemantics: "输出语义",
+      },
     },
-    // 卡片徽标位放不下「Stream（Streamable HTTP）」，这里只要动词。
+    // The card badge cannot fit Stream (Streamable HTTP), so use only the verb here.
     mcpModeShort: {
       sse: "SSE",
       stream: "Stream",
@@ -812,8 +818,8 @@ export const executionFactoryZhCN = {
     workbenchDeleteFunctionConfirmTitle: "删除函数",
     workbenchDeleteFunctionConfirmContent:
       '确定删除函数"{{name}}"吗？删除后不可恢复，正在使用它的 Agent 将无法再调用。',
-    // 沙箱那头每次执行都会清空安装目录和 pip 缓存后重装（executor 的
-    // session_config_sync_service.sync 无条件 reset），不是只有首次慢，别写成「首次」。
+    // Every sandbox execution clears installation directories and pip cache before reinstalling
+    // because executor session_config_sync_service.sync resets unconditionally. It is not slow only the first time.
     workbenchInstallingDependencies: "正在沙箱里安装依赖，每次运行都会重装，大包会比较慢…",
     workbenchLeaveConfirmTitle: "放弃未保存的改动？",
     workbenchLeaveConfirmDescription:
@@ -909,7 +915,65 @@ export const executionFactoryZhCN = {
       "该文档包含 {{count}} 个接口，保存后将批量注册 {{count}} 个算子。若只需注册一个算子，请只保留目标接口。",
     openapiVersion31Hint:
       "检测到 OpenAPI 3.1 文档。若保存失败，可尝试改为 3.0.x 或仅保留单个接口后重试。",
+    openapiTemplate: {
+      operatorDescription: "\u8bf7\u63cf\u8ff0\u7b97\u5b50\u7684\u529f\u80fd\u4e0e\u7528\u9014",
+      operatorSummary: "\u6267\u884c\u7b97\u5b50",
+      operatorTitle: "\u793a\u4f8b\u7b97\u5b50 API",
+      successResponse: "\u6210\u529f",
+      toolboxSummary: "\u793a\u4f8b\u5de5\u5177",
+      toolboxTitle: "\u793a\u4f8b\u5de5\u5177\u7bb1 API",
+    },
     submitErrorTitle: "保存失败",
+    quickApiUrlSubmitError:
+      "保存失败：未能提交有效的服务地址。请检查 cURL 命令中的完整 URL，并重新点击“识别接口信息”后再保存。{{detailSuffix}}",
+    quickApiUrlSubmitErrorDetailSuffix: " 后端返回：{{detail}}",
+    serviceErrors: {
+      existingToolboxMissingId: "已选择使用已有工具集，但未提交工具集 ID，请重新选择。",
+      newToolboxNameRequired: "请填写新工具集名称。",
+      openApiImportAllFailed: "未能从 OpenAPI 文档导入任何工具。",
+      openApiSpecRequired: "请上传 OpenAPI 3.0 规范文件。",
+      operatorSyncNameRequired: "同步发布算子时请填写算子名称。",
+      targetToolboxMissing: "未能确定目标工具集。",
+      toolCreateFailed: "工具创建失败",
+    },
+    curlErrors: {
+      apiUrlInvalid: "API 地址格式无效。",
+      apiUrlRequired: "请填写 API 地址。",
+      commandRequired: "请输入以 curl 开头的命令，或直接切换到表单模式填写。",
+      fileBodyUnsupported: "暂不支持读取本地文件，请粘贴文件内容。",
+      headerFormat: '请求头应为 "Name: Value" 格式。',
+      httpOnlyApiUrl: "仅支持 http 或 https 地址。",
+      httpOnlyCurl: "仅支持 http/https 地址。",
+      invalidJson: "请求体不是合法 JSON，请检查引号、逗号或转义字符。",
+      invalidUrlFormat: "URL 格式无效，请检查空格、引号或特殊字符是否转义。",
+      missingUrl: "未识别到 http/https 地址，请检查是否遗漏 URL。",
+      multipleUrls: "检测到多个 URL，请保留一个接口地址。",
+      unclosedQuote: "cURL 中存在未闭合的引号。",
+    },
+    openApiDocumentErrors: {
+      componentRefMissing:
+        "\u6587\u6863\u5f15\u7528\u4e86\u672a\u5b9a\u4e49\u7684\u7ec4\u4ef6 {{ref}}\u3002\u8bf7\u8865\u9f50 components \u6bb5\uff0c\u6216\u6539\u4e3a\u5185\u8054\u54cd\u5e94\u5b9a\u4e49\u3002",
+      infoRequired: "info \u5fc5\u987b\u4e3a\u5bf9\u8c61\uff0c\u4e14\u5305\u542b title \u4e0e version\u3002",
+      infoTitleRequired: "info.title \u4e0d\u80fd\u4e3a\u7a7a\u3002",
+      infoVersionRequired: "info.version \u4e0d\u80fd\u4e3a\u7a7a\u3002",
+      invalidJsonOrYaml:
+        "OpenAPI \u6587\u4ef6\u4e0d\u662f\u6709\u6548\u7684 JSON \u6216 YAML\uff1a{{detail}}",
+      manualServerRequired:
+        "OpenAPI \u672a\u58f0\u660e servers\uff0c\u8bf7\u5728\u8868\u5355\u4e2d\u586b\u5199\u5b8c\u6574\u7684 HTTP(S) \u670d\u52a1\u5730\u5740\u3002",
+      missingOpenApiField:
+        "\u7f3a\u5c11 OpenAPI \u9876\u5c42\u5b57\u6bb5 openapi\u3002\u7f16\u8f91\u9875\u5e94\u5c55\u793a\u5b8c\u6574\u6587\u6863\uff0c\u800c\u4e0d\u662f api_spec \u7247\u6bb5\u3002",
+      operationDescriptionTooLong:
+        "\u63a5\u53e3 {{method}} {{path}} \u7684 description \u8d85\u8fc7 {{limit}} \u5b57\u7b26\u3002\u8bf7\u7f29\u77ed\u540e\u518d\u4fdd\u5b58\u3002",
+      operationSummaryRequired:
+        "\u63a5\u53e3 {{method}} {{path}} \u7f3a\u5c11 summary\uff0c\u8bf7\u8865\u5145\u540e\u518d\u4fdd\u5b58\u3002",
+      operationsRequired: "paths \u4e2d\u672a\u627e\u5230\u6709\u6548\u7684 HTTP \u63a5\u53e3\u5b9a\u4e49\u3002",
+      pathsRequired: "\u7f3a\u5c11\u5fc5\u586b\u9876\u5c42\u5b57\u6bb5 paths\u3002",
+      relativeServerRequiresManualUrl:
+        "OpenAPI servers[0].url \u662f\u76f8\u5bf9\u8def\u5f84 {{serverUrl}}\uff0c\u8bf7\u586b\u5199\u5b8c\u6574\u670d\u52a1\u5730\u5740\u3002",
+      serverUrlRequired: "servers[0].url \u4e0d\u80fd\u4e3a\u7a7a\u3002",
+      specRequired: "OpenAPI \u89c4\u8303\u4e0d\u80fd\u4e3a\u7a7a\u3002",
+      topLevelObjectRequired: "OpenAPI \u6587\u6863\u9876\u5c42\u5fc5\u987b\u662f\u5bf9\u8c61\u3002",
+    },
     installedStateSyncFailed: "安装状态同步失败，已安装标记可能不准确。",
     loadMoreFailed: "加载更多失败，请重试。",
     routeMigrated: "页面地址已更新，已为您跳转到新的能力管理入口。",

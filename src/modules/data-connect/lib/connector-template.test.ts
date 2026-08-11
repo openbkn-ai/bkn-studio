@@ -5,12 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import i18n from "@/app/locales/i18n";
 import {
   isCertifiedConnectorType,
   filterConnectorTypes,
   getConnectorConfigDefaults,
+  getDataSourceFamilyMeta,
   getConnectorFieldPlaceholder,
   getConnectorTemplateMeta,
   getConnectorTypeTags,
@@ -40,6 +42,10 @@ const sqlServerConnector: DataConnectConnectorType = {
 };
 
 describe("connector-template · SQL Server", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("zh-CN");
+  });
+
   it("provides SQL Server defaults and field guidance", () => {
     expect(getConnectorConfigDefaults(sqlServerConnector)).toEqual({ port: 1433 });
     expect(getConnectorFieldPlaceholder("port", "integer", "sqlserver")).toBe(
@@ -138,6 +144,30 @@ describe("connector-template · SQL Server", () => {
         "structured",
       ),
     ).toEqual(["关系型数据库", "搜索引擎"]);
+  });
+
+  it("resolves template copy from the active English locale", async () => {
+    await i18n.changeLanguage("en-US");
+
+    expect(getDataSourceFamilyMeta("structured")).toMatchObject({
+      label: "Structured and semi-structured data",
+    });
+    expect(getConnectorTemplateMeta(sqlServerConnector).description).toBe(
+      "Connect Microsoft SQL Server relational databases.",
+    );
+    expect(getConnectorFieldPlaceholder("port", "integer", "sqlserver")).toBe(
+      "For example: 1433",
+    );
+    expect(resolveConnectorFieldControl("ssl_mode", "string")).toEqual({
+      kind: "select",
+      options: [
+        { label: "Disable", value: "disable" },
+        { label: "Prefer", value: "prefer" },
+        { label: "Require", value: "require" },
+        { label: "Verify CA", value: "verify-ca" },
+        { label: "Verify full", value: "verify-full" },
+      ],
+    });
   });
 });
 

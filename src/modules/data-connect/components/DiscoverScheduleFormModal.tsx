@@ -53,7 +53,7 @@ export type DiscoverScheduleFormModalSubmitPayload = {
   strategy: DataConnectDiscoverStrategy;
 };
 
-/** Vega discover-schedule 使用标准 5 段 cron：分 时 日 月 周 */
+/** Vega discover-schedule uses standard five-part cron: minute, hour, day, month, weekday. */
 const CRON_PRESETS = [
   { key: "daily2am", value: "0 2 * * *" },
   { key: "hourly", value: "0 * * * *" },

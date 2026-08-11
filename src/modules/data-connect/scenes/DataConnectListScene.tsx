@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ApiOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Input, Select, Space } from "antd";
+import { ApiOutlined, EllipsisOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Alert, Dropdown, Input, Select, Space, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +17,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -50,7 +51,7 @@ export function DataConnectListScene({
   onOpenDiscovers,
 }: DataConnectListSceneProps) {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const danger = useDangerDelete();
   const navigate = useNavigate();
   const { pageState, query, reset, setKeyword, setPagination } = usePageState();
@@ -90,6 +91,14 @@ export function DataConnectListScene({
     () => new Map(connectorTypes.map((item) => [item.type, item.name])),
     [connectorTypes],
   );
+  const canModifyCatalog = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "catalog:modify",
+  });
+  const canDeleteCatalog = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "catalog:delete",
+  });
 
   const loadConnectorTypes = async () => {
     const nextTypes = await listDataConnectConnectorTypes();
@@ -124,6 +133,187 @@ export function DataConnectListScene({
   useEffect(() => {
     void loadData();
   }, [loadData, refreshVersion]);
+
+  const openDetail = useCallback((record: DataConnectRecord) => {
+    onOpenDetail?.(record.id);
+    setDetailRecordId(record.id);
+  }, [onOpenDetail]);
+
+  const openDiscovers = useCallback((record: DataConnectRecord) => {
+    if (onOpenDiscovers) {
+      onOpenDiscovers(record.id);
+      return;
+    }
+    void navigate(`/data-connect/discover?catalogId=${record.id}`);
+  }, [navigate, onOpenDiscovers]);
+
+  const openEdit = useCallback((record: DataConnectRecord) => {
+    if (onEdit) {
+      onEdit(record.id);
+      return;
+    }
+    void navigate(`/data-connect/${record.id}/edit`);
+  }, [navigate, onEdit]);
+
+  const testConnection = useCallback((record: DataConnectRecord) => {
+    void (async () => {
+      try {
+        await testDataConnectRecord(record.id);
+        message.success(t("dataConnect.testConnectionSuccess"));
+      } catch (error) {
+        void message.error(extractRequestErrorMessage(error));
+      } finally {
+        setRefreshVersion((version) => version + 1);
+      }
+    })();
+  }, [message, t]);
+
+  const toggleEnabled = useCallback((record: DataConnectRecord) => {
+    const nextEnabled = !record.enabled;
+    void modal.confirm({
+      title: nextEnabled
+        ? t("dataConnect.enableConfirmTitle")
+        : t("dataConnect.disableConfirmTitle"),
+      content: nextEnabled
+        ? t("dataConnect.enableConfirmDescription", { name: record.name })
+        : t("dataConnect.disableConfirmDescription", { name: record.name }),
+      okText: nextEnabled ? t("common.enabled") : t("common.disabled"),
+      cancelText: t("common.cancel"),
+      okButtonProps: nextEnabled ? undefined : { danger: true },
+      onOk: async () => {
+        try {
+          await setDataConnectRecordEnabled(record.id, nextEnabled);
+          message.success(t("common.success"));
+          await loadData();
+        } catch (error) {
+          void message.error(extractRequestErrorMessage(error));
+          throw error;
+        }
+      },
+    });
+  }, [loadData, message, modal, t]);
+
+  const deleteRecord = useCallback((record: DataConnectRecord) => {
+    void (async () => {
+      let indexCount = 0;
+      try {
+        indexCount = (await catalogBlastRadius(record.id)).indexCount;
+      } catch {
+        indexCount = 0;
+      }
+      const highRisk = indexCount > 0;
+      danger.open({
+        title: t("dataConnect.deleteConfirmTitle"),
+        targetName: record.name,
+        requireTypeName: highRisk,
+        impact: (
+          <DeleteImpactAlert
+            detail={
+              highRisk
+                ? t("dataConnect.dangerDelete.catalogImpact", {
+                    name: record.name,
+                    count: indexCount,
+                  })
+                : t("dataConnect.dangerDelete.catalogEmpty", {
+                    name: record.name,
+                  })
+            }
+            warning={highRisk ? t("dataConnect.dangerDelete.impactWarning") : undefined}
+          />
+        ),
+        onOk: async () => {
+          try {
+            await deleteDataConnectRecord(record.id);
+          } catch (error) {
+            const running = runningIdsFromError(error);
+            void message.error(
+              running
+                ? t("dataConnect.dangerDelete.hasRunning")
+                : extractRequestErrorMessage(error),
+            );
+            throw error;
+          }
+          void message.success(t("common.success"));
+          await loadData();
+        },
+      });
+    })();
+  }, [danger, loadData, message, t]);
+
+  const buildActionMoreMenu = useCallback((record: DataConnectRecord): MenuProps => {
+    const items: NonNullable<MenuProps["items"]> = [
+      {
+        key: "detail",
+        label: t("common.detail"),
+      },
+      {
+        key: "discover",
+        label: t("dataConnect.discoverManage"),
+      },
+    ];
+
+    if (canModifyCatalog) {
+      items.push({
+        key: "edit",
+        label: t("common.edit"),
+      });
+      items.push({
+        key: "test",
+        label: t("common.testConnection"),
+      });
+      items.push({
+        key: "toggle",
+        label: record.enabled ? t("common.disabled") : t("common.enabled"),
+      });
+    }
+    if (canDeleteCatalog) {
+      items.push({
+        danger: true,
+        key: "delete",
+        label: t("common.delete"),
+      });
+    }
+
+    return {
+      items,
+      onClick: ({ key, domEvent }) => {
+        domEvent.stopPropagation();
+        if (key === "detail") {
+          openDetail(record);
+          return;
+        }
+        if (key === "discover") {
+          openDiscovers(record);
+          return;
+        }
+        if (key === "edit") {
+          openEdit(record);
+          return;
+        }
+        if (key === "test") {
+          testConnection(record);
+          return;
+        }
+        if (key === "toggle") {
+          toggleEnabled(record);
+          return;
+        }
+        if (key === "delete") {
+          deleteRecord(record);
+        }
+      },
+    };
+  }, [
+    canDeleteCatalog,
+    canModifyCatalog,
+    deleteRecord,
+    openDetail,
+    openDiscovers,
+    openEdit,
+    t,
+    testConnection,
+    toggleEnabled,
+  ]);
 
   const columns: ColumnsType<DataConnectRecord> = [
     {
@@ -162,159 +352,25 @@ export function DataConnectListScene({
     {
       key: "actions",
       title: t("common.actions"),
-      render: (_, record) => (
-        <Space className={styles.actionGroup}>
-          <AppButton
-            className={styles.actionLink}
-            onClick={() => {
-              onOpenDetail?.(record.id);
-              setDetailRecordId(record.id);
-            }}
-            type="link"
-          >
-            {t("common.detail")}
-          </AppButton>
-          <AppButton
-            className={styles.actionLink}
-            onClick={() => {
-              if (onOpenDiscovers) {
-                onOpenDiscovers(record.id);
-                return;
-              }
-              void navigate(`/data-connect/discover?catalogId=${record.id}`);
-            }}
-            type="link"
-          >
-            {t("dataConnect.discoverManage")}
-          </AppButton>
-          <PermissionGate permissions="catalog:modify">
-            <AppButton
-              className={styles.actionLink}
-              onClick={() => {
-                if (onEdit) {
-                  onEdit(record.id);
-                  return;
-                }
-                void navigate(`/data-connect/${record.id}/edit`);
-              }}
-              type="link"
-            >
-              {t("common.edit")}
-            </AppButton>
-          </PermissionGate>
-          <PermissionGate permissions="catalog:modify">
-            <AppButton
-              className={styles.actionLink}
-              onClick={() => {
-                void (async () => {
-                  try {
-                    await testDataConnectRecord(record.id);
-                    message.success(t("dataConnect.testConnectionSuccess"));
-                  } catch (error) {
-                    void message.error(extractRequestErrorMessage(error));
-                  } finally {
-                    setRefreshVersion((version) => version + 1);
-                  }
-                })();
-              }}
-              type="link"
-            >
-              {t("common.testConnection")}
-            </AppButton>
-          </PermissionGate>
-          <PermissionGate permissions="catalog:modify">
-            <AppButton
-              className={styles.actionLink}
-              onClick={() => {
-                const nextEnabled = !record.enabled;
-                void modal.confirm({
-                  title: nextEnabled
-                    ? t("dataConnect.enableConfirmTitle")
-                    : t("dataConnect.disableConfirmTitle"),
-                  content: nextEnabled
-                    ? t("dataConnect.enableConfirmDescription", { name: record.name })
-                    : t("dataConnect.disableConfirmDescription", { name: record.name }),
-                  okText: nextEnabled ? t("common.enabled") : t("common.disabled"),
-                  cancelText: t("common.cancel"),
-                  okButtonProps: nextEnabled ? undefined : { danger: true },
-                  onOk: async () => {
-                    try {
-                      await setDataConnectRecordEnabled(record.id, nextEnabled);
-                      message.success(t("common.success"));
-                      await loadData();
-                    } catch (error) {
-                      void message.error(extractRequestErrorMessage(error));
-                      throw error;
-                    }
-                  },
-                });
-              }}
-              type="link"
-            >
-              {record.enabled ? t("common.disabled") : t("common.enabled")}
-            </AppButton>
-          </PermissionGate>
-          <PermissionGate permissions="catalog:delete">
-            <AppButton
-              className={[styles.actionLink, styles.actionDanger].join(" ")}
-              danger
-              onClick={() => {
-                void (async () => {
-                  let indexCount = 0;
-                  try {
-                    indexCount = (await catalogBlastRadius(record.id)).indexCount;
-                  } catch {
-                    indexCount = 0;
-                  }
-                  const highRisk = indexCount > 0;
-                  danger.open({
-                    title: t("dataConnect.deleteConfirmTitle"),
-                    targetName: record.name,
-                    requireTypeName: highRisk,
-                    impact: (
-                      <DeleteImpactAlert
-                        detail={
-                          highRisk
-                            ? t("dataConnect.dangerDelete.catalogImpact", {
-                                name: record.name,
-                                count: indexCount,
-                              })
-                            : t("dataConnect.dangerDelete.catalogEmpty", {
-                                name: record.name,
-                              })
-                        }
-                        warning={
-                          highRisk
-                            ? t("dataConnect.dangerDelete.impactWarning")
-                            : undefined
-                        }
-                      />
-                    ),
-                    onOk: async () => {
-                      try {
-                        await deleteDataConnectRecord(record.id);
-                      } catch (error) {
-                        const running = runningIdsFromError(error);
-                        void message.error(
-                          running
-                            ? t("dataConnect.dangerDelete.hasRunning")
-                            : extractRequestErrorMessage(error),
-                        );
-                        throw error;
-                      }
-                      void message.success(t("common.success"));
-                      await loadData();
-                    },
-                  });
-                })();
-              }}
-              type="link"
-            >
-              {t("common.delete")}
-            </AppButton>
-          </PermissionGate>
-        </Space>
-      ),
+      align: "center",
+      width: 84,
+      render: (_, record) => {
+        const moreMenu = buildActionMoreMenu(record);
+
+        return (
+          <Space className={styles.actionGroup}>
+            <Dropdown menu={moreMenu} trigger={["click"]}>
+              <AppButton
+                aria-label={t("dataConnect.moreActions")}
+                className={[styles.actionLink, styles.actionMore].join(" ")}
+                icon={<EllipsisOutlined />}
+                onClick={(event) => event.stopPropagation()}
+                type="link"
+              />
+            </Dropdown>
+          </Space>
+        );
+      },
     },
   ];
 

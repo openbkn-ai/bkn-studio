@@ -14,8 +14,8 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import styles from "./EntityListRail.module.css";
 
 /**
- * 卡片右下角的小标签。抽成组件而不是导出类名，是为了让两个列表的出入参标签
- * 长得一模一样——各自在自己的 css module 里画一份时，两边的字号和底色会漂。
+ * Small tags at the lower right of cards. This is a component rather than an exported class so
+ * input/output tags look identical in both lists; separate CSS-module implementations would drift in type size and fill.
  */
 export function EntityListTag({
   children,
@@ -32,36 +32,36 @@ export function EntityListTag({
 }
 
 export type EntityListRailItem = {
-  /** 名字右侧的定宽徽标：HTTP 动词 / 函数语言。 */
+  /** Fixed-width badge to the right of the name: HTTP method or function language. */
   badge?: ReactNode;
   id: string;
-  /** 停用态：名字压暗，不打开也看得出来。 */
+  /** Disabled state dims the name so it is visible without opening the item. */
   muted?: boolean;
   name: ReactNode;
-  /** 不传就不画开关那一行（只读场景）。 */
+  /** Omit to hide the switch row in read-only views. */
   status?: {
     checked: boolean;
     disabled?: boolean;
-    /** 开关右侧文案，不进权限门禁——只读用户也要看得到状态。 */
+    /** Label to the right of the switch; do not gate it because read-only users must see status. */
     label: ReactNode;
-    /** 不传表示只展示状态、不给切换入口。 */
+    /** Omit to display status without a toggle entry point. */
     onChange?: () => void;
   };
-  /** 第二行右侧的小标签：in / out 计数、未保存等。 */
+  /** Small tags on the right of the second row, such as input/output counts and unsaved state. */
   tags?: ReactNode;
 };
 
 type EntityListRailProps = {
   activeId?: string | null;
   /**
-   * 列表区自绘内容，给不了扁平卡片的场景用（技能包的文件树有层级，压平就没了）。
-   * 传了就顶掉 items，标题 / 搜索 / 底栏这些外壳照旧，三处列表栏才长得一样。
+   * Custom list-area content for cases that cannot use flat cards, such as a hierarchical skill
+   * file tree. When supplied, it replaces items while title, search, and footer remain shared.
    */
   children?: ReactNode;
   emptyText?: ReactNode;
-  /** 固定底栏，不跟着列表滚（函数工作台的「新建函数」）。 */
+  /** Fixed footer that does not scroll with the list, such as function workbench's Create Function. */
   footer?: ReactNode;
-  /** inline = 标题和筛选框同排（右栏头也只有一行时用，两条头线才对得上）。 */
+  /** inline places title and filter on one row when the right header has one row too, aligning their header dividers. */
   headLayout?: "inline" | "stacked";
   icon?: ReactNode;
   items?: EntityListRailItem[];
@@ -74,18 +74,18 @@ type EntityListRailProps = {
   };
   selectable?: boolean;
   selectedIds?: string[];
-  /** 传了就把状态开关裹进权限门禁；状态文案不裹。 */
+  /** When provided, wraps the status switch in a permission guard; the status label remains visible. */
   statusPermission?: string;
-  /** 已含计数的完整标题。 */
+  /** Complete title including its count. */
   title: ReactNode;
 };
 
 /**
- * 左侧实体列表栏。工具箱的 HTTP 工具列表和函数工作台的函数列表共用一套卡片，
- * 两边各画一份时同一个列表会长出两种样式（边框、行数、操作位都不一样）。
+ * Left entity-list rail. HTTP-tool lists in toolboxes and function lists in the workbench share
+ * one card design; separate implementations would give the same list different borders, row counts, and action placement.
  *
- * 组件只管「列表」：标题、搜索、卡片、固定底栏。批量操作条不在这里——两个页面
- * 都把它放在列表区上方的全宽处，窄侧栏放不下会换行。
+ * The component owns only the list: title, search, cards, and fixed footer. Bulk-action bars live
+ * above the full-width list area in both pages because narrow rails would wrap them.
  */
 export function EntityListRail({
   activeId,

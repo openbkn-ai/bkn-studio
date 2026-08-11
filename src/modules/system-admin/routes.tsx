@@ -45,7 +45,7 @@ function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
-// 路由级守卫:无权限直接渲染 403,被守卫页面不 mount(因而不触发其拉数据副作用)。
+// Route-level guards render 403 when unauthorized, so guarded pages do not mount or trigger data-fetching side effects.
 function guarded(permissions: readonly string[], element: ReactNode) {
   return (
     <RequirePermission permissions={[...permissions]}>
@@ -116,8 +116,8 @@ export const systemAdminRoutes: RouteObject[] = [
         titleKey: "systemAdmin.objectGrants.createPageTitle",
       },
     },
-    // 新建授权页只有一件事可做:发对象授权。列表页放行只读审查者(admin-authz:view),
-    // 这里不放——进来也只能看着一个被 PermissionGate 隐掉的提交按钮。
+    // The create-grant page can only issue object grants. List pages allow read-only reviewers with
+    // admin-authz:view, but this route requires grant permission because submitting is its only workflow.
     element: gatedByCapability(
       CAPABILITIES.PERM_OBJECT_LEVEL,
       [authzPoints.grant],

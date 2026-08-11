@@ -170,7 +170,7 @@ export function CreateMenu({
     setCapabilityWizardOpen(true);
   };
 
-  // HTTP API：进向导先选「添加 API / 导入 API」两卡，不锁死单一模式。
+  // HTTP API: enter the wizard through Add API or Import API cards rather than locking a single mode.
   const openHttpApiWizard = () => {
     setCapabilityAllowedModes(HTTP_API_CAPABILITY_MODES);
     setCapabilityInitialMode(undefined);
@@ -209,8 +209,8 @@ export function CreateMenu({
         items: capabilityMenuItems,
         onClick: ({ key }) => handleCapabilityAction(key as CapabilityCreateMenuAction),
       }}
-      /* 菜单项是「标题 + 一行说明」的两行结构，左对齐才能让四条说明文字起始于同一列；
-         右对齐时每项宽度不同，说明文字的左缘会参差。 */
+      /* Menu items have a title and one-line description. Left alignment gives all four descriptions
+         the same starting column; right alignment makes their left edges uneven across item widths. */
       placement="bottomLeft"
       trigger={["click"]}
     >

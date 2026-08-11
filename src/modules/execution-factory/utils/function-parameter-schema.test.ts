@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-// 真机抓的 api_spec：向 10.211.55.4 建了个带嵌套参数的函数工具再 GET 回来的原样响应。
+// api_spec captured from a real environment after creating a function tool with nested parameters and fetching it again.
 import probeApiSpec from "./__fixtures__/function-api-spec.probe.json";
 import {
   buildJsonSchemaFromParameters,
@@ -49,7 +49,7 @@ describe("parseFunctionParametersFromApiSpec", () => {
       "id",
       "score",
     ]);
-    // stdout / stderr / metrics 是沙箱回包字段，不是用户声明的出参。
+    // stdout, stderr, and metrics are sandbox response fields, not user-declared outputs.
     expect(outputs?.some((item) => ["stdout", "stderr", "metrics"].includes(item.name ?? ""))).toBe(
       false,
     );

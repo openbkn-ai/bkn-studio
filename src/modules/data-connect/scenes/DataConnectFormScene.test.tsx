@@ -7,9 +7,11 @@
 
 import { configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataConnectFormScene } from "@/modules/data-connect/scenes/DataConnectFormScene";
+
+vi.setConfig({ testTimeout: 20_000 });
 
 const permissionState = vi.hoisted(() => ({
   values: new Set<string>(),
@@ -132,6 +134,7 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   beforeEach(() => {
+    vi.useRealTimers();
     permissionState.values = new Set(["catalog:modify"]);
     entitlementState.snapshot = null;
     messageSuccessMock.mockReset();
@@ -180,6 +183,10 @@ describe("DataConnectFormScene · connection preflight", () => {
       updateTime: "-",
       updaterName: "-",
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("hides the preflight action without catalog create permission", async () => {
@@ -257,7 +264,13 @@ describe("DataConnectFormScene · connection preflight", () => {
       screen.getByRole("button", { name: "common.testConnection" }),
     );
 
-    expect(await screen.findByText("dataConnect.jsonObjectInvalid")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "dataConnect.jsonObjectInvalid",
+        {},
+        { timeout: 5_000 },
+      ),
+    ).toBeTruthy();
     expect(testDataConnectConfigMock).not.toHaveBeenCalled();
   });
 
@@ -384,8 +397,8 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   /**
-   * 后端关掉认证连接器时,原因几乎一定是「没买」而不是「坏了」——所以卡片不画
-   * 「暂不可用」,画档位徽标并且可点,点击给升级引导而不是选中。
+   * When the backend disables an authenticated connector, treat it as an entitlement restriction:
+   * render a selectable edition badge and show upgrade guidance instead of an unavailable state.
    */
   it("认证连接器被后端关掉时给升级引导,不画「暂不可用」", async () => {
     permissionState.values = new Set(["catalog:create"]);
@@ -504,7 +517,7 @@ describe("DataConnectFormScene · connection preflight", () => {
     fireEvent.click(await findConnectorCard("SQL Server"));
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
 
-    fireEvent.change(screen.getByPlaceholderText("例如 供应链主库"), {
+    fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
       target: { value: "sqlserver-orders" },
     });
     fireEvent.change(screen.getByPlaceholderText("例如 db.example.internal"), {

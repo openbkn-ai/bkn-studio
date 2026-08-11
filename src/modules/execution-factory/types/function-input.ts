@@ -6,8 +6,8 @@
  */
 
 /**
- * 契约字段名跟后端 ParameterDef 对齐（sub_parameters 递归自引用）。
- * 后端约束：sub_parameters 只在 object/array 上有意义，array 必须恰好 1 个子项。
+ * Contract field names align with backend ParameterDef, where sub_parameters is recursively self-referential.
+ * Backend constraint: sub_parameters applies only to objects and arrays, and arrays require exactly one child.
  */
 export type FunctionParameterDef = {
   name?: string;

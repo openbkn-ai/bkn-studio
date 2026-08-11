@@ -82,7 +82,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   const [authorizeRecord, setAuthorizeRecord] = useState<LlmModel | null>(null);
   const userRoles = runtimeConfig.currentUser.roles;
   const userPermissions = runtimeConfig.currentUser.permissions;
-  // 真实管理员判定复用启动时 /me/permissions.is_admin(已回填 currentUser),不再二次拉取。
+  // Real administrator detection reuses /me/permissions.is_admin hydrated into currentUser at startup; do not fetch again.
   const effectiveAdmin =
     isAdmin || runtimeConfig.currentUser.isAdmin || hasModelResourcesAdminRole(userRoles);
   const canManageLargeModel = hasPermissions({
@@ -210,7 +210,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     }
   };
 
-  // 真实管理员：prop / roles(含 super_admin) / currentUser.isAdmin，或该项 operations 含 modify。
+  // Real administrator: prop, roles including super_admin, currentUser.isAdmin, or an item operation set containing modify.
   const canModify = (record: LlmModel) =>
     effectiveAdmin || Boolean(record.operations?.includes("modify"));
   const canSetDefault = (record: LlmModel) => canModify(record) && !record.default;
@@ -332,7 +332,8 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
       title: t("modelResources.models.columns.operation"),
       dataIndex: "operation",
       fixed: "left",
-      width: 72,
+      align: "center",
+      width: 96,
       render: (_value, record) => (
         <Dropdown
           menu={{
@@ -359,6 +360,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
         >
           <AppButton
             aria-label={t("modelResources.models.columns.operation")}
+            className={styles.actionMore}
             icon={<EllipsisOutlined />}
             type="text"
             onClick={(event) => event.stopPropagation()}
@@ -376,7 +378,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
       title: t("modelResources.models.columns.baseModel"),
       dataIndex: "modelSeries",
       width: 140,
-      render: (value?: string) => getModelSeriesLabel(value),
+      render: (value?: string) => getModelSeriesLabel(value, t),
     },
     {
       title: t("modelResources.models.columns.document"),
@@ -399,13 +401,13 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     {
       title: t("modelResources.models.columns.maximumContext"),
       dataIndex: "maxModelLen",
-      width: 110,
+      width: 150,
       render: (value?: number) => (value ? `${value} K` : "--"),
     },
     {
       title: t("modelResources.models.columns.parameterQuantity"),
       dataIndex: "modelParameters",
-      width: 100,
+      width: 150,
       render: (value?: number) => (value ? `${value} B` : "--"),
     },
     {

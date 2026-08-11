@@ -14,9 +14,9 @@ import {
 } from "@/modules/knowledge-network/services/context-loader.service";
 
 /**
- * 本客户端自己驱动的受管生命周期工具，供文档与测试对照。
+ * Managed lifecycle tools driven by this client, kept explicit for docs and tests.
  *
- * 注意：这**不是**过滤名单——过滤按前缀走，见 isPlatformManagedTool。
+ * This is not the filtering list; filtering uses the prefix in isPlatformManagedTool.
  */
 export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
   "bkn_start_interaction",
@@ -24,23 +24,19 @@ export const LIFECYCLE_TOOL_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * 平台侧工具前缀。生命周期与业务溯源工具一律 `bkn_` 开头（bkn_start_interaction /
- * bkn_finish_interaction / bkn_causality / bkn_get_receipt / bkn_retry_operation …），
- * 业务工具一律不带前缀（search_schema / run_sql / query_object_instance …）。
+ * Platform-side tool prefix. Lifecycle and trace tools use `bkn_`, while
+ * business tools do not.
  */
 const PLATFORM_TOOL_PREFIX = "bkn_";
 
 /**
- * 这个工具是不是平台侧管账的。
+ * Whether this tool is managed by the platform side.
  *
- * 判定按前缀而不是列名单：平台侧工具集随后端演进反复变动（#618 期间一度扩到十余个
- * 溯源工具，之后又裁回 bkn_start_interaction / bkn_finish_interaction 两个），
- * 列名单必漏。
+ * Prefix matching is deliberate because the platform tool surface changes with
+ * backend releases and an explicit list would drift.
  *
- * 命中之后**不是**把工具藏起来，而是交给 buildAgentTools 决定怎么执行：
- * bkn_start_interaction / bkn_finish_interaction 绑到客户端这一轮交互上（模型调 start
- * 拿回的就是本轮那条，不会另开一条去撞 Core 的 active interaction 唯一约束），其余
- * 溯源类读工具直通后端。屏蔽掉整片前缀会连「结束本轮交互」这项能力一起拿走。
+ * Matching does not hide the tool. buildAgentTools decides whether to bind
+ * start/finish to the current client turn or pass other trace tools through.
  */
 export function isPlatformManagedTool(name: string): boolean {
   return name.startsWith(PLATFORM_TOOL_PREFIX);
@@ -66,7 +62,7 @@ export type BknLifecycle = {
   reset(): void;
 };
 
-/** 只持久化服务端下发的 conversation ID，不生成客户端身份。 */
+/** Persists only server-issued conversation IDs; no client identity is generated. */
 export type ConversationStore = {
   read(): string | null;
   write(conversationId: string): void;
@@ -87,7 +83,7 @@ export function localConversationStore(storageKey: string, legacyStorageKey?: st
     try {
       localStorage.removeItem(legacyStorageKey);
     } catch {
-      // 忽略不可用的 localStorage。
+      // Ignore unavailable localStorage.
     }
   };
   return {
@@ -103,14 +99,14 @@ export function localConversationStore(storageKey: string, legacyStorageKey?: st
       try {
         localStorage.setItem(storageKey, conversationId);
       } catch {
-        // localStorage 不可用时，内存中的 ID 仍然有效。
+        // The in-memory ID remains valid when localStorage is unavailable.
       }
     },
     clear() {
       try {
         localStorage.removeItem(storageKey);
       } catch {
-        // 忽略不可用的 localStorage。
+        // Ignore unavailable localStorage.
       }
     },
   };
@@ -132,11 +128,11 @@ export function memoryConversationStore(): ConversationStore {
 export class BknLifecycleError extends Error {
   readonly code: string;
   readonly requiredAction: string;
-  /** `interaction_in_progress` 会回带卡住的那条交互，够我们自己回收，见 beginTurn。 */
+  /** `interaction_in_progress` includes the stuck interaction id, enough for beginTurn reclamation. */
   readonly currentInteractionId: string;
 
   constructor(tool: string, code: string, message: string, requiredAction: string, currentInteractionId = "") {
-    super(message || `${tool} 失败（${code || "未知错误"}）`);
+    super(message || `${tool} failed (${code || "unknown error"})`);
     this.name = "BknLifecycleError";
     this.code = code;
     this.requiredAction = requiredAction;
@@ -161,7 +157,7 @@ function lifecycleErrorOf(tool: string, structured: unknown, fallbackText: strin
   const envelope = structured && typeof structured === "object" ? (structured as Record<string, unknown>) : {};
   const error = (envelope.error ?? {}) as LifecycleErrorPayload;
   const code = typeof error.code === "string" ? error.code : "";
-  const fallback = fallbackText || `${tool} 调用失败`;
+  const fallback = fallbackText || `${tool} call failed`;
   const message = typeof error.message === "string" ? error.message : fallback;
   const visibleMessage = code === "interaction_in_progress" ? STUCK_INTERACTION_HINT : message;
   return new BknLifecycleError(
@@ -173,19 +169,19 @@ function lifecycleErrorOf(tool: string, structured: unknown, fallbackText: strin
   );
 }
 
-/** 回收也没救回来才会看到这句——正常情况下 beginTurn 已经替用户处理掉了。 */
-const STUCK_INTERACTION_HINT = "当前会话仍有未结束的交互，自动回收失败。请清空对话后重试。";
+/** Shown only when reclamation also fails; normally beginTurn handles this. */
+const STUCK_INTERACTION_HINT = "The current conversation still has an unfinished interaction and automatic recovery failed. Clear the chat and retry.";
 
 function shouldStartNewConversation(error: unknown): boolean {
   return error instanceof BknLifecycleError && (error.code === "conversation_not_found" || error.code === "interaction_in_progress");
 }
 
 /**
- * 把上一轮残留的活跃交互终结掉，让本会话能继续开新一轮；回收不了返回 false。
+ * Finishes a stale active interaction from the previous turn so this conversation
+ * can start a new turn. Returns false if reclamation fails.
  *
- * 触发场景是上一轮没走完：刷新、关标签页、收尾请求自己失败。Core 一条 conversation
- * 只允许一个 active interaction，残留不清掉，这条会话之后每一轮都开不出来。
- * outcome 记 cancelled 而不是 completed——那一轮确实没答完，Trace 上不该记成正常结束。
+ * This covers refreshes, closed tabs, and failed finish requests. Reclaimed turns
+ * are marked cancelled because they did not complete normally.
  */
 async function reclaimStuckInteraction(session: McpSession, error: unknown): Promise<boolean> {
   if (!(error instanceof BknLifecycleError) || error.code !== "interaction_in_progress") return false;
@@ -198,7 +194,7 @@ async function reclaimStuckInteraction(session: McpSession, error: unknown): Pro
     });
     return true;
   } catch {
-    // 回收失败就交回上层换新会话，别把这一步的错误盖住原始错误。
+    // Let the caller start a new conversation; do not mask the original error.
     return false;
   }
 }
@@ -210,11 +206,11 @@ async function callLifecycleTool(
 ): Promise<Record<string, unknown>> {
   const result = await session.callTool(tool, args);
   if (isToolMissing(result.rpcError)) {
-    throw new BknLifecycleError(tool, "lifecycle_not_supported", `${tool} 未注册`, "");
+    throw new BknLifecycleError(tool, "lifecycle_not_supported", `${tool} is not registered`, "");
   }
   if (result.isError || !result.ok) throw lifecycleErrorOf(tool, result.structured, result.text);
   if (!result.structured || typeof result.structured !== "object") {
-    throw new BknLifecycleError(tool, "lifecycle_malformed", `${tool} 未返回结构化内容`, "");
+    throw new BknLifecycleError(tool, "lifecycle_malformed", `${tool} did not return structured content`, "");
   }
   return result.structured as Record<string, unknown>;
 }
@@ -235,12 +231,12 @@ export function createBknLifecycle(
 export function createBknLifecycleOn(session: McpSession, options: BknLifecycleOptions): BknLifecycle {
   const { conversationStore } = options;
   let conversationId = conversationStore.read();
-  // 「上一轮是否不支持生命周期」——只作报告用,不作短路用。见 beginTurn。
+  // Whether the previous turn lacked lifecycle support; report only, not a short circuit.
   let notSupported = false;
   let previousTurnSettled: Promise<void> = Promise.resolve();
   /**
-   * 本实例是否成功开过交互。回收残留交互只在它为 false 时做——见 beginTurn 里的说明：
-   * 同一个 kn + 面板在另一个标签页里跑着的那一轮，从这里看跟"残留"长得一模一样。
+   * Whether this instance successfully started a turn. Stale interaction
+   * reclamation only runs while false to avoid interrupting another tab.
    */
   let startedAnyTurn = false;
 
@@ -260,11 +256,8 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
       });
       try {
         await waitFor;
-        // 这里刻意不因为 notSupported 短路。「服务端没有生命周期工具」是部署态而非
-        // 会话态:页面开着的时候后端升级/重启,工具就补上了。之前一次失败就永久置位,
-        // 于是这个标签页余生所有业务调用都不带 bkn_context,每一条都稳定 conversation_required——
-        // 而那个错误的 required_action 又把模型推回 bkn_start_interaction。代价只是不支持
-        // 的部署上每轮多打一次必败的调用,换回可恢复性。
+        // Do not short-circuit on notSupported. Lifecycle support is deployment
+        // state and may appear after backend upgrades or restarts while the page is open.
         const startInteraction = (currentConversationId: string | null) => {
           const args: Record<string, unknown> = { question };
           if (currentConversationId) args.conversation_id = currentConversationId;
@@ -275,17 +268,10 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
           state = await startInteraction(conversationId);
         } catch (error) {
           if (!conversationId) throw error;
-          // 先按后端给的 required_action 回收：interaction_in_progress 会回带
-          // current_interaction_id，把那条卡住的交互 finish 掉，本会话就能继续。
-          // 上一轮没走完（刷新、关标签页、收尾请求失败）就会留下这种残留。
-          // 直接换新会话虽然也能开出一轮，但把用户的对话历史在 Trace 上拦腰截断，
-          // 还留下一条永远 active 的孤儿交互，所以回收优先、换会话兜底。
+          // Prefer backend-directed reclamation before starting a new conversation.
           //
-          // 只在本实例还没成功开过任何一轮时回收：conversation 键只按 kn + 面板取，
-          // 同一个网络在另一个标签页里开着时，那边正在跑的交互从这里看跟"残留"完全
-          // 一样，回收就是把别人答到一半的一轮掐掉。本实例开过之后再撞上，更可能是
-          // 并发而不是残留，交给换新会话处理更安全。刷新与关标签页都会重建实例，
-          // 主要场景仍然覆盖得到。
+          // Reclaim only before this instance has started any turn; after that,
+          // a collision is more likely concurrent usage than stale state.
           if (!startedAnyTurn && (await reclaimStuckInteraction(session, error))) {
             state = await startInteraction(conversationId);
           } else {
@@ -298,7 +284,7 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
         const startedConversationId = stringField(state, "conversation_id");
         const interactionId = stringField(state, "interaction_id");
         if (!startedConversationId || !interactionId) {
-          throw new BknLifecycleError("bkn_start_interaction", "lifecycle_malformed", "bkn_start_interaction 未返回会话或交互 ID", "");
+          throw new BknLifecycleError("bkn_start_interaction", "lifecycle_malformed", "bkn_start_interaction did not return conversation or interaction ID", "");
         }
         conversationId = startedConversationId;
         conversationStore.write(startedConversationId);

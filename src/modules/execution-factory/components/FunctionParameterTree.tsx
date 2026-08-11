@@ -22,7 +22,7 @@ function isNestable(type?: string) {
   return type === "object" || type === "array";
 }
 
-/** 后端校验要求 array 恰好 1 个子项；不给的话它会自作主张塞一个 string 子项。 */
+/** Backend validation requires arrays to contain exactly one child; otherwise it inserts a string child automatically. */
 function normalizeAfterTypeChange(parameter: FunctionParameterDef): FunctionParameterDef {
   if (parameter.type === "array") {
     const existing = parameter.sub_parameters?.[0];
@@ -48,7 +48,7 @@ type ParameterNodeProps = {
   onChange: (next: FunctionParameterDef) => void;
   onRemove: () => void;
   parameter: FunctionParameterDef;
-  /** array 的唯一子项由结构决定，名字和增删都不该交给用户。 */
+  /** The array's single child is structural, so users must not name, add, or remove it. */
   fixedSlot?: boolean;
 };
 

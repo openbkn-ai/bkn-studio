@@ -332,7 +332,7 @@ export function DataCatalogScene({
     if (suppressAutoSelect) {
       return (
         <EmptyStatePanel
-          description="请从左侧物理数据源树中选择一个数据连接。"
+          description={t("dataCatalog.catalog.selectPhysicalDescription")}
           icon={<DatabaseOutlined />}
           title={t("dataCatalog.title")}
         />
@@ -366,6 +366,12 @@ export function DataCatalogScene({
           collapsed={treeCollapsed}
           onRefresh={async () => {
             await loadAll();
+          }}
+          onOpenConnections={() => {
+            void navigate("/data-connect");
+          }}
+          onOpenDiscoverTasks={(catalogId) => {
+            void navigate(`/data-connect/discover${catalogId ? `?catalogId=${catalogId}` : ""}`);
           }}
           onSelectCatalog={(catalogId) => {
             const next = new URLSearchParams(searchParams);

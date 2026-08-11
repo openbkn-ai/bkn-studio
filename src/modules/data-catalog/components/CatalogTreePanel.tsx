@@ -10,7 +10,9 @@ import {
   DatabaseOutlined,
   DeleteOutlined,
   LeftOutlined,
+  LinkOutlined,
   PlusOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import { Form, Input, Modal, Tooltip } from "antd";
 import type { DataNode } from "antd/es/tree";
@@ -38,6 +40,8 @@ type CatalogTreePanelProps = {
   collapsed?: boolean;
   connectorTypes: DataConnectConnectorType[];
   onRefresh: () => Promise<void> | void;
+  onOpenConnections?: () => void;
+  onOpenDiscoverTasks?: (catalogId?: string) => void;
   onSelectCatalog: (catalogId: string) => void;
   onSelectScope?: (scope: { schema: string } | null) => void;
   onToggleCollapsed?: () => void;
@@ -76,14 +80,14 @@ function schemaKey(catalogId: string, schema: string) {
   return `schema:${catalogId}:${schema}`;
 }
 
-function catalogSchemas(catalog: CatalogRecord) {
+function catalogSchemas(catalog: CatalogRecord, locale?: string) {
   const schemas = catalog.metadata.schemas;
   if (!Array.isArray(schemas)) {
     return [];
   }
   return [...new Set(schemas.filter((schema): schema is string => typeof schema === "string" && schema.trim().length > 0))]
     .map((schema) => schema.trim())
-    .sort((left, right) => left.localeCompare(right, "zh-CN"));
+    .sort((left, right) => left.localeCompare(right, locale));
 }
 
 export function CatalogTreePanel({
@@ -92,6 +96,8 @@ export function CatalogTreePanel({
   collapsed = false,
   connectorTypes,
   onRefresh,
+  onOpenConnections,
+  onOpenDiscoverTasks,
   onSelectCatalog,
   onSelectScope,
   onToggleCollapsed,
@@ -99,7 +105,7 @@ export function CatalogTreePanel({
   discoveringCatalogIds,
   selection,
 }: CatalogTreePanelProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { message, modal } = useAppServices();
   const [keyword, setKeyword] = useState("");
   const [expandedKeys, setExpandedKeys] = useState<string[]>([PHYSICAL_GROUP_KEY, LOGICAL_GROUP_KEY]);
@@ -111,6 +117,7 @@ export function CatalogTreePanel({
     () => new Map(connectorTypes.map((item) => [item.type, item.name])),
     [connectorTypes],
   );
+  const sortLocale = i18n.language || undefined;
 
   const selectedCatalogId = selection?.id;
 
@@ -167,16 +174,16 @@ export function CatalogTreePanel({
       if (leftBuiltin !== rightBuiltin) {
         return leftBuiltin - rightBuiltin;
       }
-      return left.name.localeCompare(right.name, "zh-CN");
+      return left.name.localeCompare(right.name, sortLocale);
     });
-  }, [catalogs, query]);
+  }, [catalogs, query, sortLocale]);
 
   const treeModel = useMemo(() => {
     const metaMap = new Map<string, TreeNodeMeta>();
     const requiredExpanded = new Set<string>([PHYSICAL_GROUP_KEY]);
 
     const attachCatalogChildren = (catalog: CatalogRecord): DataNode[] | undefined => {
-      const schemas = catalogSchemas(catalog);
+      const schemas = catalogSchemas(catalog, sortLocale);
       if (schemas.length === 0) {
         return undefined;
       }
@@ -207,11 +214,11 @@ export function CatalogTreePanel({
       .map((type) => ({
         catalogs: physicalCatalogs
           .filter((catalog) => (catalog.connectorType || "unknown") === type)
-          .sort((left, right) => left.name.localeCompare(right.name, "zh-CN")),
+          .sort((left, right) => left.name.localeCompare(right.name, sortLocale)),
         key: connectorKey(type),
         label: connectorTypeNameMap.get(type) ?? type,
       }))
-      .sort((left, right) => left.label.localeCompare(right.label, "zh-CN"));
+      .sort((left, right) => left.label.localeCompare(right.label, sortLocale));
 
     const physicalChildren = physicalGroups.map((group) => {
       metaMap.set(group.key, { key: group.key, type: "connector" });
@@ -375,6 +382,7 @@ export function CatalogTreePanel({
     query,
     discoveringCatalogIds,
     selectedCatalogId,
+    sortLocale,
     t,
   ]);
 
@@ -446,6 +454,22 @@ export function CatalogTreePanel({
         }
         headerActions={
           <>
+            <Tooltip title={t("dataCatalog.catalog.goScan")}>
+              <AppButton
+                aria-label={t("dataCatalog.catalog.goScan")}
+                className={styles.treeActionBtn}
+                icon={<SearchOutlined />}
+                onClick={() => onOpenDiscoverTasks?.(selectedCatalogId)}
+              />
+            </Tooltip>
+            <Tooltip title={t("dataCatalog.catalog.goConnection")}>
+              <AppButton
+                aria-label={t("dataCatalog.catalog.goConnection")}
+                className={styles.treeActionBtn}
+                icon={<LinkOutlined />}
+                onClick={() => onOpenConnections?.()}
+              />
+            </Tooltip>
             <PermissionGate permissions="catalog:create">
               <Tooltip title={t("dataCatalog.tree.addLogical")}>
                 <AppButton

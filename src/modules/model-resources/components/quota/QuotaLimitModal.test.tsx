@@ -13,16 +13,16 @@ import { QuotaLimitModal } from "@/modules/model-resources/components/quota/Quot
 import { getModelQuotaDetail } from "@/modules/model-resources/services/quota.service";
 import type { ModelQuota } from "@/modules/model-resources/types/quota";
 
-vi.mock("react-i18next", () => ({
-  initReactI18next: {
-    type: "3rdParty",
-    init: vi.fn(),
-  },
-  useTranslation: () => ({
-    t: (key: string, values?: Record<string, string>) =>
-      values?.amount ? `${key}:${values.amount}` : key,
-  }),
-}));
+vi.mock("react-i18next", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-i18next")>();
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, values?: Record<string, string>) =>
+        values?.amount ? `${key}:${values.amount}` : key,
+    }),
+  };
+});
 
 vi.mock("@/modules/model-resources/services/quota.service", () => ({
   createModelQuota: vi.fn(),
@@ -58,6 +58,7 @@ function renderModal() {
         } as never,
         modal: {} as never,
         runtimeConfig: {} as never,
+        updateLocale: vi.fn(),
       }}
     >
       <QuotaLimitModal mode="edit" onClose={vi.fn()} open record={quotaRecord} />

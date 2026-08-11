@@ -11,8 +11,8 @@ import { listUsers } from "@/modules/system-admin/services/admin.service";
 import { buildAuditUserDirectory } from "@/modules/execution-factory/utils/audit-user-display";
 
 /**
- * 这份目录只用来把审计字段里的用户 ID 渲染成人名，一次会话内不会变。
- * 缓存 promise 而不是结果：多个组件同时挂载时也只发一次 users?limit=500。
+ * This directory only renders user IDs in audit fields as names and does not change during a session.
+ * Cache the promise rather than the result so simultaneous component mounts issue only one users?limit=500 request.
  */
 let directoryPromise: Promise<Map<string, string>> | null = null;
 
@@ -20,7 +20,7 @@ function loadDirectory(): Promise<Map<string, string>> {
   directoryPromise ??= listUsers({ skipErrorToast: true })
     .then((users) => buildAuditUserDirectory(users))
     .catch(() => {
-      // 失败不留在缓存里，下一个挂载的组件还能重试。
+      // Do not cache failures so the next mounted component can retry.
       directoryPromise = null;
       return new Map<string, string>();
     });
@@ -28,7 +28,7 @@ function loadDirectory(): Promise<Map<string, string>> {
   return directoryPromise;
 }
 
-/** 用户增删改之后调用，让下次读取重新拉取。 */
+/** Call after user creation, deletion, or update so the next read refetches. */
 export function invalidateAuditUserDirectory() {
   directoryPromise = null;
 }

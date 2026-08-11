@@ -69,6 +69,10 @@
   flex: 0 0 auto;
 }
 
+.scene :global(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
 .loadMore {
   display: flex;
   justify-content: center;

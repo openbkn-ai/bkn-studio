@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { createLeakFilter, type AgentChunk, type LeakFilterOptions } from "./agent-chat.service";
 
-/** 按给定切片喂入并 flush，返回收到的 chunks。 */
+/** Feeds provided slices, flushes, and returns received chunks. */
 function run(deltas: string[], options: LeakFilterOptions = {}): AgentChunk[] {
   const chunks: AgentChunk[] = [];
   const filter = createLeakFilter((c) => chunks.push(c), options);
@@ -90,7 +90,7 @@ describe("createLeakFilter", () => {
   });
 });
 
-/** 推理裸奔进正文的兜底：靠提示词立起 <answer> 边界，标签外一律当思考。 */
+/** Fallback when reasoning leaks into body text: the prompt establishes an <answer> boundary and treats everything outside it as reasoning. */
 describe("createLeakFilter · answer 契约", () => {
   const opts: LeakFilterOptions = { expectAnswerTag: true };
 
@@ -112,7 +112,7 @@ describe("createLeakFilter · answer 契约", () => {
   it("模型完全不守约（从没吐 <answer>）时把改道内容回放成正文，不能一轮没答案", () => {
     const chunks = run(["模型直接给了答案没打标签。"], opts);
     expect(textOf(chunks)).toBe("模型直接给了答案没打标签。");
-    // 思考区里会重复一份，但它默认折叠，可接受。
+    // Reasoning contains a duplicate, but it is collapsed by default and acceptable.
     expect(reasoningOf(chunks)).toBe("模型直接给了答案没打标签。");
   });
 

@@ -34,8 +34,8 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
-vi.mock("react-i18next", () => ({
-  initReactI18next: { init: vi.fn(), type: "3rdParty" },
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({ t: translate }),
 }));
 
@@ -70,7 +70,7 @@ function fillField(id: string, value: string) {
   fireEvent.change(node, { target: { value } });
 }
 
-/** Mirrors the screenshot: name + toolbox filled, cURL pasted, 识别接口信息 not clicked. */
+/** Mirrors the screenshot: name and toolbox filled, cURL pasted, and API detection not clicked. */
 function fillRequiredFields(curl: string) {
   fillField("curlText", curl);
   fillField("summary", "在线工具");
@@ -105,9 +105,9 @@ describe("QuickAddApiForm cURL submit", () => {
   }, 10_000);
 
   /**
-   * 回归:点过「识别接口信息」后 detectedCurlContract 不会随输入框失效,而它会整体覆盖
-   * method/serverUrl/path/parameters/requestBody。旧实现提交时只在「从没识别过」才重解析,
-   * 于是识别 A 再改成 B 提交,会静默按 A 建工具,界面上却是 B。
+   * Regression: after API detection, detectedCurlContract does not invalidate with input and
+   * overwrites method/serverUrl/path/parameters/requestBody. The old submit path reparsed only
+   * when detection had never run, silently creating from A after detecting A, editing to B, and submitting B.
    */
   it("re-parses on submit when the cURL changed after 识别接口信息 was clicked", async () => {
     const onSubmit = vi.fn();
@@ -116,7 +116,7 @@ describe("QuickAddApiForm cURL submit", () => {
     fillRequiredFields(SCREENSHOT_CURL);
     fireEvent.click(screen.getAllByText("executionFactory.quickApiParseAction")[0]);
 
-    // 识别之后再把命令换成另一个 host/path/method。
+    // Change the command to a different host, path, and method after detection.
     fillField("curlText", "curl -X PUT https://beta.example.com/two");
     ref.current?.submit();
 

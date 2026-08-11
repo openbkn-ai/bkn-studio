@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/* Markdown 描述渲染 — 自包含配色，适配浅色容器。 */
+/* Markdown description rendering - self-contained colors for light containers. */
 .md {
   font-size: 13px;
   line-height: 1.7;
@@ -101,8 +101,9 @@
   font-weight: 600;
 }
 
-/* 整篇文档（技能包 SKILL.md 之类）：卡片描述那档字号读一屏正文太挤，正文和标题
-   各放大一档，段距同步放开。圆角归零——站点面板全是方角，只有这块圆着会很跳。 */
+/* Full documents (such as skill-package SKILL.md files): card-description sizing is too dense for
+   a screen of body text, so body copy and headings are each one size larger and spacing expands
+   accordingly. Remove border radii because all site panels are square and this one would otherwise stand out. */
 .doc {
   font-size: 14px;
   line-height: 1.75;
@@ -158,7 +159,7 @@
   padding: 6px 10px;
 }
 
-/* 深色容器（antd 黑底 tooltip 等）配色覆盖。 */
+/* Color overrides for dark containers, such as AntD's black tooltip. */
 .dark a {
   color: #91caff;
 }

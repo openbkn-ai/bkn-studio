@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
 import type {
   DataConnectDiscoverSchedule,
@@ -81,10 +82,14 @@ type ListResponse<T> = {
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
+function discoverMockText(key: string, options?: Record<string, unknown>) {
+  return i18n.t(`dataConnect.discoverMock.${key}`, options);
+}
+
 let mockSchedules: DataConnectDiscoverSchedule[] = [
   {
     id: "discover-schedule-001",
-    name: "客户主数据每日同步",
+    name: discoverMockText("customerSyncSchedule"),
     catalogId: "cat-001",
     cronExpr: "0 2 * * *",
     startTime: "2026-06-01 02:00:00",
@@ -100,7 +105,7 @@ let mockSchedules: DataConnectDiscoverSchedule[] = [
   },
   {
     id: "discover-schedule-002",
-    name: "知识索引增量探查",
+    name: discoverMockText("knowledgeIndexSchedule"),
     catalogId: "cat-002",
     cronExpr: "*/30 * * * *",
     startTime: "2026-06-02 09:00:00",
@@ -116,7 +121,7 @@ let mockSchedules: DataConnectDiscoverSchedule[] = [
   },
   {
     id: "discover-schedule-003",
-    name: "财务数仓清理任务",
+    name: discoverMockText("financeCleanupSchedule"),
     catalogId: "cat-003",
     cronExpr: "0 3 * * 1",
     startTime: "2026-05-26 03:00:00",
@@ -141,7 +146,7 @@ let mockTasks: DataConnectDiscoverTask[] = [
     triggerType: "scheduled",
     status: "completed",
     progress: 100,
-    message: "同步完成，共处理 48 张表。",
+    message: discoverMockText("syncCompleted", { count: 48 }),
     startTime: "2026-06-03 02:00:11",
     finishTime: "2026-06-03 02:12:04",
     creatorName: "Platform Admin",
@@ -155,7 +160,7 @@ let mockTasks: DataConnectDiscoverTask[] = [
     triggerType: "scheduled",
     status: "running",
     progress: 56,
-    message: "正在拉取索引增量变更。",
+    message: discoverMockText("pullingIndexChanges"),
     startTime: "2026-06-03 11:30:08",
     finishTime: "-",
     creatorName: "Search Team",
@@ -169,7 +174,7 @@ let mockTasks: DataConnectDiscoverTask[] = [
     triggerType: "manual",
     status: "failed",
     progress: 100,
-    message: "连接超时，清理任务未能完成。",
+    message: discoverMockText("cleanupTimeout"),
     startTime: "2026-06-02 03:00:00",
     finishTime: "2026-06-02 03:03:15",
     creatorName: "Data Ops",
@@ -187,7 +192,7 @@ function formatTimestamp(value?: number) {
     return "-";
   }
 
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(i18n.language || "en-US", {
     hour12: false,
     year: "numeric",
     month: "2-digit",
@@ -586,7 +591,7 @@ export async function triggerDataConnectDiscover(
       triggerType: "manual",
       status: "pending",
       progress: 0,
-      message: "手动探查任务已创建，等待执行。",
+      message: discoverMockText("manualTaskCreated"),
       startTime: formatTimestamp(now),
       startTimeValue: now,
       finishTime: "-",

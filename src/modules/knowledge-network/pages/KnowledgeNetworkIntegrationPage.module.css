@@ -134,6 +134,7 @@
   grid-template-columns: minmax(280px, 0.62fr) minmax(0, 1.38fr);
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
   overflow: auto;
 }
 
@@ -222,6 +223,8 @@
 
 .sdkContent {
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   padding: 24px 26px;
 }
 
@@ -230,8 +233,13 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  min-width: 0;
   padding-bottom: 14px;
   border-bottom: 1px solid #d9e0ea;
+}
+
+.sdkContentHeader > div {
+  min-width: 0;
 }
 
 .sdkEyebrow {
@@ -290,12 +298,15 @@
 .sdkExampleTabs {
   display: inline-flex;
   gap: 4px;
+  max-width: 100%;
   margin-top: 20px;
+  overflow-x: auto;
   padding-bottom: 10px;
   border-bottom: 1px solid #d9e0ea;
 }
 
 .sdkExampleTab {
+  flex: 0 0 auto;
   height: 32px;
   padding: 0 13px;
   border: 1px solid transparent;
@@ -319,6 +330,7 @@
 }
 
 .sdkCodeBlock {
+  max-width: 100%;
   margin-top: 16px;
   border: 1px solid #d9e0ea;
   border-radius: 4px;
@@ -330,6 +342,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
   padding: 10px 12px;
   border-bottom: 1px solid #d9e0ea;
   background: #f8faff;
@@ -338,8 +351,16 @@
   font-weight: 600;
 }
 
+.sdkCodeHeader > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sdkCopyButton {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 5px;
   height: 28px;

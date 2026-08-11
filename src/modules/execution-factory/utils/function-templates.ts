@@ -8,20 +8,21 @@
 export type FunctionTemplateId = "standard" | "pydantic";
 
 /**
- * sandbox_sdk 的 `@tool` 写法：用普通带类型注解的函数，SDK 负责把 event 解包成形参。
- * 参数定义由后端从签名 + 注解 + docstring 推导，所以模版里的类型标注不是装饰。
+ * sandbox_sdk `@tool` usage: write a normal typed function and let the SDK
+ * unpack event payloads into function parameters. Backend parameter inference
+ * uses the signature, annotations, and docstring, so type annotations matter.
  */
 const STANDARD_TEMPLATE = `from sandbox_sdk import tool
 
 @tool
 def my_function(param: str, count: int = 1) -> dict:
-    """一句话说清这个函数做什么、返回什么 —— Agent 靠它判断何时调用"""
-    # 形参的类型注解会被推导成入参声明，带默认值的即选填
-    print("debug:", param)  # print 会进 stdout
+    """Describe what this function does and returns so the Agent knows when to call it."""
+    # Type annotations are inferred as input declarations; default values are optional inputs.
+    print("debug:", param)  # print output goes to stdout
     return {"result": param, "count": count}
 `;
 
-/** 入参有嵌套结构时用 pydantic 模型声明，推导出来就是嵌套的 sub_parameters。 */
+/** Use a pydantic model for nested input structures; it infers nested sub_parameters. */
 const PYDANTIC_TEMPLATE = `from sandbox_sdk import tool
 from pydantic import BaseModel
 
@@ -31,7 +32,7 @@ class MyInput(BaseModel):
 
 @tool
 def my_function(data: MyInput) -> dict:
-    """一句话说清这个函数做什么、返回什么 —— Agent 靠它判断何时调用"""
+    """Describe what this function does and returns so the Agent knows when to call it."""
     return {"name": data.name, "count": data.count}
 `;
 

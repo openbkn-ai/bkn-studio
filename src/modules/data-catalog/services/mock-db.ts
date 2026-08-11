@@ -10,12 +10,12 @@ import type {
   CatalogResource,
   CatalogDiscoverRecord,
 } from "@/modules/data-catalog/types/data-catalog";
+import { formatDateTime } from "@/framework/i18n/format";
 
 /**
- * 共享 mock 存储:数据资源 / 构建任务 / 扫描记录。
- * 模拟 SDK 行为:batch 任务按 synced/vectorized 双计数推进,
- * streaming 任务追平存量后进入常驻监听(增量随机流入),
- * 停用连接时监听任务由服务层暂停。
+ * Shared mock storage for data resources, build tasks, and discovery records. It models SDK behavior:
+ * batch tasks advance through synced/vectorized counts, streaming tasks become persistent listeners
+ * after catching up with existing data, and services pause listeners when connections are disabled.
  */
 
 const listeners = new Set<() => void>();
@@ -48,17 +48,14 @@ export function mockSlug(length = 20) {
 }
 
 export function formatMockTimestamp(value: number) {
-  return new Intl.DateTimeFormat("zh-CN", {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
+  return formatDateTime(value, {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    month: "2-digit",
     second: "2-digit",
-  })
-    .format(value)
-    .replace(/\//g, "-");
+    year: "numeric",
+  }).replace(/\//g, "-");
 }
 
 const now = Date.now();
@@ -349,7 +346,7 @@ export const mockDiscoverRecords = new Map<string, CatalogDiscoverRecord[]>([
 
 export const mockDiscoveringCatalogs = new Set<string>();
 
-/** finance_dw(cat-003)探查后会“发现”的资源，模拟 discover 行为 */
+/** Resources discovered after probing finance_dw (cat-003), used to simulate discovery behavior. */
 const discoverableResources: CatalogResource[] = [
   makeResource({
     id: "res-contracts",
@@ -430,7 +427,7 @@ export function mockStartScan(catalogId: string) {
   }, 2600);
 }
 
-/* ---------------- 构建任务推进引擎 ---------------- */
+/* ---------------- Build task progression engine ---------------- */
 
 let tickTimer: number | null = null;
 

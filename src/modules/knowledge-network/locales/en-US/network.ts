@@ -40,6 +40,7 @@ export const networkPart = {
     export: "Export",
     exportSuccess: "Exported successfully",
     iconField: "Icon",
+    iconSearchPlaceholder: "Search icons by keyword",
     identifier: "Knowledge network ID",
     identifierMaxLength: "Must be {{len}} characters or fewer.",
     identifierPattern:
@@ -49,6 +50,9 @@ export const networkPart = {
     importConflictTip:
       "You can overwrite, ignore the conflict, or rename the network and import again.",
     importConflictTitle: "Import conflict",
+    conceptGroupIdExists: 'Concept group ID "{{id}}" already exists.',
+    conceptGroupNameExists: 'Concept group name "{{name}}" already exists.',
+    networkIdOrNameExists: "Knowledge network ID or name already exists.",
     importIgnore: "Ignore",
     importInvalidJson: "The import file is not valid JSON.",
     importOverwrite: "Overwrite",

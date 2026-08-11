@@ -11,7 +11,7 @@
   gap: 8px;
 }
 
-/* 比页头标题（20px/700）小一档：这是卡片里的指标，不该跟页面标题抢层级。 */
+/* One step below the page heading (20px/700): this is a card metric and should not compete with page hierarchy. */
 .scoreValue {
   color: var(--color-primary-600);
   font-size: 18px;
@@ -19,7 +19,7 @@
   line-height: 22px;
 }
 
-/* 进度条撤了以后，低就绪只剩数字本身能出声，所以改用告警色。 */
+/* With no progress bar, low readiness must speak through the number itself, so use a warning color. */
 .scoreValueLow {
   color: var(--color-error-text);
 }
@@ -80,4 +80,3 @@
   flex-wrap: wrap;
   gap: 6px;
 }
-

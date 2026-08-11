@@ -140,7 +140,7 @@ export function DataConnectConfigForm({
       </div>
 
       <section className={styles.section}>
-        <div className={styles.sectionTitle}>基础信息</div>
+        <div className={styles.sectionTitle}>{t("dataConnect.basicInfoSection")}</div>
         <div className={styles.grid}>
           <InlineField
             label={t("dataConnect.name")}
@@ -155,7 +155,10 @@ export function DataConnectConfigForm({
             ]}
             span="half"
           >
-            <Input maxLength={NAME_MAX_LENGTH} placeholder="例如 供应链主库" />
+            <Input
+              maxLength={NAME_MAX_LENGTH}
+              placeholder={t("dataConnect.namePlaceholder")}
+            />
           </InlineField>
           <InlineField
             label={t("common.status")}
@@ -185,7 +188,7 @@ export function DataConnectConfigForm({
           >
             <Input.TextArea
               maxLength={DESCRIPTION_MAX_LENGTH}
-              placeholder="简要说明用途（可选）"
+              placeholder={t("dataConnect.descriptionPlaceholder")}
               rows={2}
             />
           </InlineField>
@@ -205,7 +208,7 @@ export function DataConnectConfigForm({
       </section>
 
       <section className={styles.section}>
-        <div className={styles.sectionTitle}>连接配置</div>
+        <div className={styles.sectionTitle}>{t("dataConnect.connectorConfigSection")}</div>
         <div className={styles.groupStack}>
           {groupedFields.map((group) => (
             <div className={styles.group} key={group.key}>
@@ -259,6 +262,11 @@ export function DataConnectConfigForm({
                         }),
                         fieldName,
                         fieldType: fieldConfig.type,
+                        selectPlaceholder: t("dataConnect.selectFieldPlaceholder", {
+                          field: label,
+                        }),
+                        switchOff: t("dataConnect.switchOff"),
+                        switchOn: t("dataConnect.switchOn"),
                       })}
                     </InlineField>
                   );
@@ -386,6 +394,9 @@ function renderField(options: {
   encryptedPlaceholder: string;
   fieldName: string;
   fieldType: string;
+  selectPlaceholder: string;
+  switchOff: string;
+  switchOn: string;
 }) {
   const {
     connectorType,
@@ -394,6 +405,9 @@ function renderField(options: {
     encryptedPlaceholder,
     fieldName,
     fieldType,
+    selectPlaceholder,
+    switchOff,
+    switchOn,
   } = options;
 
   if (encrypted) {
@@ -412,13 +426,13 @@ function renderField(options: {
         />
       );
     case "switch":
-      return <Switch checkedChildren="开" unCheckedChildren="关" />;
+      return <Switch checkedChildren={switchOn} unCheckedChildren={switchOff} />;
     case "select":
       return (
         <Select
           allowClear
           options={control.options}
-          placeholder={`请选择${humanizeConnectorFieldLabel(fieldName)}`}
+          placeholder={selectPlaceholder}
         />
       );
     case "tags":

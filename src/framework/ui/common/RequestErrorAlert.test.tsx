@@ -10,12 +10,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RequestErrorAlert } from "./RequestErrorAlert";
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: { value?: string }) =>
-      options?.value ? `${key}: ${options.value}` : key,
-  }),
-}));
+vi.mock("react-i18next", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-i18next")>();
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, options?: { value?: string }) =>
+        options?.value ? `${key}: ${options.value}` : key,
+    }),
+  };
+});
 
 describe("RequestErrorAlert", () => {
   afterEach(() => {

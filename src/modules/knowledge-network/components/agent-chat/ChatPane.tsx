@@ -6,10 +6,9 @@
  */
 
 /**
- * 立即体验 · Agent 对话 —— 单会话面板（从 AgentChat 抽出，支持对比模式多实例并存）。
- * 每个面板独立持有：消息历史、模型选择、系统提示词、调参、工具勾选、stats、AbortController；
- * 输入框在父级（AgentChat）共享，父级经 ref { send, stop } 驱动本面板。
- * 工具勾选是硬限定：未勾选的工具不会传给模型（tools/list 实时驱动，后端新工具自动可选）。
+ * Agent chat single-session pane extracted from AgentChat, supporting compare-mode instances.
+ * Each pane owns its own message history, model selection, prompt, config, tool selection,
+ * stats, and AbortController. The parent drives it through ref { send, stop }.
  */
 
 /* eslint-disable react-refresh/only-export-components */
@@ -37,6 +36,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useTranslation } from "react-i18next";
 
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
@@ -74,68 +74,68 @@ import styles from "./AgentChat.module.css";
 import { closeOpenMarkdown, splitMarkdownBlocks } from "./markdown-blocks";
 
 /**
- * 默认提示词只讲「这个面板是干什么的、工具怎么用」。
- * 输出契约不写在这里 —— 它由 composedSystem 自动拼接，理由见 formatOutputContract。
+ * The default prompt only explains the pane role and tool usage. The output
+ * contract is appended by composedSystem; see formatOutputContract.
  */
 export const DEFAULT_PROMPT =
-  "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
-  "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
-  "kn_id 已锁定为当前网络，无需也不要修改。\n" +
-  "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。";
+  "You are a BKN business knowledge-network retrieval assistant. Answer based on object types, relation types, and logical properties in the current knowledge network.\n" +
+  "Call the provided retrieval tools when data is needed, such as search_schema, query_object_instance, query_instance_subgraph, and run_sql. Do not fabricate data.\n" +
+  "kn_id is locked to the current network; do not modify it.\n" +
+  "Query efficiently: push aggregation, sorting, and counting to SQL where possible, use LIMIT and precise filters, select only needed fields, avoid whole-table scans or huge result sets, and do not repeat already retrieved information.";
 
-/** 「仅基础数据」面板默认提示词：只讲表/SQL 工具用法，不提知识网络概念。 */
+/** Default prompt for the base-data pane: table/SQL only, without KN semantics. */
 export const DEFAULT_BASE_PROMPT =
-  "你是数据查询助手。你只能使用三个工具直接查询底层数据表回答用户问题：\n" +
-  "list_resources（列出可访问的数据表）、describe_resource（查看表的列结构）、run_sql（执行 SQL）。\n" +
-  "流程：先用 list_resources 找到相关表，再用 describe_resource 确认列，再写 SQL 查询。\n" +
-  "SQL 中的表名必须用模板占位 {{.<resource_id>}} 引用（resource_id 取自 list_resources 的 entries[].resource_id），不能写裸表名；跨 catalog 不能 join。\n" +
-  "查询要高效：聚合/排序/计数交给 SQL，用 LIMIT 和精确过滤、只取需要的字段，避免拉全表。";
+  "You are a data query assistant. You can answer only by querying underlying tables with three tools:\n" +
+  "list_resources, describe_resource, and run_sql.\n" +
+  "Flow: use list_resources to find relevant tables, describe_resource to confirm columns, then write SQL.\n" +
+  "SQL table names must use {{.<resource_id>}} placeholders from list_resources entries[].resource_id; do not use raw table names, and do not join across catalogs.\n" +
+  "Query efficiently: push aggregation, sorting, and counting into SQL, use LIMIT and precise filters, and select only necessary fields.";
 
-/** 知识网络画像的「依据」写法。 */
-export const KN_EVIDENCE_HINT = "调了哪个工具、什么过滤条件或 SQL 要点";
-/** 仅基础数据画像的「依据」写法。 */
-export const BASE_EVIDENCE_HINT = "用了哪些表、什么 SQL 要点";
+/** Evidence wording for the knowledge-network profile. */
+export const KN_EVIDENCE_HINT = "which tool was called, what filter conditions were used, or the key SQL points";
+/** Evidence wording for the base-data profile. */
+export const BASE_EVIDENCE_HINT = "which tables were used and the key SQL points";
 
-const FALLBACK_SUGGESTIONS = [
-  "这个知识网络里有哪些对象类和关系？",
-  "帮我查最近活跃的高价值客户",
-  "对象类之间是怎么关联的？",
+const FALLBACK_SUGGESTION_KEYS = [
+  "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.relations",
+  "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.customers",
+  "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.links",
 ];
 
 export type PaneKey = "solo" | "base" | "kn";
 
-/** 面板画像：决定提示词默认值、是否注入网络摘要、默认工具集与 localStorage 键。 */
+/** Pane profile controlling defaults, context injection, tool selection, and storage keys. */
 export type PaneProfile = {
   paneKey: PaneKey;
-  /** 分屏时面板头显示的身份标签（solo 不显示）。 */
+  /** Identity label shown in split view; hidden for solo. */
   title?: string;
   emptyTitle?: string;
   defaultPrompt: string;
-  /** 是否把知识网络摘要拼进系统提示词（「仅基础数据」为 false）。 */
+  /** Whether to append KN summary to the system prompt. */
   injectKnContext: boolean;
-  /** 默认勾选的工具名；null = 全部（含后端未来新增）。 */
+  /** Default selected tool names; null means all tools, including future backend tools. */
   defaultToolNames: string[] | null;
-  /** 输出契约里「依据」该怎么写（各画像可用的工具不同）。 */
+  /** Evidence wording for the output contract. */
   evidenceHint: string;
-  /** 视觉高亮（对比模式的「主角」面板：渐变标签 + 面板泛光）。 */
+  /** Visual highlight for the primary compare pane. */
   highlight?: boolean;
 };
 
-/** 一轮的结果状态：有效回答 / 无回答 / 被用户停止 / 出错。后三者为负面。 */
+/** Turn result status; empty/stopped/error are negative outcomes. */
 export type RoundOutcome = "answered" | "empty" | "stopped" | "error";
 
-/** 对比报告用：一轮问答 + 指标 + 结果状态。 */
+/** Compare-report turn data with metrics and outcome. */
 export type PaneRound = {
   question: string;
   answer: string | null;
   tokens: number | null;
   ms: number | null;
   toolCalls: { name: string; status: string }[];
-  /** 结果状态；empty/stopped/error 计为负面（该侧该轮未有效完成）。 */
+  /** Result status; empty/stopped/error mean this side did not complete effectively. */
   outcome: RoundOutcome;
 };
 
-/** 对比报告用的面板快照：全部轮次 + 会话累计。 */
+/** Compare-report pane snapshot with all rounds and cumulative stats. */
 export type PaneSnapshot = {
   model: string;
   stats: { tokens: number; ms: number };
@@ -167,15 +167,15 @@ type ChatMessage = {
   content: string;
   reasoning?: string;
   toolCalls?: ToolCallView[];
-  /** 本轮真实累计 token（来自 usage，finish 时才有）。 */
+  /** Actual token count for this turn, available from usage at finish. */
   tokens?: number;
-  /** 本轮总耗时 ms（完成后填）。 */
+  /** Total elapsed time for this turn in ms. */
   ms?: number;
-  /** 本轮被用户中途停止（AbortController）。 */
+  /** Whether this turn was stopped by the user. */
   stopped?: boolean;
-  /** 本轮整体执行失败（非工具级、而是这一轮没跑出结果）。 */
+  /** Whether this turn failed as a whole, not merely at tool level. */
   errored?: boolean;
-  /** 本轮的执行错误。独立渲染成错误块，不再拼进正文——原始报文只在「详情」里出现。 */
+  /** Execution error rendered as a separate block; raw details stay collapsed. */
   errors?: NormalizedAgentError[];
 };
 
@@ -183,7 +183,7 @@ type SessionStats = { tokens: number; ms: number };
 
 type Persisted = { messages: ChatMessage[]; model: string; systemPrompt: string; stats?: SessionStats };
 
-/** 粗略 token 估算（中英混排约 2.5 字符/token），仅流式过程实时显示用；结束换真实 usage。 */
+/** Rough token estimate for live streaming display; replaced by real usage at finish. */
 function estimateTokens(chars: number): number {
   return Math.round(chars / 2.5);
 }
@@ -197,14 +197,14 @@ export function fmtDuration(ms: number): string {
   return s >= 60 ? `${Math.floor(s / 60)}m${Math.round(s % 60)}s` : `${s.toFixed(1)}s`;
 }
 
-/** 消息历史键：solo 沿用旧键（老对话不丢），对比面板加 :cmp-* 后缀隔离。 */
+/** Message-history key; solo keeps the legacy key, compare panes use suffixes. */
 function msgsLsKey(knId: string, paneKey: PaneKey): string {
   return paneKey === "solo" ? `bkn-studio:agentchat:${knId}` : `bkn-studio:agentchat:${knId}:cmp-${paneKey}`;
 }
 
 /**
- * 受管会话身份键。每个面板一条独立 conversation —— 对比模式两侧是两个不同的 Agent
- * 在各自答题，Trace 里也应当分别溯源、分别统计，不该混进同一条会话。
+ * Managed conversation identity key. Each pane gets an independent conversation
+ * so compare-mode agents are traced and counted separately.
  */
 function conversationLsKey(knId: string, paneKey: PaneKey): string {
   return `bkn-studio:agentchat:conv:v2:${knId}:${paneKey}`;
@@ -223,7 +223,7 @@ function loadPersisted(key: string): Partial<Persisted> {
   }
 }
 
-/** Agent 调参缓存（不分 kn）：solo 沿用旧键，对比面板每侧独立。 */
+/** Agent config cache; solo keeps the legacy key and compare panes are isolated. */
 const CONFIG_LS_BASE = "bkn-studio:agentconfig";
 
 function configLsKey(paneKey: PaneKey): string {
@@ -239,7 +239,7 @@ function loadConfig(paneKey: PaneKey): AgentConfig {
   }
 }
 
-/** 工具勾选缓存（不分 kn；solo 恒为全部，不落盘）。null = 全部。 */
+/** Tool-selection cache. Solo is always all tools and is not persisted. */
 function toolsLsKey(paneKey: PaneKey): string {
   return `bkn-studio:agenttools:cmp-${paneKey}`;
 }
@@ -256,15 +256,15 @@ function loadToolSelection(profile: PaneProfile): string[] | null {
   }
 }
 
-/** 参数面板字段定义（label + 说明 + key）。 */
-const CONFIG_FIELDS: { key: keyof AgentConfig; label: string; hint: string }[] = [
-  { key: "maxSteps", label: "工具步数上限", hint: "一轮最多调多少步工具（防跑飞兜底）" },
-  { key: "keepToolResults", label: "步间保留结果数", hint: "每步只保留最近 N 个工具结果全文（0=不驱逐）" },
-  { key: "dataToolCap", label: "数据类结果上限(字)", hint: "run_sql / query_* 结果字符上限（0=不截断）" },
-  { key: "schemaToolCap", label: "Schema类结果上限(字)", hint: "get_kn_detail / search_schema 等（0=不截断）" },
-  { key: "maxHistoryMessages", label: "多轮保留条数", hint: "跨轮历史只保留最近 N 条消息" },
-  { key: "maxTurnChars", label: "单轮文本上限(字)", hint: "每条历史消息文本封顶" },
-  { key: "maxOutputTokens", label: "最大输出token", hint: "单步最大输出(含思考)；推理模型(deepseek)调大，0=模型默认" },
+/** Config panel field definitions. */
+const CONFIG_FIELD_KEYS: { key: keyof AgentConfig }[] = [
+  { key: "maxSteps" },
+  { key: "keepToolResults" },
+  { key: "dataToolCap" },
+  { key: "schemaToolCap" },
+  { key: "maxHistoryMessages" },
+  { key: "maxTurnChars" },
+  { key: "maxOutputTokens" },
 ];
 
 function formatArgs(args: unknown): string {
@@ -275,20 +275,19 @@ function formatArgs(args: unknown): string {
   }
 }
 
-/** 单个 Markdown 块。memo 是关键：流式下只有尾块的 text 在变，前面的块不会重新 parse。 */
+/** One Markdown block. memo keeps stable blocks from reparsing during streaming. */
 const MarkdownBlock = memo(function MarkdownBlock({ text }: { text: string }) {
   return <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>;
 });
 
 /**
- * Markdown 渲染（GFM：表格/删除线/任务列表）。对比报告的 AI 总结也复用。
- * streaming = 正文还在流：按块渲染 + 尾块补全未闭合语法，避免整段重 parse 的 O(n²)。
+ * Markdown rendering with GFM. Streaming renders by block and completes the
+ * active tail to avoid reparsing the entire body on every token.
  */
 export const MarkdownView = memo(function MarkdownView({ text, streaming = false }: { text: string; streaming?: boolean }) {
   const blocks = useMemo(() => {
-    // 非流式正文一次成型，没有重复 parse 的开销，就不该冒分块启发式的风险：
-    // 跨块构造（引用式链接定义、GFM 脚注）被切开会解析失败，而落在已完成的正文上
-    // 是永久错误显示，不像流式尾巴那样流一结束就自愈。整段 parse 走老路。
+    // Non-streaming text is complete, so parse the whole body to preserve constructs
+    // that can span blocks, such as reference links and footnotes.
     if (!streaming) return null;
     const bs = splitMarkdownBlocks(text);
     if (bs.length === 0) return bs;
@@ -305,15 +304,15 @@ export const MarkdownView = memo(function MarkdownView({ text, streaming = false
   );
 });
 
-/** 思考过程（reasoning_content）流式展示：进行中自动展开，结束后可折叠。 */
+/** Streaming reasoning_content display; live reasoning auto-expands. */
 function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
-  // 默认收起（思考中靠头部闪烁点体现在跑）；用户可手动展开。
+  // Collapsed by default; users can expand manually.
   const [open, setOpen] = useState(false);
   return (
     <div className={styles.reasoning}>
       <button type="button" className={`${styles.reasoningHead} ${live ? styles.reasoningLive : ""}`} onClick={() => setOpen((v) => !v)}>
         <span>
-          💭 {live ? "思考中" : "思考过程"}
+          Reasoning {live ? "in progress" : "trace"}
           {live ? (
             <span className={styles.thinkDots}>
               <i />
@@ -329,20 +328,22 @@ function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
   );
 }
 
-/** 单条工具调用卡片（可折叠，展开看真实请求参数与响应）。 */
-function ToolCallCard({ call }: { call: ToolCallView }) {
+/** Collapsible tool-call card showing actual request parameters and response. */
+function ToolCallCard({ call, t }: { call: ToolCallView; t: ReturnType<typeof useTranslation>["t"] }) {
   const [open, setOpen] = useState(false);
   const statusDot =
     call.status === "running" ? styles.dotRunning : call.status === "error" ? styles.dotError : styles.dotOk;
   const statusText =
     call.clientBlocked
-      ? "客户端拦截"
+      ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlocked")
       : call.status === "running"
-        ? "调用中…"
+        ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
         : call.status === "error"
-          ? "失败"
-          : `200 · ${call.latencyMs ?? "—"}ms`;
-  const requestLabel = call.clientBlocked ? `模型入参 · 客户端拦截未发出 → ${call.name}` : `请求 · tools/call → ${call.name}`;
+          ? t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")
+          : `200 - ${call.latencyMs ?? "-"}ms`;
+  const requestLabel = call.clientBlocked
+    ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlockedRequest", { name: call.name })
+    : t("knowledgeNetwork.agentChat.chatPane.toolCall.request", { name: call.name });
   return (
     <div className={`${styles.call} ${open ? styles.callOpen : ""}`}>
       <button type="button" className={styles.callHead} onClick={() => setOpen((v) => !v)}>
@@ -359,8 +360,14 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
             <pre className={styles.callPre}>{formatArgs(call.args)}</pre>
           </div>
           <div className={styles.callSec}>
-            <div className={styles.callLbl}>{call.clientBlocked ? "拦截原因" : call.status === "error" ? "错误" : "响应"}</div>
-            <pre className={styles.callPre}>{call.status === "error" ? call.error : call.result ?? "—"}</pre>
+            <div className={styles.callLbl}>
+              {call.clientBlocked
+                ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlockedReason")
+                : call.status === "error"
+                  ? t("knowledgeNetwork.agentChat.chatPane.toolCall.error")
+                  : t("knowledgeNetwork.agentChat.chatPane.toolCall.response")}
+            </div>
+            <pre className={styles.callPre}>{call.status === "error" ? call.error : call.result ?? "-"}</pre>
           </div>
         </div>
       ) : null}
@@ -369,23 +376,31 @@ function ToolCallCard({ call }: { call: ToolCallView }) {
 }
 
 /**
- * 一轮的执行错误：一句人话 + 可展开原文。可重试的（上游忙/连接中断）多给一个重试入口，
- * 免得用户以为只能干等——原始报文一律收进折叠里，不再糊到对话正文上。
+ * Turn execution error: user-facing message plus expandable raw detail. Retryable
+ * errors expose a retry entry point.
  */
-function ErrorBlock({ err, onRetry }: { err: NormalizedAgentError; onRetry?: () => void }) {
+function ErrorBlock({
+  err,
+  onRetry,
+  t,
+}: {
+  err: NormalizedAgentError;
+  onRetry?: () => void;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className={styles.errBox}>
       <div className={styles.errHead}>
-        <span className={styles.errMsg}>⚠️ {err.message}</span>
+        <span className={styles.errMsg}>{err.message}</span>
         {onRetry ? (
           <button type="button" className={styles.errBtn} onClick={onRetry}>
-            重试本轮
+            {t("knowledgeNetwork.agentChat.chatPane.error.retry")}
           </button>
         ) : null}
         {err.detail ? (
           <button type="button" className={styles.errBtn} onClick={() => setOpen((v) => !v)}>
-            详情 {open ? <DownOutlined /> : <RightOutlined />}
+            {t("knowledgeNetwork.agentChat.chatPane.error.detail")} {open ? <DownOutlined /> : <RightOutlined />}
           </button>
         ) : null}
       </div>
@@ -396,30 +411,30 @@ function ErrorBlock({ err, onRetry }: { err: NormalizedAgentError; onRetry?: () 
 
 export type ChatPaneProps = {
   env: ContextLoaderEnv;
-  /** 检索工具（agent-retrieval MCP）鉴权。 */
+  /** Auth for retrieval tools through agent-retrieval MCP. */
   tokenProvider: AgentTokenProvider;
-  /** 大模型（mf-model-api）鉴权：网关不认 bak_ AppKey，恒用 OAuth 会话；缺省回落 tokenProvider。 */
+  /** Auth for mf-model-api; falls back to tokenProvider when absent. */
   modelTokenProvider?: AgentTokenProvider;
   profile: PaneProfile;
   networkName?: string;
-  /** 模型列表由父级拉一次，多面板共享。 */
+  /** Model list fetched once by the parent and shared across panes. */
   models: LlmModel[];
   modelsLoaded: boolean;
-  /** 知识网络摘要（父级拉取）；是否注入由 profile.injectKnContext 决定。 */
+  /** KN summary fetched by the parent; injection depends on profile.injectKnContext. */
   knContext: string;
   knSummary: { objectTypes: number; relations: number } | null;
-  /** 空态建议问题（父级生成，两侧共用一组）。 */
+  /** Empty-state suggestions generated by the parent and shared by both sides. */
   suggestions: string[];
-  /** 点击建议问题的回调：由父级按发送目标派发（对比模式下两侧同题）。缺省则本面板直发。 */
+  /** Suggestion click callback; parent dispatches by target in compare mode. */
   onPick?: (question: string) => void;
-  /** 实时 tools/list（父级缓存共享）；send 时懒取，picker 展示用已加载值。 */
+  /** Live tools/list shared from parent cache; send lazily fetches when needed. */
   getTools: () => Promise<McpToolDef[]>;
   toolDefs: McpToolDef[] | null;
-  /** 当前知识网络绑定的 resource_id 集；用于默认把 list_resources 限定到本网络的数据表。 */
+  /** resource_id set bound to the current KN, used to scope list_resources. */
   resourceScope?: readonly string[] | null;
   /**
-   * 问答工作区的页面级滚动容器。消息不再在面板内部滚动，
-   * 由该容器统一承载阅读和流式回答的贴底跟随。
+   * Page-level scroll container for the QA workspace. Messages do not scroll
+   * inside the pane; this container owns reading and stick-to-bottom behavior.
    */
   pageScrollRef: RefObject<HTMLDivElement | null>;
   showToolbar?: boolean;
@@ -449,6 +464,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   ref,
 ) {
   const { message } = App.useApp();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const knId = env.knId;
 
@@ -456,30 +472,30 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const [busy, setBusy] = useState(false);
   const [model, setModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState(profile.defaultPrompt);
-  // 问答配置：模型、工具、系统提示词与参数集中管理，避免主对话界面过载。
+  // QA config: model, tools, system prompt, and parameters are managed together.
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [config, setConfigState] = useState<AgentConfig>(() => loadConfig(profile.paneKey));
   const [draftModel, setDraftModel] = useState("");
   const [draftSystemPrompt, setDraftSystemPrompt] = useState(profile.defaultPrompt);
   const [draftConfig, setDraftConfig] = useState<AgentConfig>(() => loadConfig(profile.paneKey));
-  // 工具勾选（硬限定）：null = 全部。solo 恒为全部（不显示选择器）。
+  // Tool selection is a hard allowlist; null means all tools.
   const [toolSelection, setToolSelection] = useState<string[] | null>(() => loadToolSelection(profile));
   const [draftToolSelection, setDraftToolSelection] = useState<string[] | null>(() => loadToolSelection(profile));
-  // 会话累计 token + 总时长（像 Claude Code 那样累加）。
+  // Cumulative session tokens and elapsed time.
   const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
 
   const abortRef = useRef<AbortController | null>(null);
-  // 本轮受管上下文，只给工具调用面板显示用；真值仍由 buildAgentTools 从 turn 逐次注入。
+  // Managed context for display in tool cards; buildAgentTools injects true values.
   const turnContextRef = useRef<BknContext | null>(null);
   const requestSequenceRef = useRef(0);
-  // 是否贴底跟随；用户上滚时置 false，回到底部恢复，避免生成时被强制拽到底。
+  // Stick-to-bottom flag; user scrolling up disables forced bottom following.
   const stickRef = useRef(true);
 
   useEffect(() => {
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
 
-  // 卸载（如对比模式切换）时中断进行中的流。
+  // Abort in-flight streaming when unmounted, such as compare-mode switches.
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
@@ -530,19 +546,19 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         JSON.stringify({ messages, model: draftModel, systemPrompt: draftSystemPrompt, stats } satisfies Persisted),
       );
     } catch {
-      /* localStorage 不可用时忽略 */
+      /* Ignore unavailable localStorage. */
     }
     setSettingsOpen(false);
-    message.success("设置已保存");
-  }, [draftConfig, draftModel, draftSystemPrompt, draftToolSelection, knId, message, messages, profile.paneKey, stats]);
+    message.success(t("knowledgeNetwork.agentChat.chatPane.messages.settingsSaved"));
+  }, [draftConfig, draftModel, draftSystemPrompt, draftToolSelection, knId, message, messages, profile.paneKey, stats, t]);
   const resetDraftSystemPrompt = useCallback(() => {
     setDraftSystemPrompt(profile.defaultPrompt);
-    message.success("系统提示词已恢复默认");
-  }, [message, profile.defaultPrompt]);
+    message.success(t("knowledgeNetwork.agentChat.chatPane.messages.promptReset"));
+  }, [message, profile.defaultPrompt, t]);
   const resetDraftConfig = useCallback(() => {
     setDraftConfig({ ...DEFAULT_AGENT_CONFIG });
-    message.success("参数已恢复默认");
-  }, [message]);
+    message.success(t("knowledgeNetwork.agentChat.chatPane.messages.configReset"));
+  }, [message, t]);
 
   const updateStickiness = useCallback(() => {
     const el = pageScrollRef.current;
@@ -558,7 +574,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     return () => el.removeEventListener("scroll", updateStickiness);
   }, [pageScrollRef, updateStickiness]);
 
-  // 载入持久化对话（按 kn + 面板隔离）。
+  // Load persisted chat history, isolated by KN and pane.
   useEffect(() => {
     const saved = loadPersisted(msgsLsKey(knId, profile.paneKey));
     setMessages(Array.isArray(saved.messages) ? saved.messages : []);
@@ -567,7 +583,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     setStats(saved.stats ?? { tokens: 0, ms: 0 });
   }, [knId, profile.paneKey, profile.defaultPrompt]);
 
-  // 模型列表就绪后选默认模型（已持久化的选择优先）。
+  // Select the default model after model list is ready; persisted choice wins.
   useEffect(() => {
     setModel((prev) => {
       if (prev && models.some((m) => m.modelName === prev)) return prev;
@@ -583,7 +599,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           JSON.stringify({ messages: msgs, model, systemPrompt, stats: statsSnapshot } satisfies Persisted),
         );
       } catch {
-        /* localStorage 不可用时忽略 */
+        /* Ignore unavailable localStorage. */
       }
     },
     [knId, profile.paneKey, model, systemPrompt],
@@ -599,7 +615,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     return () => cancelAnimationFrame(frame);
   }, [messages, pageScrollRef]);
 
-  // 一轮结束（busy: true→false）把最终 messages+stats（含本轮时长）落盘；流式中不写。
+  // Persist final messages and stats after a turn ends; do not write mid-stream.
   const prevBusyRef = useRef(false);
   useEffect(() => {
     if (prevBusyRef.current && !busy && messages.length) persist(messages, stats);
@@ -637,15 +653,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                 return {
                   id: chunk.id,
                   name: chunk.name,
-                // 展示实际发出的业务请求体（含注入的 kn_id、schema_brief 等默认值与 bkn_context），
-                // 而非模型原始入参。bkn_context 是 execute 里注入的，流式事件里没有，取自本轮 turn ——
-                // 少了它，面板看起来就像"前端没传上下文"，排查 conversation_required 时会指错方向。
-                //
-                // 被接管的生命周期工具没有请求体可展示：本轮有 turn 时它们的 execute 根本不碰
-                // session.callTool，拼上 kn_id / bkn_context 就是编一份从未发出的报文。这类
-                // 照原样显示模型入参。判定必须用 isTakenOverLifecycleTool 而不是整片 bkn_
-                // 前缀——溯源类平台工具是直通后端的，它们的请求体真实存在，按前缀判会把
-                // 那些也显示成没有请求体，等于反向再造一次失真。没有 turn 时两类都直通。
+                  // Show the effective business request, including injected defaults and bkn_context,
+                  // rather than raw model input. Taken-over lifecycle tools do not call session.callTool
+                  // for a turn, so retain their original arguments instead of displaying a fictitious request.
                   args: clientBlocked || (turnContextRef.current && isTakenOverLifecycleTool(chunk.name)) ? chunk.args : effectiveArgs,
                   status: "running" as const,
                   clientBlocked,
@@ -696,8 +706,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   );
 
   /**
-   * 本面板的受管生命周期客户端。会话身份跟着 kn + 面板走，只有「清空对话」才换新
-   * ——刷新页面复用服务端下发的 conversation ID。
+   * Managed lifecycle client for this pane. Conversation identity follows KN + pane
+   * and only changes on clear; page refresh reuses the server-issued conversation ID.
    */
   const lifecycle = useMemo(
     () =>
@@ -710,13 +720,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     [env.base, knId, tokenProvider, profile.paneKey],
   );
 
-  // 实际发送的完整系统提示词 = 可编辑提示词 + （按画像）知识网络摘要 + 截断上限 + 输出契约。
-  // 后两段都不写进可编辑提示词：上限跟着调参面板变，契约必须和过滤器认的标签逐字节一致，
-  // 而提示词是持久化状态（每轮回写、载入优先用存量值），写进默认值对老用户一律不生效。
+  // Full system prompt = editable prompt + optional KN summary + caps + output contract.
+  // Dynamic sections stay outside the editable prompt because saved prompt state wins.
   const composedSystem = useMemo(() => {
     const sections = [systemPrompt];
     if (profile.injectKnContext && knContext) {
-      sections.push(`## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n${knContext}`);
+      sections.push(`## Current Knowledge Network Summary\n${knContext}`);
     }
     const limits = formatToolResultLimits(config);
     if (limits) sections.push(limits);
@@ -729,7 +738,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       const question = text.trim();
       if (!question || busy) return;
       if (!model) {
-        message.error("当前没有可用的大模型，请先在「模型工厂」配置默认模型");
+        message.error(t("knowledgeNetwork.agentChat.chatPane.messages.noModel"));
         return;
       }
 
@@ -737,8 +746,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       const requestSequence = ++requestSequenceRef.current;
       const startedAt = performance.now();
 
-      // 重试：把失败的那一轮（user + assistant 一对）摘掉再重发，而不是在下面追加一轮
-      // ——否则会多出一条重复的用户气泡，失败轮的空 assistant 也会留在历史里。
+      // Retry by removing the failed user+assistant pair and sending again.
       const kept =
         options.replaceLastRound &&
         messages.length >= 2 &&
@@ -747,9 +755,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           ? messages.slice(0, -2)
           : messages;
 
-      // 多轮上下文压缩：只保留最近若干轮，且单轮文本封顶，防长对话纯文本堆大。
-      // （工具结果/思考本就不进历史，见 send() 历史只取 role+content。）
-      // 空正文的 assistant 轮不进历史：那是出错/被停的轮次，回灌给严格 router 只会添乱。
+      // Compress multi-turn context by retaining recent text-only turns with caps.
       const history: AgentChatTurn[] = kept
         .filter((m) => m.role === "user" || m.content.trim().length > 0)
         .slice(-config.maxHistoryMessages)
@@ -757,7 +763,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           role: m.role,
           content:
             config.maxTurnChars > 0 && m.content.length > config.maxTurnChars
-              ? `${m.content.slice(0, config.maxTurnChars)}\n…[历史过长已截断]`
+              ? `${m.content.slice(0, config.maxTurnChars)}\n...[History truncated]`
               : m.content,
         }));
       history.push({ role: "user", content: question });
@@ -769,23 +775,22 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
 
       const controller = new AbortController();
       abortRef.current = controller;
-      // 一轮交互 = 一轮问答。答复正文另行累计：终结交互要把它作为 artifact 交给 Core，
-      // 而消息 state 是异步的，finally 里读不到本轮最终值。
+      // One interaction equals one QA turn. Accumulate answer text separately
+      // because message state is asynchronous and finally needs the final artifact.
       let turn: Awaited<ReturnType<typeof lifecycle.beginTurn>> = null;
       let outcome: TurnOutcome = "completed";
       let answer = "";
-      /** 本轮流里出过 error chunk。UI 已判 errored，终结也必须记 failed。 */
+      /** Whether this turn emitted an error chunk; finish must record failed. */
       let roundFailed = false;
       try {
         turn = await lifecycle.beginTurn(question);
         turnContextRef.current = turn?.nextContext() ?? null;
         const allTools = await getTools();
-        // 生命周期工具不在这里滤掉——buildAgentTools 会接管它们的执行（绑到本轮交互）。
-        // 这里只保留「仅基础数据」面板的画像限定。
+        // Lifecycle tools stay visible here; buildAgentTools handles takeover.
         const modelVisibleTools = allTools.filter(
           (toolDef) => profile.paneKey !== "base" || !profile.defaultToolNames || profile.defaultToolNames.includes(toolDef.name),
         );
-        // 硬限定：只把勾选的工具传给模型（null = 全部）。
+        // Hard allowlist: only selected tools are sent to the model; null means all.
         const activeTools = toolSelection ? modelVisibleTools.filter((t) => toolSelection.includes(t.name)) : modelVisibleTools;
         const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider, {
           resourceScope,
@@ -804,9 +809,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           signal: controller.signal,
           onChunk: (chunk) => {
             if (chunk.type === "text") answer += chunk.delta;
-            // 流里的错误是 runAgentChat 内部捕获后正常返回的，不会抛到下面的 catch。
-            // 不在这里记一笔，交给 Core 的就是 completed + 空 artifact，
-            // 而面板上明明是红条——#620 那类失败会被系统性少记。
+            // Stream errors are caught inside runAgentChat and returned normally.
+            // Mark the turn failed so Core does not receive completed with an empty artifact.
             if (chunk.type === "error") roundFailed = true;
             if (requestSequence === requestSequenceRef.current) handleChunk(chunk);
           },
@@ -814,7 +818,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       } catch (error) {
         if (requestSequence !== requestSequenceRef.current) return;
         if (controller.signal.aborted) {
-          // 用户中途停止：标记本轮 stopped（对比报告计为负面），保留已生成的部分内容。
+          // User stopped mid-turn; keep partial content and mark negative for compare reports.
           outcome = "canceled";
           updateAssistant((m) => ({ ...m, stopped: true }));
         } else {
@@ -822,44 +826,40 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           updateAssistant((m) => ({ ...m, errored: true, errors: [...(m.errors ?? []), normalizeAgentError(error)] }));
         }
       } finally {
-        // 终结必须挡在 setBusy(false) 之前：一条 conversation 同时只允许一个 active
-        // interaction（Core 的 uq_..._interaction_active 唯一约束），提前放开输入框会让
-        // 用户手快发出的下一轮直接开不出交互。
-        // 用户点停止时 runAgentChat 是正常返回而非抛错，所以结果要认 aborted 而不是 outcome。
-        // 收尾失败不改写本轮结果：那是可观测面的问题，不该把答出来的一轮显示成失败。
+        // Finish before setBusy(false) because one conversation allows one active interaction.
+        // Stop returns normally, so use aborted state rather than outcome alone.
         const finalOutcome: TurnOutcome = roundFailed && outcome === "completed" ? "failed" : outcome;
         if (turn) {
           await turn.finish(controller.signal.aborted ? "canceled" : finalOutcome, answer).catch(() => undefined);
         }
         if (requestSequence === requestSequenceRef.current) {
-          // 只有仍是当前这一轮才清：并发下一轮已经写进自己的上下文，越权清掉会让它
-          // 后续的工具调用卡片显示不出 bkn_context。
+          // Clear only if this is still the current turn.
           turnContextRef.current = null;
           abortRef.current = null;
           const elapsed = performance.now() - startedAt;
-          // 本轮耗时写到最后一条 assistant 消息 + 累计会话总时长（token 已在 usage chunk 累计）。
+          // Record turn elapsed time on the final assistant message and cumulative stats.
           setMessages((cur) =>
             cur.map((m, i) => (i === cur.length - 1 && m.role === "assistant" ? { ...m, ms: elapsed } : m)),
           );
           setStats((s) => ({ ...s, ms: s.ms + elapsed }));
-          setBusy(false); // 触发下方「完成即持久化」effect
+          setBusy(false); // Triggers the persist-on-completion effect below.
         }
       }
     },
-    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, lifecycle, handleChunk, updateAssistant, message, profile],
+    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, lifecycle, handleChunk, updateAssistant, message, profile, t],
   );
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
   }, []);
 
-  // 对比报告用：全部轮次（user → 其后紧跟的 assistant 配对）+ 会话累计快照。
+  // Compare-report snapshot: user turns paired with following assistant turns plus totals.
   const getSnapshot = useCallback((): PaneSnapshot => {
     const rounds: PaneRound[] = [];
     let current: PaneRound | null = null;
     for (const m of messages) {
       if (m.role === "user") {
-        // 默认 empty：只有 user、没有对应 assistant（发出未答）也计为负面。
+        // Default empty covers a user turn without a corresponding assistant answer.
         current = { question: m.content, answer: null, tokens: null, ms: null, toolCalls: [], outcome: "empty" };
         rounds.push(current);
       } else if (m.role === "assistant" && current) {
@@ -878,8 +878,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const clearChat = useCallback(() => {
     setMessages([]);
     setStats({ tokens: 0, ms: 0 });
-    // 清空对话 = 换一条受管会话。这是 conversation id 唯一的更换点：不清空就一直是同一个，
-    // 刷新页面会继续使用已保存的服务端 conversation ID。
+    // Clearing chat starts a new managed conversation; refresh reuses the saved server ID.
     lifecycle.reset();
     try {
       localStorage.removeItem(msgsLsKey(knId, profile.paneKey));
@@ -895,17 +894,22 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   );
 
   const modelOptions = useMemo(
-    () => models.map((m) => ({ value: m.modelName, label: m.default ? `${m.modelName} · 默认` : m.modelName })),
-    [models],
+    () =>
+      models.map((m) => ({
+        value: m.modelName,
+        label: m.default
+          ? t("knowledgeNetwork.agentChat.chatPane.model.defaultSuffix", { modelName: m.modelName })
+          : m.modelName,
+      })),
+    [models, t],
   );
-  // 模型可见的工具集。生命周期工具不从这里藏——它们由 buildAgentTools 接管执行
-  // （绑到本轮交互），仍然是模型调得到的能力。「仅基础数据」面板另按画像硬限定。
+  // Tool set visible to the model. Lifecycle tools remain visible and are taken over later.
   const agentToolDefs = useMemo(() => {
     if (!toolDefs || profile.paneKey !== "base" || !profile.defaultToolNames) return toolDefs ?? null;
     const baseToolNames = new Set(profile.defaultToolNames);
     return toolDefs.filter((toolDef) => baseToolNames.has(toolDef.name));
   }, [profile.defaultToolNames, profile.paneKey, toolDefs]);
-  // 与 MCP 侧栏同款分组：tools/list 下发的 title / _meta 分组排序为准，老服务端退回本地兜底表。
+  // Same grouping as the MCP sidebar: server title/_meta first, local fallback for old servers.
   const toolOptions = useMemo(() => {
     if (!agentToolDefs) return [];
     return buildMcpToolGroups(agentToolDefs, (tool) => toolDisplayOf(tool.name, tool)).map((group) => ({
@@ -913,7 +917,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       title: group.label,
       options: group.items.map(({ item, display }) => ({
         value: item.name,
-        title: `${display.name} · ${item.name}`,
+        title: `${display.name} - ${item.name}`,
         searchText: `${display.name} ${item.name}`,
         label: (
           <span className={styles.toolOption}>
@@ -924,7 +928,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       })),
     }));
   }, [agentToolDefs]);
-  // 选择器展示值：null（全部）时显示当前已知的全部工具名。
+  // Selector value: null (all) shows all currently known tool names.
   const draftToolValue = useMemo(
     () => draftToolSelection ?? (agentToolDefs ? agentToolDefs.map((t) => t.name) : []),
     [draftToolSelection, agentToolDefs],
@@ -933,8 +937,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const empty = messages.length === 0;
   const lastIdx = messages.length - 1;
   const noLlm = modelsLoaded && models.length === 0;
-  const sugList = suggestions.length > 0 ? suggestions : FALLBACK_SUGGESTIONS;
-  // 对比分屏时面板只有半宽：压缩头部（去 label、缩 chip/按钮文案），尽量一行放下。
+  const fallbackSuggestionList = useMemo(() => FALLBACK_SUGGESTION_KEYS.map((key) => t(key)), [t]);
+  const sugList = suggestions.length > 0 ? suggestions : fallbackSuggestionList;
+  // Compare panes are half-width, so compact the header.
   const compact = profile.paneKey !== "solo";
 
   const promptEditor = (
@@ -943,17 +948,17 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       value={draftSystemPrompt}
       spellCheck={false}
       onChange={(e) => setDraftSystemPrompt(e.target.value)}
-      placeholder="系统提示词，保存后会随对话一起发送"
+      placeholder={t("knowledgeNetwork.agentChat.chatPane.settings.promptPlaceholder")}
     />
   );
 
   const paramsGrid = (
     <div className={styles.cfgGrid}>
-      {CONFIG_FIELDS.map((f) => (
+      {CONFIG_FIELD_KEYS.map((f) => (
         <label key={f.key} className={styles.cfgField}>
           <span className={styles.cfgLabel}>
-            {f.label}
-            <Tooltip title={f.hint}>
+            {t(`knowledgeNetwork.agentChat.chatPane.configFields.${f.key}.label`)}
+            <Tooltip title={t(`knowledgeNetwork.agentChat.chatPane.configFields.${f.key}.hint`)}>
               <QuestionCircleOutlined className={styles.cfgHintIcon} />
             </Tooltip>
           </span>
@@ -973,19 +978,19 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       <section className={styles.configSection}>
         <div className={styles.configSectionHead}>
           <div>
-            <h3>工具范围</h3>
-            <p>限定本侧 Agent 可调用的工具。未选中的工具不会发送给模型。</p>
+            <h3>{t("knowledgeNetwork.agentChat.chatPane.settings.toolScopeTitle")}</h3>
+            <p>{t("knowledgeNetwork.agentChat.chatPane.settings.toolScopeDescription")}</p>
           </div>
           <button
             type="button"
             className={styles.linkBtn}
             onClick={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}
           >
-            恢复默认
+            {t("knowledgeNetwork.agentChat.chatPane.settings.resetDefault")}
           </button>
         </div>
         <div className={styles.configCard}>
-          <div className={styles.configFieldLabel}>可用工具</div>
+          <div className={styles.configFieldLabel}>{t("knowledgeNetwork.agentChat.chatPane.settings.availableTools")}</div>
           <Select
             size="small"
             mode="multiple"
@@ -999,14 +1004,21 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               const searchText = (option as { searchText?: unknown } | undefined)?.searchText;
               return typeof searchText === "string" && searchText.toLowerCase().includes(input.trim().toLowerCase());
             }}
-            placeholder={toolDefs ? "选择工具" : "正在加载工具"}
+            placeholder={
+              toolDefs
+                ? t("knowledgeNetwork.agentChat.chatPane.settings.selectTool")
+                : t("knowledgeNetwork.agentChat.chatPane.settings.loadingTools")
+            }
             loading={!toolDefs}
             disabled={busy}
             maxTagCount={0}
             maxTagPlaceholder={() =>
               draftToolSelection === null
-                ? `全部 · ${draftToolValue.length}`
-                : `已选 ${draftToolValue.length}${agentToolDefs ? ` / ${agentToolDefs.length}` : ""}`
+                ? t("knowledgeNetwork.agentChat.chatPane.settings.allTools", { count: draftToolValue.length })
+                : t("knowledgeNetwork.agentChat.chatPane.settings.selectedTools", {
+                    count: draftToolValue.length,
+                    total: agentToolDefs ? ` / ${agentToolDefs.length}` : "",
+                  })
             }
             allowClear
             onClear={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}
@@ -1025,7 +1037,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               className={`${styles.paneTitle} ${profile.highlight ? styles.paneTitleHl : ""}`}
               title={
                 profile.injectKnContext && knSummary
-                  ? `已载入网络摘要 · ${knSummary.objectTypes} 对象类 / ${knSummary.relations} 关系类`
+                  ? t("knowledgeNetwork.agentChat.chatPane.settings.loadedSummary", {
+                      objectTypes: knSummary.objectTypes,
+                      relations: knSummary.relations,
+                    })
                   : undefined
               }
             >
@@ -1035,15 +1050,21 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         </div>
         <div className={styles.barActions}>
           <button type="button" className={styles.barBtn} onClick={settingsOpen ? cancelSettings : openSettings}>
-            <SettingOutlined /> 问答配置 {settingsOpen ? <DownOutlined /> : <RightOutlined />}
+            <SettingOutlined /> {t("knowledgeNetwork.agentChat.chatPane.settings.configTitle")} {settingsOpen ? <DownOutlined /> : <RightOutlined />}
           </button>
-          <button type="button" className={styles.barBtn} onClick={clearChat} disabled={busy || empty} title="清空对话">
-            <ClearOutlined /> 清空
+          <button
+            type="button"
+            className={styles.barBtn}
+            onClick={clearChat}
+            disabled={busy || empty}
+            title={t("knowledgeNetwork.agentChat.chatPane.settings.clearTitle")}
+          >
+            <ClearOutlined /> {t("knowledgeNetwork.agentChat.chatPane.settings.clear")}
           </button>
         </div>
       </div> : null}
       <Drawer
-        title="问答配置"
+        title={t("knowledgeNetwork.agentChat.chatPane.settings.configTitle")}
         placement="right"
         width={520}
         open={settingsOpen}
@@ -1053,10 +1074,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         footer={
           <div className={styles.configFooter}>
             <button type="button" className={styles.cancelBtn} onClick={cancelSettings}>
-              取消
+              {t("knowledgeNetwork.agentChat.chatPane.settings.cancel")}
             </button>
             <button type="button" className={styles.confirmBtn} onClick={saveSettings}>
-              确定
+              {t("knowledgeNetwork.agentChat.chatPane.settings.confirm")}
             </button>
           </div>
         }
@@ -1064,12 +1085,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         <section className={styles.configSection}>
           <div className={styles.configSectionHead}>
             <div>
-              <h3>模型配置</h3>
-              <p>选择本次问答使用的模型。</p>
+              <h3>{t("knowledgeNetwork.agentChat.chatPane.settings.modelConfigTitle")}</h3>
+              <p>{t("knowledgeNetwork.agentChat.chatPane.settings.modelConfigDescription")}</p>
             </div>
           </div>
           <div className={styles.configCard}>
-            <div className={styles.configFieldLabel}>模型</div>
+            <div className={styles.configFieldLabel}>{t("knowledgeNetwork.agentChat.chatPane.settings.modelLabel")}</div>
               <Select
                 size="small"
                 className={styles.modelSelect}
@@ -1077,7 +1098,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                 value={draftModel || undefined}
                 onChange={setDraftModel}
               options={modelOptions}
-              placeholder="选择模型"
+              placeholder={t("knowledgeNetwork.agentChat.chatPane.settings.selectModel")}
               disabled={busy}
               popupMatchSelectWidth={false}
             />
@@ -1087,11 +1108,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         <section className={styles.configSection}>
           <div className={styles.configSectionHead}>
             <div>
-              <h3><ThunderboltFilled /> 系统提示词</h3>
-              <p>控制 Agent 的身份、工具使用策略和回答风格。</p>
+              <h3><ThunderboltFilled /> {t("knowledgeNetwork.agentChat.chatPane.settings.promptTitle")}</h3>
+              <p>{t("knowledgeNetwork.agentChat.chatPane.settings.promptDescription")}</p>
             </div>
             <button type="button" className={styles.linkBtn} onClick={resetDraftSystemPrompt}>
-              恢复默认
+              {t("knowledgeNetwork.agentChat.chatPane.settings.resetDefault")}
             </button>
           </div>
           {promptEditor}
@@ -1099,11 +1120,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         <section className={styles.configSection}>
           <div className={styles.configSectionHead}>
             <div>
-              <h3>参数</h3>
-              <p>限制工具步数、历史保留和输出长度，避免问答跑偏或结果过大。</p>
+              <h3>{t("knowledgeNetwork.agentChat.chatPane.settings.paramsTitle")}</h3>
+              <p>{t("knowledgeNetwork.agentChat.chatPane.settings.paramsDescription")}</p>
             </div>
             <button type="button" className={styles.linkBtn} onClick={resetDraftConfig}>
-              恢复默认
+              {t("knowledgeNetwork.agentChat.chatPane.settings.resetDefault")}
             </button>
           </div>
           {paramsGrid}
@@ -1116,11 +1137,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             <div className={styles.introGlyph}>
               <ThunderboltFilled />
             </div>
-            <h3>还没有可用的大模型</h3>
-            <p>Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。</p>
+            <h3>{t("knowledgeNetwork.agentChat.chatPane.empty.noLlmTitle")}</h3>
+            <p>{t("knowledgeNetwork.agentChat.chatPane.empty.noLlmDescription")}</p>
             <div className={styles.sugs}>
               <button type="button" className={styles.sug} onClick={() => void navigate("/model-resources/models")}>
-                <span className={styles.sugText}>去模型工厂接入大模型</span>
+                <span className={styles.sugText}>{t("knowledgeNetwork.agentChat.chatPane.empty.goModelFactory")}</span>
                 <RightOutlined className={styles.sugArrow} />
               </button>
             </div>
@@ -1130,21 +1151,23 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             <div className={styles.introGlyph}>
               <ThunderboltFilled />
             </div>
-            <h3>{profile.emptyTitle ?? "开始验证"}</h3>
+            <h3>{profile.emptyTitle ?? t("knowledgeNetwork.agentChat.chatPane.empty.start")}</h3>
             <p>
               {profile.paneKey === "base" ? (
-                <>
-                  用自然语言提问，Agent 只能用基础数据工具（list_resources / describe_resource / run_sql）直接查表作答，
-                  不借助知识网络语义。
-                </>
+                t("knowledgeNetwork.agentChat.chatPane.empty.baseIntro")
               ) : (
-                <>
-                  用自然语言向 Agent 提问，它会基于知识网络 <code>{knId}</code>
-                  {networkName ? `（${networkName}）` : ""} 调用检索工具并作答。
-                  {knSummary
-                    ? `已自动载入网络摘要（${knSummary.objectTypes} 对象类 / ${knSummary.relations} 关系类），无需先浏览。`
-                    : ""}
-                </>
+                t("knowledgeNetwork.agentChat.chatPane.empty.knIntro", {
+                  knId,
+                  networkName: networkName
+                    ? t("knowledgeNetwork.agentChat.chatPane.empty.networkName", { networkName })
+                    : "",
+                  summary: knSummary
+                    ? t("knowledgeNetwork.agentChat.chatPane.empty.summary", {
+                        objectTypes: knSummary.objectTypes,
+                        relations: knSummary.relations,
+                      })
+                    : "",
+                })
               )}
             </p>
             <div className={styles.sugs}>
@@ -1168,20 +1191,25 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               const hasTools = !!m.toolCalls && m.toolCalls.length > 0;
               return (
                 <div key={i} className={`${styles.msg} ${m.role === "user" ? styles.msgUser : styles.msgBot}`}>
-                  <div className={styles.avatar}>{m.role === "user" ? "我" : <ThunderboltFilled />}</div>
+                  <div className={styles.avatar}>
+                    {m.role === "user" ? t("knowledgeNetwork.agentChat.chatPane.message.user") : <ThunderboltFilled />}
+                  </div>
                   <div className={styles.bubble}>
-                    <div className={styles.who}>{m.role === "user" ? "我" : "Agent"}</div>
+                    <div className={styles.who}>
+                      {m.role === "user"
+                        ? t("knowledgeNetwork.agentChat.chatPane.message.user")
+                        : t("knowledgeNetwork.agentChat.chatPane.message.agent")}
+                    </div>
                     {m.reasoning ? <ReasoningBlock text={m.reasoning} live={busy && isLast && !m.content} /> : null}
                     {hasTools ? (
                       <div className={styles.calls}>
                         {m.toolCalls!.map((tc) => (
-                          <ToolCallCard key={tc.id} call={tc} />
+                          <ToolCallCard key={tc.id} call={tc} t={t} />
                         ))}
                       </div>
                     ) : null}
                     {m.content ? (
-                      // 流式进行中也渲染 Markdown：MarkdownView 按块 memo，只有尾块重 parse，
-                      // 不再是每来一个 token 就整段重解析（长答复 O(n²) 卡 UI）。
+                      // During streaming, MarkdownView reparses only the tail block.
                       m.role === "assistant" ? (
                         <MarkdownView text={m.content} streaming={busy && isLast} />
                       ) : (
@@ -1200,8 +1228,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                           <ErrorBlock
                             key={ei}
                             err={e}
-                            // 重试 = 把失败的这一轮原地重跑（摘掉旧的一对再重发），
-                            // 不是追加新一轮——否则会多出一条重复的用户气泡。
+                            t={t}
+                            // Retry reruns the failed turn in place instead of appending a duplicate user bubble.
                             onRetry={
                               e.retryable && !busy && isLast && messages[i - 1]?.role === "user"
                                 ? () => void send(messages[i - 1].content, { replaceLastRound: true })
@@ -1214,12 +1242,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                     {m.role === "assistant" ? (
                       busy && isLast ? (
                         <div className={styles.msgMeta}>
-                          · ~{fmtTokens(estimateTokens((m.reasoning?.length ?? 0) + m.content.length))} tokens
+                          - ~{fmtTokens(estimateTokens((m.reasoning?.length ?? 0) + m.content.length))} tokens
                         </div>
                       ) : m.tokens || m.ms ? (
                         <div className={styles.msgMeta}>
                           {m.tokens ? `${fmtTokens(m.tokens)} tokens` : ""}
-                          {m.tokens && m.ms ? " · " : ""}
+                          {m.tokens && m.ms ? " - " : ""}
                           {m.ms ? fmtDuration(m.ms) : ""}
                         </div>
                       ) : null

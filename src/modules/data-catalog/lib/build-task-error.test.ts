@@ -20,4 +20,22 @@ describe("summarizeBuildTaskError", () => {
     expect(summary?.message).toContain("写入索引失败");
     expect(summary?.raw).toContain("id is missing");
   });
+
+  it("summarizes data-too-long errors with localized column interpolation", () => {
+    const summary = summarizeBuildTaskError(
+      "Data too long for column 'f_error_detail' at row 1",
+      "en-US",
+    );
+
+    expect(summary?.title).toBe("Build checkpoint write failed");
+    expect(summary?.message).toContain("Column f_error_detail received a value longer");
+    expect(summary?.suggestion).toBe("Check and increase the column length, then rebuild.");
+  });
+
+  it("summarizes duplicate entry errors in Chinese", () => {
+    const summary = summarizeBuildTaskError("Duplicate entry 'task-001' for key 'uniq'", "zh-CN");
+
+    expect(summary?.title).toBe("任务状态写入冲突");
+    expect(summary?.suggestion).toContain("请刷新任务列表");
+  });
 });

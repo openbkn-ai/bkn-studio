@@ -7,7 +7,7 @@
 
 export type ResourceCategory = "dataset" | "logicview" | "table";
 
-/** 字段级索引能力：keyword / fulltext / vector（对齐 Vega feature_type）。 */
+/** Field-level indexing capabilities: keyword, fulltext, and vector (aligned with Vega feature_type). */
 export type ResourceFeatureType = "keyword" | "fulltext" | "vector";
 
 export type ResourceFieldFeature = {
@@ -23,12 +23,12 @@ export type ResourceFieldFeature = {
 
 export type ResourceSchemaField = {
   attributes?: Record<string, unknown> | null;
-  /** 业务字段名（后端 display_name） */
+  /** Business field name (backend display_name). */
   displayName?: string;
-  /** 字段说明（后端 description） */
+  /** Field description (backend description). */
   description?: string;
   extensions?: Record<string, string>;
-  /** 字段级索引 features（全文 / 向量等） */
+  /** Field-level index features, such as full text and vectors. */
   features?: ResourceFieldFeature[];
   name: string;
   originalDescription?: string;
@@ -38,7 +38,7 @@ export type ResourceSchemaField = {
   type: string;
 };
 
-/** Resource 级默认值与跨字段构建策略（不含字段是否参与索引）。 */
+/** Resource-level defaults and cross-field build strategy, excluding per-field index participation. */
 export type ResourceIndexConfig = {
   buildKeyFields?: string[];
   defaultEmbeddingModel?: string;
@@ -51,11 +51,11 @@ export type CatalogResource = {
   columnCount: number;
   description: string;
   id: string;
-  /** 当前索引配置；列表接口可能缺省，配置页以详情为准 */
+  /** Current index configuration. List endpoints may omit it; use the detail response on configuration pages. */
   indexConfig?: ResourceIndexConfig;
   name: string;
   rowCount: number;
-  /** 物理数据源中的 schema；与字段定义 schema 区分命名。 */
+  /** Schema in the physical data source; named distinctly from the field-definition schema. */
   schemaName?: string;
   schema: ResourceSchemaField[];
   sourceIdentifier: string;
@@ -105,7 +105,7 @@ export type BuildTaskStatus =
   | "running"
   | "succeeded";
 
-/** 后端 index_health 的单项健康态:ok / 部分失败 / 失败 / 构建中。 */
+/** Per-index health state from backend index_health: ok, partial failure, failure, or building. */
 export type IndexHealthState = "ok" | "partial" | "failed" | "building";
 
 export type IndexHealth = {
@@ -127,47 +127,47 @@ export type EmbeddingFieldConfig = {
 
 export type BuildTask = {
   buildKeyFields: string[];
-  /** 后端任务记录所属 Catalog；mock 旧数据可缺省并由数据资源回填。 */
+  /** Catalog containing the backend task record. Legacy mock data may omit it and derive it from the resource. */
   catalogId?: string;
-  /** 任务列表关联返回的 catalog 展示字段，避免列表页再全量加载 catalog。 */
+  /** Catalog display field returned with task lists to avoid loading all catalogs again. */
   catalogName?: string;
-  /** 创建人信息；后端列表与详情接口均会补齐名称。 */
+  /** Creator information; backend list and detail endpoints both populate the name. */
   creator?: BuildTaskCreator;
   createTime: string;
   createdAt: number;
   embeddingFields: string[];
-  /** batch 任务创建时选择的执行类型；streaming 不适用。 */
+  /** Execution type selected when creating a batch task; not applicable to streaming. */
   executeType?: BuildTaskExecuteType;
-  /** 任务快照中每个向量字段实际使用的模型与维度。 */
+  /** Model and dimensions actually used for each vector field in the task snapshot. */
   embeddingConfigs?: Record<string, EmbeddingFieldConfig>;
   embeddingModel: string;
-  /** completed 但向量化没建满（vectorized < synced），索引不可用/部分可用。 */
+  /** Completed with incomplete vectorization (vectorized < synced), so the index is unavailable or partially usable. */
   embeddingDegraded: boolean;
   fulltextAnalyzer: string;
-  /** 任务快照中每个全文字段最终使用的 analyzer。 */
+  /** Analyzer ultimately used for each full-text field in the task snapshot. */
   fulltextAnalyzers?: Record<string, string>;
   fulltextFields: string[];
   error: string | null;
-  /** 后端 failure_detail：向量化失败的详细原因，tooltip 展开用。 */
+  /** Backend failure_detail containing the detailed reason for vectorization failure, shown in a tooltip. */
   failureDetail: string;
   finishTime: string | null;
   id: string;
-  /** 后端真实索引健康态(index_health);mock 旧数据可能缺,组件按 embeddingDegraded 兜底。 */
+  /** Actual backend index health (index_health). Legacy mock data may omit it, so components fall back to embeddingDegraded. */
   indexHealth?: IndexHealth;
-  /** 索引是否可用（embeddingDegraded 时为 false）。 */
+  /** Whether the index is usable; false when embeddingDegraded. */
   indexUsable: boolean;
   lastEventAt: number | null;
   mode: BuildMode;
   modelDimensions: number;
   resourceId: string;
-  /** 任务列表关联返回的资源名称，避免列表页再全量加载 resources。 */
+  /** Resource name returned with task lists to avoid loading all resources again. */
   resourceName?: string;
   status: BuildTaskStatus;
   syncedCount: number;
-  /** 已同步断点；用于未完成任务的续跑。 */
+  /** Synchronization checkpoint used to resume unfinished tasks. */
   syncedMark?: string;
   totalCount: number;
-  /** 后端最后更新时间，毫秒时间戳及其展示值。 */
+  /** Backend last-update time as a millisecond timestamp and its display value. */
   updatedAt?: number;
   updateTime?: string | null;
   vectorizedCount: number;
@@ -180,11 +180,14 @@ export type BuildTaskListQuery = {
   statuses?: BuildTaskStatus[];
 };
 
-/** 服务端排序维度；缺省按创建时间倒序。 */
-export type BuildTaskOrderBy = "created_at" | "updated_at";
+/** Server-side sort dimension: default uses backend ordering with active builds first and omits order_by. */
+export type BuildTaskOrderBy =
+  | "default"
+  | "created_at"
+  | "updated_at";
 
 export type BuildTaskPageQuery = {
-  /** 只看构建中:传 active=true,且不再传 status。 */
+  /** Show only active builds: send active=true and omit status. */
   active?: boolean;
   catalogId?: string;
   mode?: BuildMode;
@@ -201,9 +204,9 @@ export type BuildTaskPageResult = {
   total: number;
 };
 
-/** 创建任务：索引配置已归属 resource，此处只触发构建。 */
+/** Creates a task. Index configuration belongs to the resource, so this only starts the build. */
 export type BuildTaskCreateInput = {
-  /** batch only；默认 full。streaming 勿传 unsupported 值。 */
+  /** Batch only; defaults to full. Do not send unsupported values for streaming. */
   executeType?: BuildTaskExecuteType;
   mode: BuildMode;
   resourceId: string;
@@ -212,8 +215,8 @@ export type BuildTaskCreateInput = {
 export type FulltextAnalyzer = "hanlp_index" | "ik_max_word" | "standard";
 
 /**
- * @deprecated 索引配置改走 resource update；勿再 PUT task 配置。
- * 保留类型仅用于过渡期 UI 组装 resource 写入载荷。
+ * @deprecated Index configuration now uses resource updates; do not PUT task configuration.
+ * This type remains only for transition-period UI construction of resource write payloads.
  */
 export type BuildTaskUpdateInput = {
   buildKeyFields: string[];
@@ -224,7 +227,7 @@ export type BuildTaskUpdateInput = {
   modelDimensions: number;
 };
 
-/** start / 重跑：reset=true 仅对 full 任务忽略游标全量重跑。 */
+/** Start or rerun: reset=true reruns only full tasks from scratch, ignoring the checkpoint. */
 export type BuildTaskStartInput = {
   reset?: boolean;
 };

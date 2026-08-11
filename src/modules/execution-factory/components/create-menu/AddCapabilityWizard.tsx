@@ -82,7 +82,7 @@ type AddCapabilityWizardProps = {
 
   initialMode?: CapabilityUxMode;
 
-  /** 限定并强制展示模式选择步（如 HTTP API 入口只给 quick-api / import-openapi 两卡）。 */
+  /** Restricts and forces the mode-selection step, such as an HTTP API entry offering only quick-api and import-openapi cards. */
   allowedModesOverride?: CapabilityUxMode[];
 
   lockInitialMode?: boolean;
@@ -145,8 +145,8 @@ export function AddCapabilityWizard({
     [allowedModesOverride, contextTab],
   );
 
-  // 有 override 时按 override 的数量决定跳不跳（≥2 强制展示两卡，即使锁了工具箱）；
-  // 否则维持原来的上下文规则。
+  // With an override, its number of modes determines whether to skip; two or more force the cards
+  // even when the toolbox is locked. Otherwise retain the original context rules.
   const skipModeStep =
     lockInitialMode ||
     (allowedModesOverride

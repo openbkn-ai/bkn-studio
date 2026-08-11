@@ -7,16 +7,18 @@
 
 import {
   DeleteOutlined,
+  EllipsisOutlined,
   ReloadOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
-import { Alert, Select, Space, Tooltip } from "antd";
+import { Alert, Dropdown, Select, Space, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -73,7 +75,7 @@ function EllipsisText({ text, title }: { text: string; title?: string }) {
 
 export function IndexBuildListScene() {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [taskColumnWidth, setTaskColumnWidth] = useState(() => {
@@ -117,8 +119,12 @@ export function IndexBuildListScene() {
   const [total, setTotal] = useState(0);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const canManageResourceTasks = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "resource:task_manage",
+  });
 
-  // 服务端分页 + 排序 + 状态过滤的查询参数。
+  // Query parameters for server pagination, sorting, and status filtering.
   const taskQuery = useMemo<BuildTaskPageQuery>(
     () => ({
       page,
@@ -161,14 +167,14 @@ export function IndexBuildListScene() {
     }
   }, [taskQuery]);
 
-  // 轮询只刷新当前页任务，避免随着资源量增加而放大请求量。
+  // Poll only tasks on the current page to prevent request volume growing with resource count.
   const refreshTasksSilently = useCallback(async () => {
     try {
       const result = await listBuildTaskPage(taskQuery);
       setTasks(result.items);
       setTotal(result.total);
     } catch {
-      // 轮询失败保留旧数据,等下一轮
+      // Retain existing data when polling fails and wait for the next cycle.
     }
   }, [taskQuery]);
 
@@ -326,7 +332,7 @@ export function IndexBuildListScene() {
     };
   }, [resourceColumnWidth, taskColumnWidth]);
 
-  // 列头排序:有方向 → order_by=列key + order;清除 → 回创建时间倒序。
+  // Header sorting: a direction sends order_by=column key plus order; clearing returns to default without an arrow.
   const handleTableChange: TableProps<BuildTask>["onChange"] = (
     _pagination,
     _filters,
@@ -464,9 +470,10 @@ export function IndexBuildListScene() {
       render: (value: string) => <EllipsisText text={value} />,
     },
     {
+      align: "center",
       key: "actions",
       title: t("common.actions"),
-      width: 160,
+      width: 84,
       fixed: "right",
       render: (_, record) => {
         const pauseResumeLabel =
@@ -482,37 +489,50 @@ export function IndexBuildListScene() {
                   : "dataCatalog.task.stopBuild",
               );
 
-        return (
-          <Space className={sceneStyles.actionGroup} size={4}>
-            <AppButton onClick={() => setDetailTaskId(record.id)} type="link">
-              {t("common.detail")}
-            </AppButton>
-            {record.status === "running" ||
+        const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
+        if (
+          canManageResourceTasks &&
+          (record.status === "running" ||
             record.status === "listening" ||
             record.status === "pending" ||
-            record.status === "paused" ? (
-              <PermissionGate permissions="resource:task_manage">
-                <AppButton
-                  onClick={() => void handlePauseResume(record)}
-                  type="link"
-                >
-                  {pauseResumeLabel}
-                </AppButton>
-              </PermissionGate>
-            ) : null}
-            {record.status === "failed" ? (
-              <PermissionGate permissions="resource:task_manage">
-                <AppButton onClick={() => void handleRetry(record)} type="link">
-                  {t("dataCatalog.task.rerun")}
-                </AppButton>
-              </PermissionGate>
-            ) : null}
-            <PermissionGate permissions="resource:task_manage">
-              <AppButton danger onClick={() => handleDelete(record)} type="link">
-                {t("common.delete")}
-              </AppButton>
-            </PermissionGate>
-          </Space>
+            record.status === "paused")
+        ) {
+          menuItems.push({ key: "pauseResume", label: pauseResumeLabel });
+        }
+        if (canManageResourceTasks && record.status === "failed") {
+          menuItems.push({ key: "retry", label: t("dataCatalog.task.rerun") });
+        }
+        if (canManageResourceTasks) {
+          menuItems.push({ danger: true, key: "delete", label: t("common.delete") });
+        }
+
+        return (
+          <Dropdown
+            menu={{
+              items: menuItems,
+              onClick: ({ key, domEvent }) => {
+                domEvent.stopPropagation();
+                if (key === "detail") {
+                  setDetailTaskId(record.id);
+                  return;
+                }
+                if (key === "pauseResume") {
+                  void handlePauseResume(record);
+                  return;
+                }
+                if (key === "retry") {
+                  void handleRetry(record);
+                  return;
+                }
+                if (key === "delete") {
+                  handleDelete(record);
+                }
+              },
+            }}
+            trigger={["click"]}
+          >
+            <AppButton aria-label={t("dataConnect.moreActions")} className={sceneStyles.actionMore} icon={<EllipsisOutlined />} type="link" />
+          </Dropdown>
         );
       },
     },

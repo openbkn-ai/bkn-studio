@@ -34,7 +34,7 @@ export function ToolboxToolsPage() {
           setIsFunctionToolbox(record.metadataType === "function");
         }
       } catch {
-        // 判定不出来就退回通用工具列表页，别把用户堵在加载态。
+        // Fall back to the generic tool-list page when classification is unavailable instead of leaving users stuck loading.
         if (!cancelled) {
           setIsFunctionToolbox(false);
         }
@@ -58,7 +58,7 @@ export function ToolboxToolsPage() {
     );
   }
 
-  // 代码函数走工作台（代码 / 参数 / 调试同屏）；OpenAPI 等仍走工具列表页。
+  // Code functions use the workbench with code, parameters, and debugging together; OpenAPI and others remain on the tool-list page.
   return isFunctionToolbox ? (
     <FunctionWorkbenchScene boxId={boxId} />
   ) : (

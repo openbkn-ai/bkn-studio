@@ -9,8 +9,16 @@
   background: #fff;
   border-radius: 4px;
   margin: 0 auto;
-  max-width: 720px;
+  max-width: 880px;
   padding: 24px;
+}
+
+.formPanel :global(.ant-form-item-label) {
+  overflow: visible;
+}
+
+.formPanel :global(.ant-form-item-label > label) {
+  white-space: normal;
 }
 
 .loadingState {

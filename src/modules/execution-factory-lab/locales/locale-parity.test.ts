@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { executionFactoryLabEnUS } from "./en-US";
 import { executionFactoryLabZhCN } from "./zh-CN";
 
-// 缺键会静默回落英文，中文界面直接中英混排，所以键集必须对齐。
+// Missing keys silently fall back to English and create mixed-language Chinese UI, so key sets must remain aligned.
 describe("execution-factory-lab locale parity", () => {
   const enKeys = Object.keys(executionFactoryLabEnUS.executionFactoryLab).sort();
   const zhKeys = Object.keys(executionFactoryLabZhCN.executionFactoryLab).sort();

@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import i18n from "@/app/locales/i18n";
 import { childDepartments, computeSubtreeMemberCounts } from "@/modules/system-admin/utils/admin-helpers";
 import type {
   AdminDepartment,
@@ -22,11 +23,10 @@ import type {
 } from "@/modules/system-admin/types/admin";
 
 /**
- * 系统管理服务层 —— 对齐 bkn-safe 的 token-gated admin API
- * `/api/safe/v1/admin/*`（ISF 退役后的统一入口）。默认走前端 mock；
- * VITE_USE_MOCK=false 时改打真实后端。
+ * System admin service for the bkn-safe token-gated admin API.
+ * Uses frontend mock data by default; VITE_USE_MOCK=false calls the real backend.
  *
- * 后端暂不支持、已从写路径剔除（等后端反馈）：冻结/解冻、用户↔部门归属写入。
+ * Backend write gaps are intentionally omitted from write paths until support lands.
  */
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
@@ -49,20 +49,20 @@ const grant = (type: string, id: string, operations: string[]): ResourceGrant =>
 // ---- mock store -------------------------------------------------------------
 
 let departments: AdminDepartment[] = [
-  { id: "dep-root", parentId: null, name: "BKN 平台", type: "org", code: "BKN" },
-  { id: "dep-data", parentId: "dep-root", name: "数据智能部", type: "dept" },
-  { id: "dep-ke", parentId: "dep-data", name: "知识工程组", type: "dept" },
-  { id: "dep-gov", parentId: "dep-data", name: "数据治理组", type: "dept" },
-  { id: "dep-rd", parentId: "dep-root", name: "平台研发部", type: "dept" },
-  { id: "dep-cs", parentId: "dep-root", name: "客户成功部", type: "dept" },
+  { id: "dep-root", parentId: null, name: "BKN Platform", type: "org", code: "BKN" },
+  { id: "dep-data", parentId: "dep-root", name: "Data Intelligence", type: "dept" },
+  { id: "dep-ke", parentId: "dep-data", name: "Knowledge Engineering", type: "dept" },
+  { id: "dep-gov", parentId: "dep-data", name: "Data Governance", type: "dept" },
+  { id: "dep-rd", parentId: "dep-root", name: "Platform Engineering", type: "dept" },
+  { id: "dep-cs", parentId: "dep-root", name: "Customer Success", type: "dept" },
 ];
 
 let users: AdminUser[] = [
   { id: "u-admin", account: "local-admin", name: "Local Admin", email: "admin@bkn.local", telephone: "", enabled: true, accountType: "local", builtin: true, roleIds: [], departmentIds: ["dep-root"], updatedAt: daysAgo(2) },
-  { id: "u-chen", account: "chen.yanqiu", name: "陈砚秋", email: "chen.yanqiu@bkn.local", telephone: "", enabled: true, accountType: "local", roleIds: [], departmentIds: ["dep-ke"], updatedAt: daysAgo(4) },
-  { id: "u-li", account: "li.mubai", name: "李慕白", email: "li.mubai@bkn.local", telephone: "", enabled: true, accountType: "local", roleIds: [], departmentIds: ["dep-gov"], updatedAt: daysAgo(9) },
-  { id: "u-wang", account: "wang.xiaoou", name: "王晓鸥", email: "wang.xiaoou@bkn.local", telephone: "", enabled: true, accountType: "local", roleIds: [], departmentIds: ["dep-rd"], updatedAt: daysAgo(1) },
-  { id: "u-zhao", account: "zhao.qinglan", name: "赵清岚", email: "zhao.qinglan@bkn.local", telephone: "", enabled: false, accountType: "local", roleIds: [], departmentIds: ["dep-cs"], updatedAt: daysAgo(15) },
+  { id: "u-chen", account: "chen.yanqiu", name: "Yanqiu Chen", email: "chen.yanqiu@bkn.local", telephone: "", enabled: true, accountType: "local", roleIds: [], departmentIds: ["dep-ke"], updatedAt: daysAgo(4) },
+  { id: "u-li", account: "li.mubai", name: "Mubai Li", email: "li.mubai@bkn.local", telephone: "", enabled: true, accountType: "local", roleIds: [], departmentIds: ["dep-gov"], updatedAt: daysAgo(9) },
+  { id: "u-wang", account: "wang.xiaoou", name: "Xiaoou Wang", email: "wang.xiaoou@bkn.local", telephone: "", enabled: true, accountType: "local", roleIds: [], departmentIds: ["dep-rd"], updatedAt: daysAgo(1) },
+  { id: "u-zhao", account: "zhao.qinglan", name: "Qinglan Zhao", email: "zhao.qinglan@bkn.local", telephone: "", enabled: false, accountType: "local", roleIds: [], departmentIds: ["dep-cs"], updatedAt: daysAgo(15) },
 ];
 
 const auditLog: AuditLog[] = [
@@ -75,13 +75,13 @@ const auditLog: AuditLog[] = [
 
 let roles: AdminRole[] = [
   {
-    id: "role-super-admin", name: "super_admin", description: "内置隐藏 / 受控：平台全量权限，人数极少。",
+    id: "role-super-admin", name: "super_admin", description: "Built-in hidden and controlled role with full platform permissions.",
     builtin: true, source: "system",
     permissions: [grant("*", "*", ["*"])],
     accessorIds: ["u-admin"], updatedAt: daysAgo(30),
   },
   {
-    id: "role-admin", name: "admin", description: "系统管理员：系统运行维护、用户 / 部门基础管理。",
+    id: "role-admin", name: "admin", description: "System administrator for operations, users, and departments.",
     builtin: true, source: "system",
     permissions: [
       grant("admin-user", "*", ["create", "edit", "delete", "toggle", "reset-password"]),
@@ -90,7 +90,7 @@ let roles: AdminRole[] = [
     accessorIds: [], updatedAt: daysAgo(30),
   },
   {
-    id: "role-security", name: "security", description: "安全管理员：角色管理、授权管理、账号安全管理。",
+    id: "role-security", name: "security", description: "Security administrator for roles, authorization, and account security.",
     builtin: true, source: "system",
     permissions: [
       grant("admin-role", "*", ["create", "edit", "delete", "members"]),
@@ -100,7 +100,7 @@ let roles: AdminRole[] = [
     accessorIds: [], updatedAt: daysAgo(30),
   },
   {
-    id: "role-audit", name: "audit", description: "审计管理员：审计日志、权限配置审查、管理行为监督。",
+    id: "role-audit", name: "audit", description: "Audit administrator for audit logs, permission review, and admin behavior supervision.",
     builtin: true, source: "system",
     permissions: [
       grant("admin-audit", "*", ["view"]),
@@ -108,7 +108,7 @@ let roles: AdminRole[] = [
     accessorIds: [], updatedAt: daysAgo(30),
   },
   {
-    id: "role-network-builder", name: "network_builder", description: "业务网络构建者：数据、知识、模型与执行工厂的业务建设。",
+    id: "role-network-builder", name: "network_builder", description: "Business network builder for data, knowledge, models, and execution factory assets.",
     builtin: true, source: "business",
     permissions: [
       grant("catalog", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
@@ -124,7 +124,7 @@ let roles: AdminRole[] = [
     accessorIds: ["u-li", "dep-gov", "u-wang", "dep-rd"], updatedAt: daysAgo(8),
   },
   {
-    id: "role-normal-user", name: "normal_user", description: "普通用户：各模块查看、查询、执行与调用。",
+    id: "role-normal-user", name: "normal_user", description: "Regular user for viewing, querying, executing, and invoking module capabilities.",
     builtin: true, source: "business",
     permissions: [
       grant("catalog", "*", ["view_detail"]),
@@ -340,7 +340,7 @@ export async function listDepartmentMembers(
   return (response.data.users ?? []).map((item) => mapUser(item));
 }
 
-/** 部门成员写（幂等）：POST/DELETE /departments/:id/members {user_ids}。 */
+/** Idempotent department member writes via POST/DELETE /departments/:id/members {user_ids}. */
 export async function setDepartmentMembers(
   deptId: string,
   userIds: string[],
@@ -414,7 +414,7 @@ export async function listAuditLogs(
     },
   });
   const all = (response.data.logs ?? []).map(mapAudit);
-  // status 过滤后端无参数，前端筛（注意分页：仅对当前页过滤）。
+  // The backend has no status filter, so filter the current page on the frontend.
   const logs = query.failedOnly ? all.filter((log) => log.status >= 400) : all;
   return { logs, total: response.data.total ?? logs.length };
 }
@@ -427,7 +427,7 @@ export async function createUser(
 ): Promise<void> {
   if (useMock) {
     if (users.some((item) => item.account === input.account)) {
-      throw new Error(`登录名已存在：${input.account}`);
+      throw new Error(i18n.t("systemAdmin.errors.userAccountDuplicateWithAccount", { account: input.account }));
     }
     const user: AdminUser = {
       id: uid("u"),
@@ -533,7 +533,7 @@ export async function updateUser(
     await wait(undefined);
     return;
   }
-  // department_ids 替换语义：始终传当前选择集（含 [] 清空）。
+  // department_ids has replace semantics; always send the current selection, including [].
   await http.put(
     `${ADMIN}/users/${encodeURIComponent(id)}`,
     {
@@ -555,7 +555,7 @@ export async function deleteUser(id: string): Promise<void> {
       throw new Error("user not found");
     }
     if (user.builtin) {
-      throw new Error("内置管理员账号不可删除");
+      throw new Error(i18n.t("systemAdmin.errors.builtinAdminCannotDelete"));
     }
     for (const role of roles) {
       role.accessorIds = role.accessorIds.filter((accessorId) => accessorId !== id);
@@ -574,14 +574,14 @@ export async function setUserEnabled(id: string, enabled: boolean): Promise<void
       throw new Error("user not found");
     }
     if (user.builtin && !enabled) {
-      throw new Error("内置管理员账号不可停用");
+      throw new Error(i18n.t("systemAdmin.errors.builtinAdminCannotDisable"));
     }
     user.enabled = enabled;
     user.updatedAt = now();
     await wait(undefined);
     return;
   }
-  // bkn-safe 无单独 enable/disable 端点，经 PUT 改 enabled 字段。
+  // bkn-safe has no dedicated enable/disable endpoint; update the enabled field via PUT.
   await http.put(`${ADMIN}/users/${encodeURIComponent(id)}`, { enabled });
 }
 
@@ -590,7 +590,7 @@ export async function resetUserPassword(id: string, newPassword: string): Promis
     await wait(undefined);
     return;
   }
-  // 明文走 TLS（bkn-safe 无 RSA/thrift），后端置「首登强制改密」。
+  // Plaintext is protected by TLS; the backend enforces password change on first login.
   await http.put(`${ADMIN}/users/${encodeURIComponent(id)}/password`, { password: newPassword });
 }
 
@@ -632,7 +632,7 @@ export async function updateDepartment(id: string, input: DepartmentInput): Prom
       throw new Error("department not found");
     }
     dept.name = input.name;
-    dept.parentId = input.parentId; // 允许改上级（含移到顶层 = null）
+    dept.parentId = input.parentId;
     if (input.type) {
       dept.type = input.type;
     }
@@ -643,7 +643,7 @@ export async function updateDepartment(id: string, input: DepartmentInput): Prom
     await wait(undefined);
     return;
   }
-  // parent_id "" = 顶层；始终下发以支持改上级 / 拖拽 re-parent。
+  // parent_id "" means top-level; always send it to support re-parenting.
   await http.put(`${ADMIN}/departments/${encodeURIComponent(id)}`, {
     name: input.name,
     parent_id: input.parentId ?? "",
@@ -662,13 +662,13 @@ export async function deleteDepartment(id: string): Promise<void> {
       throw new Error("department not found");
     }
     if (childDepartments(departments, id).length) {
-      throw new Error("请先删除其下级部门");
+      throw new Error(i18n.t("systemAdmin.errors.deleteChildDepartmentsFirst"));
     }
     departments = departments.filter((item) => item.id !== id);
     await wait(undefined);
     return;
   }
-  // 非级联：有子部门/成员时后端返 409。
+  // Non-cascade delete: the backend returns 409 when children or members exist.
   await http.delete(`${ADMIN}/departments/${encodeURIComponent(id)}`, {
     skipErrorToast: true,
   });
@@ -679,7 +679,7 @@ export async function deleteDepartment(id: string): Promise<void> {
 export async function createRole(input: RoleInput): Promise<string> {
   if (useMock) {
     if (roles.some((item) => item.name === input.name)) {
-      throw new Error(`角色标识已存在：${input.name}`);
+      throw new Error(i18n.t("systemAdmin.errors.roleNameDuplicateWithName", { name: input.name }));
     }
     const id = uid("role");
     roles = [
@@ -712,7 +712,7 @@ export async function updateRole(id: string, input: RoleInput): Promise<void> {
       throw new Error("role not found");
     }
     if (role.builtin) {
-      throw new Error("内置角色不可修改");
+      throw new Error(i18n.t("systemAdmin.errors.builtinRoleCannotModify"));
     }
     role.name = input.name;
     role.description = input.description;
@@ -733,7 +733,7 @@ export async function deleteRole(id: string): Promise<void> {
       throw new Error("role not found");
     }
     if (role.builtin) {
-      throw new Error("内置角色不可删除");
+      throw new Error(i18n.t("systemAdmin.errors.builtinRoleCannotDelete"));
     }
     roles = roles.filter((item) => item.id !== id);
     await wait(undefined);
@@ -742,7 +742,7 @@ export async function deleteRole(id: string): Promise<void> {
   await http.delete(`${ADMIN}/roles/${encodeURIComponent(id)}`);
 }
 
-/** 角色绑定成员（accessor = 用户或部门）。 */
+/** Binds a role member where accessor is a user or department. */
 export async function setRoleMember(
   roleId: string,
   accessorId: string,
@@ -762,7 +762,7 @@ export async function setRoleMember(
   }
 }
 
-/** 对象级授权：给/收回角色对某资源实例（或整类 *）的操作。 */
+/** Grants or revokes role operations on one resource instance or a whole resource type. */
 export async function setRolePermission(
   roleId: string,
   attach: boolean,
@@ -774,7 +774,7 @@ export async function setRolePermission(
       throw new Error("role not found");
     }
     if (role.builtin) {
-      throw new Error("内置角色的权限不可修改");
+      throw new Error(i18n.t("systemAdmin.errors.builtinRolePermissionCannotModify"));
     }
     const existing = role.permissions.find(
       (item) => item.resource.type === perm.resource.type && item.resource.id === perm.resource.id,
@@ -837,8 +837,8 @@ type BackendAudit = {
   target_name?: string;
 };
 
-// 注意：departments 端点返 PascalCase（ID/Name/ParentID/Type），与 users/roles
-// 的小写不一致，故两种命名都兼容。
+// Department endpoints return PascalCase, unlike the lowercase users/roles payloads,
+// so both naming styles are supported.
 type BackendDept = {
   Code?: string;
   CreatedAt?: string;
@@ -968,7 +968,7 @@ function mapDept(item: BackendDept): AdminDepartment {
   const id = item.ID ?? item.id ?? "";
   return {
     id,
-    // ParentID "" = 顶层 → null（|| 同时兜住 "" 和 undefined）。
+    // ParentID "" means top-level and maps to null.
     parentId: item.ParentID || item.parent_id || null,
     name: item.Name || item.name || item.dept_name || item.department_name || id,
     type: item.Type ?? item.type ?? "dept",

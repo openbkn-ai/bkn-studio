@@ -24,7 +24,7 @@ function statusOf(error: unknown): number | undefined {
   return (error as { response?: { status?: number } })?.response?.status;
 }
 
-/** 安全 · 自助改密：验当前密码 → 直接设新密码（Path 1 JSON API，无 OAuth/hydra）。 */
+/** Security: self-service password change validates the current password and sets a new one through Path 1 JSON API, without OAuth/Hydra. */
 export function SecurityPanel({ account }: { account: string }) {
   const { t } = useTranslation();
   const { message } = useAppServices();

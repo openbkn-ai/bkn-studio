@@ -19,3 +19,12 @@ export function useRuntimeConfig() {
   return context.runtimeConfig;
 }
 
+export function useUpdateLocale() {
+  const context = useContext(PendingContext);
+
+  if (!context) {
+    throw new Error("useUpdateLocale must be used within AppServicesProvider.");
+  }
+
+  return context.updateLocale;
+}

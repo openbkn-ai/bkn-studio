@@ -7,7 +7,7 @@
 
 export const dataCatalogEnUS = {
   dataCatalog: {
-    title: "Data Directory",
+    title: "Data Catalog",
     description:
       "Browse and govern data resources. Filter by connection to inspect tables, views, and index status.",
     catalogDetailTitle: "Resources",
@@ -70,8 +70,45 @@ export const dataCatalogEnUS = {
     semanticWorkspace: { summary: "Semantic Understanding Result", applied: "Semantic results loaded", notApplied: "No semantic results loaded", processing: "Semantic understanding is in progress", create: "Create Task", createTitle: "Create Semantic Understanding Task", start: "Start", started: "Semantic understanding task started", empty: "No semantic-understanding tasks", confidenceThreshold: "Confidence threshold", includeSamples: "Include sample data", includeSamplesHint: "Sample data will be sent to the semantic-understanding service without masking." },
     emptyDescription:
       "Create and discover a connection first, then browse resources and build indexes here.",
-    backToCatalog: "Back to Data Directory",
+    backToCatalog: "Back to Data Catalog",
     buildChip: "Building · {{count}}",
+    format: {
+      daysAgo: "{{count}}d ago",
+      hoursAgo: "{{count}}h ago",
+      hundredMillionRows: "{{count}} rows",
+      justNow: "just now",
+      minutesAgo: "{{count}}m ago",
+      rows: "{{count}} rows",
+      tenThousandRows: "{{count}} rows",
+    },
+    taskErrors: {
+      dataTooLong: {
+        title: "Build checkpoint write failed",
+        syncedMarkMessage:
+          "The sync checkpoint is longer than the task table column can store, so the backend could not update the task status.",
+        columnMessage:
+          "Column {{column}} received a value longer than the database column allows, so the task status update failed.",
+        syncedMarkSuggestion:
+          "Increase the task table f_synced_mark column length, or shorten the connector checkpoint before rebuilding.",
+        columnSuggestion: "Check and increase the column length, then rebuild.",
+      },
+      duplicateEntry: {
+        title: "Task state write conflict",
+        message: "The backend hit a unique-key conflict while writing task state.",
+        suggestion:
+          "Refresh the task list and remove the conflicting task before retrying if needed.",
+      },
+      missingDocumentId: {
+        title: "Index documents are missing IDs",
+        message: "Index write failed because some documents did not include a stable id field.",
+        suggestion:
+          "Check the resource build key or primary-key mapping, save the index configuration, then rebuild.",
+      },
+      unknown: {
+        title: "Build task failed",
+        message: "The backend returned an uncategorized error. See the raw error for details.",
+      },
+    },
     kind: {
       physical: "Physical Data Source",
       logical: "Logical Group",
@@ -134,6 +171,7 @@ export const dataCatalogEnUS = {
     },
     catalog: {
       notFound: "No resources found for this connection; it may have been deleted",
+      selectPhysicalDescription: "Select a data connection from the physical data source tree.",
       resourceSection: "Resources",
       goConnection: "Data Connection",
       goScan: "Discover Tasks",
@@ -196,6 +234,7 @@ export const dataCatalogEnUS = {
     actions: {
       preview: "Preview Data",
       buildIndex: "Data Index",
+      more: "More actions",
     },
     gate: {
       catalogDisabled:
@@ -206,6 +245,8 @@ export const dataCatalogEnUS = {
     preview: {
       summary: "Showing {{count}} rows · {{total}} rows total",
       empty: "No data",
+      mockLongText:
+        "This is the long text content in row {{row}}, used to verify truncation and hover display.",
     },
     build: {
       submit: "Start Build",
@@ -356,7 +397,7 @@ export const dataCatalogEnUS = {
       statusFilterPlaceholder: "All statuses",
       empty: "No index tasks",
       emptyDescription:
-        "No tasks match the current filters. Configure and submit a build from a resource's Data Index tab in Data Directory.",
+        "No tasks match the current filters. Configure and submit a build from a resource's Data Index tab in Data Catalog.",
       pauseListening: "Pause Listening",
       resumeListening: "Resume Listening",
       paused: "Listening paused",

@@ -5,13 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/**
- * 对象授权的「资源类型 → 操作」词表。
- *
- * 数据来源：对 bkn-safe(VM foundry.example.com) 9 个内置角色的 permissions 聚合实测，
- * 即后端权威词表。授权模型 = {resource:{type,id}, operations}（id="*" 整类，
- * 具体 id = 单实例）。新类型/操作以后端为准；未知 type 走自由输入兜底。
- */
+import i18n from "@/app/locales/i18n";
+
 export type OperationDef = {
   key: string;
   label: string;
@@ -25,47 +20,68 @@ export type ResourceTypeDef = {
 
 export const WILDCARD = "*";
 
-/** 操作 key → 中文标签（跨资源类型复用）。 */
-const OPERATION_LABELS: Record<string, string> = {
-  "*": "全部操作",
-  view_detail: "查看详情",
-  view: "查看",
-  list: "列表",
-  display: "展示",
-  create: "新建",
-  modify: "修改",
-  delete: "删除",
-  authorize: "授权",
-  task_manage: "任务管理",
-  data_query: "数据查询",
-  execute: "执行",
-  manual_exec: "手动执行",
-  run_statistics: "运行统计",
-  run_with_app: "随应用运行",
-  public_access: "公开访问",
-  publish: "发布",
-  unpublish: "取消发布",
-  use: "使用",
-  edit: "编辑",
-  toggle: "启停",
-  "reset-password": "重置密码",
-  members: "成员管理",
-  permissions: "角色权限配置",
-  grant: "授权",
-  revoke: "撤权",
-  manage: "管理",
-  create_system_agent: "创建系统智能体",
-  mgnt_built_in_agent: "管理内置智能体",
-  see_trajectory_analysis: "轨迹分析",
-  unpublish_other_user_agent: "下架他人智能体",
-  unpublish_other_user_agent_tpl: "下架他人智能体模板",
-  publish_to_be_api_agent: "发布为 API 智能体",
-  publish_to_be_data_flow_agent: "发布为数据流智能体",
-  publish_to_be_skill_agent: "发布为技能智能体",
-  publish_to_be_web_sdk_agent: "发布为 Web SDK 智能体",
+const OPERATION_FALLBACK_LABELS: Record<string, string> = {
+  "*": "All operations",
+  authorize: "Authorize",
+  create: "Create",
+  create_system_agent: "Create system agent",
+  data_query: "Data query",
+  delete: "Delete",
+  display: "Display",
+  edit: "Edit",
+  execute: "Execute",
+  grant: "Grant",
+  list: "List",
+  manage: "Manage",
+  manual_exec: "Manual execution",
+  members: "Member management",
+  mgnt_built_in_agent: "Manage built-in agent",
+  modify: "Modify",
+  permissions: "Role permission configuration",
+  public_access: "Public access",
+  publish: "Publish",
+  publish_to_be_api_agent: "Publish as API agent",
+  publish_to_be_data_flow_agent: "Publish as data flow agent",
+  publish_to_be_skill_agent: "Publish as skill agent",
+  publish_to_be_web_sdk_agent: "Publish as Web SDK agent",
+  "reset-password": "Reset password",
+  revoke: "Revoke",
+  run_statistics: "Run statistics",
+  run_with_app: "Run with app",
+  see_trajectory_analysis: "Trajectory analysis",
+  task_manage: "Task management",
+  toggle: "Enable/disable",
+  unpublish: "Unpublish",
+  unpublish_other_user_agent: "Unpublish another user's agent",
+  unpublish_other_user_agent_tpl: "Unpublish another user's agent template",
+  use: "Use",
+  view: "View",
+  view_detail: "View details",
 };
 
-// 各资源类型支持的操作集（实测自后端内置角色权限）。
+const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
+  "admin-audit": "System audit log",
+  "admin-authz": "System authorization management",
+  "admin-dept": "System department management",
+  "admin-role": "System role management",
+  "admin-user": "System user management",
+  agent: "Agent",
+  agent_tpl: "Agent template",
+  catalog: "Data connection / Catalog",
+  connector_type: "Connector type",
+  data_flow: "Data flow",
+  knowledge_network: "Knowledge network",
+  large_model: "Large model",
+  mcp: "MCP",
+  operator: "Operator",
+  resource: "Data resource",
+  safe_admin: "bkn-safe management API",
+  skill: "Skill",
+  small_model: "Small model",
+  stream_data_pipeline: "Stream data pipeline",
+  tool_box: "Toolbox",
+};
+
 const CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
 const PUBLISHABLE = [
   "view",
@@ -80,85 +96,91 @@ const PUBLISHABLE = [
 ];
 
 export const RESOURCE_TYPES: ResourceTypeDef[] = [
-  { type: "catalog", label: "数据连接 / Catalog", operations: CRUD_AUTHZ },
-  { type: "resource", label: "数据资源", operations: CRUD_AUTHZ },
-  { type: "connector_type", label: "连接器类型", operations: CRUD_AUTHZ },
-  {
-    type: "knowledge_network",
-    label: "知识网络",
-    operations: ["view_detail", "create", "modify", "delete", "data_query", "authorize", "task_manage"],
-  },
-  {
-    type: "stream_data_pipeline",
-    label: "流式数据管道",
-    operations: ["view_detail", "create", "modify", "delete", "authorize"],
-  },
-  {
-    type: "data_flow",
-    label: "数据流",
-    operations: ["list", "view", "create", "modify", "delete", "manual_exec", "run_statistics", "run_with_app", "display"],
-  },
-  { type: "small_model", label: "小模型", operations: ["display", "create", "modify", "delete", "execute"] },
-  { type: "large_model", label: "大模型", operations: ["display", "create", "modify", "delete", "execute"] },
-  { type: "operator", label: "算子", operations: PUBLISHABLE },
-  { type: "tool_box", label: "工具箱", operations: PUBLISHABLE },
-  { type: "skill", label: "技能", operations: PUBLISHABLE },
-  { type: "mcp", label: "MCP", operations: PUBLISHABLE },
-  {
-    type: "agent",
-    label: "智能体",
-    operations: [
-      "use",
-      "publish",
-      "unpublish",
-      "unpublish_other_user_agent",
-      "create_system_agent",
-      "mgnt_built_in_agent",
-      "see_trajectory_analysis",
-      "publish_to_be_api_agent",
-      "publish_to_be_data_flow_agent",
-      "publish_to_be_skill_agent",
-      "publish_to_be_web_sdk_agent",
-    ],
-  },
-  {
-    type: "agent_tpl",
-    label: "智能体模板",
-    operations: ["publish", "unpublish", "unpublish_other_user_agent_tpl"],
-  },
-  {
-    type: "admin-user",
-    label: "系统用户管理",
-    operations: ["create", "edit", "delete", "toggle", "reset-password"],
-  },
-  {
-    type: "admin-dept",
-    label: "系统部门管理",
-    operations: ["create", "edit", "delete", "members"],
-  },
-  {
-    type: "admin-role",
-    label: "系统角色管理",
-    operations: ["create", "edit", "delete", "members", "permissions"],
-  },
-  { type: "admin-authz", label: "系统授权管理", operations: ["grant", "revoke"] },
-  { type: "admin-audit", label: "系统审计日志", operations: ["view"] },
-  { type: "safe_admin", label: "bkn-safe 管理 API", operations: ["manage"] },
+  resourceType("catalog", CRUD_AUTHZ),
+  resourceType("resource", CRUD_AUTHZ),
+  resourceType("connector_type", CRUD_AUTHZ),
+  resourceType("knowledge_network", [
+    "view_detail",
+    "create",
+    "modify",
+    "delete",
+    "data_query",
+    "authorize",
+    "task_manage",
+  ]),
+  resourceType("stream_data_pipeline", ["view_detail", "create", "modify", "delete", "authorize"]),
+  resourceType("data_flow", [
+    "list",
+    "view",
+    "create",
+    "modify",
+    "delete",
+    "manual_exec",
+    "run_statistics",
+    "run_with_app",
+    "display",
+  ]),
+  resourceType("small_model", ["display", "create", "modify", "delete", "execute"]),
+  resourceType("large_model", ["display", "create", "modify", "delete", "execute"]),
+  resourceType("operator", PUBLISHABLE),
+  resourceType("tool_box", PUBLISHABLE),
+  resourceType("skill", PUBLISHABLE),
+  resourceType("mcp", PUBLISHABLE),
+  resourceType("agent", [
+    "use",
+    "publish",
+    "unpublish",
+    "unpublish_other_user_agent",
+    "create_system_agent",
+    "mgnt_built_in_agent",
+    "see_trajectory_analysis",
+    "publish_to_be_api_agent",
+    "publish_to_be_data_flow_agent",
+    "publish_to_be_skill_agent",
+    "publish_to_be_web_sdk_agent",
+  ]),
+  resourceType("agent_tpl", ["publish", "unpublish", "unpublish_other_user_agent_tpl"]),
+  resourceType("admin-user", ["create", "edit", "delete", "toggle", "reset-password"]),
+  resourceType("admin-dept", ["create", "edit", "delete", "members"]),
+  resourceType("admin-role", ["create", "edit", "delete", "members", "permissions"]),
+  resourceType("admin-authz", ["grant", "revoke"]),
+  resourceType("admin-audit", ["view"]),
+  resourceType("safe_admin", ["manage"]),
 ];
 
 const byType = new Map(RESOURCE_TYPES.map((item) => [item.type, item]));
 
+function resourceType(type: string, operations: string[]): ResourceTypeDef {
+  return {
+    label: resourceTypeFallbackLabel(type),
+    operations,
+    type,
+  };
+}
+
 export function resourceTypeLabel(type: string): string {
-  return byType.get(type)?.label ?? type;
+  return i18n.t(`systemAdmin.resourceCatalog.resources.${type}`, {
+    defaultValue: resourceTypeFallbackLabel(type),
+  });
 }
 
 export function operationLabel(_type: string, op: string): string {
-  return OPERATION_LABELS[op] ?? op;
+  return i18n.t(`systemAdmin.resourceCatalog.operations.${op}`, {
+    defaultValue: operationFallbackLabel(op),
+  });
 }
 
 export function operationsForType(type: string): OperationDef[] {
   return (byType.get(type)?.operations ?? []).map((op) => ({
     key: op,
-    label: OPERATION_LABELS[op] ?? op,
+    label: operationLabel(type, op),
   }));
+}
+
+function operationFallbackLabel(op: string): string {
+  return OPERATION_FALLBACK_LABELS[op] ?? op;
+}
+
+function resourceTypeFallbackLabel(type: string): string {
+  return RESOURCE_FALLBACK_LABELS[type] ?? type;
 }

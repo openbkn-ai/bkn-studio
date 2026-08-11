@@ -189,6 +189,7 @@ export function filterKnowledgeNetworks(
   items: KnowledgeNetworkRecord[],
   query: KnowledgeNetworkListQuery,
 ) {
+  const locale = getRuntimeConfig().locale;
   const keyword = query.keyword.trim().toLowerCase();
   const tag = query.tag?.trim().toLowerCase();
   const filtered = items.filter((item) => {
@@ -211,7 +212,7 @@ export function filterKnowledgeNetworks(
     const rightValue = sortBy === "name" ? right.name : right.updateTime;
     const compareResult =
       sortBy === "name"
-        ? leftValue.localeCompare(rightValue, "zh-CN")
+        ? leftValue.localeCompare(rightValue, locale)
         : leftValue.localeCompare(rightValue);
 
     return direction === "asc" ? compareResult : -compareResult;

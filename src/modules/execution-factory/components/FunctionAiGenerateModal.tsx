@@ -60,7 +60,7 @@ export function FunctionAiGenerateModal({
   const abortRef = useRef<AbortController | null>(null);
   const contentStartedRef = useRef(false);
   const reasoningBoxRef = useRef<HTMLDivElement | null>(null);
-  /** 是否还贴着底。用户往上翻去读前面的内容后就停止跟随，别把人拽回底部。 */
+  /** Whether the view is still pinned to the bottom. Stop following after users scroll up to read earlier content. */
   const reasoningStickRef = useRef(true);
   const generateType = Form.useWatch("type", form) as FunctionAiGenerateType | undefined;
 
@@ -69,7 +69,7 @@ export function FunctionAiGenerateModal({
     [outcome],
   );
 
-  // 生成中展示流式代码，结束后展示最终结果；元数据结果是 JSON，函数结果是 Python。
+  // Show streaming code while generating and the final result afterward; metadata is JSON and functions are Python.
   const resultLanguage: CodeEditorLanguage =
     outcome && outcome.generateType === "metadata_param_generator" ? "json" : "python";
 
@@ -87,7 +87,7 @@ export function FunctionAiGenerateModal({
       return outcome.content;
     }
 
-    // 元数据结果有时是被字符串包住的 JSON，展开后才好读。
+    // Metadata results are sometimes JSON wrapped in a string and are easier to read after parsing.
     try {
       return JSON.stringify(JSON.parse(outcome.content), null, 2);
     } catch {
@@ -95,7 +95,7 @@ export function FunctionAiGenerateModal({
     }
   }, [outcome, resultLanguage, streamContent, submitting]);
 
-  // 思考内容是流式追加的，容器不跟着滚就会一直停在顶部，看着像卡住了。
+  // Reasoning content is appended as a stream; without following it, the container stays at the top and looks stuck.
   useEffect(() => {
     const node = reasoningBoxRef.current;
     if (!node || !reasoningStickRef.current) {
@@ -114,7 +114,7 @@ export function FunctionAiGenerateModal({
       setOutcome(null);
       setStreamContent("");
       setReasoning("");
-      // 下次打开是一段全新的思考内容，跟随状态要跟着重置。
+      // The next opening has new reasoning content, so reset the follow state too.
       reasoningStickRef.current = true;
       return;
     }
@@ -134,9 +134,9 @@ export function FunctionAiGenerateModal({
     setReasoning("");
     setReasoningOpen(true);
     contentStartedRef.current = false;
-    // 同一个弹窗里可以再生成一轮。上一轮用户若往上翻过，stick 会停在 false，不重置
-    // 的话新一轮整轮都不跟随；而 setReasoning("") 会把容器卸载重建，onScroll 不会
-    // 自己触发，没有自愈路径。
+    // The same modal can generate another round. If the user scrolled up previously, stick remains
+    // false and the next round never follows unless reset. setReasoning("") unmounts and rebuilds
+    // the container, so onScroll does not fire and cannot recover it.
     reasoningStickRef.current = true;
 
     try {
@@ -155,7 +155,7 @@ export function FunctionAiGenerateModal({
           input,
           {
             onContentDelta: (delta) => {
-              // 代码一开始出就把思考区收起来，把版面让给代码；用户仍可手动展开。
+              // Collapse reasoning once code starts to give code the space; users can still expand it manually.
               if (!contentStartedRef.current) {
                 contentStartedRef.current = true;
                 setReasoningOpen(false);
@@ -255,8 +255,8 @@ export function FunctionAiGenerateModal({
                 <div
                   onScroll={(event) => {
                     const node = event.currentTarget;
-                    // 距底 8px 内算贴底：流式追加时高度一直在变，留点余量免得抖一下
-                    // 就被判成「用户翻上去了」而停住。
+                    // Treat within 8px of the bottom as pinned. Streaming changes height continuously,
+                    // so the tolerance prevents a small jump from looking like an intentional scroll upward.
                     reasoningStickRef.current =
                       node.scrollHeight - node.scrollTop - node.clientHeight <= 8;
                   }}

@@ -8,7 +8,7 @@
 export const authZhCN = {
   auth: {
     signInSubtitle: "登录后访问业务知识网络控制台",
-    signInButton: "登 录",
+    signInButton: "登录",
     devTokenToggle: "使用 Token 登录（开发模式）",
     signInOtherTabTitle: "另一个标签页正在登录",
     signInOtherTabHint: "请在那个标签页完成登录。也可以点击下方按钮，改由本页面重新发起登录。",
@@ -16,5 +16,16 @@ export const authZhCN = {
     callbackErrorTitle: "登录失败",
     backToSignIn: "返回登录",
     logout: "退出登录",
+    devTokenAccessRequired: "请填写 Access Token",
+    devTokenTitle: "开发环境 Token 配置",
+    devTokenDescription:
+      "当前为远程联调模式（Mock 已关闭）。请粘贴从测试环境获取的 Bearer Token，保存后即可访问 API。",
+    devTokenEnvPrefix: "也可在",
+    devTokenEnvMiddle: "中设置",
+    devTokenEnvSuffix: "，重启 dev server 后自动生效。",
+    devTokenAccessPlaceholder: "粘贴 access_token（不含 Bearer 前缀）",
+    devTokenRefreshLabel: "Refresh Token（可选）",
+    devTokenRefreshPlaceholder: "可选，用于 token 过期后刷新",
+    devTokenSave: "保存并进入",
   },
 } as const;

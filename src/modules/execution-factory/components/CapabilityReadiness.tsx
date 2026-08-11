@@ -7,6 +7,7 @@
 
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import { Alert, Tag, Tooltip } from "antd";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import type { CapabilityManifest } from "@/modules/execution-factory/types/capability-manifest";
@@ -18,20 +19,32 @@ import {
 import styles from "./CapabilityReadiness.module.css";
 
 const DIMENSION_LABELS: Record<string, string> = {
-  "business intent": "业务用途",
-  "input semantics": "输入语义",
-  "output semantics": "输出语义",
+  "business intent": "Business intent",
+  "input semantics": "Input semantics",
+  "output semantics": "Output semantics",
 };
 
-function readinessDimensionLabel(key: string) {
-  return DIMENSION_LABELS[key] ?? key;
+const DIMENSION_LABEL_KEYS: Record<string, string> = {
+  "business intent": "businessIntent",
+  "input semantics": "inputSemantics",
+  "output semantics": "outputSemantics",
+};
+
+function readinessDimensionLabel(key: string, t: TFunction) {
+  const labelKey = DIMENSION_LABEL_KEYS[key];
+  if (!labelKey) {
+    return key;
+  }
+  return t(`executionFactory.agentReadiness.dimensions.${labelKey}`, {
+    defaultValue: DIMENSION_LABELS[key] ?? key,
+  });
 }
 
 type CapabilityManifestProps = {
   manifest: CapabilityManifest;
 };
 
-/** 就绪度评分，挂在详情卡标题行上。 */
+/** Readiness score displayed on the detail-card title row. */
 export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) {
   const { t } = useTranslation();
   const readiness = getCapabilityReadiness(manifest);
@@ -47,7 +60,7 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
             {READINESS_DIMENSIONS.map((dim) => {
               const skipped = readiness.notApplicable.includes(dim.key);
               const met = !skipped && !readiness.missing.includes(dim.key);
-              const label = readinessDimensionLabel(dim.key);
+              const label = readinessDimensionLabel(dim.key, t);
 
               return (
                 <div
@@ -93,12 +106,12 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
 }
 
 /**
- * 输入输出规模摘要，挂在「输入输出」面板标题上。刻意不做成标签行：
- * 这是计数不是属性，跟身份标签同权重排一排只会把卡片切碎。
+ * Input/output size summary displayed on the Input/Output panel title. Do not make it a tag row:
+ * these are counts rather than attributes, and giving them identity-tag weight would fragment the card.
  */
 export function CapabilityIoCounts({ manifest }: CapabilityManifestProps) {
   const { t } = useTranslation();
-  // "输入 0" is a real fact — the tool takes no arguments. "输出 0" is not:
+  // "Input 0" is a real fact because the tool takes no arguments. "Output 0" is not:
   // MCP servers almost never declare an outputSchema, and reading that as
   // "returns nothing" is wrong. Say undeclared when nothing was declared.
   const input = String(manifest.inputSemantics?.length ?? 0);
@@ -114,8 +127,8 @@ export function CapabilityIoCounts({ manifest }: CapabilityManifestProps) {
 }
 
 /**
- * 只在缺项时出声。齐备是常态，说一句「已齐备」等于把噪音铺满每张卡；
- * 状态已经由标题行的开关表达，不必再用文字复述一遍。
+ * Speak only when something is missing. Completeness is normal, and saying so on every card adds
+ * noise; the title-row switch already communicates status without repeating it in text.
  */
 export function CapabilityReadinessHint({ manifest }: CapabilityManifestProps) {
   const { t } = useTranslation();
@@ -130,7 +143,7 @@ export function CapabilityReadinessHint({ manifest }: CapabilityManifestProps) {
       description={
         <div className={styles.missingList}>
           {readiness.missing.map((item) => (
-            <Tag key={item}>{readinessDimensionLabel(item)}</Tag>
+            <Tag key={item}>{readinessDimensionLabel(item, t)}</Tag>
           ))}
         </div>
       }

@@ -6,9 +6,10 @@
  */
 
 /**
- * 工具循环的错误路径。收尾兜底（跑满步数没出正文时补一刀）在本轮已经出错时必须让路：
- * 否则同一个错误会被报两遍（流里一次、await result.response reject 再一次），
- * 还要白打一次正忙的网关 —— 客户反馈的截图里就是两条一模一样的报错。
+ * Error paths for the tool loop. The completion fallback, which makes one last call when all
+ * steps finish without text, must yield when this turn has already failed. Otherwise the same
+ * error is reported twice (once from the stream and once when await result.response rejects) and
+ * makes an unnecessary request to a busy gateway, producing two identical customer-visible errors.
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -35,14 +36,14 @@ const { streamText } = vi.hoisted(() => ({ streamText: vi.fn() }));
 
 vi.mock("ai", async (importOriginal) => ({ ...(await importOriginal<AiModule>()), streamText }));
 
-/** 一次 streamText 调用的替身：吐出给定的 fullStream 事件，response 按需 reject。 */
+/** Stand-in for one streamText call: emits provided fullStream events and optionally rejects response. */
 function stubStream(parts: unknown[], responseRejection?: Error) {
   const fullStream = (function* () {
     for (const part of parts) yield part;
   })();
   if (responseRejection === undefined) return { fullStream, response: Promise.resolve({ messages: [] }) };
   const response = Promise.reject(responseRejection);
-  // 守卫生效时没人 await 它——这正是本用例要断言的，但 vitest 会把它算成 unhandled rejection。
+  // When the guard works, nobody awaits it. That is what this case asserts, but Vitest otherwise treats it as an unhandled rejection.
   response.catch(() => undefined);
   return { fullStream, response };
 }
@@ -76,8 +77,8 @@ describe("buildAgentTools", () => {
     );
 
   it("平台侧工具照常进模型工具集——生命周期由前端接管执行，不是从工具表里拿掉", () => {
-    // 早先的做法是整体过滤掉 bkn_*，模型因此连「结束本轮交互」这项能力都没有。
-    // 现在改成接管：工具还在，执行时绑到前端这一轮交互上（见 buildAgentTools）。
+    // The earlier approach filtered all bkn_* tools, leaving the model unable to finish this
+    // interaction round. Now the tools remain and execution is bound to the frontend turn (see buildAgentTools).
     const tools = build([
       "run_sql",
       "bkn_start_interaction",
@@ -95,8 +96,9 @@ describe("buildAgentTools", () => {
   });
 
   it("没接管实现的平台工具直通后端，不因为前缀被吃掉", () => {
-    // 平台侧工具集会随后端演进（#618 期间一度扩到十余个溯源工具，之后又裁回两个）。
-    // 接管只覆盖会跟前端抢账的那两个；溯源类读工具没有冲突，照常给模型用。
+    // Platform tools evolve with the backend; during #618 they briefly grew to more than ten
+    // lineage tools before shrinking to two. Interception covers only the two that compete with
+    // the frontend for ownership; lineage read tools have no conflict and remain available to the model.
     const tools = build([
       "bkn_causality",
       "bkn_get_operation",
@@ -113,7 +115,7 @@ describe("buildAgentTools", () => {
 
 describe("本地 op 目录与后端工具面", () => {
   it("本地 op 全是业务工具，一个都不会被平台前缀规则吃掉", () => {
-    // 这是前缀过滤的安全边界：真误伤了业务工具，模型会静默失去那个能力。
+    // This is the safety boundary for prefix filtering: accidentally filtering a business tool silently removes that capability from the model.
     const eaten = CONTEXT_LOADER_OPS.filter((op) => isPlatformManagedTool(op.id));
 
     expect(eaten).toEqual([]);
@@ -125,9 +127,10 @@ describe("本地 op 目录与后端工具面", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  // 这里**不**断言本地表与后端 tools/list 完全一致：Agent 的工具集是运行时从
-  // tools/list 读的，本地表只喂勾选器分组和调试台示例（MCP 模式还有 synthesizeOp
-  // 兜底）。把它钉死等于后端一加工具我们 CI 就红，而实际什么都没坏。允许滞后。
+  // Do not assert that the local table exactly matches backend tools/list. The Agent reads its
+  // tool set at runtime; the local table only supplies picker grouping and debug-console examples
+  // (with synthesizeOp fallback in MCP mode). Exact equality would fail CI whenever the backend
+  // adds a tool even though behavior remains correct, so controlled lag is acceptable.
 });
 
 describe("formatToolResultLimits", () => {
@@ -149,7 +152,7 @@ describe("formatToolResultLimits", () => {
 
 describe("runAgentChat 错误路径", () => {
   it("流里报错后不再跑收尾兜底，同一个错误只报一次", async () => {
-    // response 也 reject：没有 errored 守卫时，await result.response 会把同一个错误再抛进 catch。
+    // response also rejects; without the errored guard, await result.response throws the same error into catch again.
     const failure = new Error("network error");
     streamText.mockReset();
     streamText.mockReturnValueOnce(stubStream([{ type: "error", error: failure }], failure));
@@ -160,7 +163,7 @@ describe("runAgentChat 错误路径", () => {
     const errors = chunks.filter((c) => c.type === "error");
     expect(errors).toHaveLength(1);
     expect(errors[0]).toMatchObject({ error: "与模型服务的连接中断，请重试", retryable: true });
-    // 只调了一次模型：收尾兜底没有对着已经出错的网关再打一枪。
+    // The model is called only once: the completion fallback does not hit a gateway that already failed.
     expect(streamText).toHaveBeenCalledTimes(1);
     expect(chunks.at(-1)).toEqual({ type: "finish" });
   });
@@ -201,8 +204,9 @@ describe("runAgentChat 错误路径", () => {
 
     expect(textOf(withContract)).toBe("共 3 个。");
     expect(reasoningOf(withContract)).toBe("我现在写最终答案。");
-    // 契约没写进提示词就不改道：用户改过提示词时，正文不该憋到 flush 才出现。
-    // 标签本身仍然当噪音吃掉——裸标签不该出现在答案里，跟 <think> 一个待遇。
+    // Do not switch paths when the contract is absent from the prompt: for user-edited prompts,
+    // body text should not wait until flush. Still discard tags as noise; bare tags do not belong
+    // in answers, just as <think> does not.
     expect(textOf(without)).toBe("我现在写最终答案。共 3 个。");
     expect(reasoningOf(without)).toBe("");
   });

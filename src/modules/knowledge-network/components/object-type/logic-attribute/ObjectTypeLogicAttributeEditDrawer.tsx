@@ -50,7 +50,7 @@ import styles from "./ObjectTypeLogicAttributeEditDrawer.module.css";
 
 type SettingItem = ObjectTypeLogicParameter & {
   error?: Record<string, string>;
-  /** 用户通过「新建」手动添加的参数，可删除。工具 schema 自动解析的不带此标记。 */
+  /** Parameter manually added through Create and therefore removable; parameters inferred from tool schema lack this marker. */
   manual?: boolean;
 };
 

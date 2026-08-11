@@ -7,9 +7,9 @@
 
 export const ADAPTATION_CODE_TEMPLATES: Record<string, string> = {
   embedding: `"""
-1.入口函数必须是main
-2.函数仅接受一个参数，参数类型为list[str]
-3.函数必须写异步函数async，避免阻塞，调用向量模型服务需要使用aiohttp发送http请求
+1. The entry function must be named main.
+2. The function accepts exactly one argument with type list[str].
+3. The function must be async. Use aiohttp for vector model service calls to avoid blocking.
 """
 import time
 import aiohttp
@@ -17,7 +17,7 @@ import json
 import uuid
 
 async def main(texts: list[str]):
-    # 调用embedding服务
+    # Call the embedding service.
     url = "http://127.0.0.1:8316/v1/embeddings"
     headers = {
         "Content-Type": "application/json",
@@ -30,7 +30,7 @@ async def main(texts: list[str]):
             if resp.status != 200:
                 raise Exception(f"Embedding API failed with status {resp.status}")
             embeddings = await resp.json()
-    # 构建标准openai风格响应体
+    # Build a standard OpenAI-style response body.
     response = {
         "object": "list",
         "data": [{
@@ -48,9 +48,9 @@ async def main(texts: list[str]):
     }
     return response`,
   reranker: `"""
-1.入口函数必须是main
-2.函数接受两个参数，第一个参数为query字符串，数据类型：str,第二个参数为文档列表，参数类型为list[str]
-3.函数必须写异步函数async，避免阻塞，调用向量模型服务需要使用aiohttp发送http请求
+1. The entry function must be named main.
+2. The function accepts two arguments: query as str and documents as list[str].
+3. The function must be async. Use aiohttp for vector model service calls to avoid blocking.
 """
 import time
 import aiohttp
@@ -59,7 +59,7 @@ import uuid
 
 
 async def main(query: str, documents: list[str]):
-    # 调用reranker服务
+    # Call the reranker service.
     url = "http://127.0.0.1:8343/v1/reranker"
     headers = {
         "Content-Type": "application/json",
@@ -75,7 +75,7 @@ async def main(query: str, documents: list[str]):
             if resp.status != 200:
                 raise Exception(f"Reranker API failed with status {resp.status}")
             scores = await resp.json()
-    # 构建标准openai风格响应体
+    # Build a standard OpenAI-style response body.
     response = {
         "object": "rerank",
         "results": sorted([

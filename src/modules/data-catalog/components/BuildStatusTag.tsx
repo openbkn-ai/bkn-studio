@@ -23,8 +23,8 @@ type BuildStatusTagProps = {
 };
 
 /**
- * 构建任务状态标。已完成但向量化没建满时，用琥珀色「已完成·向量化失败/部分失败」
- * 替代绿色「已完成」，并在 tooltip 里展开 failureDetail。
+ * Build-task status tag. When completed vectorization is incomplete, use an amber completed with
+ * vectorization failure/partial failure state instead of green completed, and expand failureDetail in a tooltip.
  */
 export function BuildStatusTag({ plain = false, task }: BuildStatusTagProps) {
   const { t } = useTranslation();
@@ -37,7 +37,7 @@ export function BuildStatusTag({ plain = false, task }: BuildStatusTagProps) {
     return <Tooltip title={tooltip}>{content}</Tooltip>;
   };
 
-  // 已完成但向量化失败/部分失败:红/橙告警标 + tooltip 展开 failure_detail。
+  // Completed with failed or partial vectorization: red/amber warning tag and tooltip with failure_detail.
   const embeddingState = embeddingStateOf(task);
   if (embeddingState === "failed" || embeddingState === "partial") {
     const failed = embeddingState === "failed";

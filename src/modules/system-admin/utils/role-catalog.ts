@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
 import type { AdminRole } from "@/modules/system-admin/types/admin";
 
 export type BuiltinRoleKey =
@@ -22,23 +23,38 @@ type RoleMeta = {
   label: string;
 };
 
+const BUILTIN_ROLE_FALLBACK_LABELS: Record<BuiltinRoleKey, string> = {
+  admin: "System administrator",
+  audit: "Audit administrator",
+  network_builder: "Business network builder",
+  normal_user: "Normal user",
+  security: "Security administrator",
+  super_admin: "Super administrator",
+};
+
 export const BUILTIN_ROLE_META: Record<BuiltinRoleKey, RoleMeta> = {
-  super_admin: { category: "super-admin", label: "超级管理员" },
-  admin: { category: "three-admin", label: "系统管理员" },
-  security: { category: "three-admin", label: "安全管理员" },
-  audit: { category: "three-admin", label: "审计管理员" },
-  network_builder: { category: "business", label: "业务网络构建者" },
-  normal_user: { category: "normal-user", label: "普通用户" },
+  super_admin: { category: "super-admin", label: builtinRoleLabel("super_admin") },
+  admin: { category: "three-admin", label: builtinRoleLabel("admin") },
+  security: { category: "three-admin", label: builtinRoleLabel("security") },
+  audit: { category: "three-admin", label: builtinRoleLabel("audit") },
+  network_builder: { category: "business", label: builtinRoleLabel("network_builder") },
+  normal_user: { category: "normal-user", label: builtinRoleLabel("normal_user") },
 };
 
 const ROLE_NAME_ALIASES: Record<string, BuiltinRoleKey> = {
-  超级管理员: "super_admin",
-  系统管理员: "admin",
-  安全管理员: "security",
-  审计管理员: "audit",
-  业务网络构建者: "network_builder",
-  普通用户: "normal_user",
+  "\u5ba1\u8ba1\u7ba1\u7406\u5458": "audit",
+  "\u5b89\u5168\u7ba1\u7406\u5458": "security",
+  "\u666e\u901a\u7528\u6237": "normal_user",
+  "\u4e1a\u52a1\u7f51\u7edc\u6784\u5efa\u8005": "network_builder",
+  "\u7cfb\u7edf\u7ba1\u7406\u5458": "admin",
+  "\u8d85\u7ea7\u7ba1\u7406\u5458": "super_admin",
 };
+
+export function builtinRoleLabel(key: BuiltinRoleKey): string {
+  return i18n.t(`systemAdmin.roleCatalog.builtin.${key}`, {
+    defaultValue: BUILTIN_ROLE_FALLBACK_LABELS[key],
+  });
+}
 
 export function resolveBuiltinRoleKey(role: Pick<AdminRole, "name">): BuiltinRoleKey | null {
   if (role.name in BUILTIN_ROLE_META) {
@@ -76,6 +92,6 @@ export function threeAdminConflictLabels(roles: Pick<AdminRole, "name" | "source
     .filter(isThreeAdminRole)
     .map((role) => {
       const builtinKey = resolveBuiltinRoleKey(role);
-      return builtinKey ? BUILTIN_ROLE_META[builtinKey].label : role.name;
+      return builtinKey ? builtinRoleLabel(builtinKey) : role.name;
     });
 }

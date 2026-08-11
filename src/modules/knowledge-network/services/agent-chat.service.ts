@@ -6,12 +6,12 @@
  */
 
 /**
- * 知识网络「立即体验 · Agent 对话」—— 前端编排的真实工具调用循环。
+ * Knowledge Network experience Agent chat, orchestrated in the frontend.
  *
- * 混合方案：用 Vercel AI SDK（streamText + tools）跑 LLM 多步工具循环 + 流式；
- * 工具执行复用 context-loader 的会话级 MCP 客户端（initialize 一次、复用 session、注入锁定 kn_id）。
- * 大模型走「模型工厂」OpenAI 兼容网关 /api/mf-model-api/v1/chat/completions（与 agent-retrieval 同 Bearer）。
- * 对话上下文全在前端缓存（无后端会话），每轮把全量 messages 重发模型。
+ * Hybrid approach: Vercel AI SDK handles multi-step tool loops and streaming;
+ * tool execution reuses the ContextLoader session-level MCP client.
+ * Models go through the Model Factory OpenAI-compatible gateway.
+ * Conversation context is cached in the frontend and replayed each turn.
  */
 
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -37,30 +37,30 @@ import {
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
-/** 模型工厂 OpenAI 兼容前缀（与 model-api-guide.getModelApiBaseUrl 一致）。 */
+/** Model Factory OpenAI-compatible prefix, aligned with model-api-guide. */
 export const MODEL_API_PATH = "/api/mf-model-api/v1";
 
 /**
- * Agent 对话可调参数。前端 localStorage 存、UI 实时改，无需重新部署调参。
+ * Tunable Agent chat parameters. Stored in localStorage and applied live by the UI.
  */
 export type AgentConfig = {
-  /** 工具步数上限（防跑飞兜底；正常由模型出最终答复自动停）。 */
+  /** Tool-step cap; normal runs stop when the model returns the final answer. */
   maxSteps: number;
-  /** 步间驱逐：每步保留最近几个工具结果全文，更早的换占位（0=不驱逐）。 */
+  /** Between-step eviction: keep this many recent full tool results; 0 disables eviction. */
   keepToolResults: number;
-  /** 数据类工具（run_sql / query_*）结果字符上限——逼聚合（0=不截断）。 */
+  /** Result character cap for data tools such as run_sql and query_*; 0 disables truncation. */
   dataToolCap: number;
-  /** schema/发现类工具（get_kn_detail / search_schema / describe / list_resources …）结果字符上限——放宽（0=不截断）。 */
+  /** Result character cap for schema/discovery tools; 0 disables truncation. */
   schemaToolCap: number;
-  /** 多轮历史保留最近条数。 */
+  /** Number of recent turns retained in multi-turn history. */
   maxHistoryMessages: number;
-  /** 单轮历史文本字符上限。 */
+  /** Per-turn history text character cap. */
   maxTurnChars: number;
-  /** 单步最大输出 token（含思考）。推理模型（deepseek 等）思考多，需调大否则答案被截；0=模型默认。 */
+  /** Max output tokens per step, including reasoning; 0 uses the model default. */
   maxOutputTokens: number;
 };
 
-/** 「仅基础数据」对比面板的默认工具集：纯表/SQL 层能力，无知识网络语义。 */
+/** Default tool set for the base-data pane: table/SQL capabilities only. */
 export const BASE_DATA_TOOL_NAMES = ["list_resources", "describe_resource", "run_sql"];
 
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
@@ -73,7 +73,7 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   maxOutputTokens: 16384,
 };
 
-/** schema/发现类工具：结果天生大但有界且模型理解必需 → 用 schemaToolCap（更宽）；其余用 dataToolCap（逼聚合）。 */
+/** Schema/discovery tools are large but bounded, so they use the wider schemaToolCap. */
 const SCHEMA_TOOLS = new Set([
   "get_kn_detail",
   "search_schema",
@@ -89,54 +89,53 @@ function capToolResult(text: string, toolName: string, cfg: AgentConfig): string
   const dropped = text.length - limit;
   return (
     text.slice(0, limit) +
-    `\n\n…[结果过长，已截断约 ${dropped} 字符。请改用更精确的过滤条件 / 更小的 LIMIT / 只取必要字段重新查询，不要拉全表；已获得的信息不要重复查询]`
+    `\n\n...[Result too long; about ${dropped} characters were truncated. Query again with narrower filters, a smaller LIMIT, and only necessary fields. Do not scan whole tables or repeat already retrieved information.]`
   );
 }
 
 /**
- * 把**实际生效**的截断上限拼成一段系统提示词。写死数字会和用户在设置面板改过的
- * config 对不上（schema 类默认就是 24000 而非 8000），模型会照着错的数字过度拆批。
+ * Formats the currently effective result caps for the system prompt. The values
+ * must reflect live settings rather than hardcoded defaults.
  */
 export function formatToolResultLimits(cfg: AgentConfig): string {
   const parts: string[] = [];
-  if (cfg.dataToolCap > 0) parts.push(`数据类工具（run_sql / query_* 等）约 ${cfg.dataToolCap} 字符`);
+  if (cfg.dataToolCap > 0) parts.push(`data tools such as run_sql and query_*: about ${cfg.dataToolCap} characters`);
   if (cfg.schemaToolCap > 0) {
-    parts.push(`schema/发现类工具（search_schema / describe_resource / list_resources 等）约 ${cfg.schemaToolCap} 字符`);
+    parts.push(`schema/discovery tools such as search_schema, describe_resource, and list_resources: about ${cfg.schemaToolCap} characters`);
   }
   if (!parts.length) return "";
   return (
-    `## 工具结果长度限制\n单次工具结果超出上限会被截断，超出部分丢失：${parts.join("；")}。` +
-    `务必把过滤与聚合下推到查询里，必要时分多次小批查询；若看到「已截断」提示说明结果不完整，` +
-    `应缩小范围重查，切勿把截断结果当作完整数据下结论。`
+    `## Tool Result Length Limits\nA single tool result beyond the cap will be truncated and the overflow is lost: ${parts.join("; ")}. ` +
+    "Push filtering and aggregation into queries, split into small batches when needed, and do not treat truncated results as complete data."
   );
 }
 
-/** 大结果工具的查询约束，追加到工具 description，逼模型在查询里就缩小结果。 */
+/** Query constraints appended to large-result tool descriptions. */
 const TOOL_HINTS: Record<string, string> = {
   run_sql:
-    " 【重要】用 SQL 完成聚合/计数/排序/分组并配 LIMIT、只取需要的列；禁止 SELECT * 或拉全表。结果过大会被截断。",
+    " Important: use SQL for aggregation/counting/sorting/grouping with LIMIT, select only necessary columns, and avoid SELECT * or full table scans. Large results will be truncated.",
   query_object_instance:
-    " 【重要】用 filters 精确过滤 + 小 limit + properties 只取必要字段；不要返回大结果集。结果过大会被截断。",
-  query_instance_subgraph: " 【重要】用尽量小的 limit；结果过大会被截断。",
-  list_resources: " 【重要】用 catalog_id/type 过滤 + 小 limit 分页；结果过大会被截断。",
+    " Important: use precise filters, a small limit, and properties for necessary fields only. Large results will be truncated.",
+  query_instance_subgraph: " Important: use the smallest practical limit. Large results will be truncated.",
+  list_resources: " Important: filter by catalog_id/type and use small paged limits. Large results will be truncated.",
   search_schema:
-    " 建议：用精确的 query，max_concepts 默认不超过 10；结果过大会被截断。schema_brief 默认 true（只返回概要），需要完整字段定义时显式传 schema_brief=false。",
+    " Recommendation: use a precise query and keep max_concepts at or below 10 by default. Large results will be truncated. schema_brief defaults to true; pass schema_brief=false only when full field definitions are needed.",
   get_action_info:
-    " 【重要】必须先从 query_object_instance 或 query_instance_subgraph 的 _instance_identity 取得真实实例标识，再传非空 _instance_identities；不要自己编实例标识。",
+    " Important: obtain real instance identifiers from _instance_identity returned by query_object_instance or query_instance_subgraph, then provide nonempty _instance_identities. Never invent instance identifiers.",
   execute_action:
-    " 【重要】必须传非空 _instance_identities 和 dynamic_params；智能问答中不允许空实例扫描执行，目标实例必须来自上游查询返回的 _instance_identity。",
+    " Important: provide nonempty _instance_identities and dynamic_params. Conversational execution cannot scan empty instances; targets must come from upstream _instance_identity values.",
 };
 
-/** 所有工具通用的默认 arguments：TOON 紧凑文本比 JSON 省大量 token（模型显式传值优先）。 */
+/** Common default arguments for all tools; model-provided values win. */
 const GLOBAL_ARG_DEFAULTS: Record<string, unknown> = { response_format: "toon" };
 
-/** 模型未显式传参时注入的默认 arguments（模型显式传值优先）。 */
+/** Default arguments injected when the model does not provide explicit values. */
 const TOOL_ARG_DEFAULTS: Record<string, Record<string, unknown>> = {
-  // brief 概要即可支撑绝大多数探索，省 token；要完整 schema 让模型显式关。
+  // Brief summaries cover most discovery flows and save tokens.
   search_schema: { schema_brief: true },
 };
 
-/** 实际发给 MCP 的最终 arguments = 通用默认 ← 工具默认 ← 模型入参 ← 锁定 kn_id ← 受管上下文。UI 工具卡片也用它展示真实请求。 */
+/** Final MCP arguments combine common defaults, tool defaults, model input, locked kn_id, and managed context. */
 export function effectiveToolArgs(
   name: string,
   input: unknown,
@@ -149,15 +148,15 @@ export function effectiveToolArgs(
     ...(input && typeof input === "object" ? (input as Record<string, unknown>) : {}),
     kn_id: knId,
   };
-  // 上下文是平台侧身份，和 kn_id 一样不接受模型覆盖：模型编出来的 id 一定不存在于 Core。
+  // Platform context is trusted identity data and must not be overwritten by model output.
   if (bknContext) args.bkn_context = bknContext;
   return args;
 }
 
 /**
- * 剥掉工具入参 schema 里的 `bkn_context`。后端把它塞进了每个业务工具的
- * properties + required，原样喂给模型会让模型自己编 conversation/interaction id；
- * 真值由 execute 注入，模型不该看见这个字段。
+ * Removes `bkn_context` from tool input schemas. The backend includes it in
+ * business tools, but true values are injected by execute and should not be
+ * invented by the model.
  */
 function stripBknContextSchema(schema: Record<string, unknown>): Record<string, unknown> {
   const properties = schema.properties;
@@ -203,7 +202,7 @@ export function guardAgentToolArgs(name: string, args: Record<string, unknown>):
     if (missing.length) {
       return toolGuardError(
         "missing_action_recall_scope",
-        "get_action_info 需要 at_id 和非空 _instance_identities。请先让用户选择目标实例，或先查询候选实例并使用返回的 _instance_identity。",
+        "get_action_info requires at_id and a nonempty _instance_identities array. Ask the user to select an instance or query candidates first and use the returned _instance_identity.",
         missing,
       );
     }
@@ -219,7 +218,7 @@ export function guardAgentToolArgs(name: string, args: Record<string, unknown>):
     if (missing.length) {
       return toolGuardError(
         "unsafe_action_call",
-        "execute_action 已被客户端拦截：缺少目标实例或 dynamic_params。请先确认执行对象和动态参数，再重新调用本工具。",
+        "execute_action was blocked by the client: a target instance or dynamic_params is missing. Confirm the execution target and dynamic parameters before calling this tool again.",
         missing,
       );
     }
@@ -229,8 +228,7 @@ export function guardAgentToolArgs(name: string, args: Record<string, unknown>):
 }
 
 /**
- * 步间驱逐旧工具结果：每步前只保留最近 keep 个工具结果的全文，更早的把内容替换成占位，
- * 但**保留 toolCallId / toolName 配对**（OpenAI 要求每个 tool_call 都有对应 tool 响应）。keep<=0 不驱逐。
+ * Evicts old tool-result payloads between steps while preserving toolCallId/toolName pairs.
  */
 function evictOldToolResults(messages: ModelMessage[], keep: number): ModelMessage[] {
   if (keep <= 0) return messages;
@@ -248,7 +246,7 @@ function evictOldToolResults(messages: ModelMessage[], keep: number): ModelMessa
             type: "tool-result" as const,
             toolCallId: part.toolCallId,
             toolName: part.toolName,
-            output: { type: "text" as const, value: "[旧工具结果已省略以节省上下文]" },
+            output: { type: "text" as const, value: "[Older tool result omitted to save context]" },
           }
         : part,
     );
@@ -258,10 +256,10 @@ function evictOldToolResults(messages: ModelMessage[], keep: number): ModelMessa
 
 export type AgentChatRole = "user" | "assistant";
 
-/** 缓存进 localStorage 的对话历史项（仅文本，工具步骤不进历史，仅用于重发上下文）。 */
+/** Chat history item persisted to localStorage. Tool steps are excluded. */
 export type AgentChatTurn = { role: AgentChatRole; content: string };
 
-/** 流式推给 UI 的增量事件。 */
+/** Streaming chunk event emitted to the UI. */
 export type AgentChunk =
   | { type: "text"; delta: string }
   | { type: "reasoning"; delta: string }
@@ -269,31 +267,28 @@ export type AgentChunk =
   | { type: "tool-result"; id: string; result: string }
   | { type: "tool-error"; id: string; error: string }
   | { type: "usage"; inputTokens: number; outputTokens: number; totalTokens: number }
-  /** 本轮执行失败。error 已归一化成一句人话，原始报文在 detail 里（UI 折叠展示）。 */
+  /** Current run failed. error is user-facing; raw details stay in detail for collapsed UI. */
   | { type: "error"; error: string; detail?: string; retryable?: boolean }
   | { type: "finish" };
 
-/** 把任意错误包成 error chunk：UI 只拿到人话，原文进 detail。 */
+/** Wraps any error as an error chunk. */
 function errorChunk(error: unknown): Extract<AgentChunk, { type: "error" }> {
   const normalized: NormalizedAgentError = normalizeAgentError(error);
   return { type: "error", error: normalized.message, detail: normalized.detail, retryable: normalized.retryable };
 }
 
 /**
- * 受管生命周期类错误：上下文缺失或本轮交互已终结，重试与换工具都救不回来。
- * 这两条错误的正文里带 `required_action`，原样喂回模型等于给它一条循环指令。
+ * Managed lifecycle dead ends: missing context or terminal interaction state.
+ * Their payloads contain required_action, which would otherwise become a loop instruction.
  */
 const LIFECYCLE_DEAD_END_CODES = new Set(["conversation_required", "interaction_terminal"]);
 
 /**
- * 把生命周期死局错误换成模型无法照做的终止语。
+ * Replaces lifecycle dead-end errors with a terminal message the model cannot act on.
  *
- * 后端的 `{"error":{"code":"conversation_required","required_action":"bkn_start_interaction"}}`
- * 曾经原样进模型上下文：模型照着 required_action 自己开一轮交互，拿到的 conversation_id
- * 停在它的对话历史里，跟客户端注入的 bkn_context 对不上，于是再次被拒、再次照办——死循环。
- * 生命周期工具现在由 managedLifecycleTool 接管（模型照常调得到，但拿回的是本轮那条交互），
- * 循环的头已经断了；这里管的是尾——真落到这两个 code 时，模型会对着同一个错误反复重试同一个
- * 工具，一路烧到 stopWhen 的步数上限，所以连"下一步该干什么"一起抹掉。
+ * Lifecycle tools are now taken over by managedLifecycleTool, but this guard
+ * handles payloads that still reach the model and would otherwise be retried
+ * until the stopWhen limit.
  */
 export function sanitizeLifecycleError(text: string): string {
   let code = "";
@@ -309,22 +304,21 @@ export function sanitizeLifecycleError(text: string): string {
     error: {
       code,
       message:
-        "本轮受管上下文不可用，这是客户端问题，重试本工具或改调其他工具都不会恢复。" +
-        "请停止工具调用，直接告诉用户当前无法取数。",
+        "The managed context for this turn is unavailable. Retrying this tool or switching tools will not recover it. " +
+        "Stop tool calls and tell the user that data cannot be retrieved right now.",
     },
   });
 }
 
 /**
- * 工具循环需要的这一轮交互接口：取上下文 + 终结。
- * 结构上兼容 bkn-lifecycle 的 BknTurn，这里只列用得到的两件事。
- * `finish` 必填——少了它 bkn_finish_interaction 就只能直通后端，凭空多一条隐性分支。
+ * Per-turn interaction interface required by the tool loop: context plus finish.
+ * It is structurally compatible with BknTurn.
  */
 export type AgentTurnScope = BknCallScope & {
   finish: (outcome: TurnOutcome, answer: string) => Promise<void>;
 };
 
-/** 模型侧 outcome → 客户端 turn 的终结语义；handed_off 客户端没有对应动作，明确拒绝。 */
+/** Model outcome to client-side turn outcome mapping. */
 const MODEL_FINISH_OUTCOMES: Record<string, TurnOutcome> = {
   completed: "completed",
   failed: "failed",
@@ -339,21 +333,17 @@ function textOf(input: unknown, key: string): string {
 }
 
 /**
- * 把 MCP tools/list 的工具定义转成 AI SDK 工具集：
- * - inputSchema 直接用 MCP 的 JSON Schema（jsonSchema() 包装）。
- * - execute 走会话级 MCP 客户端，并强制注入锁定 kn_id（模型不可改）。
- * 返回工具集 + 共享的 MCP 会话（复用同一 session）。
+ * Converts MCP tools/list definitions to an AI SDK tool set.
+ * inputSchema uses the MCP JSON Schema, and execute goes through the shared MCP session.
  */
 export type AgentToolsOptions = {
-  /** 当前知识网络绑定的 resource_id 集（KnDetail 的 data_source）。传入则默认把 list_resources 限定到本网络的数据表。 */
+  /** resource_id set bound to the current KN; list_resources is scoped to it when provided. */
   resourceScope?: readonly string[] | null;
-  /** 复用生命周期客户端的 MCP 会话，省一次 initialize 握手。 */
+  /** Reuses the lifecycle client's MCP session to avoid another initialize handshake. */
   session?: McpSession;
   /**
-   * 本轮受管交互：工具循环取上下文注入业务调用，模型调 bkn_finish_interaction 时也从
-   * 这里走终结（`finish` 内部幂等，客户端的收尾因此变成空操作）。
-   * 缺省/null 时不注入 bkn_context、生命周期工具直通后端：只有后端未启用受管生命周期
-   * 时才该这样，启用了却不传会让每个工具调用都被挡在 `conversation_required`。
+   * Managed interaction for this turn. Tool calls read context from it, and
+   * bkn_finish_interaction finishes through it. Null means lifecycle tools pass through.
    */
   turn?: AgentTurnScope | null;
 };
@@ -376,9 +366,7 @@ export function buildAgentTools(
   };
   for (const def of mcpTools) {
     if (!def.name) continue;
-    // 平台侧生命周期工具：能力照给模型，但接管执行，绑到客户端这一轮交互上。
-    // 见 managedLifecycleTool。没有 turn（后端未启用受管生命周期）时不接管，直通后端，
-    // 模型自己驱动整套生命周期。
+    // Lifecycle tools remain visible to the model, but execution is bound to this client turn.
     if (turn && isPlatformManagedTool(def.name)) {
       const managed = managedLifecycleTool(def, turn);
       if (managed) {
@@ -395,7 +383,7 @@ export function buildAgentTools(
       description:
         (def.description ?? def.name) +
         (TOOL_HINTS[def.name] ?? "") +
-        (scopedList ? " 返回结果已默认限定为当前知识网络绑定的数据表（其他 catalog 的表不会出现）。" : ""),
+        (scopedList ? " Results are scoped to data tables bound to the current knowledge network by default." : ""),
       inputSchema: jsonSchema(schema),
       execute: async (input: unknown): Promise<string> => {
         const bknContext = turn?.nextContext();
@@ -411,42 +399,37 @@ export function buildAgentTools(
 }
 
 /**
- * 这个平台侧工具会不会被接管（前提是本轮有 turn）。
+ * Whether this platform tool is taken over when the current turn is managed.
  *
- * 与 isPlatformManagedTool 的区别在精度：那个是整片 `bkn_` 前缀，而真正改变执行路径的
- * 只有这两个。溯源类读工具照旧直通后端，请求体仍然是注入后的真实报文——UI 要区分
- * 「展示模型入参」还是「展示真实请求体」时必须用这个判定，用前缀会把直通的那些也
- * 显示成没有请求体。
+ * This is narrower than isPlatformManagedTool: only start/finish change the
+ * execution path. Trace read tools still pass through to the backend.
  */
 export function isTakenOverLifecycleTool(name: string): boolean {
   return name === "bkn_start_interaction" || name === "bkn_finish_interaction";
 }
 
 /**
- * 把一个受管生命周期工具接到客户端这一轮交互上，返回 null 表示这个工具没接管、按直通处理。
+ * Binds a managed lifecycle tool to the current client turn, or returns null for pass-through.
  *
- * - `bkn_start_interaction`：返回本轮已经开好的交互，不再向后端多开一条。模型因此拿得到
- *   一个真实可用的 conversation_id / interaction_id，而不是一条我们不认识的孤儿会话。
- * - `bkn_finish_interaction`：走 turn 的终结路径。turn 内部的 terminated 幂等位保证
- *   ChatPane finally 里的收尾变成空操作，模型收过尾就不会再收第二次。
+ * - `bkn_start_interaction` returns the already-opened turn instead of opening another one.
+ * - `bkn_finish_interaction` goes through the turn finish path.
  *
- * 两者的 inputSchema 一律照抄后端下发的那份。接管改的是"这次调用落到哪里"，不是工具长什么
- * 样——在 schema 上删参数（哪怕是我们用不到的 question）或裁枚举（哪怕运行时会拒的
- * handed_off），对模型来说就是这个能力被悄悄削了一块，它连有过这个选项都不知道。
+ * Backend inputSchema is preserved. Takeover changes execution routing, not the
+ * tool shape visible to the model.
  */
 function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
   if (!isTakenOverLifecycleTool(def.name)) return null;
   const describe = (extra: string) => `${def.description ?? def.name} ${extra}`;
-  // 后端 schema 原样透传；只有它压根没给 schema 时才退回一个空对象。
+  // Preserve backend schema; fall back to an empty object only when absent.
   const backendSchema =
     def.inputSchema && typeof def.inputSchema === "object"
       ? (def.inputSchema as Record<string, unknown>)
       : { type: "object", properties: {} };
   if (def.name === "bkn_start_interaction") {
     return tool({
-      description: describe("本轮交互已由 Studio 开启，调用它只会返回当前交互的标识，不会新开一轮。"),
+      description: describe("Studio already opened this turn; calling it returns current interaction IDs instead of opening another turn."),
       inputSchema: jsonSchema(backendSchema),
-      // 入参（question 等）照收不误，只是本轮交互已经开好了，不拿它再去开一条。
+      // Accept arguments such as question, but do not use them to open another turn.
       execute: (): Promise<string> =>
         Promise.resolve(JSON.stringify({ ...turn.nextContext(), execution_status: "active" })),
     });
@@ -454,18 +437,17 @@ function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
   if (def.name === "bkn_finish_interaction") {
     const finish = turn.finish;
     return tool({
-      description: describe("答复写完后可以调用它终结本轮交互；不调用 Studio 也会在本轮结束时代为终结。"),
+      description: describe("Call it after the answer is done to finish this turn; Studio also finishes the turn if it is not called."),
       inputSchema: jsonSchema(backendSchema),
       execute: async (input: unknown): Promise<string> => {
         const raw = textOf(input, "outcome");
         const outcome = MODEL_FINISH_OUTCOMES[raw];
-        // handed_off 之类客户端没有对应动作的 outcome：明说不支持，而不是假装成功，
-        // 也不是在 schema 里当它不存在——后端支持、这条链路不支持，是两件事。
+        // Some backend outcomes, such as handed_off, have no client action here.
         if (!outcome) {
           return JSON.stringify({
             error: {
               code: "unsupported_outcome",
-              message: `Studio 代管的交互只支持 completed / failed / cancelled，收到 ${raw || "空值"}。`,
+              message: `Studio-managed interactions only support completed / failed / cancelled; received ${raw || "empty value"}.`,
             },
           });
         }
@@ -478,8 +460,8 @@ function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
 }
 
 /**
- * list_resources 限定到当前知识网络：强制 json + 一次取全（offset 0、大 limit——网络内表集很小，
- * 分页无意义），再按 KnDetail 的 resource_id 集过滤，只留本网络绑定的数据表。
+ * Scopes list_resources to the current KN by forcing JSON, fetching enough rows,
+ * and filtering by resource_id values from KnDetail.
  */
 async function listResourcesScoped(
   call: (name: string, args: Record<string, unknown>) => Promise<string>,
@@ -503,18 +485,18 @@ async function listResourcesScoped(
       : [];
     return capToolResult(JSON.stringify({ entries, total_count: entries.length }), "list_resources", cfg);
   } catch {
-    // 非预期格式（如仍是 TOON）时不阻断，原样返回。
+    // If the format is unexpected, for example TOON, return the original result.
     return capToolResult(text, "list_resources", cfg);
   }
 }
 
-/** 鉴权 provider：getToken 每请求取新鲜 token（OAuth 会续期），refresh 在 401 时刷新。 */
+/** Auth provider: getToken reads a fresh token per request, refresh handles 401. */
 export type AgentTokenProvider = { getToken: () => string; refresh: () => Promise<string | null> };
 
-/** 忙态退避重试的间隔（ms）。数组长度即最大重试次数。 */
+/** Backoff delays for busy retries in ms; array length is max retry count. */
 const RETRY_DELAYS_MS = [400, 1200];
 
-/** 加 ±30% 抖动，避免多面板同时重试再把网关按住。 */
+/** Adds jitter to avoid synchronized retries from multiple panels. */
 function withJitter(ms: number): number {
   return Math.round(ms * (0.85 + Math.random() * 0.3));
 }
@@ -534,16 +516,14 @@ function sleep(ms: number, signal: AbortSignal | null | undefined): Promise<void
 }
 
 /**
- * 这个响应值不值得重试。除了状态码，还要认「200 + 网关自家错误体」——模型工厂忙的时候
- * 就是这么返的（bkn-foundry#620）。只在非 SSE 时 peek body：流式响应 clone 出来读会把整段
- * 缓冲下来，代价不可接受。
+ * Whether this response should be retried. Besides status codes, the Model
+ * Factory may return 200 with its own busy error envelope.
  */
 async function isRetryableResponse(response: Response): Promise<boolean> {
   if (isRetryableStatus(response.status)) return true;
   if (!response.ok) return false;
-  // 正向匹配：只有明确是 JSON 才 peek。反过来写「不是 SSE 就 peek」的话，网关一旦漏标
-  // content-type，clone().text() 要读到流结束才 resolve，SDK 一个 token 都拿不到——
-  // 每一次正常对话的流式打字都会退化成等生成完一次性刷出。而网关不按契约来正是本层的前提。
+  // Only peek when the response is explicitly JSON. Peeking unknown streams can
+  // buffer the whole response and break token-by-token streaming.
   if (!(response.headers.get("content-type") ?? "").includes("application/json")) return false;
   try {
     const mf = parseModelFactoryEnvelope(await response.clone().text());
@@ -553,17 +533,16 @@ async function isRetryableResponse(response: Response): Promise<boolean> {
   }
 }
 
-/** fetch 本身抛错（连不上/被 reset）值得重试；AbortError 由调用侧判 signal，不走这里。 */
+/** Network fetch failures are retryable; AbortError is handled by the caller signal. */
 function isRetryableFetchError(error: unknown): boolean {
   return error instanceof TypeError;
 }
 
 /**
- * 模型工厂网关的鉴权 + 兼容性 fetch：
- * - 每请求用 provider.getToken() 的新鲜 token 设 Authorization；401 时 refresh 后重试一次（OAuth 自动续期，
- *   解决长对话/长循环跨过 token 过期而断掉的问题）。
- * - 忙态（429/5xx，或 200 裹着 50508）与连接失败按 RETRY_DELAYS_MS 退避重试；用户点停止立即让路。
- * - 兼容其严格 router：assistant 消息 `content: null` 归一为 ""，剥掉回灌的 `reasoning_content`。
+ * Authenticated compatibility fetch for the Model Factory gateway:
+ * - uses a fresh Authorization token per request and retries once after 401;
+ * - retries busy responses and connection failures with backoff;
+ * - normalizes assistant `content: null` and strips replayed reasoning_content.
  */
 export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
   const run = (input: RequestInfo | URL, init: RequestInit | undefined, token: string): Promise<Response> => {
@@ -579,7 +558,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
           body = JSON.stringify(parsed);
         }
       } catch {
-        /* 非 JSON body 原样放行 */
+        /* Leave non-JSON bodies unchanged. */
       }
     }
     const headers = new Headers(init?.headers);
@@ -608,7 +587,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
         response = await runWithAuthRetry(input, init);
         failure = null;
       } catch (error) {
-        // 用户停止时 fetch 抛的是 AbortError，不该被当成可重试的网络抖动。
+        // User stop throws AbortError and should not be retried as a network issue.
         if (signal?.aborted) throw error;
         response = null;
         failure = error;
@@ -616,7 +595,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
       if (attempt >= RETRY_DELAYS_MS.length || signal?.aborted) break;
       const retry = response ? await isRetryableResponse(response) : isRetryableFetchError(failure);
       if (!retry) break;
-      // 丢弃的响应要主动关掉 body，否则连接挂在那儿不释放。
+      // Close discarded response bodies so connections are released.
       void response?.body?.cancel().catch(() => undefined);
       await sleep(withJitter(RETRY_DELAYS_MS[attempt]), signal);
       if (signal?.aborted) break;
@@ -627,7 +606,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
   });
 }
 
-/** 构造模型工厂 OpenAI 兼容大模型实例（新鲜 token + 401 刷新 + 兼容性 fetch）。 */
+/** Creates a Model Factory OpenAI-compatible model with authenticated fetch. */
 function createChatModel(env: ContextLoaderEnv, modelName: string, tokenProvider: AgentTokenProvider) {
   const baseURL = `${env.base.replace(/\/+$/, "")}${MODEL_API_PATH}`;
   const provider = createOpenAICompatible({
@@ -638,38 +617,34 @@ function createChatModel(env: ContextLoaderEnv, modelName: string, tokenProvider
   return provider(modelName);
 }
 
-/* ============================ 模板标记泄漏过滤（后端 parser 缺失兜底） ============================ */
+/* ============================ Template Marker Leak Filter ============================ */
 
 /**
- * 推理后端没配 tool-call / reasoning parser 时，模型会把 <think>…</think> 与
- * <function=…>/<tool_call> 模板标记当**纯文本**吐出来（调用根本没被执行）。
- * 这里做流式兜底：think 内容改道到思考区；泄漏的调用块拦截成一张失败的工具卡，
- * 并说明根因，不再污染答案正文。代价：正文里若真要引用这些标记原文会被误拦（可接受）。
+ * Streaming fallback for inference backends missing tool-call or reasoning
+ * parsers. Leaked template markers are routed away from the final answer and
+ * leaked tool calls become failed tool cards.
  */
 const LEAK_OPENERS = ["<think>", "<tool_call>", "<function="] as const;
 const LEAK_FN_CLOSERS = ["</function>", "</tool_call>"] as const;
 
 /**
- * 最终答复的边界标记。推理后端没配 reasoning parser 时模型的推敲会裸奔进正文
- * （bkn-foundry#622），而裸推敲没有任何标记可认——靠正则猜必然误伤正文。
- * 所以改成让提示词给出边界：标签内才是答案，标签外一律当思考过程。
+ * Final-answer boundary markers. Without a reasoning parser, unmarked reasoning
+ * can leak into the answer, so the prompt makes the boundary explicit.
  */
 export const ANSWER_OPEN = "<answer>";
 const ANSWER_CLOSE = "</answer>";
 
 /**
- * 输出契约。**必须由系统提示词自动拼接，不能写进可编辑的默认提示词**：
- * 提示词是持久化状态（`bkn-studio:agentchat:*` 每轮回写、载入优先用存量值），
- * 写进默认值就只对「从没聊过」的用户生效——而会撞上这个 bug 的恰恰是老用户。
- * 放这里还顺带消掉了漂移：契约文本和过滤器认的标签用的是同一对常量。
+ * Output contract. It must be appended by the system prompt, not baked into the
+ * editable default prompt, because saved prompt state takes precedence.
  */
 export function formatOutputContract(evidenceHint: string): string {
   return (
-    "## 输出规范（务必遵守）\n" +
-    `- 最终答复必须整段包在 ${ANSWER_OPEN} 与 ${ANSWER_CLOSE} 之间；标签外的内容会被当作思考过程折叠，用户看不到。\n` +
-    `- ${ANSWER_OPEN} 内只写给用户看的结果，不要出现「我现在写…」「我选择…」「这样应该可以了」这类自述或推敲。\n` +
-    `- 固定两段：先一句话给出**结论**；再用一行**依据**说明数据怎么来的（${evidenceHint}）。\n` +
-    "- 中文，简洁专业，可用 Markdown。"
+    "## Output Rules (must follow)\n" +
+    `- Wrap the final answer entirely between ${ANSWER_OPEN} and ${ANSWER_CLOSE}; content outside the tags is treated as reasoning and hidden from the user.\n` +
+    `- Inside ${ANSWER_OPEN}, write only user-facing results. Do not include self-narration or deliberation.\n` +
+    `- Use two concise parts: first one sentence with the conclusion, then one evidence line explaining how the data was obtained (${evidenceHint}).\n` +
+    "- Answer in the current conversation language. Keep it concise, professional, and Markdown-friendly."
   );
 }
 
@@ -685,14 +660,12 @@ const LEAK_ALL_MARKS = [
 ];
 
 const LEAK_ERROR_MSG =
-  "模型把工具调用当文本输出，调用未真正执行——通常是该模型的推理后端未配置 tool-call parser" +
-  "（如 vLLM 的 --enable-auto-tool-choice --tool-call-parser，配套 --reasoning-parser）。" +
-  "请修正模型接入配置，或换用可正常调用工具的模型。";
+  "The model output a tool call as plain text, so the call was not executed. This usually means the inference backend lacks a tool-call parser, such as vLLM --enable-auto-tool-choice with --tool-call-parser and matching --reasoning-parser. Fix the model integration or switch to a model that can call tools correctly.";
 
 export type LeakFilterOptions = {
   /**
-   * 系统提示词里给了 `<answer>` 契约。只有此时才启用「标签外算思考」的改道，
-   * 否则用户把提示词改掉后正文会一直等到 flush 才出现，白白毁掉流式体验。
+   * The system prompt contains the `<answer>` contract. Only then route text
+   * outside tags to reasoning; otherwise custom prompts would break streaming.
    */
   expectAnswerTag?: boolean;
 };
@@ -705,10 +678,10 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
   let fnSeq = 0;
   let sawAnswer = false;
   let inAnswer = false;
-  /** `<answer>` 之前改道走的内容。模型完全不守约时 flush 回放成正文，不能让一轮没答案。 */
+  /** Content routed before `<answer>`; replayed as text if the model ignores the contract. */
   let provisional = "";
 
-  // 结尾若可能是某个标记的前缀，先兜住不发（跨 delta 的半个标签）。
+  // Hold a tail that may be a partial marker crossing delta boundaries.
   const holdLen = (s: string): number => {
     const max = Math.min(s.length, 12);
     for (let n = max; n > 0; n--) {
@@ -724,7 +697,7 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
   const emitReasoning = (delta: string) => {
     if (delta) onChunk({ type: "reasoning", delta });
   };
-  /** 正文候选。契约生效且还没进 `<answer>` 时改道到思考区并留底。 */
+  /** Candidate answer text; before `<answer>`, route to reasoning and keep a backup. */
   const emitBody = (delta: string) => {
     if (!delta) return;
     if (!expectAnswerTag || inAnswer) {
@@ -736,9 +709,9 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
   };
   const reportLeakedCall = (raw: string) => {
     const name =
-      /<function=([\w.-]+)/.exec(raw)?.[1] ?? /"name"\s*:\s*"([\w.-]+)"/.exec(raw)?.[1] ?? "未知工具";
+      /<function=([\w.-]+)/.exec(raw)?.[1] ?? /"name"\s*:\s*"([\w.-]+)"/.exec(raw)?.[1] ?? "unknown_tool";
     const id = `leaked-${++fnSeq}`;
-    onChunk({ type: "tool-call", id, name, args: { 泄漏的原始输出: raw.slice(0, 2000) } });
+    onChunk({ type: "tool-call", id, name, args: { leakedRawOutput: raw.slice(0, 2000) } });
     onChunk({ type: "tool-error", id, error: LEAK_ERROR_MSG });
   };
 
@@ -767,10 +740,10 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
           sawAnswer = true;
           inAnswer = true;
         } else if (marker === ANSWER_CLOSE) {
-          // 收尾之后模型还可能继续自言自语，那些同样不算答案。
+          // After closing, the model may keep narrating; that is not answer text.
           inAnswer = false;
         } else if (marker === "</think>") {
-          /* 落单的闭合标签直接丢弃 */
+          /* Drop standalone closing tags. */
         } else {
           mode = "fn";
           fnRaw = marker;
@@ -790,7 +763,7 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
         mode = "normal";
         continue;
       }
-      // fn：收集到闭合标签为止
+      // Function block: collect until a closing marker.
       let close = -1;
       let closer = "";
       for (const c of LEAK_FN_CLOSERS) {
@@ -805,7 +778,7 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
         fnRaw += buf.slice(0, buf.length - hold);
         buf = buf.slice(buf.length - hold);
         if (fnRaw.length > 20000) {
-          // 防收集无限膨胀：超长直接上报重置
+          // Prevent unbounded collection; report and reset when too long.
           reportLeakedCall(fnRaw);
           fnRaw = "";
           mode = "normal";
@@ -829,10 +802,8 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
       if (mode === "fn" && (fnRaw || buf)) reportLeakedCall(fnRaw + buf);
       else if (mode === "think") emitReasoning(buf);
       else emitBody(buf);
-      // 模型整轮没吐过 <answer>：把改道走的内容回放成正文，否则这一轮就没有答案了。
-      // 两个代价：思考区里会重复一份（默认折叠，可接受）；以及不守约的这一轮会**失去流式**
-      // ——「整轮没出现过标签」只有流结束才能判定，正文只能在这里一次性刷出。
-      // 守约的模型不受影响（标签一到就开始正常流式）。
+      // If the model never emits <answer>, replay routed content as text so the
+      // turn still has an answer. Compliant models keep normal streaming.
       if (expectAnswerTag && !sawAnswer && provisional) emitText(provisional);
       buf = "";
       fnRaw = "";
@@ -843,8 +814,8 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
 }
 
 /**
- * 跑一轮 Agent 对话：streamText 驱动模型工厂 + 工具循环，遍历 fullStream 把增量事件推给 onChunk。
- * history 含本轮最新 user 消息（最后一项）。tools 由 buildAgentTools 预构造。
+ * Runs one Agent chat turn. streamText drives the Model Factory and tool loop,
+ * while fullStream chunks are forwarded to onChunk.
  */
 export async function runAgentChat(params: {
   env: ContextLoaderEnv;
@@ -867,22 +838,20 @@ export async function runAgentChat(params: {
       messages,
       tools,
       stopWhen: stepCountIs(config.maxSteps),
-      // 重试全归 makeAuthedFetch 那一层。SDK 默认还会自己重试 2 次，叠起来一轮忙态
-      // 最多能打 9 次网关（本层 3 × SDK 3）——正是本 PR 要避免的事。
+      // Retries are handled by makeAuthedFetch; disable SDK retries to avoid multiplication.
       maxRetries: 0,
       ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
-      // 每步前驱逐旧工具结果，避免单轮多步累积撑爆上下文。
+      // Evict older tool results before each step to avoid context growth.
       prepareStep: ({ messages: stepMessages }) => ({ messages: evictOldToolResults(stepMessages, config.keepToolResults) }),
       abortSignal: signal,
     });
 
     let gotText = false;
-    // 本轮已报过错。收尾兜底不能再跑：那次调用必然也失败，只会把同一个错误再报一遍
-    // （错误从流里出一次、await result.response 再 reject 一次），还白打一次正忙的网关。
+    // If this run already reported an error, do not run fallback finalization.
     let errored = false;
-    // 提示词给了 <answer> 契约才启用标签路由——用户改掉提示词时要退回原行为。
+    // Enable tag routing only when the prompt contains the <answer> contract.
     const expectAnswerTag = system.includes(ANSWER_OPEN);
-    // 文本经泄漏过滤器：真实正文才算 gotText，泄漏的调用块会变成失败工具卡。
+    // Filter leaked template markers; only true answer text counts as gotText.
     const leakFilter = createLeakFilter((chunk) => {
       if (chunk.type === "text" && chunk.delta.trim()) gotText = true;
       onChunk(chunk);
@@ -910,7 +879,7 @@ export async function runAgentChat(params: {
           onChunk({
             type: "tool-error",
             id: part.toolCallId,
-            // 工具卡本就是折叠的，人话 + 原文一起给，排障不用再翻控制台。
+            // Tool cards are collapsed, so include both the message and raw details.
             error: normalized.detail ? `${normalized.message}\n\n${normalized.detail}` : normalized.message,
           });
           break;
@@ -935,15 +904,15 @@ export async function runAgentChat(params: {
     }
     leakFilter.flush();
 
-    // 跑满工具轮次仍没出最终答复（最后一步还在调工具）→ 强制基于已有信息收尾作答，不再调工具。
+    // If the tool loop hits the cap without a final answer, force a final text-only response.
     if (!gotText && !errored && !signal?.aborted) {
       const resp = await result.response;
       const finalResult = streamText({
         model: createChatModel(env, modelName, tokenProvider),
         system:
           system +
-          "\n\n（已达到工具调用上限或需要收尾：请基于以上已获得的信息，直接用中文给出最终答复，不要再调用任何工具。" +
-          (expectAnswerTag ? `最终答复同样要整段包在 ${ANSWER_OPEN}…${"</answer>"} 之间。` : "") +
+          "\n\nTool-call limit reached or finalization required. Based on the information already obtained, answer directly in the current conversation language without calling more tools. " +
+          (expectAnswerTag ? `Wrap the final answer entirely between ${ANSWER_OPEN} and ${"</answer>"}.` : "") +
           "）",
         messages: [...messages, ...(resp.messages as ModelMessage[])],
         ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),

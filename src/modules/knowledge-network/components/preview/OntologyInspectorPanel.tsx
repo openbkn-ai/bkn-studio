@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/** 本体图谱右侧检查面板 —— 未选中显示实体类图例，选中显示属性 / 绑定资源 / 关系。 */
+/** Right inspector for the ontology graph: entity-type legend when unselected, properties, bound resources, and relations when selected. */
 
 import { CloseOutlined, DeploymentUnitOutlined } from "@ant-design/icons";
 import { Spin, Tag } from "antd";

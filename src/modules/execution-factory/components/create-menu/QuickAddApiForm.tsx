@@ -122,9 +122,9 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     Partial<QuickApiContractFormValues> | undefined
   >();
   /**
-   * 产生 detectedCurlContract 的那段 cURL 原文。契约不会随输入框变化自动失效，
-   * 提交时要靠它判断「识别之后用户是不是又把命令改了」——改了就必须重解析，
-   * 否则会拿旧命令静默建出工具，而界面上显示的是新命令。
+   * Source cURL text that produced detectedCurlContract. The contract does not invalidate as the
+   * input changes, so submit compares it to determine whether the user changed the command after
+   * detection. A change requires reparsing; otherwise a tool is silently created from the old command.
    */
   const curlContractSourceRef = useRef<string | undefined>(undefined);
   const [toolboxOptions, setToolboxOptions] = useState<Array<{ label: string; value: string }>>([]);
@@ -201,7 +201,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     setDetectedUrlParameters(preserveManualContract ? parsed.queryParams : []);
     setDetectedCurlContract(preserveManualContract ? undefined : buildCurlContract(parsed));
     if (preserveManualContract) {
-      // 契约被清空，来源也要一起清，否则会拿旧来源去比对。
+      // Clear the source with the contract, or comparison would use stale source text.
       curlContractSourceRef.current = undefined;
     }
 
@@ -255,12 +255,12 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
     const resolvedValues =
       inputMode === "form" ? resolveQuickApiFormContract(values) : values;
 
-    // cURL 模式下「识别接口信息」是可选动作，用户常直接提交。此时没有已识别的
-    // 契约，缺的是解析而不是输入，所以在提交时补一次解析并回报真实原因。
+    // In cURL mode, detecting API information is optional and users often submit directly. The
+    // missing piece is parsing, not input, so parse on submit and report the real reason.
     const curlText = values.curlText ?? "";
-    // 除了「从没点过识别」，还要挡住「识别完又改了 cURL」：detectedCurlContract 不会
-    // 随输入框失效，而它会整体覆盖 method/serverUrl/path/parameters/requestBody，
-    // 沿用旧契约就是按旧命令建工具、界面却显示新命令，且全程无提示。
+    // Handle both never detecting and changing cURL after detection. detectedCurlContract does not
+    // invalidate with input and overwrites method/serverUrl/path/parameters/requestBody, so retaining
+    // it would create a tool from the old command while displaying the new one without notice.
     let curlContract = detectedCurlContract;
     if (inputMode === "curl" && (!curlContract || curlContractSourceRef.current !== curlText)) {
       const parsed = parseCurlCommand(curlText);

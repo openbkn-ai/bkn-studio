@@ -13,18 +13,18 @@ import { JsonCodeBlock } from "./JsonCodeBlock";
 import styles from "./DebugResultPanel.module.css";
 
 type DebugResultPanelProps = {
-  /** 调用本身失败（HTTP 非 2xx / MCP isError），面板转告警色但仍展示结果。 */
+  /** The invocation failed (non-2xx HTTP or MCP isError); use warning styling but still show the result. */
   error?: boolean;
-  /** 标题右侧的补充信息：状态码、耗时。没有就不画。 */
+  /** Supplemental information at the right of the title, such as status code and duration. Omit when absent. */
   meta?: ReactNode;
   testId?: string;
   value: unknown;
 };
 
 /**
- * 调试结果面板。三处调试入口（HTTP 弹窗、HTTP 工作台、MCP 弹窗）共用一份，
- * 各自画时会漂：MCP 那侧本来还是 antd 的 Alert，整块橄榄绿，跟另外两处
- * 「小圆点 + 标题 + 安静底色」完全不像。
+ * Debug-result panel shared by three entry points: HTTP modal, HTTP workbench, and MCP modal.
+ * Separate implementations drifted; the MCP side used AntD Alert with a solid olive-green block,
+ * unlike the quiet background, title, and small-dot treatment used elsewhere.
  */
 export function DebugResultPanel({ error, meta, testId, value }: DebugResultPanelProps) {
   const { t } = useTranslation();

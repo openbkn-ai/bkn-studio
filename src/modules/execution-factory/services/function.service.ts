@@ -29,17 +29,16 @@ function getBusinessDomainHeaders() {
 }
 
 /**
- * 沙箱控制面装依赖默认给 300s，这里留一点余量。只在真带依赖时才用这个超时，
- * 不带依赖的普通执行仍走 http 默认值，免得写错代码的函数把人干等着。
+ * Sandbox dependency installation defaults to 300s, so leave a small margin.
+ * Plain executions without dependencies keep the regular http timeout.
  */
 const DEPENDENCY_INSTALL_TIMEOUT_MS = 330_000;
 
 /**
- * 把依赖面板里的行整理成后端能收的形状。
+ * Normalizes dependency rows into the backend contract shape.
  *
- * 名字为空的行是还没填完的占位，带上去后端直接 400（包名只允许 [a-zA-Z0-9._-]）。
- * 版本留空表示装最新，得整个省略而不是发空串——发 "" 会被拼成 `name==`，同样是
- * 非法 pip spec。前后空格一律 trim 掉，同理会让后端 400。
+ * Empty names are unfinished placeholders and would produce 400 responses.
+ * Empty versions mean latest, so omit the field instead of sending an empty string.
  */
 export function normalizeExecuteDependencies(
   dependencies: FunctionExecuteInput["dependencies"],
@@ -70,14 +69,12 @@ export async function executeFunction(
       code: input.code,
       event: input.event,
       timeout: input.timeout,
-      // dependencies_url 不传：后端有默认值（pypi 官方源），与
-      // listDependencyVersions 查版本时用的源保持一致，免得"查到的版本装不上"。
+      // Omit dependencies_url so execution uses the same backend default as version lookup.
       ...(dependencies.length > 0 ? { dependencies } : {}),
     },
     {
       headers: getBusinessDomainHeaders(),
-      // 带依赖的执行要先在沙箱里 pip install，控制面那头默认给到 300s，而 http
-      // 默认超时只有 15s。不放宽的话装个 pandas 必定前端先超时，依赖白传。
+      // Dependency installs happen before sandbox execution and can exceed the default http timeout.
       ...(dependencies.length > 0 ? { timeout: DEPENDENCY_INSTALL_TIMEOUT_MS } : {}),
     },
   );
@@ -112,8 +109,8 @@ function asExecuteEnvelope(value: unknown): BackendFunctionExecute | null {
 }
 
 /**
- * 沙箱回包有时直接在顶层，有时裹在 `data` 里（工具 debug 走的就是后者）。
- * 两种都认，认不出来的就当作 handler 返回值本身。
+ * Sandbox results can be top-level or nested under `data`; both shapes are accepted.
+ * Unknown shapes are treated as the handler return value.
  */
 export function mapFunctionExecuteResult(payload: BackendFunctionExecute): FunctionExecuteResult {
   const nested = asExecuteEnvelope(payload.data);
@@ -144,8 +141,8 @@ export function mapFunctionExecuteResult(payload: BackendFunctionExecute): Funct
 }
 
 /**
- * 由后端从代码推导函数契约（名称/描述/嵌套参数）。
- * 比走 AI 生成器确定性更高，也不消耗模型额度，所以「反推参数」走这条。
+ * Infers the function contract from code on the backend.
+ * This is more deterministic than AI generation and does not consume model quota.
  */
 export async function inferFunctionSchema(code: string): Promise<InferredFunctionSchema> {
   if (useMock) {
@@ -181,7 +178,7 @@ export async function inferFunctionSchema(code: string): Promise<InferredFunctio
   };
 }
 
-/** 后端已有接口，版本按 semver 排序并过滤过 requires_python。 */
+/** The backend returns versions sorted by semver and filtered by requires_python. */
 export async function listDependencyVersions(
   packageName: string,
   options?: { pypiRepoUrl?: string; pythonVersion?: string },
@@ -206,40 +203,38 @@ export async function listDependencyVersions(
 }
 
 /**
- * 后端的系统提示词仍教 `def handler(event)` 老写法，生成出来的代码既不符合
- * sandbox_sdk 约定，也让后端无法从签名推导入参。在 query 上附一段风格约束把它掰回来，
- * 内容与「模版」按钮插入的 FUNCTION_TEMPLATES 保持一致。
+ * The backend prompt may still teach the old `def handler(event)` style.
+ * Append style constraints so generated code follows sandbox_sdk signatures.
  */
 const PYTHON_TOOL_STYLE_DIRECTIVE = `
 
-【代码风格要求（必须遵守）】
-- 使用 sandbox_sdk 的 @tool 写法：先 \`from sandbox_sdk import tool\`，再用 \`@tool\` 装饰目标函数
-- 严禁使用 \`def handler(event)\` 这种从字典取参的旧写法
-- 每个形参必须带类型注解，参数名要能自解释；带默认值的形参即选填参数
-- 平台按函数签名推导入参声明，所以签名就是参数契约，不要在函数体里二次解析入参
-- 入参有嵌套结构或字段较多时，用 pydantic BaseModel 承载，作为单个形参的类型
-- docstring 首行用一句话说清这个函数做什么、返回什么 —— Agent 靠它判断何时调用
-- 函数名用有意义的小写下划线命名，不要用 my_function、handler 这类占位名
-- 返回值必须可 JSON 序列化，优先返回 dict
-- 严禁生成 \`if __name__ == '__main__':\` 测试块，执行器会直接运行代码，写了会重复执行一次
-- 只输出纯 Python 代码，不要 Markdown 代码块标记，不要解释文字
+## Code style requirements (mandatory)
+- Use sandbox_sdk @tool style: import with \`from sandbox_sdk import tool\`, then decorate the target function with \`@tool\`.
+- Do not use the legacy \`def handler(event)\` style that extracts values from a dict.
+- Every parameter must have a type annotation and a self-explanatory name. Parameters with defaults are optional.
+- The platform infers input declarations from the function signature, so the signature is the parameter contract. Do not parse inputs again inside the function body.
+- For nested or large input structures, use a pydantic BaseModel as the type of a single parameter.
+- The first docstring line must state what the function does and what it returns so agents know when to call it.
+- Use a meaningful snake_case function name. Do not use placeholders such as my_function or handler.
+- Return values must be JSON-serializable. Prefer returning dict objects.
+- Do not generate an \`if __name__ == '__main__':\` test block; the executor runs the code directly.
+- Output only plain Python code. Do not output Markdown fences or explanatory text.
 
-【安全红线（必须遵守）】
-- 只实现用户明确描述的功能，不得额外添加用户没要求的副作用
-- 严禁任何破坏性文件操作：不删除、不清空、不覆盖已有文件或目录（如 os.remove、os.unlink、shutil.rmtree、open(path,"w") 覆盖既有文件、pathlib 的 unlink/rmdir）；确需写文件时只写临时目录且用明确的新文件名
-- 严禁执行系统命令或起子进程：不使用 os.system、subprocess、popen、pty、eval、exec、compile、\`__import__\`
-- 严禁磁盘/系统级危险操作：不格式化、不改权限属主（chmod/chown）、不动 /etc /sys /proc /dev 等系统路径、不写启动项或定时任务
-- 严禁隐蔽外联与数据外传：不做与需求无关的网络请求、反弹 shell、端口扫描、下载并执行远程代码
-- 严禁凭证与密钥操作：不读取 ~/.ssh、环境变量里的密钥、云凭证文件，不硬编码或回传任何密钥
-- 严禁资源耗尽：不写死循环、fork 炸弹、无上限递归或申请巨量内存
-- 如果用户需求本身就是破坏性或危险的，不要实现，返回一个说明拒绝原因的错误字典`;
+## Safety requirements (mandatory)
+- Implement only the function explicitly requested by the user. Do not add unrelated side effects.
+- Do not perform destructive file operations such as deleting, clearing, or overwriting existing files or directories.
+- Do not execute system commands or start subprocesses. Do not use os.system, subprocess, popen, pty, eval, exec, compile, or \`__import__\`.
+- Do not perform disk or system-level dangerous operations such as formatting disks, changing ownership or permissions, touching /etc /sys /proc /dev, or writing startup items.
+- Do not perform covert networking or data exfiltration, including unrelated network requests, reverse shells, port scans, or downloading and executing remote code.
+- Do not read credentials or secrets such as ~/.ssh, environment secrets, or cloud credential files. Do not hard-code or return any secrets.
+- Do not exhaust resources with infinite loops, fork bombs, unbounded recursion, or huge memory allocation.
+- If the requested task is itself destructive or dangerous, do not implement it. Return an error dict explaining the refusal reason.`;
 
-/** 模型没有实时时钟，涉及「今天」「本月」的需求会写死一个训练期的旧日期。 */
+/** Models have no real-time clock, so relative-date requests need an explicit current time. */
 function currentTimeNote(): string {
   const now = new Date();
-  // 注意：dateStyle/timeStyle 与 year/month/... 或 timeZoneName 互斥，同传会抛
-  // TypeError: Invalid option : option。这里用显式字段以便带上时区名。
-  const stamp = new Intl.DateTimeFormat("zh-CN", {
+  // dateStyle/timeStyle cannot be combined with year/month or timeZoneName.
+  const stamp = new Intl.DateTimeFormat(getRuntimeConfig().locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -251,10 +246,10 @@ function currentTimeNote(): string {
     timeZoneName: "short",
   }).format(now);
 
-  return `\n\n【当前时间】${stamp}（ISO: ${now.toISOString()}）。涉及日期计算时以此为基准。`;
+  return `\n\n## Current time\n${stamp} (ISO: ${now.toISOString()}). Use this as the baseline for date calculations.`;
 }
 
-/** 只有「自然语言 → 代码」需要纠偏；元数据推导读的是既有代码，附加约束反而是噪声。 */
+/** Only natural-language-to-code generation needs correction; metadata inference reads existing code. */
 export function buildQuery(input: FunctionAiGenerateInput): string | undefined {
   if (input.type !== "python_function_generator" || !input.query) {
     return input.query;
@@ -294,7 +289,7 @@ export async function generateFunction(
     },
     {
       headers: getBusinessDomainHeaders(),
-      // LLM 生成实测 40s+，默认 15s/30s 超时会中断请求。
+      // LLM generation can exceed 40s, so the default 15s/30s timeout is too short.
       timeout: 120_000,
     },
   );
@@ -303,9 +298,9 @@ export async function generateFunction(
 }
 
 export type FunctionAiStreamHandlers = {
-  /** 模型输出正式内容（代码）时逐段回调。 */
+  /** Called for official model content, usually code. */
   onContentDelta?: (delta: string) => void;
-  /** 模型输出思考内容（qwen thinking）时逐段回调。 */
+  /** Called for model reasoning content. */
   onReasoningDelta?: (delta: string) => void;
 };
 
@@ -326,15 +321,15 @@ function extractStreamErrorMessage(raw: string, fallback: string): string {
       }
     }
   } catch {
-    // 非 JSON 错误体，用原文或兜底文案。
+    // Non-JSON error body; use raw text or fallback.
   }
 
   return raw.trim() || fallback;
 }
 
 /**
- * 流式生成：body 带 stream:true，后端返回 SSE（OpenAI chunk 格式，data: [DONE] 收尾）。
- * axios 不支持浏览器端流式读取，这里用 fetch + ReadableStream。
+ * Streaming generation: body uses stream:true and the backend returns OpenAI-style SSE chunks.
+ * Browser axios cannot read streams, so this uses fetch and ReadableStream.
  */
 export async function generateFunctionStream(
   input: FunctionAiGenerateInput,

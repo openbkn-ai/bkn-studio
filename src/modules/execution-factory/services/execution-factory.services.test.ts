@@ -93,13 +93,12 @@ describe("execution-factory services (mock mode)", () => {
 
 describe("buildQuery", () => {
   it("appends style directive and current time for python generation without throwing", () => {
-    // 曾用 Intl.DateTimeFormat 同传 dateStyle/timeStyle + timeZoneName，V8 抛
-    // TypeError: Invalid option : option，把弹窗打成报错。锁住这条路径。
-    const query = buildQuery({ query: "对数组求和", type: "python_function_generator" });
+    // dateStyle/timeStyle used with timeZoneName used to throw in V8.
+    const query = buildQuery({ query: "sum an array", type: "python_function_generator" });
 
-    expect(query).toContain("对数组求和");
+    expect(query).toContain("sum an array");
     expect(query).toContain("@tool");
-    expect(query).toContain("【当前时间】");
+    expect(query).toContain("## Current time");
   });
 
   it("leaves metadata generation query untouched", () => {

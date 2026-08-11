@@ -11,6 +11,7 @@ import type {
   TraceClaim,
   TraceEvidenceRef,
 } from "@/modules/bkn-trace/services/trace.service";
+import i18n from "@/app/locales/i18n";
 
 const stageOrder: BusinessStoryStage[] = ["intent", "execution", "evidence", "claim", "action"];
 
@@ -119,24 +120,36 @@ export type BusinessNodePresentation = {
   title: string;
 };
 
-const operationNames: Record<string, string> = {
-  "data.query.observed": "查询业务数据",
-  "knowledge.read.observed": "读取业务知识网络",
-  "logic.execution.observed": "执行业务计算逻辑",
-  "retrieval.completed": "完成语义检索",
-  "context.run_sql": "查询业务数据",
-  "context.search_schema": "检索知识网络结构",
-  run_sql: "查询业务数据",
-  search_schema: "检索知识网络结构",
+const operationNameKeys: Record<string, string> = {
+  "data.query.observed": "runSql",
+  "knowledge.read.observed": "getKnowledgeNetworkDetail",
+  "logic.execution.observed": "calculateLogic",
+  "retrieval.completed": "semanticRetrievalCompleted",
+  "context.run_sql": "runSql",
+  "context.search_schema": "searchSchema",
+  run_sql: "runSql",
+  search_schema: "searchSchema",
 };
 
-const artifactNames: Record<string, string> = {
-  data_result: "数据查询结果",
-  logic_execution: "逻辑计算结果",
-  query: "查询条件与口径",
-  question: "用户问题",
-  result: "业务回答",
+const artifactNameKeys: Record<string, string> = {
+  data_result: "dataResult",
+  logic_execution: "logicExecution",
+  query: "query",
+  question: "question",
+  result: "result",
 };
+
+function traceText(key: string, options?: Record<string, unknown>) {
+  return i18n.t(`bknTrace.explainability.${key}`, options);
+}
+
+function translateOperationName(key?: string) {
+  return key ? i18n.t(`bknTrace.operations.${key}`) : undefined;
+}
+
+function artifactName(key?: string) {
+  return key ? traceText(`artifacts.${key}`) : undefined;
+}
 
 export function businessNodePresentation(node: TraceBusinessNode): BusinessNodePresentation {
   const refId = stringField(node.properties, "ref_id");
@@ -159,10 +172,12 @@ export function businessNodePresentation(node: TraceBusinessNode): BusinessNodeP
   if (resolved) {
     return { ...resolved, technicalId };
   }
-  const operationTitle = operationNames[operationName] || operationNames[eventType];
+  const operationTitle =
+    translateOperationName(operationNameKeys[operationName]) ||
+    translateOperationName(operationNameKeys[eventType]);
   if (node.nodeType === "operation" && operationTitle) {
     return {
-      kind: "执行过程",
+      kind: traceText("kinds.operation"),
       subtitle: operationName || eventType,
       technicalId,
       title: operationTitle,
@@ -170,26 +185,27 @@ export function businessNodePresentation(node: TraceBusinessNode): BusinessNodeP
   }
   if (node.nodeType === "interaction") {
     return {
-      kind: "交互意图",
-      subtitle: "用户问题与本轮任务",
+      kind: traceText("kinds.interaction"),
+      subtitle: traceText("interactionSubtitle"),
       technicalId,
-      title: "用户发起分析问题",
+      title: traceText("interactionTitle"),
     };
   }
   if (node.nodeType === "claim") {
     return {
-      kind: "业务结论",
+      kind: traceText("kinds.claim"),
       subtitle: stringField(node.properties, "claim_type") || "answer",
       technicalId,
-      title: "形成业务回答",
+      title: traceText("claimTitle"),
     };
   }
-  if (node.nodeType === "artifact" && artifactNames[artifactType]) {
+  const artifactTitle = artifactName(artifactNameKeys[artifactType]);
+  if (node.nodeType === "artifact" && artifactTitle) {
     return {
-      kind: "证据制品",
+      kind: traceText("kinds.artifact"),
       subtitle: artifactType,
       technicalId,
-      title: artifactNames[artifactType],
+      title: artifactTitle,
     };
   }
   return {
@@ -287,18 +303,37 @@ function resolveBusinessRef(ref: string): Omit<BusinessNodePresentation, "techni
   const parts = normalized.split(":");
   const refType = parts[0];
   if (refType === "kn") {
-    return { kind: "业务知识网络", subtitle: "业务知识网络 · BKN", title: `BKN：${shortValue(parts[1] ?? ref)}` };
+    return {
+      kind: traceText("kinds.knowledgeNetwork"),
+      subtitle: traceText("refs.knowledgeNetworkSubtitle"),
+      title: traceText("refs.knowledgeNetworkTitle", { value: shortValue(parts[1] ?? ref) }),
+    };
   }
   if (refType === "resource") {
-    return { kind: "数据资源", subtitle: "业务数据 · Vega", title: `数据资源：${shortValue(parts[1] ?? ref)}` };
+    return {
+      kind: traceText("kinds.dataResource"),
+      subtitle: traceText("refs.dataResourceSubtitle"),
+      title: traceText("refs.dataResourceTitle", { value: shortValue(parts[1] ?? ref) }),
+    };
   }
   if (refType === "object") {
-    return { kind: "业务对象", subtitle: compactJoin([parts[1] ? `BKN：${shortValue(parts[1])}` : "", "对象"]), title: `业务对象：${shortValue(parts[2] || ref)}` };
+    return {
+      kind: traceText("kinds.businessObject"),
+      subtitle: compactJoin([
+        parts[1] ? traceText("refs.knowledgeNetworkTitle", { value: shortValue(parts[1]) }) : "",
+        traceText("refs.objectLabel"),
+      ]),
+      title: traceText("refs.businessObjectTitle", { value: shortValue(parts[2] || ref) }),
+    };
   }
   if (refType === "property") {
     const objectName = parts[2] || "";
     const propertyName = parts[3] || ref;
-    return { kind: "业务属性", subtitle: compactJoin([objectName, "属性"]), title: `业务属性：${propertyName}` };
+    return {
+      kind: traceText("kinds.businessProperty"),
+      subtitle: compactJoin([objectName, traceText("refs.propertyLabel")]),
+      title: traceText("refs.businessPropertyTitle", { value: propertyName }),
+    };
   }
   return undefined;
 }
@@ -306,42 +341,42 @@ function resolveBusinessRef(ref: string): Omit<BusinessNodePresentation, "techni
 function businessKindLabel(nodeType: string): string {
   switch (nodeType) {
   case "artifact":
-    return "证据制品";
+    return traceText("kinds.artifact");
   case "claim":
-    return "业务结论";
+    return traceText("kinds.claim");
   case "evidence_ref":
-    return "业务证据";
+    return traceText("kinds.businessEvidence");
   case "interaction":
-    return "交互意图";
+    return traceText("kinds.interaction");
   case "knowledge_network":
-    return "业务知识网络";
+    return traceText("kinds.knowledgeNetwork");
   case "object":
   case "object_type":
-    return "业务对象";
+    return traceText("kinds.businessObject");
   case "operation":
-    return "执行过程";
+    return traceText("kinds.operation");
   case "property":
   case "field":
-    return "业务属性";
+    return traceText("kinds.businessProperty");
   case "relation":
   case "relation_type":
-    return "业务关系";
+    return traceText("kinds.businessRelation");
   case "resource":
   case "data_resource":
-    return "数据资源";
+    return traceText("kinds.dataResource");
   case "metric":
   case "metric_type":
   case "function":
   case "function_type":
   case "logic":
   case "logic_execution":
-    return "业务逻辑";
+    return traceText("kinds.businessLogic");
   case "action":
   case "action_instance":
   case "action_type":
-    return "业务行动";
+    return traceText("kinds.businessAction");
   default:
-    return nodeType || "业务节点";
+    return nodeType || traceText("kinds.businessNode");
   }
 }
 

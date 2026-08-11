@@ -77,8 +77,8 @@ function vectorSummary(
 }
 
 /**
- * batch:双层进度条(浅色=已同步,深色=已向量化,SDK 返回真实计数,百分比诚实)。
- * streaming:常驻监听没有分母,只显示已同步行数 + 最近事件时间。
+ * Batch uses a two-layer progress bar: light for synchronized and dark for vectorized, using real
+ * SDK counts for honest percentages. Streaming has no denominator, so show synchronized rows and the latest event time.
  */
 export function BuildProgress({ compact = false, task }: BuildProgressProps) {
   const { i18n, t } = useTranslation();
@@ -116,8 +116,8 @@ export function BuildProgress({ compact = false, task }: BuildProgressProps) {
     );
   }
 
-  // 后端 total_count 可能只是首批行数(连接器未做 COUNT(*)),
-  // 用 max(total, synced) 兜底,避免向量化百分比虚高
+  // Backend total_count may be only the first batch because connectors do not run COUNT(*). Use
+  // max(total, synced) to avoid overstating vectorization percentage.
   const total = Math.max(1, task.totalCount, task.syncedCount);
   const syncedPercent = Math.min(100, (task.syncedCount / total) * 100);
   const vectorPercent = Math.min(100, (task.vectorizedCount / total) * 100);

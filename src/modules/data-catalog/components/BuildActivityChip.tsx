@@ -14,8 +14,8 @@ import { listBuildTasks } from "@/modules/data-catalog/services/build-task.servi
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 
 /**
- * 顶栏「构建中」角标:仅统计 batch 运行 / 排队任务
- * (streaming 监听是稳态,不计入),点击直达索引构建页。
+ * Top-bar active-build badge. Counts only running or queued batch tasks; streaming listeners are
+ * steady state and excluded. Clicking navigates directly to the index-build page.
  */
 export function BuildActivityChip() {
   const { t } = useTranslation();

@@ -62,6 +62,10 @@ export const modelResourcesEnUS = {
         rlmFull: "Reasoning language model (RLM)",
         vuFull: "Vision understanding (VU)",
       },
+      series: {
+        qwen: "Qwen",
+        others: "Others",
+      },
       auth: {
         empty: "None",
       },

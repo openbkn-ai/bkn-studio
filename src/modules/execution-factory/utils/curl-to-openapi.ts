@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
+
 export type QuickApiParameter = {
   name: string;
   in: "query" | "header" | "path" | "cookie";
@@ -81,10 +83,14 @@ type RequestBodyResult =
   | { ok: true; value?: QuickApiRequestBody }
   | { ok: false; reason: string };
 
-const HEADER_ERROR = "请求头应为 \"Name: Value\" 格式。";
-const JSON_ERROR = "请求体不是合法 JSON，请检查引号、逗号或转义字符。";
-const FILE_BODY_ERROR = "暂不支持读取本地文件，请粘贴文件内容。";
-const QUOTE_ERROR = "cURL 中存在未闭合的引号。";
+const HEADER_ERROR = "headerFormat";
+const JSON_ERROR = "invalidJson";
+const FILE_BODY_ERROR = "fileBodyUnsupported";
+const QUOTE_ERROR = "unclosedQuote";
+
+function curlError(key: string) {
+  return i18n.t(`executionFactory.curlErrors.${key}`);
+}
 
 function normalizeCurlInput(raw: string): string {
   return raw
@@ -142,7 +148,7 @@ function tokenizeCurl(input: string): TokenizeResult {
   }
 
   if (quote) {
-    return { ok: false, reason: QUOTE_ERROR };
+    return { ok: false, reason: curlError(QUOTE_ERROR) };
   }
 
   if (current.length > 0) {
@@ -187,7 +193,7 @@ function parseHeader(value: string): CurlHeader | undefined {
 
 function scanCurlTokens(tokens: string[]): CurlScanResult {
   if (tokens[0]?.toLowerCase() !== "curl") {
-    return { ok: false, reason: "请输入以 curl 开头的命令，或直接切换到表单模式填写。" };
+    return { ok: false, reason: curlError("commandRequired") };
   }
 
   const scan: CurlScan = {
@@ -229,7 +235,7 @@ function scanCurlTokens(tokens: string[]): CurlScanResult {
       const { nextIndex, value } = readOptionValue(tokens, index, token);
       const header = value ? parseHeader(value) : undefined;
       if (!header) {
-        return { ok: false, reason: HEADER_ERROR };
+        return { ok: false, reason: curlError(HEADER_ERROR) };
       }
       scan.headers.push(header);
       index = nextIndex;
@@ -239,7 +245,7 @@ function scanCurlTokens(tokens: string[]): CurlScanResult {
     if (token.startsWith("--header=")) {
       const header = parseHeader(token.slice("--header=".length));
       if (!header) {
-        return { ok: false, reason: HEADER_ERROR };
+        return { ok: false, reason: curlError(HEADER_ERROR) };
       }
       scan.headers.push(header);
       continue;
@@ -254,7 +260,7 @@ function scanCurlTokens(tokens: string[]): CurlScanResult {
     ) {
       const { nextIndex, value } = readOptionValue(tokens, index, token);
       if (value?.startsWith("@")) {
-        return { ok: false, reason: FILE_BODY_ERROR };
+        return { ok: false, reason: curlError(FILE_BODY_ERROR) };
       }
       if (value) {
         scan.dataParts.push(value);
@@ -272,7 +278,7 @@ function scanCurlTokens(tokens: string[]): CurlScanResult {
     if (dataOption) {
       const value = token.slice(dataOption.length);
       if (value.startsWith("@")) {
-        return { ok: false, reason: FILE_BODY_ERROR };
+        return { ok: false, reason: curlError(FILE_BODY_ERROR) };
       }
       scan.dataParts.push(value);
       continue;
@@ -439,7 +445,7 @@ function buildRequestBody(scan: CurlScan): RequestBodyResult {
         },
       };
     } catch {
-      return { ok: false, reason: JSON_ERROR };
+      return { ok: false, reason: curlError(JSON_ERROR) };
     }
   }
 
@@ -551,13 +557,13 @@ export function parseCurlCommand(raw: string): ParseCurlResult {
 
   if (httpUrls.length === 0) {
     if (scan.urls.length > 0) {
-      return { ok: false, reason: "仅支持 http/https 地址。" };
+      return { ok: false, reason: curlError("httpOnlyCurl") };
     }
-    return { ok: false, reason: "未识别到 http/https 地址，请检查是否遗漏 URL。" };
+    return { ok: false, reason: curlError("missingUrl") };
   }
 
   if (httpUrls.length > 1) {
-    return { ok: false, reason: "检测到多个 URL，请保留一个接口地址。" };
+    return { ok: false, reason: curlError("multipleUrls") };
   }
 
   let parsedUrl: URL;
@@ -565,7 +571,7 @@ export function parseCurlCommand(raw: string): ParseCurlResult {
   try {
     parsedUrl = new URL(httpUrls[0]);
   } catch {
-    return { ok: false, reason: "URL 格式无效，请检查空格、引号或特殊字符是否转义。" };
+    return { ok: false, reason: curlError("invalidUrlFormat") };
   }
 
   const requestBody = buildRequestBody(scan);
@@ -689,7 +695,7 @@ export function parseQuickApiUrl(rawUrl: string): ParseCurlResult {
   const trimmed = rawUrl.trim();
 
   if (!trimmed) {
-    return { ok: false, reason: "请填写 API 地址。" };
+    return { ok: false, reason: curlError("apiUrlRequired") };
   }
 
   let url: URL;
@@ -697,11 +703,11 @@ export function parseQuickApiUrl(rawUrl: string): ParseCurlResult {
   try {
     url = new URL(trimmed);
   } catch {
-    return { ok: false, reason: "API 地址格式无效。" };
+    return { ok: false, reason: curlError("apiUrlInvalid") };
   }
 
   if (!/^https?:$/i.test(url.protocol)) {
-    return { ok: false, reason: "仅支持 http 或 https 地址。" };
+    return { ok: false, reason: curlError("httpOnlyApiUrl") };
   }
 
   const { path, serverUrl } = resolveServerAndPath(url);

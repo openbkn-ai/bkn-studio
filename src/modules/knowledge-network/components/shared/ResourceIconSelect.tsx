@@ -10,6 +10,7 @@
 import { DownOutlined, createFromIconfontCN } from "@ant-design/icons";
 import { Input, Popover } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import legacyIconList from "./resource-iconfont/dip-iconfont.json";
 import "./resource-iconfont/inject-iconfont-svg";
@@ -93,6 +94,7 @@ export function ResourceIconSelect({
 }: ResourceIconSelectProps) {
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -122,7 +124,7 @@ export function ResourceIconSelect({
     [value],
   );
 
-  // Form.Item 的 onChange 引用不稳定；不要放进依赖，否则空值回填会反复触发更新环（React #185）。
+  // Form.Item onChange is unstable; keeping it out of deps avoids empty-value update loops.
   useEffect(() => {
     if (!value?.trim()) {
       if (displayType !== value) {
@@ -154,7 +156,7 @@ export function ResourceIconSelect({
         <Search
           allowClear
           onChange={(event) => setKeyword(event.target.value)}
-          placeholder="输入关键词筛选图标"
+          placeholder={t("knowledgeNetwork.iconSearchPlaceholder")}
           style={{ marginBottom: 8 }}
           value={keyword}
         />
@@ -184,7 +186,7 @@ export function ResourceIconSelect({
         </div>
       </div>
     ),
-    [displayType, emitIconChange, filteredGlyphs, keyword],
+    [displayType, emitIconChange, filteredGlyphs, keyword, t],
   );
 
   return (

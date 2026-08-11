@@ -17,7 +17,7 @@ import type {
 const env = { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" };
 const tokenProvider = { getToken: () => "token-1", refresh: () => Promise.resolve("token-1") };
 
-/** 后端下发的业务工具 schema：bkn_context 已被 Context Loader 塞进 properties + required。 */
+/** Backend-provided business-tool schema: Context Loader has added bkn_context to properties and required. */
 const runSql: McpToolDef = {
   name: "run_sql",
   description: "执行 SQL",
@@ -32,7 +32,7 @@ const runSql: McpToolDef = {
   },
 };
 
-/** schema 照抄真机形状：接管不该改变工具在模型眼里的样子。 */
+/** Schema copied from the real response shape: interception must not change how the model sees the tool. */
 const startInteraction: McpToolDef = {
   name: "bkn_start_interaction",
   description: "开始交互",
@@ -58,10 +58,10 @@ const finishInteraction: McpToolDef = {
   },
 };
 
-/** 后端在 tools/list 里一并下发的受管生命周期工具。 */
+/** Managed lifecycle tools supplied alongside other tools by the backend's tools/list response. */
 const lifecycleTools: McpToolDef[] = [startInteraction, finishInteraction];
 
-/** 结构上等价于 ChatPane 传进来的 BknTurn。 */
+/** Structurally equivalent to the BknTurn passed by ChatPane. */
 function managedTurn() {
   return {
     nextContext: () => ({ conversation_id: "conv_1", interaction_id: "int_1" }),
@@ -92,8 +92,8 @@ function runTool(tool: unknown, input: unknown): Promise<string> {
 
 describe("buildAgentTools", () => {
   it("生命周期工具照常给模型，不从工具表里拿掉", () => {
-    // 屏蔽版曾经在这里断言只剩 run_sql，代价是模型答完连"结束本轮交互"都做不到。
-    // 现在改成接管：工具还在，执行时绑到客户端这一轮交互上。
+    // The prior filtered version asserted that only run_sql remained, leaving the model unable to
+    // finish this interaction round. Now intercept the tools while binding execution to the client turn.
     const session = stubSession();
     const tools = buildAgentTools(
       [startInteraction, runSql, finishInteraction],
@@ -112,7 +112,7 @@ describe("buildAgentTools", () => {
     const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, { session });
 
     const schema = schemaOf(tools.run_sql);
-    // 模型看得见这个字段就会自己编 conversation/interaction id，而那些 id 在 Core 里根本不存在。
+    // If the model can see this field, it invents conversation/interaction IDs that do not exist in Core.
     expect(schema.properties).not.toHaveProperty("bkn_context");
     expect(schema.required).toEqual(["kn_id", "sql"]);
   });
@@ -127,10 +127,11 @@ describe("buildAgentTools", () => {
   });
 
   /**
-   * 真机上见过的死循环：模型自己调 bkn_start_interaction，后端给它开了一条客户端不知道的
-   * conversation，而业务调用注入的 bkn_context 来自客户端这轮 turn，两者对不上 →
-   * conversation_required，错误里的 required_action 又指回 bkn_start_interaction，
-   * 模型照办再开一轮。接管之后 start 不再落到后端，返回的就是本轮那条交互。
+   * A loop observed in production: the model calls bkn_start_interaction, the backend creates an
+   * unknown conversation, and business-call bkn_context belongs to the client's current turn. The
+   * mismatch produces conversation_required, whose required_action points back to bkn_start_interaction,
+   * causing the model to start another interaction. With interception, start no longer reaches the
+   * backend and returns this turn's interaction instead.
    */
   it("接管 bkn_start_interaction：返回本轮交互，不向后端多开一条", async () => {
     const session = stubSession();
@@ -161,17 +162,17 @@ describe("buildAgentTools", () => {
   });
 
   it("接管不改工具形状：后端 schema 原样透传给模型", () => {
-    // 接管改的是"调用落到哪里"，不是工具长什么样。在 schema 上删参数或裁枚举，
-    // 对模型来说就是能力被悄悄削了一块——它连有过这个选项都不知道。
+    // Interception changes where a call lands, not what the tool looks like. Removing parameters
+    // or enum values from the schema silently removes capabilities the model no longer knows exist.
     const tools = buildAgentTools(lifecycleTools, env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
       session: stubSession(),
       turn: managedTurn(),
     });
 
-    // 我们用不到 question（本轮交互已经开好了），但它仍是后端契约的一部分。
+    // This implementation does not need question because the turn already exists, but it remains part of the backend contract.
     expect(schemaOf(tools.bkn_start_interaction).properties).toHaveProperty("question");
     expect(schemaOf(tools.bkn_start_interaction).required).toEqual(["question"]);
-    // handed_off 运行时会被拒，但不在 schema 上假装它不存在。
+    // handed_off is rejected at runtime, but the schema must not pretend it does not exist.
     const outcome = (schemaOf(tools.bkn_finish_interaction).properties as Record<string, { enum?: string[] }>).outcome;
     expect(outcome.enum).toContain("handed_off");
   });
@@ -202,7 +203,7 @@ describe("buildAgentTools", () => {
       "run_sql",
       expect.objectContaining({
         sql: "SELECT 1",
-        // kn_id 与 bkn_context 都是平台侧身份，模型传什么都以锁定值为准。
+        // kn_id and bkn_context are platform identity values; use locked values regardless of model input.
         kn_id: "kn-demo",
         bkn_context: { conversation_id: "conv_1", interaction_id: "int_1" },
       }),
@@ -215,7 +216,7 @@ describe("buildAgentTools", () => {
 
     await runTool(tools.run_sql, { sql: "SELECT 1" });
 
-    // 老版本 Context Loader 不认这个字段，也不强制它；多发一个空壳只会让请求体对不上 schema。
+    // Older Context Loader versions neither recognize nor require this field; sending an empty shell would make the request diverge from the schema.
     expect(session.callTool.mock.calls[0][1]).not.toHaveProperty("bkn_context");
   });
 
@@ -236,11 +237,11 @@ describe("buildAgentTools", () => {
 
     const result = await runTool(tools.run_sql, { sql: "SELECT 1" });
 
-    // 把后端的「下一步该调 bkn_start_interaction」原样喂回去，模型就会照办——那正是死循环的燃料。
+    // Feeding the backend's next required action back to the model would fuel a loop.
     expect(result).not.toContain("required_action");
     expect(result).not.toContain("bkn_start_interaction");
     expect(result).toContain("conversation_required");
-    expect(result).toContain("停止工具调用");
+    expect(result).toContain("Stop tool calls");
   });
 
   it("同样处理已终结交互，并且不碰普通业务错误", async () => {
@@ -262,7 +263,7 @@ describe("buildAgentTools", () => {
     const plainTools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
       session: plain,
     });
-    // 业务错误要原样给模型：它据此改 SQL 重试是正确行为。
+    // Pass business errors through unchanged so the model can correctly revise SQL and retry.
     expect(await runTool(plainTools.run_sql, { sql: "SELECT 1" })).toContain("no such table: foo");
   });
 });

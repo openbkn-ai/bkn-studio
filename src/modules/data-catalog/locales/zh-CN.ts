@@ -68,6 +68,41 @@ export const dataCatalogZhCN = {
     emptyDescription: "在数据连接中新建并探查后，即可在此浏览资源并构建索引。",
     backToCatalog: "返回数据目录",
     buildChip: "构建中 · {{count}}",
+    format: {
+      daysAgo: "{{count}} 天前",
+      hoursAgo: "{{count}} 小时前",
+      hundredMillionRows: "{{count}} 亿行",
+      justNow: "刚刚",
+      minutesAgo: "{{count}} 分钟前",
+      rows: "{{count}} 行",
+      tenThousandRows: "{{count}} 万行",
+    },
+    taskErrors: {
+      dataTooLong: {
+        title: "任务进度标记写入失败",
+        syncedMarkMessage:
+          "同步游标内容超过任务表可保存长度，导致后端更新任务状态失败。",
+        columnMessage:
+          "字段 {{column}} 的内容超过数据库可保存长度，导致任务状态更新失败。",
+        syncedMarkSuggestion:
+          "建议将任务表的 f_synced_mark 字段扩容，或缩短连接器返回的同步游标后重新构建。",
+        columnSuggestion: "建议检查对应字段长度配置，扩容后重新构建。",
+      },
+      duplicateEntry: {
+        title: "任务状态写入冲突",
+        message: "后端写入任务状态时遇到唯一键冲突。",
+        suggestion: "请刷新任务列表确认是否已有同名或同批次任务，必要时删除异常任务后重试。",
+      },
+      missingDocumentId: {
+        title: "索引文档缺少 ID",
+        message: "写入索引失败：部分文档没有生成稳定的 id 字段。",
+        suggestion: "请检查资源索引配置中的增量键或主键映射，保存配置后重新构建。",
+      },
+      unknown: {
+        title: "构建任务执行失败",
+        message: "后端返回了未分类错误，请查看原始错误定位具体原因。",
+      },
+    },
     kind: {
       physical: "物理数据源",
       logical: "逻辑分组",
@@ -129,6 +164,7 @@ export const dataCatalogZhCN = {
     },
     catalog: {
       notFound: "未找到该连接下的资源，连接可能已被删除",
+      selectPhysicalDescription: "请从左侧物理数据源树中选择一个数据连接。",
       resourceSection: "资源列表",
       goConnection: "数据连接",
       goScan: "探查任务",
@@ -187,6 +223,7 @@ export const dataCatalogZhCN = {
     actions: {
       preview: "数据预览",
       buildIndex: "数据索引",
+      more: "更多操作",
     },
     gate: {
       catalogDisabled:
@@ -197,6 +234,8 @@ export const dataCatalogZhCN = {
     preview: {
       summary: "展示 {{count}} 行 · 总计 {{total}} 行",
       empty: "没有数据",
+      mockLongText:
+        "\u8fd9\u662f\u7b2c {{row}} \u884c\u7684\u957f\u6587\u672c\u5185\u5bb9\uff0c\u7528\u4e8e\u9a8c\u8bc1\u622a\u65ad\u4e0e\u60ac\u505c\u5c55\u793a\u3002",
     },
     build: {
       submit: "开始构建",

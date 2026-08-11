@@ -34,7 +34,8 @@ test.describe("system-admin role system", () => {
 
     const userRow = page.getByRole("row").filter({ hasText: "chen.yanqiu" });
     await expect(userRow).toBeVisible();
-    await userRow.getByRole("button", { name: "角色" }).click();
+    await userRow.getByRole("button", { name: "操作" }).click();
+    await page.getByRole("menuitem", { name: "角色", exact: true }).click();
 
     const drawer = page.getByRole("dialog", { name: /配置角色/ });
     await expect(drawer).toBeVisible();

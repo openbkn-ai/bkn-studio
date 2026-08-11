@@ -6,8 +6,8 @@
  */
 
 /**
- * 知识网络「立即体验」—— ContextLoader 接口调试台 (agent-retrieval)。
- * 三个 Tab：Agent 对话 / REST 接口 / MCP 工具。REST 与 MCP 一一对应；发送为真实 HTTP 调用。
+ * Knowledge Network experience console for ContextLoader (agent-retrieval).
+ * Tabs: Agent chat, REST APIs, and MCP tools. REST and MCP map one-to-one.
  */
 
 import {
@@ -85,7 +85,7 @@ function sampleForSchemaProp(def: unknown): unknown {
   }
 }
 
-/** 从工具 inputSchema 生成示例请求体（含 required + kn_id/response_format），供合成 op 使用。 */
+/** Builds an example request body from a tool inputSchema for synthesized ops. */
 function exampleBodyFromSchema(schema: unknown): Record<string, unknown> {
   if (!schema || typeof schema !== "object") return {};
   const s = schema as Record<string, unknown>;
@@ -100,7 +100,7 @@ function exampleBodyFromSchema(schema: unknown): Record<string, unknown> {
   return out;
 }
 
-/** 把线上 MCP 工具（tools/list）合成为 ContextLoaderOp（本地无 op 定义时用）。 */
+/** Converts live MCP tools/list entries into ContextLoaderOp when no local op exists. */
 function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
   const body = exampleBodyFromSchema(tool.inputSchema);
   return {
@@ -113,7 +113,7 @@ function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
   };
 }
 
-/** 从 MCP tools/call 信封里抽出 result.content[].text（TOON 或 JSON 文本载荷）。 */
+/** Extracts result.content[].text from an MCP tools/call envelope. */
 function mcpContentTexts(obj: unknown): string[] | null {
   if (!obj || typeof obj !== "object") return null;
   const result = (obj as Record<string, unknown>).result;
@@ -129,10 +129,10 @@ function mcpContentTexts(obj: unknown): string[] | null {
 export type ResponseView = { kind: "json" | "toon"; text: string };
 
 /**
- * 响应展示视图：
- * - MCP 信封抽出 content 文本载荷——能 JSON.parse 的当 JSON 美化，否则当 TOON 纯文本（真换行）。
- * - 其余（REST / 非工具响应）按 JSON 美化；解析失败原样返回。
- * SSE（event:/data:）取最后一条 data。
+ * Response display view:
+ * - MCP envelopes use content text; parseable JSON is formatted, otherwise shown as TOON text.
+ * - REST and non-tool responses are formatted as JSON when possible.
+ * - SSE responses use the last data line.
  */
 function formatResponseView(text: string): ResponseView {
   const dataLines = text
@@ -159,7 +159,7 @@ function formatResponseView(text: string): ResponseView {
   return { kind: "json", text: JSON.stringify(obj, null, 2) };
 }
 
-/** 递归查找名为 key 且值为数组的属性（如嵌套在 search_scope 里的 concept_groups），返回该数组引用。 */
+/** Recursively finds an array property by key, such as nested concept_groups. */
 function findArrayProp(node: unknown, key: string): unknown[] | null {
   if (!node || typeof node !== "object") return null;
   for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
@@ -172,7 +172,7 @@ function findArrayProp(node: unknown, key: string): unknown[] | null {
   return null;
 }
 
-/* ============================ JSON 语法高亮（无依赖，正则分词） ============================ */
+/* ============================ JSON Syntax Highlighting ============================ */
 function maskKey(value: string): string {
   const v = value.trim();
   return v.length <= 12 ? v : `${v.slice(0, 8)}****${v.slice(-4)}`;
@@ -195,7 +195,7 @@ function MaskedKeyInput({
       <input
         className={styles.keyInput}
         value={focused ? value : value ? maskKey(value) : ""}
-        placeholder="粘贴 bak_ API Key"
+        placeholder="Paste bak_ API Key"
         spellCheck={false}
         autoComplete="off"
         onFocus={() => setFocused(true)}
@@ -203,20 +203,20 @@ function MaskedKeyInput({
         onChange={(event) => onChange(event.target.value)}
       />
       {value.trim() ? (
-        <Tooltip title="复制 API Key 明文">
+        <Tooltip title="Copy plain API Key">
           <button type="button" className={styles.keyCopy} onClick={onCopy}>
             <CopyOutlined />
           </button>
         </Tooltip>
       ) : null}
       <button type="button" className={styles.keyManage} onClick={onManage}>
-        签发 API Key
+        Issue API Key
       </button>
     </div>
   );
 }
 
-/* ============================ MCP 接入指南（Claude Code / Cursor / 通用） ============================ */
+/* ============================ MCP Setup Guide ============================ */
 type ExperienceSceneProps = {
   embedded?: boolean;
   initialMode?: ContextLoaderMode;
@@ -240,11 +240,11 @@ export function ExperienceScene({
   const apiKeyPagePath = buildApiKeyPagePath(currentPath);
 
   const copy = useCallback(
-    (text: string, label = "已复制") => {
+    (text: string, label = "Copied") => {
       void navigator.clipboard
         ?.writeText(text)
         .then(() => message.success(label))
-        .catch(() => message.error("复制失败"));
+        .catch(() => message.error("Copy failed"));
     },
     [message],
   );
@@ -258,11 +258,11 @@ export function ExperienceScene({
     setMode(initialMode);
   }, [initialMode]);
 
-  // 请求基址：走当前源（dev 经 vite 代理转后端，避免浏览器跨域）。
+  // Request base: same-origin so dev can use Vite proxy and avoid browser CORS.
   const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "http://agent-retrieval:30779"));
-  // 展示/接入指南用真实服务器（网关）地址：dev 取 VITE_DEV_AUTH_ORIGIN，prod 同源。
+  // Display/setup guide uses the real gateway origin.
   const serverAddress = gatewayOrigin() || base;
-  // 认证方式：OAuth 会话令牌（默认，每次现取避免过期）或用户从个人中心签发后粘贴的长期 API Key（bak_）。
+  // Auth mode: OAuth session token by default, or pasted long-lived bak_ API Key.
   const sessionToken = runtimeConfig.auth.tokenManager.getAccessToken() ?? "";
   const [authMode, setAuthMode] = useState<"oauth" | "apikey">("oauth");
   const [appKey, setAppKey] = useState("");
@@ -272,7 +272,7 @@ export function ExperienceScene({
     if (!key) return;
     setAuthMode("apikey");
     setAppKey(key);
-    message.success("已自动填入新签发的 API Key");
+    message.success("Newly issued API Key filled automatically");
   }, [currentPath, message]);
   const token = authMode === "apikey" ? appKey.trim() : sessionToken;
 
@@ -295,7 +295,7 @@ export function ExperienceScene({
   const [fillingTest, setFillingTest] = useState(false);
   const toolsSequenceRef = useRef(0);
   const toolsControllerRef = useRef<AbortController | null>(null);
-  // 缓存当前网络的 schema，避免「填充测试数据」每次重拉；换网络时按 knId 失效。
+  // Cache current KN schema so filling test data does not refetch every time.
   const knDetailRef = useRef<{ knId: string; detail: KnDetail } | null>(null);
 
   const invalidateRequest = useCallback(() => {
@@ -366,8 +366,8 @@ export function ExperienceScene({
     [base, token, knId],
   );
 
-  // Agent 对话用：每请求取新鲜 token、401 时刷新（OAuth 自动续期，避免长对话/长循环 token 过期断掉）。
-  // 检索工具（agent-retrieval）按所选认证方式：OAuth 会话或 bak_ AppKey。
+  // Agent chat uses fresh OAuth tokens per request and refreshes once after 401.
+  // Retrieval tools use selected auth mode: OAuth session or bak_ AppKey.
   const tokenProvider = useMemo<AgentTokenProvider>(
     () => ({
       getToken: () =>
@@ -380,16 +380,15 @@ export function ExperienceScene({
     [authMode, appKey, runtimeConfig],
   );
   /**
-   * 调试台的受管生命周期。这里不是对话，一次「发送请求」/「填充测试数据」就是一轮交互；
-   * 会话本身按本次进入调试台算一条，刷新即换新（memory 键），不写 localStorage。
+   * Managed lifecycle for the console. This is not chat: each Send Request or
+   * Fill Test Data action is one interaction. Memory store resets on refresh.
    */
   const lifecycle = useMemo(
     () => createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, { conversationStore: memoryConversationStore() }),
     [base, knId, tokenProvider],
   );
 
-  // 大模型（mf-model-api）不认 bak_ AppKey（AppKey 仅对 Context Loader 有效）→ 恒用 OAuth 会话 token，
-  // 否则认证方式切到 API Key 后模型第一步就 401。
+  // mf-model-api does not accept bak_ AppKey, so model calls always use OAuth.
   const modelTokenProvider = useMemo<AgentTokenProvider>(
     () => ({
       getToken: () => runtimeConfig.auth.tokenManager.getAccessToken() ?? "",
@@ -398,7 +397,7 @@ export function ExperienceScene({
     [runtimeConfig],
   );
 
-  // tools/list 发现结果缓存：MCP 侧栏实时驱动 + 内联 schema + 工具发现弹窗共用。
+  // tools/list cache shared by MCP sidebar, inline schema, and discovery modal.
   const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
   const [toolsLoading, setToolsLoading] = useState(false);
   const [toolsError, setToolsError] = useState<string | null>(null);
@@ -427,7 +426,7 @@ export function ExperienceScene({
         })
         .catch((err) => {
           if (sequence === toolsSequenceRef.current && requestKnId === currentKnIdRef.current && !controller.signal.aborted) {
-            setToolsError(err instanceof Error ? err.message : "tools/list 失败");
+            setToolsError(err instanceof Error ? err.message : "tools/list failed");
           }
         })
         .finally(() => {
@@ -439,12 +438,12 @@ export function ExperienceScene({
     },
     [env, knId, toolDefs, toolsLoading, tokenProvider],
   );
-  // 进入 MCP 模式时按需拉一次（同源 fetch，失败仅内联提示，不弹全局 toast）。
+  // Fetch once when entering MCP mode; failures are shown inline only.
   useEffect(() => {
     if (mode === "mcp" && !toolDefs && !toolsLoading && !toolsError) loadTools();
   }, [mode, toolDefs, toolsLoading, toolsError, loadTools]);
 
-  // MCP 模式接口列表实时由 tools/list 驱动：线上每个工具用本地 op（若有），否则从 inputSchema 合成，后端加工具自动出现，零漂移。
+  // MCP op list is driven by tools/list: use local ops when available, otherwise synthesize from inputSchema.
   const mcpOps = useMemo<ContextLoaderOp[]>(
     () =>
       toolDefs
@@ -457,12 +456,12 @@ export function ExperienceScene({
     () => activeOps.find((item) => item.id === selectedId) ?? activeOps[0] ?? null,
     [activeOps, selectedId],
   );
-  // selectedId 在当前模式的工具集里失效时（切模式 / 只在另一侧存在）回退到首项，保持侧栏高亮一致。
+  // Fall back to the first op when selectedId is invalid for the current mode.
   useEffect(() => {
     if (activeOps.length > 0 && !activeOps.some((item) => item.id === selectedId)) setSelectedId(activeOps[0].id);
   }, [activeOps, selectedId]);
 
-  // 选中接口 / 模式 / 网络变化时重置请求体与 query 默认值
+  // Reset request body and query defaults when selected op, mode, or network changes.
   useEffect(() => {
     invalidateRequest();
     invalidateFill();
@@ -486,23 +485,23 @@ export function ExperienceScene({
   }, [op, mode, knId, invalidateFill, invalidateRequest]);
 
   /**
-   * cURL 展示真实网关地址（终端可直接跑，无浏览器跨域顾虑）；请求本体仍走 env.base 代理。
-   * bkn_context 用占位串而不是本页真实 id：受管交互一轮一开、终结后即失效，把当下这轮的
-   * id 复制出去，粘到终端时多半已经是 interaction_terminal。占位符至少说清了必须先建会话。
+   * cURL displays the real gateway address for terminal use, while in-page calls
+   * still use env.base. bkn_context uses placeholders because per-turn ids expire
+   * after the managed interaction finishes.
    */
   const curl = useMemo(
     () =>
       op
         ? buildCurl({ ...env, base: serverAddress }, op, mode, queryVals, bodyText, {
-            conversation_id: "<bkn_start_interaction 返回的 conversation_id>",
-            interaction_id: "<bkn_start_interaction 返回的 interaction_id>",
+            conversation_id: "<conversation_id returned by bkn_start_interaction>",
+            interaction_id: "<interaction_id returned by bkn_start_interaction>",
           })
         : "",
     [env, serverAddress, op, mode, queryVals, bodyText],
   );
 
   const displayPath = op ? (mode === "mcp" ? mcpPathOf(op) : op.path) : "";
-  // MCP 没有 query；但 response_format 必须可调（注入进 arguments），故 MCP 也露出这一项。
+  // MCP has no query string, but response_format is still configurable through arguments.
   const visibleQuery = op ? (mode === "rest" ? op.query : op.query.filter((param) => param.name === "response_format")) : [];
   const responseView = useMemo(() => (response ? formatResponseView(response.text) : null), [response]);
 
@@ -518,11 +517,11 @@ export function ExperienceScene({
         JSON.parse(bodyText || "{}");
         setBodyError(null);
       } catch (error) {
-        setBodyError(error instanceof Error ? error.message : "JSON 解析失败");
+        setBodyError(error instanceof Error ? error.message : "JSON parse failed");
         return;
       }
     }
-    setRightTab("res"); // 发送即切回响应视图，免得停在数据浏览器看不到结果
+    setRightTab("res"); // Return to response view after sending.
     const requestSequence = ++requestSequenceRef.current;
     requestControllerRef.current?.abort();
     const controller = new AbortController();
@@ -531,15 +530,14 @@ export function ExperienceScene({
     setResponse(null);
     setReqError(null);
     try {
-      // OAuth：发送时再取一次最新会话令牌（可能已刷新）；API Key：用粘贴的长期 key。
+      // OAuth reads the latest session token at send time; API Key uses the pasted long-lived key.
       const freshToken =
         authMode === "apikey" ? appKey.trim() : runtimeConfig.auth.tokenManager.getAccessToken() ?? env.token;
       const freshEnv = { ...env, token: freshToken };
-      // 传 tokenProvider：401（token 过期）时刷新一次再重跑，不用手动重试。
-      // 一次点击 = 一轮受管交互：业务调用没有 bkn_context 会被 Context Loader 直接挡回。
+      // tokenProvider refreshes once after 401. One click equals one managed interaction.
       const result = await withManagedTurn(
         lifecycle,
-        `调试台调用 ${op.id}`,
+        `Console call ${op.id}`,
         async (turn) => {
           const sent = await sendRequest(
             freshEnv,
@@ -553,15 +551,14 @@ export function ExperienceScene({
           );
           return sent;
         },
-        // 业务返回 500 时这一轮仍算 completed —— 调用失败记在 Operation 的 Receipt 上
-        // （Core 已判 failed），Interaction 状态表达的是调用方这一轮走完了没有。
+        // Even if the business call returns 500, this interaction completed from the caller side.
         (sent) => `HTTP ${sent.status} · ${sent.sizeBytes}B`,
       );
       if (requestSequence !== requestSequenceRef.current) return;
       setResponse(result);
     } catch (error) {
       if (requestSequence !== requestSequenceRef.current || controller.signal.aborted) return;
-      setReqError(error instanceof Error ? error.message : "请求失败（可能是跨域或服务不可达）");
+      setReqError(error instanceof Error ? error.message : "Request failed; the service may be unreachable");
     } finally {
       if (requestSequence === requestSequenceRef.current) {
         requestControllerRef.current = null;
@@ -570,7 +567,7 @@ export function ExperienceScene({
     }
   }, [env, op, mode, queryVals, bodyText, runtimeConfig, authMode, appKey, tokenProvider, lifecycle]);
 
-  // 一键填充测试数据：用当前网络真实 schema + 样本行生成可直接发送的请求体。
+  // Fill test data from the current network schema and sample rows.
   const onFillTestData = useCallback(async () => {
     if (!op) return;
     const fillSequence = ++fillSequenceRef.current;
@@ -579,8 +576,8 @@ export function ExperienceScene({
     fillControllerRef.current = controller;
     setFillingTest(true);
     try {
-      // 取真实 schema / 样本行同样走 /kn/*，一次填充算一轮交互，两次取数共用它。
-      const fill = await withManagedTurn(lifecycle, `填充 ${op.id} 测试数据`, async (turn) => {
+      // Fetching schema/sample rows also goes through /kn/* and shares one managed interaction.
+      const fill = await withManagedTurn(lifecycle, `Fill ${op.id} test data`, async (turn) => {
         const detail =
           knDetailRef.current?.knId === knId
             ? knDetailRef.current.detail
@@ -593,14 +590,14 @@ export function ExperienceScene({
         if (op.id === "query_object_instance" || op.id === "run_sql") {
           ot = pickQueryableObjectType(detail);
           if (!ot) {
-            message.warning("当前知识网络没有绑定数据资源的对象类型，无法生成测试数据");
+            message.warning("The current knowledge network has no object types bound to data resources, so test data cannot be generated");
             return null;
           }
         }
         if (op.id === "query_metric") {
           const metricOwner = detail.object_types.find((item) => (item.related_metric_count ?? 0) > 0) ?? detail.object_types[0];
           if (!metricOwner) {
-            message.warning("当前知识网络没有对象类，无法生成指标测试数据");
+            message.warning("The current knowledge network has no object types, so metric test data cannot be generated");
             return null;
           }
           const objectTypes = await fetchMcpObjectTypes(
@@ -612,7 +609,7 @@ export function ExperienceScene({
           if (fillSequence !== fillSequenceRef.current) return null;
           ot = objectTypes.find((item) => item.id === metricOwner.id) ?? objectTypes[0] ?? null;
           if (!ot?.related_metrics?.length) {
-            message.warning(`对象类 ${metricOwner.name || metricOwner.id} 没有可用指标，无法生成测试数据`);
+            message.warning(`Object type ${metricOwner.name || metricOwner.id} has no available metrics, so test data cannot be generated`);
             return null;
           }
         }
@@ -627,10 +624,10 @@ export function ExperienceScene({
       setBodyText(fill.body);
       setBodyError(null);
       if (fill.query) setQueryVals((prev) => ({ ...prev, ...fill.query }));
-      message.success(fill.note ? `已填充测试数据 · ${fill.note}` : "已填充测试数据");
+      message.success(fill.note ? `Test data filled · ${fill.note}` : "Test data filled");
     } catch (error) {
       if (fillSequence !== fillSequenceRef.current || controller.signal.aborted) return;
-      message.error(error instanceof Error ? error.message : "生成测试数据失败");
+      message.error(error instanceof Error ? error.message : "Failed to generate test data");
     } finally {
       if (fillSequence === fillSequenceRef.current) {
         fillControllerRef.current = null;
@@ -639,21 +636,21 @@ export function ExperienceScene({
     }
   }, [env, op, mode, knId, message, tokenProvider, lifecycle]);
 
-  // 当前接口是否按对象类型取数（决定数据浏览器卡片是否露出「填入测试请求」）。
+  // Whether the current op fetches by object type, controlling data-browser fill action visibility.
   const opFillsFromObjectType = op?.id === "query_object_instance" || op?.id === "run_sql";
 
-  // 数据浏览器卡片「填入测试请求」：用指定对象类型的真实样本行填当前接口（用户选实体，不再随机取第一个）。
+  // Data-browser Fill Test Request action using the selected object type and real sample row.
   const fillTestFromObjectType = useCallback(
     async (ot: KnObjectType) => {
       if (!op) return;
       try {
         if (op.id === "run_sql" && !ot.data_source?.id) {
-          message.warning("该对象类型未绑定数据资源，无法生成 SQL 测试数据");
+          message.warning("This object type is not bound to a data resource, so SQL test data cannot be generated");
           return;
         }
         let sampleRow: Record<string, unknown> | null = null;
         if (op.id === "query_object_instance") {
-          const rows = await withManagedTurn(lifecycle, `取 ${ot.id} 样本行`, (turn) =>
+          const rows = await withManagedTurn(lifecycle, `Fetch ${ot.id} sample rows`, (turn) =>
             fetchObjectInstances(env, ot.id, 1, tokenProvider, undefined, turn ?? undefined),
           );
           sampleRow = rows[0] ?? null;
@@ -663,15 +660,15 @@ export function ExperienceScene({
         setBodyText(fill.body);
         setBodyError(null);
         if (fill.query) setQueryVals((prev) => ({ ...prev, ...fill.query }));
-        message.success(`已用 ${ot.name || ot.id} 填充测试请求${fill.note ? ` · ${fill.note}` : ""}`);
+        message.success(`Test request filled with ${ot.name || ot.id}${fill.note ? ` · ${fill.note}` : ""}`);
       } catch (error) {
-        message.error(error instanceof Error ? error.message : "生成测试数据失败");
+        message.error(error instanceof Error ? error.message : "Failed to generate test data");
       }
     },
     [env, op, mode, knId, message, tokenProvider, lifecycle],
   );
 
-  // 数据浏览器关系卡「填入子图」：用指定关系类拼 query_instance_subgraph 的 relation_type_paths。
+  // Data-browser relation card fills relation_type_paths for query_instance_subgraph.
   const fillSubgraphFromRelation = useCallback(
     (rel: KnRelationType) => {
       const path = subgraphPathFor(rel);
@@ -679,43 +676,42 @@ export function ExperienceScene({
       setBodyText(JSON.stringify(body, null, 2));
       setBodyError(null);
       if (mode === "rest") setQueryVals((prev) => ({ ...prev, kn_id: knId }));
-      message.success(`已填入子图路径 · ${rel.name || rel.id}`);
+      message.success(`Subgraph path filled · ${rel.name || rel.id}`);
     },
     [mode, knId, message],
   );
 
-  // 数据浏览器「填入」：字段可能是 REST 的 query 参数（如 query_object_instance 的 ot_id），
-  // 也可能在请求体里（如 MCP 的 arguments）。按实际位置填，落不到则复制兜底。
+  // Data-browser fill: write REST query params when present, otherwise JSON body fields.
   const fillBodyField = useCallback(
     (key: string, value: string) => {
       if (!op) return;
-      // 1) 当前接口把该字段作为 REST query 参数 → 填 query
+      // 1) Current REST op exposes this field as a query parameter.
       if (mode === "rest" && op.query.some((param) => param.name === key)) {
         setQueryVals((prev) => ({ ...prev, [key]: value }));
-        message.success(`已填入 ${key}`);
+        message.success(`${key} filled`);
         return;
       }
-      // 2) 否则写进请求体 JSON
+      // 2) Otherwise write into request-body JSON.
       try {
         const obj: unknown = JSON.parse(bodyText || "{}");
         if (obj && typeof obj === "object" && !Array.isArray(obj)) {
           (obj as Record<string, unknown>)[key] = value;
           setBodyText(JSON.stringify(obj, null, 2));
           setBodyError(null);
-          message.success(`已填入 ${key}`);
+          message.success(`${key} filled`);
           return;
         }
       } catch {
-        /* 落到复制兜底 */
+        /* Fall back to copy. */
       }
-      copy(value, `已复制（当前接口无 ${key} 字段，可手动粘贴）`);
+      copy(value, `Copied; current API has no ${key} field, paste it manually`);
     },
     [mode, op, bodyText, copy, message],
   );
 
   const fillResource = useCallback(
     (resourceId: string) => {
-      // 后端 SQL 表名占位需前导点：{{.<data_source.id>}}（无点会被当作裸表名报错）。
+      // Backend SQL resource placeholders require a leading dot: {{.<data_source.id>}}.
       const token = `{{.${resourceId}}}`;
       try {
         const obj = JSON.parse(bodyText || "{}") as Record<string, unknown>;
@@ -725,18 +721,18 @@ export function ExperienceScene({
             : `SELECT * FROM ${token} LIMIT 20`;
           setBodyText(JSON.stringify(obj, null, 2));
           setBodyError(null);
-          message.success("资源已填入 SQL");
+          message.success("Resource filled into SQL");
           return;
         }
       } catch {
-        /* 落到复制兜底 */
+        /* Fall back to copy. */
       }
-      copy(token, "已复制资源占位");
+      copy(token, "Resource placeholder copied");
     },
     [bodyText, copy, message],
   );
 
-  // 资源组（concept_group）→ 加入请求体的 concept_groups 数组（可能嵌套在 search_scope 下）。
+  // Add concept_group into the request body's concept_groups array.
   const fillConceptGroup = useCallback(
     (groupId: string) => {
       try {
@@ -746,13 +742,13 @@ export function ExperienceScene({
           if (!arr.includes(groupId)) arr.push(groupId);
           setBodyText(JSON.stringify(obj, null, 2));
           setBodyError(null);
-          message.success(`已加入资源组 ${groupId}`);
+          message.success(`Concept group ${groupId} added`);
           return;
         }
       } catch {
-        /* 落到复制兜底 */
+        /* Fall back to copy. */
       }
-      copy(groupId, `已复制资源组 ${groupId}（当前接口无 concept_groups）`);
+      copy(groupId, `Concept group ${groupId} copied; current API has no concept_groups`);
     },
     [bodyText, copy, message],
   );
@@ -763,7 +759,7 @@ export function ExperienceScene({
       <div className={styles.topbar}>
         {!embedded && network ? (
           <button type="button" className={styles.back} onClick={() => void navigate(`/knowledge-network/workspace/${id}/overview`)}>
-            <ArrowLeftOutlined /> 返回 {network.name}
+            <ArrowLeftOutlined /> Back to {network.name}
           </button>
         ) : null}
         {showModeTabs ? (
@@ -775,7 +771,7 @@ export function ExperienceScene({
               className={`${styles.tab} ${mode === value ? styles.tabActive : ""}`}
               onClick={() => selectMode(value)}
             >
-              {value === "agent" ? "Agent 对话" : value === "rest" ? "REST 接口" : "MCP 工具"}
+              {value === "agent" ? "Agent Chat" : value === "rest" ? "REST APIs" : "MCP Tools"}
             </button>
           ))}
         </div>
@@ -783,7 +779,7 @@ export function ExperienceScene({
         {showEnvSettings ? (
         <div className={styles.envset}>
           <div className={styles.ef}>
-            <label>知识网络 kn_id</label>
+            <label>Knowledge Network kn_id</label>
             <div className={styles.knLock}>
               <KeyOutlined />
               <span className={styles.knName}>{network?.name ?? "—"}</span>
@@ -791,7 +787,7 @@ export function ExperienceScene({
             </div>
           </div>
           <div className={styles.ef}>
-            <label>服务地址</label>
+            <label>Service Address</label>
             <div
               className={styles.addr}
               title={mode === "mcp" ? `${serverAddress}${MCP_PATH}` : serverAddress}
@@ -801,8 +797,8 @@ export function ExperienceScene({
           </div>
           <div className={styles.ef}>
             <label>
-              认证方式
-              <Tooltip title="OAuth Token：使用当前登录态（短期，仅本页调试）。API Key：在个人中心签发长期 bak_ Key 后粘贴到此处，仅对 Context Loader 有效。">
+              Auth Mode
+              <Tooltip title="OAuth Token uses the current signed-in session. API Key uses a long-lived bak_ key from Profile and only applies to Context Loader.">
                 <QuestionCircleOutlined className={styles.hintIcon} />
               </Tooltip>
             </label>
@@ -823,7 +819,7 @@ export function ExperienceScene({
                 value={appKey}
                 onChange={setAppKey}
                 onManage={() => void navigate(apiKeyPagePath)}
-                onCopy={() => copy(appKey.trim(), "API Key 已复制")}
+                onCopy={() => copy(appKey.trim(), "API Key copied")}
               />
             </div>
           ) : null}

@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
+
 export type QuickApiParameter = {
   name: string;
   in: "query" | "header" | "path";
@@ -25,6 +27,10 @@ export type ParsedQuickApi = {
 export type ParseCurlResult =
   | { ok: true; value: ParsedQuickApi }
   | { ok: false; reason: string };
+
+function curlError(key: string) {
+  return i18n.t(`executionFactoryLab.curlErrors.${key}`);
+}
 
 function normalizeCurlInput(raw: string): string {
   return raw
@@ -70,7 +76,7 @@ export function parseCurlCommand(raw: string): ParseCurlResult {
   const normalized = normalizeCurlInput(raw);
 
   if (!/^curl\b/i.test(normalized)) {
-    return { ok: false, reason: "请输入以 curl 开头的命令。" };
+    return { ok: false, reason: curlError("commandRequired") };
   }
 
   const method = extractMethod(normalized);
@@ -80,7 +86,7 @@ export function parseCurlCommand(raw: string): ParseCurlResult {
     normalized.match(/https?:\/\/[^\s'"]+/i)?.[0];
 
   if (!urlCandidate) {
-    return { ok: false, reason: "未在 cURL 中识别到 http(s) 地址。" };
+    return { ok: false, reason: curlError("missingUrl") };
   }
 
   let parsedUrl: URL;
@@ -88,7 +94,7 @@ export function parseCurlCommand(raw: string): ParseCurlResult {
   try {
     parsedUrl = new URL(urlCandidate);
   } catch {
-    return { ok: false, reason: "cURL 中的 URL 格式无效。" };
+    return { ok: false, reason: curlError("invalidUrl") };
   }
 
   const { path, serverUrl } = resolveServerAndPath(parsedUrl);

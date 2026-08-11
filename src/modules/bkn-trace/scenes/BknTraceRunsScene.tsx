@@ -13,6 +13,7 @@ import {
 import {
   Alert,
   Button,
+  DatePicker,
   Descriptions,
   Empty,
   Input,
@@ -26,6 +27,7 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -403,7 +405,7 @@ export function BknTraceRunsScene() {
         <Tag color={value === "complete" ? "green" : "orange"}>{evidenceLabel(value, t)}</Tag>
       ),
       title: t("bknTrace.fields.evidenceCompleteness"),
-      width: 150,
+      width: 180,
     },
     {
       dataIndex: "durationMs",
@@ -579,17 +581,23 @@ export function BknTraceRunsScene() {
           prefix={<SearchOutlined />}
           value={keyword}
         />
-        <Input
+        <DatePicker
+          allowClear
           aria-label={t("bknTrace.placeholders.timeFrom")}
-          onChange={(event) => setFrom(toRFC3339(event.target.value))}
-          type="datetime-local"
-		  value={toLocalDateTimeInput(from)}
+          format="YYYY-MM-DD HH:mm"
+          onChange={(value) => setFrom(toRFC3339(value))}
+          placeholder={t("bknTrace.placeholders.timeFrom")}
+          showTime={{ format: "HH:mm" }}
+		  value={toDateTimePickerValue(from)}
         />
-        <Input
+        <DatePicker
+          allowClear
           aria-label={t("bknTrace.placeholders.timeTo")}
-          onChange={(event) => setTo(toRFC3339(event.target.value))}
-          type="datetime-local"
-		  value={toLocalDateTimeInput(to)}
+          format="YYYY-MM-DD HH:mm"
+          onChange={(value) => setTo(toRFC3339(value))}
+          placeholder={t("bknTrace.placeholders.timeTo")}
+          showTime={{ format: "HH:mm" }}
+		  value={toDateTimePickerValue(to)}
         />
         <Input
           allowClear
@@ -1040,18 +1048,15 @@ function formatTime(value?: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-function toRFC3339(value: string) {
+function toRFC3339(value: dayjs.Dayjs | null) {
   if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+  return value.isValid() ? value.toISOString() : undefined;
 }
 
-function toLocalDateTimeInput(value?: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
+function toDateTimePickerValue(value?: string) {
+  if (!value) return null;
+  const date = dayjs(value);
+  return date.isValid() ? date : null;
 }
 
 function initialProvenanceState(): { query: RequestSummaryQuery; requestId?: string; view: ProvenanceView } {

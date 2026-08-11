@@ -12,22 +12,26 @@ import { OpenApiOperationsIoPreview } from "@/modules/execution-factory/componen
 
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) => {
-      if (key === "executionFactory.openapiOperationsIoPreviewHint") {
-        return "Expand to review IO.";
-      }
-      if (key === "executionFactory.openapiOperationIoSummaryWithBody") {
-        return `${options?.paramCount} URL/Header parameters · request body ${options?.bodyFieldCount} fields · ${options?.responseCount} responses`;
-      }
-      if (key === "executionFactory.openapiOperationIoSummary") {
-        return `${options?.paramCount} URL/Header parameters · ${options?.responseCount} responses`;
-      }
-      return key;
-    },
-  }),
-}));
+vi.mock("react-i18next", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-i18next")>();
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, options?: Record<string, unknown>) => {
+        if (key === "executionFactory.openapiOperationsIoPreviewHint") {
+          return "Expand to review IO.";
+        }
+        if (key === "executionFactory.openapiOperationIoSummaryWithBody") {
+          return `${options?.paramCount} URL/Header parameters · request body ${options?.bodyFieldCount} fields · ${options?.responseCount} responses`;
+        }
+        if (key === "executionFactory.openapiOperationIoSummary") {
+          return `${options?.paramCount} URL/Header parameters · ${options?.responseCount} responses`;
+        }
+        return key;
+      },
+    }),
+  };
+});
 
 describe("OpenApiOperationsIoPreview", () => {
   it("summarizes request body fields separately from URL/header parameters", () => {

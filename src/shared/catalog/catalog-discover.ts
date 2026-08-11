@@ -14,7 +14,7 @@ type CatalogDiscoverOptions = {
   wait?: boolean;
 };
 
-/** 统一触发 catalog discover。data-catalog 与 data-connect 共用同一 HTTP 契约。 */
+/** Triggers catalog discovery consistently. data-catalog and data-connect share the same HTTP contract. */
 export async function postCatalogDiscover(
   catalogId: string,
   options: CatalogDiscoverOptions = {},

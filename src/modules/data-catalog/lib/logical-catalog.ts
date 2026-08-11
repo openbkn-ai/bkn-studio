@@ -9,7 +9,7 @@ import type { CatalogRecord } from "@/shared/catalog";
 
 const BUILTIN_TAG_SET = new Set(["builtin", "built-in", "internal", "system"]);
 
-/** 仅依据明确的系统标识判断内置逻辑 catalog，避免误伤用户新建项。 */
+/** Identify built-in logical catalogs only by explicit system markers to avoid affecting user-created items. */
 export function isBuiltinLogicalCatalog(catalog: CatalogRecord) {
   if (catalog.type !== "logical") {
     return false;
@@ -28,7 +28,7 @@ export function isBuiltinLogicalCatalog(catalog: CatalogRecord) {
     return true;
   }
 
-  // 平台已知内置命名空间（名称精确/前缀匹配）
+  // Known platform namespaces, matched by exact name or prefix.
   const name = catalog.name.trim().toLowerCase();
   if (
     name === "adp_bkn_catalog" ||

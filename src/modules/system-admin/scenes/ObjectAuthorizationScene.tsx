@@ -11,13 +11,15 @@ import {
   BulbOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
+  EllipsisOutlined,
   FunctionOutlined,
   KeyOutlined,
   PlusOutlined,
   ReloadOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
-import { Alert, Empty, Input, Segmented, Select, Tag, Tooltip } from "antd";
+import { Alert, Dropdown, Empty, Input, Segmented, Select, Tag, Tooltip } from "antd";
+import type { MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,6 +29,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -80,7 +83,11 @@ const grantKey = (grant: ObjectGrant) =>
 export function ObjectAuthorizationScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
+  const canRevokeGrant = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: authzPoints.revoke,
+  });
   const { pageState, setPagination } = usePageState();
 
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
@@ -96,7 +103,7 @@ export function ObjectAuthorizationScene() {
   const debouncedKeyword = useDebouncedValue(keyword.trim(), 300);
   const [objTypeFilter, setObjTypeFilter] = useState<string>();
   const [granteeType, setGranteeType] = useState<"all" | "user" | "department">("all");
-  // 分组视图(按对象/按成员)服务端分页返回的聚合行。
+  // Aggregate rows returned by server pagination for grouped views by object or member.
   const [groups, setGroups] = useState<AuthzGroup[]>([]);
   const [drawer, setDrawer] = useState<{ open: boolean; target: DrawerTarget | null }>({
     open: false,
@@ -113,7 +120,7 @@ export function ObjectAuthorizationScene() {
       const offset = (pageState.page - 1) * pageState.pageSize;
 
       if (view === "all") {
-        // resolveNames:false —— 列表先用 id 占位立即渲染;对象名按当前可见页 on-demand 回填。
+        // resolveNames:false renders immediately with ID placeholders; resolve object names on demand for the visible page.
         const result = await listObjectGrantsPage(
           {
             search: debouncedKeyword || undefined,
@@ -137,7 +144,7 @@ export function ObjectAuthorizationScene() {
         await hydrateUserLookup([...new Set(result.grants.map((grant) => grant.accessorId))]);
         setLookupRevision((revision) => revision + 1);
       } else {
-        // 按对象/按成员:服务端分组分页,每页只取一屏聚合行,不再全量拉再客户端分组。
+        // Object/member views use server-side grouped pagination, fetching only one page of aggregates instead of grouping a full client-side load.
         const { groups: rows, total: groupTotal } = await listObjectGroups(view, {
           offset,
           limit: pageState.pageSize,
@@ -227,11 +234,12 @@ export function ObjectAuthorizationScene() {
     setPagination(1, pageState.pageSize);
   }, [debouncedKeyword, granteeType, objTypeFilter, pageState.pageSize, setPagination, view]);
 
-  // 对象名按需解析:只解析「当前可见页」的对象名,翻页/切视图再解析新出现的。用缓存,
-  // 翻回来的页零请求。避免为全部(数千条)一次性解析导致领域取名接口连接饱和/超时。
+  // Resolve object names on demand for the visible page; pagination or view changes resolve only
+  // newly visible entries, while cache makes returning pages request-free. This avoids saturating
+  // domain name-resolution APIs by resolving thousands of entries at once.
   useEffect(() => {
     if (view === "grantee") {
-      // 按成员视图行是成员,名字走用户查找(hydrateUserLookup),此处不解析对象名。
+      // Member-view rows are members whose names use hydrateUserLookup, so do not resolve object names here.
       return;
     }
     const pendingGrants =
@@ -282,7 +290,7 @@ export function ObjectAuthorizationScene() {
         }
       })
       .catch(() => {
-        // 取名失败保持 id 兜底,不阻断列表。
+        // Keep IDs as fallbacks when name resolution fails without blocking the list.
       });
     return () => {
       cancelled = true;
@@ -372,6 +380,40 @@ export function ObjectAuthorizationScene() {
     [message, modal, resolveGrantee, t],
   );
 
+  const buildGrantActionMenu = useCallback(
+    (grant: ObjectGrant): MenuProps => ({
+      items: [
+        {
+          key: "manage",
+          label: t("systemAdmin.objectGrants.manage"),
+        },
+        canRevokeGrant
+          ? {
+              danger: true,
+              key: "revoke",
+              label: t("systemAdmin.objectGrants.revoke"),
+            }
+          : null,
+      ].filter(Boolean),
+      onClick: ({ key, domEvent }) => {
+        domEvent.stopPropagation();
+        if (key === "manage") {
+          openDrawer({
+            id: grant.objId,
+            name: grant.objName,
+            sub: grant.objSub,
+            type: grant.objType,
+          });
+          return;
+        }
+        if (key === "revoke") {
+          confirmRevoke(grant);
+        }
+      },
+    }),
+    [canRevokeGrant, confirmRevoke, openDrawer, t],
+  );
+
   const columns: ColumnsType<ObjectGrant> = useMemo(() => [
     {
       title: t("systemAdmin.objectGrants.columns.object"),
@@ -407,37 +449,21 @@ export function ObjectAuthorizationScene() {
     {
       title: t("systemAdmin.objectGrants.columns.actions"),
       key: "actions",
-      width: 160,
+      align: "center",
+      width: 84,
       render: (_, grant) => (
-        <div className={[styles.actionGroup, styles.actionGroupInline].join(" ")}>
+        <Dropdown menu={buildGrantActionMenu(grant)} trigger={["click"]}>
           <AppButton
-            className={styles.actionLink}
-            onClick={() =>
-              openDrawer({
-                id: grant.objId,
-                name: grant.objName,
-                sub: grant.objSub,
-                type: grant.objType,
-              })
-            }
-            type="link"
-          >
-            {t("systemAdmin.objectGrants.manage")}
-          </AppButton>
-          <PermissionGate permissions={authzPoints.revoke}>
-            <AppButton
-              className={[styles.actionLink, styles.actionDanger].join(" ")}
-              danger
-              onClick={() => confirmRevoke(grant)}
-              type="link"
-            >
-              {t("systemAdmin.objectGrants.revoke")}
-            </AppButton>
-          </PermissionGate>
-        </div>
+            aria-label={t("systemAdmin.objectGrants.columns.actions")}
+            className={styles.actionMore}
+            icon={<EllipsisOutlined />}
+            onClick={(event) => event.stopPropagation()}
+            type="text"
+          />
+        </Dropdown>
       ),
     },
-  ], [confirmRevoke, granteeCell, openDrawer, opChips, t]);
+  ], [buildGrantActionMenu, granteeCell, opChips, t]);
 
   const renderBody = () => {
     const isEmpty = view === "all" ? filteredGrants.length === 0 : groups.length === 0;

@@ -24,7 +24,7 @@ import styles from "@/modules/system-admin/scenes/admin.module.css";
 
 type ResourceGrantEditorProps = {
   disabled?: boolean;
-  /** 锁定到某条资源（如数据连接授权）：仅可选 operations。 */
+  /** Locked to one resource, such as a data-connection grant; only operations can be selected. */
   lockedResource?: ResourceRef;
   onChange: (next: ResourceGrant[]) => void;
   value: ResourceGrant[];
@@ -124,7 +124,10 @@ export function ResourceGrantEditor({
                   setDraftType(type);
                   setDraftOps([]);
                 }}
-                options={RESOURCE_TYPES.map((item) => ({ label: item.label, value: item.type }))}
+                options={RESOURCE_TYPES.map((item) => ({
+                  label: resourceTypeLabel(item.type),
+                  value: item.type,
+                }))}
                 style={{ minWidth: 160 }}
                 value={draftType}
               />

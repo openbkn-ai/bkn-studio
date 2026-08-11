@@ -7,8 +7,8 @@
 
 import axios from "axios";
 
-// 后端拒删运行中对象 → 409 HasRunningExecution,body 带 running_ids。
-// 返回 null = 非该错误;返回数组 = 命中(数组可能为空)。
+// The backend rejects deletion of running objects with 409 HasRunningExecution and running_ids in the body.
+// Return null for a different error; return an array for a match, including an empty array.
 export function runningIdsFromError(error: unknown): string[] | null {
   if (!axios.isAxiosError(error) || error.response?.status !== 409) {
     return null;

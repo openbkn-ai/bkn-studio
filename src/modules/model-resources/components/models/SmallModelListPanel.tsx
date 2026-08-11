@@ -300,7 +300,8 @@ export function SmallModelListPanel() {
       title: t("modelResources.models.columns.operation"),
       dataIndex: "operation",
       fixed: "left",
-      width: 72,
+      align: "center",
+      width: 96,
       render: (_value, record) => {
         const menuItems = [
           { key: "view", label: t("modelResources.models.menus.view") },
@@ -331,6 +332,7 @@ export function SmallModelListPanel() {
           >
             <AppButton
               aria-label={t("modelResources.models.columns.operation")}
+              className={styles.actionMore}
               icon={<EllipsisOutlined />}
               type="text"
               onClick={(event) => event.stopPropagation()}

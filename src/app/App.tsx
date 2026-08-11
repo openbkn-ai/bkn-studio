@@ -8,12 +8,14 @@
 import { useCallback, useState } from "react";
 import { RouterProvider } from "react-router-dom";
 
+import i18n from "@/app/locales/i18n";
 import { AppProviders } from "@/app/providers/AppProviders";
 import { createAppRouter } from "@/app/router/create-router";
 import { AuthGate } from "@/framework/auth/AuthGate";
 import { EntitlementProvider } from "@/framework/entitlement/EntitlementProvider";
+import { persistLocale } from "@/framework/i18n/locale";
 import { setRuntimeConfig } from "@/framework/runtime/config";
-import type { RuntimeConfig, RuntimeUser } from "@/framework/runtime/types";
+import type { RuntimeConfig, RuntimeUser, SupportedLocale } from "@/framework/runtime/types";
 
 type AppProps = {
   runtimeConfig: RuntimeConfig;
@@ -23,8 +25,8 @@ export function App({ runtimeConfig }: AppProps) {
   const [config, setConfig] = useState(runtimeConfig);
   const [router] = useState(() => createAppRouter(runtimeConfig.router.basename));
 
-  // 登录后 /me 回填真实用户:更新 context(驱动顶栏/权限重渲染)+ 全局
-  // runtimeConfig(http 拦截器等读 getRuntimeConfig)。
+  // After login, hydrate the real user from /me, update context (which rerenders the top bar and
+  // permissions), and update global runtimeConfig read by HTTP interceptors and other consumers.
   const handleCurrentUser = useCallback((currentUser: RuntimeUser) => {
     setConfig((previous) => {
       const next = { ...previous, currentUser };
@@ -33,10 +35,20 @@ export function App({ runtimeConfig }: AppProps) {
     });
   }, []);
 
+  const handleLocaleChange = useCallback(async (locale: SupportedLocale) => {
+    persistLocale(locale);
+    await i18n.changeLanguage(locale);
+    setConfig((previous) => {
+      const next = { ...previous, locale };
+      setRuntimeConfig(next);
+      return next;
+    });
+  }, []);
+
   return (
-    <AppProviders runtimeConfig={config}>
+    <AppProviders runtimeConfig={config} updateLocale={handleLocaleChange}>
       <AuthGate onCurrentUser={handleCurrentUser}>
-        {/* 授权档位要带令牌才拉得到,所以挂在 AuthGate 之内。 */}
+        {/* Entitlements require an authentication token, so load them inside AuthGate. */}
         <EntitlementProvider>
           <RouterProvider router={router} />
         </EntitlementProvider>

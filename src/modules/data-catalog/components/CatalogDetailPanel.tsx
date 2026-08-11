@@ -5,13 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DatabaseOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Input, Select, Space, Spin, Tooltip } from "antd";
+import { DatabaseOutlined, EllipsisOutlined, SearchOutlined } from "@ant-design/icons";
+import { Alert, Dropdown, Input, Select, Space, Spin, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -109,6 +111,7 @@ export function CatalogDetailPanel({
   tasks,
 }: CatalogDetailPanelProps) {
   const { t } = useTranslation();
+  const { runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeSchema = searchParams.get("schema")?.trim() || "";
@@ -134,6 +137,10 @@ export function CatalogDetailPanel({
   const resizingRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const physical = isCatalogPhysical(catalog);
+  const canManageResourceTasks = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "resource:task_manage",
+  });
   const hasResourceQuery =
     resourceKeyword.trim().length > 0 || categoryFilter.length > 0 || indexFilter.length > 0;
 
@@ -312,76 +319,82 @@ export function CatalogDetailPanel({
     {
       key: "actions",
       title: t("common.actions"),
-      width: 188,
-      render: (_, record) => (
-        <Space className={styles.actionGroup} size={4}>
-          <AppButton onClick={() => onOpenResource(record.id, "detail")} type="link">
-            {t("common.detail")}
-          </AppButton>
-          <AppButton
-            disabled={physical && !catalog.enabled}
-            onClick={() => onOpenResource(record.id, "preview")}
-            title={
-              physical && !catalog.enabled
-                ? t("dataCatalog.gate.catalogDisabledShort")
-                : undefined
-            }
-            type="link"
-          >
-            {t("dataCatalog.actions.preview")}
-          </AppButton>
-          <PermissionGate permissions="resource:task_manage">
-            <AppButton
-              disabled={physical && !catalog.enabled}
-              onClick={() => onOpenResource(record.id, "index")}
-              title={
-                physical && !catalog.enabled
-                  ? t("dataCatalog.gate.catalogDisabledShort")
-                  : undefined
-              }
-              type="link"
+      align: "center",
+      width: 84,
+      render: (_, record) => {
+        const blockedByDisabledCatalog = physical && !catalog.enabled;
+        const moreItems: NonNullable<MenuProps["items"]> = [
+          {
+            key: "detail",
+            label: t("common.detail"),
+          },
+          {
+            disabled: blockedByDisabledCatalog,
+            key: "preview",
+            label: t("dataCatalog.actions.preview"),
+          },
+        ];
+        if (canManageResourceTasks) {
+          moreItems.push({
+            disabled: blockedByDisabledCatalog,
+            key: "index",
+            label: t("dataCatalog.actions.buildIndex"),
+          });
+        }
+
+        return (
+          <Space className={styles.actionGroup} size={4}>
+            <Dropdown
+              menu={{
+                items: moreItems,
+                onClick: ({ key, domEvent }) => {
+                  domEvent.stopPropagation();
+                  if (key === "detail") {
+                    onOpenResource(record.id, "detail");
+                    return;
+                  }
+                  if (key === "preview") {
+                    onOpenResource(record.id, "preview");
+                    return;
+                  }
+                  if (key === "index") {
+                    onOpenResource(record.id, "index");
+                  }
+                },
+              }}
+              trigger={["click"]}
             >
-              {t("dataCatalog.actions.buildIndex")}
-            </AppButton>
-          </PermissionGate>
-        </Space>
-      ),
+              <AppButton
+                aria-label={t("dataCatalog.actions.more")}
+                className={styles.actionMore}
+                icon={<EllipsisOutlined />}
+                onClick={(event) => event.stopPropagation()}
+                title={blockedByDisabledCatalog ? t("dataCatalog.gate.catalogDisabledShort") : undefined}
+                type="link"
+              />
+            </Dropdown>
+          </Space>
+        );
+      },
     },
   ];
 
   return (
     <section className={styles.contentSurface}>
       <div className={styles.operationBar}>
-        <div className={styles.operationPrimary}>
-          <div className={styles.toolbarActions}>
-            {physical ? (
-              <>
-                <AppButton
-                  onClick={() => {
-                    void navigate(`/data-connect/discover?catalogId=${catalog.id}`);
-                  }}
-                >
-                  {t("dataCatalog.catalog.goScan")}
-                </AppButton>
-                <AppButton
-                  onClick={() => {
-                    void navigate("/data-connect");
-                  }}
-                >
-                  {t("dataCatalog.catalog.goConnection")}
-                </AppButton>
-              </>
-            ) : (
+        {!physical ? (
+          <div className={styles.operationPrimary}>
+            <div className={styles.toolbarActions}>
               <PermissionGate permissions="resource:create">
                 <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                   {t("dataCatalog.resource.create")}
                 </AppButton>
               </PermissionGate>
-            )}
+            </div>
           </div>
-        </div>
+        ) : null}
         {resourceTotal > 0 || hasResourceQuery ? (
-          <div className={styles.toolbarFilters}>
+          <>
             <Input
               allowClear
               className={styles.searchInput}
@@ -390,6 +403,7 @@ export function CatalogDetailPanel({
               prefix={<SearchOutlined className={styles.searchIcon} />}
               value={resourceKeyword}
             />
+            <div className={styles.toolbarFilters}>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>{t("dataCatalog.resource.category")}</span>
               <Select
@@ -422,7 +436,8 @@ export function CatalogDetailPanel({
                 value={indexFilter}
               />
             </div>
-          </div>
+            </div>
+          </>
         ) : null}
       </div>
 

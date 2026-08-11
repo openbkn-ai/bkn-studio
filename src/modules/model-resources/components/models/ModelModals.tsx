@@ -23,7 +23,7 @@ import {
   llmModelToFormValues,
   type LlmFormValues,
 } from "@/modules/model-resources/utils/model-form";
-import { MODEL_SERIES_OPTIONS } from "@/modules/model-resources/utils/model-display";
+import { getModelSeriesOptions } from "@/modules/model-resources/utils/model-display";
 import { getLlmModelTypeLabel } from "@/modules/model-resources/utils/llm-labels";
 
 import modalStyles from "./LlmModelFormModal.module.css";
@@ -69,6 +69,7 @@ export function LlmModelFormModal({
     ],
     [t],
   );
+  const modelSeriesOptions = useMemo(() => getModelSeriesOptions(t), [t]);
 
   useEffect(() => {
     if (!open) {
@@ -200,7 +201,7 @@ export function LlmModelFormModal({
           name="modelSeries"
           rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
         >
-          <Select options={MODEL_SERIES_OPTIONS} placeholder={t("modelResources.models.modal.selectPlaceholder")} />
+          <Select options={modelSeriesOptions} placeholder={t("modelResources.models.modal.selectPlaceholder")} />
         </Form.Item>
         <Form.Item
           label={t("modelResources.models.columns.modelType")}

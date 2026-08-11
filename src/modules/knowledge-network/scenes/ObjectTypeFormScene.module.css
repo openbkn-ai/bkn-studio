@@ -25,12 +25,17 @@
 
 .basicForm {
   margin: 30px auto;
-  max-width: 600px;
+  max-width: 880px;
   width: 100%;
+}
+
+.basicForm :global(.ant-form-item-label) {
+  overflow: visible;
 }
 
 .basicForm :global(.ant-form-item-label > label) {
   color: #1f2329;
+  white-space: normal;
 }
 
 .objectInfoBar {

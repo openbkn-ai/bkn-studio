@@ -34,20 +34,20 @@ export function CapabilityCreatedNextSteps({
     <section className={styles.panel} data-testid="capability-created-next-steps">
       <div className={styles.title}>
         {t("executionFactory.createdNextStepsTitle", {
-          defaultValue: "HTTP API 已添加到工具集",
+          defaultValue: "HTTP API added to toolset",
         })}
       </div>
       <p className={styles.description}>
         {t("executionFactory.createdNextStepsDescription", {
           defaultValue:
-            "建议下一步先调试验证，或进入工具编辑页补充工具说明与使用规则。也可以直接进入工具集继续管理。",
+            "Next, debug the tool or edit its description and usage rules. You can also open the toolset to continue managing tools.",
         })}
       </p>
       <div className={styles.meta}>
         <div className={styles.metaItem}>
           <div className={styles.metaLabel}>
             {t("executionFactory.createdNextStepsTool", {
-              defaultValue: "工具",
+              defaultValue: "Tool",
             })}
           </div>
           <div className={styles.metaValue}>{toolName || "-"}</div>
@@ -55,7 +55,7 @@ export function CapabilityCreatedNextSteps({
         <div className={styles.metaItem}>
           <div className={styles.metaLabel}>
             {t("executionFactory.createdNextStepsToolbox", {
-              defaultValue: "工具集",
+              defaultValue: "Toolset",
             })}
           </div>
           <div className={styles.metaValue}>{toolboxName || "-"}</div>
@@ -64,26 +64,26 @@ export function CapabilityCreatedNextSteps({
       <div className={styles.actions}>
         <AppButton onClick={onViewToolset} type="primary">
           {t("executionFactory.createdNextStepsViewToolset", {
-            defaultValue: "查看工具集",
+            defaultValue: "View toolset",
           })}
         </AppButton>
         {onDebug ? (
           <AppButton onClick={onDebug}>
             {t("executionFactory.createdNextStepsDebug", {
-              defaultValue: "去调试",
+              defaultValue: "Debug",
             })}
           </AppButton>
         ) : null}
         {onCompleteContract ? (
           <AppButton onClick={onCompleteContract}>
             {t("executionFactory.createdNextStepsEditTool", {
-              defaultValue: "编辑工具信息",
+              defaultValue: "Edit tool info",
             })}
           </AppButton>
         ) : null}
         <AppButton onClick={onClose}>
           {t("common.close", {
-            defaultValue: "关闭",
+            defaultValue: "Close",
           })}
         </AppButton>
       </div>

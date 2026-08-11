@@ -20,16 +20,14 @@ import type {
 } from "@/modules/system-admin/types/authz";
 
 /**
- * 对象级授权服务层 —— 对接 bkn-safe `/api/safe/v1/admin/object-grants`
- * (GET/POST/DELETE, 管理员 Bearer Token)。默认走前端 mock；
- * `VITE_USE_MOCK=false` 时打真实后端。契约见
- * bkn-foundry/bkn-safe/docs/frontend-object-grants-integration.md。
+ * Object-level authorization service for bkn-safe `/api/safe/v1/admin/object-grants`.
+ * Uses frontend mock data by default; `VITE_USE_MOCK=false` calls the real backend.
+ * See bkn-foundry/bkn-safe/docs/frontend-object-grants-integration.md.
  *
- *   - 授权模型 = {accessor_id, resource:{type,id}, operations[]}，被授权方只支持用户。
- *   - POST = 整套替换（set 语义）；operations 非空；resource.id 必须具体，无 `*`。
- *   - DELETE 按 {accessor_id, resource} 撤单个用户在该对象上的授权。
- *   - bkn-safe 不存资源名：真实模式下对象名需前端从各领域服务解析（见
- *     listAuthorizableObjects 的 TODO）。
+ * - Grant model: {accessor_id, resource:{type,id}, operations[]}; grantees are users.
+ * - POST replaces the whole operation set; operations must be non-empty and resource.id concrete.
+ * - DELETE revokes one user's grant on one resource.
+ * - bkn-safe does not store resource names; real mode resolves them from domain services.
  */
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
@@ -42,18 +40,18 @@ const wait = async <T,>(value: T) =>
 
 // ---- mock store -------------------------------------------------------------
 
-// 可授权对象（演示用；真实模式从各领域服务取）。名字反范式化进 grant，列表直接用。
+// Demo authorizable objects. Real mode loads them from domain services.
 const authzObjects: AuthorizableObject[] = [
-  { type: "knowledge_network", id: "kn-customer-360", name: "客户 360 知识网络", sub: "customer" },
-  { type: "knowledge_network", id: "kn-finance-risk", name: "金融风险知识网络", sub: "finance" },
-  { type: "catalog", id: "cat-customer-mysql", name: "客户主数据 · MySQL", sub: "mysql" },
-  { type: "catalog", id: "cat-events-kafka", name: "行为事件 · Kafka", sub: "kafka" },
+  { type: "knowledge_network", id: "kn-customer-360", name: "Customer 360 Knowledge Network", sub: "customer" },
+  { type: "knowledge_network", id: "kn-finance-risk", name: "Financial Risk Knowledge Network", sub: "finance" },
+  { type: "catalog", id: "cat-customer-mysql", name: "Customer Master Data - MySQL", sub: "mysql" },
+  { type: "catalog", id: "cat-events-kafka", name: "Behavior Events - Kafka", sub: "kafka" },
   { type: "small_model", id: "bge-m3", name: "BGE-M3", sub: "bge · embedding" },
   { type: "large_model", id: "qwen3-72b", name: "Qwen3-72B-Instruct", sub: "qwen · chat" },
-  { type: "operator", id: "op-text-clean", name: "文本清洗算子", sub: "transform" },
-  { type: "tool_box", id: "tb-web-search", name: "联网搜索工具箱", sub: "toolbox" },
+  { type: "operator", id: "op-text-clean", name: "Text Cleaning Operator", sub: "transform" },
+  { type: "tool_box", id: "tb-web-search", name: "Web Search Toolbox", sub: "toolbox" },
   { type: "mcp", id: "mcp-filesystem", name: "Filesystem MCP", sub: "mcp" },
-  { type: "skill", id: "sk-sql-gen", name: "SQL 生成技能", sub: "skill" },
+  { type: "skill", id: "sk-sql-gen", name: "SQL Generation Skill", sub: "skill" },
 ];
 
 const objMeta = (type: string, id: string) =>
@@ -165,8 +163,7 @@ export async function listObjectGrantsPage(
     summary?: AuthzSummary;
   }>(`${ADMIN}/object-grants${suffix}`);
   const mapped = (response.data.entries ?? []).map(mapEntry);
-  // 默认解析对象名(抽屉等调用方直接用)。列表页传 resolveNames:false 先拿 id 占位、
-  // 立即渲染,再自行异步回填名字,避免名字解析阻塞整页。
+  // Resolve names by default for drawers. List pages can render ids first and hydrate names later.
   const grants = options.resolveNames === false ? mapped : await resolveGrantNames(mapped);
   return {
     grants,
@@ -180,22 +177,21 @@ export async function listObjectGrants(query: ObjectGrantQuery = {}): Promise<Ob
   return grantList;
 }
 
-/** 分组视图的一行:一个对象(按对象)或一个成员(按成员)的聚合。 */
+/** One grouped row: an object group or grantee group aggregate. */
 export type AuthzGroup = {
   objType?: string;
   objId?: string;
   objName?: string;
   accessorId?: string;
-  /** 按对象=授权主体数;按成员=对象数。 */
+  /** Object mode counts grantees; grantee mode counts objects. */
   count: number;
-  /** 该组合并后的操作集。 */
+  /** Merged operation set for this group. */
   operations: string[];
 };
 
 /**
- * 分组视图数据源。后端按对象/成员聚合并分页(group_by=object|grantee + offset/limit),
- * 每组只回计数 + 合并操作,前端不再一次拉全部 grant 再客户端分组。明细走抽屉(单对象
- * listObjectGrants)。对象名后端不下发,列表按当前可见页 on-demand 解析(见场景)。
+ * Data source for grouped views. The backend aggregates by object or grantee and
+ * paginates results, so the frontend no longer loads all grants for client grouping.
  */
 export async function listObjectGroups(
   groupBy: "object" | "grantee",
@@ -282,7 +278,7 @@ export function summarizeGrants(list: ObjectGrant[]): AuthzSummary {
 
 // ---- writes -----------------------------------------------------------------
 
-/** 新增/更新（整套替换该用户在该对象上的操作）。operations 为空 = 撤销。 */
+/** Creates or updates a grant by replacing this user's full operation set. Empty operations revoke it. */
 export async function upsertObjectGrant(input: ObjectGrantInput): Promise<void> {
   if (!input.operations.length) {
     await revokeObjectGrant(input.accessorId, input.objType, input.objId);
@@ -350,7 +346,7 @@ function mapEntry(item: BackendEntry): ObjectGrant {
     accessorId: item.accessor_id ?? "",
     objType: item.resource?.type ?? "",
     objId,
-    // 后端不返资源名；真实模式下名字由调用方用 listAuthorizableObjects 解析覆盖。
+    // The backend does not return resource names; callers resolve them in real mode.
     objName: objId,
     operations: item.operations ?? [],
   };

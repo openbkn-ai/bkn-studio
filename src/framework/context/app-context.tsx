@@ -10,26 +10,29 @@ import { useContext, useEffect, useMemo } from "react";
 
 import { App as AntdApp } from "antd";
 
-import type { RuntimeConfig } from "@/framework/runtime/types";
 import {
   AppServicesContext,
   PendingContext,
 } from "@/framework/context/contexts";
 import { setRequestErrorHandler } from "@/framework/request/http";
+import type { RuntimeConfig, SupportedLocale } from "@/framework/runtime/types";
 
 type AppServicesProviderProps = PropsWithChildren<{
   runtimeConfig: RuntimeConfig;
+  updateLocale: (locale: SupportedLocale) => Promise<void>;
 }>;
 
 export function AppServicesProvider({
   children,
   runtimeConfig,
+  updateLocale,
 }: AppServicesProviderProps) {
   const pendingValue = useMemo(
     () => ({
       runtimeConfig,
+      updateLocale,
     }),
-    [runtimeConfig],
+    [runtimeConfig, updateLocale],
   );
 
   return (
@@ -51,6 +54,7 @@ export function AppServicesProviderBridge({ children }: PropsWithChildren) {
     message,
     modal,
     runtimeConfig: pending.runtimeConfig,
+    updateLocale: pending.updateLocale,
   };
 
   useEffect(() => {

@@ -7,7 +7,7 @@
 
 import { http } from "@/framework/request/http";
 
-/** 当前用户资料（GET /api/safe/v1/me）。name/email/telephone 可自助改，其余只读。 */
+/** Current user profile from GET /api/safe/v1/me. Users may update name, email, and telephone; all other fields are read-only. */
 export type MyProfile = {
   id: string;
   account: string;
@@ -21,7 +21,7 @@ export type MyProfile = {
   updatedAt: string;
 };
 
-/** 自助可写字段（PUT /api/safe/v1/me，部分更新）。 */
+/** Self-service writable fields for partial PUT /api/safe/v1/me updates. */
 export type ProfileUpdatePayload = {
   name?: string;
   email?: string;
@@ -80,9 +80,9 @@ export async function getMyProfile(): Promise<MyProfile> {
 }
 
 /**
- * 自助改资料（PUT /api/safe/v1/me，部分更新）。
- * 后端：无可更新字段 / 校验不过 → 400；无 token → 401；subject 无用户 → 404。
- * email 为裸地址（不含显示名），空串清空；telephone ≤64；name 非空 ≤255。
+ * Self-service profile update through partial PUT /api/safe/v1/me. The backend returns 400 for
+ * no writable fields or validation failure, 401 without a token, and 404 when the subject has no user.
+ * email is a bare address, empty strings clear fields, telephone is at most 64 characters, and name is nonempty and at most 255.
  */
 export async function updateMyProfile(payload: ProfileUpdatePayload): Promise<MyProfile> {
   if (useMock) {
@@ -93,14 +93,14 @@ export async function updateMyProfile(payload: ProfileUpdatePayload): Promise<My
     };
     return mockProfile;
   }
-  // PUT 的响应体形态不保证（可能 204 / 只回改动字段），不直接用——改后重新 GET 拿权威完整资料。
+  // PUT response shape is not guaranteed; it may be 204 or return only changed fields, so GET again for the authoritative complete profile.
   await http.put("/safe/v1/me", payload, { skipErrorToast: true });
   return getMyProfile();
 }
 
 /**
- * 自助改密码（POST /api/safe/v1/auth/change-password）。
- * 后端：new == old → 400；账号/旧密码错 → 401；成功 204。强度规则后端暂不校验。
+ * Self-service password change through POST /api/safe/v1/auth/change-password. The backend returns
+ * 400 when new equals old, 401 for an invalid account or old password, and 204 on success; it currently does not validate strength.
  */
 export async function changePassword(
   account: string,

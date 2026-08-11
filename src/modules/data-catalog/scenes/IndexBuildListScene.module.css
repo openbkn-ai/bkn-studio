@@ -480,6 +480,11 @@
   white-space: nowrap;
 }
 
+.actionMore {
+  min-width: 24px;
+  padding-inline: 0 !important;
+}
+
 .resizableHeader {
   position: relative;
   display: flex;

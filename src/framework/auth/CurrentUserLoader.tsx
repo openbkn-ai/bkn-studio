@@ -17,9 +17,9 @@ type CurrentUserLoaderProps = PropsWithChildren<{
 }>;
 
 /**
- * Token 校验通过后、渲染主应用前,拉一次 /me + /me/permissions 填充
- * currentUser(顶栏用户名 + 菜单/按钮权限)。/me 失败不阻塞页面:
- * 退回已有 currentUser,后端仍逐请求 401 兜底。
+ * After token validation and before rendering the main app, load /me and /me/permissions to
+ * populate currentUser for the top-bar name and menu/button permissions. A failed /me does not
+ * block the page: retain the existing currentUser while the backend still handles 401 per request.
  */
 export function CurrentUserLoader({ children, onLoaded }: CurrentUserLoaderProps) {
   const [ready, setReady] = useState(false);
@@ -34,10 +34,10 @@ export function CurrentUserLoader({ children, onLoaded }: CurrentUserLoaderProps
         }
       })
       .catch(() => {
-        // 401 由 http 拦截器处理。其它错误一律退回 fail-closed 用户(无权限),
-        // 绝不沿用调用方的默认 currentUser——那是带全量权限的开发态用户,
-        // 沿用它会让普通用户看到全部系统管理入口(#176)。fetchCurrentUser 已
-        // allSettled 兜底,这里是二次保险。
+        // The HTTP interceptor handles 401. For every other error, use the fail-closed user with
+        // no permissions; never retain the caller's default currentUser, which is a development
+        // user with all permissions and would expose every system-admin entry to regular users (#176).
+        // fetchCurrentUser already uses allSettled; this is a second safeguard.
         if (!cancelled) {
           onLoaded(anonymousRuntimeUser);
         }
@@ -51,7 +51,7 @@ export function CurrentUserLoader({ children, onLoaded }: CurrentUserLoaderProps
     return () => {
       cancelled = true;
     };
-    // 仅在挂载时加载一次;刷新 token 后的更新由调用方驱动。
+    // Load only once on mount; callers drive updates after refreshing the token.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

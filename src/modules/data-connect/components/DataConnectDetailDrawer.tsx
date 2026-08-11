@@ -6,6 +6,7 @@
  */
 
 import { Alert, Descriptions, Drawer, Empty, Spin } from "antd";
+import type { TFunction } from "i18next";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -40,7 +41,7 @@ export function DataConnectDetailDrawer({
   open,
   recordId,
 }: DataConnectDetailDrawerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { message } = useAppServices();
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
   const [schedule, setSchedule] =
@@ -282,7 +283,7 @@ export function DataConnectDetailDrawer({
             <h3 className={styles.sectionTitle}>{t("dataConnect.connectorConfig")}</h3>
             {Object.entries(record.connectorConfig).length > 0 ? (
               <div className={styles.configGrid}>
-                {buildConfigEntries(record, selectedConnectorType).map((item) => (
+                {buildConfigEntries(record, t, selectedConnectorType, i18n.language || undefined).map((item) => (
                   <div className={styles.configItem} key={item.key}>
                     <span className={styles.configLabel}>{item.label}</span>
                     {item.description ? (
@@ -329,13 +330,13 @@ export function DataConnectDetailDrawer({
   );
 }
 
-function formatConfigValue(value: unknown) {
+function formatConfigValue(value: unknown, t: TFunction) {
   if (value === null || value === undefined || value === "") {
     return "-";
   }
 
   if (typeof value === "boolean") {
-    return value ? "是" : "否";
+    return value ? t("dataConnect.booleanTrue") : t("dataConnect.booleanFalse");
   }
 
   if (typeof value === "string" || typeof value === "number") {
@@ -347,7 +348,9 @@ function formatConfigValue(value: unknown) {
 
 function buildConfigEntries(
   record: DataConnectRecord,
+  t: TFunction,
   connectorType?: DataConnectConnectorType,
+  locale?: string,
 ) {
   const config = record.connectorConfig ?? {};
   const fieldConfig = connectorType?.fieldConfig ?? {};
@@ -359,9 +362,9 @@ function buildConfigEntries(
       return leftRank - rightRank;
     }
 
-    const leftName = fieldConfig[left]?.name ?? humanizeConfigKey(left);
-    const rightName = fieldConfig[right]?.name ?? humanizeConfigKey(right);
-    return leftName.localeCompare(rightName, "zh-CN");
+    const leftName = fieldConfig[left]?.name ?? humanizeConfigKey(left, t);
+    const rightName = fieldConfig[right]?.name ?? humanizeConfigKey(right, t);
+    return leftName.localeCompare(rightName, locale);
   });
 
   return keys.map((key) => {
@@ -369,8 +372,8 @@ function buildConfigEntries(
     return {
       description: configItem?.description?.trim() || "",
       key,
-      label: configItem?.name?.trim() || humanizeConfigKey(key),
-      value: configItem?.encrypted ? "******" : formatConfigValue(config[key]),
+      label: configItem?.name?.trim() || humanizeConfigKey(key, t),
+      value: configItem?.encrypted ? "******" : formatConfigValue(config[key], t),
     };
   });
 }
@@ -396,39 +399,14 @@ function configFieldOrderRank(key: string) {
   return rankMap[normalized] ?? 100;
 }
 
-function humanizeConfigKey(key: string) {
+function humanizeConfigKey(key: string, t: TFunction) {
   const normalized = key.trim().toLowerCase();
-  const labelMap: Record<string, string> = {
-    account: "账号",
-    api_key: "API Key",
-    catalog: "Catalog",
-    cluster: "集群",
-    database: "数据库",
-    db: "数据库",
-    endpoint: "访问地址",
-    host: "主机地址",
-    password: "密码",
-    path: "路径",
-    port: "端口",
-    project: "项目",
-    schema: "Schema",
-    secret: "密钥",
-    secret_key: "密钥",
-    table: "数据表",
-    token: "访问令牌",
-    uri: "连接地址",
-    url: "连接地址",
-    user: "用户名",
-    username: "用户名",
-    warehouse: "仓库",
-  };
-
-  if (labelMap[normalized]) {
-    return labelMap[normalized];
-  }
-
-  return key
+  const fallback = key
     .replace(/_/g, " ")
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/^\w/, (char) => char.toUpperCase());
+
+  return t(`dataConnect.connectorFieldLabels.${normalized}`, {
+    defaultValue: fallback,
+  });
 }

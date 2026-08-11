@@ -39,7 +39,7 @@ export function CapabilityCategoryFields({
       if (!current?.trim()) {
         const preferred =
           options.find((item) => item.value === initialValue)?.value ??
-          options.find((item) => item.label.includes("未分类"))?.value ??
+          options.find((item) => item.value === "other_category")?.value ??
           options[0]?.value ??
           initialValue;
         form.setFieldValue(name, preferred);

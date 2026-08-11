@@ -10,14 +10,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import { PublishedPermModal } from "@/modules/execution-factory/components/PublishedPermModal";
 
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
     t: (key: string) => key,
   }),
 }));
 
 describe("PublishedPermModal", () => {
-  // 回归 #156：确认按钮曾只弹一句"权限中心未接入"的占位提示后自关，用户断在半路。
+  // Regression #156: the confirmation button formerly showed a permission-center placeholder and closed, leaving users stranded.
   it("hands the configure click to onConfigure instead of silently closing", () => {
     const onConfigure = vi.fn();
     const onClose = vi.fn();

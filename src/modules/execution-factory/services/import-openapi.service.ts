@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
 import { registerOpenApiBundle } from "@/modules/execution-factory/services/capability-bundle.service";
 
 import { createToolbox } from "@/modules/execution-factory/services/toolbox.service";
@@ -61,13 +62,13 @@ function resolveToolboxTarget(input: RegisterOpenApiImportInput) {
 
   if (mode === "existing") {
     if (!boxId) {
-      throw new Error("已选择使用已有工具集，但未提交工具集 ID，请重新选择。");
+      throw new Error(executionFactoryServiceError("existingToolboxMissingId"));
     }
     return { mode, boxId, toolboxName: undefined };
   }
 
   if (!toolboxName) {
-    throw new Error("请填写新工具集名称。");
+    throw new Error(executionFactoryServiceError("newToolboxNameRequired"));
   }
   return { mode, boxId: undefined, toolboxName };
 }
@@ -128,7 +129,7 @@ export async function registerOpenApiImport(
 
   if (!openapiSpec) {
 
-    throw new Error("请上传 OpenAPI 3.0 规范文件。");
+    throw new Error(executionFactoryServiceError("openApiSpecRequired"));
 
   }
 
@@ -217,7 +218,7 @@ export async function registerOpenApiImport(
   }
 
   if (!boxId) {
-    throw new Error("未能确定目标工具集。");
+    throw new Error(executionFactoryServiceError("targetToolboxMissing"));
   }
 
 
@@ -228,7 +229,7 @@ export async function registerOpenApiImport(
 
   if (result.successCount === 0) {
 
-    const detail = result.failures[0]?.error ?? "未能从 OpenAPI 文档导入任何工具。";
+    const detail = result.failures[0]?.error ?? executionFactoryServiceError("openApiImportAllFailed");
 
     throw new Error(detail);
 
@@ -248,4 +249,8 @@ export async function registerOpenApiImport(
 
   };
 
+}
+
+function executionFactoryServiceError(key: string) {
+  return i18n.t(`executionFactory.serviceErrors.${key}`);
 }

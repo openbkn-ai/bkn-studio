@@ -15,9 +15,9 @@
   margin-bottom: 0;
 }
 
-/* 端点摘要与工具详情页的端点行同构（图标位留给标签文字，值走等宽字体）。
-   原来这里是一张 antd bordered Descriptions 表格，方框套方框，跟本项目
-   「水平线分区、无表格边框」的调子对不上。 */
+/* Endpoint summary uses the same structure as the tool-detail endpoint row: icon space belongs to
+   labels and values use monospace. This replaced AntD's bordered Descriptions table, whose nested
+   boxes conflicted with the project's divider-based, borderless-table visual language. */
 .endpoint {
   display: grid;
   gap: 6px;

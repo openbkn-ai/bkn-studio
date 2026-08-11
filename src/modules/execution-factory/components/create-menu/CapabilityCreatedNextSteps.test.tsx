@@ -6,15 +6,14 @@
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import i18n from "@/app/locales/i18n";
 import { CapabilityCreatedNextSteps } from "@/modules/execution-factory/components/create-menu/CapabilityCreatedNextSteps";
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key,
-  }),
-}));
+beforeEach(async () => {
+  await i18n.changeLanguage("en-US");
+});
 
 describe("CapabilityCreatedNextSteps", () => {
   it("shows created HTTP capability context and maps next actions to existing pages", () => {
@@ -39,10 +38,10 @@ describe("CapabilityCreatedNextSteps", () => {
     expect(screen.getByText("weather_toolbox")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Agent/i })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "查看工具集" }));
-    fireEvent.click(screen.getByRole("button", { name: "去调试" }));
-    fireEvent.click(screen.getByRole("button", { name: "编辑工具信息" }));
-    fireEvent.click(screen.getByRole("button", { name: /关\s*闭/ }));
+    fireEvent.click(screen.getByRole("button", { name: "View toolset" }));
+    fireEvent.click(screen.getByRole("button", { name: "Debug" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit tool info" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onViewToolset).toHaveBeenCalledTimes(1);
     expect(onDebug).toHaveBeenCalledTimes(1);

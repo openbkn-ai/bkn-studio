@@ -273,6 +273,7 @@ export const executionFactoryEnUS = {
     },
     operatorCategories: {
       other_category: "Other",
+      system: "System Tools",
       data_process: "Data Process",
       data_transform: "Data Transform",
       data_store: "Data Store",
@@ -309,6 +310,11 @@ export const executionFactoryEnUS = {
       missingTitle: "Fill these in before letting agents call it automatically",
       emptyIntent:
         "No business intent yet — agents can only infer how to use this from the name and the technical schema.",
+      dimensions: {
+        businessIntent: "Business intent",
+        inputSemantics: "Input semantics",
+        outputSemantics: "Output semantics",
+      },
     },
     mcpModeShort: {
       sse: "SSE",
@@ -933,7 +939,65 @@ export const executionFactoryEnUS = {
       "This document contains {{count}} endpoints and will register {{count}} operators. Keep only the target endpoint for a single operator.",
     openapiVersion31Hint:
       "OpenAPI 3.1 detected. If save fails, try OpenAPI 3.0.x or keep a single endpoint only.",
+    openapiTemplate: {
+      operatorDescription: "Describe the operator's functionality and purpose",
+      operatorSummary: "Execute operator",
+      operatorTitle: "Sample Operator API",
+      successResponse: "Success",
+      toolboxSummary: "Sample tool",
+      toolboxTitle: "Sample Toolbox API",
+    },
     submitErrorTitle: "Save failed",
+    quickApiUrlSubmitError:
+      "Save failed: could not submit a valid service URL. Check the full URL in the cURL command, then click Detect API again before saving.{{detailSuffix}}",
+    quickApiUrlSubmitErrorDetailSuffix: " Backend returned: {{detail}}",
+    serviceErrors: {
+      existingToolboxMissingId:
+        "An existing toolset was selected, but no toolset ID was submitted. Please select again.",
+      newToolboxNameRequired: "Enter a new toolset name.",
+      openApiImportAllFailed: "No tools could be imported from the OpenAPI document.",
+      openApiSpecRequired: "Upload an OpenAPI 3.0 spec file.",
+      operatorSyncNameRequired: "Enter an operator name before syncing publish.",
+      targetToolboxMissing: "Could not determine the target toolset.",
+      toolCreateFailed: "Tool creation failed",
+    },
+    curlErrors: {
+      apiUrlInvalid: "The API URL format is invalid.",
+      apiUrlRequired: "Enter an API URL.",
+      commandRequired: "Enter a command that starts with curl, or switch to form mode.",
+      fileBodyUnsupported: "Reading local files is not supported. Paste the file content instead.",
+      headerFormat: 'Headers must use the "Name: Value" format.',
+      httpOnlyApiUrl: "Only http or https URLs are supported.",
+      httpOnlyCurl: "Only http/https URLs are supported.",
+      invalidJson: "The request body is not valid JSON. Check quotes, commas, or escaping.",
+      invalidUrlFormat: "The URL format is invalid. Check spaces, quotes, or escaped characters.",
+      missingUrl: "No http/https URL was found. Check whether the URL is missing.",
+      multipleUrls: "Multiple URLs detected. Keep only one API URL.",
+      unclosedQuote: "The cURL command contains an unclosed quote.",
+    },
+    openApiDocumentErrors: {
+      componentRefMissing:
+        "The document references an undefined component {{ref}}. Add it to components or inline the response definition.",
+      infoRequired: "info must be an object and include title and version.",
+      infoTitleRequired: "info.title is required.",
+      infoVersionRequired: "info.version is required.",
+      invalidJsonOrYaml: "The OpenAPI file is not valid JSON or YAML: {{detail}}",
+      manualServerRequired:
+        "OpenAPI does not declare servers. Enter the full HTTP(S) service URL in the form.",
+      missingOpenApiField:
+        "Missing OpenAPI top-level field openapi. The edit page should show the full document, not an api_spec fragment.",
+      operationDescriptionTooLong:
+        "Endpoint {{method}} {{path}} description exceeds {{limit}} characters. Shorten it before saving.",
+      operationSummaryRequired:
+        "Endpoint {{method}} {{path}} is missing summary. Add it before saving.",
+      operationsRequired: "No valid HTTP endpoint definitions were found in paths.",
+      pathsRequired: "Missing required top-level field paths.",
+      relativeServerRequiresManualUrl:
+        "OpenAPI servers[0].url is a relative path {{serverUrl}}. Enter the full service URL.",
+      serverUrlRequired: "servers[0].url is required.",
+      specRequired: "OpenAPI spec cannot be empty.",
+      topLevelObjectRequired: "The OpenAPI document top level must be an object.",
+    },
     installedStateSyncFailed: "Failed to sync installed state. Installed tags may be inaccurate.",
     loadMoreFailed: "Failed to load more items. Please retry.",
     routeMigrated: "This page has moved. You were redirected to the new capability management hub.",

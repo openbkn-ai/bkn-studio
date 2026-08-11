@@ -18,7 +18,7 @@ const MONO_STACK =
 const EDITOR_OPTIONS = {
   folding: true,
   wordWrap: "on" as const,
-  // 行高比默认松一档：函数代码要读，不是要塞满。
+  // Use a slightly looser line height than default: function code is meant to be read, not packed densely.
   lineHeight: 24,
   fontSize: 13,
   fontFamily: MONO_STACK,
@@ -43,7 +43,7 @@ const EDITOR_OPTIONS = {
 
 const THEME_NAME = "bkn-code-light";
 
-/** 默认 vs 主题是纯白 + 深色行号，跟站点的浅灰面板放一起太硬。 */
+/** The default VS theme uses pure white with dark line numbers and looks too harsh beside the site's light-gray panels. */
 function defineTheme(monaco: Monaco) {
   monaco.editor.defineTheme(THEME_NAME, {
     base: "vs",
@@ -63,8 +63,8 @@ function defineTheme(monaco: Monaco) {
 }
 
 /**
- * 可编辑场景只用到 json / python；其余是只读预览（技能包文件）要认的语法，
- * 全部来自本地打包的 monaco-editor，不额外拉包。
+ * Editable views use only JSON and Python. The remaining languages are recognized for read-only
+ * previews of skill-package files, all from the locally bundled monaco-editor with no extra packages.
  */
 export type CodeEditorLanguage =
   | "css"
@@ -81,10 +81,10 @@ export type CodeEditorLanguage =
   | "xml"
   | "yaml";
 
-/** 挂在这个 URI 上的 JSON 文档会用下面注册的 schema 做补全与校验。 */
+/** JSON documents at this URI use the schema registered below for completion and validation. */
 const EVENT_MODEL_PATH = "bkn-function-event.json";
 
-// Python 缩进是语法的一部分，2 空格会写出不符合社区习惯的代码。
+// Python indentation is part of its syntax; two spaces produces code that does not follow community convention.
 const TAB_SIZE_BY_LANGUAGE: Partial<Record<CodeEditorLanguage, number>> = {
   python: 4,
 };
@@ -92,11 +92,11 @@ const TAB_SIZE_BY_LANGUAGE: Partial<Record<CodeEditorLanguage, number>> = {
 const DEFAULT_TAB_SIZE = 2;
 
 type CodeEditorProps = {
-  /** 内容持续追加时（流式生成）跟随滚动到最后一行，否则每次 setValue 都会跳回顶部。 */
+  /** Follow the last line while streaming content is appended; otherwise each setValue jumps back to the top. */
   followTail?: boolean;
-  /** 传 "fill" 时铺满父容器高度，交给外层的 flex 布局决定。 */
+  /** "fill" uses the parent container's full height, as determined by the outer flex layout. */
   height?: number | "fill";
-  /** 传入后 JSON 编辑器会按它做键名补全、类型校验和悬浮说明。 */
+  /** When provided, the JSON editor uses it for property completion, type validation, and hover documentation. */
   jsonSchema?: unknown;
   language: CodeEditorLanguage;
   onChange?: (value: string) => void;
@@ -118,9 +118,10 @@ export function CodeEditor({
 
   const applyJsonSchema = useCallback(
     (monaco: Monaco | null) => {
-      // setDiagnosticsOptions 是全局 json 配置：无 schema 的编辑器（参数预览、AI 结果、
-      // JsonEditor）若写空 schemas，会清掉契约编辑器已注册的 schema，且卸载不恢复。
-      // 只有拿到 schema 才动全局；fileMatch 按 path 限定，残留 schema 对无 schema 的编辑器无害。
+      // setDiagnosticsOptions configures JSON globally. An editor without a schema, such as a
+      // parameter preview, AI result, or JsonEditor, would clear schemas registered by the contract
+      // editor and not restore them on unmount. Update global configuration only with a schema;
+      // fileMatch limits it by path, so a retained schema is harmless elsewhere.
       if (!monaco || language !== "json" || !jsonSchema) {
         return;
       }
@@ -140,7 +141,7 @@ export function CodeEditor({
     [jsonSchema, language],
   );
 
-  // 参数改了要重新挂 schema，否则补全还停在旧契约上。
+  // Reattach the schema when parameters change, or completion remains on the old contract.
   useEffect(() => {
     applyJsonSchema(monacoRef.current);
   }, [applyJsonSchema]);
@@ -171,7 +172,8 @@ export function CodeEditor({
         }}
         options={{
           ...EDITOR_OPTIONS,
-          // 只读时光标和当前行高亮是噪音：读者点不动，闪烁的竖线只会让人以为能改。
+          // In read-only mode, the cursor and active-line highlight are noise: users cannot edit,
+          // and a blinking caret suggests otherwise.
           domReadOnly: readOnly,
           renderLineHighlight: readOnly ? "none" : EDITOR_OPTIONS.renderLineHighlight,
           readOnly,

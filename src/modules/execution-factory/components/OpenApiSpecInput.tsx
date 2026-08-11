@@ -14,8 +14,8 @@ import { useTranslation } from "react-i18next";
 import { OpenApiOperationsIoPreview } from "@/modules/execution-factory/components/OpenApiOperationsIoPreview";
 import { OpenApiEndpointReview } from "@/modules/execution-factory/components/OpenApiEndpointReview";
 import {
-  OPENAPI_OPERATOR_TEMPLATE,
-  OPENAPI_TOOLBOX_TEMPLATE,
+  buildOpenApiOperatorTemplate,
+  buildOpenApiToolboxTemplate,
 } from "@/modules/execution-factory/constants/import-templates";
 import {
   analyzeOpenApiDocumentText,
@@ -114,7 +114,9 @@ export function OpenApiSpecInput({
 
   const handleDownloadTemplate = () => {
     const template =
-      registrationTarget === "toolbox" ? OPENAPI_TOOLBOX_TEMPLATE : OPENAPI_OPERATOR_TEMPLATE;
+      registrationTarget === "toolbox"
+        ? buildOpenApiToolboxTemplate(t)
+        : buildOpenApiOperatorTemplate(t);
     const filename =
       registrationTarget === "toolbox"
         ? "toolbox-openapi-template.yaml"

@@ -29,7 +29,7 @@ function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
-/** 后端有时把结构化结果塞在字符串里（模型直出 JSON），这里统一先尝试解析一层。 */
+/** The backend sometimes places structured results in a string because the model emits JSON directly; parse one layer first. */
 function unwrap(content: unknown): unknown {
   if (typeof content !== "string") {
     return content;
@@ -68,7 +68,7 @@ function mapParameters(value: unknown): FunctionParameterDef[] | undefined {
       name,
       type: asString(record.type) ?? "string",
       description: asString(record.description) ?? asString(record.desc),
-      // 保留后端约束字段：array/object 缺子项写回表单会撞 sub_parameters 校验。
+      // Retain backend constraint fields: writing arrays or objects without children back to the form fails sub_parameters validation.
       ...(typeof record.required === "boolean" ? { required: record.required } : {}),
       ...(subParameters ? { sub_parameters: subParameters } : {}),
     });
@@ -78,8 +78,8 @@ function mapParameters(value: unknown): FunctionParameterDef[] | undefined {
 }
 
 /**
- * 把 AI 生成结果翻译成可以直接写回表单的结构。
- * 生成代码返回字符串，反推参数返回对象——两条路走同一个接口，只能靠形状分辨。
+ * Converts AI-generated results into a structure that can be written directly to the form. Generated
+ * code returns a string while inferred parameters return an object; both use one API and are distinguished by shape.
  */
 export function parseFunctionAiContent(
   generateType: FunctionAiGenerateType,
