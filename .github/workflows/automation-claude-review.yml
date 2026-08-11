@@ -53,6 +53,10 @@ on:
       - 'public/**'
       - 'Dockerfile'
       - 'vite.config.ts'
+      # index.html 是 config.js 的载入点与 CSP 所在，package.json 承载依赖与构建脚本
+      # ——两者都改得动运行时行为，此前不在清单里，改它们不触发评审。
+      - 'index.html'
+      - 'package.json'
       - '!**/*.md'
   issue_comment:
     types: [created]
@@ -78,8 +82,17 @@ concurrency:
   # 与 create_inline_comment 正是这条路径——曾导致评审贴出第一条评论那刻就自杀。
   #
   # 因此下面的判据必须与 job if 的评论分支逐条对齐（非 bot、含口令、author_association
-  # 属 OWNER/MEMBER/COLLABORATOR）。漏对一条，那类事件就能溜进共享组杀掉正在跑的评审。
-  group: claude-review-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}-${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && !(github.event.sender.login != 'github-actions[bot]' && (contains(github.event.comment.body, '/review') || contains(github.event.comment.body, '@claude')) && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) && format('comment-{0}', github.event.comment.id) || 'review' }}
+  # 属 OWNER/MEMBER/COLLABORATOR、PR 仍 open）。漏对一条，那类事件就能溜进共享组杀掉
+  # 正在跑的评审。open 判据两个事件的取法不同——issue_comment 看 `issue.state`、
+  # pull_request_review_comment 看 `pull_request.state`，另一个在各自 payload 里是 null
+  # （`.state` 取到空串），所以用 `||` 串起来对两者都成立。
+  #
+  # **唯独 fork 判据（`head.repo.full_name == github.repository`）有意不对齐**：
+  # issue_comment 的 payload 里根本没有 head repo，写进来会让**所有**顶层评论落进
+  # comment-<id> 组，「推提交 + 回帖 /review 收敛成一轮」这条最常走的路径就没了。
+  # 而漏对它的方向是安全的：fork 上的评论最坏也只是取消一轮自己触发不了的评审，
+  # 与「溜进共享组杀掉评审」相比代价小得多。
+  group: claude-review-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}-${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && !(github.event.sender.login != 'github-actions[bot]' && (github.event.issue.state == 'open' || github.event.pull_request.state == 'open') && (contains(github.event.comment.body, '/review') || contains(github.event.comment.body, '@claude')) && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) && format('comment-{0}', github.event.comment.id) || 'review' }}
   cancel-in-progress: true
 
 # 评审分四段跑：plan 定范围 → review 出结论 → verify 复核阻塞项 → verdict 落表态。
@@ -232,9 +245,24 @@ jobs:
           # 已有过几轮结论。review 与 verdict 共用这一个数来收紧配额，免得各自从评论
           # 历史里推断「这是第几轮」还推出不同结果。
           # 轮数用来收紧配额，最后一轮的表态用来决定这次要不要跑。
+          #
+          # **只统计 bot 自己的表态**（`.user.type == "Bot"`，同时覆盖
+          # github-actions[bot] 与配了 REVIEW_APP_ID 时的 App 身份）。不收敛的话人类
+          # 留的 review 会被算成「上一轮」，两个下游消费者都跟着错：
+          #   - skip_round：bot 报了阻塞项之后，人类补一条带正文的 approve，
+          #     `states[-1]` 就成了 APPROVED；作者按 bot 的意见推修复提交时整轮被跳过，
+          #     那条 CHANGES_REQUESTED 再没有新评审来解除——而它自己的正文写的正是
+          #     「改完请推新提交」，恰恰是这条路径下唯一不起作用的动作。
+          #   - prior_rounds：人类在 bot 首轮之前留一条 review，会让 Claude 的第一轮
+          #     按复评规格跑（inline 配额 3→1，且被告知「只针对本轮新增提交」，
+          #     而首轮压根不存在新增提交）。
+          # `select((.body // "") != "")` 只滤掉正文为空的 review（点一下 Approve 不写字
+          # 那种），滤不掉人写的正文。
           prior = subprocess.run(
               ["gh", "api", "repos/%s/pulls/%s/reviews" % (os.environ["GH_REPO"], pr),
-               "--paginate", "--jq", '[.[] | select((.body // "") != "") | .state] | @json'],
+               "--paginate", "--jq",
+               '[.[] | select((.body // "") != "") | select(.user.type == "Bot")'
+               ' | .state] | @json'],
               capture_output=True, text=True)
           states = []
           if prior.returncode == 0:
@@ -884,24 +912,30 @@ jobs:
 
           items = []
           for path in sorted(pathlib.Path("findings").glob("*.json")):
+              key = path.stem
+              # 防御范围必须与 verdict 的拼装脚本一致，含 isinstance(data, dict) 与
+              # TypeError：findings 写成顶层数组时 data.get 抛 AttributeError，
+              # `"blockers": true` 时 enumerate 抛 TypeError——两者都会让本步整个挂掉，
+              # 阻塞项一条也进不了复核，最后全部以「未复核」身份进 PR。
               try:
                   data = json.loads(path.read_text(encoding="utf-8"))
-              except (ValueError, OSError):
+                  if not isinstance(data, dict):
+                      raise ValueError("not an object")
+                  for i, b in enumerate(data.get("blockers") or []):
+                      # 过滤规则与 verdict 的拼装脚本严格一致，序号同样取自 enumerate。
+                      if not isinstance(b, dict):
+                          continue
+                      items.append({
+                          "id": "%s#%d" % (key, i),
+                          "shard": data.get("shard", key),
+                          "file": b.get("file", ""),
+                          "line": b.get("line"),
+                          "what": b.get("what", ""),
+                          "scenario": b.get("scenario", ""),
+                          "evidence": b.get("evidence") or [],
+                      })
+              except (ValueError, OSError, AttributeError, TypeError):
                   continue
-              key = path.stem
-              for i, b in enumerate(data.get("blockers") or []):
-                  # 过滤规则与 verdict 的拼装脚本严格一致，序号同样取自 enumerate。
-                  if not isinstance(b, dict):
-                      continue
-                  items.append({
-                      "id": "%s#%d" % (key, i),
-                      "shard": data.get("shard", key),
-                      "file": b.get("file", ""),
-                      "line": b.get("line"),
-                      "what": b.get("what", ""),
-                      "scenario": b.get("scenario", ""),
-                      "evidence": b.get("evidence") or [],
-                  })
 
           pathlib.Path("blockers.json").write_text(
               json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1060,8 +1094,16 @@ jobs:
               if not path.exists():
                   missing.append((s, "absent"))
                   continue
-              # 防御要罩住整个循环体，不能只罩 json.loads：文件解析成顶层数组时
-              # data.get() 抛 AttributeError，同样会让 Assemble 非零退出。
+              # 防御要罩住**整个**循环体，不能只罩 json.loads——包括下面两个取列表的
+              # 循环。findings 是模型写的，属于不可信输入，失败形态不止一种：
+              #   - 文件解析成顶层数组       → data.get() 抛 AttributeError
+              #   - `"blockers": true`      → `or []` 挡不住真值，enumerate 抛 TypeError
+              #   - 元素是字符串而非对象     → 下面的 isinstance 跳过（这个已经处理）
+              # 任何一种逃出去都会让 Assemble 非零退出，Post review 随之不执行、告警
+              # 分支也不成立——PR 上既无表态也无告警，只剩一个红叉。
+              #
+              # 收集完才 append 到 done：中途抛异常时这一片算 malformed，不能让它半条
+              # 腿留在 done 里（那会让 verdict 认为它产出过结论）。
               try:
                   data = json.loads(path.read_text(encoding="utf-8"))
                   if not isinstance(data, dict):
@@ -1069,28 +1111,27 @@ jobs:
                   # 回填的占位不算「产出过结论」：否则静默失败会变成 approve 一个
                   # 从没被审过的 PR——比不表态糟得多。
                   status = data.get("status")
-              except (ValueError, OSError, AttributeError):
+                  got_b, got_u = [], []
+                  # 序号取自 enumerate 而非计数器，跳过畸形元素不会让 id 错位（id 是
+                  # survived/refuted 分类的唯一依据，错位会把复核结论贴到别的阻塞项上）。
+                  # verify 的 collect 步骤必须用完全相同的过滤规则。
+                  for i, b in enumerate(data.get("blockers") or []):
+                      if not isinstance(b, dict):
+                          continue
+                      # id 规则必须与 verify 的 collect 步骤一致：<分片 key>#<片内序号>。
+                      got_b.append((s, dict(b, id="%s#%d" % (s["key"], i))))
+                  for u in data.get("unconfirmed") or []:
+                      if isinstance(u, dict):
+                          got_u.append((s, u))
+              except (ValueError, OSError, AttributeError, TypeError):
                   missing.append((s, "malformed"))
                   continue
               if status == "no_output":
                   missing.append((s, "no_output"))
                   continue
               done.append((s, data))
-              # findings 是模型写的，属于不可信输入：JSON 合法但结构不对（元素是字符串
-              # 而非对象）会让下面的 dict()/get() 抛异常，Assemble 非零退出后 Post review
-              # 不执行、告警分支也不成立——PR 上既无表态也无告警，只剩一个红叉。
-              # 序号取自 enumerate 而非计数器，跳过畸形元素不会让 id 错位（id 是
-              # survived/refuted 分类的唯一依据，错位会把复核结论贴到别的阻塞项上）。
-              # verify 的 collect 步骤必须用完全相同的过滤规则。
-              for i, b in enumerate(data.get("blockers") or []):
-                  if not isinstance(b, dict):
-                      continue
-                  # id 规则必须与 verify 的 collect 步骤一致：<分片 key>#<片内序号>。
-                  b = dict(b, id="%s#%d" % (s["key"], i))
-                  blockers.append((s, b))
-              for u in data.get("unconfirmed") or []:
-                  if isinstance(u, dict):
-                      unconfirmed.append((s, u))
+              blockers += got_b
+              unconfirmed += got_u
 
           # 什么都没产出（多半是 secret 缺失或全线失败）：不表态，只留告警。
           # 此时 request-changes 会拿一个「什么都没审」当阻塞理由挂住 PR。
@@ -1161,7 +1202,9 @@ jobs:
               lines.append("## %s\n" % T["block"])
               lines.append(T["verified"] + "\n")
               for s_, b in blockers:
-                  loc = b.get("file", "")
+                  # str()：`file` 被写成对象或数组时 `+=` 抛 TypeError，而这里已经在
+                  # 上面那道 try 之外了，抛出去就是既无表态也无告警的红叉。
+                  loc = str(b.get("file", ""))
                   if b.get("line"):
                       loc += ":%s" % b["line"]
                   mark = "" if verdicts.get(b["id"]) else T["unrev"]
