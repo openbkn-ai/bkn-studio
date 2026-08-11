@@ -157,6 +157,9 @@ describe("IndexConfigFormPanel", () => {
     const retryButton = await screen.findByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" });
     fireEvent.click(retryButton);
     await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.queryByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" })).toBeNull());
+    await waitFor(() => {
+      expect(screen.queryAllByText("dataCatalog.build.analyzersLoading")).toHaveLength(0);
+      expect(screen.queryByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" })).toBeNull();
+    });
   });
 });
