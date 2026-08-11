@@ -142,7 +142,7 @@ describe("IndexConfigFormPanel", () => {
       }],
     };
     getCatalogResourceMock.mockResolvedValue(fulltextResource);
-    loadAnalyzerCapabilitiesMock.mockResolvedValue({
+    loadAnalyzerCapabilitiesMock.mockResolvedValueOnce({
       errorMessage: "capabilities unavailable",
       options: [],
       state: "error",
@@ -157,5 +157,6 @@ describe("IndexConfigFormPanel", () => {
     const retryButton = await screen.findByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" });
     fireEvent.click(retryButton);
     await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" })).toBeNull());
   });
 });

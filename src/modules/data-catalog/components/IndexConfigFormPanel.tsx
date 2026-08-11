@@ -149,6 +149,7 @@ export function IndexConfigFormPanel({
   const [analyzersLoadState, setAnalyzersLoadState] = useState<AnalyzerCapabilitiesLoadState>("idle");
   const [analyzersLoadError, setAnalyzersLoadError] = useState<string | null>(null);
   const analyzerResourceIdRef = useRef<string | null>(null);
+  const analyzerRequestIdRef = useRef(0);
   const [orphanSavedModel, setOrphanSavedModel] = useState<string | null>(null);
   const [defaultModelId, setDefaultModelId] = useState<string>();
   const [error, setError] = useState<string | null>(null);
@@ -309,19 +310,9 @@ export function IndexConfigFormPanel({
     if (!active) {
       return;
     }
-    let cancelled = false;
-    setAnalyzersLoadState("loading");
-    setAnalyzersLoadError(null);
-    void loadAnalyzerCapabilities().then((loaded) => {
-      if (cancelled) {
-        return;
-      }
-      setAnalyzers(loaded.options);
-      setAnalyzersLoadState(loaded.state);
-      setAnalyzersLoadError(loaded.errorMessage);
-    });
+    void reloadAnalyzerCapabilities();
     return () => {
-      cancelled = true;
+      analyzerRequestIdRef.current += 1;
     };
   }, [active, resource.id]);
 
@@ -344,9 +335,14 @@ export function IndexConfigFormPanel({
   };
 
   const reloadAnalyzerCapabilities = async () => {
+    const requestId = analyzerRequestIdRef.current + 1;
+    analyzerRequestIdRef.current = requestId;
     setAnalyzersLoadState("loading");
     setAnalyzersLoadError(null);
     const loaded = await loadAnalyzerCapabilities();
+    if (requestId !== analyzerRequestIdRef.current) {
+      return;
+    }
     setAnalyzers(loaded.options);
     setAnalyzersLoadState(loaded.state);
     setAnalyzersLoadError(loaded.errorMessage);
