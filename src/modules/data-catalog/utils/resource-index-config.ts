@@ -80,7 +80,7 @@ function normalizeDefaultFeature(
   items: ResourceFeatureDraftInput[],
   type: "fulltext" | "vector",
 ): ResourceFeatureDraft[] {
-  const drafts = items.slice(0, 3).map((item, index) => normalizeDraft(item, type, index));
+  const drafts = items.slice(0, 1).map((item, index) => normalizeDraft(item, type, index));
   const defaultIndex = drafts.findIndex((item) => item.isDefault);
   return drafts.map((item, index) => ({
     ...item,

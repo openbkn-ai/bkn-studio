@@ -81,7 +81,7 @@ describe("resource-index-config", () => {
     ]);
   });
 
-  it("writes at most three feature groups and marks one default per type", () => {
+  it("writes one feature per type", () => {
     const result = applyIndexFormToSchema(
       [{ name: "body", type: "string", displayName: "Body" }],
       {
@@ -112,24 +112,6 @@ describe("resource-index-config", () => {
         config: { analyzer: "ik_max_word" },
       },
       {
-        name: "fulltext_2",
-        displayName: "fulltext_2",
-        featureType: "fulltext",
-        refProperty: "body",
-        isDefault: false,
-        isNative: true,
-        config: { analyzer: "standard" },
-      },
-      {
-        name: "fulltext_3",
-        displayName: "fulltext_3",
-        featureType: "fulltext",
-        refProperty: "body",
-        isDefault: false,
-        isNative: true,
-        config: { analyzer: "standard" },
-      },
-      {
         name: "vector",
         displayName: "vector",
         featureType: "vector",
@@ -137,24 +119,6 @@ describe("resource-index-config", () => {
         isDefault: true,
         isNative: true,
         config: { embedding_model: "embed-a" },
-      },
-      {
-        name: "vector_2",
-        displayName: "vector_2",
-        featureType: "vector",
-        refProperty: "body",
-        isDefault: false,
-        isNative: true,
-        config: { embedding_model: "embed-b" },
-      },
-      {
-        name: "vector_3",
-        displayName: "vector_3",
-        featureType: "vector",
-        refProperty: "body",
-        isDefault: false,
-        isNative: true,
-        config: { embedding_model: "embed-c" },
       },
     ]);
   });

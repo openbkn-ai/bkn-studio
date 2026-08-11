@@ -7,7 +7,7 @@
 
 import { QuestionCircleOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Drawer, Input, Select, Space, Tooltip } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -15,6 +15,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
+import { loadAnalyzerCapabilities, findUnavailableAnalyzers, type AnalyzerCapabilitiesLoadState } from "@/modules/data-catalog/utils/analyzer-capabilities";
 import {
   getCatalogResource,
   updateCatalogResource,
@@ -51,7 +52,6 @@ export type IndexConfigFormPanelProps = {
   resource: CatalogResource;
 };
 
-const FULLTEXT_ANALYZERS = ["standard", "ik_max_word", "hanlp_index"] as const;
 const INHERIT_VALUE = "__inherit__";
 
 const normalizeFieldType = (type: string) => type.trim().toLowerCase();
@@ -69,7 +69,7 @@ function coerceFeatureDrafts(
   kind: "embedding" | "fulltext",
   groups: Array<ResourceFeatureDraft | string> = [],
 ): ResourceFeatureDraft[] {
-  const normalized = groups.slice(0, 3).map((item, index) =>
+  const normalized = groups.map((item, index) =>
     typeof item === "string"
       ? {
           isDefault: index === 0,
@@ -140,11 +140,16 @@ export function IndexConfigFormPanel({
   const [fieldEmbeddingModelGroups, setFieldEmbeddingModelGroups] = useState<Record<string, ResourceFeatureDraft[]>>({});
   const [fieldFulltextAnalyzerGroups, setFieldFulltextAnalyzerGroups] = useState<Record<string, ResourceFeatureDraft[]>>({});
   const [featureField, setFeatureField] = useState<ResourceSchemaField | null>(null);
-  const [defaultFulltextAnalyzer, setDefaultFulltextAnalyzer] = useState<string>("standard");
+  const [defaultFulltextAnalyzer, setDefaultFulltextAnalyzer] = useState<string>("");
   const [fieldFilter, setFieldFilter] = useState("");
   const [models, setModels] = useState<EmbeddingModelOption[]>([]);
   const [modelsLoadState, setModelsLoadState] = useState<EmbeddingModelsLoadState>("idle");
   const [modelsLoadError, setModelsLoadError] = useState<string | null>(null);
+  const [analyzers, setAnalyzers] = useState<string[]>([]);
+  const [analyzersLoadState, setAnalyzersLoadState] = useState<AnalyzerCapabilitiesLoadState>("idle");
+  const [analyzersLoadError, setAnalyzersLoadError] = useState<string | null>(null);
+  const analyzerResourceIdRef = useRef<string | null>(null);
+  const analyzerRequestIdRef = useRef(0);
   const [orphanSavedModel, setOrphanSavedModel] = useState<string | null>(null);
   const [defaultModelId, setDefaultModelId] = useState<string>();
   const [error, setError] = useState<string | null>(null);
@@ -162,11 +167,11 @@ export function IndexConfigFormPanel({
 
   const analyzerOptions = useMemo(
     () =>
-      FULLTEXT_ANALYZERS.map((analyzer) => ({
-        label: t(`dataCatalog.build.analyzers.${analyzer}`),
+      analyzers.map((analyzer) => ({
+        label: t(`dataCatalog.build.analyzers.${analyzer}`, { defaultValue: analyzer }),
         value: analyzer,
       })),
-    [t],
+    [analyzers, t],
   );
 
   const modelOptions = useMemo(
@@ -203,18 +208,26 @@ export function IndexConfigFormPanel({
     if (!active) {
       return;
     }
+    // Keep analyzer reset scope aligned with the capability effect's resource.id dependency.
+    const resourceChanged = analyzerResourceIdRef.current !== resource.id;
+    analyzerResourceIdRef.current = resource.id;
 
     setActiveTask(null);
     setBuildKeyFields([]);
     setFieldEmbeddingModelGroups({});
     setFieldFulltextAnalyzerGroups({});
     setFeatureField(null);
-    setDefaultFulltextAnalyzer("standard");
+    setDefaultFulltextAnalyzer("");
     setFieldFilter("");
     setError(null);
     setDirty(false);
     setModelsLoadState("idle");
     setModelsLoadError(null);
+    if (resourceChanged) {
+      setAnalyzersLoadState("idle");
+      setAnalyzersLoadError(null);
+      setAnalyzers([]);
+    }
     setOrphanSavedModel(null);
     setModels([]);
     setSchema(resource.schema);
@@ -293,6 +306,16 @@ export function IndexConfigFormPanel({
     })();
   }, [active, resource]);
 
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+    void reloadAnalyzerCapabilities();
+    return () => {
+      analyzerRequestIdRef.current += 1;
+    };
+  }, [active, resource.id]);
+
   const reloadEmbeddingModels = async () => {
     setModelsLoadState("loading");
     setModelsLoadError(null);
@@ -309,6 +332,20 @@ export function IndexConfigFormPanel({
       setOrphanSavedModel(preferred.trim() ? preferred.trim() : null);
       setDefaultModelId(undefined);
     }
+  };
+
+  const reloadAnalyzerCapabilities = async () => {
+    const requestId = analyzerRequestIdRef.current + 1;
+    analyzerRequestIdRef.current = requestId;
+    setAnalyzersLoadState("loading");
+    setAnalyzersLoadError(null);
+    const loaded = await loadAnalyzerCapabilities();
+    if (requestId !== analyzerRequestIdRef.current) {
+      return;
+    }
+    setAnalyzers(loaded.options);
+    setAnalyzersLoadState(loaded.state);
+    setAnalyzersLoadError(loaded.errorMessage);
   };
 
   const defaultModel = useMemo(
@@ -364,6 +401,26 @@ export function IndexConfigFormPanel({
       ),
     [eligibleFulltextAnalyzerGroups],
   );
+  const unavailableSavedAnalyzers = useMemo(() => {
+    const effective = Object.values(eligibleFulltextAnalyzerGroups).flatMap((groups) =>
+      groups.map((feature) => feature.value?.trim() || defaultFulltextAnalyzer),
+    );
+    return findUnavailableAnalyzers(analyzers, effective);
+  }, [analyzers, defaultFulltextAnalyzer, eligibleFulltextAnalyzerGroups]);
+  const duplicateUnsupportedFeatureTypes = useMemo(() => {
+    const duplicates: string[] = [];
+    for (const [field, groups] of Object.entries(eligibleEmbeddingModelGroups)) {
+      if (groups.length > 1) {
+        duplicates.push(`${field}: vector`);
+      }
+    }
+    for (const [field, groups] of Object.entries(eligibleFulltextAnalyzerGroups)) {
+      if (groups.length > 1) {
+        duplicates.push(`${field}: fulltext`);
+      }
+    }
+    return duplicates;
+  }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups]);
 
   const toggleField = (
     field: string,
@@ -381,9 +438,31 @@ export function IndexConfigFormPanel({
   };
 
   const validateForm = () => {
+    if (duplicateUnsupportedFeatureTypes.length > 0) {
+      setError(t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") }));
+      return false;
+    }
     if (embeddingFields.length === 0 && fulltextFields.length === 0) {
       setError(t("dataCatalog.build.fieldsRequired"));
       return false;
+    }
+    if (fulltextFields.length > 0) {
+      if (analyzersLoadState === "loading" || analyzersLoadState === "idle") {
+        setError(t("dataCatalog.build.analyzersLoading"));
+        return false;
+      }
+      if (analyzersLoadState === "error") {
+        setError(t("dataCatalog.build.analyzersLoadError", { message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback") }));
+        return false;
+      }
+      if (analyzersLoadState === "empty") {
+        setError(t("dataCatalog.build.noAnalyzers"));
+        return false;
+      }
+      if (unavailableSavedAnalyzers.length > 0) {
+        setError(t("dataCatalog.build.savedAnalyzerUnavailable", { analyzers: unavailableSavedAnalyzers.join(", ") }));
+        return false;
+      }
     }
     const fulltextNeedsDefault = fulltextFields.some((field) =>
       (fieldFulltextAnalyzerGroups[field] ?? []).some((feature) => !feature.value?.trim()),
@@ -622,6 +701,24 @@ export function IndexConfigFormPanel({
   const modelsLoadFailed = modelsLoadState === "error";
   const modelsLoading = modelsLoadState === "loading" || modelsLoadState === "idle";
   const embeddingBlocked = noModels || modelsLoadFailed || modelsLoading;
+  const analyzersLoading = analyzersLoadState === "loading" || analyzersLoadState === "idle";
+  const analyzersLoadFailed = analyzersLoadState === "error";
+  const analyzerSelectionDisabled = analyzersLoading || analyzersLoadFailed || analyzersLoadState === "empty";
+  const analyzerBlocked = analyzerSelectionDisabled || unavailableSavedAnalyzers.length > 0;
+  const embeddingSelectionDisabledReason = modelsLoading
+    ? t("dataCatalog.build.modelsLoading")
+    : modelsLoadFailed
+      ? t("dataCatalog.build.modelsLoadError", {
+          message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
+        })
+      : t("dataCatalog.build.noModels");
+  const analyzerSelectionDisabledReason = analyzersLoading
+    ? t("dataCatalog.build.analyzersLoading")
+    : analyzersLoadFailed
+      ? t("dataCatalog.build.analyzersLoadError", {
+          message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback"),
+        })
+    : t("dataCatalog.build.analyzerSelectionUnavailable");
   const hasIndexFeatures = embeddingFields.length > 0 || fulltextFields.length > 0;
   const selectedEmbeddingGroups = featureField ? (eligibleEmbeddingModelGroups[featureField.name] ?? []) : [];
   const selectedFulltextGroups = featureField ? (eligibleFulltextAnalyzerGroups[featureField.name] ?? []) : [];
@@ -679,11 +776,11 @@ export function IndexConfigFormPanel({
         : []),
       ...options,
     ];
-    const disabledReason = disabled
-      ? isEmbedding
-        ? t("dataCatalog.build.noModels")
-        : t("dataCatalog.build.fulltextTypeHint")
-      : "";
+    const disabledReason = !disabled ? "" : isEmbedding
+        ? embeddingSelectionDisabledReason
+        : !isTextField(featureField.type)
+          ? t("dataCatalog.build.fulltextTypeHint")
+          : analyzerSelectionDisabledReason;
     const addFeature = () => {
       updateFeatureGroups(kind, featureField.name, [
         ...groups,
@@ -703,7 +800,7 @@ export function IndexConfigFormPanel({
               {title}
               <span className={formStyles.featureStatus}>
                 {groups.length > 0
-                  ? t("dataCatalog.build.featureConfiguredCount", { count: groups.length })
+                  ? t("dataCatalog.build.featureConfiguredCount")
                   : t("dataCatalog.build.featureNotEnabled")}
               </span>
             </div>
@@ -712,7 +809,7 @@ export function IndexConfigFormPanel({
             </div>
           </div>
           <AppButton
-            disabled={disabled || groups.length >= 3}
+            disabled={disabled || groups.length > 0}
             onClick={addFeature}
             size="small"
             type={groups.length === 0 ? "primary" : "default"}
@@ -821,6 +918,42 @@ export function IndexConfigFormPanel({
       {!streamingActive && actionsLocked ? (
         <Alert message={t("dataCatalog.build.activeTaskLocked")} showIcon type="warning" />
       ) : null}
+      {fulltextFields.length > 0 && analyzersLoading ? (
+        <Alert message={t("dataCatalog.build.analyzersLoading")} showIcon type="info" />
+      ) : fulltextFields.length > 0 && analyzersLoadFailed ? (
+        <Alert
+          action={
+            <AppButton
+              onClick={() => {
+                void reloadAnalyzerCapabilities();
+              }}
+              size="small"
+              type="link"
+            >
+              {t("dataCatalog.build.retryLoadAnalyzers")}
+            </AppButton>
+          }
+          message={t("dataCatalog.build.analyzersLoadError", {
+            message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback"),
+          })}
+          showIcon
+          type="error"
+        />
+      ) : fulltextFields.length > 0 && analyzersLoadState === "empty" ? (
+        <Alert message={t("dataCatalog.build.noAnalyzers")} showIcon type="error" />
+      ) : fulltextFields.length > 0 && unavailableSavedAnalyzers.length > 0 ? (
+        <Alert
+          message={t("dataCatalog.build.savedAnalyzerUnavailable", { analyzers: unavailableSavedAnalyzers.join(", ") })}
+          showIcon
+          type="error"
+        />
+      ) : duplicateUnsupportedFeatureTypes.length > 0 ? (
+        <Alert
+          message={t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") })}
+          showIcon
+          type="error"
+        />
+      ) : null}
 
       <div>
         <div className={formStyles.configOverview}>
@@ -868,6 +1001,7 @@ export function IndexConfigFormPanel({
                   </div>
                   <Select
                     allowClear
+                    disabled={analyzerSelectionDisabled}
                     onChange={(value) => {
                       setDefaultFulltextAnalyzer(value ?? "");
                       markDirty();
@@ -880,6 +1014,11 @@ export function IndexConfigFormPanel({
                   <div className={formStyles.fieldHint}>
                     {t("dataCatalog.build.fulltextAnalyzerHint")}
                   </div>
+                  {analyzerSelectionDisabled ? (
+                    <div className={formStyles.fieldHint}>
+                      {analyzerSelectionDisabledReason}
+                    </div>
+                  ) : null}
                   {fulltextAnalyzerOverrides.length > 0 ? (
                     <Alert
                       message={t("dataCatalog.build.fulltextAnalyzerOverrides", {
@@ -929,7 +1068,7 @@ export function IndexConfigFormPanel({
                         </Space>
                       }
                       message={t("dataCatalog.build.modelsLoadError", {
-                        message: modelsLoadError ?? "",
+                        message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
                       })}
                       showIcon
                       type="error"
@@ -1154,7 +1293,7 @@ export function IndexConfigFormPanel({
               t("dataCatalog.build.roleFulltext"),
               selectedFulltextGroups,
               analyzerOptions,
-              !isTextField(featureField.type),
+              !isTextField(featureField.type) || analyzerSelectionDisabled,
             )}
             {!isTextField(featureField.type) ? (
               <Alert message={t("dataCatalog.build.fulltextTypeHint")} showIcon type="info" />
@@ -1175,7 +1314,7 @@ export function IndexConfigFormPanel({
       <div className={formStyles.footer}>
         <Space style={{ marginLeft: "auto" }}>
           <AppButton
-            disabled={actionsLocked || saving || (embeddingFields.length > 0 && embeddingBlocked)}
+            disabled={actionsLocked || saving || (fulltextFields.length > 0 && analyzerBlocked) || duplicateUnsupportedFeatureTypes.length > 0 || (embeddingFields.length > 0 && embeddingBlocked)}
             loading={saving}
             onClick={() => void saveConfig()}
             type="primary"
