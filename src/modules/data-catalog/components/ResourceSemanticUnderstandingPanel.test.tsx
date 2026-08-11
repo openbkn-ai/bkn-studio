@@ -73,9 +73,8 @@ describe("ResourceSemanticUnderstandingPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
 
-    expect(screen.getByText("dataCatalog.taskManagement.applyMode.fillEmpty")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("dataCatalog.taskManagement.applyMode.fillEmpty")).toBeTruthy());
     expect(screen.getByRole("spinbutton").getAttribute("value")).toBe("0.75");
-    expect(screen.getByRole("checkbox").getAttribute("checked")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
 

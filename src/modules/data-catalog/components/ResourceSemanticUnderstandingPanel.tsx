@@ -65,6 +65,15 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
 
   const summary = useMemo(() => tasks.find((task) => task.status === "succeeded" && task.applied) ?? tasks[0], [tasks]);
 
+  useEffect(() => {
+    if (!open) return;
+    form.setFieldsValue({
+      applyMode: "fill_empty",
+      confidenceThreshold: 0.75,
+      includeSampleRows: false,
+    });
+  }, [form, open]);
+
   const start = async () => {
     const values = await form.validateFields();
     setCreating(true);
@@ -117,14 +126,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
             还锁着,客户没有任何办法发起任务。徽标留着,因为档位够不够与镜像换没换是两件
             事,标记该跟着能力走。
           */}
-          <AppButton icon={<PlusOutlined />} type="primary" onClick={() => {
-            form.setFieldsValue({
-              applyMode: "fill_empty",
-              confidenceThreshold: 0.75,
-              includeSampleRows: false,
-            });
-            setOpen(true);
-          }}>
+          <AppButton icon={<PlusOutlined />} type="primary" onClick={() => setOpen(true)}>
             {t("dataCatalog.semanticWorkspace.create")}
             <EditionBadge capability={CAPABILITIES.SEMANTIC_TASK} edition="professional" />
           </AppButton>
