@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -62,6 +62,7 @@ const resource: CatalogResource = {
 
 describe("IndexConfigFormPanel", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     getCatalogResourceMock.mockResolvedValue(resource);
     loadAnalyzerCapabilitiesMock.mockResolvedValue({ errorMessage: null, options: ["standard"], state: "ready" });
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -92,5 +93,31 @@ describe("IndexConfigFormPanel", () => {
     );
 
     await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("does not show analyzer failures for a vector-only resource", async () => {
+    const vectorResource: CatalogResource = {
+      ...resource,
+      schema: [{
+        features: [{ config: { embedding_model: "model-1" }, featureType: "vector" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    getCatalogResourceMock.mockResolvedValue(vectorResource);
+    loadAnalyzerCapabilitiesMock.mockResolvedValue({
+      errorMessage: "capabilities unavailable",
+      options: [],
+      state: "error",
+    });
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={vectorResource} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("dataCatalog.build.analyzersLoadError")).toBeNull();
   });
 });

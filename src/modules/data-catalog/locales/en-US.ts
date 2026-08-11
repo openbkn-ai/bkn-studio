@@ -299,14 +299,11 @@ export const dataCatalogEnUS = {
       featureNamePlaceholder: "Feature name",
       featureDescriptionPlaceholder: "Feature description",
       defaultFeature: "Default",
-      extraFeature: "Extra {{index}}",
       featureGroupHint: "One feature of each type is supported per field.",
       featureEnableHint: "Enable to create the feature for this field.",
       featureEmpty: "No {{feature}} configured",
       featureNotEnabled: "Off",
-      featureConfiguredCount: "{{count}} groups",
-      enableDefaultFeature: "Enable Default",
-      addExtraFeature: "Add Extra Feature",
+      featureConfiguredCount: "Configured",
       removeFeatureType: "Remove Type",
       duplicateFeatureTypeUnsupported:
         "Only one feature of each type is supported per field. Remove duplicate features: {{features}}.",
@@ -315,6 +312,7 @@ export const dataCatalogEnUS = {
       defaultModelDimensions: "Default dimensions: {{dimensions}}",
       fulltextAnalyzerHint:
         "(use ik / hanlp for Chinese data, standard for English / general)",
+      analyzerSelectionUnavailable: "Analyzer capabilities are unavailable.",
       analyzers: {
         standard: "standard · English / general",
         english: "english · English stemming",

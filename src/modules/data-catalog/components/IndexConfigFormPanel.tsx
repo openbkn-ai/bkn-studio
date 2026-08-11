@@ -751,11 +751,13 @@ export function IndexConfigFormPanel({
         : []),
       ...options,
     ];
-    const disabledReason = disabled
-      ? isEmbedding
+    const disabledReason = !disabled
+      ? ""
+      : isEmbedding
         ? t("dataCatalog.build.noModels")
-        : t("dataCatalog.build.fulltextTypeHint")
-      : "";
+        : !isTextField(featureField.type)
+          ? t("dataCatalog.build.fulltextTypeHint")
+          : t("dataCatalog.build.analyzerSelectionUnavailable");
     const addFeature = () => {
       updateFeatureGroups(kind, featureField.name, [
         ...groups,
@@ -893,9 +895,9 @@ export function IndexConfigFormPanel({
       {!streamingActive && actionsLocked ? (
         <Alert message={t("dataCatalog.build.activeTaskLocked")} showIcon type="warning" />
       ) : null}
-      {analyzersLoading ? (
+      {fulltextFields.length > 0 && analyzersLoading ? (
         <Alert message={t("dataCatalog.build.analyzersLoading")} showIcon type="info" />
-      ) : analyzersLoadFailed ? (
+      ) : fulltextFields.length > 0 && analyzersLoadFailed ? (
         <Alert
           message={t("dataCatalog.build.analyzersLoadError", {
             message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback"),
@@ -903,9 +905,9 @@ export function IndexConfigFormPanel({
           showIcon
           type="error"
         />
-      ) : analyzersLoadState === "empty" ? (
+      ) : fulltextFields.length > 0 && analyzersLoadState === "empty" ? (
         <Alert message={t("dataCatalog.build.noAnalyzers")} showIcon type="error" />
-      ) : unavailableSavedAnalyzers.length > 0 ? (
+      ) : fulltextFields.length > 0 && unavailableSavedAnalyzers.length > 0 ? (
         <Alert
           message={t("dataCatalog.build.savedAnalyzerUnavailable", { analyzers: unavailableSavedAnalyzers.join(", ") })}
           showIcon

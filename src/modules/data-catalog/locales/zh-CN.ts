@@ -281,14 +281,11 @@ export const dataCatalogZhCN = {
       featureNamePlaceholder: "特征名称",
       featureDescriptionPlaceholder: "特征描述",
       defaultFeature: "默认",
-      extraFeature: "扩展 {{index}}",
       featureGroupHint: "每个字段的每类特征仅支持配置一组。",
       featureEnableHint: "启用后会为该字段创建此类特征。",
       featureEmpty: "尚未配置{{feature}}",
       featureNotEnabled: "未启用",
-      featureConfiguredCount: "已配置 {{count}} 组",
-      enableDefaultFeature: "启用默认特征",
-      addExtraFeature: "添加扩展特征",
+      featureConfiguredCount: "已配置",
       removeFeatureType: "移除本类",
       duplicateFeatureTypeUnsupported:
         "每个字段的每类特征仅支持一组。请移除重复特征：{{features}}。",
@@ -296,6 +293,7 @@ export const dataCatalogZhCN = {
       featureUnsupported: "暂不支持",
       defaultModelDimensions: "默认向量维度：{{dimensions}}",
       fulltextAnalyzerHint: "(中文数据选 ik / hanlp,英文/通用选 standard)",
+      analyzerSelectionUnavailable: "分词器能力当前不可用。",
       analyzers: {
         standard: "standard · 英文/通用",
         english: "english · 英文词干分析",
