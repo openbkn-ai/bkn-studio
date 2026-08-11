@@ -202,7 +202,7 @@ export function guardAgentToolArgs(name: string, args: Record<string, unknown>):
     if (missing.length) {
       return toolGuardError(
         "missing_action_recall_scope",
-        "get_action_info 需要 at_id 和非空 _instance_identities。请先让用户选择目标实例，或先查询候选实例并使用返回的 _instance_identity。",
+        "get_action_info requires at_id and a nonempty _instance_identities array. Ask the user to select an instance or query candidates first and use the returned _instance_identity.",
         missing,
       );
     }
@@ -218,7 +218,7 @@ export function guardAgentToolArgs(name: string, args: Record<string, unknown>):
     if (missing.length) {
       return toolGuardError(
         "unsafe_action_call",
-        "execute_action 已被客户端拦截：缺少目标实例或 dynamic_params。请先确认执行对象和动态参数，再重新调用本工具。",
+        "execute_action was blocked by the client: a target instance or dynamic_params is missing. Confirm the execution target and dynamic parameters before calling this tool again.",
         missing,
       );
     }
