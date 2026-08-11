@@ -123,7 +123,8 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1));
+    await screen.findByText("dataCatalog.build.analyzerSelectionUnavailable");
+    expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("dataCatalog.build.analyzersLoadError")).toBeNull();
     expect(
       screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }).getAttribute("disabled"),

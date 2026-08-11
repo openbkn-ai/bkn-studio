@@ -697,7 +697,9 @@ export function IndexConfigFormPanel({
   const embeddingSelectionDisabledReason = modelsLoading
     ? t("dataCatalog.build.modelsLoading")
     : modelsLoadFailed
-      ? t("dataCatalog.build.modelsLoadErrorFallback")
+      ? t("dataCatalog.build.modelsLoadError", {
+          message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
+        })
       : t("dataCatalog.build.noModels");
   const analyzerSelectionDisabledReason = analyzersLoading
     ? t("dataCatalog.build.analyzersLoading")
