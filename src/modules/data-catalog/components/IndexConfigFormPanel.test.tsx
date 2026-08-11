@@ -99,6 +99,7 @@ describe("IndexConfigFormPanel", () => {
     );
 
     await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull();
   });
 
   it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {

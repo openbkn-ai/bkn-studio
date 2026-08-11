@@ -207,6 +207,7 @@ export function IndexConfigFormPanel({
     if (!active) {
       return;
     }
+    // Keep analyzer reset scope aligned with the capability effect's resource.id dependency.
     const resourceChanged = analyzerResourceIdRef.current !== resource.id;
     analyzerResourceIdRef.current = resource.id;
 
