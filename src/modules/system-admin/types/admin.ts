@@ -5,11 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-// 对齐 bkn-safe `/api/safe/v1/admin/*`(ISF 退役后的统一 admin API)。
-// 注意：冻结/解冻、用户↔部门归属写入 三项后端暂不支持，已从写路径剔除，等后端反馈再补。
+// Aligned with bkn-safe `/api/safe/v1/admin/*`, the unified admin API after ISF retirement.
+// Note: the backend does not yet support freezing/unfreezing or writing user-to-department
+// membership, so those operations are excluded from write paths pending backend support.
 
 export type ResourceRef = {
-  /** 资源实例 id；"*" 表示整类。 */
+  /** Resource instance ID; "*" represents the entire type. */
   id: string;
   type: string;
 };
@@ -23,17 +24,17 @@ export type AdminUser = {
   account: string;
   accountType: string;
   builtin?: boolean;
-  /** 用户所属部门 id（多对多；列表接口不返，详情/部门成员反查得到）。 */
+  /** Department IDs for the user (many-to-many; absent from list endpoints and obtained from details or department-member lookup). */
   departmentIds?: string[];
-  /** 列表接口返回的部门名称摘要。 */
+  /** Department-name summary returned by list endpoints. */
   departmentNames?: string[];
   email: string;
   enabled: boolean;
   id: string;
   name: string;
-  /** 直接绑定到该用户的角色 id（role-bindings，不含部门继承）。 */
+  /** Role IDs directly bound to this user through role-bindings, excluding inherited department roles. */
   roleIds: string[];
-  /** 列表接口返回的直接角色名称摘要。 */
+  /** Direct-role name summary returned by list endpoints. */
   roleNames?: string[];
   telephone: string;
   updatedAt?: number;
@@ -69,14 +70,14 @@ export type AdminDepartment = {
   code?: string;
   email?: string;
   id: string;
-  /** 直接成员数（GET /departments/:id/members，只读）。 */
+  /** Direct member count from read-only GET /departments/:id/members. */
   managerId?: string;
   managerName?: string;
   memberCount?: number;
   name: string;
   parentId: string | null;
   remark?: string;
-  /** 含子部门的成员数（去重用户）。 */
+  /** Member count including child departments, with users deduplicated. */
   subtreeMemberCount?: number;
   type: string;
 };
@@ -90,13 +91,13 @@ export type RoleMember = {
 };
 
 export type AdminRole = {
-  /** 直接成员 accessor id（role-bindings；类型由 users/departments 反查）。 */
+  /** Direct member accessor ID from role-bindings; resolve its type through users/departments. */
   accessorIds: string[];
   builtin: boolean;
   description: string;
   id: string;
   name: string;
-  /** 对象级授权（resource{type,id} + operations）。 */
+  /** Object-level grant: resource{type,id} plus operations. */
   permissions: ResourceGrant[];
   source?: string;
   updatedAt?: number;
@@ -118,7 +119,7 @@ export type CreateUserInput = {
 };
 
 export type UpdateUserInput = {
-  /** 替换语义：传数组=整组替换，[]=清空，不传由调用方决定。 */
+  /** Replacement semantics: an array replaces the whole set, [] clears it, and omission is decided by the caller. */
   departmentIds: string[];
   email: string;
   enabled: boolean;

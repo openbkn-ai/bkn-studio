@@ -183,8 +183,8 @@ describe("capability-manifest", () => {
   });
 
   it("reports no IO facts when the backend only returned an empty api_spec shell", () => {
-    // metadata 行查不到时后端回 DefaultMetadataInfo：api_spec 是空壳，不是 null，
-    // 前端因此解析出一个非 undefined 的空 ioSpec。这种工具不能显示成 0 入参 0 出参。
+    // When the metadata row is absent, backend returns DefaultMetadataInfo with an empty api_spec
+    // shell, not null, so frontend parses a non-undefined empty ioSpec. Do not display this as zero inputs and outputs.
     const manifest = buildToolCapabilityManifest({
       toolId: "tool-metadata-missing",
       name: "Metadata missing",
@@ -324,4 +324,3 @@ describe("capability-manifest", () => {
     expect(readiness.score).toBe(100);
   });
 });
-

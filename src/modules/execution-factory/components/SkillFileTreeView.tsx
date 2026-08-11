@@ -29,7 +29,7 @@ export type SkillFileTreeViewProps = {
   style?: CSSProperties;
 };
 
-/** 文件名右侧的定宽徽标：大写扩展名。无扩展名（LICENSE、Dockerfile）就不画。 */
+/** Fixed-width uppercase extension badge at the right of a filename. Omit it for extensionless files such as LICENSE or Dockerfile. */
 function resolveFileBadge(relPath?: string): string {
   if (!relPath?.includes(".")) {
     return "";
@@ -50,8 +50,8 @@ function toTreeDataNodes(
         : "";
       const badge = resolveFileBadge(node.file?.relPath ?? node.title);
 
-      // 文件行画成卡片：与工具 / 函数列表栏同一套观感（名字 + 右侧徽标 + 次行元信息）。
-      // 目录行保持轻量的一行，层级才不会被一摞卡片盖过去。
+      // Render file rows as cards matching tool/function rails: name, right badge, and secondary metadata.
+      // Keep directory rows lightweight and single-line so stacks of cards do not obscure hierarchy.
       return {
         key: node.key,
         isLeaf: true,

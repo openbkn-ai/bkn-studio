@@ -13,7 +13,7 @@ export type ToolboxPublishIssue = {
 };
 
 export type PreflightTool = {
-  /** 只有函数工具箱、且逐个取过详情时才有值；未取到时跳过入口检查而不是当作缺失。 */
+  /** Present only for function toolboxes after loading individual details; omit entry checks when unavailable rather than treating it as missing. */
   code?: string;
   description?: string;
   metadataType?: ToolMetadataType;
@@ -22,14 +22,14 @@ export type PreflightTool = {
 };
 
 /**
- * 两种合法入口：老路的 `def handler(event)`，以及 sandbox_sdk 的 `@tool` 装饰器
- * （用户写普通带类型注解的函数，SDK 负责解包 event）。只认 handler 会误伤后者。
+ * Two valid entry points: legacy `def handler(event)` and sandbox_sdk's `@tool` decorator, where
+ * users write ordinary typed functions and the SDK unwraps event. Recognizing only handler would reject the latter.
  */
 const ENTRYPOINT_PATTERNS = [/def\s+handler\s*\(/, /^\s*@tool\b/m];
 
 /**
- * 发布后这些工具会直接暴露给 Agent 选用，描述缺失的工具等于永远不会被调用。
- * 这里只做能本地判定的检查，判不了的（比如没取到代码）宁可不报，不猜。
+ * Published tools are immediately available to the Agent; tools without descriptions are effectively never chosen.
+ * Check only conditions that can be determined locally. When code is unavailable, avoid guessing or reporting a false issue.
  */
 export function collectToolboxPublishIssues(tools: PreflightTool[]): ToolboxPublishIssue[] {
   const issues: ToolboxPublishIssue[] = [];

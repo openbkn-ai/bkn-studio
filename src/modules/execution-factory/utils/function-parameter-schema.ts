@@ -8,11 +8,11 @@
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
 
 /**
- * 函数工具的入参/出参声明在 GET 详情里不回 function_content，只能从 api_spec 的
- * JSON Schema 反解。不解的话编辑表单是空的，一保存就把已声明的参数覆盖没了。
+ * Function-tool input/output declarations are absent from GET details' function_content and must
+ * be reconstructed from api_spec JSON Schema. Without this, the edit form is empty and saving overwrites declared parameters.
  */
 
-/** JSON Schema 的 array 元素没有名字，往返时用后端同款占位名补上。 */
+/** JSON Schema array elements have no names; use the backend's placeholder name for round trips. */
 export const ARRAY_ITEM_NAME = "item";
 
 export type JsonSchema = {
@@ -97,8 +97,8 @@ function parseApiSpec(apiSpec: unknown): Record<string, unknown> | null {
 }
 
 /**
- * 出参挂在 200 响应的 `result` 下（同级还有 stdout / stderr / metrics 这些运行时字段，
- * 它们是沙箱回包的一部分，不是用户声明的出参）。
+ * Output parameters are under `result` in the 200 response. Sibling stdout, stderr, and metrics
+ * are sandbox response fields, not user-declared outputs.
  */
 function successResultSchema(spec: Record<string, unknown>): JsonSchema | null {
   const responses = spec.responses;
@@ -136,8 +136,8 @@ export function parseFunctionParametersFromApiSpec(apiSpec: unknown): {
 }
 
 /**
- * 参数 → JSON Schema，喂给 Monaco 做测试入参的补全与校验。
- * 与上面的反解正好互逆：object 展开 properties，array 展开 items。
+ * Converts parameters to JSON Schema for Monaco test-input completion and validation. This is the
+ * inverse of reconstruction above: objects expand to properties and arrays to items.
  */
 function parameterToSchema(parameter: FunctionParameterDef): JsonSchema {
   const type = parameter.type ?? "string";

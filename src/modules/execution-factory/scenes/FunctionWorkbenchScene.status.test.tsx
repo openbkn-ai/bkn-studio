@@ -109,13 +109,14 @@ describe("FunctionWorkbenchScene status wiring", () => {
   });
 
   /**
-   * 后端建工具一律落 disabled，而 execute 只放行 enabled。不补这一刀的话，
-   * 在这个页面写完的函数发布了也调不到——这是这条断链的回归防线。
+   * The backend creates every tool as disabled while execute permits only enabled tools. Without
+   * this step, functions authored here remain unreachable after publication; this is the regression
+   * guard for that broken link.
    */
   it("enables a newly created function, because the backend creates tools disabled", async () => {
     render(<FunctionWorkbenchScene boxId="box-1" />);
 
-    // 保存按钮在代码区工具条里，要等选中函数、编辑区渲染出来才有。
+    // The save button lives in the code-area toolbar and exists only after selecting a function and rendering the editor.
     fireEvent.click(await screen.findByText("common.save", undefined, { timeout: 5_000 }));
 
     await waitFor(() => {
@@ -125,9 +126,10 @@ describe("FunctionWorkbenchScene status wiring", () => {
   });
 
   /**
-   * 回归:createTool 成功、updateToolStatus 失败时,本地状态必须拉回 disabled 与服务端
-   * 对齐。旧实现 finally 照常清 dirty、本地停在「已启用」,服务端却是 disabled,重试跳过
-   * 这项、再发布就成了「已发布但 Agent 调不到」的静默漂移。
+   * Regression: when createTool succeeds but updateToolStatus fails, restore local status to
+   * disabled to match the server. The prior implementation cleared dirty in finally and left the
+   * local state enabled while the server stayed disabled, so retries skipped it and publication
+   * silently produced a function unreachable by the Agent.
    */
   it("pulls a newly created function back to disabled when the enable call fails", async () => {
     updateToolStatus.mockRejectedValue(new Error("enable boom"));
@@ -140,11 +142,11 @@ describe("FunctionWorkbenchScene status wiring", () => {
       expect(updateToolStatus).toHaveBeenCalledWith("box-1", ["tool-new"], "enabled");
     });
 
-    // 启用失败后本地必须显示 disabled（与后端一致），而不是停在「已启用」。
+    // After enablement fails, local state must display disabled to match the backend rather than remain enabled.
     await waitFor(() => {
       expect(screen.getByText("executionFactory.workbenchDisabledBanner")).toBeTruthy();
     });
-    // 不能对同一个函数重复建库。
+    // Do not create the same function in storage twice.
     expect(createTool).toHaveBeenCalledTimes(1);
   });
 
@@ -174,10 +176,10 @@ describe("FunctionWorkbenchScene status wiring", () => {
   });
 
   /**
-   * 回归:上个函数留下声明入参 numbers,当前代码换成零参函数(后端 infer-schema 回
-   * 的 inputs 缺省 → undefined)。点运行必须按最新契约重造测试入参,而不是拿改前的
-   * {"numbers":0} 去跑。旧实现只在入参框为空壳时才重造,非空就原样发,于是执行拿到
-   * 的还是改前的旧参——正是页面上「返回值对、入参是改前的」那个 bug。
+   * Regression: the previous function declared numbers, but the current code becomes zero-argument
+   * and infer-schema omits inputs. Running must rebuild test inputs for the latest contract instead
+   * of sending the old {"numbers":0}. The old implementation rebuilt only an empty input field,
+   * leaving stale inputs and causing the UI to show correct output with pre-edit arguments.
    */
   it("runs with a freshly regenerated event after the declared params change, not the stale auto-filled body", async () => {
     listTools.mockResolvedValue({
@@ -198,8 +200,8 @@ describe("FunctionWorkbenchScene status wiring", () => {
         outputs: [],
       },
     });
-    // supported 的零参推导:后端省略 inputs 字段 → undefined。fix 前 patchActive 的
-    // `inferred.inputs ?` 守卫会漏过 undefined,active.inputs 卡在旧的 numbers。
+    // Supported zero-argument inference omits inputs, producing undefined. Before the fix, the
+    // `inferred.inputs ?` guard in patchActive skipped undefined and left active.inputs on old numbers.
     vi.mocked(inferFunctionSchema).mockResolvedValue({ supported: true });
     vi.mocked(executeFunction).mockResolvedValue({ output: { success: false }, stdout: "", stderr: "" });
 
@@ -219,9 +221,9 @@ describe("FunctionWorkbenchScene status wiring", () => {
     expect(runArg.event).toEqual({});
     expect(runArg.event).not.toHaveProperty("numbers");
 
-    // 运行完再点「按参数重新生成」:它按 active.inputs 造样例。只有 derive 把
-    // active.inputs 真落成 [] 时才会得到 "{}";否则 active.inputs 卡在旧的 numbers,
-    // 旧参 {"numbers":0} 在这里复活。这一条锁的是 patchActive 那处修复。
+    // After running, regenerating from parameters uses active.inputs. It produces "{}" only when
+    // derive actually sets active.inputs to []; otherwise old numbers restore {"numbers":0}. This
+    // assertion protects the patchActive fix.
     fireEvent.click(screen.getByText("executionFactory.workbenchEventFill"));
 
     await waitFor(() => {
@@ -231,9 +233,10 @@ describe("FunctionWorkbenchScene status wiring", () => {
   });
 
   /**
-   * 回归:沙箱基础镜像不预装任何三方库,依赖必须跟着这次执行一起发过去。旧实现只发
-   * code/event/timeout,于是声明了三方包的函数在调试里必 ModuleNotFoundError,而保存
-   * 发布后 Agent 那条路径是从库里读依赖装的、反而跑得通,用户只会以为自己代码写错了。
+   * Regression: the sandbox base image includes no third-party libraries, so dependencies must be
+   * sent with this execution. The old implementation sent only code/event/timeout, making debug
+   * runs for functions with declared packages fail with ModuleNotFoundError while the published
+   * Agent path installed stored dependencies and worked, misleading users into blaming their code.
    */
   it("sends the declared pip dependencies along with the debug run", async () => {
     listTools.mockResolvedValue({

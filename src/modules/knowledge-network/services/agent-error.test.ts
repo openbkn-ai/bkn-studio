@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import { normalizeAgentError, parseModelFactoryEnvelope } from "@/modules/knowledge-network/services/agent-error";
 
-/** 模型工厂忙态返回的真实 envelope（description/detail 是 JSON 字符串套 JSON）。见 bkn-foundry#620。 */
+/** Real model-factory busy envelope where description/detail are JSON strings wrapping JSON; see bkn-foundry#620. */
 const busyEnvelope = {
   code: "ModelFactory.ModelController.Model.Error",
   description: '{"code":50508,"message":"System is too busy now. Please try again later.","data":null}',
@@ -20,8 +20,8 @@ const busyEnvelope = {
 };
 
 /**
- * 同一个网关的另一种壳：description 里裹的是上游透传的 OpenAI 风格 error，
- * 且 code 是字符串。外层 code 恒为分类串，不能被当成错误码。
+ * Another envelope from the same gateway: description wraps a forwarded OpenAI-style error and
+ * code is a string. The outer code is always a classification string and must not be treated as an error code.
  */
 const upstreamBusyEnvelope = {
   code: "ModelFactory.ModelController.Model.Error",
@@ -49,7 +49,7 @@ describe("parseModelFactoryEnvelope", () => {
   });
 
   it("不把外层的分类串当错误码", () => {
-    // description 解不开时也只能回落到外层，但那层没有 message，不该冒出 ModelFactory.* 当码。
+    // If description cannot be parsed, fall back only to the outer layer, which has no message and must not expose ModelFactory.* as a code.
     expect(parseModelFactoryEnvelope({ code: "ModelFactory.ModelController.Model.Error", description: "not json" })).toBeNull();
   });
 
@@ -73,7 +73,7 @@ describe("normalizeAgentError", () => {
 
     expect(normalized.message).toBe("模型服务繁忙，请稍后重试（50508）");
     expect(normalized.retryable).toBe(true);
-    // 用户看到的一句话里不能出现 zod 报错或原始 envelope。
+    // The user-facing sentence must not expose Zod errors or the raw envelope.
     expect(normalized.message).not.toContain("Type validation failed");
     expect(normalized.message).not.toContain("invalid_union");
     expect(normalized.detail).toContain("ModelFactory.ModelController.Model.Error");
@@ -124,8 +124,8 @@ describe("normalizeAgentError", () => {
   });
 
   it("网关按契约返错后只剩一句 message 时，仍认得出忙态并给重试", () => {
-    // bkn-foundry#624 之后流式 HTTP 仍是 200，错误走 SSE error 帧，而 AI SDK 的
-    // chat 模型只透 error.message —— 业务码被丢掉，只能按文本认。
+    // Since bkn-foundry#624, streaming HTTP remains 200 and errors use SSE error frames. AI SDK
+    // chat models expose only error.message, losing business codes, so classification must use text.
     const normalized = normalizeAgentError(
       "Service is too busy. We advise users to temporarily switch to alternative LLM API service providers.",
     );
@@ -145,8 +145,8 @@ describe("normalizeAgentError", () => {
   });
 
   it("解析报错被重新包装成普通 Error 后，仍然不把 zod 原文贴给用户", () => {
-    // isInstance 认不出来了，只剩文本可认——兜底分支不接住的话，气泡里又会出现
-    // `Type validation failed: Value: {…`，正是本模块要消灭的那一幕。
+    // isInstance no longer recognizes it, leaving only text matching. Without this fallback, the
+    // bubble again exposes `Type validation failed: Value: {...`, which this module must eliminate.
     const rewrapped = new Error(
       'Type validation failed: Value: {"code":"ModelFactory.ModelController.Model.Error"}. Error message: [{"code":"invalid_union"}]',
     );
@@ -159,7 +159,7 @@ describe("normalizeAgentError", () => {
   });
 
   it("普通 SQL 报错不会被忙态规则误伤", () => {
-    // tool-error 走同一个归一化，`capacity` 这类宽词收紧前会把它翻成「模型服务繁忙」。
+    // tool-error uses the same normalization; before narrowing broad terms such as `capacity`, it was translated as model service busy.
     const normalized = normalizeAgentError(new Error('column "capacity" does not exist'));
 
     expect(normalized.message).toBe('column "capacity" does not exist');

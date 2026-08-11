@@ -35,7 +35,7 @@ const TEXT_EXTENSIONS = new Set([
   ".csv",
 ]);
 
-/** 后缀（含点）；没有后缀返回空串。Dockerfile 这类无后缀文件走文件名匹配。 */
+/** File suffix including the dot; returns an empty string when absent. Extensionless files such as Dockerfile match by filename. */
 function getExtension(relPath: string): string {
   const lowerPath = relPath.toLowerCase();
   return lowerPath.includes(".") ? lowerPath.slice(lowerPath.lastIndexOf(".")) : "";
@@ -59,7 +59,7 @@ export function isTextPreviewableSkillFile(mimeType?: string, relPath?: string):
   return TEXT_EXTENSIONS.has(getExtension(relPath));
 }
 
-/** 后缀 → Monaco 语言 id。这些语法都在本地打包的 monaco-editor 里，不额外拉包。 */
+/** Suffix to Monaco language ID. All of these grammars come from the locally bundled monaco-editor. */
 const LANGUAGE_BY_EXTENSION: Record<string, SkillFileLanguage> = {
   ".md": "markdown",
   ".markdown": "markdown",
@@ -99,7 +99,7 @@ export type SkillFileLanguage =
   | "xml"
   | "yaml";
 
-/** 高亮按后缀判，认不出来的按纯文本渲染——猜错语言比不高亮更难读。 */
+/** Choose highlighting by suffix; render unknown types as plain text because wrong highlighting is harder to read than none. */
 export function resolveSkillFileLanguage(relPath?: string): SkillFileLanguage {
   if (!relPath) {
     return "plaintext";

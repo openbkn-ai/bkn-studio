@@ -22,22 +22,22 @@ import styles from "./skill-file-preview.module.css";
 type SkillFilePreviewMode = "rendered" | "source";
 
 type SkillFilePreviewProps = {
-  /** 二进制文件的下载直链；给了就渲染下载态。 */
+  /** Direct download URL for a binary file; when present, render the download state. */
   downloadUrl?: string;
   errorMessage?: string | null;
   loading?: boolean;
   relPath?: string;
-  /** 文本正文。undefined = 还没选文件 / 拿不到正文。 */
+  /** Text body. undefined means no file is selected or the body is unavailable. */
   text?: string;
 };
 
 /**
- * 技能包单个文件的预览面板（标题栏 + 正文）。以前是一块裸 `<pre>`：没有语法高亮、
- * 没有行号，Markdown 也只能看源码，跟函数工作台那侧的编辑器完全不是一套东西。
+ * Preview panel for a skill-package file with header and body. It previously used a bare `<pre>`
+ * with no syntax highlighting or line numbers, and Markdown could only show source unlike the function-workbench editor.
  *
- * 现在按文件类型分流：Markdown 默认渲染、可切原文；其余文本按后缀高亮（复用全站
- * 同一个 Monaco 只读编辑器）；二进制退回下载。模式开关只在 Markdown 出现——其它
- * 类型没有第二种看法，摆个只有一个选项的开关是噪音。
+ * Views now branch by file type: Markdown renders by default with source available, other text
+ * uses extension-based highlighting through the shared read-only Monaco editor, and binaries use
+ * downloads. Show the mode toggle only for Markdown because a one-option toggle for other types is noise.
  */
 export function SkillFilePreview({
   downloadUrl,
@@ -50,7 +50,7 @@ export function SkillFilePreview({
   const isMarkdown = isMarkdownSkillFile(relPath);
   const [mode, setMode] = useState<SkillFilePreviewMode>("rendered");
 
-  // 换文件时回到默认视图：在 A.md 里切到「原文」，不该让接着点开的 B.md 也是原文。
+  // Reset to the default view when switching files so viewing A.md source does not force B.md source too.
   useEffect(() => {
     setMode("rendered");
   }, [relPath]);

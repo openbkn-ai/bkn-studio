@@ -82,7 +82,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   const [authorizeRecord, setAuthorizeRecord] = useState<LlmModel | null>(null);
   const userRoles = runtimeConfig.currentUser.roles;
   const userPermissions = runtimeConfig.currentUser.permissions;
-  // 真实管理员判定复用启动时 /me/permissions.is_admin(已回填 currentUser),不再二次拉取。
+  // Real administrator detection reuses /me/permissions.is_admin hydrated into currentUser at startup; do not fetch again.
   const effectiveAdmin =
     isAdmin || runtimeConfig.currentUser.isAdmin || hasModelResourcesAdminRole(userRoles);
   const canManageLargeModel = hasPermissions({
@@ -210,7 +210,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     }
   };
 
-  // 真实管理员：prop / roles(含 super_admin) / currentUser.isAdmin，或该项 operations 含 modify。
+  // Real administrator: prop, roles including super_admin, currentUser.isAdmin, or an item operation set containing modify.
   const canModify = (record: LlmModel) =>
     effectiveAdmin || Boolean(record.operations?.includes("modify"));
   const canSetDefault = (record: LlmModel) => canModify(record) && !record.default;

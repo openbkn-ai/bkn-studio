@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/* 立即体验 · Agent 对话。复用 ExperienceScene .page 上级联的 --accent/--txt/--line 等变量。 */
+/* Try now - Agent chat. Reuses --accent, --txt, --line, and other variables cascaded from ExperienceScene .page. */
 
 .root {
   flex: 1 1 auto;
@@ -15,7 +15,7 @@
   scrollbar-gutter: stable;
 }
 
-/* 智能问答工作台头部 */
+/* Intelligent Q&A workspace header */
 .agentHeader {
   position: sticky;
   top: 0;
@@ -84,7 +84,7 @@
   cursor: not-allowed;
 }
 
-/* 对比报告 Modal（portal 外拿不到 .page 的级联变量，这里本地补齐） */
+/* Comparison report modal (portals cannot access .page's cascaded variables, so define them locally). */
 .rptRoot {
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --accent: #2e68ff;
@@ -97,7 +97,7 @@
   font-size: 13px;
   color: var(--txt);
 }
-/* 报告顶部操作（复制 / 导出） */
+/* Report header actions (copy / export) */
 .rptActions {
   display: flex;
   justify-content: flex-end;
@@ -143,7 +143,7 @@
   border-collapse: collapse;
   font-size: 13px;
   margin-bottom: 18px;
-  /* 固定布局：总览表与各轮指标表列宽一致，上下对齐 */
+  /* Fixed layout: overview and per-round metric tables use aligned column widths. */
   table-layout: fixed;
 }
 .rptTable th,
@@ -196,7 +196,7 @@
   background: rgba(214, 58, 58, 0.09);
 }
 
-/* 逐轮分节 */
+/* Per-round sections */
 .rptRound {
   margin-top: 20px;
 }
@@ -218,7 +218,7 @@
   display: none;
 }
 
-/* 回答对比（两列，各自滚动） */
+/* Answer comparison (two independently scrolling columns) */
 .rptAnsGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -284,7 +284,7 @@
   color: var(--faint);
 }
 
-/* 会话工作区 */
+/* Conversation workspace */
 .soloStage,
 .compareStage {
   padding: 0 0 104px;
@@ -300,7 +300,7 @@
 .comparePanel {
 }
 
-/* 分屏：两个会话面板横排 */
+/* Split view: two conversation panels side by side */
 .panes {
   display: flex;
   align-items: flex-start;
@@ -309,7 +309,7 @@
   justify-content: center;
 }
 .pane {
-  /* 基于 0 等分：宽度与内容完全无关，两侧永远 50/50 */
+  /* Equal zero-basis tracks keep both sides at 50/50 regardless of content. */
   flex: 1 1 0;
   min-width: 0;
 }
@@ -319,7 +319,7 @@
 .panesSingle .pane {
   flex: 1 1 auto;
 }
-/* 高亮面板的身份标签：渐变实心 */
+/* Identity badge for the highlighted panel: solid gradient */
 .paneTitleHl {
   background: linear-gradient(135deg, #2762ff, #7b5cff);
   border-color: transparent;
@@ -327,12 +327,12 @@
   box-shadow: 0 3px 10px rgba(91, 90, 255, 0.35);
 }
 
-/* 单会话面板根（ChatPane） */
+/* Single conversation panel root (ChatPane) */
 .paneRoot {
   min-width: 0;
 }
 
-/* 面板身份标签（对比模式面板头） */
+/* Panel identity badge (comparison-mode panel header) */
 .paneTitle {
   flex: 0 0 auto;
   font-size: 11.5px;
@@ -345,13 +345,13 @@
   white-space: nowrap;
 }
 
-/* 面板工具勾选（硬限定传给模型的工具集） */
+/* Panel tool selection (strictly limits the tool set passed to the model) */
 .toolSelect {
   min-width: 118px;
   max-width: 200px;
 }
 
-/* 面板下拉菜单：全局主题的深藏青主色派生出的选中底色发灰难看，这里覆盖成浅蓝 */
+/* Panel dropdown: override the global navy-derived gray selection background with light blue. */
 .paneMenu :global(.ant-select-item-option-selected:not(.ant-select-item-option-disabled)) {
   background-color: rgba(46, 104, 255, 0.08);
   color: var(--txt);
@@ -361,7 +361,7 @@
   color: var(--accent);
 }
 
-/* 对比模式输入区：发送目标 + 对比报告 */
+/* Comparison-mode input area: send targets and comparison report */
 .toolOption {
   display: flex;
   min-width: 0;
@@ -416,7 +416,7 @@
 .targetSeg {
   flex: 0 0 auto;
 }
-/* 选中项默认白底不明显 → 主色实心 + 白字（thumb 是切换动画的滑块，同色） */
+/* The default white selected state is too subtle; use a solid primary color with white text. The switch thumb uses the same color. */
 .targetSeg :global(.ant-segmented-item-selected) {
   background: var(--accent);
   color: #fff;
@@ -429,7 +429,7 @@
   background: var(--accent);
 }
 
-/* 分屏半宽面板头：更紧凑，尽量一行放下 */
+/* Half-width split-panel header: compact enough to fit on one line where possible */
 .barCompact {
   gap: 6px 8px;
   padding: 8px 14px;
@@ -439,7 +439,7 @@
   max-width: 170px;
 }
 
-/* 顶部工具条 */
+/* Top toolbar */
 .bar {
   flex: 0 0 auto;
   display: flex;
@@ -502,7 +502,7 @@
   cursor: not-allowed;
 }
 
-/* 系统提示词编辑 */
+/* System prompt editing */
 .promptEdit {
   flex: 0 0 auto;
   padding: 12px 22px 14px;
@@ -528,7 +528,7 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(46, 104, 255, 0.12);
 }
-/* 提示词编辑框（独立类：也用于分屏「设置」合并面板，不依赖 .promptEdit 包裹） */
+/* Prompt editor (standalone class also used by the split-view settings panel; does not require .promptEdit). */
 .promptTa {
   display: block;
   width: 100%;
@@ -549,7 +549,7 @@
   box-shadow: 0 0 0 3px rgba(46, 104, 255, 0.12);
 }
 
-/* 分屏「设置」合并面板：小节标题 + 分隔线 */
+/* Combined split-view settings panel: section heading and divider */
 .setSecHead {
   display: flex;
   align-items: center;
@@ -672,7 +672,7 @@
   color: var(--faint);
 }
 
-/* 消息滚动区 */
+/* Scrollable message area */
 .scroll {
   padding: 18px 0 26px;
 }
@@ -685,7 +685,7 @@
   gap: 22px;
 }
 
-/* 空态 */
+/* Empty state */
 .intro {
   max-width: 960px;
   margin: 0 auto;
@@ -759,7 +759,7 @@
   transform: translateX(2px);
 }
 
-/* 消息气泡 */
+/* Message bubbles */
 .msg {
   display: flex;
   gap: 13px;
@@ -802,7 +802,7 @@
   word-break: break-word;
 }
 
-/* 工具调用卡片 */
+/* Tool invocation card */
 .calls {
   margin: 4px 0 8px;
   display: flex;
@@ -903,7 +903,7 @@
   overflow: auto;
 }
 
-/* 打字指示 */
+/* Typing indicator */
 .typing {
   display: inline-flex;
   gap: 4px;
@@ -933,7 +933,7 @@
   }
 }
 
-/* 输入区 */
+/* Input area */
 .composer {
   position: sticky;
   bottom: 0;
@@ -1016,7 +1016,7 @@
   }
 }
 
-/* 思考过程（reasoning_content） */
+/* Reasoning process (reasoning_content) */
 .reasoning {
   margin: 2px 0 8px;
   border-left: 2px solid var(--line);
@@ -1046,7 +1046,7 @@
   max-height: 260px;
   overflow: auto;
 }
-/* 思考中：头部变蓝 + 闪烁点，收起时也能看到在跑 */
+/* While reasoning: blue header and blinking dot remain visible when collapsed. */
 .reasoningLive {
   color: var(--accent);
 }
@@ -1070,7 +1070,7 @@
   animation-delay: 0.4s;
 }
 
-/* 执行错误块：一句人话 + 可展开原文，替代过去把报错原文拼进正文的做法 */
+/* Execution error block: a plain-language summary plus expandable raw text, replacing the former inline raw error. */
 .errs {
   display: flex;
   flex-direction: column;
@@ -1124,7 +1124,7 @@
   overflow: auto;
 }
 
-/* Markdown 答复渲染 */
+/* Markdown response rendering */
 .md {
   font-size: 13.5px;
   line-height: 1.72;
@@ -1225,7 +1225,7 @@
   margin: 14px 0;
 }
 
-/* 系统提示词 编辑/完整 切换 */
+/* System prompt edit/full toggle */
 .promptTabs {
   display: flex;
   align-items: center;
@@ -1329,7 +1329,7 @@
   }
 }
 
-/* 编辑面板「确认」按钮（保存 + 收起） */
+/* Edit-panel confirmation button (save and collapse) */
 .confirmBtn {
   flex: 0 0 auto;
   min-width: 88px;
@@ -1365,7 +1365,7 @@
   background: rgba(46, 104, 255, 0.04);
 }
 
-/* 会话累计 token + 总时长 chip（顶部右侧） */
+/* Conversation token total and duration chip (top right) */
 .statChip {
   margin-left: auto;
   font-family: var(--mono);
@@ -1377,7 +1377,7 @@
   white-space: nowrap;
 }
 
-/* 单条消息的 token / 时长脚注 */
+/* Per-message token and duration footnote */
 .msgMeta {
   margin-top: 6px;
   font-family: var(--mono);

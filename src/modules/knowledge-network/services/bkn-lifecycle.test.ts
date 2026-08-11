@@ -117,13 +117,14 @@ describe("createBknLifecycle", () => {
     await expect(lifecycle.beginTurn("question")).resolves.toBeNull();
     await expect(lifecycle.beginTurn("another question")).resolves.toBeNull();
     expect(lifecycle.unsupported()).toBe(true);
-    // 每轮都重试：不支持是部署态，不该在会话里被latch住。
+    // Retry each round: unsupported is deployment state and must not latch for the session.
     expect(calls).toHaveLength(2);
   });
 
   /**
-   * 页面开着的时候后端升级/重启，bkn_start_interaction 就补上了。之前第一次失败即永久降级，
-   * 该标签页余下所有业务调用都不带 bkn_context，每一条都稳定 conversation_required。
+   * The backend can upgrade or restart while a page remains open and add bkn_start_interaction.
+   * Previously the first failure permanently downgraded the tab, leaving every later business call
+   * without bkn_context and consistently producing conversation_required.
    */
   it("recovers on the next turn once the deployment gains the lifecycle tools", async () => {
     let attempts = 0;
@@ -193,9 +194,9 @@ describe("createBknLifecycle", () => {
   });
 
   /**
-   * 上一轮没走完（刷新、关标签页、收尾请求自己失败）会在 Core 上留下一条 active
-   * interaction，而一条 conversation 只允许一个。后端把卡住的那条 id 回带在错误里，
-   * 客户端照着 required_action 回收即可，不必让用户清空对话。
+   * An unfinished previous round caused by refresh, tab close, or failed cleanup leaves an active
+   * interaction in Core, while a conversation permits only one. The backend returns the stuck ID
+   * in its error, so the client can recover it through required_action without clearing the chat.
    */
   it("回收上一轮残留的活跃交互，然后在同一条会话上继续", async () => {
     let starts = 0;
@@ -235,18 +236,19 @@ describe("createBknLifecycle", () => {
       { name: "bkn_start_interaction", args: { question: "question", conversation_id: "conv_live" } },
       {
         name: "bkn_finish_interaction",
-        // cancelled 而非 completed：那一轮确实没答完，不该在 Trace 上记成正常结束。
+        // Use cancelled rather than completed because that round did not answer fully and must not appear normal in Trace.
         args: { interaction_id: "int_stuck", outcome: "cancelled", reason: "reclaimed by client: previous turn did not finish" },
       },
       { name: "bkn_start_interaction", args: { question: "question", conversation_id: "conv_live" } },
     ]);
-    // 会话没被丢掉，用户的对话历史在 Trace 上仍然连着。
+    // The session remains, so the user's conversation history stays connected in Trace.
     expect(store.clear).not.toHaveBeenCalled();
   });
 
   it("本实例已经开过交互后不再回收，避免掐掉另一个标签页正在跑的那一轮", async () => {
-    // conversation 键只按 kn + 面板取，同一个网络在另一个标签页里开着时，那边正在跑的
-    // 交互从这里看跟"残留"完全一样。本实例成功开过之后再撞上，更可能是并发而不是残留。
+    // Conversation keys use only knowledge network and panel. An interaction running in another
+    // tab looks exactly like residue here; after this instance has opened successfully, a collision
+    // is more likely concurrent activity than residue.
     let starts = 0;
     const { session, calls } = fakeSession({
       bkn_start_interaction: () => {
@@ -282,7 +284,7 @@ describe("createBknLifecycle", () => {
     await first?.complete("答复");
     await expect(lifecycle.beginTurn("第二轮")).resolves.toMatchObject({ conversationId: "conv_3" });
 
-    // 没有替别人 finish：只有本轮自己那次 complete。
+    // Do not finish someone else's interaction; complete only this round's own interaction.
     expect(calls.filter((call) => call.name === "bkn_finish_interaction").map((call) => call.args.interaction_id)).toEqual([
       "int_1",
     ]);

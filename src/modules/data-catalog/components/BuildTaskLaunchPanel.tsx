@@ -37,7 +37,7 @@ import type { SmallModel } from "@/modules/model-resources/types/small-model";
 
 import formStyles from "./BuildTaskFormPanel.module.css";
 
-// 流式构建后端能力仍保留，待重新开放时将此开关改为 true 即可恢复入口。
+// Streaming-build backend support remains available; set this flag to true to restore the entry point when reopening it.
 export const STREAMING_BUILD_ENTRY_ENABLED = false;
 
 export type BuildTaskLaunchPanelProps = {
@@ -187,7 +187,7 @@ export function BuildTaskLaunchPanel({
       try {
         await resumeBuildTask(task.id);
       } catch {
-        // create 后可能已自动 running
+        // Creation may already have transitioned the task to running.
       }
       message.success(t("dataCatalog.build.created", { id: task.id }));
       onStarted(task);

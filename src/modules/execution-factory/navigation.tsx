@@ -13,9 +13,9 @@ import {
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 
-// 各项均声明所需权限：无权限的用户不该在侧边栏看到点进去只有一张空页的入口。
-// 执行单元管理页同时承载算子与工具箱，任一可见即放行。
-// 沙箱运行时限超管，与后端 #339 的门禁同口径。
+// Every item declares required permissions so unauthorized users do not see sidebar entries that open to empty pages.
+// Execution Unit Management hosts both operators and toolboxes, so either permission allows entry.
+// Sandbox runtime is limited to super administrators, matching backend #339 guards.
 export const executionFactoryNavigation: ConsoleNavContribution = {
   parentKey: "execution-factory",
   items: [

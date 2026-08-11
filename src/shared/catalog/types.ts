@@ -75,7 +75,7 @@ export type CatalogListQuery = {
   keyword: string;
   page: number;
   pageSize: number;
-  /** 默认 physical；数据目录需同时展示逻辑 catalog 时传 all */
+  /** Defaults to physical; data catalogs pass all when logical catalogs must also be shown. */
   type?: "all" | "logical" | "physical";
 };
 

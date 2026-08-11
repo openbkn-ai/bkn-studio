@@ -102,7 +102,7 @@ describe("sendRequest", () => {
       bknContext,
     );
 
-    // 少了 bkn_context 会被 Context Loader 判 conversation_required，下游调用次数为 0。
+    // Without bkn_context, Context Loader returns conversation_required and makes zero downstream calls.
     expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: bknContext });
   });
 
@@ -282,7 +282,7 @@ describe("listMcpTools", () => {
                   title: "SQL 查询",
                   _meta: { "openbkn.ai/group": "query", "openbkn.ai/group_title": "实例查询", "openbkn.ai/order": 240 },
                 },
-                // 老服务端形态：一个展示字段都没有，解析后必须是 undefined 而不是空串。
+                // Legacy server shape has no display field, so parsing must yield undefined rather than an empty string.
                 { name: "legacy_tool" },
               ],
             },

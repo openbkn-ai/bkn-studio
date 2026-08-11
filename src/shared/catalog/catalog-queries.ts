@@ -7,14 +7,14 @@
 
 import type { CatalogListQuery } from "@/shared/catalog/types";
 
-/** 数据目录/索引任务等需要 physical + logical catalog 的场景 */
+/** Views such as data catalogs and index tasks that need physical and logical catalogs. */
 export function catalogListAllQuery(
   overrides: Partial<CatalogListQuery> = {},
 ): CatalogListQuery {
   return { keyword: "", page: 1, pageSize: 200, type: "all", ...overrides };
 }
 
-/** 扫描/连接管理等仅需物理连接的场景 */
+/** Views such as discovery and connection management that need only physical connections. */
 export function catalogListPhysicalQuery(
   overrides: Partial<CatalogListQuery> = {},
 ): CatalogListQuery {

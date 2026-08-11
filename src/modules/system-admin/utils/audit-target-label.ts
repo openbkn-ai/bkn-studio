@@ -31,7 +31,7 @@ function stringValue(value: unknown): string {
 
 type TargetResolver = (resource: string, id: string) => string | undefined;
 
-/** 仅在 targetName / 目录映射不足时才解析 detail JSON。 */
+/** Parse detail JSON only when targetName and directory mapping are insufficient. */
 export function resolveAuditTargetLabel(
   log: AuditLog,
   resolveTarget: TargetResolver,

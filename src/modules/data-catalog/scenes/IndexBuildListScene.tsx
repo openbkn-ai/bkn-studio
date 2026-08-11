@@ -124,7 +124,7 @@ export function IndexBuildListScene() {
     requiredPermissions: "resource:task_manage",
   });
 
-  // 服务端分页 + 排序 + 状态过滤的查询参数。
+  // Query parameters for server pagination, sorting, and status filtering.
   const taskQuery = useMemo<BuildTaskPageQuery>(
     () => ({
       page,
@@ -167,14 +167,14 @@ export function IndexBuildListScene() {
     }
   }, [taskQuery]);
 
-  // 轮询只刷新当前页任务，避免随着资源量增加而放大请求量。
+  // Poll only tasks on the current page to prevent request volume growing with resource count.
   const refreshTasksSilently = useCallback(async () => {
     try {
       const result = await listBuildTaskPage(taskQuery);
       setTasks(result.items);
       setTotal(result.total);
     } catch {
-      // 轮询失败保留旧数据,等下一轮
+      // Retain existing data when polling fails and wait for the next cycle.
     }
   }, [taskQuery]);
 
@@ -332,7 +332,7 @@ export function IndexBuildListScene() {
     };
   }, [resourceColumnWidth, taskColumnWidth]);
 
-  // 列头排序:有方向 → order_by=列key + order;清除 → 回 default(不显箭头)。
+  // Header sorting: a direction sends order_by=column key plus order; clearing returns to default without an arrow.
   const handleTableChange: TableProps<BuildTask>["onChange"] = (
     _pagination,
     _filters,

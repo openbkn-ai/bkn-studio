@@ -44,7 +44,7 @@ export function ToolboxFormScene({
   const [loading, setLoading] = useState(mode === "edit");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  /** 编辑态类型不可改，但保存时必须回传，先在加载时记下来。 */
+  /** Type cannot change during editing but must be sent on save, so capture it on load. */
   const loadedMetadataTypeRef = useRef<ToolboxMetadataType | undefined>(undefined);
   const metadataType = Form.useWatch("metadataType", form) as
     | ToolboxMetadataType
@@ -94,7 +94,7 @@ export function ToolboxFormScene({
       ? t("executionFactory.toolboxCreateDescription")
       : t("executionFactory.toolboxEditDescription");
 
-  /** 工具集列表拆成 API / 函数两个视图，回列表时要落回本工具箱所属的那个。 */
+  /** Toolbox lists split into API and function views; return to the one containing this toolbox. */
   const buildListUrl = (metadataType?: ToolboxMetadataType) => {
     const resolved = metadataType ?? loadedMetadataTypeRef.current;
     const view = resolved === "function" ? "function" : "openapi";
@@ -139,7 +139,7 @@ export function ToolboxFormScene({
         await updateToolbox({
           ...values,
           boxId,
-          // 编辑态不渲染类型字段，validateFields 取不到；不带这个值后端会拒 400。
+          // Edit mode does not render the type field, so validateFields cannot read it; the backend rejects missing type with 400.
           metadataType: values.metadataType ?? loadedMetadataTypeRef.current,
         });
       }

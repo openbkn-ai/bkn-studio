@@ -43,7 +43,7 @@ type ExecutionUnitCardProps = {
   onClick?: () => void;
 };
 
-/** 工具集内部还分 OpenAPI 与代码函数，用同一个图标看不出差别。 */
+/** Toolboxes also distinguish OpenAPI and code functions; one icon cannot show that difference. */
 function getTabIcon(activeTab: ExecutionUnitTab, metadataType?: string) {
   switch (activeTab) {
     case "mcp":
@@ -59,7 +59,7 @@ function getTabIcon(activeTab: ExecutionUnitTab, metadataType?: string) {
 
 /**
  * `offline` falls through to the neutral style on purpose: the UI shows only
- * 已发布 / 未发布, so a taken-down unit must look the same as a never-published one.
+ * Published / Unpublished, so a taken-down unit must look the same as one that was never published.
  */
 function getStatusStyle(status?: string): CSSProperties {
   if (status === "published") {
@@ -121,12 +121,12 @@ function resolveCardCategoryLabel(
 }
 
 /**
- * 副标题行最左的徽标位，每种单元填自己最有辨识度的那个事实：工具集/算子是
- * 实现形态，MCP 是连接模式。之前只有前两者有内容，MCP 的整行就只剩一个分类，
- * 而分类默认值到处都是 other_category，于是每张卡都印着同一个「其他」。
+ * The leftmost subtitle badge shows each unit's most distinctive fact: implementation form for
+ * toolboxes/operators and connection mode for MCP. Previously MCP showed only its category, whose
+ * common other_category default printed the same Other label on every card.
  *
- * SKILL 没有可放的：后端返回的 version 是一串 UUID 而不是语义版本号，印出来
- * 只是噪音；分类同样默认「未分类」。宁可整行不出现，也不占位说废话。
+ * SKILL has no useful badge: backend version is a UUID rather than a semantic version, and category
+ * defaults to Uncategorized. Omit the row rather than displaying noise.
  */
 function resolveCardBadge(
   activeTab: ExecutionUnitTab,
@@ -170,7 +170,7 @@ export function ExecutionUnitCard({
       : `executionFactory.statuses.${item.status as "published" | "unpublish" | "offline" | "editing"}`;
   const categoryLabel = resolveCardCategoryLabel(activeTab, item, t);
   const isFunction = item.metadataType === "function";
-  // other_category 是所有创建入口的默认值，几乎每张卡都是它，印出来等于没说。
+  // other_category is the default for every creation entry, so showing it says almost nothing.
   const showCategory =
     Boolean(categoryLabel) && categoryLabel !== "-" && item.category !== "other_category";
   const showToolCount = activeTab === "toolbox";

@@ -249,9 +249,9 @@ function mapResource(item: BackendResource): CatalogResource {
     description: item.description ?? "",
     schema: (item.schema_definition ?? []).map(mapSchemaField),
     indexConfig: mapIndexConfigFromBackend(item.index_config),
-    // 列表接口不返回 schema_definition,改用后端标量 column_count;详情接口回退到 schema 长度
+    // List endpoints omit schema_definition, so use backend column_count; detail endpoints fall back to schema length.
     columnCount: item.column_count ?? item.schema_definition?.length ?? 0,
-    // 顶层 row_count 后端常缺省,实际行数在 source_metadata.properties 里
+    // Backend often omits top-level row_count; actual rows are in source_metadata.properties.
     rowCount: item.row_count ?? item.source_metadata?.properties?.row_count ?? 0,
     schemaName: item.schema,
     updatedAt: item.update_time ?? 0,
@@ -552,7 +552,7 @@ export async function previewCatalogResource(
     return wait({ rows, total }, 260);
   }
 
-  // POST /resources/:id/data + X-HTTP-Method-Override: GET = 数据查询
+  // POST /resources/:id/data with X-HTTP-Method-Override: GET performs the data query.
   const response = await http.post<{
     entries?: Record<string, unknown>[];
     total_count?: number;
@@ -575,7 +575,7 @@ export async function previewCatalogResource(
   };
 }
 
-/* ---------------- 扫描(discover) ---------------- */
+/* ---------------- Discovery ---------------- */
 
 type BackendDiscoverTask = {
   create_time?: number;
@@ -613,7 +613,7 @@ export async function listCatalogDiscovers(
 
   return response.data.entries.map((item) => {
     const startedAt = item.start_time ?? item.create_time ?? 0;
-    // 后端枚举:pending/running/completed/failed
+    // Backend enum: pending, running, completed, failed.
     const status: CatalogDiscoverRecord["status"] =
       item.status === "running" || item.status === "pending"
         ? "running"

@@ -46,7 +46,7 @@ function formatPreviewValue(value: unknown) {
   }
 }
 
-/** 从单个 JSON Schema 属性生成可编辑示例值。 */
+/** Generates an editable example value from one JSON Schema property. */
 
 function ObjectTypeCard({
   ot,
@@ -63,15 +63,15 @@ function ObjectTypeCard({
   ot: KnObjectType;
   onFillField: (key: string, value: string) => void;
   onFillResource: (resourceId: string) => void;
-  /** 用该对象类型的真实样本行填充当前接口；仅在当前接口按对象类型取数时传入。 */
+  /** Fills the current endpoint with a real sample row for this object type; provided only when the endpoint queries by object type. */
   onFillTest?: (ot: KnObjectType) => Promise<void>;
   showObjectType: boolean;
   showResource: boolean;
   copy: (text: string, label?: string) => void;
   env: ContextLoaderEnv;
-  /** 401 自动刷新 token 用（OAuth 续期）。 */
+  /** Used to refresh tokens automatically on 401 through OAuth renewal. */
   auth?: McpAuth;
-  /** 面板级受管生命周期：样本行预览也是受管业务调用。 */
+  /** Panel-level managed lifecycle because sample-row preview is also a managed business call. */
   lifecycle: BknLifecycle;
 }) {
   const { t } = useTranslation();
@@ -80,7 +80,7 @@ function ObjectTypeCard({
   const res = ot.data_source ?? null;
   const props = ot.data_properties ?? [];
 
-  // 样本行预览（按需拉取 query_object_instance）
+  // Sample-row preview, loading query_object_instance on demand.
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[] | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -280,12 +280,12 @@ export function DataBrowserPanel({
   onFillField: (key: string, value: string) => void;
   onFillResource: (resourceId: string) => void;
   onFillConceptGroup: (groupId: string) => void;
-  /** 当前接口按对象类型取数时传入，使每张卡片可一键填充测试请求。 */
+  /** Provided when the endpoint queries by object type, letting each card fill a test request in one action. */
   onFillTest?: (ot: KnObjectType) => Promise<void>;
-  /** 当前接口为 query_instance_subgraph 时传入，使关系卡可一键填入子图路径。 */
+  /** Provided for query_instance_subgraph so relation cards can fill a subgraph path in one action. */
   onFillRelation?: (rel: KnRelationType) => void;
   copy: (text: string, label?: string) => void;
-  /** 401 自动刷新 token 用（OAuth 续期）。 */
+  /** Used to refresh tokens automatically on 401 through OAuth renewal. */
   auth?: McpAuth;
 }) {
   const { t } = useTranslation();
@@ -297,15 +297,15 @@ export function DataBrowserPanel({
   const loadedRef = useRef(false);
 
   /**
-   * 数据浏览器读的 get_kn_detail / query_object_instance 都是受管业务工具，
-   * 不带 bkn_context 会被 Context Loader 挡回。这里不是对话，会话按本次挂载算一条。
+   * Data Browser reads get_kn_detail and query_object_instance through managed business tools. They
+   * require bkn_context or Context Loader rejects them. This is not a chat, so one session lasts for this mount.
    */
   const lifecycle = useMemo(
     () => createBknLifecycle(lifecycleEnv(env.base, env.knId), auth, { conversationStore: memoryConversationStore() }),
     [env.base, env.knId, auth],
   );
 
-  // 懒加载：首次切到「数据浏览器」标签时拉一次 schema，之后常驻不再重拉，保留预览/筛选上下文。
+  // Lazy load schema on the first Data Browser tab visit, then keep it to preserve preview and filter context.
   useEffect(() => {
     if (!active || loadedRef.current) return;
     loadedRef.current = true;
@@ -532,4 +532,4 @@ export function DataBrowserPanel({
   );
 }
 
-/* ============================ 主场景 ============================ */
+/* ============================ Main scene ============================ */

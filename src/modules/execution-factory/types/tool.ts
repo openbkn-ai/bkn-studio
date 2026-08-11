@@ -54,8 +54,8 @@ export type ToolRecord = {
   status: ToolStatus;
   metadataType?: ToolMetadataType;
   /**
-   * 列表接口就带 metadata.api_spec，所以出入参在列表态即可用，不必逐个拉详情。
-   * 后端没给 metadata 时为 undefined——此时列表不画出入参标签，不猜。
+   * List endpoints include metadata.api_spec, so input/output is available in list state without
+   * loading each detail. Missing metadata is undefined; do not render labels or guess.
    */
   ioSpec?: ToolIoSpec;
   useRule?: string;

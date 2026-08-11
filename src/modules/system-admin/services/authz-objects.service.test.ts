@@ -21,12 +21,12 @@ vi.mock("@/framework/runtime/config", () => ({
 import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
 import type { ObjectGrant } from "@/modules/system-admin/types/authz";
 
-/** resource 型对象走 vega 旧批量取名接口(逗号拼 id 进 path)。 */
+/** Resource objects use Vega's legacy batch name-resolution endpoint with comma-separated IDs in the path. */
 function resourceGrant(id: string): ObjectGrant {
   return { accessorId: "u1", objId: id, objName: id, objType: "resource", operations: ["view"] };
 }
 
-/** vega URL 尾段解析出本批请求的 id 列表。 */
+/** Parses the ID list for this batch from the final Vega URL segment. */
 function idsInLastCalls(): string[][] {
   return getMock.mock.calls.map((call) => {
     const tail = String(call[0]).split("/").pop() ?? "";
@@ -50,12 +50,12 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
     const grants = Array.from({ length: 120 }, (_, index) => resourceGrant(`storm-${index}`));
     const result = await resolveGrantNames(grants);
 
-    // ceil(120 / 50) = 3 批;修复前是 1(整批)+ 120(逐个)= 121。
+    // ceil(120 / 50) = three batches; before the fix it was one whole batch plus 120 individual calls = 121.
     expect(getMock).toHaveBeenCalledTimes(3);
     for (const batch of idsInLastCalls()) {
       expect(batch.length).toBeLessThanOrEqual(50);
     }
-    // 解析不到 → 名称保持 id 兜底。
+    // When resolution fails, retain the ID as name fallback.
     expect(result.every((grant) => grant.objName === grant.objId)).toBe(true);
   });
 
@@ -112,7 +112,7 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
   });
 
   it("部分返回:缺失 id 退回 id 兜底,不牵连其余(按 entry.id 对齐)", async () => {
-    // 后端 ignore_missing 下只回查到的;这里模拟第 2 个已删被略过。
+    // With backend ignore_missing, return only found entries; simulate the second one being deleted and omitted.
     getMock.mockImplementation((url: string) => {
       const ids = String(url).split("/").pop()!.split(",").map(decodeURIComponent);
       const found = ids.filter((id) => id !== "part-gone");
@@ -143,7 +143,7 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
 
     const again = await resolveGrantNames(grants);
 
-    // 第二次全部命中缓存,零新请求。
+    // The second run hits cache completely and makes no new requests.
     expect(getMock.mock.calls.length).toBe(afterFirst);
     expect(again.map((grant) => grant.objName)).toEqual(["c-cache-1", "c-cache-2"]);
   });

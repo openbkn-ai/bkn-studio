@@ -48,7 +48,7 @@ function jsonDetail(value?: string) {
   try {
     content = JSON.stringify(JSON.parse(value), null, 2);
   } catch {
-    // 服务端兼容返回非 JSON 的历史数据。
+    // The server supports returning legacy data that is not JSON.
   }
   return <details className={styles.rawDetail}>
     <summary>JSON</summary>

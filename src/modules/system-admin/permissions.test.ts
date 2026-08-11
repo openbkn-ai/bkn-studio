@@ -14,8 +14,8 @@ import { authzPoints, systemAdminPermissions } from "@/modules/system-admin/perm
 import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
 
 /**
- * 三员角色在 bkn-safe 种子里的授权（grants.json，bkn-foundry PR #474 之后）。
- * 用种子的真实形态而非臆造数据，前端的显隐结论才等于线上结论。
+ * Grants for the three administrator roles in bkn-safe seed data (grants.json after bkn-foundry PR #474).
+ * Use the real seed shape rather than invented data so frontend visibility matches production behavior.
  */
 type SeedGrant = { operations: string[]; resource: { id: string; type: string } };
 
@@ -100,7 +100,7 @@ describe("授权面权限点", () => {
     for (const point of Object.values(authzPoints)) {
       expect(can(permissions, point)).toBe(false);
     }
-    // 用户与部门管理仍归系统管理员。
+    // User and department management remain assigned to the system administrator.
     expect(canEnter(permissions, systemAdminPermissions.users)).toBe(true);
   });
 
@@ -139,9 +139,9 @@ describe("授权面权限点", () => {
     expect(can(grantOnly, authzPoints.rolePermissions)).toBe(false);
   });
 
-  // 操作通配(`operations: ["*"]`)不在这里断言:它对 admin-* 点位既不可能来自接口
-  // ——bkn-safe 的角色权限写入直接拒绝通配操作(rejectWildcardGrant)——超管也不走
-  // 推导,fetchCurrentUser 在 is_admin 为真时直接放行全部已注册权限。
+  // Do not assert operation wildcards (`operations: ["*"]`) here: they cannot originate from
+  // admin-* APIs because bkn-safe role-permission writes reject them (rejectWildcardGrant). Super
+  // administrators do not use derivation either; fetchCurrentUser grants every registered permission when is_admin is true.
 
   describe("对象授权抽屉的操作 chip", () => {
     it("勾选一个未选中的操作 → 覆盖写,落 grant", () => {

@@ -56,7 +56,7 @@ export function ResourceColorSelect({
     [value],
   );
 
-  // Form.Item 的 onChange 引用不稳定；不要放进依赖，避免空值回填更新环（React #185）。
+  // Form.Item onChange reference is unstable; omit it from dependencies to avoid an empty-value writeback loop (React #185).
   useEffect(() => {
     if (!value && selectedColor !== value) {
       onChangeRef.current?.(selectedColor);

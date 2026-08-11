@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/** 本体图谱（建模预览新设计）—— 彩色实体类节点 + 关系连线，可选中并高亮邻居。 */
+/** Ontology graph for the modeling-preview redesign: colored entity-type nodes and relation edges, with selection and neighbor highlighting. */
 
 import {
   CompressOutlined,
@@ -36,7 +36,7 @@ const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 3;
 const INITIAL_VIEW = { x: 0, y: 0, w: PREVIEW_LAYOUT_WIDTH, h: PREVIEW_LAYOUT_HEIGHT };
 const GROUP_HULL_PAD = 28;
-// 分组边界配色（按分组 id 排序后稳定取色）。
+// Group-boundary colors, assigned stably after sorting by group ID.
 const GROUP_COLORS = ["#2e68ff", "#7c4dff", "#00b8a3", "#f5a623", "#eb5757", "#11a0d8", "#9b51e0", "#2bb673"];
 
 type OntologyLayoutMode = "force" | "circle" | "group";
@@ -44,9 +44,9 @@ type OntologyLayoutMode = "force" | "circle" | "group";
 type OntologyGraphViewProps = {
   graph: KnowledgeNetworkPreviewGraph;
   indexedIds: Set<string>;
-  /** 节点 id → 概念分组 id，供「按逻辑分组」聚类。 */
+  /** Node ID to concept-group ID for logical-group clustering. */
   groupOf?: Map<string, string>;
-  /** 分组 id → 名称，用于「按逻辑分组」时画边界标签。 */
+  /** Group ID to name for boundary labels in logical-group mode. */
   groupNames?: Map<string, string>;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
@@ -59,7 +59,7 @@ function truncate(value: string, max = 6) {
 const CLAMP_PAD = 64;
 const clamp = (value: number, max: number) => Math.max(CLAMP_PAD, Math.min(max - CLAMP_PAD, value));
 
-/** 圆形布局：节点等角分布在画布中心的大圆上。 */
+/** Circular layout: nodes are evenly distributed around a large circle centered on the canvas. */
 function circleLayout(ids: string[]): { id: string; x: number; y: number }[] {
   const cx = PREVIEW_LAYOUT_WIDTH / 2;
   const cy = PREVIEW_LAYOUT_HEIGHT / 2;
@@ -76,7 +76,7 @@ const NODE_SPACING = NODE_RADIUS * 2 + NODE_GAP; // 理想中心距
 const MIN_SPACING = NODE_RADIUS * 2; // 最小中心距：相切，绝不重叠
 const CELL_INSET = GROUP_HULL_PAD + NODE_RADIUS; // cell 边到节点中心可用区的内缩（留出 hull 边距）
 
-/** 组内节点排成接近正方的网格，居中于 cell；间距最多压到相切（MIN_SPACING），保证两两不重叠。 */
+/** Arrange nodes in each group as an almost-square grid centered in its cell. Compress spacing only to MIN_SPACING, preserving non-overlap. */
 function placeCluster(
   gids: string[],
   gcx: number,
@@ -94,11 +94,11 @@ function placeCluster(
   }
   const availW = Math.max(0, cellW - CELL_INSET * 2);
   const availH = Math.max(0, cellH - CELL_INSET * 2);
-  // 按可用区宽高比挑接近正方的列数。
+  // Choose a near-square column count from the available area's aspect ratio.
   const aspect = availW / Math.max(1, availH);
   const cols = Math.max(1, Math.min(n, Math.round(Math.sqrt(n * aspect)) || 1));
   const rows = Math.ceil(n / cols);
-  // 间距：理想 NODE_SPACING；可用区不足则压缩，但不低于 MIN_SPACING（相切）。
+  // Prefer NODE_SPACING; compress when space is limited but never below MIN_SPACING, where nodes touch.
   const spacingX = cols > 1 ? Math.max(MIN_SPACING, Math.min(NODE_SPACING, availW / (cols - 1))) : 0;
   const spacingY = rows > 1 ? Math.max(MIN_SPACING, Math.min(NODE_SPACING, availH / (rows - 1))) : 0;
   const startX = gcx - ((cols - 1) * spacingX) / 2;
@@ -111,8 +111,9 @@ function placeCluster(
 }
 
 /**
- * 按概念分组聚类：每组分得「等密度」cell（面积 ∝ 节点数），横向铺成若干 shelf，组内再排网格。
- * 大组拿到大 cell，不会再被挤到重叠；小组也不浪费空间。整体仍落在固定画布内。
+ * Clusters by concept group: each receives an equal-density cell with area proportional to node
+ * count, distributed across horizontal shelves and then gridded internally. Large groups get larger
+ * cells without overlap, smaller groups avoid wasted space, and all remain within the fixed canvas.
  */
 function groupLayout(ids: string[], groupOf: Map<string, string>): { id: string; x: number; y: number }[] {
   const buckets = new Map<string, string[]>();
@@ -125,7 +126,7 @@ function groupLayout(ids: string[], groupOf: Map<string, string>): { id: string;
   const groups = [...buckets.values()];
   const gn = groups.length;
   if (gn <= 1) {
-    // 单组：用整张画布作为 cell。
+    // A single group uses the whole canvas as its cell.
     return placeCluster(
       groups[0] ?? [],
       PREVIEW_LAYOUT_WIDTH / 2,
@@ -135,13 +136,13 @@ function groupLayout(ids: string[], groupOf: Map<string, string>): { id: string;
     );
   }
   const total = ids.length || 1;
-  // shelf 行数按画布宽高比定，再把组按节点数均衡分到各 shelf（行高随之 ∝ 节点数）。
+  // Derive shelf count from canvas aspect ratio, then balance groups by node count; row height is proportional to node count.
   const shelfCount = Math.max(
     1,
     Math.round(Math.sqrt(gn * (PREVIEW_LAYOUT_HEIGHT / PREVIEW_LAYOUT_WIDTH))) || 1,
   );
   const shelves = Array.from({ length: shelfCount }, () => ({ groups: [] as string[][], nodes: 0 }));
-  // 大组优先放进当前节点数最少的 shelf，均衡每行总高度。
+  // Place larger groups into the shelf with the fewest nodes to balance total row height.
   [...groups]
     .sort((a, b) => b.length - a.length)
     .forEach((gids) => {
@@ -178,7 +179,7 @@ export function OntologyGraphView({
   const [mode, setMode] = useState<OntologyLayoutMode>("force");
   const [showEdgeLabels, setShowEdgeLabels] = useState(true);
 
-  // 布局随 graph / 排列方式变化计算；选中节点时不重排。
+  // Recompute layout when graph or arrangement changes, not when selecting a node.
   const { positions, radiusById, hubId } = useMemo(() => {
     const ids = graph.nodes.map((node) => node.id);
     const layout =
@@ -221,18 +222,18 @@ export function OntologyGraphView({
     return neighborSet;
   }, [graph, selectedId]);
 
-  // 拖拽：用户可移动节点重排。覆盖位置存在 dragged 里，优先于计算布局。
+  // Dragging lets users reposition nodes. Overrides in dragged take precedence over computed layout.
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragged, setDragged] = useState<Map<string, { x: number; y: number }>>(new Map());
   const dragRef = useRef<{ id: string; offsetX: number; offsetY: number; moved: boolean } | null>(null);
 
-  // 画布缩放/平移：viewBox 驱动（getScreenCTM 自动反映，节点拖拽数学不变）。
+  // Canvas zoom/pan is driven by viewBox; getScreenCTM reflects it automatically and drag math stays unchanged.
   const [view, setView] = useState(INITIAL_VIEW);
   const panRef = useRef<
     { startX: number; startY: number; view: typeof INITIAL_VIEW; moved: boolean } | null
   >(null);
 
-  // 切换图 / 排列方式时清掉手动位置；切换图时回到初始视图。
+  // Clear manual positions when changing graph or arrangement; reset to the initial view when changing graph.
   useEffect(() => {
     setDragged(new Map());
   }, [graph, mode]);
@@ -260,7 +261,7 @@ export function OntologyGraphView({
     [dragged, positions],
   );
 
-  // 「按逻辑分组」时，按当前位置（含拖拽）算每组包围盒，画虚线边界 + 名称。
+  // In logical-group mode, calculate each group's bounding box from current positions, including drags, and draw dashed boundaries with names.
   const groupHulls = useMemo(() => {
     if (mode !== "group" || !groupOf || groupOf.size === 0) return [];
     const buckets = new Map<string, string[]>();
@@ -313,9 +314,9 @@ export function OntologyGraphView({
     return { x: local.x, y: local.y };
   }, []);
 
-  // 滚轮缩放（绕光标）：仅在按住 Ctrl/⌘ 时拦截，否则放行让页面正常滚动，
-  // 避免整页滚动经过画布时被劫持成缩放。触控板捏合会带 ctrlKey，自然支持。
-  // 用非 passive 监听以便 preventDefault 阻止页面滚动。
+  // Wheel zoom around the cursor only intercepts with Ctrl/Cmd held; otherwise allow normal page
+  // scrolling so passing over the canvas does not hijack it. Trackpad pinch naturally sets ctrlKey.
+  // Use a non-passive listener so preventDefault can stop page scrolling.
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return undefined;
@@ -338,7 +339,7 @@ export function OntologyGraphView({
     (event.currentTarget).setPointerCapture?.(event.pointerId);
   };
 
-  // 空白处按下 = 开始平移画布（节点 onPointerDown 已 stopPropagation）。
+  // Pressing blank space begins panning; node onPointerDown already stops propagation.
   const onCanvasPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
     panRef.current = { startX: event.clientX, startY: event.clientY, view, moved: false };
     svgRef.current?.setPointerCapture?.(event.pointerId);

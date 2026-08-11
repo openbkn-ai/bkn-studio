@@ -159,7 +159,7 @@ function renderSyncedMark(mark?: string) {
       }
     }
   } catch {
-    // 兼容旧任务中非 JSON 格式的断点值。
+    // Support legacy task checkpoints that are not JSON.
   }
 
   return <span className={sharedStyles.slugChip}>{mark}</span>;
@@ -212,7 +212,7 @@ export function BuildTaskDetailDrawer({
           setModels(result.items);
         }
       } catch {
-        // 解析失败保留原始值
+        // Retain the original value when parsing fails.
       }
     })();
     return () => {

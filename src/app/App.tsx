@@ -24,8 +24,8 @@ export function App({ runtimeConfig }: AppProps) {
   const [config, setConfig] = useState(runtimeConfig);
   const [router] = useState(() => createAppRouter(runtimeConfig.router.basename));
 
-  // 登录后 /me 回填真实用户:更新 context(驱动顶栏/权限重渲染)+ 全局
-  // runtimeConfig(http 拦截器等读 getRuntimeConfig)。
+  // After login, hydrate the real user from /me, update context (which rerenders the top bar and
+  // permissions), and update global runtimeConfig read by HTTP interceptors and other consumers.
   const handleCurrentUser = useCallback((currentUser: RuntimeUser) => {
     setConfig((previous) => {
       const next = { ...previous, currentUser };

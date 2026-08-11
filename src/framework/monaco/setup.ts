@@ -6,12 +6,12 @@
  */
 
 /**
- * 让 Monaco 走本地 bundle，而不是运行时从 jsdelivr CDN 下载。
+ * Uses the local Monaco bundle instead of downloading it from the jsdelivr CDN at runtime.
  *
- * `@monaco-editor/react` 默认用 AMD loader 去 CDN 拉 monaco 核心，内网 / 弱网环境
- * 拉不到或很慢，编辑器就一直卡在 Loading（函数工作台的处理逻辑、测试入参、以及
- * 各处 JSON/代码编辑器全受影响）。这里把打进构建的本地 `monaco-editor` 直接喂给
- * loader，并用 Vite 的 `?worker` 把语言 worker 也一起打包，彻底断开对 CDN 的依赖。
+ * `@monaco-editor/react` uses an AMD loader to fetch Monaco from a CDN by default. On internal
+ * or weak networks, the editor can remain stuck in Loading, affecting function-workbench logic,
+ * test inputs, and every JSON or code editor. Feed the bundled local `monaco-editor` directly to
+ * the loader and bundle language workers with Vite's `?worker` to remove the CDN dependency.
  */
 import { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
@@ -20,8 +20,8 @@ import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
 
 self.MonacoEnvironment = {
   getWorker(_workerId: string, label: string) {
-    // JSON 有专门的校验 / 补全 worker；其余语言（含本项目用的 python）走通用
-    // editor worker 即可，语法高亮是 Monarch 规则、不依赖 worker。
+    // JSON has a dedicated validation/completion worker. Other languages, including this project's
+    // Python, can use the generic editor worker because syntax highlighting uses Monarch rules.
     if (label === "json") {
       return new jsonWorker();
     }

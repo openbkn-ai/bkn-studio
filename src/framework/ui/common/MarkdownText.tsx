@@ -14,18 +14,19 @@ import styles from "./MarkdownText.module.css";
 type MarkdownTextProps = {
   className?: string;
   text: string;
-  /** dark = 深色容器（如 antd 默认黑底 tooltip）下的配色。 */
+  /** dark = colors for dark containers, such as AntD's default black tooltip. */
   tone?: "dark" | "light";
   /**
-   * compact = 卡片 / tooltip 里的一段描述（默认）；document = 整篇文档
-   * （技能包的 SKILL.md），正文和标题各放大一档，方角对齐站点其余面板。
+   * compact = a description inside a card or tooltip (default); document = a full document such
+   * as a skill package's SKILL.md, with body and headings each one size larger and square corners
+   * aligned with the rest of the site's panels.
    */
   variant?: "compact" | "document";
 };
 
 /**
- * 描述类富文本的 Markdown 渲染（GFM）。样式自包含（不依赖 agent-chat 的
- * 主题变量），可用于卡片 tooltip、详情页概览等任意上下文。
+ * Markdown renderer for descriptive rich text (GFM). Its styles are self-contained and do not
+ * depend on agent-chat theme variables, so it works in cards, tooltips, detail overviews, and more.
  */
 export const MarkdownText = memo(function MarkdownText({
   className,

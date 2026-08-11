@@ -80,7 +80,7 @@ function randomUrlSafeString() {
 }
 
 export async function computeCodeChallenge(verifier: string) {
-  // 安全上下文（HTTPS 或 localhost）：使用 Web Crypto API
+  // Secure context (HTTPS or localhost): use the Web Crypto API.
   if (window.crypto?.subtle) {
     const digest = await window.crypto.subtle.digest(
       "SHA-256",
@@ -89,7 +89,7 @@ export async function computeCodeChallenge(verifier: string) {
     return base64UrlEncode(new Uint8Array(digest));
   }
 
-  // 非安全上下文（HTTP）：使用 crypto-js 替代方案
+  // Insecure context (HTTP): use the crypto-js fallback.
   const hash = CryptoJS.SHA256(verifier);
   return hash.toString(CryptoJS.enc.Base64)
     .replace(/\+/g, "-")

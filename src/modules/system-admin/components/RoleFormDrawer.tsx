@@ -39,7 +39,7 @@ type RoleFormDrawerProps = {
 
 const grantKey = (resourceType: string, id: string) => `${resourceType}\u0000${id}`;
 
-/** 计算原始授权 → 目标授权的差异，拆成 attach / detach 调用。 */
+/** Calculates the difference between original and target grants, splitting it into attach and detach calls. */
 function diffGrants(original: ResourceGrant[], desired: ResourceGrant[]) {
   const byKey = new Map<string, { type: string; id: string; orig: Set<string>; want: Set<string> }>();
   for (const grant of original) {
@@ -75,9 +75,9 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
   const [submitting, setSubmitting] = useState(false);
   const isEdit = Boolean(role);
   const locked = Boolean(role?.builtin);
-  // 改名/改描述走 admin-role:edit,配置权限走 admin-role:permissions —— 后端把这两
-  // 件事拆成了不同点位(bkn-safe PR #474),所以只持 edit 的调用者进得来抽屉、改得了
-  // 名字,但权限编辑器只读:它提交的是 POST/DELETE roles/:id/permissions,会被 403。
+  // Renaming/describing uses admin-role:edit while configuring permissions uses admin-role:permissions.
+  // Backend PR #474 separates them, so edit-only callers can open the drawer and change names, but
+  // the permission editor stays read-only because its POST/DELETE roles/:id/permissions calls would receive 403.
   const canEditPermissions = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: authzPoints.rolePermissions,
@@ -105,8 +105,8 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
             name: values.name.trim(),
             description: values.description.trim(),
           });
-          // 无 admin-role:permissions 时权限编辑器是只读的,不该有差异;仍然显式跳过,
-          // 免得将来某个改动让只读态也能产生 diff,把一串必然 403 的请求打出去。
+          // Without admin-role:permissions, the editor is read-only and should have no difference.
+          // Skip explicitly to prevent a future change from sending a series of guaranteed-403 requests from a read-only diff.
           if (canEditPermissions) {
             const { adds, removes } = diffGrants(role.permissions, grants);
             for (const grant of adds) {

@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 
-/** 输入防抖,用于列表/扫描页关键词搜索等场景。 */
+/** Debounces input values for keyword searches in list, scan, and similar views. */
 export function useDebouncedValue<T>(value: T, delayMs = 400): T {
   const [debounced, setDebounced] = useState(value);
 

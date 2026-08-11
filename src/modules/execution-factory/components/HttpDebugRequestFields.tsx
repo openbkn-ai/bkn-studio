@@ -44,7 +44,7 @@ function replacePathParameters(path: string | undefined, rawValues?: string) {
 
   try {
     const values = parseJsonObject(rawValues, "Path") ?? {};
-    // 值为空时保留 {name} 占位，避免预览出现 /operator/market/ 这种拼错的地址。
+    // Keep the {name} placeholder when empty to avoid malformed preview URLs such as /operator/market/.
     return Object.entries(values)
       .filter(([, value]) => value !== undefined && value !== null && value !== "")
       .reduce(
@@ -111,7 +111,7 @@ export function HttpDebugRequestFields({
 
   const renderJsonField = (
     name: keyof import("@/modules/execution-factory/utils/http-debug-request").HttpDebugFormValues,
-    /** 折叠面板里传 undefined：面板头已经写了「请求头（JSON）」，再挂一次标题是重复。 */
+    /** Pass undefined inside the collapse panel because its header already says Request headers (JSON); another title is redundant. */
     label: string | undefined,
     parameters: typeof pathParameters,
     rows = 4,
@@ -159,7 +159,7 @@ export function HttpDebugRequestFields({
             t("executionFactory.debugQueryParameters"),
             queryParameters,
             4,
-            // 只有接口真用 query 带凭据时才提示，别给每个普通查询参数都挂一句噪音。
+            // Warn only when the endpoint truly carries credentials in the query, not for every ordinary query parameter.
             queryParameters.some((parameter) => isSensitiveName(parameter.name))
               ? t("executionFactory.debugSensitiveMaskHint")
               : undefined,

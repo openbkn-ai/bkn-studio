@@ -23,8 +23,9 @@ export function createThemeConfig(runtimeConfig: RuntimeConfig): ThemeConfig {
       colorText: "#111827",
       colorTextSecondary: "#475569",
       colorTextTertiary: "#94a3b8",
-      // 键盘焦点环。antd 默认 4px + 浅色派生边框，在方角控件上糊成一团灰框；
-      // 收成 2px 实线主色，键盘可达性保留，视觉上不再像误触发的选中态。
+      // Keyboard focus ring. AntD's default 4px ring and light derived border blur into a gray
+      // box on square controls; use a 2px solid primary color to preserve accessibility without
+      // looking like an accidental selection state.
       lineWidthFocus: 2,
       colorPrimaryBorder: "#2563eb",
     },

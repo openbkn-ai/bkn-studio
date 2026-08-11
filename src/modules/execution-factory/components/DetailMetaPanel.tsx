@@ -19,27 +19,27 @@ export type DetailMetaItem = {
 };
 
 type DetailMetaPanelProps = {
-  /** 宿主用来接管外框：plain 模式下由它给分区补内边距和分隔线。 */
+  /** Lets the host own the outer frame; in plain mode it supplies section padding and dividers. */
   className?: string;
-  /** 允许传节点：工具详情把「方法徽标 + 工具名」直接当标题，与函数工作台的头对齐。 */
+  /** Accepts a node so tool details can use a method badge plus tool name as the title, aligned with the function workbench header. */
   title?: ReactNode;
-  /** 标题行最右侧的入口，通常是「编辑」。 */
+  /** Entry point at the far right of the title row, usually Edit. */
   titleExtra?: ReactNode;
-  /** 标题行里 titleExtra 左边的常驻区，放状态开关、就绪度这类跟着卡片走的操作与指标。 */
+  /** Persistent area left of titleExtra for card-level actions and metrics, such as status toggles and readiness. */
   headerAside?: ReactNode;
-  /** 标题与字段列表之间的通栏区，放标签行。 */
+  /** Full-width area between the title and field list for tag rows. */
   subheader?: ReactNode;
-  /** 字段列表下方的通栏区，放结论或告警。 */
+  /** Full-width area below the field list for conclusions or warnings. */
   footer?: ReactNode;
   items: DetailMetaItem[];
-  /** 字段最多排几列；容器变窄时无论传几都会塌成一列。 */
+  /** Maximum number of field columns; a narrow container collapses to one regardless of this value. */
   columns?: 1 | 2;
   compact?: boolean;
-  /** 字段图标默认渲染，密集场景可整体关掉。 */
+  /** Field icons render by default and can be disabled globally for dense views. */
   showIcons?: boolean;
-  /** plain 去掉卡片外框，交给宿主容器（抽屉、弹窗）自己定边界。 */
+  /** plain removes the card frame so the host container, such as a drawer or modal, defines boundaries. */
   variant?: "card" | "plain";
-  /** 字段之间加分隔线；单列长列表比纯间距更好读。 */
+  /** Adds dividers between fields; long single-column lists scan better than with spacing alone. */
   dividers?: boolean;
 };
 

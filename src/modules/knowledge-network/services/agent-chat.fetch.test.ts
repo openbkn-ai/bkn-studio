@@ -6,8 +6,8 @@
  */
 
 /**
- * 模型工厂网关的鉴权 fetch。这一层的退避重试风险最高：判错了要么白打正忙的网关，
- * 要么把流式响应整段缓冲下来、把每一次正常对话的打字效果毁掉。
+ * Authenticated fetch for the model-factory gateway. Backoff retry is riskiest here: misclassification
+ * either hits a busy gateway unnecessarily or buffers a whole streaming response and destroys typing behavior.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -23,7 +23,7 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-/** 永不结束的流式响应：谁要是想把它读完，这个用例就会超时。 */
+/** Never-ending streaming response; any code trying to read it completely makes this case time out. */
 function neverEndingStream(contentType: string | null): Response {
   const stream = new ReadableStream<Uint8Array>({ start: () => undefined });
   return new Response(stream, {
@@ -54,13 +54,13 @@ describe("makeAuthedFetch 退避重试", () => {
 
   it("重试次数有上限，不会一直打正忙的网关", async () => {
     const busy = { code: "X", description: '{"code":50508,"message":"System is too busy now."}' };
-    // 每次都要给新的 Response：body 只能被消费一次，复用同一个会让第二发的 clone() 直接抛。
+    // Provide a new Response each time because a body can be consumed once; reuse makes clone() throw on the second request.
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(jsonResponse(200, busy)));
     vi.stubGlobal("fetch", fetchMock);
 
     await makeAuthedFetch(provider)("https://example.test/v1/chat/completions", { method: "POST" });
 
-    // RETRY_DELAYS_MS 两档 → 首发 + 2 次重试。
+    // Two RETRY_DELAYS_MS entries mean the initial request plus two retries.
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
@@ -84,7 +84,7 @@ describe("makeAuthedFetch 退避重试", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(neverEndingStream("text/event-stream"));
     vi.stubGlobal("fetch", fetchMock);
 
-    // 这里但凡去 peek body，promise 就永远不 resolve，用例直接超时。
+    // Peeking at the body here leaves the promise unresolved forever and makes the case time out.
     const response = await makeAuthedFetch(provider)("https://example.test/v1/chat/completions", { method: "POST" });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);

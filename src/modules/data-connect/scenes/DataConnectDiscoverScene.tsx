@@ -216,8 +216,8 @@ export function DataConnectDiscoverScene({
   ]);
 
   const openTasksForSchedule = useCallback(() => {
-    // 立即扫描 / 按计划执行 走的都是 catalog discover，任务不带 schedule_id；
-    // 因此「查看任务」进入任务 Tab 时展示当前连接下全部任务。
+    // Immediate and scheduled scans both use catalog discovery, whose tasks lack schedule_id;
+    // therefore View tasks shows every task for the current connection in the task tab.
     setTaskStatusFilter("all");
     setTaskTriggerTypeFilter("all");
     setTaskPage(1);

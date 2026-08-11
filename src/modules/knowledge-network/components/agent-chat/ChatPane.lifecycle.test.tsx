@@ -6,9 +6,10 @@
  */
 
 /**
- * 面板与受管生命周期的接线。服务层各自有单测，但「一轮问答对应一轮交互」这件事
- * 只存在于 ChatPane.send 的 try/catch/finally 里 —— 漏掉终结、outcome 判错、
- * 清空对话忘了换会话，都不会被服务层的测试发现。
+ * Wiring between the panel and managed lifecycle. Service layers have their own unit tests, but
+ * the one-question-answer-round to one-interaction relationship exists only in ChatPane.send's
+ * try/catch/finally. Missing termination, misclassifying outcomes, or failing to switch sessions
+ * after clearing a conversation would not be caught by service tests.
  */
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -93,7 +94,7 @@ function stubLifecycle() {
   return { beginTurn, finish, reset, session };
 }
 
-/** 本轮传给工具循环的选项（buildAgentTools 的第 6 个入参）。 */
+/** Options passed to the tool loop for this turn (the sixth buildAgentTools argument). */
 function toolOptions() {
   return buildAgentTools.mock.calls[0][5];
 }
@@ -147,14 +148,14 @@ describe("ChatPane 受管生命周期接线", () => {
     });
 
     expect(beginTurn).toHaveBeenCalledWith("问一句");
-    // 工具循环必须拿到本轮交互和生命周期的会话，否则每次工具调用都会被挡在
-    // conversation_required。
+    // The tool loop must receive this turn's interaction and lifecycle session; otherwise every
+    // tool invocation is blocked by conversation_required.
     expect(toolOptions()).toMatchObject({
       session,
       turn: expect.objectContaining({ interactionId: "int_1" }) as unknown,
     });
-    // 生命周期工具照常传给工具循环——buildAgentTools 会接管它们的执行，绑到本轮交互上，
-    // 而不是把它们从模型工具表里拿掉。
+    // Pass lifecycle tools to the loop as usual. buildAgentTools takes over execution and binds
+    // it to this turn's interaction instead of removing the tools from the model's tool list.
     expect(buildAgentTools.mock.calls[0][0]).toEqual([
       { name: "bkn_start_interaction" },
       { name: "run_sql" },
@@ -196,11 +197,12 @@ describe("ChatPane 受管生命周期接线", () => {
   it("被接管的生命周期工具不展示一份从未发出的请求体", async () => {
     stubLifecycle();
     runAgentChat.mockImplementation(({ onChunk }) => {
-      // 被接管的工具：execute 不碰 session.callTool，所以面板上不该出现 kn_id /
-      // bkn_context 这些「实际发出的请求体」才有的字段——那是编出来的报文。
+      // For intercepted tools, execute does not call session.callTool, so the panel must not show
+      // kn_id or bkn_context as if they belonged to an actual outbound request body.
       onChunk({ type: "tool-call", id: "c1", name: "bkn_finish_interaction", args: { outcome: "completed" } });
       onChunk({ type: "tool-call", id: "c2", name: "run_sql", args: { sql: "SELECT 1" } });
-      // 未被接管的平台工具（溯源类读工具）直通后端，请求体真实存在，照旧按真实报文展示。
+      // Platform tools that are not intercepted, such as lineage read tools, call the backend
+      // directly and have real request bodies, which should still be displayed as sent.
       onChunk({ type: "tool-call", id: "c3", name: "bkn_get_receipt", args: { receipt_id: "r1" } });
       onChunk({ type: "finish" });
       return Promise.resolve();
@@ -212,7 +214,7 @@ describe("ChatPane 受管生命周期接线", () => {
       await Promise.resolve();
     });
 
-    // 工具卡片默认折叠，展开后才渲染请求体。
+    // Tool cards are collapsed by default and render the request body only when expanded.
     for (const header of screen.getAllByText(/^(run_sql|bkn_[a-z_]+)$/)) {
       fireEvent.click(header);
     }
@@ -222,10 +224,11 @@ describe("ChatPane 受管生命周期接线", () => {
     expect(lifecycleCard).toBeDefined();
     expect(lifecycleCard).not.toContain("bkn_context");
     expect(lifecycleCard).not.toContain("kn_id");
-    // 业务工具照旧展示注入后的真实请求体。
+    // Business tools continue to display the real request body after injection.
     expect(businessCard).toContain("bkn_context");
     expect(businessCard).toContain("kn_id");
-    // 直通的平台工具同样按真实请求体展示——按 bkn_ 前缀一刀切会反向再造一次失真。
+    // Direct platform tools also display real request bodies; filtering solely by the bkn_ prefix
+    // would create a different form of distortion.
     const passthroughCard = texts.find((text) => text.includes("receipt_id"));
     expect(passthroughCard).toContain("bkn_context");
   });
@@ -260,7 +263,7 @@ describe("ChatPane 受管生命周期接线", () => {
 
   it("用户中途停止时以 canceled 终结", async () => {
     const { finish } = stubLifecycle();
-    // runAgentChat 在 abort 时是正常返回而非抛错，所以 outcome 只能靠 signal 判断。
+    // runAgentChat returns normally on abort rather than throwing, so the outcome must be determined from the signal.
     runAgentChat.mockImplementation(({ signal, onChunk }) => {
       onChunk({ type: "text", delta: "半句" });
       return new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve()));
@@ -299,8 +302,8 @@ describe("ChatPane 受管生命周期接线", () => {
   });
 
   it("流里报错时以 failed 终结，不能记成 completed", async () => {
-    // 流里的 error 是 runAgentChat 内部捕获后正常返回的，不会抛到 catch。
-    // 漏了这一笔，面板上是红条而交给 Core 的是 completed —— 失败会被系统性少记。
+    // Stream errors are caught inside runAgentChat and returned normally, so they do not reach catch.
+    // Without this record, the panel shows an error while Core receives completed, systematically undercounting failures.
     const { finish } = stubLifecycle();
     runAgentChat.mockImplementation(({ onChunk }) => {
       onChunk({ type: "error", error: "模型服务繁忙，请稍后重试（50508）", retryable: true });
@@ -326,7 +329,8 @@ describe("ChatPane 受管生命周期接线", () => {
       await Promise.resolve();
     });
 
-    // 这是 conversation id 唯一的更换点；漏了会让「清空」后的新对话仍挂在旧会话上。
+    // This is the only point where the conversation ID changes; omitting it would attach a new
+    // conversation after clearing to the old session.
     expect(reset).toHaveBeenCalledTimes(1);
   });
 });
@@ -359,15 +363,15 @@ describe("失败轮的重试", () => {
 });
 
 /**
- * 输出契约必须由 composedSystem 自动拼接。提示词是持久化状态：每轮结束回写
- * localStorage，载入时 `saved.systemPrompt ?? profile.defaultPrompt` 优先用存量值。
- * 契约一旦写进默认提示词，就只对「从没聊过」的人生效 —— 而会撞上推敲糊进正文
- * 这个 bug 的恰恰是老用户，他们也不会知道要去设置里点一次「恢复默认」。
+ * The output contract must be composed automatically by composedSystem. Prompts are persisted:
+ * every completed round writes to localStorage, and loading prefers `saved.systemPrompt ?? profile.defaultPrompt`.
+ * Adding the contract only to the default prompt affects users who have never chatted, while the
+ * users exposed to reasoning leaking into the answer are existing users who would not know to reset defaults.
  */
 describe("输出契约的下发方式", () => {
   it("存量用户存的是改版前的旧提示词，照样拿得到契约", async () => {
     stubLifecycle();
-    // 模拟老会话：localStorage 里是不含任何契约的旧提示词。
+    // Simulate an existing conversation whose localStorage contains an old prompt without the contract.
     localStorage.setItem(
       "bkn-studio:agentchat:kn-demo",
       JSON.stringify({ messages: [], model: "qwen-test", systemPrompt: "旧的自定义提示词，没有任何契约" }),

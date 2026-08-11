@@ -56,9 +56,9 @@ type ObjectAuthorizeDrawerProps = {
   objName: string;
   objSub?: string;
   objType: string;
-  /** 在新建流程中预选被授权方（可选）。 */
+  /** Optionally preselect the grantee during creation. */
   prefillGranteeId?: string;
-  /** 父级已加载的授权列表；提供时不再重复拉全量 grants。 */
+  /** Grant list already loaded by the parent; when provided, do not fetch all grants again. */
   allGrants?: ObjectGrant[];
   onGrantsChange?: (grants: ObjectGrant[]) => void;
   onChanged?: () => void;
@@ -106,8 +106,9 @@ export function ObjectAuthorizeDrawer({
 }: ObjectAuthorizeDrawerProps) {
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
-  // 抽屉是完整的写面板(添加授权、改操作集、撤权),但「看谁在这个对象上有授权」对
-  // 只读审查者是合法信息 —— 所以门禁下沉到每个写控件,而不是拦在抽屉入口。
+  // The drawer is a complete write panel for grants, operation changes, and revocation, but seeing
+  // who has access to an object is legitimate for read-only reviewers. Guard each write control,
+  // rather than blocking access to the drawer.
   const currentPermissions = runtimeConfig.currentUser.permissions;
   const canGrant = hasPermissions({
     currentPermissions,
@@ -491,9 +492,9 @@ export function ObjectAuthorizeDrawer({
                     <div className={styles.chipGroup}>
                       {ops.map((op) => {
                         const selected = grant.operations.includes(op.key);
-                        // 勾选/取消勾选发的是不同的后端动作(见 chipTogglePoint),
-                        // 所以按方向分别判点位:只持 grant 的人加得了操作、撤不掉
-                        // 最后一个;只持 revoke 的人反之。
+                        // Checking and unchecking send different backend actions (see chipTogglePoint),
+                        // so evaluate permissions by direction: grant-only users can add operations
+                        // but not remove the last one, while revoke-only users have the inverse access.
                         const point = chipTogglePoint(selected, grant.operations.length);
                         const allowed =
                           point === authzPoints.revoke ? canRevoke : canGrant;

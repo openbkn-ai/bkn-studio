@@ -16,7 +16,7 @@ describe("capability-create-menu", () => {
   it("offers one create entry per capability tab, without import entries", () => {
     const items = getCapabilityCreateMenuItems();
 
-    // 与列表 tab 一一对应：API 工具集 / 函数集 / MCP 服务 / SKILL 包。
+    // Matches list tabs one-to-one: API toolboxes, function sets, MCP services, and SKILL packages.
     expect(items.map((item) => item.action)).toEqual([
       "quick-api",
       "function",
@@ -24,7 +24,7 @@ describe("capability-create-menu", () => {
       "skill",
     ]);
 
-    // 导入走工具栏「导入」按钮，添加能力里不再出现导入项。
+    // Import uses the toolbar Import action and no longer appears in Add capability.
     expect(items.map((item) => item.action)).not.toContain("import-openapi");
     expect(items.map((item) => item.action)).not.toContain("import-adp");
   });

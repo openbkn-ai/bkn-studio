@@ -83,7 +83,7 @@ import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectA
 
 import styles from "./execution-unit-list.module.css";
 
-// 执行单元 tab → bkn-safe 对象类型（toolbox 的后端 type 是 tool_box）。
+// Execution-unit tab to bkn-safe object type; the backend type for toolbox is tool_box.
 const AUTHZ_TYPE_BY_TAB: Record<ExecutionUnitTab, string> = {
   operator: "operator",
   toolbox: "tool_box",
@@ -97,10 +97,10 @@ const ExecutionUnitListOverlays = lazy(async () => {
 });
 
 const PAGE_SIZE = 20;
-/** 逐个取详情才拿得到函数代码，工具多的工具箱不值得为一次发布确认打这么多请求。 */
+/** Function code is available only from individual details; tool-heavy toolboxes do not warrant that many requests for one publish confirmation. */
 const PUBLISH_PREFLIGHT_DETAIL_LIMIT = 20;
 const TAB_STORAGE_KEY = "execution-factory.activeTab";
-/** 工具集下的「API / 函数」子视图，和 activeTab 一样要能被详情页返回时还原。 */
+/** API/function subview under toolboxes, restored from detail-page navigation just like activeTab. */
 const TOOLBOX_VIEW_STORAGE_KEY = "execution-factory.toolboxView";
 const DEFAULT_TABS: ExecutionUnitTab[] = ["operator", "toolbox", "mcp", "skill"];
 
@@ -296,8 +296,8 @@ export function ExecutionUnitListScene({
   const [category, setCategory] = useState("");
   const [categoryOptions, setCategoryOptions] = useState<CategoryChipOption[]>([]);
   const [originFilter, setOriginFilter] = useState<"" | "internal" | "custom">("");
-  /** 工具集下再分一个「代码函数」视图，靠服务端 metadata_type 过滤。 */
-  /** 工具集拆成两个互斥视图：API 工具集 / 函数集。和新建菜单的分类一一对应。 */
+  /** Code-function subview under toolboxes, filtered by backend metadata_type. */
+  /** Toolboxes split into mutually exclusive API-toolbox and function views, matching create-menu categories. */
   const [toolboxView, setToolboxView] = useState<ToolboxView>(() =>
     resolveToolboxView(searchParams.get("toolboxView")),
   );
@@ -351,7 +351,7 @@ export function ExecutionUnitListScene({
   const [tabCounts, setTabCounts] = useState<
     Partial<Record<ExecutionUnitTab | "openapi" | "function", number>>
   >({});
-  /** 计数只在挂载和显式刷新时重拉；跟着 total 走会在列表加载完后再触发一整轮。 */
+  /** Refetch counts only on mount and explicit refresh; following total would trigger another full cycle after list loading. */
   const [countsVersion, setCountsVersion] = useState(0);
 
   useEffect(() => {
@@ -407,7 +407,7 @@ export function ExecutionUnitListScene({
     setActiveTab(resolved);
     if (resolved === "toolbox") {
       setToolboxView(resolvedView);
-      // 直接带 URL 进来时也要落盘，详情页返回没带参数时才有得可依。
+      // Persist direct URL input so detail-page returns without parameters still have state to restore.
       window.localStorage.setItem(TOOLBOX_VIEW_STORAGE_KEY, resolvedView);
     }
 
@@ -428,8 +428,9 @@ export function ExecutionUnitListScene({
   }, [defaultTab, resolvableTabs, searchParams, setSearchParams]);
 
   /**
-   * 工具箱/MCP/Skill 都有独立详情页，本域列表点卡片直接进页面，不再中转详情抽屉。
-   * 市场态仍走抽屉：引入前只要只读预览，详情页还得靠 ?from=catalog 才拿得到数据。
+   * Toolboxes, MCPs, and Skills have dedicated detail pages, so cards navigate directly instead of
+   * routing through a detail drawer. Marketplace state still uses a drawer because pre-installation
+   * needs read-only preview and detail pages require ?from=catalog to obtain data.
    */
   const openDetail = useCallback(
     (tab: ExecutionUnitTab, id: string) => {
@@ -470,7 +471,7 @@ export function ExecutionUnitListScene({
       return;
     }
 
-    // 先摘掉 detailId 再打开：openDetail 可能直接路由走，之后再改 searchParams 就落到旧 location 上了。
+    // Remove detailId before opening: openDetail may navigate immediately, and later searchParams changes would target the old location.
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("detailId");
     setSearchParams(nextParams, { replace: true });
@@ -617,8 +618,8 @@ export function ExecutionUnitListScene({
     [activeTab, category, debouncedKeyword, page, status, toolboxView],
   );
 
-  // UI 把 offline 与 unpublish 并成一档「未发布」，但后端 status 只收单值，
-  // 所以这一档要分别拉再拼；否则筛「未发布」会漏掉下线过的资源。
+  // UI combines offline and unpublish as unpublished, but backend status accepts one value, so
+  // query each and combine results; otherwise filtering unpublished misses offline resources.
   const listStatuses = useMemo(() => resolveListStatusQueries(status), [status]);
 
   const fetchPage = useCallback(
@@ -716,15 +717,15 @@ export function ExecutionUnitListScene({
     setPage(1);
     setItems([]);
     setLoading(true);
-    // toolboxView 也进 listQuery：只改 toolboxView 的 URL 前进/后退不走 Tab onChange，
-    // 漏掉它会带着上一视图的 page>1 去拉另一视图。
+    // Include toolboxView in listQuery: browser navigation that changes only toolboxView does not
+    // trigger Tab onChange, and omitting it carries a prior view's page>1 into another view.
   }, [activeTab, debouncedKeyword, status, marketMode, category, toolboxView]);
 
   useEffect(() => {
     void loadItems();
   }, [loadItems]);
 
-  // 函数视图是工具集的过滤视图，「共 N 个…」也要跟着叫函数集，否则数的东西和说的名字对不上。
+  // The function view filters toolboxes, so the count label must say function set to match what it counts.
   const tabLabel =
     activeTab === "toolbox"
       ? t(
@@ -763,7 +764,7 @@ export function ExecutionUnitListScene({
             return [entry];
           }
 
-          // 工具集拆成两个互斥视图，都是服务端过滤，不再保留并集入口。
+          // Toolboxes are two mutually exclusive server-filtered views; do not retain a combined entry.
           return [
             {
               key: openapiTabKey,
@@ -801,7 +802,7 @@ export function ExecutionUnitListScene({
   };
 
   const statusOptions = useMemo(() => {
-    // 没有单独的「已下线」选项：offline 归到「未发布」里，由 listStatuses 一并查。
+    // There is no separate offline option; offline belongs to unpublished and listStatuses queries both.
     const base = [
       { value: "", label: t("executionFactory.allStatus") },
       { value: "published", label: t("executionFactory.statuses.published") },
@@ -862,8 +863,8 @@ export function ExecutionUnitListScene({
   );
 
   /**
-   * 工具箱一发布，里面的工具就直接暴露给 Agent 选用——缺描述的工具等于永远不会被调到。
-   * 预检查只提示不拦截：拿不到工具清单时按无问题处理，不能因为预检查失败堵住发布。
+   * Publishing a toolbox exposes its tools to Agent selection, and tools without descriptions are effectively never called.
+   * Preflight warns but does not block: when the tool list is unavailable, treat it as no issue rather than blocking publication.
    */
   const collectPublishIssues = useCallback(
     async (item: ExecutionUnitCardItem): Promise<ToolboxPublishIssue[]> => {
@@ -1081,8 +1082,8 @@ export function ExecutionUnitListScene({
             () => updateOperatorStatus(item.id, item.version!, nextStatus),
           );
         } else if (activeTab === "toolbox") {
-          // 发布前跑一次预检查（缺 summary、broken $ref 等），有问题就在确认框里
-          // 列出并给「仍然发布」。下架（offline）不需要预检查，走 main 的直连即可。
+          // Run preflight before publication for missing summaries, broken $ref, and similar issues.
+          // List findings in confirmation with Publish anyway. Offline does not require preflight and calls main directly.
           if (nextStatus === "published") {
             void (async () => {
               const issues = await collectPublishIssues(item);
@@ -1198,8 +1199,8 @@ export function ExecutionUnitListScene({
     [activeTab, resolvableTabs],
   );
 
-  // tab 上的数量各拉一次 total；page_size=1 只为拿计数，不取列表内容。
-  // 依赖 tab 列表本身而不是 activeTab——来回切 tab 时列表没变，不该重拉。
+  // Fetch total once per tab; page_size=1 obtains only the count, not list content. Depend on the
+  // tab list rather than activeTab because changing tabs does not change the list and should not refetch.
   useEffect(() => {
     const tabs = countedTabsKey.split(",").filter(Boolean) as ExecutionUnitTab[];
     let cancelled = false;
@@ -1231,7 +1232,7 @@ export function ExecutionUnitListScene({
         }),
       );
 
-      // 工具集下面还有「仅 API」「仅函数」两个子视图，各自的数量单独拉一次。
+      // Toolboxes have API-only and function-only subviews, each with its own count request.
       const subtotals: Partial<Record<"openapi" | "function", number>> = {};
       if (tabs.includes("toolbox")) {
         await Promise.all(
@@ -1395,7 +1396,7 @@ export function ExecutionUnitListScene({
             if (isFunctionView || isOpenapiView) {
               const nextView: ToolboxView = isFunctionView ? "function" : "openapi";
               setToolboxView(nextView);
-              // 子视图跟着进 URL，详情页返回时才落回原来那个 tab。
+              // Put the subview in the URL so returning from details restores the original tab.
               window.localStorage.setItem(TOOLBOX_VIEW_STORAGE_KEY, nextView);
               nextParams.set("toolboxView", nextView);
             } else {
@@ -1580,7 +1581,7 @@ export function ExecutionUnitListScene({
             onCloseSkillInstallTarget={() => setSkillInstallTarget(null)}
             onCloseUpdateSkillPackage={() => setUpdateSkillPackageTarget(null)}
             onConfigurePublishedPerm={() => {
-              // 权限中心就在本页：关掉发布提示，直接开对象授权抽屉。
+              // Permission center is on this page: close publish prompting and open the object-authorization drawer directly.
               if (publishedPermTarget) {
                 setAuthorizeTarget(publishedPermTarget);
               }

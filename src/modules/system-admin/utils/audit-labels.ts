@@ -6,8 +6,8 @@
  */
 
 /**
- * 审计日志 method+action → 稳定 token（再由 i18n 渲染人话）。
- * 映射表见 bkn-safe admin-api-frontend-changes.md。
+ * Audit-log method and action mapped to stable tokens, then rendered through i18n.
+ * See bkn-safe admin-api-frontend-changes.md for the mapping table.
  */
 const ACTION_MAP: Record<string, string> = {
   "POST users": "user_create",

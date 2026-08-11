@@ -44,7 +44,7 @@ function mapIssued(item: BackendApiKey): IssuedApiKey {
   return { ...mapApiKey(item), key: item.key ?? "" };
 }
 
-/* ----------------------------- mock（本地开发） ----------------------------- */
+/* ----------------------------- Mock (local development) ----------------------------- */
 const mockApiKeys: BackendApiKey[] = [
   {
     id: "mock-1",
@@ -58,7 +58,7 @@ const mockApiKeys: BackendApiKey[] = [
   },
 ];
 
-/** 由完整明文派生掩码（mock 用；真实环境由后端返回 masked）。 */
+/** Derives a mask from plaintext for mocks; production receives masked values from the backend. */
 function maskFromPlaintext(plain: string): string {
   return plain.length <= 12 ? plain : `${plain.slice(0, 8)}****${plain.slice(-4)}`;
 }
@@ -75,7 +75,7 @@ function mockPlaintext(): string {
   return `bak_${rand(12)}_${rand(24)}`;
 }
 
-/* ------------------------------- 接口 ------------------------------- */
+/* ------------------------------- API ------------------------------- */
 export async function listApiKeys(): Promise<ApiKey[]> {
   if (useMock) {
     return mockApiKeys.map(mapApiKey);

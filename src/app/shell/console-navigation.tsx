@@ -66,7 +66,8 @@ export function filterConsoleNavigation(
     });
 }
 
-// 按当前用户权限过滤导航:自身权限不满足 → 隐藏;子项全被过滤且本身不可点 → 整组隐藏。
+// Filter navigation by the current user's permissions: hide an unauthorized item; hide the whole
+// group when all children are filtered and the group itself is not navigable.
 export function filterNavByPermission(
   items: ConsoleNavItem[],
   permissions: string[],

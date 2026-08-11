@@ -12,10 +12,10 @@ import { InlineEditableText } from "@/modules/execution-factory/components/Inlin
 
 afterEach(cleanup);
 
-// 说明：真正的 bug（Escape 收起后，卸载聚焦中的 Input 触发 onBlur→commit 写回草稿）
-// 依赖浏览器在元素移除时派发 focusout，jsdom 不实现，无法在单测里复现。这里覆盖修复
-// 里真正有风险的一环——cancelledRef 在重新进入编辑态时必须复位，否则一次 Escape 会
-// 永久吞掉后续的正常提交。
+// The actual bug, where Escape unmounts a focused Input and onBlur -> commit restores the draft,
+// relies on browsers dispatching focusout on element removal. jsdom does not implement that behavior,
+// so the unit test covers the risky part of the fix: cancelledRef must reset on re-entry or one Escape
+// permanently suppresses later valid commits.
 describe("InlineEditableText", () => {
   it("commits the edited draft on blur", () => {
     const onChange = vi.fn();
@@ -38,7 +38,7 @@ describe("InlineEditableText", () => {
     fireEvent.keyDown(screen.getByRole("textbox"), { key: "Escape" });
     expect(onChange).not.toHaveBeenCalled();
 
-    // 重新编辑并失焦：cancelledRef 若不复位，这次提交会被上一次 Escape 的标志误吞。
+    // Edit again and blur: without resetting cancelledRef, this commit is wrongly swallowed by the prior Escape flag.
     fireEvent.click(screen.getByRole("button"));
     const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "kept" } });

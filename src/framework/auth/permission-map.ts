@@ -6,31 +6,32 @@
  */
 
 /**
- * 把 bkn-safe 下发的资源授权翻译成 Studio 各模块声明的权限点。
+ * Translates resource grants issued by bkn-safe into permission points declared by Studio modules.
  *
- * 两侧命名从来不是一套：bkn-safe 发的是 `<resource_type>:<operation>`（如 `operator:create`），
- * Studio 声明的是 `<module>:<entity>:<action>`（如 `execution-factory:operator:create`）。
- * 在此之前 current-user.ts 直接拿展平后的 `type:op` 去比对模块权限点，永远不可能命中，
- * 于是所有非超管用户在执行工厂相关页面的权限集恒为空——后端明明授了 operator:create，
- * 前端却连页面都进不去。
+ * The two sides use different naming schemes: bkn-safe emits `<resource_type>:<operation>`
+ * (such as `operator:create`), while Studio declares `<module>:<entity>:<action>`
+ * (such as `execution-factory:operator:create`). Previously, current-user.ts compared
+ * flattened `type:op` values directly with module permissions, which could never match.
+ * As a result, every non-super-admin user had an empty permission set on execution-factory
+ * pages even when the backend granted `operator:create`.
  *
- * 执行工厂后端只有四个资源类型：operator / tool_box / mcp / skill
- * （adp/execution-factory/operator-integration/server/interfaces/logics_auth.go:53-58）。
- * 下面的映射即以后端实际鉴权点为准，逐条对齐。
+ * The execution-factory backend exposes only four resource types: operator, tool_box, mcp,
+ * and skill (see adp/execution-factory/operator-integration/server/interfaces/logics_auth.go:53-58).
+ * The mappings below align with the backend's actual authorization points.
  */
 
-/** bkn-safe 的资源类型。后端仅此四种。 */
+/** Resource types supported by bkn-safe. The backend supports only these four. */
 type SafeResourceType = "operator" | "tool_box" | "mcp" | "skill";
 
 const ALL_RESOURCE_TYPES: SafeResourceType[] = ["operator", "tool_box", "mcp", "skill"];
 
-/** Studio 的动作 → bkn-safe 的操作。词表不同，需逐个对齐。 */
+/** Studio actions mapped to bkn-safe operations. Their vocabularies differ and need explicit alignment. */
 const ACTION_TO_OPERATION: Record<string, string> = {
   create: "create",
   delete: "delete",
-  // Studio 说 debug，后端记的是 execute
+  // Studio calls this debug, while the backend calls it execute.
   debug: "execute",
-  // Studio 说 edit，后端记的是 modify
+  // Studio calls this edit, while the backend calls it modify.
   edit: "modify",
   execute: "execute",
   publish: "publish",
@@ -39,10 +40,11 @@ const ACTION_TO_OPERATION: Record<string, string> = {
 };
 
 /**
- * Studio 的实体 → bkn-safe 的资源类型。
+ * Studio entities mapped to bkn-safe resource types.
  *
- * capability、function 都是算子的表现形式，归 operator。
- * tool 没有独立资源类型，一切工具级操作都授权到父工具箱（toolbox_handler 全线如此）。
+ * Both capabilities and functions are forms of operators.
+ * Tools have no standalone resource type; all tool-level operations are authorized on their
+ * parent toolbox, as is consistently done by toolbox_handler.
  */
 const ENTITY_TO_RESOURCE_TYPE: Record<string, SafeResourceType> = {
   capability: "operator",
@@ -55,39 +57,44 @@ const ENTITY_TO_RESOURCE_TYPE: Record<string, SafeResourceType> = {
 };
 
 /**
- * 需要覆盖默认规则的条目。值为「命中即成立」的 `type:op` 列表，空数组表示恒不成立。
+ * Entries that override the default rules. Values list the `type:op` grants that make the
+ * permission valid; an empty array means the permission can never be granted.
  *
- * 键是去掉模块前缀后的 `<entity>:<action>`，因此 execution-factory 与
- * execution-factory-lab 两个模块共用同一套规则。
+ * Keys are `<entity>:<action>` without the module prefix, so execution-factory and
+ * execution-factory-lab share the same rules.
  */
 const OVERRIDES: Record<string, string[]> = {
-  // 市场浏览：后端对四类资源统一按 public_access 判定，没有独立的 market 资源类型。
-  // 注意 bkn-safe 也有个叫 catalog 的资源类型，那是 Vega 数据目录，与此处的能力市场
-  // 同名不同物，绝不能映过去。
+  // Marketplace browsing: the backend uses public_access for all four resource types; there
+  // is no dedicated market resource type. bkn-safe also has a catalog resource type, but that
+  // refers to the Vega data catalog, not this capability marketplace, and must not be mapped here.
   "catalog:view": ALL_RESOURCE_TYPES.map((type) => `${type}:public_access`),
-  // 市场安装：后端在执行工厂中没有对应端点，暂时屏蔽入口，待后端补齐再放开。
+  // Marketplace installation has no corresponding execution-factory endpoint, so keep the entry
+  // hidden until the backend provides one.
   "catalog:install": [],
-  // 导入导出：导出读四类中任一，导入在目标类型上建。
+  // Import/export: export requires read access to any of the four types; import creates the target type.
   "impex:export": ALL_RESOURCE_TYPES.map((type) => `${type}:view`),
   "impex:import": ALL_RESOURCE_TYPES.map((type) => `${type}:create`),
-  // 工具没有自己的资源类型，写操作一律落到父工具箱的 modify。
+  // Tools have no resource type of their own; write operations always use the parent toolbox's modify grant.
   "tool:create": ["tool_box:modify"],
   "tool:delete": ["tool_box:modify"],
   "tool:edit": ["tool_box:modify"],
 };
 
 /**
- * 只有超管可见的权限点。这些页面返回跨租户运维数据，不隶属于任何单一业务资源，
- * bkn-safe 侧也没有对应的资源类型可授，判定只能锚在 is_admin。
+ * Permission points visible only to super administrators. These pages return cross-tenant
+ * operational data and do not belong to a single business resource, so bkn-safe has no
+ * corresponding grantable resource type; the decision must be based on is_admin.
  *
- * 与执行工厂后端 CheckAdminPermission 同口径（复用 bkn-safe 的 safe_admin:console:manage）。
+ * This matches the execution-factory backend's CheckAdminPermission behavior by reusing
+ * bkn-safe's safe_admin:console:manage permission.
  */
 const ADMIN_ONLY_SUFFIXES = new Set(["sandbox-runtime:view"]);
 
 /**
- * 折叠契约下 bkn-safe 会下发通配授权:全局通配行 `*:*`(超管等价)与类型级
- * `${type}:*`(该类型全操作)。判某个 `type:op` 是否被授,须连同这两种通配一并看,
- * 否则 is_admin=false 但持通配的账号菜单会漏门。
+ * Under the compact grant contract, bkn-safe emits global wildcard `*:*` grants (equivalent
+ * to super admin) and type-level `${type}:*` grants (all operations for that type). Both
+ * wildcards must be considered when checking a `type:op`; otherwise, an account with
+ * is_admin=false but a wildcard grant could miss navigation entries.
  */
 function safeGrantsCover(safeGrants: Set<string>, type: string, operation: string): boolean {
   return (
@@ -98,16 +105,18 @@ function safeGrantsCover(safeGrants: Set<string>, type: string, operation: strin
 }
 
 /**
- * 把 bkn-safe 的授权条目展平成 `type:op` 集合。
+ * Flattens bkn-safe grant entries into a `type:op` set.
  *
- * 刻意不区分 `resource.id`:本集合驱动的是菜单、路由与按钮门禁,问的是「这类东西我有没有
- * 一个能看/能改的」,而不是「这一个我能不能改」。所以 scope=type 下后端汇总的
- * `instance_operations`(仅在某些实例上持有的操作)同样要并进来 —— 否则「只被授了
- * 某几个对象」的用户会连入口都看不到(对象授权页发出的正是这种授权)。
+ * This intentionally ignores `resource.id`: the set drives menus, routes, and button guards,
+ * answering whether a user can view or modify any resource of this type rather than this exact
+ * resource. Therefore, backend-aggregated `instance_operations` (operations granted only on
+ * particular instances) must also be included for scope=type; otherwise, users granted access
+ * to only a few objects would not see the entry point at all.
  *
- * 代价是按钮层面偏松:持有任一实例的 modify,所有同类对象的编辑按钮都会亮,点下去由
- * 后端 403 拦住。要按对象精确显隐,得用 scoped 查询逐对象判权(model-resources 的
- * getResourceOperations 即此模式),不能靠这个集合。
+ * The trade-off is permissive button visibility: a modify grant on any instance enables edit
+ * buttons for every resource of that type, and the backend returns 403 when necessary. Exact
+ * per-object visibility requires scoped authorization checks, as model-resources does with
+ * getResourceOperations; this set cannot provide that precision.
  */
 export function flattenSafeGrants(
   grants:
@@ -132,10 +141,10 @@ export function flattenSafeGrants(
 }
 
 /**
- * 适用本映射的模块前缀。
+ * Module prefixes covered by this mapping.
  *
- * 执行工厂两个模块走本通用映射。知识网络只在这里映射类型级的 create；
- * 实例级操作必须使用后端随资源返回的 operations。
+ * The two execution-factory modules use this common mapping. Knowledge-network maps only its
+ * type-level create operation here; instance-level operations must use operations returned by the backend.
  */
 const MAPPED_MODULE_PREFIXES = ["execution-factory", "execution-factory-lab"];
 
@@ -148,23 +157,23 @@ const KNOWLEDGE_NETWORK_TYPE_PERMISSIONS: Record<string, string> = {
 };
 
 /**
- * 判断某个 Studio 权限点在给定的 bkn-safe 授权集下是否成立。
+ * Checks whether a Studio permission point is granted by a given bkn-safe grant set.
  *
- * 判定顺序：
- *   1. 与 bkn-safe 下发的 `type:op` 直接同名 —— 保留既有行为，任何模块都不会因本映射掉权限；
- *   2. 超管专属权限点 —— 锚在 is_admin；
- *   3. 执行工厂的翻译规则 —— 覆盖表优先于通用的实体/动作映射。
+ * Evaluation order:
+ *   1. Direct name match with a bkn-safe `type:op`, preserving existing behavior for every module.
+ *   2. Super-admin-only permissions, based on is_admin.
+ *   3. Execution-factory translation rules, where overrides take precedence over generic entity/action mappings.
  *
- * 无法解析的权限点判为不成立（fail-closed）：宁可少给，不可错给。
+ * Permissions that cannot be resolved are denied (fail closed): under-grant rather than over-grant.
  */
 export function isStudioPermissionGranted(
   studioPermission: string,
   safeGrants: Set<string>,
   isAdmin: boolean,
 ): boolean {
-  // 1. 直接同名。data-catalog 的 `catalog:view_detail` 等即走这条。
-  //    折叠通配 `*:*` / `${type}:*` 在下方映射的 safeGrantsCover 里统一处理,
-  //    刻意不在此短路 —— 否则会绕过 catalog:install 等有意屏蔽项。
+  // 1. Direct name match. data-catalog's `catalog:view_detail`, for example, uses this path.
+  //    Compact wildcards are handled by safeGrantsCover in the mappings below instead of here,
+  //    so intentionally blocked permissions such as catalog:install cannot be bypassed.
   if (safeGrants.has(studioPermission)) {
     return true;
   }
@@ -180,12 +189,12 @@ export function isStudioPermissionGranted(
   }
   const suffix = segments.slice(1).join(":");
 
-  // 2. 超管专属。
+  // 2. Super-admin-only permission.
   if (ADMIN_ONLY_SUFFIXES.has(suffix)) {
     return isAdmin;
   }
 
-  // 3. 覆盖表优先。命中判定同样要吃类型级 `${type}:*` 通配。
+  // 3. Overrides take precedence. Matching also honors type-level `${type}:*` wildcards.
   const override = OVERRIDES[suffix];
   if (override) {
     return override.some((candidate) => {
@@ -204,10 +213,10 @@ export function isStudioPermissionGranted(
 }
 
 /**
- * 从 bkn-safe 授权推导出当前用户实际持有的 Studio 权限点。
+ * Derives the Studio permission points actually held by the current user from bkn-safe grants.
  *
- * knownPermissions 是各模块 manifest 声明的全部权限点；只在这个集合内推导，
- * 避免造出模块从未声明过的权限串。
+ * knownPermissions contains every permission point declared by module manifests. Derive only
+ * within this set to avoid producing permission strings that no module declares.
  */
 export function deriveStudioPermissions(
   knownPermissions: readonly string[],

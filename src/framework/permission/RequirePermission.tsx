@@ -23,8 +23,8 @@ type RequirePermissionProps = {
 };
 
 /**
- * 路由级权限守卫。无权限时渲染 403，不渲染 children——
- * 被守卫的页面因此不会 mount,也就不会触发其拉数据的副作用(避免无权限页狂刷错误 toast)。
+ * Route-level permission guard. Renders 403 instead of children when unauthorized, so guarded
+ * pages never mount or trigger data-fetching side effects that would repeatedly show error toasts.
  */
 export function RequirePermission({
   children,

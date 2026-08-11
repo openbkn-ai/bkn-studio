@@ -6,8 +6,8 @@
  */
 
 /**
- * 概述页本体区块 —— 进入页面默认展示「本体预览」图谱；「本体结构」表格
- * 在用户展开后再拉取明细，避免一次性加载全部对象类详情。
+ * Ontology section on overview pages. Show the ontology-preview graph by default and load the
+ * ontology-structure table only after expansion to avoid fetching every object-type detail at once.
  */
 
 import { DownOutlined, RightOutlined } from "@ant-design/icons";

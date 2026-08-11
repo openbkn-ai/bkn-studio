@@ -90,7 +90,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
   const [railKeyword, setRailKeyword] = useState("");
   const { exportComponentById, isExporting } = useImpexExport();
 
-  // MCP 工具一次性全量拉回来（listMcpTools 没分页），筛选放本地做。
+  // Load all MCP tools at once because listMcpTools is unpaginated, then filter locally.
   const visibleTools = useMemo(() => {
     const keyword = railKeyword.trim().toLowerCase();
     return keyword
@@ -170,7 +170,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
 
   const toolCount = tools.length || record?.toolConfigs?.length || 0;
 
-  // 原来只在 MCP 详情抽屉里露过，卡片改直连本页后搬到页面上，否则这些字段就没入口了。
+  // These fields were previously visible only in the MCP detail drawer. Move them here now that cards link directly to this page.
   const basicInfoItems = useMemo(() => {
     if (!record) {
       return [];
@@ -374,9 +374,9 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
                   }
                   items={[]}
                   subheader={
-                    // 与 HTTP 工具详情同构：描述直接接在标题下，不再作为 dl 里的一行。
-                    // MCP 工具的名称和描述由服务端 tools/list 给出，本地改不了,
-                    // 所以这里是只读文本，没有 HTTP 那侧的 InlineEditableText。
+                    // Match HTTP tool details by placing the description directly beneath the title
+                    // rather than in a definition-list row. MCP names and descriptions come from
+                    // backend tools/list and are not editable locally, so no InlineEditableText is used.
                     <div className={styles.toolIdentity}>
                       <div
                         className={`${styles.toolIdentityDesc} ${styles.toolIdentityDescClamp}`}

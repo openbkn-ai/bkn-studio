@@ -26,8 +26,8 @@ type MeResponse = {
 };
 
 // GET /api/safe/v1/me/permissions — role-inherited grants, type:op pairs.
-// instance_operations 只在 scope=type 下出现:该类型下「至少有一个实例持有、但未
-// 类型级持有」的操作汇总(见 bkn-safe authz.typeWideGrants)。
+// instance_operations appears only for scope=type and aggregates operations held on at least one
+// instance but not at the type level (see bkn-safe authz.typeWideGrants).
 type MePermissionsResponse = {
   is_admin?: boolean;
   permissions?: {
@@ -38,9 +38,10 @@ type MePermissionsResponse = {
 };
 
 /**
- * 无身份、无权限的兜底用户。任何权限来源不可用时都退回它——fail-closed:
- * 宁可少给,不可错给。绝不能退回带全量权限的开发态默认用户(见 dev-profile),
- * 否则 /me/permissions 一抖动,普通用户就看到全部系统管理入口(#176)。
+ * Fallback user with no identity or permissions. Use it whenever a permission source is
+ * unavailable: fail closed by under-granting rather than over-granting. Never fall back to the
+ * development default user with all permissions (see dev-profile), or transient /me/permissions
+ * failures would expose all system-admin entries to regular users (#176).
  */
 export const anonymousRuntimeUser: RuntimeUser = {
   businessDomainId: null,
@@ -52,32 +53,31 @@ export const anonymousRuntimeUser: RuntimeUser = {
 };
 
 /**
- * 登录后拉取当前用户身份 + 权限,组装成 RuntimeUser。
+ * Loads the current user's identity and permissions after login and assembles a RuntimeUser.
  *
- * bkn-safe 下发的是 `<resource_type>:<operation>`,与各模块 manifest 声明的权限点并非
- * 同一套命名,需经 permission-map 翻译(见该文件注释)。
+ * bkn-safe emits `<resource_type>:<operation>`, which uses a different naming scheme than module
+ * manifest permissions and must be translated through permission-map.
  *
- * 全量放行的判据是**资源通配授权**(`*:*` 行),不是 `is_admin`。两者不等价:
- * `is_admin` 来自后端 CanAdmin,判的是 `safe_admin:console:manage`——「可以进管理
- * API 面」,系统/安全/审计三员角色都持有它。若按 is_admin 放行全部权限,三员就都
- * 拿到全量权限点,按点位控制入口的门禁在他们身上直接失效(实测 14.103.77.23:三员
- * 的 /me/permissions 均为 is_admin=true,而 permissions 只含各自那几行)。超级管理员
- * 才持有资源通配,其 /me/permissions 折叠成单行 `{type:"*",id:"*",ops:["*"]}`。
+ * Full access is determined by a resource wildcard grant (`*:*`), not by `is_admin`; they are
+ * not equivalent. is_admin comes from backend CanAdmin and checks safe_admin:console:manage,
+ * meaning access to management APIs. System, security, and audit administrators all hold it. If
+ * it granted every permission, point-level guards would fail for all three roles. Only super
+ * administrators receive a resource wildcard, compacted in /me/permissions to `{type:"*",id:"*",ops:["*"]}`.
  *
- * is_admin 仍然有用:它是 ADMIN_ONLY_SUFFIXES(跨租户运维页)的判据,与执行工厂后端
- * CheckAdminPermission 同口径,所以照常传给 deriveStudioPermissions。
+ * is_admin remains useful as the criterion for ADMIN_ONLY_SUFFIXES, which cover cross-tenant
+ * operations pages and align with the execution-factory backend's CheckAdminPermission.
  *
- * 两个请求各自独立降级(allSettled),互不牵连:身份拿不到不影响权限,权限拿不到
- * 一律按无权限处理。permissions 拉取失败绝不放行任何权限(fail-closed)——避免因为
- * 一次瞬时失败让前端沿用带全量权限的默认用户。
+ * The two requests degrade independently through allSettled: failing to load identity does not
+ * affect permissions, and failing to load permissions yields no permissions. Never grant on a
+ * permissions-load failure, preventing a transient error from retaining the all-permission default user.
  */
 export async function fetchCurrentUser(): Promise<RuntimeUser> {
   const [meResult, permResult] = await Promise.allSettled([
     http.get<MeResponse>("/safe/v1/me", { skipErrorToast: true }),
-    // scope=type:启动只为渲染导航/菜单,只需类型级授权。响应从随逐对象授权数线性涨
-    // 收敛到类型数量级(实测 500 对象授权:501 行 37101B → 1 行 101B)。类型级之外的
-    // 操作由后端汇总进 instance_operations,flattenSafeGrants 一并折入,故入口可见性
-    // 不受影响。老后端忽略未知参数,两侧可独立上线。
+    // scope=type is sufficient at startup to render navigation and menus. It reduces responses
+    // from linear growth with object grants to type-scale size. The backend aggregates operations
+    // outside type-level grants into instance_operations, and flattenSafeGrants includes them, so
+    // entry visibility is unaffected. Older backends ignore this unknown parameter, allowing independent rollout.
     http.get<MePermissionsResponse>("/safe/v1/me/permissions", {
       params: { scope: "type" },
       skipErrorToast: true,
@@ -85,13 +85,13 @@ export async function fetchCurrentUser(): Promise<RuntimeUser> {
   ]);
 
   const me: MeResponse = meResult.status === "fulfilled" ? meResult.value.data : {};
-  // 权限接口失败 → 空授权集 → 推导出空权限,而不是保留调用方的默认(全量)权限。
+  // Permission endpoint failure produces an empty grant set and therefore no permissions, rather than retaining the caller's all-permission default.
   const perm: MePermissionsResponse =
     permResult.status === "fulfilled" ? permResult.value.data : {};
 
   const safeGrants = flattenSafeGrants(perm.permissions);
   const isAdmin = Boolean(perm.is_admin);
-  // 资源通配 = 超级管理员,对每一类资源的每个操作都成立,没有逐点推导的必要。
+  // A resource wildcard means super administrator and covers every operation on every resource type, so per-point derivation is unnecessary.
   const hasResourceWildcard = safeGrants.has("*:*");
 
   return {

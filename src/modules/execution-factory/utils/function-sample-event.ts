@@ -8,8 +8,8 @@
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
 
 /**
- * 按已声明的入参造一份 event 骨架。参数都已经填好了，还让用户对着 `{}` 手敲
- * 一遍字段名纯属重复劳动，敲错了还得靠报错才发现。
+ * Builds an event skeleton from declared inputs. Making users type field names into `{}` after
+ * parameters are already known is redundant and exposes typos only through later errors.
  */
 
 function sampleValue(parameter: FunctionParameterDef): unknown {
@@ -35,7 +35,7 @@ function sampleObject(parameters: FunctionParameterDef[]): Record<string, unknow
 
   parameters.forEach((parameter, index) => {
     const name = parameter.name?.trim();
-    // 没命名的参数在契约里也是废的，占位名只是别让它凭空消失。
+    // Unnamed parameters are unusable in the contract; the placeholder only prevents them disappearing entirely.
     result[name || `arg${index + 1}`] = sampleValue(parameter);
   });
 

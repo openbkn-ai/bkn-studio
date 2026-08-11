@@ -222,9 +222,9 @@ describe("ImportResourceModal", () => {
     vi.clearAllMocks();
   });
 
-  // 工具箱 OpenAPI 导入已并入「添加 API」向导（ImportOpenApiCapabilityForm →
-  // registerOpenApiImport），不再由 ImportResourceModal 承担；原 toolbox-OpenAPI 用例移除。
-  // 下面保留 operator 的 OpenAPI 用例与 .adp 备份导入用例。
+  // Toolbox OpenAPI import moved into the Add API wizard through ImportOpenApiCapabilityForm and
+  // registerOpenApiImport, so ImportResourceModal no longer owns it and the old toolbox case is removed.
+  // Keep operator OpenAPI and .adp backup-import cases below.
 
   it("preserves absolute OpenAPI servers when importing an operator", async () => {
     nextOpenApiSpec = absoluteServerSpec;

@@ -5,9 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/* 语义映射沿用 swagger 的习惯（读=蓝、增=绿、改=橙、删=红），但只留一点点色：
-   浅底 + 同色文字 + 细边框。实心底白字在密集列表里会变成一排色块，比工具名还抢眼——
-   动词是限定语不是主语，降到和出入参标签同一档就够。文字对浅底都过 4.5:1。 */
+/* Follow Swagger's semantic mapping (read blue, create green, update orange, delete red), but
+   use color sparingly: light backgrounds, matching text, and thin borders. Solid backgrounds with
+   white text create a distracting row of color blocks in dense lists. Verbs are qualifiers, not
+   primary content, so align them with input/output tags. Text contrast on light backgrounds exceeds 4.5:1. */
 .tag {
   --method-color: var(--color-text-secondary);
   flex-shrink: 0;
@@ -42,8 +43,7 @@
   --method-color: var(--color-warning-text);
 }
 
-/* PATCH 没有对应的语义 token（青不属于成功/警告/错误任何一档），
-   这是本文件唯一的字面色值。 */
+/* PATCH has no semantic token because teal is neither success, warning, nor error. This is the only literal color in the file. */
 .tag[data-method="PATCH"] {
   --method-color: #0f766e;
 }

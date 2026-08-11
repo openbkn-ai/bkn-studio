@@ -10,8 +10,8 @@ import { AppstoreOutlined, CloudServerOutlined, ExperimentOutlined } from "@ant-
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 import { executionFactoryLabPermissions } from "@/modules/execution-factory-lab/permissions";
 
-// 各项均声明所需权限：无权限的用户不该在侧边栏看到点进去只有一张空页的入口。
-// 沙箱运行时限超管，与后端 #339 的门禁同口径。
+// Every item declares required permissions so unauthorized users do not see sidebar entries opening to empty pages.
+// Sandbox runtime is limited to super administrators, matching backend #339 guards.
 export const executionFactoryLabNavigation: ConsoleNavContribution = {
   parentKey: "execution-factory-lab",
   items: [

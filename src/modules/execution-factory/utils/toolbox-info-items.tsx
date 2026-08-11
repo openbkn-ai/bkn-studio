@@ -26,16 +26,16 @@ import {
 type BuildToolboxBasicInfoItemsOptions = {
   t: (key: string) => string;
   auditUserDirectory: Parameters<typeof formatAuditUserDisplay>[0]["directory"];
-  /** 工具/函数数量（两个宿主分别来自不同来源，故显式传入）。 */
+  /** Tool/function count, passed explicitly because the two hosts obtain it from different sources. */
   toolCount: number;
-  /** 工具箱详情附带发布人/发布时间；函数工作台不显示。 */
+  /** Toolbox details include publisher and publication time; the function workbench does not display them. */
   includeRelease?: boolean;
 };
 
 /**
- * 工具箱（含函数工具箱）基础信息条目。工具箱详情页与函数工作台共用同一份 spec，
- * 只在数量来源与是否含发布字段上不同。喂给 DetailBasicInfoDrawer（竖排列表，
- * 不读 span），所以这里不带 span。
+ * Basic information items for toolboxes, including function toolboxes. Toolbox details and the
+ * function workbench share one spec, differing only in count source and publication fields. It is
+ * consumed by DetailBasicInfoDrawer, a vertical list that does not use span, so no span is included.
  */
 export function buildToolboxBasicInfoItems(
   toolbox: ToolboxRecord,

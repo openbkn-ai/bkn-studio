@@ -26,10 +26,10 @@ export function useConsoleNavigation(): ConsoleNavItem[] {
       filterNavByPermission(
         filterConsoleNavigation(consoleNavigation, {
           hideCatalog: !features.catalog,
-          // 执行工厂菜单常驻:不再跟随 capabilities-lab 的
-          // hide_legacy_execution_factory_menu 开关隐藏。
+          // Keep the execution-factory menu visible; it no longer follows the capabilities-lab
+          // hide_legacy_execution_factory_menu flag.
           hideLegacyExecutionFactory: false,
-          // 跨业务域市场暂未启用,入口与"执行单元管理"内容重叠。
+          // The cross-business-domain marketplace is not enabled yet, and overlaps with Execution Unit Management.
           hideMarketCatalog: !isMarketCatalogEnabled(),
         }),
         runtimeConfig.currentUser.permissions,

@@ -8,14 +8,15 @@
 import { authzPoints } from "@/modules/system-admin/permissions";
 
 /**
- * 对象授权抽屉里操作 chip 的点击落到哪个权限点。
+ * Determines which permission point receives an operation-chip click in the object-grant drawer.
  *
- * 后端 object-grants 的写入是覆盖语义:改操作集发 POST(admin-authz:grant),清空操作集
- * 才是 DELETE(admin-authz:revoke)。前端的 upsertObjectGrant 在操作集为空时自动转成
- * revoke,所以「取消掉最后一个操作」等于整条撤权 —— 需要 revoke 而不是 grant。
+ * Backend object-grant writes use replacement semantics: changing operations sends POST
+ * (admin-authz:grant), while clearing them sends DELETE (admin-authz:revoke). Frontend
+ * upsertObjectGrant automatically switches to revoke for an empty set, so removing the last
+ * operation revokes the entire grant and requires revoke rather than grant.
  *
- * 单独拿出来做纯函数,是因为这个映射是本页最容易判错的一处:selected 的反面不是
- * revoke,只有「selected 且是最后一个」才是。
+ * Kept as a pure function because this mapping is easy to get wrong: the opposite of selected is
+ * not always revoke; only a selected last operation is.
  */
 export function chipTogglePoint(selected: boolean, currentOpCount: number): string {
   if (selected && currentOpCount <= 1) {

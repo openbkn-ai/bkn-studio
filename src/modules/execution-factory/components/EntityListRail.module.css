@@ -13,9 +13,10 @@
   background: var(--color-bg-surface);
 }
 
-/* 头、列表、底栏三段的左右内边距保持一致，标题文字才和卡片左缘对齐。
-   --entity-rail-head-height 由外层页面按需给定：右侧也有一条同高的头部分隔线时
-   （函数工作台），两条线必须落在同一 y 上，否则中缝会错开一截。不给就按内容高。 */
+/* Keep horizontal padding consistent across header, list, and footer so headings align with card
+   edges. The outer page may set --entity-rail-head-height when the right side has a header divider
+   at the same height, such as the function workbench, so both dividers share one y-coordinate.
+   Without it, the header uses content height. */
 .head {
   display: flex;
   flex: none;
@@ -23,12 +24,12 @@
   gap: 10px;
   min-height: var(--entity-rail-head-height, auto);
   padding: 14px 16px;
-  /* 外层若打算自己画一条贯穿两栏的线，就把这条设成 transparent，避免两条线叠影。 */
+  /* When the outer layout draws a divider across both columns, make this transparent to prevent a double line. */
   border-bottom: 1px solid var(--entity-rail-head-border, var(--color-border));
 }
 
-/* 单行头：标题和筛选框同排。右栏头只有一行内容时用它，两栏的头部分隔线才落在
-   同一 y 上，又不必在矮的那侧垫一大片空白。 */
+/* One-line header with title and filter on the same row. Use it when the right header has one line
+   so both column dividers align without adding a large blank area to the shorter side. */
 .headInline {
   flex-direction: row;
   align-items: center;
@@ -59,14 +60,15 @@
   flex: 1 1 auto;
   flex-direction: column;
   gap: 12px;
-  /* flex 子项默认 min-height:auto，不写这行压不下去，滚动条也就不会出现。 */
+  /* Flex items default to min-height:auto; without this they cannot shrink and scrolling never appears. */
   min-height: 0;
   overflow-y: auto;
   padding: 14px 16px;
 }
 
-/* 两行卡片：名字行 + 状态行。卡内 14/16、行距 14、卡间 12——一列卡片贴太紧会糊成
-   一片横条，扫读时找不到边界；这几个值是让「卡片内」比「卡片间」略松一点的最小档。 */
+/* Two-line cards: name and status. With 14/16 padding, 14px internal spacing, and 12px between
+   cards, a column remains scannable instead of becoming an undifferentiated band. Internal card
+   spacing is only slightly looser than the gap between cards. */
 .item {
   display: flex;
   flex-direction: column;
@@ -104,7 +106,7 @@
   font-size: 12px;
 }
 
-/* 名字占满中间、超出省略；徽标定宽靠右，各行徽标对齐成一列。 */
+/* Names occupy the center and truncate on overflow; fixed-width right badges align across rows. */
 .name {
   flex: 1;
   min-width: 0;
@@ -115,7 +117,7 @@
   white-space: nowrap;
 }
 
-/* 停用项压暗，不打开也看得出来。 */
+/* Dim disabled items so their state is visible without opening them. */
 .itemMuted .name {
   color: var(--color-text-tertiary);
   font-weight: 500;
@@ -142,7 +144,7 @@
   margin-left: auto;
 }
 
-/* 卡片右下角的小标签：出入参计数、未保存等。浅底细框，不跟状态开关抢注意力。 */
+/* Small lower-right card tags for input/output counts or unsaved state. Light fill and thin borders avoid competing with status controls. */
 .tag {
   padding: 0 6px;
   border: 1px solid var(--color-border);

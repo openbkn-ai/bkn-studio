@@ -5,28 +5,28 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/** 用户自助签发的 AppKey（长期凭据，bak_ 开头）。明文 key 仅签发/轮换时返回一次。 */
+/** User-issued AppKey, a long-lived credential prefixed with bak_. The plaintext key is returned only once on issuance or rotation. */
 export type ApiKey = {
   id: string;
   keyId: string;
   name: string;
-  /** 后端返回的掩码展示，如 bak_b3ff****b234（secret 不可回取）。 */
+  /** Masked display value returned by the backend, such as bak_b3ff****b234; the secret cannot be retrieved. */
   masked: string;
   enabled: boolean;
-  /** RFC3339；null = 永不过期。 */
+  /** RFC3339; null means never expires. */
   expiresAt: string | null;
-  /** null = 从未使用。 */
+  /** null means never used. */
   lastUsedAt: string | null;
   createdAt: string;
 };
 
-/** 签发 / 轮换的返回：在 ApiKey 基础上带一次性明文 key。 */
+/** Issuance or rotation response: an ApiKey with a one-time plaintext key. */
 export type IssuedApiKey = ApiKey & { key: string };
 
 export type IssueApiKeyPayload = {
   name: string;
-  /** RFC3339；省略 = 默认 1 年。必须是将来时间。 */
+  /** RFC3339; omitted means one year by default. Must be in the future. */
   expiresAt?: string;
-  /** true = 永不过期（优先级高于 expiresAt）。 */
+  /** true means never expires and takes precedence over expiresAt. */
   neverExpire?: boolean;
 };

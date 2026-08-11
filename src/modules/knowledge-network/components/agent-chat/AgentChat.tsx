@@ -6,11 +6,11 @@
  */
 
 /**
- * 立即体验 · Agent 对话 —— 容器：单会话 / 对比模式（分屏）。
- * 会话本体在 ChatPane（独立的消息/模型/提示词/调参/工具勾选）；本容器负责共享资源
- * （模型列表、知识网络摘要、tools/list 缓存）、对比开关与共享输入框（发送目标可选）。
- * 对比模式：左「仅基础数据」（默认只挂 list_resources/describe_resource/run_sql，不注入网络摘要）
- * vs 右「业务知识网络」（全部工具 + 注入摘要）——同一问题两侧同问，直观对比语义层价值。
+ * Try-now Agent chat container for single-conversation and split comparison modes. ChatPane owns
+ * messages, model, prompt, tuning, and tool selection; this container owns shared resources such
+ * as the model list, knowledge-network summary, tools/list cache, comparison state, and shared input.
+ * Comparison asks the same question of base data on the left and the business knowledge network on
+ * the right to demonstrate the value of the semantic layer.
  */
 
 import { ClearOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RightOutlined, SettingOutlined } from "@ant-design/icons";
@@ -58,10 +58,10 @@ import {
 import styles from "./AgentChat.module.css";
 
 /**
- * 建议问题在两侧（「仅基础数据」/「业务知识网络」）共用同一组，措辞保持业务向、不带本体术语：
- * 左侧只挂 SQL/表工具，问它「对象类怎么关联」是问一个它定义上就不知道的概念，对比没有说服力；
- * 业务问题才是左侧用 SQL 抓瞎、右侧靠语义层直接答的对比场。
- * 拉不到网络结构时的兜底（不含任何具体业务名词）。
+ * Both sides share recommendations phrased as business questions without ontology terms. The base
+ * side has only SQL/table tools, so questions about object-type relationships ask concepts it does
+ * not define and make an unconvincing comparison. Business questions let SQL struggle on the left
+ * while the semantic layer answers directly on the right. These are the fallback when network structure is unavailable.
  */
 const FALLBACK_SUGGESTIONS = [
   "knowledgeNetwork.agentChat.fallbackSuggestions.overview",
@@ -69,7 +69,7 @@ const FALLBACK_SUGGESTIONS = [
   "knowledgeNetwork.agentChat.fallbackSuggestions.priorityRecords",
 ];
 
-/** 对比模式开关 + 发送目标（全局缓存，不分 kn）。 */
+/** Comparison-mode toggle and send target, cached globally rather than per knowledge network. */
 const COMPARE_LS_KEY = "bkn-studio:agentchat:compare";
 
 type CompareTarget = "both" | "base" | "kn";
@@ -86,22 +86,23 @@ function loadCompareState(): CompareState {
       target: parsed.target === "base" || parsed.target === "kn" ? parsed.target : "both",
     };
   } catch {
-    /* 用默认 */
+    /* Use defaults. */
   }
   try {
-    // 深链覆盖：?compare=on / ?compare=off（可分享演示链接，也便于自动化冒烟）。
+    // Deep-link override through ?compare=on / ?compare=off for shareable demos and automated smoke tests.
     const qp = new URLSearchParams(window.location.search).get("compare");
     if (qp === "on" || qp === "1") state = { ...state, on: true };
     else if (qp === "off" || qp === "0") state = { ...state, on: false };
   } catch {
-    /* SSR/异常时忽略 */
+    /* Ignore SSR and other errors. */
   }
   return state;
 }
 
 /**
- * 注入系统提示词的知识网络**摘要**（非完整结构）：名称 + 简介 + 规模 + 对象类名（截断）。
- * 完整本体/实例由 Agent 按需调 get_kn_detail / search_schema 等工具获取。
+ * Summary of the knowledge network injected into the system prompt, not its full structure: name,
+ * description, scale, and truncated object-type names. The Agent retrieves full ontology and instances
+ * on demand through get_kn_detail, search_schema, and related tools.
  */
 function fallbackSuggestions(t: TFunction): string[] {
   return FALLBACK_SUGGESTIONS.map((key) => t(key));
@@ -138,8 +139,9 @@ function buildKnContext(detail: KnDetail, t: TFunction): string {
 }
 
 /**
- * 无默认模型（或生成失败）时的兜底：拿业务名词套模板，同样保持业务向、不出现本体术语。
- * 概念组实测多数网络为空，故第二条优先用关系名——关系名本身就是业务动词（如「用户下单」）。
+ * Fallback when no default model is available or generation fails: apply templates to business names
+ * without ontology terminology. Most networks have empty concept groups, so prefer relation names
+ * for the second question because relations are business verbs.
  */
 function templateSuggestions(detail: KnDetail, t: TFunction): string[] {
   const out: string[] = [];
@@ -155,8 +157,9 @@ function templateSuggestions(detail: KnDetail, t: TFunction): string[] {
 }
 
 /**
- * 建议问题的生成提示词。输入是 get_kn_detail 的原始 JSON（网络/对象类的 comment、关系名等业务描述都在里面）——
- * 推荐问题的质量直接取决于 BKN 里这些描述写得好不好，这就是业务侧控制推荐问题的抓手。
+ * Generation prompt for recommended questions. Input is raw get_kn_detail JSON containing network
+ * and object-type comments, relation names, and other business descriptions. Recommendation quality
+ * depends directly on those descriptions, giving business teams control over it.
  */
 function suggestPrompt(t: TFunction, locale: string): string {
   const languageInstruction =
@@ -166,7 +169,7 @@ function suggestPrompt(t: TFunction, locale: string): string {
   return `${t("knowledgeNetwork.agentChat.suggestPrompt")}\n${languageInstruction}`;
 }
 
-/** 从模型输出里抠出 JSON 数组；任何不合预期都返回空数组，由调用方回退模板。 */
+/** Extracts a JSON array from model output; unexpected input returns an empty array and callers fall back to templates. */
 function parseSuggestions(text: string): string[] {
   const match = text.match(/\[[\s\S]*\]/);
   if (!match) return [];
@@ -183,7 +186,7 @@ function parseSuggestions(text: string): string[] {
   }
 }
 
-/** 建议问题缓存：按 knId 存，指纹变了（网络结构/描述改过）就重生成。 */
+/** Recommendation cache by knId. Regenerate when its fingerprint changes because structure or descriptions changed. */
 const SUGS_LS_PREFIX = "bkn-studio:agentchat:sugs:";
 
 function suggestionCacheKey(knId: string, locale: string): string {
@@ -207,7 +210,7 @@ function saveCachedSuggestions(knId: string, locale: string, fp: string, list: s
   try {
     localStorage.setItem(suggestionCacheKey(knId, locale), JSON.stringify({ fp, list }));
   } catch {
-    /* 隐私模式/配额满：不缓存即可，不影响功能 */
+    /* Private mode or exhausted quota: skip caching without affecting functionality. */
   }
 }
 
@@ -241,12 +244,12 @@ function buildProfiles(t: TFunction) {
   return { soloProfile, baseProfile, knProfile };
 }
 
-/** 对比报告 AI 总结的评审提示词。 */
+/** Evaluation prompt for the AI summary in a comparison report. */
 function judgePrompt(t: TFunction): string {
   return t("knowledgeNetwork.agentChat.judgePrompt");
 }
 
-/** 结果状态标签；empty/stopped/error 明确标注为负面。 */
+/** Outcome label; empty, stopped, and error are explicitly negative. */
 function outcomeLabel(o: RoundOutcome, t: TFunction): string {
   switch (o) {
     case "answered":
@@ -261,7 +264,7 @@ function outcomeLabel(o: RoundOutcome, t: TFunction): string {
   }
 }
 
-/** 一轮的答案块：有效回答直接给正文；否则标注负面状态（有部分内容则附上）。 */
+/** Answer block for one round: return the answer for success, otherwise a negative status with any partial content. */
 function answerBlock(r: PaneRound | undefined, t: TFunction): string {
   if (!r) return t("knowledgeNetwork.agentChat.answer.notParticipated");
   if (r.outcome === "answered") return r.answer ?? t("knowledgeNetwork.agentChat.answer.empty");
@@ -269,12 +272,12 @@ function answerBlock(r: PaneRound | undefined, t: TFunction): string {
   return r.answer && r.answer.trim() ? `${note}\n\n${r.answer}` : note;
 }
 
-/** 某侧未有效完成（无答/停止/出错）的轮数——对比报告里的负面计数。 */
+/** Number of rounds on one side that did not complete successfully, used as the negative count in reports. */
 function negativeRounds(s: PaneSnapshot): number {
   return s.rounds.filter((r) => r.outcome !== "answered").length;
 }
 
-/** 导出 Markdown：一轮的工具调用摘要。 */
+/** Markdown export summary of one round's tool calls. */
 function mdCalls(r: PaneRound | undefined, t: TFunction): string {
   if (!r || r.toolCalls.length === 0) return t("knowledgeNetwork.agentChat.calls.zero");
   const ok = r.toolCalls.filter((t) => t.status === "done").length;
@@ -294,7 +297,7 @@ function mdCalls(r: PaneRound | undefined, t: TFunction): string {
   });
 }
 
-/** 把对比报告导出为 Markdown 文本（总览 + 逐轮问答指标 + 双方答案 + AI 总结）。 */
+/** Exports a comparison report as Markdown with overview, per-round metrics, both answers, and AI summary. */
 function reportToMarkdown(
   base: PaneSnapshot,
   kn: PaneSnapshot,
@@ -365,7 +368,7 @@ function reportToMarkdown(
   return L.join("\n");
 }
 
-/** 报告里单侧全部轮次的评审语料（长回答截断，防提示词爆炸）。 */
+/** Evaluation corpus for all rounds on one side of a report; truncate long answers to prevent prompt explosion. */
 function paneBrief(label: string, s: PaneSnapshot, t: TFunction): string {
   const parts = [
     `### ${t("knowledgeNetwork.agentChat.report.paneBriefTitle", {
@@ -413,9 +416,9 @@ export function AgentChat({
 }: {
   env: ContextLoaderEnv;
   networkName?: string;
-  /** 检索工具（agent-retrieval MCP）鉴权：OAuth 会话或 bak_ AppKey。 */
+  /** Authentication for retrieval tools (agent-retrieval MCP): OAuth session or bak_ AppKey. */
   tokenProvider: AgentTokenProvider;
-  /** 大模型（mf-model-api）鉴权：网关不认 bak_，恒用 OAuth 会话；缺省回落 tokenProvider。 */
+  /** Authentication for LLMs (mf-model-api): the gateway does not accept bak_, so always use OAuth and fall back to tokenProvider. */
   modelTokenProvider?: AgentTokenProvider;
 }) {
   const knId = env.knId;
@@ -432,14 +435,14 @@ export function AgentChat({
   const [input, setInput] = useState("");
   const [models, setModels] = useState<LlmModel[]>([]);
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  // 自动载入的知识网络本体结构（注入系统提示词；也用于定制建议问题）。
+  // Automatically loaded knowledge-network ontology used for system-prompt injection and tailored suggestions.
   const [knContext, setKnContext] = useState("");
   const [knSummary, setKnSummary] = useState<{ objectTypes: number; relations: number } | null>(null);
-  // 当前网络绑定的 resource_id 集（object_type.data_source.id）；用于把 list_resources 默认限定到本网络的数据表。
+  // resource_id set bound to the current network (object_type.data_source.id), used to limit list_resources to this network's tables by default.
   const [knResourceIds, setKnResourceIds] = useState<string[] | null>(null);
-  // 建议问题：两侧共用一组。先用模板即时渲染，模型就绪后再换成生成结果（见下方 effect）。
+  // Both sides share suggestions. Render templates immediately and replace them with generated results when the model is ready.
   const [suggestions, setSuggestions] = useState<string[]>(defaultSuggestions);
-  // 已拉到的网络结构：既派生系统提示词摘要，也作为生成建议问题的业务描述来源。
+  // Loaded network structure both derives the system-prompt summary and supplies business descriptions for suggestions.
   const [knDetail, setKnDetail] = useState<KnDetail | null>(null);
 
   const [compare, setCompare] = useState<CompareState>(loadCompareState);
@@ -455,7 +458,7 @@ export function AgentChat({
     });
   }, []);
 
-  // 每面板 busy 上报（禁发/停止逻辑用）。
+  // Busy state reported per panel for send-disable and stop behavior.
   const [busyMap, setBusyMap] = useState<Record<PaneKey, boolean>>({ solo: false, base: false, kn: false });
   const setPaneBusy = useCallback((key: PaneKey, busy: boolean) => {
     setBusyMap((prev) => (prev[key] === busy ? prev : { ...prev, [key]: busy }));
@@ -464,7 +467,7 @@ export function AgentChat({
   const onBaseBusy = useCallback((b: boolean) => setPaneBusy("base", b), [setPaneBusy]);
   const onKnBusy = useCallback((b: boolean) => setPaneBusy("kn", b), [setPaneBusy]);
 
-  /** 平台侧预取用的一次性受管会话（不是任何一侧对话）。 */
+  /** One-time managed session for platform prefetching, not either conversation. */
   const summaryLifecycle = useMemo(
     () =>
       createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
@@ -482,7 +485,7 @@ export function AgentChat({
     setSuggestions((prev) => (prev === defaultSuggestions ? prev : defaultSuggestions));
   }, [defaultSuggestions]);
 
-  // 拉模型列表（模型工厂）一次，两侧共享；默认模型在 ChatPane 内选。
+  // Load the model-factory list once for both sides; ChatPane selects the default model.
   useEffect(() => {
     let cancelled = false;
     listLlmModels({ page: 1, size: 100 })
@@ -500,7 +503,7 @@ export function AgentChat({
     };
   }, []);
 
-  // 自动载入选定知识网络的本体结构 → 注入系统提示词 + 定制建议（免去先浏览业务知识网络）。
+  // Load the selected network ontology automatically for system-prompt injection and tailored suggestions, without requiring prior browsing.
   useEffect(() => {
     let cancelled = false;
     setKnContext("");
@@ -508,8 +511,8 @@ export function AgentChat({
     setKnResourceIds(null);
     setKnDetail(null);
     setSuggestions(defaultSuggestions);
-    // 摘要预取也是受管业务调用（get_kn_detail 走 /kn/*）。它不属于任何一侧对话，
-    // 因此用一次性会话，不要占用面板的 conversation。
+    // Summary prefetch is also a managed business call because get_kn_detail uses /kn/*. It belongs
+    // to neither conversation, so use a one-time session rather than a panel conversation.
     withManagedTurn(summaryLifecycle, t("knowledgeNetwork.agentChat.managedTurns.loadSummary"), (turn) =>
       fetchKnDetail(env, tokenProvider, undefined, turn ?? undefined),
     )
@@ -519,18 +522,18 @@ export function AgentChat({
         setKnSummary({ objectTypes: detail.object_types.length, relations: detail.relation_types.length });
         setKnResourceIds(detail.object_types.map((o) => o.data_source?.id).filter((id): id is string => !!id));
         setKnDetail(detail);
-        // 先给模板结果，空态立刻有东西可点，不等模型。
+        // Show template results first so the empty state is immediately actionable without waiting for a model.
         setSuggestions(templateSuggestions(detail, t));
       })
       .catch(() => {
-        /* 占位符 / 无权限网络拉不到结构时，回退默认建议，Agent 仍可用工具探索 */
+        /* Fall back to default suggestions when a placeholder or unauthorized network cannot load structure; the Agent can still explore tools. */
       });
     return () => {
       cancelled = true;
     };
   }, [env, tokenProvider, summaryLifecycle, defaultSuggestions, t]);
 
-  // 有默认模型就用 BKN 的业务描述生成建议问题，替换模板结果；无模型/失败/输出不合预期时留在模板。
+  // With a default model, generate suggestions from BKN business descriptions and replace templates; retain templates with no model, failure, or unexpected output.
   useEffect(() => {
     if (!knDetail || !modelsLoaded) return;
     const modelName = models.find((m) => m.default)?.modelName ?? models[0]?.modelName;
@@ -564,14 +567,14 @@ export function AgentChat({
         saveCachedSuggestions(knId, activeLocale, fp, list);
       })
       .catch(() => {
-        /* 生成失败不打扰用户：空态继续用模板建议 */
+        /* Do not interrupt users on generation failure; keep template suggestions in the empty state. */
       });
     return () => {
       controller.abort();
     };
   }, [knDetail, modelsLoaded, models, env, llmTokenProvider, knId, activeLocale, t]);
 
-  // tools/list 缓存：按 knId 拉一次，多面板共享（send 懒取 promise；picker 用已解析的 toolDefs）。
+  // tools/list cache loads once per knId and is shared across panels; send lazily awaits its promise while picker uses resolved toolDefs.
   const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
   const toolsCacheRef = useRef<{ knId: string; promise: Promise<McpToolDef[]> } | null>(null);
   const toolsRequestRef = useRef<{ sequence: number; controller: AbortController | null }>({ sequence: 0, controller: null });
@@ -592,7 +595,7 @@ export function AgentChat({
           return list;
         })
         .catch((error: unknown) => {
-          // 失败不缓存，下次重试。
+          // Do not cache failures so the next attempt retries.
           if (sequence === toolsRequestRef.current.sequence) {
             toolsCacheRef.current = null;
           }
@@ -620,11 +623,11 @@ export function AgentChat({
     },
     [],
   );
-  // 对比模式下工具选择器需要 options → 打开时预拉一次。
+  // Comparison-mode tool picker needs options, so prefetch once when opened.
   useEffect(() => {
     if (compare.on && !toolDefs) {
       getTools().catch(() => {
-        /* picker 显示加载失败前的 loading 态；send 时会重试并把错误写进消息 */
+        /* Keep the picker loading state on failure; send retries and writes the error into the message. */
       });
     }
   }, [compare.on, toolDefs, getTools]);
@@ -651,9 +654,9 @@ export function AgentChat({
   }, [input, targets, anyTargetBusy, refOf]);
 
   /**
-   * 空态点建议问题：和共享输入框走同一套发送目标。
-   * （此前是 ChatPane 内直发，绕过 targets：对比模式下点谁只发谁、两侧还各是各的问题，
-   * 导致对比报告永远拿不到同题两答。）
+   * Suggested questions clicked in the empty state use the same send targets as shared input. The
+   * previous direct ChatPane path bypassed targets, sending to only one side in comparison mode and
+   * preventing reports from ever receiving two answers to the same question.
    */
   const sendQuestion = useCallback(
     (text: string) => {
@@ -669,7 +672,7 @@ export function AgentChat({
     });
   }, [busyMap, refOf]);
 
-  // 对比报告：两侧快照 + 指标表 + AI 总结（用右侧模型评审，流式）。
+  // Comparison report: both snapshots, metric table, and streaming AI summary evaluated by the right-side model.
   const [report, setReport] = useState<{ base: PaneSnapshot; kn: PaneSnapshot } | null>(null);
   const [summary, setSummary] = useState("");
   const [summarizing, setSummarizing] = useState(false);
@@ -821,7 +824,7 @@ export function AgentChat({
           spellCheck={false}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            // 跳过中文输入法组字中的回车（确认候选词），避免误发送。
+            // Ignore Enter used to confirm a candidate during Chinese IME composition to avoid accidental sends.
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
               e.preventDefault();
               sendShared();

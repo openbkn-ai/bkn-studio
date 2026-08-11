@@ -5,12 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-// 对象 id → 名称解析（各领域服务，bkn-safe 不提供）。
-// 契约见 bkn-foundry/bkn-safe/docs/frontend-object-grants-integration.md 第七节：
-//   7.1 列实例（id+name，搜索分页）—— 喂「新建授权」对象选择器
-//   7.2 按 id 批量取名 —— 授权列表/分组回显对象名
-// 各域接口的字段名/外壳/分页参数不统一，这里按类型归一成 {id,name}。
-// 仅真实模式使用（mock 模式 authz.service 自带 seed）。
+// Resolves object IDs to names through domain services; bkn-safe does not provide this.
+// See section 7 of bkn-foundry/bkn-safe/docs/frontend-object-grants-integration.md:
+//   7.1 List instances (id + name, searchable and paginated) for the new-grant object picker.
+//   7.2 Resolve names by ID in batches for grant-list and group display.
+// Domain APIs use different field names, envelopes, and paging parameters, so normalize them to {id, name} here.
+// Used only in real mode; authz.service includes seed data for mock mode.
 import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import type { AuthorizableObject, ObjectGrant } from "@/modules/system-admin/types/authz";
@@ -18,11 +18,8 @@ import { AUTHZ_OBJECT_TYPES } from "@/modules/system-admin/utils/authz-catalog";
 
 const PAGE_SIZE = 100;
 
-/**
- * 按 id 批量取名时,单条 URL(逗号拼 id)携带的 id 数上限。旧的 vega/mcp 接口把 id
- * 拼进 path,几十上百个会撞网关 URL 长度限制;且任一 id 不存在整批 404 —— 分批可把
- * 单个坏 id 的影响限定在本批,不牵连其它。UUID(~36 char)× 50 ≈ 1.8KB。
- */
+// Maximum IDs per batch URL. Legacy Vega/MCP APIs put comma-separated IDs in the path, so batching
+// avoids gateway URL limits and confines a missing ID's 404 to its own batch (50 UUIDs are ~1.8 KB).
 const NAME_ID_BATCH = 50;
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -56,7 +53,7 @@ type ListConfig = {
   path: string;
 };
 
-// 7.1 列实例
+// 7.1 List instances.
 const LIST_CONFIG: Record<string, ListConfig> = {
   catalog: { path: "/vega-backend/v1/catalogs", domain: false, envelope: "entries", idField: "id", nameField: "name", nameParam: "name", paging: "offset" },
   knowledge_network: { path: "/bkn-backend/v1/knowledge-networks", domain: true, envelope: "entries", idField: "id", nameField: "name", nameParam: "name_pattern", paging: "offset" },
@@ -94,13 +91,13 @@ async function listOne(type: string, keyword: string): Promise<AuthorizableObjec
     .filter((object) => object.id);
 }
 
-/** 列出全部可授权对象（按类型并行；单类型失败不影响其它）。 */
+// List authorizable objects by type in parallel; one type failing does not affect the others.
 export async function listDomainObjects(keyword = ""): Promise<AuthorizableObject[]> {
   const settled = await Promise.allSettled(AUTHZ_OBJECT_TYPES.map((type) => listOne(type, keyword)));
   return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
 }
 
-// 7.2 按 id 批量取名
+// 7.2 Resolve names by ID in batches.
 type NamesConfig =
   | { kind: "post"; domain: boolean; path: string }
   | { kind: "vega"; path: string }
@@ -114,8 +111,8 @@ const NAMES_CONFIG: Record<string, NamesConfig> = {
   skill: { kind: "post", domain: true, path: "/agent-operator-integration/v1/skills/names" },
   knowledge_network: { kind: "post", domain: true, path: "/bkn-backend/v1/knowledge-networks/names" },
   catalog: { kind: "vega", path: "/vega-backend/v1/catalogs" },
-  // resource 不在授权对象选择器里（不新建单资源授权），但后端可能已存在 resource 级
-  // 授权记录，列表需能回显其名称，故保留按 id 取名（vega 旧批量接口，同 catalog）。
+  // Resources are not selectable for new grants, but the backend may contain existing resource-level
+  // grants. Keep name lookup so lists can display their names, using the legacy Vega batch API as catalog does.
   resource: { kind: "vega", path: "/vega-backend/v1/resources" },
   mcp: { kind: "mcp" },
 };
@@ -152,10 +149,11 @@ async function namesFor(type: string, ids: string[]): Promise<Map<string, string
     return map;
   }
   if (cfg.kind === "vega") {
-    // 逗号分隔 path 批量取名。ignore_missing=true 让后端对已删 id 返 200 + 查到的那些
-    // (而非任一 id 不存在就整批 404),孤儿授权混进本批也不牵连其余。按 NAME_ID_BATCH
-    // 分批控 URL 长度(50 ≈ 1.1KB,远低于网关 ~8KB/414 上限)。回填按 entry.id 对齐,
-    // 不假设返回顺序/数量;请求了但没返的 id = 已删对象 → 名称退化为 id 兜底。
+    // Resolve names through comma-separated IDs in the path. ignore_missing=true returns 200 with
+    // found IDs instead of making the whole batch fail for one deleted ID, so orphaned grants do not
+    // affect other entries. NAME_ID_BATCH keeps URLs bounded (50 IDs are about 1.1 KB, well below
+    // the gateway's roughly 8 KB / 414 limit). Reconcile by entry.id without assuming result order
+    // or count; requested IDs absent from the response represent deleted objects and fall back to their IDs.
     await Promise.all(
       chunk(ids, NAME_ID_BATCH).map(async (batch) => {
         try {
@@ -167,13 +165,13 @@ async function namesFor(type: string, ids: string[]): Promise<Map<string, string
             map.set(id, name);
           }
         } catch {
-          // 本批整体失败(非缺 id,而是网络/网关):名称保持 id 兜底,不逐个重试。
+          // The whole batch failed because of the network or gateway, not missing IDs; keep ID fallbacks without per-ID retries.
         }
       }),
     );
     return map;
   }
-  // mcp 旧接口：GET .../mcp/market/batch/{ids}/{fields}，同样分批防 URL 超限。
+  // Legacy MCP endpoint: GET .../mcp/market/batch/{ids}/{fields}; batch it to avoid URL overflow as well.
   await Promise.all(
     chunk(ids, NAME_ID_BATCH).map(async (batch) => {
       try {
@@ -185,32 +183,29 @@ async function namesFor(type: string, ids: string[]): Promise<Map<string, string
           map.set(id, name);
         }
       } catch {
-        // 本批不可解析：名称保持 id 兜底。
+        // This batch cannot be resolved; retain IDs as name fallbacks.
       }
     }),
   );
   return map;
 }
 
-/**
- * 已解析对象名的进程内正向缓存(`${type}:${id}` -> name)。跨分页翻页、列表刷新、
- * dev StrictMode 的重复加载复用,已有名字的 id 不再重复请求。只缓存成功项:解析不到
- * 的 id 下次仍会重试(可能是后来才建的对象),但重试也走分批,不会退化成风暴。
- * 生命周期随 SPA 会话,硬刷新即清空。
- */
+// In-memory positive cache of resolved object names (`${type}:${id}` -> name). Reuse names across
+// pagination, refreshes, and dev StrictMode loads. Cache only successes; retries remain batched and
+// the cache lasts for the SPA session.
 const nameCache = new Map<string, string>();
 
-/** 用领域服务解析对象名，回填到 grants 的 objName（解析失败的保持原 id 兜底）。 */
+// Resolve object names through domain services and retain IDs when resolution fails.
 export async function resolveGrantNames(grants: ObjectGrant[]): Promise<ObjectGrant[]> {
-  // 只对缓存里没有名字的 id 发起请求,按类型分组。
+  // Request only IDs without cached names, grouped by type.
   const pendingByType = new Map<string, Set<string>>();
   for (const grant of grants) {
-    // 后端已带真实名(objName ≠ id)则跳过。前向兼容:一旦 object-grants 直接回 name,
-    // 整套领域服务 fan-out 自动停掉,无需再改这里。
+    // Skip entries that already contain a real backend name (objName !== id). This is forward
+    // compatible: when object-grants returns names directly, the domain-service fan-out stops automatically.
     if (grant.objName && grant.objName !== grant.objId) {
       continue;
     }
-    // 缺 type 或 id 无法可靠取名,也会污染 `${type}:${id}` 缓存键,跳过。
+    // Missing type or ID cannot be resolved reliably and would pollute the `${type}:${id}` cache key, so skip it.
     if (!grant.objType || !grant.objId) {
       continue;
     }
@@ -229,12 +224,12 @@ export async function resolveGrantNames(grants: ObjectGrant[]): Promise<ObjectGr
           nameCache.set(`${type}:${id}`, name);
         }
       } catch {
-        // 单类型解析失败：该类型对象名退化为 id，不影响列表展示。
+        // One type failed to resolve; use IDs as its object-name fallbacks without affecting list display.
       }
     }),
   );
   return grants.map((grant) => {
-    // 已是后端真实名的保留不动。
+    // Preserve names already supplied by the backend.
     if (grant.objName && grant.objName !== grant.objId) {
       return grant;
     }

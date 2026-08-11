@@ -78,7 +78,7 @@ import { collectToolboxPublishIssues } from "@/modules/execution-factory/utils/t
 import { FunctionDependencyPanel } from "./function-workbench/FunctionDependencyPanel";
 import styles from "./function-workbench.module.css";
 
-/** 函数工具箱按设计就是小集合；真超了这个数说明该拆工具箱，不为它做分页。 */
+/** Function toolboxes are intentionally small; exceeding this limit means split the toolbox rather than add pagination. */
 const MAX_LOADED_FUNCTIONS = 50;
 
 type WorkbenchFunction = {
@@ -90,18 +90,18 @@ type WorkbenchFunction = {
   key: string;
   name: string;
   outputs: FunctionParameterDef[];
-  /** 后端 function_content.script_type，没回就留空——列表徽标只画查到的值。 */
+  /** Backend function_content.script_type. Keep absent values empty; list badges display only known values. */
   scriptType?: string;
-  /** 禁用的函数代码照样能编辑调试，只是 Agent 调不到（后端 execute 直接拒）。 */
+  /** Disabled function code remains editable and debuggable, but Agents cannot invoke it because backend execute rejects it. */
   status: ToolStatus;
-  /** 没有 toolId 表示还没落库。 */
+  /** Missing toolId means the function is not persisted yet. */
   toolId?: string;
   useRule: string;
 };
 
 /**
- * 只比较会落库的字段,用来判断「保存期间用户又改了这一项没有」。
- * key/toolId/dirty/status 不参与:前两个正是保存要写回的,status 走的是独立接口。
+ * Compares only persisted fields to determine whether users edited an item during saving. key,
+ * toolId, dirty, and status are excluded because the first two are saved back and status has its own API.
  */
 function isSamePersistedContent(a: WorkbenchFunction, b: WorkbenchFunction) {
   return (
@@ -116,17 +116,17 @@ function isSamePersistedContent(a: WorkbenchFunction, b: WorkbenchFunction) {
 }
 
 /**
- * 依赖声明入口暂时下线。
+ * Dependency declaration entry point is temporarily disabled.
  *
- * 沙箱会话是共享池，装依赖这条链路目前不可靠（requested 到 installed 中间会
- * 静默失败，用户只看到 ModuleNotFoundError，在编辑器里查不出原因）。等沙箱侧
- * 把依赖安装和会话隔离统一处理完再打开。
+ * Sandbox sessions use a shared pool and dependency installation is currently unreliable: failures
+ * between requested and installed are silent, leaving users with unexplained ModuleNotFoundError.
+ * Re-enable this after sandbox dependency installation and session isolation are handled together.
  *
- * 只藏入口，不动数据链路：已声明的依赖照常保存、照常跟着执行发下去。
+ * Hide only the entry point, not the data path: declared dependencies still save and are sent with execution.
  */
 const SHOW_DEPENDENCY_DOCK = false;
 
-/** 装依赖那条提示要常驻到运行结束，得有个固定 key 才能在 finally 里销毁。 */
+/** Dependency-installation notices persist until execution ends and need a stable key for removal in finally. */
 const DEPENDENCY_HINT_KEY = "workbench-installing-dependencies";
 
 type OutputTab = "result" | "stdout" | "stderr" | "metrics";
@@ -139,10 +139,10 @@ const OUT_TAB_COLORS: Record<OutputTab, string> = {
 };
 
 /**
- * 指标数值取整。
+ * Rounds metric values.
  *
- * 后端回的是浮点原值（57.9810839844），原样渲染会在窄卡片里折成两行，
- * 把整排卡片的高度顶起来。耗时这类量级，两位小数已经够看。
+ * Backend returns raw floats such as 57.9810839844. Rendering them verbatim wraps in narrow cards
+ * and expands an entire row; two decimal places are sufficient for durations and similar metrics.
  */
 function formatMetricValue(value: number | string | undefined): string {
   if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -160,7 +160,7 @@ function nextLocalKey() {
   return `local-${localKeySeed}`;
 }
 
-/** 后端回的是小写（python），只做展示大小写，不改写值本身。 */
+/** Backend returns lowercase values such as python; change casing only for display, not the value. */
 function formatScriptType(scriptType: string) {
   return scriptType.charAt(0).toUpperCase() + scriptType.slice(1);
 }
@@ -175,8 +175,8 @@ function emptyFunction(code: string): WorkbenchFunction {
     key: nextLocalKey(),
     name: "",
     outputs: [],
-    // 在这个页面里新建函数就是奔着给 Agent 用去的，默认可调用。
-    // 后端建工具一律落 disabled（toolbox_create.go:260），所以保存时要显式扳回来。
+    // Functions created here are intended for Agent use and default to callable. Backend creation
+    // always persists tools as disabled, so saving must explicitly restore the desired state.
     status: "enabled",
     useRule: "",
   };
@@ -203,7 +203,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   const [saving, setSaving] = useState(false);
 
   const [railKeyword, setRailKeyword] = useState("");
-  /** 批量操作选中的函数 key（含未落库的本地项）。 */
+  /** Function keys selected for bulk operations, including local unpersisted items. */
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [dockTab, setDockTab] = useState<"params" | "deps" | null>(null);
   const [ioTab, setIoTab] = useState<"inputs" | "outputs">("inputs");
@@ -211,16 +211,16 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   const [hasDefaultLlm, setHasDefaultLlm] = useState(false);
   const [paramsView, setParamsView] = useState<"form" | "json">("form");
   const [deriving, setDeriving] = useState(false);
-  /** 每个函数上次识别参数时用的代码；代码变了说明契约可能过期，要重推。 */
+  /** Code used when parameters were last inferred for each function; changed code may make the contract stale and requires reinference. */
   const derivedCodeRef = useRef<Record<string, string>>({});
 
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
   const [eventText, setEventText] = useState("{}");
-  /** 记住上次自动生成的内容，用来判断用户是否手改过。 */
+  /** Stores the last auto-generated content to detect manual user edits. */
   const autoEventRef = useRef("{}");
   /**
-   * 当前选中的函数 key。运行是异步的（带依赖时最长 330s），期间左栏没锁、可以切
-   * 函数；结果回来时得比对这个 ref，确认还是发起它的那个函数才贴上去。
+   * Key of the currently selected function. Runs are asynchronous and can take up to 330 seconds
+   * with dependencies; users can change the unlocked left rail, so verify this ref before applying results.
    */
   const activeKeyRef = useRef<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -244,7 +244,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     [activeKey],
   );
 
-  // AI 生成要调默认大模型；没配就别把按钮摆出来让人点了报错。
+  // AI generation needs a default LLM; hide the button when absent instead of letting users trigger an error.
   useEffect(() => {
     let cancelled = false;
 
@@ -350,11 +350,11 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         return;
       }
 
-      // 函数工作台只可能从「函数集」进来，回退别落到 API 工具集。
+      // Function workbench can only come from Function sets, so do not return to API toolboxes.
       void navigate("/execution-factory/units?activeTab=toolbox&toolboxView=function");
     };
 
-    // 这里丢的不是表单里一两个字段，是整个函数体——草稿只在内存里，退出去就没了。
+    // This discards the entire function body, not just a few form fields. Drafts live only in memory and are lost on exit.
     if (!hasUnsavedChanges) {
       leave();
       return;
@@ -382,7 +382,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         name: item.name,
         outputs: item.outputs,
         script_type: "python" as const,
-        // 后端只在 code 非空时才更新整段元数据，所以每次都要带上完整结构。
+        // Backend updates the complete metadata only when code is nonempty, so always send the full structure.
         dependencies: item.dependencies,
       };
 
@@ -410,20 +410,19 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         throw new Error(created.failures[0]?.error ?? t("common.error"));
       }
 
-      // 工具已经落库了，先把 id 交给调用方记下来：下面扳状态那一步再抛错，也不能让
-      // 这个 id 丢掉——丢了重试就会对同一个函数再建一遍（撞重名则永远存不下去）。
+      // The tool has been persisted. Record its ID before changing status so a later
+      // failure cannot cause a retry to create the same function again.
       onCreated?.(createdId);
 
-      // 后端建工具一律落 disabled，而 execute 只放行 enabled（execute.go:142）。
-      // 不在这里扳回来的话，新写的函数发布了 Agent 也调不到。
+      // The backend creates tools as disabled, while execution accepts only enabled tools.
+      // Re-enable it here so agents can invoke newly published functions.
       if (item.status === "enabled") {
         try {
           await updateToolStatus(boxId, [createdId], "enabled");
         } catch (error) {
-          // 建库成功、启用失败：服务端此刻仍是创建时的 disabled。通知调用方把本地状态
-          // 拉回 disabled 与后端对齐——否则 finally 会照常清掉 dirty，本地停在「已启用」、
-          // 服务端却是 disabled，重试跳过这项、再发布就成了「已发布但 Agent 调不到」。
-          // 错误照抛：保存整体报错、停批。
+          // Creation succeeded but enabling failed, so the server remains disabled. Restore
+          // the local status to match it before clearing dirty state, then rethrow to stop
+          // the batch and prevent a published but unreachable agent function.
           onEnableFailed?.(createdId);
           throw error;
         }
@@ -459,17 +458,15 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   const saveAll = useCallback(async () => {
     await saveToolboxMeta();
 
-    // 保存期间编辑器并不上锁,用户还能改代码、还能新建函数。所以不能拿点击那一刻的
-    // functions 快照整体 setFunctions 覆盖回去——那会连同这期间的改动和 dirty 标记
-    // 一起抹掉。改成按 key 把「这一轮真落库了的项」合并进最新 state。
+    // The editor remains editable while saving. Merge only items persisted in this pass by
+    // key, rather than replacing the latest state with the stale click-time snapshot.
     const persisted = new Map<
       string,
       { snapshot: WorkbenchFunction; statusOverride?: ToolStatus; toolId: string }
     >();
 
-    // 中途抛错也必须把已经建好的 toolId 写回去:createTool 那几项其实已经落库了,
-    // state 里还留着 toolId: undefined 的话,用户重试会对同一个函数再建一遍——
-    // 后端不校验重名就多出重复工具,校验了就每次都撞名、这个函数再也存不下去。
+    // Write back IDs created before an error as well. Leaving them undefined would cause a
+    // retry to create duplicates, or repeatedly fail on a backend uniqueness constraint.
     const flushPersisted = () => {
       if (persisted.size === 0) {
         return;
@@ -482,15 +479,14 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
             return item;
           }
 
-          // 落库期间用户又改了这一项 → 认下 toolId 但保留 dirty,别把没存的新改动
-          // 标成已保存。
+          // Accept the persisted ID but retain dirty when the item changed while saving.
           return {
             ...item,
             dirty: !isSamePersistedContent(item, hit.snapshot),
             key: hit.toolId,
             toolId: hit.toolId,
-            // 启用失败的项：把本地状态拉回服务端真实值（disabled），成功项不动，避免
-            // 覆盖保存期间用户对其它项的并发切换。
+            // Restore only failed enablements to the server's disabled state, preserving
+            // concurrent status changes to the other items.
             ...(hit.statusOverride ? { status: hit.statusOverride } : {}),
           };
         }),
@@ -510,7 +506,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
             persisted.set(item.key, { snapshot: item, toolId: createdId });
           },
           (createdId) => {
-            // 建库成功、启用失败：记下 toolId 防重建，同时按 disabled 落库与后端对齐。
+            // Record the created ID and align the local state with the disabled server state.
             persisted.set(item.key, {
               snapshot: item,
               statusOverride: "disabled",
@@ -526,8 +522,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   }, [functions, persistFunction, saveToolboxMeta]);
 
   /**
-   * 启用 / 禁用。已落库的立刻调接口（跟 ToolboxToolsScene 的工具状态开关同口径，
-   * 确认框也用同一套措辞）；没落库的只改本地，保存时由 persistFunction 落下去。
+   * Toggle enabled status. Persisted items call the API immediately; local items are saved
+   * by persistFunction later.
    */
   const handleToggleStatus = (target: WorkbenchFunction) => {
     const nextStatus: ToolStatus = target.status === "enabled" ? "disabled" : "enabled";
@@ -562,13 +558,13 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   };
 
   /**
-   * 复制一份到本地，不落库——照着现成函数改出下一个是这里最常见的起手式。
-   * 名字在工具箱内要唯一，所以加后缀；复制品一律从禁用起步，避免半成品被 Agent 撞上。
+   * Duplicate locally without persisting. Names must be unique in the toolbox, and copies
+   * start disabled to avoid exposing incomplete functions to agents.
    */
   const handleDuplicateFunction = (target: WorkbenchFunction) => {
     const copy: WorkbenchFunction = {
       ...target,
-      // 参数树是嵌套结构，浅拷贝会让副本和原函数共享同一批节点，改一个动两个。
+      // The parameter tree is nested, so use a deep copy to avoid sharing nodes.
       dependencies: structuredClone(target.dependencies),
       dirty: true,
       inputs: structuredClone(target.inputs),
@@ -586,8 +582,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   };
 
   /**
-   * 从列表里摘掉若干函数（本地部分）。单删和批量删共用，占位补齐和焦点转移
-   * 只有这一份实现——分头写过一次，批量那条就会漏掉「删空补占位」，右侧编辑区空掉。
+   * Remove functions from the local list. Single and batch deletion share placeholder and
+   * focus handling so deleting every item never leaves the editor empty.
    *
    * 落库的删除由调用方先打完接口再进来。
    */
@@ -596,7 +592,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       const dropped = new Set(keys);
 
       setFunctions((current) => {
-        // 焦点转移锚在被删的当前项上：删的是别的项时不动焦点，删的是当前项才顺位。
+        // Move focus only when the active item was deleted.
         const index = current.findIndex((item) => item.key === activeKey);
         const rest = current.filter((item) => !dropped.has(item.key));
 
@@ -624,9 +620,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   );
 
   /**
-   * 删函数。还没落库的（无 toolId）只从本地列表摘掉，不打接口。
-   * 删完把焦点挪到相邻一项，避免右侧编辑区空掉；全删光则补一个空白函数，
-   * 保持「进来就能写」的初始态。
+   * Delete a function. Unpersisted items are removed locally; after deletion, focus moves
+   * to a neighbor, or a blank function is created to keep the editor usable.
    */
   const handleDeleteFunction = (target: WorkbenchFunction) => {
     const runDelete = async () => {
@@ -645,7 +640,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       }
     };
 
-    // 没落库的空壳没什么可确认的，直接扔掉。
+    // A local-only placeholder can be discarded without confirmation.
     if (!target.toolId) {
       void runDelete();
       return;
@@ -670,8 +665,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   };
 
   /**
-   * 批量改状态。选中的函数里可能混着没落库的（无 toolId）——那部分只改本地，
-   * 保存时由 persistFunction 带下去；有 toolId 的才进接口，且一次打包发一趟。
+   * Change status in bulk. Local-only functions change locally and persist on save; persisted
+   * functions are sent in one API request.
    */
   const handleBatchStatus = (nextStatus: ToolStatus) => {
     const targets = functions.filter((item) => selectedKeys.includes(item.key));
@@ -710,7 +705,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     });
   };
 
-  /** 批量删。同上分流：落库的走 batch-delete，本地项直接从列表摘掉。 */
+  /** Delete in bulk: persisted items use batch delete, while local items are removed directly. */
   const handleBatchDelete = () => {
     const targets = functions.filter((item) => selectedKeys.includes(item.key));
     if (targets.length === 0) {
@@ -741,8 +736,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   };
 
   /**
-   * 发布前体检。名称/描述/代码缺失只提示不硬拦，让人自己决定要不要带病上线。
-   * 已发布的箱子保存即生效，所以那条路径也走同一套体检。
+   * Check publish readiness. Missing names, descriptions, or code produce warnings rather
+   * than hard blocks. Saving a published toolbox follows the same check.
    */
   const confirmPublishIssues = (options: { hint?: string; okText: string; title: string }) => {
     const issues = collectToolboxPublishIssues(
@@ -816,9 +811,9 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   };
 
   /**
-   * 让后端从代码推导契约：确定性比 AI 生成器高，也不烧模型额度。
-   * 返回推导出的入参，方便调用方（比如「运行」）立刻拿来造测试入参，
-   * 不用等 state 回流。silent 用于隐式触发，避免每次运行都弹一次成功提示。
+   * Derive the contract from code on the backend. This is deterministic and does not consume
+   * model quota. Return inputs immediately so callers can build test data without waiting for
+   * state updates; silent suppresses messages for implicit derivations.
    */
   const handleDeriveParams = async (
     options?: { silent?: boolean },
@@ -846,9 +841,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         ...(inferred.description && !active.description
           ? { description: inferred.description }
           : {}),
-        // supported 的推导对契约是权威的:零参函数后端会给 [] 或省略字段,两种都
-        // 得把 inputs 落成 []。用 `inferred.inputs ?` 守卫会让"省略=undefined"漏过,
-        // active.inputs 卡在上个函数的旧参,测试入参框跟着刷不掉(见 handleRun 注释)。
+        // Supported derivation is authoritative: no-argument functions can return [] or omit
+        // the field, and both must clear inputs to avoid retaining parameters from a prior function.
         inputs: inferred.inputs ?? [],
         ...(inferred.outputs ? { outputs: inferred.outputs } : {}),
       });
@@ -875,7 +869,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   );
   const isPublished = toolbox?.status === "published";
 
-  // 刷新 / 关标签页走不到 handleBack 的确认框，单独挂一次 beforeunload 兜住。
+  // Refreshing or closing a tab bypasses handleBack, so protect unsaved changes with beforeunload.
   useEffect(() => {
     if (!hasUnsavedChanges) {
       return;
@@ -883,7 +877,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
 
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
-      // Chrome 要求显式设 returnValue 才会弹原生确认框，文案由浏览器决定。
+      // Chrome requires an explicit returnValue to show the browser-controlled confirmation.
       event.returnValue = "";
     };
 
@@ -898,7 +892,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     return !current || Object.values(FUNCTION_TEMPLATES).some((tpl) => tpl.trim() === current);
   }, [active?.code]);
 
-  /** 模版会整段替换代码；用户已经写过东西时先问一句，别默默抹掉。 */
+  /** Templates replace all code, so confirm before overwriting user-authored content. */
   const applyTemplate = (id: FunctionTemplateId) => {
     if (!active) {
       return;
@@ -919,7 +913,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     });
   };
 
-  /** 代码相对上次识别有变化（或从没识别过）就该重推一次。 */
+  /** Re-derive when code has changed since the last derivation, or has never been derived. */
   const needsDerive = (item: WorkbenchFunction) =>
     Boolean(item.code.trim()) && derivedCodeRef.current[item.key] !== item.code;
 
@@ -936,7 +930,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     setConsoleCollapsed(false);
 
     try {
-      // 代码改过就先重推一次契约，避免拿过期参数去跑。没改过则不打这一趟。
+      // Re-derive changed code before execution to avoid sending stale parameters.
       let inputs = active.inputs;
       if (needsDerive(active)) {
         const derived = await handleDeriveParams({ silent: true });
@@ -947,8 +941,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
 
       let payloadText = eventText;
       const isBlankShell = !payloadText.trim() || payloadText.trim() === "{}";
-      // 空壳,或框里还是上次自动生成的样例(用户没手改)→ 按最新契约重造,免得
-      // 改了参数后拿改前的旧入参去跑。用户手动改过的入参保持不动。
+      // Regenerate an empty or untouched auto-generated sample from the current contract, while
+      // preserving manually edited input.
       const untouchedAuto = payloadText.trim() === autoEventRef.current.trim();
       if (isBlankShell || untouchedAuto) {
         payloadText = buildSampleEvent(inputs);
@@ -961,13 +955,10 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         event = JSON.parse(payloadText) as Record<string, unknown>;
       }
 
-      // 依赖得跟着这次执行一起发过去：沙箱镜像不预装三方库，而保存后 Agent 那条
-      // 路径是从库里读依赖装的。这里不带的话就会出现"调试报 ModuleNotFoundError、
-      // 发布后反而能跑"，用户只会以为自己函数写错了。
-      //
-      // 提示必须常驻到本次运行结束：带依赖时请求超时放宽到了 330s，而沙箱那头每次
-      // 都清空重装。提示只弹 3 秒的话，剩下 5 分多钟就是一个没有任何解释的转圈——
-      // 依赖面板还可能是藏着的（SHOW_DEPENDENCY_DOCK），用户根本无从知道在等什么。
+      // Send dependencies with the execution request. Sandbox images do not preinstall third-
+      // party packages, while the published agent path installs them from persisted metadata.
+      // Keep the installation notice visible for the entire run because dependency installs can
+      // take up to the extended 330-second timeout.
       if (active.dependencies.some((item) => item.name?.trim())) {
         void message.info({
           content: t("executionFactory.workbenchInstallingDependencies"),
@@ -982,8 +973,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         event,
       });
 
-      // 运行期间可以切函数（左栏没锁），330s 的窗口下这很容易发生。结果只能贴回
-      // 发起它的那个函数，否则会把上一个函数的输出安静地显示在当前函数下面。
+      // Users can switch functions while a long execution runs. Only apply its result to the
+      // function that initiated it.
       if (runKey !== activeKeyRef.current) {
         return;
       }
@@ -1004,13 +995,9 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   };
 
   /**
-   * 按已声明参数重造一份测试入参。这是显式动作，所以无条件覆盖——用户点它就是
-   * 想要一份干净样例。
-   *
-   * 原来挂在入参框的 onFocus 上，有两个毛病：点进去想手改反而被覆盖；而且代码
-   * 改过时那条分支推导完就直接 return、这一次并不填，指望后面的 effect 补，可
-   * effect 又把「内容 ≠ 上次自动值」判成用户手改而拒绝覆盖，两边互相让，结果谁
-   * 都不填，表现就是「点了半天填不出来」。
+   * Rebuild test input from declared parameters. This explicit action always replaces the
+   * contents with a clean sample. It replaces the former focus-triggered behavior, which could
+   * overwrite manual edits or fail to fill input after derivation.
    */
   const handleFillSampleEvent = async () => {
     if (!active) {
@@ -1019,9 +1006,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
 
     let inputs = active.inputs;
     if (needsDerive(active)) {
-      // 这是显式按钮，推导失败必须有回音：silent 会把 unsupported 警告和请求错误
-      // 全吞掉，再拿过期的 active.inputs 覆盖用户当前内容，用户只会看到入参莫名
-      // 变了却不知道为什么。失败就原样保留，不动输入框。
+      // This explicit action must surface derivation failures. Keep the current input unchanged
+      // rather than silently replacing it with stale parameters.
       const derived = await handleDeriveParams();
       if (!derived) {
         return;
@@ -1036,7 +1022,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
   };
 
   const sampleEvent = useMemo(() => buildSampleEvent(active?.inputs), [active?.inputs]);
-  // JSON 视图给的就是 Agent 实际拿到的 schema，不是我们内部的参数结构。
+  // The JSON view shows the schema received by agents, not the internal parameter structure.
   const paramsJsonPreview = useMemo(() => {
     const schema = buildJsonSchemaFromParameters(
       ioTab === "inputs" ? active?.inputs : active?.outputs,
@@ -1295,10 +1281,8 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                           <Switch
                             checked={active.status === "enabled"}
                             /*
-                             * 保存期间锁住：还没落库的函数扳开关只改本地 status，而
-                             * persistFunction 建工具用的是保存开始那一刻的快照状态。
-                             * 保存途中翻转会被静默吞掉——界面显示"已禁用"，服务端却是
-                             * enabled，Agent 照样调得到。锁掉这段窗口最省事也最稳。
+                             * Lock toggles while saving. Local-only status changes would not be
+                             * reflected in the creation snapshot and could diverge from the server.
                              */
                             disabled={saving}
                             onChange={() => handleToggleStatus(active)}
@@ -1694,7 +1678,7 @@ function RunOutput({
   }
 
   if (tab === "metrics") {
-    // 后端没返回的指标不占位——一排「未返回」比空着更吵。
+    // Do not render placeholders for metrics omitted by the backend.
     const metrics = (
       [
         ["duration", result.metrics?.durationMs ?? result.durationMs, "ms"],

@@ -5,31 +5,31 @@
  * Conditions. See LICENSE for the full text.
  */
 
-// 对象级授权（object-level authorization），对接 bkn-safe
-// `/api/safe/v1/admin/object-grants`。在 RBAC（角色 → 权限）之上的补充层：
-// 把某个具体对象（数据目录 / 模型 / 算子 …）的若干操作，直接授予**一个用户**。
+// Object-level authorization integrates with bkn-safe's `/api/safe/v1/admin/object-grants`.
+// It supplements RBAC (roles -> permissions) by directly granting selected operations on a
+// concrete object, such as a catalog, model, or operator, to one user.
 //
-// 后端契约要点（frontend-object-grants-integration.md）：
-//   - 被授权方只支持「用户」（部门已从后端移除：casbin 无 user→部门成员规则）。
-//   - 一条授权 = {accessor_id, resource:{type,id}, operations[]}，无 id / 无授权人时间。
-//   - 唯一键 = accessor_id + resource.type + resource.id；POST 为「整套替换」语义。
-//   - resource.id 必须是具体实例，不支持 `*` 通配（整类授权走角色页）。
-//   - bkn-safe 不存资源名，对象名由前端从各领域服务解析（这里 objName 即解析结果）。
+// Backend contract highlights (frontend-object-grants-integration.md):
+//   - Grantees support users only; departments were removed because Casbin has no user-to-department rule.
+//   - A grant is {accessor_id, resource:{type,id}, operations[]}, without its own ID or grantor timestamp.
+//   - The unique key is accessor_id + resource.type + resource.id; POST replaces the complete set.
+//   - resource.id must be a concrete instance; `*` is unsupported, and type-wide grants use the role page.
+//   - bkn-safe does not store resource names; the frontend resolves them through domain services into objName.
 
-/** 一条对象级授权：把某对象的若干操作授予某个用户。 */
+/** One object-level grant that gives a user selected operations on an object. */
 export type ObjectGrant = {
-  /** 被授权用户 id（后端 accessor_id）。 */
+  /** Grantee user ID (backend accessor_id). */
   accessorId: string;
   objId: string;
-  /** 前端解析的对象名（后端只返 type:id）；mock 直接带，真实模式从领域服务解析。 */
+  /** Object name resolved by the frontend; the backend returns only type:id. Mock mode supplies it, real mode resolves it through domain services. */
   objName: string;
   objSub?: string;
   objType: string;
-  /** 取自 operationsForType(objType)（对象授权 UI 里隐藏类型级的 create）。 */
+  /** Derived from operationsForType(objType); object-grant UI hides type-level create. */
   operations: string[];
 };
 
-/** 可被授权的对象（总览页「新建授权」对象选择器）。真实模式从领域服务取。 */
+/** An authorizable object used by the overview page's new-grant picker. Real mode loads it from domain services. */
 export type AuthorizableObject = {
   id: string;
   name: string;
@@ -37,7 +37,7 @@ export type AuthorizableObject = {
   type: string;
 };
 
-/** 新增/更新一条授权（按 用户 + 对象 唯一，整套替换）。operations 为空 = 撤销。 */
+/** Creates or updates a grant, unique by user and object and replaced as a complete set. Empty operations revoke it. */
 export type ObjectGrantInput = {
   accessorId: string;
   objId: string;
@@ -48,13 +48,13 @@ export type ObjectGrantInput = {
 };
 
 export type AuthzSummary = {
-  /** 去重后的被授权用户数。 */
+  /** Deduplicated number of grantee users. */
   grantees: number;
   grants: number;
   objects: number;
 };
 
-/** GET /object-grants 查询参数（真实后端）。 */
+/** GET /object-grants query parameters for the real backend. */
 export type ObjectGrantQuery = {
   accessorId?: string;
   resourceType?: string;

@@ -12,7 +12,7 @@ import type {
   DeptTreeEntry,
 } from "@/modules/system-admin/types/admin";
 
-/** 部门树扁平化（带层级深度，用于缩进渲染与下拉选择）。 */
+/** Flattens a department tree with nesting depth for indented rendering and selection controls. */
 export function buildDeptTree(departments: AdminDepartment[]): DeptTreeEntry[] {
   const out: DeptTreeEntry[] = [];
   const walk = (parentId: string | null, depth: number) => {
@@ -25,7 +25,7 @@ export function buildDeptTree(departments: AdminDepartment[]): DeptTreeEntry[] {
   return out;
 }
 
-/** 从根到目标部门的路径，例如「BKN 平台 / 数据智能部 / 数据治理组」。 */
+/** Path from root to the target department, for example "BKN Platform / Data Intelligence / Data Governance". */
 export function deptPath(departments: AdminDepartment[], deptId?: string): string {
   const parts: string[] = [];
   let current = departments.find((item) => item.id === deptId) ?? null;
@@ -47,7 +47,7 @@ export function childDepartments(
   return departments.filter((item) => item.parentId === parentId);
 }
 
-/** 各部门含子部门的成员数（用户去重）。 */
+/** Member count for each department including child departments, with users deduplicated. */
 export function computeSubtreeMemberCounts(
   departments: AdminDepartment[],
   users: { departmentIds?: string[]; id: string }[],
@@ -100,7 +100,7 @@ export function computeSubtreeMemberCounts(
   return out;
 }
 
-/** 从部门实体构造写请求（拖拽改上级等场景保留扩展字段）。 */
+/** Builds a write request from a department entity while retaining extension fields for cases such as drag-and-drop reparenting. */
 export function departmentInputFrom(dept: AdminDepartment): DepartmentInput {
   return {
     name: dept.name,
@@ -113,7 +113,7 @@ export function departmentInputFrom(dept: AdminDepartment): DepartmentInput {
   };
 }
 
-/** 直接绑定到该用户的角色（role-bindings；不含部门继承）。 */
+/** Roles directly bound to this user through role-bindings, excluding department inheritance. */
 export function rolesOfUser(roles: AdminRole[], userId: string): AdminRole[] {
   return roles.filter((role) => role.accessorIds.includes(userId));
 }

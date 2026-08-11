@@ -114,8 +114,8 @@ export function DataConnectFormScene({
     [connectorTypes, selectedConnectorType],
   );
 
-  // 对齐后端 catalog op 词表（catalog.json）：新建=catalog:create，编辑=catalog:modify。
-  // 旧的 data-connect:create/edit 是前端自造 key，/me/permissions 不返回 → 永远 403。
+  // Align with backend catalog operation vocabulary (catalog.json): create=catalog:create and edit=catalog:modify.
+  // Legacy data-connect:create/edit keys were invented by the frontend and absent from /me/permissions, causing permanent 403 responses.
   const permission = mode === "create" ? "catalog:create" : "catalog:modify";
   const pageTitle =
     mode === "create" ? t("dataConnect.createTitle") : t("dataConnect.editTitle");

@@ -19,13 +19,13 @@ const KNOWN_METHODS = new Set([
 
 type HttpMethodTagProps = {
   method?: string;
-  /** 列表里一行一个，收窄定宽让各行徽标对齐成一列。 */
+  /** One per list row; a narrower fixed width aligns badges into one column. */
   compact?: boolean;
 };
 
 /**
- * HTTP 动词徽标，工具列表与工具详情共用一套配色。抽成组件是因为两处各画一份时
- * 同一个 POST 会出现两种颜色。未知动词一律走中性色，不再单独配。
+ * HTTP-method badge with shared colors for tool lists and tool details. A component prevents the
+ * same POST from receiving different colors in separate implementations. Unknown methods use neutral color.
  */
 export function HttpMethodTag({ compact = false, method }: HttpMethodTagProps) {
   const normalized = method?.trim().toUpperCase();

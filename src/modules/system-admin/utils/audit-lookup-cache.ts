@@ -23,7 +23,7 @@ let departmentsCache: CacheEntry<AdminDepartment[]> | null = null;
 let rolesCache: CacheEntry<AdminRole[]> | null = null;
 const userCache = new Map<string, CacheEntry<AdminUser>>();
 
-/** 审计主体不一定是用户；例如许可证服务使用 system:license 作为 actor。 */
+/** An audit actor is not always a user; for example, the license service uses system:license. */
 export function isUserLookupId(id: string) {
   return Boolean(id.trim()) && !id.trim().startsWith("system:");
 }

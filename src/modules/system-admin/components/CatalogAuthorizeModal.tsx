@@ -68,7 +68,7 @@ export function CatalogAuthorizeModal({
     }
   }, [load, open]);
 
-  // 已对这条 catalog(或整类)授权的角色。
+  // Roles already granted this catalog or its whole type.
   const grantRows = useMemo<CatalogGrantRow[]>(() => {
     const rows: CatalogGrantRow[] = [];
     for (const role of roles) {

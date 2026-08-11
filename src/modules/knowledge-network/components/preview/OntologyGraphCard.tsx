@@ -6,10 +6,10 @@
  */
 
 /**
- * 本体图谱卡片 —— 图谱 + 右侧检查面板，自带选中态与空态。概述/预览复用。
+ * Ontology-graph card with graph and right inspector, including selection and empty states. Reused by overview and preview.
  *
- * 不传 objectTypes/relationTypes 时自行按 networkId 拉取（概述页用），
- * 传入则直接使用（预览页已加载，避免重复请求）。
+ * When objectTypes/relationTypes are absent, load them by networkId for overview pages. Use supplied
+ * values directly on preview pages, where they are already loaded, to avoid duplicate requests.
  */
 
 import { DeploymentUnitOutlined } from "@ant-design/icons";
@@ -119,7 +119,7 @@ export function OntologyGraphCard({
     return new Set(objectTypes.filter((item) => item.hasIndex).map((item) => item.id));
   }, [buildTasksByResourceId, objectTypes]);
 
-  // 概念分组成员（节点 → 分组 id），供「按逻辑分组」排列聚类。各组取详情拿成员对象类。
+  // Concept-group membership from node to group ID for logical-group clustering. Group details supply member object types.
   const [groupOf, setGroupOf] = useState<Map<string, string>>(new Map());
   const [groupNames, setGroupNames] = useState<Map<string, string>>(new Map());
   useEffect(() => {

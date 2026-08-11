@@ -19,7 +19,7 @@ import styles from "../function-workbench.module.css";
 
 export type FunctionDependency = { name?: string; version?: string };
 
-/** PEP 508：字母数字开头结尾，中间可带 - _ .。后端也按这个校验，非法名直接 400。 */
+/** PEP 508: starts and ends alphanumeric, with - _ . allowed inside. The backend applies the same validation and returns 400 for invalid names. */
 const PACKAGE_NAME_PATTERN = /^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$/;
 
 type FunctionDependencyPanelProps = {
@@ -56,7 +56,7 @@ export function FunctionDependencyPanel({ onChange, value }: FunctionDependencyP
     try {
       versions = await listDependencyVersions(name);
     } catch (error) {
-      // 查不到版本不该挡住声明依赖，留空让用户手填。
+      // Failure to find a version must not block dependency declaration; leave it empty for manual entry.
       void message.warning(extractRequestErrorMessage(error));
     } finally {
       setAdding(false);
@@ -103,7 +103,7 @@ export function FunctionDependencyPanel({ onChange, value }: FunctionDependencyP
         <Input
           onChange={(event) => setDraftName(event.target.value)}
           onKeyDown={(keyEvent) => {
-            // 中文输入法选词也会敲回车，组合期间不能当提交
+            // Chinese IME candidate selection also presses Enter, so do not treat it as submit during composition.
             if (keyEvent.key === "Enter" && !keyEvent.nativeEvent.isComposing) {
               void handleAdd();
             }

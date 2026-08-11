@@ -10,8 +10,8 @@ import { describe, expect, it } from "vitest";
 import { normalizeExecuteDependencies } from "@/modules/execution-factory/services/function.service";
 
 /**
- * 这层规范化写错的代价是后端 400，而 400 会以「运行失败」的形式出现在调试输出里，
- * 排查时很难联想到是依赖字段的形状问题，所以逐条锁住。
+ * Incorrect normalization produces backend 400 that appears as a runtime failure in debug output,
+ * making dependency-field shape hard to diagnose, so protect each case explicitly.
  */
 describe("normalizeExecuteDependencies", () => {
   it("drops rows without a name, because the panel keeps unfinished placeholders", () => {

@@ -26,7 +26,7 @@ function formatTime(value: string): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-/** 资料 · 基本信息自助编辑（PUT /me）+ 账号信息只读展示。 */
+/** Profile: self-service editing for basic information through PUT /me, with read-only account details. */
 export function ProfilePanel({ profile, onSaved }: { profile: MyProfile; onSaved: (next: MyProfile) => void }) {
   const { t } = useTranslation();
   const { message } = useAppServices();

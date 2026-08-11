@@ -7,7 +7,7 @@
 
 import { useMemo } from "react";
 
-/** 详情表列配置 localStorage 作用域（按表格类型区分）。 */
+/** localStorage scope for detail-table column configuration, separated by table type. */
 export function useDetailTableColumnStorageScope(tableId: string) {
   return useMemo(() => `detail-table:${tableId}`, [tableId]);
 }

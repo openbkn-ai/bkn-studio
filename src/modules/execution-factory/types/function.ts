@@ -10,9 +10,9 @@ import type { FunctionParameterDef } from "@/modules/execution-factory/types/fun
 export type FunctionExecuteInput = {
   code: string;
   /**
-   * 调试运行要装的 pip 依赖。沙箱基础镜像不预装任何三方库，不带这个字段的话，
-   * 凡是 import 了三方包的函数在调试里必 ModuleNotFoundError——而保存发布后
-   * Agent 那条路径是从库里读依赖装的，能跑通，两边行为会对不上。
+   * pip dependencies installed for debug runs. The sandbox base image has no third-party libraries,
+   * so functions importing them fail with ModuleNotFoundError without this field, while published
+   * Agent runs install stored dependencies and succeed, creating inconsistent behavior.
    */
   dependencies?: Array<{ name?: string; version?: string }>;
   event?: Record<string, unknown>;
@@ -26,8 +26,8 @@ export type FunctionExecuteMetrics = {
 };
 
 /**
- * 沙箱本来就产出 stdout/stderr/metrics，后端回包目前只透出一部分（exit_code 等还在补）。
- * 这里按完整形状收，缺的字段保持 undefined，由 UI 显示「后端未返回」而不是编造 0。
+ * The sandbox produces stdout, stderr, and metrics, but the backend currently exposes only part
+ * of the response. Model the complete shape and keep absent fields undefined so the UI says not returned rather than inventing zero.
  */
 export type FunctionExecuteResult = {
   output?: unknown;
@@ -55,7 +55,7 @@ export type FunctionAiGenerateResult = {
   prompt?: string;
 };
 
-/** `POST /function/infer-schema` 的结果；supported=false 时 reason 说明为什么推不出来。 */
+/** Result from `POST /function/infer-schema`; when supported=false, reason explains why inference failed. */
 export type InferredFunctionSchema = {
   description?: string;
   inputs?: FunctionParameterDef[];

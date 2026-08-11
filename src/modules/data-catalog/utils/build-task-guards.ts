@@ -26,7 +26,7 @@ export function extractRequestStatus(error: unknown): number | undefined {
   return undefined;
 }
 
-/** start 被拒：配置漂移 / 已有更新成功任务等（常见 400/409/422）。 */
+/** start rejection caused by configuration drift, an existing newer successful task, and similar conditions (commonly 400/409/422). */
 export function isBuildStartRejected(error: unknown): boolean {
   const status = extractRequestStatus(error);
   return status === 400 || status === 409 || status === 422;

@@ -47,7 +47,7 @@ describe("debug secret guards", () => {
   });
 
   it("leaves the query parameter names actually used by platform tools alone", () => {
-    // 取自 VM 上 50 个已注册工具的全部 query 参数名。
+    // Query parameter names from all 50 registered tools on the VM.
     for (const name of [
       "response_format",
       "kn_id",
