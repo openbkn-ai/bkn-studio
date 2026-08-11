@@ -303,6 +303,7 @@ export const dataCatalogZhCN = {
       analyzersLoading: "正在加载全文分词器能力…",
       analyzersLoadError: "加载全文分词器能力失败：{{message}}",
       analyzersLoadErrorFallback: "请稍后重试或检查索引服务。",
+      retryLoadAnalyzers: "重试",
       noAnalyzers: "当前没有可用的全文分词器，无法保存索引配置。",
       savedAnalyzerUnavailable: "已保存的分词器配置不可用：{{analyzers}}。请选择可用分词器后继续。",
       fieldsRequired: "请至少选择一个向量嵌入字段或全文检索字段。",

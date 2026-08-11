@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -130,5 +130,32 @@ describe("IndexConfigFormPanel", () => {
     expect(
       screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }).getAttribute("disabled"),
     ).toBeNull();
+  });
+
+  it("retries analyzer capability loading for full-text resources", async () => {
+    const fulltextResource: CatalogResource = {
+      ...resource,
+      schema: [{
+        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    getCatalogResourceMock.mockResolvedValue(fulltextResource);
+    loadAnalyzerCapabilitiesMock.mockResolvedValue({
+      errorMessage: "capabilities unavailable",
+      options: [],
+      state: "error",
+    });
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={fulltextResource} />
+      </MemoryRouter>,
+    );
+
+    const retryButton = await screen.findByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" });
+    fireEvent.click(retryButton);
+    await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(2));
   });
 });

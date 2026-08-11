@@ -322,6 +322,7 @@ export const dataCatalogEnUS = {
       analyzersLoading: "Loading full-text analyzer capabilities…",
       analyzersLoadError: "Unable to load full-text analyzer capabilities: {{message}}",
       analyzersLoadErrorFallback: "Please retry or check the index service.",
+      retryLoadAnalyzers: "Retry",
       noAnalyzers: "No full-text analyzers are available; index configuration cannot be saved.",
       savedAnalyzerUnavailable: "Saved analyzer configuration is unavailable: {{analyzers}}. Choose an available analyzer to continue.",
       fieldsRequired: "Select at least one embedding or full-text field.",

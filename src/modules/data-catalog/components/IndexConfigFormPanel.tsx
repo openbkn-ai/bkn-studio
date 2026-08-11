@@ -343,6 +343,15 @@ export function IndexConfigFormPanel({
     }
   };
 
+  const reloadAnalyzerCapabilities = async () => {
+    setAnalyzersLoadState("loading");
+    setAnalyzersLoadError(null);
+    const loaded = await loadAnalyzerCapabilities();
+    setAnalyzers(loaded.options);
+    setAnalyzersLoadState(loaded.state);
+    setAnalyzersLoadError(loaded.errorMessage);
+  };
+
   const defaultModel = useMemo(
     () => models.find((item) => item.id === defaultModelId) ?? null,
     [defaultModelId, models],
@@ -917,6 +926,17 @@ export function IndexConfigFormPanel({
         <Alert message={t("dataCatalog.build.analyzersLoading")} showIcon type="info" />
       ) : fulltextFields.length > 0 && analyzersLoadFailed ? (
         <Alert
+          action={
+            <AppButton
+              onClick={() => {
+                void reloadAnalyzerCapabilities();
+              }}
+              size="small"
+              type="link"
+            >
+              {t("dataCatalog.build.retryLoadAnalyzers")}
+            </AppButton>
+          }
           message={t("dataCatalog.build.analyzersLoadError", {
             message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback"),
           })}
