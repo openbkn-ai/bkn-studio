@@ -65,6 +65,15 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
 
   const summary = useMemo(() => tasks.find((task) => task.status === "succeeded" && task.applied) ?? tasks[0], [tasks]);
 
+  useEffect(() => {
+    if (!open) return;
+    form.setFieldsValue({
+      applyMode: "fill_empty",
+      confidenceThreshold: 0.75,
+      includeSampleRows: false,
+    });
+  }, [form, open]);
+
   const start = async () => {
     const values = await form.validateFields();
     setCreating(true);
