@@ -11,6 +11,18 @@ name: Claude Code Review
 # 覆盖每次推送而非只审首版，是因为评审之后追加的提交往往是「按意见快速改一下」，
 # 恰恰最容易引入新问题；只审首版会让这部分完全不过审。
 # 连续推送的浪费由下面的 concurrency 收敛：新一次运行会取消尚未完成的上一次。
+# 「推提交」与「回帖 /review」若在同一段时间内发生，同样收敛成一轮——两个入口都保留，
+# 合并掉的只是重复劳动：存活的那轮 checkout 拿的是 PR 最新 HEAD（含新提交），而下方
+# prompt 本就要求读回既有 inline 评论与其下的回复，代码与回复两边都不会漏。
+#
+# 口令过滤有个必须靠 prompt 兜住的副作用：作者「推提交 + 紧接着发一条处理说明」时，
+# 那条说明多半不含口令，过不了下方 job 的 if，也就不会去取消正在跑的那轮；而推送那轮
+# 的评论是在 job 开头预取的，说明发在它开头之后就永远读不到。debounce 那 15 秒对此
+# 完全无效，它只让**合格的**评论有机会取消推送轮，不合格的评论按 comment.id 单独分组、
+# 根本不参与取消。因此 review prompt 要求「写 findings 之前最后再拉一次顶层评论」。
+# 注意只堵住了顶层这一半：作者在 bot 的 inline 评论下回复「不采纳」仍读不到，因为补
+# 另一半要 `gh api`，而 review 刻意不给（全方法通配会让模型能 POST /pulls/N/reviews，
+# 破坏「表态只能有一次」）。
 #
 # 评论也能触发复评，但必须在正文里显式写 `/review` 或 `@claude`。早先是每条评论都跑
 # 一轮，作者每回一帖就复评一次，轮次膨胀且额度白烧——待确认项现在不阻断放行（见下方
@@ -38,6 +50,7 @@ on:
       - 'specs/**'
       - 'scripts/**'
       - 'deploy/**'
+      - 'public/**'
       - 'Dockerfile'
       - 'vite.config.ts'
       - '!**/*.md'
@@ -53,23 +66,46 @@ on:
         type: string
 
 concurrency:
-  # 按事件类别分组，别把评论事件和 PR 推送混在一组。concurrency 在 run 排队时求值，
-  # 早于 job if，所以隔离只能靠分组，if 拦不住取消。
+  # 分组判据是「这条事件能不能过下方 job 的 if」，不是「它是不是评论事件」。
   #
-  # push（含 opened/synchronize/…）落 -push 组、cancel-in-progress 生效：连续推送时
-  # 新 run 取消未完成的旧 run，省额度。
+  # 能过 if 的（推送、人工写 `/review`/`@claude` 的评论、手动触发）全部落 -review 组，
+  # cancel-in-progress 生效：连续推送时新 run 取消旧 run；作者「推提交 + 回帖 /review」
+  # 这种连续动作也收敛成一轮，而不是推送和评论各跑一轮。
   #
-  # 评论事件（issue_comment / pull_request_review_comment）每条按 comment.id 各自成组。
-  # 否则 claude-code-action（track_progress）在评论触发的复评跑到一半时以 bot 身份贴
-  # tracking comment，那条 comment 又触发 issue_comment、排进同一 -comment 组，
-  # cancel-in-progress 在 job if 过滤掉 bot 评论之前就把正在跑的复评取消了——评论触发的
-  # 复评每次贴进度评论那刻自杀，`/review` 一次都跑不完。
-  # 按 comment.id 分组后每条评论各自独立、互不取消，bot 的进度评论也顶不掉正在跑的复评。
-  group: claude-review-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}-${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && format('comment-{0}', github.event.comment.id) || 'push' }}
+  # 过不了 if 的评论（bot 自己贴的进度/行内评论、外部人员的评论、不含口令的普通回帖）
+  # 必须按 comment.id 各自成组。concurrency 在 run 排队时求值，早于 job if，落进共享组
+  # 就会在 if 把它过滤掉之前先取消掉正在跑的评审。claude-code-action 的 tracking comment
+  # 与 create_inline_comment 正是这条路径——曾导致评审贴出第一条评论那刻就自杀。
+  #
+  # 因此下面的判据必须与 job if 的评论分支逐条对齐（非 bot、含口令、author_association
+  # 属 OWNER/MEMBER/COLLABORATOR）。漏对一条，那类事件就能溜进共享组杀掉正在跑的评审。
+  group: claude-review-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}-${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && !(github.event.sender.login != 'github-actions[bot]' && (contains(github.event.comment.body, '/review') || contains(github.event.comment.body, '@claude')) && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) && format('comment-{0}', github.event.comment.id) || 'review' }}
   cancel-in-progress: true
 
+# 评审分四段跑：plan 定范围 → review 出结论 → verify 复核阻塞项 → verdict 落表态。
+#
+# 三条不变量（改这个文件必须守住）：
+#   - **责任范围不等于可读范围**。清单圈定「为哪些文件出结论」，核查可以读全仓——
+#     改动在一处、调用方在另一个模块，是本仓最贵的一类缺陷。
+#   - **表态只能有一次，且由 verdict 落**。评审 agent 不给 `gh pr review`，也不给
+#     `Bash(gh api:*)`（全方法通配能 POST /pulls/N/reviews 绕过去）。汇总用确定性
+#     脚本而非再起一个模型：拼接已有结论不需要判断力，也不该有编造空间。
+#   - **阻塞项必须过 verify 独立复核才进 PR**。发现者自评把握挡不住误报——同一段
+#     上下文里模型对自己刚推出来的结论天然高估。verify 换一份干净上下文、默认立场
+#     是驳回，照 evidence 去原地验。误报的代价不对称：放过一个待确认项作者自己会
+#     看到，报一个假阻塞项则挂住 PR、逼作者证伪一个不存在的问题。
+#
+# 静默是最坏的结果：跑挂了 PR 上什么都没有，与「压根没触发」无法区分。verdict 挂
+# if: always()，回填占位保证「跑了但没产出」可见，没有结论时也要贴一条通告说明本轮空转。
+#
+# 这套机制搬自 bkn-foundry（后端单体仓），但那边的分片并行没搬——本仓最近 12 个合并
+# PR 的改动文件数中位数是 3、最大 12，一个 agent 审得完；foundry 那边分片后六片各自
+# 独立找问题，按单片 20% 阻断率算至少一片阻断的概率是 1 − 0.8⁶ ≈ 74%，PR 反复挂起。
+# 所以 review 是单 agent（matrix 只有一条）。矩阵形态保留，周边机器（进度打勾、artifact
+# 汇总、缺片通告）沿用不变，分片随时可以加回来。
+
 jobs:
-  review:
+  plan:
     # 逐事件放行：
     #   - workflow_dispatch：手动，总放行。
     #   - pull_request：只同仓 PR（fork 拿不到 secret，跳过避免红叉）。
@@ -79,6 +115,8 @@ jobs:
     #     state == 'open' 让合并/关闭后的评论不再触发复评——merge 已不可逆，
     #     再跑只是白费额度、在死 PR 上贴噪声。
     #     口令过滤把「每回一帖跑一轮」压成按需触发，评审轮次由人决定。
+    #
+    # 放行判据只写在这一个 job 上，下游靠 needs 继承，避免三处各写一份逐渐走样。
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
@@ -97,13 +135,229 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # write 是为了贴那条进度评论：本文件关掉了 claude-code-action 的 track_progress
+      # （结论由 verdict 统一落一次，过程态不该各贴一条），PR 上从触发到出结论的几分钟
+      # 里便完全没有动静，看起来像没触发。这里补一条**唯一**的进度评论，由 verdict 收尾
+      # 时删掉——过程态不该留在 PR 的历史里，结论本身才是记录。
+      pull-requests: write
+    outputs:
+      pr_number: ${{ steps.meta.outputs.pr_number }}
+      shards: ${{ steps.plan.outputs.shards }}
+      has_shards: ${{ steps.plan.outputs.has_shards }}
+      skip_round: ${{ steps.plan.outputs.skip_round }}
+      prior_rounds: ${{ steps.plan.outputs.prior_rounds }}
+      file_total: ${{ steps.plan.outputs.file_total }}
+      file_listed: ${{ steps.plan.outputs.file_listed }}
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}
+      GH_TOKEN: ${{ github.token }}
+      # gh 解析目标仓库只认 --repo、GH_REPO、当前目录的 git remote 三者，**不读**
+      # GITHUB_REPOSITORY。这个 job 有意不 checkout，工作目录不是 git 仓库，不给
+      # GH_REPO 的话 gh 会以 failed to determine base repo 直接非零退出，plan 一挂
+      # 下游全跳过——连 verdict 的 always() 兜底都够不着（它被 needs.plan.result 挡着）。
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # 推送事件先静默一小会儿再往下走。作者（多数时候是 agent）常见动作是
+      # `git push` 紧接着 `gh pr comment "/review"`，两条事件各触发一次评审；静默期内
+      # 后一条到达时，上面的 concurrency 会把本 run 取消，而此刻还没 checkout、没调
+      # Claude、没贴 tracking comment，取消的代价是零。等满则照常跑，只晚十几秒。
+      # 只挂 pull_request：评论触发与手动触发都是人明确要一轮，不该让它等。
+      - name: Debounce push events
+        if: github.event_name == 'pull_request'
+        run: sleep 15
+
+      - name: Resolve PR number
+        id: meta
+        run: echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      # 只调 API 取改动文件清单，不 checkout——规划不需要工作区，省掉一次全仓拉取。
+      - name: Plan shards
+        id: plan
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, pathlib, subprocess
+
+          pr = os.environ["PR_NUMBER"]
+          out = subprocess.run(
+              ["gh", "pr", "view", pr, "--json", "files,changedFiles",
+               "--jq", '.changedFiles, (.files[].path)'],
+              capture_output=True, text=True, check=True,
+          ).stdout.splitlines()
+          # `gh pr view --json files` 一次最多返回 100 个文件。超出部分会被静默丢掉，
+          # 那些文件就永远不进评审范围、也永远不被评审——比漏审更糟的是没人知道漏了。
+          # 这里把总数单独取出来对账，差额由 verdict 在结论里点明。
+          total = int(out[0].strip())
+          paths = [p for p in out[1:] if p.strip()]
+
+          # 按类分流，省的是真活：文档与测试与代码同规格评审时，文档也在被追引用点、
+          # 被做触发式深挖，纯属浪费轮次。
+          #   deep    代码，全套
+          #   shallow 测试，只看是否验证真实行为，不追引用点（测试的调用方就是它自己）
+          #   lowrisk 文档/规格/生成物，浅审
+          # 部署与运行时配置不在此列——Helm values、Dockerfile、运行时注入的 config.js
+          # 是「改一行毁一个环境」的地方，永远走 deep。
+          def klass(path):
+              risky = (path.startswith("deploy/") or path.endswith("Dockerfile")
+                       or path.endswith("values.yaml") or path == "public/config.js"
+                       or path.endswith("nginx.conf"))
+              if risky:
+                  return "deep"
+              if (".test." in path or ".spec." in path
+                      or path.startswith("tests/")):
+                  return "shallow"
+              if (path.startswith(("docs/", "specs/", "examples/", "help/"))
+                      or path.endswith(".md")
+                      or path.endswith(("pnpm-lock.yaml", ".lock"))):
+                  return "lowrisk"
+              return "deep"
+
+          # 一片，一个 agent 看全部。本仓最近 12 个合并 PR 的改动文件数中位数是 3、
+          # 最大 12，一个 agent 审得完；分片只会重复付钱，并把阻断概率放大（多片各自
+          # 独立找问题，任一片报阻塞整轮就挂）。
+          # 保留的是上面的文件类分流——它省的是真活，与分片无关。
+          deep_files = sorted(f for f in paths if klass(f) == "deep")
+          rest_files = sorted(f for f in paths if klass(f) != "deep")
+
+          shards = [{
+              "key": "review",
+              "label": "全量",
+              "kind": "single",
+              "files": "\n".join("- " + f for f in deep_files) or "（本轮没有代码改动）",
+              "files_shallow": "\n".join("- " + f for f in rest_files),
+          }] if paths else []
+
+          print("shards=" + json.dumps(shards, ensure_ascii=False))
+          print("has_shards=" + ("true" if shards else "false"))
+          # 已有过几轮结论。review 与 verdict 共用这一个数来收紧配额，免得各自从评论
+          # 历史里推断「这是第几轮」还推出不同结果。
+          # 轮数用来收紧配额，最后一轮的表态用来决定这次要不要跑。
+          prior = subprocess.run(
+              ["gh", "api", "repos/%s/pulls/%s/reviews" % (os.environ["GH_REPO"], pr),
+               "--paginate", "--jq", '[.[] | select((.body // "") != "") | .state] | @json'],
+              capture_output=True, text=True)
+          states = []
+          if prior.returncode == 0:
+              for chunk in prior.stdout.splitlines():
+                  try:
+                      states += json.loads(chunk)
+                  except ValueError:
+                      pass
+          print("prior_rounds=%d" % len(states))
+
+          # 已经 approve 过之后，作者多半在打磨（补测试、改注释、rebase）。这些轮次
+          # 不自动跑，作者要复评回一句 /review 即可——上一轮 approve 的正文里就写着这句。
+          #
+          # 例外：新提交碰了高危面照跑。部署配置与鉴权/权限是「改一行毁一个环境」的
+          # 地方，而 approve 不会因为推送而失效（ruleset 未开 dismiss_stale_reviews_on_push），
+          # 所以这里跳过就等于门也不拦、人也不看。
+          #
+          # CHANGES_REQUESTED 之后不受影响：那时作者在修问题，正是最该盯的阶段。
+          RISKY = ("deploy/", "src/framework/auth/", "src/framework/permission/",
+                   "src/framework/entitlement/", "public/config.js", "Dockerfile")
+          risky = [p_ for p_ in paths
+                   if any(m in p_ for m in RISKY) or p_.endswith("values.yaml")]
+          # 文件清单被 gh 的 100 上限截断时不跳过：截掉的那部分里可能正有 deploy 或
+          # 权限改动，按「未触及高危面」放过就是拿看不见的东西赌。
+          truncated = total > len(paths)
+          skip = (os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
+                  and states and states[-1] == "APPROVED"
+                  and not risky and not truncated)
+          # 这个块的 stdout 整个重定向进 $GITHUB_OUTPUT，任何不含 = 的行都会让 runner
+          # 以 Invalid format 报错、plan 步骤失败——所以 ::notice:: 不能从这里打，
+          # 落成文件由下面的 shell 发出。
+          if skip:
+              pathlib.Path("skip-notice.txt").write_text(
+                  "PR #%s 上一轮已放行，且本次改动未触及高危面，跳过自动复评。"
+                  "需要复评请回复 /review。" % pr, encoding="utf-8")
+          print("skip_round=%s" % ("true" if skip else "false"))
+          print("file_total=%d" % total)
+          print("file_listed=%d" % len(paths))
+          PY
+          # 跳过提示在这里发：上面的 stdout 是 $GITHUB_OUTPUT，发不了 workflow command。
+          if [ -f skip-notice.txt ]; then
+            echo "::notice::$(cat skip-notice.txt)"
+          fi
+
+      # 跳过这一轮时 verdict 不跑，进度评论的清理也就不跑——上一轮被 concurrency 取消
+      # 后残留的那条会永久停在「评审进行中」，与它自己写的「结论落地后这条会自动消失」
+      # 直接矛盾。所以跳过路径也要清一次。
+      - name: Remove stale progress comment when skipping
+        if: steps.plan.outputs.skip_round == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          MARKER='<!-- claude-review-progress -->'
+          gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq "[.[] | select(.body | contains(\"$MARKER\")) | .id] | .[]" \
+          | while read -r id; do
+              gh api -X DELETE "repos/${GH_REPO}/issues/comments/${id}" >/dev/null
+            done
+
+      # 同一条评论反复复用（靠 body 里的 HTML 标记定位），复评不会越堆越多。
+      # 失败不阻断评审：进度提示挂了没关系，评审本身要继续。
+      - name: Post progress comment
+        if: steps.plan.outputs.has_shards == 'true' && steps.plan.outputs.skip_round != 'true'
+        continue-on-error: true
+        env:
+          SHARDS: ${{ steps.plan.outputs.shards }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # 转圈图标。自己存在仓里而不是复用 claude-code-action 那个 user-attachment：
+          # 那是别人项目的资产，删掉就成裂图。本仓是 public，raw 链接可被 GitHub 的
+          # 图片代理取到；私有仓则不行，届时要换成上传到 user-attachments。
+          # 分支取默认分支而不是写死 main：改名或迁移资产后这里会静默变成裂图，
+          # workflow 侧看不出任何异常，只有渲染出来的评论里才看得见。
+          SPINNER: ${{ github.server_url }}/${{ github.repository }}/raw/${{ github.event.repository.default_branch || 'main' }}/.github/assets/review-spinner.gif
+        run: |
+          set -euo pipefail
+          MARKER='<!-- claude-review-progress -->'
+          body=$(python3 - <<'PY'
+          import json, os
+          shards = json.loads(os.environ["SHARDS"])
+          lines = ["<!-- claude-review-progress -->",
+                   '### <img src="%s" width="16" height="16" /> 评审进行中'
+                   % os.environ["SPINNER"],
+                   "",
+                   "评审完成后统一给出一次结论。",
+                   ""]
+          # 复选框由评审跑完后回来打勾（review job 的 Tick progress 步骤）。
+          lines += ["- [ ] `%s`" % s["label"] for s in shards]
+          lines += ["", "[查看运行日志](%s)" % os.environ["RUN_URL"],
+                    "", "_结论落地后这条会自动消失。_"]
+          print("\n".join(lines))
+          PY
+          )
+          existing=$(gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq "[.[] | select(.body | contains(\"$MARKER\")) | .id] | last // empty")
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${GH_REPO}/issues/comments/${existing}" -f body="$body" >/dev/null
+          else
+            gh api -X POST "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi
+
+  review:
+    needs: plan
+    if: needs.plan.outputs.has_shards == 'true' && needs.plan.outputs.skip_round != 'true'
+    name: review (${{ matrix.shard.label }})
+    runs-on: ubuntu-latest
+    # agent 卡住时不能让 job 一路跑到 runner 的 6 小时上限：verdict 在 needs 上等着，
+    # 一片挂死会把整轮评审的结论一起拖到没人再看的时候。
+    timeout-minutes: 30
+    strategy:
+      # 一片撞上限或失败，其余片必须照跑完——矩阵的意义就在于故障隔离。
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    permissions:
+      contents: read
       pull-requests: write
       checks: read
       statuses: read
       id-token: write
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}
+      PR_NUMBER: ${{ needs.plan.outputs.pr_number }}
+      SHARD_KEY: ${{ matrix.shard.key }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -111,36 +365,117 @@ jobs:
           # pull_request 事件下 checkout 会自动落到 PR 的 merge ref；其它事件
           # （手动触发、评论、行内回复）只会拿到默认分支，需要下一步显式切到
           # PR 分支，因此这里放开深度以便 gh pr checkout 能建立分支。
-          fetch-depth: ${{ github.event_name == 'pull_request' && 1 || 0 }}
+          # 快照类文件要 `git show` 取前一版比对，也需要历史。
+          fetch-depth: 0
 
+      # PR 可能在本轮跑到一半时被合并，分支随即删除，gh pr checkout 会以
+      # `couldn't find remote ref` 硬失败。此时该跳过而不是留个红叉——PR 都合了，
+      # 评审结论已无处可用。exit 0 之后必须把后续步骤一起 gate 掉，否则会拿默认
+      # 分支的工作树当 PR 内容评审。
       - name: Checkout PR branch (non-PR events)
+        id: prbranch
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          state=$(gh pr view "$PR_NUMBER" --json state --jq .state)
+          if [ "$state" != "OPEN" ]; then
+            echo "::warning::PR #$PR_NUMBER 已是 $state（本轮跑到一半被合并或关闭），跳过。"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           gh pr checkout "$PR_NUMBER"
           echo "已切到 PR #$PR_NUMBER: $(git rev-parse --abbrev-ref HEAD) @ $(git rev-parse --short HEAD)"
 
+      - name: Prepare findings dir
+        run: mkdir -p findings
+
+      # 上一轮的 inline 评论由 shell 预取成文件，评审 agent 不再需要 `Bash(gh api:*)`
+      # ——那是全方法通配，模型可以直接 POST /pulls/N/reviews 落一条评审状态，绕过
+      # 「表态只能有一次」这条不变量（该不变量此前只靠 prompt 约束，不是权限上做不到）。
+      # 顺带省轮次：一次 shell 调用替掉模型自己发的一轮工具调用。
+      - name: Prefetch prior review comments
+        if: steps.prbranch.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # 两个来源都要取：/issues/N/comments 是顶层评论、/pulls/N/comments 是 inline
+          # 评论及其回复。作者的处理说明（哪条采纳、哪条不采纳）多半发在顶层，只取
+          # inline 等于没在听。
+          #
+          # --paginate 是逐页应用 --jq 的，评论超过一页时输出会是多个 JSON 数组首尾
+          # 相接、不是一个合法数组。所以先取原始页，再用 jq -s 合并成一个数组。
+          # 各留最近 100 条：这里取的是全部历史轮次，攒多了会挤占评审的上下文，
+          # 而复评真正要看的是最近几轮。
+          fetch() {
+            gh api "repos/${GH_REPO}/$1" --paginate | jq -s "[.[][] | $2] | .[-100:]"
+          }
+          {
+            echo '{"issue_comments":'
+            fetch "issues/${PR_NUMBER}/comments" \
+              '{user: .user.login, created_at, body}' || echo '[]'
+            echo ',"review_comments":'
+            fetch "pulls/${PR_NUMBER}/comments" \
+              '{path, line, user: .user.login, created_at, body}' || echo '[]'
+            # 上一轮的结论正文在 /pulls/N/reviews，与 inline 评论是两个端点。待确认项
+            # 只存在于正文里，不取就等于每轮从零开始——会连续几轮各报十条互不重叠的
+            # 待确认项，正是因为看不见自己上一轮说过什么。
+            echo ',"prior_verdicts":'
+            fetch "pulls/${PR_NUMBER}/reviews" \
+              '{user: .user.login, state, submitted_at, body}' || echo '[]'
+            echo '}'
+          } > prior-comments.json || echo '{"issue_comments":[],"review_comments":[],"prior_verdicts":[]}' \
+            > prior-comments.json
+
       - name: Claude review
-        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.prbranch.outputs.skip != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # track_progress 只支持 pull_request / issues / issue_comment /
-          # pull_request_review(_comment) 事件，在 workflow_dispatch 下会直接
-          # 报错退出——手动触发那条路径因此从未可用。按事件类型开关。
-          track_progress: ${{ github.event_name != 'workflow_dispatch' }}
+          # 关掉 track_progress：进度由 plan 贴的那条唯一评论承担，最终只有 verdict
+          # 那一条结论有意义。
+          track_progress: false
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ env.PR_NUMBER }}
 
-            对这个 PR 做代码评审。这是 bkn-studio —— React + TypeScript + Vite 的
-            前端单页应用，按 src/modules/<模块> 划分业务模块，通过 Helm chart 部署。
-            协作规范见 CONTRIBUTING.md、AGENTS.md、ARCHITECTURE.md、
-            MICRO_APP_CONTRACT.md。
+            对这个 PR 做一次代码评审。整轮只有你一个评审者，PR 的全部改动都归你。
 
-            重点关注（按优先级）：
+            产出文件：${{ github.workspace }}/findings/${{ matrix.shard.key }}.json
+
+            这是 bkn-studio —— React + TypeScript + Vite 的前端单页应用，按
+            src/modules/<模块> 划分业务模块，通过 Helm chart 部署。协作规范见
+            CONTRIBUTING.md、AGENTS.md、ARCHITECTURE.md、MICRO_APP_CONTRACT.md。
+
+            ## 范围
+
+            你负责这个 PR 的**全部**改动，下面是需要出结论的文件：
+
+            ${{ matrix.shard.files }}
+
+            ${{ matrix.shard.files_shallow != '' && '下面这些测试与文档/规格文件**浅审**：测试只看是否验证了真实行为、有没有把断言写成永真；文档只看是否与代码改动一致。不追引用点、不做触发式深挖。' || '' }}
+
+            ${{ matrix.shard.files_shallow }}
+
+            **责任范围不等于可读范围。** 上面的清单圈定「你要为哪些文件出结论」，
+            核查时可以读全仓任意文件——改动在一处、调用方在另一个模块，是本仓最贵的
+            一类缺陷。
+
+            ## 轮次预算（先读这一节）
+
+            这个任务有轮次上限。撞上限意味着整轮零产出，比漏掉一条意见糟得多。因此：
+
+            - 互不依赖的 Read / Grep / Glob / git 调用放在同一条消息里并发发出，不要
+              一轮发一条。逐条串行是耗尽轮次的首要原因。
+            - 用掉大约三分之二轮次时停止深挖，用已经核实的内容收敛出结论。
+            - 最后一步必须写出 `${{ github.workspace }}/findings/${{ matrix.shard.key }}.json`
+              （**必须用这个绝对路径**，工具不接受相对路径）。宁可给一份范围有限、在
+              not_covered 里写明未覆盖面的结论，也不要什么都不产出。
+
+            ## 关注面（按优先级）
 
             1. **正确性** — 逻辑错误、边界条件、异常与空态未处理、React hook 依赖
                数组错漏、副作用未清理、请求竞态（切换筛选/分页时旧响应覆盖新结果）、
@@ -151,94 +486,890 @@ jobs:
             3. **真实数据** — 本仓硬性要求：UI 只能用真实后端数据。后端没有的字段就
                不展示，禁止 mock、占位、编造的兜底值冒充真实数据。这是高频问题，重点查。
             4. **一致性** — 是否复用了既有组件/hooks/请求封装而不是另起一套；模块边界
-               是否符合 MICRO_APP_CONTRACT；用户可见文案是否 i18n 齐全。
+               是否符合 MICRO_APP_CONTRACT；用户可见文案的 i18n 是否 zh/en 两份齐全。
             5. **测试** — 新增逻辑是否有覆盖，测试是否验证真实行为而不是断言实现细节。
 
-            评审要求：
-            - 用中文。
-            - 具体问题用 inline comment 贴到对应行，说明「问题是什么 + 怎么改」。
-            - 顶层 comment 只写整体判断、阻塞项清单、待确认项清单，不要复述 diff。
-            - 不确定的推测标注为「待确认」，不要当成缺陷断言。
-            - 没问题就说没问题，不要为了凑数提格式化/命名类的琐碎意见。
-              lint 由 CI 的 eslint.config.typechecked.js 把关，不用人工复查风格。
+            这是**优先级**，不是清单。三行改动不需要逐条走一遍——只看这次改动实际
+            能触到的那几条。i18n 只在新增用户可见文案时才成立；测试只在新增了逻辑时
+            才成立。
 
-            评审的对象是**改动带来的整体影响**，不是这份 diff 的文本。diff 只是入口，
-            每一处改动都要先回答：谁在依赖它、它原本承诺了什么、改完之后这些承诺是否
-            仍然成立。至少覆盖下面四个面，逐个用 `git grep` / 读源码确认，而不是推测：
+            lint 与类型由 CI 的 `eslint.config.typechecked.js` 与 `tsc -b` 把关，
+            不用人工复查风格。
 
-            - **调用方与被调方**：改动的组件 props、hook 签名与返回值、请求封装、store
-              切片、导出的工具函数，找出全部引用点逐个核对新语义是否仍然成立。改了
-              请求封装就要把调用它的每个页面一起读，别只看改动这一半。
-            - **跨模块契约**：同一件事往往在多处各有一份声明，只改一处就是运行时不一致
-              ——路由注册与懒加载入口、MICRO_APP_CONTRACT 规定的挂载/卸载与通信约定、
-              权限点 key、i18n 的 zh 与 en 两份资源、以及与后端接口对齐的 TypeScript
-              类型定义。
-            - **配置与部署面**：Helm values、configmap、`VITE_` 构建期变量、运行时注入的
-              config，要分别核存量环境升级（沿用旧值会不会失效、缺省值会不会被覆盖）与
-              全新安装两条路径。注意构建期变量改了必须重新构建镜像才生效。
-            - **持久化状态面**：localStorage / sessionStorage 的结构与 key、缓存 key 的
-              组成、URL query 与路由参数的格式。这些都是存量数据：用户浏览器里的旧值、
-              别人发出去的旧链接，改完之后新代码必须仍能正确读出或安全降级。
+            ## 审到哪里为止
 
-            顶层结论里要点明这次改动的影响范围（波及哪些模块、页面、接口、存量状态），
-            而不只是逐行问题清单。
+            **只审这次改动引入或改变的行为。** 既有代码里的问题不归这个 PR 负责——
+            除非这次改动让它变得可达、更频繁、或后果更严重；那种情况要在意见里说清
+            「是这次改动使它成为问题」，否则不提。
 
-            以下三类改动，只读 diff 必然看不出问题，必须走出 diff 去核源码：
+            **走出 diff 只为回答一个问题：这次改动有没有破坏别处的假设。** 不是为了
+            通读子系统，也不是为了对这块代码形成完整认识。问题答完就回来。
 
-            - **整份新增或整体重写的快照类文件**（lock 文件、生成的接口类型、i18n 全量
-              资源等）：不要只读新文件本身。必须 `git show <ref>:<上一版本的同名文件>`
-              取出前一版逐行比对，确认差异只有本次改动应有的那几处。「全量快照」最容易
-              夹带无关漂移——丢字段、改名、复活已废弃的项——而这些在 diff 里全是 `+`，
-              读不出来。
+            具体到动作：改动的组件 props、hook 签名与返回值、请求封装、store 切片、
+            导出的工具函数**语义变了**才 `git grep` 追引用点；纯内部实现改写、签名与
+            语义都没变的，不追。改了请求封装且语义变了，就把调用它的每个页面一起读，
+            别只看改动这一半。
+
+            **不要为了展示覆盖面而写「我还核了 X，没问题」。** 没问题就不写。
+
+            审得多不等于审得好。一份把三行改动铺成子系统巡检的意见，作者读完不知道
+            该改什么。
+
+            ## 触发式深挖（diff 命中才做，没命中直接跳过；命中了也只查命中的那一类）
+
+            这几类改动只读 diff 必然看不出问题，命中时必须走出 diff 核源码：
+
+            - **整份新增或整体重写的快照类文件**（pnpm-lock.yaml、生成的接口类型、
+              i18n 全量资源等）：`git show <ref>:<上一版本同名文件>` 取前一版逐行比对，
+              确认差异只有本次应有的那几处。全量快照最容易夹带无关漂移——丢字段、
+              改名、复活已废弃的项——而这些在 diff 里全是 `+`，读不出来。
             - **props / 字段 / 配置项的改名或删除**：定义其语义的地方通常不在 diff 里。
-              除了 `git grep` 旧名确认无残留（含 i18n key、权限点 key、测试与 mock
-              fixture），还要读**类型定义与默认值**，确认新逻辑没有把原本合法的可选值
+              除了 `git grep` 旧名确认无残留（含 i18n key、权限点 key、测试与 fixture），
+              还要读**类型定义与默认值**，确认新逻辑没有把原本合法的可选值
               （`undefined`、空数组、空字符串）判成非法、把可选配置当成必填。
             - **被删掉的代码**：先问它在维护什么不变量、当初为什么要写。空态分支、
               `useEffect` 的 cleanup、请求竞态守卫、异常兜底，删掉一个就是不再保证那个
               不变量。必须确认对应的输入形态确实已经不存在，而不是「当前主路径不会产生」
               ——用户浏览器里的存量状态和慢网络下的乱序响应仍会产生。
+            - **跨模块契约改动**：同一件事往往在多处各有一份声明，只改一处就是运行时
+              不一致——路由注册与懒加载入口、MICRO_APP_CONTRACT 规定的挂载/卸载与通信
+              约定、权限点 key、i18n 的 zh 与 en 两份资源、与后端接口对齐的 TypeScript
+              类型定义。命中时把各处声明一并 `git grep` 出来核对。
+            - **配置与部署面改动**（deploy/、Dockerfile、`VITE_` 构建期变量、
+              public/config.js 运行时注入）：分别核存量环境升级（沿用旧值会不会失效、
+              缺省值会不会被覆盖）与全新安装两条路径。构建期变量改了必须重新构建镜像
+              才生效，运行时注入的改了不必——这两条别搞混。
+            - **持久化状态面改动**（localStorage / sessionStorage 的结构与 key、缓存 key
+              的组成、URL query 与路由参数格式）：这些都是存量数据——用户浏览器里的旧值、
+              别人发出去的旧链接，改完之后新代码必须仍能正确读出或安全降级。
 
-            这次可能是复评（作者推了新提交）。复评的目标是收敛，不是每轮重开一次
-            全面评审：
-            - 先读回你之前留下的 inline 评论与其下的回复：
-              `gh pr view "$PR_NUMBER" --json reviewDecision,comments` 与
-              `gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/comments"`。
-            - 已经提过的问题，作者改了、或给出对得上疑点的解释，就算过。不必追求
-              措辞完美，更不要凭「可能」把同一条追问第二遍。
-            - 上面「必须走出 diff」那三条的全量兜底重扫只在首轮做一次；复评的深挖
-              范围限定在上一轮之后新增的提交与文件。
-            - 第二轮起，除非发现你能说清失效场景的确定阻断项，否则就 approve。
-              评审轮次本身有成本，把 PR 反复挂起比放过一个待确认项更贵。
+            ## 复评（作者推了新提交）
 
-            按下面的规则落成一次 PR review（不是普通评论），二选一：
+            目标是收敛，不是每轮重开一次全面评审：
 
-            1. 有阻塞项 → `gh pr review "$PR_NUMBER" --request-changes
-               --body "<阻塞清单>"`。阻塞项的门槛是：你已经读过源码核实，能说清
-               具体的失效场景（什么输入、什么状态、坏成什么样）。说不清就不是阻塞项。
-               body 末尾固定带一句「改完请推新提交，或回复 `/review` 要一轮复评」——
-               CHANGES_REQUESTED 会一直挡着合并，而改动若落在本 workflow 的 paths
-               之外，推提交并不会自动复评，作者必须知道怎么把这个状态解掉。
-            2. 没有阻塞项 → `gh pr review "$PR_NUMBER" --approve --body "<放行理由>"`。
-               待确认项不阻断放行：写进 approve 的 body 里当提示，由作者自行判断，
-               不要为了等一个回应而改用 --comment 或 --request-changes。
+            - 先读回上一轮的评论：已经预取到 `${{ github.workspace }}/prior-comments.json`（绝对
+              路径），直接读文件，不要自己去调 API。里面两个来源都有：`issue_comments`
+              是顶层评论——作者的处理说明（哪条采纳、哪条不采纳）多半发在这里，
+              `review_comments` 是 inline 评论及其回复，`prior_verdicts` 是此前每一轮
+              的结论正文——**待确认项只出现在那里**，不读就会把上一轮说过的话换个说法
+              再说一遍。三个来源全看。
+            - **作者明确表示不采纳的建议，记一次就够，本轮不要再列**——包括写进
+              unconfirmed。他已经做过判断，再列一遍只是在告诉他你没读他的回复。只有
+              出现新证据推翻他的理由时才重提，并在 what 里说清新证据是什么。
+            - **待确认项必须收敛。** 只要 `prior_verdicts` 非空（即此前已有过结论），
+              这一轮的 unconfirmed **至多 1 条，且只能是本轮新增提交引入的问题**。
+              此前任何一轮结论正文里出现过的，无论作者有没有处理，都不再提。
+              「换个角度再说一遍同一个文件」也算重提。
+              评审的目标是让 PR 能走，不是每轮都证明自己还能找出东西——一份挑不完
+              毛病的清单，作者第三轮就不看了。
+            - 已经提过的问题，作者改了、或给出对得上疑点的解释，就算过。不必追求措辞
+              完美，更不要凭「可能」把同一条追问第二遍。
+            - 上面的触发式深挖只在首轮做；复评的范围限定在上一轮之后新增的提交与文件。
+            - 第二轮起，除非发现你能说清失效场景的确定阻断项，否则不要再报阻塞项。
+            - **写 findings 之前，最后再拉一次顶层评论**，逐字发这一条：
+              `gh pr view ${{ env.PR_NUMBER }} --json comments --jq '[.comments[-30:][] | {author: .author.login, body}]'`
+              PR 号已在 YAML 层插成字面量：allowedTools 是前缀白名单，命令里出现
+              `$PR_NUMBER` 这类展开会被权限层以 `Contains simple_expansion` 拒掉，
+              整条规则跑不起来。`--jq` 同样别省——不投影的话每条评论返回十几个字段
+              且是全部历史，而这一步正发生在轮次与上下文最紧的收尾时刻。
+              为什么要重拉：`prior-comments.json` 是本 job 开头预取的，而评审要跑好
+              几分钟；作者常在这段时间里推完提交紧接着发一条处理说明——哪条采纳了、
+              哪条不采纳、为什么。只读预取文件就会把他刚说过的话原样再问一遍。
+              新读到的按上面两条规则处理：已解释的算过，明确不采纳的从 unconfirmed 里
+              去掉。
 
-            不要把 CI 当放行条件。CI 全绿是 Branch Protection 的独立闸门，合并时自然
-            会拦住，评审只判代码本身。必需检查还在跑、甚至已经失败，都照常按上面二选一
-            表态；失败如果明显由这份改动引起，在 body 里点一句即可，不改变结论。
+            ## 产出
 
-            批准以 github-actions[bot] 身份提交，只表态、不合并。人工仍需自行 merge。
+            两件事，缺一不可：
 
-          # 大 PR 只给 gh pr diff 不够：Claude 需要进文件看上下文、比对具体 commit，
-          # 否则会伸手 Read/Grep/git diff 等未授权工具而被拒，撞满轮次后评论冻在
-          # 「进行中」。这里补齐只读检视工具并放宽轮次上限。
+            **一律用中文**写 inline comment 与 findings JSON 里的所有文字。代码标识符、
+            错误信息、命令、路径保持原样，不翻译。
+
+            **inline comment 的配额**：此前已有 ${{ needs.plan.outputs.prior_rounds }}
+            轮结论。为 0 时最多贴 3 条；不为 0 时最多 1 条，且只针对本轮新增提交。
+            每条 inline 都是一次通知和一个要人去关掉的会话，堆在 Files 视图里不会自己
+            消失。同一个问题**不要既贴 inline 又写进 unconfirmed**：位置明确、作者照着
+            改就行的贴 inline；需要他判断的写 unconfirmed。
+
+            **一、先写 `${{ github.workspace }}/findings/${{ matrix.shard.key }}.json`**
+            （绝对路径）。**这一步排在最前面是有意的**：它是唯一会进入最终结论的
+            产出，inline comment 不进。贴完 inline 就收尾、没写这个文件的话，整轮评审
+            在 PR 上零反馈——比漏一条意见糟得多。所以：先落文件，后贴 inline；结论有
+            更新就重写一遍文件。严格用下面的结构：
+
+            ```json
+            {
+              "shard": "${{ matrix.shard.label }}",
+              "status": "completed",
+              "summary": "整体判断，最多两句",
+              "impact": "这次改动可能波及什么（模块、页面、接口、存量状态），一句话；没什么可说就填空串",
+              "blockers": [
+                {"file": "src/modules/x/y.tsx", "line": 42, "what": "问题是什么",
+                 "scenario": "什么输入、什么状态、坏成什么样",
+                 "evidence": ["src/framework/request/client.ts:88-95 这几行里读到的、支撑这条结论的事实"]}
+              ],
+              "unconfirmed": [{"file": "...", "what": "待确认项，一到两句，不阻断放行"}],
+              "not_covered": "本轮没核到的面，一句话；全核到了就填空串"
+            }
+            ```
+
+            **blockers 的门槛**：你已经读过源码核实，能说清具体的失效场景，并且自评
+            把握 ≥ 90 分。说不清、或失效场景里有任何一环没在代码里核实过，都不算阻塞
+            项——降级进 unconfirmed，或者直接丢掉。
+
+            ## 怎么写一条意见
+
+            固定形状，两句话：**哪里坏了** + **什么情况下坏**。位置放 `file`/`line`，
+            证据放 `evidence`，都不要写进正文。
+
+            > `useResourceList.ts:64` 切换筛选时没有丢弃旧请求。慢网络下先发的响应后
+            > 到达，会把新筛选的结果覆盖回旧数据。
+
+            不要写的东西，一条都不要：
+
+            - 铺垫与转折（「值得注意的是」「这不是假设」「问题出在另一半」）
+            - 你的推理过程、排除了哪些可能、这条有多难查
+            - 复述 PR 描述或 diff 内容
+            - 自评可信度的旁白（门槛不到就不该提，提了就别再解释自己多确信）
+            - 与行为无关的事：格式、命名、结尾换行、注释措辞、文件放在哪一层
+            - 在 not_covered 里论证「这个面在本 PR 上不适用所以不算漏审」——
+              没这个面就填空串
+
+            读的人是在改代码的间隙看这条，不是在读你的工作报告。
+
+            ## 写多少
+
+            **作者划的范围就是本轮范围。** 评论里写了「只看这个提交」「这轮只改了 X」，
+            就照办，不要因为顺手看见别处可疑而扩进来——那属于下一轮，或者作者自己会问。
+
+            **但覆盖不能缩。** 责任清单里的每个文件都要过一遍。下面的条数与长度上限
+            **只作用于你写出来多少，不作用于你审了多少**：审满，然后挑最值得说的写。
+            清单太长跑不完，就在 not_covered 里写明「X 之后未覆盖」，不要默默略过——
+            漏审而不说，比漏审本身糟。
+
+            **正文长度是有代价的。** 你的输出会原样成为那条评审结论，作者要一次读完；
+            一份没人读完的评审等于没评。所以：
+
+            - `summary` 最多两句；`impact` 一句，说「可能坏成什么样」而不是列举清单，
+              没有实质影响就填空串；`not_covered` 一句，全核到了就填空串。
+            - `unconfirmed` **最多 2 条**，每条一到两句，只给结论和位置，不复述推理过程。
+              超过 3 条说明你在凑数——留下最值得作者看的那几条。
+            - 上一轮已经提过、这一轮没有新证据的，**不要再列一遍做状态标注**。作者已经
+              看过了，重复列出只会让每一轮的结论比上一轮更长。
+            - 与行为无关的意见一律不提：格式、命名、结尾换行、注释措辞、文件放在哪一层。
+              这些既不阻断也不值得作者花时间读。
+
+            `evidence` 必填且必须是你**这一轮真读过的** file:line。写不出具体位置，
+            说明这条是从 diff 表面推出来的，不是核实出来的——那它就不是阻塞项。
+            复核环节会照着 evidence 去原地验，编造的位置一验就穿。
+
+            **二、inline comment 只贴改进建议与待确认项**（贴到对应行，说明「问题是什么
+            + 怎么改」），**不要贴阻塞项**。阻塞项一律只进上面的 JSON，经独立的 verify
+            环节复核后才会出现在 PR 上——未经复核就贴到行上，作者要为假问题付出真时间。
+            不复述 diff，不为凑数提格式化/命名类琐碎意见。
+
+            **你不要调用 `gh pr review`。** 表态由 verdict 环节根据复核结果统一落一次——
+            阻塞项要先过独立复核才算数，你自己表态会绕开它。你的 JSON 就是你的表态。
+
+            不要把 CI 当放行条件。CI 全绿是 Branch Protection 的独立闸门，合并时自然会
+            拦住，评审只判代码本身。
+
+          # 只给 gh pr diff 不够：Claude 需要进文件看上下文、比对具体 commit，会伸手
+          # Read/Grep/git diff 等未授权工具而被拒，撞满轮次后评论冻在「进行中」。
+          # 补齐只读检视工具（Read/Grep/Glob/LS + git diff/log/show）与 PR view/checks。
+          #
+          # Write 用来落 findings JSON；这里不给 `gh pr review`，也不给 `Bash(gh api:*)`
+          # ——表态权限收在 verdict 一处，全方法通配能 POST /pulls/N/reviews 绕过去。
+          #
+          # 轮次上限 200 是余量而非目标，跑不满不计费；本仓 PR 通常个位数文件，实际
+          # 远用不到。留这么高是因为撞上限=整轮零产出，是最贵的失败模式。
           claude_args: |
             --model claude-opus-5
             --effort xhigh
-            --max-turns 60
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Grep,Glob,LS,Bash(gh pr comment:*),Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr checks:*),Bash(gh api:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git grep:*)"
+            --max-turns 200
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Grep,Glob,LS,Write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git grep:*)"
+
+      # if: always()——撞上限时 action 以失败退出，但它此前可能已经写了 JSON；
+      # 更重要的是没写也要让 verdict 知道这轮跑挂了（靠 artifact 缺失判定）。
+      # 补一个占位，让 verdict 能把「跑了但没落结论」与「job 整个挂掉」区分开，也保证
+      # 至少有一个 artifact 存在。
+      - name: Backfill missing findings
+        if: always() && steps.prbranch.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          # 不依赖 Prepare findings dir：那步是隐式 success()，前面任一步失败就会被跳过，
+          # 而本步是 always()——目录不存在时重定向会直接失败，安全网反而变成第二处报错。
+          mkdir -p findings
+          f="findings/${SHARD_KEY}.json"
+          if [ ! -s "$f" ]; then
+            echo "::warning::分片 ${SHARD_KEY} 未写出 findings，回填占位。"
+            printf '{"shard":"%s","status":"no_output","summary":"","impact":"","blockers":[],"unconfirmed":[],"not_covered":"本片跑完但没落下结论，这些文件未经评审。"}\n' \
+              "${SHARD_KEY}" > "$f"
+          fi
+
+      # 跑完回来把自己那行打勾，让那条唯一的进度评论真的动起来。
+      # 粒度是「每片一次」，不是 track_progress 那种每步一更——后者会把 PR 刷满。
+      # 并发写同一条评论：多片几乎同时结束时可能丢一次更新，纯显示问题，重试三次即可。
+      # continue-on-error：进度显示挂了不该影响评审产出。
+      - name: Tick progress
+        if: always() && steps.prbranch.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          # 这两个必须显式给：本文件没有 workflow 级 env，review job 的 env 里也没有，
+          # 只有 Prefetch 那步自带。缺了会在本步第一条语句就 KeyError，而
+          # continue-on-error 把它咽成绿色——本地手测时它们来自开发者自己的 shell，
+          # 这类缺失测不出来。
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHARD_LABEL: ${{ matrix.shard.label }}
+          SHARD_KEY: ${{ matrix.shard.key }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess, time
+
+          MARKER = "<!-- claude-review-progress -->"
+          repo, pr = os.environ["GH_REPO"], os.environ["PR_NUMBER"]
+          label = os.environ["SHARD_LABEL"]
+
+          # 判据取 findings 文件本身，不取 job.status。`Claude review` 那步在缺凭据时是
+          # **被跳过**的，跳过不影响 job 绿——用 job.status 会让一次没人审过的运行把每
+          # 一片都打上勾，正是这一步要防的事。回填保证了文件必然存在。
+          try:
+              data = json.loads(
+                  (pathlib.Path("findings") / (os.environ["SHARD_KEY"] + ".json"))
+                  .read_text(encoding="utf-8"))
+              reviewed = isinstance(data, dict) and data.get("status") != "no_output"
+          except Exception:
+              reviewed = False
+
+          done = "- [x] `%s`" % label
+          if not reviewed:
+              done += " —— 未产出结论，本片文件未经评审"
+          todo = "- [ ] `%s`" % label
+
+          def gh(*args):
+              return subprocess.run(["gh", "api", *args], capture_output=True,
+                                    text=True, check=True).stdout
+
+          for attempt in range(3):
+              try:
+                  # `--paginate` 不带 `--jq` 会把每页各输出一个数组、首尾相接，不是合法
+                  # JSON（本文件在预取那处已经踩过并记下了这个坑）。`--jq '.[]'` 逐页
+                  # 展开成一行一个对象，跨页拼接后仍可逐行解析。
+                  raw = gh("repos/%s/issues/%s/comments" % (repo, pr),
+                           "--paginate", "--jq", ".[]")
+                  comments = [json.loads(l) for l in raw.splitlines() if l.strip()]
+                  target = next((c for c in reversed(comments)
+                                 if MARKER in (c.get("body") or "")), None)
+                  if target is None:
+                      break
+                  body = target["body"]
+                  if todo not in body:
+                      break
+                  gh("-X", "PATCH", "repos/%s/issues/comments/%s" % (repo, target["id"]),
+                     "-f", "body=" + body.replace(todo, done, 1))
+                  break
+              except (subprocess.CalledProcessError, ValueError):
+                  if attempt == 2:
+                      raise
+                  time.sleep(2)
+          PY
+
+      # 逐轮的工具调用在 Actions 日志里看不到（track_progress: false 不流式输出），
+      # 于是「轮数花在哪」只能靠猜，后续调优也就没有依据。这里把 action 写的完整执行
+      # 记录留成 artifact，离线就能统计每轮在 Read / Grep / Bash / 思考上的分布。
+      - name: Upload transcript
+        if: always()
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          mkdir -p transcript
+          f="${RUNNER_TEMP}/claude-execution-output.json"
+          [ -f "$f" ] && cp "$f" "transcript/${SHARD_KEY}.json" || true
+
+      - name: Upload findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: findings-${{ matrix.shard.key }}
+          path: findings/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Store transcript artifact
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: transcript-${{ matrix.shard.key }}
+          path: transcript/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Warn when credential missing
         if: env.CLAUDE_CODE_OAUTH_TOKEN == ''
         run: |
           echo "::warning::Secret CLAUDE_CODE_OAUTH_TOKEN not set — skipping Claude review."
+
+  # 阻塞项在进 PR 之前先过一道独立复核。
+  #
+  # 误报的代价不对称——放过一个待确认项，作者自己会看到；报一个假阻塞项，PR 被
+  # CHANGES_REQUESTED 挂住，作者要花真时间去证伪一个不存在的问题，几次之后就没人再信
+  # 这个评审了。
+  #
+  # 让发现者自评把握（review prompt 里的 ≥ 90 分）挡不住这个：同一段上下文里，模型对
+  # 自己刚推出来的结论天然高估。所以复核必须换一份干净上下文重来一遍，且**默认立场是
+  # 驳回**——拿不出「读了哪个文件哪几行、看到了什么」就判 refuted，不给「看起来像有
+  # 问题」留出口。
+  #
+  # job 本身总会起（checkout + 下载 artifact，秒级），但只有真存在阻塞项时才调模型。
+  # 多数 PR 没有阻塞项，模型这一步直接跳过，额度开销为零。
+  verify:
+    timeout-minutes: 20
+    needs: [plan, review]
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.has_shards == 'true' && needs.plan.outputs.skip_round != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      PR_NUMBER: ${{ needs.plan.outputs.pr_number }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # PR 可能在本轮跑到一半时被合并，分支随即删除，gh pr checkout 会以
+      # `couldn't find remote ref` 硬失败。此时该跳过而不是留个红叉——PR 都合了，
+      # 评审结论已无处可用。exit 0 之后必须把后续步骤一起 gate 掉，否则会拿默认
+      # 分支的工作树当 PR 内容评审。
+      - name: Checkout PR branch (non-PR events)
+        id: prbranch
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          state=$(gh pr view "$PR_NUMBER" --json state --jq .state)
+          if [ "$state" != "OPEN" ]; then
+            echo "::warning::PR #$PR_NUMBER 已是 $state（本轮跑到一半被合并或关闭），跳过。"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          gh pr checkout "$PR_NUMBER"
+
+      # 一片产出都没有时一个 artifact 都不存在。download-artifact 在这种情况下是否
+      # 静默通过没有保证，硬失败会把 verify 和 verdict 一起带走——那正是要消掉的
+      # 「跑挂了 PR 上什么都没有」。下游按「文件缺失 = 未覆盖」处理，容得下空目录。
+      - name: Download findings
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: findings-*
+          path: findings
+          merge-multiple: true
+
+      # id 用 `<分片 key>#<该片内序号>` 生成，verdict 会按同样规则重算一遍去对齐结论。
+      # 不用全局自增序号：多片形态下 artifact 下载顺序不保证稳定。
+      - name: Collect blockers
+        id: collect
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib
+
+          items = []
+          for path in sorted(pathlib.Path("findings").glob("*.json")):
+              try:
+                  data = json.loads(path.read_text(encoding="utf-8"))
+              except (ValueError, OSError):
+                  continue
+              key = path.stem
+              for i, b in enumerate(data.get("blockers") or []):
+                  # 过滤规则与 verdict 的拼装脚本严格一致，序号同样取自 enumerate。
+                  if not isinstance(b, dict):
+                      continue
+                  items.append({
+                      "id": "%s#%d" % (key, i),
+                      "shard": data.get("shard", key),
+                      "file": b.get("file", ""),
+                      "line": b.get("line"),
+                      "what": b.get("what", ""),
+                      "scenario": b.get("scenario", ""),
+                      "evidence": b.get("evidence") or [],
+                  })
+
+          pathlib.Path("blockers.json").write_text(
+              json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
+          print("count=%d" % len(items))
+          PY
+
+      - name: Verify blockers
+        if: steps.collect.outputs.count != '0' && env.CLAUDE_CODE_OAUTH_TOKEN != ''
+          && steps.prbranch.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: false
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ env.PR_NUMBER }}
+
+            上一环节的评审报了若干**阻塞项**，全部列在
+            `${{ github.workspace }}/blockers.json`（**必须用这个绝对路径读**，工具不接受相对路径）。你的
+            工作是逐条**尝试驳回**它们，只让站得住的那些进 PR。
+
+            你不是在复述别人的结论，也不是在补充新问题。发现新问题不归你管，写进
+            notes 即可，不要加进 verdicts。
+
+            ## 立场
+
+            **默认驳回。** 每一条的默认判定是 `refuted: true`，只有你自己动手把失效
+            场景在源码里走通了，才翻成 `refuted: false`。
+
+            报告方给了 `evidence`（它声称读过的 file:line）。照着去原地读，然后问：
+
+            - 那几行真的写着它说的东西吗？位置对不上、内容对不上，直接驳回。
+            - 就算内容对得上，从这几行能推出它描述的失效场景吗？中间缺一环就驳回。
+            - 触发这个场景需要的输入/状态，在真实调用路径上到得了吗？到不了就驳回：
+              「理论上可以构造出来」不算。
+            - 有没有它没看到的上游校验、默认值、早退分支、类型约束，已经把这个场景
+              挡掉了？`git grep` 调用方确认。挡掉了就驳回。
+
+            **「真实调用路径」在浏览器里比在服务端宽。** 这是前端仓，下面这些是每天
+            都在发生的输入，不是「理论上构造出来的」，别拿「正常流程走不到」驳回：
+
+            - 慢网络下响应乱序到达、用户在请求返回前切走筛选/分页/路由
+            - 用户浏览器里的存量 localStorage / sessionStorage（旧版本写进去的结构）
+            - 别人早先发出去的链接带着旧格式的 query 或路由参数
+            - 重复点击、组件卸载后异步回调才到、React 严格模式下 effect 跑两次
+            - 后端把可选字段返回成 `null` / 缺省 / 空数组
+
+            要驳回这类，得指出代码里真的挡掉了它（竞态守卫、cleanup、默认值、类型
+            收窄），而不是说这条路径不常见。反过来，只有类型定义写着非空就断定运行时
+            非空，也不成立——那是编译期约束，后端返回什么它管不着。
+
+            拿不准就驳回。放过一个真问题，作者和后续的 CI 还有机会拦；放行一个假问题，
+            PR 被挂住、作者花时间证伪一个不存在的东西，几次之后没人再信这个评审。
+
+            ## 轮次预算
+
+            互不依赖的 Read / Grep / git 调用放在同一条消息里并发发出。每条阻塞项分到
+            的预算有限，先照 evidence 直接定位，别从头通读整个模块。
+
+            最后一步必须写出 `${{ github.workspace }}/verified.json`（绝对路径）。没写就等于整个复核
+            环节失效，所有阻塞项会以「未复核」的身份进 PR。
+
+            ## 产出
+
+            写 `${{ github.workspace }}/verified.json`，`verdicts` 必须覆盖 `blockers.json`
+            里的每一个 id：
+
+            ```json
+            {
+              "verdicts": [
+                {"id": "review#0", "refuted": true,
+                 "reason": "驳回或确认的理由，指明你读了哪个文件的哪几行"}
+              ],
+              "notes": "复核过程中顺带发现的、但不属于本次阻塞项的事情，可以为空串"
+            }
+            ```
+
+            `reason` 里必须出现你**这一轮真读过的** file:line。这是复核结论本身的
+            evidence，写不出来的结论和它要驳回的东西是同一种毛病。
+
+            `reason` **一律用中文**。它会原样进 verdict 正文，与骨架和评审给的文字
+            并排显示，语言不一致会读成两份东西。
+          claude_args: |
+            --model claude-opus-5
+            --effort xhigh
+            --max-turns 40
+            --allowedTools "Read,Grep,Glob,LS,Write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git grep:*)"
+
+      - name: Upload verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification
+          path: |
+            blockers.json
+            verified.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  verdict:
+    # always()：评审撞上限、超时或崩掉，都要照样表态并写明哪部分没覆盖。
+    # 「跑挂了 PR 上什么都没有」正是这一段要消掉的失败模式，这里是它的落点。
+    needs: [plan, review, verify]
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.has_shards == 'true' && needs.plan.outputs.skip_round != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      PR_NUMBER: ${{ needs.plan.outputs.pr_number }}
+      SHARDS: ${{ needs.plan.outputs.shards }}
+      PRIOR_ROUNDS: ${{ needs.plan.outputs.prior_rounds }}
+      FILE_TOTAL: ${{ needs.plan.outputs.file_total }}
+      FILE_LISTED: ${{ needs.plan.outputs.file_listed }}
+      GH_TOKEN: ${{ github.token }}
+      # 同 plan：这个 job 也不 checkout，没有 GH_REPO 的话最后那条 gh pr review
+      # 会在「确定 base repo」这一步就失败——评审全跑完、verdict.md 也拼好了，
+      # 唯一一次表态却落不下去，「一定有一次表态」的设计在最后一米断掉。
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # 一片产出都没有时一个 artifact 都不存在。download-artifact 在这种情况下是否
+      # 静默通过没有保证，硬失败会把 verdict 一起带走——那正是要消掉的「跑挂了 PR 上
+      # 什么都没有」。下游按「文件缺失 = 未覆盖」处理，容得下空目录。
+      - name: Download findings
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: findings-*
+          path: findings
+          merge-multiple: true
+
+      # verify 整个挂掉时这个 artifact 不存在，下一步会把全部阻塞项标成「未复核」
+      # 照常报上去——复核缺席只该降低可信度，不该让阻塞项静默消失。
+      - name: Download verification
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: verification
+          path: verification
+
+      # 汇总用确定性脚本，不再起一个模型：拼接已有结论不需要判断力，也不该有编造空间。
+      - name: Assemble verdict
+        id: assemble
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import collections, json, os, pathlib
+
+          repo, pr = os.environ["GH_REPO"], os.environ["PR_NUMBER"]
+          shards = json.loads(os.environ["SHARDS"])
+          root = pathlib.Path("findings")
+
+          done, missing, blockers, unconfirmed, lines = [], [], [], [], []
+          for s in shards:
+              path = root / (s["key"] + ".json")
+              if not path.exists():
+                  missing.append((s, "absent"))
+                  continue
+              # 防御要罩住整个循环体，不能只罩 json.loads：文件解析成顶层数组时
+              # data.get() 抛 AttributeError，同样会让 Assemble 非零退出。
+              try:
+                  data = json.loads(path.read_text(encoding="utf-8"))
+                  if not isinstance(data, dict):
+                      raise ValueError("not an object")
+                  # 回填的占位不算「产出过结论」：否则静默失败会变成 approve 一个
+                  # 从没被审过的 PR——比不表态糟得多。
+                  status = data.get("status")
+              except (ValueError, OSError, AttributeError):
+                  missing.append((s, "malformed"))
+                  continue
+              if status == "no_output":
+                  missing.append((s, "no_output"))
+                  continue
+              done.append((s, data))
+              # findings 是模型写的，属于不可信输入：JSON 合法但结构不对（元素是字符串
+              # 而非对象）会让下面的 dict()/get() 抛异常，Assemble 非零退出后 Post review
+              # 不执行、告警分支也不成立——PR 上既无表态也无告警，只剩一个红叉。
+              # 序号取自 enumerate 而非计数器，跳过畸形元素不会让 id 错位（id 是
+              # survived/refuted 分类的唯一依据，错位会把复核结论贴到别的阻塞项上）。
+              # verify 的 collect 步骤必须用完全相同的过滤规则。
+              for i, b in enumerate(data.get("blockers") or []):
+                  if not isinstance(b, dict):
+                      continue
+                  # id 规则必须与 verify 的 collect 步骤一致：<分片 key>#<片内序号>。
+                  b = dict(b, id="%s#%d" % (s["key"], i))
+                  blockers.append((s, b))
+              for u in data.get("unconfirmed") or []:
+                  if isinstance(u, dict):
+                      unconfirmed.append((s, u))
+
+          # 什么都没产出（多半是 secret 缺失或全线失败）：不表态，只留告警。
+          # 此时 request-changes 会拿一个「什么都没审」当阻塞理由挂住 PR。
+          if not done:
+              print("action=none")
+              raise SystemExit(0)
+
+          # 复核结论：refuted 的阻塞项不进 PR，只留在折叠区里备查——全部丢掉的话，
+          # 复核环节把真问题误杀了也没人看得见。
+          verdicts = {}
+          vpath = pathlib.Path("verification/verified.json")
+          if vpath.exists():
+              try:
+                  for v in json.loads(vpath.read_text(encoding="utf-8")).get("verdicts") or []:
+                      verdicts[v.get("id")] = v
+              except (ValueError, OSError):
+                  verdicts = {}
+
+          # 机器人贴到 PR 上的文字一律中文：结论骨架、分片名、进度评论、空转通告、
+          # 回填占位、verify 的驳回理由，全部同一种语言。曾按投票在 zh/en 之间切换，
+          # 结果是骨架跟着投票走、分片名等仍写死中文，拿到的是混排文档——所以不做切换，
+          # 定死一种。注意这与「我们自己写的 PR 标题与正文用英文」是两回事，别混淆。
+          T = {"block": "阻塞项",
+               "verified": "以下每一条都经过一轮独立复核（默认驳回，核实通过才保留）。",
+               "unrev": "（**未复核**，复核环节未产出结论）",
+               "scen": "失效场景：",
+               "dropped": "复核未通过、已丢弃的 %d 条", "why": "驳回理由：",
+               "byshard": "各分片结论", "impact": "影响范围：", "notcov": "未覆盖：",
+               "clean": "_（无问题）_", "counts": "_（阻塞 %d，待确认 %d）_",
+               "detail": "影响范围与未覆盖面",
+               "more_unconf": "另有 %d 条待确认项已省略，以免正文过长；详见运行日志。",
+               "unconf": "待确认项（不阻断放行）", "missing": "未产出结论的分片",
+               "missing_body": "下面这些分片没有产出结论，**这些文件本轮未经评审**：",
+               "reason_no_output": "跑完了但没落下结论（多半是撞轮次上限或提前收尾）",
+               "reason_absent": "整个分片没跑起来或中途挂了",
+               "reason_malformed": "写出的结论文件解析不了",
+               "trunc": "文件清单被截断",
+               "trunc_body": "本 PR 共 %s 个改动文件，评审只拿到 %s 个（`gh pr view --json files` 单次上限 100），**其余 %d 个未进入评审范围、本轮未经评审**。",
+               "footer": "改完请推新提交，或回复 `/review` 要一轮复评。",
+               "footer_ok": "有异议或想再评一轮，请回复 `/review`——普通回帖不会触发复评，且回帖人需为本仓 OWNER/MEMBER/COLLABORATOR。"}
+
+          # 模型不一定听话，长度要有确定性兜底——与「模型输出是不可信输入」同一思路。
+          # 只有一个评审者时，每行挂 [标签] 前缀、外加一个只有一行的「各分片结论」
+          # 小节，都是纯噪声。多片形态随时可能回来，所以按片数分支而不是删掉。
+          multi = len(done) > 1
+
+          def tag(label):
+              return "[%s] " % label if multi else ""
+
+          def clip(x, n):
+              x = " ".join(str(x).split())
+              return x if len(x) <= n else x[:n - 1].rstrip() + "…"
+
+          survived, refuted, unreviewed = [], [], []
+          for s_, b in blockers:
+              v = verdicts.get(b["id"])
+              if v is None:
+                  unreviewed.append((s_, b, None))
+              elif v.get("refuted"):
+                  refuted.append((s_, b, v))
+              else:
+                  survived.append((s_, b, v))
+
+          # 未复核的仍然当阻塞项报，但在正文里标出来——复核缺席是降可信度，不是免罪。
+          blockers = [(s_, b) for s_, b, _ in survived + unreviewed]
+
+          if blockers:
+              lines.append("## %s\n" % T["block"])
+              lines.append(T["verified"] + "\n")
+              for s_, b in blockers:
+                  loc = b.get("file", "")
+                  if b.get("line"):
+                      loc += ":%s" % b["line"]
+                  mark = "" if verdicts.get(b["id"]) else T["unrev"]
+                  lines.append("- **%s%s** — %s%s"
+                               % (tag(s_["label"]), loc, clip(b.get("what", ""), 300), mark))
+                  if b.get("scenario"):
+                      lines.append("  %s%s" % (T["scen"], clip(b["scenario"], 300)))
+              lines.append("")
+
+          if refuted:
+              lines.append("<details><summary>" + (T["dropped"] % len(refuted)) + "</summary>\n")
+              for s_, b, v in refuted:
+                  lines.append("- **%s%s** — %s" % (tag(s_["label"]), b.get("file", ""),
+                                                    clip(b.get("what", ""), 200)))
+                  lines.append("  %s%s" % (T["why"], clip(v.get("reason", ""), 200)))
+              lines.append("\n</details>\n")
+
+          # 标量字段同样是不可信输入：这里用 + 拼接（而非 %s 格式化）要求 str，
+          # 模型把 impact 写成数组就抛 TypeError，失败形态与上面挡掉的畸形元素一致
+          # ——Assemble 非零退出后既无表态也无告警。一律套 str()。
+          if not multi:
+              only = done[0][1]
+              if only.get("summary"):
+                  lines.append(clip(only["summary"], 400) + "\n")
+          else:
+              lines.append("## %s\n" % T["byshard"])
+              for s, data in done:
+                  n_b = len([b for _, b in blockers if _ is s])
+                  n_u = len([u for ss, u in unconfirmed if ss is s])
+                  # 不叫 tag：那是上面的前缀函数，同名会把它遮蔽掉，
+                  # 后面待确认项再调用就成了 str is not callable。
+                  counts = T["clean"] if not (n_b or n_u) else T["counts"] % (n_b, n_u)
+                  lines.append("- **%s** — %s %s"
+                               % (s["label"], clip(data.get("summary") or "", 240), counts))
+          lines.append("")
+
+          detail = []
+          for s, data in done:
+              extra = [(T["impact"], data.get("impact")), (T["notcov"], data.get("not_covered"))]
+              extra = [(k, v) for k, v in extra if str(v or "").strip()]
+              if not extra:
+                  continue
+              if multi:
+                  detail.append("**%s**" % s["label"])
+              detail += ["- %s%s" % (k, clip(v, 200)) for k, v in extra]
+              detail.append("")
+          if detail:
+              lines.append("<details><summary>%s</summary>\n" % T["detail"])
+              lines += detail
+              lines.append("</details>\n")
+
+          # 复评轮的配额要衰减。待确认项不阻断、成本低，模型每轮都会把配额填满，于是
+          # 「每轮十条互不重叠的新问题」可以无限持续，而后面几轮本身已经是 approve。
+          # 收敛规则写进了 prompt，但那靠自觉，这里再挡一道。
+          # 轮次由 plan 一次算好传下来，review 与这里共用同一个数，避免两处各查一次、
+          # 也避免它们对「这是第几轮」得出不同结论。
+          prior_rounds = int(os.environ.get("PRIOR_ROUNDS") or 0)
+          per_shard_cap, total_cap = (1, 2) if prior_rounds else (2, 6)
+
+          # 首轮每片至多 2 条、总共 6 条；复评轮收到 1 条 / 2 条。
+          if unconfirmed:
+              lines.append("## %s\n" % T["unconf"])
+              # 轮转取：多片时代排在最后的片会被挤掉，才有了这个写法。现在只有一片，
+              # 它退化成按顺序取，保留是因为多片形态随时可能再需要。
+              by_shard = collections.OrderedDict()
+              for s, u in unconfirmed:
+                  by_shard.setdefault(s["key"], []).append((s, u))
+              shown = 0
+              for rnd in range(per_shard_cap):
+                  for k, items in by_shard.items():
+                      if len(items) <= rnd or shown >= total_cap:
+                          continue
+                      s, u = items[rnd]
+                      shown += 1
+                      lines.append("- **%s%s** — %s"
+                                   % (tag(s["label"]), u.get("file", ""), clip(u.get("what", ""), 220)))
+              dropped_u = len(unconfirmed) - shown
+              if dropped_u > 0:
+                  lines.append("- _%s_" % (T["more_unconf"] % dropped_u))
+              lines.append("")
+
+          if missing:
+              lines.append("## %s\n" % T["missing"])
+              lines.append(T["missing_body"] + "\n")
+              # 两种原因指向完全不同的修法（轮次预算 vs job 失败），所以要分开写，
+              # 不能都渲染成一行「未覆盖」。
+              for s, reason in missing:
+                  lines.append("- %s — %s" % (s["label"], T["reason_" + reason]))
+              lines.append("")
+
+          dropped = int(os.environ.get("FILE_TOTAL") or 0) - int(os.environ.get("FILE_LISTED") or 0)
+          if dropped > 0:
+              lines.append("## %s\n" % T["trunc"])
+              lines.append(T["trunc_body"] % (os.environ["FILE_TOTAL"],
+                                          os.environ["FILE_LISTED"], dropped) + "\n")
+
+          # approve 之后作者仍可能想争一句，而普通回帖不触发复评（评论正文必须含
+          # /review 或 @claude）。不写这句，他没有别的途径知道这件事。
+          lines.append(T["footer"] if blockers else T["footer_ok"])
+
+          pathlib.Path("verdict.md").write_text("\n".join(lines), encoding="utf-8")
+          print("action=" + ("request-changes" if blockers else "approve"))
+          PY
+
+      # 待确认项与「未覆盖」都不阻断放行：写进 approve 的 body 当提示，由作者自行判断。
+      # 为了等一个回应而改用 --request-changes，只会把 PR 挂在那里。
+      # PR 可能在评审跑的这几分钟里被合并。merge 已不可逆，此时表态纯属噪声，还会让人
+      # 误以为合进去的东西有阻塞项。job if 里的 state == 'open' 是在事件到达时求值的，
+      # 拦不住跑到一半才发生的合并，只能在落地前再查一次。
+      # 组织策略可能禁止 GitHub Actions 批准 PR，而 main 的 ruleset 要求 approval——
+      # 两条撞在一起，github-actions[bot] 发的 approve 会被 GraphQL 拒，评审就过不了
+      # 合并门。禁令只针对 github-actions[bot]，GitHub App 身份不受限。
+      #
+      # 配了 REVIEW_APP_ID / REVIEW_APP_PRIVATE_KEY 就用 App 身份表态；没配则退回
+      # github.token，approve 失败时由下面的兜底改贴评论。两条路都不会让结论丢掉。
+      - name: Mint reviewer token
+        id: apptoken
+        if: vars.REVIEW_APP_ID != ''
+        continue-on-error: true
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.REVIEW_APP_ID }}
+          private-key: ${{ secrets.REVIEW_APP_PRIVATE_KEY }}
+
+      - name: Post review
+        id: post
+        env:
+          GH_TOKEN: ${{ steps.apptoken.outputs.token || github.token }}
+        if: steps.assemble.outputs.action != 'none'
+        run: |
+          set -euo pipefail
+          state=$(gh pr view "$PR_NUMBER" --json state --jq .state)
+          if [ "$state" != "OPEN" ]; then
+            echo "::warning::PR #$PR_NUMBER 已是 $state，跳过表态。结论见下方 job summary。"
+            cat verdict.md >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "${{ steps.assemble.outputs.action }}" = "request-changes" ]; then
+            gh pr review "$PR_NUMBER" --request-changes --body-file verdict.md
+          elif ! gh pr review "$PR_NUMBER" --approve --body-file verdict.md; then
+            # 仓库若关闭「Allow GitHub Actions to create and approve pull requests」，
+            # approve 会被 GraphQL 拒（request-changes 不受限，因为那不算批准）。
+            # 结论不能因此丢掉——改贴普通评论，并说清为什么没有评审状态。
+            echo "::warning::approve 被拒，改以评论形式给出结论。"
+            {
+              cat verdict.md
+              printf '\n\n---\n\n_本轮没有阻塞项。仓库当前禁止 GitHub Actions 批准 PR，因此以评论形式给出结论，没有 APPROVED 状态。需要自动批准的话，在 Settings → Actions → General 打开「Allow GitHub Actions to create and approve pull requests」。_\n'
+            } > verdict-comment.md
+            gh pr comment "$PR_NUMBER" --body-file verdict-comment.md
+          fi
+
+      # always()：不管有没有落表态（PR 中途被合并也会跳过表态），这条过程态评论都要
+      # 清掉，否则会永远停在「评审进行中」误导后来的人。
+      - name: Remove progress comment
+        if: always()
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          MARKER='<!-- claude-review-progress -->'
+          gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq "[.[] | select(.body | contains(\"$MARKER\")) | .id] | .[]" \
+          | while read -r id; do
+              gh api -X DELETE "repos/${GH_REPO}/issues/comments/${id}" >/dev/null
+            done
+
+      # 静默是最坏的结果：PR 上什么都没有，与「压根没触发」无法区分。
+      #
+      # 一个反复出现且最难自查的原因：claude-code-action 校验运行时的 workflow 文件与
+      # 默认分支上的副本是否逐字一致，不一致就把自己整步跳过（日志里是
+      # "Workflow validation failed"）。于是任何在途的评审，只要这期间有人把 workflow
+      # 改动合进 main，就会静默 no-op。改这个文件的当天尤其常见，所以通告文案把它列在
+      # 第一条。这里不落评审状态（没审过就不该 request-changes，也不该 approve），
+      # 但必须留一条普通评论说明这轮空转了。
+      # 这一轮真落了表态，就把上一轮的空转通告删掉——否则作者会在这一轮的结论旁边
+      # 读到上一轮的「本轮评审空转」。
+      - name: Clear stale empty-round notice
+        if: steps.post.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          MARKER='<!-- claude-review-empty -->'
+          gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq "[.[] | select(.body | contains(\"$MARKER\")) | .id] | .[]" \
+          | while read -r id; do
+              gh api -X DELETE "repos/${GH_REPO}/issues/comments/${id}" >/dev/null
+            done
+
+      # 判据取 Post review 的**实际结果**，不取 Assemble 的意图：Assemble 崩掉时
+      # output 没写出来、Post review 被跳过；gh pr review 自己失败时意图是 approve
+      # 但 PR 上什么都没有。两种都必须通告，否则进度评论被删、原地不留任何东西。
+      - name: Report empty round
+        if: always() && steps.post.outcome != 'success'
+        continue-on-error: true
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          echo "::warning::本轮未落评审表态。"
+          state=$(gh pr view "$PR_NUMBER" --json state --jq .state)
+          [ "$state" = "OPEN" ] || exit 0
+          MARKER='<!-- claude-review-empty -->'
+          body=$(printf '%s\n### 本轮评审没有产出结论\n\n没有落下结论，**这些改动本轮未经评审**。没有表态是因为无从表态——既不该 request-changes，也不该 approve。\n\n常见原因：本轮运行期间 workflow 文件被合进默认分支（claude-code-action 要求两者逐字一致，不一致会整步跳过）、撞轮次上限、模型未写出结论文件、汇总步骤失败、凭据缺失。[查看运行日志](%s)\n\n回复 `/review` 可以再要一轮。下一轮真出了结论，这条会自动消失。' "$MARKER" "$RUN_URL")
+          # 复用同一条：synchronize 每次推送跑一轮，凭据缺失这类持续故障否则会在 PR 上
+          # 堆出一串一模一样的通告，正是进度评论当初特意避开的噪声。
+          existing=$(gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq "[.[] | select(.body | contains(\"$MARKER\")) | .id] | last // empty")
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${GH_REPO}/issues/comments/${existing}" -f body="$body" >/dev/null
+          else
+            gh api -X POST "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi
