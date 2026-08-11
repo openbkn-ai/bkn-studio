@@ -32,6 +32,15 @@ describe("loadAnalyzerCapabilities", () => {
     await expect(loadAnalyzerCapabilities()).resolves.toEqual({ state: "empty", options: [], errorMessage: null });
   });
 
+  it("reports an error without creating a fallback when the request fails", async () => {
+    getIndexCapabilitiesMock.mockRejectedValue(new Error("capabilities unavailable"));
+
+    await expect(loadAnalyzerCapabilities()).resolves.toMatchObject({
+      state: "error",
+      options: [],
+    });
+  });
+
   it("identifies saved analyzers not in the snapshot", () => {
     expect(findUnavailableAnalyzers(["standard"], ["standard", "ik_max_word", "ik_max_word", " "])).toEqual(["ik_max_word"]);
   });

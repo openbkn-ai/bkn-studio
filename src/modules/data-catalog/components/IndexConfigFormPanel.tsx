@@ -140,7 +140,7 @@ export function IndexConfigFormPanel({
   const [fieldEmbeddingModelGroups, setFieldEmbeddingModelGroups] = useState<Record<string, ResourceFeatureDraft[]>>({});
   const [fieldFulltextAnalyzerGroups, setFieldFulltextAnalyzerGroups] = useState<Record<string, ResourceFeatureDraft[]>>({});
   const [featureField, setFeatureField] = useState<ResourceSchemaField | null>(null);
-  const [defaultFulltextAnalyzer, setDefaultFulltextAnalyzer] = useState<string>("standard");
+  const [defaultFulltextAnalyzer, setDefaultFulltextAnalyzer] = useState<string>("");
   const [fieldFilter, setFieldFilter] = useState("");
   const [models, setModels] = useState<EmbeddingModelOption[]>([]);
   const [modelsLoadState, setModelsLoadState] = useState<EmbeddingModelsLoadState>("idle");
@@ -212,7 +212,7 @@ export function IndexConfigFormPanel({
     setFieldEmbeddingModelGroups({});
     setFieldFulltextAnalyzerGroups({});
     setFeatureField(null);
-    setDefaultFulltextAnalyzer("standard");
+    setDefaultFulltextAnalyzer("");
     setFieldFilter("");
     setError(null);
     setDirty(false);
@@ -317,7 +317,7 @@ export function IndexConfigFormPanel({
     return () => {
       cancelled = true;
     };
-  }, [active, resource.id]);
+  }, [active, resource]);
 
   const reloadEmbeddingModels = async () => {
     setModelsLoadState("loading");
@@ -398,19 +398,6 @@ export function IndexConfigFormPanel({
   }, [analyzers, defaultFulltextAnalyzer, eligibleFulltextAnalyzerGroups]);
   const duplicateUnsupportedFeatureTypes = useMemo(() => {
     const duplicates: string[] = [];
-    for (const field of schema) {
-      const seen = new Set<string>();
-      for (const feature of field.features ?? []) {
-        // These two feature types are represented by the editable form state below.
-        if (feature.featureType === "vector" || feature.featureType === "fulltext") {
-          continue;
-        }
-        if (seen.has(feature.featureType)) {
-          duplicates.push(`${field.name}: ${feature.featureType}`);
-        }
-        seen.add(feature.featureType);
-      }
-    }
     for (const [field, groups] of Object.entries(eligibleEmbeddingModelGroups)) {
       if (groups.length > 1) {
         duplicates.push(`${field}: vector`);
@@ -422,7 +409,7 @@ export function IndexConfigFormPanel({
       }
     }
     return duplicates;
-  }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups, schema]);
+  }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups]);
 
   const toggleField = (
     field: string,
@@ -448,21 +435,23 @@ export function IndexConfigFormPanel({
       setError(t("dataCatalog.build.fieldsRequired"));
       return false;
     }
-    if (analyzersLoadState === "loading" || analyzersLoadState === "idle") {
-      setError(t("dataCatalog.build.analyzersLoading"));
-      return false;
-    }
-    if (analyzersLoadState === "error") {
-      setError(t("dataCatalog.build.analyzersLoadError", { message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback") }));
-      return false;
-    }
-    if (analyzersLoadState === "empty") {
-      setError(t("dataCatalog.build.noAnalyzers"));
-      return false;
-    }
-    if (unavailableSavedAnalyzers.length > 0) {
-      setError(t("dataCatalog.build.savedAnalyzerUnavailable", { analyzers: unavailableSavedAnalyzers.join(", ") }));
-      return false;
+    if (fulltextFields.length > 0) {
+      if (analyzersLoadState === "loading" || analyzersLoadState === "idle") {
+        setError(t("dataCatalog.build.analyzersLoading"));
+        return false;
+      }
+      if (analyzersLoadState === "error") {
+        setError(t("dataCatalog.build.analyzersLoadError", { message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback") }));
+        return false;
+      }
+      if (analyzersLoadState === "empty") {
+        setError(t("dataCatalog.build.noAnalyzers"));
+        return false;
+      }
+      if (unavailableSavedAnalyzers.length > 0) {
+        setError(t("dataCatalog.build.savedAnalyzerUnavailable", { analyzers: unavailableSavedAnalyzers.join(", ") }));
+        return false;
+      }
     }
     const fulltextNeedsDefault = fulltextFields.some((field) =>
       (fieldFulltextAnalyzerGroups[field] ?? []).some((feature) => !feature.value?.trim()),
@@ -1284,7 +1273,7 @@ export function IndexConfigFormPanel({
       <div className={formStyles.footer}>
         <Space style={{ marginLeft: "auto" }}>
           <AppButton
-            disabled={actionsLocked || saving || analyzerBlocked || duplicateUnsupportedFeatureTypes.length > 0 || (embeddingFields.length > 0 && embeddingBlocked)}
+            disabled={actionsLocked || saving || (fulltextFields.length > 0 && analyzerBlocked) || duplicateUnsupportedFeatureTypes.length > 0 || (embeddingFields.length > 0 && embeddingBlocked)}
             loading={saving}
             onClick={() => void saveConfig()}
             type="primary"
