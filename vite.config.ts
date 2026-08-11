@@ -199,6 +199,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(projectRoot, "./src"),
+        diagnostics_channel: path.resolve(projectRoot, "./src/framework/compat/diagnostics-channel.browser.ts"),
+        "node:diagnostics_channel": path.resolve(projectRoot, "./src/framework/compat/diagnostics-channel.browser.ts"),
       },
     },
     build: {
