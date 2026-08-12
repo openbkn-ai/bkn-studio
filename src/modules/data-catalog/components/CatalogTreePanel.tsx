@@ -308,10 +308,33 @@ export function CatalogTreePanel({
 
                       if (!impact.canDelete) {
                         void modal.warning({
-                          content: t("dataCatalog.tree.deleteLogicalBlockedDescription", {
-                            blocking: impact.semanticUnderstandingTasks.blocking,
-                            protected: impact.protectedResources,
-                          }),
+                          content: (
+                            <div>
+                              <div>
+                                {t("dataCatalog.tree.deleteLogicalBlockedDescription")}
+                              </div>
+                              <ul>
+                                {impact.blockers.map((blocker) => {
+                                  const count =
+                                    blocker === "protected_resources"
+                                      ? impact.protectedResources
+                                      : blocker === "build_tasks_running_or_stopping"
+                                        ? impact.buildTasks.blocking
+                                        : blocker === "discover_tasks_running"
+                                          ? impact.discoverTasks.blocking
+                                          : impact.semanticUnderstandingTasks.blocking;
+                                  return (
+                                    <li key={blocker}>
+                                      {t(
+                                        `dataCatalog.tree.deleteLogicalBlockers.${blocker}`,
+                                        { count },
+                                      )}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+                          ),
                           okText: t("common.confirm"),
                           title: t("dataCatalog.tree.deleteLogicalBlockedTitle"),
                         });

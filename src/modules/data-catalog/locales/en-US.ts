@@ -162,7 +162,13 @@ export const dataCatalogEnUS = {
         'Delete logical group "{{name}}"? This removes {{resources}} resources and cancels {{semanticTasks}} pending semantic tasks.',
       deleteLogicalBlockedTitle: "Logical group cannot be deleted",
       deleteLogicalBlockedDescription:
-        "There are {{protected}} protected resources and {{blocking}} running semantic tasks. Resolve them before trying again.",
+        "Resolve the following blockers before trying again:",
+      deleteLogicalBlockers: {
+        protected_resources: "{{count}} protected resources",
+        build_tasks_running_or_stopping: "{{count}} running or stopping build tasks",
+        discover_tasks_running: "{{count}} running discover tasks",
+        semantic_understanding_tasks_running: "{{count}} running semantic tasks",
+      },
       discovering: "Discovering",
       emptyPhysicalGroup: "No physical data source connections",
       emptyLogicalGroup: "No logical groups yet. Use + to add one.",

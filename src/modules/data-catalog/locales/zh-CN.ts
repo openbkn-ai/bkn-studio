@@ -156,7 +156,13 @@ export const dataCatalogZhCN = {
         '确认删除逻辑分组「{{name}}」吗？将删除 {{resources}} 个资源，并取消 {{semanticTasks}} 个待执行语义理解任务。',
       deleteLogicalBlockedTitle: "当前无法删除逻辑分组",
       deleteLogicalBlockedDescription:
-        "存在 {{protected}} 个受保护资源和 {{blocking}} 个运行中的语义理解任务，请先处理后再试。",
+        "请先处理以下阻断项，然后重试：",
+      deleteLogicalBlockers: {
+        protected_resources: "受保护资源 {{count}} 个",
+        build_tasks_running_or_stopping: "运行中或停止中的构建任务 {{count}} 个",
+        discover_tasks_running: "运行中的探查任务 {{count}} 个",
+        semantic_understanding_tasks_running: "运行中的语义理解任务 {{count}} 个",
+      },
       discovering: "探查中",
       emptyPhysicalGroup: "暂无物理数据源连接",
       emptyLogicalGroup: "暂无逻辑分组，可点击右上角新增",
