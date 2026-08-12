@@ -70,6 +70,13 @@ function pyLiteral(value: unknown): string {
   return String(value);
 }
 
+/**
+ * 服务端把 bkn_context 声明为必填入参，但它是会话生命周期管道，不是模型该决策
+ * 的东西——沙箱 stub 的 _call 会自动注入。留在签名里只会让模型去填一个它没有
+ * 的值。常规模式用 stripBknContextSchema 做同样的事。
+ */
+const PLUMBING_PARAMS = new Set(["bkn_context"]);
+
 function signature(def: McpToolDef): string {
   const schema = asSchema(def.inputSchema);
   const props = schema.properties ?? {};
@@ -77,6 +84,7 @@ function signature(def: McpToolDef): string {
   const positional: string[] = [];
   const keyword: string[] = [];
   for (const [name, spec] of Object.entries(props)) {
+    if (PLUMBING_PARAMS.has(name)) continue;
     const pyType = PY_TYPES[spec.type ?? ""] ?? "object";
     if (required.has(name)) {
       positional.push(`${name}: ${pyType}`);

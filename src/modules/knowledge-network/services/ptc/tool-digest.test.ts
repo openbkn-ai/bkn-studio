@@ -41,9 +41,10 @@ const TOOLS: McpToolDef[] = [
         ot_id: { type: "string" },
         response_format: { type: "string", default: "toon" },
         condition: { type: "object" },
+        bkn_context: { type: "object" },
         limit: { type: "integer" },
       },
-      required: ["kn_id", "ot_id"],
+      required: ["kn_id", "ot_id", "bkn_context"],
     },
     outputSchema: {
       type: "object",
@@ -86,6 +87,10 @@ describe("renderToolDigest", () => {
   it("渲染返回键 —— 键名不统一，模型猜不出来", () => {
     expect(digest).toContain("-> {entries, total_count}");
     expect(digest).toContain("-> {datas, total_count, search_after}");
+  });
+
+  it("剥掉 bkn_context —— 它是生命周期管道，由 stub 注入，模型不该看见", () => {
+    expect(digest).not.toContain("bkn_context");
   });
 
   it("排除生命周期工具", () => {
