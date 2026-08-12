@@ -28,6 +28,12 @@ test("日志原型内联 JavaScript 语法有效", () => {
   scripts.forEach((source) => new vm.Script(source));
 });
 
+test("日志详情使用贴右限高面板并仅滚动正文", () => {
+  assert.match(logsHtml, /\.detail\{[^}]*right:24px[^}]*width:min\(420px,calc\(100vw - 48px\)\)[^}]*max-height:min\(620px,calc\(100vh - 120px\)\)/);
+  assert.match(logsHtml, /\.detail-head\{[^}]*flex:0 0 auto/);
+  assert.match(logsHtml, /\.detail-body\{[^}]*flex:1 1 auto[^}]*overflow-y:auto/);
+});
+
 test("业务溯源原型不把缺失事实包装为完整证据", () => {
   assert.match(html, />业务溯源</);
   assert.match(html, /部分可溯源/);
