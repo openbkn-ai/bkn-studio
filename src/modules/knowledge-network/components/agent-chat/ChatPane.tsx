@@ -203,17 +203,30 @@ export function fmtDuration(ms: number): string {
   return s >= 60 ? `${Math.floor(s / 60)}m${Math.round(s % 60)}s` : `${s.toFixed(1)}s`;
 }
 
+/**
+ * 存储身份 = 面板 + 工具面形态。
+ *
+ * 两种模式的系统提示词互不兼容：常规模式那套要模型去调 query_object_instance
+ * 等工具，而 PTC 模式下模型只有 run_code，那些名字根本不存在。共用一个存储键
+ * 会让切换后沿用上一模式已保存的提示词，且不会报错，只会表现为模型行为异常。
+ * 历史消息同理——两种模式的工具卡片形态不同，混在一条会话里没有意义。
+ */
+function paneStorageId(paneKey: PaneKey, toolMode?: "mcp" | "ptc"): string {
+  return toolMode === "ptc" ? `${paneKey}-ptc` : paneKey;
+}
+
 /** Message-history key; solo keeps the legacy key, compare panes use suffixes. */
-function msgsLsKey(knId: string, paneKey: PaneKey): string {
-  return paneKey === "solo" ? `bkn-studio:agentchat:${knId}` : `bkn-studio:agentchat:${knId}:cmp-${paneKey}`;
+function msgsLsKey(knId: string, paneKey: PaneKey, toolMode?: "mcp" | "ptc"): string {
+  const id = paneStorageId(paneKey, toolMode);
+  return id === "solo" ? `bkn-studio:agentchat:${knId}` : `bkn-studio:agentchat:${knId}:cmp-${id}`;
 }
 
 /**
  * Managed conversation identity key. Each pane gets an independent conversation
  * so compare-mode agents are traced and counted separately.
  */
-function conversationLsKey(knId: string, paneKey: PaneKey): string {
-  return `bkn-studio:agentchat:conv:v2:${knId}:${paneKey}`;
+function conversationLsKey(knId: string, paneKey: PaneKey, toolMode?: "mcp" | "ptc"): string {
+  return `bkn-studio:agentchat:conv:v2:${knId}:${paneStorageId(paneKey, toolMode)}`;
 }
 
 function legacyConversationLsKey(knId: string, paneKey: PaneKey): string {
@@ -232,13 +245,14 @@ function loadPersisted(key: string): Partial<Persisted> {
 /** Agent config cache; solo keeps the legacy key and compare panes are isolated. */
 const CONFIG_LS_BASE = "bkn-studio:agentconfig";
 
-function configLsKey(paneKey: PaneKey): string {
-  return paneKey === "solo" ? CONFIG_LS_BASE : `${CONFIG_LS_BASE}:cmp-${paneKey}`;
+function configLsKey(paneKey: PaneKey, toolMode?: "mcp" | "ptc"): string {
+  const id = paneStorageId(paneKey, toolMode);
+  return id === "solo" ? CONFIG_LS_BASE : `${CONFIG_LS_BASE}:cmp-${id}`;
 }
 
-function loadConfig(paneKey: PaneKey): AgentConfig {
+function loadConfig(paneKey: PaneKey, toolMode?: "mcp" | "ptc"): AgentConfig {
   try {
-    const raw = localStorage.getItem(configLsKey(paneKey));
+    const raw = localStorage.getItem(configLsKey(paneKey, toolMode));
     return raw ? { ...DEFAULT_AGENT_CONFIG, ...(JSON.parse(raw) as Partial<AgentConfig>) } : { ...DEFAULT_AGENT_CONFIG };
   } catch {
     return { ...DEFAULT_AGENT_CONFIG };
@@ -489,10 +503,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const [systemPrompt, setSystemPrompt] = useState(profile.defaultPrompt);
   // QA config: model, tools, system prompt, and parameters are managed together.
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [config, setConfigState] = useState<AgentConfig>(() => loadConfig(profile.paneKey));
+  const [config, setConfigState] = useState<AgentConfig>(() => loadConfig(profile.paneKey, profile.toolMode));
   const [draftModel, setDraftModel] = useState("");
   const [draftSystemPrompt, setDraftSystemPrompt] = useState(profile.defaultPrompt);
-  const [draftConfig, setDraftConfig] = useState<AgentConfig>(() => loadConfig(profile.paneKey));
+  const [draftConfig, setDraftConfig] = useState<AgentConfig>(() => loadConfig(profile.paneKey, profile.toolMode));
   // Tool selection is a hard allowlist; null means all tools.
   const [toolSelection, setToolSelection] = useState<string[] | null>(() => loadToolSelection(profile));
   const [draftToolSelection, setDraftToolSelection] = useState<string[] | null>(() => loadToolSelection(profile));
@@ -552,12 +566,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     setConfigState(draftConfig);
     if (profile.paneKey !== "solo") setToolSelection(draftToolSelection);
     try {
-      localStorage.setItem(configLsKey(profile.paneKey), JSON.stringify(draftConfig));
+      localStorage.setItem(configLsKey(profile.paneKey, profile.toolMode), JSON.stringify(draftConfig));
       if (profile.paneKey !== "solo") {
         localStorage.setItem(toolsLsKey(profile.paneKey), JSON.stringify(draftToolSelection));
       }
       localStorage.setItem(
-        msgsLsKey(knId, profile.paneKey),
+        msgsLsKey(knId, profile.paneKey, profile.toolMode),
         JSON.stringify({ messages, model: draftModel, systemPrompt: draftSystemPrompt, stats } satisfies Persisted),
       );
     } catch {
@@ -591,7 +605,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
 
   // Load persisted chat history, isolated by KN and pane.
   useEffect(() => {
-    const saved = loadPersisted(msgsLsKey(knId, profile.paneKey));
+    const saved = loadPersisted(msgsLsKey(knId, profile.paneKey, profile.toolMode));
     setMessages(Array.isArray(saved.messages) ? saved.messages : []);
     if (saved.model) setModel(saved.model);
     setSystemPrompt(saved.systemPrompt ?? profile.defaultPrompt);
@@ -610,7 +624,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     (msgs: ChatMessage[], statsSnapshot: SessionStats) => {
       try {
         localStorage.setItem(
-          msgsLsKey(knId, profile.paneKey),
+          msgsLsKey(knId, profile.paneKey, profile.toolMode),
           JSON.stringify({ messages: msgs, model, systemPrompt, stats: statsSnapshot } satisfies Persisted),
         );
       } catch {
@@ -728,7 +742,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     () =>
       createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
         conversationStore: localConversationStore(
-          conversationLsKey(knId, profile.paneKey),
+          conversationLsKey(knId, profile.paneKey, profile.toolMode),
           legacyConversationLsKey(knId, profile.paneKey),
         ),
       }),
@@ -905,7 +919,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     // Clearing chat starts a new managed conversation; refresh reuses the saved server ID.
     lifecycle.reset();
     try {
-      localStorage.removeItem(msgsLsKey(knId, profile.paneKey));
+      localStorage.removeItem(msgsLsKey(knId, profile.paneKey, profile.toolMode));
     } catch {
       /* ignore */
     }

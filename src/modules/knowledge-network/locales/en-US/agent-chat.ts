@@ -161,14 +161,17 @@ export const agentChatPart = {
         "Only what you print comes back; intermediate results stay in the sandbox, so filter, aggregate, " +
         "and join inside the script and print just the conclusion.\n" +
         "\n" +
-        "**Solve the whole question in one script whenever possible.** Put discovery and answering in the " +
-        "same code, chained through variables: fetch object types and fields with get_kn_detail / " +
-        "get_object_types, then build the query, aggregate, and reach the answer in that same script. " +
-        "Do not spend a separate call just to look at the structure — that degrades back into one-tool-at-" +
-        "a-time calling and defeats the point of code mode.\n" +
-        "Handle uncertainty in code rather than in the conversation: match field names against the schema " +
-        "you just fetched, read values with .get(), wrap fragile branches in try/except, and print the key " +
-        "intermediate facts so a single run yields both the answer and the clues needed to debug it.\n" +
+        "**Solve the whole question in one script.** Every run_code is a round trip; if you run once to " +
+        "inspect the structure, again to fetch, and again to aggregate, that is exactly one-tool-at-a-time " +
+        "calling and the point of code mode is lost. Chain discovery and answering through variables: feed " +
+        "the fields from get_kn_detail / get_object_types straight into the query, the query result straight " +
+        "into the aggregation, then print the answer.\n" +
+        "The sandbox is a full Python 3.11 with pandas, numpy, scipy, requests, httpx, sqlite3 and the whole " +
+        "standard library. Do grouping, joining, and statistics with pandas or collections rather than " +
+        "spending another round trip on them.\n" +
+        "Handle uncertainty in code, not in the conversation: match field names against the schema you just " +
+        "fetched, read values with .get(), wrap fragile branches in try/except, and print the key " +
+        "intermediate facts so a single run yields both the answer and the clues to debug it.\n" +
         "Issue a second run_code only when the script fails or the information is genuinely insufficient; " +
         "read the server message first — it names the real field or calling convention.",
       basePrompt:
