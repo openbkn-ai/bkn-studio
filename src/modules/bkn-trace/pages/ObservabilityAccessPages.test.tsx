@@ -20,8 +20,8 @@ vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => 
   const original = await importOriginal<typeof import("@/modules/bkn-trace/services/trace.service")>();
   return { ...original, getAccessProfile: vi.fn() };
 });
-vi.mock("@/modules/bkn-trace/scenes/BknTraceRunsScene", () => ({ BknTraceRunsScene: () => <div>business-provenance-content</div> }));
-vi.mock("@/modules/bkn-trace/scenes/BknTraceExplorerScene", () => ({ BknTraceAdvancedExplorerScene: () => <div>trace-analysis-content</div> }));
+vi.mock("@/modules/bkn-trace/business-provenance/BusinessProvenanceScene", () => ({ BusinessProvenanceScene: () => <div>business-provenance-content</div> }));
+vi.mock("@/modules/bkn-trace/trace-analysis/TraceAnalysisScene", () => ({ TraceAnalysisScene: () => <div>trace-analysis-content</div> }));
 
 const baseProfile = {
   accessScopeFingerprint: "sha256:test", allowedLogCategories: [],
@@ -34,16 +34,11 @@ describe("observability capability pages", () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => cleanup());
 
-  it("业务溯源页面只消费服务端业务溯源能力", async () => {
-    vi.mocked(getAccessProfile).mockResolvedValue({ ...baseProfile, businessProvenanceOwn: true });
-    render(<BusinessProvenancePage />);
-    expect(await screen.findByText("business-provenance-content")).not.toBeNull();
-  });
-
-  it("无业务溯源能力时显示统一拒绝态", async () => {
+  it("业务溯源页面不在浏览器按访问身份重复门控", async () => {
     vi.mocked(getAccessProfile).mockResolvedValue(baseProfile);
     render(<BusinessProvenancePage />);
-    expect(await screen.findByText("bknTrace.errors.accessDenied")).not.toBeNull();
+    expect(await screen.findByText("business-provenance-content")).not.toBeNull();
+    expect(getAccessProfile).not.toHaveBeenCalled();
   });
 
   it("Trace 分析页面只消费 technicalTrace 能力", async () => {

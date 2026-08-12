@@ -1,0 +1,244 @@
+<!--
+  Copyright (c) 2026 OpenBKN
+  SPDX-License-Identifier: LicenseRef-OpenBKN
+  Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+  Conditions. See LICENSE for the full text.
+-->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenBKN 0.1.4 · 统一日志工作台高保真原型</title>
+  <style>
+    :root {
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      color:#303a4d; background:#f4f6fa; --blue:#315efb; --blue-deep:#28499c;
+      --line:#e2e7ef; --muted:#7f8ba0; --green:#168158; --red:#c84646; --amber:#a56a12;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:1180px; font-size:13px; background:#f4f6fa; }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; }
+    .hidden { display:none !important; }
+    .topbar { display:grid; grid-template-columns:276px minmax(0,1fr) auto; align-items:center; height:86px; padding:0 28px; border-bottom:1px solid #e7ebf2; background:#fff; }
+    .studio-logo { display:flex; align-items:center; gap:10px; color:#121c2d; font-size:20px; font-weight:760; }
+    .logo-graph { position:relative; width:40px; height:43px; }
+    .logo-graph::before { position:absolute; inset:4px 8px; border:2px solid #233752; clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); content:""; }
+    .logo-graph i { position:absolute; width:6px; height:6px; border-radius:50%; background:#2747a3; box-shadow:0 0 0 2px #fff; }
+    .logo-graph i:nth-child(1){left:17px;top:1px}.logo-graph i:nth-child(2){right:4px;top:11px;background:#2eb7af}.logo-graph i:nth-child(3){right:4px;bottom:10px}.logo-graph i:nth-child(4){left:17px;bottom:0;background:#2eb7af}.logo-graph i:nth-child(5){left:2px;bottom:10px}.logo-graph i:nth-child(6){left:2px;top:11px;background:#2eb7af}
+    .logo-copy small { display:block; margin-top:-3px; color:#7e8999; font-size:7px; font-weight:500; }
+    .breadcrumbs { display:flex; align-items:center; gap:12px; color:#58657a; font-size:17px; }
+    .breadcrumbs .slash { color:#c7ceda; }.breadcrumbs strong { padding:8px 14px; border-radius:20px; color:#26334a; background:#edf2ff; }
+    .admin-card { display:grid; grid-template-columns:44px auto; align-items:center; gap:10px; padding:8px 14px 8px 9px; border:1px solid #e3e8f1; border-radius:27px; background:#fff; }
+    .admin-avatar { display:grid; width:42px; height:42px; place-items:center; border-radius:13px; color:#fff; background:#2860df; font-size:21px; }
+    .admin-card strong,.admin-card small { display:block; }.admin-card small { margin-top:3px; color:#657187; }
+    .shell { display:grid; grid-template-columns:276px minmax(0,1fr); min-height:calc(100vh - 86px); }
+    .sidebar { padding:28px 14px; border-right:1px solid #e3e8f1; background:#fff; }
+    .nav-parent,.nav-item { display:flex; align-items:center; width:100%; min-height:48px; margin:2px 0; padding:0 12px; border:0; color:#59667b; background:transparent; text-align:left; }
+    .nav-parent { justify-content:space-between; font-size:15px; font-weight:650; }.nav-parent.active-parent { color:#274a9e; }
+    .nav-icon { display:inline-grid; width:28px; margin-right:4px; place-items:center; color:#68778d; font-size:17px; }
+    .nav-item.child { padding-left:14px; font-size:14px; }.nav-item.active { position:relative; color:#3159b7; background:#edf3ff; }
+    .nav-item.active::before { position:absolute; inset:0 auto 0 0; width:4px; background:#2f6df4; content:""; }
+    .enterprise { margin-left:auto; padding:3px 8px; border:1px solid #efc56a; color:#936512; background:#fff9eb; font-size:11px; }
+    .content { min-width:0; padding:16px; }
+    .content-card { min-height:calc(100vh - 118px); padding:28px 32px 34px; border:1px solid #e0e5ed; background:#fff; box-shadow:0 2px 13px rgb(43 58 86 / 3%); }
+    .page-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; }
+    .page-head h1 { margin:0; color:#283246; font-size:25px; letter-spacing:-.02em; }.page-head p { margin:7px 0 0; color:#8e9bb0; font-size:14px; }
+    .snapshot { padding:5px 10px; border:1px solid #dbe2ed; border-radius:999px; color:#657288; background:#f8fafc; font-size:11px; }
+    .source-strip { display:flex; align-items:center; gap:8px; min-height:38px; margin:12px 0 14px; padding:7px 10px; border:1px solid #eee2b3; background:#fffbee; color:#6d623f; }
+    .source-strip strong { margin-right:3px; font-size:12px; }.source-chip { padding:4px 8px; border:1px solid #dce5d2; color:#507344; background:#f7fbf5; font-size:11px; }
+    .source-chip.missing { border-color:#eadab8; color:#8a6c33; background:#fff9ed; }
+    .filters { display:grid; grid-template-columns:minmax(230px,1.25fr) 275px 150px 155px 130px auto auto; gap:8px; }
+    .filters.audit { grid-template-columns:minmax(230px,1.2fr) 275px 170px 180px 130px auto auto; }
+    .field, .select, .date-range, .button { height:40px; border:1px solid #dfe5ee; border-radius:2px; background:#fff; }
+    .field { width:100%; padding:0 12px; color:#354158; outline:none; }.field:focus,.select:focus { border-color:#688cf2; box-shadow:0 0 0 2px rgb(49 94 251 / 8%); }
+    .select { width:100%; padding:0 10px; color:#536078; outline:none; }
+    .date-range { display:flex; align-items:center; justify-content:center; gap:7px; padding:0 9px; color:#566278; white-space:nowrap; }
+    .date-range span { color:#a3adbd; }.button { padding:0 14px; color:#556177; }.button.primary { border-color:var(--blue-deep); color:#fff; background:var(--blue-deep); }.button.icon { width:40px; padding:0; font-size:17px; }
+    .toolbar-meta { display:flex; justify-content:space-between; align-items:center; min-height:38px; margin-top:10px; color:#7d899d; font-size:11px; }
+    .active-scope { display:flex; align-items:center; gap:7px; }.scope-tag { padding:3px 7px; border-radius:3px; color:#3159b7; background:#edf3ff; }
+    .table-card { position:relative; border-top:1px solid #eef1f5; }
+    .table-head,.data-row { display:grid; align-items:center; gap:12px; padding:0 14px; }
+    .table-head { min-height:52px; color:#303a4d; background:#fafafa; font-size:12px; font-weight:700; }
+    .log-grid { grid-template-columns:145px minmax(270px,2fr) 120px 145px 90px minmax(170px,1fr); }
+    .audit-grid { grid-template-columns:minmax(210px,1.35fr) minmax(150px,1fr) 180px 85px 155px 120px; }
+    .data-row { width:100%; min-height:72px; border:0; border-bottom:1px solid #edf0f4; color:#344057; background:#fff; text-align:left; }
+    .data-row:hover { background:#f8faff; }.data-row.selected { background:#f2f6ff; box-shadow:inset 3px 0 #315efb; }
+    .event-copy strong,.event-copy small { display:block; }.event-copy strong { color:#303a4d; font-size:13px; }.event-copy small { margin-top:5px; color:#8993a6; font:10px/1.4 ui-monospace,SFMono-Regular,monospace; }
+    .category { display:inline-block; width:max-content; padding:4px 7px; border-radius:3px; color:#4260a8; background:#eef3ff; font-size:10px; }.category.audit { color:#725224; background:#fff4dd; }
+    .severity { display:inline-block; width:max-content; padding:3px 7px; border:1px solid #cce8d9; color:var(--green); background:#f3fbf6; font-size:10px; }.severity.error { border-color:#efc8c8; color:var(--red); background:#fff4f4; }
+    .correlation { min-width:0; color:#315efb; font-size:11px; }.correlation strong,.correlation small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.correlation small { margin-top:4px; color:#8a94a6; }
+    .method { display:inline-block; margin-right:7px; padding:3px 7px; border:1px solid #ccd8f4; color:#365ba8; background:#f2f6ff; font:10px ui-monospace,monospace; }.method.system { border-color:#d7dce5; color:#59657a; background:#f5f6f8; }
+    .http-status { display:inline-block; min-width:44px; padding:3px 7px; text-align:center; color:var(--green); background:#eefaf3; }.http-status.failed { color:var(--red); background:#fff0f0; }
+    .pagination { display:flex; justify-content:flex-end; align-items:center; gap:7px; min-height:58px; color:#6f7b8f; font-size:11px; }.pagination button,.pagination select { height:30px; border:1px solid #dfe5ee; color:#566278; background:#fff; }.pagination button { min-width:30px; }.pagination .current { border-color:#315efb; color:#fff; background:#315efb; }
+    .detail-panel { position:fixed; z-index:10; top:50%; right:24px; width:430px; max-height:calc(100vh - 116px); overflow:auto; transform:translateY(-50%); border:1px solid #dfe5ee; background:#fff; box-shadow:0 18px 48px rgb(28 42 69 / 20%); }
+    .detail-head { position:sticky; z-index:2; top:0; display:flex; justify-content:space-between; align-items:flex-start; padding:17px 19px; border-bottom:1px solid #e7ebf2; background:#fff; }
+    .detail-head .eyebrow { color:#315efb; font-size:10px; font-weight:700; }.detail-head h2 { margin:5px 0 0; font-size:17px; }.detail-head p { margin:5px 0 0; color:#8993a5; font-size:10px; }
+    .head-actions { display:flex; gap:7px; }.mini-button { min-width:30px; height:30px; padding:0 8px; border:1px solid #dfe5ee; border-radius:4px; color:#59667b; background:#fff; }
+    .detail-section { padding:15px 19px; border-bottom:1px solid #edf0f4; }.detail-section h3 { margin:0 0 11px; color:#68758b; font-size:11px; }.detail-section dl { display:grid; grid-template-columns:88px minmax(0,1fr); gap:9px; margin:0; font-size:11px; }.detail-section dt { color:#8993a5; }.detail-section dd { margin:0; overflow-wrap:anywhere; color:#344057; line-height:1.5; }
+    .message-box { padding:11px 12px; border-left:3px solid #315efb; color:#36435a; background:#f5f7fc; font-size:11px; line-height:1.65; }.missing-fact { border-left-color:#d59a2b; color:#725d34; background:#fff9ed; }
+    .link-list { display:grid; gap:8px; }.context-link { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 10px; border:1px solid #e2e7ef; color:#315efb; background:#fafcff; text-align:left; }.context-link span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.context-link small { color:#8792a4; }
+    details.raw { border:0; }details.raw summary { cursor:pointer; color:#647086; font-size:11px; }pre { max-height:230px; margin:11px 0 0; padding:12px; overflow:auto; color:#dce5ff; background:#172033; font:10px/1.55 ui-monospace,SFMono-Regular,monospace; white-space:pre-wrap; }
+    .clamp { display:-webkit-box; max-height:3em; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-height:1.5; }.clamp.truncated { cursor:pointer; }
+    .hover-preview { position:fixed; z-index:30; width:min(330px,calc(100vw - 32px)); max-height:150px; padding:10px 12px; overflow:hidden; border:1px solid #dfe5ee; border-radius:6px; color:#445168; background:#fff; box-shadow:0 10px 28px rgb(28 42 69 / 16%); font-size:11px; line-height:1.55; pointer-events:none; }
+    dialog { width:min(720px,calc(100vw - 80px)); padding:0; border:1px solid #dfe5ee; color:#303a4d; box-shadow:0 24px 70px rgb(20 31 52 / 24%); }dialog::backdrop { background:rgb(18 27 44 / 32%); }.dialog-head,.dialog-actions { display:flex; justify-content:space-between; align-items:center; padding:15px 18px; border-bottom:1px solid #e6ebf2; }.dialog-head h2 { margin:0; font-size:17px; }.dialog-body { max-height:58vh; margin:0; padding:18px; overflow:auto; color:#344057; background:#fafbfd; font:12px/1.65 ui-monospace,monospace; white-space:pre-wrap; }.dialog-actions { justify-content:flex-end; border-top:1px solid #e6ebf2; border-bottom:0; }
+    .toast { position:fixed; z-index:40; right:24px; bottom:24px; padding:10px 14px; border-radius:5px; color:#fff; background:#26334b; box-shadow:0 8px 24px rgb(20 31 52 / 22%); }
+    body.embedded { min-width:900px; background:#fff; }
+    body.embedded .topbar,body.embedded .sidebar { display:none; }
+    body.embedded .shell { display:block; min-height:0; }
+    body.embedded .content { padding:0; }
+    body.embedded .content-card { min-height:720px; padding:0; border:0; box-shadow:none; }
+    .sidebar button:focus { outline:none; }
+    @media(max-width:1500px){
+      .filters,.filters.audit { grid-template-columns:minmax(240px,1fr) 250px 135px 135px; }
+      .filters > :nth-child(5) { grid-column:1; width:150px; }
+      .filters > :nth-child(6) { grid-column:2; width:92px; }
+      .filters > :nth-child(7) { grid-column:3; width:40px; }
+      .detail-panel{right:16px;width:400px}.log-grid{grid-template-columns:132px minmax(230px,1.7fr) 112px 125px 74px minmax(145px,.9fr)}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="studio-logo"><span class="logo-graph"><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="logo-copy">Open<span style="color:#315efb">BKN</span><small>Open Business Knowledge Network</small></span></div>
+    <div class="breadcrumbs"><span id="crumb-parent">可观测性</span><span class="slash">/</span><strong id="crumb-page">日志检索</strong></div>
+    <div class="admin-card"><span class="admin-avatar">♙</span><span><strong>Administrator</strong><small>super_admin</small></span></div>
+  </header>
+  <div class="shell">
+    <aside class="sidebar">
+      <button class="nav-item" type="button"><span class="nav-icon">⌂</span>首页</button>
+      <button class="nav-parent" type="button"><span><span class="nav-icon">⌘</span>领域知识网络</span><span>⌄</span></button>
+      <section id="observability-nav">
+        <button class="nav-parent active-parent" type="button"><span><span class="nav-icon">⌯</span>可观测性</span><span>⌃</span></button>
+        <button class="nav-item child" id="nav-business" type="button"><span class="nav-icon">▤</span>业务溯源<span class="enterprise">企业版</span></button>
+        <button class="nav-item child" id="nav-trace" type="button"><span class="nav-icon">⌁</span>Trace 分析</button>
+        <button class="nav-item child active" id="nav-logs" type="button"><span class="nav-icon">▧</span>日志检索</button>
+        <button class="nav-item child" type="button"><span class="nav-icon">⚙</span>可观测性设置</button>
+      </section>
+      <button class="nav-parent" type="button"><span><span class="nav-icon">▦</span>执行工厂</span><span>⌄</span></button>
+      <button class="nav-parent" type="button"><span><span class="nav-icon">▦</span>数据资源知识网络</span><span>⌄</span></button>
+      <button class="nav-parent" type="button"><span><span class="nav-icon">△</span>模型管理</span><span>⌄</span></button>
+      <section id="system-nav">
+        <button class="nav-parent" type="button"><span><span class="nav-icon">⚙</span>系统管理</span><span>⌃</span></button>
+        <div id="system-children" class="hidden">
+          <button class="nav-item child" type="button"><span class="nav-icon">♙</span>用户管理</button>
+          <button class="nav-item child" type="button"><span class="nav-icon">◇</span>角色管理<span class="enterprise">专业版</span></button>
+          <button class="nav-item child" type="button"><span class="nav-icon">▣</span>授权管理</button>
+          <button class="nav-item child" id="nav-audit" type="button"><span class="nav-icon">▧</span>日志管理</button>
+        </div>
+      </section>
+    </aside>
+    <main class="content"><div class="content-card">
+      <section id="logs-page">
+        <header class="page-head"><div><h1>日志检索</h1><p>检索平台、业务、模型与审计事件，并按真实关联进入 Trace、业务会话或管理对象。</p></div><span class="snapshot">真实数据快照 · 2026-08-09</span></header>
+        <div class="filters">
+          <input class="field" id="log-search" placeholder="搜索事件、服务、日志内容或关联 ID" aria-label="搜索日志">
+          <div class="date-range"><span>2026-08-08 09:00</span><b>→</b><span>2026-08-09 09:00</span></div>
+          <select class="select" id="log-category"><option value="all">全部日志类型</option><option value="runtime.business">业务运行</option><option value="runtime.system">系统运行</option><option value="runtime.model">模型运行</option><option value="audit.admin">管理审计</option></select>
+          <select class="select" id="log-source"><option value="all">全部服务 / 来源</option><option value="agent-retrieval">agent-retrieval</option><option value="bkn-safe-admin">bkn-safe-admin</option></select>
+          <select class="select" id="log-result"><option value="all">全部结果</option><option value="success">成功</option><option value="failure">失败</option></select>
+          <button class="button primary" id="query-logs" type="button">⌕ 查询</button><button class="button icon" id="reset-logs" type="button" title="重置">↻</button>
+        </div>
+        <div class="source-strip"><strong>数据源</strong><span class="source-chip">otel-runtime · 正常</span><span class="source-chip">bkn-safe-admin · 正常</span><span class="source-chip missing">bkn-safe-access · 未接入</span><span class="source-chip missing">bkn-safe-security · 未接入</span></div>
+        <div class="toolbar-meta"><span id="logs-count">最近24小时共 87 条 · 当前展示真实记录快照</span><span>按事件时间倒序</span></div>
+        <div class="table-card"><div class="table-head log-grid"><span>发生时间</span><span>事件</span><span>日志类型</span><span>来源</span><span>结果</span><span>关联上下文</span></div><div id="logs-body"></div><div class="pagination"><span>共 87 条</span><select><option>20 条 / 页</option></select><button disabled>‹</button><button class="current">1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>›</button></div></div>
+      </section>
+      <section id="audit-page" class="hidden">
+        <header class="page-head"><div><h1>审计日志</h1><p>查看谁在什么时间对哪个管理对象执行了什么操作，以及操作结果。</p></div><span class="snapshot">统一日志工作台 · 管理审计预设</span></header>
+        <div class="filters audit">
+          <input class="field" id="audit-search" placeholder="搜索动作、对象、操作人或日志 ID" aria-label="搜索审计日志">
+          <div class="date-range"><span>2026-07-10 09:00</span><b>→</b><span>2026-08-09 09:00</span></div>
+          <select class="select" id="audit-resource"><option value="all">全部管理对象</option><option value="object-grants">授权</option><option value="users">用户</option><option value="role-bindings">角色绑定</option><option value="license">许可证</option></select>
+          <select class="select" id="audit-actor"><option value="all">全部操作人</option><option value="admin">Administrator（admin）</option><option value="system">system:license</option></select>
+          <select class="select" id="audit-result"><option value="all">全部结果</option><option value="success">成功</option><option value="failure">失败</option></select>
+          <button class="button primary" id="query-audit" type="button">⌕ 查询</button><button class="button icon" id="reset-audit" type="button" title="重置">↻</button>
+        </div>
+        <div class="toolbar-meta"><span class="active-scope"><span class="scope-tag">管理审计</span><span id="audit-count">最近30天共 16 条</span></span><span>数据来源：BKN Safe Admin</span></div>
+        <div class="table-card"><div class="table-head audit-grid"><span>操作</span><span>对象</span><span>操作人</span><span>状态</span><span>时间</span><span>来源 IP</span></div><div id="audit-body"></div><div class="pagination"><span>共 16 条</span><select><option>10 条 / 页</option></select><button disabled>‹</button><button class="current">1</button><button>2</button><button>›</button></div></div>
+      </section>
+    </div></main>
+  </div>
+  <aside class="detail-panel hidden" id="detail-panel"></aside>
+  <div class="hover-preview hidden" id="hover-preview"></div>
+  <dialog id="full-dialog"><div class="dialog-head"><h2 id="full-title">查看全文</h2><button class="mini-button" id="close-full" type="button">×</button></div><pre class="dialog-body" id="full-body"></pre><div class="dialog-actions"><button class="button primary" id="copy-full" type="button">复制全文</button></div></dialog>
+  <div class="toast hidden" id="toast"></div>
+  <script>
+    const runtimeLogs = [
+      {id:"context-loader:log_5dbea5bf34de4c428da7b0a48e273b1f",time:"2026/8/8 22:08:24",summary:"读取知识网络详情",event:"operation.completed",category:"runtime.business",service:"agent-retrieval",source:"context-loader",severity:"INFO",outcome:"success",trace:"aa11a6e48784eac9025db679dcb77932",request:"req_0bae4f81-0766-446d-849d-399b44eb11a0",message:null},
+      {id:"context-loader:log_7229238b1d97d999c7fbe502e597b338",time:"2026/8/8 19:04:40",summary:"查询业务数据",event:"operation.completed",category:"runtime.business",service:"agent-retrieval",source:"context-loader",severity:"INFO",outcome:"success",trace:"c2c97a9e8afd1259218a9d975ad63e91",request:"req_7892c814-bd3a-45c5-83eb-6707f0279df1",message:null},
+      {id:"context-loader:log_9e03ef0f7be333d0ac614af2c3925fd5",time:"2026/8/8 19:03:13",summary:"查询业务数据",event:"operation.completed",category:"runtime.business",service:"agent-retrieval",source:"context-loader",severity:"INFO",outcome:"success",trace:"6f9d1e36c435ef9606a863985409b4ea",message:null},
+      {id:"context-loader:log_89fdb0980a52f34a1f9b19571d94c1dc",time:"2026/8/8 19:03:05",summary:"查询业务对象",event:"operation.completed",category:"runtime.business",service:"agent-retrieval",source:"context-loader",severity:"INFO",outcome:"success",trace:"405632aa89d9fbb5a01229b01a49633e",message:null},
+      {id:"context-loader:log_74adf28058a8ff5ab2f5fb0aaf9ae81e",time:"2026/8/8 19:02:58",summary:"查询业务数据",event:"operation.completed",category:"runtime.business",service:"agent-retrieval",source:"context-loader",severity:"INFO",outcome:"success",trace:"929ef2c3e9cdc9dbe7e3959ab8948ca0",message:null},
+      {id:"context-loader:log_bd8730ea0e51f750a60bd556b32bbd01",time:"2026/8/8 19:02:39",summary:"查询业务数据",event:"operation.completed",category:"runtime.business",service:"agent-retrieval",source:"context-loader",severity:"INFO",outcome:"success",trace:"a1db372a4ba0ef249fb0ee6ef5d7e0a2",message:null},
+      {id:"context-loader:log_8cba4ed244b3293fa4262ebec440f6db",time:"2026/8/8 19:02:31",summary:"查询业务数据",event:"operation.completed",category:"runtime.business",service:"agent-retrieval",source:"context-loader",severity:"INFO",outcome:"success",trace:"b39c50723c2c5949ef0c00f0ad8d6c32",message:null},
+      {id:"context-loader:log_cc639d25122c56e8c26c0b3e5df8f7bb",time:"2026/8/8 19:02:04",summary:"检索知识网络结构",event:"operation.completed",category:"runtime.business",service:"agent-retrieval",source:"context-loader",severity:"INFO",outcome:"success",trace:"35973dd3863ab9f20e6a2383d14f2b6d",message:null},
+      {id:"context-loader:log_3888ec7e81c6ffd52dbff1c57f210ecd",time:"2026/8/8 19:01:56",summary:"查找业务知识网络",event:"operation.completed",category:"runtime.business",service:"agent-retrieval",source:"context-loader",severity:"INFO",outcome:"success",trace:"ebc776d7d763a9cf24c7e8e030feccb7",message:null},
+      {id:"context-loader:log_06f1a007b4cbd2bdf94aa960505a8d34",time:"2026/8/8 18:53:28",summary:"沿业务关系查询",event:"operation.failed",category:"runtime.business",service:"agent-retrieval",source:"context-loader",severity:"ERROR",outcome:"failure",trace:"3eb00a9d581ceaa21823e450481107b2",message:null}
+    ];
+    const auditLogs = [
+      {key:"audit-1",id:"0ae5481d35bf965e73aab23b0e6bdb52",method:"POST",action:"object-grants · object-grants",resource:"object-grants",target:"—",actor:"Administrator（admin）",actorKey:"admin",status:204,time:"2026-08-08 08:14:12",ip:"192.168.65.1",detail:{accessor_id:"145494521a1ac8f6b76a79ab50d3d5ac",operations:["view_detail","data_query"],resource:{id:"supplychain_hd0202",type:"knowledge_network"}}},
+      {key:"audit-2",id:null,method:"POST",action:"object-grants · object-grants",resource:"object-grants",target:"—",actor:"Administrator（admin）",actorKey:"admin",status:204,time:"2026-08-08 08:04:18",ip:"192.168.65.1"},
+      {key:"audit-3",id:null,method:"POST",action:"绑定角色",resource:"role-bindings",target:"normal_user / 普通测试者",actor:"Administrator（admin）",actorKey:"admin",status:204,time:"2026-08-08 08:03:54",ip:"192.168.65.1"},
+      {key:"audit-4",id:null,method:"POST",action:"新建用户",resource:"users",target:"普通测试者",actor:"Administrator（admin）",actorKey:"admin",status:201,time:"2026-08-08 08:03:21",ip:"192.168.65.1"},
+      {key:"audit-5",id:null,method:"POST",action:"license · license.activate",resource:"license",target:"—",actor:"Administrator（admin）",actorKey:"admin",status:200,time:"2026-08-08 07:04:15",ip:"192.168.65.1"},
+      {key:"audit-6",id:null,method:"POST",action:"license · license.import",resource:"license",target:"—",actor:"Administrator（admin）",actorKey:"admin",status:200,time:"2026-08-08 07:04:15",ip:"192.168.65.1"},
+      {key:"audit-7",id:null,method:"SYSTEM",action:"license · license.state-change",resource:"license",target:"—",actor:"system:license",actorKey:"system",status:200,time:"2026-08-08 07:04:13",ip:"—"},
+      {key:"audit-8",id:null,method:"POST",action:"license · license.import",resource:"license",target:"—",actor:"Administrator（admin）",actorKey:"admin",status:409,time:"2026-08-08 07:01:36",ip:"192.168.65.1"},
+      {key:"audit-9",id:null,method:"POST",action:"license · license.import",resource:"license",target:"—",actor:"Administrator（admin）",actorKey:"admin",status:409,time:"2026-08-08 07:01:00",ip:"192.168.65.1"},
+      {key:"audit-10",id:null,method:"POST",action:"license · license.import",resource:"license",target:"—",actor:"Administrator（admin）",actorKey:"admin",status:409,time:"2026-08-08 06:59:24",ip:"192.168.65.1"}
+    ];
+    const el=id=>document.getElementById(id); let selectedRow=null; let fullValue="";
+    const esc=(value="")=>String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+    function navigateProduct(product,selector=""){if(parent===window){location.href=`./bkn-trace-0.1.4-prototype.html?linked=${encodeURIComponent(selector)}#${product}`;return;}parent.postMessage({type:"openbkn-prototype:navigate",product,selector},"*");}
+    function toast(message){el("toast").textContent=message;el("toast").classList.remove("hidden");setTimeout(()=>el("toast").classList.add("hidden"),1600)}
+    function copy(value,label="内容"){navigator.clipboard.writeText(value).then(()=>toast(`已复制${label}`));}
+    function clamp(value,label){return `<span class="clamp" data-full-label="${esc(label)}" data-full-value="${encodeURIComponent(value)}">${esc(value)}</span>`}
+    function markTruncation(root=document){root.querySelectorAll("[data-full-value]").forEach(node=>node.classList.toggle("truncated",node.scrollHeight>node.clientHeight+1));}
+    function renderLogs(){
+      const q=el("log-search").value.trim().toLowerCase(),cat=el("log-category").value,source=el("log-source").value,result=el("log-result").value;
+      const data=runtimeLogs.filter(x=>(!q||JSON.stringify(x).toLowerCase().includes(q))&&(cat==="all"||x.category===cat)&&(source==="all"||x.service===source)&&(result==="all"||x.outcome===result));
+      el("logs-body").innerHTML=data.map(x=>`<button class="data-row log-grid" data-log-id="${x.id}" type="button"><span>${x.time}</span><span class="event-copy"><strong>${esc(x.summary)}</strong><small>${x.event} · ${x.id}</small></span><span><i class="category">业务运行</i></span><span>${x.service}<small style="display:block;color:#8b95a7;margin-top:4px">${x.source}</small></span><span><i class="severity ${x.outcome==='failure'?'error':''}">${x.severity}</i></span><span class="correlation"><strong>Trace · ${x.trace.slice(0,16)}…</strong>${x.request?`<small>Request · ${x.request.slice(0,18)}…</small>`:"<small>Request · 当前列表未返回</small>"}</span></button>`).join("")||`<div style="padding:54px;text-align:center;color:#8b95a7">没有匹配的真实日志记录</div>`;
+      el("logs-count").textContent=`最近24小时共 87 条 · 当前筛选展示 ${data.length} 条真实快照`;
+      el("logs-body").querySelectorAll("[data-log-id]").forEach(row=>row.onclick=()=>openRuntimeDetail(runtimeLogs.find(x=>x.id===row.dataset.logId),row));
+    }
+    function renderAudit(){
+      const q=el("audit-search").value.trim().toLowerCase(),resource=el("audit-resource").value,actor=el("audit-actor").value,result=el("audit-result").value;
+      const data=auditLogs.filter(x=>(!q||JSON.stringify(x).toLowerCase().includes(q))&&(resource==="all"||x.resource===resource)&&(actor==="all"||x.actorKey===actor)&&(result==="all"||(result==="success"?x.status<400:x.status>=400)));
+      el("audit-body").innerHTML=data.map(x=>`<button class="data-row audit-grid" data-audit-key="${x.key}" type="button"><span><i class="method ${x.method==='SYSTEM'?'system':''}">${x.method}</i>${esc(x.action)}</span><span>${esc(x.target)}</span><span>${esc(x.actor)}</span><span><i class="http-status ${x.status>=400?'failed':''}">${x.status}</i></span><span>${x.time}</span><span>${x.ip}</span></button>`).join("")||`<div style="padding:54px;text-align:center;color:#8b95a7">没有匹配的真实审计记录</div>`;
+      el("audit-count").textContent=`最近30天共 16 条 · 当前筛选展示 ${data.length} 条真实快照`;
+      el("audit-body").querySelectorAll("[data-audit-key]").forEach(row=>row.onclick=()=>openAuditDetail(auditLogs.find(x=>x.key===row.dataset.auditKey),row));
+    }
+    function selectRow(row){if(selectedRow)selectedRow.classList.remove("selected");selectedRow=row;row.classList.add("selected")}
+    function detailHeader(eyebrow,title,subtitle,raw){return `<header class="detail-head"><div><span class="eyebrow">${eyebrow}</span><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div><div class="head-actions"><button class="mini-button" id="copy-record" title="复制记录">⧉</button><button class="mini-button" id="close-detail" title="关闭">×</button></div></header>`}
+    function bindDetail(raw){el("detail-panel").classList.remove("hidden");el("close-detail").onclick=closeDetail;el("copy-record").onclick=()=>copy(JSON.stringify(raw,null,2),"日志记录");el("detail-panel").querySelectorAll("[data-parent-product]").forEach(button=>button.onclick=()=>navigateProduct(button.dataset.parentProduct,button.dataset.parentSelector||""));markTruncation(el("detail-panel"));}
+    function closeDetail(){el("detail-panel").classList.add("hidden");if(selectedRow)selectedRow.classList.remove("selected");selectedRow=null}
+    function openRuntimeDetail(x,row){
+      selectRow(row);const raw={log_id:x.id,event_timestamp:x.time,log_category:x.category,event_name:x.event,service_name:x.service,severity:x.severity,outcome:x.outcome,summary:x.summary,facts:{message:x.message},correlation:{request_id:x.request||null,trace_id:x.trace,span_id:null},source_id:x.source};
+      el("detail-panel").innerHTML=detailHeader("业务运行日志",x.summary,`${x.event} · ${x.severity}`,raw)+`<section class="detail-section"><h3>事件事实</h3>${x.message?`<div class="message-box">${clamp(x.message,"原始日志正文")}</div>`:`<div class="message-box missing-fact"><strong>原始日志正文当前未返回</strong><br>OTLP 来源文档存在 body，但当前统一日志适配器没有读取。这里保持缺失，不根据事件摘要补写正文。</div>`}<dl style="margin-top:12px"><dt>发生时间</dt><dd>${x.time}</dd><dt>服务</dt><dd>${x.service}</dd><dt>来源</dt><dd>${x.source}</dd><dt>执行结果</dt><dd>${x.outcome}</dd></dl></section><section class="detail-section"><h3>关联上下文</h3><div class="link-list">${x.request?`<button class="context-link" data-parent-product="business" data-parent-selector="${x.request}"><span>Request · ${x.request}</span><small>查看对应交互轮次 ↗</small></button>`:""}<button class="context-link" data-parent-product="trace" data-parent-selector="${x.trace}"><span>Trace · ${x.trace}</span><small>查看 Trace 详情 ↗</small></button></div><p class="missing-fact">当前日志没有 Operation ID，因此不自动展开某次调用。</p></section><section class="detail-section"><h3>技术元信息</h3><dl><dt>日志 ID</dt><dd>${x.id}</dd><dt>事件名称</dt><dd>${x.event}</dd><dt>日志类型</dt><dd>${x.category}</dd><dt>正文状态</dt><dd>当前统一接口未返回</dd></dl></section><section class="detail-section"><details class="raw"><summary>原始记录 JSON</summary><pre>${esc(JSON.stringify(raw,null,2))}</pre></details></section>`;
+      bindDetail(raw);
+    }
+    function openAuditDetail(x,row){
+      selectRow(row);const raw={log_id:x.id,event_timestamp:x.time,log_category:"audit.admin",event_name:x.action,service_name:"bkn-safe-admin",outcome:x.status<400?"success":"failure",summary:`${x.method} ${x.action}`,facts:{action:x.action,method:x.method,status_code:x.status,client_ip:x.ip,target_type:x.resource,target_name:x.target,detail:x.detail||null},correlation:{request_id:null,trace_id:null,span_id:null},actor_id:x.actor};
+      const detailText=x.detail?JSON.stringify(x.detail,null,2):"当前快照只保留了列表事实；点击正式页面详情时由 BKN Safe 原始接口读取。";
+      el("detail-panel").innerHTML=detailHeader("管理审计",x.action,`${x.method} · HTTP ${x.status}`,raw)+`<section class="detail-section"><h3>操作事实</h3><dl><dt>操作</dt><dd>${x.action}</dd><dt>操作对象</dt><dd>${x.target}</dd><dt>资源类型</dt><dd>${x.resource}</dd><dt>操作人</dt><dd>${x.actor}</dd><dt>HTTP 状态</dt><dd>${x.status}</dd><dt>来源 IP</dt><dd>${x.ip}</dd><dt>发生时间</dt><dd>${x.time}</dd></dl></section><section class="detail-section"><h3>操作详情</h3><div class="message-box ${x.detail?'':'missing-fact'}">${clamp(detailText,"操作详情全文")}</div></section><section class="detail-section"><h3>关联上下文</h3><div class="link-list"><button class="context-link"><span>${x.resource} · ${x.target}</span><small>管理对象</small></button></div></section><section class="detail-section"><h3>技术元信息</h3><dl><dt>日志 ID</dt><dd>${x.id||"当前列表未返回，详情接口读取"}</dd><dt>日志类型</dt><dd>audit.admin</dd><dt>来源服务</dt><dd>bkn-safe-admin</dd><dt>Trace</dt><dd>无，不制造关联</dd></dl></section><section class="detail-section"><details class="raw"><summary>原始记录 JSON</summary><pre>${esc(JSON.stringify(raw,null,2))}</pre></details></section>`;
+      bindDetail(raw);
+    }
+    function switchPage(page){
+      const audit=page==="audit";el("logs-page").classList.toggle("hidden",audit);el("audit-page").classList.toggle("hidden",!audit);el("nav-logs").classList.toggle("active",!audit);el("nav-audit").classList.toggle("active",audit);el("observability-nav").querySelector(".nav-parent").classList.toggle("active-parent",!audit);el("system-nav").querySelector(".nav-parent").classList.toggle("active-parent",audit);el("system-children").classList.toggle("hidden",!audit);el("crumb-parent").textContent=audit?"系统管理":"可观测性";el("crumb-page").textContent=audit?"日志管理":"日志检索";location.hash=audit?"audit":"logs";closeDetail();window.scrollTo(0,0);
+    }
+    el("nav-logs").onclick=()=>switchPage("logs");el("system-nav").querySelector(".nav-parent").onclick=()=>switchPage("audit");el("nav-audit").onclick=()=>switchPage("audit");
+    el("nav-business").onclick=()=>navigateProduct("business");el("nav-trace").onclick=()=>navigateProduct("trace");
+    el("query-logs").onclick=renderLogs;el("reset-logs").onclick=()=>{el("log-search").value="";el("log-category").value="all";el("log-source").value="all";el("log-result").value="all";renderLogs();closeDetail()};
+    el("query-audit").onclick=renderAudit;el("reset-audit").onclick=()=>{el("audit-search").value="";el("audit-resource").value="all";el("audit-actor").value="all";el("audit-result").value="all";renderAudit();closeDetail()};
+    document.addEventListener("mouseover",event=>{const node=event.target.closest(".truncated[data-full-value]");if(!node)return;const p=el("hover-preview");p.textContent=decodeURIComponent(node.dataset.fullValue);p.classList.remove("hidden")});
+    document.addEventListener("mousemove",event=>{const p=el("hover-preview");if(p.classList.contains("hidden"))return;p.style.left=`${Math.min(innerWidth-350,event.clientX+16)}px`;p.style.top=`${Math.min(innerHeight-170,event.clientY+16)}px`});
+    document.addEventListener("mouseout",event=>{if(event.target.closest(".truncated[data-full-value]"))el("hover-preview").classList.add("hidden")});
+    document.addEventListener("click",event=>{const node=event.target.closest(".truncated[data-full-value]");if(!node)return;event.stopPropagation();fullValue=decodeURIComponent(node.dataset.fullValue);el("full-title").textContent=node.dataset.fullLabel||"查看全文";el("full-body").textContent=fullValue;el("full-dialog").showModal()});
+    el("close-full").onclick=()=>el("full-dialog").close();el("copy-full").onclick=()=>copy(fullValue,"全文");
+    window.addEventListener("message",event=>{const message=event.data||{};if(message.type!=="openbkn-prototype:logs")return;switchPage(message.view==="audit"?"audit":"logs");if(message.query){el("log-search").value=message.query;renderLogs();}});
+    if(new URLSearchParams(location.search).get("embed")==="1")document.body.classList.add("embedded");
+    renderLogs();renderAudit();switchPage(location.hash==="#audit"?"audit":"logs");
+  </script>
+</body>
+</html>

@@ -5,11 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ObservabilityCapabilityBoundary } from "@/modules/bkn-trace/components/ObservabilityCapabilityBoundary";
-import { BknTraceRunsScene } from "@/modules/bkn-trace/scenes/BknTraceRunsScene";
+import { BusinessProvenanceScene } from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene";
 
 export function BusinessProvenancePage() {
-  return <ObservabilityCapabilityBoundary allow={(profile) => profile.businessProvenanceOwn || profile.businessProvenanceManagedNetworks}>
-    <BknTraceRunsScene />
-  </ObservabilityCapabilityBoundary>;
+  return <BusinessProvenanceScene />;
 }
