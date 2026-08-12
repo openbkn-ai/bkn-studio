@@ -11,6 +11,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import i18n from "@/app/locales/i18n";
 import {
   getBusinessProvenanceAnalysisHistory,
   getBusinessProvenanceConversations,
@@ -32,6 +33,10 @@ type AgentSuggestion = { id?: string; category?: string; location?: string; prob
 type AgentAdvice = { verdicts: Record<string, string | undefined>; conclusion?: string; suggestions: AgentSuggestion[]; notEvaluable?: string };
 type ConversationLoadState = "failed" | "forbidden" | "not-installed";
 
+function bpText(key: string, options?: Record<string, string | number>) {
+  return i18n.t(`bknTrace.businessProvenance.workspace.${key}`, options);
+}
+
 function responseStatus(error: unknown) {
   if (!error || typeof error !== "object" || !("response" in error)) return undefined;
   const response = error.response;
@@ -40,55 +45,55 @@ function responseStatus(error: unknown) {
 }
 
 function isInternalAnalysisConversation(conversation: BusinessProvenanceConversation) {
-  return conversation.agentName === "业务溯源优化Agent"
-    || conversation.questionPreview?.startsWith("你是业务溯源优化分析 Agent") === true;
+  return conversation.agentName === "\u4e1a\u52a1\u6eaf\u6e90\u4f18\u5316Agent"
+    || conversation.questionPreview?.startsWith("\u4f60\u662f\u4e1a\u52a1\u6eaf\u6e90\u4f18\u5316\u5206\u6790 Agent") === true;
 }
 
 function formatTime(value?: string) {
-  if (!value) return "时间未记录";
+  if (!value) return bpText("timeNotRecorded");
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${date.toLocaleTimeString("zh-CN", { hour12: false })}`;
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${date.toLocaleTimeString(i18n.language, { hour12: false })}`;
 }
 
 function formatClock(value?: string) {
-  if (!value) return "时间未记录";
+  if (!value) return bpText("timeNotRecorded");
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString("zh-CN", { hour12: false });
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString(i18n.language, { hour12: false });
 }
 
 function formatDuration(value?: number) {
-  if (value === undefined) return "耗时未记录";
+  if (value === undefined) return bpText("durationNotRecorded");
   if (value < 1000) return `${value}ms`;
-  if (value < 60_000) return `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)} 秒`;
-  return `${Math.floor(value / 60_000)} 分${Math.round((value % 60_000) / 1000)} 秒`;
+  if (value < 60_000) return bpText("durationSeconds", { count: (value / 1000).toFixed(value % 1000 === 0 ? 0 : 1) });
+  return bpText("durationMinutes", { minutes: Math.floor(value / 60_000), seconds: Math.round((value % 60_000) / 1000) });
 }
 
 function statusLabel(value?: string) {
-  if (value === "completed") return "已完成";
-  if (value === "failed") return "失败";
-  if (value === "running" || value === "active") return "进行中";
-  return value || "未记录";
+  if (value === "completed") return bpText("status.completed");
+  if (value === "failed") return bpText("status.failed");
+  if (value === "running" || value === "active") return bpText("status.running");
+  return value || bpText("notRecorded");
 }
 
 function operationTitle(operation: OperationResolution) {
   const primary = operation.elements.filter((item) => !["property", "logic"].includes(item.kind));
   const elements = (primary.length ? primary : operation.elements).map((item) => item.name || item.id).filter(Boolean);
-  if (operation.toolName === "run_sql") return elements.length ? `查询${elements.join("、")}` : "执行数据查询";
-  if (operation.toolName === "search_schema" || operation.toolName === "get_object_types") return "探索知识网络结构";
-  if (operation.toolName === "list_knowledge_networks") return "查找业务知识网络";
-  if (operation.toolName === "query_object_instance") return elements.length ? `查询${elements.join("、")}` : "查询业务对象";
-  return elements.length ? `${operation.toolName || "调用"} · ${elements.join("、")}` : operation.toolName || "调用详情";
+  if (operation.toolName === "run_sql") return elements.length ? bpText("operation.queryElements", { elements: elements.join(bpText("listSeparator")) }) : bpText("operation.runSql");
+  if (operation.toolName === "search_schema" || operation.toolName === "get_object_types") return bpText("operation.exploreSchema");
+  if (operation.toolName === "list_knowledge_networks") return bpText("operation.findNetwork");
+  if (operation.toolName === "query_object_instance") return elements.length ? bpText("operation.queryElements", { elements: elements.join(bpText("listSeparator")) }) : bpText("operation.queryObject");
+  return elements.length ? `${operation.toolName || bpText("operation.call")} · ${elements.join(bpText("listSeparator"))}` : operation.toolName || bpText("operation.detail");
 }
 
 function operationCondition(operation: OperationResolution) {
   const condition = operation.query?.conditions;
-  if ((condition === undefined || condition === null) && operation.query?.sql) return "SQL 条件见下方完整 SQL";
-  if (condition === undefined || condition === null) return "输入条件未记录";
+  if ((condition === undefined || condition === null) && operation.query?.sql) return bpText("operation.sqlConditionBelow");
+  if (condition === undefined || condition === null) return bpText("operation.conditionNotRecorded");
   if (typeof condition === "string") return condition;
-  if (typeof condition === "object") return Object.entries(condition as Record<string, unknown>).map(([key, value]) => `${key} = ${conditionValue(value)}`).join("；");
+  if (typeof condition === "object") return Object.entries(condition as Record<string, unknown>).map(([key, value]) => `${key} = ${conditionValue(value)}`).join(bpText("conditionSeparator"));
   if (typeof condition === "number" || typeof condition === "boolean") return String(condition);
-  return "输入条件未记录";
+  return bpText("operation.conditionNotRecorded");
 }
 
 function resourceDescription(operation: OperationResolution) {
@@ -98,9 +103,9 @@ function resourceDescription(operation: OperationResolution) {
       const businessName = resource.objectName || resource.objectId;
       const physicalName = resource.name || resource.id;
       return businessName ? `${businessName} · ${physicalName}` : physicalName;
-    }).join("、");
+    }).join(bpText("listSeparator"));
   }
-  return operation.query?.resourceIds?.join("、") || "本轮事实未记录资源绑定";
+  return operation.query?.resourceIds?.join(bpText("listSeparator")) || bpText("operation.resourceNotRecorded");
 }
 
 function conditionValue(value: unknown) {
@@ -111,18 +116,18 @@ function conditionValue(value: unknown) {
 }
 
 function operationResult(operation: OperationResolution, derivedFacts: BusinessProvenanceInteraction["derivedFacts"] = []) {
-  if (operation.error) return "调用失败；错误事实已记录在本次调用中。";
-  if (derivedFacts.some((fact) => fact.rule === "changed_query_still_zero_result" && fact.operationId === operation.operationId)) return "调整查询后仍无匹配记录。";
-  if (operation.query?.resultCount !== undefined) return operation.query.resultCount === 0 ? "返回 0 条。" : `返回 ${operation.query.resultCount} 条。`;
-  return operation.callStatus === "completed" ? "调用完成；结果规模未记录。" : "结果未记录。";
+  if (operation.error) return bpText("operation.failedResult");
+  if (derivedFacts.some((fact) => fact.rule === "changed_query_still_zero_result" && fact.operationId === operation.operationId)) return bpText("operation.changedQueryNoResult");
+  if (operation.query?.resultCount !== undefined) return operation.query.resultCount === 0 ? bpText("operation.zeroRows") : bpText("operation.rows", { count: operation.query.resultCount });
+  return operation.callStatus === "completed" ? bpText("operation.completedUnknownSize") : bpText("operation.resultNotRecorded");
 }
 
 function bindingDescription(operation: OperationResolution) {
-  if (operation.status === "resolved") return "调用事实与 BKN 正式定义映射";
-  if (operation.status === "ambiguous") return "同一资源绑定到多个业务对象，无法唯一定位";
-  if (operation.status === "not_evaluable" && operation.missingFacts.includes("permission_denied")) return "无权读取源 BKN 定义，调用事实仍已保留";
-  if (operation.missingFacts.includes("resource_binding")) return "资源未绑定到业务对象";
-  return "调用事实未能确定定位";
+  if (operation.status === "resolved") return bpText("binding.resolved");
+  if (operation.status === "ambiguous") return bpText("binding.ambiguous");
+  if (operation.status === "not_evaluable" && operation.missingFacts.includes("permission_denied")) return bpText("binding.permissionDenied");
+  if (operation.missingFacts.includes("resource_binding")) return bpText("binding.resourceMissing");
+  return bpText("binding.unresolved");
 }
 
 function businessElementNames(operation: OperationResolution, kinds: string[]) {
@@ -132,22 +137,22 @@ function businessElementNames(operation: OperationResolution, kinds: string[]) {
 function propertyDescriptions(operation: OperationResolution) {
   return operation.elements.filter((item) => item.kind === "property" || item.kind === "logic").map((item) => {
     const name = item.name || item.id;
-    if (item.kind === "logic") return `${name}（${item.id}）· 逻辑/函数`;
+    if (item.kind === "logic") return `${name}（${item.id}）· ${bpText("element.logic")}`;
     return `${name}（${item.id}）${item.field ? ` → ${item.field}` : ""}`;
   });
 }
 
 function elementKindText(kind: string) {
-  return ({ object: "对象", relation: "关系", action: "行动", property: "属性", logic: "逻辑/函数", metric: "指标" } as Record<string, string>)[kind] || kind;
+  return ({ object: bpText("element.object"), relation: bpText("element.relation"), action: bpText("element.action"), property: bpText("element.property"), logic: bpText("element.logic"), metric: bpText("element.metric") } as Record<string, string>)[kind] || kind;
 }
 
 function conversationTitle(conversation: BusinessProvenanceConversation) {
   const agent = conversation.agentName?.trim();
-  return agent ? `${agent} 的业务会话` : "业务会话";
+  return agent ? bpText("conversation.titleWithAgent", { agent }) : bpText("conversation.title");
 }
 
 function evidenceLabel(conversation: BusinessProvenanceConversation) {
-  return conversation.resultPreview ? "部分可溯源" : "按轮次查看";
+  return conversation.resultPreview ? bpText("evidence.partial") : bpText("evidence.byRound");
 }
 
 function textValue(value: unknown): string | undefined {
@@ -157,7 +162,7 @@ function textValue(value: unknown): string | undefined {
 function textList(value: unknown): string | undefined {
   if (!Array.isArray(value)) return undefined;
   const items = value.map(textValue).filter((item): item is string => Boolean(item));
-  return items.length ? items.join("、") : undefined;
+  return items.length ? items.join(bpText("listSeparator")) : undefined;
 }
 
 function scopeLabel(value?: string) {
@@ -210,22 +215,23 @@ function agentAdvice(result?: Record<string, unknown>): AgentAdvice {
 }
 
 function decisionLabel(value?: string) {
-  if (value === "change_required") return "需要优化";
-  if (value === "no_change") return "暂未发现需要优化项";
-  if (value === "not_evaluable") return "当前事实不足以评估";
-  return value === "not_evaluable" ? "无法判断" : value || "未返回";
+  if (value === "change_required") return bpText("decision.changeRequired");
+  if (value === "no_change") return bpText("decision.noChange");
+  if (value === "not_evaluable") return bpText("decision.notEvaluable");
+  return value || bpText("notReturned");
 }
 
 function adviceMarkdown(advice: AgentAdvice) {
-  const verdicts = ["BKN", "BKN Trace", "MCP", "SDK", "Agent"].map((category) => `- ${category}：${decisionLabel(advice.verdicts[category])}`).join("\n");
-  const recommendations = advice.suggestions.map((item, index) => `### ${item.id || `REC-${index + 1}`}\n\n- 类别：${item.category || "未返回"}\n- 修改位置：${item.location || "未返回"}\n- 问题：${item.problem || "未返回"}\n- 源证据：${item.sourceEvidence || "未返回"}\n- 核验证据：${item.verificationEvidence || "未返回"}\n- 修改方式：${item.change || "未返回"}\n- 验收：${item.acceptance || "未返回"}`).join("\n\n");
-  return `# 业务溯源优化建议\n\n## 分类结论\n\n${verdicts}\n\n## 修改建议\n\n${recommendations || "当前结果未返回具体修改建议。"}${advice.notEvaluable ? `\n\n## 无法判断\n\n${advice.notEvaluable}` : ""}`;
+  const missing = bpText("notReturned");
+  const verdicts = ["BKN", "BKN Trace", "MCP", "SDK", "Agent"].map((category) => `- ${category}: ${decisionLabel(advice.verdicts[category])}`).join("\n");
+  const recommendations = advice.suggestions.map((item, index) => `### ${item.id || `REC-${index + 1}`}\n\n- ${bpText("agent.category")}: ${item.category || missing}\n- ${bpText("agent.location")}: ${item.location || missing}\n- ${bpText("agent.problem")}: ${item.problem || missing}\n- ${bpText("agent.sourceEvidence")}: ${item.sourceEvidence || missing}\n- ${bpText("agent.verificationEvidence")}: ${item.verificationEvidence || missing}\n- ${bpText("agent.change")}: ${item.change || missing}\n- ${bpText("agent.acceptance")}: ${item.acceptance || missing}`).join("\n\n");
+  return `# ${bpText("agent.markdownTitle")}\n\n## ${bpText("agent.verdicts")}\n\n${verdicts}\n\n## ${bpText("agent.recommendations")}\n\n${recommendations || bpText("agent.noRecommendations")}${advice.notEvaluable ? `\n\n## ${bpText("agent.unableToDetermine")}\n\n${advice.notEvaluable}` : ""}`;
 }
 
 function knowledgeGroups(projection: BusinessProvenanceInteraction) {
   const groups = new Map<string, Map<string, { kind: string; id: string; name: string; operationIds: string[] }>>();
   projection.operations.forEach((operation) => {
-    const network = operation.knowledgeNetworkId || "尚未定位知识网络";
+    const network = operation.knowledgeNetworkId || bpText("networkUnresolved");
     const elements = groups.get(network) ?? new Map<string, { kind: string; id: string; name: string; operationIds: string[] }>();
     operation.elements.forEach((element) => {
       const key = `${element.kind}:${element.id}`;
@@ -287,7 +293,7 @@ export function BusinessProvenanceScene() {
     setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisPanelOpen(false); setAnalysisError(undefined);
     void getBusinessProvenanceInteractions({ conversationId: selectedConversation.conversationId, page: 1, pageSize: 50, keyword: interactionKeyword })
       .then((page) => { setInteractions(page.entries); setSelectedInteraction(page.entries[0]); })
-      .catch(() => message.error("交互轮次加载失败"));
+      .catch(() => message.error(bpText("errors.interactionsLoad")));
   }, [interactionKeyword, selectedConversation]);
   useEffect(() => {
     if (!selectedInteraction) return;
@@ -296,10 +302,10 @@ export function BusinessProvenanceScene() {
     setAnalysisMarkdown(""); setAnalysisMarkdownLoading(true); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisStreamText(""); setAnalysisPanelOpen(false); setAnalysisError(undefined); setAnalysisStarting(false);
     void getBusinessProvenanceInteraction(selectedInteraction.interactionId)
       .then((value) => { if (current) setProjection(value); })
-      .catch(() => { if (current) message.error("调用事实加载失败"); });
+      .catch(() => { if (current) message.error(bpText("errors.factsLoad")); });
     void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
       .then((value) => { if (current) setAnalysisMarkdown(value); })
-      .catch(() => { if (current) message.error("过程事实 Markdown 加载失败"); })
+      .catch(() => { if (current) message.error(bpText("errors.markdownLoad")); })
       .finally(() => { if (current) setAnalysisMarkdownLoading(false); });
     void getBusinessProvenanceAnalysisHistory(selectedInteraction.interactionId).then((entries) => {
       if (!current) return;
@@ -323,13 +329,13 @@ export function BusinessProvenanceScene() {
       const result = await streamBusinessProvenanceAnalysis(selectedInteraction.interactionId, analysisMarkdown, (token) => setAnalysisStreamText((current) => current + token));
       setAnalysisResult(result);
       setAnalysisHistory(await getBusinessProvenanceAnalysisHistory(selectedInteraction.interactionId));
-    } catch (error) { setAnalysisError(`分析失败：${analysisErrorMessage(error)}`); } finally { setAnalysisStarting(false); }
+    } catch (error) { setAnalysisError(bpText("agent.failureWithReason", { reason: analysisErrorMessage(error) })); } finally { setAnalysisStarting(false); }
   }, [analysisMarkdown, selectedInteraction]);
 
   const copyMarkdown = useCallback(async () => {
     if (!selectedInteraction || !analysisMarkdown) return;
     await navigator.clipboard?.writeText(analysisMarkdown);
-    message.success("本轮 Markdown 已复制");
+    message.success(bpText("agent.markdownCopied"));
   }, [analysisMarkdown, selectedInteraction]);
 
   const downloadMarkdown = useCallback(() => {
@@ -347,14 +353,14 @@ export function BusinessProvenanceScene() {
   }, []);
 
   const conversationColumns: ColumnsType<BusinessProvenanceConversation> = [
-    { dataIndex: "startedAt", title: "开始时间", width: 180, render: (value: string | undefined, item) => <div className={styles.timeCell}><b>{formatTime(value)}</b><small>{item.conversationId}</small></div> },
-    { dataIndex: "questionPreview", title: "用户问题", width: 260, render: (value: string | undefined, item) => <Button type="link" className={styles.questionLink} onClick={() => setSelectedConversation(item)}>{value || "未记录问题"}</Button> },
-    { dataIndex: "interactionCount", title: "交互轮次", width: 90, align: "center", render: (value?: number) => value ?? 0 },
-    { dataIndex: "resultPreview", title: "业务结果", width: 260, ellipsis: true, render: (value?: string) => <span className={styles.tableClamp}>{value || "—"}</span> },
-    { dataIndex: "agentName", title: "Agent", width: 140, render: (value?: string) => <span className={styles.tableClamp}>{value || "未记录 Agent"}</span> },
-    { dataIndex: "status", title: "状态", width: 90, render: (value?: string) => <span className={styles.statusText}>{statusLabel(value)}</span> },
-    { title: "证据完整性", width: 120, render: (_, item) => <span className={styles.evidence}>{evidenceLabel(item)}</span> },
-    { dataIndex: "durationMs", title: "耗时", width: 90, render: (value?: number) => formatDuration(value) },
+    { dataIndex: "startedAt", title: bpText("columns.startedAt"), width: 180, render: (value: string | undefined, item) => <div className={styles.timeCell}><b>{formatTime(value)}</b><small>{item.conversationId}</small></div> },
+    { dataIndex: "questionPreview", title: bpText("columns.question"), width: 260, render: (value: string | undefined, item) => <Button type="link" className={styles.questionLink} onClick={() => setSelectedConversation(item)}>{value || bpText("questionNotRecorded")}</Button> },
+    { dataIndex: "interactionCount", title: bpText("columns.interactions"), width: 90, align: "center", render: (value?: number) => value ?? 0 },
+    { dataIndex: "resultPreview", title: bpText("columns.result"), width: 260, ellipsis: true, render: (value?: string) => <span className={styles.tableClamp}>{value || "—"}</span> },
+    { dataIndex: "agentName", title: "Agent", width: 140, render: (value?: string) => <span className={styles.tableClamp}>{value || bpText("agentNotRecorded")}</span> },
+    { dataIndex: "status", title: bpText("columns.status"), width: 90, render: (value?: string) => <span className={styles.statusText}>{statusLabel(value)}</span> },
+    { title: bpText("columns.evidence"), width: 120, render: (_, item) => <span className={styles.evidence}>{evidenceLabel(item)}</span> },
+    { dataIndex: "durationMs", title: bpText("columns.duration"), width: 90, render: (value?: number) => formatDuration(value) },
   ];
 
   if (conversationLoadState) {
@@ -375,110 +381,110 @@ export function BusinessProvenanceScene() {
 
   if (!selectedConversation) return <main className={`${styles.page} ${styles.pageSurface}`}>
     <header className={styles.pageHeader}>
-      <div><Typography.Title level={2}>业务溯源</Typography.Title><Typography.Text>从用户问题和业务结果出发，查看 Agent 如何调用业务知识网络并形成结论。</Typography.Text></div>
-      <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>刷新</Button>
+      <div><Typography.Title level={2}>{bpText("list.title")}</Typography.Title><Typography.Text>{bpText("list.description")}</Typography.Text></div>
+      <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>{bpText("actions.refresh")}</Button>
     </header>
     <section className={styles.listCard}>
       <div className={styles.filters}>
-        <Input value={conversationKeyword} onChange={(event) => setConversationKeyword(event.target.value)} prefix={<SearchOutlined />} placeholder="搜索问题、结果或会话 ID" onPressEnter={() => { setConversationPage(1); void loadConversations(); }} />
-        <Input placeholder="开始时间" aria-label="开始时间" />
-        <Input placeholder="结束时间" aria-label="结束时间" />
-        <Input value={conversationAgent} onChange={(event) => setConversationAgent(event.target.value)} placeholder="Agent / 应用" onPressEnter={() => { setConversationPage(1); void loadConversations(); }} />
-        <Input placeholder="业务域" aria-label="业务域" />
-        <Input placeholder="知识网络" aria-label="知识网络" />
-        <Select allowClear placeholder="运行状态" value={conversationStatus} options={[{ value: "completed", label: "已完成" }, { value: "failed", label: "失败" }, { value: "running", label: "进行中" }]} onChange={(value) => { setConversationPage(1); setConversationStatus(value); }} />
-        <Select allowClear placeholder="证据完整性" options={[{ value: "complete", label: "完整可溯源" }, { value: "partial", label: "部分可溯源" }]} />
-        <Button type="primary" icon={<SearchOutlined />} onClick={() => { setConversationPage(1); void loadConversations(); }}>查询</Button>
-        <Button aria-label="重置筛选" icon={<ReloadOutlined />} onClick={() => { setConversationKeyword(""); setConversationAgent(""); setConversationStatus(undefined); setConversationPage(1); }} />
+        <Input value={conversationKeyword} onChange={(event) => setConversationKeyword(event.target.value)} prefix={<SearchOutlined />} placeholder={bpText("filters.keyword")} onPressEnter={() => { setConversationPage(1); void loadConversations(); }} />
+        <Input placeholder={bpText("filters.startedAt")} aria-label={bpText("filters.startedAt")} />
+        <Input placeholder={bpText("filters.endedAt")} aria-label={bpText("filters.endedAt")} />
+        <Input value={conversationAgent} onChange={(event) => setConversationAgent(event.target.value)} placeholder={bpText("filters.agent")} onPressEnter={() => { setConversationPage(1); void loadConversations(); }} />
+        <Input placeholder={bpText("filters.businessDomain")} aria-label={bpText("filters.businessDomain")} />
+        <Input placeholder={bpText("filters.network")} aria-label={bpText("filters.network")} />
+        <Select allowClear placeholder={bpText("filters.status")} value={conversationStatus} options={[{ value: "completed", label: statusLabel("completed") }, { value: "failed", label: statusLabel("failed") }, { value: "running", label: statusLabel("running") }]} onChange={(value) => { setConversationPage(1); setConversationStatus(value); }} />
+        <Select allowClear placeholder={bpText("filters.evidence")} options={[{ value: "complete", label: bpText("evidence.complete") }, { value: "partial", label: bpText("evidence.partial") }]} />
+        <Button type="primary" icon={<SearchOutlined />} onClick={() => { setConversationPage(1); void loadConversations(); }}>{bpText("actions.query")}</Button>
+        <Button aria-label={bpText("actions.reset")} icon={<ReloadOutlined />} onClick={() => { setConversationKeyword(""); setConversationAgent(""); setConversationStatus(undefined); setConversationPage(1); }} />
       </div>
-      <Table rowKey="conversationId" columns={conversationColumns} dataSource={conversations} loading={loading} tableLayout="fixed" scroll={{ x: 1230 }} locale={{ emptyText: <Empty description="暂无业务会话" /> }} pagination={{ current: conversationPage, pageSize: 20, total: conversationTotal, showSizeChanger: true, showTotal: (total) => `共 ${total} 条`, onChange: setConversationPage }} />
+      <Table rowKey="conversationId" columns={conversationColumns} dataSource={conversations} loading={loading} tableLayout="fixed" scroll={{ x: 1230 }} locale={{ emptyText: <Empty description={bpText("list.empty")} /> }} pagination={{ current: conversationPage, pageSize: 20, total: conversationTotal, showSizeChanger: true, showTotal: (total) => bpText("list.total", { count: total }), onChange: setConversationPage }} />
     </section>
   </main>;
 
   return <main className={`${styles.page} ${styles.pageSurface}`}>
     <header className={styles.pageHeader}>
-      <div><Typography.Title level={2}>业务溯源分析</Typography.Title><Typography.Text>从真实调用事实查看 Agent 如何使用业务知识网络。</Typography.Text></div>
-      <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>刷新</Button>
+      <div><Typography.Title level={2}>{bpText("analysis.title")}</Typography.Title><Typography.Text>{bpText("analysis.description")}</Typography.Text></div>
+      <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>{bpText("actions.refresh")}</Button>
     </header>
     <section className={styles.workspace}>
       <header className={styles.workspaceHeader}>
-        <Button type="link" className={styles.backButton} onClick={() => { setSelectedConversation(undefined); setSelectedInteraction(undefined); setProjection(undefined); }}>← 返回业务会话</Button>
-        <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{interactions.length || selectedConversation.interactionCount || 0} 轮交互</span><span>{projection?.operations.length ?? "—"} 次调用</span><span>{selectedConversation.agentName || "未记录 Agent"}</span></div>
+        <Button type="link" className={styles.backButton} onClick={() => { setSelectedConversation(undefined); setSelectedInteraction(undefined); setProjection(undefined); }}>← {bpText("actions.back")}</Button>
+        <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{bpText("interactionCount", { count: interactions.length || selectedConversation.interactionCount || 0 })}</span><span>{bpText("callCount", { count: projection?.operations.length ?? 0 })}</span><span>{selectedConversation.agentName || bpText("agentNotRecorded")}</span></div>
       </header>
       <aside className={styles.roundSidebar}>
-        <div className={styles.roundSidebarTitle}><div><h3>交互轮次</h3><span>共 {interactions.length} 轮 · 当前 {Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1)} 轮</span></div></div>
-        <Input value={interactionKeyword} onChange={(event) => setInteractionKeyword(event.target.value)} prefix={<SearchOutlined />} placeholder="搜索问题或业务对象" />
-        <div className={styles.roundList}>{interactions.map((item, index) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>第 {index + 1} 轮</b><strong>{item.questionPreview || "未记录问题"}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
+        <div className={styles.roundSidebarTitle}><div><h3>{bpText("rounds.title")}</h3><span>{bpText("rounds.summary", { total: interactions.length, current: Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1) })}</span></div></div>
+        <Input value={interactionKeyword} onChange={(event) => setInteractionKeyword(event.target.value)} prefix={<SearchOutlined />} placeholder={bpText("rounds.search")} />
+        <div className={styles.roundList}>{interactions.map((item, index) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{bpText("roundLabel", { index: index + 1 })}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
       </aside>
       <section className={styles.analysisPane}>
         {projection ? <>
           <section className={styles.interactionSummary}>
-            <header><span>第 {Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1)} 轮</span><h2>{selectedInteraction?.questionPreview || "本轮问题未记录"}</h2><small>{selectedConversation.agentName || "未记录 Agent"} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {projection.operations.length} 次调用 · {statusLabel(selectedInteraction?.status)}</small></header>
-            <div className={styles.sourceTexts}><div><h4>本轮输入（原文）</h4><p>{selectedInteraction?.questionPreview || "用户输入未记录"}</p></div><div><h4>本轮输出（原文）</h4><p>{selectedInteraction?.resultPreview || "业务结果未记录"}</p></div></div>
-            <footer><Button icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>复制 Markdown</Button><Button icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>下载 Markdown</Button><Button type="primary" onClick={() => { setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisPanelOpen(true); }}>交给 BKN Agent 分析</Button></footer>
+            <header><span>{bpText("roundLabel", { index: Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1) })}</span><h2>{selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</h2><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection.operations.length })} · {statusLabel(selectedInteraction?.status)}</small></header>
+            <div className={styles.sourceTexts}><div><h4>{bpText("rounds.inputOriginal")}</h4><p>{selectedInteraction?.questionPreview || bpText("inputNotRecorded")}</p></div><div><h4>{bpText("rounds.outputOriginal")}</h4><p>{selectedInteraction?.resultPreview || bpText("resultNotRecorded")}</p></div></div>
+            <footer><Button icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("actions.copyMarkdown")}</Button><Button icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("actions.downloadMarkdown")}</Button><Button type="primary" onClick={() => { setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisPanelOpen(true); }}>{bpText("actions.analyze")}</Button></footer>
           </section>
-          <Segmented className={styles.viewSwitch} value={view} onChange={(value) => { setView(value as View); setDetailOperation(undefined); }} options={[{ label: "时间链视图", value: "timeline" }, { label: "知识网络视图", value: "knowledge" }]} />
+          <Segmented className={styles.viewSwitch} value={view} onChange={(value) => { setView(value as View); setDetailOperation(undefined); }} options={[{ label: bpText("views.timeline"), value: "timeline" }, { label: bpText("views.knowledge"), value: "knowledge" }]} />
           {view === "timeline" ? <section className={styles.timeline}>
-            <div className={styles.inputNode}><i /><div><b>本轮输入</b><span>{formatTime(selectedInteraction?.startedAt)}</span></div></div>
+            <div className={styles.inputNode}><i /><div><b>{bpText("rounds.input")}</b><span>{formatTime(selectedInteraction?.startedAt)}</span></div></div>
             {projection.operations.map((operation, index) => <div className={styles.timelineItem} key={operation.operationId}>
               <div className={styles.timelineRail}><i />{index < projection.operations.length - 1 ? <span /> : null}</div>
               <article className={styles.operationCard} onClick={() => setDetailOperation(operation)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter") setDetailOperation(operation); }}>
                 <header><h3>{operationTitle(operation)}</h3>{operation.elements[0] ? <Tag>{operation.elements[0].name || operation.elements[0].id}</Tag> : null}</header>
-                <p><b>条件：</b>{operationCondition(operation)}</p>
-                <small>{formatClock(operation.startedAt)} · {formatDuration(operation.durationMs)} · {operation.toolName || "接口未记录"}</small>
+                <p><b>{bpText("detail.condition")}:</b>{operationCondition(operation)}</p>
+                <small>{formatClock(operation.startedAt)} · {formatDuration(operation.durationMs)} · {operation.toolName || bpText("interfaceNotRecorded")}</small>
                 <p className={styles.operationResult}>{operationResult(operation, projection.derivedFacts)}</p>
-                <Button type="link" onClick={(event) => { event.stopPropagation(); setDetailOperation(operation); }}>调用详情</Button>
+                <Button type="link" onClick={(event) => { event.stopPropagation(); setDetailOperation(operation); }}>{bpText("operation.detail")}</Button>
               </article>
             </div>)}
           </section> : <section className={styles.knowledgeCanvas}>
-            <p className={styles.knowledgePath}>业务知识网络 → 本轮触达对象 → 源 BKN 关系（上下文）→ 相邻对象</p>
+            <p className={styles.knowledgePath}>{bpText("knowledge.path")}</p>
             {groups.length ? groups.map(([network, elements]) => <div className={styles.knowledgeGrid} key={network}>
-              <section className={styles.knowledgeColumn}><h3><span>1</span>业务知识网络</h3><article className={styles.networkCard}><b>{network}</b><small>{network}</small></article><p className={styles.candidateNote}>仅展示本轮调用确定性触达的业务元素。</p></section>
-              <section className={styles.knowledgeColumn}><h3><span>2</span>本轮已触达</h3>{elements.map((element) => <button key={`${element.kind}:${element.id}`} className={knowledgeSelection?.elementId === element.id ? styles.knowledgeSelected : ""} onClick={() => setKnowledgeSelection({ network, elementId: element.id, elementName: element.name })}><b>{element.name}</b><small>{elementKindText(element.kind)} · {element.operationIds.length} 次确定性调用</small></button>)}</section>
-              <section className={styles.knowledgeColumn}><h3><span>3</span>相关 BKN 关系</h3>{projection.contextRelations.filter((relation) => relation.knowledgeNetworkId === network).length ? projection.contextRelations.filter((relation) => relation.knowledgeNetworkId === network).map((relation) => <article className={styles.contextCard} key={relation.id}><b>{relation.name || relation.id}</b><small>知识网络上下文，非本轮调用</small></article>) : <p className={styles.emptyContext}>本轮未记录可展示的关系上下文。</p>}</section>
-            </div>) : <Empty description="本轮尚未记录能够确定性定位到 BKN 元素的调用" />}
+              <section className={styles.knowledgeColumn}><h3><span>1</span>{bpText("knowledge.network")}</h3><article className={styles.networkCard}><b>{network}</b><small>{network}</small></article><p className={styles.candidateNote}>{bpText("knowledge.observedOnly")}</p></section>
+              <section className={styles.knowledgeColumn}><h3><span>2</span>{bpText("knowledge.observed")}</h3>{elements.map((element) => <button key={`${element.kind}:${element.id}`} className={knowledgeSelection?.elementId === element.id ? styles.knowledgeSelected : ""} onClick={() => setKnowledgeSelection({ network, elementId: element.id, elementName: element.name })}><b>{element.name}</b><small>{elementKindText(element.kind)} · {bpText("knowledge.deterministicCalls", { count: element.operationIds.length })}</small></button>)}</section>
+              <section className={styles.knowledgeColumn}><h3><span>3</span>{bpText("knowledge.relations")}</h3>{projection.contextRelations.filter((relation) => relation.knowledgeNetworkId === network).length ? projection.contextRelations.filter((relation) => relation.knowledgeNetworkId === network).map((relation) => <article className={styles.contextCard} key={relation.id}><b>{relation.name || relation.id}</b><small>{bpText("knowledge.contextOnly")}</small></article>) : <p className={styles.emptyContext}>{bpText("knowledge.noContext")}</p>}</section>
+            </div>) : <Empty description={bpText("knowledge.empty")} />}
           </section>}
-        </> : <Empty className={styles.workspaceEmpty} description="选择交互轮次查看调用事实" />}
+        </> : <Empty className={styles.workspaceEmpty} description={bpText("rounds.select")} />}
       </section>
     </section>
-    {view === "knowledge" && knowledgeSelection && !detailOperation ? <aside className={styles.knowledgeInspector}><header><small>本轮已触达</small><b>{knowledgeSelection.elementName}</b><Button type="text" icon={<CloseOutlined />} aria-label="关闭知识网络详情" onClick={() => setKnowledgeSelection(undefined)} /></header><section><h4>事实边界</h4><p>本轮有 {selectedKnowledgeCalls.length} 次调用确定性定位到该业务元素。</p></section><section><h4>关联调用</h4>{selectedKnowledgeCalls.map((operation) => <button key={operation.operationId} onClick={() => { setKnowledgeSelection(undefined); setDetailOperation(operation); }}><b>{operationTitle(operation)}</b><small>{operation.toolName || "接口未记录"} · {operationCondition(operation)}</small></button>)}</section></aside> : null}
+    {view === "knowledge" && knowledgeSelection && !detailOperation ? <aside className={styles.knowledgeInspector}><header><small>{bpText("knowledge.observed")}</small><b>{knowledgeSelection.elementName}</b><Button type="text" icon={<CloseOutlined />} aria-label={bpText("knowledge.closeDetail")} onClick={() => setKnowledgeSelection(undefined)} /></header><section><h4>{bpText("knowledge.factBoundary")}</h4><p>{bpText("knowledge.factBoundaryDescription", { count: selectedKnowledgeCalls.length })}</p></section><section><h4>{bpText("knowledge.relatedCalls")}</h4>{selectedKnowledgeCalls.map((operation) => <button key={operation.operationId} onClick={() => { setKnowledgeSelection(undefined); setDetailOperation(operation); }}><b>{operationTitle(operation)}</b><small>{operation.toolName || bpText("interfaceNotRecorded")} · {operationCondition(operation)}</small></button>)}</section></aside> : null}
     {detailOperation ? <aside className={styles.detailPanel}>
-      <header><div><small>本轮业务调用</small><b>{operationTitle(detailOperation)}</b></div><span className={detailOperation.callStatus === "completed" ? styles.completed : styles.failed}>{statusLabel(detailOperation.callStatus)}</span><Button type="text" aria-label="关闭调用详情" icon={<CloseOutlined />} onClick={() => setDetailOperation(undefined)} /></header>
-      <section><h4>做了什么</h4><p>{operationTitle(detailOperation)}</p></section>
-      <section><h4>操作哪个业务元素</h4><dl>
-        <dt>知识网络</dt><dd>{detailOperation.knowledgeNetworkId || "未确定"}</dd>
-        <dt>业务对象</dt><dd>{businessElementNames(detailOperation, ["object"]).join("、") || "未确定"}</dd>
-        {detailOperation.status === "ambiguous" && detailOperation.objects?.length ? <><dt>候选业务对象</dt><dd>{detailOperation.objects.map((object) => object.name || object.id).join("、")}</dd></> : null}
-        {businessElementNames(detailOperation, ["relation", "action", "metric"]).length ? <><dt>关系 / 行动 / 指标</dt><dd>{businessElementNames(detailOperation, ["relation", "action", "metric"]).join("、")}</dd></> : null}
-        <dt>定位方式</dt><dd>{bindingDescription(detailOperation)}</dd>
-        {projection?.conversationContext.find((item) => item.knowledgeNetworkId === detailOperation.knowledgeNetworkId) ? <><dt>会话上下文</dt><dd>{(() => { const source = projection.conversationContext.find((item) => item.knowledgeNetworkId === detailOperation.knowledgeNetworkId); return `${source?.sourceInteractionId} · ${source?.sourceOperationId}`; })()}</dd></> : null}
+      <header><div><small>{bpText("detail.roundCall")}</small><b>{operationTitle(detailOperation)}</b></div><span className={detailOperation.callStatus === "completed" ? styles.completed : styles.failed}>{statusLabel(detailOperation.callStatus)}</span><Button type="text" aria-label={bpText("detail.close")} icon={<CloseOutlined />} onClick={() => setDetailOperation(undefined)} /></header>
+      <section><h4>{bpText("detail.what")}</h4><p>{operationTitle(detailOperation)}</p></section>
+      <section><h4>{bpText("detail.businessElement")}</h4><dl>
+        <dt>{bpText("knowledge.network")}</dt><dd>{detailOperation.knowledgeNetworkId || bpText("undetermined")}</dd>
+        <dt>{bpText("detail.businessObject")}</dt><dd>{businessElementNames(detailOperation, ["object"]).join(bpText("listSeparator")) || bpText("undetermined")}</dd>
+        {detailOperation.status === "ambiguous" && detailOperation.objects?.length ? <><dt>{bpText("detail.candidateObjects")}</dt><dd>{detailOperation.objects.map((object) => object.name || object.id).join(bpText("listSeparator"))}</dd></> : null}
+        {businessElementNames(detailOperation, ["relation", "action", "metric"]).length ? <><dt>{bpText("detail.relationActionMetric")}</dt><dd>{businessElementNames(detailOperation, ["relation", "action", "metric"]).join(bpText("listSeparator"))}</dd></> : null}
+        <dt>{bpText("detail.binding")}</dt><dd>{bindingDescription(detailOperation)}</dd>
+        {projection?.conversationContext.find((item) => item.knowledgeNetworkId === detailOperation.knowledgeNetworkId) ? <><dt>{bpText("detail.conversationContext")}</dt><dd>{(() => { const source = projection.conversationContext.find((item) => item.knowledgeNetworkId === detailOperation.knowledgeNetworkId); return `${source?.sourceInteractionId} · ${source?.sourceOperationId}`; })()}</dd></> : null}
       </dl></section>
-      <section><h4>怎么调用</h4><dl><dt>接口</dt><dd>{detailOperation.toolName || "未记录"}</dd><dt>条件</dt><dd>{operationCondition(detailOperation)}</dd><dt>资源</dt><dd>{resourceDescription(detailOperation)}</dd></dl></section>
-      <section><h4>属性与字段</h4>{propertyDescriptions(detailOperation).length ? propertyDescriptions(detailOperation).map((item) => <p key={item}>{item}</p>) : <p>本轮调用没有确定性定位到属性、字段或逻辑。</p>}</section>
-      <section><h4>实际结果</h4><p>{operationResult(detailOperation, projection?.derivedFacts)}</p></section>
+      <section><h4>{bpText("detail.how")}</h4><dl><dt>{bpText("detail.interface")}</dt><dd>{detailOperation.toolName || bpText("notRecorded")}</dd><dt>{bpText("detail.condition")}</dt><dd>{operationCondition(detailOperation)}</dd><dt>{bpText("detail.resource")}</dt><dd>{resourceDescription(detailOperation)}</dd></dl></section>
+      <section><h4>{bpText("detail.properties")}</h4>{propertyDescriptions(detailOperation).length ? propertyDescriptions(detailOperation).map((item) => <p key={item}>{item}</p>) : <p>{bpText("detail.noProperties")}</p>}</section>
+      <section><h4>{bpText("detail.actualResult")}</h4><p>{operationResult(detailOperation, projection?.derivedFacts)}</p></section>
       {detailOperation.query?.sql ? <section><h4>SQL</h4><pre>{detailOperation.query.sql}</pre></section> : null}
     </aside> : null}
     {analysisPanelOpen ? (
       <div className={styles.agentDrawerMask}>
         <aside className={styles.agentPanel}>
           <header>
-            <div><small>业务溯源优化 BKN Agent</small><b>当前交互轮次分析</b></div>
-            <Button type="text" icon={<CloseOutlined />} aria-label="关闭 BKN Agent 分析" onClick={() => setAnalysisPanelOpen(false)} />
+            <div><small>{bpText("agent.title")}</small><b>{bpText("agent.currentRound")}</b></div>
+            <Button type="text" icon={<CloseOutlined />} aria-label={bpText("agent.close")} onClick={() => setAnalysisPanelOpen(false)} />
           </header>
-          <p className={styles.agentIntro}>先确认或编辑待分析 Markdown，再启动分析。Agent 实际收到的内容与此处完全相同；可按需查询源 BKN 进行核验，但不得补写 Trace 中不存在的事实。</p>
+          <p className={styles.agentIntro}>{bpText("agent.intro")}</p>
           <div className={styles.agentSource}>
-            <strong>第 {Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1)} 轮 · {selectedInteraction?.questionPreview || "本轮问题未记录"}</strong>
-            <small>{selectedInteraction?.interactionId}<br />{formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {projection?.operations.length ?? 0} 次调用</small>
+            <strong>{bpText("roundLabel", { index: Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1) })} · {selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</strong>
+            <small>{selectedInteraction?.interactionId}<br />{formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection?.operations.length ?? 0 })}</small>
           </div>
-          {analysisHistory.length ? <Select aria-label="历史分析记录" value={analysisHistory.find((item) => item.result === analysisResult)?.analysisId ?? analysisHistory[0]?.analysisId} options={analysisHistory.map((item, index) => ({ value: item.analysisId, label: `分析记录 ${analysisHistory.length - index} · ${formatTime(item.startedAt)} · ${item.status === "completed" ? "已完成" : item.status === "failed" ? "失败" : "分析中"}` }))} onChange={(analysisId) => { const selected = analysisHistory.find((item) => item.analysisId === analysisId); setAnalysisResult(selected?.result); setAnalysisError(selected?.status === "failed" ? `分析失败：${selected.failureMessage || "未返回失败原因"}` : undefined); }} /> : null}
+          {analysisHistory.length ? <Select aria-label={bpText("agent.history")} value={analysisHistory.find((item) => item.result === analysisResult)?.analysisId ?? analysisHistory[0]?.analysisId} options={analysisHistory.map((item, index) => ({ value: item.analysisId, label: bpText("agent.historyItem", { index: analysisHistory.length - index, time: formatTime(item.startedAt), status: item.status === "completed" ? statusLabel("completed") : item.status === "failed" ? statusLabel("failed") : bpText("agent.analyzing") }) }))} onChange={(analysisId) => { const selected = analysisHistory.find((item) => item.analysisId === analysisId); setAnalysisResult(selected?.result); setAnalysisError(selected?.status === "failed" ? bpText("agent.failureWithReason", { reason: selected.failureMessage || bpText("agent.failureReasonMissing") }) : undefined); }} /> : null}
           {!analysisStarting && !analysisResult && !analysisError ? <section className={styles.agentEditor}>
-            <h4>待分析 Markdown</h4>
-            <p>仅包含当前交互轮次的调用过程事实；编辑只影响本次分析，不修改 Trace。</p>
-            <Input.TextArea aria-label="待分析 Markdown" value={analysisMarkdown} onChange={(event) => setAnalysisMarkdown(event.target.value)} autoSize={{ minRows: 14, maxRows: 24 }} disabled={analysisMarkdownLoading} placeholder={analysisMarkdownLoading ? "正在生成过程事实 Markdown…" : "未生成可分析的 Markdown"} />
-            <div className={styles.agentEditorActions}><Button icon={<CopyOutlined />} disabled={!analysisMarkdown} onClick={() => void copyMarkdown()}>复制 Markdown</Button><Button icon={<DownloadOutlined />} disabled={!analysisMarkdown} onClick={() => void downloadMarkdown()}>下载 Markdown</Button><Button type="primary" disabled={analysisMarkdownLoading || !analysisMarkdown.trim()} onClick={() => void startAnalysis()}>开始分析</Button></div>
+            <h4>{bpText("agent.markdownToAnalyze")}</h4>
+            <p>{bpText("agent.editorDescription")}</p>
+            <Input.TextArea aria-label={bpText("agent.markdownToAnalyze")} value={analysisMarkdown} onChange={(event) => setAnalysisMarkdown(event.target.value)} autoSize={{ minRows: 14, maxRows: 24 }} disabled={analysisMarkdownLoading} placeholder={analysisMarkdownLoading ? bpText("agent.generatingMarkdown") : bpText("agent.markdownUnavailable")} />
+            <div className={styles.agentEditorActions}><Button icon={<CopyOutlined />} disabled={!analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("actions.copyMarkdown")}</Button><Button icon={<DownloadOutlined />} disabled={!analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("actions.downloadMarkdown")}</Button><Button type="primary" disabled={analysisMarkdownLoading || !analysisMarkdown.trim()} onClick={() => void startAnalysis()}>{bpText("agent.start")}</Button></div>
           </section> : null}
-          {analysisStarting ? <section className={styles.agentLoading}><div><i /><strong>正在分析当前交互轮次</strong><p>{analysisStreamText || "BKN Agent 正在读取事实并核验源 BKN…"}</p></div></section> : null}
-          {analysisError ? <section className={styles.agentError}><strong>分析失败</strong><p>{analysisError.replace(/^分析失败：/, "")}</p><div><Button onClick={() => void copyMarkdown()}>复制本次 Markdown</Button><Button type="primary" onClick={prepareAnalysis}>返回编辑</Button></div></section> : null}
+          {analysisStarting ? <section className={styles.agentLoading}><div><i /><strong>{bpText("agent.analyzingRound")}</strong><p>{analysisStreamText || bpText("agent.verifying")}</p></div></section> : null}
+          {analysisError ? <section className={styles.agentError}><strong>{bpText("agent.failed")}</strong><p>{analysisError.replace(bpText("agent.failurePrefix"), "")}</p><div><Button onClick={() => void copyMarkdown()}>{bpText("agent.copyCurrentMarkdown")}</Button><Button type="primary" onClick={prepareAnalysis}>{bpText("agent.backToEdit")}</Button></div></section> : null}
           {analysisResult ? <AnalysisResult result={analysisResult} onRestart={prepareAnalysis} /> : null}
         </aside>
       </div>
@@ -488,18 +494,19 @@ export function BusinessProvenanceScene() {
 
 function AnalysisResult({ result, onRestart }: { result: Record<string, unknown>; onRestart: () => void }) {
   const advice = agentAdvice(result);
+  const missing = bpText("notReturned");
   return <section className={styles.agentResult}>
     {advice.conclusion ? <div className={styles.agentNote}>{advice.conclusion}</div> : null}
-    <h3>分类结论</h3>
+    <h3>{bpText("agent.verdicts")}</h3>
     <div className={styles.verdictGrid}>{["BKN", "BKN Trace", "MCP", "SDK", "Agent"].map((category) => <div key={category} className={styles.verdict}><strong>{category}</strong><small>{decisionLabel(advice.verdicts[category])}</small></div>)}</div>
-    <h3>修改建议</h3>
-    {advice.suggestions.length ? advice.suggestions.map((suggestion, index) => <article className={styles.recommendation} key={`${suggestion.id ?? "recommendation"}-${index}`}><header><strong>{suggestion.change || "未返回建议标题"}</strong><span>{suggestion.id || `REC-${index + 1}`}</span></header><dl><dt>类别</dt><dd>{suggestion.category || "未返回"}</dd><dt>修改位置</dt><dd>{suggestion.location || "未返回"}</dd><dt>问题</dt><dd>{suggestion.problem || "未返回"}</dd><dt>源证据</dt><dd>{suggestion.sourceEvidence || "未返回"}</dd><dt>核验证据</dt><dd>{suggestion.verificationEvidence || "未返回"}</dd><dt>修改方式</dt><dd>{suggestion.change || "未返回"}</dd><dt>验收</dt><dd>{suggestion.acceptance || "未返回"}</dd></dl></article>) : <div className={styles.agentSection}>本轮无需修改，或现有事实不足以形成严格建议。</div>}
-    <h3>无法判断</h3><div className={styles.agentSection}>{advice.notEvaluable || "无。"}</div>
-    <footer><Button onClick={() => { void navigator.clipboard?.writeText(adviceMarkdown(advice)); }}>复制建议 Markdown</Button><Button type="primary" onClick={onRestart}>重新分析</Button></footer>
+    <h3>{bpText("agent.recommendations")}</h3>
+    {advice.suggestions.length ? advice.suggestions.map((suggestion, index) => <article className={styles.recommendation} key={`${suggestion.id ?? "recommendation"}-${index}`}><header><strong>{suggestion.change || bpText("agent.suggestionTitleMissing")}</strong><span>{suggestion.id || `REC-${index + 1}`}</span></header><dl><dt>{bpText("agent.category")}</dt><dd>{suggestion.category || missing}</dd><dt>{bpText("agent.location")}</dt><dd>{suggestion.location || missing}</dd><dt>{bpText("agent.problem")}</dt><dd>{suggestion.problem || missing}</dd><dt>{bpText("agent.sourceEvidence")}</dt><dd>{suggestion.sourceEvidence || missing}</dd><dt>{bpText("agent.verificationEvidence")}</dt><dd>{suggestion.verificationEvidence || missing}</dd><dt>{bpText("agent.change")}</dt><dd>{suggestion.change || missing}</dd><dt>{bpText("agent.acceptance")}</dt><dd>{suggestion.acceptance || missing}</dd></dl></article>) : <div className={styles.agentSection}>{bpText("agent.noStrictSuggestion")}</div>}
+    <h3>{bpText("agent.unableToDetermine")}</h3><div className={styles.agentSection}>{advice.notEvaluable || bpText("none")}</div>
+    <footer><Button onClick={() => { void navigator.clipboard?.writeText(adviceMarkdown(advice)); }}>{bpText("agent.copyAdviceMarkdown")}</Button><Button type="primary" onClick={onRestart}>{bpText("agent.restart")}</Button></footer>
   </section>;
 }
 
 function analysisErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim()) return error.message.trim();
-  return "业务溯源优化 Agent 请求未返回可诊断信息";
+  return bpText("agent.noDiagnosticInfo");
 }

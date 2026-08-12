@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
 import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 
@@ -209,7 +210,7 @@ export async function streamBusinessProvenanceAnalysis(
     throw await analysisFetchError(response);
   }
   if (!response.body) {
-    throw new BusinessProvenanceAnalysisError("BKN Agent 未返回流式分析结果", "analysis_invalid_result");
+    throw new BusinessProvenanceAnalysisError(i18n.t("bknTrace.businessProvenance.workspace.agent.streamMissing"), "analysis_invalid_result");
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -227,7 +228,7 @@ export async function streamBusinessProvenanceAnalysis(
       if (event.name === "structured" && isRecord(event.data.content)) result = event.data.content;
       if (event.name === "error") {
         throw new BusinessProvenanceAnalysisError(
-          typeof event.data.message === "string" ? event.data.message : "BKN Agent 分析失败",
+          typeof event.data.message === "string" ? event.data.message : i18n.t("bknTrace.businessProvenance.workspace.agent.failed"),
           typeof event.data.code === "string" ? event.data.code : "analysis_agent_failed",
         );
       }
@@ -235,7 +236,7 @@ export async function streamBusinessProvenanceAnalysis(
     if (done) break;
   }
   if (!result) {
-    throw new BusinessProvenanceAnalysisError("BKN Agent 未返回可展示的分析结论", "analysis_empty_result");
+    throw new BusinessProvenanceAnalysisError(i18n.t("bknTrace.businessProvenance.workspace.agent.resultMissing"), "analysis_empty_result");
   }
   return result;
 }
@@ -276,9 +277,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function analysisFetchError(response: Response): Promise<BusinessProvenanceAnalysisError> {
   try {
     const payload = await response.json() as { error?: { code?: string; message?: string; status_code?: number } };
-    return new BusinessProvenanceAnalysisError(payload.error?.message || `业务溯源分析请求失败（HTTP ${response.status}）`, payload.error?.code, payload.error?.status_code ?? response.status);
+    return new BusinessProvenanceAnalysisError(payload.error?.message || i18n.t("bknTrace.businessProvenance.workspace.agent.httpFailure", { status: response.status }), payload.error?.code, payload.error?.status_code ?? response.status);
   } catch {
-    return new BusinessProvenanceAnalysisError(`业务溯源分析请求失败（HTTP ${response.status}）`, "analysis_transport", response.status);
+    return new BusinessProvenanceAnalysisError(i18n.t("bknTrace.businessProvenance.workspace.agent.httpFailure", { status: response.status }), "analysis_transport", response.status);
   }
 }
 

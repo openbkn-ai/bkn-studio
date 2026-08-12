@@ -29,10 +29,18 @@ vi.mock("@/modules/bkn-trace/business-provenance/business-provenance.service", (
 vi.mock("react-i18next", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-i18next")>();
   const { bknTraceZhCN } = await import("@/modules/bkn-trace/locales/zh-CN");
-  const values = bknTraceZhCN.bknTrace.businessProvenance as Record<string, string>;
+  const values: unknown = bknTraceZhCN.bknTrace.businessProvenance;
+  const translate = (key: string) => {
+    const path = key.replace("bknTrace.businessProvenance.", "").split(".");
+    const value = path.reduce<unknown>((current, segment) => {
+      if (!current || typeof current !== "object") return undefined;
+      return (current as Record<string, unknown>)[segment];
+    }, values);
+    return typeof value === "string" ? value : key;
+  };
   return {
     ...original,
-    useTranslation: () => ({ t: (key: string) => values[key.replace("bknTrace.businessProvenance.", "")] ?? key }),
+    useTranslation: () => ({ t: translate }),
   };
 });
 
