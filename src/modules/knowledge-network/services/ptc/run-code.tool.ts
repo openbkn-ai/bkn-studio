@@ -19,23 +19,13 @@
 
 import { jsonSchema, tool, type ToolSet } from "ai";
 
-import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
+import { http } from "@/framework/request/http";
 
-import { AGENT_OPERATOR_API_PREFIX } from "../shared/agent-operator-client";
-import stubSource from "./generated/_tools.py?raw";
-import { renderToolDigest } from "./tool-digest";
-
-/**
- * 沙箱回访 context-loader 用的 MCP 端点。
- *
- * 必须是集群内地址：浏览器侧的 base 经网关，沙箱走不到；而沙箱与 context-loader
- * 同在集群内，直接用 service 名。尾斜杠不能省——缺斜杠时服务端 307 跳转，而
- * 沙箱侧用的是 urllib，它不对 POST 跟随重定向。
- */
-const DEFAULT_SANDBOX_MCP_URL = "http://agent-retrieval:30779/api/agent-retrieval/v1/mcp/";
+import { AGENT_OPERATOR_API_PREFIX, getAgentOperatorHeaders } from "../shared/agent-operator-client";
+import type { PtcToolkit } from "./toolkit.service";
 
 /** 沙箱按 AWS Lambda 规范执行，入口必须是单参数的 handler(event)。 */
-function wrapForSandbox(code: string): string {
+function wrapForSandbox(stubSource: string, code: string): string {
   const body = code
     .split("\n")
     .map((line) => (line.trim() ? `    ${line}` : line))
@@ -51,29 +41,29 @@ type ExecuteResponse = {
 };
 
 export type PtcToolOptions = {
-  /**
-   * 运行时的 MCP 工具清单，用于渲染 run_code 的工具说明。
-   * 与常规模式同一份来源，工具增减或参数变更会自动反映到说明里。
-   */
-  mcpTools: McpToolDef[];
+  /** 由 context-loader 渲染的工具包：说明、沙箱 stub 与回访地址。 */
+  toolkit: PtcToolkit;
   /** 本轮的会话生命周期上下文，来源与常规模式一致。 */
   bknContext: () => Record<string, unknown> | undefined;
-  /** 最终用户令牌：沙箱以调用者身份访问 BKN，权限边界即该用户本人。 */
+  /**
+   * 沙箱访问 BKN 用的令牌，权限边界即该用户本人。
+   *
+   * 只作为 event 下发给沙箱，不用来给本次 HTTP 请求签名——打执行工厂的鉴权
+   * 由 http 客户端统一处理（它持有当前有效令牌并负责刷新），手拼 Authorization
+   * 会用上一个已经失效的快照，表现为 401 token is invalid。
+   */
   token: string;
   /** 网关前缀，浏览器经它打执行工厂。 */
   apiBase?: string;
-  sandboxMcpUrl?: string;
-  headers?: Record<string, string>;
 };
 
 export function buildPtcTools(options: PtcToolOptions): ToolSet {
-  const { mcpTools, bknContext, token, headers = {} } = options;
+  const { toolkit, bknContext, token } = options;
   const base = options.apiBase ?? `/api${AGENT_OPERATOR_API_PREFIX}`;
-  const mcpUrl = options.sandboxMcpUrl ?? DEFAULT_SANDBOX_MCP_URL;
 
   return {
     run_code: tool({
-      description: renderToolDigest(mcpTools),
+      description: toolkit.digest,
       inputSchema: jsonSchema({
         type: "object",
         properties: {
@@ -89,29 +79,25 @@ export function buildPtcTools(options: PtcToolOptions): ToolSet {
         const { code, timeout = 60 } = (input ?? {}) as { code?: string; timeout?: number };
         if (!code || !code.trim()) return "错误：code 为空。请给出要执行的 Python 代码。";
 
-        const response = await fetch(`${base}/function/execute`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            ...headers,
-          },
-          body: JSON.stringify({
-            code: wrapForSandbox(code),
+        const { data: result } = await http.post<ExecuteResponse>(
+          `${base}/function/execute`,
+          {
+            code: wrapForSandbox(toolkit.stub, code),
             language: "python",
             timeout,
             // 凭据与会话上下文走 event 而非 env_vars：沙箱会话是池化复用的，
             // env 会把上一个调用方的值留在容器里，event 是每次调用的入参。
-            event: { mcp: mcpUrl, token, bkn: bknContext() ?? {} },
-          }),
-        });
+            event: { mcp: toolkit.sandbox_mcp_url, token, bkn: bknContext() ?? {} },
+          },
+          {
+            headers: getAgentOperatorHeaders(),
+            // 沙箱执行可能跑满 timeout；HTTP 侧要留够余量，否则连接先断，
+            // 模型拿到的是网络错误而不是脚本的 traceback。
+            timeout: (timeout + 30) * 1000,
+            skipErrorToast: true,
+          },
+        );
 
-        if (!response.ok) {
-          const detail = (await response.text()).slice(0, 500);
-          return `沙箱执行请求失败（HTTP ${response.status}）：${detail}`;
-        }
-
-        const result = (await response.json()) as ExecuteResponse;
         const stdout = (result.stdout ?? "").trim();
         if (result.exit_code === 0) {
           return stdout || "（脚本没有输出。只有 print 的内容会返回，记得打印结果。）";

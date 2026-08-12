@@ -54,6 +54,7 @@ import {
   type AgentTokenProvider,
 } from "@/modules/knowledge-network/services/agent-chat.service";
 import { buildPtcTools } from "@/modules/knowledge-network/services/ptc/run-code.tool";
+import { fetchPtcToolkit } from "@/modules/knowledge-network/services/ptc/toolkit.service";
 import {
   normalizeAgentError,
   type NormalizedAgentError,
@@ -677,8 +678,18 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
               ...(m.toolCalls ?? []),
               (() => {
                 const bknContext = turnContextRef.current ?? undefined;
-                const effectiveArgs = effectiveToolArgs(chunk.name, chunk.args, knId, bknContext);
-                const clientBlocked = !!guardAgentToolArgs(chunk.name, effectiveArgs);
+                // PTC 模式下工具只有 run_code，入参就是模型写的代码；MCP 那套
+                // 「补齐 kn_id / response_format / bkn_context」在这里只会往展示里
+                // 塞入并不存在的参数。
+                const effectiveArgs =
+                  profile.toolMode === "ptc"
+                    ? chunk.args
+                    : effectiveToolArgs(chunk.name, chunk.args, knId, bknContext);
+                // PTC 模式没有 MCP 工具的参数护栏可言：唯一的工具是 run_code，
+                // 它的入参是一段代码，不存在「kn_id 被改写」这类需要拦截的形态。
+                const clientBlocked =
+                  profile.toolMode !== "ptc" &&
+                  !!guardAgentToolArgs(chunk.name, effectiveArgs as Record<string, unknown>);
                 return {
                   id: chunk.id,
                   name: chunk.name,
@@ -826,7 +837,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         const tools =
           profile.toolMode === "ptc"
             ? buildPtcTools({
-                mcpTools: activeTools,
+                toolkit: await fetchPtcToolkit(env.base, env.token),
                 bknContext: () => turn?.nextContext() ?? undefined,
                 token: env.token,
               })
