@@ -249,7 +249,16 @@ function buildProfiles(t: TFunction) {
     toolMode: "ptc",
     defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.ptcPrompt"),
   };
-  return { soloProfile, baseProfile, knProfile, ptcProfile };
+  // 对比模式下的 PTC 侧：沿用 knProfile 的身份与 KN 上下文注入，只换工具面形态。
+  // 左右接同一个知识网络，差别仅在「逐个工具」与「写代码」，才是有意义的对照。
+  const ptcComparePane: PaneProfile = {
+    ...knProfile,
+    title: t("knowledgeNetwork.agentChat.profiles.ptcTitle"),
+    emptyTitle: t("knowledgeNetwork.agentChat.profiles.ptcEmptyTitle"),
+    toolMode: "ptc",
+    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.ptcPrompt"),
+  };
+  return { soloProfile, baseProfile, knProfile, ptcProfile, ptcComparePane };
 }
 
 /** Evaluation prompt for the AI summary in a comparison report. */
@@ -878,12 +887,10 @@ export function AgentChat({
             />
             <span>{t("knowledgeNetwork.agentChat.composer.compareMode")}</span>
           </div>
-          {!compare.on ? (
-            <div className={styles.modeToggle}>
-              <Switch checked={ptcOn} disabled={anyBusy} onChange={setPtcOn} />
-              <span>{t("knowledgeNetwork.agentChat.composer.ptcMode")}</span>
-            </div>
-          ) : null}
+          <div className={styles.modeToggle}>
+            <Switch checked={ptcOn} disabled={anyBusy} onChange={setPtcOn} />
+            <span>{t("knowledgeNetwork.agentChat.composer.ptcMode")}</span>
+          </div>
           {!compare.on ? <span className={styles.paneTitle}>{t("knowledgeNetwork.agentChat.profiles.knTitle")}</span> : null}
         </div>
         {!compare.on ? (
@@ -919,7 +926,7 @@ export function AgentChat({
                   <ChatPane
                     ref={knRef}
                     {...paneShared}
-                    profile={profiles.knProfile}
+                    profile={ptcOn ? profiles.ptcComparePane : profiles.knProfile}
                     suggestions={suggestions}
                     onPick={sendQuestion}
                     onBusyChange={onKnBusy}

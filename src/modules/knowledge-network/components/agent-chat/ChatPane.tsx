@@ -274,6 +274,15 @@ const CONFIG_FIELD_KEYS: { key: keyof AgentConfig }[] = [
 ];
 
 function formatArgs(args: unknown): string {
+  // PTC 模式下入参就是模型写的一段 Python，JSON.stringify 会把它压成带 \n 的
+  // 单行字符串——那正是这里最该看清楚的东西，所以原样展开代码，其余参数附在后面。
+  if (args && typeof args === "object" && !Array.isArray(args)) {
+    const { code, ...rest } = args as Record<string, unknown>;
+    if (typeof code === "string") {
+      const extras = Object.keys(rest).length ? `\n\n# ${JSON.stringify(rest)}` : "";
+      return code + extras;
+    }
+  }
   try {
     return JSON.stringify(args, null, 2);
   } catch {

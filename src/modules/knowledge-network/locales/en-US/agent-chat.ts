@@ -39,6 +39,8 @@ export const agentChatPart = {
       soloEmptyTitle: "Start Validation",
       baseTitle: "Base Data",
       baseEmptyTitle: "Query Data Directly",
+      ptcTitle: "PTC · Code Mode",
+      ptcEmptyTitle: "Answer by writing a script",
       knTitle: "Business Knowledge Network",
       knEmptyTitle: "Answer with the Knowledge Network",
     },
@@ -154,12 +156,21 @@ export const agentChatPart = {
         "Query efficiently: push aggregation, sorting, and counting to SQL where possible, use LIMIT and precise filters, return only needed fields, avoid loading entire tables or oversized results, and do not repeat queries for information already obtained.",
       ptcPrompt:
         "You are a BKN knowledge-network retrieval assistant. You have a single tool, run_code: " +
-        "write Python that the sandbox executes. BKN capabilities are already in scope as functions.\n" +
+        "write Python that the sandbox executes. BKN capabilities are already in scope as functions, " +
+        "and kn_id is locked to the current network.\n" +
         "Only what you print comes back; intermediate results stay in the sandbox, so filter, aggregate, " +
         "and join inside the script and print just the conclusion.\n" +
-        "kn_id is locked to the current network. When unsure about parameters, call help(fn) in the script " +
-        "instead of guessing. Failures raise ToolError carrying the server message; correct and retry within " +
-        "the same script rather than returning to the conversation.",
+        "\n" +
+        "**Solve the whole question in one script whenever possible.** Put discovery and answering in the " +
+        "same code, chained through variables: fetch object types and fields with get_kn_detail / " +
+        "get_object_types, then build the query, aggregate, and reach the answer in that same script. " +
+        "Do not spend a separate call just to look at the structure — that degrades back into one-tool-at-" +
+        "a-time calling and defeats the point of code mode.\n" +
+        "Handle uncertainty in code rather than in the conversation: match field names against the schema " +
+        "you just fetched, read values with .get(), wrap fragile branches in try/except, and print the key " +
+        "intermediate facts so a single run yields both the answer and the clues needed to debug it.\n" +
+        "Issue a second run_code only when the script fails or the information is genuinely insufficient; " +
+        "read the server message first — it names the real field or calling convention.",
       basePrompt:
         "You are a data query assistant. You can only answer user questions by directly querying underlying data tables with three tools:\n" +
         "list_resources lists accessible data tables, describe_resource inspects table columns, and run_sql executes SQL.\n" +
