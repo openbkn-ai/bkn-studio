@@ -19,9 +19,11 @@
 
 import { jsonSchema, tool, type ToolSet } from "ai";
 
+import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
+
 import { AGENT_OPERATOR_API_PREFIX } from "../shared/agent-operator-client";
 import stubSource from "./generated/_tools.py?raw";
-import toolDigest from "./generated/tool_digest.md?raw";
+import { renderToolDigest } from "./tool-digest";
 
 /**
  * 沙箱回访 context-loader 用的 MCP 端点。
@@ -49,6 +51,11 @@ type ExecuteResponse = {
 };
 
 export type PtcToolOptions = {
+  /**
+   * 运行时的 MCP 工具清单，用于渲染 run_code 的工具说明。
+   * 与常规模式同一份来源，工具增减或参数变更会自动反映到说明里。
+   */
+  mcpTools: McpToolDef[];
   /** 本轮的会话生命周期上下文，来源与常规模式一致。 */
   bknContext: () => Record<string, unknown> | undefined;
   /** 最终用户令牌：沙箱以调用者身份访问 BKN，权限边界即该用户本人。 */
@@ -60,13 +67,13 @@ export type PtcToolOptions = {
 };
 
 export function buildPtcTools(options: PtcToolOptions): ToolSet {
-  const { bknContext, token, headers = {} } = options;
+  const { mcpTools, bknContext, token, headers = {} } = options;
   const base = options.apiBase ?? `/api${AGENT_OPERATOR_API_PREFIX}`;
   const mcpUrl = options.sandboxMcpUrl ?? DEFAULT_SANDBOX_MCP_URL;
 
   return {
     run_code: tool({
-      description: toolDigest,
+      description: renderToolDigest(mcpTools),
       inputSchema: jsonSchema({
         type: "object",
         properties: {
