@@ -74,6 +74,12 @@ describe("mapBuildTask", () => {
 
     expect(task.executeType).toBeUndefined();
   });
+
+  it("keeps stopping distinct and preserves cancelled", () => {
+    expect(mapBuildTask({ id: "task-1", status: "stopping" }).status).toBe("stopping");
+    expect(mapBuildTask({ id: "task-2", status: "stopped" }).status).toBe("paused");
+    expect(mapBuildTask({ id: "task-3", status: "cancelled" }).status).toBe("cancelled");
+  });
 });
 
 describe("createBuildTask", () => {
@@ -110,6 +116,29 @@ describe("createBuildTask", () => {
       await expect(
         createWithAPI({ mode: "batch", resourceId: "resource-1" }),
       ).rejects.toThrow("Created build task task-1 could not be retrieved");
+    });
+
+    it("sends repeated backend status parameters without active", async () => {
+      getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+      const { listBuildTaskPage } = await import(
+        "@/modules/data-catalog/services/build-task.service"
+      );
+
+      await listBuildTaskPage({
+        page: 1,
+        pageSize: 20,
+        statuses: ["stopping", "paused", "cancelled"],
+      });
+
+      expect(getMock).toHaveBeenCalledOnce();
+      expect(getMock.mock.calls[0]?.[0]).toBe("/vega-backend/v1/build-tasks");
+      const config = getMock.mock.calls[0]?.[1] as {
+        params: Record<string, unknown>;
+        paramsSerializer: { indexes: null };
+      };
+      expect(config.params.status).toEqual(["stopping", "stopped", "cancelled"]);
+      expect(config.paramsSerializer).toEqual({ indexes: null });
+      expect(config.params).not.toHaveProperty("active");
     });
   });
 });

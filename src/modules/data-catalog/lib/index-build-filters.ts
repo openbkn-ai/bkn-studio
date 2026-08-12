@@ -8,11 +8,13 @@
 import type { BuildMode, BuildTaskStatus } from "@/modules/data-catalog/types/data-catalog";
 
 const STATUS_SET = new Set<BuildTaskStatus>([
+  "cancelled",
   "failed",
   "listening",
   "paused",
   "pending",
   "running",
+  "stopping",
   "succeeded",
 ]);
 

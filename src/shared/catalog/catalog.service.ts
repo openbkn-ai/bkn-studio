@@ -23,6 +23,9 @@ import {
 import type {
   CatalogConnectionTestInput,
   CatalogConnectionTestResult,
+  CatalogDeletionBlocker,
+  CatalogDeletionImpact,
+  CatalogDeletionTaskImpact,
   CatalogHealthCheckSchedule,
   CatalogHealthCheckScheduleInput,
   CatalogListQuery,
@@ -42,6 +45,24 @@ type BackendCatalogHealthCheckSchedule = {
   last_run: number;
   mode: CatalogHealthCheckSchedule["mode"];
   next_run: number;
+};
+
+type BackendCatalogDeletionTaskImpact = {
+  blocking: number;
+  will_cancel: number;
+};
+
+type BackendCatalogDeletionImpact = {
+  blockers: CatalogDeletionBlocker[];
+  build_tasks: BackendCatalogDeletionTaskImpact;
+  can_delete: boolean;
+  catalog_health_check_schedules: number;
+  catalog_id: string;
+  discover_schedules: number;
+  discover_tasks: BackendCatalogDeletionTaskImpact;
+  protected_resources: number;
+  resources: number;
+  semantic_understanding_tasks: BackendCatalogDeletionTaskImpact;
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -107,6 +128,51 @@ export async function deleteCatalog(id: string) {
   }
 
   await http.delete(`/vega-backend/v1/catalogs/${id}`);
+}
+
+export async function previewCatalogDeletion(id: string): Promise<CatalogDeletionImpact> {
+  if (useMock) {
+    return wait({
+      blockers: [],
+      buildTasks: { blocking: 0, willCancel: 0 },
+      canDelete: true,
+      catalogHealthCheckSchedules: 0,
+      catalogId: id,
+      discoverSchedules: 0,
+      discoverTasks: { blocking: 0, willCancel: 0 },
+      protectedResources: 0,
+      resources: 0,
+      semanticUnderstandingTasks: { blocking: 0, willCancel: 0 },
+    });
+  }
+
+  const response = await http.delete<BackendCatalogDeletionImpact>(
+    `/vega-backend/v1/catalogs/${id}`,
+    {
+      params: { dry_run: true },
+      skipErrorToast: true,
+    },
+  );
+  const impact = response.data;
+  const mapTaskImpact = (
+    taskImpact: BackendCatalogDeletionTaskImpact,
+  ): CatalogDeletionTaskImpact => ({
+    blocking: taskImpact.blocking,
+    willCancel: taskImpact.will_cancel,
+  });
+
+  return {
+    blockers: impact.blockers,
+    buildTasks: mapTaskImpact(impact.build_tasks),
+    canDelete: impact.can_delete,
+    catalogHealthCheckSchedules: impact.catalog_health_check_schedules,
+    catalogId: impact.catalog_id,
+    discoverSchedules: impact.discover_schedules,
+    discoverTasks: mapTaskImpact(impact.discover_tasks),
+    protectedResources: impact.protected_resources,
+    resources: impact.resources,
+    semanticUnderstandingTasks: mapTaskImpact(impact.semantic_understanding_tasks),
+  };
 }
 
 export async function setCatalogEnabled(id: string, enabled: boolean) {

@@ -8,11 +8,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
+const deleteMock = vi.hoisted(() => vi.fn());
 const postMock = vi.hoisted(() => vi.fn());
 const putMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock, post: postMock, put: putMock },
+  http: { delete: deleteMock, get: getMock, post: postMock, put: putMock },
 }));
 
 function lastParams(): Record<string, unknown> {
@@ -48,6 +49,58 @@ describe("catalog.service · listCatalogs", () => {
     await listCatalogs({ keyword: "", page: 1, pageSize: 50, type: "all" });
 
     expect(lastParams()).toMatchObject({ type: undefined });
+  });
+});
+
+describe("catalog.service · deletion preflight", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    deleteMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("requests a dry run and maps the complete deletion impact", async () => {
+    deleteMock.mockResolvedValue({
+      data: {
+        blockers: ["discover_tasks_running"],
+        build_tasks: { blocking: 0, will_cancel: 1 },
+        can_delete: false,
+        catalog_health_check_schedules: 1,
+        catalog_id: "catalog-1",
+        discover_schedules: 2,
+        discover_tasks: { blocking: 1, will_cancel: 3 },
+        protected_resources: 0,
+        resources: 4,
+        semantic_understanding_tasks: { blocking: 0, will_cancel: 2 },
+      },
+    });
+    const { previewCatalogDeletion } = await import(
+      "@/shared/catalog/catalog.service"
+    );
+
+    await expect(previewCatalogDeletion("catalog-1")).resolves.toEqual({
+      blockers: ["discover_tasks_running"],
+      buildTasks: { blocking: 0, willCancel: 1 },
+      canDelete: false,
+      catalogHealthCheckSchedules: 1,
+      catalogId: "catalog-1",
+      discoverSchedules: 2,
+      discoverTasks: { blocking: 1, willCancel: 3 },
+      protectedResources: 0,
+      resources: 4,
+      semanticUnderstandingTasks: { blocking: 0, willCancel: 2 },
+    });
+    expect(deleteMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/catalogs/catalog-1",
+      {
+        params: { dry_run: true },
+        skipErrorToast: true,
+      },
+    );
   });
 });
 

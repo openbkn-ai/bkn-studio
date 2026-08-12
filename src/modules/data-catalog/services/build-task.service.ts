@@ -108,8 +108,8 @@ function splitFields(value?: string | string[]): string[] {
 }
 
 /**
- * Vega backend enum values: init, running, completed, stopping, stopped, and failed.
- * In streaming mode, running means persistent listening, while stopped/stopping means paused.
+ * Vega backend enum values: pending, running, completed, stopping, stopped, failed, and cancelled.
+ * In streaming mode, running means persistent listening, while stopped is presented as paused.
  */
 function normalizeStatus(value: string | undefined, mode: BuildMode): BuildTaskStatus {
   switch (value) {
@@ -117,17 +117,19 @@ function normalizeStatus(value: string | undefined, mode: BuildMode): BuildTaskS
       return mode === "streaming" ? "listening" : "running";
     case "completed":
       return "succeeded";
-    case "stopping":
     case "stopped":
       return "paused";
+    case "stopping":
+      return "stopping";
     case "failed":
       return "failed";
+    case "cancelled":
+      return "cancelled";
     case "listening":
     case "paused":
     case "succeeded":
     case "pending":
       return value;
-    case "init":
     default:
       return "pending";
   }
@@ -299,7 +301,7 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     createdAt,
     createTime: createdAt ? formatMockTimestamp(createdAt) : "-",
     finishTime:
-      (status === "succeeded" || status === "failed") && item.update_time
+      (status === "succeeded" || status === "failed" || status === "cancelled") && item.update_time
         ? formatMockTimestamp(item.update_time)
         : null,
     updatedAt: item.update_time,
@@ -338,8 +340,9 @@ export async function listBuildTasks(
     return wait(filterTasks(tasks, query), 120);
   }
 
-  // The backend supports only one status value and uses different enum values, so load all and
-  // filter in the frontend by normalized status.
+  const backendStatuses = query.statuses?.length
+    ? backendStatusParams(query.statuses)
+    : undefined;
   const tasks: BuildTask[] = [];
   let offset = 0;
   let total = Number.POSITIVE_INFINITY;
@@ -353,7 +356,9 @@ export async function listBuildTasks(
           offset,
           resource_id: query.resourceId || undefined,
           catalog_id: query.catalogId || undefined,
+          status: backendStatuses,
         },
+        paramsSerializer: { indexes: null },
         skipErrorToast: query.silent,
       },
     );
@@ -370,27 +375,27 @@ export async function listBuildTasks(
   return filterTasks(tasks, query);
 }
 
-// Frontend normalized states mapped to backend enums. paused covers stopping/stopped; listening maps to backend running.
+// Frontend normalized states mapped to backend enums. paused maps to stopped; listening maps to running.
 const FE_TO_BACKEND_STATUS: Record<BuildTaskStatus, string[]> = {
-  pending: ["init"],
+  pending: ["pending"],
   running: ["running"],
   listening: ["running"],
   succeeded: ["completed"],
-  paused: ["stopping", "stopped"],
+  paused: ["stopped"],
+  stopping: ["stopping"],
   failed: ["failed"],
+  cancelled: ["cancelled"],
 };
 
-export function backendStatusParam(statuses: BuildTaskStatus[]): string {
+export function backendStatusParams(statuses: BuildTaskStatus[]): string[] {
   const set = new Set<string>();
   for (const status of statuses) {
     for (const backend of FE_TO_BACKEND_STATUS[status]) {
       set.add(backend);
     }
   }
-  return Array.from(set).join(",");
+  return Array.from(set);
 }
-
-const ACTIVE_FE_STATUSES = new Set<BuildTaskStatus>(["pending", "running", "listening"]);
 
 function sortMockTasks(
   items: BuildTask[],
@@ -398,17 +403,9 @@ function sortMockTasks(
   order: "asc" | "desc",
 ): BuildTask[] {
   const arr = [...items];
-  if (orderBy === "default") {
-    // Active builds first, then descending createdAt within each bucket.
-    return arr.sort((a, b) => {
-      const aActive = ACTIVE_FE_STATUSES.has(a.status) ? 0 : 1;
-      const bActive = ACTIVE_FE_STATUSES.has(b.status) ? 0 : 1;
-      return aActive !== bActive ? aActive - bActive : b.createdAt - a.createdAt;
-    });
-  }
   const dir = order === "asc" ? 1 : -1;
   const keyOf = (task: BuildTask): number =>
-    orderBy === "created_at"
+    orderBy === "created_at" || orderBy === "default"
       ? task.createdAt
       : (task.lastEventAt ?? task.createdAt);
   return arr.sort((a, b) => {
@@ -421,8 +418,7 @@ function sortMockTasks(
 }
 
 /**
- * Server-paginated list with sorting and status filtering. Integrates backend pagination through
- * limit/offset, order_by/order, comma-separated status values, and active=true for active builds only.
+ * Server-paginated list with sorting and repeated status query parameters.
  */
 export async function listBuildTaskPage(
   query: BuildTaskPageQuery,
@@ -446,9 +442,7 @@ export async function listBuildTaskPage(
     if (query.mode) {
       items = items.filter((task) => task.mode === query.mode);
     }
-    if (query.active) {
-      items = items.filter((task) => ACTIVE_FE_STATUSES.has(task.status));
-    } else if (query.statuses?.length) {
+    if (query.statuses?.length) {
       const set = new Set(query.statuses);
       items = items.filter((task) => set.has(task.status));
     }
@@ -469,15 +463,13 @@ export async function listBuildTaskPage(
     params.order_by = query.orderBy;
     params.order = query.order ?? "desc";
   }
-  if (query.active) {
-    params.active = true;
-  } else if (query.statuses?.length) {
-    params.status = backendStatusParam(query.statuses);
+  if (query.statuses?.length) {
+    params.status = backendStatusParams(query.statuses);
   }
 
   const response = await http.get<ListResponse<BackendBuildTaskSummary>>(
     "/vega-backend/v1/build-tasks",
-    { params },
+    { params, paramsSerializer: { indexes: null } },
   );
   return {
     items: response.data.entries.map(mapBuildTask),
@@ -503,7 +495,8 @@ function hasActiveTaskForResource(resourceId: string) {
       task.resourceId === resourceId &&
       (task.status === "pending" ||
         task.status === "running" ||
-        task.status === "listening"),
+        task.status === "listening" ||
+        task.status === "stopping"),
   );
 }
 

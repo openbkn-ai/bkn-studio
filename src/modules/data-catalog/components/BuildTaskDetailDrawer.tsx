@@ -281,7 +281,9 @@ export function BuildTaskDetailDrawer({
                       ? sharedStyles.taskSucceeded
                       : task.status === "listening"
                         ? sharedStyles.modeStreaming
-                        : sharedStyles.taskRunning,
+                        : task.status === "cancelled"
+                          ? sharedStyles.taskPending
+                          : sharedStyles.taskRunning,
                 ].join(" ")}
               >
                 {statusLabel}

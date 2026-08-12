@@ -220,6 +220,7 @@ function normalizeTaskStatus(value?: string): DataConnectDiscoverTaskStatus {
     case "running":
     case "completed":
     case "failed":
+    case "cancelled":
       return value;
     default:
       return "pending";

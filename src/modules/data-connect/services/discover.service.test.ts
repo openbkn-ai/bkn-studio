@@ -1,0 +1,56 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const getMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/framework/request/http", () => ({
+  http: { get: getMock },
+}));
+
+describe("discover.service · task status contract", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("preserves cancelled tasks returned by Vega", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "catalog-1",
+            id: "task-1",
+            status: "cancelled",
+          },
+        ],
+        total_count: 1,
+      },
+    });
+    const { listDataConnectDiscoverTasks } = await import(
+      "@/modules/data-connect/services/discover.service"
+    );
+
+    const result = await listDataConnectDiscoverTasks({
+      page: 1,
+      pageSize: 20,
+      status: "cancelled",
+    });
+
+    expect(result.items[0]?.status).toBe("cancelled");
+    expect(getMock).toHaveBeenCalledOnce();
+    expect(getMock.mock.calls[0]?.[0]).toBe("/vega-backend/v1/discover-tasks");
+    const config = getMock.mock.calls[0]?.[1] as { params: Record<string, unknown> };
+    expect(config.params.status).toBe("cancelled");
+  });
+});

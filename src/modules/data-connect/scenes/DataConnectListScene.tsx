@@ -37,10 +37,65 @@ import {
   DeleteImpactAlert,
   useDangerDelete,
 } from "@/framework/safety/DangerDeleteModal";
-import { runningIdsFromError } from "@/framework/safety/delete-guard";
-import { catalogBlastRadius } from "@/shared/catalog";
+import {
+  previewCatalogDeletion,
+  type CatalogDeletionImpact,
+} from "@/shared/catalog";
 
 import styles from "./DataConnectListScene.module.css";
+
+function hasCascadeImpact(impact: CatalogDeletionImpact) {
+  return (
+    impact.resources > 0 ||
+    impact.catalogHealthCheckSchedules > 0 ||
+    impact.discoverSchedules > 0 ||
+    impact.buildTasks.willCancel > 0 ||
+    impact.discoverTasks.willCancel > 0 ||
+    impact.semanticUnderstandingTasks.willCancel > 0
+  );
+}
+
+function CatalogDeletionImpactDetails({
+  impact,
+  name,
+}: {
+  impact: CatalogDeletionImpact;
+  name: string;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <div>{t("dataConnect.dangerDelete.catalogImpact", { name })}</div>
+      <ul style={{ marginBottom: 0, marginTop: 8, paddingInlineStart: 20 }}>
+        <li>
+          {t("dataConnect.dangerDelete.resources", {
+            count: impact.resources,
+            protected: impact.protectedResources,
+          })}
+        </li>
+        <li>
+          {t("dataConnect.dangerDelete.schedules", {
+            discover: impact.discoverSchedules,
+            health: impact.catalogHealthCheckSchedules,
+          })}
+        </li>
+        <li>
+          {t("dataConnect.dangerDelete.buildTasks", impact.buildTasks)}
+        </li>
+        <li>
+          {t("dataConnect.dangerDelete.discoverTasks", impact.discoverTasks)}
+        </li>
+        <li>
+          {t(
+            "dataConnect.dangerDelete.semanticUnderstandingTasks",
+            impact.semanticUnderstandingTasks,
+          )}
+        </li>
+      </ul>
+    </div>
+  );
+}
 
 export function DataConnectListScene({
   defaultConnectorType,
@@ -195,13 +250,30 @@ export function DataConnectListScene({
 
   const deleteRecord = useCallback((record: DataConnectRecord) => {
     void (async () => {
-      let indexCount = 0;
+      let impact: CatalogDeletionImpact;
       try {
-        indexCount = (await catalogBlastRadius(record.id)).indexCount;
-      } catch {
-        indexCount = 0;
+        impact = await previewCatalogDeletion(record.id);
+      } catch (error) {
+        void message.error(extractRequestErrorMessage(error));
+        return;
       }
-      const highRisk = indexCount > 0;
+
+      const details = <CatalogDeletionImpactDetails impact={impact} name={record.name} />;
+      if (!impact.canDelete) {
+        void modal.warning({
+          content: (
+            <DeleteImpactAlert
+              detail={details}
+              warning={t("dataConnect.dangerDelete.blockedWarning")}
+            />
+          ),
+          okText: t("common.confirm"),
+          title: t("dataConnect.dangerDelete.blockedTitle"),
+        });
+        return;
+      }
+
+      const highRisk = hasCascadeImpact(impact);
       danger.open({
         title: t("dataConnect.deleteConfirmTitle"),
         targetName: record.name,
@@ -209,14 +281,7 @@ export function DataConnectListScene({
         impact: (
           <DeleteImpactAlert
             detail={
-              highRisk
-                ? t("dataConnect.dangerDelete.catalogImpact", {
-                    name: record.name,
-                    count: indexCount,
-                  })
-                : t("dataConnect.dangerDelete.catalogEmpty", {
-                    name: record.name,
-                  })
+              highRisk ? details : t("dataConnect.dangerDelete.catalogEmpty", { name: record.name })
             }
             warning={highRisk ? t("dataConnect.dangerDelete.impactWarning") : undefined}
           />
@@ -225,12 +290,7 @@ export function DataConnectListScene({
           try {
             await deleteDataConnectRecord(record.id);
           } catch (error) {
-            const running = runningIdsFromError(error);
-            void message.error(
-              running
-                ? t("dataConnect.dangerDelete.hasRunning")
-                : extractRequestErrorMessage(error),
-            );
+            void message.error(extractRequestErrorMessage(error));
             throw error;
           }
           void message.success(t("common.success"));
@@ -238,7 +298,7 @@ export function DataConnectListScene({
         },
       });
     })();
-  }, [danger, loadData, message, t]);
+  }, [danger, loadData, message, modal, t]);
 
   const buildActionMoreMenu = useCallback((record: DataConnectRecord): MenuProps => {
     const items: NonNullable<MenuProps["items"]> = [
