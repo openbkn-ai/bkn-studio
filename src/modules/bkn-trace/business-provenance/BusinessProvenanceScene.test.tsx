@@ -114,6 +114,21 @@ describe("BusinessProvenanceScene", () => {
     expect(screen.queryByLabelText("结束时间")).toBeNull();
   });
 
+  it("submits the conversation filters when the user presses Enter", async () => {
+    getConversations.mockResolvedValue({ entries: [], total: 0 });
+
+    render(<BusinessProvenanceScene />);
+    await waitFor(() => expect(getConversations).toHaveBeenCalledTimes(1));
+
+    const keyword = screen.getByPlaceholderText("搜索问题、结果或会话 ID");
+    fireEvent.change(keyword, { target: { value: "采购订单" } });
+    fireEvent.keyDown(keyword, { key: "Enter", code: "Enter" });
+
+    await waitFor(() => expect(getConversations).toHaveBeenLastCalledWith(expect.objectContaining({
+      keyword: "采购订单",
+    })));
+  });
+
   it("discards a late interaction list from the previously selected conversation", async () => {
     let resolveFirst!: (value: { entries: Array<{ interactionId: string; questionPreview: string }>; total: number }) => void;
     let resolveSecond!: (value: { entries: Array<{ interactionId: string; questionPreview: string }>; total: number }) => void;
