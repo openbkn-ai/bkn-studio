@@ -34,6 +34,15 @@ test("日志详情使用贴右限高面板并仅滚动正文", () => {
   assert.match(logsHtml, /\.detail-body\{[^}]*flex:1 1 auto[^}]*overflow-y:auto/);
 });
 
+test("日志工作台使用标准内容宽度和条件式两行全文预览", () => {
+  assert.doesNotMatch(logsHtml, /max-width:1680px/);
+  assert.match(logsHtml, /grid-template-columns:264px minmax\(0,1fr\)/);
+  assert.match(logsHtml, /\.clamp-2\{[^}]*-webkit-line-clamp:2/);
+  assert.match(logsHtml, /id="cell-hover-preview"/);
+  assert.match(logsHtml, /scrollHeight>[^;]*clientHeight/);
+  assert.match(logsHtml, /scrollWidth>[^;]*clientWidth/);
+});
+
 test("业务溯源原型不把缺失事实包装为完整证据", () => {
   assert.match(html, />业务溯源</);
   assert.match(html, /部分可溯源/);
