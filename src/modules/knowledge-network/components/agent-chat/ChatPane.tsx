@@ -53,6 +53,7 @@ import {
   type AgentConfig,
   type AgentTokenProvider,
 } from "@/modules/knowledge-network/services/agent-chat.service";
+import { buildPtcTools } from "@/modules/knowledge-network/services/ptc/run-code.tool";
 import {
   normalizeAgentError,
   type NormalizedAgentError,
@@ -119,6 +120,11 @@ export type PaneProfile = {
   evidenceHint: string;
   /** Visual highlight for the primary compare pane. */
   highlight?: boolean;
+  /**
+   * 工具面形态。mcp：逐个暴露 BKN 工具（默认）。ptc：只暴露 run_code，模型写
+   * Python 交沙箱执行，中间结果留在沙箱。见 services/ptc/run-code.tool.ts。
+   */
+  toolMode?: "mcp" | "ptc";
 };
 
 /** Turn result status; empty/stopped/error are negative outcomes. */
@@ -792,11 +798,20 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         );
         // Hard allowlist: only selected tools are sent to the model; null means all.
         const activeTools = toolSelection ? modelVisibleTools.filter((t) => toolSelection.includes(t.name)) : modelVisibleTools;
-        const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider, {
-          resourceScope,
-          session: lifecycle.session,
-          turn,
-        });
+        // PTC 模式只给模型一个 run_code：BKN 能力下沉为沙箱内的函数，中间结果
+        // 留在沙箱，只有 stdout 回到上下文。工具说明由同一份 tools/list 渲染。
+        const tools =
+          profile.toolMode === "ptc"
+            ? buildPtcTools({
+                mcpTools: activeTools,
+                bknContext: () => turn?.nextContext() ?? undefined,
+                token: env.token,
+              })
+            : buildAgentTools(activeTools, env, knId, config, tokenProvider, {
+                resourceScope,
+                session: lifecycle.session,
+                turn,
+              });
 
         await runAgentChat({
           env,

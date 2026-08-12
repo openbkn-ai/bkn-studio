@@ -142,6 +142,7 @@ export const agentChatPart = {
       stop: "Stop",
       send: "Send",
       compareMode: "Compare Mode",
+      ptcMode: "PTC Mode",
       settings: "Chat Settings",
       clear: "Clear",
     },
@@ -151,6 +152,14 @@ export const agentChatPart = {
         "Call the provided retrieval tools when data is needed, such as search_schema, query_object_instance, query_instance_subgraph, and run_sql. Do not fabricate answers.\n" +
         "kn_id is locked to the current network. You do not need to change it and must not change it.\n" +
         "Query efficiently: push aggregation, sorting, and counting to SQL where possible, use LIMIT and precise filters, return only needed fields, avoid loading entire tables or oversized results, and do not repeat queries for information already obtained.",
+      ptcPrompt:
+        "You are a BKN knowledge-network retrieval assistant. You have a single tool, run_code: " +
+        "write Python that the sandbox executes. BKN capabilities are already in scope as functions.\n" +
+        "Only what you print comes back; intermediate results stay in the sandbox, so filter, aggregate, " +
+        "and join inside the script and print just the conclusion.\n" +
+        "kn_id is locked to the current network. When unsure about parameters, call help(fn) in the script " +
+        "instead of guessing. Failures raise ToolError carrying the server message; correct and retry within " +
+        "the same script rather than returning to the conversation.",
       basePrompt:
         "You are a data query assistant. You can only answer user questions by directly querying underlying data tables with three tools:\n" +
         "list_resources lists accessible data tables, describe_resource inspects table columns, and run_sql executes SQL.\n" +

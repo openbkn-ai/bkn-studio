@@ -71,6 +71,7 @@ const FALLBACK_SUGGESTIONS = [
 
 /** Comparison-mode toggle and send target, cached globally rather than per knowledge network. */
 const COMPARE_LS_KEY = "bkn-studio:agentchat:compare";
+const PTC_LS_KEY = "bkn-studio:agentchat:ptc";
 
 type CompareTarget = "both" | "base" | "kn";
 
@@ -241,7 +242,14 @@ function buildProfiles(t: TFunction) {
     defaultToolNames: null,
     evidenceHint: t("knowledgeNetwork.agentChat.chatPane.evidenceHint.kn"),
   };
-  return { soloProfile, baseProfile, knProfile };
+  // PTC 模式：只暴露 run_code，BKN 能力下沉为沙箱内的函数。提示词随之改写——
+  // 模型要知道自己在写脚本，而不是在挑工具。
+  const ptcProfile: PaneProfile = {
+    ...soloProfile,
+    toolMode: "ptc",
+    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.ptcPrompt"),
+  };
+  return { soloProfile, baseProfile, knProfile, ptcProfile };
 }
 
 /** Evaluation prompt for the AI summary in a comparison report. */
@@ -446,6 +454,20 @@ export function AgentChat({
   const [knDetail, setKnDetail] = useState<KnDetail | null>(null);
 
   const [compare, setCompare] = useState<CompareState>(loadCompareState);
+  const [ptcOn, setPtcOn] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(PTC_LS_KEY) === "on";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PTC_LS_KEY, ptcOn ? "on" : "off");
+    } catch {
+      // 存储不可用不影响本次会话，忽略。
+    }
+  }, [ptcOn]);
   const setCompareState = useCallback((updater: (prev: CompareState) => CompareState) => {
     setCompare((prev) => {
       const next = updater(prev);
@@ -856,6 +878,12 @@ export function AgentChat({
             />
             <span>{t("knowledgeNetwork.agentChat.composer.compareMode")}</span>
           </div>
+          {!compare.on ? (
+            <div className={styles.modeToggle}>
+              <Switch checked={ptcOn} disabled={anyBusy} onChange={setPtcOn} />
+              <span>{t("knowledgeNetwork.agentChat.composer.ptcMode")}</span>
+            </div>
+          ) : null}
           {!compare.on ? <span className={styles.paneTitle}>{t("knowledgeNetwork.agentChat.profiles.knTitle")}</span> : null}
         </div>
         {!compare.on ? (
@@ -906,7 +934,7 @@ export function AgentChat({
             <ChatPane
               ref={soloRef}
               {...paneShared}
-              profile={profiles.soloProfile}
+              profile={ptcOn ? profiles.ptcProfile : profiles.soloProfile}
               suggestions={suggestions}
               showToolbar={false}
               onPick={sendQuestion}

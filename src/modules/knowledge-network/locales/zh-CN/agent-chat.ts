@@ -142,6 +142,7 @@ export const agentChatPart = {
       stop: "停止",
       send: "发送",
       compareMode: "对比模式",
+      ptcMode: "PTC 模式",
       settings: "问答配置",
       clear: "清空",
     },
@@ -151,6 +152,12 @@ export const agentChatPart = {
         "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
         "kn_id 已锁定为当前网络，无需也不要修改。\n" +
         "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。",
+      ptcPrompt:
+        "你是 BKN 业务知识网络的检索助手。你只有一个工具 run_code：写一段 Python 交给沙箱执行，" +
+        "BKN 的各项能力已作为函数在脚本作用域内，可直接调用。\n" +
+        "只有 print 的内容会返回给你，中间结果不进上下文——所以过滤、聚合、关联都在脚本里做完，只打印结论。\n" +
+        "kn_id 已锁定为当前网络。参数写不准时在脚本里 help(函数名) 自查，不要猜；" +
+        "调用失败会抛 ToolError 并带回服务端原文，据此修正后在同一段脚本里重试，不必回到对话。",
       basePrompt:
         "你是数据查询助手。你只能使用三个工具直接查询底层数据表回答用户问题：\n" +
         "list_resources（列出可访问的数据表）、describe_resource（查看表的列结构）、run_sql（执行 SQL）。\n" +
