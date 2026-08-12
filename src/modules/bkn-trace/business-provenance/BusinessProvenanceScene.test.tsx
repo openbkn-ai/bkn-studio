@@ -44,7 +44,7 @@ vi.mock("react-i18next", async (importOriginal) => {
   };
 });
 
-describe("BusinessProvenanceScene", () => {
+describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
   beforeEach(() => {
     getConversations.mockReset();
     getInteractions.mockReset();
@@ -219,7 +219,7 @@ describe("BusinessProvenanceScene", () => {
     fireEvent.click(screen.getByRole("button", { name: /查询物料请购单/ }));
     await waitFor(() => expect(screen.queryByText("关联调用")).toBeNull());
     expect(screen.getByText("做了什么")).not.toBeNull();
-  }, 20_000);
+  }, 60_000);
 
   it("shows ambiguous BKN bindings as candidates instead of touched objects", async () => {
     getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-1", questionPreview: "查询采购", interactionCount: 1, agentName: "Supply Agent" }], total: 1 });

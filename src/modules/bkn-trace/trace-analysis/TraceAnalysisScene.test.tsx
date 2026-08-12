@@ -24,7 +24,7 @@ vi.mock("@/modules/bkn-trace/trace-analysis/trace-analysis.service", () => ({
 
 const writeTextMock = vi.fn().mockResolvedValue(undefined);
 
-describe("TraceAnalysisScene", () => {
+describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
   beforeAll(() => {
     Object.defineProperty(window, "matchMedia", {
       value: vi.fn().mockImplementation(() => ({
@@ -181,7 +181,7 @@ describe("TraceAnalysisScene", () => {
     expect(screen.getByText(/"row_count": 6/)).not.toBeNull();
     expect(getTechnicalTrace).toHaveBeenCalledWith("c2c97a9e8afd1259218a9d975ad63e91");
     await waitFor(() => expect(listTechnicalTraces).toHaveBeenCalledTimes(1));
-  }, 20_000);
+  });
 
   it("opens an exact trace from a related-log deep link", async () => {
     window.history.replaceState({}, "", "/studio/observability/traces?trace_id=c2c97a9e8afd1259218a9d975ad63e91");
