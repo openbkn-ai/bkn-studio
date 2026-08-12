@@ -926,6 +926,7 @@ export function AgentChat({
                   <ChatPane
                     ref={knRef}
                     {...paneShared}
+                    key={ptcOn ? "kn-ptc" : "kn"}
                     profile={ptcOn ? profiles.ptcComparePane : profiles.knProfile}
                     suggestions={suggestions}
                     onPick={sendQuestion}
@@ -939,6 +940,7 @@ export function AgentChat({
         ) : (
           <div className={styles.soloPanel}>
             <ChatPane
+              key={ptcOn ? "solo-ptc" : "solo"}
               ref={soloRef}
               {...paneShared}
               profile={ptcOn ? profiles.ptcProfile : profiles.soloProfile}

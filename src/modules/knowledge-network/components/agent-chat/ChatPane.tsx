@@ -580,7 +580,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     }
     setSettingsOpen(false);
     message.success(t("knowledgeNetwork.agentChat.chatPane.messages.settingsSaved"));
-  }, [draftConfig, draftModel, draftSystemPrompt, draftToolSelection, knId, message, messages, profile.paneKey, stats, t]);
+  }, [draftConfig, draftModel, draftSystemPrompt, draftToolSelection, knId, message, messages, profile.paneKey, stats, t, profile.toolMode]);
   const resetDraftSystemPrompt = useCallback(() => {
     setDraftSystemPrompt(profile.defaultPrompt);
     message.success(t("knowledgeNetwork.agentChat.chatPane.messages.promptReset"));
@@ -611,7 +611,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     if (saved.model) setModel(saved.model);
     setSystemPrompt(saved.systemPrompt ?? profile.defaultPrompt);
     setStats(saved.stats ?? { tokens: 0, ms: 0 });
-  }, [knId, profile.paneKey, profile.defaultPrompt]);
+  }, [knId, profile.paneKey, profile.defaultPrompt, profile.toolMode]);
 
   // Select the default model after model list is ready; persisted choice wins.
   useEffect(() => {
@@ -632,7 +632,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         /* Ignore unavailable localStorage. */
       }
     },
-    [knId, profile.paneKey, model, systemPrompt],
+    [knId, profile.paneKey, model, systemPrompt, profile.toolMode],
   );
 
   useEffect(() => {
@@ -742,7 +742,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           break;
       }
     },
-    [updateAssistant, knId],
+    [updateAssistant, knId, profile.toolMode],
   );
 
   /**
@@ -757,7 +757,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           legacyConversationLsKey(knId, profile.paneKey),
         ),
       }),
-    [env.base, knId, tokenProvider, profile.paneKey],
+    [env.base, knId, tokenProvider, profile.paneKey, profile.toolMode],
   );
 
   // Full system prompt = editable prompt + optional KN summary + caps + output contract.
@@ -934,7 +934,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     } catch {
       /* ignore */
     }
-  }, [knId, profile.paneKey, lifecycle]);
+  }, [knId, profile.paneKey, lifecycle, profile.toolMode]);
 
   useImperativeHandle(
     ref,
