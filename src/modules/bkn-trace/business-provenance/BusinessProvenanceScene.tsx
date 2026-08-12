@@ -8,7 +8,7 @@
 import { CloseOutlined, CopyOutlined, DownloadOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Button, Empty, Input, Result, Segmented, Select, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/app/locales/i18n";
@@ -42,11 +42,6 @@ function responseStatus(error: unknown) {
   const response = error.response;
   if (!response || typeof response !== "object" || !("status" in response)) return undefined;
   return typeof response.status === "number" ? response.status : undefined;
-}
-
-function isInternalAnalysisConversation(conversation: BusinessProvenanceConversation) {
-  return conversation.agentName === "\u4e1a\u52a1\u6eaf\u6e90\u4f18\u5316Agent"
-    || conversation.questionPreview?.startsWith("\u4f60\u662f\u4e1a\u52a1\u6eaf\u6e90\u4f18\u5316\u5206\u6790 Agent") === true;
 }
 
 function formatTime(value?: string) {
@@ -152,7 +147,9 @@ function conversationTitle(conversation: BusinessProvenanceConversation) {
 }
 
 function evidenceLabel(conversation: BusinessProvenanceConversation) {
-  return conversation.resultPreview ? bpText("evidence.partial") : bpText("evidence.byRound");
+  if (conversation.evidenceCompleteness === "complete") return bpText("evidence.complete");
+  if (conversation.evidenceCompleteness === "partial") return bpText("evidence.partial");
+  return conversation.evidenceCompleteness || bpText("evidence.byRound");
 }
 
 function textValue(value: unknown): string | undefined {
@@ -253,7 +250,11 @@ export function BusinessProvenanceScene() {
   const [conversationPage, setConversationPage] = useState(1);
   const [conversationKeyword, setConversationKeyword] = useState("");
   const [conversationAgent, setConversationAgent] = useState("");
+  const [conversationBusinessDomain, setConversationBusinessDomain] = useState("");
+  const [conversationKnowledgeNetwork, setConversationKnowledgeNetwork] = useState("");
   const [conversationStatus, setConversationStatus] = useState<string>();
+  const [conversationEvidence, setConversationEvidence] = useState<string>();
+  const [conversationQuery, setConversationQuery] = useState<Parameters<typeof getBusinessProvenanceConversations>[0]>({});
   const [selectedConversation, setSelectedConversation] = useState<BusinessProvenanceConversation>();
   const [interactionKeyword, setInteractionKeyword] = useState("");
   const [interactions, setInteractions] = useState<BusinessProvenanceInteractionListItem[]>([]);
@@ -272,28 +273,34 @@ export function BusinessProvenanceScene() {
   const [analysisError, setAnalysisError] = useState<string>();
   const [analysisMarkdown, setAnalysisMarkdown] = useState("");
   const [analysisMarkdownLoading, setAnalysisMarkdownLoading] = useState(false);
+  const conversationRequest = useRef(0);
 
   const loadConversations = useCallback(async () => {
+    const request = ++conversationRequest.current;
     setLoading(true);
     setConversationLoadState(undefined);
     try {
-      const page = await getBusinessProvenanceConversations({ page: conversationPage, pageSize: 20, keyword: conversationKeyword, agentOrApp: conversationAgent, status: conversationStatus });
-      const visibleEntries = page.entries.filter((entry) => !isInternalAnalysisConversation(entry));
-      setConversations(visibleEntries);
-      setConversationTotal(Math.max(0, page.total - (page.entries.length - visibleEntries.length)));
+      const page = await getBusinessProvenanceConversations({ ...conversationQuery, page: conversationPage, pageSize: 20 });
+      if (request !== conversationRequest.current) return;
+      setConversations(page.entries);
+      setConversationTotal(page.total);
     } catch (error) {
+      if (request !== conversationRequest.current) return;
       const status = responseStatus(error);
       setConversationLoadState(status === 404 ? "not-installed" : status === 403 ? "forbidden" : "failed");
-    } finally { setLoading(false); }
-  }, [conversationAgent, conversationKeyword, conversationPage, conversationStatus]);
+    } finally { if (request === conversationRequest.current) setLoading(false); }
+  }, [conversationPage, conversationQuery]);
 
   useEffect(() => { void loadConversations(); }, [loadConversations]);
   useEffect(() => {
     if (!selectedConversation) return;
+    let current = true;
+    setInteractions([]); setSelectedInteraction(undefined);
     setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisPanelOpen(false); setAnalysisError(undefined);
     void getBusinessProvenanceInteractions({ conversationId: selectedConversation.conversationId, page: 1, pageSize: 50, keyword: interactionKeyword })
-      .then((page) => { setInteractions(page.entries); setSelectedInteraction(page.entries[0]); })
-      .catch(() => message.error(bpText("errors.interactionsLoad")));
+      .then((page) => { if (current) { setInteractions(page.entries); setSelectedInteraction(page.entries[0]); } })
+      .catch(() => { if (current) message.error(bpText("errors.interactionsLoad")); });
+    return () => { current = false; };
   }, [interactionKeyword, selectedConversation]);
   useEffect(() => {
     if (!selectedInteraction) return;
@@ -386,18 +393,16 @@ export function BusinessProvenanceScene() {
     </header>
     <section className={styles.listCard}>
       <div className={styles.filters}>
-        <Input value={conversationKeyword} onChange={(event) => setConversationKeyword(event.target.value)} prefix={<SearchOutlined />} placeholder={bpText("filters.keyword")} onPressEnter={() => { setConversationPage(1); void loadConversations(); }} />
-        <Input placeholder={bpText("filters.startedAt")} aria-label={bpText("filters.startedAt")} />
-        <Input placeholder={bpText("filters.endedAt")} aria-label={bpText("filters.endedAt")} />
-        <Input value={conversationAgent} onChange={(event) => setConversationAgent(event.target.value)} placeholder={bpText("filters.agent")} onPressEnter={() => { setConversationPage(1); void loadConversations(); }} />
-        <Input placeholder={bpText("filters.businessDomain")} aria-label={bpText("filters.businessDomain")} />
-        <Input placeholder={bpText("filters.network")} aria-label={bpText("filters.network")} />
-        <Select allowClear placeholder={bpText("filters.status")} value={conversationStatus} options={[{ value: "completed", label: statusLabel("completed") }, { value: "failed", label: statusLabel("failed") }, { value: "running", label: statusLabel("running") }]} onChange={(value) => { setConversationPage(1); setConversationStatus(value); }} />
-        <Select allowClear placeholder={bpText("filters.evidence")} options={[{ value: "complete", label: bpText("evidence.complete") }, { value: "partial", label: bpText("evidence.partial") }]} />
-        <Button type="primary" icon={<SearchOutlined />} onClick={() => { setConversationPage(1); void loadConversations(); }}>{bpText("actions.query")}</Button>
-        <Button aria-label={bpText("actions.reset")} icon={<ReloadOutlined />} onClick={() => { setConversationKeyword(""); setConversationAgent(""); setConversationStatus(undefined); setConversationPage(1); }} />
+        <Input value={conversationKeyword} onChange={(event) => setConversationKeyword(event.target.value)} prefix={<SearchOutlined />} placeholder={bpText("filters.keyword")} />
+        <Input value={conversationAgent} onChange={(event) => setConversationAgent(event.target.value)} placeholder={bpText("filters.agent")} />
+        <Input value={conversationBusinessDomain} onChange={(event) => setConversationBusinessDomain(event.target.value)} placeholder={bpText("filters.businessDomain")} />
+        <Input value={conversationKnowledgeNetwork} onChange={(event) => setConversationKnowledgeNetwork(event.target.value)} placeholder={bpText("filters.network")} />
+        <Select allowClear placeholder={bpText("filters.status")} value={conversationStatus} options={[{ value: "completed", label: statusLabel("completed") }, { value: "failed", label: statusLabel("failed") }, { value: "running", label: statusLabel("running") }]} onChange={setConversationStatus} />
+        <Select allowClear placeholder={bpText("filters.evidence")} value={conversationEvidence} options={[{ value: "complete", label: bpText("evidence.complete") }, { value: "partial", label: bpText("evidence.partial") }]} onChange={setConversationEvidence} />
+        <Button type="primary" icon={<SearchOutlined />} onClick={() => { setConversationPage(1); setConversationQuery({ keyword: conversationKeyword, agentOrApp: conversationAgent, businessDomain: conversationBusinessDomain, knowledgeNetwork: conversationKnowledgeNetwork, status: conversationStatus, evidenceCompleteness: conversationEvidence }); }}>{bpText("actions.query")}</Button>
+        <Button aria-label={bpText("actions.reset")} icon={<ReloadOutlined />} onClick={() => { setConversationKeyword(""); setConversationAgent(""); setConversationBusinessDomain(""); setConversationKnowledgeNetwork(""); setConversationStatus(undefined); setConversationEvidence(undefined); setConversationPage(1); setConversationQuery({}); }} />
       </div>
-      <Table rowKey="conversationId" columns={conversationColumns} dataSource={conversations} loading={loading} tableLayout="fixed" scroll={{ x: 1230 }} locale={{ emptyText: <Empty description={bpText("list.empty")} /> }} pagination={{ current: conversationPage, pageSize: 20, total: conversationTotal, showSizeChanger: true, showTotal: (total) => bpText("list.total", { count: total }), onChange: setConversationPage }} />
+      <Table rowKey="conversationId" columns={conversationColumns} dataSource={conversations} loading={loading} tableLayout="fixed" scroll={{ x: 1230 }} locale={{ emptyText: <Empty description={bpText("list.empty")} /> }} pagination={{ current: conversationPage, pageSize: 20, total: conversationTotal, showSizeChanger: false, showTotal: (total) => bpText("list.total", { count: total }), onChange: setConversationPage }} />
     </section>
   </main>;
 

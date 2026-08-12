@@ -43,6 +43,7 @@ export type BusinessProvenanceConversation = {
   status?: string;
   interactionCount?: number;
   durationMs?: number;
+  evidenceCompleteness?: string;
 };
 
 export type BusinessProvenanceInteractionListItem = {
@@ -107,6 +108,7 @@ type BackendConversation = {
   status?: string;
   interaction_count?: number;
   duration_ms?: number;
+  evidence_completeness?: string;
 };
 
 export async function getBusinessProvenanceConversations(
@@ -121,7 +123,7 @@ export async function getBusinessProvenanceConversations(
       conversationId: entry.conversation_id ?? "", agentName: entry.agent_name,
       questionPreview: entry.question_preview, resultPreview: entry.result_preview,
       startedAt: entry.started_at, status: entry.status, interactionCount: entry.interaction_count,
-      durationMs: entry.duration_ms,
+      durationMs: entry.duration_ms, evidenceCompleteness: entry.evidence_completeness,
     })),
     total: response.data.total ?? 0, page: response.data.page, pageSize: response.data.page_size,
   };

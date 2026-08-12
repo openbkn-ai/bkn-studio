@@ -91,11 +91,59 @@ describe("BusinessProvenanceScene", () => {
     expect(screen.getByRole("button", { name: /重\s*试/ })).not.toBeNull();
   });
 
+  it("submits supported conversation filters only when the user queries", async () => {
+    getConversations.mockResolvedValue({ entries: [], total: 0 });
+
+    render(<BusinessProvenanceScene />);
+    await waitFor(() => expect(getConversations).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByPlaceholderText("搜索问题、结果或会话 ID"), { target: { value: "采购" } });
+    fireEvent.change(screen.getByPlaceholderText("Agent / 应用"), { target: { value: "Cursor" } });
+    fireEvent.change(screen.getByPlaceholderText("业务域"), { target: { value: "供应链" } });
+    fireEvent.change(screen.getByPlaceholderText("知识网络"), { target: { value: "supply" } });
+    expect(getConversations).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /查\s*询/ }));
+    await waitFor(() => expect(getConversations).toHaveBeenLastCalledWith(expect.objectContaining({
+      agentOrApp: "Cursor",
+      businessDomain: "供应链",
+      keyword: "采购",
+      knowledgeNetwork: "supply",
+    })));
+    expect(screen.queryByLabelText("开始时间")).toBeNull();
+    expect(screen.queryByLabelText("结束时间")).toBeNull();
+  });
+
+  it("discards a late interaction list from the previously selected conversation", async () => {
+    let resolveFirst!: (value: { entries: Array<{ interactionId: string; questionPreview: string }>; total: number }) => void;
+    let resolveSecond!: (value: { entries: Array<{ interactionId: string; questionPreview: string }>; total: number }) => void;
+    const first = new Promise<{ entries: Array<{ interactionId: string; questionPreview: string }>; total: number }>((resolve) => { resolveFirst = resolve; });
+    const second = new Promise<{ entries: Array<{ interactionId: string; questionPreview: string }>; total: number }>((resolve) => { resolveSecond = resolve; });
+    getConversations.mockResolvedValue({ entries: [
+      { conversationId: "conv-a", questionPreview: "会话 A", interactionCount: 1 },
+      { conversationId: "conv-b", questionPreview: "会话 B", interactionCount: 1 },
+    ], total: 2 });
+    getInteractions.mockImplementation(({ conversationId }: { conversationId: string }) => conversationId === "conv-a" ? first : second);
+    getInteraction.mockImplementation((interactionId: string) => Promise.resolve({ interactionId, conversationContext: [], derivedFacts: [], contextRelations: [], operations: [] }));
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "会话 A" }));
+    fireEvent.click(screen.getByRole("button", { name: /返回业务会话/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "会话 B" }));
+
+    resolveSecond({ entries: [{ interactionId: "int-b", questionPreview: "B 的轮次" }], total: 1 });
+    expect((await screen.findAllByText("B 的轮次")).length).toBeGreaterThan(0);
+    resolveFirst({ entries: [{ interactionId: "int-a", questionPreview: "A 的迟到轮次" }], total: 1 });
+    await act(async () => { await first; });
+
+    expect(screen.queryByText("A 的迟到轮次")).toBeNull();
+    expect(screen.getAllByText("B 的轮次").length).toBeGreaterThan(0);
+  });
+
   it("keeps an eight-column conversation list before opening one interaction workspace", async () => {
     getConversations.mockResolvedValue({ entries: [
-      { conversationId: "conv-internal", questionPreview: "你是业务溯源优化分析 Agent，只能依据当前交互轮次 Markdown", interactionCount: 1, agentName: "业务溯源优化Agent", status: "active", startedAt: "2026-08-10", durationMs: 42 },
-      { conversationId: "conv-1", questionPreview: "查询采购订单", interactionCount: 2, resultPreview: "无记录", agentName: "Supply Agent", status: "completed", startedAt: "2026-08-10", durationMs: 42 },
-    ], total: 2 });
+      { conversationId: "conv-1", questionPreview: "查询采购订单", interactionCount: 2, resultPreview: "无记录", agentName: "Supply Agent", status: "completed", evidenceCompleteness: "complete", startedAt: "2026-08-10", durationMs: 42 },
+    ], total: 1 });
     getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-1", questionPreview: "查询采购订单" }], total: 1 });
     getInteraction.mockResolvedValue({ interactionId: "int-1", conversationContext: [{ knowledgeNetworkId: "supplychain_hd0202", sourceInteractionId: "int-prior", sourceOperationId: "op-prior" }], derivedFacts: [{ rule: "changed_query_still_zero_result", sourceOperationId: "op-0", operationId: "op-1", elementId: "purchase_order" }], contextRelations: [], operations: [{ operationId: "op-1", toolName: "run_sql", knowledgeNetworkId: "supplychain_hd0202", startedAt: "2026-08-10T19:02:58Z", durationMs: 725, callStatus: "completed", elements: [{ kind: "object", id: "purchase_order", name: "物料请购单" }, { kind: "property", id: "supplier_number", name: "供应商编码", parentId: "purchase_order", field: "supplier_id" }], query: { resourceIds: ["inventory_resource"], conditions: { material_number: "101-000015" }, resultCount: 0 }, missingFacts: [] }] });
     streamAnalysis.mockResolvedValue({
@@ -117,7 +165,7 @@ describe("BusinessProvenanceScene", () => {
     await screen.findByRole("columnheader", { name: "证据完整性" });
     expect(screen.getByRole("columnheader", { name: "用户问题" })).not.toBeNull();
     expect(screen.getByRole("columnheader", { name: "业务结果" })).not.toBeNull();
-    expect(screen.queryByText(/你是业务溯源优化分析 Agent/)).toBeNull();
+    expect(screen.getByText("完整可溯源")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "查询采购订单" }));
     await waitFor(() => expect(getInteractions).toHaveBeenCalledWith(expect.objectContaining({ conversationId: "conv-1" })));
     expect(await screen.findByText("1 轮交互")).not.toBeNull();

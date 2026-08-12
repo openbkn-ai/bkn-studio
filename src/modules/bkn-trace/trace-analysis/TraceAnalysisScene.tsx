@@ -54,8 +54,11 @@ const defaultPageSize = 20;
 export function TraceAnalysisScene() {
   const { t } = useTranslation();
   const [form] = Form.useForm<TechnicalTraceQuery>();
-  const [query, setQuery] = useState<TechnicalTraceQuery>({ limit: defaultPageSize });
-  const [page, setPage] = useState(1);
+  const [listState, setListState] = useState<{ query: TechnicalTraceQuery; page: number }>({
+    query: { limit: defaultPageSize },
+    page: 1,
+  });
+  const { page, query } = listState;
   const [rows, setRows] = useState<TechnicalTraceSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -65,6 +68,7 @@ export function TraceAnalysisScene() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<TechnicalTraceOperation>();
+  const listRequest = useRef(0);
 
   useEffect(() => {
     const traceId = new URLSearchParams(window.location.search).get("trace_id")?.trim();
@@ -76,6 +80,7 @@ export function TraceAnalysisScene() {
   }, [page, query]);
 
   async function loadList(nextQuery: TechnicalTraceQuery, nextPage: number) {
+    const request = ++listRequest.current;
     setLoading(true);
     setListError(false);
     try {
@@ -85,13 +90,14 @@ export function TraceAnalysisScene() {
         page: nextPage,
         pageSize: nextQuery.limit ?? defaultPageSize,
       });
+      if (request !== listRequest.current) return;
       setRows(result.entries);
       setTotal(result.total);
       setPartialReasons(result.partialReasons);
     } catch {
-      setListError(true);
+      if (request === listRequest.current) setListError(true);
     } finally {
-      setLoading(false);
+      if (request === listRequest.current) setLoading(false);
     }
   }
 
@@ -211,12 +217,14 @@ export function TraceAnalysisScene() {
         initialValues={{}}
         layout="inline"
         onFinish={(values) => {
-          setPage(1);
-          setQuery({
-            ...values,
-            from: toIsoDateTime(values.from),
-            limit: defaultPageSize,
-            to: toIsoDateTime(values.to),
+          setListState({
+            page: 1,
+            query: {
+              ...values,
+              from: toIsoDateTime(values.from),
+              limit: defaultPageSize,
+              to: toIsoDateTime(values.to),
+            },
           });
         }}
       >
@@ -247,7 +255,7 @@ export function TraceAnalysisScene() {
         />
         <Pagination
           current={page}
-          onChange={setPage}
+          onChange={(nextPage) => setListState((current) => ({ ...current, page: nextPage }))}
           pageSize={defaultPageSize}
           showSizeChanger={false}
           total={total}
@@ -346,7 +354,7 @@ function TraceDetail({
         </main>
 
         {selectedOperation ? (
-          <OperationPanel onClose={onCloseOperation} operation={selectedOperation} traceId={summary.traceId} />
+          <OperationPanel key={operationKey(selectedOperation)} onClose={onCloseOperation} operation={selectedOperation} traceId={summary.traceId} />
         ) : null}
       </div>
     </section>

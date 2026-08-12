@@ -5,17 +5,19 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TraceAnalysisScene } from "@/modules/bkn-trace/trace-analysis/TraceAnalysisScene";
 import {
+  getReferencedPayload,
   getTechnicalTrace,
   listTechnicalTraces,
 } from "@/modules/bkn-trace/trace-analysis/trace-analysis.service";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@/modules/bkn-trace/trace-analysis/trace-analysis.service", () => ({
+  getReferencedPayload: vi.fn(),
   getTechnicalTrace: vi.fn(),
   listTechnicalTraces: vi.fn(),
 }));
@@ -45,6 +47,10 @@ describe("TraceAnalysisScene", () => {
   });
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(listTechnicalTraces).mockReset();
+    vi.mocked(getTechnicalTrace).mockReset();
+    vi.mocked(getReferencedPayload).mockReset();
     writeTextMock.mockClear();
     window.history.replaceState({}, "", "/studio/observability/traces");
     vi.mocked(listTechnicalTraces).mockResolvedValue({
@@ -184,5 +190,67 @@ describe("TraceAnalysisScene", () => {
 
     await waitFor(() => expect(getTechnicalTrace).toHaveBeenCalledWith("c2c97a9e8afd1259218a9d975ad63e91"));
     expect(await screen.findByText("bknTrace.traceWorkspace.detailTitle")).not.toBeNull();
+  });
+
+  it("keeps the latest list response when an earlier page request finishes late", async () => {
+    let resolvePageTwo!: (value: Awaited<ReturnType<typeof listTechnicalTraces>>) => void;
+    const pageTwo = new Promise<Awaited<ReturnType<typeof listTechnicalTraces>>>((resolve) => { resolvePageTwo = resolve; });
+    vi.mocked(listTechnicalTraces)
+      .mockResolvedValueOnce({ entries: [{ traceId: "initial", status: "completed", spanCount: 0 }], total: 40, page: 1, pageSize: 20, partial: false, partialReasons: [], truncated: false })
+      .mockReturnValueOnce(pageTwo)
+      .mockResolvedValueOnce({ entries: [{ traceId: "filtered", status: "completed", spanCount: 0 }], total: 1, page: 1, pageSize: 20, partial: false, partialReasons: [], truncated: false });
+
+    render(<TraceAnalysisScene />);
+    await screen.findByRole("button", { name: "initial" });
+    fireEvent.click(screen.getByTitle("2"));
+    await waitFor(() => expect(listTechnicalTraces).toHaveBeenCalledTimes(2));
+    fireEvent.change(screen.getByPlaceholderText("Trace ID"), { target: { value: "filtered" } });
+    fireEvent.click(screen.getByRole("button", { name: /bknTrace.actions.query/ }));
+    await waitFor(() => expect(listTechnicalTraces).toHaveBeenCalledTimes(3));
+    expect(await screen.findByRole("button", { name: "filtered" })).not.toBeNull();
+
+    resolvePageTwo({ entries: [{ traceId: "stale-page-two", status: "completed", spanCount: 0 }], total: 40, page: 2, pageSize: 20, partial: false, partialReasons: [], truncated: false });
+    await act(async () => { await pageTwo; });
+    expect(screen.queryByRole("button", { name: "stale-page-two" })).toBeNull();
+    expect(screen.getByRole("button", { name: "filtered" })).not.toBeNull();
+  });
+
+  it("does not reuse a referenced payload after selecting another operation", async () => {
+    vi.mocked(getTechnicalTrace).mockResolvedValue({
+      summary: { traceId: "trace-referenced", status: "completed", spanCount: 0 },
+      operations: ["op-a", "op-b"].map((operationId) => ({
+        state: "completed",
+        partialReasons: [],
+        receipt: { partialReasons: [], receiptId: `receipt-${operationId}`, receiptStatus: "completed" },
+        fact: {
+          attempt: 1,
+          conversationId: "conv-1",
+          interactionId: "int-1",
+          operationId,
+          input: { byteLength: 32, mode: "referenced", ref: `artifact:${operationId}`, mediaType: "application/json" },
+          protocol: "mcp",
+          retryable: false,
+          sourceModule: "context-loader",
+          startedAt: "2026-08-08T11:04:40.302897Z",
+          status: "completed",
+          toolName: operationId,
+          traceId: "trace-referenced",
+        },
+      })),
+      graph: { nodes: [], partial: false, partialReasons: [] },
+      partial: false,
+      partialReasons: [],
+    });
+    vi.mocked(getReferencedPayload).mockResolvedValue({ operation: "op-a" });
+    window.history.replaceState({}, "", "/studio/observability/traces?trace_id=trace-referenced");
+
+    render(<TraceAnalysisScene />);
+    fireEvent.click(await screen.findByRole("button", { name: /op-a/ }));
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.traceWorkspace.loadReferencedPayload" }));
+    expect(await screen.findByText(/"operation": "op-a"/)).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /op-b/ }));
+    expect(screen.queryByText(/"operation": "op-a"/)).toBeNull();
+    expect(screen.getByRole("button", { name: "bknTrace.traceWorkspace.loadReferencedPayload" })).not.toBeNull();
   });
 });
