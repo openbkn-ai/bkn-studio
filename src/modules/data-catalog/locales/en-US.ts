@@ -62,7 +62,7 @@ export const dataCatalogEnUS = {
       moreFilters: "More filters",
       moreFiltersWithCount: "More filters ({{count}})",
       clearAdvancedFilters: "Clear more filters",
-      semanticStatus: { pending: "Pending", running: "Running", succeeded: "Succeeded", failed: "Failed" },
+      semanticStatus: { pending: "Pending", running: "Running", succeeded: "Succeeded", failed: "Failed", cancelled: "Cancelled" },
       details: { taskInformation: "Task Information", scheduleId: "Schedule ID", startTime: "Started", message: "Message", agentId: "Agent ID", failureReason: "Failure Reason" },
       discover: { empty: "No discover tasks" },
       semantic: { empty: "No semantic-understanding tasks", deleteTitle: "Delete semantic-understanding task", deleteDescription: "Delete semantic-understanding task “{{id}}”?", detailSections: { task: "Task Information", execution: "Execution & Apply", quality: "Quality & Field Application", payload: "Input & Result", audit: "Audit Information" }, fields: { catalogId: "Catalog ID", resourceId: "Resource ID", agentTaskId: "Agent Task ID", confidenceThreshold: "Confidence Threshold", confidenceDetail: "Confidence Detail", appliedTime: "Applied At", applyDetail: "Apply Detail", inputHash: "Input Hash", input: "Input Snapshot", result: "Understanding Result", resourceEffective: "Resource Enhancement", fieldEffective: "Effective Field Enhancements", warnings: "Processing Notes", field: "Field", updated: "Updated Attributes", reason: "Reason" }, values: { effective: "Effective", notEffective: "No effective update", fieldEffective: "{{effective}} / {{total}} fields" }, fieldStatus: { updated: "Updated", partial: "Partially updated", unchanged: "Unchanged", skipped: "Skipped" } },
@@ -159,7 +159,10 @@ export const dataCatalogEnUS = {
       logicalDescriptionPlaceholder: "Optional description",
       deleteLogicalTitle: "Delete logical group",
       deleteLogicalDescription:
-        'Delete logical group "{{name}}"? Resources under it will also be removed.',
+        'Delete logical group "{{name}}"? This removes {{resources}} resources and cancels {{semanticTasks}} pending semantic tasks.',
+      deleteLogicalBlockedTitle: "Logical group cannot be deleted",
+      deleteLogicalBlockedDescription:
+        "There are {{protected}} protected resources and {{blocking}} running semantic tasks. Resolve them before trying again.",
       discovering: "Discovering",
       emptyPhysicalGroup: "No physical data source connections",
       emptyLogicalGroup: "No logical groups yet. Use + to add one.",
@@ -461,6 +464,7 @@ export const dataCatalogEnUS = {
       statuses: {
         pending: "Pending",
         running: "Building",
+        stopping: "Stopping",
         listening: "Listening",
         paused: "Paused",
         stopped: "Stopped",
@@ -469,6 +473,7 @@ export const dataCatalogEnUS = {
         embeddingFailed: "Vectorization failed",
         embeddingPartial: "Partial vectorization",
         failed: "Failed",
+        cancelled: "Cancelled",
       },
     },
   },

@@ -25,7 +25,11 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { BusinessTree, BusinessTreePanel } from "@/framework/ui/common/BusinessTreePanel";
 import { isBuiltinLogicalCatalog } from "@/modules/data-catalog/lib/logical-catalog";
-import { createLogicalCatalog, deleteCatalog } from "@/shared/catalog";
+import {
+  createLogicalCatalog,
+  deleteCatalog,
+  previewCatalogDeletion,
+} from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
@@ -293,25 +297,49 @@ export function CatalogTreePanel({
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    void modal.confirm({
-                      title: t("dataCatalog.tree.deleteLogicalTitle"),
-                      content: t("dataCatalog.tree.deleteLogicalDescription", {
-                        name: catalog.name,
-                      }),
-                      okText: t("common.delete"),
-                      cancelText: t("common.cancel"),
-                      okButtonProps: { danger: true },
-                      onOk: async () => {
-                        try {
-                          await deleteCatalog(catalog.id);
-                          message.success(t("common.success"));
-                          await onRefresh();
-                        } catch (error) {
-                          void message.error(extractRequestErrorMessage(error));
-                          throw error;
-                        }
-                      },
-                    });
+                    void (async () => {
+                      let impact;
+                      try {
+                        impact = await previewCatalogDeletion(catalog.id);
+                      } catch (error) {
+                        void message.error(extractRequestErrorMessage(error));
+                        return;
+                      }
+
+                      if (!impact.canDelete) {
+                        void modal.warning({
+                          content: t("dataCatalog.tree.deleteLogicalBlockedDescription", {
+                            blocking: impact.semanticUnderstandingTasks.blocking,
+                            protected: impact.protectedResources,
+                          }),
+                          okText: t("common.confirm"),
+                          title: t("dataCatalog.tree.deleteLogicalBlockedTitle"),
+                        });
+                        return;
+                      }
+
+                      void modal.confirm({
+                        title: t("dataCatalog.tree.deleteLogicalTitle"),
+                        content: t("dataCatalog.tree.deleteLogicalDescription", {
+                          name: catalog.name,
+                          resources: impact.resources,
+                          semanticTasks: impact.semanticUnderstandingTasks.willCancel,
+                        }),
+                        okText: t("common.delete"),
+                        cancelText: t("common.cancel"),
+                        okButtonProps: { danger: true },
+                        onOk: async () => {
+                          try {
+                            await deleteCatalog(catalog.id);
+                            message.success(t("common.success"));
+                            await onRefresh();
+                          } catch (error) {
+                            void message.error(extractRequestErrorMessage(error));
+                            throw error;
+                          }
+                        },
+                      });
+                    })();
                   }}
                   title={t("common.delete")}
                   type="button"

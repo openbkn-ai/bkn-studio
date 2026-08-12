@@ -75,7 +75,30 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
       resource_id: "resource-1",
       scope: "resource",
       sort: "create_time",
-      status: "succeeded",
+      status: "completed",
     });
+  });
+
+  it("maps backend completed and cancelled states", () => {
+    const base = {
+      agent_id: "semantic-agent",
+      applied: false,
+      apply_mode: "dry_run" as const,
+      catalog_id: "catalog-1",
+      confidence: 0,
+      confidence_threshold: 0.8,
+      create_time: 100,
+      creator: { id: "user-1", name: "User", type: "user" },
+      id: "task-1",
+      scope: "catalog" as const,
+      update_time: 200,
+    };
+
+    expect(mapSemanticUnderstandingTaskSummary({ ...base, status: "completed" }).status).toBe(
+      "succeeded",
+    );
+    expect(mapSemanticUnderstandingTaskSummary({ ...base, status: "cancelled" }).status).toBe(
+      "cancelled",
+    );
   });
 });

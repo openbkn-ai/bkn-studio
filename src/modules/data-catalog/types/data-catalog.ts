@@ -98,11 +98,13 @@ export type BuildMode = "batch" | "streaming";
 export type BuildTaskExecuteType = "full" | "incremental";
 
 export type BuildTaskStatus =
+  | "cancelled"
   | "failed"
   | "listening"
   | "paused"
   | "pending"
   | "running"
+  | "stopping"
   | "succeeded";
 
 /** Per-index health state from backend index_health: ok, partial failure, failure, or building. */
@@ -180,15 +182,13 @@ export type BuildTaskListQuery = {
   statuses?: BuildTaskStatus[];
 };
 
-/** Server-side sort dimension: default uses backend ordering with active builds first and omits order_by. */
+/** Server-side sort dimension; default omits order_by and uses backend creation-time ordering. */
 export type BuildTaskOrderBy =
   | "default"
   | "created_at"
   | "updated_at";
 
 export type BuildTaskPageQuery = {
-  /** Show only active builds: send active=true and omit status. */
-  active?: boolean;
   catalogId?: string;
   mode?: BuildMode;
   order?: "asc" | "desc";

@@ -59,7 +59,7 @@ export const dataCatalogZhCN = {
       moreFilters: "更多筛选",
       moreFiltersWithCount: "更多筛选（{{count}}）",
       clearAdvancedFilters: "清空更多筛选",
-      semanticStatus: { pending: "等待中", running: "执行中", succeeded: "已完成", failed: "失败" },
+      semanticStatus: { pending: "等待中", running: "执行中", succeeded: "已完成", failed: "失败", cancelled: "已取消" },
       details: { taskInformation: "任务信息", scheduleId: "计划 ID", startTime: "开始时间", message: "执行信息", agentId: "Agent ID", failureReason: "失败原因" },
       discover: { empty: "暂无探查任务" },
       semantic: { empty: "暂无语义理解任务", deleteTitle: "删除语义理解任务", deleteDescription: "确认删除语义理解任务“{{id}}”吗？", detailSections: { task: "任务信息", execution: "执行与应用", quality: "质量与字段应用", payload: "输入与结果", audit: "审计信息" }, fields: { catalogId: "目录 ID", resourceId: "资源 ID", agentTaskId: "Agent 任务 ID", confidenceThreshold: "置信度阈值", confidenceDetail: "置信度明细", appliedTime: "应用时间", applyDetail: "应用明细", inputHash: "输入哈希", input: "输入快照", result: "理解结果", resourceEffective: "资源语义增强", fieldEffective: "有效字段增强", warnings: "处理提示", field: "字段", updated: "已更新属性", reason: "原因" }, values: { effective: "有效", notEffective: "无有效更新", fieldEffective: "{{effective}} / {{total}} 个字段" }, fieldStatus: { updated: "已更新", partial: "部分更新", unchanged: "无变更", skipped: "已跳过" } },
@@ -152,7 +152,11 @@ export const dataCatalogZhCN = {
       logicalNamePlaceholder: "例如 team_analytics",
       logicalDescriptionPlaceholder: "可选，说明该逻辑分组用途",
       deleteLogicalTitle: "删除逻辑分组",
-      deleteLogicalDescription: '确认删除逻辑分组「{{name}}」吗？其下资源将一并删除。',
+      deleteLogicalDescription:
+        '确认删除逻辑分组「{{name}}」吗？将删除 {{resources}} 个资源，并取消 {{semanticTasks}} 个待执行语义理解任务。',
+      deleteLogicalBlockedTitle: "当前无法删除逻辑分组",
+      deleteLogicalBlockedDescription:
+        "存在 {{protected}} 个受保护资源和 {{blocking}} 个运行中的语义理解任务，请先处理后再试。",
       discovering: "探查中",
       emptyPhysicalGroup: "暂无物理数据源连接",
       emptyLogicalGroup: "暂无逻辑分组，可点击右上角新增",
@@ -435,6 +439,7 @@ export const dataCatalogZhCN = {
       statuses: {
         pending: "排队中",
         running: "构建中",
+        stopping: "停止中",
         listening: "监听中",
         paused: "已暂停",
         stopped: "已停止",
@@ -443,6 +448,7 @@ export const dataCatalogZhCN = {
         embeddingFailed: "向量化失败",
         embeddingPartial: "向量化部分失败",
         failed: "失败",
+        cancelled: "已取消",
       },
     },
   },

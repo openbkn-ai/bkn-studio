@@ -441,7 +441,7 @@ export function DataConnectDiscoverScene({
       dataIndex: "status",
       title: t("dataConnect.discoverTaskStatus"),
       width: 120,
-      render: (value: DataConnectDiscoverTaskStatus) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : "processing"}>{t(`dataConnect.discoverTaskStatuses.${value}`)}</Tag>,
+      render: (value: DataConnectDiscoverTaskStatus) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : value === "cancelled" ? "default" : "processing"}>{t(`dataConnect.discoverTaskStatuses.${value}`)}</Tag>,
     },
     {
       dataIndex: "progress",
@@ -783,6 +783,7 @@ export function DataConnectDiscoverScene({
                   value: "completed",
                 },
                 { label: t("dataConnect.discoverTaskStatuses.failed"), value: "failed" },
+                { label: t("dataConnect.discoverTaskStatuses.cancelled"), value: "cancelled" },
               ]}
               value={taskStatusFilter}
             />
