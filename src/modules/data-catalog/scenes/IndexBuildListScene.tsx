@@ -60,9 +60,11 @@ const STATUS_OPTIONS: BuildTaskStatus[] = [
   "pending",
   "running",
   "listening",
+  "stopping",
   "paused",
   "succeeded",
   "failed",
+  "cancelled",
 ];
 
 function EllipsisText({ text, title }: { text: string; title?: string }) {
@@ -502,7 +504,7 @@ export function IndexBuildListScene() {
         if (canManageResourceTasks && record.status === "failed") {
           menuItems.push({ key: "retry", label: t("dataCatalog.task.rerun") });
         }
-        if (canManageResourceTasks) {
+        if (canManageResourceTasks && record.status !== "stopping") {
           menuItems.push({ danger: true, key: "delete", label: t("common.delete") });
         }
 

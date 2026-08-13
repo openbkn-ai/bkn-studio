@@ -7,6 +7,13 @@
 
 import { http } from "@/framework/request/http";
 
+export type SemanticUnderstandingTaskStatus =
+  | "cancelled"
+  | "failed"
+  | "pending"
+  | "running"
+  | "succeeded";
+
 export type SemanticUnderstandingTaskSummary = {
   agentId: string;
   agentTaskId?: string;
@@ -23,7 +30,7 @@ export type SemanticUnderstandingTaskSummary = {
   resourceId?: string;
   resourceName?: string;
   scope: "catalog" | "resource";
-  status: "pending" | "running" | "succeeded" | "failed";
+  status: SemanticUnderstandingTaskStatus;
   updateTime?: number;
 };
 
@@ -52,7 +59,7 @@ export type BackendSemanticUnderstandingTaskSummary = {
   resource_id?: string;
   resource_name?: string;
   scope: SemanticUnderstandingTaskSummary["scope"];
-  status: SemanticUnderstandingTaskSummary["status"];
+  status: "cancelled" | "completed" | "failed" | "pending" | "running";
   update_time: number;
 };
 
@@ -75,7 +82,7 @@ export function mapSemanticUnderstandingTaskSummary(task: BackendSemanticUnderst
     resourceName: task.resource_name,
     agentId: task.agent_id,
     agentTaskId: task.agent_task_id,
-    status: task.status,
+    status: task.status === "completed" ? "succeeded" : task.status,
     applyMode: task.apply_mode,
     confidenceThreshold: task.confidence_threshold,
     confidence: task.confidence,
@@ -111,7 +118,7 @@ export function buildSemanticUnderstandingTaskListParams(
     scope: filters.scope,
     catalog_id: filters.catalogId,
     resource_id: filters.resourceId,
-    status: filters.status,
+    status: filters.status === "succeeded" ? "completed" : filters.status,
     apply_mode: filters.applyMode,
     applied: filters.applied,
   };

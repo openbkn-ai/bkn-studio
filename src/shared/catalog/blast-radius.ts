@@ -21,10 +21,6 @@ function summarize(tasks: { id: string; status: string }[]): CatalogBlastRadius 
   };
 }
 
-export async function catalogBlastRadius(catalogId: string): Promise<CatalogBlastRadius> {
-  return summarize(await listBuildTasks({ catalogId }));
-}
-
 export async function resourceBlastRadius(resourceId: string): Promise<CatalogBlastRadius> {
   return summarize(await listBuildTasks({ resourceId }));
 }

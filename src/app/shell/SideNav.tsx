@@ -133,6 +133,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                         {item.lockedEdition ?? item.paidEdition ? (
                           <span className="console-sidenav-tier">
                             <EditionBadge
+                              alwaysShow={Boolean(item.paidEdition)}
                               capability={item.paidCapability}
                               edition={(item.lockedEdition ?? item.paidEdition)!}
                             />
@@ -179,6 +180,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                         {item.lockedEdition ?? item.paidEdition ? (
                           <span className="console-sidenav-tier">
                             <EditionBadge
+                              alwaysShow={Boolean(item.paidEdition)}
                               capability={item.paidCapability}
                               edition={(item.lockedEdition ?? item.paidEdition)!}
                             />
@@ -232,6 +234,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                               {child.lockedEdition ?? child.paidEdition ? (
                           <span className="console-sidenav-tier">
                             <EditionBadge
+                              alwaysShow={Boolean(child.paidEdition)}
                               capability={child.paidCapability}
                               edition={(child.lockedEdition ?? child.paidEdition)!}
                             />

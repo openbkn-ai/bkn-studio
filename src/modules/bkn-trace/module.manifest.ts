@@ -15,12 +15,11 @@ export const bknTraceModuleManifest = {
   supportsReadOnly: true,
   scenes: [
     {
-      id: "bkn-trace.explorer",
-      exportName: "BknTraceExplorerScene",
-      description: "Inspect Trace Graph, Evidence Chain, Business Graph, and Snapshot Preview.",
+      id: "bkn-trace.analysis",
+      exportName: "TraceAnalysisScene",
+      description: "Inspect one technical Trace with its spans and raw Operation call facts.",
       inputs: [
         { name: "traceId", required: false, type: "string" },
-        { name: "requestId", required: false, type: "string" },
       ],
     },
   ],

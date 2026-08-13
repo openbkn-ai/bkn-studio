@@ -7,28 +7,33 @@
 
 import { describe, expect, it } from "vitest";
 
-import { backendStatusParam } from "@/modules/data-catalog/services/build-task.service";
+import { backendStatusParams } from "@/modules/data-catalog/services/build-task.service";
 
 // Locks the frontend-normalized-state to backend-enum mapping; the real backend cannot be verified locally, so this protects the contract.
-describe("backendStatusParam — 前端状态 → 后端枚举(逗号多值)", () => {
-  it("paused 必须同时展开为 stopping,stopped", () => {
-    expect(backendStatusParam(["paused"])).toBe("stopping,stopped");
+describe("backendStatusParams — 前端状态 → 后端重复查询参数", () => {
+  it("区分 stopping 和可恢复的 stopped", () => {
+    expect(backendStatusParams(["stopping"])).toEqual(["stopping"]);
+    expect(backendStatusParams(["paused"])).toEqual(["stopped"]);
   });
 
-  it("pending→init, running→running, succeeded→completed, failed→failed", () => {
-    expect(backendStatusParam(["pending"])).toBe("init");
-    expect(backendStatusParam(["running"])).toBe("running");
-    expect(backendStatusParam(["succeeded"])).toBe("completed");
-    expect(backendStatusParam(["failed"])).toBe("failed");
+  it("映射前端归一化状态", () => {
+    expect(backendStatusParams(["pending"])).toEqual(["pending"]);
+    expect(backendStatusParams(["running"])).toEqual(["running"]);
+    expect(backendStatusParams(["succeeded"])).toEqual(["completed"]);
+    expect(backendStatusParams(["failed"])).toEqual(["failed"]);
+    expect(backendStatusParams(["cancelled"])).toEqual(["cancelled"]);
   });
 
   it("listening 也映射到后端 running,与 running 去重", () => {
-    expect(backendStatusParam(["running", "listening"])).toBe("running");
+    expect(backendStatusParams(["running", "listening"])).toEqual(["running"]);
   });
 
-  it("多状态拼接、去重", () => {
-    expect(backendStatusParam(["running", "paused", "failed"])).toBe(
-      "running,stopping,stopped,failed",
-    );
+  it("多状态展开并去重", () => {
+    expect(backendStatusParams(["running", "stopping", "paused", "failed"])).toEqual([
+      "running",
+      "stopping",
+      "stopped",
+      "failed",
+    ]);
   });
 });

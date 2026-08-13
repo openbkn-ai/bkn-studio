@@ -75,7 +75,7 @@ export function BuildStatusTag({ plain = false, task }: BuildStatusTagProps) {
         ? styles.taskSucceeded
         : task.status === "listening"
           ? styles.modeStreaming
-          : task.status === "running"
+          : task.status === "running" || task.status === "stopping"
             ? styles.taskRunning
             : styles.taskPending;
 

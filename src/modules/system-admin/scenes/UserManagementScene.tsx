@@ -45,6 +45,7 @@ import {
   readUserManagementFilters,
   type UserManagementStatusFilter,
 } from "@/modules/system-admin/utils/user-management-url";
+import { authzPoints } from "@/modules/system-admin/permissions";
 
 import styles from "./admin.module.css";
 import layoutStyles from "./UserManagementScene.module.css";
@@ -105,6 +106,10 @@ export function UserManagementScene() {
   const canDeleteUser = hasPermissions({
     currentPermissions: userPermissions,
     requiredPermissions: "admin-user:delete",
+  });
+  const canManageRoleMembers = hasPermissions({
+    currentPermissions: userPermissions,
+    requiredPermissions: authzPoints.roleMembers,
   });
   const canViewAudit = hasPermissions({
     currentPermissions: userPermissions,
@@ -362,6 +367,8 @@ export function UserManagementScene() {
           key: "edit",
           label: t("systemAdmin.users.actions.edit"),
         });
+      }
+      if (canManageRoleMembers) {
         items.push({
           key: "configureRoles",
           label: t("systemAdmin.users.actions.configureRoles"),
@@ -430,6 +437,7 @@ export function UserManagementScene() {
     [
       canDeleteUser,
       canEditUser,
+      canManageRoleMembers,
       canResetPassword,
       canToggleUser,
       canViewAudit,

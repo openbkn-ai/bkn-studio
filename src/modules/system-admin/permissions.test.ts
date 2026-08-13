@@ -14,7 +14,7 @@ import { authzPoints, systemAdminPermissions } from "@/modules/system-admin/perm
 import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
 
 /**
- * Grants for the three administrator roles in bkn-safe seed data (grants.json after bkn-foundry PR #474).
+ * Grants for the three administrator roles in the current bkn-safe seed data (grants.json).
  * Use the real seed shape rather than invented data so frontend visibility matches production behavior.
  */
 type SeedGrant = { operations: string[]; resource: { id: string; type: string } };
@@ -30,6 +30,7 @@ const SEEDED_GRANTS: Record<"admin" | "audit" | "security", SeedGrant[]> = {
       resource: { type: "admin-dept", id: "*" },
       operations: ["view", "create", "edit", "delete", "members"],
     },
+    { resource: { type: "admin-role", id: "*" }, operations: ["view"] },
   ],
   security: [
     { resource: { type: "safe_admin", id: "console" }, operations: ["manage"] },
@@ -93,13 +94,14 @@ describe("授权面权限点", () => {
     expect(can(permissions, authzPoints.rolePermissions)).toBe(false);
   });
 
-  it("系统管理员：授权面既进不去也写不了", () => {
+  it("系统管理员：可只读查看角色，但不能在用户管理中绑定或解绑角色", () => {
     const permissions = permissionsOf("admin");
     expect(canEnter(permissions, systemAdminPermissions.authorizations)).toBe(false);
-    expect(canEnter(permissions, systemAdminPermissions.roles)).toBe(false);
-    for (const point of Object.values(authzPoints)) {
-      expect(can(permissions, point)).toBe(false);
-    }
+    expect(canEnter(permissions, systemAdminPermissions.roles)).toBe(true);
+    expect(can(permissions, authzPoints.grant)).toBe(false);
+    expect(can(permissions, authzPoints.revoke)).toBe(false);
+    expect(can(permissions, authzPoints.roleMembers)).toBe(false);
+    expect(can(permissions, authzPoints.rolePermissions)).toBe(false);
     // User and department management remain assigned to the system administrator.
     expect(canEnter(permissions, systemAdminPermissions.users)).toBe(true);
   });

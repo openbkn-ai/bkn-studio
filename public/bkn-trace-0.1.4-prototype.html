@@ -1,0 +1,797 @@
+<!--
+  Copyright (c) 2026 OpenBKN
+  SPDX-License-Identifier: LicenseRef-OpenBKN
+  Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+  Conditions. See LICENSE for the full text.
+-->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BKN Trace 0.1.4 · 统一高保真原型</title>
+  <style>
+    :root { font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; color: #192235; background: #f5f7fb; --blue:#315efb; --line:#e3e8f1; --muted:#758096; --green:#168158; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 1100px; font-size:13px; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+    .shell { display: grid; grid-template-columns: 218px minmax(0,1fr); min-height: 100vh; }
+    .sidebar { padding: 20px 14px; color: #58657a; background: white; }
+    .brand { display:flex; align-items:center; gap:10px; padding: 0 10px 24px; color:white; font-weight:700; }
+    .brand i { display:grid; width:30px; height:30px; place-items:center; border-radius:9px; background:var(--blue); font-style:normal; }
+    .nav-group { margin: 16px 10px 8px; color:#7f8aa2; font-size:11px; }
+    .nav-item { width:100%; margin:3px 0; padding:10px 12px; border:0; border-radius:8px; color:#aeb9cd; background:transparent; text-align:left; }
+    .nav-item.active { color:white; background:#26324a; }
+    .content { min-width:0; padding: 26px 30px 40px; }
+    .page-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; }
+    h1 { margin:0; font-size:23px; letter-spacing:-.02em; }
+    .page-head p { margin:7px 0 0; color:var(--muted); font-size:13px; }
+    .prototype-tag { padding:5px 10px; border-radius:999px; color:#6a5630; background:#fff6df; font-size:11px; }
+    .card { border:1px solid var(--line); border-radius:13px; background:white; box-shadow:0 10px 28px rgb(28 41 69 / 6%); }
+    .filters { display:flex; gap:10px; padding:14px; margin-bottom:14px; }
+    .filters input { width:320px; padding:9px 11px; border:1px solid var(--line); border-radius:8px; }
+    .ghost, .primary { min-height:30px; padding:6px 10px; border-radius:6px; font-size:12px; }
+    .ghost { border:1px solid var(--line); color:#4d5970; background:white; }
+    .primary { border:1px solid var(--blue); color:white; background:var(--blue); }
+    .table-head, .conversation-row { display:grid; grid-template-columns:1.1fr 1.8fr .9fr .85fr .9fr; gap:16px; align-items:center; padding:13px 18px; }
+    .table-head { color:#8790a2; border-bottom:1px solid var(--line); font-size:11px; }
+    .conversation-row { width:100%; border:0; color:inherit; background:white; text-align:left; }
+    .conversation-row:hover { background:#f8faff; }
+    .conversation-row strong, .conversation-row small { display:block; }
+    .conversation-row small { margin-top:5px; color:#8a93a4; line-height:1.45; }
+    .status { color:var(--green); }
+    .back { display:flex; align-items:center; gap:7px; margin-bottom:14px; padding:0; border:0; color:#566278; background:transparent; }
+    .conversation-meta { display:flex; gap:18px; margin-top:8px; color:#7c8699; font-size:11px; }
+    .round-nav { display:flex; gap:8px; margin:18px 0 12px; }
+    .round-tab { min-width:235px; padding:11px 13px; border:1px solid var(--line); border-radius:10px; color:#59657b; background:white; text-align:left; }
+    .round-tab.active { border-color:#8da4fa; color:#25334d; background:#f5f7ff; box-shadow:0 4px 12px rgb(49 94 251 / 8%); }
+    .round-tab strong, .round-tab small { display:block; }
+    .round-tab small { margin-top:5px; color:#8992a4; }
+    .summary { margin-bottom:12px; overflow:hidden; }
+    .summary-top { display:grid; grid-template-columns:80px minmax(0,1fr) auto; gap:14px; align-items:center; padding:15px 18px; }
+    .round-badge { color:var(--blue); font-size:12px; font-weight:700; }
+    .summary-title { overflow:hidden; font-size:14px; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
+    .summary-meta { margin-top:5px; color:#7b8598; font-size:11px; }
+    .summary-body { display:grid; grid-template-columns:1fr 1fr; gap:18px; padding:0 18px 18px; border-top:1px solid #eef1f6; }
+    .summary-section { padding-top:14px; }
+    .summary-section h3, .detail-section h3 { margin:0 0 8px; color:#7e889c; font-size:11px; }
+    .summary-section p { margin:0; color:#344057; font-size:12px; line-height:1.65; }
+    .summary-actions { display:flex; gap:8px; grid-column:1/-1; }
+    .viewbar { display:flex; align-items:center; justify-content:space-between; margin:12px 0; }
+    .segmented { display:flex; padding:3px; border-radius:9px; background:#e9edf4; }
+    .view-button { padding:6px 12px; border:0; border-radius:6px; color:#69748a; background:transparent; font-size:12px; }
+    .view-button.active { color:#26334b; background:white; box-shadow:0 2px 7px rgb(25 37 62 / 10%); font-weight:650; }
+    .legend { display:flex; gap:15px; color:#7c8698; font-size:10px; }
+    .workspace-grid { position:relative; display:grid; grid-template-columns:minmax(0,1fr); gap:13px; align-items:start; }
+    .main-panel { min-height:585px; overflow:hidden; }
+    .timeline { padding:20px 22px 25px 112px; }
+    .track { position:relative; }
+    .track::before { position:absolute; top:8px; bottom:8px; left:-29px; width:2px; background:#dce3ef; content:""; }
+    .endpoint { position:relative; margin:4px 0 16px; color:#687389; font-size:11px; }
+    .endpoint::before, .operation::before { position:absolute; z-index:1; left:-41px; border-radius:50%; background:white; box-shadow:0 0 0 4px white; content:""; }
+    .endpoint::before { top:-3px; width:20px; height:20px; border:5px solid var(--blue); }
+    .endpoint.answer::before { border-color:#19a06d; }
+    .operation { position:relative; width:100%; margin:0 0 11px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; color:inherit; background:white; text-align:left; }
+    .operation::before { top:21px; width:10px; height:10px; border:2px solid #8197e7; }
+    .operation:hover, .operation.selected { border-color:#8ba2f9; background:#f9faff; }
+    .op-top { display:flex; align-items:center; gap:8px; }
+    .op-top strong { font-size:12px; }
+    .object-tag { padding:2px 7px; border-radius:999px; color:var(--blue); background:#eef2ff; font-size:10px; }
+    .condition { display:block; margin:7px 0; color:#566177; font-size:11px; }
+    .op-meta { display:flex; gap:12px; color:#8a93a5; font-size:10px; }
+    .op-result { margin-top:8px; color:#3d4a61; font-size:11px; }
+    .gap { margin:-8px 0 7px; color:#9aa2b1; font-size:9px; }
+    .network { padding:18px; min-height:585px; overflow:auto; background:linear-gradient(#f0f3f8 1px,transparent 1px),linear-gradient(90deg,#f0f3f8 1px,transparent 1px),#fbfcfe; background-size:24px 24px; }
+    .network-columns { display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:10px; min-width:780px; }
+    .network-column { min-height:490px; padding:10px; border:1px solid #dfe5ef; border-radius:10px; background:rgb(255 255 255 / 88%); }
+    .column-title { margin-bottom:12px; color:#727d91; font-size:11px; font-weight:700; }
+    .node { width:100%; margin-bottom:8px; padding:10px; border:1px solid #dde4ee; border-radius:8px; color:#344057; background:white; text-align:left; }
+    .node.observed { border-left:3px solid var(--blue); }
+    .node.context { border-style:dashed; color:#677289; }
+    .node.selected { border-color:var(--blue); background:#f6f8ff; }
+    .node small { display:block; margin-top:4px; color:#8992a4; font-size:9px; }
+    .candidate { margin-top:8px; padding:9px; border-radius:7px; color:#736541; background:#fff7e7; font-size:10px; line-height:1.5; }
+    .network-empty { padding:12px 9px; color:#8993a5; font-size:10px; line-height:1.55; }
+    .related-operation { width:100%; margin-top:7px; padding:9px; border:1px solid #e1e6ef; border-radius:7px; color:#3c4860; background:#fafbfd; text-align:left; }
+    .related-operation strong,.related-operation small { display:block; }.related-operation small { margin-top:4px; color:#7d8799; font-size:9px; line-height:1.45; }
+    .detail-panel { position:fixed; z-index:8; top:50%; right:24px; width:355px; max-height:calc(100vh - 120px); overflow:auto; transform:translateY(-50%); box-shadow:0 16px 42px rgb(30 43 69 / 18%); }
+    .detail-panel.closed { display:none; }
+    .detail-head { display:flex; justify-content:space-between; align-items:flex-start; padding:16px 18px; border-bottom:1px solid var(--line); }
+    .detail-head h2 { margin:5px 0 0; font-size:17px; }
+    .eyebrow { color:var(--blue); font-size:10px; font-weight:700; }
+    .detail-section { padding:14px 18px; border-bottom:1px solid #eef1f5; }
+    .detail-section p { margin:0; color:#3d4960; font-size:11px; line-height:1.6; }
+    .detail-section dl { display:grid; grid-template-columns:80px minmax(0,1fr); gap:7px; margin:0; font-size:10px; }
+    dt { color:#8a93a4; } dd { margin:0; overflow-wrap:anywhere; color:#354158; }
+    pre { max-height:210px; margin:0; padding:11px; overflow:auto; border-radius:7px; color:#dce5ff; background:#172033; font:10px/1.5 ui-monospace,monospace; white-space:pre-wrap; }
+    .drawer-mask { position:fixed; z-index:10; inset:0; display:flex; justify-content:flex-end; background:rgb(17 25 42 / 30%); }
+    .drawer { width:660px; height:100%; padding:24px; overflow-y:auto; background:white; box-shadow:-18px 0 45px rgb(17 25 42 / 18%); }
+    .drawer-head { display:flex; justify-content:space-between; align-items:flex-start; }
+    .drawer h2 { margin:0; font-size:19px; }
+    .drawer p { color:#657087; font-size:12px; line-height:1.65; }
+    .empty-agent { margin-top:22px; padding:28px; border:1px dashed #ccd4e2; border-radius:11px; color:#687388; background:#fafbfd; text-align:center; }
+    .agent-source { margin-top:18px; padding:14px 16px; border:1px solid #e1e7f1; border-radius:10px; background:#f8faff; }
+    .agent-source strong,.agent-source small { display:block; }.agent-source small { margin-top:6px; color:#748096; line-height:1.5; }
+    .agent-note { margin:16px 0; padding:10px 12px; border-left:3px solid #d39b2f; color:#6f5b31; background:#fff8e9; font-size:11px; line-height:1.55; }
+    .agent-ready-actions { display:flex; justify-content:center; gap:8px; margin-top:14px; }
+    .agent-error { margin-top:18px; padding:18px; border:1px solid #efc8c8; border-radius:9px; color:#623d3d; background:#fff7f7; }.agent-error strong { display:block; font-size:14px; }.agent-error code { display:block; margin-top:9px; color:#965454; font-size:10px; }.agent-error p { margin:9px 0 0; color:#795858; }
+    .agent-loading { display:grid; min-height:260px; place-items:center; color:#637088; text-align:center; }.agent-loading i { display:block; width:30px; height:30px; margin:0 auto 13px; border:3px solid #dbe3f6; border-top-color:#315efb; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .agent-result h3 { margin:20px 0 10px; font-size:13px; }
+    .verdict-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }.verdict { padding:11px; border:1px solid #e2e7ef; border-radius:8px; background:#fafbfd; }.verdict strong,.verdict small { display:block; }.verdict small { margin-top:5px; color:#68758b; }.verdict.change { border-color:#f0c985; background:#fff9ed; }.verdict.ok { border-color:#b9dfcb; background:#f2fbf6; }.verdict.unknown { border-color:#d9dee7; background:#f6f7f9; }
+    .recommendation { padding:16px; border:1px solid #dce3ee; border-radius:10px; }.recommendation + .recommendation { margin-top:10px; }.recommendation-head { display:flex; justify-content:space-between; gap:12px; }.recommendation-head span { color:#315efb; font-size:11px; font-weight:700; }.recommendation dl { display:grid; grid-template-columns:88px minmax(0,1fr); gap:9px; margin:15px 0 0; font-size:11px; }.suggestion-box { margin-top:13px; padding:12px; border-left:3px solid #315efb; color:#2f3d55; background:#f3f6ff; font-size:11px; line-height:1.65; }
+    .agent-section { padding:12px 14px; border:1px solid #e5e9f0; border-radius:8px; color:#536078; background:#fafbfd; font-size:11px; line-height:1.65; }
+    .agent-actions { position:sticky; bottom:-24px; display:flex; gap:8px; margin:20px -24px -24px; padding:14px 24px; border-top:1px solid #e5e9f0; background:white; }
+    .toast { position:fixed; z-index:20; right:24px; bottom:24px; padding:10px 14px; border-radius:8px; color:white; background:#26334b; font-size:12px; }
+    .integrated-workbench { width:100%; min-height:760px; border:0; background:white; }
+    .system-children.hidden { display:none; }
+
+    /* Match the existing OpenBKN Studio shell shown in the reference page. */
+    body { min-width:1280px; color:#303a4d; background:#f4f6fa; }
+    .studio-topbar { display:grid; grid-template-columns:276px minmax(0,1fr) auto; align-items:center; height:86px; padding:0 28px; border-bottom:1px solid #e7ebf2; background:white; }
+    .studio-logo { display:flex; align-items:center; gap:10px; color:#121c2d; font-size:20px; font-weight:750; }
+    .logo-graph { position:relative; width:40px; height:43px; }
+    .logo-graph::before { position:absolute; inset:4px 8px; border:2px solid #233752; clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); content:""; }
+    .logo-graph i { position:absolute; width:6px; height:6px; border-radius:50%; background:#2747a3; box-shadow:0 0 0 2px white; }
+    .logo-graph i:nth-child(1){left:17px;top:1px}.logo-graph i:nth-child(2){right:4px;top:11px;background:#2eb7af}.logo-graph i:nth-child(3){right:4px;bottom:10px}.logo-graph i:nth-child(4){left:17px;bottom:0;background:#2eb7af}.logo-graph i:nth-child(5){left:2px;bottom:10px}.logo-graph i:nth-child(6){left:2px;top:11px;background:#2eb7af}
+    .breadcrumbs { display:flex; align-items:center; gap:12px; color:#58657a; font-size:17px; }
+    .breadcrumbs .slash { color:#c7ceda; }.breadcrumbs strong { padding:8px 14px; border-radius:20px; color:#26334a; background:#edf2ff; }
+    .admin-card { display:grid; grid-template-columns:44px auto; align-items:center; gap:10px; padding:8px 14px 8px 9px; border:1px solid #e3e8f1; border-radius:27px; }
+    .admin-avatar { display:grid; width:42px; height:42px; place-items:center; border-radius:13px; color:white; background:#2860df; font-size:21px; }
+    .admin-card strong,.admin-card small { display:block; }.admin-card small { margin-top:3px; color:#657187; }
+    .shell { grid-template-columns:276px minmax(0,1fr); min-height:calc(100vh - 86px); }
+    .sidebar { padding:28px 14px; color:#58657a; border-right:1px solid #e3e8f1; background:white; }
+    .brand,.nav-group { display:none; }
+    .nav-section { margin-top:11px; }
+    .nav-parent,.nav-item { display:flex; align-items:center; width:100%; min-height:48px; margin:2px 0; padding:0 12px; border:0; border-radius:0; color:#59667b; background:transparent; font-size:15px; text-align:left; }
+    .nav-parent { justify-content:space-between; font-weight:650; }.nav-parent.active-parent { color:#274a9e; }
+    .nav-icon { display:inline-grid; width:28px; margin-right:4px; place-items:center; color:#68778d; font-size:17px; }
+    .nav-item.child { padding-left:14px; }.nav-item.active { position:relative; color:#3159b7; background:#edf3ff; }
+    .nav-item.active::before { position:absolute; top:0; bottom:0; left:0; width:4px; background:#2f6df4; content:""; }
+    .enterprise { margin-left:auto; padding:3px 8px; border:1px solid #efc56a; color:#936512; background:#fff9eb; font-size:11px; }
+    .content { padding:16px; background:#f4f6fa; }
+    .content-card { min-height:calc(100vh - 119px); padding:32px; border:1px solid #e0e5ed; background:white; box-shadow:0 2px 13px rgb(43 58 86 / 3%); }
+    .page-head { margin-bottom:24px; }.page-head h1 { font-size:25px; }.page-head p { color:#94a2b9; font-size:14px; }
+    #conversation-list .card { border-radius:0; box-shadow:none; }
+    #conversation-list .filters { display:grid; grid-template-columns:1.35fr .9fr .9fr .85fr .8fr .85fr auto auto; gap:8px; padding:0; border:0; }
+    #conversation-list .filters.secondary { grid-template-columns:1fr 1fr 3.8fr; margin-top:8px; }
+    #conversation-list .filters input,#conversation-list .filters button { min-height:42px; border-radius:0; }
+    .query-button { color:white !important; border-color:#28499c !important; background:#28499c !important; }
+    .table-head,.conversation-row { grid-template-columns:1.05fr 1.4fr .55fr 1.65fr .75fr .65fr .75fr .6fr; gap:10px; padding:14px 10px; }
+    .table-head { margin-top:24px; color:#273247; background:#fafafa; font-size:13px; font-weight:700; }
+    .conversation-row { min-height:102px; border-bottom:1px solid #edf0f4; }
+    .conversation-row strong { color:#303a4c; font-size:12px; }.conversation-row .link { color:#2f6ef5; }.conversation-row .result-preview { line-height:1.55; }
+    .conversation-pagination { display:flex; justify-content:flex-end; align-items:center; gap:8px; min-height:58px; padding:10px 14px; color:#69758a; font-size:12px; }
+    .conversation-pagination button,.conversation-pagination select { min-width:30px; height:30px; padding:0 9px; border:1px solid #dfe5ee; border-radius:3px; color:#566278; background:white; }
+    .conversation-pagination button.current { color:white; border-color:#315efb; background:#315efb; }.conversation-pagination button:disabled { color:#b2bac8; background:#f7f8fa; cursor:default; }
+    .analysis-layout { display:grid; grid-template-columns:274px minmax(0,1fr); gap:14px; align-items:start; }
+    .analysis-layout.rounds-collapsed { grid-template-columns:52px minmax(0,1fr); }
+    .interaction-sidebar { position:sticky; top:12px; height:calc(100vh - 145px); overflow:hidden; border:1px solid #e1e6ef; border-radius:12px; background:#fbfcfe; }
+    .interaction-sidebar.collapsed .round-sidebar-copy,.interaction-sidebar.collapsed .round-search,.interaction-sidebar.collapsed .round-tab strong,.interaction-sidebar.collapsed .round-tab small { display:none; }
+    .interaction-sidebar.collapsed .round-sidebar-head { justify-content:center; padding:11px 7px; }.interaction-sidebar.collapsed .round-tab { min-width:0; padding:12px 4px; text-align:center; }
+    .round-sidebar-head { display:flex; justify-content:space-between; align-items:center; padding:14px; border-bottom:1px solid #e7ebf2; background:white; }
+    .round-sidebar-head strong,.round-sidebar-head small { display:block; }.round-sidebar-head small { margin-top:4px; color:#8d97a9; font-size:10px; }
+    .icon-button { display:grid; width:30px; height:30px; padding:0; border:1px solid #e0e5ed; border-radius:7px; place-items:center; color:#67738a; background:white; }
+    .round-search { margin:12px; }.round-search input { width:100%; padding:9px 10px; border:1px solid #e1e6ef; border-radius:7px; font-size:11px; }
+    .round-nav { display:block; height:calc(100% - 116px); margin:0; padding:0 8px 12px; overflow-y:auto; }
+    .round-tab { width:100%; min-width:0; margin-bottom:7px; padding:12px; border-color:transparent; border-radius:8px; background:transparent; }
+    .round-tab.active { border-color:#9eb3fb; border-left:3px solid #315efb; background:#f0f4ff; box-shadow:none; }
+    .round-index { display:block; margin-bottom:5px; color:#315efb; font-size:10px; font-weight:700; }
+    .analysis-content { min-width:0; }
+    .workspace-grid { grid-template-columns:minmax(560px,1fr); }
+    .detail-panel.collapsed { width:48px; min-height:200px; }.detail-panel.collapsed > *:not(.detail-rail-button) { display:none; }
+    .detail-rail-button { display:none; width:100%; padding:12px 5px; border:0; color:#607087; background:white; writing-mode:vertical-rl; }
+    .detail-panel.collapsed .detail-rail-button { display:block; }
+    .detail-collapse { margin-left:10px; }
+    .network-path { margin-bottom:14px; color:#69758a; font-size:11px; }
+    .text-clamp-2 { display:-webkit-box; max-height:3.1em; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-height:1.55; cursor:default; }
+    .text-clamp-2.is-truncated { cursor:pointer; }
+    .text-clamp-2.is-truncated:focus { outline:2px solid #9eb3fb; outline-offset:2px; }
+    .long-text-preview { position:fixed; z-index:30; width:320px; max-width:calc(100vw - 24px); max-height:168px; padding:10px 12px; overflow:auto; border:1px solid #d8dfeb; border-radius:7px; color:#344057; background:white; box-shadow:0 10px 28px rgb(24 39 70 / 18%); font-size:11px; line-height:1.6; white-space:pre-wrap; pointer-events:none; }
+    .full-text-dialog { width:min(760px,calc(100vw - 48px)); max-height:calc(100vh - 96px); padding:0; border:0; border-radius:12px; box-shadow:0 24px 70px rgb(19 31 54 / 30%); }
+    .full-text-dialog::backdrop { background:rgb(18 27 45 / 35%); }
+    .full-text-head { display:flex; justify-content:space-between; align-items:center; padding:16px 18px; border-bottom:1px solid var(--line); }
+    .full-text-head h2 { margin:0; font-size:16px; }
+    .full-text-body { max-height:calc(100vh - 190px); margin:0; padding:18px; overflow:auto; color:#354158; background:white; font:12px/1.7 ui-monospace,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .full-text-actions { display:flex; justify-content:flex-end; gap:8px; padding:12px 18px; border-top:1px solid var(--line); background:#fafbfd; }
+    .trace-filters { display:grid; grid-template-columns:minmax(260px,1.4fr) repeat(4,minmax(120px,.7fr)) auto auto; gap:8px; margin-bottom:18px; }
+    .trace-filters input,.trace-filters button { min-height:42px; padding:0 12px; border:1px solid #dfe5ee; border-radius:0; background:white; }
+    .trace-table-head,.trace-row { display:grid; grid-template-columns:1.05fr 1.35fr 1fr .8fr .72fr .65fr .65fr; gap:12px; align-items:center; padding:14px 12px; }
+    .trace-table-head { color:#273247; border-bottom:1px solid #e7ebf2; background:#fafafa; font-size:12px; font-weight:700; }
+    .trace-row { width:100%; min-height:88px; border:0; border-bottom:1px solid #edf0f4; color:#344057; background:white; text-align:left; }
+    .trace-row:hover { background:#f8faff; }.trace-row small { display:block; margin-top:4px; color:#8690a2; }.trace-row .link { color:#2f6ef5; }
+    .trace-pagination { display:flex; justify-content:flex-end; align-items:center; gap:8px; min-height:58px; padding:10px 14px; color:#69758a; }
+    .trace-pagination button,.trace-pagination select { height:30px; padding:0 9px; border:1px solid #dfe5ee; color:#566278; background:white; }.trace-pagination .current { color:white; border-color:var(--blue); background:var(--blue); }
+    .trace-back { margin-bottom:18px; }.trace-workbench { display:grid; gap:14px; }.trace-detail-grid { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(340px,.75fr); gap:14px; align-items:start; }
+    .trace-overview { padding:18px; }.trace-overview-head { display:flex; justify-content:space-between; gap:18px; align-items:flex-start; }.trace-overview h2 { margin:0 0 5px; font-size:18px; }.trace-overview-head p { margin:0; color:#7c8799; }.partial-tag { padding:4px 9px; border:1px solid #e6bd66; color:#8a6112; background:#fff8e7; font-size:10px; white-space:nowrap; }
+    .capture-banner { margin:15px 0; padding:11px 13px; border-left:3px solid #d89a29; color:#66522e; background:#fff9ec; font-size:11px; line-height:1.6; }.capture-banner strong { display:block; color:#553f19; }
+    .fact-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }.fact { min-height:70px; padding:11px; border:1px solid #e4e8ef; background:#fafbfd; }.fact span,.fact strong { display:block; }.fact span { margin-bottom:6px; color:#8791a3; font-size:10px; }.fact strong { overflow-wrap:anywhere; font-size:11px; }
+    .root-io { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }.root-payload { min-width:0; padding:13px; border:1px solid #e1e6ef; background:white; }.root-payload h3 { margin:0 0 8px; color:#748096; font-size:10px; }.root-payload .text-clamp-2 { color:#344057; font-size:11px; }
+    .technical-findings { padding:16px 18px; }.findings-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:11px; }.findings-head h3 { margin:0; font-size:13px; }.finding-count { color:#9a6610; font-size:10px; }.finding { display:grid; grid-template-columns:92px minmax(0,1fr) auto; gap:12px; align-items:start; padding:11px 0; border-top:1px solid #edf0f4; }.finding:first-of-type { border-top:0; }.finding-code { color:#315efb; font:10px/1.5 ui-monospace,monospace; }.finding strong,.finding small { display:block; }.finding small { margin-top:4px; color:#788397; line-height:1.5; }.finding-level { padding:2px 7px; color:#94620a; background:#fff3d8; font-size:9px; }
+    .trace-section { margin-top:14px; padding:16px 18px; }.trace-section h3 { margin:0 0 12px; font-size:13px; }.trace-chain { position:relative; padding-left:28px; }.trace-chain::before { position:absolute; top:9px; bottom:9px; left:7px; width:2px; background:#dce3ef; content:""; }
+    .chain-step { position:relative; width:100%; margin-bottom:10px; padding:12px; border:1px solid #e0e5ed; color:#344057; background:white; text-align:left; }.chain-step::before { position:absolute; top:16px; left:-26px; width:10px; height:10px; border:2px solid #6684eb; border-radius:50%; background:white; content:""; }.chain-step header { display:flex; justify-content:space-between; gap:12px; }.chain-step p { margin:8px 0 0; color:#667187; font-size:11px; }.chain-step.operation-node:hover,.chain-step.operation-node.active { border-color:#8ca4fb; background:#f7f9ff; }.observed-gap { margin:-3px 0 8px; padding:5px 9px; color:#8c6d32; border-left:2px dashed #d4a84e; background:#fffbf2; font-size:9px; }
+    .raw-panel { position:sticky; top:12px; padding:16px; }.raw-panel h3 { margin:0; }.raw-panel > p { margin:5px 0 12px; color:#8490a2; font-size:10px; }.operation-facts { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:12px; }.operation-facts div { padding:8px; border:1px solid #e7ebf1; background:#fafbfd; }.operation-facts span,.operation-facts strong { display:block; }.operation-facts span { margin-bottom:4px; color:#8993a5; font-size:9px; }.operation-facts strong { overflow-wrap:anywhere; font-size:9px; }.raw-tabs { display:flex; gap:6px; margin-bottom:10px; }.raw-tabs button { padding:5px 9px; border:1px solid #dfe5ee; color:#5e6a80; background:white; }.raw-tabs button.active { color:#315efb; border-color:#9eb3fb; background:#f3f6ff; }.raw-panel pre { max-height:470px; }.log-action { width:100%; margin-top:12px; }
+    .settings-stack { display:grid; gap:16px; }
+    .settings-section { padding:20px; border:1px solid #e1e6ee; background:white; }
+    .settings-section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:15px; }
+    .settings-section-head h2 { margin:0; font-size:17px; }
+    .settings-section-head p { margin:6px 0 0; color:#8792a5; font-size:11px; line-height:1.55; }
+    .settings-refresh { padding:6px 10px; border:1px solid #dfe5ee; color:#566278; background:white; font-size:11px; }
+    .settings-summary { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+    .settings-summary article { min-height:82px; padding:13px 14px; border:1px solid #e3e8ef; background:#fafbfd; }
+    .settings-summary span,.settings-summary strong,.settings-summary small { display:block; }
+    .settings-summary span { color:#8791a3; font-size:10px; }
+    .settings-summary strong { margin-top:7px; color:#2f3b51; font-size:18px; line-height:1.25; }
+    .settings-summary small { margin-top:4px; color:#7b8699; font-size:10px; }
+    .settings-table-head,.settings-row { display:grid; grid-template-columns:1.05fr 1.05fr 1.45fr .65fr .9fr 1.25fr; gap:14px; align-items:center; padding:12px 14px; }
+    .settings-table-head { color:#59657a; border-bottom:1px solid #e5e9f0; background:#fafafa; font-size:11px; font-weight:700; }
+    .settings-row { min-height:60px; border-bottom:1px solid #edf0f4; color:#3b4659; font-size:11px; line-height:1.45; }
+    .settings-row:last-child { border-bottom:0; }
+    .settings-row strong,.settings-row small { display:block; }
+    .settings-row small { margin-top:4px; color:#8a94a6; }
+    .health-tag { display:inline-flex; width:max-content; padding:3px 8px; color:#177555; background:#edf9f3; font-size:10px; }
+    .health-tag.pending { color:#8a641e; background:#fff7e8; }
+    .retention-grid { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(320px,.8fr); gap:14px; }
+    .retention-list { border:1px solid #e3e8ef; }
+    .retention-row { display:grid; grid-template-columns:1.2fr .9fr 1.05fr .8fr; gap:12px; padding:12px 14px; border-bottom:1px solid #edf0f4; color:#3b4659; font-size:11px; line-height:1.45; }
+    .retention-row:last-child { border-bottom:0; }.retention-row.head { color:#59657a; background:#fafafa; font-weight:700; }
+    .storage-card { padding:16px; border:1px solid #e5d8b8; background:#fffaf0; }
+    .storage-card header { display:flex; justify-content:space-between; gap:12px; }
+    .storage-card h3 { margin:0; font-size:13px; }.storage-card p { margin:8px 0 13px; color:#776542; font-size:11px; line-height:1.55; }
+    .storage-card dl { display:grid; grid-template-columns:82px 1fr; gap:8px; margin:0; font-size:10px; }
+    .archive-panel { display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:18px; align-items:stretch; }
+    .archive-rule { padding:18px; border:1px solid #dfe6f1; background:#f8faff; }
+    .archive-rule h3 { margin:0; font-size:15px; }.archive-rule p { margin:7px 0 0; color:#68748a; font-size:11px; line-height:1.6; }
+    .archive-cutoff { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:14px; }
+    .archive-cutoff div { padding:11px; border:1px solid #e3e8f1; background:white; }
+    .archive-cutoff span,.archive-cutoff strong { display:block; }.archive-cutoff span { color:#8993a5; font-size:9px; }.archive-cutoff strong { margin-top:5px; font-size:11px; }
+    .archive-empty { display:grid; min-height:170px; padding:18px; border:1px dashed #ccd5e2; place-items:center; color:#69758a; background:#fbfcfe; text-align:center; }
+    .archive-empty strong,.archive-empty small { display:block; }.archive-empty strong { color:#364257; font-size:13px; }.archive-empty small { margin:7px 0 14px; line-height:1.55; }
+    .primary:disabled { color:#a4adbc; border-color:#dfe4eb; background:#eef1f5; cursor:not-allowed; }
+    .archive-table-head { display:grid; grid-template-columns:.8fr 1.7fr 1.25fr .9fr .7fr .55fr; gap:12px; padding:12px 14px; color:#59657a; border-bottom:1px solid #e5e9f0; background:#fafafa; font-size:11px; font-weight:700; }
+    .archive-list-empty { padding:34px 16px; color:#8a94a5; text-align:center; font-size:11px; }
+    .settings-note { margin-top:10px; color:#98a1b0; font-size:9px; }
+    @media(max-width:1500px){
+      .analysis-layout{grid-template-columns:224px minmax(0,1fr)}
+      .workspace-grid{grid-template-columns:minmax(0,1fr)}
+      .content-card{padding:24px}
+      .timeline{padding-left:86px}
+      .detail-panel:not(.closed){right:18px;width:350px}
+    }
+  </style>
+</head>
+<body>
+  <header class="studio-topbar" id="studio-topbar">
+    <div class="studio-logo"><span class="logo-graph"><i></i><i></i><i></i><i></i><i></i><i></i></span><span>Open<span style="color:#2c67e8">BKN</span></span></div>
+    <div class="breadcrumbs"><span id="current-section-name">可观测性</span><span class="slash">/</span><strong id="current-product-name">业务溯源</strong></div>
+    <div class="admin-card"><span class="admin-avatar">♙</span><span><strong>Administrator</strong><small>super_admin</small></span></div>
+  </header>
+  <div class="shell">
+    <aside class="sidebar" id="studio-sidebar">
+      <div class="brand"><i>◇</i>OpenBKN Studio</div>
+      <button class="nav-item" type="button"><span class="nav-icon">⌂</span>首页</button>
+      <div class="nav-section"><button class="nav-parent" type="button"><span><span class="nav-icon">⌘</span>领域知识网络</span><span>⌃</span></button><button class="nav-item child" type="button"><span class="nav-icon">◇</span>知识网络管理</button><button class="nav-item child" type="button"><span class="nav-icon">⌁</span>知识网络对接</button></div>
+      <div class="nav-section" id="observability-navigation"><button class="nav-parent active-parent" type="button"><span><span class="nav-icon">⌯</span>可观测性</span><span>⌃</span></button><button class="nav-item child active" id="nav-business-provenance" type="button"><span class="nav-icon">▤</span>业务溯源<span class="enterprise">企业版</span></button><button class="nav-item child" id="nav-trace-analysis" type="button"><span class="nav-icon">⌁</span>Trace 分析</button><button class="nav-item child" id="nav-log-search" type="button"><span class="nav-icon">□</span>日志检索</button><button class="nav-item child" id="nav-observability-settings" type="button"><span class="nav-icon">⚙</span>可观测性设置</button></div>
+      <div class="nav-section"><button class="nav-parent" type="button"><span><span class="nav-icon">▦</span>执行工厂</span><span>⌄</span></button><button class="nav-parent" type="button"><span><span class="nav-icon">▦</span>数据资源知识网络</span><span>⌄</span></button><button class="nav-parent" type="button"><span><span class="nav-icon">△</span>模型管理</span><span>⌄</span></button><section id="system-navigation"><button class="nav-parent" id="nav-system-management" type="button"><span><span class="nav-icon">⚙</span>系统管理</span><span>⌄</span></button><div class="system-children hidden" id="system-navigation-children"><button class="nav-item child" type="button"><span class="nav-icon">♙</span>用户管理</button><button class="nav-item child" type="button"><span class="nav-icon">◇</span>角色管理<span class="enterprise">专业版</span></button><button class="nav-item child" type="button"><span class="nav-icon">▣</span>授权管理</button><button class="nav-item child" id="nav-audit-logs" type="button"><span class="nav-icon">□</span>日志管理</button></div></section></div>
+    </aside>
+    <main class="content">
+      <div class="content-card">
+      <section id="business-provenance-page">
+      <section id="conversation-list">
+        <header class="page-head"><div><h1>业务溯源</h1><p>从用户问题和业务结果出发，查看 Agent 如何调用业务知识网络并形成结论。</p></div><span class="prototype-tag">0.1.4 · 企业版</span></header>
+        <div class="filters card"><input aria-label="搜索业务会话" placeholder="搜索问题、结果、业务对象或 ID" value="conv_73fc12a00ac46933c3d8015616a1b1b3"><button class="ghost" type="button">开始时间</button><button class="ghost" type="button">结束时间</button><button class="ghost" type="button">Agent / 应用</button><button class="ghost" type="button">业务域</button><button class="ghost" type="button">知识网络</button><button class="ghost query-button" type="button">⌕ 查询</button><button class="ghost" type="button">↻</button></div>
+        <div class="filters secondary"><button class="ghost" type="button">运行状态</button><button class="ghost" type="button">证据完整性</button><span></span></div>
+        <div class="card">
+          <div class="table-head"><span>开始时间</span><span>用户问题</span><span>交互轮次</span><span>业务结果</span><span>Agent</span><span>状态</span><span>证据完整性</span><span>耗时</span></div>
+          <div class="conversation-row" id="open-conversation" role="button" tabindex="0">
+            <span><strong>2026/8/8 19:01:45</strong><small>conv_73fc12a00ac46933c3d8015616a1b1b3</small></span>
+            <span data-long-text="用户问题全文"><strong class="link">分析对比900-000044和900-000063两款智能球阀的BOM物料差异，是否有共用物料？</strong></span>
+            <span><strong>2</strong></span>
+            <span class="result-preview" data-long-text="业务结果全文">完成两款智能球阀的 BOM 明细对比：900-000044 有 1 条直接物料，900-000063 返回 5 条 BOM 明细，并据返回结果判断共用物料。</span>
+            <span><strong>Codex</strong></span>
+            <span><small class="status">已完成</small></span>
+            <span><small class="partial-tag">部分可溯源</small></span>
+            <span><strong>2.1 分钟</strong></span>
+          </div>
+          <div class="conversation-pagination" id="conversation-pagination" aria-label="业务会话分页"><span>共 1 条</span><select aria-label="每页条数"><option>20 条 / 页</option></select><button type="button" disabled aria-label="上一页">‹</button><button class="current" type="button" aria-current="page">1</button><button type="button" disabled aria-label="下一页">›</button></div>
+        </div>
+      </section>
+
+      <section id="conversation-workspace" class="hidden">
+        <button class="back" id="back-to-list" type="button">← 返回业务会话</button>
+        <header class="page-head"><div><h1>Codex 的业务会话</h1><div class="conversation-meta"><span>conv_73fc12a00ac46933c3d8015616a1b1b3</span><span>2 轮交互</span><span>9 次调用</span><span>HD供应链业务知识网络_v3</span></div></div><span class="partial-tag">部分可溯源</span></header>
+        <div class="analysis-layout" id="analysis-layout">
+          <aside class="interaction-sidebar" id="interaction-sidebar">
+            <div class="round-sidebar-head"><span class="round-sidebar-copy"><strong>交互轮次</strong><small id="round-sidebar-current">共 2 轮 · 当前第 1 轮</small></span><button class="icon-button" id="collapse-interactions" type="button" title="收起轮次">‹</button></div>
+            <div class="round-search"><input id="interaction-search" aria-label="搜索交互轮次" placeholder="搜索问题或业务对象"></div>
+            <nav class="round-nav" aria-label="交互轮次">
+              <button class="round-tab active" data-interaction="0" type="button"><span class="round-index">第 1 轮</span><strong>库存、仓库与供应商</strong><small>19:01:45 · 1分37.9秒 · 8 次调用 · 完成</small></button>
+              <button class="round-tab" data-interaction="1" type="button"><span class="round-index">第 2 轮</span><strong>两款智能球阀 BOM 对比</strong><small>19:04:22 · 30.7秒 · 1 次调用 · 完成</small></button>
+            </nav>
+          </aside>
+          <section class="analysis-content" id="analysis-content">
+            <section class="summary card" id="interaction-summary"></section>
+            <div class="viewbar"><div class="segmented"><button class="view-button active" data-view="timeline" type="button">时间链视图</button><button class="view-button" data-view="network" type="button">知识网络视图</button></div><div class="legend"><span>● 本轮已触达</span><span>◇ 知识网络上下文</span><span>⌕ 探索候选</span></div></div>
+            <div class="workspace-grid detail-closed" id="workspace-grid">
+              <section class="main-panel card"><div class="timeline" id="timeline-view"></div><div class="network hidden" id="network-view"></div></section>
+              <aside class="detail-panel card closed" id="detail-panel"></aside>
+            </div>
+          </section>
+        </div>
+      </section>
+      </section>
+
+      <section id="trace-analysis-page" class="hidden">
+        <header class="page-head"><div><h1>Trace 分析</h1><p>查看 Agent、MCP 与 SDK 的原始调用事实、技术执行链和诊断信息。</p></div></header>
+        <section id="trace-list">
+          <div class="trace-filters"><input aria-label="搜索 Trace" value="conv_73fc12a00ac46933c3d8015616a1b1b3" placeholder="搜索 Conversation、Request、Operation 或工具"><button type="button">开始时间</button><button type="button">结束时间</button><button type="button">服务 / Agent</button><button type="button">状态</button><button class="query-button" type="button">⌕ 查询</button><button type="button">↻</button></div>
+          <div class="card">
+            <div class="trace-table-head"><span>开始时间</span><span>请求</span><span>调用工具</span><span>服务</span><span>状态</span><span>耗时</span><span>Span</span></div>
+            <div id="trace-table-body"></div>
+            <div class="trace-pagination" id="trace-pagination"><span>共 1 条 Trace</span><select aria-label="Trace 每页条数"><option>20 条 / 页</option></select><button disabled type="button">‹</button><button class="current" type="button">1</button><button disabled type="button">›</button></div>
+          </div>
+        </section>
+        <section id="trace-detail" class="hidden">
+          <button class="back trace-back" id="back-to-trace-list" type="button">← 返回 Trace 列表</button>
+          <div class="trace-workbench">
+            <article class="card trace-overview">
+              <div class="trace-overview-head"><div><h2>单 Trace 技术执行工作台</h2><p>展示原始调用事实和确定性技术诊断，不附加业务语义判断。</p></div><span class="partial-tag">部分记录</span></div>
+              <div class="capture-banner" id="trace-completeness"><strong>部分调用记录</strong>已获得 1 个 Operation，但 Trace ID 与 Span 未采集，无法还原父子调用层级。以下未观测区间不解释为模型或第三方 Agent 耗时。</div>
+              <div class="fact-grid"><div class="fact"><span>Interaction / Request</span><strong>int_483a29806fa10fde2e45b6eede7b435e<br>req_7892c814-bd3a-45c5-83eb-6707f0279df1</strong></div><div class="fact"><span>Agent / 来源 / 协议</span><strong>Codex<br>user-bkn-agent-retrieval · MCP</strong></div><div class="fact"><span>状态 / 时间</span><strong>completed · 30.662s<br>2026-08-08T11:04:22.614420Z</strong></div></div>
+              <div class="root-io"><section class="root-payload" id="trace-root-input"><h3>Trace 输入（原文）</h3><div data-long-text="Trace 输入原文">分析对比900-000044和900-000063两款智能球阀的BOM物料差异，是否有共用物料？</div></section><section class="root-payload" id="trace-root-output"><h3>Trace 输出（原文）</h3><div data-long-text="Trace 输出原文">完成两款智能球阀的 BOM 明细对比：900-000044 有 1 条直接物料，900-000063 返回 5 条 BOM 明细，并据返回结果判断共用物料。</div></section></div>
+            </article>
+            <article class="card technical-findings" id="trace-technical-findings"><div class="findings-head"><h3>技术问题摘要</h3><span class="finding-count">1 项采集问题 · 0 项执行异常</span></div><div class="finding"><span class="finding-code">CAPTURE-001</span><div><strong>调用层级无法还原</strong><small>Trace ID、Span ID 和父子关系未记录；当前只能按时间排列已观测 Operation。</small></div><span class="finding-level">需补采集</span></div><div class="finding"><span class="finding-code">EXECUTION</span><div><strong>未发现确定性执行异常</strong><small>已记录的 run_sql 调用完成，未记录错误；结论仅覆盖当前可见 Operation。</small></div><span class="status">正常</span></div></article>
+            <div class="trace-detail-grid">
+              <article class="card trace-section"><h3>技术执行时间序列</h3><div class="trace-chain" id="trace-execution-chain"><div class="chain-step"><header><strong>Trace 输入已记录</strong><span>19:04:22.614</span></header><p>Interaction · int_483a29806fa10fde2e45b6eede7b435e</p></div><div class="observed-gap">未观测区间 17.7s · 没有 Operation 或 Span 事实</div><button class="chain-step operation-node active" data-trace-operation="op_481d7266ea974c0d6d9e2165c9e29a43" type="button"><header><strong>MCP Operation · run_sql</strong><span>667ms</span></header><p>user-bkn-agent-retrieval · completed · Attempt 1</p></button><div class="observed-gap">未观测区间 12.3s · 没有 Operation 或 Span 事实</div><div class="chain-step"><header><strong>Trace 输出已记录</strong><span>19:04:53.277</span></header><p>Interaction completed · 结果原文可回读</p></div></div></article>
+              <aside class="card raw-panel" id="trace-operation-detail"><h3>run_sql 调用详情</h3><p>点击时间序列节点查看原始事实。</p><div class="operation-facts"><div><span>Operation ID</span><strong>op_481d7266ea974c0d6d9e2165c9e29a43</strong></div><div><span>Request ID</span><strong>req_7892c814-bd3a-45c5-83eb-6707f0279df1</strong></div><div><span>服务 / 协议</span><strong>user-bkn-agent-retrieval · MCP</strong></div><div><span>状态 / Attempt</span><strong>completed · Attempt 1</strong></div><div><span>开始时间</span><strong>2026-08-08T11:04:40.302897Z</strong></div><div><span>结束 / 耗时</span><strong>2026-08-08T11:04:40.970884Z · 667ms</strong></div></div><div class="raw-tabs"><button class="active" data-raw-tab="input" type="button">输入</button><button data-raw-tab="output" type="button">输出</button><button data-raw-tab="error" type="button">错误</button></div><div id="trace-raw-content"></div><button class="ghost log-action" type="button">打开关联日志</button></aside>
+            </div>
+          </div>
+        </section>
+      </section>
+      <section id="logs-workbench-page" class="hidden"><iframe class="integrated-workbench" id="logs-workbench-frame" title="用户操作与管理审计工作台" src="./openbkn-logs-0.1.4-prototype.html?embed=1#logs"></iframe></section>
+      <section id="observability-settings-page" class="hidden">
+        <header class="page-head"><div><h1>可观测性设置</h1><p>查看日志与 Trace 的采集、保留和历史数据归档状态。</p></div></header>
+        <div class="settings-stack">
+          <section class="settings-section">
+            <div class="settings-section-head"><div><h2>运行概览</h2><p>汇总当前可观测性来源的接入状态；只展示接口能够确认的事实。</p></div><button class="settings-refresh" type="button">↻ 刷新</button></div>
+            <div class="settings-summary"><article><span>已登记来源</span><strong>4</strong><small>当前真实返回</small></article><article><span>正常</span><strong>2</strong><small>运行日志、管理审计</small></article><article><span>异常</span><strong>0</strong><small>当前未返回异常</small></article><article><span>未接入</span><strong>2</strong><small>用户访问、安全审计</small></article><article><span>最近更新时间</span><strong>接口未返回</strong><small>不以页面时间代替</small></article></div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-head"><div><h2>采集来源</h2><p>查看日志来源、业务覆盖和接收状态；0.1.4 保持只读，不在此页修改采集策略。</p></div></div>
+            <div class="settings-table-head"><span>日志来源</span><span>覆盖范围</span><span>覆盖业务模块</span><span>状态</span><span>最近接收</span><span>数据情况</span></div>
+            <div class="settings-row"><span><strong>OpenTelemetry</strong><small>otel-runtime</small></span><span>OpenBKN 运行日志</span><span>不属于业务操作审计</span><span class="health-tag">正常</span><span>当前接口未返回</span><span>当前接口未返回接收或丢弃统计</span></div>
+            <div class="settings-row"><span><strong>BKN Safe 管理审计</strong><small>bkn-safe-admin</small></span><span>管理操作</span><span>用户与组织、权限与授权、API Key、License</span><span class="health-tag">正常</span><span>当前接口未返回</span><span>来源适配读取，不占用 Trace 热存储</span></div>
+            <div class="settings-row"><span><strong>用户访问日志</strong><small>bkn-safe-access</small></span><span>登录与访问</span><span>认证与账号</span><span class="health-tag pending">未接入</span><span>—</span><span>尚未采集</span></div>
+            <div class="settings-row"><span><strong>安全审计日志</strong><small>bkn-safe-security</small></span><span>授权与安全事件</span><span>权限与授权</span><span class="health-tag pending">未接入</span><span>—</span><span>尚未采集</span></div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-head"><div><h2>存储与保留</h2><p>只读展示当前可确认的信息；没有接口事实的字段保持缺失。</p></div></div>
+            <div class="retention-grid">
+              <div class="retention-list"><div class="retention-row head"><span>数据</span><span>热存储</span><span>保留口径</span><span>状态</span></div><div class="retention-row"><span>运行日志</span><span>OpenSearch</span><span>7 天 · 系统默认</span><span class="health-tag">正常</span></div><div class="retention-row"><span>审计日志</span><span>来源系统</span><span>365 天 · 系统默认</span><span class="health-tag">正常</span></div><div class="retention-row"><span>Trace 查询索引</span><span>OpenSearch</span><span>当前接口未返回</span><span class="health-tag pending">待补充</span></div><div class="retention-row"><span>Interaction 调用事实</span><span>MariaDB</span><span>当前接口未返回</span><span class="health-tag pending">待补充</span></div></div>
+              <aside class="storage-card"><header><h3>归档存储</h3><span class="health-tag pending">状态未知</span></header><p>0.1.3 当前没有返回预配置对象存储及连接状态，原型不构造 Bucket 或连接成功信息。</p><dl><dt>目标名称</dt><dd>当前接口未返回</dd><dt>存储类型</dt><dd>预配置对象存储</dd><dt>最近检查</dt><dd>当前接口未返回</dd></dl></aside>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-head"><div><h2>历史数据归档</h2><p>固定归档超过 30 天的平台托管日志和已结束交互轮次；校验成功后自动清理热数据。</p></div></div>
+            <div class="archive-panel"><div class="archive-rule"><h3>固定 30 天增量归档</h3><p>归档完成并校验成功后，将自动清理对应热数据。服务端只选择尚未归档且早于自然日截止时间的记录，不提供天数、范围、类别或清理选项。</p><div class="archive-cutoff"><div><span>本次截止时间</span><strong>2026-07-10 00:00 · Asia/Shanghai</strong></div><div><span>当前真实样例时间</span><strong>2026-08-08</strong></div></div><div class="settings-note">当前原型使用的真实日志和 Interaction 样例均未超过 30 天，但样例不代表系统全量，不能据此生成候选数量。</div></div><div class="archive-empty"><div><strong>当前无法判断是否有可归档数据</strong><small>0.1.3 尚未提供已归档标记和候选统计接口；正式接口返回没有新增数据时不创建空任务。</small><button class="primary" id="start-manual-archive" type="button" disabled>立即归档</button></div></div></div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-head"><div><h2>最近归档</h2><p>归档记录必须展示实际数据范围，不使用“超过 30 天”代替。</p></div></div>
+            <div class="archive-table-head"><span>归档时间</span><span>实际数据范围</span><span>数据量</span><span>结果</span><span>文件</span><span>操作</span></div>
+            <div class="archive-list-empty">尚无归档记录</div>
+          </section>
+        </div>
+      </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="drawer-mask hidden" id="agent-drawer"><aside class="drawer"><div class="drawer-head"><div><span class="eyebrow">业务溯源优化 BKN Agent</span><h2>当前交互轮次分析</h2></div><button class="ghost" id="close-agent" type="button">关闭</button></div><p>提交内容与“复制 Markdown”“下载 Markdown”完全相同。Agent 可按需查询源 BKN 进行核验，但不得补写 Trace 中不存在的事实。</p><div id="agent-analysis-state"></div></aside></div>
+  <div class="long-text-preview hidden" id="long-text-preview"></div>
+  <dialog class="full-text-dialog" id="full-text-dialog"><div class="full-text-head"><h2 id="full-text-title">查看全文</h2><button class="ghost" id="close-full-text" type="button">关闭</button></div><pre class="full-text-body" id="full-text-content"></pre><div class="full-text-actions"><button class="primary" id="copy-full-text" type="button">复制全文</button></div></dialog>
+  <div class="toast hidden" id="toast"></div>
+
+  <script>
+    const conversation = { id:"conv_73fc12a00ac46933c3d8015616a1b1b3", agent:"Codex", network:"HD供应链业务知识网络_v3", networkId:"supplychain_hd0202" };
+    const interactions = [
+      { id:"int_41d61bc56f7e5488171fa395ba73f58b", started:"2026-08-08T11:01:45.182186Z", completed:"2026-08-08T11:03:23.075149Z", duration:"97.892s", question:"使用 HD供应链业务知识网络_v3 查询物料 101-000015 有多少库存、分别分布在哪些仓库，以及这个物料的供应商是谁？", answer:"物料 101-000015（HD401_外置电池）库存合计 1,756；已获得仓库分布，但现有采购订单中未匹配到可确认的供应商。", operations:[
+        {title:"查找业务知识网络",tool:"list_knowledge_networks",time:"19:01:56",startedAt:"2026-08-08T11:01:56.684460Z",completedAt:"2026-08-08T11:01:56.707740Z",duration:"23ms",gap:"11.5s",result:"定位到 HD供应链业务知识网络_v3。"},
+        {title:"探索知识网络结构",tool:"search_schema",time:"19:02:04",startedAt:"2026-08-08T11:02:04.064344Z",completedAt:"2026-08-08T11:02:04.273688Z",duration:"209ms",gap:"7.4s",condition:"输入原文未记录（当前 Trace 仅保留输入哈希）",result:"返回 28 个探索候选；候选不作为本轮业务依据。",candidate:true},
+        {title:"查询库存分布",tool:"run_sql",time:"19:02:21",startedAt:"2026-08-08T11:02:21.990530Z",completedAt:"2026-08-08T11:02:22.628630Z",duration:"638ms",gap:"17.7s",object:"库存",resource:"d9qpqpco8jec73ec20ug",condition:"物料编码 = 101-000015",rowCount:"已记录结果规模",result:"查询已完成；具体库存合计来自本轮最终回答，不反推为本次调用结果。",sql:"SELECT warehouse, stock_status, SUM(inventory_qty) AS inventory_qty\nFROM {{d9qpqpco8jec73ec20ug}}\nWHERE material_code = '101-000015'\nGROUP BY warehouse, stock_status"},
+        {title:"按物料查询采购订单供应商",tool:"run_sql",time:"19:02:30",startedAt:"2026-08-08T11:02:30.690404Z",completedAt:"2026-08-08T11:02:31.386134Z",duration:"695ms",gap:"8.1s",object:"采购订单",resource:"d9qpqpco8jec73ec210g",condition:"物料编号 = 101-000015",rowCount:"0",result:"没有匹配到采购订单。",sql:"SELECT supplier_number, supplier_name, SUM(order_quantity) AS order_quantity\nFROM {{d9qpqpco8jec73ec210g}}\nWHERE material_number = '101-000015'\nGROUP BY supplier_number, supplier_name"},
+        {title:"扩大条件查找采购订单",tool:"run_sql",time:"19:02:38",startedAt:"2026-08-08T11:02:38.799483Z",completedAt:"2026-08-08T11:02:39.343405Z",duration:"543ms",gap:"7.4s",object:"采购订单",resource:"d9qpqpco8jec73ec210g",condition:"物料名称或编号包含 101-000015",rowCount:"0",result:"返回 0 条。",derivedResult:"扩大匹配范围后仍无采购订单记录。",derivedEvidence:["I1-O4","I1-O5"],sql:"SELECT material_number, material_name, supplier_number, supplier_name, order_quantity\nFROM {{d9qpqpco8jec73ec210g}}\nWHERE material_name LIKE '%101-000015%' OR material_number LIKE '%101-000015%'\nLIMIT 20"},
+        {title:"查询物料请购记录",tool:"run_sql",time:"19:02:58",startedAt:"2026-08-08T11:02:58.047089Z",completedAt:"2026-08-08T11:02:58.772173Z",duration:"725ms",gap:"18.7s",object:"物料请购单",resource:"d9qpqpco8jec73ec2110",condition:"物料编号 = 101-000015",result:"检查请购记录以补充供应商线索。",sql:"SELECT material_number, supplier_number, supplier_name, requested_quantity\nFROM {{d9qpqpco8jec73ec2110}}\nWHERE material_number = '101-000015'\nLIMIT 50"},
+        {title:"查询物料对象",tool:"query_object_instance",time:"19:03:05",startedAt:"2026-08-08T11:03:05.768938Z",completedAt:"2026-08-08T11:03:05.865277Z",duration:"96ms",gap:"7.0s",object:"物料",condition:"输入原文未记录（当前 Trace 仅保留输入哈希）",rowCount:"已记录候选数量",result:"已定位到物料对象类型；查询条件和返回行原文未记录。"},
+        {title:"按物料名称再次查询供应商",tool:"run_sql",time:"19:03:13",startedAt:"2026-08-08T11:03:13.093482Z",completedAt:"2026-08-08T11:03:13.655513Z",duration:"562ms",gap:"7.2s",object:"采购订单",resource:"d9qpqpco8jec73ec210g",condition:"物料名称 = HD401_外置电池",rowCount:"0",result:"按物料名称查询仍未获得可确认供应商。",sql:"SELECT supplier_number, supplier_name, SUM(order_quantity) AS order_quantity\nFROM {{d9qpqpco8jec73ec210g}}\nWHERE material_name = 'HD401_外置电池'\nGROUP BY supplier_number, supplier_name"}
+      ], touched:["库存","采购订单","物料请购单","物料"], context:["供应商"], relations:[
+        {key:"relation-context-1",name:"物料关联库存",source:"物料",target:"库存"},
+        {key:"relation-context-2",name:"采购订单关联供应商",source:"采购订单",target:"供应商"},
+        {key:"relation-context-3",name:"采购订单关联物料请购单",source:"采购订单",target:"物料请购单"}
+      ] },
+      { id:"int_483a29806fa10fde2e45b6eede7b435e", started:"2026-08-08T11:04:22.614420Z", completed:"2026-08-08T11:04:53.277119Z", duration:"30.662s", question:"分析对比900-000044和900-000063两款智能球阀的BOM物料差异，是否有共用物料？", answer:"完成两款智能球阀的 BOM 明细对比：900-000044 有 1 条直接物料，900-000063 返回 5 条 BOM 明细，并据返回结果判断共用物料。", operations:[
+        {title:"对比两款产品的 BOM 物料",tool:"run_sql",time:"19:04:40",startedAt:"2026-08-08T11:04:40.302897Z",completedAt:"2026-08-08T11:04:40.970884Z",duration:"667ms",gap:"17.7s",object:"产品BOM",resource:"d9qpqpco8jec73ec20tg",condition:"父项物料编码 ∈ 900-000044, 900-000063",rowCount:"6",result:"返回两款产品的 BOM 明细，用于比较差异与共用物料。",requestId:"req_7892c814-bd3a-45c5-83eb-6707f0279df1",operationId:"op_481d7266ea974c0d6d9e2165c9e29a43",attempt:"1",sql:"SELECT parent_material_code, material_code, material_name, standard_usage,\n  usage_numerator, usage_denominator, bom_level, alt_method, alt_group_no, alt_priority\nFROM {{d9qpqpco8jec73ec20tg}}\nWHERE parent_material_code IN ('900-000044','900-000063')\nORDER BY parent_material_code, bom_level, seq_no, material_code"}
+      ], touched:["产品BOM"], context:["产品","物料"], relations:[
+        {key:"relation-context-4",name:"产品关联产品BOM",source:"产品",target:"产品BOM"},
+        {key:"relation-context-5",name:"产品BOM关联物料",source:"产品BOM",target:"物料"}
+      ] }
+    ];
+    const technicalRecords = interactions.flatMap((interaction,interactionIndex)=>interaction.operations.map((operation,operationIndex)=>({
+      interaction,
+      interactionIndex,
+      operation,
+      operationIndex,
+      requestId:operation.requestId || "未记录",
+      operationId:operation.operationId || "未记录",
+      service:"user-bkn-agent-retrieval",
+      protocol:"MCP",
+      status:"completed",
+      traceId:operation.requestId==="req_7892c814-bd3a-45c5-83eb-6707f0279df1"?"c2c97a9e8afd1259218a9d975ad63e91":"未记录",
+      spanId:"未采集"
+    })));
+    const technicalTraceGroups = [...technicalRecords.filter(item=>item.traceId!=="未记录").reduce((groups,item)=>{
+      if(!groups.has(item.traceId))groups.set(item.traceId,{traceId:item.traceId,records:[]});
+      groups.get(item.traceId).records.push(item);
+      return groups;
+    },new Map()).values()];
+    const unlinkedOperations = technicalRecords.filter(item=>item.traceId==="未记录");
+    const sqlFieldUsageByResource = {
+      d9qpqpco8jec73ec20ug:["material_code · WHERE","warehouse · SELECT / GROUP BY","stock_status · SELECT / GROUP BY","inventory_qty · SELECT"],
+      d9qpqpco8jec73ec210g:["material_number · SELECT / WHERE","material_name · SELECT / WHERE","supplier_number · SELECT / GROUP BY","supplier_name · SELECT / GROUP BY","order_quantity · SELECT"],
+      d9qpqpco8jec73ec2110:["material_number · SELECT / WHERE","supplier_number · SELECT","supplier_name · SELECT","requested_quantity · SELECT"],
+      d9qpqpco8jec73ec20tg:["parent_material_code · SELECT / WHERE / ORDER BY","material_code · SELECT / ORDER BY","material_name · SELECT","standard_usage · SELECT","bom_level · SELECT / ORDER BY"]
+    };
+    const state = { interaction:0, view:"timeline", selected:0, networkObject:null, summaryExpanded:true, roundsCollapsed:false, technicalTrace:technicalRecords.findIndex(item=>item.traceId!=="未记录") };
+    const el = (id) => document.getElementById(id);
+    const currentInteraction = () => interactions[state.interaction];
+    const escapeHtml = (value="") => value.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+    const formatLocalTime = (iso) => new Intl.DateTimeFormat("zh-CN",{timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(new Date(iso)).replaceAll("/","-");
+    const rawTraceFacts = {
+      input: JSON.stringify({
+        resource_id:"d9qpqpco8jec73ec20tg",
+        sql:"SELECT parent_material_code, material_code, material_name, standard_usage, usage_numerator, usage_denominator, bom_level, alt_method, alt_group_no, alt_priority FROM {{d9qpqpco8jec73ec20tg}} WHERE parent_material_code IN ('900-000044','900-000063') ORDER BY parent_material_code, bom_level, seq_no, material_code"
+      },null,2),
+      output: JSON.stringify({status:"completed",row_count:6,rows:"原始结果行未记录"},null,2),
+      error:"未记录错误"
+    };
+
+    function longText(value, label="查看全文") {
+      return `<span class="text-clamp-2" aria-label="${escapeHtml(label)}" data-full-text="${encodeURIComponent(value ?? "")}">${escapeHtml(value ?? "")}</span>`;
+    }
+
+    function isTextTruncated(target) {
+      return target.scrollHeight > target.clientHeight || target.scrollWidth > target.clientWidth;
+    }
+
+    function refreshTruncationState(root=document) {
+      requestAnimationFrame(()=>root.querySelectorAll("[data-full-text]").forEach(target=>{
+        const truncated=isTextTruncated(target);
+        target.classList.toggle("is-truncated",truncated);
+        if(truncated){target.setAttribute("role","button");target.setAttribute("tabindex","0");}
+        else{target.removeAttribute("role");target.removeAttribute("tabindex");}
+      }));
+    }
+
+    function positionLongTextPreview(event) {
+      const preview=el("long-text-preview");
+      const gap=14;
+      let left=event.clientX + 14;
+      let top=event.clientY + 14;
+      if(left+preview.offsetWidth>window.innerWidth-12)left=Math.max(12,event.clientX-preview.offsetWidth-gap);
+      if(top+preview.offsetHeight>window.innerHeight-12)top=Math.max(12,event.clientY-preview.offsetHeight-gap);
+      preview.style.left=`${left}px`;
+      preview.style.top=`${top}px`;
+    }
+
+    function hydrateLongText(root=document) {
+      root.querySelectorAll("[data-long-text]:not([data-long-text-ready])").forEach(node=>{
+        const value=node.textContent.trim();
+        node.innerHTML=longText(value,node.dataset.longText || "查看全文");
+        node.dataset.longTextReady="true";
+      });
+      refreshTruncationState(root);
+    }
+
+    function showFullText(target) {
+      const value=decodeURIComponent(target.dataset.fullText || "");
+      el("full-text-title").textContent=target.getAttribute("aria-label") || "查看全文";
+      el("full-text-content").textContent=value;
+      el("full-text-dialog").showModal();
+    }
+
+    function renderRawTrace(tab="input") {
+      document.querySelectorAll("[data-raw-tab]").forEach(button=>button.classList.toggle("active",button.dataset.rawTab===tab));
+      el("trace-raw-content").innerHTML=longText(rawTraceFacts[tab],`${tab==="input"?"输入":tab==="output"?"输出":"错误"}全文`);
+      refreshTruncationState(el("trace-raw-content"));
+    }
+
+    function renderTechnicalTraceList() {
+      const traceRows=technicalTraceGroups.map(group=>{const item=group.records[0];const index=technicalRecords.indexOf(item);return `<button class="trace-row" data-technical-record="${index}" type="button"><span><strong>${formatLocalTime(item.operation.startedAt)}</strong><small>${group.traceId}</small></span><span><strong class="link">${item.requestId}</strong><small>${item.interaction.id}</small></span><span><strong>${item.operation.tool}</strong><small>${group.records.length} 次调用 · ${item.operationId}</small></span><span>${item.service}</span><span class="status">完成</span><span>${item.operation.duration.replace("ms"," 毫秒")}</span><span>Span 未采集</span></button>`;}).join("");
+      const unlinkedRows=unlinkedOperations.map(item=>{const index=technicalRecords.indexOf(item);return `<button class="trace-row" data-technical-record="${index}" type="button"><span><strong>${formatLocalTime(item.operation.startedAt)}</strong><small>Trace 未关联</small></span><span><strong class="link">${item.requestId}</strong><small>${item.interaction.id}</small></span><span><strong>${item.operation.tool}</strong><small>${item.operationId}</small></span><span>${item.service}</span><span class="status">完成</span><span>${item.operation.duration.replace("ms"," 毫秒")}</span><span>Span 未采集</span></button>`;}).join("");
+      el("trace-table-body").innerHTML=`${traceRows}<div class="capture-banner"><strong>未关联调用记录 · ${unlinkedOperations.length}</strong>以下 Operation 没有 Trace ID，不计入 Trace 数量，也不推断跨服务调用层级。</div>${unlinkedRows}`;
+      el("trace-pagination").querySelector("span").textContent=`共 ${technicalTraceGroups.length} 条 Trace`;
+      el("trace-table-body").querySelectorAll("[data-technical-record]").forEach(button=>button.onclick=()=>openTechnicalTrace(Number(button.dataset.technicalRecord)));
+    }
+
+    function technicalRawFacts(item) {
+      const operation=item.operation;
+      const input=operation.sql
+        ? JSON.stringify({resource_id:operation.resource,sql:operation.sql},null,2)
+        : operation.condition || "输入原文未记录";
+      return {
+        input,
+        output:JSON.stringify({status:item.status,row_count:operation.rowCount || "未记录",result_summary:operation.result},null,2),
+        error:"未记录错误"
+      };
+    }
+
+    function renderTechnicalTraceDetail(item) {
+      const operation=item.operation;
+      const hasIds=item.requestId!=="未记录" && item.operationId!=="未记录";
+      const hasTrace=item.traceId!=="未记录";
+      const completedGap=Math.max(0,(new Date(item.interaction.completed)-new Date(operation.completedAt))/1000).toFixed(1);
+      Object.assign(rawTraceFacts,technicalRawFacts(item));
+      document.querySelector(".trace-overview h2").textContent=hasTrace?"单 Trace 技术执行工作台":"未关联调用技术详情";
+      el("trace-completeness").innerHTML=hasTrace
+        ? `<strong>部分调用记录</strong>已获得本次 Trace ID、Request ID 与 Operation ID，但 Span 与父子关系未采集，无法还原跨服务调用层级。`
+        : hasIds
+        ? `<strong>部分调用记录</strong>已获得本次 Operation 的 Request ID 与 Operation ID，但 Trace ID 与 Span 未采集，无法还原父子调用层级。`
+        : `<strong>部分调用记录</strong>本次调用没有记录 Request ID 与 Operation ID；Trace ID 与 Span 也未采集，无法还原父子调用层级。`;
+      document.querySelector(".trace-overview .fact-grid").innerHTML=`<div class="fact"><span>Trace / Request</span><strong>${item.traceId}<br>${item.requestId}</strong></div><div class="fact"><span>Interaction / Operation</span><strong>${item.interaction.id}<br>${item.operationId}</strong></div><div class="fact"><span>状态 / 时间</span><strong>${item.status} · ${operation.duration}<br>${operation.startedAt}</strong></div>`;
+      el("trace-root-input").innerHTML=`<h3>Trace 输入（原文）</h3><div data-long-text="Trace 输入原文">${escapeHtml(item.interaction.question)}</div>`;
+      el("trace-root-output").innerHTML=`<h3>Trace 输出（原文）</h3><div data-long-text="Trace 输出原文">${escapeHtml(item.interaction.answer)}</div>`;
+      el("trace-technical-findings").innerHTML=`<div class="findings-head"><h3>技术问题摘要</h3><span class="finding-count">1 项采集问题 · 0 项执行异常</span></div><div class="finding"><span class="finding-code">CAPTURE-001</span><div><strong>调用层级无法还原</strong><small>${hasTrace?"Trace ID 已记录，但 Span ID 和父子关系未记录":"Trace ID、Span ID 和父子关系未记录"}；当前只能按时间排列这次已观测调用。</small></div><span class="finding-level">需补采集</span></div><div class="finding"><span class="finding-code">EXECUTION</span><div><strong>未发现确定性执行异常</strong><small>已记录的 ${operation.tool} 调用完成，未记录错误；结论仅覆盖当前可见事实。</small></div><span class="status">正常</span></div>`;
+      el("trace-execution-chain").innerHTML=`<div class="chain-step"><header><strong>Trace 输入已记录</strong><span>${formatLocalTime(item.interaction.started)}</span></header><p>Interaction · ${item.interaction.id}</p></div><div class="observed-gap">未观测区间 ${operation.gap} · 没有 Operation 或 Span 事实</div><button class="chain-step operation-node active" data-trace-operation="${item.operationId}" type="button"><header><strong>MCP Operation · ${operation.tool}</strong><span>${operation.duration}</span></header><p>${item.service} · ${item.status} · Attempt ${operation.attempt || "未记录"}</p></button><div class="observed-gap">未观测区间 ${completedGap}s · 没有 Operation 或 Span 事实</div><div class="chain-step"><header><strong>Trace 输出已记录</strong><span>${formatLocalTime(item.interaction.completed)}</span></header><p>Interaction completed · 结果原文可回读</p></div>`;
+      el("trace-operation-detail").innerHTML=`<h3>${operation.tool} 调用详情</h3><p>当前只展示该业务会话已记录的原始调用事实。</p><div class="operation-facts"><div><span>Operation ID</span><strong>${item.operationId}</strong></div><div><span>Request ID</span><strong>${item.requestId}</strong></div><div><span>服务 / 协议</span><strong>${item.service} · ${item.protocol}</strong></div><div><span>状态 / Attempt</span><strong>${item.status} · Attempt ${operation.attempt || "未记录"}</strong></div><div><span>开始时间</span><strong>${operation.startedAt}</strong></div><div><span>结束 / 耗时</span><strong>${operation.completedAt} · ${operation.duration}</strong></div></div><div class="raw-tabs"><button class="active" data-raw-tab="input" type="button">输入</button><button data-raw-tab="output" type="button">输出</button><button data-raw-tab="error" type="button">错误</button></div><div id="trace-raw-content"></div><button class="ghost log-action" type="button">打开关联日志</button>`;
+      document.querySelectorAll("[data-raw-tab]").forEach(button=>button.onclick=()=>renderRawTrace(button.dataset.rawTab));
+      document.querySelectorAll("[data-trace-operation]").forEach(node=>node.onclick=()=>selectTraceOperation(node.dataset.traceOperation));
+      hydrateLongText(el("trace-detail"));
+      selectTraceOperation(item.operationId);
+    }
+
+    function openTechnicalTrace(index) {
+      state.technicalTrace=index;
+      el("trace-list").classList.add("hidden");
+      el("trace-detail").classList.remove("hidden");
+      renderTechnicalTraceDetail(technicalRecords[index]);
+      window.scrollTo(0,0);
+    }
+
+    function openTraceDetailById(traceId) {
+      const index=technicalRecords.findIndex(item=>item.traceId===traceId);
+      if(index<0)return false;
+      switchProduct("trace");
+      openTechnicalTrace(index);
+      return true;
+    }
+
+    function openBusinessRequestDetail(requestId) {
+      let target=null;
+      interactions.some((interaction,interactionIndex)=>{
+        if(!interaction.operations.some(operation=>operation.requestId===requestId))return false;
+        target={interactionIndex};return true;
+      });
+      if(!target)return false;
+      switchProduct("business");
+      state.interaction=target.interactionIndex;
+      state.selected=0;
+      state.networkObject=null;
+      document.querySelectorAll("[data-interaction]").forEach(button=>button.classList.toggle("active",Number(button.dataset.interaction)===state.interaction));
+      el("round-sidebar-current").textContent=`共 ${interactions.length} 轮 · 当前第 ${state.interaction+1} 轮`;
+      el("conversation-list").classList.add("hidden");
+      el("conversation-workspace").classList.remove("hidden");
+      renderWorkspace();
+      return true;
+    }
+
+    function selectTraceOperation(operationId) {
+      document.querySelectorAll("[data-trace-operation]").forEach(node=>node.classList.toggle("active",node.dataset.traceOperation===operationId));
+      renderRawTrace("input");
+      refreshTruncationState(el("trace-detail"));
+    }
+
+    function switchProduct(product,options={}) {
+      const business=product==="business",trace=product==="trace",logs=product==="logs",settings=product==="settings",audit=product==="audit";
+      el("business-provenance-page").classList.toggle("hidden",!business);
+      el("trace-analysis-page").classList.toggle("hidden",!trace);
+      el("logs-workbench-page").classList.toggle("hidden",!(logs||audit));
+      el("observability-settings-page").classList.toggle("hidden",!settings);
+      el("nav-business-provenance").classList.toggle("active",business);
+      el("nav-trace-analysis").classList.toggle("active",trace);
+      el("nav-log-search").classList.toggle("active",logs);
+      el("nav-observability-settings").classList.toggle("active",settings);
+      el("nav-audit-logs").classList.toggle("active",audit);
+      el("observability-navigation").querySelector(".nav-parent").classList.toggle("active-parent",!audit);
+      el("nav-system-management").classList.toggle("active-parent",audit);
+      el("system-navigation-children").classList.toggle("hidden",!audit);
+      el("current-section-name").textContent=audit?"系统管理":"可观测性";
+      el("current-product-name").textContent=business?"业务溯源":trace?"Trace 分析":logs?"日志检索":settings?"可观测性设置":"日志管理";
+      if(logs||audit){const frame=el("logs-workbench-frame");const send=()=>frame.contentWindow?.postMessage({type:"openbkn-prototype:logs",view:audit?"audit":"logs",query:options.query||""},"*");frame.addEventListener("load",send,{once:true});send();}
+      location.hash=product;
+      el("full-text-dialog").close();
+      el("long-text-preview").classList.add("hidden");
+      el("agent-drawer").classList.add("hidden");
+      closeDetail();
+      window.scrollTo(0,0);
+    }
+
+    function buildInteractionMarkdown(item) {
+      const index=interactions.indexOf(item)+1;
+      const operationFacts=item.operations.map((op,i)=>{
+        const ref=`I${index}-O${i+1}`;
+        const input=op.sql?`resource_id: ${op.resource}\nSQL:\n\`\`\`sql\n${op.sql}\n\`\`\``:op.condition||"未记录";
+        const output=op.rowCount?`row_count: ${op.rowCount}`:"原始输出未记录";
+        const mapping=op.object?`resolved：${op.object}（资源 ${op.resource||"未记录"}）；属性映射未记录`:op.candidate?"candidate：仅为 Schema 探索候选":"unresolved：未定位业务元素";
+        return `### ${ref}\n- Operation ID: ${op.operationId||"未记录"}\n- Attempt: ${op.attempt||"未记录"}\n- Request ID: ${op.requestId||"未记录"}\n- Started At: ${op.startedAt}\n- Completed At: ${op.completedAt}\n- Duration: ${op.duration}\n- Tool: ${op.tool}\n- Status: completed\n- Input:\n\n${input}\n\n- Output / Error: ${output}\n- BKN Mapping: ${mapping}`;
+      }).join("\n\n");
+      const derived=item.operations.flatMap((op,i)=>op.derivedResult?[`- I${index}-D${i+1}: ${op.derivedResult}（来源：${(op.derivedEvidence||[`I${index}-O${i+1}`]).join("、")}）`]:[]).join("\n") || "- 无";
+      const missing=item.operations.flatMap((op,i)=>{
+        const ref=`I${index}-O${i+1}`; const rows=[];
+        if(!op.operationId)rows.push(`- ${ref}: Operation ID 未记录`);
+        if(!op.sql && (!op.condition || op.condition.includes("输入原文未记录")))rows.push(`- ${ref}: 原始输入未记录`);
+        if(!op.rowCount)rows.push(`- ${ref}: 原始输出或结果规模未记录`);
+        if(op.resource && sqlFieldUsageByResource[op.resource])rows.push(`- ${ref}: 源 BKN 属性与数据字段绑定未记录`);
+        return rows;
+      });
+      return `# 业务溯源交互轮次 I${index}\n\n## 轮次元数据\n- Conversation ID: ${conversation.id}\n- Interaction ID: ${item.id}\n- Agent: ${conversation.agent}\n- Started At: ${item.started}\n- Completed At: ${item.completed}\n- Duration: ${item.duration}\n- Status: completed\n- Evidence Completeness: partial\n- Knowledge Network: ${conversation.network}\n- Source Revisions: 未记录\n\n## 本轮输入（原文）\n${item.question}\n\n## Observed：调用事实\n\n${operationFacts}\n\n## Derived：解析解释\n${derived}\n\n## 本轮输出（原文）\n${item.answer}\n\n## Missing / Not evaluable\n${missing.length?missing.join("\n"):"- 当前投影未发现缺失事实"}\n- Source revisions: 当前 Trace 未记录，无法按历史版本核验。\n- 未记录字段保持缺失，不从最终回答反推。`;
+    }
+    async function copyCurrentInteractionMarkdown() {
+      await navigator.clipboard.writeText(buildInteractionMarkdown(currentInteraction()));
+      toast("已复制当前交互轮次 Markdown");
+    }
+
+    function downloadCurrentInteractionMarkdown() {
+      const item=currentInteraction(); const url=URL.createObjectURL(new Blob([buildInteractionMarkdown(item)],{type:"text/markdown"})); const a=document.createElement("a");
+      a.href=url; a.download=`${item.id}.md`; a.click(); URL.revokeObjectURL(url);
+    }
+
+    function renderSummary() {
+      const item = currentInteraction();
+      el("interaction-summary").innerHTML = `<div class="summary-top"><span class="round-badge">第 ${state.interaction+1} 轮</span><div><div class="summary-title">${longText(item.question,"本轮输入全文")}</div><div class="summary-meta">${conversation.agent} · ${formatLocalTime(item.started)} · ${item.duration} · ${item.operations.length} 次调用 · 已完成</div></div><button class="ghost" id="toggle-summary" type="button">${state.summaryExpanded?"收起":"展开"}</button></div>${state.summaryExpanded?`<div class="summary-body"><section class="summary-section"><h3>本轮输入（原文）</h3>${longText(item.question,"本轮输入全文")}</section><section class="summary-section"><h3>本轮输出（原文）</h3>${longText(item.answer,"本轮输出全文")}</section><div class="summary-actions"><button class="ghost" id="copy-markdown" type="button">复制 Markdown</button><button class="ghost" id="download-markdown" type="button">下载 Markdown</button><button class="primary" id="analyze-with-agent" type="button">交给 BKN Agent 分析</button></div></div>`:""}`;
+      refreshTruncationState(el("interaction-summary"));
+      el("toggle-summary").onclick = () => { state.summaryExpanded=!state.summaryExpanded; renderSummary(); };
+      if (!state.summaryExpanded) return;
+      el("copy-markdown").onclick = copyCurrentInteractionMarkdown;
+      el("download-markdown").onclick = downloadCurrentInteractionMarkdown;
+      el("analyze-with-agent").onclick = () => { renderAgentReady(); el("agent-drawer").classList.remove("hidden"); };
+    }
+
+    function renderTimeline() {
+      const item=currentInteraction();
+      el("timeline-view").innerHTML=`<div class="track"><div class="endpoint"><strong>本轮输入</strong> · ${formatLocalTime(item.started)}</div>${item.operations.map((op,i)=>`<div class="gap">调用之外间隔 ${op.gap}</div><article class="operation ${state.selected===i?"selected":""}" data-operation="${i}" role="button" tabindex="0"><span class="op-top"><strong>${op.title}</strong>${op.object?`<span class="object-tag">${op.object}</span>`:""}</span>${op.condition?`<span class="condition">条件：${longText(op.condition,"查询条件全文")}</span>`:""}<span class="op-meta"><span>${op.time}</span><span>${op.duration}</span><span>${op.tool}</span></span><div class="op-result">${longText(op.result,"调用结果全文")}</div></article>`).join("")}<div class="endpoint answer"><strong>Agent 输出</strong> · ${formatLocalTime(item.completed)}</div></div>`;
+      refreshTruncationState(el("timeline-view"));
+      document.querySelectorAll("[data-operation]").forEach(button=>button.onclick=event=>{if(event.target.closest("[data-full-text]"))return;state.selected=Number(button.dataset.operation);renderTimeline();const selectedButton=document.querySelector(`[data-operation="${state.selected}"]`);openDetailFor(selectedButton,renderDetail);});
+    }
+
+    function relatedOperationsFor(item,name) {
+      return item.operations.map((operation,index)=>({operation,index})).filter(({operation})=>operation.object===name);
+    }
+
+    function relationEndsFor(relation) {
+      return [relation.source,relation.target];
+    }
+
+    function renderNetwork() {
+      const item=currentInteraction(); const selected=state.networkObject;
+      const relations=selected?item.relations.filter(relation=>relationEndsFor(relation).includes(selected)):[];
+      const adjacent=selected?[...new Set(relations.flatMap(relation=>relationEndsFor(relation).filter(name=>name!==selected)))]:[];
+      el("network-view").innerHTML=`<div class="network-path">业务知识网络 → 本轮触达对象 → 源 BKN 关系（上下文） → 相邻对象</div><div class="network-columns"><section class="network-column"><div class="column-title">1　业务知识网络</div><button class="node observed" data-network-kind="network" data-network-node="${conversation.network}" type="button"><strong>${conversation.network}</strong><small>${conversation.networkId}</small></button>${item.operations.some(op=>op.candidate)?`<div class="candidate">⌕ 28 个探索候选<br>候选不作为本轮业务依据，默认不展开。</div>`:""}</section><section class="network-column"><div class="column-title">2　本轮已触达</div>${item.touched.map(name=>`<button class="node observed ${selected===name?"selected":""}" data-network-kind="object" data-network-node="${name}" type="button"><strong>${name}</strong><small>${relatedOperationsFor(item,name).length} 次确定性调用</small></button>`).join("")}</section><section class="network-column"><div class="column-title">3　相关 BKN 关系</div>${selected?(relations.length?relations.map(relation=>`<button class="node context" data-network-kind="relation" data-network-node="${relation.name}" type="button"><strong>${relation.name}</strong><small>知识网络上下文，非调用事实</small></button>`).join(""):`<div class="network-empty">源 BKN 中没有找到与“${selected}”直接相连的关系。</div>`):`<div class="network-empty">选择一个本轮触达对象，查看相关 BKN 关系。</div>`}</section><section class="network-column"><div class="column-title">4　相邻对象</div>${selected?(adjacent.length?adjacent.map(name=>`<button class="node context" data-network-kind="context" data-network-node="${name}" type="button"><strong>${name}</strong><small>${item.touched.includes(name)?"本轮也已触达":"知识网络上下文，本轮未触达"}</small></button>`).join(""):`<div class="network-empty">当前关系没有可展示的相邻对象。</div>`):`<div class="network-empty">选择对象后再显示相邻对象。</div>`}</section></div>`;
+      document.querySelectorAll("[data-network-node]").forEach(button=>button.onclick=()=>{if(button.dataset.networkKind==="object"){state.networkObject=button.dataset.networkNode;renderNetwork();}openDetailFor(button,()=>renderNetworkDetail(button.dataset.networkNode));});
+    }
+
+    function renderDetail() {
+      const op=currentInteraction().operations[state.selected] || currentInteraction().operations[0];
+      const fieldUsage=(sqlFieldUsageByResource[op.resource]||[]).map(value=>`<div><dt>${value.split(" · ")[0]}</dt><dd>未解析 · ${value.split(" · ")[1]}</dd></div>`).join("");
+      el("detail-panel").innerHTML=`<header class="detail-head"><div><span class="eyebrow">本轮业务调用</span><h2>${op.title}</h2></div><div><span class="status">● 完成</span><button class="icon-button detail-collapse" id="close-detail" type="button" title="关闭详情">×</button></div></header><section class="detail-section"><h3>做了什么</h3><p>${op.title}</p></section><section class="detail-section"><h3>操作哪个业务元素</h3><dl><dt>知识网络</dt><dd>${conversation.network}</dd><dt>业务对象</dt><dd>${op.object||"未确定"}</dd><dt>定位方式</dt><dd>${op.resource?"数据资源绑定":"Trace 直接记录或未确定"}</dd></dl></section><section class="detail-section"><h3>怎么调用</h3><dl><dt>接口</dt><dd>${op.tool}</dd><dt>条件</dt><dd>${op.condition||"未记录"}</dd><dt>资源</dt><dd>${op.resource||"未记录"}</dd></dl></section>${fieldUsage?`<section class="detail-section"><h3>属性与字段</h3><p>SQL 字段用途来自本次查询；当前事实未提供源 BKN 属性绑定，因此不补写业务属性。</p><dl>${fieldUsage}</dl></section>`:""}<section class="detail-section"><h3>实际结果</h3><dl><dt>结果规模</dt><dd>${op.rowCount||"未记录"}</dd><dt>结果</dt><dd>${op.result}</dd></dl></section>${op.derivedResult?`<section class="detail-section"><h3>链路解释</h3><p>${op.derivedResult}</p><small>来源：${op.derivedEvidence.join("、")}</small></section>`:""}${op.sql?`<section class="detail-section"><h3>复现查询</h3><pre>${escapeHtml(op.sql)}</pre></section>`:""}`;
+      el("close-detail").onclick=closeDetail;
+    }
+
+    function renderNetworkDetail(name) {
+      const item=currentInteraction(); const isNetwork=name===conversation.network; const touched=item.touched.includes(name); const relation=item.relations.find(item=>item.name===name);
+      const related=relatedOperationsFor(item,name);
+      el("detail-panel").innerHTML=`<header class="detail-head"><div><span class="eyebrow">${isNetwork?"业务知识网络":touched?"本轮已触达":"知识网络上下文"}</span><h2>${name}</h2></div><button class="icon-button detail-collapse" id="close-detail" type="button" title="关闭详情">×</button></header><section class="detail-section"><h3>事实边界</h3><p>${isNetwork?"这是本轮调用明确使用的业务知识网络；下方对象和关系继续区分调用事实与知识网络上下文。":touched?`本轮有 ${related.length} 次调用确定性定位到该对象。`:"该节点来自源业务知识网络定义，用于解释业务连接；本轮 Trace 没有记录 Agent 调用它。"}</p></section>${touched?`<section class="detail-section"><h3>关联调用</h3>${related.map(({operation,index})=>`<button class="related-operation" data-related-operation="${index}" type="button"><strong>${operation.title}</strong><small>${operation.tool} · ${operation.condition||"未记录条件"}${operation.resource?` · 资源 ${operation.resource}`:""}</small></button>`).join("")}</section>`:""}${relation?`<section class="detail-section"><h3>关系说明</h3><p>${relation.source} → ${relation.target}。这是源 BKN 关系上下文，不标记为本轮已遍历。</p></section>`:""}`;
+      el("close-detail").onclick=closeDetail;
+      document.querySelectorAll("[data-related-operation]").forEach(button=>button.onclick=()=>{state.selected=Number(button.dataset.relatedOperation);renderTimeline();openDetailFor(button,renderDetail);});
+    }
+
+    function openDetailFor(_trigger,renderContent) {
+      renderContent();
+      el("workspace-grid").classList.remove("detail-closed");
+      el("detail-panel").classList.remove("closed","collapsed");
+    }
+
+    function closeDetail() {
+      el("detail-panel").classList.add("closed");
+      el("workspace-grid").classList.add("detail-closed");
+    }
+
+    function buildAgentMarkdown() {
+      const item=currentInteraction();
+      if(state.interaction!==0)return `# 业务溯源优化建议\n\n- 源 Interaction：${item.id}\n- 说明：高保真原型未实际调用 BKN Agent\n\n## 分类结论\n\n- BKN：not_evaluable\n- BKN Trace：not_evaluable\n- MCP：not_evaluable\n- SDK：not_evaluable\n- Agent：not_evaluable\n\n## 无法判断\n\n当前轮次只有一条已记录 Operation，且缺少源 BKN 版本、工具合同和完整执行链，不能给出修改或无需修改结论。`;
+      return `# 业务溯源优化建议\n\n- 源 Interaction：${item.id}\n- 源 BKN：${conversation.network}\n- 说明：高保真原型未实际调用 BKN Agent；以下只验证建议展示合同\n\n## 分类结论\n\n- BKN：not_evaluable\n- BKN Trace：change_required\n- MCP：not_evaluable\n- SDK：not_evaluable\n- Agent：change_required\n\n## 修改建议\n\n### REC-TRACE-01\n\n- 类别：BKN Trace\n- 修改位置：Context Loader Trace 生产者 / OperationCallFact 写入与读取\n- 问题：本轮 search_schema、query_object_instance 的原始输入未记录，无法复现。\n- 源证据：I1-O2、I1-O7\n- 核验证据：not_evaluable（原型未执行 Trace 接口合同核验）\n- 修改方式：保存真实输入、输出或错误，不修改 MCP 与业务 SDK 接口。\n- 验收：重放后 I1-O2 和 I1-O7 可以回读原始输入及终态。\n\n### REC-AGENT-01\n\n- 类别：Agent\n- 修改位置：供应商查询分支 / 同一对象空结果后的停止条件\n- 问题：采购订单连续三次查询均返回 0 条。\n- 源证据：I1-O4、I1-O5、I1-O8\n- 核验证据：not_evaluable（原型未执行 Agent 规则或提示词版本核验）\n- 修改方式：连续两次扩大条件仍为 0 条时，停止查询同一对象并转向物料请购单；仍无结果则明确无法确认供应商。\n- 验收：相同问题重放时，采购订单查询不超过两次，之后转向或结束。\n\n## Not evaluable\n\n- BKN：原型没有执行源 BKN 版本核验。\n- MCP / SDK：当前 Agent 输入没有权威工具或 SDK 合同，不能判断是否需要修改。\n\n没有证据的类别不输出 no_change。`;
+    }
+    function renderAgentReady() {
+      const item=currentInteraction();
+      el("agent-analysis-state").innerHTML=`<div class="agent-source"><strong>第 ${state.interaction+1} 轮 · ${item.question}</strong><small>${item.id}<br>${formatLocalTime(item.started)} · ${item.duration} · ${item.operations.length} 次调用</small></div><div class="empty-agent"><strong>尚未提交分析</strong><p>将提交当前轮次的同一份事实 Markdown。分析只读，不修改源 BKN、MCP、SDK 或 Agent。</p><div class="agent-ready-actions"><button class="primary" id="confirm-agent" type="button">提交当前轮次 Markdown</button><button class="ghost" id="simulate-agent-error" type="button">模拟失败状态</button></div></div>`;
+      el("confirm-agent").onclick=()=>{el("agent-analysis-state").innerHTML=`<div class="agent-loading"><div><i></i><strong>正在分析当前交互轮次</strong><p>正在核验事实与源业务知识网络，不展示无法观测的内部阶段。</p></div></div>`;setTimeout(renderAgentResult,650);};
+      el("simulate-agent-error").onclick=renderAgentError;
+      clampAgentText();
+    }
+
+    function renderAgentError() {
+      const item=currentInteraction();
+      el("agent-analysis-state").innerHTML=`<div class="agent-source"><strong>第 ${state.interaction+1} 轮 · ${item.question}</strong><small>${item.id} · 事实输入：当前轮次 Markdown</small></div><div class="agent-note"><strong>模拟失败状态</strong><br>仅用于验证失败交互；正式页面由真实 Agent 调用错误触发。</div><div class="agent-error"><strong>优化 Agent 暂时不可用</strong><code>AGENT_TIMEOUT · 请求未在规定时间内返回有效结果</code><p>没有生成优化建议。当前轮次事实 Markdown 未丢失，仍可复制或下载。</p></div><div class="agent-actions"><button class="ghost" id="copy-source-markdown" type="button">复制当前轮次 Markdown</button><button class="ghost" id="download-source-markdown" type="button">下载 Markdown</button><button class="primary" id="retry-agent" type="button">重新分析</button></div>`;
+      el("copy-source-markdown").onclick=copyCurrentInteractionMarkdown;
+      el("download-source-markdown").onclick=downloadCurrentInteractionMarkdown;
+      el("retry-agent").onclick=renderAgentReady;
+      clampAgentText();
+    }
+
+    function renderAgentResult() {
+      const item=currentInteraction();
+      const actionable=state.interaction===0;
+      const recommendations=`<h3>修改建议</h3><article class="recommendation"><div class="recommendation-head"><strong>补齐可复现的调用事实</strong><span>REC-TRACE-01</span></div><dl><dt>修改位置</dt><dd>Context Loader Trace 生产者 / OperationCallFact 写入与读取</dd><dt>问题</dt><dd>本轮 search_schema、query_object_instance 的原始输入未记录。</dd><dt>源证据</dt><dd>I1-O2、I1-O7</dd><dt>核验证据</dt><dd>无法判断 · 原型未执行 Trace 接口合同核验</dd><dt>修改方式</dt><dd>保存真实输入、输出或错误；不修改 MCP 与业务 SDK 接口。</dd><dt>验收</dt><dd>重放后 I1-O2 和 I1-O7 可以回读原始输入及终态。</dd></dl></article><article class="recommendation"><div class="recommendation-head"><strong>供应商查询空结果后的停止与转向规则</strong><span>REC-AGENT-01</span></div><dl><dt>修改位置</dt><dd>供应商查询分支 / 同一对象空结果后的停止条件</dd><dt>问题</dt><dd>采购订单连续三次查询均返回 0 条。</dd><dt>源证据</dt><dd>I1-O4、I1-O5、I1-O8</dd><dt>核验证据</dt><dd>无法判断 · 原型未执行 Agent 规则或提示词版本核验</dd><dt>修改方式</dt><dd>连续两次扩大条件仍为空时转向物料请购单或结束。</dd><dt>验收</dt><dd>相同问题重放时，采购订单查询不超过两次。</dd></dl></article>`;
+      el("agent-analysis-state").innerHTML=`<div class="agent-note"><strong>交互示例，未执行真实分析</strong><br>本原型没有调用 BKN Agent；以下内容只验证严格结果合同，不作为建议质量证据。</div><div class="agent-result"><div class="agent-source"><strong>源 Interaction：${item.id}</strong><small>源 BKN：${conversation.network} · 事实输入：当前轮次 Markdown</small></div><h3>分类结论</h3><div class="verdict-grid"><div class="verdict unknown"><strong>BKN</strong><small>无法判断</small></div><div class="verdict ${actionable?"change":"unknown"}"><strong>BKN Trace</strong><small>${actionable?"需要修改":"无法判断"}</small></div><div class="verdict unknown"><strong>MCP</strong><small>无法判断</small></div><div class="verdict unknown"><strong>SDK</strong><small>无法判断</small></div><div class="verdict ${actionable?"change":"unknown"}"><strong>Agent</strong><small>${actionable?"需要修改":"无法判断"}</small></div></div>${actionable?recommendations:`<h3>修改建议</h3><div class="agent-section">当前证据不足，没有生成建议。</div>`}<h3>无法判断</h3><div class="agent-section">BKN：原型没有执行源 BKN 版本核验。<br>MCP / SDK：当前输入没有权威工具或 SDK 合同，不能给出需要修改或无需修改结论。</div><div class="agent-actions"><button class="ghost" id="copy-agent-markdown" type="button">复制建议 Markdown</button><button class="ghost" id="download-agent-markdown" type="button">下载 Markdown</button><button class="primary" id="reanalyze-agent" type="button">重新分析</button></div></div>`;
+      const markdown=buildAgentMarkdown();
+      el("copy-agent-markdown").onclick=async()=>{await navigator.clipboard.writeText(markdown);toast("已复制优化建议 Markdown");};
+      el("download-agent-markdown").onclick=()=>{const url=URL.createObjectURL(new Blob([markdown],{type:"text/markdown"}));const a=document.createElement("a");a.href=url;a.download=`${item.id}-optimization.md`;a.click();URL.revokeObjectURL(url);};
+      el("reanalyze-agent").onclick=renderAgentReady;
+      clampAgentText();
+    }
+    function clampAgentText() {
+      const root=el("agent-analysis-state");
+      root.querySelectorAll(".agent-source strong,.suggestion-box,.agent-section,.recommendation dd,.agent-error p").forEach(node=>node.setAttribute("data-long-text","查看完整内容"));
+      hydrateLongText(root);
+    }
+
+    function renderWorkspace() { renderSummary(); renderTimeline(); renderNetwork(); closeDetail(); }
+    function toast(message) { el("toast").textContent=message; el("toast").classList.remove("hidden"); setTimeout(()=>el("toast").classList.add("hidden"),1800); }
+    el("open-conversation").onclick=event=>{if(event.target.closest("[data-full-text]"))return;el("conversation-list").classList.add("hidden");el("conversation-workspace").classList.remove("hidden");window.scrollTo(0,0);renderWorkspace();};
+    el("back-to-list").onclick=()=>{el("conversation-workspace").classList.add("hidden");el("conversation-list").classList.remove("hidden");window.scrollTo(0,0);};
+    document.querySelectorAll("[data-interaction]").forEach(button=>button.onclick=()=>{state.interaction=Number(button.dataset.interaction);state.selected=0;state.networkObject=null;document.querySelectorAll("[data-interaction]").forEach(x=>x.classList.toggle("active",x===button));el("round-sidebar-current").textContent=`共 2 轮 · 当前第 ${state.interaction+1} 轮`;renderWorkspace();});
+    document.querySelectorAll("[data-view]").forEach(button=>button.onclick=()=>{state.view=button.dataset.view;document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x===button));el("timeline-view").classList.toggle("hidden",state.view!=="timeline");el("network-view").classList.toggle("hidden",state.view!=="network");closeDetail();});
+    el("close-agent").onclick=()=>el("agent-drawer").classList.add("hidden");
+    el("collapse-interactions").onclick=()=>{state.roundsCollapsed=!state.roundsCollapsed;el("interaction-sidebar").classList.toggle("collapsed",state.roundsCollapsed);el("analysis-layout").classList.toggle("rounds-collapsed",state.roundsCollapsed);el("collapse-interactions").textContent=state.roundsCollapsed?"›":"‹";el("collapse-interactions").title=state.roundsCollapsed?"展开轮次":"收起轮次";};
+    el("interaction-search").oninput=(event)=>{const keyword=event.target.value.trim();document.querySelectorAll("[data-interaction]").forEach(button=>button.classList.toggle("hidden",keyword&&!button.textContent.includes(keyword)));};
+    el("nav-business-provenance").onclick=()=>switchProduct("business");
+    el("nav-trace-analysis").onclick=()=>switchProduct("trace");
+    el("nav-log-search").onclick=()=>switchProduct("logs");
+    el("nav-observability-settings").onclick=()=>switchProduct("settings");
+    el("nav-system-management").onclick=()=>switchProduct("audit");
+    el("nav-audit-logs").onclick=()=>switchProduct("audit");
+    document.addEventListener("click",event=>{const button=event.target.closest(".log-action");if(!button)return;const item=technicalRecords[state.technicalTrace];switchProduct("logs",{query:item.requestId!=="未记录"?item.requestId:""});toast(item.requestId!=="未记录"?"已按当前 Request ID 查询关联日志":"当前记录没有可用于关联的 Request ID");});
+    window.addEventListener("message",event=>{const message=event.data||{};if(message.type!=="openbkn-prototype:navigate")return;if(message.product==="trace"&&message.selector){if(!openTraceDetailById(message.selector))toast("该精确 Trace 详情未载入当前原型，未退回列表或展示其他记录");return;}if(message.product==="business"&&message.selector){if(!openBusinessRequestDetail(message.selector))toast("该精确 Request 详情未载入当前原型，未退回列表或展示其他记录");return;}switchProduct(message.product);});
+    el("back-to-trace-list").onclick=()=>{el("trace-detail").classList.add("hidden");el("trace-list").classList.remove("hidden");window.scrollTo(0,0);};
+    document.querySelectorAll("[data-raw-tab]").forEach(button=>button.onclick=()=>renderRawTrace(button.dataset.rawTab));
+    document.querySelectorAll("[data-trace-operation]").forEach(node=>node.onclick=()=>selectTraceOperation(node.dataset.traceOperation));
+    let activePreviewTarget=null;
+    document.addEventListener("mouseover",event=>{
+      const target=event.target.closest("[data-full-text]"); if(!target||!isTextTruncated(target))return;
+      activePreviewTarget=target;
+      target.classList.add("is-truncated");
+      const preview=el("long-text-preview");
+      preview.textContent=decodeURIComponent(target.dataset.fullText || "");
+      preview.classList.remove("hidden");
+      positionLongTextPreview(event);
+    });
+    document.addEventListener("mousemove",event=>{if(activePreviewTarget)positionLongTextPreview(event);});
+    document.addEventListener("mouseout",event=>{if(!event.target.closest("[data-full-text]"))return;activePreviewTarget=null;el("long-text-preview").classList.add("hidden");});
+    document.addEventListener("click",event=>{const target=event.target.closest("[data-full-text]");if(!target||!isTextTruncated(target))return;event.preventDefault();event.stopPropagation();showFullText(target);});
+    document.addEventListener("keydown",event=>{const target=event.target.closest?.("[data-full-text]");if(target&&isTextTruncated(target)&&(event.key==="Enter"||event.key===" ")){event.preventDefault();showFullText(target);}});
+    el("close-full-text").onclick=()=>el("full-text-dialog").close();
+    el("copy-full-text").onclick=async()=>{await navigator.clipboard.writeText(el("full-text-content").textContent);toast("已复制全文");};
+    renderTechnicalTraceList();
+    hydrateLongText();
+    const initialProduct=["trace","logs","settings","audit"].includes(location.hash.slice(1))?location.hash.slice(1):"business";
+    const linkedSelector=new URLSearchParams(location.search).get("linked")||"";
+    if(initialProduct!=="business")switchProduct(initialProduct);
+    if(linkedSelector&&initialProduct==="trace"&&!openTraceDetailById(linkedSelector))toast("该精确 Trace 详情未载入当前原型，未退回列表或展示其他记录");
+    if(linkedSelector&&initialProduct==="business"&&!openBusinessRequestDetail(linkedSelector))toast("该精确 Request 详情未载入当前原型，未退回列表或展示其他记录");
+  </script>
+</body>
+</html>

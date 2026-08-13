@@ -6,10 +6,10 @@
  */
 
 import { ObservabilityCapabilityBoundary } from "@/modules/bkn-trace/components/ObservabilityCapabilityBoundary";
-import { BknTraceAdvancedExplorerScene } from "@/modules/bkn-trace/scenes/BknTraceExplorerScene";
+import { TraceAnalysisScene } from "@/modules/bkn-trace/trace-analysis/TraceAnalysisScene";
 
 export function TraceAnalysisPage() {
   return <ObservabilityCapabilityBoundary allow={(profile) => profile.technicalTrace}>
-    <BknTraceAdvancedExplorerScene />
+    <TraceAnalysisScene />
   </ObservabilityCapabilityBoundary>;
 }
