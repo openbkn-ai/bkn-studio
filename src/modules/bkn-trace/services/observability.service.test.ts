@@ -26,29 +26,29 @@ describe("observability service", () => {
     getMock.mockReset();
   });
 
-  it("queries the unified log API without exposing storage details", async () => {
+  it("queries the operation audit API with stable business filters", async () => {
     getMock.mockResolvedValue({
       data: {
         data: [{
-          schema_version: "1.0.0",
-          log_id: "log-a",
-          source_id: "otel",
-          source_log_id: "source-a",
+          schema_version: "1.0",
+          event_id: "audit-a",
           log_category: "runtime.business",
-          event_name: "knowledge.read.completed",
-          event_timestamp: "2026-08-01T10:00:00Z",
-          observed_timestamp: "2026-08-01T10:00:01Z",
-          severity_number: 9,
-          severity_text: "INFO",
-          outcome: "success",
-          safe_summary: "读取需求预测对象",
-          service_name: "context-loader",
-          tool_name: "run_sql",
-          deployment_environment: "local",
+          event_name: "conversation.created",
+          event_time: "2026-08-01T10:00:00Z",
+          recorded_at: "2026-08-01T10:00:01Z",
+          actor_id: "user-a",
+          actor_name_snapshot: "供应链管理员",
+          actor_type: "user",
+          auth_method: "api_key",
+          credential_id: "key-a",
           tenant_id: "tenant-a",
-          ingress_principal: "otel-collector",
-          trust_level: "trusted",
-          trace_id: "4b3d59daeff5bfbb23d46c47a5051ec9",
+          source_channel: "api",
+          source_id: "bkn-trace-core",
+          business_module: "domain_knowledge_network",
+          outcome: "success",
+          facts: { action: "create", target_type: "conversation", target_id: "conv-a", target_name_snapshot: "供应链分析助手", operation_type: "conversation.create", operation_status: "completed", business_context: "managed" },
+          correlation: { request_id: "req-a", conversation_id: "conv-a", trace_id: "4b3d59daeff5bfbb23d46c47a5051ec9" },
+          attributes: {},
         }],
         next_cursor: null,
         pagination: { page: 2, page_size: 20 },
@@ -61,7 +61,14 @@ describe("observability service", () => {
     const { listLogs } = await import("@/modules/bkn-trace/services/observability.service");
 
     const result = await listLogs({
-      categories: ["runtime.business"],
+      categories: ["audit.admin"],
+      businessModule: "domain_knowledge_network",
+      actorId: "user-a",
+      action: "create",
+      targetType: "conversation",
+      targetId: "conv-a",
+      outcomes: ["success"],
+      conversationId: "conv-a",
       page: 2,
       pageSize: 20,
       timeFrom: "2026-08-01T00:00:00.000Z",
@@ -72,20 +79,33 @@ describe("observability service", () => {
     expect(getMock).toHaveBeenCalledWith("/observability/v1/logs", {
       headers: { "x-business-domain": "bd_demo" },
       params: {
-        categories: ["runtime.business"],
+        categories: ["audit.admin"],
+        business_module: "domain_knowledge_network",
+        actor_id: "user-a",
+        action: "create",
+        target_type: "conversation",
+        target_id: "conv-a",
+        outcomes: ["success"],
+        conversation_id: "conv-a",
         page: 2,
         page_size: 20,
         time_from: "2026-08-01T00:00:00.000Z",
         time_to: "2026-08-02T00:00:00.000Z",
         trace_id: "4b3d59daeff5bfbb23d46c47a5051ec9",
       },
+      paramsSerializer: { indexes: null },
       skipErrorToast: true,
     });
     expect(result.data[0]).toMatchObject({
-      category: "runtime.business",
-      logId: "log-a",
-      summary: "读取需求预测对象",
-      toolName: "run_sql",
+      eventId: "audit-a",
+      eventName: "conversation.created",
+      logCategory: "runtime.business",
+      businessModule: "domain_knowledge_network",
+      action: "create",
+      target: { id: "conv-a", name: "供应链分析助手", type: "conversation" },
+      actor: { id: "user-a", name: "供应链管理员", type: "user" },
+      authMethod: "api_key",
+      conversationId: "conv-a",
     });
     expect(result).toMatchObject({ page: 2, pageSize: 20 });
     expect(getMock.mock.calls.flat().join(" ")).not.toContain("_search");
@@ -112,34 +132,30 @@ describe("observability service", () => {
     expect(policies[0]).toMatchObject({ category: "runtime.system", retentionDays: 7, readOnly: true });
   });
 
-	 it("loads an authorized log detail and filtered facets from the gateway", async () => {
-		 getMock
-			 .mockResolvedValueOnce({ data: {
+	 it("loads an authorized operation audit detail from the gateway", async () => {
+		 getMock.mockResolvedValueOnce({ data: {
 				 data: {
-					 log_id: "log-a", source_id: "context-loader", log_category: "runtime.business",
-					 event_name: "knowledge.read.completed", event_timestamp: "2026-08-01T10:00:00Z",
-					 observed_timestamp: "2026-08-01T10:00:01Z", severity_number: 9, severity_text: "INFO",
-					 outcome: "success", safe_summary: "读取需求预测对象", service_name: "context-loader",
-					 deployment_environment: "production", trace_id: "trace-a",
+				 event_id: "audit-a", log_category: "audit.admin", event_name: "role.updated",
+				 event_time: "2026-08-01T10:00:00Z", recorded_at: "2026-08-01T10:00:01Z",
+					 actor_id: "user-a", actor_name_snapshot: "Administrator", actor_type: "user", auth_method: "session",
+					 tenant_id: "tenant-a", source_channel: "studio", source_id: "bkn-safe-admin",
+					 business_module: "system_management", outcome: "success",
+					 facts: { action: "grant", target_type: "knowledge_network", target_id: "supplychain_hd0202", target_name_snapshot: "HD供应链业务知识网络_v3" },
+					 correlation: { request_id: "req-a", trace_id: "4b3d59daeff5bfbb23d46c47a5051ec9" }, attributes: {},
 				 },
 				 field_projection: { policy_revision: "r6.2-default", redacted_fields: ["attributes.query"] },
 				 request_trace_context: { current_trace_id: "trace-a", related_trace_ids: ["trace-a"] },
-			 } })
-			 .mockResolvedValueOnce({ data: { data: [{ value: "context-loader", count: 12 }], partial: false, source_status: [], next_cursor: null } });
-		 const { getLogDetail, listLogFacets } = await import("@/modules/bkn-trace/services/observability.service");
+			 } });
+		 const { getLogDetail } = await import("@/modules/bkn-trace/services/observability.service");
 
 		 const detail = await getLogDetail("log-a");
-		 const facets = await listLogFacets("service_name", { categories: ["runtime.business"] });
 
-		 expect(getMock).toHaveBeenNthCalledWith(1, "/observability/v1/logs/log-a", {
+		 expect(getMock).toHaveBeenCalledWith("/observability/v1/logs/log-a", {
 			 headers: { "x-business-domain": "bd_demo" }, skipErrorToast: true,
 		 });
-		 expect(getMock).toHaveBeenNthCalledWith(2, "/observability/v1/log-facets", {
-			 headers: { "x-business-domain": "bd_demo" },
-			 params: { categories: ["runtime.business"], facet: "service_name" },
-			 skipErrorToast: true,
+		 expect(detail).toMatchObject({
+			 data: { eventId: "audit-a", businessModule: "system_management", action: "grant", target: { id: "supplychain_hd0202" } },
+			 policyRevision: "r6.2-default", redactedFields: ["attributes.query"],
 		 });
-		 expect(detail).toMatchObject({ data: { logId: "log-a", summary: "读取需求预测对象" }, policyRevision: "r6.2-default", redactedFields: ["attributes.query"] });
-		 expect(facets.data).toEqual([{ value: "context-loader", count: 12 }]);
 	 });
 });

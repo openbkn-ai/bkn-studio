@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export const AUDIT_RESOURCE_PARAM = "resource";
+export const AUDIT_RESOURCE_PARAM = "target_type";
 export const AUDIT_ACTOR_PARAM = "actor_id";
 export const AUDIT_TARGET_PARAM = "target_id";
 export const AUDIT_FAILED_PARAM = "failed";

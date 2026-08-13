@@ -245,6 +245,7 @@ function knowledgeGroups(projection: BusinessProvenanceInteraction) {
 
 export function BusinessProvenanceScene() {
   const { t } = useTranslation();
+  const [linkedConversationId] = useState(() => new URLSearchParams(window.location.search).get("conversation_id")?.trim() ?? "");
   const [conversations, setConversations] = useState<BusinessProvenanceConversation[]>([]);
   const [conversationTotal, setConversationTotal] = useState(0);
   const [conversationPage, setConversationPage] = useState(1);
@@ -254,7 +255,7 @@ export function BusinessProvenanceScene() {
   const [conversationKnowledgeNetwork, setConversationKnowledgeNetwork] = useState("");
   const [conversationStatus, setConversationStatus] = useState<string>();
   const [conversationEvidence, setConversationEvidence] = useState<string>();
-  const [conversationQuery, setConversationQuery] = useState<Parameters<typeof getBusinessProvenanceConversations>[0]>({});
+  const [conversationQuery, setConversationQuery] = useState<Parameters<typeof getBusinessProvenanceConversations>[0]>(() => linkedConversationId ? { conversationId: linkedConversationId } : {});
   const [selectedConversation, setSelectedConversation] = useState<BusinessProvenanceConversation>();
   const [interactionKeyword, setInteractionKeyword] = useState("");
   const [interactions, setInteractions] = useState<BusinessProvenanceInteractionListItem[]>([]);
@@ -284,12 +285,16 @@ export function BusinessProvenanceScene() {
       if (request !== conversationRequest.current) return;
       setConversations(page.entries);
       setConversationTotal(page.total);
+      if (linkedConversationId) {
+        const linked = page.entries.find((entry) => entry.conversationId === linkedConversationId);
+        if (linked) setSelectedConversation((current) => current ?? linked);
+      }
     } catch (error) {
       if (request !== conversationRequest.current) return;
       const status = responseStatus(error);
       setConversationLoadState(status === 404 ? "not-installed" : status === 403 ? "forbidden" : "failed");
     } finally { if (request === conversationRequest.current) setLoading(false); }
-  }, [conversationPage, conversationQuery]);
+  }, [conversationPage, conversationQuery, linkedConversationId]);
 
   useEffect(() => { void loadConversations(); }, [loadConversations]);
   useEffect(() => {

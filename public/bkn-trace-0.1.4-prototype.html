@@ -219,15 +219,15 @@
     .settings-section-head h2 { margin:0; font-size:17px; }
     .settings-section-head p { margin:6px 0 0; color:#8792a5; font-size:11px; line-height:1.55; }
     .settings-refresh { padding:6px 10px; border:1px solid #dfe5ee; color:#566278; background:white; font-size:11px; }
-    .settings-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:16px; }
+    .settings-summary { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
     .settings-summary article { min-height:82px; padding:13px 14px; border:1px solid #e3e8ef; background:#fafbfd; }
     .settings-summary span,.settings-summary strong,.settings-summary small { display:block; }
     .settings-summary span { color:#8791a3; font-size:10px; }
-    .settings-summary strong { margin-top:7px; color:#2f3b51; font-size:20px; }
+    .settings-summary strong { margin-top:7px; color:#2f3b51; font-size:18px; line-height:1.25; }
     .settings-summary small { margin-top:4px; color:#7b8699; font-size:10px; }
-    .settings-table-head,.settings-row { display:grid; grid-template-columns:1.15fr 1.35fr .72fr .9fr 1.45fr; gap:14px; align-items:center; padding:12px 14px; }
+    .settings-table-head,.settings-row { display:grid; grid-template-columns:1.05fr 1.05fr 1.45fr .65fr .9fr 1.25fr; gap:14px; align-items:center; padding:12px 14px; }
     .settings-table-head { color:#59657a; border-bottom:1px solid #e5e9f0; background:#fafafa; font-size:11px; font-weight:700; }
-    .settings-row { min-height:60px; border-bottom:1px solid #edf0f4; font-size:11px; }
+    .settings-row { min-height:60px; border-bottom:1px solid #edf0f4; color:#3b4659; font-size:11px; line-height:1.45; }
     .settings-row:last-child { border-bottom:0; }
     .settings-row strong,.settings-row small { display:block; }
     .settings-row small { margin-top:4px; color:#8a94a6; }
@@ -235,7 +235,7 @@
     .health-tag.pending { color:#8a641e; background:#fff7e8; }
     .retention-grid { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(320px,.8fr); gap:14px; }
     .retention-list { border:1px solid #e3e8ef; }
-    .retention-row { display:grid; grid-template-columns:1.4fr .8fr .85fr; gap:12px; padding:12px 14px; border-bottom:1px solid #edf0f4; font-size:11px; }
+    .retention-row { display:grid; grid-template-columns:1.2fr .9fr 1.05fr .8fr; gap:12px; padding:12px 14px; border-bottom:1px solid #edf0f4; color:#3b4659; font-size:11px; line-height:1.45; }
     .retention-row:last-child { border-bottom:0; }.retention-row.head { color:#59657a; background:#fafafa; font-weight:700; }
     .storage-card { padding:16px; border:1px solid #e5d8b8; background:#fffaf0; }
     .storage-card header { display:flex; justify-content:space-between; gap:12px; }
@@ -350,24 +350,28 @@
           </div>
         </section>
       </section>
-      <section id="logs-workbench-page" class="hidden"><iframe class="integrated-workbench" id="logs-workbench-frame" title="统一日志工作台" src="./openbkn-logs-0.1.4-prototype.html?embed=1#logs"></iframe></section>
+      <section id="logs-workbench-page" class="hidden"><iframe class="integrated-workbench" id="logs-workbench-frame" title="用户操作与管理审计工作台" src="./openbkn-logs-0.1.4-prototype.html?embed=1#logs"></iframe></section>
       <section id="observability-settings-page" class="hidden">
         <header class="page-head"><div><h1>可观测性设置</h1><p>查看日志与 Trace 的采集、保留和历史数据归档状态。</p></div></header>
         <div class="settings-stack">
           <section class="settings-section">
-            <div class="settings-section-head"><div><h2>采集状态</h2><p>当前本地 0.1.3 接口返回 4 个来源；正常来源和未接入来源均按事实展示。</p></div><button class="settings-refresh" type="button">↻ 刷新</button></div>
-            <div class="settings-summary"><article><span>已登记来源</span><strong>4</strong><small>当前真实返回</small></article><article><span>正常采集</span><strong>2</strong><small>OpenTelemetry、管理审计</small></article><article><span>尚未接入</span><strong>2</strong><small>用户访问、安全审计</small></article><article><span>异常来源</span><strong>0</strong><small>当前未返回异常</small></article></div>
-            <div class="settings-table-head"><span>日志来源</span><span>覆盖范围</span><span>状态</span><span>最近接收</span><span>数据情况</span></div>
-            <div class="settings-row"><span><strong>OpenTelemetry</strong><small>otel-runtime</small></span><span>OpenBKN 运行日志</span><span class="health-tag">正常</span><span>当前接口未返回</span><span>当前接口未返回采样与丢弃统计</span></div>
-            <div class="settings-row"><span><strong>BKN Safe 管理审计</strong><small>bkn-safe-admin</small></span><span>管理操作</span><span class="health-tag">正常</span><span>当前接口未返回</span><span>来源适配读取，不占用 Trace 热存储</span></div>
-            <div class="settings-row"><span><strong>用户访问日志</strong><small>bkn-safe-access</small></span><span>登录与访问</span><span class="health-tag pending">未接入</span><span>—</span><span>尚未采集</span></div>
-            <div class="settings-row"><span><strong>安全审计日志</strong><small>bkn-safe-security</small></span><span>授权与安全事件</span><span class="health-tag pending">未接入</span><span>—</span><span>尚未采集</span></div>
+            <div class="settings-section-head"><div><h2>运行概览</h2><p>汇总当前可观测性来源的接入状态；只展示接口能够确认的事实。</p></div><button class="settings-refresh" type="button">↻ 刷新</button></div>
+            <div class="settings-summary"><article><span>已登记来源</span><strong>4</strong><small>当前真实返回</small></article><article><span>正常</span><strong>2</strong><small>运行日志、管理审计</small></article><article><span>异常</span><strong>0</strong><small>当前未返回异常</small></article><article><span>未接入</span><strong>2</strong><small>用户访问、安全审计</small></article><article><span>最近更新时间</span><strong>接口未返回</strong><small>不以页面时间代替</small></article></div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-head"><div><h2>采集来源</h2><p>查看日志来源、业务覆盖和接收状态；0.1.4 保持只读，不在此页修改采集策略。</p></div></div>
+            <div class="settings-table-head"><span>日志来源</span><span>覆盖范围</span><span>覆盖业务模块</span><span>状态</span><span>最近接收</span><span>数据情况</span></div>
+            <div class="settings-row"><span><strong>OpenTelemetry</strong><small>otel-runtime</small></span><span>OpenBKN 运行日志</span><span>不属于业务操作审计</span><span class="health-tag">正常</span><span>当前接口未返回</span><span>当前接口未返回接收或丢弃统计</span></div>
+            <div class="settings-row"><span><strong>BKN Safe 管理审计</strong><small>bkn-safe-admin</small></span><span>管理操作</span><span>用户与组织、权限与授权、API Key、License</span><span class="health-tag">正常</span><span>当前接口未返回</span><span>来源适配读取，不占用 Trace 热存储</span></div>
+            <div class="settings-row"><span><strong>用户访问日志</strong><small>bkn-safe-access</small></span><span>登录与访问</span><span>认证与账号</span><span class="health-tag pending">未接入</span><span>—</span><span>尚未采集</span></div>
+            <div class="settings-row"><span><strong>安全审计日志</strong><small>bkn-safe-security</small></span><span>授权与安全事件</span><span>权限与授权</span><span class="health-tag pending">未接入</span><span>—</span><span>尚未采集</span></div>
           </section>
 
           <section class="settings-section">
             <div class="settings-section-head"><div><h2>存储与保留</h2><p>只读展示当前可确认的信息；没有接口事实的字段保持缺失。</p></div></div>
             <div class="retention-grid">
-              <div class="retention-list"><div class="retention-row head"><span>数据</span><span>热存储保留</span><span>状态</span></div><div class="retention-row"><span>运行日志</span><span>7 天</span><span>系统默认</span></div><div class="retention-row"><span>审计日志</span><span>365 天</span><span>系统默认</span></div><div class="retention-row"><span>Trace 查询索引</span><span>当前接口未返回</span><span>待补充</span></div><div class="retention-row"><span>Interaction 调用事实</span><span>当前接口未返回</span><span>待补充</span></div></div>
+              <div class="retention-list"><div class="retention-row head"><span>数据</span><span>热存储</span><span>保留口径</span><span>状态</span></div><div class="retention-row"><span>运行日志</span><span>OpenSearch</span><span>7 天 · 系统默认</span><span class="health-tag">正常</span></div><div class="retention-row"><span>审计日志</span><span>来源系统</span><span>365 天 · 系统默认</span><span class="health-tag">正常</span></div><div class="retention-row"><span>Trace 查询索引</span><span>OpenSearch</span><span>当前接口未返回</span><span class="health-tag pending">待补充</span></div><div class="retention-row"><span>Interaction 调用事实</span><span>MariaDB</span><span>当前接口未返回</span><span class="health-tag pending">待补充</span></div></div>
               <aside class="storage-card"><header><h3>归档存储</h3><span class="health-tag pending">状态未知</span></header><p>0.1.3 当前没有返回预配置对象存储及连接状态，原型不构造 Bucket 或连接成功信息。</p><dl><dt>目标名称</dt><dd>当前接口未返回</dd><dt>存储类型</dt><dd>预配置对象存储</dd><dt>最近检查</dt><dd>当前接口未返回</dd></dl></aside>
             </div>
           </section>

@@ -19,53 +19,99 @@ export type LogCategory =
   | "runtime.system";
 
 type BackendLogRecord = {
-  application_id?: string;
-  attributes?: Record<string, unknown>;
+  actor_id: string;
+  actor_name_snapshot: string;
+  actor_type?: "service_account" | "user";
+  auth_method: "api_key" | "oauth" | "password" | "session" | "unknown";
   business_domain_id?: string;
-  conversation_id?: string;
-  deployment_environment: string;
+  credential_id?: string;
+  credential_name?: string;
+  event_id: string;
   event_name: string;
-  event_timestamp: string;
-  interaction_id?: string;
+  event_time: string;
+  failure_code?: string;
+  failure_message?: string;
+  facts: {
+    action: string;
+    business_context?: string;
+    client_ip?: string;
+    detail?: Record<string, unknown>;
+    method?: string;
+    operation_status?: string;
+    operation_type?: string;
+    status_code?: number;
+    target_id: string;
+    target_name_snapshot: string;
+    target_type: string;
+  };
+  correlation: {
+    conversation_id?: string;
+    interaction_id?: string;
+    operation_id?: string;
+    request_id?: string;
+    task_id?: string;
+    trace_id?: string;
+  };
+  business_module: BusinessModule;
   log_category: LogCategory;
-  log_id: string;
-  observed_timestamp: string;
-  operation_id?: string;
-  outcome: string;
-  request_id?: string;
-  safe_summary: string;
-  service_name: string;
-  severity_number: number;
-  severity_text: string;
+  outcome: AuditOutcome;
+  recorded_at: string;
+  source_channel: SourceChannel;
   source_id: string;
-  span_id?: string;
-  tool_name?: string;
-  trace_id?: string;
+  attributes: Record<string, unknown>;
+};
+
+export type AuditOutcome = "canceled" | "denied" | "failure" | "success" | "unknown";
+
+export type BusinessModule =
+  | "domain_knowledge_network"
+  | "observability"
+  | "execution_factory"
+  | "data_resource_knowledge_network"
+  | "model_management"
+  | "system_management";
+
+export type SourceChannel = "api" | "cli" | "mcp" | "sdk" | "studio";
+
+export type LogFacts = {
+  action: string;
+  businessContext?: string;
+  clientIp?: string;
+  detail?: Record<string, unknown>;
+  method?: string;
+  operationStatus?: string;
+  operationType?: string;
+  statusCode?: number;
+  targetId: string;
+  targetNameSnapshot: string;
+  targetType: string;
 };
 
 export type LogRecord = {
-  applicationId?: string;
-  attributes: Record<string, unknown>;
+  action: string;
+  actor: { id: string; name: string; type: "service_account" | "user" };
+  authMethod: BackendLogRecord["auth_method"];
   businessDomain?: string;
-  category: LogCategory;
   conversationId?: string;
-  environment: string;
+  credential?: { id: string; name?: string };
+  eventId: string;
   eventName: string;
-  eventTimestamp: string;
+  eventTime: string;
+  failure?: { code: string; message?: string };
   interactionId?: string;
-  logId: string;
-  observedTimestamp: string;
+  facts: LogFacts;
+  logCategory: LogCategory;
+  businessModule: BusinessModule;
   operationId?: string;
-  outcome: string;
+  outcome: AuditOutcome;
+  recordedAt: string;
   requestId?: string;
-  serviceName: string;
-  severityNumber: number;
-  severityText: string;
+  sourceChannel: SourceChannel;
   sourceId: string;
-  spanId?: string;
-  summary: string;
-  toolName?: string;
+  target: { id: string; name: string; type: string };
+  taskId?: string;
   traceId?: string;
+  attributes: Record<string, unknown>;
 };
 
 export type LogSourceStatus = {
@@ -90,15 +136,20 @@ export type LogPolicy = {
 };
 
 export type LogListQuery = {
+  action?: string;
+  actorId?: string;
   categories?: LogCategory[];
+  conversationId?: string;
   cursor?: string;
-  failedOnly?: boolean;
   limit?: number;
-	page?: number;
-	pageSize?: number;
+  businessModule?: BusinessModule;
+  outcomes?: AuditOutcome[];
+  page?: number;
+  pageSize?: number;
   query?: string;
   requestId?: string;
-  services?: string[];
+  targetId?: string;
+  targetType?: string;
   timeFrom?: string;
   timeTo?: string;
   traceId?: string;
@@ -150,20 +201,16 @@ export type LogDetailResult = {
   relatedTraceIds: string[];
 };
 
-export type LogFacet = "deployment_environment" | "event_name" | "log_category" | "service_name" | "severity_text";
-
-export type LogFacetResult = {
-  data: Array<{ count: number; value: string }>;
-  partial: boolean;
-  sourceStatus: LogSourceStatus[];
-};
-
 export async function listLogs(query: LogListQuery): Promise<LogListResult> {
 	const params = logQueryParams(query);
 
   const response = await http.get<BackendLogList>(`${OBSERVABILITY_API_PREFIX}/logs`, {
     headers: observabilityHeaders(),
     params,
+    // The Log Query contract uses repeated keys (`outcomes=failure&outcomes=denied`).
+    // Axios otherwise emits `outcomes[]=...`, which the Go handler deliberately
+    // does not interpret and would silently turn the UI filter into an unfiltered query.
+    paramsSerializer: { indexes: null },
     skipErrorToast: true,
   });
   return {
@@ -194,23 +241,6 @@ export async function getLogDetail(logId: string): Promise<LogDetailResult> {
   };
 }
 
-export async function listLogFacets(facet: LogFacet, query: LogListQuery = {}): Promise<LogFacetResult> {
-  const response = await http.get<{
-    data: Array<{ count: number; value: string }>;
-    partial: boolean;
-    source_status: BackendSourceStatus[];
-  }>(`${OBSERVABILITY_API_PREFIX}/log-facets`, {
-    headers: observabilityHeaders(),
-    params: { ...logQueryParams(query), facet },
-    skipErrorToast: true,
-  });
-  return {
-    data: response.data.data,
-    partial: response.data.partial,
-    sourceStatus: response.data.source_status.map(mapSourceStatus),
-  };
-}
-
 export async function listLogSources(): Promise<LogSourceStatus[]> {
   const response = await http.get<{ data: BackendSourceStatus[] }>(`${OBSERVABILITY_API_PREFIX}/log-sources`, {
     headers: observabilityHeaders(),
@@ -238,28 +268,48 @@ export async function listLogPolicies(): Promise<LogPolicy[]> {
 
 function mapLogRecord(record: BackendLogRecord): LogRecord {
   return {
-    ...(record.application_id ? { applicationId: record.application_id } : {}),
-    attributes: record.attributes ?? {},
+    action: record.facts.action,
+    actor: {
+      id: record.actor_id,
+      name: record.actor_name_snapshot,
+      type: record.actor_type ?? "user",
+    },
+    authMethod: record.auth_method,
     ...(record.business_domain_id ? { businessDomain: record.business_domain_id } : {}),
-    category: record.log_category,
-    ...(record.conversation_id ? { conversationId: record.conversation_id } : {}),
-    environment: record.deployment_environment,
+    ...(record.correlation.conversation_id ? { conversationId: record.correlation.conversation_id } : {}),
+    ...(record.credential_id ? {
+      credential: { id: record.credential_id, ...(record.credential_name ? { name: record.credential_name } : {}) },
+    } : {}),
+    eventId: record.event_id,
     eventName: record.event_name,
-    eventTimestamp: record.event_timestamp,
-    ...(record.interaction_id ? { interactionId: record.interaction_id } : {}),
-    logId: record.log_id,
-    observedTimestamp: record.observed_timestamp,
-    ...(record.operation_id ? { operationId: record.operation_id } : {}),
+    eventTime: record.event_time,
+    ...(record.failure_code ? {
+      failure: { code: record.failure_code, ...(record.failure_message ? { message: record.failure_message } : {}) },
+    } : {}),
+    facts: {
+      action: record.facts.action, targetId: record.facts.target_id,
+      targetNameSnapshot: record.facts.target_name_snapshot, targetType: record.facts.target_type,
+      ...(record.facts.business_context ? { businessContext: record.facts.business_context } : {}),
+      ...(record.facts.client_ip ? { clientIp: record.facts.client_ip } : {}),
+      ...(record.facts.detail ? { detail: record.facts.detail } : {}),
+      ...(record.facts.method ? { method: record.facts.method } : {}),
+      ...(record.facts.operation_status ? { operationStatus: record.facts.operation_status } : {}),
+      ...(record.facts.operation_type ? { operationType: record.facts.operation_type } : {}),
+      ...(record.facts.status_code !== undefined ? { statusCode: record.facts.status_code } : {}),
+    },
+    logCategory: record.log_category,
+    ...(record.correlation.interaction_id ? { interactionId: record.correlation.interaction_id } : {}),
+    businessModule: record.business_module,
+    ...(record.correlation.operation_id ? { operationId: record.correlation.operation_id } : {}),
     outcome: record.outcome,
-    ...(record.request_id ? { requestId: record.request_id } : {}),
-    serviceName: record.service_name,
-    severityNumber: record.severity_number,
-    severityText: record.severity_text,
+    recordedAt: record.recorded_at,
+    ...(record.correlation.request_id ? { requestId: record.correlation.request_id } : {}),
+    sourceChannel: record.source_channel,
     sourceId: record.source_id,
-    ...(record.span_id ? { spanId: record.span_id } : {}),
-    summary: record.safe_summary,
-    ...(record.tool_name ? { toolName: record.tool_name } : {}),
-    ...(record.trace_id ? { traceId: record.trace_id } : {}),
+    target: { id: record.facts.target_id, name: record.facts.target_name_snapshot, type: record.facts.target_type },
+    ...(record.correlation.task_id ? { taskId: record.correlation.task_id } : {}),
+    ...(record.correlation.trace_id ? { traceId: record.correlation.trace_id } : {}),
+    attributes: record.attributes,
   };
 }
 
@@ -277,15 +327,20 @@ function mapSourceStatus(source: BackendSourceStatus): LogSourceStatus {
 
 function logQueryParams(query: LogListQuery) {
   const params: Record<string, boolean | number | string | string[]> = {};
+  if (query.action) params.action = query.action;
+  if (query.actorId) params.actor_id = query.actorId;
   if (query.categories?.length) params.categories = query.categories;
+  if (query.conversationId) params.conversation_id = query.conversationId;
   if (query.cursor) params.cursor = query.cursor;
-  if (query.failedOnly !== undefined) params.failed_only = query.failedOnly;
   if (query.limit !== undefined) params.limit = query.limit;
-	if (query.page !== undefined) params.page = query.page;
-	if (query.pageSize !== undefined) params.page_size = query.pageSize;
+  if (query.businessModule) params.business_module = query.businessModule;
+  if (query.outcomes?.length) params.outcomes = query.outcomes;
+  if (query.page !== undefined) params.page = query.page;
+  if (query.pageSize !== undefined) params.page_size = query.pageSize;
   if (query.query) params.q = query.query;
   if (query.requestId) params.request_id = query.requestId;
-  if (query.services?.length) params.services = query.services;
+  if (query.targetId) params.target_id = query.targetId;
+  if (query.targetType) params.target_type = query.targetType;
   if (query.timeFrom) params.time_from = query.timeFrom;
   if (query.timeTo) params.time_to = query.timeTo;
   if (query.traceId) params.trace_id = query.traceId;
