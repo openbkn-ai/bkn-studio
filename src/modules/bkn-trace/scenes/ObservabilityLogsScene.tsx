@@ -241,6 +241,9 @@ function readInitialFilters(mode: "audit" | "logs"): Filters {
   const parameters = new URLSearchParams(window.location.search);
   const businessModule = parameters.get("business_module") ?? "";
   const outcome = parameters.get("outcome") ?? "";
+  const timeFrom = dayjs(parameters.get("time_from"));
+  const timeTo = dayjs(parameters.get("time_to"));
+  const hasValidTimeRange = timeFrom.isValid() && timeTo.isValid() && !timeTo.isBefore(timeFrom);
   return {
     ...defaults,
     action: parameters.get("action") ?? "",
@@ -248,6 +251,7 @@ function readInitialFilters(mode: "audit" | "logs"): Filters {
     ...(BUSINESS_MODULES.includes(businessModule as BusinessModule) ? { businessModule: businessModule as BusinessModule } : {}),
     ...(AUDIT_OUTCOMES.includes(outcome as AuditOutcome) ? { outcome: outcome as AuditOutcome } : {}),
     query: parameters.get("q") ?? "",
+    ...(hasValidTimeRange ? { timeRange: [timeFrom, timeTo] } : {}),
   };
 }
 
@@ -276,6 +280,8 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
   if (filters.actorId.trim()) parameters.set("actor_id", filters.actorId.trim());
   if (filters.action.trim()) parameters.set("action", filters.action.trim());
   if (filters.outcome) parameters.set("outcome", filters.outcome);
+  parameters.set("time_from", filters.timeRange[0].toISOString());
+  parameters.set("time_to", filters.timeRange[1].toISOString());
   const query = parameters.toString();
   window.history.replaceState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
 }

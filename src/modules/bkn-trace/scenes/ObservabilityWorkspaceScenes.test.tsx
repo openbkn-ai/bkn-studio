@@ -125,6 +125,17 @@ describe("observability workspace scenes", () => {
     }
   });
 
+  it("从链接恢复日志时间范围", async () => {
+    window.history.replaceState({}, "", "/observability/logs?time_from=2026-08-01T00%3A00%3A00.000Z&time_to=2026-08-03T00%3A00%3A00.000Z");
+
+    render(<ObservabilityLogsScene />);
+
+    await waitFor(() => expect(listLogs).toHaveBeenCalled());
+    const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
+    expect(query?.timeFrom).toBe("2026-08-01T00:00:00.000Z");
+    expect(query?.timeTo).toBe("2026-08-03T00:00:00.000Z");
+  });
+
   it("系统管理日志入口复用统一工作台并保留对象下钻条件", async () => {
     window.history.replaceState({}, "", "/system/audit?target_type=user&target_id=user-a");
     render(<AuditLogPage />);
