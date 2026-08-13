@@ -18,6 +18,17 @@ export function isAgentConversationCreated(record: LogRecord) {
 
 export function presentLogAction(record: LogRecord, t: Translate) {
   if (isAgentConversationCreated(record)) return t("bknTrace.logs.auditActions.startAgentConversation");
+  if (record.logCategory === "access.user") {
+    const key = `bknTrace.logs.accessActions.${record.action}`;
+    const label = t(key, { defaultValue: "" });
+    if (label && label !== key) return label;
+  }
+  if (record.businessModule === "system_management") {
+    const targetType = normalizedSystemTargetType(record.target.type);
+    const key = `bknTrace.logs.systemManagementActions.${record.action}${targetType}`;
+    const label = t(key, { defaultValue: "" });
+    if (label && label !== key) return label;
+  }
   if (record.businessModule === "domain_knowledge_network") {
     const actionKey = `bknTrace.logs.domainAuditActions.${record.action}`;
     const target = t(`bknTrace.logs.targetTypes.${record.target.type}`, { defaultValue: record.target.type });
@@ -30,6 +41,20 @@ export function presentLogAction(record: LogRecord, t: Translate) {
     return t("bknTrace.logs.domainAction", { action, target });
   }
   return t(`bknTrace.logs.auditActions.${record.action}`, { defaultValue: record.action });
+}
+
+function normalizedSystemTargetType(value: string) {
+  const types: Record<string, string> = {
+    "api-keys": "ApiKey",
+    api_key: "ApiKey",
+    license: "License",
+    licenses: "License",
+    role: "Role",
+    roles: "Role",
+    user: "User",
+    users: "User",
+  };
+  return types[value] ?? "";
 }
 
 export function presentLogTarget(record: LogRecord, t: Translate): LogText {

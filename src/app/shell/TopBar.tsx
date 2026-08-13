@@ -198,7 +198,7 @@ export function TopBar() {
         key: "logout",
         label: t("auth.logout"),
         onClick: () => {
-          logout(runtimeConfig.mode);
+          void logout(runtimeConfig.mode);
         },
       },
     );

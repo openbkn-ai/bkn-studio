@@ -9,6 +9,7 @@ import { getAppCallbackPath, getAppHomePath } from "@/app/router/app-paths";
 import { getDevRefreshToken } from "@/framework/auth/dev-auth";
 import {
   clearStoredTokens,
+  getStoredAccessToken,
   getStoredIdToken,
   storeTokens,
 } from "@/framework/auth/token-store";
@@ -426,8 +427,24 @@ export async function refreshOAuthTokens(): Promise<string | null> {
   }
 }
 
-export function logout(mode: "hosted" | "standalone") {
+export async function logout(mode: "hosted" | "standalone") {
   const idToken = getStoredIdToken();
+  const accessToken = getStoredAccessToken();
+
+  // Record only an explicit user sign-out. This is deliberately separate from
+  // Trace: it captures the platform access action and the server associates it
+  // with the authenticated user before the browser session is cleared.
+  if (shouldUseOAuthGate(mode) && accessToken) {
+    try {
+      await fetch("/api/safe/v1/me/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    } catch {
+      // Logout must remain available if the audit endpoint is temporarily down.
+    }
+  }
+
   clearStoredTokens();
   window.sessionStorage.removeItem(CSRF_RETRY_KEY);
   window.sessionStorage.removeItem(CSRF_ORIGINAL_ERROR_KEY);
