@@ -5,14 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
 import {
   CONTEXT_LOADER_OPS,
   buildCurl,
   createMcpSession,
   fetchMcpObjectTypes,
   fetchKnDetail,
+  fetchKnDetailRestLegacy,
   listMcpTools,
   sendRequest,
 } from "@/modules/knowledge-network/services/context-loader.service";
@@ -38,8 +40,13 @@ function jsonRpcBody(init: RequestInit | undefined): Record<string, unknown> {
   return JSON.parse(init.body) as Record<string, unknown>;
 }
 
+beforeEach(() => {
+  setRuntimeConfig(createRuntimeConfig({ locale: "en-US" }));
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
+  setRuntimeConfig(createRuntimeConfig());
 });
 
 describe("sendRequest", () => {
@@ -57,10 +64,10 @@ describe("sendRequest", () => {
       controller.signal,
     );
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining("/kn/search_schema"),
-      expect.objectContaining({ signal: controller.signal }),
-    );
+    expect(fetchSpy.mock.calls[0]?.[0]).toContain("/kn/search_schema");
+    const init = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+    expect(init.signal).toBe(controller.signal);
+    expect(init.headers).toMatchObject({ "Accept-Language": "en-US" });
   });
 
   it("completes the MCP initialize, initialized notification, and tools/call handshake", async () => {
@@ -86,6 +93,9 @@ describe("sendRequest", () => {
     expect(jsonRpcBody(fetchSpy.mock.calls[1][1])).toMatchObject({ method: "notifications/initialized" });
     expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({ method: "tools/call" });
     expect(fetchSpy.mock.calls[2][1]?.headers).toMatchObject({ "Mcp-Session-Id": "session-1" });
+    fetchSpy.mock.calls.forEach(([, init]) => {
+      expect(init?.headers).toMatchObject({ "Accept-Language": "en-US" });
+    });
   });
 
   it("carries the managed context into the REST body", async () => {
@@ -173,6 +183,18 @@ describe("fetchKnDetail", () => {
   });
 });
 
+describe("legacy context-loader REST requests", () => {
+  it("uses the current UI locale", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "kn-demo", object_types: [], concept_groups: [], relation_types: [] }), { status: 200 }),
+    );
+
+    await fetchKnDetailRestLegacy({ base: "https://platform.example.com", token: "", knId: "kn-demo" });
+
+    expect(fetchSpy.mock.calls[0]?.[1]?.headers).toMatchObject({ "Accept-Language": "en-US" });
+  });
+});
+
 describe("fetchMcpObjectTypes", () => {
   it("uses get_object_types with the managed context and returns related metrics", async () => {
     const session = {
@@ -222,6 +244,7 @@ describe("buildCurl", () => {
     );
 
     expect(curl).toContain('"bkn_context":{"conversation_id":"conv_1"');
+    expect(curl).toContain("Accept-Language: en-US");
   });
 
   it("keeps a half-written request body readable instead of showing it as empty", () => {
@@ -310,8 +333,12 @@ describe("listMcpTools", () => {
     ).resolves.toEqual([]);
 
     expect(fetchSpy).toHaveBeenCalledTimes(3);
-    fetchSpy.mock.calls.forEach(([, init]) => {
-      expect(init).toMatchObject({ signal: controller.signal });
+    fetchSpy.mock.calls.forEach((call) => {
+      const init = call[1] as RequestInit;
+      expect(init).toMatchObject({
+        signal: controller.signal,
+        headers: { "Accept-Language": "en-US" },
+      });
     });
   });
 });
@@ -335,5 +362,8 @@ describe("createMcpSession", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(6);
     expect(fetchSpy.mock.calls[2][1]?.headers).toMatchObject({ "Mcp-Session-Id": "session-old" });
     expect(fetchSpy.mock.calls[5][1]?.headers).toMatchObject({ "Mcp-Session-Id": "session-new" });
+    fetchSpy.mock.calls.forEach(([, init]) => {
+      expect(init?.headers).toMatchObject({ "Accept-Language": "en-US" });
+    });
   });
 });

@@ -198,6 +198,7 @@ export async function streamBusinessProvenanceAnalysis(
       headers: {
         Accept: "text/event-stream",
         "Content-Type": "application/json",
+        "Accept-Language": runtime.locale,
         "x-business-domain": runtime.currentUser.businessDomainId ?? "bd_public",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },

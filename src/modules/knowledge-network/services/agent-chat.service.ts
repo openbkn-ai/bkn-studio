@@ -17,6 +17,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { jsonSchema, stepCountIs, streamText, tool, type ModelMessage, type ToolSet } from "ai";
 
+import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   isRetryableStatus,
   normalizeAgentError,
@@ -562,6 +563,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
       }
     }
     const headers = new Headers(init?.headers);
+    headers.set("Accept-Language", getRuntimeConfig().locale);
     if (token) headers.set("Authorization", `Bearer ${token}`);
     return fetch(input, { ...init, headers, body });
   };
