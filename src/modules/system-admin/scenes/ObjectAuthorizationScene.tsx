@@ -88,6 +88,11 @@ export function ObjectAuthorizationScene() {
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: authzPoints.revoke,
   });
+  const canGrant = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: authzPoints.grant,
+  });
+  const canManageGrants = canGrant || canRevokeGrant;
   const { pageState, setPagination } = usePageState();
 
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
@@ -385,7 +390,11 @@ export function ObjectAuthorizationScene() {
       items: [
         {
           key: "manage",
-          label: t("systemAdmin.objectGrants.manage"),
+          label: t(
+            canManageGrants
+              ? "systemAdmin.objectGrants.manage"
+              : "systemAdmin.objectGrants.viewDetail",
+          ),
         },
         canRevokeGrant
           ? {
@@ -411,7 +420,7 @@ export function ObjectAuthorizationScene() {
         }
       },
     }),
-    [canRevokeGrant, confirmRevoke, openDrawer, t],
+    [canManageGrants, canRevokeGrant, confirmRevoke, openDrawer, t],
   );
 
   const columns: ColumnsType<ObjectGrant> = useMemo(() => [
@@ -507,7 +516,11 @@ export function ObjectAuthorizationScene() {
                     icon={<KeyOutlined />}
                     onClick={() => openDrawer({ id: objId, name: objName, type: objType })}
                   >
-                    {t("systemAdmin.objectGrants.manage")}
+                    {t(
+                      canManageGrants
+                        ? "systemAdmin.objectGrants.manage"
+                        : "systemAdmin.objectGrants.viewDetail",
+                    )}
                   </AppButton>
                 </div>
                 <div className={styles.authzGroupBody}>

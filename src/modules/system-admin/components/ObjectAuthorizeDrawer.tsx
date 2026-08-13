@@ -118,6 +118,7 @@ export function ObjectAuthorizeDrawer({
     currentPermissions,
     requiredPermissions: authzPoints.revoke,
   });
+  const canManageGrants = canGrant || canRevoke;
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
   const [lookupRevision, setLookupRevision] = useState(0);
@@ -401,7 +402,7 @@ export function ObjectAuthorizeDrawer({
 
       <div className={[styles.calloutBox, styles.sectionCalloutBottom].join(" ")}>
         <span>
-          {canGrant || canRevoke
+          {canManageGrants
             ? t("systemAdmin.objectGrants.drawerHint")
             : t("systemAdmin.objectGrants.drawerReadOnly")}
         </span>
@@ -442,8 +443,20 @@ export function ObjectAuthorizeDrawer({
       ) : grants.length ? (
         <section className={[styles.createPanel, styles.sectionCallout].join(" ")}>
           <div className={styles.createPanelHead}>
-            <h3 className={styles.createPanelTitle}>{t("systemAdmin.objectGrants.manage")}</h3>
-            <p className={styles.createPanelDesc}>{t("systemAdmin.objectGrants.drawerHint")}</p>
+            <h3 className={styles.createPanelTitle}>
+              {t(
+                canManageGrants
+                  ? "systemAdmin.objectGrants.manage"
+                  : "systemAdmin.objectGrants.viewDetail",
+              )}
+            </h3>
+            <p className={styles.createPanelDesc}>
+              {t(
+                canManageGrants
+                  ? "systemAdmin.objectGrants.drawerHint"
+                  : "systemAdmin.objectGrants.drawerReadOnly",
+              )}
+            </p>
           </div>
           <div className={styles.createPanelBody}>
             {hasProtectedGrant ? (
@@ -524,8 +537,20 @@ export function ObjectAuthorizeDrawer({
       ) : (
         <section className={[styles.createPanel, styles.sectionCallout].join(" ")}>
           <div className={styles.createPanelHead}>
-            <h3 className={styles.createPanelTitle}>{t("systemAdmin.objectGrants.manage")}</h3>
-            <p className={styles.createPanelDesc}>{t("systemAdmin.objectGrants.drawerHint")}</p>
+            <h3 className={styles.createPanelTitle}>
+              {t(
+                canManageGrants
+                  ? "systemAdmin.objectGrants.manage"
+                  : "systemAdmin.objectGrants.viewDetail",
+              )}
+            </h3>
+            <p className={styles.createPanelDesc}>
+              {t(
+                canManageGrants
+                  ? "systemAdmin.objectGrants.drawerHint"
+                  : "systemAdmin.objectGrants.drawerReadOnly",
+              )}
+            </p>
           </div>
           <div className={styles.createPanelBody}>
             <Empty

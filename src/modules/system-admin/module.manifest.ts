@@ -9,11 +9,13 @@ export const systemAdminModuleManifest = {
   id: "system-admin",
   name: "System Admin",
   permissions: [
+    "admin-user:view",
     "admin-user:create",
     "admin-user:edit",
     "admin-user:delete",
     "admin-user:toggle",
     "admin-user:reset-password",
+    "admin-dept:view",
     "admin-dept:create",
     "admin-dept:edit",
     "admin-dept:delete",

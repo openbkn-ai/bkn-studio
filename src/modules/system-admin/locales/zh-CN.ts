@@ -109,6 +109,7 @@ export const systemAdminZhCN = {
       create: "新建权限配置",
       authorize: "配置权限",
       manage: "管理",
+      viewDetail: "查看详情",
       revoke: "撤销权限",
       remove: "移除",
       add: "添加",

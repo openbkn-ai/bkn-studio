@@ -53,6 +53,18 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     expect(keys(group!.children ?? [])).toEqual(["log-management"]);
   });
 
+  it("审计管理员的用户和部门只读权限 → 显示用户管理与审计日志", () => {
+    const group = systemGroup(
+      filterNavByPermission(consoleNavigation, [
+        "admin-audit:view",
+        "admin-user:view",
+        "admin-dept:view",
+      ]),
+    );
+    expect(group).toBeDefined();
+    expect(keys(group!.children ?? [])).toEqual(["user-management", "log-management"]);
+  });
+
   it("非系统类菜单不受权限过滤影响", () => {
     const filtered = filterNavByPermission(consoleNavigation, []);
     expect(keys(filtered)).toContain("general-business-knowledge-network");
