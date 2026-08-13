@@ -46,6 +46,7 @@ vi.mock("react-i18next", async (importOriginal) => {
 
 describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
   beforeEach(() => {
+    window.history.replaceState({}, "", "/observability/business-provenance");
     getConversations.mockReset();
     getInteractions.mockReset();
     getInteraction.mockReset();
@@ -54,6 +55,19 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     getAnalysisHistory.mockReset();
     getAnalysisHistory.mockResolvedValue([]);
     getMarkdown.mockResolvedValue("# 当前交互轮次过程事实\n\n- Operation：`op-1`");
+  });
+
+  it("opens the exact conversation supplied by an associated log", async () => {
+    window.history.replaceState({}, "", "/observability/business-provenance?conversation_id=conv-linked");
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-linked", questionPreview: "关联会话", interactionCount: 1 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-linked", questionPreview: "关联轮次" }], total: 1 });
+    getInteraction.mockResolvedValue({ interactionId: "int-linked", conversationContext: [], derivedFacts: [], contextRelations: [], operations: [] });
+
+    render(<BusinessProvenanceScene />);
+
+    await waitFor(() => expect(getConversations).toHaveBeenCalledWith(expect.objectContaining({ conversationId: "conv-linked" })));
+    await waitFor(() => expect(getInteractions).toHaveBeenCalledWith(expect.objectContaining({ conversationId: "conv-linked" })));
+    expect(await screen.findByText("关联轮次")).not.toBeNull();
   });
 
   beforeAll(() => {
