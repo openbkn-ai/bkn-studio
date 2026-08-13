@@ -48,7 +48,7 @@ export const systemAdminZhCN = {
       },
       resources: {
         "admin-audit": "系统审计日志",
-        "admin-authz": "系统授权管理",
+        "admin-authz": "系统权限管理",
         "admin-dept": "系统部门管理",
         "admin-role": "系统角色管理",
         "admin-user": "系统用户管理",

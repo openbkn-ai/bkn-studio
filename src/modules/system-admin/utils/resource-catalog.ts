@@ -61,7 +61,7 @@ const OPERATION_FALLBACK_LABELS: Record<string, string> = {
 
 const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   "admin-audit": "System audit log",
-  "admin-authz": "System authorization management",
+  "admin-authz": "System permission management",
   "admin-dept": "System department management",
   "admin-role": "System role management",
   "admin-user": "System user management",

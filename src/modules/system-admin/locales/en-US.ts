@@ -48,7 +48,7 @@ export const systemAdminEnUS = {
       },
       resources: {
         "admin-audit": "System audit log",
-        "admin-authz": "System authorization management",
+        "admin-authz": "System permission management",
         "admin-dept": "System department management",
         "admin-role": "System role management",
         "admin-user": "System user management",
