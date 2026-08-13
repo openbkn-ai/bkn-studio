@@ -529,7 +529,6 @@ export async function updateUser(
       departmentIds: [...input.departmentIds],
       updatedAt: now(),
     });
-    await syncUserRoleBindings(id, input.roleIds);
     await wait(undefined);
     return;
   }
@@ -545,7 +544,6 @@ export async function updateUser(
     },
     { skipErrorToast: options?.skipErrorToast },
   );
-  await syncUserRoleBindings(id, input.roleIds, options);
 }
 
 export async function deleteUser(id: string): Promise<void> {
