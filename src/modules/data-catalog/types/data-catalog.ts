@@ -135,8 +135,7 @@ export type BuildTask = {
   catalogName?: string;
   /** Creator information; backend list and detail endpoints both populate the name. */
   creator?: BuildTaskCreator;
-  createTime: string;
-  createdAt: number;
+  createTime: number;
   embeddingFields: string[];
   /** Execution type selected when creating a batch task; not applicable to streaming. */
   executeType?: BuildTaskExecuteType;
@@ -152,7 +151,8 @@ export type BuildTask = {
   error: string | null;
   /** Backend failure_detail containing the detailed reason for vectorization failure, shown in a tooltip. */
   failureDetail: string;
-  finishTime: string | null;
+  /** Completion time derived from update_time for terminal tasks. */
+  finishTime: number | null;
   id: string;
   /** Actual backend index health (index_health). Legacy mock data may omit it, so components fall back to embeddingDegraded. */
   indexHealth?: IndexHealth;
@@ -169,9 +169,8 @@ export type BuildTask = {
   /** Synchronization checkpoint used to resume unfinished tasks. */
   syncedMark?: string;
   totalCount: number;
-  /** Backend last-update time as a millisecond timestamp and its display value. */
-  updatedAt?: number;
-  updateTime?: string | null;
+  /** Backend last-update time as a millisecond timestamp. */
+  updateTime?: number;
   vectorizedCount: number;
 };
 
@@ -182,20 +181,17 @@ export type BuildTaskListQuery = {
   statuses?: BuildTaskStatus[];
 };
 
-/** Server-side sort dimension; default omits order_by and uses backend creation-time ordering. */
-export type BuildTaskOrderBy =
-  | "default"
-  | "created_at"
-  | "updated_at";
+/** Server-side sort dimension for the build-task list API. */
+export type BuildTaskSort = "create_time" | "update_time";
 
 export type BuildTaskPageQuery = {
   catalogId?: string;
   mode?: BuildMode;
-  order?: "asc" | "desc";
-  orderBy?: BuildTaskOrderBy;
+  direction?: "asc" | "desc";
   page: number;
   pageSize: number;
   resourceId?: string;
+  sort?: BuildTaskSort;
   statuses?: BuildTaskStatus[];
 };
 

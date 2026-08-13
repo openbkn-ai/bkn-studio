@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { formatDateTime } from "@/framework/i18n/format";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -133,13 +134,13 @@ function buildStatusSummary(
   if (effective.mode === "streaming") {
     parts.push(
       t("dataCatalog.indexWorkspace.lastEventShort", {
-        time: timeAgo(effective.lastEventAt ?? effective.createdAt, language),
+        time: timeAgo(effective.lastEventAt ?? effective.createTime, language),
       }),
     );
   } else if (effective.finishTime) {
     parts.push(
       t("dataCatalog.indexWorkspace.finishedAtShort", {
-        time: effective.finishTime,
+        time: formatDateTime(effective.finishTime),
       }),
     );
   }
@@ -353,6 +354,7 @@ export function ResourceIndexPanel({
       dataIndex: "createTime",
       title: t("dataConnect.createTime"),
       width: 180,
+      render: (value: number) => formatDateTime(value || undefined),
     },
     {
       key: "actions",

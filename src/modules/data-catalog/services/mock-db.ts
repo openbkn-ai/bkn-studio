@@ -179,7 +179,6 @@ export const mockResources: CatalogResource[] = [
 function makeTask(
   input: Omit<
     BuildTask,
-    | "createTime"
     | "embeddingDegraded"
     | "failureDetail"
     | "finishTime"
@@ -208,8 +207,8 @@ function makeTask(
     embeddingDegraded,
     failureDetail: input.failureDetail ?? input.error ?? "",
     indexUsable: input.indexUsable ?? (indexed && !embeddingDegraded),
-    createTime: formatMockTimestamp(input.createdAt),
-    finishTime: input.finishedAt ? formatMockTimestamp(input.finishedAt) : null,
+    updateTime: input.updateTime ?? input.lastEventAt ?? input.finishedAt ?? input.createTime,
+    finishTime: input.finishedAt ?? null,
   };
 }
 
@@ -226,7 +225,7 @@ export const mockBuildTasks: BuildTask[] = [
     totalCount: 182_340,
     syncedCount: 182_340,
     vectorizedCount: 182_340,
-    createdAt: daysAgo(2),
+    createTime: daysAgo(2),
     finishedAt: daysAgo(2) + 25 * 60_000,
     lastEventAt: null,
     error: null,
@@ -243,7 +242,7 @@ export const mockBuildTasks: BuildTask[] = [
     totalCount: 96_120,
     syncedCount: 41_280,
     vectorizedCount: 28_660,
-    createdAt: minutesAgo(9),
+    createTime: minutesAgo(9),
     finishedAt: null,
     lastEventAt: null,
     error: null,
@@ -260,7 +259,7 @@ export const mockBuildTasks: BuildTask[] = [
     totalCount: 48_206,
     syncedCount: 18_440,
     vectorizedCount: 12_020,
-    createdAt: minutesAgo(75),
+    createTime: minutesAgo(75),
     finishedAt: minutesAgo(63),
     lastEventAt: null,
     error: "embedding service timeout: 504 upstream",
@@ -277,7 +276,7 @@ export const mockBuildTasks: BuildTask[] = [
     totalCount: 46_010,
     syncedCount: 46_010,
     vectorizedCount: 46_010,
-    createdAt: daysAgo(6),
+    createTime: daysAgo(6),
     finishedAt: daysAgo(6) + 19 * 60_000,
     lastEventAt: null,
     error: null,
@@ -294,7 +293,7 @@ export const mockBuildTasks: BuildTask[] = [
     totalCount: 23_412,
     syncedCount: 23_412,
     vectorizedCount: 23_412,
-    createdAt: daysAgo(1),
+    createTime: daysAgo(1),
     finishedAt: null,
     lastEventAt: minutesAgo(2),
     error: null,
@@ -446,11 +445,13 @@ function tick() {
   mockBuildTasks.forEach((task) => {
     if (task.status === "pending") {
       task.status = task.mode === "streaming" ? "listening" : "running";
+      task.updateTime = Date.now();
       changed = true;
       return;
     }
 
     if (task.status === "running") {
+      task.updateTime = Date.now();
       const step = Math.max(
         60,
         Math.floor(task.totalCount * (0.025 + Math.random() * 0.02)),
@@ -466,8 +467,8 @@ function tick() {
         task.vectorizedCount >= task.totalCount
       ) {
         task.status = "succeeded";
-        const finishedAt = Date.now();
-        task.finishTime = formatMockTimestamp(finishedAt);
+        const finishedAt = task.updateTime;
+        task.finishTime = finishedAt;
         const resource = mockResources.find((item) => item.id === task.resourceId);
         if (resource) {
           resource.updatedAt = finishedAt;
@@ -483,7 +484,8 @@ function tick() {
         const step = Math.max(80, Math.floor(task.totalCount * 0.06));
         task.syncedCount = Math.min(task.totalCount, task.syncedCount + step);
         task.vectorizedCount = task.syncedCount;
-        task.lastEventAt = Date.now();
+        task.updateTime = Date.now();
+        task.lastEventAt = task.updateTime;
         changed = true;
         return;
       }
@@ -493,7 +495,8 @@ function tick() {
         task.totalCount += delta;
         task.syncedCount += delta;
         task.vectorizedCount += delta;
-        task.lastEventAt = Date.now();
+        task.updateTime = Date.now();
+        task.lastEventAt = task.updateTime;
         const resource = mockResources.find((item) => item.id === task.resourceId);
         if (resource) {
           resource.rowCount = task.totalCount;

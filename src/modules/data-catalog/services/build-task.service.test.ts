@@ -59,6 +59,27 @@ describe("snapshotFieldsOf", () => {
 });
 
 describe("mapBuildTask", () => {
+  it("keeps backend task times as millisecond timestamps", () => {
+    const task = mapBuildTask({
+      create_time: 100,
+      id: "task-1",
+      status: "completed",
+      update_time: 200,
+    });
+
+    expect(task.createTime).toBe(100);
+    expect(task.finishTime).toBe(200);
+    expect(task.updateTime).toBe(200);
+    expect(task).not.toHaveProperty("createdAt");
+    expect(task).not.toHaveProperty("updatedAt");
+  });
+
+  it("does not expose update time as finish time for an active task", () => {
+    const task = mapBuildTask({ id: "task-1", status: "running", update_time: 200 });
+
+    expect(task.finishTime).toBeNull();
+  });
+
   it("retains the persisted batch execute type", () => {
     const task = mapBuildTask({
       id: "task-1",
@@ -137,8 +158,32 @@ describe("createBuildTask", () => {
         paramsSerializer: { indexes: null };
       };
       expect(config.params.status).toEqual(["stopping", "stopped", "cancelled"]);
+      expect(config.params.sort).toBe("create_time");
+      expect(config.params.direction).toBe("desc");
       expect(config.paramsSerializer).toEqual({ indexes: null });
       expect(config.params).not.toHaveProperty("active");
+    });
+
+    it("uses the shared sort and direction query parameters", async () => {
+      getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+      const { listBuildTaskPage } = await import(
+        "@/modules/data-catalog/services/build-task.service"
+      );
+
+      await listBuildTaskPage({
+        direction: "asc",
+        page: 1,
+        pageSize: 20,
+        sort: "update_time",
+      });
+
+      const config = getMock.mock.calls[0]?.[1] as {
+        params: Record<string, unknown>;
+      };
+      expect(config.params.sort).toBe("update_time");
+      expect(config.params.direction).toBe("asc");
+      expect(config.params).not.toHaveProperty("order_by");
+      expect(config.params).not.toHaveProperty("order");
     });
   });
 });

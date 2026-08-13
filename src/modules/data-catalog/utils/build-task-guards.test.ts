@@ -32,8 +32,7 @@ function task(status: BuildTask["status"]): BuildTask {
     vectorizedCount: 0,
     indexUsable: true,
     failureDetail: "",
-    createdAt: 0,
-    createTime: "-",
+    createTime: 0,
     finishTime: null,
     lastEventAt: null,
     error: null,
@@ -41,7 +40,7 @@ function task(status: BuildTask["status"]): BuildTask {
 }
 
 describe("build-task-guards", () => {
-  it("treats pending/running/listening as active", () => {
+  it("treats pending/running/listening/stopping as active", () => {
     expect(isActiveBuildTask(task("pending"))).toBe(true);
     expect(isActiveBuildTask(task("running"))).toBe(true);
     expect(isActiveBuildTask(task("listening"))).toBe(true);

@@ -42,6 +42,7 @@ import type {
   DataConnectDiscoverTaskSummary,
   DataConnectDiscoverTaskStatus,
 } from "@/modules/data-connect/types/discover";
+import { formatDiscoverTaskTime } from "@/modules/data-connect/utils/discover-task-time";
 import {
   DiscoverScheduleFormModal,
   type DiscoverScheduleFormModalSubmitPayload,
@@ -63,8 +64,8 @@ type DiscoverPageTab = "schedules" | "tasks";
 type TaskStatusFilterValue = "all" | DataConnectDiscoverTaskStatus;
 type TaskTriggerTypeFilterValue = "all" | DataConnectDiscoverTask["triggerType"];
 
-function renderTableTime(value?: string) {
-  return <span className={styles.timeText}>{value || "-"}</span>;
+function renderTableTime(value?: number) {
+  return <span className={styles.timeText}>{formatDiscoverTaskTime(value)}</span>;
 }
 
 function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }) {

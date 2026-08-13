@@ -16,8 +16,7 @@ function buildTask(
 ): BuildTask {
   return {
     buildKeyFields: [],
-    createdAt: 1,
-    createTime: "-",
+    createTime: 1,
     embeddingDegraded: false,
     embeddingFields: [],
     embeddingModel: "",
@@ -44,16 +43,16 @@ describe("indexStateOf · stopping and cancelled tasks", () => {
   it("keeps a stopping task in the active build bucket", () => {
     expect(indexStateOf([buildTask("stopping")]).key).toBe("building");
 
-    const previous = buildTask("succeeded", { createdAt: 1, id: "completed" });
-    const stopping = buildTask("stopping", { createdAt: 2, id: "stopping" });
+    const previous = buildTask("succeeded", { createTime: 1, id: "completed" });
+    const stopping = buildTask("stopping", { createTime: 2, id: "stopping" });
     expect(indexStateOf([previous, stopping]).key).toBe("rebuilding");
   });
 
   it("does not treat a cancelled pending task as a failed index", () => {
     expect(indexStateOf([buildTask("cancelled")]).key).toBe("none");
 
-    const previous = buildTask("succeeded", { createdAt: 1, id: "completed" });
-    const cancelled = buildTask("cancelled", { createdAt: 2, id: "cancelled" });
+    const previous = buildTask("succeeded", { createTime: 1, id: "completed" });
+    const cancelled = buildTask("cancelled", { createTime: 2, id: "cancelled" });
     expect(indexStateOf([previous, cancelled]).key).toBe("built");
   });
 });

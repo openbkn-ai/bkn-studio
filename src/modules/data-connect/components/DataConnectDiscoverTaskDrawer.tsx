@@ -15,6 +15,7 @@ import type {
   DataConnectDiscoverSchedule,
   DataConnectDiscoverTask,
 } from "@/modules/data-connect/types/discover";
+import { formatDiscoverTaskTime } from "@/modules/data-connect/utils/discover-task-time";
 
 import styles from "./DataConnectDiscoverTaskDrawer.module.css";
 
@@ -128,11 +129,11 @@ export function DataConnectDiscoverTaskDrawer({
               />
               <DetailItem
                 label={t("dataConnect.discoverStartTime")}
-                value={task.startTime || "-"}
+                value={formatDiscoverTaskTime(task.startTime)}
               />
               <DetailItem
                 label={t("dataConnect.discoverFinishTime")}
-                value={task.finishTime || "-"}
+                value={formatDiscoverTaskTime(task.finishTime)}
               />
               <DetailItem
                 label={t("dataConnect.creator")}
@@ -140,7 +141,7 @@ export function DataConnectDiscoverTaskDrawer({
               />
               <DetailItem
                 label={t("dataConnect.createTime")}
-                value={task.createTime || "-"}
+                value={formatDiscoverTaskTime(task.createTime)}
               />
               <DetailItem
                 full

@@ -147,10 +147,10 @@ let mockTasks: DataConnectDiscoverTask[] = [
     status: "completed",
     progress: 100,
     message: discoverMockText("syncCompleted", { count: 48 }),
-    startTime: "2026-06-03 02:00:11",
-    finishTime: "2026-06-03 02:12:04",
+    startTime: Date.parse("2026-06-03T02:00:11"),
+    finishTime: Date.parse("2026-06-03T02:12:04"),
     creatorName: "Platform Admin",
-    createTime: "2026-06-03 02:00:11",
+    createTime: Date.parse("2026-06-03T02:00:11"),
   },
   {
     id: "discover-task-1002",
@@ -161,10 +161,9 @@ let mockTasks: DataConnectDiscoverTask[] = [
     status: "running",
     progress: 56,
     message: discoverMockText("pullingIndexChanges"),
-    startTime: "2026-06-03 11:30:08",
-    finishTime: "-",
+    startTime: Date.parse("2026-06-03T11:30:08"),
     creatorName: "Search Team",
-    createTime: "2026-06-03 11:30:08",
+    createTime: Date.parse("2026-06-03T11:30:08"),
   },
   {
     id: "discover-task-1003",
@@ -175,10 +174,10 @@ let mockTasks: DataConnectDiscoverTask[] = [
     status: "failed",
     progress: 100,
     message: discoverMockText("cleanupTimeout"),
-    startTime: "2026-06-02 03:00:00",
-    finishTime: "2026-06-02 03:03:15",
+    startTime: Date.parse("2026-06-02T03:00:00"),
+    finishTime: Date.parse("2026-06-02T03:03:15"),
     creatorName: "Data Ops",
-    createTime: "2026-06-02 03:00:00",
+    createTime: Date.parse("2026-06-02T03:00:00"),
   },
 ];
 
@@ -278,12 +277,10 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
         }
       : undefined,
     message: item.message ?? "",
-    startTime: formatTimestamp(item.start_time),
-    startTimeValue: item.start_time,
-    finishTime: formatTimestamp(item.finish_time),
-    finishTimeValue: item.finish_time,
+    startTime: item.start_time,
+    finishTime: item.finish_time,
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
-    createTime: formatTimestamp(item.create_time),
+    createTime: item.create_time ?? 0,
   };
 }
 
@@ -307,13 +304,11 @@ function toTaskSummary(task: DataConnectDiscoverTask): DataConnectDiscoverTaskSu
     createTime: task.createTime,
     creatorName: task.creatorName,
     finishTime: task.finishTime,
-    finishTimeValue: task.finishTimeValue,
     id: task.id,
     progress: task.progress,
     result,
     scheduleId: task.scheduleId,
     startTime: task.startTime,
-    startTimeValue: task.startTimeValue,
     status: task.status,
     strategy: task.strategy,
     triggerType: task.triggerType,
@@ -360,8 +355,7 @@ function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscove
     );
   });
   const direction = query.direction === "asc" ? 1 : -1;
-  const valueOf = (item: DataConnectDiscoverTask) => item.createTime;
-  return filtered.sort((left, right) => (valueOf(left) > valueOf(right) ? direction : valueOf(left) < valueOf(right) ? -direction : 0));
+  return filtered.sort((left, right) => (left.createTime - right.createTime) * direction);
 }
 
 export async function listDataConnectDiscoverSchedules(
@@ -593,12 +587,9 @@ export async function triggerDataConnectDiscover(
       status: "pending",
       progress: 0,
       message: discoverMockText("manualTaskCreated"),
-      startTime: formatTimestamp(now),
-      startTimeValue: now,
-      finishTime: "-",
-      finishTimeValue: undefined,
+      startTime: now,
       creatorName: "Local Admin",
-      createTime: formatTimestamp(now),
+      createTime: now,
     };
     mockTasks = [task, ...mockTasks];
     await wait({ id: task.id });

@@ -14,7 +14,7 @@ import type {
 
 /** All tasks for a resource, ordered by creation time descending. */
 export function sortTasks(tasks: BuildTask[]) {
-  return [...tasks].sort((left, right) => right.createdAt - left.createdAt);
+  return [...tasks].sort((left, right) => right.createTime - left.createTime);
 }
 
 /**
