@@ -837,10 +837,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         const tools =
           profile.toolMode === "ptc"
             ? buildPtcTools({
-                toolkit: await fetchPtcToolkit(env.base, env.token),
+                toolkit: await fetchPtcToolkit(env.base, tokenProvider.getToken()),
                 knId,
                 bknContext: () => turn?.nextContext() ?? undefined,
-                token: env.token,
+                tokenProvider,
               })
             : buildAgentTools(activeTools, env, knId, config, tokenProvider, {
                 resourceScope,

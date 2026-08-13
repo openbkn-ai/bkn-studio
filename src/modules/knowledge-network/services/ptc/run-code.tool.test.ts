@@ -23,7 +23,7 @@ function build(overrides: Partial<Parameters<typeof buildPtcTools>[0]> = {}) {
   return buildPtcTools({
     toolkit: TOOLKIT,
     bknContext: () => ({ conversation_id: "conv_1", interaction_id: "int_1" }),
-    token: "tok",
+    tokenProvider: { getToken: () => "tok", refresh: () => Promise.resolve("tok2") },
     knId: "worldcup_vega_catalog_bkn",
     ...overrides,
   });
@@ -91,6 +91,35 @@ describe("buildPtcTools", () => {
     expect(result).toContain("exit_code=1");
     expect(result).toContain("部分输出");
     expect(result).toContain("ToolError: 字段不存在");
+  });
+
+  // 沙箱里的 401 浏览器看不见，不会触发 http 客户端的自动续期；漏了这一步，
+  // 令牌过期后脚本里所有工具会齐刷刷报 401 且永不恢复。
+  it("沙箱报 401 时代为续期并提示可重跑", async () => {
+    vi.spyOn(http, "post").mockResolvedValue({
+      data: { stdout: "", stderr: "HTTP Error 401: Unauthorized", exit_code: 1 },
+    } as never);
+    const refresh = vi.fn().mockResolvedValue("fresh-token");
+
+    const result = await executeOf(
+      build({ tokenProvider: { getToken: () => "stale", refresh } }),
+    )({ code: "print(1)" });
+
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(result).toContain("已自动续期");
+  });
+
+  it("每次执行都取当前令牌，不用构造时的快照", async () => {
+    const post = vi.spyOn(http, "post").mockResolvedValue({ data: { stdout: "ok", exit_code: 0 } } as never);
+    let current = "t1";
+
+    const tools = build({ tokenProvider: { getToken: () => current, refresh: () => Promise.resolve(current) } });
+    await executeOf(tools)({ code: "print(1)" });
+    current = "t2";
+    await executeOf(tools)({ code: "print(2)" });
+
+    const tokens = post.mock.calls.map((c) => (c[1] as { event: { token: string } }).event.token);
+    expect(tokens).toEqual(["t1", "t2"]);
   });
 
   it("空代码直接拒绝，不白跑一次沙箱", async () => {

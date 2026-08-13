@@ -21,6 +21,8 @@ import { jsonSchema, tool, type ToolSet } from "ai";
 
 import { http } from "@/framework/request/http";
 
+import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
+
 import { AGENT_OPERATOR_API_PREFIX, getAgentOperatorHeaders } from "../shared/agent-operator-client";
 import type { PtcToolkit } from "./toolkit.service";
 
@@ -46,13 +48,16 @@ export type PtcToolOptions = {
   /** 本轮的会话生命周期上下文，来源与常规模式一致。 */
   bknContext: () => Record<string, unknown> | undefined;
   /**
-   * 沙箱访问 BKN 用的令牌，权限边界即该用户本人。
+   * 沙箱访问 BKN 用的令牌来源，权限边界即该用户本人。
    *
-   * 只作为 event 下发给沙箱，不用来给本次 HTTP 请求签名——打执行工厂的鉴权
-   * 由 http 客户端统一处理（它持有当前有效令牌并负责刷新），手拼 Authorization
-   * 会用上一个已经失效的快照，表现为 401 token is invalid。
+   * 必须是 provider 而不是一个字符串：令牌会过期，而闭包里捕获的快照不会更新。
+   * 常规模式下 http 客户端遇 401 会自动续期，但沙箱的调用发生在服务端，
+   * 浏览器看不见那个 401，也就永远不会触发续期——表现为脚本里所有工具
+   * 齐刷刷报 401 Unauthorized。
+   *
+   * 令牌只随 event 下发给沙箱；打执行工厂的鉴权由 http 客户端另行处理。
    */
-  token: string;
+  tokenProvider: AgentTokenProvider;
   /**
    * 当前知识网络 id。常规模式由 effectiveToolArgs 自动补进每次工具调用，
    * PTC 模式没有这层注入——不告诉模型它就会自己编一个，实测如此。
@@ -63,7 +68,7 @@ export type PtcToolOptions = {
 };
 
 export function buildPtcTools(options: PtcToolOptions): ToolSet {
-  const { toolkit, bknContext, token, knId } = options;
+  const { toolkit, bknContext, tokenProvider, knId } = options;
   // http 客户端的 baseURL 已经是 /api，这里再拼一次会打到 /api/api/… 上去。
   const base = options.apiBase ?? AGENT_OPERATOR_API_PREFIX;
 
@@ -96,7 +101,12 @@ export function buildPtcTools(options: PtcToolOptions): ToolSet {
             timeout,
             // 凭据与会话上下文走 event 而非 env_vars：沙箱会话是池化复用的，
             // env 会把上一个调用方的值留在容器里，event 是每次调用的入参。
-            event: { mcp: toolkit.sandbox_mcp_url, token, bkn: bknContext() ?? {} },
+            event: {
+              mcp: toolkit.sandbox_mcp_url,
+              // 每次执行都取当前令牌，不用构造时的快照。
+              token: tokenProvider.getToken(),
+              bkn: bknContext() ?? {},
+            },
           },
           {
             headers: getAgentOperatorHeaders(),
@@ -116,6 +126,23 @@ export function buildPtcTools(options: PtcToolOptions): ToolSet {
         if (result.exit_code === 0) {
           const parts = [stdout, stderr && `[stderr]\n${stderr}`].filter(Boolean);
           return parts.join("\n\n") || "（脚本没有输出。只有 print 的内容会返回，记得打印结果。）";
+        }
+
+        // 沙箱里的 401 浏览器看不见，不会触发 http 客户端的自动续期。这里代为
+        // 续期，并告诉模型「凭据已换、可以重跑」——而不是替它重跑：脚本可能
+        // 已经执行过写操作，自动重放会重复副作用。
+        if (/\b401\b|Unauthorized/i.test(`${stdout}\n${stderr}`)) {
+          const renewed = await tokenProvider.refresh().catch(() => null);
+          return [
+            `执行失败（exit_code=${result.exit_code}）`,
+            stdout,
+            stderr,
+            renewed
+              ? "[凭据已过期，已自动续期。原样重跑同一段脚本即可。]"
+              : "[凭据已过期且续期失败，需要用户重新登录。]",
+          ]
+            .filter(Boolean)
+            .join("\n");
         }
 
         return [`执行失败（exit_code=${result.exit_code}）`, stdout, stderr]
