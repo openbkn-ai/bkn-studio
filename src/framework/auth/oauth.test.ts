@@ -16,6 +16,7 @@ import {
   consumeCsrfRetry,
   isCsrfConflictCallback,
   releaseFlowLock,
+  logout,
   shouldUseOAuthGate,
   stashCallbackError,
   subscribeFlowLockRelease,
@@ -42,6 +43,7 @@ describe("oauth", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it("computes the RFC 7636 S256 code challenge", async () => {
@@ -118,6 +120,36 @@ describe("oauth", () => {
     await expect(completeLogin("?code=abc&state=state-1")).rejects.toThrow(
       "invalid_grant",
     );
+  });
+
+  it("records a voluntary standalone logout before leaving Studio", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    document.cookie = "bkn_access_token=access-for-logout; path=/";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
+
+    await logout("standalone");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/safe/v1/me/logout",
+      expect.objectContaining({
+        method: "POST",
+        headers: { Authorization: "Bearer access-for-logout" },
+        keepalive: true,
+      }),
+    );
+  });
+
+  it("does not block logout when the access audit request never resolves", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    document.cookie = "bkn_access_token=access-for-pending-audit; path=/";
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
+
+    await expect(
+      Promise.race([
+        logout("standalone"),
+        new Promise((resolve) => window.setTimeout(() => resolve("timed-out"), 25)),
+      ]),
+    ).resolves.not.toBe("timed-out");
   });
 });
 

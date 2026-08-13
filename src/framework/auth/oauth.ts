@@ -9,6 +9,7 @@ import { getAppCallbackPath, getAppHomePath } from "@/app/router/app-paths";
 import { getDevRefreshToken } from "@/framework/auth/dev-auth";
 import {
   clearStoredTokens,
+  getStoredAccessToken,
   getStoredIdToken,
   storeTokens,
 } from "@/framework/auth/token-store";
@@ -428,6 +429,21 @@ export async function refreshOAuthTokens(): Promise<string | null> {
 
 export function logout(mode: "hosted" | "standalone") {
   const idToken = getStoredIdToken();
+  const accessToken = getStoredAccessToken();
+
+  // Record only an explicit user sign-out. This is deliberately separate from
+  // Trace: it captures the platform access action and the server associates it
+  // with the authenticated user before the browser session is cleared.
+  if (shouldUseOAuthGate(mode) && accessToken) {
+    // Access auditing is best effort: it must never hold the session tokens or
+    // prevent the browser from completing the explicit logout.
+    void fetch("/api/safe/v1/me/logout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      keepalive: true,
+    }).catch(() => {});
+  }
+
   clearStoredTokens();
   window.sessionStorage.removeItem(CSRF_RETRY_KEY);
   window.sessionStorage.removeItem(CSRF_ORIGINAL_ERROR_KEY);
@@ -437,7 +453,7 @@ export function logout(mode: "hosted" | "standalone") {
   if (!shouldUseOAuthGate(mode)) {
     // Mock / hosted mode has no hydra session to revoke.
     window.location.assign(getAppHomePath());
-    return;
+    return Promise.resolve();
   }
 
   const params = new URLSearchParams({
@@ -448,4 +464,5 @@ export function logout(mode: "hosted" | "standalone") {
   }
 
   window.location.assign(`${gatewayOrigin()}${LOGOUT_PATH}?${params.toString()}`);
+  return Promise.resolve();
 }

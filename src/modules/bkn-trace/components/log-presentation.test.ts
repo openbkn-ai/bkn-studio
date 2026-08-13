@@ -38,6 +38,28 @@ const translateZhCN = createLocaleTranslator(bknTraceZhCN);
 const translateEnUS = createLocaleTranslator(bknTraceEnUS);
 
 describe("log presentation", () => {
+  it("presents a system user creation as a readable business action", () => {
+    const record = {
+      action: "create",
+      businessModule: "system_management",
+      eventName: "user.created",
+      target: { id: "user-a", name: "日志测试", type: "user" },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("新建用户");
+  });
+
+  it("presents a user access event as a readable login action", () => {
+    const record = {
+      action: "login",
+      logCategory: "access.user",
+      businessModule: "system_management",
+      target: { id: "user-a", name: "Alice", type: "user" },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("用户登录");
+  });
+
   it("uses the current authenticated username when an old event only contains its user id", () => {
     const record = {
       actor: {
