@@ -68,13 +68,18 @@ function isResourceFeatureType(value: string | undefined): value is ResourceFeat
   return value === "keyword" || value === "fulltext" || value === "vector";
 }
 
-function mapFeatureToBackend(feature: ResourceFieldFeature): BackendFieldFeature {
+function mapFeatureToBackend(
+  feature: ResourceFieldFeature,
+  propertyName: string,
+): BackendFieldFeature {
   return {
     name: feature.name,
     display_name: feature.displayName,
     feature_type: feature.featureType,
     description: feature.description,
-    ref_property: feature.refProperty,
+    ...(feature.refProperty && feature.refProperty !== propertyName
+      ? { ref_property: feature.refProperty }
+      : {}),
     is_default: feature.isDefault,
     is_native: feature.isNative,
     config: feature.config,
@@ -137,7 +142,7 @@ function mapSchemaFieldToBackend(field: ResourceSchemaField): BackendSchemaField
     name: field.name,
     original_name: field.name,
     type: field.type,
-    features: field.features?.map(mapFeatureToBackend),
+    features: field.features?.map((feature) => mapFeatureToBackend(feature, field.name)),
   };
 }
 
@@ -160,7 +165,7 @@ function mapSchemaFieldUpdateToBackend(field: ResourceSchemaField): BackendSchem
     ...base,
     description,
     display_name: displayName,
-    features: field.features?.map(mapFeatureToBackend) ?? [],
+    features: field.features?.map((feature) => mapFeatureToBackend(feature, field.name)) ?? [],
   };
 }
 
