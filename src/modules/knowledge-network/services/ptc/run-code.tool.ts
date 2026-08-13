@@ -53,17 +53,26 @@ export type PtcToolOptions = {
    * 会用上一个已经失效的快照，表现为 401 token is invalid。
    */
   token: string;
-  /** 网关前缀，浏览器经它打执行工厂。 */
+  /**
+   * 当前知识网络 id。常规模式由 effectiveToolArgs 自动补进每次工具调用，
+   * PTC 模式没有这层注入——不告诉模型它就会自己编一个，实测如此。
+   */
+  knId: string;
+  /** 执行工厂前缀。http 客户端已带 /api 的 baseURL，这里不要再加。 */
   apiBase?: string;
 };
 
 export function buildPtcTools(options: PtcToolOptions): ToolSet {
-  const { toolkit, bknContext, token } = options;
-  const base = options.apiBase ?? `/api${AGENT_OPERATOR_API_PREFIX}`;
+  const { toolkit, bknContext, token, knId } = options;
+  // http 客户端的 baseURL 已经是 /api，这里再拼一次会打到 /api/api/… 上去。
+  const base = options.apiBase ?? AGENT_OPERATOR_API_PREFIX;
 
   return {
     run_code: tool({
-      description: toolkit.digest,
+      description:
+        `${toolkit.digest}\n\n` +
+        `## 当前知识网络\n\n` +
+        `本次会话锁定在 \`kn_id = "${knId}"\`，直接用这个值，不要臆造，也不要先去列网络。\n`,
       inputSchema: jsonSchema({
         type: "object",
         properties: {

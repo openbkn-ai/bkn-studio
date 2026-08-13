@@ -838,6 +838,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           profile.toolMode === "ptc"
             ? buildPtcTools({
                 toolkit: await fetchPtcToolkit(env.base, env.token),
+                knId,
                 bknContext: () => turn?.nextContext() ?? undefined,
                 token: env.token,
               })
