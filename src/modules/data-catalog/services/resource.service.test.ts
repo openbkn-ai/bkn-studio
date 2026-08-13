@@ -9,9 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const postMock = vi.hoisted(() => vi.fn());
 const getMock = vi.hoisted(() => vi.fn());
+const putMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock, post: postMock },
+  http: { get: getMock, post: postMock, put: putMock },
 }));
 
 describe("resource.service · previewCatalogResource", () => {
@@ -20,6 +21,7 @@ describe("resource.service · previewCatalogResource", () => {
     vi.stubEnv("VITE_USE_MOCK", "false");
     getMock.mockReset();
     postMock.mockReset();
+    putMock.mockReset();
   });
 
   afterEach(() => {
@@ -51,6 +53,7 @@ describe("resource.service · listCatalogResourcePage", () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "false");
     getMock.mockReset();
+    putMock.mockReset();
   });
 
   afterEach(() => {
@@ -96,6 +99,79 @@ describe("resource.service · listCatalogResourcePage", () => {
     expect(result).toEqual({
       items: [expect.objectContaining({ id: "res-1", schemaName: "external_data" })],
       total: 21,
+    });
+  });
+});
+
+describe("resource.service · updateCatalogResource", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+    putMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("removes self-referencing feature properties while preserving cross-field references", async () => {
+    putMock.mockResolvedValue({});
+    getMock.mockResolvedValue({
+      data: {
+        catalog_id: "cat-1",
+        category: "table",
+        id: "res-1",
+        name: "orders",
+        schema_definition: [],
+      },
+    });
+    const { updateCatalogResource } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    await updateCatalogResource("res-1", {
+      catalogId: "cat-1",
+      category: "table",
+      description: "",
+      name: "orders",
+      schema: [
+        {
+          name: "request_no",
+          type: "string",
+          features: [
+            {
+              name: "fulltext",
+              featureType: "fulltext",
+              refProperty: "request_no",
+              isNative: true,
+            },
+            {
+              name: "linked_keyword",
+              featureType: "keyword",
+              refProperty: "external_keyword",
+            },
+          ],
+        },
+      ],
+      sourceIdentifier: "orders",
+    });
+
+    expect(putMock).toHaveBeenCalledWith("/vega-backend/v1/resources/res-1", {
+      catalog_id: "cat-1",
+      category: "table",
+      description: "",
+      name: "orders",
+      schema_definition: [
+        expect.objectContaining({
+          features: [
+            expect.not.objectContaining({ ref_property: "request_no" }),
+            expect.objectContaining({ ref_property: "external_keyword" }),
+          ],
+        }),
+      ],
+      index_config: undefined,
+      source_identifier: "orders",
     });
   });
 });
