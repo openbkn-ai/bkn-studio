@@ -149,7 +149,7 @@ export const bknTraceZhCN = {
         rawAction: "原始动作", targetType: "对象类型", technicalIds: "技术标识", time: "操作时间", title: "操作日志详情",
       },
       domainAction: "{{action}}{{target}}",
-      domainAuditActions: { add_members: "添加", create: "创建", delete: "删除", import: "导入", remove_members: "移除", update: "更新" },
+      domainAuditActions: { add_members: "向{{target}}添加成员", create: "创建", delete: "删除", import: "导入", remove_members: "从{{target}}移除成员", update: "更新" },
       targetTypes: {
         action_schedule: "行动计划", action_type: "行动类型", agentConversation: "Agent 业务会话", concept_group: "概念分组",
         conversation: "业务会话", knowledge_network: "业务知识网络", metric: "指标", object_type: "对象类", relation_type: "关系类", risk_type: "风险类型",

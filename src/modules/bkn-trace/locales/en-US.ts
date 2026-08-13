@@ -149,7 +149,7 @@ export const bknTraceEnUS = {
         rawAction: "Raw action", targetType: "Target type", technicalIds: "Technical identifiers", time: "Operation time", title: "Operation log details",
       },
       domainAction: "{{action}} {{target}}",
-      domainAuditActions: { add_members: "Add to", create: "Create", delete: "Delete", import: "Import", remove_members: "Remove from", update: "Update" },
+      domainAuditActions: { add_members: "Add members to {{target}}", create: "Create", delete: "Delete", import: "Import", remove_members: "Remove members from {{target}}", update: "Update" },
       targetTypes: {
         action_schedule: "action schedule", action_type: "action type", agentConversation: "Agent business conversation", concept_group: "concept group",
         conversation: "Business conversation", knowledge_network: "business knowledge network", metric: "metric", object_type: "object type", relation_type: "relation type", risk_type: "risk type",

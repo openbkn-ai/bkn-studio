@@ -19,8 +19,14 @@ export function isAgentConversationCreated(record: LogRecord) {
 export function presentLogAction(record: LogRecord, t: Translate) {
   if (isAgentConversationCreated(record)) return t("bknTrace.logs.auditActions.startAgentConversation");
   if (record.businessModule === "domain_knowledge_network") {
-    const action = t(`bknTrace.logs.domainAuditActions.${record.action}`, { defaultValue: record.action });
+    const actionKey = `bknTrace.logs.domainAuditActions.${record.action}`;
     const target = t(`bknTrace.logs.targetTypes.${record.target.type}`, { defaultValue: record.target.type });
+    const action = t(actionKey, { defaultValue: "", target });
+    if (!action || action === actionKey) {
+      const fallback = t(`bknTrace.logs.auditActions.${record.action}`, { defaultValue: record.action });
+      return `${fallback} ${target}`;
+    }
+    if (record.action === "add_members" || record.action === "remove_members") return action;
     return t("bknTrace.logs.domainAction", { action, target });
   }
   return t(`bknTrace.logs.auditActions.${record.action}`, { defaultValue: record.action });
