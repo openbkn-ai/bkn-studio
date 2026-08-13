@@ -220,10 +220,14 @@ function saveCachedSuggestions(knId: string, locale: string, fp: string, list: s
 }
 
 function buildProfiles(t: TFunction) {
+  const mcpPrompt = t("knowledgeNetwork.agentChat.chatPane.defaultPrompt");
+  const ptcPrompt = t("knowledgeNetwork.agentChat.chatPane.ptcPrompt");
   const soloProfile: PaneProfile = {
     paneKey: "solo",
     emptyTitle: t("knowledgeNetwork.agentChat.profiles.soloEmptyTitle"),
-    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.defaultPrompt"),
+    defaultPrompt: mcpPrompt,
+    // 隔离前 PTC 单栏也写在这个键上，读到它的默认提示词就是那批脏数据。
+    foreignPrompts: [ptcPrompt],
     injectKnContext: true,
     defaultToolNames: null,
     evidenceHint: t("knowledgeNetwork.agentChat.chatPane.evidenceHint.kn"),
@@ -241,7 +245,9 @@ function buildProfiles(t: TFunction) {
     paneKey: "kn",
     title: t("knowledgeNetwork.agentChat.profiles.knTitle"),
     emptyTitle: t("knowledgeNetwork.agentChat.profiles.knEmptyTitle"),
-    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.defaultPrompt"),
+    defaultPrompt: mcpPrompt,
+    // 隔离前 PTC 对比侧就跑在 kn 栏上，提示词与参数写进了 cmp-kn。
+    foreignPrompts: [ptcPrompt],
     injectKnContext: true,
     defaultToolNames: null,
     evidenceHint: t("knowledgeNetwork.agentChat.chatPane.evidenceHint.kn"),
@@ -251,7 +257,8 @@ function buildProfiles(t: TFunction) {
   const ptcProfile: PaneProfile = {
     ...soloProfile,
     toolMode: "ptc",
-    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.ptcPrompt"),
+    defaultPrompt: ptcPrompt,
+    foreignPrompts: [mcpPrompt],
   };
   // 对比模式下的 PTC 侧：沿用 knProfile 的身份与 KN 上下文注入，只换工具面形态。
   // 接同一个知识网络，差别仅在「逐个工具」与「写代码」，才是有意义的对照。
@@ -261,7 +268,8 @@ function buildProfiles(t: TFunction) {
     title: t("knowledgeNetwork.agentChat.profiles.ptcTitle"),
     emptyTitle: t("knowledgeNetwork.agentChat.profiles.ptcEmptyTitle"),
     toolMode: "ptc",
-    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.ptcPrompt"),
+    defaultPrompt: ptcPrompt,
+    foreignPrompts: [mcpPrompt],
   };
   const compareProfiles: Record<ComparePaneId, PaneProfile> = {
     base: baseProfile,
@@ -768,6 +776,21 @@ export function AgentChat({
   /** 当前渲染中的参与方；单侧补发时只有那一栏。 */
   const shownSides = useMemo(() => (compare.on ? visibleSides(compare) : []), [compare]);
 
+  /**
+   * 渲染用的 profile：最强那侧（列序末位）加高亮，与报告表最后一列一致。
+   *
+   * 必须记忆化——ChatPane 有若干以 profile 字段为依赖的 effect，每次渲染换一个新
+   * 对象会让它们反复重跑（历史重载、会话重置）。
+   */
+  const paneProfiles = useMemo(
+    () =>
+      shownSides.map((id, i) => ({
+        ...profiles.compareProfiles[id],
+        highlight: shownSides.length > 1 && i === shownSides.length - 1,
+      })),
+    [shownSides, profiles.compareProfiles],
+  );
+
   const targets = useMemo<PaneKey[]>(
     () => (compare.on ? shownSides : ["solo"]),
     [compare.on, shownSides],
@@ -1047,11 +1070,7 @@ export function AgentChat({
                   <ChatPane
                     ref={compareRefs[id]}
                     {...paneShared}
-                    /* 最强那侧（列序末位）加高亮，与报告表最后一列一致。 */
-                    profile={{
-                      ...profiles.compareProfiles[id],
-                      highlight: shownSides.length > 1 && i === shownSides.length - 1,
-                    }}
+                    profile={paneProfiles[i]}
                     suggestions={suggestions}
                     onPick={sendQuestion}
                     onBusyChange={busyHandlerOf[id]}

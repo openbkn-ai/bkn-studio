@@ -126,6 +126,11 @@ export type PaneProfile = {
    * Python 交沙箱执行，中间结果留在沙箱。见 services/ptc/run-code.tool.ts。
    */
   toolMode?: "mcp" | "ptc";
+  /**
+   * 另一种工具面的默认提示词。存储身份隔离（见 paneStorageId）之前两种模式共用
+   * 一个键，历史数据里可能存着对面模式的提示词与参数，用它识别并丢弃。
+   */
+  foreignPrompts?: string[];
 };
 
 /** Turn result status; empty/stopped/error are negative outcomes. */
@@ -188,7 +193,14 @@ type ChatMessage = {
 
 type SessionStats = { tokens: number; ms: number };
 
-type Persisted = { messages: ChatMessage[]; model: string; systemPrompt: string; stats?: SessionStats };
+type Persisted = {
+  messages: ChatMessage[];
+  model: string;
+  systemPrompt: string;
+  stats?: SessionStats;
+  /** 写入时的工具面。缺失即隔离前的老数据，见 isForeignPersisted。 */
+  toolMode?: "mcp" | "ptc";
+};
 
 /** Rough token estimate for live streaming display; replaced by real usage at finish. */
 function estimateTokens(chars: number): number {
@@ -245,6 +257,26 @@ function loadPersisted(key: string): Partial<Persisted> {
   } catch {
     return {};
   }
+}
+
+/**
+ * 这份持久化数据是否属于另一种工具面。
+ *
+ * 存储身份隔离之前，PTC 侧就跑在 kn 栏（单栏则跑在 solo）上，提示词与参数写进了
+ * 同一个键。那批数据至今还在，读回来就表现为「两个模式的问答配置混在一起」：kn
+ * 栏拿到 PTC 的提示词，模型被要求去写 run_code，而它手上只有 MCP 工具。
+ *
+ * 新写入都带 toolMode 标记，直接比对即可；老数据没有标记，则看提示词是否正好是
+ * 对面模式的默认值——隔离前的污染恰好是这个形态，用户手写出对面默认词的可能可以
+ * 忽略。命中即整份丢弃，回到本模式默认。
+ */
+function isForeignPersisted(
+  saved: Partial<Persisted>,
+  own: { toolMode?: "mcp" | "ptc"; foreignPrompts?: string[] },
+): boolean {
+  const ownMode = own.toolMode ?? "mcp";
+  if (saved.toolMode) return saved.toolMode !== ownMode;
+  return saved.systemPrompt != null && (own.foreignPrompts ?? []).includes(saved.systemPrompt);
 }
 
 /** Agent config cache; solo keeps the legacy key and compare panes are isolated. */
@@ -577,7 +609,13 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       }
       localStorage.setItem(
         msgsLsKey(knId, profile.paneKey, profile.toolMode),
-        JSON.stringify({ messages, model: draftModel, systemPrompt: draftSystemPrompt, stats } satisfies Persisted),
+        JSON.stringify({
+          messages,
+          model: draftModel,
+          systemPrompt: draftSystemPrompt,
+          stats,
+          toolMode: profile.toolMode ?? "mcp",
+        } satisfies Persisted),
       );
     } catch {
       /* Ignore unavailable localStorage. */
@@ -611,11 +649,28 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   // Load persisted chat history, isolated by KN and pane.
   useEffect(() => {
     const saved = loadPersisted(msgsLsKey(knId, profile.paneKey, profile.toolMode));
+    if (isForeignPersisted(saved, { toolMode: profile.toolMode, foreignPrompts: profile.foreignPrompts })) {
+      // 隔离前另一模式写下的数据：提示词与参数一并回到本模式默认，历史也不沿用
+      // ——两种模式的工具卡片形态不同，混在一条会话里没有意义。
+      setMessages([]);
+      setSystemPrompt(profile.defaultPrompt);
+      setStats({ tokens: 0, ms: 0 });
+      setConfigState({ ...DEFAULT_AGENT_CONFIG });
+      setToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null);
+      return;
+    }
     setMessages(Array.isArray(saved.messages) ? saved.messages : []);
     if (saved.model) setModel(saved.model);
     setSystemPrompt(saved.systemPrompt ?? profile.defaultPrompt);
     setStats(saved.stats ?? { tokens: 0, ms: 0 });
-  }, [knId, profile.paneKey, profile.defaultPrompt, profile.toolMode]);
+  }, [
+    knId,
+    profile.paneKey,
+    profile.toolMode,
+    profile.defaultPrompt,
+    profile.foreignPrompts,
+    profile.defaultToolNames,
+  ]);
 
   // Select the default model after model list is ready; persisted choice wins.
   useEffect(() => {
@@ -630,7 +685,13 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       try {
         localStorage.setItem(
           msgsLsKey(knId, profile.paneKey, profile.toolMode),
-          JSON.stringify({ messages: msgs, model, systemPrompt, stats: statsSnapshot } satisfies Persisted),
+          JSON.stringify({
+            messages: msgs,
+            model,
+            systemPrompt,
+            stats: statsSnapshot,
+            toolMode: profile.toolMode ?? "mcp",
+          } satisfies Persisted),
         );
       } catch {
         /* Ignore unavailable localStorage. */
@@ -1033,8 +1094,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       ))}
     </div>
   );
+  // PTC 模式不给工具白名单：模型只有 run_code，BKN 能力在沙箱里是函数不是工具，
+  // 这里勾选什么都不会进入模型的工具表（见 buildPtcTools 分支），留着是个死旋钮。
   const toolPicker =
-    profile.paneKey !== "solo" ? (
+    profile.paneKey !== "solo" && profile.toolMode !== "ptc" ? (
       <section className={styles.configSection}>
         <div className={styles.configSectionHead}>
           <div>
