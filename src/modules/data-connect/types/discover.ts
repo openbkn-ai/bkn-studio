@@ -45,17 +45,15 @@ export type DataConnectDiscoverSchedule = {
 export type DataConnectDiscoverTask = {
   catalogId: string;
   catalogName?: string;
-  createTime: string;
+  createTime: number;
   creatorName: string;
-  finishTime: string;
-  finishTimeValue?: number;
+  finishTime?: number;
   id: string;
   message: string;
   progress: number;
   result?: DataConnectDiscoverResult;
   scheduleId: string;
-  startTime: string;
-  startTimeValue?: number;
+  startTime?: number;
   status: DataConnectDiscoverTaskStatus;
   strategy: DataConnectDiscoverStrategy;
   triggerType: DataConnectDiscoverTaskTriggerType;

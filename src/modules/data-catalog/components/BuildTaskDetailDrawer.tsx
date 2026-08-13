@@ -10,6 +10,7 @@ import { Alert, Descriptions, Drawer, Empty } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { formatDateTime } from "@/framework/i18n/format";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { formatCount } from "@/modules/data-catalog/lib/format";
@@ -384,10 +385,10 @@ export function BuildTaskDetailDrawer({
               {renderSyncedMark(task.syncedMark)}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataConnect.createTime")}>
-              {task.createTime}
+              {task.createTime ? formatDateTime(task.createTime) : "-"}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.updateTime")}>
-              {task.updateTime ?? "—"}
+              {task.updateTime ? formatDateTime(task.updateTime) : "—"}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>
               {task.finishTime ?? "—"}

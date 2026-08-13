@@ -9,6 +9,7 @@ import { Alert, Drawer, Empty } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { formatDateTime } from "@/framework/i18n/format";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getDataConnectDiscoverTask } from "@/modules/data-connect/services/discover.service";
 import type {
@@ -128,11 +129,11 @@ export function DataConnectDiscoverTaskDrawer({
               />
               <DetailItem
                 label={t("dataConnect.discoverStartTime")}
-                value={task.startTime || "-"}
+                value={formatDateTime(task.startTime)}
               />
               <DetailItem
                 label={t("dataConnect.discoverFinishTime")}
-                value={task.finishTime || "-"}
+                value={formatDateTime(task.finishTime)}
               />
               <DetailItem
                 label={t("dataConnect.creator")}
@@ -140,7 +141,7 @@ export function DataConnectDiscoverTaskDrawer({
               />
               <DetailItem
                 label={t("dataConnect.createTime")}
-                value={task.createTime || "-"}
+                value={formatDateTime(task.createTime || undefined)}
               />
               <DetailItem
                 full

@@ -30,7 +30,10 @@ describe("discover.service · task status contract", () => {
         entries: [
           {
             catalog_id: "catalog-1",
+            create_time: 100,
+            finish_time: 300,
             id: "task-1",
+            start_time: 200,
             status: "cancelled",
           },
         ],
@@ -48,6 +51,11 @@ describe("discover.service · task status contract", () => {
     });
 
     expect(result.items[0]?.status).toBe("cancelled");
+    expect(result.items[0]?.createTime).toBe(100);
+    expect(result.items[0]?.startTime).toBe(200);
+    expect(result.items[0]?.finishTime).toBe(300);
+    expect(result.items[0]).not.toHaveProperty("startTimeValue");
+    expect(result.items[0]).not.toHaveProperty("finishTimeValue");
     expect(getMock).toHaveBeenCalledOnce();
     expect(getMock.mock.calls[0]?.[0]).toBe("/vega-backend/v1/discover-tasks");
     const config = getMock.mock.calls[0]?.[1] as { params: Record<string, unknown> };

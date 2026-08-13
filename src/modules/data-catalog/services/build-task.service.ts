@@ -21,7 +21,7 @@ import type {
   BuildTask,
   BuildTaskCreateInput,
   BuildTaskListQuery,
-  BuildTaskOrderBy,
+  BuildTaskSort,
   BuildTaskPageQuery,
   BuildTaskPageResult,
   BuildTaskStatus,
@@ -235,7 +235,7 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
 }
 
 export function mapBuildTask(item: BackendBuildTask): BuildTask {
-  const createdAt = item.create_time ?? 0;
+  const createTime = item.create_time ?? 0;
   const mode: BuildMode = item.mode === "streaming" ? "streaming" : "batch";
   const status = normalizeStatus(item.status, mode);
   const snapshot = snapshotFieldsOf(item);
@@ -298,14 +298,12 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     indexHealth,
     indexUsable: indexHealth.usable,
     failureDetail: item.failure_detail ?? "",
-    createdAt,
-    createTime: createdAt ? formatMockTimestamp(createdAt) : "-",
+    createTime,
     finishTime:
       (status === "succeeded" || status === "failed" || status === "cancelled") && item.update_time
         ? formatMockTimestamp(item.update_time)
         : null,
-    updatedAt: item.update_time,
-    updateTime: item.update_time ? formatMockTimestamp(item.update_time) : null,
+    updateTime: item.update_time,
     lastEventAt: mode === "streaming" ? (item.update_time ?? null) : null,
     error: item.error_msg || null,
   };
@@ -319,7 +317,7 @@ function filterTasks(items: BuildTask[], query: BuildTaskListQuery) {
         !query.statuses || query.statuses.length === 0 || query.statuses.includes(item.status);
       return matchesResource && matchesStatus;
     })
-    .sort((left, right) => right.createdAt - left.createdAt);
+    .sort((left, right) => right.createTime - left.createTime);
 }
 
 export async function listBuildTasks(
@@ -399,15 +397,13 @@ export function backendStatusParams(statuses: BuildTaskStatus[]): string[] {
 
 function sortMockTasks(
   items: BuildTask[],
-  orderBy: BuildTaskOrderBy,
-  order: "asc" | "desc",
+  sort: BuildTaskSort,
+  direction: "asc" | "desc",
 ): BuildTask[] {
   const arr = [...items];
-  const dir = order === "asc" ? 1 : -1;
+  const dir = direction === "asc" ? 1 : -1;
   const keyOf = (task: BuildTask): number =>
-    orderBy === "created_at" || orderBy === "default"
-      ? task.createdAt
-      : (task.lastEventAt ?? task.createdAt);
+    sort === "create_time" ? task.createTime : (task.updateTime ?? task.createTime);
   return arr.sort((a, b) => {
     const ka = keyOf(a);
     const kb = keyOf(b);
@@ -446,23 +442,21 @@ export async function listBuildTaskPage(
       const set = new Set(query.statuses);
       items = items.filter((task) => set.has(task.status));
     }
-    items = sortMockTasks(items, query.orderBy ?? "created_at", query.order ?? "desc");
+    items = sortMockTasks(items, query.sort ?? "create_time", query.direction ?? "desc");
     const total = items.length;
     const start = (page - 1) * pageSize;
     return wait({ items: items.slice(start, start + pageSize), total }, 120);
   }
 
   const params: Record<string, unknown> = {
+    direction: query.direction ?? "desc",
     limit: pageSize,
     offset: (page - 1) * pageSize,
     resource_id: query.resourceId || undefined,
     catalog_id: query.catalogId || undefined,
     mode: query.mode || undefined,
+    sort: query.sort ?? "create_time",
   };
-  if (query.orderBy) {
-    params.order_by = query.orderBy;
-    params.order = query.order ?? "desc";
-  }
   if (query.statuses?.length) {
     params.status = backendStatusParams(query.statuses);
   }
@@ -520,7 +514,7 @@ export async function createBuildTask(
           fulltextFields: [] as string[],
           fulltextAnalyzer: "",
         };
-    const createdAt = Date.now();
+    const createTime = Date.now();
     const task: BuildTask = {
       id: `bt-${mockSlug(8)}`,
       resourceId: input.resourceId,
@@ -539,8 +533,7 @@ export async function createBuildTask(
       embeddingDegraded: false,
       indexUsable: true,
       failureDetail: "",
-      createdAt,
-      createTime: formatMockTimestamp(createdAt),
+      createTime,
       finishTime: null,
       lastEventAt: null,
       error: null,
@@ -576,6 +569,7 @@ export async function pauseBuildTask(id: string) {
     const task = mockBuildTasks.find((item) => item.id === id);
     if (task && (task.status === "listening" || task.status === "running")) {
       task.status = "paused";
+      task.updateTime = Date.now();
       emitMockChange();
     }
     await wait(undefined, 120);
@@ -591,7 +585,8 @@ export async function resumeBuildTask(id: string) {
     const task = mockBuildTasks.find((item) => item.id === id);
     if (task && task.status === "paused") {
       task.status = task.mode === "streaming" ? "listening" : "running";
-      task.lastEventAt = Date.now();
+      task.updateTime = Date.now();
+      task.lastEventAt = task.updateTime;
       emitMockChange();
       ensureMockTicker();
     }
@@ -662,7 +657,8 @@ export async function retryBuildTask(
     source.status = source.mode === "streaming" ? "listening" : "running";
     source.error = null;
     source.failureDetail = "";
-    source.lastEventAt = Date.now();
+    source.updateTime = Date.now();
+    source.lastEventAt = source.updateTime;
     emitMockChange();
     ensureMockTicker();
     return wait(source);

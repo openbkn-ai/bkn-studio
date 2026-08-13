@@ -34,8 +34,7 @@ function buildTask(
     vectorizedCount: status === "succeeded" ? 10 : 0,
     indexUsable: status === "succeeded",
     failureDetail: "",
-    createdAt: 1,
-    createTime: "-",
+    createTime: 1,
     finishTime: null,
     lastEventAt: null,
     error: null,
@@ -43,8 +42,8 @@ function buildTask(
   };
 }
 
-const succeededTask = buildTask("succeeded", { id: "task-2", createdAt: 2 });
-const failedTask = buildTask("failed", { id: "task-3", createdAt: 3 });
+const succeededTask = buildTask("succeeded", { id: "task-2", createTime: 2 });
+const failedTask = buildTask("failed", { id: "task-3", createTime: 3 });
 
 describe("hasServingResourceIndex", () => {
   it("returns true when a succeeded build exists", () => {

@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import type { DataConnectDiscoverSceneProps } from "@/modules/data-connect/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
+import { formatDateTime } from "@/framework/i18n/format";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -63,8 +64,8 @@ type DiscoverPageTab = "schedules" | "tasks";
 type TaskStatusFilterValue = "all" | DataConnectDiscoverTaskStatus;
 type TaskTriggerTypeFilterValue = "all" | DataConnectDiscoverTask["triggerType"];
 
-function renderTableTime(value?: string) {
-  return <span className={styles.timeText}>{value || "-"}</span>;
+function renderTableTime(value?: number) {
+  return <span className={styles.timeText}>{formatDateTime(value)}</span>;
 }
 
 function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }) {

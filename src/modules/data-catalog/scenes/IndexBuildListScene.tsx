@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { formatDateTime } from "@/framework/i18n/format";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -46,10 +47,11 @@ import {
 import type {
   BuildMode,
   BuildTask,
-  BuildTaskOrderBy,
   BuildTaskPageQuery,
+  BuildTaskSort,
   BuildTaskStatus,
 } from "@/modules/data-catalog/types/data-catalog";
+import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
 import { getCatalog, listCatalogs } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
@@ -116,8 +118,8 @@ export function IndexBuildListScene() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [orderBy, setOrderBy] = useState<BuildTaskOrderBy>("created_at");
-  const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const [sort, setSort] = useState<BuildTaskSort>("create_time");
+  const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const [total, setTotal] = useState(0);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -131,14 +133,23 @@ export function IndexBuildListScene() {
     () => ({
       page,
       pageSize,
-      orderBy,
-      order,
+      sort,
+      direction,
       catalogId: listFilters.catalogId,
       mode: listFilters.mode,
       resourceId: listFilters.resourceId,
       statuses: listFilters.statuses.length === 0 ? undefined : listFilters.statuses,
     }),
-    [listFilters.catalogId, listFilters.mode, listFilters.resourceId, listFilters.statuses, order, orderBy, page, pageSize],
+    [
+      direction,
+      listFilters.catalogId,
+      listFilters.mode,
+      listFilters.resourceId,
+      listFilters.statuses,
+      page,
+      pageSize,
+      sort,
+    ],
   );
 
   const updateListFilters = useCallback(
@@ -186,16 +197,7 @@ export function IndexBuildListScene() {
 
   useEffect(() => subscribeMockDb(() => void loadTasks()), [loadTasks]);
 
-  const hasActive = useMemo(
-    () =>
-      tasks.some(
-        (task) =>
-          task.status === "pending" ||
-          task.status === "running" ||
-          task.status === "listening",
-      ),
-    [tasks],
-  );
+  const hasActive = useMemo(() => tasks.some(isActiveBuildTask), [tasks]);
 
   useEffect(() => {
     if (!hasActive) {
@@ -295,8 +297,8 @@ export function IndexBuildListScene() {
     });
   };
 
-  const sortOrderOf = (key: BuildTaskOrderBy): "ascend" | "descend" | null =>
-    orderBy === key ? (order === "asc" ? "ascend" : "descend") : null;
+  const sortOrderOf = (key: BuildTaskSort): "ascend" | "descend" | null =>
+    sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
 
   useEffect(() => {
     const handleMove = (event: MouseEvent) => {
@@ -334,7 +336,7 @@ export function IndexBuildListScene() {
     };
   }, [resourceColumnWidth, taskColumnWidth]);
 
-  // Header sorting: a direction sends order_by=column key plus order; clearing returns to default without an arrow.
+  // Header sorting follows the shared task-list sort/direction contract.
   const handleTableChange: TableProps<BuildTask>["onChange"] = (
     _pagination,
     _filters,
@@ -346,11 +348,11 @@ export function IndexBuildListScene() {
     }
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
     if (!single || !single.order || !single.columnKey) {
-      setOrderBy("created_at");
-      setOrder("desc");
+      setSort("create_time");
+      setDirection("desc");
     } else {
-      setOrderBy(single.columnKey as BuildTaskOrderBy);
-      setOrder(single.order === "ascend" ? "asc" : "desc");
+      setSort(single.columnKey as BuildTaskSort);
+      setDirection(single.order === "ascend" ? "asc" : "desc");
     }
     setPage(1);
   };
@@ -464,12 +466,14 @@ export function IndexBuildListScene() {
     },
     {
       dataIndex: "createTime",
-      key: "created_at",
+      key: "create_time",
       title: t("dataCatalog.task.createTime"),
       width: 180,
       sorter: true,
-      sortOrder: sortOrderOf("created_at"),
-      render: (value: string) => <EllipsisText text={value} />,
+      sortOrder: sortOrderOf("create_time"),
+      render: (value: number) => (
+        <EllipsisText text={formatDateTime(value || undefined)} />
+      ),
     },
     {
       align: "center",

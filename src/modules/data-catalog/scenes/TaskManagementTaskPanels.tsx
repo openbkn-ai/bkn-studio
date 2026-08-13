@@ -264,9 +264,9 @@ export function DiscoverTaskListPanel() {
       onCell: () => ({ className: styles.progressCell }),
       render: (_, record) => <DiscoverTaskProgress task={record} />,
     },
-    { dataIndex: "startTime", title: t("dataCatalog.taskManagement.details.startTime"), width: 180, render: (value: string) => value || "-" },
-    { dataIndex: "finishTime", title: t("dataCatalog.task.finishedAt"), width: 180, render: (value: string) => value || "-" },
-    { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time") },
+    { dataIndex: "startTime", title: t("dataCatalog.taskManagement.details.startTime"), width: 180, render: formatTime },
+    { dataIndex: "finishTime", title: t("dataCatalog.task.finishedAt"), width: 180, render: formatTime },
+    { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
     {
       align: "center",
       fixed: "right",
