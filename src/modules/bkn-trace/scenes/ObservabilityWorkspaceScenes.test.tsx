@@ -15,15 +15,21 @@ import { getLogDetail, listLogPolicies, listLogs, listLogSources } from "@/modul
 import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
 import { AuditLogPage } from "@/modules/system-admin/pages/AuditLogPage";
 
-const translate = (key: string) => ({
+const translate = (key: string, options?: Record<string, unknown>) => {
+  const value = ({
   "bknTrace.logs.authenticatedUser": "已认证用户",
   "bknTrace.logs.authMethods.api_key": "通过 API Key",
   "bknTrace.logs.businessConversationSuffix": " 的业务会话",
   "bknTrace.logs.conversationId": "Conversation ID",
   "bknTrace.logs.unnamedAgent": "未命名 Agent",
   "bknTrace.logs.modules.openbkn": "技术运行日志（非操作日志）",
+  "bknTrace.logs.domainAction": "{{action}}{{target}}",
+  "bknTrace.logs.domainAuditActions.create": "创建",
+  "bknTrace.logs.targetTypes.object_type": "对象类",
   "bknTrace.settings.status.healthy": "已接入",
-}[key] ?? key);
+  }[key] ?? key);
+  return value.replace(/{{(\w+)}}/g, (_match, name: string) => typeof options?.[name] === "string" ? options[name] : "");
+};
 
 vi.mock("react-i18next", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-i18next")>();
@@ -123,6 +129,28 @@ describe("observability workspace scenes", () => {
     for (const column of ["time", "module", "action", "target", "actor", "outcome", "source"]) {
       expect(screen.getByText(`bknTrace.logs.columns.${column}`)).not.toBeNull();
     }
+  });
+
+  it("以业务语言展示领域知识网络管理事实", async () => {
+    vi.mocked(listLogs).mockResolvedValueOnce({
+      count: { accuracy: "exact", value: 1 },
+      data: [{
+        action: "create", actor: { id: "user-a", name: "供应链管理员", type: "user" }, authMethod: "api_key",
+        facts: { action: "create", targetId: "material", targetNameSnapshot: "物料", targetType: "object_type" },
+        eventId: "evt-a", eventName: "resource_config.changed", eventTime: "2026-08-13T08:00:00Z",
+        logCategory: "audit.admin", attributes: { method: "POST" }, businessModule: "domain_knowledge_network",
+        outcome: "success", recordedAt: "2026-08-13T08:00:01Z", requestId: "req-a", sourceChannel: "api", sourceId: "bkn-backend",
+        target: { id: "material", name: "物料", type: "object_type" },
+      }],
+      partial: false,
+      sourceStatus: [{ coveredModules: ["domain_knowledge_network"], reliability: "best_effort", sourceId: "bkn-backend", status: "healthy" }],
+    });
+
+    render(<ObservabilityLogsScene />);
+
+    expect(await screen.findByText("创建对象类")).not.toBeNull();
+    expect(screen.getByText("物料")).not.toBeNull();
+    expect(screen.getByText("供应链管理员")).not.toBeNull();
   });
 
   it("从链接恢复日志时间范围", async () => {

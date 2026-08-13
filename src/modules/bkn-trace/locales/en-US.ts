@@ -148,7 +148,12 @@ export const bknTraceEnUS = {
         method: "Request method", operation: "Operation summary", operationStatus: "Operation status", operationType: "Operation type", rawFacts: "Raw facts (collapsed)", recordedAt: "Recorded at", source: "Source", statusCode: "Status code", target: "Target", targetId: "Target ID",
         rawAction: "Raw action", targetType: "Target type", technicalIds: "Technical identifiers", time: "Operation time", title: "Operation log details",
       },
-      targetTypes: { agentConversation: "Agent business conversation", conversation: "Business conversation" },
+      domainAction: "{{action}} {{target}}",
+      domainAuditActions: { add_members: "Add to", create: "Create", delete: "Delete", import: "Import", remove_members: "Remove from", update: "Update" },
+      targetTypes: {
+        action_schedule: "action schedule", action_type: "action type", agentConversation: "Agent business conversation", concept_group: "concept group",
+        conversation: "Business conversation", knowledge_network: "business knowledge network", metric: "metric", object_type: "object type", relation_type: "relation type", risk_type: "risk type",
+      },
       title: "Log Search",
       unnamedAgent: "Unnamed Agent",
     },
