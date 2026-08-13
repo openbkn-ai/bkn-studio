@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { AuditLogScene } from "@/modules/system-admin/scenes/AuditLogScene";
+import { ObservabilityLogsScene } from "@/modules/bkn-trace/scenes/ObservabilityLogsScene";
 
 export function AuditLogPage() {
-  return <AuditLogScene />;
+  return <ObservabilityLogsScene mode="audit" />;
 }
