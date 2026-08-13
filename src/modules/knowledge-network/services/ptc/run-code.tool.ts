@@ -108,13 +108,16 @@ export function buildPtcTools(options: PtcToolOptions): ToolSet {
         );
 
         const stdout = (result.stdout ?? "").trim();
+        // stderr 在成功与失败两条路上都要回传。退出码为 0 也可能有 stderr：
+        // 库的告警、脚本自己写进去的诊断。只给 stdout 等于让模型看到「成功」
+        // 的一半，据此做的下一步判断就是瞎的。
+        const stderr = (result.stderr ?? result.error_message ?? "").trim();
+
         if (result.exit_code === 0) {
-          return stdout || "（脚本没有输出。只有 print 的内容会返回，记得打印结果。）";
+          const parts = [stdout, stderr && `[stderr]\n${stderr}`].filter(Boolean);
+          return parts.join("\n\n") || "（脚本没有输出。只有 print 的内容会返回，记得打印结果。）";
         }
 
-        // 失败时把 stderr 一并回传：traceback 里的服务端报文是模型自行修正参数
-        // 的唯一依据，吞掉它就只能盲目重试。实测中模型据此改写脚本并跑通。
-        const stderr = (result.stderr ?? result.error_message ?? "").trim();
         return [`执行失败（exit_code=${result.exit_code}）`, stdout, stderr]
           .filter(Boolean)
           .join("\n");
