@@ -193,8 +193,11 @@ async function reclaimStuckInteraction(session: McpSession, error: unknown): Pro
       reason: "reclaimed by client: previous turn did not finish",
     });
     return true;
-  } catch {
+  } catch (reclaimError) {
     // Let the caller start a new conversation; do not mask the original error.
+    // 但要留下痕迹：这一步失败是「下一轮被 interaction_in_progress 卡住」的
+    // 直接前因，静默吞掉会让人只看到症状、查不到原因。
+    console.warn("[BknLifecycle] 回收残留 interaction 失败", error.currentInteractionId, reclaimError);
     return false;
   }
 }

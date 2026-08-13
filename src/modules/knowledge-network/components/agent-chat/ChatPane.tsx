@@ -880,7 +880,13 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         // Stop returns normally, so use aborted state rather than outcome alone.
         const finalOutcome: TurnOutcome = roundFailed && outcome === "completed" ? "failed" : outcome;
         if (turn) {
-          await turn.finish(controller.signal.aborted ? "canceled" : finalOutcome, answer).catch(() => undefined);
+          // 收尾失败会让这个 interaction 留在 active，下一轮直接被
+          // interaction_in_progress 挡住。不能让它静默消失。
+          await turn
+            .finish(controller.signal.aborted ? "canceled" : finalOutcome, answer)
+            .catch((finishError: unknown) => {
+              console.warn("[ChatPane] interaction 收尾失败，下一轮可能被占用", finishError);
+            });
         }
         if (requestSequence === requestSequenceRef.current) {
           // Clear only if this is still the current turn.
