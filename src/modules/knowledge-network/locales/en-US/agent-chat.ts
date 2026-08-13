@@ -44,11 +44,20 @@ export const agentChatPart = {
       knTitle: "Business Knowledge Network",
       knEmptyTitle: "Answer with the Knowledge Network",
     },
+    // Participants vary (any pair, or all three), so judgeSides supplies each identity
+    // from the actual line-up.
+    judgeSides: {
+      base: "Base Data, which can only query the database directly with SQL/table tools",
+      kn: "Business Knowledge Network, which can use all knowledge-network retrieval tools, including semantic schema, instances, subgraphs, and logical attributes",
+      ptc: "PTC · Code Mode, which has run_code as its only tool: it writes Python that runs in a sandbox, calls the same knowledge-network capabilities over MCP inside the script, keeps intermediate results in the sandbox, and returns only what it prints",
+    },
+    judgeRosterLine: "{{letter}}: {{side}}",
     judgePrompt:
-      "You are a comparison reviewer. The same question is answered by two agents, possibly across multiple rounds: A, Base Data, can only query the database directly with SQL/table tools; B, Business Knowledge Network, can use all knowledge-network retrieval tools, including semantic schema, instances, subgraphs, and logical attributes.\n" +
+      "You are a comparison reviewer. The same question is answered by {{count}} agents, possibly across multiple rounds. Their capabilities are:\n" +
+      "{{roster}}\n" +
       "Compare the answers and metrics from these dimensions: 1. correctness and completeness, 2. whether the evidence is sufficient and reliable, 3. efficiency, including tool calls, tokens, and latency, and 4. which side is more useful for business users and why.\n" +
       "Pay special attention to the result status of each round. If a side is marked no valid answer, stopped by user, or execution error, treat that round as a negative result because the task was not completed. It should be judged worse than a side with an effective answer. The more negative rounds a side has, the more the overall review should reflect unreliability.\n" +
-      "Output Markdown in the current language: start with one overall verdict, then compare each round briefly in 2-3 sentences and call out negative results, then summarize in bullets. Be concise and do not restate the full answers.",
+      "Output Markdown in the current language: start with one overall verdict that ranks the sides from best to worst with reasons, then compare each round briefly in 2-3 sentences and call out negative results, then summarize in bullets. Be concise and do not restate the full answers.",
     outcome: {
       answered: "Answered",
       stopped: "Stopped by user (negative)",
@@ -83,23 +92,20 @@ export const agentChatPart = {
     report: {
       title: "Agent Chat Comparison Report · {{knLabel}}",
       generatedAt: "Generated at: {{generatedAt}}",
-      modelLine: "Left Base Data model: {{baseModel}}; right Business Knowledge Network model: {{knModel}}",
+      modelLine: "{{label}} model: {{model}}",
       overview: "Session Overview",
       metricHeader: "Metric",
-      baseHeader: "Base Data",
-      knHeader: "Business Knowledge Network",
       totalTokens: "Total tokens",
       totalDuration: "Total duration",
       rounds: "Rounds",
       totalToolCalls: "Total tool calls",
       invalidRounds: "Invalid rounds (empty/stopped/error)",
       roundTitle: "Round {{round}}",
-      questionBoth: "Left: {{baseQuestion}} / Right: {{knQuestion}}",
+      questionPerSide: "{{label}}: {{question}}",
       duration: "Duration",
       toolCalls: "Tool calls",
       result: "Result",
-      baseAnswerTitle: "Base Data · Answer",
-      knAnswerTitle: "Business Knowledge Network · Answer",
+      answerTitle: "{{label}} · Answer",
       aiSummary: "AI Summary",
       paneBriefTitle: "{{label}} (model {{model}}; session total {{tokens}} tokens · {{duration}})",
       paneBriefRound:
@@ -111,7 +117,7 @@ export const agentChatPart = {
       copySuccess: "Report Markdown copied",
       copyFailed: "Copy failed",
       downloadName: "comparison-report-{{knId}}-{{stamp}}.md",
-      emptyDialog: "Neither side has a conversation yet. Send a question with Both Sides first, then view the report.",
+      emptyDialog: "No side has a conversation yet. Send a question with All Sides first, then view the report.",
       overviewRounds: "Session overview ({{rounds}} rounds)",
       model: "Model",
       averagePerRound: "Average per round",
@@ -122,7 +128,7 @@ export const agentChatPart = {
       regenerateSummary: "Regenerate",
       generating: "Generating...",
       thinking: "Reviewer model is thinking...",
-      summaryHint: "Use the right-side model to review correctness, evidence, and efficiency across all rounds.",
+      summaryHint: "Use the most capable side's model to review correctness, evidence, and efficiency across all rounds.",
     },
     managedTurns: {
       loadSummary: "Load knowledge network summary",
@@ -130,16 +136,14 @@ export const agentChatPart = {
     placeholders: {
       noLlm: "Connect an LLM in Model Factory before chatting.",
       askAgent: "Ask Agent, for example: {{suggestion}}",
-      both: "Ask both sides the same question and compare the answers.",
-      base: "Send to Base Data",
-      kn: "Send to Business Knowledge Network",
+      all: "Ask all {{count}} sides the same question and compare the answers.",
+      side: "Send to {{label}}",
     },
     composer: {
       sendTo: "Send to",
-      both: "Both Sides",
-      base: "Base Data",
-      kn: "Business Knowledge Network",
-      reportTitle: "Compare the latest answers and metrics from both sides, with an AI summary.",
+      all: "All Sides",
+      sides: "Participants",
+      reportTitle: "Compare the latest answers and metrics from every side, with an AI summary.",
       report: "Comparison Report",
       stop: "Stop",
       send: "Send",

@@ -44,11 +44,19 @@ export const agentChatPart = {
       knTitle: "业务知识网络",
       knEmptyTitle: "基于知识网络回答",
     },
+    // 参与方是可变的（两两或三方），各侧身份由 judgeSides 按实际对照组拼入。
+    judgeSides: {
+      base: "「仅基础数据」只能用 SQL/表工具直接查库",
+      kn: "「业务知识网络」可用全部知识网络检索工具（语义 Schema、实例、子图、逻辑属性等）",
+      ptc: "「PTC · 代码模式」只有 run_code 一个工具：写一段 Python 在沙箱执行，脚本内经 MCP 调同一批知识网络能力，中间结果留在沙箱，只有 print 的内容回到上下文",
+    },
+    judgeRosterLine: "{{letter}}：{{side}}",
     judgePrompt:
-      "你是对比评审员。同样的问题由两个 Agent 分别回答（可能有多轮）：A「仅基础数据」只能用 SQL/表工具直接查库；B「业务知识网络」可用全部知识网络检索工具（语义 Schema、实例、子图、逻辑属性等）。\n" +
+      "你是对比评审员。同样的问题由 {{count}} 个 Agent 分别回答（可能有多轮），各侧能力如下：\n" +
+      "{{roster}}\n" +
       "请基于给出的各轮回答与指标，从这些维度对比：①结论正确性与完整度 ②依据是否充分可信 ③效率（工具调用次数、token、耗时）④哪一侧对业务用户更有用、为什么。\n" +
       "特别注意每轮的『结果状态』：若某侧某轮为『无有效回答 / 被用户停止 / 执行出错』，一律视为该侧该轮的负面结果（未完成任务），应判其明显劣于给出有效答案的一侧；某侧负面轮次越多，总评越应反映其不可靠。\n" +
-      "输出中文 Markdown：先给一行总评（哪侧更好），再逐轮简要对比（每轮 2-3 句，并点明负面结果），最后分点归纳，简洁克制，不要复述全文。",
+      "输出中文 Markdown：先给一行总评，把各侧从优到劣排序并说明理由；再逐轮简要对比（每轮 2-3 句，并点明负面结果）；最后分点归纳，简洁克制，不要复述全文。",
     outcome: {
       answered: "已回答",
       stopped: "⏹ 被用户停止（负面）",
@@ -83,23 +91,20 @@ export const agentChatPart = {
     report: {
       title: "Agent 对话对比报告 · {{knLabel}}",
       generatedAt: "生成时间：{{generatedAt}}",
-      modelLine: "左「基础数据」模型：{{baseModel}}；右「业务知识网络」模型：{{knModel}}",
+      modelLine: "「{{label}}」模型：{{model}}",
       overview: "会话总览",
       metricHeader: "指标",
-      baseHeader: "基础数据",
-      knHeader: "业务知识网络",
       totalTokens: "总 token",
       totalDuration: "总耗时",
       rounds: "轮数",
       totalToolCalls: "工具调用合计",
       invalidRounds: "无效轮次(无答/停止/出错)",
       roundTitle: "第 {{round}} 轮",
-      questionBoth: "左：{{baseQuestion}} ／ 右：{{knQuestion}}",
+      questionPerSide: "{{label}}：{{question}}",
       duration: "耗时",
       toolCalls: "工具调用",
       result: "结果",
-      baseAnswerTitle: "基础数据 · 回答",
-      knAnswerTitle: "业务知识网络 · 回答",
+      answerTitle: "{{label}} · 回答",
       aiSummary: "AI 总结",
       paneBriefTitle: "{{label}}（模型 {{model}}；会话累计 {{tokens}} tokens · {{duration}}）",
       paneBriefRound:
@@ -111,7 +116,7 @@ export const agentChatPart = {
       copySuccess: "报告 Markdown 已复制",
       copyFailed: "复制失败",
       downloadName: "对比报告-{{knId}}-{{stamp}}.md",
-      emptyDialog: "两侧还没有对话。先用「两侧同问」发一个问题，再来看对比报告。",
+      emptyDialog: "各侧还没有对话。先用「全部同问」发一个问题，再来看对比报告。",
       overviewRounds: "会话总览（{{rounds}} 轮）",
       model: "模型",
       averagePerRound: "平均每轮",
@@ -122,7 +127,7 @@ export const agentChatPart = {
       regenerateSummary: "重新生成",
       generating: "生成中…",
       thinking: "评审模型思考中…",
-      summaryHint: "用右侧模型对全部轮次做正确性 / 依据 / 效率评审。",
+      summaryHint: "用能力最强那侧的模型对全部轮次做正确性 / 依据 / 效率评审。",
     },
     managedTurns: {
       loadSummary: "载入知识网络摘要",
@@ -130,16 +135,14 @@ export const agentChatPart = {
     placeholders: {
       noLlm: "请先在「模型工厂」接入大模型后再对话",
       askAgent: "向 Agent 提问，例如：{{suggestion}}",
-      both: "同一个问题，同时问两侧，对比两种回答",
-      base: "发送给「基础数据」",
-      kn: "发送给「业务知识网络」",
+      all: "同一个问题，同时问 {{count}} 侧，对比各自的回答",
+      side: "发送给「{{label}}」",
     },
     composer: {
       sendTo: "发送到",
-      both: "两侧同问",
-      base: "基础数据",
-      kn: "业务知识网络",
-      reportTitle: "对比两侧最近一轮的回答与指标，可生成 AI 总结",
+      all: "全部同问",
+      sides: "参与对比",
+      reportTitle: "对比各侧最近一轮的回答与指标，可生成 AI 总结",
       report: "对比报告",
       stop: "停止",
       send: "发送",

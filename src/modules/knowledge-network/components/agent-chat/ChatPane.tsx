@@ -104,7 +104,7 @@ const FALLBACK_SUGGESTION_KEYS = [
   "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.links",
 ];
 
-export type PaneKey = "solo" | "base" | "kn";
+export type PaneKey = "solo" | "base" | "kn" | "ptc";
 
 /** Pane profile controlling defaults, context injection, tool selection, and storage keys. */
 export type PaneProfile = {
@@ -213,7 +213,11 @@ export function fmtDuration(ms: number): string {
  * 历史消息同理——两种模式的工具卡片形态不同，混在一条会话里没有意义。
  */
 function paneStorageId(paneKey: PaneKey, toolMode?: "mcp" | "ptc"): string {
-  return toolMode === "ptc" ? `${paneKey}-ptc` : paneKey;
+  // ptc 栏本身就是一个参与方，不需要再挂后缀；后缀只用于同一栏可切两种工具面的
+  // 场景（单栏 solo）。对比模式下 PTC 早期是 kn 栏的一个变体，键为 cmp-kn-ptc，
+  // 现在独立成 cmp-ptc，那批历史不迁移——工具卡片形态相同但身份已变。
+  if (paneKey === "ptc" || toolMode !== "ptc") return paneKey;
+  return `${paneKey}-ptc`;
 }
 
 /** Message-history key; solo keeps the legacy key, compare panes use suffixes. */

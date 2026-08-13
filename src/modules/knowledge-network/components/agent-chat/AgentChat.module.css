@@ -61,6 +61,19 @@
   width: 16px;
   height: 16px;
 }
+/* Participant picker: which modes take part in the comparison. */
+.sidePicker {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--txt);
+  font-size: 13px;
+}
+.sidePicker :global(.ant-checkbox-wrapper) {
+  color: var(--txt);
+  font-size: 13px;
+}
 .cmpReport {
   flex: 0 0 auto;
   display: inline-flex;
@@ -309,7 +322,7 @@
   justify-content: center;
 }
 .pane {
-  /* Equal zero-basis tracks keep both sides at 50/50 regardless of content. */
+  /* Equal zero-basis tracks keep every participant the same width — 50/50 for two, thirds for three. */
   flex: 1 1 0;
   min-width: 0;
 }
