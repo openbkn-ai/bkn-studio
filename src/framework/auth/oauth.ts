@@ -427,7 +427,7 @@ export async function refreshOAuthTokens(): Promise<string | null> {
   }
 }
 
-export async function logout(mode: "hosted" | "standalone") {
+export function logout(mode: "hosted" | "standalone") {
   const idToken = getStoredIdToken();
   const accessToken = getStoredAccessToken();
 
@@ -440,6 +440,7 @@ export async function logout(mode: "hosted" | "standalone") {
     void fetch("/api/safe/v1/me/logout", {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
+      keepalive: true,
     }).catch(() => {});
   }
 
@@ -452,7 +453,7 @@ export async function logout(mode: "hosted" | "standalone") {
   if (!shouldUseOAuthGate(mode)) {
     // Mock / hosted mode has no hydra session to revoke.
     window.location.assign(getAppHomePath());
-    return;
+    return Promise.resolve();
   }
 
   const params = new URLSearchParams({
@@ -463,4 +464,5 @@ export async function logout(mode: "hosted" | "standalone") {
   }
 
   window.location.assign(`${gatewayOrigin()}${LOGOUT_PATH}?${params.toString()}`);
+  return Promise.resolve();
 }

@@ -134,6 +134,7 @@ describe("oauth", () => {
       expect.objectContaining({
         method: "POST",
         headers: { Authorization: "Bearer access-for-logout" },
+        keepalive: true,
       }),
     );
   });
