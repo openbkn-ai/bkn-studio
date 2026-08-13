@@ -435,14 +435,12 @@ export async function logout(mode: "hosted" | "standalone") {
   // Trace: it captures the platform access action and the server associates it
   // with the authenticated user before the browser session is cleared.
   if (shouldUseOAuthGate(mode) && accessToken) {
-    try {
-      await fetch("/api/safe/v1/me/logout", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-    } catch {
-      // Logout must remain available if the audit endpoint is temporarily down.
-    }
+    // Access auditing is best effort: it must never hold the session tokens or
+    // prevent the browser from completing the explicit logout.
+    void fetch("/api/safe/v1/me/logout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }).catch(() => {});
   }
 
   clearStoredTokens();

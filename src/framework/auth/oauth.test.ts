@@ -137,6 +137,19 @@ describe("oauth", () => {
       }),
     );
   });
+
+  it("does not block logout when the access audit request never resolves", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    document.cookie = "bkn_access_token=access-for-pending-audit; path=/";
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
+
+    await expect(
+      Promise.race([
+        logout("standalone"),
+        new Promise((resolve) => window.setTimeout(() => resolve("timed-out"), 25)),
+      ]),
+    ).resolves.not.toBe("timed-out");
+  });
 });
 
 // Regression: forced first-login password change. The user sits on the
