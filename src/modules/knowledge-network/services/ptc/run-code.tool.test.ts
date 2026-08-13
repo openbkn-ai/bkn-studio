@@ -47,7 +47,7 @@ describe("buildPtcTools", () => {
   // http 客户端的 baseURL 已经是 /api；早期版本又拼了一次，请求落到
   // /api/api/agent-operator-integration/v1/function/execute 上，返回 404。
   it("执行工厂路径不带重复的 /api", async () => {
-    const post = vi.spyOn(http, "post").mockResolvedValue({ data: { stdout: "ok", exit_code: 0 } } as never);
+    const post = vi.spyOn(http, "post").mockResolvedValue({ data: { stdout: "ok", exit_code: 0 } });
 
     await executeOf(build())({ code: "print(1)" });
 
@@ -64,7 +64,7 @@ describe("buildPtcTools", () => {
   });
 
   it("stub 与模型代码一起下发，凭据和会话上下文走 event", async () => {
-    const post = vi.spyOn(http, "post").mockResolvedValue({ data: { stdout: "ok", exit_code: 0 } } as never);
+    const post = vi.spyOn(http, "post").mockResolvedValue({ data: { stdout: "ok", exit_code: 0 } });
 
     await executeOf(build())({ code: "print(1)" });
 
@@ -84,7 +84,7 @@ describe("buildPtcTools", () => {
   it("失败时把 stderr 一并回传", async () => {
     vi.spyOn(http, "post").mockResolvedValue({
       data: { stdout: "部分输出", stderr: "ToolError: 字段不存在", exit_code: 1 },
-    } as never);
+    });
 
     const result = await executeOf(build())({ code: "print(1)" });
 
@@ -98,7 +98,7 @@ describe("buildPtcTools", () => {
   it("沙箱报 401 时代为续期并提示可重跑", async () => {
     vi.spyOn(http, "post").mockResolvedValue({
       data: { stdout: "", stderr: "HTTP Error 401: Unauthorized", exit_code: 1 },
-    } as never);
+    });
     const refresh = vi.fn().mockResolvedValue("fresh-token");
 
     const result = await executeOf(
@@ -110,7 +110,7 @@ describe("buildPtcTools", () => {
   });
 
   it("每次执行都取当前令牌，不用构造时的快照", async () => {
-    const post = vi.spyOn(http, "post").mockResolvedValue({ data: { stdout: "ok", exit_code: 0 } } as never);
+    const post = vi.spyOn(http, "post").mockResolvedValue({ data: { stdout: "ok", exit_code: 0 } });
     let current = "t1";
 
     const tools = build({ tokenProvider: { getToken: () => current, refresh: () => Promise.resolve(current) } });
