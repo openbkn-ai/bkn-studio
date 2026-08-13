@@ -61,7 +61,7 @@ export const shellZhCN = {
       traceAnalysis: "Trace 分析",
       observabilityLogs: "日志检索",
       observabilitySettings: "可观测性设置",
-      logManagement: "日志管理",
+      logManagement: "审计日志",
       apiKeys: "API Key",
       account: "个人中心",
       installStatus: "后端服务状态",

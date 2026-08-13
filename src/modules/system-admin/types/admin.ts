@@ -124,7 +124,6 @@ export type UpdateUserInput = {
   email: string;
   enabled: boolean;
   name: string;
-  roleIds: string[];
   telephone: string;
 };
 

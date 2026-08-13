@@ -14,7 +14,7 @@ import { authzPoints, systemAdminPermissions } from "@/modules/system-admin/perm
 import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
 
 /**
- * Grants for the three administrator roles in bkn-safe seed data (grants.json after bkn-foundry PR #474).
+ * Grants for the three administrator roles in the current bkn-safe seed data (grants.json).
  * Use the real seed shape rather than invented data so frontend visibility matches production behavior.
  */
 type SeedGrant = { operations: string[]; resource: { id: string; type: string } };

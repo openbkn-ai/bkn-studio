@@ -6,7 +6,7 @@
  */
 
 import { Drawer, Form, Input, Spin, Tag, TreeSelect } from "antd";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -110,7 +110,6 @@ export function UserFormDrawer({
   const [deptIds, setDeptIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [seeding, setSeeding] = useState(false);
-  const preservedRoleIds = useRef<string[]>([]);
   const isEdit = Boolean(user);
 
   // TreeSelect uses a real tree (not flat indents).
@@ -120,7 +119,6 @@ export function UserFormDrawer({
     if (!open) {
       return;
     }
-    preservedRoleIds.current = [];
     form.setFieldsValue({
       account: user?.account ?? "",
       name: user?.name ?? "",
@@ -130,7 +128,6 @@ export function UserFormDrawer({
     });
     setDeptIds(user?.departmentIds ?? []);
     if (user) {
-      preservedRoleIds.current = user.roleIds ?? [];
       setSeeding(true);
       void getUser(user.id)
         .then((detail) => {
@@ -141,7 +138,6 @@ export function UserFormDrawer({
             telephone: detail.telephone,
           });
           setDeptIds(detail.departmentIds ?? []);
-          preservedRoleIds.current = detail.roleIds ?? [];
         })
         .catch(() => undefined)
         .finally(() => setSeeding(false));
@@ -165,7 +161,6 @@ export function UserFormDrawer({
               telephone: values.telephone.trim(),
               enabled: user.enabled,
               departmentIds: deptIds,
-              roleIds: preservedRoleIds.current,
             },
             { skipErrorToast: true },
           );

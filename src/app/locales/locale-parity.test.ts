@@ -21,6 +21,11 @@ describe("app locale parity", () => {
   it("has no Chinese-only translation keys", () => {
     expect(difference(zhKeys, enKeys)).toEqual([]);
   });
+
+  it("names the system management entry as audit logs", () => {
+    expect(zhCN.shell.items.logManagement).toBe("审计日志");
+    expect(enUS.shell.items.logManagement).toBe("Audit Logs");
+  });
 });
 
 function flattenLocaleKeys(value: unknown, prefix = ""): string[] {

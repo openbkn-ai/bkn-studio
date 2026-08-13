@@ -59,7 +59,7 @@ export const shellEnUS = {
       traceAnalysis: "Trace Analysis",
       observabilityLogs: "Log Search",
       observabilitySettings: "Observability Settings",
-      logManagement: "Log Management",
+      logManagement: "Audit Logs",
       apiKeys: "API Key",
       account: "Account",
       installStatus: "Backend Service Status",
