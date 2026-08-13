@@ -7,7 +7,6 @@
 
 export { runningIdsFromError } from "@/framework/safety/delete-guard";
 export {
-  catalogBlastRadius,
   resourceBlastRadius,
   type CatalogBlastRadius as BlastRadius,
 } from "@/shared/catalog";

@@ -93,10 +93,18 @@ export const dataConnectZhCN = {
     disableConfirmDescription:
       '确认停用“{{name}}”吗？停用后该连接将不可用于探查与数据访问。',
     dangerDelete: {
-      hasRunning: "有构建任务正在运行,请先停止再删除。",
-      catalogImpact: "连接「{{name}}」下已构建 {{count}} 个索引。",
-      impactWarning: "删除将一并删除全部索引和构建任务,且不可恢复。",
-      catalogEmpty: "连接「{{name}}」下暂无已构建的索引,删除不可恢复。",
+      blockedTitle: "当前无法删除数据连接",
+      blockedWarning: "请先处理受保护资源或等待运行中的任务结束，然后重新预检。",
+      catalogImpact: "删除连接「{{name}}」将产生以下影响：",
+      resources: "资源：{{count}} 个（其中受保护资源 {{protected}} 个）",
+      schedules: "计划：探查 {{discover}} 个，健康检查 {{health}} 个",
+      buildTasks: "构建任务：取消待执行 {{willCancel}} 个，阻断 {{blocking}} 个",
+      discoverTasks: "探查任务：取消待执行 {{willCancel}} 个，阻断 {{blocking}} 个",
+      semanticUnderstandingTasks:
+        "语义理解任务：取消待执行 {{willCancel}} 个，阻断 {{blocking}} 个",
+      impactWarning:
+        "资源和计划将被删除，待执行任务将标记为已取消；任务历史和索引不会在此流程中删除。",
+      catalogEmpty: "连接「{{name}}」下没有需要级联处理的对象，删除仍不可恢复。",
     },
     discoverManage: "探查",
     discoverTitle: "探查管理",
@@ -197,6 +205,7 @@ export const dataConnectZhCN = {
       running: "执行中",
       completed: "已完成",
       failed: "已失败",
+      cancelled: "已取消",
     },
     discoverTriggerTypes: {
       manual: "手动",

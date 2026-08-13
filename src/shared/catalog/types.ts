@@ -47,6 +47,30 @@ export type CatalogMutationOptions = {
   skipErrorToast?: boolean;
 };
 
+export type CatalogDeletionBlocker =
+  | "build_tasks_running_or_stopping"
+  | "discover_tasks_running"
+  | "protected_resources"
+  | "semantic_understanding_tasks_running";
+
+export type CatalogDeletionTaskImpact = {
+  blocking: number;
+  willCancel: number;
+};
+
+export type CatalogDeletionImpact = {
+  blockers: CatalogDeletionBlocker[];
+  buildTasks: CatalogDeletionTaskImpact;
+  canDelete: boolean;
+  catalogHealthCheckSchedules: number;
+  catalogId: string;
+  discoverSchedules: number;
+  discoverTasks: CatalogDeletionTaskImpact;
+  protectedResources: number;
+  resources: number;
+  semanticUnderstandingTasks: CatalogDeletionTaskImpact;
+};
+
 export type CatalogRecord = {
   category: string;
   connectorConfig: Record<string, unknown>;

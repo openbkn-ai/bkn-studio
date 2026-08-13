@@ -46,6 +46,8 @@ describe("build-task-guards", () => {
     expect(isActiveBuildTask(task("running"))).toBe(true);
     expect(isActiveBuildTask(task("listening"))).toBe(true);
     expect(isActiveBuildTask(task("paused"))).toBe(false);
+    expect(isActiveBuildTask(task("stopping"))).toBe(true);
+    expect(isActiveBuildTask(task("cancelled"))).toBe(false);
     expect(isActiveBuildTask(task("succeeded"))).toBe(false);
     expect(isActiveBuildTask(null)).toBe(false);
   });

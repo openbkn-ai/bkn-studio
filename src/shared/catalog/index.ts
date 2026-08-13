@@ -8,6 +8,9 @@
 export type {
   CatalogConnectionTestInput,
   CatalogConnectionTestResult,
+  CatalogDeletionBlocker,
+  CatalogDeletionImpact,
+  CatalogDeletionTaskImpact,
   CatalogHealthCheckSchedule,
   CatalogHealthCheckScheduleInput,
   CatalogHealthCheckScheduleMode,
@@ -29,6 +32,7 @@ export {
   getCatalogHealthCheckSchedule,
   getCatalog,
   listCatalogs,
+  previewCatalogDeletion,
   setCatalogEnabled,
   testCatalogConnection,
   testCatalogConnectionConfig,
@@ -38,7 +42,6 @@ export {
 } from "@/shared/catalog/catalog.service";
 
 export {
-  catalogBlastRadius,
   resourceBlastRadius,
   type CatalogBlastRadius,
 } from "@/shared/catalog/blast-radius";

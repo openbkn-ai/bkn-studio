@@ -46,7 +46,11 @@ export function indexStateOf(tasks: BuildTask[]): IndexState {
     return { key: "none", latest: null, effective: null };
   }
 
-  if (latest.status === "running" || latest.status === "pending") {
+  if (
+    latest.status === "running" ||
+    latest.status === "pending" ||
+    latest.status === "stopping"
+  ) {
     return {
       key: effective && effective.id !== latest.id ? "rebuilding" : "building",
       latest,
@@ -63,6 +67,19 @@ export function indexStateOf(tasks: BuildTask[]): IndexState {
   }
 
   if (latest.status === "succeeded") {
+    return { key: "built", latest, effective };
+  }
+
+  if (latest.status === "cancelled") {
+    if (!effective) {
+      return { key: "none", latest, effective };
+    }
+    if (effective.status === "listening") {
+      return { key: "listening", latest, effective };
+    }
+    if (effective.status === "paused") {
+      return { key: "paused", latest, effective };
+    }
     return { key: "built", latest, effective };
   }
 

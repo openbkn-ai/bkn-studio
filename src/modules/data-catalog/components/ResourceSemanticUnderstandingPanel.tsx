@@ -91,7 +91,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
 
   const columns = [
     { dataIndex: "id", title: t("dataCatalog.taskManagement.columns.task"), ellipsis: true },
-    { dataIndex: "status", title: t("common.status"), render: (value: string) => <Tag color={value === "failed" ? "error" : value === "succeeded" ? "success" : "processing"}>{t(`dataCatalog.taskManagement.semanticStatus.${value}`)}</Tag> },
+    { dataIndex: "status", title: t("common.status"), render: (value: string) => <Tag color={value === "failed" ? "error" : value === "succeeded" ? "success" : value === "cancelled" ? "default" : "processing"}>{t(`dataCatalog.taskManagement.semanticStatus.${value}`)}</Tag> },
     { dataIndex: "applyMode", title: t("dataCatalog.taskManagement.columns.applyMode"), render: (value: string) => t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`) },
     { dataIndex: "confidence", title: t("dataCatalog.taskManagement.columns.confidence"), render: (value: number) => `${Math.round(value * 100)}%` },
     { dataIndex: "applied", title: t("dataCatalog.taskManagement.columns.applied"), render: (value: boolean) => <Tag color={value ? "success" : "default"}>{t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied")}</Tag> },

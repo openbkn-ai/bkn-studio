@@ -13,6 +13,7 @@ export const ACTIVE_BUILD_TASK_STATUSES = new Set<BuildTask["status"]>([
   "pending",
   "running",
   "listening",
+  "stopping",
 ]);
 
 export function isActiveBuildTask(task: BuildTask | null | undefined): boolean {

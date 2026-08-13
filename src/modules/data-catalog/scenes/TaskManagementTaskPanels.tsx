@@ -256,7 +256,7 @@ export function DiscoverTaskListPanel() {
     },
     { dataIndex: "strategy", title: t("dataCatalog.taskManagement.columns.strategy"), width: 130, render: (value) => t(`dataConnect.discoverStrategies.${value}`) },
     { dataIndex: "triggerType", title: t("dataCatalog.taskManagement.columns.trigger"), width: 120, render: (value) => t(`dataConnect.discoverTriggerTypes.${value}`) },
-    { dataIndex: "status", title: t("common.status"), width: 120, render: (value) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : "processing"}>{t(`dataConnect.discoverTaskStatuses.${value}`)}</Tag> },
+    { dataIndex: "status", title: t("common.status"), width: 120, render: (value) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : value === "cancelled" ? "default" : "processing"}>{t(`dataConnect.discoverTaskStatuses.${value}`)}</Tag> },
     {
       dataIndex: "progress",
       title: t("dataCatalog.task.progress"),
@@ -312,7 +312,7 @@ export function DiscoverTaskListPanel() {
       <Select allowClear className={styles.select} filterOption={false} onSearch={setCatalogKeyword} options={catalogs.map((item) => ({ label: item.name, value: item.id }))} placeholder={t("dataCatalog.resource.catalog")} showSearch value={catalogId} onChange={(value) => { setCatalogId(value); setPage(1); }} />
       <Select allowClear className={styles.select} options={["full_sync", "create_only", "cleanup_only"].map((value) => ({ label: t(`dataConnect.discoverStrategies.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.strategy")} value={strategy} onChange={(value) => { setStrategy(value); setPage(1); }} />
       <Select allowClear className={styles.select} options={["manual", "scheduled"].map((value) => ({ label: t(`dataConnect.discoverTriggerTypes.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.trigger")} value={triggerType} onChange={(value) => { setTriggerType(value); setPage(1); }} />
-      <Select allowClear className={styles.select} options={["pending", "running", "completed", "failed"].map((value) => ({ label: t(`dataConnect.discoverTaskStatuses.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />
+      <Select allowClear className={styles.select} options={["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ label: t(`dataConnect.discoverTaskStatuses.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />
     </Space></div>
     <TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.discover.empty")} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />
     <Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize); }} />
@@ -465,7 +465,7 @@ export function SemanticUnderstandingTaskListPanel() {
           "-"
         ),
     },
-    { dataIndex: "status", title: t("common.status"), width: 120, render: (value) => <Tag color={value === "succeeded" ? "success" : value === "failed" ? "error" : "processing"}>{t(`dataCatalog.taskManagement.semanticStatus.${value}`)}</Tag> },
+    { dataIndex: "status", title: t("common.status"), width: 120, render: (value) => <Tag color={value === "succeeded" ? "success" : value === "failed" ? "error" : value === "cancelled" ? "default" : "processing"}>{t(`dataCatalog.taskManagement.semanticStatus.${value}`)}</Tag> },
     {
       dataIndex: "applyMode",
       title: t("dataCatalog.taskManagement.columns.applyMode"),
@@ -542,7 +542,7 @@ export function SemanticUnderstandingTaskListPanel() {
   return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
     <Select allowClear className={styles.select} filterOption={false} onSearch={setCatalogKeyword} options={catalogs.map((item) => ({ label: item.name, value: item.id }))} placeholder={t("dataCatalog.resource.catalog")} showSearch value={catalogId} onChange={(value) => { setCatalogId(value); setResourceId(undefined); setPage(1); }} />
     <Select allowClear className={styles.select} disabled={scope === "catalog"} filterOption={false} onSearch={setResourceKeyword} options={resourceOptions} placeholder={t("dataCatalog.build.resource")} showSearch value={resourceId} onChange={(value) => { setResourceId(value); setPage(1); }} />
-    <Select allowClear className={styles.select} options={["pending", "running", "succeeded", "failed"].map((value) => ({ label: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />
+    <Select allowClear className={styles.select} options={["pending", "running", "succeeded", "failed", "cancelled"].map((value) => ({ label: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />
     <Popover content={advancedFilters} trigger="click"><AppButton icon={<FilterOutlined />}>{moreFiltersLabel}</AppButton></Popover>
   </Space></div><TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize); }} />{detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}</TaskPanel>;
 }

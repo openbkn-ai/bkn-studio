@@ -11,6 +11,7 @@ export type DataConnectDiscoverStrategy =
   | "full_sync";
 
 export type DataConnectDiscoverTaskStatus =
+  | "cancelled"
   | "completed"
   | "failed"
   | "pending"

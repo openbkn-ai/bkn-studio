@@ -98,12 +98,20 @@ export const dataConnectEnUS = {
     disableConfirmDescription:
       'Disable "{{name}}"? Discovery and data access for this connection will be unavailable.',
     dangerDelete: {
-      hasRunning: "A build task is still running. Stop it before deleting.",
-      catalogImpact: "Connection \"{{name}}\" has {{count}} index(es) built.",
+      blockedTitle: "Data connection cannot be deleted",
+      blockedWarning:
+        "Resolve protected resources or wait for running tasks to finish, then run the preflight again.",
+      catalogImpact: "Deleting connection \"{{name}}\" has the following impact:",
+      resources: "Resources: {{count}} ({{protected}} protected)",
+      schedules: "Schedules: {{discover}} discover, {{health}} health check",
+      buildTasks: "Build tasks: cancel {{willCancel}} pending, {{blocking}} blocking",
+      discoverTasks: "Discover tasks: cancel {{willCancel}} pending, {{blocking}} blocking",
+      semanticUnderstandingTasks:
+        "Semantic tasks: cancel {{willCancel}} pending, {{blocking}} blocking",
       impactWarning:
-        "Deleting will also remove all indexes and build tasks, and cannot be undone.",
+        "Resources and schedules will be deleted, and pending tasks will be cancelled. Task history and indexes are not deleted by this operation.",
       catalogEmpty:
-        "Connection \"{{name}}\" has no built indexes. Deletion cannot be undone.",
+        "Connection \"{{name}}\" has no cascading objects. Deletion still cannot be undone.",
     },
     discoverManage: "Discover",
     discoverTitle: "Discover Management",
@@ -208,6 +216,7 @@ export const dataConnectEnUS = {
       running: "Running",
       completed: "Completed",
       failed: "Failed",
+      cancelled: "Cancelled",
     },
     discoverTriggerTypes: {
       manual: "Manual",
