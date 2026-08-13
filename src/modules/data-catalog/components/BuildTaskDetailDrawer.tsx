@@ -391,7 +391,7 @@ export function BuildTaskDetailDrawer({
               {task.updateTime ? formatDateTime(task.updateTime) : "—"}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>
-              {task.finishTime ?? "—"}
+              {task.finishTime ? formatDateTime(task.finishTime) : "—"}
             </Descriptions.Item>
           </Descriptions>
         </section>

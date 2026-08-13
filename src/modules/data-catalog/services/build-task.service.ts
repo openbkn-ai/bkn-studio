@@ -11,7 +11,6 @@ import { http } from "@/framework/request/http";
 import {
   emitMockChange,
   ensureMockTicker,
-  formatMockTimestamp,
   mockBuildTasks,
   mockResources,
   mockSlug,
@@ -301,7 +300,7 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     createTime,
     finishTime:
       (status === "succeeded" || status === "failed" || status === "cancelled") && item.update_time
-        ? formatMockTimestamp(item.update_time)
+        ? item.update_time
         : null,
     updateTime: item.update_time,
     lastEventAt: mode === "streaming" ? (item.update_time ?? null) : null,

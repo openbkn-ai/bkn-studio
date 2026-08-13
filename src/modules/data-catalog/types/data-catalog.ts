@@ -151,7 +151,8 @@ export type BuildTask = {
   error: string | null;
   /** Backend failure_detail containing the detailed reason for vectorization failure, shown in a tooltip. */
   failureDetail: string;
-  finishTime: string | null;
+  /** Completion time derived from update_time for terminal tasks. */
+  finishTime: number | null;
   id: string;
   /** Actual backend index health (index_health). Legacy mock data may omit it, so components fall back to embeddingDegraded. */
   indexHealth?: IndexHealth;

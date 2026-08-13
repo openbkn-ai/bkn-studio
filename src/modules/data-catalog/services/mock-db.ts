@@ -208,7 +208,7 @@ function makeTask(
     failureDetail: input.failureDetail ?? input.error ?? "",
     indexUsable: input.indexUsable ?? (indexed && !embeddingDegraded),
     updateTime: input.updateTime ?? input.lastEventAt ?? input.finishedAt ?? input.createTime,
-    finishTime: input.finishedAt ? formatMockTimestamp(input.finishedAt) : null,
+    finishTime: input.finishedAt ?? null,
   };
 }
 
@@ -468,7 +468,7 @@ function tick() {
       ) {
         task.status = "succeeded";
         const finishedAt = task.updateTime;
-        task.finishTime = formatMockTimestamp(finishedAt);
+        task.finishTime = finishedAt;
         const resource = mockResources.find((item) => item.id === task.resourceId);
         if (resource) {
           resource.updatedAt = finishedAt;

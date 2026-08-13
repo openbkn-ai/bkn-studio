@@ -140,7 +140,7 @@ function buildStatusSummary(
   } else if (effective.finishTime) {
     parts.push(
       t("dataCatalog.indexWorkspace.finishedAtShort", {
-        time: effective.finishTime,
+        time: formatDateTime(effective.finishTime),
       }),
     );
   }

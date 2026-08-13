@@ -63,13 +63,21 @@ describe("mapBuildTask", () => {
     const task = mapBuildTask({
       create_time: 100,
       id: "task-1",
+      status: "completed",
       update_time: 200,
     });
 
     expect(task.createTime).toBe(100);
+    expect(task.finishTime).toBe(200);
     expect(task.updateTime).toBe(200);
     expect(task).not.toHaveProperty("createdAt");
     expect(task).not.toHaveProperty("updatedAt");
+  });
+
+  it("does not expose update time as finish time for an active task", () => {
+    const task = mapBuildTask({ id: "task-1", status: "running", update_time: 200 });
+
+    expect(task.finishTime).toBeNull();
   });
 
   it("retains the persisted batch execute type", () => {
