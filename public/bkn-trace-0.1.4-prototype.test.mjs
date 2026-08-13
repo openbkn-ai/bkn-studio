@@ -79,20 +79,19 @@ test("Agent 建议原型明确缺少核验证据而不补造", () => {
 
 test("Conversation 源事实只定位业务会话，不伪造调用详情", () => {
   assert.match(logsHtml, /打开业务会话/);
-  assert.match(logsHtml, /统一操作审计事件尚未生成/);
+  assert.match(logsHtml, /Agent 业务会话日志/);
+  assert.match(logsHtml, /source_fact_type:x\.conversationID\?"bkn_trace_conversation"/);
   assert.doesNotMatch(logsHtml, /查看业务调用详情/);
 });
 
 test("日志检索提供完整业务模块筛选且不补造空模块记录", () => {
   [
-    "认证与账号", "用户与组织", "权限与授权", "API Key", "License", "Agent 会话",
-    "知识网络管理", "数据资源管理", "数据治理", "Agent 管理", "Skill 管理", "模型管理",
-    "工具管理", "可观测性管理",
+    "领域知识网络", "可观测性", "执行工厂", "数据资源知识网络", "模型管理", "系统管理",
   ].forEach((label) => assert.match(logsHtml, new RegExp(`>${label}<`)));
   assert.match(logsHtml, /id="log-start"/);
   assert.match(logsHtml, /id="log-end"/);
   assert.match(logsHtml, /当前时间范围内没有操作日志/);
-  assert.match(logsHtml, /Conversation 源事实/);
+  assert.match(logsHtml, /Agent 业务会话日志/);
   assert.match(logsHtml, /打开业务会话/);
 });
 
