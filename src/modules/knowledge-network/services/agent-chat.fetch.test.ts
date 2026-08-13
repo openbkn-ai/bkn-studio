@@ -10,8 +10,9 @@
  * either hits a busy gateway unnecessarily or buffers a whole streaming response and destroys typing behavior.
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
 import { makeAuthedFetch } from "@/modules/knowledge-network/services/agent-chat.service";
 
 const provider = { getToken: () => "t", refresh: () => Promise.resolve("t") };
@@ -32,12 +33,27 @@ function neverEndingStream(contentType: string | null): Response {
   });
 }
 
+beforeEach(() => {
+  setRuntimeConfig(createRuntimeConfig({ locale: "en-US" }));
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  setRuntimeConfig(createRuntimeConfig());
 });
 
 describe("makeAuthedFetch 退避重试", () => {
+  it("uses the current UI locale for every gateway request", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { choices: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await makeAuthedFetch(provider)("https://example.test/v1/chat/completions", { method: "POST" });
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).get("Accept-Language")).toBe("en-US");
+  });
+
   it("200 裹着可重试业务码时重试，拿到成功响应就停", async () => {
     const busy = { code: "X", description: '{"code":50508,"message":"System is too busy now."}' };
     const fetchMock = vi
@@ -117,5 +133,6 @@ describe("makeAuthedFetch 退避重试", () => {
     expect(response.status).toBe(200);
     const retried = fetchMock.mock.calls[1][1] as RequestInit;
     expect(new Headers(retried.headers).get("Authorization")).toBe("Bearer fresh");
+    expect(new Headers(retried.headers).get("Accept-Language")).toBe("en-US");
   });
 });

@@ -12,6 +12,8 @@
  * Send Request performs real HTTP calls, same-origin by default to avoid CORS.
  */
 
+import { getRuntimeConfig } from "@/framework/runtime/config";
+
 export type ContextLoaderMode = "agent" | "rest" | "mcp";
 
 export type OpQueryParam = {
@@ -38,6 +40,10 @@ export const REST_PREFIX = "/api/agent-retrieval/v1";
 
 /** MCP endpoint; the gateway route is /api/agent-retrieval/v1/mcp, not root /mcp. */
 export const MCP_PATH = "/api/agent-retrieval/v1/mcp/";
+
+function languageHeaders(): Record<"Accept-Language", string> {
+  return { "Accept-Language": getRuntimeConfig().locale };
+}
 
 export type RequestDataAssistantKind = "concept-group" | "object-type" | "resource" | "relation";
 
@@ -563,7 +569,7 @@ export function buildCurl(
 ): string {
   if (mode === "mcp") {
     const url = mcpBase(env);
-    const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...authHeaders(env) };
+    const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...languageHeaders(), ...authHeaders(env) };
     const args = mcpCallArgs(bodyText, queryValues, bknContext);
     const payload = { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: op.id, arguments: args } };
     let curl = `curl -X POST '${url}'`;
@@ -574,7 +580,7 @@ export function buildCurl(
     return curl;
   }
   const url = buildRestUrl(env, op, queryValues);
-  const headers = { "Content-Type": "application/json", ...authHeaders(env) };
+  const headers = { "Content-Type": "application/json", ...languageHeaders(), ...authHeaders(env) };
   let curl = `curl -X POST '${url}'`;
   Object.entries(headers).forEach(([key, value]) => {
     curl += ` \\\n  -H '${key}: ${value}'`;
@@ -622,6 +628,7 @@ export async function sendRequest(
       const baseHeaders = {
         "Content-Type": "application/json",
         Accept: "application/json, text/event-stream",
+        ...languageHeaders(),
         ...bearer,
       };
       const initResp = await fetch(url, {
@@ -678,7 +685,7 @@ export async function sendRequest(
       };
     }
     const url = buildRestUrl(env, op, queryValues);
-    const headers = { "Content-Type": "application/json", ...bearer };
+    const headers = { "Content-Type": "application/json", ...languageHeaders(), ...bearer };
     const init: RequestInit = { method: "POST", headers, signal };
     if (op.body !== null) {
       init.body = JSON.stringify(withBknContext(strictBodyObject(bodyText), bknContext));
@@ -754,6 +761,7 @@ export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth, signal
     const baseHeaders: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
+      ...languageHeaders(),
     };
     if (token) baseHeaders.Authorization = `Bearer ${token}`;
     const initResp = await fetch(url, {
@@ -924,6 +932,7 @@ export function createMcpSession(env: ContextLoaderEnv, auth?: McpAuth): McpSess
     return {
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
+      ...languageHeaders(),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   };
@@ -1113,7 +1122,7 @@ async function restPost(
   signal?: AbortSignal,
 ): Promise<Response> {
   const doFetch = (token: string) => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const headers: Record<string, string> = { "Content-Type": "application/json", ...languageHeaders() };
     if (token) headers.Authorization = `Bearer ${token}`;
     return fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
   };

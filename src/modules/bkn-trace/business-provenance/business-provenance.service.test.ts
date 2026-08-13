@@ -13,6 +13,7 @@ vi.mock("@/framework/request/http", () => ({ http: { get: getMock, post: postMoc
 vi.mock("@/framework/runtime/config", () => ({
   getRuntimeConfig: () => ({
     apiBaseUrl: "/api",
+    locale: "en-US",
     currentUser: { businessDomainId: "bd_demo" },
     auth: { tokenManager: { getAccessToken: () => "token", refreshAccessToken: vi.fn() } },
   }),
@@ -88,7 +89,7 @@ describe("EE business provenance service", () => {
     expect(tokens).toEqual(["正在分析"]);
     const request = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(request[0]).toBe("/api/agent-observability/v1/business-provenance/interactions/int-1/analysis");
-    expect(request[1]).toMatchObject({ method: "POST", body: JSON.stringify({ markdown: "# 已确认 Markdown" }), headers: { Authorization: "Bearer token", Accept: "text/event-stream", "Content-Type": "application/json" } });
+    expect(request[1]).toMatchObject({ method: "POST", body: JSON.stringify({ markdown: "# 已确认 Markdown" }), headers: { Authorization: "Bearer token", Accept: "text/event-stream", "Accept-Language": "en-US", "Content-Type": "application/json" } });
   });
 
   it("shows the normalized stream failure without exposing an empty result", async () => {
