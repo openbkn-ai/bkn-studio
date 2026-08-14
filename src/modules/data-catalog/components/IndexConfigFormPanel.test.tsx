@@ -167,7 +167,9 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull());
+    fireEvent.mouseDown(screen.getAllByRole("combobox")[0]);
+    await screen.findByText("dataCatalog.build.analyzers.english");
     expect(screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")).toBeNull();
   });
 
