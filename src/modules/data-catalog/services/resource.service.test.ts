@@ -33,6 +33,9 @@ describe("resource.service · previewCatalogResource", () => {
     const { previewCatalogResource } = await import(
       "@/modules/data-catalog/services/resource.service"
     );
+    const { transformVegaDynamicDataResponse } = await import(
+      "@/framework/request/vega-bigint"
+    );
 
     const result = await previewCatalogResource("r-1", { limit: 10, offset: 20 });
 
@@ -42,7 +45,10 @@ describe("resource.service · previewCatalogResource", () => {
         need_total: true,
         paging: { limit: 10, mode: "single", offset: 20 },
       },
-      { headers: { "X-HTTP-Method-Override": "GET" } },
+      {
+        headers: { "X-HTTP-Method-Override": "GET" },
+        transformResponse: transformVegaDynamicDataResponse,
+      },
     );
     expect(result).toEqual({ rows: [{ id: "r-1" }], total: 42 });
   });
