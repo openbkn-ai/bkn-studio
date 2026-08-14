@@ -173,6 +173,7 @@ export const dataConnectEnUS = {
     discoverProgress: "Progress",
     discoverMessage: "Message",
     discoverFinishTime: "Finish Time",
+    discoverLastProgressTime: "Last Progress Update",
     discoverScheduleTableTitle: "Discover Plans",
     discoverTaskTableTitle: "Recent Tasks",
     discoverSelectedSchedule: 'Current schedule filter: "{{name}}"',

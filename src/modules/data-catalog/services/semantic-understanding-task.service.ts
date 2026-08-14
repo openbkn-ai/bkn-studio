@@ -30,8 +30,9 @@ export type SemanticUnderstandingTaskSummary = {
   resourceId?: string;
   resourceName?: string;
   scope: "catalog" | "resource";
+  finishTime?: number;
+  startTime?: number;
   status: SemanticUnderstandingTaskStatus;
-  updateTime?: number;
 };
 
 export type SemanticUnderstandingTask = SemanticUnderstandingTaskSummary & {
@@ -60,7 +61,8 @@ export type BackendSemanticUnderstandingTaskSummary = {
   resource_name?: string;
   scope: SemanticUnderstandingTaskSummary["scope"];
   status: "cancelled" | "completed" | "failed" | "pending" | "running";
-  update_time: number;
+  finish_time?: number;
+  start_time?: number;
 };
 
 export type BackendSemanticUnderstandingTask = BackendSemanticUnderstandingTaskSummary & {
@@ -90,7 +92,8 @@ export function mapSemanticUnderstandingTaskSummary(task: BackendSemanticUnderst
     appliedTime: task.applied_time,
     creator: { id: task.creator.id, name: task.creator.name, type: task.creator.type },
     createTime: task.create_time,
-    updateTime: task.update_time,
+    startTime: task.start_time,
+    finishTime: task.finish_time,
   };
 }
 
@@ -101,7 +104,7 @@ export type SemanticUnderstandingTaskListFilters = {
   direction?: "asc" | "desc";
   resourceId?: string;
   scope?: SemanticUnderstandingTaskSummary["scope"];
-  sort?: "create_time";
+  sort?: "create_time" | "start_time" | "finish_time";
   status?: SemanticUnderstandingTaskSummary["status"];
 };
 

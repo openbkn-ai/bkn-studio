@@ -36,7 +36,8 @@ function buildTask(
     failureDetail: "",
     createTime: 1,
     finishTime: null,
-    lastEventAt: null,
+    lastProgressTime: null,
+    startTime: null,
     error: null,
     ...overrides,
   };

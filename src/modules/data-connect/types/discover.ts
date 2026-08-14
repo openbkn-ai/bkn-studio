@@ -18,7 +18,11 @@ export type DataConnectDiscoverTaskStatus =
   | "running";
 
 export type DataConnectDiscoverTaskTriggerType = "manual" | "scheduled";
-export type DataConnectDiscoverTaskSort = "create_time";
+export type DataConnectDiscoverTaskSort =
+  | "create_time"
+  | "start_time"
+  | "finish_time"
+  | "last_progress_time";
 
 export type DataConnectDiscoverSchedule = {
   catalogId: string;
@@ -49,6 +53,7 @@ export type DataConnectDiscoverTask = {
   creatorName: string;
   finishTime?: number;
   id: string;
+  lastProgressTime?: number;
   message: string;
   progress: number;
   result?: DataConnectDiscoverResult;

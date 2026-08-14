@@ -264,8 +264,9 @@ export function DiscoverTaskListPanel() {
       onCell: () => ({ className: styles.progressCell }),
       render: (_, record) => <DiscoverTaskProgress task={record} />,
     },
-    { dataIndex: "startTime", title: t("dataCatalog.taskManagement.details.startTime"), width: 180, render: formatTime },
-    { dataIndex: "finishTime", title: t("dataCatalog.task.finishedAt"), width: 180, render: formatTime },
+    { dataIndex: "startTime", key: "start_time", title: t("dataCatalog.taskManagement.details.startTime"), width: 180, sorter: true, sortOrder: sortOrderOf("start_time"), render: formatTime },
+    { dataIndex: "lastProgressTime", key: "last_progress_time", title: t("dataConnect.discoverLastProgressTime"), width: 180, sorter: true, sortOrder: sortOrderOf("last_progress_time"), render: formatTime },
+    { dataIndex: "finishTime", key: "finish_time", title: t("dataCatalog.task.finishedAt"), width: 180, sorter: true, sortOrder: sortOrderOf("finish_time"), render: formatTime },
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
     {
       align: "center",
@@ -494,6 +495,8 @@ export function SemanticUnderstandingTaskListPanel() {
         </Tag>
       ),
     },
+    { dataIndex: "startTime", key: "start_time", title: t("dataCatalog.taskManagement.details.startTime"), width: 180, sorter: true, sortOrder: sortOrderOf("start_time"), render: formatTime },
+    { dataIndex: "finishTime", key: "finish_time", title: t("dataCatalog.task.finishedAt"), width: 180, sorter: true, sortOrder: sortOrderOf("finish_time"), render: formatTime },
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
     {
       align: "center",

@@ -94,7 +94,7 @@ export function BuildProgress({ compact = false, task }: BuildProgressProps) {
       task.status === "paused"
         ? t("dataCatalog.indexState.paused")
         : t("dataCatalog.progress.lastEvent", {
-            time: timeAgo(task.lastEventAt ?? task.createTime, i18n.language),
+            time: timeAgo(task.lastProgressTime ?? task.createTime, i18n.language),
           });
     const content = (
       <div className={wrapClass}>

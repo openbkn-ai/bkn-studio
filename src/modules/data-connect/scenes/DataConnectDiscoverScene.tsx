@@ -452,12 +452,14 @@ export function DataConnectDiscoverScene({
     },
     {
       dataIndex: "startTime",
+      key: "start_time",
       title: t("dataConnect.discoverStartTime"),
       width: 180,
       render: renderTableTime,
     },
     {
       dataIndex: "finishTime",
+      key: "finish_time",
       title: t("dataConnect.discoverFinishTime"),
       width: 180,
       render: renderTableTime,
