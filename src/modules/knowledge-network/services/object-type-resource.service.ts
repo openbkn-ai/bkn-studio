@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { transformVegaDynamicDataResponse } from "@/framework/request/vega-bigint";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 import { listDataConnectConnectorTypes } from "@/modules/data-connect/services/data-connect.service";
 import type {
@@ -313,6 +314,7 @@ export async function getObjectTypeResourcePreview(
         headers: {
           "X-HTTP-Method-Override": "GET",
         },
+        transformResponse: transformVegaDynamicDataResponse,
       },
     ),
   ]);

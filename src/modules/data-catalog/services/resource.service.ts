@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { transformVegaDynamicDataResponse } from "@/framework/request/vega-bigint";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
 import {
@@ -571,7 +572,10 @@ export async function previewCatalogResource(
         offset: query.offset,
       },
     },
-    { headers: { "X-HTTP-Method-Override": "GET" } },
+    {
+      headers: { "X-HTTP-Method-Override": "GET" },
+      transformResponse: transformVegaDynamicDataResponse,
+    },
   );
 
   return {

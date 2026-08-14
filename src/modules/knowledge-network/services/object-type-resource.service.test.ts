@@ -36,6 +36,9 @@ describe("object-type-resource.service · getObjectTypeResourcePreview", () => {
     const { getObjectTypeResourcePreview } = await import(
       "@/modules/knowledge-network/services/object-type-resource.service"
     );
+    const { transformVegaDynamicDataResponse } = await import(
+      "@/framework/request/vega-bigint"
+    );
 
     const result = await getObjectTypeResourcePreview("kn-1", "r-1");
 
@@ -45,7 +48,10 @@ describe("object-type-resource.service · getObjectTypeResourcePreview", () => {
         need_total: true,
         paging: { limit: 20, mode: "single", offset: 0 },
       },
-      { headers: { "X-HTTP-Method-Override": "GET" } },
+      {
+        headers: { "X-HTTP-Method-Override": "GET" },
+        transformResponse: transformVegaDynamicDataResponse,
+      },
     );
     expect(result?.rowTotalCount).toBe(1);
   });
