@@ -241,7 +241,7 @@ describe("折叠通配契约", () => {
   it("模型资源权限映射到 bkn-safe 的 large_model/small_model 操作", () => {
     const grants = flattenSafeGrants([
       {
-        operations: ["view_detail", "create", "modify"],
+        operations: ["display", "create", "modify"],
         resource: { id: "*", type: "large_model" },
       },
     ]);

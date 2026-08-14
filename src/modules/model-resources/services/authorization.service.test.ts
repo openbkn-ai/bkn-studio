@@ -17,11 +17,12 @@ vi.mock("@/framework/request/http", () => ({
 
 import { getResourceOperations } from "@/modules/model-resources/services/authorization.service";
 
-/** Complete bkn-safe vocabulary used to expand `"*"` and is_admin; kept in sync with the tested constant. */
+/** Complete bkn-safe vocabulary used to expand `"*"`; kept in sync with the tested constant. */
 const FULL_VOCAB = new Set([
   "create",
   "delete",
   "modify",
+  "display",
   "view",
   "view_detail",
   "execute",
@@ -63,14 +64,12 @@ describe("authorization.service · getResourceOperations", () => {
     expect(getMock).not.toHaveBeenCalled();
   });
 
-  it("is_admin 响应 → 每个资源拿到全量词表", async () => {
+  it("is_admin 不等于资源通配，不隐式授予模型操作", async () => {
     getMock.mockResolvedValue(foldedResponse(true, []));
 
     const [item] = await getResourceOperations([{ id: "m1", type: "large_model" }]);
 
-    expect(new Set(item.operation)).toEqual(FULL_VOCAB);
-    // The phantom display operation has been removed.
-    expect(item.operation).not.toContain("display");
+    expect(item.operation).toEqual([]);
   });
 
   it("通配行 *:* 的非超管 → 全量词表(超管等价短路)", async () => {
