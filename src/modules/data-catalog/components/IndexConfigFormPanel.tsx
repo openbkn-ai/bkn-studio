@@ -56,6 +56,10 @@ export type IndexConfigFormPanelProps = {
 
 const INHERIT_VALUE = "__inherit__";
 
+function isChineseAnalyzer(analyzer: string): boolean {
+  return /^(?:ik|hanlp)(?:_|$)/.test(analyzer.trim().toLowerCase());
+}
+
 const normalizeFieldType = (type: string) => type.trim().toLowerCase();
 const isFeatureConfigField = (type: string) => ["string", "text"].includes(normalizeFieldType(type));
 const isTextField = isFeatureConfigField;
@@ -176,6 +180,10 @@ export function IndexConfigFormPanel({
         value: analyzer,
       })),
     [analyzers, t],
+  );
+  const enabledChineseAnalyzers = useMemo(
+    () => analyzers.filter(isChineseAnalyzer),
+    [analyzers],
   );
 
   const modelOptions = useMemo(
@@ -1034,6 +1042,15 @@ export function IndexConfigFormPanel({
                   <div className={formStyles.fieldHint}>
                     {t("dataCatalog.build.fulltextAnalyzerHint")}
                   </div>
+                  {fulltextFields.length > 0 && analyzersLoadState === "ready" ? (
+                    <div className={formStyles.fieldHint}>
+                      {enabledChineseAnalyzers.length > 0
+                        ? t("dataCatalog.build.fulltextChineseAnalyzerAvailableHint", {
+                            analyzers: enabledChineseAnalyzers.join(", "),
+                          })
+                        : t("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")}
+                    </div>
+                  ) : null}
                   {analyzerSelectionDisabled ? (
                     <div className={formStyles.fieldHint}>
                       {analyzerSelectionDisabledReason}

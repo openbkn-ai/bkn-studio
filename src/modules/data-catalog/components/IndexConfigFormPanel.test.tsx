@@ -102,6 +102,77 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull();
   });
 
+  it("explains the Chinese-search limitation when no Chinese analyzer is enabled", async () => {
+    const fulltextResource: CatalogResource = {
+      ...resource,
+      schema: [{
+        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    getCatalogResourceMock.mockResolvedValue(fulltextResource);
+    loadAnalyzerCapabilitiesMock.mockResolvedValue({
+      errorMessage: null,
+      options: ["standard", "english"],
+      state: "ready",
+    });
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={fulltextResource} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint");
+    expect(screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerAvailableHint")).toBeNull();
+  });
+
+  it("recognizes other IK analyzers returned by the server", async () => {
+    const fulltextResource: CatalogResource = {
+      ...resource,
+      schema: [{
+        features: [{ config: { analyzer: "ik_smart" }, featureType: "fulltext" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    getCatalogResourceMock.mockResolvedValue(fulltextResource);
+    loadAnalyzerCapabilitiesMock.mockResolvedValue({
+      errorMessage: null,
+      options: ["standard", "ik_smart"],
+      state: "ready",
+    });
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={fulltextResource} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("dataCatalog.build.fulltextChineseAnalyzerAvailableHint");
+    expect(screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")).toBeNull();
+  });
+
+  it("does not show Chinese analyzer guidance for a resource without full-text fields", async () => {
+    loadAnalyzerCapabilitiesMock.mockResolvedValue({
+      errorMessage: null,
+      options: ["standard", "english"],
+      state: "ready",
+    });
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={resource} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull());
+    fireEvent.mouseDown(screen.getAllByRole("combobox")[0]);
+    await screen.findByText("dataCatalog.build.analyzers.english");
+    expect(screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")).toBeNull();
+  });
+
   it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {
     const vectorResource: CatalogResource = {
       ...resource,
