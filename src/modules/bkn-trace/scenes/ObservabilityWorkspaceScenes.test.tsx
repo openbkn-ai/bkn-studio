@@ -77,6 +77,9 @@ describe("observability workspace scenes", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+		vi.mocked(createArchive).mockReset();
+		vi.mocked(getArchiveOverview).mockReset();
+		vi.mocked(listArchiveJobs).mockReset();
 		window.history.replaceState({}, "", "/observability/logs");
     vi.mocked(getAccessProfile).mockResolvedValue(profile);
     vi.mocked(listLogs).mockResolvedValue({
