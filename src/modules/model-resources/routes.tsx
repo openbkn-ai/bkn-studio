@@ -9,6 +9,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
+import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
 
 const ModelListPage = lazy(async () => {
@@ -26,8 +27,12 @@ const ModelStatisticsPage = lazy(async () => {
   return { default: module.ModelStatisticsPage };
 });
 
-function withRouteLoading(element: ReactNode) {
-  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
+function withRouteLoading(permissions: string | string[], element: ReactNode) {
+  return (
+    <RequirePermission mode="any" permissions={permissions}>
+      <Suspense fallback={<RouteLoading />}>{element}</Suspense>
+    </RequirePermission>
+  );
 }
 
 export const modelResourcesRoutes: RouteObject[] = [
@@ -40,7 +45,10 @@ export const modelResourcesRoutes: RouteObject[] = [
         titleKey: "modelResources.models.title",
       },
     },
-    element: withRouteLoading(<ModelListPage />),
+    element: withRouteLoading(
+      ["model-resources:large-model:view", "model-resources:small-model:view"],
+      <ModelListPage />,
+    ),
   },
   {
     path: "model-resources/quotas",
@@ -51,7 +59,15 @@ export const modelResourcesRoutes: RouteObject[] = [
         titleKey: "modelResources.quotas.title",
       },
     },
-    element: withRouteLoading(<QuotaListPage />),
+    element: withRouteLoading(
+      [
+        "model-resources:large-model:view",
+        "model-resources:small-model:view",
+        "model-resources:quota:view",
+        "model-resources:quota:edit",
+      ],
+      <QuotaListPage />,
+    ),
   },
   {
     path: "model-resources/statistics",
@@ -62,7 +78,14 @@ export const modelResourcesRoutes: RouteObject[] = [
         titleKey: "modelResources.statistics.title",
       },
     },
-    element: withRouteLoading(<ModelStatisticsPage />),
+    element: withRouteLoading(
+      [
+        "model-resources:large-model:view",
+        "model-resources:small-model:view",
+        "model-resources:statistics:view",
+      ],
+      <ModelStatisticsPage />,
+    ),
   },
 ];
 

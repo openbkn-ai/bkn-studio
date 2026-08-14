@@ -64,8 +64,8 @@ export const anonymousRuntimeUser: RuntimeUser = {
  * it granted every permission, point-level guards would fail for all three roles. Only super
  * administrators receive a resource wildcard, compacted in /me/permissions to `{type:"*",id:"*",ops:["*"]}`.
  *
- * is_admin remains useful as the criterion for ADMIN_ONLY_SUFFIXES, which cover cross-tenant
- * operations pages and align with the execution-factory backend's CheckAdminPermission.
+ * is_admin is retained for identity/UI decisions, but must not expand the permission set: all
+ * three administrator roles receive it, while only a resource wildcard denotes super-admin.
  *
  * The two requests degrade independently through allSettled: failing to load identity does not
  * affect permissions, and failing to load permissions yields no permissions. Never grant on a

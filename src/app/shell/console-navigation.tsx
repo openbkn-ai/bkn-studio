@@ -128,6 +128,9 @@ export function filterNavByPermission(
 ): ConsoleNavItem[] {
   const visible: ConsoleNavItem[] = [];
   for (const item of items) {
+    if (item.requiresBusinessPermission && !permissions.some(isBusinessPermission)) {
+      continue;
+    }
     if (
       item.permission &&
       !hasPermissions({
@@ -149,6 +152,10 @@ export function filterNavByPermission(
     }
   }
   return visible;
+}
+
+function isBusinessPermission(permission: string) {
+  return !permission.startsWith("admin-");
 }
 
 type ConsoleNavTrailItem = {

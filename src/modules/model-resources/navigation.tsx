@@ -20,12 +20,22 @@ export const modelResourcesNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.modelManagement",
       icon: <AppstoreOutlined />,
       path: "/model-resources/models",
+      permission: [
+        "model-resources:large-model:view",
+        "model-resources:small-model:view",
+      ],
+      permissionMode: "any",
     },
     {
       key: "model-statistics",
       labelKey: "shell.items.modelStatistics",
       icon: <BarChartOutlined />,
       path: "/model-resources/statistics",
+      permission: [
+        "model-resources:large-model:view",
+        "model-resources:small-model:view",
+      ],
+      permissionMode: "any",
     },
   ],
 };

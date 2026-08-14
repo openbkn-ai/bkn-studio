@@ -9,7 +9,9 @@ import { lazy, Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
+import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { executionFactoryModuleManifest } from "@/modules/execution-factory/module.manifest";
 import { ExecutionUnitTabRedirect } from "@/modules/execution-factory/pages/ExecutionUnitTabRedirect";
 
 const UnitManagementListPage = lazy(async () => {
@@ -63,7 +65,11 @@ const SandboxRuntimePage = lazy(async () => {
 });
 
 function withRouteLoading(element: ReactNode) {
-  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
+  return (
+    <RequirePermission mode="any" permissions={[...executionFactoryModuleManifest.permissions]}>
+      <Suspense fallback={<RouteLoading />}>{element}</Suspense>
+    </RequirePermission>
+  );
 }
 
 export const executionFactoryRoutes: RouteObject[] = [

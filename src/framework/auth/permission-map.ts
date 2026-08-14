@@ -81,14 +81,20 @@ const OVERRIDES: Record<string, string[]> = {
 };
 
 /**
- * Permission points visible only to super administrators. These pages return cross-tenant
- * operational data and do not belong to a single business resource, so bkn-safe has no
- * corresponding grantable resource type; the decision must be based on is_admin.
- *
- * This matches the execution-factory backend's CheckAdminPermission behavior by reusing
- * bkn-safe's safe_admin:console:manage permission.
+ * Model-manager resource operations use the bkn-safe catalog vocabulary rather than the
+ * Studio module vocabulary. Both large and small model grants open the shared model list.
  */
-const ADMIN_ONLY_SUFFIXES = new Set(["sandbox-runtime:view"]);
+const MODEL_RESOURCE_PERMISSIONS: Record<string, string[]> = {
+  "model-resources:model:view": ["large_model:display", "small_model:display"],
+  "model-resources:large-model:view": ["large_model:display"],
+  "model-resources:small-model:view": ["small_model:display"],
+  "model-resources:model:create": ["large_model:create", "small_model:create"],
+  "model-resources:model:edit": ["large_model:modify", "small_model:modify"],
+  "model-resources:model:delete": ["large_model:delete", "small_model:delete"],
+  "model-resources:quota:view": ["large_model:display", "small_model:display"],
+  "model-resources:quota:edit": ["large_model:modify", "small_model:modify"],
+  "model-resources:statistics:view": ["large_model:display", "small_model:display"],
+};
 
 /**
  * Under the compact grant contract, bkn-safe emits global wildcard `*:*` grants (equivalent
@@ -154,6 +160,7 @@ const MAPPED_MODULE_PREFIXES = ["execution-factory", "execution-factory-lab"];
  */
 const KNOWLEDGE_NETWORK_TYPE_PERMISSIONS: Record<string, string> = {
   "knowledge-network:create": "create",
+  "knowledge-network:view": "view_detail",
 };
 
 /**
@@ -161,7 +168,7 @@ const KNOWLEDGE_NETWORK_TYPE_PERMISSIONS: Record<string, string> = {
  *
  * Evaluation order:
  *   1. Direct name match with a bkn-safe `type:op`, preserving existing behavior for every module.
- *   2. Super-admin-only permissions, based on is_admin.
+ *   2. Model-resource translation rules.
  *   3. Execution-factory translation rules, where overrides take precedence over generic entity/action mappings.
  *
  * Permissions that cannot be resolved are denied (fail closed): under-grant rather than over-grant.
@@ -169,8 +176,11 @@ const KNOWLEDGE_NETWORK_TYPE_PERMISSIONS: Record<string, string> = {
 export function isStudioPermissionGranted(
   studioPermission: string,
   safeGrants: Set<string>,
-  isAdmin: boolean,
+  _isAdmin: boolean,
 ): boolean {
+  // Keep the public helper signature stable while permissions are being migrated away from
+  // is_admin-based authorization. A resource wildcard is handled by fetchCurrentUser instead.
+  void _isAdmin;
   // 1. Direct name match. data-catalog's `catalog:view_detail`, for example, uses this path.
   //    Compact wildcards are handled by safeGrantsCover in the mappings below instead of here,
   //    so intentionally blocked permissions such as catalog:install cannot be bypassed.
@@ -183,16 +193,19 @@ export function isStudioPermissionGranted(
     return safeGrantsCover(safeGrants, "knowledge_network", knowledgeNetworkOperation);
   }
 
+  const modelResourceOperations = MODEL_RESOURCE_PERMISSIONS[studioPermission];
+  if (modelResourceOperations) {
+    return modelResourceOperations.some((operation) => {
+      const [resourceType, resourceOperation] = operation.split(":");
+      return safeGrantsCover(safeGrants, resourceType, resourceOperation);
+    });
+  }
+
   const segments = studioPermission.split(":");
   if (segments.length < 3 || !MAPPED_MODULE_PREFIXES.includes(segments[0])) {
     return false;
   }
   const suffix = segments.slice(1).join(":");
-
-  // 2. Super-admin-only permission.
-  if (ADMIN_ONLY_SUFFIXES.has(suffix)) {
-    return isAdmin;
-  }
 
   // 3. Overrides take precedence. Matching also honors type-level `${type}:*` wildcards.
   const override = OVERRIDES[suffix];

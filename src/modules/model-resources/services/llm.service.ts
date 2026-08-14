@@ -292,6 +292,19 @@ export async function getLlmItemPermissions(
   }
 }
 
+export async function getLlmRolePermissions(): Promise<string[]> {
+  if (useMock) {
+    return ["create"];
+  }
+
+  try {
+    const items = await getResourceOperations([{ id: "*", type: "large_model" }]);
+    return items[0]?.operation ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Sets or clears a large model as the system default. Defaults are keyed by model_id.
  * - asDefault=true sets this model as default and clears the previous one.
