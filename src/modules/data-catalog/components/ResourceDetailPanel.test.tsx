@@ -81,4 +81,42 @@ describe("ResourceDetailPanel", () => {
     await waitFor(() => expect(onResourceRefreshed).toHaveBeenCalledWith(latestResource));
     expect(getCatalogResourceMock).toHaveBeenCalledWith(resource.id);
   });
+
+  it("ignores a detail refresh superseded by a parent resource update", async () => {
+    const parentResource = { ...resource, name: "Orders", updatedAt: 1 };
+    const onResourceRefreshed = vi.fn();
+    let resolveRequest: (value: CatalogResource | null) => void;
+    getCatalogResourceMock.mockImplementation(
+      () => new Promise<CatalogResource | null>((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+
+    const { rerender } = render(
+      <MemoryRouter>
+        <ResourceDetailPanel active={false} catalog={null} onResourceRefreshed={onResourceRefreshed} resource={resource} />
+      </MemoryRouter>,
+    );
+
+    await act(async () => {});
+
+    rerender(
+      <MemoryRouter>
+        <ResourceDetailPanel active catalog={null} onResourceRefreshed={onResourceRefreshed} resource={resource} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(getCatalogResourceMock).toHaveBeenCalledTimes(1));
+
+    rerender(
+      <MemoryRouter>
+        <ResourceDetailPanel active catalog={null} onResourceRefreshed={onResourceRefreshed} resource={parentResource} />
+      </MemoryRouter>,
+    );
+    act(() => {
+      resolveRequest(resource);
+    });
+    await Promise.resolve();
+
+    expect(onResourceRefreshed).not.toHaveBeenCalled();
+  });
 });

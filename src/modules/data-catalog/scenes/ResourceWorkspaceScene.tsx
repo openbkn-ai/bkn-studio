@@ -125,11 +125,7 @@ export function ResourceWorkspaceScene({
     : t("dataCatalog.gate.catalogDisabledShort");
 
   const handleResourceRefreshed = useCallback((latestResource: CatalogResource) => {
-    setResource((currentResource) =>
-      currentResource && currentResource.updatedAt > latestResource.updatedAt
-        ? currentResource
-        : latestResource,
-    );
+    setResource(latestResource);
   }, []);
 
   const handleTabChange = (key: string) => {

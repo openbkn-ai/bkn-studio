@@ -107,7 +107,7 @@ export function ResourceDetailPanel({
     return () => {
       cancelled = true;
     };
-  }, [active, message, onResourceRefreshed, resourceProp.id]);
+  }, [active, message, onResourceRefreshed, resourceProp]);
 
   useEffect(() => {
     setSchemaPage(1);
