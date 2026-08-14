@@ -318,6 +318,7 @@ export const dataCatalogEnUS = {
         "Used for incremental builds; required for both batch and streaming. Supported types are integer, unsigned integer, string, date, datetime, and timestamp.",
       buildKeyTypeHint: "Build keys support integer, unsigned integer, string, date, datetime, and timestamp fields only.",
       invalidBuildKeyFields: "Invalid build-key configuration: {{fields}}. Select schema fields with supported types.",
+      removeInvalidBuildKeyFields: "Remove invalid build keys",
       unsupportedSchemaFields: "This resource contains other-type fields unsupported for index builds: {{fields}}. Correct the source field type or its discovery mapping before building.",
       roleFulltextHint:
         "Text fields indexed for keyword full-text search; applied immediately during data sync.",

@@ -655,6 +655,10 @@ export function IndexConfigFormPanel({
     markDirty();
     const eligible = eligibleFields(role);
     if (columnAllOn(role)) {
+      if (role.buildKeyOnly) {
+        role.set([]);
+        return;
+      }
       const drop = new Set(eligible.map((field) => field.name));
       role.set(role.list.filter((name) => !drop.has(name)));
       if (role.onRemove) {
@@ -665,6 +669,15 @@ export function IndexConfigFormPanel({
       eligible.forEach((field) => next.add(field.name));
       role.set([...next]);
     }
+  };
+
+  const removeInvalidBuildKeys = () => {
+    if (actionsLocked) {
+      return;
+    }
+    const invalid = new Set(invalidSavedBuildKeyFields);
+    setBuildKeyFields((current) => current.filter((field) => !invalid.has(field)));
+    markDirty();
   };
 
   const cx = (...parts: Array<string | false | undefined>) =>
@@ -999,6 +1012,18 @@ export function IndexConfigFormPanel({
           message={t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") })}
           showIcon
           type="error"
+        />
+      ) : null}
+      {invalidSavedBuildKeyFields.length > 0 ? (
+        <Alert
+          action={
+            <AppButton disabled={actionsLocked} onClick={removeInvalidBuildKeys} size="small" type="link">
+              {t("dataCatalog.build.removeInvalidBuildKeyFields")}
+            </AppButton>
+          }
+          message={t("dataCatalog.build.invalidBuildKeyFields", { fields: invalidSavedBuildKeyFields.join(", ") })}
+          showIcon
+          type="warning"
         />
       ) : null}
 
