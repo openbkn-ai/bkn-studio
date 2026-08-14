@@ -169,7 +169,7 @@ export const bknTraceZhCN = {
       unnamedAgent: "未命名 Agent",
     },
     settings: {
-      archive: { action: "立即归档", description: "归档校验成功后将自动清理对应热数据，不提供只归档不清理选项。", fixedRule: "归档超过 30 天的平台托管日志和已结束交互轮次", noHistory: "尚无可展示的归档任务", title: "历史数据归档", unavailable: "归档概览接口尚未提供，当前无法判断候选数据，归档操作不可用。" },
+      archive: { action: "立即归档", actionFailed: "归档操作失败，请稍后重试。", candidates: "候选 {{count}} 条，截止 {{cutoff}}", completed: "归档已完成，热数据已清理。", confirm: "{{rule}} 归档校验成功后会自动清理对应热数据，且不能恢复。", confirmTitle: "确认执行归档", description: "归档校验成功后将自动清理对应热数据，不提供只归档不清理选项。", download: "下载", fixedRule: "归档超过 30 天的平台托管日志和已结束交互轮次", jobAction: "操作", jobCount: "归档条数", jobKind: "归档类别", jobRange: "实际归档范围", jobStatus: "状态", kinds: { log: "日志", trace: "Trace" }, logRule: "固定归档超过 30 天的平台托管操作日志。", logTitle: "日志归档", noHistory: "尚无可展示的归档任务", permissionDenied: "当前账号没有历史归档管理权限。", retryCleanup: "继续清理", statuses: { completed: "已归档并清理", failed: "归档失败", cleanup_incomplete: "清理未完成" }, title: "历史数据归档", traceRule: "固定归档超过 7 天的技术 Trace 与已结束交互轮次完整包。", traceTitle: "Trace 归档", unavailable: "归档概览接口尚未提供，当前无法判断候选数据，归档操作不可用。" },
       columns: { category: "类别", collection: "采集方式", coverage: "覆盖业务模块", dataKind: "数据", dataState: "数据情况", description: "说明", policyKind: "策略类型", retention: "热存储保留", revision: "策略版本", source: "日志来源", status: "接入状态" },
       days: "天",
       description: "查看采集来源、存储保留和历史归档状态，支持日常维护排查。",

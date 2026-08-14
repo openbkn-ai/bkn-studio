@@ -200,6 +200,12 @@
   padding: 16px;
 }
 
+.archiveGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .archivePanel :global(.ant-typography) {
   margin: 0 0 6px;
 }
@@ -215,7 +221,8 @@
   }
 
   .metricGrid,
-  .storageLayout {
+  .storageLayout,
+  .archiveGrid {
     grid-template-columns: 1fr;
   }
 
