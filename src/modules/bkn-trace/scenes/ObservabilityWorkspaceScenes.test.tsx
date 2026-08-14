@@ -80,6 +80,8 @@ describe("observability workspace scenes", () => {
 		vi.mocked(createArchive).mockReset();
 		vi.mocked(getArchiveOverview).mockReset();
 		vi.mocked(listArchiveJobs).mockReset();
+		vi.mocked(getArchiveOverview).mockImplementation((kind) => Promise.resolve({ candidateCount: 0, cutoffAt: "2026-08-07T00:00:00Z", kind, retentionDays: kind === "log" ? 30 : 7, storageStatus: "unavailable" }));
+		vi.mocked(listArchiveJobs).mockResolvedValue([]);
 		window.history.replaceState({}, "", "/observability/logs");
     vi.mocked(getAccessProfile).mockResolvedValue(profile);
     vi.mocked(listLogs).mockResolvedValue({
@@ -292,7 +294,7 @@ describe("observability workspace scenes", () => {
 	const confirmationButton = confirmationButtons.at(-1);
 	if (!confirmationButton) throw new Error("archive confirmation button is missing");
 	fireEvent.click(confirmationButton);
-    await waitFor(() => expect(listArchiveJobs).toHaveBeenCalledWith("log"));
+    await waitFor(() => expect(vi.mocked(listArchiveJobs).mock.calls.filter(([kind]) => kind === "log")).toHaveLength(2));
     expect(screen.getByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
   });
 
@@ -317,7 +319,7 @@ describe("observability workspace scenes", () => {
     });
 		expect(screen.getByText("bknTrace.settings.archive.logRule")).not.toBeNull();
 		expect(screen.getByText("bknTrace.settings.archive.traceRule")).not.toBeNull();
-		expect(screen.getAllByText("bknTrace.settings.archive.unavailable")).toHaveLength(2);
+		expect(screen.getAllByText("bknTrace.settings.archive.candidates")).toHaveLength(2);
 		expect(screen.getAllByRole("button", { name: "bknTrace.settings.archive.action" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
     expect(screen.queryByRole("spinbutton")).toBeNull();
   });

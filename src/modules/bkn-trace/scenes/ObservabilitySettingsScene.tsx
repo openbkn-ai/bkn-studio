@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button, Empty, Modal, Spin, Table, Tag, Typography } from "antd";
+import { Alert, Button, Empty, message, Modal, Spin, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -130,8 +130,8 @@ export function ObservabilitySettingsScene() {
 			{ title: t("bknTrace.settings.archive.jobCount"), dataIndex: "candidateCount", key: "candidateCount" },
 			{ title: t("bknTrace.settings.archive.jobStatus"), dataIndex: "status", key: "status", render: (status: ArchiveJob["status"]) => t(`bknTrace.settings.archive.statuses.${status}`) },
 			{ title: t("bknTrace.settings.archive.jobAction"), key: "action", render: (_, job) => <>
-				{(job.status === "completed" || job.status === "cleanup_incomplete") ? <Button size="small" onClick={() => { void getArchiveDownloadURL(job.id).then((url) => window.open(url, "_blank", "noopener,noreferrer")); }}>{t("bknTrace.settings.archive.download")}</Button> : null}
-				{job.status === "cleanup_incomplete" ? <Button size="small" onClick={() => { void retryArchiveCleanup(job.id).then(() => refreshArchive(job.kind, setArchives, setArchiveJobs)); }}>{t("bknTrace.settings.archive.retryCleanup")}</Button> : null}
+				{(job.status === "completed" || job.status === "cleanup_incomplete") ? <Button size="small" onClick={() => { void getArchiveDownloadURL(job.id).then((url) => window.open(url, "_blank", "noopener,noreferrer")).catch(() => message.error(t("bknTrace.settings.archive.actionFailed"))); }}>{t("bknTrace.settings.archive.download")}</Button> : null}
+				{job.status === "cleanup_incomplete" ? <Button size="small" onClick={() => { void retryArchiveCleanup(job.id).then(() => refreshArchive(job.kind, setArchives, setArchiveJobs)).catch(() => message.error(t("bknTrace.settings.archive.actionFailed"))); }}>{t("bknTrace.settings.archive.retryCleanup")}</Button> : null}
 			</> },
 		]} /> : <Empty description={t("bknTrace.settings.archive.noHistory")} image={Empty.PRESENTED_IMAGE_SIMPLE} />}
     </SettingsSection>
@@ -166,7 +166,7 @@ function ArchivePanel({ archive, canManage, kind, onCreated }: { archive?: Archi
 		}
 	};
 	return <div className={styles.archivePanel}>
-		<div><Typography.Text strong>{label}</Typography.Text><Typography.Paragraph type="secondary">{rule}</Typography.Paragraph>{archive ? <Typography.Text type="secondary">{t("bknTrace.settings.archive.candidates", { count: archive.candidateCount, cutoff: archive.cutoffAt })}</Typography.Text> : <Typography.Text type="secondary">{t("bknTrace.settings.archive.unavailable")}</Typography.Text>}</div>
+		<div><Typography.Text strong>{label}</Typography.Text><Typography.Paragraph type="secondary">{rule}</Typography.Paragraph>{archive ? <Typography.Text type="secondary">{t("bknTrace.settings.archive.candidates", { count: archive.candidateCount, cutoff: archive.cutoffAt })}</Typography.Text> : <Typography.Text type="secondary">{t(canManage ? "bknTrace.settings.archive.unavailable" : "bknTrace.settings.archive.permissionDenied")}</Typography.Text>}</div>
 		<Button disabled={!canManage || !archive || archive.candidateCount === 0 || archive.storageStatus !== "ready"} onClick={start} type="primary">{t("bknTrace.settings.archive.action")}</Button>
 		<Modal cancelText={t("common.cancel")} confirmLoading={creating} okText={t("bknTrace.settings.archive.action")} onCancel={() => setConfirmOpen(false)} onOk={() => void confirm()} open={confirmOpen} title={t("bknTrace.settings.archive.confirmTitle")}>
 			<Typography.Paragraph>{t("bknTrace.settings.archive.confirm", { rule })}</Typography.Paragraph>
