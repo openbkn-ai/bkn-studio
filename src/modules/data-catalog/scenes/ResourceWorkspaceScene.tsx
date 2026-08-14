@@ -112,6 +112,13 @@ export function ResourceWorkspaceScene({
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
   const indexState = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);
   const gate = resourceGateOf(catalog);
+  const hideSemanticUnderstanding = Boolean(catalog?.internal);
+
+  useEffect(() => {
+    if (hideSemanticUnderstanding && tab === "semantic-understanding") {
+      onTabChange("detail");
+    }
+  }, [hideSemanticUnderstanding, onTabChange, tab]);
 
   const previewDisabledMessage = catalog
     ? t("dataCatalog.gate.catalogDisabled", { name: catalog.name })
@@ -215,11 +222,15 @@ export function ResourceWorkspaceScene({
                   </span>
                 </>
               ) : null}
-              <span className={styles.contextDivider}>·</span>
-              <span className={styles.contextMeta}>
-                {t("dataCatalog.resource.headerIndexState")}{" "}
-                {formatIndexStateLabel(indexState, t)}
-              </span>
+              {!catalog?.internal ? (
+                <>
+                  <span className={styles.contextDivider}>·</span>
+                  <span className={styles.contextMeta}>
+                    {t("dataCatalog.resource.headerIndexState")}{" "}
+                    {formatIndexStateLabel(indexState, t)}
+                  </span>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -275,33 +286,37 @@ export function ResourceWorkspaceScene({
                 </div>
               ),
             },
-            {
-              key: "semantic-understanding",
-              /*
-                页签上直接挂档位徽标:这一片整体是付费能力,进去之后才发现要买,不如在
-                入口处就说清。徽标在证与镜像都满足时自己消失。
-              */
-              label: (
-                <span className="console-tab-with-tier">
-                  {t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding")}
-                  <EditionBadge
-                    capability={CAPABILITIES.SEMANTIC_TASK}
-                    edition="professional"
-                  />
-                </span>
-              ),
-              children: (
-                <div className={styles.tabPanel}>
-                  {/* 整片盖蒙版而不是只拦「新建任务」:列表本身也是这项能力的一部分。 */}
-                  <RequireEdition
-                    capability={CAPABILITIES.SEMANTIC_TASK}
-                    minEdition="professional"
-                  >
-                    <ResourceSemanticUnderstandingPanel active={tab === "semantic-understanding"} resource={resource} />
-                  </RequireEdition>
-                </div>
-              ),
-            },
+            ...(hideSemanticUnderstanding
+              ? []
+              : [
+                  {
+                    key: "semantic-understanding",
+                    /*
+                      页签上直接挂档位徽标:这一片整体是付费能力,进去之后才发现要买,不如在
+                      入口处就说清。徽标在证与镜像都满足时自己消失。
+                    */
+                    label: (
+                      <span className="console-tab-with-tier">
+                        {t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding")}
+                        <EditionBadge
+                          capability={CAPABILITIES.SEMANTIC_TASK}
+                          edition="professional"
+                        />
+                      </span>
+                    ),
+                    children: (
+                      <div className={styles.tabPanel}>
+                        {/* 整片盖蒙版而不是只拦「新建任务」:列表本身也是这项能力的一部分。 */}
+                        <RequireEdition
+                          capability={CAPABILITIES.SEMANTIC_TASK}
+                          minEdition="professional"
+                        >
+                          <ResourceSemanticUnderstandingPanel active={tab === "semantic-understanding"} resource={resource} />
+                        </RequireEdition>
+                      </div>
+                    ),
+                  },
+                ]),
           ]}
           onChange={handleTabChange}
         />

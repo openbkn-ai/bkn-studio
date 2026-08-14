@@ -137,12 +137,15 @@ export function CatalogDetailPanel({
   const resizingRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const physical = isCatalogPhysical(catalog);
+  const showIndexState = !catalog.internal;
   const canManageResourceTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "resource:task_manage",
   });
   const hasResourceQuery =
-    resourceKeyword.trim().length > 0 || categoryFilter.length > 0 || indexFilter.length > 0;
+    resourceKeyword.trim().length > 0 ||
+    categoryFilter.length > 0 ||
+    (showIndexState && indexFilter.length > 0);
 
   const tasksByResource = useMemo(() => {
     const map = new Map<string, BuildTask[]>();
@@ -154,7 +157,7 @@ export function CatalogDetailPanel({
 
   const displayResources = useMemo(() => {
     return resources.filter((resource) => {
-      if (indexFilter) {
+      if (showIndexState && indexFilter) {
         const key = indexStateOf(tasksByResource.get(resource.id) ?? []).key;
         if (indexFilterBucket(key) !== indexFilter) {
           return false;
@@ -162,7 +165,13 @@ export function CatalogDetailPanel({
       }
       return true;
     });
-  }, [indexFilter, resources, tasksByResource]);
+  }, [indexFilter, resources, showIndexState, tasksByResource]);
+
+  useEffect(() => {
+    if (!showIndexState && indexFilter) {
+      setIndexFilter("");
+    }
+  }, [indexFilter, showIndexState]);
 
   useEffect(() => {
     setPage(1);
@@ -303,19 +312,23 @@ export function CatalogDetailPanel({
       render: (value: number) =>
         value > 0 ? <span className={styles.monoText}>{formatRowCount(value)}</span> : "—",
     },
-    {
-      key: "indexState",
-      ellipsis: true,
-      title: t("dataCatalog.resource.indexState"),
-      width: 140,
-      render: (_, record) => {
-        const label = formatIndexStateLabel(
-          indexStateOf(tasksByResource.get(record.id) ?? []),
-          t,
-        );
-        return <EllipsisText text={label} />;
-      },
-    },
+    ...(showIndexState
+      ? [
+          {
+            key: "indexState",
+            ellipsis: true,
+            title: t("dataCatalog.resource.indexState"),
+            width: 140,
+            render: (_: unknown, record: CatalogResource) => {
+              const label = formatIndexStateLabel(
+                indexStateOf(tasksByResource.get(record.id) ?? []),
+                t,
+              );
+              return <EllipsisText text={label} />;
+            },
+          },
+        ]
+      : []),
     {
       key: "actions",
       title: t("common.actions"),
@@ -338,7 +351,7 @@ export function CatalogDetailPanel({
           moreItems.push({
             disabled: blockedByDisabledCatalog,
             key: "index",
-            label: t("dataCatalog.actions.buildIndex"),
+            label: t("dataCatalog.actions.dataIndex"),
           });
         }
 
@@ -382,7 +395,7 @@ export function CatalogDetailPanel({
   return (
     <section className={styles.contentSurface}>
       <div className={styles.operationBar}>
-        {!physical ? (
+        {!physical && !catalog.internal ? (
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
               <PermissionGate permissions="resource:create">
@@ -419,23 +432,25 @@ export function CatalogDetailPanel({
                 value={categoryFilter}
               />
             </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>
-                {t("dataCatalog.resource.indexState")}
-              </span>
-              <Select
-                className={styles.filterSelect}
-                onChange={(value) => setIndexFilter(value)}
-                options={[
-                  { label: t("common.all"), value: "" },
-                  ...INDEX_FILTERS.map((key) => ({
-                    label: t(`dataCatalog.indexState.${key}`),
-                    value: key,
-                  })),
-                ]}
-                value={indexFilter}
-              />
-            </div>
+            {showIndexState ? (
+              <div className={styles.filterField}>
+                <span className={styles.filterLabel}>
+                  {t("dataCatalog.resource.indexState")}
+                </span>
+                <Select
+                  className={styles.filterSelect}
+                  onChange={(value) => setIndexFilter(value)}
+                  options={[
+                    { label: t("common.all"), value: "" },
+                    ...INDEX_FILTERS.map((key) => ({
+                      label: t(`dataCatalog.indexState.${key}`),
+                      value: key,
+                    })),
+                  ]}
+                  value={indexFilter}
+                />
+              </div>
+            ) : null}
             </div>
           </>
         ) : null}
@@ -469,7 +484,7 @@ export function CatalogDetailPanel({
                 >
                   {t("dataCatalog.catalog.goDiscoverToDiscover")}
                 </AppButton>
-              ) : !physical ? (
+              ) : !physical && !catalog.internal ? (
                 <PermissionGate permissions="resource:create">
                   <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                     {t("dataCatalog.resource.create")}
@@ -513,7 +528,7 @@ export function CatalogDetailPanel({
           pageSize={pageSize}
           showSizeChanger
           showTotal={(count) => t("common.total", { total: count })}
-          total={indexFilter ? displayResources.length : resourceTotal}
+          total={showIndexState && indexFilter ? displayResources.length : resourceTotal}
         />
       ) : null}
     </section>

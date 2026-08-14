@@ -10,6 +10,7 @@ import type { CatalogRecord } from "@/shared/catalog/types";
 let mockCatalogs: CatalogRecord[] = [
   {
     id: "cat-001",
+    internal: false,
     name: "customer_master",
     description: "客户主数据连接，用于同步基础资料。",
     connectorType: "mariadb",
@@ -37,6 +38,7 @@ let mockCatalogs: CatalogRecord[] = [
   },
   {
     id: "cat-002",
+    internal: false,
     name: "knowledge_index",
     description: "知识网络的全文检索索引。",
     connectorType: "opensearch",
@@ -62,6 +64,7 @@ let mockCatalogs: CatalogRecord[] = [
   },
   {
     id: "cat-003",
+    internal: false,
     name: "finance_dw",
     description: "财务数仓只读连接。",
     connectorType: "postgresql",
@@ -88,9 +91,10 @@ let mockCatalogs: CatalogRecord[] = [
     type: "physical",
   },
   {
-    id: "cat-004",
+    id: "adp_bkn_catalog",
+    internal: true,
     name: "adp_bkn_catalog",
-    description: "平台内置逻辑 Catalog。",
+    description: "BKN的逻辑命名空间",
     connectorType: "",
     category: "table",
     mode: "local",
@@ -103,7 +107,7 @@ let mockCatalogs: CatalogRecord[] = [
     createTime: "2026-05-20 09:00:00",
     updaterName: "Platform Admin",
     creatorName: "Platform Admin",
-    tags: ["internal"],
+    tags: ["BKN", "概念索引"],
     connectorConfig: {},
     metadata: { builtin: true },
     operations: ["view"],
@@ -111,6 +115,7 @@ let mockCatalogs: CatalogRecord[] = [
   },
   {
     id: "cat-005",
+    internal: true,
     name: "openbkn_execution_factory",
     description: "执行工厂内置逻辑 Catalog。",
     connectorType: "",

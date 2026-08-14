@@ -19,6 +19,7 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
+import { isResourceIndexReadOnly } from "@/modules/data-catalog/lib/resource-index-access";
 import { getCatalogResource, updateCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type { CatalogResource, ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
@@ -54,6 +55,7 @@ export function ResourceDetailPanel({
   const wasActiveRef = useRef<boolean | null>(null);
 
   const gate = resourceGateOf(catalog);
+  const readOnly = isResourceIndexReadOnly(catalog);
   const schemaOffset = (schemaPage - 1) * schemaPageSize;
 
   useEffect(() => {
@@ -310,11 +312,11 @@ export function ResourceDetailPanel({
                   {t("common.save")}
                 </AppButton>
               </>
-            ) : (
+            ) : !readOnly ? (
               <AppButton onClick={() => setEditing(true)}>
                 {t("dataCatalog.resource.editFields")}
               </AppButton>
-            )}
+            ) : null}
           </div>
         </div>
         {editing ? <p className={styles.editHint}>{t("dataCatalog.resource.editHint")}</p> : null}

@@ -48,7 +48,9 @@ import styles from "./shared.module.css";
 
 export type IndexConfigFormPanelProps = {
   active: boolean;
+  hideBuildControls?: boolean;
   onSaved?: () => void;
+  readOnly?: boolean;
   resource: CatalogResource;
 };
 
@@ -126,7 +128,9 @@ function RoleHintIcon({ hint }: { hint: string }) {
 
 export function IndexConfigFormPanel({
   active,
+  hideBuildControls = false,
   onSaved,
+  readOnly = false,
   resource,
 }: IndexConfigFormPanelProps) {
   const { t } = useTranslation();
@@ -353,7 +357,7 @@ export function IndexConfigFormPanel({
     [defaultModelId, models],
   );
 
-  const actionsLocked = isActiveBuildTask(activeTask);
+  const actionsLocked = readOnly || isActiveBuildTask(activeTask);
   const streamingActive =
     activeTask?.mode === "streaming" && isActiveBuildTask(activeTask);
   const featureConfigFieldNames = useMemo(
@@ -428,6 +432,9 @@ export function IndexConfigFormPanel({
     setList: (next: string[]) => void,
     onRemove?: () => void,
   ) => {
+    if (actionsLocked) {
+      return;
+    }
     markDirty();
     if (list.includes(field)) {
       setList(list.filter((item) => item !== field));
@@ -617,6 +624,9 @@ export function IndexConfigFormPanel({
   };
 
   const toggleColumn = (role: (typeof roleDefs)[number]) => {
+    if (actionsLocked) {
+      return;
+    }
     markDirty();
     const eligible = eligibleFields(role);
     if (columnAllOn(role)) {
@@ -666,7 +676,7 @@ export function IndexConfigFormPanel({
     );
   };
   const renderRoleCell = (field: ResourceSchemaField, role: (typeof roleDefs)[number]) => {
-    const disabled = role.textOnly && !isTextField(field.type);
+    const disabled = actionsLocked || (role.textOnly && !isTextField(field.type));
     const checked = role.list.includes(field.name);
     return (
       <td className={styles.frtCell} key={role.id}>
@@ -733,6 +743,9 @@ export function IndexConfigFormPanel({
     fieldName: string,
     nextGroups: ResourceFeatureDraft[],
   ) => {
+    if (actionsLocked) {
+      return;
+    }
     const setter = kind === "embedding" ? setFieldEmbeddingModelGroups : setFieldFulltextAnalyzerGroups;
     setter((current) => {
       const next = { ...current };
@@ -836,6 +849,7 @@ export function IndexConfigFormPanel({
                   <label className={formStyles.featureDefaultChoice}>
                     <input
                       checked={Boolean(feature.isDefault)}
+                      disabled={disabled}
                       name={`${kind}-${featureField.name}-default`}
                       onChange={() => {
                         updateFeatureGroups(
@@ -866,6 +880,7 @@ export function IndexConfigFormPanel({
                     value={feature.value || (hasResourceDefault ? INHERIT_VALUE : options[0]?.value)}
                   />
                   <Input
+                    disabled={disabled}
                     onChange={(event) => {
                       const copy = [...groups];
                       copy[index] = { ...feature, name: event.target.value };
@@ -875,6 +890,7 @@ export function IndexConfigFormPanel({
                     value={feature.name}
                   />
                   <Input
+                    disabled={disabled}
                     onChange={(event) => {
                       const copy = [...groups];
                       copy[index] = { ...feature, description: event.target.value };
@@ -965,18 +981,22 @@ export function IndexConfigFormPanel({
             <span>{t("dataCatalog.build.roleFulltext")}</span>
             <b>{fulltextFields.length}</b>
           </div>
-          <div className={formStyles.configMetric}>
-            <span>{t("dataCatalog.build.roleBuildKey")}</span>
-            <b>{buildKeyFields.length}</b>
-          </div>
-          <div className={formStyles.configMetricWide}>
-            <span>{t("dataCatalog.build.configCanBuild")}</span>
-            <b>
-              {hasIndexFeatures
-                ? t("dataCatalog.build.configCanBuildYes")
-                : t("dataCatalog.build.configCannotBuild")}
-            </b>
-          </div>
+          {!hideBuildControls ? (
+            <>
+              <div className={formStyles.configMetric}>
+                <span>{t("dataCatalog.build.roleBuildKey")}</span>
+                <b>{buildKeyFields.length}</b>
+              </div>
+              <div className={formStyles.configMetricWide}>
+                <span>{t("dataCatalog.build.configCanBuild")}</span>
+                <b>
+                  {hasIndexFeatures
+                    ? t("dataCatalog.build.configCanBuildYes")
+                    : t("dataCatalog.build.configCannotBuild")}
+                </b>
+              </div>
+            </>
+          ) : null}
         </div>
 
           <div className={formStyles.resourceDefaults}>
@@ -1001,7 +1021,7 @@ export function IndexConfigFormPanel({
                   </div>
                   <Select
                     allowClear
-                    disabled={analyzerSelectionDisabled}
+                    disabled={actionsLocked || analyzerSelectionDisabled}
                     onChange={(value) => {
                       setDefaultFulltextAnalyzer(value ?? "");
                       markDirty();
@@ -1104,6 +1124,7 @@ export function IndexConfigFormPanel({
                       ) : null}
                       <Select
                         allowClear
+                        disabled={actionsLocked}
                         onChange={(value) => {
                           setDefaultModelId(value);
                           setOrphanSavedModel(null);
@@ -1164,14 +1185,16 @@ export function IndexConfigFormPanel({
                     {t("dataCatalog.build.roleFulltext")}
                     <b>{fulltextFields.length}</b>
                   </span>
-                  {roleDefs.map((role) => (
-                    <span className={styles.frtStat} key={role.id}>
-                      <span className={cx(styles.frtDot, role.dot)} />
-                      {role.name}
-                      <RoleHintIcon hint={getRoleHint(role.id, t)} />
-                      <b>{role.list.length}</b>
-                    </span>
-                  ))}
+                  {!hideBuildControls
+                    ? roleDefs.map((role) => (
+                        <span className={styles.frtStat} key={role.id}>
+                          <span className={cx(styles.frtDot, role.dot)} />
+                          {role.name}
+                          <RoleHintIcon hint={getRoleHint(role.id, t)} />
+                          <b>{role.list.length}</b>
+                        </span>
+                      ))
+                    : null}
                 </span>
               </div>
               <div className={styles.frtScroll}>
@@ -1180,7 +1203,7 @@ export function IndexConfigFormPanel({
                     <col className={styles.frtNameCol} />
                     <col className={styles.frtDisplayCol} />
                     <col className={styles.frtTypeCol} />
-                    <col className={styles.frtRoleWidthCol} />
+                    {!hideBuildControls ? <col className={styles.frtRoleWidthCol} /> : null}
                     <col className={styles.frtActionWidthCol} />
                   </colgroup>
                   <thead>
@@ -1188,7 +1211,7 @@ export function IndexConfigFormPanel({
                       <th>{t("dataCatalog.resource.fieldName")}</th>
                       <th>{t("dataCatalog.resource.fieldDisplayName")}</th>
                       <th>{t("dataCatalog.resource.fieldType")}</th>
-                      {renderRoleHeader(buildKeyRole)}
+                      {!hideBuildControls ? renderRoleHeader(buildKeyRole) : null}
                       <th className={cx(styles.frtActionCol, formStyles.featureActionHead)}>{t("common.actions")}</th>
                     </tr>
                   </thead>
@@ -1197,7 +1220,7 @@ export function IndexConfigFormPanel({
                       <tr>
                         <td
                           className={styles.frtEmpty}
-                          colSpan={5}
+                          colSpan={hideBuildControls ? 4 : 5}
                         >
                           {t("dataCatalog.build.fieldNoMatch", { keyword: fieldFilter })}
                         </td>
@@ -1219,7 +1242,7 @@ export function IndexConfigFormPanel({
                             </td>
                             <td className={styles.frtFieldMeta}>{field.displayName || "-"}</td>
                             <td className={styles.frtFieldMeta}>{field.type}</td>
-                            {renderRoleCell(field, buildKeyRole)}
+                            {!hideBuildControls ? renderRoleCell(field, buildKeyRole) : null}
                             <td className={cx(styles.frtFieldMeta, styles.frtActionCol)}>
                               <div className={formStyles.featureActionCell}>
                                 {canConfigureFeature ? (
@@ -1243,6 +1266,7 @@ export function IndexConfigFormPanel({
                                     </div>
                                     <AppButton
                                       className={formStyles.featureConfigLink}
+                                      disabled={actionsLocked}
                                       onClick={() => setFeatureField(field)}
                                       type="link"
                                     >
@@ -1286,14 +1310,14 @@ export function IndexConfigFormPanel({
               t("dataCatalog.build.roleEmbedding"),
               selectedEmbeddingGroups,
               modelOptions,
-              embeddingBlocked,
+              actionsLocked || embeddingBlocked,
             )}
             {renderFeatureRows(
               "fulltext",
               t("dataCatalog.build.roleFulltext"),
               selectedFulltextGroups,
               analyzerOptions,
-              !isTextField(featureField.type) || analyzerSelectionDisabled,
+              actionsLocked || !isTextField(featureField.type) || analyzerSelectionDisabled,
             )}
             {!isTextField(featureField.type) ? (
               <Alert message={t("dataCatalog.build.fulltextTypeHint")} showIcon type="info" />

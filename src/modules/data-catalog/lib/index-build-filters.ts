@@ -105,8 +105,8 @@ export function readResourceIndexView(
   if (view === "tasks" || view === "overview") {
     return "tasks";
   }
-  // No view param: provisional default; panel may auto-pick config when empty.
-  return "tasks";
+  // No view param: always open configuration first.
+  return "config";
 }
 
 export function applyResourceIndexView(
