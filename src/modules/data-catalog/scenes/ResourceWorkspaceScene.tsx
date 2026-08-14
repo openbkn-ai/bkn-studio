@@ -124,6 +124,10 @@ export function ResourceWorkspaceScene({
     ? t("dataCatalog.gate.catalogDisabled", { name: catalog.name })
     : t("dataCatalog.gate.catalogDisabledShort");
 
+  const handleResourceRefreshed = useCallback((latestResource: CatalogResource) => {
+    setResource(latestResource);
+  }, []);
+
   const handleTabChange = (key: string) => {
     const nextTab = key as ResourceWorkspaceTab;
     if (tab === "detail" && nextTab !== "detail" && detailEditing) {
@@ -248,6 +252,7 @@ export function ResourceWorkspaceScene({
                     active={tab === "detail"}
                     catalog={catalog}
                     onEditingChange={setDetailEditing}
+                    onResourceRefreshed={handleResourceRefreshed}
                     onUpdated={loadAll}
                     resource={resource}
                   />

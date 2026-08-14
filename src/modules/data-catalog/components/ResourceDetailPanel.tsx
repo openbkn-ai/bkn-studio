@@ -30,6 +30,7 @@ type ResourceDetailPanelProps = {
   active: boolean;
   catalog: CatalogRecord | null;
   onEditingChange?: (editing: boolean) => void;
+  onResourceRefreshed?: (resource: CatalogResource) => void;
   onUpdated?: () => Promise<void> | void;
   resource: CatalogResource;
 };
@@ -38,6 +39,7 @@ export function ResourceDetailPanel({
   active,
   catalog,
   onEditingChange,
+  onResourceRefreshed,
   onUpdated,
   resource: resourceProp,
 }: ResourceDetailPanelProps) {
@@ -88,6 +90,7 @@ export function ResourceDetailPanel({
       .then((latestResource) => {
         if (!cancelled && latestResource) {
           setResource(latestResource);
+          onResourceRefreshed?.(latestResource);
         }
       })
       .catch((error) => {
@@ -104,7 +107,7 @@ export function ResourceDetailPanel({
     return () => {
       cancelled = true;
     };
-  }, [active, message, resourceProp.id]);
+  }, [active, message, onResourceRefreshed, resourceProp]);
 
   useEffect(() => {
     setSchemaPage(1);
