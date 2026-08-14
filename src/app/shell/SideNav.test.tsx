@@ -20,4 +20,10 @@ describe("shouldAlwaysShowEditionBadge", () => {
   it("keeps a static product badge when no capability state is available", () => {
     expect(shouldAlwaysShowEditionBadge({})).toBe(true);
   });
+
+  it("keeps the badge for capabilities that are not reported by bkn-safe", () => {
+    expect(
+      shouldAlwaysShowEditionBadge({ paidCapability: CAPABILITIES.BUSINESS_PROVENANCE }),
+    ).toBe(true);
+  });
 });

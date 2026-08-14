@@ -11,5 +11,6 @@
  * a capability key, EditionBadge can use the entitlement snapshot instead.
  */
 export function shouldAlwaysShowEditionBadge(item: { paidCapability?: string }) {
-  return !item.paidCapability;
+  return !item.paidCapability || !capabilityReportedByEndpoint(item.paidCapability);
 }
+import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";
