@@ -6,8 +6,9 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import i18n from "@/app/locales/i18n";
 import { BusinessProvenanceScene } from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene";
 
 const getConversations = vi.hoisted(() => vi.fn());
@@ -16,6 +17,7 @@ const getInteraction = vi.hoisted(() => vi.fn());
 const getMarkdown = vi.hoisted(() => vi.fn());
 const streamAnalysis = vi.hoisted(() => vi.fn());
 const getAnalysisHistory = vi.hoisted(() => vi.fn());
+let initialLanguage = "";
 
 vi.mock("@/modules/bkn-trace/business-provenance/business-provenance.service", () => ({
   getBusinessProvenanceConversations: getConversations,
@@ -45,7 +47,8 @@ vi.mock("react-i18next", async (importOriginal) => {
 });
 
 describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("zh-CN");
     window.history.replaceState({}, "", "/observability/business-provenance");
     getConversations.mockReset();
     getInteractions.mockReset();
@@ -71,11 +74,16 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
   });
 
   beforeAll(() => {
+    initialLanguage = i18n.language;
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: vi.fn().mockImplementation(() => ({ addEventListener: vi.fn(), addListener: vi.fn(), matches: false, removeEventListener: vi.fn(), removeListener: vi.fn() })),
     });
     vi.stubGlobal("ResizeObserver", class { disconnect() {} observe() {} });
+  });
+
+  afterAll(async () => {
+    await i18n.changeLanguage(initialLanguage);
   });
 
   it("shows an enterprise image upgrade state when the licensed deployment has no EE route", async () => {
