@@ -85,12 +85,15 @@ const OVERRIDES: Record<string, string[]> = {
  * Studio module vocabulary. Both large and small model grants open the shared model list.
  */
 const MODEL_RESOURCE_PERMISSIONS: Record<string, string[]> = {
-  "model-resources:model:view": ["large_model:display", "small_model:display"],
-  "model-resources:large-model:view": ["large_model:display"],
-  "model-resources:small-model:view": ["small_model:display"],
+  "model-resources:model:view": ["large_model:view_detail", "small_model:view_detail"],
+  "model-resources:large-model:view": ["large_model:view_detail"],
+  "model-resources:small-model:view": ["small_model:view_detail"],
   "model-resources:model:create": ["large_model:create", "small_model:create"],
   "model-resources:model:edit": ["large_model:modify", "small_model:modify"],
   "model-resources:model:delete": ["large_model:delete", "small_model:delete"],
+  "model-resources:quota:view": ["large_model:view_detail", "small_model:view_detail"],
+  "model-resources:quota:edit": ["large_model:modify", "small_model:modify"],
+  "model-resources:statistics:view": ["large_model:view_detail", "small_model:view_detail"],
 };
 
 /**
@@ -157,6 +160,7 @@ const MAPPED_MODULE_PREFIXES = ["execution-factory", "execution-factory-lab"];
  */
 const KNOWLEDGE_NETWORK_TYPE_PERMISSIONS: Record<string, string> = {
   "knowledge-network:create": "create",
+  "knowledge-network:view": "view_detail",
 };
 
 /**

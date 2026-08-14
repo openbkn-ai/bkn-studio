@@ -60,7 +60,12 @@ export const modelResourcesRoutes: RouteObject[] = [
       },
     },
     element: withRouteLoading(
-      ["model-resources:quota:view", "model-resources:quota:edit"],
+      [
+        "model-resources:large-model:view",
+        "model-resources:small-model:view",
+        "model-resources:quota:view",
+        "model-resources:quota:edit",
+      ],
       <QuotaListPage />,
     ),
   },
@@ -73,7 +78,14 @@ export const modelResourcesRoutes: RouteObject[] = [
         titleKey: "modelResources.statistics.title",
       },
     },
-    element: withRouteLoading("model-resources:statistics:view", <ModelStatisticsPage />),
+    element: withRouteLoading(
+      [
+        "model-resources:large-model:view",
+        "model-resources:small-model:view",
+        "model-resources:statistics:view",
+      ],
+      <ModelStatisticsPage />,
+    ),
   },
 ];
 

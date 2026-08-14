@@ -154,6 +154,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         path: "/knowledge-network",
         permissionMode: "any",
         permissions: [
+          "knowledge-network:view",
           "knowledge-network:create",
           "knowledge-network:edit",
           "knowledge-network:delete",
@@ -179,6 +180,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         path: "/knowledge-network",
         permissionMode: "any",
         permissions: [
+          "knowledge-network:view",
           "knowledge-network:concept-group:view",
           "knowledge-network:metric:view",
         ],
@@ -192,6 +194,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         path: "/knowledge-network",
         permissionMode: "any",
         permissions: [
+          "knowledge-network:view",
           "knowledge-network:preview",
           "knowledge-network:concept-group:view",
           "knowledge-network:metric:view",

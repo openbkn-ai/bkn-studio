@@ -241,7 +241,7 @@ describe("折叠通配契约", () => {
   it("模型资源权限映射到 bkn-safe 的 large_model/small_model 操作", () => {
     const grants = flattenSafeGrants([
       {
-        operations: ["display", "create", "modify"],
+        operations: ["view_detail", "create", "modify"],
         resource: { id: "*", type: "large_model" },
       },
     ]);
@@ -252,6 +252,8 @@ describe("折叠通配契约", () => {
     expect(isStudioPermissionGranted("model-resources:model:create", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("model-resources:model:edit", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("model-resources:model:delete", grants, false)).toBe(false);
+    expect(isStudioPermissionGranted("model-resources:statistics:view", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("model-resources:quota:edit", grants, false)).toBe(true);
   });
 });
 

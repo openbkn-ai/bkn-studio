@@ -425,7 +425,7 @@ export function SmallModelListPanel() {
               .filter((item) => selectedRowKeys.includes(item.modelId))
               .every(canDelete)
           }
-          showDelete={items.some(canDelete)}
+          showDelete
         modelType={modelType}
         modelTypeOptions={[
           { value: "all", label: t("modelResources.models.all") },

@@ -123,7 +123,7 @@ describe("fetchCurrentUser — 权限来源不可用时 fail-closed", () => {
             is_admin: true,
             permissions: [
               { operations: ["view"], resource: { id: "*", type: "admin-user" } },
-              { operations: ["display", "create", "modify", "execute"], resource: { id: "*", type: "large_model" } },
+              { operations: ["view_detail", "create", "modify", "execute"], resource: { id: "*", type: "large_model" } },
             ],
           }),
     );

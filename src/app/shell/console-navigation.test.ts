@@ -88,7 +88,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
   });
 
   it("领域知识网络拆分为管理和调用两个入口", () => {
-    const filtered = filterNavByPermission(consoleNavigation, ["knowledge-network:preview"]);
+    const filtered = filterNavByPermission(consoleNavigation, ["knowledge-network:view"]);
     const group = filtered.find((item) => item.key === "domain-knowledge-network");
     expect(group).toBeDefined();
     expect(keys(group!.children ?? [])).toEqual([
