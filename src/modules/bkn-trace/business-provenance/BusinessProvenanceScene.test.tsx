@@ -194,7 +194,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     await screen.findByRole("columnheader", { name: "证据完整性" });
     expect(screen.getByRole("columnheader", { name: "用户问题" })).not.toBeNull();
     expect(screen.getByRole("columnheader", { name: "业务结果" })).not.toBeNull();
-    expect(screen.getByText("完整可溯源")).not.toBeNull();
+    expect(await screen.findByText("完整可溯源")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "查询采购订单" }));
     await waitFor(() => expect(getInteractions).toHaveBeenCalledWith(expect.objectContaining({ conversationId: "conv-1" })));
     expect(await screen.findByText("1 轮交互")).not.toBeNull();
