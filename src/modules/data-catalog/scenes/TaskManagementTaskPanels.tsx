@@ -67,6 +67,8 @@ let mockSemanticTasks: SemanticTask[] = [
     applied: true,
     creator: { id: "mock-user", name: "Mock User", type: "user" },
     createTime: Date.now() - 1000 * 60 * 45,
+    startTime: Date.now() - 1000 * 60 * 44,
+    finishTime: Date.now() - 1000 * 60 * 40,
   },
   {
     id: "semantic-task-002",
@@ -80,6 +82,7 @@ let mockSemanticTasks: SemanticTask[] = [
     applied: false,
     creator: { id: "mock-user", name: "Mock User", type: "user" },
     createTime: Date.now() - 1000 * 60 * 8,
+    startTime: Date.now() - 1000 * 60 * 7,
   },
 ];
 
@@ -264,8 +267,9 @@ export function DiscoverTaskListPanel() {
       onCell: () => ({ className: styles.progressCell }),
       render: (_, record) => <DiscoverTaskProgress task={record} />,
     },
-    { dataIndex: "startTime", title: t("dataCatalog.taskManagement.details.startTime"), width: 180, render: formatTime },
-    { dataIndex: "finishTime", title: t("dataCatalog.task.finishedAt"), width: 180, render: formatTime },
+    { dataIndex: "startTime", key: "start_time", title: t("dataCatalog.taskManagement.details.startTime"), width: 180, sorter: true, sortOrder: sortOrderOf("start_time"), render: formatTime },
+    { dataIndex: "lastProgressTime", key: "last_progress_time", title: t("dataConnect.discoverLastProgressTime"), width: 180, sorter: true, sortOrder: sortOrderOf("last_progress_time"), render: formatTime },
+    { dataIndex: "finishTime", key: "finish_time", title: t("dataCatalog.task.finishedAt"), width: 180, sorter: true, sortOrder: sortOrderOf("finish_time"), render: formatTime },
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
     {
       align: "center",
@@ -332,9 +336,14 @@ async function listSemanticTasks(page: number, pageSize: number, filters: Semant
         (filters.applied === undefined || item.applied === filters.applied),
     );
     const direction = filters.direction === "asc" ? 1 : -1;
+    const sortTime = (task: SemanticTask) => {
+      if (filters.sort === "start_time") return task.startTime ?? 0;
+      if (filters.sort === "finish_time") return task.finishTime ?? 0;
+      return task.createTime;
+    };
     const sorted = filtered.sort((left, right) => {
-      const leftValue = left.createTime;
-      const rightValue = right.createTime;
+      const leftValue = sortTime(left);
+      const rightValue = sortTime(right);
       return leftValue > rightValue ? direction : leftValue < rightValue ? -direction : 0;
     });
     const startIndex = (page - 1) * pageSize;
@@ -494,6 +503,8 @@ export function SemanticUnderstandingTaskListPanel() {
         </Tag>
       ),
     },
+    { dataIndex: "startTime", key: "start_time", title: t("dataCatalog.taskManagement.details.startTime"), width: 180, sorter: true, sortOrder: sortOrderOf("start_time"), render: formatTime },
+    { dataIndex: "finishTime", key: "finish_time", title: t("dataCatalog.task.finishedAt"), width: 180, sorter: true, sortOrder: sortOrderOf("finish_time"), render: formatTime },
     { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
     {
       align: "center",

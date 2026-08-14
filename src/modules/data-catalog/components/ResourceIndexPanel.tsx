@@ -138,7 +138,7 @@ function buildStatusSummary(
   if (effective.mode === "streaming") {
     parts.push(
       t("dataCatalog.indexWorkspace.lastEventShort", {
-        time: timeAgo(effective.lastEventAt ?? effective.createTime, language),
+        time: timeAgo(effective.lastProgressTime ?? effective.createTime, language),
       }),
     );
   } else if (effective.finishTime) {

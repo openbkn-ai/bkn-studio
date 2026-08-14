@@ -26,7 +26,8 @@ describe("mapSemanticUnderstandingTaskSummary", () => {
       id: "task-1",
       scope: "catalog",
       status: "running",
-      update_time: 200,
+      start_time: 120,
+      finish_time: 200,
     });
 
     expect(summary).toMatchObject({
@@ -41,7 +42,8 @@ describe("mapSemanticUnderstandingTaskSummary", () => {
       id: "task-1",
       scope: "catalog",
       status: "running",
-      updateTime: 200,
+      startTime: 120,
+      finishTime: 200,
     });
   });
 });
@@ -91,7 +93,8 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
       creator: { id: "user-1", name: "User", type: "user" },
       id: "task-1",
       scope: "catalog" as const,
-      update_time: 200,
+      start_time: 120,
+      finish_time: 200,
     };
 
     expect(mapSemanticUnderstandingTaskSummary({ ...base, status: "completed" }).status).toBe(

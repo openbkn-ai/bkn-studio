@@ -151,26 +151,27 @@ export type BuildTask = {
   error: string | null;
   /** Backend failure_detail containing the detailed reason for vectorization failure, shown in a tooltip. */
   failureDetail: string;
-  /** Completion time derived from update_time for terminal tasks. */
+  /** Time at which the task entered a terminal state. */
   finishTime: number | null;
   id: string;
   /** Actual backend index health (index_health). Legacy mock data may omit it, so components fall back to embeddingDegraded. */
   indexHealth?: IndexHealth;
   /** Whether the index is usable; false when embeddingDegraded. */
   indexUsable: boolean;
-  lastEventAt: number | null;
+  /** Most recent externally observable progress update. */
+  lastProgressTime: number | null;
   mode: BuildMode;
   modelDimensions: number;
   resourceId: string;
   /** Resource name returned with task lists to avoid loading all resources again. */
   resourceName?: string;
   status: BuildTaskStatus;
+  /** Time at which the worker started this execution. */
+  startTime: number | null;
   syncedCount: number;
   /** Synchronization checkpoint used to resume unfinished tasks. */
   syncedMark?: string;
   totalCount: number;
-  /** Backend last-update time as a millisecond timestamp. */
-  updateTime?: number;
   vectorizedCount: number;
 };
 
@@ -182,7 +183,11 @@ export type BuildTaskListQuery = {
 };
 
 /** Server-side sort dimension for the build-task list API. */
-export type BuildTaskSort = "create_time" | "update_time";
+export type BuildTaskSort =
+  | "create_time"
+  | "start_time"
+  | "finish_time"
+  | "last_progress_time";
 
 export type BuildTaskPageQuery = {
   catalogId?: string;

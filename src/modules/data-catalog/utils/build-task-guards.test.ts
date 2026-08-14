@@ -34,7 +34,8 @@ function task(status: BuildTask["status"]): BuildTask {
     failureDetail: "",
     createTime: 0,
     finishTime: null,
-    lastEventAt: null,
+    lastProgressTime: null,
+    startTime: null,
     error: null,
   };
 }

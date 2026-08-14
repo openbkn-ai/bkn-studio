@@ -67,11 +67,13 @@ type BackendBuildTask = {
   model_dimensions?: number;
   resource_id?: string;
   resource_name?: string;
+  start_time?: number;
   status?: string;
   synced_count?: number;
   synced_mark?: string;
   total_count?: number;
-  update_time?: number;
+  finish_time?: number;
+  last_progress_time?: number;
   vectorized_count?: number;
 };
 
@@ -298,12 +300,9 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     indexUsable: indexHealth.usable,
     failureDetail: item.failure_detail ?? "",
     createTime,
-    finishTime:
-      (status === "succeeded" || status === "failed" || status === "cancelled") && item.update_time
-        ? item.update_time
-        : null,
-    updateTime: item.update_time,
-    lastEventAt: mode === "streaming" ? (item.update_time ?? null) : null,
+    startTime: item.start_time ?? null,
+    finishTime: item.finish_time ?? null,
+    lastProgressTime: item.last_progress_time ?? null,
     error: item.error_msg || null,
   };
 }
@@ -401,8 +400,18 @@ function sortMockTasks(
 ): BuildTask[] {
   const arr = [...items];
   const dir = direction === "asc" ? 1 : -1;
-  const keyOf = (task: BuildTask): number =>
-    sort === "create_time" ? task.createTime : (task.updateTime ?? task.createTime);
+  const keyOf = (task: BuildTask): number => {
+    switch (sort) {
+      case "start_time":
+        return task.startTime ?? 0;
+      case "finish_time":
+        return task.finishTime ?? 0;
+      case "last_progress_time":
+        return task.lastProgressTime ?? 0;
+      default:
+        return task.createTime;
+    }
+  };
   return arr.sort((a, b) => {
     const ka = keyOf(a);
     const kb = keyOf(b);
@@ -534,7 +543,8 @@ export async function createBuildTask(
       failureDetail: "",
       createTime,
       finishTime: null,
-      lastEventAt: null,
+      lastProgressTime: null,
+      startTime: null,
       error: null,
     };
     mockBuildTasks.unshift(task);
@@ -568,7 +578,7 @@ export async function pauseBuildTask(id: string) {
     const task = mockBuildTasks.find((item) => item.id === id);
     if (task && (task.status === "listening" || task.status === "running")) {
       task.status = "paused";
-      task.updateTime = Date.now();
+      task.lastProgressTime = Date.now();
       emitMockChange();
     }
     await wait(undefined, 120);
@@ -583,9 +593,10 @@ export async function resumeBuildTask(id: string) {
   if (useMock) {
     const task = mockBuildTasks.find((item) => item.id === id);
     if (task && task.status === "paused") {
-      task.status = task.mode === "streaming" ? "listening" : "running";
-      task.updateTime = Date.now();
-      task.lastEventAt = task.updateTime;
+      task.status = "pending";
+      task.startTime = null;
+      task.finishTime = null;
+      task.lastProgressTime = null;
       emitMockChange();
       ensureMockTicker();
     }
@@ -653,11 +664,12 @@ export async function retryBuildTask(
       source.syncedCount = 0;
       source.vectorizedCount = 0;
     }
-    source.status = source.mode === "streaming" ? "listening" : "running";
+    source.status = "pending";
     source.error = null;
     source.failureDetail = "";
-    source.updateTime = Date.now();
-    source.lastEventAt = source.updateTime;
+    source.startTime = null;
+    source.finishTime = null;
+    source.lastProgressTime = null;
     emitMockChange();
     ensureMockTicker();
     return wait(source);

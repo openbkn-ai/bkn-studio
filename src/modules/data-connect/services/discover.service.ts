@@ -52,6 +52,7 @@ type BackendDiscoverTask = {
   creator?: BackendAccountInfo;
   finish_time?: number;
   id: string;
+  last_progress_time?: number;
   message?: string;
   progress?: number;
   result?: {
@@ -149,6 +150,7 @@ let mockTasks: DataConnectDiscoverTask[] = [
     message: discoverMockText("syncCompleted", { count: 48 }),
     startTime: Date.parse("2026-06-03T02:00:11"),
     finishTime: Date.parse("2026-06-03T02:12:04"),
+    lastProgressTime: Date.parse("2026-06-03T02:11:50"),
     creatorName: "Platform Admin",
     createTime: Date.parse("2026-06-03T02:00:11"),
   },
@@ -162,6 +164,7 @@ let mockTasks: DataConnectDiscoverTask[] = [
     progress: 56,
     message: discoverMockText("pullingIndexChanges"),
     startTime: Date.parse("2026-06-03T11:30:08"),
+    lastProgressTime: Date.parse("2026-06-03T11:42:20"),
     creatorName: "Search Team",
     createTime: Date.parse("2026-06-03T11:30:08"),
   },
@@ -176,6 +179,7 @@ let mockTasks: DataConnectDiscoverTask[] = [
     message: discoverMockText("cleanupTimeout"),
     startTime: Date.parse("2026-06-02T03:00:00"),
     finishTime: Date.parse("2026-06-02T03:03:15"),
+    lastProgressTime: Date.parse("2026-06-02T03:02:55"),
     creatorName: "Data Ops",
     createTime: Date.parse("2026-06-02T03:00:00"),
   },
@@ -279,6 +283,7 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
     message: item.message ?? "",
     startTime: item.start_time,
     finishTime: item.finish_time,
+    lastProgressTime: item.last_progress_time,
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
     createTime: item.create_time ?? 0,
   };
@@ -305,6 +310,7 @@ function toTaskSummary(task: DataConnectDiscoverTask): DataConnectDiscoverTaskSu
     creatorName: task.creatorName,
     finishTime: task.finishTime,
     id: task.id,
+    lastProgressTime: task.lastProgressTime,
     progress: task.progress,
     result,
     scheduleId: task.scheduleId,
@@ -355,7 +361,19 @@ function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscove
     );
   });
   const direction = query.direction === "asc" ? 1 : -1;
-  return filtered.sort((left, right) => (left.createTime - right.createTime) * direction);
+  const timestampOf = (task: DataConnectDiscoverTask) => {
+    switch (query.sort) {
+      case "start_time":
+        return task.startTime ?? 0;
+      case "finish_time":
+        return task.finishTime ?? 0;
+      case "last_progress_time":
+        return task.lastProgressTime ?? 0;
+      default:
+        return task.createTime;
+    }
+  };
+  return filtered.sort((left, right) => (timestampOf(left) - timestampOf(right)) * direction);
 }
 
 export async function listDataConnectDiscoverSchedules(

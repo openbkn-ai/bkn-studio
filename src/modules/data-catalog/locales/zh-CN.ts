@@ -439,7 +439,8 @@ export const dataCatalogZhCN = {
         creator: "创建人",
         syncedMark: "同步断点",
         totalCount: "总行数",
-        updateTime: "最后更新时间",
+        startTime: "开始时间",
+        lastProgressTime: "最近进度更新时间",
       },
       health: {
         building: "构建中",

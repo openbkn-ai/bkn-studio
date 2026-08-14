@@ -47,7 +47,8 @@ function buildTask(resourceId: string, id = `${resourceId}-task`): BuildTask {
     failureDetail: "",
     createTime: 1,
     finishTime: null,
-    lastEventAt: null,
+    lastProgressTime: null,
+    startTime: null,
     error: null,
   };
 }

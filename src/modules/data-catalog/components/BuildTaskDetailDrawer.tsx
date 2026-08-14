@@ -387,8 +387,11 @@ export function BuildTaskDetailDrawer({
             <Descriptions.Item label={t("dataConnect.createTime")}>
               {task.createTime ? formatDateTime(task.createTime) : "-"}
             </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.task.fields.updateTime")}>
-              {task.updateTime ? formatDateTime(task.updateTime) : "—"}
+            <Descriptions.Item label={t("dataCatalog.task.fields.startTime")}>
+              {task.startTime ? formatDateTime(task.startTime) : "—"}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.lastProgressTime")}>
+              {task.lastProgressTime ? formatDateTime(task.lastProgressTime) : "—"}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>
               {task.finishTime ? formatDateTime(task.finishTime) : "—"}

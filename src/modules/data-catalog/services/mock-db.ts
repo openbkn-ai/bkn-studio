@@ -231,8 +231,12 @@ function makeTask(
     | "fulltextAnalyzer"
     | "fulltextFields"
     | "indexUsable"
+    | "lastProgressTime"
+    | "startTime"
   > & {
     finishedAt?: number | null;
+    lastProgressAt?: number | null;
+    startedAt?: number | null;
     embeddingDegraded?: boolean;
     failureDetail?: string;
     fulltextAnalyzer?: string;
@@ -253,8 +257,9 @@ function makeTask(
     embeddingDegraded,
     failureDetail: input.failureDetail ?? input.error ?? "",
     indexUsable: input.indexUsable ?? (indexed && !embeddingDegraded),
-    updateTime: input.updateTime ?? input.lastEventAt ?? input.finishedAt ?? input.createTime,
+    startTime: input.startedAt ?? (input.status === "pending" ? null : input.createTime),
     finishTime: input.finishedAt ?? null,
+    lastProgressTime: input.lastProgressAt ?? null,
   };
 }
 
@@ -273,7 +278,7 @@ export const mockBuildTasks: BuildTask[] = [
     vectorizedCount: 182_340,
     createTime: daysAgo(2),
     finishedAt: daysAgo(2) + 25 * 60_000,
-    lastEventAt: null,
+    lastProgressAt: null,
     error: null,
   }),
   makeTask({
@@ -290,7 +295,7 @@ export const mockBuildTasks: BuildTask[] = [
     vectorizedCount: 28_660,
     createTime: minutesAgo(9),
     finishedAt: null,
-    lastEventAt: null,
+    lastProgressAt: null,
     error: null,
   }),
   makeTask({
@@ -307,7 +312,7 @@ export const mockBuildTasks: BuildTask[] = [
     vectorizedCount: 12_020,
     createTime: minutesAgo(75),
     finishedAt: minutesAgo(63),
-    lastEventAt: null,
+    lastProgressAt: null,
     error: "embedding service timeout: 504 upstream",
   }),
   makeTask({
@@ -324,7 +329,7 @@ export const mockBuildTasks: BuildTask[] = [
     vectorizedCount: 46_010,
     createTime: daysAgo(6),
     finishedAt: daysAgo(6) + 19 * 60_000,
-    lastEventAt: null,
+    lastProgressAt: null,
     error: null,
   }),
 ];
@@ -474,13 +479,13 @@ function tick() {
   mockBuildTasks.forEach((task) => {
     if (task.status === "pending") {
       task.status = task.mode === "streaming" ? "listening" : "running";
-      task.updateTime = Date.now();
+      task.startTime = Date.now();
       changed = true;
       return;
     }
 
     if (task.status === "running") {
-      task.updateTime = Date.now();
+      task.lastProgressTime = Date.now();
       const step = Math.max(
         60,
         Math.floor(task.totalCount * (0.025 + Math.random() * 0.02)),
@@ -496,7 +501,7 @@ function tick() {
         task.vectorizedCount >= task.totalCount
       ) {
         task.status = "succeeded";
-        const finishedAt = task.updateTime;
+        const finishedAt = Date.now();
         task.finishTime = finishedAt;
         const resource = mockResources.find((item) => item.id === task.resourceId);
         if (resource) {
@@ -513,8 +518,7 @@ function tick() {
         const step = Math.max(80, Math.floor(task.totalCount * 0.06));
         task.syncedCount = Math.min(task.totalCount, task.syncedCount + step);
         task.vectorizedCount = task.syncedCount;
-        task.updateTime = Date.now();
-        task.lastEventAt = task.updateTime;
+        task.lastProgressTime = Date.now();
         changed = true;
         return;
       }
@@ -524,8 +528,7 @@ function tick() {
         task.totalCount += delta;
         task.syncedCount += delta;
         task.vectorizedCount += delta;
-        task.updateTime = Date.now();
-        task.lastEventAt = task.updateTime;
+        task.lastProgressTime = Date.now();
         const resource = mockResources.find((item) => item.id === task.resourceId);
         if (resource) {
           resource.rowCount = task.totalCount;

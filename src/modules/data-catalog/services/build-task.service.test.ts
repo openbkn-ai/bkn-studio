@@ -17,8 +17,10 @@ vi.mock("@/framework/request/http", () => ({
 import {
   createBuildTask,
   mapBuildTask,
+  pauseBuildTask,
   snapshotFieldsOf,
 } from "@/modules/data-catalog/services/build-task.service";
+import { mockBuildTasks } from "@/modules/data-catalog/services/mock-db";
 
 describe("snapshotFieldsOf", () => {
   it("retains the effective analyzer for every fulltext field", () => {
@@ -64,18 +66,21 @@ describe("mapBuildTask", () => {
       create_time: 100,
       id: "task-1",
       status: "completed",
-      update_time: 200,
+      finish_time: 200,
+      last_progress_time: 180,
+      start_time: 120,
     });
 
     expect(task.createTime).toBe(100);
+    expect(task.startTime).toBe(120);
     expect(task.finishTime).toBe(200);
-    expect(task.updateTime).toBe(200);
+    expect(task.lastProgressTime).toBe(180);
     expect(task).not.toHaveProperty("createdAt");
     expect(task).not.toHaveProperty("updatedAt");
   });
 
-  it("does not expose update time as finish time for an active task", () => {
-    const task = mapBuildTask({ id: "task-1", status: "running", update_time: 200 });
+  it("does not expose a finish time for an active task", () => {
+    const task = mapBuildTask({ id: "task-1", last_progress_time: 200, status: "running" });
 
     expect(task.finishTime).toBeNull();
   });
@@ -174,16 +179,42 @@ describe("createBuildTask", () => {
         direction: "asc",
         page: 1,
         pageSize: 20,
-        sort: "update_time",
+        sort: "last_progress_time",
       });
 
       const config = getMock.mock.calls[0]?.[1] as {
         params: Record<string, unknown>;
       };
-      expect(config.params.sort).toBe("update_time");
+      expect(config.params.sort).toBe("last_progress_time");
       expect(config.params.direction).toBe("asc");
       expect(config.params).not.toHaveProperty("order_by");
       expect(config.params).not.toHaveProperty("order");
     });
+  });
+});
+
+describe("pauseBuildTask", () => {
+  it("records progress without assigning a finish time", async () => {
+    const task = mockBuildTasks.find((item) => item.id === "bt-orders-01");
+    expect(task).toBeDefined();
+    if (!task) return;
+
+    const original = { ...task };
+    task.status = "running";
+    task.finishTime = null;
+    task.lastProgressTime = null;
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(500));
+
+    const paused = pauseBuildTask(task.id);
+    await vi.advanceTimersByTimeAsync(120);
+    await paused;
+
+    expect(task.status).toBe("paused");
+    expect(task.finishTime).toBeNull();
+    expect(task.lastProgressTime).toBe(500);
+
+    Object.assign(task, original);
+    vi.useRealTimers();
   });
 });

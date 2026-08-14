@@ -165,6 +165,7 @@ export const dataConnectZhCN = {
     discoverProgress: "进度",
     discoverMessage: "执行信息",
     discoverFinishTime: "结束时间",
+    discoverLastProgressTime: "最近进度更新时间",
     discoverScheduleTableTitle: "探查计划",
     discoverTaskTableTitle: "近期探查任务",
     discoverSelectedSchedule: '当前已按计划“{{name}}”进行筛选',

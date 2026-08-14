@@ -464,7 +464,8 @@ export const dataCatalogEnUS = {
         creator: "Created by",
         syncedMark: "Sync checkpoint",
         totalCount: "Total rows",
-        updateTime: "Last updated",
+        startTime: "Started at",
+        lastProgressTime: "Last progress update",
       },
       health: {
         building: "Building",

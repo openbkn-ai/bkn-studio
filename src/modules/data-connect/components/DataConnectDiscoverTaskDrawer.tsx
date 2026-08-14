@@ -136,6 +136,10 @@ export function DataConnectDiscoverTaskDrawer({
                 value={formatDiscoverTaskTime(task.finishTime)}
               />
               <DetailItem
+                label={t("dataConnect.discoverLastProgressTime")}
+                value={formatDiscoverTaskTime(task.lastProgressTime)}
+              />
+              <DetailItem
                 label={t("dataConnect.creator")}
                 value={task.creatorName || "-"}
               />
