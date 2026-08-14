@@ -307,6 +307,7 @@ options: CatalogMutationOptions = {},
     ));
     prependMockCatalog({
       id,
+      internal: false,
       name: input.name,
       description: input.description,
       connectorType: input.connectorType,
