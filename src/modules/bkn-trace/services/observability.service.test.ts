@@ -132,6 +132,20 @@ describe("observability service", () => {
     expect(policies[0]).toMatchObject({ category: "runtime.system", retentionDays: 7, readOnly: true });
   });
 
+  it("keeps log and trace archive overview endpoints separate", async () => {
+    getMock
+      .mockResolvedValueOnce({ data: { archive_kind: "log", retention_days: 30, cutoff_at: "2026-07-15T00:00:00+08:00", candidate_count: 4, storage: { status: "ready" } } })
+      .mockResolvedValueOnce({ data: { archive_kind: "trace", retention_days: 7, cutoff_at: "2026-08-07T00:00:00+08:00", candidate_count: 2, storage: { status: "ready" } } });
+    const { getArchiveOverview } = await import("@/modules/bkn-trace/services/observability.service");
+
+    const [logs, traces] = await Promise.all([getArchiveOverview("log"), getArchiveOverview("trace")]);
+
+    expect(logs).toMatchObject({ kind: "log", retentionDays: 30, candidateCount: 4 });
+    expect(traces).toMatchObject({ kind: "trace", retentionDays: 7, candidateCount: 2 });
+    expect(getMock).toHaveBeenNthCalledWith(1, "/observability/v1/log-archive-overview", expect.objectContaining({ skipErrorToast: true }));
+    expect(getMock).toHaveBeenNthCalledWith(2, "/observability/v1/trace-archive-overview", expect.objectContaining({ skipErrorToast: true }));
+  });
+
 	 it("loads an authorized operation audit detail from the gateway", async () => {
 		 getMock.mockResolvedValueOnce({ data: {
 				 data: {

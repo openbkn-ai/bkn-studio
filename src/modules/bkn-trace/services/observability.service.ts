@@ -135,6 +135,24 @@ export type LogPolicy = {
   storageTargetRef?: string;
 };
 
+export type ArchiveKind = "log" | "trace";
+
+export type ArchiveOverview = {
+  candidateCount: number;
+  cutoffAt: string;
+  kind: ArchiveKind;
+  retentionDays: number;
+  storageStatus: "ready" | "unavailable";
+};
+
+export type ArchiveJob = {
+  candidateCount: number;
+  id: string;
+  kind: ArchiveKind;
+  range: { from?: string; to: string };
+  status: "cleanup_incomplete" | "completed" | "failed";
+};
+
 export type LogListQuery = {
   action?: string;
   actorId?: string;
@@ -264,6 +282,64 @@ export async function listLogPolicies(): Promise<LogPolicy[]> {
     scope: policy.scope,
     ...(policy.storage_target_ref ? { storageTargetRef: policy.storage_target_ref } : {}),
   }));
+}
+
+export async function getArchiveOverview(kind: ArchiveKind): Promise<ArchiveOverview> {
+  const resource = kind === "log" ? "log-archive-overview" : "trace-archive-overview";
+  const response = await http.get<{
+    archive_kind: ArchiveKind;
+    retention_days: number;
+    cutoff_at: string;
+    candidate_count: number;
+    storage: { status: "ready" | "unavailable" };
+  }>(`${OBSERVABILITY_API_PREFIX}/${resource}`, { headers: observabilityHeaders(), skipErrorToast: true });
+  return {
+    candidateCount: response.data.candidate_count,
+    cutoffAt: response.data.cutoff_at,
+    kind: response.data.archive_kind,
+    retentionDays: response.data.retention_days,
+    storageStatus: response.data.storage.status,
+  };
+}
+
+export async function createArchive(kind: ArchiveKind): Promise<ArchiveJob> {
+  const resource = kind === "log" ? "log-archive-jobs" : "trace-archive-jobs";
+  const response = await http.post<{
+    archive_job_id: string;
+    archive_kind: ArchiveKind;
+    candidate_count: number;
+    range: { from?: string; to: string };
+    status: ArchiveJob["status"];
+  }>(`${OBSERVABILITY_API_PREFIX}/${resource}`, {}, { headers: observabilityHeaders(), skipErrorToast: true });
+  return { candidateCount: response.data.candidate_count, id: response.data.archive_job_id, kind: response.data.archive_kind, range: response.data.range, status: response.data.status };
+}
+
+export async function listArchiveJobs(kind: ArchiveKind): Promise<ArchiveJob[]> {
+  const resource = kind === "log" ? "log-archive-jobs" : "trace-archive-jobs";
+  const response = await http.get<Array<{
+    archive_job_id: string;
+    archive_kind: ArchiveKind;
+    candidate_count: number;
+    range: { from?: string; to: string };
+    status: ArchiveJob["status"];
+  }>>(`${OBSERVABILITY_API_PREFIX}/${resource}`, { headers: observabilityHeaders(), skipErrorToast: true });
+  return response.data.map((job) => ({ candidateCount: job.candidate_count, id: job.archive_job_id, kind: job.archive_kind, range: job.range, status: job.status }));
+}
+
+export async function getArchiveDownloadURL(id: string): Promise<string> {
+  const response = await http.post<{ download_url: string }>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/download-url`, {}, { headers: observabilityHeaders(), skipErrorToast: true });
+  return response.data.download_url;
+}
+
+export async function retryArchiveCleanup(id: string): Promise<ArchiveJob> {
+  const response = await http.post<{
+    archive_job_id: string;
+    archive_kind: ArchiveKind;
+    candidate_count: number;
+    range: { from?: string; to: string };
+    status: ArchiveJob["status"];
+  }>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/retry-cleanup`, {}, { headers: observabilityHeaders(), skipErrorToast: true });
+  return { candidateCount: response.data.candidate_count, id: response.data.archive_job_id, kind: response.data.archive_kind, range: response.data.range, status: response.data.status };
 }
 
 function mapLogRecord(record: BackendLogRecord): LogRecord {

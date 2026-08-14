@@ -27,7 +27,7 @@ const baseProfile = {
   accessScopeFingerprint: "sha256:test", allowedLogCategories: [],
   businessProvenanceManagedNetworks: false, businessProvenanceOwn: false,
   globalLogSearch: false, logExport: false, logPolicyRead: false, logSensitiveFields: false,
-  managementAudit: false, securityAudit: false, technicalTrace: false,
+  managementAudit: false, observabilityArchiveManage: false, securityAudit: false, technicalTrace: false,
 };
 
 describe("observability capability pages", () => {

@@ -18,6 +18,7 @@ export type TraceAccessProfile = {
   globalLogSearch: boolean;
   logExport: boolean;
   logPolicyRead: boolean;
+	observabilityArchiveManage: boolean;
   logSensitiveFields: boolean;
   managementAudit: boolean;
   securityAudit: boolean;
@@ -32,6 +33,7 @@ type BackendTraceAccessProfile = {
   global_log_search?: boolean;
   log_export?: boolean;
   log_policy_read?: boolean;
+	observability_archive_manage?: boolean;
   log_sensitive_fields?: boolean;
   management_audit?: boolean;
   security_audit?: boolean;
@@ -51,6 +53,7 @@ export async function getAccessProfile(): Promise<TraceAccessProfile> {
     globalLogSearch: Boolean(response.data.global_log_search),
     logExport: Boolean(response.data.log_export),
     logPolicyRead: Boolean(response.data.log_policy_read),
+		observabilityArchiveManage: Boolean(response.data.observability_archive_manage),
     logSensitiveFields: Boolean(response.data.log_sensitive_fields),
     managementAudit: Boolean(response.data.management_audit),
     securityAudit: Boolean(response.data.security_audit),

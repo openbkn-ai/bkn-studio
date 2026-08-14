@@ -11,7 +11,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import { ObservabilityLogsScene } from "@/modules/bkn-trace/scenes/ObservabilityLogsScene";
 import { ObservabilitySettingsScene } from "@/modules/bkn-trace/scenes/ObservabilitySettingsScene";
-import { getLogDetail, listLogPolicies, listLogs, listLogSources } from "@/modules/bkn-trace/services/observability.service";
+import { createArchive, getArchiveOverview, getLogDetail, listArchiveJobs, listLogPolicies, listLogs, listLogSources } from "@/modules/bkn-trace/services/observability.service";
 import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
 import { AuditLogPage } from "@/modules/system-admin/pages/AuditLogPage";
 
@@ -43,7 +43,7 @@ vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => 
 
 vi.mock("@/modules/bkn-trace/services/observability.service", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/modules/bkn-trace/services/observability.service")>();
-  return { ...original, getLogDetail: vi.fn(), listLogPolicies: vi.fn(), listLogs: vi.fn(), listLogSources: vi.fn() };
+  return { ...original, createArchive: vi.fn(), getArchiveOverview: vi.fn(), getLogDetail: vi.fn(), listArchiveJobs: vi.fn(), listLogPolicies: vi.fn(), listLogs: vi.fn(), listLogSources: vi.fn() };
 });
 
 vi.mock("@/modules/execution-factory/utils/use-audit-user-directory", () => ({
@@ -64,6 +64,7 @@ const profile = {
   managementAudit: false,
   securityAudit: false,
   technicalTrace: true,
+  observabilityArchiveManage: true,
 };
 
 describe("observability workspace scenes", () => {
@@ -255,6 +256,20 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.settings.readOnlyNotice")).not.toBeNull();
   });
 
+  it("点击立即归档先显示不可逆清理确认，而不直接创建归档任务", async () => {
+    vi.mocked(getArchiveOverview).mockResolvedValueOnce({ candidateCount: 1, cutoffAt: "2026-07-15T00:00:00Z", kind: "log", retentionDays: 30, storageStatus: "ready" });
+    vi.mocked(getArchiveOverview).mockResolvedValueOnce({ candidateCount: 1, cutoffAt: "2026-08-07T00:00:00Z", kind: "trace", retentionDays: 7, storageStatus: "ready" });
+    vi.mocked(listArchiveJobs).mockResolvedValue([]);
+    render(<ObservabilitySettingsScene />);
+
+		const [archiveButton] = await screen.findAllByRole("button", { name: "bknTrace.settings.archive.action" });
+		if (!archiveButton) throw new Error("archive action button is missing");
+		fireEvent.click(archiveButton);
+
+    expect(await screen.findByText("bknTrace.settings.archive.confirmTitle")).not.toBeNull();
+    expect(createArchive).not.toHaveBeenCalled();
+  });
+
   it("设置页明确区分技术运行来源与已接入状态", async () => {
     render(<ObservabilitySettingsScene />);
     await waitFor(() => expect(listLogSources).toHaveBeenCalled());
@@ -274,9 +289,10 @@ describe("observability workspace scenes", () => {
     sections.forEach((section, index) => {
       if (index > 0) expect(sections[index - 1]?.compareDocumentPosition(section)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
-    expect(screen.getByText("bknTrace.settings.archive.fixedRule")).not.toBeNull();
-    expect(screen.getByText("bknTrace.settings.archive.unavailable")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "bknTrace.settings.archive.action" }).hasAttribute("disabled")).toBe(true);
+		expect(screen.getByText("bknTrace.settings.archive.logRule")).not.toBeNull();
+		expect(screen.getByText("bknTrace.settings.archive.traceRule")).not.toBeNull();
+		expect(screen.getAllByText("bknTrace.settings.archive.unavailable")).toHaveLength(2);
+		expect(screen.getAllByRole("button", { name: "bknTrace.settings.archive.action" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
     expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 

@@ -5,14 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button, Empty, Spin, Table, Tag, Typography } from "antd";
+import { Alert, Button, Empty, Modal, Spin, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
-import { listLogPolicies, listLogSources, type LogPolicy, type LogSourceStatus } from "@/modules/bkn-trace/services/observability.service";
+import { createArchive, getArchiveDownloadURL, getArchiveOverview, listArchiveJobs, listLogPolicies, listLogSources, retryArchiveCleanup, type ArchiveJob, type ArchiveKind, type ArchiveOverview, type LogPolicy, type LogSourceStatus } from "@/modules/bkn-trace/services/observability.service";
 import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
 
 type StorageRow = { dataKind: string; description: string; key: string; retention?: number; status: "known" | "unknown" };
@@ -21,6 +21,9 @@ export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
   const [policies, setPolicies] = useState<LogPolicy[]>([]);
+	const [archives, setArchives] = useState<ArchiveOverview[]>([]);
+	const [archiveJobs, setArchiveJobs] = useState<ArchiveJob[]>([]);
+	const [archiveManage, setArchiveManage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string>();
@@ -32,13 +35,21 @@ export function ObservabilitySettingsScene() {
         if (active) { setDenied(true); setLoading(false); }
         return;
       }
-      const [sourceResult, policyResult] = await Promise.allSettled([
+      setArchiveManage(profile.observabilityArchiveManage);
+      const [sourceResult, policyResult, logArchiveResult, traceArchiveResult, logJobsResult, traceJobsResult] = await Promise.allSettled([
         profile.globalLogSearch ? listLogSources() : Promise.resolve([]),
         profile.logPolicyRead ? listLogPolicies() : Promise.resolve([]),
+		profile.observabilityArchiveManage ? getArchiveOverview("log") : Promise.resolve<ArchiveOverview | undefined>(undefined),
+		profile.observabilityArchiveManage ? getArchiveOverview("trace") : Promise.resolve<ArchiveOverview | undefined>(undefined),
+		profile.observabilityArchiveManage ? listArchiveJobs("log") : Promise.resolve<ArchiveJob[]>([]),
+		profile.observabilityArchiveManage ? listArchiveJobs("trace") : Promise.resolve<ArchiveJob[]>([]),
       ]);
       if (!active) return;
       if (sourceResult.status === "fulfilled") setSources(sourceResult.value);
       if (policyResult.status === "fulfilled") setPolicies(policyResult.value);
+		const archiveData = [logArchiveResult, traceArchiveResult].flatMap((result) => result.status === "fulfilled" && result.value ? [result.value] : []);
+		setArchives(archiveData);
+		setArchiveJobs([...((logJobsResult.status === "fulfilled") ? logJobsResult.value : []), ...((traceJobsResult.status === "fulfilled") ? traceJobsResult.value : [])]);
       if (sourceResult.status === "rejected" && policyResult.status === "rejected") setError(t("bknTrace.errors.queryFailed"));
       setLoading(false);
     }).catch(() => {
@@ -106,16 +117,61 @@ export function ObservabilitySettingsScene() {
     </SettingsSection>
 
     <SettingsSection title={t("bknTrace.settings.archive.title")}>
-      <div className={styles.archivePanel}>
-        <div><Typography.Text strong>{t("bknTrace.settings.archive.fixedRule")}</Typography.Text><Typography.Paragraph type="secondary">{t("bknTrace.settings.archive.description")}</Typography.Paragraph><Typography.Text type="secondary">{t("bknTrace.settings.archive.unavailable")}</Typography.Text></div>
-        <Button disabled type="primary">{t("bknTrace.settings.archive.action")}</Button>
-      </div>
+		<div className={styles.archiveGrid}>
+			<ArchivePanel archive={archives.find((archive) => archive.kind === "log")} canManage={archiveManage} kind="log" onCreated={(kind) => refreshArchive(kind, setArchives, setArchiveJobs)} />
+			<ArchivePanel archive={archives.find((archive) => archive.kind === "trace")} canManage={archiveManage} kind="trace" onCreated={(kind) => refreshArchive(kind, setArchives, setArchiveJobs)} />
+		</div>
     </SettingsSection>
 
     <SettingsSection title={t("bknTrace.settings.recentArchives")}>
-      <Empty description={t("bknTrace.settings.archive.noHistory")} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+		{archiveJobs.length ? <Table pagination={false} rowKey="id" dataSource={archiveJobs} columns={[
+			{ title: t("bknTrace.settings.archive.jobKind"), dataIndex: "kind", key: "kind" },
+			{ title: t("bknTrace.settings.archive.jobRange"), key: "range", render: (_, job) => `${job.range.from || "-"} ~ ${job.range.to}` },
+			{ title: t("bknTrace.settings.archive.jobCount"), dataIndex: "candidateCount", key: "candidateCount" },
+			{ title: t("bknTrace.settings.archive.jobStatus"), dataIndex: "status", key: "status" },
+			{ title: t("bknTrace.settings.archive.jobAction"), key: "action", render: (_, job) => <>
+				{(job.status === "completed" || job.status === "cleanup_incomplete") ? <Button size="small" onClick={() => { void getArchiveDownloadURL(job.id).then((url) => window.open(url, "_blank", "noopener,noreferrer")); }}>{t("bknTrace.settings.archive.download")}</Button> : null}
+				{job.status === "cleanup_incomplete" ? <Button size="small" onClick={() => { void retryArchiveCleanup(job.id).then(() => refreshArchive(job.kind, setArchives, setArchiveJobs)); }}>{t("bknTrace.settings.archive.retryCleanup")}</Button> : null}
+			</> },
+		]} /> : <Empty description={t("bknTrace.settings.archive.noHistory")} image={Empty.PRESENTED_IMAGE_SIMPLE} />}
     </SettingsSection>
   </div>;
+}
+
+async function refreshArchive(kind: ArchiveKind, setArchives: (value: ArchiveOverview[] | ((previous: ArchiveOverview[]) => ArchiveOverview[])) => void, setJobs: (value: ArchiveJob[]) => void) {
+	const latest = await getArchiveOverview(kind);
+	setArchives((previous) => [...previous.filter((item) => item.kind !== kind), latest]);
+	setJobs(await listArchiveJobs(kind));
+}
+
+function ArchivePanel({ archive, canManage, kind, onCreated }: { archive?: ArchiveOverview; canManage: boolean; kind: ArchiveKind; onCreated: (kind: ArchiveKind) => Promise<void> }) {
+	const { t } = useTranslation();
+	const [confirmOpen, setConfirmOpen] = useState(false);
+	const [creating, setCreating] = useState(false);
+	const [createError, setCreateError] = useState<string>();
+	const label = kind === "log" ? t("bknTrace.settings.archive.logTitle") : t("bknTrace.settings.archive.traceTitle");
+	const rule = kind === "log" ? t("bknTrace.settings.archive.logRule") : t("bknTrace.settings.archive.traceRule");
+	const start = () => { setCreateError(undefined); setConfirmOpen(true); };
+	const confirm = async () => {
+		setCreating(true);
+		try {
+			await createArchive(kind);
+			await onCreated(kind);
+			setConfirmOpen(false);
+		} catch {
+			setCreateError(t("bknTrace.errors.queryFailed"));
+		} finally {
+			setCreating(false);
+		}
+	};
+	return <div className={styles.archivePanel}>
+		<div><Typography.Text strong>{label}</Typography.Text><Typography.Paragraph type="secondary">{rule}</Typography.Paragraph>{archive ? <Typography.Text type="secondary">{t("bknTrace.settings.archive.candidates", { count: archive.candidateCount, cutoff: archive.cutoffAt })}</Typography.Text> : <Typography.Text type="secondary">{t("bknTrace.settings.archive.unavailable")}</Typography.Text>}</div>
+		<Button disabled={!canManage || !archive || archive.candidateCount === 0 || archive.storageStatus !== "ready"} onClick={start} type="primary">{t("bknTrace.settings.archive.action")}</Button>
+		<Modal cancelText={t("common.cancel")} confirmLoading={creating} okText={t("bknTrace.settings.archive.action")} onCancel={() => setConfirmOpen(false)} onOk={() => void confirm()} open={confirmOpen} title={t("bknTrace.settings.archive.confirmTitle")}>
+			<Typography.Paragraph>{t("bknTrace.settings.archive.confirm", { rule })}</Typography.Paragraph>
+			{createError ? <Alert message={createError} showIcon type="error" /> : null}
+		</Modal>
+	</div>;
 }
 
 function SettingsSection({ children, title }: { children: ReactNode; title: string }) {
