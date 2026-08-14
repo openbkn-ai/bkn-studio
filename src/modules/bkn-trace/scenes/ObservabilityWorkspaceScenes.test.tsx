@@ -270,6 +270,29 @@ describe("observability workspace scenes", () => {
     expect(createArchive).not.toHaveBeenCalled();
   });
 
+  it("刷新一种归档任务时保留另一种归档任务并本地化枚举", async () => {
+    vi.mocked(getArchiveOverview).mockImplementation((kind) => Promise.resolve(kind === "log"
+      ? { candidateCount: 1, cutoffAt: "2026-07-15T00:00:00Z", kind, retentionDays: 30, storageStatus: "ready" }
+      : { candidateCount: 1, cutoffAt: "2026-08-07T00:00:00Z", kind, retentionDays: 7, storageStatus: "ready" }));
+    vi.mocked(listArchiveJobs).mockImplementation((kind) => Promise.resolve(kind === "log"
+      ? [{ id: "log-job", kind, range: { from: "2026-07-01", to: "2026-07-15" }, candidateCount: 1, status: "completed" }]
+      : [{ id: "trace-job", kind, range: { from: "2026-08-01", to: "2026-08-07" }, candidateCount: 1, status: "cleanup_incomplete" }]));
+    vi.mocked(createArchive).mockResolvedValue({ id: "log-job", kind: "log", range: { from: "2026-07-01", to: "2026-07-15" }, candidateCount: 1, status: "completed" });
+
+    render(<ObservabilitySettingsScene />);
+    expect(await screen.findByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
+    expect(screen.getByText("bknTrace.settings.archive.statuses.cleanup_incomplete")).not.toBeNull();
+	const [archiveButton] = screen.getAllByRole("button", { name: "bknTrace.settings.archive.action" });
+	if (!archiveButton) throw new Error("log archive action button is missing");
+	fireEvent.click(archiveButton);
+	const confirmationButtons = await screen.findAllByRole("button", { name: "bknTrace.settings.archive.action" });
+	const confirmationButton = confirmationButtons.at(-1);
+	if (!confirmationButton) throw new Error("archive confirmation button is missing");
+	fireEvent.click(confirmationButton);
+    await waitFor(() => expect(listArchiveJobs).toHaveBeenCalledWith("log"));
+    expect(screen.getByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
+  });
+
   it("设置页明确区分技术运行来源与已接入状态", async () => {
     render(<ObservabilitySettingsScene />);
     await waitFor(() => expect(listLogSources).toHaveBeenCalled());

@@ -7,6 +7,7 @@
 import CryptoJS from "crypto-js";
 import { getAppCallbackPath, getAppHomePath } from "@/app/router/app-paths";
 import { getDevRefreshToken } from "@/framework/auth/dev-auth";
+import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   clearStoredTokens,
   getStoredAccessToken,
@@ -437,7 +438,8 @@ export function logout(mode: "hosted" | "standalone") {
   if (shouldUseOAuthGate(mode) && accessToken) {
     // Access auditing is best effort: it must never hold the session tokens or
     // prevent the browser from completing the explicit logout.
-    void fetch("/api/safe/v1/me/logout", {
+    const apiBaseUrl = getRuntimeConfig().apiBaseUrl.replace(/\/$/, "");
+    void fetch(`${apiBaseUrl}/safe/v1/me/logout`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       keepalive: true,

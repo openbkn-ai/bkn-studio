@@ -125,10 +125,10 @@ export function ObservabilitySettingsScene() {
 
     <SettingsSection title={t("bknTrace.settings.recentArchives")}>
 		{archiveJobs.length ? <Table pagination={false} rowKey="id" dataSource={archiveJobs} columns={[
-			{ title: t("bknTrace.settings.archive.jobKind"), dataIndex: "kind", key: "kind" },
+			{ title: t("bknTrace.settings.archive.jobKind"), dataIndex: "kind", key: "kind", render: (kind: ArchiveKind) => t(`bknTrace.settings.archive.kinds.${kind}`) },
 			{ title: t("bknTrace.settings.archive.jobRange"), key: "range", render: (_, job) => `${job.range.from || "-"} ~ ${job.range.to}` },
 			{ title: t("bknTrace.settings.archive.jobCount"), dataIndex: "candidateCount", key: "candidateCount" },
-			{ title: t("bknTrace.settings.archive.jobStatus"), dataIndex: "status", key: "status" },
+			{ title: t("bknTrace.settings.archive.jobStatus"), dataIndex: "status", key: "status", render: (status: ArchiveJob["status"]) => t(`bknTrace.settings.archive.statuses.${status}`) },
 			{ title: t("bknTrace.settings.archive.jobAction"), key: "action", render: (_, job) => <>
 				{(job.status === "completed" || job.status === "cleanup_incomplete") ? <Button size="small" onClick={() => { void getArchiveDownloadURL(job.id).then((url) => window.open(url, "_blank", "noopener,noreferrer")); }}>{t("bknTrace.settings.archive.download")}</Button> : null}
 				{job.status === "cleanup_incomplete" ? <Button size="small" onClick={() => { void retryArchiveCleanup(job.id).then(() => refreshArchive(job.kind, setArchives, setArchiveJobs)); }}>{t("bknTrace.settings.archive.retryCleanup")}</Button> : null}
@@ -138,10 +138,11 @@ export function ObservabilitySettingsScene() {
   </div>;
 }
 
-async function refreshArchive(kind: ArchiveKind, setArchives: (value: ArchiveOverview[] | ((previous: ArchiveOverview[]) => ArchiveOverview[])) => void, setJobs: (value: ArchiveJob[]) => void) {
+async function refreshArchive(kind: ArchiveKind, setArchives: (value: ArchiveOverview[] | ((previous: ArchiveOverview[]) => ArchiveOverview[])) => void, setJobs: (value: ArchiveJob[] | ((previous: ArchiveJob[]) => ArchiveJob[])) => void) {
 	const latest = await getArchiveOverview(kind);
 	setArchives((previous) => [...previous.filter((item) => item.kind !== kind), latest]);
-	setJobs(await listArchiveJobs(kind));
+	const jobs = await listArchiveJobs(kind);
+	setJobs((previous) => [...previous.filter((job) => job.kind !== kind), ...jobs]);
 }
 
 function ArchivePanel({ archive, canManage, kind, onCreated }: { archive?: ArchiveOverview; canManage: boolean; kind: ArchiveKind; onCreated: (kind: ArchiveKind) => Promise<void> }) {
