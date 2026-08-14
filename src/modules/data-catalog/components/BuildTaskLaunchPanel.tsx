@@ -21,7 +21,6 @@ import {
   BuildTaskConflictError,
   createBuildTask,
   listBuildTasks,
-  resumeBuildTask,
 } from "@/modules/data-catalog/services/build-task.service";
 import type {
   BuildMode,
@@ -184,11 +183,6 @@ export function BuildTaskLaunchPanel({
         resourceId: resource.id,
         executeType: mode === "batch" ? executeType : undefined,
       });
-      try {
-        await resumeBuildTask(task.id);
-      } catch {
-        // Creation may already have transitioned the task to running.
-      }
       message.success(t("dataCatalog.build.created", { id: task.id }));
       onStarted(task);
     } catch (persistError) {
