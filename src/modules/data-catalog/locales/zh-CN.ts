@@ -341,7 +341,11 @@ export const dataCatalogZhCN = {
       featureSummaryEmpty: "未配置特征",
       featureUnsupported: "暂不支持",
       defaultModelDimensions: "默认向量维度：{{dimensions}}",
-      fulltextAnalyzerHint: "(中文数据选 ik / hanlp,英文/通用选 standard)",
+      fulltextAnalyzerHint:
+        "实际可选项以当前环境服务端返回为准。standard 适用于英文/通用文本；若当前可选，english 用于英文词干分析。",
+      fulltextChineseAnalyzerAvailableHint: "当前已启用可用于中文文本的分词器：{{analyzers}}。",
+      fulltextChineseAnalyzerUnavailableHint:
+        "当前未启用 IK/HanLP 等中文分词器；standard 和 english 不提供中文分词能力，中文检索的召回和相关性可能受限。请联系管理员启用中文分词器。",
       analyzerSelectionUnavailable: "分词器能力当前不可用。",
       analyzers: {
         standard: "standard · 英文/通用",

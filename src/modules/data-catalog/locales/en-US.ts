@@ -361,7 +361,11 @@ export const dataCatalogEnUS = {
       featureUnsupported: "Unsupported",
       defaultModelDimensions: "Default dimensions: {{dimensions}}",
       fulltextAnalyzerHint:
-        "(use ik / hanlp for Chinese data, standard for English / general)",
+        "Available options come from the current environment. standard is for English / general text; if available, english performs English stemming.",
+      fulltextChineseAnalyzerAvailableHint:
+        "Chinese-text analyzer enabled in this environment: {{analyzers}}.",
+      fulltextChineseAnalyzerUnavailableHint:
+        "No Chinese analyzer such as IK/HanLP is enabled in this environment. standard and english do not provide Chinese word segmentation, so Chinese search recall and relevance may be limited. Ask an administrator to enable a Chinese analyzer.",
       analyzerSelectionUnavailable: "Analyzer capabilities are unavailable.",
       analyzers: {
         standard: "standard · English / general",

@@ -102,6 +102,23 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull();
   });
 
+  it("explains the Chinese-search limitation when no Chinese analyzer is enabled", async () => {
+    loadAnalyzerCapabilitiesMock.mockResolvedValue({
+      errorMessage: null,
+      options: ["standard", "english"],
+      state: "ready",
+    });
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={resource} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint");
+    expect(screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerAvailableHint")).toBeNull();
+  });
+
   it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {
     const vectorResource: CatalogResource = {
       ...resource,
