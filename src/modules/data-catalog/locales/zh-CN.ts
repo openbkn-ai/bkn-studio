@@ -300,7 +300,11 @@ export const dataCatalogZhCN = {
         "批量构建时用于识别增量数据的字段（如更新时间、自增 ID）；必填。",
       roleBuildKeyHintStreaming: "流式构建时用于标识行的 ID 字段；必填。",
       roleBuildKeyHintConfig:
-        "增量构建使用；批量与流式均需指定。",
+        "增量构建使用；批量与流式均需指定。仅支持整数、无符号整数、字符串、日期、日期时间和时间戳字段。",
+      buildKeyTypeHint: "构建键仅支持整数、无符号整数、字符串、日期、日期时间和时间戳字段",
+      invalidBuildKeyFields: "构建键配置无效：{{fields}}。请选择存在于 schema 且类型受支持的字段。",
+      removeInvalidBuildKeyFields: "移除无效构建键",
+      unsupportedSchemaFields: "资源包含不支持索引构建的 other 类型字段：{{fields}}。请修正源端字段类型或其发现映射后再构建。",
       roleFulltextHint: "建立关键词全文索引的文本字段，随数据同步即时生效。",
       selectAll: "全选",
       clearAll: "清空",

@@ -42,6 +42,10 @@ import {
   pickRegisteredEmbeddingModelId,
   type EmbeddingModelsLoadState,
 } from "@/modules/data-catalog/utils/embedding-model-options";
+import {
+  invalidBuildKeyFields,
+  isBuildKeyField,
+} from "@/modules/data-catalog/lib/build-guards";
 
 import formStyles from "./BuildTaskFormPanel.module.css";
 import styles from "./shared.module.css";
@@ -433,6 +437,10 @@ export function IndexConfigFormPanel({
     }
     return duplicates;
   }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups]);
+  const invalidSavedBuildKeyFields = useMemo(
+    () => invalidBuildKeyFields(schema, buildKeyFields),
+    [buildKeyFields, schema],
+  );
 
   const toggleField = (
     field: string,
@@ -453,6 +461,10 @@ export function IndexConfigFormPanel({
   };
 
   const validateForm = () => {
+    if (invalidSavedBuildKeyFields.length > 0) {
+      setError(t("dataCatalog.build.invalidBuildKeyFields", { fields: invalidSavedBuildKeyFields.join(", ") }));
+      return false;
+    }
     if (duplicateUnsupportedFeatureTypes.length > 0) {
       setError(t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") }));
       return false;
@@ -603,6 +615,7 @@ export function IndexConfigFormPanel({
       name: t("dataCatalog.build.roleBuildKey"),
       onRemove: undefined as ((fieldName: string) => void) | undefined,
       set: setBuildKeyFields,
+      buildKeyOnly: true,
       textOnly: false,
     },
   ];
@@ -624,7 +637,11 @@ export function IndexConfigFormPanel({
   const showFieldSearch = schema.length > 8;
 
   const eligibleFields = (role: (typeof roleDefs)[number]) =>
-    role.textOnly ? visibleFields.filter((field) => isTextField(field.type)) : visibleFields;
+    role.buildKeyOnly
+      ? visibleFields.filter(isBuildKeyField)
+      : role.textOnly
+        ? visibleFields.filter((field) => isTextField(field.type))
+        : visibleFields;
 
   const columnAllOn = (role: (typeof roleDefs)[number]) => {
     const eligible = eligibleFields(role);
@@ -638,6 +655,10 @@ export function IndexConfigFormPanel({
     markDirty();
     const eligible = eligibleFields(role);
     if (columnAllOn(role)) {
+      if (role.buildKeyOnly) {
+        role.set([]);
+        return;
+      }
       const drop = new Set(eligible.map((field) => field.name));
       role.set(role.list.filter((name) => !drop.has(name)));
       if (role.onRemove) {
@@ -648,6 +669,15 @@ export function IndexConfigFormPanel({
       eligible.forEach((field) => next.add(field.name));
       role.set([...next]);
     }
+  };
+
+  const removeInvalidBuildKeys = () => {
+    if (actionsLocked) {
+      return;
+    }
+    const invalid = new Set(invalidSavedBuildKeyFields);
+    setBuildKeyFields((current) => current.filter((field) => !invalid.has(field)));
+    markDirty();
   };
 
   const cx = (...parts: Array<string | false | undefined>) =>
@@ -684,8 +714,14 @@ export function IndexConfigFormPanel({
     );
   };
   const renderRoleCell = (field: ResourceSchemaField, role: (typeof roleDefs)[number]) => {
-    const disabled = actionsLocked || (role.textOnly && !isTextField(field.type));
     const checked = role.list.includes(field.name);
+    const unsupportedBuildKeyType = role.buildKeyOnly && !isBuildKeyField(field);
+    const disabled = actionsLocked || ((role.textOnly && !isTextField(field.type)) || unsupportedBuildKeyType) && !checked;
+    const disabledTitle = unsupportedBuildKeyType
+      ? t("dataCatalog.build.buildKeyTypeHint")
+      : role.textOnly && !isTextField(field.type)
+        ? t("dataCatalog.build.fulltextTypeHint")
+        : undefined;
     return (
       <td className={styles.frtCell} key={role.id}>
         <span
@@ -706,7 +742,7 @@ export function IndexConfigFormPanel({
               checked ? () => role.onRemove?.(field.name) : undefined,
             );
           }}
-          title={disabled ? t("dataCatalog.build.fulltextTypeHint") : undefined}
+          title={disabledTitle}
         >
           <span className={styles.frtMark}>{checkIcon}</span>
         </span>
@@ -976,6 +1012,18 @@ export function IndexConfigFormPanel({
           message={t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") })}
           showIcon
           type="error"
+        />
+      ) : null}
+      {invalidSavedBuildKeyFields.length > 0 ? (
+        <Alert
+          action={
+            <AppButton disabled={actionsLocked} onClick={removeInvalidBuildKeys} size="small" type="link">
+              {t("dataCatalog.build.removeInvalidBuildKeyFields")}
+            </AppButton>
+          }
+          message={t("dataCatalog.build.invalidBuildKeyFields", { fields: invalidSavedBuildKeyFields.join(", ") })}
+          showIcon
+          type="warning"
         />
       ) : null}
 

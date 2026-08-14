@@ -49,6 +49,7 @@ const resource: CatalogResource = {
   name: "orders",
   rowCount: 1,
   schema: [
+    { name: "id", type: "integer" },
     {
       features: [{ featureType: "vector" }],
       name: "content",
@@ -109,5 +110,27 @@ describe("BuildTaskLaunchPanel", () => {
     });
     expect(resumeBuildTaskMock).not.toHaveBeenCalled();
     expect(onStarted).toHaveBeenCalledWith({ id: "task-running", status: "running" });
+  });
+
+  it("blocks a build when the schema contains an other-type field", async () => {
+    const blockedResource: CatalogResource = {
+      ...resource,
+      schema: [...resource.schema, { name: "interests", originalType: "_text", type: "other" }],
+    };
+
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={blockedResource}
+      />,
+    );
+
+    expect(await screen.findByText("dataCatalog.build.unsupportedSchemaFields")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }).getAttribute("disabled"),
+    ).not.toBeNull();
+    expect(createBuildTaskMock).not.toHaveBeenCalled();
   });
 });

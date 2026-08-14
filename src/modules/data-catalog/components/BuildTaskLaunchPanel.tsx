@@ -29,6 +29,10 @@ import type {
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
 import { streamingNeedsBuildKey } from "@/modules/data-catalog/lib/build-task-launch-guards";
+import {
+  invalidBuildKeyFields,
+  unsupportedSchemaFields,
+} from "@/modules/data-catalog/lib/build-guards";
 import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
 import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
@@ -91,6 +95,11 @@ export function BuildTaskLaunchPanel({
     config.embeddingFields.length > 0 || config.fulltextFields.length > 0;
   const batchNeedsBuildKey = mode === "batch" && config.buildKeyFields.length === 0;
   const streamingBuildKeyRequired = streamingNeedsBuildKey(mode, config.buildKeyFields);
+  const otherFields = useMemo(() => unsupportedSchemaFields(resource.schema), [resource.schema]);
+  const invalidConfiguredBuildKeys = useMemo(
+    () => invalidBuildKeyFields(resource.schema, config.buildKeyFields),
+    [config.buildKeyFields, resource.schema],
+  );
   const analyzerLabel = config.fulltextFields.length > 0 && config.fulltextAnalyzer
     ? t(`dataCatalog.build.analyzers.${config.fulltextAnalyzer}`, {
         defaultValue: config.fulltextAnalyzer,
@@ -151,9 +160,18 @@ export function BuildTaskLaunchPanel({
     existingActive?.mode === "streaming" && isActiveBuildTask(existingActive);
   const controlsDisabled = disabled || actionsLocked;
   const startDisabled =
-    controlsDisabled || !hasResourceConfig || batchNeedsBuildKey || streamingBuildKeyRequired;
+    controlsDisabled || !hasResourceConfig || batchNeedsBuildKey || streamingBuildKeyRequired ||
+    otherFields.length > 0 || invalidConfiguredBuildKeys.length > 0;
 
   const startBuild = async () => {
+    if (otherFields.length > 0) {
+      setError({ description: t("dataCatalog.build.unsupportedSchemaFields", { fields: otherFields.map((field) => field.name).join(", ") }) });
+      return;
+    }
+    if (invalidConfiguredBuildKeys.length > 0) {
+      setError({ description: t("dataCatalog.build.invalidBuildKeyFields", { fields: invalidConfiguredBuildKeys.join(", ") }) });
+      return;
+    }
     if (!hasResourceConfig) {
       setError({ description: t("dataCatalog.build.needConfigFirst") });
       return;
@@ -229,6 +247,26 @@ export function BuildTaskLaunchPanel({
             </AppButton>
           }
           message={t("dataCatalog.build.needConfigFirst")}
+          showIcon
+          type="warning"
+        />
+      ) : null}
+
+      {otherFields.length > 0 ? (
+        <Alert
+          message={t("dataCatalog.build.unsupportedSchemaFields", { fields: otherFields.map((field) => field.name).join(", ") })}
+          showIcon
+          type="error"
+        />
+      ) : null}
+      {otherFields.length === 0 && invalidConfiguredBuildKeys.length > 0 ? (
+        <Alert
+          action={
+            <AppButton onClick={onGoConfigure} size="small" type="link">
+              {t("dataCatalog.indexWorkspace.viewConfig")}
+            </AppButton>
+          }
+          message={t("dataCatalog.build.invalidBuildKeyFields", { fields: invalidConfiguredBuildKeys.join(", ") })}
           showIcon
           type="warning"
         />

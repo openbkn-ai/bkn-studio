@@ -173,6 +173,31 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")).toBeNull();
   });
 
+  it("allows removing a configured build key that no longer exists in the schema", async () => {
+    const staleBuildKeyResource: CatalogResource = {
+      ...resource,
+      indexConfig: { buildKeyFields: ["removed_order_no"] },
+    };
+    getCatalogResourceMock.mockResolvedValue(staleBuildKeyResource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={staleBuildKeyResource} />
+      </MemoryRouter>,
+    );
+
+    const removeButton = await screen.findByRole("button", {
+      name: "dataCatalog.build.removeInvalidBuildKeyFields",
+    });
+    fireEvent.click(removeButton);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: "dataCatalog.build.removeInvalidBuildKeyFields" }),
+      ).toBeNull();
+    });
+  });
+
   it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {
     const vectorResource: CatalogResource = {
       ...resource,
