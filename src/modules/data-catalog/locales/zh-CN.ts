@@ -232,7 +232,7 @@ export const dataCatalogZhCN = {
     },
     actions: {
       preview: "数据预览",
-      buildIndex: "数据索引",
+      dataIndex: "数据索引",
       more: "更多操作",
     },
     gate: {

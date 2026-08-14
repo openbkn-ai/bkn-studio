@@ -29,6 +29,20 @@ describe("catalog-mapper · health status", () => {
     expect(catalog.lastCheckTime).toBe(formatCatalogTimestamp(lastCheckTime));
     expect(catalog.healthCheckResult).toBe("Connection test succeeded.");
     expect(catalog.healthStatus).toBe("healthy");
+    expect(catalog.internal).toBe(false);
+  });
+
+  it("preserves the backend internal marker", () => {
+    const catalog = mapBackendCatalog({
+      connector_type: "",
+      enabled: true,
+      id: "catalog-internal",
+      internal: true,
+      name: "system-catalog",
+      type: "logical",
+    });
+
+    expect(catalog.internal).toBe(true);
   });
 
   it("uses the empty display value before the first health check", () => {

@@ -7,6 +7,8 @@
 
 import { http } from "@/framework/request/http";
 
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+
 export type IndexCapabilities = {
   checkedAt: number;
   fulltextAnalyzers: string[];
@@ -17,7 +19,16 @@ type BackendIndexCapabilities = {
   fulltext_analyzers?: Array<{ id?: string }>;
 };
 
+const MOCK_INDEX_CAPABILITIES: IndexCapabilities = {
+  checkedAt: 0,
+  fulltextAnalyzers: ["standard", "ik_max_word"],
+};
+
 export async function getIndexCapabilities(): Promise<IndexCapabilities> {
+  if (useMock) {
+    return { ...MOCK_INDEX_CAPABILITIES };
+  }
+
   const response = await http.get<BackendIndexCapabilities>("/vega-backend/v1/index-capabilities");
   return {
     checkedAt: response.data.checked_at ?? 0,

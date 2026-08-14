@@ -195,6 +195,7 @@ export async function createLogicalCatalog(input: { description?: string; name: 
   if (useMock) {
     prependMockCatalog({
       id: crypto.randomUUID(),
+      internal: false,
       name: input.name,
       description: input.description ?? "",
       connectorType: "",
@@ -272,6 +273,7 @@ export async function updateCatalog(
       description: input.description,
       enabled: input.enabled,
       id,
+      internal: false,
       name: input.name,
       tags: input.tags,
     },
@@ -305,6 +307,7 @@ options: CatalogMutationOptions = {},
     ));
     prependMockCatalog({
       id,
+      internal: false,
       name: input.name,
       description: input.description,
       connectorType: input.connectorType,

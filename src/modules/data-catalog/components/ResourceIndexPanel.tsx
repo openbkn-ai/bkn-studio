@@ -29,12 +29,16 @@ import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-f
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
 import { indexStateOf, resourceGateOf, sortTasks } from "@/modules/data-catalog/lib/index-state";
 import {
+  canManageResourceBuildTasks,
+  canViewResourceIndexTasks,
+  isResourceIndexReadOnly,
+} from "@/modules/data-catalog/lib/resource-index-access";
+import {
   buildTaskStatusLabelKey,
   embeddingStateOf,
 } from "@/modules/data-catalog/services/build-task.service";
 import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
-import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
 import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
 import type { SmallModel } from "@/modules/model-resources/types/small-model";
 import type { CatalogRecord } from "@/shared/catalog";
@@ -46,7 +50,7 @@ export type { ResourceIndexView };
 type ResourceIndexPanelProps = {
   active: boolean;
   catalog: CatalogRecord | null;
-  /** When false, panel may auto-pick config vs tasks once after resource loads. */
+  /** When false, panel opens the configuration view once after resource loads. */
   indexViewExplicit?: boolean;
   indexView: ResourceIndexView;
   onIndexViewChange: (view: ResourceIndexView) => void;
@@ -259,37 +263,34 @@ export function ResourceIndexPanel({
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
   const state = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);
   const gate = resourceGateOf(catalog);
+  const readOnly = isResourceIndexReadOnly(catalog);
+  const canManageBuildTasks = canManageResourceBuildTasks(resource, catalog);
+  const canViewTasks = canViewResourceIndexTasks(resource);
   const effective = state.effective;
   const latest = state.latest;
   const activeTask = latest && ACTIVE_TASK_STATUSES.has(latest.status) ? latest : null;
   const progressSource = progressTask(effective, latest);
 
-  const resourceConfig = useMemo(
-    () => indexFormValuesFromResource(detailResource),
-    [detailResource],
-  );
-  const hasResourceConfig =
-    resourceConfig.embeddingFields.length > 0 ||
-    resourceConfig.fulltextFields.length > 0;
-
   useEffect(() => {
     if (!active || indexViewExplicit || autoPickedRef.current) {
       return;
     }
-    const next: ResourceIndexView =
-      hasResourceConfig || sortedTasks.length > 0 ? "tasks" : "config";
     autoPickedRef.current = true;
-    if (next !== indexView) {
-      onIndexViewChange(next);
+    if (indexView !== "config") {
+      onIndexViewChange("config");
     }
   }, [
     active,
-    hasResourceConfig,
     indexView,
     indexViewExplicit,
     onIndexViewChange,
-    sortedTasks.length,
   ]);
+
+  useEffect(() => {
+    if (!canViewTasks && indexView === "tasks") {
+      onIndexViewChange("config");
+    }
+  }, [canViewTasks, indexView, onIndexViewChange]);
 
   useEffect(() => {
     setTaskPage(1);
@@ -366,25 +367,27 @@ export function ResourceIndexPanel({
           <AppButton onClick={() => setDetailTaskId(record.id)} type="link">
             {t("common.detail")}
           </AppButton>
-          {ACTIVE_TASK_STATUSES.has(record.status) ? (
+          {canManageBuildTasks && ACTIVE_TASK_STATUSES.has(record.status) ? (
             <PermissionGate permissions="resource:task_manage">
               <AppButton onClick={() => void pauseOrResume(record)} type="link">
                 {pauseResumeLabelOf(record)}
               </AppButton>
             </PermissionGate>
           ) : null}
-          {record.status === "failed" ? (
+          {canManageBuildTasks && record.status === "failed" ? (
             <PermissionGate permissions="resource:task_manage">
               <AppButton onClick={() => void retry(record)} type="link">
                 {t("dataCatalog.task.rerun")}
               </AppButton>
             </PermissionGate>
           ) : null}
-          <PermissionGate permissions="resource:task_manage">
-            <AppButton danger onClick={() => remove(record)} type="link">
-              {t("common.delete")}
-            </AppButton>
-          </PermissionGate>
+          {canManageBuildTasks ? (
+            <PermissionGate permissions="resource:task_manage">
+              <AppButton danger onClick={() => remove(record)} type="link">
+                {t("common.delete")}
+              </AppButton>
+            </PermissionGate>
+          ) : null}
         </Space>
       ),
     },
@@ -417,10 +420,12 @@ export function ResourceIndexPanel({
       <div className={panelStyles.configureCard}>
         <IndexConfigFormPanel
           active={active && indexView === "config"}
+          hideBuildControls={readOnly}
           onSaved={() => {
             reloadResource();
             void onRefresh();
           }}
+          readOnly={readOnly}
           resource={detailResource}
         />
       </div>
@@ -442,7 +447,7 @@ export function ResourceIndexPanel({
             </span>
           </div>
           <div className={panelStyles.sectionActions}>
-            {activeTask &&
+            {canManageBuildTasks && activeTask &&
             (activeTask.status === "listening" ||
               activeTask.status === "running" ||
               activeTask.status === "pending") ? (
@@ -452,7 +457,7 @@ export function ResourceIndexPanel({
                 </AppButton>
               </PermissionGate>
             ) : null}
-            {activeTask?.status === "paused" ? (
+            {canManageBuildTasks && activeTask?.status === "paused" ? (
               <PermissionGate permissions="resource:task_manage">
                 <AppButton
                   disabled={!gate.ok}
@@ -463,7 +468,7 @@ export function ResourceIndexPanel({
                 </AppButton>
               </PermissionGate>
             ) : null}
-            {latest?.status === "failed" ? (
+            {canManageBuildTasks && latest?.status === "failed" ? (
               <PermissionGate permissions="resource:task_manage">
                 <AppButton
                   disabled={!gate.ok}
@@ -514,24 +519,26 @@ export function ResourceIndexPanel({
           />
         ) : null}
 
-        <div className={panelStyles.launchSection}>
-          <div className={panelStyles.launchSectionHead}>
-            <h3 className={panelStyles.sectionTitle}>
-              {t("dataCatalog.indexWorkspace.launchTitle")}
-            </h3>
+        {canManageBuildTasks ? (
+          <div className={panelStyles.launchSection}>
+            <div className={panelStyles.launchSectionHead}>
+              <h3 className={panelStyles.sectionTitle}>
+                {t("dataCatalog.indexWorkspace.launchTitle")}
+              </h3>
+            </div>
+            <PermissionGate permissions="resource:task_manage">
+              <BuildTaskLaunchPanel
+                active={active && indexView === "tasks"}
+                disabled={!gate.ok}
+                onGoConfigure={() => onIndexViewChange("config")}
+                onStarted={() => {
+                  void onRefresh();
+                }}
+                resource={detailResource}
+              />
+            </PermissionGate>
           </div>
-          <PermissionGate permissions="resource:task_manage">
-            <BuildTaskLaunchPanel
-              active={active && indexView === "tasks"}
-              disabled={!gate.ok}
-              onGoConfigure={() => onIndexViewChange("config")}
-              onStarted={() => {
-                void onRefresh();
-              }}
-              resource={detailResource}
-            />
-          </PermissionGate>
-        </div>
+        ) : null}
       </div>
 
       <div className={panelStyles.sectionCard}>
@@ -584,20 +591,22 @@ export function ResourceIndexPanel({
             >
               {t("dataCatalog.indexWorkspace.viewConfig")}
             </button>
-            <button
-              className={
-                indexView === "tasks" ? panelStyles.viewTabActive : panelStyles.viewTab
-              }
-              onClick={() => onIndexViewChange("tasks")}
-              role="tab"
-              type="button"
-            >
-              {t("dataCatalog.indexWorkspace.viewTasks")}
-            </button>
+            {canViewTasks ? (
+              <button
+                className={
+                  indexView === "tasks" ? panelStyles.viewTabActive : panelStyles.viewTab
+                }
+                onClick={() => onIndexViewChange("tasks")}
+                role="tab"
+                type="button"
+              >
+                {t("dataCatalog.indexWorkspace.viewTasks")}
+              </button>
+            ) : null}
           </div>
         </div>
 
-        {indexView === "config" ? renderConfigTab() : renderTasksTab()}
+        {!canViewTasks || indexView === "config" ? renderConfigTab() : renderTasksTab()}
       </div>
 
       {detailTaskId ? (

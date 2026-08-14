@@ -242,7 +242,7 @@ export const dataCatalogEnUS = {
     },
     actions: {
       preview: "Preview Data",
-      buildIndex: "Data Index",
+      dataIndex: "Data Index",
       more: "More actions",
     },
     gate: {

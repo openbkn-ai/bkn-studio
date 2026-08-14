@@ -26,6 +26,7 @@ type BackendCatalog = {
   health_check_result?: string;
   health_check_status?: string;
   id: string;
+  internal?: boolean;
   last_check_time?: number;
   metadata?: Record<string, unknown>;
   name: string;
@@ -89,6 +90,7 @@ export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
     enabled: item.enabled,
     status: item.enabled ? "enabled" : "disabled",
     healthStatus: normalizeHealthStatus(item.health_check_status),
+    internal: item.internal ?? false,
     healthCheckResult: item.health_check_result ?? "",
     lastCheckTime: formatCatalogTimestamp(item.last_check_time),
     updateTime: formatCatalogTimestamp(item.update_time),
