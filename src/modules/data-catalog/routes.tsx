@@ -11,6 +11,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, useLocation, useParams, type RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
+import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
 
 const DataCatalogPage = lazy(async () => {
@@ -28,8 +29,12 @@ const IndexBuildPage = lazy(async () => {
   return { default: module.IndexBuildPage };
 });
 
-function withRouteLoading(element: ReactNode) {
-  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
+function withRouteLoading(permissions: string | string[], element: ReactNode) {
+  return (
+    <RequirePermission mode="any" permissions={permissions}>
+      <Suspense fallback={<RouteLoading />}>{element}</Suspense>
+    </RequirePermission>
+  );
 }
 
 function LegacyDataCatalogRootRedirect() {
@@ -62,7 +67,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.title",
       },
     },
-    element: withRouteLoading(<DataCatalogPage />),
+    element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <DataCatalogPage />),
   },
   {
     path: "data-directory/catalog/:catalogId",
@@ -73,7 +78,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.catalogDetailTitle",
       },
     },
-    element: withRouteLoading(<DataCatalogPage selectionType="catalog" />),
+    element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <DataCatalogPage selectionType="catalog" />),
   },
   {
     path: "data-directory/resource/:resourceId",
@@ -84,7 +89,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.resourceDetailTitle",
       },
     },
-    element: withRouteLoading(<ResourceWorkspacePage />),
+    element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <ResourceWorkspacePage />),
   },
   {
     path: "data-catalog",
@@ -107,7 +112,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.indexBuildTitle",
       },
     },
-    element: withRouteLoading(<IndexBuildPage />),
+    element: withRouteLoading(["catalog:task_manage", "resource:task_manage"], <IndexBuildPage />),
   },
 ];
 

@@ -112,6 +112,31 @@ describe("fetchCurrentUser — 权限来源不可用时 fail-closed", () => {
     // is_admin must not implicitly grant write permissions in other modules either.
     expect(user.permissions).not.toContain("admin-user:create");
     expect(user.permissions).not.toContain("admin-license:manage");
+    expect(user.permissions).not.toContain("execution-factory-lab:sandbox-runtime:view");
+  });
+
+  it("管理员持有大模型 display 授权 → 显示模型管理入口所需权限", async () => {
+    mockGet.mockImplementation((url: string) =>
+      url === "/safe/v1/me"
+        ? meOk({ id: "u-model-admin", roles: ["admin"] })
+        : meOk({
+            is_admin: true,
+            permissions: [
+              { operations: ["view"], resource: { id: "*", type: "admin-user" } },
+              { operations: ["display", "create", "modify", "execute"], resource: { id: "*", type: "large_model" } },
+            ],
+          }),
+    );
+
+    const fetchCurrentUser = await importFetchCurrentUser();
+    const user = await fetchCurrentUser();
+
+    expect(user.permissions).toContain("model-resources:model:view");
+    expect(user.permissions).toContain("model-resources:large-model:view");
+    expect(user.permissions).not.toContain("model-resources:small-model:view");
+    expect(user.permissions).toContain("model-resources:model:create");
+    expect(user.permissions).toContain("model-resources:model:edit");
+    expect(user.permissions).not.toContain("execution-factory-lab:sandbox-runtime:view");
   });
 
   it("两个请求都失败 → 完全 fail-closed", async () => {

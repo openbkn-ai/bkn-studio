@@ -53,8 +53,7 @@ const SMALL_MODEL_SORT_FIELD_MAP: Record<string, SmallModelSortRule> = {
 
 export function SmallModelListPanel() {
   const { t } = useTranslation();
-  const { message, modal, runtimeConfig } = useAppServices();
-  const isAdmin = runtimeConfig.currentUser.roles.includes("admin");
+  const { message, modal } = useAppServices();
   const { pageState, query, setKeyword, setPagination } = usePageState({ pageSize: 10 });
   const [items, setItems] = useState<SmallModel[]>([]);
   const [total, setTotal] = useState(0);
@@ -64,7 +63,7 @@ export function SmallModelListPanel() {
   const [sortRule, setSortRule] = useState<SmallModelSortRule>("create_time");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  const [canCreate, setCanCreate] = useState(true);
+  const [canCreate, setCanCreate] = useState(false);
   const [activeRecord, setActiveRecord] = useState<SmallModel | null>(null);
   const [formMode, setFormMode] = useState<"create" | "edit" | "view">("create");
   const [formOpen, setFormOpen] = useState(false);
@@ -104,9 +103,9 @@ export function SmallModelListPanel() {
 
   useEffect(() => {
     void getSmallModelRolePermissions().then((operations) => {
-      setCanCreate(isAdmin || operations.includes("create"));
+      setCanCreate(operations.includes("create"));
     });
-  }, [isAdmin]);
+  }, []);
 
   useEffect(() => {
     void loadData();
@@ -174,9 +173,9 @@ export function SmallModelListPanel() {
     }
   };
 
-  const canModify = (record: SmallModel) => isAdmin || record.operations?.includes("modify");
-  const canDelete = (record: SmallModel) => isAdmin || record.operations?.includes("delete");
-  const canAuthorize = (record: SmallModel) => isAdmin || record.operations?.includes("authorize");
+  const canModify = (record: SmallModel) => record.operations?.includes("modify");
+  const canDelete = (record: SmallModel) => record.operations?.includes("delete");
+  const canAuthorize = (record: SmallModel) => record.operations?.includes("authorize");
   const canSetDefault = (record: SmallModel) =>
     (record.modelType === "embedding" || record.modelType === "reranker") &&
     !record.default &&
@@ -418,9 +417,15 @@ export function SmallModelListPanel() {
 
   return (
     <div className={styles.panel}>
-      <ModelListToolbar
-        canCreate={canCreate}
-        deleteDisabled={selectedRowKeys.length === 0}
+        <ModelListToolbar
+          canCreate={canCreate}
+          deleteDisabled={
+            selectedRowKeys.length === 0 ||
+            !items
+              .filter((item) => selectedRowKeys.includes(item.modelId))
+              .every(canDelete)
+          }
+          showDelete={items.some(canDelete)}
         modelType={modelType}
         modelTypeOptions={[
           { value: "all", label: t("modelResources.models.all") },
@@ -429,7 +434,11 @@ export function SmallModelListPanel() {
         ]}
         onCreate={() => openForm("create")}
         onDelete={() =>
-          handleDelete(items.filter((item) => selectedRowKeys.includes(item.modelId)))
+          handleDelete(
+            items.filter(
+              (item) => selectedRowKeys.includes(item.modelId) && canDelete(item),
+            ),
+          )
         }
         onModelTypeChange={(value) => {
           setModelType(value);

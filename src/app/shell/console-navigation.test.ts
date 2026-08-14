@@ -18,10 +18,10 @@ const systemGroup = (items: ReturnType<typeof filterNavByPermission>) =>
   items.find((item) => item.key === "system-management");
 
 describe("filterNavByPermission — 系统管理按功能独立授权", () => {
-  it("普通用户的系统管理不再承载 BKN Trace", () => {
+  it("仅持有系统管理权限的用户只显示首页和获授权的系统管理菜单", () => {
     const group = systemGroup(filterNavByPermission(consoleNavigation, []));
     expect(group).toBeUndefined();
-    expect(keys(filterNavByPermission(consoleNavigation, []))).toContain("observability");
+    expect(keys(filterNavByPermission(consoleNavigation, []))).toEqual(["home"]);
   });
 
   it("超管(全部权限)→ 系统管理可见,4 个子项齐全", () => {
@@ -65,13 +65,30 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     expect(keys(group!.children ?? [])).toEqual(["user-management", "log-management"]);
   });
 
-  it("非系统类菜单不受权限过滤影响", () => {
-    const filtered = filterNavByPermission(consoleNavigation, []);
-    expect(keys(filtered)).toContain("general-business-knowledge-network");
+  it("审计角色不会看到未授予的业务菜单", () => {
+    const filtered = filterNavByPermission(consoleNavigation, [
+      "admin-audit:view",
+      "admin-user:view",
+      "admin-dept:view",
+      "admin-role:view",
+      "admin-authz:view",
+    ]);
+
+    expect(keys(filtered)).toEqual(["home", "system-management"]);
+  });
+
+  it("Catalog 查看权限显示数据连接和数据目录入口", () => {
+    const filtered = filterNavByPermission(consoleNavigation, ["catalog:view_detail"]);
+    const businessGroup = filtered.find(
+      (item) => item.key === "general-business-knowledge-network",
+    );
+
+    expect(keys(filtered)).toContain("home");
+    expect(keys(businessGroup?.children ?? [])).toEqual(["data-connection", "data-catalog"]);
   });
 
   it("领域知识网络拆分为管理和调用两个入口", () => {
-    const filtered = filterNavByPermission(consoleNavigation, []);
+    const filtered = filterNavByPermission(consoleNavigation, ["knowledge-network:preview"]);
     const group = filtered.find((item) => item.key === "domain-knowledge-network");
     expect(group).toBeDefined();
     expect(keys(group!.children ?? [])).toEqual([

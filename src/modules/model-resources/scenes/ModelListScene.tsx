@@ -9,16 +9,29 @@ import { Tabs } from "antd";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
+import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LargeModelListPanel } from "@/modules/model-resources/components/models/LargeModelListPanel";
 import { SmallModelListPanel } from "@/modules/model-resources/components/models/SmallModelListPanel";
+import { getModelViewAccess } from "@/modules/model-resources/utils/model-access";
 
 import pageStyles from "./model-resources-page.module.css";
 import styles from "./ModelListScene.module.css";
 
 export function ModelListScene() {
   const { t } = useTranslation();
+  const runtimeConfig = useRuntimeConfig();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeKey = searchParams.get("tab") === "small-model" ? "small-model" : "llm";
+  const { canViewLargeModel, canViewSmallModel } = getModelViewAccess(
+    runtimeConfig.currentUser.permissions,
+  );
+  const requestedKey = searchParams.get("tab") === "small-model" ? "small-model" : "llm";
+  const activeKey =
+    requestedKey === "small-model" && canViewSmallModel
+      ? "small-model"
+      : canViewLargeModel
+        ? "llm"
+        : "small-model";
 
   const handleTabChange = (key: string) => {
     const nextSearchParams = new URLSearchParams(searchParams);
@@ -39,23 +52,35 @@ export function ModelListScene() {
         <p className={pageStyles.pageIntroDescription}>{t("modelResources.models.description")}</p>
       </div>
 
-      <Tabs
-        activeKey={activeKey}
-        className={styles.tabs}
-        items={[
-          {
-            key: "llm",
-            label: t("modelResources.models.tabs.llm"),
-            children: <LargeModelListPanel />,
-          },
-          {
-            key: "small-model",
-            label: t("modelResources.models.tabs.smallModel"),
-            children: <SmallModelListPanel />,
-          },
-        ]}
-        onChange={handleTabChange}
-      />
+      {canViewLargeModel || canViewSmallModel ? (
+        <Tabs
+          activeKey={activeKey}
+          className={styles.tabs}
+          items={[
+            ...(canViewLargeModel
+              ? [
+                  {
+                    key: "llm",
+                    label: t("modelResources.models.tabs.llm"),
+                    children: <LargeModelListPanel />,
+                  },
+                ]
+              : []),
+            ...(canViewSmallModel
+              ? [
+                  {
+                    key: "small-model",
+                    label: t("modelResources.models.tabs.smallModel"),
+                    children: <SmallModelListPanel />,
+                  },
+                ]
+              : []),
+          ]}
+          onChange={handleTabChange}
+        />
+      ) : (
+        <EmptyStatePanel title={t("common.noPermission")} />
+      )}
     </section>
   );
 }

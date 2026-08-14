@@ -132,13 +132,13 @@ describe("isStudioPermissionGranted", () => {
     expect(isStudioPermissionGranted("execution-factory-lab:catalog:install", grants, true)).toBe(false);
   });
 
-  it("沙箱运行时只认超管，与后端 CheckAdminPermission 同口径", () => {
+  it("沙箱运行时不由 is_admin 推导，避免三员角色取得业务入口", () => {
     expect(
       isStudioPermissionGranted(executionFactoryLabPermissions.sandboxRuntimeView, grants, false),
     ).toBe(false);
     expect(
       isStudioPermissionGranted(executionFactoryLabPermissions.sandboxRuntimeView, grants, true),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("零权限账号一条都拿不到", () => {
@@ -193,7 +193,8 @@ describe("执行工厂权限点覆盖", () => {
       (permission) => !isStudioPermissionGranted(permission, fullGrants, false),
     );
 
-    // catalog:install remains blocked because the backend has no endpoint; sandbox-runtime:view is based on is_admin.
+    // catalog:install remains blocked because the backend has no endpoint. Sandbox runtime is
+    // intentionally absent: its menu is reserved for resource-wildcard super administrators.
     expect(unresolved.sort()).toEqual([
       "execution-factory-lab:catalog:install",
       "execution-factory-lab:sandbox-runtime:view",
@@ -232,8 +233,25 @@ describe("折叠通配契约", () => {
 
     // The backend has no installation endpoint, so it remains permanently blocked even by a wildcard.
     expect(isStudioPermissionGranted("execution-factory:catalog:install", globalWildcard, false)).toBe(false);
-    // Sandbox runtime is based on is_admin, so a wildcard without super-admin status does not grant it.
+    // Sandbox runtime does not use the grant mapper; fetchCurrentUser gives resource-wildcard
+    // super administrators the complete registered permission set directly.
     expect(isStudioPermissionGranted("execution-factory-lab:sandbox-runtime:view", globalWildcard, false)).toBe(false);
+  });
+
+  it("模型资源权限映射到 bkn-safe 的 large_model/small_model 操作", () => {
+    const grants = flattenSafeGrants([
+      {
+        operations: ["display", "create", "modify"],
+        resource: { id: "*", type: "large_model" },
+      },
+    ]);
+
+    expect(isStudioPermissionGranted("model-resources:model:view", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("model-resources:large-model:view", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("model-resources:small-model:view", grants, false)).toBe(false);
+    expect(isStudioPermissionGranted("model-resources:model:create", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("model-resources:model:edit", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("model-resources:model:delete", grants, false)).toBe(false);
   });
 });
 

@@ -54,6 +54,14 @@ export type ConsoleNavItem = {
   /** Permissions required to render this item (any/all is determined by permissionMode). Omit for universal visibility. */
   permission?: string | string[];
   permissionMode?: PermissionCheckMode;
+  /**
+   * Hide a business-only entry when the account holds system-administration permissions only.
+   *
+   * This is reserved for modules whose backend does not yet expose a dedicated Studio
+   * permission point (for example, observability). Entries with a concrete permission must
+   * declare `permission` instead.
+   */
+  requiresBusinessPermission?: boolean;
 };
 
 export type ConsoleNavContribution = {

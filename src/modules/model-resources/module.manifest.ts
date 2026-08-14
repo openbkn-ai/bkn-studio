@@ -10,6 +10,8 @@ export const modelResourcesModuleManifest = {
   name: "Model Resources",
   permissions: [
     "model-resources:model:view",
+    "model-resources:large-model:view",
+    "model-resources:small-model:view",
     "model-resources:model:create",
     "model-resources:model:edit",
     "model-resources:model:delete",

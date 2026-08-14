@@ -30,12 +30,12 @@ import { ModelListToolbar } from "@/modules/model-resources/components/models/Mo
 import {
   deleteLlmModels,
   getLlmItemPermissions,
+  getLlmRolePermissions,
   listLlmModels,
   setDefaultLlmModel,
   testLlmModel,
 } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
-import { hasModelResourcesAdminRole } from "@/modules/model-resources/utils/admin-access";
 import { getLlmModelTypeLabel } from "@/modules/model-resources/utils/llm-labels";
 import {
   formatNumberWithCommas,
@@ -58,11 +58,7 @@ const LARGE_MODEL_SORT_FIELD_MAP: Record<string, LargeModelSortRule> = {
   updateTime: "update_time",
 };
 
-type LargeModelListPanelProps = {
-  isAdmin?: boolean;
-};
-
-export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProps) {
+export function LargeModelListPanel() {
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const { pageState, query, setKeyword, setPagination } = usePageState({ pageSize: 10 });
@@ -80,11 +76,10 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   const [guideOpen, setGuideOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [authorizeRecord, setAuthorizeRecord] = useState<LlmModel | null>(null);
-  const userRoles = runtimeConfig.currentUser.roles;
+  const [canCreate, setCanCreate] = useState(false);
   const userPermissions = runtimeConfig.currentUser.permissions;
-  // Real administrator detection reuses /me/permissions.is_admin hydrated into currentUser at startup; do not fetch again.
-  const effectiveAdmin =
-    isAdmin || runtimeConfig.currentUser.isAdmin || hasModelResourcesAdminRole(userRoles);
+  // `is_admin` is held by all three administrator roles, not only the resource-wildcard
+  // super administrator. Resource operations must therefore come from effective grants.
   const canManageLargeModel = hasPermissions({
     currentPermissions: userPermissions,
     mode: "any",
@@ -105,7 +100,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     ],
   });
   const showQuotaField = false;
-  const showQuotaColumns = !(effectiveAdmin || canManageLargeModel || canManageQuota);
+  const showQuotaColumns = !(canManageLargeModel || canManageQuota);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -141,6 +136,12 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    void getLlmRolePermissions().then((operations) => {
+      setCanCreate(operations.includes("create"));
+    });
+  }, []);
 
 
   const sortMenuItems = useMemo(
@@ -210,9 +211,11 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
     }
   };
 
-  // Real administrator: prop, roles including super_admin, currentUser.isAdmin, or an item operation set containing modify.
-  const canModify = (record: LlmModel) =>
-    effectiveAdmin || Boolean(record.operations?.includes("modify"));
+  // Item actions are determined by the effective object operations returned by bkn-safe.
+  const canModify = (record: LlmModel) => Boolean(record.operations?.includes("modify"));
+  const canDelete = (record: LlmModel) => Boolean(record.operations?.includes("delete"));
+  const canAuthorize = (record: LlmModel) => Boolean(record.operations?.includes("authorize"));
+  const canExecute = (record: LlmModel) => Boolean(record.operations?.includes("execute"));
   const canSetDefault = (record: LlmModel) => canModify(record) && !record.default;
   const canUnsetDefault = (record: LlmModel) => canModify(record) && Boolean(record.default);
 
@@ -270,17 +273,17 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
       return;
     }
 
-    if (key === "edit") {
+    if (key === "edit" && canModify(record)) {
       openForm("edit", record);
       return;
     }
 
-    if (key === "delete") {
+    if (key === "delete" && canDelete(record)) {
       handleDelete([record]);
       return;
     }
 
-    if (key === "test") {
+    if (key === "test" && canExecute(record)) {
       void handleTest(record);
       return;
     }
@@ -297,7 +300,7 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
       return;
     }
 
-    if (key === "authorize") {
+    if (key === "authorize" && canAuthorize(record)) {
       setAuthorizeRecord(record);
     }
   };
@@ -339,9 +342,11 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
           menu={{
             items: [
               { key: "view", label: t("modelResources.models.menus.view") },
-              { key: "edit", label: t("modelResources.models.menus.edit") },
-              { key: "delete", label: t("modelResources.models.menus.delete") },
-              { key: "test", label: t("modelResources.models.menus.testConnection") },
+              canModify(record) ? { key: "edit", label: t("modelResources.models.menus.edit") } : null,
+              canDelete(record) ? { key: "delete", label: t("modelResources.models.menus.delete") } : null,
+              canExecute(record)
+                ? { key: "test", label: t("modelResources.models.menus.testConnection") }
+                : null,
               canSetDefault(record)
                 ? { key: "setDefault", label: t("modelResources.models.menus.setAsDefault") }
                 : null,
@@ -349,7 +354,9 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
                 ? { key: "unsetDefault", label: t("modelResources.models.menus.unsetDefault") }
                 : null,
               { key: "monitor", label: t("modelResources.models.menus.modelMonitoring") },
-              { key: "authorize", label: t("modelResources.models.menus.authorizationManagement") },
+              canAuthorize(record)
+                ? { key: "authorize", label: t("modelResources.models.menus.authorizationManagement") }
+                : null,
             ].filter(Boolean),
             onClick: ({ key, domEvent }) => {
               domEvent.stopPropagation();
@@ -558,9 +565,14 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
   return (
     <div className={styles.panel}>
       <ModelListToolbar
-        createPermissions="model-resources:model:create"
-        deleteDisabled={selectedRowKeys.length === 0}
-        deletePermissions="model-resources:model:delete"
+        canCreate={canCreate}
+        deleteDisabled={
+          selectedRowKeys.length === 0 ||
+          !items
+            .filter((item) => selectedRowKeys.includes(item.modelId))
+            .every(canDelete)
+        }
+        showDelete={items.some(canDelete)}
         modelType={modelType}
         modelTypeOptions={[
           { value: "all", label: t("modelResources.models.all") },
@@ -570,7 +582,11 @@ export function LargeModelListPanel({ isAdmin = false }: LargeModelListPanelProp
         ]}
         onCreate={() => openForm("create")}
         onDelete={() =>
-          handleDelete(items.filter((item) => selectedRowKeys.includes(item.modelId)))
+          handleDelete(
+            items.filter(
+              (item) => selectedRowKeys.includes(item.modelId) && canDelete(item),
+            ),
+          )
         }
         onModelTypeChange={(value) => {
           setModelType(value);
