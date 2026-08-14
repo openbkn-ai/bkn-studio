@@ -67,6 +67,8 @@ let mockSemanticTasks: SemanticTask[] = [
     applied: true,
     creator: { id: "mock-user", name: "Mock User", type: "user" },
     createTime: Date.now() - 1000 * 60 * 45,
+    startTime: Date.now() - 1000 * 60 * 44,
+    finishTime: Date.now() - 1000 * 60 * 40,
   },
   {
     id: "semantic-task-002",
@@ -80,6 +82,7 @@ let mockSemanticTasks: SemanticTask[] = [
     applied: false,
     creator: { id: "mock-user", name: "Mock User", type: "user" },
     createTime: Date.now() - 1000 * 60 * 8,
+    startTime: Date.now() - 1000 * 60 * 7,
   },
 ];
 
@@ -333,9 +336,14 @@ async function listSemanticTasks(page: number, pageSize: number, filters: Semant
         (filters.applied === undefined || item.applied === filters.applied),
     );
     const direction = filters.direction === "asc" ? 1 : -1;
+    const sortTime = (task: SemanticTask) => {
+      if (filters.sort === "start_time") return task.startTime ?? 0;
+      if (filters.sort === "finish_time") return task.finishTime ?? 0;
+      return task.createTime;
+    };
     const sorted = filtered.sort((left, right) => {
-      const leftValue = left.createTime;
-      const rightValue = right.createTime;
+      const leftValue = sortTime(left);
+      const rightValue = sortTime(right);
       return leftValue > rightValue ? direction : leftValue < rightValue ? -direction : 0;
     });
     const startIndex = (page - 1) * pageSize;

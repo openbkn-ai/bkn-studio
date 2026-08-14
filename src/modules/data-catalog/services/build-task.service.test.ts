@@ -17,8 +17,10 @@ vi.mock("@/framework/request/http", () => ({
 import {
   createBuildTask,
   mapBuildTask,
+  pauseBuildTask,
   snapshotFieldsOf,
 } from "@/modules/data-catalog/services/build-task.service";
+import { mockBuildTasks } from "@/modules/data-catalog/services/mock-db";
 
 describe("snapshotFieldsOf", () => {
   it("retains the effective analyzer for every fulltext field", () => {
@@ -188,5 +190,31 @@ describe("createBuildTask", () => {
       expect(config.params).not.toHaveProperty("order_by");
       expect(config.params).not.toHaveProperty("order");
     });
+  });
+});
+
+describe("pauseBuildTask", () => {
+  it("records progress without assigning a finish time", async () => {
+    const task = mockBuildTasks.find((item) => item.id === "bt-orders-01");
+    expect(task).toBeDefined();
+    if (!task) return;
+
+    const original = { ...task };
+    task.status = "running";
+    task.finishTime = null;
+    task.lastProgressTime = null;
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(500));
+
+    const paused = pauseBuildTask(task.id);
+    await vi.advanceTimersByTimeAsync(120);
+    await paused;
+
+    expect(task.status).toBe("paused");
+    expect(task.finishTime).toBeNull();
+    expect(task.lastProgressTime).toBe(500);
+
+    Object.assign(task, original);
+    vi.useRealTimers();
   });
 });

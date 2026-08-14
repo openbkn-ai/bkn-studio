@@ -578,7 +578,7 @@ export async function pauseBuildTask(id: string) {
     const task = mockBuildTasks.find((item) => item.id === id);
     if (task && (task.status === "listening" || task.status === "running")) {
       task.status = "paused";
-      task.finishTime = Date.now();
+      task.lastProgressTime = Date.now();
       emitMockChange();
     }
     await wait(undefined, 120);
