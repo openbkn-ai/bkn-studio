@@ -315,7 +315,10 @@ export const dataCatalogEnUS = {
         "Field used to detect incremental data in batch builds (e.g. updated_at, auto-increment ID); required.",
       roleBuildKeyHintStreaming: "Row ID field for streaming builds; required.",
       roleBuildKeyHintConfig:
-        "Used for incremental builds; required for both batch and streaming.",
+        "Used for incremental builds; required for both batch and streaming. Supported types are integer, unsigned integer, string, date, datetime, and timestamp.",
+      buildKeyTypeHint: "Build keys support integer, unsigned integer, string, date, datetime, and timestamp fields only.",
+      invalidBuildKeyFields: "Invalid build-key configuration: {{fields}}. Select schema fields with supported types.",
+      unsupportedSchemaFields: "This resource contains other-type fields unsupported for index builds: {{fields}}. Correct the source field type or its discovery mapping before building.",
       roleFulltextHint:
         "Text fields indexed for keyword full-text search; applied immediately during data sync.",
       selectAll: "Select all",
