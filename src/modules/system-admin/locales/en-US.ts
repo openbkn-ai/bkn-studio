@@ -109,6 +109,7 @@ export const systemAdminEnUS = {
       create: "New Permission Rule",
       authorize: "Configure Permissions",
       manage: "Manage",
+      viewDetail: "View details",
       revoke: "Revoke Permissions",
       remove: "Remove",
       add: "Add",

@@ -84,6 +84,7 @@ describe("授权面权限点", () => {
 
   it("审计管理员：只读审查进得去，授权面写动作一个都看不到", () => {
     const permissions = permissionsOf("audit");
+    expect(canEnter(permissions, systemAdminPermissions.users)).toBe(true);
     expect(can(permissions, authzPoints.review)).toBe(true);
     expect(canEnter(permissions, systemAdminPermissions.authorizations)).toBe(true);
     expect(canEnter(permissions, systemAdminPermissions.roles)).toBe(true);
