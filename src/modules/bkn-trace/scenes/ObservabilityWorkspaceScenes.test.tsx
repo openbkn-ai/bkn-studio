@@ -284,6 +284,34 @@ describe("observability workspace scenes", () => {
     expect(await screen.findByText("已接入部分管理操作；其余操作尚未纳入审计。")).not.toBeNull();
   });
 
+  it("设置页在未请求来源状态时不将模块显示为未接入", async () => {
+    vi.mocked(getAccessProfile).mockResolvedValue({ ...profile, globalLogSearch: false, logPolicyRead: true });
+
+    render(<ObservabilitySettingsScene />);
+
+    expect((await screen.findAllByText("bknTrace.settings.status.unknown")).length).toBeGreaterThanOrEqual(6);
+    expect(screen.queryByText("bknTrace.settings.status.not_integrated")).toBeNull();
+  });
+
+  it("设置页在同一业务模块有不可用来源时不掩盖该状态", async () => {
+    vi.mocked(listLogSources).mockResolvedValue([
+      { coveredModules: ["domain_knowledge_network"], collectionMethod: "source_adapter", reliability: "best_effort", sourceId: "bkn-backend", status: "healthy" },
+      { coveredModules: ["domain_knowledge_network"], collectionMethod: "source_adapter", reason: "source_timeout", reliability: "best_effort", sourceId: "bkn-trace-core", status: "unavailable" },
+    ]);
+
+    render(<ObservabilitySettingsScene />);
+
+    expect(await screen.findByText("bknTrace.settings.status.unavailable")).not.toBeNull();
+  });
+
+  it("设置页说明被排除的非操作日志来源", async () => {
+    vi.mocked(listLogSources).mockResolvedValue([{ coveredModules: ["openbkn"], collectionMethod: "direct_otlp", reliability: "best_effort", sourceId: "otel-ss4o", status: "healthy" }]);
+
+    render(<ObservabilitySettingsScene />);
+
+    expect(await screen.findByText("bknTrace.settings.excludedOperationAuditSources")).not.toBeNull();
+  });
+
   it("点击立即归档先显示不可逆清理确认，而不直接创建归档任务", async () => {
     vi.mocked(getArchiveOverview).mockResolvedValueOnce({ candidateCount: 1, cutoffAt: "2026-07-15T00:00:00Z", kind: "log", retentionDays: 30, storageStatus: "ready" });
     vi.mocked(getArchiveOverview).mockResolvedValueOnce({ candidateCount: 1, cutoffAt: "2026-08-07T00:00:00Z", kind: "trace", retentionDays: 7, storageStatus: "ready" });

@@ -71,6 +71,15 @@ export type BusinessModule =
   | "model_management"
   | "system_management";
 
+export const BUSINESS_MODULES: BusinessModule[] = [
+  "domain_knowledge_network",
+  "data_resource_knowledge_network",
+  "execution_factory",
+  "model_management",
+  "system_management",
+  "observability",
+];
+
 export type SourceChannel = "api" | "cli" | "mcp" | "sdk" | "studio";
 
 export type LogFacts = {
