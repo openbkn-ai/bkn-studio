@@ -27,6 +27,7 @@ const translate = (key: string, options?: Record<string, unknown>) => {
   "bknTrace.logs.domainAuditActions.create": "创建",
   "bknTrace.logs.targetTypes.object_type": "对象类",
   "bknTrace.settings.status.healthy": "已接入",
+  "bknTrace.settings.sourceState.partial_management_audit_coverage": "已接入部分管理操作；其余操作尚未纳入审计。",
   }[key] ?? key);
   return value.replace(/{{(\w+)}}/g, (_match, name: string) => typeof options?.[name] === "string" ? options[name] : "");
 };
@@ -253,12 +254,34 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("mcp:933eef3eea1fde73392031e1a7aa74e7")).toBeNull();
   });
 
-  it("设置页只读展示来源覆盖和保留策略", async () => {
+  it("设置页按业务模块汇总采集来源与保留策略", async () => {
+    vi.mocked(listLogSources).mockResolvedValue([
+      { coveredModules: ["domain_knowledge_network"], collectionMethod: "source_api", reliability: "best_effort", sourceId: "bkn-backend", status: "healthy" },
+      { coveredModules: ["data_resource_knowledge_network"], collectionMethod: "source_api", reliability: "best_effort", sourceId: "vega", status: "healthy" },
+      { coveredModules: ["execution_factory"], collectionMethod: "source_api", reliability: "best_effort", sourceId: "execution-factory", status: "healthy" },
+      { coveredModules: ["model_management"], collectionMethod: "source_api", reliability: "best_effort", sourceId: "model-manager", status: "healthy" },
+      { coveredModules: ["system_management"], collectionMethod: "source_api", reliability: "best_effort", sourceId: "bkn-safe-admin", status: "healthy" },
+    ]);
     render(<ObservabilitySettingsScene />);
     await waitFor(() => expect(listLogSources).toHaveBeenCalled());
-    expect(await screen.findByText("otel-ss4o")).not.toBeNull();
+    expect(await screen.findByText("bknTrace.logs.modules.domain_knowledge_network")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.modules.data_resource_knowledge_network")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.modules.execution_factory")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.modules.model_management")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.modules.system_management")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.modules.observability")).not.toBeNull();
+    expect(screen.getByText("bknTrace.settings.sourceLabels.bkn-backend")).not.toBeNull();
+    expect(screen.getByText("bknTrace.settings.status.not_integrated")).not.toBeNull();
     expect(screen.getByText("7 bknTrace.settings.days")).not.toBeNull();
     expect(screen.getByText("bknTrace.settings.readOnlyNotice")).not.toBeNull();
+  });
+
+  it("设置页将部分管理审计覆盖说明为可读状态", async () => {
+    vi.mocked(listLogSources).mockResolvedValueOnce([{ coveredModules: ["data_resource_knowledge_network"], collectionMethod: "source_adapter", reason: "partial_management_audit_coverage", reliability: "best_effort", sourceId: "vega", status: "healthy" }]);
+
+    render(<ObservabilitySettingsScene />);
+
+    expect(await screen.findByText("已接入部分管理操作；其余操作尚未纳入审计。")).not.toBeNull();
   });
 
   it("点击立即归档先显示不可逆清理确认，而不直接创建归档任务", async () => {
@@ -296,14 +319,6 @@ describe("observability workspace scenes", () => {
 	fireEvent.click(confirmationButton);
     await waitFor(() => expect(vi.mocked(listArchiveJobs).mock.calls.filter(([kind]) => kind === "log")).toHaveLength(2));
     expect(screen.getByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
-  });
-
-  it("设置页明确区分技术运行来源与已接入状态", async () => {
-    render(<ObservabilitySettingsScene />);
-    await waitFor(() => expect(listLogSources).toHaveBeenCalled());
-    expect(await screen.findByText("技术运行日志（非操作日志）")).not.toBeNull();
-    expect(screen.getByText("已接入")).not.toBeNull();
-    expect(screen.queryByText("openbkn")).toBeNull();
   });
 
   it("设置页按高保真顺序展示五个只读维护分区", async () => {
