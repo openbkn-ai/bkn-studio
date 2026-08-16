@@ -165,13 +165,15 @@ export function ObservabilitySettingsScene() {
 }
 
 async function downloadArchiveBundle(job: ArchiveJob) {
-	const content = await downloadArchive(job.id);
+	const { content, fileName } = await downloadArchive(job.id);
 	const url = URL.createObjectURL(content);
 	const link = document.createElement("a");
 	link.href = url;
-	link.download = `archive-${job.kind}-${job.id}.jsonl`;
+	link.download = fileName || `archive-${job.kind}-${job.id}.jsonl`;
+	document.body.appendChild(link);
 	link.click();
-	URL.revokeObjectURL(url);
+	link.remove();
+	window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 async function refreshArchive(kind: ArchiveKind, setArchives: (value: ArchiveOverview[] | ((previous: ArchiveOverview[]) => ArchiveOverview[])) => void, setJobs: (value: ArchiveJob[] | ((previous: ArchiveJob[]) => ArchiveJob[])) => void) {

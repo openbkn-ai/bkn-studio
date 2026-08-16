@@ -335,9 +335,13 @@ export async function listArchiveJobs(kind: ArchiveKind): Promise<ArchiveJob[]> 
   return response.data.map((job) => ({ candidateCount: job.candidate_count, id: job.archive_job_id, kind: job.archive_kind, range: job.range, status: job.status }));
 }
 
-export async function downloadArchive(id: string): Promise<Blob> {
+export type ArchiveDownload = { content: Blob; fileName?: string };
+
+export async function downloadArchive(id: string): Promise<ArchiveDownload> {
   const response = await http.get<Blob>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/download`, { headers: observabilityHeaders(), responseType: "blob", skipErrorToast: true });
-  return response.data;
+  const disposition = response.headers?.["content-disposition"] as string | undefined;
+  const fileName = disposition?.match(/filename="?([^";]+)"?/i)?.[1];
+  return { content: response.data, ...(fileName ? { fileName } : {}) };
 }
 
 export async function retryArchiveCleanup(id: string): Promise<ArchiveJob> {

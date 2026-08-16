@@ -148,7 +148,7 @@ describe("observability service", () => {
 
   it("downloads an archive through the observability API instead of exposing an object-store URL", async () => {
     const archive = { type: "application/x-ndjson" } as Blob;
-    getMock.mockResolvedValue({ data: archive });
+    getMock.mockResolvedValue({ data: archive, headers: { "content-disposition": 'attachment; filename="trace-archive.jsonl"' } });
     const { downloadArchive } = await import("@/modules/bkn-trace/services/observability.service");
 
     const data = await downloadArchive("arc-log-1");
@@ -158,7 +158,7 @@ describe("observability service", () => {
       responseType: "blob",
       skipErrorToast: true,
     });
-    expect(data).toBe(archive);
+    expect(data).toEqual({ content: archive, fileName: "trace-archive.jsonl" });
   });
 
 	 it("loads an authorized operation audit detail from the gateway", async () => {
