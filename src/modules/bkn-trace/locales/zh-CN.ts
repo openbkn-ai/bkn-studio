@@ -60,7 +60,7 @@ export const bknTraceZhCN = {
           resourceNotRecorded: "本轮事实未记录资源绑定", resultNotRecorded: "结果未记录。", rows: "返回 {{count}} 条。", runSql: "执行数据查询", sqlConditionBelow: "SQL 条件见下方完整 SQL", zeroRows: "返回 0 条。",
         },
         questionNotRecorded: "未记录问题", resultNotRecorded: "业务结果未记录", roundLabel: "第 {{index}} 轮", roundQuestionNotRecorded: "本轮问题未记录",
-        rounds: { input: "本轮输入", inputOriginal: "本轮输入（原文）", outputOriginal: "本轮输出（原文）", search: "搜索问题或业务对象", select: "选择交互轮次查看调用事实", summary: "共 {{total}} 轮 · 当前 {{current}} 轮", title: "交互轮次" },
+        rounds: { input: "本轮输入", inputOriginal: "本轮输入（原文）", loading: "正在加载交互轮次", loadingFacts: "正在加载调用事实", noOperations: "本轮未记录调用事实", outputOriginal: "本轮输出（原文）", search: "搜索问题或业务对象", select: "选择交互轮次查看调用事实", summary: "共 {{total}} 轮 · 当前 {{current}} 轮", title: "交互轮次" },
         status: { completed: "已完成", failed: "失败", running: "进行中" }, timeNotRecorded: "时间未记录", undetermined: "未确定", views: { knowledge: "知识网络视图", timeline: "时间链视图" },
       },
     },

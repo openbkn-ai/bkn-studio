@@ -60,7 +60,7 @@ export const bknTraceEnUS = {
           resourceNotRecorded: "No resource binding was recorded in this interaction", resultNotRecorded: "Result not recorded.", rows: "Returned {{count}} rows.", runSql: "Run data query", sqlConditionBelow: "See full SQL below for conditions", zeroRows: "Returned 0 rows.",
         },
         questionNotRecorded: "Question not recorded", resultNotRecorded: "Business result not recorded", roundLabel: "Interaction {{index}}", roundQuestionNotRecorded: "Question for this interaction not recorded",
-        rounds: { input: "Interaction input", inputOriginal: "Interaction input (original)", outputOriginal: "Interaction output (original)", search: "Search question or business object", select: "Select an interaction to inspect call facts", summary: "{{total}} interactions · current {{current}}", title: "Interactions" },
+        rounds: { input: "Interaction input", inputOriginal: "Interaction input (original)", loading: "Loading interactions", loadingFacts: "Loading call facts", noOperations: "No call facts were recorded for this interaction", outputOriginal: "Interaction output (original)", search: "Search question or business object", select: "Select an interaction to inspect call facts", summary: "{{total}} interactions · current {{current}}", title: "Interactions" },
         status: { completed: "Completed", failed: "Failed", running: "In progress" }, timeNotRecorded: "Time not recorded", undetermined: "Undetermined", views: { knowledge: "Knowledge Network", timeline: "Timeline" },
       },
     },

@@ -169,6 +169,62 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.getAllByText("B 的轮次").length).toBeGreaterThan(0);
   });
 
+  it("shows that interaction rounds are loading before the list is available", async () => {
+    let resolveInteractions!: (value: { entries: Array<{ interactionId: string; questionPreview: string }>; total: number }) => void;
+    const pendingInteractions = new Promise<{ entries: Array<{ interactionId: string; questionPreview: string }>; total: number }>((resolve) => { resolveInteractions = resolve; });
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-loading", questionPreview: "加载中的会话", interactionCount: 1 }], total: 1 });
+    getInteractions.mockReturnValue(pendingInteractions);
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "加载中的会话" }));
+
+    expect((await screen.findAllByText("正在加载交互轮次")).length).toBeGreaterThan(0);
+    resolveInteractions({ entries: [{ interactionId: "int-loading", questionPreview: "已加载轮次" }], total: 1 });
+    getInteraction.mockResolvedValue({ interactionId: "int-loading", conversationContext: [], derivedFacts: [], contextRelations: [], operations: [] });
+    expect(await screen.findByText("已加载轮次")).not.toBeNull();
+  });
+
+  it("renders the localized retry action when interaction facts fail to load", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-error", questionPreview: "错误会话", interactionCount: 1 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-error", questionPreview: "错误轮次" }], total: 1 });
+    getInteraction.mockRejectedValue(new Error("facts unavailable"));
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "错误会话" }));
+
+    expect(await screen.findByText("调用事实加载失败")).not.toBeNull();
+    expect(screen.getByRole("button", { name: /重\s*试/ })).not.toBeNull();
+  });
+
+  it("clears a stale interaction error when the round filter has no selection", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-filter", questionPreview: "筛选会话", interactionCount: 1 }], total: 1 });
+    getInteractions
+      .mockResolvedValueOnce({ entries: [{ interactionId: "int-error", questionPreview: "错误轮次" }], total: 1 })
+      .mockResolvedValueOnce({ entries: [], total: 0 });
+    getInteraction.mockRejectedValue(new Error("facts unavailable"));
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "筛选会话" }));
+    expect(await screen.findByText("调用事实加载失败")).not.toBeNull();
+
+    fireEvent.change(screen.getByPlaceholderText("搜索问题或业务对象"), { target: { value: "无匹配" } });
+
+    await waitFor(() => expect(getInteractions).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByText("调用事实加载失败")).toBeNull());
+  });
+
+  it("explains an interaction with no recorded operations instead of leaving the analysis blank", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-empty", questionPreview: "无调用会话", interactionCount: 1 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-empty", questionPreview: "无调用轮次", status: "completed" }], total: 1 });
+    getInteraction.mockResolvedValue({ interactionId: "int-empty", conversationContext: [], derivedFacts: [], contextRelations: [], operations: [] });
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "无调用会话" }));
+
+    expect(await screen.findByText("本轮未记录调用事实")).not.toBeNull();
+    expect(screen.getByText("本轮输入（原文）")).not.toBeNull();
+  });
+
   it("keeps an eight-column conversation list before opening one interaction workspace", async () => {
     getConversations.mockResolvedValue({ entries: [
       { conversationId: "conv-1", questionPreview: "查询采购订单", interactionCount: 2, resultPreview: "无记录", agentName: "Supply Agent", status: "completed", evidenceCompleteness: "complete", startedAt: "2026-08-10", durationMs: 42 },

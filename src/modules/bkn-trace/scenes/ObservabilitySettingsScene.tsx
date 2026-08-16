@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
-import { BUSINESS_MODULES, createArchive, getArchiveDownloadURL, getArchiveOverview, listArchiveJobs, listLogPolicies, listLogSources, retryArchiveCleanup, type ArchiveJob, type ArchiveKind, type ArchiveOverview, type BusinessModule, type LogPolicy, type LogSourceStatus } from "@/modules/bkn-trace/services/observability.service";
+import { BUSINESS_MODULES, createArchive, downloadArchive, getArchiveOverview, listArchiveJobs, listLogPolicies, listLogSources, retryArchiveCleanup, type ArchiveJob, type ArchiveKind, type ArchiveOverview, type BusinessModule, type LogPolicy, type LogSourceStatus } from "@/modules/bkn-trace/services/observability.service";
 import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
 
 type StorageRow = { dataKind: string; description: string; key: string; retention?: number; status: "known" | "unknown" };
@@ -156,12 +156,24 @@ export function ObservabilitySettingsScene() {
 			{ title: t("bknTrace.settings.archive.jobCount"), dataIndex: "candidateCount", key: "candidateCount" },
 			{ title: t("bknTrace.settings.archive.jobStatus"), dataIndex: "status", key: "status", render: (status: ArchiveJob["status"]) => t(`bknTrace.settings.archive.statuses.${status}`) },
 			{ title: t("bknTrace.settings.archive.jobAction"), key: "action", render: (_, job) => <>
-				{(job.status === "completed" || job.status === "cleanup_incomplete") ? <Button size="small" onClick={() => { void getArchiveDownloadURL(job.id).then((url) => window.open(url, "_blank", "noopener,noreferrer")).catch(() => message.error(t("bknTrace.settings.archive.actionFailed"))); }}>{t("bknTrace.settings.archive.download")}</Button> : null}
+				{(job.status === "completed" || job.status === "cleanup_incomplete") ? <Button size="small" onClick={() => { void downloadArchiveBundle(job).catch(() => message.error(t("bknTrace.settings.archive.actionFailed"))); }}>{t("bknTrace.settings.archive.download")}</Button> : null}
 				{job.status === "cleanup_incomplete" ? <Button size="small" onClick={() => { void retryArchiveCleanup(job.id).then(() => refreshArchive(job.kind, setArchives, setArchiveJobs)).catch(() => message.error(t("bknTrace.settings.archive.actionFailed"))); }}>{t("bknTrace.settings.archive.retryCleanup")}</Button> : null}
 			</> },
 		]} /> : <Empty description={t("bknTrace.settings.archive.noHistory")} image={Empty.PRESENTED_IMAGE_SIMPLE} />}
     </SettingsSection>
   </div>;
+}
+
+async function downloadArchiveBundle(job: ArchiveJob) {
+	const { content, fileName } = await downloadArchive(job.id);
+	const url = URL.createObjectURL(content);
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = fileName || `archive-${job.kind}-${job.id}.jsonl`;
+	document.body.appendChild(link);
+	link.click();
+	link.remove();
+	window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 async function refreshArchive(kind: ArchiveKind, setArchives: (value: ArchiveOverview[] | ((previous: ArchiveOverview[]) => ArchiveOverview[])) => void, setJobs: (value: ArchiveJob[] | ((previous: ArchiveJob[]) => ArchiveJob[])) => void) {
