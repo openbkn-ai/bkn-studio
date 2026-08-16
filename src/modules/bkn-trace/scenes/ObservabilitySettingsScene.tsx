@@ -12,14 +12,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
-import { createArchive, getArchiveDownloadURL, getArchiveOverview, listArchiveJobs, listLogPolicies, listLogSources, retryArchiveCleanup, type ArchiveJob, type ArchiveKind, type ArchiveOverview, type LogPolicy, type LogSourceStatus } from "@/modules/bkn-trace/services/observability.service";
+import { BUSINESS_MODULES, createArchive, getArchiveDownloadURL, getArchiveOverview, listArchiveJobs, listLogPolicies, listLogSources, retryArchiveCleanup, type ArchiveJob, type ArchiveKind, type ArchiveOverview, type BusinessModule, type LogPolicy, type LogSourceStatus } from "@/modules/bkn-trace/services/observability.service";
 import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
 
 type StorageRow = { dataKind: string; description: string; key: string; retention?: number; status: "known" | "unknown" };
+type SourceLoadState = "loaded" | "not_requested" | "unavailable";
+type ModuleSourceRow = { module: BusinessModule; reason?: string; sourceIds: string[]; status: "healthy" | "not_integrated" | "unavailable" | "unknown" };
 
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
+  const [sourceLoadState, setSourceLoadState] = useState<SourceLoadState>("not_requested");
   const [policies, setPolicies] = useState<LogPolicy[]>([]);
 	const [archives, setArchives] = useState<ArchiveOverview[]>([]);
 	const [archiveJobs, setArchiveJobs] = useState<ArchiveJob[]>([]);
@@ -45,12 +48,17 @@ export function ObservabilitySettingsScene() {
 		profile.observabilityArchiveManage ? listArchiveJobs("trace") : Promise.resolve<ArchiveJob[]>([]),
       ]);
       if (!active) return;
-      if (sourceResult.status === "fulfilled") setSources(sourceResult.value);
+      if (sourceResult.status === "fulfilled") {
+        setSources(sourceResult.value);
+        setSourceLoadState(profile.globalLogSearch ? "loaded" : "not_requested");
+      } else {
+        setSourceLoadState("unavailable");
+      }
       if (policyResult.status === "fulfilled") setPolicies(policyResult.value);
 		const archiveData = [logArchiveResult, traceArchiveResult].flatMap((result) => result.status === "fulfilled" && result.value ? [result.value] : []);
 		setArchives(archiveData);
 		setArchiveJobs([...((logJobsResult.status === "fulfilled") ? logJobsResult.value : []), ...((traceJobsResult.status === "fulfilled") ? traceJobsResult.value : [])]);
-      if (sourceResult.status === "rejected" && policyResult.status === "rejected") setError(t("bknTrace.errors.queryFailed"));
+      if (sourceResult.status === "rejected" || policyResult.status === "rejected") setError(t("bknTrace.errors.queryFailed"));
       setLoading(false);
     }).catch(() => {
       if (active) { setError(t("bknTrace.errors.accessProfileFailed")); setLoading(false); }
@@ -58,17 +66,34 @@ export function ObservabilitySettingsScene() {
     return () => { active = false; };
   }, [t]);
 
-  const overview = useMemo(() => {
-    const healthy = sources.filter((source) => ["available", "healthy"].includes(source.status)).length;
-    const unavailable = sources.filter((source) => ["unavailable", "error"].includes(source.status)).length;
-    return { healthy, registered: sources.length, unavailable, unconfigured: Math.max(0, sources.length - healthy - unavailable) };
-  }, [sources]);
+  const moduleSources = useMemo<ModuleSourceRow[]>(() => BUSINESS_MODULES.map((module) => {
+    if (sourceLoadState === "not_requested") return { module, reason: "source_not_requested", sourceIds: [], status: "unknown" };
+    if (sourceLoadState === "unavailable") return { module, reason: "source_query_failed", sourceIds: [], status: "unavailable" };
+    const matching = sources.filter((source) => source.coveredModules.includes(module));
+    if (!matching.length) return { module, sourceIds: [], status: "not_integrated" };
+    const unavailable = matching.find((source) => !["available", "healthy", "not_integrated"].includes(source.status));
+    if (unavailable) {
+      return { module, reason: unavailable.reason, sourceIds: matching.map((source) => source.sourceId), status: "unavailable" };
+    }
+    if (matching.some((source) => ["available", "healthy"].includes(source.status))) {
+      return { module, reason: matching.map((source) => source.reason).find(Boolean), sourceIds: matching.map((source) => source.sourceId), status: "healthy" };
+    }
+    return { module, reason: matching.map((source) => source.reason).find(Boolean), sourceIds: matching.map((source) => source.sourceId), status: "not_integrated" };
+  }), [sourceLoadState, sources]);
 
-  const sourceColumns: ColumnsType<LogSourceStatus> = [
-    { dataIndex: "sourceId", key: "sourceId", title: t("bknTrace.settings.columns.source") },
-    { key: "coverage", title: t("bknTrace.settings.columns.coverage"), render: (_, source) => <ClampedModules modules={source.coveredModules} /> },
-    { dataIndex: "status", key: "status", title: t("bknTrace.settings.columns.status"), render: (value: string) => <Tag color={["available", "healthy"].includes(value) ? "green" : "orange"}>{t(`bknTrace.settings.status.${value}`)}</Tag> },
-    { dataIndex: "reason", key: "reason", title: t("bknTrace.settings.columns.dataState"), render: (value?: string) => value || t("bknTrace.settings.noIssueReturned") },
+  const excludedOperationAuditSources = useMemo(() => sources.filter((source) => !source.coveredModules.some((module) => BUSINESS_MODULES.includes(module as BusinessModule))), [sources]);
+
+  const overview = useMemo(() => {
+    const healthy = moduleSources.filter((source) => source.status === "healthy").length;
+    const unavailable = moduleSources.filter((source) => source.status === "unavailable").length;
+    return { healthy, registered: moduleSources.length, unavailable, unconfigured: moduleSources.filter((source) => source.status === "not_integrated").length };
+  }, [moduleSources]);
+
+  const sourceColumns: ColumnsType<ModuleSourceRow> = [
+    { dataIndex: "module", key: "module", title: t("bknTrace.settings.columns.module"), render: (module: BusinessModule) => t(`bknTrace.logs.modules.${module}`) },
+    { dataIndex: "sourceIds", key: "sourceIds", title: t("bknTrace.settings.columns.source"), render: (sourceIds: string[], row) => sourceIds.length ? sourceIds.map((sourceId) => t(`bknTrace.settings.sourceLabels.${sourceId}`, { defaultValue: sourceId })).join("、") : t(row.status === "not_integrated" ? "bknTrace.settings.sourceNotIntegrated" : "bknTrace.settings.sourceNotReturned") },
+    { dataIndex: "status", key: "status", title: t("bknTrace.settings.columns.status"), render: (value: ModuleSourceRow["status"]) => <Tag color={value === "healthy" ? "green" : value === "unavailable" ? "orange" : "default"}>{t(`bknTrace.settings.status.${value}`)}</Tag> },
+    { dataIndex: "reason", key: "reason", title: t("bknTrace.settings.columns.dataState"), render: (value?: string) => sourceStateLabel(value, t) },
   ];
 
   const storageRows = useMemo<StorageRow[]>(() => {
@@ -106,7 +131,8 @@ export function ObservabilitySettingsScene() {
     </SettingsSection>
 
     <SettingsSection title={t("bknTrace.settings.sources")}>
-      <Table columns={sourceColumns} dataSource={sources} pagination={false} rowKey="sourceId" tableLayout="fixed" />
+      <Table columns={sourceColumns} dataSource={moduleSources} pagination={false} rowKey="module" tableLayout="fixed" />
+      {excludedOperationAuditSources.length ? <Typography.Paragraph type="secondary">{t("bknTrace.settings.excludedOperationAuditSources", { count: excludedOperationAuditSources.length })}</Typography.Paragraph> : null}
     </SettingsSection>
 
     <SettingsSection title={t("bknTrace.settings.storageRetention")}>
@@ -183,8 +209,7 @@ function Metric({ label, value }: { label: string; value: number | string }) {
   return <div className={styles.metric}><Typography.Text type="secondary">{label}</Typography.Text><Typography.Text strong>{value}</Typography.Text></div>;
 }
 
-function ClampedModules({ modules }: { modules: string[] }) {
-  const { t } = useTranslation();
-  const value = modules.map((module) => t(`bknTrace.logs.modules.${module}`, { defaultValue: module })).join("、");
-  return <Typography.Paragraph ellipsis={{ rows: 2, tooltip: value }}>{value || t("bknTrace.settings.notReturned")}</Typography.Paragraph>;
+function sourceStateLabel(reason: string | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
+  if (!reason) return t("bknTrace.settings.noIssueReturned");
+  return t(`bknTrace.settings.sourceState.${reason}`, { defaultValue: reason });
 }
