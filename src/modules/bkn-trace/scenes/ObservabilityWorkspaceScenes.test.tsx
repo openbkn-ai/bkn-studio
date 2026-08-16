@@ -290,6 +290,7 @@ describe("observability workspace scenes", () => {
     render(<ObservabilitySettingsScene />);
 
     expect((await screen.findAllByText("bknTrace.settings.status.unknown")).length).toBeGreaterThanOrEqual(6);
+    expect(screen.getAllByText("bknTrace.settings.sourceState.source_not_requested").length).toBeGreaterThanOrEqual(6);
     expect(screen.queryByText("bknTrace.settings.status.not_integrated")).toBeNull();
   });
 

@@ -67,7 +67,7 @@ export function ObservabilitySettingsScene() {
   }, [t]);
 
   const moduleSources = useMemo<ModuleSourceRow[]>(() => BUSINESS_MODULES.map((module) => {
-    if (sourceLoadState === "not_requested") return { module, sourceIds: [], status: "unknown" };
+    if (sourceLoadState === "not_requested") return { module, reason: "source_not_requested", sourceIds: [], status: "unknown" };
     if (sourceLoadState === "unavailable") return { module, reason: "source_query_failed", sourceIds: [], status: "unavailable" };
     const matching = sources.filter((source) => source.coveredModules.includes(module));
     if (!matching.length) return { module, sourceIds: [], status: "not_integrated" };
