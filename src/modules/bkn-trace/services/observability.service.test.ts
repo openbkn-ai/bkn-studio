@@ -146,6 +146,21 @@ describe("observability service", () => {
     expect(getMock).toHaveBeenNthCalledWith(2, "/observability/v1/trace-archive-overview", expect.objectContaining({ skipErrorToast: true }));
   });
 
+  it("downloads an archive through the observability API instead of exposing an object-store URL", async () => {
+    const archive = { type: "application/x-ndjson" } as Blob;
+    getMock.mockResolvedValue({ data: archive });
+    const { downloadArchive } = await import("@/modules/bkn-trace/services/observability.service");
+
+    const data = await downloadArchive("arc-log-1");
+
+    expect(getMock).toHaveBeenCalledWith("/observability/v1/archive-jobs/arc-log-1/download", {
+      headers: { "x-business-domain": "bd_demo" },
+      responseType: "blob",
+      skipErrorToast: true,
+    });
+    expect(data).toBe(archive);
+  });
+
 	 it("loads an authorized operation audit detail from the gateway", async () => {
 		 getMock.mockResolvedValueOnce({ data: {
 				 data: {

@@ -6,7 +6,7 @@
  */
 
 import { CloseOutlined, CopyOutlined, DownloadOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Button, Empty, Input, Result, Segmented, Select, Table, Tag, Typography, message } from "antd";
+import { Alert, Button, Empty, Input, Result, Segmented, Select, Spin, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -261,6 +261,11 @@ export function BusinessProvenanceScene() {
   const [interactions, setInteractions] = useState<BusinessProvenanceInteractionListItem[]>([]);
   const [selectedInteraction, setSelectedInteraction] = useState<BusinessProvenanceInteractionListItem>();
   const [projection, setProjection] = useState<BusinessProvenanceInteraction>();
+  const [interactionListLoading, setInteractionListLoading] = useState(false);
+  const [interactionListError, setInteractionListError] = useState(false);
+  const [interactionDetailLoading, setInteractionDetailLoading] = useState(false);
+  const [interactionDetailError, setInteractionDetailError] = useState(false);
+  const [interactionReload, setInteractionReload] = useState(0);
   const [view, setView] = useState<View>("timeline");
   const [detailOperation, setDetailOperation] = useState<OperationResolution>();
   const [knowledgeSelection, setKnowledgeSelection] = useState<KnowledgeSelection>();
@@ -301,20 +306,23 @@ export function BusinessProvenanceScene() {
     if (!selectedConversation) return;
     let current = true;
     setInteractions([]); setSelectedInteraction(undefined);
+    setInteractionListLoading(true); setInteractionListError(false);
     setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisPanelOpen(false); setAnalysisError(undefined);
     void getBusinessProvenanceInteractions({ conversationId: selectedConversation.conversationId, page: 1, pageSize: 50, keyword: interactionKeyword })
       .then((page) => { if (current) { setInteractions(page.entries); setSelectedInteraction(page.entries[0]); } })
-      .catch(() => { if (current) message.error(bpText("errors.interactionsLoad")); });
+      .catch(() => { if (current) { setInteractionListError(true); message.error(bpText("errors.interactionsLoad")); } })
+      .finally(() => { if (current) setInteractionListLoading(false); });
     return () => { current = false; };
   }, [interactionKeyword, selectedConversation]);
   useEffect(() => {
     if (!selectedInteraction) return;
     let current = true;
-    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined);
+    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setInteractionDetailLoading(true); setInteractionDetailError(false);
     setAnalysisMarkdown(""); setAnalysisMarkdownLoading(true); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisStreamText(""); setAnalysisPanelOpen(false); setAnalysisError(undefined); setAnalysisStarting(false);
     void getBusinessProvenanceInteraction(selectedInteraction.interactionId)
       .then((value) => { if (current) setProjection(value); })
-      .catch(() => { if (current) message.error(bpText("errors.factsLoad")); });
+      .catch(() => { if (current) { setInteractionDetailError(true); message.error(bpText("errors.factsLoad")); } })
+      .finally(() => { if (current) setInteractionDetailLoading(false); });
     void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
       .then((value) => { if (current) setAnalysisMarkdown(value); })
       .catch(() => { if (current) message.error(bpText("errors.markdownLoad")); })
@@ -326,7 +334,7 @@ export function BusinessProvenanceScene() {
       setAnalysisResult(latest?.result);
     }).catch(() => { if (current) setAnalysisHistory([]); });
     return () => { current = false; };
-  }, [selectedInteraction]);
+  }, [interactionReload, selectedInteraction]);
 
   const groups = useMemo(() => projection ? knowledgeGroups(projection) : [], [projection]);
   const selectedKnowledgeCalls = useMemo(() => {
@@ -434,12 +442,12 @@ export function BusinessProvenanceScene() {
         <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{bpText("interactionCount", { count: interactions.length || selectedConversation.interactionCount || 0 })}</span><span>{bpText("callCount", { count: projection?.operations.length ?? 0 })}</span><span>{selectedConversation.agentName || bpText("agentNotRecorded")}</span></div>
       </header>
       <aside className={styles.roundSidebar}>
-        <div className={styles.roundSidebarTitle}><div><h3>{bpText("rounds.title")}</h3><span>{bpText("rounds.summary", { total: interactions.length, current: Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1) })}</span></div></div>
+        <div className={styles.roundSidebarTitle}><div><h3>{bpText("rounds.title")}</h3><span>{interactionListLoading ? bpText("rounds.loading") : bpText("rounds.summary", { total: interactions.length, current: Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1) })}</span></div></div>
         <Input value={interactionKeyword} onChange={(event) => setInteractionKeyword(event.target.value)} prefix={<SearchOutlined />} placeholder={bpText("rounds.search")} />
-        <div className={styles.roundList}>{interactions.map((item, index) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{bpText("roundLabel", { index: index + 1 })}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
+        <div className={styles.roundList}>{interactionListLoading ? <div className={styles.roundLoading}><Spin size="small" />{bpText("rounds.loading")}</div> : interactionListError ? <Alert type="error" showIcon message={bpText("errors.interactionsLoad")} /> : interactions.map((item, index) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{bpText("roundLabel", { index: index + 1 })}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
       </aside>
       <section className={styles.analysisPane}>
-        {projection ? <>
+        {interactionListLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loading")}</span></div> : interactionDetailLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loadingFacts")}</span></div> : interactionDetailError ? <Result status="error" title={bpText("errors.factsLoad")} extra={<Button type="primary" onClick={() => setInteractionReload((value) => value + 1)}>{bpText("retry")}</Button>} /> : projection ? <>
           <section className={styles.interactionSummary}>
             <header><span>{bpText("roundLabel", { index: Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1) })}</span><h2>{selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</h2><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection.operations.length })} · {statusLabel(selectedInteraction?.status)}</small></header>
             <div className={styles.sourceTexts}><div><h4>{bpText("rounds.inputOriginal")}</h4><p>{selectedInteraction?.questionPreview || bpText("inputNotRecorded")}</p></div><div><h4>{bpText("rounds.outputOriginal")}</h4><p>{selectedInteraction?.resultPreview || bpText("resultNotRecorded")}</p></div></div>
@@ -448,7 +456,7 @@ export function BusinessProvenanceScene() {
           <Segmented className={styles.viewSwitch} value={view} onChange={(value) => { setView(value as View); setDetailOperation(undefined); }} options={[{ label: bpText("views.timeline"), value: "timeline" }, { label: bpText("views.knowledge"), value: "knowledge" }]} />
           {view === "timeline" ? <section className={styles.timeline}>
             <div className={styles.inputNode}><i /><div><b>{bpText("rounds.input")}</b><span>{formatTime(selectedInteraction?.startedAt)}</span></div></div>
-            {projection.operations.map((operation, index) => <div className={styles.timelineItem} key={operation.operationId}>
+            {projection.operations.length === 0 ? <Empty description={bpText("rounds.noOperations")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : projection.operations.map((operation, index) => <div className={styles.timelineItem} key={operation.operationId}>
               <div className={styles.timelineRail}><i />{index < projection.operations.length - 1 ? <span /> : null}</div>
               <article className={styles.operationCard} onClick={() => setDetailOperation(operation)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter") setDetailOperation(operation); }}>
                 <header><h3>{operationTitle(operation)}</h3>{operation.elements[0] ? <Tag>{operation.elements[0].name || operation.elements[0].id}</Tag> : null}</header>
