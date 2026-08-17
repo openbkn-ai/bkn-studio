@@ -36,8 +36,8 @@ describe("object-type-resource.service · getObjectTypeResourcePreview", () => {
     const { getObjectTypeResourcePreview } = await import(
       "@/modules/knowledge-network/services/object-type-resource.service"
     );
-    const { transformVegaDynamicDataResponse } = await import(
-      "@/framework/request/vega-bigint"
+    const { transformPrecisionSafeJSONResponse } = await import(
+      "@/framework/request/precision-safe-json"
     );
 
     const result = await getObjectTypeResourcePreview("kn-1", "r-1");
@@ -50,7 +50,7 @@ describe("object-type-resource.service · getObjectTypeResourcePreview", () => {
       },
       {
         headers: { "X-HTTP-Method-Override": "GET" },
-        transformResponse: transformVegaDynamicDataResponse,
+        transformResponse: transformPrecisionSafeJSONResponse,
       },
     );
     expect(result?.rowTotalCount).toBe(1);

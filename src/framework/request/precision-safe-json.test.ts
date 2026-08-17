@@ -7,12 +7,15 @@
 
 import { describe, expect, it } from "vitest";
 
-import { transformVegaDynamicDataResponse } from "@/framework/request/vega-bigint";
+import {
+  parsePrecisionSafeJSON,
+  transformPrecisionSafeJSONResponse,
+} from "@/framework/request/precision-safe-json";
 
-describe("transformVegaDynamicDataResponse", () => {
+describe("precision-safe JSON", () => {
   it("preserves an unsafe BIGINT as a decimal string", () => {
     expect(
-      transformVegaDynamicDataResponse(
+      transformPrecisionSafeJSONResponse(
         '{"entries":[{"id_card":110101199001152345,"safe_id":42}]}',
       ),
     ).toEqual({
@@ -22,7 +25,7 @@ describe("transformVegaDynamicDataResponse", () => {
 
   it("preserves signed and unsigned 64-bit boundaries as decimal strings", () => {
     expect(
-      transformVegaDynamicDataResponse(
+      parsePrecisionSafeJSON(
         '{"signed":-9223372036854775808,"unsigned":18446744073709551615}',
       ),
     ).toEqual({
@@ -32,6 +35,6 @@ describe("transformVegaDynamicDataResponse", () => {
   });
 
   it("leaves an empty response unchanged", () => {
-    expect(transformVegaDynamicDataResponse("")).toBe("");
+    expect(transformPrecisionSafeJSONResponse("")).toBe("");
   });
 });

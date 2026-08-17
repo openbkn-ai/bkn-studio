@@ -22,6 +22,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { gatewayOrigin } from "@/framework/auth/oauth";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
+import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 import { buildApiKeyPagePath, consumeApiKeyHandoff } from "@/modules/api-keys/utils/api-key-handoff";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
@@ -143,7 +144,7 @@ function formatResponseView(text: string): ResponseView {
   const candidate = dataLines.length > 0 ? dataLines[dataLines.length - 1] : text;
   let obj: unknown;
   try {
-    obj = JSON.parse(candidate);
+    obj = parsePrecisionSafeJSON(candidate);
   } catch {
     return { kind: "toon", text };
   }
@@ -151,7 +152,7 @@ function formatResponseView(text: string): ResponseView {
   if (texts) {
     const joined = texts.join("\n");
     try {
-      return { kind: "json", text: JSON.stringify(JSON.parse(joined), null, 2) };
+      return { kind: "json", text: JSON.stringify(parsePrecisionSafeJSON(joined), null, 2) };
     } catch {
       return { kind: "toon", text: joined };
     }

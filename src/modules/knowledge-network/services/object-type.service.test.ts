@@ -27,16 +27,20 @@ describe("object-type.service · getObjectTypeSampleData", () => {
   });
 
   it("queries object type sample data through the BKN API", async () => {
-    getMock.mockResolvedValue({
-      data: {
-        columns: [{ data_index: "order_id", title: "订单 ID" }],
-        entries: [{ order_id: 1 }],
-        name: "采购订单",
-        total_count: 1,
-      },
+    const rawResponse = JSON.stringify({
+      columns: [{ data_index: "order_id", title: "订单 ID" }],
+      entries: [{ order_id: 1 }],
+      name: "采购订单",
+      total_count: 1,
     });
+    getMock.mockImplementation((_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+      Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
+    );
     const { getObjectTypeSampleData } = await import(
       "@/modules/knowledge-network/services/object-type.service"
+    );
+    const { transformPrecisionSafeJSONResponse } = await import(
+      "@/framework/request/precision-safe-json"
     );
 
     const result = await getObjectTypeSampleData("kn-1", "purchase_order");
@@ -49,6 +53,7 @@ describe("object-type.service · getObjectTypeSampleData", () => {
           need_total: true,
           offset: 0,
         },
+        transformResponse: transformPrecisionSafeJSONResponse,
       },
     );
     expect(postMock).not.toHaveBeenCalled();
@@ -57,6 +62,27 @@ describe("object-type.service · getObjectTypeSampleData", () => {
       name: "采购订单",
       rowTotalCount: 1,
       rows: [{ order_id: 1 }],
+    });
+  });
+
+  it("preserves unsafe integers from the raw sample-data response", async () => {
+    const rawResponse =
+      '{"columns":[{"data_index":"order_id"}],"entries":[{"order_id":110101199001152345,"signed":-9223372036854775808,"unsigned":18446744073709551615}],"total_count":1}';
+    getMock.mockImplementation((_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+      Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
+    );
+    const { getObjectTypeSampleData } = await import(
+      "@/modules/knowledge-network/services/object-type.service"
+    );
+
+    await expect(getObjectTypeSampleData("kn-1", "purchase_order")).resolves.toMatchObject({
+      rows: [
+        {
+          order_id: "110101199001152345",
+          signed: "-9223372036854775808",
+          unsigned: "18446744073709551615",
+        },
+      ],
     });
   });
 });

@@ -33,8 +33,8 @@ describe("resource.service · previewCatalogResource", () => {
     const { previewCatalogResource } = await import(
       "@/modules/data-catalog/services/resource.service"
     );
-    const { transformVegaDynamicDataResponse } = await import(
-      "@/framework/request/vega-bigint"
+    const { transformPrecisionSafeJSONResponse } = await import(
+      "@/framework/request/precision-safe-json"
     );
 
     const result = await previewCatalogResource("r-1", { limit: 10, offset: 20 });
@@ -47,7 +47,7 @@ describe("resource.service · previewCatalogResource", () => {
       },
       {
         headers: { "X-HTTP-Method-Override": "GET" },
-        transformResponse: transformVegaDynamicDataResponse,
+        transformResponse: transformPrecisionSafeJSONResponse,
       },
     );
     expect(result).toEqual({ rows: [{ id: "r-1" }], total: 42 });
