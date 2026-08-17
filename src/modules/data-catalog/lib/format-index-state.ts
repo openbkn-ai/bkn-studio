@@ -23,7 +23,7 @@ export function formatIndexStateLabel(state: IndexState, t: TFunction) {
   ) {
     const percent = Math.min(
       100,
-      Math.round((state.latest.vectorizedCount / state.latest.totalCount) * 100),
+      Math.round((state.latest.syncedCount / state.latest.totalCount) * 100),
     );
     label = `${label} ${percent}%`;
   }

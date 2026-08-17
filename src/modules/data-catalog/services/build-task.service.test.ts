@@ -58,6 +58,39 @@ describe("snapshotFieldsOf", () => {
       status: "hanlp_index",
     });
   });
+
+  it("uses the SmallModel snapshot for vector fields", () => {
+    const snapshot = snapshotFieldsOf({
+      id: "task-1",
+      index_config: {
+        features: {
+          content: {
+            vector: {
+              batch_size: 32,
+              embedding_dim: 1024,
+              max_tokens: 8192,
+              model_id: "model-uuid",
+              model_name: "bge-m3",
+              model_type: "embedding",
+            },
+          },
+        },
+      },
+    });
+
+    expect(snapshot.embeddingFields).toEqual(["content"]);
+    expect(snapshot.embeddingModel).toBe("model-uuid");
+    expect(snapshot.embeddingConfigs).toEqual({
+      content: {
+        batchSize: 32,
+        dimensions: 1024,
+        maxTokens: 8192,
+        modelId: "model-uuid",
+        modelName: "bge-m3",
+        modelType: "embedding",
+      },
+    });
+  });
 });
 
 describe("mapBuildTask", () => {

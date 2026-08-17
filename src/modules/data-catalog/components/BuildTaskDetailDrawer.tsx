@@ -5,22 +5,19 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ExclamationCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { Alert, Descriptions, Drawer, Empty } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { formatDateTime } from "@/framework/i18n/format";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
-import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
-import { formatCount } from "@/modules/data-catalog/lib/format";
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
+import { formatCount } from "@/modules/data-catalog/lib/format";
 import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
 import { getBuildTask } from "@/modules/data-catalog/services/build-task.service";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
-import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
-import type { SmallModel } from "@/modules/model-resources/types/small-model";
 
 import styles from "./BuildTaskDetailDrawer.module.css";
 import sharedStyles from "./shared.module.css";
@@ -88,33 +85,10 @@ function renderEmbeddingConfigs(task: BuildTask) {
       {entries.map(([field, config]) => (
         <span className={styles.fieldText} key={field}>
           {field}: {config.modelId || "—"}
+          {config.modelName ? ` (${config.modelName})` : ""}
           {config.dimensions > 0 ? ` · ${config.dimensions}d` : ""}
         </span>
       ))}
-    </span>
-  );
-}
-
-function renderIndexHealth(task: BuildTask, t: (key: string) => string) {
-  const health = task.indexHealth;
-  if (!health) {
-    return "—";
-  }
-  return (
-    <span className={styles.healthList}>
-      <span>
-        {t("dataCatalog.task.fields.embeddingIndex")}: {t(`dataCatalog.task.health.${health.embedding}`)}
-      </span>
-      <span>
-        {t("dataCatalog.task.fields.fulltextIndex")}: {t(`dataCatalog.task.health.${health.fulltext}`)}
-      </span>
-      <span>
-        {t("dataCatalog.task.fields.indexUsable")}: {t(
-          health.usable
-            ? "dataCatalog.task.health.usable"
-            : "dataCatalog.task.health.unusable",
-        )}
-      </span>
     </span>
   );
 }
@@ -145,7 +119,26 @@ function renderSyncedMark(mark?: string) {
 
   try {
     const parsed: unknown = JSON.parse(mark);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    if (Array.isArray(parsed)) {
+      const entries = parsed.flatMap((item, index) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) {
+          return [];
+        }
+        const { key, value } = item as { key?: unknown; value?: unknown };
+        return typeof key === "string" ? [[`${key}:${index}`, key, value] as const] : [];
+      });
+      if (entries.length > 0) {
+        return (
+          <span className={sharedStyles.chipRow}>
+            {entries.map(([entryKey, key, value]) => (
+              <span className={sharedStyles.slugChip} key={entryKey}>
+                {key}: {formatSyncedMarkValue(value)}
+              </span>
+            ))}
+          </span>
+        );
+      }
+    } else if (parsed && typeof parsed === "object") {
       const entries = Object.entries(parsed);
       if (entries.length > 0) {
         return (
@@ -173,7 +166,6 @@ export function BuildTaskDetailDrawer({
   taskId,
 }: BuildTaskDetailDrawerProps) {
   const { i18n, t } = useTranslation();
-  const [models, setModels] = useState<SmallModel[]>([]);
   const [task, setTask] = useState<BuildTask | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -197,53 +189,12 @@ export function BuildTaskDetailDrawer({
     return () => { active = false; };
   }, [open, taskId]);
 
-  useEffect(() => {
-    if (!open || !task?.embeddingModel) {
-      return;
-    }
-    let active = true;
-    void (async () => {
-      try {
-        const result = await listSmallModels({
-          modelType: "embedding",
-          page: 1,
-          size: 200,
-        });
-        if (active) {
-          setModels(result.items);
-        }
-      } catch {
-        // Retain the original value when parsing fails.
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [open, task?.embeddingModel]);
-
-  const modelInfo = useMemo(() => {
-    const match = models.find(
-      (item) =>
-        item.modelId === task?.embeddingModel || item.modelName === task?.embeddingModel,
-    );
-    return {
-      name: match?.modelName || task?.embeddingModel || "",
-      dimensions: match?.embeddingDim ?? task?.modelDimensions ?? 0,
-    };
-  }, [models, task?.embeddingModel, task?.modelDimensions]);
-
   if (!task) {
     return <Drawer className={styles.drawer} destroyOnClose loading={loading} onClose={onClose} open={open} styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }} title={`${t("dataCatalog.task.detail")} · ${taskId}`} width={560}>{!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}{!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}</Drawer>;
   }
 
-  const succeededWithWarning = task.status === "succeeded" && Boolean(task.error);
-  const statusLabel = succeededWithWarning
-    ? t("dataCatalog.task.statuses.succeededWithWarning")
-    : t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`);
-  const failureSummary = summarizeBuildTaskError(
-    task.error || task.failureDetail,
-    i18n.language,
-  );
+  const statusLabel = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`);
+  const failureSummary = summarizeBuildTaskError(task.error, i18n.language);
 
   return (
     <Drawer
@@ -270,36 +221,27 @@ export function BuildTaskDetailDrawer({
             >
               {t(`dataCatalog.modes.${task.mode}`)}
             </span>
-            {task.embeddingDegraded ? (
-              <BuildStatusTag task={task} />
-            ) : (
-              <span
-                className={[
-                  sharedStyles.tag,
-                  task.status === "failed"
-                    ? sharedStyles.taskFailed
-                    : task.status === "succeeded"
-                      ? sharedStyles.taskSucceeded
-                      : task.status === "listening"
-                        ? sharedStyles.modeStreaming
-                        : task.status === "cancelled"
-                          ? sharedStyles.taskPending
-                          : sharedStyles.taskRunning,
-                ].join(" ")}
-              >
-                {statusLabel}
-              </span>
-            )}
+            <span
+              className={[
+                sharedStyles.tag,
+                task.status === "failed"
+                  ? sharedStyles.taskFailed
+                  : task.status === "succeeded"
+                    ? sharedStyles.taskSucceeded
+                    : task.status === "listening"
+                      ? sharedStyles.modeStreaming
+                      : task.status === "cancelled"
+                        ? sharedStyles.taskPending
+                        : sharedStyles.taskRunning,
+              ].join(" ")}
+            >
+              {statusLabel}
+            </span>
           </div>
 
           {failureSummary ? (
-            <div
-              className={
-                succeededWithWarning ? sharedStyles.calloutNote : sharedStyles.calloutWarn
-              }
-              style={{ marginBottom: 12 }}
-            >
-              {succeededWithWarning ? <InfoCircleOutlined /> : <ExclamationCircleOutlined />}
+            <div className={sharedStyles.calloutWarn} style={{ marginBottom: 12 }}>
+              <ExclamationCircleOutlined />
               <span className={styles.failureContent}>
                 <b>{failureSummary.title}</b>
                 <span>{failureSummary.message}</span>
@@ -373,13 +315,10 @@ export function BuildTaskDetailDrawer({
                   Object.fromEntries(
                     task.embeddingFields.map((field) => [
                       field,
-                      { dimensions: modelInfo.dimensions, modelId: modelInfo.name },
+                      { dimensions: task.modelDimensions, modelId: task.embeddingModel },
                     ]),
                   ),
               })}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.task.fields.indexHealth")}>
-              {renderIndexHealth(task, t)}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.syncedMark")}>
               {renderSyncedMark(task.syncedMark)}

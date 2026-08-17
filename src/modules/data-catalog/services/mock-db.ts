@@ -110,7 +110,7 @@ export const mockResources: CatalogResource[] = [
         type: "text",
         features: [
           { featureType: "fulltext", config: { analyzer: "ik_max_word" } },
-          { featureType: "vector", config: { embedding_model: "bge-m3" } },
+          { featureType: "vector", config: { embedding_model: "sm-1" } },
         ],
       },
       { name: "updated_at", displayName: "更新时间", type: "datetime" },
@@ -118,7 +118,7 @@ export const mockResources: CatalogResource[] = [
     indexConfig: {
       buildKeyFields: ["updated_at"],
       defaultFulltextAnalyzer: "ik_max_word",
-      defaultEmbeddingModel: "bge-m3",
+      defaultEmbeddingModel: "sm-1",
     },
     rowCount: 182_340,
     updatedAt: minutesAgo(42),
@@ -225,38 +225,23 @@ export const mockResources: CatalogResource[] = [
 function makeTask(
   input: Omit<
     BuildTask,
-    | "embeddingDegraded"
-    | "failureDetail"
     | "finishTime"
     | "fulltextAnalyzer"
     | "fulltextFields"
-    | "indexUsable"
     | "lastProgressTime"
     | "startTime"
   > & {
     finishedAt?: number | null;
     lastProgressAt?: number | null;
     startedAt?: number | null;
-    embeddingDegraded?: boolean;
-    failureDetail?: string;
     fulltextAnalyzer?: string;
     fulltextFields?: string[];
-    indexUsable?: boolean;
   },
 ): BuildTask {
-  // Derive the index-health fields so existing mock literals stay terse: an
-  // index is "indexed" once succeeded/listening, degraded if vectorization
-  // didn't catch up to the row count, and unusable while degraded or unbuilt.
-  const indexed = input.status === "succeeded" || input.status === "listening";
-  const embeddingDegraded =
-    input.embeddingDegraded ?? (indexed && input.vectorizedCount < input.totalCount);
   return {
     ...input,
     fulltextAnalyzer: input.fulltextAnalyzer ?? "ik_max_word",
     fulltextFields: input.fulltextFields ?? input.embeddingFields,
-    embeddingDegraded,
-    failureDetail: input.failureDetail ?? input.error ?? "",
-    indexUsable: input.indexUsable ?? (indexed && !embeddingDegraded),
     startTime: input.startedAt ?? (input.status === "pending" ? null : input.createTime),
     finishTime: input.finishedAt ?? null,
     lastProgressTime: input.lastProgressAt ?? null,
@@ -271,11 +256,10 @@ export const mockBuildTasks: BuildTask[] = [
     status: "succeeded",
     embeddingFields: ["profile_text"],
     buildKeyFields: ["updated_at"],
-    embeddingModel: "bge-m3",
-    modelDimensions: 1024,
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
     totalCount: 182_340,
     syncedCount: 182_340,
-    vectorizedCount: 182_340,
     createTime: daysAgo(2),
     finishedAt: daysAgo(2) + 25 * 60_000,
     lastProgressAt: null,
@@ -288,11 +272,10 @@ export const mockBuildTasks: BuildTask[] = [
     status: "running",
     embeddingFields: ["item_summary"],
     buildKeyFields: ["created_at"],
-    embeddingModel: "bge-m3",
-    modelDimensions: 1024,
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
     totalCount: 96_120,
     syncedCount: 41_280,
-    vectorizedCount: 28_660,
     createTime: minutesAgo(9),
     finishedAt: null,
     lastProgressAt: null,
@@ -305,11 +288,10 @@ export const mockBuildTasks: BuildTask[] = [
     status: "failed",
     embeddingFields: ["content"],
     buildKeyFields: ["updated_at"],
-    embeddingModel: "bge-large-zh-v1.5",
-    modelDimensions: 1024,
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
     totalCount: 48_206,
     syncedCount: 18_440,
-    vectorizedCount: 12_020,
     createTime: minutesAgo(75),
     finishedAt: minutesAgo(63),
     lastProgressAt: null,
@@ -322,11 +304,10 @@ export const mockBuildTasks: BuildTask[] = [
     status: "succeeded",
     embeddingFields: ["content"],
     buildKeyFields: ["updated_at"],
-    embeddingModel: "bge-m3",
-    modelDimensions: 1024,
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
     totalCount: 46_010,
     syncedCount: 46_010,
-    vectorizedCount: 46_010,
     createTime: daysAgo(6),
     finishedAt: daysAgo(6) + 19 * 60_000,
     lastProgressAt: null,
@@ -491,15 +472,7 @@ function tick() {
         Math.floor(task.totalCount * (0.025 + Math.random() * 0.02)),
       );
       task.syncedCount = Math.min(task.totalCount, task.syncedCount + step);
-      task.vectorizedCount = Math.min(
-        task.syncedCount,
-        task.vectorizedCount + Math.max(40, Math.floor(step * (0.55 + Math.random() * 0.35))),
-      );
-
-      if (
-        task.syncedCount >= task.totalCount &&
-        task.vectorizedCount >= task.totalCount
-      ) {
+      if (task.syncedCount >= task.totalCount) {
         task.status = "succeeded";
         const finishedAt = Date.now();
         task.finishTime = finishedAt;
@@ -517,7 +490,6 @@ function tick() {
       if (task.syncedCount < task.totalCount) {
         const step = Math.max(80, Math.floor(task.totalCount * 0.06));
         task.syncedCount = Math.min(task.totalCount, task.syncedCount + step);
-        task.vectorizedCount = task.syncedCount;
         task.lastProgressTime = Date.now();
         changed = true;
         return;
@@ -527,7 +499,6 @@ function tick() {
         const delta = 1 + Math.floor(Math.random() * 36);
         task.totalCount += delta;
         task.syncedCount += delta;
-        task.vectorizedCount += delta;
         task.lastProgressTime = Date.now();
         const resource = mockResources.find((item) => item.id === task.resourceId);
         if (resource) {

@@ -17,16 +17,13 @@ function buildTask(
   return {
     buildKeyFields: [],
     createTime: 1,
-    embeddingDegraded: false,
     embeddingFields: [],
     embeddingModel: "",
     error: null,
-    failureDetail: "",
     finishTime: null,
     fulltextAnalyzer: "",
     fulltextFields: [],
     id: "task-1",
-    indexUsable: status === "succeeded",
     lastProgressTime: null,
     mode: "batch",
     modelDimensions: 0,
@@ -35,7 +32,6 @@ function buildTask(
     status,
     syncedCount: status === "succeeded" ? 10 : 0,
     totalCount: 10,
-    vectorizedCount: status === "succeeded" ? 10 : 0,
     ...overrides,
   };
 }

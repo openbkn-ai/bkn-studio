@@ -24,7 +24,7 @@ describe("embedding-model-options", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns ready state with model_name ids from model management", async () => {
+  it("returns ready state with model_id values from model management", async () => {
     vi.mocked(listSmallModels).mockResolvedValue({
       items: [
         {
@@ -40,7 +40,7 @@ describe("embedding-model-options", () => {
     const result = await loadEmbeddingModelOptions();
     expect(result.state).toBe("ready");
     expect(result.options).toEqual([
-      { id: "bge-m3-prod", name: "bge-m3-prod", dimensions: 1024 },
+      { id: "uuid-1", name: "bge-m3-prod", dimensions: 1024 },
     ]);
   });
 

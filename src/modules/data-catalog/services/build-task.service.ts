@@ -24,21 +24,18 @@ import type {
   BuildTaskPageQuery,
   BuildTaskPageResult,
   BuildTaskStatus,
-  IndexHealth,
-  IndexHealthState,
 } from "@/modules/data-catalog/types/data-catalog";
 import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
 
 type BackendBuildTaskFieldFeature = {
   fulltext?: { analyzer?: string; config?: { analyzer?: string } };
   vector?: {
-    config?: {
-      dimensions?: number;
-      embedding_model?: string;
-      model_id?: string;
-    };
-    dimensions?: number;
+    batch_size?: number;
+    embedding_dim?: number;
+    max_tokens?: number;
     model_id?: string;
+    model_name?: string;
+    model_type?: string;
   };
 };
 
@@ -57,12 +54,10 @@ type BackendBuildTask = {
   embedding_model?: string;
   error_msg?: string;
   execute_type?: "incremental" | "full";
-  failure_detail?: string;
   fulltext_analyzer?: string;
   fulltext_fields?: string | string[];
   id: string;
   index_config?: BackendBuildTaskIndexConfig | null;
-  index_health?: { embedding?: string; fulltext?: string; usable?: boolean };
   mode?: string;
   model_dimensions?: number;
   resource_id?: string;
@@ -74,13 +69,9 @@ type BackendBuildTask = {
   total_count?: number;
   finish_time?: number;
   last_progress_time?: number;
-  vectorized_count?: number;
 };
 
-type BackendBuildTaskSummary = Omit<
-  BackendBuildTask,
-  "failure_detail" | "index_config"
->;
+type BackendBuildTaskSummary = Omit<BackendBuildTask, "index_config">;
 
 type ListResponse<T> = {
   entries: T[];
@@ -147,18 +138,6 @@ export function buildTaskStatusLabelKey(status: BuildTaskStatus, mode: BuildMode
   return status;
 }
 
-/** Vectorization health: prefer backend index_health.embedding and fall back to counts when absent. */
-export function embeddingStateOf(task: BuildTask): IndexHealthState {
-  return (
-    task.indexHealth?.embedding ??
-    (task.embeddingDegraded
-      ? task.vectorizedCount === 0
-        ? "failed"
-        : "partial"
-      : "ok")
-  );
-}
-
 export function snapshotFieldsOf(item: BackendBuildTask) {
   const snapshot = item.index_config;
   if (snapshot?.features || snapshot?.build_key_fields) {
@@ -168,25 +147,37 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
     let modelDimensions = 0;
     let fulltextAnalyzer = "";
     const fulltextAnalyzers: Record<string, string> = {};
-    const embeddingConfigs: Record<string, { modelId: string; dimensions: number }> = {};
+    const embeddingConfigs: Record<
+      string,
+      {
+        batchSize?: number;
+        dimensions: number;
+        maxTokens?: number;
+        modelId: string;
+        modelName?: string;
+        modelType?: string;
+      }
+    > = {};
 
     for (const [fieldName, feature] of Object.entries(snapshot.features ?? {})) {
       if (feature.vector) {
         embeddingFields.push(fieldName);
-        const model =
-          feature.vector.model_id ??
-          feature.vector.config?.model_id ??
-          feature.vector.config?.embedding_model ??
-          "";
+        const model = feature.vector.model_id ?? "";
         if (model && !embeddingModel) {
           embeddingModel = model;
         }
-        const dimensions =
-          feature.vector.dimensions ?? feature.vector.config?.dimensions ?? 0;
+        const dimensions = feature.vector.embedding_dim ?? 0;
         if (dimensions && !modelDimensions) {
           modelDimensions = dimensions;
         }
-        embeddingConfigs[fieldName] = { modelId: model, dimensions };
+        embeddingConfigs[fieldName] = {
+          batchSize: feature.vector.batch_size,
+          dimensions,
+          maxTokens: feature.vector.max_tokens,
+          modelId: model,
+          modelName: feature.vector.model_name,
+          modelType: feature.vector.model_type,
+        };
       }
       if (feature.fulltext) {
         fulltextFields.push(fieldName);
@@ -211,7 +202,7 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
     };
   }
 
-  // Supports legacy flattened fields used during transition or by mocks.
+  // List responses omit the configuration snapshot. Mocks use the legacy flattened fields.
   const fulltextFields = splitFields(item.fulltext_fields);
   const fulltextAnalyzer = item.fulltext_analyzer || "standard";
   const fulltextAnalyzers: Record<string, string> = {};
@@ -241,30 +232,7 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
   const status = normalizeStatus(item.status, mode);
   const snapshot = snapshotFieldsOf(item);
 
-  // Completed with incomplete embeddings (vectorized < synced) means a degraded index due to vectorization failure or partial failure.
   const synced = item.synced_count ?? 0;
-  const vectorized = item.vectorized_count ?? 0;
-  const wantsEmbedding = snapshot.embeddingFields.length > 0;
-  const embeddingDegraded =
-    item.index_health?.embedding === "failed" ||
-    item.index_health?.embedding === "partial" ||
-    (wantsEmbedding && status === "succeeded" && vectorized < synced);
-
-  // Prefer real backend index_health; otherwise fall back to counts consistently with embeddingDegraded.
-  const toHealthState = (value: string | undefined): IndexHealthState =>
-    value === "failed" || value === "partial" || value === "building" ? value : "ok";
-  const derivedEmbedding: IndexHealthState = embeddingDegraded
-    ? vectorized === 0
-      ? "failed"
-      : "partial"
-    : "ok";
-  const indexHealth: IndexHealth = item.index_health
-    ? {
-        embedding: toHealthState(item.index_health.embedding),
-        fulltext: toHealthState(item.index_health.fulltext),
-        usable: item.index_health.usable ?? !embeddingDegraded,
-      }
-    : { embedding: derivedEmbedding, fulltext: "ok", usable: !embeddingDegraded };
 
   return {
     id: item.id,
@@ -287,7 +255,6 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     embeddingConfigs: snapshot.embeddingConfigs,
     buildKeyFields: snapshot.buildKeyFields,
     embeddingModel: snapshot.embeddingModel,
-    embeddingDegraded,
     modelDimensions: snapshot.modelDimensions,
     fulltextFields: snapshot.fulltextFields,
     fulltextAnalyzer: snapshot.fulltextAnalyzer,
@@ -295,10 +262,6 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     totalCount: item.total_count ?? 0,
     syncedCount: synced,
     syncedMark: item.synced_mark,
-    vectorizedCount: vectorized,
-    indexHealth,
-    indexUsable: indexHealth.usable,
-    failureDetail: item.failure_detail ?? "",
     createTime,
     startTime: item.start_time ?? null,
     finishTime: item.finish_time ?? null,
@@ -537,10 +500,6 @@ export async function createBuildTask(
       fulltextAnalyzer: form.fulltextAnalyzer ?? "",
       totalCount: resource?.rowCount ?? 0,
       syncedCount: 0,
-      vectorizedCount: 0,
-      embeddingDegraded: false,
-      indexUsable: true,
-      failureDetail: "",
       createTime,
       finishTime: null,
       lastProgressTime: null,
@@ -662,11 +621,9 @@ export async function retryBuildTask(
     }
     if (reset && source.executeType === "full") {
       source.syncedCount = 0;
-      source.vectorizedCount = 0;
     }
     source.status = "pending";
     source.error = null;
-    source.failureDetail = "";
     source.startTime = null;
     source.finishTime = null;
     source.lastProgressTime = null;

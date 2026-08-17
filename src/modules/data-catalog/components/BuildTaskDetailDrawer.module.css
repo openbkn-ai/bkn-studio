@@ -57,13 +57,13 @@
   gap: 4px;
 }
 
-.failureContent b {
-  color: #92400e;
-  font-size: 13px;
-}
-
+.failureContent b,
 .failureSuggestion {
   color: #92400e;
+}
+
+.failureContent b {
+  font-size: 13px;
 }
 
 .failureRaw {
@@ -128,11 +128,6 @@
   font-size: 12px;
   line-height: 1.5;
   word-break: break-all;
-}
-
-.healthList {
-  display: grid;
-  gap: 2px;
 }
 
 .semanticWarning {
