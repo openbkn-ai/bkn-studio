@@ -107,15 +107,6 @@ export type BuildTaskStatus =
   | "stopping"
   | "succeeded";
 
-/** Per-index health state from backend index_health: ok, partial failure, failure, or building. */
-export type IndexHealthState = "ok" | "partial" | "failed" | "building";
-
-export type IndexHealth = {
-  embedding: IndexHealthState;
-  fulltext: IndexHealthState;
-  usable: boolean;
-};
-
 export type BuildTaskCreator = {
   id: string;
   name?: string;
@@ -123,8 +114,12 @@ export type BuildTaskCreator = {
 };
 
 export type EmbeddingFieldConfig = {
+  batchSize?: number;
   dimensions: number;
   modelId: string;
+  modelName?: string;
+  modelType?: string;
+  maxTokens?: number;
 };
 
 export type BuildTask = {
@@ -142,22 +137,14 @@ export type BuildTask = {
   /** Model and dimensions actually used for each vector field in the task snapshot. */
   embeddingConfigs?: Record<string, EmbeddingFieldConfig>;
   embeddingModel: string;
-  /** Completed with incomplete vectorization (vectorized < synced), so the index is unavailable or partially usable. */
-  embeddingDegraded: boolean;
   fulltextAnalyzer: string;
   /** Analyzer ultimately used for each full-text field in the task snapshot. */
   fulltextAnalyzers?: Record<string, string>;
   fulltextFields: string[];
   error: string | null;
-  /** Backend failure_detail containing the detailed reason for vectorization failure, shown in a tooltip. */
-  failureDetail: string;
   /** Time at which the task entered a terminal state. */
   finishTime: number | null;
   id: string;
-  /** Actual backend index health (index_health). Legacy mock data may omit it, so components fall back to embeddingDegraded. */
-  indexHealth?: IndexHealth;
-  /** Whether the index is usable; false when embeddingDegraded. */
-  indexUsable: boolean;
   /** Most recent externally observable progress update. */
   lastProgressTime: number | null;
   mode: BuildMode;
@@ -172,7 +159,6 @@ export type BuildTask = {
   /** Synchronization checkpoint used to resume unfinished tasks. */
   syncedMark?: string;
   totalCount: number;
-  vectorizedCount: number;
 };
 
 export type BuildTaskListQuery = {

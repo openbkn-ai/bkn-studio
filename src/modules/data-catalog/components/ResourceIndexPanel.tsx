@@ -35,12 +35,9 @@ import {
 } from "@/modules/data-catalog/lib/resource-index-access";
 import {
   buildTaskStatusLabelKey,
-  embeddingStateOf,
 } from "@/modules/data-catalog/services/build-task.service";
 import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
-import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
-import type { SmallModel } from "@/modules/model-resources/types/small-model";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import panelStyles from "./ResourceIndexPanel.module.css";
@@ -67,13 +64,6 @@ const ACTIVE_TASK_STATUSES = new Set<BuildTask["status"]>([
 ]);
 
 function formatTaskStatus(task: BuildTask, t: TFunction) {
-  const embeddingState = embeddingStateOf(task);
-  if (embeddingState === "failed") {
-    return t("dataCatalog.task.statuses.embeddingFailed");
-  }
-  if (embeddingState === "partial") {
-    return t("dataCatalog.task.statuses.embeddingPartial");
-  }
   return t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`);
 }
 
@@ -87,29 +77,10 @@ function formatEffectiveState(task: BuildTask, t: TFunction) {
   return t("dataCatalog.resource.effectiveActive");
 }
 
-function formatEmbeddingModelDisplay(
-  modelId: string | null | undefined,
-  dimensions: number | null | undefined,
-  models: SmallModel[],
-) {
-  const rawModel = modelId?.trim();
-  if (!rawModel) {
-    return "-";
-  }
-
-  const match = models.find(
-    (item) => item.modelId === rawModel || item.modelName === rawModel,
-  );
-  const name = match?.modelName || rawModel;
-  const resolvedDimensions = match?.embeddingDim ?? dimensions ?? 0;
-  return resolvedDimensions > 0 ? `${name} - ${resolvedDimensions}d` : name;
-}
-
 function buildStatusSummary(
   effective: BuildTask | null,
   t: TFunction,
   language: string,
-  models: SmallModel[],
 ) {
   if (!effective) {
     return null;
@@ -124,16 +95,6 @@ function buildStatusSummary(
       ) as never,
     }),
   ];
-
-  if (effective.embeddingModel) {
-    parts.push(
-      formatEmbeddingModelDisplay(
-        effective.embeddingModel,
-        effective.modelDimensions,
-        models,
-      ),
-    );
-  }
 
   if (effective.mode === "streaming") {
     parts.push(
@@ -176,7 +137,7 @@ function renderBuildFailureAlert(
   language: string,
   rawErrorLabel: string,
 ) {
-  const summary = summarizeBuildTaskError(task.error || task.failureDetail, language);
+  const summary = summarizeBuildTaskError(task.error, language);
   if (!summary) {
     return null;
   }
@@ -213,7 +174,6 @@ export function ResourceIndexPanel({
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const { pauseOrResume, remove, retry } = useBuildTaskActions(onRefresh);
   const [detailResource, setDetailResource] = useState<CatalogResource>(resource);
-  const [models, setModels] = useState<SmallModel[]>([]);
   const autoPickedRef = useRef(false);
 
   const reloadResource = () => {
@@ -237,28 +197,6 @@ export function ResourceIndexPanel({
       cancelled = true;
     };
   }, [resource]);
-
-  useEffect(() => {
-    if (!active) {
-      return;
-    }
-
-    let alive = true;
-    void listSmallModels({ modelType: "embedding", page: 1, size: 200 })
-      .then((result) => {
-        if (alive) {
-          setModels(result.items);
-        }
-      })
-      .catch(() => {
-        if (alive) {
-          setModels([]);
-        }
-      });
-    return () => {
-      alive = false;
-    };
-  }, [active]);
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
   const state = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);
@@ -393,7 +331,7 @@ export function ResourceIndexPanel({
     },
   ];
 
-  const statusSummary = buildStatusSummary(effective, t, i18n.language, models);
+  const statusSummary = buildStatusSummary(effective, t, i18n.language);
 
   const gateBanner =
     !gate.ok && catalog ? (
@@ -506,7 +444,7 @@ export function ResourceIndexPanel({
             showIcon
             type="warning"
           />
-        ) : latest?.status === "failed" && (latest.error || latest.failureDetail) ? (
+        ) : latest?.status === "failed" && latest.error ? (
           <Alert
             className={panelStyles.statusAlert}
             message={renderBuildFailureAlert(
