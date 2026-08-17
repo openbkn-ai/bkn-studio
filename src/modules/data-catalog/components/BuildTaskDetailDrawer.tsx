@@ -5,12 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { Alert, Descriptions, Drawer, Empty } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { formatDateTime } from "@/framework/i18n/format";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
+import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import { formatCount } from "@/modules/data-catalog/lib/format";
 import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
 import { getBuildTask } from "@/modules/data-catalog/services/build-task.service";
@@ -163,7 +165,7 @@ export function BuildTaskDetailDrawer({
   resource,
   taskId,
 }: BuildTaskDetailDrawerProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [task, setTask] = useState<BuildTask | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -192,6 +194,7 @@ export function BuildTaskDetailDrawer({
   }
 
   const statusLabel = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`);
+  const failureSummary = summarizeBuildTaskError(task.error, i18n.language);
 
   return (
     <Drawer
@@ -235,6 +238,25 @@ export function BuildTaskDetailDrawer({
               {statusLabel}
             </span>
           </div>
+
+          {failureSummary ? (
+            <div className={sharedStyles.calloutWarn} style={{ marginBottom: 12 }}>
+              <ExclamationCircleOutlined />
+              <span className={styles.failureContent}>
+                <b>{failureSummary.title}</b>
+                <span>{failureSummary.message}</span>
+                {failureSummary.suggestion ? (
+                  <span className={styles.failureSuggestion}>
+                    {failureSummary.suggestion}
+                  </span>
+                ) : null}
+                <details className={styles.failureRaw}>
+                  <summary>{t("dataCatalog.task.rawError")}</summary>
+                  <code>{failureSummary.raw}</code>
+                </details>
+              </span>
+            </div>
+          ) : null}
 
           <BuildProgress task={task} />
           {task.mode === "batch" ? (
