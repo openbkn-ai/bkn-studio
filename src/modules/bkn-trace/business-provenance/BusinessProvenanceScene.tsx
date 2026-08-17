@@ -71,10 +71,9 @@ function statusLabel(value?: string) {
   return value || bpText("notRecorded");
 }
 
-function roundNumber(item: BusinessProvenanceInteractionListItem | undefined, index: number, total: number) {
-  // The API owns the semantic round number. The fallback keeps a coherent
-  // display while a Studio deployment is temporarily ahead of the API.
-  return item?.roundNumber ?? Math.max(1, total - index);
+function roundLabel(item: BusinessProvenanceInteractionListItem | undefined) {
+  if (item?.roundNumber && item.roundNumber > 0) return bpText("roundLabel", { index: item.roundNumber });
+  return bpText("roundNotRecorded");
 }
 
 function operationTitle(operation: OperationResolution) {
@@ -450,17 +449,17 @@ export function BusinessProvenanceScene() {
     <section className={styles.workspace}>
       <header className={styles.workspaceHeader}>
         <Button type="link" className={styles.backButton} onClick={() => { setSelectedConversation(undefined); setSelectedInteraction(undefined); setProjection(undefined); }}>← {bpText("actions.back")}</Button>
-        <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{bpText("interactionCount", { count: interactions.length || selectedConversation.interactionCount || 0 })}</span><span>{bpText("callCount", { count: projection?.operations.length ?? 0 })}</span><span>{selectedConversation.agentName || bpText("agentNotRecorded")}</span></div>
+        <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{bpText("interactionCount", { count: selectedConversation.interactionCount ?? interactionTotal })}</span><span>{bpText("callCount", { count: projection?.operations.length ?? 0 })}</span><span>{selectedConversation.agentName || bpText("agentNotRecorded")}</span></div>
       </header>
       <aside className={styles.roundSidebar}>
-        <div className={styles.roundSidebarTitle}><div><h3>{bpText("rounds.title")}</h3><span>{interactionListLoading ? bpText("rounds.loading") : bpText("rounds.summary", { total: interactionTotal, current: selectedInteraction ? roundNumber(selectedInteraction, interactions.findIndex((item) => item.interactionId === selectedInteraction.interactionId), interactionTotal) : 0 })}</span></div></div>
+        <div className={styles.roundSidebarTitle}><div><h3>{bpText("rounds.title")}</h3><span>{interactionListLoading ? bpText("rounds.loading") : bpText("rounds.summary", { total: selectedConversation.interactionCount ?? interactionTotal, current: selectedInteraction?.roundNumber && selectedInteraction.roundNumber > 0 ? selectedInteraction.roundNumber : bpText("roundNotRecorded") })}</span></div></div>
         <Input value={interactionKeyword} onChange={(event) => setInteractionKeyword(event.target.value)} prefix={<SearchOutlined />} placeholder={bpText("rounds.search")} />
-        <div className={styles.roundList}>{interactionListLoading ? <div className={styles.roundLoading}><Spin size="small" />{bpText("rounds.loading")}</div> : interactionListError ? <Alert type="error" showIcon message={bpText("errors.interactionsLoad")} /> : interactions.map((item, index) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{bpText("roundLabel", { index: roundNumber(item, index, interactionTotal) })}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
+        <div className={styles.roundList}>{interactionListLoading ? <div className={styles.roundLoading}><Spin size="small" />{bpText("rounds.loading")}</div> : interactionListError ? <Alert type="error" showIcon message={bpText("errors.interactionsLoad")} /> : interactions.map((item) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{roundLabel(item)}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
       </aside>
       <section className={styles.analysisPane}>
         {interactionListLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loading")}</span></div> : interactionDetailLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loadingFacts")}</span></div> : interactionDetailError ? <Result status="error" title={bpText("errors.factsLoad")} extra={<Button type="primary" onClick={() => setInteractionReload((value) => value + 1)}>{t("bknTrace.businessProvenance.retry")}</Button>} /> : projection ? <>
           <section className={styles.interactionSummary}>
-            <header><span>{bpText("roundLabel", { index: roundNumber(selectedInteraction, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId), interactionTotal) })}</span><h2>{selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</h2><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection.operations.length })} · {statusLabel(selectedInteraction?.status)}</small></header>
+            <header><span>{roundLabel(selectedInteraction)}</span><h2>{selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</h2><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection.operations.length })} · {statusLabel(selectedInteraction?.status)}</small></header>
             <div className={styles.sourceTexts}><div><h4>{bpText("rounds.inputOriginal")}</h4><p>{selectedInteraction?.questionPreview || bpText("inputNotRecorded")}</p></div><div><h4>{bpText("rounds.outputOriginal")}</h4><p>{selectedInteraction?.resultPreview || bpText("resultNotRecorded")}</p></div></div>
             <footer><Button icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("actions.copyMarkdown")}</Button><Button icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("actions.downloadMarkdown")}</Button><Button type="primary" onClick={() => { setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisPanelOpen(true); }}>{bpText("actions.analyze")}</Button></footer>
           </section>
@@ -514,7 +513,7 @@ export function BusinessProvenanceScene() {
           </header>
           <p className={styles.agentIntro}>{bpText("agent.intro")}</p>
           <div className={styles.agentSource}>
-            <strong>{bpText("roundLabel", { index: roundNumber(selectedInteraction, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId), interactionTotal) })} · {selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</strong>
+            <strong>{roundLabel(selectedInteraction)} · {selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</strong>
             <small>{selectedInteraction?.interactionId}<br />{formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection?.operations.length ?? 0 })}</small>
           </div>
           {analysisHistory.length ? <Select aria-label={bpText("agent.history")} value={analysisHistory.find((item) => item.result === analysisResult)?.analysisId ?? analysisHistory[0]?.analysisId} options={analysisHistory.map((item, index) => ({ value: item.analysisId, label: bpText("agent.historyItem", { index: analysisHistory.length - index, time: formatTime(item.startedAt), status: item.status === "completed" ? statusLabel("completed") : item.status === "failed" ? statusLabel("failed") : bpText("agent.analyzing") }) }))} onChange={(analysisId) => { const selected = analysisHistory.find((item) => item.analysisId === analysisId); setAnalysisResult(selected?.result); setAnalysisError(selected?.status === "failed" ? bpText("agent.failureWithReason", { reason: selected.failureMessage || bpText("agent.failureReasonMissing") }) : undefined); }} /> : null}
