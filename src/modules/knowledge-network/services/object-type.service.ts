@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
 import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
@@ -215,6 +216,7 @@ export async function getObjectTypeSampleData(
         need_total: true,
         offset: 0,
       },
+      transformResponse: transformPrecisionSafeJSONResponse,
     },
   );
 

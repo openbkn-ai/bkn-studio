@@ -13,6 +13,7 @@
  */
 
 import { getRuntimeConfig } from "@/framework/runtime/config";
+import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 
 export type ContextLoaderMode = "agent" | "rest" | "mcp";
 
@@ -743,7 +744,7 @@ function parseMcpEnvelope(text: string): unknown {
     .filter(Boolean);
   const candidate = dataLines.length > 0 ? dataLines[dataLines.length - 1] : text;
   try {
-    return JSON.parse(candidate);
+    return parsePrecisionSafeJSON(candidate);
   } catch {
     return null;
   }
@@ -1166,7 +1167,7 @@ export async function fetchKnDetail(
   }
 
   try {
-    const fromText = knDetailFromMcpPayload(JSON.parse(result.text) as unknown, env.knId);
+    const fromText = knDetailFromMcpPayload(parsePrecisionSafeJSON(result.text), env.knId);
     if (fromText) {
       return fromText;
     }
@@ -1196,7 +1197,7 @@ export async function fetchKnDetailRestLegacy(
   if (!response.ok) {
     throw new Error(text || `Failed to fetch knowledge network detail (${response.status})`);
   }
-  const data = JSON.parse(text) as Partial<KnDetail> & Record<string, unknown>;
+  const data = parsePrecisionSafeJSON(text) as Partial<KnDetail> & Record<string, unknown>;
   return {
     id: data.id ?? env.knId,
     name: data.name,
@@ -1267,6 +1268,6 @@ export async function fetchObjectInstances(
   if (!response.ok) {
     throw new Error(text || `Failed to query object instances (${response.status})`);
   }
-  const data = JSON.parse(text) as { datas?: unknown };
+  const data = parsePrecisionSafeJSON(text) as { datas?: unknown };
   return Array.isArray(data.datas) ? (data.datas as Record<string, unknown>[]) : [];
 }

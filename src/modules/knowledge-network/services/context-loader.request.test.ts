@@ -12,6 +12,7 @@ import {
   CONTEXT_LOADER_OPS,
   buildCurl,
   createMcpSession,
+  fetchObjectInstances,
   fetchMcpObjectTypes,
   fetchKnDetail,
   fetchKnDetailRestLegacy,
@@ -192,6 +193,25 @@ describe("legacy context-loader REST requests", () => {
     await fetchKnDetailRestLegacy({ base: "https://platform.example.com", token: "", knId: "kn-demo" });
 
     expect(fetchSpy.mock.calls[0]?.[1]?.headers).toMatchObject({ "Accept-Language": "en-US" });
+  });
+
+  it("preserves unsafe integers in object-instance preview rows", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        '{"datas":[{"order_id":110101199001152345,"signed":-9223372036854775808,"unsigned":18446744073709551615}]}',
+        { status: 200 },
+      ),
+    );
+
+    await expect(
+      fetchObjectInstances({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, "orders"),
+    ).resolves.toEqual([
+      {
+        order_id: "110101199001152345",
+        signed: "-9223372036854775808",
+        unsigned: "18446744073709551615",
+      },
+    ]);
   });
 });
 
