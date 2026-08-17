@@ -314,8 +314,8 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     const firstMarkdown = new Promise<string>((resolve) => { resolveFirstMarkdown = resolve; });
     getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-1", questionPreview: "连续查询", interactionCount: 2, agentName: "Supply Agent" }], total: 1 });
     getInteractions.mockResolvedValue({ entries: [
-      { interactionId: "int-1", questionPreview: "第一轮查询" },
-      { interactionId: "int-2", questionPreview: "第二轮查询" },
+      { interactionId: "int-2", questionPreview: "第二轮查询", roundNumber: 2 },
+      { interactionId: "int-1", questionPreview: "第一轮查询", roundNumber: 1 },
     ], total: 2 });
     getInteraction.mockImplementation((interactionId: string) => Promise.resolve({ interactionId, conversationContext: [], derivedFacts: [], contextRelations: [], operations: [] }));
     getMarkdown.mockImplementation((interactionId: string) => interactionId === "int-1" ? firstMarkdown : Promise.resolve("# 第二轮过程事实"));

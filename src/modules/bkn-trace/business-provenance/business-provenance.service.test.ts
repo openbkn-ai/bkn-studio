@@ -68,13 +68,14 @@ describe("EE business provenance service", () => {
   });
 
   it("loads interaction rounds only for the selected conversation", async () => {
-    getMock.mockResolvedValue({ data: { entries: [{ interaction_id: "int-1", conversation_id: "conv-1" }], total: 1 } });
+    getMock.mockResolvedValue({ data: { entries: [{ interaction_id: "int-1", conversation_id: "conv-1", round_number: 3 }], total: 3 } });
     const { getBusinessProvenanceInteractions } = await import("./business-provenance.service");
-    await getBusinessProvenanceInteractions({ conversationId: "conv-1", page: 1, pageSize: 20 });
+    const page = await getBusinessProvenanceInteractions({ conversationId: "conv-1", page: 1, pageSize: 20 });
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions",
       { headers: { "x-business-domain": "bd_demo" }, params: { conversation_id: "conv-1", page: 1, page_size: 20 } },
     );
+    expect(page.entries[0]).toMatchObject({ interactionId: "int-1", roundNumber: 3 });
   });
 
   it("streams the server-configured provenance Agent and returns its structured result", async () => {
