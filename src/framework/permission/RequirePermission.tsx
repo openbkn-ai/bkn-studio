@@ -9,7 +9,7 @@ import { Result } from "antd";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useAppServices } from "@/framework/context/use-app-services";
+import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import {
   hasPermissions,
   type PermissionCheckMode,
@@ -33,7 +33,11 @@ export function RequirePermission({
   permissions,
 }: RequirePermissionProps) {
   const { t } = useTranslation();
-  const { runtimeConfig } = useAppServices();
+  // Route guards also protect standalone routes, whose page-level Antd/App
+  // providers are mounted inside the guarded element. Read only the runtime
+  // context available above that boundary so the guard itself cannot fail
+  // before it has a chance to render the permission result.
+  const runtimeConfig = useRuntimeConfig();
   const allowed = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode,
