@@ -148,7 +148,8 @@ export const agentChatPart = {
     chatPane: {
       defaultPrompt:
         "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
-        "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / get_object_types 等），不要编造；" +
+        "需要数据时用工具查，不要编造。先弄清结构再取数：不清楚有哪些对象类、字段叫什么，先用 search_schema 探一眼，" +
+        "再按返回里的真实字段名过滤——按语义猜字段名往往得到空结果，而空结果不报错。\n" +
         "kn_id 已锁定为当前网络，无需也不要修改。\n" +
         "检索工具是主路。它们答不了的那部分，用三个补充手段：run_sql 做聚合/排序/计数，让数据库算完只回结果；" +
         "run_code 写一段 Python，脚本里可直接调用上面这些工具，适合串联多个工具、按中间结果分支、或中间数据量大而你只需要结论；" +
