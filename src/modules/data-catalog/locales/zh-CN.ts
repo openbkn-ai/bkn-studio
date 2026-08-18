@@ -47,6 +47,20 @@ export const dataCatalogZhCN = {
       discardChangesTitle: "放弃未保存的修改？",
       discardChangesDescription: "切换 Tab 将丢失当前未保存的修改，且无法恢复。",
       discardChangesConfirm: "放弃并切换",
+      discoveryFailedTitle: "资源最近一次探查失败",
+      discoveryFailedNoSchemaDescription:
+        "当前没有可用的字段元数据，请重新执行探查后再预览或查询该资源。",
+      discoveryFailedStaleSchemaDescription:
+        "仍可使用上一次成功探查的字段，但这些字段可能已经过期。",
+      resourceMissingTitle: "资源已从源端消失",
+      resourceMissingDescription: "探查未在源端找到该资源，请恢复源端对象并重新探查后再查询。",
+      resourceDisabledTitle: "资源已停用",
+      resourceDisabledDescription: "当前资源处于停用状态，启用资源后才能预览或查询。",
+      resourceStaleTitle: "资源已失效",
+      resourceStaleDescription: "当前资源已失效，即使保留了字段元数据也不能继续预览或查询。",
+      metadataUnavailableTitle: "资源元数据尚未就绪",
+      metadataUnavailableDescription: "当前没有可用的字段元数据，请补充或刷新资源字段后再查询。",
+      openDiscovery: "前往探查",
     },
     indexBuildTitle: "任务管理",
     indexBuildDescription: "管理数据资源相关任务，支持任务查看，暂停，重启，删除等操作。",
@@ -191,6 +205,7 @@ export const dataCatalogZhCN = {
       catalog: "所属 Catalog",
       catalogPlaceholder: "选择 Catalog",
       category: "类别",
+      discoverStatus: "探查状态",
       rowCount: "行数",
       indexState: "索引状态",
       searchPlaceholder: "搜索资源名称",
@@ -228,8 +243,20 @@ export const dataCatalogZhCN = {
     },
     actions: {
       preview: "数据预览",
+      previewMissingHint: "源端资源已消失，恢复源端对象并重新探查后才能预览。",
+      previewDisabledHint: "资源已停用，启用后才能预览。",
+      previewStaleHint: "资源已失效，暂时无法预览。",
+      previewMetadataUnavailableHint: "资源没有可用字段元数据，暂时无法预览。",
       dataIndex: "数据索引",
       more: "更多操作",
+    },
+    discoverStatuses: {
+      error: "失败",
+      missing: "源端缺失",
+      new: "新发现",
+      restored: "已恢复",
+      unchanged: "未变化",
+      updated: "已更新",
     },
     gate: {
       catalogDisabled:
@@ -240,6 +267,17 @@ export const dataCatalogZhCN = {
     preview: {
       summary: "展示 {{count}} 行 · 总计 {{total}} 行",
       empty: "没有数据",
+      metadataDiscoveryFailed: "资源元数据探查失败",
+      metadataDiscoveryFailedDescription:
+        "未探查到可用字段，暂时无法预览。请重新执行探查后再试。",
+      metadataUnavailable: "资源元数据尚未就绪",
+      metadataUnavailableDescription: "补充或刷新资源字段后才能预览数据。",
+      resourceMissing: "源端资源不存在",
+      resourceMissingDescription: "当前资源已无法在源端找到，请恢复源端对象并重新探查后再预览。",
+      resourceDisabled: "资源已停用",
+      resourceDisabledDescription: "当前资源处于停用状态，启用后才能预览数据。",
+      resourceStale: "资源已失效",
+      resourceStaleDescription: "当前资源已失效，即使保留了字段元数据也不能预览数据。",
       mockLongText:
         "\u8fd9\u662f\u7b2c {{row}} \u884c\u7684\u957f\u6587\u672c\u5185\u5bb9\uff0c\u7528\u4e8e\u9a8c\u8bc1\u622a\u65ad\u4e0e\u60ac\u505c\u5c55\u793a\u3002",
     },

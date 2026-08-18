@@ -6,7 +6,7 @@
  */
 
 import { DatabaseOutlined, EllipsisOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Select, Space, Spin, Tooltip, type MenuProps } from "antd";
+import { Alert, Dropdown, Input, Select, Space, Spin, Tag, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,6 +23,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { formatRowCount } from "@/modules/data-catalog/lib/format";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
+import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import {
   indexStateOf,
   isCatalogPhysical,
@@ -31,6 +32,7 @@ import { listCatalogResourcePage } from "@/modules/data-catalog/services/resourc
 import type {
   BuildTask,
   CatalogResource,
+  ResourceDiscoverStatus,
 } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
@@ -38,6 +40,15 @@ import styles from "./CatalogDetailPanel.module.css";
 
 const INDEX_FILTERS = ["built", "none", "building", "listening", "failed"] as const;
 const CATEGORY_FILTERS = ["table", "logicview", "dataset"] as const;
+
+const DISCOVER_STATUS_COLORS: Record<ResourceDiscoverStatus, string> = {
+  error: "error",
+  missing: "error",
+  new: "processing",
+  restored: "success",
+  unchanged: "success",
+  updated: "processing",
+};
 
 function indexFilterBucket(key: string) {
   if (key === "built") return "built";
@@ -297,6 +308,20 @@ export function CatalogDetailPanel({
       ),
     },
     {
+      dataIndex: "lastDiscoverStatus",
+      ellipsis: true,
+      title: t("dataCatalog.resource.discoverStatus"),
+      width: 112,
+      render: (value: ResourceDiscoverStatus | undefined) =>
+        value ? (
+          <Tag color={DISCOVER_STATUS_COLORS[value]}>
+            {t(`dataCatalog.discoverStatuses.${value}`)}
+          </Tag>
+        ) : (
+          "—"
+        ),
+    },
+    {
       dataIndex: "columnCount",
       title: t("dataCatalog.resource.fieldCount"),
       width: 88,
@@ -336,15 +361,34 @@ export function CatalogDetailPanel({
       width: 84,
       render: (_, record) => {
         const blockedByDisabledCatalog = physical && !catalog.enabled;
+        const previewBlockReason = resourceQueryBlockReason(record, record.columnCount);
+        const previewDisabled = blockedByDisabledCatalog || previewBlockReason !== null;
+        const previewLabel = t("dataCatalog.actions.preview");
         const moreItems: NonNullable<MenuProps["items"]> = [
           {
             key: "detail",
             label: t("common.detail"),
           },
           {
-            disabled: blockedByDisabledCatalog,
+            disabled: previewDisabled,
             key: "preview",
-            label: t("dataCatalog.actions.preview"),
+            label: previewBlockReason ? (
+              <Tooltip
+                title={t(
+                  previewBlockReason === "missing"
+                    ? "dataCatalog.actions.previewMissingHint"
+                    : previewBlockReason === "disabled"
+                      ? "dataCatalog.actions.previewDisabledHint"
+                      : previewBlockReason === "stale"
+                        ? "dataCatalog.actions.previewStaleHint"
+                        : "dataCatalog.actions.previewMetadataUnavailableHint",
+                )}
+              >
+                <span>{previewLabel}</span>
+              </Tooltip>
+            ) : (
+              previewLabel
+            ),
           },
         ];
         if (canManageResourceTasks) {

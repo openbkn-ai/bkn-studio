@@ -91,6 +91,10 @@
   border-radius: 0 !important;
 }
 
+.resourceAlert {
+  flex-shrink: 0;
+}
+
 .pageTabs {
   display: flex;
   flex: 1;
