@@ -13,6 +13,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -147,6 +149,10 @@ export function CatalogDetailPanel({
     resourceKeyword.trim().length > 0 ||
     categoryFilter.length > 0 ||
     (showIndexState && indexFilter.length > 0);
+  const showOperationBar =
+    resourceTotal > 0 ||
+    hasResourceQuery ||
+    (dataCatalogCreationAvailable && !physical && !catalog.internal);
 
   const tasksByResource = useMemo(() => {
     const map = new Map<string, BuildTask[]>();
@@ -358,7 +364,12 @@ export function CatalogDetailPanel({
         if (!catalog.internal) {
           moreItems.push({
             key: "semantic-understanding",
-            label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
+            label: (
+              <span className="console-tab-with-tier">
+                {t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding")}
+                <EditionBadge capability={CAPABILITIES.SEMANTIC_TASK} edition="professional" />
+              </span>
+            ),
           });
         }
 
@@ -405,7 +416,7 @@ export function CatalogDetailPanel({
 
   return (
     <section className={styles.contentSurface}>
-      <div className={styles.operationBar}>
+      {showOperationBar ? <div className={styles.operationBar}>
         {!physical && !catalog.internal ? (
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
@@ -467,7 +478,7 @@ export function CatalogDetailPanel({
             </div>
           </>
         ) : null}
-      </div>
+      </div> : null}
 
       <TableSurface className={styles.tableSurface}>
         {resourcesLoading ? (

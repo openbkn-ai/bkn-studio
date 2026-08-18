@@ -284,7 +284,7 @@ export function CatalogTreePanel({
             <span className={styles.catalogNodeName}>{catalog.name}</span>
             {isBuiltinLogicalCatalog(catalog) ? (
               <span className={styles.treeMiniTag}>{t("dataCatalog.tree.builtin")}</span>
-            ) : (
+            ) : dataCatalogCreationAvailable ? (
               <PermissionGate permissions="catalog:delete">
                 <button
                   aria-label={t("common.delete")}
@@ -365,7 +365,7 @@ export function CatalogTreePanel({
                   <DeleteOutlined />
                 </button>
               </PermissionGate>
-            )}
+            ) : null}
           </span>
         ),
       };
