@@ -58,7 +58,8 @@ export type ResourceIndexConfig = {
 export type CatalogResource = {
   catalogId: string;
   category: ResourceCategory;
-  columnCount: number;
+  /** Field count from a detail schema or list summary; null when the list response omits it. */
+  columnCount: number | null;
   description: string;
   id: string;
   /** Current index configuration. List endpoints may omit it; use the detail response on configuration pages. */

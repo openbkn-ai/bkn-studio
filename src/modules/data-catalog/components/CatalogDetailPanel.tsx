@@ -326,8 +326,12 @@ export function CatalogDetailPanel({
       title: t("dataCatalog.resource.fieldCount"),
       width: 88,
       sorter: (left, right) => (left.columnCount ?? 0) - (right.columnCount ?? 0),
-      render: (value: number) =>
-        value > 0 ? <span className={styles.monoText}>{value}</span> : "—",
+      render: (value: number | null) =>
+        value !== null && value > 0 ? (
+          <span className={styles.monoText}>{value}</span>
+        ) : (
+          "—"
+        ),
     },
     {
       dataIndex: "rowCount",
@@ -361,9 +365,11 @@ export function CatalogDetailPanel({
       width: 84,
       render: (_, record) => {
         const blockedByDisabledCatalog = physical && !catalog.enabled;
-        const previewBlockReason = resourceQueryBlockReason(record, record.columnCount);
-        const previewDisabled = blockedByDisabledCatalog || previewBlockReason !== null;
+        const queryBlockReason = resourceQueryBlockReason(record, record.columnCount);
+        const previewDisabled = blockedByDisabledCatalog || queryBlockReason !== null;
+        const indexDisabled = blockedByDisabledCatalog || queryBlockReason !== null;
         const previewLabel = t("dataCatalog.actions.preview");
+        const indexLabel = t("dataCatalog.actions.dataIndex");
         const moreItems: NonNullable<MenuProps["items"]> = [
           {
             key: "detail",
@@ -372,14 +378,14 @@ export function CatalogDetailPanel({
           {
             disabled: previewDisabled,
             key: "preview",
-            label: previewBlockReason ? (
+            label: queryBlockReason ? (
               <Tooltip
                 title={t(
-                  previewBlockReason === "missing"
+                  queryBlockReason === "missing"
                     ? "dataCatalog.actions.previewMissingHint"
-                    : previewBlockReason === "disabled"
+                    : queryBlockReason === "disabled"
                       ? "dataCatalog.actions.previewDisabledHint"
-                      : previewBlockReason === "stale"
+                      : queryBlockReason === "stale"
                         ? "dataCatalog.actions.previewStaleHint"
                         : "dataCatalog.actions.previewMetadataUnavailableHint",
                 )}
@@ -393,9 +399,25 @@ export function CatalogDetailPanel({
         ];
         if (canManageResourceTasks) {
           moreItems.push({
-            disabled: blockedByDisabledCatalog,
+            disabled: indexDisabled,
             key: "index",
-            label: t("dataCatalog.actions.dataIndex"),
+            label: queryBlockReason ? (
+              <Tooltip
+                title={t(
+                  queryBlockReason === "missing"
+                    ? "dataCatalog.actions.indexMissingHint"
+                    : queryBlockReason === "disabled"
+                      ? "dataCatalog.actions.indexDisabledHint"
+                      : queryBlockReason === "stale"
+                        ? "dataCatalog.actions.indexStaleHint"
+                        : "dataCatalog.actions.indexMetadataUnavailableHint",
+                )}
+              >
+                <span>{indexLabel}</span>
+              </Tooltip>
+            ) : (
+              indexLabel
+            ),
           });
         }
 

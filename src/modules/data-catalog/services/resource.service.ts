@@ -287,7 +287,7 @@ function mapResource(item: BackendResource): CatalogResource {
     indexConfig: mapIndexConfigFromBackend(item.index_config),
     lastDiscoverStatus: normalizeDiscoverStatus(item.last_discover_status),
     // List endpoints omit schema_definition, so use backend column_count; detail endpoints fall back to schema length.
-    columnCount: item.column_count ?? item.schema_definition?.length ?? 0,
+    columnCount: item.column_count ?? item.schema_definition?.length ?? null,
     // Backend often omits top-level row_count; actual rows are in source_metadata.properties.
     rowCount: item.row_count ?? item.source_metadata?.properties?.row_count ?? 0,
     schemaName: item.schema,

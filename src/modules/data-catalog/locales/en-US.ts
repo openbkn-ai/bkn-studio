@@ -23,21 +23,22 @@ export const dataCatalogEnUS = {
       discardChangesConfirm: "Discard and switch",
       discoveryFailedTitle: "The latest resource discovery failed",
       discoveryFailedNoSchemaDescription:
-        "No usable field metadata is available. Refresh discovery before previewing or querying this resource.",
+        "No usable field metadata is available. Refresh discovery before previewing, querying, or indexing this resource.",
       discoveryFailedStaleSchemaDescription:
         "The last successfully discovered fields are still available, but they may be out of date.",
       resourceMissingTitle: "Resource is missing from its source",
       resourceMissingDescription:
-        "Discovery could not find this resource. Restore it at the source and run discovery again before querying.",
+        "Discovery could not find this resource. Restore it at the source and run discovery again before querying or building an index.",
       resourceDisabledTitle: "Resource is disabled",
       resourceDisabledDescription:
-        "This resource is disabled. Enable it before previewing or querying data.",
+        "This resource is disabled. Enable it before previewing, querying, or building an index.",
       resourceStaleTitle: "Resource is stale",
       resourceStaleDescription:
-        "This resource is stale and cannot be previewed or queried, even though field metadata remains.",
+        "This resource is stale and cannot be previewed, queried, or indexed, even though field metadata remains.",
       metadataUnavailableTitle: "Resource metadata is not ready",
       metadataUnavailableDescription:
-        "No usable field metadata is available. Add or refresh the resource fields before querying.",
+        "No usable field metadata is available. Add or refresh the resource fields before querying or building an index.",
+      statusMessageDetail: "Status details: {{message}}",
       openDiscovery: "Open discovery",
     },
     indexWorkspace: {
@@ -263,6 +264,12 @@ export const dataCatalogEnUS = {
       previewStaleHint: "This resource is stale and cannot be previewed.",
       previewMetadataUnavailableHint:
         "This resource has no usable field metadata and cannot be previewed yet.",
+      indexMissingHint:
+        "The source resource is missing. Restore it and run discovery again before building an index.",
+      indexDisabledHint: "This resource is disabled. Enable it before building an index.",
+      indexStaleHint: "This resource is stale and cannot be indexed.",
+      indexMetadataUnavailableHint:
+        "This resource has no usable field metadata and cannot be indexed yet.",
       dataIndex: "Data Index",
       more: "More actions",
     },

@@ -107,6 +107,7 @@ describe("resource.service · listCatalogResourcePage", () => {
     });
     expect(result).toEqual({
       items: [expect.objectContaining({
+        columnCount: null,
         id: "res-1",
         lastDiscoverStatus: "error",
         schemaName: "external_data",

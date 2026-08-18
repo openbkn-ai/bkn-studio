@@ -15,7 +15,7 @@ export type ResourceQueryBlockReason =
 
 export function resourceQueryBlockReason(
   resource: CatalogResource,
-  fieldCount = resource.schema.length,
+  fieldCount: number | null = resource.schema.length,
 ): ResourceQueryBlockReason | null {
   if (resource.status === "disabled") {
     return "disabled";

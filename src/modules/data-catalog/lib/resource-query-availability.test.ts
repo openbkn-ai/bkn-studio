@@ -50,6 +50,10 @@ describe("resourceQueryBlockReason", () => {
     expect(resourceQueryBlockReason({ ...resource, schema: [] }, 1)).toBeNull();
   });
 
+  it("does not treat an omitted list field count as an empty schema", () => {
+    expect(resourceQueryBlockReason({ ...resource, columnCount: null, schema: [] }, null)).toBeNull();
+  });
+
   it("blocks a stale resource even when its previous fields remain", () => {
     expect(resourceQueryBlockReason({ ...resource, status: "stale" })).toBe("stale");
   });

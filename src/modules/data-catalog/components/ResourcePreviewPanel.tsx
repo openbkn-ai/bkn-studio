@@ -170,12 +170,7 @@ export function ResourcePreviewPanel({
   const total = totalUnreliable
     ? Math.max(backendTotal, resource.rowCount, fetched)
     : Math.max(backendTotal, fetched);
-  const columns =
-    resource.schema.length > 0
-      ? resource.schema
-      : rows.length > 0
-        ? Object.keys(rows[0]).map((name) => ({ name, type: "string" }))
-        : [];
+  const columns = resource.schema;
 
   const handlePaginationChange = (nextPage: number, nextPageSize: number) => {
     const resolvedPageSize = nextPageSize || pageSize;

@@ -259,18 +259,31 @@ export function ResourceWorkspaceScene({
               </AppButton>
             ) : undefined}
             className={styles.resourceAlert}
-            description={t(
-              resourceDisabled
-                ? "dataCatalog.resourceWorkspace.resourceDisabledDescription"
-                : resourceMissing
-                  ? "dataCatalog.resourceWorkspace.resourceMissingDescription"
-                  : resourceStale
-                    ? "dataCatalog.resourceWorkspace.resourceStaleDescription"
-                    : metadataUnavailable
-                      ? discoveryFailed
-                        ? "dataCatalog.resourceWorkspace.discoveryFailedNoSchemaDescription"
-                        : "dataCatalog.resourceWorkspace.metadataUnavailableDescription"
-                      : "dataCatalog.resourceWorkspace.discoveryFailedStaleSchemaDescription",
+            description={(
+              <div>
+                <div>
+                  {t(
+                    resourceDisabled
+                      ? "dataCatalog.resourceWorkspace.resourceDisabledDescription"
+                      : resourceMissing
+                        ? "dataCatalog.resourceWorkspace.resourceMissingDescription"
+                        : resourceStale
+                          ? "dataCatalog.resourceWorkspace.resourceStaleDescription"
+                          : metadataUnavailable
+                            ? discoveryFailed
+                              ? "dataCatalog.resourceWorkspace.discoveryFailedNoSchemaDescription"
+                              : "dataCatalog.resourceWorkspace.metadataUnavailableDescription"
+                            : "dataCatalog.resourceWorkspace.discoveryFailedStaleSchemaDescription",
+                  )}
+                </div>
+                {resource.statusMessage ? (
+                  <div className={styles.resourceStatusMessage}>
+                    {t("dataCatalog.resourceWorkspace.statusMessageDetail", {
+                      message: resource.statusMessage,
+                    })}
+                  </div>
+                ) : null}
+              </div>
             )}
             message={t(
               resourceDisabled

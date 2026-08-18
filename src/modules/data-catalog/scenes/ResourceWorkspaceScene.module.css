@@ -95,6 +95,11 @@
   flex-shrink: 0;
 }
 
+.resourceStatusMessage {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
 .pageTabs {
   display: flex;
   flex: 1;

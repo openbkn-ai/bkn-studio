@@ -28,6 +28,7 @@ import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-e
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
 import { indexStateOf, resourceGateOf, sortTasks } from "@/modules/data-catalog/lib/index-state";
+import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import {
   canManageResourceBuildTasks,
   canViewResourceIndexTasks,
@@ -201,6 +202,8 @@ export function ResourceIndexPanel({
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
   const state = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);
   const gate = resourceGateOf(catalog);
+  const resourceBlockReason = resourceQueryBlockReason(detailResource);
+  const buildActionsDisabled = !gate.ok || resourceBlockReason !== null;
   const readOnly = isResourceIndexReadOnly(catalog);
   const canManageBuildTasks = canManageResourceBuildTasks(resource, catalog);
   const canViewTasks = canViewResourceIndexTasks(resource);
@@ -398,7 +401,7 @@ export function ResourceIndexPanel({
             {canManageBuildTasks && activeTask?.status === "paused" ? (
               <PermissionGate permissions="resource:task_manage">
                 <AppButton
-                  disabled={!gate.ok}
+                  disabled={buildActionsDisabled}
                   onClick={() => void pauseOrResume(activeTask)}
                   size="small"
                 >
@@ -409,7 +412,7 @@ export function ResourceIndexPanel({
             {canManageBuildTasks && latest?.status === "failed" ? (
               <PermissionGate permissions="resource:task_manage">
                 <AppButton
-                  disabled={!gate.ok}
+                  disabled={buildActionsDisabled}
                   onClick={() => {
                     if (latest) {
                       void retry(latest);
@@ -467,7 +470,7 @@ export function ResourceIndexPanel({
             <PermissionGate permissions="resource:task_manage">
               <BuildTaskLaunchPanel
                 active={active && indexView === "tasks"}
-                disabled={!gate.ok}
+                disabled={buildActionsDisabled}
                 onGoConfigure={() => onIndexViewChange("config")}
                 onStarted={() => {
                   void onRefresh();
