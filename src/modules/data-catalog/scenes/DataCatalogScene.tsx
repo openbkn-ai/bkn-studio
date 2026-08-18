@@ -231,7 +231,7 @@ export function DataCatalogScene({
   const openResourceWorkspace = useCallback(
     (
       resourceId: string,
-      tab: "detail" | "index" | "preview" = "detail",
+      tab: "detail" | "index" | "preview" | "semantic-understanding" = "detail",
       indexView?: "config",
     ) => {
       const params = new URLSearchParams();

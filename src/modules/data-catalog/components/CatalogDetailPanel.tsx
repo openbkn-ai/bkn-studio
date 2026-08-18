@@ -99,7 +99,7 @@ type CatalogDetailPanelProps = {
   onCreateResource: (catalogId: string) => void;
   onOpenResource: (
     resourceId: string,
-    tab?: "detail" | "index" | "preview",
+    tab?: "detail" | "index" | "preview" | "semantic-understanding",
     indexView?: "config",
   ) => void;
   tasks: BuildTask[];
@@ -355,6 +355,12 @@ export function CatalogDetailPanel({
             label: t("dataCatalog.actions.dataIndex"),
           });
         }
+        if (!catalog.internal) {
+          moreItems.push({
+            key: "semantic-understanding",
+            label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
+          });
+        }
 
         return (
           <Space className={styles.actionGroup} size={4}>
@@ -373,6 +379,10 @@ export function CatalogDetailPanel({
                   }
                   if (key === "index") {
                     onOpenResource(record.id, "index");
+                    return;
+                  }
+                  if (key === "semantic-understanding") {
+                    onOpenResource(record.id, "semantic-understanding");
                   }
                 },
               }}
