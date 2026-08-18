@@ -101,8 +101,6 @@ export function ObservabilitySettingsScene() {
     return [
       { dataKind: t("bknTrace.settings.storage.runtimeLogs"), description: t("bknTrace.settings.storage.defaultValue"), key: "runtime", retention: retention("runtime.system"), status: retention("runtime.system") === undefined ? "unknown" : "known" },
       { dataKind: t("bknTrace.settings.storage.auditLogs"), description: t("bknTrace.settings.storage.defaultValue"), key: "audit", retention: retention("audit.admin"), status: retention("audit.admin") === undefined ? "unknown" : "known" },
-      { dataKind: t("bknTrace.settings.storage.traceIndex"), description: t("bknTrace.settings.storage.interfaceMissing"), key: "trace", status: "unknown" },
-      { dataKind: t("bknTrace.settings.storage.interactionFacts"), description: t("bknTrace.settings.storage.interfaceMissing"), key: "interaction", status: "unknown" },
     ];
   }, [policies, t]);
 
