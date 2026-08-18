@@ -76,6 +76,14 @@ export function persistLocale(locale: SupportedLocale) {
   window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
 }
 
+export function syncDocumentLanguage(locale: SupportedLocale) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  document.documentElement.lang = locale;
+}
+
 function firstSupportedLocale(locales: readonly string[]) {
   for (const locale of locales) {
     const normalized = normalizeSupportedLocale(locale);

@@ -10,6 +10,7 @@ import { initReactI18next } from "react-i18next";
 
 import { enUS } from "@/app/locales/resources/en-US";
 import { zhCN } from "@/app/locales/resources/zh-CN";
+import { normalizeSupportedLocale, syncDocumentLanguage } from "@/framework/i18n/locale";
 
 void i18n.use(initReactI18next).init({
   lng: "zh-CN",
@@ -27,5 +28,11 @@ void i18n.use(initReactI18next).init({
   },
 });
 
-export default i18n;
+i18n.on("languageChanged", (language) => {
+  const locale = normalizeSupportedLocale(language);
+  if (locale) {
+    syncDocumentLanguage(locale);
+  }
+});
 
+export default i18n;
