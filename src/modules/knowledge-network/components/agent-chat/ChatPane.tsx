@@ -538,7 +538,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     }
     setSettingsOpen(false);
     message.success(t("knowledgeNetwork.agentChat.chatPane.messages.settingsSaved"));
-  }, [draftConfig, draftModel, draftSystemPrompt, draftToolSelection, knId, message, messages, profile.paneKey, stats, t]);
+  }, [draftConfig, draftModel, draftSystemPrompt, draftToolSelection, knId, message, messages, profile.defaultPrompt, profile.paneKey, stats, t]);
   const resetDraftSystemPrompt = useCallback(() => {
     setDraftSystemPrompt(profile.defaultPrompt);
     message.success(t("knowledgeNetwork.agentChat.chatPane.messages.promptReset"));
@@ -591,7 +591,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         /* Ignore unavailable localStorage. */
       }
     },
-    [knId, profile.paneKey, model, systemPrompt],
+    [knId, profile.defaultPrompt, profile.paneKey, model, systemPrompt],
   );
 
   useEffect(() => {
