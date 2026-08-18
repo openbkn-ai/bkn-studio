@@ -349,6 +349,24 @@ export type AgentToolsOptions = {
   turn?: AgentTurnScope | null;
 };
 
+/**
+ * What to persist for a system prompt the user has not customized.
+ *
+ * Storing the prompt unconditionally freezes whatever default was current at
+ * the time: the restore path only falls back when the key is absent, so a later
+ * change to defaultPrompt never reaches anyone who has already used the pane.
+ * Persisting an empty string for an unedited prompt keeps the pane on whatever
+ * the default is today, while an edited one is still stored verbatim.
+ */
+export function promptToPersist(prompt: string, defaultPrompt: string): string {
+  return prompt === defaultPrompt ? "" : prompt;
+}
+
+/** Restores a persisted prompt, treating both absent and empty as "use the default". */
+export function promptFromPersisted(saved: string | undefined, defaultPrompt: string): string {
+  return saved && saved.trim() ? saved : defaultPrompt;
+}
+
 export function buildAgentTools(
   mcpTools: McpToolDef[],
   env: ContextLoaderEnv,

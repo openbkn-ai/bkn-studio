@@ -140,6 +140,65 @@ describe("sendRequest", () => {
     });
   });
 
+  /**
+   * A body carrying an empty `bkn_context` used to suppress injection: the guard
+   * asked whether the key was present, not whether it held anything, so the
+   * request went out with `{}` and Context Loader answered conversation_required.
+   * Synthesized ops produced exactly that body from the backend schema, which is
+   * why some operations failed in the console while hand-written ops worked.
+   */
+  it("overwrites a placeholder bkn_context in the request body", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+
+    await sendRequest(
+      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+      searchSchema,
+      "rest",
+      {},
+      '{"query":"订单","bkn_context":{}}',
+      undefined,
+      undefined,
+      bknContext,
+    );
+
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: bknContext });
+  });
+
+  it("keeps a caller-supplied bkn_context that carries both ids", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const explicit = { conversation_id: "conv_explicit", interaction_id: "int_explicit" };
+
+    await sendRequest(
+      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+      searchSchema,
+      "rest",
+      {},
+      JSON.stringify({ query: "订单", bkn_context: explicit }),
+      undefined,
+      undefined,
+      bknContext,
+    );
+
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: explicit });
+  });
+
+  it("replaces a half-filled bkn_context, since both ids are required", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+
+    await sendRequest(
+      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+      searchSchema,
+      "rest",
+      {},
+      '{"query":"订单","bkn_context":{"conversation_id":"conv_1"}}',
+      undefined,
+      undefined,
+      bknContext,
+    );
+
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: bknContext });
+  });
+
 });
 
 describe("fetchKnDetail", () => {

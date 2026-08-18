@@ -517,12 +517,129 @@ export type BknCallScope = {
 };
 
 /** Merges managed context into request body or arguments without overwriting bkn_context. */
+/* ============================ Tool Summary Display ============================ */
+/**
+ * Length past which a tool summary is collapsed in the UI.
+ *
+ * Tool descriptions serve the model, not the reader: run_code carries the whole
+ * code-mode rulebook at roughly 4.5k characters. Rendering that inline pushes
+ * the parameters and the run button off the panel, so the operation cannot be
+ * exercised at all. Business tools sit at 90-160 characters, hence a threshold
+ * with room to spare above them — anything under it keeps rendering as before.
+ */
+export const TOOL_SUMMARY_COLLAPSE_CHARS = 240;
+
+/** Whether this summary is long enough to need the collapsed treatment. */
+export function isLongToolSummary(summary: string): boolean {
+  return summary.length > TOOL_SUMMARY_COLLAPSE_CHARS;
+}
+
+/**
+ * First readable chunk of a long summary, for the collapsed state.
+ *
+ * Cuts on the first blank line, then on a sentence end, so the preview reads as
+ * a finished thought rather than a severed clause. Falls back to a hard cut when
+ * the text offers neither within range.
+ */
+export function toolSummaryPreview(summary: string): string {
+  if (!isLongToolSummary(summary)) return summary;
+  const paragraph = summary.indexOf("\n\n");
+  if (paragraph > 0 && paragraph <= TOOL_SUMMARY_COLLAPSE_CHARS) {
+    return summary.slice(0, paragraph).trim();
+  }
+  const window = summary.slice(0, TOOL_SUMMARY_COLLAPSE_CHARS);
+  const sentence = Math.max(window.lastIndexOf("。"), window.lastIndexOf(". "), window.lastIndexOf("\n"));
+  if (sentence > TOOL_SUMMARY_COLLAPSE_CHARS / 3) {
+    return window.slice(0, sentence + 1).trim();
+  }
+  return window.trim() + "…";
+}
+
+/* ============================ Synthesized Ops (schema-driven) ============================ */
+function sampleForSchemaProp(def: unknown): unknown {
+  if (!def || typeof def !== "object") return "";
+  const d = def as Record<string, unknown>;
+  if (d.default !== undefined) return d.default;
+  if (Array.isArray(d.enum) && d.enum.length > 0) return d.enum[0];
+  switch (d.type) {
+    case "number":
+    case "integer":
+      return 0;
+    case "boolean":
+      return false;
+    case "array":
+      return [];
+    case "object":
+      return {};
+    default:
+      return "";
+  }
+}
+
+/**
+ * Builds an example request body from a tool inputSchema for synthesized ops.
+ *
+ * `bkn_context` is skipped even though the backend marks it required. It is
+ * platform identity injected at send time, not a caller parameter — the same
+ * reason stripBknContextSchema removes it from the schema shown to the model.
+ * Emitting it here would produce `"bkn_context": {}`, which reads as "fill this
+ * in yourself" and, worse, counts as a caller-supplied override that suppresses
+ * the real injection, so every synthesized op would answer conversation_required.
+ */
+export function exampleBodyFromSchema(schema: unknown): Record<string, unknown> {
+  if (!schema || typeof schema !== "object") return {};
+  const s = schema as Record<string, unknown>;
+  const props = (s.properties && typeof s.properties === "object" ? s.properties : {}) as Record<string, unknown>;
+  const required = Array.isArray(s.required) ? (s.required as string[]) : [];
+  const out: Record<string, unknown> = {};
+  for (const [key, def] of Object.entries(props)) {
+    if (key === "bkn_context") continue;
+    if (required.includes(key) || key === "kn_id" || key === "response_format") {
+      out[key] = sampleForSchemaProp(def);
+    }
+  }
+  return out;
+}
+
+/** Converts live MCP tools/list entries into ContextLoaderOp when no local op exists. */
+export function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
+  const body = exampleBodyFromSchema(tool.inputSchema);
+  return {
+    id: tool.name,
+    summary: tool.description ?? tool.name,
+    path: `${REST_PREFIX}/kn/${tool.name}`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body,
+    mcpArgs: body,
+  };
+}
+
 function withBknContext(
   payload: Record<string, unknown>,
   bknContext: BknContext | undefined,
 ): Record<string, unknown> {
-  if (!bknContext || "bkn_context" in payload) return payload;
+  if (!bknContext || hasUsableBknContext(payload)) return payload;
   return { ...payload, bkn_context: bknContext };
+}
+
+/**
+ * Whether the payload already carries a context worth keeping.
+ *
+ * Presence of the key is not enough. Context Loader requires both ids on every
+ * business tool, so a `bkn_context` that lacks either one is not an override —
+ * it is a placeholder, and treating it as one silently drops the real context
+ * and gets the call rejected with conversation_required.
+ */
+function hasUsableBknContext(payload: Record<string, unknown>): boolean {
+  const value = payload.bkn_context;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const context = value as Record<string, unknown>;
+  return (
+    typeof context.conversation_id === "string" &&
+    context.conversation_id.trim() !== "" &&
+    typeof context.interaction_id === "string" &&
+    context.interaction_id.trim() !== ""
+  );
 }
 
 /** Parses request-body JSON; non-object or invalid JSON falls back to an empty object. */
