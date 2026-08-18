@@ -32,7 +32,6 @@ import {
   CONTEXT_LOADER_OPS,
   MCP_PATH,
   REST_CONTEXT_LOADER_OPS,
-  REST_PREFIX,
   buildCurl,
   buildTestData,
   createMcpSession,
@@ -43,6 +42,7 @@ import {
   pickQueryableObjectType,
   requestDataAssistantKindOf,
   listMcpTools,
+  synthesizeOp,
   mcpPathOf,
   sendRequest,
   subgraphPathFor,
@@ -68,54 +68,6 @@ import { DataBrowserPanel } from "./DataBrowserPanel";
 import { McpSetupModal, ToolDiscoveryModal } from "./McpIntegrationModals";
 
 import styles from "./ExperienceScene.module.css";
-
-function sampleForSchemaProp(def: unknown): unknown {
-  if (!def || typeof def !== "object") return "";
-  const d = def as Record<string, unknown>;
-  if (d.default !== undefined) return d.default;
-  if (Array.isArray(d.enum) && d.enum.length > 0) return d.enum[0];
-  switch (d.type) {
-    case "number":
-    case "integer":
-      return 0;
-    case "boolean":
-      return false;
-    case "array":
-      return [];
-    case "object":
-      return {};
-    default:
-      return "";
-  }
-}
-
-/** Builds an example request body from a tool inputSchema for synthesized ops. */
-function exampleBodyFromSchema(schema: unknown): Record<string, unknown> {
-  if (!schema || typeof schema !== "object") return {};
-  const s = schema as Record<string, unknown>;
-  const props = (s.properties && typeof s.properties === "object" ? s.properties : {}) as Record<string, unknown>;
-  const required = Array.isArray(s.required) ? (s.required as string[]) : [];
-  const out: Record<string, unknown> = {};
-  for (const [key, def] of Object.entries(props)) {
-    if (required.includes(key) || key === "kn_id" || key === "response_format") {
-      out[key] = sampleForSchemaProp(def);
-    }
-  }
-  return out;
-}
-
-/** Converts live MCP tools/list entries into ContextLoaderOp when no local op exists. */
-function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
-  const body = exampleBodyFromSchema(tool.inputSchema);
-  return {
-    id: tool.name,
-    summary: tool.description ?? tool.name,
-    path: `${REST_PREFIX}/kn/${tool.name}`,
-    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body,
-    mcpArgs: body,
-  };
-}
 
 /** Extracts result.content[].text from an MCP tools/call envelope. */
 function mcpContentTexts(obj: unknown): string[] | null {

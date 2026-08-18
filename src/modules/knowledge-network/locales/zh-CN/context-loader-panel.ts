@@ -16,6 +16,8 @@ export const contextLoaderPanelPart = {
       data: { label: "数据资源与 SQL 查询", description: "数据资源列表、字段结构、SQL 数据查询" },
       logic: { label: "逻辑属性与行动调用", description: "逻辑属性计算、行动工具召回与执行" },
       resource: { label: "数据资源", description: "数据资源检查、技能召回和执行" },
+      action: { label: "行动", description: "行动工具召回、执行与执行记录" },
+      execution: { label: "代码执行", description: "在沙箱内运行 Python 或 shell 命令，脚本里可直接调用上面这些工具" },
       skill: { label: "技能与动态工具", description: "Skill 检索和线上动态工具" },
       other: { label: "其他能力", description: "暂未归类的 MCP 能力" },
     },
@@ -215,6 +217,8 @@ export const contextLoaderPanelPart = {
     },
     request: {
       doc: "接口文档",
+      summaryExpand: "查看完整说明",
+      summaryCollapse: "收起说明",
       running: "运行中...",
       run: "运行",
       params: "参数",

@@ -16,6 +16,8 @@ export const contextLoaderPanelPart = {
       data: { label: "Data Resources and SQL", description: "Data resource lists, field schemas, and SQL queries" },
       logic: { label: "Logical Attributes and Actions", description: "Logical attribute calculation, action recall, and execution" },
       resource: { label: "Data Resources", description: "Data resource inspection, skill recall, and execution" },
+      action: { label: "Actions", description: "Action tool recall, execution, and execution history" },
+      execution: { label: "Code Execution", description: "Run Python or a shell command in the sandbox, calling the tools above from inside the script" },
       skill: { label: "Skills and Dynamic Tools", description: "Skill retrieval and online dynamic tools" },
       other: { label: "Other Capabilities", description: "Uncategorized MCP capabilities" },
     },
@@ -215,6 +217,8 @@ export const contextLoaderPanelPart = {
     },
     request: {
       doc: "API Docs",
+      summaryExpand: "Show full description",
+      summaryCollapse: "Collapse description",
       running: "Running...",
       run: "Run",
       params: "Parameters",

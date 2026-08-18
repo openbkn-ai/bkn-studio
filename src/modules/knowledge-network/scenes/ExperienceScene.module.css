@@ -1079,6 +1079,33 @@
   line-height: 1.6;
 }
 
+.reqSumBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+/* 收起态最多三行；展开后放开高度并保留原文换行，规则小节才读得下去。 */
+.reqSumFull {
+  max-height: 320px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.reqSumToggle {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--brand, #2563eb);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.reqSumToggle:hover {
+  text-decoration: underline;
+}
+
 .reqBody {
   flex: 1 1 auto;
   overflow-y: auto;

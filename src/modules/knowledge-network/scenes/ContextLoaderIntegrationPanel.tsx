@@ -19,6 +19,8 @@ import {
   type ContextLoaderOp,
   type ContextLoaderResponse,
   type McpToolDef,
+  isLongToolSummary,
+  toolSummaryPreview,
 } from "@/modules/knowledge-network/services/context-loader.service";
 import { createClaudeCodeMcpCommand, createMcpRemoteJsonConfig, withMcpTrailingSlash } from "@/modules/knowledge-network/services/mcp-client-config";
 import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
@@ -236,6 +238,7 @@ export function ContextLoaderIntegrationPanel({
   const { t } = useTranslation();
   const location = useLocation();
   const verb = mode === "mcp" ? "MCP" : "POST";
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [schemaOpen, setSchemaOpen] = useState(false);
   const [queryParamsOpen, setQueryParamsOpen] = useState(true);
   const [callParamsOpen, setCallParamsOpen] = useState(true);
@@ -546,7 +549,20 @@ export function ContextLoaderIntegrationPanel({
             <h2 className={styles.reqTitle}>{mode === "mcp" ? opDisplay.name : op.id}</h2>
             {mode === "mcp" ? <span className={styles.reqId}>{op.id}</span> : null}
           </div>
-          <p className={styles.reqSum}>{op.summary}</p>
+          {isLongToolSummary(op.summary) ? (
+            <div className={styles.reqSumBlock}>
+              <p className={`${styles.reqSum} ${summaryOpen ? styles.reqSumFull : ""}`}>
+                {summaryOpen ? op.summary : toolSummaryPreview(op.summary)}
+              </p>
+              <button type="button" className={styles.reqSumToggle} onClick={() => setSummaryOpen((open) => !open)}>
+                {summaryOpen
+                  ? t("knowledgeNetwork.contextLoaderPanel.request.summaryCollapse")
+                  : t("knowledgeNetwork.contextLoaderPanel.request.summaryExpand")}
+              </button>
+            </div>
+          ) : (
+            <p className={styles.reqSum}>{op.summary}</p>
+          )}
         </div>
         <div className={styles.reqBody}>
           {visibleQuery.length > 0 ? (

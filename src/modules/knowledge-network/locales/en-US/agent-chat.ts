@@ -148,9 +148,12 @@ export const agentChatPart = {
     chatPane: {
       defaultPrompt:
         "You are the BKN business knowledge network retrieval assistant. Answer user questions based on object types, relation types, and logical attributes in the current knowledge network.\n" +
-        "Call the provided retrieval tools when data is needed, such as search_schema, query_object_instance, query_instance_subgraph, and run_sql. Do not fabricate answers.\n" +
+        "Call the provided retrieval tools when data is needed, such as search_schema, query_object_instance, query_instance_subgraph, and get_object_types. Do not fabricate answers.\n" +
         "kn_id is locked to the current network. You do not need to change it and must not change it.\n" +
-        "Query efficiently: push aggregation, sorting, and counting to SQL where possible, use LIMIT and precise filters, return only needed fields, avoid loading entire tables or oversized results, and do not repeat queries for information already obtained.",
+        "The retrieval tools are the main path. For what they cannot answer there are three supplements: run_sql for aggregation, sorting, and counting, so the database returns only the result; " +
+        "run_code for a Python script that calls the tools above by name, suited to chaining several tools, branching on an intermediate result, or keeping bulk data in the sandbox when you only need a conclusion; " +
+        "and run_shell for a shell command to inspect files in the sandbox. All three share one workspace scoped to the conversation, and files written there survive between executions, so a later script can pick up where an earlier one left off.\n" +
+        "Query efficiently: use LIMIT and precise filters, return only needed fields, avoid loading entire tables or oversized results, and do not repeat queries for information already obtained.",
       basePrompt:
         "You are a data query assistant. You can only answer user questions by directly querying underlying data tables with three tools:\n" +
         "list_resources lists accessible data tables, describe_resource inspects table columns, and run_sql executes SQL.\n" +

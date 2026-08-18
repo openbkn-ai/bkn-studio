@@ -52,6 +52,9 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   data: "Data resource lists, field schemas, and SQL data queries",
   logic: "Logical property calculation, action recall, and action execution",
   skill: "Skill search and online dynamic tools",
+  // run_code / run_shell. The server merged them onto the business tool surface,
+  // so they arrive as ordinary tools with their own group rather than a mode switch.
+  execution: "Run Python or a shell command in the sandbox, calling the tools above from inside the script",
   other: "Unclassified MCP capabilities",
 };
 
@@ -64,6 +67,7 @@ const LOCAL_GROUPS: Array<{ key: string; label: string }> = [
   { key: "data", label: "Data Resources and SQL" },
   { key: "logic", label: "Logic and Actions" },
   { key: "skill", label: "Skills and Dynamic Tools" },
+  { key: "execution", label: "Code Execution" },
   { key: "other", label: "Other Capabilities" },
 ];
 
@@ -106,6 +110,8 @@ const LOCAL_TOOLS: Array<{ id: string; groupKey: string; name: string }> = [
   { id: "get_skill_content", groupKey: "skill", name: "View Skill Content" },
   { id: "read_skill_file", groupKey: "skill", name: "Read Skill File" },
   { id: "execute_skill", groupKey: "skill", name: "Execute Skill" },
+  { id: "run_code", groupKey: "execution", name: "Run Code" },
+  { id: "run_shell", groupKey: "execution", name: "Run Command" },
 ];
 
 /** Fallback order base; local fallback entries sort after server-declared entries. */
