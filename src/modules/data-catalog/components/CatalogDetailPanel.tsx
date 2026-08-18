@@ -13,6 +13,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -21,6 +23,7 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
+import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { formatRowCount } from "@/modules/data-catalog/lib/format";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
@@ -109,7 +112,7 @@ type CatalogDetailPanelProps = {
   onCreateResource: (catalogId: string) => void;
   onOpenResource: (
     resourceId: string,
-    tab?: "detail" | "index" | "preview",
+    tab?: "detail" | "index" | "preview" | "semantic-understanding",
     indexView?: "config",
   ) => void;
   tasks: BuildTask[];
@@ -157,6 +160,10 @@ export function CatalogDetailPanel({
     resourceKeyword.trim().length > 0 ||
     categoryFilter.length > 0 ||
     (showIndexState && indexFilter.length > 0);
+  const showOperationBar =
+    resourceTotal > 0 ||
+    hasResourceQuery ||
+    (dataCatalogCreationAvailable && !physical && !catalog.internal);
 
   const tasksByResource = useMemo(() => {
     const map = new Map<string, BuildTask[]>();
@@ -420,6 +427,17 @@ export function CatalogDetailPanel({
             ),
           });
         }
+        if (!catalog.internal) {
+          moreItems.push({
+            key: "semantic-understanding",
+            label: (
+              <span className="console-tab-with-tier">
+                {t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding")}
+                <EditionBadge capability={CAPABILITIES.SEMANTIC_TASK} edition="professional" />
+              </span>
+            ),
+          });
+        }
 
         return (
           <Space className={styles.actionGroup} size={4}>
@@ -438,6 +456,10 @@ export function CatalogDetailPanel({
                   }
                   if (key === "index") {
                     onOpenResource(record.id, "index");
+                    return;
+                  }
+                  if (key === "semantic-understanding") {
+                    onOpenResource(record.id, "semantic-understanding");
                   }
                 },
               }}
@@ -460,15 +482,17 @@ export function CatalogDetailPanel({
 
   return (
     <section className={styles.contentSurface}>
-      <div className={styles.operationBar}>
+      {showOperationBar ? <div className={styles.operationBar}>
         {!physical && !catalog.internal ? (
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
-              <PermissionGate permissions="resource:create">
-                <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                  {t("dataCatalog.resource.create")}
-                </AppButton>
-              </PermissionGate>
+              {dataCatalogCreationAvailable ? (
+                <PermissionGate permissions="resource:create">
+                  <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                    {t("dataCatalog.resource.create")}
+                  </AppButton>
+                </PermissionGate>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -520,7 +544,7 @@ export function CatalogDetailPanel({
             </div>
           </>
         ) : null}
-      </div>
+      </div> : null}
 
       <TableSurface className={styles.tableSurface}>
         {resourcesLoading ? (
@@ -551,11 +575,13 @@ export function CatalogDetailPanel({
                   {t("dataCatalog.catalog.goDiscoverToDiscover")}
                 </AppButton>
               ) : !physical && !catalog.internal ? (
-                <PermissionGate permissions="resource:create">
-                  <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                    {t("dataCatalog.resource.create")}
-                  </AppButton>
-                </PermissionGate>
+                dataCatalogCreationAvailable ? (
+                  <PermissionGate permissions="resource:create">
+                    <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                      {t("dataCatalog.resource.create")}
+                    </AppButton>
+                  </PermissionGate>
+                ) : null
               ) : null
             }
             description={

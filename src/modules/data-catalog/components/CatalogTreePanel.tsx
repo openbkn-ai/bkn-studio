@@ -10,9 +10,7 @@ import {
   DatabaseOutlined,
   DeleteOutlined,
   LeftOutlined,
-  LinkOutlined,
   PlusOutlined,
-  SearchOutlined,
 } from "@ant-design/icons";
 import { Form, Input, Modal, Tooltip } from "antd";
 import type { DataNode } from "antd/es/tree";
@@ -24,6 +22,7 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { BusinessTree, BusinessTreePanel } from "@/framework/ui/common/BusinessTreePanel";
+import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { isBuiltinLogicalCatalog } from "@/modules/data-catalog/lib/logical-catalog";
 import {
   createLogicalCatalog,
@@ -44,8 +43,6 @@ type CatalogTreePanelProps = {
   collapsed?: boolean;
   connectorTypes: DataConnectConnectorType[];
   onRefresh: () => Promise<void> | void;
-  onOpenConnections?: () => void;
-  onOpenDiscoverTasks?: (catalogId?: string) => void;
   onSelectCatalog: (catalogId: string) => void;
   onSelectScope?: (scope: { schema: string } | null) => void;
   onToggleCollapsed?: () => void;
@@ -100,8 +97,6 @@ export function CatalogTreePanel({
   collapsed = false,
   connectorTypes,
   onRefresh,
-  onOpenConnections,
-  onOpenDiscoverTasks,
   onSelectCatalog,
   onSelectScope,
   onToggleCollapsed,
@@ -289,7 +284,7 @@ export function CatalogTreePanel({
             <span className={styles.catalogNodeName}>{catalog.name}</span>
             {isBuiltinLogicalCatalog(catalog) ? (
               <span className={styles.treeMiniTag}>{t("dataCatalog.tree.builtin")}</span>
-            ) : (
+            ) : dataCatalogCreationAvailable ? (
               <PermissionGate permissions="catalog:delete">
                 <button
                   aria-label={t("common.delete")}
@@ -370,7 +365,7 @@ export function CatalogTreePanel({
                   <DeleteOutlined />
                 </button>
               </PermissionGate>
-            )}
+            ) : null}
           </span>
         ),
       };
@@ -505,35 +500,21 @@ export function CatalogTreePanel({
         }
         headerActions={
           <>
-            <Tooltip title={t("dataCatalog.catalog.goScan")}>
-              <AppButton
-                aria-label={t("dataCatalog.catalog.goScan")}
-                className={styles.treeActionBtn}
-                icon={<SearchOutlined />}
-                onClick={() => onOpenDiscoverTasks?.(selectedCatalogId)}
-              />
-            </Tooltip>
-            <Tooltip title={t("dataCatalog.catalog.goConnection")}>
-              <AppButton
-                aria-label={t("dataCatalog.catalog.goConnection")}
-                className={styles.treeActionBtn}
-                icon={<LinkOutlined />}
-                onClick={() => onOpenConnections?.()}
-              />
-            </Tooltip>
-            <PermissionGate permissions="catalog:create">
-              <Tooltip title={t("dataCatalog.tree.addLogical")}>
-                <AppButton
-                  aria-label={t("dataCatalog.tree.addLogical")}
-                  className={styles.treeActionBtn}
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    form.resetFields();
-                    setCreateOpen(true);
-                  }}
-                />
-              </Tooltip>
-            </PermissionGate>
+            {dataCatalogCreationAvailable ? (
+              <PermissionGate permissions="catalog:create">
+                <Tooltip title={t("dataCatalog.tree.addLogical")}>
+                  <AppButton
+                    aria-label={t("dataCatalog.tree.addLogical")}
+                    className={styles.treeActionBtn}
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      form.resetFields();
+                      setCreateOpen(true);
+                    }}
+                  />
+                </Tooltip>
+              </PermissionGate>
+            ) : null}
             <Tooltip title={t("dataCatalog.tree.collapse")}>
               <AppButton
                 aria-label={t("dataCatalog.tree.collapse")}

@@ -231,7 +231,7 @@ export function DataCatalogScene({
   const openResourceWorkspace = useCallback(
     (
       resourceId: string,
-      tab: "detail" | "index" | "preview" = "detail",
+      tab: "detail" | "index" | "preview" | "semantic-understanding" = "detail",
       indexView?: "config",
     ) => {
       const params = new URLSearchParams();
@@ -366,12 +366,6 @@ export function DataCatalogScene({
           collapsed={treeCollapsed}
           onRefresh={async () => {
             await loadAll();
-          }}
-          onOpenConnections={() => {
-            void navigate("/data-connect");
-          }}
-          onOpenDiscoverTasks={(catalogId) => {
-            void navigate(`/data-connect/discover${catalogId ? `?catalogId=${catalogId}` : ""}`);
           }}
           onSelectCatalog={(catalogId) => {
             const next = new URLSearchParams(searchParams);
