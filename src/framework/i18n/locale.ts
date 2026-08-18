@@ -19,6 +19,7 @@ const supportedLocaleSet = new Set<string>(SUPPORTED_LOCALES);
 
 let activeDocumentLanguageSyncs = 0;
 let restoreDocumentLanguage: (() => void) | undefined;
+let synchronizedDocumentLanguage: string | undefined;
 
 export type LocaleResolutionInput = {
   browserLanguages?: readonly string[];
@@ -85,6 +86,7 @@ export function syncDocumentLanguage(locale: SupportedLocale) {
   }
 
   document.documentElement.lang = locale;
+  synchronizedDocumentLanguage = locale;
 }
 
 export function preserveDocumentLanguage() {
@@ -112,8 +114,11 @@ export function preserveDocumentLanguage() {
     released = true;
     activeDocumentLanguageSyncs -= 1;
     if (activeDocumentLanguageSyncs === 0) {
-      restoreDocumentLanguage?.();
+      if (document.documentElement.lang === synchronizedDocumentLanguage) {
+        restoreDocumentLanguage?.();
+      }
       restoreDocumentLanguage = undefined;
+      synchronizedDocumentLanguage = undefined;
     }
   };
 }

@@ -91,4 +91,15 @@ describe("locale resolution", () => {
 
     expect(document.documentElement.lang).toBe("fr-FR");
   });
+
+  it("keeps a host language changed while Studio is mounted", () => {
+    document.documentElement.lang = "fr-FR";
+    const release = preserveDocumentLanguage();
+
+    syncDocumentLanguage("en-US");
+    document.documentElement.lang = "de-DE";
+    release();
+
+    expect(document.documentElement.lang).toBe("de-DE");
+  });
 });
