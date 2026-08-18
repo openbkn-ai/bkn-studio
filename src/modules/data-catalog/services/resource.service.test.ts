@@ -74,8 +74,11 @@ describe("resource.service · listCatalogResourcePage", () => {
             catalog_id: "cat-1",
             category: "table",
             id: "res-1",
+            last_discover_status: "error",
             name: "orders",
             schema: "external_data",
+            status: "stale",
+            status_message: "discover metadata failed",
           },
         ],
         total_count: 21,
@@ -103,7 +106,14 @@ describe("resource.service · listCatalogResourcePage", () => {
       },
     });
     expect(result).toEqual({
-      items: [expect.objectContaining({ id: "res-1", schemaName: "external_data" })],
+      items: [expect.objectContaining({
+        columnCount: null,
+        id: "res-1",
+        lastDiscoverStatus: "error",
+        schemaName: "external_data",
+        status: "stale",
+        statusMessage: "discover metadata failed",
+      })],
       total: 21,
     });
   });

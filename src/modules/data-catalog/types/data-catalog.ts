@@ -7,6 +7,16 @@
 
 export type ResourceCategory = "dataset" | "logicview" | "table";
 
+export type ResourceDiscoverStatus =
+  | "error"
+  | "missing"
+  | "new"
+  | "restored"
+  | "unchanged"
+  | "updated";
+
+export type ResourceStatus = "active" | "deprecated" | "disabled" | "stale";
+
 /** Field-level indexing capabilities: keyword, fulltext, and vector (aligned with Vega feature_type). */
 export type ResourceFeatureType = "keyword" | "fulltext" | "vector";
 
@@ -48,17 +58,24 @@ export type ResourceIndexConfig = {
 export type CatalogResource = {
   catalogId: string;
   category: ResourceCategory;
-  columnCount: number;
+  /** Field count from a detail schema or list summary; null when the list response omits it. */
+  columnCount: number | null;
   description: string;
   id: string;
   /** Current index configuration. List endpoints may omit it; use the detail response on configuration pages. */
   indexConfig?: ResourceIndexConfig;
+  /** Latest source-discovery observation reported by Vega. */
+  lastDiscoverStatus?: ResourceDiscoverStatus;
   name: string;
   rowCount: number;
   /** Schema in the physical data source; named distinctly from the field-definition schema. */
   schemaName?: string;
   schema: ResourceSchemaField[];
   sourceIdentifier: string;
+  /** Resource lifecycle status reported by Vega. */
+  status?: ResourceStatus;
+  /** Resource lifecycle/discovery detail reported by Vega. */
+  statusMessage?: string;
   updateTime: string;
   updatedAt: number;
 };

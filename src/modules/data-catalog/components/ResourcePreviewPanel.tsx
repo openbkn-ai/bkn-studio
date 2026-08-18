@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatCount } from "@/modules/data-catalog/lib/format";
+import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import { previewCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type {
   CatalogResource,
@@ -84,6 +85,11 @@ export function ResourcePreviewPanel({
   const [result, setResult] = useState<ResourcePreviewResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const queryBlockReason = resourceQueryBlockReason(resource);
+  const resourceDisabled = queryBlockReason === "disabled";
+  const resourceMissing = queryBlockReason === "missing";
+  const resourceStale = queryBlockReason === "stale";
+  const previewUnavailable = queryBlockReason !== null;
 
   const load = useCallback(
     async (nextOffset: number, nextLimit: number) => {
@@ -106,13 +112,13 @@ export function ResourcePreviewPanel({
   );
 
   useEffect(() => {
-    if (!active || disabled) {
+    if (!active || disabled || previewUnavailable) {
       return;
     }
     setPage(1);
     setPageSize(DEFAULT_PAGE_SIZE);
     void load(0, DEFAULT_PAGE_SIZE);
-  }, [active, disabled, load, resource.id]);
+  }, [active, disabled, load, previewUnavailable, resource.id]);
 
   const offset = (page - 1) * pageSize;
 
@@ -125,6 +131,38 @@ export function ResourcePreviewPanel({
     );
   }
 
+  if (previewUnavailable) {
+    const discoveryFailed = resource.lastDiscoverStatus === "error";
+    return (
+      <Alert
+        description={t(
+          resourceDisabled
+            ? "dataCatalog.preview.resourceDisabledDescription"
+            : resourceMissing
+              ? "dataCatalog.preview.resourceMissingDescription"
+              : resourceStale
+                ? "dataCatalog.preview.resourceStaleDescription"
+                : discoveryFailed
+                  ? "dataCatalog.preview.metadataDiscoveryFailedDescription"
+                  : "dataCatalog.preview.metadataUnavailableDescription",
+        )}
+        message={t(
+          resourceDisabled
+            ? "dataCatalog.preview.resourceDisabled"
+            : resourceMissing
+              ? "dataCatalog.preview.resourceMissing"
+              : resourceStale
+                ? "dataCatalog.preview.resourceStale"
+                : discoveryFailed
+                  ? "dataCatalog.preview.metadataDiscoveryFailed"
+                  : "dataCatalog.preview.metadataUnavailable",
+        )}
+        showIcon
+        type="error"
+      />
+    );
+  }
+
   const backendTotal = result?.total ?? 0;
   const rows = result?.rows ?? [];
   const fetched = offset + rows.length;
@@ -132,12 +170,7 @@ export function ResourcePreviewPanel({
   const total = totalUnreliable
     ? Math.max(backendTotal, resource.rowCount, fetched)
     : Math.max(backendTotal, fetched);
-  const columns =
-    resource.schema.length > 0
-      ? resource.schema
-      : rows.length > 0
-        ? Object.keys(rows[0]).map((name) => ({ name, type: "string" }))
-        : [];
+  const columns = resource.schema;
 
   const handlePaginationChange = (nextPage: number, nextPageSize: number) => {
     const resolvedPageSize = nextPageSize || pageSize;

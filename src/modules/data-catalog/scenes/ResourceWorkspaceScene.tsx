@@ -19,6 +19,7 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ResourceDetailPanel } from "@/modules/data-catalog/components/ResourceDetailPanel";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
+import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import { ResourceIndexPanel } from "@/modules/data-catalog/components/ResourceIndexPanel";
 import { ResourcePreviewPanel } from "@/modules/data-catalog/components/ResourcePreviewPanel";
 import { ResourceSemanticUnderstandingPanel } from "@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel";
@@ -113,6 +114,12 @@ export function ResourceWorkspaceScene({
   const indexState = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);
   const gate = resourceGateOf(catalog);
   const hideSemanticUnderstanding = Boolean(catalog?.internal);
+  const discoveryFailed = resource?.lastDiscoverStatus === "error";
+  const queryBlockReason = resource ? resourceQueryBlockReason(resource) : null;
+  const resourceDisabled = queryBlockReason === "disabled";
+  const resourceMissing = queryBlockReason === "missing";
+  const resourceStale = queryBlockReason === "stale";
+  const metadataUnavailable = queryBlockReason === "metadata_unavailable";
 
   useEffect(() => {
     if (hideSemanticUnderstanding && tab === "semantic-understanding") {
@@ -238,6 +245,61 @@ export function ResourceWorkspaceScene({
             </div>
           </div>
         </div>
+
+        {discoveryFailed || queryBlockReason ? (
+          <Alert
+            action={!resourceDisabled && !resourceStale && (discoveryFailed || resourceMissing) ? (
+              <AppButton
+                onClick={() => {
+                  void navigate(`/data-connect/discover?catalogId=${resource.catalogId}`);
+                }}
+                type="link"
+              >
+                {t("dataCatalog.resourceWorkspace.openDiscovery")}
+              </AppButton>
+            ) : undefined}
+            className={styles.resourceAlert}
+            description={(
+              <div>
+                <div>
+                  {t(
+                    resourceDisabled
+                      ? "dataCatalog.resourceWorkspace.resourceDisabledDescription"
+                      : resourceMissing
+                        ? "dataCatalog.resourceWorkspace.resourceMissingDescription"
+                        : resourceStale
+                          ? "dataCatalog.resourceWorkspace.resourceStaleDescription"
+                          : metadataUnavailable
+                            ? discoveryFailed
+                              ? "dataCatalog.resourceWorkspace.discoveryFailedNoSchemaDescription"
+                              : "dataCatalog.resourceWorkspace.metadataUnavailableDescription"
+                            : "dataCatalog.resourceWorkspace.discoveryFailedStaleSchemaDescription",
+                  )}
+                </div>
+                {resource.statusMessage ? (
+                  <div className={styles.resourceStatusMessage}>
+                    {t("dataCatalog.resourceWorkspace.statusMessageDetail", {
+                      message: resource.statusMessage,
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            )}
+            message={t(
+              resourceDisabled
+                ? "dataCatalog.resourceWorkspace.resourceDisabledTitle"
+                : resourceMissing
+                  ? "dataCatalog.resourceWorkspace.resourceMissingTitle"
+                  : resourceStale
+                    ? "dataCatalog.resourceWorkspace.resourceStaleTitle"
+                    : discoveryFailed
+                      ? "dataCatalog.resourceWorkspace.discoveryFailedTitle"
+                      : "dataCatalog.resourceWorkspace.metadataUnavailableTitle",
+            )}
+            showIcon
+            type={queryBlockReason ? "error" : "warning"}
+          />
+        ) : null}
 
         <Tabs
           activeKey={tab}

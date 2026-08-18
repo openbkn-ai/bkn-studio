@@ -21,6 +21,25 @@ export const dataCatalogEnUS = {
       discardChangesTitle: "Discard unsaved changes?",
       discardChangesDescription: "Switching tabs will discard the current unsaved changes and cannot be undone.",
       discardChangesConfirm: "Discard and switch",
+      discoveryFailedTitle: "The latest resource discovery failed",
+      discoveryFailedNoSchemaDescription:
+        "No usable field metadata is available. Refresh discovery before previewing, querying, or indexing this resource.",
+      discoveryFailedStaleSchemaDescription:
+        "The last successfully discovered fields are still available, but they may be out of date.",
+      resourceMissingTitle: "Resource is missing from its source",
+      resourceMissingDescription:
+        "Discovery could not find this resource. Restore it at the source and run discovery again before querying or building an index.",
+      resourceDisabledTitle: "Resource is disabled",
+      resourceDisabledDescription:
+        "This resource is disabled. Enable it before previewing, querying, or building an index.",
+      resourceStaleTitle: "Resource is stale",
+      resourceStaleDescription:
+        "This resource is stale and cannot be previewed, queried, or indexed, even though field metadata remains.",
+      metadataUnavailableTitle: "Resource metadata is not ready",
+      metadataUnavailableDescription:
+        "No usable field metadata is available. Add or refresh the resource fields before querying or building an index.",
+      statusMessageDetail: "Status details: {{message}}",
+      openDiscovery: "Open discovery",
     },
     indexWorkspace: {
       backToOverview: "Back to Tasks",
@@ -198,6 +217,7 @@ export const dataCatalogEnUS = {
       catalog: "Catalog",
       catalogPlaceholder: "Select a catalog",
       category: "Category",
+      discoverStatus: "Discovery Status",
       rowCount: "Rows",
       indexState: "Index State",
       searchPlaceholder: "Search resource name",
@@ -238,8 +258,28 @@ export const dataCatalogEnUS = {
     },
     actions: {
       preview: "Preview Data",
+      previewMissingHint:
+        "The source resource is missing. Restore it and run discovery again before previewing.",
+      previewDisabledHint: "This resource is disabled. Enable it before previewing.",
+      previewStaleHint: "This resource is stale and cannot be previewed.",
+      previewMetadataUnavailableHint:
+        "This resource has no usable field metadata and cannot be previewed yet.",
+      indexMissingHint:
+        "The source resource is missing. Restore it and run discovery again before building an index.",
+      indexDisabledHint: "This resource is disabled. Enable it before building an index.",
+      indexStaleHint: "This resource is stale and cannot be indexed.",
+      indexMetadataUnavailableHint:
+        "This resource has no usable field metadata and cannot be indexed yet.",
       dataIndex: "Data Index",
       more: "More actions",
+    },
+    discoverStatuses: {
+      error: "Failed",
+      missing: "Missing",
+      new: "New",
+      restored: "Restored",
+      unchanged: "Unchanged",
+      updated: "Updated",
     },
     gate: {
       catalogDisabled:
@@ -250,6 +290,21 @@ export const dataCatalogEnUS = {
     preview: {
       summary: "Showing {{count}} rows · {{total}} rows total",
       empty: "No data",
+      metadataDiscoveryFailed: "Resource metadata discovery failed",
+      metadataDiscoveryFailedDescription:
+        "Preview is unavailable because no field metadata was discovered. Refresh discovery and try again.",
+      metadataUnavailable: "Resource metadata is not ready",
+      metadataUnavailableDescription:
+        "Preview is unavailable until resource fields have been added or refreshed.",
+      resourceMissing: "Source resource is missing",
+      resourceMissingDescription:
+        "This resource can no longer be found at its source. Restore it and run discovery again before previewing.",
+      resourceDisabled: "Resource is disabled",
+      resourceDisabledDescription:
+        "This resource is disabled. Enable it before previewing data.",
+      resourceStale: "Resource is stale",
+      resourceStaleDescription:
+        "This resource is stale and cannot be previewed, even though field metadata remains.",
       mockLongText:
         "This is the long text content in row {{row}}, used to verify truncation and hover display.",
     },

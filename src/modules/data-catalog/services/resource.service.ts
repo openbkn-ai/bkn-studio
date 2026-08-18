@@ -24,6 +24,7 @@ import type {
   CatalogDiscoverRecord,
   ResourceCategory,
   ResourceCreateInput,
+  ResourceDiscoverStatus,
   ResourceFieldFeature,
   ResourceFeatureType,
   ResourceIndexConfig,
@@ -201,6 +202,7 @@ type BackendResource = {
   description?: string;
   id: string;
   index_config?: BackendIndexConfig | null;
+  last_discover_status?: string;
   logic_type?: string;
   name: string;
   row_count?: number;
@@ -212,6 +214,8 @@ type BackendResource = {
       row_count?: number;
     };
   } | null;
+  status?: string;
+  status_message?: string;
   update_time?: number;
 };
 
@@ -245,6 +249,32 @@ function normalizeCategory(value?: string, logicType?: string): ResourceCategory
   return "table";
 }
 
+function normalizeDiscoverStatus(value?: string): ResourceDiscoverStatus | undefined {
+  switch (value) {
+    case "error":
+    case "missing":
+    case "new":
+    case "restored":
+    case "unchanged":
+    case "updated":
+      return value;
+    default:
+      return undefined;
+  }
+}
+
+function normalizeResourceStatus(value?: string): CatalogResource["status"] {
+  switch (value) {
+    case "active":
+    case "deprecated":
+    case "disabled":
+    case "stale":
+      return value;
+    default:
+      return undefined;
+  }
+}
+
 function mapResource(item: BackendResource): CatalogResource {
   return {
     id: item.id,
@@ -255,11 +285,14 @@ function mapResource(item: BackendResource): CatalogResource {
     description: item.description ?? "",
     schema: (item.schema_definition ?? []).map(mapSchemaField),
     indexConfig: mapIndexConfigFromBackend(item.index_config),
+    lastDiscoverStatus: normalizeDiscoverStatus(item.last_discover_status),
     // List endpoints omit schema_definition, so use backend column_count; detail endpoints fall back to schema length.
-    columnCount: item.column_count ?? item.schema_definition?.length ?? 0,
+    columnCount: item.column_count ?? item.schema_definition?.length ?? null,
     // Backend often omits top-level row_count; actual rows are in source_metadata.properties.
     rowCount: item.row_count ?? item.source_metadata?.properties?.row_count ?? 0,
     schemaName: item.schema,
+    status: normalizeResourceStatus(item.status),
+    statusMessage: item.status_message?.trim() || undefined,
     updatedAt: item.update_time ?? 0,
     updateTime: formatTimestamp(item.update_time),
   };
