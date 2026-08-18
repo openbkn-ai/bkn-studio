@@ -39,20 +39,7 @@ import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
 
 import type { LlmModel } from "@/modules/model-resources/types/llm";
-import {
-  buildAgentTools,
-  effectiveToolArgs,
-  guardAgentToolArgs,
-  isTakenOverLifecycleTool,
-  formatOutputContract,
-  formatToolResultLimits,
-  runAgentChat,
-  DEFAULT_AGENT_CONFIG,
-  type AgentChatTurn,
-  type AgentChunk,
-  type AgentConfig,
-  type AgentTokenProvider,
-} from "@/modules/knowledge-network/services/agent-chat.service";
+import { DEFAULT_AGENT_CONFIG, buildAgentTools, effectiveToolArgs, formatOutputContract, formatToolResultLimits, guardAgentToolArgs, isTakenOverLifecycleTool, promptFromPersisted, promptToPersist, runAgentChat, type AgentChatTurn, type AgentChunk, type AgentConfig, type AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
 import {
   normalizeAgentError,
   type NormalizedAgentError,
@@ -543,7 +530,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       }
       localStorage.setItem(
         msgsLsKey(knId, profile.paneKey),
-        JSON.stringify({ messages, model: draftModel, systemPrompt: draftSystemPrompt, stats } satisfies Persisted),
+        JSON.stringify({ messages, model: draftModel,
+          systemPrompt: promptToPersist(draftSystemPrompt, profile.defaultPrompt), stats } satisfies Persisted),
       );
     } catch {
       /* Ignore unavailable localStorage. */
@@ -579,7 +567,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     const saved = loadPersisted(msgsLsKey(knId, profile.paneKey));
     setMessages(Array.isArray(saved.messages) ? saved.messages : []);
     if (saved.model) setModel(saved.model);
-    setSystemPrompt(saved.systemPrompt ?? profile.defaultPrompt);
+    setSystemPrompt(promptFromPersisted(saved.systemPrompt, profile.defaultPrompt));
     setStats(saved.stats ?? { tokens: 0, ms: 0 });
   }, [knId, profile.paneKey, profile.defaultPrompt]);
 
@@ -596,7 +584,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       try {
         localStorage.setItem(
           msgsLsKey(knId, profile.paneKey),
-          JSON.stringify({ messages: msgs, model, systemPrompt, stats: statsSnapshot } satisfies Persisted),
+          JSON.stringify({ messages: msgs, model,
+            systemPrompt: promptToPersist(systemPrompt, profile.defaultPrompt), stats: statsSnapshot } satisfies Persisted),
         );
       } catch {
         /* Ignore unavailable localStorage. */
