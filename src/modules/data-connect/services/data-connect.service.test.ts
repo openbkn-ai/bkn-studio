@@ -106,6 +106,23 @@ describe("data-connect.service · test connection", () => {
     );
   });
 
+  it("rejects a preflight business failure with the backend details", async () => {
+    testCatalogConnectionConfigMock.mockResolvedValue({
+      message: "dial tcp db.example.com:3306: i/o timeout",
+      success: false,
+    });
+    const { testDataConnectConfig } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await expect(
+      testDataConnectConfig({
+        connectorConfig: { host: "db.example.com" },
+        connectorType: "mariadb",
+      }),
+    ).rejects.toThrow("dial tcp db.example.com:3306: i/o timeout");
+  });
+
   it("uses the localized fallback when the backend failure message is empty", async () => {
     testCatalogConnectionConfigMock.mockResolvedValue({
       message: "  ",

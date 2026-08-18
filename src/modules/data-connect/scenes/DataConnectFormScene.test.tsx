@@ -25,12 +25,13 @@ const createDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const getDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const listDataConnectConnectorTypesMock = vi.hoisted(() => vi.fn());
 const testDataConnectConfigMock = vi.hoisted(() => vi.fn());
+const messageErrorMock = vi.hoisted(() => vi.fn());
 const messageSuccessMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: {
-      error: vi.fn(),
+      error: messageErrorMock,
       success: messageSuccessMock,
       warning: vi.fn(),
     },
@@ -137,6 +138,7 @@ describe("DataConnectFormScene · connection preflight", () => {
     vi.useRealTimers();
     permissionState.values = new Set(["catalog:modify"]);
     entitlementState.snapshot = null;
+    messageErrorMock.mockReset();
     messageSuccessMock.mockReset();
     createDataConnectRecordMock.mockReset();
     createDataConnectRecordMock.mockResolvedValue(undefined);
@@ -218,6 +220,26 @@ describe("DataConnectFormScene · connection preflight", () => {
     expect(messageSuccessMock).toHaveBeenCalledWith(
       "dataConnect.testConnectionSuccess",
     );
+  });
+
+  it("shows backend connection details when the preflight fails", async () => {
+    permissionState.values.add("catalog:create");
+    testDataConnectConfigMock.mockRejectedValue(
+      new Error("dial tcp db.example.com:3306: i/o timeout"),
+    );
+    render(<DataConnectFormScene mode="edit" recordId="catalog-1" />);
+
+    await screen.findByDisplayValue("orders");
+    fireEvent.click(
+      screen.getByRole("button", { name: "common.testConnection" }),
+    );
+
+    await waitFor(() => {
+      expect(messageErrorMock).toHaveBeenCalledWith(
+        "dial tcp db.example.com:3306: i/o timeout",
+      );
+    });
+    expect(messageSuccessMock).not.toHaveBeenCalled();
   });
 
   it("normalizes SQL Server schemas and options in the connection test request", async () => {
