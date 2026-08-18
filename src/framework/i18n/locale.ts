@@ -17,6 +17,10 @@ export const LOCALE_STORAGE_KEY = "bkn-studio:locale";
 
 const supportedLocaleSet = new Set<string>(SUPPORTED_LOCALES);
 
+let activeDocumentLanguageSyncs = 0;
+let restoreDocumentLanguage: (() => void) | undefined;
+let synchronizedDocumentLanguage: string | undefined;
+
 export type LocaleResolutionInput = {
   browserLanguages?: readonly string[];
   deploymentDefaultLocale?: SupportedLocale;
@@ -74,6 +78,49 @@ export function persistLocale(locale: SupportedLocale) {
   }
 
   window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+}
+
+export function syncDocumentLanguage(locale: SupportedLocale) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  document.documentElement.lang = locale;
+  synchronizedDocumentLanguage = locale;
+}
+
+export function preserveDocumentLanguage() {
+  if (typeof document === "undefined") {
+    return () => undefined;
+  }
+
+  if (activeDocumentLanguageSyncs === 0) {
+    const originalLanguage = document.documentElement.getAttribute("lang");
+    restoreDocumentLanguage = () => {
+      if (originalLanguage === null) {
+        document.documentElement.removeAttribute("lang");
+        return;
+      }
+      document.documentElement.lang = originalLanguage;
+    };
+  }
+  activeDocumentLanguageSyncs += 1;
+
+  let released = false;
+  return () => {
+    if (released) {
+      return;
+    }
+    released = true;
+    activeDocumentLanguageSyncs -= 1;
+    if (activeDocumentLanguageSyncs === 0) {
+      if (document.documentElement.lang === synchronizedDocumentLanguage) {
+        restoreDocumentLanguage?.();
+      }
+      restoreDocumentLanguage = undefined;
+      synchronizedDocumentLanguage = undefined;
+    }
+  };
 }
 
 function firstSupportedLocale(locales: readonly string[]) {

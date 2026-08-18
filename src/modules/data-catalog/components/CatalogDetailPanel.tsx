@@ -332,7 +332,6 @@ export function CatalogDetailPanel({
       dataIndex: "columnCount",
       title: t("dataCatalog.resource.fieldCount"),
       width: 88,
-      sorter: (left, right) => (left.columnCount ?? 0) - (right.columnCount ?? 0),
       render: (value: number | null) =>
         value !== null && value > 0 ? (
           <span className={styles.monoText}>{value}</span>
@@ -344,7 +343,6 @@ export function CatalogDetailPanel({
       dataIndex: "rowCount",
       title: t("dataCatalog.resource.rowCount"),
       width: 112,
-      sorter: (left, right) => (left.rowCount ?? 0) - (right.rowCount ?? 0),
       render: (value: number) =>
         value > 0 ? <span className={styles.monoText}>{formatRowCount(value)}</span> : "—",
     },
