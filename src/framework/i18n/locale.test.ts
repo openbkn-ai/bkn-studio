@@ -11,13 +11,22 @@ import {
   LOCALE_STORAGE_KEY,
   normalizeSupportedLocale,
   persistLocale,
+  preserveDocumentLanguage,
   readPersistedLocale,
   resolveSupportedLocale,
+  syncDocumentLanguage,
 } from "@/framework/i18n/locale";
+
+const initialDocumentLanguage = document.documentElement.getAttribute("lang");
 
 describe("locale resolution", () => {
   afterEach(() => {
     window.localStorage.removeItem(LOCALE_STORAGE_KEY);
+    if (initialDocumentLanguage === null) {
+      document.documentElement.removeAttribute("lang");
+      return;
+    }
+    document.documentElement.lang = initialDocumentLanguage;
   });
 
   it("normalizes supported locale aliases", () => {
@@ -66,5 +75,20 @@ describe("locale resolution", () => {
         runtimeLocale: "fr-FR",
       }),
     ).toBe("zh-CN");
+  });
+
+  it("restores the host document language after the last mounted app unmounts", () => {
+    document.documentElement.lang = "fr-FR";
+    const releaseFirst = preserveDocumentLanguage();
+    const releaseSecond = preserveDocumentLanguage();
+
+    syncDocumentLanguage("en-US");
+    releaseFirst();
+
+    expect(document.documentElement.lang).toBe("en-US");
+
+    releaseSecond();
+
+    expect(document.documentElement.lang).toBe("fr-FR");
   });
 });

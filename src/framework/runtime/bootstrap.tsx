@@ -11,6 +11,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
 import i18n from "@/app/locales/i18n";
 import { subscribeAuthBroadcast } from "@/framework/auth/token-store";
+import { preserveDocumentLanguage } from "@/framework/i18n/locale";
 import {
   createRuntimeConfig,
   readWindowRuntimeInput,
@@ -18,7 +19,12 @@ import {
 } from "@/framework/runtime/config";
 import type { RuntimeInput } from "@/framework/runtime/types";
 
-const roots = new WeakMap<Element, ReturnType<typeof createRoot>>();
+type MountedRoot = {
+  releaseDocumentLanguage: () => void;
+  root: ReturnType<typeof createRoot>;
+};
+
+const roots = new WeakMap<Element, MountedRoot>();
 
 let authBroadcastUnsub: (() => void) | undefined;
 
@@ -36,12 +42,12 @@ export function mountApp(container: Element, runtimeInput: RuntimeInput = {}) {
   ensureAuthBroadcastListener();
   const runtimeConfig = createRuntimeConfig(runtimeInput);
   setRuntimeConfig(runtimeConfig);
-  void i18n.changeLanguage(runtimeConfig.locale);
 
   const existingRoot = roots.get(container);
 
   if (existingRoot) {
-    existingRoot.render(
+    void i18n.changeLanguage(runtimeConfig.locale);
+    existingRoot.root.render(
       <StrictMode>
         <App runtimeConfig={runtimeConfig} />
       </StrictMode>,
@@ -49,8 +55,10 @@ export function mountApp(container: Element, runtimeInput: RuntimeInput = {}) {
     return;
   }
 
+  const releaseDocumentLanguage = preserveDocumentLanguage();
   const root = createRoot(container);
-  roots.set(container, root);
+  roots.set(container, { releaseDocumentLanguage, root });
+  void i18n.changeLanguage(runtimeConfig.locale);
   root.render(
     <StrictMode>
       <App runtimeConfig={runtimeConfig} />
@@ -59,13 +67,14 @@ export function mountApp(container: Element, runtimeInput: RuntimeInput = {}) {
 }
 
 export function unmountApp(container: Element) {
-  const root = roots.get(container);
+  const mountedRoot = roots.get(container);
 
-  if (!root) {
+  if (!mountedRoot) {
     return;
   }
 
-  root.unmount();
+  mountedRoot.root.unmount();
+  mountedRoot.releaseDocumentLanguage();
   roots.delete(container);
 }
 
@@ -85,4 +94,3 @@ export function startStandaloneApp() {
     mode: runtimeInput.mode ?? "standalone",
   });
 }
-
