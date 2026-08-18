@@ -49,6 +49,8 @@ export type BusinessProvenanceConversation = {
 export type BusinessProvenanceInteractionListItem = {
   interactionId: string;
   conversationId?: string;
+  /** Chronological position within the conversation; the API list is newest first. */
+  roundNumber?: number;
   questionPreview?: string;
   resultPreview?: string;
   startedAt?: string;
@@ -133,7 +135,7 @@ export async function getBusinessProvenanceInteractions(
   query: BusinessProvenanceQuery,
 ): Promise<BusinessProvenancePage<BusinessProvenanceInteractionListItem>> {
   const response = await http.get<{ entries?: Array<{
-    interaction_id?: string; conversation_id?: string; question_preview?: string; result_preview?: string;
+    interaction_id?: string; conversation_id?: string; round_number?: number; question_preview?: string; result_preview?: string;
     started_at?: string; status?: string; duration_ms?: number;
   }>; total?: number; page?: number; page_size?: number }>(
     `${EE_PROVENANCE_PREFIX}/interactions`,
@@ -141,7 +143,7 @@ export async function getBusinessProvenanceInteractions(
   );
   return {
     entries: (response.data.entries ?? []).map((entry) => ({
-      interactionId: entry.interaction_id ?? "", conversationId: entry.conversation_id,
+      interactionId: entry.interaction_id ?? "", conversationId: entry.conversation_id, roundNumber: entry.round_number,
       questionPreview: entry.question_preview, resultPreview: entry.result_preview,
       startedAt: entry.started_at, status: entry.status, durationMs: entry.duration_ms,
     })),

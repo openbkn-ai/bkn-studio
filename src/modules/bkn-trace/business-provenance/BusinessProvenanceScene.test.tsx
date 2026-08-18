@@ -70,6 +70,18 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("关联轮次")).not.toBeNull();
   });
 
+  it("does not invent a semantic round number when the API omits it", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-legacy", questionPreview: "历史会话", interactionCount: 3 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-legacy", questionPreview: "历史轮次" }], total: 1 });
+    getInteraction.mockResolvedValue({ interactionId: "int-legacy", conversationContext: [], derivedFacts: [], contextRelations: [], operations: [] });
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "历史会话" }));
+
+    expect(await screen.findByText("轮次未记录")).not.toBeNull();
+    expect(screen.queryByText("第 1 轮")).toBeNull();
+  });
+
   beforeAll(() => {
     Object.defineProperty(window, "matchMedia", {
       writable: true,
@@ -253,7 +265,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("完整可溯源")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "查询采购订单" }));
     await waitFor(() => expect(getInteractions).toHaveBeenCalledWith(expect.objectContaining({ conversationId: "conv-1" })));
-    expect(await screen.findByText("1 轮交互")).not.toBeNull();
+    expect(await screen.findByText("2 轮交互")).not.toBeNull();
     expect(await screen.findByText("交互轮次")).not.toBeNull();
     expect(await screen.findByText("调整查询后仍无匹配记录。")).not.toBeNull();
     expect(screen.queryByRole("heading", { name: "业务会话" })).toBeNull();
@@ -314,8 +326,8 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     const firstMarkdown = new Promise<string>((resolve) => { resolveFirstMarkdown = resolve; });
     getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-1", questionPreview: "连续查询", interactionCount: 2, agentName: "Supply Agent" }], total: 1 });
     getInteractions.mockResolvedValue({ entries: [
-      { interactionId: "int-1", questionPreview: "第一轮查询" },
-      { interactionId: "int-2", questionPreview: "第二轮查询" },
+      { interactionId: "int-2", questionPreview: "第二轮查询", roundNumber: 2 },
+      { interactionId: "int-1", questionPreview: "第一轮查询", roundNumber: 1 },
     ], total: 2 });
     getInteraction.mockImplementation((interactionId: string) => Promise.resolve({ interactionId, conversationContext: [], derivedFacts: [], contextRelations: [], operations: [] }));
     getMarkdown.mockImplementation((interactionId: string) => interactionId === "int-1" ? firstMarkdown : Promise.resolve("# 第二轮过程事实"));
