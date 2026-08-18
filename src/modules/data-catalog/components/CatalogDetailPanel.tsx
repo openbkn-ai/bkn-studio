@@ -21,6 +21,7 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
+import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { formatRowCount } from "@/modules/data-catalog/lib/format";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import {
@@ -398,11 +399,13 @@ export function CatalogDetailPanel({
         {!physical && !catalog.internal ? (
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
-              <PermissionGate permissions="resource:create">
-                <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                  {t("dataCatalog.resource.create")}
-                </AppButton>
-              </PermissionGate>
+              {dataCatalogCreationAvailable ? (
+                <PermissionGate permissions="resource:create">
+                  <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                    {t("dataCatalog.resource.create")}
+                  </AppButton>
+                </PermissionGate>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -485,11 +488,13 @@ export function CatalogDetailPanel({
                   {t("dataCatalog.catalog.goDiscoverToDiscover")}
                 </AppButton>
               ) : !physical && !catalog.internal ? (
-                <PermissionGate permissions="resource:create">
-                  <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                    {t("dataCatalog.resource.create")}
-                  </AppButton>
-                </PermissionGate>
+                dataCatalogCreationAvailable ? (
+                  <PermissionGate permissions="resource:create">
+                    <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                      {t("dataCatalog.resource.create")}
+                    </AppButton>
+                  </PermissionGate>
+                ) : null
               ) : null
             }
             description={
