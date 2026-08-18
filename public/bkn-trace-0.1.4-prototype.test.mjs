@@ -134,3 +134,11 @@ test("可观测性设置按可落地的五段信息架构展示", () => {
   assert.doesNotMatch(html, /采样率/);
   assert.doesNotMatch(html, /只归档不清理/);
 });
+
+test("存储与保留不暴露无管理动作的内部 Trace 存储", () => {
+  assert.match(html, />运行日志</);
+  assert.match(html, />审计日志</);
+  assert.doesNotMatch(html, />Trace 查询索引</);
+  assert.doesNotMatch(html, />Interaction 调用事实</);
+  assert.match(html, /已结束交互轮次/);
+});

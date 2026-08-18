@@ -276,6 +276,15 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.settings.readOnlyNotice")).not.toBeNull();
   });
 
+  it("设置页只展示可维护的日志保留项，不暴露内部 Trace 存储", async () => {
+    render(<ObservabilitySettingsScene />);
+
+    expect(await screen.findByText("bknTrace.settings.storage.runtimeLogs")).not.toBeNull();
+    expect(screen.getByText("bknTrace.settings.storage.auditLogs")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.settings.storage.traceIndex")).toBeNull();
+    expect(screen.queryByText("bknTrace.settings.storage.interactionFacts")).toBeNull();
+  });
+
   it("设置页将部分管理审计覆盖说明为可读状态", async () => {
     vi.mocked(listLogSources).mockResolvedValueOnce([{ coveredModules: ["data_resource_knowledge_network"], collectionMethod: "source_adapter", reason: "partial_management_audit_coverage", reliability: "best_effort", sourceId: "vega", status: "healthy" }]);
 
