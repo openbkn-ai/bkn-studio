@@ -11,6 +11,8 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
@@ -51,7 +53,15 @@ export function DataCatalogScene({
 }: DataCatalogSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { runtimeConfig } = useAppServices();
   const [searchParams, setSearchParams] = useSearchParams();
+  // A user who cannot create a connection sees an empty list because nothing has
+  // been granted to them, not because the platform is empty (#986). Offering
+  // "new connection" there sends them to a page they cannot use.
+  const canCreateCatalog = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "catalog:create",
+  });
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [treeCollapsed, setTreeCollapsed] = useState(() => {
     try {
@@ -272,6 +282,15 @@ export function DataCatalogScene({
     }
 
     if (catalogs.length === 0) {
+      if (!canCreateCatalog) {
+        return (
+          <EmptyStatePanel
+            description={t("dataCatalog.unauthorizedDescription")}
+            icon={<DatabaseOutlined />}
+            title={t("dataCatalog.unauthorizedTitle")}
+          />
+        );
+      }
       return (
         <EmptyStatePanel
           action={

@@ -18,7 +18,7 @@ export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
   const canLoadResourceIndexStates = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode: "any",
-    requiredPermissions: ["resource:view_detail", "resource:task_manage"],
+    requiredPermissions: ["resource:view_detail", "catalog:task_manage"],
   });
   const boundResourceIds = useMemo(
     () =>

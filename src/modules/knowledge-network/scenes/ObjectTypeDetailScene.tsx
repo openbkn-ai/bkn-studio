@@ -241,7 +241,7 @@ export function ObjectTypeDetailScene() {
   const canLoadResourceIndexStates = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode: "any",
-    requiredPermissions: ["resource:view_detail", "resource:task_manage"],
+    requiredPermissions: ["resource:view_detail", "catalog:task_manage"],
   });
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
