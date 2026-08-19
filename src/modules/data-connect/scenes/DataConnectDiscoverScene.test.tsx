@@ -82,8 +82,9 @@ vi.mock("@/modules/data-connect/components/DiscoverRunNowModal", () => ({
 }));
 
 vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
-  DiscoverScheduleFormModal: ({ initialValue, onSubmit, submitting }: {
+  DiscoverScheduleFormModal: ({ initialValue, onCancel, onSubmit, submitting }: {
     initialValue: { expectedUpdateTime: number } | null;
+    onCancel: () => void;
     onSubmit: (payload: {
       catalogId: string;
       cronExpr: string;
@@ -95,6 +96,7 @@ vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
   }) => initialValue ? (
     <>
       <output data-testid="schedule-submitting">{String(submitting)}</output>
+      <button onClick={onCancel} type="button">cancel schedule</button>
       <button
         onClick={() => void onSubmit({
           catalogId: "catalog-1",
@@ -182,6 +184,26 @@ describe("DataConnectDiscoverScene", () => {
     await waitFor(() => expect(updateScheduleMock).toHaveBeenCalledTimes(1));
     fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
 
+    expect((await screen.findByTestId("schedule-submitting")).textContent).toBe("false");
+  });
+
+  it("clears the submitting state when a schedule modal closes during submission", async () => {
+    let resolveUpdate: (() => void) | undefined;
+    updateScheduleMock.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveUpdate = resolve; }),
+    );
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    fireEvent.click(await screen.findByText("dataConnect.discoverTabSchedules"));
+    fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: "submit schedule 100" }));
+    expect((await screen.findByTestId("schedule-submitting")).textContent).toBe("true");
+
+    fireEvent.click(screen.getByRole("button", { name: "cancel schedule" }));
+    await waitFor(() => expect(screen.queryByTestId("schedule-submitting")).toBeNull());
+    resolveUpdate?.();
+
+    fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
     expect((await screen.findByTestId("schedule-submitting")).textContent).toBe("false");
   });
 });

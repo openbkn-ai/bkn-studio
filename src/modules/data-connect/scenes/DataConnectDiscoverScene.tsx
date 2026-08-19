@@ -979,6 +979,7 @@ export function DataConnectDiscoverScene({
           initialValue={scheduleModalState.mode === "edit" ? editingSchedule : null}
           mode={scheduleModalState.mode}
           onCancel={() => {
+            setScheduleModalSubmitting(false);
             setScheduleModalState(null);
             setEditingSchedule(null);
           }}
