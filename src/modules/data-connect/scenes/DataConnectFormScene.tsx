@@ -284,7 +284,7 @@ export function DataConnectFormScene({
         await createDataConnectRecord(payload, { skipErrorToast: true });
       } else if (recordId) {
         if (!record) {
-          throw new Error("Catalog record is required for update");
+          throw new Error(t("common.requestFailed"));
         }
         await updateDataConnectRecord(recordId, {
           ...payload,
@@ -334,7 +334,7 @@ export function DataConnectFormScene({
                 });
               } else if (recordId) {
                 if (!record) {
-                  throw new Error("Catalog record is required for update");
+                  throw new Error(t("common.requestFailed"));
                 }
                 await updateDataConnectRecord(recordId, {
                   ...retryPayload,

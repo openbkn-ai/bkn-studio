@@ -82,7 +82,7 @@ vi.mock("@/modules/data-connect/components/DiscoverRunNowModal", () => ({
 }));
 
 vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
-  DiscoverScheduleFormModal: ({ initialValue, onSubmit }: {
+  DiscoverScheduleFormModal: ({ initialValue, onSubmit, submitting }: {
     initialValue: { expectedUpdateTime: number } | null;
     onSubmit: (payload: {
       catalogId: string;
@@ -91,19 +91,23 @@ vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
       name: string;
       strategy: "full_sync";
     }) => Promise<void>;
+    submitting: boolean;
   }) => initialValue ? (
-    <button
-      onClick={() => void onSubmit({
-        catalogId: "catalog-1",
-        cronExpr: "0 * * * *",
-        enabled: true,
-        name: "nightly",
-        strategy: "full_sync",
-      })}
-      type="button"
-    >
-      submit schedule {initialValue.expectedUpdateTime}
-    </button>
+    <>
+      <output data-testid="schedule-submitting">{String(submitting)}</output>
+      <button
+        onClick={() => void onSubmit({
+          catalogId: "catalog-1",
+          cronExpr: "0 * * * *",
+          enabled: true,
+          name: "nightly",
+          strategy: "full_sync",
+        })}
+        type="button"
+      >
+        submit schedule {initialValue.expectedUpdateTime}
+      </button>
+    </>
   ) : null,
 }));
 
@@ -165,5 +169,19 @@ describe("DataConnectDiscoverScene", () => {
       await screen.findByRole("button", { name: "submit schedule 200" }),
     ).toBeTruthy();
     await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("clears the submitting state before closing a successfully saved schedule", async () => {
+    updateScheduleMock.mockResolvedValue(undefined);
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    fireEvent.click(await screen.findByText("dataConnect.discoverTabSchedules"));
+    fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: "submit schedule 100" }));
+
+    await waitFor(() => expect(updateScheduleMock).toHaveBeenCalledTimes(1));
+    fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
+
+    expect((await screen.findByTestId("schedule-submitting")).textContent).toBe("false");
   });
 });

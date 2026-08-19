@@ -591,7 +591,7 @@ export function DataConnectDiscoverScene({
 
       if (scheduleModalState?.mode === "edit" && scheduleModalState.scheduleId) {
         if (!editingSchedule) {
-          throw new Error("Discover schedule is required for update");
+          throw new Error(t("common.requestFailed"));
         }
         await updateDataConnectDiscoverSchedule(
           scheduleModalState.scheduleId,
@@ -607,6 +607,7 @@ export function DataConnectDiscoverScene({
       if (editingScheduleIdentityRef.current !== submittedScheduleIdentity) {
         return;
       }
+      setScheduleModalSubmitting(false);
       setScheduleModalState(null);
       setEditingSchedule(null);
       void message.success(t("common.success"));
