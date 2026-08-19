@@ -91,6 +91,7 @@ describe("LicenseManagementScene", () => {
       await waitFor(() => expect(getLicenseDetailMock).toHaveBeenCalledTimes(1));
 
       expect(screen.queryByRole("button", { name: removeButtonName })).toBeNull();
+      expect(screen.getByText(`systemAdmin.license.statusDesc.${state}`)).toBeTruthy();
       expect(deleteLicenseMock).not.toHaveBeenCalled();
       expect(modalConfirmMock).not.toHaveBeenCalled();
       expect(messageMock.success).not.toHaveBeenCalledWith("systemAdmin.license.toast.deleted");

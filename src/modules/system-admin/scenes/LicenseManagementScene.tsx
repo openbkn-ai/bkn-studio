@@ -144,6 +144,9 @@ export function LicenseManagementScene() {
     if (detail.state === "fallback_community") {
       return t("systemAdmin.license.statusDesc.fallback_community");
     }
+    if (detail.state === "trial" || detail.state === "unlicensed") {
+      return t(`systemAdmin.license.statusDesc.${detail.state}`);
+    }
     if (detail.state === "invalid") {
       return t("systemAdmin.license.statusDesc.invalid");
     }
