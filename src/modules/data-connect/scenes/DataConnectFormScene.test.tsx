@@ -25,6 +25,7 @@ const createDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const getDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const listDataConnectConnectorTypesMock = vi.hoisted(() => vi.fn());
 const testDataConnectConfigMock = vi.hoisted(() => vi.fn());
+const updateDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const messageErrorMock = vi.hoisted(() => vi.fn());
 const messageSuccessMock = vi.hoisted(() => vi.fn());
 
@@ -86,7 +87,7 @@ vi.mock("@/modules/data-connect/services/data-connect.service", () => ({
   isDataConnectConnectionTestFailure: vi.fn(() => false),
   listDataConnectConnectorTypes: listDataConnectConnectorTypesMock,
   testDataConnectConfig: testDataConnectConfigMock,
-  updateDataConnectRecord: vi.fn(),
+  updateDataConnectRecord: updateDataConnectRecordMock,
 }));
 
 /**
@@ -142,8 +143,11 @@ describe("DataConnectFormScene · connection preflight", () => {
     messageSuccessMock.mockReset();
     createDataConnectRecordMock.mockReset();
     createDataConnectRecordMock.mockResolvedValue(undefined);
+    getDataConnectRecordMock.mockReset();
     testDataConnectConfigMock.mockReset();
     testDataConnectConfigMock.mockResolvedValue(undefined);
+    updateDataConnectRecordMock.mockReset();
+    updateDataConnectRecordMock.mockResolvedValue(undefined);
     listDataConnectConnectorTypesMock.mockResolvedValue([
       {
         category: "table",
@@ -171,6 +175,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       creatorName: "-",
       description: "",
       enabled: true,
+      expectedUpdateTime: 100,
       healthCheckResult: "",
       healthStatus: "healthy",
       id: "catalog-1",
@@ -240,6 +245,73 @@ describe("DataConnectFormScene · connection preflight", () => {
       );
     });
     expect(messageSuccessMock).not.toHaveBeenCalled();
+  });
+
+  it("reloads the latest record after an update conflict", async () => {
+    updateDataConnectRecordMock.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409 },
+    });
+    getDataConnectRecordMock
+      .mockResolvedValueOnce({
+        category: "table",
+        connectorConfig: { host: "db.example.com" },
+        connectorType: "postgresql",
+        createTime: "-",
+        creatorName: "-",
+        description: "",
+        enabled: true,
+        expectedUpdateTime: 100,
+        healthCheckResult: "",
+        healthStatus: "healthy",
+        id: "catalog-1",
+        lastCheckTime: "-",
+        metadata: {},
+        mode: "local",
+        name: "orders",
+        operations: [],
+        status: "enabled",
+        tags: [],
+        type: "physical",
+        updateTime: "-",
+        updaterName: "-",
+      })
+      .mockResolvedValueOnce({
+        category: "table",
+        connectorConfig: { host: "db.example.com" },
+        connectorType: "postgresql",
+        createTime: "-",
+        creatorName: "-",
+        description: "changed elsewhere",
+        enabled: true,
+        expectedUpdateTime: 200,
+        healthCheckResult: "",
+        healthStatus: "healthy",
+        id: "catalog-1",
+        lastCheckTime: "-",
+        metadata: {},
+        mode: "local",
+        name: "latest orders",
+        operations: [],
+        status: "enabled",
+        tags: [],
+        type: "physical",
+        updateTime: "-",
+        updaterName: "-",
+      });
+
+    render(<DataConnectFormScene mode="edit" recordId="catalog-1" />);
+
+    await screen.findByDisplayValue("orders");
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    expect(await screen.findByDisplayValue("latest orders")).toBeTruthy();
+    expect(getDataConnectRecordMock).toHaveBeenCalledTimes(2);
+    expect(updateDataConnectRecordMock).toHaveBeenCalledWith(
+      "catalog-1",
+      expect.objectContaining({ expectedUpdateTime: 100 }),
+      { skipErrorToast: true },
+    );
   });
 
   it("normalizes SQL Server schemas and options in the connection test request", async () => {

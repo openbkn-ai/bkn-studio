@@ -8,7 +8,7 @@
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Input, Select, Space, Switch, Tabs, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -16,7 +16,10 @@ import type { DataConnectDiscoverSceneProps } from "@/modules/data-connect/contr
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import {
+  extractRequestErrorMessage,
+  isRequestConflict,
+} from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
@@ -119,6 +122,21 @@ export function DataConnectDiscoverScene({
   const [runNowOpen, setRunNowOpen] = useState(false);
   const [runNowSubmitting, setRunNowSubmitting] = useState(false);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const editingScheduleIdentityKey = scheduleModalState
+    ? scheduleModalState.mode === "edit"
+      ? `edit:${scheduleModalState.scheduleId}`
+      : "create"
+    : null;
+  const editingScheduleIdentityRef = useRef({
+    generation: 0,
+    key: editingScheduleIdentityKey,
+  });
+  if (editingScheduleIdentityRef.current.key !== editingScheduleIdentityKey) {
+    editingScheduleIdentityRef.current = {
+      generation: editingScheduleIdentityRef.current.generation + 1,
+      key: editingScheduleIdentityKey,
+    };
+  }
 
   const catalogNameMap = useMemo(
     () => new Map(catalogs.map((item) => [item.id, item.name])),
@@ -525,20 +543,31 @@ export function DataConnectDiscoverScene({
       return;
     }
 
+    let active = true;
+    const scheduleId = scheduleModalState.scheduleId;
     void (async () => {
       try {
-        const schedule = await getDataConnectDiscoverSchedule(scheduleModalState.scheduleId);
-        setEditingSchedule(schedule);
+        const schedule = await getDataConnectDiscoverSchedule(scheduleId);
+        if (active) {
+          setEditingSchedule(schedule);
+        }
       } catch (error) {
-        setEditingSchedule(null);
-        void message.error(extractRequestErrorMessage(error));
+        if (active) {
+          setEditingSchedule(null);
+          void message.error(extractRequestErrorMessage(error));
+        }
       }
     })();
+
+    return () => {
+      active = false;
+    };
   }, [message, scheduleModalState]);
 
   const handleScheduleSubmit = async (
     payload: DiscoverScheduleFormModalSubmitPayload,
   ) => {
+    const submittedScheduleIdentity = editingScheduleIdentityRef.current;
     setScheduleModalSubmitting(true);
 
     try {
@@ -575,14 +604,40 @@ export function DataConnectDiscoverScene({
         await createDataConnectDiscoverSchedule(requestPayload);
       }
 
+      if (editingScheduleIdentityRef.current !== submittedScheduleIdentity) {
+        return;
+      }
       setScheduleModalState(null);
       setEditingSchedule(null);
       void message.success(t("common.success"));
       await Promise.all([loadSchedules(), loadTasks()]);
     } catch (error) {
+      if (editingScheduleIdentityRef.current !== submittedScheduleIdentity) {
+        return;
+      }
       void message.error(extractRequestErrorMessage(error));
+
+      if (
+        isRequestConflict(error) &&
+        scheduleModalState?.mode === "edit"
+      ) {
+        const submittedScheduleId = scheduleModalState.scheduleId;
+        try {
+          const latestSchedule =
+            await getDataConnectDiscoverSchedule(submittedScheduleId);
+          if (editingScheduleIdentityRef.current === submittedScheduleIdentity) {
+            setEditingSchedule(latestSchedule);
+          }
+        } catch (refreshError) {
+          if (editingScheduleIdentityRef.current === submittedScheduleIdentity) {
+            void message.error(extractRequestErrorMessage(refreshError));
+          }
+        }
+      }
     } finally {
-      setScheduleModalSubmitting(false);
+      if (editingScheduleIdentityRef.current === submittedScheduleIdentity) {
+        setScheduleModalSubmitting(false);
+      }
     }
   };
 

@@ -50,10 +50,9 @@ describe("DiscoverScheduleFormModal", () => {
       "dataConnect.discoverCronExprPlaceholder",
     );
     fireEvent.change(cronInput, { target: { value: "*/30 * * * *" } });
-    fireEvent.change(
-      screen.getByPlaceholderText("dataConnect.discoverScheduleNamePlaceholder"),
-      { target: { value: "Too frequent" } },
-    );
+    fireEvent.change(screen.getByLabelText(/dataConnect\.discoverScheduleName/), {
+      target: { value: "Too frequent" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
     await waitFor(() => {

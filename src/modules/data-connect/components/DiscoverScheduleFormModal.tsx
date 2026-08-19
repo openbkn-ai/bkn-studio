@@ -314,13 +314,14 @@ function InlineField({
   span = "half",
   valuePropName,
 }: InlineFieldProps) {
+  const controlId = Array.isArray(name) ? name.join("_") : String(name);
   return (
     <div
       className={[styles.field, span === "full" ? styles.spanFull : styles.spanHalf]
         .filter(Boolean)
         .join(" ")}
     >
-      <label className={styles.fieldLabel}>
+      <label className={styles.fieldLabel} htmlFor={controlId}>
         {required ? <span className={styles.requiredMark}>*</span> : null}
         <span>{label}</span>
       </label>

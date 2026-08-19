@@ -336,6 +336,26 @@ describe("catalog.service · mock health check schedule", () => {
     expect(enabled.nextRun).toContain("02:00:00");
   });
 
+  it("schedules inherit mode at the next default cron boundary", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(
+      Date.parse("2026-08-19T10:37:12Z"),
+    );
+    try {
+      const { getCatalogHealthCheckSchedule, updateCatalogHealthCheckSchedule } =
+        await import("@/shared/catalog/catalog.service");
+      const current = await getCatalogHealthCheckSchedule("cat-001");
+      const inherited = await updateCatalogHealthCheckSchedule(
+        "cat-001",
+        { mode: "inherit" },
+        current.expectedUpdateTime,
+      );
+
+      expect(inherited.nextRun).toContain("19:00:00");
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it("rejects stale catalog and health check schedule versions", async () => {
     const {
       getCatalog,

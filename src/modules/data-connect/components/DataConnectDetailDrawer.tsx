@@ -7,12 +7,15 @@
 
 import { Alert, Descriptions, Drawer, Empty, Spin } from "antd";
 import type { TFunction } from "i18next";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import {
+  extractRequestErrorMessage,
+  isRequestConflict,
+} from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { HealthCheckScheduleFormModal } from "@/modules/data-connect/components/HealthCheckScheduleFormModal";
 import {
@@ -51,6 +54,14 @@ export function DataConnectDetailDrawer({
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [scheduleUpdating, setScheduleUpdating] = useState(false);
+  const recordIdentityKey = open ? recordId : "";
+  const recordIdentityRef = useRef({ generation: 0, key: recordIdentityKey });
+  if (recordIdentityRef.current.key !== recordIdentityKey) {
+    recordIdentityRef.current = {
+      generation: recordIdentityRef.current.generation + 1,
+      key: recordIdentityKey,
+    };
+  }
 
   useEffect(() => {
     if (!open) {
@@ -314,21 +325,47 @@ export function DataConnectDetailDrawer({
             setScheduleModalOpen(false);
           }}
           onSubmit={async (input) => {
+            const submittedRecordId = recordId;
+            const submittedRecordIdentity = recordIdentityRef.current;
+
             try {
               setScheduleUpdating(true);
               const nextSchedule =
                 await updateDataConnectHealthCheckSchedule(
-                  recordId,
+                  submittedRecordId,
                   input,
                   schedule.expectedUpdateTime,
                 );
+              if (recordIdentityRef.current !== submittedRecordIdentity) {
+                return;
+              }
               setSchedule(nextSchedule);
               setScheduleModalOpen(false);
               message.success(t("common.success"));
             } catch (error) {
+              if (recordIdentityRef.current !== submittedRecordIdentity) {
+                return;
+              }
               void message.error(extractRequestErrorMessage(error));
+              if (isRequestConflict(error)) {
+                try {
+                  const latestSchedule =
+                    await getDataConnectHealthCheckSchedule(submittedRecordId);
+                  if (recordIdentityRef.current !== submittedRecordIdentity) {
+                    return;
+                  }
+                  setSchedule(latestSchedule);
+                  setScheduleError(null);
+                } catch (refreshError) {
+                  if (recordIdentityRef.current === submittedRecordIdentity) {
+                    setScheduleError(extractRequestErrorMessage(refreshError));
+                  }
+                }
+              }
             } finally {
-              setScheduleUpdating(false);
+              if (recordIdentityRef.current === submittedRecordIdentity) {
+                setScheduleUpdating(false);
+              }
             }
           }}
           open={scheduleModalOpen}

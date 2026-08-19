@@ -5,13 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
+const updateCatalogResourceMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -25,7 +26,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
   getCatalogResource: getCatalogResourceMock,
-  updateCatalogResource: vi.fn(),
+  updateCatalogResource: updateCatalogResourceMock,
 }));
 
 import { ResourceDetailPanel } from "./ResourceDetailPanel";
@@ -47,6 +48,7 @@ const resource: CatalogResource = {
 describe("ResourceDetailPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    updateCatalogResourceMock.mockResolvedValue(undefined);
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
       addListener: vi.fn(),
@@ -118,5 +120,46 @@ describe("ResourceDetailPanel", () => {
     await Promise.resolve();
 
     expect(onResourceRefreshed).not.toHaveBeenCalled();
+  });
+
+  it("refreshes the resource version after an update conflict", async () => {
+    const latestResource = {
+      ...resource,
+      description: "server description",
+      expectedUpdateTime: 200,
+    };
+    const onResourceRefreshed = vi.fn();
+    updateCatalogResourceMock.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409 },
+    });
+    getCatalogResourceMock.mockResolvedValue(latestResource);
+
+    const { container } = render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          catalog={null}
+          onResourceRefreshed={onResourceRefreshed}
+          resource={{ ...resource, expectedUpdateTime: 100 }}
+        />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+    const descriptionInput = container.querySelector("textarea");
+    if (!descriptionInput) {
+      throw new Error("resource description input not found");
+    }
+    fireEvent.change(descriptionInput, {
+      target: { value: "local description" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() => {
+      expect(onResourceRefreshed).toHaveBeenCalledWith(latestResource);
+    });
+    expect(getCatalogResourceMock).toHaveBeenCalledWith(resource.id);
+    expect(await screen.findByText("server description")).toBeTruthy();
   });
 });

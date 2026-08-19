@@ -554,7 +554,9 @@ function buildMockHealthCheckSchedule(
   const nextRunValue =
     input.mode === "enabled"
       ? calculateNextHourlyCronRun(cronExpr, now)
-      : now + 3_600_000;
+      : input.mode === "inherit"
+        ? calculateNextHourlyCronRun("0 * * * *", now)
+        : undefined;
   return {
     catalogId,
     cronExpr:
