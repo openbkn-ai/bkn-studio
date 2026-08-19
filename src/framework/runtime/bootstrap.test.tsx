@@ -62,6 +62,15 @@ describe("standalone bootstrap locale persistence", () => {
     expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("zh-CN");
   });
 
+  it("persists an English login-page cookie over an older Chinese Studio preference", () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "zh-CN");
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/`;
+
+    startStandaloneApp();
+
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en-US");
+  });
+
   it("does not persist locale for hosted runtime mode", () => {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
     document.cookie = `${LOCALE_COOKIE_NAME}=zh-CN; Path=/`;

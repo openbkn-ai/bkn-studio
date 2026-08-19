@@ -14,6 +14,7 @@ import {
   persistLocale,
   preserveDocumentLanguage,
   readLocaleCookie,
+  readLocaleCookieValue,
   readPersistedLocale,
   resolveSupportedLocale,
   syncDocumentLanguage,
@@ -67,6 +68,12 @@ describe("locale resolution", () => {
         browserLanguages: ["zh-CN"],
         persistedLocale: "zh-CN",
       }),
+    ).toBe("en-US");
+  });
+
+  it("uses the last repeated login locale cookie value", () => {
+    expect(
+      readLocaleCookieValue(`${LOCALE_COOKIE_NAME}=zh-CN; other=value; ${LOCALE_COOKIE_NAME}=en-US`),
     ).toBe("en-US");
   });
 

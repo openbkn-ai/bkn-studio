@@ -84,19 +84,41 @@ export function readLocaleCookie(): string | null {
     return null;
   }
 
-  for (const item of document.cookie.split(";")) {
+  return readLocaleCookieValue(document.cookie);
+}
+
+export function readLocaleCookieValue(cookieHeader: string): string | null {
+  let matchedValue: string | null = null;
+
+  for (const item of cookieHeader.split(";")) {
     const [rawName, ...rawValue] = item.trim().split("=");
     if (rawName !== LOCALE_COOKIE_NAME) {
       continue;
     }
     const value = rawValue.join("=");
     try {
-      return decodeURIComponent(value);
+      matchedValue = decodeURIComponent(value);
     } catch {
-      return value;
+      matchedValue = value;
     }
   }
-  return null;
+
+  return matchedValue;
+}
+
+export function clearLegacyLocaleCookies(basename = "/studio") {
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return;
+  }
+
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const legacyPaths = new Set<string>();
+  addLegacyLocaleCookiePath(legacyPaths, basename);
+  addLegacyLocaleCookiePath(legacyPaths, defaultCookiePath(window.location.pathname));
+
+  for (const path of legacyPaths) {
+    document.cookie = `${LOCALE_COOKIE_NAME}=; Path=${path}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`;
+  }
 }
 
 export function persistLocale(locale: SupportedLocale) {
@@ -104,6 +126,7 @@ export function persistLocale(locale: SupportedLocale) {
     return;
   }
 
+  clearLegacyLocaleCookies();
   window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
   document.cookie = `${LOCALE_COOKIE_NAME}=${encodeURIComponent(locale)}; Path=/; Max-Age=${LOCALE_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
@@ -167,4 +190,33 @@ function readBrowserLanguages(): string[] {
     return [];
   }
   return navigator.languages?.length ? [...navigator.languages] : [navigator.language];
+}
+
+function addLegacyLocaleCookiePath(paths: Set<string>, path: string | null | undefined) {
+  const normalizedPath = normalizeCookiePath(path);
+  if (normalizedPath && normalizedPath !== "/") {
+    paths.add(normalizedPath);
+  }
+}
+
+function normalizeCookiePath(path: string | null | undefined) {
+  const trimmed = path?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  const withoutTrailingSlash = withLeadingSlash.replace(/\/+$/, "");
+  return withoutTrailingSlash || "/";
+}
+
+function defaultCookiePath(pathname: string) {
+  if (!pathname.startsWith("/") || pathname === "/") {
+    return "/";
+  }
+
+  const rightmostSlash = pathname.lastIndexOf("/");
+  if (rightmostSlash <= 0) {
+    return "/";
+  }
+  return pathname.slice(0, rightmostSlash);
 }
