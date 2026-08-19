@@ -31,6 +31,7 @@ describe("locale resolution", () => {
     window.localStorage.removeItem(LOCALE_STORAGE_KEY);
     document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/; Max-Age=0`;
     document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/studio; Max-Age=0`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/studio/; Max-Age=0`;
     window.history.replaceState(null, "", initialLocation);
     if (initialDocumentLanguage === null) {
       document.documentElement.removeAttribute("lang");
@@ -77,11 +78,14 @@ describe("locale resolution", () => {
     ).toBe("en-US");
   });
 
-  it("re-syncs the login-page locale after a standalone login returns to an already mounted app", () => {
-    window.localStorage.setItem(LOCALE_STORAGE_KEY, "zh-CN");
-    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/`;
+  it("re-syncs the root login-page locale after a standalone login returns to an already mounted app", () => {
+    window.history.replaceState(null, "", "/studio/callback");
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    document.cookie = `${LOCALE_COOKIE_NAME}=zh-CN; Path=/`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/studio/`;
 
-    expect(resolveAuthenticatedStandaloneLocale("zh-CN", "standalone")).toBe("en-US");
+    expect(resolveAuthenticatedStandaloneLocale("en-US", "standalone", "/studio/")).toBe("zh-CN");
+    expect(readLocaleCookie()).toBe("zh-CN");
   });
 
   it("keeps hosted runtime locale isolated from the standalone login-page cookie", () => {
@@ -130,6 +134,30 @@ describe("locale resolution", () => {
     document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/; Max-Age=0`;
 
     expect(readLocaleCookie()).toBeNull();
+  });
+
+  it("clears trailing-slash legacy path-scoped cookies while keeping the root login locale cookie", () => {
+    window.history.replaceState(null, "", "/studio/callback");
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/studio/`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=zh-CN; Path=/`;
+
+    clearLegacyLocaleCookies("/studio/");
+
+    expect(readLocaleCookie()).toBe("zh-CN");
+  });
+
+  it("emits both normalized and trailing-slash legacy cookie deletions", () => {
+    const cookieSetter = vi.spyOn(Document.prototype, "cookie", "set");
+
+    clearLegacyLocaleCookies("studio/");
+
+    const writes = cookieSetter.mock.calls.map(([value]) => value);
+    expect(writes.some((value) => value.includes(`${LOCALE_COOKIE_NAME}=; Path=/studio;`))).toBe(
+      true,
+    );
+    expect(writes.some((value) => value.includes(`${LOCALE_COOKIE_NAME}=; Path=/studio/;`))).toBe(
+      true,
+    );
   });
 
   it("does not delete the root locale cookie when legacy paths normalize to root", () => {

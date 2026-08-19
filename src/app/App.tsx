@@ -32,7 +32,11 @@ export function App({ runtimeConfig }: AppProps) {
   // permissions), and update global runtimeConfig read by HTTP interceptors and other consumers.
   const handleCurrentUser = useCallback((currentUser: RuntimeUser) => {
     setConfig((previous) => {
-      const locale = resolveAuthenticatedStandaloneLocale(previous.locale, previous.mode);
+      const locale = resolveAuthenticatedStandaloneLocale(
+        previous.locale,
+        previous.mode,
+        previous.router.basename,
+      );
       if (locale !== previous.locale) {
         persistLocale(locale);
         void i18n.changeLanguage(locale);

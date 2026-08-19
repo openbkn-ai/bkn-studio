@@ -74,10 +74,13 @@ export function resolveSupportedLocale({
 export function resolveAuthenticatedStandaloneLocale(
   currentLocale: SupportedLocale,
   mode: RuntimeConfig["mode"],
+  basename = "/studio",
 ): SupportedLocale {
   if (mode !== "standalone") {
     return currentLocale;
   }
+
+  clearLegacyLocaleCookies(basename);
 
   return resolveSupportedLocale({
     deploymentDefaultLocale: currentLocale,
@@ -208,6 +211,7 @@ function addLegacyLocaleCookiePath(paths: Set<string>, path: string | null | und
   const normalizedPath = normalizeCookiePath(path);
   if (normalizedPath && normalizedPath !== "/") {
     paths.add(normalizedPath);
+    paths.add(`${normalizedPath}/`);
   }
 }
 
