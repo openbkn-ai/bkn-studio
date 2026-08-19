@@ -43,6 +43,10 @@ const { TextArea } = Input;
 
 type ActionKind = "delete" | "import" | "online" | null;
 
+function canRemoveLicense(detail: LicenseDetail | null) {
+  return detail !== null && detail.state !== "trial" && detail.state !== "unlicensed";
+}
+
 function formatUnixSeconds(value: number | undefined, locale: string, permanentText: string) {
   if (value === undefined || value === null) {
     return "-";
@@ -139,6 +143,9 @@ export function LicenseManagementScene() {
     }
     if (detail.state === "fallback_community") {
       return t("systemAdmin.license.statusDesc.fallback_community");
+    }
+    if (detail.state === "trial" || detail.state === "unlicensed") {
+      return t(`systemAdmin.license.statusDesc.${detail.state}`);
     }
     if (detail.state === "invalid") {
       return t("systemAdmin.license.statusDesc.invalid");
@@ -330,17 +337,18 @@ export function LicenseManagementScene() {
           <AppButton icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
             {t("common.refresh")}
           </AppButton>
-          <PermissionGate permissions={systemAdminPermissions.licenseManage}>
-            <AppButton
-              danger
-              disabled={!detail || detail.state === "invalid"}
-              icon={<DeleteOutlined />}
-              loading={action === "delete"}
-              onClick={handleDelete}
-            >
-              {t("systemAdmin.license.delete")}
-            </AppButton>
-          </PermissionGate>
+          {canRemoveLicense(detail) ? (
+            <PermissionGate permissions={systemAdminPermissions.licenseManage}>
+              <AppButton
+                danger
+                icon={<DeleteOutlined />}
+                loading={action === "delete"}
+                onClick={handleDelete}
+              >
+                {t("systemAdmin.license.delete")}
+              </AppButton>
+            </PermissionGate>
+          ) : null}
         </div>
       </div>
 
