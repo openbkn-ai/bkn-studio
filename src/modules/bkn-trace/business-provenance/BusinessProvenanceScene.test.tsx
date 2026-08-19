@@ -126,8 +126,8 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     fireEvent.change(screen.getByPlaceholderText("搜索问题、结果或会话 ID"), { target: { value: "采购" } });
     fireEvent.change(screen.getByPlaceholderText("Agent / 应用"), { target: { value: "Cursor" } });
     fireEvent.change(screen.getByPlaceholderText("知识网络"), { target: { value: "supply" } });
-    fireEvent.mouseDown(screen.getByPlaceholderText("运行状态"));
-    fireEvent.click(await screen.findByText("运行中"));
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "运行状态" }));
+    fireEvent.click(await screen.findByText("进行中"));
     expect(getConversations).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", { name: /查\s*询/ }));
