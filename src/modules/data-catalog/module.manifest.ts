@@ -17,6 +17,10 @@ export const dataCatalogModuleManifest = {
     "catalog:task_manage",
     "catalog:resource_manage",
     "resource:view_detail",
+    // 后端两个动词都认（老动词在前、短路），所以这里两边都要声明:自定义角色
+    // 手上还是 resource:*，只问 catalog:* 会让它们按钮全消失而接口其实可用。
+    "resource:create",
+    "resource:task_manage",
   ],
   requiresShell: true,
   supportsEmbedded: false,

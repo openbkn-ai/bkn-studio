@@ -125,7 +125,8 @@ export function IndexBuildListScene() {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const canManageResourceTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "catalog:task_manage",
+    mode: "any",
+    requiredPermissions: ["resource:task_manage", "catalog:task_manage"],
   });
 
   // Query parameters for server pagination, sorting, and status filtering.
@@ -578,7 +579,7 @@ export function IndexBuildListScene() {
             <AppButton icon={<ReloadOutlined />} onClick={() => void loadTasks()}>
               {t("common.refresh")}
             </AppButton>
-            <PermissionGate permissions="catalog:task_manage">
+            <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
               <AppButton
                 danger
                 disabled={selectedKeys.length === 0}

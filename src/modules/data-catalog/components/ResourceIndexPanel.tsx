@@ -309,21 +309,21 @@ export function ResourceIndexPanel({
             {t("common.detail")}
           </AppButton>
           {canManageBuildTasks && ACTIVE_TASK_STATUSES.has(record.status) ? (
-            <PermissionGate permissions="catalog:task_manage">
+            <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
               <AppButton onClick={() => void pauseOrResume(record)} type="link">
                 {pauseResumeLabelOf(record)}
               </AppButton>
             </PermissionGate>
           ) : null}
           {canManageBuildTasks && record.status === "failed" ? (
-            <PermissionGate permissions="catalog:task_manage">
+            <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
               <AppButton onClick={() => void retry(record)} type="link">
                 {t("dataCatalog.task.rerun")}
               </AppButton>
             </PermissionGate>
           ) : null}
           {canManageBuildTasks ? (
-            <PermissionGate permissions="catalog:task_manage">
+            <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
               <AppButton danger onClick={() => remove(record)} type="link">
                 {t("common.delete")}
               </AppButton>
@@ -392,14 +392,14 @@ export function ResourceIndexPanel({
             (activeTask.status === "listening" ||
               activeTask.status === "running" ||
               activeTask.status === "pending") ? (
-              <PermissionGate permissions="catalog:task_manage">
+              <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
                 <AppButton onClick={() => void pauseOrResume(activeTask)} size="small">
                   {pauseResumeLabel}
                 </AppButton>
               </PermissionGate>
             ) : null}
             {canManageBuildTasks && activeTask?.status === "paused" ? (
-              <PermissionGate permissions="catalog:task_manage">
+              <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
                 <AppButton
                   disabled={buildActionsDisabled}
                   onClick={() => void pauseOrResume(activeTask)}
@@ -410,7 +410,7 @@ export function ResourceIndexPanel({
               </PermissionGate>
             ) : null}
             {canManageBuildTasks && latest?.status === "failed" ? (
-              <PermissionGate permissions="catalog:task_manage">
+              <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
                 <AppButton
                   disabled={buildActionsDisabled}
                   onClick={() => {
@@ -467,7 +467,7 @@ export function ResourceIndexPanel({
                 {t("dataCatalog.indexWorkspace.launchTitle")}
               </h3>
             </div>
-            <PermissionGate permissions="catalog:task_manage">
+            <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
               <BuildTaskLaunchPanel
                 active={active && indexView === "tasks"}
                 disabled={buildActionsDisabled}

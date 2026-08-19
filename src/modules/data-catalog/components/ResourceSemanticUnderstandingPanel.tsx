@@ -100,7 +100,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       key: "actions", title: t("common.actions"), width: 160, fixed: "right" as const,
       render: (_: unknown, task: SemanticUnderstandingTaskSummary) => <Space className={styles.actionGroup} size={4}>
         <AppButton type="link" onClick={() => setDetailTaskId(task.id)}>{t("common.detail")}</AppButton>
-        <PermissionGate permissions="catalog:task_manage">
+        <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
           <AppButton danger disabled={task.status === "pending" || task.status === "running"} type="link" onClick={() => void modal.confirm({
             title: t("dataCatalog.taskManagement.semantic.deleteTitle"),
             content: t("dataCatalog.taskManagement.semantic.deleteDescription", { id: task.id }),
@@ -120,7 +120,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       </div>
       <Space>
         <AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton>
-        <PermissionGate permissions="catalog:task_manage">
+        <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
           {/*
             语义理解任务是专业档能力,拦在页面层(ResourceWorkspaceScene 的 RequireEdition):
             能走到这颗按钮,说明那一层已经放行。这里只标不挡——再挡一道,上面解开了这里

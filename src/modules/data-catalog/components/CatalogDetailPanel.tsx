@@ -154,7 +154,8 @@ export function CatalogDetailPanel({
   const showIndexState = !catalog.internal;
   const canManageResourceTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "catalog:task_manage",
+    mode: "any",
+    requiredPermissions: ["resource:task_manage", "catalog:task_manage"],
   });
   const hasResourceQuery =
     resourceKeyword.trim().length > 0 ||
@@ -485,7 +486,7 @@ export function CatalogDetailPanel({
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
               {dataCatalogCreationAvailable ? (
-                <PermissionGate permissions="catalog:resource_manage">
+                <PermissionGate mode="any" permissions={["resource:create", "catalog:resource_manage"]}>
                   <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                     {t("dataCatalog.resource.create")}
                   </AppButton>
@@ -574,7 +575,7 @@ export function CatalogDetailPanel({
                 </AppButton>
               ) : !physical && !catalog.internal ? (
                 dataCatalogCreationAvailable ? (
-                  <PermissionGate permissions="catalog:resource_manage">
+                  <PermissionGate mode="any" permissions={["resource:create", "catalog:resource_manage"]}>
                     <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                       {t("dataCatalog.resource.create")}
                     </AppButton>
