@@ -39,10 +39,14 @@ vi.mock("@/framework/auth/token-store", () => ({
 }));
 
 describe("standalone bootstrap locale persistence", () => {
+  const initialLocation = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
   beforeEach(() => {
     document.body.innerHTML = '<div id="root"></div>';
     window.localStorage.clear();
     document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/; Max-Age=0`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/studio; Max-Age=0`;
+    window.history.replaceState(null, "", initialLocation);
     delete window.__BKN_STUDIO_RUNTIME__;
   });
 
@@ -50,6 +54,8 @@ describe("standalone bootstrap locale persistence", () => {
     document.body.innerHTML = "";
     window.localStorage.clear();
     document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/; Max-Age=0`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/studio; Max-Age=0`;
+    window.history.replaceState(null, "", initialLocation);
     delete window.__BKN_STUDIO_RUNTIME__;
   });
 
@@ -60,6 +66,31 @@ describe("standalone bootstrap locale persistence", () => {
     startStandaloneApp();
 
     expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("zh-CN");
+  });
+
+  it("persists an English login-page cookie over an older Chinese Studio preference", () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "zh-CN");
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/`;
+
+    startStandaloneApp();
+
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en-US");
+  });
+
+  it("clears stale scoped login locale cookies before resolving the standalone locale", () => {
+    window.history.replaceState(null, "", "/studio/callback");
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "zh-CN");
+    document.cookie = `${LOCALE_COOKIE_NAME}=zh-CN; Path=/studio`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/`;
+    window.__BKN_STUDIO_RUNTIME__ = { router: { basename: "/studio" } };
+
+    startStandaloneApp();
+
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en-US");
+
+    document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/; Max-Age=0`;
+
+    expect(document.cookie).not.toContain(`${LOCALE_COOKIE_NAME}=`);
   });
 
   it("does not persist locale for hosted runtime mode", () => {

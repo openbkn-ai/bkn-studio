@@ -5,26 +5,34 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  clearLegacyLocaleCookies,
   LOCALE_COOKIE_NAME,
   LOCALE_STORAGE_KEY,
   normalizeSupportedLocale,
   persistLocale,
   preserveDocumentLanguage,
   readLocaleCookie,
+  readLocaleCookieValue,
   readPersistedLocale,
+  resolveAuthenticatedStandaloneLocale,
   resolveSupportedLocale,
   syncDocumentLanguage,
 } from "@/framework/i18n/locale";
 
 const initialDocumentLanguage = document.documentElement.getAttribute("lang");
+const initialLocation = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 
 describe("locale resolution", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     window.localStorage.removeItem(LOCALE_STORAGE_KEY);
     document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/; Max-Age=0`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/studio; Max-Age=0`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/studio/; Max-Age=0`;
+    window.history.replaceState(null, "", initialLocation);
     if (initialDocumentLanguage === null) {
       document.documentElement.removeAttribute("lang");
     } else {
@@ -70,6 +78,28 @@ describe("locale resolution", () => {
     ).toBe("en-US");
   });
 
+  it("re-syncs the root login-page locale after a standalone login returns to an already mounted app", () => {
+    window.history.replaceState(null, "", "/studio/callback");
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    document.cookie = `${LOCALE_COOKIE_NAME}=zh-CN; Path=/`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/studio/`;
+
+    expect(resolveAuthenticatedStandaloneLocale("en-US", "standalone", "/studio/")).toBe("zh-CN");
+    expect(readLocaleCookie()).toBe("zh-CN");
+  });
+
+  it("keeps hosted runtime locale isolated from the standalone login-page cookie", () => {
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/`;
+
+    expect(resolveAuthenticatedStandaloneLocale("zh-CN", "hosted")).toBe("zh-CN");
+  });
+
+  it("uses the last repeated login locale cookie value", () => {
+    expect(
+      readLocaleCookieValue(`${LOCALE_COOKIE_NAME}=zh-CN; other=value; ${LOCALE_COOKIE_NAME}=en-US`),
+    ).toBe("en-US");
+  });
+
   it("persists the selected locale for future app starts", () => {
     persistLocale("en-US");
 
@@ -80,6 +110,63 @@ describe("locale resolution", () => {
         browserLanguages: ["zh-CN"],
       }),
     ).toBe("en-US");
+  });
+
+  it("does not clear legacy path-scoped cookies when persisting an in-app locale change", () => {
+    const cookieSetter = vi.spyOn(Document.prototype, "cookie", "set");
+
+    persistLocale("en-US");
+
+    expect(cookieSetter).toHaveBeenCalledTimes(1);
+    expect(cookieSetter.mock.calls[0]?.[0]).toContain(`${LOCALE_COOKIE_NAME}=en-US; Path=/;`);
+    expect(cookieSetter.mock.calls.some(([value]) => value.includes("Max-Age=0"))).toBe(false);
+  });
+
+  it("clears normalized legacy path-scoped cookies while keeping the root login locale cookie", () => {
+    window.history.replaceState(null, "", "/studio/callback");
+    document.cookie = `${LOCALE_COOKIE_NAME}=zh-CN; Path=/studio`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/`;
+
+    clearLegacyLocaleCookies("studio/");
+
+    expect(readLocaleCookie()).toBe("en-US");
+
+    document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/; Max-Age=0`;
+
+    expect(readLocaleCookie()).toBeNull();
+  });
+
+  it("clears trailing-slash legacy path-scoped cookies while keeping the root login locale cookie", () => {
+    window.history.replaceState(null, "", "/studio/callback");
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/studio/`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=zh-CN; Path=/`;
+
+    clearLegacyLocaleCookies("/studio/");
+
+    expect(readLocaleCookie()).toBe("zh-CN");
+  });
+
+  it("emits both normalized and trailing-slash legacy cookie deletions", () => {
+    const cookieSetter = vi.spyOn(Document.prototype, "cookie", "set");
+
+    clearLegacyLocaleCookies("studio/");
+
+    const writes = cookieSetter.mock.calls.map(([value]) => value);
+    expect(writes.some((value) => value.includes(`${LOCALE_COOKIE_NAME}=; Path=/studio;`))).toBe(
+      true,
+    );
+    expect(writes.some((value) => value.includes(`${LOCALE_COOKIE_NAME}=; Path=/studio/;`))).toBe(
+      true,
+    );
+  });
+
+  it("does not delete the root locale cookie when legacy paths normalize to root", () => {
+    window.history.replaceState(null, "", "/studio");
+    const cookieSetter = vi.spyOn(Document.prototype, "cookie", "set");
+
+    clearLegacyLocaleCookies("/");
+
+    expect(cookieSetter).not.toHaveBeenCalled();
   });
 
   it("ignores an unsupported shared login locale cookie", () => {

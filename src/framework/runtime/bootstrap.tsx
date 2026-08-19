@@ -11,7 +11,11 @@ import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
 import i18n from "@/app/locales/i18n";
 import { subscribeAuthBroadcast } from "@/framework/auth/token-store";
-import { persistLocale, preserveDocumentLanguage } from "@/framework/i18n/locale";
+import {
+  clearLegacyLocaleCookies,
+  persistLocale,
+  preserveDocumentLanguage,
+} from "@/framework/i18n/locale";
 import {
   createRuntimeConfig,
   readWindowRuntimeInput,
@@ -40,6 +44,10 @@ function ensureAuthBroadcastListener() {
 
 export function mountApp(container: Element, runtimeInput: RuntimeInput = {}) {
   ensureAuthBroadcastListener();
+  const runtimeMode = runtimeInput.mode ?? "standalone";
+  if (runtimeMode === "standalone") {
+    clearLegacyLocaleCookies(runtimeInput.router?.basename);
+  }
   const runtimeConfig = createRuntimeConfig(runtimeInput);
   setRuntimeConfig(runtimeConfig);
   if (runtimeConfig.mode === "standalone") {

@@ -13,7 +13,10 @@ import { AppProviders } from "@/app/providers/AppProviders";
 import { createAppRouter } from "@/app/router/create-router";
 import { AuthGate } from "@/framework/auth/AuthGate";
 import { EntitlementProvider } from "@/framework/entitlement/EntitlementProvider";
-import { persistLocale } from "@/framework/i18n/locale";
+import {
+  persistLocale,
+  resolveAuthenticatedStandaloneLocale,
+} from "@/framework/i18n/locale";
 import { setRuntimeConfig } from "@/framework/runtime/config";
 import type { RuntimeConfig, RuntimeUser, SupportedLocale } from "@/framework/runtime/types";
 
@@ -29,7 +32,16 @@ export function App({ runtimeConfig }: AppProps) {
   // permissions), and update global runtimeConfig read by HTTP interceptors and other consumers.
   const handleCurrentUser = useCallback((currentUser: RuntimeUser) => {
     setConfig((previous) => {
-      const next = { ...previous, currentUser };
+      const locale = resolveAuthenticatedStandaloneLocale(
+        previous.locale,
+        previous.mode,
+        previous.router.basename,
+      );
+      if (locale !== previous.locale) {
+        persistLocale(locale);
+        void i18n.changeLanguage(locale);
+      }
+      const next = { ...previous, currentUser, locale };
       setRuntimeConfig(next);
       return next;
     });
