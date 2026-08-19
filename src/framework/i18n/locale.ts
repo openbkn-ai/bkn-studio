@@ -15,6 +15,10 @@ export const DEPLOYMENT_DEFAULT_LOCALE: SupportedLocale = "zh-CN";
 
 export const LOCALE_STORAGE_KEY = "bkn-studio:locale";
 
+export const LOCALE_COOKIE_NAME = "openbkn_locale";
+
+const LOCALE_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
+
 const supportedLocaleSet = new Set<string>(SUPPORTED_LOCALES);
 
 let activeDocumentLanguageSyncs = 0;
@@ -23,6 +27,7 @@ let synchronizedDocumentLanguage: string | undefined;
 
 export type LocaleResolutionInput = {
   browserLanguages?: readonly string[];
+  cookieLocale?: string | null;
   deploymentDefaultLocale?: SupportedLocale;
   persistedLocale?: string | null;
   runtimeLocale?: string | null;
@@ -51,12 +56,14 @@ export function normalizeSupportedLocale(locale: string | null | undefined): Sup
 
 export function resolveSupportedLocale({
   browserLanguages = readBrowserLanguages(),
+  cookieLocale = readLocaleCookie(),
   deploymentDefaultLocale = DEPLOYMENT_DEFAULT_LOCALE,
   persistedLocale = readPersistedLocale(),
   runtimeLocale,
 }: LocaleResolutionInput = {}): SupportedLocale {
   return (
     normalizeSupportedLocale(runtimeLocale) ??
+    normalizeSupportedLocale(cookieLocale) ??
     normalizeSupportedLocale(persistedLocale) ??
     firstSupportedLocale(browserLanguages) ??
     deploymentDefaultLocale ??
@@ -72,12 +79,34 @@ export function readPersistedLocale(): string | null {
   return window.localStorage.getItem(LOCALE_STORAGE_KEY);
 }
 
+export function readLocaleCookie(): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  for (const item of document.cookie.split(";")) {
+    const [rawName, ...rawValue] = item.trim().split("=");
+    if (rawName !== LOCALE_COOKIE_NAME) {
+      continue;
+    }
+    const value = rawValue.join("=");
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  }
+  return null;
+}
+
 export function persistLocale(locale: SupportedLocale) {
   if (typeof window === "undefined") {
     return;
   }
 
   window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${LOCALE_COOKIE_NAME}=${encodeURIComponent(locale)}; Path=/; Max-Age=${LOCALE_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
 }
 
 export function syncDocumentLanguage(locale: SupportedLocale) {

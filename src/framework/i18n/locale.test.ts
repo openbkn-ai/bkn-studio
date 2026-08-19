@@ -8,10 +8,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  LOCALE_COOKIE_NAME,
   LOCALE_STORAGE_KEY,
   normalizeSupportedLocale,
   persistLocale,
   preserveDocumentLanguage,
+  readLocaleCookie,
   readPersistedLocale,
   resolveSupportedLocale,
   syncDocumentLanguage,
@@ -22,11 +24,12 @@ const initialDocumentLanguage = document.documentElement.getAttribute("lang");
 describe("locale resolution", () => {
   afterEach(() => {
     window.localStorage.removeItem(LOCALE_STORAGE_KEY);
+    document.cookie = `${LOCALE_COOKIE_NAME}=; Path=/; Max-Age=0`;
     if (initialDocumentLanguage === null) {
       document.documentElement.removeAttribute("lang");
-      return;
+    } else {
+      document.documentElement.lang = initialDocumentLanguage;
     }
-    document.documentElement.lang = initialDocumentLanguage;
   });
 
   it("normalizes supported locale aliases", () => {
@@ -56,15 +59,38 @@ describe("locale resolution", () => {
     ).toBe("zh-CN");
   });
 
+  it("uses the shared login locale cookie before Studio local storage", () => {
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/`;
+
+    expect(
+      resolveSupportedLocale({
+        browserLanguages: ["zh-CN"],
+        persistedLocale: "zh-CN",
+      }),
+    ).toBe("en-US");
+  });
+
   it("persists the selected locale for future app starts", () => {
     persistLocale("en-US");
 
     expect(readPersistedLocale()).toBe("en-US");
+    expect(readLocaleCookie()).toBe("en-US");
     expect(
       resolveSupportedLocale({
         browserLanguages: ["zh-CN"],
       }),
     ).toBe("en-US");
+  });
+
+  it("ignores an unsupported shared login locale cookie", () => {
+    document.cookie = `${LOCALE_COOKIE_NAME}=fr-FR; Path=/`;
+
+    expect(
+      resolveSupportedLocale({
+        browserLanguages: ["zh-CN"],
+        persistedLocale: null,
+      }),
+    ).toBe("zh-CN");
   });
 
   it("falls back to deployment default when no requested locale is supported", () => {
