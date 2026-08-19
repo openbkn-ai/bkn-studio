@@ -196,7 +196,7 @@ export async function deleteLicense() {
       features: [],
       instanceFp: mockInstanceFingerprint,
       limits: {},
-      state: "invalid",
+      state: "trial",
     };
     return wait(undefined);
   }
