@@ -63,12 +63,12 @@ const minutesAgo = (minutes: number) => now - minutes * 60_000;
 const daysAgo = (days: number) => now - days * 86_400_000;
 
 function makeResource(
-  input: Omit<CatalogResource, "columnCount" | "updateTime"> & { updatedAt: number },
+  input: Omit<CatalogResource, "columnCount" | "updateTime">,
 ): CatalogResource {
   return {
     ...input,
     columnCount: input.schema.length,
-    updateTime: formatMockTimestamp(input.updatedAt),
+    updateTime: formatMockTimestamp(input.expectedUpdateTime),
   };
 }
 
@@ -121,7 +121,7 @@ export const mockResources: CatalogResource[] = [
       defaultEmbeddingModel: "sm-1",
     },
     rowCount: 182_340,
-    updatedAt: minutesAgo(42),
+    expectedUpdateTime: minutesAgo(42),
   }),
   makeResource({
     id: "res-orders",
@@ -139,7 +139,7 @@ export const mockResources: CatalogResource[] = [
       { name: "created_at", type: "datetime" },
     ],
     rowCount: 96_120,
-    updatedAt: minutesAgo(18),
+    expectedUpdateTime: minutesAgo(18),
   }),
   makeResource({
     id: "res-source-missing",
@@ -156,7 +156,7 @@ export const mockResources: CatalogResource[] = [
       { name: "archived_at", type: "datetime" },
     ],
     rowCount: 12_480,
-    updatedAt: minutesAgo(30),
+    expectedUpdateTime: minutesAgo(30),
   }),
   makeResource({
     id: "res-discovery-error",
@@ -173,7 +173,7 @@ export const mockResources: CatalogResource[] = [
       { name: "updated_at", type: "datetime" },
     ],
     rowCount: 8_640,
-    updatedAt: minutesAgo(35),
+    expectedUpdateTime: minutesAgo(35),
   }),
   makeResource({
     id: "res-discovery-error-no-schema",
@@ -187,7 +187,7 @@ export const mockResources: CatalogResource[] = [
     statusMessage: "Metadata discovery failed before any fields were available.",
     schema: [],
     rowCount: 0,
-    updatedAt: minutesAgo(36),
+    expectedUpdateTime: minutesAgo(36),
   }),
   makeResource({
     id: "res-discovery-new",
@@ -203,7 +203,7 @@ export const mockResources: CatalogResource[] = [
       { name: "created_at", type: "datetime" },
     ],
     rowCount: 320,
-    updatedAt: minutesAgo(4),
+    expectedUpdateTime: minutesAgo(4),
   }),
   makeResource({
     id: "res-discovery-restored",
@@ -219,7 +219,7 @@ export const mockResources: CatalogResource[] = [
       { name: "restored_at", type: "datetime" },
     ],
     rowCount: 1_280,
-    updatedAt: minutesAgo(6),
+    expectedUpdateTime: minutesAgo(6),
   }),
   makeResource({
     id: "res-discovery-unchanged",
@@ -235,7 +235,7 @@ export const mockResources: CatalogResource[] = [
       { name: "checked_at", type: "datetime" },
     ],
     rowCount: 24_000,
-    updatedAt: minutesAgo(8),
+    expectedUpdateTime: minutesAgo(8),
   }),
   makeResource({
     id: "res-discovery-updated",
@@ -252,7 +252,7 @@ export const mockResources: CatalogResource[] = [
       { name: "updated_at", type: "datetime" },
     ],
     rowCount: 16_800,
-    updatedAt: minutesAgo(10),
+    expectedUpdateTime: minutesAgo(10),
   }),
   makeResource({
     id: "res-kn-chunks",
@@ -268,7 +268,7 @@ export const mockResources: CatalogResource[] = [
       { name: "updated_at", type: "datetime" },
     ],
     rowCount: 48_206,
-    updatedAt: minutesAgo(160),
+    expectedUpdateTime: minutesAgo(160),
   }),
   makeResource({
     id: "res-metadata-unavailable",
@@ -279,7 +279,7 @@ export const mockResources: CatalogResource[] = [
     description: "用于验证资源字段元数据尚未就绪时的查询与预览保护。",
     schema: [],
     rowCount: 0,
-    updatedAt: minutesAgo(5),
+    expectedUpdateTime: minutesAgo(5),
   }),
   makeResource({
     id: "adp_bkn_concept_dataset",
@@ -342,7 +342,7 @@ export const mockResources: CatalogResource[] = [
     ],
     indexConfig: { defaultFulltextAnalyzer: "standard" },
     rowCount: 0,
-    updatedAt: minutesAgo(3),
+    expectedUpdateTime: minutesAgo(3),
   }),
 ];
 
@@ -501,7 +501,7 @@ const discoverableResources: CatalogResource[] = [
       { name: "signed_at", type: "datetime" },
     ],
     rowCount: 12_840,
-    updatedAt: now,
+    expectedUpdateTime: now,
   }),
   makeResource({
     id: "res-invoices",
@@ -518,7 +518,7 @@ const discoverableResources: CatalogResource[] = [
       { name: "issued_at", type: "datetime" },
     ],
     rowCount: 30_204,
-    updatedAt: now,
+    expectedUpdateTime: now,
   }),
 ];
 
@@ -600,11 +600,6 @@ function tick() {
         task.status = "succeeded";
         const finishedAt = Date.now();
         task.finishTime = finishedAt;
-        const resource = mockResources.find((item) => item.id === task.resourceId);
-        if (resource) {
-          resource.updatedAt = finishedAt;
-          resource.updateTime = formatMockTimestamp(finishedAt);
-        }
       }
       changed = true;
       return;

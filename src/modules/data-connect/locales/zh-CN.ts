@@ -149,6 +149,8 @@ export const dataConnectZhCN = {
     discoverScheduleConfig: "调度配置",
     discoverStrategy: "探查策略",
     discoverCronExpr: "Cron",
+    discoverCronInvalid: "请输入执行间隔不短于 1 小时的有效五段 Cron。",
+    discoverTimeRangeInvalid: "结束时间必须晚于或等于开始时间。",
     discoverCronExprPlaceholder: "例如：0 2 * * *（分 时 日 月 周）",
     discoverCronPresets: "常用",
     discoverCronPresetLabels: {

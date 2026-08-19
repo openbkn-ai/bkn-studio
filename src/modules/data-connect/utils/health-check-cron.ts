@@ -5,21 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/**
- * The backend requires at least one hour between health checks. For a standard
- * five-field cron, a single numeric minute value guarantees that constraint;
- * multiple selected minutes would create sub-hour executions.
- */
-export function isHourlyHealthCheckCron(value: unknown): value is string {
-  if (typeof value !== "string") {
-    return false;
-  }
-
-  const fields = value.trim().split(/\s+/);
-  if (fields.length !== 5) {
-    return false;
-  }
-
-  const minute = fields[0];
-  return minute !== undefined && /^(?:[0-9]|[1-5][0-9])$/.test(minute);
-}
+export {
+  calculateNextHourlyCronRun,
+  isHourlyCron,
+  parseHourlyCronFields,
+} from "@/shared/hourly-cron";
+export type { HourlyCronFields } from "@/shared/hourly-cron";

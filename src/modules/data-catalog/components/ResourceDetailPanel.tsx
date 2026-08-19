@@ -183,6 +183,7 @@ export function ResourceDetailPanel({
         catalogId: resource.catalogId,
         category: resource.category,
         description: descriptionDraft.trim(),
+        expectedUpdateTime: resource.expectedUpdateTime,
         name: resource.name,
         schema: schemaDraft.map((field) => ({
           ...field,
@@ -345,6 +346,10 @@ export function ResourceDetailPanel({
             ) : (
               <span>{resource.description || "-"}</span>
             )}
+          </p>
+          <p className={styles.basicInfoRow}>
+            <span className={styles.basicInfoLabel}>{t("common.updateTime")}:</span>{" "}
+            <span>{resource.updateTime}</span>
           </p>
         </div>
       </div>

@@ -24,7 +24,7 @@ import type {
   DataConnectConnectorType,
   DataConnectHealthCheckScheduleMode,
 } from "@/modules/data-connect/types/data-connect";
-import { isHourlyHealthCheckCron } from "@/modules/data-connect/utils/health-check-cron";
+import { isHourlyCron } from "@/modules/data-connect/utils/health-check-cron";
 
 import styles from "./DataConnectConfigForm.module.css";
 
@@ -309,7 +309,7 @@ export function DataConnectConfigForm({
                   { message: t("common.required"), required: true },
                   {
                     validator: (_, value: unknown) => {
-                      if (isHourlyHealthCheckCron(value)) {
+                      if (isHourlyCron(value)) {
                         return Promise.resolve();
                       }
 

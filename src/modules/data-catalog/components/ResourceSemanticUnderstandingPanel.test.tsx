@@ -48,7 +48,7 @@ const resource: CatalogResource = {
   schema: [{ name: "id", type: "string" }],
   sourceIdentifier: "orders",
   updateTime: "2026-08-11T00:00:00Z",
-  updatedAt: 0,
+  expectedUpdateTime: 0,
 };
 
 describe("ResourceSemanticUnderstandingPanel", () => {

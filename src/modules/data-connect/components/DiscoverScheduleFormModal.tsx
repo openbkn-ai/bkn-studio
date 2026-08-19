@@ -16,6 +16,8 @@ import type {
   DataConnectDiscoverSchedule,
   DataConnectDiscoverStrategy,
 } from "@/modules/data-connect/types/discover";
+import { isValidDiscoverScheduleTimeRange } from "@/modules/data-connect/utils/discover-schedule-time";
+import { isHourlyCron } from "@/modules/data-connect/utils/health-check-cron";
 
 import styles from "./DiscoverScheduleFormModal.module.css";
 
@@ -75,6 +77,15 @@ export function DiscoverScheduleFormModal({
   const [form] = Form.useForm<DiscoverScheduleFormValues>();
   const catalogLocked = mode === "edit" || Boolean(defaultCatalogId);
   const cronExpr = Form.useWatch("cronExpr", form);
+  const startTimeValue: unknown = Form.useWatch("startTime", form);
+  const endTimeValue: unknown = Form.useWatch("endTime", form);
+  const validateTimeRange = () => {
+    const startTime = parseDateTimeLocal(startTimeValue);
+    const endTime = parseDateTimeLocal(endTimeValue);
+    return isValidDiscoverScheduleTimeRange(startTime, endTime)
+      ? Promise.resolve()
+      : Promise.reject(new Error(t("dataConnect.discoverTimeRangeInvalid")));
+  };
 
   useEffect(() => {
     if (!open) {
@@ -102,21 +113,24 @@ export function DiscoverScheduleFormModal({
       okText={t("common.save")}
       onCancel={onCancel}
       onOk={() => {
-        void form.validateFields().then(async (values) => {
-          const enabled =
-            mode === "edit"
-              ? (initialValue?.enabled ?? true)
-              : (values.enabled ?? true);
-          await onSubmit({
-            catalogId: values.catalogId,
-            cronExpr: values.cronExpr.trim(),
-            enabled,
-            endTime: parseDateTimeLocal(values.endTime),
-            name: values.name.trim(),
-            startTime: parseDateTimeLocal(values.startTime),
-            strategy: values.strategy,
-          });
-        });
+        void form
+          .validateFields()
+          .then(async (values) => {
+            const enabled =
+              mode === "edit"
+                ? (initialValue?.enabled ?? true)
+                : (values.enabled ?? true);
+            await onSubmit({
+              catalogId: values.catalogId,
+              cronExpr: values.cronExpr.trim(),
+              enabled,
+              endTime: parseDateTimeLocal(values.endTime),
+              name: values.name.trim(),
+              startTime: parseDateTimeLocal(values.startTime),
+              strategy: values.strategy,
+            });
+          })
+          .catch(() => undefined);
       }}
       open={open}
       rootClassName={styles.modalRoot}
@@ -220,7 +234,17 @@ export function DiscoverScheduleFormModal({
               label={t("dataConnect.discoverCronExpr")}
               name="cronExpr"
               required
-              rules={[{ required: true, message: t("common.required") }]}
+              rules={[
+                { required: true, message: t("common.required") },
+                {
+                  validator: (_, value: unknown) =>
+                    isHourlyCron(value)
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(t("dataConnect.discoverCronInvalid")),
+                        ),
+                },
+              ]}
               span="full"
             >
               <Input placeholder={t("dataConnect.discoverCronExprPlaceholder")} />
@@ -251,6 +275,7 @@ export function DiscoverScheduleFormModal({
             <InlineField
               label={t("dataConnect.discoverStartTime")}
               name="startTime"
+              rules={[{ validator: validateTimeRange }]}
               span="half"
             >
               <Input type="datetime-local" />
@@ -258,6 +283,7 @@ export function DiscoverScheduleFormModal({
             <InlineField
               label={t("dataConnect.discoverEndTime")}
               name="endTime"
+              rules={[{ validator: validateTimeRange }]}
               span="half"
             >
               <Input type="datetime-local" />
@@ -327,8 +353,8 @@ function formatDateTimeLocal(value?: number) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-function parseDateTimeLocal(value?: string) {
-  if (!value) {
+function parseDateTimeLocal(value: unknown) {
+  if (typeof value !== "string" || !value) {
     return undefined;
   }
 

@@ -7,6 +7,14 @@
 
 import { http } from "@/framework/request/http";
 import {
+  throwMockRequestError,
+  validateMockExpectedUpdateTime,
+} from "@/framework/request/mock-error";
+import {
+  calculateNextHourlyCronRun,
+  isHourlyCron,
+} from "@/shared/hourly-cron";
+import {
   findMockCatalog,
   getMockCatalogs,
   prependMockCatalog,
@@ -45,6 +53,7 @@ type BackendCatalogHealthCheckSchedule = {
   last_run: number;
   mode: CatalogHealthCheckSchedule["mode"];
   next_run: number;
+  update_time: number;
 };
 
 type BackendCatalogDeletionTaskImpact = {
@@ -177,11 +186,20 @@ export async function previewCatalogDeletion(id: string): Promise<CatalogDeletio
 
 export async function setCatalogEnabled(id: string, enabled: boolean) {
   if (useMock) {
+    if (!findMockCatalog(id)) {
+      throwMockRequestError(
+        404,
+        "VegaBackend.Catalog.NotFound",
+        "Catalog not found.",
+      );
+    }
+    const now = Date.now();
     updateMockCatalog(id, (record) => ({
       ...record,
       enabled,
       status: enabled ? "enabled" : "disabled",
-      updateTime: formatCatalogTimestamp(Date.now()),
+      expectedUpdateTime: now,
+      updateTime: formatCatalogTimestamp(now),
       healthStatus: enabled ? record.healthStatus : "unchecked",
     }));
     await wait(undefined);
@@ -193,6 +211,7 @@ export async function setCatalogEnabled(id: string, enabled: boolean) {
 
 export async function createLogicalCatalog(input: { description?: string; name: string }) {
   if (useMock) {
+    const now = Date.now();
     prependMockCatalog({
       id: crypto.randomUUID(),
       internal: false,
@@ -206,8 +225,9 @@ export async function createLogicalCatalog(input: { description?: string; name: 
       healthStatus: "healthy",
       healthCheckResult: "",
       lastCheckTime: "-",
-      updateTime: formatCatalogTimestamp(Date.now()),
-      createTime: formatCatalogTimestamp(Date.now()),
+      expectedUpdateTime: now,
+      updateTime: formatCatalogTimestamp(now),
+      createTime: formatCatalogTimestamp(now),
       updaterName: "Local Admin",
       creatorName: "Local Admin",
       tags: [],
@@ -247,19 +267,52 @@ export async function updateCatalog(
     connectorType: string;
     description: string;
     enabled: boolean;
+    expectedUpdateTime: number;
     name: string;
     tags: string[];
   },
   options: CatalogMutationOptions = {},
 ) {
   if (useMock) {
+    validateMockExpectedUpdateTime(input.expectedUpdateTime);
+    const current = findMockCatalog(id);
+    if (!current) {
+      throwMockRequestError(
+        404,
+        "VegaBackend.Catalog.NotFound",
+        "Catalog not found.",
+      );
+    }
+    if (current.connectorType !== input.connectorType) {
+      throwMockRequestError(
+        400,
+        "VegaBackend.Catalog.InvalidParameter.ConnectorType",
+        "Catalog connector type cannot be changed.",
+      );
+    }
+    if (current.enabled !== input.enabled) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.Catalog.EnabledFieldNotAllowed",
+        "Use the enable or disable action to change catalog state.",
+      );
+    }
+    if (current.expectedUpdateTime !== input.expectedUpdateTime) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.Catalog.UpdateConflict",
+        "Catalog has been updated. Reload it and try again.",
+      );
+    }
+    const now = Date.now();
     updateMockCatalog(id, (record) => ({
       ...record,
       name: input.name,
       description: input.description,
       tags: input.tags,
       connectorConfig: input.connectorConfig,
-      updateTime: formatCatalogTimestamp(Date.now()),
+      expectedUpdateTime: now,
+      updateTime: formatCatalogTimestamp(now),
     }));
     await wait(undefined);
     return;
@@ -272,6 +325,7 @@ export async function updateCatalog(
       connector_type: input.connectorType,
       description: input.description,
       enabled: input.enabled,
+      expected_update_time: input.expectedUpdateTime,
       id,
       internal: false,
       name: input.name,
@@ -301,6 +355,7 @@ options: CatalogMutationOptions = {},
 ): Promise<string> {
   if (useMock) {
     const id = crypto.randomUUID();
+    const now = Date.now();
     mockHealthCheckSchedules.set(id, buildMockHealthCheckSchedule(
       id,
       input.healthCheckSchedule ?? { mode: "inherit" },
@@ -318,8 +373,9 @@ options: CatalogMutationOptions = {},
       healthStatus: "unchecked",
       healthCheckResult: "",
       lastCheckTime: "-",
-      updateTime: formatCatalogTimestamp(Date.now()),
-      createTime: formatCatalogTimestamp(Date.now()),
+      expectedUpdateTime: now,
+      updateTime: formatCatalogTimestamp(now),
+      createTime: formatCatalogTimestamp(now),
       updaterName: "Local Admin",
       creatorName: "Local Admin",
       tags: input.tags,
@@ -401,6 +457,7 @@ export async function getCatalogHealthCheckSchedule(
   catalogId: string,
 ): Promise<CatalogHealthCheckSchedule> {
   if (useMock) {
+    validateMockHealthCheckScheduleCatalog(catalogId);
     const schedule =
       mockHealthCheckSchedules.get(catalogId) ??
       buildMockHealthCheckSchedule(catalogId, { mode: "inherit" });
@@ -419,12 +476,25 @@ export async function getCatalogHealthCheckSchedule(
 export async function updateCatalogHealthCheckSchedule(
   catalogId: string,
   input: CatalogHealthCheckScheduleInput,
+  expectedUpdateTime: number,
 ): Promise<CatalogHealthCheckSchedule> {
   if (useMock) {
+    validateMockExpectedUpdateTime(expectedUpdateTime);
+    validateMockHealthCheckScheduleCatalog(catalogId);
+    const current =
+      mockHealthCheckSchedules.get(catalogId) ??
+      buildMockHealthCheckSchedule(catalogId, { mode: "inherit" });
+    if (current.expectedUpdateTime !== expectedUpdateTime) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.CatalogHealthCheckSchedule.UpdateConflict",
+        "Health check schedule has been updated. Reload it and try again.",
+      );
+    }
     const schedule = buildMockHealthCheckSchedule(
       catalogId,
       input,
-      mockHealthCheckSchedules.get(catalogId),
+      current,
     );
     mockHealthCheckSchedules.set(catalogId, schedule);
     return wait(schedule);
@@ -432,11 +502,32 @@ export async function updateCatalogHealthCheckSchedule(
 
   const response = await http.put<BackendCatalogHealthCheckSchedule>(
     `/vega-backend/v1/catalogs/${catalogId}/health-check-schedule`,
-    mapHealthCheckScheduleInput(input),
+    {
+      ...mapHealthCheckScheduleInput(input),
+      expected_update_time: expectedUpdateTime,
+    },
     { skipErrorToast: true },
   );
 
   return mapHealthCheckSchedule(response.data);
+}
+
+function validateMockHealthCheckScheduleCatalog(catalogId: string) {
+  const catalog = findMockCatalog(catalogId);
+  if (!catalog) {
+    throwMockRequestError(
+      404,
+      "VegaBackend.CatalogHealthCheckSchedule.NotFound",
+      "Catalog health check schedule not found.",
+    );
+  }
+  if (catalog.type !== "physical") {
+    throwMockRequestError(
+      400,
+      "VegaBackend.CatalogHealthCheckSchedule.InvalidParameter",
+      "Health check schedules are only supported for physical catalogs.",
+    );
+  }
 }
 
 function mapHealthCheckScheduleInput(input: CatalogHealthCheckScheduleInput) {
@@ -451,6 +542,19 @@ function buildMockHealthCheckSchedule(
   input: CatalogHealthCheckScheduleInput,
   previous?: CatalogHealthCheckSchedule,
 ): CatalogHealthCheckSchedule {
+  const now = Date.now();
+  const cronExpr = input.cronExpr ?? "";
+  if (input.mode === "enabled" && !isHourlyCron(cronExpr)) {
+    throwMockRequestError(
+      400,
+      "VegaBackend.CatalogHealthCheckSchedule.InvalidParameter",
+      "cron_expr must be a valid five-field cron with an interval of at least one hour.",
+    );
+  }
+  const nextRunValue =
+    input.mode === "enabled"
+      ? calculateNextHourlyCronRun(cronExpr, now)
+      : now + 3_600_000;
   return {
     catalogId,
     cronExpr:
@@ -459,12 +563,14 @@ function buildMockHealthCheckSchedule(
         : input.mode === "disabled"
           ? previous?.cronExpr ?? ""
           : "",
-    lastRun: "-",
+    lastRun: previous?.lastRun ?? "-",
     mode: input.mode,
+    expectedUpdateTime: now,
     nextRun:
       input.mode === "disabled"
         ? "-"
-        : formatCatalogTimestamp(Date.now() + 3_600_000),
+        : formatCatalogTimestamp(nextRunValue),
+    updateTime: formatCatalogTimestamp(now),
   };
 }
 
@@ -477,5 +583,7 @@ function mapHealthCheckSchedule(
     lastRun: formatCatalogTimestamp(schedule.last_run),
     mode: schedule.mode,
     nextRun: formatCatalogTimestamp(schedule.next_run),
+    expectedUpdateTime: schedule.update_time ?? 0,
+    updateTime: formatCatalogTimestamp(schedule.update_time),
   };
 }

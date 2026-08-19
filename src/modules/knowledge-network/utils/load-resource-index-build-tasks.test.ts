@@ -61,7 +61,7 @@ function catalogResource(id: string, catalogId: string): CatalogResource {
     schema: [],
     sourceIdentifier: "",
     updateTime: "-",
-    updatedAt: 0,
+    expectedUpdateTime: 0,
   };
 }
 

@@ -37,9 +37,11 @@ export type CatalogHealthCheckScheduleInput = {
 export type CatalogHealthCheckSchedule = {
   catalogId: string;
   cronExpr: string;
+  expectedUpdateTime: number;
   lastRun: string;
   mode: CatalogHealthCheckScheduleMode;
   nextRun: string;
+  updateTime: string;
 };
 
 export type CatalogMutationOptions = {
@@ -93,6 +95,7 @@ export type CatalogRecord = {
   tags: string[];
   type: string;
   updateTime: string;
+  expectedUpdateTime: number;
   updaterName: string;
 };
 

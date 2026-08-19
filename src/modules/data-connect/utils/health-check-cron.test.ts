@@ -7,13 +7,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import { isHourlyHealthCheckCron } from "@/modules/data-connect/utils/health-check-cron";
+import { isHourlyCron } from "@/modules/data-connect/utils/health-check-cron";
 
-describe("isHourlyHealthCheckCron", () => {
-  it.each(["0 * * * *", "30 0,12 * * *", "59 23 * * 0"])(
+describe("isHourlyCron", () => {
+  it.each(["0 * * * *", "30 0,12 * JAN,MAR MON-FRI", "59 23 ? * SUN"])(
     "accepts an hourly-or-slower five-field cron: %s",
     (cronExpr) => {
-      expect(isHourlyHealthCheckCron(cronExpr)).toBe(true);
+      expect(isHourlyCron(cronExpr)).toBe(true);
     },
   );
 
@@ -22,8 +22,13 @@ describe("isHourlyHealthCheckCron", () => {
     "* * * * *",
     "0,30 * * * *",
     "60 * * * *",
+    "0 24 * * *",
+    "0 * 32 * *",
+    "0 * * 13 *",
+    "0 * * * 7",
+    "0 invalid * * *",
     "0 * * *",
   ])("rejects an invalid or sub-hour cron: %s", (cronExpr) => {
-    expect(isHourlyHealthCheckCron(cronExpr)).toBe(false);
+    expect(isHourlyCron(cronExpr)).toBe(false);
   });
 });

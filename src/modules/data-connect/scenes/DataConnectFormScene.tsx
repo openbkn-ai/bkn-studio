@@ -213,7 +213,13 @@ export function DataConnectFormScene({
       if (mode === "create") {
         await createDataConnectRecord(payload, { skipErrorToast: true });
       } else if (recordId) {
-        await updateDataConnectRecord(recordId, payload, {
+        if (!record) {
+          throw new Error("Catalog record is required for update");
+        }
+        await updateDataConnectRecord(recordId, {
+          ...payload,
+          expectedUpdateTime: record.expectedUpdateTime,
+        }, {
           skipErrorToast: true,
         });
       }
@@ -246,7 +252,13 @@ export function DataConnectFormScene({
                   skipErrorToast: true,
                 });
               } else if (recordId) {
-                await updateDataConnectRecord(recordId, retryPayload, {
+                if (!record) {
+                  throw new Error("Catalog record is required for update");
+                }
+                await updateDataConnectRecord(recordId, {
+                  ...retryPayload,
+                  expectedUpdateTime: record.expectedUpdateTime,
+                }, {
                   allowUnhealthy: true,
                   skipErrorToast: true,
                 });

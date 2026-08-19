@@ -585,6 +585,7 @@ export function IndexConfigFormPanel({
         catalogId: detail.catalogId,
         category: detail.category,
         description: detail.description,
+        expectedUpdateTime: detail.expectedUpdateTime,
         name: detail.name,
         sourceIdentifier: detail.sourceIdentifier,
         schema: nextSchema,

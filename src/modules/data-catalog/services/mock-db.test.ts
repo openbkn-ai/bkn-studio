@@ -5,9 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { mockResources } from "./mock-db";
+import { ensureMockTicker, mockBuildTasks, mockResources } from "./mock-db";
 
 describe("data catalog discover-status mocks", () => {
   it("provides one resource for every discover status in customer_master", () => {
@@ -34,5 +34,36 @@ describe("data catalog discover-status mocks", () => {
     );
     expect(errorResources.some((resource) => resource.schema.length === 0)).toBe(true);
     expect(errorResources.some((resource) => resource.schema.length > 0)).toBe(true);
+  });
+
+  it("does not advance the resource version when a build task completes", () => {
+    vi.useFakeTimers();
+
+    const task = mockBuildTasks.find((item) => item.id === "bt-orders-01");
+    const resource = mockResources.find((item) => item.id === "res-orders");
+    expect(task).toBeDefined();
+    expect(resource).toBeDefined();
+
+    if (!task || !resource) {
+      return;
+    }
+
+    const originalTask = { ...task };
+    const originalExpectedUpdateTime = resource.expectedUpdateTime;
+    const originalUpdateTime = resource.updateTime;
+
+    try {
+      task.status = "running";
+      task.syncedCount = task.totalCount - 1;
+      ensureMockTicker();
+      vi.advanceTimersByTime(1100);
+
+      expect(task.status).toBe("succeeded");
+      expect(resource.expectedUpdateTime).toBe(originalExpectedUpdateTime);
+      expect(resource.updateTime).toBe(originalUpdateTime);
+    } finally {
+      Object.assign(task, originalTask);
+      vi.useRealTimers();
+    }
   });
 });

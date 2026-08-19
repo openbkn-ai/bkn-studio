@@ -561,9 +561,15 @@ export function DataConnectDiscoverScene({
       };
 
       if (scheduleModalState?.mode === "edit" && scheduleModalState.scheduleId) {
+        if (!editingSchedule) {
+          throw new Error("Discover schedule is required for update");
+        }
         await updateDataConnectDiscoverSchedule(
           scheduleModalState.scheduleId,
-          requestPayload,
+          {
+            ...requestPayload,
+            expectedUpdateTime: editingSchedule.expectedUpdateTime,
+          },
         );
       } else {
         await createDataConnectDiscoverSchedule(requestPayload);

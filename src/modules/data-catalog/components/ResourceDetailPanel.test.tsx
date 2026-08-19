@@ -41,7 +41,7 @@ const resource: CatalogResource = {
   schema: [{ name: "id", type: "string" }],
   sourceIdentifier: "orders",
   updateTime: "2026-08-11T00:00:00Z",
-  updatedAt: 0,
+  expectedUpdateTime: 0,
 };
 
 describe("ResourceDetailPanel", () => {
@@ -83,7 +83,7 @@ describe("ResourceDetailPanel", () => {
   });
 
   it("ignores a detail refresh superseded by a parent resource update", async () => {
-    const parentResource = { ...resource, name: "Orders", updatedAt: 1 };
+    const parentResource = { ...resource, name: "Orders", expectedUpdateTime: 1 };
     const onResourceRefreshed = vi.fn();
     let resolveRequest: (value: CatalogResource | null) => void;
     getCatalogResourceMock.mockImplementation(

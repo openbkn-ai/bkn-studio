@@ -253,6 +253,11 @@ export function DataConnectDetailDrawer({
                     label: t("dataConnect.healthCheckSchedule.nextRun"),
                     children: schedule.nextRun,
                   },
+                  {
+                    key: "updateTime",
+                    label: t("dataConnect.updateTime"),
+                    children: schedule.updateTime,
+                  },
                 ]}
               />
             ) : (
@@ -312,7 +317,11 @@ export function DataConnectDetailDrawer({
             try {
               setScheduleUpdating(true);
               const nextSchedule =
-                await updateDataConnectHealthCheckSchedule(recordId, input);
+                await updateDataConnectHealthCheckSchedule(
+                  recordId,
+                  input,
+                  schedule.expectedUpdateTime,
+                );
               setSchedule(nextSchedule);
               setScheduleModalOpen(false);
               message.success(t("common.success"));

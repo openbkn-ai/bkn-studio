@@ -6,6 +6,10 @@
  */
 
 import { http } from "@/framework/request/http";
+import {
+  throwMockRequestError,
+  validateMockExpectedUpdateTime,
+} from "@/framework/request/mock-error";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
 import type {
@@ -13,6 +17,7 @@ import type {
   DataConnectDiscoverScheduleListQuery,
   DataConnectDiscoverScheduleListResult,
   DataConnectDiscoverSchedulePayload,
+  DataConnectDiscoverScheduleUpdatePayload,
   DataConnectDiscoverStrategy,
   DataConnectDiscoverTask,
   DataConnectDiscoverTaskListQuery,
@@ -21,6 +26,11 @@ import type {
   DataConnectDiscoverTaskSummary,
   DataConnectDiscoverTaskTriggerType,
 } from "@/modules/data-connect/types/discover";
+import { isValidDiscoverScheduleTimeRange } from "@/modules/data-connect/utils/discover-schedule-time";
+import {
+  calculateNextHourlyCronRun,
+  isHourlyCron,
+} from "@/modules/data-connect/utils/health-check-cron";
 
 type BackendAccountInfo = {
   id?: string | null;
@@ -102,22 +112,24 @@ let mockSchedules: DataConnectDiscoverSchedule[] = [
     creatorName: "Platform Admin",
     updaterName: "Platform Admin",
     createTime: "2026-06-01 10:00:00",
+    expectedUpdateTime: Date.parse("2026-06-03T02:00:11Z"),
     updateTime: "2026-06-03 02:00:11",
   },
   {
     id: "discover-schedule-002",
     name: discoverMockText("knowledgeIndexSchedule"),
     catalogId: "cat-002",
-    cronExpr: "*/30 * * * *",
+    cronExpr: "30 * * * *",
     startTime: "2026-06-02 09:00:00",
     endTime: "-",
     enabled: true,
     strategy: "create_only",
     lastRun: "2026-06-03 11:30:08",
-    nextRun: "2026-06-03 12:00:00",
+    nextRun: "2026-06-03 12:30:00",
     creatorName: "Search Team",
     updaterName: "Search Team",
     createTime: "2026-06-02 09:00:00",
+    expectedUpdateTime: Date.parse("2026-06-03T11:30:08Z"),
     updateTime: "2026-06-03 11:30:08",
   },
   {
@@ -134,6 +146,7 @@ let mockSchedules: DataConnectDiscoverSchedule[] = [
     creatorName: "Data Ops",
     updaterName: "Data Ops",
     createTime: "2026-05-26 03:00:00",
+    expectedUpdateTime: Date.parse("2026-06-02T03:00:00Z"),
     updateTime: "2026-06-02 03:00:00",
   },
 ];
@@ -254,6 +267,7 @@ function mapSchedule(item: BackendDiscoverSchedule): DataConnectDiscoverSchedule
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
     createTime: formatTimestamp(item.create_time),
+    expectedUpdateTime: item.update_time ?? 0,
     updateTime: formatTimestamp(item.update_time),
   };
 }
@@ -426,7 +440,14 @@ export async function createDataConnectDiscoverSchedule(
   input: DataConnectDiscoverSchedulePayload,
 ) {
   if (useMock) {
+    validateMockDiscoverCron(input.cronExpr);
+    validateMockDiscoverTimeRange(input.startTime, input.endTime);
     const now = Date.now();
+    const nextRunValue = calculateNextHourlyCronRun(
+      input.cronExpr,
+      now,
+      input.startTime,
+    );
     mockSchedules = [
       {
         id: crypto.randomUUID(),
@@ -440,10 +461,12 @@ export async function createDataConnectDiscoverSchedule(
         enabled: input.enabled,
         strategy: input.strategy,
         lastRun: "-",
-        nextRun: "-",
+        nextRun: formatTimestamp(nextRunValue),
+        nextRunValue,
         creatorName: "Local Admin",
         updaterName: "Local Admin",
         createTime: formatTimestamp(now),
+        expectedUpdateTime: now,
         updateTime: formatTimestamp(now),
       },
       ...mockSchedules,
@@ -465,9 +488,47 @@ export async function createDataConnectDiscoverSchedule(
 
 export async function updateDataConnectDiscoverSchedule(
   id: string,
-  input: DataConnectDiscoverSchedulePayload,
+  input: DataConnectDiscoverScheduleUpdatePayload,
 ) {
   if (useMock) {
+    const current = mockSchedules.find((item) => item.id === id);
+    if (!current) {
+      throwMockRequestError(
+        404,
+        "VegaBackend.DiscoverSchedule.NotFound",
+        "Discover schedule not found.",
+      );
+    }
+    validateMockDiscoverCron(input.cronExpr);
+    validateMockDiscoverTimeRange(input.startTime, input.endTime);
+    validateMockExpectedUpdateTime(input.expectedUpdateTime);
+    if (current.catalogId !== input.catalogId) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.DiscoverSchedule.CatalogMismatch",
+        "Discover schedule catalog cannot be changed.",
+      );
+    }
+    if (current.enabled !== input.enabled) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.DiscoverSchedule.EnabledFieldNotAllowed",
+        "Use the enable or disable action to change discover schedule state.",
+      );
+    }
+    if (current.expectedUpdateTime !== input.expectedUpdateTime) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.DiscoverSchedule.UpdateConflict",
+        "Discover schedule has been updated. Reload it and try again.",
+      );
+    }
+    const now = Date.now();
+    const nextRunValue = calculateNextHourlyCronRun(
+      input.cronExpr,
+      now,
+      input.startTime,
+    );
     mockSchedules = mockSchedules.map((item) =>
       item.id === id
         ? {
@@ -479,7 +540,10 @@ export async function updateDataConnectDiscoverSchedule(
             endTime: formatTimestamp(input.endTime),
             endTimeValue: input.endTime,
             strategy: input.strategy,
-            updateTime: formatTimestamp(Date.now()),
+            nextRun: formatTimestamp(nextRunValue),
+            nextRunValue,
+            expectedUpdateTime: now,
+            updateTime: formatTimestamp(now),
           }
         : item,
     );
@@ -491,6 +555,7 @@ export async function updateDataConnectDiscoverSchedule(
     catalog_id: input.catalogId,
     cron_expr: input.cronExpr,
     enabled: input.enabled,
+    expected_update_time: input.expectedUpdateTime,
     end_time: input.endTime ?? 0,
     name: input.name,
     start_time: input.startTime ?? 0,
@@ -498,17 +563,59 @@ export async function updateDataConnectDiscoverSchedule(
   });
 }
 
+function validateMockDiscoverCron(cronExpr: string): void {
+  if (!isHourlyCron(cronExpr)) {
+    throwMockRequestError(
+      400,
+      "VegaBackend.DiscoverSchedule.InvalidCronExpr",
+      "cron_expr must be a valid five-field cron with an interval of at least one hour.",
+    );
+  }
+}
+
+function validateMockDiscoverTimeRange(
+  startTime?: number,
+  endTime?: number,
+): void {
+  if (!isValidDiscoverScheduleTimeRange(startTime, endTime)) {
+    throwMockRequestError(
+      400,
+      "VegaBackend.DiscoverSchedule.InvalidTimeRange",
+      "start_time must be less than or equal to end_time.",
+    );
+  }
+}
+
 export async function setDataConnectDiscoverScheduleEnabled(
   id: string,
   enabled: boolean,
 ) {
   if (useMock) {
+    const current = mockSchedules.find((item) => item.id === id);
+    if (!current) {
+      throwMockRequestError(
+        404,
+        "VegaBackend.DiscoverSchedule.NotFound",
+        "Discover schedule not found.",
+      );
+    }
+    const now = Date.now();
+    const nextRunValue = enabled
+      ? calculateNextHourlyCronRun(
+          current.cronExpr,
+          now,
+          current.startTimeValue,
+        )
+      : current.nextRunValue;
     mockSchedules = mockSchedules.map((item) =>
       item.id === id
         ? {
             ...item,
             enabled,
-            updateTime: formatTimestamp(Date.now()),
+            nextRun: formatTimestamp(nextRunValue),
+            nextRunValue,
+            expectedUpdateTime: now,
+            updateTime: formatTimestamp(now),
           }
         : item,
     );

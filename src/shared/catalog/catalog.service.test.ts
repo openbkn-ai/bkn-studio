@@ -226,6 +226,7 @@ describe("catalog.service · health check schedule", () => {
         last_run: 1_785_398_400_000,
         mode: "enabled",
         next_run: 1_785_402_000_000,
+        update_time: 1_785_398_400_000,
       },
     });
     const { getCatalogHealthCheckSchedule } = await import(
@@ -241,10 +242,12 @@ describe("catalog.service · health check schedule", () => {
     expect(schedule).toMatchObject({
       catalogId: "catalog-1",
       cronExpr: "0 * * * *",
+      expectedUpdateTime: 1_785_398_400_000,
       mode: "enabled",
     });
     expect(schedule.lastRun).not.toBe("-");
     expect(schedule.nextRun).not.toBe("-");
+    expect(schedule.updateTime).not.toBe("");
   });
 
   it("updates a schedule without sending cron for inherit mode", async () => {
@@ -255,6 +258,7 @@ describe("catalog.service · health check schedule", () => {
         last_run: 0,
         mode: "inherit",
         next_run: 1_785_402_000_000,
+        update_time: 124,
       },
     });
     const { updateCatalogHealthCheckSchedule } = await import(
@@ -264,18 +268,22 @@ describe("catalog.service · health check schedule", () => {
     const schedule = await updateCatalogHealthCheckSchedule(
       "catalog-1",
       { cronExpr: "0 0 * * *", mode: "inherit" },
+      123,
     );
 
     expect(putMock).toHaveBeenCalledWith(
       "/vega-backend/v1/catalogs/catalog-1/health-check-schedule",
       {
         cron_expr: undefined,
+        expected_update_time: 123,
         mode: "inherit",
       },
       { skipErrorToast: true },
     );
     expect(schedule.mode).toBe("inherit");
     expect(schedule.cronExpr).toBe("");
+    expect(schedule.expectedUpdateTime).toBe(124);
+    expect(schedule.updateTime).not.toBe("");
   });
 });
 
@@ -305,7 +313,12 @@ describe("catalog.service · mock health check schedule", () => {
       tags: [],
     });
 
-    await updateCatalogHealthCheckSchedule(catalogId, { mode: "disabled" });
+    const current = await getCatalogHealthCheckSchedule(catalogId);
+    await updateCatalogHealthCheckSchedule(
+      catalogId,
+      { mode: "disabled" },
+      current.expectedUpdateTime,
+    );
 
     await expect(getCatalogHealthCheckSchedule(catalogId)).resolves.toMatchObject({
       catalogId,
@@ -313,6 +326,145 @@ describe("catalog.service · mock health check schedule", () => {
       mode: "disabled",
       nextRun: "-",
     });
+
+    const disabled = await getCatalogHealthCheckSchedule(catalogId);
+    const enabled = await updateCatalogHealthCheckSchedule(
+      catalogId,
+      { cronExpr: "0 2 * * *", mode: "enabled" },
+      disabled.expectedUpdateTime,
+    );
+    expect(enabled.nextRun).toContain("02:00:00");
+  });
+
+  it("rejects stale catalog and health check schedule versions", async () => {
+    const {
+      getCatalog,
+      getCatalogHealthCheckSchedule,
+      updateCatalog,
+      updateCatalogHealthCheckSchedule,
+    } = await import("@/shared/catalog/catalog.service");
+    const catalog = await getCatalog("cat-001");
+    expect(catalog).not.toBeNull();
+    if (!catalog) {
+      return;
+    }
+
+    await expect(
+      updateCatalog("cat-001", {
+        connectorConfig: catalog.connectorConfig,
+        connectorType: catalog.connectorType,
+        description: catalog.description,
+        enabled: catalog.enabled,
+        expectedUpdateTime: catalog.expectedUpdateTime - 1,
+        name: "stale name",
+        tags: catalog.tags,
+      }),
+    ).rejects.toMatchObject({ response: { status: 409 } });
+    await expect(getCatalog("cat-001")).resolves.toMatchObject({
+      expectedUpdateTime: catalog.expectedUpdateTime,
+      name: catalog.name,
+    });
+
+    const schedule = await getCatalogHealthCheckSchedule("cat-001");
+    await expect(
+      updateCatalogHealthCheckSchedule(
+        "cat-001",
+        { mode: "disabled" },
+        schedule.expectedUpdateTime - 1,
+      ),
+    ).rejects.toMatchObject({ response: { status: 409 } });
+    await expect(getCatalogHealthCheckSchedule("cat-001")).resolves.toEqual(
+      schedule,
+    );
+  });
+
+  it("matches catalog update validation and not-found precedence", async () => {
+    const { getCatalog, setCatalogEnabled, updateCatalog } = await import(
+      "@/shared/catalog/catalog.service"
+    );
+    const catalog = await getCatalog("cat-001");
+    expect(catalog).not.toBeNull();
+    if (!catalog) {
+      return;
+    }
+    const input = {
+      connectorConfig: catalog.connectorConfig,
+      connectorType: catalog.connectorType,
+      description: catalog.description,
+      enabled: catalog.enabled,
+      expectedUpdateTime: catalog.expectedUpdateTime - 1,
+      name: catalog.name,
+      tags: catalog.tags,
+    };
+
+    await expect(
+      updateCatalog("cat-001", { ...input, expectedUpdateTime: 0 }),
+    ).rejects.toMatchObject({
+      response: {
+        data: { error_code: "VegaBackend.InvalidParameter.RequestBody" },
+        status: 400,
+      },
+    });
+
+    await expect(
+      updateCatalog("missing-catalog", input),
+    ).rejects.toMatchObject({
+      response: {
+        data: { error_code: "VegaBackend.Catalog.NotFound" },
+        status: 404,
+      },
+    });
+    await expect(
+      updateCatalog("cat-001", { ...input, connectorType: "postgresql" }),
+    ).rejects.toMatchObject({
+      response: {
+        data: {
+          error_code: "VegaBackend.Catalog.InvalidParameter.ConnectorType",
+        },
+        status: 400,
+      },
+    });
+    await expect(
+      updateCatalog("cat-001", { ...input, enabled: !catalog.enabled }),
+    ).rejects.toMatchObject({
+      response: {
+        data: { error_code: "VegaBackend.Catalog.EnabledFieldNotAllowed" },
+        status: 409,
+      },
+    });
+    await expect(
+      setCatalogEnabled("missing-catalog", true),
+    ).rejects.toMatchObject({
+      response: {
+        data: { error_code: "VegaBackend.Catalog.NotFound" },
+        status: 404,
+      },
+    });
+  });
+
+  it("rejects health check schedules for missing and logical catalogs", async () => {
+    const {
+      getCatalogHealthCheckSchedule,
+      updateCatalogHealthCheckSchedule,
+    } = await import(
+      "@/shared/catalog/catalog.service"
+    );
+
+    await expect(
+      updateCatalogHealthCheckSchedule("cat-001", { mode: "disabled" }, 0),
+    ).rejects.toMatchObject({
+      response: {
+        data: { error_code: "VegaBackend.InvalidParameter.RequestBody" },
+        status: 400,
+      },
+    });
+
+    await expect(
+      getCatalogHealthCheckSchedule("missing-catalog"),
+    ).rejects.toMatchObject({ response: { status: 404 } });
+    await expect(
+      getCatalogHealthCheckSchedule("adp_bkn_catalog"),
+    ).rejects.toMatchObject({ response: { status: 400 } });
   });
 });
 
@@ -337,6 +489,7 @@ describe("catalog.service · allow unhealthy", () => {
       connectorType: "postgresql",
       description: "",
       enabled: true,
+      expectedUpdateTime: 123,
       name: "orders",
       tags: [],
     };
@@ -345,7 +498,7 @@ describe("catalog.service · allow unhealthy", () => {
 
     expect(putMock).toHaveBeenCalledWith(
       "/vega-backend/v1/catalogs/catalog-1",
-      expect.any(Object),
+      expect.objectContaining({ expected_update_time: 123 }),
       {
         params: {
           allow_unhealthy: undefined,

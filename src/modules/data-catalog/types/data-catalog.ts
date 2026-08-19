@@ -77,7 +77,7 @@ export type CatalogResource = {
   /** Resource lifecycle/discovery detail reported by Vega. */
   statusMessage?: string;
   updateTime: string;
-  updatedAt: number;
+  expectedUpdateTime: number;
 };
 
 export type ResourceListQuery = {
@@ -99,7 +99,9 @@ export type ResourceCreateInput = {
   sourceIdentifier: string;
 };
 
-export type ResourceUpdateInput = ResourceCreateInput;
+export type ResourceUpdateInput = ResourceCreateInput & {
+  expectedUpdateTime: number;
+};
 
 export type ResourcePreviewQuery = {
   limit: number;
