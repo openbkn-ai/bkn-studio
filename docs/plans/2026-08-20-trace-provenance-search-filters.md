@@ -13,9 +13,8 @@
 ### Task 1: Prove the Studio query contract
 
 **Files:**
-- Modify: `src/modules/bkn-trace/scenes/BknTraceRunsScene.test.tsx`
-- Modify: `src/modules/bkn-trace/services/trace.service.test.ts`
-- Modify: `src/modules/bkn-trace/scenes/BknTraceRunsScene.tsx`
+- Modify: `src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.test.tsx`
+- Modify: `src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.tsx`
 
 **Step 1: Write failing UI and service tests**
 
@@ -29,7 +28,7 @@ Expected: FAIL because the current page renders business domain and sends `runni
 
 **Step 3: Implement the smallest Studio change**
 
-Remove business-domain state, input, URL parsing and URL serialization from `BknTraceRunsScene`. Keep `active` as the select value and use the existing localized running label.
+Remove business-domain state and input from `BusinessProvenanceScene`. Keep `active` as the select value and use the existing localized running label.
 
 **Step 4: Run the focused tests**
 
