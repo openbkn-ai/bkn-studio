@@ -11,7 +11,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
 import i18n from "@/app/locales/i18n";
 import { subscribeAuthBroadcast } from "@/framework/auth/token-store";
-import { preserveDocumentLanguage } from "@/framework/i18n/locale";
+import { persistLocale, preserveDocumentLanguage } from "@/framework/i18n/locale";
 import {
   createRuntimeConfig,
   readWindowRuntimeInput,
@@ -42,6 +42,13 @@ export function mountApp(container: Element, runtimeInput: RuntimeInput = {}) {
   ensureAuthBroadcastListener();
   const runtimeConfig = createRuntimeConfig(runtimeInput);
   setRuntimeConfig(runtimeConfig);
+  if (runtimeConfig.mode === "standalone") {
+    // Standalone Studio shares the auth locale cookie with bkn-safe. Persist
+    // the resolved startup locale back into Studio's own preference store so a
+    // login-page switch wins over an older in-app language selection after the
+    // OAuth callback lands back in the SPA.
+    persistLocale(runtimeConfig.locale);
+  }
 
   const existingRoot = roots.get(container);
 
