@@ -17,6 +17,7 @@ import {
   readLocaleCookie,
   readLocaleCookieValue,
   readPersistedLocale,
+  resolveAuthenticatedStandaloneLocale,
   resolveSupportedLocale,
   syncDocumentLanguage,
 } from "@/framework/i18n/locale";
@@ -74,6 +75,19 @@ describe("locale resolution", () => {
         persistedLocale: "zh-CN",
       }),
     ).toBe("en-US");
+  });
+
+  it("re-syncs the login-page locale after a standalone login returns to an already mounted app", () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "zh-CN");
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/`;
+
+    expect(resolveAuthenticatedStandaloneLocale("zh-CN", "standalone")).toBe("en-US");
+  });
+
+  it("keeps hosted runtime locale isolated from the standalone login-page cookie", () => {
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/`;
+
+    expect(resolveAuthenticatedStandaloneLocale("zh-CN", "hosted")).toBe("zh-CN");
   });
 
   it("uses the last repeated login locale cookie value", () => {

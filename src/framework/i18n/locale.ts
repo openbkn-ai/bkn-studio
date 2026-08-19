@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { SupportedLocale } from "@/framework/runtime/types";
+import type { RuntimeConfig, SupportedLocale } from "@/framework/runtime/types";
 
 export const SUPPORTED_LOCALES = ["zh-CN", "en-US"] as const satisfies readonly SupportedLocale[];
 
@@ -69,6 +69,19 @@ export function resolveSupportedLocale({
     deploymentDefaultLocale ??
     FALLBACK_LOCALE
   );
+}
+
+export function resolveAuthenticatedStandaloneLocale(
+  currentLocale: SupportedLocale,
+  mode: RuntimeConfig["mode"],
+): SupportedLocale {
+  if (mode !== "standalone") {
+    return currentLocale;
+  }
+
+  return resolveSupportedLocale({
+    deploymentDefaultLocale: currentLocale,
+  });
 }
 
 export function readPersistedLocale(): string | null {
