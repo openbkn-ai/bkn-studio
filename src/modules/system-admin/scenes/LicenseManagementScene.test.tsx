@@ -105,7 +105,9 @@ describe("LicenseManagementScene", () => {
 
       await waitFor(() => expect(getLicenseDetailMock).toHaveBeenCalledTimes(1));
 
-      expect(screen.getByRole("button", { name: removeButtonName }).disabled).toBe(false);
+      const removeButton = screen.getByRole("button", { name: removeButtonName });
+      expect(removeButton).toBeInstanceOf(HTMLButtonElement);
+      expect((removeButton as HTMLButtonElement).disabled).toBe(false);
     },
   );
 
