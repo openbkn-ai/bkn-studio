@@ -7,6 +7,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { formatCatalogTimestamp } from "@/shared/catalog/catalog-mapper";
+import { calculateNextHourlyCronRun } from "@/shared/hourly-cron";
+
 const getMock = vi.hoisted(() => vi.fn());
 const deleteMock = vi.hoisted(() => vi.fn());
 const postMock = vi.hoisted(() => vi.fn());
@@ -350,7 +353,9 @@ describe("catalog.service · mock health check schedule", () => {
         current.expectedUpdateTime,
       );
 
-      expect(inherited.nextRun).toContain("19:00:00");
+      expect(inherited.nextRun).toBe(
+        formatCatalogTimestamp(calculateNextHourlyCronRun("0 * * * *", Date.now())),
+      );
     } finally {
       nowSpy.mockRestore();
     }

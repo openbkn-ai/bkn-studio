@@ -36,6 +36,35 @@ vi.mock("react-router-dom", async (importOriginal) => ({
   useNavigate: () => vi.fn(),
 }));
 
+vi.mock("antd", () => ({
+  Alert: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  Input: ({ onChange, value }: { onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void; value?: string }) => (
+    <input onChange={onChange} value={value} />
+  ),
+  Select: () => null,
+  Space: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  Switch: () => null,
+  Tabs: ({
+    activeKey,
+    items,
+    onChange,
+  }: {
+    activeKey: string;
+    items: Array<{ children: ReactNode; key: string; label: ReactNode }>;
+    onChange: (key: string) => void;
+  }) => (
+    <div>
+      {items.map((item) => (
+        <button key={item.key} onClick={() => onChange(item.key)} type="button">
+          {item.label}
+        </button>
+      ))}
+      {items.find((item) => item.key === activeKey)?.children}
+    </div>
+  ),
+  Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+}));
+
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => appServicesMock,
 }));
@@ -58,6 +87,22 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
         </div>
       ))}
     </div>
+  ),
+}));
+
+vi.mock("@/framework/ui/common/AppButton", () => ({
+  AppButton: ({
+    children,
+    disabled,
+    onClick,
+  }: {
+    children?: ReactNode;
+    disabled?: boolean;
+    onClick?: () => void;
+  }) => (
+    <button disabled={disabled} onClick={onClick} type="button">
+      {children}
+    </button>
   ),
 }));
 
@@ -147,6 +192,13 @@ const schedule = (expectedUpdateTime: number) => ({
   updaterName: "-",
 });
 
+async function openScheduleEditor() {
+  await waitFor(() => expect(listSchedulesMock).toHaveBeenCalled());
+  fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+  fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
+  await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(1));
+}
+
 describe("DataConnectDiscoverScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -163,28 +215,25 @@ describe("DataConnectDiscoverScene", () => {
   it("refreshes the discover schedule version after an update conflict", async () => {
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
-    fireEvent.click(await screen.findByText("dataConnect.discoverTabSchedules"));
-    fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
-    fireEvent.click(await screen.findByRole("button", { name: "submit schedule 100" }));
+    await openScheduleEditor();
+    fireEvent.click(screen.getByRole("button", { name: "submit schedule 100" }));
 
-    expect(
-      await screen.findByRole("button", { name: "submit schedule 200" }),
-    ).toBeTruthy();
     await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("button", { name: "submit schedule 200" })).toBeTruthy();
   });
 
   it("clears the submitting state before closing a successfully saved schedule", async () => {
     updateScheduleMock.mockResolvedValue(undefined);
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
-    fireEvent.click(await screen.findByText("dataConnect.discoverTabSchedules"));
-    fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
-    fireEvent.click(await screen.findByRole("button", { name: "submit schedule 100" }));
+    await openScheduleEditor();
+    fireEvent.click(screen.getByRole("button", { name: "submit schedule 100" }));
 
     await waitFor(() => expect(updateScheduleMock).toHaveBeenCalledTimes(1));
-    fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
+    fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
+    await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(2));
 
-    expect((await screen.findByTestId("schedule-submitting")).textContent).toBe("false");
+    expect(screen.getByTestId("schedule-submitting").textContent).toBe("false");
   });
 
   it("clears the submitting state when a schedule modal closes during submission", async () => {
@@ -194,16 +243,16 @@ describe("DataConnectDiscoverScene", () => {
     );
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
-    fireEvent.click(await screen.findByText("dataConnect.discoverTabSchedules"));
-    fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
-    fireEvent.click(await screen.findByRole("button", { name: "submit schedule 100" }));
-    expect((await screen.findByTestId("schedule-submitting")).textContent).toBe("true");
+    await openScheduleEditor();
+    fireEvent.click(screen.getByRole("button", { name: "submit schedule 100" }));
+    await waitFor(() => expect(screen.getByTestId("schedule-submitting").textContent).toBe("true"));
 
     fireEvent.click(screen.getByRole("button", { name: "cancel schedule" }));
     await waitFor(() => expect(screen.queryByTestId("schedule-submitting")).toBeNull());
     resolveUpdate?.();
 
-    fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
-    expect((await screen.findByTestId("schedule-submitting")).textContent).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
+    await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByTestId("schedule-submitting").textContent).toBe("false"));
   });
 });
