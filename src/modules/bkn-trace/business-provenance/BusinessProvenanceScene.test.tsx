@@ -125,17 +125,19 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
 
     fireEvent.change(screen.getByPlaceholderText("搜索问题、结果或会话 ID"), { target: { value: "采购" } });
     fireEvent.change(screen.getByPlaceholderText("Agent / 应用"), { target: { value: "Cursor" } });
-    fireEvent.change(screen.getByPlaceholderText("业务域"), { target: { value: "供应链" } });
     fireEvent.change(screen.getByPlaceholderText("知识网络"), { target: { value: "supply" } });
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "运行状态" }));
+    fireEvent.click(await screen.findByText("进行中"));
     expect(getConversations).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", { name: /查\s*询/ }));
     await waitFor(() => expect(getConversations).toHaveBeenLastCalledWith(expect.objectContaining({
       agentOrApp: "Cursor",
-      businessDomain: "供应链",
       keyword: "采购",
       knowledgeNetwork: "supply",
+      status: "active",
     })));
+    expect(screen.queryByPlaceholderText("业务域")).toBeNull();
     expect(screen.queryByLabelText("开始时间")).toBeNull();
     expect(screen.queryByLabelText("结束时间")).toBeNull();
   });

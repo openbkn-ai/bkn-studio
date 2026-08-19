@@ -256,7 +256,6 @@ export function BusinessProvenanceScene() {
   const [conversationPage, setConversationPage] = useState(1);
   const [conversationKeyword, setConversationKeyword] = useState("");
   const [conversationAgent, setConversationAgent] = useState("");
-  const [conversationBusinessDomain, setConversationBusinessDomain] = useState("");
   const [conversationKnowledgeNetwork, setConversationKnowledgeNetwork] = useState("");
   const [conversationStatus, setConversationStatus] = useState<string>();
   const [conversationEvidence, setConversationEvidence] = useState<string>();
@@ -387,12 +386,11 @@ export function BusinessProvenanceScene() {
     setConversationQuery({
       keyword: conversationKeyword,
       agentOrApp: conversationAgent,
-      businessDomain: conversationBusinessDomain,
       knowledgeNetwork: conversationKnowledgeNetwork,
       status: conversationStatus,
       evidenceCompleteness: conversationEvidence,
     });
-  }, [conversationAgent, conversationBusinessDomain, conversationEvidence, conversationKeyword, conversationKnowledgeNetwork, conversationStatus]);
+  }, [conversationAgent, conversationEvidence, conversationKeyword, conversationKnowledgeNetwork, conversationStatus]);
 
   const conversationColumns: ColumnsType<BusinessProvenanceConversation> = [
     { dataIndex: "startedAt", title: bpText("columns.startedAt"), width: 180, render: (value: string | undefined, item) => <div className={styles.timeCell}><b>{formatTime(value)}</b><small>{item.conversationId}</small></div> },
@@ -430,12 +428,11 @@ export function BusinessProvenanceScene() {
       <div className={styles.filters}>
         <Input value={conversationKeyword} onChange={(event) => setConversationKeyword(event.target.value)} onPressEnter={submitConversationQuery} prefix={<SearchOutlined />} placeholder={bpText("filters.keyword")} />
         <Input value={conversationAgent} onChange={(event) => setConversationAgent(event.target.value)} onPressEnter={submitConversationQuery} placeholder={bpText("filters.agent")} />
-        <Input value={conversationBusinessDomain} onChange={(event) => setConversationBusinessDomain(event.target.value)} onPressEnter={submitConversationQuery} placeholder={bpText("filters.businessDomain")} />
         <Input value={conversationKnowledgeNetwork} onChange={(event) => setConversationKnowledgeNetwork(event.target.value)} onPressEnter={submitConversationQuery} placeholder={bpText("filters.network")} />
-        <Select allowClear placeholder={bpText("filters.status")} value={conversationStatus} options={[{ value: "completed", label: statusLabel("completed") }, { value: "failed", label: statusLabel("failed") }, { value: "running", label: statusLabel("running") }]} onChange={setConversationStatus} />
+        <Select aria-label={bpText("filters.status")} allowClear placeholder={bpText("filters.status")} value={conversationStatus} options={[{ value: "completed", label: statusLabel("completed") }, { value: "failed", label: statusLabel("failed") }, { value: "active", label: statusLabel("active") }]} onChange={setConversationStatus} />
         <Select allowClear placeholder={bpText("filters.evidence")} value={conversationEvidence} options={[{ value: "complete", label: bpText("evidence.complete") }, { value: "partial", label: bpText("evidence.partial") }]} onChange={setConversationEvidence} />
         <Button type="primary" icon={<SearchOutlined />} onClick={submitConversationQuery}>{bpText("actions.query")}</Button>
-        <Button aria-label={bpText("actions.reset")} icon={<ReloadOutlined />} onClick={() => { setConversationKeyword(""); setConversationAgent(""); setConversationBusinessDomain(""); setConversationKnowledgeNetwork(""); setConversationStatus(undefined); setConversationEvidence(undefined); setConversationPage(1); setConversationQuery({}); }} />
+        <Button aria-label={bpText("actions.reset")} icon={<ReloadOutlined />} onClick={() => { setConversationKeyword(""); setConversationAgent(""); setConversationKnowledgeNetwork(""); setConversationStatus(undefined); setConversationEvidence(undefined); setConversationPage(1); setConversationQuery({}); }} />
       </div>
       <Table rowKey="conversationId" columns={conversationColumns} dataSource={conversations} loading={loading} tableLayout="fixed" scroll={{ x: 1230 }} locale={{ emptyText: <Empty description={bpText("list.empty")} /> }} pagination={{ current: conversationPage, pageSize: 20, total: conversationTotal, showSizeChanger: false, showTotal: (total) => bpText("list.total", { count: total }), onChange: setConversationPage }} />
     </section>

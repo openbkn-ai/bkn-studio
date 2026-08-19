@@ -77,11 +77,9 @@ export function DiscoverScheduleFormModal({
   const [form] = Form.useForm<DiscoverScheduleFormValues>();
   const catalogLocked = mode === "edit" || Boolean(defaultCatalogId);
   const cronExpr = Form.useWatch("cronExpr", form);
-  const startTimeValue: unknown = Form.useWatch("startTime", form);
-  const endTimeValue: unknown = Form.useWatch("endTime", form);
   const validateTimeRange = () => {
-    const startTime = parseDateTimeLocal(startTimeValue);
-    const endTime = parseDateTimeLocal(endTimeValue);
+    const startTime = parseDateTimeLocal(form.getFieldValue("startTime"));
+    const endTime = parseDateTimeLocal(form.getFieldValue("endTime"));
     return isValidDiscoverScheduleTimeRange(startTime, endTime)
       ? Promise.resolve()
       : Promise.reject(new Error(t("dataConnect.discoverTimeRangeInvalid")));
